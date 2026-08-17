@@ -630,6 +630,33 @@ nm_curiosity = 1.0
 # what the rest of the evidence predicts — delivery improves, behaviour does
 # not, because conditioning is the blocker. Still shipped off: it is only worth
 # turning on together with the vision->vocal tract it was measured against.
+#
+# THAT TEST WAS FINALLY RUN, 2026-08-17, and it settles the question this note
+# left open. The bundle — `vision->vocal` at d=0.03 w=0.30 plus this pooling —
+# was assembled, **recalibrated** (it fails `calibrate` untouched: central
+# -0.40, somato +0.46, duty 0.51 -> 0.67), and scored with g3probe at 900k,
+# 141 probes per creature, five creatures:
+#
+#   arm                 obj at vocal   G3 ceiling   echo    readable?
+#   shipped             0.480          0.487        0.825   yes
+#   + vision->vocal     0.800          0.546        0.750   yes
+#   + tract & pooling   0.680          (0.515)      0.675   NO — echo under floor
+#
+# **Delivery was never the limit.** The object arrives at the larynx with a
+# margin over chance roughly three times the shipped creature's, and the
+# idealised-teacher ceiling moves 0.487 -> 0.546 against a 0.75 bar, with 0 of 5
+# creatures reaching it and only 3 of 5 beating their own random-target control.
+# The conditioning diagnosis survives its strongest test.
+#
+# And a cost nobody had quantified: **the CS pathway competes with the US
+# pathway at the same target.** The calibration echo — the word driving the
+# voice natively, which is the whole reason conditioning looked possible — falls
+# 0.825 -> 0.750 -> 0.675 as object delivery rises, because vision->vocal and
+# auditory->vocal land on the same module and the second one dilutes the first.
+# In the pooling arm it fell under g3probe's readout floor and that arm is
+# unreadable rather than negative. Any future attempt to deliver the object to
+# vocal has to pay this, and the two tracts would need separating — different
+# target populations, or different compartments — before the trade goes away.
 ffi_source = -1
 ffi_gain = 0.0
 
