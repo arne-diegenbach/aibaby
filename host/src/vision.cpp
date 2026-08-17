@@ -59,6 +59,7 @@ bool Retina::configure(const aibaby::DnaVision& cfg, std::string& error) {
   gaze_x_ = 0.0f;
   gaze_y_ = 0.0f;
   gaze_moves_ = 0;
+  servo_reset();
   // Re-aim timing is in *frames*, because the retina only exists on frame
   // boundaries: a rate in Hz has to be reconciled with frame_hz or the eye
   // would appear to move between two identical images.
@@ -123,8 +124,91 @@ void Retina::build_cell(float cx, float cy, float pitch) {
   cells_.push_back(std::move(cell));
 }
 
+void Retina::look_at(float x, float y) {
+  const float mid = 0.5f * float(frame_size_);
+  gaze_x_ = x < -mid ? -mid : (x > mid ? mid : x);
+  gaze_y_ = y < -mid ? -mid : (y > mid ? mid : y);
+  servo_reset();
+}
+
+void Retina::set_servo(const Servo& servo, uint64_t seed) {
+  servo_ = servo;
+  if (servo_.dead_frames > kMaxDead) servo_.dead_frames = kMaxDead;
+  if (servo_.slew <= 0.0f || servo_.slew > 1.0f) servo_.slew = 1.0f;
+  // Seeded rather than free-running: a noisy eye still has to give the same
+  // creature twice, or G1 is gone and every arm using it is unrepeatable.
+  servo_rng_ = seed ? seed : 1ull;
+  servo_reset();
+}
+
+void Retina::servo_reset() {
+  cmd_x_ = gaze_x_;
+  cmd_y_ = gaze_y_;
+  for (uint32_t i = 0; i <= kMaxDead; ++i) {
+    cmd_q_x_[i] = gaze_x_;
+    cmd_q_y_[i] = gaze_y_;
+    pos_q_x_[i] = gaze_x_;
+    pos_q_y_[i] = gaze_y_;
+  }
+}
+
+// One frame of actuator. Shifts both queues by one, so the command issued
+// dead_frames ago becomes the target now and the position from dead_frames ago
+// becomes what the controller can see.
+void Retina::servo_advance() {
+  const uint32_t n = servo_.dead_frames;
+  // Append the newest command, THEN read the oldest slot. Reading first would
+  // put a frame of delay in even at dead_frames 0, which is not an ideal eye
+  // and is not the pre-servo creature — the determinism hash caught exactly
+  // that and it is the reason this order is spelled out.
+  for (uint32_t i = 0; i < n; ++i) {
+    cmd_q_x_[i] = cmd_q_x_[i + 1];
+    cmd_q_y_[i] = cmd_q_y_[i + 1];
+  }
+  cmd_q_x_[n] = cmd_x_;
+  cmd_q_y_[n] = cmd_y_;
+
+  const float mid = 0.5f * float(frame_size_);
+  gaze_x_ += servo_.slew * (cmd_q_x_[0] - gaze_x_);
+  gaze_y_ += servo_.slew * (cmd_q_y_[0] - gaze_y_);
+  gaze_x_ = std::max(-mid, std::min(mid, gaze_x_));
+  gaze_y_ = std::max(-mid, std::min(mid, gaze_y_));
+
+  // Same order for the readback: at dead_frames 0 the controller sees where it
+  // actually is, which is what it saw before there was a servo at all.
+  for (uint32_t i = 0; i < n; ++i) {
+    pos_q_x_[i] = pos_q_x_[i + 1];
+    pos_q_y_[i] = pos_q_y_[i + 1];
+  }
+  pos_q_x_[n] = gaze_x_;
+  pos_q_y_[n] = gaze_y_;
+}
+
+// xorshift64*, so a noisy readback is still reproducible.
+static float servo_jitter(uint64_t& state, float scale) {
+  if (scale <= 0.0f) return 0.0f;
+  state ^= state >> 12;
+  state ^= state << 25;
+  state ^= state >> 27;
+  const uint64_t v = state * 2685821657736338717ull;
+  // [-1, 1) from the top bits, then scaled.
+  return scale * (float(double(v >> 40) / 8388608.0) - 1.0f);
+}
+
+float Retina::reported_x() {
+  return pos_q_x_[0] + servo_jitter(servo_rng_, servo_.noise_px);
+}
+
+float Retina::reported_y() {
+  return pos_q_y_[0] + servo_jitter(servo_rng_, servo_.noise_px);
+}
+
 void Retina::present(const uint8_t* pixels) {
   if (cells_.empty()) return;
+  // The eye moves before the frame is taken, so a command issued at the end of
+  // the previous frame is acting by the time this one is sampled — which is
+  // what a motor does and what an assignment does not.
+  servo_advance();
   const float inv_gain = 1.0f / cfg_.contrast_gain;
   float total = 0.0f;
 
@@ -222,15 +306,20 @@ void Retina::present(const uint8_t* pixels) {
   // putting the fovea on it means moving the gaze by its offset from the layout
   // centre. The gaze already carries whatever offset produced this view, so the
   // correction is relative and iterating converges.
+  // The correction is relative to where the controller *believes* it is, which
+  // with an ideal eye is where it is. That belief is the whole reason a servo
+  // can destabilise this loop: an eye that cannot yet see its own movement
+  // keeps asking for more of it.
   const float mid = 0.5f * float(frame_size_);
-  const float nx = gaze_x_ + cfg_.gaze_gain * (aim_x - mid);
-  const float ny = gaze_y_ + cfg_.gaze_gain * (aim_y - mid);
+  const float from_x = reported_x(), from_y = reported_y();
+  const float nx = from_x + cfg_.gaze_gain * (aim_x - mid);
+  const float ny = from_y + cfg_.gaze_gain * (aim_y - mid);
   // Only count a move that moved. Below a pixel the sampling offset rounds to
   // the same integer, so the eye has not been anywhere and saying it has would
   // make the guard below unable to fail.
-  if (std::fabs(nx - gaze_x_) < 1.0f && std::fabs(ny - gaze_y_) < 1.0f) return;
-  gaze_x_ = std::max(-mid, std::min(mid, nx));
-  gaze_y_ = std::max(-mid, std::min(mid, ny));
+  if (std::fabs(nx - cmd_x_) < 1.0f && std::fabs(ny - cmd_y_) < 1.0f) return;
+  cmd_x_ = std::max(-mid, std::min(mid, nx));
+  cmd_y_ = std::max(-mid, std::min(mid, ny));
   ++gaze_moves_;
 }
 
@@ -243,6 +332,7 @@ void Retina::reset_stream() {
   gaze_x_ = 0.0f;
   gaze_y_ = 0.0f;
   frames_to_aim_ = aim_period_;
+  servo_reset();
 }
 
 Retina::CellGeometry Retina::geometry(uint32_t cell) const {

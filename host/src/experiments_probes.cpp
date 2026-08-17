@@ -3473,8 +3473,17 @@ bool run_gazeprobe(const std::vector<uint8_t>& dna_blob, uint64_t ticks, bool ve
   // and `oracle` is the ceiling on what any controller could achieve, so a
   // reflex that lands between them can be scored as a *fraction of what was
   // available* rather than against an absolute anyone has to argue about.
-  enum Fovea { kFixed = 0, kReflex = 1, kOracle = 2 };
-  const char* fovea_name[3] = {"fixed", "reflex", "oracle"};
+  enum Fovea { kFixed = 0, kReflex = 1, kOracle = 2, kServo = 3 };
+  const char* fovea_name[4] = {"fixed", "reflex", "oracle", "servo"};
+  // The imperfect eye the reflex would have to drive on real hardware. Not a
+  // guess at any particular motor: the point is to find out whether the
+  // controller degrades gracefully or falls over, before anyone buys one.
+  // One frame is 100 ms at this frame rate, so a single dead frame is already
+  // a pessimistic servo.
+  Retina::Servo servo_model;
+  servo_model.dead_frames = 1;
+  servo_model.slew = 0.5f;
+  servo_model.noise_px = 0.5f;
 
   std::printf("  each scatter is run three ways: fovea fixed at the frame centre,\n"
               "  the DNA v31 reflex controller, and an ORACLE fovea placed exactly\n"
@@ -3493,12 +3502,19 @@ bool run_gazeprobe(const std::vector<uint8_t>& dna_blob, uint64_t ticks, bool ve
     // structure allows, which is the right setting for asking whether the
     // design can converge at all.
     std::vector<uint8_t> variant = dna_blob;
-    if (fovea == kReflex) {
-      const float rate = vcfg.frame_hz;
+    {
+      // Every arm sets the rate EXPLICITLY, including the ones that want it
+      // off. Reading it from the genome was a latent bug and v1.0.1 sprang it:
+      // switching the fovea on shipped a default of 10 Hz, so `fixed` stopped
+      // being fixed and the oracle was dragged around by the very controller
+      // it exists to bracket. All three rows printed the same numbers, which
+      // is the only reason it was noticed.
+      const bool driven = fovea == kReflex || fovea == kServo;
+      const float rate = driven ? vcfg.frame_hz : 0.0f;
       std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, vision) +
                       offsetof(aibaby::DnaVision, gaze_rate_hz),
                   &rate, sizeof(rate));
-      if (peak_frac_override > 0.0f) {
+      if (driven && peak_frac_override > 0.0f) {
         std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, vision) +
                         offsetof(aibaby::DnaVision, gaze_peak_frac),
                     &peak_frac_override, sizeof(peak_frac_override));
@@ -3511,6 +3527,7 @@ bool run_gazeprobe(const std::vector<uint8_t>& dna_blob, uint64_t ticks, bool ve
     if (!retina.configure(s.dna.header().vision, error) || !ear.configure(acfg, error)) {
       return false;
     }
+    if (fovea == kServo) retina.set_servo(servo_model, s.dna.header().seed ^ 0x5E70u);
     VowelSource voice(acfg.sample_rate);
     SceneSource scene(vcfg.frame_size, s.dna.header().seed);
     std::vector<uint8_t> frame(size_t(vcfg.frame_size) * vcfg.frame_size, 0);
@@ -3631,11 +3648,12 @@ bool run_gazeprobe(const std::vector<uint8_t>& dna_blob, uint64_t ticks, bool ve
   // module on the same trials at 0.967. A falling curve to its right is only a
   // finding about displacement if this row is up.
   double centred_vision = 0.0;
-  double sum[2][3] = {{0, 0, 0}, {0, 0, 0}}, sum_err[2][3] = {{0, 0, 0}, {0, 0, 0}};
+  double sum[2][4] = {{0, 0, 0, 0}, {0, 0, 0, 0}};
+  double sum_err[2][4] = {{0, 0, 0, 0}, {0, 0, 0, 0}};
   uint64_t total_moves = 0;
   uint32_t hard_n[2] = {0, 0};
   for (double sc : scatters) {
-    for (int f = 0; f < 3; ++f) {
+    for (int f = 0; f < 4; ++f) {
       double v = 0, c = 0, sh = 0, err = 0, base = 0;
       uint64_t moves = 0;
       if (!arm(sc, f, &v, &c, &sh, &err, &base, &moves)) {
@@ -3673,16 +3691,47 @@ bool run_gazeprobe(const std::vector<uint8_t>& dna_blob, uint64_t ticks, bool ve
     const double n = double(hard_n[b]);
     const double f = sum[b][0] / n, r = sum[b][1] / n, o = sum[b][2] / n;
     std::printf("\n  %s (scatter >= 0.05, %u rows)\n", bucket_name[b], hard_n[b]);
+    const double sv = sum[b][3] / n;
     std::printf("    fixed   vision %.3f, gaze %.1f px\n"
                 "    reflex  vision %.3f, gaze %.1f px\n"
+                "    servo   vision %.3f, gaze %.1f px   <- the same controller on a motor\n"
                 "    oracle  vision %.3f, gaze %.1f px\n",
-                f, sum_err[b][0] / n, r, sum_err[b][1] / n, o, sum_err[b][2] / n);
+                f, sum_err[b][0] / n, r, sum_err[b][1] / n, sv, sum_err[b][3] / n,
+                o, sum_err[b][2] / n);
     const double avail = o - f;
     if (avail > 0.05) {
-      std::printf("    the reflex recovers %+.3f of the %+.3f available — %.0f%%\n",
-                  r - f, avail, 100.0 * (r - f) / avail);
+      std::printf("    the reflex recovers %+.3f of the %+.3f available — %.0f%%\n"
+                  "    on a motor it recovers %+.3f — %.0f%%\n",
+                  r - f, avail, 100.0 * (r - f) / avail, sv - f,
+                  100.0 * (sv - f) / avail);
     }
   }
+  // How bad does the eye have to be before the controller stops working? The
+  // loop has no model of its own motion — it re-aims every frame at gain 0.70
+  // and corrects from where it *believes* it is — so stale readback is the
+  // parameter to fear: an eye that cannot yet see its own movement asks for
+  // more of it, which is how a proportional controller overshoots.
+  if (verbose) {
+    std::printf("\n  servo tolerance, at scatter 0.10 (toy 4.9 px out)\n");
+    std::printf("    %-6s %-6s %-8s %-10s %s\n", "dead", "slew", "noise", "vision",
+                "gaze err");
+    const Retina::Servo probes[] = {
+        {0, 1.0f, 0.0f}, {0, 0.5f, 0.0f}, {1, 1.0f, 0.0f}, {1, 0.5f, 0.0f},
+        {2, 0.5f, 0.0f}, {1, 0.5f, 0.5f}, {1, 0.5f, 2.0f},
+    };
+    for (const Retina::Servo& sv : probes) {
+      servo_model = sv;
+      double v = 0, c = 0, sh = 0, err = 0, base = 0;
+      uint64_t moves = 0;
+      if (!arm(0.10, kServo, &v, &c, &sh, &err, &base, &moves)) continue;
+      std::printf("    %-6u %-6.2f %-8.1f %-10.3f %.1f px\n", sv.dead_frames,
+                  double(sv.slew), double(sv.noise_px), v, err);
+    }
+    servo_model.dead_frames = 1;
+    servo_model.slew = 0.5f;
+    servo_model.noise_px = 0.5f;
+  }
+
   // The threshold sweep. One number spans both previously refuted designs —
   // 1.0 is the pure peak cell that parks on an object edge, and a low value is
   // v27's whole-field centroid that the periphery dilutes — so the useful

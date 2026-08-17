@@ -67,11 +67,36 @@ class Retina {
   // DNA v31's did-it-run guard. A controller that never fires and one that
   // fires and lands nowhere produce the same null everywhere else.
   uint64_t gaze_moves() const { return gaze_moves_; }
-  void look_at(float x, float y) {
-    const float mid = 0.5f * float(frame_size_);
-    gaze_x_ = x < -mid ? -mid : (x > mid ? mid : x);
-    gaze_y_ = y < -mid ? -mid : (y > mid ? mid : y);
-  }
+
+  // A model of an imperfect eye, so the controller can be asked whether it
+  // survives a real motor before there is one to buy.
+  //
+  // Not in the genome, deliberately. This describes a body the creature does
+  // not have yet, and a required TOML key per parameter is the tax the DNA v30
+  // deletion policy exists to avoid. It is a host-side testing facility and the
+  // default is the ideal eye, which is bit-identical to not having it.
+  //
+  // The three parameters are the three ways a motor differs from an assignment:
+  //
+  //   dead_frames  a command takes this long to start acting, AND the position
+  //                the controller reads back is this stale. The second half is
+  //                the one that bites: an eye that cannot yet see its own
+  //                movement keeps commanding more of it.
+  //   slew         fraction of the remaining distance covered per frame. 1 is
+  //                a teleport; a real actuator is well under that.
+  //   noise_px     readback error, because an encoder is not a promise.
+  struct Servo {
+    uint32_t dead_frames = 0;
+    float slew = 1.0f;
+    float noise_px = 0.0f;
+  };
+  void set_servo(const Servo& servo, uint64_t seed);
+  // Teleport the eye, servo state and all. Setting only the position was a bug
+  // the moment the servo existed: the actuator pulls toward its *command*, so a
+  // direct placement was undone on the very next frame and the oracle arm
+  // silently became the fixed arm. Anything that positions the eye from outside
+  // has to move the command with it.
+  void look_at(float x, float y);
 
   // Where a cell sits in the image, normalised to [0,1], plus its footprint.
   // Only the panel needs this; the core is told a count and nothing more.
@@ -114,6 +139,24 @@ class Retina {
   uint64_t gaze_moves_ = 0;
   uint32_t aim_period_ = 0;
   uint32_t frames_to_aim_ = 0;
+
+  // The imperfect-eye model. `cmd_*` is where the controller asked the eye to
+  // go; `gaze_*` above is where it actually is, which is what the sampling
+  // uses. Both queues are (dead_frames + 1) long: index 0 is the oldest and
+  // therefore the one in force now.
+  static constexpr uint32_t kMaxDead = 8;
+  Servo servo_{};
+  float cmd_x_ = 0.0f, cmd_y_ = 0.0f;
+  float cmd_q_x_[kMaxDead + 1] = {}, cmd_q_y_[kMaxDead + 1] = {};
+  float pos_q_x_[kMaxDead + 1] = {}, pos_q_y_[kMaxDead + 1] = {};
+  uint64_t servo_rng_ = 0;
+
+  void servo_reset();
+  void servo_advance();
+  // What the controller believes about its own position: stale by dead_frames
+  // and wrong by noise_px. With the default servo this is exactly gaze_x_.
+  float reported_x();
+  float reported_y();
 };
 
 // Synthetic scenes, so the headless experiments can show the baby something
