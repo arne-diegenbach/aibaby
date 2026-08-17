@@ -276,6 +276,44 @@ contrast_floor = 0.06       # below this a cell stays silent: an empty field
 gain = 1.30                 # one latency spike's worth of injected current
 frame_hz = 10.0             # camera frames the module is born expecting
 latency_ms = 60.0           # full contrast fires now, threshold contrast this
+
+# --- DNA v31: pointing the eye, second attempt --------------------------------
+# v27 aimed at the response-weighted centroid over every ganglion cell, landed
+# ~4.4 px from the toy where the visual code needs ~1.4, and was deleted in v30.
+# Deleting it is what produced the number that makes this worth rebuilding: with
+# the fovea placed exactly on the toy, `vision` reads 0.980 at 12 px of
+# displacement where a fixed eye reads 0.540, and `central` 0.860 against 0.520.
+# The mechanism was always worth having; only the aim was wrong.
+#
+# This one takes the PEAK-responding cell rather than the centroid — a centroid
+# averages the object with everything else, and a coarse ring cell that merely
+# overlaps it contributes its own faraway centre — and it ITERATES, correcting
+# `gaze_gain` of the error every re-aim rather than making one open-loop jump.
+# Three re-aims at 0.7 leave 2.7% of the initial error. Once the object is in
+# the fovea the peak cell *is* a foveal cell, so the last correction happens at
+# 2x2 px for free.
+#
+# `gazeprobe` scores it between the two rows that bracket it: `fixed` is the
+# floor, `oracle` is the ceiling, `reflex` is this.
+gaze_rate_hz = 0.0          # DNA v31: 0 = the eye never moves (the v30 creature)
+gaze_gain = 0.70            # fraction of the estimated error per re-aim
+gaze_peak_frac = 0.70       # aim at the centroid of cells >= this x the peak;
+                            # 1.0 = the peak cell alone, 0.0 = v27's whole field
+#
+# 0.70 is measured, not chosen, and the sweep is unusually legible because both
+# previously refuted designs sit at the ends of this one knob. At scatter 0.10
+# (toy 4.9 px out), gaze error against gaze_peak_frac:
+#
+#   0.20  3.3 px   too inclusive: v27's whole-field dilution coming back
+#   0.35  3.0 px
+#   0.50  2.0 px
+#   0.70  1.4 px   <- the tolerance the visual code actually needs
+#   0.90  2.9 px
+#   1.00  5.5 px   pure peak cell: parked on the object's edge, one radius out
+#
+# Chosen on gaze error rather than on the classifier score: it is the quantity
+# the controller actually controls, and at 100 trials a held-out accuracy has a
+# standard deviation near 0.07 while the mean gaze error does not.
                             # much later; the image is in the timing
 
 

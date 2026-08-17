@@ -151,7 +151,14 @@ constexpr uint32_t kDnaMagic = 0x44424941;  // "AIBD"
 //
 //     Added: DnaProjection::birth_weight, the companion without which v28's
 //     exuberance is inert by arithmetic.
-constexpr uint32_t kDnaVersion = 30;
+// 31: the fovea can be pointed again, by a controller built from what killed
+//     the last one. v27 aimed at the response-weighted centroid over every
+//     ganglion cell and landed ~4.4 px out where the code needs ~1.4; v30
+//     deleted it and, in deleting it, measured that a *perfect* eye restores
+//     the code completely (0.980 against 0.540 at 12 px of displacement). So
+//     the mechanism was always worth having and only the aim was wrong. See
+//     DnaVision::gaze_rate_hz.
+constexpr uint32_t kDnaVersion = 31;
 
 // What a module is wired to the world through. The host looks modules up by
 // role, never by name or index, so renaming a module in the genome cannot
@@ -490,6 +497,49 @@ struct DnaVision {
   // a rate code would hand the same information to the module as a number of
   // spikes, and the timing structure reward has to bind to would be gone.
   float latency_ms;
+  // DNA v31. Pointing the eye, second attempt. `gaze_rate_hz` 0 never moves it
+  // and is the v30 creature exactly.
+  //
+  // Two changes from v27, and each is aimed at a specific reason that one
+  // missed by an order of magnitude.
+  //
+  // **Aim at the peak-responding cell, not the response-weighted centroid.** A
+  // centroid over every cell averages the object with everything else in view,
+  // and the periphery is where that hurts: a coarse ring cell that merely
+  // overlaps the object still contributes, and it contributes *its own centre*,
+  // which can be half a frame away. The peak cell is a worse estimator of where
+  // the object's middle is and a far better one of where the object is at all.
+  //
+  // **Iterate.** v27 fired one open-loop jump every saccade period. This
+  // corrects a fraction `gaze_gain` of the estimated error every re-aim, so
+  // three re-aims at 0.7 leave 2.7% of the initial error — 0.3 px from a 12 px
+  // start. Precision then comes from repetition rather than from any single
+  // estimate being good, which is what real oculomotor control does and is why
+  // a coarse peripheral estimate is enough to start with.
+  //
+  // The two together buy the third thing v27's post-mortem asked for without
+  // needing a field for it: once the object is inside the fovea, the
+  // peak-responding cell *is* a foveal cell, so the final correction is made at
+  // 2x2 px resolution automatically.
+  float gaze_rate_hz;   // how often the eye re-aims; 0 = never
+  float gaze_gain;      // fraction of the estimated error corrected per re-aim
+  // The peak cell alone is the wrong target and the first run said so in one
+  // number: the eye settled ~5.4 px from the toy at *every* scatter level,
+  // including 1.0 px, where it made things worse. A fixed error independent of
+  // where the object is is not a convergence failure, it is convergence onto
+  // the wrong point — and the wrong point is the object's **edge**. A
+  // difference-of-Gaussians cell reports contrast, so the strongest response to
+  // a disc is on its boundary, one radius (6-7 px here) from its middle.
+  //
+  // So aim at the centroid of the cells responding at least this fraction of
+  // the peak. That is the synthesis of the two failures: v27's centroid was
+  // over *every* cell and got diluted by a periphery that merely overlapped the
+  // object, while a single peak cell is local but sits on an edge. A centroid
+  // over the peak's neighbourhood is local *and* centred.
+  //
+  // 1.0 is the pure-peak behaviour and 0.0 is v27's whole-field centroid, so
+  // this one number spans both previous attempts and the space between them.
+  float gaze_peak_frac;
   uint32_t pad;
 };
 

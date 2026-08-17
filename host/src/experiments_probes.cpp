@@ -3468,16 +3468,49 @@ bool run_gazeprobe(const std::vector<uint8_t>& dna_blob, uint64_t ticks, bool ve
 
   std::printf("  toy scatter is added to m3_toy's own +/-0.02, so the 0.00 row is\n"
               "  the protocol every other experiment in this project uses.\n");
-  std::printf("  each scatter is run twice: with the fovea fixed at the frame centre,\n"
-              "  and with an ORACLE fovea placed exactly on the toy every trial.\n");
+  // Three fovea modes per scatter, and the point of the middle one is that it
+  // is bracketed. `fixed` is what the creature does with no controller at all
+  // and `oracle` is the ceiling on what any controller could achieve, so a
+  // reflex that lands between them can be scored as a *fraction of what was
+  // available* rather than against an absolute anyone has to argue about.
+  enum Fovea { kFixed = 0, kReflex = 1, kOracle = 2 };
+  const char* fovea_name[3] = {"fixed", "reflex", "oracle"};
 
-  auto arm = [&](double scatter, bool oracle, double* vis_out, double* cen_out,
-                 double* shuf_out, double* err_out, double* base_out) -> bool {
+  std::printf("  each scatter is run three ways: fovea fixed at the frame centre,\n"
+              "  the DNA v31 reflex controller, and an ORACLE fovea placed exactly\n"
+              "  on the toy. The reflex re-aims every frame at gain %.2f.\n",
+              double(vcfg.gaze_gain));
+
+  // Swept by --verbose, because the threshold trades locality against centring
+  // and both ends are a previously refuted design.
+  float peak_frac_override = 0.0f;
+  auto arm = [&](double scatter, int fovea, double* vis_out, double* cen_out,
+                 double* shuf_out, double* err_out, double* base_out,
+                 uint64_t* moves_out) -> bool {
+    // The reflex arm is the same creature with the controller switched on, so
+    // the rate is patched into a copy of the blob rather than asking the user
+    // for two genomes. Re-aiming every frame is the most iterations this trial
+    // structure allows, which is the right setting for asking whether the
+    // design can converge at all.
+    std::vector<uint8_t> variant = dna_blob;
+    if (fovea == kReflex) {
+      const float rate = vcfg.frame_hz;
+      std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, vision) +
+                      offsetof(aibaby::DnaVision, gaze_rate_hz),
+                  &rate, sizeof(rate));
+      if (peak_frac_override > 0.0f) {
+        std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, vision) +
+                        offsetof(aibaby::DnaVision, gaze_peak_frac),
+                    &peak_frac_override, sizeof(peak_frac_override));
+      }
+    }
     Session s;
-    if (!s.init(dna_blob, error)) return false;
+    if (!s.init(variant, error)) return false;
     Retina retina;
     Ear ear;
-    if (!retina.configure(vcfg, error) || !ear.configure(acfg, error)) return false;
+    if (!retina.configure(s.dna.header().vision, error) || !ear.configure(acfg, error)) {
+      return false;
+    }
     VowelSource voice(acfg.sample_rate);
     SceneSource scene(vcfg.frame_size, s.dna.header().seed);
     std::vector<uint8_t> frame(size_t(vcfg.frame_size) * vcfg.frame_size, 0);
@@ -3523,7 +3556,7 @@ bool run_gazeprobe(const std::vector<uint8_t>& dna_blob, uint64_t ticks, bool ve
       // question it could never answer, because a bad controller and a useless
       // fovea produce the same null, is whether *perfect* fixation buys
       // anything. This answers that and costs one extra arm.
-      if (oracle) {
+      if (fovea == kOracle) {
         retina.look_at((float(toy.cx) - 0.5f) * float(vcfg.frame_size),
                        (float(toy.cy) - 0.5f) * float(vcfg.frame_size));
       }
@@ -3577,13 +3610,14 @@ bool run_gazeprobe(const std::vector<uint8_t>& dna_blob, uint64_t ticks, bool ve
     *shuf_out = holdout_accuracy(iv, sh, tv);
     *err_out = gaze_n ? gaze_err / double(gaze_n) : 0.0;
     *base_out = gaze_n ? want_err / double(gaze_n) : 0.0;
+    *moves_out = retina.gaze_moves();
     return true;
   };
 
   instrument("gazeprobe", probe.dna.header().seed ^ 0x6A2Eu, ticks / kM3ProbeTicks,
              "trials per scatter arm");
-  std::printf("\n    %-9s %-8s %-10s %-10s %-10s %-14s\n", "scatter", "fovea",
-              "vision", "central", "shuffled", "gaze err (px)");
+  std::printf("\n    %-9s %-8s %-10s %-10s %-10s %-16s %s\n", "scatter", "fovea",
+              "vision", "central", "shuffled", "gaze err (px)", "re-aims");
   // Fine near zero on purpose. The fovea covers the central 16 px of a 64 px
   // frame, so scatter 0.10 displaces the toy by about 5 px and never takes it
   // out of the fovea at all — and vision collapses anyway. Whatever the
@@ -3596,34 +3630,85 @@ bool run_gazeprobe(const std::vector<uint8_t>& dna_blob, uint64_t ticks, bool ve
   // the visual code is known to be legible there — m3probe reads the same
   // module on the same trials at 0.967. A falling curve to its right is only a
   // finding about displacement if this row is up.
-  double centred_vision = 0.0, worst_fixed = 1.0, worst_oracle = 1.0;
+  double centred_vision = 0.0;
+  double sum[2][3] = {{0, 0, 0}, {0, 0, 0}}, sum_err[2][3] = {{0, 0, 0}, {0, 0, 0}};
+  uint64_t total_moves = 0;
+  uint32_t hard_n[2] = {0, 0};
   for (double sc : scatters) {
-    for (int o = 0; o < 2; ++o) {
+    for (int f = 0; f < 3; ++f) {
       double v = 0, c = 0, sh = 0, err = 0, base = 0;
-      if (!arm(sc, o == 1, &v, &c, &sh, &err, &base)) {
+      uint64_t moves = 0;
+      if (!arm(sc, f, &v, &c, &sh, &err, &base, &moves)) {
         std::printf("    %-9.2f  arm failed\n", sc);
         continue;
       }
       char errbuf[48];
       std::snprintf(errbuf, sizeof(errbuf), "%.1f (toy at %.1f)", err, base);
-      std::printf("    %-9.2f %-8s %-10.3f %-10.3f %-10.3f %-14s\n", sc,
-                  o == 1 ? "oracle" : "fixed", v, c, sh, errbuf);
-      if (sc == 0.00 && o == 0) centred_vision = v;
-      if (sc >= 0.10) {
-        if (o == 0 && v < worst_fixed) worst_fixed = v;
-        if (o == 1 && v < worst_oracle) worst_oracle = v;
+      std::printf("    %-9.2f %-8s %-10.3f %-10.3f %-10.3f %-16s %llu\n", sc,
+                  fovea_name[f], v, c, sh, errbuf, (unsigned long long)moves);
+      if (sc == 0.00 && f == kFixed) centred_vision = v;
+      if (f == kReflex) total_moves += moves;
+      // Averaged over the displacements that actually cost the fixed eye
+      // something. Including scatter 0.00, where there is nothing to recover,
+      // would dilute the one comparison this table exists to make.
+      // Split by whether the toy starts inside the fovea, because averaging
+      // across that boundary describes neither regime. Inside it the
+      // controller has fine cells to home in with; outside it has only coarse
+      // rings, and acquiring a target the fovea cannot yet see is a different
+      // problem from centring one it can.
+      if (sc >= 0.05) {
+        const bool reachable = base <= 0.5 * double(vcfg.fovea_size);
+        const int bucket = reachable ? 0 : 1;
+        sum[bucket][f] += v;
+        sum_err[bucket][f] += err;
+        if (f == kFixed) ++hard_n[bucket];
       }
       ok = true;
     }
   }
-  std::printf("\n  Read the two fovea rows against each other at large scatter. The\n"
-              "  oracle eye is on the toy to the pixel, so it is the ceiling on\n"
-              "  anything a saccade controller could ever achieve. Oracle >> fixed\n"
-              "  means foveation is worth a controller and DNA v27's was simply bad\n"
-              "  (it landed ~4.4 px out); oracle == fixed means this retina's\n"
-              "  foveation buys nothing and the whole active-vision line is closed.\n"
-              "\n  Worst case at scatter >= 0.10: fixed %.3f, oracle %.3f (%+.3f).\n",
-              worst_fixed, worst_oracle, worst_oracle - worst_fixed);
+  const char* bucket_name[2] = {"toy starts INSIDE the fovea",
+                                "toy starts OUTSIDE the fovea"};
+  for (int b = 0; b < 2; ++b) {
+    if (!hard_n[b]) continue;
+    const double n = double(hard_n[b]);
+    const double f = sum[b][0] / n, r = sum[b][1] / n, o = sum[b][2] / n;
+    std::printf("\n  %s (scatter >= 0.05, %u rows)\n", bucket_name[b], hard_n[b]);
+    std::printf("    fixed   vision %.3f, gaze %.1f px\n"
+                "    reflex  vision %.3f, gaze %.1f px\n"
+                "    oracle  vision %.3f, gaze %.1f px\n",
+                f, sum_err[b][0] / n, r, sum_err[b][1] / n, o, sum_err[b][2] / n);
+    const double avail = o - f;
+    if (avail > 0.05) {
+      std::printf("    the reflex recovers %+.3f of the %+.3f available — %.0f%%\n",
+                  r - f, avail, 100.0 * (r - f) / avail);
+    }
+  }
+  // The threshold sweep. One number spans both previously refuted designs —
+  // 1.0 is the pure peak cell that parks on an object edge, and a low value is
+  // v27's whole-field centroid that the periphery dilutes — so the useful
+  // setting, if there is one, is somewhere in between and this is where it
+  // shows up.
+  if (verbose) {
+    std::printf("\n  gaze_peak_frac sweep, at scatter 0.10 (toy 4.9 px out)\n");
+    std::printf("    %-8s %-10s %-10s %s\n", "frac", "vision", "central", "gaze err");
+    for (float frac : {0.20f, 0.35f, 0.50f, 0.70f, 0.90f, 1.00f}) {
+      peak_frac_override = frac;
+      double v = 0, c = 0, sh = 0, err = 0, base = 0;
+      uint64_t moves = 0;
+      if (!arm(0.10, kReflex, &v, &c, &sh, &err, &base, &moves)) continue;
+      std::printf("    %-8.2f %-10.3f %-10.3f %.1f px  (%llu re-aims)\n", frac, v, c,
+                  err, (unsigned long long)moves);
+    }
+    peak_frac_override = 0.0f;
+  }
+
+  // The did-it-run guard. A controller that never fires and a controller that
+  // fires and lands nowhere read identically in every column above.
+  if (total_moves == 0) {
+    std::printf("\n  THE EYE NEVER MOVED — the reflex rows are the fixed rows under\n"
+                "  another name. Nothing above is a measurement of a controller.\n");
+    ok = false;
+  }
   (void)verbose;
   if (!ok) return false;
   return positive_control("gazeprobe", "scatter 0.00 — the standard protocol — in `vision`",

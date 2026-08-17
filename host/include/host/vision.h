@@ -64,6 +64,9 @@ class Retina {
   // my controller any good", which the reflexive version confounded.
   float gaze_x() const { return gaze_x_; }
   float gaze_y() const { return gaze_y_; }
+  // DNA v31's did-it-run guard. A controller that never fires and one that
+  // fires and lands nowhere produce the same null everywhere else.
+  uint64_t gaze_moves() const { return gaze_moves_; }
   void look_at(float x, float y) {
     const float mid = 0.5f * float(frame_size_);
     gaze_x_ = x < -mid ? -mid : (x > mid ? mid : x);
@@ -90,6 +93,10 @@ class Retina {
 
   std::vector<Cell> cells_;
   std::vector<float> features_;
+  // |response| per cell for the frame just presented. Kept so the gaze
+  // controller can take a second pass without re-convolving anything — the
+  // convolution is the only loop in this file that costs real time.
+  std::vector<float> magnitude_;
   aibaby::DnaVision cfg_{};
   uint32_t frame_size_ = 0;
   float contrast_ = 0.0f;
@@ -101,6 +108,12 @@ class Retina {
   // which is where every creature that is not being probed sits.
   float gaze_x_ = 0.0f;
   float gaze_y_ = 0.0f;
+
+  // DNA v31 controller state. `frames_to_aim_` counts down to the next re-aim;
+  // 0 period means the controller is off and nothing below is read.
+  uint64_t gaze_moves_ = 0;
+  uint32_t aim_period_ = 0;
+  uint32_t frames_to_aim_ = 0;
 };
 
 // Synthetic scenes, so the headless experiments can show the baby something

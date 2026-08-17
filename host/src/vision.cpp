@@ -54,9 +54,21 @@ bool Retina::configure(const aibaby::DnaVision& cfg, std::string& error) {
   }
 
   features_.assign(cells_.size() * 2, 0.0f);
+  magnitude_.assign(cells_.size(), 0.0f);
 
   gaze_x_ = 0.0f;
   gaze_y_ = 0.0f;
+  gaze_moves_ = 0;
+  // Re-aim timing is in *frames*, because the retina only exists on frame
+  // boundaries: a rate in Hz has to be reconciled with frame_hz or the eye
+  // would appear to move between two identical images.
+  if (cfg.gaze_rate_hz > 0.0f && cfg.frame_hz > 0.0f) {
+    const float per = cfg.frame_hz / cfg.gaze_rate_hz;
+    aim_period_ = per < 1.0f ? 1u : uint32_t(per + 0.5f);
+  } else {
+    aim_period_ = 0;
+  }
+  frames_to_aim_ = aim_period_;
   return true;
 }
 
@@ -123,6 +135,12 @@ void Retina::present(const uint8_t* pixels) {
   const int gx = int(gaze_x_ + (gaze_x_ >= 0.0f ? 0.5f : -0.5f));
   const int gy = int(gaze_y_ + (gaze_y_ >= 0.0f ? 0.5f : -0.5f));
 
+  // DNA v31: where the strongest response was, in the retina's own layout
+  // coordinates. Tracked while the responses are being computed because it is
+  // one comparison per cell and a second pass would double the only loop in
+  // this file that costs anything.
+  float peak = 0.0f, peak_x = 0.0f, peak_y = 0.0f;
+
   for (size_t c = 0; c < cells_.size(); ++c) {
     const Cell& cell = cells_[c];
     float response = 0.0f;
@@ -153,11 +171,67 @@ void Retina::present(const uint8_t* pixels) {
     // a neuron cannot fire a negative number of times.
     features_[c * 2] = clamp01(response);
     features_[c * 2 + 1] = clamp01(-response);
-    total += std::fabs(response);
+    const float mag = std::fabs(response);
+    magnitude_[c] = mag;
+    total += mag;
+    if (mag > peak) {
+      peak = mag;
+      peak_x = cell.cx;
+      peak_y = cell.cy;
+    }
   }
 
   contrast_ = float(total / double(cells_.size()));
   ++frames_produced_;
+
+  if (aim_period_ == 0) return;
+  if (frames_to_aim_ > 0) --frames_to_aim_;
+  if (frames_to_aim_ != 0) return;
+  frames_to_aim_ = aim_period_;
+
+  // Nothing in view is not a reason to move. A creature that re-aims at the
+  // peak of pure noise spends its life chasing grain, and `contrast_floor` is
+  // the genome's own statement of what counts as seeing something.
+  if (peak <= 0.0f || contrast_ <= cfg_.contrast_floor) return;
+
+  // Centroid over the peak's neighbourhood: every cell responding at least
+  // `gaze_peak_frac` of the peak. A DoG cell peaks on an *edge*, so the single
+  // strongest cell sits one object-radius off centre and the eye parks there
+  // forever; averaging the cells that surround the object puts the estimate
+  // back in its middle. At frac 1.0 only the peak qualifies and this is the
+  // pure-peak rule; at 0.0 every cell qualifies and it is v27's whole-field
+  // centroid.
+  float aim_x = peak_x, aim_y = peak_y;
+  {
+    const float bar = cfg_.gaze_peak_frac * peak;
+    double wx = 0.0, wy = 0.0, ws = 0.0;
+    for (size_t c = 0; c < cells_.size(); ++c) {
+      const float mag = magnitude_[c];
+      if (mag < bar) continue;
+      wx += double(mag) * double(cells_[c].cx);
+      wy += double(mag) * double(cells_[c].cy);
+      ws += double(mag);
+    }
+    if (ws > 0.0) {
+      aim_x = float(wx / ws);
+      aim_y = float(wy / ws);
+    }
+  }
+
+  // The aim point is an image position sampled through the current gaze, so
+  // putting the fovea on it means moving the gaze by its offset from the layout
+  // centre. The gaze already carries whatever offset produced this view, so the
+  // correction is relative and iterating converges.
+  const float mid = 0.5f * float(frame_size_);
+  const float nx = gaze_x_ + cfg_.gaze_gain * (aim_x - mid);
+  const float ny = gaze_y_ + cfg_.gaze_gain * (aim_y - mid);
+  // Only count a move that moved. Below a pixel the sampling offset rounds to
+  // the same integer, so the eye has not been anywhere and saying it has would
+  // make the guard below unable to fail.
+  if (std::fabs(nx - gaze_x_) < 1.0f && std::fabs(ny - gaze_y_) < 1.0f) return;
+  gaze_x_ = std::max(-mid, std::min(mid, nx));
+  gaze_y_ = std::max(-mid, std::min(mid, ny));
+  ++gaze_moves_;
 }
 
 void Retina::reset_stream() {
@@ -168,6 +242,7 @@ void Retina::reset_stream() {
   // creature looking at nothing.
   gaze_x_ = 0.0f;
   gaze_y_ = 0.0f;
+  frames_to_aim_ = aim_period_;
 }
 
 Retina::CellGeometry Retina::geometry(uint32_t cell) const {

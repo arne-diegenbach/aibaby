@@ -421,6 +421,9 @@ bool compile_dna_toml(const std::string& path, std::vector<uint8_t>& out,
     header.vision.gain = float(r.number("gain"));
     header.vision.frame_hz = float(r.number("frame_hz"));
     header.vision.latency_ms = float(r.number("latency_ms"));
+    header.vision.gaze_rate_hz = float(r.number("gaze_rate_hz"));
+    header.vision.gaze_gain = float(r.number("gaze_gain"));
+    header.vision.gaze_peak_frac = float(r.number("gaze_peak_frac"));
     collect(r);
   }
   {
