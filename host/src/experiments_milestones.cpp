@@ -498,6 +498,49 @@ bool run_babble(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose,
   double self_sum = 0.0;
   double expl_sum = 0.0, expl_min = 1e9, expl_max = -1e9;
   uint64_t expl_n = 0;
+
+  // --- Why does the creature only ever say one vowel? ------------------------
+  //
+  // Every parameter that shapes vowel colour is read as a population centroid
+  // over neuron index, and every one of them is pinned to the middle fifth of
+  // its range. Every parameter read as a group firing RATE — loudness, voicing
+  // — uses its whole range. Two readouts side by side in one module, and only
+  // one of them moves.
+  //
+  // That looks like a clean controlled comparison for the place-code story:
+  // a centroid over an untuned group is the centre of that group, whatever the
+  // input does. It is not clean, because the two readouts are also smoothed
+  // differently — 800 ms on the formants against 60 ms on the gate. An 800 ms
+  // EMA over a 10 ms frame averages ~80 samples, and a raw centroid wandering
+  // freely would come out of it looking exactly as pinned as one that never
+  // moved.
+  //
+  // The two stories have completely different fixes — topography, or one
+  // genome constant — so this measures the centroid BEFORE the smoothing. It
+  // is computed here rather than in the core because it must not be able to
+  // change anything: same `rate_fast` the decoder reads, same slicing, no core
+  // state added, and therefore no way to move the determinism hash.
+  const aibaby::DnaVocal& vcfg = s.dna.header().vocal;
+  const uint32_t formant_group[4] = {0, 2, 3, 4};
+  const char* formant_name[4] = {"f0", "F1", "F2", "F3"};
+  uint32_t raw_hist[4][10] = {};
+  double raw_sum[4] = {}, raw_sq[4] = {}, raw_lo[4] = {1e9, 1e9, 1e9, 1e9};
+  double raw_hi[4] = {-1e9, -1e9, -1e9, -1e9};
+  double sm_sum[4] = {}, sm_sq[4] = {};
+  auto raw_centroid = [&](const aibaby::Network& net, const aibaby::ModuleState& ms,
+                          uint32_t g) -> double {
+    const uint32_t b = ms.begin + aibaby::slice_begin(ms.count, aibaby::kVocalGroups, g);
+    const uint32_t e = ms.begin + aibaby::slice_begin(ms.count, aibaby::kVocalGroups, g + 1);
+    if (e <= b) return 0.5;
+    const double n = double(e - b);
+    double weighted = 0.0, total = 0.0;
+    for (uint32_t i = b; i < e; ++i) {
+      const double r = double(net.rate_fast(i));
+      weighted += r * ((double(i - b) + 0.5) / n);
+      total += r;
+    }
+    return total > 1e-6 ? weighted / total : 0.5;
+  };
   for (uint64_t t = 0; t < ticks; ++t) {
     // Hearing happens before the step, so the mel frame the creature acts on
     // is the one its previous motor frame produced.
@@ -524,6 +567,20 @@ bool run_babble(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose,
     f1_sum += f1v;
     f1_hist[std::min<uint32_t>(9, uint32_t(f1v * 10.0f))]++;
     amp_hist[std::min<uint32_t>(9, uint32_t(float(v.amplitude) * 10.0f))]++;
+    {
+      const aibaby::ModuleState& vms = s.brain.network().module(uint32_t(vm));
+      for (int k = 0; k < 4; ++k) {
+        const double raw = raw_centroid(s.brain.network(), vms, formant_group[k]);
+        raw_hist[k][std::min<uint32_t>(9, uint32_t(raw * 10.0))]++;
+        raw_sum[k] += raw;
+        raw_sq[k] += raw * raw;
+        if (raw < raw_lo[k]) raw_lo[k] = raw;
+        if (raw > raw_hi[k]) raw_hi[k] = raw;
+        const double sm = double(s.brain.vocal_groups()[formant_group[k]]);
+        sm_sum[k] += sm;
+        sm_sq[k] += sm * sm;
+      }
+    }
     if (v.voicing > 0.5f) ++voiced;
     if (v.amplitude > kAmplitudeFloor) ++loud;
     if (v.voicing > 0.5f && v.amplitude > kAmplitudeFloor &&
@@ -580,6 +637,43 @@ bool run_babble(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose,
     std::printf("\n  amplitude histogram (0.0 -> 1.0):\n    ");
     for (int i = 0; i < 10; ++i) std::printf("%6u", amp_hist[i]);
     std::printf("\n");
+
+    // The centroid before the 800 ms articulator inertia gets to it. The
+    // decisive column is `range`: if the raw centroid never leaves the middle
+    // either, the group has no structure to smooth away and the place code is
+    // the problem. If it swings and only the smoothed value is pinned, the
+    // vowel space is being erased by one genome constant.
+    if (frames > 0) {
+      const double n = double(frames);
+      const double frame_ms = double(ticks) / n * double(s.dna.header().sim.dt_ms);
+      const double a = 1.0 - std::exp(-frame_ms / double(vcfg.smoothing_ms));
+      std::printf("\n  is the vowel space absent, or smoothed away?"
+                  "  (%.0f ms motor frame, %.0f ms inertia)\n",
+                  frame_ms, double(vcfg.smoothing_ms));
+      std::printf("    %-5s %-16s %-9s %-9s %-9s %s\n", "", "raw centroid",
+                  "raw sd", "smoothed", "ratio", "");
+      for (int k = 0; k < 4; ++k) {
+        const double rm = raw_sum[k] / n;
+        const double rsd = std::sqrt(std::max(0.0, raw_sq[k] / n - rm * rm));
+        const double sm = sm_sum[k] / n;
+        const double ssd = std::sqrt(std::max(0.0, sm_sq[k] / n - sm * sm));
+        char range[32];
+        std::snprintf(range, sizeof(range), "%.3f .. %.3f", raw_lo[k], raw_hi[k]);
+        std::printf("    %-5s %-16s %-9.4f %-9.4f %-9.1f\n", formant_name[k], range,
+                    rsd, ssd, ssd > 1e-9 ? rsd / ssd : 0.0);
+      }
+      // What the smoothing alone could account for. An EMA on white noise cuts
+      // the spread by sqrt(a/(2-a)); the raw centroid is autocorrelated, so the
+      // real attenuation is weaker than this and the number is a bound, not a
+      // prediction. A measured ratio near it says the filter explains the
+      // pinning; a ratio near 1 says the filter is innocent.
+      std::printf("    an 800 ms EMA can attenuate by at most %.1fx (white noise);\n"
+                  "    a measured ratio near that is the filter, near 1.0 is the code\n",
+                  1.0 / std::sqrt(a / (2.0 - a)));
+      std::printf("  raw F1 centroid histogram (0.0 -> 1.0):\n    ");
+      for (int i = 0; i < 10; ++i) std::printf("%6u", raw_hist[1][i]);
+      std::printf("\n");
+    }
   }
 
   // We want a babbler, not a drone and not a mute. The band is wide on purpose:
