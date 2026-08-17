@@ -176,7 +176,7 @@
       </div>
 
       <div class="card">
-        <h2>eyes — foveated retina</h2>
+        <h2>eyes — foveated retina <span class="pill" id="eye-mount">fixed</span></h2>
         <canvas id="retina" height="130"></canvas>
         <div class="actions">
           <button id="camera" disabled>enable camera</button>
@@ -184,10 +184,14 @@
         <div class="drive" style="margin-top:10px">
           <div class="row"><span class="name">contrast</span><span id="viscontrast-v">—</span></div>
           <div class="bar"><i id="viscontrast" style="background:var(--warn)"></i></div>
+          <div class="row"><span class="name">gaze</span><span id="gaze-v">—</span></div>
+          <div class="row"><span class="name">re-aims</span><span id="gaze-moves">—</span></div>
         </div>
         <div class="note">
           Centre-surround, so a blank wall reads as nothing however bright it
-          is. Warm is ON, cool is OFF; the middle square is the fovea.
+          is. Warm is ON, cool is OFF; the middle square is the fovea. The
+          crosshair is where the eye is pointing and the hollow ring is where it
+          has been told to go — they separate while it is still travelling.
         </div>
       </div>
 

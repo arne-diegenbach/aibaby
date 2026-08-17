@@ -179,6 +179,9 @@ failed.
 `tools/` holds two genome-editing helpers that assert their edit matched, and
 `tools/README.md` the sweep pattern they belong to — read it before running one,
 because three of this project's sweeps have had to be thrown away and repeated.
+It also holds the two harnesses for the parts no experiment can reach:
+`eye_wire_test.py` drives the eye port over a real socket, and
+`eye_panel_test.py` checks the panel in real Chrome, down to the pixels.
 
 `m2` runs five creatures and takes about twenty seconds; `g2` runs nine
 creatures against nine yoked controls and takes a couple of minutes; `m3` runs
@@ -535,6 +538,82 @@ target is deliberately below free-running to hold the duty cycle down. The
 invariant "targets must equal free-running rates" is about measurement
 validity; it collides here with a behavioural requirement, and the behavioural
 one wins.
+
+### The eye points itself, and there is a port for a real one
+
+DNA v31 gave the retina a controller: once per frame it re-aims at the centroid
+of the cells responding above 0.70 of the peak. Inside the fovea it recovers
+**67%** of what a perfect eye would gain (vision 0.520 → 0.840, gaze 3.8 → 1.3
+px); outside the fovea it recovers nothing, and peripheral acquisition is the
+named next problem. It was switched on at v1.0.1 for the live path rather than
+for a milestone — a real camera does not hand the creature a pre-centred object
+and every experiment here does.
+
+What the retina owns is a **crop window over a fixed camera**. A real eye is
+different in kind: it belongs to whoever built it, it takes a command, it moves
+at its own pace, and it answers late. So the seam is drawn between the two
+halves that were never one thing — **where to look** stays in the creature,
+**how the eye gets there** leaves — and the port is data in and data out with no
+callback, the same shape as `present()`/`features()`:
+
+```
+     controller (DNA v31, in the retina)
+              │  gaze_command()  — px, and fractions of the frame
+              ▼
+        [ your actuator ]        — pan/tilt head, upstream cropper, robot arm
+              │  report_gaze()   — where it actually is, echoing the command seq
+              ▼
+     sampling, and the panel's crosshair
+```
+
+`Retina::EyeMount` says which side is aiming. `kInternal` slides the sampling
+window; `kExternal` means the frame already arrives aimed and the window must
+not slide as well. The same three operations exist over the WebSocket as `eye`,
+`gaze` and `look`, so the device can be out of process — `tools/eye_wire_test.py`
+drives all of it against a live host, and §9.1 of the requirements is the
+message reference.
+
+Four things this cost a measurement to learn, in the order they matter to
+somebody wiring up hardware.
+
+**A fast actuator is more dangerous than a slow one.** One frame of reporting
+lag with an instant actuator flings the eye into the frame rails — 26 px on a
+64 px frame — while the *same* lag at half slew is fine at 1.6 px. The slew is
+acting as the low-pass that holds loop gain under one across the dead time,
+because the controller re-aims every frame with no model of its own motion and
+so keeps commanding movement it cannot yet see. **Readback precision is nearly
+free**: 2.0 px of encoder noise costs nothing. Spend on reporting latency, not
+on encoder resolution.
+
+**Applying the aim twice is silent.** Leaving the mount internal while a device
+is also aiming is the obvious integration mistake, and the expectation was that
+it would tear the loop apart. It does not: at gain 0.70 the doubled loop is
+1.4, inside the stability bound of 2, so it converges on the toy and scores like
+a working eye — 1.3 px from the toy while the host reports 2.6. On the
+pessimistic motor it is not punished either, because slew 0.5 was already
+halving the loop and the doubling cancels it. **No arm in `gazeprobe` detects
+the mistake from performance.** The only symptom is that the two ends disagree
+about where the eye is, which is why `mount` is an enum and not a comment, and
+why the panel now draws the position and the command as separate marks.
+
+**A correctly wired external eye is the same creature.** `gazeprobe`'s `device`
+arm runs the whole loop through the port with the harness acting as the eye, and
+reads 0.840 / 1.3 px against the internal controller's 0.840 / 1.4 px. That arm
+fails the probe if the two ever diverge, because a port that quietly changes the
+answer is worse than no port.
+
+**The freeze is worth 0.3 px, and it is kept anyway.** When a device stops
+answering, the controller stops commanding — built from the servo sweep's
+divergence, on the reasoning that steering blind is what the sweep punished.
+Measured, it buys almost nothing: 1.8 px of command drift held against 2.1 px
+open, in the one arrangement that leaves the loop wanting anything (an eye lost
+on the first frame, before it ever reaches the toy). The reason is structural
+and worth knowing rather than fearing — **the loop is proportional with no
+integrator**, so a command is one gain-step off a frozen belief and cannot wind
+up however long the device is gone. The runaway it was built against needs a
+device that answers *late* rather than one that stops. What it is kept for is
+the interface guarantee and an explicit `held` counter; the timeout is settable
+if you want the other behaviour.
 
 ### M3 — cross-modal association: **built, G3 not met**
 

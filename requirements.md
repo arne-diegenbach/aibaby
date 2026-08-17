@@ -228,6 +228,25 @@ parameters and state.
 > **Node is a relay, not a host.** Keeping the core in its own process rather than an N-API
 > addon means no event-loop blocking, and the exact same binary runs headless on device.
 
+### 6.3.1 The eye port — a moving eye that is not the browser's
+
+The retina points itself (DNA v31), and the body it points is not necessarily a crop window
+over a webcam. The seam is drawn between the two halves that were never one thing: **where to
+look** stays in the creature, **how the eye gets there** belongs to whoever owns the hardware.
+
+- `Retina::gaze_command()` publishes the wanted position after every frame, in pixels and in
+  fractions of the frame. Fractions are the device unit: multiply by field of view for degrees
+  and never learn the retina's resolution.
+- `Retina::report_gaze()` takes the position back, optionally echoing the command sequence
+  number it reflects, from which the host reports the loop's dead time in frames.
+- `Retina::EyeMount` says which side aims. `kInternal` slides the sampling window; `kExternal`
+  means the frame already arrives aimed and the window must not slide as well.
+
+Data in and data out, with no callback: an integrator polls it from a loop they already have,
+and nothing in the retina calls into their code at a moment they did not choose. The same three
+operations exist over the WebSocket as `eye`, `gaze` and `look`, so the device may equally be
+out of process — see §9.
+
 ### 6.4 Portability discipline
 
 The ESP32-S3 has ~512 KB SRAM and 8 MB PSRAM. It **cannot** host camera + mic + FFT + a growing
@@ -279,8 +298,30 @@ also feeds sleep replay (§3.6). Cheap to build now, painful to retrofit.
 - Explicit feedback: good / bad, mapped to `R_external`
 - Push-to-talk for speaking to the baby
 - **Telemetry panel** — live neuron count per module, firing rates, reward trace, growth and
-  prune events. This is a debugging necessity, not a nice-to-have; without it a failure to learn
-  is indistinguishable from a crash.
+  prune events, and where the eye is pointing. This is a debugging necessity, not a
+  nice-to-have; without it a failure to learn is indistinguishable from a crash.
+
+### 9.1 The eye, over the wire
+
+Three text commands and one telemetry block, so a moving eye can live outside this process
+(§6.3.1). Positions travel in either unit and either may be omitted: `fx`/`fy` are fractions of
+the frame and are what a device should speak; `x`/`y` are pixels from the frame centre.
+
+| message | meaning |
+|---|---|
+| `{"cmd":"eye","mount":"external"\|"internal","timeout":5}` | which side owns the actuator, and how many frames of silence count as a lost eye |
+| `{"cmd":"gaze","fx":0.12,"fy":0,"seq":41}` | feedback: where the device says the eye actually is, echoing the command it was acting on |
+| `{"cmd":"look","fx":0,"fy":0}` | steering from outside: an attention system or a caregiver overriding the reflex |
+
+Telemetry carries `gaze`: `x`/`y` where the eye is, `cx`/`cy` and `fx`/`fy` where it has been
+told to be, `seq`, `moves`, `mount`, `stale`, `lag` in frames, `reports`, and `stalls` — re-aims
+suppressed because the device went quiet.
+
+Two rules the implementation enforces rather than documents. A report to an internal eye is
+**refused and not counted**, so a client that forgot to set the mount sees `reports` stay at
+zero instead of quietly losing a fight with the servo model. And staleness is counted in
+**retinal frames**, not wall-clock: with the camera stopped the controller is not acting, so
+there is nothing to be late for.
 
 ---
 

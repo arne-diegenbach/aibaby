@@ -85,6 +85,10 @@ class Retina {
   //   slew         fraction of the remaining distance covered per frame. 1 is
   //                a teleport; a real actuator is well under that.
   //   noise_px     readback error, because an encoder is not a promise.
+  //
+  // Applies to an internal eye only. On an external one the device *is* the
+  // servo and brings its own lag, slew and encoder error, so there is nothing
+  // here left to simulate.
   struct Servo {
     uint32_t dead_frames = 0;
     float slew = 1.0f;
@@ -96,7 +100,99 @@ class Retina {
   // direct placement was undone on the very next frame and the oracle arm
   // silently became the fixed arm. Anything that positions the eye from outside
   // has to move the command with it.
+  //
+  // On an external eye there is nothing to teleport — you cannot assign a motor
+  // a position — so this issues the command and leaves the position to whatever
+  // the device reports. Use it for an attention system that wants to override
+  // the reflex, not as a way to know where the eye is.
   void look_at(float x, float y);
+
+  // --- The eye port ---------------------------------------------------------
+  //
+  // Everything above assumes the eye is a crop window this class slides over a
+  // fixed camera. A real eye is a device somebody else owns: it accepts a
+  // command, moves at its own pace, and reports back — and it may be a pan/tilt
+  // head, a browser cropping a larger frame before it sends one, or a robot arm
+  // holding a phone. The port is the seam between the two halves that were
+  // never really one thing:
+  //
+  //   the controller  — where to look. Stays here: it is the creature's.
+  //   the actuator    — how the eye gets there. Leaves: it is the body's.
+  //
+  // The port is data in and data out, with no callback and no ownership. Read
+  // `gaze_command()` after each frame, drive whatever you have with it, and
+  // hand back a `GazeReport` when the device says where it ended up. That is
+  // the whole interface, and it is the same shape as `present()`/`features()`
+  // for the same reason: an integrator can poll it from a loop they already
+  // have, and nothing here can call into their code at a moment they did not
+  // choose.
+  enum class EyeMount {
+    // This retina aims, by sliding its sampling window over the frame. The
+    // camera is fixed and wide; the `Servo` model above applies. Default, and
+    // what every experiment and the browser use today.
+    kInternal,
+    // Something outside aims. Frames arrive ALREADY AIMED — the head turned, or
+    // an upstream cropper moved its window — so the sampling window must NOT
+    // slide as well.
+    //
+    // Getting this wrong applies the aim twice, and `gazeprobe`'s `doubled`
+    // arms say what that costs: nothing you can see. At gain 0.70 the doubled
+    // loop is 1.4, inside the stability bound of 2, so it converges on the
+    // target and scores like a working eye — 1.3 px from the toy while the host
+    // reports 2.6 px. On a slow motor it is not punished either, because the
+    // slew was already halving the loop. The only symptom is that the two ends
+    // disagree about where the eye is, which is why this is an enum the caller
+    // must pick rather than a note in a comment.
+    kExternal,
+  };
+
+  // What the controller wants, published after every frame. Two units because
+  // the device's are not the retina's: pixels are what this class thinks in,
+  // and a fraction of the frame is what survives contact with a real lens —
+  // multiply by the field of view to get degrees and the integrator never has
+  // to know the retina's resolution.
+  struct GazeCommand {
+    float x_px = 0.0f, y_px = 0.0f;      // from frame centre, +x right, +y down
+    float x_frac = 0.0f, y_frac = 0.0f;  // the same, as a fraction of the frame
+    uint64_t seq = 0;                    // bumps on change; 0 = never commanded
+  };
+
+  // What the device says came back. `seq` is the command this position reflects
+  // — echo the `seq` you were acting on and the retina will tell you your own
+  // loop's dead time in frames, which is the one servo parameter measured to be
+  // dangerous. Echo 0 if the device cannot say, and the lag reads unknown.
+  struct GazeReport {
+    float x_px = 0.0f, y_px = 0.0f;
+    uint64_t seq = 0;
+  };
+
+  void set_eye_mount(EyeMount mount);
+  EyeMount eye_mount() const { return mount_; }
+  GazeCommand gaze_command() const;
+  void report_gaze(const GazeReport& report);
+
+  // How many frames of silence before the eye counts as gone. Counted in
+  // FRAMES, not wall-clock: with the camera stopped the controller is not
+  // acting, so there is nothing for the device to be late for.
+  //
+  // While it is stale the controller stops issuing commands. That was built
+  // from the servo sweep's divergence and it is worth less than it looks:
+  // measured, it saves 0.3 px of command drift, because this loop is
+  // proportional with no integrator and so cannot wind up against a frozen
+  // belief however long the device is gone. It is kept as an interface
+  // guarantee — a predictable response to a dead device, and an explicit
+  // `eye_stalls()` counter — rather than as a protection. The runaway it looks
+  // like it prevents belongs to a device that answers LATE, which is `Servo`
+  // above, at 26 px.
+  void set_eye_timeout_frames(uint32_t frames);
+  bool eye_stale() const;
+  // Measured from the seq round-trip, 0 if the device does not echo one.
+  uint32_t eye_lag_frames() const { return eye_lag_frames_; }
+  uint64_t eye_reports() const { return eye_reports_; }
+  // Re-aims suppressed because the eye had gone quiet. The did-it-run guard
+  // for the freeze: a device that never reports and a controller that never
+  // wanted to move look identical in `gaze_moves()`.
+  uint64_t eye_stalls() const { return eye_stalls_; }
 
   // Where a cell sits in the image, normalised to [0,1], plus its footprint.
   // Only the panel needs this; the core is told a count and nothing more.
@@ -155,8 +251,28 @@ class Retina {
   void servo_advance();
   // What the controller believes about its own position: stale by dead_frames
   // and wrong by noise_px. With the default servo this is exactly gaze_x_.
+  // On an external eye it is the last report, because a real controller has no
+  // other source of truth about where its own eye is.
   float reported_x();
   float reported_y();
+
+  // Eye port state. `cmd_seq_` is bumped by every command that changes
+  // anything, and `seq_frame_` remembers when each was issued so an echoed seq
+  // becomes a lag in frames. The ring is a power of two and fixed-size: a
+  // device that echoes something older than kSeqRing commands ago is not one
+  // whose lag anybody needs to the frame.
+  static constexpr uint32_t kSeqRing = 16;
+  EyeMount mount_ = EyeMount::kInternal;
+  uint64_t cmd_seq_ = 0;
+  uint64_t seq_frame_[kSeqRing] = {};
+  uint64_t eye_reports_ = 0;
+  uint64_t eye_stalls_ = 0;
+  uint64_t last_report_frame_ = 0;
+  uint64_t last_lag_seq_ = 0;
+  uint32_t eye_timeout_frames_ = 5;
+  uint32_t eye_lag_frames_ = 0;
+
+  void issue_command(float x, float y);
 };
 
 // Synthetic scenes, so the headless experiments can show the baby something

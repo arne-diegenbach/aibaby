@@ -267,7 +267,7 @@
 
   var retinaCells = null;
 
-  function drawRetina(values, shape) {
+  function drawRetina(values, shape, gaze) {
     if (!retinaCtx) return;
     var d = clear(retinaCtx, retinaCanvas);
     if (!values || !values.length || !shape) return;
@@ -300,6 +300,37 @@
     retinaCtx.strokeRect(ox + fo * scale, oy + fo * scale,
                          shape.fovea * scale, shape.fovea * scale);
     retinaCtx.setLineDash([]);
+
+    // Where the eye is pointing, in the frame the camera sent. Drawn over the
+    // cells rather than beside them: the whole retinal layout slides with the
+    // gaze, so a number in a table cannot say what a mark on the picture says.
+    if (!gaze) return;
+    var half = shape.frame / 2;
+    var mark = function (px, py) {
+      return { x: ox + (half + px) * scale, y: oy + (half + py) * scale };
+    };
+    // The command first, so the actual position draws on top of it. They sit on
+    // each other on an ideal eye and separate on a slow one, which is the
+    // clearest thing this display can show about a motor.
+    var far = Math.abs(gaze.cx - gaze.x) > 0.75 || Math.abs(gaze.cy - gaze.y) > 0.75;
+    if (far) {
+      var c = mark(gaze.cx, gaze.cy);
+      retinaCtx.strokeStyle = 'rgba(242,163,94,0.45)';
+      retinaCtx.beginPath();
+      retinaCtx.arc(c.x, c.y, 4, 0, Math.PI * 2);
+      retinaCtx.stroke();
+    }
+    var g = mark(gaze.x, gaze.y);
+    // Red once the device has stopped answering: the controller freezes there,
+    // so the crosshair is telling the truth by not moving and the colour is the
+    // only thing that can say the difference between that and nothing to look at.
+    retinaCtx.strokeStyle = gaze.stale ? 'rgba(242,94,94,0.9)' : 'rgba(94,200,242,0.9)';
+    retinaCtx.beginPath();
+    retinaCtx.moveTo(g.x - 6, g.y);
+    retinaCtx.lineTo(g.x + 6, g.y);
+    retinaCtx.moveTo(g.x, g.y - 6);
+    retinaCtx.lineTo(g.x, g.y + 6);
+    retinaCtx.stroke();
   }
 
   // The vowel plane. Where a sound sits in F1/F2 is what makes it that vowel
@@ -456,6 +487,27 @@
     setDrive('miclevel', Math.min(1, frame.micPeak || 0));
     setDrive('viscontrast', Math.min(1, (frame.visionContrast || 0) * 3));
 
+    // The eye's own readouts. `re-aims` is the did-it-run guard the headless
+    // probe needed for the same reason: a controller that never fires and one
+    // that fires and lands nowhere look identical in every other number here.
+    var eye = frame.gaze;
+    if (eye) {
+      // Through num() rather than straight off the wire: render() is a single
+      // chain and a `.toFixed` on a field an older host does not send throws
+      // half way down it, which presents as the ears display dying.
+      var num = function (v) { return typeof v === 'number' ? v : 0; };
+      text('gaze-v', num(eye.x).toFixed(1) + ', ' + num(eye.y).toFixed(1) + ' px');
+      text('gaze-moves', num(eye.moves).toLocaleString() +
+                         (eye.stalls ? ' (' + eye.stalls + ' held)' : ''));
+      var label = eye.mount === 'external'
+          ? (eye.stale ? 'eye lost' : 'device' + (eye.lag ? ' +' + eye.lag + 'f' : ''))
+          : (eye.moves ? 'tracking' : 'fixed');
+      var mountPill = text('eye-mount', label);
+      if (mountPill) {
+        mountPill.className = 'pill' + (eye.stale ? '' : (eye.moves ? ' on' : ''));
+      }
+    }
+
     // The camera cannot open until we know how big a frame the genome expects,
     // and that arrives with the first telemetry frame. Enabling the button
     // before then would let someone start a stream the host will silently
@@ -515,7 +567,7 @@
     drawRasterColumn(frame.modules);
     drawTrace(frame.trace, frame.threshold);
     drawMel(frame.mel);
-    drawRetina(frame.retina, frame.retinaShape);
+    drawRetina(frame.retina, frame.retinaShape, frame.gaze);
     drawFormants(v);
     drawReward(r);
     drawAvatar(frame);

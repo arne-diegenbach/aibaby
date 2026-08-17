@@ -1,7 +1,59 @@
-# Sweep tooling
+# Tooling
 
 Two scripts for editing one field of a genome without touching anything else,
-and one pattern for running a sweep that cannot silently lie to you.
+two for the eye port and the panel that displays it, and one pattern for running
+a sweep that cannot silently lie to you.
+
+## `eye_wire_test.py` — the eye port, end to end
+
+```sh
+tools/eye_wire_test.py          # needs build/aibaby; AIBABY_PORT overrides 8099
+```
+
+Starts a real host, speaks the WebSocket handshake and frame format directly,
+and drives the whole eye API: steer in pixels and in frame fractions, switch the
+mount, feed position reports back, run a closed loop with the harness acting as
+the device, then stop answering and check the creature notices. Nineteen checks,
+about a minute.
+
+It exists because none of that is reachable from `--experiment`: the experiments
+link the retina straight into a probe, so they can prove the port is correct
+C++ and cannot prove a single byte of the protocol on top of it. See §6.3 in the
+requirements for what else lives on that seam.
+
+Three things it is built around, each of which has made a working feature look
+broken:
+
+- **Read the *latest* telemetry frame, not the next one.** The host broadcasts
+  at 30 Hz whether or not anyone is reading, so there is a backlog in front of
+  whatever you just did.
+- **Clear `contrast_floor` with the test stimulus.** A 5 px disc at 220/110 on a
+  64 px frame reads 0.036 against a floor of 0.06, so the controller correctly
+  refuses to chase it — and a controller that is right to do nothing looks
+  exactly like a port that is broken.
+- **Keep test movement inside the fovea.** Swinging the toy out into the rings
+  reproduces the known peripheral-acquisition failure instead of whatever you
+  were trying to measure: no command is issued, so anything timed against a
+  command reads zero.
+
+## `eye_panel_test.py` — does the panel draw where the eye is looking?
+
+```sh
+tools/eye_panel_test.py         # needs google-chrome and build/aibaby
+```
+
+Real Chrome, headless, driven over CDP: loads the panel, moves the eye from a
+second socket, and asserts both the readout text and the **pixels** — it counts
+strong blue on the retina canvas and checks the centroid lands where the eye is,
+rather than trusting that a draw call was made. Nothing is streaming during the
+test, so every cell is drawn at alpha 0.04 and the crosshair is the only bright
+thing on the canvas, which is what makes that measurable at all.
+
+`--virtual-time-budget` with `--dump-dom` is flaky here; CDP is not. And if you
+extend this to anything held, dragged or hovered, use `Input.dispatchMouseEvent`
+at real coordinates — `el.click()` and synthetic `MouseEvent`s reach your
+handlers but bypass hit testing, which is how push-to-talk stayed broken for a
+week with the harness reporting PASS.
 
 ```sh
 tools/genome_set_module.py     dna/default.toml out.toml central:norm_gain=1.0 vision:n_max=256

@@ -60,6 +60,23 @@ float json_number(const std::string& msg, const std::string& key, float fallback
   return float(std::strtod(msg.c_str() + pos + 1, nullptr));
 }
 
+bool json_has(const std::string& msg, const std::string& key) {
+  return msg.find("\"" + key + "\"") != std::string::npos;
+}
+
+// Sequence numbers go through this rather than through json_number: a float
+// stops counting exactly at 2^24, and a gaze sequence that silently starts
+// repeating itself would make the eye's measured lag quietly wrong instead of
+// obviously wrong.
+uint64_t json_uint(const std::string& msg, const std::string& key) {
+  const std::string needle = "\"" + key + "\"";
+  size_t pos = msg.find(needle);
+  if (pos == std::string::npos) return 0;
+  pos = msg.find(':', pos + needle.size());
+  if (pos == std::string::npos) return 0;
+  return uint64_t(std::strtoull(msg.c_str() + pos + 1, nullptr, 10));
+}
+
 struct Options {
   std::string dna = "dna/default.toml";
   std::string journal = "journal.aibj";
@@ -421,6 +438,47 @@ int main(int argc, char** argv) {
     } else if (cmd == "praise") {
       brain.praise(amount);
       journal.record_reward(net.tick(), amount, amount);
+    } else if (cmd == "eye" || cmd == "gaze" || cmd == "look") {
+      // The eye port over the wire. Three messages, and between them they are
+      // the whole interface a moving eye needs — whether that eye is a pan/tilt
+      // head on a serial link, a browser cropping a larger frame before it
+      // sends one, or an attention system that wants to override the reflex.
+      //
+      // Positions travel in TWO units and either may be omitted. `fx`/`fy` are
+      // fractions of the frame and are what a device should speak: multiply by
+      // the field of view for degrees and never learn how many pixels this
+      // retina has. `x`/`y` are those pixels, for the panel, which is drawing
+      // on a picture of them.
+      using aibaby_host::Retina;
+      const float frame = float(retina.frame_size());
+      const bool has_frac = json_has(msg, "fx") || json_has(msg, "fy");
+      const float px = has_frac ? json_number(msg, "fx", 0.0f) * frame
+                                : json_number(msg, "x", 0.0f);
+      const float py = has_frac ? json_number(msg, "fy", 0.0f) * frame
+                                : json_number(msg, "y", 0.0f);
+      if (cmd == "eye") {
+        // Who owns the actuator. Switching to external stops the sampling
+        // window sliding, because from here on the frames arrive already aimed.
+        const std::string mount = json_string(msg, "mount");
+        if (mount == "external") retina.set_eye_mount(Retina::EyeMount::kExternal);
+        else if (mount == "internal") retina.set_eye_mount(Retina::EyeMount::kInternal);
+        if (json_has(msg, "timeout")) {
+          retina.set_eye_timeout_frames(uint32_t(json_number(msg, "timeout", 5.0f)));
+        }
+      } else if (cmd == "gaze") {
+        // Feedback: where the device says the eye actually is. Echo the `seq`
+        // you were acting on and the host will report your loop's dead time
+        // back to you in the telemetry.
+        Retina::GazeReport report;
+        report.x_px = px;
+        report.y_px = py;
+        report.seq = json_uint(msg, "seq");
+        retina.report_gaze(report);
+      } else {
+        // Steering from outside. On an internal eye this teleports; on an
+        // external one it is a request the device is free to be slow about.
+        retina.look_at(px, py);
+      }
     }
   };
 
@@ -732,6 +790,31 @@ int main(int argc, char** argv) {
              << ",\"hz\":" << vcfg.frame_hz << "}"
              << ",\"visionContrast\":";
         json_number_out(json, retina.contrast());
+        // Where the eye is, where it was told to go, and whether whoever owns
+        // the motor is still answering. This is the outbound half of the eye
+        // port: a device reads `fx`/`fy` and drives with it, and the panel
+        // reads `x`/`y` and draws a crosshair. The v1.0.1 fovea shipped without
+        // any of this, so the eye moved in the browser with no way to see it —
+        // which is the invisible-mechanism failure this project keeps paying
+        // for, landing on the very path the change was justified by.
+        {
+          const aibaby_host::Retina::GazeCommand g = retina.gaze_command();
+          json << ",\"gaze\":{\"x\":"; json_number_out(json, retina.gaze_x());
+          json << ",\"y\":"; json_number_out(json, retina.gaze_y());
+          json << ",\"cx\":"; json_number_out(json, g.x_px);
+          json << ",\"cy\":"; json_number_out(json, g.y_px);
+          json << ",\"fx\":"; json_number_out(json, g.x_frac);
+          json << ",\"fy\":"; json_number_out(json, g.y_frac);
+          json << ",\"seq\":" << g.seq
+               << ",\"moves\":" << retina.gaze_moves()
+               << ",\"mount\":\""
+               << (retina.eye_mount() == aibaby_host::Retina::EyeMount::kExternal
+                       ? "external" : "internal")
+               << "\",\"stale\":" << (retina.eye_stale() ? "true" : "false")
+               << ",\"lag\":" << retina.eye_lag_frames()
+               << ",\"reports\":" << retina.eye_reports()
+               << ",\"stalls\":" << retina.eye_stalls() << "}";
+        }
         json << ",\"modules\":[";
         for (uint32_t m = 0; m < net.module_count(); ++m) {
           if (m) json << ',';

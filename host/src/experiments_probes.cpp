@@ -3473,8 +3473,22 @@ bool run_gazeprobe(const std::vector<uint8_t>& dna_blob, uint64_t ticks, bool ve
   // and `oracle` is the ceiling on what any controller could achieve, so a
   // reflex that lands between them can be scored as a *fraction of what was
   // available* rather than against an absolute anyone has to argue about.
-  enum Fovea { kFixed = 0, kReflex = 1, kOracle = 2, kServo = 3 };
-  const char* fovea_name[4] = {"fixed", "reflex", "oracle", "servo"};
+  enum Fovea {
+    kFixed = 0, kReflex = 1, kOracle = 2, kServo = 3,
+    // The eye-port arms. Everything from here on drives an eye this class does
+    // not own: the frame arrives already aimed and the position comes back as a
+    // report, which is what a pan/tilt head or an upstream cropper looks like
+    // from in here. They run in their own section rather than in the table
+    // above, because they answer "does the seam work" and not "what is
+    // foveation worth".
+    kDevice = 4,        // an ideal external eye, wired up correctly
+    kDoubled = 5,       // the same eye with the mount left internal
+    kDoubledServo = 6,  // ...on a motor, where a doubled gain has somewhere to go
+    kDropout = 7,       // the eye goes silent half way through every trial
+    kDropNoFreeze = 8,  // ...with the freeze disabled, to price it
+  };
+  const char* fovea_name[9] = {"fixed", "reflex", "oracle", "servo", "device",
+                               "doubled", "dbl+servo", "dropout", "no freeze"};
   // The imperfect eye the reflex would have to drive on real hardware. Not a
   // guess at any particular motor: the point is to find out whether the
   // controller degrades gracefully or falls over, before anyone buys one.
@@ -3493,6 +3507,11 @@ bool run_gazeprobe(const std::vector<uint8_t>& dna_blob, uint64_t ticks, bool ve
   // Swept by --verbose, because the threshold trades locality against centring
   // and both ends are a previously refuted design.
   float peak_frac_override = 0.0f;
+  // Written by the eye-port arms and read by the section that prints them.
+  // Out-params rather than a struct only because `arm` already has six and the
+  // two ways of adding a seventh are both worse than this.
+  double arm_drift = 0.0, arm_believed = 0.0;
+  uint64_t arm_stalls = 0, arm_reports = 0, drop_after_override = 0;
   auto arm = [&](double scatter, int fovea, double* vis_out, double* cen_out,
                  double* shuf_out, double* err_out, double* base_out,
                  uint64_t* moves_out) -> bool {
@@ -3509,7 +3528,7 @@ bool run_gazeprobe(const std::vector<uint8_t>& dna_blob, uint64_t ticks, bool ve
       // being fixed and the oracle was dragged around by the very controller
       // it exists to bracket. All three rows printed the same numbers, which
       // is the only reason it was noticed.
-      const bool driven = fovea == kReflex || fovea == kServo;
+      const bool driven = fovea != kFixed && fovea != kOracle;
       const float rate = driven ? vcfg.frame_hz : 0.0f;
       std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, vision) +
                       offsetof(aibaby::DnaVision, gaze_rate_hz),
@@ -3527,7 +3546,24 @@ bool run_gazeprobe(const std::vector<uint8_t>& dna_blob, uint64_t ticks, bool ve
     if (!retina.configure(s.dna.header().vision, error) || !ear.configure(acfg, error)) {
       return false;
     }
-    if (fovea == kServo) retina.set_servo(servo_model, s.dna.header().seed ^ 0x5E70u);
+    if (fovea == kServo || fovea == kDoubledServo) {
+      retina.set_servo(servo_model, s.dna.header().seed ^ 0x5E70u);
+    }
+    // The eye port. The `doubled` pair are the integration mistake this enum
+    // exists to price, so they are the arms that have a device aiming while the
+    // mount still tells the retina to aim as well.
+    const bool device = fovea >= kDevice;
+    const bool doubled = fovea == kDoubled || fovea == kDoubledServo;
+    if (device && !doubled) retina.set_eye_mount(Retina::EyeMount::kExternal);
+    if (fovea == kDropNoFreeze) retina.set_eye_timeout_frames(1u << 30);
+    float dev_x = 0.0f, dev_y = 0.0f;
+    uint64_t dev_frames = 0;
+    // Half of EVERY trial, not the first ten frames of the run. Killing the eye
+    // once leaves ninety-nine trials measuring one frozen position, which reads
+    // as a dead controller and says nothing about what losing a device costs.
+    // A link that drops half way through each fixation is also the failure a
+    // real one has.
+    const uint64_t drop_after = drop_after_override ? drop_after_override : 10;
     VowelSource voice(acfg.sample_rate);
     SceneSource scene(vcfg.frame_size, s.dna.header().seed);
     std::vector<uint8_t> frame(size_t(vcfg.frame_size) * vcfg.frame_size, 0);
@@ -3552,7 +3588,7 @@ bool run_gazeprobe(const std::vector<uint8_t>& dna_blob, uint64_t ticks, bool ve
 
     std::vector<std::vector<double>> xv, xc;
     std::vector<int> labels;
-    double gaze_err = 0.0, want_err = 0.0;
+    double gaze_err = 0.0, want_err = 0.0, believed_err = 0.0;
     uint32_t gaze_n = 0;
     const uint32_t n_trials = uint32_t(ticks / kM3ProbeTicks);
     for (uint32_t trial = 0; trial < n_trials; ++trial) {
@@ -3581,9 +3617,36 @@ bool run_gazeprobe(const std::vector<uint8_t>& dna_blob, uint64_t ticks, bool ve
       bool slept = false;
       for (uint64_t t = 0; t < kM3ProbeTicks; ++t) {
         if (t % frame_ticks == 0) {
-          scene.render(toy.shape, toy.cx, toy.cy, toy.radius, 0.85f, 0.02f, frame.data());
+          // An external eye has already turned by the time the frame is taken,
+          // so the world arrives displaced by the opposite of where the head is
+          // pointing. That is the whole difference between the two mounts, and
+          // rendering it here rather than cropping is what makes this a test of
+          // the port instead of a reimplementation of the sampler.
+          float tx = toy.cx, ty = toy.cy;
+          if (device) {
+            tx -= dev_x / float(vcfg.frame_size);
+            ty -= dev_y / float(vcfg.frame_size);
+          }
+          if (t == 0) dev_frames = 0;
+          scene.render(toy.shape, tx, ty, toy.radius, 0.85f, 0.02f, frame.data());
           retina.present(frame.data());
           s.brain.see(retina.features().data(), retina.feature_count());
+          if (device) {
+            // The device: ideal, so what is being measured is the seam and not
+            // a motor — `servo` above already prices the motor. It reads the
+            // published command, is there by the next frame, and says so.
+            const Retina::GazeCommand g = retina.gaze_command();
+            ++dev_frames;
+            if (fovea < kDropout || dev_frames <= drop_after) {
+              dev_x = g.x_px;
+              dev_y = g.y_px;
+              Retina::GazeReport rep;
+              rep.x_px = dev_x;
+              rep.y_px = dev_y;
+              rep.seq = g.seq;
+              retina.report_gaze(rep);
+            }
+          }
         }
         voice.render(0.0f, 0.0f, 0.0f, 0.0f, pcm.data(), samples_per_tick);
         ear.tick(s.brain, pcm.data(), samples_per_tick);
@@ -3595,13 +3658,23 @@ bool run_gazeprobe(const std::vector<uint8_t>& dna_blob, uint64_t ticks, bool ve
       // Where the eye ended up against where the toy was. In the oracle arm
       // this is 0 by construction and is printed as the proof of that.
       {
-        const double mid = 0.5 * double(vcfg.frame_size);
         const double want_x = (double(toy.cx) - 0.5) * double(vcfg.frame_size);
         const double want_y = (double(toy.cy) - 0.5) * double(vcfg.frame_size);
-        gaze_err += std::sqrt((double(retina.gaze_x()) - want_x) *
-                                  (double(retina.gaze_x()) - want_x) +
-                              (double(retina.gaze_y()) - want_y) *
-                                  (double(retina.gaze_y()) - want_y));
+        // Where the eye effectively ended up. On the doubled arm that is the
+        // sum of two aims — the device turned the head and the retina slid its
+        // window over the result — and reading either one alone would report a
+        // controller doing fine while the creature looks at nothing.
+        const double eye_x = double(retina.gaze_x()) + (doubled ? double(dev_x) : 0.0);
+        const double eye_y = double(retina.gaze_y()) + (doubled ? double(dev_y) : 0.0);
+        gaze_err += std::sqrt((eye_x - want_x) * (eye_x - want_x) +
+                              (eye_y - want_y) * (eye_y - want_y));
+        // What the host would have told you the eye was doing. On every other
+        // arm this is the same number; on the doubled ones it is the lie the
+        // mistake produces, and the size of the gap is the whole finding.
+        believed_err += std::sqrt((double(retina.gaze_x()) - want_x) *
+                                      (double(retina.gaze_x()) - want_x) +
+                                  (double(retina.gaze_y()) - want_y) *
+                                      (double(retina.gaze_y()) - want_y));
         want_err += std::sqrt(want_x * want_x + want_y * want_y);
         ++gaze_n;
       }
@@ -3628,6 +3701,20 @@ bool run_gazeprobe(const std::vector<uint8_t>& dna_blob, uint64_t ticks, bool ve
     *err_out = gaze_n ? gaze_err / double(gaze_n) : 0.0;
     *base_out = gaze_n ? want_err / double(gaze_n) : 0.0;
     *moves_out = retina.gaze_moves();
+    // How far the command ended up from the eye it is supposed to be steering.
+    // This is the quantity the freeze protects: while a device is silent the
+    // eye cannot move, so the damage a runaway controller does is entirely to
+    // the instruction waiting for the device when it comes back.
+    {
+      const Retina::GazeCommand g = retina.gaze_command();
+      arm_drift = std::sqrt((double(g.x_px) - double(dev_x)) *
+                                (double(g.x_px) - double(dev_x)) +
+                            (double(g.y_px) - double(dev_y)) *
+                                (double(g.y_px) - double(dev_y)));
+      arm_stalls = retina.eye_stalls();
+      arm_reports = retina.eye_reports();
+      arm_believed = gaze_n ? believed_err / double(gaze_n) : 0.0;
+    }
     return true;
   };
 
@@ -3706,6 +3793,117 @@ bool run_gazeprobe(const std::vector<uint8_t>& dna_blob, uint64_t ticks, bool ve
                   100.0 * (sv - f) / avail);
     }
   }
+  // The eye port. Everything above drives an eye this class owns — a crop
+  // window over a fixed camera, with or without a simulated motor. A real
+  // moving eye belongs to somebody else: it takes a command, turns in its own
+  // time, and hands back a position, and the frames it produces are already
+  // aimed. These four arms are that seam, measured rather than asserted.
+  //
+  // `device` is the one that has to come out equal to `reflex`. If a correctly
+  // wired external eye scores differently from the internal one, the port is
+  // lying about something and nothing built on it can be trusted.
+  bool port_ok = true;
+  {
+    std::printf("\n  the eye port, at scatter 0.10 (toy 4.9 px out)\n");
+    std::printf("    %-11s %-9s %-10s %-10s %-9s %s\n", "eye", "vision", "gaze err",
+                "host says", "reports", "held");
+    double reflex_v = 0.0, reflex_err = 0.0, device_v = 0.0, device_err = 0.0;
+    double dbl_err = 0.0, dbl_says = 0.0, dbl_servo_err = 0.0, servo_err = 0.0;
+    double freeze_drift = 0.0, nofreeze_drift = 0.0;
+    for (int f : {kReflex, kServo, kDevice, kDoubled, kDoubledServo, kDropout,
+                  kDropNoFreeze}) {
+      double v = 0, c = 0, sh = 0, err = 0, base = 0;
+      uint64_t moves = 0;
+      if (!arm(0.10, f, &v, &c, &sh, &err, &base, &moves)) {
+        std::printf("    %-11s arm failed\n", fovea_name[f]);
+        port_ok = false;
+        continue;
+      }
+      const char* note = f == kReflex ? "   <- the internal eye, for comparison"
+                       : f == kServo  ? "   <- ...and on the pessimistic motor"
+                                      : "";
+      std::printf("    %-11s %-9.3f %-10.1f %-10.1f %-9llu %llu%s\n", fovea_name[f],
+                  v, err, arm_believed, (unsigned long long)arm_reports,
+                  (unsigned long long)arm_stalls, note);
+      if (f == kReflex) { reflex_v = v; reflex_err = err; }
+      if (f == kServo) servo_err = err;
+      if (f == kDevice) { device_v = v; device_err = err; }
+      if (f == kDoubled) { dbl_err = err; dbl_says = arm_believed; }
+      if (f == kDoubledServo) dbl_servo_err = err;
+      if (f == kDropout) freeze_drift = arm_drift;
+      if (f == kDropNoFreeze) nofreeze_drift = arm_drift;
+    }
+    // Not exact equality: the external arm's device turns a head and sees new
+    // world where the internal arm's crop runs off the frame and edge-extends,
+    // so the two disagree about the background at the border by construction.
+    // The toy is what either eye is aiming at, and if the seam is right they
+    // land on it equally well.
+    const double dv = std::fabs(device_v - reflex_v);
+    const double de = std::fabs(device_err - reflex_err);
+    if (dv > 0.10 || de > 1.0) {
+      std::printf("    THE PORT DISAGREES WITH ITSELF — external %.3f/%.1f px against\n"
+                  "    internal %.3f/%.1f px. A correctly wired device is the same\n"
+                  "    creature; this is a bug in the seam, not a finding about eyes.\n",
+                  device_v, device_err, reflex_v, reflex_err);
+      port_ok = false;
+    }
+    // The doubled arms. The expectation going in was that applying the aim
+    // twice would tear the loop apart, and it does not: at gain 0.70 the
+    // doubled loop is 1.4, inside the stability bound of 2 for a proportional
+    // controller, so it converges on the toy and scores like a working eye.
+    // That is the finding, and it is worse news than divergence would have
+    // been — the mistake is SILENT, and the only thing that gives it away is
+    // that the two ends disagree about where the eye is.
+    std::printf("\n    applying the aim twice CONVERGES: the loop lands %.1f px from the\n"
+                "    toy while the host reports %.1f px, because each end is doing half\n"
+                "    the aiming and only one of them is being asked. Nothing above\n"
+                "    fails; the telemetry, the journal and every gaze number are wrong.\n",
+                dbl_err, dbl_says);
+    if (dbl_servo_err > 0.0) {
+      // And it is not even punished on a slow motor, which is where a doubled
+      // gain was supposed to have somewhere to go. It is not: slew 0.5 was
+      // already halving the loop, so doubling it lands back near the gain the
+      // controller was tuned at. Two mistakes cancelling is not a defence —
+      // it means there is no arm here in which performance reveals the bug.
+      std::printf("    on the pessimistic motor it costs %.1f px against %.1f px wired\n"
+                  "    correctly, i.e. nothing: slew 0.5 was already halving the loop, so\n"
+                  "    the doubling cancels it. No arm in this probe detects the mistake\n"
+                  "    from performance. The position disagreement is the only symptom,\n"
+                  "    which is why `mount` is an enum and not a comment.\n",
+                  dbl_servo_err, servo_err);
+    }
+    // The freeze, priced honestly. It was built from the servo sweep's
+    // divergence, and the sweep's divergence turns out not to be this failure.
+    std::printf("\n    a silent eye costs %.1f px of command drift with the freeze on and\n"
+                "    %.1f px with it off, because by the time the link drops the eye is\n"
+                "    already on the toy and there is no error left to act on.\n",
+                freeze_drift, nofreeze_drift);
+    {
+      // The case where there IS error left to act on: a device that dies on the
+      // first frame, before the eye ever reaches the toy. Dropping at frame 10
+      // finds the eye already there and dropping at 12 px finds a residual the
+      // controller cannot perceive anyway — peripheral acquisition is exactly
+      // what it cannot do — so this is the one arrangement that leaves the loop
+      // wanting something when the link goes.
+      double v = 0, c = 0, sh = 0, err = 0, base = 0;
+      uint64_t moves = 0;
+      double early_freeze = 0.0, early_open = 0.0;
+      drop_after_override = 1;
+      if (arm(0.10, kDropout, &v, &c, &sh, &err, &base, &moves)) early_freeze = arm_drift;
+      if (arm(0.10, kDropNoFreeze, &v, &c, &sh, &err, &base, &moves)) early_open = arm_drift;
+      drop_after_override = 0;
+      std::printf("    with the eye lost on the FIRST frame, before it ever gets there:\n"
+                  "    %.1f px held against %.1f px open. That is the whole of it, and it\n"
+                  "    is bounded by construction rather than by the freeze — the loop is\n"
+                  "    proportional with no integrator, so a command is one gain-step off\n"
+                  "    a frozen belief and cannot wind up however long the device is gone.\n"
+                  "    The freeze buys that step and an explicit `held` counter. The\n"
+                  "    runaway it was built against needs a device that answers LATE, not\n"
+                  "    one that stops: that is the servo row, at 26 px.\n",
+                  early_freeze, early_open);
+    }
+  }
+
   // How bad does the eye have to be before the controller stops working? The
   // loop has no model of its own motion — it re-aims every frame at gain 0.70
   // and corrects from where it *believes* it is — so stale readback is the
@@ -3759,7 +3957,7 @@ bool run_gazeprobe(const std::vector<uint8_t>& dna_blob, uint64_t ticks, bool ve
     ok = false;
   }
   (void)verbose;
-  if (!ok) return false;
+  if (!ok || !port_ok) return false;
   return positive_control("gazeprobe", "scatter 0.00 — the standard protocol — in `vision`",
                           centred_vision, 0.85,
                           "The curve below it is not measuring displacement.");

@@ -14,3 +14,4 @@ journal.aibj
 
 # One machine's permission allowlist, full of absolute paths.
 .claude/
+__pycache__/

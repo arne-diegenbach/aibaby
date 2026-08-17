@@ -59,6 +59,13 @@ bool Retina::configure(const aibaby::DnaVision& cfg, std::string& error) {
   gaze_x_ = 0.0f;
   gaze_y_ = 0.0f;
   gaze_moves_ = 0;
+  cmd_seq_ = 0;
+  eye_reports_ = 0;
+  eye_stalls_ = 0;
+  last_report_frame_ = 0;
+  last_lag_seq_ = 0;
+  eye_lag_frames_ = 0;
+  for (uint32_t i = 0; i < kSeqRing; ++i) seq_frame_[i] = 0;
   servo_reset();
   // Re-aim timing is in *frames*, because the retina only exists on frame
   // boundaries: a rate in Hz has to be reconciled with frame_hz or the eye
@@ -125,10 +132,102 @@ void Retina::build_cell(float cx, float cy, float pitch) {
 }
 
 void Retina::look_at(float x, float y) {
-  const float mid = 0.5f * float(frame_size_);
-  gaze_x_ = x < -mid ? -mid : (x > mid ? mid : x);
-  gaze_y_ = y < -mid ? -mid : (y > mid ? mid : y);
+  if (mount_ == EyeMount::kExternal) {
+    // Nothing to teleport: the eye is somebody else's hardware and the only
+    // thing this side can do is ask. The position stays whatever the device
+    // last reported, which is the truth rather than a wish.
+    issue_command(x, y);
+    return;
+  }
+  // Command first, then teleport onto it. The other order looks equivalent and
+  // is not: `servo_reset` assigns the command from the position, so by the time
+  // `issue_command` ran it had nothing left to change and the sequence number
+  // never advanced. An instruction that does not advance the seq is one a
+  // device polling for new commands cannot see.
+  issue_command(x, y);
+  gaze_x_ = cmd_x_;
+  gaze_y_ = cmd_y_;
   servo_reset();
+}
+
+// --- The eye port ----------------------------------------------------------
+
+void Retina::issue_command(float x, float y) {
+  const float mid = 0.5f * float(frame_size_);
+  const float cx = x < -mid ? -mid : (x > mid ? mid : x);
+  const float cy = y < -mid ? -mid : (y > mid ? mid : y);
+  // Only a command that commands something new gets a sequence number, so a
+  // device echoing the seq it is acting on is echoing a distinct instruction
+  // rather than a frame counter. A controller sitting still holds its seq and
+  // the measured lag stays the lag of the last real move.
+  if (cx == cmd_x_ && cy == cmd_y_ && cmd_seq_ != 0) return;
+  cmd_x_ = cx;
+  cmd_y_ = cy;
+  ++cmd_seq_;
+  seq_frame_[cmd_seq_ % kSeqRing] = frames_produced_;
+}
+
+void Retina::set_eye_mount(EyeMount mount) {
+  if (mount == mount_) return;
+  mount_ = mount;
+  // Hand over at the position the eye is at rather than at zero. Switching a
+  // live creature to a device should not make it look away from whatever it
+  // was watching; the device's first report will correct any disagreement.
+  cmd_x_ = gaze_x_;
+  cmd_y_ = gaze_y_;
+  servo_reset();
+  eye_lag_frames_ = 0;
+  last_lag_seq_ = cmd_seq_;
+  last_report_frame_ = frames_produced_;
+}
+
+Retina::GazeCommand Retina::gaze_command() const {
+  GazeCommand out;
+  out.x_px = cmd_x_;
+  out.y_px = cmd_y_;
+  const float inv = frame_size_ ? 1.0f / float(frame_size_) : 0.0f;
+  out.x_frac = cmd_x_ * inv;
+  out.y_frac = cmd_y_ * inv;
+  out.seq = cmd_seq_;
+  return out;
+}
+
+void Retina::report_gaze(const GazeReport& report) {
+  // Ignored on an internal eye, and deliberately not counted either: a client
+  // that reports without switching the mount over sees `eye_reports()` stay at
+  // zero, which says what is wrong. Accepting the report and quietly losing the
+  // fight with the servo model would not.
+  if (mount_ != EyeMount::kExternal) return;
+  const float mid = 0.5f * float(frame_size_);
+  gaze_x_ = report.x_px < -mid ? -mid : (report.x_px > mid ? mid : report.x_px);
+  gaze_y_ = report.y_px < -mid ? -mid : (report.y_px > mid ? mid : report.y_px);
+  ++eye_reports_;
+  last_report_frame_ = frames_produced_;
+  // Only a seq that has not been acknowledged yet measures anything. A device
+  // that keeps echoing the command it is already sitting on is not being slow —
+  // it is being still, and treating that as lag makes the number climb without
+  // bound while the eye is parked on its target. The last real round trip
+  // stands until there is a newer one, which is what a caller wants to read
+  // when they ask how quick their own loop is.
+  if (report.seq > last_lag_seq_ && report.seq <= cmd_seq_ &&
+      cmd_seq_ - report.seq < kSeqRing) {
+    const uint64_t issued = seq_frame_[report.seq % kSeqRing];
+    if (frames_produced_ >= issued) {
+      eye_lag_frames_ = uint32_t(frames_produced_ - issued);
+    }
+    last_lag_seq_ = report.seq;
+  }
+}
+
+void Retina::set_eye_timeout_frames(uint32_t frames) {
+  eye_timeout_frames_ = frames ? frames : 1;
+}
+
+bool Retina::eye_stale() const {
+  if (mount_ != EyeMount::kExternal) return false;
+  // A device gets the same grace period to say hello as it gets to answer, so
+  // attaching one a few frames before it boots is not an immediate fault.
+  return frames_produced_ - last_report_frame_ > uint64_t(eye_timeout_frames_);
 }
 
 void Retina::set_servo(const Servo& servo, uint64_t seed) {
@@ -196,10 +295,15 @@ static float servo_jitter(uint64_t& state, float scale) {
 }
 
 float Retina::reported_x() {
+  // An external eye brings its own staleness and its own encoder error, so
+  // there is nothing to simulate: the last report IS the belief, and it is the
+  // only thing the controller has.
+  if (mount_ == EyeMount::kExternal) return gaze_x_;
   return pos_q_x_[0] + servo_jitter(servo_rng_, servo_.noise_px);
 }
 
 float Retina::reported_y() {
+  if (mount_ == EyeMount::kExternal) return gaze_y_;
   return pos_q_y_[0] + servo_jitter(servo_rng_, servo_.noise_px);
 }
 
@@ -207,8 +311,9 @@ void Retina::present(const uint8_t* pixels) {
   if (cells_.empty()) return;
   // The eye moves before the frame is taken, so a command issued at the end of
   // the previous frame is acting by the time this one is sampled — which is
-  // what a motor does and what an assignment does not.
-  servo_advance();
+  // what a motor does and what an assignment does not. An external eye has
+  // already moved, in its own time, and said so through `report_gaze`.
+  if (mount_ == EyeMount::kInternal) servo_advance();
   const float inv_gain = 1.0f / cfg_.contrast_gain;
   float total = 0.0f;
 
@@ -216,8 +321,14 @@ void Retina::present(const uint8_t* pixels) {
   // piece — which is what an eye movement is. Rounded to whole pixels: a gaze
   // shift is a jump of many pixels and sub-pixel interpolation would cost a
   // resample of every stencil to buy nothing.
-  const int gx = int(gaze_x_ + (gaze_x_ >= 0.0f ? 0.5f : -0.5f));
-  const int gy = int(gaze_y_ + (gaze_y_ >= 0.0f ? 0.5f : -0.5f));
+  //
+  // On an external eye it does not slide at all. The head already turned, or an
+  // upstream cropper already moved its window, so the frame in hand is the
+  // aimed view and sliding over it would apply the aim a second time.
+  const float sample_x = mount_ == EyeMount::kInternal ? gaze_x_ : 0.0f;
+  const float sample_y = mount_ == EyeMount::kInternal ? gaze_y_ : 0.0f;
+  const int gx = int(sample_x + (sample_x >= 0.0f ? 0.5f : -0.5f));
+  const int gy = int(sample_y + (sample_y >= 0.0f ? 0.5f : -0.5f));
 
   // DNA v31: where the strongest response was, in the retina's own layout
   // coordinates. Tracked while the responses are being computed because it is
@@ -273,6 +384,17 @@ void Retina::present(const uint8_t* pixels) {
   if (frames_to_aim_ != 0) return;
   frames_to_aim_ = aim_period_;
 
+  // The eye stopped answering. Freeze rather than keep correcting: this loop
+  // has no model of its own motion and steers from where it *believes* it is,
+  // so commanding into silence is the exact condition the servo sweep measured
+  // as divergence — one frame of stale readback with a fast actuator put the
+  // eye 26 px out on a 64 px frame. A device that has gone quiet is infinitely
+  // stale readback, and the safe response to that is to stop asking.
+  if (eye_stale()) {
+    ++eye_stalls_;
+    return;
+  }
+
   // Nothing in view is not a reason to move. A creature that re-aims at the
   // peak of pure noise spends its life chasing grain, and `contrast_floor` is
   // the genome's own statement of what counts as seeing something.
@@ -318,8 +440,7 @@ void Retina::present(const uint8_t* pixels) {
   // the same integer, so the eye has not been anywhere and saying it has would
   // make the guard below unable to fail.
   if (std::fabs(nx - cmd_x_) < 1.0f && std::fabs(ny - cmd_y_) < 1.0f) return;
-  cmd_x_ = std::max(-mid, std::min(mid, nx));
-  cmd_y_ = std::max(-mid, std::min(mid, ny));
+  issue_command(nx, ny);
   ++gaze_moves_;
 }
 
@@ -329,10 +450,18 @@ void Retina::reset_stream() {
   // The gaze goes home with the stream. Resuming a camera with the eye still
   // pointed where the last frame of the previous stream happened to be is a
   // creature looking at nothing.
-  gaze_x_ = 0.0f;
-  gaze_y_ = 0.0f;
+  //
+  // On an external eye, home is a request. The command goes to centre and the
+  // position stays wherever the device last said it was, because this side does
+  // not get to decide where somebody else's motor is pointing — and reporting a
+  // position the hardware never took would be the more comfortable lie.
+  if (mount_ == EyeMount::kInternal) {
+    gaze_x_ = 0.0f;
+    gaze_y_ = 0.0f;
+    servo_reset();
+  }
+  issue_command(0.0f, 0.0f);
   frames_to_aim_ = aim_period_;
-  servo_reset();
 }
 
 Retina::CellGeometry Retina::geometry(uint32_t cell) const {
