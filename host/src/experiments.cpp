@@ -118,7 +118,7 @@ const Spec kSpecs[] = {
 // If you changed the genome or a mechanism's default ON purpose, this number
 // moves and you update it here, in the same commit, having said in the
 // changelog what moved it.
-constexpr uint64_t kPinnedHash = 0xbe2e508dfc170240ull;
+constexpr uint64_t kPinnedHash = 0x15b5dcb6d8616452ull;
 
 const Spec* find_spec(const std::string& name) {
   for (const Spec& s : kSpecs) {

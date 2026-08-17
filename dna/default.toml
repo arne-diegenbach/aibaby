@@ -295,7 +295,30 @@ latency_ms = 60.0           # full contrast fires now, threshold contrast this
 #
 # `gazeprobe` scores it between the two rows that bracket it: `fixed` is the
 # floor, `oracle` is the ceiling, `reflex` is this.
-gaze_rate_hz = 0.0          # DNA v31: 0 = the eye never moves (the v30 creature)
+# SWITCHED ON 2026-08-17, and this is the change that moves the creature's
+# identity: the determinism hash goes be2e508dfc170240 -> 15b5dcb6d8616452.
+# Every hash quoted elsewhere in this file, and every visual number recorded
+# anywhere in this project before today, was taken with the eye NAILED TO THE
+# FRAME CENTRE. Those statements are true of when they were written and are not
+# re-measurements waiting to happen; `gazeprobe` keeps `fixed` as a permanent
+# arm so the old baseline stays reachable inside the instrument.
+#
+# Turned on for the live path rather than for a milestone, and the split is
+# worth being honest about:
+#
+#   standard protocol (toy +/-1.3 px)   central 0.700 -> 0.800, inside 1 sd
+#   displaced (a real camera)           vision  0.520 -> 0.840, gaze 3.8 -> 1.3 px
+#
+# The headless experiments hand the creature a pre-centred object and will not
+# notice. A webcam does not, and until now the shipped creature only worked if
+# the world was polite to it.
+#
+# It cost nothing to switch on, which was not the expectation: `calibrate`
+# passes with ZERO recalibration rounds and the babble duty cycle is unchanged
+# at 0.51. The retina's output statistics barely move because it is the same
+# cells with the same normalisation, sampling a shifted window.
+gaze_rate_hz = 10.0         # DNA v31: re-aim once per retinal frame. 0 pins the
+                            # fovea at the centre, which is the pre-v31 creature
 gaze_gain = 0.70            # fraction of the estimated error per re-aim
 gaze_peak_frac = 0.70       # aim at the centroid of cells >= this x the peak;
                             # 1.0 = the peak cell alone, 0.0 = v27's whole field
