@@ -1,0 +1,16 @@
+# Build trees.
+build/
+build-asan/
+
+# Everything below is reproducible from the genome and the experiment that
+# made it, which is the point of G1. Committing a recording or a snapshot
+# would be committing a result rather than the thing that produces results —
+# and a stale one silently outlives the code that could read it (three .aibs
+# files predated an arena change and had to be deleted).
+journal.aibj
+*.aibs
+*.wav
+*.labels.txt
+
+# One machine's permission allowlist, full of absolute paths.
+.claude/

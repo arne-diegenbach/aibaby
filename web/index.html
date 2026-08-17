@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>aibaby — M2 vision</title>
+<style>
+  :root {
+    --bg: #0e1116;
+    --panel: #161b22;
+    --line: #262d38;
+    --text: #d7dde5;
+    --dim: #7d8794;
+    --accent: #5ec8f2;
+    --warn: #f2a35e;
+    --good: #7fd88f;
+    --bad: #f27979;
+    --vocal: #f279a8;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    padding: 20px;
+  }
+  h1 { font-size: 15px; font-weight: 600; margin: 0; letter-spacing: 0.02em; }
+  .sub { color: var(--dim); font-size: 12px; margin-top: 2px; }
+  header {
+    display: flex; align-items: baseline; justify-content: space-between;
+    gap: 16px; flex-wrap: wrap; margin-bottom: 16px;
+  }
+  #status { font-size: 12px; color: var(--warn); }
+  #status.live { color: var(--good); }
+  #status.asleep { color: var(--dim); }
+  .grid { display: grid; gap: 14px; grid-template-columns: 1fr; max-width: 1180px; }
+  .card {
+    background: var(--panel); border: 1px solid var(--line);
+    border-radius: 8px; padding: 14px;
+  }
+  .card h2 {
+    font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em;
+    color: var(--dim); margin: 0 0 10px; font-weight: 600;
+  }
+  .stats { display: flex; gap: 26px; flex-wrap: wrap; }
+  .stat .k { color: var(--dim); font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; }
+  .stat .v { font-size: 18px; font-variant-numeric: tabular-nums; }
+  canvas { display: block; width: 100%; border-radius: 4px; background: #0a0d12; }
+  .legend { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 8px; font-size: 11px; color: var(--dim); }
+  .legend span { display: flex; align-items: center; gap: 5px; }
+  .swatch { width: 9px; height: 9px; border-radius: 2px; }
+  .drive { margin-bottom: 9px; }
+  .drive:last-child { margin-bottom: 0; }
+  .drive .row { display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 3px; }
+  .drive .row .name { color: var(--dim); text-transform: uppercase; letter-spacing: 0.05em; }
+  .bar { height: 6px; background: #0a0d12; border-radius: 3px; overflow: hidden; }
+  .bar i { display: block; height: 100%; width: 0; transition: width 0.12s linear; }
+  .actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+  button {
+    background: #1f2733; color: var(--text); border: 1px solid var(--line);
+    border-radius: 5px; padding: 7px 14px; font: inherit; cursor: pointer;
+  }
+  button:hover { background: #27303e; border-color: #38424f; }
+  button:active { transform: translateY(1px); }
+  button.good { border-color: #2f5a3b; color: var(--good); }
+  button.bad { border-color: #5a2f2f; color: var(--bad); }
+  button.on { background: #2b3a4a; border-color: var(--accent); color: var(--accent); }
+  button[disabled] { opacity: 0.45; cursor: not-allowed; }
+  /* Held, not tapped: the browser must not read a press as the start of a
+     scroll or a text selection and take the pointer away mid-sentence. */
+  #ptt { touch-action: none; user-select: none; }
+  .two { display: grid; gap: 14px; grid-template-columns: 2fr 1fr; }
+  .three { display: grid; gap: 14px; grid-template-columns: 1fr 1fr 1fr; }
+  .four { display: grid; gap: 14px; grid-template-columns: repeat(4, 1fr); }
+  @media (max-width: 1100px) { .four { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 900px) { .two, .three, .four { grid-template-columns: 1fr; } }
+  .note { color: var(--dim); font-size: 11px; margin-top: 9px; }
+  table.kv { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+  table.kv td { padding: 2px 0; }
+  table.kv td.k { color: var(--dim); }
+  table.kv td.v { text-align: right; }
+  .pill {
+    display: inline-block; padding: 1px 7px; border-radius: 9px;
+    font-size: 10px; letter-spacing: 0.05em; text-transform: uppercase;
+    border: 1px solid var(--line); color: var(--dim);
+  }
+  .pill.on { color: var(--vocal); border-color: var(--vocal); }
+</style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>aibaby — milestone 2</h1>
+      <div class="sub">camera → foveated retina → B3 → B1, alongside mic → mel → B2 → B1 → B5 → formant babble → your praise → weights</div>
+    </div>
+    <div id="status">connecting…</div>
+  </header>
+
+  <div class="grid">
+    <div class="card">
+      <div class="stats">
+        <div class="stat"><div class="k">tick</div><div class="v" id="tick">—</div></div>
+        <div class="stat"><div class="k">neurons</div><div class="v" id="neurons">—</div></div>
+        <div class="stat"><div class="k">synapses</div><div class="v" id="synapses">—</div></div>
+        <div class="stat"><div class="k">mean rate</div><div class="v" id="rate">—</div></div>
+        <div class="stat"><div class="k">mean |w|</div><div class="v" id="weight">—</div></div>
+        <div class="stat"><div class="k">vocalisations</div><div class="v" id="vocalizations">—</div></div>
+        <div class="stat"><div class="k">sim clock</div><div class="v" id="clock">—</div></div>
+      </div>
+    </div>
+
+    <!-- §9 asks for growth and prune events by name, and it is right to: a
+         brain that quietly grew to its cap and one that never grew look
+         identical from every other number on this page, and only one of them
+         means learning has stopped working. -->
+    <div class="card">
+      <h2>structure — growth, pruning and consolidation <span class="pill" id="struct-state">—</span></h2>
+      <div class="stats">
+        <div class="stat"><div class="k">grown / cap</div><div class="v" id="struct-grown">—</div></div>
+        <div class="stat"><div class="k">pruned</div><div class="v" id="struct-pruned">—</div></div>
+        <div class="stat"><div class="k">sleep passes</div><div class="v" id="struct-passes">—</div></div>
+        <div class="stat"><div class="k">replays</div><div class="v" id="struct-replays">—</div></div>
+        <div class="stat"><div class="k">plateau windows</div><div class="v" id="struct-windows">—</div></div>
+        <div class="stat"><div class="k">learning rate</div><div class="v" id="struct-plasticity">—</div></div>
+      </div>
+      <div class="note" id="struct-note">
+        Neurons are added only on a detected plateau in prediction error, and
+        only into a module that is out of headroom. Pruning and replay run
+        while the baby sleeps. Plateau windows stay at zero until the
+        microphone is on — the error being watched is the prediction of the
+        next sound, so a creature nobody speaks to has nothing to plateau on.
+      </div>
+    </div>
+
+    <div class="two">
+      <div class="card">
+        <h2>spike raster — spatial bins per module, scrolling</h2>
+        <canvas id="raster" height="330"></canvas>
+        <div class="legend" id="legend"></div>
+      </div>
+
+      <div class="card">
+        <h2>the baby</h2>
+        <canvas id="avatar" height="200"></canvas>
+        <div class="note" id="mood">—</div>
+        <div class="actions">
+          <button data-cmd="feed">feed</button>
+          <button data-cmd="tickle">tickle</button>
+          <button data-cmd="stroke">stroke</button>
+          <button data-cmd="poke">poke</button>
+        </div>
+        <div class="actions">
+          <button class="good" id="praise">good baby (g)</button>
+          <button class="bad" id="scold">no (b)</button>
+        </div>
+        <div class="note">
+          Praise reaches the synapses through the eligibility trace, so it still
+          counts a second or two after the thing you liked.
+        </div>
+      </div>
+    </div>
+
+    <div class="four">
+      <div class="card">
+        <h2>ears — 24 mel channels</h2>
+        <canvas id="mel" height="130"></canvas>
+        <div class="actions">
+          <button id="mic">enable microphone</button>
+          <button id="ptt" disabled>hold to talk</button>
+        </div>
+        <div class="drive" style="margin-top:10px">
+          <div class="row"><span class="name">mic level</span><span id="miclevel-v">—</span></div>
+          <div class="bar"><i id="miclevel" style="background:var(--accent)"></i></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>eyes — foveated retina</h2>
+        <canvas id="retina" height="130"></canvas>
+        <div class="actions">
+          <button id="camera" disabled>enable camera</button>
+        </div>
+        <div class="drive" style="margin-top:10px">
+          <div class="row"><span class="name">contrast</span><span id="viscontrast-v">—</span></div>
+          <div class="bar"><i id="viscontrast" style="background:var(--warn)"></i></div>
+        </div>
+        <div class="note">
+          Centre-surround, so a blank wall reads as nothing however bright it
+          is. Warm is ON, cool is OFF; the middle square is the fovea.
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>voice — motor parameters <span class="pill" id="voicing">silent</span></h2>
+        <canvas id="formants" height="130"></canvas>
+        <table class="kv">
+          <tr><td class="k">F0</td><td class="v" id="f0">—</td>
+              <td class="k">F1</td><td class="v" id="f1">—</td></tr>
+          <tr><td class="k">F2</td><td class="v" id="f2">—</td>
+              <td class="k">F3</td><td class="v" id="f3">—</td></tr>
+          <tr><td class="k">amplitude</td><td class="v" id="amp">—</td>
+              <td class="k">speaker</td><td class="v"><button id="speaker">off</button></td></tr>
+        </table>
+      </div>
+
+      <div class="card">
+        <h2>reward — the third factor</h2>
+        <canvas id="reward" height="130"></canvas>
+        <table class="kv">
+          <tr><td class="k">external</td><td class="v" id="r-ext">—</td></tr>
+          <tr><td class="k">hunger</td><td class="v" id="r-hun">—</td></tr>
+          <tr><td class="k">comfort</td><td class="v" id="r-com">—</td></tr>
+          <tr><td class="k">curiosity</td><td class="v" id="r-cur">—</td></tr>
+          <tr><td class="k">mean |eligibility|</td><td class="v" id="elig">—</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <div class="two">
+      <div class="card">
+        <h2>membrane potential — central neuron 0</h2>
+        <canvas id="trace" height="140"></canvas>
+        <div class="note">dashed line is the firing threshold, which drifts as intrinsic
+          plasticity retunes it; each spike is drawn through it, then the membrane resets to rest</div>
+      </div>
+
+      <div class="card">
+        <h2>drives</h2>
+        <div class="drive">
+          <div class="row"><span class="name">hunger</span><span id="hunger-v">—</span></div>
+          <div class="bar"><i id="hunger" style="background:var(--warn)"></i></div>
+        </div>
+        <div class="drive">
+          <div class="row"><span class="name">comfort</span><span id="comfort-v">—</span></div>
+          <div class="bar"><i id="comfort" style="background:var(--good)"></i></div>
+        </div>
+        <div class="drive">
+          <div class="row"><span class="name">fatigue</span><span id="fatigue-v">—</span></div>
+          <div class="bar"><i id="fatigue" style="background:var(--accent)"></i></div>
+        </div>
+        <div class="note">
+          Feed, poke, tickle and stroke are afferent: each one lands on its own
+          patch of the somatosensory module, so the baby feels where it was
+          touched, not just that it was.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="synth.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
