@@ -1396,6 +1396,34 @@ lateral_fields = 9          # one competitive field per motor group
 # mechanism that unstable cannot be tuned by point measurements at all.
 # Anything that sets lateral_gain in future has to be scored over a
 # NEIGHBOURHOOD of nearby parameter values, not at one.
+#
+# TWO ATTEMPTS AT A STABLE VERSION, both refuted, and together they say what
+# the prerequisite actually is.
+#
+#   Uniform subtractive competition (lateral_sigma = 0, still selectable).
+#   Purely negative feedback, so it cannot run away — and it silences the
+#   creature: vocal 4.36 -> 1.44 Hz and duty 0.00 at gain 0.02. Lowering the
+#   threshold barely helps (1.44 -> 1.80 Hz across a 20% cut) because the term
+#   IS a rate controller: busier field, more subtraction. A uniform term can
+#   only sharpen by suppressing, and the two are inseparable.
+#
+#   Input-driven competition. Same local-minus-mean shape but read off a
+#   smoothed synaptic drive instead of firing rate, so there is no self-loop
+#   and reward — which changes afferent weights — has something to push. It is
+#   stable, and it produces NO place structure at all: raw F1 sd 0.110 against
+#   0.115 with the mechanism off, bimodality 0.35 against a Gaussian's 0.333.
+#   Removed rather than left in the tree.
+#
+# The reason is the one this file's own note on the population code gives: the
+# projection into the module is random, so nothing makes a neuron's index mean
+# anything to its afferents. Input-driven competition can only amplify
+# structure the input already has, and the input has none. Rate-driven
+# competition manufactures structure out of its own dynamics, which is why it
+# widens the vowel space AND why that structure is noise-locked and fragile.
+#
+# So the prerequisite is topography in the projection INTO vocal, which is what
+# the population-code note asked for in the first place. This session tried to
+# get it for free from recurrence; it cannot be had that way.
 # Shipped OFF at 0.0. The acoustic result that might have justified 0.020 did
 # NOT replicate: three fresh seed families, both arms on identical seeds, put
 # cube-vs-ball at d' 0.93/1.35/1.15 against nulls of 0.96/1.07/0.99 — straddling

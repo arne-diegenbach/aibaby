@@ -895,6 +895,42 @@ void Network::step() {
         const uint32_t fe = ms.begin + slice_begin(ms.count, fields, f + 1);
         if (fe <= fb) continue;
         const uint32_t width = fe - fb;
+
+        // sigma 0: competition WITHOUT local excitation.
+        //
+        // The version below it amplifies whatever neighbourhood is already
+        // busiest, which is positive feedback and is where the fragility comes
+        // from: a bump forms from noise as readily as from input, holds against
+        // being moved, and lands wherever incidental asymmetries put it. Its G2
+        // effect duly reverses sign twice over 20% of one unrelated constant.
+        //
+        // Subtracting the field's own mean has the opposite sign of feedback —
+        // busier field, more subtraction — so it cannot run away, and it still
+        // produces a place code, because a uniform subtraction against a spike
+        // threshold leaves only the best-driven neurons firing. That is the
+        // same trick `ffi` already uses; what is new is doing it per readout
+        // group rather than per module, so each group competes with itself.
+        //
+        // The point of the difference is where the winner comes from. Here it
+        // is whichever neurons the AFFERENTS drive hardest, so reward — which
+        // changes afferent weights — has something to push.
+        if (!(lateral_sigma_[m] > kZero)) {
+          Scalar sum = kZero;
+          for (uint32_t i = fb; i < fe; ++i) sum += rate_fast_[i];
+          const Scalar suppress = lateral_gain_[m] * (sum / Scalar(width));
+          for (uint32_t i = fb; i < fe; ++i) lateral_[i] = -suppress;
+          continue;
+        }
+
+        // Read off the smoothed synaptic DRIVE, not off firing rate. The first
+        // formulation used `rate_fast_` and was fragile in a specific, measured
+        // way: its G2 effect reversed sign twice across 20% of one unrelated
+        // scaling constant, because a term computed from a neuron's own output
+        // is positive feedback — the winner is whoever got busy first, a bump
+        // forms from noise as readily as from input, and once formed it resists
+        // being moved. Reward changes afferent WEIGHTS, so a competition that
+        // reads afferent drive is one reward can steer, and one with no loop in
+        // it to destabilise.
         const Scalar span = lateral_sigma_[m] * Scalar(width);
         const Scalar a = span > kOne ? clampf(kOne / span, Scalar(1e-3), kOne) : kOne;
         Scalar acc = rate_fast_[fb];
@@ -921,8 +957,13 @@ void Network::step() {
         // "this neighbourhood is busier than its field", not "by this many
         // hertz". Divisive normalisation upstairs already works in exactly
         // these units for the same reason.
+        // Contrast rather than a difference of absolutes, for the reason the
+        // very first version failed: a term that scales with the quantity it is
+        // derived from amplifies itself. The scale here is the field's own mean
+        // drive, and the guard keeps a silent field from dividing by nothing.
         const Scalar field_mean = sum / Scalar(width);
-        const Scalar inv = field_mean > Scalar(0.05) ? kOne / field_mean : kZero;
+        const Scalar scale = field_mean > Scalar(1e-4) ? field_mean : Scalar(1e-4);
+        const Scalar inv = kOne / scale;
         for (uint32_t i = fb; i < fe; ++i) {
           const Scalar contrast = clampf((lateral_[i] - field_mean) * inv,
                                          Scalar(-1), kOne);
