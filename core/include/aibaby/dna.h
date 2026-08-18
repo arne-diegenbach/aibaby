@@ -158,7 +158,7 @@ constexpr uint32_t kDnaMagic = 0x44424941;  // "AIBD"
 //     the code completely (0.980 against 0.540 at 12 px of displacement). So
 //     the mechanism was always worth having and only the aim was wrong. See
 //     DnaVision::gaze_rate_hz.
-constexpr uint32_t kDnaVersion = 33;
+constexpr uint32_t kDnaVersion = 34;
 
 // What a module is wired to the world through. The host looks modules up by
 // role, never by name or index, so renaming a module in the genome cannot
@@ -489,6 +489,20 @@ struct DnaVision {
   float surround_sigma;     // DoG surround, likewise
   float contrast_gain;      // DoG response that reads as full scale
   float contrast_floor;     // below this a cell has nothing to say
+  // DNA v34. The same threshold, but for AIMING rather than for seeing.
+  //
+  // `contrast_floor` does double duty: `AuditoryEncoder`'s visual twin uses it
+  // as the per-cell silence floor, and the gaze controller uses it to decide
+  // whether anything is worth looking at. Those are different jobs and they
+  // want different numbers. Perception should be conservative — a cell with
+  // nothing to say should say nothing. Acquisition should be twitchy, because
+  // the cost of a wasted saccade is one frame and the cost of not looking is
+  // never seeing the object at all.
+  //
+  // Splitting them is what a retinotectal pathway is for: the colliculus drives
+  // saccades from signals the geniculate pathway cannot yet resolve into a
+  // shape. Set equal to `contrast_floor` for the pre-v34 creature exactly.
+  float gaze_contrast_floor;
   float gain;               // injected current for one latency spike
   float frame_hz;           // camera frames the module is born expecting
   // Latency coding (§5.1): a cell at full contrast fires at the top of the

@@ -3492,6 +3492,83 @@ bool run_oscprobe(const std::vector<uint8_t>& dna_blob, uint64_t ticks, bool ver
 // foveation in this retina is decorative and active vision has nothing to buy.
 // If it falls and saccades restore it, then the existing numbers are resting on
 // a courtesy of the protocol and this mechanism is what pays for it honestly.
+// --- Where acquisition actually breaks --------------------------------------
+//
+// The reflex recovers 72% of the oracle gain inside the fovea and 0% outside
+// it, and DNA v33 established the aiming RULE is not why: a spatial radius
+// changes nothing out there at any setting. So the question left is whether the
+// controller is given anything to aim at, and that is answerable directly.
+//
+// Put the eye at the frame centre, show one toy at a known offset, run one
+// frame. The controller's update is `gaze = gain * (aim - centre)`, so
+// `gaze / gain` recovers exactly where it believed the toy was — no new
+// accessor required. Sweep the offset and compare the belief with the truth:
+//
+//   belief tracks truth        -> the retina sees it; the loop is the problem
+//   belief collapses to zero   -> nothing to aim at, and this says at what
+//                                 radius the retina stops localising
+//
+// `contrast` is printed beside it because the controller refuses to move below
+// `contrast_floor`, and a refusal and a wrong estimate look identical from the
+// outside.
+void run_acquisition_section(const aibaby::Dna& dna, const aibaby::DnaVision& vcfg) {
+  Retina retina;
+  std::string error;
+  if (!retina.configure(vcfg, error)) return;
+  SceneSource scene(vcfg.frame_size, dna.header().seed);
+  std::vector<uint8_t> frame(size_t(vcfg.frame_size) * vcfg.frame_size, 0);
+  const float mid = 0.5f;
+  const float fs = float(vcfg.frame_size);
+  const float gain = vcfg.gaze_gain > 0.0f ? vcfg.gaze_gain : 1.0f;
+
+  std::printf("\n  ACQUISITION: where does the eye end up, per starting offset\n");
+  std::printf("    the fovea spans +/-%.0f px; ring 1 +/-%.0f px; ring 2 +/-%.0f px\n",
+              double(vcfg.fovea_size) / 2.0, double(vcfg.fovea_size),
+              double(vcfg.fovea_size) * 2.0);
+  std::printf("    one toy, fixed size, eye released from the centre and given 40\n"
+              "    frames to converge. The first version of this read the gaze after a\n"
+              "    SINGLE frame and reported the eye blind at 2 px, which cannot be\n"
+              "    true because the reflex works inside the fovea — the command goes\n"
+              "    through the eye's queue and is not visible that soon.\n");
+  std::printf("\n    %-10s %-10s %-10s %-10s %s\n", "toy at", "eye ends", "error",
+              "contrast", "verdict");
+  const double offsets[] = {0.0, 2.0, 4.0, 6.0, 8.0, 12.0, 16.0, 24.0};
+  for (double off : offsets) {
+    Toy toy = m3_toy_at(0.5 + off / double(fs), 0.5);
+    scene.render(toy.shape, toy.cx, toy.cy, toy.radius, 0.85f, 0.02f, frame.data());
+    retina.look_at(0.0f, 0.0f);
+    for (int f = 0; f < 40; ++f) retina.present(frame.data());
+    const double ended = double(retina.gaze_x());
+    const double err = std::fabs(off - ended);
+    const double contrast = double(retina.contrast());
+    const char* verdict =
+        contrast <= double(vcfg.contrast_floor)
+            ? "REFUSED — under contrast_floor"
+            : (err < 2.0 ? "acquired"
+                         : (std::fabs(ended) < 2.0 ? "never left the centre" : "partial"));
+    std::printf("    %-10.1f %-10.1f %-10.1f %-10.4f %s\n", off, ended, err, contrast,
+                verdict);
+  }
+  // The control this whole idea lives or dies on. `gaze_contrast_floor` exists
+  // to stop the eye chasing grain, so any setting that improves acquisition has
+  // to be checked against an EMPTY field: if the eye wanders with nothing in
+  // view, the floor is too low and the acquisition numbers above were bought by
+  // making the creature twitchy rather than perceptive.
+  scene.render(SceneSource::Shape::kNone, 0.5f, 0.5f, 0.1f, 0.85f, 0.02f, frame.data());
+  retina.look_at(0.0f, 0.0f);
+  for (int f = 0; f < 40; ++f) retina.present(frame.data());
+  const double drift = std::sqrt(double(retina.gaze_x()) * double(retina.gaze_x()) +
+                                 double(retina.gaze_y()) * double(retina.gaze_y()));
+  std::printf("\n    empty field: eye drifts %.1f px, contrast %.4f, floor %.4f  %s\n",
+              drift, double(retina.contrast()), double(vcfg.gaze_contrast_floor),
+              drift < 1.0 ? "<- still, as it must be" : "<- CHASING NOISE");
+  std::printf("\n    The radius where this stops being 'acquired' is what a peripheral\n"
+              "    channel would have to cover, and whether it stops by REFUSING or by\n"
+              "    aiming short says whether the fix is the floor or the rings.\n");
+  (void)mid;
+  (void)gain;
+}
+
 bool run_gazeprobe(const std::vector<uint8_t>& dna_blob, uint64_t ticks, bool verbose) {
   std::string error;
   Session probe;
@@ -3992,6 +4069,9 @@ bool run_gazeprobe(const std::vector<uint8_t>& dna_blob, uint64_t ticks, bool ve
                 "  another name. Nothing above is a measurement of a controller.\n");
     ok = false;
   }
+  // Diagnosis for the OUTSIDE bucket above, which the arms can only report
+  // as a null: is the controller aiming badly, or aiming at nothing?
+  run_acquisition_section(probe.dna, vcfg);
   (void)verbose;
   if (!ok || !port_ok) return false;
   return positive_control("gazeprobe", "scatter 0.00 — the standard protocol — in `vision`",

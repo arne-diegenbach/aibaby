@@ -404,7 +404,7 @@ of an hour.
 Every number on this page comes from the genome in [dna/default.toml](dna/default.toml)
 as it currently stands. **The whole suite above passes except `m3`** — G1,
 calibrate, babble, audio, vision, M2, G2, sleep, G4 and snapshot are all green,
-and G3 is the one milestone still open. Shipped hash `edd7d9e246927b2c`;
+and G3 is the one milestone still open. Shipped hash `23c4eb2c7c45d05c`;
 `--experiment verify` reads 14 of 14 as expected.
 
 **G3 is open but no longer a live line of work.** The `vision→vocal` tract
@@ -2141,6 +2141,66 @@ badly** — the new tract overran `auditory`'s `max_out_degree` and was silently
 dropping up to 21 synapses per creature. Invisible on the default seed. Raised
 72 → 256, which draws no random numbers and was verified inert on its own.
 
+
+### DNA v34 — peripheral acquisition: the eye was not blind, it was refusing to look
+
+**Shipped 2026-08-19.** New hash `23c4eb2c7c45d05c`. `gazeprobe` had said for a
+long time that the v31 reflex recovers 72% of the oracle gain **inside** the
+fovea and nothing outside it — vision 0.440 against a `fixed` 0.540, i.e. the
+controller actively made things worse — and the standing explanation was that
+the retina cannot see out there.
+
+Three things were tried against that explanation and two of them were wrong.
+
+**DNA v33, a spatial aim radius: refuted.** v31 averages every cell above
+`gaze_peak_frac` × the peak *wherever it sits*, so peripheral acquisition
+failing looked like foveal cells clearing the bar on noise and dragging the aim
+back to the centre. Making the neighbourhood spatial does nothing outside the
+fovea at any radius, and hurts inside it. It ships off at 0.0, kept with its
+table.
+
+**The diagnosis that worked** was to stop scoring the controller and ask what it
+believes. Release the eye from the centre, put one fixed-size toy at a known
+offset, let it converge:
+
+| toy at | 0 | 2 | 4 | 6 | 8 | 12 | 16 | 24 px |
+|---|---|---|---|---|---|---|---|---|
+| eye ends | 0 | 1.4 | 3.1 | 5.9 | 7.3 | 11.4 | 15.6 | **REFUSED** |
+
+Acquisition was never broken out to 16 px. At 24 px whole-frame contrast falls
+to 0.0225 and the controller **refuses to move**, because `contrast_floor` was
+one number doing two jobs: the encoder's per-cell silence floor *and* the
+gaze controller's "is anything worth looking at". Perception should be
+conservative; acquisition should be twitchy, because a wasted saccade costs one
+frame and not looking costs the object entirely. Splitting them is what a
+retinotectal pathway is for — the colliculus drives saccades from signals the
+geniculate pathway cannot yet resolve into a shape.
+
+`gaze_contrast_floor`, at scatter 0.25 (toy 12.1 px out):
+
+| floor | OUTSIDE vision | gaze err | INSIDE | empty-field drift |
+|---|---|---|---|---|
+| 0.060 | 0.440 | 11.4 px | 0.870 / 1.3 px | 0.0 px |
+| 0.030 | 0.700 | 7.5 px | 0.870 / 1.3 px | 0.0 px |
+| 0.020 | 0.740 | 3.1 px | 0.870 / 1.3 px | 0.0 px |
+| **0.015** | **0.860** | **2.0 px** | 0.870 / 1.3 px | 0.0 px |
+| 0.010 | 0.900 | 1.3 px | 0.870 / 1.3 px | 0.0 px |
+
+Monotone with a plateau, and the INSIDE column is **flat across the whole
+range** — this costs nothing where the reflex already worked.
+
+**Why 0.015 rather than the better-scoring 0.010.** The control this lives on is
+an empty field, because the floor exists to stop the eye chasing grain.
+Empty-field contrast across the nine seeds is 0.0052–0.0064, so 0.015 sits 2.3×
+above the worst of it and 0.010 sits 1.6×. The gain between them is inside the
+instrument's noise at 100 trials; the safety margin is not, and a real camera is
+noisier than this renderer.
+
+**Replicated on all nine seeds:** OUTSIDE vision 0.760–0.940 (mean 0.847 against
+`fixed` 0.540 and `oracle` 1.000 — **67% of the available gain, where it was
+−22%**), gaze error 1.3–2.0 px, 0.0 px of empty-field drift on every one. No
+regression anywhere else: `audio` 9/9, `babble` 9/9, and G2 is bit-identical
+because its protocol keeps the toy centred, where the floor never binds.
 
 ## Design decisions that were not obvious
 

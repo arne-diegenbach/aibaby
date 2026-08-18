@@ -123,12 +123,13 @@ const Spec kSpecs[] = {
 //
 //   15b5dcb6d8616452 -> ca3234c61439b538   excitatory vision->vocal
 //                    -> edd7d9e246927b2c   inhibitory auditory->vocal
+//                    -> 23c4eb2c7c45d05c   DNA v34 gaze_contrast_floor 0.015
 //
 // They ship together and the second is not optional: the first one alone makes
 // the creature babble loudly enough to fail `audio` on five of the nine seeds.
 // Four recalibrated target_rate_hz ride along. Every vocal number recorded
 // before this was taken on a creature whose larynx had no visual input at all.
-constexpr uint64_t kPinnedHash = 0xedd7d9e246927b2cull;
+constexpr uint64_t kPinnedHash = 0x23c4eb2c7c45d05cull;
 
 const Spec* find_spec(const std::string& name) {
   for (const Spec& s : kSpecs) {

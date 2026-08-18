@@ -773,6 +773,19 @@ inline Toy m3_toy(aibaby::Rng& rng, int object) {
 }
 
 
+// The same toy at a chosen place, with the size jitter removed. For probes that
+// sweep POSITION and need everything else held: a toy that also changed size
+// would confound "the eye cannot find it out there" with "it got smaller".
+inline Toy m3_toy_at(double cx, double cy) {
+  Toy t;
+  t.shape = SceneSource::Shape::kDisc;
+  t.cx = float(cx);
+  t.cy = float(cy);
+  t.radius = 0.105f * kAreaMatch;  // the mid-size disc m3_toy draws
+  return t;
+}
+
+
 // One presentation: the object is in view for the whole trial and the
 // caregiver says its name over the first part of it. Praise accompanies the
 // naming — and it is deliberately *identical* for both words, so reward

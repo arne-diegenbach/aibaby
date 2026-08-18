@@ -398,7 +398,7 @@ void Retina::present(const uint8_t* pixels) {
   // Nothing in view is not a reason to move. A creature that re-aims at the
   // peak of pure noise spends its life chasing grain, and `contrast_floor` is
   // the genome's own statement of what counts as seeing something.
-  if (peak <= 0.0f || contrast_ <= cfg_.contrast_floor) return;
+  if (peak <= 0.0f || contrast_ <= cfg_.gaze_contrast_floor) return;
 
   // Centroid over the peak's neighbourhood: every cell responding at least
   // `gaze_peak_frac` of the peak. A DoG cell peaks on an *edge*, so the single
