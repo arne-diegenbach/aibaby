@@ -804,13 +804,159 @@ constexpr uint32_t kM3TrainPerProbe = 3;
 
 // What one trial leaves behind: the vocal tract averaged over the recorded
 // window, and B1's population activity over the same window.
+//
+// `f0`/`f1`/`f2` are in Hz and are what the tract actually did, rather than the
+// group values it was derived from. They are kept separately because the
+// acoustic measure below has to render a sound, and re-deriving hertz from a
+// group value would mean a second copy of the group->formant mapping that
+// `senses.cpp` owns — which is exactly the sort of duplicate description that
+// goes quietly out of date.
 struct M3Record {
   double group[aibaby::kVocalGroups] = {};
   double amplitude = 0.0;
+  double f0 = 0.0, f1 = 0.0, f2 = 0.0;
   uint64_t voiced = 0, frames = 0;
   std::vector<double> b1;
   bool slept = false;
 };
+
+
+// --- What does it SOUND like? ----------------------------------------------
+//
+// Every number this project reports about the creature's voice is a classifier
+// on motor parameters, and a classifier will happily score 0.9 on a difference
+// no ear can resolve. Nothing here has ever measured whether two utterances are
+// *audible* as different, which for a milestone whose headline is "cube and
+// ball produce distinguishable vocalisations" is the question itself.
+//
+// This renders a posture through the same two-formant tract the creature speaks
+// with, pushes it through the same cochlea its ear uses, and takes the
+// cepstrum. It is the measurement path only and never touches a brain — see the
+// note on `Mfcc` for why a DCT must not feed a creature whose auditory encoder
+// is tonotopic.
+//
+// Two honest limits. The renderer is `VowelSource`, so F3 and the bandwidths
+// the browser's three-resonator voice also has are absent — the same limit the
+// `--wav` files carry. And a posture is rendered as a steady vowel, which is
+// what the trial actually is: 800 ms of articulator inertia over a 900-tick
+// window means the tract is holding one shape, and that shape is the thing a
+// listener would name.
+class Timbre {
+ public:
+  bool configure(const aibaby::DnaAudio& audio, std::string& error) {
+    if (!cochlea_.configure(audio, error)) return false;
+    // Twelve coefficients is the usual speech-recognition choice and it is well
+    // clear of the 24 bands, so the DCT is a rotation rather than a fit.
+    if (!mfcc_.configure(cochlea_.channels(), 12, 22.0f, error)) return false;
+    rate_ = audio.sample_rate;
+    return true;
+  }
+
+  // Mean cepstrum over a steady vowel. Returns empty if the posture produced
+  // too few frames to average.
+  std::vector<double> of(double f0, double f1, double f2, double amplitude) {
+    const size_t n = size_t(rate_) * 500 / 1000;  // 500 ms, ~31 mel frames
+    pcm_.assign(n, 0.0f);
+    VowelSource voice(rate_);
+    voice.render(float(f0), float(f1), float(f2), float(amplitude), pcm_.data(), n);
+    cochlea_.reset_stream();
+    cochlea_.clear_frames();
+    cochlea_.push(pcm_.data(), n);
+    const std::vector<float>& mel = cochlea_.frames();
+    const uint32_t ch = cochlea_.channels();
+    const size_t frames = ch ? mel.size() / ch : 0;
+    // The resonators start from silence, so the first frames are an onset
+    // transient rather than the vowel. A listener naming a vowel is not
+    // listening to its attack.
+    const size_t skip = frames > 12 ? 6 : 0;
+    if (frames <= skip) return {};
+    std::vector<double> sum(mfcc_.coefficients(), 0.0);
+    for (size_t f = skip; f < frames; ++f) {
+      const std::vector<float>& c = mfcc_.transform(&mel[f * ch], ch);
+      for (size_t k = 0; k < sum.size(); ++k) sum[k] += double(c[k]);
+    }
+    const double inv = 1.0 / double(frames - skip);
+    for (double& v : sum) v *= inv;
+    return sum;
+  }
+
+  uint32_t coefficients() const { return mfcc_.coefficients(); }
+
+ private:
+  Cochlea cochlea_;
+  Mfcc mfcc_;
+  std::vector<float> pcm_;
+  uint32_t rate_ = 16000;
+};
+
+
+// How far apart two sets of sounds are, in units of how much the creature's
+// own utterances of the *same* word already wander.
+//
+// Each coefficient is divided by its pooled within-class spread before the
+// distance is taken, which is diagonal Mahalanobis: C0 carries overall loudness
+// and is numerically enormous next to C9, and an unweighted distance would be a
+// loudness measure wearing a cepstrum's clothes.
+//
+// The result is a d-prime, and it has a meaning outside this project: at
+// d' = 1 a listener gets about 76% right in a two-alternative forced choice.
+// That is the bar "audibly different" should be held to, rather than a
+// classifier accuracy that says nothing about ears.
+inline double cepstral_dprime(const std::vector<std::vector<double>>& x,
+                              const std::vector<int>& y,
+                              std::vector<double>* sigma_out = nullptr) {
+  if (x.empty() || x.size() != y.size()) return 0.0;
+  const size_t d = x[0].size();
+  std::vector<double> mean[2] = {std::vector<double>(d, 0.0), std::vector<double>(d, 0.0)};
+  double n[2] = {0.0, 0.0};
+  for (size_t i = 0; i < x.size(); ++i) {
+    const int c = y[i] ? 1 : 0;
+    for (size_t k = 0; k < d; ++k) mean[c][k] += x[i][k];
+    n[c] += 1.0;
+  }
+  if (n[0] < 2.0 || n[1] < 2.0) return 0.0;
+  for (int c = 0; c < 2; ++c) {
+    for (size_t k = 0; k < d; ++k) mean[c][k] /= n[c];
+  }
+  std::vector<double> var(d, 0.0);
+  for (size_t i = 0; i < x.size(); ++i) {
+    const int c = y[i] ? 1 : 0;
+    for (size_t k = 0; k < d; ++k) {
+      const double e = x[i][k] - mean[c][k];
+      var[k] += e * e;
+    }
+  }
+  const double dof = n[0] + n[1] - 2.0;
+  double acc = 0.0;
+  std::vector<double> sigma(d, 0.0);
+  for (size_t k = 0; k < d; ++k) {
+    sigma[k] = std::sqrt(var[k] / dof);
+    if (sigma[k] > 1e-9) {
+      const double z = (mean[0][k] - mean[1][k]) / sigma[k];
+      acc += z * z;
+    }
+  }
+  if (sigma_out) *sigma_out = sigma;
+  return std::sqrt(acc);
+}
+
+
+// The same distance between two fixed postures, measured on a ruler somebody
+// else's utterances provided. This is what turns a d-prime into a sentence:
+// "as different as [i] from [a]" rather than "1.7".
+inline double cepstral_dprime_between(const std::vector<double>& a,
+                                      const std::vector<double>& b,
+                                      const std::vector<double>& sigma) {
+  if (a.size() != b.size() || a.size() != sigma.size()) return 0.0;
+  double acc = 0.0;
+  for (size_t k = 0; k < a.size(); ++k) {
+    if (sigma[k] > 1e-9) {
+      const double z = (a[k] - b[k]) / sigma[k];
+      acc += z * z;
+    }
+  }
+  return std::sqrt(acc);
+}
 
 
 // The milestone's feature: everything the vocal tract did. Nine motor groups,
@@ -846,6 +992,24 @@ struct M3Run {
   double vocal = 0;       // held-out accuracy on the baby's voice — the milestone
   double timbre = 0;      // the same with loudness dropped
   double shuffled = 0;    // the same again with labels shuffled: the control
+  // The same trials, scored on what they SOUND like rather than on the motor
+  // parameters that produced them. `acoustic` is directly comparable to
+  // `vocal`; `dprime` is the one that answers the milestone's own sentence,
+  // because a classifier accuracy says nothing about whether an ear could do
+  // it. `anchor_*` are fixed vowel contrasts rendered through the same tract
+  // and measured on this creature's own ruler, so the d-prime has a scale.
+  double acoustic = 0;
+  double acoustic_shuffled = 0;
+  double motor_interleaved = 0;  // `vocal` on the same split, so it compares
+  double dprime = 0;
+  // d' estimated from a finite sample is biased upward by roughly
+  // sqrt(D * (1/n_A + 1/n_B)) — with 12 coefficients and eight probes a side
+  // that is about 1.7 for two IDENTICAL sounds. So the number above is
+  // unreadable without this one beside it.
+  double dprime_null = 0;
+  double anchor_ia = 0;   // [i] vs [a] — nobody would confuse these
+  double anchor_near = 0; // [ɑ] vs [ʌ] — neighbours, still two vowels
+  double anchor_sd = 0;   // the creature's own delivered F1 spread
   double echo = 0;        // voice *while* the word is playing: the ceiling
   double b1_shape = 0;    // B1 during a silent probe: is the shape even in there
   double alignment = 0;   // see below

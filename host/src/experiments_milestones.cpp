@@ -1099,12 +1099,16 @@ M3Run run_m3_session(const std::vector<uint8_t>& blob, uint64_t ticks, bool pair
       const aibaby::Scalar* g = s.brain.vocal_groups();
       for (uint32_t k = 0; k < aibaby::kVocalGroups; ++k) rec.group[k] += double(g[k]);
       rec.amplitude += double(v.amplitude);
+      rec.f0 += double(v.f0);
+      rec.f1 += double(v.f1);
+      rec.f2 += double(v.f2);
       if (v.voicing > 0.5f && v.amplitude > kAmplitudeFloor) ++rec.voiced;
     }
     return rec;
   };
 
   std::vector<std::vector<double>> probe_vocal, probe_timbre, probe_b1;
+  std::vector<M3Record> probe_posture;
   std::vector<std::vector<double>> echo_vocal;
   std::vector<int> probe_labels, echo_labels;
   std::vector<uint32_t> probe_taught;  // presentations heard before this probe
@@ -1171,6 +1175,7 @@ M3Run run_m3_session(const std::vector<uint8_t>& blob, uint64_t ticks, bool pair
     probe_timbre.push_back(m3_timbre_features(probe));
     probe_b1.push_back(rebin(probe.b1, kFeatureBins));
     probe_labels.push_back(probe_object);
+    probe_posture.push_back(probe);
     probe_taught.push_back(out.presentations);
     if (recording) {
       std::vector<float>& pile = recorder.probe[probe_object];
@@ -1198,6 +1203,94 @@ M3Run run_m3_session(const std::vector<uint8_t>& blob, uint64_t ticks, bool pair
   const size_t train = out.probes / 2;
   out.vocal = holdout_accuracy(probe_vocal, probe_labels, train);
   out.timbre = holdout_accuracy(probe_timbre, probe_labels, train);
+
+  // The same probes, scored on what they sound like. Everything above this is
+  // a classifier reading motor parameters; the milestone's own sentence is
+  // about two sounds, and until now nothing checked whether the difference the
+  // classifier finds is one an ear could find too.
+  {
+    Timbre timbre;
+    std::string terr;
+    if (timbre.configure(acfg, terr)) {
+      std::vector<std::vector<double>> ceps;
+      ceps.reserve(probe_posture.size());
+      for (const M3Record& r : probe_posture) {
+        const double n = double(r.frames ? r.frames : 1);
+        ceps.push_back(timbre.of(r.f0 / n, r.f1 / n, r.f2 / n, r.amplitude / n));
+      }
+      std::vector<double> sigma;
+      out.dprime = cepstral_dprime(ceps, probe_labels, &sigma);
+      std::vector<int> shuffled_labels = probe_labels;
+      aibaby::Rng shuf;
+      shuf.seed(s.dna.header().seed ^ 0x7A1Bu);
+      for (size_t i = shuffled_labels.size(); i > 1; --i) {
+        std::swap(shuffled_labels[i - 1], shuffled_labels[shuf.next() % i]);
+      }
+      // The same estimator on labels that mean nothing. Two identical sounds do
+      // not measure d' = 0 at this sample size, they measure about 1.7, and
+      // without this row the creature's 1.2 reads as "a listener could hear it"
+      // when it is in fact below the floor of the instrument.
+      out.dprime_null = cepstral_dprime(ceps, shuffled_labels, nullptr);
+
+      // Scored on an INTERLEAVED split, not first-half/second-half. Per-module
+      // homeostasis means the creature is not stationary, and projprobe already
+      // paid for this lesson: the naive split leaks hardest into a *pooled*
+      // readout, because a pooled unit is dominated by the population mean and
+      // the population mean is what homeostasis moves. A cepstral coefficient
+      // is a weighted sum over all 24 bands, which is as pooled as it gets —
+      // and the first version of this measure duly printed a shuffled control
+      // at 0.613 where it has to sit at chance. The motor number is recomputed
+      // on the same split so the two are comparable; the milestone's own
+      // `vocal` above stays on its historical split.
+      {
+        std::vector<std::vector<double>> ix, im;
+        std::vector<int> iy, iym;
+        size_t itrain = 0, itrain_m = 0;
+        interleave_pairs(ceps, probe_labels, ix, iy, itrain);
+        interleave_pairs(probe_vocal, probe_labels, im, iym, itrain_m);
+        out.acoustic = holdout_accuracy(ix, iy, itrain);
+        out.motor_interleaved = holdout_accuracy(im, iym, itrain_m);
+        std::vector<int> ish;
+        std::vector<std::vector<double>> idrop;
+        size_t idt = 0;
+        interleave_pairs(ceps, shuffled_labels, idrop, ish, idt);
+        out.acoustic_shuffled = holdout_accuracy(idrop, ish, idt);
+      }
+
+      // The ruler. Three fixed contrasts through the same tract, measured
+      // against this creature's own within-word scatter, so the d-prime above
+      // can be read as a sentence rather than a number. The third is the
+      // creature's *measured* F1 spread applied to its own mean posture: the
+      // most a listener could hear from the variation it already has.
+      if (!sigma.empty() && !ceps.empty() && !ceps[0].empty()) {
+        double mf0 = 0, mf1 = 0, mf2 = 0, mamp = 0;
+        for (const M3Record& r : probe_posture) {
+          const double n = double(r.frames ? r.frames : 1);
+          mf0 += r.f0 / n; mf1 += r.f1 / n; mf2 += r.f2 / n; mamp += r.amplitude / n;
+        }
+        const double inv = 1.0 / double(probe_posture.size());
+        mf0 *= inv; mf1 *= inv; mf2 *= inv; mamp *= inv;
+        // Hillenbrand's adult-male means, which is what the two-formant tract
+        // is closest to. The point is not that the creature should hit them —
+        // it is that these are what "two different vowels" costs in cepstra.
+        const std::vector<double> vi = timbre.of(mf0, 342.0, 2322.0, mamp);   // [i]
+        const std::vector<double> va = timbre.of(mf0, 768.0, 1333.0, mamp);   // [ɑ]
+        const std::vector<double> vu = timbre.of(mf0, 623.0, 1200.0, mamp);   // [ʌ]
+        double sd_f1 = 0.0;
+        for (const M3Record& r : probe_posture) {
+          const double n = double(r.frames ? r.frames : 1);
+          const double e = r.f1 / n - mf1;
+          sd_f1 += e * e;
+        }
+        sd_f1 = std::sqrt(sd_f1 / double(probe_posture.size()));
+        const std::vector<double> lo = timbre.of(mf0, mf1 - sd_f1, mf2, mamp);
+        const std::vector<double> hi = timbre.of(mf0, mf1 + sd_f1, mf2, mamp);
+        out.anchor_ia = cepstral_dprime_between(vi, va, sigma);
+        out.anchor_near = cepstral_dprime_between(va, vu, sigma);
+        out.anchor_sd = cepstral_dprime_between(lo, hi, sigma);
+      }
+    }
+  }
   out.b1_shape = holdout_accuracy(probe_b1, probe_labels, train);
 
   std::vector<int> shuffled = probe_labels;
@@ -1274,7 +1367,7 @@ bool run_m3(const std::vector<uint8_t>& blob, uint64_t ticks, const Caregiver& c
   std::printf("  %-4s %-6s %-9s %-9s %-9s %-9s %-9s %-9s %s\n", "seed", "raised", "voice",
               "timbre", "shuffled", "echo", "B1 shape", "aligned", "|R-E[R]|");
 
-  double sum[2][5] = {{0}};
+  double sum[2][13] = {{0}};
   uint32_t valid[2] = {0, 0};
   uint32_t above = 0;
   uint32_t beat_control = 0;
@@ -1300,6 +1393,14 @@ bool run_m3(const std::vector<uint8_t>& blob, uint64_t ticks, const Caregiver& c
       sum[c][2] += run[c].shuffled;
       sum[c][3] += run[c].echo;
       sum[c][4] += run[c].alignment;
+      sum[c][5] += run[c].acoustic;
+      sum[c][6] += run[c].dprime;
+      sum[c][7] += run[c].acoustic_shuffled;
+      sum[c][8] += run[c].anchor_ia;
+      sum[c][9] += run[c].anchor_near;
+      sum[c][10] += run[c].anchor_sd;
+      sum[c][11] += run[c].dprime_null;
+      sum[c][12] += run[c].motor_interleaved;
       std::printf("  %-4u %-6s %-9.3f %-9.3f %-9.3f %-9.3f %-9.3f %+-9.3f %.4f\n", r,
                   c == 0 ? "named" : "muddle", run[c].vocal, run[c].timbre,
                   run[c].shuffled, run[c].echo, run[c].b1_shape, run[c].alignment,
@@ -1338,6 +1439,51 @@ bool run_m3(const std::vector<uint8_t>& blob, uint64_t ticks, const Caregiver& c
   std::printf("  picture drives the voice the way the word does (cosine, 0 = unrelated)\n");
   std::printf("    named consistently   %+.3f\n", paired_align);
   std::printf("    named at random      %+.3f\n", control_align);
+
+  // The same probes, through a vocal tract and a cochlea instead of straight
+  // into a classifier. Every row above is a fact about motor parameters; these
+  // are facts about a sound, and the milestone's sentence is about a sound.
+  {
+    const double a_vocal = sum[0][5] / double(valid[0]);
+    const double a_ctrl = sum[1][5] / double(valid[1]);
+    const double a_shuf = sum[0][7] / double(valid[0]);
+    const double dp = sum[0][6] / double(valid[0]);
+    const double ia = sum[0][8] / double(valid[0]);
+    const double near = sum[0][9] / double(valid[0]);
+    const double own = sum[0][10] / double(valid[0]);
+    const double m_int = sum[0][12] / double(valid[0]);
+    const double null = sum[0][11] / double(valid[0]);
+    std::printf("\n  the same probes, scored on what they SOUND like"
+                " (interleaved split)\n");
+    std::printf("    named consistently   %.3f   <- against %.3f on motor parameters\n",
+                a_vocal, m_int);
+    std::printf("    named at random      %.3f   (the control)\n", a_ctrl);
+    std::printf("    labels shuffled      %.3f   (must sit at chance)\n", a_shuf);
+    // The part a classifier cannot tell you. d' is calibrated on the creature's
+    // own within-word scatter, so the anchors below are the same ruler — and
+    // read against its own null, because a finite-sample d' is not zero for
+    // two identical sounds.
+    std::printf("  separation in d-prime, on this creature's own within-word scatter\n");
+    std::printf("    cube vs ball         %.2f\n", dp);
+    std::printf("    shuffled labels      %.2f   <- the null: what two IDENTICAL\n"
+                "                                    sounds measure at this sample size\n",
+                null);
+    std::printf("    %s\n",
+                dp > null && dp >= 1.0
+                    ? "cube vs ball clears its own null — a listener could hear this"
+                    : "cube vs ball does not clear its own null — nothing audible here");
+    std::printf("    [i] vs [a]           %.2f   two vowels nobody would confuse\n", ia);
+    std::printf("    [a] vs [u]           %.2f   neighbours, still two vowels\n", near);
+    // Not a finding — a scale check. A two-sd swing measured in units of one sd
+    // has to come out near two whatever the tract does, so what this row is
+    // good for is the Hz-to-d' conversion and confirming the ruler is roughly
+    // linear between the anchors above.
+    std::printf("    +/-1sd of its own F1 %.2f   (scale check, not a result)\n", own);
+    if (ia > 0.0 && near > 0.0) {
+      std::printf("    cube vs ball is %.1f%% of an [i]/[a] contrast, %.1f%% of [a]/[u]\n",
+                  100.0 * dp / ia, 100.0 * dp / near);
+    }
+  }
 
   const bool discriminates = paired_vocal >= 0.75 && above * 2 > valid[0];
   const bool learned = paired_vocal > control_vocal && beat_control * 2 > valid[0];
