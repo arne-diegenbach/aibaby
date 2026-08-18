@@ -1382,9 +1382,20 @@ lateral_fields = 9          # one competitive field per motor group
 #   0.035   0.78   0.255  (192 Hz)     0.614     FAIL 4/9
 #   0.045   0.92   0.266             0.613     babble FAILS: the creature drones
 #
-# The bar and the milestone are on opposite sides of 0.03. Bimodality clears
-# only at gain >= 0.030 and G2 breaks by 0.035, so there is no setting that
-# buys stable postures without spending a milestone that is already met.
+# READ THE TABLE ABOVE WITH THIS. Every G2 entry in it is ONE point, and the
+# surface is not smooth. Holding gain at 0.035 and moving only rate_norm_hz —
+# a constant that does nothing to the shipped creature — walks G2 from +0.214
+# at 9, to +0.025 at 10, -0.132 at 11, -0.479 at 12, and back to +0.078 at 13.
+# A dip, not a threshold: sign reversed twice over 20% of one scaling constant,
+# while the same range leaves the shipped creature flat at +0.776/+0.777/
+# +0.969/+0.748. So "G2 breaks by 0.035" is NOT safe — 0.035 reads 4 of 9 at
+# rate_norm 10 and 6 of 9 at 9 or 13.
+#
+# What v32 really costs is not a milestone, it is robustness: it trades a
+# pinned-but-indifferent vocal code for a mobile-but-fragile one, and a
+# mechanism that unstable cannot be tuned by point measurements at all.
+# Anything that sets lateral_gain in future has to be scored over a
+# NEIGHBOURHOOD of nearby parameter values, not at one.
 # Shipped OFF at 0.0. The acoustic result that might have justified 0.020 did
 # NOT replicate: three fresh seed families, both arms on identical seeds, put
 # cube-vs-ball at d' 0.93/1.35/1.15 against nulls of 0.96/1.07/0.99 — straddling
