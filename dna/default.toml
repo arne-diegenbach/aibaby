@@ -844,7 +844,13 @@ n_max = 1024
 # developmental seeds ran out of slots and their synapses were silently
 # discarded — the genome and the built brain stop agreeing, and only the
 # startup banner says so.
-max_out_degree = 72
+#
+# 72 -> 256 for the inhibitory auditory->vocal tract at the bottom of this file,
+# which lands ~31 more synapses on every inhibitory auditory cell and overran
+# this cap on EIGHT of the nine seeds — up to 21 dropped per creature, and
+# invisible on the default seed. That is rule 6 earning its keep. Raising a cap
+# draws no random numbers, so it was verified inert on its own first.
+max_out_degree = 256
 extent = [1.0, 1.0, 1.0]
 conn_radius = 0.4
 conn_density = 0.5
@@ -852,7 +858,7 @@ threshold = 1.0
 v_rest = 0.0
 leak_tau_ms = 20.0
 refractory_ms = 3.0
-target_rate_hz = 2.22        # lowered by top-down feedback: an inhibited
+target_rate_hz = 2.55        # lowered by top-down feedback: an inhibited
                              # sensory module free-runs slower, which is what
                              # predictive suppression looks like. Re-measured,
                              # not chosen — see the [[projection]] note at the
@@ -963,7 +969,7 @@ threshold = 1.0
 v_rest = 0.0
 leak_tau_ms = 20.0
 refractory_ms = 3.0
-target_rate_hz = 2.21        # lowered by top-down feedback: an inhibited
+target_rate_hz = 2.54        # lowered by top-down feedback: an inhibited
                              # sensory module free-runs slower, which is what
                              # predictive suppression looks like. Re-measured,
                              # not chosen — see the [[projection]] note at the
@@ -1490,7 +1496,10 @@ refractory_ms = 3.0
 # `vision` too, and that recalibration needs a second pass. central has
 # norm_gain 1.0, which makes its target a fixed point rather than a measurement
 # (rule 8). A gentler tract disturbs two targets instead of four.
-target_rate_hz = 7.47
+#
+# 7.47 -> 7.22 with the inhibitory auditory->vocal tract, which quiets the
+# larynx and so quiets everything the larynx drives.
+target_rate_hz = 7.22
 inhib_fraction = 0.15
 inhib_gain = 2.5
 weight_init = 0.12
@@ -2046,6 +2055,72 @@ source = "either"        # DNA v14: recruit both cell types, the pre-v14 rule
 density = 0.03
 weight = 0.30
 delay_ms = 4.0
+delay_jitter_ms = 1.0
+hebb = 0.0                # DNA v23: per-pathway Hebbian rate, 0 = reward-gated only
+apical = 0                # DNA v25: 1 terminates on the target's apical tuft
+exuberance = 1.0          # DNA v28: born at density x this, pruned back by experience
+birth_weight = 1.0        # DNA v30: born at weight x this; set to 1/exuberance
+
+
+# auditory -> vocal, INHIBITORY: the baby stops babbling while it can hear
+# something. Added 2026-08-18, immediately after the excitatory vision->vocal
+# tract above, and it is what makes that tract shippable.
+#
+# WHY IT HAD TO EXIST. vision->vocal drives the larynx harder, the creature
+# babbles more, and it HEARS ITSELF — `self_gain` mixes its own voice into the
+# room before the cochlea. Mel energy during silence went 0.0499 -> 0.0830 and
+# the `audio` experiment failed: an external vowel no longer lifted the
+# auditory module by the 10% it requires. The baby was babbling over you.
+#
+# That failure was invisible on the default seed. Across the nine seeds the
+# experiments actually sweep, `audio` went from 8 of 9 passing to 4 of 9 while
+# the default seed sat at 1.15 and looked fine. Never accept a single-seed
+# `audio` or `babble` result after a wiring change.
+#
+# WHAT IT DOES. The ears inhibit the larynx. The creature cannot tell its own
+# voice from the room — nothing here can, the mix happens in the cochlea — so
+# this suppresses babble whenever ANYTHING is loud, the creature included. That
+# is the negative-feedback duty-cycle dial described beside `self_gain`, made
+# explicit and given its own weight. Silence quiets while the response to real
+# sound does not:
+#
+#   gate weight     none    0.15    0.25    0.40    0.80
+#   audio ratio     1.15    1.34    1.46    1.73    2.13
+#   silence rate    5.42    4.44            3.54    2.88
+#   vowel rate      6.22    5.70            5.96    6.14
+#   babble duty     0.68    0.57    0.52    0.41    0.29
+#
+# The vowel response is flat and the silence collapses. That is the shape a
+# listening reflex should have, and it is why this is not merely a volume knob.
+#
+# WHY 0.25 AND NOT MORE. Strong gates make the creature too quiet to MEASURE.
+# G2 needs enough baseline vocalisations to establish a rate, and at 0.40 two
+# creatures came back "inconclusive: 7 baseline / 43 test vocalisations", at
+# 0.80 five did and G2 FAILED. Across the nine seeds:
+#
+#   gate weight     0.15        0.25        0.40         0.80
+#   praise won      7 of 9      9 of 9      6 of 7       2 of 4  FAIL
+#   creatures       9           9           7            4
+#   rewarded rate   +0.781x     +1.361x     +0.950x      +0.442x
+#
+# 0.25 is a peak, not a plateau, so score any change to this weight over a
+# NEIGHBOURHOOD rather than at a point. The neighbours are safe — 0.15 and 0.40
+# both still pass G2 — and only 0.80 breaks it.
+#
+# WHAT IT COST, which turned out to be nothing. The prediction was that this
+# must break the echo, since echoing a word means vocalising WHILE hearing it.
+# It improves the echo instead: the voice carries the heard word at 0.880
+# against 0.840 without the gate, because a quieter creature has a cleaner
+# readout and inhibition does not stop it answering. The object delivery the
+# vision tract buys also survives (vocal 0.760 -> 0.780).
+[[projection]]
+src = "auditory"
+dst = "vocal"
+kind = "random"
+source = "inhibitory"
+density = 0.25
+weight = 0.25
+delay_ms = 5.0
 delay_jitter_ms = 1.0
 hebb = 0.0                # DNA v23: per-pathway Hebbian rate, 0 = reward-gated only
 apical = 0                # DNA v25: 1 terminates on the target's apical tuft

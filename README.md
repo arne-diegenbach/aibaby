@@ -404,7 +404,7 @@ of an hour.
 Every number on this page comes from the genome in [dna/default.toml](dna/default.toml)
 as it currently stands. **The whole suite above passes except `m3`** — G1,
 calibrate, babble, audio, vision, M2, G2, sleep, G4 and snapshot are all green,
-and G3 is the one milestone still open. Shipped hash `ca3234c61439b538`;
+and G3 is the one milestone still open. Shipped hash `edd7d9e246927b2c`;
 `--experiment verify` reads 14 of 14 as expected.
 
 **G3 is open but no longer a live line of work.** The `vision→vocal` tract
@@ -2084,6 +2084,62 @@ projection after it.
 teacher 0.618 against random 0.536, a +0.082 gap that looked like G3 moving. The
 900k run reversed it to 0.518 / 0.563. Screens select candidates; they never
 conclude.
+
+### The listening reflex — and the single-seed run that nearly shipped a deaf baby
+
+The tract above did not ship alone, and the reason is the most useful thing on
+this page.
+
+`verify` went green and `audio` passed at ratio 1.15. Then the same check across
+the **nine seeds the experiments actually sweep** said `audio` passed on **4 of
+9** — down from 8 of 9 before the change. The default seed was simply lucky. The
+tract drives the larynx harder, the creature babbles more, and it *hears itself*:
+`self_gain` mixes its own voice into the room before the cochlea, mel energy
+during silence went 0.0499 → 0.0830, and an external vowel stopped lifting the
+auditory module by the 10% the experiment needs. **The baby was babbling over
+you, and one seed hid it.**
+
+The fix is an **inhibitory `auditory→vocal` projection**: the ears quiet the
+larynx. Nothing in the creature can tell its own voice from the room, so this
+suppresses babble whenever anything is loud — which is exactly the negative
+feedback already described beside `self_gain`, now with its own weight. The
+shape is right rather than merely quieter:
+
+| gate weight | none | 0.15 | 0.25 | 0.40 | 0.80 |
+|---|---|---|---|---|---|
+| audio ratio | 1.15 | 1.34 | **1.46** | 1.73 | 2.13 |
+| silence rate | 5.42 | 4.44 | | 3.54 | 2.88 |
+| vowel rate | 6.22 | 5.70 | | 5.96 | 6.14 |
+| babble duty | 0.68 | 0.57 | 0.52 | 0.41 | 0.29 |
+
+The response to real sound is flat while the silence collapses.
+
+**Strong gates make the creature too quiet to measure.** G2 needs baseline
+vocalisations to establish a rate; at 0.40 two creatures returned
+"inconclusive: 7 baseline / 43 test vocalisations", at 0.80 five did and G2
+failed outright. It ships at **0.25**, which is a peak rather than a plateau —
+score any change to it over a neighbourhood.
+
+**The prediction that was wrong.** This should have broken the echo, since
+echoing a word means vocalising *while* hearing it. It improves the echo: the
+voice carries the heard word at 0.880 against 0.840 without the gate. A quieter
+creature has a cleaner readout, and inhibition does not stop it answering.
+
+**Where the pair lands, all nine seeds:**
+
+| | pre-change | tract only | tract + gate |
+|---|---|---|---|
+| `audio` | 8 of 9 | **4 of 9** | **9 of 9** |
+| G2 creatures scored | 9 | 9 | 9 |
+| G2 praise won | 7 of 9 | 9 of 9 | **9 of 9** |
+| G2 rewarded rate | +0.777× | +0.707× | **+1.361×** |
+| G2 F1 advantage | +0.0255 | +0.0556 | +0.0349 |
+
+One more catch on the way, and it is rule 6 of the calibration invariant: with
+the gate in, `calibrate` reported **0 modules off target and 8 of 9 seeds wiring
+badly** — the new tract overran `auditory`'s `max_out_degree` and was silently
+dropping up to 21 synapses per creature. Invisible on the default seed. Raised
+72 → 256, which draws no random numbers and was verified inert on its own.
 
 
 ## Design decisions that were not obvious
