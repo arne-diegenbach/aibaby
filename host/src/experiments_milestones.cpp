@@ -524,7 +524,8 @@ bool run_babble(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose,
   const uint32_t formant_group[4] = {0, 2, 3, 4};
   const char* formant_name[4] = {"f0", "F1", "F2", "F3"};
   uint32_t raw_hist[4][10] = {};
-  double raw_sum[4] = {}, raw_sq[4] = {}, raw_lo[4] = {1e9, 1e9, 1e9, 1e9};
+  double raw_sum[4] = {}, raw_sq[4] = {}, raw_cu[4] = {}, raw_qu[4] = {};
+  double raw_lo[4] = {1e9, 1e9, 1e9, 1e9};
   double raw_hi[4] = {-1e9, -1e9, -1e9, -1e9};
   double sm_sum[4] = {}, sm_sq[4] = {};
   auto raw_centroid = [&](const aibaby::Network& net, const aibaby::ModuleState& ms,
@@ -574,6 +575,8 @@ bool run_babble(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose,
         raw_hist[k][std::min<uint32_t>(9, uint32_t(raw * 10.0))]++;
         raw_sum[k] += raw;
         raw_sq[k] += raw * raw;
+        raw_cu[k] += raw * raw * raw;
+        raw_qu[k] += raw * raw * raw * raw;
         if (raw < raw_lo[k]) raw_lo[k] = raw;
         if (raw > raw_hi[k]) raw_hi[k] = raw;
         const double sm = double(s.brain.vocal_groups()[formant_group[k]]);
@@ -650,17 +653,33 @@ bool run_babble(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose,
       std::printf("\n  is the vowel space absent, or smoothed away?"
                   "  (%.0f ms motor frame, %.0f ms inertia)\n",
                   frame_ms, double(vcfg.smoothing_ms));
-      std::printf("    %-5s %-16s %-9s %-9s %-9s %s\n", "", "raw centroid",
-                  "raw sd", "smoothed", "ratio", "");
+      std::printf("    %-5s %-16s %-9s %-9s %-8s %s\n", "", "raw centroid",
+                  "raw sd", "smoothed", "ratio", "bimodal");
       for (int k = 0; k < 4; ++k) {
         const double rm = raw_sum[k] / n;
-        const double rsd = std::sqrt(std::max(0.0, raw_sq[k] / n - rm * rm));
+        const double v2 = std::max(0.0, raw_sq[k] / n - rm * rm);
+        const double rsd = std::sqrt(v2);
         const double sm = sm_sum[k] / n;
         const double ssd = std::sqrt(std::max(0.0, sm_sq[k] / n - sm * sm));
+        // Sarle's bimodality coefficient, (skew^2 + 1) / kurtosis. A normal
+        // distribution reads 0.33 and a uniform one 0.56; above 0.56 the mass
+        // is in two lumps rather than one. This is the bar the whole exercise
+        // is aimed at — a wandering average is noise however wide it wanders,
+        // and only two lumps mean the tract has postures to be aimed at.
+        double bc = 0.0;
+        if (v2 > 1e-12) {
+          const double m3 = raw_cu[k] / n - 3.0 * rm * raw_sq[k] / n + 2.0 * rm * rm * rm;
+          const double m4 = raw_qu[k] / n - 4.0 * rm * raw_cu[k] / n +
+                            6.0 * rm * rm * raw_sq[k] / n - 3.0 * rm * rm * rm * rm;
+          const double skew = m3 / (v2 * rsd);
+          const double kurt = m4 / (v2 * v2);
+          if (kurt > 1e-9) bc = (skew * skew + 1.0) / kurt;
+        }
         char range[32];
         std::snprintf(range, sizeof(range), "%.3f .. %.3f", raw_lo[k], raw_hi[k]);
-        std::printf("    %-5s %-16s %-9.4f %-9.4f %-9.1f\n", formant_name[k], range,
-                    rsd, ssd, ssd > 1e-9 ? rsd / ssd : 0.0);
+        std::printf("    %-5s %-16s %-9.4f %-9.4f %-8.1f %.3f%s\n", formant_name[k],
+                    range, rsd, ssd, ssd > 1e-9 ? rsd / ssd : 0.0, bc,
+                    bc > 0.556 ? "  <- two lumps" : "");
       }
       // What the smoothing alone could account for. An EMA on white noise cuts
       // the spread by sqrt(a/(2-a)); the raw centroid is autocorrelated, so the

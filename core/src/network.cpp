@@ -68,10 +68,12 @@ inline void hash_scalar(uint64_t& h, Scalar v) {
 size_t Network::required_bytes(const Dna& dna) {
   size_t capacity = 0;
   size_t synapse_pool = 0;
+  bool lateral = false;
   for (uint32_t m = 0; m < dna.module_count(); ++m) {
     const DnaModule& dm = dna.module(m);
     capacity += dm.n_max;
     synapse_pool += size_t(dm.n_max) * dm.max_out_degree;
+    if (dm.lateral_gain > 0.0f) lateral = true;
   }
 
   // Mirrors the allocation block in build(), in the same order.
@@ -92,6 +94,10 @@ size_t Network::required_bytes(const Dna& dna) {
   // Two delay rings since DNA v25: one per compartment.
   total += 2 * capacity * size_t(dna.header().sim.max_delay_ticks) * sizeof(Scalar);
   total += capacity * sizeof(uint32_t);  // spike_list
+  // DNA v32's lateral scratch, and only when a module asks for it — so a
+  // genome with the mechanism off gets an arena byte-for-byte the size it was
+  // before the mechanism existed.
+  if (lateral) total += capacity * sizeof(Scalar);
 
   // Slack for per-allocation alignment padding.
   total += 1024;
@@ -224,6 +230,23 @@ bool Network::build(const Dna& dna, Arena& arena, Rng& rng) {
     synapse_pool_ += dm.n_max * dm.max_out_degree;
   }
 
+  // DNA v32. Lateral competition. The width is kept as the fraction the genome
+  // states rather than as a filter coefficient: a module's neuron count can
+  // grow (§3.4), and a coefficient baked at birth would quietly describe a
+  // field narrower than the one it runs over. It is turned into a one-pole per
+  // field in step(), which costs one divide per field per tick.
+  for (uint32_t m = 0; m < module_count_ && m < kMaxModules; ++m) {
+    const DnaModule& dm = dna.module(m);
+    lateral_gain_[m] = kZero;
+    lateral_sigma_[m] = kZero;
+    lateral_fields_[m] = 1;
+    if (!(dm.lateral_gain > 0.0f)) continue;
+    lateral_gain_[m] = Scalar(dm.lateral_gain);
+    lateral_sigma_[m] = Scalar(dm.lateral_sigma);
+    lateral_fields_[m] = dm.lateral_fields > 1 ? dm.lateral_fields : 1;
+    any_lateral_ = true;
+  }
+
   v_ = arena.alloc_zeroed<Scalar>(capacity_);
   v_rest_ = arena.alloc_zeroed<Scalar>(capacity_);
   threshold_ = arena.alloc_zeroed<Scalar>(capacity_);
@@ -264,6 +287,7 @@ bool Network::build(const Dna& dna, Arena& arena, Rng& rng) {
   syn_traffic_ = arena.alloc_zeroed<Scalar>(synapse_pool_);
   syn_delay_ = arena.alloc_zeroed<uint16_t>(synapse_pool_);
   syn_delay0_ = arena.alloc_zeroed<uint16_t>(synapse_pool_);
+  if (any_lateral_) lateral_ = arena.alloc_zeroed<Scalar>(capacity_);
 
   inbox_ = arena.alloc_zeroed<Scalar>(size_t(capacity_) * delay_slots_);
   inbox_apical_ = arena.alloc_zeroed<Scalar>(size_t(capacity_) * delay_slots_);
@@ -851,6 +875,62 @@ void Network::step() {
       osc = osc_theta_amp_[m] * th + osc_gamma_amp_[m] * env * sin_at(g_ph);
     }
 
+    // DNA v32. Lateral competition, one pass per competitive field.
+    //
+    // Local excitation against the field's own mean: a neuron sitting in a
+    // locally-active stretch of the field gets a push and everything else gets
+    // a pull, which is what turns a wandering population average into a bump
+    // that has somewhere to sit. The local average is a one-pole run forward
+    // and then backward over the field's neuron indices — O(width), symmetric,
+    // and DC gain one, so subtracting the field mean leaves a term that sums
+    // to about zero and cannot act as a hidden excitatory bias.
+    //
+    // Read off `rate_fast_`, which is the same signal the vocal decoder reads,
+    // for the same reason `ffi` reads `pool_fast_`: an interneuron here is a
+    // rate approximation, and this is the rate the readout cares about.
+    if (any_lateral_ && lateral_gain_[m] > kZero) {
+      const uint32_t fields = lateral_fields_[m];
+      for (uint32_t f = 0; f < fields; ++f) {
+        const uint32_t fb = ms.begin + slice_begin(ms.count, fields, f);
+        const uint32_t fe = ms.begin + slice_begin(ms.count, fields, f + 1);
+        if (fe <= fb) continue;
+        const uint32_t width = fe - fb;
+        const Scalar span = lateral_sigma_[m] * Scalar(width);
+        const Scalar a = span > kOne ? clampf(kOne / span, Scalar(1e-3), kOne) : kOne;
+        Scalar acc = rate_fast_[fb];
+        for (uint32_t i = fb; i < fe; ++i) {
+          acc += a * (rate_fast_[i] - acc);
+          lateral_[i] = acc;
+        }
+        acc = rate_fast_[fe - 1];
+        Scalar sum = kZero;
+        for (uint32_t i = fe; i-- > fb;) {
+          acc += a * (lateral_[i] - acc);
+          lateral_[i] = acc;
+          sum += acc;
+        }
+        // Relative to the field's own mean, not an absolute rate difference.
+        // The first version subtracted hertz from hertz and was unstable at
+        // every gain tried, including the smallest: the term scales with the
+        // rate it is derived from, so a field that starts firing harder
+        // produces a bigger push to fire harder still. Vocal free-ran at 66 Hz
+        // against 4.4 and the duty cycle pinned at 1.00.
+        //
+        // As a fraction of the mean it is a contrast — bounded by construction,
+        // scale-free, and it says the thing the mechanism is actually about:
+        // "this neighbourhood is busier than its field", not "by this many
+        // hertz". Divisive normalisation upstairs already works in exactly
+        // these units for the same reason.
+        const Scalar field_mean = sum / Scalar(width);
+        const Scalar inv = field_mean > Scalar(0.05) ? kOne / field_mean : kZero;
+        for (uint32_t i = fb; i < fe; ++i) {
+          const Scalar contrast = clampf((lateral_[i] - field_mean) * inv,
+                                         Scalar(-1), kOne);
+          lateral_[i] = lateral_gain_[m] * contrast;
+        }
+      }
+    }
+
     Scalar ffi = kZero;
     if (dna_.module(m).ffi_source >= 0) {
       const uint32_t src = uint32_t(dna_.module(m).ffi_source);
@@ -936,10 +1016,18 @@ void Network::step() {
       // is the module's own rhythm arriving at every neuron equally, so
       // dividing it by how busy the module is, or amplifying it with a plateau,
       // would both be describing it as something it is not.
+      // v32's lateral term joins noise, bias and the oscillation rather than
+      // the synaptic sum, and for the same reason each of those does. Dividing
+      // it by `norm` would double-count: divisive normalisation scales drive by
+      // how busy the module is, and this term is *derived* from how busy the
+      // neighbourhood is. Multiplying it by `apical_mult` would be worse — a
+      // plateau changes how loudly the synapses on that tuft are heard, and a
+      // lateral interneuron is not on the tuft.
+      const Scalar lateral = any_lateral_ ? lateral_[i] : kZero;
       const Scalar drive = (in[i] * norm - ffi * ffi_w_[i]) * apical_mult +
                            noise_amp_[i] * (explore_mult_[m] * xi +
                                             drive_comp_ * (kOne - explore_mult_[m])) +
-                           bias_[i] + osc;
+                           bias_[i] + osc + lateral;
 
       // Node perturbation: remember what this neuron was actually given, so
       // that a reward arriving a second from now can credit it. Decays on the

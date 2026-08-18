@@ -158,7 +158,7 @@ constexpr uint32_t kDnaMagic = 0x44424941;  // "AIBD"
 //     the code completely (0.980 against 0.540 at 12 px of displacement). So
 //     the mechanism was always worth having and only the aim was wrong. See
 //     DnaVision::gaze_rate_hz.
-constexpr uint32_t kDnaVersion = 31;
+constexpr uint32_t kDnaVersion = 32;
 
 // What a module is wired to the world through. The host looks modules up by
 // role, never by name or index, so renaming a module in the genome cannot
@@ -977,6 +977,47 @@ struct DnaModule {
   // silently ignored: it would multiply every eligibility by (1 - gate) and
   // switch learning off, which is a mechanism that looks like it ran.
   float plateau_gate;
+
+  // DNA v32. Lateral competition inside a module, so a population code can
+  // have a *place* in it.
+  //
+  // The problem it is built for, measured rather than assumed. The vocal
+  // readout is a centroid over neuron index — value = sum(rate_i * i) / sum
+  // (rate_i) — and every parameter read that way is pinned near the middle of
+  // its range while every parameter read as a firing rate uses all of its. The
+  // instantaneous centroid is not stuck: it ranges 0.068 to 0.880, which on the
+  // formant map is F1 from 300 Hz to 910 Hz, real vowel territory at both ends.
+  // What it never does is DWELL. An untuned group excited by an arbitrary input
+  // produces a wandering average, and an average that wanders is noise however
+  // wide it wanders — there is no posture for a reward to find twice.
+  //
+  // So this is not about widening the range. The acoustic yardstick says a
+  // +/-1sd swing of the F1 the creature ALREADY delivers is d' = 3.2, which a
+  // listener hears. It is about making a position in the group stable enough to
+  // be aimed at.
+  //
+  // The mechanism is local excitation against the field mean: each neuron's
+  // drive gains `lateral_gain` x (smoothed rate over its neighbourhood minus
+  // the field's own mean rate). Locally-active regions reinforce themselves and
+  // suppress the rest, which is the standard continuous-attractor arrangement
+  // and produces a bump whose position is set by whichever part of the field
+  // the afferents happen to favour. Index then means something — to a neuron's
+  // neighbours rather than to its afferents, which is enough for the centroid
+  // to have a metric under it.
+  //
+  // Rate-based rather than spike-based, exactly as `ffi_source` above already
+  // is: this is the same interneuron approximation the pooling class uses, on
+  // the same `rate_fast` the decoder reads.
+  //
+  // `lateral_fields` tiles the module into that many competitive fields using
+  // the same `slice_begin` the decoders use, because a bump has to form inside
+  // ONE readout group. A single field spanning the vocal module would light one
+  // group and starve the other eight, taking voicing and loudness with it.
+  //
+  // gain 0 is off and is bit-identical to not having it.
+  float lateral_gain;    // strength; 0 disables the whole mechanism
+  float lateral_sigma;   // excitation width, as a fraction of one field
+  uint32_t lateral_fields;  // competitive fields per module; 0 or 1 = whole module
 };
 
 // max_out_degree is what makes growth allocation-free: every neuron owns a

@@ -555,6 +555,9 @@ bool compile_dna_toml(const std::string& path, std::vector<uint8_t>& out,
     m.critical_tau_ms = float(r.number("critical_tau_ms"));
     m.critical_floor = float(r.number("critical_floor"));
     m.plateau_gate = float(r.number("plateau_gate"));
+    m.lateral_gain = float(r.number("lateral_gain"));
+    m.lateral_sigma = float(r.number("lateral_sigma"));
+    m.lateral_fields = uint32_t(r.number("lateral_fields"));
 
     collect(r);
     module_blobs.push_back(m);

@@ -823,6 +823,12 @@ gamma_theta_coupling = 1.0
 critical_tau_ms = 0.0       # DNA v28: 0 = plasticity never closes (pre-v28)
 critical_floor = 0.2        # what the learning rate settles to when it does
 plateau_gate = 0.0          # DNA v29: 0 = eligibility ignores the tuft (pre-v29)
+# DNA v32. Lateral competition, so a population centroid has somewhere to sit.
+# 0 is off and is bit-identical to not having it. See the note in dna.h: the
+# vocal centroid already reaches F1 300-910 Hz, it just never dwells anywhere.
+lateral_gain = 0.0          # strength of local excitation minus the field mean
+lateral_sigma = 0.15        # excitation width, as a fraction of one field
+lateral_fields = 1          # competitive fields; the vocal module wants 9
 
 
                            # [normalisation]: peak per-neuron discriminability,
@@ -925,6 +931,12 @@ gamma_theta_coupling = 1.0
 critical_tau_ms = 0.0       # DNA v28: 0 = plasticity never closes (pre-v28)
 critical_floor = 0.2        # what the learning rate settles to when it does
 plateau_gate = 0.0          # DNA v29: 0 = eligibility ignores the tuft (pre-v29)
+# DNA v32. Lateral competition, so a population centroid has somewhere to sit.
+# 0 is off and is bit-identical to not having it. See the note in dna.h: the
+# vocal centroid already reaches F1 300-910 Hz, it just never dwells anywhere.
+lateral_gain = 0.0          # strength of local excitation minus the field mean
+lateral_sigma = 0.15        # excitation width, as a fraction of one field
+lateral_fields = 1          # competitive fields; the vocal module wants 9
 
 
 
@@ -1026,6 +1038,12 @@ gamma_theta_coupling = 1.0
 critical_tau_ms = 0.0       # DNA v28: 0 = plasticity never closes (pre-v28)
 critical_floor = 0.2        # what the learning rate settles to when it does
 plateau_gate = 0.0          # DNA v29: 0 = eligibility ignores the tuft (pre-v29)
+# DNA v32. Lateral competition, so a population centroid has somewhere to sit.
+# 0 is off and is bit-identical to not having it. See the note in dna.h: the
+# vocal centroid already reaches F1 300-910 Hz, it just never dwells anywhere.
+lateral_gain = 0.0          # strength of local excitation minus the field mean
+lateral_sigma = 0.15        # excitation width, as a fraction of one field
+lateral_fields = 1          # competitive fields; the vocal module wants 9
 
 
 
@@ -1123,6 +1141,12 @@ gamma_theta_coupling = 1.0
 critical_tau_ms = 0.0       # DNA v28: 0 = plasticity never closes (pre-v28)
 critical_floor = 0.2        # what the learning rate settles to when it does
 plateau_gate = 0.0          # DNA v29: 0 = eligibility ignores the tuft (pre-v29)
+# DNA v32. Lateral competition, so a population centroid has somewhere to sit.
+# 0 is off and is bit-identical to not having it. See the note in dna.h: the
+# vocal centroid already reaches F1 300-910 Hz, it just never dwells anywhere.
+lateral_gain = 0.0          # strength of local excitation minus the field mean
+lateral_sigma = 0.15        # excitation width, as a fraction of one field
+lateral_fields = 1          # competitive fields; the vocal module wants 9
 
 
 
@@ -1341,6 +1365,38 @@ critical_floor = 0.2        # what the learning rate settles to when it does
 #
 # Ships off. Off is bit-identical (be2e508dfc170240).
 plateau_gate = 0.0          # DNA v29: 0 = eligibility ignores the tuft (pre-v29)
+# DNA v32. Lateral competition, so a population centroid has somewhere to sit.
+# 0 is off and is bit-identical to not having it. See the note in dna.h: the
+# vocal centroid already reaches F1 300-910 Hz, it just never dwells anywhere.
+lateral_gain = 0.0          # strength of local excitation minus the field mean
+lateral_sigma = 0.10        # excitation width, as a fraction of one field
+lateral_fields = 9          # one competitive field per motor group
+# Swept 2026-08-18 on babble/G2. Delivered F1 sd is what the vocal tract
+# actually hands the synthesiser; the bar for "postures rather than noise" is a
+# bimodality coefficient over 0.556 (a normal distribution reads 0.333).
+#
+#   gain    duty   delivered F1 sd     bimodal   G2
+#   0 (off) 0.51   0.027  (20 Hz)      0.308     PASS 7/9, rate +0.777x
+#   0.020   0.53   0.134  (101 Hz)     0.466     PASS 6/9, rate +0.507x
+#   0.030   0.69   0.208  (156 Hz)     0.546     not run
+#   0.035   0.78   0.255  (192 Hz)     0.614     FAIL 4/9
+#   0.045   0.92   0.266             0.613     babble FAILS: the creature drones
+#
+# The bar and the milestone are on opposite sides of 0.03. Bimodality clears
+# only at gain >= 0.030 and G2 breaks by 0.035, so there is no setting that
+# buys stable postures without spending a milestone that is already met.
+# Shipped OFF at 0.0 pending a replicate of the acoustic result below.
+#
+# At 0.020 the mechanism is a real gain on everything except G2's rate half:
+# the vowel spread is 4.9x, praise's effect on F1 is +0.0559 against the
+# shipped +0.0255, and calibrate passes untouched. What it costs is the
+# rewarded-rate advantage, +0.507x against +0.777x, and 6 of 9 creatures
+# against 7 of 9.
+#
+# Note also that v32 makes the 800 ms articulator inertia stop mattering: its
+# attenuation of F1 falls from 4.2x to 1.6x, because a bump persists and an EMA
+# passes what persists. That is the reason the smoothing_ms sweep was measured
+# and deliberately not shipped.
 
 
 
@@ -1441,6 +1497,12 @@ gamma_theta_coupling = 1.0
 critical_tau_ms = 0.0       # DNA v28: 0 = plasticity never closes (pre-v28)
 critical_floor = 0.2        # what the learning rate settles to when it does
 plateau_gate = 0.0          # DNA v29: 0 = eligibility ignores the tuft (pre-v29)
+# DNA v32. Lateral competition, so a population centroid has somewhere to sit.
+# 0 is off and is bit-identical to not having it. See the note in dna.h: the
+# vocal centroid already reaches F1 300-910 Hz, it just never dwells anywhere.
+lateral_gain = 0.0          # strength of local excitation minus the field mean
+lateral_sigma = 0.15        # excitation width, as a fraction of one field
+lateral_fields = 1          # competitive fields; the vocal module wants 9
 
 
 

@@ -565,6 +565,17 @@ class Network {
   Scalar osc_gamma_amp_[kMaxModules] = {};
   Scalar osc_coupling_[kMaxModules] = {};
   bool any_osc_ = false;
+
+  // DNA v32. Lateral competition. `lateral_` holds this tick's per-neuron
+  // local-minus-field term and is scratch, not state: it is written before it
+  // is read on every tick, so it is not snapshotted and a resumed creature does
+  // not need it. Allocated only when some module asks for the mechanism, which
+  // is what keeps a v31 genome's arena byte-for-byte what it was.
+  Scalar* lateral_ = nullptr;
+  Scalar lateral_gain_[kMaxModules] = {};
+  Scalar lateral_sigma_[kMaxModules] = {};
+  uint32_t lateral_fields_[kMaxModules] = {};
+  bool any_lateral_ = false;
   // DNA v28. Does any module close its critical period? Keeps the whole
   // computation behind one branch on a genome that does not ask for it.
   bool any_critical_ = false;
