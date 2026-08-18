@@ -118,7 +118,12 @@ const Spec kSpecs[] = {
 // If you changed the genome or a mechanism's default ON purpose, this number
 // moves and you update it here, in the same commit, having said in the
 // changelog what moved it.
-constexpr uint64_t kPinnedHash = 0x15b5dcb6d8616452ull;
+// Moved 2026-08-18 by the `vision->vocal` tract, which is a deliberate wiring
+// change and not a mechanism default: 15b5dcb6d8616452 -> ca3234c61439b538.
+// Two recalibrated target_rate_hz ride along with it. Every vocal number
+// recorded before that commit was taken on a creature whose larynx had no
+// visual input at all.
+constexpr uint64_t kPinnedHash = 0xca3234c61439b538ull;
 
 const Spec* find_spec(const std::string& name) {
   for (const Spec& s : kSpecs) {

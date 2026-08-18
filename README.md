@@ -397,14 +397,25 @@ of an hour.
 | **M0** skeleton | done |
 | **M1** closed audio loop | **done — G2 met.** Rewarded vocalisations rise within the session (×1.35) and praise beats its own yoked control in **23 of 27 creatures** across three seed families, and 9 of 9 at 420 s. What closed it was directional exploration (DNA v10), which was not aimed at reward at all |
 | **M2** vision | **done** — camera → retina → B3 → B1, discriminates present from absent at 98%, and 86% with firing rate divided out |
-| **M3** cross-modal association | **built and measured, G3 not met** — the baby echoes a word it hears (0.83) but shows no trace of naming a shape (0.507, CI [0.477, 0.537] over 20 creature pairs, against a 0.75 bar) |
+| **M3** cross-modal association | **built and measured, G3 not met — and now settled rather than open.** The baby echoes a word it hears (0.75) and the seen object *does* now reach the larynx (0.654, up from 0.515, via `vision→vocal`), yet naming still reads taught−random **−0.014** with 0 of 5 creatures over the 0.75 bar. Delivery is no longer the limit; conditioning is |
 | **M4** growth and sleep | **done** — **G4 passes**: the creature never grows while it is still learning, grows only on a detected plateau, and never passes the DNA cap; myelination, pruning and replay all run |
 | M5 embedded | not started |
 
 Every number on this page comes from the genome in [dna/default.toml](dna/default.toml)
 as it currently stands. **The whole suite above passes except `m3`** — G1,
 calibrate, babble, audio, vision, M2, G2, sleep, G4 and snapshot are all green,
-and G3 is the one milestone still open.
+and G3 is the one milestone still open. Shipped hash `ca3234c61439b538`;
+`--experiment verify` reads 14 of 14 as expected.
+
+**G3 is open but no longer a live line of work.** The `vision→vocal` tract
+below raised delivery to the larynx by 27% and moved the milestone by −0.014,
+which is the third independent measurement saying the same thing: the object
+arriving is not what G3 was ever waiting on. Both of the creature's learning
+rules are ruled out as ways to supply the missing conditionality — node
+perturbation writes a per-neuron constant rather than a function of the input,
+and reward-modulated STDP's object-specific share of what it writes is about
+8%. Clearing 0.75 needs a third learning rule, which is a new architecture and
+not a fix.
 
 Two mechanisms carry the change since M4, and neither was aimed at the goal it
 hit. **Per-module homeostasis (DNA v9)** came from asking why praise did not
@@ -2004,6 +2015,76 @@ reads 0.532 on the vision module**, where `m2` gets 0.98. The pooling, not the
 creature, was destroying the signal. A negative result about a population code
 needs a positive control run through the identical readout, or it is a
 measurement of the readout.
+
+### `vision→vocal` — the seen object finally reaches the larynx, and G3 still does not move
+
+**Shipped 2026-08-18.** New hash `ca3234c61439b538`. This is the first change in
+this project that puts the *seen object* at the larynx, and it is worth being
+precise about what that did and did not buy.
+
+The genome had nine projections and `vision` reached only `central`. `projprobe`
+pushes a module's own activity through a random sparse binary matrix — the
+linear part of a tract, nothing else driving the target — and says why that
+mattered:
+
+| arm | at source | d=0.03 | d=0.15 | d=0.40 | shuffled |
+|---|---|---|---|---|---|
+| object from `central` | 0.760 | 0.620 | 0.560 | 0.600 | 0.460 |
+| **object from `vision`** | 0.960 | **0.980** | 0.840 | 0.640 | 0.540 |
+| word from `auditory` (control) | 1.000 | 1.000 | 1.000 | 0.660 | 0.400 |
+
+Vision's object code crosses a sparse tract intact and central's does not, so
+the one source whose code survives a tract had no route to the larynx.
+
+**Density was the wrong axis.** Matching `central→vocal` exactly delivered
+nothing — vocal 0.600 against a 0.500 baseline, +8% drive. The linear model has
+nothing else driving the target, and the real vocal fires ~971 spikes/trial on
+its own, so a tract that does not compete with that is invisible. Weight is the
+axis: at d=0.03 the vocal row goes 0.600 → 0.760 → 0.880 as weight goes 0.14 →
+0.40 → 0.80, with the shuffled control flat at 0.520.
+
+**Then `audio` failed, and that is the interesting part.** At weight 0.80 the
+creature babbles hard enough to hear itself — `self_gain` mixes its own voice
+into the room — so mel energy during "silence" went 0.0499 → 0.0830 and an
+external vowel no longer lifted the auditory module by the 10% that experiment
+requires. The baby was babbling over you. It shipped at **weight 0.30**, the
+largest that leaves the creature able to hear, and that costs nothing in
+delivery: 0.760 either way, because a gentler tract is not fighting the arcuate
+for the same larynx.
+
+**What it buys — G2, on the same nine seeds:**
+
+| | before | after |
+|---|---|---|
+| praise won | 7 of 9 | **9 of 9** |
+| F1 motor group advantage | +0.0255 | **+0.0556** |
+| rewarded rate advantage | +0.777× | +0.707× |
+
+The F1 advantage is the largest recorded here, above DNA v32's +0.0559 and
+without v32's `rate_norm` fragility. The rewarded-rate advantage slips, which is
+an honest cost rather than a rounding error.
+
+**What it does not buy.** G3 does not move. On this genome, with `g3probe`'s echo
+control passing at 0.750, the object arrives at vocal at **0.654 against 0.515**
+before — and taught minus random is **−0.014**, with 0 of 5 creatures over the
+0.75 bar. Delivery up 27% and the milestone went nowhere. That is the third
+independent confirmation that **delivery was never G3's limit**; the blocker is
+conditioning. No further delivery mechanism should be built for G3.
+
+`central→vocal` is left exactly as it was and is now labelled in the genome as a
+known non-participant: deleting it and recalibrating leaves every G3 number
+unchanged, its density is flat at chance over a 5× range, and the eligibility
+trace it carries is object-weak at 0.654 against the arcuate's 0.892. It stays
+because it is the only descending path from the association module to the
+larynx, because every G3 result on record was measured with it in place, and
+because deleting a projection silently re-rolls the delay jitter of every
+projection after it.
+
+**A trap worth recording.** A 300k `--allow-short` screen of an earlier arm read
+teacher 0.618 against random 0.536, a +0.082 gap that looked like G3 moving. The
+900k run reversed it to 0.518 / 0.563. Screens select candidates; they never
+conclude.
+
 
 ## Design decisions that were not obvious
 

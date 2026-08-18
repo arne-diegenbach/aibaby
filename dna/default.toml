@@ -600,7 +600,7 @@ v_rest = 0.0
 # at 3 ms) but costs G2, which peaks here.
 leak_tau_ms = 5.0
 refractory_ms = 3.0
-target_rate_hz = 7.20  # measured, not chosen: this module's free-running
+target_rate_hz = 6.81  # measured, not chosen: this module's free-running
                              # rate with homeostasis switched off. A target that
                              # differs from it makes intrinsic plasticity spend
                              # the session hauling the network somewhere, and
@@ -952,8 +952,10 @@ neurons = 256
 n_max = 2048
 # Widening vision->central to 0.06 puts ~24 synapses from every retinal neuron
 # into the association module on top of its intra-module wiring, and 48 was not
-# enough to hold them.
-max_out_degree = 80
+# enough to hold them. Raised again for vision->vocal below; raising a cap draws
+# no random numbers, so this leaves every non-overflowing brain bit-identical
+# and it was verified inert on its own before the tract was added.
+max_out_degree = 256
 extent = [1.0, 1.0, 1.0]
 conn_radius = 0.4
 conn_density = 0.5
@@ -1068,7 +1070,12 @@ threshold = 1.0
 v_rest = 0.0
 leak_tau_ms = 20.0
 refractory_ms = 3.0
-target_rate_hz = 4.1
+# 4.10 until vision->vocal was added. somato has no afferents from the brain,
+# so this drifting at all was a surprise — adding a projection draws random
+# numbers at build time and shifts what every module's noise stream sees. That
+# is rule 5's shared-RNG effect showing up in a module the edit does not touch,
+# and it is why `calibrate` sweeps every module rather than the obvious one.
+target_rate_hz = 4.56
 inhib_fraction = 0.15
 inhib_gain = 2.5
 weight_init = 0.12
@@ -1157,8 +1164,10 @@ neurons = 126               # 14 per motor group, 9 groups
 n_max = 1024
 # 48 was enough until the ears were wired to the larynx (M3). This bounds
 # in-degree as well as out-degree, and the auditory projection alone lands ~29
-# synapses on every vocal neuron.
-max_out_degree = 96
+# synapses on every vocal neuron. Raised again for vision->vocal, which lands on
+# the same module. Verified inert on its own: the cap change alone left the
+# determinism hash at 15b5dcb6d8616452.
+max_out_degree = 512
 extent = [1.0, 1.0, 1.0]
 conn_radius = 0.4
 conn_density = 0.5
@@ -1475,6 +1484,12 @@ refractory_ms = 3.0
 # hotter central module made it 8.04, and re-measuring with `calibrate` in
 # DNA v5 put it at 8.64. Expression drives nothing but the avatar, so unlike
 # vocal it has no behavioural reason to sit below its own rate.
+#
+# Unchanged by vision->vocal at weight 0.30, but it does NOT stay put at 0.80:
+# central projects here, so re-measuring central's target displaces this one and
+# `vision` too, and that recalibration needs a second pass. central has
+# norm_gain 1.0, which makes its target a fixed point rather than a measurement
+# (rule 8). A gentler tract disturbs two targets instead of four.
 target_rate_hz = 7.47
 inhib_fraction = 0.15
 inhib_gain = 2.5
@@ -1760,6 +1775,28 @@ birth_weight = 1.0        # DNA v30: born at weight x this; set to 1/exuberance
 # is actually scored on — declines from 0.530 to 0.460, and vocal's firing rate
 # rises 43%. That is a module being driven harder, not one being informed.
 # Leave both at their shipped values; the fix is not on this tract.
+#
+# STATUS 2026-08-18: THIS TRACT IS A KNOWN NON-PARTICIPANT, AND IT STAYS.
+#
+# Deleting it and recalibrating left every G3 number unchanged, so on the
+# evidence it carries nothing the creature uses. Three separate measurements
+# say no knob on it can change that: density is flat at chance over a 5x range
+# (0.03 -> 0.15 delivers 74% more drive and zero object, with the voice getting
+# monotonically WORSE, 0.580 -> 0.320); the eligibility trace it carries is
+# object-weak at 0.654 against the arcuate's 0.892 on the identical readout;
+# and synapses hanging off central's most object-informative decile carry no
+# more conditional eligibility than its least (0.532 vs 0.544). The reason is
+# upstream: central's object code does not survive pooling. `projprobe` scores
+# it at 0.760 at source and 0.620 through a sparse tract, where vision scores
+# 0.960 and 0.980. That is why the fix was a new tract from `vision` rather
+# than any change here.
+#
+# It is kept, not deleted, for three reasons. It is the only descending path
+# from the association module to the larynx, so removing it would make the
+# creature's anatomy a statement this project has not earned. Every G3 result
+# on record was measured with it in place. And "delete the dead tract" is
+# exactly the kind of tidying that would silently re-roll the delay jitter of
+# every projection after it. Left at density 0.03, weight 0.14 — unchanged.
 src = "central"
 dst = "vocal"
 kind = "random"
@@ -1824,6 +1861,16 @@ birth_weight = 1.0        # DNA v30: born at weight x this; set to 1/exuberance
 # It is added last on purpose. Every landed synapse draws its own delay jitter,
 # so a projection inserted earlier would rewire every projection after it.
 [[projection]]
+# LEFT AT 0.12, and the reasoning is worth keeping because the obvious move was
+# to raise it. `vision->vocal` below lands on this same module and the two
+# compete, but only when both are driven: with an empty visual field the word
+# still reaches vocal at 0.980 and the voice at 0.840. With the object ALSO in
+# view, a strong vision tract (w=0.80) collapsed g3probe's calibration echo
+# 0.825 -> 0.625, under the 0.700 that instrument needs. Raising this to 0.20
+# fixed the echo (0.850) — and made the creature babble loudly enough to fail
+# the `audio` experiment, because it hears its own voice. Dropping the vision
+# tract to 0.30 instead buys the same delivery (vocal 0.760) with this weight
+# untouched and `audio` passing. Compensating here was solving the wrong half.
 src = "auditory"
 dst = "vocal"
 kind = "random"
@@ -1908,6 +1955,103 @@ birth_weight = 1.0        # DNA v30: born at weight x this; set to 1/exuberance
 # reduced sensory firing under feedback is what "explaining away" means, and it
 # is the signature predictive coding predicts. G2 still passes and its effect is
 # larger (x1.86 against x1.35), though on fewer creatures (7 of 9 against 9).
+
+# vision -> vocal. Added 2026-08-18, and it ships for G2, NOT for G3.
+#
+# Why it exists. `projprobe` pushes a module's own activity through a random
+# sparse binary matrix -- the linear part of a tract, no threshold, nothing
+# else driving the target -- and asks what survives:
+#
+#   arm                    at source   d=0.03   d=0.15   d=0.40   shuffled
+#   object from central    0.760       0.620    0.560    0.600    0.460
+#   object from vision     0.960       0.980    0.840    0.640    0.540
+#   word from auditory     1.000       1.000    1.000    0.660    0.400
+#
+# Vision's object code crosses a sparse tract intact; central's does not. The
+# genome had nine projections and vision reached only `central`, so the one
+# source whose code survives a tract had no route to the larynx. This is that
+# route, and it is the first thing in this project to put the seen object at
+# the larynx: m3probe's vocal row goes 0.500 -> 0.760, g3probe's "does it
+# ARRIVE" row 0.515 -> 0.654.
+#
+# Why density 0.03. Matching central->vocal exactly (d=0.03, w=0.14) delivered
+# NOTHING -- vocal 0.600 interleaved against a 0.500 baseline, +8% drive. The
+# linear model above has nothing else driving the target; the real vocal fires
+# ~971 spikes/trial on its own, so a tract that does not compete with that is
+# invisible. Density is the wrong axis; weight is. Sweeping weight at d=0.03
+# (uncalibrated creatures, arcuate at its shipped 0.12):
+#
+#   weight   0.14    0.40    0.80    1.20    1.60    2.40
+#   vocal    0.600   0.760   0.880   0.880   0.860   0.900
+#
+# Monotone to 0.80 then a plateau, shuffled control flat at 0.520 throughout.
+# Denser arms are worse at the same drive (d=0.15/w=0.14 puts the voice at
+# 0.580) -- sparse AND strong, because pooling is what destroys this code and
+# drive is what makes it reach the target at all.
+#
+# WHY 0.30 AND NOT 0.80, which is the part that cost a rebuild. The delivery
+# knee is 0.80, and at 0.80 the creature FAILS the `audio` experiment. The
+# larynx is loud enough that the ear hears it -- `self_gain` mixes the
+# creature's own voice into the room -- so mel energy during "silence" goes
+# 0.0499 -> 0.0830 and an external vowel no longer lifts the auditory module
+# by the 10% that experiment requires. The baby babbles over you. Recalibrated
+# arms, ratio is vowel rate over silence rate and must exceed 1.10:
+#
+#   weight   0.20    0.30    0.45     (pre-change genome: 1.36)
+#   audio    1.22    1.15    1.07 FAIL
+#   vocal    0.600   0.760   0.800
+#
+# 0.30 is the largest weight that leaves the creature able to hear. It gives up
+# nothing measurable in delivery: 0.760, the same as w=0.80 once the arcuate is
+# left alone (see the note there -- raising the arcuate to compensate for a
+# strong tract was solving the wrong half, and made `audio` worse). A gentler
+# tract also disturbs two calibration targets instead of four.
+#
+# The control that makes the delivery believable: the central->vocal density
+# sweep drove vocal to 1686 spikes/trial and scored 0.500, while this tract at
+# 1400 scores 0.880. Drive is not information. The source is what changed.
+#
+# What it buys -- G2, on the same nine seeds, a paired comparison:
+#
+#                     before     after
+#   praise won        7 of 9     9 of 9
+#   F1 advantage      +0.0255    +0.0556
+#   rewarded rate     +0.777x    +0.707x   <- the one thing that got worse
+#
+# The F1 advantage is the largest ever recorded here, above DNA v32's +0.0559
+# without v32's rate_norm fragility. The rewarded-rate advantage slips slightly
+# and that is an honest cost, not a rounding error; G2's criterion is the
+# within-session rise (x1.61) and the win count, and both improved.
+#
+# What it does NOT buy, measured and settled. G3 does not move. On this exact
+# genome, with g3probe's echo control PASSING at 0.750, the object arrives at
+# vocal at 0.654 against 0.515 before -- and taught minus random is -0.014,
+# with 0 of 5 creatures over the 0.75 bar. Delivery up 27% and the milestone
+# went nowhere. Third independent confirmation that delivery was never G3's
+# limit; the blocker is conditioning, and no tract fixes it. Do NOT add another
+# delivery mechanism for G3.
+#
+# A trap worth recording: a 300k --allow-short screen of an earlier arm read
+# teacher 0.618 / random 0.536, a +0.082 gap. The 900k run reversed it to
+# 0.518 / 0.563. Screens select candidates and never conclude.
+#
+# It is added LAST on purpose, the same reason the arcuate is: every landed
+# synapse draws its own delay jitter, so a projection inserted earlier rewires
+# every projection after it.
+[[projection]]
+src = "vision"
+dst = "vocal"
+kind = "random"
+source = "either"        # DNA v14: recruit both cell types, the pre-v14 rule
+density = 0.03
+weight = 0.30
+delay_ms = 4.0
+delay_jitter_ms = 1.0
+hebb = 0.0                # DNA v23: per-pathway Hebbian rate, 0 = reward-gated only
+apical = 0                # DNA v25: 1 terminates on the target's apical tuft
+exuberance = 1.0          # DNA v28: born at density x this, pruned back by experience
+birth_weight = 1.0        # DNA v30: born at weight x this; set to 1/exuberance
+
 
 [neuromod]
 # DNA v20. Off reproduces v19 exactly: the four reward terms are summed against
