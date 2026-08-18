@@ -813,6 +813,7 @@ constexpr uint32_t kM3TrainPerProbe = 3;
 // goes quietly out of date.
 struct M3Record {
   double group[aibaby::kVocalGroups] = {};
+  double act[aibaby::kVocalGroups] = {};   // the same groups read as RATES
   double amplitude = 0.0;
   double f0 = 0.0, f1 = 0.0, f2 = 0.0;
   uint64_t voiced = 0, frames = 0;
@@ -958,6 +959,26 @@ inline double cepstral_dprime_between(const std::vector<double>& a,
   return std::sqrt(acc);
 }
 
+
+// The nine groups as CENTROIDS and the nine as RATES, scored separately on the
+// same trials. Added 2026-08-19 to ask which half of a group's reading carries
+// the object, now that `vision->vocal` has put an object at the larynx to
+// carry. Only the centroids reach the vocal tract's articulators; if the rates
+// are what carry it, the decoder is discarding the signal by construction and
+// that is a fixable readout rather than a missing one.
+inline std::vector<double> m3_centroid_features(const M3Record& r) {
+  std::vector<double> f;
+  if (r.frames == 0) return f;
+  for (uint32_t g = 0; g < aibaby::kVocalGroups; ++g) f.push_back(r.group[g] / double(r.frames));
+  return f;
+}
+
+inline std::vector<double> m3_activity_features(const M3Record& r) {
+  std::vector<double> f;
+  if (r.frames == 0) return f;
+  for (uint32_t g = 0; g < aibaby::kVocalGroups; ++g) f.push_back(r.act[g] / double(r.frames));
+  return f;
+}
 
 // The milestone's feature: everything the vocal tract did. Nine motor groups,
 // how loud it was, and how much of the time the glottis was open.

@@ -158,7 +158,7 @@ constexpr uint32_t kDnaMagic = 0x44424941;  // "AIBD"
 //     the code completely (0.980 against 0.540 at 12 px of displacement). So
 //     the mechanism was always worth having and only the aim was wrong. See
 //     DnaVision::gaze_rate_hz.
-constexpr uint32_t kDnaVersion = 32;
+constexpr uint32_t kDnaVersion = 33;
 
 // What a module is wired to the world through. The host looks modules up by
 // role, never by name or index, so renaming a module in the genome cannot
@@ -540,7 +540,42 @@ struct DnaVision {
   // 1.0 is the pure-peak behaviour and 0.0 is v27's whole-field centroid, so
   // this one number spans both previous attempts and the space between them.
   float gaze_peak_frac;
-  uint32_t pad;
+  // DNA v33. How far from the peak cell a cell may sit and still join the aim
+  // centroid, in pixels. 0 = unlimited, which is the v31 rule exactly, and it
+  // SHIPS AT 0 — this mechanism was built against a hypothesis and the
+  // hypothesis was wrong. Kept because the refutation is worth more than the
+  // field costs, and because the measurement below is the one that says where
+  // peripheral acquisition actually breaks.
+  //
+  // The hypothesis. v31's neighbourhood is a MAGNITUDE test and nothing else:
+  // every cell above `gaze_peak_frac` x the peak is averaged in, wherever it
+  // sits on the retina, even though the comment above calls it "the peak's
+  // neighbourhood". So with the toy outside the fovea, foveal cells clearing
+  // the same bar on noise should drag the aim back to the layout centre — and
+  // the symptom fits, because at scatter 0.25 the eye re-aims 133 times and
+  // moves 0.7 px.
+  //
+  // The measurement, and it is a clean no:
+  //
+  //   radius   INSIDE the fovea      OUTSIDE it
+  //   0 (v31)  0.870, gaze 1.3 px    0.440, gaze 11.4 px
+  //   6        0.740, gaze 4.5 px    0.480, gaze 12.7 px
+  //   10       0.640, gaze 2.5 px    0.460, gaze 11.4 px
+  //   16       0.830, gaze 1.3 px    0.440, gaze 11.4 px
+  //   24       0.870, gaze 1.3 px    0.440, gaze 11.4 px
+  //
+  // Outside the fovea the gaze error does not move at ANY radius, and inside
+  // it a tight radius makes aiming worse — cutting the neighbourhood down
+  // throws away the cells that centre the estimate on a DoG edge response.
+  //
+  // What it rules out, which is the useful part. The eye is not being dragged
+  // off a good estimate; there is no estimate. `fixed` reads vision 0.540 at
+  // 12.1 px, which is chance, so the retina does not localise the toy out
+  // there at all and no aiming rule can help. Peripheral acquisition is a
+  // RETINA problem — coarser rings that actually respond, or a separate
+  // low-acuity channel for acquisition the way a retinotectal pathway is —
+  // and not a controller problem. Do not tune the controller for it again.
+  float gaze_peak_radius;
 };
 
 // Reward-modulated motor exploration (LMAN).

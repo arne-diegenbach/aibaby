@@ -410,10 +410,20 @@ void Retina::present(const uint8_t* pixels) {
   float aim_x = peak_x, aim_y = peak_y;
   {
     const float bar = cfg_.gaze_peak_frac * peak;
+    // DNA v33: the neighbourhood is spatial as well as magnitude-based. A
+    // radius of 0 means unlimited and is the v31 rule exactly. Squared, so the
+    // inner loop needs no sqrt.
+    const float radius = cfg_.gaze_peak_radius;
+    const float radius_sq = radius * radius;
     double wx = 0.0, wy = 0.0, ws = 0.0;
     for (size_t c = 0; c < cells_.size(); ++c) {
       const float mag = magnitude_[c];
       if (mag < bar) continue;
+      if (radius > 0.0f) {
+        const float dx = cells_[c].cx - peak_x;
+        const float dy = cells_[c].cy - peak_y;
+        if (dx * dx + dy * dy > radius_sq) continue;
+      }
       wx += double(mag) * double(cells_[c].cx);
       wy += double(mag) * double(cells_[c].cy);
       ws += double(mag);

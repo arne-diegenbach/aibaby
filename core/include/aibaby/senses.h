@@ -162,6 +162,13 @@ class VocalDecoder {
   // Raw group readings before mapping, for telemetry: nine numbers in [0,1]
   // that say what the motor cortex is actually doing.
   const Scalar* groups() const { return group_value_; }
+  // The other half of each group's reading, and until 2026-08-19 nothing could
+  // see it. `groups()` is a population CENTROID over neuron index; this is the
+  // group's mean rate against `rate_norm`. Only `activity[voicing]` currently
+  // reaches the larynx (as loudness), so if the object rides on rates rather
+  // than positions, the vocal tract is discarding eight numbers that have it.
+  // Read-only telemetry: exposing it changes no behaviour.
+  const Scalar* activities() const { return group_activity_; }
   uint32_t frame() const { return frame_; }
 
  private:

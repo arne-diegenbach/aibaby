@@ -366,6 +366,7 @@ bool run_m3probe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
     std::vector<std::vector<std::vector<double>>> per_module_phase(modules);
     std::vector<std::vector<std::vector<double>>> per_module_ema(modules);
     std::vector<std::vector<double>> vocal;
+    std::vector<std::vector<double>> centroids, activities;
     std::vector<int> labels;
     uint32_t last_frame = 0;
 
@@ -410,7 +411,11 @@ bool run_m3probe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
         last_frame = s.brain.vocal_frame();
         ++rec.frames;
         const aibaby::Scalar* g = s.brain.vocal_groups();
-        for (uint32_t k = 0; k < aibaby::kVocalGroups; ++k) rec.group[k] += double(g[k]);
+        const aibaby::Scalar* a = s.brain.vocal_activities();
+        for (uint32_t k = 0; k < aibaby::kVocalGroups; ++k) {
+          rec.group[k] += double(g[k]);
+          rec.act[k] += double(a[k]);
+        }
         rec.amplitude += double(s.brain.voice().amplitude);
         if (s.brain.voice().voicing > 0.5f &&
             s.brain.voice().amplitude > kAmplitudeFloor) {
@@ -440,6 +445,8 @@ bool run_m3probe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
             rebin_phases(phase_counts, ms.begin, width[m], kFeatureBins / kPhaseBins));
       }
       vocal.push_back(m3_vocal_features(rec));
+      centroids.push_back(m3_centroid_features(rec));
+      activities.push_back(m3_activity_features(rec));
       labels.push_back(label);
     }
 
@@ -532,6 +539,17 @@ bool run_m3probe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
     }
     std::printf("    %-12s %-11.3f %s\n", "voice", holdout_accuracy(vocal, labels, train),
                 "  <- the nine motor groups, loudness and voicing");
+    // The same nine groups split into the two numbers a group reading has.
+    // Only `centroid` reaches the articulators; `activity` reaches the larynx
+    // for exactly one group (voicing, as loudness) and is discarded for the
+    // other eight. If activity beats centroid here, the vocal tract is
+    // throwing away the object on purpose and the decoder is the fix.
+    std::printf("    %-12s %-11.3f %s\n", "  centroids",
+                holdout_accuracy(centroids, labels, train),
+                "<- the 9 group CENTROIDS alone: what the articulators get");
+    std::printf("    %-12s %-11.3f %s\n", "  activities",
+                holdout_accuracy(activities, labels, train),
+                "<- the 9 group RATES alone: what they do NOT get");
     return control_score;
   };
 

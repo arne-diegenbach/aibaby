@@ -131,6 +131,7 @@ class Brain {
   bool has_vision() const { return has_vision_; }
   const VocalParams& voice() const { return vocal_.params(); }
   const Scalar* vocal_groups() const { return vocal_.groups(); }
+  const Scalar* vocal_activities() const { return vocal_.activities(); }
   uint32_t vocal_frame() const { return vocal_.frame(); }
   const Expression& expression() const { return expression_.value(); }
   const RewardBreakdown& reward() const { return reward_; }

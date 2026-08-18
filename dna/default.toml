@@ -1,4 +1,4 @@
-# aibaby genome — v15 format, DNA v6 feedforward wiring plus top-down feedback.
+# aibaby genome — v16 format, DNA v6 feedforward wiring plus top-down feedback.
 #
 # The blob layout is v15 — projections carry a `kind` and the receptive-field
 # parameters the two structured wiring rules read. This genome uses neither:
@@ -322,6 +322,26 @@ gaze_rate_hz = 10.0         # DNA v31: re-aim once per retinal frame. 0 pins the
 gaze_gain = 0.70            # fraction of the estimated error per re-aim
 gaze_peak_frac = 0.70       # aim at the centroid of cells >= this x the peak;
                             # 1.0 = the peak cell alone, 0.0 = v27's whole field
+gaze_peak_radius = 0.0      # DNA v33: 0 = unlimited, the v31 rule exactly.
+#
+# SHIPS OFF — built against a hypothesis that measured false, and kept for the
+# refutation. v31 averages every cell above `gaze_peak_frac` x the peak
+# regardless of where it sits, so the obvious story for why the reflex cannot
+# acquire a peripheral toy is that foveal noise cells drag the aim back to the
+# centre. Making the neighbourhood spatial does not help:
+#
+#   radius   INSIDE the fovea      OUTSIDE it
+#   0 (v31)  0.870, gaze 1.3 px    0.440, gaze 11.4 px
+#   6        0.740, gaze 4.5 px    0.480, gaze 12.7 px
+#   10       0.640, gaze 2.5 px    0.460, gaze 11.4 px
+#   16       0.830, gaze 1.3 px    0.440, gaze 11.4 px
+#   24       0.870, gaze 1.3 px    0.440, gaze 11.4 px
+#
+# The gaze error outside the fovea is flat at every radius, and a tight radius
+# makes aiming WORSE inside it. The reason is that there is no estimate to
+# protect: `fixed` reads vision 0.540 at 12.1 px, which is chance, so the
+# retina does not localise the toy out there at all. Peripheral acquisition is
+# a retina problem, not a controller one.
 #
 # 0.70 is measured, not chosen, and the sweep is unusually legible because both
 # previously refuted designs sit at the ends of this one knob. At scatter 0.10
