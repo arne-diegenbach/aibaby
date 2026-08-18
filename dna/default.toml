@@ -1385,13 +1385,25 @@ lateral_fields = 9          # one competitive field per motor group
 # The bar and the milestone are on opposite sides of 0.03. Bimodality clears
 # only at gain >= 0.030 and G2 breaks by 0.035, so there is no setting that
 # buys stable postures without spending a milestone that is already met.
-# Shipped OFF at 0.0 pending a replicate of the acoustic result below.
+# Shipped OFF at 0.0. The acoustic result that might have justified 0.020 did
+# NOT replicate: three fresh seed families, both arms on identical seeds, put
+# cube-vs-ball at d' 0.93/1.35/1.15 against nulls of 0.96/1.07/0.99 — straddling
+# zero — and acoustic accuracy was LOWER with the mechanism on in 3 of 3. One
+# arm failed m3's own shuffled-label control at 0.688. The single run that
+# motivated the test was excluded from it, and was noise.
 #
 # At 0.020 the mechanism is a real gain on everything except G2's rate half:
 # the vowel spread is 4.9x, praise's effect on F1 is +0.0559 against the
 # shipped +0.0255, and calibrate passes untouched. What it costs is the
 # rewarded-rate advantage, +0.507x against +0.777x, and 6 of 9 creatures
 # against 7 of 9.
+#
+# What the replicate showed about WHY it buys no audibility is the useful part:
+# the mechanism widens the gap between the two words and scatters each of them
+# by the same factor, so the raw distance doubles and d' — which divides by the
+# scatter — does not move at all. A wider vowel space is not a more legible one
+# while nothing controls where in it each word sits. That is the conditioning
+# blocker again, arriving from a new direction.
 #
 # Note also that v32 makes the 800 ms articulator inertia stop mattering: its
 # attenuation of F1 falls from 4.2x to 1.6x, because a bump persists and an EMA

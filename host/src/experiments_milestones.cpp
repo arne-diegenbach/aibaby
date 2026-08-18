@@ -1499,7 +1499,17 @@ bool run_m3(const std::vector<uint8_t>& blob, uint64_t ticks, const Caregiver& c
     // linear between the anchors above.
     std::printf("    +/-1sd of its own F1 %.2f   (scale check, not a result)\n", own);
     if (ia > 0.0 && near > 0.0) {
-      std::printf("    cube vs ball is %.1f%% of an [i]/[a] contrast, %.1f%% of [a]/[u]\n",
+      // Descriptive only, and NOT comparable between two creatures built
+      // differently. It is a ratio of raw cepstral distances — the sigma
+      // cancels — so it answers "how far apart on average", while d' above
+      // answers "can you tell them apart". A mechanism that widens the vowel
+      // space moves the two words further apart AND scatters each of them by
+      // the same factor, which doubles this row while leaving discriminability
+      // exactly where it was. DNA v32 did precisely that across three seed
+      // families, and this line was the most convincing thing on the page.
+      std::printf("    cube vs ball is %.1f%% of an [i]/[a] contrast, %.1f%% of [a]/[u]\n"
+                  "      (raw distance, so it grows with the vowel space whether or not\n"
+                  "       the two words became any easier to tell apart — read d')\n",
                   100.0 * dp / ia, 100.0 * dp / near);
     }
   }
