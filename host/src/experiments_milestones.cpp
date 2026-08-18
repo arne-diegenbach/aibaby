@@ -528,6 +528,9 @@ bool run_babble(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose,
   double raw_lo[4] = {1e9, 1e9, 1e9, 1e9};
   double raw_hi[4] = {-1e9, -1e9, -1e9, -1e9};
   double sm_sum[4] = {}, sm_sq[4] = {};
+  double gate_n[2] = {}, gate_f1[2] = {}, gate_f1sq[2] = {};
+  double quart_n[4] = {}, quart_f1[4] = {}, quart_f1sq[4] = {};
+  double corr_n = 0, corr_a = 0, corr_f = 0, corr_aa = 0, corr_ff = 0, corr_af = 0;
   auto raw_centroid = [&](const aibaby::Network& net, const aibaby::ModuleState& ms,
                           uint32_t g) -> double {
     const uint32_t b = ms.begin + aibaby::slice_begin(ms.count, aibaby::kVocalGroups, g);
@@ -568,6 +571,34 @@ bool run_babble(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose,
     f1_sum += f1v;
     f1_hist[std::min<uint32_t>(9, uint32_t(f1v * 10.0f))]++;
     amp_hist[std::min<uint32_t>(9, uint32_t(float(v.amplitude) * 10.0f))]++;
+    // Does the amplitude gate select on F1? Every experiment that scores the
+    // voice only looks at frames loud enough to count as a vocalisation, so if
+    // F1 differs between the frames that pass and the frames that do not, the
+    // gate is a filter on the very quantity being measured — and a mechanism
+    // that changes how much F1 varies changes how hard it filters.
+    {
+      // Does the structure survive the session? Intrinsic plasticity drives
+      // every neuron toward its target rate over minutes, and a bump is
+      // precisely a set of neurons held persistently above and below theirs —
+      // so awake regulation has a standing incentive to erase it. G2 sets its
+      // criterion in the first fifth of a session and scores in the last, so
+      // anything that decays in between shows up as reward failing.
+      const int q = int(4 * t / ticks) > 3 ? 3 : int(4 * t / ticks);
+      quart_n[q] += 1.0;
+      quart_f1[q] += double(f1v);
+      quart_f1sq[q] += double(f1v) * double(f1v);
+
+      const int gate = v.amplitude > kAmplitudeFloor ? 1 : 0;
+      gate_n[gate] += 1.0;
+      gate_f1[gate] += double(f1v);
+      gate_f1sq[gate] += double(f1v) * double(f1v);
+      corr_n += 1.0;
+      corr_a += double(v.amplitude);
+      corr_f += double(f1v);
+      corr_aa += double(v.amplitude) * double(v.amplitude);
+      corr_ff += double(f1v) * double(f1v);
+      corr_af += double(v.amplitude) * double(f1v);
+    }
     {
       const aibaby::ModuleState& vms = s.brain.network().module(uint32_t(vm));
       for (int k = 0; k < 4; ++k) {
@@ -692,6 +723,46 @@ bool run_babble(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose,
       std::printf("  raw F1 centroid histogram (0.0 -> 1.0):\n    ");
       for (int i = 0; i < 10; ++i) std::printf("%6u", raw_hist[1][i]);
       std::printf("\n");
+
+      // Is the amplitude floor a filter on F1? G2 and M3 only ever look at
+      // frames above it, so a difference here means every vocal score is
+      // measured on a biased sample of the vowel — and the bias grows with
+      // however much F1 varies.
+      if (gate_n[0] > 1.0 && gate_n[1] > 1.0) {
+        const double lo = gate_f1[0] / gate_n[0], hi = gate_f1[1] / gate_n[1];
+        const double sdlo = std::sqrt(std::max(0.0, gate_f1sq[0] / gate_n[0] - lo * lo));
+        const double sdhi = std::sqrt(std::max(0.0, gate_f1sq[1] / gate_n[1] - hi * hi));
+        double r = 0.0;
+        if (corr_n > 1.0) {
+          const double ma = corr_a / corr_n, mf = corr_f / corr_n;
+          const double va = corr_aa / corr_n - ma * ma;
+          const double vf = corr_ff / corr_n - mf * mf;
+          if (va > 1e-12 && vf > 1e-12) {
+            r = (corr_af / corr_n - ma * mf) / std::sqrt(va * vf);
+          }
+        }
+        std::printf("\n  does the amplitude floor select on F1?  (floor %.2f)\n",
+                    double(kAmplitudeFloor));
+        std::printf("    below the floor   F1 %.4f  (sd %.4f, %.0f frames)\n", lo, sdlo,
+                    gate_n[0]);
+        std::printf("    above it — what every vocal score sees\n"
+                    "                      F1 %.4f  (sd %.4f, %.0f frames)\n", hi, sdhi,
+                    gate_n[1]);
+        std::printf("    difference        %+.4f      corr(F1, amplitude) %+.3f\n",
+                    hi - lo, r);
+      }
+      // The same F1, by quarter of the session.
+      {
+        std::printf("\n  does the vowel structure survive the session?\n");
+        std::printf("    %-9s %-9s %s\n", "quarter", "mean F1", "sd");
+        for (int q = 0; q < 4; ++q) {
+          if (quart_n[q] < 2.0) continue;
+          const double mq = quart_f1[q] / quart_n[q];
+          const double sq =
+              std::sqrt(std::max(0.0, quart_f1sq[q] / quart_n[q] - mq * mq));
+          std::printf("    %-9d %-9.4f %.4f\n", q + 1, mq, sq);
+        }
+      }
     }
   }
 
