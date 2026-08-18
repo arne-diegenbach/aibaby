@@ -454,9 +454,17 @@ bool run_m3probe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
     // Both hand the classifier exactly kFeatureBins numbers per trial; one
     // describes where the spikes were and the other where *and when*. A gap
     // between them is spike timing carrying something counts cannot see.
-    std::printf("    %-12s %-11s %-11s %-11s %-11s %-11s %-11s %-11s %s\n", "module",
+    // `centroid` is the prerequisite question for topography, and it is not a
+    // variant of the columns beside it — it is the readout the larynx actually
+    // uses. The vocal decoder reads sum(rate_i * i) / sum(rate_i) over a group,
+    // so a topographic projection from some module into vocal can only deliver
+    // whatever that module's OWN centroid carries about the object. If a module
+    // scores 0.85 per neuron and 0.50 on its centroid, then every neuron knows
+    // which toy it is and their centre of mass does not, and no wiring into a
+    // centroid readout can rescue that. Cheaper to ask than to build.
+    std::printf("    %-12s %-11s %-11s %-11s %-11s %-11s %-11s %-11s %-11s %s\n", "module",
                 "per-neuron", "interleaved", "rate EMA", "32 space", "8x4 space+t",
-                "rate only", "shuffled", "spikes/trial");
+                "rate only", "shuffled", "centroid", "spikes/trial");
     for (uint32_t m = 0; m < modules; ++m) {
       std::vector<std::vector<double>> binned, rate;
       // Without this column a 0.500 is ambiguous. `holdout_accuracy` floors
@@ -467,12 +475,21 @@ bool run_m3probe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
       // A four-point density sweep once read 0.500 four times and was taken
       // for "the tract is wide enough already"; it meant the module was mute.
       double spikes = 0.0;
+      std::vector<std::vector<double>> centroid;
       for (const std::vector<double>& v : per_module[m]) {
         binned.push_back(rebin(v, kFeatureBins));
         double total = 0.0;
         for (double x : v) total += x;
         spikes += total;
         rate.push_back(std::vector<double>{total});
+        // Exactly the vocal decoder's readout: the centre of mass of activity
+        // over neuron index, normalised to [0,1] so it is the same quantity a
+        // motor group hands the larynx.
+        double weighted = 0.0;
+        for (size_t k = 0; k < v.size(); ++k) {
+          weighted += v[k] * ((double(k) + 0.5) / double(v.size()));
+        }
+        centroid.push_back(std::vector<double>{total > 1e-9 ? weighted / total : 0.5});
       }
       spikes /= double(per_module[m].size());
       std::vector<int> shuffled = labels;
@@ -493,7 +510,7 @@ bool run_m3probe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
       const double per_neuron = holdout_accuracy(per_module[m], labels, train);
       if (std::strcmp(net.module_dna(m).name, control) == 0) control_score = per_neuron;
 
-      std::printf("    %-12s %-11.3f %-11.3f %-11.3f %-11.3f %-11.3f %-11.3f %-11.3f %.1f%s\n",
+      std::printf("    %-12s %-11.3f %-11.3f %-11.3f %-11.3f %-11.3f %-11.3f %-11.3f %-11.3f %.1f%s\n",
                   net.module_dna(m).name,
                   per_neuron,
                   holdout_accuracy(xi, yi, itrain),
@@ -502,6 +519,7 @@ bool run_m3probe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
                   holdout_accuracy(per_module_phase[m], labels, train),
                   holdout_accuracy(rate, labels, train),
                   holdout_accuracy(per_module_phase[m], shuffled, train),
+                  holdout_accuracy(centroid, labels, train),
                   spikes,
                   spikes < 0.5 ? "  <- MUTE, the row above is not a score"
                   : std::fabs(tcorr) > 0.5
