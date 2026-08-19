@@ -2310,12 +2310,23 @@ buildable.
 
 | cap | what is measured | status |
 |---|---|---|
-| **delivery** | the object at vocal: 0.500 native, 0.800 with `vision→vocal` at d=0.03/w=0.30 | **solved, and it moves G3 from 0.487 to 0.546 against a 0.75 bar** |
+| **delivery** | the object at vocal in the *shipped* creature: **0.660** per neuron across three seed families (0.740 / 0.700 / 0.540), against central's 0.600 | **closed** — see the correction below |
 | **conditioning** | condition at vocal 0.732, idealised teacher: taught 0.637 vs random-target 0.639 | five mechanism classes fenced, below |
 | **expression** | cube vs ball as a *sound*: d′ **1.20** against a shuffled null of **1.57** | below the instrument's floor |
 
 They are independent. Fixing any one leaves the other two, which is why every
 intervention that improved one of them left the milestone where it was.
+
+> **Correction, 2026-08-19, and it is a stale-number bug of the kind this file
+> keeps paying for.** The delivery row above used to read "0.500 native", which
+> is what `m3probe` measured *before `vision→vocal` shipped*. That tract is in
+> the genome now, so "native" has meant something different since. Re-measured
+> on the shipped creature: vocal reads the seen object at **0.660** per neuron
+> (0.740 / 0.700 / 0.540 across three seed families, chance 0.500, SE ≈ 0.05),
+> and central reads it at **0.600** — **the larynx now knows the object better
+> than the association module does**, because the direct tract bypasses central
+> entirely. Any argument that starts "the object never arrives at the larynx" is
+> about a creature two versions old.
 
 #### What is fenced inside the conditioning cap
 
@@ -2411,6 +2422,49 @@ not sufficient. This attacks the delivery cap, which is the cap already known
 not to be binding on its own. It should be built and measured because it is the
 only *measured, label-free, buildable* lead on the board, not because it is
 expected to close G3 by itself.
+
+#### It was built, and the cap it targeted was already closed
+
+**DNA v35 adds `ModuleRole::kInterneuron`** — a relay population that exists to
+be sampled. A role rather than a field: no TOML has to mention it, so unlike a
+dead mechanism it costs nothing to carry. `Network::growable()` admits
+kAssociation and nothing else, so a relay can never grow, which is the property
+it exists to hold fixed. Roles are unique per genome except kAssociation, and
+kInterneuron joins that exception: a relay owns no hardware channel, so a limit
+of one per creature would be a restriction nothing asked for.
+`tools/genome_add_relay.py` builds one in a single command.
+
+The arms are **paired**: the module and both projections append last, and
+projection weight is applied *after* the RNG draw, so `out_w = 0` is the same
+creature with the same wiring and a silent relay. Both arms were recalibrated to
+convergence and both pass `calibrate` and `babble`.
+
+| `out_w` | babble duty | central | vocal per neuron | vocal interleaved | voice |
+|---|---|---|---|---|---|
+| 0.00 (control) | 0.51 | 0.720 | 0.760 | 0.840 | 0.520 |
+| 0.05 | 0.44 | 0.760 | 0.740 | 0.760 | 0.500 |
+| 0.10 | 0.38 | 0.760 | 0.760 | 0.700 | 0.500 |
+| 0.20 | 0.28 | 0.780 | 0.780 | 0.680 | 0.440 |
+
+**Delivery is flat across a 4× range** — 0.740 to 0.780, every value inside one
+standard error of the control — while the interleaved readout and the voice
+decline monotonically and the larynx quietens from 0.51 to 0.28. The relay
+subtracts; it does not sharpen.
+
+**And the reason is the correction at the top of this section.** `projprobe`'s
+E-I arm measures what a signed projection recovers from *central's* code, and
+that mattered when `central→vocal` was the object's only route to the larynx. It
+no longer is. `vision→vocal` ships, the shipped creature already reads the
+object at vocal at 0.660 — above central's 0.600 — and there is no buried
+central code left at the larynx for a signed projection to recover. The lead was
+real, measured and label-free, and it was aimed at a cap that had closed
+underneath it while the notes still said otherwise.
+
+**What survives.** The projprobe result itself stands: a signed projection does
+recover a balanced code where a positive one destroys it, 3/3 seeds. What is
+refuted is that `central→vocal` is where this creature needs it. If a future
+architecture ever has a module whose only route out is an all-positive random
+tract, the mechanism and the role are both here and both measured.
 
 ## Design decisions that were not obvious
 

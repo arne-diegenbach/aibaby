@@ -170,7 +170,17 @@ constexpr uint32_t kDnaMagic = 0x44424941;  // "AIBD"
 // floor of -0.081x, which is the floor. So expressiveness was never what was
 // missing. The tables are in `[exploration]` in dna/default.toml, under "the
 // third half that did not work".
-constexpr uint32_t kDnaVersion = 34;
+// 35: ModuleRole::kInterneuron — a relay population that exists to be sampled.
+//     The genome language gains a role, not a field: no TOML has to mention it,
+//     so unlike the mechanism above it costs nothing to carry. Built to test
+//     `projprobe`'s E-I result in a spiking creature, and that test came back
+//     negative for a reason worth more than the test: **the cap it targeted was
+//     already closed.** `vision->vocal` ships, so the shipped creature already
+//     reads the seen object at vocal at 0.660 across three seed families —
+//     better than central's 0.600 — and there is no buried code left at the
+//     larynx for a signed projection to recover. See DnaModule::ffi_source and
+//     the README.
+constexpr uint32_t kDnaVersion = 35;
 
 // What a module is wired to the world through. The host looks modules up by
 // role, never by name or index, so renaming a module in the genome cannot
@@ -206,6 +216,31 @@ enum class ModuleRole : uint32_t {
   // threshold, strong normalisation, a large eta_scale — which is worth being
   // able to name and check in one place.
   kHippocampus = 8,
+  // A relay of interneurons between two other modules — a population that
+  // exists to be *sampled*, not to represent anything. It owns no hardware
+  // channel and nothing in the host looks it up.
+  //
+  // It is a role rather than an unlabelled module because of what must not
+  // happen to it. `Network::growable()` admits kAssociation and nothing else,
+  // so a relay can never grow: adding neurons to it would change how every
+  // downstream cell samples its source, which is the one property it is built
+  // to hold fixed. The same argument as kVisualCortex, for the same reason.
+  //
+  // Why the creature wants one. `central->vocal` is an all-positive random
+  // projection and central's object code is *balanced* — coherence 0.024-0.152
+  // across three seed families, so 85-98% of the discriminative signal is some
+  // neurons up and others down. A positive random sum of a balanced pattern
+  // averages toward zero; a *signed* one preserves it. `projprobe`'s E-I arm
+  // measures that, label-free, at 0.560 -> 0.680 on 3 of 3 seeds.
+  //
+  // The signed projection cortex actually builds is balanced feedforward
+  // inhibition, and the thing that makes it *signed* rather than merely
+  // subtractive is that each target draws its own independent inhibitory
+  // sample. That is exactly what DnaModule::ffi_source is not — `ffi` subtracts
+  // one shared scalar from every target, which removes the common mode and
+  // leaves every target with the same positive sum of the remainder. A relay
+  // gives each target its own draw. See the README synthesis.
+  kInterneuron = 9,
   kRoleCount,
 };
 
