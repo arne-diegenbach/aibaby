@@ -2556,6 +2556,86 @@ open by making the voice steadier, which leaves it where the v32 work already
 pointed — nothing controls *where in the vowel space* each word sits, and that
 is the conditioning blocker wearing acoustic clothes.
 
+### The last untested combination — and the noise floor that ends the search
+
+**Measurement only, 2026-08-20.** Hash unmoved at `23c4eb2c7c45d05c`.
+
+One combination had never been run. DNA v19 and v23 built a reward-independent
+Hebbian term so a CS could bind to a US without reward naming the object, and
+both were refuted — but look at what they write:
+
+```
+syn_weight_[syn] += eta_h * credit * sign;
+```
+
+`credit` is the **STDP eligibility trace**, the quantity `eligprobe` measured as
+object-*weak* on `central→vocal`, and whose conditionality rises a long way when
+`a_minus` is moved off its shipped value. So v19 and v23 were classical
+conditioning driven by a signal already measured to be nearly blind to the
+condition. Each half had been tested; the combination had not.
+
+**The precondition re-measured, and it held** — `eligprobe` at 600k on the
+current creature, which matters because `vision→vocal` has shipped since the
+original table:
+
+| `a_minus` | central→vocal | shuffled | arcuate (control) | corr(A,B) |
+|---|---|---|---|---|
+| 0.012 shipped | 0.742 | 0.482 | 0.942 | **+0.938** |
+| 0.020 | 0.818 | 0.486 | 0.998 | +0.701 |
+| 0.030 | **0.832** | 0.506 | 0.998 | **+0.575** |
+
+Controls lit throughout, and `calibrate` and `babble` are untouched at all three
+(duty 0.50, ~300 vocalisations, amplitude 0.479) — so `a_minus` is free at the
+operating point, which is not what a global STDP constant usually is.
+
+**The grid, `pairprobe` against `g3probe` at the identical settings** — the
+absolute ceiling, because a reward-independent term lifts both arms and the
+usual margin is flat by construction:
+
+| arm | `a_minus` | hebb on | rate | PAIRED | unpaired | gap | echo |
+|---|---|---|---|---|---|---|---|
+| A1 | 0.012 | — | 0 | 0.524 | 0.527 | −0.003 | 0.825 |
+| **A2** | 0.012 | vision→vocal | 0.15 | 0.617 | 0.532 | **+0.085** | 0.925 |
+| B1 | 0.030 | — | 0 | 0.558 | 0.501 | +0.057 | 0.675 ✗ |
+| B2 | 0.030 | vision→vocal | 0.15 | 0.496 | 0.504 | −0.008 | 0.650 ✗ |
+| B3 | 0.030 | central→vocal | 0.15 | 0.513 | 0.532 | −0.019 | 0.750 |
+| B4 | 0.030 | vision→vocal | 0.05 | 0.479 | 0.487 | −0.008 | 0.675 ✗ |
+
+**The hypothesis is refuted directly**: at `a_minus = 0.030`, where the trace is
+most conditional, the echo falls under g3probe's 0.700 floor in three arms of
+four and nothing is positive anywhere. A more conditional trace does not buy
+conditioning; it buys an unreadable creature.
+
+And A2 — v23's own configuration at the *shipped* `a_minus`, on a creature where
+`vision→vocal` now ships — did not replicate. Three fresh seed families, each
+with its own hebb = 0 control:
+
+| seed | hebb 0 gap | hebb 0.15 gap | paired contrast |
+|---|---|---|---|
+| 20260901 | −0.008 | −0.009 | −0.001 |
+| 20260902 | +0.045 | −0.039 | **−0.084** |
+| 20260903 | −0.070 | +0.008 | **+0.078** |
+
+Mean **−0.002**, sign flipping. **Fifth single-arm high to evaporate here.**
+
+#### The number worth keeping: this metric's noise floor
+
+Read the `hebb 0` column. Those three arms have the mechanism switched off *by
+construction*, so their gap is zero by definition — and they measure −0.008,
++0.045 and −0.070, a spread of **0.115**. That is the arm-to-arm noise on
+"pairprobe minus g3probe" at five creatures and 141 probes, measured directly
+rather than assumed.
+
+It settles three things at once. A2's +0.085 was inside the noise before it was
+ever run. Any future gap on this pair under about **0.12** is unreadable at this
+sample size. And v23's original ±0.017 table, which was called null on judgement,
+was called correctly — the instrument could never have shown anything smaller
+than seven times it.
+
+**This was the last named, untested mechanism against the conditioning
+blocker.** It is now measured and negative, on a re-verified precondition, with
+a replication and a noise floor. G3 is closed under this architecture.
+
 ## Design decisions that were not obvious
 
 These were all discovered by measurement, and each one is the difference
