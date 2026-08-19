@@ -2299,6 +2299,119 @@ exactly the case it was written for: two required TOML keys and two kernel
 branches, forever, for a rule that cannot carry the milestone its own ancestor
 met. The measurement is the asset; the field is the tax.
 
+### Why G3 does not happen — the synthesis, and the one thing it specifies
+
+Written 2026-08-19, after the last structurally untried learning rule was
+refuted. Everything below is already in this file in pieces; what was missing
+was the sentence that connects them, and it turns out to name something
+buildable.
+
+#### There are three caps, not one, and each is independently sufficient
+
+| cap | what is measured | status |
+|---|---|---|
+| **delivery** | the object at vocal: 0.500 native, 0.800 with `vision→vocal` at d=0.03/w=0.30 | **solved, and it moves G3 from 0.487 to 0.546 against a 0.75 bar** |
+| **conditioning** | condition at vocal 0.732, idealised teacher: taught 0.637 vs random-target 0.639 | five mechanism classes fenced, below |
+| **expression** | cube vs ball as a *sound*: d′ **1.20** against a shuffled null of **1.57** | below the instrument's floor |
+
+They are independent. Fixing any one leaves the other two, which is why every
+intervention that improved one of them left the milestone where it was.
+
+#### What is fenced inside the conditioning cap
+
+| class | representative | result |
+|---|---|---|
+| reward composition | separate neuromodulators (v20), drives zeroed | 0.502 vs 0.498 |
+| eligibility distribution | v16 subtract, v17 scale, v18 select | all null; "the distribution is not the problem" |
+| reward-independent Hebbian | v19 global, v23 per-pathway | paired never separates from unpaired |
+| representation upstream | v12, v13, v14, denser tracts | every one improved central, none moved the voice |
+| **exploration on synapses** | node perturbation under a presynaptic gate | **cannot carry even G2** |
+
+#### Two accounts of *why* were offered, and both are now refuted
+
+**The coherence account** — "a random tract preserves coherent codes and cancels
+balanced ones, so the tonotopic word survives and the object does not" — is
+contradicted by `projprobe`'s own coherence column. Coherence is
+`|Σdᵢ| / Σ|dᵢ|`, the share of the discriminative signal that is common-mode:
+
+| | coherence | at source | through a tract |
+|---|---|---|---|
+| word from auditory | **0.007** | 1.000 | 1.000 |
+| object from vision | 0.038 | 0.960 | 0.980 |
+| object from central | **0.152** | 0.700 | 0.560 |
+
+The word is the *least* coherent code in the creature and survives perfectly;
+central's is the most coherent and does not. Coherence does not predict
+survival. Source strength does.
+
+**The SNR account** — "R-STDP differentiates and its output is buried, so raise
+the signal or lower the noise" — has now been refuted twice. `a_minus = 0.020`
+removes the 5× cancellation penalty and nearly halves the noise; the
+object-specific share moves 8% → 10%. Node perturbation on synapses cuts the
+irreproducible share from 65% to **8%**; the object-specific share does not move
+at all. The object-specific part is not being *hidden* by noise, so no amount of
+denoising surfaces it.
+
+#### What the measurements actually leave
+
+Central's object code is **balanced** — coherence 0.024–0.152 across three seed
+families, i.e. 85–98% of the discriminative signal is some neurons up and others
+down, not a shared rise. And `central→vocal` is an **all-positive random
+projection**: every synapse is excitatory, so each vocal neuron computes a
+positive-weighted sum of a random subset of central.
+
+That is the one combination that destroys information. A positive random sum of
+a balanced pattern averages toward zero — the differential falls as ~1/√n while
+the common mode adds as ~n, which is exactly the monotonic decline the density
+sweep measured (74% more drive, zero object, and a voice that gets worse). The
+word escapes not because it is tonotopic but because it arrives saturated: at
+1.000 it can pay the tract's fixed cost and still be legible.
+
+**So the object's code is not destroyed by the tract. It is written in a form the
+tract cannot read**, and there is a standard fix for that which this creature
+does not have.
+
+#### The specification, and it is buildable with no kernel change
+
+A *signed* random projection preserves a balanced code where a positive one
+destroys it. `projprobe` already measures this, label-free, as its `E-I` arm —
+two independent random subsets per target, one added and one subtracted, which
+is what balanced cortical feedforward inhibition physically is:
+
+| seed | plain | **E-I** | oracle sign-flip |
+|---|---|---|---|
+| 20260809 | 0.560 | 0.580 | 0.740 |
+| 20360812 | 0.560 | **0.760** | 0.600 (control leaking at 0.640) |
+| 20451117 | 0.560 | **0.700** | 0.720 |
+| mean | 0.560 | **0.680** | 0.687 |
+
+**3 of 3 seeds, mean +0.12, and it matches the label-derived oracle** — which
+says the label-free transform extracts essentially everything a supervised
+per-neuron sign assignment could. That is the same evidential standard as v24's
+in-degree-weighted subtraction (+0.077, 3/3), the one mechanism in this project
+that ever measurably worked.
+
+**And it is not what v24 built.** `ffi` subtracts `ffi_gain × pool_fast_[src]` —
+the source module's population mean, *one shared scalar for every target
+neuron*. That removes the common mode and leaves every target with the same
+positive-weighted sum of the remainder. The E-I transform gives each target its
+**own independent inhibitory sample**, so 126 vocal neurons form 126 different
+signed projections of the balanced pattern rather than 126 copies of one.
+
+The genome can express it today, with no C++: an inhibitory relay module between
+central and vocal — `central → relay` and `relay → vocal`, both random and
+sparse — gives every vocal neuron an inhibitory input that is an independent
+random sample of central, which is the structure the arm measures.
+
+**Two caveats, and they are real.** `projprobe` is the *linear* part of a tract:
+no threshold, and nothing else driving the target. The live larynx has a
+threshold, 33.9% intrinsic noise, and the arcuate competing for it — and the
+lesson of `delivery was never the limit` is that getting the object to vocal is
+not sufficient. This attacks the delivery cap, which is the cap already known
+not to be binding on its own. It should be built and measured because it is the
+only *measured, label-free, buildable* lead on the board, not because it is
+expected to close G3 by itself.
+
 ## Design decisions that were not obvious
 
 These were all discovered by measurement, and each one is the difference
