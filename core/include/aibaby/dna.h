@@ -158,6 +158,18 @@ constexpr uint32_t kDnaMagic = 0x44424941;  // "AIBD"
 //     the code completely (0.980 against 0.540 at 12 px of displacement). So
 //     the mechanism was always worth having and only the aim was wrong. See
 //     DnaVision::gaze_rate_hz.
+//
+// Built and removed inside one change, so it never took a version and the
+// format below is unchanged: node perturbation cashed onto *synapses* rather
+// than onto excitability, under a presynaptic gate. It was the last
+// structurally untried learning rule here — R-STDP's output is buried and a
+// per-neuron bias is a constant, so neither of this creature's two rules can
+// make the voice a function of what the eye sees. The synaptic version can
+// express that mapping and cannot estimate it: with the bias half switched off
+// it scores -0.031x on G2 against the bias half's +1.742x and a no-exploration
+// floor of -0.081x, which is the floor. So expressiveness was never what was
+// missing. The tables are in `[exploration]` in dna/default.toml, under "the
+// third half that did not work".
 constexpr uint32_t kDnaVersion = 34;
 
 // What a module is wired to the world through. The host looks modules up by
@@ -666,6 +678,7 @@ struct DnaExploration {
   float perturb_tau_ms;         // how long a perturbation stays creditable
   float perturb_rate;           // learning rate; 0 disables the whole mechanism
   float perturb_max;            // |bias| ceiling, or one lucky moment runs away
+
 
   uint32_t enabled;
 };

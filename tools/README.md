@@ -58,9 +58,16 @@ week with the harness reporting PASS.
 ```sh
 tools/genome_set_module.py     dna/default.toml out.toml central:norm_gain=1.0 vision:n_max=256
 tools/genome_set_projection.py dna/default.toml out.toml "vision->central:density=0.12"
+tools/genome_set_header.py     dna/default.toml out.toml stdp:a_minus=0.020 exploration:perturb_rate=0
 ```
 
-Both **assert that every requested edit matched exactly one line** and fail
+The third is for the scalars that live in `[stdp]`, `[exploration]`, `[homeo]`
+and friends rather than in a module or a projection — `a_minus`, `eta`,
+`perturb_rate`, the normalisation guardrails. It is scoped to the named section
+on purpose: several field names appear in more than one of them, and a
+whole-file substitution edits whichever comes first.
+
+All three **assert that every requested edit matched exactly one line** and fail
 loudly otherwise. That is the whole point of them. A sweep whose `sed` quietly
 matches nothing measures the same genome N times and draws a flat line, and
 this project has produced that flat line more than once — the first

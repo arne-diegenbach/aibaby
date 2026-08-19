@@ -631,6 +631,74 @@ perturb_max = 0.30          # |bias| ceiling, in the same units as threshold
 # already is. The scaffolding here is what it would need: the two reward
 # windows, the per-module delivery, and the HVC term that keeps a narrowing
 # creature audible.
+#
+# --- the third half that did not work: perturbation on SYNAPSES ---------------
+# Built 2026-08-19, measured, and removed the same day. No genome field remains,
+# because a required key per dead mechanism is the tax DNA v30 exists to stop
+# paying — but this is the last structurally untried learning rule in the
+# project, so the table is worth more than the field.
+#
+# The motivation was the one sentence that summarises G3: this creature has two
+# learning rules and *neither* can make the voice a function of what the eye
+# sees. R-STDP can in principle and does not — `dwprobe` splits what reward
+# writes onto central->vocal into ~61% irreproducible noise, ~31% reproducible
+# but object-independent and ~8% object-specific. Node perturbation cannot even
+# in principle, because `perturb_rate` above moves a per-neuron *constant*.
+#
+# The obvious repair is to cash the same trace onto synapses under a
+# presynaptic gate — `e_ij += k * perturb_j` on every spike of i, which is
+# Fiete & Seung's rule written on weights, and in the birdsong model this
+# section borrows from it is the HVC->RA synapse. It is conditional by
+# construction: credit lands only on synapses whose source was firing, so a cube
+# and a ball write onto different ones.
+#
+# It does something large, and on the wrong column. `dwprobe`, 3 creatures,
+# 120k, with `k` the raw gate and `c` the fraction of the source module's mean
+# firing subtracted back off:
+#
+#   k       c     mean|dw|    corr(A,A')  corr(A,B)   noise   obj-indep  obj-spec
+#   0       -     2.99e-02    0.349       0.322       65%     32%        2.7%
+#   1e-4    0     5.98e-02    0.815       0.794       19%     79%        2.1%
+#   1e-4    1.0   3.61e-02    0.460       0.449       54%     45%        1.1%
+#   3e-4    0     9.30e-02    0.917       0.910        8%     91%        0.7%
+#   3e-4    1.0   5.52e-02    0.687       0.644       31%     64%        4.3%
+#   1e-3    1.0   9.28e-02    0.688       0.658       31%     66%        3.0%
+#
+# Read the last three columns. The rule cuts the irreproducible share of
+# learning from 65% to 8% — nothing in this project had moved that column at all
+# — and every point of it lands in the object-INDEPENDENT one, 32% -> 91%.
+# Centring the gate removes that common mode exactly as designed, 91% -> 64%,
+# and gives back the calibration echo the common mode was costing (g3probe echo
+# 0.700 -> 0.925 at k=1e-4, against 0.850 shipped), which was the falsifiable
+# prediction made before the run. **The object-specific column never leaves the
+# 1-4% band in any of eight settings.** G3's margin over its own random-target
+# control: +0.017 shipped, +0.022 at the best arm, mean -0.006 across the grid,
+# 0 of 5 creatures at the bar everywhere. Above k=3e-4 the echo falls under
+# g3probe's 0.700 floor and those arms are unreadable rather than negative.
+#
+# **The control that says why, and it is the useful part.** Run G2 with the bias
+# half switched off, so the synaptic rule is the only exploration there is:
+#
+#   arm                              rewarded rate   won    G2
+#   bias half only (shipped)         +1.742 x        9/9    PASS
+#   synaptic half only               -0.031 x        5/9    FAIL
+#   neither half                     -0.081 x        3/9    FAIL
+#   both                             +1.700 x        7/9    PASS
+#
+# The synaptic rule sits at the no-exploration floor. It cannot carry G2 — the
+# milestone the *bias* version met outright — so this is not a failure of
+# conditionality at all. Both rules estimate the same gradient from the same
+# reward stream; the bias version estimates one number per neuron and the
+# synaptic version one per synapse, and the variance of the second is hopeless
+# at these session lengths. Note the last row: adding it to the working rule
+# makes G2 slightly worse, 9/9 -> 7/9.
+#
+# Two things this closes. **Expressiveness was never the problem** — the reason
+# node perturbation cannot make the voice conditional is not that a bias is a
+# constant, and giving it the expressive power does not help. And **the SNR
+# framing of G3 is refuted**: dwprobe's 61/31/8 split invited "raise the signal
+# or lower the noise", and lowering the noise by 8x moves the object-specific
+# share not at all.
 
 # --- Modules ---------------------------------------------------------------
 # Neuron counts are deliberately small. The point is a substrate we can watch

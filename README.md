@@ -2202,6 +2202,103 @@ noisier than this renderer.
 regression anywhere else: `audio` 9/9, `babble` 9/9, and G2 is bit-identical
 because its protocol keeps the toy centred, where the floor never binds.
 
+### Node perturbation on synapses — the last untried rule, and what it closes
+
+**Built, measured and removed on 2026-08-19.** No genome field survives it; the
+hash is still `23c4eb2c7c45d05c`. The tables live in `[exploration]` in
+`dna/default.toml`.
+
+For months the G3 position had a one-sentence summary: **this creature has two
+learning rules and neither can make the voice a function of what the eye is
+looking at.** R-STDP can in principle and does not — `dwprobe` splits what
+reward writes onto `central→vocal` into ~61% irreproducible noise, ~31%
+reproducible but object-independent, ~8% object-specific. Node perturbation
+cannot even in principle, because it moves `bias_`, a per-neuron *constant*, and
+a constant is not a function of the input.
+
+That sentence names its own repair, and it had never been built: cash the same
+perturbation trace onto **synapses** under a presynaptic gate.
+
+    e_ij += k * perturb_j        on every spike of i
+
+This is Fiete & Seung's rule written on weights instead of on excitability, and
+in the birdsong model this project borrows from it is the HVC→RA synapse — HVC
+says *when*, LMAN supplies the exploratory push, and the synapse active during a
+push that paid off is the one that grows. It is conditional by construction:
+credit lands only on synapses whose source was firing, so a cube and a ball
+write onto different ones without the perturbation knowing anything about
+either. It was sampled on the *presynaptic* spike rather than the postsynaptic
+one deliberately — reading the target's perturbation only when the target fired
+conditions on the very thing the perturbation caused, and turns a zero-mean
+exploratory credit into a plain Hebbian one.
+
+**It does something large, and on the wrong column.** `dwprobe`, 3 creatures,
+120k ticks, with `c` the fraction of the source module's mean firing subtracted
+back off the gate:
+
+| `k` | `c` | mean\|dw\| | corr(A,A′) | corr(A,B) | noise | obj-indep | obj-spec |
+|---|---|---|---|---|---|---|---|
+| 0 | — | 2.99e-02 | 0.349 | 0.322 | 65% | 32% | **2.7%** |
+| 1e-4 | 0 | 5.98e-02 | 0.815 | 0.794 | 19% | 79% | **2.1%** |
+| 1e-4 | 1.0 | 3.61e-02 | 0.460 | 0.449 | 54% | 45% | **1.1%** |
+| 3e-4 | 0 | 9.30e-02 | 0.917 | 0.910 | **8%** | **91%** | **0.7%** |
+| 3e-4 | 1.0 | 5.52e-02 | 0.687 | 0.644 | 31% | 64% | **4.3%** |
+| 1e-3 | 1.0 | 9.28e-02 | 0.688 | 0.658 | 31% | 66% | **3.0%** |
+
+The rule cuts the irreproducible share of learning from **65% to 8%** — nothing
+in this project had moved that column at all — and every point of it arrives in
+the object-*independent* one, 32% → 91%. The reason is one line of arithmetic:
+the gate is a presynaptic spike count, a spike count is a neuron's baseline rate
+plus a few percent of object, so the credit factorises into a shared term and a
+differential one and the shared term is far larger. The same common-mode
+swamping as everywhere else in this creature, arriving in one more place — but
+here it is arithmetic rather than anatomy, so the mean can be subtracted
+*exactly* rather than approximated by an interneuron. Centring does exactly
+that, 91% → 64%, and it also gives back the calibration echo the common mode was
+costing (g3probe echo 0.700 → 0.925 at `k`=1e-4, against 0.850 shipped) — which
+was the falsifiable prediction made before the run, on a quantity other than the
+milestone.
+
+**And the object-specific column never leaves the 1–4% band in any of eight
+settings.** G3's margin over its own random-target control: +0.017 shipped,
++0.022 at the best arm, mean −0.006 across the grid, 0 of 5 creatures at the bar
+everywhere. Above `k`=3e-4 the echo falls under g3probe's 0.700 readout floor
+and those arms are *unreadable* rather than negative.
+
+**The control that says why, and it is the part worth keeping.** Run G2 with the
+bias half switched off, so the synaptic rule is the only exploration there is:
+
+| arm | rewarded rate | won | G2 |
+|---|---|---|---|
+| bias half only (shipped) | **+1.742 ×** | 9/9 | PASS |
+| synaptic half only | **−0.031 ×** | 5/9 | FAIL |
+| neither half | −0.081 × | 3/9 | FAIL |
+| both | +1.700 × | 7/9 | PASS |
+
+The synaptic rule sits at the no-exploration floor. **It cannot carry G2 — the
+milestone the bias version met outright — so this was never a failure of
+conditionality.** Both rules estimate the same gradient from the same reward
+stream; the bias version estimates one number per *neuron* and the synaptic
+version one per *synapse*, and the variance of the second is hopeless at these
+session lengths. Note the last row, too: bolted onto the working rule it makes
+G2 slightly worse, 9/9 → 7/9.
+
+Two things that closes, and they are both corrections to standing beliefs:
+
+- **Expressiveness was never the problem.** The reason node perturbation cannot
+  make this voice conditional is not that a bias is a constant. Given the
+  expressive power, it still does not learn.
+- **The SNR framing of G3 is refuted.** `dwprobe`'s 61/31/8 split invited "raise
+  the signal or lower the noise". This lowers the noise by 8× and moves the
+  object-specific share not at all — so the object-specific part is not being
+  *hidden* by anything, and there is no amount of denoising that will surface
+  it.
+
+Removed rather than shipped-off because DNA v30 set that policy and this is
+exactly the case it was written for: two required TOML keys and two kernel
+branches, forever, for a rule that cannot carry the milestone its own ancestor
+met. The measurement is the asset; the field is the tax.
+
 ## Design decisions that were not obvious
 
 These were all discovered by measurement, and each one is the difference
