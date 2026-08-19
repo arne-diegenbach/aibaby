@@ -916,9 +916,36 @@ class Timbre {
 // d' = 1 a listener gets about 76% right in a two-alternative forced choice.
 // That is the bar "audibly different" should be held to, rather than a
 // classifier accuracy that says nothing about ears.
+//
+// `unbiased` removes the estimator's floor, and it is the difference between a
+// ruler that can answer this question and one that cannot. A squared
+// Mahalanobis distance built from two *sample* means is positively biased: even
+// for two identical distributions each coefficient contributes
+// E[z_k^2] = 1/n0 + 1/n1, because that is the variance of a difference of
+// sample means in sigma units. Summed over d coefficients,
+//
+//     E[d'^2 | identical] = d * (1/n0 + 1/n1)
+//
+// which at m3's ~20 probes and 12 coefficients is 2.4, i.e. d' = 1.55 — and the
+// shuffled-label null measures 1.57. The floor was never a property of the
+// creature. Subtracting it analytically makes two identical sounds read ~0 at
+// *any* sample size, turns the shuffled row from a floor into a check, and lets
+// a real separation smaller than 1.5 be seen at all.
+//
+// Returned as a **signed squared** distance when `unbiased` is set, not as a
+// d-prime, and that is deliberate. The correction is unbiased in d'^2 and not
+// in d': clamping at zero and taking a root per creature before averaging over
+// creatures puts the bias straight back — measured, it left the shuffled null
+// reading 0.43 instead of ~0. Callers must average the squared values across
+// creatures and take the root once, at the end. Negative is a real answer here;
+// it means "no separation, and the sample says so".
+//
+// The raw d-prime is still what comes back when `unbiased` is false, so every
+// number recorded before this existed stays reproducible.
 inline double cepstral_dprime(const std::vector<std::vector<double>>& x,
                               const std::vector<int>& y,
-                              std::vector<double>* sigma_out = nullptr) {
+                              std::vector<double>* sigma_out = nullptr,
+                              bool unbiased = false) {
   if (x.empty() || x.size() != y.size()) return 0.0;
   const size_t d = x[0].size();
   std::vector<double> mean[2] = {std::vector<double>(d, 0.0), std::vector<double>(d, 0.0)};
@@ -951,6 +978,15 @@ inline double cepstral_dprime(const std::vector<std::vector<double>>& x,
     }
   }
   if (sigma_out) *sigma_out = sigma;
+  if (unbiased) {
+    // Only the dimensions that actually contributed are counted: a coefficient
+    // with no spread was skipped above and carries no bias either.
+    double dims = 0.0;
+    for (size_t k = 0; k < d; ++k) {
+      if (sigma[k] > 1e-9) dims += 1.0;
+    }
+    return acc - dims * (1.0 / n[0] + 1.0 / n[1]);  // signed d'^2, see above
+  }
   return std::sqrt(acc);
 }
 
@@ -1041,6 +1077,14 @@ struct M3Run {
   // that is about 1.7 for two IDENTICAL sounds. So the number above is
   // unreadable without this one beside it.
   double dprime_null = 0;
+  // The same two quantities with that bias subtracted analytically rather than
+  // merely displayed, and held as **signed d'^2** because that is the domain
+  // the correction is unbiased in — averaged across creatures and rooted once,
+  // by the caller. These are the ones to read: the first is what a listener
+  // faces, and the second is a *check* that has to sit near zero rather than a
+  // floor the signal has to clear.
+  double dprime_unb_sq = 0;
+  double dprime_null_unb_sq = 0;
   double anchor_ia = 0;   // [i] vs [a] — nobody would confuse these
   double anchor_near = 0; // [ɑ] vs [ʌ] — neighbours, still two vowels
   double anchor_sd = 0;   // the creature's own delivered F1 spread

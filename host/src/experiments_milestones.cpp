@@ -1310,12 +1310,29 @@ M3Run run_m3_session(const std::vector<uint8_t>& blob, uint64_t ticks, bool pair
       }
       std::vector<double> sigma;
       out.dprime = cepstral_dprime(ceps, probe_labels, &sigma);
+      out.dprime_unb_sq = cepstral_dprime(ceps, probe_labels, nullptr, true);
       std::vector<int> shuffled_labels = probe_labels;
       aibaby::Rng shuf;
       shuf.seed(s.dna.header().seed ^ 0x7A1Bu);
       for (size_t i = shuffled_labels.size(); i > 1; --i) {
         std::swap(shuffled_labels[i - 1], shuffled_labels[shuf.next() % i]);
       }
+      // The null over MANY permutations, not one. A single shuffle is one draw
+      // from the null distribution, not an estimate of it, and with five
+      // creatures that is five draws holding up the only reference number on
+      // this table — it bounced between 0.00 and 0.50 across two run lengths
+      // for that reason alone. Re-permuting costs nothing: the cepstra are
+      // already computed and no creature is simulated again.
+      constexpr uint32_t kNullPerms = 32;
+      double null_acc = 0.0;
+      std::vector<int> perm = probe_labels;
+      for (uint32_t p = 0; p < kNullPerms; ++p) {
+        for (size_t i = perm.size(); i > 1; --i) {
+          std::swap(perm[i - 1], perm[shuf.next() % i]);
+        }
+        null_acc += cepstral_dprime(ceps, perm, nullptr, true);
+      }
+      out.dprime_null_unb_sq = null_acc / double(kNullPerms);
       // The same estimator on labels that mean nothing. Two identical sounds do
       // not measure d' = 0 at this sample size, they measure about 1.7, and
       // without this row the creature's 1.2 reads as "a listener could hear it"
@@ -1457,7 +1474,7 @@ bool run_m3(const std::vector<uint8_t>& blob, uint64_t ticks, const Caregiver& c
   std::printf("  %-4s %-6s %-9s %-9s %-9s %-9s %-9s %-9s %s\n", "seed", "raised", "voice",
               "timbre", "shuffled", "echo", "B1 shape", "aligned", "|R-E[R]|");
 
-  double sum[2][13] = {{0}};
+  double sum[2][15] = {{0}};
   uint32_t valid[2] = {0, 0};
   uint32_t above = 0;
   uint32_t beat_control = 0;
@@ -1490,6 +1507,8 @@ bool run_m3(const std::vector<uint8_t>& blob, uint64_t ticks, const Caregiver& c
       sum[c][9] += run[c].anchor_near;
       sum[c][10] += run[c].anchor_sd;
       sum[c][11] += run[c].dprime_null;
+      sum[c][13] += run[c].dprime_unb_sq;
+      sum[c][14] += run[c].dprime_null_unb_sq;
       sum[c][12] += run[c].motor_interleaved;
       std::printf("  %-4u %-6s %-9.3f %-9.3f %-9.3f %-9.3f %-9.3f %+-9.3f %.4f\n", r,
                   c == 0 ? "named" : "muddle", run[c].vocal, run[c].timbre,
@@ -1553,15 +1572,36 @@ bool run_m3(const std::vector<uint8_t>& blob, uint64_t ticks, const Caregiver& c
     // own within-word scatter, so the anchors below are the same ruler — and
     // read against its own null, because a finite-sample d' is not zero for
     // two identical sounds.
+    // Averaged as d'^2 and rooted once, which is the whole point of carrying
+    // the squared form: rooting per creature and averaging reinstates the bias.
+    const double dpu_sq = sum[0][13] / double(valid[0]);
+    const double nullu_sq = sum[0][14] / double(valid[0]);
+    const double dpu = dpu_sq > 0.0 ? std::sqrt(dpu_sq) : 0.0;
+    const double nullu = nullu_sq > 0.0 ? std::sqrt(nullu_sq) : 0.0;
     std::printf("  separation in d-prime, on this creature's own within-word scatter\n");
-    std::printf("    cube vs ball         %.2f\n", dp);
-    std::printf("    shuffled labels      %.2f   <- the null: what two IDENTICAL\n"
-                "                                    sounds measure at this sample size\n",
-                null);
+    std::printf("    cube vs ball         %.2f raw   %.2f BIAS-CORRECTED  <- read this\n",
+                dp, dpu);
+    std::printf("    shuffled labels      %.2f raw   %.2f   <- raw is this estimator's\n"
+                "                                    small-sample floor; corrected is a\n"
+                "                                    32-permutation null and sits near 0\n",
+                null, nullu);
+    // The bar is 1.0 and it is not arbitrary: d' = 1 is about 76% correct in a
+    // two-alternative forced choice, which is the weakest separation worth
+    // calling audible. A corrected d' above its null but well under 1.0 means
+    // the two utterances really do differ and no listener could use it.
+    // The correction is analytic — D*(1/nA+1/nB) subtracted from d'^2 — so the
+    // corrected null is not a floor to clear but a check that the correction is
+    // the right size. If it drifts far from zero the estimator is wrong and
+    // nothing else in this block is worth reading.
+    if (nullu > 0.5) {
+      std::printf("    INSTRUMENT SUSPECT — the corrected null should be ~0 and reads\n"
+                  "    %.2f (d'^2 %+.2f), so the bias model does not fit this sample.\n",
+                  nullu, nullu_sq);
+    }
     std::printf("    %s\n",
-                dp > null && dp >= 1.0
-                    ? "cube vs ball clears its own null — a listener could hear this"
-                    : "cube vs ball does not clear its own null — nothing audible here");
+                dpu >= 1.0 && dpu > nullu
+                    ? "cube vs ball is audible — corrected d' at or above 1.0"
+                    : "cube vs ball is NOT audible — corrected d' below 1.0");
     std::printf("    [i] vs [a]           %.2f   two vowels nobody would confuse\n", ia);
     std::printf("    [a] vs [u]           %.2f   neighbours, still two vowels\n", near);
     // Not a finding — a scale check. A two-sd swing measured in units of one sd

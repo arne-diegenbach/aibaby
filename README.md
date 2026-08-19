@@ -2466,6 +2466,96 @@ refuted is that `central→vocal` is where this creature needs it. If a future
 architecture ever has a module whose only route out is an all-positive random
 tract, the mechanism and the role are both here and both measured.
 
+### The audibility ruler could not resolve its own question — now it can
+
+**Instrument only, 2026-08-19.** Hash unmoved at `23c4eb2c7c45d05c`, `verify`
+byte-identical.
+
+`m3` renders each probe posture through the creature's own tract and cochlea and
+reports a d-prime against the creature's own within-word scatter. It also
+reported a **shuffled-label null of 1.57 against a signal of 1.20** — a floor
+higher than the thing being measured, which means the instrument could not
+resolve the question at all. It said so honestly and left it there.
+
+That floor is not a property of the creature and does not need to be measured.
+A squared Mahalanobis distance built from two *sample* means is positively
+biased: for two identical distributions each coefficient still contributes
+`E[z²] = 1/n₀ + 1/n₁`, so
+
+    E[d'² | identical sounds] = D · (1/n₀ + 1/n₁)
+
+which at 12 coefficients and ~20 probes is 2.4, i.e. **d′ = 1.55** — against the
+1.57 that was measured. The floor was arithmetic all along, and it subtracts.
+
+Three things were needed to make that work, and two of them were only visible
+once the first was tried:
+
+- **Subtract the bias analytically.** One expression.
+- **Aggregate in d′², not d′.** Clamping at zero and rooting *per creature*
+  before averaging over creatures puts the bias straight back — measured, it
+  left the null reading 0.43 instead of ~0. The corrected quantity is carried as
+  a signed square and rooted once, at the end. Negative is a real answer: it
+  means "no separation, and the sample says so".
+- **Estimate the null over 32 permutations, not one.** A single shuffle is one
+  draw from the null distribution rather than an estimate of it, and with five
+  creatures that was five draws holding up the only reference on the table. It
+  read 0.00 at 300k ticks and 0.50 at 900k — *more* data giving a worse null,
+  which is the signature. Re-permuting costs nothing: the cepstra are already
+  computed and no creature is simulated again.
+
+The null now behaves: **0.22 at 300k ticks, 0.00 at 900k**, falling with sample
+size as a null must. And the reading changes with it:
+
+| | before | after |
+|---|---|---|
+| cube vs ball | 0.68 | **0.40** |
+| shuffled null | 0.71 | **0.00** |
+| verdict | unresolvable — signal under the floor | a real separation, 2.5× under the audibility bar |
+
+**The conclusion is unchanged and its status is not.** Cube versus ball was
+"below the instrument's floor"; it is now *measured* at d′ ≈ 0.4 against a bar
+of 1.0 — the two utterances genuinely do differ, and no listener could use the
+difference. The expression cap now has a ruler that can register progress
+instead of one that can only report failure.
+
+### The smoothing sweep on a creature with something to hold: null
+
+The experiment this ruler was built for. `[[aibaby-vowel-space]]` parked the
+`smoothing_ms` sweep with an explicit trigger — the 800 ms filter is only
+destructive because it is blurring noise, so re-run it "on a creature with
+something worth holding" — and DNA v32's lateral competition is that creature
+(it drops F1 attenuation from 4.2× to 1.6×).
+
+Six arms, corrected d′:
+
+| `lateral_gain` | 800 ms | 400 ms | 200 ms |
+|---|---|---|---|
+| 0.0 (shipped) | 0.40 | 0.59 | 0.42 |
+| 0.020 (v32) | **0.76** | 0.49 | 0.36 |
+
+The v32 row looks monotone and looks like a result. It is not. Three fresh seed
+families, both ends, v32 on:
+
+| seed | 800 ms | 200 ms | Δ |
+|---|---|---|---|
+| 20260901 | 0.58 | 0.51 | +0.07 |
+| 20260902 | 0.41 | 0.58 | **−0.17** |
+| 20260903 | 0.40 | 0.29 | +0.11 |
+
+**Mean +0.003 and the sign flips.** The 0.76 does not replicate — fresh seeds
+give 0.58 / 0.41 / 0.40 at the same setting. Fourth single-seed high to
+evaporate in this project, after v32's own acoustic result,
+`invariance-not-learnable`'s +0.060 and `critical-period`'s spurious +11.
+
+**What it settles.** Articulator inertia is not what is holding the vowel space
+shut, on the shipped creature *or* on one with a bump to hold — so the parked
+decision to leave `smoothing_ms` at 800 was right, and now for a measured reason
+rather than a cautious one. And no arm of the six is audible: every corrected d′
+lands between 0.29 and 0.76 against a bar of 1.0. The expression cap does not
+open by making the voice steadier, which leaves it where the v32 work already
+pointed — nothing controls *where in the vowel space* each word sits, and that
+is the conditioning blocker wearing acoustic clothes.
+
 ## Design decisions that were not obvious
 
 These were all discovered by measurement, and each one is the difference
