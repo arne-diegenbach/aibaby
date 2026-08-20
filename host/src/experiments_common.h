@@ -985,7 +985,16 @@ inline double cepstral_dprime(const std::vector<std::vector<double>>& x,
     for (size_t k = 0; k < d; ++k) {
       if (sigma[k] > 1e-9) dims += 1.0;
     }
-    return acc - dims * (1.0 / n[0] + 1.0 / n[1]);  // signed d'^2, see above
+    // The second-order term, and it is not negligible where this is used most.
+    // sigma_k is itself estimated, and E[1/sigma_hat^2] = (1/sigma^2) *
+    // dof/(dof-2), so every z^2 is inflated by that factor before it is summed.
+    // At the ~200 probes of a long m3 run it is a 1% correction and ignorable;
+    // at the ~20 of a short one it is 12.5%, which left the corrected null
+    // reading 0.58 instead of ~0 inside verify-long — a floor again, in the
+    // one place the instrument is run most often.
+    const double dof = n[0] + n[1] - 2.0;
+    const double inflate = dof > 2.0 ? dof / (dof - 2.0) : 1.0;
+    return acc - dims * (1.0 / n[0] + 1.0 / n[1]) * inflate;  // signed d'^2
   }
   return std::sqrt(acc);
 }
@@ -1232,9 +1241,32 @@ bool run_g4(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_calibrate(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_snapshot(const std::vector<uint8_t>&, uint64_t, bool);
 
+// What `m3probe` measured, keyed by module name, for a caller that needs the
+// numbers rather than the table. It is an out-parameter on the existing runner
+// rather than a second session function on purpose: two implementations of one
+// measurement drift apart, which is the exact failure `restate` exists to
+// catch, and it would be absurd for the drift detector to introduce one.
+struct M3ProbeScores {
+  struct Row {
+    std::string module;
+    double per_neuron = 0;
+    double interleaved = 0;
+  };
+  std::vector<Row> visual;    // two shapes in silence
+  std::vector<Row> auditory;  // two words to an empty field
+
+  double get(bool vis, const char* name, bool interleaved = false) const {
+    for (const Row& r : (vis ? visual : auditory)) {
+      if (r.module == name) return interleaved ? r.interleaved : r.per_neuron;
+    }
+    return -1.0;  // "not measured" is distinguishable from any real score
+  }
+};
+
 // Defined in experiments_probes.cpp.
 bool run_v1probe(const std::vector<uint8_t>&, uint64_t, bool);
-bool run_m3probe(const std::vector<uint8_t>&, uint64_t, bool);
+bool run_m3probe(const std::vector<uint8_t>&, uint64_t, bool, M3ProbeScores* = nullptr);
+bool run_restate(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_g3probe(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_pcprobe(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_audprobe(const std::vector<uint8_t>&, uint64_t, bool);

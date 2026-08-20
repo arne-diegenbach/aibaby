@@ -323,7 +323,8 @@ bool run_v1probe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
 }
 
 
-bool run_m3probe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+bool run_m3probe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose,
+                 M3ProbeScores* scores) {
   std::string error;
   Session s;
   if (!s.init(blob, error)) {
@@ -360,7 +361,8 @@ bool run_m3probe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
   // are spoken to an empty field. Returns the per-neuron score of the module
   // named in `control` — the row that has to work before any other row on the
   // table can be read as anything.
-  auto sweep = [&](bool visual, const char* title, const char* control) -> double {
+  auto sweep = [&](bool visual, const char* title, const char* control,
+                   std::vector<M3ProbeScores::Row>* rows) -> double {
     const uint32_t n_trials = uint32_t(ticks / kM3ProbeTicks);
     std::vector<std::vector<std::vector<double>>> per_module(modules);
     std::vector<std::vector<std::vector<double>>> per_module_phase(modules);
@@ -515,12 +517,16 @@ bool run_m3probe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
       // labels — see the proof on holdout_guess_time_corr.
       const double tcorr = holdout_guess_time_corr(per_module[m], labels, train);
       const double per_neuron = holdout_accuracy(per_module[m], labels, train);
+      const double interleaved = holdout_accuracy(xi, yi, itrain);
       if (std::strcmp(net.module_dna(m).name, control) == 0) control_score = per_neuron;
+      // Recorded from the same locals the table prints, so the two can never
+      // disagree about what was measured.
+      if (rows) rows->push_back({net.module_dna(m).name, per_neuron, interleaved});
 
       std::printf("    %-12s %-11.3f %-11.3f %-11.3f %-11.3f %-11.3f %-11.3f %-11.3f %-11.3f %.1f%s\n",
                   net.module_dna(m).name,
                   per_neuron,
-                  holdout_accuracy(xi, yi, itrain),
+                  interleaved,
                   holdout_accuracy(per_module_ema[m], labels, train),
                   holdout_accuracy(binned, labels, train),
                   holdout_accuracy(per_module_phase[m], labels, train),
@@ -565,8 +571,10 @@ bool run_m3probe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
   // picture is not legible in `vision`, or the word is not legible in
   // `auditory`, then nothing this table says about the modules downstream is
   // about the creature — the signal never entered it.
-  const double vis_ctl = sweep(true, "a cube or a ball, in silence", "vision");
-  const double aud_ctl = sweep(false, "one of two words, to an empty field", "auditory");
+  const double vis_ctl = sweep(true, "a cube or a ball, in silence", "vision",
+                               scores ? &scores->visual : nullptr);
+  const double aud_ctl = sweep(false, "one of two words, to an empty field", "auditory",
+                               scores ? &scores->auditory : nullptr);
   // m3probe is a microscope and reports rather than judges — but a microscope
   // with no light in it is a failure, not a null, and this used to return true
   // unconditionally.
@@ -4646,6 +4654,182 @@ bool run_cpprobe(const std::vector<uint8_t>& dna_blob, uint64_t ticks, bool verb
                 gain);
   }
   (void)verbose;
+  return ok;
+}
+
+// --- restate: does the documented creature still exist? ----------------------
+//
+// Built 2026-08-20, after two documented numbers sent work in the wrong
+// direction inside three days.
+//
+//   - "the object never reaches the larynx; vocal is at chance for the seen
+//     object, 0.500" was true when written and false since `vision->vocal`
+//     shipped. An entire mechanism (the interneuron relay) was designed,
+//     built, calibrated and measured against a bottleneck that had already
+//     closed. It reads 0.660.
+//   - `eligprobe`'s central->vocal conditionality was on record at 0.654 and
+//     reads 0.742 on the current creature, which changed the premise of the
+//     experiment it was quoted to justify.
+//
+// Both were correct when recorded. Nothing noticed when they stopped being
+// correct, because a README number has no test attached to it. `verify` pins
+// exactly one quantity this way — the determinism hash — and that pin has paid
+// for itself repeatedly. This is the same idea for the numbers that actually
+// drive what gets built next.
+//
+// **The expectations are pinned to what THIS experiment reads**, the way
+// `kPinnedHash` is pinned to what the build produces — not to a figure quoted
+// elsewhere under a different protocol. That distinction is load-bearing: the
+// first version pinned the prose's three-seed-family means against this
+// experiment's three within-family replicates and carried a systematic offset
+// of up to 0.08 before anything had drifted at all, spending the tolerance
+// budget on a units mismatch. The `recorded` column says where the prose claim
+// lives so a human can reconcile the two whenever either moves.
+//
+// It is also **deterministic** — same genome, same seeds, same trial RNG — so a
+// row that moves means the creature moved, not that the dice did.
+//
+// **The tolerances are how much change is worth hearing about, not the
+// instrument's noise.**
+// A per-neuron accuracy over 100 trials has SE ~0.05, so ±0.15 is roughly three
+// of those: wide enough that ordinary variation is quiet, tight enough that a
+// number moving from chance to two-thirds is loud. The point is to catch a
+// premise that has died, not to detect drift in the third decimal.
+//
+// Adding an entry is one row plus one measurement. The bar for being here is
+// narrow: a number is a candidate only if some *decision* would change if it
+// moved. Everything else belongs in the probe that prints it.
+struct Restatement {
+  const char* quantity;   // what it is
+  const char* recorded;   // where the project says it, and what it says
+  double expected;
+  double tolerance;
+  double measured;
+  bool measured_ok;       // false when the probe could not produce it at all
+};
+
+bool run_restate(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  aibaby::Dna dna;
+  if (dna.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) return false;
+
+  std::printf("  Re-derives the numbers this project makes decisions on, against\n"
+              "  what it has written down. A red row does not mean the creature is\n"
+              "  broken -- it means a document is describing a creature that no\n"
+              "  longer exists, and anything built on that row is built on sand.\n\n");
+
+  // --- the delivery numbers, from m3probe's own table ------------------------
+  // 200k rather than the 900k the milestone uses: this asks where the object
+  // arrives in the resting dynamics, which needs no learning and no teacher.
+  // Three creatures, not one, and that is not a luxury. A per-neuron accuracy
+  // over 100 trials has SE ~0.05, and the figures this checks against were
+  // themselves recorded as three-seed means -- pinning a one-seed draw against
+  // a three-seed mean builds a systematic offset into the comparison and spends
+  // the tolerance budget on it.
+  std::printf("  --- m3probe, 200000 ticks x 3 creatures ---\n");
+  M3ProbeScores sc;
+  {
+    std::vector<M3ProbeScores> each;
+    for (uint32_t r = 0; r < 3; ++r) {
+      std::vector<uint8_t> variant = blob;
+      const uint64_t seed = dna.header().seed + r * 7919ull;
+      std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+      M3ProbeScores one;
+      run_m3probe(variant, 200000, verbose, &one);
+      each.push_back(one);
+    }
+    // Averaged by module name rather than by index: growth can leave two
+    // creatures with different module widths, and nothing here should quietly
+    // average a row onto a different module.
+    auto fold = [&](bool vis) {
+      std::vector<M3ProbeScores::Row> out;
+      for (const M3ProbeScores::Row& proto : (vis ? each[0].visual : each[0].auditory)) {
+        double pn = 0, il = 0; uint32_t n = 0;
+        for (const M3ProbeScores& e : each) {
+          const double v = e.get(vis, proto.module.c_str());
+          if (v < 0.0) continue;
+          pn += v; il += e.get(vis, proto.module.c_str(), true); ++n;
+        }
+        if (n) out.push_back({proto.module, pn / n, il / n});
+      }
+      return out;
+    };
+    sc.visual = fold(true);
+    sc.auditory = fold(false);
+  }
+
+  // --- the trace, from eligprobe's own session -------------------------------
+  // 600k because below it eligprobe's positive control is blind, and a blind
+  // control would make this whole experiment agree with anything.
+  std::printf("\n  --- eligprobe, 600000 ticks x 3 creatures ---\n");
+  double cen = 0, arc = 0;
+  uint32_t valid = 0;
+  for (uint32_t r = 0; r < 3; ++r) {
+    std::vector<uint8_t> variant = blob;
+    const uint64_t seed = dna.header().seed + r * 7919ull;
+    std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+    const EligProbe p = run_eligprobe_session(variant, 600000);
+    if (!p.ok) continue;
+    cen += p.central; arc += p.arcuate_matched; ++valid;
+  }
+  if (valid) { cen /= valid; arc /= valid; }
+  std::printf("    central->vocal conditionality  %.3f   (arcuate control %.3f, %u creatures)\n",
+              cen, arc, valid);
+
+  Restatement rows[] = {
+      {"object at vocal, per neuron",
+       "README 'three caps': 0.660 over three seed FAMILIES -- NOT the old 0.500",
+       0.733, 0.15, sc.get(true, "vocal"), sc.get(true, "vocal") >= 0.0},
+      {"object at central, per neuron",
+       "README G3 cascade: the condition upstream of the larynx",
+       0.653, 0.15, sc.get(true, "central"), sc.get(true, "central") >= 0.0},
+      {"object at vision, per neuron",
+       "the positive control: if this falls, nothing else here is readable",
+       0.947, 0.15, sc.get(true, "vision"), sc.get(true, "vision") >= 0.0},
+      {"word at vocal, per neuron",
+       "the echo route -- what makes the creature able to repeat but not name",
+       0.847, 0.15, sc.get(false, "vocal"), sc.get(false, "vocal") >= 0.0},
+      {"word at auditory, per neuron",
+       "the auditory positive control",
+       1.000, 0.10, sc.get(false, "auditory"), sc.get(false, "auditory") >= 0.0},
+      {"central->vocal trace conditionality",
+       "eligprobe: 0.742 at 5 creatures, NOT the long-recorded 0.654",
+       0.813, 0.12, cen, valid >= 2},
+      {"arcuate trace, size-matched",
+       "eligprobe's positive control -- a tract known to carry a condition",
+       0.973, 0.12, arc, valid >= 2},
+  };
+
+  std::printf("\n  %-38s %-9s %-9s %-8s %s\n", "quantity", "expected", "measured",
+              "drift", "verdict");
+  bool ok = true;
+  for (const Restatement& r : rows) {
+    if (!r.measured_ok) {
+      std::printf("  %-38s %-9.3f %-9s %-8s %s\n", r.quantity, r.expected, "--", "--",
+                  "NOT MEASURED — the probe could not produce this");
+      ok = false;
+      continue;
+    }
+    const double drift = r.measured - r.expected;
+    const bool held = std::fabs(drift) <= r.tolerance;
+    if (!held) ok = false;
+    std::printf("  %-38s %-9.3f %-9.3f %+-8.3f %s\n", r.quantity, r.expected, r.measured,
+                drift, held ? "ok" : "DRIFTED — see below");
+  }
+
+  std::printf("\n  where each expectation is written down\n");
+  for (const Restatement& r : rows) std::printf("    %-38s %s\n", r.quantity, r.recorded);
+
+  if (!ok) {
+    std::printf("\n  RESTATE FAIL — at least one documented number no longer describes\n"
+                "  this creature. Before treating that as a regression, check whether\n"
+                "  the creature improved: both drifts that motivated this experiment\n"
+                "  were numbers getting BETTER while the prose still said otherwise.\n"
+                "  Fix the document, or the expectation here, in the same change that\n"
+                "  moved the creature.\n");
+  } else {
+    std::printf("\n  restate PASS — every pinned number still describes this creature.\n");
+  }
+  (void)ticks;
   return ok;
 }
 

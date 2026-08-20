@@ -94,6 +94,8 @@ const Spec kSpecs[] = {
      "no requirement; G3 is the open milestone, so FAIL is the current answer"},
     {"g2", kDefaultMinimum, Expect::kPass, Tier::kLong, "no requirement"},
     {"snapshot", kDefaultMinimum, Expect::kPass, Tier::kLong, "no requirement"},
+    {"restate", 600000, Expect::kPass, Tier::kLong,
+     "measured: it runs eligprobe's session, which is blind below 600k"},
     {"eligprobe", 600000, Expect::kPass, Tier::kLong,
      "measured: the arcuate control is 0.570 at 120k and 0.892 here"},
     {"g3probe", 900000, Expect::kPass, Tier::kLong,
@@ -211,6 +213,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "g3probe") ok = run_g3probe(dna_blob, ticks, verbose);
   else if (name == "pcprobe") ok = run_pcprobe(dna_blob, ticks, verbose);
   else if (name == "audprobe") ok = run_audprobe(dna_blob, ticks, verbose);
+  else if (name == "restate") ok = run_restate(dna_blob, ticks, verbose);
   else if (name == "eligprobe") ok = run_eligprobe(dna_blob, ticks, verbose);
   else if (name == "dwprobe") ok = run_dwprobe(dna_blob, ticks, verbose);
   else if (name == "projprobe") ok = run_projprobe(dna_blob, ticks, verbose);
@@ -375,7 +378,7 @@ bool run_verify(const std::vector<uint8_t>& dna_blob, bool long_tier, bool verbo
   const bool ok = det && hash_ok && failed == 0;
   std::printf("  verify %s\n", ok ? "PASS" : "FAIL");
   if (ok && !long_tier) {
-    std::printf("  (fast tier only — verify-long adds g3probe, condprobe, pairprobe,\n"
+    std::printf("  (fast tier only — verify-long adds restate, g3probe, condprobe, pairprobe,\n"
                 "   eligprobe, m3, g2, snapshot, sleep and g4)\n");
   }
   std::printf("========================================================\n");

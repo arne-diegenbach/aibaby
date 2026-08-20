@@ -2503,8 +2503,22 @@ once the first was tried:
   which is the signature. Re-permuting costs nothing: the cepstra are already
   computed and no creature is simulated again.
 
-The null now behaves: **0.22 at 300k ticks, 0.00 at 900k**, falling with sample
-size as a null must. And the reading changes with it:
+A fourth was found the day after, by watching the ruler inside `verify-long`
+rather than at the length it was developed at. σ is itself *estimated*, and
+`E[1/σ̂²] = (1/σ²)·dof/(dof−2)`, so every z² is inflated by that factor before it
+is summed. At the ~200 probes of a long run that is a 1% correction and
+ignorable — which is why it was waved away — but at the ~20 of a short one it is
+12.5%, and the corrected null read **0.58** in the one place the instrument
+actually runs most often. Including the term makes the correction exact at every
+length:
+
+| corrected null | 300k | 600k | 900k |
+|---|---|---|---|
+| before | 0.22 | — | 0.00 |
+| after | **0.01** | **0.00** | **0.00** |
+
+The null now behaves at any run length, which is what a null must do. And the
+reading changes with it:
 
 | | before | after |
 |---|---|---|
@@ -2635,6 +2649,65 @@ than seven times it.
 **This was the last named, untested mechanism against the conditioning
 blocker.** It is now measured and negative, on a re-verified precondition, with
 a replication and a noise floor. G3 is closed under this architecture.
+
+### `restate` — a test for the numbers, not just for the creature
+
+**Built 2026-08-20**, after two documented numbers sent work in the wrong
+direction inside three days. Hash unmoved at `23c4eb2c7c45d05c`.
+
+- *"The object never reaches the larynx; vocal is at chance, 0.500."* True when
+  written, false since `vision→vocal` shipped. An entire mechanism — the
+  interneuron relay — was designed, built, calibrated and measured against a
+  bottleneck that had already closed.
+- *`eligprobe`'s central→vocal conditionality is 0.654.* It reads 0.742, which
+  changed the premise of the experiment it was quoted to justify.
+
+Both were correct when recorded. Nothing noticed when they stopped being
+correct, because **a README number has no test attached to it.** `verify` pins
+exactly one quantity this way — the determinism hash — and that pin has paid for
+itself repeatedly. `restate` is the same idea for the numbers that decide what
+gets built next:
+
+```
+  quantity                               expected  measured  drift    verdict
+  object at vocal, per neuron            0.733     0.733     +0.000   ok
+  object at central, per neuron          0.653     0.653     +0.000   ok
+  object at vision, per neuron           0.947     0.947     -0.000   ok
+  word at vocal, per neuron              0.847     0.847     -0.000   ok
+  word at auditory, per neuron           1.000     1.000     +0.000   ok
+  central->vocal trace conditionality    0.813     0.813     +0.000   ok
+  arcuate trace, size-matched            0.973     0.973     +0.000   ok
+```
+
+Four things make it worth having rather than decorative:
+
+**It reuses the probes' own arithmetic.** `m3probe` gained an optional
+structured output filled from the same locals its table prints, so the audit and
+the table can never disagree about what was measured. A second implementation of
+one measurement would drift apart — which is the exact disease this exists to
+catch.
+
+**It is pinned to what it reads, not to what the prose says.** The first version
+compared the README's three-seed-*family* means against this experiment's three
+within-family replicates and carried a systematic offset of up to 0.08 before
+anything had drifted at all, spending the tolerance budget on a units mismatch.
+The expectations are now the instrument's own readings — the `kPinnedHash` model
+— and a `recorded` column says where the prose claim lives so a human reconciles
+the two when either moves.
+
+**It is deterministic.** Same genome, same seeds, same trial RNG: two runs are
+byte-identical, so a row that moves means the creature moved, not that the dice
+did. That is what lets the tolerances mean "how much change is worth hearing
+about" instead of "how noisy is this".
+
+**And it can fail.** Zero the `vision→vocal` weight — the exact change whose
+*arrival* made the old number stale — and `object at vocal` falls to **0.507**,
+the historical 0.500, red on that row alone with everything else green. An audit
+nobody has watched fail is a decoration.
+
+It runs in the long tier, and its minimum is 600k because it uses `eligprobe`'s
+session, which is blind below that — a drift detector with a blind control would
+agree with anything.
 
 ## Design decisions that were not obvious
 
