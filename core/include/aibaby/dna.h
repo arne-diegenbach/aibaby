@@ -1170,6 +1170,51 @@ struct DnaProjection {
   // rate, still calibrated and still babbling. Per-pathway confinement solves
   // the stability problem exactly as intended. What it does not do is make a
   // paired CS come to evoke the response.
+  //
+  // --- and the one rule that did NOT read this trace: also refuted -----------
+  // Built and removed 2026-08-20 as `covar`, a per-pathway **rate covariance**
+  // applied once per plasticity interval and multiplying no eligibility at all:
+  //
+  //     dw_ij = covar * (r_i - mean_r(src)) * (r_j - mean_r(dst))
+  //
+  // The motivation was the sharpest available. *Every* learning write in this
+  // creature, `hebb` above included, multiplies a quantity assembled from spike
+  // timing inside +-20 ms windows — while central codes the object as a rate
+  // difference over hundreds of ms. Every rule tried had been a timing rule
+  // asked to read a rate code. It also predicted the one result nothing else
+  // explains: the decile test, where a synapse off central's most
+  // object-discriminative neuron carries no more conditional eligibility than
+  // one off its least, which is inexplicable for a rule that reads rates.
+  //
+  // It is not inert and it is not unstable. `babble` PASSes across 1e-7..1e-1,
+  // six orders of magnitude, and `dwprobe` shows it writing hard — mean |dw|
+  // per synapse 2.99e-02 -> 1.64e-01. What it writes is the problem:
+  //
+  //   covar   mean|dw|    corr(A,A')  corr(A,B)   noise  obj-indep  obj-spec
+  //   0       2.99e-02    0.349       0.322       65%    32%        2.7%
+  //   1e-4    1.64e-01    0.630       0.616       37%    62%        1.4%
+  //   1e-2    1.82e-01    0.349       0.308       65%    31%        4.1%
+  //   1e-1    1.89e-01    0.246       0.275       75%    28%        -2.9%
+  //
+  // Large, reproducible and **object-independent**, with the object-specific
+  // share bouncing around zero. Then the milestone test, both CS tracts on,
+  // three seed families, each against its own covar = 0 control and read
+  // against the measured 0.115 noise floor of pairprobe-minus-g3probe:
+  // **-0.009, -0.011, +0.050.** Null, and every arm readable.
+  //
+  // **The diagnosis, and it is why this file stops here.** Centring on the
+  // population mean removes the *population's* offset and not each neuron's
+  // own: `r_i - mean_r(module)` is dominated by the fact that some cells simply
+  // fire faster than their neighbours, which is a static property of the
+  // wiring. The product of two static offsets is a fixed pattern — reproducible
+  // and object-blind, which is exactly what dwprobe measured. A true covariance
+  // would centre each neuron on *its own* running mean, which needs a second
+  // per-neuron array and a snapshot format bump.
+  //
+  // That refinement is named and not built, deliberately. This was the seventh
+  // mechanism to hit the same wall — a small differential riding on a large
+  // common component — and the point at which the search was stopped rather
+  // than the point at which it ran out of ideas.
   float hebb;
   // DNA v25. Does this tract terminate on the target's apical tuft rather than
   // near its soma? See DnaModule::apical_threshold for what the compartment

@@ -2709,6 +2709,73 @@ It runs in the long tier, and its minimum is 600k because it uses `eligprobe`'s
 session, which is blind below that — a drift detector with a blind control would
 agree with anything.
 
+### The one rule that did not read the trace — and where the search stops
+
+**Built and removed 2026-08-20.** Hash unmoved at `23c4eb2c7c45d05c`.
+
+The sharpest remaining observation about this creature's learning was that
+**every write goes through `syn_elig_`**, a quantity assembled from spike timing
+inside ±20 ms windows — and `hebb` is no exception, it multiplies the same trace
+without waiting for reward. Central codes the object as a **rate** difference
+over hundreds of milliseconds. So every rule ever tried here has been a timing
+rule asked to read a rate code, and `eligprobe`'s `a_minus` sweep is that
+mismatch showing up as a number: the shipped balance nearly cancels precisely
+the rate component.
+
+So: `covar`, a per-pathway **rate covariance**, reward-independent, reading no
+eligibility at all.
+
+    dw_ij = covar * (r_i - mean_r(src module)) * (r_j - mean_r(dst module))
+
+It also predicted the one result nothing else explains — the decile test, where
+a synapse hanging off central's *most* object-discriminative neuron carries no
+more conditional eligibility than one off its least. Inexplicable for a rule
+that reads rates; expected for one counting 2.45 coincidences per synapse per
+trial.
+
+**It is neither inert nor unstable.** `babble` PASSes from 1e-7 to 1e-1 — six
+orders of magnitude — and `dwprobe` shows it writing hard, mean |dw| per synapse
+**2.99e-02 → 1.64e-01**. What it writes is the problem:
+
+| `covar` | mean\|dw\| | corr(A,A′) | corr(A,B) | noise | obj-indep | obj-spec |
+|---|---|---|---|---|---|---|
+| 0 | 2.99e-02 | 0.349 | 0.322 | 65% | 32% | 2.7% |
+| 1e-4 | 1.64e-01 | 0.630 | 0.616 | 37% | 62% | 1.4% |
+| 1e-2 | 1.82e-01 | 0.349 | 0.308 | 65% | 31% | 4.1% |
+| 1e-1 | 1.89e-01 | 0.246 | 0.275 | 75% | 28% | **−2.9%** |
+
+Large, reproducible and **object-independent**. Then the milestone test — both
+CS tracts on, three seed families, each against its own `covar = 0` control,
+read against the **0.115** noise floor measured the day before:
+
+| seed | paired contrast |
+|---|---|
+| 20260901 | −0.009 |
+| 20260902 | −0.011 |
+| 20260903 | +0.050 |
+
+Null, every arm readable, nothing near the floor.
+
+**The diagnosis, and it is the reason to stop rather than iterate.** Centring on
+the population mean removes the *population's* offset and not each neuron's own.
+`r_i − mean_r(module)` is dominated by the fact that some cells simply fire
+faster than their neighbours — a static property of the wiring — and the product
+of two static offsets is a fixed pattern: reproducible and object-blind, which
+is exactly what `dwprobe` measured. A true covariance would centre each neuron
+on *its own* running mean, which needs a second per-neuron array and a snapshot
+format bump.
+
+That refinement is named and deliberately not built. This was the **seventh**
+mechanism to hit the same wall — a small differential riding on a large common
+component — and the seventh time the differential did not move. The stopping
+rule was set before the run: clear the measured noise floor on three seed
+families or it is dead. It did not, so it is.
+
+Removed rather than shipped off, per DNA v30: `covar` was a required key on
+every one of the eleven projections, forever, for a rule that does not learn.
+The table is the asset and it is kept on `DnaProjection::hebb`, where anyone
+reaching for reward-independent per-pathway learning will land on it.
+
 ## Design decisions that were not obvious
 
 These were all discovered by measurement, and each one is the difference
