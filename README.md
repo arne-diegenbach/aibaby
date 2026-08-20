@@ -845,23 +845,24 @@ saturation guard is lowered until growth is unavoidable, proving the path being
 restrained is a path that works.
 
 ```
-as raised (DNA v5)                         forced (guard lowered)
+as raised (re-measured on DNA v35)         forced (guard lowered)
   windows    75 (4 improving, 70 plateau)     neurons  1102 -> 1150 (cap 9216)
-  neurons    1102 -> 1150 (cap 9216)          growth   6 events, 48 neurons
-  growth     6 events, 48 neurons             determinism  31 checkpoints, identical
-  saturation rate 13.5 Hz vs 20.0 bar
-             weight 0.152 vs 0.300 bar
-  crowding   2.0% at 20 s -> 0.0% thereafter
-  error      0.0273 at 20 s -> 0.0084 flat
-  sleep      7 passes, 20 synapses pruned
+  neurons    1102 -> 1190 (cap 9216)          growth   6 events, 48 neurons
+  growth     11 events, 88 neurons            determinism  31 checkpoints, identical
+  ledger     w4 w7 w10 w13 w16 w19
+             ... 42 windows of nothing ...
+             w61 w64 w67 w70 w73
+  saturation rate 8.21 Hz vs 20.0 bar
+             weight 0.146 vs 0.300 bar
+  crowding   0.4% at 20 s -> 0.0% thereafter
+  error      0.0263 at 20 s -> 0.0057 at 1320 s
+  sleep      7 passes, 25 synapses pruned
   replay     8 episodes held, 56 replayed
-  myelination  mean per-edge rate 0.63 x eta
+  myelination  mean per-edge rate 0.654 x eta
 ```
 
-The two arms now agree, which they should: with the saturation bars no longer
-required, lowering them changes nothing. The forced arm is kept because
-`require_saturation = 1` restores the old behaviour, and that arm is what
-proves the path still works when it is.
+The forced arm is kept because `require_saturation = 1` restores the old
+behaviour, and that arm is what proves the path still works when it is.
 
 **Until DNA v5 a normally raised creature never grew, and the numbers say why.**
 It reaches 68% of the rate bar and 51% of the weight bar and stops there. That
@@ -876,13 +877,16 @@ Two further measurements say the literal reading is unreachable rather than
 merely strict, and they are the reason it was replaced rather than retuned:
 
 - **The rate is a setpoint, not a slow climb.** The association module's peak
-  over 25 minutes is 13.54 Hz against a 20 Hz bar, and its genome target is
-  8.05 Hz. It is being *held* at 40% of the bar. A longer life reads the same.
+  over 25 minutes was 13.54 Hz against a 20 Hz bar when this was written, and
+  its genome target is 8.05 Hz. It is being *held* well below the bar, and a
+  longer life reads the same. (On the shipped genome the peak is now **8.21 Hz**
+  — the argument is unchanged and the gap is wider.)
 - **Crowding decays.** The share of incoming edges within 3/4 of their own
   ceiling reads 2.0% after the first 20 s and **0.0% for the remaining 25
   minutes** — sleep downscaling pulls weights away from their bounds faster
   than learning presses them into it. Nothing in this creature accumulates
-  toward "full", so no bar placed there can ever be crossed.
+  toward "full", so no bar placed there can ever be crossed. (Now 0.4% at 20 s
+  and 0.0% after, same shape.)
 
 **What replaced it, in DNA v5.** "Little headroom" now means the module cannot
 explain any more of what happens next with the structure it has: the creature
@@ -903,13 +907,37 @@ masks bugs: the network expands instead of revealing that learning is broken"*.
 If adding neurons stops helping, growth stops, and a flat neuron count goes
 back to being evidence.
 
-**What a normally raised creature now does:** six growth events, 48 neurons,
-1102 → 1150, and then it stops — because none of the six moved the prediction
-error and `patience` ran out. That is the guard working, and it is also an
-honest result about this brain: **more neurons in the association module do not
-help it predict the next sound.** Growth is now reachable; growth being *useful*
-is a separate open question, and the crowding curve above is the first place to
-look for why.
+**What a normally raised creature does — corrected 2026-08-20.** This section
+used to say "six growth events, 48 neurons, 1102 → 1150, and then it stops".
+That is now the *forced* arm. Re-measured on the shipped genome, growth comes in
+**bursts**: six events at windows 4–19, then **840 s of simulated life with
+growth switched off**, then five more from window 61. `patience` is not
+terminal — an improving window clears the counter and growth re-arms.
+
+The conclusion underneath it is unchanged and is the honest result about this
+brain: **more neurons in the association module do not help it predict the next
+sound.** Eleven events and 88 new cells move the error from 0.0070 to 0.0057,
+while the fall that actually matters — 0.0263 → 0.0070 — happens in the first
+280 s, before growth has added anything. Growth is reachable; growth being
+*useful* is still open, and the crowding curve above is the first place to look.
+
+Three variants of the re-arm rule were measured at 1.5M ticks before settling on
+the one that ships (see `Brain::try_grow`): the reference frozen at the last
+event gave 11 events, moved forward on every judgement 12, and the improving-
+window verdict 11 with a **bit-identical ledger** to the frozen one. The
+suspicion that motivated looking — that a stale absolute reference lets the error
+*drift* across it and re-arm growth for a reason growth had nothing to do with —
+is **not supported by that pair of numbers**; the two rules agree at every
+judgement here. What shipped is a simplification, not a fix: one definition of
+"improving" in the creature instead of two differently-scaled ones.
+
+**A panel readout was fixed at the same time, because it caused this question.**
+The structure card read `grown / cap` — "40 / 9216" — which parses as
+live-over-capacity and made a healthy creature look like a network stuck at 0.4%
+of its size and refusing to grow. It is a *cumulative growth counter* over the
+*arena ceiling*: 40 is five events' worth of new cells, 9216 is the sum of the
+six modules' `n_max`, fixed when the arena is allocated at hatch and unable to
+move. The card now reads `1,142 / 9,216 (40 grown)`.
 
 **Fixing the trigger exposed a bug in G4's own checker.** Growth records are
 written at window boundaries, after the tick's growth decision has run, so an

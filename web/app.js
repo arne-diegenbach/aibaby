@@ -540,8 +540,15 @@
     // broken raster.
     var st = frame.structure || {};
     if (frame.structure) {
-      text('struct-grown', (st.grown || 0).toLocaleString() + ' / ' +
-                           (st.capacity || 0).toLocaleString());
+      // Live over capacity, with the growth counter in brackets. The old
+      // "grown / cap" pairing read as live-over-capacity and invited exactly
+      // the wrong conclusion: "40 / 9216" is a *cumulative growth* counter over
+      // the *arena ceiling*, which is fixed at hatch and can never move, so a
+      // healthy creature at 1142 of 9216 looked like a network stuck at 0.4%
+      // of its size and refusing to grow.
+      text('struct-grown', (frame.neurons || 0).toLocaleString() + ' / ' +
+                           (st.capacity || 0).toLocaleString() + ' (' +
+                           (st.grown || 0).toLocaleString() + ' grown)');
       text('struct-pruned', (st.prunedSynapses || 0).toLocaleString() + ' syn, ' +
                             (st.prunedNeurons || 0).toLocaleString() + ' cells');
       text('struct-passes', (st.consolidations || 0).toLocaleString());

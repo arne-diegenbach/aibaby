@@ -340,6 +340,10 @@ bool Brain::check_plateau() {
   growth_.improvement = first ? kZero : growth_.last_best - growth_.best_error;
   growth_.plateaued = !first && growth_.improvement < Scalar(g.epsilon);
   growth_.improving = !first && growth_.improvement >= Scalar(g.epsilon);
+  // An improving window is the one thing that should un-block growth after
+  // `patience` has switched it off, and this is the only place that judgement
+  // is made — see try_grow for why it is not made twice.
+  if (growth_.improving) growth_.ineffective = 0;
   growth_.last_best = growth_.best_error;
   growth_.best_error = err;
   growth_.window_start = tick;
@@ -364,10 +368,31 @@ void Brain::try_grow() {
   // Did the last event help? Judged here rather than at the moment of growth,
   // because a neuron inserted into a running network needs its refractory
   // period to wire in and start firing before its effect is readable.
-  if (growth_.growth_events > 0) {
-    if (err < growth_.error_at_growth - Scalar(g.epsilon)) growth_.ineffective = 0;
-    else ++growth_.ineffective;
-  }
+  //
+  // The verdict is check_plateau's, and deliberately not a second test of its
+  // own: what un-blocks growth after `patience` has stopped it is an
+  // *improving window*, the same window-best comparison against the same
+  // epsilon that declares a plateau in the first place.
+  //
+  // This used to keep its own `error_at_growth`, comparing `slow_error()` now
+  // against its value at the last event — two *point samples* of a noisy trace,
+  // which is what check_plateau documents refusing to do one function up. Three
+  // variants measured at 1.5M ticks on the shipped genome, all in this order:
+  //
+  //   frozen reference (as shipped)     11 events, 88 neurons
+  //   reference moved every judgement   12 events, 96 neurons
+  //   improving window (this)           11 events, 88 neurons, ledger
+  //                                     bit-identical to the frozen reference
+  //
+  // Read that honestly. The suspicion that motivated the change — that a stale
+  // absolute reference lets the error *drift* across it and re-arm growth for a
+  // reason growth had nothing to do with — is **not supported**: the two rules
+  // agree at every judgement on this genome, so growth's second burst at w61
+  // followed a genuine improving window either way, and shortening the interval
+  // made it fire slightly more rather than less. This is kept as a
+  // simplification, not a fix: one definition of "improving" in the creature
+  // instead of two differently-scaled ones, and one less piece of state.
+  if (growth_.growth_events > 0) ++growth_.ineffective;
 
   // Condition 2, in the form a regulated network can actually reach: the
   // creature has stopped improving (it would not be here otherwise) and is
@@ -383,7 +408,6 @@ void Brain::try_grow() {
     if (!network_.below_cap(m)) continue;   // condition 3 — the DNA budget cap
     if (network_.grow(m, g.insert_k) > 0) {
       last_growth_tick_ = tick;
-      growth_.error_at_growth = err;
       ++growth_.growth_events;
     }
   }

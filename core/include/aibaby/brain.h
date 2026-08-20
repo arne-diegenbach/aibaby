@@ -48,11 +48,14 @@ struct GrowthWatch {
   uint32_t windows = 0;          // completed windows
   bool plateaued = false;        // was the most recent window a plateau?
   bool improving = false;        // ...or was error still coming down?
-  // Whether growth is earning its place. `error_at_growth` is the prediction
-  // error when the last event fired; the next window compares against it, and
-  // a run of events that changes nothing stops growth rather than filling the
-  // budget cap with neurons that do not help.
-  Scalar error_at_growth = kZero;
+  // Whether growth is earning its place: a run of events that changes nothing
+  // stops growth rather than filling the budget cap with neurons that do not
+  // help, and only an *improving* window clears the run. There used to be a
+  // second quantity here, `error_at_growth`, holding the prediction error at
+  // the last event so the next window could compare two point samples against
+  // it — removed 2026-08-20 as a duplicate definition of "improving", not as a
+  // bug fix: it and the window verdict agree at every judgement measured. See
+  // Brain::try_grow for the three variants and their ledgers.
   uint32_t ineffective = 0;      // consecutive growth events that did not help
   uint32_t growth_events = 0;    // events this brain has had, for the panel
 };
