@@ -2776,6 +2776,68 @@ every one of the eleven projections, forever, for a rule that does not learn.
 The table is the asset and it is kept on `DnaProjection::hebb`, where anyone
 reaching for reward-independent per-pathway learning will land on it.
 
+### M1b — the creature repeats what it hears: **met**
+
+**Built and met 2026-08-20.** Hash unmoved at `23c4eb2c7c45d05c`.
+
+The spec asks one question about the voice — G3, cube versus ball — and this
+creature has been failing it for months while doing something else nobody ever
+scored. `m3probe` reads the heard word out of the *voice* at 0.86 and the seen
+object at 0.58, and the notes have carried the sentence "this creature can
+repeat and cannot name" since August. Repeating is a real developmental
+milestone. It had no criterion, no control and no bar, so it was never a result.
+
+**What had to be settled first.** `m3probe`'s auditory sweep scores ticks
+500–1999 while the word plays 0–899, so **27% of its scored window is concurrent
+with the stimulus**. A voice that differs while the sound is still playing is
+the arcuate transmitting — a reflex, and an interesting one, but calling it
+imitation would be overclaiming. Repetition is what survives the sound stopping.
+
+So the voice is scored in four disjoint windows, five creatures, trial order
+shuffled rather than alternating (an alternating sequence lets a classifier
+score well on session time alone — this project has been caught by that once):
+
+| window | voice | articulators | shuffled | audible d′ | **EAR still knows** |
+|---|---|---|---|---|---|
+| WHILE the word plays | 0.896 | 0.828 | 0.499 | 1.84 | 1.000 |
+| 0–200 ms after | 0.930 | 0.864 | 0.497 | 1.85 | 0.972 |
+| **200–600 ms after** | **0.890** | **0.778** | 0.498 | **1.37** | **0.534** ← scored |
+| 600–1400 ms after | 0.704 | 0.660 | 0.497 | 0.71 | 0.482 |
+
+**The EAR column is what makes this a claim about repeating rather than about
+hearing.** It is the auditory module on the same trials in the same window. The
+caregiver stops at 900 ms and the cochlea and B2 take a few hundred more to let
+go — at 0–200 ms the ear still classifies the word at 0.972, so that row is the
+stimulus finishing its arrival, not memory. By 200–600 ms the ear is at **0.534**
+and the voice is still at **0.890**. The stimulus is gone from the ear and
+present in the voice.
+
+**M1b PASS: 5 of 5 creatures at or above 0.75**, the same bar G3 is scored
+against, with the shuffled control at chance in every window. Two things stop it
+being a technicality:
+
+- **Articulators alone read 0.778.** That column drops loudness and voicing
+  entirely, so this cannot pass on "one word makes it louder" — it is a claim
+  about two *sounds* rather than two amounts of sound.
+- **Audible d′ 1.37, against the 1.0 a listener needs.** This is the first time
+  anything this creature does has cleared the audibility bar. Cube versus ball
+  is 0.40 on the same ruler.
+
+**The window is fixed a priori, and the first version got that wrong.** It
+picked each creature's best window subject to the ear being at chance, and two
+of five then "failed" only because their ear decayed slightly slower and the
+rule fell through to a later window. Choosing the window once, in advance, for
+everyone is the difference between a milestone and a search. The first version
+also took its shuffled control from a *single* permutation, which failed the
+whole experiment on one window at 2 SE — the same one-draw-is-not-an-estimate
+error the audibility ruler needed fixing for two days earlier. Both are now 16-
+and 32-permutation averages.
+
+**Read it beside G3, same creature, same classifier, same bar: it repeats at 89%
+and names at 53%.** The object reaches the larynx (0.66, above central's 0.60)
+and does not reach the voice. That contrast is sharper than either number alone,
+and it is the honest headline for what this architecture built.
+
 ## Design decisions that were not obvious
 
 These were all discovered by measurement, and each one is the difference

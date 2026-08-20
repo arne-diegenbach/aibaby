@@ -94,6 +94,8 @@ const Spec kSpecs[] = {
      "no requirement; G3 is the open milestone, so FAIL is the current answer"},
     {"g2", kDefaultMinimum, Expect::kPass, Tier::kLong, "no requirement"},
     {"snapshot", kDefaultMinimum, Expect::kPass, Tier::kLong, "no requirement"},
+    {"imitate", 560000, Expect::kPass, Tier::kLong,
+     "derived: 2800-tick trials, so 200 of them for an accuracy step of 0.01"},
     {"restate", 600000, Expect::kPass, Tier::kLong,
      "measured: it runs eligprobe's session, which is blind below 600k"},
     {"eligprobe", 600000, Expect::kPass, Tier::kLong,
@@ -213,6 +215,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "g3probe") ok = run_g3probe(dna_blob, ticks, verbose);
   else if (name == "pcprobe") ok = run_pcprobe(dna_blob, ticks, verbose);
   else if (name == "audprobe") ok = run_audprobe(dna_blob, ticks, verbose);
+  else if (name == "imitate") ok = run_imitate(dna_blob, ticks, verbose);
   else if (name == "restate") ok = run_restate(dna_blob, ticks, verbose);
   else if (name == "eligprobe") ok = run_eligprobe(dna_blob, ticks, verbose);
   else if (name == "dwprobe") ok = run_dwprobe(dna_blob, ticks, verbose);

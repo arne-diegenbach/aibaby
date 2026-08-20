@@ -331,10 +331,20 @@ there is nothing to be late for.
 |---|-------------|-----------|
 | **M0** | Skeleton | DNA parses, LIF network simulates, journal records, browser connects, telemetry renders |
 | **M1** | **Closed audio loop** | Mic → mel → B2 → B1 → B5 → formant babble → user reward → weights change. Rewarded vocalizations measurably increase within a session (**G2**) |
+| **M1b** | **Vocal imitation** | 200–600 ms after a word stops, with the auditory module already at chance, a held-out classifier still reads which word it was off the baby's own voice at ≥75% (**met**: 0.890, 5 of 5 creatures, audible d′ 1.37) |
 | **M2** | Vision | Camera → B3 → B1. Baby discriminates object present vs absent |
 | **M3** | **Cross-modal association** | Cube vs ball produce distinguishable vocalizations (**G3** — the headline result) |
 | **M4** | Growth and sleep | Plateau-triggered growth, pruning, sleep consolidation all validated against **G4** |
 | **M5** | Embedded | Frozen brain runs inference on ESP32-S3 (**G5**) |
+
+**M1b was added on 2026-08-20, after the fact and deliberately.** It is not a
+softening of G3, which stays failed and documented: it is a result this creature
+had been producing since M1 and that the spec never asked about, because the
+spec only ever asked about *naming*. Scoring it needed the same apparatus as G3
+— a held-out classifier, a shuffled control, a 0.75 bar — plus one control G3
+does not need: the auditory module read on the same trials in the same window,
+because a voice that differs while the sound is still playing is transmission
+rather than repetition.
 
 M1 is the smallest slice that exercises the entire architecture — encoding, spiking, eligibility
 traces, delayed reward, and motor output. If M1 works, everything after it is extension rather

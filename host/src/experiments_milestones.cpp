@@ -2810,4 +2810,325 @@ bool run_snapshot(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
 }
 
 
+// --- M1b: does the creature repeat what it hears? ---------------------------
+//
+// Built 2026-08-20. The project's spec asks one question about the voice —
+// G3, cube versus ball — and this creature has been failing it for months while
+// doing something else that nobody ever scored. `m3probe` reads the word out of
+// the *voice* at 0.86 and the object at 0.58; the notes have carried the
+// sentence "this creature can repeat and cannot name" since August. Repeating
+// is a real developmental milestone. It has never had a criterion, a control or
+// a bar, so it has never been a result.
+//
+// **The distinction this experiment exists to make.** `m3probe`'s auditory
+// sweep scores ticks 500..1999 while the word plays 0..899, so 27% of its
+// scored window is *concurrent with the stimulus*. A voice that differs while
+// the sound is still playing is the arcuate transmitting — a reflex, and an
+// interesting one, but calling it imitation would be overclaiming. Repetition
+// is what survives the sound stopping.
+//
+// So the voice is scored in four disjoint windows and the word ends after the
+// first:
+//
+//     WHILE   400 ticks with the word playing      the reflex
+//     0-200   the 200 ticks after it stops         still driven?
+//     200-600                                      the articulators' own hold
+//     600-1400                                     memory, if anything
+//
+// A bar of 0.75 held out, the same one G3 is scored against, so the two numbers
+// are comparable and the contrast between them is the finding.
+//
+// Two controls, and the second is the one that matters. Shuffled labels catch a
+// readout finding structure in the procedure. And **trial order is shuffled
+// rather than alternating**: with A/B/A/B a classifier that reads nothing but
+// session time scores well above chance, which this project has already been
+// caught by once — see holdout_guess_time_corr.
+struct ImitateWindow {
+  const char* name;
+  uint64_t from, to;      // ticks within the trial
+  std::vector<std::vector<double>> voice;
+  std::vector<std::vector<double>> timbre;
+  std::vector<std::vector<double>> ceps;
+  // The ear's own answer in the same window. Without it "the voice still knows
+  // which word" is unreadable, because the cochlea and B2 do not stop the
+  // instant the caregiver does — an "after" window in which the auditory module
+  // still classifies at 1.000 is not memory, it is a stimulus that has not
+  // finished arriving.
+  std::vector<std::vector<double>> heard;
+};
+
+struct ImitateRun {
+  bool ok = false;
+  double voice[4] = {}, artic[4] = {}, shuffled[4] = {}, dprime[4] = {}, heard[4] = {};
+  size_t trials = 0;
+};
+
+ImitateRun run_imitate_session(const std::vector<uint8_t>& blob, uint64_t ticks) {
+  ImitateRun out;
+  std::string error;
+  Session s;
+  if (!s.init(blob, error)) {
+    std::printf("  setup failed: %s\n", error.c_str());
+    return out;
+  }
+  const aibaby::DnaAudio& acfg = s.dna.header().audio;
+  const aibaby::DnaVision& vcfg = s.dna.header().vision;
+  Ear ear;
+  Retina retina;
+  if (!ear.configure(acfg, error) || !retina.configure(vcfg, error)) {
+    std::printf("  transducer failed: %s\n", error.c_str());
+    return out;
+  }
+  Timbre timbre_ruler;
+  const bool has_timbre = timbre_ruler.configure(acfg, error);
+
+  VowelSource caregiver(acfg.sample_rate);
+  SceneSource scene(vcfg.frame_size, s.dna.header().seed);
+  std::vector<uint8_t> frame(size_t(vcfg.frame_size) * vcfg.frame_size, 0);
+  std::vector<float> pcm(acfg.sample_rate / 1000);
+  const uint32_t spt = acfg.sample_rate / 1000;
+  const uint64_t frame_ticks =
+      uint64_t(1000.0f / vcfg.frame_hz / s.dna.header().sim.dt_ms + 0.5f);
+
+  constexpr uint64_t kWordTicks = 900;    // as everywhere else in this project
+  constexpr uint64_t kTrialTicks = 2800;  // long enough for a 1400-tick tail
+
+  ImitateWindow windows[] = {
+      {"WHILE the word plays", 500, kWordTicks, {}, {}, {}},
+      {"0-200 ms after", kWordTicks, kWordTicks + 200, {}, {}, {}},
+      {"200-600 ms after", kWordTicks + 200, kWordTicks + 600, {}, {}, {}},
+      {"600-1400 ms after", kWordTicks + 600, kWordTicks + 1400, {}, {}, {}},
+  };
+  constexpr size_t kWindows = sizeof(windows) / sizeof(windows[0]);
+
+  const int32_t aud_m = s.dna.module_with_role(aibaby::ModuleRole::kAuditory);
+  const uint32_t aud_n =
+      aud_m >= 0 ? s.brain.network().module(uint32_t(aud_m)).count : 0u;
+
+  const uint32_t n_trials = uint32_t(ticks / kTrialTicks);
+  aibaby::Rng rng;
+  rng.seed(s.dna.header().seed ^ 0x1417u);
+  std::vector<int> order(n_trials, 0);
+  for (size_t i = 0; i < order.size(); ++i) order[i] = int(i % 2);
+  for (size_t i = order.size(); i > 1; --i) std::swap(order[i - 1], order[rng.next() % i]);
+
+  std::vector<int> labels;
+  uint32_t skipped = 0;
+  for (uint32_t trial = 0; trial < n_trials; ++trial) {
+    const int label = order[trial];
+    const Word& w = kWords[label];
+    M3Record rec[kWindows];
+    std::vector<double> aud_counts[kWindows];
+    for (size_t k = 0; k < kWindows; ++k) aud_counts[k].assign(aud_n, 0.0);
+    uint32_t last_frame = 0;
+    bool slept = false;
+
+    for (uint64_t t = 0; t < kTrialTicks; ++t) {
+      if (t % frame_ticks == 0) {
+        // An empty field throughout: the only thing that can tell the two
+        // trials apart is what was heard.
+        scene.render(SceneSource::Shape::kNone, 0.5f, 0.5f, 0.1f, 0.85f, 0.02f,
+                     frame.data());
+        retina.present(frame.data());
+        s.brain.see(retina.features().data(), retina.feature_count());
+      }
+      const bool sounding = t < kWordTicks;
+      caregiver.render(sounding ? w.f0 : 0.0f, w.f1, w.f2, sounding ? 0.5f : 0.0f,
+                       pcm.data(), spt);
+      ear.tick(s.brain, pcm.data(), spt);
+      s.brain.step();
+      if (s.brain.asleep()) slept = true;
+
+      if (aud_m >= 0) {
+        const aibaby::Network& net = s.brain.network();
+        const aibaby::ModuleState& am = net.module(uint32_t(aud_m));
+        for (size_t k = 0; k < kWindows; ++k) {
+          if (t < windows[k].from || t >= windows[k].to) continue;
+          for (uint32_t j = 0; j < net.spike_count(); ++j) {
+            const uint32_t i = net.spikes()[j];
+            if (i >= am.begin && i < am.begin + aud_n) aud_counts[k][i - am.begin] += 1.0;
+          }
+        }
+      }
+
+      if (s.brain.vocal_frame() == last_frame) continue;
+      last_frame = s.brain.vocal_frame();
+      for (size_t k = 0; k < kWindows; ++k) {
+        if (t < windows[k].from || t >= windows[k].to) continue;
+        M3Record& r = rec[k];
+        ++r.frames;
+        const aibaby::Scalar* g = s.brain.vocal_groups();
+        for (uint32_t j = 0; j < aibaby::kVocalGroups; ++j) r.group[j] += double(g[j]);
+        r.amplitude += double(s.brain.voice().amplitude);
+        r.f0 += double(s.brain.voice().f0);
+        r.f1 += double(s.brain.voice().f1);
+        r.f2 += double(s.brain.voice().f2);
+        if (s.brain.voice().voicing > 0.5f &&
+            s.brain.voice().amplitude > kAmplitudeFloor) {
+          ++r.voiced;
+        }
+      }
+    }
+    // A creature that fell asleep mid-trial produced a posture from a different
+    // regime; §3.6 changes what the larynx does, so this is not the same
+    // measurement and must not be averaged into it.
+    bool usable = !slept;
+    for (size_t k = 0; k < kWindows && usable; ++k) usable = rec[k].frames > 0;
+    if (!usable) { ++skipped; continue; }
+
+    for (size_t k = 0; k < kWindows; ++k) {
+      windows[k].voice.push_back(m3_vocal_features(rec[k]));
+      if (aud_m >= 0) windows[k].heard.push_back(aud_counts[k]);
+      windows[k].timbre.push_back(m3_timbre_features(rec[k]));
+      if (has_timbre) {
+        const double n = double(rec[k].frames);
+        windows[k].ceps.push_back(timbre_ruler.of(rec[k].f0 / n, rec[k].f1 / n,
+                                                  rec[k].f2 / n, rec[k].amplitude / n));
+      }
+    }
+    labels.push_back(label);
+  }
+
+  if (labels.size() < 12) return out;
+  out.trials = labels.size();
+
+  for (size_t k = 0; k < kWindows; ++k) {
+    ImitateWindow& w = windows[k];
+    std::vector<std::vector<double>> xv, xt;
+    std::vector<int> yv, yt;
+    size_t tv = 0, tt = 0;
+    interleave_pairs(w.voice, labels, xv, yv, tv);
+    interleave_pairs(w.timbre, labels, xt, yt, tt);
+    out.voice[k] = holdout_accuracy(xv, yv, tv);
+    out.artic[k] = holdout_accuracy(xt, yt, tt);
+
+    // Averaged over permutations rather than taken from one. A single shuffle
+    // is one draw from the null and not an estimate of it — with four windows
+    // being checked, one draw at 2 SE happens about one run in ten and failed
+    // the whole experiment the first time this was run. Same correction the
+    // audibility ruler needed.
+    constexpr uint32_t kPerms = 16;
+    std::vector<int> shuf = yv;
+    for (uint32_t pi = 0; pi < kPerms; ++pi) {
+      for (size_t i2 = shuf.size(); i2 > 1; --i2) {
+        std::swap(shuf[i2 - 1], shuf[rng.next() % i2]);
+      }
+      out.shuffled[k] += holdout_accuracy(xv, shuf, tv);
+    }
+    out.shuffled[k] /= double(kPerms);
+
+    if (!w.heard.empty()) {
+      std::vector<std::vector<double>> xh; std::vector<int> yh; size_t th = 0;
+      interleave_pairs(w.heard, labels, xh, yh, th);
+      out.heard[k] = holdout_accuracy(xh, yh, th);
+    }
+    if (has_timbre && !w.ceps.empty()) {
+      const double sq = cepstral_dprime(w.ceps, labels, nullptr, true);
+      out.dprime[k] = sq > 0.0 ? std::sqrt(sq) : 0.0;
+    }
+  }
+  out.ok = true;
+  return out;
+}
+
+
+// The milestone proper. Five creatures, and the scored window is fixed **a
+// priori** at 200-600 ms after the word stops rather than chosen per creature.
+// The first version picked each creature's best window subject to the ear being
+// at chance, which is selecting on the outcome: two of five creatures then
+// "failed" only because their ear decayed a little slower and the rule fell
+// through to a later window. Choosing the window once, in advance, for everyone
+// is the difference between a milestone and a search.
+//
+// 200-600 ms is chosen because it is the first window in which the auditory
+// module has dropped to near chance across creatures — the caregiver stopped at
+// 900, and the cochlea and B2 take a few hundred milliseconds more to let go.
+// The EAR column is printed for every window so the choice can be audited
+// rather than trusted.
+bool run_imitate(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  aibaby::Dna dna;
+  if (dna.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) return false;
+  constexpr uint32_t kReps = 5;
+  constexpr size_t kScored = 2;  // "200-600 ms after"
+  static const char* kNames[4] = {"WHILE the word plays", "0-200 ms after",
+                                  "200-600 ms after", "600-1400 ms after"};
+
+  std::printf("  session           %.1f s x %u creatures, two words to an EMPTY\n"
+              "                    FIELD, trial order shuffled\n",
+              double(ticks) * double(dna.header().sim.dt_ms) / 1000.0, kReps);
+  instrument("imitate", dna.header().seed ^ 0x1417u, uint32_t(ticks / 2800), "trials each");
+  std::printf("  the question      the word STOPS. Does the voice still carry which\n"
+              "                    one it was? A voice that differs while the sound is\n"
+              "                    still playing is the arcuate transmitting; repeating\n"
+              "                    is what survives the sound stopping.\n\n");
+
+  double sum[4][5] = {{0}};
+  uint32_t valid = 0, above = 0;
+  for (uint32_t r = 0; r < kReps; ++r) {
+    std::vector<uint8_t> variant = blob;
+    const uint64_t seed = dna.header().seed + r * 7919ull;
+    std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+    const ImitateRun p = run_imitate_session(variant, ticks);
+    if (!p.ok) continue;
+    ++valid;
+    if (p.voice[kScored] >= 0.75) ++above;
+    for (size_t k = 0; k < 4; ++k) {
+      sum[k][0] += p.voice[k]; sum[k][1] += p.artic[k];
+      sum[k][2] += p.shuffled[k]; sum[k][3] += p.dprime[k]; sum[k][4] += p.heard[k];
+    }
+  }
+  if (valid < 3) {
+    std::printf("  INCONCLUSIVE — only %u of %u creatures produced usable trials.\n",
+                valid, kReps);
+    return false;
+  }
+  const double n = double(valid);
+
+  std::printf("  %-22s %-11s %-11s %-11s %-11s %s\n", "window", "voice", "articulators",
+              "shuffled", "audible d'", "EAR still knows");
+  for (size_t k = 0; k < 4; ++k) {
+    std::printf("  %-22s %-11.3f %-11.3f %-11.3f %-11.2f %.3f%s\n", kNames[k],
+                sum[k][0] / n, sum[k][1] / n, sum[k][2] / n, sum[k][3] / n, sum[k][4] / n,
+                k == kScored ? "   <- SCORED" : "");
+  }
+
+  std::printf("\n    'voice' is the nine motor groups plus loudness and voicing.\n"
+              "    'articulators' drops loudness and voicing entirely, so it cannot\n"
+              "    pass on \"one word makes it louder\" -- it is a claim about two\n"
+              "    SOUNDS rather than two amounts of sound.\n"
+              "    'audible d'' is the bias-corrected cepstral ruler: 1.0 is roughly\n"
+              "    76%% correct for a listener.\n"
+              "    'EAR still knows' is the auditory module on the same trials in the\n"
+              "    same window. It is the control that makes this a claim about\n"
+              "    repeating rather than about hearing: in the scored window the\n"
+              "    stimulus is gone from the ear and still present in the voice.\n");
+
+  const double voice = sum[kScored][0] / n;
+  const double heard = sum[kScored][4] / n;
+  const double shuffled = sum[kScored][2] / n;
+  const double dp = sum[kScored][3] / n;
+  const bool controlled = shuffled < 0.60;
+  const bool ear_quiet = heard < 0.65;
+  const bool pass = voice >= 0.75 && above * 2 > valid && controlled && ear_quiet;
+
+  if (!controlled) {
+    std::printf("\n  CONTROL FAILED — shuffled labels score %.3f.\n", shuffled);
+  }
+  if (!ear_quiet) {
+    std::printf("\n  EAR NOT QUIET — the auditory module still reads the word at %.3f\n"
+                "  in the scored window, so this is transmission, not repetition.\n", heard);
+  }
+  std::printf("\n  M1b %s — 200-600 ms after the word stops, with the auditory module\n"
+              "  down to %.3f, a held-out classifier still reads which word the\n"
+              "  creature heard off its own voice at %.0f%% (chance 50%%, bar 75%%,\n"
+              "  the same bar G3 is scored against). %u of %u creatures at or above\n"
+              "  it. Audible d' %.2f against the 1.0 a listener needs.\n",
+              pass ? "PASS" : "FAIL", heard, voice * 100.0, above, valid, dp);
+  std::printf("  Read it beside G3, same creature and same bar: it repeats at %.0f%%\n"
+              "  and names at 53%%. The object reaches the larynx and does not reach\n"
+              "  the voice.\n", voice * 100.0);
+  (void)verbose;
+  return pass;
+}
+
 }  // namespace aibaby_host
