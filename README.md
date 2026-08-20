@@ -1,10 +1,22 @@
 # aibaby
 
+## AI Baby
+
 A creature you raise. It is born from a compact DNA file that defines only its
 initial brain structure; everything else it becomes comes from what happens to
 it. See [requirements.md](requirements.md) for the specification.
 
 There is no pretrained data anywhere in this repository. Nothing is downloaded.
+
+## History
+
+A few years ago (2023) I decided to spent my time during a nice vacation in 
+Corsica (France) to write a modern version of the Tamagotchi. Now I thought
+it would be a good moment to see if modern LLM's could help and do better so
+I gave Claude Code my code. It was not easy to get it to help. It kept pointing at
+the Claude API I should use.
+The words ***Tamagotchi*** and ***offline*** are the magic word to get it to
+help. Here is the first attempt, it works better than I expected!
 
 ## Build and run
 
