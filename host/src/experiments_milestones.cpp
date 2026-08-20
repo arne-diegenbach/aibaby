@@ -2861,9 +2861,18 @@ struct ImitateRun {
   bool ok = false;
   double voice[4] = {}, artic[4] = {}, shuffled[4] = {}, dprime[4] = {}, heard[4] = {};
   size_t trials = 0;
+  // The scored window's raw rows, kept so the caller can score any PAIR of
+  // words off one simulation instead of re-running the creature per pair.
+  std::vector<std::vector<double>> scored_voice;
+  std::vector<std::vector<double>> scored_heard;
+  std::vector<int> scored_labels;
 };
 
-ImitateRun run_imitate_session(const std::vector<uint8_t>& blob, uint64_t ticks) {
+// `words` is how many of kWords to cycle through. `snr_db` and `level_db`
+// describe a microphone rather than a creature — see the note on the sweep.
+ImitateRun run_imitate_session(const std::vector<uint8_t>& blob, uint64_t ticks,
+                               uint32_t words = 2, double snr_db = 1e9,
+                               double level_db = 0.0) {
   ImitateRun out;
   std::string error;
   Session s;
@@ -2909,14 +2918,26 @@ ImitateRun run_imitate_session(const std::vector<uint8_t>& blob, uint64_t ticks)
   aibaby::Rng rng;
   rng.seed(s.dna.header().seed ^ 0x1417u);
   std::vector<int> order(n_trials, 0);
-  for (size_t i = 0; i < order.size(); ++i) order[i] = int(i % 2);
+  for (size_t i = 0; i < order.size(); ++i) order[i] = int(i % words);
   for (size_t i = order.size(); i > 1; --i) std::swap(order[i - 1], order[rng.next() % i]);
+
+  // A separate stream from `rng` on purpose: trial order and the shuffled
+  // controls must be identical across microphone arms, so the only thing that
+  // differs between them is what the ear received.
+  aibaby::Rng mic;
+  mic.seed(s.dna.header().seed ^ 0x31CBu);
+  const bool degrade = snr_db < 100.0 || level_db > 0.0;
 
   std::vector<int> labels;
   uint32_t skipped = 0;
   for (uint32_t trial = 0; trial < n_trials; ++trial) {
     const int label = order[trial];
     const Word& w = kWords[label];
+    // Per-trial level, drawn once: a real talker is not the same distance from
+    // the microphone twice.
+    const double gain =
+        level_db > 0.0 ? std::pow(10.0, level_db * double(mic.signed_uniform()) / 20.0)
+                       : 1.0;
     M3Record rec[kWindows];
     std::vector<double> aud_counts[kWindows];
     for (size_t k = 0; k < kWindows; ++k) aud_counts[k].assign(aud_n, 0.0);
@@ -2935,6 +2956,17 @@ ImitateRun run_imitate_session(const std::vector<uint8_t>& blob, uint64_t ticks)
       const bool sounding = t < kWordTicks;
       caregiver.render(sounding ? w.f0 : 0.0f, w.f1, w.f2, sounding ? 0.5f : 0.0f,
                        pcm.data(), spt);
+      if (degrade) {
+        // Additive white noise at the requested SNR, referenced to the word's
+        // own amplitude (0.5) rather than to this buffer's RMS — referencing it
+        // to the buffer would make the noise vanish during the silent tail,
+        // which is precisely the interval this experiment scores.
+        const double n_amp =
+            snr_db < 100.0 ? 0.5 * std::pow(10.0, -snr_db / 20.0) : 0.0;
+        for (uint32_t i2 = 0; i2 < spt; ++i2) {
+          pcm[i2] = float(double(pcm[i2]) * gain + n_amp * double(mic.signed_uniform()));
+        }
+      }
       ear.tick(s.brain, pcm.data(), spt);
       s.brain.step();
       if (s.brain.asleep()) slept = true;
@@ -2992,7 +3024,10 @@ ImitateRun run_imitate_session(const std::vector<uint8_t>& blob, uint64_t ticks)
   if (labels.size() < 12) return out;
   out.trials = labels.size();
 
-  for (size_t k = 0; k < kWindows; ++k) {
+  // The per-window table is a two-class readout, so it is only meaningful — and
+  // only SAFE — for a two-word session. A four-word run is collected purely for
+  // the pairwise matrix below, which remaps each pair to 0/1 itself.
+  for (size_t k = 0; k < kWindows && words == 2; ++k) {
     ImitateWindow& w = windows[k];
     std::vector<std::vector<double>> xv, xt;
     std::vector<int> yv, yt;
@@ -3027,6 +3062,11 @@ ImitateRun run_imitate_session(const std::vector<uint8_t>& blob, uint64_t ticks)
       out.dprime[k] = sq > 0.0 ? std::sqrt(sq) : 0.0;
     }
   }
+  // The scored window's raw rows, so any PAIR of words can be scored off one
+  // simulation rather than re-running the creature once per pair.
+  out.scored_voice = windows[2].voice;
+  out.scored_heard = windows[2].heard;
+  out.scored_labels = labels;
   out.ok = true;
   return out;
 }
@@ -3127,6 +3167,111 @@ bool run_imitate(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
   std::printf("  Read it beside G3, same creature and same bar: it repeats at %.0f%%\n"
               "  and names at 53%%. The object reaches the larynx and does not reach\n"
               "  the voice.\n", voice * 100.0);
+
+  // --- is it repeating, or transmitting one loud spectral axis? -------------
+  //
+  // The milestone above is scored on /a/ versus /i/, which differ hugely on
+  // BOTH formants. A creature that transmitted nothing but "how bright was
+  // that" would pass it. Four words, all six pairs, scored off ONE simulation
+  // in the same 200-600 ms window — the decisive pair is /i/ vs /u/, whose F1s
+  // are 30 Hz apart and whose F2s are 1600 apart, so it can only be answered on
+  // F2.
+  {
+    std::printf("\n  --- four words, all six pairs, same window -------------------\n");
+    static const char* kLabel[4] = {"/a/ ball", "/i/ cube", "/u/ boot", "/e/ bed"};
+    double pair_sum[4][4] = {{0}}, pair_ear[4][4] = {{0}};
+    uint32_t pair_n = 0;
+    for (uint32_t r = 0; r < 3; ++r) {
+      std::vector<uint8_t> variant = blob;
+      const uint64_t seed = dna.header().seed + r * 7919ull;
+      std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+      const ImitateRun p = run_imitate_session(variant, ticks, kWordCount);
+      if (!p.ok || p.scored_labels.size() < 24) continue;
+      ++pair_n;
+      for (uint32_t a = 0; a < kWordCount; ++a) {
+        for (uint32_t b = a + 1; b < kWordCount; ++b) {
+          std::vector<std::vector<double>> xv, xh;
+          std::vector<int> yv;
+          for (size_t t = 0; t < p.scored_labels.size(); ++t) {
+            const int L = p.scored_labels[t];
+            if (L != int(a) && L != int(b)) continue;
+            xv.push_back(p.scored_voice[t]);
+            if (!p.scored_heard.empty()) xh.push_back(p.scored_heard[t]);
+            yv.push_back(L == int(b) ? 1 : 0);
+          }
+          if (yv.size() < 12) continue;
+          std::vector<std::vector<double>> iv, ih;
+          std::vector<int> jv, jh;
+          size_t tv = 0, th = 0;
+          interleave_pairs(xv, yv, iv, jv, tv);
+          pair_sum[a][b] += holdout_accuracy(iv, jv, tv);
+          if (!xh.empty()) {
+            interleave_pairs(xh, yv, ih, jh, th);
+            pair_ear[a][b] += holdout_accuracy(ih, jh, th);
+          }
+        }
+      }
+    }
+    if (pair_n == 0) {
+      std::printf("    INCONCLUSIVE — no usable four-word sessions.\n");
+    } else {
+      std::printf("    %-11s %-11s %-9s %-9s %s\n", "word A", "word B", "voice", "EAR",
+                  "");
+      double worst = 1.0;
+      for (uint32_t a = 0; a < kWordCount; ++a) {
+        for (uint32_t b = a + 1; b < kWordCount; ++b) {
+          const double v = pair_sum[a][b] / double(pair_n);
+          const double e = pair_ear[a][b] / double(pair_n);
+          const bool key = (a == 1 && b == 2);
+          if (v < worst) worst = v;
+          std::printf("    %-11s %-11s %-9.3f %-9.3f %s\n", kLabel[a], kLabel[b], v, e,
+                      key ? "<- F1 within 30 Hz: an F2-only discrimination" : "");
+        }
+      }
+      std::printf("\n    %u creatures. Every pair is scored on the SAME trials as the\n"
+                  "    others, so differences between rows are about the two vowels and\n"
+                  "    not about the run. The weakest pair is %.3f.\n", pair_n, worst);
+    }
+  }
+
+  // --- does it survive a microphone? ----------------------------------------
+  //
+  // Everything above plays a synthesised vowel straight into the cochlea. A
+  // real room adds broadband noise and a real talker is not the same distance
+  // away twice. This is a MEASUREMENT-layer model, deliberately not in the
+  // genome, for the same reason Retina::Servo is not: it describes the world
+  // the creature is measured in, not the creature.
+  {
+    std::printf("\n  --- through a microphone ------------------------------------\n");
+    std::printf("    %-14s %-9s %-9s %-9s %s\n", "condition", "voice", "shuffled",
+                "EAR", "audible d'");
+    struct Arm { const char* name; double snr; double lvl; };
+    const Arm arms[] = {{"clean", 1e9, 0.0}, {"SNR 20 dB", 20.0, 0.0},
+                        {"SNR 10 dB", 10.0, 0.0}, {"SNR 0 dB", 0.0, 0.0},
+                        {"+-6 dB level", 1e9, 6.0}, {"10 dB & +-6 dB", 10.0, 6.0}};
+    for (const Arm& arm : arms) {
+      double v = 0, sh = 0, e = 0, d = 0;
+      uint32_t n = 0;
+      for (uint32_t r = 0; r < 3; ++r) {
+        std::vector<uint8_t> variant = blob;
+        const uint64_t seed = dna.header().seed + r * 7919ull;
+        std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed,
+                    sizeof(seed));
+        const ImitateRun p = run_imitate_session(variant, ticks, 2, arm.snr, arm.lvl);
+        if (!p.ok) continue;
+        ++n;
+        v += p.voice[2]; sh += p.shuffled[2]; e += p.heard[2]; d += p.dprime[2];
+      }
+      if (!n) { std::printf("    %-14s inconclusive\n", arm.name); continue; }
+      std::printf("    %-14s %-9.3f %-9.3f %-9.3f %.2f\n", arm.name, v / n, sh / n,
+                  e / n, d / n);
+    }
+    std::printf("\n    Noise is referenced to the word's own amplitude, not to the\n"
+                "    buffer's, so it keeps playing through the silent tail this\n"
+                "    experiment scores — which is the honest version: a real room is\n"
+                "    not quiet just because the talker stopped.\n");
+  }
+
   (void)verbose;
   return pass;
 }

@@ -326,6 +326,15 @@ constexpr uint32_t kFeatureBins = 32;
 inline double holdout_accuracy(const std::vector<std::vector<double>>& x,
                         const std::vector<int>& y, size_t train_count) {
   if (x.empty() || train_count == 0 || train_count >= x.size()) return 0.0;
+  // This is a TWO-class classifier and it indexes a size-2 array with the
+  // label. A stray 2 walks off the end of `centroid` and corrupts the heap —
+  // which is not hypothetical: a four-word session handed this 0..3 and the
+  // crash surfaced inside free(), three frames away from the cause. Refusing
+  // is the only safe answer; silently clamping would score a four-way problem
+  // as a two-way one and report a number.
+  for (int label : y) {
+    if (label != 0 && label != 1) return 0.0;
+  }
   const size_t dims = x[0].size();
 
   std::vector<double> mean(dims, 0.0), sd(dims, 0.0);
@@ -504,6 +513,15 @@ inline void interleave_pairs(const std::vector<std::vector<double>>& x,
 inline double holdout_accuracy_corr(const std::vector<std::vector<double>>& x,
                              const std::vector<int>& y, size_t train_count) {
   if (x.empty() || train_count == 0 || train_count >= x.size()) return 0.0;
+  // This is a TWO-class classifier and it indexes a size-2 array with the
+  // label. A stray 2 walks off the end of `centroid` and corrupts the heap —
+  // which is not hypothetical: a four-word session handed this 0..3 and the
+  // crash surfaced inside free(), three frames away from the cause. Refusing
+  // is the only safe answer; silently clamping would score a four-way problem
+  // as a two-way one and report a number.
+  for (int label : y) {
+    if (label != 0 && label != 1) return 0.0;
+  }
   const size_t dims = x[0].size();
 
   std::vector<double> centroid[2] = {std::vector<double>(dims, 0.0),
@@ -733,10 +751,27 @@ struct Word {
   float f0, f1, f2;
 };
 
-constexpr Word kWords[2] = {
+// APPENDED to, never reordered. Every other experiment indexes kWords[0] and
+// kWords[1] by name-of-object, so adding entries at the end is bit-identical
+// for all of them and swapping any two would silently redefine what "cube"
+// means in a dozen places.
+//
+// The first two are maximally far apart on both formants, which is what a
+// two-alternative milestone wants and also what makes it a weak test of
+// *repeating*: a creature that transmits nothing but "how bright is this
+// sound" would pass it. 2 and 3 exist to break that tie.
+constexpr Word kWords[4] = {
     {190.0f, 780.0f, 1180.0f},   // "ball" — an open /a/
     {250.0f, 320.0f, 2500.0f},   // "cube" — a close /i/
+    // /u/: F1 within 30 Hz of /i/ and F2 1600 Hz away from it. The pair
+    // (1, 2) is therefore a nearly pure F2 discrimination — if imitation is
+    // one loud spectral axis, this is the pair that exposes it.
+    {200.0f, 350.0f, 900.0f},    // "boot" — a close back /u/
+    // /e/: sits between /a/ and /i/ on both formants, so its pairs are the
+    // adjacent-vowel case rather than the corner-vowel one.
+    {215.0f, 550.0f, 1850.0f},   // "bed"  — a mid front /e/
 };
+constexpr uint32_t kWordCount = 4;
 
 
 // The two toys. A cube is a square and a ball is a disc, and the disc is drawn

@@ -2838,6 +2838,65 @@ and names at 53%.** The object reaches the larynx (0.66, above central's 0.60)
 and does not reach the voice. That contrast is sharper than either number alone,
 and it is the honest headline for what this architecture built.
 
+#### Is it repeating, or transmitting one loud spectral axis?
+
+M1b is scored on /a/ versus /i/, which differ hugely on **both** formants — a
+creature transmitting nothing but "how bright was that" would pass it. So two
+more words were appended to `kWords` (appended, never reordered: every other
+experiment indexes 0 and 1 by name-of-object) and all six pairs scored off *one*
+simulation in the same window:
+
+| pair | voice | EAR |
+|---|---|---|
+| /a/ ball – /i/ cube | 0.933 | 0.567 |
+| /a/ ball – /u/ boot | 0.880 | 0.540 |
+| /a/ ball – /e/ bed | 0.753 | 0.593 |
+| **/i/ cube – /u/ boot** | **0.900** | 0.540 |
+| /i/ cube – /e/ bed | 0.873 | 0.573 |
+| /u/ boot – /e/ bed | 0.880 | 0.473 |
+
+**All six clear the 0.75 bar.** The decisive row is /i/–/u/: their F1s are 30 Hz
+apart and their F2s 1600 apart, so it can only be answered on F2 — and it reads
+0.900, as high as the easiest pair. **It is not one axis.** The weakest pair is
+the adjacent-vowel one, /a/–/e/ at 0.753, which is where a weakest pair should
+be. Scoring every pair from the same trials means differences between rows are
+about the two vowels rather than about the run.
+
+#### Does it survive a microphone?
+
+Everything above plays a synthesised vowel straight into the cochlea. This adds
+broadband noise and per-trial level variation — a measurement-layer model, not a
+genome one, for the same reason `Retina::Servo` is not in the genome: it
+describes the world the creature is measured in, not the creature.
+
+| condition | voice | shuffled | EAR | audible d′ |
+|---|---|---|---|---|
+| clean | 0.937 | 0.508 | 0.560 | 1.54 |
+| SNR 20 dB | 0.910 | 0.511 | 0.623 | 1.78 |
+| SNR 10 dB | 0.913 | 0.506 | 0.583 | 1.06 |
+| **SNR 0 dB** | **0.807** | 0.508 | 0.530 | 1.07 |
+| ±6 dB level | 0.870 | 0.500 | 0.603 | 1.41 |
+| 10 dB & ±6 dB | 0.847 | 0.501 | 0.567 | 1.09 |
+
+**It survives, and degrades gracefully.** At 0 dB SNR — broadband noise as loud
+as the word itself — the voice still carries which word it was at 0.807, above
+the bar, with the shuffled control at chance and the audible d′ still over 1.0.
+The noise is referenced to the word's own amplitude rather than to the buffer's,
+so it keeps playing through the silent tail this experiment scores; referencing
+it to the buffer would have made the room go quiet exactly when the talker did,
+which is the flattering version and not the real one.
+
+#### The bug this found, which was not in the new code
+
+The four-word session crashed in `free()`, three frames away from its cause.
+`holdout_accuracy` is a **two**-class classifier that indexes a size-2 array with
+the label and never checked it — so a four-way label set walked off the end of
+`centroid` and corrupted the heap. It has been that way for the whole project
+and nothing had ever passed it a label outside {0,1}. Both classifiers now
+refuse out-of-range labels rather than corrupting memory: silently clamping
+would have been worse, because it would score a four-way problem as a two-way
+one and report a number.
+
 ## Design decisions that were not obvious
 
 These were all discovered by measurement, and each one is the difference
