@@ -29,6 +29,10 @@ cmake --build build -j
 The host serves the panel and the WebSocket on the same port, so there is
 nothing to install and nothing else to start.
 
+![The panel at milestone 2: counters, structural growth, the spike raster, the
+baby and its buttons, ears, eyes, voice and reward, a central neuron's membrane
+potential, and the drives.](screenshot.png)
+
 ```
 --dna <file.toml>     genome to compile and hatch (default dna/default.toml)
 --journal <file>      interaction log (default journal.aibj)
