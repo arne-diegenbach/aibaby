@@ -426,7 +426,17 @@ Every number on this page comes from the genome in [dna/default.toml](dna/defaul
 as it currently stands. **The whole suite above passes except `m3`** — G1,
 calibrate, babble, audio, vision, M2, G2, sleep, G4 and snapshot are all green,
 and G3 is the one milestone still open. Shipped hash `23c4eb2c7c45d05c`;
-`--experiment verify` reads 14 of 14 as expected.
+`--experiment verify` reads 18 of 18 as expected on the fast tier.
+
+**DNA v36–v39 are four mechanisms built since, and all four ship off**, so none
+of the numbers above moved: dynamic synapses after Webb's cricket (v36),
+burst-dependent plasticity after Payeur et al. (v37), competitive pruning (v38),
+and a per-module eligibility timescale after e-prop (v39). Each has its own
+probe. The two that produced findings worth acting on are **v37**, where the
+apical tuft steers bursting 2.6× and the resulting third factor discriminates
+the object at 0.673 — the first one here that does anything but — and **v38**,
+which prunes 20,731 synapses where the shipped rule prunes 32. The two that
+produced corrections are recorded as such.
 
 **G3 is open but no longer a live line of work.** The `vision→vocal` tract
 below raised delivery to the larynx by 27% and moved the milestone by −0.014,
@@ -2992,27 +3002,42 @@ central's spikes-per-auditory-spike against the off arm at the same envelope,
 which is where an envelope filter would show up.
 
 ```
-arm           envelope  aud/tick  transfer  vs off   gain
-off           silence   1.30      2.1799    1.000    1.000
-              2 Hz      1.33      2.1173    1.000    1.000
-              12 Hz     0.83      3.2921    1.000    1.000
-depressing    silence   1.26      2.1178    0.971    0.656
-              2 Hz      1.37      1.9492    0.921    0.630
-              12 Hz     0.85      3.1527    0.958    0.676
-facilitating  silence   1.25      2.6017    1.193    1.725
-              2 Hz      1.37      2.4185    1.142    1.804
-              12 Hz     0.83      3.6091    1.096    1.734
+arm           envelope   aud/tick  transfer  vs off   gain
+off           silence    0.70      3.8969    1.000    1.000
+              2 Hz       1.12      2.5020    1.000    1.000
+              4 Hz       0.86      3.2302    1.000    1.000
+              8 Hz       0.78      3.5301    1.000    1.000
+              12 Hz      0.69      3.9455    1.000    1.000
+              shuffled   0.68      4.0493    1.000    1.000
+depressing    silence    0.72      3.7589    0.965    0.686
+              2 Hz       1.14      2.3705    0.947    0.643
+              4 Hz       0.88      3.0832    0.954    0.664
+              8 Hz       0.75      3.5990    1.020    0.680
+              12 Hz      0.68      4.0221    1.019    0.695
+              shuffled   0.68      4.0267    0.994    0.689
+facilitating  silence    0.68      4.2723    1.096    1.670
+              2 Hz       1.11      2.8396    1.135    1.808
+              4 Hz       0.85      3.5132    1.088    1.749
+              8 Hz       0.75      3.9217    1.111    1.732
+              12 Hz      0.72      4.0143    1.017    1.739
+              shuffled   0.65      4.3147    1.066    1.681
 ```
 
 The kernel is right: the off arm delivers 1.0000 exactly, the two corners do
-opposite things (0.63 against 1.80), and the delivered gain correlates −0.907
-with the traffic the synapse actually carried. That correlation is the PASS
-criterion, because it is a statement about arithmetic and a failure there is a
-bug.
+opposite things (0.64–0.70 against 1.67–1.81), and the delivered gain correlates
+**−0.985** with the traffic the synapse actually carried. That correlation is the
+PASS criterion, because it is a statement about arithmetic and a failure there is
+a bug rather than a surprise.
 
-**And the `vs off` column is flat.** 0.92–0.98 down the depressing arm, 1.04–1.19
-down the facilitating one, with no peak anywhere. On this tract a dynamic synapse
-is a gain knob and not an envelope filter.
+**And the `vs off` column is flat.** 0.95–1.02 down the depressing arm, 1.02–1.14
+down the facilitating one, with no peak anywhere — including at `shuffled`, which
+holds the mean rate of the 4 Hz row and destroys only its regularity. On this
+tract a dynamic synapse is a gain knob and not an envelope filter.
+
+> These numbers replace an earlier table taken with a 1500-tick settle, which
+> read silence at 1.30 spikes/tick instead of 0.70. The `vs off` conclusion is
+> unchanged; the explanation built on the old silence row was not. See the
+> section below.
 
 The first explanation offered for that was wrong and is worth recording as such:
 it blamed §3.1 for holding `auditory`'s rate flat, on a 2.8% silence-versus-speech
@@ -3144,9 +3169,30 @@ burst+tuft   13.2    40.5   16.8        6.5       0.800      0.900     0.486
 ```
 
 **The tuft steers bursting, on 3 of 3 seeds**: 16.8/16.7/16.5 % inside a plateau
-against 6.5/6.3/6.5 % outside, a factor of 2.6. At a 5 ms window — what "burst"
-means in the literature — the effect is 11×. The chain the mechanism needs is
+against 6.5/6.3/6.5 % outside, a factor of 2.6. The chain the mechanism needs is
 real and every link is measurable.
+
+**Why the window is 20 ms and not 5.** The probe tracks every interval at the
+larynx, so it can report what any window would have scored:
+
+```
+fraction of spikes following another within:
+arm           5 ms   10 ms  20 ms  40 ms  80 ms
+off           0.1    1.8    8.2    18.9   34.6
+burst         0.1    1.8    8.2    18.7   34.3
+burst+tuft    1.2    4.9    13.2   24.7   39.3
+```
+
+A pyramidal burst in the literature is 100–200 Hz, i.e. 5–10 ms — and **this
+larynx does not do that**: 0.1% of its spikes follow another within 5 ms. A code
+scoring 1 spike in 1000 is a learning signal that is zero almost everywhere. 20 ms
+is the shortest window at which the code is live in this creature.
+
+Note where the *tuft's* effect is largest, though: **11× at 5 ms** (0.1 → 1.2)
+against 1.6× at 20 ms. BAC firing produces genuine short-latency doublets, and
+the wide window that makes the code usable is also the window that dilutes the
+tuft's contribution into it. That trade is the honest reading of this table, and
+it is why the whole curve is printed rather than one number.
 
 **And the burst signal discriminates**, which no third factor in this project
 ever has. Per-neuron burst deviation at the larynx classifies cube against ball
@@ -3255,6 +3301,51 @@ Monotone on the scaled module and pinned at 1.00 on the untouched one, which is
 the half that would catch a scale applied globally by mistake. Sub-linear
 because the interval is not negligible against tau. **PASS**, and it says the
 mechanism runs — not that a longer window buys anything.
+
+### What this round taught about probes, which cost more than the mechanisms did
+
+Four mechanisms went in and five probes came out, and the probes found more
+errors in themselves than in the kernel. Each of these produced a number that
+looked entirely normal.
+
+**Settle before the *first* block, not just between them.** `stpprobe` ran its
+silent control first, on a just-hatched creature, after 1500 ticks. Silence read
+1.30 spikes/tick where a settled creature reads 0.70, so the control was measured
+on a different brain from the conditions — and the 2.3% gap that produced became
+a published explanation of a null. `ipprobe` disagreed by an order of magnitude,
+which is the only reason it was caught. When two instruments disagree that far,
+the purpose-built one is usually right: find the confound, do not reconcile.
+
+**The null is whatever the control arm does, not zero.** `pruneprobe` asks
+whether surviving synapses are stronger than the population competition selected
+from. Random removal leaves that mean unchanged, so 0% looks like the null — but
+a consolidation pass also downscales every weight, and the off arm reads −9.61%.
+Against 0% the mechanism looks marginal at +2.59%; against its actual control it
+is +12.2 points.
+
+**Nor is zero the null for a count.** The same probe first failed for orphaning
+six neurons. The shipped genome hatches with six neurons nothing projects onto,
+and the off arm has them too.
+
+**A trace is not a flag.** `burstprobe`'s first version asked "was this spike part
+of a burst" by reading the kernel's burst rate, which is a 50 ms one-pole meaning
+"has bursted recently". It reported 80.9% where the honest answer is 8.2%. A probe
+that reads the kernel's own derived quantity cannot tell a correct implementation
+from a self-consistent one — it should re-derive from the spike train it can see.
+
+**One shuffle is a draw, not a null.** `burstprobe` at one permutation reported a
+null of 0.380 against a chance of 0.500 and an "effect" that was partly that. At
+32 permutations the nulls sit at 0.486–0.503.
+
+**Count the trials before reading the column.** 200000 ticks across three arms is
+33 trials, an accuracy step of 0.06, and every object column was inside its own
+noise. The minimum is 600000.
+
+**A mechanism that ships off is invisible to `verify`.** The `syn_elig_mean_`
+pruning bug survived since v16 because it needs both a sleep prune and a genome
+with DNA v16 enabled, and the shipped genome has neither. The pinned hash cannot
+see any of the eleven off-by-default mechanisms, and the fix had to be proved on
+a genome nobody runs.
 
 ## Design decisions that were not obvious
 
