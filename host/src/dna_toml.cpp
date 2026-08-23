@@ -588,6 +588,9 @@ bool compile_dna_toml(const std::string& path, std::vector<uint8_t>& out,
     p.apical = uint32_t(r.number("apical"));
     p.exuberance = float(r.number("exuberance"));
     p.birth_weight = float(r.number("birth_weight"));
+    p.stp_use = float(r.number("stp_use"));
+    p.stp_recover_ms = float(r.number("stp_recover_ms"));
+    p.stp_facil_ms = float(r.number("stp_facil_ms"));
 
     // Spelled out on every projection rather than defaulted to "random", for
     // the reason the whole file has no defaults: a genome that does not say how

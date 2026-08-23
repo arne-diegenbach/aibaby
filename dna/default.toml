@@ -1749,6 +1749,9 @@ hebb = 0.0                # DNA v23: per-pathway Hebbian rate, 0 = reward-gated 
 apical = 0                # DNA v25: 1 terminates on the target's apical tuft
 exuberance = 1.0          # DNA v28: born at density x this, pruned back by experience
 birth_weight = 1.0        # DNA v30: born at weight x this; set to 1/exuberance
+stp_use = 0.0             # DNA v36: dynamic synapse. 0 = constant weight, the pre-v36 tract
+stp_recover_ms = 0.0      # tau_rec: how fast released resources come back
+stp_facil_ms = 0.0        # tau_facil: how long raised utilisation lasts. 0 = pure depression
 
 
 [[projection]]
@@ -1834,6 +1837,9 @@ apical = 0                # DNA v25: 1 terminates on the target's apical tuft
 # before it could be compared to anything.
 exuberance = 1.0          # DNA v28: born at density x this, pruned back by experience
 birth_weight = 1.0        # DNA v30: born at weight x this; set to 1/exuberance
+stp_use = 0.0             # DNA v36: dynamic synapse. 0 = constant weight, the pre-v36 tract
+stp_recover_ms = 0.0      # tau_rec: how fast released resources come back
+stp_facil_ms = 0.0        # tau_facil: how long raised utilisation lasts. 0 = pure depression
 
 
 [[projection]]
@@ -1849,6 +1855,9 @@ hebb = 0.0                # DNA v23: per-pathway Hebbian rate, 0 = reward-gated 
 apical = 0                # DNA v25: 1 terminates on the target's apical tuft
 exuberance = 1.0          # DNA v28: born at density x this, pruned back by experience
 birth_weight = 1.0        # DNA v30: born at weight x this; set to 1/exuberance
+stp_use = 0.0             # DNA v36: dynamic synapse. 0 = constant weight, the pre-v36 tract
+stp_recover_ms = 0.0      # tau_rec: how fast released resources come back
+stp_facil_ms = 0.0        # tau_facil: how long raised utilisation lasts. 0 = pure depression
 
 
 [[projection]]
@@ -1953,6 +1962,9 @@ hebb = 0.0                # DNA v23: per-pathway Hebbian rate, 0 = reward-gated 
 apical = 0                # DNA v25: 1 terminates on the target's apical tuft
 exuberance = 1.0          # DNA v28: born at density x this, pruned back by experience
 birth_weight = 1.0        # DNA v30: born at weight x this; set to 1/exuberance
+stp_use = 0.0             # DNA v36: dynamic synapse. 0 = constant weight, the pre-v36 tract
+stp_recover_ms = 0.0      # tau_rec: how fast released resources come back
+stp_facil_ms = 0.0        # tau_facil: how long raised utilisation lasts. 0 = pure depression
 
 
 [[projection]]
@@ -1968,6 +1980,9 @@ hebb = 0.0                # DNA v23: per-pathway Hebbian rate, 0 = reward-gated 
 apical = 0                # DNA v25: 1 terminates on the target's apical tuft
 exuberance = 1.0          # DNA v28: born at density x this, pruned back by experience
 birth_weight = 1.0        # DNA v30: born at weight x this; set to 1/exuberance
+stp_use = 0.0             # DNA v36: dynamic synapse. 0 = constant weight, the pre-v36 tract
+stp_recover_ms = 0.0      # tau_rec: how fast released resources come back
+stp_facil_ms = 0.0        # tau_facil: how long raised utilisation lasts. 0 = pure depression
 
 
 # Efference copy: the baby hears its own intention to vocalise. This is what
@@ -1985,6 +2000,9 @@ hebb = 0.0                # DNA v23: per-pathway Hebbian rate, 0 = reward-gated 
 apical = 0                # DNA v25: 1 terminates on the target's apical tuft
 exuberance = 1.0          # DNA v28: born at density x this, pruned back by experience
 birth_weight = 1.0        # DNA v30: born at weight x this; set to 1/exuberance
+stp_use = 0.0             # DNA v36: dynamic synapse. 0 = constant weight, the pre-v36 tract
+stp_recover_ms = 0.0      # tau_rec: how fast released resources come back
+stp_facil_ms = 0.0        # tau_facil: how long raised utilisation lasts. 0 = pure depression
 
 
 # Ears to larynx: the dorsal stream. Heard speech reaches the motor module
@@ -2027,6 +2045,9 @@ hebb = 0.0                # DNA v23: per-pathway Hebbian rate, 0 = reward-gated 
 apical = 0                # DNA v25: 1 terminates on the target's apical tuft
 exuberance = 1.0          # DNA v28: born at density x this, pruned back by experience
 birth_weight = 1.0        # DNA v30: born at weight x this; set to 1/exuberance
+stp_use = 0.0             # DNA v36: dynamic synapse. 0 = constant weight, the pre-v36 tract
+stp_recover_ms = 0.0      # tau_rec: how fast released resources come back
+stp_facil_ms = 0.0        # tau_facil: how long raised utilisation lasts. 0 = pure depression
 
 
 [[projection]]
@@ -2046,6 +2067,9 @@ hebb = 0.0                # DNA v23: per-pathway Hebbian rate, 0 = reward-gated 
 apical = 0                # DNA v25: 1 terminates on the target's apical tuft
 exuberance = 1.0          # DNA v28: born at density x this, pruned back by experience
 birth_weight = 1.0        # DNA v30: born at weight x this; set to 1/exuberance
+stp_use = 0.0             # DNA v36: dynamic synapse. 0 = constant weight, the pre-v36 tract
+stp_recover_ms = 0.0      # tau_rec: how fast released resources come back
+stp_facil_ms = 0.0        # tau_facil: how long raised utilisation lasts. 0 = pure depression
 
 
 [[projection]]
@@ -2065,6 +2089,9 @@ hebb = 0.0                # DNA v23: per-pathway Hebbian rate, 0 = reward-gated 
 apical = 0                # DNA v25: 1 terminates on the target's apical tuft
 exuberance = 1.0          # DNA v28: born at density x this, pruned back by experience
 birth_weight = 1.0        # DNA v30: born at weight x this; set to 1/exuberance
+stp_use = 0.0             # DNA v36: dynamic synapse. 0 = constant weight, the pre-v36 tract
+stp_recover_ms = 0.0      # tau_rec: how fast released resources come back
+stp_facil_ms = 0.0        # tau_facil: how long raised utilisation lasts. 0 = pure depression
 
 
 # --- Top-down feedback (DNA v14) ---------------------------------------------
@@ -2195,6 +2222,9 @@ hebb = 0.0                # DNA v23: per-pathway Hebbian rate, 0 = reward-gated 
 apical = 0                # DNA v25: 1 terminates on the target's apical tuft
 exuberance = 1.0          # DNA v28: born at density x this, pruned back by experience
 birth_weight = 1.0        # DNA v30: born at weight x this; set to 1/exuberance
+stp_use = 0.0             # DNA v36: dynamic synapse. 0 = constant weight, the pre-v36 tract
+stp_recover_ms = 0.0      # tau_rec: how fast released resources come back
+stp_facil_ms = 0.0        # tau_facil: how long raised utilisation lasts. 0 = pure depression
 
 
 # auditory -> vocal, INHIBITORY: the baby stops babbling while it can hear
@@ -2261,6 +2291,9 @@ hebb = 0.0                # DNA v23: per-pathway Hebbian rate, 0 = reward-gated 
 apical = 0                # DNA v25: 1 terminates on the target's apical tuft
 exuberance = 1.0          # DNA v28: born at density x this, pruned back by experience
 birth_weight = 1.0        # DNA v30: born at weight x this; set to 1/exuberance
+stp_use = 0.0             # DNA v36: dynamic synapse. 0 = constant weight, the pre-v36 tract
+stp_recover_ms = 0.0      # tau_rec: how fast released resources come back
+stp_facil_ms = 0.0        # tau_facil: how long raised utilisation lasts. 0 = pure depression
 
 
 [neuromod]

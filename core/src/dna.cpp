@@ -344,6 +344,20 @@ DnaStatus Dna::load(const void* blob, size_t size) {
     if (p.source >= uint32_t(ProjectionSource::kSourceCount)) {
       return DnaStatus::kBadProjection;
     }
+    // DNA v36. Dynamic synapses. Rejected rather than clamped for the reason
+    // the plateau gate below is: each of these is a genome that reads as an
+    // enabled mechanism and behaves as a disabled one, which is the failure
+    // this project has paid for most often.
+    //
+    //   U outside (0, 1]  — above 1 a spike releases resources the synapse does
+    //                       not have and R goes negative; below 0 it inverts
+    //                       the sign of the tract at delivery.
+    //   no recovery time  — resources return instantly, R is 1 at every spike,
+    //                       and the synapse is a constant-weight one wearing
+    //                       three genome fields.
+    if (p.stp_use < 0.0f || p.stp_use > 1.0f) return DnaStatus::kBadProjection;
+    if (p.stp_use > 0.0f && p.stp_recover_ms <= 0.0f) return DnaStatus::kBadProjection;
+    if (p.stp_recover_ms < 0.0f || p.stp_facil_ms < 0.0f) return DnaStatus::kBadProjection;
     if (p.kind == uint32_t(ProjectionKind::kGabor)) {
       // A receptive field only means anything over a retina, and the geometry
       // it reads is the vision module's channel map. Sourcing one from

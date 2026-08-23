@@ -75,6 +75,12 @@ size_t Network::required_bytes(const Dna& dna) {
     synapse_pool += size_t(dm.n_max) * dm.max_out_degree;
     if (dm.lateral_gain > 0.0f) lateral = true;
   }
+  // DNA v36. Dynamic synapses carry two numbers per synapse and one per neuron,
+  // and only a genome that asks for them pays.
+  bool stp = false;
+  for (uint32_t i = 0; i < dna.header().projection_count; ++i) {
+    if (dna.projection(i).stp_use > 0.0f) stp = true;
+  }
 
   // Mirrors the allocation block in build(), in the same order.
   const size_t per_neuron = 19 * sizeof(Scalar)     // v, v_rest, threshold, target_rate,
@@ -98,6 +104,7 @@ size_t Network::required_bytes(const Dna& dna) {
   // genome with the mechanism off gets an arena byte-for-byte the size it was
   // before the mechanism existed.
   if (lateral) total += capacity * sizeof(Scalar);
+  if (stp) total += capacity * sizeof(uint32_t) + 2 * synapse_pool * sizeof(Scalar);
 
   // Slack for per-allocation alignment padding.
   total += 1024;
@@ -143,6 +150,10 @@ bool Network::build(const Dna& dna, Arena& arena, Rng& rng) {
   // DNA v23: fold the per-pathway Hebbian rates into a (src, dst) matrix. Two
   // projections sharing a pair would overwrite rather than sum, which is worth
   // knowing but does not arise in the shipped genome.
+  for (uint32_t a = 0; a < kMaxModules; ++a) {
+    for (uint32_t b = 0; b < kMaxModules; ++b) stp_id_[a][b] = -1;
+  }
+  stp_paths_ = 0;
   for (uint32_t pi = 0; pi < dna.header().projection_count; ++pi) {
     const DnaProjection& pr = dna.projection(pi);
     if (pr.src >= kMaxModules || pr.dst >= kMaxModules) continue;
@@ -156,6 +167,35 @@ bool Network::build(const Dna& dna, Arena& arena, Rng& rng) {
     if (pr.apical != 0 && dna.module(pr.dst).apical_threshold > 0.0f) {
       apical_pair_[pr.src][pr.dst] = true;
       any_apical_ = true;
+    }
+    // DNA v36. One parameter set per (source, target) pair, with its two decay
+    // tables built here so the delivery loop never calls expf. A pair that
+    // appears twice keeps the first set rather than the last, which is the
+    // opposite of what `hebb` above does — but a second tract onto the same
+    // pair silently *replacing* a filter is worse than one silently sharing it,
+    // and the genome that does either is a mistake in both cases.
+    if (pr.stp_use > 0.0f && stp_id_[pr.src][pr.dst] < 0) {
+      if (stp_paths_ < kMaxStpPaths) {
+        const uint32_t id = stp_paths_++;
+        stp_id_[pr.src][pr.dst] = int8_t(id);
+        stp_u_[id] = Scalar(pr.stp_use);
+        stp_inv_u_[id] = kOne / Scalar(pr.stp_use);
+        for (uint32_t k = 0; k < kStpCoarse; ++k) {
+          stp_rec_lo_[id][k] = decay_per(dt_ms_ * Scalar(k), Scalar(pr.stp_recover_ms));
+          stp_fac_lo_[id][k] = decay_per(dt_ms_ * Scalar(k), Scalar(pr.stp_facil_ms));
+        }
+        for (uint32_t k = 0; k < kStpCoarseSteps; ++k) {
+          const Scalar step = dt_ms_ * Scalar(k * kStpCoarse);
+          stp_rec_hi_[id][k] = decay_per(step, Scalar(pr.stp_recover_ms));
+          stp_fac_hi_[id][k] = decay_per(step, Scalar(pr.stp_facil_ms));
+        }
+        // decay_per returns 0 for a zero time constant, and that is exactly
+        // what "no facilitation" has to mean here: the factor is 0 at every
+        // gap, so u falls straight back to U between spikes and the synapse
+        // is purely depressing. Validation guarantees the recovery constant is
+        // never zero while the mechanism is on.
+        any_stp_ = true;
+      }
     }
   }
   // DNA v25 per-module compartment parameters. Only read when any_apical_.
@@ -288,6 +328,11 @@ bool Network::build(const Dna& dna, Arena& arena, Rng& rng) {
   syn_delay_ = arena.alloc_zeroed<uint16_t>(synapse_pool_);
   syn_delay0_ = arena.alloc_zeroed<uint16_t>(synapse_pool_);
   if (any_lateral_) lateral_ = arena.alloc_zeroed<Scalar>(capacity_);
+  if (any_stp_) {
+    prev_spike_ = arena.alloc_zeroed<uint32_t>(capacity_);
+    syn_res_ = arena.alloc_zeroed<Scalar>(synapse_pool_);
+    syn_use_ = arena.alloc_zeroed<Scalar>(synapse_pool_);
+  }
 
   inbox_ = arena.alloc_zeroed<Scalar>(size_t(capacity_) * delay_slots_);
   inbox_apical_ = arena.alloc_zeroed<Scalar>(size_t(capacity_) * delay_slots_);
@@ -511,6 +556,14 @@ bool Network::add_synapse(uint32_t src, uint32_t dst, Scalar weight, uint16_t de
   syn_delay0_[slot] = delay;
   syn_elig_[slot] = kZero;
   syn_traffic_[slot] = kZero;
+  // DNA v36. Born with a full vesicle pool and nothing released yet, which is
+  // what makes the first spike after birth deliver exactly the genome's
+  // weight. A synapse grown by M4 mid-life comes through here too, so it joins
+  // the tract rested rather than inheriting whatever the slot last held.
+  if (any_stp_) {
+    syn_res_[slot] = kOne;
+    syn_use_[slot] = kZero;
+  }
   ++syn_count_[src];
   return true;
 }
@@ -1084,6 +1137,10 @@ void Network::step() {
         if (v_[i] >= threshold_[i]) {
           v_[i] = v_rest_[i];
           refrac_until_[i] = uint32_t(tick_) + refrac_ticks_[i];
+          // DNA v36. The delivery loop runs after this one and needs the
+          // interval since the *previous* release, so the value being
+          // overwritten here is saved before it is lost.
+          if (any_stp_) prev_spike_[i] = last_spike_[i];
           last_spike_[i] = uint32_t(tick_);
           spike_list_[spike_count_++] = i;
           ++ms.spikes;
@@ -1125,6 +1182,19 @@ void Network::step() {
     const uint32_t i = spike_list_[s];
     const uint32_t base = syn_base_[i];
     const uint32_t n = syn_count_[i];
+    // DNA v36. Everything a dynamic synapse needs that is a property of the
+    // *source* rather than of the synapse: which parameter sets its targets
+    // use, and how long it has been since this neuron last released. The gap
+    // is shared by every synapse below, which is why it is computed once.
+    const int8_t* stp_row = any_stp_ ? stp_id_[module_of_[i]] : nullptr;
+    uint32_t gap_lo = 0, gap_hi = 0;
+    bool gap_spanned = false;
+    if (any_stp_) {
+      const uint32_t gap = uint32_t(tick_) - prev_spike_[i];
+      gap_spanned = gap < kStpCoarse * kStpCoarseSteps;
+      gap_lo = gap % kStpCoarse;
+      gap_hi = (gap / kStpCoarse) % kStpCoarseSteps;
+    }
     for (uint32_t k = 0; k < n; ++k) {
       const uint32_t syn = base + k;
       const uint32_t target_slot = uint32_t((tick_ + syn_delay_[syn]) % delay_slots_);
@@ -1136,7 +1206,32 @@ void Network::step() {
           apical_pair_[module_of_[i]][module_of_[syn_target_[syn]]]) {
         ring = inbox_apical_;
       }
-      ring[size_t(target_slot) * capacity_ + syn_target_[syn]] += syn_weight_[syn];
+      Scalar amount = syn_weight_[syn];
+      // DNA v36. Tsodyks-Markram: recover, facilitate, release, deplete. Both
+      // state variables stay inside [0, 1] by construction — u is a convex
+      // blend of U and 1, and R is a blend of R(1-u) and 1 — so there is no
+      // clamp here, and a value outside that range would mean the arithmetic
+      // itself had gone wrong rather than the genome.
+      if (stp_row) {
+        const int8_t id = stp_row[module_of_[syn_target_[syn]]];
+        if (id >= 0) {
+          const Scalar d_rec =
+              gap_spanned ? stp_rec_lo_[id][gap_lo] * stp_rec_hi_[id][gap_hi] : kZero;
+          const Scalar d_fac =
+              gap_spanned ? stp_fac_lo_[id][gap_lo] * stp_fac_hi_[id][gap_hi] : kZero;
+          const Scalar u_prev = syn_use_[syn];
+          const Scalar r_prev = syn_res_[syn];
+          const Scalar u = stp_u_[id] + u_prev * (kOne - stp_u_[id]) * d_fac;
+          const Scalar r = kOne + (r_prev * (kOne - u_prev) - kOne) * d_rec;
+          syn_use_[syn] = u;
+          syn_res_[syn] = r;
+          // Normalised by U, so a synapse that has been silent long enough to
+          // recover delivers the genome's weight and nothing else. See the
+          // note on DnaProjection::stp_use.
+          amount *= u * r * stp_inv_u_[id];
+        }
+      }
+      ring[size_t(target_slot) * capacity_ + syn_target_[syn]] += amount;
       syn_traffic_[syn] += kOne;  // read by myelination in M4
     }
   }
@@ -1678,6 +1773,7 @@ void Network::init_neuron(uint32_t i, uint32_t m, Scalar x, Scalar y, Scalar z) 
   w_in_struct_[i] = kZero;
   refrac_until_[i] = 0;
   last_spike_[i] = 0;
+  if (any_stp_) prev_spike_[i] = 0;
   // DNA v25: born with a quiet tuft and no plateau in progress. Unlike the
   // rate estimate above there is nothing to flatter here — a plateau is an
   // event, and inheriting one would amplify the new neuron's first inputs for
@@ -1856,9 +1952,26 @@ uint32_t Network::prune_synapses() {
           syn_source_[into] = syn_source_[syn];
           syn_weight_[into] = syn_weight_[syn];
           syn_elig_[into] = syn_elig_[syn];
+          // DNA v16's baseline moves with the synapse it belongs to. It did not
+          // until 2026-08-23: a survivor sliding down a slot kept whatever
+          // baseline the *pruned* synapse had accumulated, and reward then
+          // cashed its trace against another edge's history.
+          //
+          // Two things kept it alive. It needs a sleep prune, so nothing under
+          // ~1.04M ticks can reach it — and `elig_baseline_tau_ms` is 0 in the
+          // shipped genome, which leaves this array all zeroes, so on the
+          // creature everyone runs the bug copies 0 over 0. The pinned hash
+          // does not move. On a genome with v16 switched on it does, at 1.8M
+          // ticks: 41d3a15bdb42cb47 -> b163ef30730320f1. That pair is the whole
+          // evidence the fix is a fix and not a no-op.
+          syn_elig_mean_[into] = syn_elig_mean_[syn];
           syn_traffic_[into] = syn_traffic_[syn];
           syn_delay_[into] = syn_delay_[syn];
           syn_delay0_[into] = syn_delay0_[syn];
+          if (any_stp_) {
+            syn_res_[into] = syn_res_[syn];
+            syn_use_[into] = syn_use_[syn];
+          }
         }
         ++keep;
       }
@@ -2033,6 +2146,32 @@ Telemetry Network::telemetry() const {
   return t;
 }
 
+Scalar Network::stp_gain(uint32_t src, uint32_t dst) const {
+  if (!any_stp_ || src >= kMaxModules || dst >= kMaxModules) return kOne;
+  const int8_t id = stp_id_[src][dst];
+  if (id < 0) return kOne;
+  const ModuleState& ms = modules_[src];
+  Scalar sum = kZero;
+  uint32_t counted = 0;
+  for (uint32_t k = 0; k < ms.count; ++k) {
+    const uint32_t i = ms.begin + k;
+    if (dead_[i]) continue;
+    const uint32_t base = syn_base_[i];
+    for (uint32_t j = 0; j < syn_count_[i]; ++j) {
+      const uint32_t syn = base + j;
+      if (module_of_[syn_target_[syn]] != dst) continue;
+      // u is 0 only on a synapse that has never transmitted — every release
+      // leaves it at U or above — and such a synapse is rested, not silent.
+      // Reporting its stored 0 as a gain would make a quiet tract read as a
+      // fully depleted one, which is the opposite reading.
+      const Scalar u = syn_use_[syn];
+      sum += u > kZero ? u * syn_res_[syn] * stp_inv_u_[id] : kOne;
+      ++counted;
+    }
+  }
+  return counted ? sum / Scalar(counted) : kOne;
+}
+
 uint64_t Network::state_hash() const {
   uint64_t h = 0xCBF29CE484222325ULL;
   hash_bytes(h, &tick_, sizeof(tick_));
@@ -2058,6 +2197,10 @@ uint64_t Network::state_hash() const {
         // Delay is state now: myelination moves it, so a brain whose pathways
         // have consolidated differently must hash differently.
         hash_bytes(h, &syn_delay_[base + s], sizeof(uint16_t));
+        // DNA v36. How depleted a synapse is is state a resumed creature has
+        // to agree about, and it is hashed only when the mechanism is on so
+        // that a genome without it keeps the hash it had before v36 existed.
+        if (any_stp_) hash_scalar(h, syn_res_[base + s]);
       }
     }
   }

@@ -65,6 +65,15 @@ struct Telemetry {
   Scalar last_reward;
 };
 
+// DNA v36. How many distinct dynamic-synapse parameter sets one genome may
+// have, and the shape of the decay tables each of them owns. Eight pathways is
+// more than the shipped body plan has tracts; the table spans
+// kStpCoarse * kStpCoarseSteps = 2048 ticks, which is two seconds at the
+// default dt and past the point where any recovery constant still matters.
+constexpr uint32_t kMaxStpPaths = 8;
+constexpr uint32_t kStpCoarse = 32;
+constexpr uint32_t kStpCoarseSteps = 64;
+
 class Network {
  public:
   // Exact arena size this genome needs, so the host can allocate once and
@@ -217,6 +226,24 @@ class Network {
   uint32_t spike_count() const { return spike_count_; }
 
   // Sampled membrane potential, for the telemetry trace.
+  // DNA v36. Does this genome have a dynamic synapse anywhere, and what is one
+  // pathway currently delivering?
+  //
+  // `stp_gain` is the mean of the release factor u*R/U over the live synapses
+  // of one (source, target) pair, so 1.0 is "delivering the genome's weight"
+  // and 0.3 is "delivering three tenths of it". It is read as of each synapse's
+  // most recent transmission, which is the only moment the quantity exists —
+  // a synapse that has not fired for a second holds the value it last
+  // delivered with, and a sampler has to be reading during traffic for the
+  // number to mean anything.
+  //
+  // Exposed for the same reason ModuleState::norm is: a tract quietly
+  // delivering a third of its weight is invisible in every rate, every weight
+  // and every hash, and it is the first thing to check when this is on and a
+  // number moves.
+  bool stp_active() const { return any_stp_; }
+  Scalar stp_gain(uint32_t src, uint32_t dst) const;
+
   Scalar membrane(uint32_t neuron) const { return v_[neuron]; }
   Scalar threshold(uint32_t neuron) const { return threshold_[neuron]; }
 
@@ -424,6 +451,14 @@ class Network {
   Scalar* w_in_struct_ = nullptr;
   uint32_t* refrac_until_ = nullptr;
   uint32_t* last_spike_ = nullptr;
+  // DNA v36. The tick this neuron spiked on *before* the one it is spiking on
+  // now. Dynamic synapses need the interval since the last release, and by the
+  // time the delivery loop runs, `last_spike_` has already been advanced to
+  // this tick by the integrate loop. Per neuron rather than per synapse
+  // because every synapse of a source transmits on every spike of that source,
+  // so a per-synapse copy would hold the identical number at ten times the
+  // cost. Allocated only when a genome asks for the mechanism.
+  uint32_t* prev_spike_ = nullptr;
   uint32_t* syn_base_ = nullptr;
   uint16_t* syn_count_ = nullptr;
   uint16_t* syn_cap_ = nullptr;
@@ -456,6 +491,16 @@ class Network {
   // a floor and §3.5 requires that it *reverts* when traffic decays, so the
   // unmyelinated value has to survive somewhere.
   uint16_t* syn_delay0_ = nullptr;
+  // DNA v36. The dynamic synapse's two state variables, as they stood at this
+  // synapse's most recent transmission: `syn_res_` is R, the resources it had
+  // available, and `syn_use_` is u, the fraction of them it released. Both are
+  // per synapse and not per pathway, because R depends on this synapse's own
+  // history and that is the whole point — a shared pool would be exactly the
+  // common mode the mechanism exists not to have. Allocated only when a genome
+  // asks, so a creature with it off gets an arena byte-for-byte the size it
+  // was before v36 existed.
+  Scalar* syn_res_ = nullptr;
+  Scalar* syn_use_ = nullptr;
 
   // Reverse index: for each neuron, the synapse slots that terminate on it.
   // STDP potentiation is driven by the *post*synaptic spike, and the forward
@@ -528,6 +573,24 @@ class Network {
   uint32_t* plateau_until_ = nullptr;
   bool apical_pair_[kMaxModules][kMaxModules] = {};
   bool any_apical_ = false;
+  // DNA v36. Which dynamic-synapse parameter set a (source, target) pair uses,
+  // or -1 for the constant-weight synapse every pair had before v36.
+  int8_t stp_id_[kMaxModules][kMaxModules] = {};
+  bool any_stp_ = false;
+  uint32_t stp_paths_ = 0;
+  Scalar stp_u_[kMaxStpPaths] = {};      // U
+  Scalar stp_inv_u_[kMaxStpPaths] = {};  // 1/U, so delivery never divides
+  // exp(-gap / tau), split so that the kernel can look one up for any gap
+  // without calling expf. gap is decomposed as hi*kStpCoarse + lo, and the
+  // exponential of a sum is the product of the exponentials, so two lookups
+  // and one multiply are exact rather than interpolated. Beyond what the two
+  // tables span the factor is taken as zero — at the shortest time constant a
+  // genome can usefully ask for that is a rounding error, and at the longest
+  // it is the difference between "recovered" and "recovered".
+  Scalar stp_rec_lo_[kMaxStpPaths][kStpCoarse] = {};
+  Scalar stp_rec_hi_[kMaxStpPaths][kStpCoarseSteps] = {};
+  Scalar stp_fac_lo_[kMaxStpPaths][kStpCoarse] = {};
+  Scalar stp_fac_hi_[kMaxStpPaths][kStpCoarseSteps] = {};
   Scalar apical_leak_[kMaxModules] = {};
   Scalar apical_thresh_[kMaxModules] = {};
   Scalar apical_gain_[kMaxModules] = {};

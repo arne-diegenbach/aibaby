@@ -82,6 +82,9 @@ const Spec kSpecs[] = {
     {"oscprobe", 200000, Expect::kGuard, Tier::kFast,
      "derived: 100 trials; guard — the oscillators ship off"},
     {"audprobe", 240000, Expect::kPass, Tier::kFast, "derived: 100 trials at 2400 ticks each"},
+    {"stpprobe", kDefaultMinimum, Expect::kPass, Tier::kFast,
+     "derived: 3 arms x 6 conditions, so 6666 ticks each — 13 bursts at the slowest\n"
+     "  envelope, which is the fewest an average per burst may rest on"},
     {"invprobe", 200000, Expect::kPass, Tier::kLong,
      "derived: 100 trials per scatter arm, x3 creatures x3 upbringings"},
     {"cpprobe", 600000, Expect::kGuard, Tier::kLong,
@@ -227,6 +230,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "gazeprobe") ok = run_gazeprobe(dna_blob, ticks, verbose);
   else if (name == "invprobe") ok = run_invprobe(dna_blob, ticks, verbose);
   else if (name == "cpprobe") ok = run_cpprobe(dna_blob, ticks, verbose);
+  else if (name == "stpprobe") ok = run_stpprobe(dna_blob, ticks, verbose);
   else if (name == "babble") ok = run_babble(dna_blob, ticks, verbose, cap);
   else if (name == "calibrate") ok = run_calibrate(dna_blob, ticks, verbose);
   else if (name == "sleep") ok = run_sleep(dna_blob, ticks, verbose);

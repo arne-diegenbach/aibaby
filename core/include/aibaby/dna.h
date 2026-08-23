@@ -180,7 +180,49 @@ constexpr uint32_t kDnaMagic = 0x44424941;  // "AIBD"
 //     better than central's 0.600 — and there is no buried code left at the
 //     larynx for a signed projection to recover. See DnaModule::ffi_source and
 //     the README.
-constexpr uint32_t kDnaVersion = 35;
+// 36: dynamic synapses — a tract's synapses deplete with use and recover on
+//     their own time constant, after the model Barbara Webb's group used to
+//     make a cricket robot recognise a calling song (Webb & Scutt 2000; Reeve &
+//     Webb 2002). See the References section of the README.
+//
+//     The reason to want it is that this brain has nothing on this timescale.
+//     Every plasticity mechanism it owns — R-STDP, the eligibility trace,
+//     myelination, scaling, intrinsic plasticity — runs on seconds to minutes,
+//     and a synapse's *transmission* has been a constant since M1. Recognition
+//     of a temporal pattern needs neither learning nor a recogniser if the
+//     synapse itself is a filter: Webb's BN1 fires efficiently only when the
+//     gap between sound bursts is long enough for it to have recovered from
+//     depression, and BN2 only when the onsets BN1 reports arrive close enough
+//     together for facilitation to still be standing. The bandpass on syllable
+//     rate is a side effect of two synapses with different time constants, and
+//     no part of it is learned.
+//
+//     The second reason is closer to what this project keeps hitting. A
+//     depressing synapse transmits its *changes* and not its steady traffic —
+//     it is a per-edge common-mode remover, which is the same job DNA v21-v24's
+//     pooling interneurons do at population level. That is the one thing here
+//     that measurably worked (+0.077, 3/3 families) and its documented failure
+//     mode is common-mode *swamping*: one shared scalar subtracted from every
+//     target. A synapse can only ever deplete in proportion to what it
+//     individually carries, so it has no shared term to swamp with.
+//
+//     Two decisions worth knowing before reading a number off it.
+//
+//     **Release is normalised by `stp_use`,** so the first spike after a
+//     silence delivers exactly the genome's `weight`. Without that, switching
+//     the mechanism on would scale a whole tract down by U and every number
+//     taken afterwards would be about the recalibration rather than about the
+//     filter. What depression then means is "less than the resting weight under
+//     sustained traffic", which is the semantics the mechanism is for.
+//
+//     **Synaptic scaling still holds the nominal weight.** §3.1 regulates the
+//     sum of `syn_weight_`, which is now the resting delivery rather than the
+//     mean one, so a hard-depressing tract delivers less than the regulator
+//     believes. That is a real interaction and not a bug: the resting weight is
+//     the only rate-independent thing there is to regulate.
+//
+//     See DnaProjection::stp_use and the `stpprobe` experiment.
+constexpr uint32_t kDnaVersion = 36;
 
 // What a module is wired to the world through. The host looks modules up by
 // role, never by name or index, so renaming a module in the genome cannot
@@ -1318,6 +1360,45 @@ struct DnaProjection {
   // other and prune the losers. Both fields stay, because that change would
   // make them live; they are inert-but-revivable rather than refuted outright.
   float birth_weight;
+
+  // DNA v36. Dynamic synapses (Tsodyks & Markram), the mechanism Webb's cricket
+  // model puts song recognition in. 0 is off and is bit-identical to the
+  // pre-v36 creature — no state is allocated, no table is built, and the
+  // delivery loop keeps its old cost behind one branch.
+  //
+  // `stp_use` is U, the fraction of a synapse's available resources released by
+  // one presynaptic spike. It is both the depth of the effect and its switch:
+  // at 0 the synapse is the constant-weight one it has always been, and at 1 a
+  // single spike empties it.
+  //
+  // Per spike, with `gap` the interval since this synapse last transmitted:
+  //
+  //   u <- U + u_prev (1 - U) exp(-gap / stp_facil_ms)     utilisation
+  //   R <- 1 + (R_prev (1 - u_prev) - 1) exp(-gap / stp_recover_ms)  resources
+  //   delivered <- weight * u * R / U
+  //
+  // Both stay inside [0, 1] by construction rather than by clamping, which is
+  // worth stating because a clamp would hide a genome that had gone unstable.
+  //
+  // The two time constants are what make one synapse a low-pass and another a
+  // high-pass, and that is the whole mechanism:
+  //
+  //   depressing   large U, long stp_recover_ms, stp_facil_ms 0. Passes the
+  //                first spike of a burst and little of the rest. Webb's BN1,
+  //                and the per-edge common-mode remover described above.
+  //   facilitating small U, short stp_recover_ms, long stp_facil_ms. Passes
+  //                almost nothing at rest and builds under a fast train.
+  //                Webb's BN2, which is what turns "a burst started" into
+  //                "bursts are arriving at the conspecific rate".
+  //
+  // Carried as a (source, target) module pair inside the kernel for the same
+  // reason `hebb` and `apical` are, and with the same consequence: two
+  // projections sharing a src/dst pair share these three numbers. Webb's pair
+  // needs two different *targets* rather than two tracts onto one, which is
+  // what the anatomy is anyway.
+  float stp_use;          // U: released per spike. 0 = the mechanism is off
+  float stp_recover_ms;   // tau_rec: how fast resources come back
+  float stp_facil_ms;     // tau_facil: how long utilisation stays raised. 0 = none
 
   // --- kGabor only -----------------------------------------------------------
   // A simple cell in the Hubel–Wiesel sense: an oriented envelope over the

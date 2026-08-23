@@ -4833,4 +4833,354 @@ bool run_restate(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
   return ok;
 }
 
+
+// --- stpprobe: is a dynamic synapse a filter, and what does it filter? ------
+//
+// DNA v36 puts Webb's cricket mechanism into this creature: a synapse whose
+// resources deplete with use and recover on their own time constant, so that
+// what it transmits depends on the *interval* between the spikes arriving at
+// it. Webb's model gets song recognition out of exactly this and nothing else —
+// BN1 fires efficiently only when the gap between sound bursts is long enough
+// for it to have recovered, BN2 only when onsets arrive close enough together
+// for facilitation to still be standing, and no part of the resulting bandpass
+// on syllable rate is learned.
+//
+// This asks the two questions that have to be separated before any of that can
+// be believed, and it asks them on `auditory -> central`, the tract a heard
+// word crosses:
+//
+//   1. **Does the mechanism run?** The `gain` column is what the tract actually
+//      delivered as a fraction of its genome weight. The off arm must read
+//      1.000 — it is the control that says the patch is real and not a
+//      relabelled copy of the same creature — and the depressing arm must fall
+//      as the rate rises. That pair is the PASS criterion, because it is about
+//      the kernel's arithmetic rather than about the creature, and a failure
+//      there is a bug.
+//
+//   2. **Does the filter reach the target?** The `transfer` column is central's
+//      spikes per auditory spike. It is a ratio and not a count for the reason
+//      the whole probe would otherwise be worthless: the ear responds
+//      differently to a 2 Hz and a 12 Hz envelope all by itself, and a rate
+//      effect measured at central alone would mostly be that. This column is
+//      the finding, and it is NOT gated on — whether a per-edge filter survives
+//      a sparse random tract is a result, not a correctness check.
+//
+// Three things about the design that are not free choices.
+//
+// **The duty cycle is fixed at 50%, not the burst duration.** Every rate then
+// carries identical total sound and identical mean amplitude, and only the
+// timing differs. With a fixed burst length the fast rates would simply be
+// louder, and a depressing synapse would be measured as an energy meter.
+//
+// **The rates stop at 12 Hz because the ear stops there.** The cochlea's window
+// is 32 ms with a 16 ms hop, so an envelope whose half-period is under ~32 ms
+// is inside one analysis frame and reaches the brain as steady energy. Webb's
+// crickets work at 20-30 Hz syllables through an ear with microsecond
+// resolution; the band this creature's ear can actually resolve is 1-12 Hz,
+// which is where the syllable rate of human speech sits anyway.
+//
+// **There is a shuffled row and a silent row.** The shuffled row holds the mean
+// rate and the total sound of the 4 Hz row and destroys only the regularity, so
+// it separates "selective for an interval" from "selective for a modulation
+// depth". The silent row is central's baseline: it receives vision and touch
+// and its own noise as well as the ear, and a transfer ratio that ignored that
+// would credit the tract with spikes nothing sent it.
+namespace {
+
+struct StpArm {
+  const char* name;
+  float use;         // U: released per spike
+  float recover_ms;  // tau_rec
+  float facil_ms;    // tau_facil
+};
+
+// Webb's two synapses, plus the constant-weight one this creature has always
+// had. The numbers are the standard depressing and facilitating corners of the
+// Tsodyks-Markram parameter space rather than a fit to anything: this probe
+// exists to show what the mechanism does, and the genome is where a tract that
+// ships would state its own.
+constexpr StpArm kStpArms[] = {
+    {"off",          0.00f,   0.0f,   0.0f},
+    {"depressing",   0.50f, 300.0f,   0.0f},
+    {"facilitating", 0.10f,  50.0f, 300.0f},
+};
+constexpr uint32_t kStpArmCount = sizeof(kStpArms) / sizeof(kStpArms[0]);
+
+// Hz. The last one is at the ear's resolution limit and is meant to be.
+constexpr float kStpRates[] = {2.0f, 4.0f, 8.0f, 12.0f};
+constexpr uint32_t kStpRateCount = sizeof(kStpRates) / sizeof(kStpRates[0]);
+
+// silence, the four rates, and the shuffled null
+constexpr uint32_t kStpConditions = kStpRateCount + 2;
+
+constexpr uint64_t kStpSettleTicks = 1500;
+
+struct StpRow {
+  double aud_per_tick = 0.0;  // the quantity a dynamic synapse actually reads
+  double cen_per_tick = 0.0;
+  double transfer = 0.0;      // central's spikes per auditory spike
+  double gain = 1.0;          // delivered, as a fraction of the genome weight
+  uint32_t bursts = 0;
+};
+
+}  // namespace
+
+bool run_stpprobe(const std::vector<uint8_t>& dna_blob, uint64_t ticks, bool verbose) {
+  std::string error;
+  aibaby::Dna dna0;
+  if (dna0.load(dna_blob.data(), dna_blob.size()) != aibaby::DnaStatus::kOk) {
+    std::printf("  setup failed: the genome does not load\n");
+    return false;
+  }
+  const int32_t aud_m = dna0.module_with_role(aibaby::ModuleRole::kAuditory);
+  const int32_t cen_m = dna0.module_with_role(aibaby::ModuleRole::kAssociation);
+  if (aud_m < 0 || cen_m < 0) {
+    std::printf("  this genome has no auditory or no association module\n");
+    return false;
+  }
+  // The tract to make dynamic. Chosen because it is the one a heard word
+  // crosses, and because `pcprobe` measures it as the place the word is lost.
+  int32_t tract = -1;
+  for (uint32_t i = 0; i < dna0.header().projection_count; ++i) {
+    const aibaby::DnaProjection& p = dna0.projection(i);
+    if (int32_t(p.src) == aud_m && int32_t(p.dst) == cen_m) { tract = int32_t(i); break; }
+  }
+  if (tract < 0) {
+    std::printf("  this genome has no auditory->central tract to make dynamic\n");
+    return false;
+  }
+
+  const aibaby::DnaAudio& acfg = dna0.header().audio;
+  const uint32_t samples_per_tick = uint32_t(acfg.sample_rate / 1000);
+  const uint64_t budget = ticks / (kStpArmCount * kStpConditions);
+
+  instrument("stpprobe", dna0.header().seed ^ 0x57Bu, budget, "ticks per condition");
+  std::printf("  tract             %s -> %s   density %.3f   weight %.3f\n",
+              dna0.module(uint32_t(aud_m)).name, dna0.module(uint32_t(cen_m)).name,
+              double(dna0.projection(uint32_t(tract)).density),
+              double(dna0.projection(uint32_t(tract)).weight));
+  const double window_ms = 1000.0 * double(acfg.window) / double(acfg.sample_rate);
+  std::printf("  ear               %.0f ms window, %.0f ms hop — an envelope whose half\n"
+              "                    period is under the window (~%.0f Hz) is inside one\n"
+              "                    frame and reaches the brain as steady energy\n",
+              window_ms, 1000.0 * double(acfg.hop) / double(acfg.sample_rate),
+              500.0 / window_ms);
+
+  // The condition index is the same across arms so the rows line up: 0 is
+  // silence, 1..kStpRateCount are the regular rates, and the last is shuffled.
+  StpRow rows[kStpArmCount][kStpConditions];
+
+  for (uint32_t a = 0; a < kStpArmCount; ++a) {
+    // Every arm patches all three fields EXPLICITLY, including the off arm.
+    // Reading them from the genome instead is the bug gazeprobe shipped: the
+    // day someone switches the mechanism on in dna/default.toml, the control
+    // arm would silently stop being a control and all three rows would agree.
+    std::vector<uint8_t> variant = dna_blob;
+    {
+      const size_t base = sizeof(aibaby::DnaHeader) +
+                          sizeof(aibaby::DnaModule) * dna0.module_count() +
+                          sizeof(aibaby::DnaProjection) * size_t(tract);
+      const float u = kStpArms[a].use;
+      const float rec = kStpArms[a].recover_ms;
+      const float fac = kStpArms[a].facil_ms;
+      std::memcpy(variant.data() + base + offsetof(aibaby::DnaProjection, stp_use),
+                  &u, sizeof(u));
+      std::memcpy(variant.data() + base + offsetof(aibaby::DnaProjection, stp_recover_ms),
+                  &rec, sizeof(rec));
+      std::memcpy(variant.data() + base + offsetof(aibaby::DnaProjection, stp_facil_ms),
+                  &fac, sizeof(fac));
+    }
+
+    Session s;
+    if (!s.init(variant, error)) {
+      std::printf("  arm %s failed to hatch: %s\n", kStpArms[a].name, error.c_str());
+      return false;
+    }
+    const aibaby::Network& net = s.brain.network();
+    Ear ear;
+    if (!ear.configure(acfg, error)) {
+      std::printf("  transducer failed: %s\n", error.c_str());
+      return false;
+    }
+    VowelSource voice(acfg.sample_rate);
+    std::vector<float> pcm(samples_per_tick);
+    const Word& w = kWords[0];
+
+    // One RNG per arm, seeded identically, so the shuffled schedule is the
+    // same irregular pattern in all three. A different draw per arm would put
+    // the arms on different stimuli, which is the mistake `instrument` exists
+    // to shout about.
+    aibaby::Rng rng;
+    rng.seed(dna0.header().seed ^ 0x57Bu);
+
+    // Silence first, then the rates in order, then the shuffled null. The
+    // creature carries state across conditions — that is what a dynamic
+    // synapse IS — so each block opens with silence long enough for the
+    // longest recovery constant to have run several times over.
+    for (uint32_t c = 0; c < kStpConditions; ++c) {
+      const bool silent = (c == 0);
+      const bool shuffled = (c == kStpConditions - 1);
+      const double rate = shuffled ? 4.0 : (silent ? 0.0 : double(kStpRates[c - 1]));
+      const double half_ms = silent ? 0.0 : 500.0 / rate;
+
+      // The shuffled schedule: the same mean half-period and so the same total
+      // sound, with each half drawn uniformly over +/-75% of it. Precomputed
+      // rather than drawn inline so that both halves of a burst are known
+      // before the block starts and the burst count is exact.
+      std::vector<uint64_t> schedule;
+      if (shuffled) {
+        uint64_t total = 0;
+        while (total < budget + 4000) {
+          const double f = 0.25 + 1.5 * double(rng.uniform());
+          const uint64_t len = uint64_t(half_ms * f) + 1;
+          schedule.push_back(len);
+          total += len;
+        }
+      }
+
+      uint64_t aud_spikes = 0, cen_spikes = 0, bursts = 0, scored = 0;
+      double gain_sum = 0.0;
+      size_t slot = 0;
+      uint64_t slot_left = schedule.empty() ? 0 : schedule[0];
+      bool sounding = false;
+      bool prev_sounding = false;
+
+      for (uint64_t t = 0; t < kStpSettleTicks + budget; ++t) {
+        const bool measuring = t >= kStpSettleTicks;
+        const uint64_t bt = measuring ? t - kStpSettleTicks : t;
+        if (silent) {
+          sounding = false;
+        } else if (shuffled) {
+          if (slot_left == 0) {
+            slot = (slot + 1) % schedule.size();
+            slot_left = schedule[slot];
+            sounding = !sounding;
+          }
+          --slot_left;
+        } else {
+          sounding = std::fmod(double(bt), 2.0 * half_ms) < half_ms;
+        }
+        // A burst is counted on its rising edge, which is the event the
+        // mechanism is about: Webb's BN1 responds to onsets and to nothing
+        // else, so "per burst" has to mean "per onset" and not "per second".
+        if (measuring && sounding && !prev_sounding) ++bursts;
+        prev_sounding = sounding;
+
+        voice.render(sounding ? w.f0 : 0.0f, w.f1, w.f2, sounding ? 0.5f : 0.0f,
+                     pcm.data(), samples_per_tick);
+        ear.tick(s.brain, pcm.data(), samples_per_tick);
+        s.brain.step();
+        if (!measuring || s.brain.asleep()) continue;
+        aud_spikes += net.module(uint32_t(aud_m)).spikes;
+        cen_spikes += net.module(uint32_t(cen_m)).spikes;
+        gain_sum += double(net.stp_gain(uint32_t(aud_m), uint32_t(cen_m)));
+        ++scored;
+      }
+
+      StpRow& row = rows[a][c];
+      row.bursts = uint32_t(bursts);
+      const double per = scored ? double(scored) : 1.0;
+      row.aud_per_tick = double(aud_spikes) / per;
+      row.cen_per_tick = double(cen_spikes) / per;
+      row.transfer = aud_spikes ? double(cen_spikes) / double(aud_spikes) : 0.0;
+      row.gain = scored ? gain_sum / double(scored) : 1.0;
+    }
+  }
+
+  std::printf("\n    %-13s %-9s %-7s %-10s %-10s %-10s %-8s %-8s\n", "arm", "envelope",
+              "bursts", "aud/tick", "cen/tick", "transfer", "vs off", "gain");
+  for (uint32_t a = 0; a < kStpArmCount; ++a) {
+    for (uint32_t c = 0; c < kStpConditions; ++c) {
+      char envelope[16];
+      if (c == 0) std::snprintf(envelope, sizeof(envelope), "silence");
+      else if (c == kStpConditions - 1) std::snprintf(envelope, sizeof(envelope), "shuffled");
+      else std::snprintf(envelope, sizeof(envelope), "%.0f Hz", double(kStpRates[c - 1]));
+      const StpRow& r = rows[a][c];
+      const double base = rows[0][c].transfer;
+      std::printf("    %-13s %-9s %-7u %-10.2f %-10.2f %-10.4f %-8.3f %-8.3f\n",
+                  c == 0 ? kStpArms[a].name : "", envelope, r.bursts, r.aud_per_tick,
+                  r.cen_per_tick, r.transfer, base > 0.0 ? r.transfer / base : 0.0,
+                  r.gain);
+    }
+    if (a + 1 < kStpArmCount) std::printf("\n");
+  }
+
+  // How strongly the delivered gain tracks the traffic the synapse saw. This is
+  // the mechanism's defining property stated as a number: a dynamic synapse
+  // delivers less the more it is used, so over the six conditions the gain and
+  // the presynaptic rate have to move in opposite directions. A constant-weight
+  // synapse would give 0 here, and so would a kernel that had computed the
+  // depression from anything other than this synapse's own history.
+  auto rate_gain_corr = [&](uint32_t arm) {
+    double mx = 0.0, my = 0.0;
+    for (uint32_t c = 0; c < kStpConditions; ++c) {
+      mx += rows[arm][c].aud_per_tick;
+      my += rows[arm][c].gain;
+    }
+    mx /= double(kStpConditions);
+    my /= double(kStpConditions);
+    double num = 0.0, dx = 0.0, dy = 0.0;
+    for (uint32_t c = 0; c < kStpConditions; ++c) {
+      const double p = rows[arm][c].aud_per_tick - mx, q = rows[arm][c].gain - my;
+      num += p * q; dx += p * p; dy += q * q;
+    }
+    return (dx > 0.0 && dy > 0.0) ? num / std::sqrt(dx * dy) : 0.0;
+  };
+
+  double off_worst = 1.0, dep_worst = 0.0, fac_best = 2.0;
+  for (uint32_t c = 0; c < kStpConditions; ++c) {
+    if (std::fabs(rows[0][c].gain - 1.0) > std::fabs(off_worst - 1.0)) off_worst = rows[0][c].gain;
+    if (rows[1][c].gain > dep_worst) dep_worst = rows[1][c].gain;
+    if (rows[2][c].gain < fac_best) fac_best = rows[2][c].gain;
+  }
+  const double dep_corr = rate_gain_corr(1);
+
+  std::printf("\n  gain is what the tract DELIVERED as a fraction of its genome weight.\n"
+              "  transfer is central's spikes per auditory spike — a ratio, because the\n"
+              "  ear's own response to an envelope is not flat and a count at central\n"
+              "  would mostly be measuring that. `vs off` is the same ratio against the\n"
+              "  off arm's row for the SAME envelope, and it is where an envelope filter\n"
+              "  would show up: a gain change is flat down that column and a filter is\n"
+              "  not.\n");
+  std::printf("\n  off arm gain           %.4f   (must be 1.0000 — the control)\n"
+              "  depressing, worst      %.3f   (must be under 0.950)\n"
+              "  facilitating, best     %.3f   (must be over 1.050)\n"
+              "  rate/gain corr, dep.   %+.3f   (must be under -0.500)\n",
+              off_worst, dep_worst, fac_best, dep_corr);
+
+  const bool control_ok = std::fabs(off_worst - 1.0) < 1e-6;
+  const bool corners_ok = dep_worst < 0.95 && fac_best > 1.05;
+  const bool reads_rate = dep_corr < -0.5;
+  if (!control_ok) {
+    std::printf("\n  FAIL — the off arm did not deliver its full weight. The patched blob\n"
+                "  is not the creature it claims to be, so no row above means anything.\n");
+  } else if (!corners_ok) {
+    std::printf("\n  FAIL — the two corners did not do opposite things. A Tsodyks-Markram\n"
+                "  synapse cannot depress and facilitate the same way, so the kernel is\n"
+                "  wrong rather than the creature being surprising.\n");
+  } else if (!reads_rate) {
+    std::printf("\n  FAIL — the delivered gain does not track the traffic the synapse saw.\n"
+                "  Depression that is blind to presynaptic rate is not depression.\n");
+  } else {
+    std::printf("\n  PASS — the mechanism runs, the two corners do opposite things, and\n"
+                "  what each delivers tracks the traffic it carried.\n");
+  }
+
+  // What the table says about this creature, which is not the same question.
+  std::printf("\n  WHAT IT BUYS HERE, read off `vs off` and the silence row:\n"
+              "  the auditory module is rate-regulated (§3.1), so its total output\n"
+              "  barely moves between silence and speech — %.2f against %.2f spikes per\n"
+              "  tick, %.1f%%. A dynamic synapse reads presynaptic RATE, so on this\n"
+              "  tract it sees almost none of the envelope and acts as a gain change:\n"
+              "  `vs off` is flat across the envelopes rather than peaked. Webb's BN1\n"
+              "  sits on an auditory nerve whose rate follows the sound; this one does\n"
+              "  not. That is a fact about where the tract is, not about the mechanism.\n",
+              rows[0][0].aud_per_tick, rows[0][1].aud_per_tick,
+              rows[0][0].aud_per_tick > 0.0
+                  ? 100.0 * (rows[0][1].aud_per_tick / rows[0][0].aud_per_tick - 1.0)
+                  : 0.0);
+  (void)verbose;
+  return control_ok && corners_ok && reads_rate;
+}
+
 }  // namespace aibaby_host

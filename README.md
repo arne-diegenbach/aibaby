@@ -121,6 +121,7 @@ a canvas, so each has a headless experiment that prints a number and a verdict.
 ./build/aibaby --experiment audprobe    --ticks 240000  # which word, and how fast each module knows
 ./build/aibaby --experiment eligprobe   --ticks 300000  # can R-STDP tell the two objects apart
 ./build/aibaby --experiment dwprobe     --ticks 300000  # what reward actually writes onto a tract
+./build/aibaby --experiment stpprobe    --ticks 120000  # DNA v36: is a dynamic synapse a filter here
 ./build/aibaby --experiment snapshot    --ticks 2400000 # §8: resume is exact
 ```
 
@@ -2941,6 +2942,117 @@ refuse out-of-range labels rather than corrupting memory: silently clamping
 would have been worse, because it would score a four-way problem as a two-way
 one and report a number.
 
+### DNA v36 — dynamic synapses, after Webb's cricket: **built, and it is a gain knob here**
+
+The one timescale this brain has never had. Every plasticity mechanism it owns —
+R-STDP, the eligibility trace, myelination, synaptic scaling, intrinsic
+plasticity — runs on seconds to minutes, and a synapse's *transmission* has been
+a constant since M1. Barbara Webb's cricket model puts song recognition nowhere
+else: her BN1 fires efficiently only when the gap between sound bursts is long
+enough for it to have recovered from synaptic depression, and BN2 only when the
+onsets BN1 reports arrive close enough together for facilitation to still be
+standing. The bandpass on syllable rate is a side effect of two synapses with
+different time constants, and no part of it is learned (Webb & Scutt 2000; Webb,
+Reeve, Horchler & Quinn 2003 — see [References](#references)).
+
+Two things about the name, because they change what is worth building. There is
+no novel *cell* in that model — the neuron is an ordinary leaky
+integrate-and-fire, which this creature has had since M1. And the localisation
+half of it has no substrate here: Webb's directional response is a latency race
+between two ears, and this creature has one mono cochlea. What ports is the
+recognition half, and the recognition half lives in the synapse.
+
+So v36 is a Tsodyks–Markram synapse on any tract that asks for one — `stp_use`,
+`stp_recover_ms`, `stp_facil_ms`, all three 0 in the shipped genome, which keeps
+the hash at `23c4eb2c7c45d05c`. Release is normalised by U, so the first spike
+after a silence delivers exactly the genome's `weight` and switching the
+mechanism on is not secretly a recalibration.
+
+**The second reason to want it** was the standing G3 diagnosis. A depressing
+synapse transmits its changes and not its steady traffic — it is a per-edge
+common-mode remover, the same job DNA v21–v24's pooling interneurons do at
+population level. That is the one thing in this project that measurably worked
+(+0.077, 3/3 families) and its documented failure mode is common-mode
+*swamping*: one shared scalar subtracted from every target. A synapse can only
+deplete in proportion to what it individually carries, so it has no shared term
+to swamp with.
+
+#### What `stpprobe` measured
+
+Three arms on `auditory→central` — the constant-weight synapse, a depressing
+corner (U 0.5, τ_rec 300 ms) and a facilitating one (U 0.1, τ_rec 50 ms,
+τ_facil 300 ms) — against amplitude envelopes at a **fixed 50% duty cycle**, so
+every rate carries identical total sound and only the timing differs. `gain` is
+what the tract delivered as a fraction of its genome weight; `vs off` is
+central's spikes-per-auditory-spike against the off arm at the same envelope,
+which is where an envelope filter would show up.
+
+```
+arm           envelope  aud/tick  transfer  vs off   gain
+off           silence   1.30      2.1799    1.000    1.000
+              2 Hz      1.33      2.1173    1.000    1.000
+              12 Hz     0.83      3.2921    1.000    1.000
+depressing    silence   1.26      2.1178    0.971    0.656
+              2 Hz      1.37      1.9492    0.921    0.630
+              12 Hz     0.85      3.1527    0.958    0.676
+facilitating  silence   1.25      2.6017    1.193    1.725
+              2 Hz      1.37      2.4185    1.142    1.804
+              12 Hz     0.83      3.6091    1.096    1.734
+```
+
+The kernel is right: the off arm delivers 1.0000 exactly, the two corners do
+opposite things (0.63 against 1.80), and the delivered gain correlates −0.907
+with the traffic the synapse actually carried. That correlation is the PASS
+criterion, because it is a statement about arithmetic and a failure there is a
+bug.
+
+**And the `vs off` column is flat.** 0.92–0.98 down the depressing arm, 1.04–1.19
+down the facilitating one, with no peak anywhere. On this tract a dynamic
+synapse is a gain knob and not an envelope filter, and the silence row says why
+in one number: **the auditory module emits 1.30 spikes per tick in silence and
+1.33 during speech — 2.8%.** §3.1's intrinsic plasticity holds its rate at a
+setpoint, so its total output barely knows whether anyone is talking. A dynamic
+synapse reads presynaptic rate. Webb's BN1 sits on an auditory nerve whose rate
+follows the sound; this one sits on a module regulated not to.
+
+That is a fact about *where the tract is*, not about the mechanism, and it is a
+sharper statement of something this project has recorded twice before under
+other names. It also names the one condition under which the mechanism would be
+worth another run: a presynaptic population whose rate is allowed to follow its
+input. The ear's own encoder is latency-coded and unregulated; `auditory` is
+not. Nothing has yet been built on that difference.
+
+Two instrument limits worth keeping. The cochlea's window is 32 ms with a 16 ms
+hop, so an envelope faster than ~15 Hz arrives as steady energy and the probe
+stops at 12 Hz — Webb's crickets work at 20–30 Hz syllables through an ear with
+microsecond resolution, and the band this ear resolves is 1–12 Hz, which is
+where the syllable rate of speech sits anyway. And synaptic scaling still
+regulates the *nominal* weight, so a hard-depressing tract delivers less than
+§3.1 believes it does; the resting weight is the only rate-independent thing
+there is to regulate.
+
+#### A bug this found, which was older than the mechanism
+
+Adding two per-synapse arrays meant reading every place a synapse's state is
+moved, and `consolidate()`'s pruning pass moves them: survivors are compacted
+down into the vacated slots. It copies target, source, weight, eligibility,
+traffic and both delays — and it never copied `syn_elig_mean_`. A synapse that
+slid down a slot inherited **DNA v16's eligibility baseline from the synapse
+that used to be there**, so reward cashed its trace against another edge's
+history.
+
+It has been that way since v16 and nothing caught it, for two reasons that
+compound. It needs a sleep prune, so nothing under ~1.04M ticks can reach it at
+all. And `elig_baseline_tau_ms` is 0 in the shipped genome, which leaves that
+array all zeroes — on the creature everyone actually runs, the bug copies 0 over
+0. `determinism` at 1.8M is bit-identical before and after the fix, and the
+pinned hash does not move.
+
+On a genome with v16 switched on it moves: `41d3a15bdb42cb47` →
+`b163ef30730320f1` at 1.8M ticks. That pair is the evidence the fix is a fix
+rather than a no-op, and it is the general shape of this class — a mechanism
+that ships off cannot be checked by any test run against the shipped genome.
+
 ## Design decisions that were not obvious
 
 These were all discovered by measurement, and each one is the difference
@@ -3120,3 +3232,39 @@ dna/      Genomes.
 The core never sees a socket, a file, or a thread. The host is thin and the
 browser is a peripheral, which is what keeps the ESP32 port (M5) a build
 question rather than a rewrite.
+
+## References
+
+The mechanisms here are named after the work they come from. These are the ones
+whose papers were read rather than remembered.
+
+**Dynamic synapses and cricket phonotaxis (DNA v36).**
+
+- Webb, B. & Scutt, T. (2000). *A simple latency-dependent spiking-neuron model
+  of cricket phonotaxis.* Biological Cybernetics 82, 247–269.
+  <https://link.springer.com/article/10.1007/s004220050024>
+- Reeve, R. & Webb, B. (2003). *New neural circuits for robot phonotaxis.*
+  Philosophical Transactions of the Royal Society A 361, 2245–2266.
+- Webb, B., Reeve, R., Horchler, A. & Quinn, R. (2003). *Testing a model of
+  cricket phonotaxis on an outdoor robot platform.*
+  <https://homepages.inf.ed.ac.uk/bwebb/publications/timr03.pdf> — the clearest
+  short description of the circuit: BN1 recovering from synaptic depression at
+  the right inter-burst gap, BN2 requiring those onsets close together, and the
+  four-pair auditory circuit around them.
+- Project overview and publication list:
+  <https://homepages.inf.ed.ac.uk/bwebb/cricket/main.html>
+
+**Everything else.**
+
+- **The synapse model itself.** Tsodyks, M. & Markram, H. (1997). *The neural
+  code between neocortical pyramidal neurons depends on neurotransmitter release
+  probability.* PNAS 94, 719–723. The u/R recursion in
+  `DnaProjection::stp_use` is theirs; Webb's group's contribution is what to
+  point it at.
+- **Complementary learning systems (DNA v13, the hippocampus role).**
+  McClelland, J., McNaughton, B. & O'Reilly, R. (1995).
+- **Song-system exploration (DNA v10, LMAN).** The anterior forebrain pathway of
+  the songbird, which is where reward-modulated motor variability comes from.
+- **Oriented receptive fields (DNA v7).** Hubel & Wiesel's simple cells; the
+  curvature stage of DNA v8 is V4's computation at V2's position in the
+  hierarchy.
