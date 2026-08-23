@@ -81,6 +81,11 @@ size_t Network::required_bytes(const Dna& dna) {
   for (uint32_t i = 0; i < dna.header().projection_count; ++i) {
     if (dna.projection(i).stp_use > 0.0f) stp = true;
   }
+  // DNA v37. Two traces per neuron, and only for a genome with a burst code.
+  bool burst = false;
+  for (uint32_t m = 0; m < dna.module_count(); ++m) {
+    if (dna.module(m).burst_ms > 0.0f) burst = true;
+  }
 
   // Mirrors the allocation block in build(), in the same order.
   const size_t per_neuron = 19 * sizeof(Scalar)     // v, v_rest, threshold, target_rate,
@@ -105,6 +110,8 @@ size_t Network::required_bytes(const Dna& dna) {
   // before the mechanism existed.
   if (lateral) total += capacity * sizeof(Scalar);
   if (stp) total += capacity * sizeof(uint32_t) + 2 * synapse_pool * sizeof(Scalar);
+  if (burst) total += 2 * capacity * sizeof(Scalar);
+  if (dna.header().consolidate.prune_compete > 0.0f) total += capacity * sizeof(Scalar);
 
   // Slack for per-allocation alignment padding.
   total += 1024;
@@ -139,6 +146,14 @@ bool Network::build(const Dna& dna, Arena& arena, Rng& rng) {
   post_decay_ = decay_per(dt_ms_, Scalar(h.stdp.tau_minus_ms));
   const Scalar interval_ms = dt_ms_ * Scalar(h.sim.plasticity_interval_ticks);
   elig_decay_ = decay_per(interval_ms, Scalar(h.stdp.tau_elig_ms));
+  // DNA v39. Per-module, and identical to the global value wherever the scale
+  // is 1 — decay_per is deterministic, so a genome that scales nothing gets
+  // the same float in every slot and the same brain it had before v39.
+  for (uint32_t m = 0; m < kMaxModules; ++m) elig_decay_mod_[m] = elig_decay_;
+  for (uint32_t m = 0; m < dna.module_count() && m < kMaxModules; ++m) {
+    const Scalar sc = Scalar(dna.module(m).elig_tau_scale);
+    elig_decay_mod_[m] = decay_per(interval_ms, Scalar(h.stdp.tau_elig_ms) * sc);
+  }
   // Per cash-in, not per tick: the baseline is only ever read and written in
   // apply_reward(), so its time constant is expressed on that clock.
   elig_pre_centre_ = Scalar(h.stdp.elig_pre_centre);
@@ -159,6 +174,11 @@ bool Network::build(const Dna& dna, Arena& arena, Rng& rng) {
     if (pr.src >= kMaxModules || pr.dst >= kMaxModules) continue;
     hebb_pair_[pr.src][pr.dst] = Scalar(pr.hebb);
     if (pr.hebb != 0.0f) any_hebb_pair_ = true;
+    // DNA v37, same fold and the same caveat about a shared pair. The genome
+    // loader has already refused a pathway whose target has no burst code and
+    // a genome with no baseline time constant, so this needs no second guard.
+    burst_pair_[pr.src][pr.dst] = Scalar(pr.burst_learn);
+    if (pr.burst_learn != 0.0f) any_burst_pair_ = true;
     // DNA v25, same fold and the same caveat. A tract is apical only if the
     // module it lands on actually has a compartment for it to land in — a
     // genome that marks a projection apical but leaves the target's threshold
@@ -221,6 +241,23 @@ bool Network::build(const Dna& dna, Arena& arena, Rng& rng) {
     plateau_gate_[m] = fed ? clampf(Scalar(dm.plateau_gate), kZero, kOne) : kZero;
     if (plateau_gate_[m] > kZero) any_plateau_gate_ = true;
   }
+  // DNA v37. The burst code, per module. `burst_ticks_` is the ISI at or under
+  // which a spike is scored as part of a burst, and it is a *tick* count
+  // because the comparison happens against last_spike_ in the tick loop.
+  burst_base_alpha_ = h.stdp.burst_baseline_tau_ms > 0.0f
+                          ? clampf(dt_ms_ / Scalar(h.stdp.burst_baseline_tau_ms), kZero, kOne)
+                          : kZero;
+  for (uint32_t m = 0; m < module_count_ && m < kMaxModules; ++m) {
+    const DnaModule& dm = dna.module(m);
+    burst_ticks_[m] = 0;
+    burst_refrac_[m] = kOne;
+    if (dm.burst_ms <= 0.0f) continue;
+    burst_ticks_[m] = uint32_t(Scalar(dm.burst_ms) / dt_ms_ + Scalar(0.5));
+    if (burst_ticks_[m] == 0) burst_ticks_[m] = 1;
+    burst_refrac_[m] = clampf(Scalar(dm.burst_refrac_scale), kZero, kOne);
+    any_burst_ = true;
+  }
+
   // DNA v26 oscillations. The phase increment is cycles-per-tick scaled to a
   // full uint32 turn: at 1 kHz and 6 Hz theta that is 0.006 of a turn per tick,
   // and the truncation to an integer costs less than a millionth of a cycle.
@@ -328,6 +365,13 @@ bool Network::build(const Dna& dna, Arena& arena, Rng& rng) {
   syn_delay_ = arena.alloc_zeroed<uint16_t>(synapse_pool_);
   syn_delay0_ = arena.alloc_zeroed<uint16_t>(synapse_pool_);
   if (any_lateral_) lateral_ = arena.alloc_zeroed<Scalar>(capacity_);
+  prune_compete_ = Scalar(h.consolidate.prune_compete);
+  prune_compete_min_in_ = h.consolidate.prune_compete_min_in;
+  if (prune_compete_ > kZero) in_mean_ = arena.alloc_zeroed<Scalar>(capacity_);
+  if (any_burst_) {
+    burst_rate_ = arena.alloc_zeroed<Scalar>(capacity_);
+    burst_base_ = arena.alloc_zeroed<Scalar>(capacity_);
+  }
   if (any_stp_) {
     prev_spike_ = arena.alloc_zeroed<uint32_t>(capacity_);
     syn_res_ = arena.alloc_zeroed<Scalar>(synapse_pool_);
@@ -1136,7 +1180,33 @@ void Network::step() {
         v_[i] += leak_alpha_[i] * (v_rest_[i] - v_[i]) + drive;
         if (v_[i] >= threshold_[i]) {
           v_[i] = v_rest_[i];
-          refrac_until_[i] = uint32_t(tick_) + refrac_ticks_[i];
+          // DNA v37. Is this spike part of a burst, and does the tuft get a
+          // say in whether the next one is?
+          //
+          // The ISI test uses last_spike_ before it is advanced below. A
+          // neuron that has never fired carries last_spike_ 0, so within
+          // burst_ms of tick 0 its very first spike scores as a burst spike —
+          // one spike per neuron, in the first few milliseconds of a life,
+          // against a trace every experiment settles for over a second before
+          // reading. Worth knowing about; not worth an array to fix.
+          if (burst_ticks_[m]) {
+            const bool bursty = uint32_t(tick_) - last_spike_[i] <= burst_ticks_[m];
+            burst_rate_[i] += rate_fast_alpha_ * ((bursty ? spike_rate_unit_ : kZero) -
+                                                  burst_rate_[i]);
+            // Larkum's BAC firing: a dendritic plateau turns a single spike
+            // into a doublet. Expressed as a shorter refractory period, which
+            // is the same statement about the soma and costs no second spike
+            // source — a compartment must never be able to *create* activity
+            // in a silent module, which is the invariant DNA v25 states.
+            uint32_t refrac = refrac_ticks_[i];
+            if (any_apical_ && burst_refrac_[m] < kOne && tick_ < plateau_until_[i]) {
+              refrac = uint32_t(Scalar(refrac) * burst_refrac_[m] + Scalar(0.5));
+              if (refrac == 0) refrac = 1;
+            }
+            refrac_until_[i] = uint32_t(tick_) + refrac;
+          } else {
+            refrac_until_[i] = uint32_t(tick_) + refrac_ticks_[i];
+          }
           // DNA v36. The delivery loop runs after this one and needs the
           // interval since the *previous* release, so the value being
           // overwritten here is saved before it is lost.
@@ -1146,6 +1216,16 @@ void Network::step() {
           ++ms.spikes;
           spiked = true;
         }
+      }
+
+      // DNA v37. A neuron that did not spike this tick still lets its burst
+      // rate decay, and every neuron's baseline follows its own burst rate on
+      // the genome's slow constant. Decaying only on spikes would make the
+      // trace a per-spike average rather than a rate, and a silent neuron
+      // would keep the burst rate it had when it stopped.
+      if (burst_ticks_[m]) {
+        if (!spiked) burst_rate_[i] += rate_fast_alpha_ * (kZero - burst_rate_[i]);
+        burst_base_[i] += burst_base_alpha_ * (burst_rate_[i] - burst_base_[i]);
       }
 
       const Scalar inst = spiked ? spike_rate_unit_ : kZero;
@@ -1408,7 +1488,8 @@ void Network::apply_reward_impl(const Scalar* per_module, bool any) {
       if (is_inhib_[i] && !inhib_plastic_) {
         // Inhibition still decays its traces; it just does not learn.
         for (uint32_t k2 = 0; k2 < n; ++k2) {
-          const Scalar e = syn_elig_[base + k2] * elig_decay_;
+          const Scalar e =
+              syn_elig_[base + k2] * elig_decay_mod_[module_of_[syn_target_[base + k2]]];
           syn_elig_[base + k2] = e;
           syn_traffic_[base + k2] *= traffic_decay_;
           if (elig_mean_alpha_ > kZero) {
@@ -1424,7 +1505,8 @@ void Network::apply_reward_impl(const Scalar* per_module, bool any) {
 
       for (uint32_t k2 = 0; k2 < n; ++k2) {
         const uint32_t syn = base + k2;
-        const Scalar e = syn_elig_[syn] * elig_decay_;
+        // DNA v39: the trace decays at its TARGET module's rate.
+        const Scalar e = syn_elig_[syn] * elig_decay_mod_[module_of_[syn_target_[syn]]];
         syn_elig_[syn] = e;
         syn_traffic_[syn] *= traffic_decay_;
         // DNA v16: reward multiplies the *deviation* from this synapse's own
@@ -1451,6 +1533,26 @@ void Network::apply_reward_impl(const Scalar* per_module, bool any) {
                                critical[module_of_[syn_target_[syn]]] *
                                (eta_floor + eta_span * (kOne - myelination(syn)));
           syn_weight_[syn] = clampf(syn_weight_[syn] + eta_h * credit * sign, lo, hi);
+        }
+        // DNA v37. Burst-dependent plasticity: the third factor is this
+        // synapse's OWN postsynaptic neuron rather than a scalar broadcast to
+        // the whole brain. Signed by the baseline subtraction — a target
+        // bursting above what it ordinarily does potentiates its afferents,
+        // one bursting below depresses them — and reward-independent, which is
+        // what makes it a different class from everything in the conditioning
+        // fence rather than a rescaling of it.
+        if (any_burst_pair_) {
+          const uint32_t post = syn_target_[syn];
+          const Scalar burst_here =
+              burst_pair_[module_of_[syn_source_[syn]]][module_of_[post]];
+          if (burst_here != kZero) {
+            const Scalar signal = burst_rate_[post] - burst_base_[post];
+            const Scalar eta_b = burst_here * eta_scale_[module_of_[post]] *
+                                 critical[module_of_[post]] *
+                                 (eta_floor + eta_span * (kOne - myelination(syn)));
+            syn_weight_[syn] =
+                clampf(syn_weight_[syn] + eta_b * credit * signal * sign, lo, hi);
+          }
         }
         const Scalar r_syn = per_module[module_of_[syn_target_[syn]]];
         if (r_syn != kZero) {
@@ -1774,6 +1876,10 @@ void Network::init_neuron(uint32_t i, uint32_t m, Scalar x, Scalar y, Scalar z) 
   refrac_until_[i] = 0;
   last_spike_[i] = 0;
   if (any_stp_) prev_spike_[i] = 0;
+  if (any_burst_) {
+    burst_rate_[i] = kZero;
+    burst_base_[i] = kZero;
+  }
   // DNA v25: born with a quiet tuft and no plateau in progress. Unlike the
   // rate estimate above there is nothing to flatter here — a plateau is an
   // event, and inheriting one would amplify the new neuron's first inputs for
@@ -1921,6 +2027,25 @@ uint32_t Network::prune_synapses() {
   const Scalar w_floor = Scalar(c.prune_weight);
   const Scalar t_floor = Scalar(c.prune_traffic);
   uint32_t pruned = 0;
+  competed_out_ = 0;
+
+  // DNA v38. What each target neuron's afferents look like as a population,
+  // computed before anything is removed so that every synapse is judged
+  // against the same distribution — pruning as we go would let a synapse late
+  // in a neuron's list compete against a mean its own removed neighbours had
+  // already lowered.
+  if (prune_compete_ > kZero) {
+    for (uint32_t i = 0; i < capacity_; ++i) {
+      in_mean_[i] = kZero;
+      if (dead_[i]) continue;
+      const uint32_t n_in = in_count_[i];
+      if (n_in == 0) continue;
+      const uint32_t base_in = syn_base_[i];
+      Scalar sum = kZero;
+      for (uint32_t s = 0; s < n_in; ++s) sum += absf(syn_weight_[syn_in_[base_in + s]]);
+      in_mean_[i] = sum / Scalar(n_in);
+    }
+  }
 
   for (uint32_t m = 0; m < module_count_; ++m) {
     const ModuleState& ms = modules_[m];
@@ -1933,7 +2058,18 @@ uint32_t Network::prune_synapses() {
         const uint32_t dst = syn_target_[syn];
         const bool doomed = !dead_[i] && absf(syn_weight_[syn]) < w_floor &&
                             syn_traffic_[syn] < t_floor;
-        if (doomed || dead_[dst]) {
+        // DNA v38. The competitive test, and the missing traffic condition is
+        // the whole mechanism: development removes the synapse that lost to
+        // its neighbours on the same cell, not the one that fell silent. It is
+        // judged against the pre-pass mean, and only where there are enough
+        // afferents for a mean to mean anything.
+        bool outcompeted = false;
+        if (prune_compete_ > kZero && !dead_[i] && !dead_[dst] &&
+            in_count_[dst] >= prune_compete_min_in_) {
+          outcompeted = absf(syn_weight_[syn]) < prune_compete_ * in_mean_[dst];
+          if (outcompeted && !doomed) ++competed_out_;
+        }
+        if (doomed || outcompeted || dead_[dst]) {
           // The setpoint follows the structure. Leaving it alone would make
           // scaling treat the removed weight as a deficit and boost the
           // survivors to replace it, which is redistribution, not pruning.
@@ -2172,6 +2308,35 @@ Scalar Network::stp_gain(uint32_t src, uint32_t dst) const {
   return counted ? sum / Scalar(counted) : kOne;
 }
 
+Scalar Network::mean_in_weight_of(uint32_t neuron) const {
+  const uint32_t n_in = in_count_[neuron];
+  if (n_in == 0 || dead_[neuron]) return kZero;
+  const uint32_t base = syn_base_[neuron];
+  Scalar sum = kZero;
+  for (uint32_t s = 0; s < n_in; ++s) sum += absf(syn_weight_[syn_in_[base + s]]);
+  return sum / Scalar(n_in);
+}
+
+Scalar Network::mean_eligibility(uint32_t module) const {
+  Scalar sum = kZero;
+  uint32_t counted = 0;
+  for (uint32_t m = 0; m < module_count_; ++m) {
+    const ModuleState& ms = modules_[m];
+    for (uint32_t k = 0; k < ms.count; ++k) {
+      const uint32_t i = ms.begin + k;
+      if (dead_[i]) continue;
+      const uint32_t base = syn_base_[i];
+      for (uint32_t j = 0; j < syn_count_[i]; ++j) {
+        const uint32_t syn = base + j;
+        if (module_of_[syn_target_[syn]] != module) continue;
+        sum += absf(syn_elig_[syn]);
+        ++counted;
+      }
+    }
+  }
+  return counted ? sum / Scalar(counted) : kZero;
+}
+
 uint64_t Network::state_hash() const {
   uint64_t h = 0xCBF29CE484222325ULL;
   hash_bytes(h, &tick_, sizeof(tick_));
@@ -2190,6 +2355,10 @@ uint64_t Network::state_hash() const {
       hash_scalar(h, v_[i]);
       hash_scalar(h, threshold_[i]);
       hash_scalar(h, rate_ema_[i]);
+      // DNA v37. The burst trace is what plasticity reads, so a resumed
+      // creature has to agree about it. Hashed only when a genome has a burst
+      // code, so a creature without one keeps its pre-v37 hash.
+      if (any_burst_) hash_scalar(h, burst_rate_[i]);
       const uint32_t base = syn_base_[i];
       for (uint32_t s = 0; s < syn_count_[i]; ++s) {
         hash_scalar(h, syn_weight_[base + s]);

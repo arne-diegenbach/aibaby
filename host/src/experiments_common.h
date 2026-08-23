@@ -1317,6 +1317,10 @@ bool run_gazeprobe(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_invprobe(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_cpprobe(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_stpprobe(const std::vector<uint8_t>&, uint64_t, bool);
+bool run_burstprobe(const std::vector<uint8_t>&, uint64_t, bool);
+bool run_pruneprobe(const std::vector<uint8_t>&, uint64_t, bool);
+bool run_tauprobe(const std::vector<uint8_t>&, uint64_t, bool);
+bool run_ipprobe(const std::vector<uint8_t>&, uint64_t, bool);
 
 }  // namespace aibaby_host
 

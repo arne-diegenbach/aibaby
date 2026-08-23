@@ -334,6 +334,7 @@ bool compile_dna_toml(const std::string& path, std::vector<uint8_t>& out,
     header.stdp.eta = float(r.number("eta"));
     header.stdp.reward_clip = float(r.number("reward_clip"));
     header.stdp.elig_baseline_tau_ms = float(r.number("elig_baseline_tau_ms"));
+    header.stdp.burst_baseline_tau_ms = float(r.number("burst_baseline_tau_ms"));
     header.stdp.elig_pre_centre = float(r.number("elig_pre_centre"));
     collect(r);
   }
@@ -376,6 +377,8 @@ bool compile_dna_toml(const std::string& path, std::vector<uint8_t>& out,
     header.consolidate.downscale_floor = float(r.number("downscale_floor"));
     header.consolidate.prune_weight = float(r.number("prune_weight"));
     header.consolidate.prune_traffic = float(r.number("prune_traffic"));
+    header.consolidate.prune_compete = float(r.number("prune_compete"));
+    header.consolidate.prune_compete_min_in = uint32_t(r.number("prune_compete_min_in"));
     header.consolidate.replay_episodes = uint32_t(r.number("replay_episodes"));
     header.consolidate.replay_ticks = uint32_t(r.number("replay_ticks"));
     header.consolidate.replay_threshold = float(r.number("replay_threshold"));
@@ -561,6 +564,9 @@ bool compile_dna_toml(const std::string& path, std::vector<uint8_t>& out,
     m.lateral_gain = float(r.number("lateral_gain"));
     m.lateral_sigma = float(r.number("lateral_sigma"));
     m.lateral_fields = uint32_t(r.number("lateral_fields"));
+    m.burst_ms = float(r.number("burst_ms"));
+    m.burst_refrac_scale = float(r.number("burst_refrac_scale"));
+    m.elig_tau_scale = float(r.number("elig_tau_scale"));
 
     collect(r);
     module_blobs.push_back(m);
@@ -591,6 +597,7 @@ bool compile_dna_toml(const std::string& path, std::vector<uint8_t>& out,
     p.stp_use = float(r.number("stp_use"));
     p.stp_recover_ms = float(r.number("stp_recover_ms"));
     p.stp_facil_ms = float(r.number("stp_facil_ms"));
+    p.burst_learn = float(r.number("burst_learn"));
 
     // Spelled out on every projection rather than defaulted to "random", for
     // the reason the whole file has no defaults: a genome that does not say how

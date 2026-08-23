@@ -222,7 +222,78 @@ constexpr uint32_t kDnaMagic = 0x44424941;  // "AIBD"
 //     the only rate-independent thing there is to regulate.
 //
 //     See DnaProjection::stp_use and the `stpprobe` experiment.
-constexpr uint32_t kDnaVersion = 36;
+// 37: burst-dependent plasticity (Payeur, Guerguiev, Zenke, Richards & Naud,
+//     Nature Neuroscience 2021). A neuron's postsynaptic **burst** rather than
+//     its single spike carries the learning signal, and whether it bursts is
+//     controlled by its apical dendrite — so a feedback signal arriving at the
+//     tuft steers plasticity at that neuron's basal synapses. See the
+//     References section of the README.
+//
+//     **This is the one structurally untried class in the conditioning cap.**
+//     All five classes fenced there keep R-STDP's architecture: a *global
+//     scalar* third factor multiplying a local trace. Reward composition
+//     changed the scalar (v20), eligibility distribution changed the trace
+//     (v16/v17/v18), the Hebbian arms removed the scalar (v19/v23),
+//     representation changed the input (v12/v13/v14), perturbation changed the
+//     exploration. Not one of them changed the fact that every synapse in the
+//     brain is multiplied by the same number. What has never existed here is a
+//     **per-neuron, input-specific** learning signal, which is what e-prop
+//     (Bellec et al., Nature Communications 2020) says a spiking network needs
+//     and what a burst code is a biological way to deliver.
+//
+//     **It is the "selects" version of v29, which attenuated.** The plateau
+//     gate multiplies eligibility by (1 - gate), and its recorded post-mortem
+//     is that the gate *attenuates instead of selecting*. A burst signal is
+//     signed: a neuron bursting above its own baseline potentiates its
+//     afferents and one bursting below depresses them. That is selection, and
+//     it is the precise difference the v29 failure names.
+//
+//     **Two of the three ingredients the paper names were already here.** It
+//     asks for regenerative apical activity (v25), plasticity in feedback
+//     pathways (v14), and short-term synaptic dynamics (v36, built the same
+//     day). What was missing is the burst itself: nothing in this kernel had
+//     ever distinguished two spikes 5 ms apart from two spikes 500 ms apart.
+//
+//     See DnaModule::burst_ms, DnaModule::burst_refrac_scale,
+//     DnaProjection::burst_learn, DnaStdp::burst_baseline_tau_ms, and the
+//     `burstprobe` experiment.
+// 38: competitive pruning. §3.6 removes a synapse that is weak AND idle, and
+//     the exuberance post-mortem (v28/v30) measured that the second half is the
+//     binding constraint: "in an exuberant tract every synapse carries traffic
+//     because the source fires. An absolute traffic floor cannot express what
+//     development actually does, which is COMPETITION — a synapse is removed
+//     because its neighbours on the same target won, not because it fell below
+//     a fixed bar." That file named the change and declined to build it, which
+//     is what this is.
+//
+//     A synapse is now also prunable when it is weak *relative to the other
+//     afferents of its own target*, with no idle test at all. Four arms on
+//     `vision->central` had measured at most 58 of ~18,400 exuberant synapses
+//     removed over seven sleep cycles, 0.3%, with no trend across a 10x range
+//     of birth weight — selection had no gradient because nothing born could
+//     ever become idle. A relative bar has a gradient by construction: half of
+//     any distribution is below its own mean.
+//
+//     See DnaConsolidate::prune_compete.
+// 39: a per-module eligibility time constant, which is e-prop's one concrete
+//     experimental prediction made testable here (Bellec, Scherr, Subramoney,
+//     Hajek, Salaj, Legenstein & Maass, Nature Communications 2020: "the time
+//     constant of the eligibility trace for a synapse is correlated with the
+//     time constant for the history-dependence of the firing activity of the
+//     postsynaptic neuron"). This creature has one global tau_elig for every
+//     synapse in the brain, which asserts that the larynx and the association
+//     module credit the past over the same window. They do not: the larynx has
+//     800 ms of articulator inertia and central carries an object code over
+//     hundreds of ms.
+//
+//     **Honest placement: this lands inside a fence.** "Eligibility
+//     distribution" is one of the five refuted conditioning classes — v16
+//     subtracted a baseline, v17 scaled by the presynaptic mean, v18 selected,
+//     and the recorded verdict is "the distribution is not the problem". A
+//     per-module timescale is another knob on the same quantity, and it is
+//     built because it is cheap and named in the literature rather than
+//     because the fence has a gap in it. See DnaModule::elig_tau_scale.
+constexpr uint32_t kDnaVersion = 39;
 
 // What a module is wired to the world through. The host looks modules up by
 // role, never by name or index, so renaming a module in the genome cannot
@@ -387,6 +458,16 @@ struct DnaStdp {
   // A baseline subtraction is sign-neutral by construction — it removes a
   // common mode without biasing the drift — so it should not cost the drive.
   float elig_baseline_tau_ms;
+  // DNA v37. The timescale of the per-neuron baseline burst rate that
+  // burst-dependent plasticity reads its learning signal as a deviation from.
+  // 0 disables the mechanism brain-wide, because without a baseline the signal
+  // is a rate — non-negative at every neuron at every moment — and a rule that
+  // can only potentiate is the failure mode v19 already paid for.
+  //
+  // Slow relative to the burst rate itself, which follows the 50 ms motor
+  // readout constant: the baseline has to describe what this neuron ordinarily
+  // does, not what it is doing now, or the deviation is always zero.
+  float burst_baseline_tau_ms;
   // DNA v17. How much of the presynaptic module's *instantaneous population
   // mean* trace to subtract before the potentiation term reads it. 0 disables
   // it and reproduces v16 exactly; 1.0 subtracts the mean entirely.
@@ -517,6 +598,29 @@ struct DnaConsolidate {
   float downscale_floor;
   float prune_weight;           // |w| below this, and quiet, is prunable
   float prune_traffic;          // traffic below this counts as negligible
+  // DNA v38. Competitive pruning: a synapse whose |w| is below this fraction of
+  // the MEAN |w| over its target neuron's afferents is removed, whether or not
+  // it is idle. 0 is off and is the pre-v38 rule exactly.
+  //
+  // The absence of the idle test is the mechanism, not an oversight. Pruning
+  // has always been "weak AND idle", and an exuberant tract fails the second
+  // test everywhere: every synapse carries traffic because its source fires.
+  // Development does not wait for a synapse to fall silent — it removes the
+  // ones that lost to their neighbours on the same postsynaptic cell, which is
+  // a comparison and not a threshold.
+  //
+  // Read it as a fraction: 0.5 removes afferents under half their target's
+  // mean, which for a symmetric distribution is a large minority, and 1.0 would
+  // remove everything below the mean and is almost certainly too much. It runs
+  // once per sleep pass, so the effect compounds across a life.
+  float prune_compete;
+  // How many afferents a target needs before competition applies to it at all.
+  // Without this, a neuron down to two inputs would keep losing the weaker of
+  // them every sleep and end up disconnected — which the neuron pruner would
+  // then remove, so a mechanism meant to sharpen a tract would quietly delete
+  // it. Competition is only meaningful among enough candidates to have a
+  // meaningful mean.
+  uint32_t prune_compete_min_in;
   uint32_t replay_episodes;     // high-reward episodes kept and replayed
   uint32_t replay_ticks;        // how long each replayed episode is presented
   float replay_threshold;       // effective reward above which one is worth keeping
@@ -1157,6 +1261,42 @@ struct DnaModule {
   float lateral_gain;    // strength; 0 disables the whole mechanism
   float lateral_sigma;   // excitation width, as a fraction of one field
   uint32_t lateral_fields;  // competitive fields per module; 0 or 1 = whole module
+
+  // DNA v37. What counts as a burst in this module, and what the apical
+  // compartment does about it.
+  //
+  // `burst_ms` is the inter-spike interval under which a spike is scored as
+  // part of a burst rather than as a lone event. 0 means this module has no
+  // burst code at all and is bit-identical to the pre-v37 creature. A real
+  // pyramidal burst is two to four spikes at 100-200 Hz, so the interval that
+  // means "burst" is a handful of milliseconds and not a tenth of the
+  // refractory period — set it too wide and every spike in a busy module is a
+  // burst spike, which is a rate code with a new name.
+  //
+  // `burst_refrac_scale` is how the tuft gets a say. Larkum's BAC firing is a
+  // dendritic calcium spike turning a somatic single spike into a burst, and
+  // the cheapest faithful version of that here is to shorten the refractory
+  // period while the tuft is in a plateau: the same drive then produces a
+  // doublet where it produced one spike. 1.0 is no effect and is the pre-v37
+  // creature exactly; below 1 an apical plateau makes bursting easier.
+  //
+  // This is the whole causal chain the mechanism needs — feedback arrives on
+  // the tuft (v14 + v25), the tuft raises burst probability (here), and the
+  // burst signs the weight change (DnaProjection::burst_learn) — and each link
+  // is separately measurable by `burstprobe`, which is the point of splitting
+  // it this way rather than hiding it in one number.
+  float burst_ms;
+  float burst_refrac_scale;
+
+  // DNA v39. This module's eligibility time constant, as a multiple of the
+  // genome's global tau_elig. 1.0 is what every module did before and is
+  // bit-identical to it.
+  //
+  // Read on the POSTSYNAPTIC side — a synapse decays at its target module's
+  // rate, not its source's — because that is what e-prop's prediction is
+  // about: the trace's timescale tracks the history-dependence of the neuron
+  // whose firing the credit is for.
+  float elig_tau_scale;
 };
 
 // max_out_degree is what makes growth allocation-free: every neuron owns a
@@ -1399,6 +1539,26 @@ struct DnaProjection {
   float stp_use;          // U: released per spike. 0 = the mechanism is off
   float stp_recover_ms;   // tau_rec: how fast resources come back
   float stp_facil_ms;     // tau_facil: how long utilisation stays raised. 0 = none
+
+  // DNA v37. The rate at which this pathway learns from the POSTSYNAPTIC
+  // neuron's burst signal, rather than from the global reward scalar. 0 is off
+  // and bit-identical to the pre-v37 tract.
+  //
+  //   dw = burst_learn * eta_scale * credit * (burst_rate_post - burst_base_post)
+  //
+  // Signed by construction: a target bursting above its own running baseline
+  // potentiates whatever fired into it, one bursting below depresses. The
+  // baseline is what makes it a *deviation* rather than a rate, and without it
+  // the term could only ever potentiate — the same argument as v16's
+  // eligibility baseline, one level up.
+  //
+  // Per pathway rather than global for the reason v23's `hebb` is, and with
+  // the same measured motivation: v19's global Hebbian term potentiated every
+  // tract at once, including the dense arcuate, and the creature droned.
+  //
+  // Carried as a (source, target) module pair inside the kernel, so two
+  // projections sharing a pair share this rate.
+  float burst_learn;
 
   // --- kGabor only -----------------------------------------------------------
   // A simple cell in the Hubel–Wiesel sense: an oriented envelope over the

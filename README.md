@@ -122,6 +122,10 @@ a canvas, so each has a headless experiment that prints a number and a verdict.
 ./build/aibaby --experiment eligprobe   --ticks 300000  # can R-STDP tell the two objects apart
 ./build/aibaby --experiment dwprobe     --ticks 300000  # what reward actually writes onto a tract
 ./build/aibaby --experiment stpprobe    --ticks 120000  # DNA v36: is a dynamic synapse a filter here
+./build/aibaby --experiment burstprobe  --ticks 600000  # DNA v37: is there a burst code, and does the tuft steer it
+./build/aibaby --experiment pruneprobe  --ticks 120000  # DNA v38: is competitive pruning selective, or just large
+./build/aibaby --experiment tauprobe    --ticks 240000  # DNA v39: does a per-module eligibility tau do anything
+./build/aibaby --experiment ipprobe     --ticks 240000  # what §3.1's regulator costs the rate code at the ear
 ./build/aibaby --experiment snapshot    --ticks 2400000 # §8: resume is exact
 ```
 
@@ -3007,20 +3011,25 @@ criterion, because it is a statement about arithmetic and a failure there is a
 bug.
 
 **And the `vs off` column is flat.** 0.92–0.98 down the depressing arm, 1.04–1.19
-down the facilitating one, with no peak anywhere. On this tract a dynamic
-synapse is a gain knob and not an envelope filter, and the silence row says why
-in one number: **the auditory module emits 1.30 spikes per tick in silence and
-1.33 during speech — 2.8%.** §3.1's intrinsic plasticity holds its rate at a
-setpoint, so its total output barely knows whether anyone is talking. A dynamic
-synapse reads presynaptic rate. Webb's BN1 sits on an auditory nerve whose rate
-follows the sound; this one sits on a module regulated not to.
+down the facilitating one, with no peak anywhere. On this tract a dynamic synapse
+is a gain knob and not an envelope filter.
 
-That is a fact about *where the tract is*, not about the mechanism, and it is a
-sharper statement of something this project has recorded twice before under
-other names. It also names the one condition under which the mechanism would be
-worth another run: a presynaptic population whose rate is allowed to follow its
-input. The ear's own encoder is latency-coded and unregulated; `auditory` is
-not. Nothing has yet been built on that difference.
+The first explanation offered for that was wrong and is worth recording as such:
+it blamed §3.1 for holding `auditory`'s rate flat, on a 2.8% silence-versus-speech
+gap that turned out to be a settling artefact. The module's rate moves +60% with
+sound. See the section above.
+
+**The real reason is that one dynamic synapse cannot be a bandpass.** Depression
+scales everything a synapse transmits by a single number that follows its own
+mean rate — a high-pass with no upper corner. `gain` tracks the traffic
+faithfully (−0.907) and every spike gets the same multiplier, so the transfer
+ratio cannot peak at any envelope. **Webb's bandpass is two stages**: BN1
+depressing, feeding BN2 facilitating, with the tuning living in the mismatch
+between their time constants rather than in either synapse. v36 built one stage.
+
+The genome can express the second today with no kernel change — a relay module
+between `auditory` and `central`, depressing on the way in and facilitating on
+the way out. It has not been built, and it is the named next step.
 
 Two instrument limits worth keeping. The cochlea's window is 32 ms with a 16 ms
 hop, so an envelope faster than ~15 Hz arrives as steady energy and the probe
@@ -3052,6 +3061,200 @@ On a genome with v16 switched on it moves: `41d3a15bdb42cb47` →
 `b163ef30730320f1` at 1.8M ticks. That pair is the evidence the fix is a fix
 rather than a no-op, and it is the general shape of this class — a mechanism
 that ships off cannot be checked by any test run against the shipped genome.
+
+### The regulator costs dynamic range — and the first measurement of it was wrong
+
+`stpprobe` originally reported that `auditory` emits 1.30 spikes/tick in silence
+and 1.33 during speech — 2.3% — and concluded that §3.1's intrinsic plasticity
+holds the module so flat that no rate-reading mechanism can see anything. A whole
+explanation of DNA v36's null was built on that number and **it was an artefact**.
+
+`ipprobe` was written to make the claim a standing test, and it disagreed by an
+order of magnitude. The cause is in the first probe, not the second: `stpprobe`
+ran its silent block **first, on a just-hatched creature, after 1500 ticks of
+settle**. That is nowhere near enough for intrinsic plasticity, so "silence" was
+measured on an unregulated brain at 1.30 while every later block was measured on
+a settled one. A settled creature reads silence at **0.72**. With the settle
+raised to 20000 ticks the two instruments agree.
+
+What is actually true, from `ipprobe` — silence and speech each read after the
+regulator has settled into them:
+
+| `auditory.ip_wake_scale` | silence | speech | gap |
+|---|---|---|---|
+| 1.00 (shipped) | 0.72 | 1.08 | **+51%** |
+| 0.25 | 0.89 | 1.61 | +82% |
+| 0.10 | 1.07 | 1.84 | +72% |
+| 0.00 | 1.11 | 2.11 | +89% |
+
+So the regulator **narrows** the rate signal — it does not erase it. Relaxing it
+returns about half as much again, and the nine-seed guards pass on both arms
+(`audio` 9/9, `babble` 9/9, silence→vowel ratio up on 9/9, mean 1.90 → 2.41).
+Still not shipped: changing a module's regulation invalidates every calibrated
+number downstream of it.
+
+The correction matters more than the finding. A mechanism measured against the
+shipped `auditory` module is measured against a signal a regulator has cut in
+half — worth knowing — but *"a rate code is not available here"* was never true,
+and `ipprobe` exists so that the next person gets the number instead of the
+story.
+
+### DNA v37 — burst-dependent plasticity: **built, the tuft steers it, and the burst loses what the plateau had**
+
+The only structurally untried class in the conditioning cap. All five mechanisms
+fenced there keep R-STDP's architecture — a *global scalar* third factor
+multiplying a local trace — and change something else about it. What has never
+existed here is a **per-neuron, input-specific** learning signal, which is what
+e-prop argues a spiking network needs ([Bellec et al. 2020][ep]) and what a burst
+code is a biological way to deliver ([Payeur, Guerguiev, Zenke, Richards & Naud
+2021][bp]).
+
+The rule: a postsynaptic *burst* rather than a single spike carries the learning
+signal, and whether a neuron bursts is controlled by its apical dendrite. So
+
+```
+dw = burst_learn · eta_scale · credit · (burst_rate_post − burst_base_post)
+```
+
+is **signed by the baseline subtraction** — a target bursting above what it
+ordinarily does potentiates its afferents, one bursting below depresses them.
+That is the precise difference from DNA v29, whose recorded failure is that *the
+gate attenuates instead of selecting*: a gate can only change how much is
+written, never what.
+
+Two of the paper's three named ingredients were already here — regenerative
+apical activity (v25) and plasticity in feedback pathways (v14) — and the third,
+short-term synaptic dynamics, shipped the same day as v36. What was missing was
+the burst itself: nothing in this kernel had ever distinguished two spikes 5 ms
+apart from two spikes 500 ms apart. The tuft gets its say through Larkum's BAC
+firing, expressed as a shorter refractory period during a plateau, which is the
+same statement about the soma and cannot make a silent module fire.
+
+#### What `burstprobe` measured
+
+The architecture under test is Payeur's mapped onto this body plan:
+`vision→vocal` moved onto the tuft, `central→vocal` learning. Three seed
+families, 100 trials per arm, 32-permutation nulls.
+
+```
+arm          burst%  plat%  burst|plat  burst|no  obj|burst  obj|plat  shuffled
+off          0.0     0.0    0.0         0.0       0.500      0.500     0.503
+burst        8.2     0.0    0.0         8.2       0.680      0.500     0.491
+burst+tuft   13.2    40.5   16.8        6.5       0.800      0.900     0.486
+```
+
+**The tuft steers bursting, on 3 of 3 seeds**: 16.8/16.7/16.5 % inside a plateau
+against 6.5/6.3/6.5 % outside, a factor of 2.6. At a 5 ms window — what "burst"
+means in the literature — the effect is 11×. The chain the mechanism needs is
+real and every link is measurable.
+
+**And the burst signal discriminates**, which no third factor in this project
+ever has. Per-neuron burst deviation at the larynx classifies cube against ball
+at **0.673 mean across three seeds (0.800 / 0.600 / 0.620)** against a
+32-permutation null of 0.494 — above chance on 3 of 3. `eligprobe` reads the
+trace R-STDP multiplies as object-*blind*, +0.93 correlated between the two
+conditions.
+
+**The control is what settles it, and it goes the other way.** The plateau the
+burst is derived from reads **0.913 (0.900 / 0.960 / 0.880)**. Turning a plateau
+into a burst rate is a nonlinearity applied to a signal that was already there,
+and it costs 0.24 of object specificity on 3 of 3 seeds. So v37's claim reduces
+to: *a signed signal at 0.673 is worth more than an unsigned one at 0.913*. That
+is not absurd — v29 had the 0.913 and could not teach with it — but it is not
+settled by this probe, and `m3` is what would settle it.
+
+This is the eighth mechanism to meet the same shape of wall, and the first to
+carry a discriminating signal into it.
+
+### DNA v38 — competitive pruning: **the change v28/v30 named and declined to build**
+
+§3.6 removes a synapse that is weak **and** idle, and the exuberance post-mortem
+measured that the second half is the binding constraint:
+
+> in an exuberant tract every synapse carries traffic because the source fires.
+> An absolute traffic floor cannot express what development actually does, which
+> is **competition** — a synapse is removed because its neighbours on the same
+> target won, not because it fell below a fixed bar.
+
+v38 adds exactly that. A synapse is prunable when its |w| is below
+`prune_compete` × the mean |w| over its **own target's** afferents, *with no idle
+test at all*. The absence of the idle test is the mechanism. A relative bar has a
+gradient by construction — half of any distribution sits below its own mean —
+where the absolute one had none: four arms across a 10× range of birth weight
+removed at most 58 of ~18,400 exuberant synapses, 0.3%, with no trend.
+
+The mean is computed in a pre-pass, before anything is removed, so every synapse
+is judged against the same distribution rather than one its own removed
+neighbours had already lowered. `prune_compete_min_in` stops a neuron down to two
+inputs from losing the weaker of them every sleep until the neuron pruner deletes
+it.
+
+#### It works, and at 0.5 it works far too hard
+
+On the exuberant tract v28/v30 could never prune — `vision→central` at
+exuberance 3, born-weak at 0.333, seven sleep passes over 1.5M ticks:
+
+| `prune_compete` | synapses pruned | G4 |
+|---|---|---|
+| 0.0 (the pre-v38 rule) | **32** | PASS |
+| 0.5 | **20,731** | PASS |
+
+648×, and growth still passes its milestone. The requirement the exuberance
+post-mortem named is met: selection now has a gradient.
+
+`pruneprobe` measures whether the removal is *selective* rather than merely
+large, and its null is not a guess — removing k of a target's afferents at random
+leaves the surviving mean |w| unchanged in expectation, so the off arm (same
+sleep downscaling, no competition) is the control:
+
+```
+arm       pruned  competed  % of  mean|w| in  mean|w| out  change   orphans
+off       0       0         0.0   0.14881     0.13451      -9.61    6
+compete   8801    8801      26.5  0.14881     0.15266      +2.59    6
+```
+
+The survivors are **12.2 points stronger** than the population competition
+selected from, and no neuron lost connectivity the off arm kept — the six
+orphans are there at birth in both arms. But 26.5% of the brain in five passes
+says 0.5 is a decimation rate, not a selection rate. It ships at 0, and anything
+that turns it on should start an order of magnitude lower and watch `g4`.
+
+### DNA v39 — a per-module eligibility timescale, and it lands inside a fence
+
+e-prop's one concrete experimental prediction is that *the eligibility trace's
+time constant tracks the history-dependence of the postsynaptic neuron*
+([Bellec et al. 2020][ep]). This creature has a single global `tau_elig` for
+every synapse in the brain, which asserts that the larynx and the association
+module credit the past over the same window — and they do not: the larynx has
+800 ms of articulator inertia and central carries its object code over hundreds
+of ms. `elig_tau_scale` is per module and read on the postsynaptic side, which is
+what the prediction is about.
+
+**It is built with its verdict already stated.** "Eligibility distribution" is
+one of the five refuted conditioning classes: v16 subtracted a baseline, v17
+scaled by the presynaptic mean, v18 selected, and the recorded finding is *"the
+distribution is not the problem"*. A per-module timescale is another knob on the
+same quantity. It is here because it is cheap, because it makes a named
+prediction testable in this creature, and so that the fence covers it explicitly
+rather than by analogy — not because the fence was thought to have a gap.
+
+`tauprobe` checks the only thing that can be silently wrong about a four-line
+mechanism — a scale read on the wrong side of the synapse, or folded into a
+decay already computed, would leave every number unchanged and the field would
+look enabled forever. A leaky accumulator's steady state is proportional to its
+time constant, so:
+
+| `elig_tau_scale` on central | mean \|e\| central | vs 1× | mean \|e\| vocal | vs 1× |
+|---|---|---|---|---|
+| 1 | 0.008647 | 1.00 | 0.006279 | 1.00 |
+| 2 | 0.013744 | 1.59 | 0.006185 | 0.99 |
+| 4 | 0.022824 | 2.64 | 0.006276 | 1.00 |
+| 8 | 0.038117 | 4.41 | 0.006297 | 1.00 |
+
+Monotone on the scaled module and pinned at 1.00 on the untouched one, which is
+the half that would catch a scale applied globally by mistake. Sub-linear
+because the interval is not negligible against tau. **PASS**, and it says the
+mechanism runs — not that a longer window buys anything.
 
 ## Design decisions that were not obvious
 
@@ -3254,6 +3457,25 @@ whose papers were read rather than remembered.
 - Project overview and publication list:
   <https://homepages.inf.ed.ac.uk/bwebb/cricket/main.html>
 
+**Per-neuron credit assignment (DNA v37, v39).**
+
+- Payeur, A., Guerguiev, J., Zenke, F., Richards, B. & Naud, R. (2021).
+  *Burst-dependent synaptic plasticity can coordinate learning in hierarchical
+  circuits.* Nature Neuroscience 24, 1010–1019.
+  <https://www.nature.com/articles/s41593-021-00857-x> — the rule DNA v37
+  implements, and the source of the observation that it wants short-term
+  synaptic dynamics, apical regenerative activity and plastic feedback
+  pathways alongside it. Two of those three were already here.
+- Bellec, G., Scherr, F., Subramoney, A., Hajek, E., Salaj, D., Legenstein, R. &
+  Maass, W. (2020). *A solution to the learning dilemma for recurrent networks of
+  spiking neurons.* Nature Communications 11, 3625.
+  <https://www.nature.com/articles/s41467-020-17236-y> — e-prop: eligibility
+  traces times a *per-neuron* learning signal. The argument DNA v37 rests on, and
+  the source of DNA v39's testable prediction.
+- Larkum, M. (2013). *A cellular mechanism for cortical associations.* Trends in
+  Neurosciences 36, 141–151 — BAC firing: a dendritic calcium spike turning a
+  somatic single spike into a burst, which is what `burst_refrac_scale` models.
+
 **Everything else.**
 
 - **The synapse model itself.** Tsodyks, M. & Markram, H. (1997). *The neural
@@ -3268,3 +3490,6 @@ whose papers were read rather than remembered.
 - **Oriented receptive fields (DNA v7).** Hubel & Wiesel's simple cells; the
   curvature stage of DNA v8 is V4's computation at V2's position in the
   hierarchy.
+
+[bp]: https://www.nature.com/articles/s41593-021-00857-x
+[ep]: https://www.nature.com/articles/s41467-020-17236-y

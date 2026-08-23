@@ -82,6 +82,19 @@ const Spec kSpecs[] = {
     {"oscprobe", 200000, Expect::kGuard, Tier::kFast,
      "derived: 100 trials; guard — the oscillators ship off"},
     {"audprobe", 240000, Expect::kPass, Tier::kFast, "derived: 100 trials at 2400 ticks each"},
+    {"tauprobe", 240000, Expect::kPass, Tier::kFast,
+     "derived: 4 arms, and the 8x arm needs 8x as long to reach its steady state,\n"
+     "  so each arm is read over its own second half"},
+    {"ipprobe", 240000, Expect::kPass, Tier::kFast,
+     "derived: 4 arms x a silent half and a spoken half, each read after the\n"
+     "  regulator has settled into it"},
+    {"pruneprobe", kDefaultMinimum, Expect::kPass, Tier::kFast,
+     "measured: the weight spread the rule selects on is what waking life builds,\n"
+     "  and at 60000 ticks per arm the surviving mean has separated from the null"},
+    {"burstprobe", 600000, Expect::kPass, Tier::kLong,
+     "derived: 3 arms x 2000-tick trials, so 100 trials per arm. The first run\n"
+     "  of this probe used 200000 and got 33, an accuracy step of 0.06 — every\n"
+     "  object column was inside its own noise and read as a null"},
     {"stpprobe", kDefaultMinimum, Expect::kPass, Tier::kFast,
      "derived: 3 arms x 6 conditions, so 6666 ticks each — 13 bursts at the slowest\n"
      "  envelope, which is the fewest an average per burst may rest on"},
@@ -231,6 +244,10 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "invprobe") ok = run_invprobe(dna_blob, ticks, verbose);
   else if (name == "cpprobe") ok = run_cpprobe(dna_blob, ticks, verbose);
   else if (name == "stpprobe") ok = run_stpprobe(dna_blob, ticks, verbose);
+  else if (name == "burstprobe") ok = run_burstprobe(dna_blob, ticks, verbose);
+  else if (name == "pruneprobe") ok = run_pruneprobe(dna_blob, ticks, verbose);
+  else if (name == "tauprobe") ok = run_tauprobe(dna_blob, ticks, verbose);
+  else if (name == "ipprobe") ok = run_ipprobe(dna_blob, ticks, verbose);
   else if (name == "babble") ok = run_babble(dna_blob, ticks, verbose, cap);
   else if (name == "calibrate") ok = run_calibrate(dna_blob, ticks, verbose);
   else if (name == "sleep") ok = run_sleep(dna_blob, ticks, verbose);

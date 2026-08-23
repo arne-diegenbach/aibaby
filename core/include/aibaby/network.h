@@ -168,6 +168,13 @@ class Network {
 
   const StructuralStats& structural() const { return structural_; }
 
+  // DNA v38. How many synapses the last prune pass removed for losing to their
+  // neighbours rather than for being weak and idle. Separate from
+  // structural_.synapses_pruned because the two answer different questions: a
+  // pass that removed 40 synapses tells you nothing about whether competition
+  // is what removed them, and a mechanism that ships off must be visibly off.
+  uint32_t competed_out() const { return competed_out_; }
+
   // Replay is the Brain's business — it owns the episodes and the encoders —
   // but the count belongs beside the other structural events, because it is
   // the third of the three things §3.6 says sleep does and the panel shows
@@ -195,6 +202,18 @@ class Network {
   Scalar exploration(uint32_t module) const {
     return module < kMaxModules ? explore_mult_[module] : kOne;
   }
+
+  // DNA v39. Mean |eligibility| over the synapses TERMINATING on one module.
+  // By target and not by source because that is the side v39's time constant is
+  // read on, and a probe measuring the mechanism has to slice it the same way
+  // the mechanism does.
+  // DNA v38. One neuron's mean afferent weight, for `pruneprobe`. The
+  // per-module mean_in_weight() above cannot answer a question about
+  // selection: pruning is a comparison *within* one target's inputs, and a
+  // module-wide mean averages over every such comparison at once.
+  Scalar mean_in_weight_of(uint32_t neuron) const;
+
+  Scalar mean_eligibility(uint32_t module) const;
 
   Telemetry telemetry() const;
 
@@ -241,6 +260,20 @@ class Network {
   // delivering a third of its weight is invisible in every rate, every weight
   // and every hash, and it is the first thing to check when this is on and a
   // number moves.
+  // DNA v37. The burst code, for `burstprobe`. `burst_rate` is the neuron's
+  // fast running rate of burst spikes and `burst_base` the slow baseline the
+  // learning signal is a deviation from — their difference IS the third factor
+  // burst-dependent plasticity substitutes for the global reward scalar, so a
+  // probe that cannot see both cannot tell a silent mechanism from a balanced
+  // one.
+  bool burst_active() const { return any_burst_; }
+  Scalar burst_rate(uint32_t neuron) const {
+    return any_burst_ ? burst_rate_[neuron] : Scalar(0);
+  }
+  Scalar burst_base(uint32_t neuron) const {
+    return any_burst_ ? burst_base_[neuron] : Scalar(0);
+  }
+
   bool stp_active() const { return any_stp_; }
   Scalar stp_gain(uint32_t src, uint32_t dst) const;
 
@@ -459,6 +492,12 @@ class Network {
   // so a per-synapse copy would hold the identical number at ten times the
   // cost. Allocated only when a genome asks for the mechanism.
   uint32_t* prev_spike_ = nullptr;
+  // DNA v37. Burst-dependent plasticity's two per-neuron traces: a fast rate of
+  // burst spikes on the motor readout's 50 ms constant, and the slow baseline
+  // it is read as a deviation from. Allocated only when a module asks for a
+  // burst code.
+  Scalar* burst_rate_ = nullptr;
+  Scalar* burst_base_ = nullptr;
   uint32_t* syn_base_ = nullptr;
   uint16_t* syn_count_ = nullptr;
   uint16_t* syn_cap_ = nullptr;
@@ -539,6 +578,10 @@ class Network {
   Scalar pre_decay_ = kOne;
   Scalar post_decay_ = kOne;
   Scalar elig_decay_ = kOne;
+  // DNA v39. The same decay, per module, read on the postsynaptic side. All
+  // entries equal elig_decay_ unless a genome scales one, so the arithmetic is
+  // bit-identical when the mechanism is unused.
+  Scalar elig_decay_mod_[kMaxModules] = {};
   Scalar elig_mean_alpha_ = kZero;  // 0 disables the baseline entirely
   // DNA v17. 0 disables presynaptic centring entirely.
   Scalar elig_pre_centre_ = kZero;
@@ -575,6 +618,23 @@ class Network {
   bool any_apical_ = false;
   // DNA v36. Which dynamic-synapse parameter set a (source, target) pair uses,
   // or -1 for the constant-weight synapse every pair had before v36.
+  // DNA v37. Per-pathway burst learning rate, indexed [source][target], and
+  // the per-module burst parameters. `burst_refrac_` is 1 wherever the tuft is
+  // not allowed to change bursting, which is every module by default.
+  Scalar burst_pair_[kMaxModules][kMaxModules] = {};
+  bool any_burst_pair_ = false;
+  bool any_burst_ = false;
+  uint32_t burst_ticks_[kMaxModules] = {};
+  Scalar burst_refrac_[kMaxModules] = {};
+  Scalar burst_base_alpha_ = kZero;
+
+  // DNA v38. Competitive pruning's scratch: the mean |w| over each neuron's
+  // afferents, recomputed at the top of every prune pass. Arena-allocated only
+  // when a genome asks, and never read outside consolidate().
+  Scalar* in_mean_ = nullptr;
+  Scalar prune_compete_ = kZero;
+  uint32_t prune_compete_min_in_ = 0;
+
   int8_t stp_id_[kMaxModules][kMaxModules] = {};
   bool any_stp_ = false;
   uint32_t stp_paths_ = 0;
@@ -672,6 +732,7 @@ class Network {
   Scalar norm_ceiling_ = kOne;
 
   StructuralStats structural_ = {};
+  uint32_t competed_out_ = 0;  // DNA v38: removed by competition, not by the floor
   // Refreshed by myelinate(), which walks the pool anyway. See mean_plasticity().
   Scalar mean_plasticity_ = kOne;
 };

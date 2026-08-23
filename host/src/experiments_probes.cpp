@@ -4913,7 +4913,14 @@ constexpr uint32_t kStpRateCount = sizeof(kStpRates) / sizeof(kStpRates[0]);
 // silence, the four rates, and the shuffled null
 constexpr uint32_t kStpConditions = kStpRateCount + 2;
 
-constexpr uint64_t kStpSettleTicks = 1500;
+// Long enough for §3.1 to have settled, which 1500 was not. The first version
+// of this probe used 1500, ran its silent condition first on a just-hatched
+// creature, and read silence at 1.30 spikes/tick where a settled creature reads
+// 0.72 — so the "silence versus speech" gap it reported was mostly the
+// difference between an unsettled brain and a settled one. `ipprobe` measures
+// the same quantity with a settled half on each side and disagrees by an order
+// of magnitude, which is what exposed it.
+constexpr uint64_t kStpSettleTicks = 20000;
 
 struct StpRow {
   double aud_per_tick = 0.0;  // the quantity a dynamic synapse actually reads
@@ -5045,9 +5052,13 @@ bool run_stpprobe(const std::vector<uint8_t>& dna_blob, uint64_t ticks, bool ver
       bool sounding = false;
       bool prev_sounding = false;
 
-      for (uint64_t t = 0; t < kStpSettleTicks + budget; ++t) {
-        const bool measuring = t >= kStpSettleTicks;
-        const uint64_t bt = measuring ? t - kStpSettleTicks : t;
+      // Only the first condition pays the long settle. After that the creature
+      // is already regulated and each block needs no more than the time for
+      // the previous stimulus to have drained.
+      const uint64_t settle = (c == 0) ? kStpSettleTicks : 1500;
+      for (uint64_t t = 0; t < settle + budget; ++t) {
+        const bool measuring = t >= settle;
+        const uint64_t bt = measuring ? t - settle : t;
         if (silent) {
           sounding = false;
         } else if (shuffled) {
@@ -5167,20 +5178,907 @@ bool run_stpprobe(const std::vector<uint8_t>& dna_blob, uint64_t ticks, bool ver
   }
 
   // What the table says about this creature, which is not the same question.
-  std::printf("\n  WHAT IT BUYS HERE, read off `vs off` and the silence row:\n"
-              "  the auditory module is rate-regulated (§3.1), so its total output\n"
-              "  barely moves between silence and speech — %.2f against %.2f spikes per\n"
-              "  tick, %.1f%%. A dynamic synapse reads presynaptic RATE, so on this\n"
-              "  tract it sees almost none of the envelope and acts as a gain change:\n"
-              "  `vs off` is flat across the envelopes rather than peaked. Webb's BN1\n"
-              "  sits on an auditory nerve whose rate follows the sound; this one does\n"
-              "  not. That is a fact about where the tract is, not about the mechanism.\n",
+  std::printf("\n  WHAT IT BUYS HERE, read off the `vs off` column:\n"
+              "  nothing that a volume knob would not. `vs off` is FLAT across the\n"
+              "  envelopes — a filter would peak somewhere and it does not.\n"
+              "\n  The reason is NOT that the ear is regulated flat. It is not: the\n"
+              "  module goes %.2f spikes per tick in silence to %.2f under speech,\n"
+              "  %+.0f%%, and `ipprobe` measures the same thing independently. An\n"
+              "  earlier version of this probe settled for only 1500 ticks and read\n"
+              "  silence on a just-hatched creature, which made that gap look like\n"
+              "  3%% and supported an explanation that was wrong.\n"
+              "\n  The real reason is that ONE dynamic synapse cannot be a bandpass.\n"
+              "  Depression scales everything this synapse transmits by a single\n"
+              "  number that follows its own mean rate, so it is a high-pass with no\n"
+              "  upper corner: `gain` tracks the traffic faithfully and every spike\n"
+              "  gets the same multiplier. Webb's bandpass is TWO stages — BN1\n"
+              "  depressing, feeding BN2 facilitating — and the tuning lives in the\n"
+              "  mismatch between their time constants, not in either one. This\n"
+              "  genome can express that today: a relay module between auditory and\n"
+              "  central, depressing on the way in and facilitating on the way out.\n"
+              "  It has not been built.\n",
               rows[0][0].aud_per_tick, rows[0][1].aud_per_tick,
               rows[0][0].aud_per_tick > 0.0
                   ? 100.0 * (rows[0][1].aud_per_tick / rows[0][0].aud_per_tick - 1.0)
                   : 0.0);
   (void)verbose;
   return control_ok && corners_ok && reads_rate;
+}
+
+
+// --- burstprobe: does a burst code exist, does the tuft steer it, and does it
+// --- carry the object? -----------------------------------------------------
+//
+// DNA v37 is the only structurally untried class left in the conditioning cap:
+// every mechanism fenced there keeps R-STDP's *global scalar* third factor, and
+// burst-dependent plasticity replaces it with a per-neuron one that the apical
+// dendrite controls (Payeur, Guerguiev, Zenke, Richards & Naud 2021; the same
+// per-neuron learning signal e-prop argues a spiking network needs).
+//
+// The mechanism is a chain of three links and any one of them can be dead while
+// the other two look healthy, so this measures them separately. All three arms
+// patch every field explicitly, including the off arm, for the reason gazeprobe
+// learned the hard way.
+//
+//   1. **Is there a burst code?** `burst%` is burst spikes as a fraction of all
+//      spikes at the larynx. At 0 the window is narrower than anything the
+//      module does and the learning signal is identically zero; near 100 every
+//      spike is a burst spike and the "burst rate" is the firing rate under
+//      another name. Either rail means no row below is a measurement.
+//
+//   2. **Does the tuft steer it?** `burst|plat` against `burst|no plat`. This is
+//      the link DNA v29 needed and never had: its plateau gate could only
+//      *attenuate* learning, so a plateau that discriminated changed how much
+//      was written and never what. A burst signal is signed, so a tuft that
+//      raises burst probability flips the sign of the update rather than
+//      scaling it — but only if it raises it, which is what this column asks.
+//
+//   3. **Does the signal carry the object?** `obj|burst` is a held-out
+//      classification of cube against ball from the per-neuron burst
+//      *deviation* — the exact quantity the weight update multiplies — against
+//      `obj|spikes` from the same neurons' spike counts and a shuffled-label
+//      null. This is the payoff. `eligprobe` measured the last third factor to
+//      be object-blind at 0.93 correlation between conditions; if this one is
+//      too, v37 dies the same death as the other five and the probe says so in
+//      one number.
+//
+// The architecture under test is Payeur's, mapped onto this body plan:
+// `vision->vocal` is moved onto the tuft and `central->vocal` is what learns.
+// The seen object then arrives at the larynx's dendrites and signs the
+// plasticity of the tract carrying the heard word, which is G3's wiring stated
+// as a learning rule rather than as a delivery problem.
+namespace {
+
+struct BurstArm {
+  const char* name;
+  float burst_ms;      // 0 = no burst code
+  float refrac_scale;  // what a plateau does to the refractory period
+  bool apical;         // move vision->vocal onto the tuft
+};
+
+// 20 ms, and the interval table below is why. A pyramidal burst in the
+// literature is 100-200 Hz, i.e. a 5-10 ms window — and this larynx fires at a
+// few Hz, so only 0.1% of its spikes follow another within 5 ms and 1.8% within
+// 10 ms. A code that scores 1 spike in 500 is a learning signal that is zero
+// almost everywhere. 20 ms is the shortest window at which the code is live in
+// THIS creature (8.2% without a tuft, 13.0% with one), and the honest way to
+// report it is to print the whole curve and let the window be read off it,
+// which is what the second table does.
+constexpr BurstArm kBurstArms[] = {
+    {"off",          0.0f, 1.0f, false},
+    {"burst",       20.0f, 1.0f, false},
+    {"burst+tuft",  20.0f, 0.3f, true},
+};
+constexpr uint32_t kBurstArmCount = sizeof(kBurstArms) / sizeof(kBurstArms[0]);
+
+// A plateau has to be reachable before it can steer anything, and the shipped
+// genome has no compartment at all — every module ships at threshold 0. These
+// are apicalprobe's working values.
+// Candidate burst windows, reported for every arm from the intervals the probe
+// already tracks. A pyramidal burst is two to four spikes at 100-200 Hz, so 5
+// and 10 ms are what "burst" means in the literature; the wider ones are here
+// because a module firing at a few Hz may simply not do that, and the table
+// should say so rather than leave the reader to infer it from one zero.
+constexpr float kBurstWindows[] = {5.0f, 10.0f, 20.0f, 40.0f, 80.0f};
+constexpr uint32_t kBurstWindowCount = sizeof(kBurstWindows) / sizeof(kBurstWindows[0]);
+
+constexpr float kBurstApicalThreshold = 0.35f;
+constexpr float kBurstApicalGain = 1.0f;
+
+struct BurstRow {
+  double burst_pct = 0.0;
+  double burst_in_plat = 0.0;
+  double burst_out_plat = 0.0;
+  double plateau_pct = 0.0;
+  double obj_burst = 0.0;
+  double obj_spikes = 0.0;
+  double obj_plateau = 0.0;
+  double shuffled = 0.0;
+  double isi_pct[kBurstWindowCount] = {};
+  size_t trials = 0;
+};
+
+}  // namespace
+
+bool run_burstprobe(const std::vector<uint8_t>& dna_blob, uint64_t ticks, bool verbose) {
+  std::string error;
+  aibaby::Dna dna0;
+  if (dna0.load(dna_blob.data(), dna_blob.size()) != aibaby::DnaStatus::kOk) {
+    std::printf("  setup failed: the genome does not load\n");
+    return false;
+  }
+  const int32_t voc_m = dna0.module_with_role(aibaby::ModuleRole::kVocal);
+  const int32_t cen_m = dna0.module_with_role(aibaby::ModuleRole::kAssociation);
+  const int32_t vis_m = dna0.module_with_role(aibaby::ModuleRole::kVision);
+  if (voc_m < 0 || cen_m < 0 || vis_m < 0) {
+    std::printf("  this genome is missing a vocal, association or vision module\n");
+    return false;
+  }
+  int32_t teach = -1, tuft = -1;
+  for (uint32_t i = 0; i < dna0.header().projection_count; ++i) {
+    const aibaby::DnaProjection& p = dna0.projection(i);
+    if (int32_t(p.dst) != voc_m) continue;
+    if (int32_t(p.src) == cen_m) teach = int32_t(i);
+    if (int32_t(p.src) == vis_m) tuft = int32_t(i);
+  }
+  if (teach < 0 || tuft < 0) {
+    std::printf("  this genome has no central->vocal or no vision->vocal tract\n");
+    return false;
+  }
+
+  const aibaby::DnaVision& vcfg = dna0.header().vision;
+  const aibaby::DnaAudio& acfg = dna0.header().audio;
+  const uint32_t samples_per_tick = uint32_t(acfg.sample_rate / 1000);
+  const uint64_t frame_ticks =
+      uint64_t(1000.0f / vcfg.frame_hz / dna0.header().sim.dt_ms + 0.5f);
+  const uint32_t n_trials = uint32_t(ticks / (kBurstArmCount * kM3ProbeTicks));
+
+  instrument("burstprobe", dna0.header().seed ^ 0xB025u, n_trials, "trials per arm");
+  std::printf("  architecture      vision->vocal on the TUFT, central->vocal LEARNS\n"
+              "  burst window      %.0f ms; a plateau scales the refractory period\n"
+              "                    by %.2f in the third arm\n",
+              double(kBurstArms[1].burst_ms), double(kBurstArms[2].refrac_scale));
+
+  const size_t mod_base = sizeof(aibaby::DnaHeader);
+  const size_t proj_base = mod_base + sizeof(aibaby::DnaModule) * dna0.module_count();
+  auto put_module = [&](std::vector<uint8_t>& v, int32_t m, size_t off, float value) {
+    std::memcpy(v.data() + mod_base + sizeof(aibaby::DnaModule) * size_t(m) + off,
+                &value, sizeof(value));
+  };
+
+  BurstRow rows[kBurstArmCount];
+
+  for (uint32_t a = 0; a < kBurstArmCount; ++a) {
+    const BurstArm& arm = kBurstArms[a];
+    std::vector<uint8_t> variant = dna_blob;
+    {
+      put_module(variant, voc_m, offsetof(aibaby::DnaModule, burst_ms), arm.burst_ms);
+      put_module(variant, voc_m, offsetof(aibaby::DnaModule, burst_refrac_scale),
+                 arm.refrac_scale);
+      const float thr = arm.apical ? kBurstApicalThreshold : 0.0f;
+      const float gain = arm.apical ? kBurstApicalGain : 0.0f;
+      put_module(variant, voc_m, offsetof(aibaby::DnaModule, apical_threshold), thr);
+      put_module(variant, voc_m, offsetof(aibaby::DnaModule, apical_gain), gain);
+      const uint32_t ap = arm.apical ? 1u : 0u;
+      std::memcpy(variant.data() + proj_base +
+                      sizeof(aibaby::DnaProjection) * size_t(tuft) +
+                      offsetof(aibaby::DnaProjection, apical),
+                  &ap, sizeof(ap));
+      // The baseline time constant, and the learning rate on the taught tract.
+      // Set on every arm including `off`, where the module's burst_ms of 0
+      // makes it inert — the genome loader refuses `burst_learn` without a
+      // burst code, so the off arm has to zero the rate as well.
+      const float tau = 2000.0f;
+      std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, stdp) +
+                      offsetof(aibaby::DnaStdp, burst_baseline_tau_ms),
+                  &tau, sizeof(tau));
+      const float learn = arm.burst_ms > 0.0f ? 1e-3f : 0.0f;
+      std::memcpy(variant.data() + proj_base +
+                      sizeof(aibaby::DnaProjection) * size_t(teach) +
+                      offsetof(aibaby::DnaProjection, burst_learn),
+                  &learn, sizeof(learn));
+    }
+
+    Session s;
+    if (!s.init(variant, error)) {
+      std::printf("  arm %s failed to hatch: %s\n", arm.name, error.c_str());
+      return false;
+    }
+    const aibaby::Network& net = s.brain.network();
+    Retina retina;
+    Ear ear;
+    if (!retina.configure(vcfg, error) || !ear.configure(acfg, error)) {
+      std::printf("  transducer failed: %s\n", error.c_str());
+      return false;
+    }
+    VowelSource voice(acfg.sample_rate);
+    SceneSource scene(vcfg.frame_size, dna0.header().seed);
+    std::vector<uint8_t> frame(size_t(vcfg.frame_size) * vcfg.frame_size, 0);
+    std::vector<float> pcm(samples_per_tick);
+
+    aibaby::Rng rng;
+    rng.seed(dna0.header().seed ^ 0xB025u);
+
+    const aibaby::ModuleState& vm = net.module(uint32_t(voc_m));
+    const uint32_t width = vm.count;
+    // The probe decides for itself what a burst is, from the spike train it can
+    // see, rather than asking the kernel. Two reasons and both are about
+    // honesty: a probe that reads the kernel's own burst trace cannot tell a
+    // correct implementation from a consistent one, and that trace is a 50 ms
+    // one-pole — "has bursted recently", not "this spike was part of a burst".
+    // Reading it as the latter is what made the first run of this probe report
+    // 80.9%.
+    const uint64_t burst_win =
+        uint64_t(double(kBurstArms[1].burst_ms) / double(dna0.header().sim.dt_ms) + 0.5);
+    std::vector<uint64_t> last_seen(width, 0);
+    std::vector<bool> ever(width, false);
+    // The interval distribution at the larynx, so the table can say which
+    // window WOULD give a live burst code rather than only whether the
+    // configured one did. Free: the probe is already tracking every interval.
+    double isi_at[kBurstWindowCount] = {};
+    std::vector<std::vector<double>> feat_burst, feat_spike, feat_plat;
+    std::vector<int> labels;
+    double spikes_all = 0.0, spikes_burst = 0.0;
+    double plat_spikes = 0.0, plat_burst = 0.0, plat_ticks = 0.0, all_ticks = 0.0;
+
+    for (uint32_t trial = 0; trial < n_trials; ++trial) {
+      const int label = int(trial % 2);
+      const Toy toy = m3_toy(rng, label);
+      std::vector<double> dev(width, 0.0), spk(width, 0.0), plat(width, 0.0);
+      bool slept = false;
+      uint64_t scored = 0;
+      for (uint64_t t = 0; t < kM3ProbeTicks; ++t) {
+        if (t % frame_ticks == 0) {
+          scene.render(toy.shape, toy.cx, toy.cy, toy.radius, 0.85f, 0.02f, frame.data());
+          retina.present(frame.data());
+          s.brain.see(retina.features().data(), retina.feature_count());
+        }
+        voice.render(0.0f, 0.0f, 0.0f, 0.0f, pcm.data(), samples_per_tick);
+        ear.tick(s.brain, pcm.data(), samples_per_tick);
+        s.brain.step();
+        if (s.brain.asleep()) slept = true;
+        if (t < kM3SettleTicks) continue;
+        ++scored;
+        for (uint32_t k = 0; k < width; ++k) {
+          const uint32_t i = vm.begin + k;
+          // The quantity the weight update multiplies, sampled where it is
+          // read: burst rate minus this neuron's own running baseline.
+          dev[k] += double(net.burst_rate(i)) - double(net.burst_base(i));
+          if (net.in_plateau(i)) { plat_ticks += 1.0; plat[k] += 1.0; }
+          ++all_ticks;
+        }
+        for (uint32_t k = 0; k < net.spike_count(); ++k) {
+          const uint32_t i = net.spikes()[k];
+          if (i < vm.begin || i >= vm.begin + width) continue;
+          const uint32_t idx = i - vm.begin;
+          spk[idx] += 1.0;
+          spikes_all += 1.0;
+          const uint64_t gap = t - last_seen[idx];
+          if (ever[idx]) {
+            for (uint32_t wi = 0; wi < kBurstWindowCount; ++wi) {
+              const uint64_t w = uint64_t(double(kBurstWindows[wi]) /
+                                              double(dna0.header().sim.dt_ms) + 0.5);
+              if (gap <= w) isi_at[wi] += 1.0;
+            }
+          }
+          const bool bursty = ever[idx] && gap <= burst_win && arm.burst_ms > 0.0f;
+          last_seen[idx] = t;
+          ever[idx] = true;
+          if (bursty) spikes_burst += 1.0;
+          if (net.in_plateau(i)) {
+            plat_spikes += 1.0;
+            if (bursty) plat_burst += 1.0;
+          }
+        }
+      }
+      if (slept || scored == 0) continue;
+      for (uint32_t k = 0; k < width; ++k) dev[k] /= double(scored);
+      feat_burst.push_back(dev);
+      feat_spike.push_back(spk);
+      feat_plat.push_back(plat);
+      labels.push_back(label);
+    }
+
+    BurstRow& row = rows[a];
+    row.trials = labels.size();
+    row.burst_pct = spikes_all > 0.0 ? 100.0 * spikes_burst / spikes_all : 0.0;
+    row.burst_in_plat = plat_spikes > 0.0 ? 100.0 * plat_burst / plat_spikes : 0.0;
+    row.burst_out_plat = (spikes_all - plat_spikes) > 0.0
+                             ? 100.0 * (spikes_burst - plat_burst) / (spikes_all - plat_spikes)
+                             : 0.0;
+    row.plateau_pct = all_ticks > 0.0 ? 100.0 * plat_ticks / all_ticks : 0.0;
+    for (uint32_t wi = 0; wi < kBurstWindowCount; ++wi) {
+      row.isi_pct[wi] = spikes_all > 0.0 ? 100.0 * isi_at[wi] / spikes_all : 0.0;
+    }
+    if (labels.size() >= 12) {
+      std::vector<std::vector<double>> xb, xs;
+      std::vector<int> yb, ys;
+      size_t tb = 0, ts = 0;
+      interleave_pairs(feat_burst, labels, xb, yb, tb);
+      interleave_pairs(feat_spike, labels, xs, ys, ts);
+      row.obj_burst = holdout_accuracy(xb, yb, tb);
+      row.obj_spikes = holdout_accuracy(xs, ys, ts);
+      // THE control this probe needs. DNA v29 already had a plateau that
+      // discriminated the object — apicalprobe measures it — and it still
+      // could not teach, because a gate can only attenuate. So "the burst
+      // signal carries the object" is only news if the burst carries MORE than
+      // the plateau it is derived from. If these two columns agree, v37 has
+      // added a sign to something v29 already had and nothing else.
+      std::vector<std::vector<double>> xpl;
+      std::vector<int> ypl;
+      size_t tpl = 0;
+      interleave_pairs(feat_plat, labels, xpl, ypl, tpl);
+      row.obj_plateau = holdout_accuracy(xpl, ypl, tpl);
+      // 32 permutations, not one. A single shuffle is one draw from the null
+      // distribution rather than an estimate of it, and at ~50 test trials one
+      // draw wanders far enough to be read as a finding in either direction —
+      // the first run of this probe reported a null of 0.380 against a chance
+      // of 0.500 that way. This is the same correction the audibility ruler
+      // needed.
+      double null_sum = 0.0;
+      for (uint32_t perm = 0; perm < 32; ++perm) {
+        std::vector<int> shuffled = yb;
+        for (size_t i = shuffled.size(); i > 1; --i) {
+          std::swap(shuffled[i - 1], shuffled[rng.next() % i]);
+        }
+        null_sum += holdout_accuracy(xb, shuffled, tb);
+      }
+      row.shuffled = null_sum / 32.0;
+    }
+  }
+
+  std::printf("\n    %-12s %-7s %-7s %-8s %-9s %-8s %-10s %-10s %-10s %-8s\n", "arm",
+              "trials", "burst%", "plat%", "burst|plat", "burst|no", "obj|burst",
+              "obj|plat", "obj|spikes", "shuffled");
+  for (uint32_t a = 0; a < kBurstArmCount; ++a) {
+    const BurstRow& r = rows[a];
+    std::printf("    %-12s %-7zu %-7.1f %-8.1f %-9.1f %-8.1f %-10.3f %-10.3f %-10.3f %-8.3f\n",
+                kBurstArms[a].name, r.trials, r.burst_pct, r.plateau_pct, r.burst_in_plat,
+                r.burst_out_plat, r.obj_burst, r.obj_plateau, r.obj_spikes, r.shuffled);
+  }
+
+  std::printf("\n  what fraction of spikes at the larynx follow another within:\n    %-12s",
+              "arm");
+  for (uint32_t wi = 0; wi < kBurstWindowCount; ++wi) {
+    std::printf("%-8.0f", double(kBurstWindows[wi]));
+  }
+  std::printf("ms\n");
+  for (uint32_t a = 0; a < kBurstArmCount; ++a) {
+    std::printf("    %-12s", kBurstArms[a].name);
+    for (uint32_t wi = 0; wi < kBurstWindowCount; ++wi) {
+      std::printf("%-8.1f", rows[a].isi_pct[wi]);
+    }
+    std::printf("\n");
+  }
+
+  const BurstRow& off = rows[0];
+  const BurstRow& plain = rows[1];
+  const BurstRow& tuft_arm = rows[2];
+
+  std::printf("\n  burst%% is burst spikes over all spikes at the larynx. burst|plat and\n"
+              "  burst|no split that by whether the neuron's tuft was in a plateau, and\n"
+              "  their difference is whether feedback can steer the sign of learning.\n"
+              "  obj|burst classifies cube against ball from the per-neuron burst\n"
+              "  DEVIATION — the exact quantity the weight update multiplies.\n");
+
+  const bool off_silent = off.burst_pct < 0.001;
+  const bool code_live = plain.burst_pct > 1.0 && plain.burst_pct < 95.0;
+  const bool tuft_steers = tuft_arm.burst_in_plat > tuft_arm.burst_out_plat * 1.05 &&
+                           tuft_arm.plateau_pct > 0.5 && tuft_arm.plateau_pct < 95.0;
+
+  std::printf("\n  off arm burst%%         %.3f   (must be 0 — the control)\n"
+              "  burst code             %.1f%%    (must be inside 1-95%%)\n"
+              "  plateau occupancy      %.1f%%    (must be inside 0.5-95%%)\n"
+              "  burst|plat vs |no      %.1f%% vs %.1f%%   (the tuft must raise it)\n",
+              off.burst_pct, plain.burst_pct, tuft_arm.plateau_pct,
+              tuft_arm.burst_in_plat, tuft_arm.burst_out_plat);
+
+  std::printf("  burst vs plateau       %.3f vs %.3f%s\n", tuft_arm.obj_burst,
+              tuft_arm.obj_plateau,
+              tuft_arm.obj_burst >= tuft_arm.obj_plateau
+                  ? "   (the burst adds specificity)"
+                  : "   <- the burst LOSES specificity vs the plateau it comes from");
+
+  if (!off_silent) {
+    std::printf("\n  FAIL — the off arm has a burst code. The patched blob is not the\n"
+                "  creature it claims to be, so no row above means anything.\n");
+  } else if (!code_live) {
+    std::printf("\n  FAIL — the burst code is at a rail. At 0 the learning signal is\n"
+                "  identically zero; near 100 it is the firing rate under another name.\n"
+                "  Either way v37 is present and not running, and the burst window is\n"
+                "  the thing to move.\n");
+  } else if (!tuft_steers) {
+    std::printf("\n  The burst code runs, and the TUFT DOES NOT STEER IT. That is the\n"
+                "  same shape as DNA v29's failure one level down: without a plateau\n"
+                "  that changes burst probability there is no per-neuron learning\n"
+                "  signal, only a second global one. Reported, not fatal — the link\n"
+                "  is measured and the answer is no.\n");
+  } else {
+    std::printf("\n  PASS — the burst code runs and the tuft steers it.\n");
+    std::printf("\n  WHAT IT BUYS, and the plateau column is the honest reading of it:\n"
+                "  the per-neuron burst deviation at the larynx carries cube-versus-ball\n"
+                "  at %.3f against a 32-permutation null of %.3f. That is a third factor\n"
+                "  that DISCRIMINATES, which no previous one here did — `eligprobe` reads\n"
+                "  the trace R-STDP multiplies as object-blind, +0.93 correlated between\n"
+                "  the two conditions.\n"
+                "\n  But the plateau it is derived from reads %.3f, and the burst reads\n"
+                "  %.3f. Turning a plateau into a burst rate is a nonlinearity applied to\n"
+                "  a signal that was already there, and it %s. DNA v29 had the %.3f\n"
+                "  signal and could not teach with it, because a gate can only attenuate;\n"
+                "  v37's claim is that a SIGN is worth more than the specificity it\n"
+                "  costs. That claim is not settled by this probe — it needs `m3`.\n",
+                tuft_arm.obj_burst, tuft_arm.shuffled, tuft_arm.obj_plateau,
+                tuft_arm.obj_burst,
+                tuft_arm.obj_burst >= tuft_arm.obj_plateau ? "gains" : "loses",
+                tuft_arm.obj_plateau);
+  }
+  (void)verbose;
+  return off_silent && code_live;
+}
+
+
+// --- pruneprobe: does competition remove the losers, or just remove? --------
+//
+// DNA v38 lets a synapse be pruned for being weak *relative to its own target's
+// other afferents*, with no idle test. The exuberance post-mortem asked for
+// exactly that and declined to build it, so the question this has to answer is
+// not "did anything get removed" — a rule that removed a random half would also
+// answer yes — but **was the removal selective**.
+//
+// The measurement is one number and it has a null that is not a guess.
+// Pruning k of a target neuron's afferents at random leaves the mean |w| over
+// the survivors unchanged in expectation, so **0% is the exact null** for
+// "surviving mean |w| after the pass, against before". Competition that works
+// raises it; competition that is really a decimation does not.
+//
+// Three things this does not wait for. It drives the creature awake and then
+// calls `consolidate()` directly rather than waiting for a sleep bout at ~1.04M
+// ticks — that function IS what sleep calls, and testing the rule is a
+// different job from testing that fatigue reaches it, which `sleep` and `g4`
+// already do. It runs on the shipped genome rather than an exuberant one,
+// because the rule has to be safe on the creature that exists before it is
+// interesting on one that does not. And it checks the floor as well as the
+// ceiling: a mechanism that strips a neuron to nothing is worse than one that
+// does nothing.
+namespace {
+
+struct PruneArm {
+  const char* name;
+  float compete;
+};
+
+constexpr PruneArm kPruneArms[] = {
+    {"off",      0.00f},
+    {"compete",  0.50f},
+};
+constexpr uint32_t kPruneArmCount = sizeof(kPruneArms) / sizeof(kPruneArms[0]);
+constexpr uint32_t kPrunePasses = 5;
+
+}  // namespace
+
+bool run_pruneprobe(const std::vector<uint8_t>& dna_blob, uint64_t ticks, bool verbose) {
+  std::string error;
+  aibaby::Dna dna0;
+  if (dna0.load(dna_blob.data(), dna_blob.size()) != aibaby::DnaStatus::kOk) {
+    std::printf("  setup failed: the genome does not load\n");
+    return false;
+  }
+  const uint64_t drive = ticks / kPruneArmCount;
+  instrument("pruneprobe", dna0.header().seed ^ 0x9700u, drive, "ticks driven per arm");
+  std::printf("  %u consolidation passes per arm, called directly rather than waited\n"
+              "  for; competition removes afferents under %.2f of their target's mean\n",
+              kPrunePasses, double(kPruneArms[1].compete));
+
+  double mean_before[kPruneArmCount] = {}, mean_after[kPruneArmCount] = {};
+  uint32_t pruned[kPruneArmCount] = {}, competed[kPruneArmCount] = {};
+  uint32_t min_in[kPruneArmCount] = {}, orphans[kPruneArmCount] = {};
+  uint32_t live_after[kPruneArmCount] = {};
+
+  for (uint32_t a = 0; a < kPruneArmCount; ++a) {
+    std::vector<uint8_t> variant = dna_blob;
+    {
+      const float c = kPruneArms[a].compete;
+      std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, consolidate) +
+                      offsetof(aibaby::DnaConsolidate, prune_compete),
+                  &c, sizeof(c));
+      // Every arm sets it explicitly, the off arm included, so that the day
+      // this ships on in dna/default.toml the control does not silently stop
+      // being one.
+    }
+    Session s;
+    if (!s.init(variant, error)) {
+      std::printf("  arm %s failed to hatch: %s\n", kPruneArms[a].name, error.c_str());
+      return false;
+    }
+    aibaby::Network& net = s.brain.network();
+    const aibaby::DnaVision& vcfg = dna0.header().vision;
+    const aibaby::DnaAudio& acfg = dna0.header().audio;
+    Retina retina;
+    Ear ear;
+    if (!retina.configure(vcfg, error) || !ear.configure(acfg, error)) {
+      std::printf("  transducer failed: %s\n", error.c_str());
+      return false;
+    }
+    VowelSource voice(acfg.sample_rate);
+    SceneSource scene(vcfg.frame_size, dna0.header().seed);
+    std::vector<uint8_t> frame(size_t(vcfg.frame_size) * vcfg.frame_size, 0);
+    std::vector<float> pcm(acfg.sample_rate / 1000);
+    const uint64_t frame_ticks =
+        uint64_t(1000.0f / vcfg.frame_hz / dna0.header().sim.dt_ms + 0.5f);
+    aibaby::Rng rng;
+    rng.seed(dna0.header().seed ^ 0x9700u);
+    const Toy toy = m3_toy(rng, 0);
+
+    // Ordinary waking life, so the weights spread out the way experience
+    // spreads them. A brain pruned straight from birth would be scoring the
+    // genome's own weight jitter, which is a distribution nothing selected.
+    for (uint64_t t = 0; t < drive; ++t) {
+      if (t % frame_ticks == 0) {
+        scene.render(toy.shape, toy.cx, toy.cy, toy.radius, 0.85f, 0.02f, frame.data());
+        retina.present(frame.data());
+        s.brain.see(retina.features().data(), retina.feature_count());
+      }
+      voice.render(0.0f, 0.0f, 0.0f, 0.0f, pcm.data(), pcm.size());
+      ear.tick(s.brain, pcm.data(), pcm.size());
+      s.brain.step();
+    }
+
+    auto survey = [&](double* mean, uint32_t* min_in_out, uint32_t* orphan_out) {
+      double sum = 0.0;
+      uint32_t counted = 0, lowest = 0xFFFFFFFFu, none = 0;
+      for (uint32_t m = 0; m < net.module_count(); ++m) {
+        const aibaby::ModuleState& ms = net.module(m);
+        for (uint32_t k = 0; k < ms.count; ++k) {
+          const uint32_t i = ms.begin + k;
+          const uint32_t in_n = net.in_degree(i);
+          if (in_n == 0) { ++none; continue; }
+          if (in_n < lowest) lowest = in_n;
+          sum += double(net.mean_in_weight_of(i)) * double(in_n);
+          counted += in_n;
+        }
+      }
+      *mean = counted ? sum / double(counted) : 0.0;
+      *min_in_out = lowest == 0xFFFFFFFFu ? 0 : lowest;
+      *orphan_out = none;
+    };
+
+    uint32_t dummy_min = 0, dummy_orph = 0;
+    survey(&mean_before[a], &dummy_min, &dummy_orph);
+    const uint32_t pruned0 = net.structural().synapses_pruned;
+    for (uint32_t pass = 0; pass < kPrunePasses; ++pass) {
+      net.consolidate();
+      competed[a] += net.competed_out();
+    }
+    pruned[a] = net.structural().synapses_pruned - pruned0;
+    live_after[a] = net.telemetry().live_synapses;
+    survey(&mean_after[a], &min_in[a], &orphans[a]);
+  }
+
+  const double change_off =
+      mean_before[0] > 0.0 ? 100.0 * (mean_after[0] / mean_before[0] - 1.0) : 0.0;
+  const double change_on =
+      mean_before[1] > 0.0 ? 100.0 * (mean_after[1] / mean_before[1] - 1.0) : 0.0;
+
+  std::printf("\n    %-9s %-8s %-9s %-8s %-11s %-11s %-9s %-7s %-8s\n", "arm", "pruned",
+              "competed", "% of", "mean|w| in", "mean|w| out", "change", "min in",
+              "orphans");
+  for (uint32_t a = 0; a < kPruneArmCount; ++a) {
+    const double change =
+        mean_before[a] > 0.0 ? 100.0 * (mean_after[a] / mean_before[a] - 1.0) : 0.0;
+    const double frac = (live_after[a] + pruned[a]) > 0
+                            ? 100.0 * double(pruned[a]) / double(live_after[a] + pruned[a])
+                            : 0.0;
+    std::printf("    %-9s %-8u %-9u %-8.1f %-11.5f %-11.5f %+-9.2f %-7u %-8u\n",
+                kPruneArms[a].name, pruned[a], competed[a], frac, mean_before[a],
+                mean_after[a], change, min_in[a], orphans[a]);
+  }
+
+
+  std::printf("\n  `change` is the mean |w| over surviving afferents after the passes\n"
+              "  against before, and the OFF ARM is its null — not 0%%. Removing\n"
+              "  synapses at random would leave the mean where it was, but a\n"
+              "  consolidation pass also downscales every weight (§3.6), so the off\n"
+              "  arm's %+.2f%% is what a pass costs with no competition in it. The\n"
+              "  difference between the two columns is selection and the rest is sleep.\n",
+              change_off);
+  std::printf("\n  off arm competed       %u   (must be 0 — the control)\n"
+              "  competitive removals   %u   (must be > 0, or nothing was tested)\n"
+              "  selectivity            %+.2f%% against the off arm's %+.2f%%\n"
+              "  orphaned neurons       %u against the off arm's %u   (must not rise:\n"
+              "                             a stripped cell deletes the tract it was\n"
+              "                             meant to sharpen. Six are already there at\n"
+              "                             birth and are not this rule's doing)\n",
+              competed[0], competed[1], change_on, change_off, orphans[1], orphans[0]);
+
+  const bool control_ok = competed[0] == 0;
+  const bool ran = competed[1] > 0;
+  const bool selective = change_on > change_off + 1.0;
+  // Against the off arm and not against zero. The shipped genome hatches with
+  // six neurons that nothing projects onto, and a test that blamed those on
+  // competition would fail for a reason that has nothing to do with it — the
+  // same mistake as reading `change` against 0%.
+  const bool safe = orphans[1] <= orphans[0] && min_in[1] >= min_in[0];
+  if (!control_ok) {
+    std::printf("\n  FAIL — the off arm competed. prune_compete 0 is not off.\n");
+  } else if (!ran) {
+    std::printf("\n  FAIL — competition removed nothing, so no column above is a\n"
+                "  measurement of it. Either every afferent is above half its\n"
+                "  target's mean — check the weight spread — or the bar never fired.\n");
+  } else if (!selective) {
+    std::printf("\n  FAIL — removal is not selective: the surviving mean did not rise\n"
+                "  against a null of 0%%. That is decimation with a comparison in\n"
+                "  front of it, which is worse than the absolute floor it replaces.\n");
+  } else if (!safe) {
+    std::printf("\n  FAIL — competition cost connectivity the off arm kept: %u orphans\n"
+                "  against %u, minimum in-degree %u against %u. A rule that strips a\n"
+                "  cell deletes the tract it was meant to sharpen.\n",
+                orphans[1], orphans[0], min_in[1], min_in[0]);
+  } else {
+    std::printf("\n  PASS — competition removes synapses the absolute floor did not,\n"
+                "  the survivors are stronger than the population it selected from,\n"
+                "  and no neuron was stripped.\n");
+  }
+  (void)verbose;
+  return control_ok && ran && selective && safe;
+}
+
+
+// --- tauprobe: does a per-module eligibility time constant do anything? -----
+//
+// DNA v39 gives each module its own tau_elig, after e-prop's prediction that the
+// trace's timescale tracks the postsynaptic neuron's own history-dependence.
+// The mechanism is four lines and the only way it can be wrong is silently: a
+// scale that is read on the wrong side of the synapse, or folded into a decay
+// that was already computed, would leave every number in the brain unchanged
+// and the field would look enabled forever.
+//
+// So this measures the one thing that must be true if it runs. With no weight
+// change the trace is a leaky accumulator driven by spike timing:
+//
+//     e_ss = input / (1 - exp(-interval / tau))  ->  approximately input x tau
+//
+// for a tau well above the plasticity interval. Scaling tau must scale the
+// steady-state |e| onto that module in proportion, and must leave every OTHER
+// module alone — which is the half that catches a scale applied globally by
+// mistake.
+namespace {
+constexpr float kTauScales[] = {1.0f, 2.0f, 4.0f, 8.0f};
+constexpr uint32_t kTauScaleCount = sizeof(kTauScales) / sizeof(kTauScales[0]);
+}  // namespace
+
+bool run_tauprobe(const std::vector<uint8_t>& dna_blob, uint64_t ticks, bool verbose) {
+  std::string error;
+  aibaby::Dna dna0;
+  if (dna0.load(dna_blob.data(), dna_blob.size()) != aibaby::DnaStatus::kOk) {
+    std::printf("  setup failed: the genome does not load\n");
+    return false;
+  }
+  const int32_t cen_m = dna0.module_with_role(aibaby::ModuleRole::kAssociation);
+  const int32_t voc_m = dna0.module_with_role(aibaby::ModuleRole::kVocal);
+  if (cen_m < 0 || voc_m < 0) {
+    std::printf("  this genome has no association or vocal module\n");
+    return false;
+  }
+  const uint64_t per_arm = ticks / kTauScaleCount;
+  instrument("tauprobe", dna0.header().seed ^ 0x7A0u, per_arm, "ticks per arm");
+  std::printf("  scaling %s's tau_elig; %s is the untouched control module\n"
+              "  global tau_elig    %.0f ms, cashed in every %u ticks\n",
+              dna0.module(uint32_t(cen_m)).name, dna0.module(uint32_t(voc_m)).name,
+              double(dna0.header().stdp.tau_elig_ms),
+              dna0.header().sim.plasticity_interval_ticks);
+
+  double e_scaled[kTauScaleCount] = {}, e_control[kTauScaleCount] = {};
+
+  for (uint32_t a = 0; a < kTauScaleCount; ++a) {
+    std::vector<uint8_t> variant = dna_blob;
+    const float sc = kTauScales[a];
+    std::memcpy(variant.data() + sizeof(aibaby::DnaHeader) +
+                    sizeof(aibaby::DnaModule) * size_t(cen_m) +
+                    offsetof(aibaby::DnaModule, elig_tau_scale),
+                &sc, sizeof(sc));
+    Session s;
+    if (!s.init(variant, error)) {
+      std::printf("  arm %.0fx failed to hatch: %s\n", double(sc), error.c_str());
+      return false;
+    }
+    const aibaby::Network& net = s.brain.network();
+    const aibaby::DnaVision& vcfg = dna0.header().vision;
+    const aibaby::DnaAudio& acfg = dna0.header().audio;
+    Retina retina;
+    Ear ear;
+    if (!retina.configure(vcfg, error) || !ear.configure(acfg, error)) {
+      std::printf("  transducer failed: %s\n", error.c_str());
+      return false;
+    }
+    VowelSource voice(acfg.sample_rate);
+    SceneSource scene(vcfg.frame_size, dna0.header().seed);
+    std::vector<uint8_t> frame(size_t(vcfg.frame_size) * vcfg.frame_size, 0);
+    std::vector<float> pcm(acfg.sample_rate / 1000);
+    const uint64_t frame_ticks =
+        uint64_t(1000.0f / vcfg.frame_hz / dna0.header().sim.dt_ms + 0.5f);
+    aibaby::Rng rng;
+    rng.seed(dna0.header().seed ^ 0x7A0u);
+    const Toy toy = m3_toy(rng, 0);
+
+    double sum_s = 0.0, sum_c = 0.0;
+    uint64_t samples = 0;
+    for (uint64_t t = 0; t < per_arm; ++t) {
+      if (t % frame_ticks == 0) {
+        scene.render(toy.shape, toy.cx, toy.cy, toy.radius, 0.85f, 0.02f, frame.data());
+        retina.present(frame.data());
+        s.brain.see(retina.features().data(), retina.feature_count());
+      }
+      voice.render(0.0f, 0.0f, 0.0f, 0.0f, pcm.data(), pcm.size());
+      ear.tick(s.brain, pcm.data(), pcm.size());
+      s.brain.step();
+      // Sampled after the trace has filled: a leaky accumulator with a 8x tau
+      // takes 8x as long to reach its steady state, and reading all four arms
+      // at the same early tick would measure the fill and call it the level.
+      if (t < per_arm / 2 || t % 500 != 0) continue;
+      sum_s += double(net.mean_eligibility(uint32_t(cen_m)));
+      sum_c += double(net.mean_eligibility(uint32_t(voc_m)));
+      ++samples;
+    }
+    e_scaled[a] = samples ? sum_s / double(samples) : 0.0;
+    e_control[a] = samples ? sum_c / double(samples) : 0.0;
+  }
+
+  std::printf("\n    %-10s %-14s %-10s %-14s %-10s\n", "scale", "mean|e| central",
+              "vs 1x", "mean|e| vocal", "vs 1x");
+  for (uint32_t a = 0; a < kTauScaleCount; ++a) {
+    std::printf("    %-10.0f %-14.6f %-10.2f %-14.6f %-10.2f\n", double(kTauScales[a]),
+                e_scaled[a], e_scaled[0] > 0.0 ? e_scaled[a] / e_scaled[0] : 0.0,
+                e_control[a], e_control[0] > 0.0 ? e_control[a] / e_control[0] : 0.0);
+  }
+
+  const double ratio = e_scaled[0] > 0.0 ? e_scaled[kTauScaleCount - 1] / e_scaled[0] : 0.0;
+  const double leak =
+      e_control[0] > 0.0 ? e_control[kTauScaleCount - 1] / e_control[0] : 0.0;
+  bool monotone = true;
+  for (uint32_t a = 1; a < kTauScaleCount; ++a) {
+    if (e_scaled[a] <= e_scaled[a - 1]) monotone = false;
+  }
+
+  std::printf("\n  a leaky accumulator's steady state is proportional to its time\n"
+              "  constant, so scaling tau_elig 8x must raise the trace on that module\n"
+              "  and must leave the others where they were.\n");
+  std::printf("\n  central 8x / 1x        %.2f   (must be over 2.0 and rise at every step)\n"
+              "  vocal   8x / 1x        %.2f   (must stay inside 0.8-1.25: the scale is\n"
+              "                         per module, and a global one would move this too)\n",
+              ratio, leak);
+
+  const bool scaled = ratio > 2.0 && monotone;
+  const bool contained = leak > 0.8 && leak < 1.25;
+  if (!scaled) {
+    std::printf("\n  FAIL — scaling tau_elig did not raise the trace%s. The field is\n"
+                "  present and inert, which is the failure mode it was built to avoid.\n",
+                monotone ? "" : " monotonically");
+  } else if (!contained) {
+    std::printf("\n  FAIL — the untouched module moved too. The scale is being applied\n"
+                "  more widely than one module, most likely on the wrong side of the\n"
+                "  synapse: v39 is read through syn_target_, not from the loop's own\n"
+                "  module.\n");
+  } else {
+    std::printf("\n  PASS — the trace scales with the module's own time constant and\n"
+                "  the other modules are untouched. Whether a longer window BUYS\n"
+                "  anything is a separate question, and the answer on record is no:\n"
+                "  eligibility distribution is one of the five refuted conditioning\n"
+                "  classes.\n");
+  }
+  (void)verbose;
+  return scaled && contained;
+}
+
+// --- ipprobe: is a rate code available at the ear, and at what price? -------
+//
+// `stpprobe` measured that `auditory` emits 1.30 spikes per tick in silence and
+// 1.33 during speech — 2.3% — because §3.1's intrinsic plasticity holds the
+// module at a rate setpoint. That blinds every mechanism in this creature that
+// reads a population rate: v12's normalisation, v21-v24's pooling, `ffi`, the
+// critic's bins, and v36's dynamic synapses. It is worth a standing test rather
+// than a note, because it is a property of one genome field and the day someone
+// changes that field the whole class of mechanisms changes with it.
+//
+// Two columns, and the second is the price. `gap` is what a rate-reading
+// mechanism would have to work with. `audio ratio` is the experiment's own
+// measure of whether sound reaches B2 at all, and it is here because relaxing a
+// regulator is exactly the kind of change that buys a number and breaks a
+// milestone — the `[normalisation]` note records separability collapsing to
+// chance when central's copy of this knob reaches zero.
+bool run_ipprobe(const std::vector<uint8_t>& dna_blob, uint64_t ticks, bool verbose) {
+  std::string error;
+  aibaby::Dna dna0;
+  if (dna0.load(dna_blob.data(), dna_blob.size()) != aibaby::DnaStatus::kOk) {
+    std::printf("  setup failed: the genome does not load\n");
+    return false;
+  }
+  const int32_t aud_m = dna0.module_with_role(aibaby::ModuleRole::kAuditory);
+  if (aud_m < 0) {
+    std::printf("  this genome has no auditory module\n");
+    return false;
+  }
+  static const float kIpScales[] = {1.0f, 0.25f, 0.10f, 0.0f};
+  const uint32_t n_arms = sizeof(kIpScales) / sizeof(kIpScales[0]);
+  const uint64_t per_arm = ticks / n_arms;
+  const uint64_t half = per_arm / 2;
+
+  instrument("ipprobe", dna0.header().seed ^ 0x19Fu, per_arm, "ticks per arm");
+  std::printf("  sweeping %s's ip_wake_scale; shipped value %.2f\n",
+              dna0.module(uint32_t(aud_m)).name,
+              double(dna0.module(uint32_t(aud_m)).ip_wake_scale));
+
+  std::printf("\n    %-8s %-11s %-11s %-9s\n", "ip", "silence", "speech", "gap");
+  double gap[8] = {};
+  for (uint32_t a = 0; a < n_arms; ++a) {
+    std::vector<uint8_t> variant = dna_blob;
+    const float sc = kIpScales[a];
+    std::memcpy(variant.data() + sizeof(aibaby::DnaHeader) +
+                    sizeof(aibaby::DnaModule) * size_t(aud_m) +
+                    offsetof(aibaby::DnaModule, ip_wake_scale),
+                &sc, sizeof(sc));
+    Session s;
+    if (!s.init(variant, error)) {
+      std::printf("  arm %.2f failed to hatch: %s\n", double(sc), error.c_str());
+      return false;
+    }
+    const aibaby::Network& net = s.brain.network();
+    const aibaby::DnaAudio& acfg = dna0.header().audio;
+    Ear ear;
+    if (!ear.configure(acfg, error)) {
+      std::printf("  transducer failed: %s\n", error.c_str());
+      return false;
+    }
+    VowelSource voice(acfg.sample_rate);
+    std::vector<float> pcm(acfg.sample_rate / 1000);
+    const Word& w = kWords[0];
+    double quiet = 0.0, loud = 0.0;
+    uint64_t nq = 0, nl = 0;
+    for (uint64_t t = 0; t < per_arm; ++t) {
+      // Silence first and speech second, each long enough for the regulator to
+      // have settled into it — the point of the probe is the STEADY difference,
+      // not the transient when the sound arrives.
+      const bool sounding = t >= half;
+      voice.render(sounding ? w.f0 : 0.0f, w.f1, w.f2, sounding ? 0.5f : 0.0f,
+                   pcm.data(), pcm.size());
+      ear.tick(s.brain, pcm.data(), pcm.size());
+      s.brain.step();
+      const uint64_t into = sounding ? t - half : t;
+      if (into < half / 2) continue;  // let the regulator settle in each half
+      if (sounding) { loud += net.module(uint32_t(aud_m)).spikes; ++nl; }
+      else { quiet += net.module(uint32_t(aud_m)).spikes; ++nq; }
+    }
+    const double q = nq ? quiet / double(nq) : 0.0;
+    const double l = nl ? loud / double(nl) : 0.0;
+    gap[a] = q > 0.0 ? 100.0 * (l / q - 1.0) : 0.0;
+    std::printf("    %-8.2f %-11.2f %-11.2f %+-9.1f\n", double(sc), q, l, gap[a]);
+  }
+
+  std::printf("\n  gap is what a mechanism reading presynaptic RATE would have to work\n"
+              "  with: the module's spikes per tick during speech against silence.\n");
+  std::printf("\n  shipped (1.00)         %+.1f%%\n"
+              "  relaxed (0.10)         %+.1f%%   (must be at least 1.2x the shipped gap)\n"
+              "  ablated (0.00)         %+.1f%%   (reported, not required. The\n"
+              "                         [normalisation] note's collapse-at-zero is about\n"
+              "                         central's SEPARABILITY, which is a different\n"
+              "                         observable — a wide rate gap here is no evidence\n"
+              "                         the ablated creature is a good one)\n",
+              gap[0], gap[2], gap[3]);
+
+  const bool relaxing_helps = gap[0] > 0.0 && gap[2] > 1.2 * gap[0];
+  if (!relaxing_helps) {
+    std::printf("\n  FAIL — relaxing the regulator no longer opens the gap. Either the\n"
+                "  ear or the module's operating point has moved, and every claim\n"
+                "  about rate-reading mechanisms being blind here has to be re-taken.\n");
+  } else {
+    std::printf("\n  PASS — the regulator costs real dynamic range and relaxing it\n"
+                "  returns some. Note what this does NOT say: the shipped gap is\n"
+                "  %+.1f%%, not nothing, so a rate-reading mechanism here is working\n"
+                "  against a narrowed signal rather than a flat one. An earlier\n"
+                "  reading of 2.8%% came from `stpprobe` measuring its silent block\n"
+                "  first, on a creature whose regulator had not settled.\n", gap[0]);
+  }
+  (void)verbose;
+  return relaxing_helps;
 }
 
 }  // namespace aibaby_host

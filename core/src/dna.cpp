@@ -176,6 +176,12 @@ DnaStatus Dna::load(const void* blob, size_t size) {
         return DnaStatus::kBadGrowth;
       }
       if (c.prune_weight < 0.0f) return DnaStatus::kBadGrowth;
+      // DNA v38. A competitive bar at or above 1 removes every afferent below
+      // its target's mean on every sleep pass, which is not selection but
+      // decimation; and competition among fewer than two candidates is not
+      // competition. Both are genomes that would run and destroy a tract.
+      if (c.prune_compete < 0.0f || c.prune_compete >= 1.0f) return DnaStatus::kBadGrowth;
+      if (c.prune_compete > 0.0f && c.prune_compete_min_in < 2) return DnaStatus::kBadGrowth;
       if (c.prune_traffic < 0.0f) return DnaStatus::kBadGrowth;
       if (c.interval_ticks == 0) return DnaStatus::kBadGrowth;
       if (c.replay_episodes > kMaxReplayEpisodes) return DnaStatus::kBadGrowth;
@@ -355,6 +361,14 @@ DnaStatus Dna::load(const void* blob, size_t size) {
     //   no recovery time  — resources return instantly, R is 1 at every spike,
     //                       and the synapse is a constant-weight one wearing
     //                       three genome fields.
+    // DNA v37. A pathway cannot learn from a burst signal the genome never
+    // asked any module to compute, and it cannot read a deviation from a
+    // baseline with no time constant. Both would run, write nothing, and look
+    // enabled.
+    if (p.burst_learn != 0.0f) {
+      if (h->stdp.burst_baseline_tau_ms <= 0.0f) return DnaStatus::kBadProjection;
+      if (modules[p.dst].burst_ms <= 0.0f) return DnaStatus::kBadProjection;
+    }
     if (p.stp_use < 0.0f || p.stp_use > 1.0f) return DnaStatus::kBadProjection;
     if (p.stp_use > 0.0f && p.stp_recover_ms <= 0.0f) return DnaStatus::kBadProjection;
     if (p.stp_recover_ms < 0.0f || p.stp_facil_ms < 0.0f) return DnaStatus::kBadProjection;
@@ -407,6 +421,30 @@ DnaStatus Dna::load(const void* blob, size_t size) {
   // and every eligibility is multiplied by (1 - gate) — plasticity turned down
   // or off by what reads as an enabled mechanism. Rejected here rather than
   // clamped, because the wrong genome should not run at all.
+  // DNA v37. A burst window wider than the refractory period would score every
+  // spike as a burst spike, and one at or below it can never fire — either way
+  // the mechanism reads as enabled and measures nothing. `burst_refrac_scale`
+  // is a fraction of a period and cannot exceed 1: lengthening the refractory
+  // period during a plateau is the opposite of BAC firing.
+  for (uint32_t i = 0; i < h->module_count; ++i) {
+    // DNA v39. A zero or negative scale would make the trace decay instantly
+    // or grow without bound; the global check above already refuses a
+    // plasticity interval longer than tau_elig, and this must not be able to
+    // sneak a module back past it.
+    if (modules[i].elig_tau_scale <= 0.0f) return DnaStatus::kBadModule;
+    if (float(h->sim.plasticity_interval_ticks) * h->sim.dt_ms >
+        h->stdp.tau_elig_ms * modules[i].elig_tau_scale) {
+      return DnaStatus::kBadModule;
+    }
+    if (modules[i].burst_ms < 0.0f) return DnaStatus::kBadModule;
+    if (modules[i].burst_ms > 0.0f && modules[i].burst_ms <= modules[i].refractory_ms) {
+      return DnaStatus::kBadModule;
+    }
+    if (modules[i].burst_refrac_scale <= 0.0f || modules[i].burst_refrac_scale > 1.0f) {
+      return DnaStatus::kBadModule;
+    }
+  }
+
   for (uint32_t i = 0; i < h->module_count; ++i) {
     if (modules[i].plateau_gate <= 0.0f) continue;
     if (modules[i].plateau_gate > 1.0f) return DnaStatus::kBadModule;
