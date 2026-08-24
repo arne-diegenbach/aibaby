@@ -129,6 +129,7 @@ a canvas, so each has a headless experiment that prints a number and a verdict.
 ./build/aibaby --experiment mechverify                   # a pinned hash for every mechanism that ships off
 ./build/aibaby --experiment errprobe    --ticks 600000  # DNA v40: does the tuft learn to carry an error
 ./build/aibaby --experiment relayprobe  --ticks 240000  # Webb's two-stage circuit; needs a genome with a relay
+./build/aibaby --experiment vocallearn  --ticks 3400000 # does the echo improve with feedback (OPEN)
 ./build/aibaby --experiment snapshot    --ticks 2400000 # §8: resume is exact
 ```
 
@@ -3588,6 +3589,111 @@ with practice?** The machinery for that already exists and is the one thing in
 this project that has ever worked — node perturbation met G2, so reward can
 shape a motor act here. It has only ever been scored on how MUCH the creature
 vocalises, never on how well.
+
+### `vocallearn` — does the echo get better with practice? Built, and honest about its own power
+
+Eleven mechanisms have been aimed at G3, which is settled negative. None has ever
+been aimed at the thing that works. M1b measures the creature repeating a heard
+word at **0.890** with an audible d′ of **1.37** — the only number here that
+clears the audibility bar — and nothing has been built on it.
+
+The question it raises: **the creature imitates, does it get better at it?** That
+is vocal learning, and it is what the songbird literature this project already
+borrows from (LMAN, DNA v10) is actually about — motor variability selected by
+how close a rendition lands to a template.
+
+**Why this is a fair question where G3 is not.** Improving the echo does not ask
+the creature to *learn* a conditional mapping; M1b measured that it already has
+one, delivered by the ear-to-larynx route it was born with. It asks for that
+mapping to be refined toward the heard formants. And the rule that would do it is
+the one thing here that has ever worked: node perturbation met G2, so reward can
+shape a motor act in this creature. It has only ever been scored on how *much*
+the creature vocalises, never on how well.
+
+The design is G2's with accuracy in place of rate. Error is
+`|log(f1/heard f1)| + |log(f2/heard f2)|` over the voiced frames 200–600 ms after
+the word stops — M1b's window, where the ear reads at chance and the voice still
+carries the word. Four arms: **taught**, **yoked** (the same praise and scolding
+in the same proportions, shifted, for nothing it did), **none**, and **fixed
+target** — a positive control that rewards one formant target with no
+conditionality at all, which is exactly the act G2 proved reward can shape here.
+
+Two design points that are not details. The reward baseline is **per word**:
+against one global mean, a word whose natural posture sits closer would earn
+praise every time and the creature would be rewarded for word identity rather
+than accuracy — it would learn to say the easy word. And a trial in which the
+creature said nothing is **skipped, not scored as maximum error**: silence is not
+a wrong answer, and scoring it as one makes "say less" the winning strategy.
+
+#### Reward moves this larynx a long way, and cannot move it conditionally
+
+Three seed families, 3.4M ticks, ~900 scored trials per arm:
+
+| seed | `fixed − yoked` | `taught − yoked` |
+|---|---|---|
+| 20260809 | +18.3 | +0.7 |
+| 20360812 | **+36.3** | −1.4 |
+| 20451117 | +17.4 | +0.3 |
+| **mean** | **+24.0** | **−0.1** |
+
+```
+arm         scored  err early  err late  change   rewards   voiced
+taught      913     0.8138     0.8074    +0.8%    3612      0.37
+yoked       889     0.8180     0.8172    +0.1%       0      0.32
+none        902     0.8051     0.8140    -1.1%       0      0.34
+fixed tgt   894     0.4989     0.4070   +18.4%    3231      0.31
+```
+
+**The positive control is the largest effect anything in this project has ever
+produced on the voice** — an 18–36% reduction in formant error, far past G2's
+×1.35 on rate. And the conditional arm is flat on 3 of 3, mean −0.1.
+
+The two arms differ in exactly one thing. Same readout, same rule, same session,
+same reward density, same praise/scold balance (1800/1812 against 1723/1508).
+Only whether the target the creature is rewarded toward depends on what it just
+heard.
+
+**So the wall is not about vision, or naming, or the association module.** M1b
+already measured that this creature HAS a conditional route — the ear-to-larynx
+pathway delivers word-specific postures at 0.890. What this says is that reward
+**cannot reshape that route**. Node perturbation moves a per-neuron bias, which
+is a constant: it can shift an entire posture in one direction superbly, and it
+has no way to shift it *differently depending on the input*. This creature has
+exactly one conditional pathway and it is innate.
+
+That is the same boundary G3 keeps meeting, reached from the one direction that
+was supposed to avoid it — and it is the sharpest statement of it on this page,
+because for once the positive control sits inside the same instrument.
+
+#### The instrument's own power curve, and why the minimum is 3.4M
+
+`fixed − yoked`, in points, is what the positive control buys over its own
+control. The experiment refuses to report on the taught arm until this clears 5:
+
+| session | feedback | `fixed − yoked` | `taught − yoked` |
+|---|---|---|---|
+| 560k | one reward per 2800-tick trial | **−1.2** | −1.8 |
+| 560k | G2's clock, every 150 ticks | **+1.0** | −1.4 |
+| 1.6M | G2's clock | **+4.0** | −1.8 |
+| 3.4M | G2's clock | **+18.3** | +0.7 |
+
+The first version delivered one reward per trial and its positive control moved
+*backwards*. G2 delivers every 150 ticks while the creature is making the sound —
+nineteen times denser, and the regime this creature's one working learning rule
+was actually measured under. That change alone moved the control 2.2 points, and
+tripling the session moved it 3 more.
+
+**The control scales by a factor of fifteen and the taught arm does not move at
+all.** That curve is why the minimum is 3.4M ticks and why it is set by the
+positive control rather than by trial arithmetic: below it the experiment reports
+UNDERPOWERED rather than a null, because a creature that will not move on one
+fixed target will not move on anything here.
+
+It also nearly produced a wrong answer twice. At 560k with one reward per trial
+the taught arm read −1.8 and the control read −1.2 — a null that looked like a
+finding and was a fact about reward density. G2 delivers every 150 ticks while
+the creature is making the sound, nineteen times denser, and that is the regime
+this creature's one working learning rule was measured under.
 
 ### What this round taught about probes, which cost more than the mechanisms did
 
