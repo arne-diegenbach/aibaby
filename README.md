@@ -126,6 +126,7 @@ a canvas, so each has a headless experiment that prints a number and a verdict.
 ./build/aibaby --experiment pruneprobe  --ticks 120000  # DNA v38: is competitive pruning selective, or just large
 ./build/aibaby --experiment tauprobe    --ticks 240000  # DNA v39: does a per-module eligibility tau do anything
 ./build/aibaby --experiment ipprobe     --ticks 240000  # what §3.1's regulator costs the rate code at the ear
+./build/aibaby --experiment mechverify                   # a pinned hash for every mechanism that ships off
 ./build/aibaby --experiment snapshot    --ticks 2400000 # §8: resume is exact
 ```
 
@@ -3303,20 +3304,81 @@ the half that would catch a scale applied globally by mistake. Sub-linear
 because the interval is not negligible against tau. **PASS**, and it says the
 mechanism runs — not that a longer window buys anything.
 
+### `mechverify` — a pinned hash for every mechanism that ships off
+
+`verify` pins exactly one number, the determinism hash of the shipped genome,
+and that pin has paid for itself repeatedly. It also has a blind spot big enough
+to hide a bug for four DNA versions: **it is taken on one genome, and a dozen
+mechanisms are switched off in it.** Nothing they do is hashed, so nothing about
+them can go red.
+
+That is not hypothetical, and the cost is on this page. `syn_elig_mean_` was not
+carried through the pruning compaction from DNA v16 until 2026-08-23, so after
+every sleep prune a surviving synapse inherited another edge's eligibility
+baseline. The pin stayed green throughout, because reaching the bug needs **both**
+a sleep prune and `elig_baseline_tau_ms` above zero, and the shipped genome has
+neither. Proving the fix was real required a genome nobody runs.
+
+So `mechverify` pins fourteen more hashes, one per off-by-default mechanism, each
+on a genome where that mechanism alone is switched on:
+
+```
+mechanism                  dna   ticks     expected           measured           verdict
+predictive coding          v15   120000    5246e218f7c2b8d6   5246e218f7c2b8d6   ok
+eligibility baseline       v16   120000    2ef07ecfd3c1756d   2ef07ecfd3c1756d   ok
+presynaptic centring       v17   120000    12c4c9061cc62019   12c4c9061cc62019   ok
+per-pathway Hebbian        v23   120000    1fc86fcdc2b06e2d   1fc86fcdc2b06e2d   ok
+pooling interneurons       v24   120000    633dcd0314e81925   633dcd0314e81925   ok
+apical compartment         v25   120000    73653dbad8466837   73653dbad8466837   ok
+oscillations               v26   120000    e77ded57ffba8e6c   e77ded57ffba8e6c   ok
+critical period            v28   120000    7dcf64323b9e6ae3   7dcf64323b9e6ae3   ok
+plateau-gated plasticity   v29   120000    d0a3b887d3dfd855   d0a3b887d3dfd855   ok
+lateral competition        v32   120000    feb08e20bf42c877   feb08e20bf42c877   ok
+dynamic synapses           v36   120000    ed756042e4167e0c   ed756042e4167e0c   ok
+burst plasticity           v37   120000    d4159bcbf1dddfe2   d4159bcbf1dddfe2   ok
+competitive pruning        v38   1300000   8bc54c9948268aed   8bc54c9948268aed   ok
+per-module elig tau        v39   120000    6037b59ae289c878   6037b59ae289c878   ok
+
+14 mechanisms, 0 drifted, 0 vacuous, 0 unpinned, 0 broken
+```
+
+**The second condition is what makes it worth having.** A pin that matches is
+only evidence if the variant differs from the shipped creature at all. An
+enabled-but-inert mechanism hashes identically to the off genome, and pinning
+*that* locks in a test that cannot fail — which is the failure this project has
+paid for under half a dozen names: v18 measured flat, v28 inert by arithmetic,
+v35 aimed at a cap that was already closed. So every variant must **match its
+pin and differ from the baseline**, and one that does not is reported VACUOUS and
+fails.
+
+That check earned its keep before the experiment ever passed once. The v24
+variant set `ffi_gain = 0.5` and hashed **identically** to the shipped creature,
+because `ffi_source` is a module index defaulting to −1 and the gain alone does
+nothing. Without the vacuity test that number would have been pinned and v24
+recorded as covered.
+
+Two design notes. `mechverify` ignores `--ticks`; each variant declares its own
+length, because a pin taken where the mechanism cannot run is vacuous by
+construction. That is why v38 gets **1.3M** and not 120000: competitive pruning
+only executes inside a consolidation pass, and the creature does not fall asleep
+until ~1.04M ticks.
+
 ### The suite, both tiers
 
 Run 2026-08-24 on the shipped genome, with DNA v36–v39 all switched off.
 
 ```
 --experiment verify           determinism PASS   pinned hash PASS   18 of 18 as expected
---experiment verify-long      determinism PASS   pinned hash PASS   32 of 32 as expected
+--experiment verify-long      determinism PASS   pinned hash PASS   33 of 33 as expected
+--experiment mechverify       14 mechanisms, 0 drifted, 0 vacuous, 0 unpinned, 0 broken
                               1 open milestone still failing, which is what
                               "as expected" means for m3
 ```
 
 Both tiers green, and the pinned hash is still `23c4eb2c7c45d05c` — four
 mechanisms and a bug fix later, the creature everyone runs is bit-identical to
-the one before them.
+the one before them. `mechverify` runs inside the long tier, so a green
+`verify-long` now also means every mechanism that ships *off* is unchanged.
 
 **The fast tier cannot see any of this work, and that is the point of running
 the long one.** `burstprobe` is `kLong` at a 600000-tick minimum because 200000
@@ -3378,11 +3440,12 @@ null of 0.380 against a chance of 0.500 and an "effect" that was partly that. At
 33 trials, an accuracy step of 0.06, and every object column was inside its own
 noise. The minimum is 600000.
 
-**A mechanism that ships off is invisible to `verify`.** The `syn_elig_mean_`
+**A mechanism that ships off was invisible to `verify`.** The `syn_elig_mean_`
 pruning bug survived since v16 because it needs both a sleep prune and a genome
-with DNA v16 enabled, and the shipped genome has neither. The pinned hash cannot
-see any of the eleven off-by-default mechanisms, and the fix had to be proved on
-a genome nobody runs.
+with DNA v16 enabled, and the shipped genome has neither. The pinned hash could
+not see any of the off-by-default mechanisms, and the fix had to be proved on a
+genome nobody runs. That is what `mechverify` above is for, and it is the only
+one of these lessons that turned into code rather than a rule.
 
 ## Design decisions that were not obvious
 

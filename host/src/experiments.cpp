@@ -82,6 +82,10 @@ const Spec kSpecs[] = {
     {"oscprobe", 200000, Expect::kGuard, Tier::kFast,
      "derived: 100 trials; guard — the oscillators ship off"},
     {"audprobe", 240000, Expect::kPass, Tier::kFast, "derived: 100 trials at 2400 ticks each"},
+    {"mechverify", kDefaultMinimum, Expect::kPass, Tier::kLong,
+     "each variant declares its own length; --ticks is not read. Long because one\n"
+     "  mechanism only executes inside a sleep consolidation and needs 1.3M to\n"
+     "  reach one"},
     {"tauprobe", 240000, Expect::kPass, Tier::kFast,
      "derived: 4 arms, and the 8x arm needs 8x as long to reach its steady state,\n"
      "  so each arm is read over its own second half"},
@@ -248,6 +252,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "pruneprobe") ok = run_pruneprobe(dna_blob, ticks, verbose);
   else if (name == "tauprobe") ok = run_tauprobe(dna_blob, ticks, verbose);
   else if (name == "ipprobe") ok = run_ipprobe(dna_blob, ticks, verbose);
+  else if (name == "mechverify") ok = run_mechverify(dna_blob, ticks, verbose);
   else if (name == "babble") ok = run_babble(dna_blob, ticks, verbose, cap);
   else if (name == "calibrate") ok = run_calibrate(dna_blob, ticks, verbose);
   else if (name == "sleep") ok = run_sleep(dna_blob, ticks, verbose);
