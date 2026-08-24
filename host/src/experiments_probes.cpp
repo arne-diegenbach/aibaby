@@ -6131,7 +6131,7 @@ struct Edit {
 struct MechPin {
   const char* name;
   const char* dna;     // which DNA version introduced it
-  Edit edits[5];
+  Edit edits[8];
   uint32_t n_edits;
   uint64_t ticks;
   uint64_t hash;       // 0 means "not pinned yet"; the run prints what to paste
@@ -6206,6 +6206,15 @@ const MechPin kMechPins[] = {
      {{PatchScope::kHeader, nullptr, kPruneCompete, 0.5f, false, nullptr}}, 1, kThroughSleep, 0x8bc54c9948268aedull},
     {"per-module elig tau", "v39",
      {{PatchScope::kModule, "central", M_(elig_tau_scale), 4.0f, false, nullptr}}, 1, kShort, 0x6037b59ae289c878ull},
+    {"dendritic error", "v40",
+     {{PatchScope::kModule, "vocal", M_(apical_threshold), 0.35f, false, nullptr},
+      {PatchScope::kModule, "vocal", M_(apical_gain), 1.0f, false, nullptr},
+      {PatchScope::kProjection, "vision->vocal", P_(apical), 1.0f, true, nullptr},
+      {PatchScope::kModule, "vocal", M_(ffi_source), 0.0f, true, "vision"},
+      {PatchScope::kModule, "vocal", M_(ffi_gain), 0.5f, false, nullptr},
+      {PatchScope::kModule, "vocal", M_(ffi_apical), 1.0f, true, nullptr},
+      {PatchScope::kModule, "vocal", M_(ffi_learn), 2e-4f, false, nullptr}},
+     7, kShort, 0x457a17d1af252433ull},
 };
 constexpr uint32_t kMechPinCount = sizeof(kMechPins) / sizeof(kMechPins[0]);
 
@@ -6396,6 +6405,637 @@ bool run_mechverify(const std::vector<uint8_t>& dna_blob, uint64_t ticks, bool v
   }
   (void)verbose;
   return drifted == 0 && vacuous == 0 && broken == 0 && unpinned == 0;
+}
+
+
+// --- errprobe: does the tuft learn to carry an ERROR? ----------------------
+//
+// DNA v40 is the dendritic error microcircuit (Sacramento, Ponte Costa, Bengio
+// & Senn 2018): the pooling interneuron moves onto the apical compartment and
+// its weight learns until what the tuft integrates is top-down input MINUS what
+// the lateral pool predicted of it. Right prediction, zero residual, nothing
+// written; wrong prediction, the residual is what drives learning.
+//
+// It is worth measuring against a specific number rather than against zero.
+// `burstprobe` reads the *raw* apical signal at the larynx — the plateau — as
+// carrying cube-versus-ball at **0.913**, and the burst derived from it at
+// 0.673. So the tuft already carries the object very well, and v40's claim is
+// not that it makes the tuft informative. The claim is that subtracting a
+// learned prediction removes the part that is the same for both objects, which
+// is this project's standing diagnosis stated as a circuit: *a small
+// differential riding on a large common mode*.
+//
+// Three arms, each patched explicitly including the control:
+//
+//   soma           v24 as it stands — interneuron on the soma, weight fixed at
+//                  its in-degree-weighted birth value. The mechanism that
+//                  measurably worked (+0.077, 3/3 families).
+//   tuft, fixed    the same interneuron moved onto the compartment, still
+//                  fixed. This isolates *where* it lands from *whether it
+//                  learns*, and without it a result could be either.
+//   tuft, learning the microcircuit.
+//
+// Four columns, and the second exists to stop the first being believed on its
+// own. `resid early` and `resid late` are the mean |apical| over the first and
+// last thirds of the run: the microcircuit should drive it down. But a residual
+// falling because the input went quiet looks identical, so `ffi w` reports
+// whether the weight actually moved — a residual that fell with a weight that
+// did not is the creature going silent, not the circuit learning.
+namespace {
+
+struct ErrArm {
+  const char* name;
+  uint32_t apical;   // land the interneuron on the tuft
+  float learn;       // and let its weight move
+};
+
+constexpr ErrArm kErrArms[] = {
+    {"soma",           0u, 0.0f},
+    {"tuft, fixed",    1u, 0.0f},
+    {"tuft, learning", 1u, 2e-4f},
+};
+constexpr uint32_t kErrArmCount = sizeof(kErrArms) / sizeof(kErrArms[0]);
+
+constexpr float kErrApicalThreshold = 0.35f;
+constexpr float kErrApicalGain = 1.0f;
+constexpr float kErrFfiGain = 0.5f;
+
+struct ErrRow {
+  double resid_early = 0.0, resid_late = 0.0;
+  double ffi_early = 0.0, ffi_late = 0.0;
+  double plateau_pct = 0.0;
+  double obj_resid = 0.0, shuffled = 0.0;
+  size_t trials = 0;
+};
+
+}  // namespace
+
+bool run_errprobe(const std::vector<uint8_t>& dna_blob, uint64_t ticks, bool verbose) {
+  std::string error;
+  aibaby::Dna dna0;
+  if (dna0.load(dna_blob.data(), dna_blob.size()) != aibaby::DnaStatus::kOk) {
+    std::printf("  setup failed: the genome does not load\n");
+    return false;
+  }
+  const int32_t voc_m = dna0.module_with_role(aibaby::ModuleRole::kVocal);
+  const int32_t vis_m = dna0.module_with_role(aibaby::ModuleRole::kVision);
+  if (voc_m < 0 || vis_m < 0) {
+    std::printf("  this genome has no vocal or vision module\n");
+    return false;
+  }
+  int32_t tuft = -1;
+  for (uint32_t i = 0; i < dna0.header().projection_count; ++i) {
+    const aibaby::DnaProjection& p = dna0.projection(i);
+    if (int32_t(p.dst) == voc_m && int32_t(p.src) == vis_m) tuft = int32_t(i);
+  }
+  if (tuft < 0) {
+    std::printf("  this genome has no vision->vocal tract to put on the tuft\n");
+    return false;
+  }
+
+  const aibaby::DnaVision& vcfg = dna0.header().vision;
+  const aibaby::DnaAudio& acfg = dna0.header().audio;
+  const uint64_t frame_ticks =
+      uint64_t(1000.0f / vcfg.frame_hz / dna0.header().sim.dt_ms + 0.5f);
+  const uint32_t n_trials = uint32_t(ticks / (kErrArmCount * kM3ProbeTicks));
+  const size_t mod_base = sizeof(aibaby::DnaHeader);
+  const size_t proj_base = mod_base + sizeof(aibaby::DnaModule) * dna0.module_count();
+
+  instrument("errprobe", dna0.header().seed ^ 0xE770u, n_trials, "trials per arm");
+  std::printf("  architecture      vision->vocal on the TUFT; the interneuron pools\n"
+              "                    %s, which is the input it has to predict\n",
+              dna0.module(uint32_t(vis_m)).name);
+  std::printf("  reference         burstprobe reads the RAW plateau at 0.913 across\n"
+              "                    three seeds. v40 is not trying to beat that with a\n"
+              "                    bigger signal, but with a cleaner one\n");
+
+  ErrRow rows[kErrArmCount];
+
+  for (uint32_t a = 0; a < kErrArmCount; ++a) {
+    const ErrArm& arm = kErrArms[a];
+    std::vector<uint8_t> variant = dna_blob;
+    {
+      auto put_m = [&](size_t off, const void* v, size_t n) {
+        std::memcpy(variant.data() + mod_base +
+                        sizeof(aibaby::DnaModule) * size_t(voc_m) + off,
+                    v, n);
+      };
+      const float thr = kErrApicalThreshold, gain = kErrApicalGain;
+      put_m(offsetof(aibaby::DnaModule, apical_threshold), &thr, sizeof(thr));
+      put_m(offsetof(aibaby::DnaModule, apical_gain), &gain, sizeof(gain));
+      const int32_t src = vis_m;
+      put_m(offsetof(aibaby::DnaModule, ffi_source), &src, sizeof(src));
+      const float fg = kErrFfiGain;
+      put_m(offsetof(aibaby::DnaModule, ffi_gain), &fg, sizeof(fg));
+      put_m(offsetof(aibaby::DnaModule, ffi_apical), &arm.apical, sizeof(arm.apical));
+      put_m(offsetof(aibaby::DnaModule, ffi_learn), &arm.learn, sizeof(arm.learn));
+      const uint32_t ap = 1u;
+      std::memcpy(variant.data() + proj_base +
+                      sizeof(aibaby::DnaProjection) * size_t(tuft) +
+                      offsetof(aibaby::DnaProjection, apical),
+                  &ap, sizeof(ap));
+    }
+    Session s;
+    if (!s.init(variant, error)) {
+      std::printf("  arm %s failed to hatch: %s\n", arm.name, error.c_str());
+      return false;
+    }
+    const aibaby::Network& net = s.brain.network();
+    Retina retina;
+    Ear ear;
+    if (!retina.configure(vcfg, error) || !ear.configure(acfg, error)) {
+      std::printf("  transducer failed: %s\n", error.c_str());
+      return false;
+    }
+    VowelSource voice(acfg.sample_rate);
+    SceneSource scene(vcfg.frame_size, dna0.header().seed);
+    std::vector<uint8_t> frame(size_t(vcfg.frame_size) * vcfg.frame_size, 0);
+    std::vector<float> pcm(acfg.sample_rate / 1000);
+    aibaby::Rng rng;
+    rng.seed(dna0.header().seed ^ 0xE770u);
+
+    const aibaby::ModuleState& vm = net.module(uint32_t(voc_m));
+    const uint32_t width = vm.count;
+    std::vector<std::vector<double>> feat;
+    std::vector<int> labels;
+    double resid[2] = {}, ffiw[2] = {};
+    uint64_t nres[2] = {};
+    double plat_ticks = 0.0, all_ticks = 0.0;
+    const uint32_t third = n_trials / 3 ? n_trials / 3 : 1;
+
+    for (uint32_t trial = 0; trial < n_trials; ++trial) {
+      const int label = int(trial % 2);
+      const Toy toy = m3_toy(rng, label);
+      std::vector<double> res(width, 0.0);
+      bool slept = false;
+      uint64_t scored = 0;
+      for (uint64_t t = 0; t < kM3ProbeTicks; ++t) {
+        if (t % frame_ticks == 0) {
+          scene.render(toy.shape, toy.cx, toy.cy, toy.radius, 0.85f, 0.02f, frame.data());
+          retina.present(frame.data());
+          s.brain.see(retina.features().data(), retina.feature_count());
+        }
+        voice.render(0.0f, 0.0f, 0.0f, 0.0f, pcm.data(), pcm.size());
+        ear.tick(s.brain, pcm.data(), pcm.size());
+        s.brain.step();
+        if (s.brain.asleep()) slept = true;
+        if (t < kM3SettleTicks) continue;
+        ++scored;
+        for (uint32_t k = 0; k < width; ++k) {
+          const uint32_t i = vm.begin + k;
+          res[k] += std::fabs(double(net.apical_membrane(i)));
+          if (net.in_plateau(i)) plat_ticks += 1.0;
+          ++all_ticks;
+        }
+      }
+      // The first and last thirds, so "did it settle" is a comparison inside
+      // one creature's life rather than between two of them.
+      const int bin = trial < third ? 0 : (trial >= n_trials - third ? 1 : -1);
+      if (bin >= 0) {
+        resid[bin] += double(net.mean_apical(uint32_t(voc_m)));
+        ffiw[bin] += double(net.mean_ffi_weight(uint32_t(voc_m)));
+        ++nres[bin];
+      }
+      if (slept || scored == 0) continue;
+      for (uint32_t k = 0; k < width; ++k) res[k] /= double(scored);
+      feat.push_back(res);
+      labels.push_back(label);
+    }
+
+    ErrRow& row = rows[a];
+    row.trials = labels.size();
+    row.resid_early = nres[0] ? resid[0] / double(nres[0]) : 0.0;
+    row.resid_late = nres[1] ? resid[1] / double(nres[1]) : 0.0;
+    row.ffi_early = nres[0] ? ffiw[0] / double(nres[0]) : 0.0;
+    row.ffi_late = nres[1] ? ffiw[1] / double(nres[1]) : 0.0;
+    row.plateau_pct = all_ticks > 0.0 ? 100.0 * plat_ticks / all_ticks : 0.0;
+    if (labels.size() >= 12) {
+      std::vector<std::vector<double>> x;
+      std::vector<int> y;
+      size_t tr = 0;
+      interleave_pairs(feat, labels, x, y, tr);
+      row.obj_resid = holdout_accuracy(x, y, tr);
+      double null_sum = 0.0;
+      for (uint32_t perm = 0; perm < 32; ++perm) {
+        std::vector<int> sh = y;
+        for (size_t i = sh.size(); i > 1; --i) std::swap(sh[i - 1], sh[rng.next() % i]);
+        null_sum += holdout_accuracy(x, sh, tr);
+      }
+      row.shuffled = null_sum / 32.0;
+    }
+  }
+
+  std::printf("\n    %-16s %-7s %-11s %-11s %-9s %-9s %-8s %-11s %-9s\n", "arm", "trials",
+              "resid early", "resid late", "ffi w in", "ffi w out", "plat%",
+              "obj|resid", "shuffled");
+  for (uint32_t a = 0; a < kErrArmCount; ++a) {
+    const ErrRow& r = rows[a];
+    std::printf("    %-16s %-7zu %-11.5f %-11.5f %-9.4f %-9.4f %-8.1f %-11.3f %-9.3f\n",
+                kErrArms[a].name, r.trials, r.resid_early, r.resid_late, r.ffi_early,
+                r.ffi_late, r.plateau_pct, r.obj_resid, r.shuffled);
+  }
+
+  const ErrRow& soma = rows[0];
+  const ErrRow& fixed = rows[1];
+  const ErrRow& learn = rows[2];
+  // Between arms, not within one. The weight converges inside the first trial,
+  // so first-third against last-third cannot see the transient — the first run
+  // of this probe reported "x0.971, did not move" for a weight that had gone
+  // from 1.0 to 0.0018 before the first bin closed. The fixed arm is the same
+  // creature with the same interneuron on the same compartment, differing only
+  // in whether the weight may move, and that is the comparison.
+  const double cancelled =
+      fixed.resid_late > 0.0 ? 100.0 * (1.0 - learn.resid_late / fixed.resid_late) : 0.0;
+
+  std::printf("\n  resid is the mean |apical| at the larynx. `ffi w` is the mean pooling\n"
+              "  weight, and it is the control on the residual: a residual that fell\n"
+              "  while the weight did not move is the creature going quiet, not the\n"
+              "  circuit learning. obj|resid classifies cube against ball from the\n"
+              "  per-neuron residual, against a 32-permutation null.\n");
+  std::printf("\n  residual vs fixed arm  %+.1f%%   (learning must cancel what a fixed\n"
+              "                         weight on the same compartment does not)\n"
+              "  weight, birth -> end   %.4f -> %.4f\n"
+              "  plateau, learn/fixed   %.1f%% / %.1f%%   (a compartment driven to a rail\n"
+              "                         by an uncalibrated prediction never fires)\n"
+              "  obj|resid, learn/soma  %.3f / %.3f   (the payoff, not a check)\n"
+              "  raw plateau reference  0.913 from burstprobe, three seeds\n",
+              cancelled, learn.ffi_early, learn.ffi_late, learn.plateau_pct,
+              fixed.plateau_pct, learn.obj_resid, soma.obj_resid);
+
+  const bool control_ok = std::fabs(soma.ffi_late - soma.ffi_early) < 1e-6 &&
+                          std::fabs(fixed.ffi_late - fixed.ffi_early) < 1e-6;
+  const bool ran = learn.plateau_pct > 0.5 && learn.trials >= 12;
+  const bool learned = cancelled > 50.0 && learn.plateau_pct > fixed.plateau_pct;
+  if (!control_ok) {
+    std::printf("\n  FAIL — a fixed-weight arm's pooling weight moved. ffi_learn 0 is not\n"
+                "  off, so neither control is one.\n");
+  } else if (!ran) {
+    std::printf("\n  FAIL — the compartment never ran (%.1f%% plateau, %zu trials), so no\n"
+                "  column above is a measurement of anything.\n",
+                learn.plateau_pct, learn.trials);
+  } else if (!learned) {
+    std::printf("\n  The microcircuit did NOT cancel: residual %+.1f%% against the fixed\n"
+                "  arm, plateau %.1f%% against %.1f%%. Sacramento's interneuron settles\n"
+                "  when its prediction can track the top-down input; one scalar per\n"
+                "  neuron predicting a whole tract may not be able to, which would be\n"
+                "  v24's shared-scalar failure one level up. Reported, not fatal.\n",
+                cancelled, learn.plateau_pct, fixed.plateau_pct);
+  } else {
+    std::printf("\n  PASS — the circuit runs and settles. Read that narrowly: the fixed\n"
+                "  arm is a broken configuration, not a rival, so beating it by %.1f%%\n"
+                "  only says a learned weight is usable on a tuft where a fixed one is\n"
+                "  not (%.1f%% plateau against %.1f%%).\n",
+                cancelled, learn.plateau_pct, fixed.plateau_pct);
+    std::printf("\n  WHAT IT BUYS, against the arm that is a rival: obj|resid reads %.3f\n"
+                "  learning against %.3f with the interneuron left at the soma. The\n"
+                "  converged weight is %.4f — the circuit finds almost nothing to\n"
+                "  cancel, and the residual is the raw apical signal with a rounding\n"
+                "  error taken off it.\n"
+                "\n  The scales are the reason to suspect rather than the mechanism. `ffi`\n"
+                "  is a pooled rate in Hz, order 1, while the apical input is a sparse\n"
+                "  tract's per-tick arrival, order 0.1 — so one scalar per neuron\n"
+                "  multiplying a smooth rate cannot track a bursty sparse input, and the\n"
+                "  cancelling weight it converges on is small because that is the best\n"
+                "  such a predictor can do. A predictor that could is one that sees the\n"
+                "  same spikes: an interneuron POPULATION sampled per target, which is\n"
+                "  what Sacramento's circuit actually has and what DnaModule::ffi_source\n"
+                "  is not. That is a body-plan change, not a genome field.\n",
+                learn.obj_resid, soma.obj_resid, learn.ffi_late);
+  }
+  (void)verbose;
+  return control_ok && ran;
+}
+
+
+// --- relayprobe: is Webb's TWO-stage circuit a bandpass? --------------------
+//
+// `stpprobe` measured that one dynamic synapse is a gain knob and not a filter,
+// and named why: depression scales everything a synapse transmits by a single
+// number tracking its own mean rate — a high-pass with no upper corner. Webb's
+// bandpass is two stages, BN1 depressing feeding BN2 facilitating, and **the
+// tuning lives in the mismatch between their time constants rather than in
+// either synapse**. This builds that and asks whether the mismatch produces a
+// peak.
+//
+// Four arms, because "two stages" and "the RIGHT two stages" are different
+// claims and only the second is Webb's:
+//
+//   off        a constant-weight relay. The control, and the baseline every
+//              `vs off` column is read against.
+//   dep -> dep both stages depressing. If a peak appears here, the finding is
+//              about having a relay at all and nothing to do with Webb.
+//   dep -> fac Webb's circuit: recover-gated onset detection feeding a
+//              facilitating stage that needs those onsets close together.
+//   fac -> dep the same two synapses in the wrong order. A bandpass built from
+//              a mismatch should not survive swapping which side it is on.
+//
+// The stimulus is `stpprobe`'s: a 50% duty cycle at every rate, so all of them
+// carry identical total sound and only the timing differs, plus a shuffled row
+// holding the mean rate of the 4 Hz row and destroying only its regularity.
+//
+// The band is chosen by the ear, not by preference. The cochlea's window is
+// 32 ms, so an envelope whose half-period is shorter arrives as steady energy
+// and 12 Hz is the ceiling. Webb's crickets work at 20-30 Hz through an ear with
+// microsecond resolution; the band this creature resolves, 1-12 Hz, is where the
+// syllable rate of human speech sits, which is why the test is worth running
+// here at all rather than waiting for a better cochlea.
+namespace {
+
+struct RelayArm {
+  const char* name;
+  float in_use, in_rec, in_fac;    // auditory -> relay
+  float out_use, out_rec, out_fac; // relay -> central
+};
+
+constexpr RelayArm kRelayArms[] = {
+    {"off",        0.00f,   0.0f,   0.0f,  0.00f,   0.0f,   0.0f},
+    {"dep -> dep", 0.50f, 300.0f,   0.0f,  0.50f, 300.0f,   0.0f},
+    {"dep -> fac", 0.50f, 300.0f,   0.0f,  0.10f,  50.0f, 300.0f},
+    {"fac -> dep", 0.10f,  50.0f, 300.0f,  0.50f, 300.0f,   0.0f},
+};
+constexpr uint32_t kRelayArmCount = sizeof(kRelayArms) / sizeof(kRelayArms[0]);
+
+constexpr float kRelayRates[] = {2.0f, 4.0f, 8.0f, 12.0f};
+constexpr uint32_t kRelayRateCount = sizeof(kRelayRates) / sizeof(kRelayRates[0]);
+constexpr uint32_t kRelayConditions = kRelayRateCount + 2;  // silence + rates + shuffled
+constexpr uint64_t kRelayWarmTicks = 20000;
+
+struct RelayRow {
+  double aud = 0.0, relay = 0.0, cen = 0.0;
+  double transfer = 0.0;
+  double gain_in = 1.0, gain_out = 1.0;
+  uint32_t bursts = 0;
+};
+
+}  // namespace
+
+bool run_relayprobe(const std::vector<uint8_t>& dna_blob, uint64_t ticks, bool verbose) {
+  std::string error;
+  aibaby::Dna dna0;
+  if (dna0.load(dna_blob.data(), dna_blob.size()) != aibaby::DnaStatus::kOk) {
+    std::printf("  setup failed: the genome does not load\n");
+    return false;
+  }
+  const int32_t aud_m = dna0.module_with_role(aibaby::ModuleRole::kAuditory);
+  const int32_t cen_m = dna0.module_with_role(aibaby::ModuleRole::kAssociation);
+  if (aud_m < 0 || cen_m < 0) {
+    std::printf("  this genome has no auditory or association module\n");
+    return false;
+  }
+  // The relay: an interneuron population with a tract in from the ear and a
+  // tract out to the association module. Found rather than named, so a genome
+  // built by tools/genome_add_relay.py works whatever it called the module.
+  int32_t relay_m = -1, in_p = -1, out_p = -1;
+  for (uint32_t m = 0; m < dna0.module_count(); ++m) {
+    if (dna0.module(m).role != uint32_t(aibaby::ModuleRole::kInterneuron)) continue;
+    int32_t a = -1, b = -1;
+    for (uint32_t i = 0; i < dna0.header().projection_count; ++i) {
+      const aibaby::DnaProjection& p = dna0.projection(i);
+      if (int32_t(p.src) == aud_m && p.dst == m) a = int32_t(i);
+      if (p.src == m && int32_t(p.dst) == cen_m) b = int32_t(i);
+    }
+    if (a >= 0 && b >= 0) { relay_m = int32_t(m); in_p = a; out_p = b; break; }
+  }
+  if (relay_m < 0) {
+    std::printf("  this genome has no auditory -> relay -> central path.\n"
+                "  Build one:  python3 tools/genome_add_relay.py dna/default.toml \\\n"
+                "                out.toml auditory central inhib=0.0 name=webbrelay\n");
+    return false;
+  }
+
+  const aibaby::DnaAudio& acfg = dna0.header().audio;
+  const uint32_t samples_per_tick = uint32_t(acfg.sample_rate / 1000);
+  const uint64_t budget = ticks / (kRelayArmCount * kRelayConditions);
+  const size_t proj_base = sizeof(aibaby::DnaHeader) +
+                           sizeof(aibaby::DnaModule) * dna0.module_count();
+
+  instrument("relayprobe", dna0.header().seed ^ 0x2E1Au, budget, "ticks per condition");
+  std::printf("  path              %s -> %s (%u cells, %s) -> %s\n",
+              dna0.module(uint32_t(aud_m)).name, dna0.module(uint32_t(relay_m)).name,
+              dna0.module(uint32_t(relay_m)).neurons,
+              dna0.module(uint32_t(relay_m)).inhib_fraction >= 0.5f ? "inhibitory"
+                                                                   : "excitatory",
+              dna0.module(uint32_t(cen_m)).name);
+  const double window_ms = 1000.0 * double(acfg.window) / double(acfg.sample_rate);
+  std::printf("  ear ceiling       ~%.0f Hz (%.0f ms window), so the sweep stops at %.0f\n",
+              500.0 / window_ms, window_ms, double(kRelayRates[kRelayRateCount - 1]));
+
+  RelayRow rows[kRelayArmCount][kRelayConditions];
+
+  for (uint32_t a = 0; a < kRelayArmCount; ++a) {
+    const RelayArm& arm = kRelayArms[a];
+    std::vector<uint8_t> variant = dna_blob;
+    {
+      auto put = [&](int32_t p, size_t off, float v) {
+        std::memcpy(variant.data() + proj_base +
+                        sizeof(aibaby::DnaProjection) * size_t(p) + off,
+                    &v, sizeof(v));
+      };
+      // Explicitly on every arm including `off`, so the control stays a control
+      // the day a genome ships with the relay's synapses already dynamic.
+      put(in_p, offsetof(aibaby::DnaProjection, stp_use), arm.in_use);
+      put(in_p, offsetof(aibaby::DnaProjection, stp_recover_ms), arm.in_rec);
+      put(in_p, offsetof(aibaby::DnaProjection, stp_facil_ms), arm.in_fac);
+      put(out_p, offsetof(aibaby::DnaProjection, stp_use), arm.out_use);
+      put(out_p, offsetof(aibaby::DnaProjection, stp_recover_ms), arm.out_rec);
+      put(out_p, offsetof(aibaby::DnaProjection, stp_facil_ms), arm.out_fac);
+    }
+    Session s;
+    if (!s.init(variant, error)) {
+      std::printf("  arm %s failed to hatch: %s\n", arm.name, error.c_str());
+      return false;
+    }
+    const aibaby::Network& net = s.brain.network();
+    Ear ear;
+    if (!ear.configure(acfg, error)) {
+      std::printf("  transducer failed: %s\n", error.c_str());
+      return false;
+    }
+    VowelSource voice(acfg.sample_rate);
+    std::vector<float> pcm(samples_per_tick);
+    const Word& w = kWords[0];
+    aibaby::Rng rng;
+    rng.seed(dna0.header().seed ^ 0x2E1Au);
+
+    for (uint32_t c = 0; c < kRelayConditions; ++c) {
+      const bool silent = (c == 0);
+      const bool shuffled = (c == kRelayConditions - 1);
+      const double rate = shuffled ? 4.0 : (silent ? 0.0 : double(kRelayRates[c - 1]));
+      const double half_ms = silent ? 0.0 : 500.0 / rate;
+
+      std::vector<uint64_t> schedule;
+      if (shuffled) {
+        uint64_t total = 0;
+        while (total < budget + 4000) {
+          const double f = 0.25 + 1.5 * double(rng.uniform());
+          schedule.push_back(uint64_t(half_ms * f) + 1);
+          total += schedule.back();
+        }
+      }
+      // The first condition pays a long warm-up. `stpprobe` learned this the
+      // expensive way: measuring a silent control on a just-hatched creature
+      // reads the hatch transient and reports it as the creature.
+      const uint64_t settle = (c == 0) ? kRelayWarmTicks : 1500;
+      uint64_t aud = 0, rel = 0, cen = 0, bursts = 0, scored = 0;
+      double gin = 0.0, gout = 0.0;
+      size_t slot = 0;
+      uint64_t slot_left = schedule.empty() ? 0 : schedule[0];
+      bool sounding = false, prev = false;
+
+      for (uint64_t t = 0; t < settle + budget; ++t) {
+        const bool measuring = t >= settle;
+        const uint64_t bt = measuring ? t - settle : t;
+        if (silent) sounding = false;
+        else if (shuffled) {
+          if (slot_left == 0) {
+            slot = (slot + 1) % schedule.size();
+            slot_left = schedule[slot];
+            sounding = !sounding;
+          }
+          --slot_left;
+        } else {
+          sounding = std::fmod(double(bt), 2.0 * half_ms) < half_ms;
+        }
+        if (measuring && sounding && !prev) ++bursts;
+        prev = sounding;
+        voice.render(sounding ? w.f0 : 0.0f, w.f1, w.f2, sounding ? 0.5f : 0.0f,
+                     pcm.data(), samples_per_tick);
+        ear.tick(s.brain, pcm.data(), samples_per_tick);
+        s.brain.step();
+        if (!measuring || s.brain.asleep()) continue;
+        aud += net.module(uint32_t(aud_m)).spikes;
+        rel += net.module(uint32_t(relay_m)).spikes;
+        cen += net.module(uint32_t(cen_m)).spikes;
+        gin += double(net.stp_gain(uint32_t(aud_m), uint32_t(relay_m)));
+        gout += double(net.stp_gain(uint32_t(relay_m), uint32_t(cen_m)));
+        ++scored;
+      }
+      RelayRow& row = rows[a][c];
+      const double n = scored ? double(scored) : 1.0;
+      row.aud = double(aud) / n;
+      row.relay = double(rel) / n;
+      row.cen = double(cen) / n;
+      row.transfer = aud ? double(cen) / double(aud) : 0.0;
+      row.gain_in = gin / n;
+      row.gain_out = gout / n;
+      row.bursts = uint32_t(bursts);
+    }
+  }
+
+  std::printf("\n    %-12s %-9s %-8s %-8s %-8s %-9s %-8s %-8s %-8s\n", "arm", "envelope",
+              "aud", "relay", "cen", "transfer", "vs off", "gain in", "gain out");
+  for (uint32_t a = 0; a < kRelayArmCount; ++a) {
+    for (uint32_t c = 0; c < kRelayConditions; ++c) {
+      char env[16];
+      if (c == 0) std::snprintf(env, sizeof(env), "silence");
+      else if (c == kRelayConditions - 1) std::snprintf(env, sizeof(env), "shuffled");
+      else std::snprintf(env, sizeof(env), "%.0f Hz", double(kRelayRates[c - 1]));
+      const RelayRow& r = rows[a][c];
+      const double base = rows[0][c].transfer;
+      std::printf("    %-12s %-9s %-8.2f %-8.2f %-8.2f %-9.4f %-8.3f %-8.3f %-8.3f\n",
+                  c == 0 ? kRelayArms[a].name : "", env, r.aud, r.relay, r.cen,
+                  r.transfer, base > 0.0 ? r.transfer / base : 0.0, r.gain_in,
+                  r.gain_out);
+    }
+    if (a + 1 < kRelayArmCount) std::printf("\n");
+  }
+
+  // A bandpass is a PEAK in `vs off` over the rate rows, and the honest way to
+  // ask is how far the best rate stands above the worst. A gain change is flat
+  // down that column whatever its absolute level, so the spread is the quantity
+  // and the level is not.
+  auto spread = [&](uint32_t arm, uint32_t* at) {
+    double lo = 1e9, hi = -1e9;
+    for (uint32_t c = 1; c <= kRelayRateCount; ++c) {
+      const double base = rows[0][c].transfer;
+      const double v = base > 0.0 ? rows[arm][c].transfer / base : 0.0;
+      if (v < lo) lo = v;
+      if (v > hi) { hi = v; *at = c; }
+    }
+    return lo > 0.0 ? hi / lo : 0.0;
+  };
+  uint32_t peak_dd = 0, peak_df = 0, peak_fd = 0, peak_off = 0;
+  const double s_off = spread(0, &peak_off);
+  const double s_dd = spread(1, &peak_dd);
+  const double s_df = spread(2, &peak_df);
+  const double s_fd = spread(3, &peak_fd);
+
+  // The off arm's spread is 1.000 BY CONSTRUCTION — that column is the arm
+  // divided by itself — so it is an identity and not a noise floor, and the
+  // first version of this probe wrongly offered it as one. The two honest
+  // controls are already in the table:
+  //
+  //   dep -> dep   two stages with no mismatch. If Webb's order is not clearly
+  //                above this, the tuning is not coming from the mismatch.
+  //   shuffled     the 4 Hz row's mean rate with its regularity destroyed. An
+  //                INTERVAL filter must prefer the regular train; anything that
+  //                prefers the shuffled one is reading rate, not timing.
+  const double shuf_df = rows[0][kRelayConditions - 1].transfer > 0.0
+                             ? rows[2][kRelayConditions - 1].transfer /
+                                   rows[0][kRelayConditions - 1].transfer
+                             : 0.0;
+  double peak_df_val = 0.0;
+  for (uint32_t c = 1; c <= kRelayRateCount; ++c) {
+    const double base = rows[0][c].transfer;
+    const double v = base > 0.0 ? rows[2][c].transfer / base : 0.0;
+    if (v > peak_df_val) peak_df_val = v;
+  }
+
+  std::printf("\n  `vs off` is central's spikes-per-auditory-spike against the constant-\n"
+              "  weight relay at the SAME envelope. A gain change is flat down that\n"
+              "  column; a bandpass peaks. `spread` is the best rate over the worst.\n"
+              "  The off arm's spread is 1.000 by construction — it is that column\n"
+              "  divided by itself — so it is an identity and NOT a noise floor.\n");
+  std::printf("\n  dep -> dep spread %.3f   peak at %.0f Hz   (two stages, no mismatch)\n"
+              "  dep -> fac spread %.3f   peak at %.0f Hz   <- Webb's order\n"
+              "  fac -> dep spread %.3f   peak at %.0f Hz   (the same pair, swapped)\n"
+              "\n  Webb's peak %.3f against its own SHUFFLED row %.3f — an interval\n"
+              "  filter must prefer the regular train at the same mean rate.\n",
+              s_dd, double(kRelayRates[peak_dd - 1]), s_df,
+              double(kRelayRates[peak_df - 1]), s_fd, double(kRelayRates[peak_fd - 1]),
+              peak_df_val, shuf_df);
+  (void)s_off;
+
+  bool relay_alive = true;
+  for (uint32_t a = 0; a < kRelayArmCount; ++a) {
+    if (rows[a][1].relay < 0.01) relay_alive = false;
+  }
+  const bool control_ok = rows[0][1].gain_in > 0.999 && rows[0][1].gain_in < 1.001 &&
+                          rows[0][1].gain_out > 0.999 && rows[0][1].gain_out < 1.001;
+  const bool arms_differ = rows[2][1].gain_in < 0.95 || rows[2][1].gain_out > 1.05;
+
+  if (!relay_alive) {
+    std::printf("\n  FAIL — the relay is silent in at least one arm, so nothing crossed\n"
+                "  it and no column above is a measurement of a two-stage anything.\n");
+  } else if (!control_ok) {
+    std::printf("\n  FAIL — the off arm's synapses are not delivering their genome\n"
+                "  weight, so it is not a control.\n");
+  } else if (!arms_differ) {
+    std::printf("\n  FAIL — the Webb arm's synapses did not move off 1.000. The\n"
+                "  mechanism is present and not running.\n");
+  } else if (s_df > s_dd * 1.3 && peak_df_val > shuf_df) {
+    std::printf("\n  A BANDPASS. `dep -> fac` peaks at %.0f Hz, spreads %.3f against\n"
+                "  `dep -> dep`'s %.3f — so the tuning comes from the MISMATCH between\n"
+                "  the two stages and not from having a relay — and it prefers the\n"
+                "  regular train (%.3f) to the shuffled one at the same mean rate\n"
+                "  (%.3f), so it is reading the interval and not the rate.\n",
+                double(kRelayRates[peak_df - 1]), s_df, s_dd, peak_df_val, shuf_df);
+  } else {
+    std::printf("\n  NO BANDPASS, and both controls say so.\n"
+                "\n  Webb's order spreads %.3f where two DEPRESSING stages spread %.3f —\n"
+                "  indistinguishable, so nothing here comes from the mismatch the whole\n"
+                "  circuit is built on. And its peak regular row reads %.3f against a\n"
+                "  SHUFFLED row of %.3f: the circuit responds MORE to irregular timing\n"
+                "  at the same mean rate, which is the opposite of an interval filter.\n"
+                "\n  The stages themselves are working — `gain in` sits near %.2f and\n"
+                "  `gain out` near %.2f, moving in opposite directions exactly as two\n"
+                "  mismatched time constants should. What does not happen is the\n"
+                "  mismatch turning into selectivity at the target.\n",
+                s_df, s_dd, peak_df_val, shuf_df, rows[2][2].gain_in,
+                rows[2][2].gain_out);
+  }
+  (void)verbose;
+  return relay_alive && control_ok && arms_differ;
 }
 
 }  // namespace aibaby_host

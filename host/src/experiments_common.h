@@ -1322,6 +1322,8 @@ bool run_pruneprobe(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_tauprobe(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_ipprobe(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_mechverify(const std::vector<uint8_t>&, uint64_t, bool);
+bool run_errprobe(const std::vector<uint8_t>&, uint64_t, bool);
+bool run_relayprobe(const std::vector<uint8_t>&, uint64_t, bool);
 
 }  // namespace aibaby_host
 

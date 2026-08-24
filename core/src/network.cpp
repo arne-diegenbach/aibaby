@@ -241,6 +241,14 @@ bool Network::build(const Dna& dna, Arena& arena, Rng& rng) {
     plateau_gate_[m] = fed ? clampf(Scalar(dm.plateau_gate), kZero, kOne) : kZero;
     if (plateau_gate_[m] > kZero) any_plateau_gate_ = true;
   }
+  // DNA v40. The dendritic error microcircuit, per module.
+  for (uint32_t m = 0; m < module_count_ && m < kMaxModules; ++m) {
+    const DnaModule& dm = dna.module(m);
+    ffi_apical_[m] = dm.ffi_apical != 0;
+    ffi_learn_[m] = Scalar(dm.ffi_learn);
+    if (ffi_learn_[m] > kZero) any_ffi_learn_ = true;
+  }
+
   // DNA v37. The burst code, per module. `burst_ticks_` is the ISI at or under
   // which a spike is scored as part of a burst, and it is a *tick* count
   // because the comparison happens against last_spike_ in the tick loop.
@@ -537,6 +545,20 @@ void Network::capture_ffi_weights() {
       ffi_w_[j] = n;
       total += n;
       ++counted;
+    }
+    // DNA v40. A learning interneuron starts predicting NOTHING and grows into
+    // its prediction, which is what Sacramento's microcircuit does and what the
+    // first run of `errprobe` said in one number: starting from v24's
+    // in-degree weight, a tuft-mounted interneuron over-subtracts so hard that
+    // the compartment sits at |apical| 78.97 and never plateaus once. That
+    // weight is calibrated for the soma's synaptic drive and there is no reason
+    // it should also be the right scale for a top-down tract.
+    //
+    // The fixed arm keeps the v24 value on purpose: it is the control that
+    // shows a fixed pooling weight cannot land on a tuft at all.
+    if (ffi_apical_[m] && ffi_learn_[m] > kZero) {
+      for (uint32_t k = 0; k < ms.count; ++k) ffi_w_[ms.begin + k] = kZero;
+      continue;
     }
     // Normalise to mean 1. A module with no afferents from the source gets
     // zero everywhere, which disables the term rather than dividing by zero.
@@ -1108,7 +1130,20 @@ void Network::step() {
       if (any_apical_) {
         const Scalar th = apical_thresh_[m];
         if (th > kZero) {
-          v_apical_[i] += apical_leak_[m] * (kZero - v_apical_[i]) + in_ap[i];
+          // DNA v40. The interneuron's prediction is subtracted HERE rather
+          // than from the somatic drive below, which is the whole difference
+          // between gain control and a cancelled prediction: what the tuft then
+          // integrates is top-down input minus what the lateral pool expected
+          // of it.
+          const Scalar predicted = ffi_apical_[m] ? ffi * ffi_w_[i] : kZero;
+          v_apical_[i] += apical_leak_[m] * (kZero - v_apical_[i]) + in_ap[i] - predicted;
+          // And the weight moves to make that residual zero. Clamped at zero
+          // from below: a pooling weight that went negative would stop being
+          // inhibitory and the loop would run away instead of settling.
+          if (ffi_learn_[m] > kZero) {
+            ffi_w_[i] += ffi_learn_[m] * v_apical_[i] * ffi;
+            if (ffi_w_[i] < kZero) ffi_w_[i] = kZero;
+          }
           if (tick_ >= plateau_until_[i] && v_apical_[i] >= th) {
             plateau_until_[i] = uint32_t(tick_) + apical_ticks_[m];
             v_apical_[i] = kZero;
@@ -1162,7 +1197,10 @@ void Network::step() {
       // plateau changes how loudly the synapses on that tuft are heard, and a
       // lateral interneuron is not on the tuft.
       const Scalar lateral = any_lateral_ ? lateral_[i] : kZero;
-      const Scalar drive = (in[i] * norm - ffi * ffi_w_[i]) * apical_mult +
+      // DNA v40: an interneuron that landed on the tuft is not also subtracted
+      // here. It is one population of cells, and it inhibits one compartment.
+      const Scalar ffi_soma = ffi_apical_[m] ? kZero : ffi;
+      const Scalar drive = (in[i] * norm - ffi_soma * ffi_w_[i]) * apical_mult +
                            noise_amp_[i] * (explore_mult_[m] * xi +
                                             drive_comp_ * (kOne - explore_mult_[m])) +
                            bias_[i] + osc + lateral;
@@ -2317,6 +2355,33 @@ Scalar Network::mean_in_weight_of(uint32_t neuron) const {
   return sum / Scalar(n_in);
 }
 
+Scalar Network::mean_apical(uint32_t module) const {
+  if (!any_apical_) return kZero;
+  const ModuleState& ms = modules_[module];
+  Scalar sum = kZero;
+  uint32_t counted = 0;
+  for (uint32_t k = 0; k < ms.count; ++k) {
+    const uint32_t i = ms.begin + k;
+    if (dead_[i]) continue;
+    sum += absf(v_apical_[i]);
+    ++counted;
+  }
+  return counted ? sum / Scalar(counted) : kZero;
+}
+
+Scalar Network::mean_ffi_weight(uint32_t module) const {
+  const ModuleState& ms = modules_[module];
+  Scalar sum = kZero;
+  uint32_t counted = 0;
+  for (uint32_t k = 0; k < ms.count; ++k) {
+    const uint32_t i = ms.begin + k;
+    if (dead_[i]) continue;
+    sum += ffi_w_[i];
+    ++counted;
+  }
+  return counted ? sum / Scalar(counted) : kZero;
+}
+
 Scalar Network::mean_eligibility(uint32_t module) const {
   Scalar sum = kZero;
   uint32_t counted = 0;
@@ -2359,6 +2424,9 @@ uint64_t Network::state_hash() const {
       // creature has to agree about it. Hashed only when a genome has a burst
       // code, so a creature without one keeps its pre-v37 hash.
       if (any_burst_) hash_scalar(h, burst_rate_[i]);
+      // DNA v40. A learned pooling weight is state a resumed creature must
+      // agree about; hashed only when a genome lets it move.
+      if (any_ffi_learn_) hash_scalar(h, ffi_w_[i]);
       const uint32_t base = syn_base_[i];
       for (uint32_t s = 0; s < syn_count_[i]; ++s) {
         hash_scalar(h, syn_weight_[base + s]);

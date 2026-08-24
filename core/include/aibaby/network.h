@@ -213,6 +213,14 @@ class Network {
   // module-wide mean averages over every such comparison at once.
   Scalar mean_in_weight_of(uint32_t neuron) const;
 
+  // DNA v40. Mean |apical residual| over a module's live neurons — the error
+  // the microcircuit is supposed to drive toward zero — and the mean pooling
+  // weight that is supposed to move to do it. `errprobe` reads both, because a
+  // residual that falls while the weight has not moved is the input going
+  // quiet rather than the circuit learning.
+  Scalar mean_apical(uint32_t module) const;
+  Scalar mean_ffi_weight(uint32_t module) const;
+
   Scalar mean_eligibility(uint32_t module) const;
 
   Telemetry telemetry() const;
@@ -627,6 +635,13 @@ class Network {
   uint32_t burst_ticks_[kMaxModules] = {};
   Scalar burst_refrac_[kMaxModules] = {};
   Scalar burst_base_alpha_ = kZero;
+
+  // DNA v40. The dendritic error microcircuit. `ffi_apical_` moves the pooled
+  // inhibition onto the tuft and `ffi_learn_` is the rate at which each
+  // neuron's own `ffi_w_` moves to cancel what lands there.
+  bool ffi_apical_[kMaxModules] = {};
+  Scalar ffi_learn_[kMaxModules] = {};
+  bool any_ffi_learn_ = false;
 
   // DNA v38. Competitive pruning's scratch: the mean |w| over each neuron's
   // afferents, recomputed at the top of every prune pass. Arena-allocated only

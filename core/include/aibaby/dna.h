@@ -293,7 +293,36 @@ constexpr uint32_t kDnaMagic = 0x44424941;  // "AIBD"
 //     per-module timescale is another knob on the same quantity, and it is
 //     built because it is cheap and named in the literature rather than
 //     because the fence has a gap in it. See DnaModule::elig_tau_scale.
-constexpr uint32_t kDnaVersion = 39;
+// 40: the dendritic error microcircuit (Sacramento, Ponte Costa, Bengio &
+//     Senn, NeurIPS 2018). The pooling interneuron moves onto the apical tuft
+//     and its weight LEARNS to cancel what arrives there, so the compartment
+//     carries a prediction *error* rather than a teaching signal. When the
+//     lateral prediction is right the tuft reads zero and nothing is written;
+//     when it is wrong, the residual is what drives learning.
+//
+//     **Why this and not another third factor.** v37 put a per-neuron learning
+//     signal on the tuft and `burstprobe` measured what it cost: the plateau
+//     carries the object at 0.913 and the burst derived from it at 0.673, on
+//     3 of 3 seeds. A nonlinearity applied to a signal that was already there
+//     loses a quarter of it. An error is not a nonlinearity on the signal — it
+//     is the signal with the predictable part subtracted, which is the one
+//     transform this project's standing diagnosis actually asks for: *a small
+//     differential riding on a large common mode*, eight times over.
+//
+//     **Why it can be built out of parts that already exist.** v24 gave every
+//     neuron its own weight on the pooled signal (`ffi_w_`, mean 1 within a
+//     module) and v25 gave it an apical compartment. What was missing is that
+//     `ffi_w_` is fixed at birth. v24's recorded failure is that `ffi`
+//     subtracts *one shared scalar from every target*; a weight that learns
+//     until the residual is zero is per-target by construction, and it is the
+//     difference between a fixed gain and a cancellation.
+//
+//     It also needs no reward, which puts it outside the conditioning cap
+//     rather than inside it — every one of the five classes fenced there is
+//     about what reward multiplies.
+//
+//     See DnaModule::ffi_apical and DnaModule::ffi_learn, and `errprobe`.
+constexpr uint32_t kDnaVersion = 40;
 
 // What a module is wired to the world through. The host looks modules up by
 // role, never by name or index, so renaming a module in the genome cannot
@@ -1095,6 +1124,31 @@ struct DnaModule {
   // density 0.03 the spread is about 18%.
   int32_t ffi_source;   // module index to pool from, -1 for none
   float ffi_gain;
+  // DNA v40. Where the pooling interneuron lands, and whether its weight
+  // learns. Both 0 is the pre-v40 module exactly.
+  //
+  // `ffi_apical` moves the subtraction from the soma's synaptic drive onto the
+  // apical compartment. That is the whole architectural change: at the soma a
+  // pooled inhibition is gain control, and on the tuft it is a prediction being
+  // cancelled. The module needs an apical compartment for it to land in —
+  // `apical_threshold` above zero and a tract marked apical — or the genome is
+  // refused, for the same reason v29's gate is.
+  //
+  // `ffi_learn` is the rate at which each neuron's own `ffi_w_` moves to make
+  // the residual zero:
+  //
+  //     ffi_w_[i] += ffi_learn * v_apical_[i] * ffi
+  //
+  // Positive residual means the tuft is receiving more than the interneuron
+  // predicts, so the weight rises until it does not. It is clamped at zero
+  // from below: an inhibitory pooling weight that went negative would stop
+  // being inhibitory and the microcircuit would run away rather than settle.
+  //
+  // At `ffi_learn` 0 the weight stays at v24's in-degree-weighted value, which
+  // is the mechanism that measurably worked (+0.077, 3/3 families) and is worth
+  // keeping as the control arm rather than replacing.
+  uint32_t ffi_apical;
+  float ffi_learn;
   // DNA v25. The apical compartment. Until now a neuron here has been a point:
   // every synapse, from every source, summed into one membrane. A real
   // pyramidal cell is at least two electrically separated compartments — a

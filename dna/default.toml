@@ -868,6 +868,8 @@ nm_curiosity = 1.0
 # target populations, or different compartments — before the trade goes away.
 ffi_source = -1
 ffi_gain = 0.0
+ffi_apical = 0               # DNA v40: land the interneuron on the tuft, not the soma
+ffi_learn = 0.0              # DNA v40: and let its weight learn to cancel what arrives there
 
 # --- DNA v25: the apical compartment -----------------------------------------
 # A neuron here used to be a point: every synapse summed into one membrane. A
@@ -1038,6 +1040,8 @@ nm_curiosity = 1.0
 # mean rate of the named source module from every neuron here. -1 disables.
 ffi_source = -1
 ffi_gain = 0.0
+ffi_apical = 0               # DNA v40: land the interneuron on the tuft, not the soma
+ffi_learn = 0.0              # DNA v40: and let its weight learn to cancel what arrives there
 
 # --- DNA v25: the apical compartment -----------------------------------------
 # A neuron here used to be a point: every synapse summed into one membrane. A
@@ -1150,6 +1154,8 @@ nm_curiosity = 1.0
 # mean rate of the named source module from every neuron here. -1 disables.
 ffi_source = -1
 ffi_gain = 0.0
+ffi_apical = 0               # DNA v40: land the interneuron on the tuft, not the soma
+ffi_learn = 0.0              # DNA v40: and let its weight learn to cancel what arrives there
 
 # --- DNA v25: the apical compartment -----------------------------------------
 # A neuron here used to be a point: every synapse summed into one membrane. A
@@ -1261,6 +1267,8 @@ nm_curiosity = 1.0
 # mean rate of the named source module from every neuron here. -1 disables.
 ffi_source = -1
 ffi_gain = 0.0
+ffi_apical = 0               # DNA v40: land the interneuron on the tuft, not the soma
+ffi_learn = 0.0              # DNA v40: and let its weight learn to cancel what arrives there
 
 # --- DNA v25: the apical compartment -----------------------------------------
 # A neuron here used to be a point: every synapse summed into one membrane. A
@@ -1374,6 +1382,8 @@ nm_curiosity = 1.0
 # mean rate of the named source module from every neuron here. -1 disables.
 ffi_source = -1
 ffi_gain = 0.0
+ffi_apical = 0               # DNA v40: land the interneuron on the tuft, not the soma
+ffi_learn = 0.0              # DNA v40: and let its weight learn to cancel what arrives there
 
 # --- DNA v25: the apical compartment -----------------------------------------
 # A neuron here used to be a point: every synapse summed into one membrane. A
@@ -1685,6 +1695,8 @@ nm_curiosity = 1.0
 # mean rate of the named source module from every neuron here. -1 disables.
 ffi_source = -1
 ffi_gain = 0.0
+ffi_apical = 0               # DNA v40: land the interneuron on the tuft, not the soma
+ffi_learn = 0.0              # DNA v40: and let its weight learn to cancel what arrives there
 
 # --- DNA v25: the apical compartment -----------------------------------------
 # A neuron here used to be a point: every synapse summed into one membrane. A

@@ -127,6 +127,8 @@ a canvas, so each has a headless experiment that prints a number and a verdict.
 ./build/aibaby --experiment tauprobe    --ticks 240000  # DNA v39: does a per-module eligibility tau do anything
 ./build/aibaby --experiment ipprobe     --ticks 240000  # what §3.1's regulator costs the rate code at the ear
 ./build/aibaby --experiment mechverify                   # a pinned hash for every mechanism that ships off
+./build/aibaby --experiment errprobe    --ticks 600000  # DNA v40: does the tuft learn to carry an error
+./build/aibaby --experiment relayprobe  --ticks 240000  # Webb's two-stage circuit; needs a genome with a relay
 ./build/aibaby --experiment snapshot    --ticks 2400000 # §8: resume is exact
 ```
 
@@ -3319,7 +3321,7 @@ baseline. The pin stayed green throughout, because reaching the bug needs **both
 a sleep prune and `elig_baseline_tau_ms` above zero, and the shipped genome has
 neither. Proving the fix was real required a genome nobody runs.
 
-So `mechverify` pins fourteen more hashes, one per off-by-default mechanism, each
+So `mechverify` pins fifteen more hashes, one per off-by-default mechanism, each
 on a genome where that mechanism alone is switched on:
 
 ```
@@ -3338,8 +3340,9 @@ dynamic synapses           v36   120000    ed756042e4167e0c   ed756042e4167e0c  
 burst plasticity           v37   120000    d4159bcbf1dddfe2   d4159bcbf1dddfe2   ok
 competitive pruning        v38   1300000   8bc54c9948268aed   8bc54c9948268aed   ok
 per-module elig tau        v39   120000    6037b59ae289c878   6037b59ae289c878   ok
+dendritic error            v40   120000    457a17d1af252433   457a17d1af252433   ok
 
-14 mechanisms, 0 drifted, 0 vacuous, 0 unpinned, 0 broken
+15 mechanisms, 0 drifted, 0 vacuous, 0 unpinned, 0 broken
 ```
 
 **The second condition is what makes it worth having.** A pin that matches is
@@ -3370,7 +3373,7 @@ Run 2026-08-24 on the shipped genome, with DNA v36–v39 all switched off.
 ```
 --experiment verify           determinism PASS   pinned hash PASS   18 of 18 as expected
 --experiment verify-long      determinism PASS   pinned hash PASS   33 of 33 as expected
---experiment mechverify       14 mechanisms, 0 drifted, 0 vacuous, 0 unpinned, 0 broken
+--experiment mechverify       15 mechanisms, 0 drifted, 0 vacuous, 0 unpinned, 0 broken
                               1 open milestone still failing, which is what
                               "as expected" means for m3
 ```
@@ -3400,6 +3403,191 @@ means the mechanism was built, hatched and measured — not skipped. `stpprobe`,
 `burstprobe`, `pruneprobe` and `tauprobe` all carry an explicit off arm patched
 the same way, because an arm that reads its setting from the genome silently
 stops being a control the day someone ships the mechanism on.
+
+### Exuberance and competition: the candidate is refuted, and it was the tract all along
+
+DNA v38 gave selection the gradient v28/v30 lacked, which made `projprobe`'s
+second named candidate testable for the first time — *"make the tract structured
+rather than random, so each target samples a feature-defined group instead of a
+uniform random subset"*, built by activity-dependent pruning from an exuberant
+start rather than by hand.
+
+Three arms, `m3probe` at 1.6M ticks so sleep consolidates seven times, all three
+sharing 4× `max_out_degree` so nothing is dropped and the arms differ in one
+thing:
+
+| arm | `vision→central` | central, per-neuron | vision | shuffled |
+|---|---|---|---|---|
+| **A** | random, no competition | **0.893** | 0.997 | 0.477 |
+| **B** | exuberance 3, born weak 0.333 | 0.664 | 0.994 | 0.480 |
+| **C** | the same, `prune_compete` 0.5 | **0.613** | 0.994 | 0.492 |
+
+**Refuted, and each step made it worse.** Exuberance alone costs 0.229. Adding
+competition costs a further 0.051. Vision is flat across all three at 0.994–0.997,
+so the loss is in the tract and not in what feeds it.
+
+The diagnosis is one sentence and it is not about pruning working — v38 removes
+20,731 synapses where the old rule removes 32, so it works exactly as built.
+**Competition selects on weight, and weight is not a measure of what a synapse
+contributes to a distributed code.** Central's object code is *balanced* —
+coherence 0.024–0.152, so 85–98% of the discriminative signal is some neurons up
+and others down — and in a balanced code the informative synapses are not the
+strong ones. Pruning the weak prunes thedifferential as readily as the noise.
+
+That closes the candidate. What it does not close is v38, which is a working
+mechanism looking for a criterion: any future use of it needs to rank afferents
+by something other than |w|.
+
+### DNA v40 — the dendritic error microcircuit: **built, settles, and finds nothing to cancel**
+
+[Sacramento, Ponte Costa, Bengio & Senn (NeurIPS 2018)][sac]. Lateral
+interneurons learn to *predict* the top-down input arriving at a cell's apical
+tuft, and the tuft computes the **mismatch**. Right prediction, zero residual,
+nothing written; wrong prediction, the residual drives learning. No separate
+phases, errors local and continuous in time.
+
+The reason to want it here is v37's specific loss. `burstprobe` reads the raw
+plateau at **0.913** and the burst derived from it at **0.673** — a nonlinearity
+applied to a signal that was already there costs a quarter of it. An error is not
+a nonlinearity on the signal; it is the signal with the predictable part
+subtracted, which is the transform this project's standing diagnosis has asked
+for eight times: *a small differential riding on a large common mode*.
+
+It needed two genome fields, because the parts existed. `ffi_apical` moves v24's
+pooling interneuron from the soma onto v25's compartment; `ffi_learn` lets each
+neuron's own `ffi_w_` move until the residual is zero:
+
+```
+ffi_w_[i] += ffi_learn · v_apical_[i] · ffi        (clamped at 0 from below)
+```
+
+#### What `errprobe` measured
+
+```
+arm              resid    plateau%  ffi w     obj|resid  shuffled
+soma             0.126    40.6      1.0000    0.940      0.508
+tuft, fixed      70.23     0.0      1.0000    0.680      0.503
+tuft, learning   0.145    27.8      0.0018    0.940      0.494
+```
+
+**A fixed pooling weight cannot land on a tuft at all.** v24's in-degree weight
+is calibrated for somatic drive, and on a compartment it over-subtracts so hard
+that |apical| sits at 79 and the tuft **never plateaus once**. That is why the
+learning arm now starts at zero and grows into its prediction, which is what the
+biology does and what the first run of this probe forced.
+
+**And against the arm that is actually a rival, it buys nothing.** `obj|resid`
+is 0.940 learning against 0.940 with the interneuron left at the soma. The
+converged weight is **0.0018** — the circuit finds almost nothing to cancel, and
+the residual is the raw apical signal with a rounding error taken off it.
+
+**The reason is a body-plan limit, not a tuning one.** `ffi` is a pooled rate in
+hertz, order 1; the apical input is a sparse tract's per-tick arrival, order 0.1.
+One scalar per neuron multiplying a smooth rate cannot track a bursty sparse
+input, and the small weight it converges on is the best such a predictor can do.
+Sacramento's circuit has an interneuron **population sampled per target** —
+which is exactly what `DnaModule::ffi_source` is not, and exactly the shape of
+v24's own recorded failure (*one shared scalar for every target*) one level up.
+Building that is a body-plan change, not a genome field.
+
+Ninth mechanism into the same wall, and the second in two days to arrive there
+by a different road and find the same thing waiting.
+
+### Webb's two-stage circuit, built: **no bandpass, and both controls say so**
+
+`stpprobe` closed v36 with a named next step: one dynamic synapse is a high-pass
+with no upper corner, and Webb's bandpass is **two** stages — BN1 depressing
+feeding BN2 facilitating — with the tuning living in the *mismatch* between their
+time constants rather than in either synapse. That was expressible in the genome
+with no kernel change, so it was built: `tools/genome_add_relay.py` grew an
+`inhib=0.0` knob and the six v36 fields, and now inserts a Webb pair.
+
+Four arms, because *two stages* and *the right two stages* are different claims,
+on the same 50%-duty envelopes `stpprobe` uses:
+
+```
+arm          envelope  aud   relay  cen   transfer  vs off  gain in  gain out
+off          2 Hz      1.10  0.99   3.63  3.2938    1.000   1.000    1.000
+             8 Hz      0.80  0.66   3.27  4.0620    1.000   1.000    1.000
+             shuffled  0.72  0.55   3.12  4.3400    1.000   1.000    1.000
+dep -> dep   2 Hz      1.12  0.43   3.02  2.6923    0.817   0.639    0.670
+             8 Hz      0.84  0.42   2.99  3.5606    0.877   0.670    0.680
+dep -> fac   2 Hz      1.08  0.42   3.58  3.3069    1.004   0.652    1.725
+             8 Hz      0.78  0.41   3.49  4.4735    1.101   0.685    1.698
+             shuffled  0.68  0.40   3.39  4.9711    1.145   0.688    1.691
+fac -> dep   8 Hz      0.83  1.87   3.13  3.7893    0.933   1.767    0.369
+```
+
+**The stages work exactly as designed.** `gain in` sits at 0.65–0.69 and
+`gain out` at 1.69–1.73, moving in opposite directions, which is two mismatched
+time constants doing what they should.
+
+**And the mismatch buys nothing.** Three seed families:
+
+| | seed 1 | seed 2 | seed 3 |
+|---|---|---|---|
+| `dep → dep` spread | 1.087 | 1.098 | **1.210** |
+| `dep → fac` spread (Webb) | 1.097 | 1.052 | 1.179 |
+| Webb's peak vs its shuffled row | 1.101 / **1.145** | 1.077 / **1.138** | **1.159** / 1.111 |
+
+Two stages with **no** mismatch spread as much as Webb's order — more, on 2 of 3
+seeds. And on 2 of 3 the circuit responds *more* to the shuffled train than to
+the regular one at the same mean rate, which is the opposite of an interval
+filter. Whatever small spread exists is a rate effect the ear already had.
+
+**One correction to this probe's own first criterion.** It offered the off arm's
+spread as a noise floor. That is 1.000 *by construction* — the column is that arm
+divided by itself — so it is an identity and measures nothing. The two honest
+controls were already in the table: `dep → dep` for whether the mismatch matters,
+and the shuffled row for whether the interval does. Both were needed; either
+alone would have left the result arguable.
+
+**What this closes.** v36's named next step is now measured and negative, which
+means the ear is not what stood between this creature and a temporal filter — the
+band Webb's circuit needs here (4–8 Hz, speech syllable rate) is well inside what
+the 32 ms cochlea already resolves. **So a better cochlea would not have helped**,
+and the case for rebuilding the auditory front end is weaker than it looked
+rather than stronger.
+
+### Where eleven mechanisms leave it, and the number that redirected the search
+
+Three mechanisms were built and measured in one day — a dendritic error
+microcircuit, developmental selection, and Webb's two-stage temporal filter —
+by three unrelated routes, and all three found the same wall. That brings the
+count to eleven. It seemed worth asking, before building a twelfth, exactly
+where the object stops.
+
+`m3probe` at 600000 ticks, 300 trials, the whole chain in one column:
+
+```
+vision 0.993  ->  central 0.773  ->  vocal 0.747  ->  voice 0.600   (shuffled 0.440)
+```
+
+**The object arrives.** It reaches the larynx at 0.747 and it survives the motor
+decoder into the sound at 0.600, against a shuffled null of 0.440. The word does
+the same: vocal 0.845, voice 0.741.
+
+This corrected a hypothesis before it became work. A 200000-tick run had shown
+the object at 0.740 in vocal and 0.440 in the voice — a total collapse at the
+decoder — and the obvious next move was to attack the nine-scalar motor readout.
+At 300 trials instead of 100 the collapse is not there: the decoder costs 0.147
+on the object and 0.104 on the word, which is a similar toll on both and not an
+object-specific one. **The 100-trial version of that table has an accuracy step
+of 0.06 and should not be read for differences of 0.10.**
+
+So delivery works, expression is weak but real, and what does not happen is the
+creature producing the sound *in response to* the object. That is conditioning,
+and conditioning is now fenced eleven times.
+
+**G3 is closed under this architecture, and the useful move is a different
+question rather than a twelfth mechanism.** M1b is the result that works — the
+creature repeats a heard word at 0.890 with an audible d′ of 1.37, the only
+number here that clears the audibility bar — and nothing has been built on it.
+The open question it raises has never been asked: **does the echo get better
+with practice?** The machinery for that already exists and is the one thing in
+this project that has ever worked — node perturbation met G2, so reward can
+shape a motor act here. It has only ever been scored on how MUCH the creature
+vocalises, never on how well.
 
 ### What this round taught about probes, which cost more than the mechanisms did
 
@@ -3666,6 +3854,11 @@ whose papers were read rather than remembered.
 - Larkum, M. (2013). *A cellular mechanism for cortical associations.* Trends in
   Neurosciences 36, 141–151 — BAC firing: a dendritic calcium spike turning a
   somatic single spike into a burst, which is what `burst_refrac_scale` models.
+- Sacramento, J., Ponte Costa, R., Bengio, Y. & Senn, W. (2018). *Dendritic
+  cortical microcircuits approximate the backpropagation algorithm.* NeurIPS
+  2018. <https://arxiv.org/pdf/1810.11393> — DNA v40. Errors originate at apical
+  dendrites as a mismatch between predictive input from lateral interneurons and
+  actual top-down feedback, continuously and without separate phases.
 
 **Everything else.**
 
@@ -3684,3 +3877,4 @@ whose papers were read rather than remembered.
 
 [bp]: https://www.nature.com/articles/s41593-021-00857-x
 [ep]: https://www.nature.com/articles/s41467-020-17236-y
+[sac]: https://arxiv.org/pdf/1810.11393

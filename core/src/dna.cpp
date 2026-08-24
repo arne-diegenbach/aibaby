@@ -426,6 +426,25 @@ DnaStatus Dna::load(const void* blob, size_t size) {
   // the mechanism reads as enabled and measures nothing. `burst_refrac_scale`
   // is a fraction of a period and cannot exceed 1: lengthening the refractory
   // period during a plateau is the opposite of BAC firing.
+  // DNA v40. A pooling interneuron cannot land on a compartment the module
+  // does not have, and cannot learn to cancel something it is not subtracted
+  // from. Both are genomes that would run and quietly do nothing.
+  for (uint32_t i = 0; i < h->module_count; ++i) {
+    if (modules[i].ffi_learn < 0.0f) return DnaStatus::kBadModule;
+    if (modules[i].ffi_apical == 0 && modules[i].ffi_learn > 0.0f) {
+      return DnaStatus::kBadModule;
+    }
+    if (modules[i].ffi_apical != 0) {
+      if (modules[i].ffi_source < 0) return DnaStatus::kBadModule;
+      if (modules[i].apical_threshold <= 0.0f) return DnaStatus::kBadModule;
+      bool fed = false;
+      for (uint32_t q = 0; q < h->projection_count; ++q) {
+        if (projections[q].dst == i && projections[q].apical != 0) fed = true;
+      }
+      if (!fed) return DnaStatus::kBadModule;
+    }
+  }
+
   for (uint32_t i = 0; i < h->module_count; ++i) {
     // DNA v39. A zero or negative scale would make the trace decay instantly
     // or grow without bound; the global check above already refuses a

@@ -549,6 +549,8 @@ bool compile_dna_toml(const std::string& path, std::vector<uint8_t>& out,
     m.nm_curiosity = float(r.number("nm_curiosity"));
     m.ffi_source = int32_t(r.number("ffi_source"));
     m.ffi_gain = float(r.number("ffi_gain"));
+    m.ffi_apical = uint32_t(r.number("ffi_apical"));
+    m.ffi_learn = float(r.number("ffi_learn"));
     m.apical_tau_ms = float(r.number("apical_tau_ms"));
     m.apical_threshold = float(r.number("apical_threshold"));
     m.apical_gain = float(r.number("apical_gain"));

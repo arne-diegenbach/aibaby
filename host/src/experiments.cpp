@@ -82,6 +82,12 @@ const Spec kSpecs[] = {
     {"oscprobe", 200000, Expect::kGuard, Tier::kFast,
      "derived: 100 trials; guard — the oscillators ship off"},
     {"audprobe", 240000, Expect::kPass, Tier::kFast, "derived: 100 trials at 2400 ticks each"},
+    {"relayprobe", 240000, Expect::kGuard, Tier::kFast,
+     "derived: 4 arms x 6 conditions, so 10000 ticks each — 20 bursts at the\n"
+     "  slowest envelope. Guard: the shipped genome has no relay to probe"},
+    {"errprobe", 600000, Expect::kPass, Tier::kLong,
+     "derived: 3 arms x 2000-tick trials, so 100 per arm — and the residual is\n"
+     "  read as first third against last third, which needs the trials to spend"},
     {"mechverify", kDefaultMinimum, Expect::kPass, Tier::kLong,
      "each variant declares its own length; --ticks is not read. Long because one\n"
      "  mechanism only executes inside a sleep consolidation and needs 1.3M to\n"
@@ -253,6 +259,8 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "tauprobe") ok = run_tauprobe(dna_blob, ticks, verbose);
   else if (name == "ipprobe") ok = run_ipprobe(dna_blob, ticks, verbose);
   else if (name == "mechverify") ok = run_mechverify(dna_blob, ticks, verbose);
+  else if (name == "errprobe") ok = run_errprobe(dna_blob, ticks, verbose);
+  else if (name == "relayprobe") ok = run_relayprobe(dna_blob, ticks, verbose);
   else if (name == "babble") ok = run_babble(dna_blob, ticks, verbose, cap);
   else if (name == "calibrate") ok = run_calibrate(dna_blob, ticks, verbose);
   else if (name == "sleep") ok = run_sleep(dna_blob, ticks, verbose);
