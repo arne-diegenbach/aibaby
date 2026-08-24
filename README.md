@@ -426,7 +426,8 @@ Every number on this page comes from the genome in [dna/default.toml](dna/defaul
 as it currently stands. **The whole suite above passes except `m3`** — G1,
 calibrate, babble, audio, vision, M2, G2, sleep, G4 and snapshot are all green,
 and G3 is the one milestone still open. Shipped hash `23c4eb2c7c45d05c`;
-`--experiment verify` reads 18 of 18 as expected on the fast tier.
+`--experiment verify` reads 18 of 18 as expected on the fast tier and
+`verify-long` 32 of 32 — see [The suite, both tiers](#the-suite-both-tiers).
 
 **DNA v36–v39 are four mechanisms built since, and all four ship off**, so none
 of the numbers above moved: dynamic synapses after Webb's cricket (v36),
@@ -3301,6 +3302,42 @@ Monotone on the scaled module and pinned at 1.00 on the untouched one, which is
 the half that would catch a scale applied globally by mistake. Sub-linear
 because the interval is not negligible against tau. **PASS**, and it says the
 mechanism runs — not that a longer window buys anything.
+
+### The suite, both tiers
+
+Run 2026-08-24 on the shipped genome, with DNA v36–v39 all switched off.
+
+```
+--experiment verify           determinism PASS   pinned hash PASS   18 of 18 as expected
+--experiment verify-long      determinism PASS   pinned hash PASS   32 of 32 as expected
+                              1 open milestone still failing, which is what
+                              "as expected" means for m3
+```
+
+Both tiers green, and the pinned hash is still `23c4eb2c7c45d05c` — four
+mechanisms and a bug fix later, the creature everyone runs is bit-identical to
+the one before them.
+
+**The fast tier cannot see any of this work, and that is the point of running
+the long one.** `burstprobe` is `kLong` at a 600000-tick minimum because 200000
+gives it 33 trials, and v38's pruning path only executes inside a sleep
+consolidation at ~1.04M ticks. A green fast tier says nothing about either. What
+the long tier actually reached:
+
+| experiment | what it exercised |
+|---|---|
+| `burstprobe` | v37's whole chain — burst detection, BAC firing, the object columns |
+| `g4` | **7 sleep passes, 25 synapses pruned** as raised and 31 forced — the compaction loop v38 changed, and the loop the `syn_elig_mean_` fix is in |
+| `sleep` | fatigue reaching consolidation at 1040 s and waking at 1224 s |
+| `snapshot` | the arena arrays v36 and v37 added, saved and restored |
+
+Three of the four new probes are `Expect::kPass` even though the mechanisms they
+test ship **off**. That is deliberate and it is what makes them tests rather than
+guards: each patches its own arms into a copy of the genome blob, so a green run
+means the mechanism was built, hatched and measured — not skipped. `stpprobe`,
+`burstprobe`, `pruneprobe` and `tauprobe` all carry an explicit off arm patched
+the same way, because an arm that reads its setting from the genome silently
+stops being a control the day someone ships the mechanism on.
 
 ### What this round taught about probes, which cost more than the mechanisms did
 
