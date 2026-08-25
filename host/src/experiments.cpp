@@ -120,6 +120,12 @@ const Spec kSpecs[] = {
      "no requirement; G3 is the open milestone, so FAIL is the current answer"},
     {"g2", kDefaultMinimum, Expect::kPass, Tier::kLong, "no requirement"},
     {"snapshot", kDefaultMinimum, Expect::kPass, Tier::kLong, "no requirement"},
+    {"retain", 5600000, Expect::kPass, Tier::kLong,
+     "derived: 60% of it is the teaching phase, which needs teachsound's 3.4M to\n"
+     "  produce something worth retaining; the rest is a full fatigue cycle so the\n"
+     "  sleeping arm can sleep, and a window to re-measure in. It passes when the\n"
+     "  teaching phase moved far enough to have something to retain; the three\n"
+     "  retention figures are the finding and are not gated"},
     {"teachsound", 3400000, Expect::kPass, Tier::kLong,
      "the same length vocallearn's positive control needs, because this IS that\n"
      "  arm asked whether its effect is audible. It was OPEN for one day and it\n"
@@ -262,6 +268,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "imitate") ok = run_imitate(dna_blob, ticks, verbose);
   else if (name == "vocallearn") ok = run_vocallearn(dna_blob, ticks, verbose);
   else if (name == "teachsound") ok = run_teachsound(dna_blob, ticks, verbose, cap);
+  else if (name == "retain") ok = run_retain(dna_blob, ticks, verbose);
   else if (name == "restate") ok = run_restate(dna_blob, ticks, verbose);
   else if (name == "eligprobe") ok = run_eligprobe(dna_blob, ticks, verbose);
   else if (name == "dwprobe") ok = run_dwprobe(dna_blob, ticks, verbose);

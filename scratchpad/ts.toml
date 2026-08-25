@@ -1,0 +1,2399 @@
+# aibaby genome — v16 format, DNA v6 feedforward wiring plus top-down feedback.
+#
+# The blob layout is v15 — projections carry a `kind` and the receptive-field
+# parameters the two structured wiring rules read. This genome uses neither:
+# the V1 and V2 stages were built, measured and reverted (README, "DNA v7").
+# The visual *wiring* below is unchanged from the one every G2, M2 and G3 number
+# up to DNA v11 was measured on — but the creature is not, because v12 switches
+# divisive normalisation on for `central` (v12) and, since v14, top-down
+# feedback from central onto the two distance senses. v15 adds predictive coding
+# and ships it off, so the creature is bit-identical to v14. Hash history:
+# 7b2e385d6ef2faf5 (v9-v11), 0ebf3dad6155254b (v12-v13), 2594458a1939c28e (v14),
+# unchanged at v15. Any number quoted against an earlier hash is stale.
+# (At `--experiment determinism`'s default 120k ticks the same creature hashes
+# be2e508dfc170240 — the two lengths are not comparable to each other.)
+#
+# Everything here is heritable: it defines the brain at birth and the rules by
+# which it may change. Nothing in this file is a runtime tuning knob. Every
+# field is required — there are no defaults, because two genomes that read
+# differently must never produce the same brain (requirement G1).
+
+seed = 20451117
+
+[sim]
+dt_ms = 1.0                 # 1 kHz simulation
+max_delay_ticks = 32        # ring depth; caps the longest axonal delay
+conduction_velocity = 0.1   # spatial units per ms
+plasticity_interval_ticks = 10   # cash eligibility in at 100 Hz
+
+[stdp]
+a_plus = 0.010
+a_minus = 0.012             # slightly depression-dominant, the usual guard
+                            # against runaway potentiation
+tau_plus_ms = 20.0
+tau_minus_ms = 20.0
+tau_elig_ms = 2000.0        # the human-feedback window: how long a synapse
+                            # stays eligible for a "good baby!" that arrives late
+eta = 0.35                  # reward-gated learning rate
+reward_clip = 2.0           # one poke must not be able to flatten a brain
+
+# DNA v16. Time constant of a per-synapse running mean of the eligibility trace,
+# subtracted before reward cashes it in — the reward baseline's trick one level
+# down. 0 is v15 exactly.
+#
+# Why: `eligprobe` measures the trace on central->vocal as large but object-
+# blind, correlating +0.93 between the two objects. Reward can therefore only
+# scale that tract, which is exactly the G3 symptom. Subtracting a per-synapse
+# mean turns the correlation rule into a covariance rule and leaves only the
+# part of the trace that is unusual for that synapse.
+# MEASURED AND REFUTED, 2026-08-15, before it ever shipped on. With the baseline
+# at 30 s the raw trace is unchanged (0.570) but what reward multiplies falls to
+# 0.503 — chance. The per-synapse mean was already being removed by the readout
+# that measured the problem, so subtracting it again online only adds the lag and
+# noise of a running estimate. Kept in the genome at 0 because the mechanism is
+# correct and cheap, and the next covariance-flavoured idea should start here
+# rather than rebuild it.
+elig_baseline_tau_ms = 0.0
+
+# DNA v37. The timescale of the per-neuron baseline burst rate that
+# burst-dependent plasticity reads its learning signal as a deviation from.
+# 0 disables the mechanism brain-wide.
+burst_baseline_tau_ms = 0.0
+# DNA v17. Fraction of the presynaptic module's population-mean trace to
+# subtract before the potentiation term reads it. 0 reproduces v16 exactly.
+#
+# The rule is a product of two rates, and splitting each into a population mean
+# plus a deviation shows only the d_i*d_j term is conjunctive while mean_i*mean_j
+# dominates. That is the same common-mode swamping `projprobe` measured in the
+# tract: subtracting each trial's population mean restores the object from 0.510
+# to 0.940 out of vision and 0.500 to 0.690 out of central. This is that
+# operation moved into the learning rule.
+#
+# MEASURED AND REFUTED, 2026-08-15, before it ever shipped on. Scored on
+# `condprobe`, which is the only instrument that isolates conditioning — it
+# delivers the condition by ear at 0.732 instead of by eye at chance, so a null
+# cannot be blamed on delivery. The quantity is the *margin*, taught minus its
+# own random-target control, because the creature reacts to a word natively
+# (echo 0.825 untaught) and that reactivity sits in both arms:
+#
+#   seed        centre 0.0   centre 0.5   echo @0.5
+#   20260809      -0.002       +0.051       0.750
+#   77001         +0.039       -0.020       0.850
+#   313377        -0.003       +0.014       0.675
+#   mean          +0.011       +0.015
+#
+# The first family alone looked like the first real learning signal in the
+# project (+0.051, 4 of 5 creatures beating their control). Across three
+# families the mean margin moves +0.011 -> +0.015, the sign flips on 77001, and
+# beat-its-own-control goes 7/15 -> 9/15, which is chance. At 1.0 it is worse
+# than useless: the calibration echo collapses 0.750 -> 0.575 because full
+# centring starves the word-driven drive.
+#
+# Kept at 0 because the mechanism is right in principle and costs one multiply,
+# and because the *next* conjunctive idea should start from this term rather
+# than rebuild it. Note the pattern this now shares with v15 and v16 — three
+# mechanisms built, measured and shipped off. See the memory note
+# `aibaby-conditioning-is-the-blocker`.
+elig_pre_centre = 0.0
+
+[homeostasis]
+# Mandatory, not optional (§3.1). Without rate regulation a spiking network
+# either falls silent or saturates within minutes, and every measurement after
+# that is measuring the bug.
+# Homeostasis has to be slow relative to learning, or it is an eraser rather
+# than a regulator: it normalises exactly the thing reward is trying to
+# differentiate. These constants act over minutes, which is the timescale rate
+# regulation is for; reward acts over seconds.
+ip_rate = 0.0003            # threshold step per Hz of rate error, per pass
+threshold_min = 0.20
+threshold_max = 4.00
+w_max = 0.50                # |weight| ceiling for excitatory synapses
+scaling_rate = 0.02         # firm once the bound is crossed
+scaling_band = 3.0          # but silent inside [birth/3, birth*3]
+interval_ticks = 500        # twice a second
+# Each module carries its own wake/sleep multipliers on the two rates above
+# (§3.1 meets §3.6), and the split is the point. Four numbers per module, not
+# two: ip_wake_scale/ip_sleep_scale multiply ip_rate, syn_wake_scale/
+# syn_sleep_scale multiply scaling_rate. Why they had to come apart is at the
+# bottom of this note.
+#
+# Waking is net-potentiating in a real animal and sleep is when the
+# renormalisation happens. Applied globally that does preserve G2's reward
+# effect — at 420 s, the duration at which it was recorded as having vanished,
+# the rewarded-share advantage goes from +0.0012 to +0.0518 — and it also drives
+# the babble duty cycle to 0.93, because the vocal module already sits 1.8 Hz
+# above its target and the same dial was holding it down. One number, two
+# demands, opposite directions.
+#
+# Per module the two demands come apart. Measured with `g2`, nine creatures,
+# rewarded-share advantage at 200 s and at 420 s, with the babble duty cycle
+# beside it — the 420 s column is the one that matters, because decay is what
+# the hypothesis is about:
+#
+#   scheme                            200 s     420 s     won    duty
+#   all 1.0 (as before)              +0.0629   +0.0012    5/9    0.67
+#   all 0.25/4.0                     +0.0980   +0.0518    5/9    0.93  FAIL
+#   vocal 1.0, rest relaxed          +0.0560   +0.0071    6/9    0.63
+#   central relaxed only             +0.0165   +0.0279    7/9    0.65
+#   vocal + auditory 1.0  <- shipped +0.0372  +0.0564     7/9    0.65
+#
+# The shipped row keeps more of the effect at 420 s than the drone did, and the
+# creature still babbles. Note it does not start higher — it simply does not
+# decay: 0.0372 -> 0.0564 where the baseline goes 0.0629 -> 0.0012. That is
+# preservation rather than amplification, which is exactly what the hypothesis
+# predicts and not what a louder creature would look like.
+#
+# Why *auditory* has to stay regulated with vocal is the surprise, and the row
+# above it is the evidence: relaxing auditory alone costs almost all of the
+# preservation (+0.0071). The ears→larynx tract is the densest in the genome, so
+# an under-regulated auditory module drives vocal hard enough to swamp the
+# reward signal in the very place it has to land.
+#
+# A real neuromodulator is not global either: it reaches some regions and not
+# others, which is the freedom the single dial was missing.
+#
+# Not free, and not finished. Relaxed modules run hotter under drive — vision
+# sits at 6.5 Hz awake against its 4.6 target, where it used to sit at 5.2 —
+# and `calibrate` cannot see this, because it measures with homeostasis off.
+# `babble` is the check that catches it. And the win counts are 5-7 of 9 across
+# every arm, which is not significant on its own; settling that needs the
+# treatment the M3 null got, twenty pairs across four seed families.
+inhib_plastic = false       # reward retunes excitation only
+
+[growth]
+# §3.4: growth without limits masks bugs — the network expands instead of
+# revealing that learning is broken. All three conditions must hold, and each
+# one of them is a number here rather than a judgement in the code.
+enabled = true
+plateau_window_ticks = 20000     # 20 s of simulated life per window
+epsilon = 0.001                  # prediction-error improvement below this is a plateau
+insert_k = 8                     # neurons per growth event
+saturation_rate_hz = 20.0        # a module must be this busy...
+saturation_weight = 0.60         # ...*and* this far into its weight ceiling
+# ...but only if this is 1. Those two bars describe an unregulated network, and
+# §3.1's homeostasis is what keeps them out of reach: measured over 25 minutes,
+# a healthy creature peaks at 13.5 Hz against the 20 Hz bar, and the share of
+# its edges near the weight ceiling *falls* from 2% to nothing as sleep
+# downscaling does its work. With this at 1 no creature ever grows outside the
+# forced arm of `g4`, which is where every measurement before DNA v5 was taken.
+require_saturation = 0
+# What replaces it: grow while the creature is still wrong about what happens
+# next. The critic's slow error settles at about 0.0084 on this genome and this
+# environment, so a floor of 0.004 means "keep developing until you are roughly
+# twice as good as you currently get", and a creature that reaches it stops.
+error_floor = 0.004
+# ...and stop anyway if six growth events in a row fail to move the error.
+# §3.4 wants growth to reveal broken learning rather than mask it, and this is
+# that sentence made mechanical.
+patience = 6
+new_weight = 0.02                # small, so a grown neuron earns its place
+refractory_ticks = 60000         # one growth event per minute, at most
+
+[consolidation]
+# Myelination (§3.5) and sleep consolidation (§3.6). One section because they
+# are one mechanism at two timescales: traffic marks the load-bearing edges,
+# myelination speeds and protects those, and sleep deletes what traffic never
+# reached.
+enabled = true
+
+# Traffic settles near (presynaptic rate in Hz) x (tau in seconds), so a half
+# of 50 at tau 10 s means an axon carrying about 5 Hz is half-myelinated —
+# which is roughly what the modules free-run at.
+traffic_tau_ms = 10000.0
+traffic_half = 50.0
+delay_floor_frac = 0.5           # a fully myelinated axon is twice as fast
+eta_floor_frac = 0.3             # ...and learns at 30% of eta: consolidated,
+                                 # and protected from being overwritten
+
+# Sleep. The pass runs every 30 s of a sleep bout, which is about six times per
+# ~3 min bout.
+interval_ticks = 30000
+downscale = 0.98                 # uniform, so relative strengths survive
+downscale_floor = 0.60           # ...but never past 60% of what the structure
+                                 # entitles a neuron to, or a long life fades
+prune_weight = 0.004             # weak...
+prune_traffic = 1.0              # ...and idle. Both, or it is not unused.
+
+# DNA v38. Competitive pruning: a synapse under this fraction of the MEAN |w|
+# over its target's afferents is removed, with no idle test. 0 = off, which is
+# the pre-v38 rule. The idle test is what the exuberance post-mortem measured as
+# the binding constraint — every synapse in an exuberant tract carries traffic,
+# so nothing could ever qualify and selection had no gradient.
+prune_compete = 0.0
+prune_compete_min_in = 8         # too few afferents to compete is not competition
+replay_episodes = 8
+replay_ticks = 400               # 400 ms each, against a 2 s eligibility trace
+replay_threshold = 0.05          # only moments that beat expectation are kept
+
+[drives]
+hunger_rate = 0.0000017     # per ms — empty to full in roughly ten minutes
+comfort_decay = 0.0005      # relaxes to neutral with a ~2 s time constant
+fatigue_rate = 0.00017      # scaled by activity, so a busy brain tires first
+curiosity_weight = 1.0
+w_external = 1.0
+w_hunger = 0.5
+w_comfort = 0.5
+reward_baseline_tau_ms = 8000.0   # learning follows surprise, not reward
+# Sleep (§3.6). Awake, fatigue only rises; sleeping is the only thing that
+# discharges it, which is what makes sleep a state the creature needs rather
+# than a timer that happens to it. At the rates below a baby babbling at ~5 Hz
+# is awake for roughly eleven minutes and then sleeps for about three.
+fatigue_recovery = 0.0000030   # per ms while asleep
+sleep_threshold = 0.90
+wake_threshold = 0.35
+
+[audio]
+# The cochlea (§5.2). Mel spacing and log compression are what the real one
+# does, and they cut dimensionality by ~50x against raw FFT bins.
+sample_rate = 16000
+window = 512                # 32 ms
+hop = 256                   # 50% overlap -> 62.5 frames/s
+mel_channels = 24
+mel_low_hz = 50.0
+mel_high_hz = 7000.0
+floor_db = -60.0            # anything quieter than this is silence
+# How loud the baby is to itself (§5.3). The loop from larynx to cochlea is
+# what makes babbling have a consequence the creature can learn from; with it
+# at 0 the creature is deaf to itself, which is how every measurement before
+# DNA v6 was taken. It is also a positive feedback path — larynx to ear to the
+# dorsal tract and back — so it is set below the caregiver's 0.5 rather than at
+# the bone-conduction level a real infant hears.
+# Swept 0.0 .. 2.0 against `babble`: the loop turns out to be *negative*
+# feedback, not the howl that was expected. Louder self-hearing drives the
+# auditory module, the dorsal tract carries that to the larynx, vocal rises
+# above its setpoint, and intrinsic plasticity answers by raising thresholds —
+# so the creature gets quieter, monotonically: duty cycle 0.84 deaf, 0.73 at
+# 0.35, 0.59 at 0.7, 0.39 at 2.0. That makes this the dial on the duty cycle
+# that the genome never had.
+#
+# 0.5 is where the headroom is bought without knocking the auditory module off
+# its calibrated operating point: duty 0.67, auditory 4.62 Hz against a 4.50
+# target. At 0.6 auditory falls to 4.07 and `calibrate` calls it stale.
+self_gain = 0.5
+gain = 0.40                 # injected current per unit normalised band energy
+
+[vision]
+# The retina (§5.1). Foveated because the data budget says so: a uniform 64x64
+# grid would be 4096 numbers per frame for a creature whose whole education is
+# a few thousand interactions. Full acuity in the middle 16x16, halving with
+# every ring outward, gives 88 centre-surround cells — 176 ON/OFF responses.
+frame_size = 64             # grayscale square the browser sends
+fovea_size = 16             # central region at full acuity
+fovea_grid = 8              # 8x8 cells across the fovea -> 2x2 px each
+ring_grid = 4               # 4x4 cells per ring, middle four dropped
+center_sigma = 0.5          # difference-of-Gaussians, in cell pitches
+surround_sigma = 1.6        # wider than the centre, or there is no opponency
+contrast_gain = 0.30        # DoG response that reads as full scale
+contrast_floor = 0.06       # below this a cell stays silent: an empty field
+gaze_contrast_floor = 0.015 # DNA v34: the same threshold, for AIMING. Setting
+                            # it equal to contrast_floor above is the pre-v34
+                            # creature exactly.
+#
+# THIS IS WHAT FIXED PERIPHERAL ACQUISITION, and the diagnosis was three
+# refutations deep before it turned up. `gazeprobe` had said for a long time
+# that the reflex recovers 72% of the oracle gain inside the fovea and NOTHING
+# outside it (vision 0.440 against a fixed 0.540 — it made things worse), and
+# the standing story was that the retina simply cannot see out there.
+#
+# It can. Released from the centre with one toy in view, the eye walks to it:
+#
+#   toy at    0    2    4    6    8    12    16    24 px
+#   eye ends  0  1.4  3.1  5.9  7.3  11.4  15.6   REFUSED
+#
+# Acquisition was never the problem out to 16 px. What happens at 24 px is that
+# whole-frame contrast falls to 0.0225 and the controller REFUSES to move,
+# because it shared `contrast_floor` with the encoder — one number doing two
+# jobs. Perception should be conservative; acquisition should be twitchy, since
+# a wasted saccade costs one frame and not looking costs the object entirely.
+# That is what a retinotectal pathway is: the colliculus drives saccades from
+# signals the geniculate pathway cannot resolve into a shape yet.
+#
+# Splitting them, at scatter 0.25 (toy 12.1 px out):
+#
+#   floor    OUTSIDE vision   gaze err   INSIDE     empty-field drift
+#   0.060    0.440            11.4 px    0.870/1.3  0.0 px   <- was shipped
+#   0.030    0.700             7.5 px    0.870/1.3  0.0 px
+#   0.020    0.740             3.1 px    0.870/1.3  0.0 px
+#   0.015    0.860             2.0 px    0.870/1.3  0.0 px   <- shipped
+#   0.010    0.900             1.3 px    0.870/1.3  0.0 px
+#   0.008    0.900             1.3 px    0.870/1.3  0.0 px
+#
+# Monotone with a plateau, and the INSIDE column is FLAT across the whole range
+# — this costs nothing where the reflex already worked.
+#
+# Why 0.015 and not 0.010, which scores better. The control that matters is an
+# empty field: the floor exists to stop the eye chasing grain. Empty-field
+# contrast across the nine seeds is 0.0052 .. 0.0064, so 0.015 sits 2.3x above
+# the worst of it while 0.010 sits 1.6x. The gain between them (0.860 vs 0.900)
+# is inside this instrument's noise at 100 trials; the safety margin is not.
+# A real camera is noisier than this renderer, so take the margin.
+#
+# Replicated on all nine seeds at 0.015: OUTSIDE vision 0.760 .. 0.940
+# (mean 0.847 against a fixed 0.540 and an oracle 1.000 — 67% of what is
+# available), gaze error 1.3 .. 2.0 px, and 0.0 px of empty-field drift on
+# every one.
+                            # has to *be* empty, not merely late
+gain = 1.30                 # one latency spike's worth of injected current
+frame_hz = 10.0             # camera frames the module is born expecting
+latency_ms = 60.0           # full contrast fires now, threshold contrast this
+
+# --- DNA v31: pointing the eye, second attempt --------------------------------
+# v27 aimed at the response-weighted centroid over every ganglion cell, landed
+# ~4.4 px from the toy where the visual code needs ~1.4, and was deleted in v30.
+# Deleting it is what produced the number that makes this worth rebuilding: with
+# the fovea placed exactly on the toy, `vision` reads 0.980 at 12 px of
+# displacement where a fixed eye reads 0.540, and `central` 0.860 against 0.520.
+# The mechanism was always worth having; only the aim was wrong.
+#
+# This one takes the PEAK-responding cell rather than the centroid — a centroid
+# averages the object with everything else, and a coarse ring cell that merely
+# overlaps it contributes its own faraway centre — and it ITERATES, correcting
+# `gaze_gain` of the error every re-aim rather than making one open-loop jump.
+# Three re-aims at 0.7 leave 2.7% of the initial error. Once the object is in
+# the fovea the peak cell *is* a foveal cell, so the last correction happens at
+# 2x2 px for free.
+#
+# `gazeprobe` scores it between the two rows that bracket it: `fixed` is the
+# floor, `oracle` is the ceiling, `reflex` is this.
+# SWITCHED ON 2026-08-17, and this is the change that moves the creature's
+# identity: the determinism hash goes be2e508dfc170240 -> 15b5dcb6d8616452.
+# Every hash quoted elsewhere in this file, and every visual number recorded
+# anywhere in this project before today, was taken with the eye NAILED TO THE
+# FRAME CENTRE. Those statements are true of when they were written and are not
+# re-measurements waiting to happen; `gazeprobe` keeps `fixed` as a permanent
+# arm so the old baseline stays reachable inside the instrument.
+#
+# Turned on for the live path rather than for a milestone, and the split is
+# worth being honest about:
+#
+#   standard protocol (toy +/-1.3 px)   central 0.700 -> 0.800, inside 1 sd
+#   displaced (a real camera)           vision  0.520 -> 0.840, gaze 3.8 -> 1.3 px
+#
+# The headless experiments hand the creature a pre-centred object and will not
+# notice. A webcam does not, and until now the shipped creature only worked if
+# the world was polite to it.
+#
+# It cost nothing to switch on, which was not the expectation: `calibrate`
+# passes with ZERO recalibration rounds and the babble duty cycle is unchanged
+# at 0.51. The retina's output statistics barely move because it is the same
+# cells with the same normalisation, sampling a shifted window.
+gaze_rate_hz = 10.0         # DNA v31: re-aim once per retinal frame. 0 pins the
+                            # fovea at the centre, which is the pre-v31 creature
+gaze_gain = 0.70            # fraction of the estimated error per re-aim
+gaze_peak_frac = 0.70       # aim at the centroid of cells >= this x the peak;
+                            # 1.0 = the peak cell alone, 0.0 = v27's whole field
+gaze_peak_radius = 0.0      # DNA v33: 0 = unlimited, the v31 rule exactly.
+#
+# SHIPS OFF — built against a hypothesis that measured false, and kept for the
+# refutation. v31 averages every cell above `gaze_peak_frac` x the peak
+# regardless of where it sits, so the obvious story for why the reflex cannot
+# acquire a peripheral toy is that foveal noise cells drag the aim back to the
+# centre. Making the neighbourhood spatial does not help:
+#
+#   radius   INSIDE the fovea      OUTSIDE it
+#   0 (v31)  0.870, gaze 1.3 px    0.440, gaze 11.4 px
+#   6        0.740, gaze 4.5 px    0.480, gaze 12.7 px
+#   10       0.640, gaze 2.5 px    0.460, gaze 11.4 px
+#   16       0.830, gaze 1.3 px    0.440, gaze 11.4 px
+#   24       0.870, gaze 1.3 px    0.440, gaze 11.4 px
+#
+# The gaze error outside the fovea is flat at every radius, and a tight radius
+# makes aiming WORSE inside it. The reason is that there is no estimate to
+# protect: `fixed` reads vision 0.540 at 12.1 px, which is chance, so the
+# retina does not localise the toy out there at all. Peripheral acquisition is
+# a retina problem, not a controller one.
+#
+# 0.70 is measured, not chosen, and the sweep is unusually legible because both
+# previously refuted designs sit at the ends of this one knob. At scatter 0.10
+# (toy 4.9 px out), gaze error against gaze_peak_frac:
+#
+#   0.20  3.3 px   too inclusive: v27's whole-field dilution coming back
+#   0.35  3.0 px
+#   0.50  2.0 px
+#   0.70  1.4 px   <- the tolerance the visual code actually needs
+#   0.90  2.9 px
+#   1.00  5.5 px   pure peak cell: parked on the object's edge, one radius out
+#
+# Chosen on gaze error rather than on the classifier score: it is the quantity
+# the controller actually controls, and at 100 trials a held-out accuracy has a
+# standard deviation near 0.07 while the mean gaze error does not.
+                            # much later; the image is in the timing
+
+
+[touch]
+gain = 0.50
+duration_ms = 250.0         # a touch lingers; it is not a single tick
+
+[vocal]
+# The vocal tract (§5.3). These ranges are body plan — a baby with different
+# formant limits is a physically different creature.
+f0_min = 90.0
+f0_max = 400.0
+f1_min = 250.0
+f1_max = 1000.0
+f2_min = 700.0
+f2_max = 2600.0
+f3_min = 1800.0
+f3_max = 3400.0
+bw_min = 50.0
+bw_max = 250.0
+voicing_threshold = 0.42    # normalised group activity that opens the glottis
+smoothing_ms = 800.0        # articulator inertia: a posture is held for a syllable
+gate_smoothing_ms = 60.0    # the glottis is a valve; it opens and shuts fast
+rate_norm_hz = 10.0         # group rate that reads as full scale
+
+[curiosity]
+learn_rate = 0.02           # LMS rate of the forward model
+fast_tau_ms = 2000.0
+slow_tau_ms = 20000.0
+gain = 2.0                  # learning progress -> reward
+
+# Predictive coding (DNA v15). How much of the predicted next frame is taken off
+# the frame the ears deliver. 0 is DNA v14 exactly, bit for bit: the forward
+# model still runs and still pays curiosity reward, it just never reaches a
+# neuron. 1 makes B2 a pure error module.
+#
+# Measured across the range, and it behaves: energy delivered to B2 falls
+# 100% -> 57% -> 19% at gain 0 / 0.5 / 1.0, with 0 / 31% / 41% of channel-frames
+# rectified away, and B2's mean rate 3.39 -> 2.63 -> 2.35 Hz.
+#
+# Note for anyone who turns it up: **at gain 1.0 `--experiment audio` FAILS, and
+# correctly.** That test asks whether a sustained vowel raises B2's rate, and a
+# sustained vowel is exactly what a predictive-coding ear cancels — the creature
+# has become an onset detector, which is what the mechanism is for. The test
+# would need rewriting around onsets before full subtraction could ship.
+#
+# It is off for a different reason: the prediction is not worth subtracting. The
+# critic loses to "the next frame looks like this one" in every condition, and
+# the association module it reads carries no information about the sound at all
+# — see `pcprobe`, and the auditory->central density note further down.
+predict_gain = 0.0
+
+# What the forward model predicts: the absolute frame (0, the model this
+# creature has had since M1) or the change from the last one (1). Measured in
+# `pcprobe` before this switch existed — the absolute model loses to
+# persistence in every condition and does not learn its way out.
+persistence_base = 0
+
+[normalisation]
+# Divisive normalisation (DNA v12). Cortex divides a neuron's drive by how
+# active its neighbourhood is; before v12 this creature did not. The measurement
+# that motivated it is in `g3probe`: the association module carries
+# cube-versus-ball in 4% of its neurons where the vision module feeding it
+# carries it in 22%.
+#
+# Two things were believed when this was built and the measurement refuted both.
+#
+# 1. "Central's code is too dense, sparsen it." Relaxing central's intrinsic
+#    plasticity does sparsen it — population sparseness 0.91 -> 0.85 -> 0.79 as
+#    ip_wake_scale goes 0.25 -> 0.05 -> 0.0 — and separability *collapses to
+#    chance* at zero, because nothing is left holding the neurons in their
+#    dynamic range. Sparser is not better on its own.
+# 2. "Normalisation will sparsen it properly." It does the opposite: sparseness
+#    rises with gain, 0.913 -> 0.939 across the sweep below, while separability
+#    improves anyway.
+#
+# What it actually does is raise per-neuron discriminability by dividing out a
+# common-mode "how busy is this module" term riding on every neuron at once.
+# Central, five creatures, 600k ticks, `g3probe`:
+#
+#   central norm_gain   cube/ball   mean |d'|   sparseness   M2    duty
+#   0.0 (off)             0.621       0.177       0.913      93%   0.61
+#   0.5                   0.715       0.193       0.928      96%   0.63
+#   1.0                   0.736       0.202       0.933      96%   0.62
+#   2.0                   0.685       0.197       0.937      94%   0.62
+#   4.0                   0.723       0.197       0.939      89%   0.61
+#
+# Read mean |d'| rather than the accuracy column: 400 neurons x 93 probes is a
+# far more stable statistic than a classifier on ~46 training samples, whose
+# shuffled control wanders 0.515-0.591 across these same arms.
+#
+# Confirmed across three seed families before being switched on. mean |d'| at
+# central rises in all three (+0.025, +0.006, +0.045) and M2 rises in all three
+# (93->96, 97->98, 94->95). The cube/ball *accuracy* column moves much more
+# erratically (+0.039, -0.008, +0.196 on the margin) and should not be quoted as
+# the headline — one family carries almost all of it.
+#
+# What it does NOT do: move G3. The ceiling reads 0.505 off and 0.488 on. The
+# condition side improving while the voice does not is the cleanest evidence yet
+# that G3 is two problems and this is only the first of them.
+#
+# Only `central` uses it; every other module is at 0.0, which makes the factor
+# exactly 1.0 and that module bit-identical to a v11 one. Verified both ways:
+# with all gains at 0 the whole brain hashes 7b2e385d6ef2faf5, exactly as v11
+# did, and gains of 1.0 and 4.0 give distinct hashes, so the mechanism is
+# provably inert when off and provably live when on. The shipped genome hashes
+# 0ebf3dad6155254b — every G2/G3 number recorded before DNA v12 was taken on a
+# different creature and is stale.
+enabled = 1
+floor = 0.25               # the most a busy module may be divided down
+ceiling = 2.0              # and the most a quiet one may be amplified back up
+
+[exploration]
+# LMAN: motor variability that reward opens and closes (§5.3's "motor noise",
+# made a variable instead of a constant).
+#
+# Babble came from a fixed noise_amp, and a fixed exploration rate is the one
+# thing that cannot converge — the creature was exactly as random after a
+# hundred praises as on its first babble. A zebra finch does the opposite:
+# LMAN *injects* variability into the motor pathway, undirected practice is
+# variable, directed song is stereotyped, and lesioning LMAN abolishes the
+# variability and the learning together.
+#
+# The performance signal is the gap between two windows on total reward, and it
+# has to be a gap: the reward prediction error the synapses see is reward minus
+# its own running mean, so it averages to zero by construction and cannot tell
+# doing-well from doing-badly. Fast above slow means better than lately.
+# Ships off. The mechanism is built and provably inert here — the creature is
+# bit-identical to one compiled before it existed — but a *global* variability
+# gain measured net harmful, and the reason is instructive rather than a tuning
+# miss. See the note below the parameters.
+enabled = 1
+fast_tau_ms = 4000.0        # about a handful of vocalisations
+slow_tau_ms = 60000.0       # the reference the fast window is judged against
+sensitivity = 0.0           # how hard that gap moves exploration
+floor = 0.35                # most stereotyped the creature may become
+ceiling = 1.60              # ...and most exploratory. 1.0 is plain noise_amp
+                            # exactly, which is where it sits with enabled = 1
+# The HVC term. Without it, closing exploration does not make the larynx
+# stereotyped — it makes it silent, because in this creature the motor module's
+# spontaneous drive *is* its babble. Measured at sensitivity 500 without it:
+# five of nine creatures produced too few vocalisations to score.
+drive_compensation = 0.5
+
+# Directional exploration: node perturbation. Each neuron traces the random
+# numbers it was actually given, and when reward arrives its excitability moves
+# along that trace. A push that preceded a better-than-expected outcome is
+# kept. This is the part that *steers* variability rather than shrinking it,
+# and it is a second learning rule beside STDP.
+#
+# The trace decays on the reward's timescale rather than the membrane's: the
+# caregiver's "good baby" lands a second or two after the thing it liked, which
+# is the same argument that sets tau_elig.
+perturb_tau_ms = 2000.0
+#
+# This is the parameter G2 turns on. Swept against `g2` at 200 s, nine
+# creatures, with the scalar gain above held at zero so only the directional
+# part is acting:
+#
+#   rate      rate advantage   won    mean ratio
+#   3e-6      +0.312x          7/9    x0.95
+#   1e-5      +0.580x          9/9    x1.20
+#   3e-5      +0.936x          9/9    x1.35   <- shipped
+#   5e-5      +0.888x          7/9    x1.34
+#   1e-4      +0.667x          5/9    x1.46
+#   1e-3      -0.123x          4/9    x1.01
+#
+# A plateau between 1e-5 and 3e-5, falling away on both sides: too slow and the
+# gradient estimate never accumulates against the noise, too fast and each
+# creature chases single lucky perturbations. 3e-5 over 1e-5 because it is the
+# one that also carries the *absolute* clause at 420 s (x1.11 against x0.94),
+# where 1e-5 has the cleaner win counts.
+perturb_rate = 0.00003
+perturb_max = 0.30          # |bias| ceiling, in the same units as threshold
+
+# --- what the two halves of this section are for ------------------------------
+#
+# `sensitivity` above stays 0: a *scalar* gain on the noise measured worse than
+# nothing, and the note below records why. `perturb_rate` is the half that
+# works, and it is what carries G2. They are separable on purpose — the failure
+# of the first is the reason the second exists.
+#
+# G2 with directional exploration on, nine creatures per family:
+#
+#   200 s, seed 20260809   +0.936x   9 of 9   x1.35   PASS
+#   200 s, seed 20360812   +0.593x   6 of 9   x1.30   PASS
+#   200 s, seed 20451117   +0.504x   8 of 9   x1.39   PASS
+#   420 s, seed 20260809   +0.672x   9 of 9   x1.11   PASS
+#
+# Both clauses, at both durations, across three independent seed families. The
+# 420 s row matters most: that is the duration at which every previous version
+# of this creature had lost the effect entirely.
+#
+# **Read the advantage column with one correction.** Praised creatures go from
+# x0.742 to x1.347 when this is switched on, and their yoked twins go from
+# x0.686 to x0.411 — so roughly a third of the "advantage" is the control being
+# *harmed* rather than the creature being helped, because random praise times a
+# perturbation trace is a random walk in excitability and that damages a
+# creature. Arguably it should: a baby praised at random ought to learn
+# nonsense. But the milestone does not rest on it. x1.347 is the praised arm on
+# its own, and the absolute clause is met without reference to any control.
+#
+# --- the half that did not work ----------------------------------------------
+# Why the scalar gain ships off, and what made it wrong.
+#
+# Measured with `g2`, nine creatures, sensitivity 500 and 1000, with the HVC
+# term in place: mean rewarded ratio x0.35 and x0.15 against a x0.72 baseline,
+# and three of nine creatures too quiet to score. Worse than doing nothing.
+#
+# The signal is systematically one-sided. `fast - slow` trends positive as the
+# drives settle over a session, so exploration closes monotonically — mean 0.87
+# — and the creature narrows early, before it has learned anything to narrow
+# onto. A songbird does the opposite: wide early, stereotyped late.
+#
+# But the deeper error is the shape of the mechanism, not the sign of its input.
+# A single scalar gain on the noise makes the larynx *less varied in every
+# direction at once*, which is not what LMAN does and not how node perturbation
+# works. Real exploration is **directional**: each neuron's own recent
+# perturbation is correlated with the reward that followed, and the ones that
+# helped are kept. That steers the variability instead of merely shrinking it,
+# and it is the difference between narrowing onto something and going quiet.
+#
+# Building that means a second learning rule beside STDP — a per-neuron
+# perturbation trace, cashed against reward the way the eligibility trace
+# already is. The scaffolding here is what it would need: the two reward
+# windows, the per-module delivery, and the HVC term that keeps a narrowing
+# creature audible.
+#
+# --- the third half that did not work: perturbation on SYNAPSES ---------------
+# Built 2026-08-19, measured, and removed the same day. No genome field remains,
+# because a required key per dead mechanism is the tax DNA v30 exists to stop
+# paying — but this is the last structurally untried learning rule in the
+# project, so the table is worth more than the field.
+#
+# The motivation was the one sentence that summarises G3: this creature has two
+# learning rules and *neither* can make the voice a function of what the eye
+# sees. R-STDP can in principle and does not — `dwprobe` splits what reward
+# writes onto central->vocal into ~61% irreproducible noise, ~31% reproducible
+# but object-independent and ~8% object-specific. Node perturbation cannot even
+# in principle, because `perturb_rate` above moves a per-neuron *constant*.
+#
+# The obvious repair is to cash the same trace onto synapses under a
+# presynaptic gate — `e_ij += k * perturb_j` on every spike of i, which is
+# Fiete & Seung's rule written on weights, and in the birdsong model this
+# section borrows from it is the HVC->RA synapse. It is conditional by
+# construction: credit lands only on synapses whose source was firing, so a cube
+# and a ball write onto different ones.
+#
+# It does something large, and on the wrong column. `dwprobe`, 3 creatures,
+# 120k, with `k` the raw gate and `c` the fraction of the source module's mean
+# firing subtracted back off:
+#
+#   k       c     mean|dw|    corr(A,A')  corr(A,B)   noise   obj-indep  obj-spec
+#   0       -     2.99e-02    0.349       0.322       65%     32%        2.7%
+#   1e-4    0     5.98e-02    0.815       0.794       19%     79%        2.1%
+#   1e-4    1.0   3.61e-02    0.460       0.449       54%     45%        1.1%
+#   3e-4    0     9.30e-02    0.917       0.910        8%     91%        0.7%
+#   3e-4    1.0   5.52e-02    0.687       0.644       31%     64%        4.3%
+#   1e-3    1.0   9.28e-02    0.688       0.658       31%     66%        3.0%
+#
+# Read the last three columns. The rule cuts the irreproducible share of
+# learning from 65% to 8% — nothing in this project had moved that column at all
+# — and every point of it lands in the object-INDEPENDENT one, 32% -> 91%.
+# Centring the gate removes that common mode exactly as designed, 91% -> 64%,
+# and gives back the calibration echo the common mode was costing (g3probe echo
+# 0.700 -> 0.925 at k=1e-4, against 0.850 shipped), which was the falsifiable
+# prediction made before the run. **The object-specific column never leaves the
+# 1-4% band in any of eight settings.** G3's margin over its own random-target
+# control: +0.017 shipped, +0.022 at the best arm, mean -0.006 across the grid,
+# 0 of 5 creatures at the bar everywhere. Above k=3e-4 the echo falls under
+# g3probe's 0.700 floor and those arms are unreadable rather than negative.
+#
+# **The control that says why, and it is the useful part.** Run G2 with the bias
+# half switched off, so the synaptic rule is the only exploration there is:
+#
+#   arm                              rewarded rate   won    G2
+#   bias half only (shipped)         +1.742 x        9/9    PASS
+#   synaptic half only               -0.031 x        5/9    FAIL
+#   neither half                     -0.081 x        3/9    FAIL
+#   both                             +1.700 x        7/9    PASS
+#
+# The synaptic rule sits at the no-exploration floor. It cannot carry G2 — the
+# milestone the *bias* version met outright — so this is not a failure of
+# conditionality at all. Both rules estimate the same gradient from the same
+# reward stream; the bias version estimates one number per neuron and the
+# synaptic version one per synapse, and the variance of the second is hopeless
+# at these session lengths. Note the last row: adding it to the working rule
+# makes G2 slightly worse, 9/9 -> 7/9.
+#
+# Two things this closes. **Expressiveness was never the problem** — the reason
+# node perturbation cannot make the voice conditional is not that a bias is a
+# constant, and giving it the expressive power does not help. And **the SNR
+# framing of G3 is refuted**: dwprobe's 61/31/8 split invited "raise the signal
+# or lower the noise", and lowering the noise by 8x moves the object-specific
+# share not at all.
+
+# --- Modules ---------------------------------------------------------------
+# Neuron counts are deliberately small. The point is a substrate we can watch
+# at 1 kHz in real time, not a big brain.
+#
+# `role` is how the host finds a module. Renaming a module is cosmetic;
+# changing its role rewires the creature to the outside world.
+
+[[module]]
+name = "central"
+role = "association"
+neurons = 400
+n_max = 4096
+max_out_degree = 512
+extent = [1.0, 1.0, 1.0]
+conn_radius = 0.4
+conn_density = 0.5
+# Threshold and leak are a pair, and they were swept as a pair: for each leak
+# the threshold was searched until the module free-ran at the same 8 Hz, so the
+# sweep varies how long the module integrates and holds how hard it fires
+# constant. Otherwise "shorter leak" and "quieter module" are the same
+# experiment and neither can be read.
+threshold = 0.645
+v_rest = 0.0
+# The senses arrive as volleys, not as levels. The retina fires each cell once
+# per frame and early if it responded strongly, so a picture is spread across a
+# 60 ms latency window inside a 100 ms frame (§5.1). A 20 ms membrane constant
+# integrates most of that window into a sum, which converts the volley's order
+# into an amount — and "amount" is exactly the part of B1 that M2 showed was
+# doing all the work. At 5 ms the module reads coincidence instead, and the
+# measurements move together: M2's held-out accuracy 0.89 -> 0.94, and the same
+# score with each trial's firing rate divided out — the honest one, the "where"
+# rather than "how hard" — 0.69 -> 0.79. Shorter still keeps helping M2 (0.84
+# at 3 ms) but costs G2, which peaks here.
+leak_tau_ms = 5.0
+refractory_ms = 3.0
+target_rate_hz = 6.81  # measured, not chosen: this module's free-running
+                             # rate with homeostasis switched off. A target that
+                             # differs from it makes intrinsic plasticity spend
+                             # the session hauling the network somewhere, and
+                             # that drift swamps whatever else is being measured.
+                             # The threshold above is what holds this at 8.05
+                             # after the leak changed
+inhib_fraction = 0.2
+inhib_gain = 2.5
+weight_init = 0.12
+noise_amp = 0.28
+# Relaxed while awake and repaid during sleep — see the [homeostasis] note.
+# This is where G2's reward effect was being erased mid-session.
+ip_wake_scale = 0.25
+ip_sleep_scale = 4.0
+syn_wake_scale = 0.25
+syn_sleep_scale = 4.0
+explore_scale = 0.0        # not a motor module; keeps its plain noise_amp
+norm_gain = 1.0            # the one module that uses it. Chosen by the sweep in
+eta_scale = 1.0            # cortical rate; see ModuleRole::kHippocampus
+# DNA v20 neuromodulator channel gains; read only when [neuromod] enabled.
+nm_external = 1.0
+nm_hunger = 1.0
+nm_comfort = 1.0
+nm_curiosity = 1.0
+# DNA v21 pooling interneurons: subtract the gain below times the population
+# mean rate of the named source module from every neuron here. -1 disables.
+#
+# MEASURED 2026-08-16 with vocal pooling from vision, on the genome that has a
+# strong vision->vocal tract. Note the scale: mean_rate_fast is in Hz (~5), so a
+# gain of 0.05 subtracts 0.25 from the drive every tick against a threshold of
+# 1.0 and silences the module outright. The useful range is near 0.002.
+#
+#   ffi      cal    duty   vocal-obj  vocal-int  voice   vocal-spk
+#   0.000    PASS   0.69   0.680      0.720      0.640   1065.5
+#   0.002    PASS   0.56   0.790      0.730      0.590    954.8
+#   0.005    PASS   0.31   0.610      0.680      0.570    788.4
+#   0.010    PASS   0.06   0.500      0.520      0.500    527.6
+#   0.020    PASS   0.00   0.510      0.530      0.510     75.5
+#
+# It does NOT do what it was built for. The split-half column jumps to 0.790 but
+# the interleaved one — the trustworthy column — moves only 0.720 -> 0.730, and
+# the voice falls. The reason is a timescale mismatch: mean_rate_fast is a
+# one-second EMA while the common-mode fluctuation that buries the object code
+# is trial-to-trial. A constant offset is invisible to the classifier anyway,
+# because holdout_accuracy z-scores every dimension; only the fast part matters
+# and this term cannot follow it. A faster pool is the thing to try next.
+#
+# What it IS good for: at 0.002 it restores the operating point that a strong
+# vision->vocal tract disturbs — duty 0.69 -> 0.56, spikes 1065 -> 955 against a
+# 944.9 baseline — while holding delivery. Useful as that tract's companion.
+#
+# DNA v22 tested the timescale explanation and REFUTED it. With a dedicated
+# 15 ms pool ([interneuron] tau_ms) instead of the one-second EMA, the
+# interleaved column goes 0.720 -> 0.700 -> 0.700 -> 0.660 across gains
+# 0 / 0.001 / 0.002 / 0.005 — monotonically *down*. Speed was not the problem.
+#
+# The actual reason the offline result does not transfer, worked out from the
+# algebra: projprobe's `centred` arm computes y_j = sum_{i in S_j}(x_i - m),
+# which equals sum(x_i) - |S_j| * m. This term computes sum(x_i) - g * m. The
+# two agree only if every target has the same fan-in, and at density 0.03 over
+# ~1024 sources |S_j| is Poisson with mean 31 and spread +/-5.5, about 18%. A
+# uniform subtraction over-corrects the sparsely innervated neurons and
+# under-corrects the densely innervated ones, and the residual scales with the
+# very common mode it is supposed to remove.
+#
+# So the next form is not a faster pool but a **per-neuron** one: scale the
+# subtraction by each target's own in-degree from the source module. That is
+# also what a real basket cell does — its innervation is proportional to the
+# target's excitatory input, not uniform across the population.
+#
+# DNA v24 DID THAT AND IT WORKS. `ffi_gain` is now weighted per neuron by how
+# much of the source module that neuron actually receives, normalised to mean 1
+# so the gain keeps its old scale. Measured at ffi 0.001 against 0, three seed
+# families, each recalibrated, all passing and all babbling:
+#
+#   seed        ffi 0.000   ffi 0.001   delta    voice
+#   20260809      0.720       0.780     +0.060   0.640 -> 0.580
+#   77001         0.670       0.720     +0.050   0.630 -> 0.550
+#   313377        0.760       0.880     +0.120   0.550 -> 0.650
+#   mean          0.717       0.793     +0.077
+#
+# Three of three positive, no sign flip. This is the first *constructed*
+# improvement in a long run of refutations, and the fan-in algebra earned it:
+# the argument predicted both that a uniform term would fail and that an
+# in-degree-weighted one would work, and both held.
+#
+# The voice does not follow (0.607 -> 0.593 mean, two down one up), which is
+# what the rest of the evidence predicts — delivery improves, behaviour does
+# not, because conditioning is the blocker. Still shipped off: it is only worth
+# turning on together with the vision->vocal tract it was measured against.
+#
+# THAT TEST WAS FINALLY RUN, 2026-08-17, and it settles the question this note
+# left open. The bundle — `vision->vocal` at d=0.03 w=0.30 plus this pooling —
+# was assembled, **recalibrated** (it fails `calibrate` untouched: central
+# -0.40, somato +0.46, duty 0.51 -> 0.67), and scored with g3probe at 900k,
+# 141 probes per creature, five creatures:
+#
+#   arm                 obj at vocal   G3 ceiling   echo    readable?
+#   shipped             0.480          0.487        0.825   yes
+#   + vision->vocal     0.800          0.546        0.750   yes
+#   + tract & pooling   0.680          (0.515)      0.675   NO — echo under floor
+#
+# **Delivery was never the limit.** The object arrives at the larynx with a
+# margin over chance roughly three times the shipped creature's, and the
+# idealised-teacher ceiling moves 0.487 -> 0.546 against a 0.75 bar, with 0 of 5
+# creatures reaching it and only 3 of 5 beating their own random-target control.
+# The conditioning diagnosis survives its strongest test.
+#
+# And a cost nobody had quantified: **the CS pathway competes with the US
+# pathway at the same target.** The calibration echo — the word driving the
+# voice natively, which is the whole reason conditioning looked possible — falls
+# 0.825 -> 0.750 -> 0.675 as object delivery rises, because vision->vocal and
+# auditory->vocal land on the same module and the second one dilutes the first.
+# In the pooling arm it fell under g3probe's readout floor and that arm is
+# unreadable rather than negative. Any future attempt to deliver the object to
+# vocal has to pay this, and the two tracts would need separating — different
+# target populations, or different compartments — before the trade goes away.
+ffi_source = -1
+ffi_gain = 0.0
+ffi_apical = 0               # DNA v40: land the interneuron on the tuft, not the soma
+ffi_learn = 0.0              # DNA v40: and let its weight learn to cancel what arrives there
+
+# --- DNA v25: the apical compartment -----------------------------------------
+# A neuron here used to be a point: every synapse summed into one membrane. A
+# pyramidal cell is at least two integration sites, and a tract says which one
+# it lands on (see `apical` on the projections below).
+#
+# The tuft integrates on its own slow constant and cannot make the soma fire.
+# What it can do is cross `apical_threshold` and start a calcium plateau, and
+# for `apical_plateau_ms` after that the soma's synaptic drive is multiplied by
+# (1 + apical_gain). Feedforward alone: regular spiking. Feedback alone:
+# nothing at all. Both together: a burst.
+#
+# apical_threshold = 0 disables the compartment on this module, which is what
+# every module ships with, and a genome with no apical tract anywhere is
+# bit-identical under a v25 core.
+apical_tau_ms = 30.0
+apical_threshold = 0.0
+apical_gain = 0.0
+apical_plateau_ms = 50.0
+
+# --- DNA v26: subthreshold oscillations --------------------------------------
+# A theta rhythm and a gamma rhythm nested inside it, added to every neuron in
+# this module as a current. Both amplitudes 0 is off, and off is bit-identical
+# to v25.
+#
+# Aimed at a measured failure rather than at the fact that cortex oscillates.
+# `eligprobe` shows the eligibility trace on central->vocal is large but
+# object-BLIND, correlating +0.93 between the two conditions, and the reason is
+# structural: pair-based STDP adds `+a_plus * trace_pre` and subtracts
+# `-a_minus * trace_post`, both scaling with the same firing rates, so it is
+# nearly rate-balanced by construction — while central codes the object as a
+# rate difference. It is a timing rule being asked to read a rate code.
+#
+# On a shared rising ramp a neuron with more drive crosses threshold earlier in
+# the cycle than one with less. The rate difference becomes a *timing*
+# difference, which is the one thing STDP can see. So the prediction is not
+# about accuracy anywhere — it is that the trace on central->vocal becomes
+# object-conditional, tested by the probe that found it blind.
+#
+# Additive, not multiplicative, and the argument above is why: a gain scales
+# each neuron's own drive and cannot reorder threshold crossings, while a shared
+# ramp makes crossing time a function of drive.
+#
+# MEASURED HERE 2026-08-17, on central, and REFUTED. Ships off.
+#
+# The mechanism does everything it was designed to do. `oscprobe` measures
+# entrainment and the phase code separately, because an oscillation that never
+# entrained and one that entrained and did not help produce the same null:
+#
+#   gamma_amp   vector strength   rate/phase corr
+#   0.01        0.102             +0.182
+#   0.03        0.276             +0.286
+#   0.06        0.470             +0.403
+#   0.12        0.694             +0.553
+#
+# So central entrains, hard and monotonically, and a systematic rate-to-phase
+# mapping appears — which is the whole precondition of the argument. (It runs
+# the *opposite* way to the textbook: busier neurons fire LATER, not earlier.
+# Two candidates, neither tested — refractoriness spreading a high-rate
+# neuron's spikes past the optimal phase, and intrinsic plasticity raising a
+# busy neuron's threshold so it needs more of the ramp. Either way a monotone
+# map exists, which is all the argument needed.)
+#
+# And the eligibility trace does not care. `eligprobe` at 600k:
+#
+#   theta  gamma  cal   duty   cent->voc  shuffled  arcuate  corr
+#   0.0    0.0    PASS  0.51   0.654      0.514     0.892    +0.959
+#   0.0    0.01   PASS  0.52   0.638      0.476     0.892    +0.961
+#   0.0    0.03   PASS  0.53   0.646      0.520     0.896    +0.963
+#   0.0    0.06   FAIL  0.55   0.594      0.502     0.888    +0.969
+#   0.06   0.0    FAIL  0.66   0.616      0.530     0.882    +0.971
+#
+# Flat to falling, never better, and the object-INdependent share creeps up
+# rather than down. Above amplitude 0.03 the creature stops calibrating, so
+# the usable window is entirely inside the region where nothing happens.
+#
+# The `arcuate` column is on every row on purpose: it is a tract known to carry
+# a conditional trace, and it holds at 0.882-0.896 throughout, so no row above
+# is a null produced by a blind instrument. The first version of this sweep was
+# run at eligprobe's default 120k, where that same control reads 0.570 against
+# a chance of 0.510, and the entire table had to be thrown away. `eligprobe`
+# now prints an UNDERPOWERED banner when the control falls below 0.700.
+#
+# **The conclusion is the strong form of the negative.** The rhythm entrained,
+# the rate code became a timing code, and STDP still could not use it. This is
+# not "the amplitude was too small" — the amplitudes that produce the strongest
+# phase code are measured here and they are the ones that make things slightly
+# worse. A shared rhythm is itself a large common-mode signal, and common-mode
+# swamping is this creature's established failure mode: the oscillation adds to
+# the object-blind component of the trace, which was already the problem.
+#
+# One number here corrects the record. At 600k the baseline trace on
+# central->vocal reads 0.654 against a shuffled 0.514, not the 0.520 recorded
+# from a 120k run. The trace is not object-BLIND; it is object-WEAK — 0.654
+# against the arcuate's 0.892 on the identical readout.
+theta_hz = 6.0
+theta_amp = 0.0
+gamma_hz = 40.0
+gamma_amp = 0.0
+gamma_theta_coupling = 1.0
+critical_tau_ms = 0.0       # DNA v28: 0 = plasticity never closes (pre-v28)
+critical_floor = 0.2        # what the learning rate settles to when it does
+plateau_gate = 0.0          # DNA v29: 0 = eligibility ignores the tuft (pre-v29)
+# DNA v32. Lateral competition, so a population centroid has somewhere to sit.
+# 0 is off and is bit-identical to not having it. See the note in dna.h: the
+# vocal centroid already reaches F1 300-910 Hz, it just never dwells anywhere.
+lateral_gain = 0.0          # strength of local excitation minus the field mean
+lateral_sigma = 0.15        # excitation width, as a fraction of one field
+lateral_fields = 1          # competitive fields; the vocal module wants 9
+burst_ms = 0.0               # DNA v37: ISI that counts as a burst. 0 = no burst code
+burst_refrac_scale = 1.0     # what an apical plateau does to it. 1.0 = nothing
+elig_tau_scale = 1.0         # DNA v39: this module's tau_elig, as a multiple of the global one
+
+
+                           # [normalisation]: peak per-neuron discriminability,
+                           # M2 up in 3 of 3 seed families, nothing else moved
+
+[[module]]
+name = "auditory"
+role = "auditory"
+neurons = 192               # 8 neurons per mel channel
+n_max = 1024
+# Every auditory neuron now branches into the vocal module as well as into
+# central, which costs it ~19 more synapses. At 48 the busiest neurons in some
+# developmental seeds ran out of slots and their synapses were silently
+# discarded — the genome and the built brain stop agreeing, and only the
+# startup banner says so.
+#
+# 72 -> 256 for the inhibitory auditory->vocal tract at the bottom of this file,
+# which lands ~31 more synapses on every inhibitory auditory cell and overran
+# this cap on EIGHT of the nine seeds — up to 21 dropped per creature, and
+# invisible on the default seed. That is rule 6 earning its keep. Raising a cap
+# draws no random numbers, so it was verified inert on its own first.
+max_out_degree = 256
+extent = [1.0, 1.0, 1.0]
+conn_radius = 0.4
+conn_density = 0.5
+threshold = 1.0
+v_rest = 0.0
+leak_tau_ms = 20.0
+refractory_ms = 3.0
+target_rate_hz = 2.55        # lowered by top-down feedback: an inhibited
+                             # sensory module free-runs slower, which is what
+                             # predictive suppression looks like. Re-measured,
+                             # not chosen — see the [[projection]] note at the
+                             # bottom of this file
+inhib_fraction = 0.2
+inhib_gain = 2.5
+weight_init = 0.12
+noise_amp = 0.28
+# Held at full regulation, awake and asleep. The larynx because relaxing it
+# drives the babble duty cycle to 0.93 and the creature drones; the ears
+# because the dense ears→larynx tract then swamps the reward signal at the
+# motor module. See the table in the [homeostasis] note.
+ip_wake_scale = 1.0
+ip_sleep_scale = 1.0
+syn_wake_scale = 1.0
+syn_sleep_scale = 1.0
+explore_scale = 0.0        # not a motor module; keeps its plain noise_amp
+norm_gain = 0.0            # divisive normalisation off; see [normalisation]
+eta_scale = 1.0            # cortical rate; see ModuleRole::kHippocampus
+# DNA v20 neuromodulator channel gains; read only when [neuromod] enabled.
+nm_external = 1.0
+nm_hunger = 1.0
+nm_comfort = 1.0
+nm_curiosity = 1.0
+# DNA v21 pooling interneurons: subtract the gain below times the population
+# mean rate of the named source module from every neuron here. -1 disables.
+ffi_source = -1
+ffi_gain = 0.0
+ffi_apical = 0               # DNA v40: land the interneuron on the tuft, not the soma
+ffi_learn = 0.0              # DNA v40: and let its weight learn to cancel what arrives there
+
+# --- DNA v25: the apical compartment -----------------------------------------
+# A neuron here used to be a point: every synapse summed into one membrane. A
+# pyramidal cell is at least two integration sites, and a tract says which one
+# it lands on (see `apical` on the projections below).
+#
+# The tuft integrates on its own slow constant and cannot make the soma fire.
+# What it can do is cross `apical_threshold` and start a calcium plateau, and
+# for `apical_plateau_ms` after that the soma's synaptic drive is multiplied by
+# (1 + apical_gain). Feedforward alone: regular spiking. Feedback alone:
+# nothing at all. Both together: a burst.
+#
+# apical_threshold = 0 disables the compartment on this module, which is what
+# every module ships with, and a genome with no apical tract anywhere is
+# bit-identical under a v25 core.
+apical_tau_ms = 30.0
+apical_threshold = 0.0
+apical_gain = 0.0
+apical_plateau_ms = 50.0
+
+# --- DNA v26: subthreshold oscillations --------------------------------------
+# A theta rhythm and a gamma rhythm nested inside it, added to every neuron in
+# this module as a current. Both amplitudes 0 is off, and off is bit-identical
+# to v25.
+#
+# Aimed at a measured failure rather than at the fact that cortex oscillates.
+# `eligprobe` shows the eligibility trace on central->vocal is large but
+# object-BLIND, correlating +0.93 between the two conditions, and the reason is
+# structural: pair-based STDP adds `+a_plus * trace_pre` and subtracts
+# `-a_minus * trace_post`, both scaling with the same firing rates, so it is
+# nearly rate-balanced by construction — while central codes the object as a
+# rate difference. It is a timing rule being asked to read a rate code.
+#
+# On a shared rising ramp a neuron with more drive crosses threshold earlier in
+# the cycle than one with less. The rate difference becomes a *timing*
+# difference, which is the one thing STDP can see. So the prediction is not
+# about accuracy anywhere — it is that the trace on central->vocal becomes
+# object-conditional, tested by the probe that found it blind.
+#
+# Additive, not multiplicative, and the argument above is why: a gain scales
+# each neuron's own drive and cannot reorder threshold crossings, while a shared
+# ramp makes crossing time a function of drive.
+theta_hz = 6.0
+theta_amp = 0.0
+gamma_hz = 40.0
+gamma_amp = 0.0
+gamma_theta_coupling = 1.0
+critical_tau_ms = 0.0       # DNA v28: 0 = plasticity never closes (pre-v28)
+critical_floor = 0.2        # what the learning rate settles to when it does
+plateau_gate = 0.0          # DNA v29: 0 = eligibility ignores the tuft (pre-v29)
+# DNA v32. Lateral competition, so a population centroid has somewhere to sit.
+# 0 is off and is bit-identical to not having it. See the note in dna.h: the
+# vocal centroid already reaches F1 300-910 Hz, it just never dwells anywhere.
+lateral_gain = 0.0          # strength of local excitation minus the field mean
+lateral_sigma = 0.15        # excitation width, as a fraction of one field
+lateral_fields = 1          # competitive fields; the vocal module wants 9
+burst_ms = 0.0               # DNA v37: ISI that counts as a burst. 0 = no burst code
+burst_refrac_scale = 1.0     # what an apical plateau does to it. 1.0 = nothing
+elig_tau_scale = 1.0         # DNA v39: this module's tau_elig, as a multiple of the global one
+
+
+
+[[module]]
+name = "vision"
+role = "vision"
+neurons = 256
+# Sized for growth headroom the module can never use, and left that way on
+# purpose: positions are drawn for every slot up to n_max, so changing it
+# moves the shared RNG stream and rebuilds a different creature. Restoring
+# the DNA v6 value is what makes this genome bit-identical to the one every
+# recorded G2 and M2 number was measured on.
+n_max = 2048
+# Widening vision->central to 0.06 puts ~24 synapses from every retinal neuron
+# into the association module on top of its intra-module wiring, and 48 was not
+# enough to hold them. Raised again for vision->vocal below; raising a cap draws
+# no random numbers, so this leaves every non-overflowing brain bit-identical
+# and it was verified inert on its own before the tract was added.
+max_out_degree = 256
+extent = [1.0, 1.0, 1.0]
+conn_radius = 0.4
+conn_density = 0.5
+threshold = 1.0
+v_rest = 0.0
+leak_tau_ms = 20.0
+refractory_ms = 3.0
+target_rate_hz = 2.54        # lowered by top-down feedback: an inhibited
+                             # sensory module free-runs slower, which is what
+                             # predictive suppression looks like. Re-measured,
+                             # not chosen — see the [[projection]] note at the
+                             # bottom of this file
+inhib_fraction = 0.2
+inhib_gain = 2.5
+weight_init = 0.12
+noise_amp = 0.28
+# Relaxed while awake and repaid during sleep — see the [homeostasis] note.
+# This is where G2's reward effect was being erased mid-session.
+ip_wake_scale = 0.25
+ip_sleep_scale = 4.0
+syn_wake_scale = 0.25
+syn_sleep_scale = 4.0
+explore_scale = 0.0        # not a motor module; keeps its plain noise_amp
+norm_gain = 0.0            # divisive normalisation off; see [normalisation]
+eta_scale = 1.0            # cortical rate; see ModuleRole::kHippocampus
+# DNA v20 neuromodulator channel gains; read only when [neuromod] enabled.
+nm_external = 1.0
+nm_hunger = 1.0
+nm_comfort = 1.0
+nm_curiosity = 1.0
+# DNA v21 pooling interneurons: subtract the gain below times the population
+# mean rate of the named source module from every neuron here. -1 disables.
+ffi_source = -1
+ffi_gain = 0.0
+ffi_apical = 0               # DNA v40: land the interneuron on the tuft, not the soma
+ffi_learn = 0.0              # DNA v40: and let its weight learn to cancel what arrives there
+
+# --- DNA v25: the apical compartment -----------------------------------------
+# A neuron here used to be a point: every synapse summed into one membrane. A
+# pyramidal cell is at least two integration sites, and a tract says which one
+# it lands on (see `apical` on the projections below).
+#
+# The tuft integrates on its own slow constant and cannot make the soma fire.
+# What it can do is cross `apical_threshold` and start a calcium plateau, and
+# for `apical_plateau_ms` after that the soma's synaptic drive is multiplied by
+# (1 + apical_gain). Feedforward alone: regular spiking. Feedback alone:
+# nothing at all. Both together: a burst.
+#
+# apical_threshold = 0 disables the compartment on this module, which is what
+# every module ships with, and a genome with no apical tract anywhere is
+# bit-identical under a v25 core.
+apical_tau_ms = 30.0
+apical_threshold = 0.0
+apical_gain = 0.0
+apical_plateau_ms = 50.0
+
+# --- DNA v26: subthreshold oscillations --------------------------------------
+# A theta rhythm and a gamma rhythm nested inside it, added to every neuron in
+# this module as a current. Both amplitudes 0 is off, and off is bit-identical
+# to v25.
+#
+# Aimed at a measured failure rather than at the fact that cortex oscillates.
+# `eligprobe` shows the eligibility trace on central->vocal is large but
+# object-BLIND, correlating +0.93 between the two conditions, and the reason is
+# structural: pair-based STDP adds `+a_plus * trace_pre` and subtracts
+# `-a_minus * trace_post`, both scaling with the same firing rates, so it is
+# nearly rate-balanced by construction — while central codes the object as a
+# rate difference. It is a timing rule being asked to read a rate code.
+#
+# On a shared rising ramp a neuron with more drive crosses threshold earlier in
+# the cycle than one with less. The rate difference becomes a *timing*
+# difference, which is the one thing STDP can see. So the prediction is not
+# about accuracy anywhere — it is that the trace on central->vocal becomes
+# object-conditional, tested by the probe that found it blind.
+#
+# Additive, not multiplicative, and the argument above is why: a gain scales
+# each neuron's own drive and cannot reorder threshold crossings, while a shared
+# ramp makes crossing time a function of drive.
+theta_hz = 6.0
+theta_amp = 0.0
+gamma_hz = 40.0
+gamma_amp = 0.0
+gamma_theta_coupling = 1.0
+critical_tau_ms = 0.0       # DNA v28: 0 = plasticity never closes (pre-v28)
+critical_floor = 0.2        # what the learning rate settles to when it does
+plateau_gate = 0.0          # DNA v29: 0 = eligibility ignores the tuft (pre-v29)
+# DNA v32. Lateral competition, so a population centroid has somewhere to sit.
+# 0 is off and is bit-identical to not having it. See the note in dna.h: the
+# vocal centroid already reaches F1 300-910 Hz, it just never dwells anywhere.
+lateral_gain = 0.0          # strength of local excitation minus the field mean
+lateral_sigma = 0.15        # excitation width, as a fraction of one field
+lateral_fields = 1          # competitive fields; the vocal module wants 9
+burst_ms = 0.0               # DNA v37: ISI that counts as a burst. 0 = no burst code
+burst_refrac_scale = 1.0     # what an apical plateau does to it. 1.0 = nothing
+elig_tau_scale = 1.0         # DNA v39: this module's tau_elig, as a multiple of the global one
+
+
+
+[[module]]
+name = "somato"
+role = "somato"
+neurons = 64                # 16 per caregiver action
+n_max = 512
+# 32 held until M3 widened vision->central. Nothing about touch changed — but
+# every landed synapse draws its own delay jitter, so a denser projection wired
+# earlier shifts the shared RNG stream for every projection after it, and in
+# one developmental seed of nine that was enough to push the busiest somato
+# neuron past 32 outgoing. Four synapses were silently discarded and the only
+# symptom was a line in the startup banner. Raising a cap costs arena bytes and
+# draws no random numbers, so it changes the one brain that was overflowing and
+# leaves the other eight bit-identical.
+max_out_degree = 48
+extent = [1.0, 1.0, 1.0]
+conn_radius = 0.45
+conn_density = 0.5
+threshold = 1.0
+v_rest = 0.0
+leak_tau_ms = 20.0
+refractory_ms = 3.0
+# 4.10 until vision->vocal was added. somato has no afferents from the brain,
+# so this drifting at all was a surprise — adding a projection draws random
+# numbers at build time and shifts what every module's noise stream sees. That
+# is rule 5's shared-RNG effect showing up in a module the edit does not touch,
+# and it is why `calibrate` sweeps every module rather than the obvious one.
+target_rate_hz = 4.56
+inhib_fraction = 0.15
+inhib_gain = 2.5
+weight_init = 0.12
+noise_amp = 0.28
+# Relaxed while awake and repaid during sleep — see the [homeostasis] note.
+# This is where G2's reward effect was being erased mid-session.
+ip_wake_scale = 0.25
+ip_sleep_scale = 4.0
+syn_wake_scale = 0.25
+syn_sleep_scale = 4.0
+explore_scale = 0.0        # not a motor module; keeps its plain noise_amp
+norm_gain = 0.0            # divisive normalisation off; see [normalisation]
+eta_scale = 1.0            # cortical rate; see ModuleRole::kHippocampus
+# DNA v20 neuromodulator channel gains; read only when [neuromod] enabled.
+nm_external = 1.0
+nm_hunger = 1.0
+nm_comfort = 1.0
+nm_curiosity = 1.0
+# DNA v21 pooling interneurons: subtract the gain below times the population
+# mean rate of the named source module from every neuron here. -1 disables.
+ffi_source = -1
+ffi_gain = 0.0
+ffi_apical = 0               # DNA v40: land the interneuron on the tuft, not the soma
+ffi_learn = 0.0              # DNA v40: and let its weight learn to cancel what arrives there
+
+# --- DNA v25: the apical compartment -----------------------------------------
+# A neuron here used to be a point: every synapse summed into one membrane. A
+# pyramidal cell is at least two integration sites, and a tract says which one
+# it lands on (see `apical` on the projections below).
+#
+# The tuft integrates on its own slow constant and cannot make the soma fire.
+# What it can do is cross `apical_threshold` and start a calcium plateau, and
+# for `apical_plateau_ms` after that the soma's synaptic drive is multiplied by
+# (1 + apical_gain). Feedforward alone: regular spiking. Feedback alone:
+# nothing at all. Both together: a burst.
+#
+# apical_threshold = 0 disables the compartment on this module, which is what
+# every module ships with, and a genome with no apical tract anywhere is
+# bit-identical under a v25 core.
+apical_tau_ms = 30.0
+apical_threshold = 0.0
+apical_gain = 0.0
+apical_plateau_ms = 50.0
+
+# --- DNA v26: subthreshold oscillations --------------------------------------
+# A theta rhythm and a gamma rhythm nested inside it, added to every neuron in
+# this module as a current. Both amplitudes 0 is off, and off is bit-identical
+# to v25.
+#
+# Aimed at a measured failure rather than at the fact that cortex oscillates.
+# `eligprobe` shows the eligibility trace on central->vocal is large but
+# object-BLIND, correlating +0.93 between the two conditions, and the reason is
+# structural: pair-based STDP adds `+a_plus * trace_pre` and subtracts
+# `-a_minus * trace_post`, both scaling with the same firing rates, so it is
+# nearly rate-balanced by construction — while central codes the object as a
+# rate difference. It is a timing rule being asked to read a rate code.
+#
+# On a shared rising ramp a neuron with more drive crosses threshold earlier in
+# the cycle than one with less. The rate difference becomes a *timing*
+# difference, which is the one thing STDP can see. So the prediction is not
+# about accuracy anywhere — it is that the trace on central->vocal becomes
+# object-conditional, tested by the probe that found it blind.
+#
+# Additive, not multiplicative, and the argument above is why: a gain scales
+# each neuron's own drive and cannot reorder threshold crossings, while a shared
+# ramp makes crossing time a function of drive.
+theta_hz = 6.0
+theta_amp = 0.0
+gamma_hz = 40.0
+gamma_amp = 0.0
+gamma_theta_coupling = 1.0
+critical_tau_ms = 0.0       # DNA v28: 0 = plasticity never closes (pre-v28)
+critical_floor = 0.2        # what the learning rate settles to when it does
+plateau_gate = 0.0          # DNA v29: 0 = eligibility ignores the tuft (pre-v29)
+# DNA v32. Lateral competition, so a population centroid has somewhere to sit.
+# 0 is off and is bit-identical to not having it. See the note in dna.h: the
+# vocal centroid already reaches F1 300-910 Hz, it just never dwells anywhere.
+lateral_gain = 0.0          # strength of local excitation minus the field mean
+lateral_sigma = 0.15        # excitation width, as a fraction of one field
+lateral_fields = 1          # competitive fields; the vocal module wants 9
+burst_ms = 0.0               # DNA v37: ISI that counts as a burst. 0 = no burst code
+burst_refrac_scale = 1.0     # what an apical plateau does to it. 1.0 = nothing
+elig_tau_scale = 1.0         # DNA v39: this module's tau_elig, as a multiple of the global one
+
+
+
+[[module]]
+name = "vocal"
+role = "vocal"
+neurons = 126               # 14 per motor group, 9 groups
+n_max = 1024
+# 48 was enough until the ears were wired to the larynx (M3). This bounds
+# in-degree as well as out-degree, and the auditory projection alone lands ~29
+# synapses on every vocal neuron. Raised again for vision->vocal, which lands on
+# the same module. Verified inert on its own: the cap change alone left the
+# determinism hash at 15b5dcb6d8616452.
+max_out_degree = 512
+extent = [1.0, 1.0, 1.0]
+conn_radius = 0.4
+conn_density = 0.5
+threshold = 1.0
+v_rest = 0.0
+leak_tau_ms = 20.0
+refractory_ms = 3.0
+target_rate_hz = 5.0
+inhib_fraction = 0.2
+inhib_gain = 2.5
+weight_init = 0.12
+# Was 0.28 before the auditory projection below existed. Some of this module's
+# liveliness now comes from the ears instead of from a noise generator, and the
+# two have to add up to the same thing: at 0.28 the creature free-ran at
+# 10.3 Hz and droned with a duty cycle of 0.96. At 0.22 it free-runs at 6.7 Hz
+# against the 7.0 it had before, and babbles at 0.78 against 0.79 — the same
+# baby, listening.
+noise_amp = 0.22
+# Held at full regulation, awake and asleep. The larynx because relaxing it
+# drives the babble duty cycle to 0.93 and the creature drones; the ears
+# because the dense ears→larynx tract then swamps the reward signal at the
+# motor module. See the table in the [homeostasis] note.
+ip_wake_scale = 1.0
+ip_sleep_scale = 1.0
+syn_wake_scale = 1.0
+syn_sleep_scale = 1.0
+# LMAN projects to the motor pathway and nowhere else, so this is the only
+# module whose babble answers to how well things are going.
+explore_scale = 1.0
+norm_gain = 0.0            # divisive normalisation off; see [normalisation]
+eta_scale = 1.0            # cortical rate; see ModuleRole::kHippocampus
+# DNA v20 neuromodulator channel gains; read only when [neuromod] enabled.
+nm_external = 1.0
+nm_hunger = 1.0
+nm_comfort = 1.0
+nm_curiosity = 1.0
+# DNA v21 pooling interneurons: subtract the gain below times the population
+# mean rate of the named source module from every neuron here. -1 disables.
+ffi_source = -1
+ffi_gain = 0.0
+ffi_apical = 0               # DNA v40: land the interneuron on the tuft, not the soma
+ffi_learn = 0.0              # DNA v40: and let its weight learn to cancel what arrives there
+
+# --- DNA v25: the apical compartment -----------------------------------------
+# A neuron here used to be a point: every synapse summed into one membrane. A
+# pyramidal cell is at least two integration sites, and a tract says which one
+# it lands on (see `apical` on the projections below).
+#
+# The tuft integrates on its own slow constant and cannot make the soma fire.
+# What it can do is cross `apical_threshold` and start a calcium plateau, and
+# for `apical_plateau_ms` after that the soma's synaptic drive is multiplied by
+# (1 + apical_gain). Feedforward alone: regular spiking. Feedback alone:
+# nothing at all. Both together: a burst.
+#
+# apical_threshold = 0 disables the compartment on this module, which is what
+# every module ships with, and a genome with no apical tract anywhere is
+# bit-identical under a v25 core.
+#
+# MEASURED HERE, on the larynx, 2026-08-17. The delivery-solved creature
+# (vision->vocal d=0.03 w=0.30), three seed families, 600k ticks = ~300 trials.
+# It ships off because it does not beat the route already in the genome.
+#
+# The operating point is narrow, and finding it comes before believing any
+# other number — DNA v11's synaptic scaling was swept for a week before a
+# direct measurement showed it never executed on this module at all. Plateau
+# occupancy at vocal against `apical_threshold`:
+#
+#   threshold   0.25   0.5    1.0    2.0    4.0    8.0
+#   occupancy   51.6%  29.1%  6.6%   0.0%   0.0%   0.0%
+#
+# Half-saturated to silent across a factor of eight in one parameter. Above 2.0
+# the compartment never fires and every score it produces reads exactly chance,
+# which is the mechanism's own negative control and it passes.
+#
+# What the tuft holds, `vision->vocal` apical at threshold 1.0:
+#
+#   read from            object   shuffled
+#   vocal's plateaus     0.835    0.502
+#   vocal's spikes       0.524    0.502
+#
+# The object reaches the larynx's dendrites nearly intact and is destroyed at
+# the soma. The control is `auditory->vocal` routed to the tuft instead — the
+# ears hear nothing in this condition, so that tract carries no object — and
+# its plateau column reads **0.529**. The tuft reports what its input carries;
+# plateaus are not merely an easier thing to classify than spikes.
+#
+# The gain transfers part of it into the spikes, 3 of 3 seeds, `calibrate` PASS
+# and duty 0.50-0.52 throughout: 0.524 -> **0.711** at apical_gain = 3.0.
+#
+# And that is still worse than what the project already had. Every arm at 600k
+# on the same three seeds, scored by `m3probe` on all of them:
+#
+#   arm                                    object   word
+#   v24: vision->vocal somatic + pooling    0.820    0.968   <- best, unchanged
+#   vision->vocal apical, gain 0            0.524      -
+#   vision->vocal apical, gain 3.0          0.711      -
+#   auditory->vocal (arcuate) to the tuft   0.813    0.552   <- destroys the word
+#   central->vocal to the tuft, gain 0      0.818    0.972
+#   central->vocal to the tuft, gain 3.0    0.818    0.979
+#
+# Three things worth keeping. The arcuate arm first read 0.871 and looked like
+# a win — it was scored by `apicalprobe` against an `m3probe` baseline, and
+# re-run on one instrument it is 0.813 against 0.820, nothing, while the word
+# collapses to chance. **Moving `central->vocal` to another compartment and
+# switching on a 4x gain changes no number at all**, a third independent
+# confirmation that this tract carries nothing. And segregation (0.835 at the
+# tuft) and v24's pooling interneurons (0.820 at the soma) reach the same
+# ceiling by unrelated means, which puts the remaining loss in the tract rather
+# than in how the target integrates it.
+apical_tau_ms = 30.0
+apical_threshold = 0.0
+apical_gain = 0.0
+apical_plateau_ms = 50.0
+
+# --- DNA v26: subthreshold oscillations --------------------------------------
+# A theta rhythm and a gamma rhythm nested inside it, added to every neuron in
+# this module as a current. Both amplitudes 0 is off, and off is bit-identical
+# to v25.
+#
+# Aimed at a measured failure rather than at the fact that cortex oscillates.
+# `eligprobe` shows the eligibility trace on central->vocal is large but
+# object-BLIND, correlating +0.93 between the two conditions, and the reason is
+# structural: pair-based STDP adds `+a_plus * trace_pre` and subtracts
+# `-a_minus * trace_post`, both scaling with the same firing rates, so it is
+# nearly rate-balanced by construction — while central codes the object as a
+# rate difference. It is a timing rule being asked to read a rate code.
+#
+# On a shared rising ramp a neuron with more drive crosses threshold earlier in
+# the cycle than one with less. The rate difference becomes a *timing*
+# difference, which is the one thing STDP can see. So the prediction is not
+# about accuracy anywhere — it is that the trace on central->vocal becomes
+# object-conditional, tested by the probe that found it blind.
+#
+# Additive, not multiplicative, and the argument above is why: a gain scales
+# each neuron's own drive and cannot reorder threshold crossings, while a shared
+# ramp makes crossing time a function of drive.
+theta_hz = 6.0
+theta_amp = 0.0
+gamma_hz = 40.0
+gamma_amp = 0.0
+gamma_theta_coupling = 1.0
+#
+# MEASURED HERE 2026-08-17: the envelope reaches the weights, and that is all
+# that has been established. At `critical_floor` 0.0 with tau 1 s — everything
+# closed almost immediately — `dwprobe`'s mean |dw| per synapse on
+# central->vocal falls from 3.185e-02 to 4.6e-03. The mechanism works.
+#
+# At a realistic tau (30 s, floor 0.2) the same probe reads 3.171e-02 against
+# 3.185e-02, i.e. nothing, and that is a limit of the instrument rather than a
+# result: dwprobe's measurement window sits early in the creature's life, so a
+# 30 s time constant has barely begun to close within it. **Whether closing the
+# period helps or hurts this creature is NOT measured** — it needs a protocol
+# that teaches early and tests late, which nothing here currently does. Ships
+# off.
+critical_tau_ms = 0.0       # DNA v28: 0 = plasticity never closes (pre-v28)
+critical_floor = 0.2        # what the learning rate settles to when it does
+
+# --- DNA v29: plateau-gated plasticity ---------------------------------------
+#
+# MEASURED AND REFUTED, 2026-08-17. This was the one idea that attacked the
+# conditioning blocker head-on rather than routing around it, and the
+# best-motivated mechanism in the whole realism run: R-STDP's third factor is a
+# global scalar and so can scale a tract but never steer it, while a plateau is
+# per-neuron and input-specific — and DNA v25 measured vocal's plateaus
+# discriminating cube from ball at 0.835 where the same neurons' spikes managed
+# 0.524. Gating eligibility on the plateau should have made the rule conditional
+# by construction.
+#
+# The arm: a `vision->vocal` tract onto the tuft — the configuration the 0.835
+# was measured in — with apical_gain 0 so it drives nothing and exists only to
+# decide plasticity, and plateau_gate 1.0. Every threshold scored against **the
+# same wiring with the gate off**, because adding a tract changes the creature
+# by itself. eligprobe at 600k, five creatures:
+#
+#   threshold  gate passes  cen->vocal  arcuate control  corr(A,B)
+#   gate off   -            0.680       0.912            +0.959
+#   0.25       76.0%        0.600       0.788            +0.945
+#   0.50       50.6%        0.592       0.732            +0.927
+#   1.00       15.9%        0.514       0.560   <- UNREADABLE, control at chance
+#
+# **The gate attenuates; it does not select.** Signal and positive control fall
+# together at every operating point, their ratio barely moves (0.746 -> 0.761 ->
+# 0.809), and the trace stays nearly identical between the two objects the whole
+# way down (+0.959 -> +0.927). The last row is not "the gate destroyed the
+# trace" — it is the probe going blind, which eligprobe's own positive control
+# caught and printed rather than leaving to be noticed.
+#
+# The mechanism of the failure is the operating-point trap, for the third time
+# in this project (see the visual cortex above, and the pooling interneurons).
+# At 76% occupancy nearly every neuron is plateauing nearly all the time, so the
+# gate is almost always open and drops a quarter of the learning events at
+# moments mostly unrelated to the object. At 16% it is genuinely selective and
+# drops five sixths of them, and what survives is shot noise. **There is no
+# window in which the gate is both selective and leaves enough events to learn
+# from**, and the two ends of the sweep fail for opposite reasons.
+#
+# The deeper reading is the one v24 and v25 already gave. The *population* of
+# plateaus discriminates the object at 0.86, but an individual neuron's plateau
+# is a small object-dependent modulation on a large object-independent
+# occupancy. Multiplying an object-blind trace by that is common-mode swamping
+# again, in a third mechanism. The object signal in this creature keeps turning
+# out to be a small differential riding on a big shared term, and every
+# mechanism that combines the two — additively, multiplicatively, or as a gate —
+# inherits the problem instead of fixing it. What has ever worked here is
+# *subtracting* the shared term (v24's in-degree-weighted pooling, +0.077).
+#
+# Ships off. Off is bit-identical (be2e508dfc170240).
+plateau_gate = 0.0          # DNA v29: 0 = eligibility ignores the tuft (pre-v29)
+# DNA v32. Lateral competition, so a population centroid has somewhere to sit.
+# 0 is off and is bit-identical to not having it. See the note in dna.h: the
+# vocal centroid already reaches F1 300-910 Hz, it just never dwells anywhere.
+lateral_gain = 0.0          # strength of local excitation minus the field mean
+lateral_sigma = 0.10        # excitation width, as a fraction of one field
+lateral_fields = 9          # one competitive field per motor group
+burst_ms = 0.0               # DNA v37: ISI that counts as a burst. 0 = no burst code
+burst_refrac_scale = 1.0     # what an apical plateau does to it. 1.0 = nothing
+elig_tau_scale = 1.0         # DNA v39: this module's tau_elig, as a multiple of the global one
+# Swept 2026-08-18 on babble/G2. Delivered F1 sd is what the vocal tract
+# actually hands the synthesiser; the bar for "postures rather than noise" is a
+# bimodality coefficient over 0.556 (a normal distribution reads 0.333).
+#
+#   gain    duty   delivered F1 sd     bimodal   G2
+#   0 (off) 0.51   0.027  (20 Hz)      0.308     PASS 7/9, rate +0.777x
+#   0.020   0.53   0.134  (101 Hz)     0.466     PASS 6/9, rate +0.507x
+#   0.030   0.69   0.208  (156 Hz)     0.546     not run
+#   0.035   0.78   0.255  (192 Hz)     0.614     FAIL 4/9
+#   0.045   0.92   0.266             0.613     babble FAILS: the creature drones
+#
+# READ THE TABLE ABOVE WITH THIS. Every G2 entry in it is ONE point, and the
+# surface is not smooth. Holding gain at 0.035 and moving only rate_norm_hz —
+# a constant that does nothing to the shipped creature — walks G2 from +0.214
+# at 9, to +0.025 at 10, -0.132 at 11, -0.479 at 12, and back to +0.078 at 13.
+# A dip, not a threshold: sign reversed twice over 20% of one scaling constant,
+# while the same range leaves the shipped creature flat at +0.776/+0.777/
+# +0.969/+0.748. So "G2 breaks by 0.035" is NOT safe — 0.035 reads 4 of 9 at
+# rate_norm 10 and 6 of 9 at 9 or 13.
+#
+# What v32 really costs is not a milestone, it is robustness: it trades a
+# pinned-but-indifferent vocal code for a mobile-but-fragile one, and a
+# mechanism that unstable cannot be tuned by point measurements at all.
+# Anything that sets lateral_gain in future has to be scored over a
+# NEIGHBOURHOOD of nearby parameter values, not at one.
+#
+# TWO ATTEMPTS AT A STABLE VERSION, both refuted, and together they say what
+# the prerequisite actually is.
+#
+#   Uniform subtractive competition (lateral_sigma = 0, still selectable).
+#   Purely negative feedback, so it cannot run away — and it silences the
+#   creature: vocal 4.36 -> 1.44 Hz and duty 0.00 at gain 0.02. Lowering the
+#   threshold barely helps (1.44 -> 1.80 Hz across a 20% cut) because the term
+#   IS a rate controller: busier field, more subtraction. A uniform term can
+#   only sharpen by suppressing, and the two are inseparable.
+#
+#   Input-driven competition. Same local-minus-mean shape but read off a
+#   smoothed synaptic drive instead of firing rate, so there is no self-loop
+#   and reward — which changes afferent weights — has something to push. It is
+#   stable, and it produces NO place structure at all: raw F1 sd 0.110 against
+#   0.115 with the mechanism off, bimodality 0.35 against a Gaussian's 0.333.
+#   Removed rather than left in the tree.
+#
+# The reason is the one this file's own note on the population code gives: the
+# projection into the module is random, so nothing makes a neuron's index mean
+# anything to its afferents. Input-driven competition can only amplify
+# structure the input already has, and the input has none. Rate-driven
+# competition manufactures structure out of its own dynamics, which is why it
+# widens the vowel space AND why that structure is noise-locked and fragile.
+#
+# So the prerequisite is topography in the projection INTO vocal, which is what
+# the population-code note asked for in the first place. This session tried to
+# get it for free from recurrence; it cannot be had that way.
+# Shipped OFF at 0.0. The acoustic result that might have justified 0.020 did
+# NOT replicate: three fresh seed families, both arms on identical seeds, put
+# cube-vs-ball at d' 0.93/1.35/1.15 against nulls of 0.96/1.07/0.99 — straddling
+# zero — and acoustic accuracy was LOWER with the mechanism on in 3 of 3. One
+# arm failed m3's own shuffled-label control at 0.688. The single run that
+# motivated the test was excluded from it, and was noise.
+#
+# At 0.020 the mechanism is a real gain on everything except G2's rate half:
+# the vowel spread is 4.9x, praise's effect on F1 is +0.0559 against the
+# shipped +0.0255, and calibrate passes untouched. What it costs is the
+# rewarded-rate advantage, +0.507x against +0.777x, and 6 of 9 creatures
+# against 7 of 9.
+#
+# What the replicate showed about WHY it buys no audibility is the useful part:
+# the mechanism widens the gap between the two words and scatters each of them
+# by the same factor, so the raw distance doubles and d' — which divides by the
+# scatter — does not move at all. A wider vowel space is not a more legible one
+# while nothing controls where in it each word sits. That is the conditioning
+# blocker again, arriving from a new direction.
+#
+# Note also that v32 makes the 800 ms articulator inertia stop mattering: its
+# attenuation of F1 falls from 4.2x to 1.6x, because a bump persists and an EMA
+# passes what persists. That is the reason the smoothing_ms sweep was measured
+# and deliberately not shipped.
+
+
+
+[[module]]
+name = "expression"
+role = "expression"
+neurons = 64
+n_max = 512
+# 32 was enough until the vision projection widened. Every synapse that lands
+# draws its own delay jitter, so changing one projection's density shifts the
+# RNG stream for every projection wired after it — and four of expression's
+# neurons ended up with more incoming than the reverse index could hold. A
+# dropped reverse entry is the worst kind: that synapse still depresses but can
+# never potentiate again.
+max_out_degree = 48
+extent = [1.0, 1.0, 1.0]
+conn_radius = 0.45
+conn_density = 0.5
+threshold = 1.0
+v_rest = 0.0
+leak_tau_ms = 20.0
+refractory_ms = 3.0
+# Re-measured after the vision projection widened. It was 5.0 against a
+# free-running 6.95, which was already drift the genome was paying for; a
+# hotter central module made it 8.04, and re-measuring with `calibrate` in
+# DNA v5 put it at 8.64. Expression drives nothing but the avatar, so unlike
+# vocal it has no behavioural reason to sit below its own rate.
+#
+# Unchanged by vision->vocal at weight 0.30, but it does NOT stay put at 0.80:
+# central projects here, so re-measuring central's target displaces this one and
+# `vision` too, and that recalibration needs a second pass. central has
+# norm_gain 1.0, which makes its target a fixed point rather than a measurement
+# (rule 8). A gentler tract disturbs two targets instead of four.
+#
+# 7.47 -> 7.22 with the inhibitory auditory->vocal tract, which quiets the
+# larynx and so quiets everything the larynx drives.
+target_rate_hz = 7.22
+inhib_fraction = 0.15
+inhib_gain = 2.5
+weight_init = 0.12
+noise_amp = 0.28
+# Relaxed while awake and repaid during sleep — see the [homeostasis] note.
+# This is where G2's reward effect was being erased mid-session.
+ip_wake_scale = 0.25
+ip_sleep_scale = 4.0
+syn_wake_scale = 0.25
+syn_sleep_scale = 4.0
+explore_scale = 0.0        # not a motor module; keeps its plain noise_amp
+norm_gain = 0.0            # divisive normalisation off; see [normalisation]
+eta_scale = 1.0            # cortical rate; see ModuleRole::kHippocampus
+# DNA v20 neuromodulator channel gains; read only when [neuromod] enabled.
+nm_external = 1.0
+nm_hunger = 1.0
+nm_comfort = 1.0
+nm_curiosity = 1.0
+# DNA v21 pooling interneurons: subtract the gain below times the population
+# mean rate of the named source module from every neuron here. -1 disables.
+ffi_source = -1
+ffi_gain = 0.0
+ffi_apical = 0               # DNA v40: land the interneuron on the tuft, not the soma
+ffi_learn = 0.0              # DNA v40: and let its weight learn to cancel what arrives there
+
+# --- DNA v25: the apical compartment -----------------------------------------
+# A neuron here used to be a point: every synapse summed into one membrane. A
+# pyramidal cell is at least two integration sites, and a tract says which one
+# it lands on (see `apical` on the projections below).
+#
+# The tuft integrates on its own slow constant and cannot make the soma fire.
+# What it can do is cross `apical_threshold` and start a calcium plateau, and
+# for `apical_plateau_ms` after that the soma's synaptic drive is multiplied by
+# (1 + apical_gain). Feedforward alone: regular spiking. Feedback alone:
+# nothing at all. Both together: a burst.
+#
+# apical_threshold = 0 disables the compartment on this module, which is what
+# every module ships with, and a genome with no apical tract anywhere is
+# bit-identical under a v25 core.
+apical_tau_ms = 30.0
+apical_threshold = 0.0
+apical_gain = 0.0
+apical_plateau_ms = 50.0
+
+# --- DNA v26: subthreshold oscillations --------------------------------------
+# A theta rhythm and a gamma rhythm nested inside it, added to every neuron in
+# this module as a current. Both amplitudes 0 is off, and off is bit-identical
+# to v25.
+#
+# Aimed at a measured failure rather than at the fact that cortex oscillates.
+# `eligprobe` shows the eligibility trace on central->vocal is large but
+# object-BLIND, correlating +0.93 between the two conditions, and the reason is
+# structural: pair-based STDP adds `+a_plus * trace_pre` and subtracts
+# `-a_minus * trace_post`, both scaling with the same firing rates, so it is
+# nearly rate-balanced by construction — while central codes the object as a
+# rate difference. It is a timing rule being asked to read a rate code.
+#
+# On a shared rising ramp a neuron with more drive crosses threshold earlier in
+# the cycle than one with less. The rate difference becomes a *timing*
+# difference, which is the one thing STDP can see. So the prediction is not
+# about accuracy anywhere — it is that the trace on central->vocal becomes
+# object-conditional, tested by the probe that found it blind.
+#
+# Additive, not multiplicative, and the argument above is why: a gain scales
+# each neuron's own drive and cannot reorder threshold crossings, while a shared
+# ramp makes crossing time a function of drive.
+theta_hz = 6.0
+theta_amp = 0.0
+gamma_hz = 40.0
+gamma_amp = 0.0
+gamma_theta_coupling = 1.0
+critical_tau_ms = 0.0       # DNA v28: 0 = plasticity never closes (pre-v28)
+critical_floor = 0.2        # what the learning rate settles to when it does
+plateau_gate = 0.0          # DNA v29: 0 = eligibility ignores the tuft (pre-v29)
+# DNA v32. Lateral competition, so a population centroid has somewhere to sit.
+# 0 is off and is bit-identical to not having it. See the note in dna.h: the
+# vocal centroid already reaches F1 300-910 Hz, it just never dwells anywhere.
+lateral_gain = 0.0          # strength of local excitation minus the field mean
+lateral_sigma = 0.15        # excitation width, as a fraction of one field
+lateral_fields = 1          # competitive fields; the vocal module wants 9
+burst_ms = 0.0               # DNA v37: ISI that counts as a burst. 0 = no burst code
+burst_refrac_scale = 1.0     # what an apical plateau does to it. 1.0 = nothing
+elig_tau_scale = 1.0         # DNA v39: this module's tau_elig, as a multiple of the global one
+
+
+
+# --- Projections -----------------------------------------------------------
+# Sparse by design. The central module has no sensor of its own; it only ever
+# sees what the sensory modules have already chewed on.
+
+[[projection]]
+src = "auditory"
+dst = "central"
+kind = "random"
+source = "either"        # DNA v14: recruit both cell types, the pre-v14 rule
+# MEASURED 2026-08-14 and left alone pending its own verified change: at this
+# density the sound does not reach the association module. `pcprobe`'s offline
+# ridge ceiling — the best any linear readout of a module's firing rates could
+# do, held out — reads the spectrum in B2 at 0.583 and in central at +0.013.
+# It is legible at the ear and gone one step later. At 0.06 central reads 0.194
+# and at 0.10 it reads 0.266, so the tract is the whole loss, not the ear.
+#
+# Note what sits ten lines below: vision->central was raised from this same 0.02
+# to 0.06 for exactly this reason, and audio was never revisited. G3 is
+# cross-modal, and its cascade scores cube-versus-ball — a question the creature
+# can answer from vision alone — so no G3 measurement ever taken here has tested
+# whether the *word* arrives.
+#
+# Raising it needs auditory's max_out_degree above 72 (134 synapses drop at
+# 0.10) and a recalibration pass; central has norm_gain > 0, which makes that
+# the fixed-point loop described in tools/README.md.
+density = 0.02
+weight = 0.12
+delay_ms = 4.0
+delay_jitter_ms = 1.0
+hebb = 0.0                # DNA v23: per-pathway Hebbian rate, 0 = reward-gated only
+apical = 0                # DNA v25: 1 terminates on the target's apical tuft
+exuberance = 1.0          # DNA v28: born at density x this, pruned back by experience
+birth_weight = 1.0        # DNA v30: born at weight x this; set to 1/exuberance
+stp_use = 0.0             # DNA v36: dynamic synapse. 0 = constant weight, the pre-v36 tract
+stp_recover_ms = 0.0      # tau_rec: how fast released resources come back
+stp_facil_ms = 0.0        # tau_facil: how long raised utilisation lasts. 0 = pure depression
+burst_learn = 0.0         # DNA v37: learn from the target's burst deviation, not from reward
+
+
+[[projection]]
+src = "vision"
+dst = "central"
+kind = "random"
+source = "either"        # DNA v14: recruit both cell types, the pre-v14 rule
+# Three times the auditory density, and it had to be: at 0.02 an object was
+# legible in B3 but only barely in B1, which is precisely the trip M2 is about.
+#
+# This was 0.04 for M2, chosen by a sweep that scored *object present versus
+# absent*. M3 asks a different question of the same wire — which of two shapes
+# — and it gets a different answer. Scored on shape, B1 reads 0.52 at 0.02,
+# 0.73 at 0.04, 0.80 at 0.06 and 0.85 at 0.10. "Denser is worse" was true of
+# the quantity M2 measured (past ~0.06 the association module reads *busier*
+# rather than *different*, and present-versus-absent is exactly a busyness
+# question) and false of this one. 0.06 is where both are still healthy.
+#
+# DNA v7 and v8 replaced this tract with retina -> V1 -> V2 -> central, built
+# out of the two structured wiring rules the genome still carries. Both stages
+# provably computed what they were designed to compute — `v1probe` scores V1's
+# orientation map at 24 deg against a 43.6 deg shuffle — and cube-versus-ball
+# at central went 0.77 -> 0.473 -> 0.433 anyway, with a four-fold wider readout
+# ruling out undersampling as the cause. The wiring is reverted here and the
+# mechanism is kept: `kGabor`, `kCurvature`, the two cortical roles and
+# `v1probe` all still exist, and a genome that wants them only has to say so.
+# See the DNA v7/v8 section of the README before building a third stage.
+# Retested after DNA v12, because normalisation divides out exactly the busyness
+# that set this cap — 0.06/0.12/0.20 crossed with central's norm_gain, one seed
+# family. The cap survives: with normalisation on, mean |d'| at central reads
+# 0.202 / 0.212 / 0.202, which is flat, and M2 falls monotonically 96 / 84 / 71%
+# (61% with normalisation off). Density buys nothing.
+#
+# What that sweep did show is worth more than the null. Without normalisation
+# mean |d'| *degrades* as this tract thickens, 0.177 -> 0.171 -> 0.124; with it,
+# flat. So what normalisation contributes grows with how hard central is driven:
+# +0.025, +0.041, +0.078. It is insurance against a loud input, not a way to
+# afford a louder one.
+#
+# Raising this above ~0.15 also needs central's max_out_degree raised: the
+# reverse index shares the per-neuron slicing, so central's cap limits its
+# *incoming* count, and at 0.20 with cap 64 it silently loses 2369 reverse
+# entries. Check with `babble`, which prints the warning; `audio` does not.
+# Raising a fan-out cap is wiring-neutral and free. Do NOT reach for `n_max` in
+# the same edit: it sets each module's global neuron index base, so changing it
+# re-rolls the wiring downstream and makes the arm a different creature.
+density = 0.06
+weight = 0.12
+delay_ms = 5.0
+delay_jitter_ms = 1.0
+hebb = 0.0                # DNA v23: per-pathway Hebbian rate, 0 = reward-gated only
+apical = 0                # DNA v25: 1 terminates on the target's apical tuft
+#
+# MEASURED HERE 2026-08-17 and INERT, for a reason worth keeping. Born at
+# exuberance 3.0 (density 0.06 -> 0.18, roughly three times the synapses), with
+# max_out_degree raised on both ends so nothing is dropped, run 1.6M ticks so
+# sleep consolidates seven times:
+#
+#   exuberance   born density   synapses pruned
+#   1.0          0.06           58
+#   3.0          0.18           52
+#
+# Tripling the synapse count changes what gets pruned by nothing at all. Both
+# arms G4 PASS.
+#
+# The arithmetic says why, and said so before the run. Pruning removes a synapse
+# that is weak AND idle: `prune_weight` is 0.004, this tract is born at
+# `weight` 0.12 with 30% spread, and sleep downscaling bottoms out at 0.60 of
+# structural — 0.072. **Nothing born here can ever become weak enough to
+# prune.** Every synapse is equally established from birth, so selection has no
+# gradient to follow and exuberance is a permanent density increase.
+#
+# Which is worse than neutral: `projprobe` measured that a random tract's
+# capacity FALLS with density, so a tract that stays exuberant is a tract made
+# worse. Ships at 1.0.
+#
+# The requirement for the next attempt, which is the useful part: **the surplus
+# has to be born weak.** Development overproduces *weak* contacts and keeps the
+# ones traffic strengthens; overproducing contacts already at adult strength is
+# not the same operation and cannot select. That needs a companion field — a
+# birth-weight multiplier applied with the exuberance — and it changes the
+# module's total input drive at birth, so the arm would need recalibrating
+# before it could be compared to anything.
+exuberance = 1.0          # DNA v28: born at density x this, pruned back by experience
+birth_weight = 1.0        # DNA v30: born at weight x this; set to 1/exuberance
+stp_use = 0.0             # DNA v36: dynamic synapse. 0 = constant weight, the pre-v36 tract
+stp_recover_ms = 0.0      # tau_rec: how fast released resources come back
+stp_facil_ms = 0.0        # tau_facil: how long raised utilisation lasts. 0 = pure depression
+burst_learn = 0.0         # DNA v37: learn from the target's burst deviation, not from reward
+
+
+[[projection]]
+src = "somato"
+dst = "central"
+kind = "random"
+source = "either"        # DNA v14: recruit both cell types, the pre-v14 rule
+density = 0.04
+weight = 0.10          # touch is the most direct line to the middle
+delay_ms = 3.0
+delay_jitter_ms = 0.5
+hebb = 0.0                # DNA v23: per-pathway Hebbian rate, 0 = reward-gated only
+apical = 0                # DNA v25: 1 terminates on the target's apical tuft
+exuberance = 1.0          # DNA v28: born at density x this, pruned back by experience
+birth_weight = 1.0        # DNA v30: born at weight x this; set to 1/exuberance
+stp_use = 0.0             # DNA v36: dynamic synapse. 0 = constant weight, the pre-v36 tract
+stp_recover_ms = 0.0      # tau_rec: how fast released resources come back
+stp_facil_ms = 0.0        # tau_facil: how long raised utilisation lasts. 0 = pure depression
+burst_learn = 0.0         # DNA v37: learn from the target's burst deviation, not from reward
+
+
+[[projection]]
+# NOT a bottleneck. LESIONED AND RECALIBRATED 2026-08-16: set this weight to 0,
+# raise vocal's noise_amp 0.22 -> 0.26 to replace the drive, one calibrate pass
+# on central's target_rate_hz (7.20 -> 6.93), and the creature comes back to its
+# operating point — 938.6 vocal spikes/trial against 944.9, duty 0.54 against
+# 0.51, calibrate PASS. Then every G3 number is unchanged:
+#
+#   measure                        baseline   tract REMOVED
+#   vocal object (m3probe)         0.510      0.480
+#   voice (m3probe)                0.530      0.520
+#   G3 ceiling (g3probe)           0.487      0.499
+#   g3probe random control         0.501      0.499
+#   condprobe margin               -0.002     -0.039
+#   condprobe vocal has the word   0.732      0.769
+#
+# This tract supplies 10.9% of vocal's spikes and that drive is fully replaced
+# by turning a noise generator up by 0.04. It is a pipe connected to nothing
+# useful: what crosses it is object-independent population activity, which is
+# exactly what a random sparse projection preserves (see projprobe). The
+# creature has no working route from the association module to the larynx; the
+# word only reaches vocal because `auditory->vocal` is a separate direct tract,
+# and that keeps working with this one gone.
+#
+# So stop tuning it. Everything below was aimed at a tract that carries no task
+# signal. Keep it in the genome — it is architecturally the only
+# association->motor path, and removing it is a diagnostic rather than a
+# proposal — but the next G3 idea should be a route that does not exist yet.
+#
+# The two knobs, for the record, are also dead ends on their own terms.
+#
+# `projprobe` records per-neuron activity and applies the projection in
+# software — a random sparse binary matrix, the linear part of a tract with no
+# threshold and nothing else driving the target. Scoring cube-vs-ball through
+# it, against the word from `auditory` as a control:
+#
+#   arm                    at source   d=0.03   d=0.15   d=0.40
+#   object from central    0.820       0.620    0.500    0.490
+#   object from vision     1.000       0.980    0.510    0.500
+#   word from auditory     1.000       1.000    1.000    0.520
+#
+# The control is the row that makes the rest readable: at d=0.15, the real
+# `auditory->vocal` density, the word projects at 1.000 and the creature really
+# does read the word in vocal at 0.960.
+#
+# Two things follow. The object code is pooling-fragile and the word code is
+# not — the word is legible on 32 spatial bins (1.000) while the object is only
+# legible per-neuron (0.640 binned in central, 0.690 in vision), because the
+# auditory pathway is tonotopic and `vision->central` is `kind = "random"`.
+# Summing random subsets keeps a spatially coherent code and cancels a balanced
+# one. And a random tract's capacity FALLS with density: the word itself dies at
+# d=0.40, because as each target sums more sources every target converges on the
+# population mean. **The good direction on this density is down, not up.**
+#
+# So density was swept 0.03 -> 0.40 against vocal's own spikes (not the voice,
+# which is what every earlier sweep scored) and vocal stayed at chance. Then
+# weight was swept at fixed density, which raises central's share of vocal's
+# drive without touching the pooling geometry:
+#
+#   weight  central  vocal(interleaved)  voice   vocal spikes/trial
+#   0.14    0.850    0.510               0.530   944.9
+#   0.28    0.790    0.590               0.470   1119.2
+#   0.56    0.760    0.540               0.470   1362.3
+#   1.12    0.810    0.580               0.460   1347.3
+#
+# Vocal lifts weakly and non-monotonically while the *voice* — the quantity G3
+# is actually scored on — declines from 0.530 to 0.460, and vocal's firing rate
+# rises 43%. That is a module being driven harder, not one being informed.
+# Leave both at their shipped values; the fix is not on this tract.
+#
+# STATUS 2026-08-18: THIS TRACT IS A KNOWN NON-PARTICIPANT, AND IT STAYS.
+#
+# Deleting it and recalibrating left every G3 number unchanged, so on the
+# evidence it carries nothing the creature uses. Three separate measurements
+# say no knob on it can change that: density is flat at chance over a 5x range
+# (0.03 -> 0.15 delivers 74% more drive and zero object, with the voice getting
+# monotonically WORSE, 0.580 -> 0.320); the eligibility trace it carries is
+# object-weak at 0.654 against the arcuate's 0.892 on the identical readout;
+# and synapses hanging off central's most object-informative decile carry no
+# more conditional eligibility than its least (0.532 vs 0.544). The reason is
+# upstream: central's object code does not survive pooling. `projprobe` scores
+# it at 0.760 at source and 0.620 through a sparse tract, where vision scores
+# 0.960 and 0.980. That is why the fix was a new tract from `vision` rather
+# than any change here.
+#
+# It is kept, not deleted, for three reasons. It is the only descending path
+# from the association module to the larynx, so removing it would make the
+# creature's anatomy a statement this project has not earned. Every G3 result
+# on record was measured with it in place. And "delete the dead tract" is
+# exactly the kind of tidying that would silently re-roll the delay jitter of
+# every projection after it. Left at density 0.03, weight 0.14 — unchanged.
+src = "central"
+dst = "vocal"
+kind = "random"
+source = "either"        # DNA v14: recruit both cell types, the pre-v14 rule
+density = 0.03
+weight = 0.14
+delay_ms = 4.0
+delay_jitter_ms = 1.0
+hebb = 0.0                # DNA v23: per-pathway Hebbian rate, 0 = reward-gated only
+apical = 0                # DNA v25: 1 terminates on the target's apical tuft
+exuberance = 1.0          # DNA v28: born at density x this, pruned back by experience
+birth_weight = 1.0        # DNA v30: born at weight x this; set to 1/exuberance
+stp_use = 0.0             # DNA v36: dynamic synapse. 0 = constant weight, the pre-v36 tract
+stp_recover_ms = 0.0      # tau_rec: how fast released resources come back
+stp_facil_ms = 0.0        # tau_facil: how long raised utilisation lasts. 0 = pure depression
+burst_learn = 0.0         # DNA v37: learn from the target's burst deviation, not from reward
+
+
+[[projection]]
+src = "central"
+dst = "expression"
+kind = "random"
+source = "either"        # DNA v14: recruit both cell types, the pre-v14 rule
+density = 0.04
+weight = 0.14
+delay_ms = 3.0
+delay_jitter_ms = 0.5
+hebb = 0.0                # DNA v23: per-pathway Hebbian rate, 0 = reward-gated only
+apical = 0                # DNA v25: 1 terminates on the target's apical tuft
+exuberance = 1.0          # DNA v28: born at density x this, pruned back by experience
+birth_weight = 1.0        # DNA v30: born at weight x this; set to 1/exuberance
+stp_use = 0.0             # DNA v36: dynamic synapse. 0 = constant weight, the pre-v36 tract
+stp_recover_ms = 0.0      # tau_rec: how fast released resources come back
+stp_facil_ms = 0.0        # tau_facil: how long raised utilisation lasts. 0 = pure depression
+burst_learn = 0.0         # DNA v37: learn from the target's burst deviation, not from reward
+
+
+# Efference copy: the baby hears its own intention to vocalise. This is what
+# lets M1 associate what it meant to say with what it then heard.
+[[projection]]
+src = "vocal"
+dst = "central"
+kind = "random"
+source = "either"        # DNA v14: recruit both cell types, the pre-v14 rule
+density = 0.01
+weight = 0.04
+delay_ms = 4.0
+delay_jitter_ms = 1.0
+hebb = 0.0                # DNA v23: per-pathway Hebbian rate, 0 = reward-gated only
+apical = 0                # DNA v25: 1 terminates on the target's apical tuft
+exuberance = 1.0          # DNA v28: born at density x this, pruned back by experience
+birth_weight = 1.0        # DNA v30: born at weight x this; set to 1/exuberance
+stp_use = 0.0             # DNA v36: dynamic synapse. 0 = constant weight, the pre-v36 tract
+stp_recover_ms = 0.0      # tau_rec: how fast released resources come back
+stp_facil_ms = 0.0        # tau_facil: how long raised utilisation lasts. 0 = pure depression
+burst_learn = 0.0         # DNA v37: learn from the target's burst deviation, not from reward
+
+
+# Ears to larynx: the dorsal stream. Heard speech reaches the motor module
+# directly rather than only through the association module, which is what a
+# creature needs in order to *echo* — and echoing is what M3 has to have before
+# it can have anything else. Association binds a picture to a sound the baby
+# can already make; with no route from B2 to B5 there is no such sound, and
+# measurement said so plainly: a word was legible in B1 at 0.93 and in the
+# voice at 0.50, which is chance.
+#
+# Denser than any other projection, and it has to be. The vocal tract is read
+# as nine population vectors (§5.3), and a population vector is a lossy thing
+# to push a pattern through: at density 0.08 the word was legible in B5's
+# spikes at 0.93 and in the *voice* at 0.57. Only when most of a motor group is
+# driven does its centroid move reliably. This is the anatomy that says the
+# arcuate fasciculus is a large tract rather than a few fibres.
+#
+# It is added last on purpose. Every landed synapse draws its own delay jitter,
+# so a projection inserted earlier would rewire every projection after it.
+[[projection]]
+# LEFT AT 0.12, and the reasoning is worth keeping because the obvious move was
+# to raise it. `vision->vocal` below lands on this same module and the two
+# compete, but only when both are driven: with an empty visual field the word
+# still reaches vocal at 0.980 and the voice at 0.840. With the object ALSO in
+# view, a strong vision tract (w=0.80) collapsed g3probe's calibration echo
+# 0.825 -> 0.625, under the 0.700 that instrument needs. Raising this to 0.20
+# fixed the echo (0.850) — and made the creature babble loudly enough to fail
+# the `audio` experiment, because it hears its own voice. Dropping the vision
+# tract to 0.30 instead buys the same delivery (vocal 0.760) with this weight
+# untouched and `audio` passing. Compensating here was solving the wrong half.
+src = "auditory"
+dst = "vocal"
+kind = "random"
+source = "either"        # DNA v14: recruit both cell types, the pre-v14 rule
+density = 0.15
+weight = 0.12
+delay_ms = 5.0
+delay_jitter_ms = 1.0
+hebb = 0.0                # DNA v23: per-pathway Hebbian rate, 0 = reward-gated only
+apical = 0                # DNA v25: 1 terminates on the target's apical tuft
+exuberance = 1.0          # DNA v28: born at density x this, pruned back by experience
+birth_weight = 1.0        # DNA v30: born at weight x this; set to 1/exuberance
+stp_use = 0.0             # DNA v36: dynamic synapse. 0 = constant weight, the pre-v36 tract
+stp_recover_ms = 0.0      # tau_rec: how fast released resources come back
+stp_facil_ms = 0.0        # tau_facil: how long raised utilisation lasts. 0 = pure depression
+burst_learn = 0.0         # DNA v37: learn from the target's burst deviation, not from reward
+
+
+[[projection]]
+src = "central"
+dst = "vision"
+kind = "random"
+source = "inhibitory"
+# Top-down feedback (item 5). Cortex sends about as many fibres back down the
+# hierarchy as up it; before DNA v14 this creature had none. Density and weight
+# are scaled per arm so that every arm delivers the same number of synapses and
+# the same total |w|, leaving the *sign* of the feedback as the only difference.
+density = 0.25
+weight = 0.024
+delay_ms = 6.0
+delay_jitter_ms = 1.0
+hebb = 0.0                # DNA v23: per-pathway Hebbian rate, 0 = reward-gated only
+apical = 0                # DNA v25: 1 terminates on the target's apical tuft
+exuberance = 1.0          # DNA v28: born at density x this, pruned back by experience
+birth_weight = 1.0        # DNA v30: born at weight x this; set to 1/exuberance
+stp_use = 0.0             # DNA v36: dynamic synapse. 0 = constant weight, the pre-v36 tract
+stp_recover_ms = 0.0      # tau_rec: how fast released resources come back
+stp_facil_ms = 0.0        # tau_facil: how long raised utilisation lasts. 0 = pure depression
+burst_learn = 0.0         # DNA v37: learn from the target's burst deviation, not from reward
+
+
+[[projection]]
+src = "central"
+dst = "auditory"
+kind = "random"
+source = "inhibitory"
+# Top-down feedback (item 5). Cortex sends about as many fibres back down the
+# hierarchy as up it; before DNA v14 this creature had none. Density and weight
+# are scaled per arm so that every arm delivers the same number of synapses and
+# the same total |w|, leaving the *sign* of the feedback as the only difference.
+density = 0.25
+weight = 0.024
+delay_ms = 6.0
+delay_jitter_ms = 1.0
+hebb = 0.0                # DNA v23: per-pathway Hebbian rate, 0 = reward-gated only
+apical = 0                # DNA v25: 1 terminates on the target's apical tuft
+exuberance = 1.0          # DNA v28: born at density x this, pruned back by experience
+birth_weight = 1.0        # DNA v30: born at weight x this; set to 1/exuberance
+stp_use = 0.0             # DNA v36: dynamic synapse. 0 = constant weight, the pre-v36 tract
+stp_recover_ms = 0.0      # tau_rec: how fast released resources come back
+stp_facil_ms = 0.0        # tau_facil: how long raised utilisation lasts. 0 = pure depression
+burst_learn = 0.0         # DNA v37: learn from the target's burst deviation, not from reward
+
+
+# --- Top-down feedback (DNA v14) ---------------------------------------------
+#
+# Until v14 this creature's projection graph was entirely feedforward apart from
+# one weak vocal->central return. Cortex sends about as many fibres back down a
+# hierarchy as up it, so that was a large architectural gap rather than a tuning
+# choice.
+#
+# The two tracts below recruit only *inhibitory* central neurons, and that is
+# the whole design. Matched for synapse count and total |w|, the excitatory
+# version is unstable: it is a positive feedback loop with a gain above one, and
+# chasing its operating point diverges rather than converges — five rounds of
+# re-measuring took central 8.48 -> 17.48 Hz and vision 4.60 -> 15.90 and it was
+# still climbing. The inhibitory version settles in two rounds. That is the
+# textbook argument for why cortical feedback is not net-excitatory, arrived at
+# by measurement here.
+#
+# What it buys, three seed families, against the same genome without it:
+#
+#   vision mean |d'|   0.357 -> 0.372   (+0.015, +0.009, +0.021 — up in 3 of 3)
+#   M2                 96%   -> 98%     (+3, +0, +1 — never negative)
+#   central            0.658 -> 0.649   (-0.006, +0.014, -0.034 — no effect)
+#   G3 ceiling         0.527 -> 0.522   (unmoved)
+#
+# So it sharpens the module it lands on and the vision->central bottleneck
+# throws the gain away, exactly as everything else aimed at that bottleneck has.
+# It is shipped for the sensory improvement and the architecture, not for G3.
+#
+# The cost is that the distance senses free-run at about half their old rate,
+# which is why their target_rate_hz above came down. That is not a regression:
+# reduced sensory firing under feedback is what "explaining away" means, and it
+# is the signature predictive coding predicts. G2 still passes and its effect is
+# larger (x1.86 against x1.35), though on fewer creatures (7 of 9 against 9).
+
+# vision -> vocal. Added 2026-08-18, and it ships for G2, NOT for G3.
+#
+# Why it exists. `projprobe` pushes a module's own activity through a random
+# sparse binary matrix -- the linear part of a tract, no threshold, nothing
+# else driving the target -- and asks what survives:
+#
+#   arm                    at source   d=0.03   d=0.15   d=0.40   shuffled
+#   object from central    0.760       0.620    0.560    0.600    0.460
+#   object from vision     0.960       0.980    0.840    0.640    0.540
+#   word from auditory     1.000       1.000    1.000    0.660    0.400
+#
+# Vision's object code crosses a sparse tract intact; central's does not. The
+# genome had nine projections and vision reached only `central`, so the one
+# source whose code survives a tract had no route to the larynx. This is that
+# route, and it is the first thing in this project to put the seen object at
+# the larynx: m3probe's vocal row goes 0.500 -> 0.760, g3probe's "does it
+# ARRIVE" row 0.515 -> 0.654.
+#
+# Why density 0.03. Matching central->vocal exactly (d=0.03, w=0.14) delivered
+# NOTHING -- vocal 0.600 interleaved against a 0.500 baseline, +8% drive. The
+# linear model above has nothing else driving the target; the real vocal fires
+# ~971 spikes/trial on its own, so a tract that does not compete with that is
+# invisible. Density is the wrong axis; weight is. Sweeping weight at d=0.03
+# (uncalibrated creatures, arcuate at its shipped 0.12):
+#
+#   weight   0.14    0.40    0.80    1.20    1.60    2.40
+#   vocal    0.600   0.760   0.880   0.880   0.860   0.900
+#
+# Monotone to 0.80 then a plateau, shuffled control flat at 0.520 throughout.
+# Denser arms are worse at the same drive (d=0.15/w=0.14 puts the voice at
+# 0.580) -- sparse AND strong, because pooling is what destroys this code and
+# drive is what makes it reach the target at all.
+#
+# WHY 0.30 AND NOT 0.80, which is the part that cost a rebuild. The delivery
+# knee is 0.80, and at 0.80 the creature FAILS the `audio` experiment. The
+# larynx is loud enough that the ear hears it -- `self_gain` mixes the
+# creature's own voice into the room -- so mel energy during "silence" goes
+# 0.0499 -> 0.0830 and an external vowel no longer lifts the auditory module
+# by the 10% that experiment requires. The baby babbles over you. Recalibrated
+# arms, ratio is vowel rate over silence rate and must exceed 1.10:
+#
+#   weight   0.20    0.30    0.45     (pre-change genome: 1.36)
+#   audio    1.22    1.15    1.07 FAIL
+#   vocal    0.600   0.760   0.800
+#
+# 0.30 is the largest weight that leaves the creature able to hear. It gives up
+# nothing measurable in delivery: 0.760, the same as w=0.80 once the arcuate is
+# left alone (see the note there -- raising the arcuate to compensate for a
+# strong tract was solving the wrong half, and made `audio` worse). A gentler
+# tract also disturbs two calibration targets instead of four.
+#
+# The control that makes the delivery believable: the central->vocal density
+# sweep drove vocal to 1686 spikes/trial and scored 0.500, while this tract at
+# 1400 scores 0.880. Drive is not information. The source is what changed.
+#
+# What it buys -- G2, on the same nine seeds, a paired comparison:
+#
+#                     before     after
+#   praise won        7 of 9     9 of 9
+#   F1 advantage      +0.0255    +0.0556
+#   rewarded rate     +0.777x    +0.707x   <- the one thing that got worse
+#
+# The F1 advantage is the largest ever recorded here, above DNA v32's +0.0559
+# without v32's rate_norm fragility. The rewarded-rate advantage slips slightly
+# and that is an honest cost, not a rounding error; G2's criterion is the
+# within-session rise (x1.61) and the win count, and both improved.
+#
+# What it does NOT buy, measured and settled. G3 does not move. On this exact
+# genome, with g3probe's echo control PASSING at 0.750, the object arrives at
+# vocal at 0.654 against 0.515 before -- and taught minus random is -0.014,
+# with 0 of 5 creatures over the 0.75 bar. Delivery up 27% and the milestone
+# went nowhere. Third independent confirmation that delivery was never G3's
+# limit; the blocker is conditioning, and no tract fixes it. Do NOT add another
+# delivery mechanism for G3.
+#
+# A trap worth recording: a 300k --allow-short screen of an earlier arm read
+# teacher 0.618 / random 0.536, a +0.082 gap. The 900k run reversed it to
+# 0.518 / 0.563. Screens select candidates and never conclude.
+#
+# It is added LAST on purpose, the same reason the arcuate is: every landed
+# synapse draws its own delay jitter, so a projection inserted earlier rewires
+# every projection after it.
+[[projection]]
+src = "vision"
+dst = "vocal"
+kind = "random"
+source = "either"        # DNA v14: recruit both cell types, the pre-v14 rule
+density = 0.03
+weight = 0.30
+delay_ms = 4.0
+delay_jitter_ms = 1.0
+hebb = 0.0                # DNA v23: per-pathway Hebbian rate, 0 = reward-gated only
+apical = 0                # DNA v25: 1 terminates on the target's apical tuft
+exuberance = 1.0          # DNA v28: born at density x this, pruned back by experience
+birth_weight = 1.0        # DNA v30: born at weight x this; set to 1/exuberance
+stp_use = 0.0             # DNA v36: dynamic synapse. 0 = constant weight, the pre-v36 tract
+stp_recover_ms = 0.0      # tau_rec: how fast released resources come back
+stp_facil_ms = 0.0        # tau_facil: how long raised utilisation lasts. 0 = pure depression
+burst_learn = 0.0         # DNA v37: learn from the target's burst deviation, not from reward
+
+
+# auditory -> vocal, INHIBITORY: the baby stops babbling while it can hear
+# something. Added 2026-08-18, immediately after the excitatory vision->vocal
+# tract above, and it is what makes that tract shippable.
+#
+# WHY IT HAD TO EXIST. vision->vocal drives the larynx harder, the creature
+# babbles more, and it HEARS ITSELF — `self_gain` mixes its own voice into the
+# room before the cochlea. Mel energy during silence went 0.0499 -> 0.0830 and
+# the `audio` experiment failed: an external vowel no longer lifted the
+# auditory module by the 10% it requires. The baby was babbling over you.
+#
+# That failure was invisible on the default seed. Across the nine seeds the
+# experiments actually sweep, `audio` went from 8 of 9 passing to 4 of 9 while
+# the default seed sat at 1.15 and looked fine. Never accept a single-seed
+# `audio` or `babble` result after a wiring change.
+#
+# WHAT IT DOES. The ears inhibit the larynx. The creature cannot tell its own
+# voice from the room — nothing here can, the mix happens in the cochlea — so
+# this suppresses babble whenever ANYTHING is loud, the creature included. That
+# is the negative-feedback duty-cycle dial described beside `self_gain`, made
+# explicit and given its own weight. Silence quiets while the response to real
+# sound does not:
+#
+#   gate weight     none    0.15    0.25    0.40    0.80
+#   audio ratio     1.15    1.34    1.46    1.73    2.13
+#   silence rate    5.42    4.44            3.54    2.88
+#   vowel rate      6.22    5.70            5.96    6.14
+#   babble duty     0.68    0.57    0.52    0.41    0.29
+#
+# The vowel response is flat and the silence collapses. That is the shape a
+# listening reflex should have, and it is why this is not merely a volume knob.
+#
+# WHY 0.25 AND NOT MORE. Strong gates make the creature too quiet to MEASURE.
+# G2 needs enough baseline vocalisations to establish a rate, and at 0.40 two
+# creatures came back "inconclusive: 7 baseline / 43 test vocalisations", at
+# 0.80 five did and G2 FAILED. Across the nine seeds:
+#
+#   gate weight     0.15        0.25        0.40         0.80
+#   praise won      7 of 9      9 of 9      6 of 7       2 of 4  FAIL
+#   creatures       9           9           7            4
+#   rewarded rate   +0.781x     +1.361x     +0.950x      +0.442x
+#
+# 0.25 is a peak, not a plateau, so score any change to this weight over a
+# NEIGHBOURHOOD rather than at a point. The neighbours are safe — 0.15 and 0.40
+# both still pass G2 — and only 0.80 breaks it.
+#
+# WHAT IT COST, which turned out to be nothing. The prediction was that this
+# must break the echo, since echoing a word means vocalising WHILE hearing it.
+# It improves the echo instead: the voice carries the heard word at 0.880
+# against 0.840 without the gate, because a quieter creature has a cleaner
+# readout and inhibition does not stop it answering. The object delivery the
+# vision tract buys also survives (vocal 0.760 -> 0.780).
+[[projection]]
+src = "auditory"
+dst = "vocal"
+kind = "random"
+source = "inhibitory"
+density = 0.25
+weight = 0.25
+delay_ms = 5.0
+delay_jitter_ms = 1.0
+hebb = 0.0                # DNA v23: per-pathway Hebbian rate, 0 = reward-gated only
+apical = 0                # DNA v25: 1 terminates on the target's apical tuft
+exuberance = 1.0          # DNA v28: born at density x this, pruned back by experience
+birth_weight = 1.0        # DNA v30: born at weight x this; set to 1/exuberance
+stp_use = 0.0             # DNA v36: dynamic synapse. 0 = constant weight, the pre-v36 tract
+stp_recover_ms = 0.0      # tau_rec: how fast released resources come back
+stp_facil_ms = 0.0        # tau_facil: how long raised utilisation lasts. 0 = pure depression
+burst_learn = 0.0         # DNA v37: learn from the target's burst deviation, not from reward
+
+
+[neuromod]
+# DNA v20. Off reproduces v19 exactly: the four reward terms are summed against
+# one running baseline and the single scalar reaches every synapse in the brain.
+#
+# On, each term keeps its own baseline and each module weights the four itself
+# through its nm_* fields. The motivation is measured, not tidiness: `dwprobe`
+# finds that with the caregiver silent the weights still move 76% as much,
+# because hunger, comfort and curiosity are object-blind and pay reward anyway.
+# It is also what DNA v19 showed was missing — a global signal potentiates
+# everything at once, and a real neuromodulator reaches some regions and not
+# others.
+#
+# MEASURED 2026-08-16. Built, bit-identical when off (hash be2e508dfc170240),
+# and it works — but it does not move G3, which was the prediction going in:
+# `g3probe`'s clean-teacher run had already zeroed the drives globally and read
+# 0.502. Scored on `condprobe` by the margin (taught minus random control):
+#
+#   arm                        cal    duty   teacher  random  margin   g2
+#   off (v19)                  PASS   0.51   0.637    0.639   -0.002   PASS
+#   on, all gains 1.0          PASS   0.51   0.620    0.665   -0.045   PASS
+#   on, vocal: caregiver only  PASS   0.52   0.594    0.648   -0.054   PASS
+#
+# All three sit inside the +/-0.05 noise floor. Cutting hunger, comfort and
+# curiosity out of the larynx's plasticity entirely — so the caregiver has a
+# private line to it — changes nothing measurable.
+#
+# Ships off because it does not earn a hash change, not because it is wrong.
+# The all-ones arm reproduces the summed behaviour (calibrate PASS, g2 PASS,
+# duty unchanged), so turning it on is behaviourally neutral and available to
+# anyone who wants the extra realism. And the *capability* is the thing DNA v19
+# showed was missing: a global signal potentiates everything at once, and this
+# is the machinery for a modulator that reaches some places and not others.
+# What it still cannot do is separate two tracts that share a target module —
+# vision->vocal and auditory->vocal both land on the larynx — which needs
+# per-projection plasticity metadata that the kernel does not have.
+enabled = false
+
+[interneuron]
+# DNA v22. Time constant of the pooling interneurons' estimate of their source
+# module's activity (DnaModule::ffi_source / ffi_gain).
+#
+# v21 reused `mean_rate_fast`, a one-second EMA, and that is why it failed: the
+# common mode that buries the object code moves trial-to-trial, and a constant
+# offset is invisible to a classifier that z-scores every dimension anyway.
+# Only the fast component matters. Real feedforward inhibition acts within about
+# ten milliseconds.
+tau_ms = 15.0

@@ -134,6 +134,7 @@ a canvas, so each has a headless experiment that prints a number and a verdict.
 ./build/aibaby --experiment relayprobe  --ticks 240000  # Webb's two-stage circuit; needs a genome with a relay
 ./build/aibaby --experiment vocallearn  --ticks 3400000 # does the echo improve with feedback (OPEN)
 ./build/aibaby --experiment teachsound  --ticks 3400000 # M1c: teach it a vowel; --wav to hear it
+./build/aibaby --experiment retain      --ticks 5600000 # does it keep the lesson; does sleep erase it
 ./build/aibaby --experiment snapshot    --ticks 2400000 # §8: resume is exact
 ```
 
@@ -3753,6 +3754,84 @@ perturbation, which shifts a whole posture in one direction and, as
 So the creature's abilities divide cleanly. **What it says in response to what it
 hears is innate** and cannot be reshaped by reward. **What it says can be taught**,
 as long as you are teaching it one thing.
+
+### `retain` — the creature keeps what it was taught, sleep does not erase it, and a second lesson does
+
+M1c gave this project its first taught behaviour that a listener can hear, which
+made three questions answerable that never had been. Sleep, replay, downscaling
+and myelination all ship and all pass G4, and **none had ever been shown to do
+anything for learning** — there was nothing learned to test them against. Worse,
+the prior was hostile: DNA v9 exists because awake homeostasis was measured to be
+**G2's eraser**, and sleep downscaling is the same shape of mechanism run harder,
+over every synapse, once a bout.
+
+One creature, three phases, one continuous life: teach toward /i/, intervene,
+re-measure with no reward. The arms differ only in the middle.
+
+```
+retention = (err before teaching - err after intervening)
+            / (err before teaching - err after teaching)
+```
+
+Three seed families, 5.6M ticks each:
+
+| arm | seed 1 | seed 2 | seed 3 | mean |
+|---|---|---|---|---|
+| **quiet** (sleeps when tired) | 1.21 | 1.23 | 1.50 | **1.31** |
+| **no sleep** (`fatigue_rate` 0) | 1.14 | 1.22 | 1.41 | **1.26** |
+| **relearn** (a conflicting lesson) | 0.56 | **0.03** | **0.06** | **0.22** |
+| **never taught** (`settle` control) | 1.000 | 0.995 | 1.002 | **0.999** |
+
+**What is taught is kept, and keeps improving.** Retention above 1 on 3 of 3 —
+the creature drifts slightly further toward the target after the praise stops.
+
+**Sleep is not an eraser.** Six bouts cost +0.06, +0.01, +0.09 — nothing, on
+3 of 3, and the sleeping arm keeps marginally *more*. That is the first time any
+part of §3.6 has been shown to be harmless to a learned behaviour, let alone
+helpful.
+
+**A conflicting second lesson erases the first.** Mean retention 0.22, and on two
+of three seeds it is **0.03 and 0.06** — back to baseline as if never taught. The
+formants move exactly as interference predicts: F1 564 → 580 (back up, away from
+/i/'s 320 and toward the new target's 850) and F2 1784 → 1727 (down, away from
+2500). This is what `vocallearn` predicts: **one non-conditional pathway, so one
+lesson at a time.**
+
+#### The control refuted the hypothesis it was built to measure
+
+The `never taught` arm exists because the first version of this experiment
+returned retention above 1.0 in every arm and I did not believe it. The proposed
+explanation was an artefact: reward drives node perturbation, perturbation is
+trial-to-trial scatter, the formant error is convex, so switching reward off
+should lower the measured error without anything being learned.
+
+It reads **0.999**. `err before 1.0851 → taught 1.0858 → after 1.0861`, flat on
+3 of 3. There is no such artefact, the hypothesis was wrong, and retention above
+1 means what it says.
+
+#### Three faults this experiment had before it had a result
+
+Each was found by the data rather than by inspection, and each would have
+produced a publishable-looking number.
+
+**The interference arm did not interfere, twice.** The second lesson was first
+"boot" /u/, whose F1 is 350 against /i/'s 320 — the two lessons *agree* on F1, so
+teaching the second improved the first one's score and the relearn arm came back
+retaining 1.46, *more* than quiet. Replacing it with "bed" /e/ (550, 1850) was
+worse in a more interesting way: that is almost exactly where the creature sits
+after learning /i/ (564, 1784), so the second lesson was "stay where you are".
+The target is now stated outright — (850, 1100), far from /i/ on both formants,
+far from where teaching leaves the creature, and never heard.
+
+**The control measured nothing.** The never-taught arm's scoring window was gated
+on the same flag as its reward, so `err_taught` came back 0.0000 and its `settle`
+of 1.000 was a default rather than a measurement. The phase a trial is in and
+whether that arm is being taught are two different things.
+
+**And one seed told a different story from three.** On the first seed the relearn
+arm retained 0.56, which reads as "half survives, so there is more capacity here
+than `vocallearn` implied". On the other two it is 0.03 and 0.06. The one-seed
+reading was wrong and the three-seed one agrees with everything else on this page.
 
 ### What this round taught about probes, which cost more than the mechanisms did
 

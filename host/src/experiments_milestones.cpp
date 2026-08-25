@@ -3945,4 +3945,324 @@ bool run_teachsound(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
   return moved && audible;
 }
 
+
+// --- retain: does the creature KEEP what it was taught? ---------------------
+//
+// M1c is this project's first taught behaviour that a listener can hear. That
+// makes a whole built-and-unvalidated subsystem testable for the first time.
+// Sleep, replay, synaptic downscaling and myelination all exist and all pass
+// G4, and **none has ever been shown to do anything for learning** — there was
+// no learned behaviour worth testing them against until now.
+//
+// And the prior is not friendly. DNA v9 exists because awake homeostasis was
+// measured to be **G2's eraser**: regulation removed a rewarded change before it
+// could compound. Sleep downscaling is the same shape of mechanism run harder,
+// once per bout, over every synapse in the brain.
+//
+// One creature, three phases, one continuous life:
+//
+//   teach       praise toward /i/ while it hears /a/, exactly as `teachsound`
+//   intervene   no teaching, and one of three things happens
+//   re-measure  no reward at all; what does it say now?
+//
+// The arms differ only in the middle phase:
+//
+//   quiet       nothing. Sleep happens when fatigue says so.
+//   no sleep    the same, with `sleep_threshold` raised out of reach, so the
+//               creature stays awake through the whole interval. The pair
+//               isolates SLEEP from the mere passage of time, which nothing
+//               else in this project has ever separated for a learned change.
+//   relearn     a SECOND vowel is taught. Given that this creature has one
+//               non-conditional motor pathway (`vocallearn`), the prediction is
+//               that the second lesson overwrites the first, and a retention
+//               near zero here is the interference result.
+//
+// The score is one number and it is bounded at both ends:
+//
+//   retention = (err before teaching - err after intervening)
+//               / (err before teaching - err after teaching)
+//
+// 1.0 is "kept everything the teaching bought", 0.0 is "back where it started",
+// and negative is worse than never having been taught. It is a ratio of two
+// differences measured on the same creature in the same session, so a genome
+// that simply says /i/ better than average cannot flatter it.
+namespace {
+
+constexpr uint64_t kRTTrial = 2800;
+constexpr uint64_t kRTEchoFrom = 900 + 200;
+constexpr uint64_t kRTEchoTo = 900 + 600;
+constexpr uint64_t kRTRewardFrom = 900;
+constexpr uint64_t kRTRewardTo = 900 + 800;
+constexpr double kRTBaselineAlpha = 0.02;
+constexpr uint32_t kRTHeard = 0;    // "ball" /a/ — what the caregiver always says
+constexpr uint32_t kRTTarget = 1;   // "cube" /i/ — the first lesson
+// The second lesson, and picking it took three tries because the obvious
+// choices are all wrong for a reason only the data showed.
+//
+//   "boot" /u/  F1 350 — AGREES with /i/'s 320, so teaching it improved the
+//               first lesson's score and the relearn arm "retained" 1.46.
+//   "bed"  /e/  F1 550, F2 1850 — which is where the creature ALREADY SITS
+//               after learning /i/ (564/1784). The lesson was "stay put".
+//   "ball" /a/  far from both, but it is the vowel the caregiver says, so
+//               "taught toward it" and "hears it" could not be separated.
+//
+// So the second target is stated outright rather than borrowed: a low-back
+// vowel far from /i/ on both formants AND far from where teaching leaves the
+// creature, and one it never hears. If a second lesson can displace the first,
+// this is the one that would.
+constexpr Word kRTSecondWord = {200.0f, 850.0f, 1100.0f};
+
+// `kRTNever` is the control every other number is read against, and the first
+// run of this experiment needed it and did not have it: all three arms came back
+// retaining MORE than 100%, which is not consolidation but an artefact. Reward
+// drives node perturbation, perturbation is trial-to-trial scatter, the error is
+// convex in the formants, and so removing reward lowers the MEASURED error
+// without the creature having learned anything further. An arm that is never
+// taught at all measures exactly that much and nothing else.
+enum RTArm { kRTQuiet = 0, kRTNoSleep, kRTRelearn, kRTNever, kRTArmCount };
+
+struct RTRow {
+  double err_before = 0.0, err_taught = 0.0, err_after = 0.0;
+  double retention = 0.0, dprime = 0.0, null = 0.0, settle = 0.0;
+  uint32_t sleeps = 0, scored = 0;
+  double f1_taught = 0.0, f2_taught = 0.0, f1_after = 0.0, f2_after = 0.0;
+};
+
+}  // namespace
+
+bool run_retain(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  Regime regime;
+  regime.praise = kPraiseValue;
+  regime.scold = kScoldValue;
+  aibaby::Dna dna0;
+  if (dna0.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) {
+    std::printf("  setup failed: the genome does not load\n");
+    return false;
+  }
+  std::string error;
+  Timbre ruler;
+  if (!ruler.configure(dna0.header().audio, error)) {
+    std::printf("  the audibility ruler failed: %s\n", error.c_str());
+    return false;
+  }
+  // Three phases out of one budget: teaching needs the length M1c needed, the
+  // interval needs a full fatigue cycle so the sleeping arm can actually
+  // sleep, and the re-measure only has to be long enough to average.
+  const uint64_t teach_ticks = ticks * 60 / 100;
+  const uint64_t gap_ticks = ticks * 28 / 100;
+  const uint64_t after_ticks = ticks - teach_ticks - gap_ticks;
+
+  instrument("retain", dna0.header().seed ^ 0x2E7Au, ticks / kRTTrial, "trials");
+  std::printf("  teach %llu, intervene %llu, re-measure %llu ticks, one life\n",
+              (unsigned long long)teach_ticks, (unsigned long long)gap_ticks,
+              (unsigned long long)after_ticks);
+  std::printf("  the caregiver says \"ball\"; the first lesson is \"cube\", the second\n"
+              "  (relearn arm only) is \"boot\"\n");
+
+  RTRow rows[kRTArmCount];
+  const char* names[kRTArmCount] = {"quiet", "no sleep", "relearn", "never taught"};
+
+  for (uint32_t a = 0; a < kRTArmCount; ++a) {
+    std::vector<uint8_t> variant = blob;
+    if (a == kRTNoSleep) {
+      // The creature never gets tired, so it never drops off. `sleep_threshold`
+      // would be the more surgical knob and the genome loader refuses it above
+      // 1.0 — correctly, since fatigue is a fraction. Stopping fatigue from
+      // rising is the same intervention stated at the source, and it is honest
+      // about its side effect: fatigue also feeds valence, so this arm is a
+      // creature that is never sleepy rather than one that cannot sleep.
+      const float none = 0.0f;
+      std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, drives) +
+                      offsetof(aibaby::DnaDrives, fatigue_rate),
+                  &none, sizeof(none));
+    }
+    Session s;
+    if (!s.init(variant, error)) {
+      std::printf("  arm %s failed to hatch: %s\n", names[a], error.c_str());
+      return false;
+    }
+    const aibaby::DnaAudio& acfg = dna0.header().audio;
+    Ear ear;
+    if (!ear.configure(acfg, error)) {
+      std::printf("  transducer failed: %s\n", error.c_str());
+      return false;
+    }
+    VowelSource caregiver(acfg.sample_rate);
+    std::vector<float> pcm(acfg.sample_rate / 1000);
+    const uint32_t spt = acfg.sample_rate / 1000;
+    const Word& heard = kWords[kRTHeard];
+    const Word& first = kWords[kRTTarget];
+    const Word& second = kRTSecondWord;
+    aibaby::Rng rng;
+    rng.seed(dna0.header().seed ^ 0x2E7Au);
+
+    const uint32_t n_teach = uint32_t(teach_ticks / kRTTrial);
+    const uint32_t n_gap = uint32_t(gap_ticks / kRTTrial);
+    const uint32_t n_after = uint32_t(after_ticks / kRTTrial);
+    const uint32_t n_total = n_teach + n_gap + n_after;
+    const uint32_t third = n_teach / 3 ? n_teach / 3 : 1;
+
+    std::deque<Praise> pending;
+    double baseline1 = -1.0, baseline2 = -1.0;
+    uint32_t last_frame = 0;
+    uint64_t last_feedback = 0;
+    bool was_asleep = false;
+    double sum_before = 0, sum_taught = 0, sum_after = 0;
+    double f1t = 0, f2t = 0, f1a = 0, f2a = 0;
+    uint32_t n_before = 0, n_tt = 0, n_aa = 0;
+    std::vector<std::vector<double>> ceps;
+    std::vector<int> when;
+
+    for (uint32_t trial = 0; trial < n_total; ++trial) {
+      // The PHASE and whether this arm is being taught are two different
+      // things, and conflating them is why the never-taught control came back
+      // with err_taught 0.0000 and measured nothing: its scoring window was
+      // gated on the same flag as its reward.
+      const bool in_teach_phase = trial < n_teach;
+      const bool teaching = in_teach_phase && a != kRTNever;
+      const bool relearning =
+          (a == kRTRelearn) && trial >= n_teach && trial < n_teach + n_gap;
+      const Word& lesson = relearning ? second : first;
+      double f1_acc = 0, f2_acc = 0;
+      uint32_t nv = 0;
+
+      for (uint64_t t = 0; t < kRTTrial; ++t) {
+        const uint64_t now = uint64_t(trial) * kRTTrial + t;
+        while (!pending.empty() && pending.front().tick <= now) {
+          s.brain.praise(pending.front().value);
+          pending.pop_front();
+        }
+        const bool sounding = t < 900;
+        caregiver.render(sounding ? heard.f0 : 0.0f, heard.f1, heard.f2,
+                         sounding ? 0.5f : 0.0f, pcm.data(), spt);
+        ear.tick(s.brain, pcm.data(), spt);
+        s.brain.step();
+        if (s.brain.asleep() && !was_asleep) ++rows[a].sleeps;
+        was_asleep = s.brain.asleep();
+
+        if (s.brain.vocal_frame() == last_frame) continue;
+        last_frame = s.brain.vocal_frame();
+        const aibaby::VocalParams& v = s.brain.voice();
+        const bool voiced = v.voicing > 0.5f && v.amplitude > kAmplitudeFloor;
+
+        if ((teaching || relearning) && voiced && t >= kRTRewardFrom && t < kRTRewardTo &&
+            now - last_feedback >= regime.feedback_period) {
+          const double e = formant_error(double(v.f1), double(v.f2), lesson);
+          if (e >= 0.0) {
+            last_feedback = now;
+            double& base = relearning ? baseline2 : baseline1;
+            if (base >= 0.0) {
+              pending.push_back(Praise{now + regime.delay,
+                                       e < base ? regime.praise : regime.scold});
+            }
+            base = base < 0.0 ? e : base + kRTBaselineAlpha * (e - base);
+          }
+        }
+        if (t < kRTEchoFrom || t >= kRTEchoTo || !voiced) continue;
+        ++nv;
+        f1_acc += double(v.f1);
+        f2_acc += double(v.f2);
+      }
+      if (nv == 0) continue;
+      const double f1 = f1_acc / nv, f2 = f2_acc / nv;
+      // ALWAYS scored against the FIRST lesson, in every phase and every arm.
+      // That is the quantity retention is about, and scoring the relearn arm
+      // against its second lesson would measure something else entirely.
+      const double err = formant_error(f1, f2, first);
+      if (err < 0.0) continue;
+      ++rows[a].scored;
+
+      if (trial < third) { sum_before += err; ++n_before; }
+      else if (in_teach_phase && trial >= n_teach - third) {
+        sum_taught += err; f1t += f1; f2t += f2; ++n_tt;
+        std::vector<double> c = ruler.of(double(dna0.header().vocal.f0_min), f1, f2, 0.4);
+        if (!c.empty()) { ceps.push_back(c); when.push_back(0); }
+      } else if (trial >= n_teach + n_gap) {
+        sum_after += err; f1a += f1; f2a += f2; ++n_aa;
+        std::vector<double> c = ruler.of(double(dna0.header().vocal.f0_min), f1, f2, 0.4);
+        if (!c.empty()) { ceps.push_back(c); when.push_back(1); }
+      }
+    }
+
+    RTRow& r = rows[a];
+    r.err_before = n_before ? sum_before / n_before : 0.0;
+    r.err_taught = n_tt ? sum_taught / n_tt : 0.0;
+    r.err_after = n_aa ? sum_after / n_aa : 0.0;
+    r.f1_taught = n_tt ? f1t / n_tt : 0.0;
+    r.f2_taught = n_tt ? f2t / n_tt : 0.0;
+    r.f1_after = n_aa ? f1a / n_aa : 0.0;
+    r.f2_after = n_aa ? f2a / n_aa : 0.0;
+    const double gained = r.err_before - r.err_taught;
+    r.retention = std::fabs(gained) > 1e-6 ? (r.err_before - r.err_after) / gained : 0.0;
+    // What the same window does with no lesson in it at all.
+    r.settle = r.err_taught > 1e-6 ? r.err_after / r.err_taught : 1.0;
+    if (ceps.size() >= 24) {
+      const double d2 = cepstral_dprime(ceps, when, nullptr, true);
+      r.dprime = d2 >= 0.0 ? std::sqrt(d2) : -std::sqrt(-d2);
+      double ns = 0.0;
+      for (uint32_t p = 0; p < 32; ++p) {
+        std::vector<int> sh = when;
+        for (size_t i = sh.size(); i > 1; --i) std::swap(sh[i - 1], sh[rng.next() % i]);
+        const double nd = cepstral_dprime(ceps, sh, nullptr, true);
+        ns += nd >= 0.0 ? std::sqrt(nd) : -std::sqrt(-nd);
+      }
+      r.null = ns / 32.0;
+    }
+  }
+
+  std::printf("\n    %-13s %-7s %-11s %-11s %-11s %-10s %-8s %-9s %-8s\n", "arm",
+              "sleeps", "err before", "err taught", "err after", "retention", "settle",
+              "d' t->a", "null");
+  for (uint32_t a = 0; a < kRTArmCount; ++a) {
+    const RTRow& r = rows[a];
+    if (a == kRTNever) {
+      std::printf("    %-13s %-7u %-11.4f %-11.4f %-11.4f %-10s %-8.3f %-9.3f %-8.3f\n",
+                  names[a], r.sleeps, r.err_before, r.err_taught, r.err_after, "-",
+                  r.settle, r.dprime, r.null);
+    } else {
+      std::printf("    %-13s %-7u %-11.4f %-11.4f %-11.4f %-10.2f %-8.3f %-9.3f %-8.3f\n",
+                  names[a], r.sleeps, r.err_before, r.err_taught, r.err_after,
+                  r.retention, r.settle, r.dprime, r.null);
+    }
+  }
+  for (uint32_t a = 0; a < kRTArmCount; ++a) {
+    std::printf("    F1/F2 %-13s %.0f/%.0f -> %.0f/%.0f\n", names[a],
+                rows[a].f1_taught, rows[a].f2_taught, rows[a].f1_after,
+                rows[a].f2_after);
+  }
+
+  std::printf("\n  retention is (before - after) / (before - taught): 1.0 keeps\n"
+              "  everything the lesson bought, 0.0 is back where it started, negative\n"
+              "  is worse than never taught. `d' t->a` is whether a listener can hear\n"
+              "  the difference between what it said at the end of teaching and what\n"
+              "  it says now — LOW is retained, high is changed.\n");
+
+  const bool taught_ok = rows[0].err_before - rows[0].err_taught > 0.02 &&
+                         rows[1].err_before - rows[1].err_taught > 0.02;
+  if (!taught_ok) {
+    std::printf("\n  UNDERPOWERED — the teaching phase did not move the error far enough\n"
+                "  to have anything to retain (%.4f and %.4f gained). Retention of a\n"
+                "  change that did not happen is not a measurement. Raise --ticks.\n",
+                rows[0].err_before - rows[0].err_taught,
+                rows[1].err_before - rows[1].err_taught);
+    return false;
+  }
+  std::printf("\n  `settle` is err after / err taught, and the NEVER TAUGHT arm is what it\n"
+              "  reads with no lesson in it at all: reward drives node perturbation,\n"
+              "  perturbation is scatter, the error is convex in the formants, so simply\n"
+              "  switching reward off lowers the measured error. Any retention above 1.0\n"
+              "  has to clear that arm before it means consolidation.\n");
+  std::printf("\n  quiet         %.2f   (%u sleep bouts)\n"
+              "  no sleep      %.2f   (%u — isolates sleep from the passage of time)\n"
+              "  relearn       %.2f   (a conflicting vowel taught in between)\n"
+              "  never taught  settle %.3f, against %.3f / %.3f / %.3f above\n"
+              "\n  sleep costs             %+.2f\n  a second lesson costs   %+.2f\n",
+              rows[0].retention, rows[0].sleeps, rows[1].retention, rows[1].sleeps,
+              rows[2].retention, rows[3].settle, rows[0].settle, rows[1].settle,
+              rows[2].settle, rows[0].retention - rows[1].retention,
+              rows[2].retention - rows[0].retention);
+  (void)verbose;
+  return true;
+}
+
 }  // namespace aibaby_host

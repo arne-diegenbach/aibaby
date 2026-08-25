@@ -1,0 +1,34 @@
+experiment: mechverify
+  instrument        mechverify   trial seed 000000000135b90d   14 mechanisms
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  one pinned hash per mechanism that ships OFF, each on a genome where
+  that mechanism alone is switched on. A variant must MATCH its pin and
+  DIFFER from the shipped creature: an enabled mechanism that hashes the
+  same as the off one is inert, and pinning it would lock in a test that
+  cannot fail.
+
+  shipped baseline   f9da4354176b33d2 at 120000 ticks
+                     a685dad99a9b0f77 at 1300000 ticks
+
+    mechanism                  dna   ticks     expected           measured           verdict
+    predictive coding          v15   120000    -                  5246e218f7c2b8d6   unpinned — paste the measured value
+    eligibility baseline       v16   120000    -                  2ef07ecfd3c1756d   unpinned — paste the measured value
+    presynaptic centring       v17   120000    -                  12c4c9061cc62019   unpinned — paste the measured value
+    per-pathway Hebbian        v23   120000    -                  1fc86fcdc2b06e2d   unpinned — paste the measured value
+    pooling interneurons       v24   120000    -                  633dcd0314e81925   unpinned — paste the measured value
+    apical compartment         v25   120000    -                  73653dbad8466837   unpinned — paste the measured value
+    oscillations               v26   120000    -                  e77ded57ffba8e6c   unpinned — paste the measured value
+    critical period            v28   120000    -                  7dcf64323b9e6ae3   unpinned — paste the measured value
+    plateau-gated plasticity   v29   120000    -                  d0a3b887d3dfd855   unpinned — paste the measured value
+    lateral competition        v32   120000    -                  feb08e20bf42c877   unpinned — paste the measured value
+    dynamic synapses           v36   120000    -                  ed756042e4167e0c   unpinned — paste the measured value
+    burst plasticity           v37   120000    -                  d4159bcbf1dddfe2   unpinned — paste the measured value
+    competitive pruning        v38   1300000   -                  8bc54c9948268aed   unpinned — paste the measured value
+    per-module elig tau        v39   120000    -                  6037b59ae289c878   unpinned — paste the measured value
+
+  14 mechanisms, 0 drifted, 0 vacuous, 14 unpinned, 0 broken
+
+  UNPINNED — every variant ran and moved the hash, and none has a
+  recorded value yet. Paste the measured column into kMechPins and
+  this becomes a test.
