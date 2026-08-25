@@ -1273,6 +1273,7 @@ bool run_imitate(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_vocallearn(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_teachsound(const std::vector<uint8_t>&, uint64_t, bool, const Capture&);
 bool run_retain(const std::vector<uint8_t>&, uint64_t, bool);
+bool run_capacity(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_m3(const std::vector<uint8_t>&, uint64_t, const Caregiver&, uint32_t, bool,
             const Capture&);
 bool run_g2(const std::vector<uint8_t>&, uint64_t, bool, const Regime&);

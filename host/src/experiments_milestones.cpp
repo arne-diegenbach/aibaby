@@ -4265,4 +4265,403 @@ bool run_retain(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) 
   return true;
 }
 
+
+// --- capacity: is teaching ONE degree of freedom, or two? -------------------
+//
+// `retain` found that a second lesson erases the first (retention 0.22 on 3
+// seeds) and read it as "one lesson at a time". That reading is confounded,
+// and this experiment exists because the confound is mine: BOTH lessons in
+// `retain` moved the same thing. The reward there is
+// |log(f1/target)| + |log(f2/target)|, a single scalar over both formants, and
+// the two vowels pulled F1 and F2 together. So the collapse has two readings
+// with opposite consequences:
+//
+//   one degree of freedom   there is exactly one teachable scalar, every
+//                           future milestone is a single setpoint, and
+//                           "teach it two things" is out of reach here.
+//   overlapping targets     the lessons collided because they competed for
+//                           the same formants, and orthogonal lessons would
+//                           coexist.
+//
+// The larynx makes the test possible: F1 and F2 are read from two SEPARATE
+// population-coded groups (§5.3, groups 2 and 3), so independent control is
+// structurally available even if learning cannot use it. Lesson A is scored on
+// F1 alone and lesson B on F2 alone. Their joint target is (320, 2500), which
+// is "cube" /i/ — the vowel `teachsound` already proved this creature can be
+// driven toward. The two halves of a known-reachable target.
+//
+// Five arms, and the value is almost entirely in the controls:
+//
+//   A only     teach F1, then nothing. What A retention looks like undisturbed
+//              — and its F2 column is the YOKE CHECK: if F2 drifts toward B's
+//              target without B ever being taught, the two formants are not
+//              independent in practice and the whole test is void.
+//   A then A   teach F1, then keep teaching F1. The tight control for "reward
+//              kept running": if A survives here but not in `A then B`, the
+//              loss is caused by B specifically and not by more reward, more
+//              perturbation or more time.
+//   A then B   the test.
+//   A+B        both dimensions taught together for the same teaching budget.
+//              REACHABILITY: if the larynx cannot hold both targets at once
+//              even when taught both at once, a collapse in `A then B` is
+//              anatomy rather than interference and says nothing about
+//              learning. This arm is what makes a negative result meaningful.
+//   never      taught nothing. `retain` needed this arm and did not have it on
+//              its first run: reward drives node perturbation, perturbation is
+//              scatter, the error is convex, so simply switching reward off
+//              lowers the measured error with nothing learned.
+//
+// Every arm is scored on BOTH errors in every window, against the fixed
+// targets, whatever it was taught. Scoring an arm against its own lesson would
+// measure a different quantity in each arm.
+namespace {
+
+constexpr uint64_t kCapTrial = 2800;
+constexpr uint64_t kCapEchoFrom = 900 + 200;
+constexpr uint64_t kCapEchoTo = 900 + 600;
+constexpr uint64_t kCapRewardFrom = 900;
+constexpr uint64_t kCapRewardTo = 900 + 800;
+constexpr double kCapBaselineAlpha = 0.02;
+constexpr uint32_t kCapHeard = 0;      // "ball" /a/ — what the caregiver says
+constexpr double kCapTargetF1 = 320.0;   // lesson A: F1 alone, downward
+constexpr double kCapTargetF2 = 2500.0;  // lesson B: F2 alone, upward
+
+// Which dimensions a lesson is scored on. kCapLessonNone is a phase with no
+// reward in it, which is a different thing from an arm that is never taught.
+enum CapLesson { kCapLessonNone = 0, kCapLessonA, kCapLessonB, kCapLessonAB };
+
+enum CapArm { kCapAOnly = 0, kCapAThenA, kCapAThenB, kCapBoth, kCapNever, kCapArmCount };
+
+struct CapRow {
+  double f1_before = 0.0, f1_taught = 0.0, f1_after = 0.0;
+  double f2_before = 0.0, f2_taught = 0.0, f2_after = 0.0;
+  double e1_before = 0.0, e1_taught = 0.0, e1_after = 0.0;
+  double e2_before = 0.0, e2_taught = 0.0, e2_after = 0.0;
+  uint32_t scored = 0;
+};
+
+// |log(said / wanted)| on one formant. Same shape as `formant_error`, one
+// dimension at a time, so the two are directly comparable and their sum is
+// exactly the two-dimensional error the other experiments use.
+inline double axis_error(double hz, double want) {
+  if (hz <= 1.0) return -1.0;
+  return std::fabs(std::log(hz / want));
+}
+
+inline double lesson_error(CapLesson lesson, double f1, double f2) {
+  switch (lesson) {
+    case kCapLessonA: return axis_error(f1, kCapTargetF1);
+    case kCapLessonB: return axis_error(f2, kCapTargetF2);
+    case kCapLessonAB: {
+      const double a = axis_error(f1, kCapTargetF1), b = axis_error(f2, kCapTargetF2);
+      return (a < 0.0 || b < 0.0) ? -1.0 : a + b;
+    }
+    default: return -1.0;
+  }
+}
+
+// What each arm is doing in the teaching phase and in the gap.
+struct CapPlan { CapLesson teach, gap; };
+constexpr CapPlan kCapPlan[kCapArmCount] = {
+    {kCapLessonA, kCapLessonNone},   // A only
+    {kCapLessonA, kCapLessonA},      // A then A
+    {kCapLessonA, kCapLessonB},      // A then B
+    {kCapLessonAB, kCapLessonNone},  // A+B
+    {kCapLessonNone, kCapLessonNone} // never
+};
+
+}  // namespace
+
+bool run_capacity(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  Regime regime;
+  regime.praise = kPraiseValue;
+  regime.scold = kScoldValue;
+  aibaby::Dna dna0;
+  if (dna0.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) {
+    std::printf("  setup failed: the genome does not load\n");
+    return false;
+  }
+  std::string error;
+  Timbre ruler;
+  if (!ruler.configure(dna0.header().audio, error)) {
+    std::printf("  the audibility ruler failed: %s\n", error.c_str());
+    return false;
+  }
+  // The same split `retain` uses: teaching gets what `teachsound` needs, the
+  // gap is long enough for a second lesson to land if one can, and the
+  // re-measure only has to be long enough to average.
+  const uint64_t teach_ticks = ticks * 60 / 100;
+  const uint64_t gap_ticks = ticks * 28 / 100;
+  const uint64_t after_ticks = ticks - teach_ticks - gap_ticks;
+
+  instrument("capacity", dna0.header().seed ^ 0x1C4Bu, ticks / kCapTrial, "trials");
+  std::printf("  teach %llu, second phase %llu, re-measure %llu ticks, one life\n",
+              (unsigned long long)teach_ticks, (unsigned long long)gap_ticks,
+              (unsigned long long)after_ticks);
+  std::printf("  lesson A is F1 -> %.0f Hz alone, lesson B is F2 -> %.0f Hz alone;\n"
+              "  their joint target is \"cube\" /i/, which teachsound reaches\n",
+              kCapTargetF1, kCapTargetF2);
+
+  CapRow rows[kCapArmCount];
+  const char* names[kCapArmCount] = {"A only", "A then A", "A then B", "A+B", "never"};
+  // Final-window timbres, kept per arm so the interference can be asked as an
+  // audibility question and not only as a pair of error numbers.
+  std::vector<std::vector<double>> final_ceps[kCapArmCount];
+
+  for (uint32_t a = 0; a < kCapArmCount; ++a) {
+    Session s;
+    if (!s.init(blob, error)) {
+      std::printf("  arm %s failed to hatch: %s\n", names[a], error.c_str());
+      return false;
+    }
+    const aibaby::DnaAudio& acfg = dna0.header().audio;
+    Ear ear;
+    if (!ear.configure(acfg, error)) {
+      std::printf("  transducer failed: %s\n", error.c_str());
+      return false;
+    }
+    VowelSource caregiver(acfg.sample_rate);
+    std::vector<float> pcm(acfg.sample_rate / 1000);
+    const uint32_t spt = acfg.sample_rate / 1000;
+    const Word& heard = kWords[kCapHeard];
+
+    const uint32_t n_teach = uint32_t(teach_ticks / kCapTrial);
+    const uint32_t n_gap = uint32_t(gap_ticks / kCapTrial);
+    const uint32_t n_after = uint32_t(after_ticks / kCapTrial);
+    const uint32_t n_total = n_teach + n_gap + n_after;
+    const uint32_t third = n_teach / 3 ? n_teach / 3 : 1;
+
+    std::deque<Praise> pending;
+    // One baseline per lesson kind. A shared baseline would carry lesson A's
+    // scale into lesson B's first comparisons and praise B for nothing.
+    double base[4] = {-1.0, -1.0, -1.0, -1.0};
+    uint32_t last_frame = 0;
+    uint64_t last_feedback = 0;
+    double s1[3] = {}, s2[3] = {}, sf1[3] = {}, sf2[3] = {};
+    uint32_t n_win[3] = {};
+
+    for (uint32_t trial = 0; trial < n_total; ++trial) {
+      const bool in_teach_phase = trial < n_teach;
+      const bool in_gap = trial >= n_teach && trial < n_teach + n_gap;
+      const CapLesson lesson = in_teach_phase ? kCapPlan[a].teach
+                             : in_gap         ? kCapPlan[a].gap
+                                              : kCapLessonNone;
+      double f1_acc = 0, f2_acc = 0;
+      uint32_t nv = 0;
+
+      for (uint64_t t = 0; t < kCapTrial; ++t) {
+        const uint64_t now = uint64_t(trial) * kCapTrial + t;
+        while (!pending.empty() && pending.front().tick <= now) {
+          s.brain.praise(pending.front().value);
+          pending.pop_front();
+        }
+        const bool sounding = t < 900;
+        caregiver.render(sounding ? heard.f0 : 0.0f, heard.f1, heard.f2,
+                         sounding ? 0.5f : 0.0f, pcm.data(), spt);
+        ear.tick(s.brain, pcm.data(), spt);
+        s.brain.step();
+
+        if (s.brain.vocal_frame() == last_frame) continue;
+        last_frame = s.brain.vocal_frame();
+        const aibaby::VocalParams& v = s.brain.voice();
+        const bool voiced = v.voicing > 0.5f && v.amplitude > kAmplitudeFloor;
+
+        if (lesson != kCapLessonNone && voiced && t >= kCapRewardFrom &&
+            t < kCapRewardTo && now - last_feedback >= regime.feedback_period) {
+          const double e = lesson_error(lesson, double(v.f1), double(v.f2));
+          if (e >= 0.0) {
+            last_feedback = now;
+            double& b = base[uint32_t(lesson)];
+            if (b >= 0.0) {
+              pending.push_back(Praise{now + regime.delay,
+                                       e < b ? regime.praise : regime.scold});
+            }
+            b = b < 0.0 ? e : b + kCapBaselineAlpha * (e - b);
+          }
+        }
+        if (t < kCapEchoFrom || t >= kCapEchoTo || !voiced) continue;
+        ++nv;
+        f1_acc += double(v.f1);
+        f2_acc += double(v.f2);
+      }
+      if (nv == 0) continue;
+      const double f1 = f1_acc / nv, f2 = f2_acc / nv;
+      const double e1 = axis_error(f1, kCapTargetF1), e2 = axis_error(f2, kCapTargetF2);
+      if (e1 < 0.0 || e2 < 0.0) continue;
+      ++rows[a].scored;
+
+      int w = -1;
+      if (trial < third) w = 0;
+      else if (in_teach_phase && trial >= n_teach - third) w = 1;
+      else if (trial >= n_teach + n_gap) w = 2;
+      if (w < 0) continue;
+      s1[w] += e1; s2[w] += e2; sf1[w] += f1; sf2[w] += f2; ++n_win[w];
+      if (w == 2) {
+        std::vector<double> c = ruler.of(double(dna0.header().vocal.f0_min), f1, f2, 0.4);
+        if (!c.empty()) final_ceps[a].push_back(c);
+      }
+    }
+
+    CapRow& r = rows[a];
+    const double inv0 = n_win[0] ? 1.0 / n_win[0] : 0.0;
+    const double inv1 = n_win[1] ? 1.0 / n_win[1] : 0.0;
+    const double inv2 = n_win[2] ? 1.0 / n_win[2] : 0.0;
+    r.e1_before = s1[0] * inv0; r.e2_before = s2[0] * inv0;
+    r.e1_taught = s1[1] * inv1; r.e2_taught = s2[1] * inv1;
+    r.e1_after = s1[2] * inv2;  r.e2_after = s2[2] * inv2;
+    r.f1_before = sf1[0] * inv0; r.f2_before = sf2[0] * inv0;
+    r.f1_taught = sf1[1] * inv1; r.f2_taught = sf2[1] * inv1;
+    r.f1_after = sf1[2] * inv2;  r.f2_after = sf2[2] * inv2;
+  }
+
+  std::printf("\n    %-9s %-8s %-24s %-24s\n", "arm", "trials",
+              "F1 error  before/taught/after", "F2 error  before/taught/after");
+  for (uint32_t a = 0; a < kCapArmCount; ++a) {
+    const CapRow& r = rows[a];
+    std::printf("    %-9s %-8u %6.4f %6.4f %6.4f      %6.4f %6.4f %6.4f\n", names[a],
+                r.scored, r.e1_before, r.e1_taught, r.e1_after, r.e2_before,
+                r.e2_taught, r.e2_after);
+  }
+  std::printf("\n    %-9s %-28s %-28s\n", "arm", "F1 Hz  before -> after",
+              "F2 Hz  before -> after");
+  for (uint32_t a = 0; a < kCapArmCount; ++a) {
+    const CapRow& r = rows[a];
+    std::printf("    %-9s %6.0f -> %-6.0f (want %.0f)   %6.0f -> %-6.0f (want %.0f)\n",
+                names[a], r.f1_before, r.f1_after, kCapTargetF1, r.f2_before,
+                r.f2_after, kCapTargetF2);
+  }
+
+  // Audibility of the interference: the same creature at the same point in its
+  // life, differing only in what happened in the middle phase.
+  double d_int = 0.0, d_null = 0.0;
+  if (final_ceps[kCapAOnly].size() >= 12 && final_ceps[kCapAThenB].size() >= 12) {
+    std::vector<std::vector<double>> ceps;
+    std::vector<int> label;
+    for (const auto& c : final_ceps[kCapAOnly]) { ceps.push_back(c); label.push_back(0); }
+    for (const auto& c : final_ceps[kCapAThenB]) { ceps.push_back(c); label.push_back(1); }
+    const double d2 = cepstral_dprime(ceps, label, nullptr, true);
+    d_int = d2 >= 0.0 ? std::sqrt(d2) : -std::sqrt(-d2);
+    aibaby::Rng rng;
+    rng.seed(dna0.header().seed ^ 0x1C4Bu);
+    double ns = 0.0;
+    for (uint32_t p = 0; p < 32; ++p) {
+      std::vector<int> sh = label;
+      for (size_t i = sh.size(); i > 1; --i) std::swap(sh[i - 1], sh[rng.next() % i]);
+      const double nd = cepstral_dprime(ceps, sh, nullptr, true);
+      ns += nd >= 0.0 ? std::sqrt(nd) : -std::sqrt(-nd);
+    }
+    d_null = ns / 32.0;
+  }
+
+  // The reading. `gain` is how much of lesson A's error the arm still has gone
+  // from its own starting point, so it is a within-arm ratio and a creature
+  // that simply says /i/ better than average cannot flatter it.
+  auto gain1 = [](const CapRow& r) {
+    return r.e1_before > 1e-6 ? (r.e1_before - r.e1_after) / r.e1_before : 0.0;
+  };
+  auto gain2 = [](const CapRow& r) {
+    return r.e2_before > 1e-6 ? (r.e2_before - r.e2_after) / r.e2_before : 0.0;
+  };
+
+  std::printf("\n  `gain` is (before - after) / before on ONE formant: the fraction of\n"
+              "  that axis's starting error the arm has lost by the end. The never arm\n"
+              "  is what the same window reads with no lesson in it at all.\n");
+  std::printf("\n    %-9s %-12s %-12s\n", "arm", "A gain (F1)", "B gain (F2)");
+  for (uint32_t a = 0; a < kCapArmCount; ++a) {
+    std::printf("    %-9s %+11.3f %+11.3f\n", names[a], gain1(rows[a]), gain2(rows[a]));
+  }
+
+  const double never1 = gain1(rows[kCapNever]), never2 = gain2(rows[kCapNever]);
+  const double a_undisturbed = gain1(rows[kCapAOnly]) - never1;
+  const double a_more_reward = gain1(rows[kCapAThenA]) - never1;
+  const double a_after_b = gain1(rows[kCapAThenB]) - never1;
+  const double b_landed = gain2(rows[kCapAThenB]) - never2;
+  const double yoke = gain2(rows[kCapAOnly]) - never2;
+  const double both1 = gain1(rows[kCapBoth]) - never1, both2 = gain2(rows[kCapBoth]) - never2;
+
+  std::printf("\n  against the never-taught arm:\n"
+              "    A undisturbed        %+.3f\n"
+              "    A with more A        %+.3f   (reward kept running, same lesson)\n"
+              "    A after B            %+.3f   <- the test\n"
+              "    B landed             %+.3f   (did the second lesson do anything?)\n"
+              "    yoke check           %+.3f   (F2 in the arm that never learned B)\n"
+              "    A+B together         %+.3f / %+.3f   (reachability of the pair)\n",
+              a_undisturbed, a_more_reward, a_after_b, b_landed, yoke, both1, both2);
+  if (final_ceps[kCapAOnly].size() >= 12) {
+    std::printf("    interference d'      %.3f against a null of %.3f\n", d_int, d_null);
+  }
+
+  // Powered? The question only exists if lesson A landed in the first place,
+  // and the honest answer when it did not is UNDERPOWERED, not a null.
+  if (a_undisturbed <= 0.02 || a_more_reward <= 0.02) {
+    std::printf("\n  UNDERPOWERED — lesson A did not land far enough to have anything to\n"
+                "  interfere with (%+.3f undisturbed, %+.3f with more A, against the\n"
+                "  never-taught arm). Capacity for a lesson that was never learned is\n"
+                "  not a measurement. Raise --ticks.\n", a_undisturbed, a_more_reward);
+    return false;
+  }
+  if (both1 <= 0.02 || both2 <= 0.02) {
+    std::printf("\n  VOID — the A+B arm could not hold both targets even when taught both\n"
+                "  at once (%+.3f / %+.3f). The joint target is not reachable for this\n"
+                "  creature, so nothing the sequential arms do can distinguish\n"
+                "  interference from anatomy.\n", both1, both2);
+    return false;
+  }
+  if (yoke > 0.5 * b_landed && yoke > 0.02) {
+    std::printf("\n  YOKED — F2 moved %+.3f toward lesson B's target in the arm that was\n"
+                "  never taught B, against %+.3f in the arm that was. The two formants\n"
+                "  are not independent in practice, so this pair cannot separate one\n"
+                "  degree of freedom from two.\n", yoke, b_landed);
+    return false;
+  }
+
+  // TWO ratios, because the two obvious controls answer different questions
+  // and quoting only one of them overstates whichever case you prefer.
+  //
+  //   retained   A after B, over A undisturbed. "Did the lesson survive?" The
+  //              gap is quiet in the denominator, so this is the fair analogue
+  //              of `retain`'s retention and directly comparable to its 0.22.
+  //   split      A after B, over A with more A. "What did the creature give up
+  //              by spending the second phase on B?" Reward runs in both, so
+  //              this isolates WHICH lesson the reward went to.
+  const double retained = a_undisturbed > 1e-6 ? a_after_b / a_undisturbed : 0.0;
+  const double split = a_more_reward > 1e-6 ? a_after_b / a_more_reward : 0.0;
+  std::printf("\n  A retained            %.2f   (A after B / A undisturbed — the number\n"
+              "                               comparable with retain's 0.22)\n"
+              "  A against more A      %.2f   (what spending the second phase on B\n"
+              "                               gave up, with reward running in both)\n",
+              retained, split);
+  // Deliberately NOT a threshold on the cost. The first version of this
+  // experiment printed a binary verdict at -0.25 of A's gain, and three seed
+  // families straddled it: -0.14, +0.08, -0.43 returned "two degrees of
+  // freedom" twice and "one" once from what is plainly one distribution. The
+  // underlying quantity is continuous and its seed spread is wider than any
+  // line drawn through it, so the RATIO is the finding and the label is only a
+  // reading aid. Moving the line until the seeds agree would have been fitting
+  // the verdict to the data.
+  if (b_landed <= 0.02) {
+    std::printf("\n  B NEVER LANDED — the second lesson did nothing, so whatever happened\n"
+                "  to A is not interference from it. Lesson B on F2 alone may simply be\n"
+                "  the harder axis; this is not an answer to the capacity question.\n");
+  } else if (retained >= 0.5) {
+    std::printf("\n  BOTH LESSONS COEXIST — B landed (%+.3f) and A kept %.0f%% of what it\n"
+                "  had. That is a different creature from the one `retain` measured,\n"
+                "  where a CONFLICTING second lesson left 22%%. But the two lessons do\n"
+                "  compete: A kept only %.0f%% of what continuing A would have bought,\n"
+                "  so the second degree of freedom is real and is not free.\n"
+                "  One seed cannot settle this — the ratio moves by ~0.25 across seed\n"
+                "  families. Three agreeing is the claim; one is an anecdote.\n",
+                b_landed, retained * 100.0, split * 100.0);
+  } else {
+    std::printf("\n  A DID NOT SURVIVE — B landed (%+.3f) and A kept only %.0f%%, on\n"
+                "  ORTHOGONAL targets, with a reachability control saying the pair can\n"
+                "  be held at once. That would make teaching a single setpoint.\n"
+                "  One seed cannot settle this — the ratio moves by ~0.25 across seed\n"
+                "  families. Three agreeing is the claim; one is an anecdote.\n",
+                b_landed, retained * 100.0);
+  }
+  (void)verbose;
+  return true;
+}
+
 }  // namespace aibaby_host

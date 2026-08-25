@@ -135,6 +135,7 @@ a canvas, so each has a headless experiment that prints a number and a verdict.
 ./build/aibaby --experiment vocallearn  --ticks 3400000 # does the echo improve with feedback (OPEN)
 ./build/aibaby --experiment teachsound  --ticks 3400000 # M1c: teach it a vowel; --wav to hear it
 ./build/aibaby --experiment retain      --ticks 5600000 # does it keep the lesson; does sleep erase it
+./build/aibaby --experiment capacity    --ticks 5600000 # can it hold two lessons at once
 ./build/aibaby --experiment snapshot    --ticks 2400000 # §8: resume is exact
 ```
 
@@ -436,8 +437,23 @@ Every number on this page comes from the genome in [dna/default.toml](dna/defaul
 as it currently stands. **The whole suite above passes except `m3`** — G1,
 calibrate, babble, audio, vision, M2, G2, sleep, G4 and snapshot are all green,
 and G3 is the one milestone still open. Shipped hash `23c4eb2c7c45d05c`;
-`--experiment verify` reads 18 of 18 as expected on the fast tier and
-`verify-long` 32 of 32 — see [The suite, both tiers](#the-suite-both-tiers).
+`--experiment verify` reads 19 of 19 as expected on the fast tier and
+`verify-long` 39 of 39 — see [The suite, both tiers](#the-suite-both-tiers).
+
+**What teaching can and cannot do is now measured rather than guessed.** Three
+experiments bound it. `teachsound` (M1c) says praise alone moves the voice toward
+a target it never hears, audibly. `retain` says the lesson is kept, keeps
+improving, and **sleep does not erase it** — the first time any part of §3.6 has
+been shown harmless to a learned behaviour, against a hostile prior. `capacity`
+says the creature holds **two** lessons at once on orthogonal output dimensions
+(0.84 of the first kept while the second lands), which **corrects** this page's
+earlier "one lesson at a time" reading of `retain` — that collapse was two
+lessons competing for the same formants. The remaining limits are real and
+narrow: the two dimensions share one reward channel and compete for it (0.58
+against a continued single lesson), teaching both at once is worse than teaching
+them in turn, and every target is still *fixed* rather than conditional on what
+the creature heard — which is `vocallearn`'s +24 against −0.1 and the reason G3
+is closed.
 
 **DNA v36–v39 are four mechanisms built since, and all four ship off**, so none
 of the numbers above moved: dynamic synapses after Webb's cricket (v36),
@@ -3375,14 +3391,14 @@ until ~1.04M ticks.
 
 ### The suite, both tiers
 
-Run 2026-08-24 on the shipped genome, with DNA v36–v39 all switched off.
+Run 2026-08-25 on the shipped genome, with DNA v36–v40 all switched off.
 
 ```
---experiment verify           determinism PASS   pinned hash PASS   18 of 18 as expected
---experiment verify-long      determinism PASS   pinned hash PASS   33 of 33 as expected
+--experiment verify           determinism PASS   pinned hash PASS   19 of 19 as expected
+--experiment verify-long      determinism PASS   pinned hash PASS   39 of 39 as expected
 --experiment mechverify       15 mechanisms, 0 drifted, 0 vacuous, 0 unpinned, 0 broken
-                              1 open milestone still failing, which is what
-                              "as expected" means for m3
+                              2 open milestones still failing, which is what
+                              "as expected" means for them
 ```
 
 Both tiers green, and the pinned hash is still `23c4eb2c7c45d05c` — four
@@ -3794,8 +3810,14 @@ helpful.
 of three seeds it is **0.03 and 0.06** — back to baseline as if never taught. The
 formants move exactly as interference predicts: F1 564 → 580 (back up, away from
 /i/'s 320 and toward the new target's 850) and F2 1784 → 1727 (down, away from
-2500). This is what `vocallearn` predicts: **one non-conditional pathway, so one
-lesson at a time.**
+2500).
+
+**"One lesson at a time" was the wrong reading of this, and `capacity` below is
+what corrects it.** Both lessons here move the *same thing*: the reward is
+|log(f1/target)| + |log(f2/target)|, one scalar over both formants, and the two
+vowels pulled F1 and F2 in opposite directions. The interference is real and the
+generalisation from it was not. On orthogonal targets the same creature holds
+**two** lessons at once.
 
 #### The control refuted the hypothesis it was built to measure
 
@@ -3832,6 +3854,91 @@ whether that arm is being taught are two different things.
 arm retained 0.56, which reads as "half survives, so there is more capacity here
 than `vocallearn` implied". On the other two it is 0.03 and 0.06. The one-seed
 reading was wrong and the three-seed one agrees with everything else on this page.
+
+### `capacity` — teaching has at least two degrees of freedom, and they compete
+
+`retain` found that a second lesson erases the first and this page read it as
+"one teachable scalar". That reading was confounded, and the confound was ours:
+both of its lessons moved the same two formants through one summed error, so a
+collapse could equally have meant *the targets overlapped*. The two readings have
+opposite consequences — one says every future milestone is a single setpoint,
+the other says orthogonal lessons would have coexisted — so the question was
+worth an experiment rather than a paragraph.
+
+The larynx makes the test possible. F1 and F2 are read from two **separate**
+population-coded groups (§5.3, `group_value_[2]` and `[3]`), so independent
+control is structurally available even if learning cannot use it. Lesson A is
+scored on F1 alone, lesson B on F2 alone, and their joint target (320, 2500) is
+"cube" /i/ — the vowel `teachsound` already proved reachable. One known-reachable
+target, split into two orthogonal halves.
+
+Five arms, and most of the value is in the three controls:
+
+| arm | teach phase | second phase | what it is for |
+|---|---|---|---|
+| `A only` | F1 | — | A undisturbed; its F2 column is the **yoke check** |
+| `A then A` | F1 | F1 | **reward kept running** on the same lesson |
+| `A then B` | F1 | F2 | the test |
+| `A+B` | both | — | **reachability** of the pair |
+| `never` | — | — | the scatter control `retain` needed and lacked |
+
+Every arm is scored on both errors in every window against the fixed targets,
+whatever it was taught; scoring each arm against its own lesson would measure a
+different quantity in each arm. Three seed families, 5.6M ticks each:
+
+| | seed 1 | seed 2 | seed 3 | mean |
+|---|---|---|---|---|
+| A undisturbed | +0.335 | +0.344 | +0.310 | **+0.330** |
+| A with more A | +0.511 | +0.459 | +0.495 | **+0.488** |
+| **A after B** | +0.289 | +0.371 | +0.176 | **+0.279** |
+| **B landed** | +0.206 | +0.129 | +0.197 | **+0.177** |
+| yoke check | +0.069 | −0.067 | +0.013 | **+0.005** |
+| A retained | 0.86 | 1.08 | 0.57 | **0.84** |
+| A against more A | 0.57 | 0.81 | 0.36 | **0.58** |
+| interference d′ | 4.30 | 4.83 | 7.34 | (nulls −0.14, −0.06, −0.03) |
+
+**Both lessons coexist.** A keeps a mean **0.84** of its gain while B lands on
+3 of 3. On the same footing `retain`'s *conflicting* second lesson left **0.22**.
+The difference between 0.84 and 0.22 is the whole finding: interference in this
+creature is about competing for the same output dimension, not about a single
+teachable scalar.
+
+**The second degree of freedom is real and is not free.** Against `A then A` —
+reward running in both arms, so the only difference is *which* lesson it went to
+— A keeps only **0.58** of what continuing A would have bought. Two teachable
+dimensions, one reward channel, and they compete for it.
+
+**Teaching both at once is worse than teaching them in turn.** The `A+B` arm gets
++0.132 / +0.244 / +0.182 on F1 where `A only` gets +0.335 / +0.344 / +0.310 on
+the same teaching budget. One scalar reward split across two dimensions does each
+of them worse than spending the whole budget on one and then the other.
+
+**The formants really are independent here.** The yoke check — F2 in the arm that
+was never taught B — averages **+0.005** across seeds (+0.069, −0.067, +0.013).
+Seed 1's positive reading alone would have looked like coupling; three seeds say
+it is noise. Without this the orthogonality the experiment rests on would be an
+assumption rather than a measurement.
+
+#### The verdict line was fitted to the data, and that is why it is gone
+
+The first version printed a **binary verdict** thresholded at −0.25 of A's gain.
+The three seeds straddled it — costs of −0.14, +0.08 and −0.43 — and it returned
+"two degrees of freedom" twice and "one" once from what is plainly one
+distribution. The quantity is continuous and its seed spread is wider than any
+line drawn through it.
+
+The fix was **not** to move the threshold until the seeds agreed. That is fitting
+the verdict to the data, it would have worked, and nothing in the output would
+have shown it had happened. The readout now prints the two ratios and states
+outright that one seed cannot settle the question; the reasoning sits in a
+comment at the decision so the next person cannot quietly undo it. This is the
+same failure mode as `retain`'s 0.56 seed, caught one stage earlier.
+
+`capacity` refuses rather than nulls in three ways: **UNDERPOWERED** if lesson A
+never landed, **VOID** if the `A+B` arm cannot hold both targets even when taught
+both at once — which would make a sequential collapse anatomy rather than
+interference — and **YOKED** if F2 moves toward B's target in the arm that never
+learned it.
 
 ### What this round taught about probes, which cost more than the mechanisms did
 
