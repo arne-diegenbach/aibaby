@@ -11,8 +11,11 @@ There is no pretrained data anywhere in this repository. Nothing is downloaded.
 ## History
 
 A few years ago (2023) I decided to spent my time during a nice vacation in 
-Corsica (France) to write a modern version of the Tamagotchi. Now I thought
-it would be a good moment to see if modern LLM's could help and do better so
+Corsica (France) to write a modern version of the Tamagotchi. I watched all videos
+on YouTube on how a brain is formed and develops, very interesting but I had limited results.
+(Yes, I am a very bad holiday partner as I bring my laptop, learning something gives my
+brain the best long term reward).
+Now I thought it would be a good moment to see if modern LLM's could help and do better so
 I gave Claude Code my code. It was not easy to get it to help. It kept pointing at
 the Claude API I should use.
 The words ***Tamagotchi*** and ***offline*** are the magic word to get it to
@@ -130,6 +133,7 @@ a canvas, so each has a headless experiment that prints a number and a verdict.
 ./build/aibaby --experiment errprobe    --ticks 600000  # DNA v40: does the tuft learn to carry an error
 ./build/aibaby --experiment relayprobe  --ticks 240000  # Webb's two-stage circuit; needs a genome with a relay
 ./build/aibaby --experiment vocallearn  --ticks 3400000 # does the echo improve with feedback (OPEN)
+./build/aibaby --experiment teachsound  --ticks 3400000 # M1c: teach it a vowel; --wav to hear it
 ./build/aibaby --experiment snapshot    --ticks 2400000 # §8: resume is exact
 ```
 
@@ -420,6 +424,7 @@ of an hour.
 | Milestone | State |
 |---|---|
 | **M0** skeleton | done |
+| **M1c** taught vocalisation | **met** — praise alone moves the creature's vowel toward a target it never hears: error down **+15.9 points** against its own yoked control and the change is audible at **d′ 5.57** (null −0.01, yoked 1.08), 3 of 3 seed families. The first taught change to *what* this creature says rather than how often |
 | **M1** closed audio loop | **done — G2 met.** Rewarded vocalisations rise within the session (×1.35) and praise beats its own yoked control in **23 of 27 creatures** across three seed families, and 9 of 9 at 420 s. What closed it was directional exploration (DNA v10), which was not aimed at reward at all |
 | **M2** vision | **done** — camera → retina → B3 → B1, discriminates present from absent at 98%, and 86% with firing rate divided out |
 | **M3** cross-modal association | **built and measured, G3 not met — and now settled rather than open.** The baby echoes a word it hears (0.75) and the seen object *does* now reach the larynx (0.654, up from 0.515, via `vision→vocal`), yet naming still reads taught−random **−0.014** with 0 of 5 creatures over the 0.75 bar. Delivery is no longer the limit; conditioning is |
@@ -3694,6 +3699,60 @@ the taught arm read −1.8 and the control read −1.2 — a null that looked li
 finding and was a fact about reward density. G2 delivers every 150 ticks while
 the creature is making the sound, nineteen times denser, and that is the regime
 this creature's one working learning rule was measured under.
+
+### M1c — the creature can be TAUGHT a sound, and you can hear it: **met**
+
+`vocallearn`'s positive control was only ever meant to be a control, and it
+produced the largest effect this project has had on the voice. It had never been
+asked the question everything else here is held to: **is it audible?** That bar
+exists because "cube and ball produce distinguishable vocalisations" was true at
+0.75 in a readout and inaudible to any listener.
+
+`teachsound` asks it. The caregiver says **"ball"** (an open /a/) and praises the
+creature toward **"cube"** (a close /i/) — deliberately a *different* vowel from
+the one it hears, so a shift toward the target cannot be the innate ear-to-larynx
+pathway doing its job. Praise when a moment lands closer to the target than this
+creature usually gets, a mild no when further. Nothing else.
+
+Three seed families, 3.4M ticks, ~930 scored trials per arm:
+
+| seed | error vs yoked | d′ taught | d′ yoked | null |
+|---|---|---|---|---|
+| 20260809 | +12.9 | 5.298 | 0.585 | −0.027 |
+| 20360812 | +23.5 | **7.093** | 1.836 | −0.028 |
+| 20451117 | +11.3 | 4.326 | 0.833 | +0.018 |
+| **mean** | **+15.9** | **5.57** | **1.08** | **−0.012** |
+
+And the formants move the right way on 3 of 3 — toward a target of F1 320,
+F2 2500:
+
+```
+F1   609 → 564    605 → 535    605 → 560
+F2  1685 → 1789   1707 → 1864  1695 → 1776
+```
+
+**d′ 5.57 mean.** At d′ = 1 a listener gets about 76% right in a two-alternative
+forced choice; M1b cleared the bar at 1.37. This is four times that. `--wav`
+writes the early utterance, the late one and the target, half a second each, so
+the number is checkable by ear rather than taken on trust.
+
+**One caveat, and it is the reason the yoked arm exists.** The creature's voice
+drifts on its own: the yoked arm reads d′ 0.585 / 1.836 / 0.833, and on one seed
+that drift is itself above the audibility bar. So the claim is not "the voice
+changed" — it is that the taught change is **three to four times the drift on
+every seed**, with the error moving toward the target only in the taught arm
+(+15.9 points against −2.8 to +0.8).
+
+**What is new about it.** G2 was taught behaviour too, but it changed how *much*
+the creature vocalises. This changes **what it says**, and a listener can tell.
+It is the first taught change to the content of this creature's voice, and it
+rests entirely on the one learning rule here that has ever worked — node
+perturbation, which shifts a whole posture in one direction and, as
+`vocallearn` established on the same day, cannot be made conditional.
+
+So the creature's abilities divide cleanly. **What it says in response to what it
+hears is innate** and cannot be reshaped by reward. **What it says can be taught**,
+as long as you are teaching it one thing.
 
 ### What this round taught about probes, which cost more than the mechanisms did
 

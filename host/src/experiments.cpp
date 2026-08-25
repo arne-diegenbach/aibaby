@@ -120,6 +120,11 @@ const Spec kSpecs[] = {
      "no requirement; G3 is the open milestone, so FAIL is the current answer"},
     {"g2", kDefaultMinimum, Expect::kPass, Tier::kLong, "no requirement"},
     {"snapshot", kDefaultMinimum, Expect::kPass, Tier::kLong, "no requirement"},
+    {"teachsound", 3400000, Expect::kPass, Tier::kLong,
+     "the same length vocallearn's positive control needs, because this IS that\n"
+     "  arm asked whether its effect is audible. It was OPEN for one day and it\n"
+     "  is met: +15.9 points against the yoke and d' 5.57 against a null of\n"
+     "  -0.01, 3 of 3 seed families"},
     {"vocallearn", 3400000, Expect::kOpen, Tier::kLong,
      "measured, and the number that sets it is the POSITIVE CONTROL. `fixed - yoked`\n"
      "  reads -1.2 at 560000 with one reward per trial, +1.0 at 560000 on G2's\n"
@@ -221,7 +226,14 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   // answers something: what it sounds like at all, and what the milestone
   // actually scored. Saying so is the point — an ignored flag is worse than a
   // missing one, because the missing file looks like a silent baby.
-  if (cap.wanted() && name != "babble" && name != "m3") {
+  // `teachsound` joins them, and for the same reason: its whole claim is about
+  // a sound, and a claim about a sound that cannot be listened to is a number.
+  // `--save` still is not wired into it, so that is refused separately.
+  if (cap.wanted() && name == "teachsound" && !output.save.empty()) {
+    std::printf("  --save is not wired into teachsound; --wav is.\n");
+    return false;
+  }
+  if (cap.wanted() && name != "babble" && name != "m3" && name != "teachsound") {
     std::printf("  --wav/--save are not wired into %s; use babble or m3.\n", name.c_str());
     return false;
   }
@@ -249,6 +261,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "audprobe") ok = run_audprobe(dna_blob, ticks, verbose);
   else if (name == "imitate") ok = run_imitate(dna_blob, ticks, verbose);
   else if (name == "vocallearn") ok = run_vocallearn(dna_blob, ticks, verbose);
+  else if (name == "teachsound") ok = run_teachsound(dna_blob, ticks, verbose, cap);
   else if (name == "restate") ok = run_restate(dna_blob, ticks, verbose);
   else if (name == "eligprobe") ok = run_eligprobe(dna_blob, ticks, verbose);
   else if (name == "dwprobe") ok = run_dwprobe(dna_blob, ticks, verbose);
