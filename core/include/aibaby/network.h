@@ -96,6 +96,23 @@ class Network {
   // DNA v20: the same pass, but each module weights the four channels itself.
   void apply_reward_channels(const Scalar* channels);
 
+  // EXPERIMENT ONLY — an ORACLE, not a mechanism. Restricts the next reward
+  // cash-ins to one contiguous range of neurons: node perturbation runs only
+  // for those neurons, and a synapse takes the reward term only if its TARGET
+  // is one of them. Traces, Hebbian and burst terms are untouched, because
+  // those are not what the reward broadcast is.
+  //
+  // This hands the creature the credit assignment it cannot compute, so it
+  // measures an UPPER BOUND — what a perfectly targeted neuromodulator would
+  // buy — and never a behaviour the creature could learn on its own. It exists
+  // for the same reason the oracle fovea does: to price a mechanism before
+  // building one. No genome field reaches it and the shipped creature never
+  // sets it, which is why the pinned hash does not move.
+  void set_reward_mask(uint32_t lo, uint32_t hi) {
+    reward_mask_ = true; rm_lo_ = lo; rm_hi_ = hi;
+  }
+  void clear_reward_mask() { reward_mask_ = false; }
+
  private:
   void apply_reward_impl(const Scalar* per_module, bool any);
   void capture_ffi_weights();
@@ -511,6 +528,8 @@ class Network {
   uint16_t* syn_cap_ = nullptr;
   uint16_t* in_count_ = nullptr;
   uint16_t* refrac_ticks_ = nullptr;
+  bool reward_mask_ = false;   // see set_reward_mask: experiment oracle, off by default
+  uint32_t rm_lo_ = 0, rm_hi_ = 0;
   uint8_t* module_of_ = nullptr;
   uint8_t* is_inhib_ = nullptr;
   // Tombstone rather than compaction (§3.4's "neurons left with no surviving

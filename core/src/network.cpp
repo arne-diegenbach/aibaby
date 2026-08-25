@@ -1509,6 +1509,7 @@ void Network::apply_reward_impl(const Scalar* per_module, bool any) {
       for (uint32_t k = 0; k < ms.count; ++k) {
         const uint32_t i = ms.begin + k;
         if (dead_[i]) continue;
+        if (reward_mask_ && (i < rm_lo_ || i >= rm_hi_)) continue;
         bias_[i] = clampf(bias_[i] + step * perturb_[i], -perturb_max_, perturb_max_);
       }
     }
@@ -1592,7 +1593,10 @@ void Network::apply_reward_impl(const Scalar* per_module, bool any) {
                 clampf(syn_weight_[syn] + eta_b * credit * signal * sign, lo, hi);
           }
         }
-        const Scalar r_syn = per_module[module_of_[syn_target_[syn]]];
+        const uint32_t tgt_n = syn_target_[syn];
+        const Scalar r_syn = (reward_mask_ && (tgt_n < rm_lo_ || tgt_n >= rm_hi_))
+                                 ? kZero
+                                 : per_module[module_of_[tgt_n]];
         if (r_syn != kZero) {
           // eta_scale is the *postsynaptic* module's, which is why it is read
           // through syn_target_ rather than taken from the loop's module: this

@@ -4664,4 +4664,261 @@ bool run_capacity(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
   return true;
 }
 
+
+// --- credit: what a perfectly targeted neuromodulator would buy -------------
+//
+// `capacity` found two teachable degrees of freedom that COMPETE: teaching
+// lesson B costs lesson A 0.42 of what continuing A would have bought, even
+// though the two lessons drive disjoint neuron groups. The mechanism of that
+// cost is visible in `apply_reward_impl`. Node perturbation — the rule that
+// actually shapes this larynx — nudges `bias_[i]` for EVERY neuron in the
+// motor module, scaled by one scalar. While B is being taught, the F1 group's
+// neurons keep receiving updates driven by a reward uncorrelated with anything
+// they did, so what A taught them random-walks away.
+//
+// So the obvious next mechanism is a neuromodulator that reaches some neurons
+// and not others. DNA v20 already splits reward into four channels with
+// per-MODULE gains — and cannot do this, because both lessons live in the same
+// module. Per-neuron gating is kernel surgery.
+//
+// BEFORE building it, price it. `Network::set_reward_mask` hands the creature
+// the credit assignment it cannot compute: during lesson A, reward reaches only
+// the F1 group; during lesson B, only the F2 group. That is an ORACLE. It is
+// not a mechanism, it is not learnable, and no genome field reaches it. What it
+// measures is the UPPER BOUND — if a perfectly targeted neuromodulator existed,
+// how much of the interference would go away? If the answer is "none", then no
+// mechanism that discovers credit assignment can help here and the whole line
+// closes for the price of one experiment. This is the move the oracle fovea
+// made for foveation, and it reversed that decision.
+//
+// Two honest caveats, both of which belong in any reading of the numbers:
+//
+//   The mask blocks ALL reward-driven plasticity outside the target group, not
+//   just praise. `reward_.effective` carries hunger, comfort and curiosity too,
+//   so the other groups are frozen with respect to reward, not merely
+//   un-praised. That is the intervention, and it is stronger than a real
+//   neuromodulator would be.
+//
+//   Masking removes plasticity, so a masked arm may simply learn LESS. That is
+//   why retention is read within each condition — `A then B*` against
+//   `A only*`, never against the broadcast arm's denominator.
+namespace {
+
+enum CrArm { kCrAOnly = 0, kCrAThenB, kCrAOnlyM, kCrAThenBM, kCrNever, kCrArmCount };
+
+struct CrPlan { CapLesson teach, gap; bool masked; };
+constexpr CrPlan kCrPlan[kCrArmCount] = {
+    {kCapLessonA, kCapLessonNone, false},  // A only        broadcast
+    {kCapLessonA, kCapLessonB,    false},  // A then B      broadcast
+    {kCapLessonA, kCapLessonNone, true},   // A only*       targeted
+    {kCapLessonA, kCapLessonB,    true},   // A then B*     targeted
+    {kCapLessonNone, kCapLessonNone, false} // never
+};
+
+constexpr uint32_t kCrGroupF1 = 2;  // VocalDecoder reads group_value_[2] as F1
+constexpr uint32_t kCrGroupF2 = 3;  // and [3] as F2 — see core/src/senses.cpp
+
+}  // namespace
+
+bool run_credit(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  Regime regime;
+  regime.praise = kPraiseValue;
+  regime.scold = kScoldValue;
+  aibaby::Dna dna0;
+  if (dna0.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) {
+    std::printf("  setup failed: the genome does not load\n");
+    return false;
+  }
+  std::string error;
+  const uint64_t teach_ticks = ticks * 60 / 100;
+  const uint64_t gap_ticks = ticks * 28 / 100;
+  const uint64_t after_ticks = ticks - teach_ticks - gap_ticks;
+
+  instrument("credit", dna0.header().seed ^ 0x3D91u, ticks / kCapTrial, "trials");
+  std::printf("  the same three phases and the same two orthogonal lessons as\n"
+              "  `capacity`; the two starred arms deliver reward ONLY to the neuron\n"
+              "  group the current lesson is about. That is an ORACLE — the creature\n"
+              "  cannot compute this assignment — so it prices a mechanism, it is not\n"
+              "  one, and no genome field reaches it.\n");
+
+  CapRow rows[kCrArmCount];
+  const char* names[kCrArmCount] = {"A only", "A then B", "A only*", "A then B*", "never"};
+
+  for (uint32_t a = 0; a < kCrArmCount; ++a) {
+    Session s;
+    if (!s.init(blob, error)) {
+      std::printf("  arm %s failed to hatch: %s\n", names[a], error.c_str());
+      return false;
+    }
+    aibaby::Network& net = s.brain.network();
+    const uint32_t modules = dna0.module_count();
+    uint32_t m_vocal = modules;
+    for (uint32_t m = 0; m < modules; ++m) {
+      if (std::strcmp(net.module_dna(m).name, "vocal") == 0) { m_vocal = m; break; }
+    }
+    if (m_vocal == modules) {
+      std::printf("  setup failed: no module named \"vocal\"\n");
+      return false;
+    }
+    const aibaby::ModuleState& vms = net.module(m_vocal);
+    const uint32_t f1_lo = vms.begin + aibaby::slice_begin(vms.count, aibaby::kVocalGroups, kCrGroupF1);
+    const uint32_t f1_hi = vms.begin + aibaby::slice_begin(vms.count, aibaby::kVocalGroups, kCrGroupF1 + 1);
+    const uint32_t f2_lo = vms.begin + aibaby::slice_begin(vms.count, aibaby::kVocalGroups, kCrGroupF2);
+    const uint32_t f2_hi = vms.begin + aibaby::slice_begin(vms.count, aibaby::kVocalGroups, kCrGroupF2 + 1);
+    if (a == 0) {
+      std::printf("  vocal module %u, neurons %u..%u; F1 group %u..%u, F2 group %u..%u\n",
+                  m_vocal, vms.begin, vms.begin + vms.count, f1_lo, f1_hi, f2_lo, f2_hi);
+    }
+
+    const aibaby::DnaAudio& acfg = dna0.header().audio;
+    Ear ear;
+    if (!ear.configure(acfg, error)) {
+      std::printf("  transducer failed: %s\n", error.c_str());
+      return false;
+    }
+    VowelSource caregiver(acfg.sample_rate);
+    std::vector<float> pcm(acfg.sample_rate / 1000);
+    const uint32_t spt = acfg.sample_rate / 1000;
+    const Word& heard = kWords[kCapHeard];
+
+    const uint32_t n_teach = uint32_t(teach_ticks / kCapTrial);
+    const uint32_t n_gap = uint32_t(gap_ticks / kCapTrial);
+    const uint32_t n_after = uint32_t(after_ticks / kCapTrial);
+    const uint32_t n_total = n_teach + n_gap + n_after;
+    const uint32_t third = n_teach / 3 ? n_teach / 3 : 1;
+
+    std::deque<Praise> pending;
+    double base[4] = {-1.0, -1.0, -1.0, -1.0};
+    uint32_t last_frame = 0;
+    uint64_t last_feedback = 0;
+    double s1[3] = {}, s2[3] = {}, sf1[3] = {}, sf2[3] = {};
+    uint32_t n_win[3] = {};
+
+    for (uint32_t trial = 0; trial < n_total; ++trial) {
+      const bool in_teach_phase = trial < n_teach;
+      const bool in_gap = trial >= n_teach && trial < n_teach + n_gap;
+      const CapLesson lesson = in_teach_phase ? kCrPlan[a].teach
+                             : in_gap         ? kCrPlan[a].gap
+                                              : kCapLessonNone;
+      // The oracle, re-aimed at each phase boundary. Cleared whenever no lesson
+      // is running, so the re-measure phase is identical in every arm and the
+      // final numbers are not comparing two different plasticity regimes.
+      if (kCrPlan[a].masked && lesson == kCapLessonA) net.set_reward_mask(f1_lo, f1_hi);
+      else if (kCrPlan[a].masked && lesson == kCapLessonB) net.set_reward_mask(f2_lo, f2_hi);
+      else net.clear_reward_mask();
+
+      double f1_acc = 0, f2_acc = 0;
+      uint32_t nv = 0;
+      for (uint64_t t = 0; t < kCapTrial; ++t) {
+        const uint64_t now = uint64_t(trial) * kCapTrial + t;
+        while (!pending.empty() && pending.front().tick <= now) {
+          s.brain.praise(pending.front().value);
+          pending.pop_front();
+        }
+        const bool sounding = t < 900;
+        caregiver.render(sounding ? heard.f0 : 0.0f, heard.f1, heard.f2,
+                         sounding ? 0.5f : 0.0f, pcm.data(), spt);
+        ear.tick(s.brain, pcm.data(), spt);
+        s.brain.step();
+
+        if (s.brain.vocal_frame() == last_frame) continue;
+        last_frame = s.brain.vocal_frame();
+        const aibaby::VocalParams& v = s.brain.voice();
+        const bool voiced = v.voicing > 0.5f && v.amplitude > kAmplitudeFloor;
+
+        if (lesson != kCapLessonNone && voiced && t >= kCapRewardFrom &&
+            t < kCapRewardTo && now - last_feedback >= regime.feedback_period) {
+          const double e = lesson_error(lesson, double(v.f1), double(v.f2));
+          if (e >= 0.0) {
+            last_feedback = now;
+            double& b = base[uint32_t(lesson)];
+            if (b >= 0.0) {
+              pending.push_back(Praise{now + regime.delay,
+                                       e < b ? regime.praise : regime.scold});
+            }
+            b = b < 0.0 ? e : b + kCapBaselineAlpha * (e - b);
+          }
+        }
+        if (t < kCapEchoFrom || t >= kCapEchoTo || !voiced) continue;
+        ++nv;
+        f1_acc += double(v.f1);
+        f2_acc += double(v.f2);
+      }
+      if (nv == 0) continue;
+      const double f1 = f1_acc / nv, f2 = f2_acc / nv;
+      const double e1 = axis_error(f1, kCapTargetF1), e2 = axis_error(f2, kCapTargetF2);
+      if (e1 < 0.0 || e2 < 0.0) continue;
+      ++rows[a].scored;
+      int w = -1;
+      if (trial < third) w = 0;
+      else if (in_teach_phase && trial >= n_teach - third) w = 1;
+      else if (trial >= n_teach + n_gap) w = 2;
+      if (w < 0) continue;
+      s1[w] += e1; s2[w] += e2; sf1[w] += f1; sf2[w] += f2; ++n_win[w];
+    }
+    net.clear_reward_mask();
+
+    CapRow& r = rows[a];
+    const double i0 = n_win[0] ? 1.0 / n_win[0] : 0.0;
+    const double i1 = n_win[1] ? 1.0 / n_win[1] : 0.0;
+    const double i2 = n_win[2] ? 1.0 / n_win[2] : 0.0;
+    r.e1_before = s1[0] * i0; r.e2_before = s2[0] * i0;
+    r.e1_taught = s1[1] * i1; r.e2_taught = s2[1] * i1;
+    r.e1_after = s1[2] * i2;  r.e2_after = s2[2] * i2;
+    r.f1_after = sf1[2] * i2; r.f2_after = sf2[2] * i2;
+  }
+
+  auto gain1 = [](const CapRow& r) {
+    return r.e1_before > 1e-6 ? (r.e1_before - r.e1_after) / r.e1_before : 0.0;
+  };
+  auto gain2 = [](const CapRow& r) {
+    return r.e2_before > 1e-6 ? (r.e2_before - r.e2_after) / r.e2_before : 0.0;
+  };
+  const double n1 = gain1(rows[kCrNever]), n2 = gain2(rows[kCrNever]);
+
+  std::printf("\n    %-11s %-9s %-12s %-12s\n", "arm", "trials", "A gain (F1)", "B gain (F2)");
+  for (uint32_t a = 0; a < kCrArmCount; ++a) {
+    std::printf("    %-11s %-9u %+11.3f %+11.3f\n", names[a], rows[a].scored,
+                gain1(rows[a]) - n1, gain2(rows[a]) - n2);
+  }
+  std::printf("    (both columns are against the never-taught arm, which reads\n"
+              "     %+.3f / %+.3f raw and is the scatter this window shows with no\n"
+              "     lesson in it at all)\n", n1, n2);
+
+  const double b_bcast = gain1(rows[kCrAOnly]) - n1;
+  const double b_after = gain1(rows[kCrAThenB]) - n1;
+  const double m_bcast = gain1(rows[kCrAOnlyM]) - n1;
+  const double m_after = gain1(rows[kCrAThenBM]) - n1;
+  const double b_landed = gain2(rows[kCrAThenB]) - n2;
+  const double m_landed = gain2(rows[kCrAThenBM]) - n2;
+  const double ret_b = b_bcast > 1e-6 ? b_after / b_bcast : 0.0;
+  const double ret_m = m_bcast > 1e-6 ? m_after / m_bcast : 0.0;
+
+  std::printf("\n  A retained, broadcast reward   %.2f   (%+.3f / %+.3f)\n"
+              "  A retained, targeted reward    %.2f   (%+.3f / %+.3f)\n"
+              "  B landed                       broadcast %+.3f, targeted %+.3f\n",
+              ret_b, b_after, b_bcast, ret_m, m_after, m_bcast, b_landed, m_landed);
+
+  if (m_bcast <= 0.02) {
+    std::printf("\n  MASK KILLED THE LESSON — with reward reaching only the F1 group,\n"
+                "  lesson A itself no longer lands (%+.3f). There is nothing to retain,\n"
+                "  so this run cannot price targeting. The oracle is too strong an\n"
+                "  intervention at this group size, not a verdict on the idea.\n", m_bcast);
+    return false;
+  }
+  if (m_landed <= 0.02) {
+    std::printf("\n  TARGETED B NEVER LANDED — the second lesson does nothing when its\n"
+                "  reward is confined to the F2 group (%+.3f), so a retention gain here\n"
+                "  would only mean B was never taught. Not a verdict on targeting.\n",
+                m_landed);
+    return false;
+  }
+  std::printf("\n  targeting changes A's retention by %+.2f, with B still landing.\n"
+              "  One seed cannot settle this — capacity's ratio moves by ~0.25 across\n"
+              "  seed families and this one is built from two of them.\n",
+              ret_m - ret_b);
+  (void)verbose;
+  return true;
+}
+
 }  // namespace aibaby_host

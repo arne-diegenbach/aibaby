@@ -135,6 +135,14 @@ const Spec kSpecs[] = {
      "  Measured on 3 seed families: A keeps 0.84 of its gain while an\n"
      "  ORTHOGONAL second lesson lands, against 0.22 for retain's conflicting\n"
      "  one. The ratios are the finding; the verdict line is a reading aid"},
+    {"credit", 5600000, Expect::kPass, Tier::kLong,
+     "derived: capacity's budget, because it is capacity's session with two of\n"
+     "  its arms re-run under a reward mask. It refuses rather than nulls if the\n"
+     "  mask kills lesson A outright or if targeted B never lands — either would\n"
+     "  make a retention gain meaningless. Measured on 3 seed families:\n"
+     "  targeted retention lands at 0.95-1.09 whatever the broadcast arm read,\n"
+     "  and the gain tracks how much interference there was to remove. It costs\n"
+     "  ~30% of the learning rate, because a mask is also a smaller search"},
     {"teachsound", 3400000, Expect::kPass, Tier::kLong,
      "the same length vocallearn's positive control needs, because this IS that\n"
      "  arm asked whether its effect is audible. It was OPEN for one day and it\n"
@@ -279,6 +287,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "teachsound") ok = run_teachsound(dna_blob, ticks, verbose, cap);
   else if (name == "retain") ok = run_retain(dna_blob, ticks, verbose);
   else if (name == "capacity") ok = run_capacity(dna_blob, ticks, verbose);
+  else if (name == "credit") ok = run_credit(dna_blob, ticks, verbose);
   else if (name == "restate") ok = run_restate(dna_blob, ticks, verbose);
   else if (name == "eligprobe") ok = run_eligprobe(dna_blob, ticks, verbose);
   else if (name == "dwprobe") ok = run_dwprobe(dna_blob, ticks, verbose);

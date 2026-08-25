@@ -136,6 +136,7 @@ a canvas, so each has a headless experiment that prints a number and a verdict.
 ./build/aibaby --experiment teachsound  --ticks 3400000 # M1c: teach it a vowel; --wav to hear it
 ./build/aibaby --experiment retain      --ticks 5600000 # does it keep the lesson; does sleep erase it
 ./build/aibaby --experiment capacity    --ticks 5600000 # can it hold two lessons at once
+./build/aibaby --experiment credit      --ticks 5600000 # would per-neuron reward remove the interference
 ./build/aibaby --experiment snapshot    --ticks 2400000 # §8: resume is exact
 ```
 
@@ -438,7 +439,7 @@ as it currently stands. **The whole suite above passes except `m3`** — G1,
 calibrate, babble, audio, vision, M2, G2, sleep, G4 and snapshot are all green,
 and G3 is the one milestone still open. Shipped hash `23c4eb2c7c45d05c`;
 `--experiment verify` reads 19 of 19 as expected on the fast tier and
-`verify-long` 39 of 39 — see [The suite, both tiers](#the-suite-both-tiers).
+`verify-long` 40 of 40 — see [The suite, both tiers](#the-suite-both-tiers).
 
 **What teaching can and cannot do is now measured rather than guessed.** Three
 experiments bound it. `teachsound` (M1c) says praise alone moves the voice toward
@@ -3395,7 +3396,7 @@ Run 2026-08-25 on the shipped genome, with DNA v36–v40 all switched off.
 
 ```
 --experiment verify           determinism PASS   pinned hash PASS   19 of 19 as expected
---experiment verify-long      determinism PASS   pinned hash PASS   39 of 39 as expected
+--experiment verify-long      determinism PASS   pinned hash PASS   40 of 40 as expected
 --experiment mechverify       15 mechanisms, 0 drifted, 0 vacuous, 0 unpinned, 0 broken
                               2 open milestones still failing, which is what
                               "as expected" means for them
@@ -3939,6 +3940,68 @@ never landed, **VOID** if the `A+B` arm cannot hold both targets even when taugh
 both at once — which would make a sequential collapse anatomy rather than
 interference — and **YOKED** if F2 moves toward B's target in the arm that never
 learned it.
+
+### `credit` — pricing a mechanism before building it, and the answer is that the prize is real
+
+`capacity` left one number pointing somewhere specific. The two lessons compete
+— the first keeps only **0.58** of what continuing it would have bought — and
+reading `apply_reward_impl` says why. Node perturbation, the rule that actually
+shapes this larynx, nudges `bias_[i]` for **every** neuron in the motor module,
+scaled by one broadcast scalar. While lesson B is being taught, the F1 group's
+neurons keep receiving updates driven by a reward uncorrelated with anything
+they did, so what A taught them random-walks away. The two groups are disjoint
+populations; the *reward* is what they share.
+
+The mechanism that would fix that is a neuromodulator reaching some neurons and
+not others. DNA v20 already splits reward into four channels — and **cannot do
+this**, because its gains are per *module* and both lessons live in `vocal`.
+Per-neuron gating is kernel surgery, so it is worth knowing whether it would pay
+before writing it.
+
+`Network::set_reward_mask` hands the creature the credit assignment it cannot
+compute: while lesson A runs, reward reaches only the F1 group; while B runs,
+only F2. **This is an oracle, not a mechanism.** It is not learnable, no genome
+field reaches it, the shipped creature never sets it, and the pinned hash does
+not move. What it measures is the ceiling — if perfect targeting existed, how
+much of the interference goes away? A "none" would have closed the entire line
+for the price of one experiment. That is the move the oracle fovea made for
+foveation, and it reversed that decision.
+
+Three seed families, 5.6M ticks, retention read **within** each condition
+(`A then B*` against `A only*`) because a mask removes plasticity and a masked
+arm may simply learn less:
+
+| | seed 1 | seed 2 | seed 3 | mean |
+|---|---|---|---|---|
+| A retained, **broadcast** | 0.86 | 1.08 | 0.57 | **0.84** |
+| A retained, **targeted** | 1.06 | 1.09 | 0.95 | **1.03** |
+| change | +0.20 | +0.01 | +0.39 | **+0.20** |
+| A gain, broadcast to targeted | 0.335 / 0.281 | 0.344 / 0.228 | 0.310 / 0.183 | 0.330 / **0.231** |
+| B landed, broadcast to targeted | 0.206 / 0.159 | 0.129 / 0.129 | 0.197 / 0.143 | 0.177 / **0.144** |
+
+**Targeted retention lands at ~1.0 whatever the broadcast arm read** — 1.06,
+1.09, 0.95 from starting points of 0.86, 1.08 and 0.57. The interference does
+not shrink by some fixed amount; it goes to zero. And the size of the gain
+tracks how much interference there was to remove (+0.39 where broadcast read
+0.57, +0.01 where it already read 1.08). A mechanism that removed something
+other than the broadcast would not produce that correlation.
+
+**It is a trade, not a free win.** Lesson A lands 30% weaker under the mask
+(0.330 to 0.231) and B 19% weaker, because node perturbation searching **14
+neurons instead of 126** is a weaker search. Confining the reward and confining
+the exploration are the same act here. So the honest statement is that perfect
+credit assignment converts a *broadcast-interference* problem into a *slower
+learning* problem — and that is the bar a real DNA v41 has to clear while also
+**discovering** the assignment rather than being handed it.
+
+**What this does not show.** Nothing here says the creature could learn which
+neurons deserve the reward. That is exactly what burst plasticity (v37) and the
+dendritic error microcircuit (v40) were attempts at, and both are recorded above
+as refuted. `credit` says the prize is worth another attempt; it does not say an
+attempt would succeed. Two experiments with the same shape — an oracle that
+works and a learnable mechanism that does not — is the pattern this project has
+hit repeatedly, and it is the reason the oracle is labelled as one everywhere it
+appears.
 
 ### What this round taught about probes, which cost more than the mechanisms did
 
