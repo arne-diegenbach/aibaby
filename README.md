@@ -4133,6 +4133,28 @@ So the cost is **structural to the formulation**, not a tuning failure: two
 compartments cannot separate the noise from the signal when both arrive through
 the same variable. The crude brake it was built to improve on is better here.
 
+**And it does not ship, because the gain does not transfer to a milestone.**
+`metaprobe`'s +0.21 is measured on its own internal retention ratio, so the
+commitment gate was run against `retain` — a milestone experiment — on three
+seeds:
+
+| arm | brake off | brake on |
+|---|---|---|
+| quiet | 1.21 1.23 1.50 = **1.31** | 1.24 0.89 1.37 = **1.17** |
+| no sleep | 1.14 1.22 1.41 = **1.26** | 1.05 0.91 1.02 = **0.99** |
+| relearn | 0.56 0.03 0.06 = **0.22** | 0.45 -0.32 0.65 = **0.26** |
+
+It **costs** the headline retention that `retain`'s result rests on, and does not
+reliably buy interference resistance — 0.22 to 0.26 is nothing against seed
+swings of 0.45, -0.32 and 0.65. It also drops the babble duty cycle from 0.78 to
+0.50. So it stays off, with a measured reason rather than caution.
+
+The general lesson is worth more than the mechanism: **a gain measured on the
+probe built to show a mechanism working is not a gain.** Test against a milestone
+before shipping. And one seed here read relearn 0.06 -> 0.65, which looks exactly
+like the mechanism doing its job; the other two read 0.56 -> 0.45 and
+0.03 -> -0.32.
+
 **The moment ratio is refuted**, at a mean of -0.13 and swings from +0.44 to
 -0.70. Its measured SNR separation is 0.0025 against 0.0024 — no separation at
 all — and that is a design flaw with a name rather than bad luck: the statistic's
