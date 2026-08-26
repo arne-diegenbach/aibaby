@@ -69,6 +69,15 @@ conn_radius = 0.4
 conn_density = 0.0           # no recurrence: a relay that talks to itself is a
                              # dynamical system, and this one is meant to be a
                              # projection
+# DNA v42, all off for the same reason conn_density is: a relay is a projection,
+# not a generator. Present because every genome field is required — this tool
+# has now been stale by a new mechanism's keys twice, and a genome that will not
+# load is the good failure. The silent one is a key that exists with a wrong
+# default.
+chain_weight = 0.0
+chain_density = 0.0
+chain_group = 0
+chain_delay_ms = 1.0
 threshold = {opt["threshold"]}
 v_rest = 0.0
 leak_tau_ms = 5.0            # central's constant, because it reads central's

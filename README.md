@@ -4338,6 +4338,44 @@ than "too weak": **a chain's pattern cannot cross an unsigned random projection
 at all** — more weight makes the creature drone before it makes the trajectory
 audible.
 
+#### The signed route is worse, and the ranking is the finding
+
+`genome_add_relay.py` exists because an all-positive random projection is the one
+thing that averages a balanced code away, and a relay of interneurons — where
+each target draws its OWN inhibitory sample — preserves it. So the chain was
+routed `hvc -> relay -> vocal`, calibrated to a duty cycle of 0.38, against a
+control with the relay present and its output weight at zero.
+
+| route | shared shape | span | d' |
+|---|---|---|---|
+| chain **inside** `vocal` | **53.8%** | 4.1 Hz | 0.461 |
+| HVC -> vocal, direct | 17.5% | 1.0 Hz | 0.032 |
+| HVC -> relay -> vocal | **5.1%** | 0.6 Hz | -0.148 |
+| relay silent (control) | 2.1% | 0.2 Hz | -0.141 |
+
+5.1% against a 2.1% control, with d' indistinguishable from its own null. The
+signed route carries essentially nothing — worse than the unsigned one it was
+built to fix.
+
+**The ranking is what matters.** The only arrangement that works is the one with
+NO TRACT AT ALL. The chain inside `vocal` reaches 53.8% precisely because there
+is no projection between the sequence and the readout; every attempt to route it
+through one loses almost everything, unsigned (it drones before it shapes) and
+signed (it delivers nothing).
+
+That is a sharper statement of this project's oldest result than it had before.
+It is not only that `central->vocal` is thin, or that pooling swamps a balanced
+code: **a projection into `vocal` cannot carry a temporal pattern by either
+sign.** Three routes, two mechanisms of failure, one conclusion.
+
+What is left is not another route. `vocal` is 126 neurons in nine groups of
+fourteen and everything downstream reads a centroid over fourteen cells, which is
+what caps the trajectory at 4-6 Hz. The next thing worth trying is a BIGGER
+LARYNX — groups of a hundred rather than fourteen, where a chain inside the
+module could sweep a centroid with real convergence. Changing a module's neuron
+count re-rolls its wiring, so that is a different creature needing calibration
+from scratch, which is why it is a separate piece of work and not a knob.
+
 #### `n_max` is not the live neuron count, and reading it as one wasted the first three runs
 
 `central` hatches at **400 neurons**. `n_max = 4096` is the arena ceiling M4
