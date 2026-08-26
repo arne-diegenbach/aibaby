@@ -5579,15 +5579,101 @@ TjSplit split_half(const std::vector<TjBins>& f1, const std::vector<TjBins>& f2)
 
 }  // namespace
 
+// DNA v42 arms. `seqprobe` showed a hand-wired population chain carries a
+// travelling, reproducible, finite sequence — the centre of activity climbs
+// 107 -> 330 over 96 ms and then the wave runs off the end. This asks the only
+// question that matters about it: does any of that reach the VOICE?
+//
+// Two placements, because they fail differently and it is worth knowing which.
+// In `central` the chain has to cross the thin central->vocal tract (density
+// 0.03) to be heard at all. In `vocal` it is already at the larynx, but it
+// sweeps ACROSS the nine parameter groups rather than within them, so it lights
+// f0, then voicing, then f1, then f2 in turn — a sequential parameter sweep
+// rather than a coordinated trajectory. Neither is the songbird arrangement,
+// which is a separate nucleus projecting into the motor one; both are cheap.
+struct TjArm {
+  const char* what;
+  const char* module;   // nullptr for the untouched creature
+  float weight, density, delay_ms;
+  uint32_t group;
+};
+
+bool run_trajprobe_arm(const std::vector<uint8_t>& blob, uint64_t ticks,
+                       const TjArm& arm, double* share_out, double* amp_out);
+
 bool run_trajprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  const TjArm arms[] = {
+      {"no chain", nullptr, 0.0f, 0.0f, 0.0f, 0},
+      {"chain in central", "central", 0.30f, 1.0f, 8.0f, 20},
+      {"chain in vocal", "vocal", 0.30f, 1.0f, 8.0f, 20},
+  };
+  bool ok = true;
+  double share[3] = {}, amp[3] = {};
+  for (uint32_t a = 0; a < 3; ++a) {
+    std::printf("\n  ===== %s =====\n", arms[a].what);
+    ok = run_trajprobe_arm(blob, ticks, arms[a], &share[a], &amp[a]) && ok;
+  }
+  const double amp_best = share[2] > share[1] ? amp[2] : amp[1];
+  std::printf("\n  shared time course, the fraction of an utterance's movement that\n"
+              "  other utterances agree with:\n");
+  for (uint32_t a = 0; a < 3; ++a) {
+    std::printf("    %-18s %.1f%%\n", arms[a].what, 100.0 * share[a]);
+  }
+  const double best = std::max(share[1], share[2]);
+  // Gated on the AMPLITUDE as well as the fraction. The first version of this
+  // line asked only whether utterances agreed, and called a 53.8% shared shape
+  // spanning 4.1 Hz "a syllable" — a real statistic about an event no listener
+  // could hear. The same mistake this probe's own null was rewritten to avoid.
+  if (best > share[0] * 2.0 && best > 0.20 && amp_best > 30.0) {
+    std::printf("\n  THE CHAIN REACHES THE VOICE AUDIBLY — utterances agree about their\n"
+                "  own shape where they did not, and the shape spans %.0f Hz.\n", amp_best);
+  } else if (best > share[0] * 2.0 && best > 0.20) {
+    std::printf("\n  A SHAPE, BUT AN INAUDIBLE ONE — utterances now agree about their own\n"
+                "  time course (%.1f%% against %.1f%%), which they did not before, so the\n"
+                "  chain IS reaching the larynx and imposing a reproducible trajectory.\n"
+                "  It spans %.0f Hz. Teaching moves a formant by ~70 Hz. The generator\n"
+                "  works and the coupling is far too weak to hear, which is a question\n"
+                "  about the route into the vocal groups, not about the sequence.\n",
+                100.0 * best, 100.0 * share[0], amp_best);
+  } else {
+    std::printf("\n  THE CHAIN DOES NOT REACH THE VOICE — %.1f%% against %.1f%% for the\n"
+                "  untouched creature. A sequence exists in the brain and the larynx\n"
+                "  still holds a vowel, so what is missing is the ROUTE, not the\n"
+                "  generator: nothing aligns the chain to the start of an utterance,\n"
+                "  and a chain that begins at a different place each time produces\n"
+                "  utterances that cannot agree.\n", 100.0 * best, 100.0 * share[0]);
+  }
+  (void)verbose;
+  return ok;
+}
+
+bool run_trajprobe_arm(const std::vector<uint8_t>& blob, uint64_t ticks, const TjArm& arm,
+                       double* share_out, double* amp_out) {
   aibaby::Dna dna0;
   if (dna0.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) {
     std::printf("  setup failed: the genome does not load\n");
     return false;
   }
+  std::vector<uint8_t> variant = blob;
+  if (arm.module) {
+    int32_t m = -1;
+    for (uint32_t i = 0; i < dna0.module_count(); ++i) {
+      if (std::strcmp(dna0.module(i).name, arm.module) == 0) m = int32_t(i);
+    }
+    if (m < 0) { std::printf("  no module named %s\n", arm.module); return false; }
+    const size_t at = sizeof(aibaby::DnaHeader) + sizeof(aibaby::DnaModule) * size_t(m);
+    std::memcpy(variant.data() + at + offsetof(aibaby::DnaModule, chain_weight),
+                &arm.weight, sizeof(float));
+    std::memcpy(variant.data() + at + offsetof(aibaby::DnaModule, chain_density),
+                &arm.density, sizeof(float));
+    std::memcpy(variant.data() + at + offsetof(aibaby::DnaModule, chain_delay_ms),
+                &arm.delay_ms, sizeof(float));
+    std::memcpy(variant.data() + at + offsetof(aibaby::DnaModule, chain_group),
+                &arm.group, sizeof(uint32_t));
+  }
   std::string error;
   Session s;
-  if (!s.init(blob, error)) {
+  if (!s.init(variant, error)) {
     std::printf("  failed to hatch: %s\n", error.c_str());
     return false;
   }
@@ -5598,6 +5684,7 @@ bool run_trajprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
               kTjBins);
 
   std::vector<TjBins> traj_f1, traj_f2;
+  std::vector<double> abs_first, abs_last, abs_first2, abs_last2;
   std::vector<double> cur_f1, cur_f2;
   uint32_t last_frame = 0, gap = 0;
   uint64_t frames = 0, voiced_frames = 0;
@@ -5625,6 +5712,15 @@ bool run_trajprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
       }
       traj_f1.push_back(b1);
       traj_f2.push_back(b2);
+      // The ABSOLUTE first and last bins, kept because "the utterances agree
+      // about a shape" and "a listener can hear the shape" are different
+      // questions and this probe first answered only the first one. A 53.8%
+      // shared time course spanning 4 Hz is a real statistic about an inaudible
+      // event.
+      abs_first.push_back(b1[0] + m1);
+      abs_last.push_back(b1[kTjBins - 1] + m1);
+      abs_first2.push_back(b2[0] + m2);
+      abs_last2.push_back(b2[kTjBins - 1] + m2);
     }
     cur_f1.clear();
     cur_f2.clear();
@@ -5740,6 +5836,47 @@ bool run_trajprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
   const double best = std::max(real.r_f1, real.r_f2);
   const double null = std::max(n1, n2);
   const double share = std::max(share1, share2);
+  if (share_out) *share_out = share;
+  if (amp_out) *amp_out = std::max(amp1, amp2);
+
+  // IS IT AUDIBLE? The project's own ruler, on the timbre at the start of an
+  // utterance against the timbre at its end.
+  double d_shape = 0.0, d_null = 0.0;
+  {
+    Timbre ruler;
+    std::string terr;
+    if (ruler.configure(dna0.header().audio, terr)) {
+      std::vector<std::vector<double>> ceps;
+      std::vector<int> when;
+      const double f0 = double(dna0.header().vocal.f0_min);
+      for (size_t u = 0; u < abs_first.size(); ++u) {
+        std::vector<double> a = ruler.of(f0, abs_first[u], abs_first2[u], 0.4);
+        std::vector<double> b = ruler.of(f0, abs_last[u], abs_last2[u], 0.4);
+        if (a.empty() || b.empty()) continue;
+        ceps.push_back(a); when.push_back(0);
+        ceps.push_back(b); when.push_back(1);
+      }
+      if (ceps.size() >= 24) {
+        const double d2 = cepstral_dprime(ceps, when, nullptr, true);
+        d_shape = d2 >= 0.0 ? std::sqrt(d2) : -std::sqrt(-d2);
+        aibaby::Rng rng;
+        rng.seed(dna0.header().seed ^ 0x7A3Cu);
+        double ns = 0.0;
+        for (uint32_t p = 0; p < 32; ++p) {
+          std::vector<int> sh = when;
+          for (size_t i = sh.size(); i > 1; --i) std::swap(sh[i - 1], sh[rng.next() % i]);
+          const double nd = cepstral_dprime(ceps, sh, nullptr, true);
+          ns += nd >= 0.0 ? std::sqrt(nd) : -std::sqrt(-nd);
+        }
+        d_null = ns / 32.0;
+      }
+    }
+  }
+  std::printf("\n  is the shape AUDIBLE? start of an utterance against its end:\n"
+              "    d' %.3f against a shuffled null of %.3f\n"
+              "  (teaching moves F1 by ~70 Hz for comparison; a shared shape can be\n"
+              "   statistically solid and far too small to hear)\n", d_shape, d_null);
+
   if (share > 0.10 && best - null > 0.3) {
     std::printf("\n  THERE IS A SHARED TIME COURSE — utterances agree about their own\n"
                 "  shape at %+.3f against a null of %+.3f. The larynx already produces\n"
@@ -5754,7 +5891,6 @@ bool run_trajprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
                 "  a trajectory that is never repeated, so a word is unreachable until\n"
                 "  something generates one.\n", 100.0 * share);
   }
-  (void)verbose;
   return true;
 }
 

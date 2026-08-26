@@ -533,6 +533,10 @@ bool compile_dna_toml(const std::string& path, std::vector<uint8_t>& out,
     r.vec3("extent", m.extent);
     m.conn_radius = float(r.number("conn_radius"));
     m.conn_density = float(r.number("conn_density"));
+    m.chain_weight = float(r.number("chain_weight"));
+    m.chain_density = float(r.number("chain_density"));
+    m.chain_group = uint32_t(r.number("chain_group"));
+    m.chain_delay_ms = float(r.number("chain_delay_ms"));
     m.threshold = float(r.number("threshold"));
     m.v_rest = float(r.number("v_rest"));
     m.leak_tau_ms = float(r.number("leak_tau_ms"));

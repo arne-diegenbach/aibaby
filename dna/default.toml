@@ -746,6 +746,18 @@ max_out_degree = 512
 extent = [1.0, 1.0, 1.0]
 conn_radius = 0.4
 conn_density = 0.5
+# DNA v42 — a synfire chain, laid down at birth. The wiring above is
+# distance-based and therefore symmetric, and seqprobe measured that a symmetric
+# loop cannot carry a kick forward for even 10 ms (r 0.92 -> 0.03, at every
+# weight to 8x). A sequence needs asymmetry AND convergence: a whole group of
+# neurons drives the next group, so each cell of the next link gets tens of
+# coincident inputs. A per-neuron window gives about three and does nothing. Nothing wraps — a finite chain is a syllable, a wrapping one
+# is a loop that sustains forever or seizes. SHIPS OFF at chain_weight = 0,
+# which skips the pass and is bit-identical.
+chain_weight = 0.0          # 0 disables the whole pass
+chain_density = 0.4         # connection probability inside the window
+chain_group = 64            # neurons per link; the chain is group k -> group k+1
+chain_delay_ms = 3.0        # one link's delay, and so the step of the chain
 # Threshold and leak are a pair, and they were swept as a pair: for each leak
 # the threshold was searched until the module free-ran at the same 8 Hz, so the
 # sweep varies how long the module integrates and holds how hard it fires
@@ -1024,6 +1036,18 @@ max_out_degree = 256
 extent = [1.0, 1.0, 1.0]
 conn_radius = 0.4
 conn_density = 0.5
+# DNA v42 — a synfire chain, laid down at birth. The wiring above is
+# distance-based and therefore symmetric, and seqprobe measured that a symmetric
+# loop cannot carry a kick forward for even 10 ms (r 0.92 -> 0.03, at every
+# weight to 8x). A sequence needs asymmetry AND convergence: a whole group of
+# neurons drives the next group, so each cell of the next link gets tens of
+# coincident inputs. A per-neuron window gives about three and does nothing. Nothing wraps — a finite chain is a syllable, a wrapping one
+# is a loop that sustains forever or seizes. SHIPS OFF at chain_weight = 0,
+# which skips the pass and is bit-identical.
+chain_weight = 0.0          # 0 disables the whole pass
+chain_density = 0.4         # connection probability inside the window
+chain_group = 64            # neurons per link; the chain is group k -> group k+1
+chain_delay_ms = 3.0        # one link's delay, and so the step of the chain
 threshold = 1.0
 v_rest = 0.0
 leak_tau_ms = 20.0
@@ -1140,6 +1164,18 @@ max_out_degree = 256
 extent = [1.0, 1.0, 1.0]
 conn_radius = 0.4
 conn_density = 0.5
+# DNA v42 — a synfire chain, laid down at birth. The wiring above is
+# distance-based and therefore symmetric, and seqprobe measured that a symmetric
+# loop cannot carry a kick forward for even 10 ms (r 0.92 -> 0.03, at every
+# weight to 8x). A sequence needs asymmetry AND convergence: a whole group of
+# neurons drives the next group, so each cell of the next link gets tens of
+# coincident inputs. A per-neuron window gives about three and does nothing. Nothing wraps — a finite chain is a syllable, a wrapping one
+# is a loop that sustains forever or seizes. SHIPS OFF at chain_weight = 0,
+# which skips the pass and is bit-identical.
+chain_weight = 0.0          # 0 disables the whole pass
+chain_density = 0.4         # connection probability inside the window
+chain_group = 64            # neurons per link; the chain is group k -> group k+1
+chain_delay_ms = 3.0        # one link's delay, and so the step of the chain
 threshold = 1.0
 v_rest = 0.0
 leak_tau_ms = 20.0
@@ -1252,6 +1288,18 @@ max_out_degree = 48
 extent = [1.0, 1.0, 1.0]
 conn_radius = 0.45
 conn_density = 0.5
+# DNA v42 — a synfire chain, laid down at birth. The wiring above is
+# distance-based and therefore symmetric, and seqprobe measured that a symmetric
+# loop cannot carry a kick forward for even 10 ms (r 0.92 -> 0.03, at every
+# weight to 8x). A sequence needs asymmetry AND convergence: a whole group of
+# neurons drives the next group, so each cell of the next link gets tens of
+# coincident inputs. A per-neuron window gives about three and does nothing. Nothing wraps — a finite chain is a syllable, a wrapping one
+# is a loop that sustains forever or seizes. SHIPS OFF at chain_weight = 0,
+# which skips the pass and is bit-identical.
+chain_weight = 0.0          # 0 disables the whole pass
+chain_density = 0.4         # connection probability inside the window
+chain_group = 64            # neurons per link; the chain is group k -> group k+1
+chain_delay_ms = 3.0        # one link's delay, and so the step of the chain
 threshold = 1.0
 v_rest = 0.0
 leak_tau_ms = 20.0
@@ -1362,6 +1410,18 @@ max_out_degree = 512
 extent = [1.0, 1.0, 1.0]
 conn_radius = 0.4
 conn_density = 0.5
+# DNA v42 — a synfire chain, laid down at birth. The wiring above is
+# distance-based and therefore symmetric, and seqprobe measured that a symmetric
+# loop cannot carry a kick forward for even 10 ms (r 0.92 -> 0.03, at every
+# weight to 8x). A sequence needs asymmetry AND convergence: a whole group of
+# neurons drives the next group, so each cell of the next link gets tens of
+# coincident inputs. A per-neuron window gives about three and does nothing. Nothing wraps — a finite chain is a syllable, a wrapping one
+# is a loop that sustains forever or seizes. SHIPS OFF at chain_weight = 0,
+# which skips the pass and is bit-identical.
+chain_weight = 0.0          # 0 disables the whole pass
+chain_density = 0.4         # connection probability inside the window
+chain_group = 64            # neurons per link; the chain is group k -> group k+1
+chain_delay_ms = 3.0        # one link's delay, and so the step of the chain
 threshold = 1.0
 v_rest = 0.0
 leak_tau_ms = 20.0
@@ -1671,6 +1731,18 @@ max_out_degree = 48
 extent = [1.0, 1.0, 1.0]
 conn_radius = 0.45
 conn_density = 0.5
+# DNA v42 — a synfire chain, laid down at birth. The wiring above is
+# distance-based and therefore symmetric, and seqprobe measured that a symmetric
+# loop cannot carry a kick forward for even 10 ms (r 0.92 -> 0.03, at every
+# weight to 8x). A sequence needs asymmetry AND convergence: a whole group of
+# neurons drives the next group, so each cell of the next link gets tens of
+# coincident inputs. A per-neuron window gives about three and does nothing. Nothing wraps — a finite chain is a syllable, a wrapping one
+# is a loop that sustains forever or seizes. SHIPS OFF at chain_weight = 0,
+# which skips the pass and is bit-identical.
+chain_weight = 0.0          # 0 disables the whole pass
+chain_density = 0.4         # connection probability inside the window
+chain_group = 64            # neurons per link; the chain is group k -> group k+1
+chain_delay_ms = 3.0        # one link's delay, and so the step of the chain
 threshold = 1.0
 v_rest = 0.0
 leak_tau_ms = 20.0

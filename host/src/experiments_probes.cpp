@@ -7073,8 +7073,12 @@ bool run_relayprobe(const std::vector<uint8_t>& dna_blob, uint64_t ticks, bool v
 namespace {
 
 constexpr uint32_t kSqRepeats = 24;    // repeats of the identical kick
-constexpr uint32_t kSqBins = 12;       // time bins watched after it
-constexpr uint32_t kSqBinTicks = 10;   // 10 ms each, so 120 ms of aftermath
+// 8 ms bins so one bin is one chain link and a wave advances exactly one group
+// per column. At 10 ms against a 3 ms link the whole chain crossed inside two
+// bins and the centre of activity read flat — the wave was real and the
+// instrument could not see it.
+constexpr uint32_t kSqBins = 24;
+constexpr uint32_t kSqBinTicks = 8;    // 192 ms of aftermath
 constexpr uint32_t kSqKickTicks = 10;
 constexpr uint32_t kSqSettle = 20000;  // the rule from `stpprobe`: settle first
 
@@ -7112,46 +7116,120 @@ bool run_seqprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
   }
 
   instrument("seqprobe", dna0.header().seed ^ 0x6B21u, ticks, "ticks");
-  std::printf("  kick a fixed 5%% of `central`, remove the kick, and watch %u bins of\n"
+  std::printf("  kick the HEAD of `central` — a contiguous block the size of one\n"
+              "  chain link — remove the kick, and watch %u bins of\n"
               "  %u ms. Reliability is the correlation between REPEATS of the same\n"
               "  kick, so the creature's own spontaneous activity is uncorrelated by\n"
               "  construction and acts as the null.\n", kSqBins, kSqBinTicks);
-  std::printf("  swept over the recurrent weight, because the question is whether ANY\n"
-              "  setting has a regime that persists, changes and repeats at once.\n");
+  std::printf("  the first four arms sweep the SYMMETRIC weight — is the existing\n"
+              "  wiring merely too weak? The last two switch on DNA v42's asymmetric\n"
+              "  chain instead — does it need structure? Same creature, one run.\n");
 
   const float shipped = dna0.module(uint32_t(m_target)).weight_init;
-  const float scales[] = {1.0f, 2.0f, 4.0f, 8.0f};
-  const uint32_t n_scales = 4;
+  // The first four arms sweep the SYMMETRIC weight, which asks "is the existing
+  // wiring merely too weak". The last two switch on DNA v42's asymmetric chain
+  // instead, which asks "does it need structure". Both in one run, so the
+  // comparison is against the same creature and the same kick.
+  // The chain propagates two links and stops dead — 0.88, 0.17, 0.01 — and it
+  // stops SOONER at higher chain weight, which points at the module's own
+  // regulation rather than at the chain. Two things in `central` are fast
+  // enough to do that on a 20 ms timescale, and both are patchable here without
+  // touching the kernel:
+  //
+  //   inhib_gain 2.5   the chain excites the next group's inhibitory cells too,
+  //                    which then suppress it locally. Feedforward inhibition
+  //                    riding the wave.
+  //   norm_gain 1.0    divisive normalisation, DNA v12, shipped ON for central.
+  //                    A loud wave divides itself down.
+  //
+  // Each gets its own arm and then both together, so a partial effect is
+  // attributable rather than a shrug.
+  // `central` hatches at 400 neurons — `n_max` 4096 is the arena ceiling M4
+  // growth may one day reach, not the live count, and reading it as the live
+  // count is what made the first version of this sweep meaningless. 400 neurons
+  // has to pay for BOTH properties a chain needs, and they pull opposite ways:
+  //
+  //   convergence   each cell of link k+1 needs tens of coincident inputs from
+  //                 link k, which wants LARGE groups
+  //   length        a syllable needs many links, which wants MANY groups
+  //
+  // At 64 per group there are six links and, at 3 ms each, a chain 18 ms long
+  // end to end — which is why the shipped arm "persisted 20 ms". That was the
+  // chain RUNNING TO ITS END, not dying at link two. So the length is bought
+  // with the link delay instead, where there is room: `max_delay_ticks` is 32.
+  struct Arm {
+    const char* what;
+    float chain, inhib_gain, norm_gain;
+    uint32_t group;
+    float density, delay_ms;
+  };
+  const Arm arms[] = {
+      {"no chain",        0.00f, -1.0f, -1.0f, 64, 0.4f,  3.0f},
+      {"6 links, 3 ms",   0.30f, -1.0f, -1.0f, 64, 0.4f,  3.0f},
+      {"6 links, 16 ms",  0.30f, -1.0f, -1.0f, 64, 0.4f, 16.0f},
+      {"12 links, 8 ms",  0.30f, -1.0f, -1.0f, 32, 0.8f,  8.0f},
+      {"20 links, 8 ms",  0.30f, -1.0f, -1.0f, 20, 1.0f,  8.0f},
+      {"12 links, no norm", 0.30f, -1.0f, 0.0f, 32, 0.8f, 8.0f},
+  };
+  const uint32_t n_scales = 6;
 
-  std::printf("\n    %-8s %-9s %-10s %-11s %-11s %-10s\n", "w_rec", "rate Hz", "runaway",
-              "persist ms", "reliab r", "changes r");
+  std::printf("\n    %-8s %-8s %-9s %-9s %-11s %-11s %-10s\n", "w_rec", "w_chain",
+              "rate Hz", "runaway", "persist ms", "reliab r", "changes r");
   bool any_usable = false;
   double best_persist = 0.0;
 
   for (uint32_t sc = 0; sc < n_scales; ++sc) {
     std::vector<uint8_t> variant = blob;
-    const float w = shipped * scales[sc];
-    std::memcpy(variant.data() + mod_base + sizeof(aibaby::DnaModule) * size_t(m_target) +
-                    offsetof(aibaby::DnaModule, weight_init),
-                &w, sizeof(w));
+    const float w = shipped;
+    const size_t mbase = mod_base + sizeof(aibaby::DnaModule) * size_t(m_target);
+    std::memcpy(variant.data() + mbase + offsetof(aibaby::DnaModule, weight_init), &w,
+                sizeof(w));
+    std::memcpy(variant.data() + mbase + offsetof(aibaby::DnaModule, chain_weight),
+                &arms[sc].chain, sizeof(float));
+    if (arms[sc].inhib_gain >= 0.0f) {
+      std::memcpy(variant.data() + mbase + offsetof(aibaby::DnaModule, inhib_gain),
+                  &arms[sc].inhib_gain, sizeof(float));
+    }
+    if (arms[sc].norm_gain >= 0.0f) {
+      std::memcpy(variant.data() + mbase + offsetof(aibaby::DnaModule, norm_gain),
+                  &arms[sc].norm_gain, sizeof(float));
+    }
+    std::memcpy(variant.data() + mbase + offsetof(aibaby::DnaModule, chain_group),
+                &arms[sc].group, sizeof(uint32_t));
+    std::memcpy(variant.data() + mbase + offsetof(aibaby::DnaModule, chain_density),
+                &arms[sc].density, sizeof(float));
+    std::memcpy(variant.data() + mbase + offsetof(aibaby::DnaModule, chain_delay_ms),
+                &arms[sc].delay_ms, sizeof(float));
     std::string error;
     Session s;
     if (!s.init(variant, error)) {
-      std::printf("    %-8.3f failed to hatch: %s\n", double(w), error.c_str());
+      std::printf("    %-17s failed to hatch: %s\n", arms[sc].what, error.c_str());
       continue;
     }
     aibaby::Network& net = s.brain.network();
     const aibaby::ModuleState& ms = net.module(uint32_t(m_target));
+    if (sc == 0) {
+      std::printf("  `central` is %u neurons LIVE — `n_max` %u is the arena ceiling M4\n"
+                  "  growth may reach, not the live count. Every chain length below is\n"
+                  "  derived from 400, and each arm's kick is one link wide.\n",
+                  ms.count, dna0.module(uint32_t(m_target)).n_max);
+    }
     for (uint32_t t = 0; t < kSqSettle; ++t) s.brain.step();
 
     // One fixed kick pattern for every repeat — the same question asked of the
     // module 24 times.
+    // THE HEAD OF THE CHAIN, not a random scatter. The first version kicked a
+    // random 5% spread across all 64 groups, which fires a chain from everywhere
+    // at once and leaves no wave to follow — it measured reliability rising to
+    // 0.65 while persistence stayed pinned at one bin, and that pinning was the
+    // stimulus, not the module. A contiguous block from the start of the module
+    // is the same size of kick for every arm, chain or no chain, so the
+    // comparison stays fair.
     aibaby::Rng rng;
     rng.seed(dna0.header().seed ^ 0x6B21u);
     std::vector<uint32_t> kick;
-    for (uint32_t k = 0; k < ms.count; ++k) {
-      if (rng.chance(0.05f)) kick.push_back(ms.begin + k);
-    }
+    const uint32_t head = arms[sc].group;
+    for (uint32_t k = 0; k < head && k < ms.count; ++k) kick.push_back(ms.begin + k);
 
     // counts[repeat][bin][neuron]
     std::vector<std::vector<std::vector<float>>> counts(
@@ -7240,7 +7318,12 @@ bool run_seqprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
     // Meaningless when nothing persisted: `first` and `last` are then the same
     // bin and the correlation is 1.000 by construction, which reads as "a
     // frozen attractor" when it is really "no data".
-    const double changes = persist ? pop_corr(first, last) : -2.0;
+    // Needs at least TWO bins: with one, `first` and `last` are the same bin
+    // and the correlation is 1.000 by construction — which reads as "a frozen
+    // attractor" when it is really "one bin of data". The persist==0 case had
+    // this guard already; the persist==1 case slipped through and printed
+    // exactly that spurious 1.000.
+    const double changes = persist >= 2 ? pop_corr(first, last) : -2.0;
 
     double kick_r = 0.0;
     {
@@ -7255,12 +7338,34 @@ bool run_seqprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
         for (uint32_t k = 0; k < ms.count; ++k) ks += during[i][k];
       const double kick_rate = ks / double(kSqRepeats) / double(kSqKickTicks) /
                                double(ms.count) / 0.001;
-      std::printf("    %-8.3f %-9.1f %-10s %-11u %-11.3f %-11s  | kick %.0f->%.0f Hz r=%.2f\n",
-                  double(w), mean_rate, runaway ? "SEIZED" : "no", persist * kSqBinTicks,
+      std::printf("    %-17s %-9.1f %-9s %-11u %-11.3f %-11s | kick %.0f->%.0f Hz r=%.2f\n",
+                  arms[sc].what, mean_rate, runaway ? "SEIZED" : "no",
+                  persist * kSqBinTicks,
                   rel[0], changes < -1.0 ? "-" : (std::snprintf(nullptr, 0, "%.3f", changes),
                   [&]{ static char buf[16]; std::snprintf(buf, sizeof(buf), "%.3f", changes);
                        return buf; }()),
                   base_rate, kick_rate, kick_r);
+      std::printf("      reliability by 10 ms bin:");
+      for (uint32_t b = 0; b < kSqBins; ++b) std::printf(" %.2f", rel[b]);
+      std::printf("\n");
+      // WHERE the activity is, in neuron index, bin by bin. This is the direct
+      // test for a travelling wave and the correlation is not: a chain of
+      // 64-neuron groups stepping every 3 ms should advance about 200 indices
+      // per 10 ms bin, while a persistent blob sits still. `changes r` cannot
+      // tell those apart — it reads 0.91 for a blob and would read low for a
+      // wave, but it also reads low for noise.
+      std::printf("      centre of activity, neuron index:");
+      for (uint32_t b = 0; b < kSqBins; ++b) {
+        double num = 0.0, den = 0.0;
+        for (uint32_t r = 0; r < kSqRepeats; ++r) {
+          for (uint32_t k = 0; k < ms.count; ++k) {
+            num += double(k) * double(counts[r][b][k]);
+            den += double(counts[r][b][k]);
+          }
+        }
+        std::printf(" %5.0f", den > 0.0 ? num / den : -1.0);
+      }
+      std::printf("\n");
       if (kick_r < 0.3 || kick_rate < base_rate * 1.5) {
         std::printf("      ^ POSITIVE CONTROL FAILED at this weight: the kick did not\n"
                     "        make a loud reproducible pattern, so the zero above is\n"

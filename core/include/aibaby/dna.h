@@ -322,7 +322,7 @@ constexpr uint32_t kDnaMagic = 0x44424941;  // "AIBD"
 //     about what reward multiplies.
 //
 //     See DnaModule::ffi_apical and DnaModule::ffi_learn, and `errprobe`.
-constexpr uint32_t kDnaVersion = 41;
+constexpr uint32_t kDnaVersion = 42;
 
 // What a module is wired to the world through. The host looks modules up by
 // role, never by name or index, so renaming a module in the genome cannot
@@ -1094,6 +1094,54 @@ struct DnaModule {
   float extent[3];              // spatial volume
   float conn_radius;            // hard cutoff for intra-module wiring
   float conn_density;           // connection probability at zero distance
+
+  // --- DNA v42: a synfire chain, laid down at birth -------------------------
+  // `seqprobe` measured that the intra-module wiring above cannot carry a kick
+  // forward for even 10 ms: it lands at r = 0.92 and reads 0.03 one bin later,
+  // at every weight up to eight times the shipped one. `trajprobe` measured the
+  // consequence at the output — an utterance is a HELD VOWEL, 10 Hz of movement
+  // against the 750 Hz the body plan allows, and 1-8% of even that shared
+  // between utterances. Reward cannot select a trajectory that is never
+  // repeated, which is why every taught result in this project is a setpoint.
+  //
+  // The wiring above is distance-based and therefore SYMMETRIC: if i drives j
+  // then j drives i just as hard, and a symmetric loop has no direction to
+  // carry anything along. What a sequence needs is asymmetry — one population
+  // driving the next and not the reverse. That is a synfire chain, and it is
+  // structure rather than a constant, which is why no sweep of `conn_density`
+  // or `weight_init` was ever going to find it.
+  //
+  // The chain is between POPULATIONS, not between neurons, and getting that
+  // wrong is the first way this was built. Neurons are cut into consecutive
+  // groups of `chain_group`, and every neuron in group k drives group k+1:
+  //
+  //   group k  ->  group k+1   at chain_density
+  //
+  // A per-neuron window instead of a group — i driving i+4..i+11 — was tried
+  // first and does exactly nothing (reliability 0.022 against 0.034 for no
+  // chain at all). It fails for a reason worth keeping: at that span each
+  // target receives about three synapses from its predecessors, and three
+  // coincident spikes at this weight cannot make a neuron fire. A synfire chain
+  // needs CONVERGENCE — tens of inputs arriving together on each cell of the
+  // next link — and convergence is what a group-to-group rule buys and a
+  // narrow window does not.
+  //
+  // Nothing wraps. A wrapping chain is a loop that either sustains forever or
+  // seizes; a finite one is a syllable, which is the thing that is missing.
+  //
+  // SHIPS OFF at chain_weight = 0, which skips the pass entirely and is
+  // bit-identical to the pre-v42 creature.
+  //
+  // This is the cheap stepping stone, and it is deliberately INNATE: the chain
+  // is a fixed genome-specified sequence, so reward can select where in it to
+  // sing but cannot change what it is. The interesting version — a chain that
+  // self-organises out of asymmetric plasticity — needs this same wiring
+  // primitive and this same measurement, and is not worth attempting until a
+  // hand-built chain is shown to sustain anything at all in this kernel.
+  float chain_weight;           // 0 disables the whole pass
+  float chain_density;          // connection probability from group k to group k+1
+  uint32_t chain_group;         // neurons per link; 0 disables
+  float chain_delay_ms;         // one link's delay, and so the step of the chain
   float threshold;
   float v_rest;
   float leak_tau_ms;

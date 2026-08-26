@@ -4250,6 +4250,85 @@ The control — the pattern DURING the kick must be loud and reproducible — is
 what turns this from a shrug into a measurement, and it is checked per weight
 rather than once.
 
+### DNA v42 — a synfire chain, and the first structure across time this creature has had
+
+`trajprobe` and `seqprobe` above say the same thing twice: an utterance is a held
+vowel, and no module can carry its own activity forward for 10 ms. The wiring
+every module has is distance-based and therefore **symmetric** — if i drives j
+then j drives i just as hard — and a symmetric loop has no direction to carry
+anything along. v42 adds the asymmetric pass: neurons are cut into consecutive
+groups of `chain_group`, and every excitatory neuron in group k drives group
+k+1. Nothing wraps, so a chain is a syllable and not a loop. **Ships off** at
+`chain_weight = 0`.
+
+**In `central` it carries a travelling wave.** `seqprobe` at 20 links of 8 ms:
+
+```
+reliability:  0.75 0.67 0.74 0.76 0.74 0.65 0.63 0.54 0.53 0.51 0.56 0.58 | 0.01
+centre:        107  120  142  152  175  195  224  241  272  299  325  330 |  154
+```
+
+The centre of activity climbs monotonically for **96 ms** and then the wave runs
+off the end of the chain and reliability collapses in one bin. Reproducible
+across 24 repeats, moving, and finite — with divisive normalisation left ON and
+the module at 22 Hz, so this is not a saturation artefact. The same creature with
+no chain reads reliability 0.022 and a centre pinned flat at ~200 forever.
+
+**At the larynx it imposes a reproducible trajectory, and an inaudible one.**
+`trajprobe` with the chain in `vocal`, three seed families:
+
+| seed | no chain | chain in `vocal` | shape spans | d' (null) |
+|---|---|---|---|---|
+| 1 | 1.2% | **53.8%** | 4.1 Hz | 0.461 (-0.014) |
+| 2 | 5.1% | **66.2%** | 6.2 Hz | 0.641 (-0.010) |
+| 3 | 8.1% | **57.1%** | 4.3 Hz | 0.549 (-0.030) |
+
+Utterances go from agreeing about 1-8% of their own movement to **53-66%**, and
+the mean shape goes from flat noise to a clean monotonic ramp. But it spans
+**4-6 Hz** at d' ~0.5, and teaching moves a formant by ~70 Hz. The generator
+works; the coupling into the vocal groups is far too weak to hear.
+
+The chain in `central` does nothing at the voice (3.3-5.8%, no better than
+baseline) even though `seqprobe` measures 96 ms of travelling wave in exactly
+that module. The `central->vocal` tract at density 0.03 does not carry it, which
+is the fourth independent measurement saying that about that tract.
+
+So the open problem has moved from "there is no sequence anywhere" to "the
+sequence does not reach the vocal groups loudly enough", which is a route and
+not a generator. This chain is also entirely **innate** — reward could select
+where in it to sing, but the sequence is genome-specified. The interesting
+version self-organises, and it inherits exactly this route problem.
+
+#### `n_max` is not the live neuron count, and reading it as one wasted the first three runs
+
+`central` hatches at **400 neurons**. `n_max = 4096` is the arena ceiling M4
+growth may one day reach. Every conclusion drawn before that was checked was
+wrong in the same direction:
+
+- "the chain propagates two links and stops dead" — at 64 per group there are
+  six links and, at 3 ms each, a chain **18 ms long end to end**. The measured
+  20 ms of persistence was the chain running to its end.
+- "more drive makes it die sooner" — higher `chain_weight` compresses a
+  completed chain, it does not truncate one.
+- "divisive normalisation is the brake" — switching v12 off gives 90 ms of
+  persistence on an 18 ms chain, which is reverberation. v12 is not stopping a
+  wave; it is stopping the module saturating, which is its job.
+
+The instrument was wrong too: 10 ms bins cannot resolve a 3 ms link, so the
+centre of activity read flat while the wave was real. And the first chain built
+was a per-neuron window — each neuron driving about three downstream — which has
+no **convergence** and therefore cannot fire anything. Four separate
+plausible-looking negatives, none of them about the mechanism.
+
+#### The verdict said "the creature has a syllable" about a 4 Hz event
+
+`trajprobe`'s first chain verdict gated on the shared **fraction** and never on
+the amplitude, so 53.8% printed as a syllable. It is a real statistic about
+something no listener could hear — and it is the same mistake this very probe's
+null was rewritten to avoid earlier the same day, made again in the same file.
+It now gates on both and runs the project's audibility ruler on the start of an
+utterance against its end.
+
 ### Three verify tiers, because the second one had become unrunnable
 
 The teaching experiments each raise a creature through several phases of a life

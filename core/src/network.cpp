@@ -690,6 +690,32 @@ void Network::wire_intra_module(uint32_t m, Rng& rng) {
       add_synapse(i, j, w, delay_ticks(d / velocity));
     }
   }
+
+  // DNA v42. The asymmetric pass. Runs after the distance rule and adds to it
+  // rather than replacing it, so a chain module keeps whatever local dynamics
+  // it had — the chain is the thing that carries activity FORWARD, not the
+  // whole of the module's wiring.
+  if (dm.chain_weight > 0.0f && dm.chain_group > 0) {
+    const uint16_t link = delay_ticks(Scalar(dm.chain_delay_ms));
+    const uint32_t g = dm.chain_group;
+    for (uint32_t a = 0; a < ms.count; ++a) {
+      const uint32_t i = ms.begin + a;
+      // An inhibitory neuron does not carry the chain. A link has to EXCITE the
+      // next population or there is nothing to propagate, and letting the 20%
+      // inhibitory cells lay down negative links would make the forward
+      // direction a mixture that cancels.
+      if (is_inhib_[i]) continue;
+      const uint32_t next_lo = (a / g + 1) * g;
+      const uint32_t next_hi = next_lo + g;
+      if (next_lo >= ms.count) continue;  // nothing wraps: a syllable, not a loop
+      for (uint32_t b = next_lo; b < next_hi && b < ms.count; ++b) {
+        if (!rng.chance(Scalar(dm.chain_density))) continue;
+        Scalar w = Scalar(dm.chain_weight) * (kOne + Scalar(0.3) * rng.normal());
+        if (w < kZero) w = kZero;
+        add_synapse(i, ms.begin + b, w, link);
+      }
+    }
+  }
 }
 
 // A retinotopic, orientation-selective map from the retina onto a cortical
