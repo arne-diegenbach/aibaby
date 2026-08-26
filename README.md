@@ -4419,6 +4419,32 @@ mobile, not more — the readout is a centroid over a population and a larger
 population averages harder. The change made to give a chain something to sweep
 is the same change that flattened the thing being swept.
 
+**CORRECTION, measured the next day: size was not the problem, unopposed
+background was.** Switching DNA v32's lateral competition on in the same
+900-neuron larynx (`lateral_gain = 0.06`, `lateral_fields = 9` — one competitive
+field per motor group, which is what it was built for) takes the F1 range from
+4.8 Hz to **18.5 Hz**, above even the shipped 126-neuron larynx's 10.4 Hz. So
+"a larger population averages harder" is the right mechanism and "bigger is
+worse" was the wrong conclusion drawn from it: the extra neurons are only a
+liability while nothing suppresses the ones the wave is not in.
+
+That does not rescue the chain, and the reason is a third instance of the knob
+v32 already documents:
+
+| 900-neuron `vocal` | F1 range | shared shape | d' |
+|---|---|---|---|
+| no lateral, no chain | 4.8 Hz | 3.4% | -0.071 |
+| no lateral, chain | 4.7 Hz | **49.2%** | **0.419** |
+| lateral 0.06, no chain | **18.5 Hz** | 6.0% | -0.228 |
+| lateral 0.06 + chain | 12.1 Hz | 10.3% | -0.289 |
+
+Competition restores the mobility and **destroys the reproducibility** — 49.2%
+down to 10.3%, with d' back below its own null. Winner-take-all makes which
+subset wins depend on competition dynamics, and those amplify small differences,
+so each utterance's wave settles somewhere else. Mobility and reproducibility sit
+on opposite sides of one gain, exactly as v32's notes say its bimodality bar and
+G2 do.
+
 The strong-chain arm confirms it from the other side: it recovers the shared
 shape (49.2%, d' 0.419, close to the small larynx's 53.8% and 0.461) but its span
 is SMALLER at 2.3 Hz and it costs most of the voice, 11% voiced against 40%.
