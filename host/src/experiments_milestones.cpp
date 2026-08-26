@@ -5487,4 +5487,275 @@ bool run_metaprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
   return true;
 }
 
+
+// --- trajprobe: does an utterance have a SHAPE, or only a value? ------------
+//
+// Every taught result on this page teaches a SETPOINT. M1c moves the creature's
+// vowel toward a target; `capacity` teaches two formants to two values;
+// `vocallearn` scores the distance from a fixed pair of numbers. Nothing has
+// ever asked the larynx for a trajectory, and the reason is visible in the
+// genome rather than in any experiment.
+//
+// §5.3's own comment says the songbird arrangement plainly: "HVC drives RA
+// reliably and LMAN adds variance on top. This is the HVC term." The creature
+// has an LMAN — node perturbation, DNA v10 — and an RA, which is `vocal`. What
+// it has in place of HVC is `drive_compensation`: a SCALAR steady
+// depolarisation. A constant. A constant cannot carry a sequence, so if that
+// really is all the drive there is, every utterance is a fixed point plus noise
+// and a word is not merely untaught but unreachable.
+//
+// This measures that before anything is built for it. `central` cannot supply
+// the missing structure either — it is sense-driven convergence with no
+// autonomous time course of its own — so the answer decides whether the next
+// mechanism is a generator or a way of shaping structure that is already there.
+//
+// The question is asked in two halves, because they can come apart:
+//
+//   shape          does the mean utterance have a time course at all, or is
+//                  the between-bin variance of it no bigger than the noise?
+//   reproducible   do DIFFERENT utterances share that time course? Split the
+//                  utterances in half, average each half, and correlate. A
+//                  creature whose every utterance wanders differently has
+//                  variability but no sequence, and shaping cannot get hold of
+//                  it.
+//
+// Each utterance is mean-subtracted before binning, so this is about SHAPE and
+// not about which vowel was said — otherwise a creature that reliably says the
+// same steady vowel would score a perfect trajectory correlation for having no
+// trajectory at all. That trap is the whole reason the null below shuffles time
+// bins rather than utterances.
+namespace {
+
+constexpr uint32_t kTjBins = 8;         // time bins across one utterance
+constexpr uint32_t kTjMinFrames = 8;    // shorter than this cannot fill them
+constexpr uint32_t kTjGapFrames = 3;    // unvoiced frames that end an utterance
+
+struct TjSplit { double r_f1 = 0.0, r_f2 = 0.0; };
+
+// A plain struct rather than std::array: <array> is not included in this
+// translation unit and one probe is not a reason to add a header to it.
+struct TjBins {
+  double v[kTjBins];
+  double& operator[](uint32_t i) { return v[i]; }
+  const double& operator[](uint32_t i) const { return v[i]; }
+};
+
+// Pearson correlation between two binned trajectories.
+double corr(const double* a, const double* b, uint32_t n) {
+  double ma = 0, mb = 0;
+  for (uint32_t i = 0; i < n; ++i) { ma += a[i]; mb += b[i]; }
+  ma /= n; mb /= n;
+  double num = 0, da = 0, db = 0;
+  for (uint32_t i = 0; i < n; ++i) {
+    const double x = a[i] - ma, y = b[i] - mb;
+    num += x * y; da += x * x; db += y * y;
+  }
+  return (da > 1e-12 && db > 1e-12) ? num / std::sqrt(da * db) : 0.0;
+}
+
+// Average the even-indexed and odd-indexed utterances separately and correlate
+// the two means. Split-half rather than utterance-to-utterance, because a
+// single pair of utterances is far too noisy to correlate and the quantity that
+// matters is whether a SHARED time course exists at all.
+TjSplit split_half(const std::vector<TjBins>& f1, const std::vector<TjBins>& f2) {
+  TjSplit out;
+  if (f1.size() < 4) return out;
+  double a1[kTjBins] = {}, b1[kTjBins] = {}, a2[kTjBins] = {}, b2[kTjBins] = {};
+  uint32_t na = 0, nb = 0;
+  for (size_t u = 0; u < f1.size(); ++u) {
+    double* d1 = (u % 2) ? b1 : a1;
+    double* d2 = (u % 2) ? b2 : a2;
+    for (uint32_t k = 0; k < kTjBins; ++k) { d1[k] += f1[u][k]; d2[k] += f2[u][k]; }
+    if (u % 2) ++nb; else ++na;
+  }
+  if (na == 0 || nb == 0) return out;
+  for (uint32_t k = 0; k < kTjBins; ++k) {
+    a1[k] /= na; b1[k] /= nb; a2[k] /= na; b2[k] /= nb;
+  }
+  out.r_f1 = corr(a1, b1, kTjBins);
+  out.r_f2 = corr(a2, b2, kTjBins);
+  return out;
+}
+
+}  // namespace
+
+bool run_trajprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  aibaby::Dna dna0;
+  if (dna0.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) {
+    std::printf("  setup failed: the genome does not load\n");
+    return false;
+  }
+  std::string error;
+  Session s;
+  if (!s.init(blob, error)) {
+    std::printf("  failed to hatch: %s\n", error.c_str());
+    return false;
+  }
+  instrument("trajprobe", dna0.header().seed ^ 0x7A3Cu, ticks, "ticks");
+  std::printf("  the creature babbles alone; every voiced run is one utterance,\n"
+              "  mean-subtracted and resampled to %u bins. The question is whether\n"
+              "  utterances SHARE a time course, not whether they have one each.\n",
+              kTjBins);
+
+  std::vector<TjBins> traj_f1, traj_f2;
+  std::vector<double> cur_f1, cur_f2;
+  uint32_t last_frame = 0, gap = 0;
+  uint64_t frames = 0, voiced_frames = 0;
+  double len_sum = 0.0;
+
+  auto close_utterance = [&]() {
+    if (cur_f1.size() >= kTjMinFrames) {
+      len_sum += double(cur_f1.size());
+      TjBins b1 = {}, b2 = {};
+      double m1 = 0, m2 = 0;
+      for (size_t i = 0; i < cur_f1.size(); ++i) { m1 += cur_f1[i]; m2 += cur_f2[i]; }
+      m1 /= double(cur_f1.size()); m2 /= double(cur_f2.size());
+      for (uint32_t k = 0; k < kTjBins; ++k) {
+        const size_t lo = cur_f1.size() * k / kTjBins;
+        size_t hi = cur_f1.size() * (k + 1) / kTjBins;
+        if (hi <= lo) hi = lo + 1;
+        double a = 0, b = 0;
+        uint32_t n = 0;
+        for (size_t i = lo; i < hi && i < cur_f1.size(); ++i) {
+          a += cur_f1[i]; b += cur_f2[i]; ++n;
+        }
+        // Mean-subtracted: the SHAPE of the utterance, not which vowel it was.
+        b1[k] = n ? a / n - m1 : 0.0;
+        b2[k] = n ? b / n - m2 : 0.0;
+      }
+      traj_f1.push_back(b1);
+      traj_f2.push_back(b2);
+    }
+    cur_f1.clear();
+    cur_f2.clear();
+  };
+
+  for (uint64_t t = 0; t < ticks; ++t) {
+    s.brain.step();
+    if (s.brain.vocal_frame() == last_frame) continue;
+    last_frame = s.brain.vocal_frame();
+    ++frames;
+    const aibaby::VocalParams& v = s.brain.voice();
+    if (v.voicing > 0.5f && v.amplitude > kAmplitudeFloor) {
+      ++voiced_frames;
+      gap = 0;
+      cur_f1.push_back(double(v.f1));
+      cur_f2.push_back(double(v.f2));
+    } else if (!cur_f1.empty()) {
+      if (++gap >= kTjGapFrames) close_utterance();
+    }
+  }
+  close_utterance();
+
+  std::printf("\n  frames %llu, voiced %.1f%%, utterances %zu, mean length %.1f frames\n",
+              (unsigned long long)frames,
+              frames ? 100.0 * double(voiced_frames) / double(frames) : 0.0,
+              traj_f1.size(), traj_f1.empty() ? 0.0 : len_sum / double(traj_f1.size()));
+
+  if (traj_f1.size() < 24) {
+    std::printf("\n  TOO FEW UTTERANCES — %zu of them cannot support a split-half\n"
+                "  correlation. Raise --ticks.\n", traj_f1.size());
+    return false;
+  }
+
+  const TjSplit real = split_half(traj_f1, traj_f2);
+
+  // The null shuffles TIME BINS within each utterance. That destroys any shared
+  // time course while leaving every other property — utterance count, length,
+  // formant spread, the mean-subtraction — exactly as it was.
+  aibaby::Rng rng;
+  rng.seed(dna0.header().seed ^ 0x7A3Cu);
+  double n1 = 0.0, n2 = 0.0;
+  const uint32_t perms = 32;
+  for (uint32_t p = 0; p < perms; ++p) {
+    std::vector<TjBins> sh1 = traj_f1, sh2 = traj_f2;
+    for (size_t u = 0; u < sh1.size(); ++u) {
+      for (uint32_t k = kTjBins; k > 1; --k) {
+        const uint32_t j = rng.next() % k;
+        std::swap(sh1[u][k - 1], sh1[u][j]);
+        std::swap(sh2[u][k - 1], sh2[u][j]);
+      }
+    }
+    const TjSplit ns = split_half(sh1, sh2);
+    n1 += ns.r_f1;
+    n2 += ns.r_f2;
+  }
+  n1 /= perms;
+  n2 /= perms;
+
+  // How big the shared time course is in Hz, for a sense of whether a
+  // statistically real shape is also an audible one.
+  double amp1 = 0.0, amp2 = 0.0;
+  {
+    double m1[kTjBins] = {}, m2[kTjBins] = {};
+    for (size_t u = 0; u < traj_f1.size(); ++u) {
+      for (uint32_t k = 0; k < kTjBins; ++k) { m1[k] += traj_f1[u][k]; m2[k] += traj_f2[u][k]; }
+    }
+    double lo1 = 1e9, hi1 = -1e9, lo2 = 1e9, hi2 = -1e9;
+    for (uint32_t k = 0; k < kTjBins; ++k) {
+      m1[k] /= double(traj_f1.size());
+      m2[k] /= double(traj_f2.size());
+      lo1 = std::min(lo1, m1[k]); hi1 = std::max(hi1, m1[k]);
+      lo2 = std::min(lo2, m2[k]); hi2 = std::max(hi2, m2[k]);
+    }
+    amp1 = hi1 - lo1;
+    amp2 = hi2 - lo2;
+    std::printf("\n  mean utterance shape, Hz from the utterance's own mean:\n    F1 ");
+    for (uint32_t k = 0; k < kTjBins; ++k) std::printf("%+7.1f", m1[k]);
+    std::printf("\n    F2 ");
+    for (uint32_t k = 0; k < kTjBins; ++k) std::printf("%+7.1f", m2[k]);
+    std::printf("\n");
+  }
+
+  // How far a SINGLE utterance ranges, to read the shared amplitude against.
+  // This is the statistic that decides the question, and the correlation is
+  // not: when the shared shape is 0.1 Hz, the split-half r is two noise vectors
+  // normalised against each other and can come out anywhere — this run read
+  // -0.94 on F2 and it means nothing at all. Amplitude first, correlation only
+  // as confirmation.
+  double ind1 = 0.0, ind2 = 0.0;
+  for (size_t u = 0; u < traj_f1.size(); ++u) {
+    double lo1 = 1e9, hi1 = -1e9, lo2 = 1e9, hi2 = -1e9;
+    for (uint32_t k = 0; k < kTjBins; ++k) {
+      lo1 = std::min(lo1, traj_f1[u][k]); hi1 = std::max(hi1, traj_f1[u][k]);
+      lo2 = std::min(lo2, traj_f2[u][k]); hi2 = std::max(hi2, traj_f2[u][k]);
+    }
+    ind1 += hi1 - lo1;
+    ind2 += hi2 - lo2;
+  }
+  ind1 /= double(traj_f1.size());
+  ind2 /= double(traj_f2.size());
+  const double share1 = ind1 > 1e-9 ? amp1 / ind1 : 0.0;
+  const double share2 = ind2 > 1e-9 ? amp2 / ind2 : 0.0;
+
+  std::printf("\n  how much of an utterance's movement is SHARED with the others:\n"
+              "    F1   one utterance ranges %6.1f Hz, the shared shape %5.1f Hz  (%.1f%%)\n"
+              "    F2   one utterance ranges %6.1f Hz, the shared shape %5.1f Hz  (%.1f%%)\n",
+              ind1, amp1, 100.0 * share1, ind2, amp2, 100.0 * share2);
+  std::printf("\n  split-half correlation, as confirmation only:\n"
+              "    F1   %+.3f   against a bin-shuffled null of %+.3f\n"
+              "    F2   %+.3f   against a bin-shuffled null of %+.3f\n",
+              real.r_f1, n1, real.r_f2, n2);
+
+  const double best = std::max(real.r_f1, real.r_f2);
+  const double null = std::max(n1, n2);
+  const double share = std::max(share1, share2);
+  if (share > 0.10 && best - null > 0.3) {
+    std::printf("\n  THERE IS A SHARED TIME COURSE — utterances agree about their own\n"
+                "  shape at %+.3f against a null of %+.3f. The larynx already produces\n"
+                "  structure across time, so the missing piece is a way to SHAPE it,\n"
+                "  not a generator to create it.\n", best, null);
+  } else {
+    std::printf("\n  NO SHARED TIME COURSE — only %.1f%% of an utterance's movement is\n"
+                "  shared with the other utterances. They vary, but each varies its own\n"
+                "  way: there is variability and no sequence. A setpoint plus noise is\n"
+                "  all this larynx produces, which is what a scalar\n"
+                "  `drive_compensation` in place of HVC predicts. Reward cannot select\n"
+                "  a trajectory that is never repeated, so a word is unreachable until\n"
+                "  something generates one.\n", 100.0 * share);
+  }
+  (void)verbose;
+  return true;
+}
+
 }  // namespace aibaby_host

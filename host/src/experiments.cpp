@@ -147,6 +147,16 @@ const Spec kSpecs[] = {
      "  or blocked lesson B. Measured on 6 seed families: the commitment gate\n"
      "  moves retention +0.21 on average and on 5 of 6, at 14% of the learning\n"
      "  rate; the moment-ratio gate is REFUTED at -0.13"},
+    {"seqprobe", kDefaultMinimum, Expect::kPass, Tier::kLong,
+     "ignores --ticks: it settles 20000 and then runs a fixed 24 repeats of a\n"
+     "  fixed kick at each of four recurrent weights. Measured: the kick lands at\n"
+     "  r=0.92 and 5x baseline, and 10 ms later reads 0.03 at every weight up to\n"
+     "  8x. Local recurrence cannot carry activity forward at all"},
+    {"trajprobe", 600000, Expect::kPass, Tier::kLong,
+     "derived: it needs at least 24 utterances for a split-half correlation and\n"
+     "  refuses below that rather than correlating noise. Measured on 3 seed\n"
+     "  families: an utterance ranges ~10 Hz of F1 and 1-8% of that is shared\n"
+     "  with other utterances. The larynx holds a vowel; it has no trajectory"},
     {"driftprobe", 3400000, Expect::kPass, Tier::kTeach,
      "derived: 60% of it teaches lesson A, which needs teachsound's 3.4M scaled\n"
      "  down to the two arms this has; below that the boundary snapshot is taken\n"
@@ -311,6 +321,8 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "credit") ok = run_credit(dna_blob, ticks, verbose);
   else if (name == "driftprobe") ok = run_driftprobe(dna_blob, ticks, verbose);
   else if (name == "metaprobe") ok = run_metaprobe(dna_blob, ticks, verbose);
+  else if (name == "trajprobe") ok = run_trajprobe(dna_blob, ticks, verbose);
+  else if (name == "seqprobe") ok = run_seqprobe(dna_blob, ticks, verbose);
   else if (name == "restate") ok = run_restate(dna_blob, ticks, verbose);
   else if (name == "eligprobe") ok = run_eligprobe(dna_blob, ticks, verbose);
   else if (name == "dwprobe") ok = run_dwprobe(dna_blob, ticks, verbose);

@@ -7038,4 +7038,258 @@ bool run_relayprobe(const std::vector<uint8_t>& dna_blob, uint64_t ticks, bool v
   return relay_alive && control_ok && arms_differ;
 }
 
+
+// --- seqprobe: can a module in this kernel HOLD a sequence? ----------------
+//
+// `trajprobe` found that an utterance is a held vowel — the formants move ~10 Hz
+// inside it and almost none of that movement is shared between utterances. So
+// reward has no trajectory to select, and a word is unreachable until something
+// generates one. §5.3's own comment names the missing piece: "HVC drives RA
+// reliably and LMAN adds variance on top." The creature has an LMAN (DNA v10)
+// and an RA (`vocal`), and in place of HVC it has `drive_compensation` — a
+// scalar. A constant cannot carry a sequence.
+//
+// Before designing a generator, ask whether this kernel could run one at all.
+// The substrate is already there and nobody has looked at it: `wire_intra_module`
+// gives every module dense local recurrence (density 0.5 inside radius 0.4,
+// weight 0.12, 20% inhibitory). A sequence needs that loop to do three things
+// at once, and they pull against each other:
+//
+//   persist      activity outlasts the input that started it
+//   differ       the pattern CHANGES over time rather than freezing, or it is
+//                a memory and not a sequence
+//   repeat       the same kick produces the same succession, or reward cannot
+//                select it — which is exactly what `trajprobe` found missing
+//
+// The measurement kicks a fixed random subset of one module, removes the kick,
+// and watches. Reliability is the correlation between REPEATS of the same kick
+// at the same delay, so the creature's own spontaneous activity is the null
+// rather than a confound: noise is uncorrelated across repeats by construction.
+//
+// Swept over the recurrent weight, because the interesting answer is not what
+// the shipped genome does but whether ANY setting of it has a usable regime.
+// DNA v14 already found that excitatory feedback between modules diverges and
+// only inhibitory feedback settles; this asks the same question inside one.
+namespace {
+
+constexpr uint32_t kSqRepeats = 24;    // repeats of the identical kick
+constexpr uint32_t kSqBins = 12;       // time bins watched after it
+constexpr uint32_t kSqBinTicks = 10;   // 10 ms each, so 120 ms of aftermath
+constexpr uint32_t kSqKickTicks = 10;
+constexpr uint32_t kSqSettle = 20000;  // the rule from `stpprobe`: settle first
+
+// Correlation between two population vectors.
+double pop_corr(const std::vector<float>& a, const std::vector<float>& b) {
+  const size_t n = a.size();
+  if (n < 2 || b.size() != n) return 0.0;
+  double ma = 0, mb = 0;
+  for (size_t i = 0; i < n; ++i) { ma += a[i]; mb += b[i]; }
+  ma /= double(n); mb /= double(n);
+  double num = 0, da = 0, db = 0;
+  for (size_t i = 0; i < n; ++i) {
+    const double x = a[i] - ma, y = b[i] - mb;
+    num += x * y; da += x * x; db += y * y;
+  }
+  return (da > 1e-12 && db > 1e-12) ? num / std::sqrt(da * db) : 0.0;
+}
+
+}  // namespace
+
+bool run_seqprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  aibaby::Dna dna0;
+  if (dna0.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) {
+    std::printf("  setup failed: the genome does not load\n");
+    return false;
+  }
+  const size_t mod_base = sizeof(aibaby::DnaHeader);
+  int32_t m_target = -1;
+  for (uint32_t m = 0; m < dna0.module_count(); ++m) {
+    if (std::strcmp(dna0.module(m).name, "central") == 0) m_target = int32_t(m);
+  }
+  if (m_target < 0) {
+    std::printf("  setup failed: no module named \"central\"\n");
+    return false;
+  }
+
+  instrument("seqprobe", dna0.header().seed ^ 0x6B21u, ticks, "ticks");
+  std::printf("  kick a fixed 5%% of `central`, remove the kick, and watch %u bins of\n"
+              "  %u ms. Reliability is the correlation between REPEATS of the same\n"
+              "  kick, so the creature's own spontaneous activity is uncorrelated by\n"
+              "  construction and acts as the null.\n", kSqBins, kSqBinTicks);
+  std::printf("  swept over the recurrent weight, because the question is whether ANY\n"
+              "  setting has a regime that persists, changes and repeats at once.\n");
+
+  const float shipped = dna0.module(uint32_t(m_target)).weight_init;
+  const float scales[] = {1.0f, 2.0f, 4.0f, 8.0f};
+  const uint32_t n_scales = 4;
+
+  std::printf("\n    %-8s %-9s %-10s %-11s %-11s %-10s\n", "w_rec", "rate Hz", "runaway",
+              "persist ms", "reliab r", "changes r");
+  bool any_usable = false;
+  double best_persist = 0.0;
+
+  for (uint32_t sc = 0; sc < n_scales; ++sc) {
+    std::vector<uint8_t> variant = blob;
+    const float w = shipped * scales[sc];
+    std::memcpy(variant.data() + mod_base + sizeof(aibaby::DnaModule) * size_t(m_target) +
+                    offsetof(aibaby::DnaModule, weight_init),
+                &w, sizeof(w));
+    std::string error;
+    Session s;
+    if (!s.init(variant, error)) {
+      std::printf("    %-8.3f failed to hatch: %s\n", double(w), error.c_str());
+      continue;
+    }
+    aibaby::Network& net = s.brain.network();
+    const aibaby::ModuleState& ms = net.module(uint32_t(m_target));
+    for (uint32_t t = 0; t < kSqSettle; ++t) s.brain.step();
+
+    // One fixed kick pattern for every repeat — the same question asked of the
+    // module 24 times.
+    aibaby::Rng rng;
+    rng.seed(dna0.header().seed ^ 0x6B21u);
+    std::vector<uint32_t> kick;
+    for (uint32_t k = 0; k < ms.count; ++k) {
+      if (rng.chance(0.05f)) kick.push_back(ms.begin + k);
+    }
+
+    // counts[repeat][bin][neuron]
+    std::vector<std::vector<std::vector<float>>> counts(
+        kSqRepeats, std::vector<std::vector<float>>(kSqBins, std::vector<float>(ms.count, 0.0f)));
+    std::vector<std::vector<float>> during(kSqRepeats, std::vector<float>(ms.count, 0.0f));
+    double base_spikes = 0.0;
+    for (uint32_t t = 0; t < 2000; ++t) {
+      s.brain.step();
+      const uint32_t* fired = net.spikes();
+      for (uint32_t f = 0; f < net.spike_count(); ++f) {
+        const uint32_t id = fired[f];
+        if (id >= ms.begin && id < ms.begin + ms.count) base_spikes += 1.0;
+      }
+    }
+    const double base_rate = base_spikes / 2000.0 / double(ms.count) / 0.001;
+    double rate_sum = 0.0;
+    uint64_t rate_n = 0;
+
+    for (uint32_t r = 0; r < kSqRepeats; ++r) {
+      // Let the module return to its own baseline between repeats, or repeat
+      // r+1 measures the tail of repeat r and every reliability is inflated.
+      for (uint32_t t = 0; t < 400; ++t) s.brain.step();
+      // THE POSITIVE CONTROL, and without it this probe cannot tell "the trace
+      // dies" from "the kick never landed". The pattern during the kick itself
+      // must be both loud and reproducible; if it is not, every zero below is
+      // about the stimulus and not about the module.
+      for (uint32_t t = 0; t < kSqKickTicks; ++t) {
+        for (uint32_t idx : kick) net.inject(idx, aibaby::Scalar(2.0));
+        s.brain.step();
+        const uint32_t* fired = net.spikes();
+        for (uint32_t f = 0; f < net.spike_count(); ++f) {
+          const uint32_t id = fired[f];
+          if (id >= ms.begin && id < ms.begin + ms.count) during[r][id - ms.begin] += 1.0f;
+        }
+      }
+      for (uint32_t b = 0; b < kSqBins; ++b) {
+        for (uint32_t t = 0; t < kSqBinTicks; ++t) {
+          s.brain.step();
+          // Walk the tick's spike list rather than testing every neuron: the
+          // list is short and the module is 4096 wide.
+          const uint32_t* fired = net.spikes();
+          for (uint32_t f = 0; f < net.spike_count(); ++f) {
+            const uint32_t id = fired[f];
+            if (id >= ms.begin && id < ms.begin + ms.count) counts[r][b][id - ms.begin] += 1.0f;
+          }
+        }
+        double bin_spikes = 0.0;
+        for (uint32_t k = 0; k < ms.count; ++k) bin_spikes += counts[r][b][k];
+        rate_sum += bin_spikes;
+        ++rate_n;
+      }
+    }
+
+    const double mean_rate = rate_n ? rate_sum / double(rate_n) / double(ms.count) /
+                                          (double(kSqBinTicks) * 0.001) : 0.0;
+    const bool runaway = mean_rate > 200.0;
+
+    // Reliability per bin: mean pairwise correlation across repeats.
+    double rel[kSqBins] = {};
+    for (uint32_t b = 0; b < kSqBins; ++b) {
+      double acc = 0.0;
+      uint32_t n = 0;
+      for (uint32_t i = 0; i < kSqRepeats; ++i) {
+        for (uint32_t j = i + 1; j < kSqRepeats; ++j) {
+          acc += pop_corr(counts[i][b], counts[j][b]);
+          ++n;
+        }
+      }
+      rel[b] = n ? acc / double(n) : 0.0;
+    }
+    // How long reliability stays above 0.1.
+    uint32_t persist = 0;
+    for (uint32_t b = 0; b < kSqBins; ++b) {
+      if (rel[b] > 0.1) persist = b + 1; else break;
+    }
+    // Does the pattern CHANGE? Correlate the first bin's mean pattern with the
+    // last reliable one: a frozen attractor reads ~1, a sequence reads low.
+    std::vector<float> first(ms.count, 0.0f), last(ms.count, 0.0f);
+    const uint32_t lb = persist ? persist - 1 : 0;
+    for (uint32_t r = 0; r < kSqRepeats; ++r) {
+      for (uint32_t k = 0; k < ms.count; ++k) {
+        first[k] += counts[r][0][k];
+        last[k] += counts[r][lb][k];
+      }
+    }
+    // Meaningless when nothing persisted: `first` and `last` are then the same
+    // bin and the correlation is 1.000 by construction, which reads as "a
+    // frozen attractor" when it is really "no data".
+    const double changes = persist ? pop_corr(first, last) : -2.0;
+
+    double kick_r = 0.0;
+    {
+      double acc = 0.0;
+      uint32_t n = 0;
+      for (uint32_t i = 0; i < kSqRepeats; ++i) {
+        for (uint32_t j = i + 1; j < kSqRepeats; ++j) { acc += pop_corr(during[i], during[j]); ++n; }
+      }
+      kick_r = n ? acc / double(n) : 0.0;
+      double ks = 0.0;
+      for (uint32_t i = 0; i < kSqRepeats; ++i)
+        for (uint32_t k = 0; k < ms.count; ++k) ks += during[i][k];
+      const double kick_rate = ks / double(kSqRepeats) / double(kSqKickTicks) /
+                               double(ms.count) / 0.001;
+      std::printf("    %-8.3f %-9.1f %-10s %-11u %-11.3f %-11s  | kick %.0f->%.0f Hz r=%.2f\n",
+                  double(w), mean_rate, runaway ? "SEIZED" : "no", persist * kSqBinTicks,
+                  rel[0], changes < -1.0 ? "-" : (std::snprintf(nullptr, 0, "%.3f", changes),
+                  [&]{ static char buf[16]; std::snprintf(buf, sizeof(buf), "%.3f", changes);
+                       return buf; }()),
+                  base_rate, kick_rate, kick_r);
+      if (kick_r < 0.3 || kick_rate < base_rate * 1.5) {
+        std::printf("      ^ POSITIVE CONTROL FAILED at this weight: the kick did not\n"
+                    "        make a loud reproducible pattern, so the zero above is\n"
+                    "        about the stimulus, not the module.\n");
+      }
+    }
+    if (!runaway && persist * kSqBinTicks >= 30 && changes < 0.9) {
+      any_usable = true;
+      best_persist = std::max(best_persist, double(persist * kSqBinTicks));
+    }
+  }
+
+  std::printf("\n  `persist ms` is how long a repeat of the same kick still produces the\n"
+              "  same population pattern; `reliab r` is that correlation in the first\n"
+              "  bin; `changes r` compares the first bin's pattern with the last\n"
+              "  reliable one — near 1 is a frozen attractor holding still, which is a\n"
+              "  memory rather than a sequence.\n");
+  if (!any_usable) {
+    std::printf("\n  NO USABLE REGIME — at every recurrent weight tried, the module\n"
+                "  either fails to carry its own activity forward or seizes. Local\n"
+                "  recurrence as this kernel wires it cannot hold a sequence, so a\n"
+                "  generator needs new structure and not a new constant.\n");
+    return true;
+  }
+  std::printf("\n  THERE IS A REGIME — the kick survives %.0f ms with the pattern still\n"
+              "  reproducible and still changing. This kernel can carry a sequence;\n"
+              "  what it lacks is something that USES one.\n", best_persist);
+  (void)verbose;
+  return true;
+}
+
 }  // namespace aibaby_host

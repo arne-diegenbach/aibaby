@@ -139,6 +139,8 @@ a canvas, so each has a headless experiment that prints a number and a verdict.
 ./build/aibaby --experiment credit      --ticks 5600000 # would per-neuron reward remove the interference
 ./build/aibaby --experiment driftprobe  --ticks 3400000 # is the interference credit, or variance
 ./build/aibaby --experiment metaprobe   --ticks 5600000 # does DNA v41 buy what the oracle bought
+./build/aibaby --experiment trajprobe   --ticks 600000  # does an utterance have a shape
+./build/aibaby --experiment seqprobe                    # can any module hold a sequence
 ./build/aibaby --experiment snapshot    --ticks 2400000 # §8: resume is exact
 ```
 
@@ -441,7 +443,7 @@ as it currently stands. **The whole suite above passes except `m3`** — G1,
 calibrate, babble, audio, vision, M2, G2, sleep, G4 and snapshot are all green,
 and G3 is the one milestone still open. Shipped hash `23c4eb2c7c45d05c`;
 `--experiment verify` reads 19 of 19 as expected on the fast tier and
-`verify-long` 35 of 35 and `verify-teach` the seven hour-scale ones — see [The suite, both tiers](#the-suite-both-tiers).
+`verify-long` 37 of 37 and `verify-teach` the seven hour-scale ones — see [The suite, both tiers](#the-suite-both-tiers).
 
 **What teaching can and cannot do is now measured rather than guessed.** Three
 experiments bound it. `teachsound` (M1c) says praise alone moves the voice toward
@@ -3398,7 +3400,7 @@ Run 2026-08-26 on the shipped genome, with DNA v36–v41 all switched off.
 
 ```
 --experiment verify           determinism PASS   pinned hash PASS   19 of 19 as expected
---experiment verify-long      determinism PASS   pinned hash PASS   35 of 35 as expected
+--experiment verify-long      determinism PASS   pinned hash PASS   37 of 37 as expected
 --experiment verify-teach     the seven hour-scale teaching experiments
 --experiment mechverify       15 mechanisms, 0 drifted, 0 vacuous, 0 unpinned, 0 broken
                               2 open milestones still failing, which is what
@@ -4169,6 +4171,84 @@ was piped to `tail`, so `$?` reported **tail's** exit status and the segfault
 read as success — and stdout was block-buffered, so the crash discarded every
 line the experiment had printed and it looked like a silent clean exit. Run it
 unpiped, and use `stdbuf -o0`, before believing a fast quiet finish.
+
+### `trajprobe` and `seqprobe` — an utterance is a held vowel, and nothing here can hold a sequence
+
+Every taught result on this page teaches a **setpoint**. M1c moves the creature's
+vowel toward a target; `capacity` teaches two formants to two values;
+`vocallearn` scores the distance from a fixed pair of numbers. Nothing has ever
+asked the larynx for a trajectory, and these two probes are why that was never
+an oversight.
+
+**An utterance has no shape.** `trajprobe` records every voiced run the creature
+produces alone, mean-subtracts each one so the question is about SHAPE and not
+about which vowel was said, resamples it to eight bins, and asks whether
+different utterances share a time course. Three seed families, ~1000 utterances
+each:
+
+| | one utterance ranges | shared with the others |
+|---|---|---|
+| F1 | ~10 Hz | 1.2% / 5.1% / 8.1% |
+| F2 | ~26 Hz | 1.0% / 3.7% / 1.9% |
+
+The formants barely move *within* an utterance — 10 Hz against the 750 Hz of F1
+the body plan allows — and almost none of that little movement is shared between
+utterances. There is variability and no sequence, and **reward cannot select a
+trajectory that is never repeated.**
+
+§5.3's own comment named the missing piece years before this was measured: "HVC
+drives RA reliably and LMAN adds variance on top. This is the HVC term." The
+creature has an LMAN — node perturbation, DNA v10 — and an RA, which is `vocal`.
+What it has in place of HVC is `drive_compensation`: a **scalar** steady
+depolarisation. A constant cannot carry a sequence.
+
+**And no module can hold one.** The substrate looked promising and nobody had
+looked at it: `wire_intra_module` gives every module dense local recurrence
+(density 0.5 inside radius 0.4, weight 0.12, 20% inhibitory). `seqprobe` kicks a
+fixed 5% of `central`, removes the kick, and correlates repeats of the same kick
+against each other — so the creature's own spontaneous activity is uncorrelated
+by construction and acts as the null.
+
+| w_rec | during the kick | 10 ms later | seized? |
+|---|---|---|---|
+| 0.120 (shipped) | 7 → **33 Hz**, r = **0.92** | r = 0.034 | no |
+| 0.240 | 9 → 39 Hz, r = 0.89 | 0.057 | no |
+| 0.480 | 13 → 46 Hz, r = 0.81 | 0.051 | no |
+| 0.960 | 13 → 45 Hz, r = 0.78 | 0.060 | no |
+
+The kick lands hard — five times baseline in a pattern reproducible at 0.92
+across 24 repeats — and one bin later it is at 0.03. The trace does not decay,
+it **vanishes**. Eight times the recurrent weight moves the rate from 6 Hz to
+11 Hz and the reliability not at all: the loop is not near an interesting
+operating point, it is nowhere near one. This is DNA v14's finding about
+feedback *between* modules, now measured *inside* one.
+
+So a generator needs **new structure, not a new constant**. Distance-based
+symmetric wiring cannot carry activity forward; a sequence needs asymmetry — a
+chain where one population drives the next — which is something this
+architecture has never had anywhere.
+
+#### Both probes first printed a confident number computed on absent data
+
+`trajprobe`'s split-half correlation read **-0.940** on one seed, which looks
+like a strong finding until you notice the shared shape it is correlating spans
+**0.3 Hz**: two noise vectors normalised against each other, and the value can
+come out anywhere. The probe now leads with the amplitude ratio and prints the
+correlation as confirmation only.
+
+`seqprobe`'s `changes r` read **1.000** at every weight, which reads as "a frozen
+attractor". It was comparing bin 0 with bin 0, because nothing had persisted. It
+now prints `-`.
+
+Neither number was wrong arithmetic; both were statistics computed where there
+was no data to compute them on, and both looked like results. The same shape of
+mistake as the frozen-creature retention ratios above.
+
+**`seqprobe` also shipped without its positive control and was rewritten to have
+one.** "No persistence" and "the kick never landed" are the same table of zeros.
+The control — the pattern DURING the kick must be loud and reproducible — is
+what turns this from a shrug into a measurement, and it is checked per weight
+rather than once.
 
 ### Three verify tiers, because the second one had become unrunnable
 
