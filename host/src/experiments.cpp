@@ -152,6 +152,12 @@ const Spec kSpecs[] = {
      "  fixed kick at each of four recurrent weights. Measured: the kick lands at\n"
      "  r=0.92 and 5x baseline, and 10 ms later reads 0.03 at every weight up to\n"
      "  8x. Local recurrence cannot carry activity forward at all"},
+    {"vocab", 1200000, Expect::kOpen, Tier::kLong,
+     "derived: eight words share the trial budget four had, so it needs twice\n"
+     "  imitate's 560000 to leave enough trials per word for a held-out pair.\n"
+     "  Measured: mean 0.786 but 12 of 28 pairs under 0.75 (worst 0.569 against a\n"
+     "  chance of 0.5), and one of eight reads 0.210 against a chance of 0.125.\n"
+     "  The vocabulary is full below eight, so this is expected to FAIL"},
     {"trajprobe", 600000, Expect::kPass, Tier::kLong,
      "derived: it needs at least 24 utterances for a split-half correlation and\n"
      "  refuses below that rather than correlating noise. Measured on 3 seed\n"
@@ -322,6 +328,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "driftprobe") ok = run_driftprobe(dna_blob, ticks, verbose);
   else if (name == "metaprobe") ok = run_metaprobe(dna_blob, ticks, verbose);
   else if (name == "trajprobe") ok = run_trajprobe(dna_blob, ticks, verbose);
+  else if (name == "vocab") ok = run_vocab(dna_blob, ticks, verbose);
   else if (name == "seqprobe") ok = run_seqprobe(dna_blob, ticks, verbose);
   else if (name == "restate") ok = run_restate(dna_blob, ticks, verbose);
   else if (name == "eligprobe") ok = run_eligprobe(dna_blob, ticks, verbose);

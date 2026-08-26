@@ -760,7 +760,7 @@ struct Word {
 // two-alternative milestone wants and also what makes it a weak test of
 // *repeating*: a creature that transmits nothing but "how bright is this
 // sound" would pass it. 2 and 3 exist to break that tie.
-constexpr Word kWords[4] = {
+constexpr Word kWords[8] = {
     {190.0f, 780.0f, 1180.0f},   // "ball" — an open /a/
     {250.0f, 320.0f, 2500.0f},   // "cube" — a close /i/
     // /u/: F1 within 30 Hz of /i/ and F2 1600 Hz away from it. The pair
@@ -770,8 +770,23 @@ constexpr Word kWords[4] = {
     // /e/: sits between /a/ and /i/ on both formants, so its pairs are the
     // adjacent-vowel case rather than the corner-vowel one.
     {215.0f, 550.0f, 1850.0f},   // "bed"  — a mid front /e/
+    // Appended for `vocab`, which asks how many words this creature can hold
+    // apart at once. Chosen to CROWD the four above rather than to sit in the
+    // gaps: /o/ is 50 Hz from /u/ on F1, /ae/ is 140 from /a/ on F1 and 20 on
+    // F2, /^/ sits between /a/ and /e/, and /I/ is a close front vowel 550 Hz
+    // below /i/ on F2. A vocabulary that only grows into empty space measures
+    // the size of the space, not the creature.
+    {205.0f, 450.0f, 850.0f},    // "boat" — /o/,  crowds /u/
+    {195.0f, 690.0f, 1700.0f},   // "bat"  — /ae/, crowds /a/ and /e/
+    {210.0f, 620.0f, 1200.0f},   // "but"  — /^/,  crowds /a/
+    {235.0f, 400.0f, 1950.0f},   // "bit"  — /I/,  crowds /i/ and /e/
 };
+// The four the milestones are scored on. `imitate` and everything before it
+// index this, so it must NOT grow: adding words to the table above is
+// bit-identical for them only while this stays 4.
 constexpr uint32_t kWordCount = 4;
+// The whole table, for `vocab`.
+constexpr uint32_t kVocabCount = 8;
 
 
 // The two toys. A cube is a square and a ball is a disc, and the disc is drawn
@@ -1278,6 +1293,7 @@ bool run_credit(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_driftprobe(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_metaprobe(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_trajprobe(const std::vector<uint8_t>&, uint64_t, bool);
+bool run_vocab(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_seqprobe(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_m3(const std::vector<uint8_t>&, uint64_t, const Caregiver&, uint32_t, bool,
             const Capture&);

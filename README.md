@@ -443,7 +443,7 @@ as it currently stands. **The whole suite above passes except `m3`** — G1,
 calibrate, babble, audio, vision, M2, G2, sleep, G4 and snapshot are all green,
 and G3 is the one milestone still open. Shipped hash `23c4eb2c7c45d05c`;
 `--experiment verify` reads 19 of 19 as expected on the fast tier and
-`verify-long` 37 of 37 and `verify-teach` the seven hour-scale ones — see [The suite, both tiers](#the-suite-both-tiers).
+`verify-long` 38 of 38 and `verify-teach` the seven hour-scale ones — see [The suite, both tiers](#the-suite-both-tiers).
 
 **What teaching can and cannot do is now measured rather than guessed.** Three
 experiments bound it. `teachsound` (M1c) says praise alone moves the voice toward
@@ -3400,7 +3400,7 @@ Run 2026-08-26 on the shipped genome, with DNA v36–v41 all switched off.
 
 ```
 --experiment verify           determinism PASS   pinned hash PASS   19 of 19 as expected
---experiment verify-long      determinism PASS   pinned hash PASS   37 of 37 as expected
+--experiment verify-long      determinism PASS   pinned hash PASS   38 of 38 as expected
 --experiment verify-teach     the seven hour-scale teaching experiments
 --experiment mechverify       15 mechanisms, 0 drifted, 0 vacuous, 0 unpinned, 0 broken
                               2 open milestones still failing, which is what
@@ -4272,6 +4272,73 @@ The control — the pattern DURING the kick must be loud and reproducible — is
 what turns this from a shrug into a measurement, and it is checked per weight
 rather than once.
 
+### `vocab` — the creature recognises four words and not eight
+
+`imitate` scores four words in all six pairs, 200-600 ms AFTER the word stops, and
+every pair clears 0.75. The decisive one is /i/ against /u/: their F1s are 30 Hz
+apart and their F2s 1600, so it can only be answered on F2 — and it reads
+**0.900**, against 0.933 for the maximally-separated pair. The creature is not
+running a brightness meter. It carries which vowel it heard, in its voice, after
+the sound is gone, and it survives a microphone at 0 dB SNR (0.807, shuffled
+control 0.508).
+
+`vocab` asks the recognition twin of what `capacity` asked about teaching: how
+many? Four vowels are appended to `kWords` that CROWD the original four rather
+than filling the gaps between them — /o/ 50 Hz from /u/ on F1, /ae/ 140 from /a/,
+/^/ between /a/ and /e/, /I/ 550 below /i/ on F2 — because a vocabulary that only
+grows into empty space measures the size of the space and not the creature. All
+28 pairs are scored off one simulation in the same window.
+
+| hardest pairs | voice | dF1 | dF2 |
+|---|---|---|---|
+| /e/ bed - /ae/ bat | **0.569** | 140 | 150 |
+| /e/ - /I/ bit | 0.664 | 150 | 100 |
+| /a/ - /^/ but | 0.679 | 160 | **20** |
+| /e/ - /o/ boat | 0.691 | 100 | 1000 |
+| /u/ - /o/ | 0.701 | 100 | 50 |
+
+Mean 0.786, but **12 of 28 pairs fall below 0.75** and the worst is 0.569 against
+a chance of 0.5. At four words every pair cleared 0.753.
+
+**The number that settles it is one-of-eight: 0.210 against a chance of 0.125.**
+A pairwise table saying every pair is separable does not say a word can be picked
+out of eight — that needs every boundary to hold at once. The gap between 0.786
+pairwise and 0.210 eight-way is the difference between "these two sounds are
+different" and "the creature has a vocabulary", and it is large.
+
+#### The verdict line passed a saturated table, and had to be tightened
+
+The first version asked whether MORE THAN HALF the pairs cleared 0.75, and duly
+printed `EIGHT WORDS HOLD APART` over a table whose worst row was 0.569 against a
+chance of 0.5, with twelve of twenty-eight failing. Four words clear every pair,
+so "most of them" was never the standard the smaller vocabulary already met. The
+bar is now every pair AND a one-of-eight score well clear of chance.
+
+The return value then contradicted the verdict: `vocab` printed
+`THE VOCABULARY IS FULL BELOW EIGHT` and returned **true**, so `verify` reported
+"a milestone this project has never met just did". That message is the loudest
+one the harness has and it exists for exactly this — had `vocab` been marked
+`Expect::kPass` instead of `kOpen`, the same bug would have been completely
+silent and this page would now claim eight words hold apart directly above a
+table showing twelve failing pairs.
+
+Appending to `kWords` also came within one constant of silently rewriting a
+milestone: `kWordCount` was the only thing bounding `imitate`'s six-pair loop, so
+growing the table from four to eight would have quietly turned that milestone
+into a thinner 28-pair test. `kWordCount` stays pinned at 4 with a comment saying
+why, `vocab` uses its own `kVocabCount`, and `imitate` was re-run to confirm it
+reproduces its six numbers exactly. It does.
+
+**One thing this does not explain.** /i/-/u/ has a 30 Hz F1 gap and scores 0.900;
+/e/-/o/ has 100 Hz of F1 and 1000 of F2 and scores 0.691. The limit is therefore
+not distance in Hz, and not F1 dominance either. The likely reading is that the
+discriminable axis is the cochlea's own — this creature hears through a mel
+filterbank, and the vowel literature is consistent that Bark- or mel-scaled
+distance models confusion far better than F1xF2 in Hz, with sensitivity heightened
+in densely populated regions. That is checkable without building anything: score
+the 28 gaps in mel rather than Hz and see whether the ranking falls out. Until
+then "where it runs out" describes the table rather than explaining it.
+
 ### DNA v42 — a synfire chain, and the first structure across time this creature has had
 
 `trajprobe` and `seqprobe` above say the same thing twice: an utterance is a held
@@ -4742,17 +4809,75 @@ question rather than a rewrite.
 
 ## References
 
-The mechanisms here are named after the work they come from. These are the ones
-whose papers were read rather than remembered.
+The mechanisms here are named after the work they come from, and every paper the
+text leans on is listed with a link. Where a citation could not be verified to
+author level it is given by title and URL rather than guessed at — an invented
+author list is worse than an incomplete one.
+
+**Sequence generation, and why it needs more than STDP.**
+
+- Fiete, I. R., Senn, W., Wang, C. Z. H. & Hahnloser, R. H. R. (2010).
+  *Spike-time-dependent plasticity and heterosynaptic competition organize
+  networks to produce long scale-free sequences of neural activity.* Neuron
+  65(4), 563–576. <https://doi.org/10.1016/j.neuron.2010.02.003> — states this
+  project's `seqprobe` result from the other direction: STDP **alone** cannot
+  organize a network to generate long sequences, and STDP **plus heterosynaptic
+  competition** does, with no structured input. Both ingredients already exist
+  here — STDP ships, and DNA v38's competitive pruning is the same family — so
+  DNA v42's innate chain has an untested self-organising alternative.
+- Mackevicius, E. L., Gu, S., Denisenko, N. I. & Fee, M. S. (2023).
+  *Self-organization of songbird neural sequences during social isolation.*
+  eLife 12, e77262. <https://elifesciences.org/articles/77262> — sequences form
+  in HVC **without tutor exposure**, so the generator does not need patterned
+  input to exist; a tutor later binds pre-existing sequences to syllables.
+- *Addition of new neurons and the emergence of a local neural circuit for
+  precise timing.* <https://www.ncbi.nlm.nih.gov/pmc/articles/PMC8007041/> — new
+  projection neurons are recruited to the **end** of a growing feedforward chain
+  because immature cells are more excitable and more spontaneously active. The
+  closest thing in the literature to what M4's structural growth could be for.
+- Okubo, T. S., Mackevicius, E. L., Payne, H. L., Lynch, G. F. & Fee, M. S.
+  (2015). *Growth and splitting of neural sequences in songbird vocal
+  development.* Nature 528, 352–357. <https://doi.org/10.1038/nature15741> — the
+  developmental account the two above build on.
+
+**Node perturbation, which is this creature's motor learning rule (DNA v10).**
+
+- Fiete, I. R. & Seung, H. S. (2006). *Gradient learning in spiking neural
+  networks by dynamic perturbation of conductances.* Physical Review Letters 97,
+  048104. <https://doi.org/10.1103/PhysRevLett.97.048104> — the rule
+  `perturb_rate` implements. `driftprobe`'s reframing rests on its central
+  property: the estimate is **unbiased**, so a neuron that cannot affect the
+  reward has a covariance of exactly zero with it and receives noise rather than
+  a wrong answer.
+- Georgopoulos, A. P., Schwartz, A. B. & Kettner, R. E. (1986). *Neuronal
+  population coding of movement direction.* Science 233, 1416–1419.
+  <https://doi.org/10.1126/science.3749885> — the population vector. §5.3's
+  larynx reads a centroid over each motor group, which is this idea, and
+  `trajprobe` and `vocab` are both eventually limited by what a centroid can
+  represent.
 
 **Metaplasticity and memory consolidation (DNA v41).**
 
 - Fusi, S., Drew, P. J. & Abbott, L. F. (2005). *Cascade models of synaptically
   stored memories.* Neuron 45(4), 599–611.
-  <https://doi.org/10.1016/j.neuron.2005.02.001>
+  <https://doi.org/10.1016/j.neuron.2005.02.001> — the commitment brake is this
+  in its simplest form.
 - Benna, M. K. & Fusi, S. (2016). *Computational principles of synaptic memory
   consolidation.* Nature Neuroscience 19, 1697–1706.
-  <https://doi.org/10.1038/nn.4401>
+  <https://doi.org/10.1038/nn.4401> — the two-compartment store v41 built and
+  refuted. Its conservation law is what makes the readout keep only `r/(1+r)` of
+  a lesson.
+- Abraham, W. C. & Bear, M. F. (1996). *Metaplasticity: the plasticity of
+  synaptic plasticity.* Trends in Neurosciences 19(4), 126–130.
+  <https://doi.org/10.1016/S0166-2236(96)80018-X> — the framing: plasticity that
+  depends on a synapse's own history rather than on any signal from elsewhere.
+- Zenke, F., Poole, B. & Ganguli, S. (2017). *Continual learning through
+  synaptic intelligence.* ICML 70, 3987–3995.
+  <https://proceedings.mlr.press/v70/zenke17a.html>
+- Kirkpatrick, J. et al. (2017). *Overcoming catastrophic forgetting in neural
+  networks.* PNAS 114(13), 3521–3526. <https://doi.org/10.1073/pnas.1611835114>
+  — the machine-learning form of the same idea, and the reason `capacity` and
+  `retain` are posed the way they are.
 
 **Dynamic synapses and cricket phonotaxis (DNA v36).**
 
@@ -4761,6 +4886,7 @@ whose papers were read rather than remembered.
   <https://link.springer.com/article/10.1007/s004220050024>
 - Reeve, R. & Webb, B. (2003). *New neural circuits for robot phonotaxis.*
   Philosophical Transactions of the Royal Society A 361, 2245–2266.
+  <https://doi.org/10.1098/rsta.2003.1188>
 - Webb, B., Reeve, R., Horchler, A. & Quinn, R. (2003). *Testing a model of
   cricket phonotaxis on an outdoor robot platform.*
   <https://homepages.inf.ed.ac.uk/bwebb/publications/timr03.pdf> — the clearest
@@ -4769,16 +4895,21 @@ whose papers were read rather than remembered.
   four-pair auditory circuit around them.
 - Project overview and publication list:
   <https://homepages.inf.ed.ac.uk/bwebb/cricket/main.html>
+- Tsodyks, M. & Markram, H. (1997). *The neural code between neocortical
+  pyramidal neurons depends on neurotransmitter release probability.* PNAS 94,
+  719–723. <https://doi.org/10.1073/pnas.94.2.719> — the u/R recursion in
+  `DnaProjection::stp_use` is theirs; Webb's group's contribution is what to
+  point it at.
 
-**Per-neuron credit assignment (DNA v37, v39).**
+**Per-neuron credit assignment (DNA v37, v39, v40).**
 
 - Payeur, A., Guerguiev, J., Zenke, F., Richards, B. & Naud, R. (2021).
   *Burst-dependent synaptic plasticity can coordinate learning in hierarchical
   circuits.* Nature Neuroscience 24, 1010–1019.
   <https://www.nature.com/articles/s41593-021-00857-x> — the rule DNA v37
   implements, and the source of the observation that it wants short-term
-  synaptic dynamics, apical regenerative activity and plastic feedback
-  pathways alongside it. Two of those three were already here.
+  synaptic dynamics, apical regenerative activity and plastic feedback pathways
+  alongside it. Two of those three were already here.
 - Bellec, G., Scherr, F., Subramoney, A., Hajek, E., Salaj, D., Legenstein, R. &
   Maass, W. (2020). *A solution to the learning dilemma for recurrent networks of
   spiking neurons.* Nature Communications 11, 3625.
@@ -4786,29 +4917,50 @@ whose papers were read rather than remembered.
   traces times a *per-neuron* learning signal. The argument DNA v37 rests on, and
   the source of DNA v39's testable prediction.
 - Larkum, M. (2013). *A cellular mechanism for cortical associations.* Trends in
-  Neurosciences 36, 141–151 — BAC firing: a dendritic calcium spike turning a
-  somatic single spike into a burst, which is what `burst_refrac_scale` models.
+  Neurosciences 36, 141–151. <https://doi.org/10.1016/j.tins.2012.11.006> — BAC
+  firing: a dendritic calcium spike turning a somatic single spike into a burst,
+  which is what `burst_refrac_scale` models.
 - Sacramento, J., Ponte Costa, R., Bengio, Y. & Senn, W. (2018). *Dendritic
   cortical microcircuits approximate the backpropagation algorithm.* NeurIPS
   2018. <https://arxiv.org/pdf/1810.11393> — DNA v40. Errors originate at apical
   dendrites as a mismatch between predictive input from lateral interneurons and
   actual top-down feedback, continuously and without separate phases.
 
+**Hearing and the vowel space.**
+
+- Stevens, S. S., Volkmann, J. & Newman, E. B. (1937). *A scale for the
+  measurement of the psychological magnitude pitch.* JASA 8, 185–190.
+  <https://doi.org/10.1121/1.1915893> — the mel scale the cochlea is built on.
+- Syrdal, A. K. & Gopal, H. S. (1986). *A perceptual model of vowel recognition
+  based on the auditory internal representation of vowels.* JASA 79, 1086–1100.
+  <https://doi.org/10.1121/1.393381> — Bark-scaled formant differences model
+  vowel identification better than F1×F2 in Hz.
+- *Auditory sensitivity to formant ratios: toward an account of vowel
+  normalization.* <https://pmc.ncbi.nlm.nih.gov/articles/PMC2893733/> —
+  sensitivity is heightened in densely populated regions of the vowel space,
+  which is the shape `vocab`'s hardest pairs have.
+- *Phonetic information in the vowel spectrum: the meaning of Mel-Frequency
+  Cepstral Coefficients.*
+  <https://www.sciencedirect.com/science/article/abs/pii/S0095447025000452> —
+  what MFCCs actually carry, which matters because the audibility ruler is built
+  on them.
+
 **Everything else.**
 
-- **The synapse model itself.** Tsodyks, M. & Markram, H. (1997). *The neural
-  code between neocortical pyramidal neurons depends on neurotransmitter release
-  probability.* PNAS 94, 719–723. The u/R recursion in
-  `DnaProjection::stp_use` is theirs; Webb's group's contribution is what to
-  point it at.
 - **Complementary learning systems (DNA v13, the hippocampus role).**
-  McClelland, J., McNaughton, B. & O'Reilly, R. (1995).
-- **Song-system exploration (DNA v10, LMAN).** The anterior forebrain pathway of
-  the songbird, which is where reward-modulated motor variability comes from.
-- **Oriented receptive fields (DNA v7).** Hubel & Wiesel's simple cells; the
-  curvature stage of DNA v8 is V4's computation at V2's position in the
-  hierarchy.
+  McClelland, J. L., McNaughton, B. L. & O'Reilly, R. C. (1995). *Why there are
+  complementary learning systems in the hippocampus and neocortex.*
+  Psychological Review 102(3), 419–457.
+  <https://doi.org/10.1037/0033-295X.102.3.419>
+- **Song-system exploration (DNA v10, LMAN).** Ölveczky, B. P., Andalman, A. S. &
+  Fee, M. S. (2005). *Vocal experimentation in the juvenile songbird requires a
+  basal ganglia circuit.* PLoS Biology 3(5), e153.
+  <https://doi.org/10.1371/journal.pbio.0030153> — the anterior forebrain
+  pathway, which is where reward-modulated motor variability comes from.
+- **Oriented receptive fields (DNA v7).** Hubel, D. H. & Wiesel, T. N. (1962).
+  *Receptive fields, binocular interaction and functional architecture in the
+  cat's visual cortex.* Journal of Physiology 160, 106–154.
+  <https://doi.org/10.1113/jphysiol.1962.sp006837> — the curvature stage of DNA
+  v8 is V4's computation at V2's position in the hierarchy.
 
 [bp]: https://www.nature.com/articles/s41593-021-00857-x
-[ep]: https://www.nature.com/articles/s41467-020-17236-y
-[sac]: https://arxiv.org/pdf/1810.11393

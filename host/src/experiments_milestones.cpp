@@ -5894,4 +5894,192 @@ bool run_trajprobe_arm(const std::vector<uint8_t>& blob, uint64_t ticks, const T
   return true;
 }
 
+
+// --- vocab: how many words can this creature hold apart at once? -----------
+//
+// `imitate` scores four words in all six pairs and every pair clears 0.75, with
+// the decisive /i/-/u/ case — F1s 30 Hz apart, answerable only on F2 — at 0.900.
+// So the creature is not running a brightness meter: 200-600 ms after a word
+// stops, its voice still carries which one it was.
+//
+// That invites the obvious question, and it is the recognition twin of what
+// `capacity` asked about teaching: how many? Eight words, all 28 pairs, scored
+// off ONE simulation in the same window, so a difference between rows is about
+// the two vowels and never about the run.
+//
+// The four appended words CROWD the original four rather than filling the gaps
+// between them — /o/ 50 Hz from /u/ on F1, /ae/ 140 from /a/ — because a
+// vocabulary that only grows into empty space measures the size of the space
+// and not the creature.
+//
+// What this can and cannot say. A high pairwise score across 28 pairs means
+// every word is distinguishable from every other; it does NOT mean the creature
+// could pick one out of eight, which is a harder question a pairwise table
+// cannot answer. Both are printed, because the gap between them is the
+// interesting part.
+namespace {
+
+struct VocabPair { uint32_t a, b; double voice, ear, f1_gap, f2_gap; };
+
+}  // namespace
+
+bool run_vocab(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  aibaby::Dna dna;
+  if (dna.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) return false;
+  static const char* kLabel[kVocabCount] = {"/a/ ball", "/i/ cube", "/u/ boot", "/e/ bed",
+                                            "/o/ boat", "/ae/ bat", "/^/ but", "/I/ bit"};
+  instrument("vocab", dna.header().seed ^ 0x2C0Bu, uint32_t(ticks / 2800), "trials each");
+  std::printf("  eight words, all %u pairs, scored off one simulation in the\n"
+              "  200-600 ms window AFTER the word stops — so what is measured is what\n"
+              "  the voice still carries once the sound is gone.\n",
+              kVocabCount * (kVocabCount - 1) / 2);
+
+  constexpr uint32_t kReps = 3;
+  double pair_v[kVocabCount][kVocabCount] = {{0}}, pair_e[kVocabCount][kVocabCount] = {{0}};
+  uint32_t n_ok = 0;
+  double eight_way = 0.0;
+  uint32_t eight_n = 0;
+
+  for (uint32_t r = 0; r < kReps; ++r) {
+    std::vector<uint8_t> variant = blob;
+    const uint64_t seed = dna.header().seed + r * 7919ull;
+    std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+    const ImitateRun p = run_imitate_session(variant, ticks, kVocabCount);
+    if (!p.ok || p.scored_labels.size() < 48) continue;
+    ++n_ok;
+    for (uint32_t a = 0; a < kVocabCount; ++a) {
+      for (uint32_t b = a + 1; b < kVocabCount; ++b) {
+        std::vector<std::vector<double>> xv, xh;
+        std::vector<int> yv;
+        for (size_t t = 0; t < p.scored_labels.size(); ++t) {
+          const int L = p.scored_labels[t];
+          if (L != int(a) && L != int(b)) continue;
+          xv.push_back(p.scored_voice[t]);
+          if (!p.scored_heard.empty()) xh.push_back(p.scored_heard[t]);
+          yv.push_back(L == int(b) ? 1 : 0);
+        }
+        if (yv.size() < 12) continue;
+        std::vector<std::vector<double>> iv, ih;
+        std::vector<int> jv, jh;
+        size_t tv = 0, th = 0;
+        interleave_pairs(xv, yv, iv, jv, tv);
+        pair_v[a][b] += holdout_accuracy(iv, jv, tv);
+        if (!xh.empty()) {
+          interleave_pairs(xh, yv, ih, jh, th);
+          pair_e[a][b] += holdout_accuracy(ih, jh, th);
+        }
+      }
+    }
+    // ONE OF EIGHT, by nearest centroid on held-out trials. A pairwise table
+    // saying every pair is separable does not say a word can be picked out of
+    // eight — that needs every boundary to hold at once, and this is the number
+    // that says whether it does. Chance is 0.125.
+    {
+      std::vector<std::vector<double>> mu(kVocabCount);
+      std::vector<uint32_t> cnt(kVocabCount, 0);
+      const size_t half = p.scored_labels.size() / 2;
+      for (size_t t = 0; t < half; ++t) {
+        const int L = p.scored_labels[t];
+        if (L < 0 || L >= int(kVocabCount)) continue;
+        if (mu[L].empty()) mu[L].assign(p.scored_voice[t].size(), 0.0);
+        for (size_t d = 0; d < mu[L].size(); ++d) mu[L][d] += p.scored_voice[t][d];
+        ++cnt[L];
+      }
+      bool usable = true;
+      for (uint32_t k = 0; k < kVocabCount; ++k) {
+        if (cnt[k] < 2) { usable = false; break; }
+        for (double& v : mu[k]) v /= double(cnt[k]);
+      }
+      if (usable) {
+        uint32_t hit = 0, tot = 0;
+        for (size_t t = half; t < p.scored_labels.size(); ++t) {
+          const int L = p.scored_labels[t];
+          if (L < 0 || L >= int(kVocabCount)) continue;
+          int best = -1;
+          double bd = 0.0;
+          for (uint32_t k = 0; k < kVocabCount; ++k) {
+            double d2 = 0.0;
+            for (size_t d = 0; d < mu[k].size() && d < p.scored_voice[t].size(); ++d) {
+              const double e = p.scored_voice[t][d] - mu[k][d];
+              d2 += e * e;
+            }
+            if (best < 0 || d2 < bd) { bd = d2; best = int(k); }
+          }
+          if (best == L) ++hit;
+          ++tot;
+        }
+        if (tot > 0) { eight_way += double(hit) / double(tot); ++eight_n; }
+      }
+    }
+  }
+
+  if (n_ok == 0) {
+    std::printf("\n  INCONCLUSIVE — no usable eight-word sessions. Eight words share the\n"
+                "  same trial budget four had, so this needs more --ticks than imitate.\n");
+    return false;
+  }
+
+  std::vector<VocabPair> rows;
+  for (uint32_t a = 0; a < kVocabCount; ++a) {
+    for (uint32_t b = a + 1; b < kVocabCount; ++b) {
+      rows.push_back({a, b, pair_v[a][b] / n_ok, pair_e[a][b] / n_ok,
+                      std::fabs(double(kWords[a].f1) - double(kWords[b].f1)),
+                      std::fabs(double(kWords[a].f2) - double(kWords[b].f2))});
+    }
+  }
+  std::sort(rows.begin(), rows.end(),
+            [](const VocabPair& x, const VocabPair& y) { return x.voice < y.voice; });
+
+  std::printf("\n  the ten HARDEST pairs, worst first:\n");
+  std::printf("    %-10s %-10s %-8s %-8s %-9s %s\n", "word A", "word B", "voice", "EAR",
+              "dF1 Hz", "dF2 Hz");
+  for (size_t i = 0; i < rows.size() && i < 10; ++i) {
+    std::printf("    %-10s %-10s %-8.3f %-8.3f %-9.0f %.0f\n", kLabel[rows[i].a],
+                kLabel[rows[i].b], rows[i].voice, rows[i].ear, rows[i].f1_gap,
+                rows[i].f2_gap);
+  }
+  double mean = 0.0;
+  uint32_t above = 0;
+  for (const VocabPair& v : rows) {
+    mean += v.voice;
+    if (v.voice >= 0.75) ++above;
+  }
+  mean /= double(rows.size());
+  const double eight = eight_n ? eight_way / eight_n : 0.0;
+
+  std::printf("\n  %u creatures, %zu pairs: mean %.3f, %u of %zu at or above 0.75.\n",
+              n_ok, rows.size(), mean, above, rows.size());
+  std::printf("  one of eight, nearest centroid on held-out trials: %.3f (chance 0.125)\n",
+              eight);
+  std::printf("\n  A pairwise table saying every pair is separable does NOT say a word\n"
+              "  can be picked out of eight — that needs every boundary to hold at once.\n"
+              "  The gap between the two numbers above is the interesting part.\n");
+
+  // The bar is EVERY pair, not most of them, and the one-of-eight score has to
+  // clear chance by a real margin. A "more than half the pairs pass" rule was
+  // tried first and printed EIGHT WORDS HOLD APART over a table whose worst row
+  // was 0.569 against a chance of 0.5 — with twelve of twenty-eight pairs
+  // failing. At four words every pair clears 0.753, so "most of them" is not
+  // the standard the smaller vocabulary already meets.
+  const uint32_t failed = uint32_t(rows.size()) - above;
+  const bool pairs_ok = failed == 0;
+  const bool eight_ok = eight > 0.40;  // chance is 0.125
+  if (!pairs_ok || !eight_ok) {
+    std::printf("\n  THE VOCABULARY IS FULL BELOW EIGHT — %u of %zu pairs are under 0.75\n"
+                "  (worst %.3f against a chance of 0.5), and one of eight reads %.3f\n"
+                "  against a chance of 0.125. Four words hold apart on every pair; eight\n"
+                "  do not, and the hardest rows above say where it runs out.\n",
+                failed, rows.size(), rows.front().voice, eight);
+  } else {
+    std::printf("\n  EIGHT WORDS HOLD APART — every pair at or above 0.75 and one of\n"
+                "  eight at %.3f against a chance of 0.125.\n", eight);
+  }
+  (void)verbose;
+  // The verdict above and the value returned here have to be the same claim.
+  // The first version printed THE VOCABULARY IS FULL and then returned true,
+  // so `verify` read a milestone this project has never met as newly met — and
+  // said so loudly, which is the only reason it was noticed within the minute.
+  return pairs_ok && eight_ok;
+}
+
 }  // namespace aibaby_host
