@@ -4299,6 +4299,45 @@ not a generator. This chain is also entirely **innate** — reward could select
 where in it to sing, but the sequence is genome-specified. The interesting
 version self-organises, and it inherits exactly this route problem.
 
+#### A dedicated HVC is WORSE, and it walks into this project's oldest wall
+
+The chain inside `vocal` spans only 4-6 Hz for a structural reason: `vocal` is
+126 neurons in nine groups of fourteen, a group's output is a CENTROID over its
+fourteen cells, and sweeping that centroid would need links of three or four
+neurons — which gives each target about three inputs and cannot fire anything.
+Convergence and readout resolution are irreconcilable at that size. The songbird
+answer is not to put HVC inside RA, so `tools/genome_add_hvc.py` appends a
+dedicated 400-neuron nucleus (20 links, 160 ms) projecting into `vocal`.
+
+The prediction, stated in advance: shared shape stays ~55% and the span rises
+from 4 Hz toward 50+. **It fell to 1.0 Hz.**
+
+| | chain in `vocal` | HVC -> vocal | HVC disconnected |
+|---|---|---|---|
+| shared shape | 53.8% | **17.5%** | 3.0% |
+| span | 4.1 Hz | **1.0 Hz** | 0.3 Hz |
+| d' | 0.461 | **0.032** | -0.147 |
+
+The chain does run in the nucleus — `seqprobe` retargeted at it reads persist
+24 ms and reliability 0.59 -> 0.26 -> 0.18, weaker than the 96 ms it manages in
+`central` because `central` has sensory tracts feeding it background
+depolarisation and `hvc` has only its own noise. So this is a real negative and
+not a chain that never fired.
+
+**Why it fails is the wall G3 hit.** At `out_w = 0.30` the creature DRONES —
+duty cycle 1.00. A random all-positive projection into `vocal` excites every
+group roughly equally, voicing and amplitude included: it delivers *drive*, not
+*pattern*. Calibrating it down until the creature behaves at all (0.08, with
+`vocal`'s own noise cut 0.22 -> 0.16 to pay for it, which is rule 1 of the
+calibration invariant) leaves too little to shape anything.
+
+That is what `genome_add_relay.py` already says about `central->vocal`: "an
+all-positive random projection, and central's object code is balanced, which is
+the one combination that averages a code away." So the route problem is sharper
+than "too weak": **a chain's pattern cannot cross an unsigned random projection
+at all** — more weight makes the creature drone before it makes the trajectory
+audible.
+
 #### `n_max` is not the live neuron count, and reading it as one wasted the first three runs
 
 `central` hatches at **400 neurons**. `n_max = 4096` is the arena ceiling M4

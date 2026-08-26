@@ -7106,9 +7106,14 @@ bool run_seqprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
     return false;
   }
   const size_t mod_base = sizeof(aibaby::DnaHeader);
+  // Prefers an `hvc` if the genome has one — a variant built by
+  // tools/genome_add_hvc.py — so the same instrument can ask whether the chain
+  // runs in the nucleus that was added for it. Without that, a null at the
+  // larynx cannot be told from a chain that never fired.
   int32_t m_target = -1;
   for (uint32_t m = 0; m < dna0.module_count(); ++m) {
-    if (std::strcmp(dna0.module(m).name, "central") == 0) m_target = int32_t(m);
+    if (std::strcmp(dna0.module(m).name, "central") == 0 && m_target < 0) m_target = int32_t(m);
+    if (std::strcmp(dna0.module(m).name, "hvc") == 0) m_target = int32_t(m);
   }
   if (m_target < 0) {
     std::printf("  setup failed: no module named \"central\"\n");
@@ -7209,7 +7214,7 @@ bool run_seqprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
     aibaby::Network& net = s.brain.network();
     const aibaby::ModuleState& ms = net.module(uint32_t(m_target));
     if (sc == 0) {
-      std::printf("  `central` is %u neurons LIVE — `n_max` %u is the arena ceiling M4\n"
+      std::printf("  the chain module is %u neurons LIVE — `n_max` %u is the arena ceiling M4\n"
                   "  growth may reach, not the live count. Every chain length below is\n"
                   "  derived from 400, and each arm's kick is one link wide.\n",
                   ms.count, dna0.module(uint32_t(m_target)).n_max);
