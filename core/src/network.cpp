@@ -111,6 +111,9 @@ size_t Network::required_bytes(const Dna& dna) {
   if (lateral) total += capacity * sizeof(Scalar);
   if (stp) total += capacity * sizeof(uint32_t) + 2 * synapse_pool * sizeof(Scalar);
   if (burst) total += 2 * capacity * sizeof(Scalar);
+  // DNA v41. Two moments per neuron, and only a genome that gates on them pays.
+  if (dna.header().exploration.meta_window > 0.0f) total += 2 * capacity * sizeof(Scalar);
+  if (dna.header().exploration.meta_flow > 0.0f) total += capacity * sizeof(Scalar);
   if (dna.header().consolidate.prune_compete > 0.0f) total += capacity * sizeof(Scalar);
 
   // Slack for per-allocation alignment padding.
@@ -376,6 +379,15 @@ bool Network::build(const Dna& dna, Arena& arena, Rng& rng) {
   prune_compete_ = Scalar(h.consolidate.prune_compete);
   prune_compete_min_in_ = h.consolidate.prune_compete_min_in;
   if (prune_compete_ > kZero) in_mean_ = arena.alloc_zeroed<Scalar>(capacity_);
+  // DNA v41. Allocated whenever the mechanism is on, and NOT folded into the
+  // burst block above: these two are read by a gate that has nothing to do with
+  // bursting, and hiding them behind another mechanism's flag is how they came
+  // back null on the shipped genome the first time.
+  if (h.exploration.meta_window > 0.0f) {
+    meta_m1_ = arena.alloc_zeroed<Scalar>(capacity_);
+    meta_m2_ = arena.alloc_zeroed<Scalar>(capacity_);
+  }
+  if (h.exploration.meta_flow > 0.0f) meta_slow_ = arena.alloc_zeroed<Scalar>(capacity_);
   if (any_burst_) {
     burst_rate_ = arena.alloc_zeroed<Scalar>(capacity_);
     burst_base_ = arena.alloc_zeroed<Scalar>(capacity_);
@@ -427,6 +439,18 @@ bool Network::build(const Dna& dna, Arena& arena, Rng& rng) {
     perturb_decay_ = decay_per(dt_ms_, Scalar(ex.perturb_tau_ms));
     perturb_rate_ = ex.enabled ? Scalar(ex.perturb_rate) : kZero;
     perturb_max_ = Scalar(ex.perturb_max);
+    // DNA v41. tau of 0 leaves meta_alpha_ at zero, which takes the pre-v41
+    // branch in apply_reward_impl and is bit-identical.
+    // A plain 1/N EMA over reward events. See DnaExploration::meta_window for
+    // why the window is counted in events and not in milliseconds.
+    meta_alpha_ = ex.meta_window > 1.0f ? kOne / Scalar(ex.meta_window)
+                  : ex.meta_window > 0.0f ? kOne
+                                          : kZero;
+    meta_floor_ = clampf(Scalar(ex.meta_floor), kZero, kOne);
+    meta_ref_ = Scalar(ex.meta_ref) > kZero ? Scalar(ex.meta_ref) : kOne;
+    meta_commit_ = clampf(Scalar(ex.meta_commit), kZero, kOne);
+    meta_flow_ = clampf(Scalar(ex.meta_flow), kZero, kOne);
+    meta_ratio_ = clampf(Scalar(ex.meta_ratio), kZero, kOne);
     for (uint32_t m = 0; m < kMaxModules; ++m) {
       perturb_scale_[m] = m < dna.module_count() ? Scalar(dna.module(m).explore_scale) : kZero;
     }
@@ -1510,7 +1534,43 @@ void Network::apply_reward_impl(const Scalar* per_module, bool any) {
         const uint32_t i = ms.begin + k;
         if (dead_[i]) continue;
         if (reward_mask_ && (i < rm_lo_ || i >= rm_hi_)) continue;
-        bias_[i] = clampf(bias_[i] + step * perturb_[i], -perturb_max_, perturb_max_);
+        const Scalar u = step * perturb_[i];
+        Scalar gate_meta = kOne;
+        if (meta_alpha_ > kZero && meta_m1_ && per_module[m] != kZero) {
+          // The moments track the RAW evidence, not the gated update, or the
+          // gate would feed on its own output and a quieted neuron could never
+          // report that its updates had started agreeing again.
+          meta_m1_[i] += meta_alpha_ * (u - meta_m1_[i]);
+          meta_m2_[i] += meta_alpha_ * (u * u - meta_m2_[i]);
+          const Scalar snr = meta_m2_[i] > Scalar(1e-20)
+                                 ? (meta_m1_[i] * meta_m1_[i]) / meta_m2_[i]
+                                 : kZero;
+          const Scalar consistent = snr >= meta_ref_ ? kOne : snr / meta_ref_;
+          gate_meta = meta_floor_ + (kOne - meta_floor_) * consistent;
+        } else if (meta_alpha_ > kZero) {
+          // No reward this interval means u is zero anyway; the gate is
+          // irrelevant and the moments must not move. Stated rather than left
+          // implicit, because "u is zero so it does not matter" stops being
+          // true the moment anyone adds a term here.
+          gate_meta = kOne;
+        }
+        // The commitment brake. Reads `bias_` before this update, so a neuron
+        // is judged on what it had already committed to and not on where this
+        // one step is about to put it.
+        if (meta_commit_ > kZero && perturb_max_ > kZero) {
+          const Scalar mag = bias_[i] < kZero ? -bias_[i] : bias_[i];
+          const Scalar far = mag >= perturb_max_ ? kOne : mag / perturb_max_;
+          gate_meta *= kOne - (kOne - meta_floor_) * meta_commit_ * far;
+        }
+        bias_[i] = clampf(bias_[i] + u * gate_meta, -perturb_max_, perturb_max_);
+        // DNA v41's third gate. Runs on every cash-in, rewarded or not, because
+        // it is a relaxation and not a response to evidence.
+        if (meta_slow_) {
+          const Scalar to_store = meta_flow_ * (meta_slow_[i] - bias_[i]);
+          const Scalar from_fast = meta_flow_ * meta_ratio_ * (bias_[i] - meta_slow_[i]);
+          bias_[i] = clampf(bias_[i] + to_store, -perturb_max_, perturb_max_);
+          meta_slow_[i] = clampf(meta_slow_[i] + from_fast, -perturb_max_, perturb_max_);
+        }
       }
     }
   }
@@ -1919,6 +1979,8 @@ void Network::init_neuron(uint32_t i, uint32_t m, Scalar x, Scalar y, Scalar z) 
   last_spike_[i] = 0;
   if (any_stp_) prev_spike_[i] = 0;
   if (any_burst_) {
+    if (meta_m1_) { meta_m1_[i] = kZero; meta_m2_[i] = kZero; }
+    if (meta_slow_) meta_slow_[i] = kZero;
     burst_rate_[i] = kZero;
     burst_base_[i] = kZero;
   }
@@ -2428,6 +2490,13 @@ uint64_t Network::state_hash() const {
       // creature has to agree about it. Hashed only when a genome has a burst
       // code, so a creature without one keeps its pre-v37 hash.
       if (any_burst_) hash_scalar(h, burst_rate_[i]);
+      // DNA v41. The moments gate plasticity, so a resumed creature has to
+      // agree about them; hashed only when a genome actually keeps them.
+      if (meta_slow_) hash_scalar(h, meta_slow_[i]);
+      if (meta_alpha_ > kZero && meta_m1_) {
+        hash_scalar(h, meta_m1_[i]);
+        hash_scalar(h, meta_m2_[i]);
+      }
       // DNA v40. A learned pooling weight is state a resumed creature must
       // agree about; hashed only when a genome lets it move.
       if (any_ffi_learn_) hash_scalar(h, ffi_w_[i]);

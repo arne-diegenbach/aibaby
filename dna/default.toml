@@ -592,6 +592,23 @@ perturb_tau_ms = 2000.0
 perturb_rate = 0.00003
 perturb_max = 0.30          # |bias| ceiling, in the same units as threshold
 
+# DNA v41 — metaplastic consolidation. Node perturbation is an unbiased gradient
+# estimate, so a neuron that cannot affect the current reward is already being
+# told "you get nothing" — as zero-mean noise, which random-walks whatever it
+# had already learned. `driftprobe` measures the cost: while one vocal group is
+# taught, the other diffuses just as hard with 9x less directional motion.
+#
+# Each neuron gates its own plasticity on E[u]^2 / E[u^2] over its own updates:
+# 1 means every update agrees, 0 means pure noise. The window is counted in
+# REWARD EVENTS, because silence is not evidence either way. SHIPS OFF —
+# meta_window = 0 takes the pre-v41 path and is bit-identical.
+meta_window = 0.0           # reward events in the window; 0 disables
+meta_floor = 0.25           # plasticity left to a neuron whose updates are noise
+meta_ref = 0.15             # the SNR that already counts as fully consistent
+meta_commit = 0.0           # brake plasticity by how far this neuron already moved; 0 off
+meta_flow = 0.0             # Benna-Fusi: leak the bias toward a slow store; 0 off
+meta_ratio = 0.05           # how much slower that store is than the bias
+
 # --- what the two halves of this section are for ------------------------------
 #
 # `sensitivity` above stays 0: a *scalar* gain on the noise measured worse than

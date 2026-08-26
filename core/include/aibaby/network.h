@@ -434,6 +434,18 @@ class Network {
   // `out = nullptr` to count first, then size a buffer and call again.
   uint32_t tract_synapses(uint32_t src_module, uint32_t dst_module, uint32_t* out,
                           uint32_t max) const;
+  // Read-only telemetry. `driftprobe` needs the standing excitability itself,
+  // because the question it asks — does an untaught neuron's bias DRIFT or
+  // DIFFUSE — is about the vector, not about any summary of it.
+  Scalar bias_of(uint32_t i) const { return bias_[i]; }
+
+  // DNA v41 telemetry: this neuron's own estimate of how much of what it is
+  // being told is signal. `metaprobe` reads it; nothing in the kernel does.
+  Scalar meta_snr(uint32_t i) const {
+    if (!meta_m2_ || meta_m2_[i] <= Scalar(1e-20)) return kZero;
+    return (meta_m1_[i] * meta_m1_[i]) / meta_m2_[i];
+  }
+
   Scalar synapse_eligibility(uint32_t syn) const { return syn_elig_[syn]; }
   Scalar synapse_weight(uint32_t syn) const { return syn_weight_[syn]; }
   // Which neuron drives this synapse. Needed to ask whether a synapse's trace
@@ -528,6 +540,18 @@ class Network {
   uint16_t* syn_cap_ = nullptr;
   uint16_t* in_count_ = nullptr;
   uint16_t* refrac_ticks_ = nullptr;
+  // DNA v41. Two running moments of each neuron's own bias updates; their
+  // ratio is a local estimate of how much of what it is being told is signal.
+  Scalar* meta_m1_ = nullptr;
+  Scalar* meta_m2_ = nullptr;
+  Scalar meta_alpha_ = kZero;   // 0 means the mechanism is off entirely
+  Scalar meta_floor_ = kOne;
+  Scalar meta_ref_ = kOne;
+  Scalar meta_commit_ = kZero;  // DNA v41's second gate; see DnaExploration
+  Scalar* meta_slow_ = nullptr; // DNA v41's third: Benna-Fusi's slow store
+  Scalar meta_flow_ = kZero;
+  Scalar meta_ratio_ = kZero;
+
   bool reward_mask_ = false;   // see set_reward_mask: experiment oracle, off by default
   uint32_t rm_lo_ = 0, rm_hi_ = 0;
   uint8_t* module_of_ = nullptr;

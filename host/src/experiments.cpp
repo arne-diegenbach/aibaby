@@ -21,8 +21,14 @@ enum class Expect {
 };
 
 enum class Tier {
-  kFast,  // seconds to a minute
-  kLong,  // minutes — the price of the minimum below
+  kFast,   // seconds to a minute
+  kLong,   // minutes — the price of the minimum below
+  // Hours. The teaching experiments each raise a creature through several
+  // phases of a life at 3.4M-5.6M ticks, and there are now seven of them; left
+  // in kLong they turned a half-hour suite into a five-hour one and stopped
+  // being run. Split out so `verify-long` is still something you run before a
+  // commit, and `verify-teach` is something you start and walk away from.
+  kTeach,
 };
 
 // The shortest run whose scored output is a measurement rather than a rumour.
@@ -120,13 +126,13 @@ const Spec kSpecs[] = {
      "no requirement; G3 is the open milestone, so FAIL is the current answer"},
     {"g2", kDefaultMinimum, Expect::kPass, Tier::kLong, "no requirement"},
     {"snapshot", kDefaultMinimum, Expect::kPass, Tier::kLong, "no requirement"},
-    {"retain", 5600000, Expect::kPass, Tier::kLong,
+    {"retain", 5600000, Expect::kPass, Tier::kTeach,
      "derived: 60% of it is the teaching phase, which needs teachsound's 3.4M to\n"
      "  produce something worth retaining; the rest is a full fatigue cycle so the\n"
      "  sleeping arm can sleep, and a window to re-measure in. It passes when the\n"
      "  teaching phase moved far enough to have something to retain; the three\n"
      "  retention figures are the finding and are not gated"},
-    {"capacity", 5600000, Expect::kPass, Tier::kLong,
+    {"capacity", 5600000, Expect::kPass, Tier::kTeach,
      "derived: the same three-phase budget retain uses, because the teaching\n"
      "  phase is teachsound's and the gap has to be long enough for a second\n"
      "  lesson to land if one can. It refuses rather than nulls in three ways:\n"
@@ -135,7 +141,19 @@ const Spec kSpecs[] = {
      "  Measured on 3 seed families: A keeps 0.84 of its gain while an\n"
      "  ORTHOGONAL second lesson lands, against 0.22 for retain's conflicting\n"
      "  one. The ratios are the finding; the verdict line is a reading aid"},
-    {"credit", 5600000, Expect::kPass, Tier::kLong,
+    {"metaprobe", 5600000, Expect::kPass, Tier::kTeach,
+     "derived: credit's budget, because it is credit's session with the oracle\n"
+     "  replaced by DNA v41. Refuses rather than nulls if a gate froze lesson A\n"
+     "  or blocked lesson B. Measured on 6 seed families: the commitment gate\n"
+     "  moves retention +0.21 on average and on 5 of 6, at 14% of the learning\n"
+     "  rate; the moment-ratio gate is REFUTED at -0.13"},
+    {"driftprobe", 3400000, Expect::kPass, Tier::kTeach,
+     "derived: 60% of it teaches lesson A, which needs teachsound's 3.4M scaled\n"
+     "  down to the two arms this has; below that the boundary snapshot is taken\n"
+     "  before anything was learned. Measured on 3 seed families: the taught group\n"
+     "  reads drift/rms 0.841 and the untaught one 0.184 while still moving 59%\n"
+     "  as much in total — the interference is VARIANCE, not credit"},
+    {"credit", 5600000, Expect::kPass, Tier::kTeach,
      "derived: capacity's budget, because it is capacity's session with two of\n"
      "  its arms re-run under a reward mask. It refuses rather than nulls if the\n"
      "  mask kills lesson A outright or if targeted B never lands — either would\n"
@@ -143,12 +161,12 @@ const Spec kSpecs[] = {
      "  targeted retention lands at 0.95-1.09 whatever the broadcast arm read,\n"
      "  and the gain tracks how much interference there was to remove. It costs\n"
      "  ~30% of the learning rate, because a mask is also a smaller search"},
-    {"teachsound", 3400000, Expect::kPass, Tier::kLong,
+    {"teachsound", 3400000, Expect::kPass, Tier::kTeach,
      "the same length vocallearn's positive control needs, because this IS that\n"
      "  arm asked whether its effect is audible. It was OPEN for one day and it\n"
      "  is met: +15.9 points against the yoke and d' 5.57 against a null of\n"
      "  -0.01, 3 of 3 seed families"},
-    {"vocallearn", 3400000, Expect::kOpen, Tier::kLong,
+    {"vocallearn", 3400000, Expect::kOpen, Tier::kTeach,
      "measured, and the number that sets it is the POSITIVE CONTROL. `fixed - yoked`\n"
      "  reads -1.2 at 560000 with one reward per trial, +1.0 at 560000 on G2's\n"
      "  clock, +4.0 at 1600000 and +18.3 here. Below this the experiment cannot\n"
@@ -210,15 +228,18 @@ const Spec* effective_spec(const std::string& name) {
   return find_spec(name);
 }
 
-bool run_verify(const std::vector<uint8_t>& dna_blob, bool long_tier, bool verbose);
+bool run_verify(const std::vector<uint8_t>& dna_blob, bool long_tier, bool teach_tier,
+                bool verbose);
 
 }  // namespace
 
 bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blob,
                     uint64_t ticks, bool verbose, const ExperimentOutput& output,
                     bool allow_short) {
-  if (name == "verify") return run_verify(dna_blob, false, verbose);
-  if (name == "verify-long") return run_verify(dna_blob, true, verbose);
+  if (name == "verify") return run_verify(dna_blob, false, false, verbose);
+  if (name == "verify-long") return run_verify(dna_blob, true, false, verbose);
+  if (name == "verify-teach") return run_verify(dna_blob, false, true, verbose);
+  if (name == "verify-all") return run_verify(dna_blob, true, true, verbose);
 
   std::printf("experiment: %s\n", name.c_str());
 
@@ -288,6 +309,8 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "retain") ok = run_retain(dna_blob, ticks, verbose);
   else if (name == "capacity") ok = run_capacity(dna_blob, ticks, verbose);
   else if (name == "credit") ok = run_credit(dna_blob, ticks, verbose);
+  else if (name == "driftprobe") ok = run_driftprobe(dna_blob, ticks, verbose);
+  else if (name == "metaprobe") ok = run_metaprobe(dna_blob, ticks, verbose);
   else if (name == "restate") ok = run_restate(dna_blob, ticks, verbose);
   else if (name == "eligprobe") ok = run_eligprobe(dna_blob, ticks, verbose);
   else if (name == "dwprobe") ok = run_dwprobe(dna_blob, ticks, verbose);
@@ -404,7 +427,8 @@ namespace {
 // So the table above records what each experiment is *supposed* to do, and this
 // compares against that. A guard that starts passing is as red as a milestone
 // that starts failing — it means the mechanism it watches quietly came on.
-bool run_verify(const std::vector<uint8_t>& dna_blob, bool long_tier, bool verbose) {
+bool run_verify(const std::vector<uint8_t>& dna_blob, bool long_tier, bool teach_tier,
+                bool verbose) {
   std::printf("verify: every %s experiment at its own minimum length, against the\n"
               "        outcome it is supposed to have.\n\n",
               long_tier ? "fast and long-horizon" : "fast");
@@ -430,6 +454,7 @@ bool run_verify(const std::vector<uint8_t>& dna_blob, bool long_tier, bool verbo
   std::string bad;
   for (const Spec& s : kSpecs) {
     if (s.tier == Tier::kLong && !long_tier) continue;
+    if (s.tier == Tier::kTeach && !teach_tier) continue;
     if (std::strcmp(s.name, "determinism") == 0) continue;
     std::printf("\n  --- %s, %llu ticks ---\n", s.name, (unsigned long long)s.min_ticks);
     const bool got = run_experiment(s.name, dna_blob, s.min_ticks, verbose);
@@ -460,9 +485,9 @@ bool run_verify(const std::vector<uint8_t>& dna_blob, bool long_tier, bool verbo
   if (!bad.empty()) std::printf("%s", bad.c_str());
   const bool ok = det && hash_ok && failed == 0;
   std::printf("  verify %s\n", ok ? "PASS" : "FAIL");
-  if (ok && !long_tier) {
-    std::printf("  (fast tier only — verify-long adds restate, g3probe, condprobe, pairprobe,\n"
-                "   eligprobe, m3, g2, snapshot, sleep and g4)\n");
+  if (ok && !(long_tier && teach_tier)) {
+    std::printf("  (this tier only — verify-long adds the minute-scale experiments,\n"
+                "   verify-teach the hour-scale teaching ones, verify-all both)\n");
   }
   std::printf("========================================================\n");
   return ok;

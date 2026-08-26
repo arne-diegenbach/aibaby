@@ -4921,4 +4921,570 @@ bool run_credit(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) 
   return true;
 }
 
+
+// --- driftprobe: is the interference a credit failure, or is it VARIANCE? ---
+//
+// Everything on this page so far has called `capacity`'s interference a
+// credit-assignment problem, and that framing is wrong. Node perturbation
+// already assigns credit correctly *in expectation*:
+//
+//   d bias_i  ~  R * perturb_i        and       E[d bias_i]  ~  Cov(R, perturb_i)
+//
+// `perturb_[i]` is the neuron's own injected noise, independent across neurons
+// and independent of the reward except through that neuron's causal effect on
+// behaviour. For a neuron with no effect on the current lesson's reward the
+// covariance is ZERO — the rule is already telling it "you get nothing". What
+// it cannot do is deliver zero on any single sample. It delivers zero-mean
+// NOISE, and zero-mean noise applied to a standing value is a random walk.
+//
+// So the prediction is specific and falsifiable. During lesson B, the F1
+// group's bias vector should DIFFUSE — spread out with no preferred direction —
+// while the F2 group's should DRIFT, moving systematically along the axis that
+// changes what the group decodes to. If instead F1 also drifts, something is
+// correlating its perturbations with B's reward, the covariance is not zero,
+// and this is a credit problem after all.
+//
+// The decomposition has to respect what the larynx actually reads. A group's
+// output is a population CENTROID over neuron index (§5.3), so the centroid
+// moves only if the change correlates with a neuron's preferred position — a
+// uniform shift of every bias in the group moves nothing. The change vector is
+// therefore split along that axis and perpendicular to it:
+//
+//   p_i         the neuron's centred preferred position in its group
+//   drift       the component of the change along p — this MOVES the readout
+//   diffusion   the residual — this only spreads the code out
+//
+// This distinction decides which mechanism to build, which is why it is worth
+// its own run rather than an assumption inside a bigger one.
+namespace {
+
+enum DpArm { kDpAOnly = 0, kDpAThenB, kDpArmCount };
+
+struct DpGroup {
+  double drift = 0.0, diffusion = 0.0, rms = 0.0;
+};
+
+// Split a per-neuron change vector into the part that moves a centroid readout
+// and the part that does not.
+DpGroup decompose(const std::vector<double>& d) {
+  DpGroup out;
+  const size_t n = d.size();
+  if (n < 2) return out;
+  double pp = 0.0, dp = 0.0, sq = 0.0;
+  for (size_t k = 0; k < n; ++k) {
+    const double p = (double(k) + 0.5) / double(n) - 0.5;
+    pp += p * p;
+    dp += d[k] * p;
+    sq += d[k] * d[k];
+  }
+  const double proj = pp > 1e-12 ? dp / pp : 0.0;
+  double res = 0.0;
+  for (size_t k = 0; k < n; ++k) {
+    const double p = (double(k) + 0.5) / double(n) - 0.5;
+    const double r = d[k] - proj * p;
+    res += r * r;
+  }
+  out.drift = std::fabs(proj) * std::sqrt(pp / double(n));
+  out.diffusion = std::sqrt(res / double(n));
+  out.rms = std::sqrt(sq / double(n));
+  return out;
+}
+
+}  // namespace
+
+bool run_driftprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  Regime regime;
+  regime.praise = kPraiseValue;
+  regime.scold = kScoldValue;
+  aibaby::Dna dna0;
+  if (dna0.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) {
+    std::printf("  setup failed: the genome does not load\n");
+    return false;
+  }
+  std::string error;
+  const uint64_t teach_ticks = ticks * 60 / 100;
+  const uint64_t gap_ticks = ticks - teach_ticks;
+
+  instrument("driftprobe", dna0.header().seed ^ 0x51A7u, ticks / kCapTrial, "trials");
+  std::printf("  teach lesson A (F1) for %llu ticks, then %llu more in which the\n"
+              "  `A then B` arm is taught lesson B (F2) and the `A only` arm is not.\n"
+              "  The bias vector of BOTH groups is snapshotted at the boundary and\n"
+              "  at the end, and each change is split into the component that moves\n"
+              "  a centroid readout (drift) and the component that does not\n"
+              "  (diffusion).\n",
+              (unsigned long long)teach_ticks, (unsigned long long)gap_ticks);
+
+  DpGroup f1_of[kDpArmCount], f2_of[kDpArmCount];
+
+  for (uint32_t a = 0; a < kDpArmCount; ++a) {
+    Session s;
+    if (!s.init(blob, error)) {
+      std::printf("  arm %u failed to hatch: %s\n", a, error.c_str());
+      return false;
+    }
+    aibaby::Network& net = s.brain.network();
+    const uint32_t modules = dna0.module_count();
+    uint32_t m_vocal = modules;
+    for (uint32_t m = 0; m < modules; ++m) {
+      if (std::strcmp(net.module_dna(m).name, "vocal") == 0) { m_vocal = m; break; }
+    }
+    if (m_vocal == modules) {
+      std::printf("  setup failed: no module named \"vocal\"\n");
+      return false;
+    }
+    const aibaby::ModuleState& vms = net.module(m_vocal);
+    const uint32_t f1_lo = vms.begin + aibaby::slice_begin(vms.count, aibaby::kVocalGroups, kCrGroupF1);
+    const uint32_t f1_hi = vms.begin + aibaby::slice_begin(vms.count, aibaby::kVocalGroups, kCrGroupF1 + 1);
+    const uint32_t f2_lo = vms.begin + aibaby::slice_begin(vms.count, aibaby::kVocalGroups, kCrGroupF2);
+    const uint32_t f2_hi = vms.begin + aibaby::slice_begin(vms.count, aibaby::kVocalGroups, kCrGroupF2 + 1);
+
+    const aibaby::DnaAudio& acfg = dna0.header().audio;
+    Ear ear;
+    if (!ear.configure(acfg, error)) {
+      std::printf("  transducer failed: %s\n", error.c_str());
+      return false;
+    }
+    VowelSource caregiver(acfg.sample_rate);
+    std::vector<float> pcm(acfg.sample_rate / 1000);
+    const uint32_t spt = acfg.sample_rate / 1000;
+    const Word& heard = kWords[kCapHeard];
+
+    const uint32_t n_teach = uint32_t(teach_ticks / kCapTrial);
+    const uint32_t n_gap = uint32_t(gap_ticks / kCapTrial);
+    std::deque<Praise> pending;
+    double base[4] = {-1.0, -1.0, -1.0, -1.0};
+    uint32_t last_frame = 0;
+    uint64_t last_feedback = 0;
+    std::vector<double> f1_at_boundary, f2_at_boundary;
+
+    for (uint32_t trial = 0; trial < n_teach + n_gap; ++trial) {
+      const bool in_teach = trial < n_teach;
+      const CapLesson lesson = in_teach ? kCapLessonA
+                             : (a == kDpAThenB ? kCapLessonB : kCapLessonNone);
+      if (trial == n_teach) {
+        for (uint32_t i = f1_lo; i < f1_hi; ++i) f1_at_boundary.push_back(double(net.bias_of(i)));
+        for (uint32_t i = f2_lo; i < f2_hi; ++i) f2_at_boundary.push_back(double(net.bias_of(i)));
+      }
+      for (uint64_t t = 0; t < kCapTrial; ++t) {
+        const uint64_t now = uint64_t(trial) * kCapTrial + t;
+        while (!pending.empty() && pending.front().tick <= now) {
+          s.brain.praise(pending.front().value);
+          pending.pop_front();
+        }
+        const bool sounding = t < 900;
+        caregiver.render(sounding ? heard.f0 : 0.0f, heard.f1, heard.f2,
+                         sounding ? 0.5f : 0.0f, pcm.data(), spt);
+        ear.tick(s.brain, pcm.data(), spt);
+        s.brain.step();
+        if (s.brain.vocal_frame() == last_frame) continue;
+        last_frame = s.brain.vocal_frame();
+        const aibaby::VocalParams& v = s.brain.voice();
+        const bool voiced = v.voicing > 0.5f && v.amplitude > kAmplitudeFloor;
+        if (lesson != kCapLessonNone && voiced && t >= kCapRewardFrom &&
+            t < kCapRewardTo && now - last_feedback >= regime.feedback_period) {
+          const double e = lesson_error(lesson, double(v.f1), double(v.f2));
+          if (e >= 0.0) {
+            last_feedback = now;
+            double& b = base[uint32_t(lesson)];
+            if (b >= 0.0) {
+              pending.push_back(Praise{now + regime.delay,
+                                       e < b ? regime.praise : regime.scold});
+            }
+            b = b < 0.0 ? e : b + kCapBaselineAlpha * (e - b);
+          }
+        }
+      }
+    }
+    std::vector<double> d1, d2;
+    for (uint32_t i = f1_lo; i < f1_hi; ++i) {
+      d1.push_back(double(net.bias_of(i)) - f1_at_boundary[i - f1_lo]);
+    }
+    for (uint32_t i = f2_lo; i < f2_hi; ++i) {
+      d2.push_back(double(net.bias_of(i)) - f2_at_boundary[i - f2_lo]);
+    }
+    f1_of[a] = decompose(d1);
+    f2_of[a] = decompose(d2);
+  }
+
+  std::printf("\n    %-11s %-9s %-11s %-11s %-11s\n", "arm", "group", "drift", "diffusion",
+              "drift/rms");
+  auto row = [&](const char* arm, const char* g, const DpGroup& d) {
+    std::printf("    %-11s %-9s %-11.5f %-11.5f %-11.3f\n", arm, g, d.drift, d.diffusion,
+                d.rms > 1e-12 ? d.drift / d.rms : 0.0);
+  };
+  row("A only", "F1", f1_of[kDpAOnly]);
+  row("A only", "F2", f2_of[kDpAOnly]);
+  row("A then B", "F1", f1_of[kDpAThenB]);
+  row("A then B", "F2", f2_of[kDpAThenB]);
+
+  const DpGroup& taught = f2_of[kDpAThenB];    // being taught in phase 2
+  const DpGroup& idle = f1_of[kDpAThenB];      // NOT being taught in phase 2
+  const double taught_ratio = taught.rms > 1e-12 ? taught.drift / taught.rms : 0.0;
+  const double idle_ratio = idle.rms > 1e-12 ? idle.drift / idle.rms : 0.0;
+
+  std::printf("\n  `drift` is the part of the change that moves what the group decodes\n"
+              "  to; `diffusion` is the part that only spreads it. A group being\n"
+              "  taught should show drift; a group receiving zero-mean noise should\n"
+              "  show diffusion and no drift.\n");
+  std::printf("\n  taught group (F2)     drift %.5f  diffusion %.5f  ratio %.3f\n"
+              "  untaught group (F1)   drift %.5f  diffusion %.5f  ratio %.3f\n",
+              taught.drift, taught.diffusion, taught_ratio, idle.drift, idle.diffusion,
+              idle_ratio);
+  std::printf("  the untaught group still moves %.0f%% as much in total as the taught\n"
+              "  one — that motion is what erodes lesson A\n",
+              taught.rms > 1e-12 ? 100.0 * idle.rms / taught.rms : 0.0);
+
+  if (idle.diffusion <= 1e-9) {
+    std::printf("\n  NOTHING MOVED — the untaught group's bias did not change at all,\n"
+                "  so there is no erosion to explain and the premise is wrong.\n");
+    return false;
+  }
+  if (idle_ratio >= taught_ratio) {
+    std::printf("\n  IT IS A CREDIT PROBLEM AFTER ALL — the untaught group drifts as\n"
+                "  directionally as the taught one (%.3f vs %.3f). Something correlates\n"
+                "  its perturbations with the other lesson's reward, so the covariance\n"
+                "  is not zero and the variance story is refuted.\n",
+                idle_ratio, taught_ratio);
+    return true;
+  }
+  std::printf("\n  IT IS VARIANCE, NOT CREDIT — the taught group moves directionally\n"
+              "  (ratio %.3f) and the untaught group mostly does not (%.3f), while\n"
+              "  still moving %.0f%% as much in total. Node perturbation is already\n"
+              "  telling the untaught neurons \"you get nothing\"; what it cannot do is\n"
+              "  say it without noise. The mechanism to build is one that stops what\n"
+              "  has already been decided from moving — consolidation — and NOT one\n"
+              "  that works out who deserves the reward.\n",
+              taught_ratio, idle_ratio,
+              taught.rms > 1e-12 ? 100.0 * idle.rms / taught.rms : 0.0);
+  (void)verbose;
+  return true;
+}
+
+
+// --- metaprobe: does DNA v41 buy what the oracle bought? --------------------
+//
+// `credit` priced perfect targeting with an oracle: interference goes to zero
+// (retention ~1.0 on 3 of 3) at 30% of the learning rate. `driftprobe` then
+// said the oracle was not supplying missing information at all — node
+// perturbation's covariance with an irrelevant reward is already zero, and what
+// the mask suppressed was VARIANCE. DNA v41 is the local mechanism that follows
+// from that: each neuron gates its own plasticity on E[u]^2 / E[u^2] over its
+// own updates, needing no teacher, no third factor and no credit assignment.
+//
+// This is `credit`'s design with the oracle replaced by a genome patch, so the
+// two are directly comparable. The bar is set by both of them at once:
+//
+//   retention   must beat the broadcast arm's 0.84 and approach the oracle's
+//               1.03, or the mechanism does not do what it was built for.
+//   A gain      must beat the oracle's 0.231, or v41 is merely a slower
+//               learner wearing a different hat — which is what a floor on
+//               plasticity would look like if the SNR term did nothing.
+//   B landing   must survive, or v41 has frozen the creature rather than
+//               protected it, and a retention win would mean nothing.
+//
+// That third one is the real risk in this mechanism and it has its own refusal.
+namespace {
+
+// DNA v41 offers two gates that ask the same question different ways, so both
+// run here against the same creature and the same seed rather than in two runs
+// that could differ for any other reason.
+enum MpMode { kMpOff = 0, kMpSnr, kMpCommit, kMpFlow, kMpFlow2 };
+
+enum MpArm {
+  kMpAOnly = 0, kMpAThenB,          // v41 off — the baseline pair
+  kMpAOnlyS, kMpAThenBS,            // the moment-ratio gate
+  kMpAOnlyC, kMpAThenBC,            // the commitment brake
+  kMpAOnlyF, kMpAThenBF,            // Benna-Fusi's store, slow leak
+  kMpAOnlyG, kMpAThenBG,            // ...and a leak three times faster
+  kMpNever, kMpArmCount
+};
+
+struct MpPlan { CapLesson teach, gap; MpMode mode; };
+constexpr MpPlan kMpPlan[kMpArmCount] = {
+    {kCapLessonA, kCapLessonNone, kMpOff},
+    {kCapLessonA, kCapLessonB,    kMpOff},
+    {kCapLessonA, kCapLessonNone, kMpSnr},
+    {kCapLessonA, kCapLessonB,    kMpSnr},
+    {kCapLessonA, kCapLessonNone, kMpCommit},
+    {kCapLessonA, kCapLessonB,    kMpCommit},
+    {kCapLessonA, kCapLessonNone, kMpFlow},
+    {kCapLessonA, kCapLessonB,    kMpFlow},
+    {kCapLessonA, kCapLessonNone, kMpFlow2},
+    {kCapLessonA, kCapLessonB,    kMpFlow2},
+    {kCapLessonNone, kCapLessonNone, kMpOff}
+};
+
+constexpr float kMpWindow = 400.0f;  // reward events in the moment window
+constexpr float kMpFloor = 0.25f;    // plasticity left to a fully quieted neuron
+// Measured, not guessed: at 400k the taught group's mean per-neuron SNR reads
+// 0.0021 against the untaught group's 0.0012, so the whole usable range sits
+// near 0.002 and the first two values tried here (0.15, then 0.02) pinned every
+// neuron to the floor. Set at the untaught level, so a neuron reading noise is
+// quieted and one reading better than noise is not.
+constexpr float kMpRef = 0.0012f;    // the SNR that counts as fully consistent
+constexpr float kMpCommitGain = 1.0f;
+// The clock matters more than the number. Cash-ins run at 100 Hz, the teaching
+// phase is 3360 s, and the gap the diffusion happens in is 1568 s. The first
+// value tried here was 0.02, which is a time constant of half a SECOND — it
+// wiped each lesson within a second of it being taught and froze the creature.
+// These two bracket the useful range instead of guessing inside it: 1e-5 is a
+// 1000 s store, 3e-5 a 333 s one. Slower preserves learning and damps less;
+// faster damps the random walk harder and caps what a lesson can accumulate.
+constexpr float kMpFlowRate = 1e-5f;    // tau ~ 1000 s on the 100 Hz cash-in clock
+// `meta_ratio`, NOT the flow, is what froze the first two attempts. The pair
+// conserves ratio*bias + slow, so the readout settles at r/(1+r) of the lesson:
+// 0.05 keeps 5% and looks like a frozen creature at any flow. These two keep
+// 23% and 50%, bracketing the damping-versus-readout trade where it actually
+// lives.
+constexpr float kMpRatioA = 0.3f;
+constexpr float kMpRatioB = 1.0f;
+
+}  // namespace
+
+bool run_metaprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  Regime regime;
+  regime.praise = kPraiseValue;
+  regime.scold = kScoldValue;
+  aibaby::Dna dna0;
+  if (dna0.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) {
+    std::printf("  setup failed: the genome does not load\n");
+    return false;
+  }
+  std::string error;
+  const uint64_t teach_ticks = ticks * 60 / 100;
+  const uint64_t gap_ticks = ticks * 28 / 100;
+  const uint64_t after_ticks = ticks - teach_ticks - gap_ticks;
+
+  instrument("metaprobe", dna0.header().seed ^ 0x4F13u, ticks / kCapTrial, "trials");
+  std::printf("  credit's session with the ORACLE replaced by DNA v41, which is a\n"
+              "  real mechanism. S = the moment-ratio gate (window %.0f events, ref %.4f);\n"
+              "  C = the commitment brake (gain %.2f, floor %.2f); F = Benna-Fusi's\n"
+              "  two-compartment store (flow %.0e, ratio %.2f and %.2f), gating NOTHING\n"
+              "  and so should cost no learning rate at all.\n",
+              double(kMpWindow), double(kMpRef), double(kMpCommitGain), double(kMpFloor),
+              double(kMpFlowRate), double(kMpRatioA), double(kMpRatioB));
+
+  CapRow rows[kMpArmCount];
+  double snr_taught[kMpArmCount] = {}, snr_idle[kMpArmCount] = {};
+  const char* names[kMpArmCount] = {"A only",   "A then B",
+                                    "A only S", "A then B S",
+                                    "A only C", "A then B C",
+                                    "A only F", "A then B F",
+                                    "A only G", "A then B G", "never"};
+
+  for (uint32_t a = 0; a < kMpArmCount; ++a) {
+    std::vector<uint8_t> variant = blob;
+    if (kMpPlan[a].mode != kMpOff) {
+      const size_t base = offsetof(aibaby::DnaHeader, exploration);
+      auto put = [&](size_t off, float v) {
+        std::memcpy(variant.data() + base + off, &v, sizeof(v));
+      };
+      put(offsetof(aibaby::DnaExploration, meta_floor), kMpFloor);
+      if (kMpPlan[a].mode == kMpSnr) {
+        put(offsetof(aibaby::DnaExploration, meta_window), kMpWindow);
+        put(offsetof(aibaby::DnaExploration, meta_ref), kMpRef);
+      } else if (kMpPlan[a].mode == kMpCommit) {
+        put(offsetof(aibaby::DnaExploration, meta_commit), kMpCommitGain);
+      } else {
+        put(offsetof(aibaby::DnaExploration, meta_flow), kMpFlowRate);
+        put(offsetof(aibaby::DnaExploration, meta_ratio),
+            kMpPlan[a].mode == kMpFlow ? kMpRatioA : kMpRatioB);
+      }
+    }
+    Session s;
+    if (!s.init(variant, error)) {
+      std::printf("  arm %s failed to hatch: %s\n", names[a], error.c_str());
+      return false;
+    }
+    aibaby::Network& net = s.brain.network();
+    const uint32_t modules = dna0.module_count();
+    uint32_t m_vocal = modules;
+    for (uint32_t m = 0; m < modules; ++m) {
+      if (std::strcmp(net.module_dna(m).name, "vocal") == 0) { m_vocal = m; break; }
+    }
+    if (m_vocal == modules) {
+      std::printf("  setup failed: no module named \"vocal\"\n");
+      return false;
+    }
+    const aibaby::ModuleState& vms = net.module(m_vocal);
+    const uint32_t f1_lo = vms.begin + aibaby::slice_begin(vms.count, aibaby::kVocalGroups, kCrGroupF1);
+    const uint32_t f1_hi = vms.begin + aibaby::slice_begin(vms.count, aibaby::kVocalGroups, kCrGroupF1 + 1);
+    const uint32_t f2_lo = vms.begin + aibaby::slice_begin(vms.count, aibaby::kVocalGroups, kCrGroupF2);
+    const uint32_t f2_hi = vms.begin + aibaby::slice_begin(vms.count, aibaby::kVocalGroups, kCrGroupF2 + 1);
+
+    const aibaby::DnaAudio& acfg = dna0.header().audio;
+    Ear ear;
+    if (!ear.configure(acfg, error)) {
+      std::printf("  transducer failed: %s\n", error.c_str());
+      return false;
+    }
+    VowelSource caregiver(acfg.sample_rate);
+    std::vector<float> pcm(acfg.sample_rate / 1000);
+    const uint32_t spt = acfg.sample_rate / 1000;
+    const Word& heard = kWords[kCapHeard];
+
+    const uint32_t n_teach = uint32_t(teach_ticks / kCapTrial);
+    const uint32_t n_gap = uint32_t(gap_ticks / kCapTrial);
+    const uint32_t n_after = uint32_t(after_ticks / kCapTrial);
+    const uint32_t n_total = n_teach + n_gap + n_after;
+    const uint32_t third = n_teach / 3 ? n_teach / 3 : 1;
+
+    std::deque<Praise> pending;
+    double base[4] = {-1.0, -1.0, -1.0, -1.0};
+    uint32_t last_frame = 0;
+    uint64_t last_feedback = 0;
+    double s1[3] = {}, s2[3] = {}, sf1[3] = {}, sf2[3] = {};
+    uint32_t n_win[3] = {};
+
+    for (uint32_t trial = 0; trial < n_total; ++trial) {
+      const bool in_teach_phase = trial < n_teach;
+      const bool in_gap = trial >= n_teach && trial < n_teach + n_gap;
+      const CapLesson lesson = in_teach_phase ? kMpPlan[a].teach
+                             : in_gap         ? kMpPlan[a].gap
+                                              : kCapLessonNone;
+      // Sampled at the END of the second phase, where the question is: does the
+      // group that is NOT being taught know that its updates are noise?
+      if (trial == n_teach + n_gap - 1) {
+        double s_t = 0.0, s_i = 0.0;
+        for (uint32_t i = f2_lo; i < f2_hi; ++i) s_t += double(net.meta_snr(i));
+        for (uint32_t i = f1_lo; i < f1_hi; ++i) s_i += double(net.meta_snr(i));
+        snr_taught[a] = s_t / double(f2_hi - f2_lo);
+        snr_idle[a] = s_i / double(f1_hi - f1_lo);
+      }
+      double f1_acc = 0, f2_acc = 0;
+      uint32_t nv = 0;
+      for (uint64_t t = 0; t < kCapTrial; ++t) {
+        const uint64_t now = uint64_t(trial) * kCapTrial + t;
+        while (!pending.empty() && pending.front().tick <= now) {
+          s.brain.praise(pending.front().value);
+          pending.pop_front();
+        }
+        const bool sounding = t < 900;
+        caregiver.render(sounding ? heard.f0 : 0.0f, heard.f1, heard.f2,
+                         sounding ? 0.5f : 0.0f, pcm.data(), spt);
+        ear.tick(s.brain, pcm.data(), spt);
+        s.brain.step();
+        if (s.brain.vocal_frame() == last_frame) continue;
+        last_frame = s.brain.vocal_frame();
+        const aibaby::VocalParams& v = s.brain.voice();
+        const bool voiced = v.voicing > 0.5f && v.amplitude > kAmplitudeFloor;
+        if (lesson != kCapLessonNone && voiced && t >= kCapRewardFrom &&
+            t < kCapRewardTo && now - last_feedback >= regime.feedback_period) {
+          const double e = lesson_error(lesson, double(v.f1), double(v.f2));
+          if (e >= 0.0) {
+            last_feedback = now;
+            double& b = base[uint32_t(lesson)];
+            if (b >= 0.0) {
+              pending.push_back(Praise{now + regime.delay,
+                                       e < b ? regime.praise : regime.scold});
+            }
+            b = b < 0.0 ? e : b + kCapBaselineAlpha * (e - b);
+          }
+        }
+        if (t < kCapEchoFrom || t >= kCapEchoTo || !voiced) continue;
+        ++nv;
+        f1_acc += double(v.f1);
+        f2_acc += double(v.f2);
+      }
+      if (nv == 0) continue;
+      const double f1 = f1_acc / nv, f2 = f2_acc / nv;
+      const double e1 = axis_error(f1, kCapTargetF1), e2 = axis_error(f2, kCapTargetF2);
+      if (e1 < 0.0 || e2 < 0.0) continue;
+      ++rows[a].scored;
+      int w = -1;
+      if (trial < third) w = 0;
+      else if (in_teach_phase && trial >= n_teach - third) w = 1;
+      else if (trial >= n_teach + n_gap) w = 2;
+      if (w < 0) continue;
+      s1[w] += e1; s2[w] += e2; sf1[w] += f1; sf2[w] += f2; ++n_win[w];
+    }
+
+    CapRow& r = rows[a];
+    const double i0 = n_win[0] ? 1.0 / n_win[0] : 0.0;
+    const double i2 = n_win[2] ? 1.0 / n_win[2] : 0.0;
+    r.e1_before = s1[0] * i0; r.e2_before = s2[0] * i0;
+    r.e1_after = s1[2] * i2;  r.e2_after = s2[2] * i2;
+  }
+
+  auto g1 = [](const CapRow& r) {
+    return r.e1_before > 1e-6 ? (r.e1_before - r.e1_after) / r.e1_before : 0.0;
+  };
+  auto g2 = [](const CapRow& r) {
+    return r.e2_before > 1e-6 ? (r.e2_before - r.e2_after) / r.e2_before : 0.0;
+  };
+  const double n1 = g1(rows[kMpNever]), n2 = g2(rows[kMpNever]);
+
+  std::printf("\n    %-11s %-9s %-12s %-12s\n", "arm", "trials", "A gain (F1)", "B gain (F2)");
+  for (uint32_t a = 0; a < kMpArmCount; ++a) {
+    std::printf("    %-11s %-9u %+11.3f %+11.3f\n", names[a], rows[a].scored,
+                g1(rows[a]) - n1, g2(rows[a]) - n2);
+  }
+
+  const double off_only = g1(rows[kMpAOnly]) - n1;
+  const double off_after = g1(rows[kMpAThenB]) - n1;
+  const double off_b = g2(rows[kMpAThenB]) - n2;
+  const double ret_off = off_only > 1e-6 ? off_after / off_only : 0.0;
+
+  struct Verdict { const char* name; double only, after, b, ret; };
+  Verdict v[4];
+  const MpArm only_of[4] = {kMpAOnlyS, kMpAOnlyC, kMpAOnlyF, kMpAOnlyG};
+  const MpArm after_of[4] = {kMpAThenBS, kMpAThenBC, kMpAThenBF, kMpAThenBG};
+  const char* label[4] = {"moment ratio (S)", "commitment (C)", "Benna-Fusi r=0.3",
+                          "Benna-Fusi r=1.0"};
+  for (int k = 0; k < 4; ++k) {
+    v[k].name = label[k];
+    v[k].only = g1(rows[only_of[k]]) - n1;
+    v[k].after = g1(rows[after_of[k]]) - n1;
+    v[k].b = g2(rows[after_of[k]]) - n2;
+    v[k].ret = v[k].only > 1e-6 ? v[k].after / v[k].only : 0.0;
+  }
+
+  std::printf("\n  mean per-neuron SNR at the end of the second phase, S arm:\n"
+              "    group being taught   %.4f\n"
+              "    group NOT taught     %.4f   (this is what the S gate reads)\n",
+              snr_taught[kMpAThenBS], snr_idle[kMpAThenBS]);
+  std::printf("\n    %-18s %-10s %-10s %-10s %-10s\n", "gate", "A retained", "A gain",
+              "B landed", "vs off");
+  std::printf("    %-18s %-10.2f %+-10.3f %+-10.3f %s\n", "off", ret_off, off_only,
+              off_b, "-");
+  for (int k = 0; k < 4; ++k) {
+    char d[32];
+    std::snprintf(d, sizeof(d), "%+.2f", v[k].ret - ret_off);
+    std::printf("    %-18s %-10.2f %+-10.3f %+-10.3f %s\n", v[k].name, v[k].ret, v[k].only,
+                v[k].b, d);
+  }
+  std::printf("\n  the bar is both at once: retention must beat %.2f and approach the\n"
+              "  oracle's 1.03, while A's gain beats the oracle's 0.231 — a gate that\n"
+              "  buys retention by simply learning less has bought nothing.\n", ret_off);
+
+  bool any_usable = false;
+  for (int k = 0; k < 4; ++k) {
+    if (v[k].only <= 0.02) {
+      std::printf("\n  %s FROZE THE CREATURE — lesson A no longer lands (%+.3f).\n"
+                  "  A verdict on these constants, not on the idea.\n", v[k].name, v[k].only);
+      continue;
+    }
+    if (v[k].b <= 0.02) {
+      std::printf("\n  %s BLOCKED THE SECOND LESSON — B lands at %+.3f against %+.3f\n"
+                  "  with the gate off. Retention bought this way means nothing.\n",
+                  v[k].name, v[k].b, off_b);
+      continue;
+    }
+    any_usable = true;
+    // "Did not freeze and did not block" is ALL this line means. An earlier
+    // version said "is usable" and then printed a retention change of -0.70
+    // beside it, which reads as an endorsement of a bad number.
+    std::printf("\n  %s ran without freezing A or blocking B. Retention %+.2f\n"
+                "  against off, A gain %+.3f against %+.3f. Whether that is an\n"
+                "  improvement is the sign of the first number, not this line.\n",
+                v[k].name, v[k].ret - ret_off, v[k].only, off_only);
+  }
+  if (!any_usable) {
+    std::printf("\n  NEITHER GATE IS USABLE at these constants.\n");
+    return false;
+  }
+  (void)verbose;
+  return true;
+}
+
 }  // namespace aibaby_host

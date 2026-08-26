@@ -137,6 +137,8 @@ a canvas, so each has a headless experiment that prints a number and a verdict.
 ./build/aibaby --experiment retain      --ticks 5600000 # does it keep the lesson; does sleep erase it
 ./build/aibaby --experiment capacity    --ticks 5600000 # can it hold two lessons at once
 ./build/aibaby --experiment credit      --ticks 5600000 # would per-neuron reward remove the interference
+./build/aibaby --experiment driftprobe  --ticks 3400000 # is the interference credit, or variance
+./build/aibaby --experiment metaprobe   --ticks 5600000 # does DNA v41 buy what the oracle bought
 ./build/aibaby --experiment snapshot    --ticks 2400000 # §8: resume is exact
 ```
 
@@ -439,7 +441,7 @@ as it currently stands. **The whole suite above passes except `m3`** — G1,
 calibrate, babble, audio, vision, M2, G2, sleep, G4 and snapshot are all green,
 and G3 is the one milestone still open. Shipped hash `23c4eb2c7c45d05c`;
 `--experiment verify` reads 19 of 19 as expected on the fast tier and
-`verify-long` 40 of 40 — see [The suite, both tiers](#the-suite-both-tiers).
+`verify-long` 35 of 35 and `verify-teach` the seven hour-scale ones — see [The suite, both tiers](#the-suite-both-tiers).
 
 **What teaching can and cannot do is now measured rather than guessed.** Three
 experiments bound it. `teachsound` (M1c) says praise alone moves the voice toward
@@ -3392,11 +3394,12 @@ until ~1.04M ticks.
 
 ### The suite, both tiers
 
-Run 2026-08-25 on the shipped genome, with DNA v36–v40 all switched off.
+Run 2026-08-26 on the shipped genome, with DNA v36–v41 all switched off.
 
 ```
 --experiment verify           determinism PASS   pinned hash PASS   19 of 19 as expected
---experiment verify-long      determinism PASS   pinned hash PASS   40 of 40 as expected
+--experiment verify-long      determinism PASS   pinned hash PASS   35 of 35 as expected
+--experiment verify-teach     the seven hour-scale teaching experiments
 --experiment mechverify       15 mechanisms, 0 drifted, 0 vacuous, 0 unpinned, 0 broken
                               2 open milestones still failing, which is what
                               "as expected" means for them
@@ -4003,6 +4006,184 @@ works and a learnable mechanism that does not — is the pattern this project ha
 hit repeatedly, and it is the reason the oracle is labelled as one everywhere it
 appears.
 
+### `driftprobe` — the interference was never a credit-assignment problem
+
+Everything above calls `capacity`'s interference a credit-assignment failure.
+That framing is wrong, and this is the correction. Node perturbation already
+assigns credit correctly **in expectation**:
+
+```
+d bias_i  ~  R * perturb_i        so       E[d bias_i]  ~  Cov(R, perturb_i)
+```
+
+`perturb_[i]` is the neuron's own injected noise, independent across neurons and
+independent of the reward except through that neuron's causal effect on
+behaviour. For a neuron with no effect on the current lesson's reward the
+covariance is **exactly zero** — the rule is already telling it "you get
+nothing". What it cannot do is deliver zero on any single sample. It delivers
+zero-mean *noise*, and zero-mean noise applied to a standing bias is a random
+walk.
+
+So the prediction is specific: during lesson B the F1 group should DIFFUSE while
+the F2 group DRIFTS. The decomposition has to respect what the larynx reads — a
+group's output is a population centroid, so a uniform shift of every bias in the
+group moves nothing — and the change vector is split along the axis that moves
+the readout and perpendicular to it.
+
+| seed | taught group drift/rms | untaught group drift/rms | untaught total motion |
+|---|---|---|---|
+| 1 | 0.744 | 0.083 | 69% |
+| 2 | 0.860 | 0.117 | 61% |
+| 3 | 0.919 | 0.353 | 48% |
+| **mean** | **0.841** | **0.184** | **59%** |
+
+The untaught group's *diffusion* is essentially identical to the taught group's
+(0.0164 against 0.0160 on seed 1) with nine times less drift, and teaching B
+raises it **5.6x** over the quiet arm. Same noise, no signal.
+
+**This retires three refutations at once.** Burst plasticity (v37), the
+dendritic error microcircuit (v40) and plateau gating (v29) were all attempts to
+build a better *third factor* — a richer signal about who is responsible right
+now. If the covariance is already right, they were answering a question the
+learning rule had answered. The probe carries the falsifier in its own output:
+had the untaught group drifted as directionally as the taught one, it prints
+`IT IS A CREDIT PROBLEM AFTER ALL` and this section would not exist.
+
+### DNA v41 — metaplastic consolidation, and one of its two gates works
+
+If the problem is variance rather than credit, the mechanism to build is one
+that stops what has already been decided from moving. v41 offers two gates that
+ask that question different ways. Both ship off; both were measured in the same
+`metaprobe` session against the same creature and seed, so nothing else can
+differ between them.
+
+**The moment ratio (S).** Each neuron gates its own plasticity on
+`E[u]^2 / E[u^2]` over its own updates — 1 if every update agrees, 0 if pure
+noise. Local, no teacher, two floats per neuron.
+
+**The commitment brake (C).** The bias IS the accumulated evidence: a neuron
+driven consistently walks away from zero, one fed noise stays near it, and the
+distance integrates over the whole lesson rather than over a window.
+
+```
+gate = 1 - (1 - meta_floor) * meta_commit * |bias| / perturb_max
+```
+
+It costs **no new state at all**, because the quantity it reads is one the
+kernel already keeps. That is Fusi's cascade in its simplest form (Fusi, Drew &
+Abbott 2005; Benna & Fusi 2016), and the standard soft weight bound arrived at
+from the other direction.
+
+Six seed families, 5.6M ticks, against the `credit` oracle's 1.03 retention and
+0.231 A-gain:
+
+| seed | off | **commitment (C)** | change | C's A gain | moment ratio (S) |
+|---|---|---|---|---|---|
+| 1 | 0.86 | 1.22 | +0.36 | 0.159 | 0.94 |
+| 2 | 1.08 | 0.85 | **-0.23** | 0.368 | 0.38 |
+| 3 | 0.57 | 0.86 | +0.29 | 0.257 | 0.54 |
+| 4 | 0.94 | 1.00 | +0.07 | 0.329 | 0.86 |
+| 5 | 0.74 | 0.86 | +0.12 | 0.087 | 1.18 |
+| 6 | 1.09 | 1.78 | +0.68 | 0.114 | 0.58 |
+| **mean** | **0.88** | **1.10** | **+0.21** | **0.219** | **0.75** |
+
+**The commitment gate reaches the oracle without being one.** Retention 1.10
+against the oracle's 1.03 and 0.88 for doing nothing, at an A-gain of 0.219
+against the oracle's 0.231. A purely local rule, reading a quantity that already
+existed, lands where perfect targeting landed.
+
+**The qualifications are not small.** It is 5 of 6 by sign, not 6 of 6. Seed 2
+LOST 0.23, and it is the seed that had no interference to fix — the brake stops
+the spontaneous post-lesson improvement as well as the erosion, so what it
+really does is clamp retention toward ~1 from both directions. Seed 6's +0.68 is
+an outlier pulling the mean up; the median is +0.205. A's gain falls 14% on
+average and ranges from 0.087 to 0.368 across seeds.
+
+**Benna-Fusi's two-compartment store is refuted too, and it was meant to be the
+improvement.** Both gates above work by refusing updates, which is why the
+commitment brake costs learning rate, so the obvious fix was a mechanism that
+refuses nothing: make the bias the fast variable of a chain coupled to a slow
+store. The prediction stated in advance was that it would cost no learning rate
+at all. **That prediction was wrong, and the reason is one line of algebra that
+should have been done before the first run.**
+
+The exchange conserves `ratio * bias + slow`. That is the property that makes it
+a store rather than a leak — nothing drains to zero. It also means that starting
+from an empty store the pair settles at `bias = ratio * B / (1 + ratio)`, so the
+readout keeps `r/(1+r)` of the lesson and the effective learning rate is scaled
+by the same factor. `meta_flow` sets only how fast that happens; it cannot
+change it.
+
+| ratio | keeps | seed 1 | seed 2 | seed 3 |
+|---|---|---|---|---|
+| **0.3** | 23% | froze (-0.045) | froze (-0.056) | froze (-0.038) |
+| **1.0** | 50% | ret 1.31, gain 0.075 | ret 1.05, gain 0.102 | ret 0.98, gain 0.037 |
+
+At r = 0.3 the creature freezes on 3 of 3. At r = 1.0 it does not freeze, and it
+posts the best retention numbers of anything tried — and fails the joint bar
+outright: A's gain falls from a mean of 0.330 to **0.071**, a 78% cost, and
+lesson B is blocked on 2 of 3 seeds (+0.002 and +0.003). It bought retention by
+learning less, which is exactly what that bar exists to catch. The measured cost
+is worse than the 50% the algebra predicts, because the leak damps the
+systematic drift during the gap as well as the noise.
+
+So the cost is **structural to the formulation**, not a tuning failure: two
+compartments cannot separate the noise from the signal when both arrive through
+the same variable. The crude brake it was built to improve on is better here.
+
+**The moment ratio is refuted**, at a mean of -0.13 and swings from +0.44 to
+-0.70. Its measured SNR separation is 0.0025 against 0.0024 — no separation at
+all — and that is a design flaw with a name rather than bad luck: the statistic's
+noise floor is `1/meta_window`, a lesson holds only a few thousand reward
+events, and there is no headroom to work in. Two guesses at its threshold (0.15,
+then 0.02) pinned every neuron to the floor and froze the creature before the
+third was measured from the data.
+
+#### Four constants guessed instead of derived, at a full-length run each
+
+This mechanism cost more compute in wrong constants than in wrong code, and all
+four were one line of arithmetic away from being right the first time.
+
+| constant | guessed | what the system said |
+|---|---|---|
+| `meta_ref` | 0.15, then 0.02 | measured SNRs live near 0.002; both pinned every neuron to the floor |
+| `meta_flow` | 0.02 | cash-ins run at 100 Hz, so that is a **half-second** store against a 3360 s lesson |
+| `meta_ratio` | 0.05 | the pair conserves `r*bias + slow`, so the readout keeps `r/(1+r)` = **5%** |
+
+The pattern is the same each time: a number was picked from intuition when the
+system's own arithmetic determined it. The `meta_flow` and `meta_ratio` errors
+are the worst of them, because each produced a *frozen creature* — a result that
+looks like a refutation of the idea rather than of the constant, and would have
+been recorded as one if the probe had not been built to say `FROZE THE CREATURE`
+instead of printing a retention ratio computed from a near-zero denominator.
+
+#### Three bugs, and two of them looked like success
+
+The v41 arrays were allocated inside `if (any_burst_)`, so they came back null on
+any genome without a burst code and the probe segfaulted. `meta_alpha_` was
+assigned *after* the allocation that tested it. `required_bytes` did not count
+the new arrays, so the arm failed to hatch.
+
+The first of those was invisible twice, and the reason is worth keeping: the run
+was piped to `tail`, so `$?` reported **tail's** exit status and the segfault
+read as success — and stdout was block-buffered, so the crash discarded every
+line the experiment had printed and it looked like a silent clean exit. Run it
+unpiped, and use `stdbuf -o0`, before believing a fast quiet finish.
+
+### Three verify tiers, because the second one had become unrunnable
+
+The teaching experiments each raise a creature through several phases of a life
+at 3.4M-5.6M ticks, and there are now seven of them. Left in `kLong` they turned
+a half-hour suite into a five-hour one, which does not mean the suite is
+thorough — it means it stops being run before a commit.
+
+```
+--experiment verify        determinism, hash, 19 fast experiments      seconds
+--experiment verify-long   + the minute-scale ones, 35 total           ~30 min
+--experiment verify-teach  + the seven hour-scale teaching ones        hours
+--experiment verify-all    both
+```
+
 ### What this round taught about probes, which cost more than the mechanisms did
 
 Four mechanisms went in and five probes came out, and the probes found more
@@ -4233,6 +4414,15 @@ question rather than a rewrite.
 
 The mechanisms here are named after the work they come from. These are the ones
 whose papers were read rather than remembered.
+
+**Metaplasticity and memory consolidation (DNA v41).**
+
+- Fusi, S., Drew, P. J. & Abbott, L. F. (2005). *Cascade models of synaptically
+  stored memories.* Neuron 45(4), 599–611.
+  <https://doi.org/10.1016/j.neuron.2005.02.001>
+- Benna, M. K. & Fusi, S. (2016). *Computational principles of synaptic memory
+  consolidation.* Nature Neuroscience 19, 1697–1706.
+  <https://doi.org/10.1038/nn.4401>
 
 **Dynamic synapses and cricket phonotaxis (DNA v36).**
 

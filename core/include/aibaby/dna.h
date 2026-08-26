@@ -322,7 +322,7 @@ constexpr uint32_t kDnaMagic = 0x44424941;  // "AIBD"
 //     about what reward multiplies.
 //
 //     See DnaModule::ffi_apical and DnaModule::ffi_learn, and `errprobe`.
-constexpr uint32_t kDnaVersion = 40;
+constexpr uint32_t kDnaVersion = 41;
 
 // What a module is wired to the world through. The host looks modules up by
 // role, never by name or index, so renaming a module in the genome cannot
@@ -888,6 +888,100 @@ struct DnaExploration {
   float perturb_tau_ms;         // how long a perturbation stays creditable
   float perturb_rate;           // learning rate; 0 disables the whole mechanism
   float perturb_max;            // |bias| ceiling, or one lucky moment runs away
+
+  // --- DNA v41: metaplastic consolidation -----------------------------------
+  // The rule above is an unbiased gradient estimate, and `driftprobe` measured
+  // what that costs. A neuron with no effect on the current lesson's reward has
+  // a covariance of exactly zero with it — the rule is already telling it "you
+  // get nothing" — but it cannot say so on any single sample. It says it as
+  // zero-mean NOISE, and zero-mean noise applied to a standing bias is a random
+  // walk. Measured on the larynx: while one vocal group is being taught, the
+  // OTHER group diffuses just as hard (0.0164 against 0.0160) with nine times
+  // less directional motion, and that diffusion is what erodes the older lesson.
+  //
+  // So the missing machinery is not a better third factor. Every attempt at one
+  // here has been refuted — burst plasticity (v37), the dendritic microcircuit
+  // (v40), plateau gating (v29) — and if the covariance is already right, they
+  // were all answering a question the learning rule had answered. What is
+  // missing is a way to stop moving what has already been decided.
+  //
+  // Each neuron keeps two running moments of its OWN bias updates, and their
+  // ratio is a purely local estimate of how much of what it is being told is
+  // signal:
+  //
+  //   snr = E[u]^2 / E[u^2]        1 = every update agrees, 0 = pure noise
+  //
+  // Plasticity is gated on that, so a neuron receiving a consistent gradient
+  // learns at full rate and one receiving noise is quieted toward `meta_floor`.
+  // This is metaplasticity in Fusi's sense — the plasticity of a synapse
+  // depending on its own history of change rather than on any signal from
+  // elsewhere (Fusi, Drew & Abbott 2005; Benna & Fusi 2016) — and it is the
+  // per-neuron version of exactly the statistic `driftprobe` reads per group.
+  //
+  // It needs no credit assignment, no third factor and no teacher, which is why
+  // it is a different class from everything in the conditioning fence.
+  // Counted in REWARD EVENTS, not milliseconds, and that is not cosmetic. The
+  // moments may only advance when reward actually arrived: updating them on
+  // every plasticity interval would decay E[u]^2 faster than E[u^2] through a
+  // quiet stretch, so the SNR would fall to zero from silence alone and the
+  // gate would quiet every neuron almost all the time. The question this
+  // statistic asks is "of the rewards I have had, how consistently did they
+  // point the same way", and silence is not evidence either way.
+  float meta_window;            // reward events in the window; 0 disables
+  float meta_floor;             // plasticity left to a neuron whose updates are noise
+  float meta_ref;               // the SNR that already counts as fully consistent
+
+  // The SECOND way of asking the same question, and the cheaper one. The bias
+  // IS the accumulated evidence: a neuron driven consistently walks away from
+  // zero, one fed noise stays near it, and the distance is integrated over the
+  // whole lesson rather than over a window. That matters, because the moment
+  // ratio above has a noise floor of 1/meta_window and a lesson holds only a
+  // few thousand reward events, so it has almost no headroom to work in.
+  //
+  // Plasticity falls with how far this neuron has already committed:
+  //
+  //   gate = 1 - (1 - meta_floor) * meta_commit * |bias| / perturb_max
+  //
+  // A neuron that has learned something is hard to move; a fresh one is free.
+  // That is Fusi's cascade in its simplest form and it costs no state at all,
+  // because the quantity it reads is one the kernel already keeps. It is also
+  // the standard soft-bound on a weight, arrived at from the other direction.
+  //
+  // Independent of the moment gate: a genome may run either, both or neither.
+  float meta_commit;            // 0 disables; 1 is the full brake at |bias| = max
+
+  // The THIRD way, and the one that is actually Benna & Fusi's. Both gates
+  // above work by refusing updates, which is why the commitment brake costs 14%
+  // of the learning rate: a gate cannot tell "this neuron should stop" from
+  // "this neuron is still working", so it slows both.
+  //
+  // This one refuses nothing. The bias becomes the fast variable of a
+  // two-compartment chain, coupled to a slow one that stores:
+  //
+  //   bias  += flow * (slow - bias)
+  //   slow  += flow * ratio * (bias - slow)
+  //
+  // A random walk injected into `bias` becomes an Ornstein-Uhlenbeck process
+  // with bounded variance instead of one that wanders without limit, so the
+  // DIFFUSION `driftprobe` measured decays away on its own. Sustained drive is
+  // not damped the same way: it drags `slow` with it, the pair settles at the
+  // driven value, and with no drive at all the two converge and stay — so what
+  // a lesson bought is kept rather than leaked back to zero.
+  //
+  // The learning rate is never touched, which is the whole point.
+  // The exchange CONSERVES `meta_ratio * bias + slow`, which is what makes this
+  // a store rather than a leak — nothing drains to zero and a lesson is kept.
+  // It is also what makes `meta_ratio` the parameter that matters, and the one
+  // this project first got wrong. Starting from an empty store the pair settles
+  // at `bias = ratio * B / (1 + ratio)`, so the readout keeps `r/(1+r)` of what
+  // was learned: at 0.05 that is FIVE PERCENT and the creature looks frozen no
+  // matter how `meta_flow` is set. `meta_flow` only sets how fast that happens.
+  //
+  // The trade is therefore between damping and readout: larger `meta_ratio`
+  // keeps more of the lesson and shares less of the noise away.
+  float meta_flow;              // fast-to-slow coupling per cash-in; 0 disables
+  float meta_ratio;             // the store's capacity ratio; keeps r/(1+r) of the signal
+
 
 
   uint32_t enabled;
