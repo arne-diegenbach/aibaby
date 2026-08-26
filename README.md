@@ -4376,6 +4376,52 @@ module could sweep a centroid with real convergence. Changing a module's neuron
 count re-rolls its wiring, so that is a different creature needing calibration
 from scratch, which is why it is a separate piece of work and not a knob.
 
+#### A bigger larynx makes it worse, and for the opposite reason to the one expected
+
+`vocal` is 126 neurons in nine groups of fourteen, and a group's output is a
+centroid over its fourteen cells — so the reasoning was that groups of a hundred
+would let a chain sweep a centroid with real convergence and lift the 4-6 Hz
+ceiling. `vocal` grown to 900 neurons calibrates cleanly (duty 0.73 at the
+shipped noise), so the test is clean.
+
+| 900-neuron `vocal` | shared shape | F1 range | span | d' | voiced |
+|---|---|---|---|---|---|
+| no chain | 3.4% | **4.8 Hz** | 0.2 Hz | -0.071 | 62% |
+| chain 0.02, matched duty | 5.0% | 4.7 Hz | 0.2 Hz | -0.124 | 58% |
+| chain 0.08, duty 0.14 | 49.2% | 4.7 Hz | **2.3 Hz** | 0.419 | **11%** |
+| *(126-neuron original)* | *53.8%* | *10.4 Hz* | *4.1 Hz* | *0.461* | *40%* |
+
+**The baseline is the finding.** One utterance in the big larynx ranges 4.8 Hz of
+F1 where the small one ranges 10.4 Hz. Growing the module made the voice LESS
+mobile, not more — the readout is a centroid over a population and a larger
+population averages harder. The change made to give a chain something to sweep
+is the same change that flattened the thing being swept.
+
+The strong-chain arm confirms it from the other side: it recovers the shared
+shape (49.2%, d' 0.419, close to the small larynx's 53.8% and 0.461) but its span
+is SMALLER at 2.3 Hz and it costs most of the voice, 11% voiced against 40%.
+
+There is also no usable operating point. With a real chain weight the duty cycle
+pins at ~0.15 and **no amount of noise lifts it** — 0.22, 0.40 and 0.55 all read
+0.14 to 0.16. Only weakening the chain to 0.02 restores normal vocalisation, and
+at 0.02 the chain does nothing. Strong enough to matter is too strong to speak.
+
+**So four routes have now been tried and the picture is consistent:**
+
+| | result |
+|---|---|
+| chain inside `vocal` (126) | **works**, capped at 4-6 Hz by fourteen-neuron groups |
+| direct projection | drones before it shapes |
+| signed relay | delivers nothing |
+| bigger larynx | averages the movement away, and will not tolerate a real chain |
+
+The only arrangement that carries a temporal pattern to the voice is the one
+with no tract at all, and the ceiling on it is set by a population code that gets
+*smoother* as you enlarge it. That is a structural statement about this vocal
+architecture rather than a tuning result, and it is where this line stops without
+a different readout at the larynx — one that reads something other than a
+centroid.
+
 #### `n_max` is not the live neuron count, and reading it as one wasted the first three runs
 
 `central` hatches at **400 neurons**. `n_max = 4096` is the arena ceiling M4
