@@ -4196,6 +4196,15 @@ unpiped, and use `stdbuf -o0`, before believing a fast quiet finish.
 
 ### `trajprobe` and `seqprobe` — an utterance is a held vowel, and nothing here can hold a sequence
 
+> **Read the second half of this heading with the travelling-wave section
+> below.** "Nothing here can hold a sequence" was measured with population-vector
+> correlation, which demands the same neurons in the same bin across repeats and
+> is therefore structurally blind to a wave whose SPEED jitters. Measured
+> per-repeat instead, `central` carries a travelling wave at travel r +0.583
+> against a +0.035 null. The claim about the utterance — the first half —
+> stands: it is about the larynx's output, not about the instrument.
+
+
 Every taught result on this page teaches a **setpoint**. M1c moves the creature's
 vowel toward a target; `capacity` teaches two formants to two values;
 `vocallearn` scores the distance from a fixed pair of numbers. Nothing has ever
@@ -4675,7 +4684,7 @@ and 0%, so the instrument is not inventing either number.
 
 **What removing normalisation bought is rate, and persistence follows rate.**
 The norm-OFF arm looked like the best result this probe has produced: persist
-16 ms -> 144 ms, reliability above 0.6 for 70 ms and above 0.1 out to 200 ms,
+16 ms -> 144 ms, reliability above 0.6 for 56 ms and above 0.1 out to 160 ms,
 first bin uncorrelated with last so the pattern *evolves* rather than sitting in
 a static attractor — against this project's standing finding that no module
 holds a kick for 10 ms. But it also ran at 55.5 Hz, eight times `central`'s
@@ -4731,6 +4740,83 @@ failed loudly — they returned plausible tables. What caught it was checking
 whether the arm had actually produced the condition it was supposed to produce
 (high rate, matched rate) rather than reading its verdict column. Ratios like
 `ms/Hz` exist to make that check part of the output.
+
+#### The chain does carry a travelling wave, and only the per-repeat readout sees it
+
+The section above closes with persistence explained away as density, which left
+one thread: at a matched rate the chain still did something the no-chain arm did
+not. `seqprobe` already printed a `centre of activity` line and nobody had read
+it. The no-chain arms pin at ~210 — the centre of mass of diffuse activity is
+just the population mean. Every chain arm instead collapses to the chain head
+and sweeps monotonically away from it:
+
+```
+no chain           196 221 217 207 203 215 216 212 208 214 216 ... 208 214
+12 links, 8 ms      65  74  14  15  15  16  16  20  21  23  31 ... 265 256 255 232
+6 links, 16 ms      95 130 155 196 173  45  38  35  32  43  41 ...  238 248 286
+```
+
+**That line pools all 24 repeats**, so it cannot say whether any single repeat
+sweeps — one loud repeat dominates a weighted mean, and this project has read an
+aggregate as a per-trial fact before. So the probe now reports two per-repeat
+numbers instead. `travel` is centre against bin WITHIN one repeat, averaged over
+repeats: does activity move each time? `agree` is one repeat's trajectory against
+another's: do they move the same way? A chain needs both, and neither alone is
+enough.
+
+On the shipped genome, 24 repeats per arm:
+
+| arm | rate | travel r | agree r |
+|---|---|---|---|
+| `no chain` | 6.0 Hz | **+0.035** (sd 0.197) | **+0.005** |
+| `no chain, no norm` | 6.6 Hz | **-0.007** (sd 0.201) | **+0.000** |
+| `6 links, 3 ms` | 4.0 Hz | +0.373 | +0.247 |
+| `6 links, 16 ms` | 8.7 Hz | +0.294 | +0.660 |
+| **`12 links, 8 ms`** | 5.8 Hz | **+0.583** (sd 0.205) | **+0.525** |
+| `20 links, 8 ms` | 5.7 Hz | +0.521 | +0.406 |
+
+Both nulls sit at zero on both measures; every chain arm is well clear of them.
+The strongest is `12 links, 8 ms` — one chain link per 8 ms bin, which is what
+the bin width was chosen for.
+
+**Why `reliab r` misses it.** Population-vector reliability collapses to 0.02-0.06
+in exactly the bins where the sweep happens, and that is not a contradiction: it
+demands the same neurons fire in the same bin across repeats, so jitter in wave
+SPEED destroys it while leaving the trajectory intact. A probe that only measured
+pattern correlation would have reported no sequence here, and did for months.
+
+**The discriminator against "activity just spreads from the kick site"** is that
+the chain arms leave the null's resting centre in *both* directions: they start
+at the chain head (14-35, far below the null's ~210) and end past where diffuse
+activity sits (265-286). Spreading with uniform decay converges on the mean from
+one side; it does not start below it and finish above it.
+
+**One result is genome-dependent and is reported as such.** Removing
+normalisation destroys travel on the shipped genome and does not on a genome
+carrying a potentiated `central->central` Hebbian tract:
+
+| no-norm arm | shipped | + Hebbian tract (mean \|w\| x5.64) |
+|---|---|---|
+| `12 links, no norm` | -0.069 | **+0.435** |
+| `no norm, inhib 5` | -0.079 | **+0.480** |
+| `no norm, inhib 10` | -0.379 | **+0.342** |
+| `no norm, inhib 20` | -0.357 | **+0.209** |
+
+Four arms each, consistent within genome and opposite between them, so this is
+systematic and not one arm wobbling. Extra potentiated recurrence appears to
+substitute for normalisation in holding a wave together. The cause is not
+isolated — that genome also sets `scaling_band = 1.02` — but the band sweep
+above moved nothing to two digits, which leaves the tract as the candidate.
+
+Note also that `agree` stays positive (+0.35 to +0.53) on the shipped genome's
+no-norm arms while `travel` is negative. Those repeats do agree — on a
+rise-then-fall that is not travel. Either number alone would have been read as a
+sequence.
+
+**And the bin label was wrong.** The line printed "reliability by 10 ms bin"
+while `kSqBinTicks` was 8 at `dt_ms = 1.0`, so every duration computed off it
+came out 25% long, including one in this README that called seven bins above 0.6
+"70 ms" when it is 56. The label is now derived from the constant.
 
 ### Three verify tiers, because the second one had become unrunnable
 

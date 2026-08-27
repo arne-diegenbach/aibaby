@@ -7097,6 +7097,21 @@ double pop_corr(const std::vector<float>& a, const std::vector<float>& b) {
   return (da > 1e-12 && db > 1e-12) ? num / std::sqrt(da * db) : 0.0;
 }
 
+// Correlation over doubles, for trajectories rather than population vectors.
+double corr_d(const std::vector<double>& a, const std::vector<double>& b) {
+  const size_t n = a.size();
+  if (n < 3 || b.size() != n) return -2.0;
+  double ma = 0, mb = 0;
+  for (size_t i = 0; i < n; ++i) { ma += a[i]; mb += b[i]; }
+  ma /= double(n); mb /= double(n);
+  double num = 0, da = 0, db = 0;
+  for (size_t i = 0; i < n; ++i) {
+    const double x = a[i] - ma, y = b[i] - mb;
+    num += x * y; da += x * x; db += y * y;
+  }
+  return (da > 1e-12 && db > 1e-12) ? num / std::sqrt(da * db) : -2.0;
+}
+
 }  // namespace
 
 bool run_seqprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
@@ -7532,7 +7547,11 @@ bool run_seqprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
                        return buf; }()),
                   mean_rate > 1e-9 ? double(persist * kSqBinTicks) / mean_rate : 0.0,
                   base_rate, kick_rate, kick_r);
-      std::printf("      reliability by 10 ms bin:");
+      // Derived from the constant, not written out. This label read "10 ms bin"
+      // while kSqBinTicks was 8, so every time computed off this line came out
+      // 25% long — including one in the README, which called 7 bins above 0.6
+      // "70 ms" when it is 56.
+      std::printf("      reliability by %u ms bin:", kSqBinTicks);
       for (uint32_t b = 0; b < kSqBins; ++b) std::printf(" %.2f", rel[b]);
       std::printf("\n");
       // WHERE the activity is, in neuron index, bin by bin. This is the direct
@@ -7553,6 +7572,84 @@ bool run_seqprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
         std::printf(" %5.0f", den > 0.0 ? num / den : -1.0);
       }
       std::printf("\n");
+      // DOES EACH REPEAT TRAVEL, OR ONLY THEIR AVERAGE? The centre line above
+      // pools all 24 repeats into one weighted mean per bin, and a pooled
+      // centre can sweep for reasons no single repeat does — one loud repeat
+      // dominates the weighting, or different repeats contribute at different
+      // bins. This project has read an aggregate as if it were a per-trial fact
+      // before.
+      //
+      // Two numbers, and they answer different questions. `travel` is the
+      // correlation of centre against bin WITHIN one repeat, averaged over
+      // repeats: does activity move monotonically through the module each time?
+      // `agree` is the correlation BETWEEN two repeats' trajectories, averaged
+      // over pairs: do they move the same way? A chain needs both. Diffuse
+      // activity has no travel; a wave whose speed jitters travels but agrees
+      // poorly, and would fail the population-vector `reliab r` above while
+      // still being a real sequence.
+      //
+      // The null is the `no chain` arm, whose centre pins at the module's
+      // midpoint because the centre of mass of diffuse activity IS the
+      // population mean.
+      {
+        std::vector<std::vector<double>> traj(kSqRepeats);
+        std::vector<double> tvl;
+        for (uint32_t r = 0; r < kSqRepeats; ++r) {
+          std::vector<double> bx, cy;
+          traj[r].assign(kSqBins, -1.0);
+          for (uint32_t b = 0; b < kSqBins; ++b) {
+            double num = 0.0, den = 0.0;
+            for (uint32_t k = 0; k < ms.count; ++k) {
+              num += double(k) * double(counts[r][b][k]);
+              den += double(counts[r][b][k]);
+            }
+            if (den > 0.0) {
+              traj[r][b] = num / den;
+              bx.push_back(double(b));
+              cy.push_back(num / den);
+            }
+          }
+          // Six bins is the floor at which a trend means anything; below it the
+          // arm is reported as having no measurable trajectory rather than
+          // given a correlation computed on three points.
+          if (bx.size() >= 6) {
+            const double c = corr_d(bx, cy);
+            if (c > -1.5) tvl.push_back(c);
+          }
+        }
+        std::vector<double> agr;
+        for (uint32_t i = 0; i < kSqRepeats; ++i) {
+          for (uint32_t j = i + 1; j < kSqRepeats; ++j) {
+            std::vector<double> u, v;
+            for (uint32_t b = 0; b < kSqBins; ++b) {
+              if (traj[i][b] >= 0.0 && traj[j][b] >= 0.0) {
+                u.push_back(traj[i][b]);
+                v.push_back(traj[j][b]);
+              }
+            }
+            if (u.size() >= 6) {
+              const double c = corr_d(u, v);
+              if (c > -1.5) agr.push_back(c);
+            }
+          }
+        }
+        if (tvl.size() < 4 || agr.size() < 4) {
+          std::printf("      per-repeat travel: fewer than 4 usable repeats — "
+                      "REFUSING to report a trend\n");
+        } else {
+          double mt = 0.0, ma2 = 0.0;
+          for (double x : tvl) mt += x;
+          for (double x : agr) ma2 += x;
+          mt /= double(tvl.size());
+          ma2 /= double(agr.size());
+          double st = 0.0;
+          for (double x : tvl) st += (x - mt) * (x - mt);
+          st = std::sqrt(st / double(tvl.size()));
+          std::printf("      per-repeat travel r %+.3f (sd %.3f, %zu repeats), "
+                      "between-repeat agreement r %+.3f\n",
+                      mt, st, tvl.size(), ma2);
+        }
+      }
       if (kick_r < 0.3 || kick_rate < base_rate * 1.5) {
         std::printf("      ^ POSITIVE CONTROL FAILED at this weight: the kick did not\n"
                     "        make a loud reproducible pattern, so the zero above is\n"
