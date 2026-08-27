@@ -7,12 +7,6 @@ namespace {
 
 constexpr float kPi = 3.14159265358979323846f;
 
-// The mel scale is what the cochlea actually does: roughly linear below 1 kHz
-// and logarithmic above it. Using it instead of raw FFT bins is what makes 24
-// numbers a sufficient description of a sound (§5.2).
-float hz_to_mel(float hz) { return 2595.0f * std::log10(1.0f + hz / 700.0f); }
-float mel_to_hz(float mel) { return 700.0f * (std::pow(10.0f, mel / 2595.0f) - 1.0f); }
-
 // In-place iterative radix-2 Cooley-Tukey. The window size is validated as a
 // power of two when the genome loads, so there is no mixed-radix path.
 void fft(std::vector<float>& re, std::vector<float>& im) {
@@ -51,6 +45,14 @@ void fft(std::vector<float>& re, std::vector<float>& im) {
 }
 
 }  // namespace
+
+// The mel scale is what the cochlea actually does: roughly linear below 1 kHz
+// and logarithmic above it. Using it instead of raw FFT bins is what makes 24
+// numbers a sufficient description of a sound (§5.2). Declared in the header
+// since 2026-08-27 so an analysis can ask questions on the ear's own axis
+// without keeping a second copy of the formula.
+float hz_to_mel(float hz) { return 2595.0f * std::log10(1.0f + hz / 700.0f); }
+float mel_to_hz(float mel) { return 700.0f * (std::pow(10.0f, mel / 2595.0f) - 1.0f); }
 
 bool Cochlea::configure(const aibaby::DnaAudio& cfg, std::string& error) {
   sample_rate_ = cfg.sample_rate;

@@ -26,6 +26,13 @@
 
 namespace aibaby_host {
 
+// The mel scale itself, exported because `vocab` asks whether this creature's
+// vowel confusions follow the axis its own ear resolves on — and that question
+// is only worth anything if the analysis uses the SAME conversion the
+// filterbank is built from rather than a second copy of the formula.
+float hz_to_mel(float hz);
+float mel_to_hz(float mel);
+
 class Cochlea {
  public:
   bool configure(const aibaby::DnaAudio& cfg, std::string& error);

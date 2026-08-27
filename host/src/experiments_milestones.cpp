@@ -3,6 +3,7 @@
 // Shared scaffolding is in experiments_common.h.
 
 #include "experiments_common.h"
+#include "host/mel.h"
 #include "host/wav.h"
 
 namespace aibaby_host {
@@ -2857,6 +2858,8 @@ struct ImitateWindow {
   // still classifies at 1.000 is not memory, it is a stimulus that has not
   // finished arriving.
   std::vector<std::vector<double>> heard;
+  // The creature's own echo formants in this window, per trial.
+  std::vector<double> f1, f2;
 };
 
 struct ImitateRun {
@@ -2868,6 +2871,15 @@ struct ImitateRun {
   std::vector<std::vector<double>> scored_voice;
   std::vector<std::vector<double>> scored_heard;
   std::vector<int> scored_labels;
+  // The creature's own ECHO formants in the scored window, per trial. Kept
+  // because `vocab` needs to ask whether a pair is hard because the two vowels
+  // are close, or because the creature cannot SAY them differently — and those
+  // are different questions with the same discrimination score.
+  std::vector<double> scored_f1, scored_f2;
+  // The ARTICULATOR-only rows: the nine motor groups minus loudness and
+  // voicing. `vocab`'s first version scored pairs on the unguarded features and
+  // was therefore reporting, in part, "one word makes it louder".
+  std::vector<std::vector<double>> scored_artic;
 };
 
 // `words` is how many of kWords to cycle through. `snr_db` and `level_db`
@@ -3012,6 +3024,11 @@ ImitateRun run_imitate_session(const std::vector<uint8_t>& blob, uint64_t ticks,
 
     for (size_t k = 0; k < kWindows; ++k) {
       windows[k].voice.push_back(m3_vocal_features(rec[k]));
+      {
+        const double nf = rec[k].frames ? double(rec[k].frames) : 1.0;
+        windows[k].f1.push_back(rec[k].f1 / nf);
+        windows[k].f2.push_back(rec[k].f2 / nf);
+      }
       if (aud_m >= 0) windows[k].heard.push_back(aud_counts[k]);
       windows[k].timbre.push_back(m3_timbre_features(rec[k]));
       if (has_timbre) {
@@ -3069,6 +3086,9 @@ ImitateRun run_imitate_session(const std::vector<uint8_t>& blob, uint64_t ticks,
   out.scored_voice = windows[2].voice;
   out.scored_heard = windows[2].heard;
   out.scored_labels = labels;
+  out.scored_f1 = windows[2].f1;
+  out.scored_f2 = windows[2].f2;
+  out.scored_artic = windows[2].timbre;
   out.ok = true;
   return out;
 }
@@ -5919,7 +5939,38 @@ bool run_trajprobe_arm(const std::vector<uint8_t>& blob, uint64_t ticks, const T
 // interesting part.
 namespace {
 
-struct VocabPair { uint32_t a, b; double voice, ear, f1_gap, f2_gap; };
+struct VocabPair {
+  uint32_t a, b;
+  double voice, artic, ear, f1_gap, f2_gap, hz_dist, mel_dist, echo_dist;
+};
+
+// Spearman rank correlation. Rank rather than Pearson because the question is
+// whether a metric ORDERS the pairs correctly, not whether the relationship is
+// linear — and a discrimination score is bounded at both ends, so linearity is
+// not on offer.
+double spearman(std::vector<double> x, std::vector<double> y) {
+  const size_t n = x.size();
+  if (n < 3 || y.size() != n) return 0.0;
+  auto rank = [n](std::vector<double>& v) {
+    std::vector<size_t> idx(n);
+    for (size_t i = 0; i < n; ++i) idx[i] = i;
+    std::sort(idx.begin(), idx.end(), [&](size_t a, size_t b) { return v[a] < v[b]; });
+    std::vector<double> r(n);
+    for (size_t k = 0; k < n; ++k) r[idx[k]] = double(k);
+    v = r;
+  };
+  rank(x);
+  rank(y);
+  double mx = 0, my = 0;
+  for (size_t i = 0; i < n; ++i) { mx += x[i]; my += y[i]; }
+  mx /= double(n); my /= double(n);
+  double num = 0, dx = 0, dy = 0;
+  for (size_t i = 0; i < n; ++i) {
+    const double a = x[i] - mx, b = y[i] - my;
+    num += a * b; dx += a * a; dy += b * b;
+  }
+  return (dx > 1e-12 && dy > 1e-12) ? num / std::sqrt(dx * dy) : 0.0;
+}
 
 }  // namespace
 
@@ -5936,6 +5987,12 @@ bool run_vocab(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
 
   constexpr uint32_t kReps = 3;
   double pair_v[kVocabCount][kVocabCount] = {{0}}, pair_e[kVocabCount][kVocabCount] = {{0}};
+  double pair_a[kVocabCount][kVocabCount] = {{0}};  // articulators only
+  // What the creature ITSELF said after hearing each word, averaged over trials
+  // and creatures. The hypothesis this tests: a pair is hard not because the two
+  // vowels are close, but because this larynx cannot say them differently.
+  double echo_f1[kVocabCount] = {0}, echo_f2[kVocabCount] = {0};
+  uint32_t echo_n[kVocabCount] = {0};
   uint32_t n_ok = 0;
   double eight_way = 0.0;
   uint32_t eight_n = 0;
@@ -5947,23 +6004,35 @@ bool run_vocab(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
     const ImitateRun p = run_imitate_session(variant, ticks, kVocabCount);
     if (!p.ok || p.scored_labels.size() < 48) continue;
     ++n_ok;
+    for (size_t t = 0; t < p.scored_labels.size() && t < p.scored_f1.size(); ++t) {
+      const int L = p.scored_labels[t];
+      if (L < 0 || L >= int(kVocabCount)) continue;
+      echo_f1[L] += p.scored_f1[t];
+      echo_f2[L] += p.scored_f2[t];
+      ++echo_n[L];
+    }
     for (uint32_t a = 0; a < kVocabCount; ++a) {
       for (uint32_t b = a + 1; b < kVocabCount; ++b) {
-        std::vector<std::vector<double>> xv, xh;
+        std::vector<std::vector<double>> xv, xh, xa;
         std::vector<int> yv;
         for (size_t t = 0; t < p.scored_labels.size(); ++t) {
           const int L = p.scored_labels[t];
           if (L != int(a) && L != int(b)) continue;
           xv.push_back(p.scored_voice[t]);
           if (!p.scored_heard.empty()) xh.push_back(p.scored_heard[t]);
+          if (t < p.scored_artic.size()) xa.push_back(p.scored_artic[t]);
           yv.push_back(L == int(b) ? 1 : 0);
         }
         if (yv.size() < 12) continue;
-        std::vector<std::vector<double>> iv, ih;
-        std::vector<int> jv, jh;
-        size_t tv = 0, th = 0;
+        std::vector<std::vector<double>> iv, ih, ia;
+        std::vector<int> jv, jh, ja;
+        size_t tv = 0, th = 0, ta = 0;
         interleave_pairs(xv, yv, iv, jv, tv);
         pair_v[a][b] += holdout_accuracy(iv, jv, tv);
+        if (xa.size() == yv.size()) {
+          interleave_pairs(xa, yv, ia, ja, ta);
+          pair_a[a][b] += holdout_accuracy(ia, ja, ta);
+        }
         if (!xh.empty()) {
           interleave_pairs(xh, yv, ih, jh, th);
           pair_e[a][b] += holdout_accuracy(ih, jh, th);
@@ -6022,33 +6091,105 @@ bool run_vocab(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
   std::vector<VocabPair> rows;
   for (uint32_t a = 0; a < kVocabCount; ++a) {
     for (uint32_t b = a + 1; b < kVocabCount; ++b) {
-      rows.push_back({a, b, pair_v[a][b] / n_ok, pair_e[a][b] / n_ok,
-                      std::fabs(double(kWords[a].f1) - double(kWords[b].f1)),
-                      std::fabs(double(kWords[a].f2) - double(kWords[b].f2))});
+      const double d1 = double(kWords[a].f1) - double(kWords[b].f1);
+      const double d2 = double(kWords[a].f2) - double(kWords[b].f2);
+      // The SAME hz_to_mel the cochlea is built from, so this asks whether the
+      // creature's discrimination follows the axis its own ear resolves on.
+      const double m1 = double(hz_to_mel(kWords[a].f1)) - double(hz_to_mel(kWords[b].f1));
+      const double m2 = double(hz_to_mel(kWords[a].f2)) - double(hz_to_mel(kWords[b].f2));
+      // The gap between what the creature SAID after each of the two words, on
+      // the same mel axis, which is the quantity the discrimination is actually
+      // computed from.
+      double ed = 0.0;
+      if (echo_n[a] > 0 && echo_n[b] > 0) {
+        const double e1 = double(hz_to_mel(float(echo_f1[a] / echo_n[a]))) -
+                          double(hz_to_mel(float(echo_f1[b] / echo_n[b])));
+        const double e2 = double(hz_to_mel(float(echo_f2[a] / echo_n[a]))) -
+                          double(hz_to_mel(float(echo_f2[b] / echo_n[b])));
+        ed = std::sqrt(e1 * e1 + e2 * e2);
+      }
+      rows.push_back({a, b, pair_v[a][b] / n_ok, pair_a[a][b] / n_ok, pair_e[a][b] / n_ok,
+                      std::fabs(d1), std::fabs(d2),
+                      std::sqrt(d1 * d1 + d2 * d2), std::sqrt(m1 * m1 + m2 * m2), ed});
     }
   }
   std::sort(rows.begin(), rows.end(),
-            [](const VocabPair& x, const VocabPair& y) { return x.voice < y.voice; });
+            [](const VocabPair& x, const VocabPair& y) { return x.artic < y.artic; });
 
   std::printf("\n  the ten HARDEST pairs, worst first:\n");
-  std::printf("    %-10s %-10s %-8s %-8s %-9s %s\n", "word A", "word B", "voice", "EAR",
-              "dF1 Hz", "dF2 Hz");
+  std::printf("    %-10s %-10s %-8s %-8s %-8s %-8s %-8s %s\n", "word A", "word B", "voice",
+              "ARTIC", "EAR", "dF1 Hz", "dF2 Hz", "dist mel");
   for (size_t i = 0; i < rows.size() && i < 10; ++i) {
-    std::printf("    %-10s %-10s %-8.3f %-8.3f %-9.0f %.0f\n", kLabel[rows[i].a],
-                kLabel[rows[i].b], rows[i].voice, rows[i].ear, rows[i].f1_gap,
-                rows[i].f2_gap);
+    std::printf("    %-10s %-10s %-8.3f %-8.3f %-8.3f %-8.0f %-8.0f %.0f\n", kLabel[rows[i].a],
+                kLabel[rows[i].b], rows[i].voice, rows[i].artic, rows[i].ear,
+                rows[i].f1_gap, rows[i].f2_gap, rows[i].mel_dist);
   }
-  double mean = 0.0;
+  // Which axis does the creature's discrimination actually follow? Hz distance
+  // and mel distance rank the pairs differently, and only one of them should
+  // predict the table if the limit is the cochlea's resolution rather than the
+  // larynx's. Ranked, not fitted: nothing here is tuned to the answer.
+  {
+    std::vector<double> v, dh, dm;
+    for (const VocabPair& r : rows) { v.push_back(r.artic); dh.push_back(r.hz_dist);
+                                      dm.push_back(r.mel_dist); }
+    std::vector<double> de;
+    for (const VocabPair& r : rows) de.push_back(r.echo_dist);
+    const double rho_hz = spearman(dh, v), rho_mel = spearman(dm, v);
+    const double rho_echo = spearman(de, v);
+    std::printf("\n  what the creature ITSELF said after each word (mel of the echo):\n");
+    for (uint32_t k = 0; k < kVocabCount; ++k) {
+      if (!echo_n[k]) continue;
+      std::printf("    %-10s heard %4.0f/%4.0f Hz  ->  said %4.0f/%4.0f Hz\n", kLabel[k],
+                  double(kWords[k].f1), double(kWords[k].f2), echo_f1[k] / echo_n[k],
+                  echo_f2[k] / echo_n[k]);
+    }
+    std::printf("\n  does distance predict discrimination? Spearman rank correlation\n"
+                "  over all %zu pairs, between the gap and the voice score:\n"
+                "    Hz  distance between the two WORDS      rho %+.3f\n"
+                "    mel distance between the two WORDS      rho %+.3f\n"
+                "    mel distance between the two ECHOES     rho %+.3f  <- what is scored\n",
+                rows.size(), rho_hz, rho_mel, rho_echo);
+    if (rho_echo > std::max(rho_hz, rho_mel) + 0.10) {
+      std::printf("  THE LIMIT IS THE VOICE, NOT THE EAR — how far apart the creature\n"
+                  "  SAYS two words predicts discrimination better than how far apart\n"
+                  "  they are. A pair is hard when this larynx cannot say them\n"
+                  "  differently, so a larger vocabulary needs a wider reachable vowel\n"
+                  "  space and not a finer cochlea.\n");
+    }
+    if (rho_mel > rho_hz + 0.10) {
+      std::printf("  MEL WINS — the creature's vowel confusions follow its own ear's\n"
+                  "  axis, not the formant grid. The vocabulary limit is the cochlea's\n"
+                  "  resolution, so a larger one needs a better EAR and not a better\n"
+                  "  larynx.\n");
+    } else if (rho_hz > rho_mel + 0.10) {
+      std::printf("  HZ WINS — confusions track the formant grid rather than the mel\n"
+                  "  axis, which is not what a mel filterbank in front of everything\n"
+                  "  would predict and is worth explaining before it is built on.\n");
+    } else {
+      std::printf("  NEITHER SEPARATES — the two metrics rank these eight vowels too\n"
+                  "  similarly to tell apart (%+.3f against %+.3f). Deciding this needs\n"
+                  "  vowels chosen so the two orderings DISAGREE, which these were not.\n",
+                  rho_hz, rho_mel);
+    }
+  }
+  // Scored on the ARTICULATORS, not the unguarded features: a vocabulary claim
+  // has to be about two sounds and not about two amounts of sound. `imitate`
+  // reads 0.888 unguarded and 0.774 guarded on four words, so the guard is
+  // worth about 0.11 and the first version of this verdict banked all of it.
+  double mean = 0.0, mean_unguarded = 0.0;
   uint32_t above = 0;
   for (const VocabPair& v : rows) {
-    mean += v.voice;
-    if (v.voice >= 0.75) ++above;
+    mean += v.artic;
+    mean_unguarded += v.voice;
+    if (v.artic >= 0.75) ++above;
   }
+  mean_unguarded /= double(rows.size());
   mean /= double(rows.size());
   const double eight = eight_n ? eight_way / eight_n : 0.0;
 
-  std::printf("\n  %u creatures, %zu pairs: mean %.3f, %u of %zu at or above 0.75.\n",
-              n_ok, rows.size(), mean, above, rows.size());
+  std::printf("\n  %u creatures, %zu pairs, scored on the ARTICULATORS: mean %.3f,\n"
+              "  %u of %zu at or above 0.75. Unguarded it would read %.3f.\n",
+              n_ok, rows.size(), mean, above, rows.size(), mean_unguarded);
   std::printf("  one of eight, nearest centroid on held-out trials: %.3f (chance 0.125)\n",
               eight);
   std::printf("\n  A pairwise table saying every pair is separable does NOT say a word\n"

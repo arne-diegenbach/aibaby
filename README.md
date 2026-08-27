@@ -4329,15 +4329,73 @@ into a thinner 28-pair test. `kWordCount` stays pinned at 4 with a comment sayin
 why, `vocab` uses its own `kVocabCount`, and `imitate` was re-run to confirm it
 reproduces its six numbers exactly. It does.
 
-**One thing this does not explain.** /i/-/u/ has a 30 Hz F1 gap and scores 0.900;
-/e/-/o/ has 100 Hz of F1 and 1000 of F2 and scores 0.691. The limit is therefore
-not distance in Hz, and not F1 dominance either. The likely reading is that the
-discriminable axis is the cochlea's own — this creature hears through a mel
-filterbank, and the vowel literature is consistent that Bark- or mel-scaled
-distance models confusion far better than F1xF2 in Hz, with sensitivity heightened
-in densely populated regions. That is checkable without building anything: score
-the 28 gaps in mel rather than Hz and see whether the ranking falls out. Until
-then "where it runs out" describes the table rather than explaining it.
+**Scored on the ARTICULATORS.** The first version used the unguarded feature set
+— the nine motor groups **plus loudness and voicing** — when
+`m3_timbre_features` sits directly beneath it in the same header for exactly this
+reason: "Loudness and voicing are dropped entirely, so this cannot pass on 'the
+cube makes it noisier'. It is the difference between two SOUNDS rather than two
+amounts of sound." Guarded, the mean falls from 0.786 to **0.760** and 14 of 28
+pairs clear the bar instead of 16. The conclusion is unchanged, and it had been
+resting partly on loudness.
+
+#### The creature says almost the same thing whatever it hears
+
+`vocab` also reports what the creature ITSELF said after each word, which turns
+out to be the most informative row in the experiment:
+
+| heard | said |
+|---|---|
+| /a/ 780/1180 Hz | 632/1656 Hz |
+| /i/ 320/2500 Hz | 627/1643 Hz |
+| /u/ 350/900 Hz | 628/1630 Hz |
+| /e/ 550/1850 Hz | 636/1654 Hz |
+| /o/ 450/850 Hz | 633/1646 Hz |
+| /ae/ 690/1700 Hz | 634/1646 Hz |
+| /^/ 620/1200 Hz | 629/1675 Hz |
+| /I/ 400/1950 Hz | 633/1644 Hz |
+
+**F1 spans 9 Hz across the eight echoes** — 627 to 636 — against stimuli spanning
+460 Hz. F2 spans 45 against 1650. The creature repeats every word by saying very
+nearly the same thing.
+
+That does not contradict M1b, because discriminability is a RATIO: small
+differences with small variance are still discriminable, and the audibility ruler
+agrees at d' 1.33, which is a listener at about 76% correct. But it puts every
+other number on this page into one frame:
+
+| | |
+|---|---|
+| echo spread across eight words | **9 Hz** of F1 |
+| one utterance's range, shipped larynx | ~10 Hz |
+| the chain's best trajectory (DNA v42) | 4 Hz |
+| what teaching moves a formant by (M1c) | ~70 Hz |
+
+**The voice lives in a band of tens of Hz inside a nominal range of hundreds**,
+and the trajectory ceiling, the utterance range, the echo spread and the
+vocabulary limit are not four walls but one. Teaching is the only thing that
+moves it by more than a few tens of Hz, and it does that by pushing a setpoint
+rather than by using the range.
+
+**Two hypotheses tested here and refuted.** That the discriminable axis is the
+cochlea's own — this creature hears through a mel filterbank, and the vowel
+literature is consistent that Bark- or mel-scaled distance models confusion
+better than F1xF2 in Hz. Over all 28 pairs the Spearman rank correlation with the
+score is **+0.622 for Hz and +0.689 for mel**, using the creature's own
+`hz_to_mel`. That is not a distinction, and the probe says so rather than
+reporting +0.689 as a win: mel is a monotonic transform of Hz, so for vowels
+whose formants differ in the same direction the orderings largely agree, and
+these eight were chosen to CROWD rather than to make the metrics disagree.
+Deciding it needs vowels picked so the two rankings conflict.
+
+And that pairs are hard when the creature cannot SAY the two words differently.
+The distance between the two ECHOES predicts discrimination **worse** than the
+distance between the two words (+0.421 against +0.689), because the echo barely
+moves for any word.
+
+**What none of it explains.** /i/-/u/ has a 30 Hz F1 gap and scores 0.900;
+/e/-/o/ has the largest gap in the hardest ten on BOTH scales — 1005 Hz, 569 mel
+— and scores 0.691. A resolution limit on either axis cannot produce that, so
+"where it runs out" still describes the table rather than explaining it.
 
 ### DNA v42 — a synfire chain, and the first structure across time this creature has had
 
