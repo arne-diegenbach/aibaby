@@ -7121,6 +7121,9 @@ bool run_seqprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
   }
 
   instrument("seqprobe", dna0.header().seed ^ 0x6B21u, ticks, "ticks");
+  std::printf("  soaking %llu ticks before the kick — for a chain that has to FORM\n"
+              "  rather than one wired at birth, this is the time it forms in.\n",
+              (unsigned long long)(ticks > kSqSettle ? ticks : kSqSettle));
   std::printf("  kick the HEAD of `central` — a contiguous block the size of one\n"
               "  chain link — remove the kick, and watch %u bins of\n"
               "  %u ms. Reliability is the correlation between REPEATS of the same\n"
@@ -7175,11 +7178,35 @@ bool run_seqprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
       {"12 links, 8 ms",  0.30f, -1.0f, -1.0f, 32, 0.8f,  8.0f},
       {"20 links, 8 ms",  0.30f, -1.0f, -1.0f, 20, 1.0f,  8.0f},
       {"12 links, no norm", 0.30f, -1.0f, 0.0f, 32, 0.8f, 8.0f},
+      // THE RATE CONTROL FOR THE ARM ABOVE. Removing normalisation takes
+      // `central` from 6.7 Hz to 55.5 Hz, and population correlation inflates
+      // when activity is dense — at eight times the rate, "reliable" can just
+      // mean "everything is firing." This arm is the same knob with the chain
+      // OFF, so it has the rate and not the structure. If it also persists for
+      // 144 ms, the persistence is the rate; if it dies in two bins, the chain
+      // is doing the work.
+      {"no chain, no norm", 0.00f, -1.0f, 0.0f, 32, 0.8f, 8.0f},
+      // RATE-MATCHING THE ARM THAT PERSISTED. The arm above was meant to supply
+      // the high rate without the chain, and did not: with the chain off the
+      // module sits at 7.3 Hz, so it is the CHAIN's recurrence that drives 55.5
+      // Hz once normalisation stops holding it down. That arm therefore removes
+      // structure and density together and cannot separate them.
+      //
+      // These do it the other way round: the persisting configuration exactly,
+      // with inhibition raised to bring the rate back toward `central`'s normal
+      // 6.8 Hz. If 144 ms of reliable evolving activity survives at a matched
+      // rate, the persistence is structural. If it collapses toward the 16 ms
+      // the norm-ON arm manages, it was density inflating a correlation.
+      // Default `inhib_gain` is 2.5; the bracket is wide because the mapping
+      // from inhibition to rate has never been measured on this module.
+      {"no norm, inhib 5",  0.30f,  5.0f, 0.0f, 32, 0.8f, 8.0f},
+      {"no norm, inhib 10", 0.30f, 10.0f, 0.0f, 32, 0.8f, 8.0f},
+      {"no norm, inhib 20", 0.30f, 20.0f, 0.0f, 32, 0.8f, 8.0f},
   };
-  const uint32_t n_scales = 6;
+  const uint32_t n_scales = 10;
 
-  std::printf("\n    %-8s %-8s %-9s %-9s %-11s %-11s %-10s\n", "w_rec", "w_chain",
-              "rate Hz", "runaway", "persist ms", "reliab r", "changes r");
+  std::printf("\n    %-8s %-8s %-9s %-9s %-11s %-11s %-11s %-9s\n", "w_rec", "w_chain",
+              "rate Hz", "runaway", "persist ms", "reliab r", "changes r", "ms/Hz");
   bool any_usable = false;
   double best_persist = 0.0;
 
@@ -7219,7 +7246,153 @@ bool run_seqprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
                   "  derived from 400, and each arm's kick is one link wide.\n",
                   ms.count, dna0.module(uint32_t(m_target)).n_max);
     }
-    for (uint32_t t = 0; t < kSqSettle; ++t) s.brain.step();
+    // `--ticks` is a SOAK, not a trial count. A hand-wired chain is there at
+    // birth and needs only the settle; a self-organised one has to form, which
+    // is many minutes of spontaneous activity under STDP and competition. Below
+    // the settle this is the old behaviour exactly.
+    const uint64_t soak = ticks > kSqSettle ? ticks : kSqSettle;
+    // THE POSITIVE CONTROL FOR SELF-ORGANISATION. A chain that never formed and
+    // a plasticity rule that never ran produce the SAME flat table, and this is
+    // the only thing that tells them apart: the module's own recurrent synapses
+    // are snapshotted before the soak and re-read after it. If the weights did
+    // not move, a null below is about the rule and not about the idea.
+    std::vector<uint32_t> intra(
+        net.tract_synapses(uint32_t(m_target), uint32_t(m_target), nullptr, 0));
+    std::vector<double> w_before(intra.size(), 0.0);
+    if (!intra.empty()) {
+      net.tract_synapses(uint32_t(m_target), uint32_t(m_target), intra.data(),
+                         uint32_t(intra.size()));
+      for (size_t k = 0; k < intra.size(); ++k) {
+        w_before[k] = double(net.synapse_weight(intra[k]));
+      }
+    }
+    for (uint64_t t = 0; t < soak; ++t) s.brain.step();
+    double w_moved = 0.0, w_mean0 = 0.0, w_mean1 = 0.0;
+    uint32_t w_big = 0;
+    for (size_t k = 0; k < intra.size(); ++k) {
+      const double now = double(net.synapse_weight(intra[k]));
+      const double d = now - w_before[k];
+      w_moved += std::fabs(d);
+      w_mean0 += w_before[k];
+      w_mean1 += now;
+      if (w_before[k] > 1e-9 && std::fabs(d) > 0.2 * w_before[k]) ++w_big;
+    }
+    if (!intra.empty()) {
+      const double n = double(intra.size());
+      const double m0 = w_mean0 / n, m1 = w_mean1 / n;
+      double sd0 = 0.0, sd1 = 0.0;
+      for (size_t k = 0; k < intra.size(); ++k) {
+        const double a = w_before[k] - m0;
+        const double b = double(net.synapse_weight(intra[k])) - m1;
+        sd0 += a * a;
+        sd1 += b * b;
+      }
+      sd0 = std::sqrt(sd0 / n);
+      sd1 = std::sqrt(sd1 / n);
+      // COMPETITION HAS A SIGNATURE AND GROWTH HAS A DIFFERENT ONE. Fiete's
+      // mechanism needs the per-neuron weight sum conserved, so some synapses
+      // win and their siblings lose: the DISTRIBUTION spreads relative to its
+      // own mean. A mean that simply rises is runaway potentiation, which is
+      // the STDP ALONE condition the paper says produces no sequences. Reading
+      // only the mean cannot tell those apart, and the first version of this
+      // control read only the mean.
+      //
+      // The verdict is on the COEFFICIENT OF VARIATION, not on mean drift. The
+      // first version banded the mean at x0.67, and the band-only control then
+      // landed on x0.67 exactly — a threshold sitting on a measured value, which
+      // is the mistake this project has made before. CV is what actually
+      // separates the three cases, and it has a MEASURED null: with the Hebbian
+      // term off, synaptic scaling rescales every weight by x0.67 and leaves
+      // CV at 4.824 -> 4.823, a ratio of 1.00. The guard is exactly CV-neutral
+      // by construction, so any CV movement below is the plasticity rule's.
+      const double drift = m0 > 1e-9 ? m1 / m0 : 0.0;
+      const double spread = sd0 > 1e-9 ? sd1 / sd0 : 0.0;
+      const double cv0 = m0 > 1e-9 ? sd0 / m0 : 0.0;
+      const double cv1 = m1 > 1e-9 ? sd1 / m1 : 0.0;
+      const double cvr = cv0 > 1e-9 ? cv1 / cv0 : 0.0;
+      std::printf("    recurrent synapses %zu: mean |w| %.4f -> %.4f (x%.2f), "
+                  "sd %.4f -> %.4f (x%.2f)\n"
+                  "      CV %.3f -> %.3f (x%.2f)   [pure-rescale null is x1.00]\n"
+                  "      %u of %zu moved >20%%.  %s\n",
+                  intra.size(), m0, m1, drift, sd0, sd1, spread, cv0, cv1, cvr,
+                  w_big, intra.size(),
+                  cvr >= 1.15
+                      ? "CV ROSE — synapses differentiated, siblings lost: COMPETITION"
+                      : (cvr <= 0.85
+                             ? "CV FELL — uniform growth or decay, synapses converging"
+                             : "CV held — distribution shape unchanged (rescale, or nothing ran)"));
+
+      // POPULATION CV IS NOT ENOUGH, AND THE FIRST VERSION STOPPED THERE.
+      // Fiete's competition is HETEROSYNAPTIC: the afferents of ONE neuron
+      // trade strength against each other, so that neuron's total is roughly
+      // conserved while the weights inside it separate. A population CV that
+      // rises is equally consistent with every neuron growing independently at
+      // its own rate, which is not competition and builds no sequence.
+      //
+      // So decompose it. WITHIN each postsynaptic neuron: does the spread of
+      // its own afferents widen? BETWEEN neurons: does each neuron's total
+      // hold? Competition is the two together. Independent growth moves the
+      // totals as much as it moves the weights.
+      std::vector<uint32_t> tgt(intra.size(), 0);
+      for (size_t k = 0; k < intra.size(); ++k) tgt[k] = net.synapse_target(intra[k]);
+      std::vector<uint32_t> order(intra.size(), 0);
+      for (size_t k = 0; k < order.size(); ++k) order[k] = uint32_t(k);
+      std::sort(order.begin(), order.end(),
+                [&](uint32_t a, uint32_t b) { return tgt[a] < tgt[b]; });
+      double cvw_sum = 0.0, dsum_sum = 0.0;
+      uint32_t cells = 0;
+      size_t i0 = 0;
+      while (i0 < order.size()) {
+        size_t i1 = i0;
+        while (i1 < order.size() && tgt[order[i1]] == tgt[order[i0]]) ++i1;
+        const size_t deg = i1 - i0;
+        // Four afferents is the floor at which a CV means anything at all.
+        if (deg >= 4) {
+          double s0 = 0.0, s1 = 0.0;
+          for (size_t j = i0; j < i1; ++j) {
+            s0 += w_before[order[j]];
+            s1 += double(net.synapse_weight(intra[order[j]]));
+          }
+          const double a0 = s0 / double(deg), a1 = s1 / double(deg);
+          double v0 = 0.0, v1 = 0.0;
+          for (size_t j = i0; j < i1; ++j) {
+            const double d0 = w_before[order[j]] - a0;
+            const double d1 = double(net.synapse_weight(intra[order[j]])) - a1;
+            v0 += d0 * d0;
+            v1 += d1 * d1;
+          }
+          const double c0 = a0 > 1e-9 ? std::sqrt(v0 / double(deg)) / a0 : 0.0;
+          const double c1 = a1 > 1e-9 ? std::sqrt(v1 / double(deg)) / a1 : 0.0;
+          if (c0 > 1e-9 && s0 > 1e-9) {
+            cvw_sum += c1 / c0;
+            // Against the GLOBAL drift, not against s0. Synaptic scaling
+            // multiplies every weight by one number, so a pure rescale moves
+            // every cell total by that number — measured raw, the x0.67 null
+            // would read a 33% per-cell change and look like cells moving
+            // independently. Dividing it out makes a uniform rescale read 0,
+            // which is what a null has to do.
+            dsum_sum += std::fabs(s1 / (s0 * (drift > 1e-9 ? drift : 1.0)) - 1.0);
+            ++cells;
+          }
+        }
+        i0 = i1;
+      }
+      if (cells > 0) {
+        const double cvw = cvw_sum / double(cells);
+        const double dsum = dsum_sum / double(cells);
+        std::printf("      per-neuron (%u cells, deg>=4): within-cell CV x%.2f, "
+                    "cell total %.0f%% off the global drift\n"
+                    "        %s\n",
+                    cells, cvw, dsum * 100.0,
+                    (cvw >= 1.15 && dsum <= 0.25)
+                        ? "afferents separated while the cell's total held — "
+                          "HETEROSYNAPTIC COMPETITION"
+                        : (cvw >= 1.15
+                               ? "afferents separated but cell totals moved too — "
+                                 "differential growth, not competition"
+                               : "afferents did not separate within a cell"));
+      }
+    }
 
     // One fixed kick pattern for every repeat — the same question asked of the
     // module 24 times.
@@ -7343,12 +7516,21 @@ bool run_seqprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
         for (uint32_t k = 0; k < ms.count; ++k) ks += during[i][k];
       const double kick_rate = ks / double(kSqRepeats) / double(kSqKickTicks) /
                                double(ms.count) / 0.001;
-      std::printf("    %-17s %-9.1f %-9s %-11u %-11.3f %-11s | kick %.0f->%.0f Hz r=%.2f\n",
+      // PERSISTENCE PER Hz, because persistence alone is not a fact about
+      // structure. Across a 9x rate range — inhibition 2.5 to 20, normalisation
+      // on and off, 12 links and 20 — every chain-bearing arm measured here sat
+      // between 2.4 and 2.9 ms of persistence per Hz of mean rate. Reading the
+      // raw millisecond figure, `no norm` looks like the longest sequence this
+      // project has produced; read per Hz it is the same module doing the same
+      // thing eight times faster. A probe that prints only the numerator invites
+      // exactly that mistake, and did.
+      std::printf("    %-17s %-9.1f %-9s %-11u %-11.3f %-11s %-9.2f | kick %.0f->%.0f Hz r=%.2f\n",
                   arms[sc].what, mean_rate, runaway ? "SEIZED" : "no",
                   persist * kSqBinTicks,
                   rel[0], changes < -1.0 ? "-" : (std::snprintf(nullptr, 0, "%.3f", changes),
                   [&]{ static char buf[16]; std::snprintf(buf, sizeof(buf), "%.3f", changes);
                        return buf; }()),
+                  mean_rate > 1e-9 ? double(persist * kSqBinTicks) / mean_rate : 0.0,
                   base_rate, kick_rate, kick_r);
       std::printf("      reliability by 10 ms bin:");
       for (uint32_t b = 0; b < kSqBins; ++b) std::printf(" %.2f", rel[b]);

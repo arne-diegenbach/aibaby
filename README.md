@@ -4625,6 +4625,113 @@ null was rewritten to avoid earlier the same day, made again in the same file.
 It now gates on both and runs the project's audibility ruler on the start of an
 utterance against its end.
 
+#### The self-organising alternative: what removing divisive normalisation does
+
+DNA v42's chain is wired at birth. Fiete's result says it should not have to be:
+STDP **plus heterosynaptic competition** organizes a network into long sequences
+with no structured input. The reason that looked cheap to test is that this
+README claimed *"both ingredients already exist here — STDP ships, and DNA v38's
+competitive pruning is the same family."* That sentence is wrong about v38,
+which is structural and sleep-gated: it deletes synapses, in bursts, offline,
+where Fiete needs one neuron's afferents trading strength continuously while the
+sequence forms.
+
+`seqprobe` grew a `--ticks` soak so a chain that must FORM has time to form in,
+and a weight control, because a flat table cannot otherwise be told apart from a
+rule that never ran. Three million ticks of spontaneous activity in `central`
+with a `central->central` Hebbian tract at `1e-3`.
+
+**Synaptic scaling is not the suppressor, and is exactly CV-neutral.** The band
+was swept 1.02 / 1.2 / 3.0: mean unchanged to two digits across a 3x range, and
+the *narrow* band came out most uniform, backwards from the prediction. With
+`hebb = 0` it multiplies every weight by 0.67 and leaves CV at 4.823 -> 4.823, a
+ratio of 1.00 — it rescales the distribution and has no opinion about which
+synapse inside it wins. That is the design, stated where the rule lives:
+
+> The band is the whole point. Pulling toward an exact setpoint regulates
+> precisely the quantity that reward-modulated learning moves. Bounding it
+> instead stops runaway without having an opinion about anything inside the
+> bounds.
+
+**`norm_gain` is the knob that moves weights apart.** Arms 4 and 6 are the same
+wiring — 12 links, 8 ms, 11246 synapses, identical starting spread — one knob
+apart:
+
+| arm | mean \|w\| | sd | population CV | within-cell CV | cell total vs global drift |
+|---|---|---|---|---|---|
+| `12 links, 8 ms` (norm ON) | x1.72 | x1.23 | 0.831 -> 0.594 (x0.71) | x0.79 | 23% |
+| `12 links, no norm` | x0.90 | x1.41 | 0.831 -> **1.309 (x1.58)** | **x2.28** | **69%** |
+| same, `hebb = 0` | x0.66 | x0.66 | 0.831 -> 0.820 (x0.99) | x1.00 | 0% |
+
+**But it is not Fiete's mechanism, and the control that says so had to be built.**
+Population CV rising is equally consistent with heterosynaptic competition and
+with every synapse growing independently at its own rate. Fiete's is specifically
+per-postsynaptic-neuron: the afferents of one cell separate *while that cell's
+total holds*. So the probe now decomposes it — within-cell spread, and each
+cell's total measured against the **global drift** so that a uniform rescale
+reads zero rather than 33%. Row 2 separates its afferents hard (x2.28) and moves
+its cell totals 69%. That is differential growth. The `hebb = 0` row reads x1.00
+and 0%, so the instrument is not inventing either number.
+
+**What removing normalisation bought is rate, and persistence follows rate.**
+The norm-OFF arm looked like the best result this probe has produced: persist
+16 ms -> 144 ms, reliability above 0.6 for 70 ms and above 0.1 out to 200 ms,
+first bin uncorrelated with last so the pattern *evolves* rather than sitting in
+a static attractor — against this project's standing finding that no module
+holds a kick for 10 ms. But it also ran at 55.5 Hz, eight times `central`'s
+normal rate, and population correlation inflates when activity is dense.
+`runaway` stayed silent only because its threshold is 200 Hz.
+
+Two controls settle it, and neither did what it was built to do. A `no chain, no
+norm` arm was meant to supply rate without structure; instead the module sits at
+**7.3 Hz**, so removing normalisation is not what makes `central` hyperactive —
+it is the **chain's own recurrence**, which normalisation had been holding down.
+Rate-matching from the other side then failed too: `inhib_gain` from its default
+2.5 up to 20 moved the rate only 55.5 -> 37.8 Hz, and non-monotonically, since
+inhibition 5 *raised* it to 61.0.
+
+A failed match that spans the variable beats a successful one, because it gives
+a slope instead of a point:
+
+| arm | rate | persist | **ms per Hz** |
+|---|---|---|---|
+| `no chain, no norm` | 7.3 Hz | 8 ms | 1.10 |
+| `12 links, 8 ms` (norm ON) | 6.7 Hz | 16 ms | **2.39** |
+| `no norm, inhib 20` | 37.8 Hz | 104 ms | **2.75** |
+| `no norm, inhib 10` | 39.8 Hz | 104 ms | **2.61** |
+| `12 links, no norm` | 55.5 Hz | 144 ms | **2.59** |
+| `no norm, inhib 5` | 61.0 Hz | 176 ms | **2.89** |
+
+Every chain-bearing arm sits between 2.4 and 2.9 ms of persistence per Hz across
+a **9.1x rate range**, through changes of inhibition, normalisation and chain
+length. Persistence here is not a fact about structure; it is a fact about
+density. `seqprobe` now prints the `ms/Hz` column, because a probe that reports
+only the numerator invites exactly the reading this section first gave it.
+
+There is a second reason the norm-OFF configuration is not a candidate
+mechanism: at 55.5 Hz the module is running eight times its own homeostatic
+target of 6.81 Hz, which is outside the range its regulator restores. That is a
+broken operating point, not a discovered one.
+
+Three lessons, each of which cost a rerun. **A claim about what the code already
+does is not evidence about what the code already does** — the v38 claim sat here
+as settled fact and priced a whole line of work. **`| head -3` on a probe that
+prints six arms is a measurement error, not a display choice**: it hid the arm
+that reversed the conclusion, and a write-up built on the truncated output
+declared this architecture unable to do something it had just been measured
+doing. And **a population statistic cannot answer a per-neuron question** — the
+first version of the weight control stopped at population CV, which would have
+shipped "COMPETITION" for what the decomposition then showed to be ordinary
+differential growth.
+
+A fourth, from the two controls that missed: **a control can test a different
+question than the one it was built for, and still read as an answer.** Both
+assumed a rate/structure relationship that turned out to be backwards. Neither
+failed loudly — they returned plausible tables. What caught it was checking
+whether the arm had actually produced the condition it was supposed to produce
+(high rate, matched rate) rather than reading its verdict column. Ratios like
+`ms/Hz` exist to make that check part of the output.
+
 ### Three verify tiers, because the second one had become unrunnable
 
 The teaching experiments each raise a creature through several phases of a life
@@ -4880,9 +4987,12 @@ author list is worse than an incomplete one.
   65(4), 563–576. <https://doi.org/10.1016/j.neuron.2010.02.003> — states this
   project's `seqprobe` result from the other direction: STDP **alone** cannot
   organize a network to generate long sequences, and STDP **plus heterosynaptic
-  competition** does, with no structured input. Both ingredients already exist
-  here — STDP ships, and DNA v38's competitive pruning is the same family — so
-  DNA v42's innate chain has an untested self-organising alternative.
+  competition** does, with no structured input. This project first recorded that
+  both ingredients already existed here, naming v38's competitive pruning — which
+  is wrong, since v38 is structural and sleep-gated. Measured directly, turning
+  DNA v12's divisive normalisation off does spread the weight distribution, but
+  per-neuron it is differential growth rather than the conserved-total
+  competition Fiete's mechanism needs.
 - Mackevicius, E. L., Gu, S., Denisenko, N. I. & Fee, M. S. (2023).
   *Self-organization of songbird neural sequences during social isolation.*
   eLife 12, e77262. <https://elifesciences.org/articles/77262> — sequences form

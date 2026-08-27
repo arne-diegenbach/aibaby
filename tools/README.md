@@ -59,6 +59,7 @@ week with the harness reporting PASS.
 tools/genome_set_module.py     dna/default.toml out.toml central:norm_gain=1.0 vision:n_max=256
 tools/genome_set_projection.py dna/default.toml out.toml "vision->central:density=0.12"
 tools/genome_set_header.py     dna/default.toml out.toml stdp:a_minus=0.020 exploration:perturb_rate=0
+tools/genome_add_recurrent.py  dna/default.toml out.toml central hebb=1e-3 density=0.05
 ```
 
 The third is for the scalars that live in `[stdp]`, `[exploration]`, `[homeo]`
@@ -67,7 +68,21 @@ and friends rather than in a module or a projection — `a_minus`, `eta`,
 on purpose: several field names appear in more than one of them, and a
 whole-file substitution edits whichever comes first.
 
-All three **assert that every requested edit matched exactly one line** and fail
+The fourth **creates** a projection rather than editing one, for the case a
+tract does not exist in the genome at all — a module wired to itself, which is
+what the self-organising alternative to DNA v42's innate chain needs before STDP
+has anything to shape. It clones `central->vocal` instead of writing a literal
+block, so a projection field added in a later DNA version cannot silently
+default to zero in the genomes a sweep is measuring. `genome_add_relay.py` went
+stale by four keys exactly that way when v42 landed.
+
+Note the third one already covers the homeostasis guardrails, `scaling_band`
+included. A throwaway `sed` script was written for that during the Fiete sweep
+before anyone checked, which is the cheaper version of the same mistake this
+directory exists to prevent.
+
+All four **assert that every requested edit matched exactly one line** — and the
+fourth also refuses an unknown module name or an unknown field — failing
 loudly otherwise. That is the whole point of them. A sweep whose `sed` quietly
 matches nothing measures the same genome N times and draws a flat line, and
 this project has produced that flat line more than once — the first
