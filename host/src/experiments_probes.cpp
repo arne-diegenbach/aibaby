@@ -1444,6 +1444,15 @@ struct EligProbe {
   double from_silent = 0;        // ...and bottom-decile, same synapse count
   double informative_frac = 0;   // share of central neurons with |d'| > 0.5
   double mean_d = 0;
+  // THE TRACT THAT ACTUALLY CARRIES THE SEEN OBJECT. The two above were the
+  // whole G3 eligibility diagnosis, and neither is the right tract to ask it of.
+  // `central->vocal` was later shown to be a NON-PARTICIPANT — delete it,
+  // recalibrate, and every G3 number is unchanged — and the arcuate carries the
+  // heard WORD, not the seen object. `vision->vocal` shipped after that
+  // diagnosis was written and reads the object at 0.660 at the larynx.
+  // "The trace is object-blind" was never measured on the tract that carries it.
+  double vision = 0, vision_shuf = 0, vision_absE = 0, vision_r = 0;
+  uint32_t vision_n = 0;
   uint32_t central_n = 0, arcuate_n = 0, trials = 0;
   bool ok = false;
 };
@@ -1489,6 +1498,17 @@ EligProbe run_eligprobe_session(const std::vector<uint8_t>& blob, uint64_t ticks
   if (cv.empty() || av.empty()) return out;
   net0.tract_synapses(uint32_t(cen), uint32_t(voc), cv.data(), uint32_t(cv.size()));
   net0.tract_synapses(uint32_t(aud), uint32_t(voc), av.data(), uint32_t(av.size()));
+  const int32_t vis = s.dna.module_with_role(aibaby::ModuleRole::kVision);
+  // Optional. A genome with no vision->vocal tract reports 0 synapses, which
+  // reads as "not present" rather than as a null about its trace.
+  std::vector<uint32_t> vv;
+  if (vis >= 0) {
+    vv.resize(net0.tract_synapses(uint32_t(vis), uint32_t(voc), nullptr, 0));
+    if (!vv.empty()) {
+      net0.tract_synapses(uint32_t(vis), uint32_t(voc), vv.data(), uint32_t(vv.size()));
+    }
+  }
+  out.vision_n = uint32_t(vv.size());
   out.central_n = uint32_t(cv.size());
   out.arcuate_n = uint32_t(av.size());
   const aibaby::ModuleState& ms_c = net0.module(uint32_t(cen));
@@ -1513,13 +1533,15 @@ EligProbe run_eligprobe_session(const std::vector<uint8_t>& blob, uint64_t ticks
   for (size_t i = 0; i < order.size(); ++i) order[i] = int(i % 2);
   for (size_t i = order.size(); i > 1; --i) std::swap(order[i - 1], order[rng.next() % i]);
 
-  std::vector<std::vector<double>> xc, xa, xam, xcen, xcred, xdiv;
+  std::vector<std::vector<double>> xc, xa, xam, xcen, xcred, xdiv, xv;
   std::vector<int> y;
+  std::vector<double> mean_v[2] = {std::vector<double>(vv.size(), 0.0),
+                                   std::vector<double>(vv.size(), 0.0)};
   std::vector<double> mean_e[2] = {std::vector<double>(cv.size(), 0.0),
                                    std::vector<double>(cv.size(), 0.0)};
   std::vector<double> mean_a[2];
   double n_cond[2] = {0, 0};
-  double abs_c = 0, abs_a = 0, live_c = 0, cells_c = 0;
+  double abs_c = 0, abs_a = 0, live_c = 0, cells_c = 0, abs_v = 0;
   double share_sum = 0, share_n = 0;
   const uint32_t vocal_n = net0.module(uint32_t(voc)).begin + net0.module(uint32_t(voc)).count;
   std::vector<uint32_t> cv_target(cv.size(), 0);
@@ -1571,6 +1593,11 @@ EligProbe run_eligprobe_session(const std::vector<uint8_t>& blob, uint64_t ticks
 
       if (t != kSample) continue;
       const aibaby::Network& net = s.brain.network();
+      std::vector<double> ev(vv.size());
+      for (size_t i = 0; i < vv.size(); ++i) {
+        ev[i] = double(net.synapse_eligibility(vv[i]));
+        abs_v += std::fabs(ev[i]);
+      }
       std::vector<double> ec(cv.size()), ea(av.size()), eam(av_matched.size());
       std::vector<double> cr(cv.size());
       for (size_t i = 0; i < cv.size(); ++i) {
@@ -1591,6 +1618,10 @@ EligProbe run_eligprobe_session(const std::vector<uint8_t>& blob, uint64_t ticks
         for (size_t i = 0; i < cv.size(); ++i) mean_e[object][i] += ec[i];
         for (size_t i = 0; i < eam.size(); ++i) mean_a[object][i] += eam[i];
         n_cond[object] += 1;
+        if (!vv.empty()) {
+          xv.push_back(ev);
+          for (size_t i = 0; i < vv.size(); ++i) mean_v[object][i] += ev[i];
+        }
         xc.push_back(ec);
         xa.push_back(ea);
         xam.push_back(eam);
@@ -1635,6 +1666,12 @@ EligProbe run_eligprobe_session(const std::vector<uint8_t>& blob, uint64_t ticks
   std::vector<int> shuf = y;
   for (size_t i = shuf.size(); i > 1; --i) std::swap(shuf[i - 1], shuf[rng.next() % i]);
 
+  if (!xv.empty()) {
+    out.vision = holdout_accuracy(xv, y, train);
+    out.vision_shuf = holdout_accuracy(xv, shuf, train);
+    out.vision_absE = out.trials
+        ? abs_v / (double(vv.size()) * double(out.trials)) : 0.0;
+  }
   out.central = holdout_accuracy(xc, y, train);
   out.credit = holdout_accuracy(xcred, y, train);
   out.divided = holdout_accuracy(xdiv, y, train);
@@ -1651,6 +1688,13 @@ EligProbe run_eligprobe_session(const std::vector<uint8_t>& blob, uint64_t ticks
     if (n_cond[c] <= 0) continue;
     for (double& v : mean_e[c]) v /= n_cond[c];
     for (double& v : mean_a[c]) v /= n_cond[c];
+  }
+  if (!vv.empty()) {
+    for (int c = 0; c < 2; ++c) {
+      if (n_cond[c] <= 0) continue;
+      for (double& v : mean_v[c]) v /= n_cond[c];
+    }
+    out.vision_r = vector_corr(mean_v[0], mean_v[1]);
   }
   out.central_r = vector_corr(mean_e[0], mean_e[1]);
   out.arcuate_r = vector_corr(mean_a[0], mean_a[1]);
@@ -1742,12 +1786,14 @@ bool run_eligprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
   std::printf("  session           %.1f s x %u creatures, object + its word, shuffled\n",
               double(ticks) * double(dna.header().sim.dt_ms) / 1000.0, kReps);
   instrument("eligprobe", dna.header().seed ^ 0xE117Bu, ticks / 3000, "trials per creature");
-  std::printf("  the question      is the eligibility trace on central->vocal\n"
+  std::printf("  the question      is the eligibility trace on vision->vocal\n"
               "                    DIFFERENT for the two objects? If it is not, no\n"
               "                    reward schedule can make the voice conditional.\n\n");
   std::printf("  %-5s %-9s %-9s %-9s %-9s %-9s %s\n", "seed", "cen->voc", "shuffled",
               "arc full", "arc match", "mean|e|", "corr(A,B)");
 
+  double sv = 0, svs = 0, sve = 0, svr = 0;
+  uint32_t vn = 0;
   double sc = 0, scs = 0, sa = 0, sam = 0, se = 0, sr = 0, sae = 0, sar = 0;
   double sti = 0, sts = 0, sif = 0, sd = 0, scr = 0, sps = 0, sdv = 0;
   uint32_t valid = 0, cn = 0, an = 0;
@@ -1757,7 +1803,8 @@ bool run_eligprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
     std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
     const EligProbe p = run_eligprobe_session(variant, ticks);
     if (!p.ok) { std::printf("  %-5u (inconclusive: %u trials)\n", r, p.trials); continue; }
-    ++valid; cn = p.central_n; an = p.arcuate_n;
+    ++valid; cn = p.central_n; an = p.arcuate_n; vn = p.vision_n;
+    sv += p.vision; svs += p.vision_shuf; sve += p.vision_absE; svr += p.vision_r;
     sc += p.central; scs += p.central_shuf; sa += p.arcuate;
     sam += p.arcuate_matched; se += p.central_absE; sr += p.central_r;
     sae += p.arcuate_absE; sar += p.arcuate_r;
@@ -1774,6 +1821,16 @@ bool run_eligprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
   std::printf("  mean |e|          central->vocal %.3e, arcuate %.3e\n", se / n, sae / n);
   std::printf("  live fraction     see per-seed column; a trace at 0 is no trace\n");
   std::printf("\n  which object, read off the eligibility trace:\n");
+  if (vn > 0) {
+    std::printf("    vision->vocal         %.3f   (shuffled %.3f)   %u synapses, "
+                "mean |e| %.3e, corr(A,B) %+.3f\n"
+                "      ^ THE TRACT THAT CARRIES THE OBJECT. The rows below are the\n"
+                "        original diagnosis and were measured on a non-participant\n"
+                "        (central->vocal) and on the tract carrying the WORD.\n",
+                sv / n, svs / n, vn, sve / n, svr / n);
+  } else {
+    std::printf("    vision->vocal         absent from this genome\n");
+  }
   std::printf("    central->vocal        %.3f   (shuffled %.3f)\n", sc / n, scs / n);
   std::printf("    arcuate, full         %.3f\n", sa / n);
   std::printf("    arcuate, size-matched %.3f   <- the control that matters\n", sam / n);

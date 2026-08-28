@@ -5005,6 +5005,49 @@ correction does work; it has a tail. The usable conclusion is narrower than
 floor of roughly 0.25, so no difference below that is readable without many
 seeds — which is exactly what the n=3 table above got wrong.
 
+#### The G3 eligibility diagnosis was measured on the wrong tract
+
+`eligprobe` asks whether the eligibility trace distinguishes the two objects,
+because if it does not then no reward schedule can make the voice conditional.
+It has always read two tracts: `central->vocal` and the arcuate. Neither is the
+right one to ask.
+
+`central->vocal` was **later shown to be a non-participant** — delete it,
+recalibrate, and every G3 number is unchanged. The arcuate carries the heard
+**word**, not the seen object. And `vision->vocal` — the tract that actually
+delivers the seen object to the larynx, reading it at 0.660 — shipped *after*
+that diagnosis was written and was never in the probe. So `eligprobe` now reads
+it too:
+
+| tract | object, from the trace | shuffled null | corr(A,B) |
+|---|---|---|---|
+| **`vision->vocal`** | **0.820** | 0.474 | **+0.945** |
+| `central->vocal` | 0.752 | 0.496 | +0.938 |
+| arcuate, size-matched | 0.944 | — | **+0.689** |
+
+**"The trace is object-blind" is too strong**, and this project has been quoting
+it as settled since. On the tract that carries the object the trace classifies
+it at 0.820 against a 0.474 null — above the non-participant the claim was
+measured on.
+
+**And it still cannot be used, for a reason the first column hides.** The mean
+trace under cube and under ball are **94.5% identical**. The arcuate — the one
+tract here whose conditionality is not in doubt, since the creature repeats
+words — sits at 68.9%. A classifier with 1027 features can find a 5.5%
+differential; R-STDP multiplies the whole trace by one scalar, so what it can
+act on is the common mode. That is the same shape as everything else on this
+page: a small differential riding a large common mode.
+
+**What it changes.** The recorded diagnosis was "no conditional signal exists at
+the larynx, so conditioning cannot work". The measurement says the signal exists
+and the *rule* cannot separate it. Those have different fixes: the first needs a
+new pathway, which is what `vision->vocal`, the HVC nucleus, the signed relay
+and DNA v43's topographic map all tried; the second needs the common mode
+removed **from the trace**, which nothing in this genome can express. Note the
+existing `divided` column removes the per-*target* factor and lands at 0.488,
+chance — so the differential is not the postsynaptic factor, and subtracting the
+tract's own mean trace is a different operation that has not been tried.
+
 ### Three verify tiers, because the second one had become unrunnable
 
 The teaching experiments each raise a creature through several phases of a life
