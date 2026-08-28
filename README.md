@@ -4818,6 +4818,89 @@ while `kSqBinTicks` was 8 at `dt_ms = 1.0`, so every duration computed off it
 came out 25% long, including one in this README that called seven bins above 0.6
 "70 ms" when it is 56. The label is now derived from the constant.
 
+### DNA v43 — a topographic tract to the larynx, and the seventh common-mode wall
+
+The travelling wave gave this project its first spatially organised signal, and
+the larynx has always read a **place code**: `VocalDecoder` takes each motor
+parameter as the centroid of firing rate WITHIN one 14-neuron group, so F1 is
+the centre of mass of `vocal[28..42]`. Moving F1 means differentially activating
+positions inside one slice. Every tract into the larynx has been
+`kind = "random"`, which touches every position equally, so its centroid sits at
+0.5 however loud it is — the measured HVC failure, where more weight drones
+before it articulates.
+
+So v43 adds a `kTopographic` projection: source position picks destination
+position, with a destination sub-range so a genome can target one motor group,
+and `topo_dst_lo > topo_dst_hi` reversing the map. The reversal is not a
+flourish — [i] -> [a] raises F1 while F2 falls, so a forward map into group 2 and
+a reversed one into group 3 turn ONE wave into a diphthong instead of sliding
+both formants together. `tools/genome_add_topographic.py` wires it. Rule 1
+holds: unused, the hash does not move.
+
+**The oracle that justified building it.** Mapped onto one group, central's
+measured wave (centre sweeping 14 -> 265 of 400) would sweep F1 by **471 Hz**,
+against a null arm's 47 Hz, the 400 Hz two vowels need, and the **20 Hz the
+larynx actually delivers**. That is the largest voice number this project has
+produced, and it is an upper bound.
+
+**It does not survive contact.** Three measurements, in the order they were made:
+
+| | F1 raw sd |
+|---|---|
+| chain on, no map | **0.1098** |
+| + topographic map, w 0.14 | 0.0951 |
+| + w 0.30, d 0.60 | 0.0845 |
+| + w 0.60, d 0.60 | 0.0792 |
+
+Monotonically *down*: more topographic drive makes F1 **less** variable. That is
+what a stationary localized input does — it pins the centroid rather than moving
+it — and it says the map was delivering a stationary bump.
+
+**Why: the shipped creature has no wave.** `chain_weight = 0.0` in
+`dna/default.toml`; `seqprobe` sets it per arm. The chain ships OFF, so the map
+had nothing to carry. With it on, `babble` now prints central's own centre of
+mass free-running: **sd 0.0170 without the chain, 0.0438 with it, against the
+kicked wave's 0.035 .. 0.66**. The chain roughly doubles the excursion and it is
+still a wobble, not a sweep. Nothing kicks the chain head in free behaviour.
+
+**`topoprobe` supplies the trigger as an oracle**, the way the credit oracle
+priced per-neuron reward before it was built: two arms on one genome differing
+only in whether central's chain head is kicked. It refuses on the shipped genome
+— no chain, no map — and that refusal is the point, since running it there would
+print a clean null about the genome rather than about the route.
+
+| topographic weight | map r | central under trigger | **F1 gain** |
+|---|---|---|---|
+| 0.14 | 0.494 | x2.29 | **x1.00** |
+| 0.40 | 0.613 | x2.31 | x1.26 |
+| 1.00 | 0.613 | x2.32 | x1.06 |
+
+Both preconditions pass — the kick moves the source, and the synapses landing in
+group 2 correlate source position with target position at r ~0.5-0.6, so the map
+is a map. The wave arrives, and F1 does not move. **Seventh appearance of the
+common-mode wall:** the group's other drive — the auditory arc, `vision->vocal`,
+its own recurrence, noise — dominates a centroid that one tract cannot move.
+
+**Two instrument notes, because both preconditions had to be built and one was
+wrong first.** The kick initially used a single tick at 1.5 and its own source
+check caught it (central moved x1.09), so the F1 columns would have been a null
+about the stimulus; it now matches `seqprobe`'s 2.0 held for 10 ticks. And the
+delivery check first asked whether the trigger changed group 2's firing RATE —
+the wrong quantity, since a travelling wave *redistributes* activity rather than
+adding it, so a correctly working map holds the rate flat at ~1.00 and moves the
+centroid. That check would have refused exactly the success it was built to
+detect. It is now structural.
+
+**What this leaves.** The route is built, correct, and measured, and the thing
+in the way is not the route. Making it work needs the map to dominate its
+target's activity, and raising the weight does not do that — homeostasis pulls
+group 2's rate back (7.67 at w 1.00, 5.70 at w 2.50). The untried direction is
+the one thing that has measurably worked against this wall before:
+**in-degree-weighted subtraction** (DNA v21-v24's pooling interneurons, +0.077
+on 3/3 families) and v32's lateral competition, applied *within* the target
+group, so the map chooses where a bump sits and competition makes it sharp
+rather than adding to a common mode.
+
 ### Three verify tiers, because the second one had become unrunnable
 
 The teaching experiments each raise a creature through several phases of a life

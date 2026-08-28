@@ -2,6 +2,7 @@
 //
 // Shared scaffolding is in experiments_common.h.
 
+#include <cstring>
 #include "experiments_common.h"
 #include "host/mel.h"
 #include "host/wav.h"
@@ -528,6 +529,17 @@ bool run_babble(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose,
   const char* formant_name[4] = {"f0", "F1", "F2", "F3"};
   uint32_t raw_hist[4][10] = {};
   double raw_sum[4] = {}, raw_sq[4] = {}, raw_cu[4] = {}, raw_qu[4] = {};
+  // THE SOURCE'S OWN CENTRE OF MASS, free-running. `seqprobe` measures the
+  // chain by KICKING its head and watching a wave leave; nothing kicks it in
+  // free behaviour, so the wave may simply not exist here — and a topographic
+  // map faithfully delivering an absent wave looks exactly like a broken map.
+  // Same statistic seqprobe prints, on the same module, without a kick.
+  double src_sum = 0.0, src_sq = 0.0, src_lo = 1e9, src_hi = -1e9;
+  uint32_t src_frames = 0;
+  uint32_t centre_module = 0;
+  for (uint32_t m = 0; m < s.brain.network().module_count(); ++m) {
+    if (std::strcmp(s.brain.network().module_dna(m).name, "central") == 0) centre_module = m;
+  }
   double raw_lo[4] = {1e9, 1e9, 1e9, 1e9};
   double raw_hi[4] = {-1e9, -1e9, -1e9, -1e9};
   double sm_sum[4] = {}, sm_sq[4] = {};
@@ -567,6 +579,23 @@ bool run_babble(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose,
     if (s.brain.vocal_frame() == last_frame) continue;
     last_frame = s.brain.vocal_frame();
     ++frames;
+    {
+      const aibaby::ModuleState& cms = s.brain.network().module(centre_module);
+      double wsum = 0.0, tot = 0.0;
+      for (uint32_t i = 0; i < cms.count; ++i) {
+        const double r = double(s.brain.network().rate_fast(cms.begin + i));
+        wsum += r * (double(i) + 0.5) / double(cms.count);
+        tot += r;
+      }
+      if (tot > 1e-9) {
+        const double c = wsum / tot;
+        src_sum += c;
+        src_sq += c * c;
+        if (c < src_lo) src_lo = c;
+        if (c > src_hi) src_hi = c;
+        ++src_frames;
+      }
+    }
 
     const aibaby::VocalParams& v = s.brain.voice();
     const float f1v = float(s.brain.vocal_groups()[2]);
@@ -689,6 +718,16 @@ bool run_babble(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose,
                   frame_ms, double(vcfg.smoothing_ms));
       std::printf("    %-5s %-16s %-9s %-9s %-8s %s\n", "", "raw centroid",
                   "raw sd", "smoothed", "ratio", "bimodal");
+      if (src_frames > 0) {
+        const double cm = src_sum / double(src_frames);
+        const double csd = std::sqrt(std::max(0.0, src_sq / double(src_frames) - cm * cm));
+        std::printf("    (central free-running centre of mass %.3f .. %.3f, sd %.4f, "
+                    "%u frames;\n"
+                    "     seqprobe's KICKED wave sweeps 0.035 .. 0.66, so a small sd here "
+                    "means there\n"
+                    "     is no travelling wave to map — not that the map failed)\n",
+                    src_lo, src_hi, csd, src_frames);
+      }
       for (int k = 0; k < 4; ++k) {
         const double rm = raw_sum[k] / n;
         const double v2 = std::max(0.0, raw_sq[k] / n - rm * rm);

@@ -224,6 +224,7 @@ bool parse_projection_kind(const std::string& text, uint32_t& out) {
   if (text == "random") { out = uint32_t(aibaby::ProjectionKind::kRandom); return true; }
   if (text == "gabor") { out = uint32_t(aibaby::ProjectionKind::kGabor); return true; }
   if (text == "curvature") { out = uint32_t(aibaby::ProjectionKind::kCurvature); return true; }
+  if (text == "topographic") { out = uint32_t(aibaby::ProjectionKind::kTopographic); return true; }
   return false;
 }
 
@@ -618,7 +619,7 @@ bool compile_dna_toml(const std::string& path, std::vector<uint8_t>& out,
     const std::string kind = r.text("kind");
     if (!kind.empty() && !parse_projection_kind(kind, p.kind)) {
       errors.push_back("unknown projection kind '" + kind + "' on " + src + "->" + dst +
-                       " (random|gabor|curvature)");
+                       " (random|gabor|curvature|topographic)");
     }
 
     // Same reasoning as `kind`: spelled out on every projection, never
@@ -648,6 +649,16 @@ bool compile_dna_toml(const std::string& path, std::vector<uint8_t>& out,
       p.rf_radius_min = float(r.number("rf_radius_min"));
       p.rf_radius_max = float(r.number("rf_radius_max"));
       p.rf_tangent_sigma = float(r.number("rf_tangent_sigma"));
+    }
+    // DNA v43. Same rule as the two above: required exactly when they mean
+    // something. `topo_dst_lo > topo_dst_hi` is legal and reverses the map,
+    // which is how one wave drives F1 up while F2 comes down.
+    if (p.kind == uint32_t(aibaby::ProjectionKind::kTopographic)) {
+      p.topo_src_lo = float(r.number("topo_src_lo"));
+      p.topo_src_hi = float(r.number("topo_src_hi"));
+      p.topo_dst_lo = float(r.number("topo_dst_lo"));
+      p.topo_dst_hi = float(r.number("topo_dst_hi"));
+      p.topo_sigma = float(r.number("topo_sigma"));
     }
 
     collect(r);

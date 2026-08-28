@@ -322,7 +322,7 @@ constexpr uint32_t kDnaMagic = 0x44424941;  // "AIBD"
 //     about what reward multiplies.
 //
 //     See DnaModule::ffi_apical and DnaModule::ffi_learn, and `errprobe`.
-constexpr uint32_t kDnaVersion = 42;
+constexpr uint32_t kDnaVersion = 43;
 
 // What a module is wired to the world through. The host looks modules up by
 // role, never by name or index, so renaming a module in the genome cannot
@@ -421,6 +421,11 @@ enum class ProjectionKind : uint32_t {
   kRandom = 0,
   kGabor = 1,
   kCurvature = 2,
+  // DNA v43. A place-to-place map: source position picks destination position.
+  // The two structured kinds above are vision-specific, and everything reaching
+  // the larynx has been kRandom — which is why it delivers drive and not
+  // pattern. See the topo_* fields on DnaProjection.
+  kTopographic = 3,
   kKindCount,
 };
 
@@ -1809,6 +1814,47 @@ struct DnaProjection {
   // and the cell is a contrast meter again; narrow, and the discrete retina
   // cannot supply enough matching edges to fire it at all.
   float rf_tangent_sigma;
+
+  // ---- DNA v43: kTopographic ----------------------------------------------
+  // Read only when `kind` is kTopographic; all zero is the pre-v43 genome and
+  // wires nothing, so rule 1 holds by construction.
+  //
+  // WHY THIS KIND EXISTS. `VocalDecoder` reads each motor parameter as the
+  // centroid of firing rate WITHIN one 14-neuron group: F1 is the centre of
+  // mass of vocal[28..42]. Moving F1 therefore means differentially activating
+  // positions inside a single slice. A kRandom projection touches every group
+  // and every position with equal probability, so its centroid sits at 0.5 no
+  // matter how loud it is — which is exactly the measured HVC result, that more
+  // weight makes the creature drone before it makes a trajectory, and the same
+  // reason genome_add_relay.py records for central->vocal.
+  //
+  // The source has to have somewhere to point FROM, and until DNA v42's chain
+  // was measured per-repeat nothing here did: `central` now carries a wave
+  // whose centre of activity sweeps 14 -> 265 of 400 neurons, reproducibly
+  // within a repeat (travel r +0.583 against a +0.035 null). Mapped onto one
+  // group, that is 471 Hz of F1 against the 20 Hz the larynx delivers today.
+  //
+  // Note this kind does NOT rest on the old argument that killed topography —
+  // "a map delivers no more than the source's centroid carries" — which was
+  // measured false: auditory's own centroid reads 0.520 and produces 0.840 at
+  // vocal, because a map preserves a pattern and the source centroid is a
+  // lossier projection of it.
+  //
+  // Positions are fractions of each module's live neuron count, so a genome
+  // does not have to know how big a module is. The destination range is how a
+  // projection targets ONE motor group: 2/9..3/9 is F1, 3/9..4/9 is F2.
+  float topo_src_lo, topo_src_hi;
+  // dst_lo > dst_hi REVERSES the map. That is not a flourish: [i] -> [a] moves
+  // F1 up while F2 comes down, so a forward map into group 2 and a reversed one
+  // into group 3 turn one travelling wave into a diphthong rather than into two
+  // formants sliding the same way, which is a single articulatory dimension and
+  // not a vowel trajectory.
+  float topo_dst_lo, topo_dst_hi;
+  // Spread of one source neuron's footprint, as a fraction of the DESTINATION
+  // range. Too tight and 400 sources cannot cover 14 targets without holes; too
+  // wide and every source reaches every target, which is kRandom with extra
+  // steps and returns the centroid to 0.5.
+  float topo_sigma;
 };
 
 struct DnaHeader {

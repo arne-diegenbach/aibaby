@@ -7114,6 +7114,229 @@ double corr_d(const std::vector<double>& a, const std::vector<double>& b) {
 
 }  // namespace
 
+// TOPOPROBE — DNA v43. Does a travelling wave reach the voice, GIVEN a wave?
+//
+// `babble` says the topographic map into vocal group 2 does nothing, and the
+// free-running centre-of-mass readout says why: central's centre wobbles
+// (sd 0.044, range 0.31) where the KICKED wave sweeps 0.63. A map faithfully
+// transferring a wobble looks identical to a map that does not work, and the
+// two have completely different fixes — one needs a trigger, the other needs
+// abandoning. This separates them by supplying the trigger as an ORACLE, the
+// same way the credit oracle priced per-neuron reward before it was built.
+//
+// Two arms on ONE genome, differing only in whether the chain head is kicked.
+// Everything else — wiring, seed, drive, homeostasis — is shared, so the
+// comparison cannot be about anything else.
+//
+// The readout is the vocal decoder's own F1, both raw and after the 800 ms
+// articulator inertia, because those answer different questions: raw says
+// whether the wave reaches the larynx at all, smoothed says whether anything
+// survives to be heard. A raw win with a smoothed null is a real delivery
+// against one genome constant, not a failure.
+bool run_topoprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  std::string error;
+  aibaby::Dna dna0;
+  if (dna0.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) {
+    std::printf("  setup failed: the genome does not load\n");
+    return false;
+  }
+  int32_t m_central = -1, m_vocal = -1;
+  for (uint32_t m = 0; m < dna0.module_count(); ++m) {
+    if (std::strcmp(dna0.module(m).name, "central") == 0) m_central = int32_t(m);
+    if (std::strcmp(dna0.module(m).name, "vocal") == 0) m_vocal = int32_t(m);
+  }
+  if (m_central < 0 || m_vocal < 0) {
+    std::printf("  setup failed: need modules \"central\" and \"vocal\"\n");
+    return false;
+  }
+  // REFUSE rather than measure a creature the question does not apply to. A
+  // chain-less genome would run both arms identically and print a clean null,
+  // and that null would be about the genome, not about the route.
+  if (!(dna0.module(uint32_t(m_central)).chain_weight > 0.0f)) {
+    std::printf("  REFUSED — central has chain_weight = 0, so there is no chain to\n"
+                "  kick and both arms would measure the same creature. Enable it:\n"
+                "    tools/genome_set_module.py dna/default.toml out.toml \\\n"
+                "        central:chain_weight=0.30 central:chain_group=32 \\\n"
+                "        central:chain_delay_ms=8.0\n");
+    return false;
+  }
+  bool has_topo = false;
+  for (uint32_t i = 0; i < dna0.projection_count(); ++i) {
+    const aibaby::DnaProjection& p = dna0.projection(i);
+    if (p.kind == uint32_t(aibaby::ProjectionKind::kTopographic) &&
+        int32_t(p.dst) == m_vocal) has_topo = true;
+  }
+  if (!has_topo) {
+    std::printf("  REFUSED — no topographic projection into vocal. Add one:\n"
+                "    tools/genome_add_topographic.py in.toml out.toml --group 2\n");
+    return false;
+  }
+
+  instrument("topoprobe", dna0.header().seed ^ 0x70B0u, ticks, "ticks");
+  const uint64_t run = ticks > 400000 ? ticks : 400000;
+  std::printf("  kick central's chain HEAD every %u ms and read the vocal\n"
+              "  decoder's F1. The unkicked arm is the same creature with the\n"
+              "  trigger withheld — the only difference between them.\n", 250u);
+
+  struct Arm { const char* what; bool kick; };
+  const Arm arms[] = {{"no trigger", false}, {"oracle trigger", true}};
+  double sd_raw[2] = {}, rng_raw[2] = {}, sd_sm[2] = {}, cm_sd[2] = {}, grp[2] = {};
+  double map_r = -2.0;
+
+  for (uint32_t a = 0; a < 2; ++a) {
+    Session s;
+    if (!s.init(blob, error)) {
+      std::printf("  setup failed: %s\n", error.c_str());
+      return false;
+    }
+    const aibaby::ModuleState& cms = s.brain.network().module(uint32_t(m_central));
+    const uint32_t head = dna0.module(uint32_t(m_central)).chain_group;
+    // Settle first — the rule stpprobe established, and the one an earlier
+    // probe here broke by reading a just-hatched creature.
+    for (uint32_t i = 0; i < 20000; ++i) s.brain.step();
+
+    double grp_rate = 0.0;
+    double n = 0.0, r_sum = 0.0, r_sq = 0.0, s_sum = 0.0, s_sq = 0.0;
+    double r_lo = 1e9, r_hi = -1e9, c_sum = 0.0, c_sq = 0.0;
+    uint32_t last_frame = s.brain.vocal_frame();
+    for (uint64_t tick = 0; tick < run; ++tick) {
+      // A kick every 250 ms: longer than the 96 ms the wave takes to cross, so
+      // one sweep finishes before the next starts, and comfortably inside the
+      // 800 ms inertia so several sweeps land within one articulatory posture.
+      // Matched to seqprobe's kick, which is the one known to launch a wave
+      // here: 2.0 held for 10 ticks, not a single-tick 1.5. The first version
+      // of this probe used the latter and its own precondition check caught it
+      // — central's centre moved x1.09, so the F1 columns would have been a
+      // null about the stimulus rather than about the map.
+      if (arms[a].kick && (tick % 250) < 10) {
+        for (uint32_t k = 0; k < head && k < cms.count; ++k) {
+          s.brain.network().inject(cms.begin + k, aibaby::Scalar(2.0));
+        }
+      }
+      s.brain.step();
+      if (s.brain.vocal_frame() == last_frame) continue;
+      last_frame = s.brain.vocal_frame();
+
+      double wsum = 0.0, tot = 0.0;
+      for (uint32_t i = 0; i < cms.count; ++i) {
+        const double rr = double(s.brain.network().rate_fast(cms.begin + i));
+        wsum += rr * (double(i) + 0.5) / double(cms.count);
+        tot += rr;
+      }
+      if (tot > 1e-9) {
+        const double c = wsum / tot;
+        c_sum += c;
+        c_sq += c * c;
+      }
+      // The decoder's own numbers: group_value_ is post-inertia, and the group
+      // centroid recomputed here is what it saw before it.
+      const double sm = double(s.brain.vocal_groups()[2]);
+      const aibaby::ModuleState& vms = s.brain.network().module(uint32_t(m_vocal));
+      const uint32_t g_begin = vms.begin + (vms.count * 2) / 9;
+      const uint32_t g_end = vms.begin + (vms.count * 3) / 9;
+      double gw = 0.0, gt = 0.0;
+      for (uint32_t i = g_begin; i < g_end; ++i) {
+        const double rr = double(s.brain.network().rate_fast(i));
+        gw += rr * (double(i - g_begin) + 0.5) / double(g_end - g_begin);
+        gt += rr;
+      }
+      const double raw = gt > 1e-9 ? gw / gt : 0.5;
+      grp_rate += gt / double(g_end - g_begin);
+      r_sum += raw; r_sq += raw * raw;
+      s_sum += sm;  s_sq += sm * sm;
+      if (raw < r_lo) r_lo = raw;
+      if (raw > r_hi) r_hi = raw;
+      n += 1.0;
+    }
+    if (n < 100.0) {
+      std::printf("  REFUSED — only %.0f motor frames; nothing to compute a spread on\n", n);
+      return false;
+    }
+    const double rm = r_sum / n, smm = s_sum / n, cmm = c_sum / n;
+    sd_raw[a] = std::sqrt(std::max(0.0, r_sq / n - rm * rm));
+    sd_sm[a]  = std::sqrt(std::max(0.0, s_sq / n - smm * smm));
+    cm_sd[a]  = std::sqrt(std::max(0.0, c_sq / n - cmm * cmm));
+    rng_raw[a] = r_hi - r_lo;
+    // THE DELIVERY SIDE OF THE PRECONDITION. The source check above says the
+    // wave happened; this says the tract carrying it exists and drives the
+    // target. Without both, "F1 did not move" is unreadable: a tract that
+    // wired nothing and a tract swamped by common mode print the same null,
+    // and they have opposite fixes.
+    if (a == 0) {
+      // IS THE MAP ACTUALLY A MAP? The first version of this check asked
+      // whether the trigger changed group 2's firing RATE, and that was the
+      // wrong quantity — a travelling wave redistributes activity rather than
+      // adding it, so a correctly working map holds the group's rate flat and
+      // moves its centroid. The check would have refused exactly the success
+      // it was built to detect.
+      //
+      // Structural instead: over the synapses landing in group 2, correlate
+      // where each came from with where it lands. A topographic map reads near
+      // +1 (or -1 reversed); the random tract sharing this pair contributes
+      // noise, so a clearly signed number means the map dominates what group 2
+      // receives.
+      const aibaby::ModuleState& vms2 = s.brain.network().module(uint32_t(m_vocal));
+      const uint32_t gb = vms2.begin + (vms2.count * 2) / 9;
+      const uint32_t ge = vms2.begin + (vms2.count * 3) / 9;
+      std::vector<uint32_t> all(
+          s.brain.network().tract_synapses(uint32_t(m_central), uint32_t(m_vocal),
+                                           nullptr, 0));
+      if (!all.empty()) {
+        s.brain.network().tract_synapses(uint32_t(m_central), uint32_t(m_vocal),
+                                         all.data(), uint32_t(all.size()));
+      }
+      std::vector<double> sx, sy;
+      for (uint32_t id : all) {
+        const uint32_t tg = s.brain.network().synapse_target(id);
+        if (tg < gb || tg >= ge) continue;
+        sx.push_back(double(s.brain.network().synapse_source(id) - cms.begin));
+        sy.push_back(double(tg - gb));
+      }
+      map_r = sx.size() >= 8 ? corr_d(sx, sy) : -2.0;
+      std::printf("    %zu of %zu central->vocal synapses land in group 2; "
+                  "source-to-target r %s%.3f\n",
+                  sx.size(), all.size(), map_r > -1.5 ? "" : "n/a ",
+                  map_r > -1.5 ? map_r : 0.0);
+    }
+    grp[a] = grp_rate / n;
+    std::printf("    %-16s central centre sd %.4f | group-2 rate %.3f | "
+                "F1 raw sd %.4f, range %.3f | F1 smoothed sd %.4f\n",
+                arms[a].what, cm_sd[a], grp[a], sd_raw[a], rng_raw[a], sd_sm[a]);
+  }
+
+  // The trigger has to move the SOURCE before anything it does at the larynx
+  // can be about the route. If central's centre did not move, this measured a
+  // kick that did not take, and the F1 columns are about something else.
+  const double src_gain = cm_sd[0] > 1e-9 ? cm_sd[1] / cm_sd[0] : 0.0;
+  const double f1_gain = sd_raw[0] > 1e-9 ? sd_raw[1] / sd_raw[0] : 0.0;
+  std::printf("\n    trigger moves central x%.2f, and F1 x%.2f\n", src_gain, f1_gain);
+  if (src_gain < 1.3) {
+    std::printf("    THE KICK DID NOT TAKE — central's own centre barely moved, so\n"
+                "    the F1 columns say nothing about the map. Raise the injected\n"
+                "    current or check chain_group against the module's live count.\n");
+    return false;
+  }
+  const double drive_gain = grp[0] > 1e-9 ? grp[1] / grp[0] : 0.0;
+  std::printf("    group 2's rate under the trigger x%.2f (expected ~1.00: a wave\n"
+              "    redistributes activity, it does not add it)\n", drive_gain);
+  if (!(std::fabs(map_r) >= 0.30)) {
+    std::printf("    THE MAP IS NOT A MAP — source and target position are uncorrelated\n"
+                "    among the synapses reaching group 2, so nothing below is evidence\n"
+                "    about common mode. Check topo_sigma, density, and the group index.\n");
+    return false;
+  }
+  const bool delivered = f1_gain >= 1.3;
+  std::printf("    %s\n",
+              delivered
+                  ? "THE WAVE REACHES THE VOICE: a trigger is the missing piece and\n"
+                    "    the topographic map is not the problem."
+                  : "THE WAVE DOES NOT REACH THE VOICE: central moves and F1 does not,\n"
+                    "    so a trigger alone would not fix this — the group's other\n"
+                    "    drive swamps the map, which is the common-mode wall again.");
+  return true;
+}
+
 bool run_seqprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
   aibaby::Dna dna0;
   if (dna0.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) {

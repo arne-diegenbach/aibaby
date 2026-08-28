@@ -147,6 +147,13 @@ const Spec kSpecs[] = {
      "  or blocked lesson B. Measured on 6 seed families: the commitment gate\n"
      "  moves retention +0.21 on average and on 5 of 6, at 14% of the learning\n"
      "  rate; the moment-ratio gate is REFUTED at -0.13"},
+    {"topoprobe", kDefaultMinimum, Expect::kGuard, Tier::kLong,
+     "DNA v43. Asks whether a travelling wave reaches the voice GIVEN a wave,\n"
+     "  by supplying the trigger as an oracle: two arms on one genome differing\n"
+     "  only in whether central's chain head is kicked. Expected to REFUSE on the\n"
+     "  shipped genome, which has chain_weight = 0 and no topographic projection\n"
+     "  — that refusal is the point, since running it there would print a clean\n"
+     "  null about the genome rather than about the route"},
     {"seqprobe", kDefaultMinimum, Expect::kPass, Tier::kLong,
      "ignores --ticks: it settles 20000 and then runs a fixed 24 repeats of a\n"
      "  fixed kick at each of four recurrent weights. Measured: the kick lands at\n"
@@ -330,6 +337,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "trajprobe") ok = run_trajprobe(dna_blob, ticks, verbose);
   else if (name == "vocab") ok = run_vocab(dna_blob, ticks, verbose);
   else if (name == "seqprobe") ok = run_seqprobe(dna_blob, ticks, verbose);
+  else if (name == "topoprobe") ok = run_topoprobe(dna_blob, ticks, verbose);
   else if (name == "restate") ok = run_restate(dna_blob, ticks, verbose);
   else if (name == "eligprobe") ok = run_eligprobe(dna_blob, ticks, verbose);
   else if (name == "dwprobe") ok = run_dwprobe(dna_blob, ticks, verbose);

@@ -947,6 +947,66 @@ void Network::wire_projection_curvature(const DnaProjection& p, Rng& rng) {
   }
 }
 
+// DNA v43. A place-to-place map: where a source neuron sits decides where it
+// lands. Everything reaching the larynx has been kRandom, and a random
+// projection touches every position of the target with equal probability, so
+// the centroid the vocal decoder reads sits at 0.5 however loud the tract is.
+// That is the measured HVC failure — more weight drones before it articulates.
+//
+// The footprint is Gaussian rather than a hard slice so that 400 sources can
+// cover 14 targets without holes. `topo_sigma` is in units of the destination
+// RANGE, not of the whole module, or a genome retargeting the map at a
+// different group would silently change its own spread — the shared-constant
+// bug class this project has audited before.
+void Network::wire_projection_topographic(const DnaProjection& p, Rng& rng) {
+  const ModuleState& src = modules_[p.src];
+  const ModuleState& dst = modules_[p.dst];
+  const DnaModule& src_dna = dna_.module(p.src);
+  if (src.count == 0 || dst.count == 0) return;
+
+  const float slo = p.topo_src_lo, shi = p.topo_src_hi;
+  const float span = p.topo_dst_hi - p.topo_dst_lo;   // negative REVERSES the map
+  const float sigma = p.topo_sigma * std::fabs(span);
+  // A genome that asks for an empty source range or a zero footprint has asked
+  // for nothing, and wiring nothing silently is how a sweep measures the same
+  // creature N times. Leave the tract unwired and let the caller's dropped
+  // synapse check speak.
+  if (!(shi > slo) || !(sigma > 0.0f)) return;
+
+  for (uint32_t a = 0; a < src.count; ++a) {
+    const uint32_t i = src.begin + a;
+    const float sp = (float(a) + 0.5f) / float(src.count);
+    for (uint32_t b = 0; b < dst.count; ++b) {
+      // Coin first, filter second — the same discipline as the random path, and
+      // for the same reason: consuming a different number of draws would
+      // re-roll every projection wired after this one.
+      if (!rng.chance(birth_density(p))) continue;
+      if (!source_allowed(p, i)) continue;
+      if (sp < slo || sp >= shi) continue;
+
+      const float u = (sp - slo) / (shi - slo);
+      const float centre = p.topo_dst_lo + u * span;
+      const float dp = (float(b) + 0.5f) / float(dst.count);
+      const float off = dp - centre;
+      const float g = std::exp(-(off * off) / (2.0f * sigma * sigma));
+      // Two sigma. Past that the synapse carries almost nothing but still costs
+      // an arena slot and still adds common-mode drive to the group, which is
+      // the one thing this kind exists to avoid.
+      if (g < 0.135f) continue;
+
+      const uint32_t j = dst.begin + b;
+      Scalar w = birth_weight(p) * Scalar(g) * (kOne + Scalar(0.3) * rng.normal());
+      if (w < kZero) w = kZero;
+      if (is_inhib_[i]) w = -w * Scalar(src_dna.inhib_gain);
+
+      const Scalar jitter = Scalar(p.delay_jitter_ms) * rng.signed_uniform();
+      Scalar ms = Scalar(p.delay_ms) + jitter;
+      if (ms < kZero) ms = kZero;
+      add_synapse(i, j, w, delay_ticks(ms));
+    }
+  }
+}
+
 void Network::wire_projection(const DnaProjection& p, Rng& rng) {
   if (p.kind == uint32_t(ProjectionKind::kGabor)) {
     wire_projection_gabor(p, rng);
@@ -954,6 +1014,10 @@ void Network::wire_projection(const DnaProjection& p, Rng& rng) {
   }
   if (p.kind == uint32_t(ProjectionKind::kCurvature)) {
     wire_projection_curvature(p, rng);
+    return;
+  }
+  if (p.kind == uint32_t(ProjectionKind::kTopographic)) {
+    wire_projection_topographic(p, rng);
     return;
   }
 

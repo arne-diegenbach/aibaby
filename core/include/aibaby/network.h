@@ -471,6 +471,8 @@ class Network {
   // ProjectionKind::kCurvature — tangency to a common circle, over the oriented
   // cells a kGabor projection built. See the note at the definition.
   void wire_projection_curvature(const DnaProjection& p, Rng& rng);
+  // DNA v43. Place-to-place: source position picks destination position.
+  void wire_projection_topographic(const DnaProjection& p, Rng& rng);
   bool add_synapse(uint32_t src, uint32_t dst, Scalar weight, uint16_t delay);
   void build_reverse_index();
   void rebuild_reverse_index();
