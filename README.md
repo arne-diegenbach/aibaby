@@ -5152,6 +5152,131 @@ the same mistake as reading a smoothed formant for a raw one. The probe refused
 rather than reporting a trajectory on zero onsets, which is why the bug surfaced
 as a refusal instead of as a null.
 
+### M1d — does the creature take turns? **not met, and the guard is the point**
+
+G3 has now absorbed eight mechanisms against one wall without moving, so this
+asks a question shaped to what the creature demonstrably does. It echoes a heard
+word (M1b), learns a fixed vowel from praise (M1c), keeps it across sleep, and
+falls silent while listening. Proto-conversational turn-taking needs none of the
+conditionality that is blocked: the creature does not have to know *what* it
+heard, only that it heard something and that the speaker stopped.
+
+**M1b is a claim about content and this is a claim about rate.** M1b showed the
+voice CARRIES the word 200-600 ms after it ends. A creature babbling at a
+constant rate, whose babble happens to resemble what it just heard, passes M1b
+and is not taking turns.
+
+**The trap this is built around.** The listening reflex suppresses babbling while
+the creature hears something, so "quiet during the word, vocal afterwards" is
+true *by construction* — a milestone defined on alternation passes without the
+creature doing anything. So the silence is not scored at all. The only quantity
+is whether the post-word rate exceeds the creature's own quiet baseline, taken
+1400-2300 ms into the same trial once the reflex has long released. The null is
+the same creature on the same trial clock hearing **nothing**, which removes any
+rhythm of its own.
+
+| window | word | silence | word - silence |
+|---|---|---|---|
+| while the word | 0.276 | 0.382 | **-0.105** |
+| 0-200 ms after | 0.289 | 0.379 | -0.090 |
+| 200-600 ms after | 0.408 | 0.368 | +0.040 |
+| 600-1400 ms after | 0.432 | 0.380 | +0.052 |
+| 1400-2300 ms (quiet) | 0.440 | 0.379 | +0.061 |
+
+**Answering burst -0.032, the same contrast in silence -0.011, corrected
+-0.021.** The creature does not answer. The profile is suppression and recovery:
+deeply quiet during the word, still below its own baseline at 200-600 ms (0.408
+against 0.440), rising monotonically back with no overshoot. **M1b's content
+match at 200-600 ms is an echo riding on babble that was going to happen
+anyway.**
+
+And the guard did its job: on alternation alone that -0.105 would have read as a
+pass.
+
+**One unplanned positive.** The word arm sits above the silent arm at every late
+window — +0.061 at the quiet tail. Hearing words raises the creature's overall
+babble rate. That is arousal rather than turn-taking, it is not time-locked to
+anything, and it had not been measured before.
+
+#### DNA v44 — the rebound, and the signature appears
+
+An answering burst needs the post-stimulus rate to **overshoot** baseline rather
+than recover to it: a transient excitability rise when input stops, opposite in
+sign to the listening reflex and outlasting it. Both halves of an offset
+detector already exist in the kernel — `pool_fast_` is tens of ms and
+`mean_rate` is a one-second EMA — so v44 is one rectified difference:
+
+```
+drive += rebound_gain * max(0, mean_rate[src] - pool_fast_[src])
+```
+
+Rectified on purpose: unrectified, a module whose source was RISING would be
+suppressed, which is a second listening reflex nobody asked for. Rule 1 holds —
+at gain 0 the hash does not move.
+
+**The signature appears, and by a route worth understanding.**
+
+| window | shipped | rebound 0.02 |
+|---|---|---|
+| while the word | 0.276 | **0.018** |
+| 0-200 ms after | 0.289 | 0.454 |
+| 200-600 ms after | 0.408 | **0.841** |
+| 600-1400 ms after | 0.432 | 0.699 |
+| 1400-2300 ms (quiet) | 0.440 | 0.553 |
+| **corrected burst** | **-0.021** | **+0.296** |
+
++0.296 at gain 0.02 and +0.257 at 0.05, against a bar of +0.05. But read the
+first row: the creature is now nearly **silent** while the word plays. That is
+the rectification. During quiet, fluctuations rectify to a tonic lift — which is
+why the silent-arm baseline rises 0.379 to 0.45 — and while the word plays the
+fast pool sits above the slow one so the term is exactly zero. The word removes
+a tonic drive *and* applies the reflex, and the burst is the release from both.
+
+**M1b survives, and its audibility improves.** Same table, same conditions:
+
+| condition | shipped voice / d′ | rebound voice / d′ |
+|---|---|---|
+| clean | 0.937 / 1.54 | 0.897 / **1.97** |
+| SNR 20 dB | 0.910 / 1.78 | 0.900 / 1.74 |
+| SNR 10 dB | 0.913 / 1.06 | 0.893 / **1.62** |
+| SNR 0 dB | 0.807 / 1.07 | 0.823 / **1.59** |
+| ±6 dB level | 0.870 / 1.41 | 0.910 / 1.43 |
+| 10 dB & ±6 dB | 0.847 / 1.09 | 0.883 / **1.18** |
+
+Discrimination is essentially unchanged and audible d′ rises in five of six
+conditions, most in noise.
+
+**And a confound, which is in the control column.** `EAR` goes 0.560 -> 0.700.
+That column exists because an after-window in which the auditory module still
+classifies is not memory but a stimulus that has not finished arriving. A
+creature silent while listening does not mask the caregiver with its own babble,
+so it hears the word better and more of it persists into the scored window.
+**Part of the M1b gain is a cleaner stimulus rather than a better echo**, and
+this table cannot say how much.
+
+**Status: the signature is reachable, the milestone is not met.** v44 ships OFF.
+Meeting M1d means shipping it on, which moves the hash and forces a re-baseline
+of every vocal number under the calibration invariant — and it should not be
+switched on until the EAR confound is separated, because the honest headline
+today is "a mechanism exists that makes the creature answer", not "the creature
+answers". The separation is cheap: score the burst on trials where the ear's own
+classification in the scored window is at chance.
+
+**What it would take.** An answering burst needs the post-stimulus rate to
+*overshoot* baseline rather than recover to it — a transient excitability rise
+when input stops, which is the opposite sign to the listening reflex and would
+have to outlast it. That is a genome-level change to one module rather than a
+new pathway, which makes it cheap to try; it is not attempted here.
+
+**A bug worth recording.** Adding the fifth window overflowed `ImitateRun`'s
+four-wide per-window classification arrays and segfaulted. The fifth is a *rate*
+baseline, not a content window — asking which word the voice carries 1400-2300 ms
+after it ended is not a question — so the scoring loop is now bounded by its own
+`kScoredWindows` rather than by `kWindows`. Same hard-coded-count class as the
+shared-constants audit. It first appeared as *no output at all*, because the run
+was piped to `tail`, which reports its own exit status and swallowed the crash —
+the trap this project has already recorded once.
+
 ### Three verify tiers, because the second one had become unrunnable
 
 The teaching experiments each raise a creature through several phases of a life

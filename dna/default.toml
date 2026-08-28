@@ -897,6 +897,8 @@ nm_curiosity = 1.0
 # target populations, or different compartments — before the trade goes away.
 ffi_source = -1
 ffi_gain = 0.0
+rebound_source = -1          # DNA v44: post-stimulus rebound; -1 disables
+rebound_gain = 0.0           # drive += gain * max(0, mean_rate[src] - pool_fast[src])
 ffi_apical = 0               # DNA v40: land the interneuron on the tuft, not the soma
 ffi_learn = 0.0              # DNA v40: and let its weight learn to cancel what arrives there
 
@@ -1081,6 +1083,8 @@ nm_curiosity = 1.0
 # mean rate of the named source module from every neuron here. -1 disables.
 ffi_source = -1
 ffi_gain = 0.0
+rebound_source = -1          # DNA v44: post-stimulus rebound; -1 disables
+rebound_gain = 0.0           # drive += gain * max(0, mean_rate[src] - pool_fast[src])
 ffi_apical = 0               # DNA v40: land the interneuron on the tuft, not the soma
 ffi_learn = 0.0              # DNA v40: and let its weight learn to cancel what arrives there
 
@@ -1207,6 +1211,8 @@ nm_curiosity = 1.0
 # mean rate of the named source module from every neuron here. -1 disables.
 ffi_source = -1
 ffi_gain = 0.0
+rebound_source = -1          # DNA v44: post-stimulus rebound; -1 disables
+rebound_gain = 0.0           # drive += gain * max(0, mean_rate[src] - pool_fast[src])
 ffi_apical = 0               # DNA v40: land the interneuron on the tuft, not the soma
 ffi_learn = 0.0              # DNA v40: and let its weight learn to cancel what arrives there
 
@@ -1332,6 +1338,8 @@ nm_curiosity = 1.0
 # mean rate of the named source module from every neuron here. -1 disables.
 ffi_source = -1
 ffi_gain = 0.0
+rebound_source = -1          # DNA v44: post-stimulus rebound; -1 disables
+rebound_gain = 0.0           # drive += gain * max(0, mean_rate[src] - pool_fast[src])
 ffi_apical = 0               # DNA v40: land the interneuron on the tuft, not the soma
 ffi_learn = 0.0              # DNA v40: and let its weight learn to cancel what arrives there
 
@@ -1459,6 +1467,8 @@ nm_curiosity = 1.0
 # mean rate of the named source module from every neuron here. -1 disables.
 ffi_source = -1
 ffi_gain = 0.0
+rebound_source = -1          # DNA v44: post-stimulus rebound; -1 disables
+rebound_gain = 0.0           # drive += gain * max(0, mean_rate[src] - pool_fast[src])
 ffi_apical = 0               # DNA v40: land the interneuron on the tuft, not the soma
 ffi_learn = 0.0              # DNA v40: and let its weight learn to cancel what arrives there
 
@@ -1784,6 +1794,8 @@ nm_curiosity = 1.0
 # mean rate of the named source module from every neuron here. -1 disables.
 ffi_source = -1
 ffi_gain = 0.0
+rebound_source = -1          # DNA v44: post-stimulus rebound; -1 disables
+rebound_gain = 0.0           # drive += gain * max(0, mean_rate[src] - pool_fast[src])
 ffi_apical = 0               # DNA v40: land the interneuron on the tuft, not the soma
 ffi_learn = 0.0              # DNA v40: and let its weight learn to cancel what arrives there
 

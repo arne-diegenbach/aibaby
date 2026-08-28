@@ -6312,6 +6312,23 @@ const MechPin kMechPins[] = {
       {PatchScope::kModule, "vocal", M_(ffi_apical), 1.0f, true, nullptr},
       {PatchScope::kModule, "vocal", M_(ffi_learn), 2e-4f, false, nullptr}},
      7, kShort, 0x457a17d1af252433ull},
+    // DNA v43. A projection KIND rather than a scalar, so the patch retargets an
+    // existing tract: central->vocal becomes a topographic map onto vocal's F1
+    // group. Without this row the kind could rot into a no-op and nothing would
+    // notice, which is the blind spot this experiment exists to close.
+    {"topographic tract", "v43",
+     {{PatchScope::kProjection, "central->vocal", P_(kind), 3.0f, true, nullptr},
+      {PatchScope::kProjection, "central->vocal", P_(topo_src_lo), 0.0f, false, nullptr},
+      {PatchScope::kProjection, "central->vocal", P_(topo_src_hi), 0.70f, false, nullptr},
+      {PatchScope::kProjection, "central->vocal", P_(topo_dst_lo), 0.2222f, false, nullptr},
+      {PatchScope::kProjection, "central->vocal", P_(topo_dst_hi), 0.3333f, false, nullptr},
+      {PatchScope::kProjection, "central->vocal", P_(topo_sigma), 0.07f, false, nullptr}},
+     6, kShort, 0xfa7adb88f9690d79ull},
+    // DNA v44. The post-stimulus rebound on the larynx, driven by the ear.
+    {"post-stimulus rebound", "v44",
+     {{PatchScope::kModule, "vocal", M_(rebound_source), 0.0f, true, "auditory"},
+      {PatchScope::kModule, "vocal", M_(rebound_gain), 0.02f, false, nullptr}},
+     2, kShort, 0xa51d76a402c159dcull},
 };
 constexpr uint32_t kMechPinCount = sizeof(kMechPins) / sizeof(kMechPins[0]);
 

@@ -322,7 +322,7 @@ constexpr uint32_t kDnaMagic = 0x44424941;  // "AIBD"
 //     about what reward multiplies.
 //
 //     See DnaModule::ffi_apical and DnaModule::ffi_learn, and `errprobe`.
-constexpr uint32_t kDnaVersion = 43;
+constexpr uint32_t kDnaVersion = 44;
 
 // What a module is wired to the world through. The host looks modules up by
 // role, never by name or index, so renaming a module in the genome cannot
@@ -1271,6 +1271,29 @@ struct DnaModule {
   // density 0.03 the spread is about 18%.
   int32_t ffi_source;   // module index to pool from, -1 for none
   float ffi_gain;
+  // DNA v44. A post-stimulus REBOUND: this module's drive rises when the named
+  // source's activity FALLS. -1 disables it and 0 gain is bit-identical to v43.
+  //
+  //     drive += rebound_gain * max(0, mean_rate[src] - pool_fast_[src])
+  //
+  // Both terms already exist — `pool_fast_` is the interneuron's tens-of-ms
+  // estimate and `mean_rate` is a one-second EMA — so slow-minus-fast is an
+  // OFFSET detector for free, the mirror of the depressing synapse's onset
+  // detector. During sustained input the two converge and the term vanishes;
+  // when input stops the fast pool collapses, the slow one lags, and the
+  // difference decays over the slow EMA's own time constant.
+  //
+  // WHY. `turntake` measured that the creature does not answer: after a word it
+  // RECOVERS toward baseline (0.408 at 200-600 ms against its own 0.440) rather
+  // than overshooting it. The listening reflex is an inhibitory auditory->vocal
+  // tract whose suppression outlasts the word, so an answering burst needs a
+  // term of the opposite sign that outlasts the reflex. This is that term, and
+  // it has to clear roughly 0.03-0.06 of voiced fraction to show.
+  //
+  // Rectified at zero on purpose: without that, a module whose source is RISING
+  // would be suppressed, which is a second listening reflex nobody asked for.
+  int32_t rebound_source;
+  float rebound_gain;
   // DNA v40. Where the pooling interneuron lands, and whether its weight
   // learns. Both 0 is the pre-v40 module exactly.
   //

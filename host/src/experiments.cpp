@@ -195,6 +195,11 @@ const Spec kSpecs[] = {
      "  clock, +4.0 at 1600000 and +18.3 here. Below this the experiment cannot\n"
      "  see learning it is looking for, and it says UNDERPOWERED rather than null.\n"
      "  OPEN: does the echo improve with feedback — the day it flips is news"},
+    {"turntake", 560000, Expect::kOpen, Tier::kLong,
+     "M1d, and OPEN until measured: does the creature vocalise MORE after the\n"
+     "  caregiver stops, or merely resume its baseline babble? M1b showed the\n"
+     "  voice CARRIES the word at 200-600 ms, which is content, not rate. Same\n"
+     "  minimum as imitate, whose session it reuses"},
     {"imitate", 560000, Expect::kPass, Tier::kLong,
      "derived: 2800-tick trials, so 200 of them for an accuracy step of 0.01"},
     {"restate", 600000, Expect::kPass, Tier::kLong,
@@ -327,6 +332,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "pcprobe") ok = run_pcprobe(dna_blob, ticks, verbose);
   else if (name == "audprobe") ok = run_audprobe(dna_blob, ticks, verbose);
   else if (name == "imitate") ok = run_imitate(dna_blob, ticks, verbose);
+  else if (name == "turntake") ok = run_turntake(dna_blob, ticks, verbose);
   else if (name == "vocallearn") ok = run_vocallearn(dna_blob, ticks, verbose);
   else if (name == "teachsound") ok = run_teachsound(dna_blob, ticks, verbose, cap);
   else if (name == "retain") ok = run_retain(dna_blob, ticks, verbose);

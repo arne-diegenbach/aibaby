@@ -2904,6 +2904,9 @@ struct ImitateWindow {
 struct ImitateRun {
   bool ok = false;
   double voice[4] = {}, artic[4] = {}, shuffled[4] = {}, dprime[4] = {}, heard[4] = {};
+  // Voiced FRACTION per window: the answering burst. M1b scores what the voice
+  // carries; this is whether it speaks at all.
+  double voiced_frac[5] = {};
   size_t trials = 0;
   // The scored window's raw rows, kept so the caller can score any PAIR of
   // words off one simulation instead of re-running the creature per pair.
@@ -2925,7 +2928,7 @@ struct ImitateRun {
 // describe a microphone rather than a creature — see the note on the sweep.
 ImitateRun run_imitate_session(const std::vector<uint8_t>& blob, uint64_t ticks,
                                uint32_t words = 2, double snr_db = 1e9,
-                               double level_db = 0.0) {
+                               double level_db = 0.0, bool silent = false) {
   ImitateRun out;
   std::string error;
   Session s;
@@ -2960,8 +2963,25 @@ ImitateRun run_imitate_session(const std::vector<uint8_t>& blob, uint64_t ticks,
       {"0-200 ms after", kWordTicks, kWordTicks + 200, {}, {}, {}},
       {"200-600 ms after", kWordTicks + 200, kWordTicks + 600, {}, {}, {}},
       {"600-1400 ms after", kWordTicks + 600, kWordTicks + 1400, {}, {}, {}},
+      // THE QUIET TAIL, and the baseline the answering burst is measured
+      // against. The four windows above ask what the voice CARRIES; this one
+      // exists to ask a different question — whether the creature vocalises
+      // MORE after the caregiver stops than it does when nothing has happened.
+      // Content and rate are separate measurements and M1b only made the first.
+      {"1400-2300 ms (quiet)", kWordTicks + 1400, 2800, {}, {}, {}},
   };
   constexpr size_t kWindows = sizeof(windows) / sizeof(windows[0]);
+  // The per-window CLASSIFICATION arrays on ImitateRun are four wide, and the
+  // fifth window is a rate baseline rather than a content window — asking which
+  // word the voice carries 1400-2300 ms after it ended is not a question. This
+  // constant is what bounds the scoring loop; taking it from kWindows instead
+  // wrote one past the end of out.voice[] and segfaulted, which is the
+  // hard-coded-count bug class this project has audited before.
+  constexpr size_t kScoredWindows = 4;
+  // Voiced frames and total frames per window, summed over trials. Pooled
+  // rather than averaged per trial: a trial with three frames and a trial with
+  // thirty should not weigh the same in a RATE.
+  double vsum[kWindows] = {}, fsum[kWindows] = {};
 
   const int32_t aud_m = s.dna.module_with_role(aibaby::ModuleRole::kAuditory);
   const uint32_t aud_n =
@@ -3006,7 +3026,9 @@ ImitateRun run_imitate_session(const std::vector<uint8_t>& blob, uint64_t ticks,
         retina.present(frame.data());
         s.brain.see(retina.features().data(), retina.feature_count());
       }
-      const bool sounding = t < kWordTicks;
+      // The silent arm plays no word at all, keeping the trial clock. Any
+      // structure it shows across the same windows is the clock, not an answer.
+      const bool sounding = !silent && t < kWordTicks;
       caregiver.render(sounding ? w.f0 : 0.0f, w.f1, w.f2, sounding ? 0.5f : 0.0f,
                        pcm.data(), spt);
       if (degrade) {
@@ -3062,6 +3084,10 @@ ImitateRun run_imitate_session(const std::vector<uint8_t>& blob, uint64_t ticks,
     if (!usable) { ++skipped; continue; }
 
     for (size_t k = 0; k < kWindows; ++k) {
+      if (k < 5) {
+        vsum[k] += double(rec[k].voiced);
+        fsum[k] += double(rec[k].frames);
+      }
       windows[k].voice.push_back(m3_vocal_features(rec[k]));
       {
         const double nf = rec[k].frames ? double(rec[k].frames) : 1.0;
@@ -3085,7 +3111,7 @@ ImitateRun run_imitate_session(const std::vector<uint8_t>& blob, uint64_t ticks,
   // The per-window table is a two-class readout, so it is only meaningful — and
   // only SAFE — for a two-word session. A four-word run is collected purely for
   // the pairwise matrix below, which remaps each pair to 0/1 itself.
-  for (size_t k = 0; k < kWindows && words == 2; ++k) {
+  for (size_t k = 0; k < kScoredWindows && words == 2; ++k) {
     ImitateWindow& w = windows[k];
     std::vector<std::vector<double>> xv, xt;
     std::vector<int> yv, yt;
@@ -3122,6 +3148,9 @@ ImitateRun run_imitate_session(const std::vector<uint8_t>& blob, uint64_t ticks,
   }
   // The scored window's raw rows, so any PAIR of words can be scored off one
   // simulation rather than re-running the creature once per pair.
+  for (size_t k = 0; k < kWindows && k < 5; ++k) {
+    out.voiced_frac[k] = fsum[k] > 0.0 ? vsum[k] / fsum[k] : 0.0;
+  }
   out.scored_voice = windows[2].voice;
   out.scored_heard = windows[2].heard;
   out.scored_labels = labels;
@@ -3146,6 +3175,87 @@ ImitateRun run_imitate_session(const std::vector<uint8_t>& blob, uint64_t ticks,
 // 900, and the cochlea and B2 take a few hundred milliseconds more to let go.
 // The EAR column is printed for every window so the choice can be audited
 // rather than trusted.
+// M1d, the answering burst — does the creature vocalise MORE after the
+// caregiver stops than when nothing has happened?
+//
+// M1b established that the voice CARRIES the word 200-600 ms after it ends.
+// That is about content and says nothing about rate: a creature babbling at a
+// constant rate, whose babble happens to resemble what it just heard, passes
+// M1b and is not taking turns. Turn-taking is a claim about WHEN it speaks.
+//
+// THE TRAP THIS IS BUILT AROUND. The listening reflex suppresses babbling while
+// the creature hears something, so "quiet during the word, vocal afterwards" is
+// true by construction and would pass a milestone defined on alternation
+// without the creature doing anything. So the silence contributes nothing here.
+// The only thing scored is whether the post-word rate EXCEEDS the creature's
+// own quiet baseline, measured in the same trial 1400-2300 ms after the word,
+// when the reflex has long released.
+//
+// The null is the same creature on the same trial clock hearing NOTHING. Any
+// structure across these windows in that arm is the clock — the trials are
+// periodic, and a creature with any rhythm of its own would otherwise look like
+// it was answering.
+bool run_turntake(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  aibaby::Dna dna;
+  if (dna.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) return false;
+  instrument("turntake", dna.header().seed ^ 0x7712u, ticks / 2800, "trials");
+  std::printf("  the question      M1b showed the voice CARRIES the word 200-600 ms\n"
+              "                    after it ends. This asks whether the creature\n"
+              "                    SPEAKS MORE then — content and rate are different\n"
+              "                    measurements and only the first was ever made.\n\n");
+
+  constexpr uint32_t kSeeds = 3;
+  double spoke[5] = {}, quiet[5] = {};
+  uint32_t valid = 0;
+  const char* names[5] = {"while the word", "0-200 ms after", "200-600 ms after",
+                          "600-1400 ms after", "1400-2300 (quiet)"};
+  for (uint32_t r = 0; r < kSeeds; ++r) {
+    std::vector<uint8_t> variant = blob;
+    const uint64_t seed = dna.header().seed + r * 7919ull;
+    std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+    const ImitateRun a = run_imitate_session(variant, ticks, 2, 1e9, 0.0, false);
+    const ImitateRun b = run_imitate_session(variant, ticks, 2, 1e9, 0.0, true);
+    if (!a.ok || !b.ok) continue;
+    for (int k = 0; k < 5; ++k) { spoke[k] += a.voiced_frac[k]; quiet[k] += b.voiced_frac[k]; }
+    ++valid;
+  }
+  if (valid < 2) {
+    std::printf("  INCONCLUSIVE — %u of %u creatures usable.\n", valid, kSeeds);
+    return false;
+  }
+  for (int k = 0; k < 5; ++k) { spoke[k] /= valid; quiet[k] /= valid; }
+
+  std::printf("  voiced fraction, %u creatures\n", valid);
+  std::printf("    %-20s %-10s %-10s %s\n", "window", "word", "silence", "word - silence");
+  for (int k = 0; k < 5; ++k) {
+    std::printf("    %-20s %-10.3f %-10.3f %+.3f\n", names[k], spoke[k], quiet[k],
+                spoke[k] - quiet[k]);
+  }
+
+  // The burst is window 2 against the SAME arm's quiet tail, and the null is
+  // the same contrast in the silent arm. Subtracting the null is what removes
+  // the trial clock.
+  const double burst = spoke[2] - spoke[4];
+  const double null_burst = quiet[2] - quiet[4];
+  std::printf("\n    answering burst   %+.3f   (200-600 ms above this arm's own quiet tail)\n"
+              "    the same in silence %+.3f   <- the trial clock, which must be subtracted\n"
+              "    corrected          %+.3f\n",
+              burst, null_burst, burst - null_burst);
+  const bool answers = (burst - null_burst) > 0.05;
+  std::printf("\n    %s\n",
+              answers
+                  ? "M1d SIGNATURE PRESENT — the creature speaks MORE after the\n"
+                    "    caregiver stops than it does unprompted. Turn-taking is a\n"
+                    "    rate claim and this is the rate."
+                  : "NOT PRESENT — the creature resumes its baseline babble rather\n"
+                    "    than answering. M1b's content match at 200-600 ms is an echo\n"
+                    "    riding on babble that was going to happen anyway.");
+  std::printf("    (the reflex's silence during the word is NOT scored: it is true\n"
+              "     by construction and would pass this milestone on its own.)\n");
+  return answers;
+}
+
 bool run_imitate(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
   aibaby::Dna dna;
   if (dna.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) return false;

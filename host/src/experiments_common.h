@@ -1285,6 +1285,7 @@ bool run_sleep(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_babble(const std::vector<uint8_t>&, uint64_t, bool, const Capture&);
 bool run_m2(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_imitate(const std::vector<uint8_t>&, uint64_t, bool);
+bool run_turntake(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_vocallearn(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_teachsound(const std::vector<uint8_t>&, uint64_t, bool, const Capture&);
 bool run_retain(const std::vector<uint8_t>&, uint64_t, bool);

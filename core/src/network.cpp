@@ -1213,6 +1213,17 @@ void Network::step() {
       }
     }
 
+    // DNA v44. The post-stimulus rebound: positive drive while the source is
+    // FALLING. slow minus fast, rectified — see the note on DnaModule.
+    Scalar rebound = kZero;
+    if (dna_.module(m).rebound_source >= 0 && dna_.module(m).rebound_gain != kZero) {
+      const uint32_t src = uint32_t(dna_.module(m).rebound_source);
+      if (src < module_count_) {
+        const Scalar drop = modules_[src].mean_rate - pool_fast_[src];
+        if (drop > kZero) rebound = Scalar(dna_.module(m).rebound_gain) * drop;
+      }
+    }
+
     for (uint32_t k = 0; k < ms.count; ++k) {
       const uint32_t i = ms.begin + k;
       // A tombstoned slot has no synapses in either direction, so it could
@@ -1317,7 +1328,7 @@ void Network::step() {
       const Scalar drive = (in[i] * norm - ffi_soma * ffi_w_[i]) * apical_mult +
                            noise_amp_[i] * (explore_mult_[m] * xi +
                                             drive_comp_ * (kOne - explore_mult_[m])) +
-                           bias_[i] + osc + lateral;
+                           bias_[i] + osc + lateral + rebound;
 
       // Node perturbation: remember what this neuron was actually given, so
       // that a reward arriving a second from now can credit it. Decays on the
