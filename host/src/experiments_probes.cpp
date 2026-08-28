@@ -4844,8 +4844,8 @@ bool run_restate(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
   // 600k because below it eligprobe's positive control is blind, and a blind
   // control would make this whole experiment agree with anything.
   std::printf("\n  --- eligprobe, 600000 ticks x 3 creatures ---\n");
-  double cen = 0, arc = 0;
-  uint32_t valid = 0;
+  double cen = 0, arc = 0, vis = 0;
+  uint32_t valid = 0, vis_valid = 0;
   for (uint32_t r = 0; r < 3; ++r) {
     std::vector<uint8_t> variant = blob;
     const uint64_t seed = dna.header().seed + r * 7919ull;
@@ -4853,10 +4853,14 @@ bool run_restate(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
     const EligProbe p = run_eligprobe_session(variant, 600000);
     if (!p.ok) continue;
     cen += p.central; arc += p.arcuate_matched; ++valid;
+    if (p.vision_n > 0) { vis += p.vision; ++vis_valid; }
   }
   if (valid) { cen /= valid; arc /= valid; }
-  std::printf("    central->vocal conditionality  %.3f   (arcuate control %.3f, %u creatures)\n",
-              cen, arc, valid);
+  if (vis_valid) { vis /= vis_valid; }
+  std::printf("    vision->vocal conditionality   %.3f   <- the tract that carries "
+              "the object\n"
+              "    central->vocal conditionality  %.3f   (arcuate control %.3f, %u creatures)\n",
+              vis, cen, arc, valid);
 
   Restatement rows[] = {
       {"object at vocal, per neuron",
@@ -4874,6 +4878,18 @@ bool run_restate(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
       {"word at auditory, per neuron",
        "the auditory positive control",
        1.000, 0.10, sc.get(false, "auditory"), sc.get(false, "auditory") >= 0.0},
+      // THE ROW THIS TABLE WAS MISSING. `restate` pins the numbers decisions
+      // rest on, and the conditionality decision rested on `central->vocal`
+      // alone — a tract later shown to be a NON-PARTICIPANT, whose deletion
+      // leaves every G3 number unchanged. `vision->vocal` is what delivers the
+      // seen object to the larynx, and until 2026-08-28 no eligibility number
+      // had ever been taken on it.
+      {"vision->vocal trace conditionality",
+       "the tract that carries the object; central->vocal is a non-participant",
+       // 0.907 is what THIS experiment measures at its own 3 creatures.
+       // eligprobe reports 0.820 at 5; pinning that here would bake in a
+       // sample-size drift and blunt the check.
+       0.907, 0.12, vis, vis_valid >= 2},
       {"central->vocal trace conditionality",
        "eligprobe: 0.742 at 5 creatures, NOT the long-recorded 0.654",
        0.813, 0.12, cen, valid >= 2},

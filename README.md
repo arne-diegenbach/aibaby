@@ -170,8 +170,10 @@ readouts to the mel frame and mel bands are collinear enough to cost the fit's
 self-test 3%; against an MFCC target that self-test reads exactly 1.000.
 
 `eligprobe` opens up one tract. It samples the **eligibility trace** on
-`central->vocal` at the same phase of every trial and asks a held-out classifier
-which object the creature was looking at. That is the quantity R-STDP actually
+`vision->vocal` — the tract that carries the seen object; it read
+`central->vocal` alone until that was found to be a non-participant — at the
+same phase of every trial and asks a held-out classifier which object the
+creature was looking at. That is the quantity R-STDP actually
 spends, and the question it settles is not "is there a trace" but "is the trace
 *different* for the two objects" — because reward does not create eligibility,
 it only cashes it. If the pattern is the same either way, no reward schedule can
