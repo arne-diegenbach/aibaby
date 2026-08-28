@@ -48,7 +48,19 @@ if len(args) < 2:
 src_path, dst_path = args[0], args[1]
 
 opt = {"--group": "2", "--density": "0.35", "--weight": "0.14",
-       "--src-hi": "0.70", "--sigma": "0.07", "--src": "central"}
+       "--src-hi": "0.70", "--sigma": "0.07", "--src": "central",
+       # A projection can also aim at an arbitrary sub-range of an arbitrary
+       # module, which is what a chain TRIGGER is: every source cell landing on
+       # the first link, so a sensory onset starts the wave. --dst overrides the
+       # vocal-group form and --dst-lo/--dst-hi give the range directly.
+       "--dst": "", "--dst-lo": "", "--dst-hi": "",
+       # A TRIGGER MUST BE TRANSIENT. A plain projection onto the chain head
+       # delivers sustained drive and raises the head's rate without launching
+       # anything; seqprobe's kick is 10 ticks and then off. DNA v36's
+       # depressing synapse passes the first spike of a burst and little of the
+       # rest, which is an onset detector built from a mechanism that already
+       # ships. Set --stp-use ~0.7 with a long --stp-recover for that.
+       "--stp-use": "", "--stp-recover": "", "--stp-facil": ""}
 reverse = False
 i = 2
 while i < len(args):
@@ -87,8 +99,16 @@ for b in blocks[1:]:
 if template is None:
     sys.exit(f"no central->vocal projection in {src_path} to clone")
 
-lo = group / VOCAL_GROUPS
-hi = (group + 1) / VOCAL_GROUPS
+dst_module = opt["--dst"] or "vocal"
+if opt["--dst"]:
+    if not (opt["--dst-lo"] and opt["--dst-hi"]):
+        sys.exit("--dst needs --dst-lo and --dst-hi")
+    lo, hi = float(opt["--dst-lo"]), float(opt["--dst-hi"])
+    if dst_module not in names:
+        sys.exit(f"no module named {dst_module!r} in {src_path}")
+else:
+    lo = group / VOCAL_GROUPS
+    hi = (group + 1) / VOCAL_GROUPS
 dst_lo, dst_hi = (hi, lo) if reverse else (lo, hi)
 
 out = ["", "[[projection]]"]
@@ -98,10 +118,13 @@ for line in template.split("\n"):
         continue
     k, v = m.group(1), m.group(2).strip()
     if k == "src":       v = f'"{opt["--src"]}"'
-    elif k == "dst":     v = '"vocal"'
+    elif k == "dst":     v = f'"{dst_module}"'
     elif k == "kind":    v = '"topographic"'
     elif k == "density": v = opt["--density"]
     elif k == "weight":  v = opt["--weight"]
+    elif k == "stp_use" and opt["--stp-use"]:         v = opt["--stp-use"]
+    elif k == "stp_recover_ms" and opt["--stp-recover"]: v = opt["--stp-recover"]
+    elif k == "stp_facil_ms" and opt["--stp-facil"]:  v = opt["--stp-facil"]
     out.append(f"{k} = {v}")
 out += [
     "topo_src_lo = 0.0",
@@ -111,7 +134,7 @@ out += [
     f'topo_sigma = {opt["--sigma"]}',
 ]
 open(dst_path, "w").write(text.rstrip("\n") + "\n" + "\n".join(out) + "\n")
-print(f"wrote {dst_path}: {opt['--src']}->vocal group {group} "
+print(f"wrote {dst_path}: {opt['--src']}->{dst_module} "
       f"({'reversed' if reverse else 'forward'}), "
       f"dst {dst_lo:.3f}..{dst_hi:.3f}, density {opt['--density']}, "
       f"weight {opt['--weight']}")

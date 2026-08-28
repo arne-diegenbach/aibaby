@@ -5095,6 +5095,63 @@ pair by seed and the behaviour is correct. Never pair a label with output under
 class as the `| head -3` truncation elsewhere on this page: a shell-level
 artifact that produced a confident, wrong claim about the creature.
 
+#### A trigger for the chain: the wave needs synchrony, and no pathway carries it
+
+DNA v42's chain produces a travelling wave when `seqprobe` kicks it, and nothing
+kicks it in life. The obvious next move is a trigger, and it needed no new
+mechanism: v43's topographic kind can aim a projection at a *sub-range* of a
+module, so `auditory -> central[0 .. 0.08]` — the first chain link — is a genome
+edit. `tools/genome_add_topographic.py` grew `--dst/--dst-lo/--dst-hi` for it.
+
+**A first correction, because the claim it rests on was over-read.** The v43
+section reports central's free-running centre-of-mass spread (sd 0.0438 against
+the kicked wave's 0.63 range) as showing no wave occurs without a kick. That
+statistic cannot show it. `seqprobe` sees the wave by *aligning to a known
+onset and averaging 24 repeats*; in free running, waves launching at random
+times with several in flight at once average to the middle and produce a SMALL
+spread. Small sd means "no waves **or** many overlapping waves".
+
+So `topoprobe` gained the measurement that can answer it: align to the
+creature's own auditory onsets and average, which is `seqprobe`'s analysis on a
+natural trigger instead of an injected one. **It confirms the conclusion by a
+route that could have refuted it** — travel r **+0.060** (sd 0.457, 200 onsets)
+where the kicked wave reads +0.583 and the no-chain null +0.035. With 200 onsets
+the standard error is ~0.032, so this sits on the null.
+
+**And the trigger does not work.**
+
+| trigger onto the chain head | travel r |
+|---|---|
+| none (chain only) | +0.060 |
+| depressing, weight 0.30 | +0.086 |
+| depressing, weight 1.0 | +0.104 |
+| depressing, weight 3.0 | +0.101 |
+| *(`seqprobe`'s injected kick)* | *+0.583* |
+| *(no-chain null)* | *+0.035* |
+
+A ten-fold range of trigger weight moves nothing, and making the projection
+**depressing** — DNA v36's synapse, which passes the first spike of a burst and
+little of the rest, i.e. an onset detector already in the genome — does not
+either.
+
+**Why, and it is structural.** A synfire chain propagates a *synchronous
+volley*. `seqprobe`'s kick is 2.0 of current onto 32 neurons held for 10 ticks,
+arriving together. A synaptic projection delivers asynchronous spikes, and
+asynchronous drive of any magnitude raises the head's firing rate without ever
+forming a volley. Drive is not synchrony, and no sensory pathway in this
+creature carries synchrony. A working trigger would need a mechanism that
+manufactures one — a burst generator, or a gate that releases the head all at
+once — which is a different thing from any tract.
+
+**An instrument bug found on the way.** The onset detector first compared
+`mean_rate` against its own running mean and found **zero** onsets in 400k
+ticks. `mean_rate` is a one-second EMA and cannot rise through 1.3x of itself.
+The module already exposes the right pair — `mean_rate_fast` is tens of ms, the
+timescale an onset lives in. Reading a slow average as an instantaneous one is
+the same mistake as reading a smoothed formant for a raw one. The probe refused
+rather than reporting a trajectory on zero onsets, which is why the bug surfaced
+as a refusal instead of as a null.
+
 ### Three verify tiers, because the second one had become unrunnable
 
 The teaching experiments each raise a creature through several phases of a life

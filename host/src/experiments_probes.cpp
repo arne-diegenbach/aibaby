@@ -7402,6 +7402,100 @@ bool run_topoprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
                 arms[a].what, cm_sd[a], grp[a], sd_raw[a], rng_raw[a], sd_sm[a]);
   }
 
+  // DOES THE WAVE HAPPEN IN LIFE? Everything above injects a kick. The
+  // free-running centre-of-mass readout in `babble` was read as saying no wave
+  // occurs without one, and that inference is weaker than it looked: a wave
+  // launching at random times, with several in flight at once, averages to the
+  // middle and shows a SMALL spread. Small sd means "no waves OR many
+  // overlapping waves", and only alignment separates them.
+  //
+  // So do what seqprobe does — align and average — but on the creature's own
+  // trigger instead of an injected one. Onsets are upward threshold crossings
+  // of the auditory population rate; central's centre of mass is tracked for
+  // the following bins and averaged over onsets. `travel` is then the same
+  // statistic seqprobe reports, and the same +0.035 null applies.
+  {
+    Session s;
+    if (!s.init(blob, error)) return false;
+    const aibaby::ModuleState& cms = s.brain.network().module(uint32_t(m_central));
+    int32_t m_aud = -1;
+    for (uint32_t m = 0; m < dna0.module_count(); ++m) {
+      if (std::strcmp(dna0.module(m).name, "auditory") == 0) m_aud = int32_t(m);
+    }
+    if (m_aud >= 0) {
+      for (uint32_t i = 0; i < 20000; ++i) s.brain.step();
+      constexpr uint32_t kBins = 24, kBinTicks = 8;
+      std::vector<std::vector<double>> traj;
+      std::vector<double> base;
+      double prev = 0.0;
+      uint32_t onsets = 0;
+      (void)base;
+      // FAST ABOVE SLOW. The first version compared `mean_rate` against its own
+      // running mean and found ZERO onsets in 400k ticks — `mean_rate` is a
+      // one-second EMA and cannot rise through 1.3x of itself. The module
+      // already carries the right pair: `mean_rate_fast` is tens of ms, which is
+      // what an onset lives in, and `mean_rate` is the baseline to judge it
+      // against. Reading a slow average as if it were an instantaneous one is
+      // the same mistake as reading a smoothed formant for a raw one.
+      for (uint64_t tick = 0; tick < 400000 && onsets < 200; ++tick) {
+        s.brain.step();
+        const aibaby::ModuleState& am = s.brain.network().module(uint32_t(m_aud));
+        const double fast = double(am.mean_rate_fast);
+        const double slow = double(am.mean_rate);
+        const bool onset = slow > 0.1 && prev <= slow * 1.3 && fast > slow * 1.3;
+        prev = fast;
+        if (!onset) continue;
+        ++onsets;
+        std::vector<double> c;
+        for (uint32_t b = 0; b < kBins; ++b) {
+          double num = 0.0, den = 0.0;
+          for (uint32_t k = 0; k < kBinTicks; ++k) {
+            s.brain.step();
+            ++tick;
+            for (uint32_t i = 0; i < cms.count; ++i) {
+              const double r = double(s.brain.network().rate_fast(cms.begin + i));
+              num += r * (double(i) + 0.5) / double(cms.count);
+              den += r;
+            }
+          }
+          c.push_back(den > 1e-9 ? num / den : -1.0);
+        }
+        traj.push_back(c);
+      }
+      if (onsets < 8) {
+        std::printf("\n    natural trigger: only %u auditory onsets — REFUSING to\n"
+                    "    report a trajectory on that\n", onsets);
+      } else {
+        std::vector<double> tv;
+        for (const std::vector<double>& c : traj) {
+          std::vector<double> bx, cy;
+          for (uint32_t b = 0; b < kBins; ++b) {
+            if (c[b] >= 0.0) { bx.push_back(double(b)); cy.push_back(c[b]); }
+          }
+          if (bx.size() >= 6) {
+            const double r = corr_d(bx, cy);
+            if (r > -1.5) tv.push_back(r);
+          }
+        }
+        if (tv.size() >= 8) {
+          double mt = 0.0;
+          for (double x : tv) mt += x;
+          mt /= double(tv.size());
+          double sd = 0.0;
+          for (double x : tv) sd += (x - mt) * (x - mt);
+          sd = std::sqrt(sd / double(tv.size()));
+          std::printf("\n    NATURAL TRIGGER (%u auditory onsets, no injection):\n"
+                      "      travel r %+.3f (sd %.3f)   — seqprobe's kicked wave reads\n"
+                      "      +0.583 and its no-chain null +0.035. This is whether the\n"
+                      "      wave happens in LIFE, which the free-running centre-of-mass\n"
+                      "      spread cannot answer: overlapping waves average to the\n"
+                      "      middle and look like no wave at all.\n",
+                      onsets, mt, sd);
+        }
+      }
+    }
+  }
+
   // The trigger has to move the SOURCE before anything it does at the larynx
   // can be about the route. If central's centre did not move, this measured a
   // kick that did not take, and the F1 columns are about something else.
