@@ -1799,8 +1799,9 @@ bool run_eligprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
   std::printf("  the question      is the eligibility trace on vision->vocal\n"
               "                    DIFFERENT for the two objects? If it is not, no\n"
               "                    reward schedule can make the voice conditional.\n\n");
-  std::printf("  %-5s %-9s %-9s %-9s %-9s %-9s %s\n", "seed", "cen->voc", "shuffled",
-              "arc full", "arc match", "mean|e|", "corr(A,B)");
+  std::printf("  %-5s %-9s %-9s %-9s %-9s %-9s %-11s %-8s %s\n", "seed", "cen->voc",
+              "shuffled", "arc full", "arc match", "mean|e|", "corr(A,B)",
+              "vis cred", "vis n");
 
   double sv = 0, svs = 0, sve = 0, svr = 0, svc = 0;
   uint32_t vn = 0;
@@ -1822,8 +1823,13 @@ bool run_eligprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
     scr += p.credit; sps += p.post_share; sdv += p.divided;
     sti += p.from_informative; sts += p.from_silent;
     sif += p.informative_frac; sd += p.mean_d;
-    std::printf("  %-5u %-9.3f %-9.3f %-9.3f %-9.3f %-9.2e %+.3f\n", r, p.central,
-                p.central_shuf, p.arcuate, p.arcuate_matched, p.central_absE, p.central_r);
+    // PER-CREATURE, not just the mean of five. An aggregate that lands on the
+    // same value for several genome seeds is either a real variance collapse or
+    // something that is not tracking the seed at all, and only the spread
+    // inside one run tells those apart.
+    std::printf("  %-5u %-9.3f %-9.3f %-9.3f %-9.3f %-9.2e %+.3f      %-8.3f %u\n", r,
+                p.central, p.central_shuf, p.arcuate, p.arcuate_matched, p.central_absE,
+                p.central_r, p.vision_credit, p.vision_n);
   }
   if (valid < 3) { std::printf("\n  INCONCLUSIVE — %u of %u usable.\n", valid, kReps); return false; }
 

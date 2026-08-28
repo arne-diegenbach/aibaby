@@ -5068,13 +5068,30 @@ numbers. On `vision->vocal`, across three genome seeds:
 | mean | 0.854 | 0.868 | **+0.014**, 2/3 |
 
 +0.014 on 2 of 3 is not a result; a single first observation read 0.864 and
-looked like one. Worth noting the ON arm reads **0.868 on all three seeds** while
-the OFF arm spans 0.830-0.880 — accuracy is quantised on a 0.002 grid here, so
-three seeds landing on one point is possible but unlikely, and it is the
-signature this project has a standing warning about. Either the baseline
-genuinely collapses the variance or something in that arm is not tracking the
-seed; three seeds cannot separate those, and nothing should be built on the
-column until they do.
+looked like one. A fourth seed takes it to **+0.011 on 3 of 4**, against a
+per-run standard error of about 0.013 — one SE, which is nothing.
+
+**The variance gate, run because that ON column read 0.868 on all three seeds
+while OFF spanned 0.830-0.880.** That is the signature this project has a
+standing warning about, and it was worth stopping to check rather than building
+on. `eligprobe` now prints the per-creature vision credit and synapse count
+instead of only the five-creature mean. The gate comes back clean on every
+count: per-creature credit spans **0.77-0.93** (sd ~0.03), so nothing is stuck
+and 0.868 was a coincidence on a 0.002 grid; and the tract's synapse counts are
+identical across `tau` within a seed and different between seeds, so wiring
+tracks the seed and an STDP timescale does not touch it. If anything the
+baseline *raises* per-creature variance — 0.16 of spread against 0.07 — which is
+the opposite of the collapse that was suspected.
+
+**One of those readings was briefly a false alarm, and the cause is worth
+recording.** The first gate run went through `xargs -P 4`, so all four labels
+printed immediately while the tables arrived minutes later in completion order.
+Pairing them by position said the genome seed did not change the wiring and that
+`elig_baseline_tau_ms` did — two impossible things — when in fact the tables
+pair by seed and the behaviour is correct. Never pair a label with output under
+`-P`; print the label from inside the job, or run serially. This is the same
+class as the `| head -3` truncation elsewhere on this page: a shell-level
+artifact that produced a confident, wrong claim about the creature.
 
 ### Three verify tiers, because the second one had become unrunnable
 
