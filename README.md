@@ -4959,6 +4959,52 @@ a re-baseline of every vocal number, which is the same trade `smoothing_ms` was
 parked on. Both knobs are one line each when there is something worth
 re-baselining for.
 
+#### The smoothing sweep, re-run on the creature it was parked for: null again
+
+`[[aibaby-vowel-space]]` parked the `smoothing_ms` sweep with a condition: the
+800 ms filter is only destructive while it is blurring noise, so re-run it "on a
+creature with something worth holding". The pooling + lateral pair above is that
+creature — its F1 width survives the inertia where a bare one's does not. So the
+sweep was run: two arms, three smoothing values, on the audibility ruler.
+
+**At three seeds it looked like a result, and it was not.**
+
+| arm | 800 ms | 400 ms | 200 ms | 800 -> 200 | signs |
+|---|---|---|---|---|---|
+| topographic only, **n=3** | 0.34 | 0.39 | 0.58 | **+0.24** | + + + |
+| topographic only, **n=6** | 0.34 | 0.40 | 0.37 | **+0.03** | 4/6 |
+| + pooling + lateral, n=3 | 0.45 | 0.26 | 0.31 | -0.14 | 1/3 |
+| + pooling + lateral, n=6 | 0.48 | 0.44 | 0.35 | -0.13 | 2/6 |
+
+Three seeds with the sign agreeing on **all three** gave +0.24; three more seeds
+took it to +0.03. **This is the second time this exact sweep has produced an
+effect that evaporated**, and it is worth being precise about how the bar moved:
+the first time, a single seed read 0.76 and three fresh seeds killed it, and the
+lesson recorded was "use three seeds". Three seeds with unanimous signs was still
+not enough. The per-cell scatter here is larger than any effect being looked for
+— arm A's 800 ms column alone runs 0.00, 0.27, 0.36, 0.39, 0.39, 0.62.
+
+**Nothing is audible in any of the 36 runs.** Corrected d′ averages 0.398 and
+peaks at 0.79 against the bar of 1.0. The smoothing knob does not produce two
+distinguishable utterances on either creature, which is the question the sweep
+existed to answer. That thread is now closed rather than parked.
+
+**And the wider vowel does not buy audibility.** The pooling + lateral pair
+raises delivered F1 spread ×1.35 on 3/3 seeds, but at the shipped 800 ms its
+audibility gain is +0.14 on **4/6** — the same weak level as everything else
+here. A wider centroid and a more audible creature are not the same measurement,
+and only the first of them replicated.
+
+**A correction about the null, stated because it was overstated first.** On 18
+runs the corrected null looked misbehaved — mean 0.08, max 0.25, against a
+README table saying 0.00 at 600k ticks — and that read as the bias correction
+failing away from the shipped operating point. At 36 runs the picture is milder:
+**median 0.01, mean 0.060, max 0.25, with 7 of 36 at or above 0.15.** The
+correction does work; it has a tail. The usable conclusion is narrower than
+"the ruler is broken" and more useful: a *single* run's corrected d′ carries a
+floor of roughly 0.25, so no difference below that is readable without many
+seeds — which is exactly what the n=3 table above got wrong.
+
 ### Three verify tiers, because the second one had become unrunnable
 
 The teaching experiments each raise a creature through several phases of a life
