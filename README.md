@@ -4901,6 +4901,64 @@ on 3/3 families) and v32's lateral competition, applied *within* the target
 group, so the map chooses where a bump sits and competition makes it sharp
 rather than adding to a common mode.
 
+#### Pooling subtraction and lateral competition: not the route, but +35% of vowel
+
+v43's negative pointed at the one thing that has measurably moved the
+common-mode wall before — in-degree-weighted subtraction (v21-v24's pooling
+interneurons, +0.077 on 3/3) and v32's lateral competition — applied *within*
+the target group, so the map chooses where a bump sits and competition sharpens
+it rather than adding to a common mode. `vocal` is already built for the second
+half: `lateral_fields = 9`, one competitive field per motor group. Both ship OFF.
+
+**The constant trap, for the fourth time this project.** `ffi_gain = 0.5` is
+what `mechverify`'s variant uses, and carried over to `vocal` pooling from
+`central` it silences the larynx outright — 0.00 Hz, duty cycle 0.00. The scale
+is derivable and was not derived: `pool_fast_` is in **Hz**, `central` runs at
+~5.5, so a gain of 0.5 subtracts ~2.75 of drive from a module whose net drive is
+on the order of 0.05. The usable range is **0.0005 to 0.001**, five hundred
+times smaller, and 0.002 already fails `babble`.
+
+**On the question it was built for, the answer is no.** Four arms, same genome,
+trigger oracle:
+
+| arm | F1 gain under trigger | F1 smoothed sd |
+|---|---|---|
+| topographic only | x1.26 | 0.0297 |
+| + pooling subtraction | x1.28 | 0.0344 |
+| + lateral competition | x1.16 | 0.0445 |
+| + both | x1.18 | **0.0538** |
+
+The trigger effect is flat at x1.16-1.28 across every arm. Neither mechanism
+makes the travelling wave reach the voice, and the two together do not either.
+
+**What they do instead replicates.** The *delivered* F1 spread rises with them,
+present with and without the trigger, on three fresh seeds:
+
+| seed | topographic only | + both | ratio |
+|---|---|---|---|
+| 20260901 | 0.0186 | 0.0248 | x1.33 |
+| 20260902 | 0.0193 | 0.0255 | x1.32 |
+| 20260903 | 0.0201 | 0.0284 | x1.41 |
+
+3/3, same sign, x1.35 mean — which matters because the previous `lateral_gain`
+result in this README did NOT replicate, coming out at mean +0.003 with the sign
+flipping. The first seed's x1.81 was optimistic; x1.35 is the number.
+
+**And the mechanism is legible.** Raw F1 sd rises only ~10% (x1.11, x1.09,
+x1.10) while *smoothed* rises ~35%. The combination barely widens the centroid;
+it makes the width **survive the 800 ms articulator inertia**. That is exactly
+what the vowel-space note predicted would change the smoothing calculus — the
+filter is destructive only while it is blurring noise, and a group holding a
+stable bump is a posture rather than jitter. Anyone re-running the
+`smoothing_ms` sweep should do it on this creature.
+
+**Not shipped.** In Hz this is ~14.5 -> ~20 against a range of 750 and a bar of
+~400 for two distinguishable vowels: a 35% gain on a quantity that needs about
+twenty times. Switching it on is a genome change that moves the hash and forces
+a re-baseline of every vocal number, which is the same trade `smoothing_ms` was
+parked on. Both knobs are one line each when there is something worth
+re-baselining for.
+
 ### Three verify tiers, because the second one had become unrunnable
 
 The teaching experiments each raise a creature through several phases of a life
