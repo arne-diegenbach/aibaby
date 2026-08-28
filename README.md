@@ -5043,10 +5043,38 @@ the larynx, so conditioning cannot work". The measurement says the signal exists
 and the *rule* cannot separate it. Those have different fixes: the first needs a
 new pathway, which is what `vision->vocal`, the HVC nucleus, the signed relay
 and DNA v43's topographic map all tried; the second needs the common mode
-removed **from the trace**, which nothing in this genome can express. Note the
-existing `divided` column removes the per-*target* factor and lands at 0.488,
-chance — so the differential is not the postsynaptic factor, and subtracting the
-tract's own mean trace is a different operation that has not been tried.
+removed **from the trace**.
+
+**That second operation is DNA v16, and it is already in the genome.** It was
+written for exactly this reason — "reward can therefore only scale that tract,
+which is exactly the G3 symptom" — measured on 2026-08-15, refuted, and kept at
+`elig_baseline_tau_ms = 0` with a note saying the mechanism is correct and cheap
+and that the next covariance-flavoured idea should start there rather than
+rebuild it. An earlier draft of this section called that operation untried. It
+is not, and the genome comment anticipates the reasoning for proposing it,
+including why it fails: a classifier is already invariant to per-feature means,
+so the 0.820 above *is* the centred signal and subtracting the mean online only
+adds the lag and noise of a running estimate.
+
+**Its refutation was measured on the same wrong tract, and re-testing does not
+rescue it.** v16 was killed on `0.570 -> 0.503`, which are `central->vocal`
+numbers. On `vision->vocal`, across three genome seeds:
+
+| seed | credit, v16 off | credit, v16 ON | Δ |
+|---|---|---|---|
+| 20260911 | 0.852 | 0.868 | +0.016 |
+| 20260912 | 0.880 | 0.868 | **-0.012** |
+| 20260913 | 0.830 | 0.868 | +0.038 |
+| mean | 0.854 | 0.868 | **+0.014**, 2/3 |
+
++0.014 on 2 of 3 is not a result; a single first observation read 0.864 and
+looked like one. Worth noting the ON arm reads **0.868 on all three seeds** while
+the OFF arm spans 0.830-0.880 — accuracy is quantised on a 0.002 grid here, so
+three seeds landing on one point is possible but unlikely, and it is the
+signature this project has a standing warning about. Either the baseline
+genuinely collapses the variance or something in that arm is not tracking the
+seed; three seeds cannot separate those, and nothing should be built on the
+column until they do.
 
 ### Three verify tiers, because the second one had become unrunnable
 

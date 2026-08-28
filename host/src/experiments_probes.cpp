@@ -1452,6 +1452,13 @@ struct EligProbe {
   // diagnosis was written and reads the object at 0.660 at the larynx.
   // "The trace is object-blind" was never measured on the tract that carries it.
   double vision = 0, vision_shuf = 0, vision_absE = 0, vision_r = 0;
+  // WHAT REWARD ACTUALLY MULTIPLIES, on the tract that carries the object.
+  // E[dw_ij] ~ Cov(R, e_ij) + E[R] E[e_ij]. The second term potentiates every
+  // synapse in proportion to its MEAN trace whatever the condition — that is
+  // the 94.5% common mode, and it is what a reward baseline cancels. So the
+  // trace's own classification is the wrong quantity to read: learning acts on
+  // the credit, not on e.
+  double vision_credit = 0;
   uint32_t vision_n = 0;
   uint32_t central_n = 0, arcuate_n = 0, trials = 0;
   bool ok = false;
@@ -1533,7 +1540,7 @@ EligProbe run_eligprobe_session(const std::vector<uint8_t>& blob, uint64_t ticks
   for (size_t i = 0; i < order.size(); ++i) order[i] = int(i % 2);
   for (size_t i = order.size(); i > 1; --i) std::swap(order[i - 1], order[rng.next() % i]);
 
-  std::vector<std::vector<double>> xc, xa, xam, xcen, xcred, xdiv, xv;
+  std::vector<std::vector<double>> xc, xa, xam, xcen, xcred, xdiv, xv, xvcred;
   std::vector<int> y;
   std::vector<double> mean_v[2] = {std::vector<double>(vv.size(), 0.0),
                                    std::vector<double>(vv.size(), 0.0)};
@@ -1593,9 +1600,10 @@ EligProbe run_eligprobe_session(const std::vector<uint8_t>& blob, uint64_t ticks
 
       if (t != kSample) continue;
       const aibaby::Network& net = s.brain.network();
-      std::vector<double> ev(vv.size());
+      std::vector<double> ev(vv.size()), crv(vv.size());
       for (size_t i = 0; i < vv.size(); ++i) {
         ev[i] = double(net.synapse_eligibility(vv[i]));
+        crv[i] = double(net.synapse_credit(vv[i]));
         abs_v += std::fabs(ev[i]);
       }
       std::vector<double> ec(cv.size()), ea(av.size()), eam(av_matched.size());
@@ -1620,6 +1628,7 @@ EligProbe run_eligprobe_session(const std::vector<uint8_t>& blob, uint64_t ticks
         n_cond[object] += 1;
         if (!vv.empty()) {
           xv.push_back(ev);
+          xvcred.push_back(crv);
           for (size_t i = 0; i < vv.size(); ++i) mean_v[object][i] += ev[i];
         }
         xc.push_back(ec);
@@ -1671,6 +1680,7 @@ EligProbe run_eligprobe_session(const std::vector<uint8_t>& blob, uint64_t ticks
     out.vision_shuf = holdout_accuracy(xv, shuf, train);
     out.vision_absE = out.trials
         ? abs_v / (double(vv.size()) * double(out.trials)) : 0.0;
+    out.vision_credit = holdout_accuracy(xvcred, y, train);
   }
   out.central = holdout_accuracy(xc, y, train);
   out.credit = holdout_accuracy(xcred, y, train);
@@ -1792,7 +1802,7 @@ bool run_eligprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
   std::printf("  %-5s %-9s %-9s %-9s %-9s %-9s %s\n", "seed", "cen->voc", "shuffled",
               "arc full", "arc match", "mean|e|", "corr(A,B)");
 
-  double sv = 0, svs = 0, sve = 0, svr = 0;
+  double sv = 0, svs = 0, sve = 0, svr = 0, svc = 0;
   uint32_t vn = 0;
   double sc = 0, scs = 0, sa = 0, sam = 0, se = 0, sr = 0, sae = 0, sar = 0;
   double sti = 0, sts = 0, sif = 0, sd = 0, scr = 0, sps = 0, sdv = 0;
@@ -1805,6 +1815,7 @@ bool run_eligprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
     if (!p.ok) { std::printf("  %-5u (inconclusive: %u trials)\n", r, p.trials); continue; }
     ++valid; cn = p.central_n; an = p.arcuate_n; vn = p.vision_n;
     sv += p.vision; svs += p.vision_shuf; sve += p.vision_absE; svr += p.vision_r;
+    svc += p.vision_credit;
     sc += p.central; scs += p.central_shuf; sa += p.arcuate;
     sam += p.arcuate_matched; se += p.central_absE; sr += p.central_r;
     sae += p.arcuate_absE; sar += p.arcuate_r;
@@ -1828,6 +1839,13 @@ bool run_eligprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
                 "        original diagnosis and were measured on a non-participant\n"
                 "        (central->vocal) and on the tract carrying the WORD.\n",
                 sv / n, svs / n, vn, sve / n, svr / n);
+    std::printf("    vision->vocal, CREDIT  %.3f   <- what reward actually\n"
+                "                                    multiplies. E[dw] ~ Cov(R,e) +\n"
+                "                                    E[R]E[e]; the baseline cancels the\n"
+                "                                    second term, so THIS is the row\n"
+                "                                    that decides whether reward can\n"
+                "                                    make the voice conditional.\n",
+                svc / n);
   } else {
     std::printf("    vision->vocal         absent from this genome\n");
   }
