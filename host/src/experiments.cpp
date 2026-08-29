@@ -84,6 +84,8 @@ const Spec kSpecs[] = {
     {"m3probe", 200000, Expect::kPass, Tier::kFast, "derived: 100 trials at 2000 ticks each"},
     {"shapeprobe", 200000, Expect::kPass, Tier::kFast,
      "derived: 100 frames per bank"},
+    {"ctxprobe", kDefaultMinimum, Expect::kPass, Tier::kLong,
+     "derived: the m3 teaching protocol, 5 creatures x 3 arms"},
     {"projprobe", 200000, Expect::kPass, Tier::kFast, "derived: 100 trials at 2000 ticks each"},
     {"gazeprobe", 200000, Expect::kPass, Tier::kFast,
      "derived: 100 trials at 2000 ticks each, per scatter arm"},
@@ -367,6 +369,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "restate") ok = run_restate(dna_blob, ticks, verbose);
   else if (name == "eligprobe") ok = run_eligprobe(dna_blob, ticks, verbose);
   else if (name == "dwprobe") ok = run_dwprobe(dna_blob, ticks, verbose);
+  else if (name == "ctxprobe") ok = run_ctxprobe(dna_blob, ticks, verbose);
   else if (name == "shapeprobe") ok = run_shapeprobe(dna_blob, ticks, verbose);
   else if (name == "projprobe") ok = run_projprobe(dna_blob, ticks, verbose);
   else if (name == "condprobe") ok = run_condprobe(dna_blob, ticks, verbose);

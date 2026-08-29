@@ -1076,8 +1076,28 @@ bool run_m2(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
 }
 
 
+// The context oracle, and it exists to decide one question this project could
+// not otherwise ask. `dwprobe` on `vision->vocal` says a cube session and a ball
+// session write MEASURABLY DIFFERENT weight changes on the v46 creature (ratio
+// 0.71 against its own ceiling, 3 of 3 seeds) — so "the rule writes the same
+// thing either way" is false there. What is left is that the two writes land on
+// the same synapses when the objects ALTERNATE, and undo each other.
+//
+// kByObject hands the creature what it cannot compute: which half of the larynx
+// reward is allowed to reach, chosen by which object is actually present. If
+// interference is the blocker, that separates the two lessons and the voice
+// becomes conditional. kRandom picks the same halves on a coin flip and is the
+// control that has to stay flat — without it, "masking reward helps" could be
+// about reward reaching fewer synapses rather than about the CONDITION.
+//
+// This is an oracle and prices a mechanism; it is not a behaviour the creature
+// has. See `credit`, which established that a per-neuron mask removes lesson
+// interference completely.
+enum class CtxMask { kOff, kByObject, kRandom };
+
 M3Run run_m3_session(const std::vector<uint8_t>& blob, uint64_t ticks, bool paired,
-                     const Caregiver& care, bool verbose, const Capture& cap) {
+                     const Caregiver& care, bool verbose, const Capture& cap,
+                     CtxMask ctx = CtxMask::kOff) {
   M3Run out;
   std::string error;
   Session s;
@@ -1122,6 +1142,9 @@ M3Run run_m3_session(const std::vector<uint8_t>& blob, uint64_t ticks, bool pair
 
   aibaby::Rng rng;
   rng.seed(s.dna.header().seed ^ 0x3EE3u);
+  aibaby::Rng ctx_rng;
+  ctx_rng.seed(s.dna.header().seed ^ 0xC7C7u);
+  const int32_t voc = s.dna.module_with_role(aibaby::ModuleRole::kVocal);
 
   // Recording is off unless a path was asked for, and it is deliberately
   // outside every path that touches the brain or the RNG.
@@ -1158,6 +1181,33 @@ M3Run run_m3_session(const std::vector<uint8_t>& blob, uint64_t ticks, bool pair
     // than one picture. The classifier never sees the retina, so this is not
     // about leakage — it is about whether what reaches the voice generalises.
     const Toy toy = m3_toy(rng, object);
+
+    // Its own RNG stream: drawing the coin flip from `rng` would move every
+    // toy placement after it and make the control arm a different protocol
+    // rather than a different mask.
+    if (ctx != CtxMask::kOff) {
+      aibaby::Network& mnet = s.brain.network();
+      const aibaby::ModuleState& vm = mnet.module(uint32_t(voc));
+      // WITHIN ONE ARTICULATOR GROUP, and the first version of this got it
+      // wrong in a way worth recording. Splitting `vocal` in half by neuron
+      // index splits it ACROSS the nine groups, so a cube lesson could only
+      // touch the bandwidths and a ball lesson only f0 and the low formants —
+      // two lessons on different articulators, which is `capacity`'s orthogonal
+      // case and not naming at all. It read -0.080 and wrecked the echo.
+      //
+      // Naming needs both objects to drive the SAME dimension to DIFFERENT
+      // values. F1 is group 2, its centroid is the readout, and the two halves
+      // of that group are the two ends the centroid can be pulled toward. So
+      // the mask lets a cube lesson potentiate one end and a ball lesson the
+      // other, inside the one knob that carries the answer.
+      const uint32_t g_lo = aibaby::slice_begin(vm.count, aibaby::kVocalGroups, 2);
+      const uint32_t g_hi = aibaby::slice_begin(vm.count, aibaby::kVocalGroups, 3);
+      const uint32_t mid = g_lo + (g_hi - g_lo) / 2;
+      const bool upper = ctx == CtxMask::kByObject ? (object == 1)
+                                                   : ((ctx_rng.next() & 1u) != 0u);
+      if (upper) mnet.set_reward_mask(vm.begin + mid, vm.begin + g_hi);
+      else mnet.set_reward_mask(vm.begin + g_lo, vm.begin + mid);
+    }
 
     if (recording) {
       char text[48];
@@ -6728,6 +6778,124 @@ bool run_vocab(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
   // so `verify` read a milestone this project has never met as newly met — and
   // said so loudly, which is the only reason it was noticed within the minute.
   return pairs_ok && eight_ok;
+}
+
+
+// --- Is interference the blocker? ------------------------------------------
+//
+// The last question this project has that is not already answered. `dwprobe`
+// pointed at `vision->vocal` — the tract that participates, rather than the
+// non-participant every earlier decomposition used — says a cube session and a
+// ball session write MEASURABLY DIFFERENT weight changes on the v46 creature:
+// ratio 0.71 against its own reproducibility ceiling, 3 of 3 seeds, where the
+// shipped retina sits at 1.03. So "the rule writes the same thing whichever
+// object is present" is false there.
+//
+// What is left is that the objects ALTERNATE in the real protocol, so the two
+// writes land on the same synapses and undo each other. `retain` measures that
+// directly (a conflicting second lesson wipes the first, 0.22), `capacity` says
+// two lessons coexist only on orthogonal output dimensions, and `credit` shows
+// a per-neuron reward mask removes the interference completely.
+//
+// So: run the naming protocol three ways and read the milestone's own number.
+//
+//   unmasked        what the creature does today
+//   masked byobject the ORACLE — reward reaches the lower half of the larynx on
+//                   ball trials and the upper half on cube trials, so the two
+//                   lessons cannot overwrite each other
+//   masked random   the CONTROL — the same two halves on a coin flip. Without
+//                   it a win could be about reward reaching fewer synapses
+//                   rather than about the condition, and that is exactly the
+//                   confound that has eaten results here before.
+//
+// Decisive in both directions, and it is why this is worth a run:
+//   byobject >> unmasked with random flat  -> interference IS the blocker, and
+//     a context gate is a mechanism worth building
+//   byobject ~ unmasked                    -> interference is not the blocker
+//     either, and the last standing hypothesis is closed with the others.
+//
+// An oracle prices a mechanism. It is not a behaviour the creature has: the
+// mask is chosen from ground truth the creature cannot compute.
+bool run_ctxprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  aibaby::Dna dna;
+  if (dna.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) return false;
+  constexpr uint32_t kReps = 5;
+  std::printf("  session           %.1f s of simulated life x %u creatures x 3 arms\n",
+              double(ticks) * double(dna.header().sim.dt_ms) / 1000.0, kReps);
+  instrument("ctxprobe", dna.header().seed, kReps, "creatures x 3 arms");
+  std::printf("  the oracle gates REWARD by which object is present. The random\n"
+              "  arm gates it the same amount on a coin flip and must stay flat.\n\n");
+
+  struct Arm { const char* name; CtxMask mask; };
+  const Arm arms[3] = {{"unmasked", CtxMask::kOff},
+                       {"masked by object", CtxMask::kByObject},
+                       {"masked at random", CtxMask::kRandom}};
+  double sum[3] = {0, 0, 0}, sum_shuf[3] = {0, 0, 0}, sum_echo[3] = {0, 0, 0};
+  uint32_t valid[3] = {0, 0, 0};
+  std::vector<double> per[3];
+
+  Caregiver care;
+  std::printf("  %-5s %-18s %-9s %-9s %s\n", "seed", "arm", "voice", "shuffled", "echo");
+  for (uint32_t r = 0; r < kReps; ++r) {
+    std::vector<uint8_t> variant = blob;
+    const uint64_t seed = dna.header().seed + r * 7919ull;
+    std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+    for (int a = 0; a < 3; ++a) {
+      const M3Run run = run_m3_session(variant, ticks, true, care, false, Capture{},
+                                       arms[a].mask);
+      if (!run.ok) {
+        std::printf("  %-5u %-18s (inconclusive)\n", r, arms[a].name);
+        continue;
+      }
+      ++valid[a];
+      sum[a] += run.vocal;
+      sum_shuf[a] += run.shuffled;
+      sum_echo[a] += run.echo;
+      per[a].push_back(run.vocal);
+      std::printf("  %-5u %-18s %-9.3f %-9.3f %.3f\n", r, arms[a].name, run.vocal,
+                  run.shuffled, run.echo);
+    }
+  }
+
+  if (valid[0] < 3 || valid[1] < 3 || valid[2] < 3) {
+    std::printf("\n  ctxprobe INCONCLUSIVE — too few usable creatures.\n");
+    return false;
+  }
+
+  std::printf("\n  %-18s %-9s %-9s %s\n", "arm", "voice", "shuffled", "echo");
+  for (int a = 0; a < 3; ++a) {
+    std::printf("  %-18s %-9.3f %-9.3f %.3f\n", arms[a].name, sum[a] / valid[a],
+                sum_shuf[a] / valid[a], sum_echo[a] / valid[a]);
+  }
+
+  // Paired across creatures, because the arms share a seed and the per-creature
+  // spread is much larger than the difference being looked for.
+  auto paired = [&](int x, int y) {
+    const size_t n = per[x].size() < per[y].size() ? per[x].size() : per[y].size();
+    double m = 0;
+    for (size_t i = 0; i < n; ++i) m += per[x][i] - per[y][i];
+    m /= double(n);
+    double ss = 0;
+    for (size_t i = 0; i < n; ++i) {
+      const double d = (per[x][i] - per[y][i]) - m;
+      ss += d * d;
+    }
+    const double se = n > 1 ? std::sqrt(ss / double(n - 1) / double(n)) : 0.0;
+    return std::pair<double, double>(m, se);
+  };
+  const std::pair<double, double> oracle = paired(1, 0);
+  const std::pair<double, double> control = paired(2, 0);
+  std::printf("\n  oracle - unmasked    %+.3f +/- %.3f SE   <- the question\n", oracle.first,
+              oracle.second);
+  std::printf("  random - unmasked    %+.3f +/- %.3f SE   (must stay flat)\n",
+              control.first, control.second);
+  std::printf("\n    m3's taught-random floor is +/-0.060 across seed families with the\n"
+              "    mechanism absent, so read the first line against about 0.12 as well\n"
+              "    as against its own SE. A gap that clears both, with the second line\n"
+              "    flat, is the first evidence in this project that a CONDITION can be\n"
+              "    made to matter at the larynx.\n");
+  (void)verbose;
+  return true;
 }
 
 }  // namespace aibaby_host

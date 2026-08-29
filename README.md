@@ -915,6 +915,59 @@ while `m3` alternates them, so nothing here shows two mappings coexisting.
 > project has had to ask in some time, and it exists because a probe was pointed
 > at the tract that matters instead of the one it was written for.
 
+### `ctxprobe` — pricing the interference hypothesis, and it does not pay
+
+`dwprobe` on the participating tract left one hypothesis standing: the two
+writes are different, but the objects alternate, so they land on the same
+synapses and undo each other. `ctxprobe` prices that with an oracle. The naming
+protocol runs three ways and the milestone's own readout is scored:
+
+- **unmasked** — what the creature does today;
+- **masked by object** — reward reaches only the lower half of the F1 group on
+  ball trials and only the upper half on cube trials, so the two lessons cannot
+  overwrite each other;
+- **masked at random** — the same two halves on a coin flip.
+
+**The first version of the mask was wrong and is worth recording.** It split
+`vocal` in half by neuron index, which splits it *across* the nine articulator
+groups — a cube lesson could only touch the bandwidths and a ball lesson only
+f0 and the low formants. That is `capacity`'s orthogonal case, not naming. It
+read −0.080 and cost the echo. Naming needs both objects driving the **same**
+dimension to different values, so the mask now lives inside the F1 group, whose
+centroid is the knob that would carry the answer.
+
+Four seed families, 5 creatures × 3 arms each:
+
+| family | unmasked | by object | at random | oracle − unmasked | **oracle − random** |
+|---|---|---|---|---|---|
+| shipped | 0.600 | 0.480 | 0.440 | −0.120 | **+0.040** |
+| 20260901 | 0.520 | 0.480 | 0.380 | −0.040 | **+0.100** |
+| 20260902 | 0.720 | 0.620 | 0.620 | −0.100 | **0.000** |
+| 20260903 | 0.560 | 0.640 | 0.500 | +0.080 | **+0.140** |
+| mean | 0.600 | 0.555 | 0.485 | **−0.045** | **+0.070 ± 0.031 SE** |
+
+**Read the two right-hand columns together.** Against no mask at all the oracle
+is **negative** — masking reward costs more than the condition buys, which is
+consistent with `credit`'s note that the mask runs at about 30% of the learning
+rate. Against a random mask of the same size it is **positive on 4 of 4 with no
+negative, +0.070 ± 0.031 SE**. So the condition is doing *something*: gating by
+which object is present beats gating by a coin flip.
+
+**It is still not a result, for two reasons, and the second is the interesting
+one.** It sits below m3's own cross-family floor of ~0.12. And the random arm
+re-rolls its mask every trial, so it thrashes — a lesson's synapses get reward
+on half its own trials *and* on half the other object's. **"Oracle beats
+random" therefore confounds "the condition matters" with "a consistent mask
+beats an inconsistent one",** and this instrument cannot separate them. The
+control that would is a mask that is consistent but uncorrelated with the
+object, which is awkward to build in a protocol where the objects alternate.
+
+> **Where that leaves it.** Interference is not the blocker in the strong form:
+> removing it by oracle does not make naming work, it makes it slightly worse.
+> The residue is a +0.070 that has a live confound and sits under the floor.
+> G3 stays closed. What this adds is that the last standing hypothesis was
+> priced rather than argued, and the price is on the record.
+
 ## Why G3 is closed, and what would have to be different
 
 G3 asked for a **held-out classifier to tell cube from ball off the baby's own
