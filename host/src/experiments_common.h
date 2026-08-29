@@ -1303,6 +1303,7 @@ bool run_g2(const std::vector<uint8_t>&, uint64_t, bool, const Regime&);
 bool run_g4(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_calibrate(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_snapshot(const std::vector<uint8_t>&, uint64_t, bool);
+bool run_footprint(const std::vector<uint8_t>&, uint64_t, bool);
 
 // What `m3probe` measured, keyed by module name, for a caller that needs the
 // numbers rather than the table. It is an out-parameter on the existing runner

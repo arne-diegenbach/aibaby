@@ -8251,4 +8251,127 @@ bool run_seqprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
   return true;
 }
 
+
+
+// M5's first question, and the one nothing in this project printed: how much
+// memory is this creature?
+//
+// The README has long said the architecture keeps the ESP32 port "a build
+// question rather than a rewrite". The portability half is true — core includes
+// stddef.h, stdint.h, math.h on the build path and <type_traits>, with no STL
+// container, no allocator, no I/O and no thread. The fit half was never
+// measured, and it is wrong by two orders of magnitude: the shipped genome
+// needs 108.70 MB against an ESP32's 520 KB of SRAM and an ESP32-S3's 8 MB
+// ceiling with PSRAM.
+//
+// 99.1% of that is the synapse pool, which is sized n_max * max_out_degree —
+// the worst case the GENOME PERMITS, not what the creature wires. At birth it
+// uses 1102 of 9216 neuron slots and 33,248 of 3,457,024 synapse slots, which
+// is under one percent.
+//
+// The two fields are not equally free, and the difference is the reason this
+// prints an `in` column:
+//
+//   max_out_degree slices the REVERSE index as well as the forward one, so a
+//   module that is mostly a TARGET is bounded by its in-degree. `vocal` wires
+//   16 out-synapses per neuron and receives 85. Sizing it off the out-degree
+//   drops 158 reverse entries and quietly builds a different creature — which
+//   is worse than losing a synapse, because a synapse with no reverse entry
+//   depresses and never potentiates. Verified: central 256, auditory 128,
+//   vision 96 and vocal 128 are bit-identical to the shipped creature and take
+//   the arena to 50.70 MB; vocal at 64 is not.
+//
+//   n_max is BOTH the arena size and the growth cap — below_cap() is
+//   live() < capacity — and it re-rolls the wiring. Shrinking it was tested on
+//   all five non-growable modules and every one built a different creature.
+//
+// The dead provisioning is worth seeing plainly: growable() is true only for
+// kAssociation, so on the shipped body plan 4,608 of 9,216 neuron slots belong
+// to modules the growth code can never extend. That headroom is unreachable by
+// construction and still cannot be reclaimed without a re-baseline.
+bool run_footprint(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)ticks; (void)verbose;
+  aibaby::Dna dna;
+  if (dna.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) return false;
+  std::string error;
+  Session s;
+  if (!s.init(blob, error)) { std::printf("  setup failed: %s\n", error.c_str()); return false; }
+  const aibaby::Network& net = s.brain.network();
+
+  const size_t all = aibaby::Brain::required_bytes(dna);
+  const size_t nb = aibaby::Network::required_bytes(dna);
+  std::printf("  arena             %zu B  (%.1f KB, %.2f MB)\n", all, all / 1024.0,
+              all / 1048576.0);
+  std::printf("    of which Network %.2f MB (%.1f%%)\n", nb / 1048576.0,
+              100.0 * double(nb) / double(all));
+  // Named parts rather than a bare number: "108 MB" means nothing without the
+  // thing it has to fit inside.
+  const struct { const char* name; double bytes; } targets[] = {
+      {"ESP32 SRAM", 520.0 * 1024}, {"ESP32-S3 SRAM", 512.0 * 1024},
+      {"ESP32-S3 + PSRAM", 8.0 * 1024 * 1024}};
+  for (const auto& t : targets) {
+    std::printf("    vs %-18s %6.1fx too large\n", t.name, double(all) / t.bytes);
+  }
+
+  std::vector<uint32_t> deg(net.total_capacity(), 0), ind(net.total_capacity(), 0);
+  for (uint32_t a = 0; a < dna.module_count(); ++a) {
+    for (uint32_t b = 0; b < dna.module_count(); ++b) {
+      const uint32_t n = net.tract_synapses(a, b, nullptr, 0);
+      if (!n) continue;
+      std::vector<uint32_t> syn(n);
+      net.tract_synapses(a, b, syn.data(), n);
+      for (uint32_t k = 0; k < n; ++k) {
+        deg[net.synapse_source(syn[k])] += 1;
+        ind[net.synapse_target(syn[k])] += 1;
+      }
+    }
+  }
+
+  std::printf("\n  %-11s %6s %6s %5s %5s %5s %5s %8s %s\n", "module", "n_max", "live",
+              "cap", "out", "in", "bind", "headroom", "grows");
+  size_t pool = 0, tight = 0, dead = 0;
+  for (uint32_t m = 0; m < dna.module_count(); ++m) {
+    const aibaby::ModuleState& ms = net.module(m);
+    uint32_t mx = 0, mi = 0;
+    for (uint32_t i = ms.begin; i < ms.begin + ms.count; ++i) {
+      if (deg[i] > mx) mx = deg[i];
+      if (ind[i] > mi) mi = ind[i];
+    }
+    const uint32_t bind = mx > mi ? mx : mi;
+    const uint32_t cap = dna.module(m).max_out_degree;
+    const bool grows = net.growable(m);
+    pool += size_t(dna.module(m).n_max) * cap;
+    tight += size_t(dna.module(m).n_max) * (bind ? bind : 1);
+    if (!grows) dead += dna.module(m).n_max - ms.live();
+    std::printf("  %-11s %6u %6u %5u %5u %5u %5u %7.1fx %s\n", dna.module(m).name,
+                dna.module(m).n_max, ms.live(), cap, mx, mi, bind,
+                bind ? double(cap) / double(bind) : 0.0, grows ? "yes" : "no");
+  }
+  std::printf("\n  synapse pool      %zu slots, %u wired (%.2f%%)\n", pool,
+              net.live_synapses(), 100.0 * double(net.live_synapses()) / double(pool));
+  std::printf("  pool if every cap matched its binding degree: %zu (%.1fx smaller)\n",
+              tight, tight ? double(pool) / double(tight) : 0.0);
+  std::printf("  neuron slots on modules that CANNOT grow: %zu of %u\n"
+              "    growable() is kAssociation only, so this headroom is unreachable\n"
+              "    by construction — and n_max re-rolls the wiring, so reclaiming it\n"
+              "    still costs a re-baseline of every number in the project.\n",
+              dead, dna.total_neurons_max());
+
+  // The real invariant, and the reason this is kPass rather than a print: a
+  // genome whose caps are over-subscribed is not the genome the DNA describes,
+  // and a dropped REVERSE entry leaves a synapse that depresses and never
+  // potentiates. Tightening max_out_degree for M5 is exactly the edit that
+  // trips this, so the suite should hold it.
+  const uint32_t ds = net.dropped_synapses(), dr = net.dropped_reverse();
+  std::printf("\n  dropped           %u synapses, %u reverse entries\n", ds, dr);
+  if (ds || dr) {
+    std::printf("  footprint FAIL — the caps are over-subscribed, so this creature is\n"
+                "  not the one the genome describes. Raise the max_out_degree of the\n"
+                "  module named in the build warning.\n");
+    return false;
+  }
+  std::printf("  footprint PASS — nothing dropped; the built brain is the genome's.\n");
+  return true;
+}
+
 }  // namespace aibaby_host

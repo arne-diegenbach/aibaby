@@ -438,14 +438,14 @@ of an hour.
 | **M2** vision | **done** — camera → retina → B3 → B1, discriminates present from absent at 98%, and 86% with firing rate divided out |
 | **M3** cross-modal association | **built and measured, G3 not met — and now settled rather than open.** The baby echoes a word it hears (0.75) and the seen object *does* now reach the larynx (0.654, up from 0.515, via `vision→vocal`), yet naming still reads taught−random **−0.014** with 0 of 5 creatures over the 0.75 bar. Delivery is no longer the limit; conditioning is |
 | **M4** growth and sleep | **done** — **G4 passes**: the creature never grows while it is still learning, grows only on a detected plateau, and never passes the DNA cap; myelination, pruning and replay all run |
-| M5 embedded | not started |
+| M5 embedded | **started, and the first measurement moves the goalposts.** `--experiment footprint` reports what nothing printed before: the shipped genome needs **108.70 MB**, against an ESP32's 520 KB of SRAM and an ESP32-S3's 8 MB ceiling with PSRAM — **13.6× too large**. 99.1% of that is the synapse pool, sized `n_max × max_out_degree`, and the creature wires **0.96%** of it. Tightening `max_out_degree` is free and verified bit-identical (108.70 → 50.70 MB); the rest is `n_max`, which is also the growth cap and re-rolls the wiring |
 
 Every number on this page comes from the genome in [dna/default.toml](dna/default.toml)
 as it currently stands. **The whole suite above passes except `m3`** — G1,
 calibrate, babble, audio, vision, M2, G2, sleep, G4 and snapshot are all green,
-and G3 is the one milestone still open. Shipped hash `23c4eb2c7c45d05c`;
-`--experiment verify` reads 19 of 19 as expected on the fast tier and
-`verify-long` 38 of 38 and `verify-teach` the seven hour-scale ones — see [The suite, both tiers](#the-suite-both-tiers).
+and G3 is the one milestone still open. Shipped hash `ad96f882becbee92`;
+`--experiment verify` reads 20 of 20 as expected on the fast tier and
+`verify-long` 40 of 40 and `verify-teach` the seven hour-scale ones — see [The suite, both tiers](#the-suite-both-tiers).
 
 **What teaching can and cannot do is now measured rather than guessed.** Three
 experiments bound it. `teachsound` (M1c) says praise alone moves the voice toward
@@ -5836,8 +5836,17 @@ dna/      Genomes.
 ```
 
 The core never sees a socket, a file, or a thread. The host is thin and the
-browser is a peripheral, which is what keeps the ESP32 port (M5) a build
-question rather than a rewrite.
+browser is a peripheral.
+
+**That makes M5 not a rewrite. It does not make it a build question, which is
+what this paragraph claimed until 2026-08-29.** The portability half is real —
+core includes `stddef.h`, `stdint.h`, `math.h` on the build path and
+`<type_traits>`, with no STL container, no allocator, no I/O and no thread. The
+*fit* was never measured, and the creature is **13.6× larger than the biggest
+part it was meant to run on**. See `--experiment footprint`, and the M5 row in
+[Where the project stands](#where-the-project-stands). M5 is a provisioning
+question: the arena is sized for a worst case the genome permits and the
+creature uses under one percent of it.
 
 ## References
 

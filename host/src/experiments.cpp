@@ -75,6 +75,8 @@ const Spec kSpecs[] = {
     {"m2", kDefaultMinimum, Expect::kPass, Tier::kFast, "no requirement"},
     {"babble", kDefaultMinimum, Expect::kPass, Tier::kFast, "no requirement"},
     {"calibrate", kDefaultMinimum, Expect::kPass, Tier::kFast, "no requirement"},
+    {"footprint", kDefaultMinimum, Expect::kPass, Tier::kFast,
+     "no requirement: it wires one creature and reads it, no session"},
     {"pcprobe", kDefaultMinimum, Expect::kPass, Tier::kFast, "no requirement"},
     {"dwprobe", kDefaultMinimum, Expect::kPass, Tier::kFast, "no requirement"},
     {"v1probe", kDefaultMinimum, Expect::kGuard, Tier::kFast,
@@ -385,6 +387,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "g4") ok = run_g4(dna_blob, ticks, verbose);
   else if (name == "g2") ok = run_g2(dna_blob, ticks, verbose, Regime{});
   else if (name == "snapshot") ok = run_snapshot(dna_blob, ticks, verbose);
+  else if (name == "footprint") ok = run_footprint(dna_blob, ticks, verbose);
   else if (name == "g2probe") {
     // Diagnostic ceiling: dense, immediate, full-strength feedback.
     Regime r;
@@ -445,6 +448,8 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
               "    projprobe     can a sparse tract carry this code at all — the same\n"
               "                  activity pushed through a projection in software\n"
               "    condprobe     g3probe with the condition delivered by ear instead\n"
+              "    footprint     the arena this genome needs, what the creature\n"
+              "                  actually wires, and what M5 has to fit inside\n"
               "                  of by eye, so a null cannot be blamed on delivery\n"
               "    apicalprobe   does the apical compartment run, and does the\n"
               "                  plateau carry the object (DNA v25)\n"
