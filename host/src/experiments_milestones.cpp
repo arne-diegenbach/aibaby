@@ -2909,6 +2909,9 @@ struct ImitateWindow {
   // still classifies at 1.000 is not memory, it is a stimulus that has not
   // finished arriving.
   std::vector<std::vector<double>> heard;
+  // Vocal's own spikes, per neuron, per trial — 126 numbers rather than the
+  // nine the motor groups reduce them to.
+  std::vector<std::vector<double>> vocal;
   // The creature's own echo formants in this window, per trial.
   std::vector<double> f1, f2;
 };
@@ -2936,6 +2939,10 @@ struct ImitateRun {
   std::vector<std::vector<double>> scored_voice;
   std::vector<std::vector<double>> scored_heard;
   std::vector<int> scored_labels;
+  // VOCAL'S PER-NEURON activity in the scored window, per trial. The question
+  // it exists for: is the vocabulary ceiling a limit on the creature or on the
+  // nine motor scalars everything else is read through?
+  std::vector<std::vector<double>> scored_vocal;
   // The creature's own ECHO formants in the scored window, per trial. Kept
   // because `vocab` needs to ask whether a pair is hard because the two vowels
   // are close, or because the creature cannot SAY them differently — and those
@@ -3019,6 +3026,10 @@ ImitateRun run_imitate_session(const std::vector<uint8_t>& blob, uint64_t ticks,
   const int32_t aud_m = s.dna.module_with_role(aibaby::ModuleRole::kAuditory);
   const uint32_t aud_n =
       aud_m >= 0 ? s.brain.network().module(uint32_t(aud_m)).count : 0u;
+  const int32_t voc_m = s.dna.module_with_role(aibaby::ModuleRole::kVocal);
+  const uint32_t voc_n =
+      voc_m >= 0 ? s.brain.network().module(uint32_t(voc_m)).count : 0u;
+  if (voc_m < 0) return out;
 
   const uint32_t n_trials = uint32_t(ticks / kTrialTicks);
   aibaby::Rng rng;
@@ -3047,6 +3058,8 @@ ImitateRun run_imitate_session(const std::vector<uint8_t>& blob, uint64_t ticks,
     M3Record rec[kWindows];
     std::vector<double> aud_counts[kWindows];
     for (size_t k = 0; k < kWindows; ++k) aud_counts[k].assign(aud_n, 0.0);
+    std::vector<double> voc_counts[kWindows];
+    for (size_t k = 0; k < kWindows; ++k) voc_counts[k].assign(voc_n, 0.0);
     uint32_t last_frame = 0;
     bool slept = false;
 
@@ -3087,6 +3100,24 @@ ImitateRun run_imitate_session(const std::vector<uint8_t>& blob, uint64_t ticks,
           for (uint32_t j = 0; j < net.spike_count(); ++j) {
             const uint32_t i = net.spikes()[j];
             if (i >= am.begin && i < am.begin + aud_n) aud_counts[k][i - am.begin] += 1.0;
+          }
+        }
+      }
+      // VOCAL'S OWN SPIKES, per neuron. Everything this experiment scores is
+      // read through the nine motor groups, and `m3probe` says the module
+      // carries far more than they express — the heard word reads 0.980 per
+      // neuron at vocal and 0.380 on the centroid. So a vocabulary that will
+      // not hold apart in the articulators may still be present in the module,
+      // and those are completely different findings: one is a limit on the
+      // creature, the other a limit on the nine knobs the larynx is steered by.
+      {
+        const aibaby::Network& net = s.brain.network();
+        const aibaby::ModuleState& vm = net.module(uint32_t(voc_m));
+        for (size_t k = 0; k < kWindows; ++k) {
+          if (t < windows[k].from || t >= windows[k].to) continue;
+          for (uint32_t j = 0; j < net.spike_count(); ++j) {
+            const uint32_t i = net.spikes()[j];
+            if (i >= vm.begin && i < vm.begin + voc_n) voc_counts[k][i - vm.begin] += 1.0;
           }
         }
       }
@@ -3133,6 +3164,7 @@ ImitateRun run_imitate_session(const std::vector<uint8_t>& blob, uint64_t ticks,
         windows[k].f2.push_back(rec[k].f2 / nf);
       }
       if (aud_m >= 0) windows[k].heard.push_back(aud_counts[k]);
+      windows[k].vocal.push_back(voc_counts[k]);
       windows[k].timbre.push_back(m3_timbre_features(rec[k]));
       if (has_timbre) {
         const double n = double(rec[k].frames);
@@ -3190,6 +3222,7 @@ ImitateRun run_imitate_session(const std::vector<uint8_t>& blob, uint64_t ticks,
     out.voiced_frac[k] = fsum[k] > 0.0 ? vsum[k] / fsum[k] : 0.0;
   }
   out.scored_voice = windows[2].voice;
+  out.scored_vocal = windows[2].vocal;
   out.scored_heard = windows[2].heard;
   out.scored_labels = labels;
   out.scored_f1 = windows[2].f1;
@@ -6258,6 +6291,14 @@ bool run_vocab(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
   uint32_t echo_n[kVocabCount] = {0};
   uint32_t n_ok = 0;
   double eight_way = 0.0;
+  double eight_neuron = 0.0;
+  uint32_t eight_neuron_n = 0;
+  double eight_neuron_shuf = 0.0;
+  uint32_t eight_neuron_sn = 0;
+  double eight_artic = 0.0;
+  uint32_t eight_artic_n = 0;
+  aibaby::Rng rng_shuf;
+  rng_shuf.seed(dna.header().seed ^ 0x5F1Fu);
   uint32_t eight_n = 0;
 
   for (uint32_t r = 0; r < kReps; ++r) {
@@ -6307,15 +6348,55 @@ bool run_vocab(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
     // eight — that needs every boundary to hold at once, and this is the number
     // that says whether it does. Chance is 0.125.
     {
-      std::vector<std::vector<double>> mu(kVocabCount);
-      std::vector<uint32_t> cnt(kVocabCount, 0);
+      // GUARDED AND UNGUARDED, both. The pairwise table above was moved to the
+      // articulators because the wide readout can pass on "one word makes it
+      // louder" — and this block was left on `scored_voice`, which is the nine
+      // groups PLUS loudness and voicing. That mattered the moment M1d shipped:
+      // the answering burst is louder by construction, so an unguarded
+      // one-of-eight is exactly where a spurious gain would land. Both are
+      // computed here and both are printed; the guarded one is the claim.
+      std::vector<std::vector<double>> mu(kVocabCount), amu(kVocabCount);
+      std::vector<uint32_t> cnt(kVocabCount, 0), acnt(kVocabCount, 0);
       const size_t half = p.scored_labels.size() / 2;
+      const bool have_artic = p.scored_artic.size() == p.scored_labels.size();
       for (size_t t = 0; t < half; ++t) {
         const int L = p.scored_labels[t];
         if (L < 0 || L >= int(kVocabCount)) continue;
         if (mu[L].empty()) mu[L].assign(p.scored_voice[t].size(), 0.0);
         for (size_t d = 0; d < mu[L].size(); ++d) mu[L][d] += p.scored_voice[t][d];
         ++cnt[L];
+        if (have_artic) {
+          if (amu[L].empty()) amu[L].assign(p.scored_artic[t].size(), 0.0);
+          for (size_t d = 0; d < amu[L].size(); ++d) amu[L][d] += p.scored_artic[t][d];
+          ++acnt[L];
+        }
+      }
+      if (have_artic) {
+        bool a_ok = true;
+        for (uint32_t k = 0; k < kVocabCount; ++k) {
+          if (acnt[k] < 2) { a_ok = false; break; }
+          for (double& v : amu[k]) v /= double(acnt[k]);
+        }
+        if (a_ok) {
+          uint32_t ah = 0, at = 0;
+          for (size_t tt = half; tt < p.scored_labels.size(); ++tt) {
+            const int L = p.scored_labels[tt];
+            if (L < 0 || L >= int(kVocabCount)) continue;
+            int best = -1;
+            double bd = 0.0;
+            for (uint32_t k = 0; k < kVocabCount; ++k) {
+              double d2 = 0.0;
+              for (size_t d = 0; d < amu[k].size() && d < p.scored_artic[tt].size(); ++d) {
+                const double e = p.scored_artic[tt][d] - amu[k][d];
+                d2 += e * e;
+              }
+              if (best < 0 || d2 < bd) { bd = d2; best = int(k); }
+            }
+            if (best == L) ++ah;
+            ++at;
+          }
+          if (at > 0) { eight_artic += double(ah) / double(at); ++eight_artic_n; }
+        }
       }
       bool usable = true;
       for (uint32_t k = 0; k < kVocabCount; ++k) {
@@ -6341,6 +6422,101 @@ bool run_vocab(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
           ++tot;
         }
         if (tot > 0) { eight_way += double(hit) / double(tot); ++eight_n; }
+      }
+    }
+
+    // THE SAME QUESTION ON VOCAL'S OWN SPIKES. Everything above is read
+    // through the nine motor groups, and `m3probe` says the module carries far
+    // more than they express: the heard word reads 0.980 per neuron at vocal
+    // and 0.380 on the centroid. If eight words hold apart in the module but
+    // not in the articulators, the ceiling is the READOUT — a limit on the nine
+    // knobs the larynx is steered by, not on the creature. Those are different
+    // findings with different fixes, and the pairwise table cannot tell them
+    // apart because it only ever sees the knobs.
+    //
+    // Identical estimator, identical trials, identical split: the only thing
+    // that changes is which vector a trial is.
+    if (!p.scored_vocal.empty() && p.scored_vocal.size() == p.scored_labels.size()) {
+      std::vector<std::vector<double>> mu(kVocabCount);
+      std::vector<uint32_t> cnt(kVocabCount, 0);
+      const size_t half = p.scored_labels.size() / 2;
+      for (size_t t = 0; t < half; ++t) {
+        const int L = p.scored_labels[t];
+        if (L < 0 || L >= int(kVocabCount)) continue;
+        if (mu[L].empty()) mu[L].assign(p.scored_vocal[t].size(), 0.0);
+        for (size_t d = 0; d < mu[L].size(); ++d) mu[L][d] += p.scored_vocal[t][d];
+        ++cnt[L];
+      }
+      bool usable = true;
+      for (uint32_t k = 0; k < kVocabCount; ++k) {
+        if (cnt[k] < 2) { usable = false; break; }
+        for (double& v : mu[k]) v /= double(cnt[k]);
+      }
+      if (usable) {
+        uint32_t hit = 0, tot = 0;
+        for (size_t t = half; t < p.scored_labels.size(); ++t) {
+          const int L = p.scored_labels[t];
+          if (L < 0 || L >= int(kVocabCount)) continue;
+          int best = -1;
+          double bd = 0.0;
+          for (uint32_t k = 0; k < kVocabCount; ++k) {
+            double d2 = 0.0;
+            for (size_t d = 0; d < mu[k].size() && d < p.scored_vocal[t].size(); ++d) {
+              const double e = p.scored_vocal[t][d] - mu[k][d];
+              d2 += e * e;
+            }
+            if (best < 0 || d2 < bd) { bd = d2; best = int(k); }
+          }
+          if (best == L) ++hit;
+          ++tot;
+        }
+        if (tot > 0) { eight_neuron += double(hit) / double(tot); ++eight_neuron_n; }
+
+        // THE DIMENSIONALITY CONTROL. 126 dimensions against 8 classes is a far
+        // richer space than 9, and a nearest-centroid estimator can gain from
+        // dimensionality alone — so a higher score is not by itself evidence
+        // that the module holds more. Shuffle the labels and rebuild the
+        // centroids on the SAME 126 dimensions: with no information in the
+        // labels this must sit at chance whatever the width. If it does not,
+        // the comparison above is about the estimator and not the creature.
+        std::vector<int> shuf(p.scored_labels);
+        for (size_t i = shuf.size(); i > 1; --i) {
+          std::swap(shuf[i - 1], shuf[rng_shuf.next() % i]);
+        }
+        std::vector<std::vector<double>> smu(kVocabCount);
+        std::vector<uint32_t> scnt(kVocabCount, 0);
+        for (size_t tt = 0; tt < half; ++tt) {
+          const int L = shuf[tt];
+          if (L < 0 || L >= int(kVocabCount)) continue;
+          if (smu[L].empty()) smu[L].assign(p.scored_vocal[tt].size(), 0.0);
+          for (size_t d = 0; d < smu[L].size(); ++d) smu[L][d] += p.scored_vocal[tt][d];
+          ++scnt[L];
+        }
+        bool s_ok = true;
+        for (uint32_t k = 0; k < kVocabCount; ++k) {
+          if (scnt[k] < 2) { s_ok = false; break; }
+          for (double& v : smu[k]) v /= double(scnt[k]);
+        }
+        if (s_ok) {
+          uint32_t sh = 0, st = 0;
+          for (size_t tt = half; tt < shuf.size(); ++tt) {
+            const int L = shuf[tt];
+            if (L < 0 || L >= int(kVocabCount)) continue;
+            int best = -1;
+            double bd = 0.0;
+            for (uint32_t k = 0; k < kVocabCount; ++k) {
+              double d2 = 0.0;
+              for (size_t d = 0; d < smu[k].size() && d < p.scored_vocal[tt].size(); ++d) {
+                const double e = p.scored_vocal[tt][d] - smu[k][d];
+                d2 += e * e;
+              }
+              if (best < 0 || d2 < bd) { bd = d2; best = int(k); }
+            }
+            if (best == L) ++sh;
+            ++st;
+          }
+          if (st > 0) { eight_neuron_shuf += double(sh) / double(st); ++eight_neuron_sn; }
+        }
       }
     }
   }
@@ -6453,6 +6629,37 @@ bool run_vocab(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
   std::printf("\n  %u creatures, %zu pairs, scored on the ARTICULATORS: mean %.3f,\n"
               "  %u of %zu at or above 0.75. Unguarded it would read %.3f.\n",
               n_ok, rows.size(), mean, above, rows.size(), mean_unguarded);
+  // THE READOUT COMPARISON. Same estimator, same trials, same split — the only
+  // difference is whether a trial is nine motor scalars or vocal's 126 neurons.
+  if (eight_neuron_n > 0) {
+    const double en = eight_neuron / eight_neuron_n;
+    if (eight_neuron_sn > 0) {
+      std::printf("\n  126-dimension shuffled control: %.3f (must sit at 0.125 — a\n"
+                  "    nearest-centroid estimator can gain from width alone)\n",
+                  eight_neuron_shuf / eight_neuron_sn);
+    }
+    std::printf("\n  one of eight on VOCAL'S OWN SPIKES:  %.3f (chance 0.125)\n"
+                "    against %.3f through the nine motor groups. Same estimator,\n"
+                "    same trials, same split; the only change is which vector a\n"
+                "    trial is. %s\n",
+                en, eight_n ? eight_way / eight_n : 0.0,
+                en >= (eight_n ? eight_way / eight_n : 0.0) + 0.15 &&
+                        (eight_neuron_sn == 0 ||
+                         eight_neuron_shuf / eight_neuron_sn < 0.20)
+                    ? "THE CEILING IS THE READOUT — the module holds the\n"
+                      "    vocabulary and the nine knobs cannot express it."
+                    : "The module does NOT hold what the knobs miss, so the\n"
+                      "    ceiling is upstream of the larynx, not in its\n"
+                      "    parameterisation.");
+  }
+  if (eight_artic_n > 0) {
+    std::printf("\n  one of eight on the ARTICULATORS: %.3f (chance 0.125)\n"
+                "    <- THE CLAIM. Drops loudness and voicing, which the row below\n"
+                "    does not, and M1d made the answering burst louder by\n"
+                "    construction — so an unguarded vocabulary score is exactly\n"
+                "    where a spurious gain would land.\n",
+                eight_artic / eight_artic_n);
+  }
   std::printf("  one of eight, nearest centroid on held-out trials: %.3f (chance 0.125)\n",
               eight);
   std::printf("\n  A pairwise table saying every pair is separable does NOT say a word\n"

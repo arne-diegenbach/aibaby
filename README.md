@@ -5429,6 +5429,51 @@ per-window arrays (a segfault), `kScoredWindows` (the bound), and now this. They
 should be sized from one constant rather than repeated as literals; a fourth
 instance is likely.
 
+#### The vocabulary ceiling is upstream of the larynx, not in its nine knobs
+
+`m3probe` reads the heard word out of `vocal` at **0.980 per neuron** and
+**0.380 on the centroid**, so the module plainly carries more than the nine
+motor groups express. That suggests an obvious explanation for the vocabulary
+ceiling: the brain holds eight words and the knobs cannot express them. If true
+it would be a *readout* limit — a different problem from G3's wall, and a
+tractable one.
+
+`vocab` now scores one-of-eight on `vocal`'s own 126 neurons alongside the motor
+groups. Identical estimator, identical trials, identical split; the only change
+is which vector a trial is.
+
+| readout | rebound OFF | rebound ON |
+|---|---|---|
+| `vocal` per-neuron (126) | 0.129 | 0.234 |
+| **articulators (9, guarded)** | **0.325** | **0.344** |
+| unguarded (11) | 0.210 | 0.371 |
+| 126-dim shuffled control | — | 0.149 |
+
+**The module does not hold what the knobs miss.** Per-neuron scores *below* the
+articulators in both arms, and at 0.129 with the rebound off it is at the
+shuffled control's own level. The nine knobs are the better readout, not the
+bottleneck — each group's centroid averages noise that raw counts carry. So the
+ceiling is upstream of the larynx and the readout hypothesis is refuted.
+
+**And a 76% improvement that is not one.** Unguarded one-of-eight reads 0.210
+with the rebound off and 0.371 with it on, which looks like M1d substantially
+enlarging the vocabulary. Guarded, it is **0.325 -> 0.344**: nothing. The jump
+lives entirely in loudness and voicing.
+
+The reasoning that nearly published it is worth recording. Seeing guarded 0.344
+against unguarded 0.371 in the ON arm, the conclusion drawn was "the guard costs
+only 0.027, so the gain is not loudness" — comparing guarded against unguarded
+*within one arm*, when the question requires guarded *across* arms. With the
+rebound off the guarded readout **beats** the unguarded one, 0.325 against
+0.210: adding loudness and voicing actively hurts there. The rebound did not add
+word information, it changed how the unguarded channels behave. Only the
+same-binary A/B could show that.
+
+The A/B was run for a different reason — the recorded 0.210 predated a window
+addition and an out-of-bounds fix, so the comparison crossed a code change. The
+OFF arm reproduced 0.210 **exactly**, so the record was sound and the control
+was unnecessary for its stated purpose. It caught the real error anyway.
+
 ### Three verify tiers, because the second one had become unrunnable
 
 The teaching experiments each raise a creature through several phases of a life
