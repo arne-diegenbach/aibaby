@@ -1527,6 +1527,7 @@ bool run_m3(const std::vector<uint8_t>& blob, uint64_t ticks, const Caregiver& c
   double sum[2][15] = {{0}};
   uint32_t valid[2] = {0, 0};
   uint32_t above = 0;
+  std::vector<double> gap;
   uint32_t beat_control = 0;
 
   for (uint32_t r = 0; r < replicates; ++r) {
@@ -1568,6 +1569,9 @@ bool run_m3(const std::vector<uint8_t>& blob, uint64_t ticks, const Caregiver& c
     if (!run[0].ok || !run[1].ok) continue;
     if (run[0].vocal >= 0.75) ++above;
     if (run[0].vocal > run[1].vocal) ++beat_control;
+    // The paired difference, kept per creature so the gap below can carry its
+    // own error bar instead of being read as a number.
+    gap.push_back(run[0].vocal - run[1].vocal);
   }
 
   const uint32_t need = replicates < 3 ? replicates : 3;
@@ -1595,6 +1599,31 @@ bool run_m3(const std::vector<uint8_t>& blob, uint64_t ticks, const Caregiver& c
               paired_echo);
   std::printf("    at or above 0.75     %u of %u creatures\n", above, valid[0]);
   std::printf("    beat its own control %u of %u creatures\n", beat_control, valid[0]);
+  // THE FLOOR, and this line exists because the number above it was read as a
+  // result for months. `taught - random` is a difference of two small means and
+  // it has a spread that has nothing to do with any mechanism.
+  //
+  // Two scales, and both are needed. WITHIN a run the paired per-creature
+  // differences give an error bar directly, printed here. ACROSS runs the floor
+  // was measured on 2026-08-30 by running the control genome — where the
+  // mechanism is absent by construction — on four seed families: it read
+  // +0.060 / -0.060 / +0.060 / -0.060, mean 0.000, **spread 0.120**. That is
+  // the same floor `pairprobe` reports at 0.115 on a different metric, arrived
+  // at independently, and it is the number a cross-family claim has to clear.
+  if (gap.size() >= 2) {
+    double mean = 0;
+    for (double g : gap) mean += g;
+    mean /= double(gap.size());
+    double ss = 0;
+    for (double g : gap) ss += (g - mean) * (g - mean);
+    const double se = std::sqrt(ss / double(gap.size() - 1) / double(gap.size()));
+    std::printf("    taught - random      %+.3f +/- %.3f SE over %zu paired creatures\n",
+                mean, se, gap.size());
+    std::printf("                         a gap under 2 SE is not a result, and the\n"
+                "                         control genome swings +/-0.060 across seed\n"
+                "                         families with the mechanism absent — so a\n"
+                "                         cross-family claim needs about 0.12.\n");
+  }
   std::printf("  picture drives the voice the way the word does (cosine, 0 = unrelated)\n");
   std::printf("    named consistently   %+.3f\n", paired_align);
   std::printf("    named at random      %+.3f\n", control_align);

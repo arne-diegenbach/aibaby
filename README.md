@@ -864,6 +864,58 @@ answer was yes and it is still yes. The tract was never the binding constraint �
 the step from `vocal`'s population to nine scalars is, and DNA v46 does nothing
 about that. Ships off, pinned in `mechverify` at `9945f7d9b1d66af8`.
 
+### The oracle's ordering cannot be wired — and that reading of it was mine
+
+The oracle arm said the object is in `vocal`'s slices and index order hides it,
+worth +0.303 ± 0.070 in centroid d′². This page then said that names the
+target: *"an ordered map into `vocal`, with the ordering arriving from a
+coherent upstream code rather than from reward."* DNA v46 supplied exactly that
+coherent upstream code, and DNA v43's `kTopographic` supplies the map. So the
+composition was built and measured, and **it does not work.**
+
+`vision→vocal`, `kTopographic`, source range the whole shape bank, destination
+the F1 group — annulus number onto position within the slice, which is the
+permutation the oracle applies by hand. Weight is explicitly not a derived
+constant, so it was swept.
+
+On the shipped seed the dose-response is as clean as anything in this project:
+
+| weight | 0.0 | 0.14 | 0.35 | 0.70 |
+|---|---|---|---|---|
+| F1 d′ | −0.199 | +0.400 | +0.804 | **+1.242** |
+| voice | 0.580 | 0.620 | 0.700 | **0.740** |
+
+Monotone over a 6× range in both the targeted knob and the milestone quantity.
+**It is the seventh single-seed high in this project's history.** Two of the
+other three seeds in that sweep collapse above 0.14, and at eight families
+against a weight-0 control that has the same wiring:
+
+| | F1 d′ delta | voice delta |
+|---|---|---|
+| mean over 8 seeds | **+0.172 ± 0.225 SE** | **+0.048 ± 0.040 SE** |
+| sign | 6 of 8 positive, two large negatives (−1.087, −0.013) | 6 of 8 |
+
+0.8 SE and 1.2 SE. Null on both, and the two biggest numbers in the F1 column
+point in opposite directions (+1.003 on the shipped seed, −1.087 on 20260907).
+
+> **The correction, and it is about how the oracle should have been read.** The
+> oracle derives its ordering from *that creature's own training deltas* — it is
+> a **learned** ordering, not a geometric one. A fixed map from an ordered
+> source cannot supply it, because which of `vocal`'s neurons carry the object
+> is a fact about that creature's random wiring and not about any axis outside
+> it. So the oracle's +0.303 is not a route. It is another statement of the same
+> wall: the ordering would have to be learned, and learning an ordering is what
+> eight learning rules could not do.
+>
+> Reading it as "names the target" was mine and it was wrong. The arm is still a
+> correct measurement of an upper bound; it was never a design.
+
+**And `m3` now prints its own floor**, because this page quoted the shipped
+creature's taught−random as a number for months. It reads **+0.060 ± 0.040 SE
+over 5 paired creatures** — 1.5 SE, not a result — with a note that the control
+genome swings ±0.060 across seed families with the mechanism absent by
+construction, so a cross-family claim needs about 0.12.
+
 Two mechanisms carry the change since M4, and neither was aimed at the goal it
 hit. **Per-module homeostasis (DNA v9)** came from asking why praise did not
 survive its own session, and it stopped the decay. **Directional exploration
