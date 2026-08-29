@@ -2,8 +2,13 @@
 //
 // The core is headless and freestanding-ish: no exceptions, no RTTI, no STL,
 // no I/O, no threads, no allocation outside the arena. Everything the host
-// needs is passed in. This is what keeps a microcontroller port a build
-// question rather than a rewrite.
+// needs is passed in.
+//
+// This was once justified by an embedded target, which stopped being a project
+// requirement on 2026-08-29 (and the creature never fitted one anyway — see
+// `--experiment footprint`). The constraints are kept for what they buy here:
+// a core that cannot allocate or reach a syscall is deterministic, is testable
+// without a harness, and cannot hide a state change from the pinned hash.
 
 #ifndef AIBABY_CONFIG_H
 #define AIBABY_CONFIG_H

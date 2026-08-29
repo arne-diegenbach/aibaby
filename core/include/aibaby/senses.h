@@ -4,7 +4,8 @@
 // These live in the core rather than the host because they are part of the
 // creature, not part of the desktop. The host does DSP (FFT, mel) and audio
 // output; everything between a normalised sensory vector and a neuron stays
-// here, so the ESP32 build gets the same encoding for free.
+// here, so the encoding travels with the creature rather than with the machine
+// it happens to be running on.
 
 #ifndef AIBABY_SENSES_H
 #define AIBABY_SENSES_H

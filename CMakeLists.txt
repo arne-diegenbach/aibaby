@@ -11,8 +11,9 @@ endif()
 
 # --- Core: portable, freestanding-ish, no host dependencies ----------------
 # The flags are the portability contract, not a preference. If the core ever
-# stops building with -fno-exceptions -fno-rtti, it has grown a dependency
-# that a microcontroller port would have to unpick later.
+# stops building with -fno-exceptions -fno-rtti, it has grown a host dependency
+# — and a core that can throw, allocate or reach a syscall is a core whose state
+# changes are no longer all visible to the pinned hash.
 #
 # -ffp-contract=off, and no -ffast-math: determinism (G1) is the only real
 # testing lever this project has, and fast-math lets the compiler reassociate

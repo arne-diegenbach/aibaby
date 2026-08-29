@@ -8253,42 +8253,30 @@ bool run_seqprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
 
 
 
-// M5's first question, and the one nothing in this project printed: how much
-// memory is this creature?
+// Does the built brain match the genome that describes it?
 //
-// The README has long said the architecture keeps the ESP32 port "a build
-// question rather than a rewrite". The portability half is true — core includes
-// stddef.h, stdint.h, math.h on the build path and <type_traits>, with no STL
-// container, no allocator, no I/O and no thread. The fit half was never
-// measured, and it is wrong by two orders of magnitude: the shipped genome
-// needs 108.70 MB against an ESP32's 520 KB of SRAM and an ESP32-S3's 8 MB
-// ceiling with PSRAM.
+// `max_out_degree` slices the REVERSE index as well as the forward one, so a
+// module that is mostly a TARGET is bounded by its **in-degree**, not its
+// out-degree. `vocal` wires 16 out-synapses per neuron and receives 85. Set its
+// cap by the obvious column and 158 reverse entries are dropped — and a dropped
+// reverse entry is worse than a lost synapse, because that synapse then
+// depresses and never potentiates. `build()` warns; nothing failed on it.
 //
-// 99.1% of that is the synapse pool, which is sized n_max * max_out_degree —
-// the worst case the GENOME PERMITS, not what the creature wires. At birth it
-// uses 1102 of 9216 neuron slots and 33,248 of 3,457,024 synapse slots, which
-// is under one percent.
+// That is what this guards, and it is the reason the experiment exists. It
+// prints both degrees and names the binding one so the cap can be set from the
+// right number, and it FAILS on any genome with a dropped synapse or reverse
+// entry. Proven by making it fire.
 //
-// The two fields are not equally free, and the difference is the reason this
-// prints an `in` column:
-//
-//   max_out_degree slices the REVERSE index as well as the forward one, so a
-//   module that is mostly a TARGET is bounded by its in-degree. `vocal` wires
-//   16 out-synapses per neuron and receives 85. Sizing it off the out-degree
-//   drops 158 reverse entries and quietly builds a different creature — which
-//   is worse than losing a synapse, because a synapse with no reverse entry
-//   depresses and never potentiates. Verified: central 256, auditory 128,
-//   vision 96 and vocal 128 are bit-identical to the shipped creature and take
-//   the arena to 50.70 MB; vocal at 64 is not.
-//
-//   n_max is BOTH the arena size and the growth cap — below_cap() is
-//   live() < capacity — and it re-rolls the wiring. Shrinking it was tested on
-//   all five non-growable modules and every one built a different creature.
-//
-// The dead provisioning is worth seeing plainly: growable() is true only for
-// kAssociation, so on the shipped body plan 4,608 of 9,216 neuron slots belong
-// to modules the growth code can never extend. That headroom is unreachable by
-// construction and still cannot be reclaimed without a re-baseline.
+// It also reports the arena, and that number has no requirement attached to it.
+// An embedded target was a project requirement until 2026-08-29 — the README
+// claimed the freestanding core kept an ESP32 port "a build question rather
+// than a rewrite", which was half true: core includes stddef.h, stdint.h,
+// math.h on the build path and <type_traits>, with no STL container, no
+// allocator, no I/O and no thread, and the creature still needed 108.70 MB
+// against that part's 8 MB ceiling. The requirement was dropped rather than the
+// 108.70 MB defended. The arena line stays because provisioning is worth being
+// able to see — 99.1% of it is the synapse pool, sized n_max * max_out_degree,
+// and the creature wires under 1% of that — but nothing here is a budget.
 bool run_footprint(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
   (void)ticks; (void)verbose;
   aibaby::Dna dna;
@@ -8304,14 +8292,7 @@ bool run_footprint(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
               all / 1048576.0);
   std::printf("    of which Network %.2f MB (%.1f%%)\n", nb / 1048576.0,
               100.0 * double(nb) / double(all));
-  // Named parts rather than a bare number: "108 MB" means nothing without the
-  // thing it has to fit inside.
-  const struct { const char* name; double bytes; } targets[] = {
-      {"ESP32 SRAM", 520.0 * 1024}, {"ESP32-S3 SRAM", 512.0 * 1024},
-      {"ESP32-S3 + PSRAM", 8.0 * 1024 * 1024}};
-  for (const auto& t : targets) {
-    std::printf("    vs %-18s %6.1fx too large\n", t.name, double(all) / t.bytes);
-  }
+  std::printf("    informational — this project has no memory budget\n");
 
   std::vector<uint32_t> deg(net.total_capacity(), 0), ind(net.total_capacity(), 0);
   for (uint32_t a = 0; a < dna.module_count(); ++a) {
@@ -8352,9 +8333,11 @@ bool run_footprint(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
   std::printf("  pool if every cap matched its binding degree: %zu (%.1fx smaller)\n",
               tight, tight ? double(pool) / double(tight) : 0.0);
   std::printf("  neuron slots on modules that CANNOT grow: %zu of %u\n"
-              "    growable() is kAssociation only, so this headroom is unreachable\n"
-              "    by construction — and n_max re-rolls the wiring, so reclaiming it\n"
-              "    still costs a re-baseline of every number in the project.\n",
+              "    growable() is kAssociation only, so that headroom is unreachable\n"
+              "    by construction. Reported because a module at its cap cannot grow\n"
+              "    and one that can never reach it is a different situation — not\n"
+              "    because the slots are worth reclaiming. n_max is also the growth\n"
+              "    cap (below_cap is live() < capacity) and re-rolls the wiring.\n",
               dead, dna.total_neurons_max());
 
   // The real invariant, and the reason this is kPass rather than a print: a
