@@ -555,6 +555,52 @@ another run. (The match is on a 126-feature classifier's *score*, not on the
 underlying code — which is the point, same score and different form, but worth
 quoting with it.)
 
+### The rate substrate, priced and refused
+
+`vision->auditory` closed the topology. The remaining structural question was
+the *substrate*: every learning rule here — R-STDP, `hebb`, v37's burst term,
+v16's baseline — is `syn_elig_` times a different third factor, and `syn_elig_`
+is a ±20 ms coincidence trace while the object is a rate difference over
+hundreds of ms. `covar` was the one rule that read no eligibility, and its
+refutation named its own fix: centre each neuron on its **own** running mean
+rather than its module's. It was deferred for needing "a new per-neuron array
+and a snapshot bump".
+
+**That cost was out of date** — `rate_ema_` and `rate_fast_` both exist and were
+already exposed. So `eligprobe` gained a rate arm, on the same tract, trials,
+split and estimator as the trace, and the answer is **do not build it.**
+
+Two criteria were written down before the run, and they fired in opposite
+directions:
+
+| | |
+|---|---|
+| rate product `corr(A,B)` | **+0.303 / +0.277 / +0.273** vs the trace's +0.945 |
+| the product itself | **0.482 / 0.500 / 0.482**, shuffled 0.514 / 0.516 / 0.496 |
+| `vision` raw rate | **0.795** |
+| `vision` minus each neuron's own mean | **0.514** (+0.281 ± 0.012 SE, 15/15) |
+
+The `corr(A,B)` row is a **trap**. It fires positively because the residual is
+mostly noise, and uncorrelated noise has a low common-mode share by
+construction. `fast − slow` is a change detector and the object sits in the
+field for the whole trial, so both EMAs equilibrate and the object cancels.
+**Centring does not fail to help — it removes the signal.**
+
+> **A low common-mode share is necessary, not sufficient.** Any mechanism
+> motivated by "remove the common mode" can maximise its own metric by
+> destroying the thing it was meant to isolate. Pair it with a row showing the
+> residual still carries the signal.
+
+That closes the dilemma on both sides: centred loses the object, population-
+centred multiplies static wiring offsets, and uncentred is a rule that can only
+potentiate — which is v19, already refuted.
+
+**The finding worth keeping is the positive one.** `vision`'s raw rate reads the
+object at **0.795, above the coincidence trace's 0.726** on the same tract and
+trials. The substrate mismatch is real — every rule here reads coincidences and
+the object is a tonic rate. What is refuted is the specific repair the notes had
+named for it.
+
 This closes the last structurally different escape. "G3 is closed under this
 architecture" was a statement about learning rules — eight of them. It now
 covers **rewiring** as well: you cannot reach the milestone by feeding the

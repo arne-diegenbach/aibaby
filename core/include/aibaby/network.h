@@ -393,6 +393,13 @@ class Network {
   // groups through the slow estimate would low-pass the creature's entire
   // output down to about 1 Hz — the vocal tract could not form a syllable, and
   // reward would have nothing fast enough to shape.
+  // Their DIFFERENCE is "this neuron firing unusually for itself right now",
+  // and `eligprobe`'s rate-deviation arm reads it. Worth knowing that it costs
+  // nothing: `covar` -- the one learning rule here that read no eligibility --
+  // failed because it centred each neuron on its MODULE's mean and so
+  // multiplied two static wiring offsets, and the fix was named as per-neuron
+  // centring and deferred for needing "a new per-neuron array". These are that
+  // array, they already existed, and they were already exposed.
   Scalar rate(uint32_t neuron) const { return rate_ema_[neuron]; }
   Scalar rate_fast(uint32_t neuron) const { return rate_fast_[neuron]; }
 

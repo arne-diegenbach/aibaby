@@ -1,3 +1,4 @@
+#include <array>
 // Diagnostics: not goals, but the measurements that say why a goal failed.
 //
 // Shared scaffolding is in experiments_common.h.
@@ -1459,6 +1460,24 @@ struct EligProbe {
   // trace's own classification is the wrong quantity to read: learning acts on
   // the credit, not on e.
   double vision_credit = 0;
+  // THE RATE-DEVIATION ARM. Every rule this creature has multiplies
+  // `syn_elig_`, a +-20 ms coincidence trace, while the object is coded as a
+  // rate difference over hundreds of ms. This is what the one rule that reads
+  // no eligibility would write, with each neuron centred on its OWN running
+  // mean rather than its module's — which is the correction `covar`'s
+  // refutation named and deferred:
+  //
+  //     dw_ij ~ (fast_i - slow_i) * (fast_j - slow_j)
+  //
+  // Scored on the same trials, split and estimator as the trace above it, so
+  // the two rows are directly comparable. `rate_r` against the trace's +0.945
+  // is the number that decides whether the substrate is worth building: a
+  // scalar reward multiplying a 94.5%-common-mode pattern acts on the common
+  // mode, and a rule whose own pattern is less shared does not have that
+  // problem. The single-sided rows say which end any difference comes from.
+  double rate_prod = 0, rate_prod_shuf = 0, rate_r = 0;
+  double rate_pre = 0, rate_post = 0;   // the deviation vectors on their own
+  double rate_pre_raw = 0;              // vision's RAW rate, the no-centring control
   uint32_t vision_n = 0;
   uint32_t central_n = 0, arcuate_n = 0, trials = 0;
   bool ok = false;
@@ -1541,6 +1560,17 @@ EligProbe run_eligprobe_session(const std::vector<uint8_t>& blob, uint64_t ticks
   for (size_t i = order.size(); i > 1; --i) std::swap(order[i - 1], order[rng.next() % i]);
 
   std::vector<std::vector<double>> xc, xa, xam, xcen, xcred, xdiv, xv, xvcred;
+  // The rate-deviation arm, on the same tract and the same trials.
+  std::vector<std::vector<double>> xrp, xrpre, xrpost, xrraw;
+  std::vector<double> mean_rp[2] = {std::vector<double>(vv.size(), 0.0),
+                                    std::vector<double>(vv.size(), 0.0)};
+  std::vector<uint32_t> vv_src(vv.size(), 0), vv_dst(vv.size(), 0);
+  for (size_t i = 0; i < vv.size(); ++i) {
+    vv_src[i] = net0.synapse_source(vv[i]);
+    vv_dst[i] = net0.synapse_target(vv[i]);
+  }
+  const aibaby::ModuleState& ms_vis = net0.module(uint32_t(vis >= 0 ? vis : 0));
+  const aibaby::ModuleState& ms_voc = net0.module(uint32_t(voc));
   std::vector<int> y;
   std::vector<double> mean_v[2] = {std::vector<double>(vv.size(), 0.0),
                                    std::vector<double>(vv.size(), 0.0)};
@@ -1631,6 +1661,34 @@ EligProbe run_eligprobe_session(const std::vector<uint8_t>& blob, uint64_t ticks
           xvcred.push_back(crv);
           for (size_t i = 0; i < vv.size(); ++i) mean_v[object][i] += ev[i];
         }
+        // The rate-deviation arm. Same tract, same trial, same sample tick as
+        // the trace above, so any difference between the two rows is the
+        // quantity and not the protocol.
+        if (!vv.empty()) {
+          std::vector<double> rp(vv.size());
+          for (size_t i = 0; i < vv.size(); ++i) {
+            const double dpre =
+                double(net.rate_fast(vv_src[i])) - double(net.rate(vv_src[i]));
+            const double dpost =
+                double(net.rate_fast(vv_dst[i])) - double(net.rate(vv_dst[i]));
+            rp[i] = dpre * dpost;
+            mean_rp[object][i] += rp[i];
+          }
+          xrp.push_back(rp);
+          std::vector<double> dpre(ms_vis.count), dpost(ms_voc.count), raw(ms_vis.count);
+          for (uint32_t i = 0; i < ms_vis.count; ++i) {
+            const uint32_t n = ms_vis.begin + i;
+            dpre[i] = double(net.rate_fast(n)) - double(net.rate(n));
+            raw[i] = double(net.rate_fast(n));
+          }
+          for (uint32_t i = 0; i < ms_voc.count; ++i) {
+            const uint32_t n = ms_voc.begin + i;
+            dpost[i] = double(net.rate_fast(n)) - double(net.rate(n));
+          }
+          xrpre.push_back(dpre);
+          xrpost.push_back(dpost);
+          xrraw.push_back(raw);
+        }
         xc.push_back(ec);
         xa.push_back(ea);
         xam.push_back(eam);
@@ -1681,6 +1739,15 @@ EligProbe run_eligprobe_session(const std::vector<uint8_t>& blob, uint64_t ticks
     out.vision_absE = out.trials
         ? abs_v / (double(vv.size()) * double(out.trials)) : 0.0;
     out.vision_credit = holdout_accuracy(xvcred, y, train);
+    out.rate_prod = holdout_accuracy(xrp, y, train);
+    out.rate_prod_shuf = holdout_accuracy(xrp, shuf, train);
+    out.rate_pre = holdout_accuracy(xrpre, y, train);
+    out.rate_post = holdout_accuracy(xrpost, y, train);
+    out.rate_pre_raw = holdout_accuracy(xrraw, y, train);
+    for (int c = 0; c < 2; ++c) {
+      if (n_cond[c] > 0) for (double& v : mean_rp[c]) v /= n_cond[c];
+    }
+    out.rate_r = vector_corr(mean_rp[0], mean_rp[1]);
   }
   out.central = holdout_accuracy(xc, y, train);
   out.credit = holdout_accuracy(xcred, y, train);
@@ -1804,6 +1871,8 @@ bool run_eligprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
               "vis cred", "vis n");
 
   double sv = 0, svs = 0, sve = 0, svr = 0, svc = 0;
+  double srp = 0, srps = 0, srr = 0, srpre = 0, srpost = 0, srraw = 0;
+  std::vector<std::array<double, 5>> rate_rows;
   uint32_t vn = 0;
   double sc = 0, scs = 0, sa = 0, sam = 0, se = 0, sr = 0, sae = 0, sar = 0;
   double sti = 0, sts = 0, sif = 0, sd = 0, scr = 0, sps = 0, sdv = 0;
@@ -1817,6 +1886,8 @@ bool run_eligprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
     ++valid; cn = p.central_n; an = p.arcuate_n; vn = p.vision_n;
     sv += p.vision; svs += p.vision_shuf; sve += p.vision_absE; svr += p.vision_r;
     svc += p.vision_credit;
+    srp += p.rate_prod; srps += p.rate_prod_shuf; srr += p.rate_r;
+    srpre += p.rate_pre; srpost += p.rate_post; srraw += p.rate_pre_raw;
     sc += p.central; scs += p.central_shuf; sa += p.arcuate;
     sam += p.arcuate_matched; se += p.central_absE; sr += p.central_r;
     sae += p.arcuate_absE; sar += p.arcuate_r;
@@ -1830,6 +1901,7 @@ bool run_eligprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
     std::printf("  %-5u %-9.3f %-9.3f %-9.3f %-9.3f %-9.2e %+.3f      %-8.3f %u\n", r,
                 p.central, p.central_shuf, p.arcuate, p.arcuate_matched, p.central_absE,
                 p.central_r, p.vision_credit, p.vision_n);
+    rate_rows.push_back({double(r), p.rate_prod, p.rate_r, p.rate_pre, p.rate_pre_raw});
   }
   if (valid < 3) { std::printf("\n  INCONCLUSIVE — %u of %u usable.\n", valid, kReps); return false; }
 
@@ -1852,6 +1924,35 @@ bool run_eligprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
                 "                                    that decides whether reward can\n"
                 "                                    make the voice conditional.\n",
                 svc / n);
+    // THE PRECONDITION FOR A RATE-BASED SUBSTRATE. Every rule this creature
+    // has multiplies the coincidence trace above; this is what a rule reading
+    // no eligibility at all would write. Printed on the same tract, trials,
+    // split and estimator, so the pair is a like-for-like comparison and not
+    // two experiments.
+    std::printf("\n    --- the same tract, as a RATE deviation instead of a trace ---\n");
+    // PER CREATURE, not just the mean of five — same reason the table above is
+    // per creature. `vis dev` against `vis raw` is the deciding pair: same
+    // neurons, same trials, differing only by subtracting each neuron's own
+    // running mean.
+    std::printf("    %-5s %-9s %-9s %-9s %s\n", "seed", "rate x", "r(A,B)",
+                "vis dev", "vis raw");
+    for (const std::array<double, 5>& q : rate_rows) {
+      std::printf("    %-5u %-9.3f %+-9.3f %-9.3f %.3f\n", uint32_t(q[0]), q[1], q[2],
+                  q[3], q[4]);
+    }
+    std::printf("    (fast-slow)_pre x (fast-slow)_post  %.3f   (shuffled %.3f)\n",
+                srp / n, srps / n);
+    std::printf("      corr(A,B) %+.3f   <- read against the trace's %+.3f above.\n"
+                "      A scalar reward multiplying a mostly-shared pattern acts on\n"
+                "      what is shared; a rule whose pattern is less shared does not\n"
+                "      have that problem. This is the number that prices the build.\n",
+                srr / n, svr / n);
+    std::printf("    vision deviation alone   %.3f   (raw rate, uncentred: %.3f)\n",
+                srpre / n, srraw / n);
+    std::printf("    vocal  deviation alone   %.3f\n", srpost / n);
+    std::printf("      ^ which END carries it. If the raw rate matches the centred\n"
+                "        one, per-neuron centring is buying nothing and `covar`'s\n"
+                "        refutation stands as written.\n");
   } else {
     std::printf("    vision->vocal         absent from this genome\n");
   }
