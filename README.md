@@ -436,13 +436,15 @@ of an hour.
 | **M1c** taught vocalisation | **met** — praise alone moves the creature's vowel toward a target it never hears: error down **+19.0 points** against its own yoked control and the change is audible at **d′ 7.50** (null −0.03), 3 of 3 seed families — re-measured after M1d shipped; it was +15.9 and d′ 5.57 before. The first taught change to *what* this creature says rather than how often |
 | **M1** closed audio loop | **done — G2 met.** Rewarded vocalisations rise within the session (×1.35) and praise beats its own yoked control in **23 of 27 creatures** across three seed families, and 9 of 9 at 420 s. What closed it was directional exploration (DNA v10), which was not aimed at reward at all |
 | **M2** vision | **done** — camera → retina → B3 → B1, discriminates present from absent at 98%, and 86% with firing rate divided out |
-| **M3** cross-modal association | **built and measured, G3 not met — and now settled rather than open.** The baby echoes a word it hears (0.75) and the seen object *does* now reach the larynx (0.654, up from 0.515, via `vision→vocal`), yet naming still reads taught−random **−0.014** with 0 of 5 creatures over the 0.75 bar. Delivery is no longer the limit; conditioning is |
+| **M3** cross-modal association | **CLOSED, NEGATIVE.** Not "still open": eleven mechanisms across four structurally different families were built and measured against it, and the milestone has never moved outside its own noise floor. The shipped creature reads taught−random **+0.060 ± 0.040 SE**, which is 1.5 SE and not a result, and the control genome — mechanism absent by construction — swings ±0.060 across seed families. What the creature *can* do is bounded and known: it learns a fixed vocal target from praise (M1c), and it inherits one conditional map that is innate (the arcuate). It does not acquire a new conditional map |
 | **M4** growth and sleep | **done** — **G4 passes**: the creature never grows while it is still learning, grows only on a detected plateau, and never passes the DNA cap; myelination, pruning and replay all run |
 
 Every number on this page comes from the genome in [dna/default.toml](dna/default.toml)
 as it currently stands. **The whole suite above passes except `m3`** — G1,
 calibrate, babble, audio, vision, M2, G2, sleep, G4 and snapshot are all green,
-and G3 is the one milestone still open. Shipped hash `ad96f882becbee92`;
+and G3 is closed negative rather than open — see the row above and
+[Why G3 is closed](#why-g3-is-closed-and-what-would-have-to-be-different).
+Shipped hash `ad96f882becbee92`;
 `--experiment verify` reads 20 of 20 as expected on the fast tier and
 `verify-long` 40 of 40 and `verify-teach` the seven hour-scale ones — see [The suite, both tiers](#the-suite-both-tiers).
 
@@ -863,6 +865,50 @@ the milestone**. It asked whether a coherent front-end survives a tract; the
 answer was yes and it is still yes. The tract was never the binding constraint —
 the step from `vocal`'s population to nine scalars is, and DNA v46 does nothing
 about that. Ships off, pinned in `mechverify` at `9945f7d9b1d66af8`.
+
+## Why G3 is closed, and what would have to be different
+
+G3 asked for a **held-out classifier to tell cube from ball off the baby's own
+vocalisations at 0.75**, paired beating unpaired. It is not met, and after
+eleven mechanisms in four structurally different families it is filed as a
+settled negative rather than an open problem. The distinction matters: an open
+milestone is an invitation to keep trying the same shape of thing, and this one
+is not.
+
+**The statement of the limit, in one measurement.** `vocallearn`, same
+instrument, same session: reward cuts formant error **+24 points** toward a
+*fixed* target and **−0.1** toward a target that depends on what the creature
+heard. The creature has exactly one conditional pathway and it is **innate** —
+the arcuate, `auditory→vocal`, which M1b measures at 0.890 and which the
+`vision→auditory` work showed is an identity map rather than a channel.
+
+**What was ruled out, by family:**
+
+| family | what was built | outcome |
+|---|---|---|
+| learning rules | R-STDP, `hebb`, node perturbation on biases and on synapses, plateau gating (v29), burst plasticity (v37), rate covariance, metaplasticity (v41) — eight, every one `syn_elig_` × a different third factor | the object-specific share of what reward writes is ~8% |
+| rewiring | `vision→vocal` (shipped), `vision→auditory` (built), topographic variants (v43, v46) | delivery reaches 0.880 and the voice moves +0.04 / 0.00 / −0.06 |
+| substrate | per-neuron rate covariance, the repair the notes had named | centring is a high-pass and the object is tonic: it removes the signal |
+| readout | the per-knob table, the oracle arm, the shape bank + topographic map | the object is in `vocal`'s slices, in none of the eighteen readings, and the ordering that would expose it is **learned**, not geometric |
+
+**The arithmetic that now refuses future delivery work.** The within-route
+`vocal→voice` slope is **+0.12**. DNA v46 moved `vocal` +0.115 and the voice
+moved +0.005 — predicted +0.014. Perfect delivery to the larynx would buy about
++0.04 against a bar needing +0.24. A delivery mechanism can be declined on paper.
+
+**What would have to be different.** Not a ninth learning rule. The creature
+would need a way to make plasticity *itself* depend on which object is present —
+a per-context gate on which synapses are eligible, rather than a scalar reward
+scaling a population-wide trace. Everything here multiplies one eligibility
+trace by one third factor, and a scalar cannot carry a condition. Whether that
+is buildable in this architecture is genuinely open; what is closed is the idea
+that any refinement of the existing machinery gets there.
+
+**What the creature does do**, and these are the milestones that are met: it
+repeats a heard word at 0.890 (M1b), it is taught a vowel by praise alone and
+the change is audible at d′ 7.50 (M1c), it answers when spoken to (M1d), and the
+answer carries the word +0.215 above ambient babble. Those are the interesting
+results and none of them was aimed at the milestone it hit.
 
 ### The oracle's ordering cannot be wired — and that reading of it was mine
 
