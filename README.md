@@ -554,6 +554,66 @@ another run. (The match is on a 126-feature classifier's *score*, not on the
 underlying code — which is the point, same score and different form, but worth
 quoting with it.)
 
+### The object IS in the slice — index order is what hides it
+
+The table above leaves two readings, and they point opposite ways. Either the
+object is not in a vocal group at the granularity a centroid sees — in which
+case nothing downstream of `vocal` is fixable and a coherent front-end would
+not help either — or it is there and the centroid cannot see it, because a
+*balanced* delta leaves a centre of mass where it found it.
+
+`m3probe`'s oracle arm separates them without touching the genome. Within each
+of the nine slices the neurons are **reordered by their own training-set
+delta**, so the ones that fire more for a cube end up at one end of the slice
+and the ones that fire more for a ball at the other. Rates are untouched — it
+is a permutation, not a reweighting, so what comes out is still a physically
+realisable readout. The order comes from training trials and d′ is scored on
+the held-out half; `oracle-shuf` takes the order from **shuffled** training
+labels and must not rescue anything.
+
+Object route, mean d′² over the nine groups, 50 held-out trials each:
+
+| seed | as wired | oracle | oracle-shuf | oracle − shuf |
+|---|---|---|---|---|
+| shipped | +0.005 | +0.630 | +0.030 | **+0.600** |
+| 20260901 | +0.024 | +0.214 | +0.020 | **+0.194** |
+| 20260902 | +0.157 | +0.653 | +0.074 | **+0.579** |
+| 20260903 | +0.197 | +0.247 | +0.111 | **+0.136** |
+| 20260904 | −0.021 | +0.305 | +0.040 | **+0.265** |
+| 20260905 | +0.057 | +0.228 | +0.156 | **+0.072** |
+| 20260906 | +0.018 | +0.288 | +0.090 | **+0.198** |
+| 20260907 | +0.037 | +0.367 | −0.009 | **+0.376** |
+
+**+0.303 ± 0.070 SE, 8 of 8 positive**, against an as-wired margin of −0.005 —
+the shipped readout sits exactly on its own control. Eight families rather than
+three on purpose: the smoothing sweep was unanimous at n=3 and null at n=6, and
+this survived that test.
+
+> **The object is in the slice. The index order is what hides it.** The
+> centroid is not too coarse and the object is not too weak; the neurons that
+> carry it are simply scattered through the slice with no axis, and a centre of
+> mass over a scattered balanced code is a constant. That is the same coherence
+> failure as the tract, now measured at the readout with a control.
+
+**What this does and does not license.** It does not say "build it and G3
+falls out" — the ordering carries a bit per neuron of label information, and
+finding it without labels is exactly what eight learning rules could not do. It
+says the target is an **ordered map into `vocal`**, and that the ordering has to
+arrive from a coherent upstream code rather than from reward. DNA v43 built a
+topographic tract and measured F1 ×1.00, which is consistent rather than
+contradictory: it ordered `vocal` by *vision's* coordinates, and vision's code
+is a balanced template with no object axis to inherit.
+
+So the two open threads join. A coherent visual front-end would supply both
+halves at once — a code that survives the tract, and an axis a topographic map
+can align `vocal`'s index to. That is the one build this measurement supports,
+and the offline pooling check gates it before any genome edit.
+
+One caution for anyone re-running it: `oracle-shuf` is flat for the object
+everywhere (≤ +0.156) but reaches **+0.721** on the word for seed 20260903.
+Sorting ~113 neurons on 50 noisy training trials can find structure. Read the
+object rows, which is what the arm was built for.
+
 ### The rate substrate, priced and refused
 
 `vision->auditory` closed the topology. The remaining structural question was

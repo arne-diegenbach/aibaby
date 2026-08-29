@@ -681,6 +681,130 @@ bool run_m3probe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose,
       std::printf("    If the object's d'^2 sits in the discarded rows and the word's\n"
                   "    sits in the heard ones, the larynx is the loss.\n");
     }
+
+    // --- the oracle: is it in the slice, hidden only by index order? --------
+    //
+    // The table above says the object dies at the group readout. Two things
+    // that could mean, and they point opposite ways:
+    //
+    //   * the object is not in the slice at the granularity a centroid sees —
+    //     nothing downstream of `vocal` can be fixed, and a coherent front-end
+    //     would not help either;
+    //   * the object IS in the slice and the centroid cannot see it, because a
+    //     BALANCED delta leaves a centre of mass where it found it — then
+    //     coherence is the whole story at both stages.
+    //
+    // This separates them without touching the genome. Within each of the nine
+    // slices the neurons are REORDERED by their own training-set delta, so the
+    // ones that fire more for a cube end up at one end of the slice and the
+    // ones that fire more for a ball at the other. Rates are untouched: it is a
+    // permutation, not a reweighting, so what comes out is still a physically
+    // realisable readout. It is precisely what an ordered map into `vocal`
+    // would buy, which is where DNA v43's topographic tract was aiming.
+    //
+    // The order comes from TRAINING trials and d' is scored on the held-out
+    // half, or the arm could not fail. `oracle-shuf` takes the order from
+    // SHUFFLED training labels and must not rescue anything.
+    {
+      uint32_t voc_m = modules;
+      for (uint32_t m = 0; m < modules; ++m) {
+        if (std::strcmp(net.module_dna(m).name, "vocal") == 0) voc_m = m;
+      }
+      if (voc_m < modules && per_module[voc_m].size() >= 24) {
+        std::vector<std::vector<double>> vx;
+        std::vector<int> vy;
+        size_t vtrain = 0;
+        interleave_pairs(per_module[voc_m], labels, vx, vy, vtrain);
+        const uint32_t w = width[voc_m];
+        aibaby::Rng ork;
+        ork.seed(s.dna.header().seed ^ 0x0BADu);
+
+        // Per-neuron firing difference between the two classes, training only.
+        auto deltas = [&](const std::vector<int>& lab) {
+          std::vector<double> mu0(w, 0.0), mu1(w, 0.0);
+          size_t n0 = 0, n1 = 0;
+          for (size_t t = 0; t < vtrain; ++t) {
+            std::vector<double>& mu = lab[t] ? mu1 : mu0;
+            ++(lab[t] ? n1 : n0);
+            for (uint32_t k = 0; k < w; ++k) mu[k] += vx[t][k];
+          }
+          std::vector<double> d(w, 0.0);
+          if (n0 == 0 || n1 == 0) return d;
+          for (uint32_t k = 0; k < w; ++k) {
+            d[k] = mu1[k] / double(n1) - mu0[k] / double(n0);
+          }
+          return d;
+        };
+
+        // The decoder's own readout — centre of mass over index within a slice
+        // — recomputed on held-out trials under a given within-slice ordering.
+        auto read = [&](const std::vector<double>& d, bool ordered,
+                        std::vector<std::vector<double>>& out, std::vector<int>& oy) {
+          out.clear();
+          oy.clear();
+          std::vector<std::vector<uint32_t>> order(aibaby::kVocalGroups);
+          for (uint32_t g = 0; g < aibaby::kVocalGroups; ++g) {
+            const uint32_t b = aibaby::slice_begin(w, aibaby::kVocalGroups, g);
+            const uint32_t e = aibaby::slice_begin(w, aibaby::kVocalGroups, g + 1);
+            for (uint32_t k = b; k < e; ++k) order[g].push_back(k);
+            if (ordered) {
+              std::stable_sort(order[g].begin(), order[g].end(),
+                               [&](uint32_t p, uint32_t q) { return d[p] < d[q]; });
+            }
+          }
+          for (size_t t = vtrain; t < vx.size(); ++t) {
+            std::vector<double> row;
+            for (uint32_t g = 0; g < aibaby::kVocalGroups; ++g) {
+              const std::vector<uint32_t>& o = order[g];
+              double num = 0.0, den = 0.0;
+              for (size_t j = 0; j < o.size(); ++j) {
+                const double r = vx[t][o[j]];
+                num += r * ((double(j) + 0.5) / double(o.size()));
+                den += r;
+              }
+              row.push_back(den > 1e-9 ? num / den : 0.5);
+            }
+            out.push_back(row);
+            oy.push_back(vy[t]);
+          }
+        };
+
+        std::vector<int> lab_shuf = vy;
+        for (size_t i = vtrain; i > 1; --i) {
+          std::swap(lab_shuf[i - 1], lab_shuf[ork.next() % i]);
+        }
+        std::vector<std::vector<double>> raw_t, orc_t, shf_t;
+        std::vector<int> ty;
+        read(deltas(vy), false, raw_t, ty);
+        read(deltas(vy), true, orc_t, ty);
+        read(deltas(lab_shuf), true, shf_t, ty);
+
+        auto mean_d2 = [&](const std::vector<std::vector<double>>& tbl) {
+          double acc = 0.0;
+          for (uint32_t g = 0; g < aibaby::kVocalGroups; ++g) {
+            const double d = knob_dprime(tbl, ty, g);
+            acc += d < 0.0 ? -(d * d) : d * d;
+          }
+          return acc / double(aibaby::kVocalGroups);
+        };
+
+        std::printf("\n    oracle reordering within each slice — %zu held-out trials\n",
+                    ty.size());
+        std::printf("    %-14s %-11s %s\n", "ordering", "mean d'^2", "per-group d'");
+        struct Row { const char* name; const std::vector<std::vector<double>>* t; };
+        const Row rows3[3] = {{"as wired", &raw_t}, {"oracle", &orc_t},
+                              {"oracle-shuf", &shf_t}};
+        for (const Row& r : rows3) {
+          std::printf("    %-14s %+11.3f ", r.name, mean_d2(*r.t));
+          for (uint32_t g = 0; g < aibaby::kVocalGroups; ++g) {
+            std::printf("%+.2f ", knob_dprime(*r.t, ty, g));
+          }
+          std::printf("\n");
+        }
+        std::printf("    oracle >> as-wired with oracle-shuf flat = the object is IN the\n"
+                    "    slice and index order hides it. All three flat = it is not there.\n");
+      }
+    }
     return control_score;
   };
 
