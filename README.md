@@ -5383,6 +5383,52 @@ shared-constants audit. It first appeared as *no output at all*, because the run
 was piped to `tail`, which reports its own exit status and swallowed the crash —
 the trap this project has already recorded once.
 
+#### The answer is informative, not just louder
+
+M1b says the voice CARRIES the word 200-600 ms after it ends. M1d says the
+creature SPEAKS MORE then. Those two together read as "it answers with what it
+heard" — but that is a conjunction of two separate measurements, and the
+alternative is that the burst is simply more babble whose echo is incidental.
+
+`imitate` now scores the fifth window for content as well as rate. That window
+is the creature's own ambient babble, 1400-2300 ms after the word, with the
+reflex long released and nothing left arriving — the same trials, the same
+creature, no stimulus. If the burst carries the word no better than that, M1d
+added volume and nothing else.
+
+Read on **articulators**, which drops loudness and voicing: the burst is by
+construction louder, so the wide `voice` readout could separate two words on
+amount of sound alone. This is a claim about two sounds.
+
+| seed | burst (200-600) | ambient (1400-2300) | difference | shuffled |
+|---|---|---|---|---|
+| 20260809 | 0.752 | 0.546 | **+0.206** | 0.500 |
+| 20360812 | 0.812 | 0.580 | **+0.232** | 0.501 |
+| 20451117 | 0.850 | 0.644 | **+0.206** | 0.502 |
+| **mean** | **0.805** | **0.590** | **+0.215** | 0.501 |
+
+3 of 3, and every shuffled control sits at chance, so the instrument works in
+the ambient window on every seed. The burst carries about five times the
+above-chance information that ambient babble does — 0.305 against 0.090 — and
+ambient babble is only slightly above chance itself.
+
+**So M1b and M1d compose.** The creature goes quiet while you speak, answers
+when you stop, and the answer carries which word it heard. That is a different
+statement from either milestone alone, and it was not guaranteed by having both.
+
+**A bug that nearly buried it, and the tell that caught it.** `double sum[4][5]`
+was still four wide after the scoring loop widened to five, so the ambient row
+came out of bounds: **0.000 voice against a 0.174 shuffled**. A two-class
+holdout accuracy cannot be 0.000 and its shuffled control must sit at 0.5 — the
+impossible number is the only reason it was caught rather than believed. Had the
+garbage landed anywhere plausible the conclusion would have been right by
+accident.
+
+That is the third hard-coded four this window count has broken: `ImitateRun`'s
+per-window arrays (a segfault), `kScoredWindows` (the bound), and now this. They
+should be sized from one constant rather than repeated as literals; a fourth
+instance is likely.
+
 ### Three verify tiers, because the second one had become unrunnable
 
 The teaching experiments each raise a creature through several phases of a life

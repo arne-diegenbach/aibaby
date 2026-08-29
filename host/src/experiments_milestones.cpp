@@ -2903,7 +2903,7 @@ struct ImitateWindow {
 
 struct ImitateRun {
   bool ok = false;
-  double voice[4] = {}, artic[4] = {}, shuffled[4] = {}, dprime[4] = {}, heard[4] = {};
+  double voice[5] = {}, artic[5] = {}, shuffled[5] = {}, dprime[5] = {}, heard[5] = {};
   // Voiced FRACTION per window: the answering burst. M1b scores what the voice
   // carries; this is whether it speaks at all.
   double voiced_frac[5] = {};
@@ -2980,13 +2980,20 @@ ImitateRun run_imitate_session(const std::vector<uint8_t>& blob, uint64_t ticks,
       {"1400-2300 ms (quiet)", kWordTicks + 1400, 2800, {}, {}, {}},
   };
   constexpr size_t kWindows = sizeof(windows) / sizeof(windows[0]);
-  // The per-window CLASSIFICATION arrays on ImitateRun are four wide, and the
-  // fifth window is a rate baseline rather than a content window — asking which
-  // word the voice carries 1400-2300 ms after it ended is not a question. This
-  // constant is what bounds the scoring loop; taking it from kWindows instead
-  // wrote one past the end of out.voice[] and segfaulted, which is the
-  // hard-coded-count bug class this project has audited before.
-  constexpr size_t kScoredWindows = 4;
+  // The fifth window was added as a RATE baseline for M1d and deliberately not
+  // scored for content, on the grounds that asking which word the voice carries
+  // 1400-2300 ms after it ended is not a question. Once the creature started
+  // answering it became the question: M1b says the voice carries the word at
+  // 200-600 ms and M1d says the creature speaks MORE then, and those two
+  // together are only "it answers with what it heard" if the BURST carries the
+  // word better than the creature's ambient babble does. The quiet tail is that
+  // ambient babble, on the same trials. Scored equally, the burst would be
+  // louder babble with an incidental echo.
+  //
+  // The arrays on ImitateRun were four wide and are now five. Taking this bound
+  // from kWindows while they were four wrote one past the end of out.voice[]
+  // and segfaulted — the hard-coded-count bug class this project has audited.
+  constexpr size_t kScoredWindows = 5;
   // Voiced frames and total frames per window, summed over trials. Pooled
   // rather than averaged per trial: a trial with three frames and a trial with
   // thirty should not weigh the same in a RATE.
@@ -3317,8 +3324,9 @@ bool run_imitate(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
   if (dna.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) return false;
   constexpr uint32_t kReps = 5;
   constexpr size_t kScored = 2;  // "200-600 ms after"
-  static const char* kNames[4] = {"WHILE the word plays", "0-200 ms after",
-                                  "200-600 ms after", "600-1400 ms after"};
+  static const char* kNames[5] = {"WHILE the word plays", "0-200 ms after",
+                                  "200-600 ms after", "600-1400 ms after",
+                                  "1400-2300 (ambient)"};
 
   std::printf("  session           %.1f s x %u creatures, two words to an EMPTY\n"
               "                    FIELD, trial order shuffled\n",
@@ -3329,7 +3337,12 @@ bool run_imitate(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
               "                    still playing is the arcuate transmitting; repeating\n"
               "                    is what survives the sound stopping.\n\n");
 
-  double sum[4][5] = {{0}};
+  // FIVE, matching kScoredWindows. This was four while the fifth window existed
+  // as a rate baseline, and widening the scoring without widening this wrote out
+  // of bounds and printed an ambient row of 0.000 voice against a 0.174
+  // shuffled — impossible for a two-class holdout, whose chance is 0.5, which is
+  // the only reason it was caught rather than believed.
+  double sum[5][5] = {{0}};
   uint32_t valid = 0, above = 0;
   for (uint32_t r = 0; r < kReps; ++r) {
     std::vector<uint8_t> variant = blob;
@@ -3339,7 +3352,7 @@ bool run_imitate(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
     if (!p.ok) continue;
     ++valid;
     if (p.voice[kScored] >= 0.75) ++above;
-    for (size_t k = 0; k < 4; ++k) {
+    for (size_t k = 0; k < 5; ++k) {
       sum[k][0] += p.voice[k]; sum[k][1] += p.artic[k];
       sum[k][2] += p.shuffled[k]; sum[k][3] += p.dprime[k]; sum[k][4] += p.heard[k];
     }
@@ -3353,10 +3366,38 @@ bool run_imitate(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
 
   std::printf("  %-22s %-11s %-11s %-11s %-11s %s\n", "window", "voice", "articulators",
               "shuffled", "audible d'", "EAR still knows");
-  for (size_t k = 0; k < 4; ++k) {
+  for (size_t k = 0; k < 5; ++k) {
     std::printf("  %-22s %-11.3f %-11.3f %-11.3f %-11.2f %.3f%s\n", kNames[k],
                 sum[k][0] / n, sum[k][1] / n, sum[k][2] / n, sum[k][3] / n, sum[k][4] / n,
-                k == kScored ? "   <- SCORED" : "");
+                k == kScored ? "   <- SCORED" : (k == 4 ? "   <- ambient babble" : ""));
+  }
+
+  // IS THE ANSWER INFORMATIVE, OR ONLY LOUDER? M1b says the voice carries the
+  // word at 200-600 ms; M1d says the creature SPEAKS MORE then. Those two are
+  // "it answers with what it heard" only if the burst carries the word better
+  // than the creature's own ambient babble does, on the same trials. The last
+  // row is that babble, 1400-2300 ms after the word, with the reflex long
+  // released and nothing left arriving.
+  //
+  // Read `articulators` rather than `voice` for this: `voice` includes loudness
+  // and voicing, and the burst is by construction louder, so the wide readout
+  // could separate the words on amount of sound alone. That is the same guard
+  // `vocab` needed.
+  {
+    const double burst_a = sum[2][1] / n, ambient_a = sum[4][1] / n;
+    const double burst_v = sum[2][0] / n, ambient_v = sum[4][0] / n;
+    std::printf("\n  the answer against ambient babble, same trials:\n"
+                "    articulators   burst %.3f  vs ambient %.3f   %+.3f\n"
+                "    voice          burst %.3f  vs ambient %.3f   %+.3f\n",
+                burst_a, ambient_a, burst_a - ambient_a,
+                burst_v, ambient_v, burst_v - ambient_v);
+    std::printf("    %s\n",
+                (burst_a - ambient_a) >= 0.10
+                    ? "THE ANSWER IS INFORMATIVE — the burst carries the word better\n"
+                      "    than the babble the same creature produces unprompted."
+                    : "NOT SHOWN — the burst carries the word no better than ambient\n"
+                      "    babble, so M1d added volume and this adds no information on\n"
+                      "    top of M1b's echo.");
   }
 
   std::printf("\n    'voice' is the nine motor groups plus loudness and voicing.\n"
