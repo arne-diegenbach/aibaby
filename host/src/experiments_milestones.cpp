@@ -2885,6 +2885,18 @@ bool run_snapshot(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
 // rather than alternating**: with A/B/A/B a classifier that reads nothing but
 // session time scores well above chance, which this project has already been
 // caught by once — see holdout_guess_time_corr.
+// ONE constant for how many windows `imitate` cuts a trial into. It is not a
+// tidiness change: this count broke three separate hard-coded 4s in a single
+// day. ImitateRun's per-window arrays overflowed and segfaulted; the scoring
+// loop's bound was a second literal; and `sum[4][5]` in the reporter read out
+// of bounds and printed a two-class accuracy of 0.000 against a 0.174 shuffled,
+// which is impossible and is the only reason it was caught rather than
+// believed. Plausible garbage would have been read as data.
+//
+// A static_assert below ties it to the window TABLE, so adding a window without
+// widening the arrays is a compile error rather than silent corruption.
+constexpr size_t kImitateWindows = 5;
+
 struct ImitateWindow {
   const char* name;
   uint64_t from, to;      // ticks within the trial
@@ -2903,10 +2915,12 @@ struct ImitateWindow {
 
 struct ImitateRun {
   bool ok = false;
-  double voice[5] = {}, artic[5] = {}, shuffled[5] = {}, dprime[5] = {}, heard[5] = {};
+  double voice[kImitateWindows] = {}, artic[kImitateWindows] = {},
+         shuffled[kImitateWindows] = {}, dprime[kImitateWindows] = {},
+         heard[kImitateWindows] = {};
   // Voiced FRACTION per window: the answering burst. M1b scores what the voice
   // carries; this is whether it speaks at all.
-  double voiced_frac[5] = {};
+  double voiced_frac[kImitateWindows] = {};
   // PER-TRIAL, so a caller can filter. The EAR column exists because an
   // after-window in which the auditory module still classifies is not memory
   // but a stimulus that has not finished arriving — and a creature that goes
@@ -2914,8 +2928,8 @@ struct ImitateRun {
   // the confound grows exactly when the mechanism works. Auditory ACTIVITY per
   // trial is the direct measure of arrival, and lets the burst be scored on
   // the trials where the word has genuinely gone.
-  std::vector<double> trial_voiced[5];
-  std::vector<double> trial_aud[5];
+  std::vector<double> trial_voiced[kImitateWindows];
+  std::vector<double> trial_aud[kImitateWindows];
   size_t trials = 0;
   // The scored window's raw rows, kept so the caller can score any PAIR of
   // words off one simulation instead of re-running the creature per pair.
@@ -2980,6 +2994,9 @@ ImitateRun run_imitate_session(const std::vector<uint8_t>& blob, uint64_t ticks,
       {"1400-2300 ms (quiet)", kWordTicks + 1400, 2800, {}, {}, {}},
   };
   constexpr size_t kWindows = sizeof(windows) / sizeof(windows[0]);
+  static_assert(kWindows == kImitateWindows,
+                "add a window to the table above and every per-window array on "
+                "ImitateRun has to widen with it");
   // The fifth window was added as a RATE baseline for M1d and deliberately not
   // scored for content, on the grounds that asking which word the voice carries
   // 1400-2300 ms after it ended is not a question. Once the creature started
@@ -2993,7 +3010,7 @@ ImitateRun run_imitate_session(const std::vector<uint8_t>& blob, uint64_t ticks,
   // The arrays on ImitateRun were four wide and are now five. Taking this bound
   // from kWindows while they were four wrote one past the end of out.voice[]
   // and segfaulted — the hard-coded-count bug class this project has audited.
-  constexpr size_t kScoredWindows = 5;
+  constexpr size_t kScoredWindows = kImitateWindows;
   // Voiced frames and total frames per window, summed over trials. Pooled
   // rather than averaged per trial: a trial with three frames and a trial with
   // thirty should not weigh the same in a RATE.
@@ -3100,7 +3117,7 @@ ImitateRun run_imitate_session(const std::vector<uint8_t>& blob, uint64_t ticks,
     if (!usable) { ++skipped; continue; }
 
     for (size_t k = 0; k < kWindows; ++k) {
-      if (k < 5) {
+      if (k < kImitateWindows) {
         vsum[k] += double(rec[k].voiced);
         fsum[k] += double(rec[k].frames);
         out.trial_voiced[k].push_back(
@@ -3169,7 +3186,7 @@ ImitateRun run_imitate_session(const std::vector<uint8_t>& blob, uint64_t ticks,
   }
   // The scored window's raw rows, so any PAIR of words can be scored off one
   // simulation rather than re-running the creature once per pair.
-  for (size_t k = 0; k < kWindows && k < 5; ++k) {
+  for (size_t k = 0; k < kImitateWindows; ++k) {
     out.voiced_frac[k] = fsum[k] > 0.0 ? vsum[k] / fsum[k] : 0.0;
   }
   out.scored_voice = windows[2].voice;
@@ -3227,9 +3244,9 @@ bool run_turntake(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
               "                    measurements and only the first was ever made.\n\n");
 
   constexpr uint32_t kSeeds = 3;
-  double spoke[5] = {}, quiet[5] = {};
+  double spoke[kImitateWindows] = {}, quiet[kImitateWindows] = {};
   uint32_t valid = 0;
-  const char* names[5] = {"while the word", "0-200 ms after", "200-600 ms after",
+  const char* names[kImitateWindows] = {"while the word", "0-200 ms after", "200-600 ms after",
                           "600-1400 ms after", "1400-2300 (quiet)"};
   for (uint32_t r = 0; r < kSeeds; ++r) {
     std::vector<uint8_t> variant = blob;
@@ -3238,18 +3255,18 @@ bool run_turntake(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
     const ImitateRun a = run_imitate_session(variant, ticks, 2, 1e9, 0.0, false);
     const ImitateRun b = run_imitate_session(variant, ticks, 2, 1e9, 0.0, true);
     if (!a.ok || !b.ok) continue;
-    for (int k = 0; k < 5; ++k) { spoke[k] += a.voiced_frac[k]; quiet[k] += b.voiced_frac[k]; }
+    for (size_t k = 0; k < kImitateWindows; ++k) { spoke[k] += a.voiced_frac[k]; quiet[k] += b.voiced_frac[k]; }
     ++valid;
   }
   if (valid < 2) {
     std::printf("  INCONCLUSIVE — %u of %u creatures usable.\n", valid, kSeeds);
     return false;
   }
-  for (int k = 0; k < 5; ++k) { spoke[k] /= valid; quiet[k] /= valid; }
+  for (size_t k = 0; k < kImitateWindows; ++k) { spoke[k] /= valid; quiet[k] /= valid; }
 
   std::printf("  voiced fraction, %u creatures\n", valid);
   std::printf("    %-20s %-10s %-10s %s\n", "window", "word", "silence", "word - silence");
-  for (int k = 0; k < 5; ++k) {
+  for (size_t k = 0; k < kImitateWindows; ++k) {
     std::printf("    %-20s %-10.3f %-10.3f %+.3f\n", names[k], spoke[k], quiet[k],
                 spoke[k] - quiet[k]);
   }
@@ -3324,7 +3341,7 @@ bool run_imitate(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
   if (dna.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) return false;
   constexpr uint32_t kReps = 5;
   constexpr size_t kScored = 2;  // "200-600 ms after"
-  static const char* kNames[5] = {"WHILE the word plays", "0-200 ms after",
+  static const char* kNames[kImitateWindows] = {"WHILE the word plays", "0-200 ms after",
                                   "200-600 ms after", "600-1400 ms after",
                                   "1400-2300 (ambient)"};
 
@@ -3342,7 +3359,7 @@ bool run_imitate(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
   // of bounds and printed an ambient row of 0.000 voice against a 0.174
   // shuffled — impossible for a two-class holdout, whose chance is 0.5, which is
   // the only reason it was caught rather than believed.
-  double sum[5][5] = {{0}};
+  double sum[kImitateWindows][5] = {{0}};
   uint32_t valid = 0, above = 0;
   for (uint32_t r = 0; r < kReps; ++r) {
     std::vector<uint8_t> variant = blob;
@@ -3352,7 +3369,7 @@ bool run_imitate(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
     if (!p.ok) continue;
     ++valid;
     if (p.voice[kScored] >= 0.75) ++above;
-    for (size_t k = 0; k < 5; ++k) {
+    for (size_t k = 0; k < kImitateWindows; ++k) {
       sum[k][0] += p.voice[k]; sum[k][1] += p.artic[k];
       sum[k][2] += p.shuffled[k]; sum[k][3] += p.dprime[k]; sum[k][4] += p.heard[k];
     }
@@ -3366,7 +3383,7 @@ bool run_imitate(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
 
   std::printf("  %-22s %-11s %-11s %-11s %-11s %s\n", "window", "voice", "articulators",
               "shuffled", "audible d'", "EAR still knows");
-  for (size_t k = 0; k < 5; ++k) {
+  for (size_t k = 0; k < kImitateWindows; ++k) {
     std::printf("  %-22s %-11.3f %-11.3f %-11.3f %-11.2f %.3f%s\n", kNames[k],
                 sum[k][0] / n, sum[k][1] / n, sum[k][2] / n, sum[k][3] / n, sum[k][4] / n,
                 k == kScored ? "   <- SCORED" : (k == 4 ? "   <- ambient babble" : ""));
