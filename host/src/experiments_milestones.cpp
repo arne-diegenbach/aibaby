@@ -1280,9 +1280,17 @@ M3Run run_m3_session(const std::vector<uint8_t>& blob, uint64_t ticks, bool pair
     if (!named.slept) {
       // The echo: what the vocal tract does *while* the word is playing. Not
       // the milestone — the caregiver is talking, so it measures the audio
-      // route rather than the visual one. It is the ceiling the visual route
-      // could inherit, which is the first thing to look at when the milestone
-      // fails.
+      // route rather than the visual one.
+      //
+      // It is NOT "the ceiling the visual route could inherit", which is what
+      // this comment claimed until 2026-08-29 and what the printed label still
+      // invites. The echo is an *identity map*: the arcuate transcodes a
+      // pattern that is already in the ear's coordinates into the larynx's, so
+      // of course the word comes back out. It is not a general-purpose channel
+      // the object could be poured into. Measured, three ways, by wiring the
+      // `vision->auditory` tract this creature never had: the object reaches
+      // auditory at up to 0.880 and the voice does not move (+0.04/0.00/-0.06
+      // over three seeds). See the README, "Borrowing the pathway that works".
       const std::vector<double> f = m3_vocal_features(named);
       if (!f.empty()) {
         echo_vocal.push_back(f);

@@ -482,6 +482,85 @@ and reward-modulated STDP's object-specific share of what it writes is about
 8%. Clearing 0.75 needs a third learning rule, which is a new architecture and
 not a fix.
 
+### Borrowing the pathway that works — measured, and it does not transfer
+
+The one idea left that was not another learning rule: **stop trying to build a
+second conditional pathway and route the object through the one that already
+works.** The creature repeats a heard word at 0.890 (M1b). If the seen object
+could evoke the *word's* activity in the auditory module, the innate arcuate
+would say it, and G3 would need no conditional reward at all — only Hebbian
+association between two co-active sensory codes, which is the one learning
+problem this architecture has never been asked to solve.
+
+`m3probe` states the case in two rows of one table — same creature, same
+larynx, same 100-trial instrument:
+
+| the condition is delivered to | that module reads | → **the voice reads** |
+|---|---|---|
+| `auditory` (a word, empty field) | 1.000 | **0.920** |
+| `vision` (an object, in silence) | 0.980 | **0.460** |
+
+and it also shows the missing edge: in the object block `auditory` sits at
+**0.480**, chance. The seen object never reaches the ear's module, and no probe
+had ever read that row — the genome has `vision→central`, `vision→vocal` and
+`central→auditory`, and no `vision→auditory` at all.
+
+So it was built (`tools/genome_add_tract.py`, genome-only, appended last so a
+weight-0 arm is the same wiring). **Three independent manipulations, all
+negative:**
+
+| manipulation | object in `auditory` | **voice** |
+|---|---|---|
+| no tract (control) | 0.420 / 0.520 / 0.380 | 0.580 / 0.460 / 0.500 |
+| random tract, w 0.35 | 0.880 / 0.500 / 0.680 | 0.620 / 0.460 / 0.440 |
+| topographic, σ 0.05–0.20 | 0.500–0.800 | 0.500–0.560 |
+| Hebbian (`hebb` 0.05–1.20), `m3` named − control | — | 0.000 / −0.113 / −0.038 / −0.012 |
+
+The tract delivers: on one seed the object goes from chance to **0.880** in
+auditory, driving it *harder than a real word does* (1601 spikes/trial against
+the word's 932). The voice moves **+0.04 / 0.00 / −0.06** across three seeds.
+The Hebbian arms are read against a mechanism-**off** arm that scored +0.112 —
+this instrument's noise floor showing, and the reason none of the four counts.
+
+**Why, and it is the part worth keeping.** The word's auditory code survives
+32-bin spatial pooling at **1.000**; the vision-driven code at the same
+per-neuron legibility sits at **0.520**, chance. One is coarse and coherent, the
+other fine-grained and balanced.
+
+> **The arcuate is a transcoder, not an amplifier.** It converts a pattern
+> already in the ear's coordinates into the larynx's. M1b's 0.890 is a
+> measurement of a fixed innate identity map — *not* a ceiling the visual route
+> could inherit by being poured into the same module. `m3`'s own comment and
+> its printed label claimed otherwise; the comment is corrected.
+
+**One number fell out of it that prices the whole delivery programme.** The 14
+`m3probe` runs above each give a matched object/word pair on the same creature
+in the same run, and the tract moves vocal's object legibility over a useful
+range — so for the first time the two routes *overlap* in how well `vocal`
+itself knows which stimulus it is:
+
+| | n | `vocal` (input) | **`voice` (output)** |
+|---|---|---|---|
+| object, `vocal` in [0.64, 0.82] | 7 | 0.749 | **0.523** |
+| word, same band | 12 | 0.752 | **0.867** |
+
+**+0.344 at matched input legibility**, and paired within-run +0.360 ± 0.018 SE,
+14/14 positive, where the input differs by only +0.111. The step is not a lossy
+channel whose output tracks its input: **the within-route slope is +0.12**, and
+the object route's voice sits at 0.513 ± 0.013 — one SE off chance — while
+vocal's own spikes read 0.661. Taking delivery to `vocal` from today's 0.66 to a
+perfect 1.00 would buy about **+0.04** at the voice against a bar needing +0.24.
+A future delivery mechanism can now be refused by arithmetic rather than by
+another run. (The match is on a 126-feature classifier's *score*, not on the
+underlying code — which is the point, same score and different form, but worth
+quoting with it.)
+
+This closes the last structurally different escape. "G3 is closed under this
+architecture" was a statement about learning rules — eight of them. It now
+covers **rewiring** as well: you cannot reach the milestone by feeding the
+object into the one pathway that works, because that pathway is an identity map
+rather than a channel.
+
 Two mechanisms carry the change since M4, and neither was aimed at the goal it
 hit. **Per-module homeostasis (DNA v9)** came from asking why praise did not
 survive its own session, and it stopped the decay. **Directional exploration
