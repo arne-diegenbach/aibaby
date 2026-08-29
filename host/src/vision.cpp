@@ -53,7 +53,10 @@ bool Retina::configure(const aibaby::DnaVision& cfg, std::string& error) {
     return false;
   }
 
-  features_.assign(cells_.size() * 2, 0.0f);
+  // DNA v46: a shape bank replaces the retinotopic one. The DoG cells are still
+  // built and still sampled — `magnitude_`, `contrast_` and the gaze controller
+  // all read them — but what leaves the eye is the radial profile.
+  features_.assign(aibaby::vision_features(cfg), 0.0f);
   magnitude_.assign(cells_.size(), 0.0f);
 
   gaze_x_ = 0.0f;
@@ -364,8 +367,10 @@ void Retina::present(const uint8_t* pixels) {
     // a dark surround, the other dark on light. Splitting a signed response
     // into two non-negative channels is also what lets a spike code carry it —
     // a neuron cannot fire a negative number of times.
-    features_[c * 2] = clamp01(response);
-    features_[c * 2 + 1] = clamp01(-response);
+    if (cfg_.radial_bins == 0) {
+      features_[c * 2] = clamp01(response);
+      features_[c * 2 + 1] = clamp01(-response);
+    }
     const float mag = std::fabs(response);
     magnitude_[c] = mag;
     total += mag;
@@ -377,6 +382,7 @@ void Retina::present(const uint8_t* pixels) {
   }
 
   contrast_ = float(total / double(cells_.size()));
+  if (cfg_.radial_bins != 0) present_radial(pixels);
   ++frames_produced_;
 
   if (aim_period_ == 0) return;
@@ -485,6 +491,85 @@ Retina::CellGeometry Retina::geometry(uint32_t cell) const {
 
 SceneSource::SceneSource(uint32_t frame_size, uint64_t seed) : frame_size_(frame_size) {
   rng_.seed(seed);
+}
+
+// DNA v46 — the shape bank, and it is host code for exactly the reason the
+// cochlea is: segmenting a frame and taking moments of it is signal processing
+// a laptop and a phone would each do differently. What the creature is born
+// with is the *shape* of the result — an ordered bank of coarse channels over a
+// physically meaningful axis — and that lives in the genome.
+//
+// The axis is normalised radius from the object's own centroid, scaled by the
+// equivalent-circle radius, so the bank is translation-free and scale-free
+// without the eye having to move. An area-matched square reaches sqrt(2)*a in
+// its corners where a disc stops at 1.128*a, so the outer channels are where a
+// cube lives and a ball does not.
+void Retina::present_radial(const uint8_t* pixels) {
+  const uint32_t k = uint32_t(features_.size());
+  for (float& f : features_) f = 0.0f;
+  if (k == 0) return;
+
+  // Segment on the midpoint of the frame's own intensity range. A sense may not
+  // read the genome's background and luminance constants — it does not know
+  // them — and at any usable contrast the two populations are far apart.
+  uint8_t lo = 255, hi = 0;
+  const size_t n_px = size_t(frame_size_) * frame_size_;
+  for (size_t i = 0; i < n_px; ++i) {
+    if (pixels[i] < lo) lo = pixels[i];
+    if (pixels[i] > hi) hi = pixels[i];
+  }
+  const float thr = 0.5f * (float(lo) + float(hi));
+
+  double mass = 0, mx = 0, my = 0;
+  for (uint32_t y = 0; y < frame_size_; ++y) {
+    for (uint32_t x = 0; x < frame_size_; ++x) {
+      if (float(pixels[size_t(y) * frame_size_ + x]) <= thr) continue;
+      mass += 1.0;
+      mx += double(x) + 0.5;
+      my += double(y) + 0.5;
+    }
+  }
+  // An empty field has to read as empty, which is what keeps "is anything
+  // there" legible at all — and the mass test alone does NOT do it. Thresholding
+  // a blank wall at the midpoint of its own noise puts half the frame above the
+  // line, so `mass` comes out at half the pixels rather than at zero and the
+  // eye reports a confident profile of nothing. Measured: M2 read 0.57 with only
+  // the mass guard in place.
+  //
+  // `contrast_` is already the retina's own statement of whether anything is
+  // there, computed from the DoG cells a few lines above, and `contrast_floor`
+  // is the genome's statement of how much of it counts. Reusing them is better
+  // than inventing a threshold: one description of "seeing something", and no
+  // new constant to guess wrong.
+  if (contrast_ <= cfg_.contrast_floor) return;
+  if (mass < 4.0) return;
+  mx /= mass;
+  my /= mass;
+  const double r_eq = std::sqrt(mass / 3.14159265358979323846);
+
+  std::vector<double> bins(k, 0.0);
+  for (uint32_t y = 0; y < frame_size_; ++y) {
+    for (uint32_t x = 0; x < frame_size_; ++x) {
+      if (float(pixels[size_t(y) * frame_size_ + x]) <= thr) continue;
+      const double dx = double(x) + 0.5 - mx, dy = double(y) + 0.5 - my;
+      const double r = std::sqrt(dx * dx + dy * dy) / r_eq;
+      uint32_t b = uint32_t(r / (1.6 / double(k)));
+      bins[b >= k ? k - 1 : b] += 1.0;
+    }
+  }
+
+  // Per-frame gain against the strongest channel, which is the same thing the
+  // cochlea does to mel energies and for the same reason: the encoder reads
+  // [0,1] and puts the intensity into *when* a channel fires, so a bank whose
+  // channels are all small fractions would fire everything late and carry its
+  // shape nowhere. Normalising by the peak keeps the profile and spends the
+  // whole latency window on it.
+  double peak = 0.0;
+  for (double v : bins) {
+    if (v > peak) peak = v;
+  }
+  if (peak <= 0.0) return;
+  for (uint32_t b = 0; b < k; ++b) features_[b] = float(bins[b] / peak);
 }
 
 void SceneSource::render(Shape shape, float cx, float cy, float radius, float luminance,

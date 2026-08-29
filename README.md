@@ -797,6 +797,73 @@ luminance step the segmentation is essentially perfect, where the retina's
 centre-surround responses carry the pixel noise. So a REFUSE here would have
 been decisive and a BUILD is permission to spend the sense and find out.
 
+### DNA v46 — the shape bank, built: delivery moves a long way, the voice does not
+
+`shapeprobe` said build, so it was built. `radial_bins` on `[vision]` is 0 in
+the shipped genome and bit-identical to v45 there; non-zero replaces the
+retina's ON/OFF responses with that many **radial mass channels** — the host
+segments the frame, finds the object's own centroid, and reports the fraction of
+it in each normalised annulus, radius scaled by the equivalent-circle radius.
+Ordered, coarse, translation-free and scale-free. The DoG cells are still built
+and still sampled, so `contrast`, the gaze controller and the panel's meters
+keep working; what leaves the eye is the profile.
+
+**A prediction that was wrong, and the bug it hid.** The genome comment said M2
+would not survive a shape-only eye. M2 reads **100%**, against the retinotopic
+eye's 98% — but only after a real bug was fixed. Thresholding a blank wall at
+the midpoint of its own noise puts half the frame above the line, so an empty
+field produced a confident profile of nothing and M2 read **0.57**. The guard
+now reuses `contrast_` and `contrast_floor`, which are the retina's and the
+genome's existing statements of "is anything there", rather than a new constant.
+
+`m3probe`, four seed families, object route:
+
+| seed | arm | vision | central | vocal | **voice** | oracle |
+|---|---|---|---|---|---|---|
+| 20260901 | retina | 1.000 | 0.640 | 0.760 | 0.460 | +0.214 |
+| 20260901 | **radial** | 1.000 | **0.920** | **0.840** | 0.600 | **+0.866** |
+| 20260902 | retina | 1.000 | 0.760 | 0.860 | 0.540 | +0.653 |
+| 20260902 | **radial** | 1.000 | **0.800** | **0.920** | 0.580 | **+1.360** |
+| 20260903 | retina | 0.920 | 0.560 | 0.660 | 0.620 | +0.247 |
+| 20260903 | **radial** | 1.000 | **0.820** | **0.860** | 0.580 | **+0.909** |
+| 20260904 | retina | 0.980 | 0.760 | 0.760 | 0.660 | +0.305 |
+| 20260904 | **radial** | 1.000 | **0.820** | **0.880** | 0.540 | **+0.904** |
+
+**`central` +0.160 and `vocal` +0.115, both 4 of 4, and the oracle roughly
+triples.** The shape bank does exactly what `shapeprobe` said it would: the
+object now survives the tract and arrives in the larynx's slices with an axis.
+
+**And the milestone does not move.** `m3` on four families, each genome against
+its own random-order control:
+
+| | shipped seed | 20260901 | 20260902 | 20260903 | mean |
+|---|---|---|---|---|---|
+| retina, taught − random | +0.060 | −0.060 | +0.060 | −0.060 | **0.000** |
+| radial, taught − random | +0.080 | 0.000 | **+0.260** | 0.000 | **+0.085** |
+
+**+0.085 ± 0.071 SE — 1.2 SE, and it rests on one arm of four.** Seventh
+single-arm high in this project's history. Read it against the row above it:
+the control genome has the mechanism absent by construction and still swings
+**±0.060, spread 0.120** — an independent re-measurement of the same noise floor
+`pairprobe` reported at 0.115, on a different metric. Audibility agrees: cube
+versus ball on the shape eye is corrected d′ **0.00** against a 32-permutation
+null of 0.48, so nothing here is a sound anyone could hear.
+
+> **This is the sixth intervention to improve what the association module
+> represents and leave the voice where it was**, after divisive normalisation,
+> top-down feedback, the hippocampus, the denser vision tract and the faster
+> auditory tract. What is new is that this one was **priced in advance and the
+> arithmetic held**. The within-route vocal→voice slope is +0.12, so `vocal`
+> moving +0.115 predicts a voice change of about **+0.014**. Observed: +0.005 on
+> the four paired families. The delivery programme can now be refused by
+> arithmetic, and this is the measurement that shows the arithmetic works.
+
+So `shapeprobe`'s gate was **correct about what it measured and did not decide
+the milestone**. It asked whether a coherent front-end survives a tract; the
+answer was yes and it is still yes. The tract was never the binding constraint —
+the step from `vocal`'s population to nine scalars is, and DNA v46 does nothing
+about that. Ships off, pinned in `mechverify` at `9945f7d9b1d66af8`.
+
 Two mechanisms carry the change since M4, and neither was aimed at the goal it
 hit. **Per-module homeostasis (DNA v9)** came from asking why praise did not
 survive its own session, and it stopped the decay. **Directional exploration

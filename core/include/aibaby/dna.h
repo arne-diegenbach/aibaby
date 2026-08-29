@@ -322,7 +322,7 @@ constexpr uint32_t kDnaMagic = 0x44424941;  // "AIBD"
 //     about what reward multiplies.
 //
 //     See DnaModule::ffi_apical and DnaModule::ffi_learn, and `errprobe`.
-constexpr uint32_t kDnaVersion = 45;
+constexpr uint32_t kDnaVersion = 46;
 
 // What a module is wired to the world through. The host looks modules up by
 // role, never by name or index, so renaming a module in the genome cannot
@@ -730,6 +730,37 @@ struct DnaVision {
   // saccades from signals the geniculate pathway cannot yet resolve into a
   // shape. Set equal to `contrast_floor` for the pre-v34 creature exactly.
   float gaze_contrast_floor;
+  // DNA v46 — a shape bank, the visual analogue of the cochlea.
+  //
+  // 0 is off and is bit-identical to v45: the retina emits its centre-surround
+  // ON/OFF responses and nothing here executes.
+  //
+  // Non-zero replaces them with this many RADIAL MASS channels: the host
+  // segments the frame, finds the object's own centroid, and reports what
+  // fraction of it lies in each normalised annulus, radius scaled by the
+  // equivalent-circle radius. Ordered, coarse, translation-free and
+  // scale-free, which is what the retina's code is not.
+  //
+  // The reason it exists is measured. `projprobe` says the object's code dies
+  // in a sparse tract where the word's survives; the per-knob table says it
+  // dies again at the larynx; the oracle arm says it is present but carried
+  // with no axis. `shapeprobe` then encoded candidate banks the way mel is
+  // encoded and pooled them: the shipped retina goes into a d=0.40 tract at
+  // 0.920 and comes out at 0.570 mean, and this bank comes out at 0.960, with
+  // a word control lit at 1.000 and a channel-count control at 0.495 on four
+  // seed families.
+  //
+  // It REPLACES rather than joins the retinotopic code, so a creature with it
+  // on is a shape-only eye. The gaze controller still works — it reads the DoG
+  // cells, which are still built and still sampled — but any structured visual
+  // wiring (kGabor, kCurvature) has no cells to index and the panel's cell view
+  // divides the count by two and will read half.
+  //
+  // **M2 was expected not to survive this and does: 100% against the
+  // retinotopic eye's 98%**, once an empty field reads as empty (see
+  // `Retina::present_radial`, where the first version did not and M2 read
+  // 0.57). Predicting the loss and being wrong is worth leaving in place.
+  uint32_t radial_bins;
   float gain;               // injected current for one latency spike
   float frame_hz;           // camera frames the module is born expecting
   // Latency coding (§5.1): a cell at full contrast fires at the top of the
@@ -1937,7 +1968,10 @@ struct DnaHeader {
 // covers that ground at higher resolution.
 uint32_t vision_rings(const DnaVision& v);
 uint32_t vision_cells(const DnaVision& v);
-inline uint32_t vision_features(const DnaVision& v) { return vision_cells(v) * 2; }
+inline uint32_t vision_features(const DnaVision& v) {
+  // DNA v46: a shape bank replaces the retinotopic one. Zero keeps v45 exactly.
+  return v.radial_bins ? v.radial_bins : vision_cells(v) * 2;
+}
 
 // Where a ganglion cell sits and how wide its field is, in normalised [0,1]
 // frame coordinates. The host sampler used to own this arithmetic and the core

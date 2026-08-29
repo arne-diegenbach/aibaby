@@ -333,6 +333,14 @@ gaze_contrast_floor = 0.015 # DNA v34: the same threshold, for AIMING. Setting
 # available), gaze error 1.3 .. 2.0 px, and 0.0 px of empty-field drift on
 # every one.
                             # has to *be* empty, not merely late
+radial_bins = 0             # DNA v46: 0 = the retinotopic eye, bit-identical to
+                            # v45. Non-zero replaces the ON/OFF responses with
+                            # that many radial mass channels — the shape bank
+                            # `shapeprobe` says survives a tract where the
+                            # retina's code does not. A shape-only eye: M2 and
+                            # the gaze controller DO survive it (M2 reads 100%),
+                            # structured visual wiring does not. It lifts
+                            # delivery and does not move the voice; see README.
 gain = 1.30                 # one latency spike's worth of injected current
 frame_hz = 10.0             # camera frames the module is born expecting
 latency_ms = 60.0           # full contrast fires now, threshold contrast this

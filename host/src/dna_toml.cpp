@@ -424,6 +424,7 @@ bool compile_dna_toml(const std::string& path, std::vector<uint8_t>& out,
     header.vision.contrast_gain = float(r.number("contrast_gain"));
     header.vision.contrast_floor = float(r.number("contrast_floor"));
     header.vision.gaze_contrast_floor = float(r.number("gaze_contrast_floor"));
+    header.vision.radial_bins = uint32_t(r.number("radial_bins"));
     header.vision.gain = float(r.number("gain"));
     header.vision.frame_hz = float(r.number("frame_hz"));
     header.vision.latency_ms = float(r.number("latency_ms"));

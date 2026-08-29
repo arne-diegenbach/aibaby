@@ -39,6 +39,10 @@ class Retina {
   // the encoder are not left holding the final frame of a stream that ended.
   void reset_stream();
 
+  // DNA v46. Fills `features_` with the radial mass profile instead of the
+  // ON/OFF responses. Called from present() when the genome asks for it.
+  void present_radial(const uint8_t* pixels);
+
   uint32_t frame_size() const { return frame_size_; }
   uint32_t cells() const { return uint32_t(cells_.size()); }
   uint32_t feature_count() const { return uint32_t(features_.size()); }

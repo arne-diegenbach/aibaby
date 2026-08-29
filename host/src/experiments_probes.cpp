@@ -6626,6 +6626,8 @@ constexpr size_t kCuriosityPredict =
     offsetof(aibaby::DnaHeader, curiosity) + offsetof(aibaby::DnaCuriosity, predict_gain);
 constexpr size_t kPruneCompete = offsetof(aibaby::DnaHeader, consolidate) +
                                  offsetof(aibaby::DnaConsolidate, prune_compete);
+constexpr size_t kVisionRadial =
+    offsetof(aibaby::DnaHeader, vision) + offsetof(aibaby::DnaVision, radial_bins);
 
 constexpr uint64_t kShort = 120000;
 // Pruning only executes inside a consolidation pass, and the creature does not
@@ -6635,6 +6637,8 @@ constexpr uint64_t kShort = 120000;
 constexpr uint64_t kThroughSleep = 1300000;
 
 const MechPin kMechPins[] = {
+    {"shape bank", "v46",
+     {{PatchScope::kHeader, nullptr, kVisionRadial, 12.0f, true, nullptr}}, 1, kShort, 0x9945f7d9b1d66af8ull},
     {"predictive coding", "v15",
      {{PatchScope::kHeader, nullptr, kCuriosityPredict, 0.5f, false, nullptr}}, 1, kShort, 0xa2512d68027bf089ull},
     {"eligibility baseline", "v16",
