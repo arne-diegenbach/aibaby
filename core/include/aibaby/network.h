@@ -648,6 +648,9 @@ class Network {
   // interneurons. Separate from mean_rate_fast because that one is a
   // one-second EMA and this has to follow the common mode trial-to-trial.
   Scalar pool_fast_[kMaxModules] = {};
+  // DNA v45. The rebound term's own slow mean, so the tonic component of a
+  // rectified difference can be subtracted off and only the offset survives.
+  Scalar rebound_mean_[kMaxModules] = {};
   Scalar pool_alpha_ = kOne;
   // DNA v24. Per-neuron pooling weight, mean 1 within each module.
   Scalar* ffi_w_ = nullptr;

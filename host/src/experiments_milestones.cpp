@@ -2907,6 +2907,15 @@ struct ImitateRun {
   // Voiced FRACTION per window: the answering burst. M1b scores what the voice
   // carries; this is whether it speaks at all.
   double voiced_frac[5] = {};
+  // PER-TRIAL, so a caller can filter. The EAR column exists because an
+  // after-window in which the auditory module still classifies is not memory
+  // but a stimulus that has not finished arriving — and a creature that goes
+  // quiet while listening stops masking the caregiver and hears it BETTER, so
+  // the confound grows exactly when the mechanism works. Auditory ACTIVITY per
+  // trial is the direct measure of arrival, and lets the burst be scored on
+  // the trials where the word has genuinely gone.
+  std::vector<double> trial_voiced[5];
+  std::vector<double> trial_aud[5];
   size_t trials = 0;
   // The scored window's raw rows, kept so the caller can score any PAIR of
   // words off one simulation instead of re-running the creature per pair.
@@ -3087,6 +3096,11 @@ ImitateRun run_imitate_session(const std::vector<uint8_t>& blob, uint64_t ticks,
       if (k < 5) {
         vsum[k] += double(rec[k].voiced);
         fsum[k] += double(rec[k].frames);
+        out.trial_voiced[k].push_back(
+            rec[k].frames ? double(rec[k].voiced) / double(rec[k].frames) : 0.0);
+        double a = 0.0;
+        for (double x : aud_counts[k]) a += x;
+        out.trial_aud[k].push_back(a);
       }
       windows[k].voice.push_back(m3_vocal_features(rec[k]));
       {
@@ -3231,6 +3245,48 @@ bool run_turntake(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
   for (int k = 0; k < 5; ++k) {
     std::printf("    %-20s %-10.3f %-10.3f %+.3f\n", names[k], spoke[k], quiet[k],
                 spoke[k] - quiet[k]);
+  }
+
+  // THE EAR SEPARATION. The burst above is scored on every trial, and the EAR
+  // control rises when the mechanism works — a creature silent while listening
+  // does not mask the caregiver, hears the word better, and more of it persists
+  // into the scored window. So score it again on the trials where the word has
+  // genuinely GONE: those whose auditory activity at 200-600 ms has fallen back
+  // to what the same trial shows at 1400-2300 ms.
+  //
+  // If the burst survives this it is an answer. If it collapses, it was a
+  // stimulus arriving late.
+  {
+    std::vector<uint8_t> variant = blob;
+    const ImitateRun a = run_imitate_session(variant, ticks, 2, 1e9, 0.0, false);
+    if (a.ok && a.trial_voiced[2].size() == a.trial_aud[2].size() &&
+        a.trial_voiced[2].size() >= 20) {
+      const size_t n = a.trial_voiced[2].size();
+      // "Back to baseline" is within 20% of the same trial's own quiet window,
+      // which makes the criterion per-trial rather than a level chosen once for
+      // creatures with different auditory gains.
+      std::vector<double> kept_burst;
+      for (size_t i = 0; i < n; ++i) {
+        const double q = a.trial_aud[4][i];
+        if (q <= 0.0) continue;
+        if (a.trial_aud[2][i] <= q * 1.2) {
+          kept_burst.push_back(a.trial_voiced[2][i] - a.trial_voiced[4][i]);
+        }
+      }
+      if (kept_burst.size() < 8) {
+        std::printf("\n    ear separation: only %zu of %zu trials had the ear back at\n"
+                    "    baseline — REFUSING to score the burst on that\n",
+                    kept_burst.size(), n);
+      } else {
+        double m = 0.0;
+        for (double x : kept_burst) m += x;
+        m /= double(kept_burst.size());
+        std::printf("\n    ear separation: on the %zu of %zu trials where auditory\n"
+                    "    activity at 200-600 ms is back within 20%% of the same trial's\n"
+                    "    quiet window, the burst is %+.3f\n",
+                    kept_burst.size(), n, m);
+      }
+    }
   }
 
   // The burst is window 2 against the SAME arm's quiet tail, and the null is

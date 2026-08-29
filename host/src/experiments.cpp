@@ -195,10 +195,12 @@ const Spec kSpecs[] = {
      "  clock, +4.0 at 1600000 and +18.3 here. Below this the experiment cannot\n"
      "  see learning it is looking for, and it says UNDERPOWERED rather than null.\n"
      "  OPEN: does the echo improve with feedback — the day it flips is news"},
-    {"turntake", 560000, Expect::kOpen, Tier::kLong,
-     "M1d, and OPEN until measured: does the creature vocalise MORE after the\n"
-     "  caregiver stops, or merely resume its baseline babble? M1b showed the\n"
-     "  voice CARRIES the word at 200-600 ms, which is content, not rate. Same\n"
+    {"turntake", 560000, Expect::kPass, Tier::kLong,
+     "M1d, MET as of DNA v44/v45: the creature vocalises MORE after the caregiver\n"
+     "  stops rather than resuming its baseline babble. Corrected burst +0.349 on\n"
+     "  6 of 6 seeds against a +0.05 bar and a -0.021 baseline before the rebound\n"
+     "  shipped. The reflex's silence during the word is NOT scored — it is true\n"
+     "  with the creature inert — only the burst above its own quiet tail. Same\n"
      "  minimum as imitate, whose session it reuses"},
     {"imitate", 560000, Expect::kPass, Tier::kLong,
      "derived: 2800-tick trials, so 200 of them for an accuracy step of 0.01"},
@@ -234,12 +236,26 @@ const Spec kSpecs[] = {
 //   15b5dcb6d8616452 -> ca3234c61439b538   excitatory vision->vocal
 //                    -> edd7d9e246927b2c   inhibitory auditory->vocal
 //                    -> 23c4eb2c7c45d05c   DNA v34 gaze_contrast_floor 0.015
+//                    -> ad96f882becbee92   DNA v44/v45 rebound, M1d
 //
 // They ship together and the second is not optional: the first one alone makes
 // the creature babble loudly enough to fail `audio` on five of the nine seeds.
 // Four recalibrated target_rate_hz ride along. Every vocal number recorded
 // before this was taken on a creature whose larynx had no visual input at all.
-constexpr uint64_t kPinnedHash = 0x23c4eb2c7c45d05cull;
+//
+// The last move is M1d. `vocal` gains a post-stimulus rebound driven by
+// `auditory` — drive rises while the ear's activity FALLS — with its own slow
+// mean subtracted so a rectified difference does not become a tonic lift. The
+// creature answers: +0.349 corrected burst on 6 of 6 seeds against a +0.05 bar
+// and a -0.021 baseline, with both confounds excluded (removing the tonic lift
+// RAISES it, and scoring only trials where the ear is back at baseline raises
+// it further). NO target_rate_hz moved — `calibrate` passes unchanged, vocal's
+// free-running rate going 3.81 -> 4.12 Hz against a 5.00 target.
+//
+// What it costs: the creature is now nearly silent WHILE it listens (voiced
+// fraction 0.276 -> 0.010), because the mean-subtracted term is negative during
+// input. That is a real behavioural change and not only an added burst.
+constexpr uint64_t kPinnedHash = 0xad96f882becbee92ull;
 
 const Spec* find_spec(const std::string& name) {
   for (const Spec& s : kSpecs) {

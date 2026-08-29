@@ -562,6 +562,7 @@ bool compile_dna_toml(const std::string& path, std::vector<uint8_t>& out,
     m.ffi_gain = float(r.number("ffi_gain"));
     m.rebound_source = int32_t(r.number("rebound_source"));
     m.rebound_gain = float(r.number("rebound_gain"));
+    m.rebound_mean_tau_ms = float(r.number("rebound_mean_tau_ms"));
     m.ffi_apical = uint32_t(r.number("ffi_apical"));
     m.ffi_learn = float(r.number("ffi_learn"));
     m.apical_tau_ms = float(r.number("apical_tau_ms"));

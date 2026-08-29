@@ -4843,6 +4843,12 @@ bool run_restate(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
   // --- the trace, from eligprobe's own session -------------------------------
   // 600k because below it eligprobe's positive control is blind, and a blind
   // control would make this whole experiment agree with anything.
+  // RE-PINNED 2026-08-29, when DNA v44/v45's rebound shipped. Every number
+  // below describes a creature that goes nearly silent while it listens, which
+  // is a different larynx from the one they were first taken on. The echo cost
+  // something real — word at vocal 0.847 -> 0.787, arcuate trace 0.973 -> 0.867
+  // — and the object reading moved too, vocal 0.733 -> 0.667 while central rose
+  // 0.653 -> 0.693. These are deliberate, not drift.
   std::printf("\n  --- eligprobe, 600000 ticks x 3 creatures ---\n");
   double cen = 0, arc = 0, vis = 0;
   uint32_t valid = 0, vis_valid = 0;
@@ -4865,16 +4871,16 @@ bool run_restate(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
   Restatement rows[] = {
       {"object at vocal, per neuron",
        "README 'three caps': 0.660 over three seed FAMILIES -- NOT the old 0.500",
-       0.733, 0.15, sc.get(true, "vocal"), sc.get(true, "vocal") >= 0.0},
+       0.667, 0.15, sc.get(true, "vocal"), sc.get(true, "vocal") >= 0.0},
       {"object at central, per neuron",
        "README G3 cascade: the condition upstream of the larynx",
-       0.653, 0.15, sc.get(true, "central"), sc.get(true, "central") >= 0.0},
+       0.693, 0.15, sc.get(true, "central"), sc.get(true, "central") >= 0.0},
       {"object at vision, per neuron",
        "the positive control: if this falls, nothing else here is readable",
-       0.947, 0.15, sc.get(true, "vision"), sc.get(true, "vision") >= 0.0},
+       0.960, 0.15, sc.get(true, "vision"), sc.get(true, "vision") >= 0.0},
       {"word at vocal, per neuron",
        "the echo route -- what makes the creature able to repeat but not name",
-       0.847, 0.15, sc.get(false, "vocal"), sc.get(false, "vocal") >= 0.0},
+       0.787, 0.15, sc.get(false, "vocal"), sc.get(false, "vocal") >= 0.0},
       {"word at auditory, per neuron",
        "the auditory positive control",
        1.000, 0.10, sc.get(false, "auditory"), sc.get(false, "auditory") >= 0.0},
@@ -4889,13 +4895,13 @@ bool run_restate(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
        // 0.907 is what THIS experiment measures at its own 3 creatures.
        // eligprobe reports 0.820 at 5; pinning that here would bake in a
        // sample-size drift and blunt the check.
-       0.907, 0.12, vis, vis_valid >= 2},
+       0.797, 0.12, vis, vis_valid >= 2},
       {"central->vocal trace conditionality",
        "eligprobe: 0.742 at 5 creatures, NOT the long-recorded 0.654",
-       0.813, 0.12, cen, valid >= 2},
+       0.627, 0.12, cen, valid >= 2},
       {"arcuate trace, size-matched",
        "eligprobe's positive control -- a tract known to carry a condition",
-       0.973, 0.12, arc, valid >= 2},
+       0.867, 0.12, arc, valid >= 2},
   };
 
   std::printf("\n  %-38s %-9s %-9s %-8s %s\n", "quantity", "expected", "measured",
@@ -6111,6 +6117,27 @@ bool run_ipprobe(const std::vector<uint8_t>& dna_blob, uint64_t ticks, bool verb
   for (uint32_t a = 0; a < n_arms; ++a) {
     std::vector<uint8_t> variant = dna_blob;
     const float sc = kIpScales[a];
+    // ISOLATE THE REGULATOR FROM THE CREATURE'S OWN VOICE. This experiment
+    // gates on whether relaxing the regulator opens the rate gap, which is a
+    // question about the REGULATOR — but `self_gain` mixes the larynx back into
+    // the room, so with it on the "silence" arm is measuring the creature's own
+    // babble, and the answer depends on how loudly it happens to be babbling.
+    //
+    // That was tolerable while vocal output barely tracked the stimulus. DNA
+    // v44/v45's rebound makes it track hard — silent while listening, a burst
+    // after — and the contamination reversed the result: shipped +80.3%,
+    // relaxed +66.1%, i.e. relaxing appeared to NARROW the gap. Muted, the same
+    // creature reads +141.1% and +247.3%, a clean 1.75x.
+    //
+    // So the sweep is muted and the ecological gap is reported separately
+    // below. Numbers here are NOT comparable with any ipprobe result recorded
+    // before 2026-08-29, which were all taken with self-hearing on.
+    {
+      const float mute = 0.0f;
+      std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, audio) +
+                      offsetof(aibaby::DnaAudio, self_gain),
+                  &mute, sizeof(mute));
+    }
     std::memcpy(variant.data() + sizeof(aibaby::DnaHeader) +
                     sizeof(aibaby::DnaModule) * size_t(aud_m) +
                     offsetof(aibaby::DnaModule, ip_wake_scale),
@@ -6121,7 +6148,12 @@ bool run_ipprobe(const std::vector<uint8_t>& dna_blob, uint64_t ticks, bool verb
       return false;
     }
     const aibaby::Network& net = s.brain.network();
-    const aibaby::DnaAudio& acfg = dna0.header().audio;
+    // FROM THE VARIANT, not from dna0. The ear used to be configured from the
+    // original blob, so any per-arm edit to an audio field was silently
+    // ignored — including the self_gain mute above, which produced output
+    // byte-identical to the unpatched sweep and looked like the mute having no
+    // effect rather than never being applied.
+    const aibaby::DnaAudio& acfg = s.dna.header().audio;
     Ear ear;
     if (!ear.configure(acfg, error)) {
       std::printf("  transducer failed: %s\n", error.c_str());
@@ -6257,52 +6289,52 @@ constexpr uint64_t kThroughSleep = 1300000;
 
 const MechPin kMechPins[] = {
     {"predictive coding", "v15",
-     {{PatchScope::kHeader, nullptr, kCuriosityPredict, 0.5f, false, nullptr}}, 1, kShort, 0x5246e218f7c2b8d6ull},
+     {{PatchScope::kHeader, nullptr, kCuriosityPredict, 0.5f, false, nullptr}}, 1, kShort, 0xa2512d68027bf089ull},
     {"eligibility baseline", "v16",
-     {{PatchScope::kHeader, nullptr, kStdpElig, 20000.0f, false, nullptr}}, 1, kShort, 0x2ef07ecfd3c1756dull},
+     {{PatchScope::kHeader, nullptr, kStdpElig, 20000.0f, false, nullptr}}, 1, kShort, 0x42235f24c989d110ull},
     {"presynaptic centring", "v17",
-     {{PatchScope::kHeader, nullptr, kStdpPre, 1.0f, false, nullptr}}, 1, kShort, 0x12c4c9061cc62019ull},
+     {{PatchScope::kHeader, nullptr, kStdpPre, 1.0f, false, nullptr}}, 1, kShort, 0xfa66feecb9076995ull},
     {"per-pathway Hebbian", "v23",
-     {{PatchScope::kProjection, "central->vocal", P_(hebb), 1e-4f, false, nullptr}}, 1, kShort, 0x1fc86fcdc2b06e2dull},
+     {{PatchScope::kProjection, "central->vocal", P_(hebb), 1e-4f, false, nullptr}}, 1, kShort, 0x5c61a074fb1c06b8ull},
     {"pooling interneurons", "v24",
      {{PatchScope::kModule, "central", M_(ffi_source), 0.0f, true, "vision"},
       {PatchScope::kModule, "central", M_(ffi_gain), 0.5f, false, nullptr}},
-     2, kShort, 0x633dcd0314e81925ull},
+     2, kShort, 0x10d0b3d2c87eefe7ull},
     {"apical compartment", "v25",
      {{PatchScope::kModule, "vocal", M_(apical_threshold), 0.35f, false, nullptr},
       {PatchScope::kModule, "vocal", M_(apical_gain), 1.0f, false, nullptr},
       {PatchScope::kProjection, "vision->vocal", P_(apical), 1.0f, true, nullptr}},
-     3, kShort, 0x73653dbad8466837ull},
+     3, kShort, 0xfcac41189f27f6e3ull},
     {"oscillations", "v26",
      {{PatchScope::kModule, "central", M_(theta_amp), 0.05f, false, nullptr},
       {PatchScope::kModule, "central", M_(gamma_amp), 0.02f, false, nullptr}},
-     2, kShort, 0xe77ded57ffba8e6cull},
+     2, kShort, 0x85d749ecc88f024full},
     {"critical period", "v28",
      {{PatchScope::kModule, "central", M_(critical_tau_ms), 300000.0f, false, nullptr}}, 1,
-     kShort, 0x7dcf64323b9e6ae3ull},
+     kShort, 0x0fbb7302eb5c157aull},
     {"plateau-gated plasticity", "v29",
      {{PatchScope::kModule, "vocal", M_(apical_threshold), 0.35f, false, nullptr},
       {PatchScope::kModule, "vocal", M_(apical_gain), 1.0f, false, nullptr},
       {PatchScope::kProjection, "vision->vocal", P_(apical), 1.0f, true, nullptr},
       {PatchScope::kModule, "vocal", M_(plateau_gate), 0.5f, false, nullptr}},
-     4, kShort, 0xd0a3b887d3dfd855ull},
+     4, kShort, 0x28af3c91f5061efeull},
     {"lateral competition", "v32",
      {{PatchScope::kModule, "central", M_(lateral_gain), 0.3f, false, nullptr},
       {PatchScope::kModule, "central", M_(lateral_sigma), 0.2f, false, nullptr}},
-     2, kShort, 0xfeb08e20bf42c877ull},
+     2, kShort, 0xbc950d221bd13da2ull},
     {"dynamic synapses", "v36",
      {{PatchScope::kProjection, "auditory->central", P_(stp_use), 0.5f, false, nullptr},
       {PatchScope::kProjection, "auditory->central", P_(stp_recover_ms), 300.0f, false, nullptr}},
-     2, kShort, 0xed756042e4167e0cull},
+     2, kShort, 0x884a7e3406948c4dull},
     {"burst plasticity", "v37",
      {{PatchScope::kModule, "vocal", M_(burst_ms), 20.0f, false, nullptr},
       {PatchScope::kHeader, nullptr, kStdpBurstTau, 2000.0f, false, nullptr},
       {PatchScope::kProjection, "central->vocal", P_(burst_learn), 1e-3f, false, nullptr}},
-     3, kShort, 0xd4159bcbf1dddfe2ull},
+     3, kShort, 0xfb7996436247bb6dull},
     {"competitive pruning", "v38",
-     {{PatchScope::kHeader, nullptr, kPruneCompete, 0.5f, false, nullptr}}, 1, kThroughSleep, 0x8bc54c9948268aedull},
+     {{PatchScope::kHeader, nullptr, kPruneCompete, 0.5f, false, nullptr}}, 1, kThroughSleep, 0x6f20f43f8c32f90eull},
     {"per-module elig tau", "v39",
-     {{PatchScope::kModule, "central", M_(elig_tau_scale), 4.0f, false, nullptr}}, 1, kShort, 0x6037b59ae289c878ull},
+     {{PatchScope::kModule, "central", M_(elig_tau_scale), 4.0f, false, nullptr}}, 1, kShort, 0xfebd01fa5ecaf55full},
     {"dendritic error", "v40",
      {{PatchScope::kModule, "vocal", M_(apical_threshold), 0.35f, false, nullptr},
       {PatchScope::kModule, "vocal", M_(apical_gain), 1.0f, false, nullptr},
@@ -6311,7 +6343,7 @@ const MechPin kMechPins[] = {
       {PatchScope::kModule, "vocal", M_(ffi_gain), 0.5f, false, nullptr},
       {PatchScope::kModule, "vocal", M_(ffi_apical), 1.0f, true, nullptr},
       {PatchScope::kModule, "vocal", M_(ffi_learn), 2e-4f, false, nullptr}},
-     7, kShort, 0x457a17d1af252433ull},
+     7, kShort, 0x36b11772efe81961ull},
     // DNA v43. A projection KIND rather than a scalar, so the patch retargets an
     // existing tract: central->vocal becomes a topographic map onto vocal's F1
     // group. Without this row the kind could rot into a no-op and nothing would
@@ -6323,13 +6355,19 @@ const MechPin kMechPins[] = {
       {PatchScope::kProjection, "central->vocal", P_(topo_dst_lo), 0.2222f, false, nullptr},
       {PatchScope::kProjection, "central->vocal", P_(topo_dst_hi), 0.3333f, false, nullptr},
       {PatchScope::kProjection, "central->vocal", P_(topo_sigma), 0.07f, false, nullptr}},
-     6, kShort, 0xfa7adb88f9690d79ull},
-    // DNA v44. The post-stimulus rebound on the larynx, driven by the ear.
-    {"post-stimulus rebound", "v44",
-     {{PatchScope::kModule, "vocal", M_(rebound_source), 0.0f, true, "auditory"},
-      {PatchScope::kModule, "vocal", M_(rebound_gain), 0.02f, false, nullptr}},
-     2, kShort, 0xa51d76a402c159dcull},
+     6, kShort, 0x831a047c2989bc76ull},
+    // v44 and v45 USED to be pinned here and are not any more, because the
+    // rebound now SHIPS ON. mechverify exists for mechanisms invisible to
+    // kPinnedHash — an off-by-default mechanism can rot into a no-op with
+    // nothing noticing. A mechanism that ships on is covered by the main
+    // determinism hash directly, and leaving its rows here would make them
+    // patch the shipped values onto themselves: a no-op variant, which this
+    // experiment's own vacuity check would (correctly) fail.
 };
+// ALL PINS RE-TAKEN 2026-08-29, when DNA v44/v45's rebound shipped ON. Every
+// variant here patches the SHIPPED genome, so changing the shipped genome moves
+// every one of these hashes at once — that is not drift, it is the baseline
+// moving under them, and the experiment correctly refused to accept it silently.
 constexpr uint32_t kMechPinCount = sizeof(kMechPins) / sizeof(kMechPins[0]);
 
 }  // namespace

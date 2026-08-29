@@ -1220,7 +1220,18 @@ void Network::step() {
       const uint32_t src = uint32_t(dna_.module(m).rebound_source);
       if (src < module_count_) {
         const Scalar drop = modules_[src].mean_rate - pool_fast_[src];
-        if (drop > kZero) rebound = Scalar(dna_.module(m).rebound_gain) * drop;
+        const Scalar raw = drop > kZero ? drop : kZero;
+        // DNA v45. Track and subtract the term's own slow mean, so a rectified
+        // difference stops contributing a tonic lift and only the offset shows.
+        // tau 0 leaves v44's behaviour byte for byte.
+        const Scalar tau = Scalar(dna_.module(m).rebound_mean_tau_ms);
+        Scalar use = raw;
+        if (tau > kZero) {
+          const Scalar a = Scalar(dna_.header().sim.dt_ms) / tau;
+          rebound_mean_[m] += a * (raw - rebound_mean_[m]);
+          use = raw - rebound_mean_[m];
+        }
+        rebound = Scalar(dna_.module(m).rebound_gain) * use;
       }
     }
 
@@ -2641,6 +2652,19 @@ void Network::save_state(SnapshotWriter& w) const {
     w.put(dropped_by_module_[m]);
     w.put(dropped_reverse_by_module_[m]);
   }
+  // THE INTERNEURON POOL AND THE REBOUND'S MEAN. Neither was saved before, and
+  // it did not matter while nothing shipped that read them: `pool_fast_`
+  // reconverges in tens of ms, and `rebound_mean_` did not exist. DNA v44/v45
+  // ships ON and reads both every tick — `drop = mean_rate[src] -
+  // pool_fast_[src]`, then a mean with a FIVE SECOND time constant subtracted
+  // from it. A resumed creature restarted that mean at zero and ran five
+  // seconds of wrong drive, which `snapshot` caught as a divergence at the
+  // first checkpoint with the arena hash matching exactly. State the hash does
+  // not cover is exactly what that experiment is for.
+  for (uint32_t m = 0; m < kMaxModules; ++m) {
+    w.put(pool_fast_[m]);
+    w.put(rebound_mean_[m]);
+  }
 }
 
 void Network::load_state(SnapshotReader& r) {
@@ -2662,6 +2686,13 @@ void Network::load_state(SnapshotReader& r) {
   for (uint32_t m = 0; m < kMaxModules; ++m) {
     r.get(dropped_by_module_[m]);
     r.get(dropped_reverse_by_module_[m]);
+  }
+  // Symmetric with save_state above. Reading these in the same order is what
+  // keeps the layout fingerprint honest: a field added on one side only makes
+  // every later field land one slot out of step.
+  for (uint32_t m = 0; m < kMaxModules; ++m) {
+    r.get(pool_fast_[m]);
+    r.get(rebound_mean_[m]);
   }
 }
 

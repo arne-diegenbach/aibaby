@@ -322,7 +322,7 @@ constexpr uint32_t kDnaMagic = 0x44424941;  // "AIBD"
 //     about what reward multiplies.
 //
 //     See DnaModule::ffi_apical and DnaModule::ffi_learn, and `errprobe`.
-constexpr uint32_t kDnaVersion = 44;
+constexpr uint32_t kDnaVersion = 45;
 
 // What a module is wired to the world through. The host looks modules up by
 // role, never by name or index, so renaming a module in the genome cannot
@@ -1294,6 +1294,28 @@ struct DnaModule {
   // would be suppressed, which is a second listening reflex nobody asked for.
   int32_t rebound_source;
   float rebound_gain;
+  // DNA v45. The rebound's own baseline. 0 is v44 exactly.
+  //
+  // v44's term is rectified — max(0, slow - fast) — and rectifying a
+  // fluctuating difference gives a POSITIVE MEAN even when nothing is
+  // happening. Measured: it lifts `vocal`'s silent-arm voiced fraction from
+  // 0.379 to 0.45. While a word plays the fast pool sits above the slow one and
+  // the term is exactly zero, so the word REMOVES that tonic lift on top of
+  // applying the listening reflex, and the creature falls to 0.018.
+  //
+  // The burst that follows is therefore two things at once: a genuine response
+  // to the offset, and the restoration of a baseline the creature was deprived
+  // of. Subtracting the term's own slow mean removes the second and leaves the
+  // first:
+  //
+  //     raw = max(0, slow - fast)
+  //     drive += rebound_gain * (raw - mean)      mean tracks raw on this tau
+  //
+  // The tau must be long relative to the transient it is meant to preserve. The
+  // rebound decays on the source's one-second EMA, so anything at or under a
+  // second would subtract the event along with the baseline; seconds, not
+  // hundreds of ms.
+  float rebound_mean_tau_ms;
   // DNA v40. Where the pooling interneuron lands, and whether its weight
   // learns. Both 0 is the pre-v40 module exactly.
   //

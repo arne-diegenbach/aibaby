@@ -5152,7 +5152,7 @@ the same mistake as reading a smoothed formant for a raw one. The probe refused
 rather than reporting a trajectory on zero onsets, which is why the bug surfaced
 as a refusal instead of as a null.
 
-### M1d — does the creature take turns? **not met, and the guard is the point**
+### M1d — the creature takes turns: **met, and SHIPPED**
 
 G3 has now absorbed eight mechanisms against one wall without moving, so this
 asks a question shaped to what the creature demonstrably does. It echoes a heard
@@ -5254,7 +5254,104 @@ so it hears the word better and more of it persists into the scored window.
 **Part of the M1b gain is a cleaner stimulus rather than a better echo**, and
 this table cannot say how much.
 
-**Status: the signature is reachable, the milestone is not met.** v44 ships OFF.
+#### DNA v45 — the rebound's own baseline, and both gates pass
+
+Two things stood between the signature and a claim, and both are now settled.
+
+**The mechanism was doing something other than advertised.** v44's term is
+rectified, and rectifying a fluctuating difference has a positive mean even at
+rest — it lifted the silent-arm baseline 0.379 to 0.45. While a word plays the
+term is exactly zero, so the word removed that lift *as well as* applying the
+reflex, and the burst was partly the restoration of a baseline the creature had
+been deprived of. v45 subtracts the term's own slow mean, which costs one field
+and leaves v44 byte-identical at tau 0.
+
+| | v44 (rectified) | v45, tau 5 s | v45, tau 20 s |
+|---|---|---|---|
+| silent-arm baseline | 0.45 | **0.370** | 0.372 |
+| corrected burst | +0.296 | **+0.348** | +0.346 |
+
+Removing the tonic lift **raises** the burst. So it was not baseline
+restoration. Worth noting the mechanism is now *biphasic* rather than rectified
+— during a word `raw` is 0 while the mean is positive, so the term goes negative
+— which means the near-silence while listening (0.010) is partly v45's own doing
+and not the reflex alone. That was not the design intent and is worth stating.
+
+**And it is not a stimulus arriving late.** The `EAR` control rises when the
+mechanism works, because a creature silent while listening stops masking the
+caregiver and hears it better. So the burst is scored again on only those trials
+whose auditory activity at 200-600 ms has fallen back within 20% of that same
+trial's quiet window — per trial, so the criterion does not depend on a
+creature's auditory gain.
+
+| arm | burst, all trials | burst, ear back at baseline | trials qualifying |
+|---|---|---|---|
+| v44 | +0.296 | **+0.349** | 196/200 |
+| v45 | +0.348 | **+0.425** | 192/200 |
+
+Restricting to trials where the word has genuinely gone **strengthens** the
+effect. A late stimulus would shrink it. The confound is excluded rather than
+bounded, and 96% of trials qualify, so it was small to begin with.
+
+**Six seeds.**
+
+| seed | corrected | ear-separated |
+|---|---|---|
+| 20260921 | +0.333 | +0.358 |
+| 20260922 | +0.315 | +0.283 |
+| 20260923 | +0.357 | +0.308 |
+| 20260924 | +0.364 | +0.318 |
+| 20260925 | +0.366 | +0.318 |
+| 20260926 | +0.358 | +0.389 |
+| **mean** | **+0.349** | **+0.329** |
+
+6/6 positive, minimum +0.315, spread ~0.02, against a +0.05 bar and a shipped
+baseline of -0.021. This is a different shape from the `smoothing_ms` result
+that evaporated on the same page: there the per-cell scatter was 0.6 and the
+effect 0.03; here the scatter is 0.05 and the effect 0.35.
+
+**Status: MET and SHIPPED.** `vocal` now carries the rebound in
+`dna/default.toml` — `rebound_source = 1`, `rebound_gain = 0.02`,
+`rebound_mean_tau_ms = 5000`. The pinned hash moves
+`23c4eb2c7c45d05c -> ad96f882becbee92`.
+
+**What shipping cost, and what it did not.** `calibrate` passes **unchanged** —
+no `target_rate_hz` moved, `vocal`'s free-running rate going 3.81 -> 4.12 Hz
+against a 5.00 target and every other module inside 0.21 Hz. That is the
+cheapest re-baseline this project has had; the fixed-point hunt the calibration
+invariant warns about never started.
+
+`mechverify` loses its v44 and v45 rows and returns to 17. It exists for
+mechanisms invisible to `kPinnedHash`, and a mechanism that ships ON is covered
+by the determinism hash directly — left in, those rows would patch the shipped
+values onto themselves, and the experiment's own vacuity check would correctly
+fail a variant that had stopped doing anything.
+
+**The behavioural cost is real and is not only an added burst.** The
+mean-subtracted term is NEGATIVE while a word plays, so the creature is now
+nearly silent when it listens: voiced fraction 0.276 -> 0.010. That is plausible
+for an infant and it is a bigger change than "answers afterwards", and it was
+not the design intent — v45 was built to remove a tonic lift and turned out
+biphasic.
+
+**And shipping it broke `ipprobe`, which turned out to be two bugs in the
+probe.** It gates on whether relaxing the regulator opens `auditory`'s rate gap
+— a question about the REGULATOR — while measuring a creature that hears its own
+voice through `self_gain`. With vocal output barely tracking the stimulus that
+was tolerable; the rebound makes it track hard, and the contamination reversed
+the result (shipped +80.3%, relaxed +66.1%: relaxing appeared to NARROW the
+gap). Muted, the same creature reads +141.1% and +247.3%, a clean 1.75x.
+
+The second bug was found while fixing the first: `ipprobe` configured its ear
+from the ORIGINAL blob rather than from each arm's variant, so every per-arm
+edit to an audio field was silently ignored. The mute produced output
+byte-identical to the unpatched sweep, which read as "the mute does nothing"
+rather than "the mute never happened". Any future audio sweep in this probe
+would have measured the same creature N times.
+
+Both are fixed: the sweep is muted and built from its variant. **Numbers from
+`ipprobe` are not comparable with any recorded before 2026-08-29**, which were
+all taken with self-hearing on.
 Meeting M1d means shipping it on, which moves the hash and forces a re-baseline
 of every vocal number under the calibration invariant — and it should not be
 switched on until the EAR confound is separated, because the honest headline
