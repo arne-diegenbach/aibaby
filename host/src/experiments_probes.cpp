@@ -326,6 +326,47 @@ bool run_v1probe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
 }
 
 
+// Corrected univariate d' for one column of a per-trial feature table.
+//
+// A d' built from two SAMPLE means is positively biased, and the audibility
+// ruler (2026-08-19/20) cost this project a whole verdict before that was
+// noticed. Two terms, both of which matter at the ~50 trials a sweep produces:
+//
+//   * the mean difference is noisy, contributing (1/n0 + 1/n1) to E[d'^2]
+//     even when the two distributions are identical;
+//   * sigma is itself estimated, and E[1/sigma_hat^2] = (1/sigma^2)*dof/(dof-2),
+//     so every squared z is inflated BEFORE the first term is added.
+//
+// So the unbiased estimate of d'^2 is d_hat^2 * (dof-2)/dof - (1/n0 + 1/n1),
+// which is what this returns, signed-rooted ONCE. Clamping at zero before
+// rooting reinstates the bias; a negative d' is a real answer and means "below
+// the floor". Callers that average across arms must average the SQUARE.
+double knob_dprime(const std::vector<std::vector<double>>& x, const std::vector<int>& y,
+                   size_t col) {
+  double m[2] = {0, 0};
+  size_t n[2] = {0, 0};
+  for (size_t t = 0; t < x.size(); ++t) {
+    if (col >= x[t].size()) return 0.0;
+    m[y[t]] += x[t][col];
+    ++n[y[t]];
+  }
+  if (n[0] < 3 || n[1] < 3) return 0.0;
+  m[0] /= double(n[0]);
+  m[1] /= double(n[1]);
+  double ss = 0.0;
+  for (size_t t = 0; t < x.size(); ++t) {
+    const double d = x[t][col] - m[y[t]];
+    ss += d * d;
+  }
+  const double dof = double(n[0] + n[1]) - 2.0;
+  const double pooled = ss / dof;
+  if (pooled <= 1e-18 || dof <= 2.0) return 0.0;
+  const double raw = (m[1] - m[0]) * (m[1] - m[0]) / pooled;
+  const double d2 = raw * (dof - 2.0) / dof - (1.0 / double(n[0]) + 1.0 / double(n[1]));
+  return d2 < 0.0 ? -std::sqrt(-d2) : std::sqrt(d2);
+}
+
+
 bool run_m3probe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose,
                  M3ProbeScores* scores) {
   std::string error;
@@ -559,6 +600,87 @@ bool run_m3probe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose,
     std::printf("    %-12s %-11.3f %s\n", "  activities",
                 holdout_accuracy(activities, labels, train),
                 "<- the 9 group RATES alone: what they do NOT get");
+
+    // --- which of the eighteen readings carries it, and which nine reach air
+    //
+    // The voice is not a population read of `vocal`. It is NINE scalars, and
+    // `VocalDecoder::update` says exactly which nine: group CENTROIDS 0 and
+    // 2..7 become f0, the three formants and the three bandwidths, group
+    // ACTIVITY 1 opens the voicing gate, and group ACTIVITY 8 is loudness.
+    // The other nine readings are computed every frame and thrown away.
+    //
+    // That asymmetry is why this table exists. A 126-feature classifier reads
+    // `vocal` at 0.749 for the object and 0.752 for the word — matched — and
+    // the voice that comes out of them reads 0.523 and 0.867. Something is
+    // lost between the population and the air, and no other row in this
+    // project can say what. If the word loads a knob that reaches the larynx
+    // and the object loads only knobs that do not, the loss is located and it
+    // is a wiring fact rather than a learning one.
+    //
+    // d' is bias-corrected (see knob_dprime) and the null is 32 permutations
+    // aggregated in d'^2, because one shuffle is a draw from the null and not
+    // an estimate of it. The permutation RNG is its own stream: drawing from
+    // `rng` here would shift the toy placements of the sweep that runs after
+    // this one and silently change the other half of the table.
+    {
+      aibaby::Rng perm_rng;
+      perm_rng.seed(s.dna.header().seed ^ 0x4B0Bu);
+      static const struct {
+        const char* name;
+        uint32_t g;
+        bool centroid;
+        const char* reaches;
+      } kKnobs[] = {
+          {"centroid 0", 0, true, "f0"},
+          {"centroid 1", 1, true, "-"},
+          {"centroid 2", 2, true, "f1"},
+          {"centroid 3", 3, true, "f2"},
+          {"centroid 4", 4, true, "f3"},
+          {"centroid 5", 5, true, "bw1"},
+          {"centroid 6", 6, true, "bw2"},
+          {"centroid 7", 7, true, "bw3"},
+          {"centroid 8", 8, true, "-"},
+          {"activity 0", 0, false, "-"},
+          {"activity 1", 1, false, "voicing gate"},
+          {"activity 2", 2, false, "-"},
+          {"activity 3", 3, false, "-"},
+          {"activity 4", 4, false, "-"},
+          {"activity 5", 5, false, "-"},
+          {"activity 6", 6, false, "-"},
+          {"activity 7", 7, false, "-"},
+          {"activity 8", 8, false, "loudness"},
+      };
+      std::printf("\n    per-knob d' on the larynx's own readings — 'reaches' is what\n"
+                  "    this number becomes in the air, '-' is computed and discarded\n");
+      std::printf("    %-12s %-14s %-9s %s\n", "reading", "reaches", "d'", "null (32 perm)");
+      double heard2 = 0.0, deaf2 = 0.0;
+      uint32_t heard_n = 0, deaf_n = 0;
+      for (const auto& k : kKnobs) {
+        const std::vector<std::vector<double>>& src = k.centroid ? centroids : activities;
+        const double d = knob_dprime(src, labels, k.g);
+        double null2 = 0.0;
+        for (uint32_t p = 0; p < 32; ++p) {
+          std::vector<int> sl = labels;
+          for (size_t i = sl.size(); i > 1; --i) {
+            std::swap(sl[i - 1], sl[perm_rng.next() % i]);
+          }
+          const double nd = knob_dprime(src, sl, k.g);
+          null2 += nd < 0.0 ? -(nd * nd) : nd * nd;
+        }
+        null2 /= 32.0;
+        const double null = null2 < 0.0 ? -std::sqrt(-null2) : std::sqrt(null2);
+        const bool reaches = std::strcmp(k.reaches, "-") != 0;
+        (reaches ? heard2 : deaf2) += d < 0.0 ? -(d * d) : d * d;
+        ++(reaches ? heard_n : deaf_n);
+        std::printf("    %-12s %-14s %+9.3f %+.3f%s\n", k.name, k.reaches, d, null,
+                    reaches ? "" : "   (discarded)");
+      }
+      const double heard = heard2 / double(heard_n), deaf = deaf2 / double(deaf_n);
+      std::printf("    mean d'^2    %-14s %+9.3f  vs %+.3f discarded\n", "(the 9 heard)",
+                  heard, deaf);
+      std::printf("    If the object's d'^2 sits in the discarded rows and the word's\n"
+                  "    sits in the heard ones, the larynx is the loss.\n");
+    }
     return control_score;
   };
 

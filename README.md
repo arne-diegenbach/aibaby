@@ -606,6 +606,68 @@ covers **rewiring** as well: you cannot reach the milestone by feeding the
 object into the one pathway that works, because that pathway is an identity map
 rather than a channel.
 
+### The larynx reads nine scalars, and the object is in none of them
+
+The strangest number on this page is that at *matched* input legibility —
+`vocal` read at 0.749 for the object and 0.752 for the word — the voice comes
+out at 0.523 and 0.867. The voice is not a population read of `vocal`. It is
+**nine scalars**, and `VocalDecoder::update` says exactly which nine: group
+centroids 0 and 2–7 become f0, three formants and three bandwidths, group
+*activity* 1 opens the voicing gate, and group *activity* 8 is loudness. The
+other nine readings are computed every frame and discarded.
+
+`m3probe` now prints a bias-corrected d′ for all eighteen against a
+32-permutation null, on the same trials as the accuracy table above it. The
+correction matters: a d′ from two sample means is positively biased by both a
+noisy mean difference and an estimated σ, which is what the
+audibility ruler below cost a whole verdict to learn.
+
+**The hypothesis that motivated it was that the object hides in the discarded
+half. It does not, and neither does anything else.**
+
+| word route, mean d′² | heard (9) | discarded (9) |
+|---|---|---|
+| shipped seed | +0.574 | **+1.118** |
+| 20260901 | **+0.438** | +0.286 |
+| 20260902 | **+0.537** | +0.338 |
+| 20260903 | **+2.943** | +0.747 |
+
+Heard beats discarded on 3 of 4. The shipped seed's dissent rests on one cell —
+centroid 8 at d′ **2.859** — which reads 0.217 / 0.831 / 1.705 on fresh seeds.
+**Sixth single-arm high to evaporate here.** Routing the discarded readings to
+the larynx would buy nothing, and the open question in `senses.h` — *"if the
+object rides on rates rather than positions, the vocal tract is discarding
+eight numbers that have it"* — is answered no.
+
+**What the same table says about the object is the finding.**
+
+| object route | `vocal` per-neuron | voice | d′² heard | d′² discarded |
+|---|---|---|---|---|
+| shipped | 0.540 | 0.460 | −0.032 | −0.026 |
+| 20260901 | **0.760** | 0.460 | −0.009 | +0.003 |
+| 20260902 | **0.860** | 0.540 | +0.020 | +0.034 |
+| 20260903 | 0.660 | 0.620 | +0.066 | +0.083 |
+
+`vocal` knows which toy it is at 0.860 — as well as it knows which *word* it is
+(0.740) — and **not one of the eighteen group readings carries it.** All
+eighteen sit at the permutation null on all four seeds. The word, at the same
+population legibility, loads d′² of +0.44 to +2.94.
+
+> **The decoder is a second pooling stage, and it fails the way the tract
+> fails.** A group reading is a centroid over an index-slice of `vocal`, and a
+> centroid is exactly the statistic a *balanced* delta vector leaves unmoved —
+> `projprobe` measures the object's coherence at **0.065** against the word's
+> **0.130**. The object survives the tract into `vocal`'s population and then
+> dies at the readout, for the same reason and a second time.
+
+This is the eighth time a small differential riding on a large common mode has
+stopped something here, and the first time it has been located in a **fixed,
+non-plastic, genome-specified readout** rather than in a learning rule. It does
+not reopen G3 — nine scalars that cannot see a balanced code cannot be taught
+to, and the centroid/rate/density readouts were all refuted separately when
+the vowel space was measured. What it removes is the last version of "the object is at the
+larynx and something downstream is throwing it away".
+
 Two mechanisms carry the change since M4, and neither was aimed at the goal it
 hit. **Per-module homeostasis (DNA v9)** came from asking why praise did not
 survive its own session, and it stopped the decay. **Directional exploration
