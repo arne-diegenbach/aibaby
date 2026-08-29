@@ -866,6 +866,55 @@ answer was yes and it is still yes. The tract was never the binding constraint �
 the step from `vocal`'s population to nine scalars is, and DNA v46 does nothing
 about that. Ships off, pinned in `mechverify` at `9945f7d9b1d66af8`.
 
+### The write is not object-blind any more — and the old number was on the wrong tract
+
+`dwprobe` decomposed what reward writes and found ~8% object-specific, which is
+one of the two measurements that closed the credit-assignment family. It watched
+**`central→vocal`** — and this page's own next section shows that tract is a
+**non-participant**: delete it, recalibrate, and every G3 number is unchanged.
+So the number that closed a family was measured on a pipe connected to nothing.
+The probe now names its tract and runs both.
+
+`corr(cube vs ball)` read against `corr(same object, redrawn)`, which is the
+reproducibility ceiling and the only thing it may be read against:
+
+| creature | tract | arm | ceiling | cube vs ball | ratio |
+|---|---|---|---|---|---|
+| retina | `vision→vocal` | praise | 0.458 | 0.473 | **1.03** |
+| retina | `vision→vocal` | balanced | 0.436 | 0.444 | 1.02 |
+| retina | `vision→vocal` | no reward | 0.448 | 0.433 | 0.97 |
+| **v46 shape bank** | `vision→vocal` | praise | 0.639 | 0.454 | **0.71** |
+| **v46 shape bank** | `vision→vocal` | balanced | 0.654 | 0.498 | 0.76 |
+| **v46 shape bank** | `vision→vocal` | no reward | 0.666 | 0.472 | 0.71 |
+
+**On the shipped retina the tract that reaches the larynx does not
+differentiate at all** — cube-vs-ball sits *at* its own ceiling, 1 of 3 seeds.
+**On the shape-bank creature it does, 3 of 3 seeds.** A session of
+cube-teaching writes a measurably different weight change than a session of
+ball-teaching, on the tract that participates.
+
+**Two things this is not.** It is not reward doing it: the no-reward arm gives
+the same 0.71, so this is the activity difference driving STDP and not credit
+assignment. And it is not behaviour: `dwprobe` blocks one object per session,
+while `m3` alternates them, so nothing here shows two mappings coexisting.
+
+> **What it changes is which question is open.** "The rule writes the same thing
+> whichever object is present" was the diagnosis, and on this creature and this
+> tract it is false. What remains is that the two different things it writes
+> land on the same synapses and overwrite each other — which is not a new guess
+> but the thing three existing experiments already measure. `retain`: a
+> conflicting second lesson wipes the first, 0.22. `capacity`: two lessons
+> coexist on *orthogonal* output dimensions at 0.84 but compete for one reward
+> channel. `credit`: a per-neuron reward mask removes the interference
+> **completely**, targeted retention ~1.0 on 3 of 3.
+>
+> So the standing hypothesis is **interference, not credit** — and unlike every
+> mechanism in the closed families, it already has a measured upper bound and an
+> oracle that reaches it. G3 stays filed as a closed negative, because none of
+> this is behaviour yet. But it is the first genuinely different question this
+> project has had to ask in some time, and it exists because a probe was pointed
+> at the tract that matters instead of the one it was written for.
+
 ## Why G3 is closed, and what would have to be different
 
 G3 asked for a **held-out classifier to tell cube from ball off the baby's own

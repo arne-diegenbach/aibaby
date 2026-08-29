@@ -2284,7 +2284,7 @@ struct DwRun {
 enum class DwReward { kPraiseOnly = 0, kSymmetric = 1, kNone = 2 };
 
 DwRun run_dw_session(const std::vector<uint8_t>& blob, uint64_t ticks, int object,
-                     uint64_t placement_seed, DwReward mode) {
+                     uint64_t placement_seed, DwReward mode, const char* src_name) {
   DwRun out;
   std::string error;
   Session s;
@@ -2302,9 +2302,22 @@ DwRun run_dw_session(const std::vector<uint8_t>& blob, uint64_t ticks, int objec
   if (cen < 0 || voc < 0) return out;
 
   const aibaby::Network& net0 = s.brain.network();
-  std::vector<uint32_t> cv(net0.tract_synapses(uint32_t(cen), uint32_t(voc), nullptr, 0));
+  // Which tract's weights are watched. The original version hard-coded
+  // `central->vocal`, which was the tract this project suspected — and which
+  // was later shown to be a NON-PARTICIPANT: delete it, recalibrate, and every
+  // G3 number is unchanged. So a decomposition measured only there is a fact
+  // about a pipe connected to nothing, and the probe now names its tract.
+  int32_t src = cen;
+  if (src_name) {
+    src = -1;
+    for (uint32_t m = 0; m < net0.module_count(); ++m) {
+      if (std::strcmp(net0.module_dna(m).name, src_name) == 0) src = int32_t(m);
+    }
+    if (src < 0) return out;
+  }
+  std::vector<uint32_t> cv(net0.tract_synapses(uint32_t(src), uint32_t(voc), nullptr, 0));
   if (cv.empty()) return out;
-  net0.tract_synapses(uint32_t(cen), uint32_t(voc), cv.data(), uint32_t(cv.size()));
+  net0.tract_synapses(uint32_t(src), uint32_t(voc), cv.data(), uint32_t(cv.size()));
 
   std::vector<double> before(cv.size());
   for (size_t i = 0; i < cv.size(); ++i) before[i] = double(net0.synapse_weight(cv[i]));
@@ -2362,7 +2375,8 @@ DwRun run_dw_session(const std::vector<uint8_t>& blob, uint64_t ticks, int objec
   return out;
 }
 
-bool run_dwprobe_arm(const std::vector<uint8_t>& blob, uint64_t ticks, DwReward mode) {
+bool run_dwprobe_arm(const std::vector<uint8_t>& blob, uint64_t ticks, DwReward mode,
+                     const char* src_name) {
   aibaby::Dna dna;
   if (dna.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) return false;
   constexpr uint32_t kReps = 3;
@@ -2370,8 +2384,9 @@ bool run_dwprobe_arm(const std::vector<uint8_t>& blob, uint64_t ticks, DwReward 
   std::printf("  session           %.1f s per arm x %u creatures, one object throughout\n",
               double(ticks) * double(dna.header().sim.dt_ms) / 1000.0, kReps);
   std::printf("  the question      does a session of ball-teaching write a DIFFERENT\n"
-              "                    weight change onto central->vocal than a session of\n"
-              "                    cube-teaching? If not, no training can separate them.\n\n");
+              "                    weight change onto %-14s than a session of\n"
+              "                    cube-teaching? If not, no training can separate them.\n\n",
+              src_name ? "vision->vocal" : "central->vocal");
   std::printf("  %-5s %-11s %-11s %-11s %s\n", "seed", "mean|dw|", "corr(A,A')",
               "corr(A,B)", "verdict");
 
@@ -2382,9 +2397,9 @@ bool run_dwprobe_arm(const std::vector<uint8_t>& blob, uint64_t ticks, DwReward 
     const uint64_t seed = dna.header().seed + r * 7919ull;
     std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
 
-    const DwRun a = run_dw_session(variant, ticks, 0, 0xA11CE, mode);
-    const DwRun a2 = run_dw_session(variant, ticks, 0, 0xB0B, mode);
-    const DwRun b = run_dw_session(variant, ticks, 1, 0xA11CE, mode);
+    const DwRun a = run_dw_session(variant, ticks, 0, 0xA11CE, mode, src_name);
+    const DwRun a2 = run_dw_session(variant, ticks, 0, 0xB0B, mode, src_name);
+    const DwRun b = run_dw_session(variant, ticks, 1, 0xA11CE, mode, src_name);
     if (!a.ok || !a2.ok || !b.ok) { std::printf("  %-5u (inconclusive)\n", r); continue; }
     ++valid;
     const double same = vector_corr(a.dw, a2.dw);
@@ -2413,9 +2428,19 @@ bool run_dwprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
   const char* label[3] = {"praise only (what a caregiver actually does)",
                           "praise and scold balanced (mean reward zero)",
                           "no reward at all (the control: dw should be nil)"};
+  // Both tracts, because only one of them participates. `central->vocal` is the
+  // tract every earlier decomposition used and the one measured as a
+  // non-participant; `vision->vocal` is the one that actually reaches the
+  // larynx. A differentiation on the first is not a fact about behaviour and a
+  // differentiation on the second might be, so they are printed side by side
+  // rather than one being quoted for the other.
+  const char* tract[2] = {nullptr, "vision"};
+  const char* tract_name[2] = {"central->vocal (NON-PARTICIPANT)", "vision->vocal (participates)"};
   for (int m = 0; m < 3; ++m) {
-    std::printf("\n########## %s ##########\n", label[m]);
-    ok = run_dwprobe_arm(blob, ticks, DwReward(m)) && ok;
+    for (int t = 0; t < 2; ++t) {
+      std::printf("\n########## %s — %s ##########\n", label[m], tract_name[t]);
+      ok = run_dwprobe_arm(blob, ticks, DwReward(m), tract[t]) && ok;
+    }
   }
   (void)verbose;
   return ok;
