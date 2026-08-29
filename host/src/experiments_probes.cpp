@@ -8603,4 +8603,399 @@ bool run_footprint(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
   return true;
 }
 
+
+// --- Is a coherent visual front-end worth building? -------------------------
+//
+// [[the oracle arm]] says the object is in `vocal`'s slices and that index
+// order hides it; `projprobe` says the object's delta vector is BALANCED
+// (coherence 0.065) where the word's is coherent (0.130); the per-knob table
+// says the same failure repeats at the larynx. Every one of those points at the
+// same repair: give vision a code that is coarse, ordered and same-signed, the
+// way the cochlea gives audition one.
+//
+// That is a new SENSE, and building a sense is expensive. This experiment is
+// the gate, and it runs entirely outside the brain: no network, no genome edit,
+// no ticks. It renders the same toys `m3probe` renders, computes candidate
+// channel banks from the same noisy 8-bit frames, and asks the two questions
+// the measurements above turned into bars.
+//
+//   BAR 1, pooling. A random sparse tract is a pooling operation. The word
+//   survives it at 1.000 and the shipped visual code at 0.520 (projprobe,
+//   d=0.40). A candidate has to survive it.
+//
+//   BAR 2, coherence. |mean(delta)| / mean(|delta|). Word 0.130, object 0.065.
+//   This is the quantity that decides bar 1, so it is reported beside it — a
+//   candidate that passes bar 1 with low coherence passed it by luck.
+//
+// The shipped Retina is the same-instrument baseline: same toys, same jitter,
+// same classifier, same projection. If a candidate does not beat that row there
+// is nothing to build.
+//
+// **What this is not.** It compares FEATURE VECTORS, not what the brain makes
+// of them. It also lets the candidates segment the frame — a global threshold —
+// which is a step the retina does not do. Both favour the candidates, so a
+// negative here is decisive and a positive is a licence to build and measure,
+// not a result about the creature.
+bool run_shapeprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  aibaby::Dna dna;
+  if (dna.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) return false;
+  const aibaby::DnaVision& vcfg = dna.header().vision;
+  std::string error;
+  Retina retina;
+  if (!retina.configure(vcfg, error)) {
+    std::printf("  retina failed: %s\n", error.c_str());
+    return false;
+  }
+  const uint32_t n = vcfg.frame_size;
+  SceneSource scene(n, dna.header().seed);
+  std::vector<uint8_t> frame(size_t(n) * n, 0);
+  aibaby::Rng rng;
+  rng.seed(dna.header().seed ^ 0x5A9Eu);
+
+  const uint32_t n_trials = uint32_t(ticks / kM3ProbeTicks);
+  constexpr uint32_t kRadialBins = 12;
+  constexpr uint32_t kSectors = 64;
+  constexpr uint32_t kHarmonics = 8;
+
+  std::vector<std::vector<double>> f_retina, f_radial, f_angular, f_both;
+  std::vector<int> labels;
+
+  for (uint32_t trial = 0; trial < n_trials; ++trial) {
+    const int label = int(trial % 2);
+    const Toy toy = m3_toy(rng, label);
+    scene.render(toy.shape, toy.cx, toy.cy, toy.radius, 0.85f, 0.02f, frame.data());
+
+    retina.present(frame.data());
+    f_retina.emplace_back(retina.features().begin(), retina.features().end());
+
+    // Segment on the midpoint of the frame's own intensity range. A front-end
+    // cannot know the genome's background and luminance constants, so it may
+    // not use them; with the noise at 0.02 the two populations are far apart
+    // and a midpoint threshold separates them.
+    uint8_t lo = 255, hi = 0;
+    for (uint8_t v : frame) {
+      lo = v < lo ? v : lo;
+      hi = v > hi ? v : hi;
+    }
+    const double thr = 0.5 * (double(lo) + double(hi));
+    double mass = 0, mx = 0, my = 0;
+    for (uint32_t y = 0; y < n; ++y) {
+      for (uint32_t x = 0; x < n; ++x) {
+        if (double(frame[size_t(y) * n + x]) <= thr) continue;
+        mass += 1.0;
+        mx += double(x) + 0.5;
+        my += double(y) + 0.5;
+      }
+    }
+    if (mass < 4.0) {  // nothing found; keep the row shape and let it score
+      f_radial.emplace_back(kRadialBins, 0.0);
+      f_angular.emplace_back(kHarmonics, 0.0);
+      f_both.emplace_back(kRadialBins + kHarmonics, 0.0);
+      labels.push_back(label);
+      continue;
+    }
+    mx /= mass;
+    my /= mass;
+    // Normalising the radius by the equivalent-circle radius is what makes this
+    // scale-free, and `m3_toy` jitters the size by 20% so it has to be.
+    const double r_eq = std::sqrt(mass / M_PI);
+
+    // BANK 1 — the radial mass profile: what fraction of the object sits in
+    // each normalised annulus. This is the direct analogue of a mel bank: an
+    // ordered set of coarse channels over a physically meaningful axis. An
+    // area-matched square reaches sqrt(2)*a in its corners where the disc stops
+    // at 1.128*a, so the outer bins are where a cube lives and a ball does not.
+    std::vector<double> radial(kRadialBins, 0.0);
+    std::vector<double> sector(kSectors, 0.0);
+    for (uint32_t y = 0; y < n; ++y) {
+      for (uint32_t x = 0; x < n; ++x) {
+        if (double(frame[size_t(y) * n + x]) <= thr) continue;
+        const double dx = double(x) + 0.5 - mx, dy = double(y) + 0.5 - my;
+        const double r = std::sqrt(dx * dx + dy * dy) / r_eq;
+        uint32_t b = uint32_t(r / (1.6 / double(kRadialBins)));
+        radial[b >= kRadialBins ? kRadialBins - 1 : b] += 1.0;
+        double a = std::atan2(dy, dx);
+        if (a < 0) a += 2.0 * M_PI;
+        const uint32_t sidx = uint32_t(a * double(kSectors) / (2.0 * M_PI)) % kSectors;
+        if (r > sector[sidx]) sector[sidx] = r;
+      }
+    }
+    for (double& v : radial) v /= mass;
+
+    // BANK 2 — the angular spectrum of the silhouette's outline. r(theta) is
+    // constant for a disc and 4-fold symmetric for a square, so harmonic 4 is
+    // the cube detector and it is same-signed by construction. Ordered by
+    // harmonic number, and translation-free because theta is measured from the
+    // object's own centroid.
+    std::vector<double> ang(kHarmonics, 0.0);
+    for (uint32_t k = 0; k < kHarmonics; ++k) {
+      double re = 0, im = 0;
+      for (uint32_t j = 0; j < kSectors; ++j) {
+        const double p = 2.0 * M_PI * double(k) * double(j) / double(kSectors);
+        re += sector[j] * std::cos(p);
+        im -= sector[j] * std::sin(p);
+      }
+      ang[k] = std::sqrt(re * re + im * im) / double(kSectors);
+    }
+    const double dc = ang[0] > 1e-9 ? ang[0] : 1.0;
+    for (uint32_t k = 1; k < kHarmonics; ++k) ang[k] /= dc;
+
+    std::vector<double> both = radial;
+    both.insert(both.end(), ang.begin(), ang.end());
+    f_radial.push_back(radial);
+    f_angular.push_back(ang);
+    f_both.push_back(both);
+    labels.push_back(label);
+  }
+
+  // The WORD, through the real cochlea, as the IN-INSTRUMENT positive control.
+  // Quoting projprobe's 1.000 here would compare two quantities measured by two
+  // probes on two different objects; this row is the same encoder, the same
+  // projection and the same classifier as every visual row beside it. If the
+  // word does not survive pooling here, this instrument is not modelling the
+  // thing that makes the auditory route work and no visual row means anything.
+  std::vector<std::vector<double>> f_word;
+  {
+    Cochlea cochlea;
+    std::string cerr;
+    const aibaby::DnaAudio& acfg = dna.header().audio;
+    if (cochlea.configure(acfg, cerr)) {
+      VowelSource src(acfg.sample_rate);
+      const uint32_t spt = uint32_t(acfg.sample_rate / 1000);
+      std::vector<float> pcm(spt);
+      for (uint32_t trial = 0; trial < n_trials; ++trial) {
+        const Word& w = kWords[trial % 2];
+        cochlea.reset_stream();
+        cochlea.clear_frames();
+        for (uint32_t t = 0; t < 200; ++t) {
+          src.render(w.f0, w.f1, w.f2, 0.5f, pcm.data(), spt);
+          cochlea.push(pcm.data(), spt);
+        }
+        const uint32_t ch = cochlea.channels();
+        const std::vector<float>& fr = cochlea.frames();
+        const size_t nf = ch ? fr.size() / ch : 0;
+        std::vector<double> mean(ch, 0.0);
+        for (size_t k = 0; k < nf; ++k) {
+          for (uint32_t c = 0; c < ch; ++c) mean[c] += double(fr[k * ch + c]);
+        }
+        if (nf) {
+          for (double& v : mean) v /= double(nf);
+        }
+        f_word.push_back(mean);
+      }
+    }
+  }
+
+  instrument("shapeprobe", dna.header().seed ^ 0x5A9Eu, n_trials, "frames per bank");
+  std::printf("  no network and no ticks: signal processing on the same frames\n"
+              "  m3probe renders, to decide whether a new visual sense is worth\n"
+              "  building before one is built.\n\n");
+
+  // Every bank is encoded into the same 256-neuron population, the way the
+  // cochlea's output is encoded into `auditory`: channel c owns a contiguous
+  // slice and a louder channel recruits more of it.
+  //
+  // **This step is the whole instrument, and the first version of this probe
+  // did not have it.** Without it a 12-number bank was projected straight onto
+  // 126 units, which is very nearly invertible, so every candidate "survived
+  // pooling" for a reason with nothing to do with coherence and the check could
+  // not fail. Pooling only means anything against a population the size of a
+  // real module.
+  constexpr uint32_t kPop = 256;
+  auto encode = [&](const std::vector<std::vector<double>>& x) {
+    std::vector<std::vector<double>> out;
+    if (x.empty() || x[0].empty()) return out;
+    const uint32_t C = uint32_t(x[0].size());
+    // Per-channel gain so a bank whose numbers are small is not penalised for
+    // being small. Monotone and label-blind: an AGC, not a classifier.
+    std::vector<double> lo(C, 1e30), hi(C, -1e30);
+    for (const std::vector<double>& r : x) {
+      for (uint32_t c = 0; c < C; ++c) {
+        lo[c] = std::min(lo[c], r[c]);
+        hi[c] = std::max(hi[c], r[c]);
+      }
+    }
+    for (const std::vector<double>& r : x) {
+      std::vector<double> pop(kPop, 0.0);
+      for (uint32_t c = 0; c < C; ++c) {
+        const uint32_t b = aibaby::slice_begin(kPop, C, c);
+        const uint32_t e = aibaby::slice_begin(kPop, C, c + 1);
+        const uint32_t sz = e - b;
+        if (sz == 0) continue;
+        const double span = hi[c] - lo[c];
+        const double v = span > 1e-12 ? (r[c] - lo[c]) / span : 0.0;
+        for (uint32_t j = 0; j < sz; ++j) {
+          const double theta = (double(j) + 0.5) / double(sz);
+          pop[b + j] = std::min(1.0, std::max(0.0, (v - theta) * double(sz)));
+        }
+      }
+      out.push_back(pop);
+    }
+    return out;
+  };
+
+  auto project = [&](const std::vector<std::vector<double>>& x, uint32_t n_dst,
+                     double density, aibaby::Rng& prng) {
+    const size_t n_src = x.empty() ? 0 : x[0].size();
+    std::vector<std::vector<uint32_t>> pre(n_dst);
+    for (uint32_t d = 0; d < n_dst; ++d) {
+      for (size_t sidx = 0; sidx < n_src; ++sidx) {
+        if (double(prng.next() % 1000000u) / 1000000.0 < density) {
+          pre[d].push_back(uint32_t(sidx));
+        }
+      }
+    }
+    std::vector<std::vector<double>> y;
+    y.reserve(x.size());
+    for (const std::vector<double>& row : x) {
+      std::vector<double> o(size_t(n_dst), 0.0);
+      for (uint32_t d = 0; d < n_dst; ++d) {
+        double sum = 0.0;
+        for (uint32_t sidx : pre[d]) sum += row[sidx];
+        o[d] = sum;
+      }
+      y.push_back(o);
+    }
+    return y;
+  };
+
+  // THE CONFOUND CONTROL, and the first run needed it. Every candidate bank has
+  // ~12 channels where the retina has 176, and the encoder gives each channel a
+  // contiguous slice — so a 12-channel bank gets 21 neurons per channel and a
+  // block-structured delta, while the retina gets 1.5 and none. That alone
+  // could carry the result, and it would mean the finding is "use fewer
+  // channels", not "use these channels".
+  //
+  // So: the retina's OWN features averaged down to 12 contiguous groups, then
+  // encoded and pooled identically. If this row pools like the candidates, the
+  // win is the channel count and there is no new sense to build.
+  std::vector<std::vector<double>> f_coarse;
+  for (const std::vector<double>& r : f_retina) {
+    std::vector<double> c(kRadialBins, 0.0);
+    if (r.empty()) { f_coarse.push_back(c); continue; }
+    const uint32_t C = uint32_t(r.size());
+    for (uint32_t b = 0; b < kRadialBins; ++b) {
+      const uint32_t lo2 = aibaby::slice_begin(C, kRadialBins, b);
+      const uint32_t hi2 = aibaby::slice_begin(C, kRadialBins, b + 1);
+      double acc = 0;
+      for (uint32_t k = lo2; k < hi2; ++k) acc += r[k];
+      c[b] = hi2 > lo2 ? acc / double(hi2 - lo2) : 0.0;
+    }
+    f_coarse.push_back(c);
+  }
+
+  struct Bank { const char* name; const std::vector<std::vector<double>>* x; };
+  const Bank banks[6] = {{"WORD (control)", &f_word},
+                         {"retina (shipped)", &f_retina},
+                         {"retina, 12 coarse", &f_coarse},
+                         {"radial profile", &f_radial},
+                         {"angular spectrum", &f_angular},
+                         {"radial+angular", &f_both}};
+
+  std::printf("  every bank encoded into the same %u-neuron population, then pooled\n"
+              "  by a random sparse binary projection onto 126 units.\n\n", kPop);
+  std::printf("  %-18s %-6s %-11s %-11s %-11s %-11s %-11s %s\n", "bank", "chans",
+              "population", "d=0.15", "d=0.40", "shuffled", "coherence", "delta PR");
+  double word_pooled = 0.0, retina_pooled = 0.0, best_pooled = 0.0;
+  double coarse_pooled = 0.0;
+  const char* best_name = "none";
+  for (const Bank& b : banks) {
+    const std::vector<std::vector<double>> pop = encode(*b.x);
+    if (pop.empty()) {
+      std::printf("  %-18s (empty)\n", b.name);
+      continue;
+    }
+    std::vector<std::vector<double>> xi;
+    std::vector<int> yi;
+    size_t itrain = 0;
+    interleave_pairs(pop, labels, xi, yi, itrain);
+    const size_t dims = xi[0].size();
+
+    // Coherence on the TRAINING half only, for the same reason projprobe does
+    // it there: a delta computed over the trials it is scored on cannot fail.
+    std::vector<double> mu0(dims, 0.0), mu1(dims, 0.0);
+    size_t c0 = 0, c1 = 0;
+    for (size_t t = 0; t < itrain; ++t) {
+      std::vector<double>& mu = yi[t] ? mu1 : mu0;
+      ++(yi[t] ? c1 : c0);
+      for (size_t k = 0; k < dims; ++k) mu[k] += xi[t][k];
+    }
+    double sum = 0, abs_sum = 0;
+    if (c0 && c1) {
+      for (size_t k = 0; k < dims; ++k) {
+        const double d = mu1[k] / double(c1) - mu0[k] / double(c0);
+        sum += d;
+        abs_sum += std::fabs(d);
+      }
+    }
+    const double coherence = abs_sum > 0 ? std::fabs(sum) / abs_sum : 0.0;
+
+    // Coherence turned out NOT to order these banks — the radial profile has
+    // the lowest of any row and the best pooling — so this is the statistic
+    // that does. The participation ratio of the delta, (sum d^2)^2 / sum d^4,
+    // is the effective NUMBER OF NEURONS carrying the class difference. A
+    // pooled unit sums a random ~40% of the population: if the delta lives on
+    // a handful of neurons with large values, every pooled unit that touches
+    // one gets a big signal; if it is spread thinly over all 256 with
+    // alternating signs, each pooled unit sums a random walk. That is the
+    // quantity, not the global sign balance.
+    double s2 = 0, s4 = 0;
+    if (c0 && c1) {
+      for (size_t k = 0; k < dims; ++k) {
+        const double d = mu1[k] / double(c1) - mu0[k] / double(c0);
+        s2 += d * d;
+        s4 += d * d * d * d;
+      }
+    }
+    const double pr = s4 > 0 ? (s2 * s2) / s4 : 0.0;
+
+    aibaby::Rng p1, p2, p3;
+    p1.seed(dna.header().seed ^ 0x9111u);
+    p2.seed(dna.header().seed ^ 0x9222u);
+    p3.seed(dna.header().seed ^ 0x9333u);
+    const std::vector<std::vector<double>> y15 = project(xi, 126, 0.15, p1);
+    const std::vector<std::vector<double>> y40 = project(xi, 126, 0.40, p2);
+    std::vector<int> shuf = yi;
+    for (size_t i = shuf.size(); i > 1; --i) std::swap(shuf[i - 1], shuf[p3.next() % i]);
+
+    const double pooled = holdout_accuracy(y40, yi, itrain);
+    std::printf("  %-18s %-6zu %-11.3f %-11.3f %-11.3f %-11.3f %-11.3f %.1f\n", b.name,
+                b.x->empty() ? 0 : (*b.x)[0].size(), holdout_accuracy(xi, yi, itrain),
+                holdout_accuracy(y15, yi, itrain), pooled,
+                holdout_accuracy(y40, shuf, itrain), coherence, pr);
+    if (std::strcmp(b.name, "WORD (control)") == 0) word_pooled = pooled;
+    else if (std::strcmp(b.name, "retina (shipped)") == 0) retina_pooled = pooled;
+    else if (std::strcmp(b.name, "retina, 12 coarse") == 0) coarse_pooled = pooled;
+    else if (pooled > best_pooled) {
+      best_pooled = pooled;
+      best_name = b.name;
+    }
+  }
+
+  // The control has to be lit before any candidate row is a measurement: the
+  // word is the code that demonstrably survives a real tract in the creature,
+  // so if it does not survive here the model of a tract is wrong.
+  const bool lit = positive_control("shapeprobe", "the WORD through a d=0.40 tract",
+                                    word_pooled, 0.85,
+                                    "Every visual row is scored by the same pooling.");
+  std::printf("\n  best candidate: %s at %.3f pooled, retina %.3f, word %.3f.\n",
+              best_name, best_pooled, retina_pooled, word_pooled);
+  if (lit) {
+    std::printf("  the channel-count control (retina at 12 coarse channels) pools at\n"
+                "  %.3f. The candidate has to beat THAT, not just the 176-channel\n"
+                "  retina, or the finding is 'use fewer channels'.\n", coarse_pooled);
+    const bool worth_it = best_pooled >= 0.85 && best_pooled > retina_pooled + 0.05 &&
+                          best_pooled > coarse_pooled + 0.05;
+    std::printf("\n  shapeprobe %s — a coherent visual front-end is %sworth building.\n",
+                worth_it ? "SAYS BUILD" : "SAYS REFUSE", worth_it ? "" : "NOT ");
+  }
+  std::printf("  This gates a build; it is not a result about the creature. It\n"
+              "  compares feature banks rather than what a brain makes of them, and\n"
+              "  it lets the candidates segment the frame, which the retina cannot.\n"
+              "  Both favour the candidates, so a REFUSE is decisive and a BUILD is\n"
+              "  a licence to measure.\n");
+  (void)verbose;
+  return lit;
+}
+
 }  // namespace aibaby_host

@@ -728,6 +728,75 @@ to, and the centroid/rate/density readouts were all refuted separately when
 the vowel space was measured. What it removes is the last version of "the object is at the
 larynx and something downstream is throwing it away".
 
+### `shapeprobe` — the gate on building a new sense, and it says build
+
+Three measurements now point at the same repair: the object's code is balanced
+where the word's is coherent, it dies in the tract, and it dies again at the
+larynx. All of them say *give vision a code shaped like the cochlea's*. That is
+a new sense, and senses are expensive, so `shapeprobe` is the gate. It runs
+**entirely outside the brain** — no network, no ticks, no genome edit. It
+renders the same toys `m3probe` renders, computes candidate channel banks from
+the same noisy frames, encodes each into the same 256-neuron population the way
+mel is encoded into `auditory`, and pools it through the same random sparse
+projection a tract applies.
+
+| bank | chans | population | d=0.15 | **d=0.40** | shuffled | coherence | delta PR |
+|---|---|---|---|---|---|---|---|
+| WORD (control) | 24 | 1.000 | 1.000 | **1.000** | 0.420 | 0.207 | 181.8 |
+| retina (shipped) | 176 | 0.920 | 0.680 | **0.560** | 0.540 | 0.157 | 34.7 |
+| retina, 12 coarse | 12 | 0.820 | 0.740 | **0.580** | 0.540 | 0.057 | 29.7 |
+| **radial profile** | 12 | 0.920 | 0.980 | **0.940** | 0.420 | 0.050 | 42.7 |
+| angular spectrum | 8 | 0.960 | 0.760 | 0.740 | 0.460 | 0.361 | 79.4 |
+| radial+angular | 20 | 0.980 | 0.860 | 0.760 | 0.460 | 0.151 | 55.9 |
+
+The **radial mass profile** — what fraction of the segmented object sits in each
+normalised annulus, the direct analogue of a mel bank over an ordered physical
+axis — goes into a d=0.40 tract at 0.920 and comes out at **0.940**. Pooling
+costs it nothing. The shipped retina goes in at 0.920 and comes out at 0.560.
+
+Four seed families, d=0.40:
+
+| | shipped | 20260901 | 20260902 | 20260903 |
+|---|---|---|---|---|
+| WORD control | 1.000 | 1.000 | 1.000 | 1.000 |
+| radial profile | **0.940** | **1.000** | **0.980** | **0.920** |
+| retina (shipped) | 0.560 | 0.620 | 0.480 | 0.620 |
+| retina, 12 coarse | 0.580 | 0.480 | 0.460 | 0.460 |
+
+4 of 4, no overlap between the distributions.
+
+**Two things had to be controlled and both were.** The **word row** is an
+in-instrument positive control rather than a number quoted from `projprobe` —
+same encoder, same projection, same classifier — and it survives at 1.000 every
+time, so the model of a tract is the one that works in the creature. The
+**channel-count control** is the retina's own features averaged into 12
+contiguous groups and encoded identically: every candidate has ~12 channels
+where the retina has 176, and the encoder gives each channel a contiguous slice,
+so a coarse bank gets 21 neurons per channel and block structure the retina
+never gets. That control pools at **0.495 mean** — no better than the full
+retina. **The win is the features, not the channel count.**
+
+> **Two mechanistic statistics were tried and neither orders the banks.**
+> Coherence, which this page has treated as the operative variable, is *lowest*
+> on the winning row (0.050) and middling on the losing one (0.157). The delta's
+> participation ratio does no better: the channel-count control has a *higher*
+> PR than the radial profile and pools worse. The pooled accuracy is the
+> measurement; the statistic that explains it is not in hand. "Coarse and
+> coherent" was a story, and the part of it that survives is "coarse".
+
+**The first version of this probe could not fail, and that is worth recording.**
+It projected the 12-number banks straight onto 126 units without the population
+encoding — which is very nearly invertible, so every candidate "survived
+pooling" for a reason with nothing to do with the code. It printed SAYS BUILD.
+The encoding step is the whole instrument.
+
+**What it licenses.** A build and a measurement, not a claim. Two things favour
+the candidates: it compares feature banks rather than what a brain makes of
+them, and it lets them **segment the frame** — at 0.02 noise against a 0.40
+luminance step the segmentation is essentially perfect, where the retina's
+centre-surround responses carry the pixel noise. So a REFUSE here would have
+been decisive and a BUILD is permission to spend the sense and find out.
+
 Two mechanisms carry the change since M4, and neither was aimed at the goal it
 hit. **Per-module homeostasis (DNA v9)** came from asking why praise did not
 survive its own session, and it stopped the decay. **Directional exploration

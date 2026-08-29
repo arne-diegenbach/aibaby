@@ -82,6 +82,8 @@ const Spec kSpecs[] = {
     {"v1probe", kDefaultMinimum, Expect::kGuard, Tier::kFast,
      "no requirement; guard — the shipped genome has no visual cortex"},
     {"m3probe", 200000, Expect::kPass, Tier::kFast, "derived: 100 trials at 2000 ticks each"},
+    {"shapeprobe", 200000, Expect::kPass, Tier::kFast,
+     "derived: 100 frames per bank"},
     {"projprobe", 200000, Expect::kPass, Tier::kFast, "derived: 100 trials at 2000 ticks each"},
     {"gazeprobe", 200000, Expect::kPass, Tier::kFast,
      "derived: 100 trials at 2000 ticks each, per scatter arm"},
@@ -365,6 +367,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "restate") ok = run_restate(dna_blob, ticks, verbose);
   else if (name == "eligprobe") ok = run_eligprobe(dna_blob, ticks, verbose);
   else if (name == "dwprobe") ok = run_dwprobe(dna_blob, ticks, verbose);
+  else if (name == "shapeprobe") ok = run_shapeprobe(dna_blob, ticks, verbose);
   else if (name == "projprobe") ok = run_projprobe(dna_blob, ticks, verbose);
   else if (name == "condprobe") ok = run_condprobe(dna_blob, ticks, verbose);
   else if (name == "pairprobe") ok = run_pairprobe(dna_blob, ticks, verbose);
@@ -445,6 +448,8 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
               "                  conditional on the object, or only large\n"
               "    dwprobe       what R-STDP actually writes: how much of the weight\n"
               "                  change depends on which object was shown\n"
+              "    shapeprobe    would a coherent visual front-end survive a tract —\n"
+              "                  the gate on building a new sense, run outside the brain\n"
               "    projprobe     can a sparse tract carry this code at all — the same\n"
               "                  activity pushed through a projection in software\n"
               "    condprobe     g3probe with the condition delivered by ear instead\n"
