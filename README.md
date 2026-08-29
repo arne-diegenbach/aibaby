@@ -433,7 +433,7 @@ of an hour.
 | Milestone | State |
 |---|---|
 | **M0** skeleton | done |
-| **M1c** taught vocalisation | **met** — praise alone moves the creature's vowel toward a target it never hears: error down **+15.9 points** against its own yoked control and the change is audible at **d′ 5.57** (null −0.01, yoked 1.08), 3 of 3 seed families. The first taught change to *what* this creature says rather than how often |
+| **M1c** taught vocalisation | **met** — praise alone moves the creature's vowel toward a target it never hears: error down **+19.0 points** against its own yoked control and the change is audible at **d′ 7.50** (null −0.03), 3 of 3 seed families — re-measured after M1d shipped; it was +15.9 and d′ 5.57 before. The first taught change to *what* this creature says rather than how often |
 | **M1** closed audio loop | **done — G2 met.** Rewarded vocalisations rise within the session (×1.35) and praise beats its own yoked control in **23 of 27 creatures** across three seed families, and 9 of 9 at 420 s. What closed it was directional exploration (DNA v10), which was not aimed at reward at all |
 | **M2** vision | **done** — camera → retina → B3 → B1, discriminates present from absent at 98%, and 86% with firing rate divided out |
 | **M3** cross-modal association | **built and measured, G3 not met — and now settled rather than open.** The baby echoes a word it hears (0.75) and the seen object *does* now reach the larynx (0.654, up from 0.515, via `vision→vocal`), yet naming still reads taught−random **−0.014** with 0 of 5 creatures over the 0.75 bar. Delivery is no longer the limit; conditioning is |
@@ -3743,10 +3743,19 @@ Three seed families, 3.4M ticks, ~930 scored trials per arm:
 
 | seed | error vs yoked | d′ taught | d′ yoked | null |
 |---|---|---|---|---|
-| 20260809 | +12.9 | 5.298 | 0.585 | −0.027 |
-| 20360812 | +23.5 | **7.093** | 1.836 | −0.028 |
-| 20451117 | +11.3 | 4.326 | 0.833 | +0.018 |
-| **mean** | **+15.9** | **5.57** | **1.08** | **−0.012** |
+| 20260809 | +22.8 | **8.669** | — | −0.011 |
+| 20360812 | +18.8 | 5.665 | — | −0.065 |
+| 20451117 | +15.4 | 8.164 | — | −0.011 |
+| **mean** | **+19.0** | **7.50** | — | **−0.029** |
+
+**Re-measured 2026-08-29, after DNA v44/v45's rebound shipped.** These replace
+the pre-M1d numbers, which were +12.9 / +23.5 / +11.3 and d′ 5.298 / 7.093 /
+4.326, mean +15.9 and 5.57 — taken on a creature that babbled through the
+caregiver. The mean rose on both measures and **2 of 3 families moved that way,
+not 3 of 3**: seed 20360812 fell on both. Against a family spread of d′ 4.3 to
+8.7 that is suggestive and not established, so the claim here is that M1d cost
+M1c nothing, not that it improved it. The milestone is met on all three either
+way, every d′ far above the audibility bar of 1.0.
 
 And the formants move the right way on 3 of 3 — toward a target of F1 320,
 F2 2500:
