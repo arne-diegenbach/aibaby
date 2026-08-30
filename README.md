@@ -1069,6 +1069,59 @@ object, which is awkward to build in a protocol where the objects alternate.
 > G3 stays closed. What this adds is that the last standing hypothesis was
 > priced rather than argued, and the price is on the record.
 
+### The two protocol axes, and neither was the missing piece
+
+Eleven mechanisms were built against G3 and every one was measured under the
+same protocol. Two things in this project's own notes said that protocol was the
+wrong thing to hold fixed, and neither had been tested.
+
+**Length.** Every teaching result that *works* runs at 3.4M–5.6M ticks;
+`teachsound` (M1c), the one milestone where praise demonstrably moves the voice,
+needs **3,400,000**. `m3` runs at **120,000** — 28× shorter, and `g3probe`'s
+900k is still 3.7× under it. So `m3` was run on the v46 creature at
+`teachsound`'s own length:
+
+| | 120k (all prior G3 work) | **3.4M** |
+|---|---|---|
+| taught − random | +0.060 ± 0.040 | **−0.035 ± 0.013** |
+| beat its own control | 2 of 5 | 1 of 5 |
+| at or above 0.75 | 0 of 5 | 0 of 5 |
+
+The error bar *tightens* at length and the estimate sits below zero. Against the
+±0.060 cross-family floor it is a null rather than a negative, but there is no
+sign of a gap opening with time. **"We never gave it time" is answered: no.**
+
+One number did move, and it is the only thing 28× the training ever bought:
+cube versus ball reads **corrected d′ 0.49 against a 0.07 null**, where every
+shorter run read ~0.00. The two utterances genuinely differ at teaching length —
+2.5% of an [i]/[a] contrast — and that is still five times under the audibility
+bar and invisible to the classifier.
+
+**Schedule.** `capacity` says in as many words that *sequential beats
+simultaneous*: two lessons taught at once interfere where the same two taught in
+turn do not. `m3` interleaves cube and ball from the first trial and always has.
+`curriculum` adds a blocked-fade arm — blocks of sixteen of one object, halving
+until the schedule *is* m3's interleaved one — each arm carrying its own
+random-order control:
+
+| arm | taught − random |
+|---|---|
+| interleaved (m3's schedule) | **+0.061 ± 0.014**, 3 of 3 positive |
+| block-fade | **−0.146 ± 0.046**, 3 of 3 negative |
+
+**Blocking is actively harmful, by more than the floor.** That is not a null and
+it is worth understanding: `capacity`'s result is about lessons on *orthogonal*
+output dimensions, and naming's two lessons are on the *same* dimension. So a
+block of ball-teaching is overwritten by the block of cube-teaching that follows
+it — which is `retain`'s 0.22 showing up in behaviour rather than in weights.
+m3's interleaved schedule was already the right one, now for a measured reason.
+
+> **Both protocol axes are closed alongside the four mechanism families.** The
+> interleaved arm also reads +0.061 at 1.2M against +0.060 at 120k, so the
+> milestone is stable across a 10× length range and sits exactly on its own
+> noise floor at both ends. There is no protocol under which the existing
+> machinery reaches the bar.
+
 ## Why G3 is closed, and what would have to be different
 
 G3 asked for a **held-out classifier to tell cube from ball off the baby's own

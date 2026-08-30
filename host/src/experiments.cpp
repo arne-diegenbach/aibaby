@@ -165,6 +165,8 @@ const Spec kSpecs[] = {
      "  fixed kick at each of four recurrent weights. Measured: the kick lands at\n"
      "  r=0.92 and 5x baseline, and 10 ms later reads 0.03 at every weight up to\n"
      "  8x. Local recurrence cannot carry activity forward at all"},
+    {"curriculum", 1200000, Expect::kOpen, Tier::kLong,
+     "derived: m3's protocol at a length where teaching works"},
     {"vocabcurve", 1200000, Expect::kPass, Tier::kLong,
      "derived: same session as vocab, scored on nested subsets"},
     {"vocab", 1200000, Expect::kOpen, Tier::kLong,
@@ -371,6 +373,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "restate") ok = run_restate(dna_blob, ticks, verbose);
   else if (name == "eligprobe") ok = run_eligprobe(dna_blob, ticks, verbose);
   else if (name == "dwprobe") ok = run_dwprobe(dna_blob, ticks, verbose);
+  else if (name == "curriculum") ok = run_curriculum(dna_blob, ticks, verbose);
   else if (name == "vocabcurve") ok = run_vocabcurve(dna_blob, ticks, verbose);
   else if (name == "ctxprobe") ok = run_ctxprobe(dna_blob, ticks, verbose);
   else if (name == "shapeprobe") ok = run_shapeprobe(dna_blob, ticks, verbose);

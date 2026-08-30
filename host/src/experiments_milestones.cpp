@@ -1095,9 +1095,22 @@ bool run_m2(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
 // interference completely.
 enum class CtxMask { kOff, kByObject, kRandom };
 
+// How the two objects are SCHEDULED across the session, which is the axis this
+// project has never varied. `m3` interleaves them from the first trial, and
+// `capacity` says in as many words that **sequential beats simultaneous** — two
+// lessons taught at once interfere where the same two taught in turn do not.
+// Naming has been measured only in the simultaneous condition.
+//
+// kBlockFade is the standard curriculum shape: long blocks of one object first,
+// so each lesson has room to consolidate before the other arrives, then blocks
+// that halve until the schedule is the interleaved one m3 already runs. It
+// spans both extremes rather than picking a block length to defend.
+enum class Curriculum { kInterleaved, kBlockFade };
+
 M3Run run_m3_session(const std::vector<uint8_t>& blob, uint64_t ticks, bool paired,
                      const Caregiver& care, bool verbose, const Capture& cap,
-                     CtxMask ctx = CtxMask::kOff) {
+                     CtxMask ctx = CtxMask::kOff,
+                     Curriculum curriculum = Curriculum::kInterleaved) {
   M3Run out;
   std::string error;
   Session s;
@@ -1299,7 +1312,23 @@ M3Run run_m3_session(const std::vector<uint8_t>& blob, uint64_t ticks, bool pair
   // that always guessing "ball" cannot score, shuffled so the readout cannot
   // pick up on alternation.
   std::vector<int> deck;
+  uint32_t block_left = 0;
+  int block_obj = 0;
   auto next_object = [&]() -> int {
+    if (curriculum == Curriculum::kBlockFade) {
+      // Block length halves as the session runs: 16, 8, 4, 2, then 1, which is
+      // the interleaved schedule. `now` and `ticks` are the session clock, so
+      // this does not depend on how many trials happen to fit.
+      if (block_left == 0) {
+        const double frac = ticks ? double(now) / double(ticks) : 1.0;
+        const uint32_t step = uint32_t(frac * 5.0);
+        block_left = 16u >> (step > 4 ? 4 : step);
+        if (block_left == 0) block_left = 1;
+        block_obj ^= 1;
+      }
+      --block_left;
+      return block_obj;
+    }
     if (deck.empty()) {
       for (int k = 0; k < 8; ++k) deck.push_back(k % 2);
       for (size_t i = deck.size(); i > 1; --i) {
@@ -7051,6 +7080,101 @@ bool run_vocabcurve(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
               "    the creature — the same bottleneck G3 died on. If both fall, the\n"
               "    limit is the creature and that is something this project has not\n"
               "    measured before.\n");
+  (void)verbose;
+  return true;
+}
+
+
+// --- Does the SCHEDULE matter? ---------------------------------------------
+//
+// The axis this project has never varied. Eleven mechanisms were built against
+// G3 and every one was measured under the same protocol: the two objects
+// interleaved from the first trial, at 120 s of simulated life.
+//
+// Two things in the project's own notes say that protocol is the wrong one to
+// have held fixed.
+//
+//   * `capacity` says **sequential beats simultaneous** — two lessons taught at
+//     once interfere where the same two taught in turn do not. Naming has only
+//     ever been measured in the simultaneous condition.
+//   * every teaching result that WORKS runs at 3.4M-5.6M ticks. `teachsound`
+//     (M1c), the one milestone where praise demonstrably moves the voice, needs
+//     3,400,000. `m3` runs at 120,000 — 28x shorter, and `g3probe`'s 900k is
+//     still 3.7x under it.
+//
+// So this varies the two protocol axes against each other and reads the
+// milestone's own number. `interleaved` is m3's schedule and is the control;
+// `block-fade` starts with blocks of sixteen of one object and halves them
+// until the schedule IS the interleaved one, so each lesson gets room to
+// consolidate before the other arrives.
+//
+// Both arms carry m3's own taught-minus-random control, and the floor to read
+// them against is the one m3 now prints: +/-0.060 across seed families with the
+// mechanism absent by construction, spread 0.120.
+bool run_curriculum(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  aibaby::Dna dna;
+  if (dna.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) return false;
+  constexpr uint32_t kReps = 3;
+  std::printf("  session           %.1f s of simulated life x %u creatures x 2 arms x 2\n",
+              double(ticks) * double(dna.header().sim.dt_ms) / 1000.0, kReps);
+  instrument("curriculum", dna.header().seed, kReps, "creatures per arm");
+  std::printf("  m3's schedule is `interleaved`; `block-fade` teaches in blocks of\n"
+              "  16 that halve to 1. Each arm carries m3's own random-order control.\n\n");
+
+  struct Arm { const char* name; Curriculum c; };
+  const Arm arms[2] = {{"interleaved (m3)", Curriculum::kInterleaved},
+                       {"block-fade", Curriculum::kBlockFade}};
+  Caregiver care;
+  std::printf("  %-5s %-18s %-9s %-9s %-9s %s\n", "seed", "arm", "named", "random",
+              "gap", "echo");
+  double sum_gap[2] = {0, 0};
+  uint32_t n_gap[2] = {0, 0};
+  std::vector<double> gaps[2];
+
+  for (uint32_t r = 0; r < kReps; ++r) {
+    std::vector<uint8_t> variant = blob;
+    const uint64_t seed = dna.header().seed + r * 7919ull;
+    std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+    for (int a = 0; a < 2; ++a) {
+      const M3Run named =
+          run_m3_session(variant, ticks, true, care, false, Capture{}, CtxMask::kOff,
+                         arms[a].c);
+      const M3Run ctl =
+          run_m3_session(variant, ticks, false, care, false, Capture{}, CtxMask::kOff,
+                         arms[a].c);
+      if (!named.ok || !ctl.ok) {
+        std::printf("  %-5u %-18s (inconclusive)\n", r, arms[a].name);
+        continue;
+      }
+      const double gap = named.vocal - ctl.vocal;
+      sum_gap[a] += gap;
+      ++n_gap[a];
+      gaps[a].push_back(gap);
+      std::printf("  %-5u %-18s %-9.3f %-9.3f %+-9.3f %.3f\n", r, arms[a].name,
+                  named.vocal, ctl.vocal, gap, named.echo);
+    }
+  }
+  if (n_gap[0] < 2 || n_gap[1] < 2) {
+    std::printf("\n  curriculum INCONCLUSIVE.\n");
+    return false;
+  }
+
+  auto se_of = [](const std::vector<double>& v) {
+    double m = 0;
+    for (double x : v) m += x;
+    m /= double(v.size());
+    double ss = 0;
+    for (double x : v) ss += (x - m) * (x - m);
+    return v.size() > 1 ? std::sqrt(ss / double(v.size() - 1) / double(v.size())) : 0.0;
+  };
+  std::printf("\n  %-18s %s\n", "arm", "taught - random");
+  for (int a = 0; a < 2; ++a) {
+    std::printf("  %-18s %+.3f +/- %.3f SE over %u creatures\n", arms[a].name,
+                sum_gap[a] / n_gap[a], se_of(gaps[a]), n_gap[a]);
+  }
+  std::printf("\n    Read both against m3's measured floor: the control genome swings\n"
+              "    +/-0.060 across seed families with the mechanism absent, spread\n"
+              "    0.120. A schedule effect has to clear that, not just its own SE.\n");
   (void)verbose;
   return true;
 }
