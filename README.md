@@ -915,6 +915,60 @@ while `m3` alternates them, so nothing here shows two mappings coexisting.
 > project has had to ask in some time, and it exists because a probe was pointed
 > at the tract that matters instead of the one it was written for.
 
+### Routing the shape bank through the arcuate — and poolability was not the missing piece
+
+The alignment principle says the nine scalars carry whatever arrives in their
+coordinates, and exactly one pathway does that: the arcuate. `vision→auditory`
+was built weeks ago to exploit it and failed, with a measured explanation — *the
+word's auditory code survives 32-bin pooling at 1.000, the vision-driven code at
+matched per-neuron legibility sits at 0.520.* The retina's code was the wrong
+shape.
+
+DNA v46 supplies a code of the right shape: `shapeprobe` puts the radial bank
+through the same pooling at **0.960** where the retina reads 0.570. So the
+experiment was re-run with the shape bank as the source — the one ingredient the
+first attempt was diagnosed as missing.
+
+**Ten configurations, then a replication.** Weight first, at density 0.15:
+auditory delivery peaks at 0.640 (w 0.05) and collapses to 0.500 by w 0.20,
+with `central`, `vocal` and the voice all degrading — the signature of a tract
+that is too loud, which the shape bank is prone to because 12 channels drive 21
+neurons each in lockstep where the retina drove about 1.5. Then density, which
+runs the other way: **0.06 → 0.720, 0.15 → 0.640, 0.40 → 0.500**, the same
+"a random tract's capacity falls with density" this project measured in
+`projprobe`.
+
+At the best setting (d 0.06, w 0.10), against a weight-0 arm with identical
+wiring, four seed families:
+
+| seed | auditory off → on | voice off → on |
+|---|---|---|
+| shipped | 0.520 → **0.720** | 0.580 → 0.620 |
+| 20260901 | 0.480 → **0.780** | 0.560 → 0.560 |
+| 20260902 | 0.540 → **0.660** | 0.580 → 0.700 |
+| 20260903 | 0.600 → **0.700** | 0.560 → 0.520 |
+| mean | **+0.180, 4 of 4** | **+0.030, sign flips** |
+
+**The tract delivers and the voice does not follow** — the same result the
+retina-sourced version gave (+0.04 / 0.00 / −0.06), reproduced with a source
+chosen specifically to fix the diagnosed fault.
+
+> **This retires my own explanation of the first failure.** "The visual code
+> does not survive pooling" was the reason given for why the arcuate route did
+> not transfer. A code that *does* survive pooling — measured at 0.960, against
+> the word's 1.000 — does not transfer either. Poolability was not the missing
+> ingredient.
+>
+> Two independent ways of failing at the same step now exist: a well-delivered
+> badly-shaped code (retina, auditory 0.880) and a moderately-delivered
+> well-shaped code (shape bank, auditory 0.720). Both leave the voice at its
+> control. **The arcuate is an identity map on the ear's own coordinates, and no
+> visual code inherits it regardless of how it is shaped.** That is a stronger
+> statement than the one this page made before, and it was bought by trying the
+> repair the earlier diagnosis called for.
+
+Genome-only: nothing shipped, no code changed, the pinned hash is untouched.
+
 ### `vocabcurve` — the vocabulary does not collapse, and the readout is not the limit
 
 With G3 closed, the open question moved to the pathway that works. M1b reads
