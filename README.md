@@ -915,6 +915,53 @@ while `m3` alternates them, so nothing here shows two mappings coexisting.
 > project has had to ask in some time, and it exists because a probe was pointed
 > at the tract that matters instead of the one it was written for.
 
+### `vocabcurve` — the vocabulary does not collapse, and the readout is not the limit
+
+With G3 closed, the open question moved to the pathway that works. M1b reads
+**0.890 for two words** and `vocab` reads **0.371 for eight against a chance of
+0.125**, and nothing had measured what happens in between.
+
+**One session, nested subsets.** Each creature is run once on all eight words
+and the N-way score is taken over the trials whose label is below N, so trials
+*per word* are identical at every N. Running the creature separately per
+vocabulary size would confound capacity with sampling — more words in a fixed
+session means fewer trials each, and accuracy would fall for no reason about the
+creature. Total trials do fall with N, which shrinks the training set at the
+small-N end and so biases *against* it; the count is printed.
+
+`voice` accuracy divided by chance, three seed families:
+
+| N | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
+|---|---|---|---|---|---|---|---|
+| shipped | 1.49 | 2.00 | 2.48 | 2.60 | 2.63 | 2.68 | **2.88** |
+| 20260901 | 1.44 | 1.77 | 2.12 | 2.08 | 2.33 | 2.47 | **2.55** |
+| 20260902 | 1.52 | 1.97 | 2.43 | 2.49 | 2.62 | 2.85 | **3.01** |
+
+**The advantage over chance grows as words are added.** Raw accuracy falls from
+0.747 to 0.360 only because chance falls faster, from 0.500 to 0.125. Shuffled
+controls sit at chance at every N on 3 of 3. `vocab`'s "the vocabulary is full
+below eight" remains true and is a *different* statement — it is about pairwise
+separation against a 0.75 bar, 15 of 28 pairs under it. Both hold; say which.
+
+**And the column that matters is the third one.** `vocal` read *per neuron* is
+**below** the nine scalars at every N on 3 of 3 — 0.237 against 0.360 at eight
+words, with `vocab` reporting the same independently (0.234 against 0.371).
+
+> **The nine scalars are a bottleneck only for information that does not arrive
+> in their coordinates.** A heard word comes through the arcuate, which is an
+> identity map onto the readout's own coordinates, and there the scalars carry
+> **more** than the population does — each group's centroid averages away noise
+> the raw counts keep. A seen object arrives with no such alignment, and there
+> the population carries 0.860 while the scalars carry nothing. Same readout,
+> opposite verdicts, and the difference is alignment rather than capacity. This
+> completes the per-knob finding above from the other side, and it means *more
+> motor groups* is not the fix for either problem.
+
+**One hypothesis of mine was refuted by its own control.** I expected `vocab`'s
+number to be depressed by its first-half/second-half split — the documented
+`projprobe` bug. The naive-split control column reads **0.371** against the
+interleaved split's 0.360. The split is not a confound here.
+
 ### `ctxprobe` — pricing the interference hypothesis, and it does not pay
 
 `dwprobe` on the participating tract left one hypothesis standing: the two

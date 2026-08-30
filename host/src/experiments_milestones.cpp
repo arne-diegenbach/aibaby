@@ -6898,4 +6898,161 @@ bool run_ctxprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
   return true;
 }
 
+
+// --- Where does the vocabulary run out? ------------------------------------
+//
+// Two numbers from the same creature and the same larynx bracket everything
+// this project knows about how much the voice can carry: M1b reads **0.890 for
+// two words**, and `vocab` reads **0.210 for eight against a chance of 0.125**.
+// Nobody has measured what happens in between, and that curve is the first
+// question of the project's second arc — because unlike G3 it starts from
+// something that WORKS rather than from chance.
+//
+// **One session, nested subsets.** Running the creature separately at each
+// vocabulary size would confound capacity with sampling: more words in a fixed
+// session means fewer trials each, and accuracy would fall for a reason that has
+// nothing to do with the creature. So each creature is run ONCE on all eight
+// words, and the N-way score is taken over the trials whose label is below N.
+// Trials per word are then identical at every N by construction. Total trials do
+// fall with N, which shrinks the classifier's training set at small N — that
+// biases AGAINST the small-N end, so it is conservative for "where does it fall
+// off", and the count is printed so it can be seen.
+//
+// **Three feature sets, and the third is the point.** `voice` is the milestone's
+// own readout, the nine motor groups plus loudness and voicing. `artic` drops
+// loudness and voicing, so a win cannot be "one word makes it louder". `vocal`
+// is the module's PER-NEURON activity — and the comment on `ImitateRun` already
+// posed the question this answers: *is the vocabulary ceiling a limit on the
+// creature or on the nine motor scalars everything else is read through?* If
+// `vocal` holds up where `voice` collapses, the ceiling is the readout, which is
+// the same bottleneck G3 died on wearing different clothes. If both collapse
+// together, the limit is the creature and it is a new fact.
+//
+// Split is INTERLEAVED WITHIN EACH CLASS rather than first-half/second-half:
+// the naive split is what made every pre-2026-08-17 `projprobe` number read low,
+// and an imitate session drifts.
+bool run_vocabcurve(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  aibaby::Dna dna;
+  if (dna.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) return false;
+  constexpr uint32_t kReps = 3;
+  instrument("vocabcurve", dna.header().seed ^ 0x2C0Bu, uint32_t(ticks / 2800),
+             "trials per creature");
+  std::printf("  one eight-word session per creature, scored on nested subsets:\n"
+              "  the N-way number uses the trials whose word is among the first N,\n"
+              "  so trials PER WORD are the same at every N.\n\n");
+
+  // Nearest class centroid, interleaved within class. Returns -1 if any class
+  // has too few training trials to have a centroid at all.
+  auto nway = [](const std::vector<std::vector<double>>& x, const std::vector<int>& y,
+                 uint32_t n_classes, bool naive = false) -> double {
+    std::vector<uint32_t> seen(n_classes, 0), cnt(n_classes, 0);
+    std::vector<std::vector<double>> mu(n_classes);
+    std::vector<size_t> test;
+    for (size_t t = 0; t < y.size() && t < x.size(); ++t) {
+      const int L = y[t];
+      if (L < 0 || L >= int(n_classes) || x[t].empty()) continue;
+      // `naive` reproduces the first-half / second-half split `vocab` uses, so
+      // the two numbers can be compared on identical data. It is here as a
+      // CONTROL, not an option: if it reproduces vocab's 0.210 where the
+      // interleaved split reads higher, then vocab's headline is depressed by
+      // its split and not by the creature.
+      const bool train = naive ? (t * 2 < y.size()) : (seen[L] % 2 == 0);
+      if (train) {
+        if (mu[L].empty()) mu[L].assign(x[t].size(), 0.0);
+        for (size_t d = 0; d < x[t].size() && d < mu[L].size(); ++d) mu[L][d] += x[t][d];
+        ++cnt[L];
+      } else {
+        test.push_back(t);
+      }
+      ++seen[L];
+    }
+    for (uint32_t k = 0; k < n_classes; ++k) {
+      if (cnt[k] < 2) return -1.0;
+      for (double& v : mu[k]) v /= double(cnt[k]);
+    }
+    uint32_t hit = 0, tot = 0;
+    for (size_t t : test) {
+      int best = -1;
+      double bd = 0.0;
+      for (uint32_t k = 0; k < n_classes; ++k) {
+        double d2 = 0.0;
+        for (size_t d = 0; d < mu[k].size() && d < x[t].size(); ++d) {
+          const double e = x[t][d] - mu[k][d];
+          d2 += e * e;
+        }
+        if (best < 0 || d2 < bd) { bd = d2; best = int(k); }
+      }
+      if (best == y[t]) ++hit;
+      ++tot;
+    }
+    return tot ? double(hit) / double(tot) : -1.0;
+  };
+
+  double acc[kVocabCount + 1][5] = {{0}};
+  uint32_t n_at[kVocabCount + 1][5] = {{0}};
+  uint32_t trials_at[kVocabCount + 1] = {0};
+  aibaby::Rng shuf_rng;
+  shuf_rng.seed(dna.header().seed ^ 0x11C7u);
+
+  uint32_t ok = 0;
+  for (uint32_t r = 0; r < kReps; ++r) {
+    std::vector<uint8_t> variant = blob;
+    const uint64_t seed = dna.header().seed + r * 7919ull;
+    std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+    const ImitateRun p = run_imitate_session(variant, ticks, kVocabCount);
+    if (!p.ok || p.scored_labels.size() < 48) continue;
+    ++ok;
+
+    for (uint32_t n = 2; n <= kVocabCount; ++n) {
+      std::vector<std::vector<double>> xv, xa, xn;
+      std::vector<int> y;
+      for (size_t t = 0; t < p.scored_labels.size(); ++t) {
+        const int L = p.scored_labels[t];
+        if (L < 0 || L >= int(n)) continue;
+        if (t < p.scored_voice.size()) xv.push_back(p.scored_voice[t]);
+        if (t < p.scored_artic.size()) xa.push_back(p.scored_artic[t]);
+        if (t < p.scored_vocal.size()) xn.push_back(p.scored_vocal[t]);
+        y.push_back(L);
+      }
+      trials_at[n] += uint32_t(y.size());
+      std::vector<int> ys = y;
+      for (size_t i = ys.size(); i > 1; --i) std::swap(ys[i - 1], ys[shuf_rng.next() % i]);
+      const std::vector<std::vector<double>>* sets[5] = {&xv, &xa, &xn, &xv, &xv};
+      for (int f = 0; f < 5; ++f) {
+        const double a = nway(*sets[f], f == 3 ? ys : y, n, f == 4);
+        if (a >= 0.0) { acc[n][f] += a; ++n_at[n][f]; }
+      }
+    }
+  }
+  if (ok < 2) {
+    std::printf("  vocabcurve INCONCLUSIVE — %u usable creatures.\n", ok);
+    return false;
+  }
+
+  std::printf("  %-4s %-8s %-8s %-9s %-9s %-9s %-9s %-11s %s\n", "N", "trials",
+              "chance", "voice", "artic", "vocal", "shuffled", "voice/chance",
+              "naive split");
+  for (uint32_t n = 2; n <= kVocabCount; ++n) {
+    const double chance = 1.0 / double(n);
+    const double v = n_at[n][0] ? acc[n][0] / n_at[n][0] : -1.0;
+    std::printf("  %-4u %-8u %-8.3f %-9.3f %-9.3f %-9.3f %-9.3f %-11.2f %.3f\n", n,
+                trials_at[n] / ok, chance, v,
+                n_at[n][1] ? acc[n][1] / n_at[n][1] : -1.0,
+                n_at[n][2] ? acc[n][2] / n_at[n][2] : -1.0,
+                n_at[n][3] ? acc[n][3] / n_at[n][3] : -1.0,
+                v > 0 ? v / chance : 0.0,
+                n_at[n][4] ? acc[n][4] / n_at[n][4] : -1.0);
+  }
+  std::printf("\n    `voice` is the milestone's readout, `artic` drops loudness and\n"
+              "    voicing so a win cannot be 'one word makes it louder', and `vocal`\n"
+              "    is the module's own per-neuron activity. Read the last two columns\n"
+              "    of the bottom rows against each other: if `vocal` holds where\n"
+              "    `voice` falls, the vocabulary ceiling is the NINE SCALARS and not\n"
+              "    the creature — the same bottleneck G3 died on. If both fall, the\n"
+              "    limit is the creature and that is something this project has not\n"
+              "    measured before.\n");
+  (void)verbose;
+  return true;
+}
+
 }  // namespace aibaby_host
