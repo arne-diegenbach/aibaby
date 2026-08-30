@@ -15,3 +15,7 @@ journal.aibj
 # One machine's permission allowlist, full of absolute paths.
 .claude/
 __pycache__/
+
+# Experiment output and one-off genome variants: derived from the genome and
+# the experiment that made them, for the same reason the recordings above are.
+scratchpad/

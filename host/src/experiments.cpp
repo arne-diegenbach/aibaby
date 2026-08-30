@@ -167,6 +167,11 @@ const Spec kSpecs[] = {
      "  8x. Local recurrence cannot carry activity forward at all"},
     {"curriculum", 1200000, Expect::kOpen, Tier::kLong,
      "derived: m3's protocol at a length where teaching works"},
+    {"ctxlearn", 3400000, Expect::kOpen, Tier::kLong,
+     "derived: vocallearn's own minimum, which its positive control sets.\n"
+     "  Stage 0 of the audio rewrite: can reward write a CONDITIONAL map when\n"
+     "  the condition arrives on a zero-baseline code? Needs a genome with a\n"
+     "  kContext module — tools/genome_add_context.py"},
     {"vocabcurve", 1200000, Expect::kPass, Tier::kLong,
      "derived: same session as vocab, scored on nested subsets"},
     {"vocab", 1200000, Expect::kOpen, Tier::kLong,
@@ -374,6 +379,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "eligprobe") ok = run_eligprobe(dna_blob, ticks, verbose);
   else if (name == "dwprobe") ok = run_dwprobe(dna_blob, ticks, verbose);
   else if (name == "curriculum") ok = run_curriculum(dna_blob, ticks, verbose);
+  else if (name == "ctxlearn") ok = run_ctxlearn(dna_blob, ticks, verbose);
   else if (name == "vocabcurve") ok = run_vocabcurve(dna_blob, ticks, verbose);
   else if (name == "ctxprobe") ok = run_ctxprobe(dna_blob, ticks, verbose);
   else if (name == "shapeprobe") ok = run_shapeprobe(dna_blob, ticks, verbose);

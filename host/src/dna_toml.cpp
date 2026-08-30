@@ -197,6 +197,7 @@ bool parse_role(const std::string& text, uint32_t& out) {
       {"visual_form", aibaby::ModuleRole::kVisualForm},
       {"hippocampus", aibaby::ModuleRole::kHippocampus},
       {"interneuron", aibaby::ModuleRole::kInterneuron},
+      {"context", aibaby::ModuleRole::kContext},
   };
   for (const auto& entry : kRoles) {
     if (text == entry.name) {

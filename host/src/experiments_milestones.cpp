@@ -3784,12 +3784,55 @@ constexpr double kVLBaselineAlpha = 0.02;
 // taught arm's null is a fact about the probe.
 enum VLArm { kVLTaught = 0, kVLYoked, kVLNone, kVLFixed, kVLArmCount };
 
+// What the creature is rewarded TOWARD, split off the arm above so a control
+// arm can be scored the same way as the arm it controls for. `vocallearn` never
+// needed the split: its yoked arm controls for the taught one and both score
+// against the heard word. `ctxlearn` has three targets and each needs its own
+// yoke, and a yoke scored against a different target is not a control.
+//
+//   kVLTgtHeard  the word the caregiver just said. Conditional, and it is the
+//                map the innate arcuate already delivers at 0.890 — so reward
+//                here is REFINING an existing route.
+//   kVLTgtFixed  one word's formants whatever was heard. No conditionality:
+//                vocallearn's positive control, +24.0 points on 3 of 3.
+//   kVLTgtSwap   the OTHER word's formants. Conditional, arbitrary, and the
+//                arcuate is actively pulling against it — which is what makes
+//                it a measurement of a LEARNED conditional map rather than of a
+//                refined innate one.
+enum VLTarget { kVLTgtHeard = 0, kVLTgtFixed, kVLTgtSwap };
+
+// An oracle condition, written straight into a kContext module (DNA v47).
+//
+// This is the manipulation the whole experiment exists for. `module` is a
+// population with no noise, no homeostatic setpoint and no recurrence, cut into
+// `slots` disjoint slices; the trial's word selects one slice and `gain` is
+// injected into every neuron of it, every tick. Every neuron of every other
+// slice stays at exactly zero, which is a presynaptic baseline this creature
+// has never had anywhere.
+//
+// `gain` at zero is the control and it is a control WITHIN one genome: the
+// module is present and wired either way, so the two arms share a creature, a
+// noise stream and a set of synapses, and differ only in whether the oracle
+// speaks.
+struct CtxDrive {
+  int32_t module = -1;
+  uint32_t slots = 2;
+  double gain = 0.0;
+};
+
 struct VLRun {
   bool ok = false;
   double err_early = 0.0, err_late = 0.0;
   double err_by_word[kVLWords][2] = {};
   uint32_t scored = 0, skipped = 0, praises = 0, scolds = 0;
   double voiced_frac = 0.0;
+  // What the oracle actually did, because a silent context module and a
+  // saturated one both look like "the tract is connected" from outside.
+  double ctx_rate = 0.0;
+  // Mean |dw| over the session on the oracle's own tract, and on the larynx's
+  // other afferents as the scale to read it against.
+  double ctx_dw = 0.0;
+  double ref_dw = 0.0;
   std::vector<Praise> feedback;  // what the taught arm earned, for the yoke
 };
 
@@ -3803,7 +3846,13 @@ inline double formant_error(double f1, double f2, const Word& w) {
 }
 
 VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, VLArm arm,
-                             const std::vector<Praise>* yoked, const Regime& regime) {
+                             const std::vector<Praise>* yoked, const Regime& regime,
+                             int target = -1, const CtxDrive* ctx = nullptr) {
+  // -1 is vocallearn's own rule, and passing nothing reproduces it exactly: the
+  // positive control aims at one fixed target and every other arm at the word
+  // that was heard.
+  const VLTarget tgt =
+      target < 0 ? (arm == kVLFixed ? kVLTgtFixed : kVLTgtHeard) : VLTarget(target);
   VLRun out;
   std::string error;
   Session s;
@@ -3820,6 +3869,30 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
   VowelSource caregiver(acfg.sample_rate);
   std::vector<float> pcm(acfg.sample_rate / 1000);
   const uint32_t spt = acfg.sample_rate / 1000;
+
+  // Birth weights of every afferent of the larynx, so the session can say
+  // afterwards whether reward wrote anything onto the oracle's tract.
+  std::vector<uint32_t> w0_neuron, w0_slot, w0_src;
+  std::vector<double> w0_w;
+  if (ctx && ctx->module >= 0) {
+    const int32_t vm = s.dna.module_with_role(aibaby::ModuleRole::kVocal);
+    if (vm >= 0) {
+      const aibaby::Network& net = s.brain.network();
+      const aibaby::ModuleState& vms = net.module(uint32_t(vm));
+      for (uint32_t n = vms.begin; n < vms.begin + vms.count; ++n) {
+        const uint32_t deg = net.in_degree(n);
+        for (uint32_t k = 0; k < deg; ++k) {
+          uint32_t src = 0;
+          aibaby::Scalar w = aibaby::Scalar(0);
+          net.in_synapse(n, k, src, w);
+          w0_neuron.push_back(n);
+          w0_slot.push_back(k);
+          w0_src.push_back(src);
+          w0_w.push_back(double(w));
+        }
+      }
+    }
+  }
 
   const uint32_t n_trials = uint32_t(ticks / kVLTrialTicks);
   if (n_trials < 24) return out;
@@ -3840,8 +3913,15 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
     // The word the creature HEARS is still alternating on every arm — the
     // positive control differs only in what it is scored and rewarded against,
     // so the two arms hear identical sessions.
-    const Word& w = kWords[arm == kVLFixed ? 0 : label];
-    const uint32_t bucket = arm == kVLFixed ? 0 : label;
+    // Which word's formants this trial is scored and rewarded against. The
+    // bucket is the per-word reward baseline, and it follows the TARGET rather
+    // than the label so that "closer than you usually get" always means closer
+    // to the thing being asked for.
+    const uint32_t target_word = tgt == kVLTgtFixed  ? 0u
+                                 : tgt == kVLTgtSwap ? (label + 1u) % kVLWords
+                                                     : label;
+    const Word& w = kWords[target_word];
+    const uint32_t bucket = target_word;
     double f1_sum = 0.0, f2_sum = 0.0;
     uint32_t n_voiced = 0;
 
@@ -3862,6 +3942,20 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
       caregiver.render(sounding ? heard.f0 : 0.0f, heard.f1, heard.f2,
                        sounding ? 0.5f : 0.0f, pcm.data(), spt);
       ear.tick(s.brain, pcm.data(), spt);
+      // The oracle condition, held for the whole trial. A caregiver naming a
+      // thing does not take it away while the baby answers, and the condition
+      // has to still be present when reward lands or there is nothing for it to
+      // bind to.
+      if (ctx && ctx->module >= 0 && ctx->gain > 0.0) {
+        const aibaby::ModuleState& cm = s.brain.network().module(uint32_t(ctx->module));
+        const uint32_t slots = ctx->slots ? ctx->slots : 1u;
+        const uint32_t slice = label % slots;
+        const uint32_t lo2 = cm.begin + cm.count * slice / slots;
+        const uint32_t hi2 = cm.begin + cm.count * (slice + 1) / slots;
+        for (uint32_t n = lo2; n < hi2; ++n) {
+          s.brain.network().inject(n, aibaby::Scalar(ctx->gain));
+        }
+      }
       s.brain.step();
 
       if (s.brain.vocal_frame() == last_frame) continue;
@@ -3925,6 +4019,29 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
     }
   }
   out.voiced_frac = frames_total ? double(frames_voiced) / double(frames_total) : 0.0;
+  if (ctx && ctx->module >= 0) {
+    out.ctx_rate = double(s.brain.network().module(uint32_t(ctx->module)).mean_rate);
+    // Did the tract LEARN anything? A flat conditional arm means nothing if the
+    // synapses the condition arrives on never moved, and "the oracle fires" and
+    // "reward writes to the oracle's synapses" are different claims that no
+    // firing rate can tell apart. Reported beside the larynx's OTHER afferents
+    // so that "small" has a scale.
+    double d_ctx = 0.0, d_ref = 0.0;
+    uint32_t n_ctx = 0, n_ref = 0;
+    const aibaby::Network& net = s.brain.network();
+    const aibaby::ModuleState& cms = net.module(uint32_t(ctx->module));
+    for (uint32_t k = 0; k < w0_src.size(); ++k) {
+      uint32_t src = 0;
+      aibaby::Scalar w = aibaby::Scalar(0);
+      net.in_synapse(w0_neuron[k], w0_slot[k], src, w);
+      if (src != w0_src[k]) continue;  // pruning moved it; not the same synapse
+      const double d = std::fabs(double(w) - w0_w[k]);
+      if (src >= cms.begin && src < cms.begin + cms.count) { d_ctx += d; ++n_ctx; }
+      else { d_ref += d; ++n_ref; }
+    }
+    out.ctx_dw = n_ctx ? d_ctx / n_ctx : 0.0;
+    out.ref_dw = n_ref ? d_ref / n_ref : 0.0;
+  }
   (void)voiced_sum;
   out.ok = out.scored >= 18 && err_n[0] > 0 && err_n[1] > 0;
   return out;
@@ -7177,6 +7294,348 @@ bool run_curriculum(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
               "    0.120. A schedule effect has to clear that, not just its own SE.\n");
   (void)verbose;
   return true;
+}
+
+
+// --- ctxlearn: can reward write a conditional map onto a ZERO-BASELINE code? -
+//
+// Stage 0 of the audio rewrite, and it is a falsification rather than a
+// mechanism. It either licenses the rewrite or kills it.
+//
+// THE ARGUMENT. Every conditional-learning failure in this project has the same
+// arithmetic, and the synaptic-perturbation post-mortem writes it out in one
+// line: the presynaptic gate is a spike count, a spike count is a neuron's
+// baseline rate plus a few percent of condition, so the credit factorises into a
+// shared term and a differential one and the shared term is far larger. That
+// shared term has been subtracted (v24), signed (v35), gated (v29, v37, v40),
+// re-timed (v26, v42), re-routed (v43, v46) and re-rewarded (v20) -- seven
+// common-mode walls and eleven mechanisms. Its CAUSE has never been touched:
+// requirements 3.1 makes rate homeostasis mandatory, so no population in this
+// creature has ever had a baseline of zero.
+//
+// `vocallearn` states the consequence in two numbers from one instrument:
+// **+24.0 points toward a fixed target and -0.1 toward a conditional one**, 3
+// of 3 seeds. The +24 is not a consolation prize. It is a conditional-learning
+// result with a context layer of size ONE. `capacity` measured what happens
+// when two lessons stop sharing parameters -- 0.84 of the first kept against
+// 0.22 when they share -- and `driftprobe` measured that the estimator is
+// unbiased and merely noisy. Give R-STDP a context layer of size n whose slices
+// are DISJOINT and exactly zero when absent, and two conditions share no
+// presynaptic unit, therefore no synapse, therefore no common mode to factor
+// out. No new learning rule: `trace_pre_` on an unwritten kContext neuron is
+// zero, so the shipped rule already has the property and has never had a
+// substrate with a zero baseline to run on.
+//
+// THE CONTROL IS WITHIN ONE GENOME. The oracle is present and wired at every
+// level including zero, so all arms share a creature, a noise stream and a set
+// of synapses. (An appended-module genome is NOT comparable to
+// dna/default.toml -- noise is drawn per neuron per tick, so 64 extra neurons
+// re-roll the stream. See tools/genome_add_context.py.)
+//
+// THREE TARGETS, EACH WITH ITS OWN YOKE, because a yoke scored against a
+// different target is not a control:
+//
+//   fixed   one word's formants whatever was heard. vocallearn's positive
+//           control, and it decides what a null means.
+//   heard   the word that was just said. Conditional -- but the innate arcuate
+//           already delivers this map at 0.890, so reward is REFINING an
+//           existing route. This is vocallearn's -0.1.
+//   swap    the OTHER word's formants. Conditional, arbitrary, and the arcuate
+//           is pulling against it. Nothing innate can supply it, so anything it
+//           earns was LEARNED. This is the milestone-shaped arm.
+//
+// WHY THIS IS A SWEEP AND NOT ONE POINT, and it is a correction to the first
+// version of this experiment. Run at a single oracle strength it read `swap`
+// -8.6 driven against +0.2 silent and printed a negative -- while its own
+// positive control fell from +35.9 to +12.2 with a standard error of 10.2, dead
+// on two of three seeds. A column whose positive control has collapsed cannot
+// report a null on anything: the oracle was not delivering a condition, it was
+// knocking the larynx off the operating point at which reward works at all,
+// which is rule 1 of the calibration invariant arriving as a result. So the
+// oracle's strength is swept, `fixed` gates every level, and a level whose
+// control has fallen is printed UNREADABLE rather than scored.
+//
+// WHAT WOULD KILL THE REWRITE: `swap` flat at every level where `fixed` is
+// still alive. WHAT WOULD LICENSE IT: `swap` lifting at a level where `fixed`
+// has not moved. WHAT WOULD MEAN NEITHER: no level where the control survives,
+// which says this genome cannot deliver an oracle to this larynx and names the
+// next lever rather than the answer.
+namespace {
+
+// Injected current per tick into every neuron of the active slice. Threshold is
+// 1.0 over a 20 ms leak at 1 kHz, so the steady state is 20x this and 0.05 is
+// exactly threshold: below it the slice never fires and the oracle is mute
+// without saying so.
+// 0.04 is deliberately gone. Threshold is 1.0 over a 20 ms leak at 1 kHz, so
+// the steady state is 20x the gain and anything under 0.05 never fires: the
+// first sweep ran 0.04 and it came back BYTE-IDENTICAL to the silent arm, which
+// is correct and useless. A mute level is not a driven level, and the verdict
+// below now checks the measured rate rather than the index.
+constexpr double kCtxLevels[] = {0.00, 0.06, 0.10, 0.20};
+constexpr uint32_t kCtxLevelCount = 4;
+// vocallearn's own bar: the positive control has to move this far against its
+// yoke or the instrument cannot see learning and every null in it is a fact
+// about the probe.
+constexpr double kCtxVisible = 5.0;
+// ...and it has to keep this share of what it reads with the oracle silent. A
+// control at a third of its own reference is not a control that happens to be
+// smaller; it is a different creature being asked the same question.
+constexpr double kCtxControlKeep = 0.60;
+
+struct CtxArm {
+  const char* name;
+  VLTarget target;
+};
+
+double vl_change(const VLRun& r) {
+  return r.err_early > 0.0 ? 100.0 * (1.0 - r.err_late / r.err_early) : 0.0;
+}
+
+double ctx_mean_se(const std::vector<double>& v, double* se) {
+  if (v.empty()) { *se = 0.0; return 0.0; }
+  double m = 0.0;
+  for (double x : v) m += x;
+  m /= double(v.size());
+  double ss = 0.0;
+  for (double x : v) ss += (x - m) * (x - m);
+  *se = v.size() > 1 ? std::sqrt(ss / double(v.size() - 1) / double(v.size())) : 0.0;
+  return m;
+}
+
+}  // namespace
+
+bool run_ctxlearn(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  aibaby::Dna dna;
+  if (dna.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) {
+    std::printf("  setup failed: the genome does not load\n");
+    return false;
+  }
+  const int32_t ctx_module = dna.module_with_role(aibaby::ModuleRole::kContext);
+  if (ctx_module < 0) {
+    std::printf("  this genome has no kContext module, so there is no oracle to\n"
+                "  drive and nothing to measure. Build one:\n\n"
+                "    python3 tools/genome_add_context.py dna/default.toml ctx.toml vocal\n"
+                "    ./build/aibaby --dna ctx.toml --experiment ctxlearn\n");
+    return false;
+  }
+  const aibaby::DnaModule& cm = dna.module(uint32_t(ctx_module));
+  constexpr uint32_t kReps = 3;
+  instrument("ctxlearn", dna.header().seed, ticks / kVLTrialTicks, "trials per arm");
+  std::printf("  oracle            `%s`, %u neurons in %u disjoint slices,\n"
+              "                    zero baseline (noise %.2f, target %.2f Hz)\n",
+              cm.name, cm.neurons, kVLWords, double(cm.noise_amp),
+              double(cm.target_rate_hz));
+  std::printf("  every level shares one genome, so the arms share a creature, a\n"
+              "  noise stream and a set of synapses; level 0.00 is the control.\n\n");
+
+  const CtxArm arms[3] = {{"fixed", kVLTgtFixed},
+                          {"heard", kVLTgtHeard},
+                          {"swap", kVLTgtSwap}};
+  std::vector<double> points[kCtxLevelCount][3];
+  double ctx_hz[kCtxLevelCount] = {};
+  double voiced[kCtxLevelCount] = {};
+  double dw_ctx[kCtxLevelCount] = {};
+  double dw_ref[kCtxLevelCount] = {};
+  uint32_t cells[kCtxLevelCount] = {};
+
+  std::printf("  %-6s %-7s %-7s %-9s %-9s %-9s %-8s %-10s %-10s\n", "seed", "gain",
+              "arm", "taught", "yoked", "points", "ctx Hz", "|dw| ctx", "|dw| rest");
+  for (uint32_t r = 0; r < kReps; ++r) {
+    std::vector<uint8_t> variant = blob;
+    const uint64_t seed = dna.header().seed + r * 7919ull;
+    std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+
+    for (uint32_t L = 0; L < kCtxLevelCount; ++L) {
+      CtxDrive drive;
+      drive.module = ctx_module;
+      drive.slots = kVLWords;
+      drive.gain = kCtxLevels[L];
+
+      for (int a = 0; a < 3; ++a) {
+        Regime reg;
+        reg.praise = kPraiseValue;
+        reg.scold = kScoldValue;
+        const VLRun taught = run_vocallearn_session(variant, ticks, kVLTaught, nullptr,
+                                                    reg, arms[a].target, &drive);
+        if (!taught.ok) {
+          std::printf("  %-6u %-7.2f %-7s (inconclusive: %u scored, %u skipped)\n", r,
+                      kCtxLevels[L], arms[a].name, taught.scored, taught.skipped);
+          continue;
+        }
+        // Each arm carries its OWN yoke, scored against its OWN target: the
+        // same praise and scolding in the same proportions, half a trial out of
+        // phase so it cannot land on this creature's own echoes.
+        std::vector<Praise> yoke = taught.feedback;
+        for (Praise& p : yoke) p.tick += kVLTrialTicks / 2;
+        const VLRun yoked = run_vocallearn_session(variant, ticks, kVLYoked, &yoke, reg,
+                                                   arms[a].target, &drive);
+        if (!yoked.ok || yoked.praises + yoked.scolds != 0) {
+          std::printf("  %-6u %-7.2f %-7s (inconclusive: the yoke earned %u of its own)\n",
+                      r, kCtxLevels[L], arms[a].name, yoked.praises + yoked.scolds);
+          continue;
+        }
+        const double pt = vl_change(taught) - vl_change(yoked);
+        points[L][a].push_back(pt);
+        ctx_hz[L] += taught.ctx_rate;
+        voiced[L] += taught.voiced_frac;
+        dw_ctx[L] += taught.ctx_dw;
+        dw_ref[L] += taught.ref_dw;
+        ++cells[L];
+        std::printf("  %-6u %-7.2f %-7s %+-9.1f %+-9.1f %+-9.1f %-8.1f %-10.2e %-10.2e\n",
+                    r, kCtxLevels[L], arms[a].name, vl_change(taught), vl_change(yoked),
+                    pt, taught.ctx_rate, taught.ctx_dw, taught.ref_dw);
+      }
+    }
+  }
+
+  double mean[kCtxLevelCount][3] = {}, se[kCtxLevelCount][3] = {};
+  bool complete = true;
+  for (uint32_t L = 0; L < kCtxLevelCount; ++L) {
+    for (int a = 0; a < 3; ++a) {
+      mean[L][a] = ctx_mean_se(points[L][a], &se[L][a]);
+      if (points[L][a].size() < 2) complete = false;
+    }
+  }
+  if (!complete) {
+    std::printf("\n  ctxlearn INCONCLUSIVE — a cell did not produce two usable\n"
+                "  creatures. A creature that does not vocalise in the echo window has\n"
+                "  no accuracy to improve, and that is not a measurement of whether it\n"
+                "  could.\n");
+    return false;
+  }
+
+  // The control at gain 0 is the reference every other level is read against.
+  const double ref = mean[0][0];
+  std::printf("\n  arm — yoke, in points of formant-error reduction. `fixed` is the\n"
+              "  positive control and it gates its own row: a level that cannot move\n"
+              "  it is not a level that can report a null on anything else.\n\n");
+  std::printf("  %-7s %-8s %-8s %-16s %-16s %-16s %s\n", "gain", "ctx Hz", "voiced",
+              "fixed (control)", "heard", "swap", "readable");
+  bool any_readable_driven = false;
+  bool readable[kCtxLevelCount] = {};
+  bool driven[kCtxLevelCount] = {};
+  for (uint32_t L = 0; L < kCtxLevelCount; ++L) {
+    // A level is DRIVEN only if the oracle measurably fired. The first version
+    // of this check asked whether L > 0, and picked a sub-threshold level as
+    // its best driven arm -- which is the silent control wearing a label.
+    const double hz = cells[L] ? ctx_hz[L] / cells[L] : 0.0;
+    driven[L] = hz > 1.0;
+    readable[L] = mean[L][0] > kCtxVisible &&
+                  (!driven[L] || mean[L][0] >= kCtxControlKeep * ref);
+    if (driven[L] && readable[L]) any_readable_driven = true;
+    char f[32], h[32], w[32];
+    std::snprintf(f, sizeof f, "%+.1f +/- %.1f", mean[L][0], se[L][0]);
+    std::snprintf(h, sizeof h, "%+.1f +/- %.1f", mean[L][1], se[L][1]);
+    std::snprintf(w, sizeof w, "%+.1f +/- %.1f", mean[L][2], se[L][2]);
+    std::printf("  %-7.2f %-8.1f %-8.2f %-16s %-16s %-16s %s\n", kCtxLevels[L],
+                cells[L] ? ctx_hz[L] / cells[L] : 0.0,
+                cells[L] ? voiced[L] / cells[L] : 0.0, f, h, w,
+                !driven[L] ? "n/a — oracle mute"
+                           : (readable[L] ? "yes" : "NO — control gone"));
+  }
+  std::printf("\n  A level is readable when the control clears %.0f points AND keeps\n"
+              "  %.0f%% of what it reads with the oracle silent (%+.1f).\n",
+              kCtxVisible, 100.0 * kCtxControlKeep, ref);
+
+  // A flat conditional arm on a tract reward never wrote to is not a
+  // measurement of conditionality. This is the row that separates them.
+  std::printf("\n  did reward write to the oracle's tract at all?\n");
+  std::printf("  %-7s %-14s %-14s %s\n", "gain", "mean|dw| ctx", "mean|dw| rest",
+              "ratio");
+  for (uint32_t L = 0; L < kCtxLevelCount; ++L) {
+    const double c = cells[L] ? dw_ctx[L] / cells[L] : 0.0;
+    const double f = cells[L] ? dw_ref[L] / cells[L] : 0.0;
+    std::printf("  %-7.2f %-14.3e %-14.3e %-8.2f%s\n", kCtxLevels[L], c, f,
+                f > 0.0 ? c / f : 0.0,
+                (L > 0 && f > 0.0 && c / f < 0.05) ? "  <- INERT: nothing was written"
+                                                   : "");
+  }
+
+  if (!readable[0]) {
+    std::printf("\n  UNDERPOWERED — the control reads %+.1f with the oracle silent,\n"
+                "  under the %.0f points this instrument needs. Nothing here is\n"
+                "  readable and the conditional arms' nulls are facts about the probe.\n"
+                "  Try --ticks higher.\n", ref, kCtxVisible);
+    return false;
+  }
+
+  // Among the levels that survived, the best the conditional arm managed.
+  double best = 0.0, best_gain = 0.0, best_ctrl = 0.0;
+  bool have_best = false;
+  for (uint32_t L = 1; L < kCtxLevelCount; ++L) {
+    if (!readable[L] || !driven[L]) continue;
+    if (!have_best || mean[L][2] > best) {
+      best = mean[L][2];
+      best_gain = kCtxLevels[L];
+      best_ctrl = mean[L][0];
+      have_best = true;
+    }
+  }
+
+  if (!any_readable_driven) {
+    // Before calling it undeliverable: did a level where the control fell also
+    // move the CONDITIONAL arms? A drive artefact lifts everything, so
+    // conditional-up-and-control-down is the one pattern that cannot be one,
+    // and it is a lead rather than a failure to deliver.
+    for (uint32_t L = 1; L < kCtxLevelCount; ++L) {
+      if (!driven[L] || readable[L]) continue;
+      if (mean[L][2] > kCtxVisible && mean[L][2] > mean[L][0] &&
+          mean[L][2] > mean[0][2] + kCtxVisible) {
+        std::printf("\n  LEAD, NOT A RESULT — at gain %.2f the arbitrary conditional\n"
+                    "  arm reads %+.1f +/- %.1f against %+.1f with the oracle mute, while\n"
+                    "  the NON-conditional control reads %+.1f. Conditional up and\n"
+                    "  control down is the one pattern extra drive cannot produce.\n\n"
+                    "  It is not a result because the control has fallen from %+.1f, so\n"
+                    "  this level is a different creature being asked the question, and\n"
+                    "  because `points` is taught minus yoke and a yoke that DEGRADES\n"
+                    "  inflates it as surely as a taught arm that improves. Decompose it\n"
+                    "  before believing it, then re-run on six seed families: three with\n"
+                    "  unanimous signs has been enough to be wrong here before.\n\n"
+                    "  The design fault this exposes: `gain` sets both how much the\n"
+                    "  oracle FIRES and how hard it SHOVES the larynx, so there is no\n"
+                    "  level that does one without the other. Separate them — hold gain\n"
+                    "  above threshold and sweep `out_w` instead.\n",
+                    kCtxLevels[L], mean[L][2], se[L][2], mean[0][2], mean[L][0], ref);
+        return false;
+      }
+    }
+    std::printf("\n  ORACLE NOT DELIVERABLE — the control is alive at %+.1f with the\n"
+                "  oracle silent and gone at every level that drives it. This genome\n"
+                "  cannot put a condition into this larynx without taking the larynx\n"
+                "  off the operating point at which reward works, so the question is\n"
+                "  NOT answered either way. The levers, in order: pay for the tract out\n"
+                "  of vocal's own noise (`dst_noise` in genome_add_context.py, rule 1 of\n"
+                "  the calibration invariant), a weaker `out_w`, or fewer neurons per\n"
+                "  slice. Do not read this as a negative.\n", ref);
+    return false;
+  }
+
+  std::printf("\n  Read `swap` against `fixed` in the same ROW. The oracle adds drive\n"
+              "  whichever target is being taught, so an effect that also lifts the\n"
+              "  control is about drive and not about conditionality.\n");
+
+  if (best > kCtxVisible) {
+    std::printf("\n  CONDITIONAL LEARNING — an arbitrary map the creature has no innate\n"
+                "  route for was taught by praise: `swap` reads %+.1f at gain %.2f,\n"
+                "  where it reads %+.1f with the oracle silent, and the control at that\n"
+                "  level is %+.1f against its silent %+.1f. The presynaptic baseline was\n"
+                "  the binding variable. Before this licenses anything, run it on six\n"
+                "  seed families: three with unanimous signs has been enough to be wrong\n"
+                "  in this project before.\n",
+                best, best_gain, mean[0][2], best_ctrl, ref);
+    return true;
+  }
+  std::printf("\n  NO CONDITIONAL LEARNING — the best `swap` at any level whose control\n"
+              "  survived is %+.1f (gain %.2f, control %+.1f against its silent %+.1f),\n"
+              "  against %+.1f with the oracle silent. A sparse zero-baseline context\n"
+              "  code on disjoint slices does not let reward write a conditional map,\n"
+              "  and this time the control was alive to say so. That is the falsifier\n"
+              "  this experiment was built to be able to report: the presynaptic\n"
+              "  baseline is not the binding variable, and the rewrite is not licensed\n"
+              "  on this argument.\n",
+              best, best_gain, best_ctrl, ref, mean[0][2]);
+  (void)verbose;
+  return false;
 }
 
 }  // namespace aibaby_host

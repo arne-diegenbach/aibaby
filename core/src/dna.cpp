@@ -307,13 +307,15 @@ DnaStatus Dna::load(const void* blob, size_t size) {
     if (!terminated) return DnaStatus::kBadModule;
 
     if (m.role >= uint32_t(ModuleRole::kRoleCount)) return DnaStatus::kBadRole;
-    // Association and interneuron are the roles a genome may hand out more than
-    // once; the transducer roles each own a hardware channel and cannot be
-    // shared. A relay owns no channel and nothing looks it up, so there is no
-    // reason a creature may not have one between each of several module pairs —
-    // and a rule that allowed only one would be a limit nothing asked for.
+    // Association, interneuron and context are the roles a genome may hand out
+    // more than once; the transducer roles each own a hardware channel and
+    // cannot be shared. A relay owns no channel and nothing looks it up, so
+    // there is no reason a creature may not have one between each of several
+    // module pairs — and a rule that allowed only one would be a limit nothing
+    // asked for. A context module owns no channel either, for the same reason.
     if (m.role != uint32_t(ModuleRole::kAssociation) &&
-        m.role != uint32_t(ModuleRole::kInterneuron)) {
+        m.role != uint32_t(ModuleRole::kInterneuron) &&
+        m.role != uint32_t(ModuleRole::kContext)) {
       if (role_seen[m.role]) return DnaStatus::kBadRole;
       role_seen[m.role] = true;
     }

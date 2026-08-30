@@ -322,7 +322,7 @@ constexpr uint32_t kDnaMagic = 0x44424941;  // "AIBD"
 //     about what reward multiplies.
 //
 //     See DnaModule::ffi_apical and DnaModule::ffi_learn, and `errprobe`.
-constexpr uint32_t kDnaVersion = 46;
+constexpr uint32_t kDnaVersion = 47;
 
 // What a module is wired to the world through. The host looks modules up by
 // role, never by name or index, so renaming a module in the genome cannot
@@ -383,6 +383,40 @@ enum class ModuleRole : uint32_t {
   // leaves every target with the same positive sum of the remainder. A relay
   // gives each target its own draw. See the README synthesis.
   kInterneuron = 9,
+  // DNA v47. A population the world writes into directly and nothing else
+  // drives — no noise, no homeostasis, no spontaneous rate. It owns no hardware
+  // channel; whoever runs the creature says which of its slices is active, the
+  // way a caregiver's touch says which slice of `somato` is.
+  //
+  // **What it is for, and it is the one variable this project never varied.**
+  // Every conditional-learning failure here has the same arithmetic, and the
+  // synaptic-perturbation post-mortem states it in one line: the presynaptic
+  // gate is a spike count, a spike count is a neuron's baseline rate plus a few
+  // percent of condition, so the credit factorises into a shared term and a
+  // differential one and the shared term is far larger. Seven common-mode
+  // walls. The shared term has been subtracted (v24), signed (v35), gated
+  // (v29, v37, v40), re-timed (v26, v42), re-routed (v43, v46) and re-rewarded
+  // (v20). Its *cause* has never been touched: §3.1 makes rate homeostasis
+  // mandatory and drives every neuron to a DNA target rate, so no population in
+  // this creature has ever had a baseline of zero.
+  //
+  // A context module is that missing substrate. With `noise_amp`,
+  // `target_rate_hz` and both ip/syn scales at zero it is **silent unless
+  // written to**, so `trace_pre_` on its outgoing synapses is exactly zero for
+  // every inactive unit and large for the active one. R-STDP's presynaptic gate
+  // stops factorising, because there is no baseline to factor out.
+  //
+  // This is the HVC property the birdsong rule was ported without. An HVC_RA
+  // neuron bursts once per motif and is otherwise silent; `genome_add_hvc.py`
+  // built a chain module driven by its own noise, which has a baseline like
+  // everything else here. Sparsity and silence are the substrate, not the rule.
+  //
+  // Like kInterneuron it is exempt from the one-per-genome rule — it owns no
+  // hardware channel, so a limit of one is a restriction nothing asked for —
+  // and like every role but kAssociation it can never grow: `Network::growable`
+  // admits kAssociation and nothing else, and a context module that gained
+  // neurons would change which slice means what.
+  kContext = 10,
   kRoleCount,
 };
 
