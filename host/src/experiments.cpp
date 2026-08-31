@@ -167,6 +167,9 @@ const Spec kSpecs[] = {
      "  8x. Local recurrence cannot carry activity forward at all"},
     {"curriculum", 1200000, Expect::kOpen, Tier::kLong,
      "derived: m3's protocol at a length where teaching works"},
+    {"coderprobe", 300000, Expect::kOpen, Tier::kFast,
+     "the gate on a sparse auditory coder: is the EAR the bottleneck, or is\n"
+     "  vocab's 0.210 a fact about the voice? Measured before building"},
     {"g2cond", 3400000, Expect::kOpen, Tier::kLong,
      "derived: vocallearn's trial clock. Is the wall the formant readout or\n"
      "  conditionality? Asks it on G2's OWN contingency, criterion and class,\n"
@@ -390,6 +393,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "ctxlearn") ok = run_ctxlearn(dna_blob, ticks, verbose);
   else if (name == "pgprobe") ok = run_pgprobe(dna_blob, ticks, verbose);
   else if (name == "g2cond") ok = run_g2cond(dna_blob, ticks, verbose);
+  else if (name == "coderprobe") ok = run_coderprobe(dna_blob, ticks, verbose);
   else if (name == "vocabcurve") ok = run_vocabcurve(dna_blob, ticks, verbose);
   else if (name == "ctxprobe") ok = run_ctxprobe(dna_blob, ticks, verbose);
   else if (name == "shapeprobe") ok = run_shapeprobe(dna_blob, ticks, verbose);

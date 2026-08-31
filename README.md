@@ -1696,6 +1696,49 @@ first time all three of these hold in one instrument: a positive control that is
 a **met milestone** reproducing at 12 SE, a control with **matched marginals**,
 and a readout that is **not a centroid**. Every earlier framing had at most one.
 
+### `coderprobe` — the gate that says do not build it
+
+The audio rewrite's third stage was an unsupervised competitive sparse auditory
+coder, and its stated premise was that `vocab` reads one-of-eight at **0.210**
+against chance 0.125, so the creature has no real word categories. It was the
+one part of the proposal that needed no conditionality and it survived
+`ctxlearn`, `pgprobe` and `g2cond` untouched.
+
+**The premise was wrong, and one thirty-second experiment says so.** `vocab`'s
+0.210 is measured off the creature's **voice** — what a classifier reads from the
+echo 200–600 ms after the word stops. It was never a measurement of what the
+creature *hears*. Nobody had read the ear.
+
+| readout, one-of-eight, 3 seed families | |
+|---|---|
+| **mel** — the cochlea's own output, before any neuron | **1.000** |
+| **auditory** — the B2 population, binned as every probe here bins it | **0.981** (0.981 / 0.962 / 1.000) |
+| shuffled control | 0.122, against chance 0.125 |
+
+> **There is no headroom.** The ear carries the word at 0.981 against a signal
+> ceiling of 1.000. A better auditory representation has nothing to occupy, and
+> `vocab`'s 0.210 is a fact about what this creature can **say**, not about what
+> it can hear. Building the coder would have been improving the one stage that is
+> not the bottleneck.
+
+`coderprobe` is `Tier::kFast` and runs in seconds. It is written so that its
+only interesting outcome is a refusal — a gate that can only say *build it* is
+not a gate — and it follows `shapeprobe`, which licensed DNA v46 by measuring a
+front end outside the brain before any of it existed.
+
+#### All three stages of the audio rewrite, priced
+
+| stage | premise | measured |
+|---|---|---|
+| **0** — a zero-baseline conditional code | the presynaptic baseline is the binding variable | the substrate works at the synapse (1–7% → 28–79% of the larynx's plasticity) and **starves the larynx**: control gone at every level, 5 genomes, 12 driven levels |
+| **1** — an unsupervised sparse auditory coder | the ear has no word categories | **the ear reads one-of-eight at 0.981**; no headroom exists |
+| **2** — a motor dictionary, then a categorical policy gradient | the centroid readout is where the object is lost | `g2cond`: reward moves a **binary class boundary** from 0.500 to 0.88 and it *still* cannot be made conditional. **The wall is not the readout** |
+
+Three premises, three measurements, and none of the premises survived. What the
+programme produced instead is four instruments — `ctxlearn`, `pgprobe`, `g2cond`,
+`coderprobe` — and a much sharper statement of the one thing that was always in
+the way.
+
 ### G1 — determinism: **passing**
 
 Two brains from the same genome, given the same scripted touches, praise and

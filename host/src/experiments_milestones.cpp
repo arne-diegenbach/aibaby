@@ -8304,4 +8304,207 @@ bool run_g2cond(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) 
   return false;
 }
 
+
+// --- coderprobe: is the AUDITORY front end the bottleneck, or is it not? -----
+//
+// The gate on building a competitive sparse auditory coder, run OUTSIDE the
+// brain before any of it is built -- the pattern `shapeprobe` used to license
+// DNA v46 and the one this session should have used three mechanisms ago.
+//
+// THE PREMISE BEING CHECKED, AND IT IS THE PROPOSAL'S OWN. The argument for a
+// coder was that this creature has no unsupervised category formation and that
+// `vocab` reads one-of-eight at 0.210 against chance 0.125. **But 0.210 is the
+// creature's VOICE.** It is what a classifier reads off the echo the creature
+// produces, 200-600 ms after the word stops. It is not what the creature HEARS.
+//
+// So the question a coder's value depends on is one nobody stated: how well is
+// the word represented at the EAR? If the auditory module already carries
+// one-of-eight near ceiling, then a better auditory code has nothing to buy, the
+// 0.210 is a production limit downstream of it, and building a coder would be
+// improving the one stage that is not the problem.
+//
+// Two readouts of the same eight-word session, no learning of any kind:
+//
+//   mel        the cochlea's own output, mean band energies over the word.
+//              The ceiling: what is in the signal before any neuron sees it.
+//   auditory   the B2 population, binned as every other probe here bins it.
+//              What the creature actually has.
+//
+// A gate that can only say "build it" is not a gate. This one says do not, if
+// the ear is already at ceiling.
+bool run_coderprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  aibaby::Dna dna;
+  if (dna.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) return false;
+  constexpr uint32_t kReps = 3;
+  constexpr uint64_t kWordTicks = 900;
+  constexpr uint64_t kTrialTicks = 2800;
+  instrument("coderprobe", dna.header().seed ^ 0xC0DEu, uint32_t(ticks / kTrialTicks),
+             "trials per creature");
+  std::printf("  the gate          would a competitive sparse auditory coder have\n"
+              "                    anything to buy? Measured before building it.\n");
+  std::printf("  the premise       `vocab`'s one-of-eight 0.210 is the creature's\n"
+              "                    VOICE, not its ear. This reads the EAR.\n");
+  std::printf("  chance            %.3f\n\n", 1.0 / double(kVocabCount));
+
+  double sum_mel = 0.0, sum_aud = 0.0, sum_shuf = 0.0;
+  uint32_t n_ok = 0;
+
+  std::printf("  %-6s %-10s %-10s %-10s %s\n", "seed", "mel", "auditory", "shuffled",
+              "trials");
+  for (uint32_t r = 0; r < kReps; ++r) {
+    std::vector<uint8_t> variant = blob;
+    const uint64_t seed = dna.header().seed + r * 7919ull;
+    std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+
+    std::string error;
+    Session s;
+    if (!s.init(variant, error)) continue;
+    const aibaby::DnaAudio& acfg = s.dna.header().audio;
+    Ear ear;
+    if (!ear.configure(acfg, error)) continue;
+    VowelSource caregiver(acfg.sample_rate);
+    std::vector<float> pcm(acfg.sample_rate / 1000);
+    const uint32_t spt = acfg.sample_rate / 1000;
+    const int32_t am = s.dna.module_with_role(aibaby::ModuleRole::kAuditory);
+    if (am < 0) continue;
+
+    const uint32_t n_trials = uint32_t(ticks / kTrialTicks);
+    std::vector<std::vector<double>> fx_mel, fx_aud;
+    std::vector<int> labels;
+    aibaby::Rng order;
+    order.seed(seed ^ 0xC0DEu);
+
+    for (uint32_t trial = 0; trial < n_trials; ++trial) {
+      // Shuffled presentation, so a classifier cannot read trial index.
+      const uint32_t label = uint32_t(order.next() % kVocabCount);
+      const Word& w = kWords[label];
+      std::vector<double> mel(acfg.mel_channels, 0.0);
+      uint32_t mel_n = 0;
+      const aibaby::ModuleState& ams = s.brain.network().module(uint32_t(am));
+      std::vector<double> bins(kFeatureBins, 0.0);
+      uint32_t spike_frames = 0;
+
+      for (uint64_t t = 0; t < kTrialTicks; ++t) {
+        const bool sounding = t < kWordTicks;
+        caregiver.render(sounding ? w.f0 : 0.0f, w.f1, w.f2, sounding ? 0.5f : 0.0f,
+                         pcm.data(), spt);
+        ear.tick(s.brain, pcm.data(), spt);
+        s.brain.step();
+        if (t >= kWordTicks) continue;
+        // The word is still playing: this is what ARRIVES, which is the whole
+        // question. Later windows are about what is retained.
+        const aibaby::Scalar* lv = s.brain.auditory_level();
+        for (uint32_t c = 0; c < acfg.mel_channels; ++c) mel[c] += double(lv[c]);
+        ++mel_n;
+        // Walk this tick's spike list rather than polling every neuron: it is
+        // the same information and it costs spikes rather than population.
+        const aibaby::Network& net = s.brain.network();
+        const uint32_t* fired = net.spikes();
+        for (uint32_t k = 0; k < net.spike_count(); ++k) {
+          const uint32_t n = fired[k];
+          if (n < ams.begin || n >= ams.begin + ams.count) continue;
+          bins[size_t(uint64_t(n - ams.begin) * kFeatureBins / ams.count)] += 1.0;
+        }
+        ++spike_frames;
+      }
+      if (mel_n == 0 || spike_frames == 0) continue;
+      for (double& v : mel) v /= double(mel_n);
+      for (double& v : bins) v /= double(spike_frames);
+      fx_mel.push_back(mel);
+      fx_aud.push_back(bins);
+      labels.push_back(int(label));
+    }
+    if (labels.size() < kVocabCount * 4) continue;
+
+    // Nearest class centroid, interleaved within class -- `vocabcurve`'s
+    // readout, so the numbers are comparable with the ones already on record.
+    auto nway = [](const std::vector<std::vector<double>>& x, const std::vector<int>& y) {
+      std::vector<uint32_t> seen(kVocabCount, 0), cnt(kVocabCount, 0);
+      std::vector<std::vector<double>> mu(kVocabCount);
+      std::vector<size_t> test;
+      for (size_t t = 0; t < y.size(); ++t) {
+        const int L = y[t];
+        if (L < 0 || L >= int(kVocabCount) || x[t].empty()) continue;
+        if (seen[L] % 2 == 0) {
+          if (mu[L].empty()) mu[L].assign(x[t].size(), 0.0);
+          for (size_t d = 0; d < x[t].size(); ++d) mu[L][d] += x[t][d];
+          ++cnt[L];
+        } else {
+          test.push_back(t);
+        }
+        ++seen[L];
+      }
+      for (uint32_t k = 0; k < kVocabCount; ++k) {
+        if (cnt[k] < 2) return -1.0;
+        for (double& v : mu[k]) v /= double(cnt[k]);
+      }
+      uint32_t hit = 0, tot = 0;
+      for (size_t t : test) {
+        int best = -1;
+        double bd = 0.0;
+        for (uint32_t k = 0; k < kVocabCount; ++k) {
+          double d2 = 0.0;
+          for (size_t d = 0; d < mu[k].size() && d < x[t].size(); ++d) {
+            const double e = x[t][d] - mu[k][d];
+            d2 += e * e;
+          }
+          if (best < 0 || d2 < bd) { bd = d2; best = int(k); }
+        }
+        if (best == y[t]) ++hit;
+        ++tot;
+      }
+      return tot ? double(hit) / double(tot) : -1.0;
+    };
+
+    const double a_mel = nway(fx_mel, labels);
+    const double a_aud = nway(fx_aud, labels);
+    // The label-shuffled control: the same features, the same readout, labels
+    // permuted. Anything above chance here is the procedure, not the creature.
+    std::vector<int> shuffled = labels;
+    aibaby::Rng sh;
+    sh.seed(seed ^ 0x5F1Fu);
+    for (size_t i = shuffled.size(); i > 1; --i) {
+      std::swap(shuffled[i - 1], shuffled[size_t(sh.next() % i)]);
+    }
+    const double a_shuf = nway(fx_aud, shuffled);
+    if (a_mel < 0 || a_aud < 0 || a_shuf < 0) continue;
+    sum_mel += a_mel; sum_aud += a_aud; sum_shuf += a_shuf;
+    ++n_ok;
+    std::printf("  %-6u %-10.3f %-10.3f %-10.3f %zu\n", r, a_mel, a_aud, a_shuf,
+                labels.size());
+  }
+
+  if (n_ok < 2) {
+    std::printf("\n  coderprobe INCONCLUSIVE — fewer than two usable creatures.\n");
+    return false;
+  }
+  const double mel = sum_mel / n_ok, aud = sum_aud / n_ok, shuf = sum_shuf / n_ok;
+  std::printf("\n  mel (the signal)      %.3f\n  auditory (the ear)    %.3f\n"
+              "  shuffled control      %.3f   <- must sit at chance %.3f\n",
+              mel, aud, shuf, 1.0 / double(kVocabCount));
+
+  if (shuf > 2.0 / double(kVocabCount)) {
+    std::printf("\n  CONTROL FAILED — shuffled labels score %.3f, so the readout is\n"
+                "  finding structure in the procedure and no number here is worth\n"
+                "  reading.\n", shuf);
+    return false;
+  }
+  if (aud >= 0.90 * mel && aud >= 0.75) {
+    std::printf("\n  DO NOT BUILD IT — the ear already carries one-of-eight at %.3f\n"
+                "  against the signal's own %.3f. There is no headroom for a better\n"
+                "  auditory code to occupy, so `vocab`'s 0.210 is a fact about what the\n"
+                "  creature can SAY and not about what it can hear. A competitive coder\n"
+                "  would be improving the one stage that is not the bottleneck.\n",
+                aud, mel);
+    return false;
+  }
+  std::printf("\n  HEADROOM — the ear carries %.3f where the signal carries %.3f, so a\n"
+              "  representation that keeps more of what the cochlea delivers has\n"
+              "  something to occupy. That licenses building the coder and measuring\n"
+              "  it against these two numbers -- not against `vocab`'s 0.210, which is\n"
+              "  the voice.\n", aud, mel);
+  (void)verbose;
+  return true;
+}
+
 }  // namespace aibaby_host
