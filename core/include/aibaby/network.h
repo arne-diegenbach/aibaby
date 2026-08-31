@@ -208,6 +208,19 @@ class Network {
   // sensory encoders drive the brain.
   void inject(uint32_t neuron, Scalar current);
 
+  // DNA v49. Add a categorical policy gradient to the eligibility of every
+  // synapse terminating on `module`, sliced into `units` equal parts, with
+  // `pg[u]` the REINFORCE term for slice u. Gated by the PRESYNAPTIC trace, so
+  // credit lands only on synapses whose source was firing -- which is what
+  // makes the rule able to write a different thing for a different input, and
+  // is the property a per-neuron bias can never have.
+  //
+  // It rides `syn_elig_` and therefore the existing reward cash-in, so the
+  // caregiver's delay is bridged by machinery that already works rather than by
+  // a second trace.
+  void accumulate_policy_gradient(uint32_t module, const Scalar* pg, uint32_t units,
+                                  Scalar rate);
+
   // Scale a module's spontaneous drive (DnaExploration). 1.0 is the genome's
   // noise_amp unchanged; the Brain moves it as performance changes. Multiplying
   // the amplitude does not change how many random numbers a tick draws, so at

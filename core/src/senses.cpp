@@ -291,6 +291,11 @@ void VocalDecoder::configure(const Dna& dna, uint32_t module_index, Scalar updat
   dwell_left_ = 0;
   switches_ = 0;
   dict_primed_ = false;
+  chose_ = false;
+  // Derived from the genome seed rather than fixed, or every creature in a
+  // seed family would babble the same sequence of postures.
+  dict_rng_.seed(dna.header().seed ^ 0x9E3779B97F4A7C15ull);
+  for (uint32_t u = 0; u < kMaxDictionaryUnits; ++u) policy_grad_[u] = kZero;
   for (uint32_t u = 0; u < kMaxDictionaryUnits; ++u) unit_activity_[u] = kZero;
   params_ = VocalParams{};
   params_.f0 = lerp(Scalar(cfg_.f0_min), Scalar(cfg_.f0_max), Scalar(0.5));
@@ -370,7 +375,13 @@ void VocalDecoder::update(const Network& net, bool awake) {
     const bool reselect = dwell_left_ == 0;
     if (dwell_left_ > 0) --dwell_left_;
     if (reselect) {
-      if (best != winner_) { winner_ = best; ++switches_; }
+      // Only the deterministic policy takes the leader here; the sampling one
+      // draws its own winner below, and letting both write `winner_` would
+      // double-count every switch.
+      if (Scalar(cfg_.dictionary_temp) <= kZero && best != winner_) {
+        winner_ = best;
+        ++switches_;
+      }
       dwell_left_ = dwell_ticks_;
     }
 
@@ -389,56 +400,72 @@ void VocalDecoder::update(const Network& net, bool awake) {
                   (Scalar(u % side) + Scalar(0.5)) / n);
     };
 
-    Scalar f1_cell, f2_cell;
+    // DNA v49. The policy: sample a posture rather than take the leader or
+    // average the field. Sampling is what makes the choice creditable -- a
+    // deterministic policy has no REINFORCE gradient, because pi is one-hot and
+    // ([u == a] - pi(u)) is identically zero -- and it is also where the
+    // variability comes from, which for this readout replaces the motor noise
+    // LMAN scales.
+    //
+    // The average was v48's attempt and it is superseded: blending well-separated
+    // anchors keeps some spread but is still steered by a per-neuron bias rule
+    // that has no gradient to follow, and it measured +4.2 against the centroid's
+    // +36.5.
     const Scalar temp = Scalar(cfg_.dictionary_temp);
-    if (temp <= kZero) {
-      // Hard argmax: the winner alone holds the tract.
-      f1_cell = cell_f1(winner_);
-      f2_cell = cell_f2(winner_);
-    } else {
-      // Softmax over the unit activities, weighting the postures. Shifted by
-      // the maximum before exponentiating -- the activities are bounded in
-      // [0,1] but the temperature is not, and exp of a large quotient
-      // overflows a float long before it stops being a useful weight.
-      // Z-scored before the softmax, and this is the correction that makes the
-      // temperature mean anything. Measured on the raw activities the blend
-      // collapses to the grid's mean at every usable temperature -- F1 spread
-      // 147 Hz at hard argmax, 30 Hz at temp 0.02, 24 Hz at 0.05, against the
-      // centroid readout's own 25 Hz. The reason is that the units' activities
-      // differ by one or two percent of their mean, because `vocal` is a
-      // homeostatically regulated population: it is the same small differential
-      // on a big common mode that this creature has everywhere else, arriving
-      // at the readout. An absolute temperature is therefore either far below
-      // the differences (argmax, no gradient) or far above them (uniform blend,
-      // no spread), with no regime in between.
-      //
-      // Scaling by the units' own spread makes the knob scale-free: temp 1.0
-      // blends everything within one standard deviation of the field, 0.3
-      // prefers the leader sharply. The intermediate regime exists by
-      // construction rather than by luck.
-      Scalar mean = kZero;
-      for (uint32_t u = 0; u < units_; ++u) mean += unit_activity_[u];
-      mean /= Scalar(units_);
-      Scalar var = kZero;
-      for (uint32_t u = 0; u < units_; ++u) {
-        const Scalar d = unit_activity_[u] - mean;
-        var += d * d;
-      }
-      const Scalar sd = sqrtf(float(var / Scalar(units_)));
-      // A field with no spread at all has no opinion; fall back to the winner
-      // rather than dividing by zero.
-      const Scalar scale = sd > Scalar(1e-6) ? sd : kOne;
+    chose_ = false;
+    if (reselect) {
+      if (temp <= kZero) {
+        for (uint32_t u = 0; u < units_; ++u) policy_grad_[u] = kZero;
+      } else {
+        // Z-scored before the softmax, because the units' activities differ by
+        // one or two percent of their mean -- `vocal` is homeostatically
+        // regulated, so it is the same small differential on a big common mode
+        // as everywhere else, arriving at the readout. An absolute temperature
+        // is either far below those differences or far above them, with no
+        // regime in between; scaling by the field's own spread makes the knob
+        // mean something.
+        Scalar mean = kZero;
+        for (uint32_t u = 0; u < units_; ++u) mean += unit_activity_[u];
+        mean /= Scalar(units_);
+        Scalar var = kZero;
+        for (uint32_t u = 0; u < units_; ++u) {
+          const Scalar d = unit_activity_[u] - mean;
+          var += d * d;
+        }
+        const Scalar sd = sqrtf(float(var / Scalar(units_)));
+        const Scalar scale = sd > Scalar(1e-6) ? sd : kOne;
 
-      Scalar total = kZero, w1 = kZero, w2 = kZero;
-      for (uint32_t u = 0; u < units_; ++u) {
-        const Scalar w = expf((unit_activity_[u] - best_act) / (temp * scale));
-        total += w;
-        w1 += w * cell_f1(u);
-        w2 += w * cell_f2(u);
+        // Shifted by the maximum before exponentiating: the activities are
+        // bounded but the quotient is not.
+        Scalar total = kZero;
+        for (uint32_t u = 0; u < units_; ++u) {
+          policy_grad_[u] = expf((unit_activity_[u] - best_act) / (temp * scale));
+          total += policy_grad_[u];
+        }
+        if (total <= Scalar(1e-9)) {
+          for (uint32_t u = 0; u < units_; ++u) policy_grad_[u] = kOne / Scalar(units_);
+          total = kOne;
+        } else {
+          for (uint32_t u = 0; u < units_; ++u) policy_grad_[u] /= total;
+        }
+
+        // Sample, then turn the probabilities into the gradient in place.
+        const Scalar r = dict_rng_.uniform();
+        Scalar acc = kZero;
+        uint32_t drawn = units_ - 1;
+        for (uint32_t u = 0; u < units_; ++u) {
+          acc += policy_grad_[u];
+          if (r < acc) { drawn = u; break; }
+        }
+        if (drawn != winner_) { winner_ = drawn; ++switches_; }
+        for (uint32_t u = 0; u < units_; ++u) {
+          policy_grad_[u] = (u == winner_ ? kOne : kZero) - policy_grad_[u];
+        }
+        chose_ = true;
       }
-      if (total > Scalar(1e-9)) { f1_cell = w1 / total; f2_cell = w2 / total; }
-      else { f1_cell = cell_f1(winner_); f2_cell = cell_f2(winner_); }
     }
+    const Scalar f1_cell = cell_f1(winner_);
+    const Scalar f2_cell = cell_f2(winner_);
     // Smoothed with the SAME constant the centroid path uses, so that swapping
     // readouts does not quietly also swap articulator inertia. Primed on the
     // first frame, or the tract slides up from zero and the first syllable of

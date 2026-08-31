@@ -460,6 +460,7 @@ bool compile_dna_toml(const std::string& path, std::vector<uint8_t>& out,
     header.vocal.dictionary_units = uint32_t(r.number("dictionary_units"));
     header.vocal.dictionary_dwell_ms = float(r.number("dictionary_dwell_ms"));
     header.vocal.dictionary_temp = float(r.number("dictionary_temp"));
+    header.vocal.dictionary_policy_rate = float(r.number("dictionary_policy_rate"));
     collect(r);
   }
   {

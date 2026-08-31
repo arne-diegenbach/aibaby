@@ -322,7 +322,7 @@ constexpr uint32_t kDnaMagic = 0x44424941;  // "AIBD"
 //     about what reward multiplies.
 //
 //     See DnaModule::ffi_apical and DnaModule::ffi_learn, and `errprobe`.
-constexpr uint32_t kDnaVersion = 48;
+constexpr uint32_t kDnaVersion = 49;
 
 // What a module is wired to the world through. The host looks modules up by
 // role, never by name or index, so renaming a module in the genome cannot
@@ -1171,6 +1171,53 @@ struct DnaVocal {
   // in formant space, so a small change in the weights still moves the voice a
   // long way. Spread survives because the things being averaged are far apart.
   float dictionary_temp;
+
+  // --- DNA v49: a categorical policy gradient ------------------------------
+  //
+  // 0 disables it and is bit-identical to v48.
+  //
+  // WHY A NEW RULE, when not needing one was the whole argument. v48 measured
+  // that a dictionary cannot be steered by anything this creature has: five
+  // configurations, none teachable, against a centroid readout's +36.5. Node
+  // perturbation writes a per-neuron bias and estimates Cov(R, xi), which needs
+  // the output to be a smooth function of those biases; a discrete selection is
+  // a step function of them. The gradient is not buried, it does not exist.
+  //
+  // For a categorical choice the correct estimator is REINFORCE. With postures
+  // sampled from a softmax policy pi over the unit activities,
+  //
+  //     d log pi(a) / d score_u  =  [u == a] - pi(u)
+  //
+  // so the chosen posture's score rises and every other falls in proportion to
+  // how likely it was, scaled by reward. That is a different KIND of rule from
+  // the eight in the conditioning fence: every one of those is an eligibility
+  // trace times a third factor, and a scalar cannot carry a condition. This is a
+  // gradient of a log-likelihood, and it is exact rather than estimated.
+  //
+  // WHERE IT IS CASHED, and this is the part that decides whether it can ever be
+  // conditional. A learned per-POSTURE score would be a constant -- it could
+  // learn "always say /a/" and never "say /a/ when you hear A", which is exactly
+  // the wall node perturbation hits. So the term is written onto the SYNAPSES
+  // onto that posture's neurons, gated by presynaptic activity:
+  //
+  //     d elig_ij  +=  rate * ([u == a] - pi(u)) * trace_pre_i
+  //
+  // Credit lands only on synapses whose source was firing, so two contexts write
+  // to different synapses without the rule knowing anything about either. Paired
+  // with the v47 context module -- whose inactive slices sit at exactly zero --
+  // the update lands only on the present condition's synapses. That combination
+  // is the one this project has never had: a categorical policy gradient on a
+  // zero-baseline conditional input.
+  //
+  // It rides the existing `syn_elig_` and therefore the existing reward cash-in,
+  // so the caregiver's two-second delay is bridged by the machinery that already
+  // does it rather than by a second trace.
+  //
+  // NOTE: at `dictionary_temp` 0 the policy is deterministic and pi is one-hot,
+  // so the term is identically zero -- a deterministic policy has no REINFORCE
+  // gradient. Sampling is not optional here, it is where the exploration comes
+  // from, and it replaces LMAN's role for this readout.
+  float dictionary_policy_rate;
 };
 
 // Curiosity (§3.3) is a forward model of the next sensory frame plus two

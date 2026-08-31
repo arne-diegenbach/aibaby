@@ -494,6 +494,41 @@ dictionary_dwell_ms = 1600.0
 # which a centroid over neuron index does not.
 dictionary_temp = 0.05
 
+# DNA v49 — the categorical policy gradient. 0 disables it and is bit-identical.
+#
+# v48 measured that a dictionary cannot be steered by anything this creature
+# had: five configurations, none teachable, against the centroid's +36.5. Node
+# perturbation writes a per-neuron BIAS and needs the output to be a smooth
+# function of it; a discrete selection is a step function of it, so the gradient
+# does not exist rather than being buried.
+#
+# For a categorical choice the estimator is REINFORCE: with postures sampled
+# from a softmax policy, d log pi(a) / d score_u = [u == a] - pi(u). The term is
+# cashed onto the SYNAPSES onto that posture's neurons, gated by presynaptic
+# activity -- a learned per-posture score would be a constant, and could learn
+# "always say /a/" but never "say /a/ when you hear A", which is the wall node
+# perturbation already hits.
+#
+# Requires dictionary_temp > 0: a deterministic policy has no REINFORCE
+# gradient, and sampling is also where the variability comes from.
+# Swept against vocallearn's positive control at temp 0.35, units 9. `change` is
+# improvement between the first and last third of the session, so it goes
+# negative once learning completes inside the first third -- read the absolute
+# final error beside it:
+#
+#   rate        0.0    0.03    0.2    0.4    0.8    1.5
+#   fixed-yoked  -0.0   +10.1  +16.4  -14.2  -10.0  -22.3
+#   err early   0.598   0.575  0.579  0.458  0.450  0.476
+#   err late    0.604   0.521  0.485  0.524  0.484  0.581
+#
+# 0.2 is the operating point: final error 0.604 -> 0.485, a 20% reduction, from
+# a control that reads exactly zero. Above it the creature learns faster early
+# and then drifts back up, which is a learning rate past its stability limit
+# rather than a metric artefact -- though the metric is one too, since a
+# creature that has finished learning by the first third has no headroom left
+# for a between-thirds measure to see.
+dictionary_policy_rate = 0.0
+
 [curiosity]
 learn_rate = 0.02           # LMS rate of the forward model
 fast_tau_ms = 2000.0

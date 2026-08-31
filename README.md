@@ -1481,6 +1481,81 @@ instrument or the design instead.
    that is selecting and a dictionary that is selecting *and being heard* are the
    same histogram.
 
+### DNA v49 — a categorical policy gradient, and discrete selection becomes learnable
+
+v48 above ends by naming what it would take: the dictionary is not steerable by
+anything this creature had, because node perturbation writes a per-neuron **bias**
+and estimates `Cov(R, xi)`, which needs the output to be a smooth function of
+those biases. A discrete selection is a *step function* of them. The gradient is
+not buried — it does not exist. Making a categorical choice learnable needs the
+estimator a categorical choice actually has, and that is a new learning rule,
+which is a decision rather than a tuning step.
+
+**It was taken, and it works.**
+
+For postures sampled from a softmax policy `pi` over the unit activities,
+
+    d log pi(a) / d score_u  =  [u == a] - pi(u)
+
+so the chosen posture's score rises and every other falls in proportion to how
+likely it was. Three properties matter:
+
+**Sampling is not optional.** At `dictionary_temp` 0 the policy is deterministic,
+`pi` is one-hot, and the term is identically zero — a deterministic policy has no
+REINFORCE gradient. Sampling is also where the variability comes from, which for
+this readout replaces the role LMAN's motor noise plays for the centroid.
+
+**It is cashed onto synapses, not onto postures, and that is the part that
+decides whether it can ever be conditional.** A learned per-posture score is a
+*constant*: it can learn "always say /a/" and never "say /a/ when you hear A",
+which is precisely the wall node perturbation hits. So the term is written onto
+the synapses onto that posture's neurons, gated by the presynaptic trace —
+credit lands only on synapses whose source was firing, so two contexts write to
+different synapses without the rule knowing anything about either.
+
+**It rides `syn_elig_`**, and therefore the reward cash-in that already bridges
+the caregiver's two-second delay. No second trace.
+
+Ships **off**: `dictionary_policy_rate = 0` is bit-identical, hash
+`ad96f882becbee92`, `verify` 21 of 21.
+
+#### The dose-response, against a control that reads exactly zero
+
+`vocallearn`'s positive control, at `dictionary_units` 9 and temp 0.35:
+
+| rate | 0.0 | 0.03 | 0.08 | **0.2** | 0.4 | 0.8 | 1.5 |
+|---|---|---|---|---|---|---|---|
+| `fixed − yoked` | **−0.0** | +10.1 | +10.4 | **+16.4** | −14.2 | −10.0 | −22.3 |
+| err early | 0.598 | 0.575 | — | 0.579 | 0.458 | 0.450 | 0.476 |
+| err late | 0.604 | 0.521 | — | **0.485** | 0.524 | 0.484 | 0.581 |
+
+Every readout-only configuration in v48 sat at +2.3 / +4.2 / −1.2 / +2.4. Here
+the control — sampling with the rule switched off — reads **−0.0**, and the rule
+lifts it monotonically to +16.4. **Discrete selection is learnable in this
+creature once it is given the right estimator.**
+
+The rate was sized rather than guessed: `a_plus` is 0.010 and the policy writes
+once per dwell where STDP writes about eight times, so a comparable rate is
+~0.08, and the sweep brackets it.
+
+**Read the two error rows with the `change` row, because they disagree and both
+are informative.** `change` is improvement between the first and last third, so
+a creature that finishes learning inside the first third has no headroom left
+for it to see — which is exactly what the err-early column shows at rate 0.4 and
+above (0.458 against 0.598 at rate 0). But those arms then *drift back up*, which
+is a learning rate past its stability limit rather than only a metric artefact.
+In absolute terms 0.2 is the operating point: final formant error **0.604 →
+0.485**, a 20% reduction.
+
+**What is still open, and it is the whole point.** The conditional arm is noise
+at every rate (+5.5, −3.5, +2.9): `taught` asks for a map that depends on what
+was heard, and nothing supplies the condition to the larynx yet. The rule is
+*built* to be conditional — credit lands only on firing sources — but that is a
+property it cannot exercise without a zero-baseline conditional input. The
+combination this has been building toward, and which this project has never had,
+is v49's estimator on v47's substrate. That run is the one that matters and it is
+not reported here yet.
+
 ### G1 — determinism: **passing**
 
 Two brains from the same genome, given the same scripted touches, praise and

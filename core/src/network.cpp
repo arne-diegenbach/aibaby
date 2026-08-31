@@ -1056,6 +1056,28 @@ void Network::inject(uint32_t neuron, Scalar current) {
   inbox_[size_t(slot) * capacity_ + neuron] += current;
 }
 
+void Network::accumulate_policy_gradient(uint32_t module, const Scalar* pg,
+                                         uint32_t units, Scalar rate) {
+  if (module >= module_count_ || units == 0 || rate <= kZero || pg == nullptr) return;
+  const ModuleState& ms = modules_[module];
+  if (ms.count == 0) return;
+  for (uint32_t u = 0; u < units; ++u) {
+    const Scalar term = rate * pg[u];
+    if (term == kZero) continue;
+    const uint32_t lo = ms.begin + uint32_t(uint64_t(ms.count) * u / units);
+    const uint32_t hi = ms.begin + uint32_t(uint64_t(ms.count) * (u + 1) / units);
+    for (uint32_t j = lo; j < hi; ++j) {
+      if (dead_[j]) continue;
+      const uint32_t base = syn_base_[j];
+      const uint32_t n = in_count_[j];
+      for (uint32_t k = 0; k < n; ++k) {
+        const uint32_t syn = syn_in_[base + k];
+        syn_elig_[syn] += term * trace_pre_[syn_source_[syn]];
+      }
+    }
+  }
+}
+
 void Network::step() {
   const uint32_t slot = uint32_t(tick_ % delay_slots_);
   Scalar* in = inbox_ + size_t(slot) * capacity_;

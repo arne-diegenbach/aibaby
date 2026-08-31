@@ -179,7 +179,17 @@ void Brain::step() {
   const bool still_awake = sleep_ == SleepState::kAwake;
 
   const uint64_t tick = network_.tick();
-  if (has_vocal_ && tick % vocal_interval_ == 0) vocal_.update(network_, still_awake);
+  if (has_vocal_ && tick % vocal_interval_ == 0) {
+    vocal_.update(network_, still_awake);
+    // DNA v49. A posture was just sampled, so the choice is creditable. Written
+    // straight into the eligibility the reward pass already reads, which is why
+    // the caregiver's delay needs no new machinery.
+    if (vocal_.chose()) {
+      network_.accumulate_policy_gradient(vocal_.module_index(), vocal_.policy_grad(),
+                                          vocal_.units(),
+                                          Scalar(dna_.header().vocal.dictionary_policy_rate));
+    }
+  }
   if (has_expression_ && tick % vocal_interval_ == 0) expression_.update(network_);
 
   if (tick % plasticity_interval_ == 0) cash_in_reward();

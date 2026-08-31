@@ -13,6 +13,7 @@
 #include "aibaby/config.h"
 #include "aibaby/dna.h"
 #include "aibaby/network.h"
+#include "aibaby/rng.h"
 
 namespace aibaby {
 
@@ -193,6 +194,15 @@ class VocalDecoder {
   uint32_t units() const { return units_; }
   uint32_t switches() const { return switches_; }
 
+  // DNA v49. The REINFORCE term for the posture just sampled, one per unit:
+  // [u == chosen] - pi(u). Zero everywhere when the policy is deterministic.
+  // `chose()` is true on exactly the frames a new posture was drawn, which is
+  // when the term is meaningful and when the Brain hands it to the Network.
+  const Scalar* policy_grad() const { return policy_grad_; }
+  bool chose() const { return chose_; }
+  // The larynx's module, so the Brain can tell the Network where to write.
+  uint32_t module_index() const { return module_index_; }
+
  private:
   DnaVocal cfg_ = {};
   VocalParams params_;
@@ -219,6 +229,18 @@ class VocalDecoder {
   Scalar dict_f2_ = kZero;
   Scalar held_f1_ = kZero;
   Scalar held_f2_ = kZero;
+  Scalar policy_grad_[kMaxDictionaryUnits] = {};
+  bool chose_ = false;
+  // The decoder's own stream, so that turning the policy rate up or down does
+  // not also re-roll the network's noise and make the two arms different
+  // creatures. Seeded from the genome.
+  //
+  // KNOWN GAP: like `group_value_`, this is not carried in the snapshot, so a
+  // resumed creature samples a different sequence of postures. The existing
+  // decoder state has always had that property and `snapshot` does not cover
+  // the decoder at all; it is recorded here rather than fixed because the
+  // dictionary ships off, and it must be fixed before it ships on.
+  Rng dict_rng_;
   bool dict_primed_ = false;
 };
 
