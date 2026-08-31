@@ -167,10 +167,10 @@ const Spec kSpecs[] = {
      "  8x. Local recurrence cannot carry activity forward at all"},
     {"curriculum", 1200000, Expect::kOpen, Tier::kLong,
      "derived: m3's protocol at a length where teaching works"},
-    {"loudprobe", 3400000, Expect::kOpen, Tier::kLong,
-     "derived: vocallearn's own minimum. Is the wall the formant readout or\n"
-     "  conditionality? Asks it on AMPLITUDE, a group rate G2 already proved\n"
-     "  reward can shape, against a matched-marginal control"},
+    {"g2cond", 3400000, Expect::kOpen, Tier::kLong,
+     "derived: vocallearn's trial clock. Is the wall the formant readout or\n"
+     "  conditionality? Asks it on G2's OWN contingency, criterion and class,\n"
+     "  with the praised class depending on the word heard"},
     {"pgprobe", 3400000, Expect::kOpen, Tier::kLong,
      "derived: vocallearn's own minimum. Is the policy gradient's conditional\n"
      "  arm conditional, or a creature sitting between two alternating targets?\n"
@@ -389,7 +389,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "curriculum") ok = run_curriculum(dna_blob, ticks, verbose);
   else if (name == "ctxlearn") ok = run_ctxlearn(dna_blob, ticks, verbose);
   else if (name == "pgprobe") ok = run_pgprobe(dna_blob, ticks, verbose);
-  else if (name == "loudprobe") ok = run_loudprobe(dna_blob, ticks, verbose);
+  else if (name == "g2cond") ok = run_g2cond(dna_blob, ticks, verbose);
   else if (name == "vocabcurve") ok = run_vocabcurve(dna_blob, ticks, verbose);
   else if (name == "ctxprobe") ok = run_ctxprobe(dna_blob, ticks, verbose);
   else if (name == "shapeprobe") ok = run_shapeprobe(dna_blob, ticks, verbose);

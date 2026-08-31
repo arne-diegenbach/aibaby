@@ -8003,77 +8003,224 @@ bool run_pgprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
 }
 
 
-// --- loudprobe: can ANY output dimension be made conditional? ---------------
+// --- g2cond: G2's own contingency, made conditional -------------------------
 //
-// Fourteen mechanisms across five families have been aimed at making this
-// creature's voice depend on what it heard, and every one of them was scored on
-// FORMANTS, read through a population centroid. `pgprobe` now puts that at
-// **-0.1 +/- 0.7** against a target with matched marginals, which is as close to
-// zero as this project can measure.
+// Fourteen mechanisms have been aimed at making the voice depend on what was
+// heard, all scored on FORMANT ERROR through a population centroid, now measured
+// at -0.1 +/- 0.7 against a matched-marginal control. The question one level up
+// has never been asked: **is the wall the readout, or is it conditionality?**
 //
-// Nobody has asked the question one level up: **is it formants, or is it
-// conditionality?**
+// G2 is the place to ask it. It is a met milestone -- rewarded vocalisations
+// rise x1.35 within a session, 23 of 27 creatures, 9 of 9 at 420 s -- so "reward
+// can shape this" is a result rather than a hypothesis, and the only new thing
+// being asked is whether the shaping may DEPEND ON THE INPUT.
 //
-// Amplitude is the dimension to ask on, and for a reason that removes the usual
-// argument about positive controls. It is a group RATE rather than a centroid,
-// and G2 -- a met milestone -- is exactly the finding that reward moves it:
-// rewarded vocalisations rise x1.74 on 9 of 9 creatures. So "reward can shape
-// this dimension" is not a hypothesis here, it is a result. The only new thing
-// being asked is whether the shaping can be made to DEPEND on the input.
+// THIS IS A REBUILD, AND THE THREE FAULTS OF THE FIRST VERSION ARE THE REASON.
+// It was written in `vocallearn`'s frame and re-derived a contingency G2 already
+// had working, wrongly three times: reward on a clock rather than on an act
+// (positive control +3.9 +/- 2.4, taught and yoked degrading together); a
+// running-mean baseline fed a binary signal, which converges onto it and makes
+// every trial a scold; and a positive control whose target never changed, so
+// every event was praised and none scolded -- which `vocallearn` prints a
+// ONE-SIDED: NOT A TRAINING SIGNAL warning for and the probe did not print at
+// all. Each fault is downstream of not copying G2.
 //
-//   fixed    loud on every trial whatever was heard. The positive control, and
-//            the closest thing this instrument has to G2 itself.
-//   heard    loud for one word, quiet for the other. Conditional.
-//   swap     the same map inverted. Conditional, and the innate arcuate is not
-//            carrying loudness either way, so neither direction is privileged.
-//   random   loud or quiet drawn INDEPENDENTLY of what was heard, in the same
-//            proportions. The matched-marginal control: a creature that learns
-//            "be moderately loud always" scores identically on this and on the
-//            conditional arms, and only a creature whose output depends on its
-//            input separates them.
+// SO THIS COPIES G2 EXACTLY and changes one thing.
 //
-// The quantity is `heard - random`, and `swap - random` beside it.
+//   * the act is a voiced frame, as G2's is, so reward always follows something
+//     the creature did;
+//   * the class is `vocal_groups()[2]`, the F1 motor group -- the thing the
+//     brain controls, not the audio it produces, which is G2's own choice;
+//   * the criterion is THIS creature's baseline median over the first 20% of
+//     the session, so hits start at half and BOTH SIGNS OCCUR BY CONSTRUCTION.
+//     That is the property all three broken versions lacked;
+//   * feedback runs over the middle 60% and the last 20% is scored, as G2 does.
 //
-// TWO OUTCOMES AND BOTH ARE WORTH HAVING. If loudness is conditional where
-// formants are not, the wall is the centroid readout and there is a route out of
-// it. If loudness is not conditional either, then conditionality fails on the
-// one output dimension reward provably controls, against the tightest control
-// this project has -- which closes G3 far more firmly than a fifteenth negative
-// on formants.
+// The one change: **which class is praised depends on the word just heard.**
 //
-// SILENCE IS A LOW-AMPLITUDE ANSWER. The formant path skips silent trials, and
-// carrying that over would make "be quiet" unrewardable and unscoreable, which
-// would decide this experiment before it ran. See VLScore.
-bool run_loudprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
-  aibaby::Dna dna;
-  if (dna.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) {
-    std::printf("  setup failed: the genome does not load\n");
-    return false;
+//   fixed    praise a hit always. This IS G2, with a caregiver talking.
+//   heard    praise a hit after word A, praise a MISS after word B.
+//   swap     the same map inverted, since neither direction is privileged --
+//            the arcuate carries formants, and this is a binary class boundary.
+//   random   the direction drawn INDEPENDENTLY of the word, in the same
+//            proportions. The matched-marginal control.
+//
+// THE MEASURE NEEDS NO YOKE, which removes the whole class of fault that cost
+// `pgprobe` a run. Conditionality is scored WITHIN an arm: the hit rate on
+// trials whose direction was "praise a hit" minus the hit rate on trials whose
+// direction was "praise a miss", both in the test window. A creature that
+// ignores the word scores zero on that difference no matter what else it does,
+// and `random` is the control that says so with matched marginals.
+//
+// The positive control is G2's own measure on the `fixed` arm: test hit rate
+// against baseline hit rate.
+namespace {
+
+struct GcArm {
+  const char* name;
+  int mode;  // 0 fixed, 1 heard, 2 swap, 3 random
+};
+
+struct GcRun {
+  bool ok = false;
+  double baseline_hit = 0.0;
+  double test_hit = 0.0;
+  // Hit rate in the test window, split by what the trial was asking for.
+  double hit_when_want = 0.0, hit_when_not = 0.0;
+  uint64_t n_want = 0, n_not = 0;
+  uint64_t praises = 0, scolds = 0, events = 0;
+  float criterion = 0.0f;
+};
+
+// Which class this trial rewards, given the word heard and the arm.
+inline bool gc_want_hit(int mode, uint32_t label, uint32_t trial) {
+  if (mode == 0) return true;
+  if (mode == 1) return label == 0;
+  if (mode == 2) return label != 0;
+  uint32_t r = trial * 2654435761u;
+  r ^= r >> 16;
+  return (r & 1u) != 0;
+}
+
+GcRun run_g2cond_session(const std::vector<uint8_t>& blob, uint64_t ticks, int mode,
+                         const Regime& regime) {
+  GcRun out;
+  std::string error;
+  Session s;
+  if (!s.init(blob, error)) return out;
+  const aibaby::DnaAudio& acfg = s.dna.header().audio;
+  Ear ear;
+  if (!ear.configure(acfg, error)) return out;
+  VowelSource caregiver(acfg.sample_rate);
+  std::vector<float> pcm(acfg.sample_rate / 1000);
+  const uint32_t spt = acfg.sample_rate / 1000;
+
+  const uint32_t n_trials = uint32_t(ticks / kVLTrialTicks);
+  if (n_trials < 40) return out;
+  const uint32_t baseline_trials = n_trials / 5;
+  const uint32_t train_end_trial = n_trials - n_trials / 5;
+
+  std::deque<Praise> pending;
+  std::vector<float> baseline_values;
+  float criterion = -1.0f;
+  uint32_t last_frame = 0;
+  uint64_t last_event = 0, last_feedback = 0;
+  uint64_t test_hits = 0, test_events = 0;
+  uint64_t want_hits = 0, want_events = 0, not_hits = 0, not_events = 0;
+
+  for (uint32_t trial = 0; trial < n_trials; ++trial) {
+    const uint32_t label = trial % kVLWords;
+    const Word& heard = kWords[label];
+    const bool want = gc_want_hit(mode, label, trial);
+
+    for (uint64_t t = 0; t < kVLTrialTicks; ++t) {
+      const uint64_t now = uint64_t(trial) * kVLTrialTicks + t;
+      while (!pending.empty() && pending.front().tick <= now) {
+        s.brain.praise(pending.front().value);
+        pending.pop_front();
+      }
+      const bool sounding = t < kVLWordTicks;
+      caregiver.render(sounding ? heard.f0 : 0.0f, heard.f1, heard.f2,
+                       sounding ? 0.5f : 0.0f, pcm.data(), spt);
+      ear.tick(s.brain, pcm.data(), spt);
+      s.brain.step();
+
+      if (s.brain.vocal_frame() == last_frame) continue;
+      last_frame = s.brain.vocal_frame();
+      // Two windows, not one, and the difference is what `vocallearn` reported
+      // itself UNDERPOWERED for twice before finding. SCORING uses M1b's
+      // window -- 200-600 ms after the word stops, where the ear reads at
+      // chance and the voice still carries what it heard. FEEDBACK uses a wider
+      // bracket on G2's own clock, because a reward delivered only inside the
+      // scoring window is 14% of a trial and G2 earned its milestone at
+      // nineteen times that density.
+      const bool in_score = t >= kVLEchoFrom && t < kVLEchoTo;
+      const bool in_reward = t >= kVLRewardFrom && t < kVLRewardTo;
+      if (!in_score && !in_reward) continue;
+
+      const aibaby::VocalParams& v = s.brain.voice();
+      if (!(v.voicing > 0.5f && v.amplitude > kAmplitudeFloor)) continue;
+      const float value = float(s.brain.vocal_groups()[2]);
+      const bool new_event = now - last_event >= kEventRefractoryTicks;
+      if (new_event) last_event = now;
+
+      if (trial < baseline_trials) {
+        // The criterion is measured in the window it will be applied in.
+        if (new_event && in_score) baseline_values.push_back(value);
+        continue;
+      }
+      if (criterion < 0.0f) {
+        if (baseline_values.size() < 8) {
+          criterion = 0.5f;
+        } else {
+          std::vector<float> sorted = baseline_values;
+          std::nth_element(sorted.begin(), sorted.begin() + long(sorted.size() / 2),
+                           sorted.end());
+          criterion = sorted[sorted.size() / 2];
+        }
+      }
+      const bool hit = value >= criterion;
+
+      if (trial < train_end_trial) {
+        if (in_reward && now - last_feedback >= regime.feedback_period) {
+          last_feedback = now;
+          // The whole experiment is this line: praise the class this trial's
+          // WORD asked for. With mode 0 the word is ignored and it is G2.
+          const float val = (hit == want) ? regime.praise : regime.scold;
+          if (val > 0.0f) ++out.praises; else ++out.scolds;
+          pending.push_back(Praise{now + regime.delay, val});
+        }
+      } else if (new_event && in_score) {
+        ++test_events;
+        if (hit) ++test_hits;
+        if (want) { ++want_events; if (hit) ++want_hits; }
+        else { ++not_events; if (hit) ++not_hits; }
+      }
+    }
   }
+
+  uint64_t base_hits = 0;
+  for (float v : baseline_values) if (v >= criterion) ++base_hits;
+  out.baseline_hit = baseline_values.empty()
+                         ? 0.0 : double(base_hits) / double(baseline_values.size());
+  out.test_hit = test_events ? double(test_hits) / double(test_events) : 0.0;
+  out.hit_when_want = want_events ? double(want_hits) / double(want_events) : 0.0;
+  out.hit_when_not = not_events ? double(not_hits) / double(not_events) : 0.0;
+  out.n_want = want_events;
+  out.n_not = not_events;
+  out.events = test_events;
+  out.criterion = criterion;
+  out.ok = test_events >= 40 && baseline_values.size() >= 8 &&
+           out.praises > 0 && out.scolds > 0;
+  return out;
+}
+
+}  // namespace
+
+bool run_g2cond(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  aibaby::Dna dna;
+  if (dna.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) return false;
   constexpr uint32_t kReps = 3;
-  instrument("loudprobe", dna.header().seed, ticks / kVLTrialTicks, "trials per arm");
-  std::printf("  the question      every conditional test here has been scored on\n"
-              "                    FORMANTS. Is the wall the readout, or is it\n"
-              "                    conditionality? This asks it on HOW MUCH the\n"
-              "                    creature vocalises -- G2's own quantity, met at\n"
-              "                    x1.35 and 9 of 9, so the unconditional positive\n"
-              "                    control is a milestone rather than a hypothesis.\n");
-  std::printf("  targets           voiced fraction %.2f / %.2f, and reward follows a\n"
-              "                    vocalisation EVENT as G2's does -- praised when this\n"
-              "                    trial wants events, scolded when it does not\n",
-              kVLRateHigh, kVLRateLow);
-  std::printf("  the control       `random`: the same two targets in the same\n"
-              "                    proportions, drawn independently of the word.\n\n");
+  instrument("g2cond", dna.header().seed, ticks / kVLTrialTicks, "trials per arm");
+  std::printf("  the question      every conditional test here is scored on formant\n"
+              "                    ERROR through a centroid, and reads -0.1 +/- 0.7\n"
+              "                    against a matched control. Is the wall the readout\n"
+              "                    or conditionality? Asked on G2's own contingency.\n");
+  std::printf("  the act           a voiced frame, as G2's is, so reward always\n"
+              "                    follows something the creature did\n");
+  std::printf("  the class         F1 group against THIS creature's baseline median,\n"
+              "                    so hits start at half and both signs occur\n");
+  std::printf("  the change        which class is praised depends on the word heard\n");
+  std::printf("  the measure       hit rate when the trial wanted a hit, minus hit\n"
+              "                    rate when it wanted a miss. No yoke: a creature\n"
+              "                    that ignores the word scores zero by construction.\n\n");
 
-  struct LArm { const char* name; VLTarget target; };
-  const LArm arms[4] = {{"fixed", kVLTgtFixed},
-                        {"heard", kVLTgtHeard},
-                        {"swap", kVLTgtSwap},
-                        {"random", kVLTgtRandom}};
-  std::vector<double> pts[4];
+  const GcArm arms[4] = {{"fixed (=G2)", 0}, {"heard", 1}, {"swap", 2}, {"random", 3}};
+  std::vector<double> cond[4];
+  std::vector<double> g2m[4];
 
-  std::printf("  %-6s %-8s %-9s %-9s %-9s %-8s %-9s %s\n", "seed", "arm", "taught",
-              "yoked", "points", "skipped", "err late", "praise/scold");
+  std::printf("  %-6s %-12s %-9s %-9s %-9s %-9s %-8s %s\n", "seed", "arm", "base hit",
+              "test hit", "hit|want", "hit|not", "cond", "praise/scold");
   for (uint32_t r = 0; r < kReps; ++r) {
     std::vector<uint8_t> variant = blob;
     const uint64_t seed = dna.header().seed + r * 7919ull;
@@ -8082,86 +8229,77 @@ bool run_loudprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
       Regime reg;
       reg.praise = kPraiseValue;
       reg.scold = kScoldValue;
-      const VLRun taught = run_vocallearn_session(variant, ticks, kVLTaught, nullptr, reg,
-                                                  arms[a].target, nullptr, kVLScoreRate);
-      if (!taught.ok) {
-        std::printf("  %-6u %-8s (inconclusive: %u scored, %u skipped)\n", r,
-                    arms[a].name, taught.scored, taught.skipped);
+      const GcRun g = run_g2cond_session(variant, ticks, arms[a].mode, reg);
+      if (!g.ok) {
+        std::printf("  %-6u %-12s (inconclusive: %llu test events, %llu/%llu feedback)\n",
+                    r, arms[a].name, (unsigned long long)g.events,
+                    (unsigned long long)g.praises, (unsigned long long)g.scolds);
         continue;
       }
-      std::vector<Praise> yoke = taught.feedback;
-      for (Praise& p : yoke) p.tick += kVLTrialTicks / 2;
-      const VLRun yoked = run_vocallearn_session(variant, ticks, kVLYoked, &yoke, reg,
-                                                 arms[a].target, nullptr, kVLScoreRate);
-      if (!yoked.ok || yoked.praises + yoked.scolds != 0) {
-        std::printf("  %-6u %-8s (inconclusive: the yoke earned %u of its own)\n", r,
-                    arms[a].name, yoked.praises + yoked.scolds);
-        continue;
-      }
-      const double pt = vl_change(taught) - vl_change(yoked);
-      pts[a].push_back(pt);
-      // The praise/scold split, because its absence is what hid this probe's
-      // third design fault. `vocallearn` prints it and warns ONE-SIDED: NOT A
-      // TRAINING SIGNAL when either count is zero, and the `fixed` arm here was
-      // exactly that -- target_word is always 0, so want_loud is always true,
-      // so every event was praised and none was ever scolded. Undifferentiated
-      // praise moves the taught and yoked arms together, which is the -52.4
-      // against -56.1 in the column to the left.
-      std::printf("  %-6u %-8s %+-9.1f %+-9.1f %+-9.1f %-8u %-9.4f %u/%u%s\n", r,
-                  arms[a].name, vl_change(taught), vl_change(yoked), pt,
-                  taught.skipped, taught.err_late, taught.praises, taught.scolds,
-                  (taught.praises == 0 || taught.scolds == 0)
+      const double c = g.hit_when_want - g.hit_when_not;
+      // The fixed arm never asks for a miss, so its conditional cell is empty
+      // by construction and only its G2 measure means anything.
+      if (arms[a].mode != 0) cond[a].push_back(c);
+      g2m[a].push_back(g.test_hit - g.baseline_hit);
+      std::printf("  %-6u %-12s %-9.3f %-9.3f %-9.3f %-9.3f %+-8.3f %llu/%llu%s\n", r,
+                  arms[a].name, g.baseline_hit, g.test_hit, g.hit_when_want,
+                  g.hit_when_not, arms[a].mode == 0 ? 0.0 : c,
+                  (unsigned long long)g.praises, (unsigned long long)g.scolds,
+                  (g.praises == 0 || g.scolds == 0)
                       ? "  <- ONE-SIDED: not a training signal" : "");
     }
   }
 
-  double m[4] = {}, e[4] = {};
-  for (int a = 0; a < 4; ++a) {
-    if (pts[a].size() < 2) {
-      std::printf("\n  loudprobe INCONCLUSIVE — an arm did not produce two usable\n"
-                  "  creatures.\n");
-      return false;
-    }
-    m[a] = ctx_mean_se(pts[a], &e[a]);
-  }
-
-  std::printf("\n  %-8s %s\n", "arm", "taught - yoke");
-  for (int a = 0; a < 4; ++a) {
-    std::printf("  %-8s %+.1f +/- %.1f\n", arms[a].name, m[a], e[a]);
-  }
-  const double ch = m[1] - m[3], ch_se = std::sqrt(e[1] * e[1] + e[3] * e[3]);
-  const double cs = m[2] - m[3], cs_se = std::sqrt(e[2] * e[2] + e[3] * e[3]);
-  std::printf("\n  heard - random   %+.1f +/- %.1f  <- THE conditional quantity\n",
-              ch, ch_se);
-  std::printf("  swap  - random   %+.1f +/- %.1f\n", cs, cs_se);
-
-  if (m[0] < 5.0) {
-    std::printf("\n  UNDERPOWERED — the `fixed` positive control moved %+.1f, under the\n"
-                "  5 points this instrument needs. Reward is not shaping loudness here\n"
-                "  at all, so the conditional arms say nothing. That is a fact about\n"
-                "  this probe and not about conditionality — G2 says the dimension is\n"
-                "  shapeable, so suspect the window, the targets or the length.\n", m[0]);
+  if (g2m[0].size() < 2 || cond[1].size() < 2 || cond[3].size() < 2) {
+    std::printf("\n  g2cond INCONCLUSIVE — an arm did not produce two usable creatures.\n");
     return false;
   }
-  const double best = ch > cs ? ch : cs;
-  const double best_se = ch > cs ? ch_se : cs_se;
-  if (best > 5.0 && best > 2.0 * best_se) {
-    std::printf("\n  CONDITIONAL ON A RATE — loudness depends on what was heard,\n"
-                "  %+.1f +/- %.1f against a target with the same marginals, while the\n"
-                "  positive control reads %+.1f. Formants are measured at -0.1 +/- 0.7\n"
-                "  on the same creature, so THE WALL IS THE CENTROID READOUT AND NOT\n"
-                "  CONDITIONALITY. Next: six seed families, then whether a rate-coded\n"
-                "  vocal dimension can carry anything a listener would call a word.\n",
-                best, best_se, m[0]);
+
+  double se_g2 = 0.0;
+  const double m_g2 = ctx_mean_se(g2m[0], &se_g2);
+  double se_h = 0.0, se_s = 0.0, se_r = 0.0;
+  const double m_h = ctx_mean_se(cond[1], &se_h);
+  const double m_s = ctx_mean_se(cond[2], &se_s);
+  const double m_r = ctx_mean_se(cond[3], &se_r);
+
+  std::printf("\n  G2 measure, `fixed` arm   test hit - baseline hit  %+.3f +/- %.3f\n",
+              m_g2, se_g2);
+  std::printf("\n  %-10s %s\n", "arm", "hit|want - hit|not");
+  std::printf("  %-10s %+.3f +/- %.3f\n", "heard", m_h, se_h);
+  std::printf("  %-10s %+.3f +/- %.3f\n", "swap", m_s, se_s);
+  std::printf("  %-10s %+.3f +/- %.3f   <- matched-marginal control\n", "random", m_r, se_r);
+
+  const double best = m_h > m_s ? m_h : m_s;
+  const double best_se = m_h > m_s ? se_h : se_s;
+  const double d = best - m_r;
+  const double d_se = std::sqrt(best_se * best_se + se_r * se_r);
+  std::printf("\n  conditional      %+.3f +/- %.3f  <- best of heard/swap, minus random\n",
+              d, d_se);
+
+  if (m_g2 < 0.05) {
+    std::printf("\n  UNDERPOWERED — G2's own measure moved %+.3f on the `fixed` arm,\n"
+                "  which is this contingency reproducing G2 with a caregiver in the\n"
+                "  room. If that does not move, nothing else here is readable, and it\n"
+                "  is a fact about this probe rather than about conditionality.\n", m_g2);
+    return false;
+  }
+  if (d > 0.05 && d > 2.0 * d_se) {
+    std::printf("\n  CONDITIONAL ON G2'S OWN CONTINGENCY — which class the creature\n"
+                "  produces depends on the word it just heard, %+.3f +/- %.3f above a\n"
+                "  direction drawn independently of the word. Formant error reads\n"
+                "  -0.1 +/- 0.7 on the same creature, so THE WALL IS THE READOUT AND\n"
+                "  NOT CONDITIONALITY. Next: six seed families, then whether a binary\n"
+                "  class boundary can carry anything a listener would call a word.\n",
+                d, d_se);
     return true;
   }
-  std::printf("\n  NOT CONDITIONAL, ON THE ONE DIMENSION REWARD PROVABLY CONTROLS.\n"
-              "  The positive control moves %+.1f -- loudness is shapeable here, as G2\n"
-              "  says -- and making it depend on what was heard reads %+.1f +/- %.1f\n"
-              "  against a matched-marginal target. Formants read -0.1 +/- 0.7. The\n"
-              "  wall is not the formant readout: it is conditionality itself, and it\n"
-              "  is the same on a centroid and on a rate.\n",
-              m[0], best, best_se);
+  std::printf("\n  NOT CONDITIONAL — G2's contingency reproduces at %+.3f, so reward is\n"
+              "  shaping this class as the milestone says it does, and making the class\n"
+              "  depend on the word reads %+.3f +/- %.3f against a matched-marginal\n"
+              "  control. Formant error reads -0.1 +/- 0.7. The wall is not the formant\n"
+              "  readout: conditionality fails on a binary class boundary and on a\n"
+              "  centroid alike, on the one contingency this creature demonstrably\n"
+              "  learns.\n", m_g2, d, d_se);
   (void)verbose;
   return false;
 }

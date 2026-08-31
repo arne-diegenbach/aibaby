@@ -1630,6 +1630,72 @@ And `pgprobe`'s own summary printed `heard − random` as **+38.8** beside a
 which is the argument for printing the arms and the derived quantity together
 rather than the conclusion alone.
 
+### `g2cond` — the wall is not the readout. It is conditionality.
+
+Every conditional test in this project has been scored on **formant error**
+through a population centroid. `pgprobe` puts that at −0.1 ± 0.7 against a
+matched-marginal control, and DNA v48 spent a whole mechanism on the theory that
+the centroid was the problem. **The question one level up had never been asked:
+is the wall the readout, or is it conditionality?**
+
+G2 is the place to ask it, and for one reason. It is a met milestone —
+rewarded vocalisations rise ×1.35 within a session, 23 of 27 creatures, 9 of 9 at
+420 s — so *reward can shape this* is a result rather than a hypothesis. `g2cond`
+copies G2's contingency exactly and changes one line.
+
+| taken from G2 verbatim | |
+|---|---|
+| the act | a voiced frame, so reward always follows something the creature **did** |
+| the class | `vocal_groups()[2]`, the F1 motor group — the thing the brain controls, not the audio it makes |
+| the criterion | **this creature's own baseline median** over the first 20%, so hits start at half and **both signs occur by construction** |
+| the schedule | feedback over the middle 60%, scoring over the last 20% |
+
+The one change: **which class is praised depends on the word just heard.**
+`fixed` praises a hit always, which *is* G2 with a caregiver in the room; `heard`
+praises a hit after word A and a miss after word B; `swap` inverts it; `random`
+draws the direction independently of the word, in the same proportions.
+
+**And the measure needs no yoke.** Conditionality is scored *within* an arm: hit
+rate on trials that wanted a hit, minus hit rate on trials that wanted a miss. A
+creature that ignores the word scores zero on that difference no matter what else
+it does — which removes the entire class of fault that cost `pgprobe` a run.
+
+#### The result
+
+| | 3 seed families |
+|---|---|
+| **G2 measure, `fixed`** — test hit − baseline hit | **+0.369 ± 0.031** |
+| `heard` — hit\|want − hit\|not | +0.005 ± 0.176 |
+| `swap` | +0.051 ± 0.151 |
+| `random` — matched-marginal control | +0.029 ± 0.025 |
+| **conditional** (best of heard/swap, minus random) | **+0.022 ± 0.153** |
+
+The positive control takes hit rate from **0.500 to 0.913 / 0.885 / 0.811** — a
+twelve-sigma effect, inside this instrument, on this contingency. Making the
+identical contingency depend on the word produces nothing: per seed `heard` reads
++0.252, −0.335, +0.097 and `swap` reads −0.124, +0.352, −0.074. Both signs, no
+consistency, and the matched control at +0.029 ± 0.025.
+
+The two conditional arms and the control also receive **matched feedback
+balance** — roughly 50/50 praise and scold, against `fixed`'s 2363/439 — because
+half their trials ask for a miss. That is inherent to the design and it is
+exactly what `random` controls for.
+
+> **This closes the question the readout work was asking.** DNA v48 was built on
+> the theory that the centroid is a second pooling stage and the place the object
+> is lost; DNA v49 on the theory that a discrete selection needed its own
+> estimator. Both were aimed at the readout. Here the readout is a **binary class
+> boundary derived from the creature's own median**, reward moves it from half to
+> nine tenths, and it *still* cannot be made to depend on the input. The wall is
+> not the formant centroid, not the nine scalars, and not the motor plant. **It
+> is conditionality itself, and it is the same on a class boundary as on a
+> centroid.**
+
+That is the firmest statement of G3's closure this project has, because for the
+first time all three of these hold in one instrument: a positive control that is
+a **met milestone** reproducing at 12 SE, a control with **matched marginals**,
+and a readout that is **not a centroid**. Every earlier framing had at most one.
+
 ### G1 — determinism: **passing**
 
 Two brains from the same genome, given the same scripted touches, praise and
