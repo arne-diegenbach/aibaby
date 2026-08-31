@@ -1226,6 +1226,147 @@ Three other mechanisms were built, measured and either reverted or shipped
 inert — a visual cortex, a curvature stage, and a scalar version of that same
 exploration — and each of those sections below records what it ruled out.
 
+## Stage 0 of the audio rewrite — DNA v47, and the wall it found is a new one
+
+The rewrite this is the first step of drops vision and rebuilds the audio path.
+Its argument, in one paragraph. Every conditional-learning failure here has the
+same arithmetic, and the synaptic-perturbation post-mortem writes it out: the
+presynaptic gate is a spike count, a spike count is a neuron's baseline rate
+plus a few percent of condition, so the credit factorises into a shared term and
+a differential one and the shared term is far larger. That shared term has been
+subtracted (v24), signed (v35), gated (v29, v37, v40), re-timed (v26, v42),
+re-routed (v43, v46) and re-rewarded (v20) — seven common-mode walls and eleven
+mechanisms. Its **cause** had never been touched: §3.1 makes rate homeostasis
+mandatory, so no population in this creature has ever had a baseline of zero.
+
+`vocallearn` states the consequence in two numbers from one instrument: **+24.0
+points toward a fixed target and −0.1 toward a conditional one.** The +24 is a
+conditional-learning result with a context layer of size **one**. Give the
+shipped rules a context layer of size *n* whose slices are disjoint and exactly
+zero when absent, and two conditions share no presynaptic unit, therefore no
+synapse.
+
+**DNA v47 is that substrate.** `ModuleRole::kContext` — no noise, no homeostatic
+setpoint, no recurrence, cut into slices the host writes into. It needs **no new
+learning rule**: `trace_pre_` on an unwritten unit is exactly zero, so the
+shipped R-STDP already has the property and had never had a substrate to run it
+on. The role is inert on the shipped creature (`verify` 21 of 21, hash
+`ad96f882becbee92`). `tools/genome_add_context.py` appends it;
+`--experiment ctxlearn` is `vocallearn` with a third target — `fixed` (no
+conditionality, the positive control), `heard` (the innate map, refined), and
+`swap` (the *other* word's formants: arbitrary, and the arcuate pulls against
+it, so anything it earns was learned). Each carries its **own** yoke, because a
+yoke scored against a different target is not a control.
+
+**With the oracle mute it reproduces `vocallearn` exactly**: +35.9 / +0.5 / +0.2.
+
+### The substrate does what was predicted, at the synapse
+
+Mean |Δw| written by reward onto the oracle's tract, as a fraction of what is
+written onto the larynx's other afferents:
+
+| oracle | out_w 0.005 | 0.010 | 0.020 |
+|---|---|---|---|
+| mute | 0.01 | 0.04 | 0.07 |
+| 13 Hz | 0.42 | 0.28 | 0.44 |
+| 63 Hz | **0.76** | **0.79** | **0.62** |
+
+A zero-baseline tract goes from 1–7% of the larynx's plasticity to 28–79% of
+it, against the ~8% object-specific share a dense tract manages. **It is the
+most learnable input in the creature.** That much of the argument is confirmed.
+
+### And that is exactly why it cannot be used
+
+The positive control — one fixed formant target, no conditionality, the act G2
+proved reward can shape — **dies whenever the oracle fires.** Not the difference
+metric: the taught arm's own error reduction, over three seeds per cell:
+
+| vocal noise | oracle mute | oracle at 31 Hz |
+|---|---|---|
+| 0.22, out_w 0.005 | +24.6 / +39.1 / +38.1 | +6.1 / +2.2 / −5.9 |
+| 0.22, out_w 0.010 | +24.6 / +39.1 / +38.1 | −8.8 / +0.8 / +7.3 |
+| 0.22, out_w 0.020 | +24.6 / +39.1 / +38.1 | −13.8 / +12.5 / −3.1 |
+| 0.16, out_w 0.010 | +21.7 / +31.0 / +35.5 | +21.5 / +6.7 / −10.7 |
+| 0.10, out_w 0.010 | +13.1 / +31.0 / +31.1 | +15.4 / −12.5 / −31.2 |
+
+**Five genomes, twelve driven levels, and the control never survives once.** The
+collapse does **not** scale with `out_w` over a 6× range, so it is not the tract
+shoving the larynx; and paying for the tract out of vocal's own noise — rule 1
+of the calibration invariant, the lever this experiment prints — does not save
+it either, at 0.16 or at 0.10.
+
+> **The wall, and it is a different kind from the seven before it.** Those were
+> *the condition does not arrive*. This one is **arriving costs more than it
+> pays**: this larynx cannot host a learnable conditional input and a
+> reward-driven exploratory pathway at the same time, and adding the first
+> abolishes the second. The presynaptic baseline was a real variable — the
+> substrate delivers exactly what the arithmetic predicted — and the delivery is
+> not usable on a single shared motor population.
+
+**What that specifies, and it is not another learning rule.** In the birdsong
+circuit this project borrows from, HVC→RA and LMAN→RA are separate afferent
+populations onto RA under separate rules; RA is never asked to be a shared
+exploratory pool and a conditional readout at once. `vocal` here is 126 neurons
+in nine groups read as centroids, and it is asked to be both. So the motor side
+has to be rebuilt **before** a conditional input can be tested at all — a sparse
+dictionary of articulatory postures selected by competition, where a conditional
+pathway *selects among discrete units* rather than competing for the same
+continuous posture node perturbation is exploring. That was Stage 2 of the
+rewrite plan for an unrelated reason (the `vocal→voice` slope is +0.12 because a
+centroid over a dense module is a second pooling stage); it is now a
+prerequisite rather than a follow-on.
+
+### Two retractions, and both are the instrument working
+
+**A +20.3 that did not replicate.** At `out_w` 0.030, gain 0.06, `swap` read
+**+20.3 ± 2.7, 3 of 3 positive** against +0.2 with the oracle mute, with the
+non-conditional control *down* — conditional-up-and-control-down being the one
+pattern extra drive cannot produce. It was written up here as a lead. Across the
+weight and noise series the same cell reads:
+
+| | w 0.005 | w 0.010 | w 0.020 | **w 0.030** | noise 0.16 | noise 0.10 |
+|---|---|---|---|---|---|---|
+| `swap` at 13 Hz | +7.6 ± 7.5 | +3.2 ± 2.3 | +6.1 ± 14.8 | **+20.3 ± 2.7** | +7.6 ± 11.9 | +1.4 ± 5.0 |
+
+Five of six under +8 with error bars over zero. **It is the eighth single-point
+high in this project's history and it behaved like the other seven.** Retracted.
+
+**A diagnostic that could not fail.** The collapse was first blamed on the
+oracle winning vocal's *synaptic-scaling* competition. `syn_wake_scale` and
+`syn_sleep_scale` were set to zero on vocal and three of the four rows came back
+**byte-identical** — because DNA v11 measured in August that **synaptic scaling
+never executes on the larynx at all** (`sum|w| / setpoint 0.93, outside the band
+0.0% of samples`). The mechanism being relaxed was not running. That memory
+carries the rule verbatim — *before relaxing a regulator, measure whether it is
+running* — and it was read after the run rather than before it. The remaining
+suspect is intrinsic plasticity, which v11 showed **is** the half that runs on
+vocal, and which responds to rate rather than to weight — which fits a collapse
+that does not scale with `out_w`.
+
+### Three instrument corrections `ctxlearn` now carries
+
+1. **A mute level is not a driven level.** Threshold is 1.0 over a 20 ms leak at
+   1 kHz, so the steady state is 20× the gain and anything under 0.05 never
+   fires. The first sweep ran gain 0.04, got a byte-identical copy of the silent
+   arm, and *chose it as the best driven level*. Readability now checks the
+   measured rate, not the index.
+2. **A collapsed control cannot report a null.** `fixed` gates every row: a level
+   is scored only if the control clears 5 points and keeps 60% of what it reads
+   with the oracle mute. Otherwise the row prints UNREADABLE. The first version
+   asked only for `> +5`, passed a control at a third of its own reference, and
+   printed a negative it was not entitled to.
+3. **A lead must clear its own error bar.** The LEAD branch tripped once on
+   +6.1 ± 14.8; it now requires the mean to exceed 2 SE.
+
+And one that belongs to the tooling rather than to this experiment: **appending a
+module is not wiring-neutral.** Noise is `rng_->signed_uniform()` once per neuron
+per tick, so 64 extra neurons re-roll the stream — `calibrate` reads somato
+4.45 → 4.16 (STALE), and reads *the same at `out_w` 0.0 as at 0.30*, which is
+what proves it is the stream and not the tract. `genome_add_relay.py` and
+`genome_add_hvc.py` both say "bit-identical"; their paired arms are sound, their
+docstrings are not. Never quote an appended genome's number against
+`dna/default.toml`.
+
 ### G1 — determinism: **passing**
 
 Two brains from the same genome, given the same scripted touches, praise and

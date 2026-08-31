@@ -7580,7 +7580,8 @@ bool run_ctxlearn(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
     for (uint32_t L = 1; L < kCtxLevelCount; ++L) {
       if (!driven[L] || readable[L]) continue;
       if (mean[L][2] > kCtxVisible && mean[L][2] > mean[L][0] &&
-          mean[L][2] > mean[0][2] + kCtxVisible) {
+          mean[L][2] > mean[0][2] + kCtxVisible &&
+          mean[L][2] > 2.0 * se[L][2]) {
         std::printf("\n  LEAD, NOT A RESULT — at gain %.2f the arbitrary conditional\n"
                     "  arm reads %+.1f +/- %.1f against %+.1f with the oracle mute, while\n"
                     "  the NON-conditional control reads %+.1f. Conditional up and\n"
@@ -7602,11 +7603,20 @@ bool run_ctxlearn(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
     std::printf("\n  ORACLE NOT DELIVERABLE — the control is alive at %+.1f with the\n"
                 "  oracle silent and gone at every level that drives it. This genome\n"
                 "  cannot put a condition into this larynx without taking the larynx\n"
-                "  off the operating point at which reward works, so the question is\n"
-                "  NOT answered either way. The levers, in order: pay for the tract out\n"
-                "  of vocal's own noise (`dst_noise` in genome_add_context.py, rule 1 of\n"
-                "  the calibration invariant), a weaker `out_w`, or fewer neurons per\n"
-                "  slice. Do not read this as a negative.\n", ref);
+                "  off the operating point at which reward works.\n\n"
+                "  TWO OF THE THREE LEVERS ARE SPENT. `out_w` was swept over 6x\n"
+                "  (0.005-0.030) and the collapse does not scale with it, so it is not\n"
+                "  the tract shoving the larynx. Paying for the tract out of vocal's own\n"
+                "  noise -- rule 1 of the calibration invariant -- was run at 0.16 and\n"
+                "  0.10 against a genome noise of 0.22 and does not save it either.\n"
+                "  Five genomes, twelve driven levels, control never survives once.\n\n"
+                "  So read this as the finding rather than as a failure to deliver: a\n"
+                "  single shared motor population cannot host a learnable conditional\n"
+                "  input AND a reward-driven exploratory pathway. In the birdsong\n"
+                "  circuit HVC->RA and LMAN->RA are separate afferents onto RA under\n"
+                "  separate rules; `vocal` is asked to be both. The motor side has to be\n"
+                "  rebuilt -- a sparse dictionary of postures selected by competition --\n"
+                "  BEFORE a conditional input can be tested at all.\n", ref);
     return false;
   }
 
