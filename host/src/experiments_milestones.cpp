@@ -7446,6 +7446,10 @@ constexpr double kCtxVisible = 5.0;
 // control at a third of its own reference is not a control that happens to be
 // smaller; it is a different creature being asked the same question.
 constexpr double kCtxControlKeep = 0.60;
+// ...and the creature has to still be talking. Below this share of the voiced
+// fraction it manages with the oracle mute, the formant readout is measuring a
+// different creature and its error bars explode.
+constexpr double kCtxVoicedKeep = 0.60;
 
 struct CtxArm {
   const char* name;
@@ -7585,7 +7589,16 @@ bool run_ctxlearn(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
     // its best driven arm -- which is the silent control wearing a label.
     const double hz = cells[L] ? ctx_hz[L] / cells[L] : 0.0;
     driven[L] = hz > 1.0;
-    readable[L] = mean[L][0] > kCtxVisible &&
+    // A level where the creature has stopped VOCALISING is not comparable to
+    // one where it has not, whatever the control happens to read. Formant error
+    // measured over 13% of the echo window and over 61% of it are two different
+    // instruments, and the first one's error bars show it: the run that forced
+    // this gate read swap +53.4 / -35.5 / +16.7 across three seeds at a voiced
+    // fraction of 0.13.
+    const double vf = cells[L] ? voiced[L] / cells[L] : 0.0;
+    const double vf_ref = cells[0] ? voiced[0] / cells[0] : 0.0;
+    const bool talking = vf_ref <= 0.0 || vf >= kCtxVoicedKeep * vf_ref;
+    readable[L] = talking && mean[L][0] > kCtxVisible &&
                   (!driven[L] || mean[L][0] >= kCtxControlKeep * ref);
     if (driven[L] && readable[L]) any_readable_driven = true;
     char f[32], h[32], w[32];
@@ -7596,7 +7609,9 @@ bool run_ctxlearn(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
                 cells[L] ? ctx_hz[L] / cells[L] : 0.0,
                 cells[L] ? voiced[L] / cells[L] : 0.0, f, h, w,
                 !driven[L] ? "n/a — oracle mute"
-                           : (readable[L] ? "yes" : "NO — control gone"));
+                           : (readable[L] ? "yes"
+                              : (!talking ? "NO — creature stopped talking"
+                                          : "NO — control gone")));
   }
   std::printf("\n  A level is readable when the control clears %.0f points AND keeps\n"
               "  %.0f%% of what it reads with the oracle silent (%+.1f).\n",
@@ -7625,12 +7640,13 @@ bool run_ctxlearn(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
   }
 
   // Among the levels that survived, the best the conditional arm managed.
-  double best = 0.0, best_gain = 0.0, best_ctrl = 0.0;
+  double best = 0.0, best_gain = 0.0, best_ctrl = 0.0, best_se = 0.0;
   bool have_best = false;
   for (uint32_t L = 1; L < kCtxLevelCount; ++L) {
     if (!readable[L] || !driven[L]) continue;
     if (!have_best || mean[L][2] > best) {
       best = mean[L][2];
+      best_se = se[L][2];
       best_gain = kCtxLevels[L];
       best_ctrl = mean[L][0];
       have_best = true;
@@ -7689,7 +7705,12 @@ bool run_ctxlearn(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
               "  whichever target is being taught, so an effect that also lifts the\n"
               "  control is about drive and not about conditionality.\n");
 
-  if (best > kCtxVisible) {
+  // The 2 SE requirement was added to the LEAD branch first and NOT here, and
+  // this branch then fired on +11.6 +/- 25.8 -- per seed +53.4, -35.5, +16.7.
+  // A bar on the mean without a bar on its error is not a bar. It applies to
+  // every verdict now, positive included, which is the general form of a hole
+  // this experiment has printed through three times.
+  if (best > kCtxVisible && best > 2.0 * best_se) {
     std::printf("\n  CONDITIONAL LEARNING — an arbitrary map the creature has no innate\n"
                 "  route for was taught by praise: `swap` reads %+.1f at gain %.2f,\n"
                 "  where it reads %+.1f with the oracle silent, and the control at that\n"
