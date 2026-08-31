@@ -3864,7 +3864,17 @@ enum VLArm { kVLTaught = 0, kVLYoked, kVLNone, kVLFixed, kVLArmCount };
 //                arcuate is actively pulling against it — which is what makes
 //                it a measurement of a LEARNED conditional map rather than of a
 //                refined innate one.
-enum VLTarget { kVLTgtHeard = 0, kVLTgtFixed, kVLTgtSwap };
+//   kVLTgtRandom the same two targets in the same proportions, drawn
+//                INDEPENDENTLY of what was heard. This is the control that
+//                decides whether a conditional arm means anything: a creature
+//                that simply learns to sit at the midpoint of two alternating
+//                targets scores positively on `swap` with no conditionality at
+//                all, and against a target with matched marginals it cannot.
+//                Same reward density, same target distribution; the only
+//                difference is whether the target correlates with the input.
+//                m3 has always been read as taught-minus-random and vocallearn
+//                never had the equivalent.
+enum VLTarget { kVLTgtHeard = 0, kVLTgtFixed, kVLTgtSwap, kVLTgtRandom };
 
 // An oracle condition, written straight into a kContext module (DNA v47).
 //
@@ -3982,9 +3992,14 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
     // bucket is the per-word reward baseline, and it follows the TARGET rather
     // than the label so that "closer than you usually get" always means closer
     // to the thing being asked for.
-    const uint32_t target_word = tgt == kVLTgtFixed  ? 0u
-                                 : tgt == kVLTgtSwap ? (label + 1u) % kVLWords
-                                                     : label;
+    // The random arm's draw is a hash of the trial index rather than a live
+    // RNG, so it is reproducible and costs the session no stream state.
+    uint32_t rnd = uint32_t(trial) * 2654435761u;
+    rnd ^= rnd >> 16;
+    const uint32_t target_word = tgt == kVLTgtFixed    ? 0u
+                                 : tgt == kVLTgtSwap   ? (label + 1u) % kVLWords
+                                 : tgt == kVLTgtRandom ? (rnd & 1u)
+                                                       : label;
     const Word& w = kWords[target_word];
     const uint32_t bucket = target_word;
     double f1_sum = 0.0, f2_sum = 0.0;
@@ -7730,6 +7745,157 @@ bool run_ctxlearn(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
               "  baseline is not the binding variable, and the rewrite is not licensed\n"
               "  on this argument.\n",
               best, best_gain, best_ctrl, ref, mean[0][2]);
+  (void)verbose;
+  return false;
+}
+
+
+// --- pgprobe: is the policy gradient's conditional arm actually conditional? -
+//
+// `ctxlearn` on the v48 dictionary + v49 policy gradient left exactly one live
+// number: with the oracle MUTE, `swap` reads +6.5 +/- 1.1 on 3 of 3 seeds,
+// where the centroid creature reads +0.2 +/- 0.2. That is 54% of the
+// fixed-target control's magnitude against 0.6% before, and it needs no oracle
+// at all -- the condition would be arriving through the innate arcuate, and the
+// policy gradient would be using what a centroid readout could not.
+//
+// **It has one obvious way of being fake and this experiment is that control.**
+// `swap`'s target alternates between the two words. A creature that learns
+// nothing conditional, and simply moves to the MIDPOINT of the two, reduces its
+// mean error against both and scores positively -- with no dependence on what it
+// heard whatsoever. Nothing in `vocallearn` separates that from real
+// conditionality, because its `fixed` control aims at ONE word rather than at
+// the same distribution.
+//
+// The control that does is a target with MATCHED MARGINALS: the same two words
+// in the same proportions, drawn independently of what was heard. A
+// midpoint-seeker scores identically on it; only a creature whose output depends
+// on its input can beat it. So the quantity is `swap - random`, and m3 has been
+// read that way for its whole life while vocallearn never had the equivalent.
+//
+// Four targets, each with its own yoke, at oracle-mute -- no context module is
+// needed, which is the point.
+bool run_pgprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  aibaby::Dna dna;
+  if (dna.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) {
+    std::printf("  setup failed: the genome does not load\n");
+    return false;
+  }
+  // Deliberately runs on a centroid creature too, and that is not a fallback.
+  // `vocallearn` scores its `fixed` arm against a yoke built from the TAUGHT
+  // arm's reward stream rather than from its own, and this experiment gives
+  // every arm its own yoke. When the dictionary's control fell from +16.4 under
+  // the first method to +2.2 under the second, there were two candidate
+  // explanations -- a weak mechanism, or a stricter instrument -- and the only
+  // way to separate them is to put the SHIPPED creature through the same
+  // instrument. A control that changes when the yoke changes was never a
+  // measurement of the creature.
+  const bool has_dict = dna.header().vocal.dictionary_units > 0 &&
+                        dna.header().vocal.dictionary_policy_rate > 0.0f;
+  constexpr uint32_t kReps = 3;
+  instrument("pgprobe", dna.header().seed, ticks / kVLTrialTicks, "trials per arm");
+  if (has_dict) {
+    std::printf("  dictionary        %u postures, temp %.2f, policy rate %.2f\n",
+                dna.header().vocal.dictionary_units,
+                double(dna.header().vocal.dictionary_temp),
+                double(dna.header().vocal.dictionary_policy_rate));
+  } else {
+    std::printf("  readout           the nine centroids — no dictionary. This is the\n"
+                "                    like-for-like control for the dictionary's number.\n");
+  }
+  std::printf("  the question      is `swap` conditional, or is it a creature that\n"
+              "                    learned to sit between two alternating targets?\n"
+              "  the control       `random`: same two targets, same proportions,\n"
+              "                    drawn independently of what was heard.\n\n");
+
+  struct PgArm { const char* name; VLTarget target; };
+  const PgArm arms[4] = {{"fixed", kVLTgtFixed},
+                         {"heard", kVLTgtHeard},
+                         {"swap", kVLTgtSwap},
+                         {"random", kVLTgtRandom}};
+  std::vector<double> pts[4];
+
+  std::printf("  %-6s %-8s %-9s %-9s %-9s %s\n", "seed", "arm", "taught", "yoked",
+              "points", "voiced");
+  for (uint32_t r = 0; r < kReps; ++r) {
+    std::vector<uint8_t> variant = blob;
+    const uint64_t seed = dna.header().seed + r * 7919ull;
+    std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+    for (int a = 0; a < 4; ++a) {
+      Regime reg;
+      reg.praise = kPraiseValue;
+      reg.scold = kScoldValue;
+      const VLRun taught =
+          run_vocallearn_session(variant, ticks, kVLTaught, nullptr, reg, arms[a].target);
+      if (!taught.ok) {
+        std::printf("  %-6u %-8s (inconclusive: %u scored, %u skipped)\n", r,
+                    arms[a].name, taught.scored, taught.skipped);
+        continue;
+      }
+      std::vector<Praise> yoke = taught.feedback;
+      for (Praise& p : yoke) p.tick += kVLTrialTicks / 2;
+      const VLRun yoked =
+          run_vocallearn_session(variant, ticks, kVLYoked, &yoke, reg, arms[a].target);
+      if (!yoked.ok || yoked.praises + yoked.scolds != 0) {
+        std::printf("  %-6u %-8s (inconclusive: the yoke earned %u of its own)\n", r,
+                    arms[a].name, yoked.praises + yoked.scolds);
+        continue;
+      }
+      const double pt = vl_change(taught) - vl_change(yoked);
+      pts[a].push_back(pt);
+      std::printf("  %-6u %-8s %+-9.1f %+-9.1f %+-9.1f %.2f\n", r, arms[a].name,
+                  vl_change(taught), vl_change(yoked), pt, taught.voiced_frac);
+    }
+  }
+
+  double m[4] = {}, e[4] = {};
+  for (int a = 0; a < 4; ++a) {
+    if (pts[a].size() < 2) {
+      std::printf("\n  pgprobe INCONCLUSIVE — an arm did not produce two usable\n"
+                  "  creatures.\n");
+      return false;
+    }
+    m[a] = ctx_mean_se(pts[a], &e[a]);
+  }
+
+  std::printf("\n  %-8s %s\n", "arm", "taught - yoke");
+  for (int a = 0; a < 4; ++a) {
+    std::printf("  %-8s %+.1f +/- %.1f\n", arms[a].name, m[a], e[a]);
+  }
+
+  // The conditional quantity, and it is the only one this experiment exists to
+  // print. Both arms see the same two targets in the same proportions; only one
+  // of them has a target that depends on what the creature heard.
+  const double cond = m[2] - m[3];
+  const double cond_se = std::sqrt(e[2] * e[2] + e[3] * e[3]);
+  std::printf("\n  swap - random    %+.1f +/- %.1f  <- THE conditional quantity\n",
+              cond, cond_se);
+  // arms[] is {fixed, heard, swap, random}, so `heard` is m[1]. The first
+  // version of this line read m[0] and printed fixed-minus-random under the
+  // heard label -- +38.8 next to a `heard` arm that reads -0.8, which is the
+  // only reason it was caught.
+  std::printf("  heard - random   %+.1f +/- %.1f\n", m[1] - m[3],
+              std::sqrt(e[1] * e[1] + e[3] * e[3]));
+
+  if (m[0] < 5.0) {
+    std::printf("\n  UNDERPOWERED — the `fixed` positive control moved %+.1f, under the\n"
+                "  5 points this instrument needs, so nothing here is readable.\n", m[0]);
+    return false;
+  }
+  if (cond > 5.0 && cond > 2.0 * cond_se) {
+    std::printf("\n  CONDITIONAL — `swap` beats a target with the same marginals by\n"
+                "  %+.1f +/- %.1f. A creature sitting between two alternating targets\n"
+                "  scores the same on both arms, so this is a dependence on what was\n"
+                "  HEARD and not a posture that happens to suit either. Next: six seed\n"
+                "  families, and the audibility ruler — points of formant error are not\n"
+                "  a sound anybody can hear until d' says so.\n", cond, cond_se);
+    return true;
+  }
+  std::printf("\n  NOT CONDITIONAL — `swap` reads %+.1f and its matched-marginal\n"
+              "  control %+.1f, a difference of %+.1f +/- %.1f. The gain is what a\n"
+              "  creature gets for learning to sit between two alternating targets,\n"
+              "  which needs no dependence on the input at all. The lead is closed.\n",
+              m[2], m[3], cond, cond_se);
   (void)verbose;
   return false;
 }

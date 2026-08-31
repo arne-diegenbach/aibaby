@@ -1556,6 +1556,79 @@ combination this has been building toward, and which this project has never had,
 is v49's estimator on v47's substrate. That run is the one that matters and it is
 not reported here yet.
 
+### `pgprobe` — the control vocallearn never had, and DNA v49 does not survive it
+
+The v49 section above reports that the categorical policy gradient made discrete
+selection learnable: a control reading exactly −0.0 with the rule off, rising to
++16.4 with it on. **That is retracted.** It was measured against a mismatched
+yoke, and under a correct one the effect is +2.2 ± 6.0 — indistinguishable from
+every readout-only configuration v48 already refuted.
+
+**What was wrong.** `vocallearn` scores its `fixed` arm against a yoke built from
+the **taught** arm's reward stream rather than from its own. On the shipped
+creature that is harmless — the two streams have near-identical statistics — but
+the dictionary creature *samples* its postures, so its yoked arm wanders too, and
+its yoke reads +9.6 / +0.2 / −1.5 where the centroid creature's reads −3.7 /
+−6.4 / −2.5. A control that moves is a control that can manufacture a
+dose-response: as `dictionary_policy_rate` rises the taught arm's reward stream
+changes, so the yoke changes, so `fixed − yoked` changes for reasons that have
+nothing to do with the fixed arm. **The dose-response was the control moving.**
+
+`pgprobe` gives every arm its own yoke, and adds the control this project has
+used for `m3` since the beginning and `vocallearn` never had: a **matched-marginal
+random target** — the same two words in the same proportions, drawn independently
+of what was heard. A creature that learns nothing conditional and simply sits at
+the midpoint of two alternating targets scores identically on `swap` and on
+`random`; only a creature whose output depends on its input separates them. So
+the conditional quantity is `swap − random`, and `vocallearn`'s `fixed` arm was
+never a matched comparison for it.
+
+#### The instrument is not the problem, which is the good news
+
+| creature | `fixed` (positive control) | per seed |
+|---|---|---|
+| **centroid (shipped)** | **+38.2 ± 3.8** | +40.2 / +30.9 / +43.5 |
+| dictionary + policy gradient | **+2.2 ± 6.0** | +6.6 / +9.5 / −9.6 |
+
+The shipped creature reads **+38.2 under the strict instrument against
+`vocallearn`'s +36.5 under the loose one.** So the yoke mismatch was inflating
+nothing on the centroid, M1c and the +24.0 stand as measured, and the collapse
+belongs to the dictionary rather than to the method. **DNA v49 is refuted:
+17× worse than the readout it was built to rescue, same seeds, same instrument,
+everything but the readout identical.**
+
+#### And the conditional quantity, measured against a matched control at last
+
+| | `swap` | `random` | **`swap − random`** |
+|---|---|---|---|
+| centroid | −0.7 ± 0.5 | −0.6 ± 0.5 | **−0.1 ± 0.7** |
+
+`heard − random` reads −0.2 on the same run. **Both conditional arms are exactly
+zero against a target with the same marginals, with error bars under one point** —
+the tightest statement of the conditional wall this project has, and the first
+one where the control has the same target distribution as the arm it controls.
+
+> The eleven mechanisms, the seven common-mode walls, `vocallearn`'s +24 against
+> −0.1: all of them compared a conditional arm to a *fixed* one. This compares it
+> to a target drawn from the same distribution and uncorrelated with the input,
+> which is the only comparison that isolates conditionality itself. It reads
+> −0.1 ± 0.7.
+
+#### Two bugs this run caught, and one of them printed a verdict
+
+`ctxlearn` printed **CONDITIONAL LEARNING** on `swap` +11.6 ± 25.8 — per seed
++53.4 / −35.5 / +16.7, at a voiced fraction of 0.13 against 0.61 with the oracle
+mute. The 2 SE requirement had been added to the LEAD branch and not to the
+positive branch, which is the third time this experiment printed through a hole
+of that exact shape; it now applies to every verdict, and a level where the
+creature has stopped vocalising is unreadable whatever its control reads.
+
+And `pgprobe`'s own summary printed `heard − random` as **+38.8** beside a
+`heard` arm reading −0.8, because the derived line indexed `fixed` instead of
+`heard`. It was caught only because the two numbers were visibly incompatible —
+which is the argument for printing the arms and the derived quantity together
+rather than the conclusion alone.
+
 ### G1 — determinism: **passing**
 
 Two brains from the same genome, given the same scripted touches, praise and
