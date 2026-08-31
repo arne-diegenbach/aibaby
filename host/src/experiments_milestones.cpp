@@ -3876,6 +3876,52 @@ enum VLArm { kVLTaught = 0, kVLYoked, kVLNone, kVLFixed, kVLArmCount };
 //                never had the equivalent.
 enum VLTarget { kVLTgtHeard = 0, kVLTgtFixed, kVLTgtSwap, kVLTgtRandom };
 
+// WHAT is being scored, as opposed to which word it is scored against. Every
+// conditional test this project has ever run targets FORMANTS, read through a
+// population centroid, and that is now measured at -0.1 +/- 0.7 against a
+// matched control. This axis asks whether the wall is about the formant readout
+// or about conditionality itself.
+//
+// Amplitude is the dimension to ask it on, for one reason: it is a group RATE
+// rather than a centroid, and G2 is precisely the result that reward can move it
+// -- rewarded vocalisations rise x1.74, 9 of 9. So the unconditional positive
+// control does not have to be argued for, it is a met milestone. If "be loud for
+// this word and quiet for that one" is learnable where formants are not, the
+// wall is the readout and there is a route. If it is not learnable either, then
+// conditionality fails on the one output dimension reward provably controls, and
+// that closes it far more firmly than another negative on formants would.
+//
+// Silence is a LOW AMPLITUDE ANSWER, not a missing one. The formant path skips
+// silent trials -- correctly, since silence has no formants to be wrong about --
+// and carrying that rule over would make "be quiet" unscoreable and unrewardable,
+// which is the one mistake that would decide this experiment before it ran.
+enum VLScore { kVLScoreFormant = 0, kVLScoreAmp, kVLScoreRate };
+
+// The two amplitudes, either side of what the creature does naturally (babble
+// sits near 0.48) so that neither target is the one it would drift to anyway.
+constexpr double kVLAmpLoud = 0.75;
+constexpr double kVLAmpQuiet = 0.15;
+
+// kVLScoreAmp is kept and it is a RECORDED FAILURE rather than a live option.
+// It delivered reward on a fixed clock whether or not the creature had done
+// anything, and G2 -- the milestone whose dimension it borrowed -- delivers
+// reward ON A VOCALISATION EVENT. With no act to credit, the trace holds nothing
+// specific and praise becomes indistinguishable from yoked praise: the positive
+// control read +3.9 +/- 2.4 with taught and yoked degrading together, -55.2
+// against -57.1, -56.5 against -57.6, -70.5 against -79.1. The dimension was
+// right and the contingency was not.
+//
+// kVLScoreRate is the repair, and it makes the question sharper rather than
+// weaker: score G2's OWN quantity -- how much the creature vocalises -- with
+// G2's own event-triggered contingency. Each vocalisation event in the reward
+// window is praised when this trial's target is HIGH and scolded when it is LOW,
+// which is exactly G2 when the target never changes. So the unconditional
+// positive control is a met milestone by construction (x1.35 within session,
+// 23 of 27 creatures, 9 of 9 at 420 s), and the only new thing being asked is
+// whether the target may depend on what was heard.
+constexpr double kVLRateHigh = 0.80;
+constexpr double kVLRateLow = 0.10;
+
 // An oracle condition, written straight into a kContext module (DNA v47).
 //
 // This is the manipulation the whole experiment exists for. `module` is a
@@ -3922,7 +3968,8 @@ inline double formant_error(double f1, double f2, const Word& w) {
 
 VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, VLArm arm,
                              const std::vector<Praise>* yoked, const Regime& regime,
-                             int target = -1, const CtxDrive* ctx = nullptr) {
+                             int target = -1, const CtxDrive* ctx = nullptr,
+                             VLScore score = kVLScoreFormant) {
   // -1 is vocallearn's own rule, and passing nothing reproduces it exactly: the
   // positive control aims at one fixed target and every other arm at the word
   // that was heard.
@@ -4004,6 +4051,15 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
     const uint32_t bucket = target_word;
     double f1_sum = 0.0, f2_sum = 0.0;
     uint32_t n_voiced = 0;
+    // Amplitude is averaged over EVERY frame of the window, silent ones
+    // included at zero, because a quiet answer is an answer.
+    double amp_sum = 0.0;
+    uint32_t n_amp = 0;
+    const double amp_target = target_word == 0 ? kVLAmpLoud : kVLAmpQuiet;
+    // Rate mode: this trial wants a talkative creature or a quiet one.
+    const bool want_loud = target_word == 0;
+    const double rate_target = want_loud ? kVLRateHigh : kVLRateLow;
+    uint32_t n_frames = 0, n_events = 0;
 
     for (uint64_t t = 0; t < kVLTrialTicks; ++t) {
       const uint64_t now = uint64_t(trial) * kVLTrialTicks + t;
@@ -4045,11 +4101,35 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
 
       // Feedback, on G2's clock, while the creature is making the sound. Only
       // the taught and positive-control arms earn it.
-      if ((arm == kVLTaught || arm == kVLFixed) && voiced &&
+      // Rate mode follows G2 exactly: reward is delivered ON an event, so it
+      // always follows something the creature did. That is the property the
+      // amplitude version lacked and the reason it measured nothing.
+      const bool scorable = score == kVLScoreAmp ? true : voiced;
+      if ((arm == kVLTaught || arm == kVLFixed) && scorable &&
           t >= kVLRewardFrom && t < kVLRewardTo &&
           now - last_feedback >= regime.feedback_period) {
-        const double e = formant_error(double(v.f1), double(v.f2), w);
-        if (e >= 0.0) {
+        const double e = score == kVLScoreAmp
+                             ? std::fabs(double(v.amplitude) - amp_target)
+                         : score == kVLScoreRate
+                             // An event happened. Praise it if this trial wanted
+                             // events and scold it if it did not -- so the sign
+                             // is the condition, and with a constant target this
+                             // is G2's own contingency unchanged.
+                             ? (want_loud ? 0.0 : 1.0)
+                             : formant_error(double(v.f1), double(v.f2), w);
+        if (score == kVLScoreRate) {
+          // No baseline here, and that is not an omission. The baseline exists
+          // so that praise means "closer than you usually get to THIS target",
+          // which needs a graded error; rate mode's signal is a SIGN -- an event
+          // was wanted or it was not -- and a running mean of a per-bucket
+          // constant converges onto it and turns every trial into a scold. The
+          // first version of this did exactly that.
+          last_feedback = now;
+          const float value = want_loud ? regime.praise : regime.scold;
+          if (value > 0.0f) ++out.praises; else ++out.scolds;
+          pending.push_back(Praise{now + regime.delay, value});
+          out.feedback.push_back(Praise{now + regime.delay, value});
+        } else if (e >= 0.0) {
           last_feedback = now;
           if (baseline[bucket] >= 0.0) {
             const float value = e < baseline[bucket] ? regime.praise : regime.scold;
@@ -4066,6 +4146,14 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
 
       if (t < kVLEchoFrom || t >= kVLEchoTo) continue;
       ++frames_total;
+      if (score == kVLScoreAmp) {
+        amp_sum += double(v.amplitude);
+        ++n_amp;
+      }
+      if (score == kVLScoreRate) {
+        ++n_frames;
+        if (voiced) ++n_events;
+      }
       if (!voiced) continue;
       ++frames_voiced;
       ++n_voiced;
@@ -4076,8 +4164,22 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
     // A trial in which the creature said nothing has no accuracy to score and
     // must not be counted as a bad one: silence is not a wrong answer, and
     // scoring it as maximum error would make "say less" the winning strategy.
-    if (n_voiced == 0) { ++out.skipped; continue; }
-    const double err = formant_error(f1_sum / n_voiced, f2_sum / n_voiced, w);
+    double err;
+    if (score == kVLScoreRate) {
+      // Silence is the correct answer to a low target, so no trial is skipped
+      // for it -- only one in which the window itself was empty.
+      if (n_frames == 0) { ++out.skipped; continue; }
+      err = std::fabs(double(n_events) / double(n_frames) - rate_target);
+    } else if (score == kVLScoreAmp) {
+      // No silence skip: a trial the creature spent quiet is a trial in which
+      // it produced an amplitude of zero, and against a quiet target that is
+      // the right answer rather than a missing measurement.
+      if (n_amp == 0) { ++out.skipped; continue; }
+      err = std::fabs(amp_sum / double(n_amp) - amp_target);
+    } else {
+      if (n_voiced == 0) { ++out.skipped; continue; }
+      err = formant_error(f1_sum / n_voiced, f2_sum / n_voiced, w);
+    }
     if (err < 0.0) { ++out.skipped; continue; }
     ++out.scored;
 
@@ -7896,6 +7998,170 @@ bool run_pgprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
               "  creature gets for learning to sit between two alternating targets,\n"
               "  which needs no dependence on the input at all. The lead is closed.\n",
               m[2], m[3], cond, cond_se);
+  (void)verbose;
+  return false;
+}
+
+
+// --- loudprobe: can ANY output dimension be made conditional? ---------------
+//
+// Fourteen mechanisms across five families have been aimed at making this
+// creature's voice depend on what it heard, and every one of them was scored on
+// FORMANTS, read through a population centroid. `pgprobe` now puts that at
+// **-0.1 +/- 0.7** against a target with matched marginals, which is as close to
+// zero as this project can measure.
+//
+// Nobody has asked the question one level up: **is it formants, or is it
+// conditionality?**
+//
+// Amplitude is the dimension to ask on, and for a reason that removes the usual
+// argument about positive controls. It is a group RATE rather than a centroid,
+// and G2 -- a met milestone -- is exactly the finding that reward moves it:
+// rewarded vocalisations rise x1.74 on 9 of 9 creatures. So "reward can shape
+// this dimension" is not a hypothesis here, it is a result. The only new thing
+// being asked is whether the shaping can be made to DEPEND on the input.
+//
+//   fixed    loud on every trial whatever was heard. The positive control, and
+//            the closest thing this instrument has to G2 itself.
+//   heard    loud for one word, quiet for the other. Conditional.
+//   swap     the same map inverted. Conditional, and the innate arcuate is not
+//            carrying loudness either way, so neither direction is privileged.
+//   random   loud or quiet drawn INDEPENDENTLY of what was heard, in the same
+//            proportions. The matched-marginal control: a creature that learns
+//            "be moderately loud always" scores identically on this and on the
+//            conditional arms, and only a creature whose output depends on its
+//            input separates them.
+//
+// The quantity is `heard - random`, and `swap - random` beside it.
+//
+// TWO OUTCOMES AND BOTH ARE WORTH HAVING. If loudness is conditional where
+// formants are not, the wall is the centroid readout and there is a route out of
+// it. If loudness is not conditional either, then conditionality fails on the
+// one output dimension reward provably controls, against the tightest control
+// this project has -- which closes G3 far more firmly than a fifteenth negative
+// on formants.
+//
+// SILENCE IS A LOW-AMPLITUDE ANSWER. The formant path skips silent trials, and
+// carrying that over would make "be quiet" unrewardable and unscoreable, which
+// would decide this experiment before it ran. See VLScore.
+bool run_loudprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  aibaby::Dna dna;
+  if (dna.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) {
+    std::printf("  setup failed: the genome does not load\n");
+    return false;
+  }
+  constexpr uint32_t kReps = 3;
+  instrument("loudprobe", dna.header().seed, ticks / kVLTrialTicks, "trials per arm");
+  std::printf("  the question      every conditional test here has been scored on\n"
+              "                    FORMANTS. Is the wall the readout, or is it\n"
+              "                    conditionality? This asks it on HOW MUCH the\n"
+              "                    creature vocalises -- G2's own quantity, met at\n"
+              "                    x1.35 and 9 of 9, so the unconditional positive\n"
+              "                    control is a milestone rather than a hypothesis.\n");
+  std::printf("  targets           voiced fraction %.2f / %.2f, and reward follows a\n"
+              "                    vocalisation EVENT as G2's does -- praised when this\n"
+              "                    trial wants events, scolded when it does not\n",
+              kVLRateHigh, kVLRateLow);
+  std::printf("  the control       `random`: the same two targets in the same\n"
+              "                    proportions, drawn independently of the word.\n\n");
+
+  struct LArm { const char* name; VLTarget target; };
+  const LArm arms[4] = {{"fixed", kVLTgtFixed},
+                        {"heard", kVLTgtHeard},
+                        {"swap", kVLTgtSwap},
+                        {"random", kVLTgtRandom}};
+  std::vector<double> pts[4];
+
+  std::printf("  %-6s %-8s %-9s %-9s %-9s %-8s %-9s %s\n", "seed", "arm", "taught",
+              "yoked", "points", "skipped", "err late", "praise/scold");
+  for (uint32_t r = 0; r < kReps; ++r) {
+    std::vector<uint8_t> variant = blob;
+    const uint64_t seed = dna.header().seed + r * 7919ull;
+    std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+    for (int a = 0; a < 4; ++a) {
+      Regime reg;
+      reg.praise = kPraiseValue;
+      reg.scold = kScoldValue;
+      const VLRun taught = run_vocallearn_session(variant, ticks, kVLTaught, nullptr, reg,
+                                                  arms[a].target, nullptr, kVLScoreRate);
+      if (!taught.ok) {
+        std::printf("  %-6u %-8s (inconclusive: %u scored, %u skipped)\n", r,
+                    arms[a].name, taught.scored, taught.skipped);
+        continue;
+      }
+      std::vector<Praise> yoke = taught.feedback;
+      for (Praise& p : yoke) p.tick += kVLTrialTicks / 2;
+      const VLRun yoked = run_vocallearn_session(variant, ticks, kVLYoked, &yoke, reg,
+                                                 arms[a].target, nullptr, kVLScoreRate);
+      if (!yoked.ok || yoked.praises + yoked.scolds != 0) {
+        std::printf("  %-6u %-8s (inconclusive: the yoke earned %u of its own)\n", r,
+                    arms[a].name, yoked.praises + yoked.scolds);
+        continue;
+      }
+      const double pt = vl_change(taught) - vl_change(yoked);
+      pts[a].push_back(pt);
+      // The praise/scold split, because its absence is what hid this probe's
+      // third design fault. `vocallearn` prints it and warns ONE-SIDED: NOT A
+      // TRAINING SIGNAL when either count is zero, and the `fixed` arm here was
+      // exactly that -- target_word is always 0, so want_loud is always true,
+      // so every event was praised and none was ever scolded. Undifferentiated
+      // praise moves the taught and yoked arms together, which is the -52.4
+      // against -56.1 in the column to the left.
+      std::printf("  %-6u %-8s %+-9.1f %+-9.1f %+-9.1f %-8u %-9.4f %u/%u%s\n", r,
+                  arms[a].name, vl_change(taught), vl_change(yoked), pt,
+                  taught.skipped, taught.err_late, taught.praises, taught.scolds,
+                  (taught.praises == 0 || taught.scolds == 0)
+                      ? "  <- ONE-SIDED: not a training signal" : "");
+    }
+  }
+
+  double m[4] = {}, e[4] = {};
+  for (int a = 0; a < 4; ++a) {
+    if (pts[a].size() < 2) {
+      std::printf("\n  loudprobe INCONCLUSIVE — an arm did not produce two usable\n"
+                  "  creatures.\n");
+      return false;
+    }
+    m[a] = ctx_mean_se(pts[a], &e[a]);
+  }
+
+  std::printf("\n  %-8s %s\n", "arm", "taught - yoke");
+  for (int a = 0; a < 4; ++a) {
+    std::printf("  %-8s %+.1f +/- %.1f\n", arms[a].name, m[a], e[a]);
+  }
+  const double ch = m[1] - m[3], ch_se = std::sqrt(e[1] * e[1] + e[3] * e[3]);
+  const double cs = m[2] - m[3], cs_se = std::sqrt(e[2] * e[2] + e[3] * e[3]);
+  std::printf("\n  heard - random   %+.1f +/- %.1f  <- THE conditional quantity\n",
+              ch, ch_se);
+  std::printf("  swap  - random   %+.1f +/- %.1f\n", cs, cs_se);
+
+  if (m[0] < 5.0) {
+    std::printf("\n  UNDERPOWERED — the `fixed` positive control moved %+.1f, under the\n"
+                "  5 points this instrument needs. Reward is not shaping loudness here\n"
+                "  at all, so the conditional arms say nothing. That is a fact about\n"
+                "  this probe and not about conditionality — G2 says the dimension is\n"
+                "  shapeable, so suspect the window, the targets or the length.\n", m[0]);
+    return false;
+  }
+  const double best = ch > cs ? ch : cs;
+  const double best_se = ch > cs ? ch_se : cs_se;
+  if (best > 5.0 && best > 2.0 * best_se) {
+    std::printf("\n  CONDITIONAL ON A RATE — loudness depends on what was heard,\n"
+                "  %+.1f +/- %.1f against a target with the same marginals, while the\n"
+                "  positive control reads %+.1f. Formants are measured at -0.1 +/- 0.7\n"
+                "  on the same creature, so THE WALL IS THE CENTROID READOUT AND NOT\n"
+                "  CONDITIONALITY. Next: six seed families, then whether a rate-coded\n"
+                "  vocal dimension can carry anything a listener would call a word.\n",
+                best, best_se, m[0]);
+    return true;
+  }
+  std::printf("\n  NOT CONDITIONAL, ON THE ONE DIMENSION REWARD PROVABLY CONTROLS.\n"
+              "  The positive control moves %+.1f -- loudness is shapeable here, as G2\n"
+              "  says -- and making it depend on what was heard reads %+.1f +/- %.1f\n"
+              "  against a matched-marginal target. Formants read -0.1 +/- 0.7. The\n"
+              "  wall is not the formant readout: it is conditionality itself, and it\n"
+              "  is the same on a centroid and on a rate.\n",
+              m[0], best, best_se);
   (void)verbose;
   return false;
 }
