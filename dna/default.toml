@@ -450,6 +450,50 @@ smoothing_ms = 800.0        # articulator inertia: a posture is held for a sylla
 gate_smoothing_ms = 60.0    # the glottis is a valve; it opens and shuts fast
 rate_norm_hz = 10.0         # group rate that reads as full scale
 
+# DNA v48 — a dictionary of postures instead of a centroid. 0 is OFF and is
+# bit-identical to v47.
+#
+# The centroid readout is measured, twice over, as where the object is lost: the
+# `vocal->voice` slope is +0.12, so perfect delivery to the larynx buys +0.04
+# against a bar needing +0.24, and the per-knob table finds the object at the
+# null in all eighteen group readings while the population carries it at 0.860.
+# A centroid over a dense group is a second pooling stage.
+#
+# `ctxlearn` then made the readout a PREREQUISITE rather than a refinement. A
+# zero-baseline conditional input takes 28-79% of the larynx's plasticity and
+# abolishes the fixed-target learning G2 and M1c rest on, across five genomes
+# and twelve driven levels. One shared motor population cannot carry a
+# learnable conditional input and a reward-driven exploratory pathway at once.
+#
+# With a dictionary, reward SELECTS among discrete postures instead of steering
+# one shared continuous posture, and selection is the act this creature performs
+# well (G2 x1.74, a fixed formant target +24 to +36). Adjacent grid cells differ
+# by hundreds of Hz, so a change of winner is audible by construction.
+dictionary_units = 0
+# 1600 is measured, not guessed. Swept against the spread of the formants the
+# creature actually PRODUCES, which is what every milestone downstream hears:
+#
+#   dwell ms      120    400    800   1600   3200
+#   F1 sd Hz       70     88    119    147    156
+#   F2 sd Hz      135    214    270    426    354
+#   effective    8.41   8.17   8.06   8.21   6.97
+#
+# against the centroid readout's F1 +/- 25 Hz and F2 +/- 51 Hz. The optimum is
+# interior and both sides have a reason: under 1600 the tract cannot REACH a
+# posture before the target moves, because `smoothing_ms` is 800; over it the
+# inventory stops being explored and the effective size falls away. The 3x3
+# grid's own ceiling is 204 and 517, so 1600 reaches 72% and 82% of it.
+dictionary_dwell_ms = 1600.0
+
+# Softmax temperature over the posture activities. 0 is the hard argmax, and
+# the hard argmax is measured NOT to work: it buys 5.9x the F1 spread and takes
+# vocallearn's positive control from +36.5 to +2.3 (UNDERPOWERED), because node
+# perturbation writes a per-neuron bias and an argmax makes the voice a STEP
+# function of those biases -- zero gradient almost everywhere. A blend over
+# well-separated posture anchors restores the gradient while keeping the spread,
+# which a centroid over neuron index does not.
+dictionary_temp = 0.05
+
 [curiosity]
 learn_rate = 0.02           # LMS rate of the forward model
 fast_tau_ms = 2000.0

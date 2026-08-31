@@ -53,6 +53,13 @@ constexpr uint32_t kMaxVisionFeatures = 512;
 constexpr uint32_t kVocalParams = 8;
 constexpr uint32_t kVocalGroups = kVocalParams + 1;  // + voicing
 
+// DNA v48. Most postures a motor dictionary may hold. Fixed because the decoder
+// carries the per-unit activity inline rather than out of the arena, and
+// because a vowel inventory this creature could actually select among is small:
+// `vocab` reads one-of-eight at 0.210 against chance 0.125, so a dictionary
+// larger than its vocabulary is a readout it cannot use.
+constexpr uint32_t kMaxDictionaryUnits = 64;
+
 // Population bins used to summarise a module's activity for the curiosity
 // forward model. Binning rather than per-neuron features is what keeps the
 // critic the same size before and after growth (M4).

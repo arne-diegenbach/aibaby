@@ -457,6 +457,9 @@ bool compile_dna_toml(const std::string& path, std::vector<uint8_t>& out,
     header.vocal.smoothing_ms = float(r.number("smoothing_ms"));
     header.vocal.gate_smoothing_ms = float(r.number("gate_smoothing_ms"));
     header.vocal.rate_norm_hz = float(r.number("rate_norm_hz"));
+    header.vocal.dictionary_units = uint32_t(r.number("dictionary_units"));
+    header.vocal.dictionary_dwell_ms = float(r.number("dictionary_dwell_ms"));
+    header.vocal.dictionary_temp = float(r.number("dictionary_temp"));
     collect(r);
   }
   {

@@ -181,6 +181,18 @@ class VocalDecoder {
   const Scalar* activities() const { return group_activity_; }
   uint32_t frame() const { return frame_; }
 
+  // --- DNA v48: the motor dictionary ---------------------------------------
+  // Which posture is being held, its per-unit activities, and how many times
+  // the winner has changed. All three are read-only telemetry and none of them
+  // changes behaviour -- but a dictionary in which one unit always wins and a
+  // dictionary that chatters every frame are both degenerate, and they look
+  // identical in every formant the creature produces. `switches()` against
+  // `frame()` is the number that tells them apart.
+  uint32_t winner() const { return winner_; }
+  const Scalar* unit_activities() const { return unit_activity_; }
+  uint32_t units() const { return units_; }
+  uint32_t switches() const { return switches_; }
+
  private:
   DnaVocal cfg_ = {};
   VocalParams params_;
@@ -191,6 +203,23 @@ class VocalDecoder {
   Scalar smooth_ = Scalar(1);
   Scalar gate_smooth_ = Scalar(1);
   bool configured_ = false;
+
+  // DNA v48. The dictionary's own state: which slice holds the tract, how long
+  // it is still entitled to, and the smoothed formant targets it names. The
+  // targets are smoothed with `smooth_` exactly as the centroid path is, so
+  // switching readouts does not also switch articulator inertia -- the whole
+  // point is to change one thing.
+  Scalar unit_activity_[kMaxDictionaryUnits] = {};
+  uint32_t units_ = 0;
+  uint32_t winner_ = 0;
+  uint32_t dwell_ticks_ = 0;
+  uint32_t dwell_left_ = 0;
+  uint32_t switches_ = 0;
+  Scalar dict_f1_ = kZero;
+  Scalar dict_f2_ = kZero;
+  Scalar held_f1_ = kZero;
+  Scalar held_f2_ = kZero;
+  bool dict_primed_ = false;
 };
 
 // Reads the expression module the same way, into two numbers.

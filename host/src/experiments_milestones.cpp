@@ -469,6 +469,24 @@ bool run_babble(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose,
     return false;
   }
 
+  // DNA v48. Posture usage. A dictionary stuck on one unit and a dictionary
+  // that is genuinely selecting give identical duty cycles, identical firing
+  // rates and an identical verdict below, so the histogram is the only thing
+  // that tells them apart.
+  const uint32_t dict_units = s.dna.header().vocal.dictionary_units;
+  uint64_t dict_use[aibaby::kMaxDictionaryUnits] = {};
+  uint64_t dict_frames = 0;
+  // The spread of the formants the creature ACTUALLY PRODUCED, in Hz, over the
+  // frames it was making a sound. Every other number here is about how often
+  // and how loudly the creature vocalises; this is the one about whether the
+  // sounds differ from each other, which is what every milestone downstream is
+  // scored on. It is also the number that catches a dictionary whose dwell is
+  // shorter than the tract's own inertia: a posture that is replaced before it
+  // is reached leaves the tract hovering near the mean of the inventory, and
+  // that looks identical in the usage histogram.
+  double vf1 = 0.0, vf1sq = 0.0, vf2 = 0.0, vf2sq = 0.0;
+  uint64_t vfn = 0;
+
   // Nobody is in the room, so this records mono and carries no label track:
   // the whole file is one condition.
   const uint32_t sample_rate = s.dna.header().audio.sample_rate;
@@ -649,6 +667,18 @@ bool run_babble(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose,
     }
     if (v.voicing > 0.5f) ++voiced;
     if (v.amplitude > kAmplitudeFloor) ++loud;
+    // DNA v48. Which posture the dictionary is holding, counted only while the
+    // creature is actually making a sound: a winner held through silence is not
+    // a vowel the creature produced.
+    if (v.voicing > 0.5f && v.amplitude > kAmplitudeFloor) {
+      vf1 += double(v.f1); vf1sq += double(v.f1) * double(v.f1);
+      vf2 += double(v.f2); vf2sq += double(v.f2) * double(v.f2);
+      ++vfn;
+    }
+    if (dict_units > 0 && v.voicing > 0.5f && v.amplitude > kAmplitudeFloor) {
+      ++dict_use[s.brain.vocal_decoder().winner() % dict_units];
+      ++dict_frames;
+    }
     if (v.voicing > 0.5f && v.amplitude > kAmplitudeFloor &&
         t - last_event >= kEventRefractoryTicks) {
       last_event = t;
@@ -683,6 +713,41 @@ bool run_babble(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose,
                   double(s.brain.network().module_dna(uint32_t(aud)).target_rate_hz));
     }
   }
+  if (vfn > 1) {
+    const double m1 = vf1 / double(vfn), m2 = vf2 / double(vfn);
+    const double s1 = std::sqrt((vf1sq / double(vfn)) - m1 * m1);
+    const double s2 = std::sqrt((vf2sq / double(vfn)) - m2 * m2);
+    std::printf("  produced formants F1 %.0f +/- %.0f Hz, F2 %.0f +/- %.0f Hz over\n"
+                "                    %llu voiced frames — the spread is what any\n"
+                "                    milestone downstream has to hear\n",
+                m1, s1, m2, s2, (unsigned long long)vfn);
+  }
+
+  if (dict_units > 0) {
+    // Effective inventory size, so one number says whether the dictionary is
+    // being used. exp(H) over the usage distribution: 1.0 means one posture
+    // carries every sound the creature made, `dict_units` means all of them
+    // equally. A dictionary at 1.0 has replaced a centroid with a constant.
+    double h = 0.0;
+    uint32_t nonzero = 0;
+    for (uint32_t u = 0; u < dict_units; ++u) {
+      if (!dict_use[u] || !dict_frames) continue;
+      const double q = double(dict_use[u]) / double(dict_frames);
+      h -= q * std::log(q);
+      ++nonzero;
+    }
+    std::printf("  postures used     %u of %u, effective %.2f (1.00 = one posture\n"
+                "                    carries everything, %.2f = all used equally)\n",
+                nonzero, dict_units, std::exp(h), double(dict_units));
+    std::printf("  posture switches  %u over %llu voiced frames\n",
+                s.brain.vocal_decoder().switches(), (unsigned long long)dict_frames);
+    std::printf("  usage             ");
+    for (uint32_t u = 0; u < dict_units; ++u) {
+      std::printf("%.0f%% ", dict_frames ? 100.0 * double(dict_use[u]) / double(dict_frames) : 0.0);
+    }
+    std::printf("\n");
+  }
+
   // What LMAN is doing. Babble that has stopped varying and babble that has
   // stopped are the same reading on every other number here.
   std::printf("  exploration       %.3f min, %.3f mean, %.3f max (1.0 = plain noise_amp)\n",

@@ -1367,6 +1367,120 @@ what proves it is the stream and not the tract. `genome_add_relay.py` and
 docstrings are not. Never quote an appended genome's number against
 `dna/default.toml`.
 
+### DNA v48 — a dictionary of postures, and the centroid is not what was wrong
+
+`ctxlearn` above ends by naming the motor side as a prerequisite: one shared
+population cannot host a learnable conditional input and a reward-driven
+exploratory pathway, so the larynx has to stop being one shared continuous
+posture before a conditional pathway can be tested. The proposal was a
+dictionary — a sparse inventory of articulatory postures selected by
+competition, where reward *selects among discrete alternatives* rather than
+steering a continuous posture. It was independently motivated: the
+`vocal→voice` slope is +0.12 and the per-knob table finds the object at the null
+in all eighteen group readings, both of which say the centroid is a second
+pooling stage.
+
+**It is built and it does not work, and the reason inverts the argument.**
+
+`dictionary_units` slices of the *same* `vocal` neurons compete; the field names
+a posture on a grid over (F1, F2), softmax-blended and held for a dwell. The
+nine groups still set F0, the bandwidths, amplitude and voicing. Neurons, drive,
+homeostasis and every learning rule are untouched, so the only thing under test
+is how the larynx is read. Ships **off**: `dictionary_units = 0` is bit-identical
+(hash `ad96f882becbee92`, `verify` 21 of 21), and switching it on moves the hash
+to `fcda2eace06fcf36`, so it is live rather than inert.
+
+#### First, the number the shipped larynx had never been asked for
+
+| readout | produced F1 | produced F2 |
+|---|---|---|
+| **centroid (shipped)** | 638 **± 25 Hz** | 1620 **± 51 Hz** |
+
+*Why the creature always sounds the same*, in Hz at the output. `babble` now
+prints it, because it is what every milestone downstream has to hear and no
+other number in that experiment is about it.
+
+#### And then the trade-off, which is absolute
+
+| readout | smoothing | F2 spread | `fixed − yoked` |
+|---|---|---|---|
+| centroid | 800 (shipped) | 51 Hz | **+36.5** |
+| centroid | 200 | 86 Hz | **+17.6** |
+| dictionary, argmax | 800 | 406 Hz | +2.3 |
+| dictionary, blend 0.20 | 800 | 271 Hz | +4.2 |
+| dictionary, blend 0.35 | 800 | 292 Hz | −1.2 |
+| dictionary, blend 0.20 | 200 | 266 Hz | +2.4 |
+
+**Five dictionary configurations, none teachable; two centroid configurations,
+both teachable.** The last row is the control that matters: at *matched* 800 ms
+of articulator inertia the comparison is confounded by the dictionary's dwell,
+so the pair was re-run at 200 ms with everything but the readout identical. The
+centroid clears the bar at +17.6 with 86 Hz of spread; the dictionary has 3.1×
+the spread and cannot be taught at all.
+
+> **The centroid is not a lossy readout to be engineered away. It is what makes
+> the larynx steerable.** A centroid gives each of fourteen neurons a distinct,
+> monotone lever on a continuous scalar, which is exactly what a per-neuron bias
+> rule can push on. A dictionary pools those fourteen into one slice activity:
+> the effective parameter count falls from 126 to 9, F1 and F2 are coupled
+> through shared posture anchors, and the output is quantised to three levels per
+> formant. The gradient node perturbation needs is gone.
+>
+> So the +0.12 slope is not a defect. **It is the price of a readout this
+> creature's learning rule can steer at all**, and the shipped genome sits at the
+> steerable end of a real tension.
+
+#### What that refutes, and it is this page's own proposal
+
+The audio rewrite argued that the motor readout was the load-bearing repair. Two
+of its three stages are now measured and neither does what was claimed:
+`ctxlearn` showed a zero-baseline conditional input starves the exploratory
+pathway, and the dictionary — the proposed fix for exactly that — is not
+steerable. **Making a discrete selection learnable needs policy gradient over a
+categorical distribution, which is a new learning rule**, and needing no new
+learning rule was the whole basis on which the rewrite was preferred to another
+mechanism. That is a decision rather than a tuning step, and it is not taken
+here.
+
+What survives is two measurements worth having: a zero-baseline code is the most
+learnable input this creature can be given (28–79% of the larynx's plasticity,
+against ~8% for a dense tract), and the shipped voice has a standard deviation of
+25 Hz in F1.
+
+#### Four failures on the way, each of which named the next one
+
+Recorded because three of them looked like the mechanism failing and were the
+instrument or the design instead.
+
+1. **The hard argmax.** 5.9× the F1 spread, positive control +36.5 → +2.3. Node
+   perturbation writes a per-neuron *bias*, and under an argmax the voice is a
+   **step function** of those biases — zero gradient almost everywhere, undefined
+   at the boundaries. Replacing a pooling stage with a non-differentiable one is
+   not an improvement.
+2. **The softmax fix, on raw activities.** Spread collapsed to 24–30 Hz at every
+   usable temperature, i.e. back to the centroid's own 25. The units' activities
+   differ by **one or two percent of their mean**, because `vocal` is
+   homeostatically regulated — the same small differential on a big common mode
+   this creature has everywhere else, now arriving at the readout. An absolute
+   temperature is either far below those differences or far above them, with no
+   regime in between.
+3. **Z-scoring the activities**, to make the temperature scale-free — and the
+   sweep came back flat *including at temp 0.20, which is very nearly an
+   argmax*. **A difference that survives at temperatures where the two rules
+   agree was never about the temperature.** The softmax path was bypassing the
+   hysteresis: it followed the instantaneous leader, which flips every frame, and
+   the 800 ms inertia averaged a flickering target down to the mean of the whole
+   inventory. The argmax path got the dwell for free through `winner_`. Holding
+   the *blend* for the dwell is what opened the regime in the table above.
+4. **The dwell itself.** 120 ms was a guess and it left the tract hovering near
+   the inventory mean, because `smoothing_ms` is 800 and a posture replaced
+   before it is reached is never produced. Swept to 1600 ms, where the spread
+   peaks and the effective inventory has not yet collapsed. **The usage histogram
+   looked perfect throughout** — all nine postures, effective 8.4 of 9 — which is
+   why `babble` reports the produced spread and not only the usage: a dictionary
+   that is selecting and a dictionary that is selecting *and being heard* are the
+   same histogram.
+
 ### G1 — determinism: **passing**
 
 Two brains from the same genome, given the same scripted touches, praise and

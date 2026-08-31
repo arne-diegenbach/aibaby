@@ -119,6 +119,9 @@ DnaStatus Dna::load(const void* blob, size_t size) {
   if (h->sim.max_delay_ticks < 2) return DnaStatus::kBadModule;
   if (h->sim.conduction_velocity <= 0.0f) return DnaStatus::kBadModule;
 
+  // DNA v48. 0 is off; above the cap the decoder would read past its arrays.
+  if (h->vocal.dictionary_units > kMaxDictionaryUnits) return DnaStatus::kBadModule;
+
   if (h->sim.plasticity_interval_ticks == 0) return DnaStatus::kBadPlasticity;
   if (h->homeo.interval_ticks == 0) return DnaStatus::kBadPlasticity;
   if (h->stdp.tau_plus_ms <= 0.0f || h->stdp.tau_minus_ms <= 0.0f) {

@@ -1,5 +1,12 @@
 #include "aibaby/senses.h"
 
+// expf, for DNA v48's softmax over the motor dictionary. The kernel keeps
+// transcendentals out of the TICK loop on purpose (see network.cpp); this runs
+// once per motor frame per posture -- 100 Hz times nine, not 1 kHz times nine
+// thousand -- so it is the same category as critic.cpp's use rather than an
+// exception to the rule.
+#include <math.h>  // expf, sqrtf
+
 namespace aibaby {
 namespace {
 
@@ -271,6 +278,20 @@ void VocalDecoder::configure(const Dna& dna, uint32_t module_index, Scalar updat
   gate_smooth_ = cfg_.gate_smoothing_ms > kZero
                      ? clampf(update_ms / Scalar(cfg_.gate_smoothing_ms), kZero, kOne)
                      : kOne;
+
+  // DNA v48. The dictionary is off at 0 and the block below never executes,
+  // which is what makes this version bit-identical to v47 on the shipped
+  // genome.
+  units_ = cfg_.dictionary_units > kMaxDictionaryUnits ? kMaxDictionaryUnits
+                                                       : cfg_.dictionary_units;
+  dwell_ticks_ = cfg_.dictionary_dwell_ms > kZero
+                     ? uint32_t(Scalar(cfg_.dictionary_dwell_ms) / update_ms + Scalar(0.5))
+                     : 0;
+  winner_ = 0;
+  dwell_left_ = 0;
+  switches_ = 0;
+  dict_primed_ = false;
+  for (uint32_t u = 0; u < kMaxDictionaryUnits; ++u) unit_activity_[u] = kZero;
   params_ = VocalParams{};
   params_.f0 = lerp(Scalar(cfg_.f0_min), Scalar(cfg_.f0_max), Scalar(0.5));
   params_.f1 = lerp(Scalar(cfg_.f1_min), Scalar(cfg_.f1_max), Scalar(0.5));
@@ -324,8 +345,123 @@ void VocalDecoder::update(const Network& net, bool awake) {
 
   // Group order is fixed: it is the wiring between motor cortex and larynx.
   const Scalar target_f0 = lerp(Scalar(cfg_.f0_min), Scalar(cfg_.f0_max), group_value_[0]);
-  const Scalar target_f1 = lerp(Scalar(cfg_.f1_min), Scalar(cfg_.f1_max), group_value_[2]);
-  const Scalar target_f2 = lerp(Scalar(cfg_.f2_min), Scalar(cfg_.f2_max), group_value_[3]);
+  Scalar target_f1 = lerp(Scalar(cfg_.f1_min), Scalar(cfg_.f1_max), group_value_[2]);
+  Scalar target_f2 = lerp(Scalar(cfg_.f2_min), Scalar(cfg_.f2_max), group_value_[3]);
+
+  // DNA v48. The dictionary, if the genome asked for one. The same neurons,
+  // cut a second way: `units_` slices compete on mean rate, the most active
+  // wins, and the winner names a cell of a grid over (F1, F2). The nine groups
+  // above still set everything else, so this replaces the centroid readout of
+  // two parameters and nothing else in the creature.
+  if (units_ > 0) {
+    uint32_t best = winner_;
+    Scalar best_act = Scalar(-1);
+    for (uint32_t u = 0; u < units_; ++u) {
+      const uint32_t b = ms.begin + slice_begin(ms.count, units_, u);
+      const uint32_t e = ms.begin + slice_begin(ms.count, units_, u + 1);
+      unit_activity_[u] = read_group(net, b, e, rate_norm, kZero).activity;
+      if (unit_activity_[u] > best_act) { best_act = unit_activity_[u]; best = u; }
+    }
+    // Hysteresis. An argmax over near-equal activities changes its mind at the
+    // readout rate, and a vocal tract that redraws its posture every ten
+    // milliseconds produces a buzz rather than a vowel -- the same argument
+    // `smoothing_ms` makes about how fast the tract moves, applied to how often
+    // it is allowed to be aimed somewhere new.
+    const bool reselect = dwell_left_ == 0;
+    if (dwell_left_ > 0) --dwell_left_;
+    if (reselect) {
+      if (best != winner_) { winner_ = best; ++switches_; }
+      dwell_left_ = dwell_ticks_;
+    }
+
+    // The grid. Square, and the last row is short when `units_` is not a
+    // perfect square -- an inventory with a ragged edge is better than one
+    // whose size the genome may not choose freely.
+    uint32_t side = 1;
+    while (side * side < units_) ++side;
+    const Scalar n = Scalar(side);
+    auto cell_f1 = [&](uint32_t u) {
+      return lerp(Scalar(cfg_.f1_min), Scalar(cfg_.f1_max),
+                  (Scalar(u / side) + Scalar(0.5)) / n);
+    };
+    auto cell_f2 = [&](uint32_t u) {
+      return lerp(Scalar(cfg_.f2_min), Scalar(cfg_.f2_max),
+                  (Scalar(u % side) + Scalar(0.5)) / n);
+    };
+
+    Scalar f1_cell, f2_cell;
+    const Scalar temp = Scalar(cfg_.dictionary_temp);
+    if (temp <= kZero) {
+      // Hard argmax: the winner alone holds the tract.
+      f1_cell = cell_f1(winner_);
+      f2_cell = cell_f2(winner_);
+    } else {
+      // Softmax over the unit activities, weighting the postures. Shifted by
+      // the maximum before exponentiating -- the activities are bounded in
+      // [0,1] but the temperature is not, and exp of a large quotient
+      // overflows a float long before it stops being a useful weight.
+      // Z-scored before the softmax, and this is the correction that makes the
+      // temperature mean anything. Measured on the raw activities the blend
+      // collapses to the grid's mean at every usable temperature -- F1 spread
+      // 147 Hz at hard argmax, 30 Hz at temp 0.02, 24 Hz at 0.05, against the
+      // centroid readout's own 25 Hz. The reason is that the units' activities
+      // differ by one or two percent of their mean, because `vocal` is a
+      // homeostatically regulated population: it is the same small differential
+      // on a big common mode that this creature has everywhere else, arriving
+      // at the readout. An absolute temperature is therefore either far below
+      // the differences (argmax, no gradient) or far above them (uniform blend,
+      // no spread), with no regime in between.
+      //
+      // Scaling by the units' own spread makes the knob scale-free: temp 1.0
+      // blends everything within one standard deviation of the field, 0.3
+      // prefers the leader sharply. The intermediate regime exists by
+      // construction rather than by luck.
+      Scalar mean = kZero;
+      for (uint32_t u = 0; u < units_; ++u) mean += unit_activity_[u];
+      mean /= Scalar(units_);
+      Scalar var = kZero;
+      for (uint32_t u = 0; u < units_; ++u) {
+        const Scalar d = unit_activity_[u] - mean;
+        var += d * d;
+      }
+      const Scalar sd = sqrtf(float(var / Scalar(units_)));
+      // A field with no spread at all has no opinion; fall back to the winner
+      // rather than dividing by zero.
+      const Scalar scale = sd > Scalar(1e-6) ? sd : kOne;
+
+      Scalar total = kZero, w1 = kZero, w2 = kZero;
+      for (uint32_t u = 0; u < units_; ++u) {
+        const Scalar w = expf((unit_activity_[u] - best_act) / (temp * scale));
+        total += w;
+        w1 += w * cell_f1(u);
+        w2 += w * cell_f2(u);
+      }
+      if (total > Scalar(1e-9)) { f1_cell = w1 / total; f2_cell = w2 / total; }
+      else { f1_cell = cell_f1(winner_); f2_cell = cell_f2(winner_); }
+    }
+    // Smoothed with the SAME constant the centroid path uses, so that swapping
+    // readouts does not quietly also swap articulator inertia. Primed on the
+    // first frame, or the tract slides up from zero and the first syllable of
+    // every life is a chirp.
+    // The target is refreshed only when the dwell expires, and HELD in between.
+    // The argmax path was getting this for free -- `winner_` is dwell-held --
+    // and the softmax path was not: it followed the instantaneous leader, which
+    // flips every frame, and `smooth_` then averaged a flickering target down
+    // to the mean of the whole inventory. That is why the temperature sweep read
+    // 27 Hz at temp 0.2, which is very nearly an argmax, against 147 Hz for the
+    // argmax itself. A difference that survives at temperatures where the two
+    // rules agree was never about the temperature.
+    if (!dict_primed_) {
+      held_f1_ = f1_cell; held_f2_ = f2_cell;
+      dict_f1_ = f1_cell; dict_f2_ = f2_cell;
+      dict_primed_ = true;
+    }
+    if (reselect) { held_f1_ = f1_cell; held_f2_ = f2_cell; }
+    dict_f1_ += smooth_ * (held_f1_ - dict_f1_);
+    dict_f2_ += smooth_ * (held_f2_ - dict_f2_);
+    target_f1 = dict_f1_;
+    target_f2 = dict_f2_;
+  }
   const Scalar target_f3 = lerp(Scalar(cfg_.f3_min), Scalar(cfg_.f3_max), group_value_[4]);
   const Scalar target_bw1 = lerp(Scalar(cfg_.bw_min), Scalar(cfg_.bw_max), group_value_[5]);
   const Scalar target_bw2 = lerp(Scalar(cfg_.bw_min), Scalar(cfg_.bw_max), group_value_[6]);

@@ -322,7 +322,7 @@ constexpr uint32_t kDnaMagic = 0x44424941;  // "AIBD"
 //     about what reward multiplies.
 //
 //     See DnaModule::ffi_apical and DnaModule::ffi_learn, and `errprobe`.
-constexpr uint32_t kDnaVersion = 47;
+constexpr uint32_t kDnaVersion = 48;
 
 // What a module is wired to the world through. The host looks modules up by
 // role, never by name or index, so renaming a module in the genome cannot
@@ -1099,6 +1099,78 @@ struct DnaVocal {
   float smoothing_ms;           // articulator inertia (formant targets)
   float gate_smoothing_ms;      // glottal inertia (voicing and loudness)
   float rate_norm_hz;           // group rate that reads as full scale
+
+  // --- DNA v48: a dictionary of postures, instead of a centroid -------------
+  //
+  // 0 is off and is bit-identical to v47: the larynx is the nine population
+  // centroids it has always been.
+  //
+  // WHY. Two independent measurements say the centroid readout is the problem
+  // and not the code arriving at it. The `vocal->voice` slope is **+0.12**: at
+  // matched input legibility the word route reaches the voice at 0.867 and the
+  // object route at 0.523, so taking delivery to the larynx from 0.66 to a
+  // perfect 1.00 buys about +0.04 against a bar needing +0.24. And the
+  // per-knob table reads the object at the null in all eighteen of `vocal`'s
+  // group readings while the population carries it at 0.860. A centroid over a
+  // dense group is a second pooling stage, and it is where the object is lost.
+  //
+  // AND `ctxlearn` SAYS THE READOUT IS NOW A PREREQUISITE, not a refinement. A
+  // zero-baseline conditional input takes 28-79% of the larynx's plasticity and
+  // abolishes the fixed-target learning that G2 and M1c rest on -- five
+  // genomes, twelve driven levels, control never survives. A single shared
+  // motor population cannot host a learnable conditional input and a
+  // reward-driven exploratory pathway at once. In the birdsong circuit HVC->RA
+  // and LMAN->RA are separate afferents onto RA under separate rules.
+  //
+  // WHAT IT IS. `dictionary_units` slices of the same `vocal` neurons compete,
+  // the most active slice wins, and the winner names a posture on a grid over
+  // (F1, F2). The nine groups keep running and keep setting F0, the bandwidths,
+  // amplitude and voicing -- two readouts of one population, not two
+  // populations. So the neurons, their drive, their homeostasis and the rules
+  // that write to them are all unchanged, and the ONLY thing under test is how
+  // the larynx is read.
+  //
+  // WHY THIS MAKES THE PROBLEM EASIER RATHER THAN JUST DIFFERENT. Reward stops
+  // being asked to do conditional *regression* on a shared continuous posture
+  // and starts being asked to *select* among discrete alternatives. Selection
+  // is the act this creature demonstrably performs: node perturbation raises
+  // the biases of the neurons in a slice, that slice wins more often, and that
+  // is the same mechanism that met G2 at x1.74 and moves a fixed formant target
+  // +24 to +36 points. Adjacent grid cells differ by hundreds of Hz, so a
+  // change of winner is audible by construction -- which is the +0.12 slope
+  // removed rather than fought.
+  //
+  // The dictionary is INNATE and the selection is learned. A dictionary whose
+  // postures also had to be learned would need a new rule for the posture, and
+  // needing a new rule is what this whole line of work is trying to stop.
+  uint32_t dictionary_units;    // 0 disables; the grid side is round(sqrt(n))
+  // How long a chosen posture is held before a different slice may take over.
+  // A vocal tract does not chatter between vowels at the readout rate, and an
+  // argmax over near-equal activities would do exactly that. Distinct from
+  // `smoothing_ms`, which is how fast the tract MOVES once the target changes;
+  // this is how often the target is allowed to change at all.
+  float dictionary_dwell_ms;
+  // Softmax temperature over the unit activities. 0 is the hard argmax above,
+  // and the hard argmax is MEASURED NOT TO WORK: it buys 5.9x the F1 spread and
+  // 8.4x the F2 spread and takes `vocallearn`'s positive control from +36.5 to
+  // +2.3, which is UNDERPOWERED. The reason is a design error worth keeping.
+  //
+  // Node perturbation writes a per-neuron BIAS. Under the centroid readout that
+  // shifts the formants smoothly and monotonically, so `Cov(R, perturb_i)` is
+  // an estimate of something; under an argmax the output is a STEP FUNCTION of
+  // those biases -- almost every perturbation leaves the winner unchanged and
+  // produces an identical sound, and the rare one that flips it jumps
+  // discontinuously. The gradient is zero almost everywhere and undefined at
+  // the boundaries. Replacing a pooling stage with a non-differentiable one is
+  // not an improvement.
+  //
+  // A softmax blend over the POSTURES restores a gradient without going back to
+  // a centroid, and the distinction is the whole point: a centroid pools
+  // fourteen neurons into an index-weighted mean, which is where the object is
+  // lost; this pools unit activities into weights over well-separated ANCHORS
+  // in formant space, so a small change in the weights still moves the voice a
+  // long way. Spread survives because the things being averaged are far apart.
+  float dictionary_temp;
 };
 
 // Curiosity (§3.3) is a forward model of the next sensory frame plus two

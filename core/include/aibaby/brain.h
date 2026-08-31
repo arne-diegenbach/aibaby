@@ -136,6 +136,11 @@ class Brain {
   const Scalar* vocal_groups() const { return vocal_.groups(); }
   const Scalar* vocal_activities() const { return vocal_.activities(); }
   uint32_t vocal_frame() const { return vocal_.frame(); }
+  // DNA v48. The motor dictionary, for telemetry and for experiments. A
+  // dictionary stuck on one posture and a dictionary that is genuinely
+  // selecting produce identical firing rates, identical duty cycles and an
+  // identical `babble` verdict, so the usage has to be readable from outside.
+  const VocalDecoder& vocal_decoder() const { return vocal_; }
   const Expression& expression() const { return expression_.value(); }
   const RewardBreakdown& reward() const { return reward_; }
   const Critic& critic() const { return critic_; }
