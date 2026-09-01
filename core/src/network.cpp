@@ -521,6 +521,21 @@ Scalar Network::isp_saturation(uint32_t module) const {
   return total ? Scalar(at_ceiling) / Scalar(total) : kZero;
 }
 
+// See set_bias_oracle in network.h. A ramp from -amp at the low end of the range
+// to +amp at the high end, sampled at neuron centres so the mean over the range
+// is exactly zero.
+Scalar Network::bias_oracle_at(uint32_t i) const {
+  Scalar out = kZero;
+  for (uint32_t k = 0; k < bias_oracle_n_; ++k) {
+    const BiasOracle& b = bias_oracle_[k];
+    if (i < b.lo || i >= b.hi) continue;
+    const Scalar n = Scalar(b.hi - b.lo);
+    const Scalar pos = (Scalar(i - b.lo) + Scalar(0.5)) / n;
+    out += b.amp * (Scalar(2) * pos - kOne);
+  }
+  return out;
+}
+
 Scalar Network::weight_ceiling(uint32_t src) const {
   const Scalar w_max = Scalar(dna_.header().homeo.w_max);
   if (!is_inhib_[src]) return w_max;
@@ -1380,13 +1395,19 @@ void Network::step() {
       // plateau changes how loudly the synapses on that tuft are heard, and a
       // lateral interneuron is not on the tuft.
       const Scalar lateral = any_lateral_ ? lateral_[i] : kZero;
+      // The bias oracle (experiment only). It joins noise, bias, the
+      // oscillation and the lateral term rather than the synaptic sum, for the
+      // reason all of those do: it is not synaptic drive. It is what an
+      // upstream structure would deliver to this neuron's excitability, and
+      // that is the whole point of handing it over directly.
+      const Scalar bias_oracle = bias_oracle_n_ ? bias_oracle_at(i) : kZero;
       // DNA v40: an interneuron that landed on the tuft is not also subtracted
       // here. It is one population of cells, and it inhibits one compartment.
       const Scalar ffi_soma = ffi_apical_[m] ? kZero : ffi;
       const Scalar drive = (in[i] * norm - ffi_soma * ffi_w_[i]) * apical_mult +
                            noise_amp_[i] * (explore_mult_[m] * xi +
                                             drive_comp_ * (kOne - explore_mult_[m])) +
-                           bias_[i] + osc + lateral + rebound;
+                           bias_[i] + osc + lateral + rebound + bias_oracle;
 
       // Node perturbation: remember what this neuron was actually given, so
       // that a reward arriving a second from now can credit it. Decays on the

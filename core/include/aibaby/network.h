@@ -113,6 +113,40 @@ class Network {
   }
   void clear_reward_mask() { reward_mask_ = false; }
 
+  // --- The bias oracle (experiment only, no genome field) -------------------
+  //
+  // A graded, zero-mean excitability offset across a range of neurons, added to
+  // the drive alongside `bias_`. It exists to price ONE architecture before
+  // anyone builds it.
+  //
+  // Fee & Goldberg's account of the songbird has the conditional map learned
+  // OUTSIDE the motor population — a basal-ganglia stage receives the timing
+  // signal and a collateral of the exploratory signal, and its output BIASES
+  // the motor population. This creature cannot host that arrangement yet, but
+  // the last step of it is a bias onto `vocal`, and a bias onto `vocal` can be
+  // handed over directly. If the positive control dies even then, no upstream
+  // architecture can help, because a bias is what all of them deliver.
+  //
+  // GRADED AND ZERO-MEAN on purpose, which is what makes it the right oracle
+  // rather than just another input. The larynx reads each articulator group as
+  // a rate-weighted centroid over neuron index, so a ramp across a group MOVES
+  // THAT CENTROID while adding no net drive — it cannot saturate intrinsic
+  // plasticity the way the v47 context tract did, and it cannot be dismissed as
+  // "you made the module louder". It steers the one quantity the readout reads.
+  //
+  // Slots so that F1 and F2 can be steered at once. `amp` may be negative,
+  // which is how a condition picks a direction.
+  static constexpr uint32_t kBiasOracleSlots = 4;
+  void set_bias_oracle(uint32_t slot, uint32_t lo, uint32_t hi, Scalar amp) {
+    if (slot >= kBiasOracleSlots || hi <= lo) return;
+    bias_oracle_[slot] = BiasOracle{lo, hi, amp};
+    if (slot + 1 > bias_oracle_n_) bias_oracle_n_ = slot + 1;
+  }
+  void clear_bias_oracle() { bias_oracle_n_ = 0; }
+  // What the oracle adds to neuron i. Exposed so an experiment can report the
+  // size of what it injected instead of asserting it.
+  Scalar bias_oracle_at(uint32_t i) const;
+
  private:
   void apply_reward_impl(const Scalar* per_module, bool any);
   void capture_ffi_weights();
@@ -589,6 +623,12 @@ class Network {
 
   bool reward_mask_ = false;   // see set_reward_mask: experiment oracle, off by default
   uint32_t rm_lo_ = 0, rm_hi_ = 0;
+  // see set_bias_oracle. `bias_oracle_n_ == 0` is the shipped creature and the
+  // tick loop skips the whole thing, so this costs one compare per neuron and
+  // leaves the determinism hash where it was.
+  struct BiasOracle { uint32_t lo = 0, hi = 0; Scalar amp = kZero; };
+  BiasOracle bias_oracle_[kBiasOracleSlots] = {};
+  uint32_t bias_oracle_n_ = 0;
   uint8_t* module_of_ = nullptr;
   uint8_t* is_inhib_ = nullptr;
   // Tombstone rather than compaction (§3.4's "neurons left with no surviving

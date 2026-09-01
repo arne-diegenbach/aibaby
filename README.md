@@ -6988,7 +6988,13 @@ considered, and DNA v35 is the standing warning: a lead that was real,
 label-free and correctly derived, built against a bottleneck that had closed
 underneath it while the notes still said otherwise. The oracle that prices it
 costs an afternoon and can only be interesting if it refuses, which is the shape
-`shapeprobe` and `coderprobe` both had:
+`shapeprobe` and `coderprobe` both had.
+
+> **This was built and run — see `ctxbias` below, which LICENSES the route.**
+> The gate is kept here as written, because what it predicted and what it found
+> are different documents and the first should not be quietly edited into the
+> second.
+
 
 > **Area X's output is a bias onto the motor population.** So deliver one — a
 > per-neuron bias offset on `vocal` that depends on the context, injected
@@ -7003,13 +7009,108 @@ costs an afternoon and can only be interesting if it refuses, which is the shape
 > oracle's own number as the bar the built version has to reach.
 
 The second question that run should answer, because the same session can carry
-it: this creature has **one** population that can affect the voice. The arcuate
+it — **answered below, and the answer is that it cannot**: this creature has
+**one** population that can affect the voice. The arcuate
 carries the word innately, `vision->vocal` ships, and `central->vocal` is a
 measured non-participant — deleting it leaves every G3 number unchanged. An
 Area X analogue has to project *somewhere*, and the only association-to-motor
 tract this creature has is the one that was shown to deliver nothing. Whether
 that is the tract's fault or `central`'s is not known, and it decides whether
 the architecture is buildable here at all.
+
+### `ctxbias` — pricing the last architecture, and it is licensed
+
+v47, v48 and v50 all failed the same way, and the shape they share is that
+every one of them added something to `vocal` and `vocal` charged for it. Fee and
+Goldberg's arrangement is the one that does not ask it to: the conditional map
+is learned in a basal-ganglia stage that receives the timing signal and a
+*collateral* of the exploratory signal, and its output biases the motor
+population from outside.
+
+That is the largest build this project has considered, and DNA v35 is the
+standing reason not to start it — a lead that was real, label-free and correctly
+derived, built against a bottleneck that had closed underneath it while the
+notes still said it had not. So it gets priced first, the way `credit` priced
+v41 and the oracle fovea priced v34.
+
+**The last step of that architecture is a bias onto `vocal`, and a bias onto
+`vocal` can be handed over directly.** `Network::set_bias_oracle` is a graded,
+zero-mean ramp across an articulator group, added to the drive beside `bias_`.
+Experiment-only, no genome field, on the `set_reward_mask` precedent; the hash
+is unmoved at `ad96f882becbee92`. Three things make it an oracle rather than
+another input: it moves the centroid the decoder actually reads while adding no
+net drive, it bypasses every tract and synapse, and its amplitude is a multiple
+of the module's own `noise_amp` — the scale node perturbation's bias lives on —
+rather than a constant somebody typed.
+
+#### 8 arms, 3 seed families, 24 sessions of 3.4M ticks
+
+| arm | dF1 (Hz) | vocal Hz | change |
+|---|---|---|---|
+| off | +1.0 +/- 9.6 | 5.10 | **+34.0 +/- 4.9** |
+| cond k=1 | **+235.9 +/- 9.6** | 5.81 | +3.9 +/- 0.8 |
+| cond k=2 | **+302.5 +/- 4.0** | 8.06 | -0.1 +/- 0.3 |
+| toward k=1 | -4.3 +/- 5.4 | 5.22 | +55.0 +/- 1.8 |
+| away k=1 | +4.2 +/- 4.2 | 4.93 | +19.0 +/- 1.6 |
+| **offaxis k=1** | -4.3 +/- 9.2 | 5.60 | **+31.2 +/- 8.6** |
+| **offaxis k=2** | -0.8 +/- 7.7 | 7.02 | **+39.7 +/- 4.2** |
+| central k=2 | +15.3 +/- 16.2 | 5.18 | +26.1 +/- 5.6 |
+
+`dF1` is the voice's own F1 separation between the two words, over every voiced
+frame — the vacuity guard and the ceiling measurement at once.
+
+**Arriving as a bias is free.** The `offaxis` arms put the identical ramp — same
+module, same amplitude, same conditional sign — on the first two *bandwidth*
+groups, which `formant_error` does not read. The oracle arrives in full and
+contributes exactly zero to the score, and the positive control does not move:
++34.0 -> +31.2 at k=1 and +39.7 at k=2, with k=2 carrying *more* drive
+(7.02 Hz against 5.10) and reading *higher*. Against v47's tract, which killed
+the same control outright on five genomes, and v50's regulator, which took it to
++15.4, that is the contrast the run exists for. **The wall those two hit is not
+inherent to delivering something to this module**, so an upstream structure
+whose output is a bias has somewhere to land.
+
+**The bar is 236 Hz of dF1, which is 51% of the 460 Hz separating the two
+words** — 302 Hz and 66% at k=2, at the cost of a rate that is no longer
+neutral. That is the ceiling on how conditional this voice can be made by
+anything, with credit assignment removed entirely. An upper bound and not a
+behaviour, the same caution `credit`'s reward-mask oracle carries.
+
+**And the second question, which the same session answers.** The identical
+oracle on `central`, at a *larger* amplitude than the one that moves the voice
+302 Hz from `vocal`, moves it +15.3 +/- 16.2 Hz — indistinguishable from the
++1.0 +/- 9.6 baseline. The association-to-motor route cannot carry a steering
+signal at all, which is `central->vocal` being a non-participant seen from the
+other side and with an oracle in place of a code. **An Area X analogue here has
+to project to the larynx directly.**
+
+#### Three verdicts, two of them wrong, and why that is in the file
+
+This experiment printed a confident answer twice before it printed a defensible
+one, and both retractions came from a control that was already in it.
+
+1. **It first scored the conditional arm** and printed REFUSED on
+   +34.0 -> +3.9. But the oracle moves F1 by 236 Hz per word while `fixed`
+   rewards one target and teaching moves about 70, so that collapse is the
+   arithmetic of a disturbance three times larger than the effect being scored.
+   It is not a finding about credit assignment.
+2. **It then scored a constant bias pointing away from the target**, and printed
+   REFUSED again on +34.0 -> +19.0. `change` is a *ratio*, `1 - late/early`, and
+   a constant off-target bias adds an error offset that compresses it whether or
+   not learning was harmed — which `away k=2` shows by driving it to +1.0 on its
+   own. The tell was already on the page: `toward` and `away` sit
+   near-symmetrically around `off` at +55.0 and +19.0, which is an oracle moving
+   the creature *along the scored axis*, not damaging it.
+3. **Only `offaxis` prices arrival**, because it is the one arm that arrives
+   without touching the quantity the score is computed from.
+
+**The limitation that leaves, stated rather than buried.** The cost of a
+*steering* bias on the scored axis is not measurable with a score computed from
+that axis — that is true by construction, not for want of an arm. So what is
+licensed is precisely: a bias arriving on neurons other than the ones carrying
+the lesson is free. That is what an Area X output is, since it is a targeted
+bias rather than v47's broadcast tract, but it is narrower than "a bias anywhere
+in `vocal` is free" and should not be quoted as the wider claim.
 
 ## Design decisions that were not obvious
 

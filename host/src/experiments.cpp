@@ -181,6 +181,14 @@ const Spec kSpecs[] = {
      "derived: vocallearn's own minimum. Is the policy gradient's conditional\n"
      "  arm conditional, or a creature sitting between two alternating targets?\n"
      "  Controls `swap` against a target with MATCHED MARGINALS"},
+    {"ctxbias", 3400000, Expect::kOpen, Tier::kTeach,
+     "derived: vocallearn's session length, because it scores vocallearn's own\n"
+     "  positive control. Prices Fee & Goldberg's architecture BEFORE building\n"
+     "  it: that architecture ends in a bias onto the motor population, so hand\n"
+     "  one over directly -- graded, zero-mean, bypassing every tract -- and ask\n"
+     "  whether the control survives it and whether the voice becomes\n"
+     "  conditional at all. Refuses rather than nulls if the oracle is too small\n"
+     "  to reach the voice. Needs no special genome"},
     {"ipctx", 3400000, Expect::kOpen, Tier::kTeach,
      "derived: vocallearn's session length, because it reads the larynx after a\n"
      "  full teaching session. ctxlearn's collapse does not scale with out_w, so\n"
@@ -402,6 +410,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "curriculum") ok = run_curriculum(dna_blob, ticks, verbose);
   else if (name == "ctxlearn") ok = run_ctxlearn(dna_blob, ticks, verbose);
   else if (name == "ipctx") ok = run_ipctx(dna_blob, ticks, verbose);
+  else if (name == "ctxbias") ok = run_ctxbias(dna_blob, ticks, verbose);
   else if (name == "pgprobe") ok = run_pgprobe(dna_blob, ticks, verbose);
   else if (name == "g2cond") ok = run_g2cond(dna_blob, ticks, verbose);
   else if (name == "coderprobe") ok = run_coderprobe(dna_blob, ticks, verbose);

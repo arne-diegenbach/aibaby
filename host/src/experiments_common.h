@@ -1310,6 +1310,7 @@ bool run_vocabcurve(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_curriculum(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_ctxlearn(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_ipctx(const std::vector<uint8_t>&, uint64_t, bool);
+bool run_ctxbias(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_pgprobe(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_g2cond(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_coderprobe(const std::vector<uint8_t>&, uint64_t, bool);

@@ -3960,6 +3960,24 @@ struct CtxDrive {
   double gain = 0.0;
 };
 
+// The bias oracle's configuration for one session. See Network::set_bias_oracle
+// and `ctxbias`: this is Fee & Goldberg's Area X output handed over directly,
+// so that the architecture can be priced before it is built.
+struct BiasDrive {
+  int32_t module = -1;   // where the bias lands; -1 is off
+  double k = 0.0;        // amplitude as a MULTIPLE of the module's noise_amp
+  bool conditional = true;  // does the sign follow the word, or is it constant?
+  // For the constant arms only: which way it points. +1 is toward the fixed
+  // target, -1 away from it. Both are needed, because a constant bias aimed at
+  // the very target reward is asking for does part of the task, and an arm that
+  // helps cannot price the cost of arriving.
+  double dir = 1.0;
+  // Which two articulator groups the ramp lands on. 2 and 3 are F1 and F2, the
+  // pair the score is computed from. 5 and 6 are the first two BANDWIDTHS,
+  // which the score does not read at all -- see the note on the `offaxis` arm.
+  uint32_t group_a = 2, group_b = 3;
+};
+
 struct VLRun {
   bool ok = false;
   double err_early = 0.0, err_late = 0.0;
@@ -3990,6 +4008,13 @@ struct VLRun {
   // every genome that does not switch ISP on, because nothing else in this
   // creature moves an inhibitory weight.
   double isp_pinned = 0.0;
+  // What the VOICE actually did, per word, over the whole session. `ctxbias`
+  // needs this and nothing else reports it: an oracle that steers the larynx
+  // and one that is too small to be heard produce the same firing rates and the
+  // same verdict everywhere else, which is the trap DNA v48 fell into.
+  double f1_by_word[kVLWords] = {};
+  double f2_by_word[kVLWords] = {};
+  double bias_amp = 0.0;   // what the oracle injected, in drive units
   std::vector<Praise> feedback;  // what the taught arm earned, for the yoke
 };
 
@@ -4005,7 +4030,8 @@ inline double formant_error(double f1, double f2, const Word& w) {
 VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, VLArm arm,
                              const std::vector<Praise>* yoked, const Regime& regime,
                              int target = -1, const CtxDrive* ctx = nullptr,
-                             VLScore score = kVLScoreFormant) {
+                             VLScore score = kVLScoreFormant,
+                             const BiasDrive* bias = nullptr) {
   // -1 is vocallearn's own rule, and passing nothing reproduces it exactly: the
   // positive control aims at one fixed target and every other arm at the word
   // that was heard.
@@ -4073,6 +4099,44 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
   uint32_t err_n[2] = {}, frames_total = 0, frames_voiced = 0;
   double word_sum[kVLWords][2] = {};
   uint32_t word_n[kVLWords][2] = {};
+  // The voice's own formants per word, over every voiced frame of the session.
+  double vf1_sum[kVLWords] = {}, vf2_sum[kVLWords] = {};
+  uint32_t vf_n[kVLWords] = {};
+
+  // The bias oracle, if this session has one. Amplitude is a MULTIPLE of the
+  // module's own noise_amp rather than a number in drive units, because
+  // noise_amp is what this creature explores with and what node perturbation's
+  // bias is measured against -- so k = 1 means "the oracle pushes as hard as
+  // the creature's own exploration", which is a scale with a meaning rather
+  // than a constant someone typed. Four guessed constants have cost this
+  // project a run each.
+  //
+  // The ramp lands on the F1 and F2 groups, which is where steering the larynx
+  // has to happen: the decoder reads each group as a rate-weighted centroid
+  // over neuron index, so a graded, zero-mean ramp across a group moves that
+  // centroid and adds no net drive to the module.
+  uint32_t bias_lo[2] = {}, bias_hi[2] = {};
+  double bias_amp_units = 0.0;
+  double bias_sign[2] = {1.0, 1.0};
+  if (bias && bias->module >= 0 && bias->k > 0.0) {
+    const aibaby::ModuleState& bm = s.brain.network().module(uint32_t(bias->module));
+    // Groups 2 and 3 are F1 and F2; the slicing is the decoder's own.
+    const uint32_t which[2] = {bias->group_a, bias->group_b};
+    for (uint32_t g = 0; g < 2; ++g) {
+      const uint32_t gi = which[g];
+      bias_lo[g] = bm.begin + aibaby::slice_begin(bm.count, aibaby::kVocalGroups, gi);
+      bias_hi[g] = bm.begin + aibaby::slice_begin(bm.count, aibaby::kVocalGroups, gi + 1);
+    }
+    bias_amp_units = bias->k * double(s.dna.module(uint32_t(bias->module)).noise_amp);
+    // Which way each formant has to move to name word 0 rather than word 1,
+    // read off the word table rather than typed in.
+    bias_sign[0] = kWords[0].f1 > kWords[1].f1 ? 1.0 : -1.0;
+    bias_sign[1] = kWords[0].f2 > kWords[1].f2 ? 1.0 : -1.0;
+    // Off the formant axis there is no "toward the target" to point at, so both
+    // ramps take the same sign and the condition supplies the direction.
+    if (bias->group_a != 2) { bias_sign[0] = 1.0; bias_sign[1] = 1.0; }
+    out.bias_amp = bias_amp_units;
+  }
   uint32_t last_frame = 0;
   uint64_t last_feedback = 0;
 
@@ -4095,6 +4159,20 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
                                                        : label;
     const Word& w = kWords[target_word];
     const uint32_t bucket = target_word;
+    // The oracle is set once per trial and held, exactly as the context tract
+    // is: a condition that vanishes before reward lands has nothing to bind to.
+    // In the CONDITIONAL arm the sign follows the word the creature heard, which
+    // is what an Area X output is. In the constant arm it does not, and that is
+    // the control that separates "a bias costs the exploratory pathway" from
+    // "a bias moved the voice around while reward asked for one target".
+    if (bias_amp_units > 0.0) {
+      const double dir = bias->conditional ? (label == 0 ? 1.0 : -1.0) : bias->dir;
+      for (uint32_t g = 0; g < 2; ++g) {
+        s.brain.network().set_bias_oracle(
+            g, bias_lo[g], bias_hi[g],
+            aibaby::Scalar(dir * bias_sign[g] * bias_amp_units));
+      }
+    }
     double f1_sum = 0.0, f2_sum = 0.0;
     uint32_t n_voiced = 0;
     // Amplitude is averaged over EVERY frame of the window, silent ones
@@ -4205,6 +4283,11 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
       ++n_voiced;
       f1_sum += double(v.f1);
       f2_sum += double(v.f2);
+      // Bucketed by the word HEARD, not by the word scored: the question this
+      // serves is whether the voice became conditional on the input.
+      vf1_sum[label] += double(v.f1);
+      vf2_sum[label] += double(v.f2);
+      ++vf_n[label];
     }
 
     // A trial in which the creature said nothing has no accuracy to score and
@@ -4245,6 +4328,10 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
     for (uint32_t b = 0; b < 2; ++b) {
       out.err_by_word[k][b] = word_n[k][b] ? word_sum[k][b] / word_n[k][b] : 0.0;
     }
+  }
+  for (uint32_t k = 0; k < kVLWords; ++k) {
+    out.f1_by_word[k] = vf_n[k] ? vf1_sum[k] / vf_n[k] : 0.0;
+    out.f2_by_word[k] = vf_n[k] ? vf2_sum[k] / vf_n[k] : 0.0;
   }
   out.voiced_frac = frames_total ? double(frames_voiced) / double(frames_total) : 0.0;
   {
@@ -7672,6 +7759,353 @@ double ctx_mean_se(const std::vector<double>& v, double* se) {
 }
 
 }  // namespace
+
+// --- ctxbias: pricing the one architecture that is left --------------------
+//
+// Everything that has been added to `vocal` has been charged for. A conditional
+// afferent (v47) killed the positive control on five genomes. A second
+// regulator (v50) cost it +34.0 -> +15.4 with the tract silent. Less of the
+// first regulator cost it too. The v47 diagnosis -- one shared motor population
+// cannot host a learnable conditional input and a reward-driven exploratory
+// search at once -- has been reached three times from three directions.
+//
+// Fee & Goldberg (Neuroscience 2011) describe the arrangement that does not ask
+// it to: the conditional map is learned in a basal-ganglia stage receiving the
+// timing signal and a COLLATERAL of the exploratory signal, and its output
+// biases the motor population from outside. That is the largest build this
+// project has considered. DNA v35 is the standing reason not to start it -- a
+// lead that was real, label-free and correctly derived, built against a
+// bottleneck that had closed underneath it while the notes still said it had
+// not.
+//
+// So price it first. **The last step of that architecture is a bias onto
+// `vocal`, and a bias onto `vocal` can be handed over directly.** If the
+// positive control dies even under a perfect one, then no upstream structure
+// can help, because a bias is what every one of them delivers -- and the route
+// is refused for one run instead of one month.
+//
+// THREE THINGS MAKE THIS AN ORACLE RATHER THAN JUST ANOTHER INPUT.
+//
+//  1. It is GRADED AND ZERO-MEAN across an articulator group. The decoder reads
+//     each group as a rate-weighted centroid over neuron index, so a ramp moves
+//     that centroid while adding NO net drive. It cannot saturate intrinsic
+//     plasticity the way v47's tract did, and a null cannot be explained away
+//     as "you made the module louder".
+//  2. It bypasses every tract and every synapse. There is nothing left between
+//     the condition and the larynx to blame.
+//  3. Its amplitude is a MULTIPLE of the module's own `noise_amp` -- what this
+//     creature explores with, and the scale node perturbation's bias is
+//     measured on. k = 1 is "the oracle pushes as hard as the creature's own
+//     exploration". Not a constant anyone typed.
+//
+// TWO COLUMNS, AND NEITHER IS ENOUGH ALONE.
+//
+//   `dF1` is the voice's own F1 separation between the two words. It is the
+//   vacuity guard -- an oracle too small to be heard would leave the positive
+//   control untouched and falsely license the route -- and it is simultaneously
+//   the ceiling measurement: how conditional can this voice be MADE, given a
+//   perfect conditional bias and no learning problem at all?
+//
+//   `change` is the positive control's own formant-error reduction, the number
+//   v47 and v50 both watched die.
+//
+// AND THE CONTROL THAT MAKES THEM READABLE. In the conditional arm the oracle
+// steers per word while `fixed` rewards one target, so a drop in `change` could
+// be the exploratory pathway being damaged OR just the voice being pushed
+// around. The `const` arm applies the SAME amplitude with the sign held fixed:
+// same drive, same everything, no conditional disturbance. A drop there is
+// cost; a drop only in the conditional arm is disturbance.
+//
+// THE SECOND QUESTION, which rides along because the same session answers it.
+// An Area X analogue has to project somewhere, and this creature has exactly
+// one population that can affect the voice. The arcuate carries the word
+// innately, `vision->vocal` ships, and `central->vocal` is a measured
+// NON-PARTICIPANT -- delete it and every G3 number is unchanged. Is that the
+// tract's fault or `central`'s? The last row puts the identical oracle on
+// `central` and reads the same `dF1`. If a perfect bias on central moves the
+// voice, the tract can carry something and central had nothing to send. If it
+// does not, the association-to-motor route is broken and the architecture is
+// not buildable here until that is fixed.
+struct CtxBiasArm {
+  const char* name;
+  bool on_central;
+  double k;
+  bool conditional;
+  double dir;
+  uint32_t group_a, group_b;
+};
+
+// k = 0 is the control and must come first; the two `const` rows are the
+// disturbance control; the last row is the tract question.
+// THE ARM THAT PRICES ARRIVAL IS `offaxis`, and it took two runs to see why.
+//
+// `change` is 100 * (1 - err_late / err_early), a RATIO. A bias on the F1/F2
+// groups moves the very quantity that error is computed from, so it shifts the
+// ratio whichever way it points and does so without touching learning at all:
+// `toward` reads +55.0 against a baseline of +34.0 and `away` reads +19.0,
+// near-symmetric around it, which is the signature of an oracle moving the
+// creature ALONG the scored axis. At `away k=2` the offset is large enough to
+// drive the ratio to +1.0 on its own. Neither constant arm can price a cost.
+//
+// `offaxis` puts the identical ramp -- same module, same amplitude, same
+// per-trial hold, same conditional sign -- on the first two BANDWIDTH groups
+// instead. `formant_error` reads f1 and f2 and nothing else, so this arm
+// arrives at the larynx in full and contributes exactly zero to the score. If
+// the positive control survives it, arriving is free and what killed v47's
+// tract was not arrival. If it dies, arrival is the cost, and every upstream
+// architecture inherits it.
+constexpr CtxBiasArm kCtxBiasArms[] = {
+    {"off",         false, 0.0, true,   1.0, 2, 3},
+    {"cond k=1",    false, 1.0, true,   1.0, 2, 3},
+    {"cond k=2",    false, 2.0, true,   1.0, 2, 3},
+    {"toward k=1",  false, 1.0, false,  1.0, 2, 3},
+    {"away k=1",    false, 1.0, false, -1.0, 2, 3},
+    {"offaxis k=1", false, 1.0, true,   1.0, 5, 6},
+    {"offaxis k=2", false, 2.0, true,   1.0, 5, 6},
+    {"central k=2", true,  2.0, true,   1.0, 2, 3},
+};
+constexpr uint32_t kCtxBiasArmCount = sizeof(kCtxBiasArms) / sizeof(kCtxBiasArms[0]);
+
+bool run_ctxbias(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  aibaby::Dna dna;
+  if (dna.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) {
+    std::printf("  setup failed: the genome does not load\n");
+    return false;
+  }
+  const int32_t vm = dna.module_with_role(aibaby::ModuleRole::kVocal);
+  const int32_t cm = dna.module_with_role(aibaby::ModuleRole::kAssociation);
+  if (vm < 0 || cm < 0) {
+    std::printf("  setup failed: need a kVocal and a kAssociation module\n");
+    return false;
+  }
+  constexpr uint32_t kReps = 3;
+  instrument("ctxbias", dna.header().seed, ticks / kVLTrialTicks, "trials per arm");
+  std::printf("  question          Fee & Goldberg's architecture ends in a BIAS onto the\n"
+              "                    motor population. Hand one over directly, bypassing\n"
+              "                    every tract: does the positive control survive it, and\n"
+              "                    does the voice become conditional at all?\n");
+  std::printf("  the oracle        a graded, ZERO-MEAN ramp across the F1 and F2 groups,\n"
+              "                    sign following the word heard. Amplitude k x noise_amp\n"
+              "                    (`%s` %.4f, `%s` %.4f).\n",
+              dna.module(uint32_t(vm)).name, double(dna.module(uint32_t(vm)).noise_amp),
+              dna.module(uint32_t(cm)).name, double(dna.module(uint32_t(cm)).noise_amp));
+  std::printf("  arm               `fixed` -- the same positive control v47 and v50 both\n"
+              "                    watched die. No yoke: `dF1` is scored within an arm.\n\n");
+
+  std::vector<double> df1[kCtxBiasArmCount], df2[kCtxBiasArmCount];
+  std::vector<double> change[kCtxBiasArmCount], voiced[kCtxBiasArmCount];
+  std::vector<double> pinned[kCtxBiasArmCount], rate[kCtxBiasArmCount];
+  double amp_used[kCtxBiasArmCount] = {};
+
+  std::printf("  %-6s %-13s %-9s %-9s %-9s %-9s %-8s %s\n", "seed", "arm", "bias amp",
+              "dF1 (Hz)", "dF2 (Hz)", "vocal Hz", "voiced", "change");
+  for (uint32_t r = 0; r < kReps; ++r) {
+    std::vector<uint8_t> variant = blob;
+    const uint64_t seed = dna.header().seed + r * 7919ull;
+    std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+
+    for (uint32_t a = 0; a < kCtxBiasArmCount; ++a) {
+      const CtxBiasArm& arm = kCtxBiasArms[a];
+      BiasDrive bd;
+      bd.module = arm.on_central ? cm : vm;
+      bd.k = arm.k;
+      bd.conditional = arm.conditional;
+      bd.dir = arm.dir;
+      bd.group_a = arm.group_a;
+      bd.group_b = arm.group_b;
+      Regime reg;
+      reg.praise = kPraiseValue;
+      reg.scold = kScoldValue;
+      const VLRun run = run_vocallearn_session(variant, ticks, kVLFixed, nullptr, reg,
+                                               kVLTgtFixed, nullptr, kVLScoreFormant, &bd);
+      if (!run.ok) {
+        std::printf("  %-6u %-13s (inconclusive: %u scored, %u skipped)\n", r, arm.name,
+                    run.scored, run.skipped);
+        continue;
+      }
+      const double d1 = run.f1_by_word[0] - run.f1_by_word[1];
+      const double d2 = run.f2_by_word[0] - run.f2_by_word[1];
+      df1[a].push_back(d1);
+      df2[a].push_back(d2);
+      change[a].push_back(vl_change(run));
+      voiced[a].push_back(run.voiced_frac);
+      pinned[a].push_back(run.ip_pinned);
+      rate[a].push_back(run.ip_rate_hz);
+      amp_used[a] = run.bias_amp;
+      std::printf("  %-6u %-13s %-9.4f %+-9.1f %+-9.1f %-9.2f %-8.2f %+.1f\n", r, arm.name,
+                  run.bias_amp, d1, d2, run.ip_rate_hz, run.voiced_frac, vl_change(run));
+    }
+  }
+
+  double m_d1[kCtxBiasArmCount], s_d1[kCtxBiasArmCount];
+  double m_d2[kCtxBiasArmCount], s_d2[kCtxBiasArmCount];
+  double m_ch[kCtxBiasArmCount], s_ch[kCtxBiasArmCount];
+  double m_vf[kCtxBiasArmCount], s_vf[kCtxBiasArmCount];
+  double m_pin[kCtxBiasArmCount], s_pin[kCtxBiasArmCount];
+  double m_rt[kCtxBiasArmCount], s_rt[kCtxBiasArmCount];
+  for (uint32_t a = 0; a < kCtxBiasArmCount; ++a) {
+    if (df1[a].size() < 2) {
+      std::printf("\n  ctxbias INCONCLUSIVE -- arm `%s` did not produce two usable\n"
+                  "  creatures, so it has no spread and nothing can be read against it.\n",
+                  kCtxBiasArms[a].name);
+      return false;
+    }
+    m_d1[a] = ctx_mean_se(df1[a], &s_d1[a]);
+    m_d2[a] = ctx_mean_se(df2[a], &s_d2[a]);
+    m_ch[a] = ctx_mean_se(change[a], &s_ch[a]);
+    m_vf[a] = ctx_mean_se(voiced[a], &s_vf[a]);
+    m_pin[a] = ctx_mean_se(pinned[a], &s_pin[a]);
+    m_rt[a] = ctx_mean_se(rate[a], &s_rt[a]);
+  }
+
+  std::printf("\n  %-13s %-9s %-16s %-16s %-13s %-8s %s\n", "arm", "bias amp",
+              "dF1 (Hz)", "dF2 (Hz)", "vocal Hz", "voiced", "change");
+  for (uint32_t a = 0; a < kCtxBiasArmCount; ++a) {
+    char b[32], c[32], d[32], e[32];
+    std::snprintf(b, sizeof b, "%+.1f +/- %.1f", m_d1[a], s_d1[a]);
+    std::snprintf(c, sizeof c, "%+.1f +/- %.1f", m_d2[a], s_d2[a]);
+    std::snprintf(d, sizeof d, "%.2f +/- %.2f", m_rt[a], s_rt[a]);
+    std::snprintf(e, sizeof e, "%+.1f +/- %.1f", m_ch[a], s_ch[a]);
+    std::printf("  %-13s %-9.4f %-16s %-16s %-13s %-8.2f %s\n", kCtxBiasArms[a].name,
+                amp_used[a], b, c, d, m_vf[a], e);
+  }
+  std::printf("\n  `dF1`/`dF2` are the voice's own formant separation between the two\n"
+              "  words, over every voiced frame. The `off` row is the creature's\n"
+              "  baseline conditionality with no oracle at all, and every other row\n"
+              "  has to be read against IT rather than against zero.\n");
+
+  // --- the verdict, and its gates ------------------------------------------
+  //
+  // Order matters. Vacuity is checked BEFORE cost, because an oracle that did
+  // nothing would otherwise print "the positive control survives" and license
+  // the largest build in the project on the strength of an inert arm.
+  // THE PRIMARY ARM IS k = 1, NOT k = 2, and the smoke run is why.
+  //
+  // A zero-mean bias is only drive-neutral in a LINEAR unit. These rectify at a
+  // threshold, so neurons pushed up gain more spikes than neurons pushed down
+  // lose, and a big enough ramp raises the module's rate after all: at k = 2
+  // `vocal` runs ~8 Hz against a 5 Hz baseline. That reimports exactly the
+  // confound this oracle was shaped to avoid -- "you made the module louder" --
+  // and it is v47's own failure mode wearing a different hat.
+  //
+  // k = 1 buys 92% of the steering (dF1 265 vs 288 Hz) at a rate within a few
+  // tenths of baseline, so it is the arm where the claim "no net drive was
+  // added" actually holds. k = 2 is kept as the amplitude check: if the two
+  // disagree, the difference is drive and not condition.
+  const uint32_t kOff = 0, kCond1 = 1, kCond2 = 2;
+  const uint32_t kToward1 = 3, kAway1 = 4, kOff1 = 5, kOff2 = 6, kCentral = 7;
+  const double base_d1 = std::fabs(m_d1[kOff]);
+  const double lift = std::fabs(m_d1[kCond1]) - base_d1;
+  const double lift_se = s_d1[kCond1] + s_d1[kOff];
+  const bool steers = lift > 2.0 * lift_se;
+  // Is the primary arm actually rate-neutral, or is it a drive manipulation?
+  const double rate_shift = m_rt[kCond1] - m_rt[kOff];
+  const bool rate_neutral = std::fabs(rate_shift) < 2.0 * (s_rt[kCond1] + s_rt[kOff]);
+
+  if (!steers) {
+    std::printf("\n  ORACLE IS MUTE -- REFUSING TO REPORT A COST. At k = 2 the voice\n"
+                "  separates the two words by %+.1f +/- %.1f Hz of F1 against %+.1f +/- %.1f\n"
+                "  with no oracle at all, which is not a lift above its own baseline.\n"
+                "  A bias this size does not reach the voice, so whatever `change`\n"
+                "  does in these rows is not a fact about delivering a condition --\n"
+                "  it is a fact about an oracle that was not heard.\n\n"
+                "  This is REFUSAL, not a null. Raise k and run it again; if no k\n"
+                "  steers the voice without destroying it, THAT is the finding, and\n"
+                "  it says the larynx cannot be biased into naming from outside at\n"
+                "  all -- which refuses the architecture more firmly than a cost\n"
+                "  measurement ever could.\n",
+                m_d1[kCond1], s_d1[kCond1], m_d1[kOff], s_d1[kOff]);
+    return false;
+  }
+
+  // The disturbance control. If the constant-sign arm costs as much as the
+  // conditional one, the cost is arrival; if only the conditional one pays, the
+  // cost is the voice being pushed two ways while reward asks for one.
+  // WHICH ARM PRICES ARRIVAL, and the first run of this experiment got it
+  // wrong in a way worth keeping. The conditional arm steers the voice by
+  // ~236 Hz of F1 per word while `fixed` rewards ONE target, and teaching moves
+  // a formant by about 70. So the oracle drags the creature off target by three
+  // times what the score is measuring, and `change` collapsing is the
+  // ARITHMETIC of that disturbance, not a discovery about credit assignment.
+  // The conditional arm cannot price the cost of arriving and must not be read
+  // as if it could.
+  //
+  // The constant arms can, and there have to be two of them. A constant bias
+  // pointing TOWARD the fixed target is doing part of the task, so an arm that
+  // helps proves nothing about cost. `away` points the same magnitude in the
+  // opposite direction: same drive, same rate, same everything, actively
+  // unhelpful. If the positive control survives THAT, arriving is free.
+  const double cost_offaxis = m_ch[kOff1] - m_ch[kOff];
+  const bool survives = cost_offaxis > -2.0 * (s_ch[kOff1] + s_ch[kOff]);
+  const bool control_survives = survives;
+
+  std::printf("\n  scored at k = 1, the rate-neutral arm; k = 2 is the amplitude check\n");
+  std::printf("  the oracle steers        dF1 %+.1f -> %+.1f Hz (lift %.1f, %.1f SE)\n",
+              m_d1[kOff], m_d1[kCond1], lift, lift_se > 0.0 ? lift / lift_se : 0.0);
+  std::printf("  and at k = 2             dF1 %+.1f Hz, vocal %.2f Hz vs %.2f baseline\n",
+              m_d1[kCond2], m_rt[kCond2], m_rt[kOff]);
+  std::printf("  rate neutral at k = 1    vocal %.2f vs %.2f Hz (%+.2f) -- %s\n",
+              m_rt[kCond1], m_rt[kOff], rate_shift,
+              rate_neutral ? "yes, so this is not a drive manipulation"
+                           : "NO -- read the cost as drive, not as condition");
+  std::printf("  on the SCORED axis, none of these is a cost measurement -- `change` is\n"
+              "  a ratio and a bias on F1/F2 moves the creature along the very axis the\n"
+              "  error is computed from, in whichever direction it points:\n");
+  std::printf("    conditional            change %+.1f -> %+.1f  (%.0f Hz/word vs ~70 taught)\n"
+              "    pointing at the target change %+.1f -> %+.1f  (does part of the task)\n"
+              "    pointing away from it  change %+.1f -> %+.1f  (adds a constant error)\n",
+              m_ch[kOff], m_ch[kCond1], std::fabs(m_d1[kCond1]),
+              m_ch[kOff], m_ch[kToward1], m_ch[kOff], m_ch[kAway1]);
+  std::printf("  OFF THE SCORED AXIS      change %+.1f -> %+.1f  <- the cost of ARRIVING\n"
+              "                           (%+.1f at k = 2). Same module, same amplitude,\n"
+              "                           same conditional sign, on bandwidths the score\n"
+              "                           does not read.\n",
+              m_ch[kOff], m_ch[kOff1], m_ch[kOff2]);
+  std::printf("  a bias on `%s`      dF1 %+.1f +/- %.1f\n",
+              dna.module(uint32_t(cm)).name, m_d1[kCentral], s_d1[kCentral]);
+
+  const double word_gap = std::fabs(double(kWords[0].f1) - double(kWords[1].f1));
+  if (survives && control_survives) {
+    std::printf("\n  LICENSED -- a bias handed straight to the larynx steers the voice\n"
+                "  %.1f Hz of F1 above baseline, and an equally large bias arriving OFF\n"
+                "  the scored axis leaves the positive control at %+.1f against\n"
+                "  %+.1f. Arriving at the larynx as a BIAS is free, where arriving as a\n"
+                "  tract (v47) and as a second regulator (v50) both cost it. So the wall\n"
+                "  those two hit is not inherent to delivering something to this module,\n"
+                "  and an upstream structure whose output is a bias has somewhere to\n"
+                "  land.\n\n"
+                "  THE BAR: %.0f Hz of dF1, which is %.0f%% of the %.0f Hz separating the\n"
+                "  two words. That is the CEILING on how conditional this voice can be\n"
+                "  made, by anything, with the credit-assignment problem removed\n"
+                "  entirely. An UPPER BOUND -- nothing here says the creature could\n"
+                "  compute it, the same caution `credit`'s reward-mask oracle carries.\n\n"
+                "  AND THE SECOND QUESTION: the same oracle on `%s` moves the voice\n"
+                "  %+.1f +/- %.1f Hz against a baseline of %+.1f +/- %.1f -- nothing, at a\n"
+                "  LARGER amplitude than the one that moves it %.0f Hz from `%s`. The\n"
+                "  association-to-motor route cannot carry a steering signal at all, so\n"
+                "  an Area X analogue here has to project to the larynx directly.\n",
+                lift, m_ch[kOff1], m_ch[kOff],
+                std::fabs(m_d1[kCond1]), 100.0 * std::fabs(m_d1[kCond1]) / word_gap, word_gap,
+                dna.module(uint32_t(cm)).name, m_d1[kCentral], s_d1[kCentral],
+                m_d1[kOff], s_d1[kOff], std::fabs(m_d1[kCond2]),
+                dna.module(uint32_t(vm)).name);
+    return true;
+  }
+
+  std::printf("\n  REFUSED -- the oracle reaches the voice (%.1f Hz of F1 above baseline)\n"
+              "  and a bias arriving OFF the scored axis, at the same amplitude and the\n"
+              "  same conditional sign, costs the positive control anyway: %+.1f against\n"
+              "  %+.1f with no oracle (%+.1f at k = 2). Nothing about that arm touches\n"
+              "  the formants the error is computed from, so it is the cost of ARRIVING\n"
+              "  and not of being pushed off target.\n\n"
+              "  A bias onto the larynx is the LAST STEP of every upstream architecture\n"
+              "  proposed for this creature, Fee & Goldberg's included. A cost that is\n"
+              "  already there before any of them is built is a cost none of them\n"
+              "  avoids, so the route is refused for one run instead of one month.\n",
+              lift, m_ch[kOff1], m_ch[kOff], m_ch[kOff2]);
+  return false;
+}
 
 // --- ipctx: is intrinsic plasticity what strangles the context tract? -------
 //
