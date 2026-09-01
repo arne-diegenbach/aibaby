@@ -7112,6 +7112,68 @@ the lesson is free. That is what an Area X output is, since it is a targeted
 bias rather than v47's broadcast tract, but it is narrower than "a bias anywhere
 in `vocal` is free" and should not be quoted as the wider claim.
 
+### What the literature says to build next, and why it is the cheap option
+
+`ctxbias` split the problem cleanly. **Delivery works**: a bias arriving off the
+lesson's own neurons is free, and a perfect conditional bias steers the voice to
+51% of the gap between the two words. **Computation is missing**: nothing in
+this creature can work out what that bias should be.
+
+Five papers, read together, name the same thing, and it is smaller than any
+mechanism built here since v41.
+
+**The parameterisation is the whole problem, and this project has said so twice
+in contradictory ways.** `vocallearn` concluded that node perturbation cannot be
+conditional *because a per-neuron bias is a constant*. Node perturbation on
+synapses was then built to fix that, and its post-mortem retracted the
+diagnosis: "expressiveness was never the problem, variance is". Both are right,
+and Werfel, Xie and Seung reconcile them — learning time scales with the number
+of parameters estimated, so the synaptic version bought expressiveness at
+sixteen times the parameter count and paid for it in variance. **What was never
+tried is the parameterisation that is expressive AND cheap.**
+
+`bias_[i]` is one scalar per neuron. Make it one scalar per neuron *per context*
+— `bias_[i][c]`, with `c` the active slice of a v47 `kContext` module — and:
+
+- it is **conditional by construction**, which is the thing `g2cond` measured the
+  absence of;
+- it is **two node-perturbation problems, not one weight-perturbation problem**:
+  252 parameters against 126, where the synaptic tract was ~4000;
+- it is cashed **exactly as G2's rule already cashes**, and G2 is a met
+  milestone at twelve sigma, so the estimator is not a hypothesis;
+- it is delivered **as a bias**, which `ctxbias` has just shown costs the
+  exploratory pathway nothing — where v47's tract and v50's regulator both
+  charged for arriving;
+- and it must project **to the larynx directly**, which the same run established
+  by showing a bias on `central` reaches the voice not at all.
+
+**It is Fee and Goldberg's Area X reduced to its computational core.** HVC's
+timing signal is sparse and near-one-hot, so a basal-ganglia stage driven by it
+and biasing the motor population *is* a context-indexed bias table. Kojima and
+colleagues supply the variability that the perturbation term needs; the
+efference copy of it is what lets the learning site evaluate an exploration it
+did not itself produce, and it arrives at the striatal neuron **without driving
+it** — gating plasticity rather than adding drive, which is the same shape
+`ctxbias` just measured as free.
+
+**Two things it also explains, which is the reason to believe it.** `retain`
+found a conflicting lesson wipes a taught sound to 0.22 while `capacity` found
+two orthogonal lessons coexisting at 0.84. Heald, Lengyel and Wolpert's account
+says that is one computation, not two results: experiences assigned to one
+context overwrite, experiences assigned to two do not. Naming is the conflicting
+case by construction — both lessons drive the same formant to different values —
+and an explicit context index is precisely what converts the first case into the
+second. And Miconi's network learns delayed non-match-to-sample with a rule of
+this family, so `g2cond`'s null is a fact about this creature's parameters
+rather than about reward-modulated learning.
+
+**What would refuse it.** The honest bar is `ctxbias`'s own ceiling: 236 Hz of
+dF1. A context-indexed bias that learns nothing the shared bias did not already
+learn, or that reaches a small fraction of that number, says the estimator
+cannot find a conditional optimum even when one is representable — and that
+would be a much firmer closure of G3 than anything currently on file, because
+every earlier null had a delivery excuse and this one would not.
+
 ## Design decisions that were not obvious
 
 These were all discovered by measurement, and each one is the difference
@@ -7394,6 +7456,61 @@ author list is worse than an incomplete one.
   is what the ISP result licenses next if range is not the whole story — and
   because it is a much larger build than a plasticity rule, which is why it was
   not the thing tried first.
+
+**Where the conditional map is computed, rather than where it is delivered.**
+`ctxbias` licensed the delivery route and measured its ceiling; these are the
+papers about the half it does not touch.
+
+- Gadagkar, V., Puzerey, P. A., Chen, R., Baird-Daniel, E., Farhang, A. R. &
+  Goldberg, J. H. (2016). *Dopamine neurons encode performance error in singing
+  birds.* Science 354(6317), 1278–1282.
+  <https://doi.org/10.1126/science.aah6837>, free full text at
+  <https://pmc.ncbi.nlm.nih.gov/articles/PMC5464363/> — the reward signal in
+  Area X is a *performance prediction error*: suppressed after worse-than-
+  predicted, activated after better-than-predicted. This creature delivers raw
+  R, and every reward term in the honest protocol is object-blind. The
+  difference matters because a prediction error is the one form of reward whose
+  sign can depend on context without anyone telling it the context.
+- Kojima, S., Kao, M. H., Doupe, A. J. & Brainard, M. S. (2018). *The avian
+  basal ganglia are a source of rapid behavioral variation that enables vocal
+  motor exploration.* Journal of Neuroscience 38(45), 9635–9647.
+  <https://doi.org/10.1523/JNEUROSCI.2915-17.2018>, free full text at
+  <https://pmc.ncbi.nlm.nih.gov/articles/PMC6222063/> — the experimental
+  counterpart to DNA v10. The variability that node perturbation depends on is
+  generated in the basal ganglia and is *rapid* and *trial-to-trial*, which is
+  what makes an efference copy of it worth anything.
+- Werfel, J., Xie, X. & Seung, H. S. (2005). *Learning curves for stochastic
+  gradient descent in linear feedforward networks.* Neural Computation 17(12),
+  2699–2718. <https://direct.mit.edu/neco/article-abstract/17/12/2699>,
+  <https://pubmed.ncbi.nlm.nih.gov/16212768/> — learning time scales with the
+  number of parameters being estimated, so perturbing *weights* is slower than
+  perturbing *nodes* by the ratio of synapses to neurons. This is the
+  retroactive explanation of the one learning rule this project built and
+  removed: node perturbation cashed onto synapses cut irreproducible learning
+  noise 65% -> 8% and still could not carry G2, and the reason was never
+  expressiveness. **It also says which parameterisation to reach for next, and
+  it is the cheapest one, not the richest.**
+- Miconi, T. (2017). *Biologically plausible learning in recurrent neural
+  networks reproduces neural dynamics observed during cognitive tasks.* eLife 6,
+  e20899. <https://doi.org/10.7554/eLife.20899>, free full text at
+  <https://pmc.ncbi.nlm.nih.gov/articles/PMC5398889/> — the existence proof this
+  project needs against its own null. A reward-modulated rule driven by
+  exploratory perturbation, with a running reward baseline, learns
+  *context-dependent* tasks including delayed non-match-to-sample. So `g2cond`'s
+  result is not "this rule class cannot be conditional"; it is a fact about this
+  creature's parameterisation.
+- Heald, J. B., Lengyel, M. & Wolpert, D. M. (2021). *Contextual inference
+  underlies the learning of sensorimotor repertoires.* Nature 600(7889),
+  489–493. <https://doi.org/10.1038/s41586-021-04129-3>, free full text at
+  <https://pmc.ncbi.nlm.nih.gov/articles/PMC8809113/> — the reframing, and the
+  one that explains this project's own measurements rather than adding a
+  mechanism. Memory creation, updating and expression are governed by a single
+  computation: which context the learner infers it is in. `retain` found that a
+  conflicting lesson wipes a taught sound to 0.22 while `capacity` found two
+  orthogonal lessons coexisting at 0.84 — which is exactly the difference
+  between two experiences assigned to one context and to two. Naming is the
+  conflicting case by construction: both lessons drive the same dimension to
+  different values.
 
 **Metaplasticity and memory consolidation (DNA v41).**
 
