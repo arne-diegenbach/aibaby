@@ -181,6 +181,12 @@ const Spec kSpecs[] = {
      "derived: vocallearn's own minimum. Is the policy gradient's conditional\n"
      "  arm conditional, or a creature sitting between two alternating targets?\n"
      "  Controls `swap` against a target with MATCHED MARGINALS"},
+    {"ipctx", 3400000, Expect::kOpen, Tier::kTeach,
+     "derived: vocallearn's session length, because it reads the larynx after a\n"
+     "  full teaching session. ctxlearn's collapse does not scale with out_w, so\n"
+     "  the suspect is rate-side, and IP is the only rate regulator that runs on\n"
+     "  the larynx (v11: scaling never executes there). Measures whether IP even\n"
+     "  responds before an ip_wake_scale arm is spent. Needs a kContext genome"},
     {"ctxlearn", 3400000, Expect::kOpen, Tier::kTeach,
      "derived: vocallearn's own minimum, which its positive control sets.\n"
      "  Stage 0 of the audio rewrite: can reward write a CONDITIONAL map when\n"
@@ -192,7 +198,8 @@ const Spec kSpecs[] = {
      "derived: eight words share the trial budget four had, so it needs twice\n"
      "  imitate's 560000 to leave enough trials per word for a held-out pair.\n"
      "  Measured: mean 0.786 but 12 of 28 pairs under 0.75 (worst 0.569 against a\n"
-     "  chance of 0.5), and one of eight reads 0.210 against a chance of 0.125.\n"
+     "  chance of 0.5), and one of eight reads 0.371 against a chance of 0.125\n"
+     "  post-M1d (0.210 is the stale pre-M1d number).\n"
      "  The vocabulary is full below eight, so this is expected to FAIL"},
     {"trajprobe", 600000, Expect::kPass, Tier::kLong,
      "derived: it needs at least 24 utterances for a split-half correlation and\n"
@@ -394,6 +401,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "dwprobe") ok = run_dwprobe(dna_blob, ticks, verbose);
   else if (name == "curriculum") ok = run_curriculum(dna_blob, ticks, verbose);
   else if (name == "ctxlearn") ok = run_ctxlearn(dna_blob, ticks, verbose);
+  else if (name == "ipctx") ok = run_ipctx(dna_blob, ticks, verbose);
   else if (name == "pgprobe") ok = run_pgprobe(dna_blob, ticks, verbose);
   else if (name == "g2cond") ok = run_g2cond(dna_blob, ticks, verbose);
   else if (name == "coderprobe") ok = run_coderprobe(dna_blob, ticks, verbose);

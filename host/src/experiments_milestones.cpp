@@ -3935,6 +3935,25 @@ constexpr double kVLRateLow = 0.10;
 // module is present and wired either way, so the two arms share a creature, a
 // noise stream and a set of synapses, and differ only in whether the oracle
 // speaks.
+// Mean adaptive threshold over a module, and optionally the share of it sitting
+// at the clamp. Dead neurons are included: their threshold does not move, so
+// they dilute the drift by a constant that is identical across arms of the same
+// creature, which is the only comparison this is used for.
+double mean_threshold(const aibaby::Network& net, uint32_t module, double* pinned,
+                      float t_max) {
+  const aibaby::ModuleState& ms = net.module(module);
+  if (ms.count == 0) { if (pinned) *pinned = 0.0; return 0.0; }
+  double sum = 0.0;
+  uint32_t at_clamp = 0;
+  for (uint32_t n = ms.begin; n < ms.begin + ms.count; ++n) {
+    const double t = double(net.threshold(n));
+    sum += t;
+    if (t_max > 0.0f && t >= double(t_max) * 0.999) ++at_clamp;
+  }
+  if (pinned) *pinned = double(at_clamp) / double(ms.count);
+  return sum / double(ms.count);
+}
+
 struct CtxDrive {
   int32_t module = -1;
   uint32_t slots = 2;
@@ -3954,6 +3973,18 @@ struct VLRun {
   // other afferents as the scale to read it against.
   double ctx_dw = 0.0;
   double ref_dw = 0.0;
+  // DNA v47 follow-up. IP is threshold += ip_rate * (rate_ema - target), so if
+  // intrinsic plasticity on the larynx is what kills the positive control when
+  // the oracle fires, two things have to be true and both are measurable here:
+  // the larynx has to run ABOVE its target while driven (IP needs a rate error
+  // to act on), and its threshold has to MOVE further than it does with the
+  // oracle mute. Neither was checked before `ip_wake_scale` was blamed --
+  // which is the mistake `syn_wake_scale` already cost this project once.
+  double ip_thresh_drift = 0.0;  // mean threshold on vocal, end - start
+  double ip_ref_drift = 0.0;     // the same on a module the oracle never drives
+  double ip_rate_hz = 0.0;       // vocal's mean rate over the session
+  double ip_target_hz = 0.0;     // what IP is pulling that rate toward
+  double ip_pinned = 0.0;        // share of vocal at the threshold_max clamp
   std::vector<Praise> feedback;  // what the taught arm earned, for the yoke
 };
 
@@ -3996,6 +4027,16 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
   // afterwards whether reward wrote anything onto the oracle's tract.
   std::vector<uint32_t> w0_neuron, w0_slot, w0_src;
   std::vector<double> w0_w;
+  // Birth thresholds of the larynx, and of a module the oracle does not touch
+  // as the scale to read its drift against.
+  const int32_t ip_vm = s.dna.module_with_role(aibaby::ModuleRole::kVocal);
+  const int32_t ip_rm = s.dna.module_with_role(aibaby::ModuleRole::kAssociation);
+  double ip_t0 = 0.0, ip_r0 = 0.0;
+  {
+    const aibaby::Network& net = s.brain.network();
+    if (ip_vm >= 0) ip_t0 = mean_threshold(net, uint32_t(ip_vm), nullptr, 0.0f);
+    if (ip_rm >= 0) ip_r0 = mean_threshold(net, uint32_t(ip_rm), nullptr, 0.0f);
+  }
   if (ctx && ctx->module >= 0) {
     const int32_t vm = s.dna.module_with_role(aibaby::ModuleRole::kVocal);
     if (vm >= 0) {
@@ -4201,6 +4242,20 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
     }
   }
   out.voiced_frac = frames_total ? double(frames_voiced) / double(frames_total) : 0.0;
+  {
+    const aibaby::Network& net = s.brain.network();
+    const float t_max = s.dna.header().homeo.threshold_max;
+    if (ip_vm >= 0) {
+      double pinned = 0.0;
+      out.ip_thresh_drift = mean_threshold(net, uint32_t(ip_vm), &pinned, t_max) - ip_t0;
+      out.ip_pinned = pinned;
+      out.ip_rate_hz = double(net.module(uint32_t(ip_vm)).mean_rate);
+      out.ip_target_hz = double(s.dna.module(uint32_t(ip_vm)).target_rate_hz);
+    }
+    if (ip_rm >= 0) {
+      out.ip_ref_drift = mean_threshold(net, uint32_t(ip_rm), nullptr, 0.0f) - ip_r0;
+    }
+  }
   if (ctx && ctx->module >= 0) {
     out.ctx_rate = double(s.brain.network().module(uint32_t(ctx->module)).mean_rate);
     // Did the tract LEARN anything? A flat conditional arm means nothing if the
@@ -7611,6 +7666,264 @@ double ctx_mean_se(const std::vector<double>& v, double* se) {
 }
 
 }  // namespace
+
+// --- ipctx: is intrinsic plasticity what strangles the context tract? -------
+//
+// ctxlearn's finding is that the positive control DIES whenever the oracle
+// fires: +24.6/+39.1/+38.1 with the oracle mute becomes ~0 at 31 Hz, on five
+// genomes and twelve driven levels, and it does not scale with out_w over a 6x
+// range. Weight-side levers do not explain it, which points at a RATE-side one.
+//
+// IP is the only rate-side regulator that runs on the larynx: v11 measured that
+// synaptic scaling never executes there at all, and this project has already
+// paid once for relaxing a regulator without first checking it was running.
+// So this measures, and does not intervene. Two things have to be true before
+// `ip_wake_scale` is worth a single 3.4M-tick arm:
+//
+//   1. the larynx runs ABOVE its target while driven -- IP acts on the rate
+//      error, so with no error there is nothing for it to do; and
+//   2. its threshold moves FURTHER while driven than with the oracle mute,
+//      by more than the spread across creatures.
+//
+// If either fails the hypothesis is dead and the intervention is not licensed.
+// Twelve sessions rather than ctxlearn's seventy-two, because no yoke is needed
+// to read a threshold.
+bool run_ipctx(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  aibaby::Dna dna;
+  if (dna.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) {
+    std::printf("  setup failed: the genome does not load\n");
+    return false;
+  }
+  const int32_t ctx_module = dna.module_with_role(aibaby::ModuleRole::kContext);
+  if (ctx_module < 0) {
+    std::printf("  this genome has no kContext module, so there is no oracle to\n"
+                "  drive and nothing to measure. Build one:\n\n"
+                "    python3 tools/genome_add_context.py dna/default.toml ctx.toml vocal\n"
+                "    ./build/aibaby --dna ctx.toml --experiment ipctx\n");
+    return false;
+  }
+  const int32_t vm = dna.module_with_role(aibaby::ModuleRole::kVocal);
+  if (vm < 0) {
+    std::printf("  setup failed: no kVocal module to read a threshold from\n");
+    return false;
+  }
+  constexpr uint32_t kReps = 3;
+  instrument("ipctx", dna.header().seed, ticks / kVLTrialTicks, "trials per arm");
+  std::printf("  question          does intrinsic plasticity on `%s` move when the\n"
+              "                    context tract drives it? IP is\n"
+              "                    threshold += ip_rate * (rate - target), ip_rate %.3g,\n"
+              "                    target %.1f Hz, clamp [%.2f, %.2f]\n",
+              dna.module(uint32_t(vm)).name, double(dna.header().homeo.ip_rate),
+              double(dna.module(uint32_t(vm)).target_rate_hz),
+              double(dna.header().homeo.threshold_min),
+              double(dna.header().homeo.threshold_max));
+  std::printf("  arm               `fixed` -- ctxlearn's positive control, the one\n"
+              "                    that dies when the oracle fires. No yoke: this\n"
+              "                    reads a regulator, not a learning difference.\n\n");
+
+  // IP steps the threshold by ip_rate * (rate - target) once every
+  // interval_ticks, so the drift IS the integral of the rate error and the
+  // session-mean error follows by division -- exact, where the endpoint EMA the
+  // first version gated on is one noisy sample of a quantity that moved all
+  // session (gain 0.10 read 8.18 +/- 2.48 Hz for a drift of +0.372 +/- 0.024).
+  // Valid only while nothing is at the clamp, which is why `pinned` gates it.
+  const double ip_rate_k = double(dna.header().homeo.ip_rate);
+  const uint32_t homeo_interval = dna.header().homeo.interval_ticks;
+  const double n_calls =
+      homeo_interval ? double((ticks / kVLTrialTicks) * kVLTrialTicks / homeo_interval)
+                     : 0.0;
+  const double err_scale =
+      (ip_rate_k > 0.0 && n_calls > 0.0) ? 1.0 / (ip_rate_k * n_calls) : 0.0;
+
+  std::vector<double> drift[kCtxLevelCount], refdrift[kCtxLevelCount];
+  std::vector<double> rate[kCtxLevelCount], change[kCtxLevelCount];
+  std::vector<double> pinned[kCtxLevelCount], voiced[kCtxLevelCount];
+  double ctx_hz[kCtxLevelCount] = {};
+  double target_hz = 0.0;
+  uint32_t cells[kCtxLevelCount] = {};
+
+  std::printf("  %-6s %-7s %-8s %-9s %-9s %-10s %-9s %s\n", "seed", "gain", "ctx Hz",
+              "vocal Hz", "d thresh", "d ref", "pinned", "change");
+  for (uint32_t r = 0; r < kReps; ++r) {
+    std::vector<uint8_t> variant = blob;
+    const uint64_t seed = dna.header().seed + r * 7919ull;
+    std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+
+    for (uint32_t L = 0; L < kCtxLevelCount; ++L) {
+      CtxDrive drive;
+      drive.module = ctx_module;
+      drive.slots = kVLWords;
+      drive.gain = kCtxLevels[L];
+      Regime reg;
+      reg.praise = kPraiseValue;
+      reg.scold = kScoldValue;
+      const VLRun run = run_vocallearn_session(variant, ticks, kVLTaught, nullptr, reg,
+                                               kVLTgtFixed, &drive);
+      if (!run.ok) {
+        std::printf("  %-6u %-7.2f (inconclusive: %u scored, %u skipped)\n", r,
+                    kCtxLevels[L], run.scored, run.skipped);
+        continue;
+      }
+      drift[L].push_back(run.ip_thresh_drift);
+      refdrift[L].push_back(run.ip_ref_drift);
+      rate[L].push_back(run.ip_rate_hz);
+      change[L].push_back(vl_change(run));
+      pinned[L].push_back(run.ip_pinned);
+      voiced[L].push_back(run.voiced_frac);
+      ctx_hz[L] += run.ctx_rate;
+      target_hz = run.ip_target_hz;
+      ++cells[L];
+      std::printf("  %-6u %-7.2f %-8.1f %-9.2f %+-9.4f %+-10.4f %-9.2f %+.1f\n", r,
+                  kCtxLevels[L], run.ctx_rate, run.ip_rate_hz, run.ip_thresh_drift,
+                  run.ip_ref_drift, run.ip_pinned, vl_change(run));
+    }
+  }
+
+  double m_drift[kCtxLevelCount], s_drift[kCtxLevelCount];
+  double m_rate[kCtxLevelCount], s_rate[kCtxLevelCount];
+  double m_ref[kCtxLevelCount], s_ref[kCtxLevelCount];
+  double m_chg[kCtxLevelCount], s_chg[kCtxLevelCount];
+  double m_pin[kCtxLevelCount], s_pin[kCtxLevelCount];
+  double m_vf[kCtxLevelCount], s_vf[kCtxLevelCount];
+  for (uint32_t L = 0; L < kCtxLevelCount; ++L) {
+    if (drift[L].size() < 2) {
+      std::printf("\n  ipctx INCONCLUSIVE -- gain %.2f did not produce two usable\n"
+                  "  creatures, so it has no spread and nothing here can be read\n"
+                  "  against it.\n", kCtxLevels[L]);
+      return false;
+    }
+    m_drift[L] = ctx_mean_se(drift[L], &s_drift[L]);
+    m_rate[L] = ctx_mean_se(rate[L], &s_rate[L]);
+    m_ref[L] = ctx_mean_se(refdrift[L], &s_ref[L]);
+    m_chg[L] = ctx_mean_se(change[L], &s_chg[L]);
+    m_pin[L] = ctx_mean_se(pinned[L], &s_pin[L]);
+    m_vf[L] = ctx_mean_se(voiced[L], &s_vf[L]);
+  }
+
+  std::printf("\n  %-7s %-8s %-15s %-15s %-15s %-13s %s\n", "gain", "ctx Hz",
+              "vocal Hz", "d threshold", "d ref (central)", "pinned", "change");
+  for (uint32_t L = 0; L < kCtxLevelCount; ++L) {
+    char a[32], b[32], c[32], d[32], e[32];
+    std::snprintf(a, sizeof a, "%.2f +/- %.2f", m_rate[L], s_rate[L]);
+    std::snprintf(b, sizeof b, "%+.4f +/- %.4f", m_drift[L], s_drift[L]);
+    std::snprintf(c, sizeof c, "%+.4f +/- %.4f", m_ref[L], s_ref[L]);
+    std::snprintf(d, sizeof d, "%.2f +/- %.2f", m_pin[L], s_pin[L]);
+    std::snprintf(e, sizeof e, "%+.1f", m_chg[L]);
+    std::printf("  %-7.2f %-8.1f %-15s %-15s %-15s %-13s %s\n", kCtxLevels[L],
+                cells[L] ? ctx_hz[L] / cells[L] : 0.0, a, b, c, d, e);
+  }
+  std::printf("\n  mean rate error over the session, DERIVED from the drift as\n"
+              "  drift / (ip_rate * calls) -- exact where nothing is at the clamp:\n");
+  std::printf("  %-7s %-18s %s\n", "gain", "mean err (Hz)", "valid");
+  for (uint32_t L = 0; L < kCtxLevelCount; ++L) {
+    char v[32];
+    std::snprintf(v, sizeof v, "%+.2f +/- %.2f", m_drift[L] * err_scale,
+                  s_drift[L] * err_scale);
+    std::printf("  %-7.2f %-18s %s\n", kCtxLevels[L], v,
+                m_pin[L] > 0.02 ? "NO -- at the clamp" : "yes");
+  }
+  std::printf("\n  `change` is the taught arm's own formant-error reduction, unyoked:\n"
+              "  it is here to show the collapse ctxlearn measured, not to score it.\n"
+              "  IP is pulling `%s` toward %.1f Hz.\n",
+              dna.module(uint32_t(vm)).name, target_hz);
+
+  // The two conditions, in order. Both are about the DRIVEN levels that
+  // actually fired -- a mute level is not a level, which ctxlearn learned the
+  // expensive way.
+  //
+  // BOTH have to hold at the SAME level. The first version of this loop set two
+  // independent flags and then reported them together, which passed condition
+  // (1) at gain 0.20 and condition (2) at 0.10 and called the pair a licence --
+  // two different regimes wearing one verdict. It matters here specifically:
+  // 0.20 saturates, and a level where the clamp is holding most of the module
+  // is not a level where IP is regulating anything.
+  bool any_driven = false, rate_error = false, drift_moved = false, both = false;
+  double best_drift = 0.0, best_rate = 0.0, best_gain = 0.0, best_pin = 0.0;
+  for (uint32_t L = 1; L < kCtxLevelCount; ++L) {
+    const double hz = cells[L] ? ctx_hz[L] / cells[L] : 0.0;
+    if (hz <= 1.0) continue;  // oracle mute at this level
+    any_driven = true;
+    // (1) is there a rate error for IP to act on, above the mute arm's own?
+    // Derived from the drift rather than sampled off the final EMA, and only
+    // where the clamp is not holding the module: past that the drift stops
+    // tracking the error and the division is meaningless.
+    const double err_hz = m_drift[L] * err_scale;
+    const double err_hz0 = m_drift[0] * err_scale;
+    const bool err = m_pin[L] <= 0.02 && err_hz > 0.0 &&
+                     err_hz - err_hz0 > 2.0 * (s_drift[L] + s_drift[0]) * err_scale;
+    // (2) does the threshold move further than it does with the oracle mute?
+    const double gap = std::fabs(m_drift[L]) - std::fabs(m_drift[0]);
+    const bool moved = gap > 2.0 * (s_drift[L] + s_drift[0]);
+    rate_error = rate_error || err;
+    drift_moved = drift_moved || moved;
+    if (err && moved && (!both || gap > best_drift)) {
+      both = true;
+      best_drift = gap; best_rate = m_rate[L];
+      best_gain = kCtxLevels[L]; best_pin = m_pin[L];
+    }
+  }
+
+  if (!any_driven) {
+    std::printf("\n  UNREADABLE -- no level drove the oracle above 1 Hz, so nothing\n"
+                "  here is a measurement of what drive does to the larynx.\n");
+    return false;
+  }
+
+  if (!rate_error && !drift_moved) {
+    std::printf("\n  IP IS NOT THE STRANGLER -- and this closes the last named\n"
+                "  suspect for ctxlearn's collapse. The larynx runs at %.2f Hz driven\n"
+                "  against %.2f Hz mute (target %.1f), and its threshold drifts\n"
+                "  %+.4f driven against %+.4f mute: no rate error for IP to act on\n"
+                "  and no threshold response, while `change` falls %+.1f -> %+.1f.\n"
+                "  Whatever kills the positive control when the context tract fires,\n"
+                "  it is not intrinsic plasticity re-regulating the larynx.\n"
+                "  Do NOT spend an ip_wake_scale arm on this.\n",
+                m_rate[1], m_rate[0], target_hz, m_drift[1], m_drift[0],
+                m_chg[0], m_chg[1]);
+    return false;
+  }
+
+  if (both) {
+    if (best_pin > 0.5) {
+      std::printf("\n  SATURATED, NOT REGULATED -- the only level where both conditions\n"
+                  "  hold is gain %.2f, and there %.0f%% of the larynx is sitting at the\n"
+                  "  threshold clamp with the module at %.1f Hz against a %.1f Hz target.\n"
+                  "  IP has run out of range: a clamp is not a regulator, and this is\n"
+                  "  not the regime ctxlearn ran its arms in. Relaxing ip_wake_scale\n"
+                  "  here would be relaxing something that has already stopped acting.\n"
+                  "  The licence this probe was built to grant is NOT granted.\n",
+                  best_gain, 100.0 * best_pin, best_rate, target_hz);
+      return false;
+    }
+    std::printf("\n  IP IS RESPONDING, and the intervention is licensed. At gain %.2f\n"
+                "  the larynx runs %.2f Hz against a %.1f Hz target and its threshold\n"
+                "  drifts %.4f further than with the oracle mute, against a central\n"
+                "  module that moves %+.4f. Both of the conditions this probe was\n"
+                "  built to check are met, so `ip_wake_scale` on the larynx is now\n"
+                "  worth a graded arm in ctxlearn.\n\n"
+                "  It is NOT yet a result: IP responding and IP being the CAUSE of\n"
+                "  the collapse are different claims, and relaxing IP on the larynx\n"
+                "  is already known to make the creature drone (v9: duty 0.61 ->\n"
+                "  0.83), which moves the voiced fraction this readout depends on.\n"
+                "  Any such arm needs a TWO-sided voiced gate; ctxlearn's present\n"
+                "  one only catches the creature going quiet.\n",
+                best_gain, best_rate, target_hz, best_drift, m_ref[1]);
+    return true;
+  }
+
+
+  std::printf("\n  PARTIAL -- %s but %s. The two conditions disagree, so the\n"
+              "  mechanism as stated does not hold: IP acts on the rate error, so a\n"
+              "  threshold that moves without one, or an error that produces no\n"
+              "  movement, is not the story that was told about it. Read the table\n"
+              "  before spending an arm on it.\n",
+              rate_error ? "the larynx does run above target while driven"
+                         : "the larynx shows no rate error to act on",
+              drift_moved ? "its threshold does move further than when mute"
+                          : "its threshold does not move any further than when mute");
+  return false;
+}
 
 bool run_ctxlearn(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
   aibaby::Dna dna;
