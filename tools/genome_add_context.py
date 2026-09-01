@@ -124,6 +124,8 @@ ip_wake_scale = 0.0
 ip_sleep_scale = 0.0
 syn_wake_scale = 0.0
 syn_sleep_scale = 0.0
+# DNA v50: a context unit is written by the host and has no afferents at all.
+isp_gain = 0.0
 # All excitatory: a slice must mean "this condition is present", and an
 # inhibitory unit inside it would mean the opposite for half the target.
 inhib_fraction = 0.0

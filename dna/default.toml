@@ -111,6 +111,42 @@ w_max = 0.50                # |weight| ceiling for excitatory synapses
 scaling_rate = 0.02         # firm once the bound is crossed
 scaling_band = 3.0          # but silent inside [birth/3, birth*3]
 interval_ticks = 500        # twice a second
+#
+# DNA v50 adds a THIRD regulator, per module, `isp_gain`, off everywhere here.
+# Inhibitory synaptic plasticity: Vogels, Sprekeler, Zenke, Clopath & Gerstner,
+# Science 2011. The two above regulate a rate by moving a threshold and by
+# rescaling an afferent set; this one grows the inhibition a neuron already
+# receives until the neuron sits at its target.
+#
+# The reason to have a third is that the first two both run out. `ipctx` drove
+# a context tract into the larynx at four levels and watched IP try to absorb
+# it: the threshold climbs +1.2 to +2.8 into the [0.20, 4.00] clamp above, and
+# a quarter to five-sixths of the module ends the session PINNED at
+# threshold_max. That is a bounded quantity being spent, not a set point being
+# found. Synaptic scaling is no help — v11 measured it never executes on the
+# larynx, and it is multiplicative over the whole afferent set, so it would
+# attenuate the input that caused the error along with every input that did not.
+#
+# `isp_gain` is a fraction, the same kind of number `scaling_rate` is: at 1.0
+# one pass of ISP moves a neuron's mean synaptic drive by exactly what one pass
+# of IP moves its threshold. Nothing was fitted to get that — the step is
+# normalised by the presynaptic rate vector, so `ip_rate` above is the only
+# calibrated constant either mechanism uses.
+#
+# IT IS OFF BECAUSE IT WAS MEASURED AND IT DOES NOT WORK. `ipctx` run as a 2x2
+# — ip_wake_scale 1.0/0.25 crossed with isp_gain 0/1, 48 sessions — keeps the
+# saturation in every cell: the threshold climbs +1.1 to +2.9 into the clamp
+# whether or not inhibition is plastic, and whether IP runs at full strength or
+# a quarter of it. ISP reaches only 6-25% of its OWN ceiling while doing it, so
+# the failure is not a budget that is too small.
+#
+# The run also closed the hypothesis it was built to test. At 31.4 Hz of context
+# drive the shipped larynx reads pinned 0.31 with `change` +16.6 +/- 1.8; the
+# IP-relaxed larynx at the same drive reads pinned 0.00 on 3 of 3 seeds with
+# `change` -2.3 +/- 1.1. Unpinning the larynx does not lift ctxlearn's collapse.
+# And ISP costs the positive control with the tract SILENT, +34.0 -> +15.4, at
+# an unchanged voiced fraction of 0.66 — so it is paid out of the exploratory
+# pathway, not out of the duty cycle.
 # Each module carries its own wake/sleep multipliers on the two rates above
 # (§3.1 meets §3.6), and the split is the point. Four numbers per module, not
 # two: ip_wake_scale/ip_sleep_scale multiply ip_rate, syn_wake_scale/
@@ -881,6 +917,7 @@ ip_wake_scale = 0.25
 ip_sleep_scale = 4.0
 syn_wake_scale = 0.25
 syn_sleep_scale = 4.0
+isp_gain = 0.0          # DNA v50, off; see the block below
 explore_scale = 0.0        # not a motor module; keeps its plain noise_amp
 norm_gain = 1.0            # the one module that uses it. Chosen by the sweep in
 eta_scale = 1.0            # cortical rate; see ModuleRole::kHippocampus
@@ -1159,6 +1196,7 @@ ip_wake_scale = 1.0
 ip_sleep_scale = 1.0
 syn_wake_scale = 1.0
 syn_sleep_scale = 1.0
+isp_gain = 0.0          # DNA v50, off; see the block below
 explore_scale = 0.0        # not a motor module; keeps its plain noise_amp
 norm_gain = 0.0            # divisive normalisation off; see [normalisation]
 eta_scale = 1.0            # cortical rate; see ModuleRole::kHippocampus
@@ -1288,6 +1326,7 @@ ip_wake_scale = 0.25
 ip_sleep_scale = 4.0
 syn_wake_scale = 0.25
 syn_sleep_scale = 4.0
+isp_gain = 0.0          # DNA v50, off; see the block below
 explore_scale = 0.0        # not a motor module; keeps its plain noise_amp
 norm_gain = 0.0            # divisive normalisation off; see [normalisation]
 eta_scale = 1.0            # cortical rate; see ModuleRole::kHippocampus
@@ -1416,6 +1455,7 @@ ip_wake_scale = 0.25
 ip_sleep_scale = 4.0
 syn_wake_scale = 0.25
 syn_sleep_scale = 4.0
+isp_gain = 0.0          # DNA v50, off; see the block below
 explore_scale = 0.0        # not a motor module; keeps its plain noise_amp
 norm_gain = 0.0            # divisive normalisation off; see [normalisation]
 eta_scale = 1.0            # cortical rate; see ModuleRole::kHippocampus
@@ -1544,6 +1584,7 @@ ip_wake_scale = 1.0
 ip_sleep_scale = 1.0
 syn_wake_scale = 1.0
 syn_sleep_scale = 1.0
+isp_gain = 0.0          # DNA v50, off; see the block below
 # LMAN projects to the motor pathway and nowhere else, so this is the only
 # module whose babble answers to how well things are going.
 explore_scale = 1.0
@@ -1874,6 +1915,7 @@ ip_wake_scale = 0.25
 ip_sleep_scale = 4.0
 syn_wake_scale = 0.25
 syn_sleep_scale = 4.0
+isp_gain = 0.0          # DNA v50, off; see the block below
 explore_scale = 0.0        # not a motor module; keeps its plain noise_amp
 norm_gain = 0.0            # divisive normalisation off; see [normalisation]
 eta_scale = 1.0            # cortical rate; see ModuleRole::kHippocampus

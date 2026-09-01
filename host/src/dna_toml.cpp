@@ -557,6 +557,7 @@ bool compile_dna_toml(const std::string& path, std::vector<uint8_t>& out,
     m.ip_sleep_scale = float(r.number("ip_sleep_scale"));
     m.syn_wake_scale = float(r.number("syn_wake_scale"));
     m.syn_sleep_scale = float(r.number("syn_sleep_scale"));
+    m.isp_gain = float(r.number("isp_gain"));
     m.explore_scale = float(r.number("explore_scale"));
     m.norm_gain = float(r.number("norm_gain"));
     m.eta_scale = float(r.number("eta_scale"));

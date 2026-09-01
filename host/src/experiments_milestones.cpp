@@ -3985,6 +3985,11 @@ struct VLRun {
   double ip_rate_hz = 0.0;       // vocal's mean rate over the session
   double ip_target_hz = 0.0;     // what IP is pulling that rate toward
   double ip_pinned = 0.0;        // share of vocal at the threshold_max clamp
+  // DNA v50. The same question asked of the OTHER bounded budget: the share of
+  // vocal's inhibitory afferents sitting at their own weight ceiling. Zero on
+  // every genome that does not switch ISP on, because nothing else in this
+  // creature moves an inhibitory weight.
+  double isp_pinned = 0.0;
   std::vector<Praise> feedback;  // what the taught arm earned, for the yoke
 };
 
@@ -4251,6 +4256,7 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
       out.ip_pinned = pinned;
       out.ip_rate_hz = double(net.module(uint32_t(ip_vm)).mean_rate);
       out.ip_target_hz = double(s.dna.module(uint32_t(ip_vm)).target_rate_hz);
+      out.isp_pinned = double(net.isp_saturation(uint32_t(ip_vm)));
     }
     if (ip_rm >= 0) {
       out.ip_ref_drift = mean_threshold(net, uint32_t(ip_rm), nullptr, 0.0f) - ip_r0;
@@ -7739,12 +7745,13 @@ bool run_ipctx(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
   std::vector<double> drift[kCtxLevelCount], refdrift[kCtxLevelCount];
   std::vector<double> rate[kCtxLevelCount], change[kCtxLevelCount];
   std::vector<double> pinned[kCtxLevelCount], voiced[kCtxLevelCount];
+  std::vector<double> isat[kCtxLevelCount];
   double ctx_hz[kCtxLevelCount] = {};
   double target_hz = 0.0;
   uint32_t cells[kCtxLevelCount] = {};
 
-  std::printf("  %-6s %-7s %-8s %-9s %-9s %-10s %-9s %s\n", "seed", "gain", "ctx Hz",
-              "vocal Hz", "d thresh", "d ref", "pinned", "change");
+  std::printf("  %-6s %-7s %-8s %-9s %-9s %-10s %-9s %-9s %s\n", "seed", "gain", "ctx Hz",
+              "vocal Hz", "d thresh", "d ref", "pinned", "inh sat", "change");
   for (uint32_t r = 0; r < kReps; ++r) {
     std::vector<uint8_t> variant = blob;
     const uint64_t seed = dna.header().seed + r * 7919ull;
@@ -7770,13 +7777,14 @@ bool run_ipctx(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
       rate[L].push_back(run.ip_rate_hz);
       change[L].push_back(vl_change(run));
       pinned[L].push_back(run.ip_pinned);
+      isat[L].push_back(run.isp_pinned);
       voiced[L].push_back(run.voiced_frac);
       ctx_hz[L] += run.ctx_rate;
       target_hz = run.ip_target_hz;
       ++cells[L];
-      std::printf("  %-6u %-7.2f %-8.1f %-9.2f %+-9.4f %+-10.4f %-9.2f %+.1f\n", r,
+      std::printf("  %-6u %-7.2f %-8.1f %-9.2f %+-9.4f %+-10.4f %-9.2f %-9.2f %+.1f\n", r,
                   kCtxLevels[L], run.ctx_rate, run.ip_rate_hz, run.ip_thresh_drift,
-                  run.ip_ref_drift, run.ip_pinned, vl_change(run));
+                  run.ip_ref_drift, run.ip_pinned, run.isp_pinned, vl_change(run));
     }
   }
 
@@ -7785,6 +7793,7 @@ bool run_ipctx(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
   double m_ref[kCtxLevelCount], s_ref[kCtxLevelCount];
   double m_chg[kCtxLevelCount], s_chg[kCtxLevelCount];
   double m_pin[kCtxLevelCount], s_pin[kCtxLevelCount];
+  double m_isat[kCtxLevelCount], s_isat[kCtxLevelCount];
   double m_vf[kCtxLevelCount], s_vf[kCtxLevelCount];
   for (uint32_t L = 0; L < kCtxLevelCount; ++L) {
     if (drift[L].size() < 2) {
@@ -7798,20 +7807,27 @@ bool run_ipctx(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
     m_ref[L] = ctx_mean_se(refdrift[L], &s_ref[L]);
     m_chg[L] = ctx_mean_se(change[L], &s_chg[L]);
     m_pin[L] = ctx_mean_se(pinned[L], &s_pin[L]);
+    m_isat[L] = ctx_mean_se(isat[L], &s_isat[L]);
     m_vf[L] = ctx_mean_se(voiced[L], &s_vf[L]);
   }
 
-  std::printf("\n  %-7s %-8s %-15s %-15s %-15s %-13s %s\n", "gain", "ctx Hz",
-              "vocal Hz", "d threshold", "d ref (central)", "pinned", "change");
+  // `voiced` is printed because relaxing regulation on the larynx makes the
+  // creature DRONE (v9: duty 0.61 -> 0.83), and ctxlearn's voiced gate is
+  // one-sided and would not catch it. A `change` read off a droning creature is
+  // a different measurement wearing the same name.
+  std::printf("\n  %-7s %-8s %-15s %-15s %-13s %-13s %-8s %s\n", "gain", "ctx Hz",
+              "vocal Hz", "d threshold", "pinned", "inh sat", "voiced", "change");
   for (uint32_t L = 0; L < kCtxLevelCount; ++L) {
-    char a[32], b[32], c[32], d[32], e[32];
+    char a[32], b[32], c[32], d[32], e[32], f[32];
     std::snprintf(a, sizeof a, "%.2f +/- %.2f", m_rate[L], s_rate[L]);
     std::snprintf(b, sizeof b, "%+.4f +/- %.4f", m_drift[L], s_drift[L]);
     std::snprintf(c, sizeof c, "%+.4f +/- %.4f", m_ref[L], s_ref[L]);
     std::snprintf(d, sizeof d, "%.2f +/- %.2f", m_pin[L], s_pin[L]);
-    std::snprintf(e, sizeof e, "%+.1f", m_chg[L]);
-    std::printf("  %-7.2f %-8.1f %-15s %-15s %-15s %-13s %s\n", kCtxLevels[L],
-                cells[L] ? ctx_hz[L] / cells[L] : 0.0, a, b, c, d, e);
+    std::snprintf(f, sizeof f, "%.2f +/- %.2f", m_isat[L], s_isat[L]);
+    std::snprintf(e, sizeof e, "%+.1f +/- %.1f", m_chg[L], s_chg[L]);
+    (void)c;
+    std::printf("  %-7.2f %-8.1f %-15s %-15s %-13s %-13s %-8.2f %s\n", kCtxLevels[L],
+                cells[L] ? ctx_hz[L] / cells[L] : 0.0, a, b, d, f, m_vf[L], e);
   }
   std::printf("\n  mean rate error over the session, DERIVED from the drift as\n"
               "  drift / (ip_rate * calls) -- exact where nothing is at the clamp:\n");

@@ -97,6 +97,8 @@ ip_wake_scale = 0.25
 ip_sleep_scale = 4.0
 syn_wake_scale = 0.25
 syn_sleep_scale = 4.0
+# DNA v50: a relay exists to be sampled, not regulated by inhibition.
+isp_gain = 0.0
 explore_scale = 0.0
 norm_gain = 0.0
 eta_scale = 1.0

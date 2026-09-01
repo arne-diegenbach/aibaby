@@ -252,6 +252,12 @@ bool Network::build(const Dna& dna, Arena& arena, Rng& rng) {
     if (ffi_learn_[m] > kZero) any_ffi_learn_ = true;
   }
 
+  // DNA v50. Inhibitory synaptic plasticity (Vogels et al. 2011), per module.
+  for (uint32_t m = 0; m < module_count_ && m < kMaxModules; ++m) {
+    isp_gain_[m] = Scalar(dna.module(m).isp_gain);
+    if (isp_gain_[m] > kZero) any_isp_ = true;
+  }
+
   // DNA v37. The burst code, per module. `burst_ticks_` is the ISI at or under
   // which a spike is scored as part of a burst, and it is a *tick* count
   // because the comparison happens against last_spike_ in the tick loop.
@@ -494,6 +500,25 @@ bool Network::source_allowed(const DnaProjection& p, uint32_t src_neuron) const 
     case ProjectionSource::kInhibitory: return is_inhib_[src_neuron];
     default: return true;
   }
+}
+
+// DNA v50. See the note in network.h: an inhibitory budget is as bounded as a
+// threshold is, so the mechanism has to be able to report its own ceiling.
+Scalar Network::isp_saturation(uint32_t module) const {
+  const ModuleState& ms = modules_[module];
+  uint32_t total = 0, at_ceiling = 0;
+  for (uint32_t k = 0; k < ms.count; ++k) {
+    const uint32_t i = ms.begin + k;
+    if (dead_[i]) continue;
+    for (uint32_t s = 0; s < in_count_[i]; ++s) {
+      const uint32_t syn = syn_in_[syn_base_[i] + s];
+      const uint32_t src = syn_source_[syn];
+      if (!is_inhib_[src]) continue;
+      ++total;
+      if (-syn_weight_[syn] >= weight_ceiling(src) * Scalar(0.999)) ++at_ceiling;
+    }
+  }
+  return total ? Scalar(at_ceiling) / Scalar(total) : kZero;
 }
 
 Scalar Network::weight_ceiling(uint32_t src) const {
@@ -1827,10 +1852,23 @@ void Network::homeostasis(bool asleep) {
     const DnaModule& dm = dna_.module(m);
     const Scalar ip_scale = asleep ? Scalar(dm.ip_sleep_scale) : Scalar(dm.ip_wake_scale);
     const Scalar syn_scale = asleep ? Scalar(dm.syn_sleep_scale) : Scalar(dm.syn_wake_scale);
-    // Unregulated by both in this state: nothing below would change anything.
-    if (ip_scale <= kZero && syn_scale <= kZero) continue;
+    // DNA v50. Inhibitory plasticity is not gated by the wake/sleep pair above.
+    // Those two scale a *neuromodulatory* schedule onto regulation that erases
+    // learning; this one grows inhibition to match excitation and erases
+    // nothing, so there is no reason to hold it off in either state and no
+    // second pair of fields for it.
+    const Scalar isp = any_isp_ ? isp_gain_[m] : kZero;
+    // Unregulated by all three in this state: nothing below would change anything.
+    if (ip_scale <= kZero && syn_scale <= kZero && isp <= kZero) continue;
     const Scalar ip_rate = Scalar(hm.ip_rate) * ip_scale;
     const Scalar scaling = Scalar(hm.scaling_rate) * syn_scale;
+    // ISP is quoted in units of the *unscaled* ip_rate, because that constant is
+    // already calibrated as "the drive one pass of regulation should move" and
+    // the point of the mechanism is to move that drive somewhere other than the
+    // threshold. Multiplying by ip_scale too would make a module that has
+    // relaxed its threshold regulation also relax its inhibition, which is the
+    // opposite of what the split is for.
+    const Scalar isp_step = isp * Scalar(hm.ip_rate);
     for (uint32_t k = 0; k < ms.count; ++k) {
       const uint32_t i = ms.begin + k;
       if (dead_[i]) continue;
@@ -1842,6 +1880,67 @@ void Network::homeostasis(bool asleep) {
         threshold_[i] = clampf(threshold_[i] + ip_rate * (rate_ema_[i] - target_rate_[i]),
                                t_min, t_max);
       }
+      // Inhibitory synaptic plasticity (DNA v50, Vogels et al. 2011). Rate
+      // regulation that spends inhibitory weight instead of threshold range.
+      //
+      // Vogels' spike-timing rule has mean drift eta * nu_pre * (nu_post - rho0)
+      // — gradient descent on the postsynaptic rate error with the presynaptic
+      // rate as the input vector. Written here in that mean-field form on the
+      // rate EMAs this creature already keeps, and normalised by |x|^2 so the
+      // step size is not a new free constant.
+      //
+      // What it is normalised TO is the one place this could have gone quietly
+      // wrong. A threshold step of dθ is NOT worth a drive step of −dθ: the
+      // membrane integrates, v += leak_alpha * (v_rest − v) + drive, so a
+      // steady drive d holds v at v_rest + d / leak_alpha and a drive change is
+      // worth leak_alpha times as much as a threshold change. At a 20 ms leak
+      // and a 1 ms tick that is a factor of twenty, so matching the two step
+      // sizes naively would have made ISP twenty times weaker than the
+      // mechanism it is quoted against — a mechanism that reads as too slow to
+      // matter and is really just mis-scaled. leak_alpha_[i] is the conversion,
+      // and it is per neuron because the leak is.
+      //
+      // Inhibitory afferents only. That is what separates this from synaptic
+      // scaling below, which multiplies the *whole* afferent set and so
+      // attenuates the input that caused the error together with every input
+      // that did not — and, being multiplicative on excitation, erases what
+      // reward wrote. Nothing here touches an excitatory weight.
+      if (isp_step > kZero && in_count_[i] > 0) {
+        const Scalar err = rate_ema_[i] - target_rate_[i];
+        if (err != kZero) {
+          // The equivalent-drive step: one pass moves this neuron's steady-state
+          // membrane by what one pass of IP moves its threshold.
+          const Scalar equiv = isp_step * leak_alpha_[i];
+          const uint32_t ibase = syn_base_[i];
+          Scalar denom = kZero;
+          for (uint32_t s = 0; s < in_count_[i]; ++s) {
+            const uint32_t syn = syn_in_[ibase + s];
+            const uint32_t src = syn_source_[syn];
+            if (!is_inhib_[src] || dead_[src]) continue;
+            const Scalar x = rate_ema_[src] / spike_rate_unit_;
+            denom += x * x;
+          }
+          // No inhibitory afferent is firing: there is nothing for the rule to
+          // act on, and the neuron is left to IP. A silent inhibitory pool is
+          // not an error — it is what a fresh module looks like before its own
+          // interneurons have anything to say.
+          if (denom > kZero) {
+            const Scalar step = -equiv * err / denom;
+            for (uint32_t s = 0; s < in_count_[i]; ++s) {
+              const uint32_t syn = syn_in_[ibase + s];
+              const uint32_t src = syn_source_[syn];
+              if (!is_inhib_[src] || dead_[src]) continue;
+              const Scalar x = rate_ema_[src] / spike_rate_unit_;
+              // An inhibitory weight lives in [-ceiling, 0]: the sign law is
+              // the same one R-STDP obeys, so this cannot turn an interneuron
+              // excitatory however hard the rule pushes.
+              syn_weight_[syn] =
+                  clampf(syn_weight_[syn] + step * x, -weight_ceiling(src), kZero);
+            }
+          }
+        }
+      }
+
       if (syn_scale <= kZero) continue;  // scaling off: skip the afferent sweep
 
       // Synaptic scaling: keep total incoming |w| inside a band around the

@@ -90,6 +90,8 @@ ip_wake_scale = 1.0
 ip_sleep_scale = 1.0
 syn_wake_scale = 1.0
 syn_sleep_scale = 1.0
+# DNA v50: off, like every module in the shipped genome.
+isp_gain = 0.0
 explore_scale = 0.0
 norm_gain = 1.0
 eta_scale = 1.0

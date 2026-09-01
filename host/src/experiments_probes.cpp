@@ -6732,6 +6732,14 @@ const MechPin kMechPins[] = {
       {PatchScope::kProjection, "central->vocal", P_(topo_dst_hi), 0.3333f, false, nullptr},
       {PatchScope::kProjection, "central->vocal", P_(topo_sigma), 0.07f, false, nullptr}},
      6, kShort, 0x831a047c2989bc76ull},
+    // DNA v50. Inhibitory synaptic plasticity on the larynx, the module it was
+    // built for. A scalar, but one that writes to synapse WEIGHTS rather than
+    // to a drive term, so it is exactly the kind of mechanism that can rot into
+    // a no-op without the shipped hash noticing: every inhibitory afferent in
+    // the shipped creature is frozen for life, and this is the only rule that
+    // moves one.
+    {"inhibitory plasticity", "v50",
+     {{PatchScope::kModule, "vocal", M_(isp_gain), 1.0f, false, nullptr}}, 1, kShort, 0xae8f00ea1c735799ull},
     // v44 and v45 USED to be pinned here and are not any more, because the
     // rebound now SHIPS ON. mechverify exists for mechanisms invisible to
     // kPinnedHash — an off-by-default mechanism can rot into a no-op with

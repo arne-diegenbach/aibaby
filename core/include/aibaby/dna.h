@@ -322,7 +322,82 @@ constexpr uint32_t kDnaMagic = 0x44424941;  // "AIBD"
 //     about what reward multiplies.
 //
 //     See DnaModule::ffi_apical and DnaModule::ffi_learn, and `errprobe`.
-constexpr uint32_t kDnaVersion = 49;
+// 50: inhibitory synaptic plasticity (Vogels, Sprekeler, Zenke, Clopath &
+//     Gerstner, Science 2011: "Inhibitory plasticity balances excitation and
+//     inhibition in sensory pathways and memory networks"). A rate regulator
+//     that acts on inhibitory synapses instead of on a threshold.
+//
+//     **The measurement that asks for it.** `ipctx` ran ctxlearn's positive
+//     control at four levels of context drive and read the larynx's regulator
+//     directly. IP does not settle at a new operating point — the threshold
+//     climbs +1.2 to +2.8 into a [0.20, 4.00] clamp, and 25% to 83% of the
+//     module ends the session pinned at threshold_max. The share pinned tracks
+//     the collapse of the control better than anything else in that table
+//     (0.00/0.25/0.31/0.83 against +34.0/+14.7/+16.6/+1.5).
+//
+//     **Why that is structural rather than a tuning miss.** A threshold is
+//     bounded, so threshold regulation has a finite budget; a sustained new
+//     afferent spends it. The creature's only other rate regulator is synaptic
+//     scaling, which v11 measured never runs on the larynx, and which is
+//     multiplicative over the whole afferent set — it would attenuate the
+//     tract that caused the error and every other tract with it. Inhibition is
+//     neither bounded in the same way nor indiscriminate: Vogels' rule grows
+//     the inhibitory input that matches the excitation that arrived.
+//
+//     **What it is aimed at.** ctxlearn's wall is a new KIND: not "the
+//     condition does not arrive" — a zero-baseline context tract takes 28-79%
+//     of the larynx's plasticity, so it arrives — but **arriving costs more
+//     than it pays**, the positive control dying at every driven level on five
+//     genomes. If the cost is the regulator running out of range, a regulator
+//     with range is the repair, and it is testable on a quantity that is not
+//     the milestone: ISP predicts the PINNED SHARE stays near zero while the
+//     tract drives at the same rate. `ipctx` already prints that column.
+//
+//     **Honest placement.** This does not touch conditionality, which `g2cond`
+//     shows is the wall, and it is not claimed to. It is aimed at the one
+//     obstruction standing between the creature and a fair test of a
+//     conditional afferent, which is a smaller and more answerable thing.
+//
+//     **BUILT, MEASURED AND REFUTED, and it took the hypothesis with it.**
+//     `ipctx` as a 2x2 -- ip_wake_scale 1.0 / 0.25 crossed with isp_gain 0 / 1,
+//     3 seed families, 48 sessions of 3.4M ticks. Every cell keeps the
+//     saturation: the threshold climbs +1.1 to +2.9 into the clamp whether IP
+//     runs at full strength or a quarter of it, and whether or not inhibition
+//     is plastic. The prediction registered before the run -- that the pinned
+//     share falls toward zero -- fails at every combination.
+//
+//     `inh sat` is what makes that readable rather than ambiguous. ISP reaches
+//     only 6-25% of its own ceiling, so this is NOT the inhibitory budget being
+//     too small; the rule has three quarters of its range unspent and still
+//     does not absorb the drive. And relaxing IP fourfold does not slow the
+//     threshold's walk to the clamp at all, which refutes the one excuse the
+//     mechanism had -- that IP was winning the race and ISP never got the job.
+//     It got the job and could not do it.
+//
+//     **What it settles, which is worth more than the mechanism.** `ipctx`
+//     raised a narrower hypothesis and said in terms that it needed its own
+//     experiment: that IP pushes the larynx onto its ceiling, where a per-neuron
+//     bias perturbation has less purchase, so the PINNED SHARE and not the
+//     learning score is the operative variable. This is that experiment, and it
+//     comes out against. At 31.4 Hz of context drive the shipped larynx reads
+//     pinned 0.31 and `change` +16.6 +/- 1.8; the IP-relaxed larynx at the SAME
+//     drive reads pinned **0.00 on 3 of 3 seeds** and `change` **-2.3 +/- 1.1**.
+//     Unpinning the module completely does not lift the collapse, it deepens
+//     it. Pinned share and learning score come apart, with the sign reversed.
+//
+//     **And ISP costs the positive control on its own.** With the context tract
+//     SILENT, `change` goes +34.0 +/- 4.7 -> +15.4 +/- 4.3. Not through the
+//     drone that DNA v9 measured when IP was relaxed -- the voiced fraction is
+//     0.66 in both -- so it is the exploratory pathway being paid for, not the
+//     duty cycle.
+//
+//     Ships OFF, and kept rather than removed, on the precedent of v29, v40 and
+//     v43: a refuted mechanism whose absence would invite the proposal again is
+//     worth one field and one branch, and `mechverify` now pins it so it cannot
+//     rot into a no-op. The measurement is the asset either way.
+//
+//     See DnaModule::isp_gain.
+constexpr uint32_t kDnaVersion = 50;
 
 // What a module is wired to the world through. The host looks modules up by
 // role, never by name or index, so renaming a module in the genome cannot
@@ -1373,6 +1448,55 @@ struct DnaModule {
   float ip_sleep_scale;
   float syn_wake_scale;
   float syn_sleep_scale;
+  // DNA v50. Inhibitory synaptic plasticity — the third regulator, and the
+  // only one of the three that regulates a rate without spending a budget that
+  // runs out. Vogels, Sprekeler, Zenke, Clopath & Gerstner, Science 2011.
+  //
+  // 0 is off and is bit-identical to v49. It is off everywhere in the shipped
+  // genome; the whole mechanism is one branch on this field.
+  //
+  // WHY IT EXISTS. `ipctx` measured what happens when a second afferent
+  // arrives at the larynx: the threshold climbs +1.2 to +2.8 into a
+  // [0.20, 4.00] clamp and a quarter to five-sixths of the module ends the
+  // session PINNED at threshold_max. That is the shape of a regulator running
+  // out of range, and it is not a tuning accident — a threshold is a bounded
+  // quantity, so threshold regulation has a finite budget by construction, and
+  // a sustained new input spends it. The creature's other rate regulator does
+  // not help: synaptic scaling is multiplicative on the whole afferent set and
+  // v11 measured that it never executes on the larynx at all.
+  //
+  // Inhibition has no such bound. Vogels' rule drives each neuron's inhibitory
+  // input until the neuron sits at a target rate, and it does so at the
+  // synapse, per afferent — so a new excitatory input is cancelled by matched
+  // inhibition rather than by a threshold every OTHER input then has to climb.
+  // That is the difference the mechanism is for: raising a threshold attenuates
+  // every afferent this neuron has, and growing inhibition attenuates the one
+  // that caused the error.
+  //
+  // THE RULE, and why the constant is derived rather than guessed. Vogels'
+  // spike-timing form has mean drift eta * nu_pre * (nu_post - rho0), i.e.
+  // gradient descent on the postsynaptic rate error with the presynaptic rate
+  // as the input. Written here in that mean-field form on the rates the
+  // creature already keeps, and normalised so that one pass moves the neuron's
+  // mean drive by exactly what one pass of intrinsic plasticity moves its
+  // threshold:
+  //
+  //     x_s   = rate_ema[source of s] / spike_rate_unit   (drive per tick per
+  //                                                        unit of weight)
+  //     dw_s  = -isp_gain * ip_rate * (rate - target) * x_s / sum_t x_t^2
+  //
+  // so sum_s dw_s * x_s = -isp_gain * ip_rate * (rate - target). At
+  // isp_gain = 1 inhibition removes per pass exactly the drive a threshold step
+  // would have removed, which makes `isp_gain` the same kind of number
+  // `scaling_rate` is — a fraction of the error corrected per pass — and leaves
+  // no free constant to fit. Four guessed constants have cost this project a
+  // run each; ip_rate is already calibrated, so ISP is quoted in units of it.
+  //
+  // Inhibitory afferents only, which is what makes it Vogels' rule and not
+  // another synaptic scaling. Excitatory weights are untouched, so nothing here
+  // erases what reward wrote — the failure mode that made v11 split this field
+  // in the first place.
+  float isp_gain;
   // How much this module's spontaneous drive answers to the exploration signal
   // (see DnaExploration). 0 leaves it at the fixed noise_amp above, which is
   // what every module did before DNA v10; 1 hands it the full range between

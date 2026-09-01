@@ -296,6 +296,7 @@ DnaStatus Dna::load(const void* blob, size_t size) {
     if (m.explore_scale < 0.0f) return DnaStatus::kBadModule;
     if (m.ip_wake_scale < 0.0f || m.ip_sleep_scale < 0.0f) return DnaStatus::kBadModule;
     if (m.syn_wake_scale < 0.0f || m.syn_sleep_scale < 0.0f) return DnaStatus::kBadModule;
+    if (m.isp_gain < 0.0f) return DnaStatus::kBadModule;
     if (m.norm_gain < 0.0f) return DnaStatus::kBadModule;
     if (m.eta_scale < 0.0f) return DnaStatus::kBadModule;
     if (m.extent[0] <= 0.0f || m.extent[1] <= 0.0f || m.extent[2] <= 0.0f) {

@@ -389,6 +389,19 @@ class Network {
     weight = syn_weight_[syn];
   }
 
+  // DNA v50. The share of inhibitory afferents onto this module that are
+  // sitting at their own weight ceiling.
+  //
+  // This exists because IP's failure mode is now a measured thing rather than a
+  // worry: `ipctx` found the larynx's threshold climbing into its clamp instead
+  // of settling, with a quarter to five-sixths of the module pinned. Inhibitory
+  // weight is also a bounded budget, so inhibitory plasticity can fail in
+  // exactly the same shape — and a mechanism that saturates and one that has
+  // nothing to do both read as "no threshold movement". Without this column an
+  // ISP arm could not tell those apart, which is the whole reason the IP story
+  // needed a second run to get right.
+  Scalar isp_saturation(uint32_t module) const;
+
   // What synaptic scaling is aiming this neuron's afferent set at — the birth
   // total, lowered by sleep downscaling. Exposed because "scaling erased the
   // weights" and "scaling never fired" produce the same flat sweep, and the
@@ -807,6 +820,12 @@ class Network {
   // Divisive normalisation (DNA v12), cached from the genome at build. All
   // derived state — nothing here is saved, because all of it is recomputed
   // from the genome the moment a brain is constructed.
+  // DNA v50. Inhibitory synaptic plasticity, per module, cached from
+  // DnaModule::isp_gain. `any_isp_` keeps the whole mechanism behind one branch
+  // so a genome that does not ask for it pays nothing and stays bit-identical.
+  Scalar isp_gain_[kMaxModules] = {};
+  bool any_isp_ = false;
+
   Scalar norm_gain_[kMaxModules] = {};
   Scalar norm_target_[kMaxModules] = {};  // target_rate_hz, the reference point
   // DnaModule::eta_scale, cached. Indexed by the *postsynaptic* module.

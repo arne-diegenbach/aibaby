@@ -6838,6 +6838,143 @@ derivable rather than sampleable — IP steps the threshold by
 mean follows by division: +3.12 +/- 0.21 Hz where the endpoint EMA gave
 8.18 +/- 2.48 for the same quantity.
 
+### DNA v50 — inhibitory plasticity, and the pinned-share hypothesis dies with it
+
+`ipctx` ended by naming its own successor. It had refuted the graded
+re-regulation story and raised a narrower one in its place: not that intrinsic
+plasticity re-regulates the larynx away from the context tract, but that it
+pushes a large share of the larynx onto its threshold ceiling, where a
+per-neuron bias perturbation has less purchase on the output. It said in terms
+that this needed a *different* experiment — one predicting the pinned share
+rather than the learning score — and that no `ip_wake_scale` arm was licensed
+until something else was tried.
+
+The something else is in the literature and this creature did not have it.
+**Outside sleep downscaling, no inhibitory weight in this brain has ever
+changed.** Both of its rate regulators act on the excitatory side: intrinsic
+plasticity moves a threshold, synaptic scaling rescales the whole afferent set,
+and v11 measured that the second never executes on the larynx at all. A
+threshold is a bounded quantity, so threshold regulation has a finite budget by
+construction, and `ipctx` had just watched a sustained new afferent spend it.
+
+Vogels, Sprekeler, Zenke, Clopath and Gerstner (*Science*, 2011) is the
+regulator with the other budget: a rule on inhibitory synapses whose mean drift
+is `eta * nu_pre * (nu_post - rho0)`, which holds a neuron at a target rate by
+growing the inhibition that matches the excitation arriving. Where a threshold
+attenuates *every* afferent a neuron has, inhibition grows against the one that
+caused the error.
+
+**The constant is derived, not guessed, and deriving it caught a real bug.**
+`isp_gain` is a fraction like `scaling_rate`: the step is normalised by the
+presynaptic rate vector so that one pass moves a neuron's steady-state membrane
+by exactly what one pass of IP moves its threshold, leaving `ip_rate` as the
+only calibrated constant either mechanism uses. The conversion between the two
+is not one-for-one. The membrane integrates — `v += leak_alpha * (v_rest - v) +
+drive` holds a steady drive `d` at `v_rest + d / leak_alpha` — so a drive change
+is worth `leak_alpha` times a threshold change, a factor of twenty at a 20 ms
+leak and a 1 ms tick. Matching the two step sizes naively would have made ISP
+twenty times weaker than the mechanism it is quoted against, and it would have
+read as a mechanism too slow to matter rather than as one that was mis-scaled.
+
+**It also has an instrument for its own failure mode**, because inhibitory
+weight is as bounded as a threshold is and "saturated" and "nothing to do" would
+otherwise read identically — which is exactly the confusion that cost `ipctx` a
+second run. `inh sat` is the share of a module's inhibitory afferents sitting at
+their own ceiling, and `ipctx` now prints it, along with the voiced fraction,
+because relaxing regulation on the larynx makes the creature drone (v9: duty
+0.61 -> 0.83) and a `change` read off a droning creature is a different
+measurement wearing the same name.
+
+**The prediction was registered before the run: the pinned share falls toward
+zero at the same context drive.** Not the learning score — five upstream
+improvements in this project have left the milestone still, and the mechanism's
+own claim is about range.
+
+#### The 2x2, 3 seed families, 48 sessions of 3.4M ticks
+
+`ip_wake_scale` 1.0 / 0.25 crossed with `isp_gain` 0 / 1. The IP-relaxed cells
+are the control that makes the test fair: with IP at full strength it nulls the
+rate error before ISP can act, and in Vogels' network ISP *is* the regulator.
+
+| ctx drive | | pinned | inh sat | voiced | change |
+|---|---|---|---|---|---|
+| mute | IP 1.0, no ISP | 0.00 | 0.00 | 0.66 | **+34.0 +/- 4.7** |
+| | IP 1.0, **ISP** | 0.00 | 0.00 | 0.66 | **+15.4 +/- 4.3** |
+| | IP 0.25, no ISP | 0.00 | 0.00 | 0.66 | +21.8 +/- 10.4 |
+| | IP 0.25, **ISP** | 0.00 | 0.01 | 0.67 | +21.1 +/- 4.8 |
+| 13.4 Hz | IP 1.0, no ISP | 0.25 | 0.00 | 0.49 | +14.7 +/- 7.0 |
+| | IP 1.0, **ISP** | 0.20 | 0.06 | 0.46 | +4.2 +/- 3.8 |
+| | IP 0.25, no ISP | 0.20 | 0.00 | 0.45 | -10.4 +/- 22.6 |
+| | IP 0.25, **ISP** | 0.11 | 0.01 | 0.45 | -6.7 +/- 12.7 |
+| 31.4 Hz | IP 1.0, no ISP | 0.31 | 0.00 | 0.65 | **+16.6 +/- 1.8** |
+| | IP 1.0, **ISP** | 0.47 | 0.09 | 0.60 | -5.9 +/- 5.2 |
+| | IP 0.25, no ISP | **0.00** | 0.00 | 0.60 | **-2.3 +/- 1.1** |
+| | IP 0.25, **ISP** | 0.46 | 0.24 | 0.64 | -6.2 +/- 5.6 |
+| 62.6 Hz | IP 1.0, no ISP | 0.83 | 0.00 | 0.42 | +1.5 +/- 6.6 |
+| | IP 1.0, **ISP** | 0.40 | 0.24 | 0.37 | -4.2 +/- 13.0 |
+| | IP 0.25, no ISP | 0.90 | 0.00 | 0.38 | +1.2 +/- 3.3 |
+| | IP 0.25, **ISP** | 0.56 | 0.25 | 0.37 | -5.7 +/- 16.0 |
+
+The no-ISP, IP-1.0 rows reproduce the recorded `ipctx` table exactly — pinned
+0.00/0.25/0.31/0.83, change +34.0/+14.7/+16.6/+1.5 — so the arms are paired and
+the instrument is intact.
+
+**The registered prediction fails in every cell.** The threshold climbs +1.1 to
++2.9 into the clamp whether or not inhibition is plastic, and whether IP runs at
+full strength or at a quarter of it. Relaxing IP fourfold does not slow the walk
+to the clamp *at all*, which kills the mechanism's one excuse: it was not that
+IP won the race and ISP never got the job. ISP got the job and could not do it.
+
+**And it is not the inhibitory budget.** `inh sat` peaks at 0.25 — three
+quarters of the range unspent while the threshold saturates beside it. That
+column was added to tell "saturated" apart from "nothing to do", and it says
+neither: the rule has room and is not using it.
+
+#### What this actually settles, which is worth more than the mechanism
+
+> At 31.4 Hz of context drive the shipped larynx reads **pinned 0.31** with
+> `change` **+16.6 +/- 1.8**, positive on 3 of 3 seeds. The IP-relaxed larynx at
+> the **same** drive reads **pinned 0.00 on 3 of 3 seeds** with `change`
+> **-2.3 +/- 1.1**, negative on 3 of 3. Unpinning the larynx completely does not
+> lift `ctxlearn`'s collapse. It deepens it.
+
+That is `ipctx`'s narrower hypothesis, tested and answered with the sign
+reversed. **Pinned share and learning score come apart**, unanimously and with
+tight bars on both sides, so the pinned share is not the operative variable and
+the `ip_wake_scale` arm that was never licensed is now not merely unlicensed but
+spent and negative. Whatever kills the positive control when the context tract
+fires, it is not the larynx sitting on its threshold ceiling — the same way it
+was already not intrinsic plasticity re-regulating, not synaptic scaling, not
+`out_w` over a 6x range, and not `dst_noise`.
+
+**ISP also costs the positive control on its own.** With the context tract
+silent, `change` goes +34.0 +/- 4.7 -> +15.4 +/- 4.3, and *not* through the
+drone v9 measured — the voiced fraction is 0.66 in both. So it is paid out of
+the exploratory pathway rather than out of the duty cycle, which is the same
+currency `ctxlearn`'s wall is denominated in: a single motor population cannot
+host a conditional afferent and a reward-driven exploratory search at once, and
+it turns out it cannot host a second *regulator* either.
+
+Ships off. `isp_gain = 0` is bit-identical to v49, hash unmoved at
+`ad96f882becbee92`, `verify` 22/22. Kept rather than removed on the precedent of
+v29, v40 and v43 — a refuted mechanism whose absence would invite the proposal
+again is worth one field and one branch — and `mechverify` now carries an
+eighteenth pin, `c7067352b374d80d`, so it cannot rot into a no-op unnoticed.
+
+**Where it points.** Mehaffey and Doupe (*Nature Neuroscience*, 2015) measured
+what this creature is being asked to do without: HVC's premotor input and LMAN's
+exploratory input arrive at RA as separate afferents under separate rules, and
+pairing them drives the two in opposite directions. `vocal` here is one
+population asked to be both. Two attempts have now been made to make that
+arrangement work by changing what happens *at* the larynx — v48's readout and
+v50's regulator — and neither moved it. Fee and Goldberg (*Neuroscience*, 2011)
+describe the arrangement that does not require it: the conditional map is not
+learned at the motor population at all, but in a basal-ganglia stage receiving
+the timing signal and a *collateral* of the exploratory signal, which then
+biases the motor population from outside. That is a much larger build than a
+plasticity rule, which is why it was not the thing tried first — and it is what
+is left.
+
 ## Design decisions that were not obvious
 
 These were all discovered by measurement, and each one is the difference
@@ -7076,6 +7213,46 @@ author list is worse than an incomplete one.
   larynx reads a centroid over each motor group, which is this idea, and
   `trajprobe` and `vocab` are both eventually limited by what a centroid can
   represent.
+
+**Inhibitory plasticity, and the two afferents onto one motor population
+(DNA v50).**
+
+- Vogels, T. P., Sprekeler, H., Zenke, F., Clopath, C. & Gerstner, W. (2011).
+  *Inhibitory plasticity balances excitation and inhibition in sensory pathways
+  and memory networks.* Science 334, 1569–1573.
+  <https://doi.org/10.1126/science.1211095> — the rule `isp_gain` implements.
+  A symmetric spike-timing rule on inhibitory synapses whose mean drift is
+  `eta * nu_pre * (nu_post - rho0)`: it holds a neuron at a target rate by
+  growing the inhibition that matches the excitation arriving, rather than by
+  moving a threshold every other afferent then has to climb. This creature had
+  no inhibitory plasticity of any kind — outside sleep downscaling, an
+  inhibitory weight here was fixed for life — and `ipctx` measured what that
+  costs: its one rate-side regulator on the larynx runs into its clamp.
+- Royer, S. & Paré, D. (2003). *Conservation of total synaptic weight through
+  balanced synaptic depression and potentiation.* Nature 422, 518–522.
+  <https://doi.org/10.1038/nature01530> — the experimental result behind the
+  same idea stated as a budget: potentiation at one input is accompanied by
+  depression at others, so a new input does not simply add. The property this
+  creature's regulators do not have, and the reason a second afferent onto the
+  larynx costs what it does.
+- Mehaffey, W. H. & Doupe, A. J. (2015). *Naturalistic stimulation drives
+  opposing heterosynaptic plasticity at two inputs to songbird cortex.* Nature
+  Neuroscience 18, 1272–1280. <https://doi.org/10.1038/nn.4078> — the
+  arrangement `ctxlearn` is asking one module to be. RA receives the premotor
+  timing input from HVC and the exploratory input from LMAN as *separate*
+  afferents under *separate* rules, and pairing them drives the two in opposite
+  directions. `vocal` here is asked to host both at once, which is what
+  "arriving costs more than it pays" is a description of.
+- Fee, M. S. & Goldberg, J. H. (2011). *A hypothesis for basal
+  ganglia-dependent reinforcement learning in the songbird.* Neuroscience 198,
+  152–170. <https://doi.org/10.1016/j.neuroscience.2011.09.069> — the
+  architecture the alternative reading points at. The conditional map is not
+  learned at the motor population at all: Area X receives HVC's timing signal
+  and a collateral of LMAN's own exploratory signal, learns there under
+  dopamine, and biases the motor population from outside. Named here because it
+  is what the ISP result licenses next if range is not the whole story — and
+  because it is a much larger build than a plasticity rule, which is why it was
+  not the thing tried first.
 
 **Metaplasticity and memory consolidation (DNA v41).**
 
