@@ -6783,6 +6783,61 @@ not see any of the off-by-default mechanisms, and the fix had to be proved on a
 genome nobody runs. That is what `mechverify` above is for, and it is the only
 one of these lessons that turned into code rather than a rule.
 
+### `ipctx` — the regulator was measured before it was relaxed, and it saturates
+
+`ctxlearn` left one named suspect. Its positive control dies whenever the
+context oracle fires, the collapse does not scale with `out_w` over a 6x range,
+and `dst_noise` compensation does not save it — so the lever is rate-side, and
+intrinsic plasticity is the only rate regulator that runs on the larynx (DNA
+v11 measured that synaptic scaling never executes there at all).
+
+The obvious move is `ip_wake_scale = 0`. Two things already in this file say
+not to. DNA v9 measured that relaxing IP on vocal makes the creature **drone**
+(duty 0.61 -> 0.83), which moves the voiced fraction the formant readout
+depends on — and `ctxlearn`'s voiced gate is one-sided, so it would not catch
+it. And relaxing a regulator without first checking it runs is the
+`syn_wake_scale` mistake, which cost a 3.4M-tick arm and returned byte-identical
+rows. So `ipctx` measures rather than intervenes: twelve sessions, no yoke,
+because reading a regulator does not need one.
+
+| gain | ctx Hz | d threshold | **pinned** | change |
+|---|---|---|---|---|
+| 0.00 | 0.0 | -0.071 +/- 0.007 | **0.00** | **+34.0** |
+| 0.06 | 13.4 | +1.233 +/- 0.318 | **0.25** | +14.7 |
+| 0.10 | 31.4 | +1.263 +/- 0.371 | **0.31** | +16.6 |
+| 0.20 | 62.6 | +2.781 +/- 0.028 | **0.83** | +1.5 |
+
+**IP does not re-regulate the larynx. It runs out of range.** The threshold
+climbs +1.2 to +2.8 into a [0.20, 4.00] clamp, and every driven level ends the
+session with a quarter to five-sixths of the module sitting at `threshold_max`.
+The derived rate error reads +0.60/+0.62 Hz driven but is invalid at all of
+them, because once a neuron is on the clamp the drift stops tracking the error.
+The graded re-regulation story is refuted, and `ctxlearn`'s last named suspect
+is closed.
+
+What it raises and does not claim: `pinned` tracks the collapse better than
+anything else in the table. The narrower hypothesis is that IP pushes a large
+share of the larynx onto its ceiling, where a per-neuron bias perturbation has
+less purchase on the output — a **different** experiment, predicting the pinned
+share rather than the learning score. The `ip_wake_scale` arm is not licensed.
+
+**At 200000 ticks this probe reads `pinned 0.00` everywhere and grants the
+licence.** The threshold needs a full session to walk to the clamp, so a short
+run of this experiment reports the opposite of a long one. `--allow-short`
+exists for exactly that and fails the run regardless of what it prints; the
+short numbers were still quoted as directional before the long ones landed.
+
+Three verdict bugs, each caught after printing something plausible: the two
+conditions were tested independently across levels and passed one at gain 0.20
+and the other at 0.10, calling two regimes one licence; a saturated level was
+reported rather than refused, and refusing it is what exposed the first bug;
+and it printed "no rate error to act on" when the error was *unmeasurable
+because clamped*, which is the opposite conclusion. The rate error itself was
+derivable rather than sampleable — IP steps the threshold by
+`ip_rate * (rate - target)`, so the drift is the integral of the error and the
+mean follows by division: +3.12 +/- 0.21 Hz where the endpoint EMA gave
+8.18 +/- 2.48 for the same quantity.
+
 ## Design decisions that were not obvious
 
 These were all discovered by measurement, and each one is the difference
