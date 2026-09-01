@@ -7839,11 +7839,16 @@ bool run_ipctx(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
   // 0.20 saturates, and a level where the clamp is holding most of the module
   // is not a level where IP is regulating anything.
   bool any_driven = false, rate_error = false, drift_moved = false, both = false;
+  bool any_unpinned_driven = false;
   double best_drift = 0.0, best_rate = 0.0, best_gain = 0.0, best_pin = 0.0;
+  double min_pin = 1.0, max_pin = 0.0;
   for (uint32_t L = 1; L < kCtxLevelCount; ++L) {
     const double hz = cells[L] ? ctx_hz[L] / cells[L] : 0.0;
     if (hz <= 1.0) continue;  // oracle mute at this level
     any_driven = true;
+    if (m_pin[L] <= 0.02) any_unpinned_driven = true;
+    if (m_pin[L] < min_pin) min_pin = m_pin[L];
+    if (m_pin[L] > max_pin) max_pin = m_pin[L];
     // (1) is there a rate error for IP to act on, above the mute arm's own?
     // Derived from the drift rather than sampled off the final EMA, and only
     // where the clamp is not holding the module: past that the drift stops
@@ -7867,6 +7872,31 @@ bool run_ipctx(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
   if (!any_driven) {
     std::printf("\n  UNREADABLE -- no level drove the oracle above 1 Hz, so nothing\n"
                 "  here is a measurement of what drive does to the larynx.\n");
+    return false;
+  }
+
+  if (!any_unpinned_driven) {
+    std::printf("\n  IP SATURATES -- and that is a different finding from the one this\n"
+                "  probe set out to make. Every driven level ends the session with\n"
+                "  %.0f-%.0f%% of the larynx sitting at threshold_max, so the derived\n"
+                "  rate error cannot be read at ANY of them and the graded\n"
+                "  re-regulation story is not what is happening. The threshold does\n"
+                "  climb -- %+.3f at the lowest driven level against %+.3f mute -- but\n"
+                "  it climbs into the clamp rather than settling at a new operating\n"
+                "  point, while `change` falls %+.1f -> %+.1f.\n\n"
+                "  This REFUTES the mechanism as stated and raises a narrower one in\n"
+                "  its place: not that IP re-regulates the larynx away from the\n"
+                "  oracle's drive, but that it drives a large share of the larynx onto\n"
+                "  its threshold ceiling, where a per-neuron bias perturbation has\n"
+                "  much less purchase on the output. That is a DIFFERENT experiment --\n"
+                "  it predicts the pinned share, not the learning score, is what\n"
+                "  tracks the collapse -- and it is not licensed by this run.\n\n"
+                "  NOTE: at 200000 ticks this same probe reads pinned 0.00 at every\n"
+                "  driven level and grants the licence. The threshold needs a full\n"
+                "  session to walk to the clamp, so a short run of this experiment\n"
+                "  reports the OPPOSITE of what it reports at length.\n",
+                100.0 * min_pin, 100.0 * max_pin, m_drift[1], m_drift[0],
+                m_chg[0], m_chg[kCtxLevelCount - 1]);
     return false;
   }
 
@@ -7919,7 +7949,9 @@ bool run_ipctx(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
               "  movement, is not the story that was told about it. Read the table\n"
               "  before spending an arm on it.\n",
               rate_error ? "the larynx does run above target while driven"
-                         : "the larynx shows no rate error to act on",
+                         : (any_unpinned_driven
+                                ? "the larynx shows no rate error to act on"
+                                : "the rate error is not measurable -- clamped"),
               drift_moved ? "its threshold does move further than when mute"
                           : "its threshold does not move any further than when mute");
   return false;
