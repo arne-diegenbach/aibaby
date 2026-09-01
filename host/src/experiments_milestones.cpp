@@ -7474,8 +7474,30 @@ bool run_curriculum(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
   std::printf("\n    Read both against m3's measured floor: the control genome swings\n"
               "    +/-0.060 across seed families with the mechanism absent, spread\n"
               "    0.120. A schedule effect has to clear that, not just its own SE.\n");
+
+  // ...and now the experiment ASSERTS it rather than leaving it to the reader.
+  //
+  // This returned an unconditional `true` while its spec said Expect::kOpen,
+  // so `verify-long` reported "a milestone this project has never met just did"
+  // on every run. It was descriptive code carrying a verdict's label. The floor
+  // is m3's own measured one: the control genome swings +/-0.060 across seed
+  // families with the mechanism absent by construction, so a cross-family claim
+  // needs about 0.120.
+  const double kM3Floor = 0.120;
+  const double best = std::max(sum_gap[0] / n_gap[0], sum_gap[1] / n_gap[1]);
+  if (best > kM3Floor) {
+    std::printf("\n  SCHEDULE MATTERS — the better arm reads %+.3f, clear of m3's\n"
+                "  %.3f cross-family floor. Naming has been measured under one\n"
+                "  protocol for eleven mechanisms and the protocol was load-bearing.\n",
+                best, kM3Floor);
+    return true;
+  }
+  std::printf("\n  SCHEDULE DOES NOT MATTER — the better arm reads %+.3f against m3's\n"
+              "  %.3f cross-family floor, and the blocked arm is actively harmful.\n"
+              "  m3's interleaved schedule was already the right one.\n",
+              best, kM3Floor);
   (void)verbose;
-  return true;
+  return false;
 }
 
 
@@ -8489,6 +8511,10 @@ bool run_coderprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
                 "  reading.\n", shuf);
     return false;
   }
+  // PASS means the ear is at ceiling, which is both the answer to the gate
+  // and a regression check worth keeping: the day this fails, either the
+  // front end has broken or something has genuinely opened headroom, and
+  // both of those are news.
   if (aud >= 0.90 * mel && aud >= 0.75) {
     std::printf("\n  DO NOT BUILD IT — the ear already carries one-of-eight at %.3f\n"
                 "  against the signal's own %.3f. There is no headroom for a better\n"
@@ -8496,7 +8522,7 @@ bool run_coderprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
                 "  creature can SAY and not about what it can hear. A competitive coder\n"
                 "  would be improving the one stage that is not the bottleneck.\n",
                 aud, mel);
-    return false;
+    return true;
   }
   std::printf("\n  HEADROOM — the ear carries %.3f where the signal carries %.3f, so a\n"
               "  representation that keeps more of what the cochlea delivers has\n"
@@ -8504,7 +8530,7 @@ bool run_coderprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
               "  it against these two numbers -- not against `vocab`'s 0.210, which is\n"
               "  the voice.\n", aud, mel);
   (void)verbose;
-  return true;
+  return false;
 }
 
 }  // namespace aibaby_host

@@ -4,6 +4,8 @@
 // experiments_milestones.cpp and experiments_probes.cpp; the scaffolding they
 // share is in experiments_common.h.
 
+#include <chrono>
+
 #include "experiments_common.h"
 
 namespace aibaby_host {
@@ -167,18 +169,19 @@ const Spec kSpecs[] = {
      "  8x. Local recurrence cannot carry activity forward at all"},
     {"curriculum", 1200000, Expect::kOpen, Tier::kLong,
      "derived: m3's protocol at a length where teaching works"},
-    {"coderprobe", 300000, Expect::kOpen, Tier::kFast,
-     "the gate on a sparse auditory coder: is the EAR the bottleneck, or is\n"
-     "  vocab's 0.210 a fact about the voice? Measured before building"},
-    {"g2cond", 3400000, Expect::kOpen, Tier::kLong,
+    {"coderprobe", 300000, Expect::kPass, Tier::kFast,
+     "the auditory front end carries one-of-eight at ceiling (0.981 against a\n"
+     "  1.000 signal). PASSES while that holds: it is a regression check on the\n"
+     "  ear, and it doubles as the gate that refused a sparse auditory coder"},
+    {"g2cond", 3400000, Expect::kOpen, Tier::kTeach,
      "derived: vocallearn's trial clock. Is the wall the formant readout or\n"
      "  conditionality? Asks it on G2's OWN contingency, criterion and class,\n"
      "  with the praised class depending on the word heard"},
-    {"pgprobe", 3400000, Expect::kOpen, Tier::kLong,
+    {"pgprobe", 3400000, Expect::kOpen, Tier::kTeach,
      "derived: vocallearn's own minimum. Is the policy gradient's conditional\n"
      "  arm conditional, or a creature sitting between two alternating targets?\n"
      "  Controls `swap` against a target with MATCHED MARGINALS"},
-    {"ctxlearn", 3400000, Expect::kOpen, Tier::kLong,
+    {"ctxlearn", 3400000, Expect::kOpen, Tier::kTeach,
      "derived: vocallearn's own minimum, which its positive control sets.\n"
      "  Stage 0 of the audio rewrite: can reward write a CONDITIONAL map when\n"
      "  the condition arrives on a zero-baseline code? Needs a genome with a\n"
@@ -541,13 +544,27 @@ bool run_verify(const std::vector<uint8_t>& dna_blob, bool long_tier, bool teach
   }
 
   uint32_t passed = 0, failed = 0, open = 0;
+  double total_secs = 0.0, slowest_secs = 0.0;
+  const char* slowest = "";
   std::string bad;
   for (const Spec& s : kSpecs) {
     if (s.tier == Tier::kLong && !long_tier) continue;
     if (s.tier == Tier::kTeach && !teach_tier) continue;
     if (std::strcmp(s.name, "determinism") == 0) continue;
     std::printf("\n  --- %s, %llu ticks ---\n", s.name, (unsigned long long)s.min_ticks);
+    // Timed, because a tier can only be curated on evidence. `verify-long` is
+    // documented as "something you run before a commit" and measured at ELEVEN
+    // HOURS AND FORTY-EIGHT MINUTES, and nothing in its output said which
+    // experiment was responsible. A suite that cannot be profiled gets slower
+    // until it stops being run, which is the failure the kTeach split was
+    // already written to prevent once.
+    const auto t0 = std::chrono::steady_clock::now();
     const bool got = run_experiment(s.name, dna_blob, s.min_ticks, verbose);
+    const double secs =
+        std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count();
+    total_secs += secs;
+    if (secs > slowest_secs) { slowest_secs = secs; slowest = s.name; }
+    std::printf("  [%s took %.1f s]\n", s.name, secs);
     const bool want = s.expect == Expect::kPass;
     if (got == want) {
       ++passed;
@@ -568,6 +585,8 @@ bool run_verify(const std::vector<uint8_t>& dna_blob, bool long_tier, bool teach
   std::printf("  determinism       %s\n", det ? "PASS" : "FAIL");
   std::printf("  pinned hash       %s\n", hash_ok ? "PASS" : "FAIL");
   std::printf("  experiments       %u as expected, %u not\n", passed, failed);
+  std::printf("  wall time         %.1f min, slowest `%s` at %.1f min\n",
+              total_secs / 60.0, slowest, slowest_secs / 60.0);
   if (open) {
     std::printf("  open milestones   %u still failing, which is what \"as expected\"\n"
                 "                    means for them\n", open);
