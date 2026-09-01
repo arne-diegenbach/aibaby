@@ -6961,19 +6961,55 @@ v29, v40 and v43 — a refuted mechanism whose absence would invite the proposal
 again is worth one field and one branch — and `mechverify` now carries an
 eighteenth pin, `c7067352b374d80d`, so it cannot rot into a no-op unnoticed.
 
-**Where it points.** Mehaffey and Doupe (*Nature Neuroscience*, 2015) measured
-what this creature is being asked to do without: HVC's premotor input and LMAN's
-exploratory input arrive at RA as separate afferents under separate rules, and
-pairing them drives the two in opposite directions. `vocal` here is one
-population asked to be both. Two attempts have now been made to make that
-arrangement work by changing what happens *at* the larynx — v48's readout and
-v50's regulator — and neither moved it. Fee and Goldberg (*Neuroscience*, 2011)
-describe the arrangement that does not require it: the conditional map is not
-learned at the motor population at all, but in a basal-ganglia stage receiving
-the timing signal and a *collateral* of the exploratory signal, which then
-biases the motor population from outside. That is a much larger build than a
-plasticity rule, which is why it was not the thing tried first — and it is what
-is left.
+#### Where it points, and the next thing to run
+
+Mehaffey and Doupe (*Nature Neuroscience*, 2015) measured what this creature is
+being asked to do without: HVC's premotor input and LMAN's exploratory input
+arrive at RA as *separate* afferents under *separate* rules, and pairing them
+drives the two in opposite directions. `vocal` here is one population asked to
+be both. The v47 diagnosis — a single shared motor population cannot host a
+learnable conditional input and a reward-driven exploratory pathway at once —
+has now been reached from three directions, and every one of them was an
+addition to the larynx that the larynx charged for:
+
+| what was added to `vocal` | what it cost the exploratory pathway |
+|---|---|
+| a conditional afferent (v47) | `fixed` +24.6/+39.1/+38.1 -> ~0, 5 genomes |
+| a second regulator (v50) | +34.0 -> +15.4 with the tract silent |
+| *less* of the first regulator (v50) | +34.0 -> +21.8 with the tract silent |
+
+Fee and Goldberg (*Neuroscience*, 2011) describe the arrangement that does not
+require the larynx to host anything: the conditional map is learned in a
+basal-ganglia stage that receives the timing signal and a *collateral* of the
+exploratory signal, and its output biases the motor population from outside.
+
+**Do not build that yet — price it.** It is the largest build this project has
+considered, and DNA v35 is the standing warning: a lead that was real,
+label-free and correctly derived, built against a bottleneck that had closed
+underneath it while the notes still said otherwise. The oracle that prices it
+costs an afternoon and can only be interesting if it refuses, which is the shape
+`shapeprobe` and `coderprobe` both had:
+
+> **Area X's output is a bias onto the motor population.** So deliver one — a
+> per-neuron bias offset on `vocal` that depends on the context, injected
+> directly, bypassing every tract, the way `set_reward_mask` injects a credit
+> assignment the creature cannot compute. Then ask `ctxlearn`'s only question:
+> does the positive control survive?
+>
+> If an oracle bias *also* kills `fixed`, then no upstream architecture can
+> help, because a bias onto `vocal` is exactly what any of them delivers — and
+> the whole basal-ganglia route is refused for one run instead of one month. If
+> it survives, the route is licensed and the cost is worth paying, with the
+> oracle's own number as the bar the built version has to reach.
+
+The second question that run should answer, because the same session can carry
+it: this creature has **one** population that can affect the voice. The arcuate
+carries the word innately, `vision->vocal` ships, and `central->vocal` is a
+measured non-participant — deleting it leaves every G3 number unchanged. An
+Area X analogue has to project *somewhere*, and the only association-to-motor
+tract this creature has is the one that was shown to deliver nothing. Whether
+that is the tract's fault or `central`'s is not known, and it decides whether
+the architecture is buildable here at all.
 
 ## Design decisions that were not obvious
 
@@ -7219,8 +7255,9 @@ author list is worse than an incomplete one.
 
 - Vogels, T. P., Sprekeler, H., Zenke, F., Clopath, C. & Gerstner, W. (2011).
   *Inhibitory plasticity balances excitation and inhibition in sensory pathways
-  and memory networks.* Science 334, 1569–1573.
-  <https://doi.org/10.1126/science.1211095> — the rule `isp_gain` implements.
+  and memory networks.* Science 334(6062), 1569–1573.
+  <https://doi.org/10.1126/science.1211095>,
+  <https://pubmed.ncbi.nlm.nih.gov/22075724/> — the rule `isp_gain` implements.
   A symmetric spike-timing rule on inhibitory synapses whose mean drift is
   `eta * nu_pre * (nu_post - rho0)`: it holds a neuron at a target rate by
   growing the inhibition that matches the excitation arriving, rather than by
@@ -7229,15 +7266,17 @@ author list is worse than an incomplete one.
   inhibitory weight here was fixed for life — and `ipctx` measured what that
   costs: its one rate-side regulator on the larynx runs into its clamp.
 - Royer, S. & Paré, D. (2003). *Conservation of total synaptic weight through
-  balanced synaptic depression and potentiation.* Nature 422, 518–522.
-  <https://doi.org/10.1038/nature01530> — the experimental result behind the
+  balanced synaptic depression and potentiation.* Nature 422(6931), 518–522.
+  <https://doi.org/10.1038/nature01530>,
+  <https://pubmed.ncbi.nlm.nih.gov/12673250/> — the experimental result behind the
   same idea stated as a budget: potentiation at one input is accompanied by
   depression at others, so a new input does not simply add. The property this
   creature's regulators do not have, and the reason a second afferent onto the
   larynx costs what it does.
 - Mehaffey, W. H. & Doupe, A. J. (2015). *Naturalistic stimulation drives
   opposing heterosynaptic plasticity at two inputs to songbird cortex.* Nature
-  Neuroscience 18, 1272–1280. <https://doi.org/10.1038/nn.4078> — the
+  Neuroscience 18(9), 1272–1280. <https://doi.org/10.1038/nn.4078>, free full
+  text at <https://pmc.ncbi.nlm.nih.gov/articles/PMC5726397/> — the
   arrangement `ctxlearn` is asking one module to be. RA receives the premotor
   timing input from HVC and the exploratory input from LMAN as *separate*
   afferents under *separate* rules, and pairing them drives the two in opposite
@@ -7245,7 +7284,8 @@ author list is worse than an incomplete one.
   "arriving costs more than it pays" is a description of.
 - Fee, M. S. & Goldberg, J. H. (2011). *A hypothesis for basal
   ganglia-dependent reinforcement learning in the songbird.* Neuroscience 198,
-  152–170. <https://doi.org/10.1016/j.neuroscience.2011.09.069> — the
+  152–170. <https://doi.org/10.1016/j.neuroscience.2011.09.069>, free full text
+  at <https://pmc.ncbi.nlm.nih.gov/articles/PMC3221789/> — the
   architecture the alternative reading points at. The conditional map is not
   learned at the motor population at all: Area X receives HVC's timing signal
   and a collateral of LMAN's own exploratory signal, learns there under
