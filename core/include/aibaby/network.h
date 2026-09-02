@@ -147,6 +147,19 @@ class Network {
   // size of what it injected instead of asserting it.
   Scalar bias_oracle_at(uint32_t i) const;
 
+  // DNA v51, for experiments and the panel: which context the creature is in
+  // right now, and whether it is in one at all. `areax` reports both, because
+  // a table that is never indexed and a table that is indexed and useless are
+  // the same flat result from outside.
+  uint32_t active_context() const { return active_ctx_; }
+  bool context_present() const { return ctx_present_; }
+  uint32_t context_slots() const { return ctx_slots_; }
+  // This neuron's bias in context `c`. Exposed so a probe can show the table
+  // diverging (or not) rather than infer it from behaviour.
+  Scalar context_bias(uint32_t i, uint32_t c) const {
+    return (bias_ctx_ && c < ctx_slots_) ? bias_ctx_[size_t(i) * ctx_slots_ + c] : kZero;
+  }
+
  private:
   void apply_reward_impl(const Scalar* per_module, bool any);
   void capture_ffi_weights();
@@ -351,6 +364,10 @@ class Network {
 
   Scalar membrane(uint32_t neuron) const { return v_[neuron]; }
   Scalar threshold(uint32_t neuron) const { return threshold_[neuron]; }
+  // Node perturbation's learned excitability. Exposed for DNA v51's probe,
+  // which has to read the shared bias and the per-context tables against each
+  // other to say whether the split did anything.
+  Scalar bias(uint32_t neuron) const { return bias_[neuron]; }
 
   // DNA v25. Is this neuron's apical tuft in a plateau right now? Exposed
   // because the question the compartment was built to answer is measurable
@@ -850,6 +867,22 @@ class Network {
   Scalar explore_mult_[kMaxModules] = {};
   // DnaExploration::drive_compensation, cached from the genome at build.
   Scalar drive_comp_ = kZero;
+  // DNA v51. The context-indexed bias table: `ctx_slots_` scalars per neuron,
+  // laid out neuron-major, arena-allocated so the snapshot carries it for free.
+  // Null and zero when the genome does not ask for it, which is what keeps a
+  // v50 genome bit-identical.
+  Scalar* bias_ctx_ = nullptr;
+  uint32_t ctx_slots_ = 0;
+  int32_t ctx_module_ = -1;   // the kContext module the index is read from
+  uint32_t active_ctx_ = 0;   // argmax slice, refreshed each tick
+  bool ctx_present_ = false;  // is any slice actually driven this tick?
+  // When a slice counts as driven, in Hz. NOT a guessed constant: a kContext
+  // module has no noise, no target rate and no intra-module wiring, so a silent
+  // slice fires at exactly zero and a driven one fires at 13-62 Hz across the
+  // levels `ipctx` sweeps. `ipctx` already uses 1 Hz as its own "oracle mute at
+  // this level" test, and this is that same test in the kernel.
+  static constexpr Scalar kContextRateFloor = Scalar(1.0);
+
   Scalar perturb_decay_ = kZero;
   Scalar perturb_rate_ = kZero;
   Scalar perturb_max_ = kZero;

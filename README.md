@@ -7112,6 +7112,121 @@ the lesson is free. That is what an Area X output is, since it is a targeted
 bias rather than v47's broadcast tract, but it is narrower than "a bias anywhere
 in `vocal` is free" and should not be quoted as the wider claim.
 
+### DNA v51 — a context-indexed bias, which is Area X reduced to its core
+
+**Built from five papers, and the argument for it is a parameter count.**
+
+`ctxbias` split the problem: delivery works, computation is missing. v51 is the
+smallest thing that can supply the missing half. `bias_[i]` — node
+perturbation's learned excitability, one scalar per neuron since DNA v10 —
+becomes `bias_[i][c]`, indexed by the active slice of a `kContext` module.
+`context_slots = 0` ships, is bit-identical to v50, and the hash is unmoved at
+`ad96f882becbee92`.
+
+**The index is read, never driven.** The context module needs no projection to
+anything — v51 takes the argmax over its slices by rate and nothing else. That
+is the whole reason this costs the larynx nothing where DNA v47's context tract
+cost it everything: `ctxbias` measured that a bias arriving off the lesson's own
+neurons is free, and an index is cheaper than a bias. The genome for the
+experiment is built with `out_w = 0`.
+
+**Where each paper enters, and what it decides.**
+
+| paper | what it decides here |
+|---|---|
+| Werfel, Xie & Seung 2005 | *which parameterisation.* Learning time scales with parameter count, so one bias per neuron per context is 2x, where node perturbation on synapses was ~16x |
+| Fee & Goldberg 2011 | *what it is anatomically.* HVC's code is sparse and near-one-hot, so a BG stage driven by it and biasing the larynx **is** a context-indexed table |
+| Heald, Lengyel & Wolpert 2021 | *why an index is the fix.* Memory creation, updating and expression are one computation — which context the learner infers |
+| Gadagkar et al. 2016 | *what is still missing after this.* Area X's reward is a performance prediction error; this creature delivers raw, object-blind R |
+| Miconi 2017 | *that the rule class can be conditional at all*, so `g2cond` is a fact about parameters and not about reward-modulated learning |
+
+**It reconciles two of this project's own contradictory conclusions.**
+`vocallearn` concluded node perturbation cannot be conditional *because a
+per-neuron bias is a constant*. The post-mortem on node perturbation cashed onto
+synapses retracted that — *"expressiveness was never the problem, variance is"* —
+after the synaptic version cut irreproducible learning noise 65% -> 8% and still
+could not carry G2. Both are right. Werfel's scaling law says the synaptic
+version bought expressiveness at sixteen times the parameter count and paid for
+it in variance, and **the parameterisation that is expressive and cheap was
+never tried.**
+
+**The cash-in goes to the active context's table, or to the shared bias when
+there is no context**, so the two lessons never touch the same parameter. That
+is the point: `retain` measured a conflicting lesson wiping a taught sound to
+0.22 while `capacity` measured two orthogonal lessons coexisting at 0.84, and
+Heald, Lengyel and Wolpert say those are one computation seen with one context
+and with two. Naming is the conflicting case by construction — both lessons
+drive the same formant to different values — and an index is what converts it
+into the other case.
+
+**`areax` measures it against a bar that already exists**, which is unusual here
+and is the reason `ctxbias` was run first: a perfect conditional bias reaches
+236 Hz of dF1 on this readout. Four arms — `off`, `on`, a matched-marginal
+`random` control, and `fixed+on` as the positive control. That last one is not
+optional: splitting the table halves the trials each context gets, and
+`vocallearn`'s own power curve reads +1.0 at 560k against +18.3 at 3.4M, so
+without it a flat conditional result could be a null or simply half a session.
+Two further gates fire before any of it is read — the creature has to have been
+in a context, and the two tables have to have diverged, because a table that was
+never indexed and a table that was indexed and learned nothing are the same flat
+dF1 from outside.
+
+#### `areax` — and it learns
+
+Four arms, 3 seed families, at 3.4M ticks and again at 6.8M. `off` and `on`
+differ in one genome field; `random` keeps the mechanism on and draws the target
+independently of the word with the same marginals.
+
+| arm | dF1 (Hz) | table div | change |
+|---|---|---|---|
+| off | 27.1 +/- 13.9 | 0.0000 | +1.7 +/- 3.1 |
+| **on** | **112.9 +/- 3.8** | 0.0368 | **+22.5 +/- 4.5** |
+| random | 33.5 +/- 19.0 | **0.0368** | -0.3 +/- 0.2 |
+| fixed+on | 18.1 +/- 7.5 | 0.0439 | -1.7 +/- 3.1 |
+
+**The voice becomes conditional.** dF1 112.9 against 27.1 with the mechanism off
+(6.0 SE) and 33.5 against the matched-marginal control (4.1 SE), **unanimous on
+3 of 3 seeds with no overlap in either comparison** — every `on` creature is
+above every `off` and every `random` one. That is 48% of the 236 Hz a perfect
+oracle bias reaches on the same readout.
+
+**The line that matters most is the `table div` column.** `on` and `random` have
+**identical divergence, 0.0368 both**. The estimator wrote the same *amount*
+into the two contexts in both arms; only when the target tracked the word did
+that writing become conditional behaviour. A creature that had merely become
+more variable, or that sat between two targets, would score the same in both —
+which is the control `pgprobe` exists to demand, and it is passed here on the
+mechanism's own internal quantity as well as on the behaviour.
+
+**It grows with trials, as a real effect should.** From 3.4M to 6.8M ticks, dF1
+goes 82.0 -> 112.9 and the conditional arm's own error reduction goes
++14.5 -> +22.5. That was a prediction registered before the longer run.
+
+#### The gate that was wrong, and how it was caught
+
+`areax` first shipped with `fixed+on` as its power gate: keep the mechanism on,
+make the target unconditional, and refuse the run if a split table cannot learn.
+It refused at 3.4M (+5.3 against an +18.3 bar) and its own remedy was "re-run at
+2x --ticks". **At 6.8M it read -1.7. Doubling the session made it worse, and a
+power problem cannot do that.**
+
+So the arm was falsified as a power measurement on its own terms, rather than
+retired because the numbers underneath it were attractive — which is the
+distinction that matters, because changing a gate after it refuses is exactly
+the failure this project keeps a note about. The a priori reason was available
+before either run and should have been seen: with an unconditional target both
+tables must learn the *same* bias, so the split doubles the parameters needed
+for one lesson while halving the data for each. **It is the split table's worst
+case**, where the conditional task is its best, and "if this fails the
+conditional arm is unreadable" never followed.
+
+The gate is now `on` against `random` on the error reduction — identical
+structure, identical marginals, identical split, differing only in whether the
+target tracks the word. `fixed+on` is still reported, because what it measures
+is real and worth knowing: **a split table is worse at an unconditional lesson**,
+which is the price of the split and the reason `context_slots` should stay 0 in
+a genome with nothing to condition on.
+
 ### What the literature says to build next, and why it is the cheap option
 
 `ctxbias` split the problem cleanly. **Delivery works**: a bias arriving off the

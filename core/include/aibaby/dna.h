@@ -397,7 +397,12 @@ constexpr uint32_t kDnaMagic = 0x44424941;  // "AIBD"
 //     rot into a no-op. The measurement is the asset either way.
 //
 //     See DnaModule::isp_gain.
-constexpr uint32_t kDnaVersion = 50;
+// 51: a context-indexed bias — node perturbation's excitability table split
+//     one-per-context, which is the first parameterisation this creature has
+//     had that is conditional by construction. See DnaExploration::context_slots
+//     for the full argument and `areax` for the measurement. Ships OFF;
+//     `context_slots = 0` is bit-identical to v50.
+constexpr uint32_t kDnaVersion = 51;
 
 // What a module is wired to the world through. The host looks modules up by
 // role, never by name or index, so renaming a module in the genome cannot
@@ -1033,6 +1038,71 @@ struct DnaExploration {
   float perturb_tau_ms;         // how long a perturbation stays creditable
   float perturb_rate;           // learning rate; 0 disables the whole mechanism
   float perturb_max;            // |bias| ceiling, or one lucky moment runs away
+
+  // --- DNA v51: a context-indexed bias --------------------------------------
+  //
+  // How many separate excitability tables each neuron keeps, one per context.
+  // 0 and 1 are both "the shared bias this creature has always had", and 0 is
+  // bit-identical to v50.
+  //
+  // WHY THIS AND NOT ANOTHER LEARNING RULE. This project has stated the same
+  // diagnosis twice, in contradiction. `vocallearn` concluded that node
+  // perturbation cannot be conditional *because a per-neuron bias is a
+  // constant*. The post-mortem on node perturbation cashed onto synapses
+  // retracted that — "expressiveness was never the problem, variance is" —
+  // after the synaptic version cut irreproducible learning noise 65% -> 8% and
+  // still could not carry G2.
+  //
+  // Both are right, and Werfel, Xie & Seung (Neural Computation 2005) reconcile
+  // them: learning time scales with the NUMBER OF PARAMETERS being estimated,
+  // so perturbing weights is slower than perturbing nodes by the ratio of
+  // synapses to neurons. The synaptic version bought expressiveness at roughly
+  // sixteen times the parameter count and paid for it in variance. **The
+  // parameterisation that is expressive AND cheap was never tried**, and this
+  // is it: one bias per neuron per context is 2x the parameters, not 16x.
+  //
+  // WHAT IT IS, ANATOMICALLY. Fee & Goldberg's account of the songbird has the
+  // conditional map learned outside the motor population: Area X receives HVC's
+  // timing signal and a collateral of LMAN's exploratory signal, learns under a
+  // dopaminergic performance error (Gadagkar et al., Science 2016), and biases
+  // the motor population from outside. HVC's code is sparse and near-one-hot in
+  // time, so a basal-ganglia stage driven by it and biasing the larynx **is** a
+  // context-indexed bias table. This is that architecture reduced to its
+  // computational core, with the sparse code supplied by a `kContext` module
+  // rather than grown.
+  //
+  // WHY IT IS BUILDABLE NOW AND WAS NOT BEFORE. `ctxbias` measured the two
+  // things this depends on. A bias arriving on neurons other than the ones
+  // carrying the lesson costs the exploratory pathway nothing (+34.0 -> +31.2),
+  // where DNA v47's context tract and v50's regulator both charged for
+  // arriving — so the delivery route is free. And the same oracle on `central`
+  // moves the voice not at all, so the table has to bias the larynx directly.
+  // **The context module needs no projection whatsoever**: it is read as an
+  // INDEX, not as drive, which is why this costs the larynx nothing at all
+  // where v47 cost it everything.
+  //
+  // THE INDEX is the argmax over the `kContext` module's slices, by mean rate.
+  // With no such module, or with every slice silent, there is no context and
+  // the shared bias is used alone — which is what makes a genome without one
+  // bit-identical to v50 and leaves G2 exactly as it was.
+  //
+  // THE CASH-IN goes to the active context's table, or to the shared bias when
+  // there is no context. The two lessons therefore never touch the same
+  // parameter, which is the entire point: `retain` measured a conflicting
+  // lesson wiping a taught sound to 0.22 while `capacity` measured two
+  // orthogonal lessons coexisting at 0.84, and Heald, Lengyel & Wolpert (Nature
+  // 2021) say those are one computation — experiences assigned to one context
+  // overwrite, experiences assigned to two do not. Naming is the conflicting
+  // case by construction, and an index is what converts it into the other one.
+  //
+  // THE BAR IS ALREADY MEASURED, which is unusual here and is the point of
+  // having run `ctxbias` first: an oracle bias steers the voice 236 Hz of F1,
+  // 51% of the gap between the two words. A context-indexed bias that reaches a
+  // small fraction of that says the estimator cannot find a conditional optimum
+  // even when one is REPRESENTABLE — a firmer closure of G3 than anything on
+  // file, because every earlier null had a delivery excuse and this one does
+  // not.
+  uint32_t context_slots;
 
   // --- DNA v41: metaplastic consolidation -----------------------------------
   // The rule above is an unbiased gradient estimate, and `driftprobe` measured

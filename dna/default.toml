@@ -714,6 +714,14 @@ perturb_tau_ms = 2000.0
 # where 1e-5 has the cleaner win counts.
 perturb_rate = 0.00003
 perturb_max = 0.30          # |bias| ceiling, in the same units as threshold
+# DNA v51: how many excitability tables each neuron keeps, one per context.
+# 0 and 1 both mean "the shared bias this creature has always had", and 0 is
+# bit-identical to v50. It does nothing without a kContext module to index from
+# (tools/genome_add_context.py) -- and that module needs NO projection, because
+# it is read as an index and never as drive. See `areax`, and the long note on
+# DnaExploration::context_slots for why this parameterisation and not another.
+context_slots = 0
+
 
 # DNA v41 — metaplastic consolidation. Node perturbation is an unbiased gradient
 # estimate, so a neuron that cannot affect the current reward is already being

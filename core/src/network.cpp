@@ -115,6 +115,12 @@ size_t Network::required_bytes(const Dna& dna) {
   if (dna.header().exploration.meta_window > 0.0f) total += 2 * capacity * sizeof(Scalar);
   if (dna.header().exploration.meta_flow > 0.0f) total += capacity * sizeof(Scalar);
   if (dna.header().consolidate.prune_compete > 0.0f) total += capacity * sizeof(Scalar);
+  // DNA v51. One bias table per context, and only a genome that asks for more
+  // than one pays. Mirrors the guard in build(): 0 and 1 both mean the shared
+  // bias alone, so a v50 genome's arena is byte-for-byte the size it was.
+  if (dna.header().exploration.context_slots > 1) {
+    total += capacity * size_t(dna.header().exploration.context_slots) * sizeof(Scalar);
+  }
 
   // Slack for per-allocation alignment padding.
   total += 1024;
@@ -394,6 +400,26 @@ bool Network::build(const Dna& dna, Arena& arena, Rng& rng) {
     meta_m2_ = arena.alloc_zeroed<Scalar>(capacity_);
   }
   if (h.exploration.meta_flow > 0.0f) meta_slow_ = arena.alloc_zeroed<Scalar>(capacity_);
+  // DNA v51. One bias table per context, allocated only when the genome asks
+  // for more than one -- 0 and 1 both mean "the shared bias alone", so a v50
+  // genome allocates nothing and hashes exactly as it did.
+  ctx_slots_ = h.exploration.context_slots > 1 ? h.exploration.context_slots : 0;
+  ctx_module_ = -1;
+  active_ctx_ = 0;
+  ctx_present_ = false;
+  if (ctx_slots_ > 0) {
+    bias_ctx_ = arena.alloc_zeroed<Scalar>(size_t(capacity_) * ctx_slots_);
+    // The index comes from the kContext module, read as an INDEX and never as
+    // drive -- it needs no projection anywhere, which is the whole reason this
+    // costs the larynx nothing where DNA v47's tract cost it everything.
+    for (uint32_t m = 0; m < module_count_; ++m) {
+      if (dna.module(m).role == uint32_t(ModuleRole::kContext)) { ctx_module_ = int32_t(m); break; }
+    }
+    // No context module is not an error: the table is then never indexed and
+    // the creature behaves exactly as it did without it. `areax` checks for
+    // this rather than trusting it.
+    if (ctx_module_ < 0) ctx_slots_ = 0;
+  }
   if (any_burst_) {
     burst_rate_ = arena.alloc_zeroed<Scalar>(capacity_);
     burst_base_ = arena.alloc_zeroed<Scalar>(capacity_);
@@ -1119,6 +1145,37 @@ void Network::accumulate_policy_gradient(uint32_t module, const Scalar* pg,
 }
 
 void Network::step() {
+  // DNA v51. Which context the creature is in, computed ONCE for the whole tick
+  // from the kContext module's slice rates -- argmax by mean rate, and "none"
+  // when every slice is silent.
+  //
+  // Read as an index and never as drive. The context module needs no projection
+  // to anything, which is what makes this free where v47's tract was not:
+  // `ctxbias` measured that a bias arriving off the lesson's own neurons costs
+  // the exploratory pathway nothing, and an index costs it even less than that.
+  //
+  // `rate_fast` rather than the one-second EMA, because a context has to be
+  // current when reward lands and a trial here is seconds long, not minutes.
+  if (ctx_slots_ > 0 && ctx_module_ >= 0) {
+    const ModuleState& cms = modules_[uint32_t(ctx_module_)];
+    Scalar best = kZero;
+    uint32_t best_slice = 0;
+    bool any = false;
+    for (uint32_t c = 0; c < ctx_slots_; ++c) {
+      const uint32_t lo = cms.begin + slice_begin(cms.count, ctx_slots_, c);
+      const uint32_t hi = cms.begin + slice_begin(cms.count, ctx_slots_, c + 1);
+      if (hi <= lo) continue;
+      Scalar sum = kZero;
+      for (uint32_t n = lo; n < hi; ++n) sum += rate_fast_[n];
+      const Scalar mean = sum / Scalar(hi - lo);
+      if (mean > best) { best = mean; best_slice = c; any = true; }
+    }
+    // A silent context module means no context, not context zero. Defaulting to
+    // slice 0 would quietly make every untagged moment a lesson in one
+    // particular context, which is the bug this branch exists to avoid.
+    ctx_present_ = any && best > kContextRateFloor;
+    if (ctx_present_) active_ctx_ = best_slice;
+  }
   const uint32_t slot = uint32_t(tick_ % delay_slots_);
   Scalar* in = inbox_ + size_t(slot) * capacity_;
   Scalar* in_ap = inbox_apical_ + size_t(slot) * capacity_;
@@ -1401,13 +1458,20 @@ void Network::step() {
       // upstream structure would deliver to this neuron's excitability, and
       // that is the whole point of handing it over directly.
       const Scalar bias_oracle = bias_oracle_n_ ? bias_oracle_at(i) : kZero;
+      // DNA v51. The context's own excitability, ADDED to the shared bias
+      // rather than replacing it: the shared term is what G2 learned and what
+      // the creature does when it is in no particular context, and the table is
+      // the part that depends on which context it is in.
+      const Scalar ctx_bias =
+          (ctx_slots_ > 0 && ctx_present_)
+              ? bias_ctx_[size_t(i) * ctx_slots_ + active_ctx_] : kZero;
       // DNA v40: an interneuron that landed on the tuft is not also subtracted
       // here. It is one population of cells, and it inhibits one compartment.
       const Scalar ffi_soma = ffi_apical_[m] ? kZero : ffi;
       const Scalar drive = (in[i] * norm - ffi_soma * ffi_w_[i]) * apical_mult +
                            noise_amp_[i] * (explore_mult_[m] * xi +
                                             drive_comp_ * (kOne - explore_mult_[m])) +
-                           bias_[i] + osc + lateral + rebound + bias_oracle;
+                           bias_[i] + ctx_bias + osc + lateral + rebound + bias_oracle;
 
       // Node perturbation: remember what this neuron was actually given, so
       // that a reward arriving a second from now can credit it. Decays on the
@@ -1742,7 +1806,26 @@ void Network::apply_reward_impl(const Scalar* per_module, bool any) {
           const Scalar far = mag >= perturb_max_ ? kOne : mag / perturb_max_;
           gate_meta *= kOne - (kOne - meta_floor_) * meta_commit_ * far;
         }
-        bias_[i] = clampf(bias_[i] + u * gate_meta, -perturb_max_, perturb_max_);
+        // DNA v51. The cash-in goes to the ACTIVE CONTEXT's table when there is
+        // one, and to the shared bias when there is not. The two lessons
+        // therefore never touch the same parameter, which is the entire point:
+        // `retain` measured a conflicting lesson wiping a taught sound to 0.22
+        // and `capacity` measured two orthogonal lessons coexisting at 0.84,
+        // and those are one computation (Heald, Lengyel & Wolpert 2021) --
+        // experiences assigned to one context overwrite, experiences assigned
+        // to two do not.
+        //
+        // `perturb_[i]` is not itself indexed, and does not need to be: a trial
+        // holds one context for its whole length and the trace decays on the
+        // reward's own timescale, so the perturbation being credited happened
+        // in the context that is active now. A protocol that switched context
+        // mid-trial would break that, and would deserve to.
+        if (ctx_slots_ > 0 && ctx_present_) {
+          Scalar& b = bias_ctx_[size_t(i) * ctx_slots_ + active_ctx_];
+          b = clampf(b + u * gate_meta, -perturb_max_, perturb_max_);
+        } else {
+          bias_[i] = clampf(bias_[i] + u * gate_meta, -perturb_max_, perturb_max_);
+        }
         // DNA v41's third gate. Runs on every cash-in, rewarded or not, because
         // it is a relaxation and not a response to evidence.
         if (meta_slow_) {

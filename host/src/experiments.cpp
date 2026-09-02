@@ -181,6 +181,13 @@ const Spec kSpecs[] = {
      "derived: vocallearn's own minimum. Is the policy gradient's conditional\n"
      "  arm conditional, or a creature sitting between two alternating targets?\n"
      "  Controls `swap` against a target with MATCHED MARGINALS"},
+    {"areax", 3400000, Expect::kOpen, Tier::kTeach,
+     "derived: vocallearn's session length, the length its positive control\n"
+     "  needs. DNA v51: node perturbation's excitability table split one per\n"
+     "  context. Scored against ctxbias's measured ceiling of 236 Hz of dF1 --\n"
+     "  what a PERFECT conditional bias achieves on the same readout. Refuses\n"
+     "  unless the creature was in a context and the tables diverged. Needs a\n"
+     "  kContext genome, built with out_w=0: v51 reads it as an index"},
     {"ctxbias", 3400000, Expect::kOpen, Tier::kTeach,
      "derived: vocallearn's session length, because it scores vocallearn's own\n"
      "  positive control. Prices Fee & Goldberg's architecture BEFORE building\n"
@@ -411,6 +418,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "ctxlearn") ok = run_ctxlearn(dna_blob, ticks, verbose);
   else if (name == "ipctx") ok = run_ipctx(dna_blob, ticks, verbose);
   else if (name == "ctxbias") ok = run_ctxbias(dna_blob, ticks, verbose);
+  else if (name == "areax") ok = run_areax(dna_blob, ticks, verbose);
   else if (name == "pgprobe") ok = run_pgprobe(dna_blob, ticks, verbose);
   else if (name == "g2cond") ok = run_g2cond(dna_blob, ticks, verbose);
   else if (name == "coderprobe") ok = run_coderprobe(dna_blob, ticks, verbose);

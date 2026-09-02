@@ -6740,6 +6740,19 @@ const MechPin kMechPins[] = {
     // moves one.
     {"inhibitory plasticity", "v50",
      {{PatchScope::kModule, "vocal", M_(isp_gain), 1.0f, false, nullptr}}, 1, kShort, 0xae8f00ea1c735799ull},
+    // DNA v51 IS NOT PINNED HERE, AND THAT IS A HOLE THIS EXPERIMENT CANNOT
+    // CLOSE. Every row above patches a scalar onto the SHIPPED genome, and v51
+    // does nothing without a `kContext` module to index from -- the shipped
+    // genome has none, so `context_slots = 2` on it sets ctx_slots_ back to 0
+    // and the variant would hash identically. The vacuity check would (rightly)
+    // call that VACUOUS.
+    //
+    // So v51 is covered by `areax`'s own gates and by nothing else, which is
+    // exactly the blind spot this experiment was built to close, one level up:
+    // a mechanism whose trigger is a MODULE rather than a field is invisible
+    // here. Reaching it needs mechverify to be able to append a module, which
+    // is a bigger change than any row above and is not made for one mechanism.
+    // Written down so the gap is known rather than assumed absent.
     // v44 and v45 USED to be pinned here and are not any more, because the
     // rebound now SHIPS ON. mechverify exists for mechanisms invisible to
     // kPinnedHash — an off-by-default mechanism can rot into a no-op with

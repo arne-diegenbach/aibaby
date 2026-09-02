@@ -4015,6 +4015,14 @@ struct VLRun {
   double f1_by_word[kVLWords] = {};
   double f2_by_word[kVLWords] = {};
   double bias_amp = 0.0;   // what the oracle injected, in drive units
+  // DNA v51. The mechanism's own claim, readable separately from the
+  // behaviour: how often the creature was in a context at all, and how far the
+  // per-context bias tables actually diverged. A table that was never indexed
+  // and a table that was indexed and learned nothing are the same flat dF1 from
+  // outside, and `areax` refuses rather than reporting either as the other.
+  double ctx_present_frac = 0.0;
+  double ctx_table_div = 0.0;   // mean |bias[i][0] - bias[i][1]| over the larynx
+  double ctx_shared_mag = 0.0;  // mean |shared bias|, the scale to read it against
   std::vector<Praise> feedback;  // what the taught arm earned, for the yoke
 };
 
@@ -4102,6 +4110,7 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
   // The voice's own formants per word, over every voiced frame of the session.
   double vf1_sum[kVLWords] = {}, vf2_sum[kVLWords] = {};
   uint32_t vf_n[kVLWords] = {};
+  uint64_t ctx_ticks = 0, ctx_ticks_total = 0;
 
   // The bias oracle, if this session has one. Amplitude is a MULTIPLE of the
   // module's own noise_amp rather than a number in drive units, because
@@ -4217,6 +4226,8 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
         }
       }
       s.brain.step();
+      ++ctx_ticks_total;
+      if (s.brain.network().context_present()) ++ctx_ticks;
 
       if (s.brain.vocal_frame() == last_frame) continue;
       last_frame = s.brain.vocal_frame();
@@ -4334,6 +4345,28 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
     out.f2_by_word[k] = vf_n[k] ? vf2_sum[k] / vf_n[k] : 0.0;
   }
   out.voiced_frac = frames_total ? double(frames_voiced) / double(frames_total) : 0.0;
+  out.ctx_present_frac = ctx_ticks_total ? double(ctx_ticks) / double(ctx_ticks_total) : 0.0;
+  {
+    const aibaby::Network& net = s.brain.network();
+    const int32_t vmod = s.dna.module_with_role(aibaby::ModuleRole::kVocal);
+    if (vmod >= 0 && net.context_slots() >= 2) {
+      const aibaby::ModuleState& vms = net.module(uint32_t(vmod));
+      double dsum = 0.0, msum = 0.0;
+      for (uint32_t n = vms.begin; n < vms.begin + vms.count; ++n) {
+        dsum += std::fabs(double(net.context_bias(n, 0)) - double(net.context_bias(n, 1)));
+        // The scale to read the divergence against is the SIZE of the tables,
+        // not the shared bias. With a context present on every tick the shared
+        // bias is never cashed into at all and sits at zero by construction --
+        // which is correct behaviour and a useless denominator.
+        msum += 0.5 * (std::fabs(double(net.context_bias(n, 0))) +
+                       std::fabs(double(net.context_bias(n, 1))));
+      }
+      if (vms.count) {
+        out.ctx_table_div = dsum / vms.count;
+        out.ctx_shared_mag = msum / vms.count;
+      }
+    }
+  }
   {
     const aibaby::Network& net = s.brain.network();
     const float t_max = s.dna.header().homeo.threshold_max;
@@ -7759,6 +7792,276 @@ double ctx_mean_se(const std::vector<double>& v, double* se) {
 }
 
 }  // namespace
+
+// --- areax: does a context-indexed bias learn what the oracle delivered? ----
+//
+// `ctxbias` split the problem and priced both halves. Delivery WORKS: a bias
+// arriving off the lesson's own neurons costs the exploratory pathway nothing,
+// where DNA v47's context tract and v50's regulator both charged for arriving.
+// And it measured the ceiling: an oracle bias steers the voice 236 Hz of F1,
+// 51% of the gap between the two words. What was missing was the other half --
+// nothing in this creature could work out what that bias should be.
+//
+// DNA v51 is the smallest thing that can. `bias_[i]` becomes `bias_[i][c]`,
+// indexed by the active slice of a `kContext` module, and the argument for that
+// parameterisation and no other is in DnaExploration::context_slots: this
+// project holds two contradictory conclusions about why node perturbation
+// cannot be conditional, and Werfel, Xie & Seung reconcile them by saying
+// learning time scales with PARAMETER COUNT. One bias per neuron per context is
+// 2x the parameters where the synaptic version was ~16x.
+//
+// **The context module needs no projection.** It is read as an index, never as
+// drive, which is why this costs the larynx nothing where v47 cost it
+// everything -- and it is why the genome for this experiment is built with
+// `out_w=0`.
+//
+// THREE ARMS, and the third is the one `pgprobe` taught this project to
+// include. `on` and `off` differ in one genome field. `random` keeps the
+// mechanism on and draws the target INDEPENDENTLY of the word with the same
+// marginals, so a creature that has merely become more variable, or that sits
+// between two targets, scores the same as one that has learned nothing.
+//
+// TWO GATES BEFORE ANY OF THAT IS READ. A table that was never indexed and a
+// table that was indexed and learned nothing are the same flat dF1 from
+// outside, so the run refuses unless it can show both that the creature was in
+// a context and that the tables diverged.
+struct AreaxArm {
+  const char* name;
+  uint32_t slots;
+  int target;      // VLTarget
+};
+
+// `fixed+on` WAS THIS EXPERIMENT'S POWER GATE AND IT IS NOT ONE. Kept as a
+// diagnostic, because how it failed is worth more than what it was for.
+//
+// The reasoning that put it here: splitting the table halves the trials each
+// context gets, vocallearn's positive control reads +1.0 at 560k against +18.3
+// at 3.4M, so a flat conditional result might be half a session rather than a
+// null. This arm keeps the mechanism on and makes the target UNCONDITIONAL.
+//
+// It refused the run at 3.4M (+5.3 against an +18.3 bar) and its own remedy was
+// "re-run at 2x". At 6.8M it read **-1.7**. **Doubling the session made it
+// worse, and a power problem cannot do that** -- which falsifies the arm as a
+// power measurement on its own terms rather than on a preference for the
+// numbers underneath it.
+//
+// The a priori reason, which was available before the run and should have been
+// seen: with an unconditional target both tables must learn the SAME bias, so
+// the split doubles the parameters needed to express one lesson while halving
+// the data for each. **It is the split table's WORST case**, where the
+// conditional task is its best. "If this fails the conditional arm is
+// unreadable" never followed.
+//
+// The gate is now `on` against `random` on `change` -- the conditional lesson's
+// own error reduction against a control with identical structure, identical
+// marginals and an identical split, differing only in whether the target tracks
+// the word. That bounds what it claims to bound.
+constexpr AreaxArm kAreaxArms[] = {
+    {"off",      0, kVLTgtHeard},
+    {"on",       2, kVLTgtHeard},
+    {"random",   2, kVLTgtRandom},
+    {"fixed+on", 2, kVLTgtFixed},
+};
+constexpr uint32_t kAreaxArmCount = sizeof(kAreaxArms) / sizeof(kAreaxArms[0]);
+
+// The bar, from `ctxbias` on the same protocol and the same readout: what a
+// PERFECT conditional bias delivered straight to the larynx achieves.
+constexpr double kAreaxOracleDF1 = 235.9;
+
+bool run_areax(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  aibaby::Dna dna;
+  if (dna.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) {
+    std::printf("  setup failed: the genome does not load\n");
+    return false;
+  }
+  const int32_t ctx_module = dna.module_with_role(aibaby::ModuleRole::kContext);
+  if (ctx_module < 0) {
+    std::printf("  this genome has no kContext module, so there is no index to\n"
+                "  key a per-context bias on. Build one -- and give it NO output\n"
+                "  weight, because v51 reads it as an index and never as drive:\n\n"
+                "    python3 tools/genome_add_context.py dna/default.toml ctx.toml \\\n"
+                "        vocal out_w=0\n"
+                "    ./build/aibaby --dna ctx.toml --experiment areax\n");
+    return false;
+  }
+  constexpr uint32_t kReps = 3;
+  const size_t slots_off = offsetof(aibaby::DnaHeader, exploration) +
+                           offsetof(aibaby::DnaExploration, context_slots);
+  instrument("areax", dna.header().seed, ticks / kVLTrialTicks, "trials per arm");
+  std::printf("  question          DNA v51 splits node perturbation's excitability table\n"
+              "                    one-per-context. Can the estimator that met G2 at\n"
+              "                    twelve sigma find a CONDITIONAL optimum now that one\n"
+              "                    is representable?\n");
+  std::printf("  the bar           %.0f Hz of dF1 -- what `ctxbias` measured a PERFECT\n"
+              "                    conditional bias achieves on this readout. Reaching a\n"
+              "                    small fraction of it is a real result: it would say the\n"
+              "                    estimator cannot find the optimum even when it exists.\n",
+              kAreaxOracleDF1);
+  std::printf("  arm               taught, conditional target. `random` is the\n"
+              "                    matched-marginal control pgprobe exists for.\n\n");
+
+  std::vector<double> df1[kAreaxArmCount], change[kAreaxArmCount];
+  std::vector<double> present[kAreaxArmCount], div[kAreaxArmCount], shared[kAreaxArmCount];
+
+  std::printf("  %-6s %-8s %-9s %-9s %-10s %-10s %s\n", "seed", "arm", "dF1 (Hz)",
+              "in ctx", "table div", "shared", "change");
+  for (uint32_t r = 0; r < kReps; ++r) {
+    for (uint32_t a = 0; a < kAreaxArmCount; ++a) {
+      std::vector<uint8_t> variant = blob;
+      const uint64_t seed = dna.header().seed + r * 7919ull;
+      std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+      const uint32_t slots = kAreaxArms[a].slots;
+      std::memcpy(variant.data() + slots_off, &slots, sizeof(slots));
+
+      CtxDrive drive;
+      drive.module = ctx_module;
+      drive.slots = kVLWords;
+      // Enough to put the slice unambiguously above the kernel's 1 Hz floor.
+      // The module has no noise and no target rate, so a silent slice is at
+      // exactly zero and this is not a threshold anyone has to tune.
+      drive.gain = 0.10;
+      Regime reg;
+      reg.praise = kPraiseValue;
+      reg.scold = kScoldValue;
+      const VLRun run = run_vocallearn_session(variant, ticks, kVLTaught, nullptr, reg,
+                                               kAreaxArms[a].target, &drive);
+      if (!run.ok) {
+        std::printf("  %-6u %-8s (inconclusive: %u scored, %u skipped)\n", r,
+                    kAreaxArms[a].name, run.scored, run.skipped);
+        continue;
+      }
+      const double d1 = std::fabs(run.f1_by_word[0] - run.f1_by_word[1]);
+      df1[a].push_back(d1);
+      change[a].push_back(vl_change(run));
+      present[a].push_back(run.ctx_present_frac);
+      div[a].push_back(run.ctx_table_div);
+      shared[a].push_back(run.ctx_shared_mag);
+      std::printf("  %-6u %-8s %-9.1f %-9.2f %-10.4f %-10.4f %+.1f\n", r,
+                  kAreaxArms[a].name, d1, run.ctx_present_frac, run.ctx_table_div,
+                  run.ctx_shared_mag, vl_change(run));
+    }
+  }
+
+  double m_d1[kAreaxArmCount], s_d1[kAreaxArmCount];
+  double m_ch[kAreaxArmCount], s_ch[kAreaxArmCount];
+  double m_pr[kAreaxArmCount], s_pr[kAreaxArmCount];
+  double m_dv[kAreaxArmCount], s_dv[kAreaxArmCount];
+  double m_sh[kAreaxArmCount], s_sh[kAreaxArmCount];
+  for (uint32_t a = 0; a < kAreaxArmCount; ++a) {
+    if (df1[a].size() < 2) {
+      std::printf("\n  areax INCONCLUSIVE -- arm `%s` did not produce two usable\n"
+                  "  creatures, so it has no spread and nothing can be read against it.\n",
+                  kAreaxArms[a].name);
+      return false;
+    }
+    m_d1[a] = ctx_mean_se(df1[a], &s_d1[a]);
+    m_ch[a] = ctx_mean_se(change[a], &s_ch[a]);
+    m_pr[a] = ctx_mean_se(present[a], &s_pr[a]);
+    m_dv[a] = ctx_mean_se(div[a], &s_dv[a]);
+    m_sh[a] = ctx_mean_se(shared[a], &s_sh[a]);
+  }
+
+  std::printf("\n  %-9s %-16s %-13s %-15s %-13s %s\n", "arm", "dF1 (Hz)", "in ctx",
+              "table div", "|ctx bias|", "change");
+  for (uint32_t a = 0; a < kAreaxArmCount; ++a) {
+    char b[40], c[40], d[40], e[40], f[40];
+    std::snprintf(b, sizeof b, "%.1f +/- %.1f", m_d1[a], s_d1[a]);
+    std::snprintf(c, sizeof c, "%.2f +/- %.2f", m_pr[a], s_pr[a]);
+    std::snprintf(d, sizeof d, "%.4f +/- %.4f", m_dv[a], s_dv[a]);
+    std::snprintf(e, sizeof e, "%.4f +/- %.4f", m_sh[a], s_sh[a]);
+    std::snprintf(f, sizeof f, "%+.1f +/- %.1f", m_ch[a], s_ch[a]);
+    std::printf("  %-9s %-16s %-13s %-15s %-13s %s\n", kAreaxArms[a].name, b, c, d, e, f);
+  }
+
+  const uint32_t kOff = 0, kOn = 1, kRnd = 2, kPos = 3;
+
+  // GATE 0: did the mechanism learn ANYTHING? The conditional arm's own error
+  // reduction, against the matched-marginal control's. Same structure, same
+  // split, same context drive; the only difference is whether the target tracks
+  // the word. A creature that has merely become more variable scores the same
+  // in both, so this bounds what it claims to bound -- unlike `fixed+on`, which
+  // is reported below and is the split table's worst case rather than a
+  // measure of its power.
+  if (m_ch[kOn] - m_ch[kRnd] <= 2.0 * (s_ch[kOn] + s_ch[kRnd])) {
+    std::printf("\n  NOTHING WAS LEARNED -- the conditional arm reduces its own error by\n"
+                "  %+.1f +/- %.1f against %+.1f +/- %.1f for a target drawn independently of\n"
+                "  the word. The mechanism is running (the tables diverged) and reward is\n"
+                "  not moving the creature toward the conditional target at all, so the\n"
+                "  dF1 numbers below are not about conditional behaviour.\n",
+                m_ch[kOn], s_ch[kOn], m_ch[kRnd], s_ch[kRnd]);
+    return false;
+  }
+
+  // GATE 1: was the creature ever in a context? Without this, a flat result is
+  // a fact about the host's driving and not about the mechanism.
+  if (m_pr[kOn] < 0.5) {
+    std::printf("\n  REFUSED -- the creature was in a context on only %.0f%% of ticks, so\n"
+                "  the table was mostly not indexed and nothing here is a measurement of\n"
+                "  what a context-indexed bias does. Raise the oracle's gain.\n",
+                100.0 * m_pr[kOn]);
+    return false;
+  }
+  // GATE 2: did the two tables actually come apart? A split that stays
+  // identical has learned nothing conditional whatever the voice did, and
+  // saying so is different from saying the voice did not move.
+  if (m_dv[kOn] <= 2.0 * s_dv[kOn] || m_dv[kOn] < 0.01 * m_sh[kOn]) {
+    std::printf("\n  REFUSED -- the two context tables never diverged (%.4f +/- %.4f\n"
+                "  against a shared |bias| of %.4f). The mechanism ran and the estimator\n"
+                "  wrote nothing different into the two contexts, so a flat dF1 below is\n"
+                "  not evidence about conditional behaviour -- it is the same statement\n"
+                "  one level up. Check that reward is reaching the larynx at all.\n",
+                m_dv[kOn], s_dv[kOn], m_sh[kOn]);
+    return false;
+  }
+
+  const double lift = m_d1[kOn] - m_d1[kOff];
+  const double lift_se = s_d1[kOn] + s_d1[kOff];
+  const double vs_rnd = m_d1[kOn] - m_d1[kRnd];
+  const double rnd_se = s_d1[kOn] + s_d1[kRnd];
+  const double frac = 100.0 * m_d1[kOn] / kAreaxOracleDF1;
+
+  std::printf("\n  the split's OWN cost     `fixed+on` %+.1f -- an unconditional lesson on\n"
+              "                           a split table, which is its WORST case and not a\n"
+              "                           power measurement (it fell with more ticks)\n",
+              m_ch[kPos]);
+  std::printf("  the tables diverged      %.4f against a shared |bias| of %.4f\n"
+              "  the creature was in ctx  %.0f%% of ticks\n"
+              "  dF1 on -- off            %.1f -> %.1f Hz (lift %+.1f, %.1f SE)\n"
+              "  dF1 on -- random         %.1f -> %.1f Hz (%+.1f, %.1f SE)\n"
+              "  against the oracle       %.1f%% of %.0f Hz\n",
+              m_dv[kOn], m_sh[kOn], 100.0 * m_pr[kOn], m_d1[kOff], m_d1[kOn], lift,
+              lift_se > 0.0 ? lift / lift_se : 0.0, m_d1[kRnd], m_d1[kOn], vs_rnd,
+              rnd_se > 0.0 ? vs_rnd / rnd_se : 0.0, frac, kAreaxOracleDF1);
+
+  const bool beats_off = lift > 2.0 * lift_se;
+  const bool beats_rnd = vs_rnd > 2.0 * rnd_se;
+  if (beats_off && beats_rnd) {
+    std::printf("\n  IT LEARNS -- a context-indexed bias makes the voice depend on the\n"
+                "  word, %+.1f Hz of F1 above the shared-bias arm and %+.1f above a\n"
+                "  matched-marginal control, which is %.0f%% of what a perfect bias\n"
+                "  achieves. This is the first conditional effect on the voice in this\n"
+                "  project that reward produced rather than an oracle.\n",
+                lift, vs_rnd, frac);
+    return true;
+  }
+
+  std::printf("\n  IT DOES NOT LEARN, AND THAT IS THE FIRMEST CLOSURE OF G3 ON FILE.\n"
+              "  The tables DID diverge (%.4f), so the estimator ran and wrote\n"
+              "  different things into the two contexts. The voice still does not\n"
+              "  depend on the word: %.1f Hz against %.1f with the mechanism off and\n"
+              "  %.1f against the matched-marginal control, where a perfect bias on this\n"
+              "  same readout reaches %.0f.\n\n"
+              "  Every earlier null here had a delivery excuse -- the condition did not\n"
+              "  arrive, the tract could not carry it, the readout could not express it.\n"
+              "  This one has none. `ctxbias` showed the bias route is free and the\n"
+              "  optimum is representable; v51 makes it representable IN THE CREATURE\n"
+              "  and the estimator does not find it. What is left is the estimator\n"
+              "  itself -- Gadagkar's performance prediction error rather than the raw,\n"
+              "  object-blind R this creature delivers.\n",
+              m_dv[kOn], m_d1[kOn], m_d1[kOff], m_d1[kRnd], kAreaxOracleDF1);
+  return false;
+}
 
 // --- ctxbias: pricing the one architecture that is left --------------------
 //
