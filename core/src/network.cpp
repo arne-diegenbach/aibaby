@@ -119,7 +119,19 @@ size_t Network::required_bytes(const Dna& dna) {
   // than one pays. Mirrors the guard in build(): 0 and 1 both mean the shared
   // bias alone, so a v50 genome's arena is byte-for-byte the size it was.
   if (dna.header().exploration.context_slots > 1) {
-    total += capacity * size_t(dna.header().exploration.context_slots) * sizeof(Scalar);
+    const size_t slots = size_t(dna.header().exploration.context_slots);
+    total += capacity * slots * sizeof(Scalar);
+    // DNA v53. Source 2 adds one prototype per context over the SOURCE module,
+    // plus one accumulator. The source module is not known here without a role
+    // lookup, so budget the largest module -- an over-estimate of at most a few
+    // kilobytes, where under-estimating is a failed init.
+    if (dna.header().exploration.context_source == 2) {
+      size_t widest = 0;
+      for (uint32_t m = 0; m < dna.module_count(); ++m) {
+        if (dna.module(m).n_max > widest) widest = dna.module(m).n_max;
+      }
+      total += widest * (slots + 1) * sizeof(Scalar);
+    }
   }
 
   // Slack for per-allocation alignment padding.
@@ -415,8 +427,9 @@ bool Network::build(const Dna& dna, Arena& arena, Rng& rng) {
     // the larynx nothing where DNA v47's tract cost it everything. DNA v52
     // chooses WHICH module: the kContext one the host may write (an oracle
     // whenever it does), or the larynx itself (the creature's own state).
-    const ModuleRole want =
-        ctx_source_ == 1 ? ModuleRole::kVocal : ModuleRole::kContext;
+    const ModuleRole want = ctx_source_ == 1   ? ModuleRole::kVocal
+                            : ctx_source_ == 2 ? ModuleRole::kAuditory
+                                               : ModuleRole::kContext;
     for (uint32_t m = 0; m < module_count_; ++m) {
       if (dna.module(m).role == uint32_t(want)) { ctx_module_ = int32_t(m); break; }
     }
@@ -424,6 +437,31 @@ bool Network::build(const Dna& dna, Arena& arena, Rng& rng) {
     // and the creature behaves exactly as it did without it. `areax` and
     // `ctxself` check for this rather than trusting it.
     if (ctx_module_ < 0) ctx_slots_ = 0;
+    // DNA v53. The competitive partition's state. Only source 2 allocates, so
+    // sources 0 and 1 hash exactly as they did.
+    if (ctx_slots_ > 0 && ctx_source_ == 2) {
+      if (ctx_slots_ > kMaxContextSlots) {
+        ctx_slots_ = 0;
+      } else {
+        const ModuleState& sms = modules_[uint32_t(ctx_module_)];
+        ctx_proto_ = arena.alloc_zeroed<Scalar>(size_t(ctx_slots_) * sms.capacity);
+        ctx_acc_ = arena.alloc_zeroed<Scalar>(sms.capacity);
+        for (uint32_t c = 0; c < ctx_slots_; ++c) ctx_wins_[c] = kZero;
+        ctx_src_target_ = Scalar(dna.module(uint32_t(ctx_module_)).target_rate_hz);
+        for (uint32_t m = 0; m < module_count_; ++m) {
+          if (dna.module(m).role == uint32_t(ModuleRole::kVocal)) {
+            ctx_gate_module_ = int32_t(m);
+            ctx_gate_target_ = Scalar(dna.module(m).target_rate_hz);
+            break;
+          }
+        }
+        if (ctx_gate_module_ < 0 || ctx_gate_target_ <= kZero) ctx_slots_ = 0;
+        // Without a setpoint there is no stimulus-independent reference to call
+        // a word against, and the episode detector would be back to comparing
+        // the module with a version of itself. Refuse rather than run wrong.
+        if (ctx_src_target_ <= kZero) ctx_slots_ = 0;
+      }
+    }
   }
   if (any_burst_) {
     burst_rate_ = arena.alloc_zeroed<Scalar>(capacity_);
@@ -1182,7 +1220,7 @@ void Network::step() {
         const Scalar mean = sum / Scalar(hi - lo);
         if (mean > best) { best = mean; best_slice = c; any = true; }
       }
-    } else {
+    } else if (ctx_source_ == 1) {
       // DNA v52. The SAME argmax over a different population: the larynx with
       // articulator groups 2 and 3 removed, treated as one ordered set. Taking
       // those two out leaves exactly two contiguous runs, and rank r maps into
@@ -1209,8 +1247,123 @@ void Network::step() {
     // A silent context module means no context, not context zero. Defaulting to
     // slice 0 would quietly make every untagged moment a lesson in one
     // particular context, which is the bug this branch exists to avoid.
-    ctx_present_ = any && best > kContextRateFloor;
-    if (ctx_present_) active_ctx_ = best_slice;
+    if (ctx_source_ == 2) {
+      // DNA v53. A competitive partition of the source code, learned online
+      // with no labels, and LATCHED so the context outlives the word.
+      //
+      // TWO SIGNALS FOR TWO JOBS, which took three attempts to get right and is
+      // the whole difficulty of this mechanism.
+      //
+      // The FEATURE wants the fast mean: it has to follow the word's energy
+      // while the word is playing. The BOUNDARY wants the slow one: it has to
+      // fire once per word. Using the fast mean for both is what the first two
+      // builds did, and it produced **20 to 38 competitions per trial where the
+      // design is one** -- a tens-of-milliseconds average of a spiking response
+      // crosses any threshold many times during a steady vowel, so every update
+      // saw a fragment. Using the slow mean for both would put the boundary
+      // hundreds of milliseconds after the word, inside the reward window.
+      //
+      // Both are compared against `target_rate_hz`, the module's homeostatic
+      // setpoint: a reference that does NOT track the stimulus. The second build
+      // compared the fast mean against the module's own one-second EMA, which
+      // looked parameter-free and was structurally wrong -- a one-second
+      // reference catches up to a 900-tick word mid-word. No new constant here
+      // either way: the setpoint already exists and already means "resting".
+      const ModuleState& sms = modules_[uint32_t(ctx_module_)];
+      // WHICH MODULE SAYS A WORD IS PLAYING, and the answer is not the ear.
+      // Auditory activity marks SOUND, not the caregiver: between words the
+      // creature babbles and hears itself, so the ear is driven either way.
+      // `partprobe` never met this, because the host handed it the word windows
+      // -- an oracle the probe quietly kept, and the reason a mechanism that
+      // priced at 1.000 could still have nowhere to start.
+      //
+      // The LARYNX marks it. M1d's listening reflex is shipped and measured:
+      // the creature goes nearly silent while it hears something, voiced
+      // fraction 0.276 -> 0.010. So "the larynx is below its setpoint" is "I am
+      // listening", and the two modules each do what they are good at -- the
+      // ear supplies the feature, the larynx supplies the boundary.
+      const ModuleState& gms = modules_[uint32_t(ctx_gate_module_)];
+      const bool fast_on = gms.mean_rate_fast < ctx_gate_target_;
+      const bool slow_on = gms.mean_rate < ctx_gate_target_;
+      const Scalar inv = ctx_acc_n_ > kZero ? kOne / ctx_acc_n_ : kZero;
+
+      if (fast_on) {
+        for (uint32_t n = 0; n < sms.count; ++n) ctx_acc_[n] += rate_fast_[sms.begin + n];
+        ctx_acc_n_ += kOne;
+        // The INDEX, refreshed from the running mean rather than from this
+        // tick's vector: it sharpens as the word accumulates instead of
+        // flickering with it, and it is available from early in the word rather
+        // than only at the end.
+        const Scalar in2 = kOne / ctx_acc_n_;
+        Scalar best_d = kZero;
+        uint32_t winner = 0;
+        for (uint32_t c = 0; c < ctx_slots_; ++c) {
+          const Scalar* proto = ctx_proto_ + size_t(c) * sms.capacity;
+          Scalar d = kZero;
+          for (uint32_t n = 0; n < sms.count; ++n) {
+            const Scalar e = ctx_acc_[n] * in2 - proto[n];
+            d += e * e;
+          }
+          if (c == 0 || d < best_d) { best_d = d; winner = c; }
+        }
+        active_ctx_ = winner;
+        ctx_latched_ = true;
+      }
+
+      // The episode ends on the SLOW signal, once, and that is when the
+      // prototype learns. One update per word is what `partprobe` scored.
+      if (ctx_src_active_ && !slow_on && ctx_acc_n_ > kZero) {
+        Scalar total_wins = kZero;
+        for (uint32_t c = 0; c < ctx_slots_; ++c) total_wins += ctx_wins_[c];
+        const Scalar dscale = ctx_dn_ > kZero ? ctx_dsum_ / ctx_dn_ : kZero;
+        Scalar best_score = kZero, best_dist = kZero;
+        uint32_t winner = 0;
+        // The conscience. A unit that wins early becomes the running mean of
+        // what it won, and in high dimensions a mean is nearer every point than
+        // any single point is, so it keeps winning and the other starves --
+        // DeSieno's dead unit, which `partprobe` measured killing 78% of random
+        // inits and which the conscience took to 0/16. It also solves the
+        // initialisation problem here for free: prototypes start at zero, so the
+        // first episode is a tie that unit 0 takes, and the penalty is what
+        // makes unit 1 claim the next word it is nearer to.
+        for (uint32_t c = 0; c < ctx_slots_; ++c) {
+          const Scalar* proto = ctx_proto_ + size_t(c) * sms.capacity;
+          Scalar d = kZero;
+          for (uint32_t n = 0; n < sms.count; ++n) {
+            const Scalar e = ctx_acc_[n] * inv - proto[n];
+            d += e * e;
+          }
+          Scalar score = d;
+          if (total_wins > kZero && dscale > kZero) {
+            score += (Scalar(ctx_slots_) * (ctx_wins_[c] / total_wins) - kOne) * dscale;
+          }
+          if (c == 0 || score < best_score) { best_score = score; best_dist = d; winner = c; }
+        }
+        ctx_wins_[winner] += kOne;
+        ctx_dsum_ += best_dist;
+        ctx_dn_ += kOne;
+        // MacQueen: each prototype is the running mean of the words it has won,
+        // so the learning rate is 1/wins and nothing is guessed.
+        const Scalar lr = kOne / ctx_wins_[winner];
+        Scalar* proto = ctx_proto_ + size_t(winner) * sms.capacity;
+        for (uint32_t n = 0; n < sms.count; ++n) {
+          proto[n] += lr * (ctx_acc_[n] * inv - proto[n]);
+        }
+        for (uint32_t n = 0; n < sms.count; ++n) ctx_acc_[n] = kZero;
+        ctx_acc_n_ = kZero;
+        active_ctx_ = winner;
+        ++ctx_events_;
+      }
+      ctx_src_active_ = slow_on;
+      // The latch is the point: once a word has been heard the creature is IN
+      // that context until it hears another, so the cash-in reaches the latched
+      // table rather than the shared bias. Before the first word there is no
+      // context, which is not the same as context zero.
+      ctx_present_ = ctx_latched_;
+    } else {
+      ctx_present_ = any && best > kContextRateFloor;
+      if (ctx_present_) active_ctx_ = best_slice;
+    }
   }
   const uint32_t slot = uint32_t(tick_ % delay_slots_);
   Scalar* in = inbox_ + size_t(slot) * capacity_;

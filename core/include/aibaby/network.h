@@ -155,6 +155,8 @@ class Network {
   bool context_present() const { return ctx_present_; }
   uint32_t context_slots() const { return ctx_slots_; }
   uint32_t context_source() const { return ctx_source_; }
+  bool context_latched() const { return ctx_latched_; }
+  uint64_t context_events() const { return ctx_events_; }
   // This neuron's bias in context `c`. Exposed so a probe can show the table
   // diverging (or not) rather than infer it from behaviour.
   Scalar context_bias(uint32_t i, uint32_t c) const {
@@ -884,6 +886,33 @@ class Network {
   uint32_t ctx_source_ = 0;
   static constexpr uint32_t kCtxSelfSkipA = 2;  // F1
   static constexpr uint32_t kCtxSelfSkipB = 3;  // F2
+  // DNA v53, source 2. One prototype per context over the source module's
+  // neurons, plus the accumulator that averages a word before the competition
+  // runs. Arena-allocated, so a snapshot carries them for free; null and unused
+  // for sources 0 and 1, which is what keeps those bit-identical.
+  Scalar* ctx_proto_ = nullptr;   // ctx_slots_ x source count, context-major
+  Scalar* ctx_acc_ = nullptr;     // source count, the current word's sum
+  Scalar ctx_acc_n_ = kZero;      // ticks accumulated into it
+  Scalar ctx_wins_[8] = {};       // per-context win counts; MacQueen's 1/wins
+  Scalar ctx_dsum_ = kZero;       // running sum of winner distances...
+  Scalar ctx_dn_ = kZero;         // ...and its count, so the conscience scales
+  bool ctx_src_active_ = false;   // was the source active on the previous tick?
+  bool ctx_latched_ = false;      // has a context ever been formed?
+  // How many times the competition has RUN. One per word is the design; many
+  // per word means the fast/slow crossing is chattering and each update is
+  // seeing a fragment of a word rather than a word.
+  uint64_t ctx_events_ = 0;
+  // The source module's homeostatic setpoint, cached from the genome at build.
+  // Read from the DNA rather than from `norm_target_`, which only exists when
+  // divisive normalisation is switched on -- v53 must not depend on v12.
+  Scalar ctx_src_target_ = kZero;
+  // ...and the LISTENING GATE: the larynx, and its setpoint. The ear cannot
+  // mark where a word is, because the creature hears its own babble too. The
+  // larynx can: M1d's listening reflex takes the voiced fraction from 0.276 to
+  // 0.010 while a word plays, so "quiet" IS "listening".
+  int32_t ctx_gate_module_ = -1;
+  Scalar ctx_gate_target_ = kZero;
+  static constexpr uint32_t kMaxContextSlots = 8;
   uint32_t active_ctx_ = 0;   // argmax slice, refreshed each tick
   bool ctx_present_ = false;  // is any slice actually driven this tick?
   // When a slice counts as driven, in Hz. NOT a guessed constant: a kContext

@@ -724,11 +724,16 @@ context_slots = 0
 # DNA v52: WHERE that index is read from. 0 is the kContext module (v51, and
 # bit-identical to it); 1 reads the larynx's own slices instead, over the
 # neurons outside the two articulator groups the F1/F2 score is computed from.
+# 2 (DNA v53) is a COMPETITIVE partition of the auditory code, learned online
+# with no labels, formed while the word plays and LATCHED across the silence.
 # 0 is an oracle whenever the host writes the context module -- which is what
-# `areax` does -- and 1 is the creature deriving it for itself. `ctxsrc`
-# measured why the larynx and nothing else: in the reward window the
-# articulators carry the word at 0.740 where the ear is at 0.541 and central at
-# 0.514. See `ctxself` and DnaExploration::context_source.
+# `areax` does -- and 1 and 2 are the creature deriving it for itself.
+#
+# `partprobe` priced all of them read-only, same trials, same split: the ear
+# reads 1.000 under a competitive rule with a conscience and 0.466 -- CHANCE --
+# under rule 1's fixed cut, while the larynx's best unsupervised partition
+# reaches 0.670. So 2 is not 1 pointed at another module; the boundary has to
+# be learned. See `ctxself` and DnaExploration::context_source.
 context_source = 0
 
 

@@ -7639,6 +7639,116 @@ signals present at the moment the index is needed and independent of the word
 the creature is trying to name, which is the one property an unsupervised
 clustering of its own voice cannot have.
 
+### DNA v53 — a competitive index off the ear, and the oracle the probe kept
+
+`partprobe` said build it: the word is separable in the auditory code without
+labels and without restarts, at 1.000, where the best unsupervised partition of
+the motor state reaches 0.670. So v53 is `context_source = 2` — a competitive
+partition of the auditory code, learned online with no labels, formed while the
+word plays and **latched** across the silence.
+
+Three design choices, each forced by a measurement rather than picked:
+
+- **One update per word, not per tick.** The rate vector accumulates while the
+  creature is listening and the competition runs once at the end, which is what
+  `partprobe` scored. Per-tick wins would drive MacQueen's `1/wins` to zero
+  inside a single word and freeze the prototypes on noise.
+- **The conscience**, which is the whole difference between 0.584 and 1.000. Its
+  strength is derived: the penalty is in the data's own distance units and the
+  fair share is `1/K`. It also solves initialisation for free — prototypes start
+  at zero, the first episode is a tie, and the share penalty is what makes the
+  second unit claim a word.
+- **The latch.** `ctxsrc` reads the ear at 1.000 during the word and 0.541 by the
+  reward window, and that decay looked fatal only under the assumption that the
+  index is *recomputed* when reward lands. It is not. The index is formed while
+  the word plays and held until the next word, so the context is "the last thing
+  I heard" — and `ctx_present_` now stays true once latched, so the cash-in
+  reaches that table rather than the shared bias.
+
+#### The oracle `partprobe` quietly kept
+
+**`partprobe` scored the ear inside `ctxsrc`'s word bins, and those bins are
+written by the host from the trial structure.** So "1.000" always presupposed
+*knowing where the word is* — and the creature does not. Between caregiver words
+it babbles and hears itself, so auditory activity marks SOUND, not the
+caregiver. A mechanism can price at 1.000 and still have nowhere to start.
+
+That is the same class as `areax`'s host-written slice and `ctxsrc`'s supervised
+ceiling: an oracle one level below the one that had just been removed.
+
+**Four boundary detectors failed before one worked, and each died against a
+counter rather than against judgement** — `ev/tri`, competitions per trial,
+where the design is one:
+
+| boundary | ev/trial | why it failed |
+|---|---|---|
+| ear vs a fixed 1 Hz floor | 0 or ∞ | that constant was derived for a `kContext` module, which rests at *exactly* zero. The ear never does |
+| ear fast vs ear's own 1 s EMA | 26–38 | a one-second reference **catches up to a 900-tick word mid-word** |
+| ear fast vs its setpoint | 20–28 | a tens-of-ms EMA of a spiking response crosses any threshold repeatedly |
+| ear slow vs its setpoint | ~0 | the creature's own babble keeps the ear above setpoint |
+
+The one that works is **the larynx, not the ear**: M1d's listening reflex is
+shipped and measured — the creature falls nearly silent while it hears something,
+voiced fraction 0.276 -> 0.010 — so *quiet is listening*. Each module then does
+what it is good at: the ear supplies the feature, the larynx supplies the
+boundary, both against their own genome setpoints. Still no new constant. That
+reads `ev/tri` ≈ 1.2 against a design of 1.
+
+#### The result: better than v52, and it still refuses
+
+Six arms, nine creatures, 3.4M ticks, on a fresh seed family.
+
+| arm | dF1 (Hz) | p(index) | busiest | table div |
+|---|---|---|---|---|
+| off | 17.4 +/- 5.5 | — | — | 0.0000 |
+| oracle | 82.4 +/- 6.3 | 1.000 | 0.500 | 0.0280 |
+| self (v52) | 23.3 +/- 5.6 | 0.540 | 0.513 | 0.0179 |
+| **ear (v53)** | **36.0 +/- 5.5** | **0.643 +/- 0.016** | 0.772 | 0.0239 |
+| ear-rnd | 22.6 +/- 5.6 | 0.729 | 0.664 | 0.0242 |
+
+Paired, which is this design's correct test:
+
+- **`ear` − `ear-rnd`: +13.4 +/- 7.8 Hz, 1.72 SE, 8 of 9** — the gate asks 2 SE.
+  **Short.**
+- `ear` − `off`: +18.6 +/- 5.2 Hz, **3.6 SE**, 8 of 9.
+- v52 for comparison: +9.9 +/- 7.4, 1.34 SE, 6 of 9.
+
+> **v53 nearly doubles the index (0.540 -> 0.643, keeping 8% -> 29% of the
+> conditional effect) and lifts the voice from 23.3 to 36.0 Hz. It beats the
+> no-mechanism arm at 3.6 SE and its own matched-marginal control at 1.72. The
+> gate is the control, and the gate does not move.**
+
+**Three things the diagnostics say that dF1 alone would not.**
+
+1. **`ear-rnd` has a HIGHER index accuracy than `ear`** — 0.729 against 0.643.
+   The arms are not matched on `p`, because the index is read from the ear and
+   the ear hears the creature's own voice: changing the target changes the
+   behaviour changes the index. The matched-marginal control is less clean here
+   than its name suggests, and that is a property of reading a context off a
+   modality the creature also drives.
+2. **It does not sharpen** (0.641 -> 0.634 across the session). The prototypes
+   converge early and stay, so more trials buy nothing.
+3. **`busiest` is 0.772, where `partprobe`'s clean windows gave exactly 0.500.**
+   Roughly three-quarters of reward windows land in one context. That lopsidedness
+   is the visible cost of the creature finding its own window.
+
+#### Two bugs this found in its own instrument
+
+**A collapsed v53 is invisible in dF1.** A context table with one live slice is
+arithmetically a shared bias, so the first build printed `ear` and `off` dF1s
+that were *identical to the decimal*. Only `busiest = 1.000` showed why. Without
+that column the whole 70-minute run would have read as "the ear index does
+nothing" when a threshold was wrong.
+
+**And the summary printed the wrong arm.** After the experiment was retargeted
+from v52 to v53, two `printf` argument lists still pointed at the old arm, so the
+line labelled "THE GATE" showed v52's `+9.9, 1.4 SE, 6 of 9`. The *decision* used
+v53's numbers correctly and the verdict text below it was right, which is how the
+contradiction became visible. Fixed; the table was always authoritative.
+
+**`context_source = 0` stays bit-identical**: hash `ad96f882becbee92`, `verify`
+22/22, checked after v53 touched both `step()` and the arena budget.
+
 ### What the literature says to build next, and why it is the cheap option
 
 > **This section is the argument that produced DNA v51, kept as the record of

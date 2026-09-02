@@ -408,7 +408,13 @@ constexpr uint32_t kDnaMagic = 0x44424941;  // "AIBD"
 //     pointed at a different population. It is a change of WHERE the index is
 //     read and not a new rule. See DnaExploration::context_source and
 //     `ctxself`. Ships OFF; `context_source = 0` is bit-identical to v51.
-constexpr uint32_t kDnaVersion = 52;
+// 53: the index the creature works out for ITSELF. v52 read it from a fixed cut
+//     of the larynx and `ctxself` refused that on two seed families. `partprobe`
+//     then priced every alternative read-only and found exactly one that works:
+//     a COMPETITIVE partition of the auditory code, formed while the word plays
+//     and LATCHED across the silence. See DnaExploration::context_source and
+//     `ctxself`'s `ear` arms. Ships OFF; `context_source = 0` is bit-identical.
+constexpr uint32_t kDnaVersion = 53;
 
 // What a module is wired to the world through. The host looks modules up by
 // role, never by name or index, so renaming a module in the genome cannot
@@ -1119,6 +1125,54 @@ struct DnaExploration {
   //   0 — the kContext module's slices, argmax by rate. DNA v51, unchanged.
   //   1 — the LARYNX's own slices, argmax by rate, over the neurons OUTSIDE
   //       the two articulator groups the F1/F2 readout is scored on.
+  //   2 — DNA v53. A COMPETITIVE partition of the AUDITORY code, learned online
+  //       with no labels, formed while the word plays and LATCHED afterwards.
+  //
+  // WHY 2 EXISTS AND WHY IT IS NOT 1 WITH A DIFFERENT MODULE. `partprobe`
+  // measured every candidate read-only, on identical trials and splits:
+  //
+  //   the ear, supervised                     1.000
+  //   the ear, batch k-means (no labels)      1.000
+  //   the ear, ONLINE competitive + conscience 1.000   <- what 2 runs
+  //   the ear, online competitive, no conscience 0.584
+  //   the ear, A FIXED CUT (rule 1's rule)     0.466   <- CHANCE
+  //   the larynx, best unsupervised            0.670
+  //
+  // **Moving rule 1's index to the ear would sit at chance.** A fixed
+  // equal-halves cut of a roughly tonotopic array does not separate two vowels;
+  // their formant PATTERN does, and finding it needs a learned boundary. That is
+  // the opposite of what the larynx rows say, where learned beats fixed by
+  // +0.062 and neither is enough.
+  //
+  // THE CONSCIENCE IS NOT AN EXTRA KNOB, it is the difference between 0.584 and
+  // 1.000. A unit that wins early becomes the running mean of what it won, and
+  // in high dimensions a mean is nearer every point than any single point is, so
+  // it keeps winning and the other unit starves — DeSieno's dead unit, which
+  // killed 78% of random inits here. Penalising a unit for exceeding its share
+  // fixes it, and **this creature already runs that fix**: per-module
+  // homeostasis drives each unit toward a target rate and DNA v32's lateral
+  // competition is what makes them compete at all.
+  //
+  // Nothing in it is a guessed constant. The penalty is expressed in the data's
+  // own distance units (the running mean distance from a sample to its winner)
+  // and the fair share is 1/K for K contexts, which is arithmetic. The learning
+  // rate is MacQueen's 1/wins, so each prototype is the running mean of the
+  // words it has won.
+  //
+  // ONE UPDATE PER WORD, not per tick. The rate vector is accumulated while the
+  // source is active and the competition is run once on the falling edge, which
+  // is what `partprobe` scored (one feature vector per trial) and what keeps
+  // 1/wins meaningful — per-tick wins would drive the rate to zero within a
+  // single word and freeze the prototypes on noise.
+  //
+  // AND IT LATCHES, which is the other half. `ctxsrc` reads the ear at 1.000
+  // while the word plays and 0.541 once it stops, and that decay looked fatal
+  // only under the assumption that the index is RECOMPUTED when reward lands.
+  // It is not: the index is formed at the end of the word and held until the
+  // next word, so the context is "the last thing I heard" — which is what a
+  // context is in Heald, Lengyel & Wolpert's account. `ctx_present_` therefore
+  // stays true once anything has been latched, so the cash-in reaches the
+  // latched context's table rather than the shared bias.
   //
   // Why the larynx and not the ear. `ctxsrc` measured every candidate carrier
   // in the window where reward actually lands — the 800 ms AFTER the word

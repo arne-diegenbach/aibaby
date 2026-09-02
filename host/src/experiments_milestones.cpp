@@ -4040,6 +4040,8 @@ struct VLRun {
   // different verdicts and a session-mean cannot tell them apart. Thirds rather
   // than halves, because `vocallearn`'s own early/late windows are thirds.
   double ctx_match_early = 0.0, ctx_match_late = 0.0;
+  // DNA v53: competitions run per trial. The design is one per word.
+  double ctx_events_per_trial = 0.0;
   // ...and the share taken by the busiest slice. A constant index scores 0.5
   // on `ctx_match` with balanced words, but it scores 1.0 here, and the two
   // failures deserve different verdicts.
@@ -4415,6 +4417,8 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
   }
   out.voiced_frac = frames_total ? double(frames_voiced) / double(frames_total) : 0.0;
   out.ctx_present_frac = ctx_ticks_total ? double(ctx_ticks) / double(ctx_ticks_total) : 0.0;
+  out.ctx_events_per_trial =
+      n_trials ? double(s.brain.network().context_events()) / double(n_trials) : 0.0;
   // DNA v52. The best of the two slice-to-word assignments, and the busiest
   // slice's share. Two words and two slots is the only case this project runs;
   // with more of either the diagonal below is a lower bound rather than the
@@ -8019,6 +8023,10 @@ struct CtxSrc {
   // error was about -- it once moved the window and the readout at once.
   std::vector<std::vector<double>> feat_grp[2];  // 7 off-axis articulator values
   std::vector<std::vector<double>> feat_neu[2];  // off-axis vocal spike counts
+  // ...and the EAR during the two WORD bins. Not a reward-window feature: it is
+  // there for the latched index `partprobe` prices, where the index is formed
+  // while the word plays and held afterwards.
+  std::vector<std::vector<double>> feat_aud[2];  // auditory spike counts, word
   std::vector<int> labels;
   size_t train_split = 0;
   double aud_shuf = 0.0, cen_shuf = 0.0, voc_shuf = 0.0;
@@ -8169,6 +8177,7 @@ CtxSrc run_ctxsrc_session(const std::vector<uint8_t>& blob, uint64_t ticks) {
   for (uint32_t r = 0; r < 2; ++r) {
     out.feat_grp[r] = xgb[2 + r];
     out.feat_neu[r] = xvx[2 + r];
+    out.feat_aud[r] = xa[r];  // bins 0 and 1 are the word: 0-200 and 200-900
   }
   out.labels = y;
   out.train_split = train;
@@ -8562,6 +8571,37 @@ bool run_rpeprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
 // **BUILD only if an unsupervised partition reaches p >= 0.65.** Below that the
 // effect stays too small to be a route to naming however significant it is,
 // which is the same reasoning that retired v52's own residual.
+// WHAT "SUPERVISED BY SOMETHING THE CREATURE HAS" COMES TO, and two thirds of
+// it are already answered by measurements on file rather than by this run.
+//
+//   REWARD cannot supervise it. `rpeprobe` decomposed the reward stream by
+//   context and found the between-context share is **0.0000** -- `vocallearn`
+//   sets its praise criterion PER WORD by design, so reward is balanced across
+//   the two words on purpose and carries no information about which one was
+//   said. A teacher with zero mutual information with the label is not a
+//   teacher. Refused without a run.
+//
+//   CAREGIVER TIMING cannot supervise it either, and this one is true by
+//   construction: both words occupy ticks 0-900 and both reward windows run
+//   900-1700, so the protocol's timing is IDENTICAL between the contexts.
+//   Refused without a run.
+//
+//   THE EAR DURING THE WORD is the one that could. `ctxsrc` reads the auditory
+//   module at **1.000** while the word plays and 0.541 by the reward window,
+//   and the reason that decay looked fatal was an assumption worth re-examining:
+//   that the index has to be RECOMPUTED when reward lands. It does not.
+//   **DNA v52 already latches** -- `active_ctx_` is written only when the source
+//   is active and holds its previous value otherwise -- so an index formed while
+//   the word plays survives into the reward window for free. What would have to
+//   change is not the latch but `ctx_present_`, which currently gates the
+//   cash-in too, so a silent ear at reward time sends the update to the shared
+//   bias.
+//
+// So the question this probe now has to answer is exactly one thing, and it is
+// the question `partprobe` was built to ask: **is the word separable in the
+// auditory code WITHOUT the labels?** The 1.000 above is supervised, and this
+// probe's whole finding is that a supervised ceiling is not a target an
+// unsupervised mechanism can approach.
 constexpr double kPpBuildBar = 0.65;
 constexpr double kPpSupervisedRef = 0.740;  // ctxsrc, 9 creatures
 constexpr double kPpCtxselfP = 0.540;       // ctxself, fresh family
@@ -8593,16 +8633,17 @@ bool run_partprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
   // reward is delivered across the whole window, and an index right for the
   // first half and wrong for the second writes two different tables in one
   // trial. `ctxsrc` scores its own verdict the same way.
-  enum { kGrp = 0, kNeu = 1, kSpaces = 2 };
-  enum { kSup = 0, kKmZ = 1, kKmRaw = 2, kFix = 3, kRules = 4 };
-  static const char* kSpaceName[kSpaces] = {"articulator groups", "off-axis neurons"};
-  static const char* kRuleName[kRules] = {"supervised", "k-means (z)", "k-means (raw)",
-                                          "fixed cut"};
+  enum { kGrp = 0, kNeu = 1, kAud = 2, kSpaces = 3 };
+  enum { kSup = 0, kKmZ = 1, kOnl = 2, kCon = 3, kFix = 4, kRules = 5 };
+  static const char* kSpaceName[kSpaces] = {"articulator groups", "off-axis neurons",
+                                            "EAR, during word"};
+  static const char* kRuleName[kRules] = {"supervised", "batch k-means", "online",
+                                          "online+conscience", "fixed cut"};
   std::vector<double> acc[kSpaces][kRules];
-  std::vector<double> shuf[kSpaces];
+  std::vector<double> shuf[kSpaces], busy[kSpaces], hit[kSpaces];
 
-  std::printf("  %-6s %-20s %-11s %-13s %-13s %s\n", "seed", "features", "supervised",
-              "k-means (z)", "k-means(raw)", "fixed cut");
+  std::printf("  %-6s %-18s %-11s %-11s %-11s %-13s %s\n", "seed", "features",
+              "supervised", "batch km", "online", "online+consc", "fixed cut");
   uint32_t valid = 0;
   for (uint32_t r = 0; r < kReps; ++r) {
     std::vector<uint8_t> variant = blob;
@@ -8623,16 +8664,40 @@ bool run_partprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
 
     for (uint32_t sp = 0; sp < kSpaces; ++sp) {
       const std::vector<std::vector<double>>* f =
-          sp == kGrp ? p.feat_grp : p.feat_neu;
+          sp == kGrp ? p.feat_grp : (sp == kNeu ? p.feat_neu : p.feat_aud);
       double worst[kRules];
       for (uint32_t k = 0; k < kRules; ++k) worst[k] = 2.0;
       double worst_shuf = 2.0;
+      double worst_busy = 0.0;
+      double worst_hit = 2.0;
       for (uint32_t b = 0; b < 2; ++b) {
+        // The online rule is run over MANY INITS and summarised by its
+        // distribution, because a single draw is a coin flip and the question
+        // is how often one pass finds the split -- see the note on
+        // `online_competitive_accuracy`. `kOnlHit` is the share of draws that
+        // essentially solve it; `kOnl` is the mean over draws.
+        double bz_sum = 0.0, onl_sum = 0.0, con_sum = 0.0, con_hit = 0.0;
+        constexpr uint32_t kDraws = 16;
+        for (uint32_t d = 0; d < kDraws; ++d) {
+          double bz = 1.0, bzc = 1.0;
+          onl_sum += online_competitive_accuracy(f[b], p.labels, p.train_split, true,
+                                                 &bz, seed ^ (0xD00Du + d), false);
+          const double c = online_competitive_accuracy(f[b], p.labels, p.train_split,
+                                                       true, &bzc, seed ^ (0xD00Du + d),
+                                                       true);
+          con_sum += c;
+          bz_sum += bzc;
+          if (c >= 0.9) con_hit += 1.0;
+        }
         const double v[kRules] = {
             holdout_accuracy(f[b], p.labels, p.train_split),
             kmeans_accuracy(f[b], p.labels, p.train_split, seed ^ 0xB1u, true),
-            kmeans_accuracy(f[b], p.labels, p.train_split, seed ^ 0xB1u, false),
+            onl_sum / double(kDraws),
+            con_sum / double(kDraws),
             fixedcut_accuracy(f[b], p.labels, p.train_split)};
+        const double hit = con_hit / double(kDraws);
+        if (hit < worst_hit) worst_hit = hit;
+        if (bz_sum / double(kDraws) > worst_busy) worst_busy = bz_sum / double(kDraws);
         for (uint32_t k = 0; k < kRules; ++k) {
           if (v[k] < worst[k]) worst[k] = v[k];
         }
@@ -8641,8 +8706,11 @@ bool run_partprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
       }
       for (uint32_t k = 0; k < kRules; ++k) acc[sp][k].push_back(worst[k]);
       shuf[sp].push_back(worst_shuf);
-      std::printf("  %-6u %-20s %-11.3f %-13.3f %-13.3f %.3f\n", r, kSpaceName[sp],
-                  worst[kSup], worst[kKmZ], worst[kKmRaw], worst[kFix]);
+      busy[sp].push_back(worst_busy);
+      hit[sp].push_back(worst_hit);
+      std::printf("  %-6u %-18s %-11.3f %-11.3f %-11.3f %-13.3f %.3f\n", r,
+                  kSpaceName[sp], worst[kSup], worst[kKmZ], worst[kOnl],
+                  worst[kCon], worst[kFix]);
     }
   }
   if (valid < 3) {
@@ -8651,25 +8719,34 @@ bool run_partprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
   }
 
   double m[kSpaces][kRules], se[kSpaces][kRules], ms[kSpaces], ss[kSpaces];
+  double mb[kSpaces], sb[kSpaces], mh[kSpaces], sh2[kSpaces];
   for (uint32_t sp = 0; sp < kSpaces; ++sp) {
     for (uint32_t k = 0; k < kRules; ++k) m[sp][k] = ctx_mean_se(acc[sp][k], &se[sp][k]);
     ms[sp] = ctx_mean_se(shuf[sp], &ss[sp]);
+    mb[sp] = ctx_mean_se(busy[sp], &sb[sp]);
+    mh[sp] = ctx_mean_se(hit[sp], &sh2[sp]);
   }
 
-  std::printf("\n  %-20s %-16s %-16s %-16s %s\n", "features", "supervised",
-              "k-means (z)", "k-means (raw)", "fixed cut");
+  std::printf("\n  %-18s %-15s %-15s %-15s %-15s %s\n", "features", "supervised",
+              "batch k-means", "online", "online+conscience", "fixed cut");
   for (uint32_t sp = 0; sp < kSpaces; ++sp) {
     char c[kRules][32];
     for (uint32_t k = 0; k < kRules; ++k) {
-      std::snprintf(c[k], sizeof c[k], "%.3f +/- %.3f", m[sp][k], se[sp][k]);
+      std::snprintf(c[k], sizeof c[k], "%.3f +/-%.3f", m[sp][k], se[sp][k]);
     }
-    std::printf("  %-20s %-16s %-16s %-16s %s\n", kSpaceName[sp], c[kSup], c[kKmZ],
-                c[kKmRaw], c[kFix]);
+    std::printf("  %-18s %-15s %-15s %-15s %-15s %s\n", kSpaceName[sp], c[kSup],
+                c[kKmZ], c[kOnl], c[kCon], c[kFix]);
   }
-  std::printf("\n  shuffled control (k-means, z): groups %.3f, neurons %.3f\n",
-              ms[kGrp], ms[kNeu]);
+  std::printf("\n  ONLINE+CONSCIENCE over 16 random inits per creature:\n"
+              "    share of inits that essentially solve it (>=0.90)\n"
+              "      groups %.2f, neurons %.2f, EAR %.2f +/- %.2f\n"
+              "    busiest cluster, mean over inits (1.000 is a dead unit)\n"
+              "      groups %.3f, neurons %.3f, ear %.3f\n",
+              mh[kGrp], mh[kNeu], mh[kAud], sh2[kAud], mb[kGrp], mb[kNeu], mb[kAud]);
+  std::printf("\n  shuffled control (k-means, z): groups %.3f, neurons %.3f, ear %.3f\n",
+              ms[kGrp], ms[kNeu], ms[kAud]);
 
-  if (ms[kGrp] > 0.62 || ms[kNeu] > 0.62) {
+  if (ms[kGrp] > 0.62 || ms[kNeu] > 0.62 || ms[kAud] > 0.62) {
     std::printf("\n  CONTROL FAILED -- an unsupervised partition scores above chance\n"
                 "  against SHUFFLED labels, so the assignment step is finding structure\n"
                 "  that is not the word and nothing above is worth reading.\n");
@@ -8692,11 +8769,24 @@ bool run_partprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
   // feature spaces cannot clear the bar, no single choice among them will.
   uint32_t bsp = 0, brule = kKmZ;
   double best = -1.0;
-  for (uint32_t sp = 0; sp < kSpaces; ++sp) {
-    for (uint32_t k = kKmZ; k <= kKmRaw; ++k) {
+  for (uint32_t sp = 0; sp < kAud; ++sp) {   // the MOTOR spaces only
+    for (uint32_t k = kKmZ; k <= kCon; ++k) {
       if (m[sp][k] > best) { best = m[sp][k]; bsp = sp; brule = k; }
     }
   }
+  // The ear is scored on its own, because it answers a different question: not
+  // "is the motor state better partitioned" but "is there anywhere in this
+  // creature the word is separable WITHOUT the labels".
+  //
+  // AND IT IS SCORED ON THE **ONLINE** RULE, not on batch k-means. Batch runs
+  // eight restarts and keeps the best by inertia; a creature gets one pass
+  // through its life and no restarts. Every gap between a proxy and a behaviour
+  // in this project has been of exactly that shape, so the number that decides
+  // a build is the one the creature could run. Batch is reported beside it as
+  // the ceiling that rule class has.
+  const double aud_best = m[kAud][kCon];
+  const double aud_se = se[kAud][kCon];
+  const double aud_batch = m[kAud][kKmZ];
 
   std::printf("\n  what the CUT costs       %.3f supervised -> %.3f unsupervised, same\n"
               "                           features (%s) -- and the BEST learned boundary\n"
@@ -8711,14 +8801,48 @@ bool run_partprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
               "  best unsupervised        %.3f +/- %.3f  (%s, %s)\n"
               "  the bar                  %.2f\n",
               m[kGrp][kSup],
-              m[kGrp][kKmZ] > m[kGrp][kKmRaw] ? m[kGrp][kKmZ] : m[kGrp][kKmRaw],
+              m[kGrp][kKmZ] > m[kGrp][kCon] ? m[kGrp][kKmZ] : m[kGrp][kCon],
               kSpaceName[kGrp],
-              (m[kGrp][kKmZ] > m[kGrp][kKmRaw] ? m[kGrp][kKmZ] : m[kGrp][kKmRaw]) -
+              (m[kGrp][kKmZ] > m[kGrp][kCon] ? m[kGrp][kKmZ] : m[kGrp][kCon]) -
                   m[kGrp][kFix],
               m[kGrp][kSup], m[kNeu][kSup],
               m[kNeu][kFix], kPpCtxselfP,
               best, se[bsp][brule], kSpaceName[bsp], kRuleName[brule],
               kPpBuildBar);
+  std::printf("  EAR, online+conscience   %.3f +/- %.3f  <-- what the creature could run\n"
+              "  the ear, batch k-means   %.3f  (8 restarts; the rule class's ceiling)\n"
+              "  the ear, supervised      %.3f\n"
+              "  the ear, v52's OWN rule  %.3f -- a fixed cut of the auditory code is at\n"
+              "                           CHANCE, so nothing here is reachable by moving\n"
+              "                           v52's index to the ear. The partition must be\n"
+              "                           learned, which is the opposite of what the\n"
+              "                           motor-state rows found.\n",
+              aud_best, aud_se, aud_batch, m[kAud][kSup], m[kAud][kFix]);
+
+  // The ear is reported first when it clears, because it is the larger result:
+  // it says the index can be formed at all, where the motor-state rows only say
+  // which cut of a marginal signal is best.
+  if (aud_best >= kPpBuildBar) {
+    std::printf("\n  BUILD THE LATCHED INDEX -- the word is separable in the auditory\n"
+                "  code WITHOUT the labels and WITHOUT restarts, at %.3f on a single\n"
+                "  pass (%.3f supervised), where the best unsupervised partition of the\n"
+                "  MOTOR state reaches %.3f. That keeps %.0f%% of the conditional effect\n"
+                "  against v52's 8%%, or ~%.0f Hz.\n\n"
+                "  The mechanism is most of the way built: `active_ctx_` is written only\n"
+                "  when the source is active and HOLDS otherwise, so an index formed\n"
+                "  while the word plays already survives into the reward window. What\n"
+                "  has to change is `ctx_present_`, which gates the cash-in as well as\n"
+                "  the index, so a silent ear at reward time currently sends the update\n"
+                "  to the shared bias instead of the latched context's table.\n\n"
+                "  Note what this does NOT show: that an unsupervised partition of the\n"
+                "  ear TRACKS THE WORD rather than something correlated with it in this\n"
+                "  protocol. Two vowels differing in loudness or onset would split this\n"
+                "  cleanly too. The build's own control has to be `ctxself`'s\n"
+                "  matched-marginal arm, on the paired test, on a fresh seed family.\n",
+                aud_best, m[kAud][kSup], best,
+                100.0 * (2.0 * aud_best - 1.0), 65.0 * (2.0 * aud_best - 1.0));
+    return true;
+  }
 
   if (best >= kPpBuildBar) {
     std::printf("\n  BUILD IT -- an unsupervised partition of %s reaches %.3f,\n"
@@ -8747,6 +8871,15 @@ bool run_partprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
               "  motor state.\n",
               best, kPpBuildBar, 100.0 * (2.0 * best - 1.0), 65.0 * (2.0 * best - 1.0),
               best - m[bsp][kFix]);
+  std::printf("\n  AND THE EAR DOES NOT RESCUE IT: %.3f unsupervised against %.3f\n"
+              "  supervised. The word is at ceiling in the auditory code and a\n"
+              "  partition that has not been told which word is which still cannot\n"
+              "  find it, which is the same circularity one module further back.\n"
+              "  `rpeprobe` already refused reward as the teacher (0.0%%%% of the reward\n"
+              "  variance is between contexts) and the protocol's timing is identical\n"
+              "  between the two words by construction. **There is nothing left in\n"
+              "  this creature to supervise the partition with.**\n",
+              aud_best, m[kAud][kSup]);
   return false;
 }
 
@@ -9090,6 +9223,13 @@ constexpr CtxSelfArm kCtxSelfArms[] = {
     {"oracle",   2, 0, kVLTgtHeard},
     {"self",     2, 1, kVLTgtHeard},
     {"self-rnd", 2, 1, kVLTgtRandom},
+    // DNA v53: the competitive latched index off the auditory code. `ear-rnd`
+    // is its matched-marginal control and is the arm the verdict is gated on --
+    // `partprobe` said so before this was built, because a clean split of the
+    // ear would look identical whether it tracks the WORD or something merely
+    // correlated with it in this protocol.
+    {"ear",      2, 2, kVLTgtHeard},
+    {"ear-rnd",  2, 2, kVLTgtRandom},
 };
 constexpr uint32_t kCtxSelfArmCount = sizeof(kCtxSelfArms) / sizeof(kCtxSelfArms[0]);
 
@@ -9156,8 +9296,8 @@ bool run_ctxself(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
   std::vector<double> occ[kCtxSelfArmCount];
   std::vector<double> mte[kCtxSelfArmCount], mtl[kCtxSelfArmCount];
 
-  std::printf("  %-6s %-9s %-9s %-8s %-8s %-10s %s\n", "seed", "arm", "dF1 (Hz)",
-              "p(idx)", "busiest", "table div", "change");
+  std::printf("  %-6s %-9s %-9s %-8s %-8s %-10s %-7s %s\n", "seed", "arm", "dF1 (Hz)",
+              "p(idx)", "busiest", "table div", "ev/tri", "change");
   for (uint32_t r = 0; r < kReps; ++r) {
     for (uint32_t a = 0; a < kCtxSelfArmCount; ++a) {
       std::vector<uint8_t> variant = blob;
@@ -9193,9 +9333,9 @@ bool run_ctxself(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
       occ[a].push_back(run.ctx_occupancy);
       mte[a].push_back(run.ctx_match_early);
       mtl[a].push_back(run.ctx_match_late);
-      std::printf("  %-6u %-9s %-9.1f %-8.3f %-8.3f %-10.4f %+.1f\n", r,
+      std::printf("  %-6u %-9s %-9.1f %-8.3f %-8.3f %-10.4f %-7.1f %+.1f\n", r,
                   kCtxSelfArms[a].name, d1, run.ctx_match, run.ctx_occupancy,
-                  run.ctx_table_div, vl_change(run));
+                  run.ctx_table_div, run.ctx_events_per_trial, vl_change(run));
     }
   }
 
@@ -9240,7 +9380,7 @@ bool run_ctxself(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
     std::printf("  %-9s %-16s %-15s %-14s %-13s %s\n", kCtxSelfArms[a].name, b, c, d, e, f);
   }
 
-  const uint32_t kOff = 0, kOra = 1, kSelf = 2, kSRnd = 3;
+  const uint32_t kOff = 0, kOra = 1, kSelf = 2, kSRnd = 3, kEar = 4, kERnd = 5;
 
   // The paired differences, computed and printed HERE -- above every gate --
   // because they are descriptive statistics rather than verdicts, and a run
@@ -9269,11 +9409,19 @@ bool run_ctxself(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
   uint32_t p_rnd_pos = 0, p_off_pos = 0, p_rnd_n = 0, p_off_n = 0;
   const double p_rnd = paired(kSelf, kSRnd, &p_rnd_se, &p_rnd_pos, &p_rnd_n);
   const double p_off = paired(kSelf, kOff, &p_off_se, &p_off_pos, &p_off_n);
+  double e_rnd_se = 0.0, e_off_se = 0.0;
+  uint32_t e_rnd_pos = 0, e_off_pos = 0, e_rnd_n = 0, e_off_n = 0;
+  const double e_rnd = paired(kEar, kERnd, &e_rnd_se, &e_rnd_pos, &e_rnd_n);
+  const double e_off = paired(kEar, kOff, &e_off_se, &e_off_pos, &e_off_n);
   std::printf("\n  paired differences (same creature, arms differ only in genome fields)\n"
-              "    self - self-rnd   %+.1f +/- %.1f Hz, %.1f SE, %u of %u positive\n"
-              "    self - off        %+.1f +/- %.1f Hz, %.1f SE, %u of %u positive\n",
+              "    v52  self - self-rnd   %+.1f +/- %.1f Hz, %.1f SE, %u of %u positive\n"
+              "    v52  self - off        %+.1f +/- %.1f Hz, %.1f SE, %u of %u positive\n"
+              "    v53  ear  - ear-rnd    %+.1f +/- %.1f Hz, %.1f SE, %u of %u positive\n"
+              "    v53  ear  - off        %+.1f +/- %.1f Hz, %.1f SE, %u of %u positive\n",
               p_rnd, p_rnd_se, p_rnd_se > 0.0 ? p_rnd / p_rnd_se : 0.0, p_rnd_pos, p_rnd_n,
-              p_off, p_off_se, p_off_se > 0.0 ? p_off / p_off_se : 0.0, p_off_pos, p_off_n);
+              p_off, p_off_se, p_off_se > 0.0 ? p_off / p_off_se : 0.0, p_off_pos, p_off_n,
+              e_rnd, e_rnd_se, e_rnd_se > 0.0 ? e_rnd / e_rnd_se : 0.0, e_rnd_pos, e_rnd_n,
+              e_off, e_off_se, e_off_se > 0.0 ? e_off / e_off_se : 0.0, e_off_pos, e_off_n);
 
   // GATE 0: is the instrument the one `areax` validated? The oracle index is
   // held for the whole trial and read by the same argmax, so p there is 1.000
@@ -9307,25 +9455,28 @@ bool run_ctxself(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
   // from one that names slices at random -- and the two deserve different
   // verdicts, because a constant index means the mechanism was never split
   // while a random one means it was split on nothing.
-  if (m_oc[kSelf] > 0.95) {
+  if (m_oc[kEar] > 0.95) {
     std::printf("\n  REFUSED, AND IT IS A FINDING ABOUT THE PARTITION, NOT THE MECHANISM.\n"
-                "  The creature's own index named the same slice on %.0f%% of reward-window\n"
+                "  The creature's v53 index named the same slice on %.0f%% of reward-window\n"
                 "  ticks, so the table was effectively never split and `self` is `off`\n"
                 "  with extra memory. A fixed equal-sized cut of the larynx does not\n"
                 "  separate the two words' motor states; what fails here is the cut, and\n"
                 "  the next thing to try is one that is learned rather than fixed.\n",
-                100.0 * m_oc[kSelf]);
+                100.0 * m_oc[kEar]);
     return false;
   }
 
-  if (m_pr[kSelf] < 0.5) {
+  if (m_pr[kEar] < 0.5) {
     std::printf("\n  REFUSED -- the creature was in a context on only %.0f%% of ticks in\n"
                 "  the `self` arm, so the table was mostly not indexed at all.\n",
-                100.0 * m_pr[kSelf]);
+                100.0 * m_pr[kEar]);
     return false;
   }
 
-  const double p = m_mt[kSelf];
+  // DNA v53 is what this experiment now tests; v52 is reported as the settled
+  // negative it became on two seed families. Both carry their own
+  // matched-marginal control and both are scored on the paired difference.
+  const double p = m_mt[kEar];
   const double keep_bound = 2.0 * kCtxSelfBound - 1.0;
   const double keep_meas = 2.0 * p - 1.0;
   // (2p - 1) x the oracle's dF1, floored at the no-signal arm. See the note on
@@ -9336,10 +9487,10 @@ bool run_ctxself(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
   };
   const double pred_bound = predict(keep_bound);
   const double pred_meas = predict(keep_meas);
-  const double lift = m_d1[kSelf] - m_d1[kOff];
-  const double lift_se = s_d1[kSelf] + s_d1[kOff];
-  const double vs_rnd = m_d1[kSelf] - m_d1[kSRnd];
-  const double rnd_se = s_d1[kSelf] + s_d1[kSRnd];
+  const double lift = m_d1[kEar] - m_d1[kOff];
+  const double lift_se = s_d1[kEar] + s_d1[kOff];
+  const double vs_rnd = m_d1[kEar] - m_d1[kERnd];
+  const double rnd_se = s_d1[kEar] + s_d1[kERnd];
 
   std::printf("\n  the reference here       oracle %.1f Hz vs off %.1f (%+.1f, %.1f SE)\n"
               "  the derived index        p = %.3f +/- %.3f, busiest slice %.3f\n"
@@ -9349,12 +9500,12 @@ bool run_ctxself(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
               "  measured                 %.1f Hz  (%+.1f vs off, %.1f SE)\n"
               "  vs matched-marginal      %.1f Hz  (%+.1f, %.1f SE)\n",
               m_d1[kOra], m_d1[kOff], ora_lift, ora_se > 0.0 ? ora_lift / ora_se : 0.0,
-              p, s_mt[kSelf], m_oc[kSelf],
-              m_me[kSelf], s_me[kSelf], m_ml[kSelf], s_ml[kSelf],
+              p, s_mt[kEar], m_oc[kEar],
+              m_me[kEar], s_me[kEar], m_ml[kEar], s_ml[kEar],
               pred_bound, kCtxSelfBound, 100.0 * keep_bound,
               pred_meas, 100.0 * (keep_meas > 0.0 ? keep_meas : 0.0),
-              m_d1[kSelf], lift, lift_se > 0.0 ? lift / lift_se : 0.0,
-              m_d1[kSRnd], vs_rnd, rnd_se > 0.0 ? vs_rnd / rnd_se : 0.0);
+              m_d1[kEar], lift, lift_se > 0.0 ? lift / lift_se : 0.0,
+              m_d1[kERnd], vs_rnd, rnd_se > 0.0 ? vs_rnd / rnd_se : 0.0);
 
   // THE GATE IS `self` AGAINST `self-rnd`, AND `off` IS REPORTED BUT NOT GATED
   // ON. This experiment shipped requiring both, and its first run showed that
@@ -9409,13 +9560,13 @@ bool run_ctxself(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
   // built for and manufactures nothing in the one that was already null.
 
   const bool beats_off = lift > 2.0 * lift_se;
-  const bool beats_rnd = p_rnd > 2.0 * p_rnd_se;
+  const bool beats_rnd = e_rnd > 2.0 * e_rnd_se;
   std::printf("  PAIRED vs matched-marg   %+.1f +/- %.1f Hz, %.1f SE  <-- THE GATE\n"
               "                           %u of %u creatures positive\n"
               "  paired vs `off`          %+.1f +/- %.1f Hz, %.1f SE (diagnostic)\n"
               "  unpaired, for the record %+.1f (%.1f SE) vs control, %+.1f (%.1f SE) vs off\n",
-              p_rnd, p_rnd_se, p_rnd_se > 0.0 ? p_rnd / p_rnd_se : 0.0, p_rnd_pos, p_rnd_n,
-              p_off, p_off_se, p_off_se > 0.0 ? p_off / p_off_se : 0.0,
+              e_rnd, e_rnd_se, e_rnd_se > 0.0 ? e_rnd / e_rnd_se : 0.0, e_rnd_pos, e_rnd_n,
+              e_off, e_off_se, e_off_se > 0.0 ? e_off / e_off_se : 0.0,
               vs_rnd, rnd_se > 0.0 ? vs_rnd / rnd_se : 0.0,
               lift, lift_se > 0.0 ? lift / lift_se : 0.0);
   (void)beats_off;
@@ -9428,7 +9579,7 @@ bool run_ctxself(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
                 "  what the host-written index bought IN THIS SAME RUN, against %.0f%%\n"
                 "  predicted from `ctxsrc`'s upper bound and %.0f%% from this run's own p.\n"
                 "  The last oracle in the architecture is gone.\n",
-                p_rnd, p_rnd_se, p_rnd_pos, p_rnd_n, p,
+                e_rnd, e_rnd_se, e_rnd_pos, e_rnd_n, p,
                 100.0 * lift / (ora_lift > 0.0 ? ora_lift : 1.0),
                 100.0 * keep_bound, 100.0 * (keep_meas > 0.0 ? keep_meas : 0.0));
     return true;
@@ -9448,7 +9599,7 @@ bool run_ctxself(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
               "  the motor state is the best carrier there is here and still short of\n"
               "  the bar; this measures the same shortfall in the mechanism's own units\n"
               "  rather than in a proxy's.\n",
-              m_d1[kOra], p, m_d1[kSelf], p_rnd, p_rnd_se, p_rnd_pos, p_rnd_n);
+              m_d1[kOra], p, m_d1[kEar], e_rnd, e_rnd_se, e_rnd_pos, e_rnd_n);
   return false;
 }
 

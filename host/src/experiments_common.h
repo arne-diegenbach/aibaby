@@ -577,6 +577,130 @@ inline double fixedcut_accuracy(const std::vector<std::vector<double>>& x,
   return double(hit) / double(x.size() - train_count);
 }
 
+// ONLINE competitive learning -- MacQueen's k-means, one pass, no restarts.
+//
+// THIS IS THE ONE THE CREATURE COULD ACTUALLY RUN, and the reason it exists is
+// that `kmeans_accuracy` below is BATCH with EIGHT RESTARTS scored by inertia.
+// A creature has one pass through its life and cannot restart it. Every gap
+// between a proxy and a behaviour in this project has been of that shape, so
+// the weaker rule is measured rather than assumed equivalent.
+//
+// The learning rate is 1/(wins) -- MacQueen's, which makes each prototype the
+// running mean of what it has won. No constant is guessed: see the note in this
+// project's own record about four guessed constants costing a run each.
+//
+// INIT IS THE WHOLE DIFFICULTY AND THIS FUNCTION MEASURES IT RATHER THAN
+// SUFFERING IT. The first version seeded the two prototypes from the first two
+// training rows, and that is a COIN FLIP BY CONSTRUCTION: with balanced labels
+// those two rows are the same word about half the time, both prototypes start
+// inside one cluster, and the loser never wins anything. It read 2 of 9
+// creatures at 1.000 and the other 7 at chance -- bimodal, which is a dead unit
+// and not a fact about competitive learning.
+//
+// So the prototypes are seeded from two RANDOM distinct training rows, the
+// caller runs many draws, and what gets reported is the DISTRIBUTION: how often
+// a single pass finds the split, not whether one particular pass did. That is
+// also the quantity that maps onto the creature, where "how often" is "do the
+// competing units differentiate" -- a question its lateral competition (v32)
+// and per-module homeostasis exist to answer, and which more units make easier.
+//
+// Still one pass, still no restarts, still no labels, and the learning rate is
+// MacQueen's 1/wins so no constant is guessed.
+inline double online_competitive_accuracy(const std::vector<std::vector<double>>& x,
+                                          const std::vector<int>& y, size_t train_count,
+                                          bool standardise, double* busiest,
+                                          uint64_t seed, bool conscience) {
+  if (busiest) *busiest = 1.0;
+  if (x.empty() || train_count < 4 || train_count >= x.size()) return 0.0;
+  const size_t dims = x[0].size();
+  if (dims == 0) return 0.0;
+  std::vector<std::vector<double>> z = x;
+  if (standardise) {
+    std::vector<double> mean(dims, 0.0), sd(dims, 0.0);
+    for (size_t i = 0; i < train_count; ++i)
+      for (size_t d = 0; d < dims; ++d) mean[d] += x[i][d];
+    for (size_t d = 0; d < dims; ++d) mean[d] /= double(train_count);
+    for (size_t i = 0; i < train_count; ++i)
+      for (size_t d = 0; d < dims; ++d) {
+        const double dev = x[i][d] - mean[d];
+        sd[d] += dev * dev;
+      }
+    for (size_t d = 0; d < dims; ++d) {
+      sd[d] = std::sqrt(sd[d] / double(train_count));
+      if (sd[d] < 1e-9) sd[d] = 1e-9;
+    }
+    for (size_t i = 0; i < z.size(); ++i)
+      for (size_t d = 0; d < dims; ++d) z[i][d] = (x[i][d] - mean[d]) / sd[d];
+  }
+  aibaby::Rng rng;
+  rng.seed(seed);
+  size_t i0 = rng.next() % train_count;
+  size_t i1 = rng.next() % train_count;
+  for (uint32_t guard = 0; i1 == i0 && guard < 16; ++guard) i1 = rng.next() % train_count;
+  std::vector<double> w[2] = {z[i0], z[i1]};
+  double wins[2] = {1.0, 1.0};
+  // The CONSCIENCE, and why it is the creature's rule rather than an extra
+  // knob. A unit that wins early becomes the running mean of everything it has
+  // won, and in high dimensions a mean is closer to every point than any single
+  // point is -- so it keeps winning and the other unit dies. That is DeSieno's
+  // dead-unit problem, and the standard fix is to penalise a unit for winning
+  // more than its share. **This creature already runs that fix**: per-module
+  // homeostasis drives each unit's rate toward a target, and lateral
+  // competition (v32) is what makes them compete in the first place. Measuring
+  // the version WITHOUT it is measuring a rule the creature would never have.
+  //
+  // The strength is DERIVED, not guessed: the penalty is expressed in the data's
+  // own distance units (`dscale`, the running mean distance from a sample to its
+  // winner) and the target share is 1/K for K units, which is arithmetic. A unit
+  // at its fair share is penalised nothing.
+  double dscale = 0.0, dn = 0.0;
+  for (size_t i = 0; i < train_count; ++i) {
+    if (i == i0 || i == i1) continue;
+    double d0 = 0.0, d1 = 0.0;
+    for (size_t d = 0; d < dims; ++d) {
+      const double e0 = z[i][d] - w[0][d], e1 = z[i][d] - w[1][d];
+      d0 += e0 * e0;
+      d1 += e1 * e1;
+    }
+    double s0 = d0, s1 = d1;
+    if (conscience && dn > 0.0) {
+      const double tot = wins[0] + wins[1];
+      s0 += (2.0 * wins[0] / tot - 1.0) * (dscale / dn);
+      s1 += (2.0 * wins[1] / tot - 1.0) * (dscale / dn);
+    }
+    const int k = s1 < s0 ? 1 : 0;
+    wins[k] += 1.0;
+    dscale += (k == 0 ? d0 : d1);
+    dn += 1.0;
+    const double lr = 1.0 / wins[k];
+    for (size_t d = 0; d < dims; ++d) w[k][d] += lr * (z[i][d] - w[k][d]);
+  }
+  std::vector<int> cluster(z.size(), 0);
+  size_t occ[2] = {0, 0};
+  for (size_t i = 0; i < z.size(); ++i) {
+    double d0 = 0.0, d1 = 0.0;
+    for (size_t d = 0; d < dims; ++d) {
+      const double e0 = z[i][d] - w[0][d], e1 = z[i][d] - w[1][d];
+      d0 += e0 * e0;
+      d1 += e1 * e1;
+    }
+    cluster[i] = d1 < d0 ? 1 : 0;
+    ++occ[cluster[i]];
+  }
+  if (busiest) {
+    *busiest = double(occ[0] > occ[1] ? occ[0] : occ[1]) / double(z.size());
+  }
+  size_t agree = 0;
+  for (size_t i = 0; i < train_count; ++i) if (cluster[i] == y[i]) ++agree;
+  const bool flip = double(agree) / double(train_count) < 0.5;
+  size_t hit = 0;
+  for (size_t i = train_count; i < z.size(); ++i) {
+    const int pred = flip ? 1 - cluster[i] : cluster[i];
+    if (pred == y[i]) ++hit;
+  }
+  return double(hit) / double(z.size() - train_count);
+}
+
 // Two-means, fit on the train half WITHOUT labels. Restarts are chosen by
 // within-cluster sum of squares -- the unsupervised criterion -- and never by
 // accuracy, which would be exactly the leakage this measurement exists to
