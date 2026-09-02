@@ -510,6 +510,170 @@ inline void interleave_pairs(const std::vector<std::vector<double>>& x,
 //
 // This one compares shapes rather than scaled distances, so silent neurons
 // contribute nothing instead of contributing noise.
+// --- partitions that do NOT get to see the labels --------------------------
+//
+// `holdout_accuracy` fits its centroids WITH the word labels: it is the
+// ceiling, the best a linear readout of this population could do. What DNA v52
+// actually runs is a FIXED cut of the same population, and what a
+// lateral-competition build would run is an UNSUPERVISED one. The three are
+// scored here on identical features and an identical split, so the only thing
+// that changes between the numbers is who may see the labels and how the
+// boundary is drawn.
+//
+// In all three the cluster-to-word map comes from the TRAIN half and is applied
+// to the test half, exactly as the supervised centroids are. Choosing the map
+// with train labels is not leakage -- an index only has to be CONSISTENT, and
+// naming which slice is which is one bit that the creature's reward would
+// supply for free.
+
+// Best of the two cluster-to-word assignments, measured on the rows given.
+inline double assign_accuracy(const std::vector<int>& cluster,
+                              const std::vector<int>& y, size_t from, size_t to) {
+  if (to <= from) return 0.0;
+  size_t agree = 0;
+  for (size_t i = from; i < to; ++i) {
+    if (cluster[i] == y[i]) ++agree;
+  }
+  const size_t n = to - from;
+  const size_t other = n - agree;
+  return double(agree > other ? agree : other) / double(n);
+}
+
+// DNA v52's rule, exactly: cut the ordered feature vector into two equal
+// contiguous halves and take whichever has the larger mean.
+//
+// NOT standardised, because v52 compares raw mean rates and standardising would
+// be measuring a different rule. And note what this is an upper bound on: v52
+// argmaxes EVERY TICK and its `p` is the share of ticks that agree, where this
+// argmaxes the bin average once. Averaging before the argmax removes noise the
+// live rule has to live with, so a gap between this and `ctxself`'s p is the
+// per-tick noise rather than the cut.
+inline double fixedcut_accuracy(const std::vector<std::vector<double>>& x,
+                                const std::vector<int>& y, size_t train_count) {
+  if (x.empty() || train_count == 0 || train_count >= x.size()) return 0.0;
+  const size_t dims = x[0].size();
+  if (dims < 2) return 0.0;
+  const size_t mid = dims / 2;
+  std::vector<int> cluster(x.size(), 0);
+  for (size_t i = 0; i < x.size(); ++i) {
+    double a = 0.0, b = 0.0;
+    for (size_t d = 0; d < mid; ++d) a += x[i][d];
+    for (size_t d = mid; d < dims; ++d) b += x[i][d];
+    a /= double(mid);
+    b /= double(dims - mid);
+    cluster[i] = b > a ? 1 : 0;
+  }
+  // Which half means which word is fixed on the train rows, then applied.
+  const double train_direct = assign_accuracy(cluster, y, 0, train_count);
+  size_t agree = 0;
+  for (size_t i = 0; i < train_count; ++i) if (cluster[i] == y[i]) ++agree;
+  const bool flip = double(agree) / double(train_count) < 0.5;
+  (void)train_direct;
+  size_t hit = 0;
+  for (size_t i = train_count; i < x.size(); ++i) {
+    const int pred = flip ? 1 - cluster[i] : cluster[i];
+    if (pred == y[i]) ++hit;
+  }
+  return double(hit) / double(x.size() - train_count);
+}
+
+// Two-means, fit on the train half WITHOUT labels. Restarts are chosen by
+// within-cluster sum of squares -- the unsupervised criterion -- and never by
+// accuracy, which would be exactly the leakage this measurement exists to
+// avoid.
+inline double kmeans_accuracy(const std::vector<std::vector<double>>& x,
+                              const std::vector<int>& y, size_t train_count,
+                              uint64_t seed, bool standardise) {
+  if (x.empty() || train_count < 4 || train_count >= x.size()) return 0.0;
+  const size_t dims = x[0].size();
+  if (dims == 0) return 0.0;
+  std::vector<std::vector<double>> z = x;
+  if (standardise) {
+    std::vector<double> mean(dims, 0.0), sd(dims, 0.0);
+    for (size_t i = 0; i < train_count; ++i)
+      for (size_t d = 0; d < dims; ++d) mean[d] += x[i][d];
+    for (size_t d = 0; d < dims; ++d) mean[d] /= double(train_count);
+    for (size_t i = 0; i < train_count; ++i)
+      for (size_t d = 0; d < dims; ++d) {
+        const double dev = x[i][d] - mean[d];
+        sd[d] += dev * dev;
+      }
+    for (size_t d = 0; d < dims; ++d) {
+      sd[d] = std::sqrt(sd[d] / double(train_count));
+      if (sd[d] < 1e-9) sd[d] = 1e-9;
+    }
+    for (size_t i = 0; i < z.size(); ++i)
+      for (size_t d = 0; d < dims; ++d) z[i][d] = (x[i][d] - mean[d]) / sd[d];
+  }
+  aibaby::Rng rng;
+  rng.seed(seed);
+  std::vector<double> best_c[2];
+  double best_inertia = -1.0;
+  for (uint32_t restart = 0; restart < 8; ++restart) {
+    std::vector<double> c[2];
+    c[0] = z[rng.next() % train_count];
+    c[1] = z[rng.next() % train_count];
+    std::vector<int> a(train_count, 0);
+    for (uint32_t it = 0; it < 50; ++it) {
+      bool moved = false;
+      for (size_t i = 0; i < train_count; ++i) {
+        double d0 = 0.0, d1 = 0.0;
+        for (size_t d = 0; d < dims; ++d) {
+          const double e0 = z[i][d] - c[0][d], e1 = z[i][d] - c[1][d];
+          d0 += e0 * e0;
+          d1 += e1 * e1;
+        }
+        const int pick = d1 < d0 ? 1 : 0;
+        if (pick != a[i]) { a[i] = pick; moved = true; }
+      }
+      std::vector<double> sum[2] = {std::vector<double>(dims, 0.0),
+                                    std::vector<double>(dims, 0.0)};
+      size_t n[2] = {0, 0};
+      for (size_t i = 0; i < train_count; ++i) {
+        for (size_t d = 0; d < dims; ++d) sum[a[i]][d] += z[i][d];
+        ++n[a[i]];
+      }
+      for (int k = 0; k < 2; ++k) {
+        if (n[k] == 0) continue;
+        for (size_t d = 0; d < dims; ++d) c[k][d] = sum[k][d] / double(n[k]);
+      }
+      if (!moved) break;
+    }
+    double inertia = 0.0;
+    for (size_t i = 0; i < train_count; ++i) {
+      for (size_t d = 0; d < dims; ++d) {
+        const double e = z[i][d] - c[a[i]][d];
+        inertia += e * e;
+      }
+    }
+    if (best_inertia < 0.0 || inertia < best_inertia) {
+      best_inertia = inertia;
+      best_c[0] = c[0];
+      best_c[1] = c[1];
+    }
+  }
+  if (best_c[0].empty()) return 0.0;
+  std::vector<int> cluster(z.size(), 0);
+  for (size_t i = 0; i < z.size(); ++i) {
+    double d0 = 0.0, d1 = 0.0;
+    for (size_t d = 0; d < dims; ++d) {
+      const double e0 = z[i][d] - best_c[0][d], e1 = z[i][d] - best_c[1][d];
+      d0 += e0 * e0;
+      d1 += e1 * e1;
+    }
+    cluster[i] = d1 < d0 ? 1 : 0;
+  }
+  size_t agree = 0;
+  for (size_t i = 0; i < train_count; ++i) if (cluster[i] == y[i]) ++agree;
+  const bool flip = double(agree) / double(train_count) < 0.5;
+  size_t hit = 0;
+  for (size_t i = train_count; i < z.size(); ++i) {
+    const int pred = flip ? 1 - cluster[i] : cluster[i];
+    if (pred == y[i]) ++hit;
+  }
+  return double(hit) / double(z.size() - train_count);
+}
+
 inline double holdout_accuracy_corr(const std::vector<std::vector<double>>& x,
                              const std::vector<int>& y, size_t train_count) {
   if (x.empty() || train_count == 0 || train_count >= x.size()) return 0.0;
@@ -1315,6 +1479,7 @@ bool run_areax(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_rpeprobe(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_ctxsrc(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_ctxself(const std::vector<uint8_t>&, uint64_t, bool);
+bool run_partprobe(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_pgprobe(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_g2cond(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_coderprobe(const std::vector<uint8_t>&, uint64_t, bool);

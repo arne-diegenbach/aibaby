@@ -7559,6 +7559,86 @@ identically and read VACUOUS. What covers it instead is `ctxself`'s own gate
 requiring the oracle arm to reproduce `areax` inside the same run, which is a
 per-run check that the index path is live.
 
+### `partprobe` — pricing the learned partition, and it refuses
+
+`ctxself` refused v52 at p = 0.540 where `ctxsrc`'s supervised readout of the
+same seven off-axis groups reaches 0.740. The obvious reading was that the loss
+is the **cut** — v52 slices the population into two equal contiguous halves, and
+a partition drawn from the data would recover it. Lateral competition (v32)
+already runs on that module, so it would not even be a new mechanism class.
+
+This project prices a mechanism before building it — `credit`'s reward mask,
+`ctxbias`'s bias oracle, `rpeprobe`'s variance decomposition — and two of those
+three came back saying don't. So the same question, read-only, on `ctxsrc`'s own
+trials: **if the partition were learned, how good would the index get?**
+
+**Three things could be losing the signal, and naming one without the others is
+how this project's last three instrument errors happened.**
+
+1. **The cut.** Fixed equal halves against a boundary drawn from the data.
+2. **The representation.** `ctxsrc`'s 0.740 is measured on the seven
+   ARTICULATOR GROUP VALUES — the knobs. v52's rule reads NEURON SLICE RATES.
+   Different feature spaces, and the 0.740 -> 0.540 gap was being attributed
+   entirely to (1) when part of it is this.
+3. **The per-tick argmax.** v52 argmaxes every tick; every column here argmaxes
+   the bin average once.
+
+`run_ctxsrc_session` now hands back its raw features, so every column runs on
+identical trials, identical reward bins and an identical held-out split — only
+the rule differs. Only the supervised column sees labels when it draws its
+boundary; k-means picks its restart by within-cluster sum of squares and never
+by accuracy.
+
+**The bar, derived and stated first.** The effect scales as `(2p - 1)` against
+the 65 Hz an oracle index buys, so p = 0.65 keeps 30% — about 20 Hz, ~2.8 SE on
+the paired test at n=9, and a third of the way to naming. **Build only at
+p >= 0.65.** Below that the mechanism is too small to be a route to naming
+however significant it is, which is the reasoning that retired v52's residual.
+
+Nine creatures, worst of the two reward bins:
+
+| features | supervised | k-means (z) | k-means (raw) | fixed cut |
+|---|---|---|---|---|
+| articulator groups | **0.740 +/- 0.040** | 0.616 +/- 0.055 | 0.626 +/- 0.055 | 0.607 +/- 0.036 |
+| off-axis neurons | 0.561 +/- 0.016 | 0.512 +/- 0.024 | 0.507 +/- 0.024 | 0.475 +/- 0.016 |
+
+Shuffled controls: 0.474 and 0.461. **The supervised column reproduces
+`ctxsrc`'s 0.740 to three decimals**, which is the gate that says this probe is
+looking at what that number was measured on — without it, no comparison drawn
+against 0.740 would be valid.
+
+> **DO NOT BUILD IT. A learned boundary buys +0.019 over the fixed one on the
+> same features.** That is the entire case for the mechanism and it is not
+> there. The cut was never what was losing the signal.
+
+**The largest single term is the one that had not been separated.** Supervised
+reads 0.740 on the articulator groups and 0.561 on the neuron slice rates — a
+loss of 0.179, against 0.124 for the cut — and neuron slice rates are what v52
+actually reads. Going straight to the build would have replaced the cut and left
+the term costing three times as much untouched.
+
+**And the ceiling is unreachable in principle rather than in practice.** 0.740
+is what a decoder achieves *by being told the answer*. Unsupervised on the same
+features is 0.626. **The gap is the labels, and the labels are exactly what the
+creature is trying to infer.** That is a circularity, not a tuning problem, and
+it is the finding this probe exists to have produced.
+
+**One thing this probe does NOT decompose, stated rather than buried.** Its
+fixed cut on neurons reads 0.475 where `ctxself` reads p = 0.540, and those two
+cannot be subtracted to isolate the per-tick argmax: this runs read-only on the
+shipped genome with no context module for 600k ticks, `ctxself` runs a taught
+creature carrying an active bias table for 3.4M. Genome, regime and session
+length all differ. The first version of this write-up printed that difference as
+a third term in the decomposition, which it is not; it is now reported side by
+side and labelled.
+
+**What it leaves as the lead.** Not a better clustering of the motor state —
+that is now measured and refused. A partition **supervised by something the
+creature actually has**: reward, or the caregiver's own timing. Those are
+signals present at the moment the index is needed and independent of the word
+the creature is trying to name, which is the one property an unsupervised
+clustering of its own voice cannot have.
+
 ### What the literature says to build next, and why it is the cheap option
 
 > **This section is the argument that produced DNA v51, kept as the record of
@@ -7634,10 +7714,12 @@ between contexts, because `vocallearn`'s per-word praise criterion had already
 balanced it). The fourth is where the index comes from, and after v52 it is
 **two** quantities rather than one: the word survives into the reward window at
 0.740, and a *fixed* cut of the population holding it recovers 0.569 of that.
-The second loses more than the first. **A learned partition of the motor state
-is the next thing the literature would be read for — competitive or clustering
-rather than persistent** — and this project already has lateral competition
-(v32) working on the same module.
+The second loses more than the first. A learned partition of the motor state was the obvious next
+build — and `partprobe` priced it and **refused it**: a learned boundary buys
++0.019 over the fixed one, and the supervised ceiling that motivated it is only
+reachable by seeing the labels the creature is trying to infer. What is left is
+a partition supervised by something the creature has, which is a different
+shape from anything tried here.
 
 ## Design decisions that were not obvious
 

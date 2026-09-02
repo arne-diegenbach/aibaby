@@ -8011,6 +8011,16 @@ struct CtxSrc {
   // wider bins with a different readout -- two changes at once, in the
   // favourable direction, which is not a comparison.
   double grp[kCsBinCount] = {};
+  // Raw features for `partprobe`, which asks a different question of the same
+  // trials: the two REWARD bins only, because that is the only window a context
+  // index is ever used in. Kept as FEATURES rather than as accuracies so a new
+  // partition rule can be scored on identical trials, identical bins and an
+  // identical split. That is the discipline this probe's own third instrument
+  // error was about -- it once moved the window and the readout at once.
+  std::vector<std::vector<double>> feat_grp[2];  // 7 off-axis articulator values
+  std::vector<std::vector<double>> feat_neu[2];  // off-axis vocal spike counts
+  std::vector<int> labels;
+  size_t train_split = 0;
   double aud_shuf = 0.0, cen_shuf = 0.0, voc_shuf = 0.0;
   uint32_t trials = 0;
   bool ok = false;
@@ -8155,6 +8165,13 @@ CtxSrc run_ctxsrc_session(const std::vector<uint8_t>& blob, uint64_t ticks) {
   for (uint32_t b = 0; b < kCsBinCount; ++b) out.grp[b] = holdout_accuracy(xgb[b], y, train);
   out.echo_grp = holdout_accuracy(xg, y, train);
   out.echo_grp_shuf = holdout_accuracy(xg, shuf, train);
+  // Bins 2 and 3 are the reward window (900-1300 and 1300-1700).
+  for (uint32_t r = 0; r < 2; ++r) {
+    out.feat_grp[r] = xgb[2 + r];
+    out.feat_neu[r] = xvx[2 + r];
+  }
+  out.labels = y;
+  out.train_split = train;
   out.ok = true;
   return out;
 }
@@ -8487,6 +8504,250 @@ bool run_rpeprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
               "  global one is a scalar.\n",
               100.0 * m_b[kOn]);
   return true;
+}
+
+// --- partprobe: pricing a learned partition before building it -------------
+//
+// `ctxself` refused DNA v52 on two seed families: the creature CAN read a
+// context index off its own larynx, but at p = 0.540 it keeps only 8% of the
+// conditional effect, where `ctxsrc`'s supervised readout of the same seven
+// off-axis articulator groups reaches 0.740 and would keep 48%. The obvious
+// reading is that the loss is the CUT -- v52 slices the population into two
+// equal contiguous halves, and a partition that was learned rather than fixed
+// would recover it. Lateral competition (DNA v32) already works on this module,
+// so it would not even be a new mechanism class.
+//
+// **This project prices a mechanism before building it** -- `credit`'s reward
+// mask, `ctxbias`'s bias oracle, `rpeprobe`'s variance decomposition -- and two
+// of those three came back saying do not build. So the same question here,
+// read-only: if the partition were learned, how good would the index get?
+//
+// THREE THINGS COULD BE LOSING THE SIGNAL and the probe separates them, because
+// naming one of them without the others is how this project's last three
+// instrument errors happened.
+//
+//   1. THE CUT. Fixed equal halves against a boundary drawn from the data.
+//   2. THE REPRESENTATION. `ctxsrc`'s 0.740 is measured on the seven ARTICULATOR
+//      GROUP VALUES -- the knobs. v52's rule reads NEURON SLICE RATES. Those are
+//      different feature spaces, and the 0.740 -> 0.540 gap was quietly being
+//      attributed to (1) when part of it may be this.
+//   3. THE PER-TICK ARGMAX. v52 argmaxes every tick and `ctxself`'s p is the
+//      share of ticks that agree; every column here argmaxes the bin average
+//      once.
+//
+// (1) and (2) are separated cleanly, because the columns differ in one thing.
+// **(3) IS NOT, and the printout says so rather than pretending otherwise.**
+// This probe runs read-only on the SHIPPED genome -- no context module, no
+// learning, 600k ticks -- while `ctxself` runs a TAUGHT creature carrying an
+// active bias table for 3.4M. Genome, regime and session length all differ, so
+// the two numbers cannot be subtracted to isolate the per-tick argmax. Isolating
+// it would need this probe run on the ctx genome mid-teaching, which is a
+// different experiment. Reported side by side as a diagnostic, never as a
+// decomposition.
+//
+// Every column runs on the SAME trials, the SAME reward bins and the SAME
+// held-out split -- `run_ctxsrc_session` hands back its raw features so that
+// nothing but the rule can differ. Only the supervised column sees the labels
+// when it draws its boundary; k-means picks its restart by within-cluster sum
+// of squares and never by accuracy.
+//
+// THE BAR, DERIVED AND STATED FIRST. The conditional effect scales as (2p - 1),
+// and `ctxself` measured the oracle index buying 65 Hz over baseline. v52 at
+// 0.540 keeps 8% of that -- about 5 Hz, which is why it refused. For a learned
+// partition to be worth building it has to be detectable AND matter:
+//
+//   p = 0.65  ->  keeps 30%  ->  ~20 Hz, which is ~2.8 SE on the paired test
+//                                at n=9, and a third of the way to naming.
+//
+// **BUILD only if an unsupervised partition reaches p >= 0.65.** Below that the
+// effect stays too small to be a route to naming however significant it is,
+// which is the same reasoning that retired v52's own residual.
+constexpr double kPpBuildBar = 0.65;
+constexpr double kPpSupervisedRef = 0.740;  // ctxsrc, 9 creatures
+constexpr double kPpCtxselfP = 0.540;       // ctxself, fresh family
+
+bool run_partprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  aibaby::Dna dna;
+  if (dna.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) {
+    std::printf("  setup failed: the genome does not load\n");
+    return false;
+  }
+  constexpr uint32_t kReps = 9;
+  instrument("partprobe", dna.header().seed ^ 0x9A17u, ticks / kVLTrialTicks,
+             "trials per creature");
+  std::printf("  question          `ctxself` refused DNA v52 at p = %.3f where a\n"
+              "                    SUPERVISED readout of the same population reaches\n"
+              "                    %.3f. Is the loss the fixed CUT -- in which case a\n"
+              "                    learned partition recovers it -- or something else?\n",
+              kPpCtxselfP, kPpSupervisedRef);
+  std::printf("  the bar           BUILD only if an unsupervised partition reaches\n"
+              "                    p >= %.2f. The effect scales as (2p - 1) and the\n"
+              "                    oracle index buys 65 Hz, so %.2f keeps ~30%% (~20 Hz,\n"
+              "                    detectable at n=9 paired). Below it the mechanism is\n"
+              "                    too small to be a route to naming however significant.\n",
+              kPpBuildBar, kPpBuildBar);
+  std::printf("  read-only         no learning, no genome field, nothing shipped.\n\n");
+
+  // Two feature spaces x four rules, on the worst of the two reward bins --
+  // reward is delivered across the whole window, and an index right for the
+  // first half and wrong for the second writes two different tables in one
+  // trial. `ctxsrc` scores its own verdict the same way.
+  enum { kGrp = 0, kNeu = 1, kSpaces = 2 };
+  enum { kSup = 0, kKmZ = 1, kKmRaw = 2, kFix = 3, kRules = 4 };
+  static const char* kSpaceName[kSpaces] = {"articulator groups", "off-axis neurons"};
+  static const char* kRuleName[kRules] = {"supervised", "k-means (z)", "k-means (raw)",
+                                          "fixed cut"};
+  std::vector<double> acc[kSpaces][kRules];
+  std::vector<double> shuf[kSpaces];
+
+  std::printf("  %-6s %-20s %-11s %-13s %-13s %s\n", "seed", "features", "supervised",
+              "k-means (z)", "k-means(raw)", "fixed cut");
+  uint32_t valid = 0;
+  for (uint32_t r = 0; r < kReps; ++r) {
+    std::vector<uint8_t> variant = blob;
+    const uint64_t seed = dna.header().seed + r * 7919ull;
+    std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+    const CtxSrc p = run_ctxsrc_session(variant, ticks);
+    if (!p.ok || p.train_split == 0) {
+      std::printf("  %-6u (inconclusive: too few usable trials)\n", r);
+      continue;
+    }
+    ++valid;
+    // A shuffled label vector, drawn once per creature and shared by every
+    // column, so the control is the same control everywhere.
+    aibaby::Rng rng;
+    rng.seed(seed ^ 0x9A17u);
+    std::vector<int> sh = p.labels;
+    for (size_t i = sh.size(); i > 1; --i) std::swap(sh[i - 1], sh[rng.next() % i]);
+
+    for (uint32_t sp = 0; sp < kSpaces; ++sp) {
+      const std::vector<std::vector<double>>* f =
+          sp == kGrp ? p.feat_grp : p.feat_neu;
+      double worst[kRules];
+      for (uint32_t k = 0; k < kRules; ++k) worst[k] = 2.0;
+      double worst_shuf = 2.0;
+      for (uint32_t b = 0; b < 2; ++b) {
+        const double v[kRules] = {
+            holdout_accuracy(f[b], p.labels, p.train_split),
+            kmeans_accuracy(f[b], p.labels, p.train_split, seed ^ 0xB1u, true),
+            kmeans_accuracy(f[b], p.labels, p.train_split, seed ^ 0xB1u, false),
+            fixedcut_accuracy(f[b], p.labels, p.train_split)};
+        for (uint32_t k = 0; k < kRules; ++k) {
+          if (v[k] < worst[k]) worst[k] = v[k];
+        }
+        const double s = kmeans_accuracy(f[b], sh, p.train_split, seed ^ 0xB1u, true);
+        if (s < worst_shuf) worst_shuf = s;
+      }
+      for (uint32_t k = 0; k < kRules; ++k) acc[sp][k].push_back(worst[k]);
+      shuf[sp].push_back(worst_shuf);
+      std::printf("  %-6u %-20s %-11.3f %-13.3f %-13.3f %.3f\n", r, kSpaceName[sp],
+                  worst[kSup], worst[kKmZ], worst[kKmRaw], worst[kFix]);
+    }
+  }
+  if (valid < 3) {
+    std::printf("\n  partprobe INCONCLUSIVE -- %u of %u creatures usable.\n", valid, kReps);
+    return false;
+  }
+
+  double m[kSpaces][kRules], se[kSpaces][kRules], ms[kSpaces], ss[kSpaces];
+  for (uint32_t sp = 0; sp < kSpaces; ++sp) {
+    for (uint32_t k = 0; k < kRules; ++k) m[sp][k] = ctx_mean_se(acc[sp][k], &se[sp][k]);
+    ms[sp] = ctx_mean_se(shuf[sp], &ss[sp]);
+  }
+
+  std::printf("\n  %-20s %-16s %-16s %-16s %s\n", "features", "supervised",
+              "k-means (z)", "k-means (raw)", "fixed cut");
+  for (uint32_t sp = 0; sp < kSpaces; ++sp) {
+    char c[kRules][32];
+    for (uint32_t k = 0; k < kRules; ++k) {
+      std::snprintf(c[k], sizeof c[k], "%.3f +/- %.3f", m[sp][k], se[sp][k]);
+    }
+    std::printf("  %-20s %-16s %-16s %-16s %s\n", kSpaceName[sp], c[kSup], c[kKmZ],
+                c[kKmRaw], c[kFix]);
+  }
+  std::printf("\n  shuffled control (k-means, z): groups %.3f, neurons %.3f\n",
+              ms[kGrp], ms[kNeu]);
+
+  if (ms[kGrp] > 0.62 || ms[kNeu] > 0.62) {
+    std::printf("\n  CONTROL FAILED -- an unsupervised partition scores above chance\n"
+                "  against SHUFFLED labels, so the assignment step is finding structure\n"
+                "  that is not the word and nothing above is worth reading.\n");
+    return false;
+  }
+  // The supervised column on the articulator groups is this probe reproducing
+  // `ctxsrc`. If it does not, the features are not the ones that number was
+  // measured on and every comparison drawn against 0.740 is void.
+  if (std::fabs(m[kGrp][kSup] - kPpSupervisedRef) > 0.08) {
+    std::printf("\n  REFUSED -- the supervised readout of the articulator groups reads\n"
+                "  %.3f where `ctxsrc` measured %.3f on the same features and window.\n"
+                "  This probe is not looking at what that number was measured on, so\n"
+                "  nothing here can be compared against it.\n",
+                m[kGrp][kSup], kPpSupervisedRef);
+    return false;
+  }
+
+  // Best unsupervised result anywhere -- the build's ceiling, and it is scored
+  // generously on purpose: if the best of four unsupervised numbers across two
+  // feature spaces cannot clear the bar, no single choice among them will.
+  uint32_t bsp = 0, brule = kKmZ;
+  double best = -1.0;
+  for (uint32_t sp = 0; sp < kSpaces; ++sp) {
+    for (uint32_t k = kKmZ; k <= kKmRaw; ++k) {
+      if (m[sp][k] > best) { best = m[sp][k]; bsp = sp; brule = k; }
+    }
+  }
+
+  std::printf("\n  what the CUT costs       %.3f supervised -> %.3f unsupervised, same\n"
+              "                           features (%s) -- and the BEST learned boundary\n"
+              "                           buys only %+.3f over the fixed one\n"
+              "  what the SPACE costs     %.3f groups -> %.3f neurons, both supervised.\n"
+              "                           THE LARGEST SINGLE TERM, and it is the space\n"
+              "                           v52 actually reads\n"
+              "  fixed cut on neurons     %.3f here vs p = %.3f in `ctxself` -- NOT a\n"
+              "                           decomposition: different genome (no context\n"
+              "                           module), read-only not taught, 600k not 3.4M.\n"
+              "                           Side by side only\n"
+              "  best unsupervised        %.3f +/- %.3f  (%s, %s)\n"
+              "  the bar                  %.2f\n",
+              m[kGrp][kSup],
+              m[kGrp][kKmZ] > m[kGrp][kKmRaw] ? m[kGrp][kKmZ] : m[kGrp][kKmRaw],
+              kSpaceName[kGrp],
+              (m[kGrp][kKmZ] > m[kGrp][kKmRaw] ? m[kGrp][kKmZ] : m[kGrp][kKmRaw]) -
+                  m[kGrp][kFix],
+              m[kGrp][kSup], m[kNeu][kSup],
+              m[kNeu][kFix], kPpCtxselfP,
+              best, se[bsp][brule], kSpaceName[bsp], kRuleName[brule],
+              kPpBuildBar);
+
+  if (best >= kPpBuildBar) {
+    std::printf("\n  BUILD IT -- an unsupervised partition of %s reaches %.3f,\n"
+                "  against %.3f for the fixed cut v52 ships and a %.3f supervised\n"
+                "  ceiling. That keeps %.0f%% of the conditional effect where v52 keeps\n"
+                "  8%%, which is ~%.0f Hz and detectable on the paired test at n=9.\n"
+                "  Lateral competition (DNA v32) already runs on this module.\n",
+                kSpaceName[bsp], best, m[bsp][kFix], m[bsp][kSup],
+                100.0 * (2.0 * best - 1.0), 65.0 * (2.0 * best - 1.0));
+    return true;
+  }
+
+  std::printf("\n  DO NOT BUILD IT -- the best unsupervised partition reaches %.3f\n"
+              "  against a %.2f bar, which keeps %.0f%% of the conditional effect (~%.0f Hz)\n"
+              "  where v52's fixed cut already keeps 8%%. **The cut is not what is\n"
+              "  losing the signal.** A learned boundary buys %+.3f over the fixed one\n"
+              "  on the same features, and the supervised ceiling that motivated the\n"
+              "  build is only reachable BY SEEING THE LABELS -- which is the one thing\n"
+              "  the creature cannot do, because the labels are what it is trying to\n"
+              "  work out.\n\n"
+              "  What that leaves is the honest reading of `ctxsrc`'s 0.740: it is the\n"
+              "  best a decoder WITH the answer can do, not a target an unsupervised\n"
+              "  mechanism can approach. The remaining route to a self-derived context\n"
+              "  is a partition supervised by something the creature HAS -- reward, or\n"
+              "  the caregiver's own timing -- and not a better clustering of the\n"
+              "  motor state.\n",
+              best, kPpBuildBar, 100.0 * (2.0 * best - 1.0), 65.0 * (2.0 * best - 1.0),
+              best - m[bsp][kFix]);
+  return false;
 }
 
 // --- areax: does a context-indexed bias learn what the oracle delivered? ----
