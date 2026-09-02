@@ -6753,6 +6753,14 @@ const MechPin kMechPins[] = {
     // here. Reaching it needs mechverify to be able to append a module, which
     // is a bigger change than any row above and is not made for one mechanism.
     // Written down so the gap is known rather than assumed absent.
+    //
+    // DNA v52 INHERITS THE SAME HOLE, and for a sharper reason. It IS a scalar
+    // field, so a row for it would patch cleanly -- but `context_source` only
+    // does anything when `context_slots > 1`, which needs the module v51 needs.
+    // Patched onto the shipped genome it is a no-op and would read VACUOUS.
+    // It is covered by `ctxself`'s gates, and in particular by the one that
+    // requires the ORACLE arm to reproduce `areax` inside the same run: that is
+    // a per-run check that the index path is live, which is what a pin buys.
     // v44 and v45 USED to be pinned here and are not any more, because the
     // rebound now SHIPS ON. mechverify exists for mechanisms invisible to
     // kPinnedHash — an off-by-default mechanism can rot into a no-op with

@@ -485,6 +485,7 @@ bool compile_dna_toml(const std::string& path, std::vector<uint8_t>& out,
     header.exploration.perturb_rate = float(r.number("perturb_rate"));
     header.exploration.perturb_max = float(r.number("perturb_max"));
     header.exploration.context_slots = uint32_t(r.number("context_slots"));
+    header.exploration.context_source = uint32_t(r.number("context_source"));
     header.exploration.meta_window = float(r.number("meta_window"));
     header.exploration.meta_floor = float(r.number("meta_floor"));
     header.exploration.meta_ref = float(r.number("meta_ref"));

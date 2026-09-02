@@ -194,6 +194,13 @@ const Spec kSpecs[] = {
      "  node perturbation already subtracts a running baseline, and the only\n"
      "  difference is that this creature's is global. Read-only. Refuses the\n"
      "  mechanism if the contexts are already balanced"},
+    {"ctxself", 3400000, Expect::kOpen, Tier::kTeach,
+     "derived: areax's session length, because it runs areax's arms plus two.\n"
+     "  DNA v52: the last oracle removed. areax's index is written by the HOST\n"
+     "  from the word label; this reads it from the creature's own larynx and\n"
+     "  scores it against the oracle arm measured IN THE SAME RUN. Reports the\n"
+     "  index's own accuracy p, and refuses if the oracle arm did not reproduce\n"
+     "  areax or if the derived index never names a second slice"},
     {"areax", 3400000, Expect::kOpen, Tier::kTeach,
      "derived: vocallearn's session length, the length its positive control\n"
      "  needs. DNA v51: node perturbation's excitability table split one per\n"
@@ -434,6 +441,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "areax") ok = run_areax(dna_blob, ticks, verbose);
   else if (name == "rpeprobe") ok = run_rpeprobe(dna_blob, ticks, verbose);
   else if (name == "ctxsrc") ok = run_ctxsrc(dna_blob, ticks, verbose);
+  else if (name == "ctxself") ok = run_ctxself(dna_blob, ticks, verbose);
   else if (name == "pgprobe") ok = run_pgprobe(dna_blob, ticks, verbose);
   else if (name == "g2cond") ok = run_g2cond(dna_blob, ticks, verbose);
   else if (name == "coderprobe") ok = run_coderprobe(dna_blob, ticks, verbose);

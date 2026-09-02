@@ -404,20 +404,25 @@ bool Network::build(const Dna& dna, Arena& arena, Rng& rng) {
   // for more than one -- 0 and 1 both mean "the shared bias alone", so a v50
   // genome allocates nothing and hashes exactly as it did.
   ctx_slots_ = h.exploration.context_slots > 1 ? h.exploration.context_slots : 0;
+  ctx_source_ = h.exploration.context_source;
   ctx_module_ = -1;
   active_ctx_ = 0;
   ctx_present_ = false;
   if (ctx_slots_ > 0) {
     bias_ctx_ = arena.alloc_zeroed<Scalar>(size_t(capacity_) * ctx_slots_);
-    // The index comes from the kContext module, read as an INDEX and never as
-    // drive -- it needs no projection anywhere, which is the whole reason this
-    // costs the larynx nothing where DNA v47's tract cost it everything.
+    // The index comes from a module read as an INDEX and never as drive -- the
+    // source needs no projection anywhere, which is the whole reason this costs
+    // the larynx nothing where DNA v47's tract cost it everything. DNA v52
+    // chooses WHICH module: the kContext one the host may write (an oracle
+    // whenever it does), or the larynx itself (the creature's own state).
+    const ModuleRole want =
+        ctx_source_ == 1 ? ModuleRole::kVocal : ModuleRole::kContext;
     for (uint32_t m = 0; m < module_count_; ++m) {
-      if (dna.module(m).role == uint32_t(ModuleRole::kContext)) { ctx_module_ = int32_t(m); break; }
+      if (dna.module(m).role == uint32_t(want)) { ctx_module_ = int32_t(m); break; }
     }
-    // No context module is not an error: the table is then never indexed and
-    // the creature behaves exactly as it did without it. `areax` checks for
-    // this rather than trusting it.
+    // A missing source module is not an error: the table is then never indexed
+    // and the creature behaves exactly as it did without it. `areax` and
+    // `ctxself` check for this rather than trusting it.
     if (ctx_module_ < 0) ctx_slots_ = 0;
   }
   if (any_burst_) {
@@ -1156,19 +1161,50 @@ void Network::step() {
   //
   // `rate_fast` rather than the one-second EMA, because a context has to be
   // current when reward lands and a trial here is seconds long, not minutes.
+  //
+  // DNA v52 changes only WHICH population is argmaxed. The rate floor keeps its
+  // meaning in both: on a kContext module a silent slice fires at exactly zero,
+  // so it separates driven from mute; on the larynx it separates "the creature
+  // is doing something" from silence, which is the same question asked of a
+  // module that is never at rest. `ctx_present_frac` reports which it got.
   if (ctx_slots_ > 0 && ctx_module_ >= 0) {
     const ModuleState& cms = modules_[uint32_t(ctx_module_)];
     Scalar best = kZero;
     uint32_t best_slice = 0;
     bool any = false;
-    for (uint32_t c = 0; c < ctx_slots_; ++c) {
-      const uint32_t lo = cms.begin + slice_begin(cms.count, ctx_slots_, c);
-      const uint32_t hi = cms.begin + slice_begin(cms.count, ctx_slots_, c + 1);
-      if (hi <= lo) continue;
-      Scalar sum = kZero;
-      for (uint32_t n = lo; n < hi; ++n) sum += rate_fast_[n];
-      const Scalar mean = sum / Scalar(hi - lo);
-      if (mean > best) { best = mean; best_slice = c; any = true; }
+    if (ctx_source_ == 0) {
+      for (uint32_t c = 0; c < ctx_slots_; ++c) {
+        const uint32_t lo = cms.begin + slice_begin(cms.count, ctx_slots_, c);
+        const uint32_t hi = cms.begin + slice_begin(cms.count, ctx_slots_, c + 1);
+        if (hi <= lo) continue;
+        Scalar sum = kZero;
+        for (uint32_t n = lo; n < hi; ++n) sum += rate_fast_[n];
+        const Scalar mean = sum / Scalar(hi - lo);
+        if (mean > best) { best = mean; best_slice = c; any = true; }
+      }
+    } else {
+      // DNA v52. The SAME argmax over a different population: the larynx with
+      // articulator groups 2 and 3 removed, treated as one ordered set. Taking
+      // those two out leaves exactly two contiguous runs, and rank r maps into
+      // the first while it lasts and the second afterwards.
+      const uint32_t r0 = slice_begin(cms.count, kVocalGroups, 0);
+      const uint32_t r0e = slice_begin(cms.count, kVocalGroups, kCtxSelfSkipA);
+      const uint32_t r1 = slice_begin(cms.count, kVocalGroups, kCtxSelfSkipB + 1);
+      const uint32_t r1e = slice_begin(cms.count, kVocalGroups, kVocalGroups);
+      const uint32_t n0 = r0e > r0 ? r0e - r0 : 0u;
+      const uint32_t n1 = r1e > r1 ? r1e - r1 : 0u;
+      const uint32_t n = n0 + n1;
+      for (uint32_t c = 0; c < ctx_slots_; ++c) {
+        const uint32_t lo = slice_begin(n, ctx_slots_, c);
+        const uint32_t hi = slice_begin(n, ctx_slots_, c + 1);
+        if (hi <= lo) continue;
+        Scalar sum = kZero;
+        for (uint32_t r = lo; r < hi; ++r) {
+          sum += rate_fast_[cms.begin + (r < n0 ? r0 + r : r1 + (r - n0))];
+        }
+        const Scalar mean = sum / Scalar(hi - lo);
+        if (mean > best) { best = mean; best_slice = c; any = true; }
+      }
     }
     // A silent context module means no context, not context zero. Defaulting to
     // slice 0 would quietly make every untagged moment a lesson in one

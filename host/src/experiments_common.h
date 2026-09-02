@@ -1314,6 +1314,7 @@ bool run_ctxbias(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_areax(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_rpeprobe(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_ctxsrc(const std::vector<uint8_t>&, uint64_t, bool);
+bool run_ctxself(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_pgprobe(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_g2cond(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_coderprobe(const std::vector<uint8_t>&, uint64_t, bool);

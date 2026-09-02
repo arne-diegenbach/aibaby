@@ -154,6 +154,7 @@ class Network {
   uint32_t active_context() const { return active_ctx_; }
   bool context_present() const { return ctx_present_; }
   uint32_t context_slots() const { return ctx_slots_; }
+  uint32_t context_source() const { return ctx_source_; }
   // This neuron's bias in context `c`. Exposed so a probe can show the table
   // diverging (or not) rather than infer it from behaviour.
   Scalar context_bias(uint32_t i, uint32_t c) const {
@@ -873,7 +874,16 @@ class Network {
   // v50 genome bit-identical.
   Scalar* bias_ctx_ = nullptr;
   uint32_t ctx_slots_ = 0;
-  int32_t ctx_module_ = -1;   // the kContext module the index is read from
+  int32_t ctx_module_ = -1;   // the module the index is read from
+  // DNA v52. WHICH module that is, and how it is cut. 0 is the kContext
+  // module's own slices (v51); 1 is the larynx's, over the neurons outside the
+  // two articulator groups the F1/F2 readout is scored on -- an index read
+  // from the very groups the bias table steers would be measuring a feedback
+  // loop rather than a context. The runs are recomputed from `count` each tick
+  // rather than cached, so a module that grows cannot leave them stale.
+  uint32_t ctx_source_ = 0;
+  static constexpr uint32_t kCtxSelfSkipA = 2;  // F1
+  static constexpr uint32_t kCtxSelfSkipB = 3;  // F2
   uint32_t active_ctx_ = 0;   // argmax slice, refreshed each tick
   bool ctx_present_ = false;  // is any slice actually driven this tick?
   // When a slice counts as driven, in Hz. NOT a guessed constant: a kContext

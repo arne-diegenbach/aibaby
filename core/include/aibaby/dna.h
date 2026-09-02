@@ -402,7 +402,13 @@ constexpr uint32_t kDnaMagic = 0x44424941;  // "AIBD"
 //     had that is conditional by construction. See DnaExploration::context_slots
 //     for the full argument and `areax` for the measurement. Ships OFF;
 //     `context_slots = 0` is bit-identical to v50.
-constexpr uint32_t kDnaVersion = 51;
+// 52: where that index COMES FROM. v51 works, but `areax` has the host write
+//     the slice from the word label, which is an oracle. This field lets the
+//     index be read from the creature's own larynx instead — the same argmax,
+//     pointed at a different population. It is a change of WHERE the index is
+//     read and not a new rule. See DnaExploration::context_source and
+//     `ctxself`. Ships OFF; `context_source = 0` is bit-identical to v51.
+constexpr uint32_t kDnaVersion = 52;
 
 // What a module is wired to the world through. The host looks modules up by
 // role, never by name or index, so renaming a module in the genome cannot
@@ -1103,6 +1109,40 @@ struct DnaExploration {
   // file, because every earlier null had a delivery excuse and this one does
   // not.
   uint32_t context_slots;
+
+  // --- DNA v52: where the context index comes from --------------------------
+  // v51 worked — `areax` measured 112.9 Hz of dF1 against 27.1 with the table
+  // shared — but the index it was keyed on was written by the HOST from the
+  // word label. That is an oracle, and it is the honest limit on the result.
+  // For naming, the creature has to derive the index from its own state.
+  //
+  //   0 — the kContext module's slices, argmax by rate. DNA v51, unchanged.
+  //   1 — the LARYNX's own slices, argmax by rate, over the neurons OUTSIDE
+  //       the two articulator groups the F1/F2 readout is scored on.
+  //
+  // Why the larynx and not the ear. `ctxsrc` measured every candidate carrier
+  // in the window where reward actually lands — the 800 ms AFTER the word
+  // stops — and the ear is at 0.541 there while the articulators are at 0.740.
+  // The voice carries the word BETTER once the word has ended (0.818) than
+  // while it plays (0.510), which is a delayed copy: the motor state is the
+  // only thing in this creature that holds a context across the silence. It is
+  // also, at 0.740 against a derived bar of 0.75, only just not enough — which
+  // is why the direct measurement is now cheaper than the proxy.
+  //
+  // Why OUTSIDE groups 2 and 3. Those are F1 and F2, the pair the bias table
+  // steers and the score is computed from. An index read from them would be
+  // read from the very quantity the mechanism is changing, and the arm would
+  // measure a feedback loop rather than a context. `ctxbias` already separated
+  // these two populations for exactly this reason: its `offaxis` arm put the
+  // same ramp on groups the score does not read, and it arrived in full and
+  // scored zero.
+  //
+  // The rule is the SAME argmax v51 already runs, over a different population.
+  // No new state, no new constant, no new learning: the whole change is which
+  // neurons the loop walks. That matters because `ctxsrc`'s 0.740 is the upper
+  // bound of a SUPERVISED held-out readout, and a fixed unsupervised partition
+  // can only do worse — so this field buys a measurement, not an expectation.
+  uint32_t context_source;
 
   // --- DNA v41: metaplastic consolidation -----------------------------------
   // The rule above is an unbiased gradient estimate, and `driftprobe` measured

@@ -7363,19 +7363,165 @@ bar was set to protect.
 That leaves two honest options and the file does not pretend otherwise. **The
 cheap one** is to wire v51's index to the articulators anyway and measure
 `areax` directly against its own 112.9 Hz: at p = 0.740 the predicted signal is
-~54 Hz against an `off` baseline of 27, which is still detectable, and the build
-is a change of where the index is read rather than a new mechanism. The proxy
-is marginal enough that the direct measurement is now the cheaper instrument.
+`(2p - 1) x 112.9` = ~54 Hz against an `off` baseline of 27, which is still
+detectable, and the build is a change of where the index is read rather than a
+new mechanism. The proxy is marginal enough that the direct measurement is now
+the cheaper instrument. (The 27 is a *floor*, not a pedestal to add: dF1 is an
+absolute difference, so the `off` arm's 27 Hz is `E|noise|` with no signal under
+it, and scaling the difference and then adding it counts the noise twice.)
 **The expensive one** is persistent activity — a mechanism class rather than a
-tuning knob, and one this creature has resisted before: no module holds a kick
-for 10 ms (`seqprobe`: r 0.92 -> 0.03 at every recurrent weight up to 8x), and
-an utterance is a held vowel rather than a trajectory.
+tuning knob, and one this creature has resisted before.
+
+> **The cheap one was taken: DNA v52 below.** It is worth reading this section's
+> conclusion against what that measured. A *fixed* cut of the larynx reaches
+> only p = 0.569 where the supervised readout above reaches 0.740, so the
+> readout loses more of the effect than the persistence shortfall does — and the
+> next thing to build is a partition that is learned, not persistence.
+
+(On the expensive option: no module here holds a kick for 10 ms — `seqprobe`,
+r 0.92 -> 0.03 at every recurrent weight up to 8x — and an utterance is a held
+vowel rather than a trajectory.)
 
 What is not in doubt is where the obstruction is. It is not credit assignment,
 delivery, expressiveness or reward composition — all four are now measured and
 none of them is it.
 
+### DNA v52 — the creature indexes itself, and it is not accurate enough
+
+`ctxsrc` left two options and this is the cheap one, built and measured. DNA v51
+works, but `areax` has the **host** write the context slice from the word label,
+and that oracle is the honest limit on the result. `ctxsrc` said where a
+self-derived index would have to come from — the larynx, which carries the word
+at 0.740 in the reward window where the ear is at 0.541 — and said 0.740 was
+just under the 0.75 the bar needs.
+
+**Why build it after a proxy said no, and why that is not fitting a verdict to
+data.** `ctxsrc`'s 0.740 is a *held-out supervised* readout: it fits centroids
+using the word labels and reports the best any linear decoder could manage. What
+v52 installs is a **fixed, unsupervised partition** — the same argmax v51 already
+runs, pointed at the larynx — which can only do worse. So the proxy was not a
+prediction that got ignored; it was an upper bound that came out marginal, and
+once an upper bound is marginal the direct measurement is the cheaper instrument
+and the only one that can settle it.
+
+The change is one genome field, `context_source`. `0` is the `kContext` module
+(v51, and bit-identical to it); `1` reads the same argmax over the larynx's own
+slices, restricted to the neurons **outside** articulator groups 2 and 3. Those
+two are F1 and F2, the pair the bias table steers and the score is computed
+from; an index read from them would be read from the very quantity the mechanism
+is changing. `ctxbias` had already separated those populations for this reason —
+its `offaxis` arm put the same ramp on groups the score does not read, and it
+arrived in full and scored zero. No new rule, no new state, no new constant: the
+whole change is which neurons the loop walks.
+
+**`ctxself` runs `areax`'s arms plus two, and every arm gets the same host drive
+on the context module**, so `self` and `oracle` differ in exactly one field and
+`self` is not also a creature that was deprived of something.
+
+Nine creatures, 3.4M ticks each:
+
+| arm | dF1 (Hz) | p(index) | busiest slice | table div | change |
+|---|---|---|---|---|---|
+| off | 31.2 +/- 7.4 | — | — | 0.0000 | +3.7 |
+| **oracle** | **89.0 +/- 8.9** | **1.000** | 0.500 | 0.0286 | +15.2 |
+| **self** | **37.1 +/- 7.1** | **0.569 +/- 0.018** | 0.521 | 0.0183 | +2.2 |
+| self-rnd | 17.8 +/- 4.2 | 0.525 | 0.512 | 0.0167 | +0.4 |
+
+**The instrument checks itself and passes.** The oracle arm's index agrees with
+the word 1.000 of the time, which is arithmetic if the kernel is reading the
+condition the host wrote and a bug otherwise, and its dF1 reproduces `areax`
+in-run (89.0 against 82.0 there at the same tick count, +57.8 over `off` at 3.5
+SE). The reference is measured here rather than quoted, because a `self` result
+means nothing beside an oracle arm that did not work either.
+
+**The creature's own index does carry the word.** p = 0.569 +/- 0.018 is 3.8 SE
+above chance, and the busiest slice takes 0.521 of the reward window — it is a
+real index and not a constant dressed up as one. It even **sharpens over the
+session, 0.564 -> 0.607**, which is the feedback loop closing: the bias table
+cashes into the same off-axis neurons the index is read from, so the mechanism
+can steer its own index. That loop cannot raise p, which is agreement with the
+caregiver rather than with itself, and `self-rnd` runs the identical loop with a
+target that does not track the word.
+
+**And the effect is the size the index's accuracy predicts.** An index right
+with probability `p` writes the other table `1-p` of the time and the wrong write
+*cancels*, so the conditional part scales as `(2p - 1)`. At p = 0.569 that
+predicts 31.2 Hz; the creature delivered 37.1.
+
+> **It does not clear the bar. `self` beats the matched-marginal control by
+> +19.3 Hz at 1.7 SE, 8 of 9 seeds positive — short of the 2 SE the gate asks
+> for, and the gate does not move.**
+
+**Two shortfalls, and the second is the larger.** This is what the run adds to
+`ctxsrc`, and it changes the prescription:
+
+| stage | p | keeps |
+|---|---|---|
+| the host's oracle | 1.000 | 100% |
+| the best readout of the larynx there is (`ctxsrc`, supervised, held-out) | 0.740 | 48% |
+| **a fixed unsupervised cut of the same population (this run)** | **0.569** | **14%** |
+
+Persistence costs just over half the effect. **The fixed cut then costs 71% of
+what was left** — more, as a multiplier, than persistence did. `ctxsrc` concluded
+that what stands between v51 and naming is nowhere to *hold* a context; that is
+true and it is not the whole story. The information that survives into the
+reward window is largely there — 0.740 of it — and a fixed equal-sized slicing of
+the larynx recovers only 0.569 of it. **The cheaper target is a partition that is
+learned rather than fixed**, not more ticks and not persistence.
+
+#### The gate that could not have passed, which was my error and not the run's
+
+`ctxself` shipped requiring `self` to beat **both** `off` and the
+matched-marginal control at 2 SE. The `off` half cannot pass — not "did not",
+cannot, on numbers available before it ran:
+
+```
+detection threshold vs off, n=3     2 x (11.7 + 11.6)  =  46.6 Hz
+largest lift ctxsrc's bound allows        55.3 - 30.7  =  24.6 Hz
+```
+
+The gate demanded a lift twice the maximum its own pre-stated upper bound
+permits, and seeds do not close the gap: n=6 needs 33.0 Hz and n=9 needs 26.9,
+both above 24.6. At n=9 with this run's own numbers it is 29.1 against 11.5.
+**A gate a perfect result would also fail is not a gate.** That is the same test
+`areax` used to retire `fixed+on` — the control falsified a prediction it makes
+itself, rather than being dropped because of the numbers underneath it — and the
+arithmetic is in the source beside the gate.
+
+There is a structural reason too, not only a power one. `off` carries no split
+table, so its dF1 is incidental spread between two words with nothing
+suppressing it; a split table averages opposing writes toward zero, which is why
+`self-rnd` sits **below** `off` (17.8 against 31.2) rather than beside it. They
+are not two measurements of the same zero. `self-rnd` is the zero of a creature
+carrying identical machinery and differing in one thing — whether the target
+tracks the word. `off` stays in the table and in the report as a diagnostic.
+
+#### Three seeds said 0.603 and nine say 0.569
+
+The first run of this experiment used three creatures and read p = 0.603 +/-
+0.051 with `self` at 44.6 Hz and +31.0 against the control. At nine it is 0.569
++/- 0.018 and +19.3. **Same direction and same size of drift as `ctxsrc`'s 0.754
+-> 0.740**, three days earlier, and the reason the run was nine this time is
+that lesson rather than anything about these numbers. The quantity the verdict
+turns on is a difference of tens of Hz between arms whose per-creature spread is
+tens of Hz, which is exactly the regime where three seeds decide nothing.
+
+One detail worth recording and not worth leaning on: at n=3 the single seed
+where `self` fell below `off` was the seed whose index read p = 0.506, chance.
+
+**`context_source = 0` is bit-identical**: hash `ad96f882becbee92`, `verify`
+22/22, `mechverify` 18/18. Like v51 it cannot be pinned in `mechverify` — it is
+a scalar field, so a row would patch cleanly, but it does nothing without the
+`kContext` module the shipped genome has not got, so the variant would hash
+identically and read VACUOUS. What covers it instead is `ctxself`'s own gate
+requiring the oracle arm to reproduce `areax` inside the same run, which is a
+per-run check that the index path is live.
+
 ### What the literature says to build next, and why it is the cheap option
+
+> **This section is the argument that produced DNA v51, kept as the record of
+> what was predicted before it was measured.** v51 and v52 above are what
+> happened. What it leaves open is at the end.
 
 `ctxbias` split the problem cleanly. **Delivery works**: a bias arriving off the
 lesson's own neurons is free, and a perfect conditional bias steers the voice to
@@ -7436,6 +7582,20 @@ learn, or that reaches a small fraction of that number, says the estimator
 cannot find a conditional optimum even when one is representable — and that
 would be a much firmer closure of G3 than anything currently on file, because
 every earlier null had a delivery excuse and this one would not.
+
+**What actually happened, and what is left.** It was not refused: `areax` reads
+112.9 Hz, 48% of that ceiling, and the estimator finds the conditional optimum
+when it is handed an index. Three of the architecture's four pieces are settled
+— the indexed bias works, delivery as a bias is free, and a per-context
+prediction error is unnecessary here (`rpeprobe`: 0.0% of the reward variance is
+between contexts, because `vocallearn`'s per-word praise criterion had already
+balanced it). The fourth is where the index comes from, and after v52 it is
+**two** quantities rather than one: the word survives into the reward window at
+0.740, and a *fixed* cut of the population holding it recovers 0.569 of that.
+The second loses more than the first. **A learned partition of the motor state
+is the next thing the literature would be read for — competitive or clustering
+rather than persistent** — and this project already has lateral competition
+(v32) working on the same module.
 
 ## Design decisions that were not obvious
 

@@ -721,6 +721,15 @@ perturb_max = 0.30          # |bias| ceiling, in the same units as threshold
 # it is read as an index and never as drive. See `areax`, and the long note on
 # DnaExploration::context_slots for why this parameterisation and not another.
 context_slots = 0
+# DNA v52: WHERE that index is read from. 0 is the kContext module (v51, and
+# bit-identical to it); 1 reads the larynx's own slices instead, over the
+# neurons outside the two articulator groups the F1/F2 score is computed from.
+# 0 is an oracle whenever the host writes the context module -- which is what
+# `areax` does -- and 1 is the creature deriving it for itself. `ctxsrc`
+# measured why the larynx and nothing else: in the reward window the
+# articulators carry the word at 0.740 where the ear is at 0.541 and central at
+# 0.514. See `ctxself` and DnaExploration::context_source.
+context_source = 0
 
 
 # DNA v41 — metaplastic consolidation. Node perturbation is an unbiased gradient

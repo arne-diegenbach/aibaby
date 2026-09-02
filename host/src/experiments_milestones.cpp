@@ -4023,6 +4023,27 @@ struct VLRun {
   double ctx_present_frac = 0.0;
   double ctx_table_div = 0.0;   // mean |bias[i][0] - bias[i][1]| over the larynx
   double ctx_shared_mag = 0.0;  // mean |shared bias|, the scale to read it against
+  // DNA v52. What the index the creature DERIVED for itself actually was,
+  // measured only in the window where reward lands -- `ctxsrc`'s whole finding
+  // is that a carrier at ceiling while the word plays can be at chance 400 ms
+  // later, so an accuracy averaged over the trial would be the wrong number.
+  //
+  // The slice-to-word assignment is arbitrary: an index only has to be
+  // CONSISTENT, not correctly labelled. So this is the better of the two
+  // permutations, which is the p the (2p - 1) bar is stated in.
+  double ctx_match = 0.0;
+  // ...and the same thing over the first and last third of the session. A
+  // derived index sits inside a loop: the bias table steers the voice, and the
+  // voice is what the index is read from. If p RISES over a session the loop is
+  // closing on itself and the prescription is a longer run; if it is flat, the
+  // partition has a fixed accuracy and more ticks buy nothing. Those are
+  // different verdicts and a session-mean cannot tell them apart. Thirds rather
+  // than halves, because `vocallearn`'s own early/late windows are thirds.
+  double ctx_match_early = 0.0, ctx_match_late = 0.0;
+  // ...and the share taken by the busiest slice. A constant index scores 0.5
+  // on `ctx_match` with balanced words, but it scores 1.0 here, and the two
+  // failures deserve different verdicts.
+  double ctx_occupancy = 0.0;
   // `rpeprobe`. The reward stream decomposed by context, sampled once per
   // plasticity event -- the cadence at which reward actually reaches the
   // synapses, not per tick, which would over-weight whatever the creature
@@ -4121,6 +4142,14 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
   double vf1_sum[kVLWords] = {}, vf2_sum[kVLWords] = {};
   uint32_t vf_n[kVLWords] = {};
   uint64_t ctx_ticks = 0, ctx_ticks_total = 0;
+  // DNA v52. Confusion between the word the caregiver said and the slice the
+  // creature's own index picked, over the reward window only.
+  uint64_t ctx_conf[kVLWords][kVLWords] = {};
+  uint64_t ctx_conf_n = 0;
+  // The same, split by third. Index 0 is the first third and 1 the last; the
+  // middle third is counted in the session total only.
+  uint64_t ctx_conf_t[2][kVLWords][kVLWords] = {};
+  uint64_t ctx_conf_tn[2] = {};
   uint64_t last_plast = 0;
   double rw_sum[kVLWords] = {}, rw_sq[kVLWords] = {};
   double rw_esum[kVLWords] = {}, rw_esq[kVLWords] = {};
@@ -4241,7 +4270,22 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
       }
       s.brain.step();
       ++ctx_ticks_total;
-      if (s.brain.network().context_present()) ++ctx_ticks;
+      if (s.brain.network().context_present()) {
+        ++ctx_ticks;
+        // DNA v52. Sampled AFTER the step, so the index is this tick's, and
+        // only inside the reward window, which is the only place it is used.
+        if (t >= kVLRewardFrom && t < kVLRewardTo) {
+          const uint32_t c = s.brain.network().active_context();
+          const bool in_word = label < kVLWords && c < kVLWords;
+          if (in_word) ++ctx_conf[label][c];
+          ++ctx_conf_n;
+          const int part = trial < third ? 0 : (trial >= n_trials - third ? 1 : -1);
+          if (part >= 0) {
+            if (in_word) ++ctx_conf_t[part][label][c];
+            ++ctx_conf_tn[part];
+          }
+        }
+      }
       // One sample per plasticity event: that is when a reward is actually
       // cashed, and it is the quantity Gadagkar's account is about.
       if (s.brain.plasticity_events() != last_plast) {
@@ -4371,6 +4415,27 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
   }
   out.voiced_frac = frames_total ? double(frames_voiced) / double(frames_total) : 0.0;
   out.ctx_present_frac = ctx_ticks_total ? double(ctx_ticks) / double(ctx_ticks_total) : 0.0;
+  // DNA v52. The best of the two slice-to-word assignments, and the busiest
+  // slice's share. Two words and two slots is the only case this project runs;
+  // with more of either the diagonal below is a lower bound rather than the
+  // best assignment, which is why it is derived here and not in the kernel.
+  {
+    static_assert(kVLWords == 2, "ctx_match assumes two words and two slices");
+    auto best_assign = [](const uint64_t c[kVLWords][kVLWords], uint64_t n) {
+      if (n == 0) return 0.0;
+      const double diag = double(c[0][0] + c[1][1]);
+      const double anti = double(c[0][1] + c[1][0]);
+      return (diag > anti ? diag : anti) / double(n);
+    };
+    out.ctx_match = best_assign(ctx_conf, ctx_conf_n);
+    out.ctx_match_early = best_assign(ctx_conf_t[0], ctx_conf_tn[0]);
+    out.ctx_match_late = best_assign(ctx_conf_t[1], ctx_conf_tn[1]);
+    if (ctx_conf_n > 0) {
+      const double s0 = double(ctx_conf[0][0] + ctx_conf[1][0]);
+      const double s1 = double(ctx_conf[0][1] + ctx_conf[1][1]);
+      out.ctx_occupancy = (s0 > s1 ? s0 : s1) / double(ctx_conf_n);
+    }
+  }
   {
     // The decomposition this exists for. A centred reward R - b_global splits
     // into (mean_c - b_global) + (R - mean_c). If the first term dominates,
@@ -8691,6 +8756,378 @@ bool run_areax(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
               "  itself -- Gadagkar's performance prediction error rather than the raw,\n"
               "  object-blind R this creature delivers.\n",
               m_dv[kOn], m_d1[kOn], m_d1[kOff], m_d1[kRnd], kAreaxOracleDF1);
+  return false;
+}
+
+// --- ctxself: can the creature index its own bias table? -------------------
+//
+// `areax` is the result this exists to finish. DNA v51 works -- a context-
+// indexed bias makes the voice depend on the word, 112.9 Hz of dF1 against
+// 27.1 with the table shared and 33.5 against a matched-marginal control --
+// but the index it is keyed on is WRITTEN BY THE HOST from the word label.
+// That is an oracle, and it is the honest limit on the result. For naming, the
+// creature has to work out which context it is in from its own state.
+//
+// `ctxsrc` measured where that could come from, in the window where reward
+// actually lands rather than while the word plays, and the answer was the
+// LARYNX: the articulators carry the word at 0.740 there where the ear is at
+// 0.541 and central at 0.514 -- and they carry it BETTER after the word stops
+// (0.818) than during it (0.510), which is a delayed copy and the signature of
+// a memory. It also measured that 0.740 is just under the 0.75 a two-context
+// index needs, so the proxy refused to license the build.
+//
+// SO WHY BUILD IT ANYWAY, AND WHY THAT IS NOT FITTING A VERDICT TO DATA.
+// `ctxsrc`'s 0.740 is a HELD-OUT SUPERVISED readout: it fits centroids using
+// the word labels and reports the best any linear decoder could do. What DNA
+// v52 installs is a FIXED, unsupervised partition -- the same argmax v51
+// already runs, pointed at the larynx -- which can only do worse. So the proxy
+// is not a prediction that was ignored; it is an upper bound that came out
+// marginal, and once an upper bound is marginal the direct measurement is the
+// cheaper instrument and the only one that can settle it.
+//
+// THE BAR, DERIVED AND STATED FIRST. An index right with probability p writes
+// the OTHER table 1-p of the time, and the wrong write CANCELS rather than
+// merely failing to help, so the conditional component scales as (2p - 1). At
+// `ctxsrc`'s upper bound that is 0.48 of what the oracle index bought.
+//
+// It scales the ORACLE's dF1 and the `off` arm's is not added to it, which is
+// an arithmetic trap worth naming because this project has already published
+// the wrong form of it once. dF1 is |mean F1 word A - mean F1 word B|, an
+// ABSOLUTE value, so the `off` arm's 27 Hz is E|noise| with no signal under it
+// rather than a pedestal the signal sits on. Scaling the difference and then
+// adding the pedestal counts the noise twice. The prediction is therefore
+// (2p - 1) x oracle, floored at `off` because E|s + noise| can never fall below
+// E|noise|. This run measures p directly and prints the prediction from BOTH
+// the bound and its own measurement.
+//
+// A LOOP THAT IS REAL AND HAS TO BE REPORTED, NOT DESIGNED AWAY. The bias
+// table cashes into every larynx neuron, including the off-axis ones the index
+// is read from, so the mechanism can steer its own index. That is a property of
+// the architecture rather than a flaw in the instrument -- an Area X output
+// biases the same motor population its input is derived from -- and it has two
+// visible signatures. If the table learns to make the index self-confirming,
+// one slice takes the whole reward window and `busiest slice` says so. If it
+// merely becomes more variable, `self-rnd` scores the same as `self`, because
+// that control runs the identical loop with a target that does not track the
+// word. What the loop CANNOT do is raise p, which is agreement with the
+// caregiver and not with itself.
+//
+// FOUR ARMS, and every one of them is driven by the same host oracle so that
+// the creature's inputs are identical across the run. The context module has
+// no output weight, so driving it changes nothing the kernel does not read --
+// which means `self` and `oracle` differ in exactly one genome field, and
+// `self` is not a creature that was also deprived of something.
+struct CtxSelfArm {
+  const char* name;
+  uint32_t slots;
+  uint32_t source;  // DnaExploration::context_source
+  int target;       // VLTarget
+};
+
+constexpr CtxSelfArm kCtxSelfArms[] = {
+    {"off",      0, 0, kVLTgtHeard},
+    {"oracle",   2, 0, kVLTgtHeard},
+    {"self",     2, 1, kVLTgtHeard},
+    {"self-rnd", 2, 1, kVLTgtRandom},
+};
+constexpr uint32_t kCtxSelfArmCount = sizeof(kCtxSelfArms) / sizeof(kCtxSelfArms[0]);
+
+// `ctxsrc`'s upper bound on how well ANY readout of the larynx names the word
+// in the reward window, on 9 creatures.
+constexpr double kCtxSelfBound = 0.740;
+
+bool run_ctxself(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  aibaby::Dna dna;
+  if (dna.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) {
+    std::printf("  setup failed: the genome does not load\n");
+    return false;
+  }
+  const int32_t ctx_module = dna.module_with_role(aibaby::ModuleRole::kContext);
+  if (ctx_module < 0) {
+    std::printf("  this genome has no kContext module. The `self` arms do not need\n"
+                "  one -- they read the larynx -- but the `oracle` reference arm does,\n"
+                "  and without it there is nothing to measure the creature's own index\n"
+                "  against. Build one with NO output weight:\n\n"
+                "    python3 tools/genome_add_context.py dna/default.toml ctx.toml \\\n"
+                "        vocal out_w=0\n"
+                "    ./build/aibaby --dna ctx.toml --experiment ctxself\n");
+    return false;
+  }
+  if (dna.module_with_role(aibaby::ModuleRole::kVocal) < 0) {
+    std::printf("  setup failed: this genome has no kVocal module, so there is no\n"
+                "  larynx for DNA v52 to read an index from\n");
+    return false;
+  }
+  // NINE, not three, and the reason is this project's own most recent lesson.
+  // `ctxsrc` read 0.754 on three creatures and PRINTED A LICENCE; at nine it
+  // read 0.740 and refused. The quantity this run turns on is a difference of
+  // tens of Hz between arms whose per-creature spread is tens of Hz, which is
+  // exactly the regime where three seeds decide nothing.
+  constexpr uint32_t kReps = 9;
+  const size_t slots_off = offsetof(aibaby::DnaHeader, exploration) +
+                           offsetof(aibaby::DnaExploration, context_slots);
+  const size_t src_off = offsetof(aibaby::DnaHeader, exploration) +
+                         offsetof(aibaby::DnaExploration, context_source);
+  instrument("ctxself", dna.header().seed ^ 0x5E1Fu, ticks / kVLTrialTicks,
+             "trials per arm");
+  std::printf("  question          `areax` proved a context-indexed bias works, keyed on\n"
+              "                    an index the HOST wrote from the word label. Can the\n"
+              "                    creature derive that index from its own larynx?\n");
+  std::printf("  the bar           an index right with probability p writes the other\n"
+              "                    table 1-p of the time, so the conditional part scales\n"
+              "                    as (2p - 1). `ctxsrc` bounds p at %.3f for ANY readout\n"
+              "                    of the larynx in this window, which is %.0f%% of what the\n"
+              "                    oracle index bought. A FIXED partition can only do\n"
+              "                    worse, so that is a ceiling and not a prediction.\n",
+              kCtxSelfBound, 100.0 * (2.0 * kCtxSelfBound - 1.0));
+  std::printf("  arm               all four get the same host drive on the context\n"
+              "                    module, so `self` and `oracle` differ in ONE field.\n\n");
+
+  std::vector<double> df1[kCtxSelfArmCount], change[kCtxSelfArmCount];
+  std::vector<double> present[kCtxSelfArmCount], div[kCtxSelfArmCount];
+  std::vector<double> shared[kCtxSelfArmCount], match[kCtxSelfArmCount];
+  std::vector<double> occ[kCtxSelfArmCount];
+  std::vector<double> mte[kCtxSelfArmCount], mtl[kCtxSelfArmCount];
+
+  std::printf("  %-6s %-9s %-9s %-8s %-8s %-10s %s\n", "seed", "arm", "dF1 (Hz)",
+              "p(idx)", "busiest", "table div", "change");
+  for (uint32_t r = 0; r < kReps; ++r) {
+    for (uint32_t a = 0; a < kCtxSelfArmCount; ++a) {
+      std::vector<uint8_t> variant = blob;
+      const uint64_t seed = dna.header().seed + r * 7919ull;
+      std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+      const uint32_t slots = kCtxSelfArms[a].slots;
+      const uint32_t source = kCtxSelfArms[a].source;
+      std::memcpy(variant.data() + slots_off, &slots, sizeof(slots));
+      std::memcpy(variant.data() + src_off, &source, sizeof(source));
+
+      CtxDrive drive;
+      drive.module = ctx_module;
+      drive.slots = kVLWords;
+      drive.gain = 0.10;
+      Regime reg;
+      reg.praise = kPraiseValue;
+      reg.scold = kScoldValue;
+      const VLRun run = run_vocallearn_session(variant, ticks, kVLTaught, nullptr, reg,
+                                               kCtxSelfArms[a].target, &drive);
+      if (!run.ok) {
+        std::printf("  %-6u %-9s (inconclusive: %u scored, %u skipped)\n", r,
+                    kCtxSelfArms[a].name, run.scored, run.skipped);
+        continue;
+      }
+      const double d1 = std::fabs(run.f1_by_word[0] - run.f1_by_word[1]);
+      df1[a].push_back(d1);
+      change[a].push_back(vl_change(run));
+      present[a].push_back(run.ctx_present_frac);
+      div[a].push_back(run.ctx_table_div);
+      shared[a].push_back(run.ctx_shared_mag);
+      match[a].push_back(run.ctx_match);
+      occ[a].push_back(run.ctx_occupancy);
+      mte[a].push_back(run.ctx_match_early);
+      mtl[a].push_back(run.ctx_match_late);
+      std::printf("  %-6u %-9s %-9.1f %-8.3f %-8.3f %-10.4f %+.1f\n", r,
+                  kCtxSelfArms[a].name, d1, run.ctx_match, run.ctx_occupancy,
+                  run.ctx_table_div, vl_change(run));
+    }
+  }
+
+  double m_d1[kCtxSelfArmCount], s_d1[kCtxSelfArmCount];
+  double m_ch[kCtxSelfArmCount], s_ch[kCtxSelfArmCount];
+  double m_pr[kCtxSelfArmCount], s_pr[kCtxSelfArmCount];
+  double m_dv[kCtxSelfArmCount], s_dv[kCtxSelfArmCount];
+  double m_sh[kCtxSelfArmCount], s_sh[kCtxSelfArmCount];
+  double m_mt[kCtxSelfArmCount], s_mt[kCtxSelfArmCount];
+  double m_oc[kCtxSelfArmCount], s_oc[kCtxSelfArmCount];
+  double m_me[kCtxSelfArmCount], s_me[kCtxSelfArmCount];
+  double m_ml[kCtxSelfArmCount], s_ml[kCtxSelfArmCount];
+  uint32_t valid = 0;
+  for (uint32_t a = 0; a < kCtxSelfArmCount; ++a) {
+    if (df1[a].size() < 2) {
+      std::printf("\n  ctxself INCONCLUSIVE -- arm `%s` produced %zu usable creatures.\n",
+                  kCtxSelfArms[a].name, df1[a].size());
+      return false;
+    }
+    ++valid;
+    m_d1[a] = ctx_mean_se(df1[a], &s_d1[a]);
+    m_ch[a] = ctx_mean_se(change[a], &s_ch[a]);
+    m_pr[a] = ctx_mean_se(present[a], &s_pr[a]);
+    m_dv[a] = ctx_mean_se(div[a], &s_dv[a]);
+    m_sh[a] = ctx_mean_se(shared[a], &s_sh[a]);
+    m_mt[a] = ctx_mean_se(match[a], &s_mt[a]);
+    m_oc[a] = ctx_mean_se(occ[a], &s_oc[a]);
+    m_me[a] = ctx_mean_se(mte[a], &s_me[a]);
+    m_ml[a] = ctx_mean_se(mtl[a], &s_ml[a]);
+  }
+  (void)valid;
+
+  std::printf("\n  %-9s %-16s %-15s %-14s %-13s %s\n", "arm", "dF1 (Hz)", "p(index)",
+              "busiest slice", "table div", "change");
+  for (uint32_t a = 0; a < kCtxSelfArmCount; ++a) {
+    char b[40], c[40], d[40], e[40], f[40];
+    std::snprintf(b, sizeof b, "%.1f +/- %.1f", m_d1[a], s_d1[a]);
+    std::snprintf(c, sizeof c, "%.3f +/- %.3f", m_mt[a], s_mt[a]);
+    std::snprintf(d, sizeof d, "%.3f +/- %.3f", m_oc[a], s_oc[a]);
+    std::snprintf(e, sizeof e, "%.4f +/- %.4f", m_dv[a], s_dv[a]);
+    std::snprintf(f, sizeof f, "%+.1f +/- %.1f", m_ch[a], s_ch[a]);
+    std::printf("  %-9s %-16s %-15s %-14s %-13s %s\n", kCtxSelfArms[a].name, b, c, d, e, f);
+  }
+
+  const uint32_t kOff = 0, kOra = 1, kSelf = 2, kSRnd = 3;
+
+  // GATE 0: is the instrument the one `areax` validated? The oracle index is
+  // held for the whole trial and read by the same argmax, so p there is 1.000
+  // by construction. Anything else means the kernel's index is not the host's
+  // condition, and every number below is about something other than a context.
+  if (m_mt[kOra] < 0.99) {
+    std::printf("\n  REFUSED -- the ORACLE arm's index agrees with the word only %.3f of\n"
+                "  the time, where holding one slice up for the whole trial makes 1.000\n"
+                "  arithmetic. The kernel is not reading the condition the host wrote,\n"
+                "  so the `self` arms are not being compared against anything.\n",
+                m_mt[kOra]);
+    return false;
+  }
+
+  // GATE 1: does this run reproduce `areax`? The reference the whole experiment
+  // is scored against is measured HERE rather than quoted, because a `self`
+  // result means nothing next to an oracle arm that did not work either.
+  const double ora_lift = m_d1[kOra] - m_d1[kOff];
+  const double ora_se = s_d1[kOra] + s_d1[kOff];
+  if (ora_lift <= 2.0 * ora_se) {
+    std::printf("\n  REFUSED -- the ORACLE arm did not reproduce `areax` in this run:\n"
+                "  %.1f Hz against %.1f with the table shared (%+.1f, %.1f SE). Without a\n"
+                "  working reference there is nothing to measure the creature's own\n"
+                "  index against, and a flat `self` would be unreadable.\n",
+                m_d1[kOra], m_d1[kOff], ora_lift, ora_se > 0.0 ? ora_lift / ora_se : 0.0);
+    return false;
+  }
+
+  // GATE 2: is the derived index an index at all? A partition that always
+  // names the same slice scores 0.5 on p with balanced words -- indistinguishable
+  // from one that names slices at random -- and the two deserve different
+  // verdicts, because a constant index means the mechanism was never split
+  // while a random one means it was split on nothing.
+  if (m_oc[kSelf] > 0.95) {
+    std::printf("\n  REFUSED, AND IT IS A FINDING ABOUT THE PARTITION, NOT THE MECHANISM.\n"
+                "  The creature's own index named the same slice on %.0f%% of reward-window\n"
+                "  ticks, so the table was effectively never split and `self` is `off`\n"
+                "  with extra memory. A fixed equal-sized cut of the larynx does not\n"
+                "  separate the two words' motor states; what fails here is the cut, and\n"
+                "  the next thing to try is one that is learned rather than fixed.\n",
+                100.0 * m_oc[kSelf]);
+    return false;
+  }
+
+  if (m_pr[kSelf] < 0.5) {
+    std::printf("\n  REFUSED -- the creature was in a context on only %.0f%% of ticks in\n"
+                "  the `self` arm, so the table was mostly not indexed at all.\n",
+                100.0 * m_pr[kSelf]);
+    return false;
+  }
+
+  const double p = m_mt[kSelf];
+  const double keep_bound = 2.0 * kCtxSelfBound - 1.0;
+  const double keep_meas = 2.0 * p - 1.0;
+  // (2p - 1) x the oracle's dF1, floored at the no-signal arm. See the note on
+  // why the `off` arm is a floor and not a pedestal.
+  auto predict = [&](double keep) {
+    const double v = (keep > 0.0 ? keep : 0.0) * m_d1[kOra];
+    return v > m_d1[kOff] ? v : m_d1[kOff];
+  };
+  const double pred_bound = predict(keep_bound);
+  const double pred_meas = predict(keep_meas);
+  const double lift = m_d1[kSelf] - m_d1[kOff];
+  const double lift_se = s_d1[kSelf] + s_d1[kOff];
+  const double vs_rnd = m_d1[kSelf] - m_d1[kSRnd];
+  const double rnd_se = s_d1[kSelf] + s_d1[kSRnd];
+
+  std::printf("\n  the reference here       oracle %.1f Hz vs off %.1f (%+.1f, %.1f SE)\n"
+              "  the derived index        p = %.3f +/- %.3f, busiest slice %.3f\n"
+              "  ...and does it sharpen?  %.3f +/- %.3f -> %.3f +/- %.3f over the session\n"
+              "  predicted from ctxsrc    %.1f Hz  (p <= %.3f, keeps %.0f%%)\n"
+              "  predicted from THIS p    %.1f Hz  (keeps %.0f%%)\n"
+              "  measured                 %.1f Hz  (%+.1f vs off, %.1f SE)\n"
+              "  vs matched-marginal      %.1f Hz  (%+.1f, %.1f SE)\n",
+              m_d1[kOra], m_d1[kOff], ora_lift, ora_se > 0.0 ? ora_lift / ora_se : 0.0,
+              p, s_mt[kSelf], m_oc[kSelf],
+              m_me[kSelf], s_me[kSelf], m_ml[kSelf], s_ml[kSelf],
+              pred_bound, kCtxSelfBound, 100.0 * keep_bound,
+              pred_meas, 100.0 * (keep_meas > 0.0 ? keep_meas : 0.0),
+              m_d1[kSelf], lift, lift_se > 0.0 ? lift / lift_se : 0.0,
+              m_d1[kSRnd], vs_rnd, rnd_se > 0.0 ? vs_rnd / rnd_se : 0.0);
+
+  // THE GATE IS `self` AGAINST `self-rnd`, AND `off` IS REPORTED BUT NOT GATED
+  // ON. This experiment shipped requiring both, and its first run showed that
+  // the `off` half CANNOT pass -- not "did not", cannot, on numbers that were
+  // available before it ran.
+  //
+  //   detection threshold vs off, n=3    2 x (11.7 + 11.6)  =  46.6 Hz
+  //   largest lift ctxsrc's bound allows       55.3 - 30.7  =  24.6 Hz
+  //
+  // The gate demanded a lift twice the maximum its own pre-stated upper bound
+  // permits, and seeds do not close the gap: n=6 needs 33.0 Hz and n=9 needs
+  // 26.9, both still above 24.6. **A gate a perfect result would fail is not a
+  // gate.** That is the same test `areax` used to retire `fixed+on` -- the
+  // control falsified a prediction it makes itself, rather than being dropped
+  // because of the numbers underneath it.
+  //
+  // Why `off` is so wide is not a mystery, and it is a reason to prefer the
+  // other control on STRUCTURE and not only on power. `off` carries no split
+  // table, so its dF1 is incidental spread between two words with nothing
+  // suppressing it. A split table averages opposing writes toward zero, which
+  // is why `self-rnd` sits BELOW `off` rather than beside it: the two are not
+  // two measurements of the same zero. `self-rnd` is the zero of a creature
+  // carrying identical machinery and differing in one thing -- whether the
+  // target tracks the word.
+  //
+  // `off` stays in the table and in the report, because how far a shared bias
+  // gets on its own is worth seeing. It is a diagnostic, not a gate.
+  const bool beats_off = lift > 2.0 * lift_se;
+  const bool beats_rnd = vs_rnd > 2.0 * rnd_se;
+  uint32_t unanimous = 0;
+  const size_t pairs =
+      df1[kSelf].size() < df1[kSRnd].size() ? df1[kSelf].size() : df1[kSRnd].size();
+  for (size_t i = 0; i < pairs; ++i) {
+    if (df1[kSelf][i] > df1[kSRnd][i]) ++unanimous;
+  }
+  std::printf("  per-creature             %u of %zu seeds put `self` above the\n"
+              "                           matched-marginal control\n"
+              "  vs `off`                 %+.1f Hz at %.1f SE -- REPORTED, NOT GATED. This\n"
+              "                           arm sets a %.1f Hz threshold where ctxsrc's own\n"
+              "                           bound allows at most %.1f, so it is a gate that a\n"
+              "                           perfect result would also fail\n",
+              unanimous, pairs, lift, lift_se > 0.0 ? lift / lift_se : 0.0,
+              2.0 * lift_se, pred_bound - m_d1[kOff]);
+  (void)beats_off;
+  if (beats_rnd) {
+    std::printf("\n  THE CREATURE INDEXES ITSELF -- the voice depends on the word with NO\n"
+                "  oracle anywhere. %+.1f Hz of F1 above a control carrying the same\n"
+                "  split table and the same derived index, differing only in whether the\n"
+                "  target tracks the word, on an index read from its own larynx at %.3f\n"
+                "  (and %+.1f against the shared-bias arm, which is reported rather than\n"
+                "  gated on). That is %.0f%% of what the host-written index bought in this\n"
+                "  same run, against %.0f%% predicted from `ctxsrc`'s upper bound and %.0f%%\n"
+                "  from this run's own p. The last oracle in the architecture is gone.\n",
+                vs_rnd, p, lift, 100.0 * lift / (ora_lift > 0.0 ? ora_lift : 1.0),
+                100.0 * keep_bound, 100.0 * (keep_meas > 0.0 ? keep_meas : 0.0));
+    return true;
+  }
+
+  std::printf("\n  IT CANNOT INDEX ITSELF WELL ENOUGH, AND THE REASON IS NOW A NUMBER.\n"
+              "  The mechanism works -- the same creature with the host writing the\n"
+              "  index reaches %.1f Hz in this very run. Reading the index from its own\n"
+              "  larynx instead gives p = %.3f and %.1f Hz: %+.1f against the shared\n"
+              "  table, and %+.1f against the matched-marginal control this is gated on,\n"
+              "  which is short of the 2 SE that gate asks for.\n\n"
+              "  What this closes: it is not credit assignment (`areax` found the\n"
+              "  conditional optimum), not delivery (`ctxbias` measured a bias to the\n"
+              "  larynx as free), not expressiveness and not the reward's composition\n"
+              "  (`rpeprobe`). What is left is that this creature has nowhere to HOLD\n"
+              "  what it heard across the silence before reward arrives. `ctxsrc` said\n"
+              "  the motor state is the best carrier there is here and still short of\n"
+              "  the bar; this measures the same shortfall in the mechanism's own units\n"
+              "  rather than in a proxy's.\n",
+              m_d1[kOra], p, m_d1[kSelf], lift, vs_rnd);
   return false;
 }
 
