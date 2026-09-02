@@ -8885,6 +8885,11 @@ bool run_ctxself(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
               "                    module, so `self` and `oracle` differ in ONE field.\n\n");
 
   std::vector<double> df1[kCtxSelfArmCount], change[kCtxSelfArmCount];
+  // Which creature each row came from. `ctxself` runs every arm on the SAME
+  // seeds, so the comparison is paired -- but an arm that fails a gate leaves a
+  // hole, and pairing by position after a hole compares two different
+  // creatures. Pair by the seed index and never by the row.
+  std::vector<uint32_t> reps[kCtxSelfArmCount];
   std::vector<double> present[kCtxSelfArmCount], div[kCtxSelfArmCount];
   std::vector<double> shared[kCtxSelfArmCount], match[kCtxSelfArmCount];
   std::vector<double> occ[kCtxSelfArmCount];
@@ -8918,6 +8923,7 @@ bool run_ctxself(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
       }
       const double d1 = std::fabs(run.f1_by_word[0] - run.f1_by_word[1]);
       df1[a].push_back(d1);
+      reps[a].push_back(r);
       change[a].push_back(vl_change(run));
       present[a].push_back(run.ctx_present_frac);
       div[a].push_back(run.ctx_table_div);
@@ -8974,6 +8980,39 @@ bool run_ctxself(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
   }
 
   const uint32_t kOff = 0, kOra = 1, kSelf = 2, kSRnd = 3;
+
+  // The paired differences, computed and printed HERE -- above every gate --
+  // because they are descriptive statistics rather than verdicts, and a run
+  // that refuses should still show the numbers it refused on. This experiment's
+  // gate-1 refusal on a short run would otherwise hide them entirely.
+  auto paired = [&](uint32_t A, uint32_t B, double* se, uint32_t* npos, uint32_t* n) {
+    std::vector<double> d;
+    for (size_t i = 0; i < reps[A].size(); ++i) {
+      for (size_t j = 0; j < reps[B].size(); ++j) {
+        if (reps[A][i] == reps[B][j]) { d.push_back(df1[A][i] - df1[B][j]); break; }
+      }
+    }
+    *n = uint32_t(d.size());
+    *npos = 0;
+    for (double v : d) if (v > 0.0) ++*npos;
+    if (d.size() < 2) { *se = 0.0; return 0.0; }
+    double m = 0.0;
+    for (double v : d) m += v;
+    m /= double(d.size());
+    double ss = 0.0;
+    for (double v : d) ss += (v - m) * (v - m);
+    *se = std::sqrt(ss / double(d.size() - 1)) / std::sqrt(double(d.size()));
+    return m;
+  };
+  double p_rnd_se = 0.0, p_off_se = 0.0;
+  uint32_t p_rnd_pos = 0, p_off_pos = 0, p_rnd_n = 0, p_off_n = 0;
+  const double p_rnd = paired(kSelf, kSRnd, &p_rnd_se, &p_rnd_pos, &p_rnd_n);
+  const double p_off = paired(kSelf, kOff, &p_off_se, &p_off_pos, &p_off_n);
+  std::printf("\n  paired differences (same creature, arms differ only in genome fields)\n"
+              "    self - self-rnd   %+.1f +/- %.1f Hz, %.1f SE, %u of %u positive\n"
+              "    self - off        %+.1f +/- %.1f Hz, %.1f SE, %u of %u positive\n",
+              p_rnd, p_rnd_se, p_rnd_se > 0.0 ? p_rnd / p_rnd_se : 0.0, p_rnd_pos, p_rnd_n,
+              p_off, p_off_se, p_off_se > 0.0 ? p_off / p_off_se : 0.0, p_off_pos, p_off_n);
 
   // GATE 0: is the instrument the one `areax` validated? The oracle index is
   // held for the whole trial and read by the same argmax, so p there is 1.000
@@ -9082,33 +9121,54 @@ bool run_ctxself(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
   //
   // `off` stays in the table and in the report, because how far a shared bias
   // gets on its own is worth seeing. It is a diagnostic, not a gate.
+  // THE TEST IS PAIRED, AND THE HISTORY OF THAT DECISION IS THE POINT.
+  //
+  // Every arm here runs the SAME creature: the seed is `header.seed + r*7919`
+  // and the arms differ only in genome fields. So the comparison is paired by
+  // construction, and the between-creature variance -- which is enormous, `off`
+  // ranges 5.5 to 75.7 Hz across nine seeds -- is common to both arms and
+  // cancels. An unpaired SE on a paired design is not a second valid choice; it
+  // discards the design's whole advantage.
+  //
+  // This experiment's first two runs GATED ON THE UNPAIRED SE, which was simply
+  // the wrong test, and the error was noticed only after the gate refused. On
+  // the same nine creatures the two disagree:
+  //
+  //     self vs self-rnd    unpaired +19.3, 1.7 SE    paired +19.3, 3.4 SE
+  //     self vs off         unpaired  +5.9, 0.4 SE    paired  +5.9, 0.6 SE
+  //
+  // A statistic adopted after a gate fails is worth nothing on the data that
+  // motivated it, however correct the arithmetic. **So this gate was written
+  // down first and the run that decides it uses a FRESH SEED FAMILY** -- a
+  // genome with a different `seed`, creatures the re-analysis never saw. That
+  // is what turns a post-hoc re-analysis into a prediction.
+  //
+  // Note what pairing does NOT do, which is the reason to trust it: it leaves
+  // `self vs off` flat at 0.6 SE. It tightens the comparison the design was
+  // built for and manufactures nothing in the one that was already null.
+
   const bool beats_off = lift > 2.0 * lift_se;
-  const bool beats_rnd = vs_rnd > 2.0 * rnd_se;
-  uint32_t unanimous = 0;
-  const size_t pairs =
-      df1[kSelf].size() < df1[kSRnd].size() ? df1[kSelf].size() : df1[kSRnd].size();
-  for (size_t i = 0; i < pairs; ++i) {
-    if (df1[kSelf][i] > df1[kSRnd][i]) ++unanimous;
-  }
-  std::printf("  per-creature             %u of %zu seeds put `self` above the\n"
-              "                           matched-marginal control\n"
-              "  vs `off`                 %+.1f Hz at %.1f SE -- REPORTED, NOT GATED. This\n"
-              "                           arm sets a %.1f Hz threshold where ctxsrc's own\n"
-              "                           bound allows at most %.1f, so it is a gate that a\n"
-              "                           perfect result would also fail\n",
-              unanimous, pairs, lift, lift_se > 0.0 ? lift / lift_se : 0.0,
-              2.0 * lift_se, pred_bound - m_d1[kOff]);
+  const bool beats_rnd = p_rnd > 2.0 * p_rnd_se;
+  std::printf("  PAIRED vs matched-marg   %+.1f +/- %.1f Hz, %.1f SE  <-- THE GATE\n"
+              "                           %u of %u creatures positive\n"
+              "  paired vs `off`          %+.1f +/- %.1f Hz, %.1f SE (diagnostic)\n"
+              "  unpaired, for the record %+.1f (%.1f SE) vs control, %+.1f (%.1f SE) vs off\n",
+              p_rnd, p_rnd_se, p_rnd_se > 0.0 ? p_rnd / p_rnd_se : 0.0, p_rnd_pos, p_rnd_n,
+              p_off, p_off_se, p_off_se > 0.0 ? p_off / p_off_se : 0.0,
+              vs_rnd, rnd_se > 0.0 ? vs_rnd / rnd_se : 0.0,
+              lift, lift_se > 0.0 ? lift / lift_se : 0.0);
   (void)beats_off;
   if (beats_rnd) {
     std::printf("\n  THE CREATURE INDEXES ITSELF -- the voice depends on the word with NO\n"
-                "  oracle anywhere. %+.1f Hz of F1 above a control carrying the same\n"
-                "  split table and the same derived index, differing only in whether the\n"
-                "  target tracks the word, on an index read from its own larynx at %.3f\n"
-                "  (and %+.1f against the shared-bias arm, which is reported rather than\n"
-                "  gated on). That is %.0f%% of what the host-written index bought in this\n"
-                "  same run, against %.0f%% predicted from `ctxsrc`'s upper bound and %.0f%%\n"
-                "  from this run's own p. The last oracle in the architecture is gone.\n",
-                vs_rnd, p, lift, 100.0 * lift / (ora_lift > 0.0 ? ora_lift : 1.0),
+                "  oracle anywhere. %+.1f +/- %.1f Hz of F1, PAIRED, against a control\n"
+                "  carrying the same split table and the same derived index and differing\n"
+                "  only in whether the target tracks the word; %u of %u creatures\n"
+                "  positive, on an index read from the larynx at %.3f. That is %.0f%% of\n"
+                "  what the host-written index bought IN THIS SAME RUN, against %.0f%%\n"
+                "  predicted from `ctxsrc`'s upper bound and %.0f%% from this run's own p.\n"
+                "  The last oracle in the architecture is gone.\n",
+                p_rnd, p_rnd_se, p_rnd_pos, p_rnd_n, p,
+                100.0 * lift / (ora_lift > 0.0 ? ora_lift : 1.0),
                 100.0 * keep_bound, 100.0 * (keep_meas > 0.0 ? keep_meas : 0.0));
     return true;
   }
@@ -9116,9 +9176,9 @@ bool run_ctxself(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
   std::printf("\n  IT CANNOT INDEX ITSELF WELL ENOUGH, AND THE REASON IS NOW A NUMBER.\n"
               "  The mechanism works -- the same creature with the host writing the\n"
               "  index reaches %.1f Hz in this very run. Reading the index from its own\n"
-              "  larynx instead gives p = %.3f and %.1f Hz: %+.1f against the shared\n"
-              "  table, and %+.1f against the matched-marginal control this is gated on,\n"
-              "  which is short of the 2 SE that gate asks for.\n\n"
+              "  larynx instead gives p = %.3f and %.1f Hz, which is %+.1f +/- %.1f\n"
+              "  PAIRED against the matched-marginal control (%u of %u creatures) --\n"
+              "  short of the 2 SE the gate asks for.\n\n"
               "  What this closes: it is not credit assignment (`areax` found the\n"
               "  conditional optimum), not delivery (`ctxbias` measured a bias to the\n"
               "  larynx as free), not expressiveness and not the reward's composition\n"
@@ -9127,7 +9187,7 @@ bool run_ctxself(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
               "  the motor state is the best carrier there is here and still short of\n"
               "  the bar; this measures the same shortfall in the mechanism's own units\n"
               "  rather than in a proxy's.\n",
-              m_d1[kOra], p, m_d1[kSelf], lift, vs_rnd);
+              m_d1[kOra], p, m_d1[kSelf], p_rnd, p_rnd_se, p_rnd_pos, p_rnd_n);
   return false;
 }
 

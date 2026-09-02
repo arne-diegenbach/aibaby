@@ -7448,9 +7448,11 @@ with probability `p` writes the other table `1-p` of the time and the wrong writ
 *cancels*, so the conditional part scales as `(2p - 1)`. At p = 0.569 that
 predicts 31.2 Hz; the creature delivered 37.1.
 
-> **It does not clear the bar. `self` beats the matched-marginal control by
-> +19.3 Hz at 1.7 SE, 8 of 9 seeds positive — short of the 2 SE the gate asks
-> for, and the gate does not move.**
+> **It does not clear the bar, on two seed families and on both tests.** On
+> these creatures `self` beats the matched-marginal control by +19.3 Hz at 1.7
+> SE unpaired (8 of 9 positive); on a fresh family with the correct paired test
+> fixed in advance it is +9.9 +/- 7.4, 1.4 SE, 6 of 9. See the replication
+> section below — the gate does not move.
 
 **Two shortfalls, and the second is the larger.** This is what the run adds to
 `ctxsrc`, and it changes the prescription:
@@ -7496,13 +7498,53 @@ are not two measurements of the same zero. `self-rnd` is the zero of a creature
 carrying identical machinery and differing in one thing — whether the target
 tracks the word. `off` stays in the table and in the report as a diagnostic.
 
+#### The paired re-analysis, and the replication that refused it
+
+`ctxself` is a **paired design** — every arm runs the same creature, differing
+only in genome fields — and its first two runs gated on an **unpaired** SE.
+That is not a second valid choice; it discards the design's whole advantage,
+since the between-creature spread (`off` ranges 3.1 to 75.7 Hz) is common to
+both arms and cancels. On the nine creatures already run, the two tests
+disagree:
+
+| comparison | unpaired | paired |
+|---|---|---|
+| self vs self-rnd | +19.3, **1.7 SE** | +19.3, **3.4 SE**, 8/9 positive |
+| self vs off | +5.9, 0.4 SE | +5.9, 0.6 SE |
+
+**The error was noticed only after the gate refused**, which is when a change of
+statistic is least trustworthy. So the verdict was not flipped. Instead the
+paired test was written into the source as the gate, and the run that decides it
+used a **fresh seed family** — genome seed `20260902` against `20260809`, sharing
+no creature seed, so it is out-of-sample rather than a re-analysis.
+
+> **IT DID NOT REPLICATE.** On fresh creatures with the paired test
+> pre-registered: **+9.9 +/- 7.4 Hz, 1.4 SE, 6 of 9 positive.** The gate asks
+> for 2 SE and does not get it. The 3.4 SE above was a post-hoc statistic doing
+> what post-hoc statistics do.
+
+The oracle arm reproduced in that run (82.4 Hz against 17.4, +65.0 at 5.5 SE),
+so the refusal is a fact about the derived index and not about a dead reference.
+
+Pooling both families gives +15.8 +/- 4.5, 3.5 SE across eighteen creatures.
+**That number is recorded and not claimed**: family A is what motivated the
+choice of test, so pooling it back in reintroduces exactly the selection the
+replication was run to remove. The out-of-sample estimate is family B alone.
+
+**Had the verdict been flipped on the re-analysis, this project would now carry
+a false positive.** That is the whole return on the fresh-seed run, and the
+reason to keep paying for it.
+
 #### Three seeds said 0.603 and nine say 0.569
 
 The first run of this experiment used three creatures and read p = 0.603 +/-
 0.051 with `self` at 44.6 Hz and +31.0 against the control. At nine it is 0.569
 +/- 0.018 and +19.3. **Same direction and same size of drift as `ctxsrc`'s 0.754
 -> 0.740**, three days earlier, and the reason the run was nine this time is
-that lesson rather than anything about these numbers. The quantity the verdict
+that lesson rather than anything about these numbers. It kept going: the fresh
+family reads **0.540**, so the sequence across every run of this measurement is
+0.603 (n=3) -> 0.569 (n=9) -> 0.540 (n=9, fresh), keeping 21% -> 14% -> 8% of
+the conditional effect. The quantity the verdict
 turns on is a difference of tens of Hz between arms whose per-creature spread is
 tens of Hz, which is exactly the regime where three seeds decide nothing.
 
