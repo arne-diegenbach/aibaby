@@ -7906,7 +7906,47 @@ constexpr double kCsBar = 0.75;
 struct CtxSrc {
   double aud[kCsBinCount] = {};
   double cen[kCsBinCount] = {};
-  double aud_shuf = 0.0, cen_shuf = 0.0;
+  // M1b says the creature REPEATS: 200-600 ms after a word stops, with the ear
+  // already at chance, the voice still carries which word at 0.890 on 5 of 5
+  // creatures. That window is ticks 1100-1500, which sits inside the reward
+  // window this probe is about -- so the persistence a context index needs may
+  // already exist, in the MOTOR system rather than the sensory one. The echo
+  // would be the working memory: the creature remembers what it heard by having
+  // said it.
+  //
+  // Two columns, because only the second is usable. `voc` is the whole larynx.
+  // `vocx` EXCLUDES the F1 and F2 groups, which is where DNA v51's bias table
+  // writes -- reading the index from the neurons the mechanism steers would
+  // make v51 its own input, and `ctxbias` already measured that a signal on the
+  // other groups arrives in full without touching what the formant readout
+  // reads. The separation is measured rather than hoped for.
+  double voc[kCsBinCount] = {};
+  double vocx[kCsBinCount] = {};
+  // The corrected readout, and both corrections are to instrument choices this
+  // probe got wrong on its first run.
+  //
+  // (1) SPIKE COUNTS ARE THE WRONG READOUT of the larynx and this project had
+  // already measured that: `vocab` scores vocal per-neuron at 0.234 against the
+  // articulators at 0.344 and says in terms that the knobs are the better
+  // readout, because a group's centroid averages noise that raw counts carry.
+  // M1b's 0.890 is measured on the articulators. The first run of this probe
+  // used counts and read 0.589.
+  //
+  // (2) THE BINS STRADDLE M1b's WINDOW. M1b is 200-600 ms after the word stops,
+  // ticks 1100-1500, which falls across the 900-1300 / 1300-1700 boundary. This
+  // is that window exactly.
+  //
+  // Excludes F1 and F2 for the circularity reason above, leaving f0, F3, three
+  // bandwidths, loudness and voicing.
+  double echo_grp = 0.0;
+  double echo_grp_shuf = 0.0;
+  // The SAME articulator readout in the same bins as every other column, so
+  // that the comparison is one variable at a time. The first version of this
+  // reported 0.816 from M1b's narrow window against 0.533 from the worst of two
+  // wider bins with a different readout -- two changes at once, in the
+  // favourable direction, which is not a comparison.
+  double grp[kCsBinCount] = {};
+  double aud_shuf = 0.0, cen_shuf = 0.0, voc_shuf = 0.0;
   uint32_t trials = 0;
   bool ok = false;
 };
@@ -7921,7 +7961,8 @@ CtxSrc run_ctxsrc_session(const std::vector<uint8_t>& blob, uint64_t ticks) {
   if (!ear.configure(acfg, error)) return out;
   const int32_t aud = s.dna.module_with_role(aibaby::ModuleRole::kAuditory);
   const int32_t cen = s.dna.module_with_role(aibaby::ModuleRole::kAssociation);
-  if (aud < 0 || cen < 0) return out;
+  const int32_t voc = s.dna.module_with_role(aibaby::ModuleRole::kVocal);
+  if (aud < 0 || cen < 0 || voc < 0) return out;
 
   const double dt = double(s.dna.header().sim.dt_ms);
   const uint32_t spt = uint32_t(double(acfg.sample_rate) * dt / 1000.0 + 0.5);
@@ -7929,10 +7970,20 @@ CtxSrc run_ctxsrc_session(const std::vector<uint8_t>& blob, uint64_t ticks) {
   std::vector<float> pcm(spt);
   const aibaby::ModuleState& ms_a = s.brain.network().module(uint32_t(aud));
   const aibaby::ModuleState& ms_c = s.brain.network().module(uint32_t(cen));
-  const uint32_t wa = ms_a.count, wc = ms_c.count;
+  const aibaby::ModuleState& ms_v = s.brain.network().module(uint32_t(voc));
+  const uint32_t wa = ms_a.count, wc = ms_c.count, wv = ms_v.count;
+  // The F1 and F2 groups, which v51's bias table writes to and which the
+  // restricted readout therefore must not see.
+  const uint32_t f_lo = aibaby::slice_begin(wv, aibaby::kVocalGroups, 2);
+  const uint32_t f_hi = aibaby::slice_begin(wv, aibaby::kVocalGroups, 4);
+  // M1b's own window: 200-600 ms after the word stops.
+  const uint64_t echo_from = kVLWordTicks + 200, echo_to = kVLWordTicks + 600;
   const uint64_t n_trials = ticks / kVLTrialTicks;
 
   std::vector<std::vector<double>> xa[kCsBinCount], xc[kCsBinCount];
+  std::vector<std::vector<double>> xv[kCsBinCount], xvx[kCsBinCount];
+  std::vector<std::vector<double>> xg;
+  std::vector<std::vector<double>> xgb[kCsBinCount];
   std::vector<int> y;
   aibaby::Rng rng;
   rng.seed(s.dna.header().seed ^ 0xC7530u);
@@ -7948,6 +7999,13 @@ CtxSrc run_ctxsrc_session(const std::vector<uint8_t>& blob, uint64_t ticks) {
     const int word = order[size_t(k)];
     std::vector<std::vector<double>> ba(kCsBinCount, std::vector<double>(wa, 0.0));
     std::vector<std::vector<double>> bc(kCsBinCount, std::vector<double>(wc, 0.0));
+    std::vector<std::vector<double>> bv(kCsBinCount, std::vector<double>(wv, 0.0));
+    // The articulator centroids, averaged over M1b's window. Seven of nine:
+    // F1 and F2 are what v51's bias table steers.
+    double gsum[aibaby::kVocalGroups] = {};
+    uint32_t gn = 0;
+    double gbin[kCsBinCount][aibaby::kVocalGroups] = {};
+    uint32_t gbn[kCsBinCount] = {};
     bool slept = false;
     for (uint64_t t = 0; t < kVLTrialTicks; ++t) {
       const bool sounding = t < kVLWordTicks;
@@ -7961,16 +8019,54 @@ CtxSrc run_ctxsrc_session(const std::vector<uint8_t>& blob, uint64_t ticks) {
       for (uint32_t b = 0; b < kCsBinCount; ++b) {
         if (t >= kCsBins[b][0] && t < kCsBins[b][1]) { bin = b; break; }
       }
+      if (t >= echo_from && t < echo_to) {
+        const aibaby::Scalar* g = s.brain.vocal_groups();
+        for (uint32_t q = 0; q < aibaby::kVocalGroups; ++q) gsum[q] += double(g[q]);
+        ++gn;
+      }
+      if (bin < kCsBinCount) {
+        const aibaby::Scalar* g = s.brain.vocal_groups();
+        for (uint32_t q = 0; q < aibaby::kVocalGroups; ++q) gbin[bin][q] += double(g[q]);
+        ++gbn[bin];
+      }
       if (bin >= kCsBinCount) continue;
       const aibaby::Network& net = s.brain.network();
       for (uint32_t i = 0; i < net.spike_count(); ++i) {
         const uint32_t idx = net.spikes()[i];
         if (idx >= ms_a.begin && idx < ms_a.begin + wa) ba[bin][idx - ms_a.begin] += 1.0;
         else if (idx >= ms_c.begin && idx < ms_c.begin + wc) bc[bin][idx - ms_c.begin] += 1.0;
+        else if (idx >= ms_v.begin && idx < ms_v.begin + wv) bv[bin][idx - ms_v.begin] += 1.0;
       }
     }
     if (slept) continue;
-    for (uint32_t b = 0; b < kCsBinCount; ++b) { xa[b].push_back(ba[b]); xc[b].push_back(bc[b]); }
+    for (uint32_t b = 0; b < kCsBinCount; ++b) {
+      xa[b].push_back(ba[b]);
+      xc[b].push_back(bc[b]);
+      xv[b].push_back(bv[b]);
+      std::vector<double> rest;
+      rest.reserve(wv - (f_hi - f_lo));
+      for (uint32_t i = 0; i < wv; ++i) {
+        if (i >= f_lo && i < f_hi) continue;  // the groups v51 steers
+        rest.push_back(bv[b][i]);
+      }
+      xvx[b].push_back(rest);
+    }
+    {
+      std::vector<double> g;
+      for (uint32_t q = 0; q < aibaby::kVocalGroups; ++q) {
+        if (q == 2 || q == 3) continue;  // F1 and F2: what v51 steers
+        g.push_back(gn ? gsum[q] / gn : 0.0);
+      }
+      xg.push_back(g);
+    }
+    for (uint32_t b = 0; b < kCsBinCount; ++b) {
+      std::vector<double> g;
+      for (uint32_t q = 0; q < aibaby::kVocalGroups; ++q) {
+        if (q == 2 || q == 3) continue;
+        g.push_back(gbn[b] ? gbin[b][q] / gbn[b] : 0.0);
+      }
+      xgb[b].push_back(g);
+    }
     y.push_back(word);
   }
 
@@ -7982,12 +8078,18 @@ CtxSrc run_ctxsrc_session(const std::vector<uint8_t>& blob, uint64_t ticks) {
   for (uint32_t b = 0; b < kCsBinCount; ++b) {
     out.aud[b] = holdout_accuracy(xa[b], y, train);
     out.cen[b] = holdout_accuracy(xc[b], y, train);
+    out.voc[b] = holdout_accuracy(xv[b], y, train);
+    out.vocx[b] = holdout_accuracy(xvx[b], y, train);
   }
   // The shuffled control is taken in a REWARD bin, not in the word bin: a
   // control that only proves the readout is honest where the signal is loudest
   // proves it in the wrong place.
   out.aud_shuf = holdout_accuracy(xa[2], shuf, train);
   out.cen_shuf = holdout_accuracy(xc[2], shuf, train);
+  out.voc_shuf = holdout_accuracy(xvx[2], shuf, train);
+  for (uint32_t b = 0; b < kCsBinCount; ++b) out.grp[b] = holdout_accuracy(xgb[b], y, train);
+  out.echo_grp = holdout_accuracy(xg, y, train);
+  out.echo_grp_shuf = holdout_accuracy(xg, shuf, train);
   out.ok = true;
   return out;
 }
@@ -7999,7 +8101,12 @@ bool run_ctxsrc(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) 
     std::printf("  setup failed: the genome does not load\n");
     return false;
   }
-  constexpr uint32_t kReps = 3;
+  // NINE creatures, not three. The whole verdict turns on whether the
+  // articulator readout clears 0.75 in its WORST reward bin, and the first run
+  // put it at 0.754 -- a margin of four thousandths, which is a coin flip
+  // rather than a result. This probe is cheap enough that the honest sample
+  // costs three minutes.
+  constexpr uint32_t kReps = 9;
   instrument("ctxsrc", dna.header().seed ^ 0xC7530u, ticks / kVLTrialTicks,
              "trials per creature");
   std::printf("  question          `areax` has the HOST write the context slice from the\n"
@@ -8013,9 +8120,13 @@ bool run_ctxsrc(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) 
   std::printf("  chance            0.500 -- trials are balanced and shuffled\n\n");
 
   double sa[kCsBinCount] = {}, sc[kCsBinCount] = {};
-  double sas = 0.0, scs = 0.0;
+  double sv[kCsBinCount] = {}, svx[kCsBinCount] = {}, sg[kCsBinCount] = {};
+  std::vector<double> gsamp[kCsBinCount];
+  std::vector<double> gworst;
+  double sas = 0.0, scs = 0.0, svs = 0.0, seg = 0.0, segs = 0.0;
   uint32_t valid = 0;
-  std::printf("  %-6s %-40s %s\n", "seed", "auditory, by bin", "central, by bin");
+  std::printf("  %-6s %-32s %-32s %s\n", "seed", "auditory", "central",
+              "vocal minus F1/F2");
   for (uint32_t r = 0; r < kReps; ++r) {
     std::vector<uint8_t> variant = blob;
     const uint64_t seed = dna.header().seed + r * 7919ull;
@@ -8023,29 +8134,45 @@ bool run_ctxsrc(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) 
     const CtxSrc p = run_ctxsrc_session(variant, ticks);
     if (!p.ok) { std::printf("  %-6u (inconclusive: %u trials)\n", r, p.trials); continue; }
     ++valid;
-    char as[64] = {0}, cs[64] = {0};
+    char as[64] = {0}, cs[64] = {0}, vs[64] = {0};
     for (uint32_t b = 0; b < kCsBinCount; ++b) {
-      sa[b] += p.aud[b]; sc[b] += p.cen[b];
+      sa[b] += p.aud[b]; sc[b] += p.cen[b]; sv[b] += p.voc[b]; svx[b] += p.vocx[b];
+      sg[b] += p.grp[b];
+      gsamp[b].push_back(p.grp[b]);
       char t[16];
       std::snprintf(t, sizeof t, "%.2f ", p.aud[b]); std::strcat(as, t);
       std::snprintf(t, sizeof t, "%.2f ", p.cen[b]); std::strcat(cs, t);
+      std::snprintf(t, sizeof t, "%.2f ", p.vocx[b]); std::strcat(vs, t);
     }
-    sas += p.aud_shuf; scs += p.cen_shuf;
-    std::printf("  %-6u %-40s %s\n", r, as, cs);
+    sas += p.aud_shuf; scs += p.cen_shuf; svs += p.voc_shuf;
+    seg += p.echo_grp; segs += p.echo_grp_shuf;
+    gworst.push_back(std::min(p.grp[2], p.grp[3]));
+    std::printf("  %-6u %-32s %-32s %s\n", r, as, cs, vs);
   }
   if (valid < 2) {
     std::printf("\n  ctxsrc INCONCLUSIVE -- %u of %u creatures usable.\n", valid, kReps);
     return false;
   }
   const double n = double(valid);
-  std::printf("\n  %-18s %10s %10s\n", "bin", "auditory", "central");
+  std::printf("\n  %-18s %10s %10s %12s %14s\n", "bin", "auditory", "central",
+              "vocal spikes", "ARTICULATORS");
   for (uint32_t b = 0; b < kCsBinCount; ++b) {
-    std::printf("  %-18s %10.3f %10.3f\n", kCsBinName[b], sa[b] / n, sc[b] / n);
+    std::printf("  %-18s %10.3f %10.3f %12.3f %14.3f\n", kCsBinName[b], sa[b] / n,
+                sc[b] / n, svx[b] / n, sg[b] / n);
   }
-  std::printf("\n  shuffled control in a REWARD bin: auditory %.3f, central %.3f\n",
-              sas / n, scs / n);
+  std::printf("  %-18s %10s %10s %12s %14.3f\n", "1100-1500 (M1b)", "-", "-", "-",
+              seg / n);
+  std::printf("\n  the last two columns are the SAME module: spike counts against the\n"
+              "  nine articulator centroids, minus the two v51 steers. `vocab` already\n"
+              "  measured that the knobs beat the neurons on this module, and the gap\n"
+              "  here is the same finding arriving from a different direction.\n");
+  std::printf("\n  THE ARTICULATOR READOUT, in M1b's own window (1100-1500), on the\n"
+              "  seven groups v51 does NOT steer: %.3f (shuffled %.3f)\n",
+              seg / n, segs / n);
+  std::printf("\n  shuffled control in a REWARD bin: auditory %.3f, central %.3f,\n"
+              "  vocal-minus-F1/F2 %.3f\n", sas / n, scs / n, svs / n);
 
-  if (sas / n > 0.62 || scs / n > 0.62) {
+  if (sas / n > 0.62 || scs / n > 0.62 || svs / n > 0.62) {
     std::printf("\n  CONTROL FAILED -- a shuffled readout scores above chance in the\n"
                 "  reward window, so nothing else here is worth reading.\n");
     return false;
@@ -8057,27 +8184,67 @@ bool run_ctxsrc(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) 
   // trial.
   const double a_rw = std::min(sa[2], sa[3]) / n;
   const double c_rw = std::min(sc[2], sc[3]) / n;
-  const double best = std::max(a_rw, c_rw);
-  std::printf("  worst reward bin:  auditory %.3f, central %.3f (bar %.2f)\n",
-              a_rw, c_rw, kCsBar);
+  const double v_rw = std::min(svx[2], svx[3]) / n;
+  const double g_rw = std::min(sg[2], sg[3]) / n;
+  const double sense = std::max(a_rw, c_rw);
+  // The articulator readout replaces the spike-count one for the voice: it is
+  // the better instrument on this module by measurement, not by preference.
+  // Scored on the SAME worst-of-two-reward-bins rule as every other column.
+  // M1b's narrow window is reported beside it and is not what the verdict
+  // rests on -- one variable at a time.
+  const double echo = seg / n;
+  const double best = std::max(sense, std::max(v_rw, g_rw));
+  (void)best;
+  // Per creature, so the decisive number carries a spread rather than being a
+  // ratio of two sums.
+  double g_se = 0.0;
+  const double g_mean = ctx_mean_se(gworst, &g_se);
+  std::printf("  worst reward bin:  auditory %.3f, central %.3f, vocal spikes %.3f\n"
+              "                     ARTICULATORS %.3f +/- %.3f per creature "
+              "(bar %.2f)\n"
+              "                     M1b's own window %.3f\n",
+              a_rw, c_rw, v_rw, g_mean, g_se, kCsBar, echo);
+  const bool clears = g_mean - 2.0 * g_se >= kCsBar;
+  if (g_mean >= kCsBar && !clears) {
+    std::printf("\n  TOO CLOSE TO CALL -- the articulator readout's worst reward bin is\n"
+                "  %.3f +/- %.3f against a %.2f bar, so the mean clears it and the spread\n"
+                "  does not. Treat this as a lead and not a licence: an index this\n"
+                "  marginal would carry a fraction of areax's effect that depends on\n"
+                "  which creature you got.\n", g_mean, g_se, kCsBar);
+    return false;
+  }
 
   if (best >= kCsBar) {
+    const char* who = (g_rw >= a_rw && g_rw >= c_rw) ? "the VOICE"
+                      : (c_rw >= a_rw)               ? "central" : "auditory";
     std::printf("\n  THE CREATURE CAN SUPPLY ITS OWN INDEX -- %s carries the word at\n"
                 "  %.3f through the whole reward window, above the %.2f a two-context\n"
-                "  index needs to keep half of areax's effect. Wire a kContext module\n"
-                "  from it and re-run `areax` against its own 112.9 Hz.\n\n"
-                "  This is a CEILING on the index, not a mechanism: a held-out linear\n"
-                "  readout is not something the creature computes, and the projection\n"
-                "  that would have to learn this is the next question rather than a\n"
-                "  settled one.\n",
-                c_rw >= a_rw ? "central" : "auditory", best, kCsBar);
+                "  index needs to keep half of areax's effect, scored on the same\n"
+                "  worst-of-both-reward-bins rule as every other column.\n",
+                who, best, kCsBar);
+    if (g_rw >= sense) {
+      std::printf("\n  AND IT IS THE MOTOR SYSTEM, NOT A SENSORY ONE. The ear is at %.3f\n"
+                  "  in the same window and central at %.3f: the persistence a context\n"
+                  "  index needs already exists, and it is the ECHO. The creature\n"
+                  "  remembers what it heard by having SAID it, which is M1b read as a\n"
+                  "  memory rather than as an imitation.\n\n"
+                  "  This column EXCLUDES the F1 and F2 groups, so wiring v51's index to\n"
+                  "  it does not make the mechanism its own input: the bias table writes\n"
+                  "  to groups this readout cannot see, and `ctxbias` measured that a\n"
+                  "  signal on the other groups arrives in full without touching what\n"
+                  "  the formant readout reads.\n", a_rw, c_rw);
+    }
+    std::printf("\n  A CEILING, NOT A MECHANISM: a held-out linear readout is not\n"
+                "  something the creature computes. What would have to learn this map\n"
+                "  is the next question rather than a settled one.\n");
     return true;
   }
 
   std::printf("\n  IT CANNOT, AND THE REASON IS TIMING RATHER THAN LEGIBILITY.\n"
               "  The word is legible while it plays -- %.3f in auditory in the first\n"
-              "  bin -- and by the reward window the best either module manages is\n"
-              "  %.3f, against the %.2f a two-context index needs.\n\n"
+              "  bin -- and by the reward window the best ANY of them manages is\n"
+              "  %.3f, against the %.2f a two-context index needs. The voice does not\n"
+              "  carry it either, so M1b's echo is not a usable memory here.\n\n"
               "  So what is missing is not a better readout of the ear. It is somewhere\n"
               "  to HOLD the context across the silence between hearing a word and\n"
               "  being rewarded for answering it, and this creature has nowhere: no\n"

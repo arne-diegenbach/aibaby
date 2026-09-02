@@ -7293,40 +7293,87 @@ index right with probability `p` writes the *other* context's table `1-p` of the
 time, so the conditional signal scales as `(2p - 1)`. Keeping half of `areax`'s
 112.9 Hz needs `p >= 0.75` in the reward bins.
 
-| bin | auditory | central |
-|---|---|---|
-| 0-200 word | **1.000** | 0.704 |
-| 200-900 word | **1.000** | 0.978 |
-| 900-1300 **reward** | 0.807 | 0.551 |
-| 1300-1700 **reward** | **0.533** | 0.480 |
-| 1700-2800 after | 0.498 | 0.486 |
+Nine creatures, and the sample size is not incidental — see below.
 
-Shuffled control, taken in a *reward* bin rather than where the signal is
-loudest: 0.474 both.
+| bin | auditory | central | vocal spikes | **articulators** |
+|---|---|---|---|---|
+| 0-200 word | **1.000** | 0.729 | 0.872 | 0.510 |
+| 200-900 word | **1.000** | 0.971 | 0.991 | 0.742 |
+| 900-1300 **reward** | 0.841 | 0.503 | 0.602 | **0.818** |
+| 1300-1700 **reward** | 0.541 | 0.514 | 0.588 | **0.742** |
+| 1700-2800 after | 0.498 | 0.482 | 0.538 | 0.632 |
+| 1100-1500 (M1b's window) | - | - | - | 0.789 |
 
-> **The word is at ceiling while it plays and at chance by the second half of
-> the reward window.** Best across the whole window is 0.533 against a bar of
-> 0.75. And this is a *held-out linear readout* — an upper bound on any index
-> the creature could compute — so a refusal here is not "the decoder was weak".
+Shuffled controls, taken in a *reward* bin rather than where the signal is
+loudest: 0.469, 0.468, 0.486, and 0.497 for the articulators.
 
-**`central` does not hold it either, which refutes the obvious hypothesis.**
+**M1b said to look at the voice, and the voice is by far the best carrier.**
+The creature repeats what it hears 200-600 ms after a word stops with the ear
+already at chance, so the persistence a context index needs might already exist
+in the motor system — the echo as a memory rather than as an imitation. It
+does: the articulators read 0.742 in the window where the ear reads 0.541 and
+central 0.514. And they carry the word BETTER AFTER THE WORD STOPS (0.818,
+0.742) than while it plays (0.510, 0.742), which is what a delayed copy looks
+like and is the signature of a memory rather than a relay.
+
+**It is still not enough.** The decisive number is the worst reward bin, and it
+is **0.740 +/- 0.040 across nine creatures** against a 0.75 bar. The mean is
+below the bar and the spread straddles it.
+
+**And the sample size is the lesson.** At three creatures this read 0.754 and
+the probe printed a licence. At nine it reads 0.740 and refuses. That is the
+same failure `smoothing-sweep-closed` records — three seeds with unanimous signs
+was not enough there either — and the only reason it was caught is that a
+verdict resting on four thousandths is visibly a coin flip rather than a result.
+The probe now runs nine and reports a spread on the number the verdict turns on.
+
+**Two instrument errors, both found by checking rather than by the answer
+changing.** The first version of this probe decoded the larynx from SPIKE COUNTS
+and read 0.589 — but `vocab` had already measured that the articulator centroids
+beat the per-neuron readout on this module, so it used the instrument this
+project's own notes call inferior. And its bins straddled M1b's window
+(1100-1500) rather than aligning to it. Fixing both is what turned 0.589 into
+0.742, and neither fix was chosen because of what it did to the answer.
+
+The third error was in the comparison itself: the corrected readout was first
+reported from M1b's narrow window against the ear's *worst of two wider bins* —
+a different window and a different readout, both moved in the favourable
+direction at once, which is not a comparison. Every column above is now the same
+bins and the same worst-of-both rule.
+
+> **The word is at ceiling while it plays and marginal at best by the time
+> reward lands.** The ear is at chance (0.541); the voice, which is the best
+> carrier anything here has, reaches 0.740 +/- 0.040 against a 0.75 bar. And
+> these are *held-out linear readouts* — upper bounds on any index the creature
+> could compute — so the shortfall is not "the decoder was weak".
+
+**`central` does not hold it at all, which refutes the obvious hypothesis.**
 `audprobe` established that B2 classifies the word within 50 ms while central
 needs 1200 ms to reach 0.940 — central is slow because it *integrates*, and
 integration looked like exactly what a context needs to survive silence. It
 reaches 0.978 during the word and then collapses to 0.551 and 0.480, if anything
 faster than the ear. **Central integrates up; it does not hold.**
 
-**So what stands between v51 and naming is not a better readout of the ear. It
-is somewhere to hold the context across the silence between hearing a word and
-being rewarded for answering it** — and this creature has nowhere. No module
-here holds a kick for 10 ms (`seqprobe`: r 0.92 -> 0.03 at every recurrent
-weight up to 8x), and an utterance is a held vowel rather than a trajectory.
+**So what stands between v51 and naming is a context that does not survive long
+enough to be used.** The creature does have a persistent trace of the word and
+it is in the motor system, which is worth knowing and was not known before — but
+at 0.740 it would carry roughly half of `areax`'s effect, and half is what the
+bar was set to protect.
 
-That names a mechanism class rather than a tuning knob: **persistent activity**.
-It is a sharper statement of the obstruction than anything the conditioning work
-produced, because it is not about credit assignment, delivery, expressiveness or
-reward composition — all of which are now measured and none of which is the
-blocker.
+That leaves two honest options and the file does not pretend otherwise. **The
+cheap one** is to wire v51's index to the articulators anyway and measure
+`areax` directly against its own 112.9 Hz: at p = 0.740 the predicted signal is
+~54 Hz against an `off` baseline of 27, which is still detectable, and the build
+is a change of where the index is read rather than a new mechanism. The proxy
+is marginal enough that the direct measurement is now the cheaper instrument.
+**The expensive one** is persistent activity — a mechanism class rather than a
+tuning knob, and one this creature has resisted before: no module holds a kick
+for 10 ms (`seqprobe`: r 0.92 -> 0.03 at every recurrent weight up to 8x), and
+an utterance is a held vowel rather than a trajectory.
+
+What is not in doubt is where the obstruction is. It is not credit assignment,
+delivery, expressiveness or reward composition — all four are now measured and
+none of them is it.
 
 ### What the literature says to build next, and why it is the cheap option
 
