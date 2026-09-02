@@ -4023,6 +4023,16 @@ struct VLRun {
   double ctx_present_frac = 0.0;
   double ctx_table_div = 0.0;   // mean |bias[i][0] - bias[i][1]| over the larynx
   double ctx_shared_mag = 0.0;  // mean |shared bias|, the scale to read it against
+  // `rpeprobe`. The reward stream decomposed by context, sampled once per
+  // plasticity event -- the cadence at which reward actually reaches the
+  // synapses, not per tick, which would over-weight whatever the creature
+  // happened to be doing when an interval was long.
+  double rw_mean[kVLWords] = {};   // mean TOTAL reward in each context
+  double rw_ext[kVLWords] = {};    // ...and the external (caregiver) part alone
+  double rw_between = 0.0;         // variance of the per-context means
+  double rw_within = 0.0;          // mean variance within a context
+  double rw_ext_share = 0.0;       // external share of total reward variance
+  uint32_t rw_n[kVLWords] = {};
   std::vector<Praise> feedback;  // what the taught arm earned, for the yoke
 };
 
@@ -4111,6 +4121,10 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
   double vf1_sum[kVLWords] = {}, vf2_sum[kVLWords] = {};
   uint32_t vf_n[kVLWords] = {};
   uint64_t ctx_ticks = 0, ctx_ticks_total = 0;
+  uint64_t last_plast = 0;
+  double rw_sum[kVLWords] = {}, rw_sq[kVLWords] = {};
+  double rw_esum[kVLWords] = {}, rw_esq[kVLWords] = {};
+  uint32_t rw_n[kVLWords] = {};
 
   // The bias oracle, if this session has one. Amplitude is a MULTIPLE of the
   // module's own noise_amp rather than a number in drive units, because
@@ -4228,6 +4242,17 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
       s.brain.step();
       ++ctx_ticks_total;
       if (s.brain.network().context_present()) ++ctx_ticks;
+      // One sample per plasticity event: that is when a reward is actually
+      // cashed, and it is the quantity Gadagkar's account is about.
+      if (s.brain.plasticity_events() != last_plast) {
+        last_plast = s.brain.plasticity_events();
+        const aibaby::RewardBreakdown& rb = s.brain.reward();
+        const uint32_t c = label < kVLWords ? label : 0u;
+        const double tot = double(rb.total), ext = double(rb.external);
+        rw_sum[c] += tot; rw_sq[c] += tot * tot;
+        rw_esum[c] += ext; rw_esq[c] += ext * ext;
+        ++rw_n[c];
+      }
 
       if (s.brain.vocal_frame() == last_frame) continue;
       last_frame = s.brain.vocal_frame();
@@ -4346,6 +4371,39 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
   }
   out.voiced_frac = frames_total ? double(frames_voiced) / double(frames_total) : 0.0;
   out.ctx_present_frac = ctx_ticks_total ? double(ctx_ticks) / double(ctx_ticks_total) : 0.0;
+  {
+    // The decomposition this exists for. A centred reward R - b_global splits
+    // into (mean_c - b_global) + (R - mean_c). If the first term dominates,
+    // node perturbation is mostly learning "context A is a good place to be"
+    // rather than "that action was good IN this context" -- a common mode on
+    // the REWARD side, which is the one place this project's recurring
+    // arithmetic has never been looked for.
+    double gm = 0.0, gn = 0.0, within = 0.0, ewithin = 0.0;
+    for (uint32_t c = 0; c < kVLWords; ++c) {
+      if (!rw_n[c]) continue;
+      out.rw_mean[c] = rw_sum[c] / rw_n[c];
+      out.rw_ext[c] = rw_esum[c] / rw_n[c];
+      out.rw_n[c] = rw_n[c];
+      const double v = rw_sq[c] / rw_n[c] - out.rw_mean[c] * out.rw_mean[c];
+      const double ev = rw_esq[c] / rw_n[c] - out.rw_ext[c] * out.rw_ext[c];
+      within += (v > 0.0 ? v : 0.0) * rw_n[c];
+      ewithin += (ev > 0.0 ? ev : 0.0) * rw_n[c];
+      gm += rw_sum[c];
+      gn += rw_n[c];
+    }
+    if (gn > 0.0) {
+      gm /= gn;
+      out.rw_within = within / gn;
+      double between = 0.0;
+      for (uint32_t c = 0; c < kVLWords; ++c) {
+        if (!rw_n[c]) continue;
+        between += rw_n[c] * (out.rw_mean[c] - gm) * (out.rw_mean[c] - gm);
+      }
+      out.rw_between = between / gn;
+      const double tot_var = out.rw_between + out.rw_within;
+      out.rw_ext_share = tot_var > 0.0 ? (ewithin / gn) / tot_var : 0.0;
+    }
+  }
   {
     const aibaby::Network& net = s.brain.network();
     const int32_t vmod = s.dna.module_with_role(aibaby::ModuleRole::kVocal);
@@ -7792,6 +7850,173 @@ double ctx_mean_se(const std::vector<double>& v, double* se) {
 }
 
 }  // namespace
+
+// --- rpeprobe: is there a performance prediction error to be had? -----------
+//
+// DNA v51 works, and the same literature names what is still missing. Gadagkar,
+// Puzerey, Chen, Baird-Daniel, Farhang & Goldberg (Science 2016) recorded
+// dopamine in Area X during singing and found a PERFORMANCE PREDICTION ERROR:
+// suppressed after worse-than-predicted, activated after better-than-predicted.
+//
+// This creature is closer to that than it looks, and the difference is exact.
+// `Brain::update_drives` already computes `reward.effective = reward.total -
+// reward_baseline_`, so node perturbation is driven by a prediction error
+// already. **The baseline is ONE GLOBAL EMA.** Gadagkar's is per performance
+// context. That is the entire gap, and it is one array instead of one scalar.
+//
+// SO WHY MEASURE FIRST. Because a per-context baseline can only buy something
+// if the contexts DIFFER in mean reward, and `vocallearn`'s teaching protocol
+// already sets its praise criterion per word -- deliberately, because against
+// one global mean the creature is simply rewarded for saying the easier word.
+// If that has already balanced the delivered reward across contexts, there is
+// nothing left for a per-context baseline to remove and the mechanism is
+// refused before it is written. A gate whose only interesting outcome is a
+// refusal is the shape `shapeprobe` and `coderprobe` both had.
+//
+// THE DECOMPOSITION, which is the measurement. A centred reward splits as
+//
+//     R - b_global  =  (mean_c - b_global)  +  (R - mean_c)
+//
+// The first term is the same for every trial in a context and carries no
+// information about what the creature DID; the second is the part that can
+// teach an action. If the first dominates, node perturbation is largely
+// learning "context A is a good place to be" rather than "that action was good
+// in this context" -- **a common mode on the REWARD side**, which is this
+// project's recurring arithmetic in the one place nobody has looked for it.
+//
+// Read-only. Two arms, because the question is whether v51 itself changes the
+// picture: with the context-indexed bias off and on.
+struct RpeArm { const char* name; uint32_t slots; };
+constexpr RpeArm kRpeArms[] = {{"v51 off", 0}, {"v51 on", 2}};
+constexpr uint32_t kRpeArmCount = 2;
+
+bool run_rpeprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  aibaby::Dna dna;
+  if (dna.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) {
+    std::printf("  setup failed: the genome does not load\n");
+    return false;
+  }
+  const int32_t ctx_module = dna.module_with_role(aibaby::ModuleRole::kContext);
+  if (ctx_module < 0) {
+    std::printf("  this genome has no kContext module, so there are no contexts to\n"
+                "  decompose the reward by. Build one:\n\n"
+                "    python3 tools/genome_add_context.py dna/default.toml ctx.toml \\\n"
+                "        vocal out_w=0\n"
+                "    ./build/aibaby --dna ctx.toml --experiment rpeprobe\n");
+    return false;
+  }
+  constexpr uint32_t kReps = 3;
+  const size_t slots_off = offsetof(aibaby::DnaHeader, exploration) +
+                           offsetof(aibaby::DnaExploration, context_slots);
+  instrument("rpeprobe", dna.header().seed, ticks / kVLTrialTicks, "trials per arm");
+  std::printf("  question          node perturbation is already driven by a prediction\n"
+              "                    error -- reward.total minus a running baseline. That\n"
+              "                    baseline is ONE GLOBAL EMA where Gadagkar's is per\n"
+              "                    performance context. Is there anything to be had by\n"
+              "                    splitting it?\n");
+  std::printf("  the measurement   R - b splits into (mean_c - b) + (R - mean_c). The\n"
+              "                    first term is constant within a context and teaches\n"
+              "                    nothing about what the creature DID. `between` is its\n"
+              "                    share of the variance.\n");
+  std::printf("  the gate          a small `between` REFUSES the mechanism: with the two\n"
+              "                    contexts already balanced there is nothing for a\n"
+              "                    per-context baseline to remove.\n\n");
+
+  std::vector<double> betw[kRpeArmCount], gap[kRpeArmCount], ext[kRpeArmCount];
+  std::printf("  %-6s %-9s %-11s %-11s %-11s %-11s %s\n", "seed", "arm", "R | ctx0",
+              "R | ctx1", "between", "within", "ext share");
+  for (uint32_t r = 0; r < kReps; ++r) {
+    for (uint32_t a = 0; a < kRpeArmCount; ++a) {
+      std::vector<uint8_t> variant = blob;
+      const uint64_t seed = dna.header().seed + r * 7919ull;
+      std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+      std::memcpy(variant.data() + slots_off, &kRpeArms[a].slots, sizeof(uint32_t));
+      CtxDrive drive;
+      drive.module = ctx_module;
+      drive.slots = kVLWords;
+      drive.gain = 0.10;
+      Regime reg;
+      reg.praise = kPraiseValue;
+      reg.scold = kScoldValue;
+      const VLRun run = run_vocallearn_session(variant, ticks, kVLTaught, nullptr, reg,
+                                               kVLTgtHeard, &drive);
+      if (!run.ok || !run.rw_n[0] || !run.rw_n[1]) {
+        std::printf("  %-6u %-9s (inconclusive: %u scored, %u skipped)\n", r,
+                    kRpeArms[a].name, run.scored, run.skipped);
+        continue;
+      }
+      const double tot = run.rw_between + run.rw_within;
+      const double share = tot > 0.0 ? run.rw_between / tot : 0.0;
+      betw[a].push_back(share);
+      gap[a].push_back(run.rw_mean[0] - run.rw_mean[1]);
+      ext[a].push_back(run.rw_ext_share);
+      std::printf("  %-6u %-9s %-11.5f %-11.5f %-11.4f %-11.4f %.3f\n", r,
+                  kRpeArms[a].name, run.rw_mean[0], run.rw_mean[1], share,
+                  1.0 - share, run.rw_ext_share);
+    }
+  }
+
+  double m_b[kRpeArmCount], s_b[kRpeArmCount];
+  double m_g[kRpeArmCount], s_g[kRpeArmCount];
+  double m_e[kRpeArmCount], s_e[kRpeArmCount];
+  for (uint32_t a = 0; a < kRpeArmCount; ++a) {
+    if (betw[a].size() < 2) {
+      std::printf("\n  rpeprobe INCONCLUSIVE -- arm `%s` did not produce two usable\n"
+                  "  creatures.\n", kRpeArms[a].name);
+      return false;
+    }
+    m_b[a] = ctx_mean_se(betw[a], &s_b[a]);
+    m_g[a] = ctx_mean_se(gap[a], &s_g[a]);
+    m_e[a] = ctx_mean_se(ext[a], &s_e[a]);
+  }
+
+  std::printf("\n  %-9s %-20s %-20s %s\n", "arm", "between share", "R gap ctx0-ctx1",
+              "external share");
+  for (uint32_t a = 0; a < kRpeArmCount; ++a) {
+    char b[40], c[40], d[40];
+    std::snprintf(b, sizeof b, "%.4f +/- %.4f", m_b[a], s_b[a]);
+    std::snprintf(c, sizeof c, "%+.5f +/- %.5f", m_g[a], s_g[a]);
+    std::snprintf(d, sizeof d, "%.3f +/- %.3f", m_e[a], s_e[a]);
+    std::printf("  %-9s %-20s %-20s %s\n", kRpeArms[a].name, b, c, d);
+  }
+
+  // The bar is stated before the numbers are read, and it is the same one the
+  // rest of this project uses for a common mode: a term worth removing has to
+  // be a substantial share of what it rides on. 10% is the line, and it is the
+  // order at which the object-specific share of the weight change (~8%) was
+  // judged too small to be the mechanism.
+  const uint32_t kOn = 1;
+  const bool worth_it = m_b[kOn] > 0.10 && m_b[kOn] > 2.0 * s_b[kOn];
+
+  std::printf("\n  between-context share of the reward variance, v51 on: %.4f +/- %.4f\n"
+              "  the two contexts differ in mean reward by %+.5f\n"
+              "  the caregiver's own term is %.1f%% of the variance; the rest is drives\n",
+              m_b[kOn], s_b[kOn], m_g[kOn], 100.0 * m_e[kOn]);
+
+  if (!worth_it) {
+    std::printf("\n  DO NOT BUILD IT -- only %.1f%% of the reward variance is between\n"
+                "  contexts, so a per-context baseline has almost nothing to remove.\n"
+                "  `vocallearn` already sets its praise criterion per word, and this is\n"
+                "  that decision showing up where it matters: the delivered reward is\n"
+                "  already balanced across contexts, and Gadagkar's per-context\n"
+                "  prediction error would be subtracting a term this creature does not\n"
+                "  have.\n\n"
+                "  The %.1f%%%% that IS between contexts is a real but small asymmetry, and\n"
+                "  removing it is a tuning change rather than a mechanism.\n",
+                100.0 * m_b[kOn], 100.0 * m_b[kOn]);
+    return false;
+  }
+
+  std::printf("\n  BUILD IT -- %.1f%% of the reward variance is between contexts rather\n"
+              "  than within them, so that fraction of every weight change node\n"
+              "  perturbation makes is teaching the creature which context is a good\n"
+              "  place to be rather than which action was good in it. A per-context\n"
+              "  baseline removes exactly that term, and it is one array where the\n"
+              "  global one is a scalar.\n",
+              100.0 * m_b[kOn]);
+  return true;
+}
 
 // --- areax: does a context-indexed bias learn what the oracle delivered? ----
 //

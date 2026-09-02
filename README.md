@@ -7227,6 +7227,51 @@ is real and worth knowing: **a split table is worse at an unconditional lesson**
 which is the price of the split and the reason `context_slots` should stay 0 in
 a genome with nothing to condition on.
 
+### `rpeprobe` — Gadagkar's mechanism, priced and refused
+
+DNA v51 works, and the same literature names what is still missing. Gadagkar and
+colleagues (*Science*, 2016) recorded dopamine in Area X during singing and found
+a **performance prediction error**: suppressed after worse-than-predicted,
+activated after better-than-predicted.
+
+This creature is closer to that than it looks, and the difference is exact.
+`Brain::update_drives` already computes `reward.effective = reward.total -
+reward_baseline_`, so node perturbation is driven by a prediction error already.
+**The baseline is one global EMA.** Gadagkar's is per performance context. That
+is the whole gap — one array where this has a scalar.
+
+Which is exactly why it wanted measuring first. A per-context baseline can only
+buy something if the contexts differ in mean reward, and `vocallearn` already
+sets its praise criterion per word — deliberately, because against one global
+mean the creature is simply rewarded for saying the easier word.
+
+**The decomposition**, on `areax`'s own protocol, read-only, 3 seed families:
+
+    R - b_global  =  (mean_c - b_global)  +  (R - mean_c)
+
+| arm | between share | R gap ctx0-ctx1 | external share |
+|---|---|---|---|
+| v51 off | 0.0000 +/- 0.0000 | -0.00008 +/- 0.00019 | 0.995 |
+| v51 on | 0.0000 +/- 0.0000 | -0.00015 +/- 0.00006 | 0.995 |
+
+**DO NOT BUILD IT.** Effectively none of the reward variance is between
+contexts, against a bar of 10% set before the run — the order at which this
+project already judged the object-specific share of a weight change (~8%) too
+small to be the mechanism. The delivered reward is already balanced across
+contexts, so a per-context prediction error would be subtracting a term this
+creature does not have. **The protocol's own per-word criterion anticipated the
+mechanism**, which is a pleasant way to lose a hypothesis.
+
+**And a number nobody had measured: the caregiver's term is 99.5% of the reward
+variance.** The drives contribute almost none of it. That is not a contradiction
+of the standing finding that weights still move 76% as much with the caregiver
+SILENT — that was a different condition, and the two together say something
+sharper than either alone. The drives supply a large and nearly *constant*
+reward, so the baseline removes almost all of it, and what reaches node
+perturbation in a teaching session is overwhelmingly praise and scold. Any
+future claim that the drives are drowning the teaching signal has to be made
+against this number.
+
 ### What the literature says to build next, and why it is the cheap option
 
 `ctxbias` split the problem cleanly. **Delivery works**: a bias arriving off the
