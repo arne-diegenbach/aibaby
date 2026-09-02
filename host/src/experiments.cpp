@@ -181,6 +181,13 @@ const Spec kSpecs[] = {
      "derived: vocallearn's own minimum. Is the policy gradient's conditional\n"
      "  arm conditional, or a creature sitting between two alternating targets?\n"
      "  Controls `swap` against a target with MATCHED MARGINALS"},
+    {"ctxsrc", 600000, Expect::kOpen, Tier::kLong,
+     "derived: vocallearn's 2800-tick trial, and it needs at least 16 balanced\n"
+     "  trials for a held-out split. The last piece of the Area X architecture:\n"
+     "  areax has the HOST write the context slice, and this asks whether the\n"
+     "  creature can derive it from what it heard AT THE MOMENT REWARD LANDS.\n"
+     "  No learning. Bar is 0.75, derived from how a wrong index writes the\n"
+     "  other context's table"},
     {"rpeprobe", 3400000, Expect::kOpen, Tier::kTeach,
      "derived: areax's own session, whose reward stream it decomposes. Prices\n"
      "  Gadagkar's per-context performance prediction error BEFORE building it:\n"
@@ -426,6 +433,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "ctxbias") ok = run_ctxbias(dna_blob, ticks, verbose);
   else if (name == "areax") ok = run_areax(dna_blob, ticks, verbose);
   else if (name == "rpeprobe") ok = run_rpeprobe(dna_blob, ticks, verbose);
+  else if (name == "ctxsrc") ok = run_ctxsrc(dna_blob, ticks, verbose);
   else if (name == "pgprobe") ok = run_pgprobe(dna_blob, ticks, verbose);
   else if (name == "g2cond") ok = run_g2cond(dna_blob, ticks, verbose);
   else if (name == "coderprobe") ok = run_coderprobe(dna_blob, ticks, verbose);

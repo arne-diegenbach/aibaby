@@ -7851,6 +7851,245 @@ double ctx_mean_se(const std::vector<double>& v, double* se) {
 
 }  // namespace
 
+// --- ctxsrc: can the creature supply its OWN context index? -----------------
+//
+// This is the last piece of the Fee & Goldberg architecture and it is now the
+// whole thing. DNA v51 works -- a context-indexed bias takes the voice to 48%
+// of the oracle ceiling -- but `areax` WRITES THE CONTEXT SLICE FROM THE WORD
+// LABEL. The host hands it over. For naming, the creature has to derive it from
+// what it heard.
+//
+// The information exists: `coderprobe` reads one-of-eight off the auditory
+// module at 0.981 against a 1.000 signal ceiling. **But that is measured while
+// the word is playing**, and v51 needs the index at the moment reward lands.
+// `vocab` already noted the shape of the problem from the other side: the ear
+// reads 0.47-0.59 in the window after a word stops, because the sound has
+// stopped. A context that has decayed by the time it is needed is not a context.
+//
+// SO THE QUESTION IS TIMING, NOT LEGIBILITY, and it is answerable with no
+// learning and no new mechanism. Decode the word from `auditory` and from
+// `central` in bins across vocallearn's OWN trial, and look at the bins where
+// reward is actually delivered.
+//
+// Written here rather than beside the other probes so that it uses vocallearn's
+// timing constants directly instead of copying them. Two copies of 900 and 2800
+// that have to agree is the shared-constant bug class this project has already
+// swept once, and a probe whose windows silently drift out of step with the
+// protocol it is about would be worse than no probe.
+//
+// `central` is the interesting column, not `auditory`. `audprobe` measured that
+// B2 classifies the word within 50 ms while central needs 1200 ms to reach
+// 0.940 -- central is slow because it INTEGRATES, and integration is exactly
+// what a context needs to survive the silence. The ear is fast and forgets.
+//
+// THE BAR IS DERIVED, and stated before the run. With two contexts an index
+// that is right with probability p writes the OTHER context's table 1-p of the
+// time, so the conditional signal scales as (2p - 1). To keep half of areax's
+// 112.9 Hz needs 2p - 1 >= 0.5, i.e. **p >= 0.75 in the reward window**. Below
+// that, a derived index cannot carry v51 and what is missing is not a better
+// readout but somewhere to HOLD the context -- which this creature does not
+// have anywhere ([[no module holds a kick for 10 ms]]).
+constexpr uint64_t kCsBins[][2] = {
+    {0, 200},                              // the word arrives
+    {200, kVLWordTicks},                   // the rest of it
+    {kVLWordTicks, kVLWordTicks + 400},    // reward window, first half
+    {kVLWordTicks + 400, kVLRewardTo},     // reward window, second half
+    {kVLRewardTo, kVLTrialTicks},          // after reward
+};
+constexpr uint32_t kCsBinCount = sizeof(kCsBins) / sizeof(kCsBins[0]);
+constexpr const char* kCsBinName[kCsBinCount] = {
+    "0-200 word", "200-900 word", "900-1300 REWARD", "1300-1700 REWARD", "1700-2800 after"};
+// The share of areax's effect a p-accurate index would retain, and the p that
+// keeps half of it.
+constexpr double kCsBar = 0.75;
+
+struct CtxSrc {
+  double aud[kCsBinCount] = {};
+  double cen[kCsBinCount] = {};
+  double aud_shuf = 0.0, cen_shuf = 0.0;
+  uint32_t trials = 0;
+  bool ok = false;
+};
+
+CtxSrc run_ctxsrc_session(const std::vector<uint8_t>& blob, uint64_t ticks) {
+  CtxSrc out;
+  std::string error;
+  Session s;
+  if (!s.init(blob, error)) return out;
+  const aibaby::DnaAudio& acfg = s.dna.header().audio;
+  Ear ear;
+  if (!ear.configure(acfg, error)) return out;
+  const int32_t aud = s.dna.module_with_role(aibaby::ModuleRole::kAuditory);
+  const int32_t cen = s.dna.module_with_role(aibaby::ModuleRole::kAssociation);
+  if (aud < 0 || cen < 0) return out;
+
+  const double dt = double(s.dna.header().sim.dt_ms);
+  const uint32_t spt = uint32_t(double(acfg.sample_rate) * dt / 1000.0 + 0.5);
+  VowelSource voice(acfg.sample_rate);
+  std::vector<float> pcm(spt);
+  const aibaby::ModuleState& ms_a = s.brain.network().module(uint32_t(aud));
+  const aibaby::ModuleState& ms_c = s.brain.network().module(uint32_t(cen));
+  const uint32_t wa = ms_a.count, wc = ms_c.count;
+  const uint64_t n_trials = ticks / kVLTrialTicks;
+
+  std::vector<std::vector<double>> xa[kCsBinCount], xc[kCsBinCount];
+  std::vector<int> y;
+  aibaby::Rng rng;
+  rng.seed(s.dna.header().seed ^ 0xC7530u);
+  // Balanced but SHUFFLED, never alternating -- audprobe's note applies here
+  // unchanged: strict alternation makes the label equal to trial parity, and
+  // anything in the creature with a period of two trials would carry the label
+  // without a word ever being heard.
+  std::vector<int> order(size_t(n_trials), 0);
+  for (size_t i = 0; i < order.size(); ++i) order[i] = int(i % 2);
+  for (size_t i = order.size(); i > 1; --i) std::swap(order[i - 1], order[rng.next() % i]);
+
+  for (uint64_t k = 0; k < n_trials; ++k) {
+    const int word = order[size_t(k)];
+    std::vector<std::vector<double>> ba(kCsBinCount, std::vector<double>(wa, 0.0));
+    std::vector<std::vector<double>> bc(kCsBinCount, std::vector<double>(wc, 0.0));
+    bool slept = false;
+    for (uint64_t t = 0; t < kVLTrialTicks; ++t) {
+      const bool sounding = t < kVLWordTicks;
+      const Word& w = kWords[word];
+      voice.render(sounding ? w.f0 : 0.0f, w.f1, w.f2, sounding ? 0.5f : 0.0f,
+                   pcm.data(), spt);
+      ear.tick(s.brain, pcm.data(), spt);
+      s.brain.step();
+      if (s.brain.asleep()) slept = true;
+      uint32_t bin = kCsBinCount;
+      for (uint32_t b = 0; b < kCsBinCount; ++b) {
+        if (t >= kCsBins[b][0] && t < kCsBins[b][1]) { bin = b; break; }
+      }
+      if (bin >= kCsBinCount) continue;
+      const aibaby::Network& net = s.brain.network();
+      for (uint32_t i = 0; i < net.spike_count(); ++i) {
+        const uint32_t idx = net.spikes()[i];
+        if (idx >= ms_a.begin && idx < ms_a.begin + wa) ba[bin][idx - ms_a.begin] += 1.0;
+        else if (idx >= ms_c.begin && idx < ms_c.begin + wc) bc[bin][idx - ms_c.begin] += 1.0;
+      }
+    }
+    if (slept) continue;
+    for (uint32_t b = 0; b < kCsBinCount; ++b) { xa[b].push_back(ba[b]); xc[b].push_back(bc[b]); }
+    y.push_back(word);
+  }
+
+  out.trials = uint32_t(y.size());
+  if (out.trials < 16) return out;
+  const size_t train = out.trials / 2;
+  std::vector<int> shuf = y;
+  for (size_t i = shuf.size(); i > 1; --i) std::swap(shuf[i - 1], shuf[rng.next() % i]);
+  for (uint32_t b = 0; b < kCsBinCount; ++b) {
+    out.aud[b] = holdout_accuracy(xa[b], y, train);
+    out.cen[b] = holdout_accuracy(xc[b], y, train);
+  }
+  // The shuffled control is taken in a REWARD bin, not in the word bin: a
+  // control that only proves the readout is honest where the signal is loudest
+  // proves it in the wrong place.
+  out.aud_shuf = holdout_accuracy(xa[2], shuf, train);
+  out.cen_shuf = holdout_accuracy(xc[2], shuf, train);
+  out.ok = true;
+  return out;
+}
+
+bool run_ctxsrc(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  aibaby::Dna dna;
+  if (dna.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) {
+    std::printf("  setup failed: the genome does not load\n");
+    return false;
+  }
+  constexpr uint32_t kReps = 3;
+  instrument("ctxsrc", dna.header().seed ^ 0xC7530u, ticks / kVLTrialTicks,
+             "trials per creature");
+  std::printf("  question          `areax` has the HOST write the context slice from the\n"
+              "                    word label. Can the creature derive it from what it\n"
+              "                    heard, at the moment reward actually lands?\n");
+  std::printf("  the bar           %.2f. With two contexts an index right with\n"
+              "                    probability p writes the OTHER table 1-p of the time,\n"
+              "                    so the signal scales as (2p-1); keeping half of\n"
+              "                    areax's 112.9 Hz needs p >= 0.75 IN THE REWARD BINS.\n",
+              kCsBar);
+  std::printf("  chance            0.500 -- trials are balanced and shuffled\n\n");
+
+  double sa[kCsBinCount] = {}, sc[kCsBinCount] = {};
+  double sas = 0.0, scs = 0.0;
+  uint32_t valid = 0;
+  std::printf("  %-6s %-40s %s\n", "seed", "auditory, by bin", "central, by bin");
+  for (uint32_t r = 0; r < kReps; ++r) {
+    std::vector<uint8_t> variant = blob;
+    const uint64_t seed = dna.header().seed + r * 7919ull;
+    std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+    const CtxSrc p = run_ctxsrc_session(variant, ticks);
+    if (!p.ok) { std::printf("  %-6u (inconclusive: %u trials)\n", r, p.trials); continue; }
+    ++valid;
+    char as[64] = {0}, cs[64] = {0};
+    for (uint32_t b = 0; b < kCsBinCount; ++b) {
+      sa[b] += p.aud[b]; sc[b] += p.cen[b];
+      char t[16];
+      std::snprintf(t, sizeof t, "%.2f ", p.aud[b]); std::strcat(as, t);
+      std::snprintf(t, sizeof t, "%.2f ", p.cen[b]); std::strcat(cs, t);
+    }
+    sas += p.aud_shuf; scs += p.cen_shuf;
+    std::printf("  %-6u %-40s %s\n", r, as, cs);
+  }
+  if (valid < 2) {
+    std::printf("\n  ctxsrc INCONCLUSIVE -- %u of %u creatures usable.\n", valid, kReps);
+    return false;
+  }
+  const double n = double(valid);
+  std::printf("\n  %-18s %10s %10s\n", "bin", "auditory", "central");
+  for (uint32_t b = 0; b < kCsBinCount; ++b) {
+    std::printf("  %-18s %10.3f %10.3f\n", kCsBinName[b], sa[b] / n, sc[b] / n);
+  }
+  std::printf("\n  shuffled control in a REWARD bin: auditory %.3f, central %.3f\n",
+              sas / n, scs / n);
+
+  if (sas / n > 0.62 || scs / n > 0.62) {
+    std::printf("\n  CONTROL FAILED -- a shuffled readout scores above chance in the\n"
+                "  reward window, so nothing else here is worth reading.\n");
+    return false;
+  }
+
+  // The reward bins are 2 and 3, and BOTH have to clear the bar: reward is
+  // delivered across the whole window, and an index that is right for the first
+  // half and wrong for the second is writing to two different tables inside one
+  // trial.
+  const double a_rw = std::min(sa[2], sa[3]) / n;
+  const double c_rw = std::min(sc[2], sc[3]) / n;
+  const double best = std::max(a_rw, c_rw);
+  std::printf("  worst reward bin:  auditory %.3f, central %.3f (bar %.2f)\n",
+              a_rw, c_rw, kCsBar);
+
+  if (best >= kCsBar) {
+    std::printf("\n  THE CREATURE CAN SUPPLY ITS OWN INDEX -- %s carries the word at\n"
+                "  %.3f through the whole reward window, above the %.2f a two-context\n"
+                "  index needs to keep half of areax's effect. Wire a kContext module\n"
+                "  from it and re-run `areax` against its own 112.9 Hz.\n\n"
+                "  This is a CEILING on the index, not a mechanism: a held-out linear\n"
+                "  readout is not something the creature computes, and the projection\n"
+                "  that would have to learn this is the next question rather than a\n"
+                "  settled one.\n",
+                c_rw >= a_rw ? "central" : "auditory", best, kCsBar);
+    return true;
+  }
+
+  std::printf("\n  IT CANNOT, AND THE REASON IS TIMING RATHER THAN LEGIBILITY.\n"
+              "  The word is legible while it plays -- %.3f in auditory in the first\n"
+              "  bin -- and by the reward window the best either module manages is\n"
+              "  %.3f, against the %.2f a two-context index needs.\n\n"
+              "  So what is missing is not a better readout of the ear. It is somewhere\n"
+              "  to HOLD the context across the silence between hearing a word and\n"
+              "  being rewarded for answering it, and this creature has nowhere: no\n"
+              "  module here holds a kick for 10 ms, and an utterance is a held vowel\n"
+              "  rather than a trajectory.\n\n"
+              "  That is a sharper statement of what stands between v51 and naming than\n"
+              "  anything the conditioning work produced, and it names a mechanism\n"
+              "  class rather than a tuning knob: persistent activity.\n",
+              sa[0] / n, best, kCsBar);
+  return false;
+}
+
 // --- rpeprobe: is there a performance prediction error to be had? -----------
 //
 // DNA v51 works, and the same literature names what is still missing. Gadagkar,

@@ -7272,6 +7272,62 @@ perturbation in a teaching session is overwhelmingly praise and scold. Any
 future claim that the drives are drowning the teaching signal has to be made
 against this number.
 
+### `ctxsrc` — the last piece, and it is not a readout problem
+
+`areax` has the **host** write the context slice from the word label. That is an
+oracle, and it is the honest limit on v51's result. For naming, the creature has
+to derive the index from what it heard.
+
+The information exists — `coderprobe` reads one-of-eight off the auditory module
+at 0.981 against a 1.000 ceiling. But that is measured *while the word is
+playing*, and v51 needs the index at the moment reward lands, which in
+`vocallearn`'s trial is ticks 900-1700: the 800 ms **after** the word stops.
+So the question is timing, not legibility, and it needs no learning and no new
+mechanism to answer. Decode the word from each module in bins across
+`vocallearn`'s own trial — written beside those constants rather than copying
+them, because two copies of 900 and 2800 that have to agree is the
+shared-constant bug class this project has already swept once.
+
+**The bar is derived and was stated before the run.** With two contexts, an
+index right with probability `p` writes the *other* context's table `1-p` of the
+time, so the conditional signal scales as `(2p - 1)`. Keeping half of `areax`'s
+112.9 Hz needs `p >= 0.75` in the reward bins.
+
+| bin | auditory | central |
+|---|---|---|
+| 0-200 word | **1.000** | 0.704 |
+| 200-900 word | **1.000** | 0.978 |
+| 900-1300 **reward** | 0.807 | 0.551 |
+| 1300-1700 **reward** | **0.533** | 0.480 |
+| 1700-2800 after | 0.498 | 0.486 |
+
+Shuffled control, taken in a *reward* bin rather than where the signal is
+loudest: 0.474 both.
+
+> **The word is at ceiling while it plays and at chance by the second half of
+> the reward window.** Best across the whole window is 0.533 against a bar of
+> 0.75. And this is a *held-out linear readout* — an upper bound on any index
+> the creature could compute — so a refusal here is not "the decoder was weak".
+
+**`central` does not hold it either, which refutes the obvious hypothesis.**
+`audprobe` established that B2 classifies the word within 50 ms while central
+needs 1200 ms to reach 0.940 — central is slow because it *integrates*, and
+integration looked like exactly what a context needs to survive silence. It
+reaches 0.978 during the word and then collapses to 0.551 and 0.480, if anything
+faster than the ear. **Central integrates up; it does not hold.**
+
+**So what stands between v51 and naming is not a better readout of the ear. It
+is somewhere to hold the context across the silence between hearing a word and
+being rewarded for answering it** — and this creature has nowhere. No module
+here holds a kick for 10 ms (`seqprobe`: r 0.92 -> 0.03 at every recurrent
+weight up to 8x), and an utterance is a held vowel rather than a trajectory.
+
+That names a mechanism class rather than a tuning knob: **persistent activity**.
+It is a sharper statement of the obstruction than anything the conditioning work
+produced, because it is not about credit assignment, delivery, expressiveness or
+reward composition — all of which are now measured and none of which is the
+blocker.
+
 ### What the literature says to build next, and why it is the cheap option
 
 `ctxbias` split the problem cleanly. **Delivery works**: a bias arriving off the
