@@ -8027,6 +8027,13 @@ struct CtxSrc {
   // there for the latched index `partprobe` prices, where the index is formed
   // while the word plays and held afterwards.
   std::vector<std::vector<double>> feat_aud[2];  // auditory spike counts, word
+  // ...and the same auditory code accumulated over a window the CREATURE found
+  // for itself, rather than one the host wrote from the trial structure. The
+  // gate is DNA v53's: the larynx below its own setpoint, which is M1d's
+  // listening reflex used as a clock. One row per trial, normalised by gated
+  // ticks because that window's length varies where the host's bins do not.
+  std::vector<std::vector<double>> feat_gate;
+  double gate_ticks_mean = 0.0;  // how much of a trial the creature called "a word"
   std::vector<int> labels;
   size_t train_split = 0;
   double aud_shuf = 0.0, cen_shuf = 0.0, voc_shuf = 0.0;
@@ -8067,6 +8074,10 @@ CtxSrc run_ctxsrc_session(const std::vector<uint8_t>& blob, uint64_t ticks) {
   std::vector<std::vector<double>> xv[kCsBinCount], xvx[kCsBinCount];
   std::vector<std::vector<double>> xg;
   std::vector<std::vector<double>> xgb[kCsBinCount];
+  std::vector<std::vector<double>> xag;   // creature-gated auditory, one per trial
+  double gate_ticks = 0.0;
+  // DNA v53's gate, read from the genome exactly as the kernel reads it.
+  const double voc_target = double(s.dna.module(uint32_t(voc)).target_rate_hz);
   std::vector<int> y;
   aibaby::Rng rng;
   rng.seed(s.dna.header().seed ^ 0xC7530u);
@@ -8089,6 +8100,8 @@ CtxSrc run_ctxsrc_session(const std::vector<uint8_t>& blob, uint64_t ticks) {
     uint32_t gn = 0;
     double gbin[kCsBinCount][aibaby::kVocalGroups] = {};
     uint32_t gbn[kCsBinCount] = {};
+    std::vector<double> bg(wa, 0.0);   // the creature-gated auditory vector
+    uint32_t bgn = 0;                  // ticks the creature spent listening
     bool slept = false;
     for (uint64_t t = 0; t < kVLTrialTicks; ++t) {
       const bool sounding = t < kVLWordTicks;
@@ -8112,6 +8125,19 @@ CtxSrc run_ctxsrc_session(const std::vector<uint8_t>& blob, uint64_t ticks) {
         for (uint32_t q = 0; q < aibaby::kVocalGroups; ++q) gbin[bin][q] += double(g[q]);
         ++gbn[bin];
       }
+      // The creature's OWN window, gated exactly as DNA v53 gates it, and
+      // running over the whole trial rather than only inside the host's bins --
+      // the creature has no bins.
+      {
+        const aibaby::Network& net = s.brain.network();
+        if (net.module(uint32_t(voc)).mean_rate < voc_target) {
+          for (uint32_t i = 0; i < net.spike_count(); ++i) {
+            const uint32_t idx = net.spikes()[i];
+            if (idx >= ms_a.begin && idx < ms_a.begin + wa) bg[idx - ms_a.begin] += 1.0;
+          }
+          ++bgn;
+        }
+      }
       if (bin >= kCsBinCount) continue;
       const aibaby::Network& net = s.brain.network();
       for (uint32_t i = 0; i < net.spike_count(); ++i) {
@@ -8122,6 +8148,17 @@ CtxSrc run_ctxsrc_session(const std::vector<uint8_t>& blob, uint64_t ticks) {
       }
     }
     if (slept) continue;
+    {
+      // Normalised to a per-tick mean: the gated window's length varies from
+      // trial to trial, and an unnormalised count would let the classifier read
+      // HOW LONG the creature listened instead of WHAT it heard.
+      std::vector<double> row(wa, 0.0);
+      if (bgn > 0) {
+        for (uint32_t n = 0; n < wa; ++n) row[n] = bg[n] / double(bgn);
+      }
+      xag.push_back(row);
+      gate_ticks += double(bgn);
+    }
     for (uint32_t b = 0; b < kCsBinCount; ++b) {
       xa[b].push_back(ba[b]);
       xc[b].push_back(bc[b]);
@@ -8179,6 +8216,8 @@ CtxSrc run_ctxsrc_session(const std::vector<uint8_t>& blob, uint64_t ticks) {
     out.feat_neu[r] = xvx[2 + r];
     out.feat_aud[r] = xa[r];  // bins 0 and 1 are the word: 0-200 and 200-900
   }
+  out.feat_gate = xag;
+  out.gate_ticks_mean = y.empty() ? 0.0 : gate_ticks / double(y.size());
   out.labels = y;
   out.train_split = train;
   out.ok = true;
@@ -8604,7 +8643,9 @@ bool run_rpeprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
 // unsupervised mechanism can approach.
 constexpr double kPpBuildBar = 0.65;
 constexpr double kPpSupervisedRef = 0.740;  // ctxsrc, 9 creatures
-constexpr double kPpCtxselfP = 0.540;       // ctxself, fresh family
+constexpr double kPpCtxselfP = 0.540;
+// DNA v53's index accuracy in a taught creature, from `ctxself` on 9 creatures.
+constexpr double kPpV53Index = 0.643;       // ctxself, fresh family
 
 bool run_partprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
   (void)verbose;
@@ -8633,18 +8674,20 @@ bool run_partprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
   // reward is delivered across the whole window, and an index right for the
   // first half and wrong for the second writes two different tables in one
   // trial. `ctxsrc` scores its own verdict the same way.
-  enum { kGrp = 0, kNeu = 1, kAud = 2, kSpaces = 3 };
-  enum { kSup = 0, kKmZ = 1, kOnl = 2, kCon = 3, kFix = 4, kRules = 5 };
+  enum { kGrp = 0, kNeu = 1, kAud = 2, kGate = 3, kSpaces = 4 };
+  enum { kSup = 0, kKmZ = 1, kOnl = 2, kCon = 3, kKern = 4, kFix = 5, kRules = 6 };
   static const char* kSpaceName[kSpaces] = {"articulator groups", "off-axis neurons",
-                                            "EAR, during word"};
+                                            "EAR, host window", "EAR, self window"};
   static const char* kRuleName[kRules] = {"supervised", "batch k-means", "online",
-                                          "online+conscience", "fixed cut"};
+                                          "online+conscience", "AS THE KERNEL RUNS IT",
+                                          "fixed cut"};
   std::vector<double> acc[kSpaces][kRules];
   std::vector<double> shuf[kSpaces], busy[kSpaces], hit[kSpaces];
 
-  std::printf("  %-6s %-18s %-11s %-11s %-11s %-13s %s\n", "seed", "features",
-              "supervised", "batch km", "online", "online+consc", "fixed cut");
+  std::printf("  %-6s %-18s %-9s %-9s %-9s %-11s %-9s %s\n", "seed", "features",
+              "supervised", "batch km", "online", "onl+consc", "AS KERNEL", "fixed");
   uint32_t valid = 0;
+  double gate_sum = 0.0;
   for (uint32_t r = 0; r < kReps; ++r) {
     std::vector<uint8_t> variant = blob;
     const uint64_t seed = dna.header().seed + r * 7919ull;
@@ -8655,6 +8698,7 @@ bool run_partprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
       continue;
     }
     ++valid;
+    gate_sum += p.gate_ticks_mean;
     // A shuffled label vector, drawn once per creature and shared by every
     // column, so the control is the same control everywhere.
     aibaby::Rng rng;
@@ -8663,8 +8707,16 @@ bool run_partprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
     for (size_t i = sh.size(); i > 1; --i) std::swap(sh[i - 1], sh[rng.next() % i]);
 
     for (uint32_t sp = 0; sp < kSpaces; ++sp) {
+      // The creature-gated space has one row per trial rather than one per bin,
+      // so the same rows are scored twice and the worse kept, exactly as every
+      // other space is scored on both of its bins. Same trials, same labels,
+      // same split throughout; only the WINDOW differs.
+      std::vector<std::vector<double>> gate_pair[2] = {p.feat_gate, p.feat_gate};
       const std::vector<std::vector<double>>* f =
-          sp == kGrp ? p.feat_grp : (sp == kNeu ? p.feat_neu : p.feat_aud);
+          sp == kGrp   ? p.feat_grp
+          : sp == kNeu ? p.feat_neu
+          : sp == kAud ? p.feat_aud
+                       : gate_pair;
       double worst[kRules];
       for (uint32_t k = 0; k < kRules; ++k) worst[k] = 2.0;
       double worst_shuf = 2.0;
@@ -8689,11 +8741,20 @@ bool run_partprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
           bz_sum += bzc;
           if (c >= 0.9) con_hit += 1.0;
         }
+        // The KERNEL-FAITHFUL variant: everything DNA v53 actually does, which
+        // is not quite what the column beside it measures. No standardisation
+        // (the kernel compares raw rates) and prototypes starting at zero (the
+        // kernel has no data rows to seed from). Priced separately because
+        // "priced one rule, built another" is how the last three of these went.
+        double bzk = 1.0;
+        const double kern = online_competitive_accuracy(
+            f[b], p.labels, p.train_split, false, &bzk, seed ^ 0xD00Du, true, true);
         const double v[kRules] = {
             holdout_accuracy(f[b], p.labels, p.train_split),
             kmeans_accuracy(f[b], p.labels, p.train_split, seed ^ 0xB1u, true),
             onl_sum / double(kDraws),
             con_sum / double(kDraws),
+            kern,
             fixedcut_accuracy(f[b], p.labels, p.train_split)};
         const double hit = con_hit / double(kDraws);
         if (hit < worst_hit) worst_hit = hit;
@@ -8708,9 +8769,9 @@ bool run_partprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
       shuf[sp].push_back(worst_shuf);
       busy[sp].push_back(worst_busy);
       hit[sp].push_back(worst_hit);
-      std::printf("  %-6u %-18s %-11.3f %-11.3f %-11.3f %-13.3f %.3f\n", r,
+      std::printf("  %-6u %-18s %-9.3f %-9.3f %-9.3f %-11.3f %-9.3f %.3f\n", r,
                   kSpaceName[sp], worst[kSup], worst[kKmZ], worst[kOnl],
-                  worst[kCon], worst[kFix]);
+                  worst[kCon], worst[kKern], worst[kFix]);
     }
   }
   if (valid < 3) {
@@ -8718,6 +8779,7 @@ bool run_partprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
     return false;
   }
 
+  const double gate_mean = valid ? gate_sum / double(valid) : 0.0;
   double m[kSpaces][kRules], se[kSpaces][kRules], ms[kSpaces], ss[kSpaces];
   double mb[kSpaces], sb[kSpaces], mh[kSpaces], sh2[kSpaces];
   for (uint32_t sp = 0; sp < kSpaces; ++sp) {
@@ -8727,15 +8789,16 @@ bool run_partprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
     mh[sp] = ctx_mean_se(hit[sp], &sh2[sp]);
   }
 
-  std::printf("\n  %-18s %-15s %-15s %-15s %-15s %s\n", "features", "supervised",
-              "batch k-means", "online", "online+conscience", "fixed cut");
+  std::printf("\n  %-18s %-14s %-14s %-14s %-14s %-14s %s\n", "features",
+              "supervised", "batch k-means", "online", "onl+conscience",
+              "AS KERNEL RUNS", "fixed cut");
   for (uint32_t sp = 0; sp < kSpaces; ++sp) {
     char c[kRules][32];
     for (uint32_t k = 0; k < kRules; ++k) {
       std::snprintf(c[k], sizeof c[k], "%.3f +/-%.3f", m[sp][k], se[sp][k]);
     }
-    std::printf("  %-18s %-15s %-15s %-15s %-15s %s\n", kSpaceName[sp], c[kSup],
-                c[kKmZ], c[kOnl], c[kCon], c[kFix]);
+    std::printf("  %-18s %-14s %-14s %-14s %-14s %-14s %s\n", kSpaceName[sp],
+                c[kSup], c[kKmZ], c[kOnl], c[kCon], c[kKern], c[kFix]);
   }
   std::printf("\n  ONLINE+CONSCIENCE over 16 random inits per creature:\n"
               "    share of inits that essentially solve it (>=0.90)\n"
@@ -8743,10 +8806,14 @@ bool run_partprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
               "    busiest cluster, mean over inits (1.000 is a dead unit)\n"
               "      groups %.3f, neurons %.3f, ear %.3f\n",
               mh[kGrp], mh[kNeu], mh[kAud], sh2[kAud], mb[kGrp], mb[kNeu], mb[kAud]);
-  std::printf("\n  shuffled control (k-means, z): groups %.3f, neurons %.3f, ear %.3f\n",
-              ms[kGrp], ms[kNeu], ms[kAud]);
+  std::printf("\n  shuffled control (k-means, z): groups %.3f, neurons %.3f,\n"
+              "                                ear-host %.3f, ear-self %.3f\n",
+              ms[kGrp], ms[kNeu], ms[kAud], ms[kGate]);
+  std::printf("  the creature called %.0f of %llu ticks a word (host window: %llu)\n",
+              gate_mean, (unsigned long long)kVLTrialTicks,
+              (unsigned long long)kVLWordTicks);
 
-  if (ms[kGrp] > 0.62 || ms[kNeu] > 0.62 || ms[kAud] > 0.62) {
+  if (ms[kGrp] > 0.62 || ms[kNeu] > 0.62 || ms[kAud] > 0.62 || ms[kGate] > 0.62) {
     std::printf("\n  CONTROL FAILED -- an unsupervised partition scores above chance\n"
                 "  against SHUFFLED labels, so the assignment step is finding structure\n"
                 "  that is not the word and nothing above is worth reading.\n");
@@ -8818,6 +8885,35 @@ bool run_partprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
               "                           learned, which is the opposite of what the\n"
               "                           motor-state rows found.\n",
               aud_best, aud_se, aud_batch, m[kAud][kSup], m[kAud][kFix]);
+
+  // THE ISOLATION THIS PROBE WAS EXTENDED FOR. `ctxself` measured DNA v53's
+  // index at 0.643 where this probe priced the ear at 1.000, and TWO things
+  // differ between those numbers: the WINDOW (the host's tick bins against the
+  // creature's own listening gate) and the SETTING (a read-only probe against a
+  // taught creature). Two variables at once is exactly `ctxsrc`'s third
+  // instrument error, so the window is scored on its own here -- same trials,
+  // same labels, same split, same rules, only the window changed.
+  std::printf("\n  ISOLATING THE WINDOW\n"
+              "    ear, HOST window, conscience   %.3f +/- %.3f\n"
+              "    ear, SELF window, conscience   %.3f +/- %.3f\n"
+              "    what the window costs          %+.3f\n"
+              "    v53 in the creature (ctxself)  %.3f\n",
+              m[kAud][kCon], se[kAud][kCon], m[kGate][kCon], se[kGate][kCon],
+              m[kGate][kCon] - m[kAud][kCon], kPpV53Index);
+  std::printf("    ...and AS THE KERNEL RUNS IT, on the creature's own window:\n"
+              "      raw features, zero init      %.3f +/- %.3f\n"
+              "      what those two cost          %+.3f against the column above\n",
+              m[kGate][kKern], se[kGate][kKern], m[kGate][kKern] - m[kGate][kCon]);
+  if (m[kGate][kCon] < m[kAud][kCon] - 0.10) {
+    std::printf("    -> THE WINDOW IS THE GAP. The rule is fine and the creature's\n"
+                "       listening gate is what loses it, so the next work is the\n"
+                "       BOUNDARY and not the partition.\n");
+  } else {
+    std::printf("    -> THE WINDOW IS NOT THE GAP: the creature's own gate scores\n"
+                "       close to the host's. What separates this from v53's %.3f is\n"
+                "       the taught setting or the kernel, not the window.\n",
+                kPpV53Index);
+  }
 
   // The ear is reported first when it clears, because it is the larger result:
   // it says the index can be formed at all, where the motor-state rows only say

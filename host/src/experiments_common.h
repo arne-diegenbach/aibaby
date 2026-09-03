@@ -609,7 +609,8 @@ inline double fixedcut_accuracy(const std::vector<std::vector<double>>& x,
 inline double online_competitive_accuracy(const std::vector<std::vector<double>>& x,
                                           const std::vector<int>& y, size_t train_count,
                                           bool standardise, double* busiest,
-                                          uint64_t seed, bool conscience) {
+                                          uint64_t seed, bool conscience,
+                                          bool zero_init = false) {
   if (busiest) *busiest = 1.0;
   if (x.empty() || train_count < 4 || train_count >= x.size()) return 0.0;
   const size_t dims = x[0].size();
@@ -639,6 +640,16 @@ inline double online_competitive_accuracy(const std::vector<std::vector<double>>
   for (uint32_t guard = 0; i1 == i0 && guard < 16; ++guard) i1 = rng.next() % train_count;
   std::vector<double> w[2] = {z[i0], z[i1]};
   double wins[2] = {1.0, 1.0};
+  // `zero_init` reproduces what the KERNEL does: prototypes start at zero and
+  // the conscience is the only thing that can pull them apart. Seeding from two
+  // data rows is the probe's own convenience and the creature has no equivalent,
+  // so the two are measured rather than assumed interchangeable.
+  if (zero_init) {
+    w[0].assign(dims, 0.0);
+    w[1].assign(dims, 0.0);
+    wins[0] = wins[1] = 0.0;
+    i0 = i1 = train_count;  // consume no rows as seeds
+  }
   // The CONSCIENCE, and why it is the creature's rule rather than an extra
   // knob. A unit that wins early becomes the running mean of everything it has
   // won, and in high dimensions a mean is closer to every point than any single

@@ -7749,6 +7749,85 @@ contradiction became visible. Fixed; the table was always authoritative.
 **`context_source = 0` stays bit-identical**: hash `ad96f882becbee92`, `verify`
 22/22, checked after v53 touched both `step()` and the arena budget.
 
+#### Isolating the gap: the window is not it, and neither is the rule
+
+`ctxself` measured v53's index at 0.643 where `partprobe` priced the ear at
+1.000, and **two things differ between those numbers** — the window (the host's
+tick bins against the creature's own listening gate) and the setting (a
+read-only probe against a taught creature). Two variables at once is `ctxsrc`'s
+third instrument error, so `partprobe` was extended to score the window on its
+own: same trials, same labels, same split, same rules, only the window changed.
+
+| configuration | p |
+|---|---|
+| host window, z-scored, seeded from data rows | 1.000 +/- 0.000 |
+| **self window** (v53's own larynx gate), z-scored, seeded | 0.990 +/- 0.006 |
+| **self window, raw features, zero init — exactly what the kernel runs** | 0.980 +/- 0.008 |
+| **v53 in the creature** | **0.643** |
+
+**The window costs -0.010 and the kernel's own rule costs a further -0.010.**
+The creature's gate is even *over-inclusive* — it calls 1522 of 2800 ticks a word
+against the host's 900, swallowing ~600 ticks of silence — and still separates
+the words at 0.980. The boundary was never the problem, and the four detectors
+it took to find it were fixing something that was not broken by much.
+
+That ladder is worth more than the mechanism it was built for: a five-minute
+read-only instrument that prices a kernel change before a seventy-minute run
+does.
+
+#### The one difference left, fixed, and it changed nothing measurable
+
+The probe accumulated on the larynx's SLOW gate; the kernel accumulated on the
+FAST one and competed per fragment. That is the same fast-EMA chatter this
+project had just diagnosed on the ear, reintroduced one edit later on the
+larynx — the reasoning ("each signal for the job it suits") felt principled and
+was wrong in a way already on the page.
+
+Aligning it moved the index 0.643 -> 0.681 and the voice 36.0 -> 23.1 Hz.
+**Neither is significant at n=9** (1.1 SE and 1.3 SE), so the two builds cannot
+be told apart and the fix is UNVALIDATED. It is kept because it makes the kernel
+match the configuration that priced at 0.980, not because it demonstrably helped.
+
+| arm | dF1 (Hz) | p(index) | busiest |
+|---|---|---|---|
+| off | 17.4 +/- 5.5 | — | — |
+| oracle | 82.4 +/- 6.3 | 1.000 | 0.500 |
+| ear (v53b) | 23.1 +/- 8.7 | 0.681 +/- 0.030 | 0.585 |
+| ear-rnd | 13.5 +/- 4.9 | 0.769 +/- 0.008 | 0.603 |
+
+`ear` - `ear-rnd` paired: **+9.6 +/- 9.4, 1.0 SE, 6 of 9. Refused**, against
+v53a's 1.72 SE. Both builds refuse.
+
+#### The finding: the index is WORSE exactly when the target tracks the word
+
+| build | p(ear) | p(ear-rnd) | paired difference | seeds |
+|---|---|---|---|---|
+| v53a, fast gate | 0.643 | 0.729 | **-0.086 +/- 0.018** | 9 of 9 |
+| v53b, slow gate | 0.681 | 0.769 | **-0.088 +/- 0.027** | 9 of 9 |
+
+**18 of 18 creatures, two independent builds, 4.8 and 3.3 SE.** The arm whose
+target tracks the word derives a worse context than the arm whose target is
+drawn independently of it. The mechanism's own input degrades precisely when the
+mechanism has something to learn.
+
+**The obvious explanation is refuted by its own data.** v53 injects bias into
+`vocal` and the listening gate is `vocal` below setpoint, so learning should
+perturb the gate, corrupt the window, and spoil the index — which predicts that
+seeds learning MORE have WORSE indices. The within-arm correlation between how
+much an arm learned and how good its index is comes out **+0.72 on 18
+creatures**: the opposite sign. Better index -> more learning, which is the
+mechanism working rather than undermining itself.
+
+So the asymmetry is real, reproduced, and **unexplained**. The leading remaining
+hypothesis is drift: MacQueen's `1/wins` means the prototypes FREEZE — after N
+words the learning rate is 1/N — and the taught arm is the one whose own voice
+changes under them. The read-only probe cannot see this, because nothing in it
+drifts. It predicts the index should DECAY across a session in the learning arm,
+and v53b's does: **0.697 -> 0.663**. The test is to report that split per arm,
+and the fix would be a learning rate that does not go to zero — which needs
+deriving rather than guessing, on this project's own record with constants.
+
+
 ### What the literature says to build next, and why it is the cheap option
 
 > **This section is the argument that produced DNA v51, kept as the record of

@@ -1283,8 +1283,20 @@ void Network::step() {
       // listening", and the two modules each do what they are good at -- the
       // ear supplies the feature, the larynx supplies the boundary.
       const ModuleState& gms = modules_[uint32_t(ctx_gate_module_)];
-      const bool fast_on = gms.mean_rate_fast < ctx_gate_target_;
+      // BOTH the accumulation and the boundary run off the SLOW gate, and the
+      // first build's split between them is what cost the mechanism its index.
+      //
+      // Accumulating on the fast larynx mean looked right -- responsive, catches
+      // the word's onset -- and it chatters for exactly the reason the fast EAR
+      // mean chattered: a tens-of-milliseconds average crosses any threshold
+      // repeatedly. The kernel then resets and competes per fragment, so a
+      // fragment holding only silence writes a prototype from silence and
+      // OVERWRITES the latch. `partprobe` scored the slow-gated window at
+      // **0.980** with everything else identical -- raw features, zero init, the
+      // creature's own gate -- against 0.643 for this mechanism as first built,
+      // and the accumulation gate is the only difference left between them.
       const bool slow_on = gms.mean_rate < ctx_gate_target_;
+      const bool fast_on = slow_on;
       const Scalar inv = ctx_acc_n_ > kZero ? kOne / ctx_acc_n_ : kZero;
 
       if (fast_on) {
