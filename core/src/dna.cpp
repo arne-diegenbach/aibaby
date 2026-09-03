@@ -277,7 +277,7 @@ DnaStatus Dna::load(const void* blob, size_t size) {
     // DNA v52. An unknown source would fall through to "no context at all",
     // which reads from outside as a mechanism that did nothing rather than as a
     // genome the kernel does not understand.
-    if (h->exploration.context_source > 2u) return DnaStatus::kBadPlasticity;
+    if (h->exploration.context_source > 3u) return DnaStatus::kBadPlasticity;
   }
 
   if (h->normalisation.enabled) {

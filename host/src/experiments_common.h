@@ -610,7 +610,8 @@ inline double online_competitive_accuracy(const std::vector<std::vector<double>>
                                           const std::vector<int>& y, size_t train_count,
                                           bool standardise, double* busiest,
                                           uint64_t seed, bool conscience,
-                                          bool zero_init = false) {
+                                          bool zero_init = false, int rate_mode = 0,
+                                          double drift = 0.0) {
   if (busiest) *busiest = 1.0;
   if (x.empty() || train_count < 4 || train_count >= x.size()) return 0.0;
   const size_t dims = x[0].size();
@@ -633,8 +634,40 @@ inline double online_competitive_accuracy(const std::vector<std::vector<double>>
     for (size_t i = 0; i < z.size(); ++i)
       for (size_t d = 0; d < dims; ++d) z[i][d] = (x[i][d] - mean[d]) / sd[d];
   }
+  // Synthetic DRIFT, for pricing a learning rate against the defect `ctxself`
+  // measured: with frozen prototypes the index decays across a session in the
+  // arm whose voice changes (0.697 -> 0.663) and is FLAT in the arm whose voice
+  // does not (0.763 -> 0.764). A read-only probe cannot produce that on its own,
+  // so it is injected here at a known size and the rules are compared as a
+  // ROBUSTNESS CURVE rather than at one guessed magnitude.
+  //
+  // The direction is random and fixed per run -- neutral, favouring no rule --
+  // and the size is in units of the data's own within-dimension SD, ramped
+  // linearly across the rows so late rows sit `drift` SDs from early ones.
   aibaby::Rng rng;
   rng.seed(seed);
+  if (drift > 0.0 && z.size() > 1) {
+    std::vector<double> dir(dims, 0.0);
+    double norm = 0.0;
+    for (size_t d = 0; d < dims; ++d) {
+      dir[d] = (double(rng.next() % 2001) / 1000.0) - 1.0;
+      norm += dir[d] * dir[d];
+    }
+    norm = std::sqrt(norm > 0.0 ? norm : 1.0);
+    std::vector<double> sd(dims, 0.0);
+    for (size_t d = 0; d < dims; ++d) {
+      double m = 0.0;
+      for (size_t i = 0; i < z.size(); ++i) m += z[i][d];
+      m /= double(z.size());
+      double v = 0.0;
+      for (size_t i = 0; i < z.size(); ++i) v += (z[i][d] - m) * (z[i][d] - m);
+      sd[d] = std::sqrt(v / double(z.size()));
+    }
+    for (size_t i = 0; i < z.size(); ++i) {
+      const double t = double(i) / double(z.size() - 1);
+      for (size_t d = 0; d < dims; ++d) z[i][d] += drift * t * sd[d] * dir[d] / norm;
+    }
+  }
   size_t i0 = rng.next() % train_count;
   size_t i1 = rng.next() % train_count;
   for (uint32_t guard = 0; i1 == i0 && guard < 16; ++guard) i1 = rng.next() % train_count;
@@ -665,6 +698,10 @@ inline double online_competitive_accuracy(const std::vector<std::vector<double>>
   // winner) and the target share is 1/K for K units, which is arithmetic. A unit
   // at its fair share is penalised nothing.
   double dscale = 0.0, dn = 0.0;
+  // mode 2's running error statistics, one per prototype.
+  std::vector<double> err_sum[2] = {std::vector<double>(dims, 0.0),
+                                    std::vector<double>(dims, 0.0)};
+  double err_n[2] = {0.0, 0.0}, err_msq[2] = {0.0, 0.0};
   for (size_t i = 0; i < train_count; ++i) {
     if (i == i0 || i == i1) continue;
     double d0 = 0.0, d1 = 0.0;
@@ -683,7 +720,55 @@ inline double online_competitive_accuracy(const std::vector<std::vector<double>>
     wins[k] += 1.0;
     dscale += (k == 0 ? d0 : d1);
     dn += 1.0;
-    const double lr = 1.0 / wins[k];
+    // THE LEARNING RATE, and which question it answers is the whole point.
+    //
+    //  mode 0  MacQueen, lr = 1/wins. The prototype is the running mean of what
+    //          it has won, and the rate REACHES ZERO -- correct under a
+    //          stationary input, defenceless under a moving one.
+    //
+    //  mode 1  the REFUTED cap, n_eff = 4*dscale/gap^2. It asks "how long must
+    //          I average to resolve the gap", which SHRINKS as the gap grows,
+    //          so it adapts hardest when tracking matters least. In the creature
+    //          it cost -0.146 of index on 8 of 9 seeds and made both arms decay.
+    //          Kept so the comparison is against a measured failure, not a
+    //          remembered one.
+    //
+    //  mode 2  the signal fraction. Random errors cancel and averaging is
+    //          right; systematic errors add and the prototype must follow. The
+    //          standard parameter-free test of which is which is the ratio of
+    //          the squared MEAN error to the mean SQUARED error -- 0 when errors
+    //          cancel, 1 when they all point one way -- and both terms are
+    //          already formed by the update. lr = max(1/wins, f).
+    double lr = 1.0 / wins[k];
+    if (rate_mode == 1) {
+      double gap = 0.0;
+      for (size_t d = 0; d < dims; ++d) {
+        const double e = w[0][d] - w[1][d];
+        gap += e * e;
+      }
+      const double sc = dn > 0.0 ? dscale / dn : 0.0;
+      if (gap > 0.0 && sc > 0.0) {
+        const double n_eff = 4.0 * sc / gap;
+        const double cap = n_eff > 1.0 ? n_eff : 1.0;
+        if (wins[k] > cap) lr = 1.0 / cap;
+      }
+    } else if (rate_mode == 2) {
+      double msq = 0.0, mean_sq = 0.0;
+      for (size_t d = 0; d < dims; ++d) {
+        const double e = z[i][d] - w[k][d];
+        err_sum[k][d] += e;
+        msq += e * e;
+      }
+      err_n[k] += 1.0;
+      err_msq[k] += msq;
+      for (size_t d = 0; d < dims; ++d) {
+        const double me = err_sum[k][d] / err_n[k];
+        mean_sq += me * me;
+      }
+      const double denom = err_msq[k] / err_n[k];
+      const double f = denom > 0.0 ? mean_sq / denom : 0.0;
+      if (f > lr) lr = f < 1.0 ? f : 1.0;
+    }
     for (size_t d = 0; d < dims; ++d) w[k][d] += lr * (z[i][d] - w[k][d]);
   }
   std::vector<int> cluster(z.size(), 0);

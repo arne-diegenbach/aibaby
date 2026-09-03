@@ -125,7 +125,7 @@ size_t Network::required_bytes(const Dna& dna) {
     // plus one accumulator. The source module is not known here without a role
     // lookup, so budget the largest module -- an over-estimate of at most a few
     // kilobytes, where under-estimating is a failed init.
-    if (dna.header().exploration.context_source == 2) {
+    if (dna.header().exploration.context_source >= 2) {
       size_t widest = 0;
       for (uint32_t m = 0; m < dna.module_count(); ++m) {
         if (dna.module(m).n_max > widest) widest = dna.module(m).n_max;
@@ -427,8 +427,8 @@ bool Network::build(const Dna& dna, Arena& arena, Rng& rng) {
     // the larynx nothing where DNA v47's tract cost it everything. DNA v52
     // chooses WHICH module: the kContext one the host may write (an oracle
     // whenever it does), or the larynx itself (the creature's own state).
-    const ModuleRole want = ctx_source_ == 1   ? ModuleRole::kVocal
-                            : ctx_source_ == 2 ? ModuleRole::kAuditory
+    const ModuleRole want = ctx_source_ == 1  ? ModuleRole::kVocal
+                            : ctx_source_ >= 2 ? ModuleRole::kAuditory
                                                : ModuleRole::kContext;
     for (uint32_t m = 0; m < module_count_; ++m) {
       if (dna.module(m).role == uint32_t(want)) { ctx_module_ = int32_t(m); break; }
@@ -439,7 +439,7 @@ bool Network::build(const Dna& dna, Arena& arena, Rng& rng) {
     if (ctx_module_ < 0) ctx_slots_ = 0;
     // DNA v53. The competitive partition's state. Only source 2 allocates, so
     // sources 0 and 1 hash exactly as they did.
-    if (ctx_slots_ > 0 && ctx_source_ == 2) {
+    if (ctx_slots_ > 0 && ctx_source_ >= 2) {
       if (ctx_slots_ > kMaxContextSlots) {
         ctx_slots_ = 0;
       } else {
@@ -1247,7 +1247,7 @@ void Network::step() {
     // A silent context module means no context, not context zero. Defaulting to
     // slice 0 would quietly make every untagged moment a lesson in one
     // particular context, which is the bug this branch exists to avoid.
-    if (ctx_source_ == 2) {
+    if (ctx_source_ >= 2) {
       // DNA v53. A competitive partition of the source code, learned online
       // with no labels, and LATCHED so the context outlives the word.
       //
@@ -1356,7 +1356,43 @@ void Network::step() {
         ctx_dn_ += kOne;
         // MacQueen: each prototype is the running mean of the words it has won,
         // so the learning rate is 1/wins and nothing is guessed.
-        const Scalar lr = kOne / ctx_wins_[winner];
+        //
+        // DNA v53, SOURCE 3: that rate REACHES ZERO, and a prototype that has
+        // stopped moving cannot follow a creature whose own voice is changing.
+        // `ctxself` measured the index DECAYING across a session (0.697 ->
+        // 0.663) in the arm that learns, which is what a frozen prototype under
+        // a drifting input looks like -- and the read-only probe that priced
+        // this at 0.980 could not have seen it, because nothing in a read-only
+        // session drifts.
+        //
+        // The cap is DERIVED rather than floored with a chosen constant.
+        // Average only long enough that the prototype is accurate relative to
+        // the gap it has to resolve, then keep tracking:
+        //
+        //   error of a mean after n samples  =  within / sqrt(n)
+        //   the decision boundary sits at       between / 2
+        //   so  n_eff = (2 * within / between)^2 = 4 * dscale / gap^2
+        //
+        // Both quantities are already maintained by the conscience: `dscale` is
+        // the running mean SQUARED distance from a word to its winner -- the
+        // within-context scatter -- and `gap` is the squared distance between
+        // the two prototypes. The 2 is where a two-way boundary is, which is
+        // arithmetic and not a choice.
+        Scalar lr = kOne / ctx_wins_[winner];
+        if (ctx_source_ == 3 && ctx_slots_ == 2) {
+          Scalar gap = kZero;
+          const Scalar* p0 = ctx_proto_;
+          const Scalar* p1 = ctx_proto_ + sms.capacity;
+          for (uint32_t n = 0; n < sms.count; ++n) {
+            const Scalar e = p0[n] - p1[n];
+            gap += e * e;
+          }
+          if (gap > kZero) {
+            const Scalar n_eff = Scalar(4.0) * dscale / gap;
+            const Scalar cap = n_eff > kOne ? n_eff : kOne;
+            if (ctx_wins_[winner] > cap) lr = kOne / cap;
+          }
+        }
         Scalar* proto = ctx_proto_ + size_t(winner) * sms.capacity;
         for (uint32_t n = 0; n < sms.count; ++n) {
           proto[n] += lr * (ctx_acc_[n] * inv - proto[n]);

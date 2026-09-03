@@ -8886,6 +8886,53 @@ bool run_partprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
               "                           motor-state rows found.\n",
               aud_best, aud_se, aud_batch, m[kAud][kSup], m[kAud][kFix]);
 
+  // DRIFT ROBUSTNESS -- pricing a learning rate before it is built.
+  //
+  // `ctxself` confirmed the defect with its own control: frozen prototypes lose
+  // index across a session ONLY in the arm whose voice changes (0.697 -> 0.663)
+  // and hold flat in the arm whose voice does not (0.763 -> 0.764). The first
+  // fix for it was derived and REFUTED -- `n_eff = 4*dscale/gap^2` cost -0.146
+  // of index on 8 of 9 creatures and made both arms decay, because it asks how
+  // long to average to RESOLVE A GAP and so adapts hardest when the gap is
+  // widest and tracking matters least.
+  //
+  // A read-only session does not drift, so drift is injected here at known
+  // sizes and the rules are compared as a CURVE. That is the honest form: the
+  // true magnitude in the creature is unknown, so what is priced is which rule
+  // degrades gracefully, not which wins at one guessed number.
+  {
+    static const double kDrift[] = {0.0, 0.5, 1.0, 2.0};
+    static const char* kRateName[3] = {"frozen (1/wins)", "n_eff cap (refuted)",
+                                       "signal fraction"};
+    std::printf("\n  DRIFT ROBUSTNESS, on the creature's own window, ear features\n");
+    std::printf("    %-22s %8s %8s %8s %8s\n", "learning rate", "0.0 SD", "0.5 SD",
+                "1.0 SD", "2.0 SD");
+    for (int mode = 0; mode < 3; ++mode) {
+      char cell[4][16];
+      for (uint32_t di = 0; di < 4; ++di) {
+        std::vector<double> acc_d;
+        for (uint32_t r = 0; r < kReps; ++r) {
+          const uint64_t sd = dna.header().seed + r * 7919ull;
+          std::vector<uint8_t> variant = blob;
+          std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &sd, sizeof(sd));
+          const CtxSrc pr = run_ctxsrc_session(variant, ticks);
+          if (!pr.ok || pr.train_split == 0 || pr.feat_gate.empty()) continue;
+          double bz = 1.0;
+          acc_d.push_back(online_competitive_accuracy(
+              pr.feat_gate, pr.labels, pr.train_split, false, &bz, sd ^ 0xD00Du,
+              true, true, mode, kDrift[di]));
+        }
+        double e = 0.0;
+        std::snprintf(cell[di], sizeof cell[di], "%.3f",
+                      acc_d.empty() ? 0.0 : ctx_mean_se(acc_d, &e));
+      }
+      std::printf("    %-22s %8s %8s %8s %8s\n", kRateName[mode], cell[0], cell[1],
+                  cell[2], cell[3]);
+    }
+    std::printf("    (drift in units of the data's own within-dimension SD, ramped\n"
+                "     across the session in a random direction that favours no rule)\n");
+  }
+
   // THE ISOLATION THIS PROBE WAS EXTENDED FOR. `ctxself` measured DNA v53's
   // index at 0.643 where this probe priced the ear at 1.000, and TWO things
   // differ between those numbers: the WINDOW (the host's tick bins against the
@@ -9317,8 +9364,16 @@ struct CtxSelfArm {
 constexpr CtxSelfArm kCtxSelfArms[] = {
     {"off",      0, 0, kVLTgtHeard},
     {"oracle",   2, 0, kVLTgtHeard},
-    {"self",     2, 1, kVLTgtHeard},
-    {"self-rnd", 2, 1, kVLTgtRandom},
+    // DNA v52's arms are retired from the run and kept in the record: it was
+    // refused on two seed families and its numbers are in the README. The slots
+    // they free go to the drift test, which is what this run is now for.
+    //
+    // `ear` freezes its prototypes (MacQueen's 1/wins reaches zero); `adapt`
+    // caps the averaging window at the point where a prototype is already
+    // accurate relative to the gap it resolves. If drift is what costs the
+    // index, `adapt` keeps what `ear` loses -- and the per-arm early->late
+    // split below says whether drift is happening at all, independently of
+    // whether the fix works.
     // DNA v53: the competitive latched index off the auditory code. `ear-rnd`
     // is its matched-marginal control and is the arm the verdict is gated on --
     // `partprobe` said so before this was built, because a clean split of the
@@ -9326,6 +9381,8 @@ constexpr CtxSelfArm kCtxSelfArms[] = {
     // correlated with it in this protocol.
     {"ear",      2, 2, kVLTgtHeard},
     {"ear-rnd",  2, 2, kVLTgtRandom},
+    {"adapt",    2, 3, kVLTgtHeard},
+    {"adapt-rnd",2, 3, kVLTgtRandom},
 };
 constexpr uint32_t kCtxSelfArmCount = sizeof(kCtxSelfArms) / sizeof(kCtxSelfArms[0]);
 
@@ -9476,7 +9533,7 @@ bool run_ctxself(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
     std::printf("  %-9s %-16s %-15s %-14s %-13s %s\n", kCtxSelfArms[a].name, b, c, d, e, f);
   }
 
-  const uint32_t kOff = 0, kOra = 1, kSelf = 2, kSRnd = 3, kEar = 4, kERnd = 5;
+  const uint32_t kOff = 0, kOra = 1, kEar = 2, kERnd = 3, kAda = 4, kARnd = 5;
 
   // The paired differences, computed and printed HERE -- above every gate --
   // because they are descriptive statistics rather than verdicts, and a run
@@ -9501,23 +9558,39 @@ bool run_ctxself(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
     *se = std::sqrt(ss / double(d.size() - 1)) / std::sqrt(double(d.size()));
     return m;
   };
-  double p_rnd_se = 0.0, p_off_se = 0.0;
-  uint32_t p_rnd_pos = 0, p_off_pos = 0, p_rnd_n = 0, p_off_n = 0;
-  const double p_rnd = paired(kSelf, kSRnd, &p_rnd_se, &p_rnd_pos, &p_rnd_n);
-  const double p_off = paired(kSelf, kOff, &p_off_se, &p_off_pos, &p_off_n);
   double e_rnd_se = 0.0, e_off_se = 0.0;
   uint32_t e_rnd_pos = 0, e_off_pos = 0, e_rnd_n = 0, e_off_n = 0;
   const double e_rnd = paired(kEar, kERnd, &e_rnd_se, &e_rnd_pos, &e_rnd_n);
   const double e_off = paired(kEar, kOff, &e_off_se, &e_off_pos, &e_off_n);
+  // THE DRIFT TEST, and it is independent of whether the fix works. A frozen
+  // prototype under a drifting input predicts the index DECAYS across a
+  // session, and only in the arm whose target tracks the word -- the arm whose
+  // voice actually changes. Printed per arm so the hypothesis is falsifiable on
+  // its own terms rather than only through the `adapt` arm's score.
+  std::printf("\n  does the index hold up across a session? (early third -> last third)\n");
+  for (uint32_t a = kEar; a < kCtxSelfArmCount; ++a) {
+    std::printf("    %-10s %.3f +/- %.3f -> %.3f +/- %.3f   (%+.3f)\n",
+                kCtxSelfArms[a].name, m_me[a], s_me[a], m_ml[a], s_ml[a],
+                m_ml[a] - m_me[a]);
+  }
+  // Each mechanism against ITS OWN matched-marginal control, and against the
+  // no-mechanism arm. v52's rows used to sit here and were removed with its
+  // arms: aliasing the retired indices onto v53's made this block print v53's
+  // numbers twice under v52's labels, which is a reporting bug and not a
+  // result. v52's numbers are in the README.
+  double a_rnd_se = 0.0, a_off_se = 0.0;
+  uint32_t a_rnd_pos = 0, a_off_pos = 0, a_rnd_n = 0, a_off_n = 0;
+  const double a_rnd = paired(kAda, kARnd, &a_rnd_se, &a_rnd_pos, &a_rnd_n);
+  const double a_off = paired(kAda, kOff, &a_off_se, &a_off_pos, &a_off_n);
   std::printf("\n  paired differences (same creature, arms differ only in genome fields)\n"
-              "    v52  self - self-rnd   %+.1f +/- %.1f Hz, %.1f SE, %u of %u positive\n"
-              "    v52  self - off        %+.1f +/- %.1f Hz, %.1f SE, %u of %u positive\n"
-              "    v53  ear  - ear-rnd    %+.1f +/- %.1f Hz, %.1f SE, %u of %u positive\n"
-              "    v53  ear  - off        %+.1f +/- %.1f Hz, %.1f SE, %u of %u positive\n",
-              p_rnd, p_rnd_se, p_rnd_se > 0.0 ? p_rnd / p_rnd_se : 0.0, p_rnd_pos, p_rnd_n,
-              p_off, p_off_se, p_off_se > 0.0 ? p_off / p_off_se : 0.0, p_off_pos, p_off_n,
+              "    ear   - ear-rnd     %+.1f +/- %.1f Hz, %.1f SE, %u of %u positive\n"
+              "    ear   - off         %+.1f +/- %.1f Hz, %.1f SE, %u of %u positive\n"
+              "    adapt - adapt-rnd   %+.1f +/- %.1f Hz, %.1f SE, %u of %u positive\n"
+              "    adapt - off         %+.1f +/- %.1f Hz, %.1f SE, %u of %u positive\n",
               e_rnd, e_rnd_se, e_rnd_se > 0.0 ? e_rnd / e_rnd_se : 0.0, e_rnd_pos, e_rnd_n,
-              e_off, e_off_se, e_off_se > 0.0 ? e_off / e_off_se : 0.0, e_off_pos, e_off_n);
+              e_off, e_off_se, e_off_se > 0.0 ? e_off / e_off_se : 0.0, e_off_pos, e_off_n,
+              a_rnd, a_rnd_se, a_rnd_se > 0.0 ? a_rnd / a_rnd_se : 0.0, a_rnd_pos, a_rnd_n,
+              a_off, a_off_se, a_off_se > 0.0 ? a_off / a_off_se : 0.0, a_off_pos, a_off_n);
 
   // GATE 0: is the instrument the one `areax` validated? The oracle index is
   // held for the whole trial and read by the same argmax, so p there is 1.000

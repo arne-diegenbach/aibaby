@@ -7732,6 +7732,67 @@ Paired, which is this design's correct test:
    Roughly three-quarters of reward windows land in one context. That lopsidedness
    is the visible cost of the creature finding its own window.
 
+#### The drift hypothesis: confirmed in the creature, refuted as the cause
+
+`ctxself` predicted it and then measured it, per arm, with the frozen rule:
+
+| arm | early third -> last third | |
+|---|---|---|
+| `ear` (target tracks the word) | 0.697 -> 0.663 | **-0.034** |
+| `ear-rnd` (target independent) | 0.763 -> 0.764 | +0.001, flat |
+
+**Decay only in the arm whose voice actually changes.** That is exactly what a
+frozen prototype under a moving input looks like, and exactly what a read-only
+probe cannot show, because nothing in a read-only session drifts.
+
+**So the fix was derived and it is refuted.** MacQueen's `1/wins` reaches zero,
+so the first attempt capped the averaging window at the point where a prototype
+is already accurate relative to the gap it resolves: `n_eff = 4*dscale/gap^2`,
+both terms already maintained by the conscience, the 2 being where a two-way
+boundary sits. In the creature it cost **-0.146 of index on 8 of 9 seeds** and
+made *both* arms decay (-0.074 and -0.072) — the signature of a prototype
+chasing noise rather than tracking drift. The flaw was stated before the run and
+is in the arithmetic: `n_eff` **shrinks as the gap grows**, so it adapts hardest
+when the clusters are furthest apart and tracking matters least. It answers "how
+long to average to resolve the gap" when the question is "how fast is the input
+moving".
+
+A second rate was derived to answer the right question — random errors cancel
+and averaging is correct, systematic errors add and the prototype must follow,
+and the parameter-free test of which is which is the signal fraction
+`|mean error|^2 / mean|error|^2`, 0 when errors cancel and 1 when they align.
+**It was priced before building, and the pricing refuses the whole line of
+work.** Drift is injected into the creature's own gated features at known sizes,
+in a random direction favouring no rule, and scored as a curve rather than at
+one guessed magnitude:
+
+| learning rate | 0.0 SD | 0.5 SD | 1.0 SD | 2.0 SD |
+|---|---|---|---|---|
+| frozen (`1/wins`) | 0.980 | 0.979 | 0.978 | 0.979 |
+| `n_eff` cap (refuted in the creature) | 0.997 | 0.997 | 0.997 | 0.997 |
+| signal fraction | 0.998 | 0.998 | 0.998 | 0.998 |
+
+> **Every rule is flat out to two standard deviations of drift.** Frozen
+> prototypes lose 0.002 where the creature is missing 0.30. The reason is on the
+> same page: the two vowels are so far apart that the supervised readout is
+> 1.000, so a prototype can be badly stale and still classify correctly.
+> **Feature-space drift is not what costs the creature its index**, and the
+> adaptive rate that would have fixed it buys 0.018 against a 0.30 gap.
+
+What survives is the asymmetry itself — the learning arm's index really is worse
+(18 of 18 creatures across two builds) and really does decay while its control
+does not. What is refuted is that drift in the feature space explains it.
+
+**The surviving candidate is episode fragmentation, and the evidence is already
+recorded.** `ev/tri` reads **1.2 to 1.5** where the design is one competition per
+word. The probe forms ONE vector per trial and scores 0.980; the creature takes
+the LAST of 1.2-1.5 episodes, so on 20-50% of trials the latch is set from a
+fragment — plausibly one holding only post-word silence. It fits the arm
+asymmetry too: the learning arm babbles differently, so its listening gate opens
+and closes differently. The test is to take the episode with the most
+accumulated ticks rather than the most recent one, which is a change to *which*
+episode wins and not to any rate.
+
 #### Two bugs this found in its own instrument
 
 **A collapsed v53 is invisible in dF1.** A context table with one live slice is
