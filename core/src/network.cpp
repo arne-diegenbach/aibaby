@@ -1299,8 +1299,49 @@ void Network::step() {
       const bool fast_on = slow_on;
       const Scalar inv = ctx_acc_n_ > kZero ? kOne / ctx_acc_n_ : kZero;
 
+      // A CONJUNCTION WITH THE EAR WAS TRIED HERE AND IS INERT. Requiring the
+      // ear above its own setpoint as well as the larynx below its own looked
+      // like the right definition of "listening to something", and it changed
+      // the index by +0.004 with three of six seeds bit-identical -- because the
+      // ear sits above its setpoint nearly always, so the conjunction admits
+      // almost every episode. Removed rather than left in: an inert condition
+      // reads as if it does something. The real answer is source 4, which does
+      // not need an episode at all.
+      // DNA v53, SOURCE 4: NO EPISODE AT ALL, because the memory belongs in the
+      // FEATURE and not in a latch. `rate_ema_` is already a per-neuron EMA over
+      // roughly the last second, so at reward time it still carries a word that
+      // ended 400 ticks earlier -- `partprobe` scores it at **1.000** under the
+      // exact rule this kernel runs, with no gate, no accumulator and no latch.
+      //
+      // That also explains why fragmentation cost so much. An accumulator
+      // RESETS, so a fragment holding 80% silence carries almost nothing; an EMA
+      // never resets, so the same fragment still holds the preceding word. The
+      // 4.27 episodes per trial stop mattering rather than having to be fixed.
+      //
+      // (This is not a contradiction of `ctxsrc`'s 0.541 for the ear in this
+      // window. That counted spikes INSIDE the bin, which remembers nothing
+      // before it. A different measurement of the same module, not a better
+      // decoder of the same quantity.)
+      if (ctx_source_ == 4) {
+        Scalar best_d = kZero;
+        uint32_t winner = 0;
+        for (uint32_t c = 0; c < ctx_slots_; ++c) {
+          const Scalar* proto = ctx_proto_ + size_t(c) * sms.capacity;
+          Scalar d = kZero;
+          for (uint32_t n = 0; n < sms.count; ++n) {
+            const Scalar e = rate_ema_[sms.begin + n] - proto[n];
+            d += e * e;
+          }
+          if (c == 0 || d < best_d) { best_d = d; winner = c; }
+        }
+        active_ctx_ = winner;
+        ctx_latched_ = true;
+      }
       if (fast_on) {
-        for (uint32_t n = 0; n < sms.count; ++n) ctx_acc_[n] += rate_fast_[sms.begin + n];
+        for (uint32_t n = 0; n < sms.count; ++n) {
+          ctx_acc_[n] += ctx_source_ == 4 ? rate_ema_[sms.begin + n]
+                                          : rate_fast_[sms.begin + n];
+        }
         ctx_acc_n_ += kOne;
         // The INDEX, refreshed from the running mean rather than from this
         // tick's vector: it sharpens as the word accumulates instead of
@@ -1309,17 +1350,22 @@ void Network::step() {
         const Scalar in2 = kOne / ctx_acc_n_;
         Scalar best_d = kZero;
         uint32_t winner = 0;
-        for (uint32_t c = 0; c < ctx_slots_; ++c) {
-          const Scalar* proto = ctx_proto_ + size_t(c) * sms.capacity;
-          Scalar d = kZero;
-          for (uint32_t n = 0; n < sms.count; ++n) {
-            const Scalar e = ctx_acc_[n] * in2 - proto[n];
-            d += e * e;
+        // Source 4 already set the index from the EMA above and must not have
+        // it overwritten here -- an `else` binding to the loop rather than to
+        // the assignment would silently pin it to slice 0.
+        if (ctx_source_ != 4) {
+          for (uint32_t c = 0; c < ctx_slots_; ++c) {
+            const Scalar* proto = ctx_proto_ + size_t(c) * sms.capacity;
+            Scalar d = kZero;
+            for (uint32_t n = 0; n < sms.count; ++n) {
+              const Scalar e = ctx_acc_[n] * in2 - proto[n];
+              d += e * e;
+            }
+            if (c == 0 || d < best_d) { best_d = d; winner = c; }
           }
-          if (c == 0 || d < best_d) { best_d = d; winner = c; }
+          active_ctx_ = winner;
+          ctx_latched_ = true;
         }
-        active_ctx_ = winner;
-        ctx_latched_ = true;
       }
 
       // The episode ends on the SLOW signal, once, and that is when the

@@ -7732,6 +7732,96 @@ Paired, which is this design's correct test:
    Roughly three-quarters of reward windows land in one context. That lopsidedness
    is the visible cost of the creature finding its own window.
 
+### DNA v53 source 4 — the creature derives its own context, and it holds up
+
+Eight boundary detectors failed before this one, and the ninth attempt was not a
+detector. `partprobe`'s fragmentation counters said why:
+
+    gate episodes per trial       4.27   (the kernel latches the LAST)
+    of ALL gated ticks, word      0.55
+    of the LAST episode, word     0.20   <- what the creature latches on
+
+The gate fragments, and the fragment the creature commits to is **80% silence**.
+Over a whole trial 55% of gated ticks are word, which is why a probe that
+averages the trial into one vector reads 0.980 where the creature read 0.68: the
+creature throws that average away and latches the last piece.
+
+**So the fix removes the machinery rather than repairing it.** An accumulator
+RESETS, so a fragment holding 80% silence carries almost nothing. `rate_ema_` is
+already a per-neuron EMA over roughly the last second and never resets, so at
+reward time it still carries a word that ended 400 ticks earlier. **The memory
+belongs in the feature, not in a latch.** Source 4 reads the index straight off
+that EMA every tick: no gate, no accumulator, no episode, no latch. The 4.27
+episodes stop mattering instead of having to be fixed.
+
+`partprobe` priced it first, on the same trials and the same split as everything
+else, under the exact rule the kernel runs:
+
+| features | supervised | batch | online | onl+conscience | AS KERNEL | fixed cut |
+|---|---|---|---|---|---|---|
+| EAR, host window | 1.000 | 1.000 | 0.584 | 1.000 | 1.000 | 0.466 |
+| EAR, self window | 0.999 | 0.999 | 0.689 | 0.990 | 0.980 | 0.474 |
+| **EAR ema @ reward** | **1.000** | **1.000** | 0.520 | **1.000** | **1.000** | 0.472 |
+
+This is **not** a contradiction of `ctxsrc`'s 0.541 for the ear in this window.
+That counted spikes INSIDE the bin, which remembers nothing before it. An EMA is
+a different measurement of the same module, not a better decoder of the same
+quantity — and the fixed cut still sits at chance, so nothing here is a leak.
+
+#### The result, replicated out of sample
+
+| arm | family two | family three |
+|---|---|---|
+| off | 17.4 +/- 5.5 | 23.1 +/- 6.9 |
+| oracle | 82.4 +/- 6.3 | 65.0 +/- 8.4 |
+| `ear` (source 2) | 23.1 +/- 8.7 | 33.3 +/- 8.6 |
+| **`ema` (source 4)** | **49.2 +/- 10.0** | **56.1 +/- 10.3** |
+| `ema-rnd` | 28.2 +/- 7.4 | 23.0 +/- 7.5 |
+
+Paired against its own matched-marginal control — the gate, unchanged since it
+was written down before the run that first used it:
+
+| family | `ema` - `ema-rnd` | seeds | oracle lift recovered |
+|---|---|---|---|
+| two (`20260902`) | **+21.0 +/- 7.4, 2.8 SE** | 8 of 9 | 49% |
+| three (`20260903`) | **+33.1 +/- 14.2, 2.3 SE** | 8 of 9 | 79% |
+| **pooled, 18 creatures** | **+23.6 +/- 6.6, 3.6 SE** | **16 of 18** | |
+
+> **The creature derives its own context index and the conditional effect on the
+> voice is real.** The last oracle in the Area X architecture is gone: nothing in
+> the `ema` arm is written by the host. Source 2 on the same two families reads
+> +9.6 (1.0 SE) and +11.9 (1.2 SE) and is refused both times.
+
+**Why the replication was run rather than the first result claimed.** Four
+mechanisms have now been tested against this gate — v52's `self`, v53's `ear`,
+the `adapt` rate cap and `ema` — and the more candidates you test the cheaper a
+2.8 SE becomes. The rule never moved and each mechanism faced its own
+matched-marginal control, but a result selected from four candidates has to
+survive on creatures the selection never touched. This project has the
+cautionary case on file: a paired re-analysis at 3.4 SE came back at 1.4 on
+fresh seeds. Pooling is legitimate HERE and was not there — both families were
+measured with the gate already fixed, and neither was used to choose it.
+
+**The `(2p - 1)` model held a fourth and fifth time**: p = 0.758 predicts 42.5 Hz
+against 49.2 measured, and p = 0.883 predicts 49.8 against 56.1.
+
+#### What is still unexplained, and is not being smoothed over
+
+- **The control's index is sometimes better than the mechanism's.** `ear` is
+  worse than `ear-rnd` on 18 of 18 creatures across two builds; for `ema` it goes
+  the other way on family three (0.883 against 0.844) and the same way on family
+  two. The one explanation offered — that learning perturbs the larynx and
+  corrupts its own gate — was refuted by its own data at **+0.72**, the wrong
+  sign. Source 4 reads no gate at all, which may be why the asymmetry stops being
+  consistent for it.
+- **The index still decays slightly across a session** in both `ema` arms
+  (-0.036 and -0.046 on family three). Feature-space drift is already refuted as
+  the cause: injected drift out to two standard deviations costs the frozen rule
+  0.002.
+- **The oracle arm itself varies by family** (82.4 against 65.0), so fractions of
+  "the oracle lift" are family-relative and the pooled Hz figure is the sounder
+  number.
+
 #### The drift hypothesis: confirmed in the creature, refuted as the cause
 
 `ctxself` predicted it and then measured it, per arm, with the frozen rule:

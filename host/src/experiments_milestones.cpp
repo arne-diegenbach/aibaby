@@ -8034,6 +8034,22 @@ struct CtxSrc {
   // ticks because that window's length varies where the host's bins do not.
   std::vector<std::vector<double>> feat_gate;
   double gate_ticks_mean = 0.0;  // how much of a trial the creature called "a word"
+  // FRAGMENTATION, which is the surviving candidate for why the creature's
+  // index (0.68) falls so far short of this probe's (0.98). The kernel competes
+  // once per gate EPISODE and latches the winner of the LAST one; this probe
+  // forms a single vector per trial. If a trial contains more than one episode,
+  // the creature's context is set by whichever fragment happened to come last.
+  double episodes_per_trial = 0.0;
+  double last_ep_word_frac = 0.0;   // of the LAST episode's ticks, how many were word
+  double all_ep_word_frac = 0.0;    // ...and of every gated tick in the trial
+  // A BOUNDARY-FREE feature: the ear's own per-neuron rate EMA, sampled in the
+  // middle of the reward window, with no gate, no episode and no latch. The EMA
+  // integrates the preceding second, so it still carries the word that ended
+  // 400 ticks earlier -- which is why this is not the same measurement as
+  // `ctxsrc`'s 0.541 for the ear in that bin: THAT was spike counts inside the
+  // bin, with no memory of anything before it. If this separates the words, the
+  // EMA *is* the latch and none of the episode machinery is needed.
+  std::vector<std::vector<double>> feat_ema;
   std::vector<int> labels;
   size_t train_split = 0;
   double aud_shuf = 0.0, cen_shuf = 0.0, voc_shuf = 0.0;
@@ -8076,6 +8092,9 @@ CtxSrc run_ctxsrc_session(const std::vector<uint8_t>& blob, uint64_t ticks) {
   std::vector<std::vector<double>> xgb[kCsBinCount];
   std::vector<std::vector<double>> xag;   // creature-gated auditory, one per trial
   double gate_ticks = 0.0;
+  std::vector<std::vector<double>> xae;   // ear rate EMA at reward time
+  double ep_sum = 0.0, last_frac_sum = 0.0, all_frac_sum = 0.0;
+  uint32_t last_frac_n = 0;
   // DNA v53's gate, read from the genome exactly as the kernel reads it.
   const double voc_target = double(s.dna.module(uint32_t(voc)).target_rate_hz);
   std::vector<int> y;
@@ -8102,6 +8121,11 @@ CtxSrc run_ctxsrc_session(const std::vector<uint8_t>& blob, uint64_t ticks) {
     uint32_t gbn[kCsBinCount] = {};
     std::vector<double> bg(wa, 0.0);   // the creature-gated auditory vector
     uint32_t bgn = 0;                  // ticks the creature spent listening
+    uint32_t eps = 0;                  // gate episodes in this trial
+    uint32_t ep_ticks = 0, ep_word = 0;      // the CURRENT episode
+    uint32_t last_ticks = 0, last_word = 0;  // ...and the last completed one
+    uint32_t gw = 0;                   // gated ticks that were inside the word
+    bool gate_prev = false;
     bool slept = false;
     for (uint64_t t = 0; t < kVLTrialTicks; ++t) {
       const bool sounding = t < kVLWordTicks;
@@ -8125,18 +8149,35 @@ CtxSrc run_ctxsrc_session(const std::vector<uint8_t>& blob, uint64_t ticks) {
         for (uint32_t q = 0; q < aibaby::kVocalGroups; ++q) gbin[bin][q] += double(g[q]);
         ++gbn[bin];
       }
+      // The boundary-free sample: one row per trial, taken at the midpoint of
+      // the reward window, which is where v53's index has to be correct.
+      if (t == kVLWordTicks + 400) {
+        const aibaby::Network& net = s.brain.network();
+        std::vector<double> row(wa, 0.0);
+        for (uint32_t n = 0; n < wa; ++n) row[n] = double(net.rate(ms_a.begin + n));
+        xae.push_back(row);
+      }
       // The creature's OWN window, gated exactly as DNA v53 gates it, and
       // running over the whole trial rather than only inside the host's bins --
       // the creature has no bins.
       {
         const aibaby::Network& net = s.brain.network();
-        if (net.module(uint32_t(voc)).mean_rate < voc_target) {
+        const bool gate = net.module(uint32_t(voc)).mean_rate < voc_target;
+        if (gate) {
           for (uint32_t i = 0; i < net.spike_count(); ++i) {
             const uint32_t idx = net.spikes()[i];
             if (idx >= ms_a.begin && idx < ms_a.begin + wa) bg[idx - ms_a.begin] += 1.0;
           }
           ++bgn;
+          ++ep_ticks;
+          if (sounding) { ++gw; ++ep_word; }
+          if (!gate_prev) ++eps;
+        } else if (gate_prev) {
+          last_ticks = ep_ticks;
+          last_word = ep_word;
+          ep_ticks = ep_word = 0;
         }
+        gate_prev = gate;
       }
       if (bin >= kCsBinCount) continue;
       const aibaby::Network& net = s.brain.network();
@@ -8158,6 +8199,14 @@ CtxSrc run_ctxsrc_session(const std::vector<uint8_t>& blob, uint64_t ticks) {
       }
       xag.push_back(row);
       gate_ticks += double(bgn);
+      // An episode still open at the trial's end is the last one.
+      if (ep_ticks > 0) { last_ticks = ep_ticks; last_word = ep_word; }
+      ep_sum += double(eps);
+      if (last_ticks > 0) {
+        last_frac_sum += double(last_word) / double(last_ticks);
+        ++last_frac_n;
+      }
+      if (bgn > 0) all_frac_sum += double(gw) / double(bgn);
     }
     for (uint32_t b = 0; b < kCsBinCount; ++b) {
       xa[b].push_back(ba[b]);
@@ -8218,6 +8267,11 @@ CtxSrc run_ctxsrc_session(const std::vector<uint8_t>& blob, uint64_t ticks) {
   }
   out.feat_gate = xag;
   out.gate_ticks_mean = y.empty() ? 0.0 : gate_ticks / double(y.size());
+  const double ny = y.empty() ? 1.0 : double(y.size());
+  out.feat_ema = xae;
+  out.episodes_per_trial = ep_sum / ny;
+  out.last_ep_word_frac = last_frac_n ? last_frac_sum / double(last_frac_n) : 0.0;
+  out.all_ep_word_frac = all_frac_sum / ny;
   out.labels = y;
   out.train_split = train;
   out.ok = true;
@@ -8674,10 +8728,11 @@ bool run_partprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
   // reward is delivered across the whole window, and an index right for the
   // first half and wrong for the second writes two different tables in one
   // trial. `ctxsrc` scores its own verdict the same way.
-  enum { kGrp = 0, kNeu = 1, kAud = 2, kGate = 3, kSpaces = 4 };
+  enum { kGrp = 0, kNeu = 1, kAud = 2, kGate = 3, kEma = 4, kSpaces = 5 };
   enum { kSup = 0, kKmZ = 1, kOnl = 2, kCon = 3, kKern = 4, kFix = 5, kRules = 6 };
   static const char* kSpaceName[kSpaces] = {"articulator groups", "off-axis neurons",
-                                            "EAR, host window", "EAR, self window"};
+                                            "EAR, host window", "EAR, self window",
+                                            "EAR ema @ reward"};
   static const char* kRuleName[kRules] = {"supervised", "batch k-means", "online",
                                           "online+conscience", "AS THE KERNEL RUNS IT",
                                           "fixed cut"};
@@ -8687,7 +8742,7 @@ bool run_partprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
   std::printf("  %-6s %-18s %-9s %-9s %-9s %-11s %-9s %s\n", "seed", "features",
               "supervised", "batch km", "online", "onl+consc", "AS KERNEL", "fixed");
   uint32_t valid = 0;
-  double gate_sum = 0.0;
+  double gate_sum = 0.0, ep_sum = 0.0, lastw_sum = 0.0, allw_sum = 0.0;
   for (uint32_t r = 0; r < kReps; ++r) {
     std::vector<uint8_t> variant = blob;
     const uint64_t seed = dna.header().seed + r * 7919ull;
@@ -8699,6 +8754,9 @@ bool run_partprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
     }
     ++valid;
     gate_sum += p.gate_ticks_mean;
+    ep_sum += p.episodes_per_trial;
+    lastw_sum += p.last_ep_word_frac;
+    allw_sum += p.all_ep_word_frac;
     // A shuffled label vector, drawn once per creature and shared by every
     // column, so the control is the same control everywhere.
     aibaby::Rng rng;
@@ -8712,11 +8770,13 @@ bool run_partprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
       // other space is scored on both of its bins. Same trials, same labels,
       // same split throughout; only the WINDOW differs.
       std::vector<std::vector<double>> gate_pair[2] = {p.feat_gate, p.feat_gate};
+      std::vector<std::vector<double>> ema_pair[2] = {p.feat_ema, p.feat_ema};
       const std::vector<std::vector<double>>* f =
-          sp == kGrp   ? p.feat_grp
-          : sp == kNeu ? p.feat_neu
-          : sp == kAud ? p.feat_aud
-                       : gate_pair;
+          sp == kGrp    ? p.feat_grp
+          : sp == kNeu  ? p.feat_neu
+          : sp == kAud  ? p.feat_aud
+          : sp == kGate ? gate_pair
+                        : ema_pair;
       double worst[kRules];
       for (uint32_t k = 0; k < kRules; ++k) worst[k] = 2.0;
       double worst_shuf = 2.0;
@@ -8812,8 +8872,27 @@ bool run_partprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
   std::printf("  the creature called %.0f of %llu ticks a word (host window: %llu)\n",
               gate_mean, (unsigned long long)kVLTrialTicks,
               (unsigned long long)kVLWordTicks);
+  // FRAGMENTATION, the surviving candidate for the 0.98 -> 0.68 gap. The kernel
+  // competes once per gate episode and LATCHES THE LAST ONE; this probe forms a
+  // single vector per trial. If trials hold more than one episode, and if the
+  // last one is mostly silence, then the creature's context is routinely set by
+  // a fragment carrying no word -- which the probe would never see.
+  std::printf("  BOUNDARY-FREE: ear rate EMA sampled at reward time, no gate at all\n"
+              "    supervised %.3f   conscience %.3f   AS KERNEL %.3f   fixed %.3f\n"
+              "    (`ctxsrc` read the ear at 0.541 in this window from SPIKE COUNTS in\n"
+              "     the bin. An EMA carries the preceding second, so it still holds a\n"
+              "     word that ended 400 ticks ago -- a different measurement, not a\n"
+              "     better decoder.)\n",
+              m[kEma][kSup], m[kEma][kCon], m[kEma][kKern], m[kEma][kFix]);
+  std::printf("  gate episodes per trial       %.2f   (the kernel latches the LAST)\n"
+              "  of ALL gated ticks, word      %.2f\n"
+              "  of the LAST episode, word     %.2f   <- what the creature latches on\n",
+              valid ? ep_sum / double(valid) : 0.0,
+              valid ? allw_sum / double(valid) : 0.0,
+              valid ? lastw_sum / double(valid) : 0.0);
 
-  if (ms[kGrp] > 0.62 || ms[kNeu] > 0.62 || ms[kAud] > 0.62 || ms[kGate] > 0.62) {
+  if (ms[kGrp] > 0.62 || ms[kNeu] > 0.62 || ms[kAud] > 0.62 || ms[kGate] > 0.62 ||
+      ms[kEma] > 0.62) {
     std::printf("\n  CONTROL FAILED -- an unsupervised partition scores above chance\n"
                 "  against SHUFFLED labels, so the assignment step is finding structure\n"
                 "  that is not the word and nothing above is worth reading.\n");
@@ -9381,8 +9460,14 @@ constexpr CtxSelfArm kCtxSelfArms[] = {
     // correlated with it in this protocol.
     {"ear",      2, 2, kVLTgtHeard},
     {"ear-rnd",  2, 2, kVLTgtRandom},
-    {"adapt",    2, 3, kVLTgtHeard},
-    {"adapt-rnd",2, 3, kVLTgtRandom},
+    // `adapt` (source 3, the derived rate cap) is retired: it cost -0.146 of
+    // index on 8 of 9 seeds and made both arms decay. Its slots go to source 4,
+    // which needs no episode at all -- `partprobe` scores the ear's own rate EMA
+    // at reward time at 1.000 under this kernel's exact rule, with no gate, no
+    // accumulator and no latch, because an EMA carries the preceding second
+    // where an accumulator that resets carries whatever the last fragment held.
+    {"ema",      2, 4, kVLTgtHeard},
+    {"ema-rnd",  2, 4, kVLTgtRandom},
 };
 constexpr uint32_t kCtxSelfArmCount = sizeof(kCtxSelfArms) / sizeof(kCtxSelfArms[0]);
 
@@ -9534,6 +9619,7 @@ bool run_ctxself(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
   }
 
   const uint32_t kOff = 0, kOra = 1, kEar = 2, kERnd = 3, kAda = 4, kARnd = 5;
+  const uint32_t kEma = kAda, kMRnd = kARnd;  // source 4 occupies those slots
 
   // The paired differences, computed and printed HERE -- above every gate --
   // because they are descriptive statistics rather than verdicts, and a run
@@ -9585,8 +9671,8 @@ bool run_ctxself(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
   std::printf("\n  paired differences (same creature, arms differ only in genome fields)\n"
               "    ear   - ear-rnd     %+.1f +/- %.1f Hz, %.1f SE, %u of %u positive\n"
               "    ear   - off         %+.1f +/- %.1f Hz, %.1f SE, %u of %u positive\n"
-              "    adapt - adapt-rnd   %+.1f +/- %.1f Hz, %.1f SE, %u of %u positive\n"
-              "    adapt - off         %+.1f +/- %.1f Hz, %.1f SE, %u of %u positive\n",
+              "    ema   - ema-rnd     %+.1f +/- %.1f Hz, %.1f SE, %u of %u positive\n"
+              "    ema   - off         %+.1f +/- %.1f Hz, %.1f SE, %u of %u positive\n",
               e_rnd, e_rnd_se, e_rnd_se > 0.0 ? e_rnd / e_rnd_se : 0.0, e_rnd_pos, e_rnd_n,
               e_off, e_off_se, e_off_se > 0.0 ? e_off / e_off_se : 0.0, e_off_pos, e_off_n,
               a_rnd, a_rnd_se, a_rnd_se > 0.0 ? a_rnd / a_rnd_se : 0.0, a_rnd_pos, a_rnd_n,
@@ -9624,28 +9710,33 @@ bool run_ctxself(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
   // from one that names slices at random -- and the two deserve different
   // verdicts, because a constant index means the mechanism was never split
   // while a random one means it was split on nothing.
-  if (m_oc[kEar] > 0.95) {
+  if (m_oc[kEma] > 0.95) {
     std::printf("\n  REFUSED, AND IT IS A FINDING ABOUT THE PARTITION, NOT THE MECHANISM.\n"
                 "  The creature's v53 index named the same slice on %.0f%% of reward-window\n"
                 "  ticks, so the table was effectively never split and `self` is `off`\n"
                 "  with extra memory. A fixed equal-sized cut of the larynx does not\n"
                 "  separate the two words' motor states; what fails here is the cut, and\n"
                 "  the next thing to try is one that is learned rather than fixed.\n",
-                100.0 * m_oc[kEar]);
+                100.0 * m_oc[kEma]);
     return false;
   }
 
-  if (m_pr[kEar] < 0.5) {
+  if (m_pr[kEma] < 0.5) {
     std::printf("\n  REFUSED -- the creature was in a context on only %.0f%% of ticks in\n"
                 "  the `self` arm, so the table was mostly not indexed at all.\n",
-                100.0 * m_pr[kEar]);
+                100.0 * m_pr[kEma]);
     return false;
   }
 
   // DNA v53 is what this experiment now tests; v52 is reported as the settled
   // negative it became on two seed families. Both carry their own
   // matched-marginal control and both are scored on the paired difference.
-  const double p = m_mt[kEar];
+  // The mechanism under test is source 4 (`ema`); source 2 (`ear`) is reported
+  // beside it as the version it replaced. Each is gated against ITS OWN
+  // matched-marginal control on the paired difference -- the same rule, applied
+  // to whichever mechanism the run is about, and unchanged since it was written
+  // down before the run that first used it.
+  const double p = m_mt[kEma];
   const double keep_bound = 2.0 * kCtxSelfBound - 1.0;
   const double keep_meas = 2.0 * p - 1.0;
   // (2p - 1) x the oracle's dF1, floored at the no-signal arm. See the note on
@@ -9656,10 +9747,10 @@ bool run_ctxself(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
   };
   const double pred_bound = predict(keep_bound);
   const double pred_meas = predict(keep_meas);
-  const double lift = m_d1[kEar] - m_d1[kOff];
-  const double lift_se = s_d1[kEar] + s_d1[kOff];
-  const double vs_rnd = m_d1[kEar] - m_d1[kERnd];
-  const double rnd_se = s_d1[kEar] + s_d1[kERnd];
+  const double lift = m_d1[kEma] - m_d1[kOff];
+  const double lift_se = s_d1[kEma] + s_d1[kOff];
+  const double vs_rnd = m_d1[kEma] - m_d1[kMRnd];
+  const double rnd_se = s_d1[kEma] + s_d1[kMRnd];
 
   std::printf("\n  the reference here       oracle %.1f Hz vs off %.1f (%+.1f, %.1f SE)\n"
               "  the derived index        p = %.3f +/- %.3f, busiest slice %.3f\n"
@@ -9669,12 +9760,12 @@ bool run_ctxself(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
               "  measured                 %.1f Hz  (%+.1f vs off, %.1f SE)\n"
               "  vs matched-marginal      %.1f Hz  (%+.1f, %.1f SE)\n",
               m_d1[kOra], m_d1[kOff], ora_lift, ora_se > 0.0 ? ora_lift / ora_se : 0.0,
-              p, s_mt[kEar], m_oc[kEar],
-              m_me[kEar], s_me[kEar], m_ml[kEar], s_ml[kEar],
+              p, s_mt[kEma], m_oc[kEma],
+              m_me[kEma], s_me[kEma], m_ml[kEma], s_ml[kEma],
               pred_bound, kCtxSelfBound, 100.0 * keep_bound,
               pred_meas, 100.0 * (keep_meas > 0.0 ? keep_meas : 0.0),
-              m_d1[kEar], lift, lift_se > 0.0 ? lift / lift_se : 0.0,
-              m_d1[kERnd], vs_rnd, rnd_se > 0.0 ? vs_rnd / rnd_se : 0.0);
+              m_d1[kEma], lift, lift_se > 0.0 ? lift / lift_se : 0.0,
+              m_d1[kMRnd], vs_rnd, rnd_se > 0.0 ? vs_rnd / rnd_se : 0.0);
 
   // THE GATE IS `self` AGAINST `self-rnd`, AND `off` IS REPORTED BUT NOT GATED
   // ON. This experiment shipped requiring both, and its first run showed that
@@ -9729,13 +9820,13 @@ bool run_ctxself(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
   // built for and manufactures nothing in the one that was already null.
 
   const bool beats_off = lift > 2.0 * lift_se;
-  const bool beats_rnd = e_rnd > 2.0 * e_rnd_se;
+  const bool beats_rnd = a_rnd > 2.0 * a_rnd_se;
   std::printf("  PAIRED vs matched-marg   %+.1f +/- %.1f Hz, %.1f SE  <-- THE GATE\n"
               "                           %u of %u creatures positive\n"
               "  paired vs `off`          %+.1f +/- %.1f Hz, %.1f SE (diagnostic)\n"
               "  unpaired, for the record %+.1f (%.1f SE) vs control, %+.1f (%.1f SE) vs off\n",
-              e_rnd, e_rnd_se, e_rnd_se > 0.0 ? e_rnd / e_rnd_se : 0.0, e_rnd_pos, e_rnd_n,
-              e_off, e_off_se, e_off_se > 0.0 ? e_off / e_off_se : 0.0,
+              a_rnd, a_rnd_se, a_rnd_se > 0.0 ? a_rnd / a_rnd_se : 0.0, a_rnd_pos, a_rnd_n,
+              a_off, a_off_se, a_off_se > 0.0 ? a_off / a_off_se : 0.0,
               vs_rnd, rnd_se > 0.0 ? vs_rnd / rnd_se : 0.0,
               lift, lift_se > 0.0 ? lift / lift_se : 0.0);
   (void)beats_off;
@@ -9748,7 +9839,7 @@ bool run_ctxself(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
                 "  what the host-written index bought IN THIS SAME RUN, against %.0f%%\n"
                 "  predicted from `ctxsrc`'s upper bound and %.0f%% from this run's own p.\n"
                 "  The last oracle in the architecture is gone.\n",
-                e_rnd, e_rnd_se, e_rnd_pos, e_rnd_n, p,
+                a_rnd, a_rnd_se, a_rnd_pos, a_rnd_n, p,
                 100.0 * lift / (ora_lift > 0.0 ? ora_lift : 1.0),
                 100.0 * keep_bound, 100.0 * (keep_meas > 0.0 ? keep_meas : 0.0));
     return true;
@@ -9768,7 +9859,7 @@ bool run_ctxself(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
               "  the motor state is the best carrier there is here and still short of\n"
               "  the bar; this measures the same shortfall in the mechanism's own units\n"
               "  rather than in a proxy's.\n",
-              m_d1[kOra], p, m_d1[kEar], e_rnd, e_rnd_se, e_rnd_pos, e_rnd_n);
+              m_d1[kOra], p, m_d1[kEma], a_rnd, a_rnd_se, a_rnd_pos, a_rnd_n);
   return false;
 }
 
