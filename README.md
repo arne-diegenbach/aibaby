@@ -7805,6 +7805,53 @@ measured with the gate already fixed, and neither was used to choose it.
 **The `(2p - 1)` model held a fourth and fifth time**: p = 0.758 predicts 42.5 Hz
 against 49.2 measured, and p = 0.883 predicts 49.8 against 56.1.
 
+#### At twice the session, the creature's own index MATCHES the oracle
+
+`areax` established that the oracle index's effect grows with trials — 82.0 ->
+112.9 Hz from 3.4M to 6.8M — and predicted that before measuring it. So the
+question for a self-derived index is whether it composes over a long session or
+degrades, which the decay (-0.036 per session third) made a live worry.
+
+Family three, the same nine creatures at 3.4M and 6.8M, so growth is measured
+within-creature:
+
+| arm | dF1 @ 3.4M | dF1 @ 6.8M |
+|---|---|---|
+| off | 23.1 +/- 6.9 | 22.5 +/- 5.3 |
+| oracle | 65.0 +/- 8.4 | **93.0 +/- 7.2** |
+| **`ema`** | 56.1 +/- 10.3 | **93.1 +/- 10.1** |
+| `ema-rnd` | 23.0 +/- 7.5 | 27.4 +/- 8.7 |
+| `ear` (source 2) | 33.3 +/- 8.6 | 38.8 +/- 8.2 |
+
+    ema - ema-rnd   +65.6 +/- 16.5 Hz, 4.0 SE, 8 of 9    <- the gate
+    ema - off       +70.6 +/- 12.7 Hz, 5.6 SE, 9 of 9
+    oracle - off    +70.5,             5.7 SE
+
+> **The creature's own index recovers 100.1% of the oracle's lift** — 70.6 Hz
+> against 70.5. It did not plateau: doubling the session took the oracle from
+> 65.0 to 93.0 and `ema` from 56.1 to 93.1, closing the gap rather than falling
+> behind it. **The index is no longer the bottleneck.**
+
+**And the `(2p - 1)` model finally broke, in the direction that matters.** It had
+held five times; here p = 0.873 predicts 69.4 Hz and the creature delivers 93.1.
+The model assumes a mis-indexed write CANCELS an correct one, and evidently they
+cancel less than that — so it is a lower bound, not an estimate. It is recorded
+as broken rather than dropped, because it stopped being conservative in the
+convenient direction.
+
+**Where that leaves the goal.** The two words are 460 Hz apart in F1:
+
+| | dF1 | of the word gap |
+|---|---|---|
+| an oracle BIAS with credit assignment removed (`ctxbias`) | 236 Hz | 51% |
+| a LEARNED bias on an oracle index (`areax`, 6.8M) | 112.9 Hz | 25% |
+| a LEARNED bias on the creature's OWN index (this run) | 93.1 Hz | 20% |
+
+Naming is not achieved. But the remaining distance is **not** in the context any
+more — that now matches the oracle — it is in how large a bias reward can build,
+which is `areax`'s territory and a different problem from the one this thread
+was about.
+
 #### What is still unexplained, and is not being smoothed over
 
 - **The control's index is sometimes better than the mechanism's.** `ear` is
