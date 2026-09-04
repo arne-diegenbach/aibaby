@@ -7827,10 +7827,16 @@ within-creature:
     ema - off       +70.6 +/- 12.7 Hz, 5.6 SE, 9 of 9
     oracle - off    +70.5,             5.7 SE
 
-> **The creature's own index recovers 100.1% of the oracle's lift** — 70.6 Hz
-> against 70.5. It did not plateau: doubling the session took the oracle from
-> 65.0 to 93.0 and `ema` from 56.1 to 93.1, closing the gap rather than falling
-> behind it. **The index is no longer the bottleneck.**
+> **The creature's own index recovers 100.1% of the oracle's lift on this
+> family** — 70.6 Hz against 70.5 — and it did not plateau: doubling the session
+> took the oracle from 65.0 to 93.0 and `ema` from 56.1 to 93.1.
+>
+> **CORRECTION, from the replication below: that 100% is family-specific.** On
+> family two at the same length the oracle is stronger (109.3) and `ema` weaker
+> (72.6), which is **60%**. The honest figure is 60-100%, family-dependent. What
+> replicates is the gate — `ema` - `ema-rnd` reads +65.6 (4.0 SE) here and +42.2
+> (2.9 SE) there, 8 of 9 creatures both times — not the claim that the index has
+> caught the oracle outright.
 
 **And the `(2p - 1)` model finally broke, in the direction that matters.** It had
 held five times; here p = 0.873 predicts 69.4 Hz and the creature delivers 93.1.
@@ -7851,6 +7857,73 @@ Naming is not achieved. But the remaining distance is **not** in the context any
 more — that now matches the oracle — it is in how large a bias reward can build,
 which is `areax`'s territory and a different problem from the one this thread
 was about.
+
+### Does it NAME? — the milestone question, and one control that cannot answer it
+
+Every number in this thread was scored on `dF1`, the gap between the MEAN F1 for
+one word and the other. That was the right instrument while the question was
+whether a context reaches the voice. **It is not the milestone.** A mean shift
+smaller than the within-word scatter buys a listener nothing, and node
+perturbation works by injecting variance — so a creature can move dF1 and still
+be unnameable. `vocab` asks the real question: can a listener tell which word
+was said?
+
+So utterances are kept per trial and scored the way `vocab` scores them — a
+held-out one-of-two readout over what the creature actually produced. **F1 and F2
+only**: `vocallearn` also asks for a different AMPLITUDE and rate per word, and a
+readout given those would score loudness as naming.
+
+**The confound the smoke run found first, before the long one.** With no
+mechanism at all the readout already reads 0.70 at 200k. That is M1b — the
+creature repeats what it just heard — and in this protocol **the context IS the
+word just heard**, so imitation and naming are confounded by construction. No
+readout over these trials can separate them; the most that can be claimed is the
+increment over the imitation baseline, which is why `off` matters more here than
+in any earlier measurement.
+
+Both families, 6.8M:
+
+| | `ema` | `off` (echo only) | `ema-rnd` | `oracle` |
+|---|---|---|---|---|
+| family three | **0.895 +/- 0.018** | 0.610 | 0.650 | 0.973 |
+| family two | **0.780 +/- 0.052** | 0.575 | 0.732 | 0.973 |
+
+    PAIRED  ema - off       +0.205 +/- 0.069,  3.0 SE,  6 of 9   PASSES
+    PAIRED  ema - ema-rnd   +0.048 +/- 0.046,  1.0 SE,  7 of 9   FAILS
+
+Every shuffled control sits at chance (0.484-0.507), so the readout is honest.
+And the echo baseline FALLS with training, 0.704 at 200k to 0.575-0.610 at 6.8M
+— the increment is not an artefact of imitation getting stronger.
+
+> **The 93 Hz survives as discriminability**: a listener tells the words apart
+> from the creature's own utterances at 0.78-0.90, against an imitation baseline
+> of 0.575-0.610, paired at 3.0 SE. That was the thing no earlier measurement
+> could predict, because dF1 is a shift in a mean and discriminability is a shift
+> against the scatter.
+
+**But `ema-rnd` cannot answer this question, and the reason is structural.** Its
+index still tracks the word — p = 0.835 — because the index is read from the EAR,
+which hears the word whatever the target is. So the control arm's bias table is
+also indexed by the word, and also makes the voice word-dependent, just not in
+the direction reward asked for. **A discriminability readout cannot separate
+"named correctly" from "named arbitrarily but consistently."** `ema-rnd` is the
+right control for *did reward teach the mapping* and the wrong one for *is the
+voice word-dependent*.
+
+The evidence that the direction is the taught one is elsewhere and is not
+ambiguous: **`change` reads +11.4 and +18.3 for `ema` against +0.1 for
+`ema-rnd`**, and dF1 against the matched-marginal control passes on both
+families (+42.2 at 2.9 SE, +65.6 at 4.0 SE).
+
+**So the composite claim, and it needs both halves.** The voice becomes
+word-dependent above the imitation baseline, AND the dependence is in the taught
+direction. Neither number alone is naming: discriminability alone would count an
+arbitrary-but-consistent mapping, and dF1 alone would count a mean shift no
+listener could use.
+
+**What this is not.** It is TWO words, which `partprobe` shows are trivially
+separable in the ear (1.000), and `vocab` already reports four words working and
+eight not. A listener telling two vowels apart is not a vocabulary.
 
 #### What is still unexplained, and is not being smoothed over
 

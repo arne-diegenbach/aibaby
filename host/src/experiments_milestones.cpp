@@ -4042,6 +4042,23 @@ struct VLRun {
   double ctx_match_early = 0.0, ctx_match_late = 0.0;
   // DNA v53: competitions run per trial. The design is one per word.
   double ctx_events_per_trial = 0.0;
+  // THE NAMING MEASUREMENT, and it is a different question from dF1.
+  //
+  // Everything in this thread has been scored on dF1 -- the gap between the MEAN
+  // F1 for one word and for the other. That is the mechanism's own quantity, and
+  // it was the right instrument while the question was whether a context reaches
+  // the voice at all. **It is not the milestone.** A mean shift smaller than the
+  // within-word scatter buys a listener nothing, so a creature can move dF1 and
+  // still be unnameable.
+  //
+  // So the utterances are kept PER TRIAL and scored the way `vocab` scores them:
+  // a held-out one-of-two readout over what the creature actually produced.
+  // **F1 and F2 only.** `vocallearn`'s protocol also asks for a different
+  // AMPLITUDE and a different rate per word, so a readout given those could
+  // score loudness as naming -- which would be true of the protocol rather than
+  // of the voice.
+  std::vector<double> utt_f1, utt_f2;
+  std::vector<int> utt_word;
   // ...and the share taken by the busiest slice. A constant index scores 0.5
   // on `ctx_match` with balanced words, but it scores 1.0 here, and the two
   // failures deserve different verdicts.
@@ -4393,6 +4410,14 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
     }
     if (err < 0.0) { ++out.skipped; continue; }
     ++out.scored;
+    // One row per scored trial: what the creature actually said, and which word
+    // it was being taught. See the note on `utt_f1` -- this is the naming
+    // measurement, and it is not the same question as dF1.
+    if (n_voiced > 0 && label < kVLWords) {
+      out.utt_f1.push_back(f1_sum / double(n_voiced));
+      out.utt_f2.push_back(f2_sum / double(n_voiced));
+      out.utt_word.push_back(int(label));
+    }
 
     const int bin = trial < third ? 0 : (trial >= n_trials - third ? 1 : -1);
     if (bin >= 0) {
@@ -9533,6 +9558,11 @@ bool run_ctxself(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
   std::vector<double> shared[kCtxSelfArmCount], match[kCtxSelfArmCount];
   std::vector<double> occ[kCtxSelfArmCount];
   std::vector<double> mte[kCtxSelfArmCount], mtl[kCtxSelfArmCount];
+  std::vector<double> name[kCtxSelfArmCount], nshuf[kCtxSelfArmCount];
+  // Which creature each naming row came from, so the comparison can be PAIRED
+  // like every other gate in this experiment. Reported as a mean only, the
+  // milestone number would rest on a weaker test than the mechanism numbers do.
+  std::vector<uint32_t> nreps[kCtxSelfArmCount];
 
   std::printf("  %-6s %-9s %-9s %-8s %-8s %-10s %-7s %s\n", "seed", "arm", "dF1 (Hz)",
               "p(idx)", "busiest", "table div", "ev/tri", "change");
@@ -9569,6 +9599,28 @@ bool run_ctxself(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
       shared[a].push_back(run.ctx_shared_mag);
       match[a].push_back(run.ctx_match);
       occ[a].push_back(run.ctx_occupancy);
+      // THE NAMING SCORE: a held-out one-of-two readout over the creature's own
+      // utterances, F1 and F2 only. Chance is 0.500 with balanced words. The
+      // shuffled control uses the same rows and the same split, so a readout
+      // that has learned the split rather than the voice scores the same in
+      // both and the difference is what is real.
+      {
+        std::vector<std::vector<double>> rows;
+        rows.reserve(run.utt_word.size());
+        for (size_t i = 0; i < run.utt_word.size(); ++i) {
+          rows.push_back({run.utt_f1[i], run.utt_f2[i]});
+        }
+        const size_t tr = rows.size() / 2;
+        if (rows.size() >= 16) {
+          name[a].push_back(holdout_accuracy(rows, run.utt_word, tr));
+          nreps[a].push_back(r);
+          aibaby::Rng nr;
+          nr.seed(seed ^ 0x4E41u);
+          std::vector<int> sh = run.utt_word;
+          for (size_t i = sh.size(); i > 1; --i) std::swap(sh[i - 1], sh[nr.next() % i]);
+          nshuf[a].push_back(holdout_accuracy(rows, sh, tr));
+        }
+      }
       mte[a].push_back(run.ctx_match_early);
       mtl[a].push_back(run.ctx_match_late);
       std::printf("  %-6u %-9s %-9.1f %-8.3f %-8.3f %-10.4f %-7.1f %+.1f\n", r,
@@ -9586,6 +9638,8 @@ bool run_ctxself(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
   double m_oc[kCtxSelfArmCount], s_oc[kCtxSelfArmCount];
   double m_me[kCtxSelfArmCount], s_me[kCtxSelfArmCount];
   double m_ml[kCtxSelfArmCount], s_ml[kCtxSelfArmCount];
+  double m_nm[kCtxSelfArmCount], s_nm[kCtxSelfArmCount];
+  double m_ns[kCtxSelfArmCount], s_ns[kCtxSelfArmCount];
   uint32_t valid = 0;
   for (uint32_t a = 0; a < kCtxSelfArmCount; ++a) {
     if (df1[a].size() < 2) {
@@ -9603,6 +9657,8 @@ bool run_ctxself(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
     m_oc[a] = ctx_mean_se(occ[a], &s_oc[a]);
     m_me[a] = ctx_mean_se(mte[a], &s_me[a]);
     m_ml[a] = ctx_mean_se(mtl[a], &s_ml[a]);
+    m_nm[a] = name[a].size() >= 2 ? ctx_mean_se(name[a], &s_nm[a]) : 0.0;
+    m_ns[a] = nshuf[a].size() >= 2 ? ctx_mean_se(nshuf[a], &s_ns[a]) : 0.0;
   }
   (void)valid;
 
@@ -9648,6 +9704,50 @@ bool run_ctxself(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
   uint32_t e_rnd_pos = 0, e_off_pos = 0, e_rnd_n = 0, e_off_n = 0;
   const double e_rnd = paired(kEar, kERnd, &e_rnd_se, &e_rnd_pos, &e_rnd_n);
   const double e_off = paired(kEar, kOff, &e_off_se, &e_off_pos, &e_off_n);
+  // DOES IT NAME? dF1 is a shift in a MEAN; this asks whether a listener could
+  // tell the words apart from what the creature actually said, which is the
+  // milestone-level question and can come out negative when dF1 is positive.
+  std::printf("\n  can a listener tell the words apart? (held-out one-of-two, F1+F2)\n");
+  for (uint32_t a = 0; a < kCtxSelfArmCount; ++a) {
+    std::printf("    %-10s %.3f +/- %.3f   (shuffled %.3f, chance 0.500)\n",
+                kCtxSelfArms[a].name, m_nm[a], s_nm[a], m_ns[a]);
+  }
+  // Paired, by creature, against the two controls that matter: `off` carries
+  // the same M1b ECHO with no conditional mechanism -- in this protocol the
+  // context IS the word just heard, so imitation and naming are confounded by
+  // construction and the increment over `off` is the most that can be claimed --
+  // and `ema-rnd` carries the same machinery and the same echo, differing only
+  // in whether the target tracks the word.
+  {
+    auto npaired = [&](uint32_t A, uint32_t B, double* se, uint32_t* pos, uint32_t* n) {
+      std::vector<double> d;
+      for (size_t i = 0; i < nreps[A].size(); ++i) {
+        for (size_t j = 0; j < nreps[B].size(); ++j) {
+          if (nreps[A][i] == nreps[B][j]) { d.push_back(name[A][i] - name[B][j]); break; }
+        }
+      }
+      *n = uint32_t(d.size());
+      *pos = 0;
+      for (double v : d) if (v > 0.0) ++*pos;
+      if (d.size() < 2) { *se = 0.0; return 0.0; }
+      double m = 0.0;
+      for (double v : d) m += v;
+      m /= double(d.size());
+      double ss = 0.0;
+      for (double v : d) ss += (v - m) * (v - m);
+      *se = std::sqrt(ss / double(d.size() - 1)) / std::sqrt(double(d.size()));
+      return m;
+    };
+    double se1 = 0.0, se2 = 0.0;
+    uint32_t p1 = 0, p2 = 0, n1 = 0, n2 = 0;
+    const double d1 = npaired(kEma, kOff, &se1, &p1, &n1);
+    const double d2 = npaired(kEma, kMRnd, &se2, &p2, &n2);
+    std::printf("    PAIRED  ema - off       %+.3f +/- %.3f, %.1f SE, %u of %u\n"
+                "    PAIRED  ema - ema-rnd   %+.3f +/- %.3f, %.1f SE, %u of %u\n",
+                d1, se1, se1 > 0.0 ? d1 / se1 : 0.0, p1, n1,
+                d2, se2, se2 > 0.0 ? d2 / se2 : 0.0, p2, n2);
+  }
+
   // THE DRIFT TEST, and it is independent of whether the fix works. A frozen
   // prototype under a drifting input predicts the index DECAYS across a
   // session, and only in the arm whose target tracks the word -- the arm whose
