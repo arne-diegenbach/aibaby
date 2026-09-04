@@ -8519,6 +8519,23 @@ papers about the half it does not touch.
   conflicting case by construction: both lessons drive the same dimension to
   different values.
 
+- Kornfeld, J., Wang, Y., Januszewski, M., Rother, A., Schubert, P., Goldman, M.,
+  Jain, V., Denk, W. & Fee, M. S. (2025). *An anatomical substrate of credit
+  assignment in reinforcement learning.* bioRxiv 2020.02.18.954354.
+  <https://doi.org/10.1101/2020.02.18.954354> — **a lead this project has not
+  built, and it contradicts how v51/v53 are wired.** Serial EM of Area X finds the
+  two inputs land on different structures: **78.8% of HVC input (the timing and
+  context signal) is on dendritic SPINES, while 50% of LMAN input (the
+  exploratory variability) is on dendritic SHAFTS.** Shaft depolarisation spreads
+  into nearby spine heads and relieves the magnesium block, so variability GATES
+  which context-carrying synapses are eligible rather than being added to them.
+  The paper prices the alternative: targeting spines with both is about **4 times
+  less efficient**. In this creature context and perturbation share ONE parameter
+  — `bias_[i][c]` is both the context's memory and the thing node perturbation
+  jitters — and the machinery for the separation already exists unused in DNA
+  v25's apical compartment, which `apicalprobe` measured carrying the object at
+  0.835 to the dendrites against 0.524 at the soma.
+
 **Metaplasticity and memory consolidation (DNA v41).**
 
 - Fusi, S., Drew, P. J. & Abbott, L. F. (2005). *Cascade models of synaptically
@@ -8588,6 +8605,30 @@ papers about the half it does not touch.
   2018. <https://arxiv.org/pdf/1810.11393> — DNA v40. Errors originate at apical
   dendrites as a mismatch between predictive input from lateral interneurons and
   actual top-down feedback, continuously and without separate phases.
+
+**Competitive learning, which is how DNA v53 derives a context without labels.**
+
+- MacQueen, J. (1967). *Some methods for classification and analysis of
+  multivariate observations.* Proceedings of the Fifth Berkeley Symposium on
+  Mathematical Statistics and Probability, Volume 1: Statistics, 281–297.
+  University of California Press.
+  <https://projecteuclid.org/ebooks/berkeley-symposium-on-mathematical-statistics-and-probability/Proceedings-of-the-Fifth-Berkeley-Symposium-on-Mathematical-Statistics-and/chapter/Some-methods-for-classification-and-analysis-of-multivariate-observations/bsmsp/1200512992>
+  — the source of the online update DNA v53 runs: each prototype is the running
+  mean of what it has won, so the learning rate is `1/wins` and **no constant is
+  guessed**. `partprobe` also scores the batch version beside it, because batch
+  with restarts is what a probe can do and a creature cannot.
+- DeSieno, D. (1988). *Adding a conscience to competitive learning.*
+  Proceedings of the IEEE International Conference on Neural Networks, San Diego,
+  Vol. I, 117–124. IEEE Press.
+  <https://www.inf.ufrgs.br/~engel/data/media/file/cmp121/conscience%20competitive%20learning.pdf>
+  — **the difference between 0.584 and 1.000 in `partprobe`.** A unit that wins
+  early becomes the running mean of what it won, and in high dimensions a mean is
+  nearer every point than any single point is, so it keeps winning and the other
+  starves. Penalising a unit for exceeding its share fixes it, and this creature
+  already runs the biological form of that fix — per-module homeostasis drives
+  each unit toward a target rate and DNA v32's lateral competition is what makes
+  them compete at all. The strength here is derived from the data's own distance
+  scale rather than taken from the paper.
 
 **Hearing and the vowel space.**
 
