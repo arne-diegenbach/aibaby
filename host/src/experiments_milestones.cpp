@@ -8082,7 +8082,8 @@ struct CtxSrc {
   bool ok = false;
 };
 
-CtxSrc run_ctxsrc_session(const std::vector<uint8_t>& blob, uint64_t ticks) {
+CtxSrc run_ctxsrc_session(const std::vector<uint8_t>& blob, uint64_t ticks,
+                          uint32_t n_words = 2) {
   CtxSrc out;
   std::string error;
   Session s;
@@ -8130,7 +8131,8 @@ CtxSrc run_ctxsrc_session(const std::vector<uint8_t>& blob, uint64_t ticks) {
   // anything in the creature with a period of two trials would carry the label
   // without a word ever being heard.
   std::vector<int> order(size_t(n_trials), 0);
-  for (size_t i = 0; i < order.size(); ++i) order[i] = int(i % 2);
+  const uint32_t nw = n_words < 2 ? 2u : (n_words > 4 ? 4u : n_words);
+  for (size_t i = 0; i < order.size(); ++i) order[i] = int(i % nw);
   for (size_t i = order.size(); i > 1; --i) std::swap(order[i - 1], order[rng.next() % i]);
 
   for (uint64_t k = 0; k < n_trials; ++k) {
@@ -8989,6 +8991,71 @@ bool run_partprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
               "                           learned, which is the opposite of what the\n"
               "                           motor-state rows found.\n",
               aud_best, aud_se, aud_batch, m[kAud][kSup], m[kAud][kFix]);
+
+  // DOES ANY OF THIS SURVIVE MORE THAN TWO WORDS?
+  //
+  // Everything DNA v53 was validated on is TWO vowels, and the ear separates
+  // those at 1.000 -- the easy case. Four is harder BY DESIGN: /i/ and /u/ are
+  // within 30 Hz on F1 and 1600 Hz apart on F2 (a nearly pure F2
+  // discrimination), and /e/ sits between /a/ and /i/ on both. `coderprobe`
+  // reads one-of-eight at 0.981 SUPERVISED, which says nothing about whether an
+  // unsupervised rule can find those boundaries without being told.
+  //
+  // This is the cheap gate before any four-word protocol is written: the SAME
+  // competitive rule with the SAME conscience, on the SAME feature v53 actually
+  // reads (the ear's rate EMA at reward time), asked for four clusters instead
+  // of two. Chance is 0.250. If it cannot find four, the four-word build stops
+  // here for the price of a read-only run rather than a protocol rewrite.
+  {
+    std::printf("\n  CAN IT FIND FOUR? (same rule, same conscience, ear EMA at reward)\n");
+    std::vector<double> k4, k4s, k2ref;
+    for (uint32_t r = 0; r < kReps; ++r) {
+      const uint64_t sd = dna.header().seed + r * 7919ull;
+      std::vector<uint8_t> variant = blob;
+      std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &sd, sizeof(sd));
+      const CtxSrc q = run_ctxsrc_session(variant, ticks, 4);
+      if (!q.ok || q.train_split == 0 || q.feat_ema.empty()) continue;
+      k4.push_back(competitive_k_accuracy(q.feat_ema, q.labels, q.train_split, 4,
+                                          sd ^ 0xF00Du, true));
+      aibaby::Rng nr;
+      nr.seed(sd ^ 0xBEEFu);
+      std::vector<int> sh = q.labels;
+      for (size_t i = sh.size(); i > 1; --i) std::swap(sh[i - 1], sh[nr.next() % i]);
+      k4s.push_back(competitive_k_accuracy(q.feat_ema, sh, q.train_split, 4,
+                                           sd ^ 0xF00Du, true));
+      // The same rule on the same creature at TWO words, so the four-word
+      // number is read against this probe's own two-word result rather than
+      // against one quoted from a different run.
+      const CtxSrc q2 = run_ctxsrc_session(variant, ticks, 2);
+      if (q2.ok && q2.train_split > 0 && !q2.feat_ema.empty()) {
+        k2ref.push_back(competitive_k_accuracy(q2.feat_ema, q2.labels, q2.train_split,
+                                               2, sd ^ 0xF00Du, true));
+      }
+    }
+    if (k4.size() >= 3) {
+      double e4 = 0.0, e4s = 0.0, e2 = 0.0;
+      const double m4 = ctx_mean_se(k4, &e4);
+      const double m4s = ctx_mean_se(k4s, &e4s);
+      const double m2 = k2ref.size() >= 3 ? ctx_mean_se(k2ref, &e2) : 0.0;
+      std::printf("    two words, k=2   %.3f +/- %.3f   (chance 0.500)\n"
+                  "    FOUR words, k=4  %.3f +/- %.3f   (chance 0.250)\n"
+                  "    shuffled control %.3f +/- %.3f\n",
+                  m2, e2, m4, e4, m4s, e4s);
+      if (m4 > 0.60) {
+        std::printf("    -> IT FINDS FOUR. The partition is not a two-word trick, so\n"
+                    "       the four-word protocol is worth writing.\n");
+      } else if (m4 > 0.35) {
+        std::printf("    -> PARTIAL. Above chance but well short of the two-word case:\n"
+                    "       the boundaries exist and the rule finds some of them.\n");
+      } else {
+        std::printf("    -> IT DOES NOT. The competitive rule finds two clusters and\n"
+                    "       not four, so a four-word protocol would be measuring the\n"
+                    "       index rather than the naming. Fix the partition first.\n");
+      }
+    } else {
+      std::printf("    inconclusive: %zu usable creatures\n", k4.size());
+    }
+  }
 
   // DRIFT ROBUSTNESS -- pricing a learning rate before it is built.
   //

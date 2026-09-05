@@ -797,6 +797,95 @@ inline double online_competitive_accuracy(const std::vector<std::vector<double>>
   return double(hit) / double(z.size() - train_count);
 }
 
+// K-way competitive learning, for the question "does any of this survive more
+// than two words?"
+//
+// Everything DNA v53 was validated on is TWO vowels, and `partprobe` shows the
+// ear separates those at 1.000 -- the easy case. The four-word set is harder BY
+// DESIGN: /i/ and /u/ sit within 30 Hz on F1 and 1600 Hz apart on F2, so that
+// pair is a nearly pure F2 discrimination, and /e/ sits between /a/ and /i/ on
+// both formants. `coderprobe` reads one-of-eight at 0.981 SUPERVISED, which says
+// nothing about whether an unsupervised rule can find the boundaries.
+//
+// Same rule as the two-way version and the same conscience -- a unit over its
+// 1/K share is pushed away by a penalty in the data's own distance units -- so
+// this is the shipped mechanism asked a harder question, not a new mechanism.
+//
+// The cluster-to-word map is the best of all k! assignments, taken on the TRAIN
+// half and applied to the test half. k! is 24 at four words, which is cheap to
+// enumerate and exact; a greedy match would understate a partition that is right
+// but permuted.
+inline double competitive_k_accuracy(const std::vector<std::vector<double>>& x,
+                                     const std::vector<int>& y, size_t train_count,
+                                     uint32_t k, uint64_t seed, bool conscience) {
+  if (x.empty() || k < 2 || k > 8 || train_count < k * 4 || train_count >= x.size()) {
+    return 0.0;
+  }
+  const size_t dims = x[0].size();
+  if (dims == 0) return 0.0;
+  aibaby::Rng rng;
+  rng.seed(seed);
+  std::vector<std::vector<double>> w(k, std::vector<double>(dims, 0.0));
+  std::vector<double> wins(k, 0.0);
+  double dscale = 0.0, dn = 0.0;
+  for (size_t i = 0; i < train_count; ++i) {
+    double best_score = 0.0, best_d = 0.0;
+    uint32_t win = 0;
+    double total = 0.0;
+    for (uint32_t c = 0; c < k; ++c) total += wins[c];
+    const double sc = dn > 0.0 ? dscale / dn : 0.0;
+    for (uint32_t c = 0; c < k; ++c) {
+      double d = 0.0;
+      for (size_t q = 0; q < dims; ++q) {
+        const double e = x[i][q] - w[c][q];
+        d += e * e;
+      }
+      double score = d;
+      if (conscience && total > 0.0 && sc > 0.0) {
+        score += (double(k) * (wins[c] / total) - 1.0) * sc;
+      }
+      if (c == 0 || score < best_score) { best_score = score; best_d = d; win = c; }
+    }
+    wins[win] += 1.0;
+    dscale += best_d;
+    dn += 1.0;
+    const double lr = 1.0 / wins[win];
+    for (size_t q = 0; q < dims; ++q) w[win][q] += lr * (x[i][q] - w[win][q]);
+  }
+  std::vector<int> cluster(x.size(), 0);
+  for (size_t i = 0; i < x.size(); ++i) {
+    double bd = 0.0;
+    uint32_t win = 0;
+    for (uint32_t c = 0; c < k; ++c) {
+      double d = 0.0;
+      for (size_t q = 0; q < dims; ++q) {
+        const double e = x[i][q] - w[c][q];
+        d += e * e;
+      }
+      if (c == 0 || d < bd) { bd = d; win = c; }
+    }
+    cluster[i] = int(win);
+  }
+  // Best of all k! cluster-to-word assignments, chosen on TRAIN only.
+  std::vector<uint32_t> perm(k);
+  for (uint32_t c = 0; c < k; ++c) perm[c] = c;
+  std::vector<uint32_t> best_perm = perm;
+  double best_train = -1.0;
+  do {
+    size_t hit = 0;
+    for (size_t i = 0; i < train_count; ++i) {
+      if (int(perm[size_t(cluster[i])]) == y[i]) ++hit;
+    }
+    const double acc = double(hit) / double(train_count);
+    if (acc > best_train) { best_train = acc; best_perm = perm; }
+  } while (std::next_permutation(perm.begin(), perm.end()));
+  size_t hit = 0;
+  for (size_t i = train_count; i < x.size(); ++i) {
+    if (int(best_perm[size_t(cluster[i])]) == y[i]) ++hit;
+  }
+  return double(hit) / double(x.size() - train_count);
+}
+
 // Two-means, fit on the train half WITHOUT labels. Restarts are chosen by
 // within-cluster sum of squares -- the unsupervised criterion -- and never by
 // accuracy, which would be exactly the leakage this measurement exists to

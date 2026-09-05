@@ -7990,6 +7990,36 @@ same size everywhere. And `oracle` reaches 0.875-0.901 where `ema` reaches
 > two vowels apart is not a vocabulary, and the creature points the right way
 > more reliably (0.74-0.82) than it arrives (0.60-0.67).
 
+#### The index scales to four words. The LEARNING at four words is untested.
+
+Before writing a four-word protocol, the cheap gate: the same competitive rule
+with the same conscience, on the same feature v53 actually reads, asked for four
+clusters instead of two. The four-word set is the hard case by design — `/i/` and
+`/u/` sit within 30 Hz on F1 and 1600 Hz apart on F2, a nearly pure F2
+discrimination, and `/e/` lands between `/a/` and `/i/` on both.
+
+    two words, k=2    1.000 +/- 0.000   (chance 0.500)
+    FOUR words, k=4   0.895 +/- 0.028   (chance 0.250)
+    shuffled control  0.271 +/- 0.008
+
+**0.895 against a chance of 0.250, so the partition is not a two-word trick.**
+The shuffled control earns its place: a best-of-24-permutations assignment has
+room to flatter itself, and it inflates by 0.021.
+
+**What this does NOT license.** It measures the INDEX at four words, not the
+LEARNING. Four contexts means four conditional mappings competing for one reward
+channel, and `capacity` measured this creature holding TWO orthogonal lessons at
+once (0.84) while a conflicting pair collapses to 0.22. Whether node perturbation
+can hold four is a separate question this gate says nothing about.
+
+**The four-word build, scoped.** `kWords[8]` already exists and `kVLWords` is one
+constant, but four things assume two: `ctx_match`'s best-assignment (2
+permutations, needs 24 — the code pattern now exists), `holdout_accuracy` which
+**refuses labels above 1** by design, the amplitude and rate targets which are
+`word == 0 ? loud : quiet`, and **the axis measure, which does not generalise** —
+there is no single axis between four targets. The strict nearest-target score
+does generalise for free, at chance 0.250.
+
 
 #### What is still unexplained, and is not being smoothed over
 
