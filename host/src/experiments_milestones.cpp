@@ -9563,6 +9563,10 @@ bool run_ctxself(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
   // like every other gate in this experiment. Reported as a mean only, the
   // milestone number would rest on a weaker test than the mechanism numbers do.
   std::vector<uint32_t> nreps[kCtxSelfArmCount];
+  std::vector<double> corr[kCtxSelfArmCount];
+  std::vector<uint32_t> creps[kCtxSelfArmCount];
+  std::vector<double> axis[kCtxSelfArmCount];
+  std::vector<uint32_t> areps[kCtxSelfArmCount];
 
   std::printf("  %-6s %-9s %-9s %-8s %-8s %-10s %-7s %s\n", "seed", "arm", "dF1 (Hz)",
               "p(idx)", "busiest", "table div", "ev/tri", "change");
@@ -9610,6 +9614,79 @@ bool run_ctxself(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
         for (size_t i = 0; i < run.utt_word.size(); ++i) {
           rows.push_back({run.utt_f1[i], run.utt_f2[i]});
         }
+        // CORRECT naming, as opposed to merely CONSISTENT naming. The readout
+        // below fits centroids to the creature's own output, so it scores an
+        // arbitrary-but-stable mapping exactly as highly as the taught one --
+        // which is why `ema-rnd` beat it: that arm's index tracks the word too,
+        // so its voice is word-dependent, just not in the direction reward
+        // asked for.
+        //
+        // This scores against the WORDS' OWN TARGETS instead. Nothing is
+        // fitted, so there is no split and no leak: an utterance either lands
+        // nearer the target for the word the creature HEARD or nearer the other
+        // one, and chance is 0.500. An arm taught a random target now sits at
+        // chance by construction, which is what makes it a control this
+        // question can use.
+        {
+          uint32_t hit = 0, tot = 0;
+          for (size_t i = 0; i < run.utt_word.size(); ++i) {
+            const double e0 = formant_error(run.utt_f1[i], run.utt_f2[i], kWords[0]);
+            const double e1 = formant_error(run.utt_f1[i], run.utt_f2[i], kWords[1]);
+            if (e0 < 0.0 || e1 < 0.0) continue;
+            const int pick = e1 < e0 ? 1 : 0;
+            if (pick == run.utt_word[i]) ++hit;
+            ++tot;
+          }
+          if (tot >= 16) {
+            corr[a].push_back(double(hit) / double(tot));
+            creps[a].push_back(r);
+          }
+          // ...and the same question asked RELATIVE TO THE CREATURE'S OWN
+          // BASELINE, which is the one it can currently pass.
+          //
+          // The absolute score above asks whether the utterance REACHED the
+          // right target, and it cannot come off chance here: the two words sit
+          // 460 Hz apart in F1, the taught shift is ~93 Hz, and nearest-target
+          // only flips if the creature crosses the midpoint. `off` reads 0.513
+          // while the SAME utterances are 70% discriminable, which is the
+          // measure disagreeing with itself about what it is testing.
+          //
+          // This projects each utterance onto the axis joining the two targets,
+          // centred on the creature's own grand mean, and asks whether the SIGN
+          // matches the word it heard. The centring uses no labels, so nothing
+          // is fitted to the answer. An arbitrary-but-consistent mapping scores
+          // 0.500 because its sign is uncorrelated with the word; a taught one
+          // scores above it without having to arrive.
+          {
+            double mf1 = 0.0, mf2 = 0.0;
+            uint32_t mn = 0;
+            for (size_t i = 0; i < run.utt_word.size(); ++i) {
+              if (run.utt_f1[i] <= 1.0 || run.utt_f2[i] <= 1.0) continue;
+              mf1 += std::log(run.utt_f1[i]);
+              mf2 += std::log(run.utt_f2[i]);
+              ++mn;
+            }
+            if (mn >= 16) {
+              mf1 /= double(mn);
+              mf2 /= double(mn);
+              const double ax1 = std::log(double(kWords[1].f1)) - std::log(double(kWords[0].f1));
+              const double ax2 = std::log(double(kWords[1].f2)) - std::log(double(kWords[0].f2));
+              uint32_t h2 = 0, t2 = 0;
+              for (size_t i = 0; i < run.utt_word.size(); ++i) {
+                if (run.utt_f1[i] <= 1.0 || run.utt_f2[i] <= 1.0) continue;
+                const double p1 = std::log(run.utt_f1[i]) - mf1;
+                const double p2 = std::log(run.utt_f2[i]) - mf2;
+                const int pick = (p1 * ax1 + p2 * ax2) > 0.0 ? 1 : 0;
+                if (pick == run.utt_word[i]) ++h2;
+                ++t2;
+              }
+              if (t2 >= 16) {
+                axis[a].push_back(double(h2) / double(t2));
+                areps[a].push_back(r);
+              }
+            }
+          }
+        }
         const size_t tr = rows.size() / 2;
         if (rows.size() >= 16) {
           name[a].push_back(holdout_accuracy(rows, run.utt_word, tr));
@@ -9640,6 +9717,8 @@ bool run_ctxself(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
   double m_ml[kCtxSelfArmCount], s_ml[kCtxSelfArmCount];
   double m_nm[kCtxSelfArmCount], s_nm[kCtxSelfArmCount];
   double m_ns[kCtxSelfArmCount], s_ns[kCtxSelfArmCount];
+  double m_cr[kCtxSelfArmCount], s_cr[kCtxSelfArmCount];
+  double m_ax[kCtxSelfArmCount], s_ax[kCtxSelfArmCount];
   uint32_t valid = 0;
   for (uint32_t a = 0; a < kCtxSelfArmCount; ++a) {
     if (df1[a].size() < 2) {
@@ -9659,6 +9738,8 @@ bool run_ctxself(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
     m_ml[a] = ctx_mean_se(mtl[a], &s_ml[a]);
     m_nm[a] = name[a].size() >= 2 ? ctx_mean_se(name[a], &s_nm[a]) : 0.0;
     m_ns[a] = nshuf[a].size() >= 2 ? ctx_mean_se(nshuf[a], &s_ns[a]) : 0.0;
+    m_cr[a] = corr[a].size() >= 2 ? ctx_mean_se(corr[a], &s_cr[a]) : 0.0;
+    m_ax[a] = axis[a].size() >= 2 ? ctx_mean_se(axis[a], &s_ax[a]) : 0.0;
   }
   (void)valid;
 
@@ -9746,6 +9827,70 @@ bool run_ctxself(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
                 "    PAIRED  ema - ema-rnd   %+.3f +/- %.3f, %.1f SE, %u of %u\n",
                 d1, se1, se1 > 0.0 ? d1 / se1 : 0.0, p1, n1,
                 d2, se2, se2 > 0.0 ? d2 / se2 : 0.0, p2, n2);
+    std::printf("\n  is the utterance nearer the RIGHT word's target? (no fitting,"
+                " chance 0.500)\n");
+    for (uint32_t a = 0; a < kCtxSelfArmCount; ++a) {
+      std::printf("    %-10s %.3f +/- %.3f\n", kCtxSelfArms[a].name, m_cr[a], s_cr[a]);
+    }
+    auto cpaired = [&](uint32_t A, uint32_t B, double* se, uint32_t* pos, uint32_t* n) {
+      std::vector<double> d;
+      for (size_t i = 0; i < creps[A].size(); ++i) {
+        for (size_t j = 0; j < creps[B].size(); ++j) {
+          if (creps[A][i] == creps[B][j]) { d.push_back(corr[A][i] - corr[B][j]); break; }
+        }
+      }
+      *n = uint32_t(d.size());
+      *pos = 0;
+      for (double v : d) if (v > 0.0) ++*pos;
+      if (d.size() < 2) { *se = 0.0; return 0.0; }
+      double m = 0.0;
+      for (double v : d) m += v;
+      m /= double(d.size());
+      double ss = 0.0;
+      for (double v : d) ss += (v - m) * (v - m);
+      *se = std::sqrt(ss / double(d.size() - 1)) / std::sqrt(double(d.size()));
+      return m;
+    };
+    double c1 = 0.0, c2 = 0.0;
+    uint32_t q1 = 0, q2 = 0, r1 = 0, r2 = 0;
+    const double e1 = cpaired(kEma, kOff, &c1, &q1, &r1);
+    const double e2 = cpaired(kEma, kMRnd, &c2, &q2, &r2);
+    std::printf("    PAIRED  ema - off       %+.3f +/- %.3f, %.1f SE, %u of %u\n"
+                "    PAIRED  ema - ema-rnd   %+.3f +/- %.3f, %.1f SE, %u of %u\n",
+                e1, c1, c1 > 0.0 ? e1 / c1 : 0.0, q1, r1,
+                e2, c2, c2 > 0.0 ? e2 / c2 : 0.0, q2, r2);
+    std::printf("\n  did it move the RIGHT WAY along the axis between the two words?\n"
+                "  (centred on the creature's own mean, no labels fitted, chance 0.500)\n");
+    for (uint32_t a = 0; a < kCtxSelfArmCount; ++a) {
+      std::printf("    %-10s %.3f +/- %.3f\n", kCtxSelfArms[a].name, m_ax[a], s_ax[a]);
+    }
+    auto apaired = [&](uint32_t A, uint32_t B, double* se, uint32_t* pos, uint32_t* n) {
+      std::vector<double> d;
+      for (size_t i = 0; i < areps[A].size(); ++i) {
+        for (size_t j = 0; j < areps[B].size(); ++j) {
+          if (areps[A][i] == areps[B][j]) { d.push_back(axis[A][i] - axis[B][j]); break; }
+        }
+      }
+      *n = uint32_t(d.size());
+      *pos = 0;
+      for (double v : d) if (v > 0.0) ++*pos;
+      if (d.size() < 2) { *se = 0.0; return 0.0; }
+      double m = 0.0;
+      for (double v : d) m += v;
+      m /= double(d.size());
+      double ss = 0.0;
+      for (double v : d) ss += (v - m) * (v - m);
+      *se = std::sqrt(ss / double(d.size() - 1)) / std::sqrt(double(d.size()));
+      return m;
+    };
+    double g1 = 0.0, g2 = 0.0;
+    uint32_t u1 = 0, u2 = 0, v1 = 0, v2 = 0;
+    const double f1d = apaired(kEma, kOff, &g1, &u1, &v1);
+    const double f2d = apaired(kEma, kMRnd, &g2, &u2, &v2);
+    std::printf("    PAIRED  ema - off       %+.3f +/- %.3f, %.1f SE, %u of %u\n"
+                "    PAIRED  ema - ema-rnd   %+.3f +/- %.3f, %.1f SE, %u of %u\n",
+                f1d, g1, g1 > 0.0 ? f1d / g1 : 0.0, u1, v1,
+                f2d, g2, g2 > 0.0 ? f2d / g2 : 0.0, u2, v2);
   }
 
   // THE DRIFT TEST, and it is independent of whether the fix works. A frozen

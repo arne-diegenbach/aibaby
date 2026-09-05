@@ -7925,6 +7925,72 @@ listener could use.
 separable in the ear (1.000), and `vocab` already reports four words working and
 eight not. A listener telling two vowels apart is not a vocabulary.
 
+#### The measure that answers it: did the voice move the RIGHT WAY?
+
+The held-out readout above fits centroids to the creature's own output, so it
+cannot tell **named correctly** from **named arbitrarily but consistently** — and
+`ema-rnd`'s index tracks the word too, so that arm's voice IS word-dependent,
+just pointed nowhere. Nor can it separate naming from M1b's echo.
+
+So each utterance is projected onto the axis joining the two words' targets,
+centred on **the creature's own grand mean**, and the question is whether the
+SIGN matches the word it heard. Nothing is fitted to the answer: the centring
+uses no labels and the axis comes from the protocol. Chance is 0.500, and an
+arbitrary-but-consistent mapping scores chance **by construction**, because its
+sign is uncorrelated with the word.
+
+| axis score | family three | family two |
+|---|---|---|
+| `oracle` | 0.875 | 0.901 |
+| **`ema`** | **0.824** | **0.738** |
+| `off` (echo only) | 0.503 | 0.561 |
+| `ema-rnd` | 0.406 | 0.593 |
+
+    POOLED  ema - off       +0.276 +/- 0.036,  7.6 SE   (9/9 and 7/9)
+    POOLED  ema - ema-rnd   +0.244 +/- 0.041,  6.0 SE   (9/9 and 9/9)
+
+> **THE IMITATION CONFOUND DISAPPEARS ON THIS MEASURE.** `off` reads 0.503 on
+> family three while the SAME utterances are 0.610 discriminable: M1b's echo
+> makes the voice tell the words apart, and does **not** move it in the correct
+> direction. So this score cannot be passed by echoing, and it cannot be passed
+> by arbitrary consistency — `ema-rnd` lands at 0.406. Both loopholes that made
+> the fitted readout unusable are closed by construction rather than by argument.
+
+**And it does not merely point the right way — it partly arrives.** The strict
+score, nearest of the two words' ACTUAL targets with nothing fitted:
+
+| | family three | family two |
+|---|---|---|
+| **`ema`** | **0.670** | **0.604** |
+| `off` | 0.514 | 0.518 |
+| `ema-rnd` | 0.495 | 0.499 |
+
+    POOLED  ema - off       +0.121 +/- 0.021,  5.9 SE
+    POOLED  ema - ema-rnd   +0.145 +/- 0.020,  7.4 SE
+
+**A prediction of mine was wrong here, in the generous direction.** I expected
+this score to sit at chance for every arm — a 93 Hz shift against a 460 Hz gap
+should rarely flip a nearest-target decision. It reads 0.60-0.67, because the
+creature's baseline sits nearer the midpoint than that reasoning assumed.
+
+**What is honest about the size.** The baselines are cleaner on family three
+(`off` 0.503, `ema-rnd` 0.406) than on family two (0.561, 0.593), so the
+increment varies by family — +0.32 against +0.18. Both gates pass on both
+families and every paired comparison is 7/9 or better, but the effect is not the
+same size everywhere. And `oracle` reaches 0.875-0.901 where `ema` reaches
+0.738-0.824, so a perfect index is still worth something.
+
+> **At two words, the creature names.** It moves its voice the correct way for
+> the word it heard, on a measure that fits nothing, that an echo scores at
+> chance, and that an arbitrary mapping scores at chance — replicated on two
+> fresh seed families, 6.0 SE pooled against the matched-marginal control.
+>
+> **It is two words.** `partprobe` shows the ear separates them at 1.000, and
+> `vocab` already reports four words working and eight not. A listener telling
+> two vowels apart is not a vocabulary, and the creature points the right way
+> more reliably (0.74-0.82) than it arrives (0.60-0.67).
+
+
 #### What is still unexplained, and is not being smoothed over
 
 - **The control's index is sometimes better than the mechanism's.** `ear` is
