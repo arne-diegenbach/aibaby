@@ -8377,6 +8377,53 @@ fitted-verdict rule forbids; the change here would have been made identically ha
 the run gone the other way, and `ctxfour` now prints the retired raw number
 beside the corrected one so the move is visible rather than tidied away.
 
+### `ctxscale` — the bias is COMPUTE-limited, and the controls are what say so
+
+Two-word naming works and the distance left is how large a bias reward can build:
+`ctxbias` showed the route carries 236 Hz of F1 when a bias is handed to the
+larynx, and learning builds 93. That is either a matter of trials or a matter of
+architecture, and the two remaining leads point opposite ways depending on which.
+So it was measured rather than argued. Nine creatures, three arms, three budgets,
+each budget a separate session so the points do not share a noise draw.
+
+| budget | trials | off | ema | ema-rnd | excess (ema − rnd) |
+|---|---|---|---|---|---|
+| 3.4M | 1214 | 23.1 +/- 6.9 | 56.1 +/- 10.3 | 23.0 +/- 7.5 | +33.1 +/- 17.8 |
+| 6.8M | 2428 | 22.5 +/- 5.3 | 93.1 +/- 10.1 | 27.4 +/- 8.7 | +65.6 +/- 18.8 |
+| 13.6M | 4857 | 25.9 +/- 2.5 | **119.2 +/- 8.2** | 28.9 +/- 6.4 | **+90.3 +/- 14.6** |
+
+**The controls carry the result.** Across a 4x span in trials the `off` arm moves
+23.1 -> 25.9 and the matched-marginal `ema-rnd` moves 23.0 -> 28.9 — both flat —
+while the taught arm goes 56.1 -> 119.2. Growth this specific to the arm that is
+being taught is hard to get from a drift, a warm-up or a measurement artefact,
+all of which would lift the controls too. And the 6.8M point reproduces the 93 Hz
+already on record from a different experiment, which is a free replication.
+
+Excess grew 2.73x over a 4x span, against the 2.0 that sqrt(t) predicts —
+**implied exponent 0.72, between diffusion and linear.**
+
+**The concern this was built to test is refuted by the table-divergence column.**
+The one hint on record was that divergence grew like sqrt(2) when the session
+doubled, and the worry was that a magnitude can grow while the useful component
+does not — an unbiased random walk grows as sqrt(t) too. Divergence here goes
+0.0275 -> 0.0363 -> 0.0452, an exponent of **0.36**, while the useful effect grows
+at 0.72. The tables are getting *better aligned*, not merely bigger. That is the
+opposite of the random-walk story.
+
+**What it does not license.** The exponent rests on three points with standard
+errors of +/-17.8, +/-18.8 and +/-14.6 — the shortest budget's error is over half
+its value. "Compute-limited rather than saturated" is safe, because saturation
+would need the excess to stop moving and it nearly tripled. The *exponent* is
+soft, so the extrapolation it prints — 4x more trials to reach 236 Hz — is a
+direction, not a plan.
+
+**One prediction worth having on record.** `nearest`, the absolute naming score,
+only flips when an utterance crosses the midpoint between two targets 460 Hz
+apart, which is ~230 Hz of dF1. So if the curve holds, the absolute measure
+should come off chance at about the same place the extrapolation reaches 236 Hz —
+two independent quantities meeting at one number, which is the kind of
+coincidence that is worth being wrong about publicly.
+
 ### What the literature says to build next, and why it is the cheap option
 
 > **This section is the argument that produced DNA v51, kept as the record of
