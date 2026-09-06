@@ -51,5 +51,6 @@ add_executable(aibaby
   host/src/experiments_probes.cpp
 )
 target_include_directories(aibaby PRIVATE host/include)
-target_link_libraries(aibaby PRIVATE aibaby_core)
+find_package(Threads REQUIRED)
+target_link_libraries(aibaby PRIVATE aibaby_core Threads::Threads)
 target_compile_options(aibaby PRIVATE -Wall -Wextra -ffp-contract=off)

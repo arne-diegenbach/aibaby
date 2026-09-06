@@ -10330,63 +10330,89 @@ bool run_ctxfour(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
 
   std::printf("  %-6s %-8s %-10s %-9s %-10s %-10s %s\n", "seed", "arm", "F1 spread",
               "ctx_match", "direction", "nearest", "change");
-  for (uint32_t r = 0; r < kReps; ++r) {
-    for (uint32_t a = 0; a < kCtxFourArmCount; ++a) {
-      std::vector<uint8_t> variant = blob;
-      const uint64_t seed = dna.header().seed + r * 7919ull;
-      std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
-      const uint32_t sl = kCtxFourArms[a].slots;
-      std::memcpy(variant.data() + slots_off, &sl, sizeof(sl));
-      CtxDrive drive;
-      drive.module = ctx_module;
-      drive.slots = kCFWords;
-      drive.gain = 0.10;
-      Regime reg;
-      reg.praise = kPraiseValue;
-      reg.scold = kScoldValue;
-      const VLRun run = run_vocallearn_session(variant, ticks, kVLTaught, nullptr, reg,
-                                               kCtxFourArms[a].target, &drive,
-                                               kVLScoreFormant, nullptr, kCFWords);
-      if (!run.ok) {
-        std::printf("  %-6u %-8s (inconclusive: %u scored, %u skipped)\n", r,
-                    kCtxFourArms[a].name, run.scored, run.skipped);
-        continue;
-      }
-      // Mean absolute pairwise F1 difference: the four-word generalisation of
-      // dF1, which is a single pair.
-      double sp = 0.0;
-      uint32_t np = 0;
-      for (uint32_t i = 0; i < kCFWords; ++i) {
-        for (uint32_t j = i + 1; j < kCFWords; ++j) {
-          sp += std::fabs(run.f1_by_word[i] - run.f1_by_word[j]);
-          ++np;
+  // Nine creatures x two arms are eighteen independent brains, so they run
+  // across the machine's cores. The rows are printed and pooled SERIALLY from
+  // the returned cells and a rep's seed is a pure function of its index, so
+  // these are the numbers the serial loop printed — bit for bit.
+  struct Cell {
+    bool ok = false;
+    uint32_t scored = 0, skipped = 0;
+    double sp = 0.0, match = 0.0, dir = 0.0, near = 0.0, chg = 0.0, divg = 0.0;
+  };
+  const std::vector<Cell> cells =
+      parallel_reps<Cell>(kReps * kCtxFourArmCount, [&](uint32_t i) {
+        const uint32_t r = i / kCtxFourArmCount;
+        const uint32_t a = i % kCtxFourArmCount;
+        Cell cell;
+        std::vector<uint8_t> variant = blob;
+        const uint64_t seed = dna.header().seed + r * 7919ull;
+        std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed,
+                    sizeof(seed));
+        const uint32_t sl = kCtxFourArms[a].slots;
+        std::memcpy(variant.data() + slots_off, &sl, sizeof(sl));
+        CtxDrive drive;
+        drive.module = ctx_module;
+        drive.slots = kCFWords;
+        drive.gain = 0.10;
+        Regime reg;
+        reg.praise = kPraiseValue;
+        reg.scold = kScoldValue;
+        const VLRun run = run_vocallearn_session(variant, ticks, kVLTaught, nullptr, reg,
+                                                 kCtxFourArms[a].target, &drive,
+                                                 kVLScoreFormant, nullptr, kCFWords);
+        cell.scored = run.scored;
+        cell.skipped = run.skipped;
+        if (!run.ok) return cell;
+        // Mean absolute pairwise F1 difference: the four-word generalisation of
+        // dF1, which is a single pair.
+        double sp = 0.0;
+        uint32_t np = 0;
+        for (uint32_t x = 0; x < kCFWords; ++x) {
+          for (uint32_t y = x + 1; y < kCFWords; ++y) {
+            sp += std::fabs(run.f1_by_word[x] - run.f1_by_word[y]);
+            ++np;
+          }
         }
-      }
-      sp = np ? sp / np : 0.0;
-      const double dr = direction_accuracy(run.utt_f1, run.utt_f2, run.utt_word, tg);
-      uint32_t hit = 0, tot = 0;
-      for (size_t i = 0; i < run.utt_word.size(); ++i) {
-        double best = 0.0;
-        int pick = 0;
-        for (uint32_t q = 0; q < kCFWords; ++q) {
-          const double e = formant_error(run.utt_f1[i], run.utt_f2[i], kWords[q]);
-          if (e < 0.0) { pick = -1; break; }
-          if (q == 0 || e < best) { best = e; pick = int(q); }
+        cell.sp = np ? sp / np : 0.0;
+        cell.dir = direction_accuracy(run.utt_f1, run.utt_f2, run.utt_word, tg);
+        uint32_t hit = 0, tot = 0;
+        for (size_t u = 0; u < run.utt_word.size(); ++u) {
+          double best = 0.0;
+          int pick = 0;
+          for (uint32_t q = 0; q < kCFWords; ++q) {
+            const double e = formant_error(run.utt_f1[u], run.utt_f2[u], kWords[q]);
+            if (e < 0.0) { pick = -1; break; }
+            if (q == 0 || e < best) { best = e; pick = int(q); }
+          }
+          if (pick < 0) continue;
+          if (pick == run.utt_word[u]) ++hit;
+          ++tot;
         }
-        if (pick < 0) continue;
-        if (pick == run.utt_word[i]) ++hit;
-        ++tot;
-      }
-      const double nr = tot ? double(hit) / double(tot) : 0.0;
-      spread[a].push_back(sp);
-      match[a].push_back(run.ctx_match);
-      dir[a].push_back(dr);
-      near[a].push_back(nr);
-      chg[a].push_back(vl_change(run));
-      divg[a].push_back(run.ctx_table_div);
-      std::printf("  %-6u %-8s %-10.1f %-9.3f %-10.3f %-10.3f %+.1f\n", r,
-                  kCtxFourArms[a].name, sp, run.ctx_match, dr, nr, vl_change(run));
+        cell.near = tot ? double(hit) / double(tot) : 0.0;
+        cell.match = run.ctx_match;
+        cell.chg = vl_change(run);
+        cell.divg = run.ctx_table_div;
+        cell.ok = true;
+        return cell;
+      });
+
+  for (uint32_t i = 0; i < kReps * kCtxFourArmCount; ++i) {
+    const uint32_t r = i / kCtxFourArmCount;
+    const uint32_t a = i % kCtxFourArmCount;
+    const Cell& c = cells[i];
+    if (!c.ok) {
+      std::printf("  %-6u %-8s (inconclusive: %u scored, %u skipped)\n", r,
+                  kCtxFourArms[a].name, c.scored, c.skipped);
+      continue;
     }
+    spread[a].push_back(c.sp);
+    match[a].push_back(c.match);
+    dir[a].push_back(c.dir);
+    near[a].push_back(c.near);
+    chg[a].push_back(c.chg);
+    divg[a].push_back(c.divg);
+    std::printf("  %-6u %-8s %-10.1f %-9.3f %-10.3f %-10.3f %+.1f\n", r,
+                kCtxFourArms[a].name, c.sp, c.match, c.dir, c.near, c.chg);
   }
 
   double m_sp[kCtxFourArmCount], s_sp[kCtxFourArmCount];

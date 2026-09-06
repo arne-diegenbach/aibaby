@@ -148,6 +148,62 @@ a canvas, so each has a headless experiment that prints a number and a verdict.
 `v1probe` exits non-zero on the shipped genome by design — it has no visual
 cortex to probe. It is there for a genome that turns one on.
 
+### Experiments run across the cores, and the numbers do not change
+
+An experiment raises nine creatures, sometimes across six arms, and until
+2026-09-06 it raised them one at a time on one core of fourteen. `parallel_reps`
+in `host/src/experiments_common.h` runs them together.
+
+The point is that this is **bit-identical**, not merely equivalent, and that
+rests on three properties rather than on hope:
+
+1. `core/` has no mutable globals — the only `static`s in it are three functions
+   in `brain.cpp`. Every creature is an `Arena`, a `Network` and an `Rng` passed
+   in explicitly, and `Session` owns its arena as a member. This is what the
+   `-fno-exceptions -fno-rtti` contract has been buying all along.
+2. A rep's seed is `header.seed + r * 7919` — a pure function of the rep index,
+   so execution order cannot reach the numbers.
+3. Distinct elements of a `std::vector<T>` may be written concurrently.
+
+So a converted experiment still prints its rows and pools its statistics
+**serially** from the returned cells. Sharding across processes instead would
+need something outside the binary to pool the rows into a verdict — a second
+implementation of the verdict, which is the trap `restate` and the
+fitted-verdict rule exist to prevent. `ctxfour` is converted, and its whole
+output is byte-for-byte the serial log's.
+
+**The ceiling is 3.7x, not 14x, and it was worth measuring rather than
+assuming.** `ctxfour`'s 18 sessions at 200k ticks:
+
+| threads | wall | max RSS |
+|---|---|---|
+| 1 | 166.4 s | — |
+| 6 | 60.4 s | 0.7 GB |
+| 14 | 55.5 s | — |
+| 18 (default) | 44.4 s | 2.0 GB |
+
+A session's arena is ~113 MB against a 12 MB L3 on a mobile hybrid part, so it
+is memory-bound rather than compute-bound and threads stop paying at about four.
+Running several experiments as separate processes hits the *same* wall — the
+machine does ~3.7 sessions' worth of work at once however the work is divided.
+That still takes `ctxfour` from 75 minutes to 20, and a six-arm run from 3h40 to
+about an hour.
+
+The default deliberately over-subscribes — one round of `n` threads whenever
+`n <= 2 * hardware_concurrency` — because on a memory-bound job an idle tail
+costs more than over-subscription does: 18 jobs on 14 threads is a full round
+plus a tail of four, and it lost to 18 threads by 20%. `AIBABY_JOBS` caps the
+pool for running several experiments at once.
+
+The other rep loops are unconverted. Convert on demand, and diff a short run
+against a serial reference captured **before** the edit every time — that diff
+is the whole warrant.
+
+**Spend it on `n`, not on arms.** The smoothing sweep closed on three seeds with
+unanimous signs collapsing at n=6. More arms at fixed `n` makes the
+multiple-comparisons problem worse exactly where this project has already been
+burned; `kReps` 9 -> 24 now costs what one run used to.
+
 `pcprobe` asks whether a prediction is worth anything before anything is built on
 it. It scores the curiosity critic's forward model against two baselines — the
 per-channel mean and *persistence*, "the next frame looks like this one" — and

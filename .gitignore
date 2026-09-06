@@ -19,3 +19,4 @@ __pycache__/
 # Experiment output and one-off genome variants: derived from the genome and
 # the experiment that made them, for the same reason the recordings above are.
 scratchpad/
+build-par/

@@ -23,8 +23,11 @@
 #include <cstdio>
 #include <cstddef>
 #include <cstring>
+#include <atomic>
+#include <cstdlib>
 #include <deque>
 #include <fstream>
+#include <thread>
 
 #include "aibaby/brain.h"
 #include "aibaby/snapshot.h"
@@ -35,6 +38,63 @@
 #include "host/wav.h"
 
 namespace aibaby_host {
+
+// Run `n` independent creatures across the machine's cores and return their
+// results in rep order. The parallelism is BIT-IDENTICAL to the serial loop, not
+// merely equivalent, and that rests on three properties rather than on hope:
+//
+//   1. `core/` has no mutable globals — every creature is an Arena, a Network
+//      and an Rng passed in explicitly, and `Session` owns its arena as a
+//      member. That is what the core's freestanding contract buys.
+//   2. A rep's seed is a pure function of its rep index (`seed + r * 7919`), so
+//      execution order cannot reach the numbers.
+//   3. Distinct elements of a `std::vector<T>` may be written concurrently.
+//
+// So a converted experiment must still print its rows and accumulate its
+// statistics SERIALLY from the returned vector. The verdict stays in one place —
+// sharding across processes and pooling the rows outside the binary would make
+// the verdict a second implementation of itself, which is the trap `restate`
+// and the fitted-verdict rule exist to prevent.
+//
+// AIBABY_JOBS caps the pool, for running several experiments at once without
+// over-subscribing. `job` must be callable from several threads and must touch
+// nothing shared.
+template <typename T, typename F>
+inline std::vector<T> parallel_reps(uint32_t n, F job) {
+  std::vector<T> out(n);
+  if (n == 0) return out;
+  unsigned want = std::thread::hardware_concurrency();
+  if (const char* e = std::getenv("AIBABY_JOBS")) {
+    const long v = std::strtol(e, nullptr, 10);
+    if (v > 0) want = unsigned(v);
+  }
+  if (want == 0) want = 1;
+  // One round beats two uneven ones. Measured on the 265U: 18 sessions took 55 s
+  // on 14 threads (a full round plus a tail of 4) and 45 s on 18, where the tail
+  // disappears. A session is memory-bound rather than compute-bound — its arena
+  // is ~113 MB against a 12 MB L3 — so modest over-subscription costs nothing
+  // and the idle tail costs a lot.
+  if (n <= 2 * want) want = n;
+  if (want > n) want = n;
+  if (want == 1) {
+    for (uint32_t i = 0; i < n; ++i) out[i] = job(i);
+    return out;
+  }
+  std::atomic<uint32_t> next(0);
+  std::vector<std::thread> pool;
+  pool.reserve(want);
+  for (unsigned t = 0; t < want; ++t) {
+    pool.emplace_back([&]() {
+      for (;;) {
+        const uint32_t i = next.fetch_add(1);
+        if (i >= n) return;
+        out[i] = job(i);
+      }
+    });
+  }
+  for (std::thread& th : pool) th.join();
+  return out;
+}
 
 // A vocalisation is a voiced burst above an amplitude floor. The refractory
 // period is what makes it an *event*: without it, one two-second wail would
