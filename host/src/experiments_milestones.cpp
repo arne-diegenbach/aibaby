@@ -9822,6 +9822,9 @@ bool run_ctxself(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
           }
         }
         cell.ok = true;
+        parallel_note("  [%u/%u] seed %u %s  dF1 %.1f  p(idx) %.3f\n",
+                      i + 1, kReps * kCtxSelfArmCount, r, kCtxSelfArms[a].name,
+                      cell.d1, cell.match);
         return cell;
       });
 
@@ -10428,6 +10431,9 @@ bool run_ctxfour(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
         cell.chg = vl_change(run);
         cell.divg = run.ctx_table_div;
         cell.ok = true;
+        parallel_note("  [%u/%u] seed %u %s  spread %.1f  dir %.3f (null %.3f)\n",
+                      i + 1, kReps * kCtxFourArmCount, r, kCtxFourArms[a].name,
+                      cell.sp, cell.dir, cell.dnull);
         return cell;
       });
 

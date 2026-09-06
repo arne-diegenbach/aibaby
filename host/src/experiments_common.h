@@ -24,7 +24,9 @@
 #include <cstddef>
 #include <cstring>
 #include <atomic>
+#include <cstdarg>
 #include <cstdlib>
+#include <mutex>
 #include <deque>
 #include <fstream>
 #include <thread>
@@ -59,6 +61,28 @@ namespace aibaby_host {
 // AIBABY_JOBS caps the pool, for running several experiments at once without
 // over-subscribing. `job` must be callable from several threads and must touch
 // nothing shared.
+// A job's own progress line, serialised onto STDERR.
+//
+// Running the reps together costs the one thing the serial loop gave for free:
+// rows appeared as creatures finished, so killing a long run cost only the
+// creatures still in flight. Now nothing prints until every cell is home. A
+// three-hour run that dies at 2h50 would lose everything, which is the failure
+// this project has already had once.
+//
+// So a job announces itself as it lands. STDERR, not stdout, because stdout is
+// the measurement and must stay byte-for-byte what the serial loop produced --
+// redirect the two to separate files on a long run. Unordered by nature: this is
+// a crash log, not a result.
+inline void parallel_note(const char* fmt, ...) {
+  static std::mutex mu;
+  std::lock_guard<std::mutex> lock(mu);
+  va_list ap;
+  va_start(ap, fmt);
+  std::vfprintf(stderr, fmt, ap);
+  va_end(ap);
+  std::fflush(stderr);
+}
+
 template <typename T, typename F>
 inline std::vector<T> parallel_reps(uint32_t n, F job) {
   std::vector<T> out(n);
