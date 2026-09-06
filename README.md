@@ -8251,6 +8251,62 @@ and the fix would be a learning rate that does not go to zero — which needs
 deriving rather than guessing, on this project's own record with constants.
 
 
+### `ctxfour` — the bias holds four DISTINCTIONS, not four TARGETS
+
+The pre-registered gate passed and the write-up it printed is too generous, so
+the number goes in here with the correction attached rather than as a milestone.
+
+`partprobe` had cleared the *index* at four words (0.895 against chance 0.250)
+and said nothing about the *learning*. Four contexts is four conditional
+mappings competing for one reward channel, and `capacity` measured this creature
+holding two orthogonal lessons at 0.84 while a conflicting pair collapses to
+0.22. So this ran the **oracle arm and its baseline only**: with the host
+writing a perfect index, can the bias hold four mappings at all? The creature's
+own index cannot beat the oracle, so a failure here would have made the six-arm
+run pointless.
+
+Nine creatures per arm at 6.8M ticks:
+
+| arm | F1 spread (Hz) | direction | nearest | change |
+|---|---|---|---|---|
+| off | 34.1 +/- 4.7 | 0.321 +/- 0.040 | 0.161 +/- 0.020 | +1.2 +/- 3.1 |
+| oracle | 71.6 +/- 8.2 | 0.484 +/- 0.033 | 0.279 +/- 0.024 | **-20.0 +/- 3.5** |
+
+Chance is 0.250 on `direction` and `nearest`. `ctx_match` read 1.000 on every
+oracle row, which is the k-way assignment's own check and the refactor's last
+outstanding claim.
+
+**The prediction was half right, and the half it missed is the half that
+matters.** From Werfel/Xie/Seung, learning time scales with parameter count, so
+four contexts at 504 parameters against 252 should need ~2x the trials: at 6.8M,
+what two words gave at 3.4M — ~65 Hz of spread and ~0.80 direction. The spread
+came in at 71.6 Hz, near enough to call a hit. Direction came in at **0.484**
+against a predicted 0.80. It clears chance (+0.163 at 2.2 SE) and it is a third
+of the predicted headroom, not the whole of it.
+
+**And two numbers the verdict text did not read.** `nearest` — which asks
+whether an utterance actually lands closest to the right target, the measure
+that corresponds to naming — is **0.279 against a chance of 0.250**, under one
+SE. And the formant error in the oracle arm *grew 20% over the session* at 5.7
+SE, while the off arm was flat. That is not "learning, but slower": slower would
+sit near zero. The bias is producing larger, correctly-signed excursions that
+land in the wrong places.
+
+So the honest statement is that a context-indexed bias separates four words
+along the axis and does not put them on their targets. It holds four
+distinctions, not four mappings. **The gate as written asked only about
+direction, and direction was the wrong thing to gate on** — a lesson that
+belongs with `verdict-fitted-to-data`, except the failure here is choosing the
+generous measure in advance rather than after the fact.
+
+One loose end that needs an answer before any of this is built on: the **off**
+arm reads 0.321 on direction against a chance of 0.250, +0.071 at 1.8 SE. At two
+words the corresponding arm sat at chance (0.503 and 0.561 against 0.500). A
+baseline that is above chance with the mechanism off is either the echo
+reappearing at four words or a bias in `direction_accuracy` at k > 2, and until
+it is one of those, the +0.163 is measured against a floor that is not the
+floor.
+
 ### What the literature says to build next, and why it is the cheap option
 
 > **This section is the argument that produced DNA v51, kept as the record of
