@@ -9678,153 +9678,182 @@ bool run_ctxself(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
 
   std::printf("  %-6s %-9s %-9s %-8s %-8s %-10s %-7s %s\n", "seed", "arm", "dF1 (Hz)",
               "p(idx)", "busiest", "table div", "ev/tri", "change");
-  for (uint32_t r = 0; r < kReps; ++r) {
-    for (uint32_t a = 0; a < kCtxSelfArmCount; ++a) {
-      std::vector<uint8_t> variant = blob;
-      const uint64_t seed = dna.header().seed + r * 7919ull;
-      std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
-      const uint32_t slots = kCtxSelfArms[a].slots;
-      const uint32_t source = kCtxSelfArms[a].source;
-      std::memcpy(variant.data() + slots_off, &slots, sizeof(slots));
-      std::memcpy(variant.data() + src_off, &source, sizeof(source));
+  // Fifty-four independent brains, run across the machine's cores. Every row is
+  // printed and every statistic pooled SERIALLY from the returned cells below,
+  // and a rep's seed is a pure function of its index, so this is byte-for-byte
+  // what the serial loop produced -- checked against a reference captured before
+  // the conversion.
+  struct Cell {
+    bool ok = false;
+    uint32_t scored = 0, skipped = 0;
+    double d1 = 0.0, chg = 0.0, present = 0.0, div = 0.0, shared = 0.0;
+    double match = 0.0, occ = 0.0, evt = 0.0, mte = 0.0, mtl = 0.0;
+    bool has_corr = false, has_axis = false, has_dir = false, has_name = false;
+    double corr = 0.0, axis = 0.0, dir = 0.0, name = 0.0, nshuf = 0.0;
+  };
+  const std::vector<Cell> cells =
+      parallel_reps<Cell>(kReps * kCtxSelfArmCount, [&](uint32_t i) {
+        const uint32_t r = i / kCtxSelfArmCount;
+        const uint32_t a = i % kCtxSelfArmCount;
+        Cell cell;
+        std::vector<uint8_t> variant = blob;
+        const uint64_t seed = dna.header().seed + r * 7919ull;
+        std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+        const uint32_t slots = kCtxSelfArms[a].slots;
+        const uint32_t source = kCtxSelfArms[a].source;
+        std::memcpy(variant.data() + slots_off, &slots, sizeof(slots));
+        std::memcpy(variant.data() + src_off, &source, sizeof(source));
 
-      CtxDrive drive;
-      drive.module = ctx_module;
-      drive.slots = kVLWords;
-      drive.gain = 0.10;
-      Regime reg;
-      reg.praise = kPraiseValue;
-      reg.scold = kScoldValue;
-      const VLRun run = run_vocallearn_session(variant, ticks, kVLTaught, nullptr, reg,
-                                               kCtxSelfArms[a].target, &drive);
-      if (!run.ok) {
-        std::printf("  %-6u %-9s (inconclusive: %u scored, %u skipped)\n", r,
-                    kCtxSelfArms[a].name, run.scored, run.skipped);
-        continue;
-      }
-      const double d1 = std::fabs(run.f1_by_word[0] - run.f1_by_word[1]);
-      df1[a].push_back(d1);
-      reps[a].push_back(r);
-      change[a].push_back(vl_change(run));
-      present[a].push_back(run.ctx_present_frac);
-      div[a].push_back(run.ctx_table_div);
-      shared[a].push_back(run.ctx_shared_mag);
-      match[a].push_back(run.ctx_match);
-      occ[a].push_back(run.ctx_occupancy);
-      // THE NAMING SCORE: a held-out one-of-two readout over the creature's own
-      // utterances, F1 and F2 only. Chance is 0.500 with balanced words. The
-      // shuffled control uses the same rows and the same split, so a readout
-      // that has learned the split rather than the voice scores the same in
-      // both and the difference is what is real.
-      {
-        std::vector<std::vector<double>> rows;
-        rows.reserve(run.utt_word.size());
-        for (size_t i = 0; i < run.utt_word.size(); ++i) {
-          rows.push_back({run.utt_f1[i], run.utt_f2[i]});
-        }
-        // CORRECT naming, as opposed to merely CONSISTENT naming. The readout
-        // below fits centroids to the creature's own output, so it scores an
-        // arbitrary-but-stable mapping exactly as highly as the taught one --
-        // which is why `ema-rnd` beat it: that arm's index tracks the word too,
-        // so its voice is word-dependent, just not in the direction reward
-        // asked for.
-        //
-        // This scores against the WORDS' OWN TARGETS instead. Nothing is
-        // fitted, so there is no split and no leak: an utterance either lands
-        // nearer the target for the word the creature HEARD or nearer the other
-        // one, and chance is 0.500. An arm taught a random target now sits at
-        // chance by construction, which is what makes it a control this
-        // question can use.
+        CtxDrive drive;
+        drive.module = ctx_module;
+        drive.slots = kVLWords;
+        drive.gain = 0.10;
+        Regime reg;
+        reg.praise = kPraiseValue;
+        reg.scold = kScoldValue;
+        const VLRun run = run_vocallearn_session(variant, ticks, kVLTaught, nullptr, reg,
+                                                 kCtxSelfArms[a].target, &drive);
+        cell.scored = run.scored;
+        cell.skipped = run.skipped;
+        if (!run.ok) return cell;
+        cell.d1 = std::fabs(run.f1_by_word[0] - run.f1_by_word[1]);
+        cell.chg = vl_change(run);
+        cell.present = run.ctx_present_frac;
+        cell.div = run.ctx_table_div;
+        cell.shared = run.ctx_shared_mag;
+        cell.match = run.ctx_match;
+        cell.occ = run.ctx_occupancy;
+        cell.evt = run.ctx_events_per_trial;
+        cell.mte = run.ctx_match_early;
+        cell.mtl = run.ctx_match_late;
+        // THE NAMING SCORE: a held-out one-of-two readout over the creature's own
+        // utterances, F1 and F2 only. Chance is 0.500 with balanced words. The
+        // shuffled control uses the same rows and the same split, so a readout
+        // that has learned the split rather than the voice scores the same in
+        // both and the difference is what is real.
         {
-          uint32_t hit = 0, tot = 0;
-          for (size_t i = 0; i < run.utt_word.size(); ++i) {
-            const double e0 = formant_error(run.utt_f1[i], run.utt_f2[i], kWords[0]);
-            const double e1 = formant_error(run.utt_f1[i], run.utt_f2[i], kWords[1]);
-            if (e0 < 0.0 || e1 < 0.0) continue;
-            const int pick = e1 < e0 ? 1 : 0;
-            if (pick == run.utt_word[i]) ++hit;
-            ++tot;
+          std::vector<std::vector<double>> rows;
+          rows.reserve(run.utt_word.size());
+          for (size_t u = 0; u < run.utt_word.size(); ++u) {
+            rows.push_back({run.utt_f1[u], run.utt_f2[u]});
           }
-          if (tot >= 16) {
-            corr[a].push_back(double(hit) / double(tot));
-            creps[a].push_back(r);
-          }
-          // ...and the same question asked RELATIVE TO THE CREATURE'S OWN
-          // BASELINE, which is the one it can currently pass.
+          // CORRECT naming, as opposed to merely CONSISTENT naming. The readout
+          // below fits centroids to the creature's own output, so it scores an
+          // arbitrary-but-stable mapping exactly as highly as the taught one --
+          // which is why `ema-rnd` beat it: that arm's index tracks the word too,
+          // so its voice is word-dependent, just not in the direction reward
+          // asked for.
           //
-          // The absolute score above asks whether the utterance REACHED the
-          // right target, and it cannot come off chance here: the two words sit
-          // 460 Hz apart in F1, the taught shift is ~93 Hz, and nearest-target
-          // only flips if the creature crosses the midpoint. `off` reads 0.513
-          // while the SAME utterances are 70% discriminable, which is the
-          // measure disagreeing with itself about what it is testing.
-          //
-          // This projects each utterance onto the axis joining the two targets,
-          // centred on the creature's own grand mean, and asks whether the SIGN
-          // matches the word it heard. The centring uses no labels, so nothing
-          // is fitted to the answer. An arbitrary-but-consistent mapping scores
-          // 0.500 because its sign is uncorrelated with the word; a taught one
-          // scores above it without having to arrive.
+          // This scores against the WORDS' OWN TARGETS instead. Nothing is
+          // fitted, so there is no split and no leak: an utterance either lands
+          // nearer the target for the word the creature HEARD or nearer the other
+          // one, and chance is 0.500.
           {
-            double mf1 = 0.0, mf2 = 0.0;
-            uint32_t mn = 0;
-            for (size_t i = 0; i < run.utt_word.size(); ++i) {
-              if (run.utt_f1[i] <= 1.0 || run.utt_f2[i] <= 1.0) continue;
-              mf1 += std::log(run.utt_f1[i]);
-              mf2 += std::log(run.utt_f2[i]);
-              ++mn;
+            uint32_t hit = 0, tot = 0;
+            for (size_t u = 0; u < run.utt_word.size(); ++u) {
+              const double e0 = formant_error(run.utt_f1[u], run.utt_f2[u], kWords[0]);
+              const double e1 = formant_error(run.utt_f1[u], run.utt_f2[u], kWords[1]);
+              if (e0 < 0.0 || e1 < 0.0) continue;
+              const int pick = e1 < e0 ? 1 : 0;
+              if (pick == run.utt_word[u]) ++hit;
+              ++tot;
             }
-            if (mn >= 16) {
-              mf1 /= double(mn);
-              mf2 /= double(mn);
-              const double ax1 = std::log(double(kWords[1].f1)) - std::log(double(kWords[0].f1));
-              const double ax2 = std::log(double(kWords[1].f2)) - std::log(double(kWords[0].f2));
-              uint32_t h2 = 0, t2 = 0;
-              for (size_t i = 0; i < run.utt_word.size(); ++i) {
-                if (run.utt_f1[i] <= 1.0 || run.utt_f2[i] <= 1.0) continue;
-                const double p1 = std::log(run.utt_f1[i]) - mf1;
-                const double p2 = std::log(run.utt_f2[i]) - mf2;
-                const int pick = (p1 * ax1 + p2 * ax2) > 0.0 ? 1 : 0;
-                if (pick == run.utt_word[i]) ++h2;
-                ++t2;
+            if (tot >= 16) {
+              cell.corr = double(hit) / double(tot);
+              cell.has_corr = true;
+            }
+            // ...and the same question asked RELATIVE TO THE CREATURE'S OWN
+            // BASELINE, which is the one it can currently pass. The absolute
+            // score above asks whether the utterance REACHED the right target
+            // and cannot come off chance here: the words sit 460 Hz apart in F1
+            // and the taught shift is ~93 Hz.
+            {
+              double mf1 = 0.0, mf2 = 0.0;
+              uint32_t mn = 0;
+              for (size_t u = 0; u < run.utt_word.size(); ++u) {
+                if (run.utt_f1[u] <= 1.0 || run.utt_f2[u] <= 1.0) continue;
+                mf1 += std::log(run.utt_f1[u]);
+                mf2 += std::log(run.utt_f2[u]);
+                ++mn;
               }
-              if (t2 >= 16) {
-                axis[a].push_back(double(h2) / double(t2));
-                areps[a].push_back(r);
+              if (mn >= 16) {
+                mf1 /= double(mn);
+                mf2 /= double(mn);
+                const double ax1 = std::log(double(kWords[1].f1)) - std::log(double(kWords[0].f1));
+                const double ax2 = std::log(double(kWords[1].f2)) - std::log(double(kWords[0].f2));
+                uint32_t h2 = 0, t2 = 0;
+                for (size_t u = 0; u < run.utt_word.size(); ++u) {
+                  if (run.utt_f1[u] <= 1.0 || run.utt_f2[u] <= 1.0) continue;
+                  const double p1 = std::log(run.utt_f1[u]) - mf1;
+                  const double p2 = std::log(run.utt_f2[u]) - mf2;
+                  const int pick = (p1 * ax1 + p2 * ax2) > 0.0 ? 1 : 0;
+                  if (pick == run.utt_word[u]) ++h2;
+                  ++t2;
+                }
+                if (t2 >= 16) {
+                  cell.axis = double(h2) / double(t2);
+                  cell.has_axis = true;
+                }
+                // The K-WORD generalisation, run here at k=2 as a CHECK on
+                // itself: with two targets t0 = -t1, so the argmax of the dot
+                // product is the sign of the projection and this must reproduce
+                // the axis number above. If the two columns disagree at two
+                // words, the generalisation is wrong and nothing it says at four
+                // words can be trusted.
+                std::vector<std::pair<double, double>> tg;
+                for (uint32_t q = 0; q < kVLWords; ++q) {
+                  tg.push_back({double(kWords[q].f1), double(kWords[q].f2)});
+                }
+                const double dir = direction_accuracy(run.utt_f1, run.utt_f2,
+                                                      run.utt_word, tg);
+                if (dir > 0.0) { cell.dir = dir; cell.has_dir = true; }
               }
-              // The K-WORD generalisation, run here at k=2 as a CHECK on
-              // itself: with two targets t0 = -t1, so the argmax of the dot
-              // product is the sign of the projection and this must reproduce
-              // the axis number above. If the two columns disagree at two
-              // words, the generalisation is wrong and nothing it says at four
-              // words can be trusted.
-              std::vector<std::pair<double, double>> tg;
-              for (uint32_t q = 0; q < kVLWords; ++q) {
-                tg.push_back({double(kWords[q].f1), double(kWords[q].f2)});
-              }
-              const double dir = direction_accuracy(run.utt_f1, run.utt_f2,
-                                                    run.utt_word, tg);
-              if (dir > 0.0) { dirs[a].push_back(dir); }
             }
           }
+          const size_t tr = rows.size() / 2;
+          if (rows.size() >= 16) {
+            cell.name = holdout_accuracy(rows, run.utt_word, tr);
+            aibaby::Rng nr;
+            nr.seed(seed ^ 0x4E41u);
+            std::vector<int> sh = run.utt_word;
+            for (size_t u = sh.size(); u > 1; --u) std::swap(sh[u - 1], sh[nr.next() % u]);
+            cell.nshuf = holdout_accuracy(rows, sh, tr);
+            cell.has_name = true;
+          }
         }
-        const size_t tr = rows.size() / 2;
-        if (rows.size() >= 16) {
-          name[a].push_back(holdout_accuracy(rows, run.utt_word, tr));
-          nreps[a].push_back(r);
-          aibaby::Rng nr;
-          nr.seed(seed ^ 0x4E41u);
-          std::vector<int> sh = run.utt_word;
-          for (size_t i = sh.size(); i > 1; --i) std::swap(sh[i - 1], sh[nr.next() % i]);
-          nshuf[a].push_back(holdout_accuracy(rows, sh, tr));
-        }
-      }
-      mte[a].push_back(run.ctx_match_early);
-      mtl[a].push_back(run.ctx_match_late);
-      std::printf("  %-6u %-9s %-9.1f %-8.3f %-8.3f %-10.4f %-7.1f %+.1f\n", r,
-                  kCtxSelfArms[a].name, d1, run.ctx_match, run.ctx_occupancy,
-                  run.ctx_table_div, run.ctx_events_per_trial, vl_change(run));
+        cell.ok = true;
+        return cell;
+      });
+
+  for (uint32_t i = 0; i < kReps * kCtxSelfArmCount; ++i) {
+    const uint32_t r = i / kCtxSelfArmCount;
+    const uint32_t a = i % kCtxSelfArmCount;
+    const Cell& c = cells[i];
+    if (!c.ok) {
+      std::printf("  %-6u %-9s (inconclusive: %u scored, %u skipped)\n", r,
+                  kCtxSelfArms[a].name, c.scored, c.skipped);
+      continue;
     }
+    df1[a].push_back(c.d1);
+    reps[a].push_back(r);
+    change[a].push_back(c.chg);
+    present[a].push_back(c.present);
+    div[a].push_back(c.div);
+    shared[a].push_back(c.shared);
+    match[a].push_back(c.match);
+    occ[a].push_back(c.occ);
+    if (c.has_corr) { corr[a].push_back(c.corr); creps[a].push_back(r); }
+    if (c.has_axis) { axis[a].push_back(c.axis); areps[a].push_back(r); }
+    if (c.has_dir) dirs[a].push_back(c.dir);
+    if (c.has_name) {
+      name[a].push_back(c.name);
+      nreps[a].push_back(r);
+      nshuf[a].push_back(c.nshuf);
+    }
+    mte[a].push_back(c.mte);
+    mtl[a].push_back(c.mtl);
+    std::printf("  %-6u %-9s %-9.1f %-8.3f %-8.3f %-10.4f %-7.1f %+.1f\n", r,
+                kCtxSelfArms[a].name, c.d1, c.match, c.occ, c.div, c.evt, c.chg);
   }
 
   double m_d1[kCtxSelfArmCount], s_d1[kCtxSelfArmCount];
