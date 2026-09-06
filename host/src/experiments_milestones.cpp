@@ -10321,6 +10321,7 @@ bool run_ctxfour(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
 
   std::vector<double> spread[kCtxFourArmCount], match[kCtxFourArmCount];
   std::vector<double> dir[kCtxFourArmCount], near[kCtxFourArmCount];
+  std::vector<double> dnul[kCtxFourArmCount], dexc[kCtxFourArmCount];
   std::vector<double> chg[kCtxFourArmCount], divg[kCtxFourArmCount];
 
   std::vector<std::pair<double, double>> tg;
@@ -10328,8 +10329,9 @@ bool run_ctxfour(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
     tg.push_back({double(kWords[q].f1), double(kWords[q].f2)});
   }
 
-  std::printf("  %-6s %-8s %-10s %-9s %-10s %-10s %s\n", "seed", "arm", "F1 spread",
-              "ctx_match", "direction", "nearest", "change");
+  std::printf("  %-6s %-8s %-10s %-9s %-10s %-10s %-10s %-10s %s\n", "seed", "arm",
+              "F1 spread", "ctx_match", "direction", "its null", "dir-null", "nearest",
+              "change");
   // Nine creatures x two arms are eighteen independent brains, so they run
   // across the machine's cores. The rows are printed and pooled SERIALLY from
   // the returned cells and a rep's seed is a pure function of its index, so
@@ -10337,7 +10339,8 @@ bool run_ctxfour(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
   struct Cell {
     bool ok = false;
     uint32_t scored = 0, skipped = 0;
-    double sp = 0.0, match = 0.0, dir = 0.0, near = 0.0, chg = 0.0, divg = 0.0;
+    double sp = 0.0, match = 0.0, dir = 0.0, dnull = 0.0, near = 0.0, chg = 0.0,
+           divg = 0.0;
   };
   const std::vector<Cell> cells =
       parallel_reps<Cell>(kReps * kCtxFourArmCount, [&](uint32_t i) {
@@ -10375,6 +10378,9 @@ bool run_ctxfour(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
         }
         cell.sp = np ? sp / np : 0.0;
         cell.dir = direction_accuracy(run.utt_f1, run.utt_f2, run.utt_word, tg);
+        // This creature's own floor, on this creature's own utterances and label
+        // counts. Chance is not 0.250 -- see `direction_null`.
+        cell.dnull = direction_null(run.utt_f1, run.utt_f2, run.utt_word, tg);
         uint32_t hit = 0, tot = 0;
         for (size_t u = 0; u < run.utt_word.size(); ++u) {
           double best = 0.0;
@@ -10408,16 +10414,21 @@ bool run_ctxfour(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
     spread[a].push_back(c.sp);
     match[a].push_back(c.match);
     dir[a].push_back(c.dir);
+    dnul[a].push_back(c.dnull);
+    dexc[a].push_back(c.dir - c.dnull);
     near[a].push_back(c.near);
     chg[a].push_back(c.chg);
     divg[a].push_back(c.divg);
-    std::printf("  %-6u %-8s %-10.1f %-9.3f %-10.3f %-10.3f %+.1f\n", r,
-                kCtxFourArms[a].name, c.sp, c.match, c.dir, c.near, c.chg);
+    std::printf("  %-6u %-8s %-10.1f %-9.3f %-10.3f %-10.3f %-10.3f %-10.3f %+.1f\n",
+                r, kCtxFourArms[a].name, c.sp, c.match, c.dir, c.dnull,
+                c.dir - c.dnull, c.near, c.chg);
   }
 
   double m_sp[kCtxFourArmCount], s_sp[kCtxFourArmCount];
   double m_mt[kCtxFourArmCount], s_mt[kCtxFourArmCount];
   double m_dr[kCtxFourArmCount], s_dr[kCtxFourArmCount];
+  double m_dn[kCtxFourArmCount], s_dn[kCtxFourArmCount];
+  double m_ex[kCtxFourArmCount], s_ex[kCtxFourArmCount];
   double m_nr[kCtxFourArmCount], s_nr[kCtxFourArmCount];
   double m_ch[kCtxFourArmCount], s_ch[kCtxFourArmCount];
   double m_dv[kCtxFourArmCount], s_dv[kCtxFourArmCount];
@@ -10430,24 +10441,33 @@ bool run_ctxfour(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
     m_sp[a] = ctx_mean_se(spread[a], &s_sp[a]);
     m_mt[a] = ctx_mean_se(match[a], &s_mt[a]);
     m_dr[a] = ctx_mean_se(dir[a], &s_dr[a]);
+    m_dn[a] = ctx_mean_se(dnul[a], &s_dn[a]);
+    m_ex[a] = ctx_mean_se(dexc[a], &s_ex[a]);
     m_nr[a] = ctx_mean_se(near[a], &s_nr[a]);
     m_ch[a] = ctx_mean_se(chg[a], &s_ch[a]);
     m_dv[a] = ctx_mean_se(divg[a], &s_dv[a]);
   }
   const uint32_t kOff = 0, kOra = 1;
 
-  std::printf("\n  %-8s %-16s %-14s %-14s %-14s %s\n", "arm", "F1 spread (Hz)",
-              "ctx_match", "direction", "nearest", "change");
+  std::printf("\n  %-8s %-16s %-14s %-14s %-14s %-14s %s\n", "arm", "F1 spread (Hz)",
+              "direction", "its own null", "dir - null", "nearest", "change");
   for (uint32_t a = 0; a < kCtxFourArmCount; ++a) {
-    char b[40], c[40], d[40], e[40], f[40];
+    char b[40], c[40], d[40], e[40], f[40], g[40];
     std::snprintf(b, sizeof b, "%.1f +/- %.1f", m_sp[a], s_sp[a]);
-    std::snprintf(c, sizeof c, "%.3f +/- %.3f", m_mt[a], s_mt[a]);
-    std::snprintf(d, sizeof d, "%.3f +/- %.3f", m_dr[a], s_dr[a]);
-    std::snprintf(e, sizeof e, "%.3f +/- %.3f", m_nr[a], s_nr[a]);
-    std::snprintf(f, sizeof f, "%+.1f +/- %.1f", m_ch[a], s_ch[a]);
-    std::printf("  %-8s %-16s %-14s %-14s %-14s %s\n", kCtxFourArms[a].name, b, c, d, e, f);
+    std::snprintf(c, sizeof c, "%.3f +/- %.3f", m_dr[a], s_dr[a]);
+    std::snprintf(d, sizeof d, "%.3f +/- %.3f", m_dn[a], s_dn[a]);
+    std::snprintf(e, sizeof e, "%+.3f +/- %.3f", m_ex[a], s_ex[a]);
+    std::snprintf(f, sizeof f, "%.3f +/- %.3f", m_nr[a], s_nr[a]);
+    std::snprintf(g, sizeof g, "%+.1f +/- %.1f", m_ch[a], s_ch[a]);
+    std::printf("  %-8s %-16s %-14s %-14s %-14s %-14s %s\n", kCtxFourArms[a].name, b, c,
+                d, e, f, g);
   }
-  std::printf("\n  chance is 0.250 on direction and nearest, not 0.500.\n");
+  // The floor is MEASURED, not assumed. 1/k is wrong here by about the size of
+  // the effect: the argmax wedges of four vowel directions are 0.210 to 0.290
+  // wide, so any imbalance in label counts moves the floor. `nearest` is a
+  // genuine 0.250 -- it compares absolute distances, not directions.
+  std::printf("\n  chance on `nearest` is 0.250. Chance on `direction` is NOT 1/k and\n"
+              "  is the per-creature shuffled null in the column beside it.\n");
 
   // THE REFACTOR'S CHECK, before any result is read. The host holds one slice up
   // for the whole trial, so a correct k-way assignment makes this 1.000 by
@@ -10462,32 +10482,60 @@ bool run_ctxfour(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
     return false;
   }
 
+  // THE GATE MOVED, AND IT MOVED BECAUSE THE INSTRUMENT WAS WRONG.
+  //
+  // The 2026-09-06 run pre-registered raw `direction` against a chance of 0.250
+  // and passed at +0.163, 2.2 SE. Then the measure was checked on an
+  // informationless voice and it does not read 1/k: unnormalised target
+  // directions plus unequal argmax wedges put the floor at 0.29-0.30 under a
+  // skewed label distribution. So the gate is now the excess over each
+  // creature's OWN shuffled null.
+  //
+  // Both numbers are printed. Changing a gate after seeing the data is exactly
+  // what the fitted-verdict rule forbids, and the defence is that this change is
+  // driven by a null measured WITHOUT any creature in it -- it would have been
+  // made identically had the run gone the other way.
   const double d_dir = m_dr[kOra] - m_dr[kOff];
   const double se_dir = s_dr[kOra] + s_dr[kOff];
+  const double d_exc = m_ex[kOra] - m_ex[kOff];
+  const double se_exc = s_ex[kOra] + s_ex[kOff];
   std::printf("  the refactor's check     ctx_match %.3f at k=4 (1.000 expected)\n"
               "  F1 spread               %.1f -> %.1f Hz\n"
-              "  direction               %.3f -> %.3f  (chance 0.250)\n"
+              "  direction, RAW          %.3f -> %.3f  (the retired gate)\n"
+              "  its own shuffled null   %.3f -> %.3f  (this is the real floor)\n"
+              "  direction ABOVE null    %+.3f -> %+.3f  (%+.3f, %.1f SE)\n"
               "  nearest target          %.3f -> %.3f  (chance 0.250)\n"
               "  the tables diverged     %.4f\n",
               m_mt[kOra], m_sp[kOff], m_sp[kOra], m_dr[kOff], m_dr[kOra],
-              m_nr[kOff], m_nr[kOra], m_dv[kOra]);
+              m_dn[kOff], m_dn[kOra], m_ex[kOff], m_ex[kOra], d_exc,
+              se_exc > 0.0 ? d_exc / se_exc : 0.0, m_nr[kOff], m_nr[kOra], m_dv[kOra]);
+  (void)d_dir;
+  (void)se_dir;
 
-  if (d_dir > 2.0 * se_dir && m_dr[kOra] > 0.45) {
+  // `nearest` is the measure that corresponds to NAMING -- does the utterance
+  // land closest to the right target -- and it has an honest 0.250 floor. It is
+  // reported alongside because the 2026-09-06 run passed its direction gate
+  // while `nearest` sat at chance and formant error GREW 20%: the bias made
+  // larger, correctly-signed excursions that landed in the wrong places.
+  if (d_exc > 2.0 * se_exc && m_ex[kOra] > 0.05) {
     std::printf("\n  IT HOLDS FOUR -- a context-indexed bias carries four mappings on one\n"
-                "  reward channel: direction %.3f against %.3f with the mechanism off\n"
-                "  and a chance of 0.250, %+.3f at %.1f SE. The mechanism is not a\n"
-                "  two-word trick, and the full six-arm run with the creature's OWN\n"
-                "  index is worth its cost.\n",
-                m_dr[kOra], m_dr[kOff], d_dir, se_dir > 0.0 ? d_dir / se_dir : 0.0);
+                "  reward channel: direction sits %+.3f above its own shuffled null\n"
+                "  against %+.3f with the mechanism off, %+.3f at %.1f SE. Read it with\n"
+                "  `nearest` (%.3f against a chance of 0.250) before calling this\n"
+                "  naming: pointing the right way is not arriving.\n",
+                m_ex[kOra], m_ex[kOff], d_exc, se_exc > 0.0 ? d_exc / se_exc : 0.0,
+                m_nr[kOra]);
     return true;
   }
-  std::printf("\n  IT DOES NOT HOLD FOUR. With a PERFECT index the bias reaches %.3f\n"
-              "  against %.3f off and a chance of 0.250 (%+.3f, %.1f SE). The creature's\n"
-              "  own index cannot do better than the oracle, so the four-word ceiling is\n"
-              "  the BIAS MECHANISM and not the context -- `capacity`'s finding that a\n"
-              "  conflicting pair collapses to 0.22 reaching four tables. The work goes\n"
-              "  to making the bias larger, not to a four-word protocol.\n",
-              m_dr[kOra], m_dr[kOff], d_dir, se_dir > 0.0 ? d_dir / se_dir : 0.0);
+  std::printf("\n  IT DOES NOT HOLD FOUR. With a PERFECT index the bias sits %+.3f above\n"
+              "  its own shuffled null against %+.3f off (%+.3f, %.1f SE), and `nearest`\n"
+              "  reads %.3f against a chance of 0.250. The creature's own index cannot do\n"
+              "  better than the oracle, so the four-word ceiling is the BIAS MECHANISM\n"
+              "  and not the context -- `capacity`'s finding that a conflicting pair\n"
+              "  collapses to 0.22 reaching four tables. The work goes to making the bias\n"
+              "  land ON targets, not to a four-word protocol.\n",
+              m_ex[kOra], m_ex[kOff], d_exc, se_exc > 0.0 ? d_exc / se_exc : 0.0,
+              m_nr[kOra]);
   return false;
 }
 

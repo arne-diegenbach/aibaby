@@ -908,10 +908,26 @@ inline double direction_accuracy(const std::vector<double>& f1,
   }
   t1 /= double(k);
   t2 /= double(k);
+  // NORMALISED, because the question is which direction the utterance aligns
+  // with and an unnormalised dot product is alignment TIMES magnitude. The four
+  // targets' deviations differ by more than a factor of two (|d| 0.270 for /e/
+  // against 0.643 for /i/), so without this the measure under-picks the targets
+  // near the centroid — and with an uneven label distribution that prediction
+  // bias correlates with the labels and leaves 1/k. Measured on an
+  // informationless voice with labels drawn 40/30/20/10: 0.288-0.304 before,
+  // 0.251-0.266 after.
+  //
+  // AT k=2 THIS CHANGES NOTHING, digit for digit: two targets give d0 = -d1, so
+  // both vectors are scaled by the same constant and the argmax is untouched.
+  // Every published two-word number stands.
   std::vector<double> d1(k), d2(k);
   for (size_t c = 0; c < k; ++c) {
-    d1[c] = std::log(targets[c].first) - t1;
-    d2[c] = std::log(targets[c].second) - t2;
+    double a = std::log(targets[c].first) - t1;
+    double b = std::log(targets[c].second) - t2;
+    const double mag = std::sqrt(a * a + b * b);
+    if (mag > 0.0) { a /= mag; b /= mag; }
+    d1[c] = a;
+    d2[c] = b;
   }
   size_t hit = 0, tot = 0;
   for (size_t i = 0; i < f1.size(); ++i) {
@@ -929,6 +945,44 @@ inline double direction_accuracy(const std::vector<double>& f1,
     ++tot;
   }
   return tot ? double(hit) / double(tot) : 0.0;
+}
+
+// THE CHANCE LEVEL OF `direction_accuracy` IS NOT 1/k, AND THIS MEASURES IT.
+//
+// Normalising the target directions removes the magnitude bias but not a second,
+// purely geometric one: the argmax carves the plane into wedges, one per target,
+// and four vowels do not sit 90 degrees apart. The shipped four lie at -24.5,
+// +126.3, -120.0 and +53.5 degrees, so an informationless voice is assigned to
+// them 0.241 / 0.259 / 0.290 / 0.210 of the time. Combined with any imbalance in
+// how many utterances carry each label, the aggregate floor moves off 1/k — and
+// it moves by roughly the size of the effects being measured.
+//
+// So the floor is measured on the same utterances instead of assumed: shuffle
+// the labels, which preserves their marginal distribution exactly and destroys
+// only their relation to the voice, and score again. This is `pgprobe`'s
+// matched-marginal control applied to the naming score.
+//
+// The mean over `kDirNullShuffles` is used as an OFFSET, not to derive a p-value
+// from the rank of the observed score — a 32-permutation null cannot resolve one
+// (see the audibility ruler). The seed is fixed so the floor is reproducible.
+inline double direction_null(const std::vector<double>& f1,
+                             const std::vector<double>& f2,
+                             const std::vector<int>& word,
+                             const std::vector<std::pair<double, double>>& targets) {
+  constexpr uint32_t kDirNullShuffles = 64;
+  if (word.size() < 16) return 0.0;
+  std::vector<int> w = word;
+  uint64_t rng = 0x9E3779B97F4A7C15ull ^ uint64_t(word.size());
+  double sum = 0.0;
+  for (uint32_t s = 0; s < kDirNullShuffles; ++s) {
+    for (size_t i = w.size(); i > 1; --i) {
+      rng ^= rng << 13; rng ^= rng >> 7; rng ^= rng << 17;
+      const size_t j = size_t(rng % uint64_t(i));
+      std::swap(w[i - 1], w[j]);
+    }
+    sum += direction_accuracy(f1, f2, w, targets);
+  }
+  return sum / double(kDirNullShuffles);
 }
 
 // K-way competitive learning, for the question "does any of this survive more

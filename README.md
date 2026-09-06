@@ -8299,13 +8299,63 @@ direction, and direction was the wrong thing to gate on** — a lesson that
 belongs with `verdict-fitted-to-data`, except the failure here is choosing the
 generous measure in advance rather than after the fact.
 
-One loose end that needs an answer before any of this is built on: the **off**
-arm reads 0.321 on direction against a chance of 0.250, +0.071 at 1.8 SE. At two
-words the corresponding arm sat at chance (0.503 and 0.561 against 0.500). A
-baseline that is above chance with the mechanism off is either the echo
-reappearing at four words or a bias in `direction_accuracy` at k > 2, and until
-it is one of those, the +0.163 is measured against a floor that is not the
-floor.
+One loose end needed an answer before any of this could be built on: the **off**
+arm reads 0.321 on direction against a chance of 0.250, +0.071 at 1.8 SE, where
+at two words the corresponding arm sat at chance (0.503 and 0.561 against 0.500).
+That was either the echo reappearing at four words or a bias in the measure.
+
+### It was the measure: chance on `direction` is not 1/k
+
+Checked the way it should have been checked before the run — by feeding
+`direction_accuracy` a voice that carries **no information at all** and seeing
+what it reads. Utterances drawn around one operating point, labels drawn
+independently of them, the real four targets:
+
+| labels | shipped | normalised |
+|---|---|---|
+| balanced | 0.243 / 0.258 / 0.258 | 0.242 / 0.250 / 0.258 |
+| skewed 40/30/20/10 | **0.288 / 0.302 / 0.304** | 0.251 / 0.263 / 0.266 |
+
+Two separate faults, and the first is a plain bug.
+
+**The dot product was unnormalised.** The measure picks the target whose
+direction the utterance best *aligns* with, but `p · d` is alignment times
+magnitude, and the four targets' deviations differ by more than two to one —
+`|d|` is 0.270 for /e/, which sits near the centroid of the four, against 0.643
+for /i/. So targets far from the centroid win on length alone. On its own that
+only skews *which* target is predicted; combined with an uneven label
+distribution it moves the accuracy off 1/k. **At k=2 this is provably a no-op**,
+because two targets give `d0 = -d1`, both are scaled by the same constant and
+the argmax is untouched — which is why it was invisible for as long as the
+project only had two words, and why every published two-word number stands.
+
+**And a residue that is not a bug but geometry.** Normalising leaves the argmax
+carving the plane into one wedge per target, and four vowels do not sit 90
+degrees apart: the shipped four lie at −24.5°, +126.3°, −120.0° and +53.5°, so an
+informationless voice is assigned to them 0.241 / 0.259 / 0.290 / 0.210 of the
+time. There is no constant to correct that to. The floor depends on the target
+geometry *and* on how many utterances carry each label.
+
+So the floor is now **measured on the same utterances instead of assumed**:
+shuffle the labels, which preserves their marginal distribution exactly and
+destroys only their relation to the voice, and score again — `pgprobe`'s
+matched-marginal control applied to the naming score. The mean over 64 shuffles
+is used as an offset, not to read a p-value off the rank of the observed score,
+which a 64-permutation null cannot resolve.
+
+Two facts make the shuffle the right null here rather than a block-preserving
+one. Words are presented strict round-robin (`label = trial % nw`), so each label
+is spread evenly across the session and slow drift cannot align with it. The
+skew that produces the artefact is therefore not in the *trial* counts, which are
+balanced by construction, but in the *utterance* counts — the creature vocalises
+more in some trials than others — and shuffling utterance labels preserves
+exactly that.
+
+**The gate moved because of this, and the defence is that the null was measured
+with no creature in it.** Changing a gate after seeing the data is what the
+fitted-verdict rule forbids; the change here would have been made identically had
+the run gone the other way, and `ctxfour` now prints the retired raw number
+beside the corrected one so the move is visible rather than tidied away.
 
 ### What the literature says to build next, and why it is the cheap option
 
