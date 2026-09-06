@@ -10574,6 +10574,233 @@ bool run_ctxfour(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
   return false;
 }
 
+// --- ctxscale: is the bias COMPUTE-limited or MECHANISM-limited? -----------
+//
+// Two-word naming works and the remaining distance is how LARGE a bias reward
+// can build. `ctxbias` showed the route carries 236 Hz of F1 when a bias is
+// handed to the larynx; learning builds 93 Hz. The open question is which kind
+// of gap that is, and it decides which of the two remaining leads to take:
+//
+//   COMPUTE-LIMITED  the bias is still growing and 236 Hz is a matter of trials.
+//                    Then the architecture is right and the answer is a longer
+//                    run, which is now affordable.
+//   MECHANISM-LIMITED the bias has found its asymptote. Then more trials buy
+//                    nothing and the work goes to Kornfeld's compartments --
+//                    context on spines, variability on shafts, gating rather
+//                    than adding.
+//
+// The one hint on record points at compute: table divergence grew 0.0280 ->
+// 0.0374 when the session doubled, which is close to sqrt(2). But that is a
+// magnitude, and a magnitude can grow while the USEFUL component does not -- an
+// unbiased random walk grows as sqrt(t) too. So this measures the thing that
+// matters, dF1 above its own matched-marginal control, at three budgets.
+//
+// PRE-REGISTERED, and the inconclusive band is declared here rather than
+// discovered later:
+//
+//   excess(4x) / excess(1x)  > 1.7  compute-limited. sqrt(t) predicts 2.0.
+//                            < 1.3  saturated.
+//                            else   inconclusive, and it says so.
+//
+// Each budget is a SEPARATE session rather than a checkpoint of one, because a
+// resumed creature would share its noise draw with the shorter run and the
+// three points would not be independent.
+struct CtxScaleArm {
+  const char* name;
+  uint32_t slots;
+  uint32_t source;
+  int target;
+};
+constexpr CtxScaleArm kCtxScaleArms[] = {
+    {"off", 0, 0, kVLTgtHeard},
+    // Source 4, the ear's rate EMA: the creature's own index, and the only one
+    // that has replicated out of sample.
+    {"ema", 2, 4, kVLTgtHeard},
+    // The control the dF1 comparison needs. Its index tracks the word too, so
+    // its voice is word-dependent -- just not in the direction reward asked for.
+    {"ema-rnd", 2, 4, kVLTgtRandom},
+};
+constexpr uint32_t kCtxScaleArmCount =
+    sizeof(kCtxScaleArms) / sizeof(kCtxScaleArms[0]);
+// Longest first, so the tail of the work queue is short jobs rather than one
+// four-times-everything straggler holding thirteen idle cores.
+constexpr uint32_t kCtxScaleBudgets = 3;
+
+bool run_ctxscale(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  aibaby::Dna dna;
+  if (dna.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) {
+    std::printf("  setup failed: the genome does not load\n");
+    return false;
+  }
+  const int32_t ctx_module = dna.module_with_role(aibaby::ModuleRole::kContext);
+  if (ctx_module < 0) {
+    std::printf("  this genome has no kContext module. Build one with NO output\n"
+                "  weight -- the index is READ, never driven:\n\n"
+                "    python3 tools/genome_add_context.py dna/default.toml ctx.toml \\\n"
+                "        vocal out_w=0\n"
+                "    ./build/aibaby --dna ctx.toml --experiment ctxscale\n");
+    return false;
+  }
+  constexpr uint32_t kReps = 9;
+  const size_t slots_off = offsetof(aibaby::DnaHeader, exploration) +
+                           offsetof(aibaby::DnaExploration, context_slots);
+  const size_t src_off = offsetof(aibaby::DnaHeader, exploration) +
+                         offsetof(aibaby::DnaExploration, context_source);
+  instrument("ctxscale", dna.header().seed ^ 0x5CA1u, ticks / kVLTrialTicks,
+             "trials at the LONGEST budget");
+  std::printf("  question          is the learned bias still GROWING with trials, or has\n"
+              "                    it found its asymptote? That decides whether 236 Hz is\n"
+              "                    a matter of compute or of architecture.\n");
+  std::printf("  the gate          excess = dF1(ema) - dF1(ema-rnd), pooled per budget.\n"
+              "                    ratio 4x/1x  > 1.7 compute-limited (sqrt(t) gives 2.0)\n"
+              "                                 < 1.3 saturated\n"
+              "                                 else  inconclusive, and it says so.\n\n");
+
+  struct Cell {
+    bool ok = false;
+    uint32_t scored = 0, skipped = 0;
+    double d1 = 0.0, div = 0.0, match = 0.0, chg = 0.0;
+  };
+  const uint32_t njobs = kReps * kCtxScaleArmCount * kCtxScaleBudgets;
+  const std::vector<Cell> cells = parallel_reps<Cell>(njobs, [&](uint32_t i) {
+    const uint32_t per_rep = kCtxScaleArmCount * kCtxScaleBudgets;
+    const uint32_t r = i / per_rep;
+    const uint32_t rem = i % per_rep;
+    const uint32_t a = rem / kCtxScaleBudgets;
+    const uint32_t b = rem % kCtxScaleBudgets;
+    Cell cell;
+    std::vector<uint8_t> variant = blob;
+    const uint64_t seed = dna.header().seed + r * 7919ull;
+    std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+    const uint32_t sl = kCtxScaleArms[a].slots;
+    const uint32_t sr = kCtxScaleArms[a].source;
+    std::memcpy(variant.data() + slots_off, &sl, sizeof(sl));
+    std::memcpy(variant.data() + src_off, &sr, sizeof(sr));
+    CtxDrive drive;
+    drive.module = ctx_module;
+    drive.slots = kVLWords;
+    drive.gain = 0.10;
+    Regime reg;
+    reg.praise = kPraiseValue;
+    reg.scold = kScoldValue;
+    const VLRun run = run_vocallearn_session(variant, ticks >> b, kVLTaught, nullptr,
+                                             reg, kCtxScaleArms[a].target, &drive);
+    cell.scored = run.scored;
+    cell.skipped = run.skipped;
+    if (!run.ok) return cell;
+    cell.d1 = std::fabs(run.f1_by_word[0] - run.f1_by_word[1]);
+    cell.div = run.ctx_table_div;
+    cell.match = run.ctx_match;
+    cell.chg = vl_change(run);
+    cell.ok = true;
+    parallel_note("  [%u/%u] seed %u %s %.2fM  dF1 %.1f\n", i + 1, njobs, r,
+                  kCtxScaleArms[a].name, double(ticks >> b) / 1e6, cell.d1);
+    return cell;
+  });
+
+  std::vector<double> d1[kCtxScaleArmCount][kCtxScaleBudgets];
+  std::vector<double> dv[kCtxScaleArmCount][kCtxScaleBudgets];
+  std::printf("  %-6s %-9s %-9s %-9s %-10s %s\n", "seed", "arm", "budget", "dF1 (Hz)",
+              "table div", "change");
+  for (uint32_t i = 0; i < njobs; ++i) {
+    const uint32_t per_rep = kCtxScaleArmCount * kCtxScaleBudgets;
+    const uint32_t r = i / per_rep;
+    const uint32_t rem = i % per_rep;
+    const uint32_t a = rem / kCtxScaleBudgets;
+    const uint32_t b = rem % kCtxScaleBudgets;
+    const Cell& c = cells[i];
+    char bud[24];
+    std::snprintf(bud, sizeof bud, "%.2fM", double(ticks >> b) / 1e6);
+    if (!c.ok) {
+      std::printf("  %-6u %-9s %-9s (inconclusive: %u scored, %u skipped)\n", r,
+                  kCtxScaleArms[a].name, bud, c.scored, c.skipped);
+      continue;
+    }
+    d1[a][b].push_back(c.d1);
+    dv[a][b].push_back(c.div);
+    std::printf("  %-6u %-9s %-9s %-9.1f %-10.4f %+.1f\n", r, kCtxScaleArms[a].name,
+                bud, c.d1, c.div, c.chg);
+  }
+
+  double m_d1[kCtxScaleArmCount][kCtxScaleBudgets], s_d1[kCtxScaleArmCount][kCtxScaleBudgets];
+  double m_dv[kCtxScaleArmCount][kCtxScaleBudgets], s_dv[kCtxScaleArmCount][kCtxScaleBudgets];
+  for (uint32_t a = 0; a < kCtxScaleArmCount; ++a) {
+    for (uint32_t b = 0; b < kCtxScaleBudgets; ++b) {
+      if (d1[a][b].size() < 3) {
+        std::printf("\n  ctxscale INCONCLUSIVE -- arm `%s` at budget %u produced %zu\n"
+                    "  creatures.\n", kCtxScaleArms[a].name, b, d1[a][b].size());
+        return false;
+      }
+      m_d1[a][b] = ctx_mean_se(d1[a][b], &s_d1[a][b]);
+      m_dv[a][b] = ctx_mean_se(dv[a][b], &s_dv[a][b]);
+    }
+  }
+
+  const uint32_t kOff = 0, kEma = 1, kRnd = 2;
+  (void)kOff;
+  std::printf("\n  %-9s %-9s %-16s %-16s %-16s %s\n", "budget", "trials", "off",
+              "ema", "ema-rnd", "excess (ema - rnd)");
+  double excess[kCtxScaleBudgets], se_ex[kCtxScaleBudgets];
+  for (int b = int(kCtxScaleBudgets) - 1; b >= 0; --b) {
+    excess[b] = m_d1[kEma][b] - m_d1[kRnd][b];
+    se_ex[b] = s_d1[kEma][b] + s_d1[kRnd][b];
+    char bud[24], tr[24], o[32], e[32], n[32], x[40];
+    std::snprintf(bud, sizeof bud, "%.2fM", double(ticks >> b) / 1e6);
+    std::snprintf(tr, sizeof tr, "%llu",
+                  (unsigned long long)((ticks >> b) / kVLTrialTicks));
+    std::snprintf(o, sizeof o, "%.1f +/- %.1f", m_d1[0][b], s_d1[0][b]);
+    std::snprintf(e, sizeof e, "%.1f +/- %.1f", m_d1[kEma][b], s_d1[kEma][b]);
+    std::snprintf(n, sizeof n, "%.1f +/- %.1f", m_d1[kRnd][b], s_d1[kRnd][b]);
+    std::snprintf(x, sizeof x, "%+.1f +/- %.1f", excess[b], se_ex[b]);
+    std::printf("  %-9s %-9s %-16s %-16s %-16s %s\n", bud, tr, o, e, n, x);
+  }
+  std::printf("\n  table divergence  %.4f -> %.4f -> %.4f (1x, 2x, 4x)\n",
+              m_dv[kEma][kCtxScaleBudgets - 1], m_dv[kEma][1], m_dv[kEma][0]);
+
+  const double lo = excess[kCtxScaleBudgets - 1];
+  const double hi = excess[0];
+  if (lo <= 0.0) {
+    std::printf("\n  ctxscale INCONCLUSIVE -- the excess at the SHORTEST budget is %+.1f Hz,\n"
+                "  so there is no positive quantity to measure growth in. The ratio is\n"
+                "  undefined and reporting one would be inventing a denominator.\n", lo);
+    return false;
+  }
+  const double ratio = hi / lo;
+  // sqrt(t) would give 2.0 over a 4x span, linear 4.0, saturated 1.0. Reported
+  // as an exponent because that is what extrapolates.
+  const double expo = std::log(ratio > 0.0 ? ratio : 1e-9) / std::log(4.0);
+  std::printf("  excess grew       %+.1f -> %+.1f Hz over a 4x span, ratio %.2f\n"
+              "  implied exponent  %.2f  (0.5 is sqrt(t), 1.0 linear, 0.0 saturated)\n",
+              lo, hi, ratio, expo);
+  if (expo > 0.05 && hi > 0.0) {
+    const double need = std::pow(236.0 / hi, 1.0 / expo);
+    std::printf("  to reach 236 Hz   %.0fx these trials at this exponent\n", need);
+  }
+
+  if (ratio > 1.7) {
+    std::printf("\n  COMPUTE-LIMITED -- the excess is still growing at %.2f over a 4x span\n"
+                "  against the 2.0 that sqrt(t) predicts. The architecture is not the\n"
+                "  binding constraint at two words, and a longer run is the cheapest\n"
+                "  thing left. Kornfeld's compartments are not refused, but they are not\n"
+                "  yet needed.\n", ratio);
+    return true;
+  }
+  if (ratio < 1.3) {
+    std::printf("\n  SATURATED -- the excess grew only %.2f over a 4x span, so the bias has\n"
+                "  found its asymptote at ~%.1f Hz against the 236 Hz the route can carry.\n"
+                "  More trials buy nothing and the gap is MECHANISM. The work goes to\n"
+                "  Kornfeld's compartments: context on spines, variability on shafts,\n"
+                "  gating rather than adding.\n", ratio, hi);
+    return false;
+  }
+  std::printf("\n  INCONCLUSIVE -- ratio %.2f falls in the band declared before the run\n"
+              "  (1.3 to 1.7), which is exactly where a 4x span and nine creatures cannot\n"
+              "  separate sqrt(t) growth from an asymptote. Widening the span costs less\n"
+              "  than choosing a side of this.\n", ratio);
+  return false;
+}
+
 // --- ctxbias: pricing the one architecture that is left --------------------
 //
 // Everything that has been added to `vocal` has been charged for. A conditional

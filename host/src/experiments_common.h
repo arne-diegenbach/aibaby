@@ -2002,6 +2002,7 @@ bool run_ctxsrc(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_ctxself(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_partprobe(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_ctxfour(const std::vector<uint8_t>&, uint64_t, bool);
+bool run_ctxscale(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_pgprobe(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_g2cond(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_coderprobe(const std::vector<uint8_t>&, uint64_t, bool);

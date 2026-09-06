@@ -172,20 +172,30 @@ implementation of the verdict, which is the trap `restate` and the
 fitted-verdict rule exist to prevent. `ctxfour` is converted, and its whole
 output is byte-for-byte the serial log's.
 
-**The ceiling is 3.7x, not 14x, and it was worth measuring rather than
-assuming.** `ctxfour`'s 18 sessions at 200k ticks:
+**The ceiling is 3.2x, not 14x.** `ctxfour`'s 18 sessions at 200k ticks, measured
+on an idle machine — the first attempt at this table was taken while a 6.8M run
+was consuming cores throughout, which inflated the serial baseline to 166 s and
+the ceiling to a flattering 3.7x:
 
-| threads | wall | max RSS |
+| threads | wall | speedup |
 |---|---|---|
-| 1 | 166.4 s | — |
-| 6 | 60.4 s | 0.7 GB |
-| 14 | 55.5 s | — |
-| 18 (default) | 44.4 s | 2.0 GB |
+| 1 | 99.0 s | 1.00x |
+| 6 | 41.7 s | 2.38x |
+| 14 | 32.2 s | 3.08x |
+| 18 (default) | 30.9 s | 3.20x |
 
-A session's arena is ~113 MB against a 12 MB L3 on a mobile hybrid part, so it
-is memory-bound rather than compute-bound and threads stop paying at about four.
-Running several experiments as separate processes hits the *same* wall — the
-machine does ~3.7 sessions' worth of work at once however the work is divided.
+**Capacity is not the constraint and never was** — peak RSS is 2.0 GB of 61 GB,
+so there is no reason to throttle job counts to save memory. What is scarce is
+memory *bandwidth*: a session streams a ~113 MB arena past a 12 MB L3 on a mobile
+hybrid part, so cores wait on DRAM and threads stop paying at about three.
+
+**And running separate processes hits the same wall** — asserted first, then
+measured, because it is the kind of claim that follows plausibly from a bandwidth
+limit and could still have been wrong. Three concurrent processes at six threads
+each did 54 sessions in 93.4 s, against 92.8 s for the same 54 sessions done as
+three sequential single-process runs at 18 threads. **3.18x against 3.20x**: the
+machine does the same work per second however the work is divided.
+
 That still takes `ctxfour` from 75 minutes to 20, and a six-arm run from 3h40 to
 about an hour.
 
@@ -8267,22 +8277,32 @@ run pointless.
 
 Nine creatures per arm at 6.8M ticks:
 
-| arm | F1 spread (Hz) | direction | nearest | change |
-|---|---|---|---|---|
-| off | 34.1 +/- 4.7 | 0.321 +/- 0.040 | 0.161 +/- 0.020 | +1.2 +/- 3.1 |
-| oracle | 71.6 +/- 8.2 | 0.484 +/- 0.033 | 0.279 +/- 0.024 | **-20.0 +/- 3.5** |
+Re-run after the instrument was fixed. The first pass's numbers, and why they
+moved, are in the section below.
 
-Chance is 0.250 on `direction` and `nearest`. `ctx_match` read 1.000 on every
-oracle row, which is the k-way assignment's own check and the refactor's last
-outstanding claim.
+| arm | F1 spread (Hz) | direction | its own null | dir - null | nearest | change |
+|---|---|---|---|---|---|---|
+| off | 34.1 +/- 4.7 | 0.283 +/- 0.037 | 0.251 +/- 0.004 | +0.032 +/- 0.034 | 0.161 +/- 0.020 | +1.2 +/- 3.1 |
+| oracle | 71.6 +/- 8.2 | 0.469 +/- 0.033 | 0.267 +/- 0.006 | **+0.201 +/- 0.029** | 0.279 +/- 0.024 | **-20.0 +/- 3.5** |
+
+`ctx_match` read 1.000 on every oracle row, which is the k-way assignment's own
+check and the refactor's last outstanding claim.
+
+**The fix strengthened the result while dissolving the anomaly, which is the
+pattern a correct fix makes.** The off arm's unexplained 0.321 became +0.032
++/- 0.034 above its own null -- at its floor, where a mechanism-off arm belongs.
+The oracle's null came out at 0.267 rather than 0.250, so its raw score was
+inflated too. The gap between the arms went from +0.163 at 2.2 SE on the raw
+numbers to **+0.169 at 2.7 SE** on the excesses: the correction took a confound
+out of the baseline rather than shaving the effect.
 
 **The prediction was half right, and the half it missed is the half that
 matters.** From Werfel/Xie/Seung, learning time scales with parameter count, so
 four contexts at 504 parameters against 252 should need ~2x the trials: at 6.8M,
 what two words gave at 3.4M — ~65 Hz of spread and ~0.80 direction. The spread
-came in at 71.6 Hz, near enough to call a hit. Direction came in at **0.484**
-against a predicted 0.80. It clears chance (+0.163 at 2.2 SE) and it is a third
-of the predicted headroom, not the whole of it.
+came in at 71.6 Hz, near enough to call a hit. Direction came in at **0.469**
+against a predicted 0.80, and +0.201 above its own null. It clears (+0.169 at
+2.7 SE) and it is a third of the predicted headroom, not the whole of it.
 
 **And two numbers the verdict text did not read.** `nearest` — which asks
 whether an utterance actually lands closest to the right target, the measure
