@@ -4109,6 +4109,11 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
   // get the table's worth rather than read past it.
   const uint32_t nw = words < 2 ? 2u : (words > kVLMaxWords ? kVLMaxWords : words);
   VLRun out;
+  // The amplitude and rate lessons are `word == 0 ? loud : quiet`, which is a
+  // two-way distinction and cannot be stretched over four words. Refusing is
+  // better than scoring three of four words against the same target and calling
+  // the result a four-word lesson.
+  if (nw != 2 && (score == kVLScoreAmp || score == kVLScoreRate)) return out;
   std::string error;
   Session s;
   if (!s.init(blob, error)) {
@@ -4266,6 +4271,11 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
     // included at zero, because a quiet answer is an answer.
     double amp_sum = 0.0;
     uint32_t n_amp = 0;
+    // TWO-WORD ONLY, and guarded rather than left to go quietly wrong: at four
+    // words this makes word 0 loud and words 1-3 all quiet, which is not a
+    // four-way amplitude lesson. `ctxself` and `ctxfour` score FORMANTS, so this
+    // is unused there; the guard is above, where the session refuses an
+    // amplitude or rate score with more than two words.
     const double amp_target = target_word == 0 ? kVLAmpLoud : kVLAmpQuiet;
     // Rate mode: this trial wants a talkative creature or a quiet one.
     const bool want_loud = target_word == 0;
@@ -10230,6 +10240,228 @@ bool run_ctxself(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
               "  the bar; this measures the same shortfall in the mechanism's own units\n"
               "  rather than in a proxy's.\n",
               m_d1[kOra], p, m_d1[kEma], a_rnd, a_rnd_se, a_rnd_pos, a_rnd_n);
+  return false;
+}
+
+// --- ctxfour: does the context-indexed bias hold FOUR mappings? -------------
+//
+// `partprobe`'s k=4 gate cleared the INDEX -- the same competitive rule with the
+// same conscience finds four clusters in the ear at 0.895 against a chance of
+// 0.250. It said nothing about the LEARNING, and that is the load-bearing
+// unknown: four contexts is four conditional mappings competing for ONE reward
+// channel. `capacity` measured this creature holding TWO orthogonal lessons at
+// 0.84 while a CONFLICTING pair collapses to 0.22, and naming's lessons conflict
+// by construction -- they drive the same formant to different values. The
+// context index is exactly what makes them non-conflicting at two words.
+// Whether that survives four tables is untested.
+//
+// **So this runs the ORACLE arm only, and its baseline.** With the host writing
+// a perfect index, can a context-indexed bias hold four mappings at all? Two
+// arms instead of six is ~75 minutes rather than 3h40, and it is the question
+// worth spending first: if a PERFECT index cannot carry four, the creature's own
+// index certainly cannot, and the ceiling is the bias mechanism rather than the
+// context -- which would send the work to the compartment lead instead.
+//
+// THE PREDICTION, from Werfel, Xie & Seung and stated before the run. Learning
+// time scales with the number of parameters estimated. Four contexts is 504
+// parameters against two contexts' 252, so **2x the parameters and therefore
+// ~2x the trials**. At 6.8M with four words expect roughly what two words gave
+// at 3.4M: `oracle` around 65 Hz of pairwise F1 spread, and a direction score
+// near 0.80 against a chance that is now 0.250. Landing there says the mechanism
+// is merely slower; landing at chance says something structural breaks at four.
+//
+// AND IT CARRIES THE REFACTOR'S OWN OUTSTANDING CHECK. `kVLWords` became a
+// runtime count and every test so far ran with nw == 2, so a loop left at the
+// constant is invisible until four words actually run. With the host writing the
+// index, **`ctx_match` must read 1.000 at k=4** -- anything less means the k-way
+// assignment or the confusion accounting is wrong, independently of what the
+// creature learned. That gate fires before any result is read.
+struct CtxFourArm {
+  const char* name;
+  uint32_t slots;
+  int target;
+};
+constexpr CtxFourArm kCtxFourArms[] = {
+    {"off",    0, kVLTgtHeard},
+    {"oracle", 4, kVLTgtHeard},
+};
+constexpr uint32_t kCtxFourArmCount = sizeof(kCtxFourArms) / sizeof(kCtxFourArms[0]);
+constexpr uint32_t kCFWords = 4;
+
+bool run_ctxfour(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  aibaby::Dna dna;
+  if (dna.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) {
+    std::printf("  setup failed: the genome does not load\n");
+    return false;
+  }
+  const int32_t ctx_module = dna.module_with_role(aibaby::ModuleRole::kContext);
+  if (ctx_module < 0) {
+    std::printf("  this genome has no kContext module. Build one with NO output\n"
+                "  weight -- the index is READ, never driven:\n\n"
+                "    python3 tools/genome_add_context.py dna/default.toml ctx.toml \\\n"
+                "        vocal out_w=0\n"
+                "    ./build/aibaby --dna ctx.toml --experiment ctxfour\n");
+    return false;
+  }
+  constexpr uint32_t kReps = 9;
+  const size_t slots_off = offsetof(aibaby::DnaHeader, exploration) +
+                           offsetof(aibaby::DnaExploration, context_slots);
+  instrument("ctxfour", dna.header().seed ^ 0x4F0Bu, ticks / kVLTrialTicks,
+             "trials per arm");
+  std::printf("  question          `partprobe` cleared the INDEX at four words (0.895\n"
+              "                    against chance 0.250). Can the BIAS hold four\n"
+              "                    mappings on one reward channel?\n");
+  std::printf("  the prediction    4 contexts is 2x the parameters of 2, so ~2x the\n"
+              "                    trials: at 6.8M expect what two words gave at 3.4M,\n"
+              "                    ~65 Hz spread and ~0.80 direction (chance 0.250).\n");
+  std::printf("  the oracle arm    the host writes the index, so this is the CEILING.\n"
+              "                    If a perfect index cannot carry four, the creature's\n"
+              "                    own cannot either.\n\n");
+
+  std::vector<double> spread[kCtxFourArmCount], match[kCtxFourArmCount];
+  std::vector<double> dir[kCtxFourArmCount], near[kCtxFourArmCount];
+  std::vector<double> chg[kCtxFourArmCount], divg[kCtxFourArmCount];
+
+  std::vector<std::pair<double, double>> tg;
+  for (uint32_t q = 0; q < kCFWords; ++q) {
+    tg.push_back({double(kWords[q].f1), double(kWords[q].f2)});
+  }
+
+  std::printf("  %-6s %-8s %-10s %-9s %-10s %-10s %s\n", "seed", "arm", "F1 spread",
+              "ctx_match", "direction", "nearest", "change");
+  for (uint32_t r = 0; r < kReps; ++r) {
+    for (uint32_t a = 0; a < kCtxFourArmCount; ++a) {
+      std::vector<uint8_t> variant = blob;
+      const uint64_t seed = dna.header().seed + r * 7919ull;
+      std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+      const uint32_t sl = kCtxFourArms[a].slots;
+      std::memcpy(variant.data() + slots_off, &sl, sizeof(sl));
+      CtxDrive drive;
+      drive.module = ctx_module;
+      drive.slots = kCFWords;
+      drive.gain = 0.10;
+      Regime reg;
+      reg.praise = kPraiseValue;
+      reg.scold = kScoldValue;
+      const VLRun run = run_vocallearn_session(variant, ticks, kVLTaught, nullptr, reg,
+                                               kCtxFourArms[a].target, &drive,
+                                               kVLScoreFormant, nullptr, kCFWords);
+      if (!run.ok) {
+        std::printf("  %-6u %-8s (inconclusive: %u scored, %u skipped)\n", r,
+                    kCtxFourArms[a].name, run.scored, run.skipped);
+        continue;
+      }
+      // Mean absolute pairwise F1 difference: the four-word generalisation of
+      // dF1, which is a single pair.
+      double sp = 0.0;
+      uint32_t np = 0;
+      for (uint32_t i = 0; i < kCFWords; ++i) {
+        for (uint32_t j = i + 1; j < kCFWords; ++j) {
+          sp += std::fabs(run.f1_by_word[i] - run.f1_by_word[j]);
+          ++np;
+        }
+      }
+      sp = np ? sp / np : 0.0;
+      const double dr = direction_accuracy(run.utt_f1, run.utt_f2, run.utt_word, tg);
+      uint32_t hit = 0, tot = 0;
+      for (size_t i = 0; i < run.utt_word.size(); ++i) {
+        double best = 0.0;
+        int pick = 0;
+        for (uint32_t q = 0; q < kCFWords; ++q) {
+          const double e = formant_error(run.utt_f1[i], run.utt_f2[i], kWords[q]);
+          if (e < 0.0) { pick = -1; break; }
+          if (q == 0 || e < best) { best = e; pick = int(q); }
+        }
+        if (pick < 0) continue;
+        if (pick == run.utt_word[i]) ++hit;
+        ++tot;
+      }
+      const double nr = tot ? double(hit) / double(tot) : 0.0;
+      spread[a].push_back(sp);
+      match[a].push_back(run.ctx_match);
+      dir[a].push_back(dr);
+      near[a].push_back(nr);
+      chg[a].push_back(vl_change(run));
+      divg[a].push_back(run.ctx_table_div);
+      std::printf("  %-6u %-8s %-10.1f %-9.3f %-10.3f %-10.3f %+.1f\n", r,
+                  kCtxFourArms[a].name, sp, run.ctx_match, dr, nr, vl_change(run));
+    }
+  }
+
+  double m_sp[kCtxFourArmCount], s_sp[kCtxFourArmCount];
+  double m_mt[kCtxFourArmCount], s_mt[kCtxFourArmCount];
+  double m_dr[kCtxFourArmCount], s_dr[kCtxFourArmCount];
+  double m_nr[kCtxFourArmCount], s_nr[kCtxFourArmCount];
+  double m_ch[kCtxFourArmCount], s_ch[kCtxFourArmCount];
+  double m_dv[kCtxFourArmCount], s_dv[kCtxFourArmCount];
+  for (uint32_t a = 0; a < kCtxFourArmCount; ++a) {
+    if (spread[a].size() < 3) {
+      std::printf("\n  ctxfour INCONCLUSIVE -- arm `%s` produced %zu creatures.\n",
+                  kCtxFourArms[a].name, spread[a].size());
+      return false;
+    }
+    m_sp[a] = ctx_mean_se(spread[a], &s_sp[a]);
+    m_mt[a] = ctx_mean_se(match[a], &s_mt[a]);
+    m_dr[a] = ctx_mean_se(dir[a], &s_dr[a]);
+    m_nr[a] = ctx_mean_se(near[a], &s_nr[a]);
+    m_ch[a] = ctx_mean_se(chg[a], &s_ch[a]);
+    m_dv[a] = ctx_mean_se(divg[a], &s_dv[a]);
+  }
+  const uint32_t kOff = 0, kOra = 1;
+
+  std::printf("\n  %-8s %-16s %-14s %-14s %-14s %s\n", "arm", "F1 spread (Hz)",
+              "ctx_match", "direction", "nearest", "change");
+  for (uint32_t a = 0; a < kCtxFourArmCount; ++a) {
+    char b[40], c[40], d[40], e[40], f[40];
+    std::snprintf(b, sizeof b, "%.1f +/- %.1f", m_sp[a], s_sp[a]);
+    std::snprintf(c, sizeof c, "%.3f +/- %.3f", m_mt[a], s_mt[a]);
+    std::snprintf(d, sizeof d, "%.3f +/- %.3f", m_dr[a], s_dr[a]);
+    std::snprintf(e, sizeof e, "%.3f +/- %.3f", m_nr[a], s_nr[a]);
+    std::snprintf(f, sizeof f, "%+.1f +/- %.1f", m_ch[a], s_ch[a]);
+    std::printf("  %-8s %-16s %-14s %-14s %-14s %s\n", kCtxFourArms[a].name, b, c, d, e, f);
+  }
+  std::printf("\n  chance is 0.250 on direction and nearest, not 0.500.\n");
+
+  // THE REFACTOR'S CHECK, before any result is read. The host holds one slice up
+  // for the whole trial, so a correct k-way assignment makes this 1.000 by
+  // arithmetic. Anything less is a bug in the assignment or the confusion
+  // accounting, not a fact about the creature.
+  if (m_mt[kOra] < 0.99) {
+    std::printf("\n  REFUSED -- the ORACLE arm's index agrees with the word only %.3f of\n"
+                "  the time, where the host holding one slice up for the whole trial\n"
+                "  makes 1.000 arithmetic. At two words this read exactly 1.000, so the\n"
+                "  k-way assignment or the confusion accounting is wrong and nothing\n"
+                "  below is about the creature.\n", m_mt[kOra]);
+    return false;
+  }
+
+  const double d_dir = m_dr[kOra] - m_dr[kOff];
+  const double se_dir = s_dr[kOra] + s_dr[kOff];
+  std::printf("  the refactor's check     ctx_match %.3f at k=4 (1.000 expected)\n"
+              "  F1 spread               %.1f -> %.1f Hz\n"
+              "  direction               %.3f -> %.3f  (chance 0.250)\n"
+              "  nearest target          %.3f -> %.3f  (chance 0.250)\n"
+              "  the tables diverged     %.4f\n",
+              m_mt[kOra], m_sp[kOff], m_sp[kOra], m_dr[kOff], m_dr[kOra],
+              m_nr[kOff], m_nr[kOra], m_dv[kOra]);
+
+  if (d_dir > 2.0 * se_dir && m_dr[kOra] > 0.45) {
+    std::printf("\n  IT HOLDS FOUR -- a context-indexed bias carries four mappings on one\n"
+                "  reward channel: direction %.3f against %.3f with the mechanism off\n"
+                "  and a chance of 0.250, %+.3f at %.1f SE. The mechanism is not a\n"
+                "  two-word trick, and the full six-arm run with the creature's OWN\n"
+                "  index is worth its cost.\n",
+                m_dr[kOra], m_dr[kOff], d_dir, se_dir > 0.0 ? d_dir / se_dir : 0.0);
+    return true;
+  }
+  std::printf("\n  IT DOES NOT HOLD FOUR. With a PERFECT index the bias reaches %.3f\n"
+              "  against %.3f off and a chance of 0.250 (%+.3f, %.1f SE). The creature's\n"
+              "  own index cannot do better than the oracle, so the four-word ceiling is\n"
+              "  the BIAS MECHANISM and not the context -- `capacity`'s finding that a\n"
+              "  conflicting pair collapses to 0.22 reaching four tables. The work goes\n"
+              "  to making the bias larger, not to a four-word protocol.\n",
+              m_dr[kOra], m_dr[kOff], d_dir, se_dir > 0.0 ? d_dir / se_dir : 0.0);
   return false;
 }
 

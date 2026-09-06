@@ -200,6 +200,12 @@ const Spec kSpecs[] = {
      "  state before it is built: supervised vs k-means vs v52's fixed cut, on\n"
      "  two feature spaces. Read-only. Bar is p >= 0.65, derived from (2p-1)\n"
      "  against the 65 Hz an oracle index buys"},
+    {"ctxfour", 3400000, Expect::kOpen, Tier::kTeach,
+     "derived: ctxself's session at FOUR words. partprobe cleared the index at\n"
+     "  four (0.895 vs chance 0.250); this asks whether the BIAS holds four\n"
+     "  mappings on one reward channel. Oracle arm only -- if a perfect index\n"
+     "  cannot carry four, the creature's own cannot either. Refuses unless\n"
+     "  ctx_match reads 1.000, which is the k-way assignment's own check"},
     {"ctxself", 3400000, Expect::kOpen, Tier::kTeach,
      "derived: areax's session length, because it runs areax's arms plus two.\n"
      "  DNA v52: the last oracle removed. areax's index is written by the HOST\n"
@@ -448,6 +454,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "rpeprobe") ok = run_rpeprobe(dna_blob, ticks, verbose);
   else if (name == "ctxsrc") ok = run_ctxsrc(dna_blob, ticks, verbose);
   else if (name == "ctxself") ok = run_ctxself(dna_blob, ticks, verbose);
+  else if (name == "ctxfour") ok = run_ctxfour(dna_blob, ticks, verbose);
   else if (name == "partprobe") ok = run_partprobe(dna_blob, ticks, verbose);
   else if (name == "pgprobe") ok = run_pgprobe(dna_blob, ticks, verbose);
   else if (name == "g2cond") ok = run_g2cond(dna_blob, ticks, verbose);
