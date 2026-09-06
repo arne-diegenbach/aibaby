@@ -3833,7 +3833,16 @@ constexpr uint64_t kVLEchoTo = kVLWordTicks + 600;
 // creature's one working learning rule was measured under.
 constexpr uint64_t kVLRewardFrom = kVLWordTicks;
 constexpr uint64_t kVLRewardTo = kVLWordTicks + 800;
+// The word count `vocallearn` and everything built on it has always used. It
+// stays 2, and it is now a DEFAULT rather than a fact: `run_vocallearn_session`
+// takes a runtime count so a four-word protocol can be written without moving a
+// single existing number. Arrays are sized by kVLMaxWords; loops and modulo use
+// the runtime value.
 constexpr uint32_t kVLWords = 2;
+// Sizing only. Four is where the word table's own comments say the hard cases
+// live -- /i/ and /u/ within 30 Hz on F1 and 1600 apart on F2, /e/ between /a/
+// and /i/ on both.
+constexpr uint32_t kVLMaxWords = 4;
 // How fast the per-word expectation follows. Slow enough that a run of good
 // trials does not immediately raise the bar out of reach, fast enough that it
 // tracks a creature that is genuinely improving.
@@ -3981,7 +3990,7 @@ struct BiasDrive {
 struct VLRun {
   bool ok = false;
   double err_early = 0.0, err_late = 0.0;
-  double err_by_word[kVLWords][2] = {};
+  double err_by_word[kVLMaxWords][2] = {};
   uint32_t scored = 0, skipped = 0, praises = 0, scolds = 0;
   double voiced_frac = 0.0;
   // What the oracle actually did, because a silent context module and a
@@ -4012,8 +4021,8 @@ struct VLRun {
   // needs this and nothing else reports it: an oracle that steers the larynx
   // and one that is too small to be heard produce the same firing rates and the
   // same verdict everywhere else, which is the trap DNA v48 fell into.
-  double f1_by_word[kVLWords] = {};
-  double f2_by_word[kVLWords] = {};
+  double f1_by_word[kVLMaxWords] = {};
+  double f2_by_word[kVLMaxWords] = {};
   double bias_amp = 0.0;   // what the oracle injected, in drive units
   // DNA v51. The mechanism's own claim, readable separately from the
   // behaviour: how often the creature was in a context at all, and how far the
@@ -4067,12 +4076,12 @@ struct VLRun {
   // plasticity event -- the cadence at which reward actually reaches the
   // synapses, not per tick, which would over-weight whatever the creature
   // happened to be doing when an interval was long.
-  double rw_mean[kVLWords] = {};   // mean TOTAL reward in each context
-  double rw_ext[kVLWords] = {};    // ...and the external (caregiver) part alone
+  double rw_mean[kVLMaxWords] = {};   // mean TOTAL reward in each context
+  double rw_ext[kVLMaxWords] = {};    // ...and the external (caregiver) part alone
   double rw_between = 0.0;         // variance of the per-context means
   double rw_within = 0.0;          // mean variance within a context
   double rw_ext_share = 0.0;       // external share of total reward variance
-  uint32_t rw_n[kVLWords] = {};
+  uint32_t rw_n[kVLMaxWords] = {};
   std::vector<Praise> feedback;  // what the taught arm earned, for the yoke
 };
 
@@ -4089,12 +4098,16 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
                              const std::vector<Praise>* yoked, const Regime& regime,
                              int target = -1, const CtxDrive* ctx = nullptr,
                              VLScore score = kVLScoreFormant,
-                             const BiasDrive* bias = nullptr) {
+                             const BiasDrive* bias = nullptr,
+                             uint32_t words = kVLWords) {
   // -1 is vocallearn's own rule, and passing nothing reproduces it exactly: the
   // positive control aims at one fixed target and every other arm at the word
   // that was heard.
   const VLTarget tgt =
       target < 0 ? (arm == kVLFixed ? kVLTgtFixed : kVLTgtHeard) : VLTarget(target);
+  // Clamped, because a caller asking for more words than the table holds should
+  // get the table's worth rather than read past it.
+  const uint32_t nw = words < 2 ? 2u : (words > kVLMaxWords ? kVLMaxWords : words);
   VLRun out;
   std::string error;
   Session s;
@@ -4152,27 +4165,30 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
 
   std::deque<Praise> pending;
   size_t yoke_cursor = 0;
-  double baseline[kVLWords] = {-1.0, -1.0};
+  // NOT an aggregate initialiser: at kVLMaxWords the tail would be 0.0, and 0.0
+  // reads to the code below as "a baseline has already been recorded".
+  double baseline[kVLMaxWords];
+  for (uint32_t b = 0; b < kVLMaxWords; ++b) baseline[b] = -1.0;
   double err_sum[2] = {}, voiced_sum = 0.0;
   uint32_t err_n[2] = {}, frames_total = 0, frames_voiced = 0;
-  double word_sum[kVLWords][2] = {};
-  uint32_t word_n[kVLWords][2] = {};
+  double word_sum[kVLMaxWords][2] = {};
+  uint32_t word_n[kVLMaxWords][2] = {};
   // The voice's own formants per word, over every voiced frame of the session.
-  double vf1_sum[kVLWords] = {}, vf2_sum[kVLWords] = {};
-  uint32_t vf_n[kVLWords] = {};
+  double vf1_sum[kVLMaxWords] = {}, vf2_sum[kVLMaxWords] = {};
+  uint32_t vf_n[kVLMaxWords] = {};
   uint64_t ctx_ticks = 0, ctx_ticks_total = 0;
   // DNA v52. Confusion between the word the caregiver said and the slice the
   // creature's own index picked, over the reward window only.
-  uint64_t ctx_conf[kVLWords][kVLWords] = {};
+  uint64_t ctx_conf[kVLMaxWords][kVLMaxWords] = {};
   uint64_t ctx_conf_n = 0;
   // The same, split by third. Index 0 is the first third and 1 the last; the
   // middle third is counted in the session total only.
-  uint64_t ctx_conf_t[2][kVLWords][kVLWords] = {};
+  uint64_t ctx_conf_t[2][kVLMaxWords][kVLMaxWords] = {};
   uint64_t ctx_conf_tn[2] = {};
   uint64_t last_plast = 0;
-  double rw_sum[kVLWords] = {}, rw_sq[kVLWords] = {};
-  double rw_esum[kVLWords] = {}, rw_esq[kVLWords] = {};
-  uint32_t rw_n[kVLWords] = {};
+  double rw_sum[kVLMaxWords] = {}, rw_sq[kVLMaxWords] = {};
+  double rw_esum[kVLMaxWords] = {}, rw_esq[kVLMaxWords] = {};
+  uint32_t rw_n[kVLMaxWords] = {};
 
   // The bias oracle, if this session has one. Amplitude is a MULTIPLE of the
   // module's own noise_amp rather than a number in drive units, because
@@ -4212,7 +4228,7 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
   uint64_t last_feedback = 0;
 
   for (uint32_t trial = 0; trial < n_trials; ++trial) {
-    const uint32_t label = trial % kVLWords;
+    const uint32_t label = trial % nw;
     // The word the creature HEARS is still alternating on every arm — the
     // positive control differs only in what it is scored and rewarded against,
     // so the two arms hear identical sessions.
@@ -4225,7 +4241,7 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
     uint32_t rnd = uint32_t(trial) * 2654435761u;
     rnd ^= rnd >> 16;
     const uint32_t target_word = tgt == kVLTgtFixed    ? 0u
-                                 : tgt == kVLTgtSwap   ? (label + 1u) % kVLWords
+                                 : tgt == kVLTgtSwap   ? (label + 1u) % nw
                                  : tgt == kVLTgtRandom ? (rnd & 1u)
                                                        : label;
     const Word& w = kWords[target_word];
@@ -4295,7 +4311,7 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
         // only inside the reward window, which is the only place it is used.
         if (t >= kVLRewardFrom && t < kVLRewardTo) {
           const uint32_t c = s.brain.network().active_context();
-          const bool in_word = label < kVLWords && c < kVLWords;
+          const bool in_word = label < nw && c < nw;
           if (in_word) ++ctx_conf[label][c];
           ++ctx_conf_n;
           const int part = trial < third ? 0 : (trial >= n_trials - third ? 1 : -1);
@@ -4310,7 +4326,7 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
       if (s.brain.plasticity_events() != last_plast) {
         last_plast = s.brain.plasticity_events();
         const aibaby::RewardBreakdown& rb = s.brain.reward();
-        const uint32_t c = label < kVLWords ? label : 0u;
+        const uint32_t c = label < nw ? label : 0u;
         const double tot = double(rb.total), ext = double(rb.external);
         rw_sum[c] += tot; rw_sq[c] += tot * tot;
         rw_esum[c] += ext; rw_esq[c] += ext * ext;
@@ -4413,7 +4429,7 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
     // One row per scored trial: what the creature actually said, and which word
     // it was being taught. See the note on `utt_f1` -- this is the naming
     // measurement, and it is not the same question as dF1.
-    if (n_voiced > 0 && label < kVLWords) {
+    if (n_voiced > 0 && label < nw) {
       out.utt_f1.push_back(f1_sum / double(n_voiced));
       out.utt_f2.push_back(f2_sum / double(n_voiced));
       out.utt_word.push_back(int(label));
@@ -4431,12 +4447,12 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
 
   out.err_early = err_n[0] ? err_sum[0] / err_n[0] : 0.0;
   out.err_late = err_n[1] ? err_sum[1] / err_n[1] : 0.0;
-  for (uint32_t k = 0; k < kVLWords; ++k) {
+  for (uint32_t k = 0; k < nw; ++k) {
     for (uint32_t b = 0; b < 2; ++b) {
       out.err_by_word[k][b] = word_n[k][b] ? word_sum[k][b] / word_n[k][b] : 0.0;
     }
   }
-  for (uint32_t k = 0; k < kVLWords; ++k) {
+  for (uint32_t k = 0; k < nw; ++k) {
     out.f1_by_word[k] = vf_n[k] ? vf1_sum[k] / vf_n[k] : 0.0;
     out.f2_by_word[k] = vf_n[k] ? vf2_sum[k] / vf_n[k] : 0.0;
   }
@@ -4448,21 +4464,35 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
   // slice's share. Two words and two slots is the only case this project runs;
   // with more of either the diagonal below is a lower bound rather than the
   // best assignment, which is why it is derived here and not in the kernel.
+  // An index only has to be CONSISTENT, not correctly labelled, so this is the
+  // best of all k! assignments -- exact rather than greedy, because a partition
+  // that is right but PERMUTED would otherwise read as a failure. Two words
+  // gives back the diagonal-or-anti-diagonal test this used to hard-code; four
+  // gives 24 permutations, still cheap to enumerate.
   {
-    static_assert(kVLWords == 2, "ctx_match assumes two words and two slices");
-    auto best_assign = [](const uint64_t c[kVLWords][kVLWords], uint64_t n) {
+    auto best_assign = [&](const uint64_t c[kVLMaxWords][kVLMaxWords], uint64_t n) {
       if (n == 0) return 0.0;
-      const double diag = double(c[0][0] + c[1][1]);
-      const double anti = double(c[0][1] + c[1][0]);
-      return (diag > anti ? diag : anti) / double(n);
+      std::vector<uint32_t> perm(nw);
+      for (uint32_t i = 0; i < nw; ++i) perm[i] = i;
+      double best = 0.0;
+      do {
+        double agree = 0.0;
+        for (uint32_t w = 0; w < nw; ++w) agree += double(c[w][perm[w]]);
+        if (agree > best) best = agree;
+      } while (std::next_permutation(perm.begin(), perm.end()));
+      return best / double(n);
     };
     out.ctx_match = best_assign(ctx_conf, ctx_conf_n);
     out.ctx_match_early = best_assign(ctx_conf_t[0], ctx_conf_tn[0]);
     out.ctx_match_late = best_assign(ctx_conf_t[1], ctx_conf_tn[1]);
     if (ctx_conf_n > 0) {
-      const double s0 = double(ctx_conf[0][0] + ctx_conf[1][0]);
-      const double s1 = double(ctx_conf[0][1] + ctx_conf[1][1]);
-      out.ctx_occupancy = (s0 > s1 ? s0 : s1) / double(ctx_conf_n);
+      double busiest = 0.0;
+      for (uint32_t c = 0; c < nw; ++c) {
+        double col = 0.0;
+        for (uint32_t w = 0; w < nw; ++w) col += double(ctx_conf[w][c]);
+        if (col > busiest) busiest = col;
+      }
+      out.ctx_occupancy = busiest / double(ctx_conf_n);
     }
   }
   {
@@ -4473,7 +4503,7 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
     // the REWARD side, which is the one place this project's recurring
     // arithmetic has never been looked for.
     double gm = 0.0, gn = 0.0, within = 0.0, ewithin = 0.0;
-    for (uint32_t c = 0; c < kVLWords; ++c) {
+    for (uint32_t c = 0; c < nw; ++c) {
       if (!rw_n[c]) continue;
       out.rw_mean[c] = rw_sum[c] / rw_n[c];
       out.rw_ext[c] = rw_esum[c] / rw_n[c];
