@@ -9634,6 +9634,7 @@ bool run_ctxself(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
   std::vector<uint32_t> creps[kCtxSelfArmCount];
   std::vector<double> axis[kCtxSelfArmCount];
   std::vector<uint32_t> areps[kCtxSelfArmCount];
+  std::vector<double> dirs[kCtxSelfArmCount];
 
   std::printf("  %-6s %-9s %-9s %-8s %-8s %-10s %-7s %s\n", "seed", "arm", "dF1 (Hz)",
               "p(idx)", "busiest", "table div", "ev/tri", "change");
@@ -9751,6 +9752,19 @@ bool run_ctxself(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
                 axis[a].push_back(double(h2) / double(t2));
                 areps[a].push_back(r);
               }
+              // The K-WORD generalisation, run here at k=2 as a CHECK on
+              // itself: with two targets t0 = -t1, so the argmax of the dot
+              // product is the sign of the projection and this must reproduce
+              // the axis number above. If the two columns disagree at two
+              // words, the generalisation is wrong and nothing it says at four
+              // words can be trusted.
+              std::vector<std::pair<double, double>> tg;
+              for (uint32_t q = 0; q < kVLWords; ++q) {
+                tg.push_back({double(kWords[q].f1), double(kWords[q].f2)});
+              }
+              const double dir = direction_accuracy(run.utt_f1, run.utt_f2,
+                                                    run.utt_word, tg);
+              if (dir > 0.0) { dirs[a].push_back(dir); }
             }
           }
         }
@@ -9786,6 +9800,7 @@ bool run_ctxself(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
   double m_ns[kCtxSelfArmCount], s_ns[kCtxSelfArmCount];
   double m_cr[kCtxSelfArmCount], s_cr[kCtxSelfArmCount];
   double m_ax[kCtxSelfArmCount], s_ax[kCtxSelfArmCount];
+  double m_dr[kCtxSelfArmCount], s_dr[kCtxSelfArmCount];
   uint32_t valid = 0;
   for (uint32_t a = 0; a < kCtxSelfArmCount; ++a) {
     if (df1[a].size() < 2) {
@@ -9807,6 +9822,7 @@ bool run_ctxself(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
     m_ns[a] = nshuf[a].size() >= 2 ? ctx_mean_se(nshuf[a], &s_ns[a]) : 0.0;
     m_cr[a] = corr[a].size() >= 2 ? ctx_mean_se(corr[a], &s_cr[a]) : 0.0;
     m_ax[a] = axis[a].size() >= 2 ? ctx_mean_se(axis[a], &s_ax[a]) : 0.0;
+    m_dr[a] = dirs[a].size() >= 2 ? ctx_mean_se(dirs[a], &s_dr[a]) : 0.0;
   }
   (void)valid;
 
@@ -9929,7 +9945,19 @@ bool run_ctxself(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
     std::printf("\n  did it move the RIGHT WAY along the axis between the two words?\n"
                 "  (centred on the creature's own mean, no labels fitted, chance 0.500)\n");
     for (uint32_t a = 0; a < kCtxSelfArmCount; ++a) {
-      std::printf("    %-10s %.3f +/- %.3f\n", kCtxSelfArms[a].name, m_ax[a], s_ax[a]);
+      std::printf("    %-10s %.3f +/- %.3f    (k-way form: %.3f)\n",
+                  kCtxSelfArms[a].name, m_ax[a], s_ax[a], m_dr[a]);
+    }
+    {
+      // The generalisation's self-check, stated as a number rather than left to
+      // the reader: at two words the two columns are the same test.
+      double worst = 0.0;
+      for (uint32_t a = 0; a < kCtxSelfArmCount; ++a) {
+        const double gap = std::fabs(m_ax[a] - m_dr[a]);
+        if (gap > worst) worst = gap;
+      }
+      std::printf("    the k-way form reduces to the axis test at k=2:"
+                  " worst disagreement %.4f\n", worst);
     }
     auto apaired = [&](uint32_t A, uint32_t B, double* se, uint32_t* pos, uint32_t* n) {
       std::vector<double> d;

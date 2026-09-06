@@ -797,6 +797,80 @@ inline double online_competitive_accuracy(const std::vector<std::vector<double>>
   return double(hit) / double(z.size() - train_count);
 }
 
+// THE NAMING SCORE, GENERALISED TO K WORDS.
+//
+// The two-word version projects an utterance onto the axis joining the two
+// targets, centred on the creature's own grand mean, and asks whether the SIGN
+// matches the word. That closed both loopholes a fitted readout leaves open: an
+// arbitrary-but-consistent mapping scores chance because its sign is
+// uncorrelated with the word, and M1b's ECHO scores chance too -- measured at
+// 0.503 while the same utterances were 0.610 discriminable, so imitation makes
+// the voice tell words apart without moving it the right way.
+//
+// There is no single axis between four targets, so the sign test does not
+// survive. What does is the thing the sign test was standing in for: **does the
+// utterance deviate from the creature's own mean in the DIRECTION of the right
+// target, rather than of a different one?** Take each utterance's deviation from
+// the creature's grand mean, each target's deviation from the mean of all
+// targets, and pick the word whose direction the utterance best aligns with.
+// Chance is 1/k.
+//
+// **At k=2 this IS the axis measure**, because two targets give t0 = -t1 and the
+// argmax of the dot product is the sign of the projection. That makes the
+// generalisation checkable rather than asserted: run it at two words and it must
+// reproduce the axis numbers.
+//
+// Nothing is fitted to the answer. The creature's mean uses no labels, and the
+// targets come from the protocol -- the same knowledge the axis measure used.
+// Formants are compared in LOG space, as `formant_error` does, because a 100 Hz
+// difference means something different at 300 Hz and at 2500 Hz.
+inline double direction_accuracy(const std::vector<double>& f1,
+                                 const std::vector<double>& f2,
+                                 const std::vector<int>& word,
+                                 const std::vector<std::pair<double, double>>& targets) {
+  const size_t k = targets.size();
+  if (k < 2 || f1.size() != word.size() || f1.size() < 16) return 0.0;
+  double m1 = 0.0, m2 = 0.0;
+  size_t n = 0;
+  for (size_t i = 0; i < f1.size(); ++i) {
+    if (f1[i] <= 1.0 || f2[i] <= 1.0) continue;
+    m1 += std::log(f1[i]);
+    m2 += std::log(f2[i]);
+    ++n;
+  }
+  if (n < 16) return 0.0;
+  m1 /= double(n);
+  m2 /= double(n);
+  double t1 = 0.0, t2 = 0.0;
+  for (size_t c = 0; c < k; ++c) {
+    t1 += std::log(targets[c].first);
+    t2 += std::log(targets[c].second);
+  }
+  t1 /= double(k);
+  t2 /= double(k);
+  std::vector<double> d1(k), d2(k);
+  for (size_t c = 0; c < k; ++c) {
+    d1[c] = std::log(targets[c].first) - t1;
+    d2[c] = std::log(targets[c].second) - t2;
+  }
+  size_t hit = 0, tot = 0;
+  for (size_t i = 0; i < f1.size(); ++i) {
+    if (f1[i] <= 1.0 || f2[i] <= 1.0) continue;
+    if (word[i] < 0 || size_t(word[i]) >= k) continue;
+    const double p1 = std::log(f1[i]) - m1;
+    const double p2 = std::log(f2[i]) - m2;
+    size_t best = 0;
+    double bestdot = 0.0;
+    for (size_t c = 0; c < k; ++c) {
+      const double dot = p1 * d1[c] + p2 * d2[c];
+      if (c == 0 || dot > bestdot) { bestdot = dot; best = c; }
+    }
+    if (int(best) == word[i]) ++hit;
+    ++tot;
+  }
+  return tot ? double(hit) / double(tot) : 0.0;
+}
+
 // K-way competitive learning, for the question "does any of this survive more
 // than two words?"
 //
