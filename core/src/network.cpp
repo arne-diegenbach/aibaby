@@ -2085,7 +2085,26 @@ void Network::apply_reward_impl(const Scalar* per_module, bool any) {
         // is judged on what it had already committed to and not on where this
         // one step is about to put it.
         if (meta_commit_ > kZero && perturb_max_ > kZero) {
-          const Scalar mag = bias_[i] < kZero ? -bias_[i] : bias_[i];
+          // READS THE PARAMETER THE CASH-IN IS ABOUT TO WRITE, which since v51
+          // is the active context's table and not the shared bias.
+          //
+          // It read `bias_[i]` until 2026-09-08, and `bias_[i]` is never cashed
+          // into while a context is present -- it sits at zero by construction,
+          // as the divergence probe's own comment already noted. So the brake
+          // was not weak under contexts, it was ARITHMETICALLY INERT: measured
+          // at meta_commit = 1.0, five context arms are byte-identical to
+          // meta_commit = 0.0 and only the context-free `off` arm moves.
+          //
+          // That made v41 unmeasurable in exactly the regime v51 created, and it
+          // matters beyond tidiness: with no leak on `bias_ctx_` and no brake,
+          // the context table is a pure clamped accumulator, and its growth is
+          // the near-diffusive exponent 0.27 that `ctxscale` measured. The brake
+          // is the one shipped mechanism that acts on that balance.
+          const Scalar committed =
+              (ctx_slots_ > 0 && ctx_present_)
+                  ? bias_ctx_[size_t(i) * ctx_slots_ + active_ctx_]
+                  : bias_[i];
+          const Scalar mag = committed < kZero ? -committed : committed;
           const Scalar far = mag >= perturb_max_ ? kOne : mag / perturb_max_;
           gate_meta *= kOne - (kOne - meta_floor_) * meta_commit_ * far;
         }
