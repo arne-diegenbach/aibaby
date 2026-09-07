@@ -8377,7 +8377,14 @@ fitted-verdict rule forbids; the change here would have been made identically ha
 the run gone the other way, and `ctxfour` now prints the retired raw number
 beside the corrected one so the move is visible rather than tidied away.
 
-### `ctxscale` — the bias is COMPUTE-limited, and the controls are what say so
+### `ctxscale` — the bias SATURATES at ~118 Hz (and my first read of it was wrong)
+
+**Read this heading before the section below it.** On three points the excess
+looked like it was still growing and this experiment printed COMPUTE-LIMITED. A
+fourth point at 27.2M bent the curve, and a model comparison across all four says
+the bias is at **94% of an asymptote of ~118 Hz** — against the 460 Hz the two
+words are apart. The original three-point reading is kept underneath, because the
+way it failed is the useful part.
 
 Two-word naming works and the distance left is how large a bias reward can build:
 `ctxbias` showed the route carries 236 Hz of F1 when a bias is handed to the
@@ -8416,6 +8423,54 @@ its value. "Compute-limited rather than saturated" is safe, because saturation
 would need the excess to stop moving and it nearly tripled. The *exponent* is
 soft, so the extrapolation it prints — 4x more trials to reach 236 Hz — is a
 direction, not a plan.
+
+### The fourth point, and the reversal
+
+Extending to 27.2M (9714 trials) was launched with a prediction on record:
+exponent 0.72 put the excess at **~149 Hz**, with "at or below ~100" declared as
+the falsifier.
+
+| budget | trials | off | ema | ema-rnd | excess |
+|---|---|---|---|---|---|
+| 6.8M | 2428 | 22.5 | 93.1 | 27.4 | +65.6 +/- 18.8 |
+| 13.6M | 4857 | 25.9 | 119.2 | 28.9 | +90.3 +/- 14.6 |
+| 27.2M | 9714 | 20.3 | **141.4 +/- 7.6** | 30.0 | **+111.5 +/- 14.7** |
+
+**It came in at 111.5.** The pre-registered ratio landed on 1.70, the exact edge
+of the inconclusive band declared before the first run, and the experiment
+printed INCONCLUSIVE — the gate doing its job rather than me choosing.
+
+But a ratio between the two extreme points throws away the middle ones, and with
+all four the picture is not ambiguous at all. The per-doubling ratios are
+**1.98, 1.38, 1.23** — the growth exponent halves every doubling:
+
+| model | fit | chi-squared |
+|---|---|---|
+| power law `A·t^k` | k = 0.47 | 0.72 |
+| saturating `A(1 − e^−t/τ)` | **A = 118 Hz**, τ = 3300 trials | **0.08** |
+
+The saturating model fits an order of magnitude better, and it puts the creature
+at **94% of its asymptote already**. Doubling the trials again buys 6 Hz; ten
+times the trials buys nothing at all.
+
+**Choosing a model after seeing data is the fitted-verdict trap, so the defence
+has to be stated.** These two models are not a fishing expedition — they are the
+two named hypotheses from the experiment's own header, written before it ran:
+"compute-limited" *is* the power law and "saturated" *is* the asymptote. What the
+data chose between was declared in advance; only the discriminating statistic
+changed, from a two-point ratio to a four-point fit, and it changed because the
+ratio provably ignores half the evidence.
+
+**One thing I mis-sold.** I called the repeated 6.8M and 13.6M points an
+out-of-sample replication. They are not: same genome, same seeds, so those are
+bit-identical re-executions. They are a determinism check — a good one, they
+reproduce exactly — but they add no independent evidence.
+
+**So the architecture IS the binding constraint, and the earlier conclusion
+inverts.** 118 Hz is half the 236 Hz the route can carry and a quarter of the
+460 Hz gap, so `nearest` — which needs an utterance to cross the midpoint at
+~230 Hz — cannot come off chance by spending trials. Kornfeld's compartments stop
+being "not yet needed" and become the live lead.
 
 **One prediction worth having on record.** `nearest`, the absolute naming score,
 only flips when an utterance crosses the midpoint between two targets 460 Hz
