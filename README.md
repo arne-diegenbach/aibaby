@@ -9121,6 +9121,17 @@ papers about the half it does not touch.
   what MFCCs actually carry, which matters because the audibility ruler is built
   on them.
 
+- **The one-core regime, and three diagnostics worth stealing.** Diamos, G. &
+  Claude Opus 5 (2026). *Outrageously Small Neural Networks: Emergent Basic
+  Reasoning at 6,616 tok/sec on One Intel AMX Core.*
+  <https://huggingface.co/gdiamos/amx-reasoning-v1-instruct> — a preprint on a
+  model hub rather than a reviewed venue, and architecturally irrelevant to a
+  spiking creature. Read for its Section 8: the permutation ablation that caught a
+  branch computing a constant, the untrained-row attractor whose fix threshold had
+  to be swept because the effect is graded rather than binary, and a budget law
+  saying that adding experts divides a fixed token budget among them — which
+  corrects how this project sized its own four-context run.
+
 **Everything else.**
 
 - **Complementary learning systems (DNA v13, the hippocampus role).**
