@@ -8514,6 +8514,63 @@ should come off chance at about the same place the extrapolation reaches 236 Hz 
 two independent quantities meeting at one number, which is the kind of
 coincidence that is worth being wrong about publicly.
 
+### The alignment split — my prediction was refuted, and the readout is the wall
+
+Pre-registered before the run: if the ceiling were the *shape* of what reward
+writes, `gain` should fall across budgets. The falsifier declared alongside it was
+gain flat or rising, which would mean the ceiling is a delivery nonlinearity and
+send the work somewhere other than Kornfeld.
+
+**Gain rose.**
+
+| budget | aligned (F1) | common-mode | outside group | gain (1.0 = structureless) |
+|---|---|---|---|---|
+| 6.8M | 0.03529 | 0.01103 | 0.04425 | 2.97 +/- 0.19 |
+| 13.6M | 0.05261 | 0.01426 | 0.05444 | 3.57 +/- 0.18 |
+| 27.2M | 0.07017 | 0.01456 | 0.06840 | **3.82 +/- 0.28** |
+
+Growth exponents per doubling make it sharper still:
+
+| | exponents |
+|---|---|
+| aligned (moves F1) | **0.58, 0.42** |
+| outside group | 0.30, 0.33 |
+| delivered dF1 | 0.36, 0.25 |
+
+The component that can move F1 is growing **fastest of the three** — faster than
+the useless directions, and faster than the formant separation it produces. The
+table is nearly four times better aligned than a structureless one and getting
+more so. **Reward is writing the right direction, and writing it increasingly
+well.** The shape hypothesis is dead.
+
+**So the loss is downstream of the bias.** Plotting delivered dF1 against the
+only part of the bias that can produce it:
+
+| aligned | delivered | Hz per unit |
+|---|---|---|
+| 0.03529 | 93.1 | 2638 |
+| 0.05261 | 119.2 | 2266 |
+| 0.07017 | 141.4 | 2015 |
+
+`dF1 ~ aligned^0.61`. The larynx compresses what it is given.
+
+**And that corrects "SATURATED at ~118 Hz" from the section above.** A saturating
+fit whose asymptote lands 2% past the last data point is the classic way an
+asymptote gets fitted to a decelerating power law, and that is what happened. The
+underlying quantity shows *no* deceleration — aligned bias keeps growing at
+exponent ~0.5 — so the bend in dF1 is the readout compressing, not learning
+stopping. A compressive transfer is not a wall; it is an expensive slope.
+
+**The suspect is the pooling rule itself.** `read_group` is a ratio,
+`Σ(r_i·p_i)/Σ(r_i)`, and a ratio's sensitivity falls as the rates feeding it
+grow — which `ipctx` already saw from the other side, with 25-83% of the larynx
+pinned at `threshold_max`. This is the same common-mode pooling wall this project
+has now hit from eight directions.
+
+**Next, and it discriminates cleanly.** At 2x more trials the two readings
+predict **174 Hz** (compressive power law) against **144 Hz** (true asymptote),
+against a per-arm SE of about 8. Running it before choosing.
+
 ### What the literature says to build next, and why it is the cheap option
 
 > **This section is the argument that produced DNA v51, kept as the record of
