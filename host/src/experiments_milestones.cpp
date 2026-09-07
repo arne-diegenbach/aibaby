@@ -10899,11 +10899,22 @@ bool run_ctxscale(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
     return true;
   }
   if (ratio < 1.3) {
+    // THE PRESCRIPTION HERE WAS WRONG UNTIL 2026-09-08 and is worth keeping
+    // corrected in place. It used to send the work to Kornfeld's compartments on
+    // the reasoning that a saturated bias means a mechanism problem. The
+    // alignment split refuted that: the aligned component grows fastest of the
+    // three and the alignment gain holds at ~3.8, so which-parameters-change is
+    // already healthy. Nor is the readout broken -- `ctxbias` drives it to 236 Hz
+    // with a hand-supplied ramp. What is left is the SIZE of what reward can
+    // build.
     std::printf("\n  SATURATED -- the excess grew only %.2f over a 4x span, so the bias has\n"
                 "  found its asymptote at ~%.1f Hz against the 236 Hz the route can carry.\n"
-                "  More trials buy nothing and the gap is MECHANISM. The work goes to\n"
-                "  Kornfeld's compartments: context on spines, variability on shafts,\n"
-                "  gating rather than adding.\n", ratio, hi);
+                "  More trials buy nothing.\n"
+                "\n  Read this with the alignment table above before concluding anything.\n"
+                "  If `gain` is holding up, the shape of what reward writes is fine and\n"
+                "  the readout is fine -- `ctxbias` reaches 236 Hz through it -- and what\n"
+                "  saturates is the MAGNITUDE the learning rule can hold. That is a\n"
+                "  different target from credit assignment or compartments.\n", ratio, hi);
     return false;
   }
   std::printf("\n  INCONCLUSIVE -- ratio %.2f falls in the band declared before the run\n"

@@ -8571,6 +8571,61 @@ has now hit from eight directions.
 predict **174 Hz** (compressive power law) against **144 Hz** (true asymptote),
 against a per-arm SE of about 8. Running it before choosing.
 
+### The discriminator, and one transfer curve that two routes agree on
+
+Pre-registered before the 54.4M run: the compressive reading predicted **174 Hz**,
+the asymptote reading **144**. Actual: **137.4 +/- 7.5** — 4.9 SE from mine, 0.9
+from the other. My reading is refuted.
+
+| budget | trials | off | ema | ema-rnd | excess |
+|---|---|---|---|---|---|
+| 13.6M | 4857 | 25.9 | 119.2 +/- 8.2 | 28.9 | +90.3 |
+| 27.2M | 9714 | 20.3 | 141.4 +/- 7.6 | 30.0 | +111.5 |
+| 54.4M | 19428 | 14.7 | **137.4 +/- 7.5** | 33.7 | +103.8 |
+
+One thing not to over-read: 141.4 -> 137.4 is 0.4 SE. It is not a fall, it is a
+flat line, and describing it as the readout "switching off" would be reading noise.
+
+**Meanwhile everything upstream keeps growing, exactly as before** — aligned
+0.0526 -> 0.0702 -> 0.0847, outside 1.254x per doubling, table divergence 1.251x,
+gain steady at 3.57 / 3.82 / 3.76. Learning does not stop. Delivery does.
+
+**And the aligned axis lets the learned bias and the hand-supplied one be put on
+one curve for the first time.** `ctxbias`'s oracle is a ramp of `k x noise_amp`
+across the F1 group; converting it into the same aligned units gives 0.507 at
+k=2, where it delivered 236 Hz. Fitting all five points — four learned, one
+oracle — to a saturating transfer:
+
+| aligned | delivered |
+|---|---|
+| 0.0353 | 93.1 |
+| 0.0526 | 119.2 |
+| 0.0702 | 141.4 |
+| 0.0847 | 137.4 |
+| 0.507 (oracle) | 236.0 |
+
+**Asymptote 234 Hz.** `ctxbias` measured 236 independently. Two routes, one
+number, and neither was fitted to the other.
+
+So the position is now precise, and it is not the one the verdict text used to
+print:
+
+- **The readout is not broken.** It reaches 236 Hz when driven hard enough.
+- **The shape is not the problem.** Gain holds at 3.8x a structureless table.
+- **Credit assignment is not the problem.** The aligned component grows fastest.
+- **The learned bias is simply too small** — 0.085 against the 0.326 that curve
+  says is needed for 230 Hz, about 3.8x — and it grows at exponent 0.27 per
+  doubling, so trials would need **147x**. Dead by compute, and dead for a reason
+  that is now measured rather than inferred.
+
+**The target is therefore the equilibrium magnitude of the learned bias.** It is
+not clamped — `perturb_max` is 0.30 and the tables sit at 0.085 — so an
+equilibrium is being set by the balance between what reward writes and what
+leaks away. That is a different question from every mechanism considered in the
+last week, and it comes with a payoff already priced: 3.8x more aligned bias is
+230 Hz, and 230 Hz is where `nearest` crosses the midpoint and absolute naming
+becomes possible.
+
 ### What the literature says to build next, and why it is the cheap option
 
 > **This section is the argument that produced DNA v51, kept as the record of
