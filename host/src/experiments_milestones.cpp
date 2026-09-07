@@ -4031,6 +4031,29 @@ struct VLRun {
   // outside, and `areax` refuses rather than reporting either as the other.
   double ctx_present_frac = 0.0;
   double ctx_table_div = 0.0;   // mean |bias[i][0] - bias[i][1]| over the larynx
+  // THE SAME TABLE DIFFERENCE, SPLIT BY WHETHER IT CAN REACH F1 AT ALL.
+  //
+  // `read_group` pools a slice into a rate-weighted CENTROID of position:
+  // value = sum(r_i * p_i) / sum(r_i) with p_i the neuron's place in the slice.
+  // Two consequences, both exact rather than estimated, and together they say
+  // which parts of a learned table are capable of moving a formant:
+  //
+  //   - F1 is group 2 of nine. A bias on any neuron OUTSIDE that slice moves
+  //     f0, F2, amplitude or voicing. Never F1.
+  //   - Inside the slice the readout is a RATIO, so lifting every neuron by the
+  //     same amount leaves it exactly unchanged. Only the component along the
+  //     centred position vector (p_i - 0.5) does anything.
+  //
+  // So: `aligned` is the projection onto that centred direction, `common` is the
+  // uniform component inside the F1 group, `outside` is everything else. All
+  // three are per-neuron RMS so they are comparable with each other.
+  double ctx_align = 0.0;    // moves F1
+  double ctx_common = 0.0;   // inside the F1 group, moves nothing (ratio)
+  double ctx_outside = 0.0;  // outside the F1 group, moves other parameters
+  // aligned, as a multiple of what a STRUCTURELESS table of the same size gives.
+  // 1.0 is the null; this is the number the shape question actually turns on.
+  double ctx_align_gain = 0.0;
+  uint32_t ctx_f1_group_n = 0;
   double ctx_shared_mag = 0.0;  // mean |shared bias|, the scale to read it against
   // DNA v52. What the index the creature DERIVED for itself actually was,
   // measured only in the window where reward lands -- `ctxsrc`'s whole finding
@@ -4556,6 +4579,49 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
       if (vms.count) {
         out.ctx_table_div = dsum / vms.count;
         out.ctx_shared_mag = msum / vms.count;
+      }
+      // The F1 slice, by the decoder's own rule rather than a guess at it.
+      const uint32_t g_beg =
+          vms.begin + aibaby::slice_begin(vms.count, aibaby::kVocalGroups, 2);
+      const uint32_t g_end =
+          vms.begin + aibaby::slice_begin(vms.count, aibaby::kVocalGroups, 3);
+      const uint32_t gn = g_end > g_beg ? g_end - g_beg : 0;
+      if (gn >= 2) {
+        double dot = 0.0, unorm = 0.0, mean_in = 0.0, out_ss = 0.0;
+        for (uint32_t n = g_beg; n < g_end; ++n) {
+          const double d = double(net.context_bias(n, 0)) - double(net.context_bias(n, 1));
+          const double u = (double(n - g_beg) + 0.5) / double(gn) - 0.5;
+          dot += d * u;
+          unorm += u * u;
+          mean_in += d;
+        }
+        mean_in /= double(gn);
+        for (uint32_t n = vms.begin; n < vms.begin + vms.count; ++n) {
+          if (n >= g_beg && n < g_end) continue;
+          const double d = double(net.context_bias(n, 0)) - double(net.context_bias(n, 1));
+          out_ss += d * d;
+        }
+        const uint32_t outn = vms.count > gn ? vms.count - gn : 0;
+        // Per-neuron RMS in every case, so the three are on one scale.
+        out.ctx_align = unorm > 0.0 ? std::fabs(dot) / std::sqrt(unorm) / std::sqrt(double(gn)) : 0.0;
+        out.ctx_common = std::fabs(mean_in);
+        out.ctx_outside = outn ? std::sqrt(out_ss / double(outn)) : 0.0;
+        // THE NULL THESE MUST BE READ AGAINST, or the comparison is meaningless.
+        // `aligned` and `common` are each a projection onto ONE direction; a
+        // table with no structure at all still puts something there. For a table
+        // whose entries are independent with per-neuron RMS sigma, `outside`
+        // reads sigma while both projections read sigma/sqrt(gn) -- so the raw
+        // columns differ by sqrt(gn) with NOTHING learned, and reporting
+        // "four times as much lands outside" off them would be an artefact of
+        // dimension, not a finding.
+        //
+        // So: gain = 1.0 is exactly what a structureless table gives. Above 1
+        // means reward has preferentially written the direction that moves F1.
+        out.ctx_align_gain =
+            out.ctx_outside > 0.0
+                ? out.ctx_align * std::sqrt(double(gn)) / out.ctx_outside
+                : 0.0;
+        out.ctx_f1_group_n = gn;
       }
     }
   }
@@ -10661,6 +10727,8 @@ bool run_ctxscale(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
     bool ok = false;
     uint32_t scored = 0, skipped = 0;
     double d1 = 0.0, div = 0.0, match = 0.0, chg = 0.0;
+    double align = 0.0, common = 0.0, outside = 0.0, gain = 0.0;
+    uint32_t gn = 0;
   };
   const uint32_t njobs = kReps * kCtxScaleArmCount * kCtxScaleBudgets;
   const std::vector<Cell> cells = parallel_reps<Cell>(njobs, [&](uint32_t i) {
@@ -10693,6 +10761,11 @@ bool run_ctxscale(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
     cell.div = run.ctx_table_div;
     cell.match = run.ctx_match;
     cell.chg = vl_change(run);
+    cell.align = run.ctx_align;
+    cell.common = run.ctx_common;
+    cell.outside = run.ctx_outside;
+    cell.gain = run.ctx_align_gain;
+    cell.gn = run.ctx_f1_group_n;
     cell.ok = true;
     parallel_note("  [%u/%u] seed %u %s %.2fM  dF1 %.1f\n", i + 1, njobs, r,
                   kCtxScaleArms[a].name, double(ticks >> b) / 1e6, cell.d1);
@@ -10701,6 +10774,10 @@ bool run_ctxscale(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
 
   std::vector<double> d1[kCtxScaleArmCount][kCtxScaleBudgets];
   std::vector<double> dv[kCtxScaleArmCount][kCtxScaleBudgets];
+  std::vector<double> al[kCtxScaleArmCount][kCtxScaleBudgets];
+  std::vector<double> cm[kCtxScaleArmCount][kCtxScaleBudgets];
+  std::vector<double> os[kCtxScaleArmCount][kCtxScaleBudgets];
+  std::vector<double> gnv[kCtxScaleArmCount][kCtxScaleBudgets];
   std::printf("  %-6s %-9s %-9s %-9s %-10s %s\n", "seed", "arm", "budget", "dF1 (Hz)",
               "table div", "change");
   for (uint32_t i = 0; i < njobs; ++i) {
@@ -10719,12 +10796,20 @@ bool run_ctxscale(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
     }
     d1[a][b].push_back(c.d1);
     dv[a][b].push_back(c.div);
+    al[a][b].push_back(c.align);
+    cm[a][b].push_back(c.common);
+    os[a][b].push_back(c.outside);
+    gnv[a][b].push_back(c.gain);
     std::printf("  %-6u %-9s %-9s %-9.1f %-10.4f %+.1f\n", r, kCtxScaleArms[a].name,
                 bud, c.d1, c.div, c.chg);
   }
 
   double m_d1[kCtxScaleArmCount][kCtxScaleBudgets], s_d1[kCtxScaleArmCount][kCtxScaleBudgets];
   double m_dv[kCtxScaleArmCount][kCtxScaleBudgets], s_dv[kCtxScaleArmCount][kCtxScaleBudgets];
+  double m_al[kCtxScaleArmCount][kCtxScaleBudgets], s_al[kCtxScaleArmCount][kCtxScaleBudgets];
+  double m_cm[kCtxScaleArmCount][kCtxScaleBudgets], s_cm[kCtxScaleArmCount][kCtxScaleBudgets];
+  double m_os[kCtxScaleArmCount][kCtxScaleBudgets], s_os[kCtxScaleArmCount][kCtxScaleBudgets];
+  double m_gn[kCtxScaleArmCount][kCtxScaleBudgets], s_gn[kCtxScaleArmCount][kCtxScaleBudgets];
   for (uint32_t a = 0; a < kCtxScaleArmCount; ++a) {
     for (uint32_t b = 0; b < kCtxScaleBudgets; ++b) {
       if (d1[a][b].size() < 3) {
@@ -10734,6 +10819,10 @@ bool run_ctxscale(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
       }
       m_d1[a][b] = ctx_mean_se(d1[a][b], &s_d1[a][b]);
       m_dv[a][b] = ctx_mean_se(dv[a][b], &s_dv[a][b]);
+      m_al[a][b] = ctx_mean_se(al[a][b], &s_al[a][b]);
+      m_cm[a][b] = ctx_mean_se(cm[a][b], &s_cm[a][b]);
+      m_os[a][b] = ctx_mean_se(os[a][b], &s_os[a][b]);
+      m_gn[a][b] = ctx_mean_se(gnv[a][b], &s_gn[a][b]);
     }
   }
 
@@ -10757,6 +10846,29 @@ bool run_ctxscale(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
   }
   std::printf("\n  table divergence  %.4f -> %.4f -> %.4f (1x, 2x, 4x)\n",
               m_dv[kEma][kCtxScaleBudgets - 1], m_dv[kEma][1], m_dv[kEma][0]);
+
+  // WHERE THE LEARNED TABLE GOES, by the decoder's own rule. F1 is group 2 of
+  // nine and `read_group` pools it as a rate-weighted CENTROID, so only the
+  // component along the centred position vector inside that slice can move F1
+  // at all. `common` is the uniform part inside the group -- a ratio does not
+  // notice it -- and `outside` is every other neuron in the larynx. Per-neuron
+  // RMS throughout, so the three are on one scale.
+  //
+  // If `aligned` saturates while the other two keep growing, the ceiling is the
+  // SHAPE of what reward writes, not the amount, and a mechanism that gates
+  // WHICH parameters may move is aimed at the right thing.
+  std::printf("\n  %-9s %-16s %-16s %-16s %s\n", "budget", "aligned (F1)",
+              "common-mode", "outside group", "gain (1.0 = no structure)");
+  for (int b = int(kCtxScaleBudgets) - 1; b >= 0; --b) {
+    char bud[24], x[32], y[32], z[32];
+    std::snprintf(bud, sizeof bud, "%.2fM", double(ticks >> b) / 1e6);
+    std::snprintf(x, sizeof x, "%.5f +/- %.5f", m_al[kEma][b], s_al[kEma][b]);
+    std::snprintf(y, sizeof y, "%.5f +/- %.5f", m_cm[kEma][b], s_cm[kEma][b]);
+    std::snprintf(z, sizeof z, "%.5f +/- %.5f", m_os[kEma][b], s_os[kEma][b]);
+    char w[32];
+    std::snprintf(w, sizeof w, "%.2f +/- %.2f", m_gn[kEma][b], s_gn[kEma][b]);
+    std::printf("  %-9s %-16s %-16s %-16s %s\n", bud, x, y, z, w);
+  }
 
   const double lo = excess[kCtxScaleBudgets - 1];
   const double hi = excess[0];
