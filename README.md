@@ -8466,6 +8466,41 @@ out-of-sample replication. They are not: same genome, same seeds, so those are
 bit-identical re-executions. They are a determinism check — a good one, they
 reproduce exactly — but they add no independent evidence.
 
+**The two columns disagree, and that is the actual finding.** Fitting the
+`ema` arm's delivered dF1 and its table divergence separately, over the same four
+budgets:
+
+| | per doubling | power law | saturating | verdict |
+|---|---|---|---|---|
+| delivered dF1 | 1.66, 1.28, 1.19 | k=0.37, chi2 2.50 | A=144 Hz, chi2 **0.38** | **saturates** |
+| table divergence | 1.32, 1.25, 1.25 | k=0.34, chi2 **0.27** | chi2 9.09 | **does not** |
+
+The creature goes on learning at a perfectly steady rate — divergence grows 1.25x
+per doubling with no deceleration at all — while the voice stops responding. So
+the ceiling is not how much it learns.
+
+**And it is not the route either**, because `ctxbias` handed a bias straight to
+the larynx and got 236 Hz through the same path. The route carries more than
+144 Hz; the learned bias cannot get there.
+
+**What is left is SHAPE.** Additional learned magnitude stops converting into
+delivered separation, which means it is increasingly going into directions that
+do not move F1. That also inverts something claimed one section above: on the
+first three points the useful effect grew faster than the table magnitude and I
+called it "the tables are getting better aligned". With the fourth point the
+exponents cross the other way — 0.19 for delivery in the last doubling against a
+steady 0.32 for divergence — so the alignment is getting *worse*, not better. The
+random-walk story I said was refuted is back, in a sharper form: the walk is in
+the part of the table that does not reach the voice.
+
+**This does not refuse Kornfeld — it aims it.** A mechanism whose whole content is
+*gating which parameters may change* is pointed directly at a bias that grows in
+unproductive directions. The next measurement is the cheap one that discriminates:
+project the learned table difference onto the direction that actually moves F1,
+and watch that component against the orthogonal one across budgets. If the aligned
+part saturates while the orthogonal part grows, the diagnosis is settled without
+building anything.
+
 **So the architecture IS the binding constraint, and the earlier conclusion
 inverts.** 118 Hz is half the 236 Hz the route can carry and a quarter of the
 460 Hz gap, so `nearest` — which needs an utterance to cross the midpoint at
