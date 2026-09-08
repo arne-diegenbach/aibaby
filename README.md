@@ -9187,6 +9187,22 @@ papers about the half it does not touch.
   saying that adding experts divides a fixed token budget among them — which
   corrects how this project sized its own four-context run.
 
+- **Infant brain volumes, and what they do NOT license.** Knickmeyer, R. C.,
+  Gouttard, S., Kang, C., Evans, D., Wilber, K., Smith, J. K., Hamer, R. M.,
+  Lin, W., Gerig, G. & Gilmore, J. H. (2008). *A structural MRI study of human
+  brain development from birth to 2 years.* Journal of Neuroscience 28(47),
+  12176-12182. <https://pmc.ncbi.nlm.nih.gov/articles/PMC2884385/> — read
+  2026-09-08. Volumetric, so it says nothing about any mechanism this project can
+  build, and nothing at all about the current bottleneck. Two things it does do.
+  **Grey matter grows 149% in year one while white matter grows 11%**, so the
+  period covering babbling and first words involves almost no long-range tract
+  growth — an independent corroboration of this project's expensive finding that
+  delivery was never the limit. And it sharpens rather than resolves the
+  exuberance question: biology proliferates then prunes, while `exuberance`
+  measured proliferation here as costing 0.229. The biological schedule does not
+  transfer to this substrate, and that is now a measured disagreement rather than
+  an oversight.
+
 **Everything else.**
 
 - **Complementary learning systems (DNA v13, the hippocampus role).**
