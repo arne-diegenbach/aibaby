@@ -3967,6 +3967,22 @@ struct CtxDrive {
   int32_t module = -1;
   uint32_t slots = 2;
   double gain = 0.0;
+  // PRICING SELECTIVITY BEFORE BUILDING IT. >= 0 confines the reward cash-in to
+  // one articulator group of the larynx via `Network::set_reward_mask`, so
+  // `outside` is zero BY CONSTRUCTION rather than by a mechanism.
+  //
+  // The magnitude route is closed -- more trials saturate near 140 Hz, and more
+  // rate destroys selectivity faster than it builds magnitude -- so what is left
+  // is writing less off-target. This is the oracle for that, and it costs one
+  // arm instead of a compartment model.
+  // A GROUP RANGE [lo, hi), not a single group, and the reason is a confound.
+  // Reward is formant error over F1 AND F2. Confining writes to F1 alone would
+  // score the creature on something it can only half control, and a drop could
+  // then be blamed on selectivity when it was really an amputated task. Groups
+  // 2 and 3 are adjacent, so [2, 4) is exactly "may change what it is scored on,
+  // and nothing else" -- and `set_reward_mask` takes one contiguous range.
+  int32_t mask_lo = -1;
+  int32_t mask_hi = -1;
 };
 
 // The bias oracle's configuration for one session. See Network::set_bias_oracle
@@ -4142,6 +4158,19 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
   if (!s.init(blob, error)) {
     std::printf("  setup failed: %s\n", error.c_str());
     return out;
+  }
+  // The selectivity oracle, set once for the session. An articulator group is a
+  // contiguous slice, which is exactly what `set_reward_mask` takes.
+  if (ctx && ctx->mask_lo >= 0 && ctx->mask_hi > ctx->mask_lo) {
+    const int32_t vmod_m = s.dna.module_with_role(aibaby::ModuleRole::kVocal);
+    if (vmod_m >= 0) {
+      const aibaby::ModuleState& vm = s.brain.network().module(uint32_t(vmod_m));
+      const uint32_t mlo = vm.begin + aibaby::slice_begin(vm.count, aibaby::kVocalGroups,
+                                                          uint32_t(ctx->mask_lo));
+      const uint32_t mhi = vm.begin + aibaby::slice_begin(vm.count, aibaby::kVocalGroups,
+                                                          uint32_t(ctx->mask_hi));
+      s.brain.network().set_reward_mask(mlo, mhi);
+    }
   }
   const aibaby::DnaAudio& acfg = s.dna.header().audio;
   Ear ear;
@@ -10676,15 +10705,22 @@ struct CtxScaleArm {
   uint32_t slots;
   uint32_t source;
   int target;
+  int32_t mask_lo, mask_hi;  // -1 = write anywhere; [2,4) = only F1 and F2
 };
 constexpr CtxScaleArm kCtxScaleArms[] = {
-    {"off", 0, 0, kVLTgtHeard},
+    {"off", 0, 0, kVLTgtHeard, -1, -1},
     // Source 4, the ear's rate EMA: the creature's own index, and the only one
     // that has replicated out of sample.
-    {"ema", 2, 4, kVLTgtHeard},
+    {"ema", 2, 4, kVLTgtHeard, -1, -1},
+    // THE SELECTIVITY ORACLE. Same index, same rate, same everything: the only
+    // difference is that reward may not write outside the two groups the score
+    // is computed from. If delivery is limited by off-target writing this should
+    // climb past `ema`'s ~140 Hz ceiling; if it does not, off-target writing was
+    // costing nothing and the product model is wrong.
+    {"mask-F1F2", 2, 4, kVLTgtHeard, 2, 4},
     // The control the dF1 comparison needs. Its index tracks the word too, so
     // its voice is word-dependent -- just not in the direction reward asked for.
-    {"ema-rnd", 2, 4, kVLTgtRandom},
+    {"ema-rnd", 2, 4, kVLTgtRandom, -1, -1},
 };
 constexpr uint32_t kCtxScaleArmCount =
     sizeof(kCtxScaleArms) / sizeof(kCtxScaleArms[0]);
@@ -10749,6 +10785,8 @@ bool run_ctxscale(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
     drive.module = ctx_module;
     drive.slots = kVLWords;
     drive.gain = 0.10;
+    drive.mask_lo = kCtxScaleArms[a].mask_lo;
+    drive.mask_hi = kCtxScaleArms[a].mask_hi;
     Regime reg;
     reg.praise = kPraiseValue;
     reg.scold = kScoldValue;
