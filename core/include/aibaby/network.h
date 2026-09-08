@@ -875,6 +875,8 @@ class Network {
   // Null and zero when the genome does not ask for it, which is what keeps a
   // v50 genome bit-identical.
   Scalar* bias_ctx_ = nullptr;
+  // DNA v41 x v51: one slow store per context, allocated only when both ask.
+  Scalar* meta_slow_ctx_ = nullptr;
   uint32_t ctx_slots_ = 0;
   int32_t ctx_module_ = -1;   // the module the index is read from
   // DNA v52. WHICH module that is, and how it is cut. 0 is the kContext

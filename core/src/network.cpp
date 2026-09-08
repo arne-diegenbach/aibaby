@@ -121,6 +121,13 @@ size_t Network::required_bytes(const Dna& dna) {
   if (dna.header().exploration.context_slots > 1) {
     const size_t slots = size_t(dna.header().exploration.context_slots);
     total += capacity * slots * sizeof(Scalar);
+    // The slow store, per context. Guarded on BOTH flags exactly as build() is:
+    // the arena budget and the allocation must agree or init fails, and this
+    // guard has been got wrong twice on this project (v51, and v53's `>= 2`
+    // against `== 2`).
+    if (dna.header().exploration.meta_flow > 0.0f) {
+      total += capacity * slots * sizeof(Scalar);
+    }
     // DNA v53. Source 2 adds one prototype per context over the SOURCE module,
     // plus one accumulator. The source module is not known here without a role
     // lookup, so budget the largest module -- an over-estimate of at most a few
@@ -422,6 +429,10 @@ bool Network::build(const Dna& dna, Arena& arena, Rng& rng) {
   ctx_present_ = false;
   if (ctx_slots_ > 0) {
     bias_ctx_ = arena.alloc_zeroed<Scalar>(size_t(capacity_) * ctx_slots_);
+    // DNA v41's slow store, per context. Same guard as required_bytes above.
+    if (h.exploration.meta_flow > 0.0f) {
+      meta_slow_ctx_ = arena.alloc_zeroed<Scalar>(size_t(capacity_) * ctx_slots_);
+    }
     // The index comes from a module read as an INDEX and never as drive -- the
     // source needs no projection anywhere, which is the whole reason this costs
     // the larynx nothing where DNA v47's tract cost it everything. DNA v52
@@ -2130,7 +2141,19 @@ void Network::apply_reward_impl(const Scalar* per_module, bool any) {
         }
         // DNA v41's third gate. Runs on every cash-in, rewarded or not, because
         // it is a relaxation and not a response to evidence.
-        if (meta_slow_) {
+        // Runs on the parameter the cash-in actually wrote. Until 2026-09-09 this
+        // relaxed `bias_[i]` unconditionally, which under a context is never
+        // written and sits at zero -- so the store, like the brake before it,
+        // could not act on the commitment it was supposed to consolidate.
+        if (meta_slow_ctx_ && ctx_slots_ > 0 && ctx_present_) {
+          const size_t x = size_t(i) * ctx_slots_ + active_ctx_;
+          Scalar& fast = bias_ctx_[x];
+          Scalar& slow = meta_slow_ctx_[x];
+          const Scalar to_store = meta_flow_ * (slow - fast);
+          const Scalar from_fast = meta_flow_ * meta_ratio_ * (fast - slow);
+          fast = clampf(fast + to_store, -perturb_max_, perturb_max_);
+          slow = clampf(slow + from_fast, -perturb_max_, perturb_max_);
+        } else if (meta_slow_) {
           const Scalar to_store = meta_flow_ * (meta_slow_[i] - bias_[i]);
           const Scalar from_fast = meta_flow_ * meta_ratio_ * (bias_[i] - meta_slow_[i]);
           bias_[i] = clampf(bias_[i] + to_store, -perturb_max_, perturb_max_);
@@ -2620,6 +2643,9 @@ void Network::init_neuron(uint32_t i, uint32_t m, Scalar x, Scalar y, Scalar z) 
   if (any_burst_) {
     if (meta_m1_) { meta_m1_[i] = kZero; meta_m2_[i] = kZero; }
     if (meta_slow_) meta_slow_[i] = kZero;
+    if (meta_slow_ctx_) {
+      for (uint32_t c = 0; c < ctx_slots_; ++c) meta_slow_ctx_[size_t(i) * ctx_slots_ + c] = kZero;
+    }
     burst_rate_[i] = kZero;
     burst_base_[i] = kZero;
   }
@@ -3132,6 +3158,11 @@ uint64_t Network::state_hash() const {
       // DNA v41. The moments gate plasticity, so a resumed creature has to
       // agree about them; hashed only when a genome actually keeps them.
       if (meta_slow_) hash_scalar(h, meta_slow_[i]);
+      if (meta_slow_ctx_) {
+        for (uint32_t c = 0; c < ctx_slots_; ++c) {
+          hash_scalar(h, meta_slow_ctx_[size_t(i) * ctx_slots_ + c]);
+        }
+      }
       if (meta_alpha_ > kZero && meta_m1_) {
         hash_scalar(h, meta_m1_[i]);
         hash_scalar(h, meta_m2_[i]);
