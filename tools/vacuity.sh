@@ -8,8 +8,10 @@
 # reads as "no effect" rather than "never executed".
 #
 # Two minutes against four hours. A field that changes nothing at smoke length
-# will change nothing at full length, and the converse failure -- a field that
-# matters only after millions of ticks -- is far rarer than a dead one.
+# will usually change nothing at full length. The exception is a CEILING, which is
+# slack until something grows into it -- `perturb_max` reads dead here and is not
+# inert, just not yet binding. So a DEAD verdict sends you to the code path, not
+# straight to the bin.
 #
 #   tools/vacuity.sh <genome> <field> <lo> <hi> <experiment> [ticks]
 #
@@ -33,8 +35,17 @@ for v in "$LO" "$HI"; do
       --allow-short > "$T/out_$v.txt" 2>/dev/null
 done
 if diff -q "$T/out_$LO.txt" "$T/out_$HI.txt" >/dev/null; then
-  echo "  DEAD: ${FIELD} = ${LO} and ${HI} give byte-identical ${EXP} output."
-  echo "  Do not sweep it. Find what gates it first."
+  echo "  DEAD at ${TICKS} ticks: ${FIELD} = ${LO} and ${HI} give byte-identical output."
+  echo
+  echo "  This does NOT always mean the field is inert. Two cases, and they need"
+  echo "  different responses:"
+  echo "    (a) GATED OFF -- something upstream disables the path, as meta_window = 0"
+  echo "        does to meta_floor. Find the gate; sweeping is pointless at any length."
+  echo "    (b) NOT YET BINDING -- a CEILING that nothing has reached. perturb_max"
+  echo "        reads dead at smoke length because the bias is at 28% of it, and it"
+  echo "        would read dead at full length too until something grows into it."
+  echo "  Tell them apart by reading the code path, not by running longer: a gated"
+  echo "  field is unreachable, a ceiling is merely slack."
   exit 1
 fi
 echo "  LIVE: ${FIELD} changes ${EXP} output. $(diff "$T/out_$LO.txt" "$T/out_$HI.txt" | grep -c '^[<>]') lines differ."
