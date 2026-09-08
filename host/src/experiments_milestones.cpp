@@ -10864,7 +10864,26 @@ bool run_ctxscale(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
     }
   }
 
-  const uint32_t kOff = 0, kEma = 1, kRnd = 2;
+  // BY NAME, NOT BY POSITION. These were literal indices until 2026-09-09, when
+  // inserting `mask-F1F2` at index 2 silently re-pointed the summary's "ema-rnd"
+  // column at the new arm -- the third time in this project that a printf
+  // argument list has outlived the arm order it was written for. A lookup cannot
+  // rot: add, remove or reorder arms and the summary follows.
+  const auto arm_index = [](const char* want) {
+    for (uint32_t i = 0; i < kCtxScaleArmCount; ++i) {
+      if (std::strcmp(kCtxScaleArms[i].name, want) == 0) return i;
+    }
+    return kCtxScaleArmCount;  // out of range: the checks below fail loudly
+  };
+  const uint32_t kOff = arm_index("off");
+  const uint32_t kEma = arm_index("ema");
+  const uint32_t kRnd = arm_index("ema-rnd");
+  if (kOff >= kCtxScaleArmCount || kEma >= kCtxScaleArmCount ||
+      kRnd >= kCtxScaleArmCount) {
+    std::printf("\n  REFUSED -- the summary needs arms named off / ema / ema-rnd and one\n"
+                "  is missing. Renaming an arm must not silently repoint a column.\n");
+    return false;
+  }
   (void)kOff;
   std::printf("\n  %-9s %-9s %-16s %-16s %-16s %s\n", "budget", "trials", "off",
               "ema", "ema-rnd", "excess (ema - rnd)");
