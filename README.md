@@ -8947,6 +8947,60 @@ part and a frozen part measurably changes what reward can learn, with nothing in
 the code reading the split. That is either a bug worth finding or a fact about
 this estimator worth knowing.
 
+### The verdict on naming: DIRECTIONAL naming is MET, absolute naming has a measured ceiling
+
+This thread has been written as an open question for long enough that the answer
+got lost inside it. Both halves are settled, and they settle differently.
+
+**MET — the creature says the right word for what it heard, directionally.** On
+the axis measure, which asks only whether the voice moved toward the target it was
+taught for the word it just heard:
+
+| | family three | family two | pooled |
+|---|---|---|---|
+| **`ema`** (the creature's own index) | **0.824** | **0.738** | — |
+| `off` (echo only) | 0.503 | 0.561 | **+0.276 +/- 0.036, 7.6 SE** |
+| `ema-rnd` (matched marginal) | 0.406 | 0.593 | **+0.244 +/- 0.041, 6.0 SE** |
+
+Both loopholes that make a fitted readout unusable are closed **by construction,
+not by argument**. Echoing cannot pass it: `off` reads 0.503 while the *same*
+utterances are 0.610 discriminable, so M1b's echo makes the words tell apart
+without moving the voice the right way. Arbitrary-but-consistent mapping cannot
+pass it either: `ema-rnd`'s index tracks the word — it is read off the ear, which
+hears the word whatever the target is — and it lands at **0.406**, below chance.
+
+And it partly *arrives*, not just points: on the strict nearest-of-two-actual-
+targets score with nothing fitted, 0.670 and 0.604 against 0.495-0.518 for both
+controls, pooled at 5.9 and 7.4 SE. A prediction of mine was wrong in the generous
+direction there — I expected chance on every arm.
+
+**NOT MET, and now with a mechanism rather than an excuse — absolute naming.**
+Delivered dF1 tops out near **137 Hz** where roughly 230 Hz is needed for
+`nearest` to cross the midpoint on absolute targets. That is not a shortfall
+waiting on compute:
+
+- The readout is fine. `ctxbias`'s oracle reaches 236 Hz through it, and a
+  saturating transfer fitted to four learned points plus that oracle gives an
+  asymptote of **234 Hz** — two routes, one number, neither fitted to the other.
+- The learned bias is simply **3.8x too small**, and `boundprobe` says why:
+  learning has two phases, and after ~4900 trials the useful and useless
+  directions grow at **identical** exponents (0.290 vs 0.286) with `gain` frozen.
+  The table keeps getting bigger and stops getting better. That is node
+  perturbation on its variance floor.
+- **Seven routes to a bigger bias are priced and closed**: more trials saturate;
+  more rate grows `outside` 3x and halves `gain`; a selectivity mask buys nothing;
+  the commitment brake moves it 1.07x against 6.2x needed; the slow store moves it
+  12.5x the *wrong* way and is analytically bounded from ever helping; a graded
+  criterion does not escape the floor; and daily consolidation is neutral at best.
+
+**So the honest milestone is the axis measure at 0.82, and the honest limit is
+137 Hz.** Those are different claims about different quantities and both are
+measured. What is NOT closed is the parameterisation: every one of those seven
+routes tried to make the bias *bigger*, and none tried to make it *smaller in
+parameters* — which is the one thing Werfel, Xie and Seung's scaling law actually
+prescribes, and the same law that licensed v51's drop from ~4000 synaptic
+parameters to 252 and produced the first conditional effect on the voice.
+
 ### What the literature says to build next, and why it is the cheap option
 
 > **This section is the argument that produced DNA v51, kept as the record of
