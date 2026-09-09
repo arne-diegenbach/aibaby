@@ -1,0 +1,59 @@
+experiment: ctxfour
+  SHORT RUN — 200000 ticks against a minimum of 3400000. derived: ctxself's session at FOUR words. partprobe cleared the index at
+  four (0.895 vs chance 0.250); this asks whether the BIAS holds four
+  mappings on one reward channel. Oracle arm only -- if a perfect index
+  cannot carry four, the creature's own cannot either. Refuses unless
+  ctx_match reads 1.000, which is the k-way assignment's own check
+  Everything below is printed for debugging and is NOT a
+  measurement; this run cannot pass whatever it reads.
+
+  instrument        ctxfour   trial seed 000000000135672c   71 trials per arm
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  question          `partprobe` cleared the INDEX at four words (0.895
+                    against chance 0.250). Can the BIAS hold four
+                    mappings on one reward channel?
+  the prediction    4 contexts is 2x the parameters of 2, so ~2x the
+                    trials: at 6.8M expect what two words gave at 3.4M,
+                    ~65 Hz spread and ~0.80 direction (chance 0.250).
+  the oracle arm    the host writes the index, so this is the CEILING.
+                    If a perfect index cannot carry four, the creature's
+                    own cannot either.
+
+  seed   arm      F1 spread  ctx_match direction  nearest    change
+  0      off      31.7       0.000     0.254      0.225      -2.9
+  0      oracle   33.4       1.000     0.380      0.225      -0.1
+  1      off      24.5       0.000     0.169      0.239      -1.5
+  1      oracle   13.7       1.000     0.282      0.239      +7.4
+  2      off      15.6       0.000     0.183      0.239      -6.5
+  2      oracle   17.6       1.000     0.352      0.282      +0.5
+  3      off      34.2       0.000     0.183      0.225      +1.9
+  3      oracle   33.1       1.000     0.211      0.239      -2.3
+  4      off      31.0       0.000     0.282      0.239      -4.5
+  4      oracle   26.6       1.000     0.357      0.229      -11.0
+  5      off      13.4       0.000     0.282      0.254      +7.6
+  5      oracle   41.9       1.000     0.183      0.239      +6.5
+  6      off      37.8       0.000     0.296      0.225      -6.5
+  6      oracle   47.3       1.000     0.254      0.225      -0.3
+  7      off      28.3       0.000     0.268      0.197      +5.8
+  7      oracle   18.2       1.000     0.169      0.211      +6.4
+  8      off      46.4       0.000     0.254      0.239      -6.5
+  8      oracle   47.6       1.000     0.296      0.239      +1.2
+
+  arm      F1 spread (Hz)   ctx_match      direction      nearest        change
+  off      29.2 +/- 3.5     0.000 +/- 0.000 0.241 +/- 0.016 0.232 +/- 0.005 -1.5 +/- 1.8
+  oracle   31.0 +/- 4.3     1.000 +/- 0.000 0.276 +/- 0.026 0.237 +/- 0.006 +0.9 +/- 1.9
+
+  chance is 0.250 on direction and nearest, not 0.500.
+  the refactor's check     ctx_match 1.000 at k=4 (1.000 expected)
+  F1 spread               29.2 -> 31.0 Hz
+  direction               0.241 -> 0.276  (chance 0.250)
+  nearest target          0.232 -> 0.237  (chance 0.250)
+  the tables diverged     0.0061
+
+  IT DOES NOT HOLD FOUR. With a PERFECT index the bias reaches 0.276
+  against 0.241 off and a chance of 0.250 (+0.035, 0.8 SE). The creature's
+  own index cannot do better than the oracle, so the four-word ceiling is
+  the BIAS MECHANISM and not the context -- `capacity`'s finding that a
+  conflicting pair collapses to 0.22 reaching four tables. The work goes
+  to making the bias larger, not to a four-word protocol.

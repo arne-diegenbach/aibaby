@@ -1,0 +1,8 @@
+experiment: ctxscale
+  REFUSED — ctxscale needs at least 13600000 ticks and was given 6800000.
+  is the learned bias still GROWING with trials or has it found its
+  asymptote? Runs off/ema/ema-rnd at three budgets (1x, 2x, 4x) and gates
+  on whether dF1 above its matched-marginal control grows. Decides between
+  the two remaining leads: a longer run, or Kornfeld's compartments
+  Re-run with --ticks 13600000. --allow-short runs it anyway, prints
+  the numbers, and fails regardless of what they say.

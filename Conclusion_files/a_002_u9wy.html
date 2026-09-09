@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html style=""><head>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8"><!-- frame-runtime --><script>window.__FRAME_PREAMBLE={"v":1,"capabilities":{"artifact":"artifact.DF6_9MzE.js","assets":"assets.8Gk803W0.js","comments":"comments.vw5vQdGA.js","db":"db.h-3sndFg.js","downloads":"downloads.C3GSvEDP.js","embed":"embed.CxGAyc-v.js","mcp":"mcp.Bvma3qD7.js","network":"network.B5UA9Su4.js","notifications":"notifications.ssU4jy7G.js","permissions":"permissions.BNySkLV5.js","room":"room.BMMoe2BY.js","sample":"sample.BW2Uysoh.js","self":"artifact.DF6_9MzE.js","user":"user.BpKav-Rf.js"},"transforms":"_transforms.DSB5x63f.js","comments":"_comments.C6E0cR5g.js","translate":"_translate.5HCW4BJh.js"}</script><script>(function(){"use strict";var te=["light","dark","system"],re=/^[A-Za-z0-9_-]{1,64}$/,$=/^[a-zA-Z_:][a-zA-Z0-9_:.-]{0,127}$/,ne=new Set(["class","hidden","value","checked","style","title","alt","placeholder","lang","dir","role","tabindex","disabled","readonly","contenteditable","open","colspan","rowspan"]);function oe(e){const t=e.toLowerCase();return t.startsWith("data-")||t.startsWith("aria-")||ne.has(t)}var Be="http://www.w3.org/1999/xhtml",se="http://www.w3.org/2000/svg",ae=new Set(["script","style","iframe","noscript","noframes","noembed","xmp","plaintext","template","title","textarea","object","embed"]),ie=new Set(["script","style"]);function ce(e){const t=e.localName.toLowerCase();return e.namespaceURI==="http://www.w3.org/1999/xhtml"?!ae.has(t):e.namespaceURI===se?!ie.has(t):!1}function M(e,t){return e===t||(e===160||e===32)&&(t===160||t===32)}function le(e,t){const r=e.length,n=t.length;let s=0;for(;s<r&&s<n&&M(e.charCodeAt(s),t.charCodeAt(s));)s++;let o=0;for(;o<r-s&&o<n-s&&M(e.charCodeAt(r-1-o),t.charCodeAt(n-1-o));)o++;return{p:s,s:o}}function ue(e,t){const r=e.firstChild;if(e.childNodes.length!==1||r===null||r.nodeType!==Node.TEXT_NODE){e.textContent=t;return}const n=r.data,s=n.length,o=t.length,{p:i,s:c}=le(n,t);i===s&&c===0&&s===o||r.replaceData(i,s-i-c,t.slice(i,o-c));const h=r.data,p=e.ownerDocument.getSelection?.()??null,w=p!==null&&p.rangeCount>0&&(p.anchorNode===r||p.focusNode===r)?{anchor:p.anchorNode,anchorOffset:p.anchorOffset,focus:p.focusNode,focusOffset:p.focusOffset}:null;let m=-1,g=-1;for(let f=0;f<h.length&&f<t.length;f++){const v=h.charCodeAt(f),b=t.charCodeAt(f);v!==b&&M(v,b)&&(m<0&&(m=f),g=f)}const a=m>=0;if(a&&r.replaceData(m,g-m+1,t.slice(m,g+1)),a&&w!==null&&w.anchor!==null&&w.focus!==null)try{p.setBaseAndExtent(w.anchor,w.anchorOffset,w.focus,w.focusOffset)}catch{}}var fe=new Set(["html","head","body","frameset"]);function de(e){return e.namespaceURI==="http://www.w3.org/1999/xhtml"&&fe.has(e.localName)}function pe(e){if(e===null||typeof e!="object")return!1;const t=e;if(typeof t.target!="string"||!re.test(t.target)||t.text!==void 0&&typeof t.text!="string")return!1;if(t.attrsSet!==void 0){if(t.attrsSet===null||typeof t.attrsSet!="object")return!1;for(const[r,n]of Object.entries(t.attrsSet))if(!$.test(r)||typeof n!="string")return!1}if(t.attrsRemoved!==void 0){if(!Array.isArray(t.attrsRemoved))return!1;for(const r of t.attrsRemoved)if(typeof r!="string"||!$.test(r))return!1}return!0}function me(e,t){if(e===null||typeof e!="object")return!1;const{seq:r,elements:n}=e;if(typeof r!="number"||!Number.isSafeInteger(r)||!Array.isArray(n)||n.length===0||n.length>64)return!1;for(let s=0;s<n.length;s++)if(!t(n[s]))return!1;return!0}function he(e){return e===null||typeof e!="object"?!1:me(e.__frame_patch,pe)}function _e(e){if(e===null||typeof e!="object")return!1;const t=e.__frame_init;return t!==null&&typeof t=="object"}function ve(e){return e!==null&&typeof e=="object"&&e.__frame_size_poke===!0}function ye(e){if(e===null||typeof e!="object")return!1;const t=e.__frame_theme;if(t===null||typeof t!="object")return!1;const r=t.theme;return typeof r=="string"&&te.includes(r)}var A=/^[\w.-]+\.js$/;function we(e,t,r){return r?"inert":typeof t=="string"&&A.test(t)?e?[t]:"inert":e?"inert":"framed"}function ge(){return{post(e,t){parent.postMessage(e,t)},on(e){const t=r=>{r.source===parent&&e(r.data,r.origin,r.isTrusted)};return addEventListener("message",t),()=>removeEventListener("message",t)}}}function be(){return{post:()=>{},on:()=>()=>{}}}var j="__frame_scroll",Ee=150,Ae=310,Se=160,Te=3e4;function ke(){let e=0,t=!1,r=!1,n=!1,s=0,o=null;const i=l=>{try{sessionStorage.setItem(j,JSON.stringify({y:l}))}catch{}},c=()=>{if(clearTimeout(e),o===null)return;const l=o;o=null,i(l)},h=()=>{if(t){t=!1;return}r=!0,o=scrollY,clearTimeout(e),e=setTimeout(c,Ee)};try{addEventListener("scroll",h,{passive:!0}),addEventListener("pagehide",c)}catch{}const p=()=>{let l;try{l=sessionStorage.getItem(j)}catch{return null}if(l===null)return null;let _;try{_=JSON.parse(l)}catch{_=null}const d=_?.y;if(!(typeof d=="number"&&Number.isFinite(d)&&d>=0)){try{sessionStorage.removeItem(j)}catch{}return null}return d};let w=!1;const m=l=>{try{const _=scrollY;scrollTo({top:l,left:0,behavior:"instant"}),s=l,n=!0,clearTimeout(e),o=null,i(l);const d=scrollY;d!==_&&(t=!0),d!==l&&!w&&(w=!0,addEventListener("load",()=>{try{if(scrollY===d){const T=p();m(T!==null?T:s)}}catch{}},{once:!0}))}catch{}},g=()=>{try{return!!location.hash}catch{return!0}};let a=!1;const f=()=>{try{if(a||innerWidth>Ae||innerHeight>Se)return;a=!0;const l=Date.now(),_=()=>{try{removeEventListener("resize",_)}catch{}if(Date.now()-l>Te||r||g())return;const d=p();m(d!==null?d:s)};addEventListener("resize",_)}catch{}};let v=!1,b=!1;return{restore(){if(v||(v=!0,g()))return;const l=p();l!==null&&(m(l),f())},promoted(){if(b||(b=!0,g()))return;const l=p();l!==null?(m(l),f()):n&&m(s)}}}function Re(e,t,r,n){let s=null;try{s=window.trustedTypes?.createPolicy("frame-runtime",{createScriptURL:h=>h})??null}catch{}const o=window.Worker,i=o?.prototype,c=Object.freeze({Worker:o,workerOn:i?.addEventListener,workerPost:i?.postMessage,workerTerminate:i?.terminate,fetch:window.fetch.bind(window),preventDefault:Event.prototype.preventDefault,policy:s,origins:t});r(e).then(h=>h?.bootTopLevel?h.bootTopLevel(c,n):n.settle()).catch(()=>n.settle())}var De="modulepreload",Ie=function(e){return"/"+e},Ue={},Le=function(t,r,n){let s=Promise.resolve();function o(i){const c=new Event("vite:preloadError",{cancelable:!0});if(c.payload=i,window.dispatchEvent(c),!c.defaultPrevented)throw i}return s.then(i=>{for(const c of i||[])c.status==="rejected"&&o(c.reason);return t().catch(o)})},Oe=window===top,q=Object.getOwnPropertyDescriptor(window,"claude"),k=we(Oe,window.__FRAME_PREAMBLE?.topLevel,q?.writable===!1),N=typeof k=="object"&&k[0],y=N?be():ge();(function(){const e=Object.defineProperty,t=globalThis,r=["RTCPeerConnection","webkitRTCPeerConnection","RTCDataChannel","RTCIceCandidate","RTCSessionDescription","RTCRtpSender","RTCRtpReceiver"];let n=0;for(let s=0;s<r.length;s++){const o=r[s];try{e(t,o,{value:void 0,writable:!1,configurable:!1})}catch{try{delete t[o]}catch{}try{e(t,o,{value:void 0,writable:!1,configurable:!0})}catch{}}typeof t[o]=="function"&&n++}if(n&&k==="framed")try{y.post({__frame_rtc_lockdown_failed:n},"*")}catch{}})();var Pe=1e4,Y=Object.freeze([...window.__FRAME_PREAMBLE?.origins??["https://claude.ai","https://preview.claude.ai"]]);function X(e){for(const t of Y)if(t.endsWith(":*"))try{const r=new URL(e);if(`${r.protocol}//${r.hostname}:*`===t)return!0}catch{}else if(e===t)return!0;return!1}var R=Object.freeze({...window.__FRAME_PREAMBLE?.capabilities}),B=window.__FRAME_PREAMBLE?.transforms,D=window.__FRAME_PREAMBLE?.comments,I=window.__FRAME_PREAMBLE?.translate;function S(e){return Le(()=>import("/_runtime/"+e),void 0)}function G(e,t){return{contract:e.contract,changes:new Set(e.changes??[]),flags:new Set(e.flags??[]),capabilities:e.capabilities??{},capBudgets:e.capBudgets??{},transforms:new Map,shellOrigin:t,mount:x,hooks:O,pipe:()=>({wrap:(r,n)=>(...s)=>{try{return n(...s)}catch(o){return Promise.reject(o)}}})}}var L=null,E=null;function V(e,t,r){try{Object.defineProperty(e,t,{value:r,writable:!1,configurable:!1,enumerable:!0})}catch{try{Object.defineProperty(e,t,{value:r,writable:!1,configurable:!0,enumerable:!0})}catch{}}}var U=!1,O={editBefore:null,edit:null};function Ce(e,t,r=!1){const n=[];let s;if(r)try{O.editBefore?.(e)}catch{}for(const o of e.elements){const i=document.querySelector(`[data-id="${o.target}"]`);if(!i){s=o.target;break}if([...Object.keys(o.attrsSet??{}),...o.attrsRemoved??[]].some(c=>!oe(c))){s=o.target;break}if(o.text!==void 0&&(!ce(i)||de(i))){s=o.target;break}for(const[c,h]of Object.entries(o.attrsSet??{}))if(!J(i,c)){try{i.setAttribute(c,h)}catch{}Z(i,c,h)}for(const c of o.attrsRemoved??[])J(i,c)||(i.removeAttribute(c),Z(i,c,null));typeof o.text=="string"&&ue(i,o.text),n.push(o.target)}if(r)try{O.edit?.(e.seq,n,s)}catch{}if(s!==void 0){y.post({__frame_patch_miss:{seq:e.seq}},t);return}try{document.dispatchEvent(new CustomEvent("claude:edit",{detail:{seq:e.seq,targets:n}}))}catch{}}function Z(e,t,r){if(!(e instanceof HTMLInputElement))return;const n=t.toLowerCase();n==="checked"?e.checked=r!==null:n==="value"&&e.type!=="file"&&(e.value=r??"")}function J(e,t){const r=t.toLowerCase(),n=e;return r==="data-id"||(r==="value"||r==="checked")&&(n.__artifactSecret===!0||/^(password|hidden|file)$/.test(n.type??"")||/(^|\s)(cc-|one-time-code|current-password|new-password)/i.test(`${e.getAttribute("autocomplete")??""} ${n.autocomplete??""}`))}function Q(e){const t=document.documentElement;e==="light"||e==="dark"?(t.dataset.theme=e,t.style.colorScheme=e,U=!0):U&&(delete t.dataset.theme,t.style.colorScheme="",U=!1)}var P=new Map;function Me(){let e;const t={u:new Promise(r=>{e=r}),r:r=>{t.done=!0,e(r)},done:!1,nulled:!1};return t}function F(){for(const e of P.values())e.done||(e.nulled=!0,e.r(null))}var je=Object.freeze(Object.assign(Object.create(null),{call:Function.prototype.call,apply:Function.prototype.apply,bind:Function.prototype.bind})),x=(e,t)=>{const r=P.get(e);if(!r||r.done){r?.nulled&&E&&y.post({__frame_cap_telemetry:{kind:"cap-load-error",cap:e}},E);return}const n=typeof t=="function"?Object.setPrototypeOf(t,je):Object.assign(Object.create(null),t);typeof n.then=="function"&&delete n.then,r.r(Object.freeze(n))};function ee(){const e=q?.value??{};V(window,"claude",e);for(const t of Object.keys(R)){if(e[t]!==void 0){V(e,t,e[t]);continue}P.set(t,Me())}if(e.use===void 0){const t=r=>{if(typeof r!="string"||!Object.hasOwn(R,r))return Promise.resolve(null);const n=P.get(r);return n?n.u:Promise.resolve(e[r]??null)};try{Object.defineProperty(e,"use",{value:t,writable:!0,configurable:!0,enumerable:!1})}catch{}}}if(k==="framed"){const e=B&&A.test(B)?S(B).catch(()=>{}):Promise.resolve(void 0),t=a=>{if(a.type==="auxclick"&&a.button!==1)return;const f=a.target,v=f&&f.closest?f.closest("a[href],area[href]"):null;if(!v)return;const b=v.getAttribute("href");if(!b)return;let l;try{l=new URL(b,document.baseURI)}catch{return}if((l.protocol==="http:"||l.protocol==="https:")&&l.origin!==location.origin){a.preventDefault();const _=(v.getAttribute("target")??"").toLowerCase(),d=a.type==="auxclick"||a.metaKey||a.ctrlKey||a.shiftKey||a.altKey||!["","_self","_top","_parent"].includes(_);y.post({__frame_nav:!0,url:l.href,newTab:d},"*")}};addEventListener("click",t,!0),addEventListener("auxclick",t,!0);const r={},n=a=>{a.isTrusted&&(r.pointer=!0)},s=a=>{a.isTrusted&&(r.click=!0)};addEventListener("pointermove",n,{capture:!0,passive:!0}),addEventListener("click",s,{capture:!0,passive:!0}),e.then(a=>{a?.wireNav&&(a.wireNav(),removeEventListener("click",t,!0),removeEventListener("auxclick",t,!0),removeEventListener("pointermove",n,!0),removeEventListener("click",s,!0),a.wireEngagement?.(r))});let o=null;try{o=ke()}catch{}ee();let i=null,c=null,h=0;const p=y.on((a,f)=>{X(f)&&_e(a)&&(i=a.__frame_init,E=f,p(),clearTimeout(h),c?.())});y.post({__frame_connect:!0},"*");const w=new Promise(a=>{c=a,h=setTimeout(()=>{p(),a()},Pe)}),m=document.readyState==="loading"?new Promise(a=>document.addEventListener("DOMContentLoaded",()=>a(),{once:!0})):Promise.resolve();m.then(()=>{try{o?.restore()}catch{}});const g={cb:null};y.on((a,f)=>{if(X(f)&&ve(a)){try{o?.promoted()}catch{}g.cb?.()}}),w.then(async()=>{if(!i||!E){F();return}Q(i.theme);const a=E;let f=!1,v=!1;y.on((u,z,C)=>{if(z!==a)return;ye(u)&&Q(u.__frame_theme.theme),he(u)&&Ce(u.__frame_patch,a,C);const H=u?.__fc_mode;H&&typeof H=="object"&&!f&&D&&A.test(D)&&(f=!0,S(D).then(K=>K.install?.(a,H.on===!0)).catch(()=>{}));const W=u?.__ft_cmd;W&&typeof W=="object"&&!v&&I&&A.test(I)&&(v=!0,S(I).then(K=>K.install?.(a,W)).catch(()=>{}))});const b=Object.keys(i.capabilities??{}).filter(u=>Object.hasOwn(R,u)).map(u=>[u,R[u]]).filter(u=>typeof u[1]=="string"&&A.test(u[1])),l=await Promise.allSettled(b.map(([,u])=>S(u))),_=await e,d=E;if(_?.buildBoot||y.post({__frame_cap_telemetry:{kind:"cap-load-error",cap:"_transforms"}},d),_?.buildBoot)try{L=_.buildBoot(i,_.TRANSFORMS??{},{shellOrigin:d,mount:x,hooks:O},u=>y.post({__frame_cap_telemetry:u},d))}catch{y.post({__frame_cap_telemetry:{kind:"cap-load-error",cap:"_transforms"}},d),L=G(i,d)}else L=G(i,d);const T=u=>y.post({__frame_cap_telemetry:{kind:"cap-load-error",cap:u}},d),Ne=L;l.forEach((u,z)=>{const C=b[z][0];if(u.status!=="fulfilled"){T(C);return}try{u.value?.install?.(Ne)}catch{T(C)}}),F(),await m,y.post({__frame_ready:!0},E),e.then(u=>u?.installSizeReporter?.(d,g))})}else N&&(ee(),Re(N,Y,S,{settle:F,mount:x}))})();</script><!-- /frame-runtime --><meta charset="utf8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>:root{color-scheme:light}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found]){display:none!important}</style></head><body>
+<title>Repeats But Cannot Name</title>
+<link rel="preconnect" href="https://fonts.googleapis.com/">
+<link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin="">
+<link rel="stylesheet" href="a_data/css2_u9wy.css">
+
+<style>
+:root {
+  --ground:      #F3F6F6;
+  --panel:       #FFFFFF;
+  --panel-alt:   #EAEFEF;
+  --ink:         #141A1C;
+  --ink-mid:     #47585C;
+  --ink-soft:    #6B7C80;
+  --rule:        #D6DEDE;
+  --rule-soft:   #E4EAEA;
+  --accent:      #1F5E6B;
+  --accent-soft: #DCEAEC;
+  --met:         #2C6A4E;
+  --met-bg:      #DFEDE5;
+  --refuted:     #8C3A2E;
+  --refuted-bg:  #F2E2DE;
+  --open:        #7A6520;
+  --open-bg:     #F0E9D4;
+
+  --serif: "Newsreader", Georgia, "Times New Roman", serif;
+  --sans:  "IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --mono:  "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+  --measure: 34rem;
+  --wide: 54rem;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ground:      #0E1416;
+    --panel:       #151D20;
+    --panel-alt:   #1B2528;
+    --ink:         #E6ECEC;
+    --ink-mid:     #A8B8BB;
+    --ink-soft:    #7E9094;
+    --rule:        #263336;
+    --rule-soft:   #1E292C;
+    --accent:      #6DBECC;
+    --accent-soft: #16333A;
+    --met:         #6BB894;
+    --met-bg:      #16302A;
+    --refuted:     #D9917F;
+    --refuted-bg:  #33201C;
+    --open:        #C7AE62;
+    --open-bg:     #2B2617;
+  }
+}
+
+:root[data-theme="dark"] {
+  --ground:      #0E1416;
+  --panel:       #151D20;
+  --panel-alt:   #1B2528;
+  --ink:         #E6ECEC;
+  --ink-mid:     #A8B8BB;
+  --ink-soft:    #7E9094;
+  --rule:        #263336;
+  --rule-soft:   #1E292C;
+  --accent:      #6DBECC;
+  --accent-soft: #16333A;
+  --met:         #6BB894;
+  --met-bg:      #16302A;
+  --refuted:     #D9917F;
+  --refuted-bg:  #33201C;
+  --open:        #C7AE62;
+  --open-bg:     #2B2617;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  background: var(--ground);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 16px;
+  line-height: 1.62;
+  -webkit-font-smoothing: antialiased;
+}
+
+.wrap {
+  max-width: var(--wide);
+  margin: 0 auto;
+  padding: 0 1.5rem 6rem;
+}
+
+.col { max-width: var(--measure); }
+
+p, ul, ol { margin: 0 0 1.1rem; }
+a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+a:focus-visible, [tabindex]:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+strong { font-weight: 600; }
+em { font-style: italic; }
+
+/* ---------- masthead ---------- */
+
+.masthead {
+  padding: 5rem 0 2.25rem;
+  border-bottom: 1px solid var(--ink);
+}
+
+.eyebrow {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  margin: 0 0 1.75rem;
+}
+
+h1 {
+  font-family: var(--serif);
+  font-weight: 500;
+  font-size: clamp(2.6rem, 7vw, 4.4rem);
+  line-height: 1.02;
+  letter-spacing: -0.022em;
+  text-wrap: balance;
+  margin: 0 0 1.5rem;
+  max-width: 16ch;
+}
+
+.thesis {
+  font-family: var(--serif);
+  font-size: clamp(1.15rem, 2.4vw, 1.4rem);
+  line-height: 1.5;
+  color: var(--ink-mid);
+  max-width: 46ch;
+  margin: 0;
+}
+
+.thesis b { color: var(--ink); font-weight: 600; }
+
+/* ---------- instrument stamp ---------- */
+
+.stamp {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 2.25rem;
+  padding: 1rem 0 1.15rem;
+  border-bottom: 1px solid var(--rule);
+  font-family: var(--mono);
+  font-size: 0.735rem;
+  color: var(--ink-soft);
+}
+
+.stamp div { display: flex; gap: 0.5rem; align-items: baseline; }
+.stamp span { color: var(--ink); font-weight: 500; }
+
+/* ---------- sections ---------- */
+
+section { padding-top: 3.5rem; }
+
+h2 {
+  font-family: var(--serif);
+  font-weight: 500;
+  font-size: clamp(1.6rem, 3.4vw, 2.1rem);
+  line-height: 1.16;
+  letter-spacing: -0.014em;
+  text-wrap: balance;
+  margin: 0 0 0.35rem;
+  max-width: 26ch;
+}
+
+.sec-num {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  color: var(--accent);
+  display: block;
+  margin-bottom: 0.85rem;
+}
+
+h3 {
+  font-family: var(--sans);
+  font-weight: 600;
+  font-size: 0.95rem;
+  letter-spacing: 0.005em;
+  margin: 2.25rem 0 0.6rem;
+}
+
+.lede {
+  font-size: 1.06rem;
+  color: var(--ink-mid);
+  max-width: 42ch;
+  margin-bottom: 1.75rem;
+}
+
+/* ---------- data ---------- */
+
+.scroll { overflow-x: auto; margin: 1.75rem 0; }
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+  min-width: 30rem;
+  font-family: var(--mono);
+  font-size: 0.79rem;
+  font-variant-numeric: tabular-nums;
+}
+
+caption {
+  caption-side: top;
+  text-align: left;
+  font-family: var(--sans);
+  font-size: 0.82rem;
+  color: var(--ink-soft);
+  padding-bottom: 0.7rem;
+  max-width: 60ch;
+}
+
+th {
+  text-align: left;
+  font-weight: 500;
+  font-size: 0.685rem;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  padding: 0 0.9rem 0.55rem 0;
+  border-bottom: 1px solid var(--ink);
+  white-space: nowrap;
+}
+
+td {
+  padding: 0.5rem 0.9rem 0.5rem 0;
+  border-bottom: 1px solid var(--rule-soft);
+  vertical-align: baseline;
+}
+
+td.num, th.num { text-align: right; padding-right: 1.4rem; }
+tbody tr:last-child td { border-bottom: 1px solid var(--rule); }
+.dim { color: var(--ink-soft); }
+.key { color: var(--ink); font-weight: 600; }
+
+/* ---------- the divergence panel ---------- */
+
+.diverge {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
+  background: var(--rule);
+  border: 1px solid var(--rule);
+  margin: 2rem 0 1.25rem;
+}
+
+.diverge > div { background: var(--panel); padding: 1.4rem 1.5rem 1.5rem; }
+
+.diverge h4 {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  margin: 0 0 1.1rem;
+}
+
+.chain { display: flex; flex-direction: column; gap: 0.55rem; }
+
+.link {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  font-family: var(--mono);
+  font-size: 0.79rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.link .stage { color: var(--ink-mid); }
+.link .val { font-weight: 600; }
+
+.link.hi .val { color: var(--met); }
+.link.lo .val { color: var(--refuted); }
+
+.bar {
+  height: 3px;
+  background: var(--rule-soft);
+  margin-top: 0.15rem;
+  position: relative;
+}
+.bar i { position: absolute; inset: 0 auto 0 0; background: var(--ink-soft); display: block; }
+.link.hi + .bar i { background: var(--met); }
+.link.lo + .bar i { background: var(--refuted); }
+
+/* ---------- ledger ---------- */
+
+.ledger { margin: 2rem 0 1rem; border-top: 1px solid var(--ink); }
+
+.row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.35rem 1.5rem;
+  padding: 1.05rem 0;
+  border-bottom: 1px solid var(--rule-soft);
+}
+
+.row .claim { font-weight: 600; font-size: 0.94rem; }
+.row .ev {
+  grid-column: 1 / -1;
+  font-family: var(--mono);
+  font-size: 0.775rem;
+  color: var(--ink-mid);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.55;
+}
+
+.chip {
+  font-family: var(--mono);
+  font-size: 0.655rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0.2rem 0.5rem;
+  white-space: nowrap;
+  align-self: start;
+  color: var(--refuted);
+  background: var(--refuted-bg);
+}
+.chip.met { color: var(--met); background: var(--met-bg); }
+.chip.open { color: var(--open); background: var(--open-bg); }
+
+/* ---------- pull ---------- */
+
+.pull {
+  font-family: var(--serif);
+  font-size: clamp(1.25rem, 2.9vw, 1.65rem);
+  line-height: 1.36;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  max-width: 30ch;
+  margin: 2.5rem 0;
+  padding-left: 1.4rem;
+  border-left: 2px solid var(--accent);
+  text-wrap: balance;
+}
+
+/* ---------- notes ---------- */
+
+.note {
+  background: var(--panel-alt);
+  border-left: 2px solid var(--ink-soft);
+  padding: 1.05rem 1.35rem;
+  margin: 1.75rem 0;
+  font-size: 0.92rem;
+  color: var(--ink-mid);
+  max-width: 46rem;
+}
+.note b { color: var(--ink); }
+
+code {
+  font-family: var(--mono);
+  font-size: 0.875em;
+  background: var(--panel-alt);
+  padding: 0.1em 0.34em;
+}
+
+.footer {
+  margin-top: 4.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--rule);
+  font-family: var(--mono);
+  font-size: 0.735rem;
+  color: var(--ink-soft);
+  max-width: 60ch;
+}
+
+@media (max-width: 640px) {
+  .diverge { grid-template-columns: 1fr; }
+  .masthead { padding-top: 3rem; }
+}
+</style>
+
+<div class="wrap">
+
+  <header class="masthead">
+    <p class="eyebrow">Negative result · spiking network · 2026-09-01</p>
+    <h1>Repeats But Cannot Name</h1>
+    <p class="thesis">A simulated infant learns to imitate a word, and 
+can be taught a vowel by praise alone. It cannot learn to say one thing 
+for one object and another for another — and after eliminating delivery,
+ perception, credit assignment, motor readout, teaching protocol and 
+homeostasis, <b>what is left is conditionality itself.</b></p>
+  </header>
+
+  <div class="stamp">
+    <div>determinism <span>ad96f882becbee92</span></div>
+    <div>verify <span>22 / 22</span></div>
+    <div>restate <span>PASS, 0 drift on 8</span></div>
+  </div>
+
+  <section>
+    <span class="sec-num">01 — THE SETUP</span>
+    <h2>One creature, three goals, two of them met</h2>
+    <div class="col">
+      <p class="lede">A leaky integrate-and-fire network with 
+reward-modulated STDP and node perturbation, wired to a cochlea, a 
+retina and a formant synthesiser. It babbles, hears itself, sleeps, and 
+is taught by a caregiver who says one of two words.</p>
+
+      <p>Three behavioural goals were set. <strong>G1</strong>, determinism: the same genome and inputs give a bit-identical brain. <strong>G2</strong>, reward shapes behaviour: praise moves what the creature does. <strong>G3</strong>, cross-modal association: the creature says one thing for a cube and another for a ball.</p>
+
+      <p>G1 and G2 hold. Three further milestones hold with them, each 
+against a yoked control that receives the same praise in the same 
+proportions for nothing it did:</p>
+    </div>
+
+    <div class="ledger">
+      <div class="row">
+        <span class="claim">M1b — the creature repeats a word</span>
+        <span class="chip met">met</span>
+        <span class="ev">0.890 held-out, 5/5 seeds, audible at d′ 1.37. 
+Scored 200–600 ms after the word stops, where the ear reads at chance 
+and the voice still carries it.</span>
+      </div>
+      <div class="row">
+        <span class="claim">M1c — the creature is taught a sound</span>
+        <span class="chip met">met</span>
+        <span class="ev">Praise alone moves its vowel toward a target it
+ never hears: +15.9 points against its yoke, d′ 5.57 against a −0.01 
+null, 3/3 seeds.</span>
+      </div>
+      <div class="row">
+        <span class="claim">M1d — the creature answers when spoken to</span>
+        <span class="chip met">met</span>
+        <span class="ev">+0.349 answering burst, 6/6 seeds, and nearly 
+silent while listening (0.276 → 0.010). The answer carries the word 
++0.215 above ambient babble, 3/3.</span>
+      </div>
+      <div class="row">
+        <span class="claim">G3 — the creature names what it sees</span>
+        <span class="chip">not met</span>
+        <span class="ev">Closed negative under every mechanism tried across DNA v12–v49, including three built specifically for it in the final week.</span>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <span class="sec-num">02 — THE MEASUREMENT</span>
+    <h2>The same reward, the same act, made conditional</h2>
+    <div class="col">
+      <p class="lede">The sharpest form of the result does not involve 
+naming at all. It takes G2's own contingency — the one reward 
+demonstrably shapes — and asks for it conditionally.</p>
+
+      <p>The creature is rewarded for pushing a scalar past a criterion set at its <em>own</em>
+ baseline median, so the target is defined by the creature rather than 
+by the experimenter. Unconditionally, reward moves that boundary hard. 
+Conditionally — push it up after word A, down after word B — it does not
+ move at all, against a control that shares the arm's marginals exactly.</p>
+    </div>
+
+    <div class="scroll">
+      <table>
+        <caption><code>g2cond</code> — hit rate against the creature's own baseline criterion, 3 seeds</caption>
+        <thead>
+          <tr><th>Contingency</th><th class="num">Hit rate</th><th class="num">Change</th><th>Reading</th></tr>
+        </thead>
+        <tbody>
+          <tr><td class="key">Unconditional</td><td class="num key">0.500 → 0.88</td><td class="num key">+0.369 ± 0.031</td><td class="dim">≈ 12σ</td></tr>
+          <tr><td class="key">Conditional</td><td class="num">—</td><td class="num key">+0.022 ± 0.153</td><td class="dim">null</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="col">
+      <p>The same shape appears in the vocal domain. <code>vocallearn</code> teaches a formant target and scores it against a yoke:</p>
+    </div>
+
+    <div class="scroll">
+      <table>
+        <caption><code>vocallearn</code> — formant-error reduction against a yoked control, in points</caption>
+        <thead>
+          <tr><th>Target</th><th class="num">Arm − yoke</th><th>Reading</th></tr>
+        </thead>
+        <tbody>
+          <tr><td class="key">Fixed target</td><td class="num key">+36.5</td><td class="dim">one target, no conditionality</td></tr>
+          <tr><td class="key">Depends on what was heard</td><td class="num key">−1.4</td><td class="dim">same instrument, same session</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p class="pull">Reward moves an unconditional act at twelve sigma and the same act made conditional does not move at all.</p>
+
+    <div class="note">
+      <b>The control this needed, and did not have until late.</b> An earlier version scored the conditional arm against a yoke built from the <em>taught</em>
+ arm's reward stream — a mismatched comparison that manufactured a +16.4
+ result and a clean dose–response. Giving each arm its own yoke and a 
+matched-marginal random target collapsed it to <b>−0.1 ± 0.7</b>. The dose–response had been the control moving. The published finding was retracted.
+    </div>
+  </section>
+
+  <section>
+    <span class="sec-num">03 — THE ASYMMETRY</span>
+    <h2>A heard word reaches the voice. A seen object does not.</h2>
+    <div class="col">
+      <p class="lede">The creature has one conditional route that works —
+ ear to larynx, which is what makes it able to repeat. Reading the same 
+pipeline under the two conditions shows exactly where they part.</p>
+      <p>Each figure is a held-out classifier reading the module's 
+population: can it tell which of two stimuli was present? One seed 
+family is shown; across the three, the voice reads 0.860–0.920 for a 
+heard word and 0.460–0.600 for a seen object.</p>
+    </div>
+
+    <div class="diverge">
+      <div>
+        <h4>Hearing a word</h4>
+        <div class="chain">
+          <div class="link hi"><span class="stage">auditory</span><span class="val">1.000</span></div>
+          <div class="bar"><i style="width:100%"></i></div>
+          <div class="link"><span class="stage">central</span><span class="val">0.760</span></div>
+          <div class="bar"><i style="width:76%"></i></div>
+          <div class="link"><span class="stage">vocal</span><span class="val">0.900</span></div>
+          <div class="bar"><i style="width:90%"></i></div>
+          <div class="link hi"><span class="stage">voice (in the air)</span><span class="val">0.920</span></div>
+          <div class="bar"><i style="width:92%"></i></div>
+        </div>
+      </div>
+      <div>
+        <h4>Seeing an object</h4>
+        <div class="chain">
+          <div class="link hi"><span class="stage">vision</span><span class="val">0.980</span></div>
+          <div class="bar"><i style="width:98%"></i></div>
+          <div class="link"><span class="stage">central</span><span class="val">0.680</span></div>
+          <div class="bar"><i style="width:68%"></i></div>
+          <div class="link"><span class="stage">vocal</span><span class="val">0.540</span></div>
+          <div class="bar"><i style="width:54%"></i></div>
+          <div class="link lo"><span class="stage">voice (in the air)</span><span class="val">0.460</span></div>
+          <div class="bar"><i style="width:46%"></i></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col">
+      <p>Both input controls are lit — the stimulus is unambiguously 
+present at the sensor in each case. The word survives the whole chain 
+and comes out of the mouth. The object is legible at the retina at 
+0.980, is still measurably present in the larynx population, and arrives
+ at the voice at chance.</p>
+      <p>This is not a delivery failure in the usual sense. A separately pinned measurement puts the seen object <em>at the larynx</em>
+ at 0.667 per neuron, against 0.693 at central and 0.960 at the retina. 
+The object does reach the motor population, at close to the strength it 
+had one stage earlier. It does not reach the air.</p>
+    </div>
+  </section>
+
+  <section>
+    <span class="sec-num">04 — THE LEDGER</span>
+    <h2>Six explanations, each with its own control</h2>
+    <div class="col">
+      <p class="lede">Every plausible account of the failure was given a
+ measurement that could have confirmed it. None did. The order below is 
+roughly the order they were believed.</p>
+    </div>
+
+    <div class="ledger">
+      <div class="row">
+        <span class="claim">The object never reaches the larynx</span>
+        <span class="chip">refuted</span>
+        <span class="ev">Built the tract the genome lacked (<code>vision→vocal</code>, shipped) and an arcuate <code>vision→auditory</code>
+ transcoder. Object at auditory 0.880; voice moved +0.04 / 0.00 / −0.06.
+ The best-delivering creature ever built moves the milestone 0.487 → 
+0.546.</span>
+      </div>
+      <div class="row">
+        <span class="claim">The ear has no real word categories</span>
+        <span class="chip">refuted</span>
+        <span class="ev">One-of-eight at the auditory module reads <b>0.981</b>
+ (0.981 / 0.962 / 1.000) against a 1.000 mel ceiling, shuffled control 
+0.122 vs chance 0.125. No headroom. The 0.371 that motivated a new coder
+ is the creature's <em>voice</em>, not its ear.</span>
+      </div>
+      <div class="row">
+        <span class="claim">Credit is assigned to the wrong synapses</span>
+        <span class="chip">refuted</span>
+        <span class="ev">A per-neuron reward-mask oracle removes lesson 
+interference completely (targeted retention ≈1.0, 3/3) at ~30% of the 
+learning rate — and naming still does not work with it (−0.045 against 
+no mask). Node perturbation was already assigning credit correctly; the 
+problem was variance.</span>
+      </div>
+      <div class="row">
+        <span class="claim">The motor readout is too lossy</span>
+        <span class="chip">refuted</span>
+        <span class="ev">Replaced the centroid readout with a learnable 
+dictionary of postures plus a categorical policy gradient. Five 
+dictionary configurations, none teachable; two centroid configurations, 
+both. The pooling stage <em>is</em> what makes the larynx steerable.</span>
+      </div>
+      <div class="row">
+        <span class="claim">The condition arrives on too noisy a baseline</span>
+        <span class="chip">refuted</span>
+        <span class="ev">Built a zero-baseline context module. Reward's write share on that tract goes 1–7% → <b>28–79%</b>,
+ the most learnable input in the creature — and the positive control 
+dies at every driven level, on 5 genomes and 12 levels. Arriving costs 
+more than it pays.</span>
+      </div>
+      <div class="row">
+        <span class="claim">The teaching protocol is wrong</span>
+        <span class="chip">refuted</span>
+        <span class="ev">28× longer sessions: −0.035 ± 0.013. Blocked 
+rather than interleaved teaching: −0.146, 3/3 — actively harmful, 
+because naming's two lessons share one output dimension.</span>
+      </div>
+      <div class="row">
+        <span class="claim">Rate homeostasis erases the conditional map</span>
+        <span class="chip">refuted</span>
+        <span class="ev">Intrinsic plasticity does respond, but it saturates rather than regulates: 25–83% of the larynx ends a driven session pinned at <code>threshold_max</code>, threshold climbing +1.2 to +2.8 into a [0.20, 4.00] clamp. The graded re-regulation story does not hold.</span>
+      </div>
+    </div>
+
+    <div class="col">
+      <p>Two further families were tried as learning rules rather than 
+as explanations, and both are informative in the same direction. 
+Perturbation moved onto synapses instead of neurons cut learning noise 
+from 65% to 8% and still could not carry even G2 — so expressiveness was
+ never the constraint. And a burst/plateau third factor discriminated 
+the object at 0.673, the best any third factor has managed here, while 
+the plateau it derives from reads 0.913: the nonlinearity costs more 
+than it delivers.</p>
+    </div>
+  </section>
+
+  <section>
+    <span class="sec-num">05 — WHAT IS LEFT</span>
+    <h2>The wall is conditionality, not any of its parts</h2>
+    <div class="col">
+      <p>The condition arrives. The credit is assigned correctly. The 
+reward moves the act. The motor plant is demonstrably steerable, and the
+ readout that makes it steerable is the one that was suspected of losing
+ the signal. What does not happen, under any of it, is the <em>dependence</em> — the output conditioning on which stimulus was present.</p>
+
+      <p>The creature does have one conditional route, and it works 
+well: the innate ear-to-larynx path that produces imitation at 0.890. 
+Every attempt to build a second one that reward can shape has failed at 
+the same place, and the eligibility trace shows why the failure is not a
+ failure of signal. On the tract that actually participates, the trace 
+reads the object at <b>0.797</b> conditionality against a 0.867 positive
+ control. The information is in the trace. Two traces recorded under the
+ two conditions are nonetheless 94.5% identical.</p>
+
+      <p class="pull">A differential this small on a common mode this 
+large is not a signal-to-noise problem you can solve by delivering more 
+signal. It is the arithmetic of the rule.</p>
+
+      <p>Stated carefully: <strong>in this architecture, a 
+presynaptic-gated three-factor rule cannot build a conditional map on a 
+population that is simultaneously hosting reward-driven exploration.</strong> That is narrower than "spiking networks cannot learn associations", and it is what the measurements support.</p>
+    </div>
+  </section>
+
+  <section>
+    <span class="sec-num">06 — METHOD</span>
+    <h2>The part that transfers</h2>
+    <div class="col">
+      <p class="lede">Most of the work in a negative result is making 
+the negative trustworthy. Seven practices did more for this project than
+ any mechanism in it.</p>
+    </div>
+
+    <div class="ledger">
+      <div class="row">
+        <span class="claim">Measure the floor before believing the finding</span>
+        <span class="chip open">practice</span>
+        <span class="ev">The naming milestone's control genome swings 
+±0.060 across seed families, giving a 0.120 cross-family floor. That 
+column was quoted as a result for months before anyone measured what it 
+does when nothing is being taught.</span>
+      </div>
+      <div class="row">
+        <span class="claim">A control must share the arm's marginals</span>
+        <span class="chip open">practice</span>
+        <span class="ev">Yoked controls receive identical praise and 
+scolding in identical proportions for nothing they did. Without that, 
+"reward arrived" and "reward taught" are indistinguishable — and a 
+mismatched yoke produced a +16.4 result that did not survive.</span>
+      </div>
+      <div class="row">
+        <span class="claim">A positive control gates its own row</span>
+        <span class="chip open">practice</span>
+        <span class="ev">A level where the known-good arm has collapsed 
+cannot report a null on anything else: it is a different creature being 
+asked the same question. Three experiments printed wrong verdicts before
+ this became a gate rather than a habit.</span>
+      </div>
+      <div class="row">
+        <span class="claim">Derive the constant, do not sample it</span>
+        <span class="chip open">practice</span>
+        <span class="ev">Intrinsic plasticity steps a threshold by <code>ip_rate × (rate − target)</code>, so the drift <em>is</em> the integral of the error. Derived: +3.12 ± 0.21 Hz. Sampled off the final EMA: 8.18 ± 2.48 Hz for the same quantity.</span>
+      </div>
+      <div class="row">
+        <span class="claim">Never move a threshold to fit the data</span>
+        <span class="chip open">practice</span>
+        <span class="ev">A binary verdict that flips on one seed of 
+three means the quantity is continuous and the label was the mistake. 
+Print the ratio; leave the threshold alone until the seeds agree.</span>
+      </div>
+      <div class="row">
+        <span class="claim">A cheap run is a different measurement, not a weaker one</span>
+        <span class="chip open">practice</span>
+        <span class="ev">The homeostasis probe reads 0% pinned at 200k 
+ticks and grants its licence; at 3.4M it reads 25–83% and refuses. Three
+ seeds with unanimous signs (+0.24) became +0.03 at six. A single-seed 
+pass once hid a 4-of-9 failure.</span>
+      </div>
+      <div class="row">
+        <span class="claim">Pin the numbers decisions rest on</span>
+        <span class="chip open">practice</span>
+        <span class="ev">A command re-derives every load-bearing figure 
+and fails on drift, the way a hash check fails on a changed build. It 
+exists because two stale documented numbers caused a mechanism to be 
+built against a bottleneck that had already been closed.</span>
+      </div>
+    </div>
+
+    <div class="note">
+      <b>The failure mode all seven guard against is the same one.</b> Every wrong verdict in this project was <em>plausible</em>
+ when printed. None looked like a bug; each looked like a finding. The 
+instruments that earned their cost are the ones that can refuse — a 
+probe whose only interesting outcome is "do not build this" saved a 
+rewrite stage in thirty seconds, by measuring the thing everyone had 
+assumed.
+    </div>
+  </section>
+
+  <section>
+    <span class="sec-num">07 — FALSIFIERS</span>
+    <h2>What would change the conclusion</h2>
+    <div class="col">
+      <p>The result is stated so it can be overturned. Any of these would do it:</p>
+      <ul>
+        <li><strong>Separate populations.</strong> In birdsong, the 
+timing pathway and the exploratory pathway are distinct afferents onto a
+ shared motor nucleus. Here one population is asked to be both. The 
+context-module result — the condition arriving costs more than it pays —
+ is what that architecture would predict, and the split was never built.</li>
+        <li><strong>A rule whose gate is not presynaptic activity.</strong>
+ Every mechanism here factorises credit into a term shared across 
+conditions plus a small differential. Seven separate walls have that 
+same arithmetic.</li>
+        <li><strong>An output space where the two lessons do not share a dimension.</strong> The creature holds two lessons at once on <em>orthogonal</em>
+ targets (0.84 retained versus 0.22 for conflicting ones). Naming's two 
+lessons compete for one dimension, which is also why blocked teaching 
+hurts.</li>
+        <li><strong>Any conditional result that survives a matched-marginal control.</strong> Several did not.</li>
+      </ul>
+    </div>
+
+    <div class="footer">
+      All figures re-derived at publication time. <code>restate</code> PASS, zero drift on 8 pinned quantities; <code>verify</code> 22/22; determinism hash <code>ad96f882becbee92</code>.
+ Classifier figures are held-out; ± is standard error across seeds; d′ 
+values are corrected against their own permutation nulls. Retracted 
+findings are marked as such rather than removed.
+    </div>
+  </section>
+
+</div>
+
+</body></html>

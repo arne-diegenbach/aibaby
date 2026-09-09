@@ -8626,6 +8626,76 @@ last week, and it comes with a payoff already priced: 3.8x more aligned bias is
 230 Hz, and 230 Hz is where `nearest` crosses the midpoint and absolute naming
 becomes possible.
 
+### The slow store, tested at last — refuted, and it validates the transfer curve
+
+DNA v41's third gate had never executed under a context: it relaxed `bias_[i]`,
+which v51 never writes. Fixed on 2026-09-09, and the prediction was derived and
+committed **before** the run, because the coupling is closed-form.
+
+Per cash-in the pair is `fast += flow*(slow-fast)`, `slow += flow*ratio*(fast-slow)`.
+For a coherent drift `u` the gap settles at `u / (flow*(1+ratio))`, after which the
+whole pair advances at `u * ratio/(1+ratio)` per event instead of `u`. At
+`meta_ratio = 0.05` that is a **21x brake on exactly the quantity we are short of**,
+and `meta_flow` does not appear in it at all — it sets only how fast the gap
+reaches equilibrium.
+
+Two arms, `meta_flow` 0.02 and 0.1, against the `meta_flow = 0` baseline:
+
+| 13.6M budget | off | ema | ema-rnd | excess | aligned (F1) | gain |
+|---|---|---|---|---|---|---|
+| **0 (baseline)** | 25.9 | **119.2 +/- 8.2** | 28.9 | **+90.3 +/- 14.6** | 0.05261 | 3.57 |
+| **0.02** | 12.7 | 39.0 +/- 6.1 | 16.5 | +22.5 +/- 10.0 | 0.00421 | 4.57 |
+| **0.1** | 24.6 | 35.8 +/- 6.4 | 13.0 | +22.8 +/- 9.3 | 0.00422 | 4.40 |
+
+**Refuted, and every clause of the prediction held.** Aligned bias falls 12.5x and
+delivered excess 4x. The measured level ratio is short of the derived 21x because
+baseline aligned itself grows sublinearly (exponent ~0.5), so a 21x cut in *rate*
+shows as less than 21x in *level*.
+
+**The fingerprint that confirms the derivation rather than merely the sign:**
+`aligned` reads 0.00421 and 0.00422 across a **5x** change in `meta_flow` — equal
+to three significant figures. The accumulation rate is set by `meta_ratio` alone,
+exactly as the algebra says. This also corrects the looser phrasing in my own
+launch note, which said the loss would be "roughly in proportion to `meta_flow`".
+It is not. It is independent of it.
+
+**And the other half of the prediction held too, which is why this is not a
+tuning failure.** The store was expected to *improve* the drift-to-diffusion
+ratio while cutting absolute drift — and `gain` rises, 3.57 -> 4.57. It does the
+thing it is for. This creature is short of **magnitude**, not of SNR: `gain` was
+already 3.8x a structureless table, and forcing `outside` to zero bought nothing.
+A mechanism that trades magnitude for cleanliness is aimed at a problem the
+creature has not got, which is the same verdict `retention` reached from the
+other side.
+
+**No `meta_ratio` sweep will be run, and the reason is a bound rather than a
+budget.** `ratio/(1+ratio) <= 0.5` for every `ratio` in [0,1], so Benna-Fusi can
+at best halve the accumulation and can never raise it. The launch note's "raising
+`meta_ratio` toward 1.0 should recover it" is true only up to 50% of the
+no-store case. There is no setting that wins, so the question closes analytically.
+
+**The unplanned payoff: a refuted mechanism is a clean probe.** The alignment
+split fitted `dF1 ~ aligned^0.61` over a 2.4x range of aligned. These two arms sit
+**12.5x below** that range, which no earlier run reached, and the law was never
+fitted to them:
+
+| readout model | predicted excess | measured |
+|---|---|---|
+| compressive, `aligned^0.61` | **19.3 Hz** | 22.5 +/- 10.0 and 22.8 +/- 9.3 |
+| linear | 7.2 Hz | 1.5 SE high |
+| saturated (flat) | 90.3 Hz | 6.8 SE high |
+
+Within 0.3 SE, a decade below where it was fitted. The compressive readout is now
+the only model standing across a 12.5x span of drive, and "the larynx compresses
+what it is given" stops being a fit and becomes a measured property.
+
+**So the magnitude question is closed on this architecture.** Every route to a
+larger aligned bias has now been priced: more trials saturate near 137 Hz, more
+rate grows `outside` 3x and halves `gain`, selectivity buys nothing, the
+commitment brake moves it 1.07x where 6.2x is needed, and the slow store moves it
+the wrong way by 12.5x. What remains is not a knob on the bias but a different
+place to put it.
+
 ### What the literature says to build next, and why it is the cheap option
 
 > **This section is the argument that produced DNA v51, kept as the record of

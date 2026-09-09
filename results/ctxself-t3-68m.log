@@ -1,0 +1,112 @@
+experiment: ctxself
+  instrument        ctxself   trial seed 0000000001357638   2428 trials per arm
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  question          `areax` proved a context-indexed bias works, keyed on
+                    an index the HOST wrote from the word label. Can the
+                    creature derive that index from its own larynx?
+  the bar           an index right with probability p writes the other
+                    table 1-p of the time, so the conditional part scales
+                    as (2p - 1). `ctxsrc` bounds p at 0.740 for ANY readout
+                    of the larynx in this window, which is 48% of what the
+                    oracle index bought. A FIXED partition can only do
+                    worse, so that is a ceiling and not a prediction.
+  arm               all four get the same host drive on the context
+                    module, so `self` and `oracle` differ in ONE field.
+
+  seed   arm       dF1 (Hz)  p(idx)   busiest  table div  ev/tri  change
+  0      off       8.1       0.000    0.000    0.0000     0.0     +0.7
+  0      oracle    112.0     1.000    0.500    0.0354     0.0     +17.5
+  0      ear       62.2      0.779    0.523    0.0373     3.5     +3.1
+  0      ear-rnd   16.2      0.778    0.575    0.0305     3.8     +0.2
+  0      ema       78.1      0.876    0.624    0.0355     2.4     +24.7
+  0      ema-rnd   48.7      0.878    0.622    0.0299     3.2     -0.1
+  1      off       3.3       0.000    0.000    0.0000     0.0     +7.5
+  1      oracle    82.2      1.000    0.500    0.0392     0.0     +11.3
+  1      ear       32.9      0.747    0.534    0.0359     3.3     +7.9
+  1      ear-rnd   10.5      0.781    0.574    0.0335     3.6     +0.5
+  1      ema       80.8      0.865    0.634    0.0305     1.2     +13.8
+  1      ema-rnd   6.8       0.500    0.995    0.0383     4.4     +0.7
+  2      off       24.5      0.000    0.000    0.0000     0.0     +2.1
+  2      oracle    93.7      1.000    0.500    0.0316     0.0     +22.3
+  2      ear       38.6      0.743    0.597    0.0322     3.2     +7.9
+  2      ear-rnd   31.8      0.761    0.624    0.0374     3.0     -0.5
+  2      ema       91.2      0.868    0.630    0.0279     1.6     +23.9
+  2      ema-rnd   17.8      0.867    0.513    0.0374     3.4     +0.3
+  3      off       1.7       0.000    0.000    0.0000     0.0     +3.2
+  3      oracle    49.2      1.000    0.500    0.0421     0.0     +17.8
+  3      ear       79.1      0.613    0.563    0.0258     1.7     -2.9
+  3      ear-rnd   23.7      0.764    0.553    0.0319     4.0     -0.4
+  3      ema       121.0     0.875    0.619    0.0367     2.3     +10.8
+  3      ema-rnd   2.2       0.877    0.623    0.0404     3.3     -0.0
+  4      off       20.7      0.000    0.000    0.0000     0.0     +0.8
+  4      oracle    85.4      1.000    0.500    0.0392     0.0     +18.6
+  4      ear       7.0       0.757    0.560    0.0394     3.1     +3.4
+  4      ear-rnd   25.5      0.781    0.554    0.0284     3.9     -0.1
+  4      ema       104.5     0.877    0.623    0.0380     2.5     +20.0
+  4      ema-rnd   6.9       0.878    0.622    0.0358     3.3     -0.5
+  5      off       23.9      0.000    0.000    0.0000     0.0     -1.1
+  5      oracle    94.8      1.000    0.500    0.0391     0.0     +21.1
+  5      ear       10.3      0.740    0.631    0.0328     3.1     +6.9
+  5      ear-rnd   23.7      0.775    0.597    0.0307     3.3     -0.4
+  5      ema       112.0     0.878    0.622    0.0432     1.8     +17.6
+  5      ema-rnd   57.5      0.878    0.622    0.0368     3.5     +0.5
+  6      off       34.9      0.000    0.000    0.0000     0.0     -3.8
+  6      oracle    110.5     1.000    0.500    0.0368     0.0     +21.4
+  6      ear       53.5      0.734    0.614    0.0314     3.6     +7.1
+  6      ear-rnd   53.3      0.791    0.521    0.0368     4.0     +0.6
+  6      ema       143.2     0.878    0.622    0.0332     1.8     +22.6
+  6      ema-rnd   7.1       0.875    0.625    0.0351     3.0     -0.3
+  7      off       44.3      0.000    0.000    0.0000     0.0     -7.9
+  7      oracle    123.2     1.000    0.500    0.0325     0.0     +31.6
+  7      ear       49.4      0.620    0.515    0.0297     1.6     +3.9
+  7      ear-rnd   25.5      0.775    0.532    0.0363     4.6     +0.5
+  7      ema       50.0      0.871    0.629    0.0394     2.8     +14.1
+  7      ema-rnd   73.5      0.879    0.621    0.0362     3.5     +0.2
+  8      off       41.0      0.000    0.000    0.0000     0.0     +0.1
+  8      oracle    85.7      1.000    0.500    0.0408     0.0     +13.0
+  8      ear       16.1      0.731    0.589    0.0362     2.9     +10.1
+  8      ear-rnd   23.5      0.743    0.634    0.0326     3.0     +0.2
+  8      ema       56.9      0.869    0.619    0.0421     3.0     +16.9
+  8      ema-rnd   26.6      0.877    0.622    0.0391     2.9     +0.4
+
+  arm       dF1 (Hz)         p(index)        busiest slice  table div     change
+  off       22.5 +/- 5.3     0.000 +/- 0.000 0.000 +/- 0.000 0.0000 +/- 0.0000 +0.2 +/- 1.4
+  oracle    93.0 +/- 7.2     1.000 +/- 0.000 0.500 +/- 0.000 0.0374 +/- 0.0012 +19.4 +/- 2.0
+  ear       38.8 +/- 8.2     0.718 +/- 0.020 0.570 +/- 0.014 0.0334 +/- 0.0014 +5.3 +/- 1.3
+  ear-rnd   26.0 +/- 4.0     0.772 +/- 0.005 0.574 +/- 0.013 0.0331 +/- 0.0010 +0.1 +/- 0.1
+  ema       93.1 +/- 10.1    0.873 +/- 0.002 0.625 +/- 0.002 0.0363 +/- 0.0017 +18.3 +/- 1.6
+  ema-rnd   27.4 +/- 8.7     0.834 +/- 0.042 0.652 +/- 0.045 0.0366 +/- 0.0010 +0.1 +/- 0.1
+
+  does the index hold up across a session? (early third -> last third)
+    ear        0.711 +/- 0.017 -> 0.723 +/- 0.028   (+0.012)
+    ear-rnd    0.767 +/- 0.010 -> 0.782 +/- 0.007   (+0.015)
+    ema        0.895 +/- 0.004 -> 0.876 +/- 0.002   (-0.019)
+    ema-rnd    0.860 +/- 0.045 -> 0.837 +/- 0.042   (-0.023)
+
+  paired differences (same creature, arms differ only in genome fields)
+    ear   - ear-rnd     +12.8 +/- 8.7 Hz, 1.5 SE, 6 of 9 positive
+    ear   - off         +16.3 +/- 11.2 Hz, 1.5 SE, 6 of 9 positive
+    ema   - ema-rnd     +65.6 +/- 16.5 Hz, 4.0 SE, 8 of 9 positive
+    ema   - off         +70.6 +/- 12.7 Hz, 5.6 SE, 9 of 9 positive
+
+  the reference here       oracle 93.0 Hz vs off 22.5 (+70.5, 5.7 SE)
+  the derived index        p = 0.873 +/- 0.002, busiest slice 0.625
+  ...and does it sharpen?  0.895 +/- 0.004 -> 0.876 +/- 0.002 over the session
+  predicted from ctxsrc    44.6 Hz  (p <= 0.740, keeps 48%)
+  predicted from THIS p    69.4 Hz  (keeps 75%)
+  measured                 93.1 Hz  (+70.6 vs off, 4.6 SE)
+  vs matched-marginal      27.4 Hz  (+65.6, 3.5 SE)
+  PAIRED vs matched-marg   +65.6 +/- 16.5 Hz, 4.0 SE  <-- THE GATE
+                           8 of 9 creatures positive
+  paired vs `off`          +70.6 +/- 12.7 Hz, 5.6 SE (diagnostic)
+  unpaired, for the record +65.6 (3.5 SE) vs control, +70.6 (4.6 SE) vs off
+
+  THE CREATURE INDEXES ITSELF -- the voice depends on the word with NO
+  oracle anywhere. +65.6 +/- 16.5 Hz of F1, PAIRED, against a control
+  carrying the same split table and the same derived index and differing
+  only in whether the target tracks the word; 8 of 9 creatures
+  positive, on an index read from the larynx at 0.873. That is 100% of
+  what the host-written index bought IN THIS SAME RUN, against 48%
+  predicted from `ctxsrc`'s upper bound and 75% from this run's own p.
+  The last oracle in the architecture is gone.

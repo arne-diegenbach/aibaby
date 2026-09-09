@@ -1,0 +1,142 @@
+experiment: ctxscale
+  instrument        ctxscale   trial seed 0000000001357486   4857 trials at the LONGEST budget
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  question          is the learned bias still GROWING with trials, or has
+                    it found its asymptote? That decides whether 236 Hz is
+                    a matter of compute or of architecture.
+  the gate          excess = dF1(ema) - dF1(ema-rnd), pooled per budget.
+                    ratio 4x/1x  > 1.7 compute-limited (sqrt(t) gives 2.0)
+                                 < 1.3 saturated
+                                 else  inconclusive, and it says so.
+
+  seed   arm       budget    dF1 (Hz)  table div  change
+  0      off       13.60M    8.3       0.0000     -1.8
+  0      off       6.80M     3.9       0.0000     +2.7
+  0      off       3.40M     11.6      0.0000     +5.4
+  0      ema       13.60M    66.4      0.0033     +10.7
+  0      ema       6.80M     27.4      0.0022     +4.6
+  0      ema       3.40M     25.5      0.0015     +8.0
+  0      mask-F1F2 13.60M    23.4      0.0011     +8.7
+  0      mask-F1F2 6.80M     13.9      0.0006     +10.9
+  0      mask-F1F2 3.40M     0.5       0.0004     +5.1
+  0      ema-rnd   13.60M    6.4       0.0030     +0.2
+  0      ema-rnd   6.80M     0.0       0.0019     +0.4
+  0      ema-rnd   3.40M     5.6       0.0012     +0.8
+  1      off       13.60M    13.8      0.0000     +0.9
+  1      off       6.80M     13.3      0.0000     -1.7
+  1      off       3.40M     11.6      0.0000     -0.0
+  1      ema       13.60M    38.1      0.0031     +3.2
+  1      ema       6.80M     23.6      0.0021     +5.6
+  1      ema       3.40M     6.9       0.0015     +4.8
+  1      mask-F1F2 13.60M    22.0      0.0015     +8.2
+  1      mask-F1F2 6.80M     2.0       0.0009     -2.1
+  1      mask-F1F2 3.40M     4.7       0.0004     +2.5
+  1      ema-rnd   13.60M    28.6      0.0025     +0.1
+  1      ema-rnd   6.80M     27.2      0.0018     +0.6
+  1      ema-rnd   3.40M     28.0      0.0013     +1.7
+  2      off       13.60M    23.0      0.0000     -0.5
+  2      off       6.80M     8.2       0.0000     +6.5
+  2      off       3.40M     1.7       0.0000     -0.0
+  2      ema       13.60M    33.4      0.0028     +4.3
+  2      ema       6.80M     17.2      0.0022     +3.1
+  2      ema       3.40M     15.7      0.0012     -2.1
+  2      mask-F1F2 13.60M    28.0      0.0011     -1.4
+  2      mask-F1F2 6.80M     23.2      0.0008     +0.9
+  2      mask-F1F2 3.40M     16.4      0.0005     +5.1
+  2      ema-rnd   13.60M    5.8       0.0027     +0.0
+  2      ema-rnd   6.80M     3.3       0.0020     +0.1
+  2      ema-rnd   3.40M     2.0       0.0014     +1.2
+  3      off       13.60M    1.4       0.0000     +4.1
+  3      off       6.80M     2.6       0.0000     +2.0
+  3      off       3.40M     3.3       0.0000     +3.4
+  3      ema       13.60M    30.3      0.0032     -1.9
+  3      ema       6.80M     39.8      0.0019     -4.3
+  3      ema       3.40M     49.6      0.0011     -2.0
+  3      mask-F1F2 13.60M    21.7      0.0015     +2.4
+  3      mask-F1F2 6.80M     12.2      0.0008     +1.9
+  3      mask-F1F2 3.40M     5.4       0.0004     +2.0
+  3      ema-rnd   13.60M    20.6      0.0025     -0.2
+  3      ema-rnd   6.80M     22.5      0.0017     -0.5
+  3      ema-rnd   3.40M     23.4      0.0014     -0.9
+  4      off       13.60M    5.0       0.0000     +8.8
+  4      off       6.80M     26.1      0.0000     -0.4
+  4      off       3.40M     32.0      0.0000     +3.4
+  4      ema       13.60M    24.2      0.0029     +7.2
+  4      ema       6.80M     10.0      0.0020     +3.7
+  4      ema       3.40M     18.8      0.0012     +0.2
+  4      mask-F1F2 13.60M    3.2       0.0014     +8.4
+  4      mask-F1F2 6.80M     25.0      0.0008     +2.6
+  4      mask-F1F2 3.40M     28.9      0.0005     +1.1
+  4      ema-rnd   13.60M    8.4       0.0022     +0.0
+  4      ema-rnd   6.80M     19.8      0.0018     +0.9
+  4      ema-rnd   3.40M     30.7      0.0012     +1.8
+  5      off       13.60M    32.1      0.0000     +27.1
+  5      off       6.80M     14.7      0.0000     +7.0
+  5      off       3.40M     22.8      0.0000     +5.9
+  5      ema       13.60M    58.5      0.0026     -0.7
+  5      ema       6.80M     99.2      0.0015     +3.8
+  5      ema       3.40M     76.2      0.0011     -2.7
+  5      mask-F1F2 13.60M    2.9       0.0012     +8.3
+  5      mask-F1F2 6.80M     15.0      0.0007     +4.2
+  5      mask-F1F2 3.40M     24.6      0.0004     +0.0
+  5      ema-rnd   13.60M    14.4      0.0026     -0.1
+  5      ema-rnd   6.80M     8.5       0.0019     -0.0
+  5      ema-rnd   3.40M     18.8      0.0014     -0.4
+  6      off       13.60M    8.7       0.0000     +2.6
+  6      off       6.80M     10.6      0.0000     +0.5
+  6      off       3.40M     8.3       0.0000     +4.6
+  6      ema       13.60M    57.6      0.0027     +3.9
+  6      ema       6.80M     56.4      0.0019     -1.0
+  6      ema       3.40M     65.6      0.0013     +14.1
+  6      mask-F1F2 13.60M    37.2      0.0012     +7.2
+  6      mask-F1F2 6.80M     21.8      0.0007     +0.9
+  6      mask-F1F2 3.40M     19.7      0.0004     -2.9
+  6      ema-rnd   13.60M    3.9       0.0025     -0.4
+  6      ema-rnd   6.80M     14.0      0.0019     -0.4
+  6      ema-rnd   3.40M     16.3      0.0014     -0.6
+  7      off       13.60M    5.1       0.0000     +3.1
+  7      off       6.80M     21.9      0.0000     +2.7
+  7      off       3.40M     26.8      0.0000     +5.1
+  7      ema       13.60M    33.6      0.0025     +4.5
+  7      ema       6.80M     12.7      0.0016     +0.3
+  7      ema       3.40M     27.7      0.0013     -4.6
+  7      mask-F1F2 13.60M    6.2       0.0014     +5.9
+  7      mask-F1F2 6.80M     8.2       0.0009     -0.4
+  7      mask-F1F2 3.40M     11.6      0.0005     +3.1
+  7      ema-rnd   13.60M    23.5      0.0023     +0.1
+  7      ema-rnd   6.80M     23.5      0.0017     -0.5
+  7      ema-rnd   3.40M     20.8      0.0013     -0.6
+  8      off       13.60M    17.2      0.0000     -1.5
+  8      off       6.80M     15.0      0.0000     -1.6
+  8      off       3.40M     11.4      0.0000     -4.4
+  8      ema       13.60M    9.3       0.0029     +14.9
+  8      ema       6.80M     16.1      0.0020     +4.4
+  8      ema       3.40M     21.8      0.0014     +3.1
+  8      mask-F1F2 13.60M    5.1       0.0011     +5.5
+  8      mask-F1F2 6.80M     5.1       0.0007     +2.9
+  8      mask-F1F2 3.40M     11.7      0.0005     +6.1
+  8      ema-rnd   13.60M    37.2      0.0026     -0.2
+  8      ema-rnd   6.80M     37.0      0.0018     +0.5
+  8      ema-rnd   3.40M     44.8      0.0013     +1.6
+
+  budget    trials    off              ema              ema-rnd          excess (ema - rnd)
+  3.40M     1214      14.4 +/- 3.5     34.2 +/- 8.0     21.2 +/- 4.3     +13.0 +/- 12.3
+  6.80M     2428      12.9 +/- 2.6     33.6 +/- 9.5     17.3 +/- 4.0     +16.3 +/- 13.5
+  13.60M    4857      12.7 +/- 3.3     39.0 +/- 6.1     16.5 +/- 3.9     +22.5 +/- 10.0
+
+  table divergence  0.0013 -> 0.0019 -> 0.0029 (1x, 2x, 4x)
+
+  budget    aligned (F1)     common-mode      outside group    gain (1.0 = no structure)
+  3.40M     0.00119 +/- 0.00025 0.00040 +/- 0.00009 0.00159 +/- 0.00005 2.74 +/- 0.56
+  6.80M     0.00231 +/- 0.00036 0.00044 +/- 0.00010 0.00235 +/- 0.00009 3.58 +/- 0.51
+  13.60M    0.00421 +/- 0.00052 0.00052 +/- 0.00010 0.00344 +/- 0.00011 4.57 +/- 0.55
+  excess grew       +13.0 -> +22.5 Hz over a 4x span, ratio 1.72
+  implied exponent  0.39  (0.5 is sqrt(t), 1.0 linear, 0.0 saturated)
+  to reach 236 Hz   396x these trials at this exponent
+
+  COMPUTE-LIMITED -- the excess is still growing at 1.72 over a 4x span
+  against the 2.0 that sqrt(t) predicts. The architecture is not the
+  binding constraint at two words, and a longer run is the cheapest
+  thing left. Kornfeld's compartments are not refused, but they are not
+  yet needed.

@@ -1,0 +1,115 @@
+experiment: ctxscale
+  instrument        ctxscale   trial seed 0000000001357486   19428 trials at the LONGEST budget
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  question          is the learned bias still GROWING with trials, or has
+                    it found its asymptote? That decides whether 236 Hz is
+                    a matter of compute or of architecture.
+  the gate          excess = dF1(ema) - dF1(ema-rnd), pooled per budget.
+                    ratio 4x/1x  > 1.7 compute-limited (sqrt(t) gives 2.0)
+                                 < 1.3 saturated
+                                 else  inconclusive, and it says so.
+
+  seed   arm       budget    dF1 (Hz)  table div  change
+  0      off       54.40M    15.5      0.0000     -2.4
+  0      off       27.20M    20.4      0.0000     -1.8
+  0      off       13.60M    21.2      0.0000     +3.6
+  0      ema       54.40M    148.8     0.0693     +20.3
+  0      ema       27.20M    144.1     0.0596     +17.6
+  0      ema       13.60M    110.7     0.0465     +20.4
+  0      ema-rnd   54.40M    5.2       0.0913     +0.2
+  0      ema-rnd   27.20M    8.1       0.0692     +0.3
+  0      ema-rnd   13.60M    38.8      0.0488     -0.8
+  1      off       54.40M    9.6       0.0000     -2.9
+  1      off       27.20M    15.4      0.0000     -0.5
+  1      off       13.60M    22.0      0.0000     +9.1
+  1      ema       54.40M    100.1     0.0654     -11.0
+  1      ema       27.20M    94.4      0.0589     -21.1
+  1      ema       13.60M    95.2      0.0426     -8.0
+  1      ema-rnd   54.40M    9.5       0.0959     -0.1
+  1      ema-rnd   27.20M    12.9      0.0678     +0.2
+  1      ema-rnd   13.60M    10.5      0.0509     +0.4
+  2      off       54.40M    14.0      0.0000     -4.6
+  2      off       27.20M    22.1      0.0000     -5.4
+  2      off       13.60M    32.1      0.0000     +1.7
+  2      ema       54.40M    159.1     0.0859     +12.7
+  2      ema       27.20M    132.5     0.0448     +12.7
+  2      ema       13.60M    100.9     0.0356     +13.8
+  2      ema-rnd   54.40M    49.9      0.0997     +0.2
+  2      ema-rnd   27.20M    55.3      0.0686     +0.1
+  2      ema-rnd   13.60M    38.0      0.0467     -0.2
+  3      off       54.40M    35.8      0.0000     -12.4
+  3      off       27.20M    1.7       0.0000     -2.1
+  3      off       13.60M    11.7      0.0000     +2.5
+  3      ema       54.40M    159.9     0.0705     -42.1
+  3      ema       27.20M    161.9     0.0624     +3.0
+  3      ema       13.60M    138.7     0.0512     +13.1
+  3      ema-rnd   54.40M    47.1      0.1041     +0.1
+  3      ema-rnd   27.20M    20.8      0.0711     +0.1
+  3      ema-rnd   13.60M    4.7       0.0526     +0.4
+  4      off       54.40M    10.2      0.0000     -4.5
+  4      off       27.20M    19.5      0.0000     -5.6
+  4      off       13.60M    28.1      0.0000     -1.3
+  4      ema       54.40M    122.5     0.0640     -33.6
+  4      ema       27.20M    135.0     0.0498     -15.3
+  4      ema       13.60M    135.8     0.0407     +9.2
+  4      ema-rnd   54.40M    52.9      0.0945     -0.0
+  4      ema-rnd   27.20M    46.0      0.0647     +0.1
+  4      ema-rnd   13.60M    16.0      0.0470     +0.1
+  5      off       54.40M    5.6       0.0000     -1.8
+  5      off       27.20M    16.0      0.0000     +2.4
+  5      off       13.60M    23.4      0.0000     +9.2
+  5      ema       54.40M    135.2     0.0838     +10.4
+  5      ema       27.20M    156.3     0.0646     +13.0
+  5      ema       13.60M    139.2     0.0529     +20.2
+  5      ema-rnd   54.40M    67.5      0.1187     +0.0
+  5      ema-rnd   27.20M    61.4      0.0768     +0.3
+  5      ema-rnd   13.60M    58.2      0.0593     +0.1
+  6      off       54.40M    30.8      0.0000     -2.6
+  6      off       27.20M    47.9      0.0000     +3.4
+  6      off       13.60M    35.9      0.0000     -1.8
+  6      ema       54.40M    165.9     0.0597     +21.6
+  6      ema       27.20M    172.0     0.0489     +13.8
+  6      ema       13.60M    154.6     0.0380     +12.6
+  6      ema-rnd   54.40M    7.9       0.1008     +0.2
+  6      ema-rnd   27.20M    4.1       0.0707     +0.3
+  6      ema-rnd   13.60M    13.0      0.0490     -0.3
+  7      off       54.40M    1.6       0.0000     -7.3
+  7      off       27.20M    21.0      0.0000     -8.0
+  7      off       13.60M    26.3      0.0000     -8.2
+  7      ema       54.40M    127.4     0.0682     -16.1
+  7      ema       27.20M    149.3     0.0575     +20.6
+  7      ema       13.60M    117.3     0.0478     +27.1
+  7      ema-rnd   54.40M    14.2      0.1016     -0.0
+  7      ema-rnd   27.20M    20.2      0.0710     -0.2
+  7      ema-rnd   13.60M    52.7      0.0517     -0.5
+  8      off       54.40M    9.6       0.0000     +3.4
+  8      off       27.20M    18.7      0.0000     +5.0
+  8      off       13.60M    32.7      0.0000     +2.1
+  8      ema       54.40M    118.0     0.0707     -22.2
+  8      ema       27.20M    127.5     0.0626     +22.1
+  8      ema       13.60M    80.4      0.0511     +17.0
+  8      ema-rnd   54.40M    48.6      0.0940     +0.2
+  8      ema-rnd   27.20M    41.0      0.0745     +0.1
+  8      ema-rnd   13.60M    27.8      0.0537     +0.1
+
+  budget    trials    off              ema              ema-rnd          excess (ema - rnd)
+  13.60M    4857      25.9 +/- 2.5     119.2 +/- 8.2    28.9 +/- 6.4     +90.3 +/- 14.6
+  27.20M    9714      20.3 +/- 4.0     141.4 +/- 7.6    30.0 +/- 7.1     +111.5 +/- 14.7
+  54.40M    19428     14.7 +/- 3.8     137.4 +/- 7.5    33.7 +/- 8.0     +103.8 +/- 15.5
+
+  table divergence  0.0452 -> 0.0566 -> 0.0708 (1x, 2x, 4x)
+
+  budget    aligned (F1)     common-mode      outside group    gain (1.0 = no structure)
+  13.60M    0.05261 +/- 0.00434 0.01426 +/- 0.00258 0.05444 +/- 0.00224 3.57 +/- 0.18
+  27.20M    0.07017 +/- 0.00600 0.01456 +/- 0.00298 0.06840 +/- 0.00218 3.82 +/- 0.28
+  54.40M    0.08468 +/- 0.00586 0.01951 +/- 0.00458 0.08577 +/- 0.00328 3.76 +/- 0.33
+  excess grew       +90.3 -> +103.8 Hz over a 4x span, ratio 1.15
+  implied exponent  0.10  (0.5 is sqrt(t), 1.0 linear, 0.0 saturated)
+  to reach 236 Hz   3704x these trials at this exponent
+
+  SATURATED -- the excess grew only 1.15 over a 4x span, so the bias has
+  found its asymptote at ~103.8 Hz against the 236 Hz the route can carry.
+  More trials buy nothing and the gap is MECHANISM. The work goes to
+  Kornfeld's compartments: context on spines, variability on shafts,
+  gating rather than adding.

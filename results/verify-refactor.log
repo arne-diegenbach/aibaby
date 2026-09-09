@@ -1,0 +1,857 @@
+verify: every fast experiment at its own minimum length, against the
+        outcome it is supposed to have.
+
+  --- determinism and the pinned hash ---
+  ticks             120000
+  checkpoints       120
+  final hash A      ad96f882becbee92
+  final hash B      ad96f882becbee92
+
+  G1 PASS — same genome and same inputs give a bit-identical brain.
+  hash              ad96f882becbee92  as recorded
+
+  --- audio, 120000 ticks ---
+experiment: audio
+  mel energy        silence 0.0539   vowel 0.1840
+  auditory rate     silence 4.20 Hz -> vowel 5.84 Hz -> silence 2.23 Hz
+
+  audio path PASS — sound reaches B2 and silence does not.
+  [audio took 3.1 s]
+
+  --- vision, 120000 ticks ---
+experiment: vision
+  retina            88 cells -> 176 ON/OFF responses
+  mean |response|   empty 0.0059   object 0.1945
+  vision rate       empty 2.40 Hz -> object 4.65 Hz -> empty 2.43 Hz
+
+  vision path PASS — an object reaches B3 and an empty field does not.
+  [vision took 2.9 s]
+
+  --- m2, 120000 ticks ---
+experiment: m2
+  session           120.0 s of simulated life x 5 creatures
+  chance            0.500 — trials are balanced present/absent
+  seed B1 held-out B1 pattern  B1 shuffled B3 (path)   B1 spikes/tick present vs absent
+  0    1.000       0.833       0.333       1.000       2.969 vs 2.630
+  1    1.000       0.600       0.367       1.000       2.937 vs 2.583
+  2    1.000       0.833       0.433       1.000       2.925 vs 2.619
+  3    1.000       0.833       0.533       1.000       2.930 vs 2.571
+  4    1.000       0.700       0.333       1.000       3.002 vs 2.637
+
+  mean held-out accuracy
+    B1 association       1.000   <- the milestone
+    B1, rate divided out 0.760
+    B1, labels shuffled  0.400   (the control: must sit at chance)
+    B3 vision            1.000   (the input module; plumbing, not the claim)
+    at or above 0.75     5 of 5 creatures
+
+  M2 PASS — a held-out classifier reads object-present from B1 at 100%
+  (chance 50%, shuffled control 40%). With each trial's overall firing
+  rate divided out it still reads 76%, so most of what B1 carries about
+  the object is how hard it is working and some of it is where.
+  [m2 took 15.1 s]
+
+  --- babble, 120000 ticks ---
+experiment: babble
+  motor frames      12000
+  voiced            51.7% of frames
+  above amp floor   49.5% of frames (floor 0.45)
+  vocalisations     338  (169.0 /min)
+  mean amplitude    0.487
+  mean F1 group     0.508
+  vocal module rate 5.37 Hz
+  hears itself at   0.1116 mean peak (self_gain 0.50)
+  auditory rate     3.19 Hz (target 2.55) — driven by its own voice
+  produced formants F1 638 +/- 25 Hz, F2 1620 +/- 51 Hz over
+                    4496 voiced frames — the spread is what any
+                    milestone downstream has to hear
+  exploration       1.000 min, 1.000 mean, 1.000 max (1.0 = plain noise_amp)
+
+  babble PASS — vocal duty cycle 0.50 (want 0.10 .. 0.85).
+  [babble took 3.1 s]
+
+  --- calibrate, 120000 ticks ---
+experiment: calibrate
+  free-running rates, measured with ip_rate and scaling_rate at 0.
+  A target that does not match is a module whose every later
+  measurement includes intrinsic plasticity fighting the genome.
+
+  module       free-running       target   verdict
+  central           6.60 Hz      6.81 Hz   -0.21  ok
+  auditory          2.52 Hz      2.55 Hz   -0.03  ok
+  vision            2.53 Hz      2.54 Hz   -0.01  ok
+  somato            4.45 Hz      4.56 Hz   -0.11  ok
+  vocal             4.12 Hz      5.00 Hz   -0.88  by design — holds the duty cycle down
+  expression        7.24 Hz      7.22 Hz   +0.02  ok
+
+  amplitude floor  0.45 against an operating point of 0.50 (5.00 / 10.0 Hz)
+                   margin +0.05 — want at least 0.10  THIN, and structurally so
+                   a floor below a pinned operating point is a creature that is
+                   always above it. Not fixable by retuning — see the README.
+
+  in-degree caps across the 9 seeds g2 and m3 sweep
+
+  calibrate PASS — 0 modules off target, 0 seeds wiring badly. Amplitude floor thin (structural).
+  [calibrate took 3.3 s]
+
+  --- footprint, 120000 ticks ---
+experiment: footprint
+  arena             113980928 B  (111309.5 KB, 108.70 MB)
+    of which Network 108.69 MB (100.0%)
+    informational — this project has no memory budget
+
+  module       n_max   live   cap   out    in  bind headroom grows
+  central       4096    400   512   151    49   151     3.4x yes
+  auditory      1024    192   256    70    36    70     3.7x no
+  vision        2048    256   256    48    40    48     5.3x no
+  somato         512     64    48    27     7    27     1.8x no
+  vocal         1024    126   512    16    85    85     6.0x no
+  expression     512     64    48     5    29    29     1.7x no
+
+  synapse pool      3457024 slots, 33248 wired (0.96%)
+  pool if every cap matched its binding degree: 904192 (3.8x smaller)
+  neuron slots on modules that CANNOT grow: 4418 of 9216
+    growable() is kAssociation only, so that headroom is unreachable
+    by construction. Reported because a module at its cap cannot grow
+    and one that can never reach it is a different situation — not
+    because the slots are worth reclaiming. n_max is also the growth
+    cap (below_cap is live() < capacity) and re-rolls the wiring.
+
+  dropped           0 synapses, 0 reverse entries
+  footprint PASS — nothing dropped; the built brain is the genome's.
+  [footprint took 0.1 s]
+
+  --- pcprobe, 120000 ticks ---
+experiment: pcprobe
+  session           120.0 s, caregiver speaks 30% of it, asleep 0%
+  predict_gain      0.00   (off — this run measures the model, not the effect)
+  frames scored     7498
+
+  Is the prediction worth subtracting?
+                                all     loud    quiet
+    R^2 vs channel mean       0.631    0.481   -2.502
+    R^2 of persistence        0.782    0.737    0.120   <- the baseline that matters
+    corr(pred, prev frame)    0.659    0.663    0.498
+    sd(pred)/sd(mel)          0.834    0.977    0.816
+    spectral shape corr       0.975
+    R^2 first half / second    0.609 -> 0.646   (persistence 0.766 -> 0.888)
+
+    R^2 at or below zero means the forward model does no better than
+    predicting each channel's own average. Beating that is necessary and
+    nowhere near sufficient: persistence — "the next frame looks like this
+    one" — costs nothing and scores well on a spectrum that changes over
+    a syllable. The model has to beat *that* row to be a model, and if
+    corr(pred, prev frame) is near 1 it has simply learned to echo.
+    "quiet" is the reafference test: the only sound then is the
+    creature's own voice, driven by the very module the model reads.
+
+  What the subtraction costs
+    mean channel energy      0.1195 -> 0.1195  (100% kept)
+    cells rectified away       0.0%
+    ...at gain 1.0            38.3%   (what full subtraction would clip)
+    B2 mean rate               4.19 Hz
+
+  Ceiling: the best a linear readout could do (7498 rows, held out)
+    critic's 32 bins, fitted offline     -0.168
+    every central neuron                 -0.236
+    previous frame alone                  0.900
+    central + previous frame              0.877
+    central, rows shuffled               -0.140   (control: must be <= 0)
+    central -> current frame             -0.240   (control: the frame it is hearing NOW)
+    B2 -> current frame                   0.530
+    B2 -> next frame                      0.472
+    target from a copy of itself          1.000   (self-test: must be ~1)
+
+  the same, with the target decorrelated (13 MFCCs, DCT of the log-mel)
+    MFCC from a copy of itself            1.000   (self-test: must be ~1)
+    central -> current frame             -0.223
+    central -> next frame                -0.218
+    previous frame alone                  0.895
+
+    Read down the first two rows for the pooling: if per-neuron beats
+    32 bins the critic is throwing the signal away before it fits, and
+    kCriticBins is the repair. Read the last two against "previous frame
+    alone" for the harder question — whether the association module knows
+    anything about the next sound that the last sound does not already say.
+  [pcprobe took 4.0 s]
+
+  --- dwprobe, 120000 ticks ---
+experiment: dwprobe
+
+########## praise only (what a caregiver actually does) — central->vocal (NON-PARTICIPANT) ##########
+  instrument        dwprobe   trial seed 00000000000a11ce   3 creatures per arm
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  session           120.0 s per arm x 3 creatures, one object throughout
+  the question      does a session of ball-teaching write a DIFFERENT
+                    weight change onto central->vocal than a session of
+                    cube-teaching? If not, no training can separate them.
+
+  seed  mean|dw|    corr(A,A')  corr(A,B)   verdict
+  0     3.929e-02   0.397       0.366       same either way
+  1     2.880e-02   0.315       0.272       same either way
+  2     3.284e-02   0.370       0.339       same either way
+
+  mean |dw| per synapse        3.364e-02
+  corr(same object, redrawn)   0.361   <- the reproducibility ceiling
+  corr(cube vs ball)           0.326
+
+    Read the second against the first, never against 1.0. If they are
+    equal, showing a cube and showing a ball write the same weight change
+    and R-STDP cannot build a conditional mapping on this tract. If the
+    object correlation is clearly lower, the rule does differentiate and
+    G3's failure is downstream of it.
+
+########## praise only (what a caregiver actually does) — vision->vocal (participates) ##########
+  instrument        dwprobe   trial seed 00000000000a11ce   3 creatures per arm
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  session           120.0 s per arm x 3 creatures, one object throughout
+  the question      does a session of ball-teaching write a DIFFERENT
+                    weight change onto vision->vocal  than a session of
+                    cube-teaching? If not, no training can separate them.
+
+  seed  mean|dw|    corr(A,A')  corr(A,B)   verdict
+  0     4.169e-02   0.558       0.507       differentiates
+  1     3.014e-02   0.410       0.492       same either way
+  2     3.109e-02   0.407       0.420       same either way
+
+  mean |dw| per synapse        3.431e-02
+  corr(same object, redrawn)   0.458   <- the reproducibility ceiling
+  corr(cube vs ball)           0.473
+
+    Read the second against the first, never against 1.0. If they are
+    equal, showing a cube and showing a ball write the same weight change
+    and R-STDP cannot build a conditional mapping on this tract. If the
+    object correlation is clearly lower, the rule does differentiate and
+    G3's failure is downstream of it.
+
+########## praise and scold balanced (mean reward zero) — central->vocal (NON-PARTICIPANT) ##########
+  instrument        dwprobe   trial seed 00000000000a11ce   3 creatures per arm
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  session           120.0 s per arm x 3 creatures, one object throughout
+  the question      does a session of ball-teaching write a DIFFERENT
+                    weight change onto central->vocal than a session of
+                    cube-teaching? If not, no training can separate them.
+
+  seed  mean|dw|    corr(A,A')  corr(A,B)   verdict
+  0     3.133e-02   0.444       0.379       differentiates
+  1     2.354e-02   0.386       0.339       same either way
+  2     2.730e-02   0.383       0.335       same either way
+
+  mean |dw| per synapse        2.739e-02
+  corr(same object, redrawn)   0.405   <- the reproducibility ceiling
+  corr(cube vs ball)           0.351
+
+    Read the second against the first, never against 1.0. If they are
+    equal, showing a cube and showing a ball write the same weight change
+    and R-STDP cannot build a conditional mapping on this tract. If the
+    object correlation is clearly lower, the rule does differentiate and
+    G3's failure is downstream of it.
+
+########## praise and scold balanced (mean reward zero) — vision->vocal (participates) ##########
+  instrument        dwprobe   trial seed 00000000000a11ce   3 creatures per arm
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  session           120.0 s per arm x 3 creatures, one object throughout
+  the question      does a session of ball-teaching write a DIFFERENT
+                    weight change onto vision->vocal  than a session of
+                    cube-teaching? If not, no training can separate them.
+
+  seed  mean|dw|    corr(A,A')  corr(A,B)   verdict
+  0     3.355e-02   0.491       0.448       same either way
+  1     2.521e-02   0.448       0.504       same either way
+  2     2.538e-02   0.369       0.379       same either way
+
+  mean |dw| per synapse        2.805e-02
+  corr(same object, redrawn)   0.436   <- the reproducibility ceiling
+  corr(cube vs ball)           0.444
+
+    Read the second against the first, never against 1.0. If they are
+    equal, showing a cube and showing a ball write the same weight change
+    and R-STDP cannot build a conditional mapping on this tract. If the
+    object correlation is clearly lower, the rule does differentiate and
+    G3's failure is downstream of it.
+
+########## no reward at all (the control: dw should be nil) — central->vocal (NON-PARTICIPANT) ##########
+  instrument        dwprobe   trial seed 00000000000a11ce   3 creatures per arm
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  session           120.0 s per arm x 3 creatures, one object throughout
+  the question      does a session of ball-teaching write a DIFFERENT
+                    weight change onto central->vocal than a session of
+                    cube-teaching? If not, no training can separate them.
+
+  seed  mean|dw|    corr(A,A')  corr(A,B)   verdict
+  0     3.274e-02   0.387       0.348       same either way
+  1     2.277e-02   0.342       0.379       same either way
+  2     2.821e-02   0.372       0.375       same either way
+
+  mean |dw| per synapse        2.790e-02
+  corr(same object, redrawn)   0.367   <- the reproducibility ceiling
+  corr(cube vs ball)           0.367
+
+    Read the second against the first, never against 1.0. If they are
+    equal, showing a cube and showing a ball write the same weight change
+    and R-STDP cannot build a conditional mapping on this tract. If the
+    object correlation is clearly lower, the rule does differentiate and
+    G3's failure is downstream of it.
+
+########## no reward at all (the control: dw should be nil) — vision->vocal (participates) ##########
+  instrument        dwprobe   trial seed 00000000000a11ce   3 creatures per arm
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  session           120.0 s per arm x 3 creatures, one object throughout
+  the question      does a session of ball-teaching write a DIFFERENT
+                    weight change onto vision->vocal  than a session of
+                    cube-teaching? If not, no training can separate them.
+
+  seed  mean|dw|    corr(A,A')  corr(A,B)   verdict
+  0     3.493e-02   0.535       0.395       differentiates
+  1     2.376e-02   0.426       0.536       same either way
+  2     2.579e-02   0.382       0.367       same either way
+
+  mean |dw| per synapse        2.816e-02
+  corr(same object, redrawn)   0.448   <- the reproducibility ceiling
+  corr(cube vs ball)           0.433
+
+    Read the second against the first, never against 1.0. If they are
+    equal, showing a cube and showing a ball write the same weight change
+    and R-STDP cannot build a conditional mapping on this tract. If the
+    object correlation is clearly lower, the rule does differentiate and
+    G3's failure is downstream of it.
+  [dwprobe took 176.2 s]
+
+  --- v1probe, 120000 ticks ---
+experiment: v1probe
+  genome has no visual cortex — nothing to probe
+  [v1probe took 0.1 s]
+
+  --- m3probe, 200000 ticks ---
+experiment: m3probe
+  each trial 2000 ms, first 500 discarded; no learning, no reward
+  instrument        m3probe   trial seed 000000000135367a   100 trials per sweep
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  '32 space' and '8x4 space+t' are 32 features each — the same budget
+  spent on where the spikes were, or on where and when. 'shuffled'
+  controls the space+t column.
+
+  a cube or a ball, in silence — 100 trials
+    module       per-neuron  interleaved rate EMA    32 space    8x4 space+t rate only   shuffled    centroid    spikes/trial
+    central      0.680       0.740       0.700       0.640       0.500       0.500       0.560       0.620       4324.8
+    auditory     0.480       0.480       0.440       0.520       0.400       0.500       0.540       0.500       901.6
+    vision       0.980       0.900       0.920       0.720       0.840       0.500       0.580       0.540       1908.0
+    somato       0.580       0.600       0.620       0.520       0.460       0.420       0.360       0.480       409.1
+    vocal        0.540       0.620       0.520       0.520       0.500       0.500       0.520       0.400       1032.0
+    expression   0.480       0.540       0.460       0.440       0.540       0.480       0.460       0.500       707.4
+    voice        0.460         <- the nine motor groups, loudness and voicing
+      centroids  0.460       <- the 9 group CENTROIDS alone: what the articulators get
+      activities 0.480       <- the 9 group RATES alone: what they do NOT get
+
+    per-knob d' on the larynx's own readings — 'reaches' is what
+    this number becomes in the air, '-' is computed and discarded
+    reading      reaches        d'        null (32 perm)
+    centroid 0   f0                -0.151 -0.059
+    centroid 1   -                 -0.081 +0.065   (discarded)
+    centroid 2   f1                -0.173 -0.089
+    centroid 3   f2                -0.198 -0.122
+    centroid 4   f3                -0.192 -0.069
+    centroid 5   bw1               -0.199 -0.075
+    centroid 6   bw2               -0.136 +0.143
+    centroid 7   bw3               -0.162 +0.055
+    centroid 8   -                 -0.091 +0.144   (discarded)
+    activity 0   -                 -0.200 +0.058   (discarded)
+    activity 1   voicing gate      -0.195 -0.105
+    activity 2   -                 -0.191 +0.113   (discarded)
+    activity 3   -                 -0.174 -0.005   (discarded)
+    activity 4   -                 -0.187 +0.077   (discarded)
+    activity 5   -                 -0.166 -0.097   (discarded)
+    activity 6   -                 -0.180 +0.114   (discarded)
+    activity 7   -                 -0.123 -0.029   (discarded)
+    activity 8   loudness          -0.199 -0.112
+    mean d'^2    (the 9 heard)     -0.032  vs -0.026 discarded
+    If the object's d'^2 sits in the discarded rows and the word's
+    sits in the heard ones, the larynx is the loss.
+
+    oracle reordering within each slice — 50 held-out trials
+    ordering       mean d'^2   per-group d'
+    as wired            +0.005 -0.27 +0.46 -0.18 +0.12 -0.24 -0.24 -0.22 +0.41 -0.28 
+    oracle              +0.630 +0.40 +0.16 +0.66 +0.54 +0.58 +0.77 +0.56 +1.59 +0.99 
+    oracle-shuf         +0.030 -0.24 -0.27 -0.21 +0.08 -0.23 +0.25 -0.26 +0.76 -0.28 
+    oracle >> as-wired with oracle-shuf flat = the object is IN the
+    slice and index order hides it. All three flat = it is not there.
+
+  one of two words, to an empty field — 100 trials
+    module       per-neuron  interleaved rate EMA    32 space    8x4 space+t rate only   shuffled    centroid    spikes/trial
+    central      0.760       0.800       0.680       0.400       0.520       0.480       0.460       0.540       3864.3
+    auditory     1.000       1.000       1.000       1.000       1.000       0.500       0.500       0.560       931.6
+    vision       0.480       0.560       0.540       0.560       0.520       0.580       0.580       0.540       754.7
+    somato       0.440       0.560       0.500       0.360       0.520       0.480       0.580       0.460       419.2
+    vocal        0.900       0.740       0.700       0.640       0.600       0.520       0.480       0.420       1007.4
+    expression   0.540       0.540       0.480       0.560       0.540       0.640       0.580       0.680       669.9
+    voice        0.920         <- the nine motor groups, loudness and voicing
+      centroids  0.900       <- the 9 group CENTROIDS alone: what the articulators get
+      activities 0.620       <- the 9 group RATES alone: what they do NOT get
+
+    per-knob d' on the larynx's own readings — 'reaches' is what
+    this number becomes in the air, '-' is computed and discarded
+    reading      reaches        d'        null (32 perm)
+    centroid 0   f0                +0.657 +0.026
+    centroid 1   -                 +1.398 +0.076   (discarded)
+    centroid 2   f1                +0.904 -0.046
+    centroid 3   f2                +0.149 -0.117
+    centroid 4   f3                +0.870 -0.040
+    centroid 5   bw1               +1.243 +0.090
+    centroid 6   bw2               -0.193 -0.130
+    centroid 7   bw3               +1.158 -0.049
+    centroid 8   -                 +2.859 -0.040   (discarded)
+    activity 0   -                 -0.190 +0.085   (discarded)
+    activity 1   voicing gate      +0.208 +0.071
+    activity 2   -                 -0.182 -0.104   (discarded)
+    activity 3   -                 -0.121 -0.110   (discarded)
+    activity 4   -                 -0.192 +0.087   (discarded)
+    activity 5   -                 -0.190 +0.127   (discarded)
+    activity 6   -                 +0.073 +0.097   (discarded)
+    activity 7   -                 +0.285 +0.064   (discarded)
+    activity 8   loudness          +0.497 -0.113
+    mean d'^2    (the 9 heard)     +0.574  vs +1.118 discarded
+    If the object's d'^2 sits in the discarded rows and the word's
+    sits in the heard ones, the larynx is the loss.
+
+    oracle reordering within each slice — 50 held-out trials
+    ordering       mean d'^2   per-group d'
+    as wired            +0.198 -0.18 -0.27 -0.28 +0.54 -0.27 +0.42 +0.10 +0.51 +1.14 
+    oracle              +0.809 +0.70 +0.74 +0.98 +0.90 +0.77 +1.59 +0.58 +0.60 +0.82 
+    oracle-shuf         +0.095 +0.12 -0.28 +0.38 -0.22 +0.39 +0.91 -0.16 -0.28 -0.22 
+    oracle >> as-wired with oracle-shuf flat = the object is IN the
+    slice and index order hides it. All three flat = it is not there.
+
+  m3probe is a microscope, not a criterion — both delivery controls
+  are lit (0.980, 1.000), so the rows above are about the creature.
+  [m3probe took 10.9 s]
+
+  --- shapeprobe, 200000 ticks ---
+experiment: shapeprobe
+  instrument        shapeprobe   trial seed 0000000001357d57   100 frames per bank
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  no network and no ticks: signal processing on the same frames
+  m3probe renders, to decide whether a new visual sense is worth
+  building before one is built.
+
+  every bank encoded into the same 256-neuron population, then pooled
+  by a random sparse binary projection onto 126 units.
+
+  bank               chans  population  d=0.15      d=0.40      shuffled    coherence   delta PR
+  WORD (control)     24     1.000       1.000       1.000       0.420       0.207       181.8
+  retina (shipped)   176    0.920       0.680       0.560       0.540       0.157       34.7
+  retina, 12 coarse  12     0.820       0.740       0.580       0.540       0.057       29.7
+  radial profile     12     0.920       0.980       0.940       0.420       0.050       42.7
+  angular spectrum   8      0.960       0.760       0.740       0.460       0.361       79.4
+  radial+angular     20     0.980       0.860       0.760       0.460       0.151       55.9
+
+  best candidate: radial profile at 0.940 pooled, retina 0.560, word 1.000.
+  the channel-count control (retina at 12 coarse channels) pools at
+  0.580. The candidate has to beat THAT, not just the 176-channel
+  retina, or the finding is 'use fewer channels'.
+
+  shapeprobe SAYS BUILD — a coherent visual front-end is worth building.
+  This gates a build; it is not a result about the creature. It
+  compares feature banks rather than what a brain makes of them, and
+  it lets the candidates segment the frame, which the retina cannot.
+  Both favour the candidates, so a REFUSE is decisive and a BUILD is
+  a licence to measure.
+  [shapeprobe took 0.0 s]
+
+  --- projprobe, 200000 ticks ---
+experiment: projprobe
+  each trial 2000 ms, first 500 discarded; no learning, no reward
+  a random sparse binary projection onto 126 units — the linear part
+  of a tract, with no threshold and nothing else driving the target.
+  instrument        projprobe   trial seed 0000000001357bc2   100 trials per arm
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+
+    arm                    at source   d=0.03      d=0.15      d=0.40      shuffled
+    object from central    0.780       0.580       0.600       0.540       0.500
+    object from vision     0.980       0.980       0.940       0.740       0.500
+    word from auditory     1.000       1.000       1.000       0.720       0.400
+
+    arm                    coherence   d=0.15      centred     E-I         flipped     flip-shuf
+    object from central    0.060       0.600       0.680       0.740       0.760       0.500
+    object from vision     0.065       0.940       0.980       0.980       0.940       1.000
+    word from auditory     0.130       1.000       1.000       1.000       1.000       1.000
+
+    'at source' is the same number m3probe prints. Read each row across:
+    the drop from source to projected is what a tract of that density costs
+    this code, before the target neuron has done anything at all.
+
+    The word row is the control and has to hold up — auditory->vocal is a
+    real tract at density 0.15 and vocal reads the word at 0.960. If the word
+    falls apart here too, the projection is a bad model of a tract and no
+    other row on this table means anything.
+  [projprobe took 10.7 s]
+
+  --- gazeprobe, 200000 ticks ---
+experiment: gazeprobe
+  toy scatter is added to m3_toy's own +/-0.02, so the 0.00 row is
+  the protocol every other experiment in this project uses.
+  each scatter is run three ways: fovea fixed at the frame centre,
+  the DNA v31 reflex controller, and an ORACLE fovea placed exactly
+  on the toy. The reflex re-aims every frame at gain 0.70.
+  instrument        gazeprobe   trial seed 0000000001354de7   100 trials per scatter arm
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+
+    scatter   fovea    vision     central    shuffled   gaze err (px)    re-aims
+    0.00      fixed    0.900      0.800      0.460      1.0 (toy at 1.0) 0
+    0.00      reflex   1.000      0.860      0.480      0.9 (toy at 1.0) 31
+    0.00      oracle   1.000      0.940      0.500      0.0 (toy at 1.0) 0
+    0.00      servo    1.000      0.920      0.480      0.5 (toy at 1.0) 425
+    0.02      fixed    0.860      0.660      0.480      1.4 (toy at 1.4) 0
+    0.02      reflex   0.980      0.800      0.520      0.9 (toy at 1.4) 71
+    0.02      oracle   1.000      0.880      0.580      0.0 (toy at 1.4) 0
+    0.02      servo    1.000      0.780      0.420      0.5 (toy at 1.4) 457
+    0.05      fixed    0.560      0.580      0.580      2.6 (toy at 2.6) 0
+    0.05      reflex   0.860      0.720      0.440      1.2 (toy at 2.6) 131
+    0.05      oracle   1.000      0.900      0.480      0.0 (toy at 2.6) 0
+    0.05      servo    0.880      0.660      0.460      0.7 (toy at 2.6) 538
+    0.10      fixed    0.460      0.600      0.560      4.9 (toy at 4.9) 0
+    0.10      reflex   0.840      0.740      0.540      1.4 (toy at 4.9) 185
+    0.10      oracle   1.000      0.820      0.600      0.0 (toy at 4.9) 0
+    0.10      servo    0.720      0.740      0.500      1.1 (toy at 4.9) 673
+    0.25      fixed    0.500      0.440      0.560      12.1 (toy at 12.1) 0
+    0.25      reflex   0.820      0.760      0.520      2.0 (toy at 12.1) 285
+    0.25      oracle   0.980      0.880      0.500      0.0 (toy at 12.1) 0
+    0.25      servo    0.600      0.480      0.520      2.0 (toy at 12.1) 975
+
+  toy starts INSIDE the fovea (scatter >= 0.05, 2 rows)
+    fixed   vision 0.510, gaze 3.8 px
+    reflex  vision 0.850, gaze 1.3 px
+    servo   vision 0.800, gaze 0.9 px   <- the same controller on a motor
+    oracle  vision 1.000, gaze 0.0 px
+    the reflex recovers +0.340 of the +0.490 available — 69%
+    on a motor it recovers +0.290 — 59%
+
+  toy starts OUTSIDE the fovea (scatter >= 0.05, 1 rows)
+    fixed   vision 0.500, gaze 12.1 px
+    reflex  vision 0.820, gaze 2.0 px
+    servo   vision 0.600, gaze 2.0 px   <- the same controller on a motor
+    oracle  vision 0.980, gaze 0.0 px
+    the reflex recovers +0.320 of the +0.480 available — 67%
+    on a motor it recovers +0.100 — 21%
+
+  the eye port, at scatter 0.10 (toy 4.9 px out)
+    eye         vision    gaze err   host says  reports   held
+    reflex      0.840     1.4        1.4        0         0   <- the internal eye, for comparison
+    servo       0.720     1.1        1.1        0         0   <- ...and on the pessimistic motor
+    device      0.840     1.3        1.3        2000      0
+    doubled     0.900     1.3        2.6        0         0
+    dbl+servo   0.940     0.9        2.6        0         0
+    dropout     0.840     1.4        1.4        1000      599
+    no freeze   0.780     1.5        1.5        1000      0
+
+    applying the aim twice CONVERGES: the loop lands 1.3 px from the
+    toy while the host reports 2.6 px, because each end is doing half
+    the aiming and only one of them is being asked. Nothing above
+    fails; the telemetry, the journal and every gaze number are wrong.
+    on the pessimistic motor it costs 0.9 px against 1.1 px wired
+    correctly, i.e. nothing: slew 0.5 was already halving the loop, so
+    the doubling cancels it. No arm in this probe detects the mistake
+    from performance. The position disagreement is the only symptom,
+    which is why `mount` is an enum and not a comment.
+
+    a silent eye costs 0.0 px of command drift with the freeze on and
+    0.0 px with it off, because by the time the link drops the eye is
+    already on the toy and there is no error left to act on.
+    with the eye lost on the FIRST frame, before it ever gets there:
+    1.8 px held against 2.1 px open. That is the whole of it, and it
+    is bounded by construction rather than by the freeze — the loop is
+    proportional with no integrator, so a command is one gain-step off
+    a frozen belief and cannot wind up however long the device is gone.
+    The freeze buys that step and an explicit `held` counter. The
+    runaway it was built against needs a device that answers LATE, not
+    one that stops: that is the servo row, at 26 px.
+
+  ACQUISITION: where does the eye end up, per starting offset
+    the fovea spans +/-8 px; ring 1 +/-16 px; ring 2 +/-32 px
+    one toy, fixed size, eye released from the centre and given 40
+    frames to converge. The first version of this read the gaze after a
+    SINGLE frame and reported the eye blind at 2 px, which cannot be
+    true because the reflex works inside the fovea — the command goes
+    through the eye's queue and is not visible that soon.
+
+    toy at     eye ends   error      contrast   verdict
+    0.0        0.0        0.0        0.2015     acquired
+    2.0        1.4        0.6        0.2029     acquired
+    4.0        3.1        0.9        0.2019     acquired
+    6.0        5.9        0.1        0.2021     acquired
+    8.0        7.3        0.7        0.2028     acquired
+    12.0       11.4       0.6        0.2013     acquired
+    16.0       15.6       0.4        0.2025     acquired
+    24.0       21.8       2.2        0.2024     partial
+
+    empty field: eye drifts 0.0 px, contrast 0.0060, floor 0.0150  <- still, as it must be
+
+    The radius where this stops being 'acquired' is what a peripheral
+    channel would have to cover, and whether it stops by REFUSING or by
+    aiming short says whether the fix is the floor or the rings.
+  [gazeprobe took 155.0 s]
+
+  --- apicalprobe, 200000 ticks ---
+experiment: apicalprobe
+  instrument        apicalprobe   trial seed 00000000013580d5   100 trials
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  apical tracts in this genome:
+    none — this genome is a point-neuron creature, nothing to probe
+  [apicalprobe took 0.1 s]
+
+  --- oscprobe, 200000 ticks ---
+experiment: oscprobe
+  instrument        oscprobe   trial seed 0000000001352208   100 trials
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  oscillating modules:
+    none — this genome has no rhythm, nothing to probe
+  [oscprobe took 0.1 s]
+
+  --- audprobe, 240000 ticks ---
+experiment: audprobe
+  session           240.0 s x 5 creatures, two words, alternating, nothing in view
+  instrument        audprobe   trial seed 00000000013f2ade   100 trials per creature
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  the question      which word was just said, read off each module
+  chance            0.500 — trials are balanced
+
+  seed  B2 at 50 / 200 / 1200 ms central, same windows    cen corr  shuffled
+  0     0.96 1.00 1.00           0.48 0.70 0.98           1.000     0.380
+  1     0.94 1.00 1.00           0.46 0.62 1.00           0.980     0.300
+  2     0.92 1.00 1.00           0.46 0.70 0.94           1.000     0.460
+  3     0.96 1.00 1.00           0.42 0.74 1.00           1.000     0.440
+  4     0.82 1.00 1.00           0.48 0.66 0.98           1.000     0.660
+
+  window        50 ms   200 ms  1200 ms
+  B2            0.920    1.000    1.000
+  central       0.460    0.684    0.980
+
+  at 1200 ms:  B2 corr 1.000, shuffled 0.500 | central corr 0.996, shuffled 0.448
+
+    controls at chance.
+
+  audprobe: with nothing to look at, the word is legible in B2 at 100%
+  and in the association module at 100%. This is the auditory half of
+  the cross-modal task, which the cube-versus-ball cascade cannot see.
+  [audprobe took 32.3 s]
+
+  --- relayprobe, 240000 ticks ---
+experiment: relayprobe
+  this genome has no auditory -> relay -> central path.
+  Build one:  python3 tools/genome_add_relay.py dna/default.toml \
+                out.toml auditory central inhib=0.0 name=webbrelay
+  [relayprobe took 0.0 s]
+
+  --- tauprobe, 240000 ticks ---
+experiment: tauprobe
+  instrument        tauprobe   trial seed 0000000001352069   60000 ticks per arm
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  scaling central's tau_elig; vocal is the untouched control module
+  global tau_elig    2000 ms, cashed in every 10 ticks
+
+    scale      mean|e| central vs 1x      mean|e| vocal  vs 1x     
+    1          0.008645       1.00       0.006025       1.00      
+    2          0.013743       1.59       0.006023       1.00      
+    4          0.022866       2.64       0.006166       1.02      
+    8          0.038272       4.43       0.006133       1.02      
+
+  a leaky accumulator's steady state is proportional to its time
+  constant, so scaling tau_elig 8x must raise the trace on that module
+  and must leave the others where they were.
+
+  central 8x / 1x        4.43   (must be over 2.0 and rise at every step)
+  vocal   8x / 1x        1.02   (must stay inside 0.8-1.25: the scale is
+                         per module, and a global one would move this too)
+
+  PASS — the trace scales with the module's own time constant and
+  the other modules are untouched. Whether a longer window BUYS
+  anything is a separate question, and the answer on record is no:
+  eligibility distribution is one of the five refuted conditioning
+  classes.
+  [tauprobe took 6.5 s]
+
+  --- ipprobe, 240000 ticks ---
+experiment: ipprobe
+  instrument        ipprobe   trial seed 0000000001352656   60000 ticks per arm
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  sweeping auditory's ip_wake_scale; shipped value 1.00
+
+    ip       silence     speech      gap      
+    1.00     0.47        1.14        +141.1   
+    0.25     0.47        1.50        +219.4   
+    0.10     0.47        1.63        +247.3   
+    0.00     0.47        1.74        +269.9   
+
+  gap is what a mechanism reading presynaptic RATE would have to work
+  with: the module's spikes per tick during speech against silence.
+
+  shipped (1.00)         +141.1%
+  relaxed (0.10)         +247.3%   (must be at least 1.2x the shipped gap)
+  ablated (0.00)         +269.9%   (reported, not required. The
+                         [normalisation] note's collapse-at-zero is about
+                         central's SEPARABILITY, which is a different
+                         observable — a wide rate gap here is no evidence
+                         the ablated creature is a good one)
+
+  PASS — the regulator costs real dynamic range and relaxing it
+  returns some. Note what this does NOT say: the shipped gap is
+  +141.1%, not nothing, so a rate-reading mechanism here is working
+  against a narrowed signal rather than a flat one. An earlier
+  reading of 2.8% came from `stpprobe` measuring its silent block
+  first, on a creature whose regulator had not settled.
+  [ipprobe took 6.0 s]
+
+  --- pruneprobe, 120000 ticks ---
+experiment: pruneprobe
+  instrument        pruneprobe   trial seed 000000000135b0c9   60000 ticks driven per arm
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  5 consolidation passes per arm, called directly rather than waited
+  for; competition removes afferents under 0.50 of their target's mean
+
+    arm       pruned   competed  % of     mean|w| in  mean|w| out change    min in  orphans 
+    off       0        0         0.0      0.14809     0.13387     -9.61     1       6       
+    compete   8908     8908      26.6     0.14809     0.15221     +2.78     1       6       
+
+  `change` is the mean |w| over surviving afferents after the passes
+  against before, and the OFF ARM is its null — not 0%. Removing
+  synapses at random would leave the mean where it was, but a
+  consolidation pass also downscales every weight (§3.6), so the off
+  arm's -9.61% is what a pass costs with no competition in it. The
+  difference between the two columns is selection and the rest is sleep.
+
+  off arm competed       0   (must be 0 — the control)
+  competitive removals   8908   (must be > 0, or nothing was tested)
+  selectivity            +2.78% against the off arm's -9.61%
+  orphaned neurons       6 against the off arm's 6   (must not rise:
+                             a stripped cell deletes the tract it was
+                             meant to sharpen. Six are already there at
+                             birth and are not this rule's doing)
+
+  PASS — competition removes synapses the absolute floor did not,
+  the survivors are stronger than the population it selected from,
+  and no neuron was stripped.
+  [pruneprobe took 3.2 s]
+
+  --- stpprobe, 120000 ticks ---
+experiment: stpprobe
+  instrument        stpprobe   trial seed 00000000013522b2   6666 ticks per condition
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  tract             auditory -> central   density 0.020   weight 0.120
+  ear               32 ms window, 16 ms hop — an envelope whose half
+                    period is under the window (~16 Hz) is inside one
+                    frame and reaches the brain as steady energy
+
+    arm           envelope  bursts  aud/tick   cen/tick   transfer   vs off   gain    
+    off           silence   0       0.51       2.70       5.2903     1.000    1.000   
+                  2 Hz      14      1.21       2.81       2.3125     1.000    1.000   
+                  4 Hz      27      1.02       2.79       2.7295     1.000    1.000   
+                  8 Hz      54      0.85       2.76       3.2478     1.000    1.000   
+                  12 Hz     80      0.78       2.78       3.5403     1.000    1.000   
+                  shuffled  27      0.79       2.74       3.4885     1.000    1.000   
+
+    depressing    silence   0       0.60       2.67       4.4898     0.849    0.694   
+                  2 Hz      14      1.22       2.69       2.2039     0.953    0.640   
+                  4 Hz      27      1.04       2.71       2.6048     0.954    0.643   
+                  8 Hz      54      0.81       2.70       3.3450     1.030    0.678   
+                  12 Hz     80      0.72       2.71       3.7427     1.057    0.692   
+                  shuffled  27      0.82       2.70       3.3002     0.946    0.668   
+
+    facilitating  silence   0       0.49       2.75       5.6505     1.068    1.604   
+                  2 Hz      14      1.21       3.24       2.6782     1.158    1.789   
+                  4 Hz      27      0.99       3.11       3.1429     1.151    1.768   
+                  8 Hz      54      0.82       3.03       3.7131     1.143    1.732   
+                  12 Hz     80      0.73       2.93       4.0225     1.136    1.722   
+                  shuffled  27      0.77       2.95       3.8265     1.097    1.732   
+
+  gain is what the tract DELIVERED as a fraction of its genome weight.
+  transfer is central's spikes per auditory spike — a ratio, because the
+  ear's own response to an envelope is not flat and a count at central
+  would mostly be measuring that. `vs off` is the same ratio against the
+  off arm's row for the SAME envelope, and it is where an envelope filter
+  would show up: a gain change is flat down that column and a filter is
+  not.
+
+  off arm gain           1.0000   (must be 1.0000 — the control)
+  depressing, worst      0.694   (must be under 0.950)
+  facilitating, best     1.604   (must be over 1.050)
+  rate/gain corr, dep.   -0.957   (must be under -0.500)
+
+  PASS — the mechanism runs, the two corners do opposite things, and
+  what each delivers tracks the traffic it carried.
+
+  WHAT IT BUYS HERE, read off the `vs off` column:
+  nothing that a volume knob would not. `vs off` is FLAT across the
+  envelopes — a filter would peak somewhere and it does not.
+
+  The reason is NOT that the ear is regulated flat. It is not: the
+  module goes 0.51 spikes per tick in silence to 1.21 under speech,
+  +138%, and `ipprobe` measures the same thing independently. An
+  earlier version of this probe settled for only 1500 ticks and read
+  silence on a just-hatched creature, which made that gap look like
+  3% and supported an explanation that was wrong.
+
+  The real reason is that ONE dynamic synapse cannot be a bandpass.
+  Depression scales everything this synapse transmits by a single
+  number that follows its own mean rate, so it is a high-pass with no
+  upper corner: `gain` tracks the traffic faithfully and every spike
+  gets the same multiplier. Webb's bandpass is TWO stages — BN1
+  depressing, feeding BN2 facilitating — and the tuning lives in the
+  mismatch between their time constants, not in either one. This
+  genome can express that today: a relay module between auditory and
+  central, depressing on the way in and facilitating on the way out.
+  It has not been built.
+  [stpprobe took 5.5 s]
+
+  --- coderprobe, 300000 ticks ---
+experiment: coderprobe
+  instrument        coderprobe   trial seed 000000000135e717   107 trials per creature
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  the gate          would a competitive sparse auditory coder have
+                    anything to buy? Measured before building it.
+  the premise       `vocab`'s one-of-eight 0.210 is the creature's
+                    VOICE, not its ear. This reads the EAR.
+  chance            0.125
+
+  seed   mel        auditory   shuffled   trials
+  0      1.000      0.981      0.154      107
+  1      1.000      0.962      0.154      107
+  2      1.000      1.000      0.059      107
+
+  mel (the signal)      1.000
+  auditory (the ear)    0.981
+  shuffled control      0.122   <- must sit at chance 0.125
+
+  DO NOT BUILD IT — the ear already carries one-of-eight at 0.981
+  against the signal's own 1.000. There is no headroom for a better
+  auditory code to occupy, so `vocab`'s 0.210 is a fact about what the
+  creature can SAY and not about what it can hear. A competitive coder
+  would be improving the one stage that is not the bottleneck.
+  [coderprobe took 23.5 s]
+
+
+========================================================
+  determinism       PASS
+  pinned hash       PASS
+  experiments       22 as expected, 0 not
+  wall time         7.7 min, slowest `dwprobe` at 2.9 min
+  verify PASS
+  (this tier only — verify-long adds the minute-scale experiments,
+   verify-teach the hour-scale teaching ones, verify-all both)
+========================================================

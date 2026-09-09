@@ -1,0 +1,53 @@
+experiment: ctxfour
+  instrument        ctxfour   trial seed 000000000135672c   2428 trials per arm
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  question          `partprobe` cleared the INDEX at four words (0.895
+                    against chance 0.250). Can the BIAS hold four
+                    mappings on one reward channel?
+  the prediction    4 contexts is 2x the parameters of 2, so ~2x the
+                    trials: at 6.8M expect what two words gave at 3.4M,
+                    ~65 Hz spread and ~0.80 direction (chance 0.250).
+  the oracle arm    the host writes the index, so this is the CEILING.
+                    If a perfect index cannot carry four, the creature's
+                    own cannot either.
+
+  seed   arm      F1 spread  ctx_match direction  its null   dir-null   nearest    change
+  0      off      32.9       0.000     0.230      0.242      -0.012     0.226      +9.6
+  0      oracle   100.9      1.000     0.402      0.250      0.151      0.221      -11.4
+  1      off      20.2       0.000     0.352      0.256      0.097      0.223      -7.1
+  1      oracle   88.9       1.000     0.581      0.292      0.289      0.304      -17.2
+  2      off      15.0       0.000     0.385      0.275      0.109      0.094      +17.1
+  2      oracle   48.1       1.000     0.631      0.294      0.338      0.374      -4.7
+  3      off      29.6       0.000     0.352      0.270      0.083      0.251      -2.0
+  3      oracle   74.3       1.000     0.293      0.258      0.035      0.230      -16.0
+  4      off      59.1       0.000     0.282      0.236      0.045      0.112      +2.6
+  4      oracle   38.2       1.000     0.483      0.266      0.217      0.236      -40.6
+  5      off      31.1       0.000     0.410      0.247      0.163      0.121      -1.1
+  5      oracle   43.8       1.000     0.510      0.273      0.236      0.240      -28.8
+  6      off      51.9       0.000     0.090      0.239      -0.150     0.119      -8.3
+  6      oracle   75.3       1.000     0.457      0.270      0.187      0.251      -22.0
+  7      off      38.7       0.000     0.311      0.247      0.064      0.129      -9.1
+  7      oracle   68.1       1.000     0.436      0.250      0.186      0.242      -24.6
+  8      off      28.1       0.000     0.138      0.246      -0.108     0.175      +9.5
+  8      oracle   106.7      1.000     0.426      0.252      0.173      0.417      -15.2
+
+  arm      F1 spread (Hz)   direction      its own null   dir - null     nearest        change
+  off      34.1 +/- 4.7     0.283 +/- 0.037 0.251 +/- 0.004 +0.032 +/- 0.034 0.161 +/- 0.020 +1.2 +/- 3.1
+  oracle   71.6 +/- 8.2     0.469 +/- 0.033 0.267 +/- 0.006 +0.201 +/- 0.029 0.279 +/- 0.024 -20.0 +/- 3.5
+
+  chance on `nearest` is 0.250. Chance on `direction` is NOT 1/k and
+  is the per-creature shuffled null in the column beside it.
+  the refactor's check     ctx_match 1.000 at k=4 (1.000 expected)
+  F1 spread               34.1 -> 71.6 Hz
+  direction, RAW          0.283 -> 0.469  (the retired gate)
+  its own shuffled null   0.251 -> 0.267  (this is the real floor)
+  direction ABOVE null    +0.032 -> +0.201  (+0.169, 2.7 SE)
+  nearest target          0.161 -> 0.279  (chance 0.250)
+  the tables diverged     0.0181
+
+  IT HOLDS FOUR -- a context-indexed bias carries four mappings on one
+  reward channel: direction sits +0.201 above its own shuffled null
+  against +0.032 with the mechanism off, +0.169 at 2.7 SE. Read it with
+  `nearest` (0.279 against a chance of 0.250) before calling this
+  naming: pointing the right way is not arriving.

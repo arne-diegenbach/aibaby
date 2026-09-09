@@ -1,0 +1,122 @@
+experiment: ctxself
+  instrument        ctxself   trial seed 0000000001357639   2428 trials per arm
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  question          `areax` proved a context-indexed bias works, keyed on
+                    an index the HOST wrote from the word label. Can the
+                    creature derive that index from its own larynx?
+  the bar           an index right with probability p writes the other
+                    table 1-p of the time, so the conditional part scales
+                    as (2p - 1). `ctxsrc` bounds p at 0.740 for ANY readout
+                    of the larynx in this window, which is 48% of what the
+                    oracle index bought. A FIXED partition can only do
+                    worse, so that is a ceiling and not a prediction.
+  arm               all four get the same host drive on the context
+                    module, so `self` and `oracle` differ in ONE field.
+
+  seed   arm       dF1 (Hz)  p(idx)   busiest  table div  ev/tri  change
+  0      off       2.1       0.000    0.000    0.0000     0.0     -2.1
+  0      oracle    108.4     1.000    0.500    0.0399     0.0     +20.9
+  0      ear       16.0      0.731    0.593    0.0309     2.7     +8.7
+  0      ear-rnd   11.2      0.803    0.538    0.0288     3.7     -0.0
+  0      ema       95.4      0.878    0.621    0.0406     3.3     +18.5
+  0      ema-rnd   5.5       0.878    0.621    0.0350     3.5     -0.1
+  1      off       12.7      0.000    0.000    0.0000     0.0     +4.4
+  1      oracle    71.4      1.000    0.500    0.0357     0.0     +28.5
+  1      ear       49.1      0.649    0.513    0.0334     2.2     +12.9
+  1      ear-rnd   15.5      0.797    0.571    0.0344     3.6     +1.0
+  1      ema       97.4      0.876    0.619    0.0367     2.6     +19.2
+  1      ema-rnd   60.6      0.877    0.623    0.0376     3.0     -0.6
+  2      off       13.8      0.000    0.000    0.0000     0.0     +4.3
+  2      oracle    134.6     1.000    0.500    0.0343     0.0     +10.0
+  2      ear       38.8      0.623    0.579    0.0334     2.1     +12.8
+  2      ear-rnd   4.0       0.780    0.633    0.0332     4.4     -0.3
+  2      ema       12.9      0.506    0.994    0.0342     3.6     -0.8
+  2      ema-rnd   5.8       0.506    0.992    0.0326     4.7     +0.4
+  3      off       15.0      0.000    0.000    0.0000     0.0     +2.6
+  3      oracle    102.3     1.000    0.500    0.0332     0.0     +15.8
+  3      ear       55.9      0.718    0.561    0.0336     3.4     -1.1
+  3      ear-rnd   14.1      0.770    0.585    0.0340     4.6     -0.1
+  3      ema       110.1     0.860    0.638    0.0390     3.9     +17.6
+  3      ema-rnd   43.4      0.876    0.624    0.0416     3.5     +0.1
+  4      off       2.7       0.000    0.000    0.0000     0.0     +3.7
+  4      oracle    136.2     1.000    0.500    0.0337     0.0     +15.6
+  4      ear       29.6      0.701    0.630    0.0317     3.7     +13.8
+  4      ear-rnd   3.8       0.766    0.638    0.0345     3.0     -0.1
+  4      ema       78.0      0.877    0.623    0.0381     2.6     +14.8
+  4      ema-rnd   60.2      0.876    0.624    0.0353     2.8     +0.1
+  5      off       16.0      0.000    0.000    0.0000     0.0     +7.8
+  5      oracle    112.1     1.000    0.500    0.0342     0.0     +18.1
+  5      ear       11.2      0.601    0.567    0.0334     1.9     +3.9
+  5      ear-rnd   14.3      0.735    0.555    0.0336     3.5     -0.0
+  5      ema       2.7       0.512    0.987    0.0279     3.8     +1.0
+  5      ema-rnd   25.8      0.874    0.621    0.0382     3.8     +0.1
+  6      off       17.8      0.000    0.000    0.0000     0.0     -1.4
+  6      oracle    97.2      1.000    0.500    0.0434     0.0     +16.4
+  6      ear       2.0       0.589    0.527    0.0300     2.1     +8.7
+  6      ear-rnd   28.8      0.759    0.584    0.0348     3.8     -0.5
+  6      ema       26.0      0.512    0.988    0.0326     1.5     -2.2
+  6      ema-rnd   0.5       0.875    0.625    0.0398     2.8     +0.5
+  7      off       25.6      0.000    0.000    0.0000     0.0     -1.8
+  7      oracle    98.2      1.000    0.500    0.0361     0.0     +15.2
+  7      ear       83.9      0.674    0.532    0.0318     2.4     +2.9
+  7      ear-rnd   13.7      0.771    0.522    0.0294     4.4     +0.3
+  7      ema       125.4     0.855    0.645    0.0325     1.4     +18.9
+  7      ema-rnd   5.8       0.876    0.624    0.0322     3.4     +0.1
+  8      off       45.3      0.000    0.000    0.0000     0.0     -0.0
+  8      oracle    123.1     1.000    0.500    0.0388     0.0     +22.7
+  8      ear       20.1      0.505    0.575    0.0345     2.8     -7.2
+  8      ear-rnd   49.2      0.750    0.621    0.0390     2.9     -0.4
+  8      ema       106.0     0.875    0.622    0.0381     2.1     +15.8
+  8      ema-rnd   66.7      0.876    0.559    0.0409     3.5     +0.2
+
+  arm       dF1 (Hz)         p(index)        busiest slice  table div     change
+  off       16.8 +/- 4.3     0.000 +/- 0.000 0.000 +/- 0.000 0.0000 +/- 0.0000 +1.9 +/- 1.1
+  oracle    109.3 +/- 6.8    1.000 +/- 0.000 0.500 +/- 0.000 0.0366 +/- 0.0011 +18.1 +/- 1.8
+  ear       34.1 +/- 8.6     0.643 +/- 0.024 0.564 +/- 0.012 0.0325 +/- 0.0005 +6.1 +/- 2.4
+  ear-rnd   17.2 +/- 4.7     0.770 +/- 0.007 0.583 +/- 0.014 0.0335 +/- 0.0010 -0.0 +/- 0.1
+  ema       72.6 +/- 15.4    0.750 +/- 0.060 0.749 +/- 0.060 0.0355 +/- 0.0013 +11.4 +/- 3.1
+  ema-rnd   30.5 +/- 9.2     0.835 +/- 0.041 0.657 +/- 0.043 0.0370 +/- 0.0011 +0.1 +/- 0.1
+
+  can a listener tell the words apart? (held-out one-of-two, F1+F2)
+    off        0.575 +/- 0.027   (shuffled 0.500, chance 0.500)
+    oracle     0.973 +/- 0.016   (shuffled 0.507, chance 0.500)
+    ear        0.623 +/- 0.024   (shuffled 0.499, chance 0.500)
+    ear-rnd    0.673 +/- 0.046   (shuffled 0.484, chance 0.500)
+    ema        0.780 +/- 0.052   (shuffled 0.501, chance 0.500)
+    ema-rnd    0.732 +/- 0.057   (shuffled 0.495, chance 0.500)
+    PAIRED  ema - off       +0.205 +/- 0.069, 3.0 SE, 6 of 9
+    PAIRED  ema - ema-rnd   +0.048 +/- 0.046, 1.0 SE, 7 of 9
+
+  does the index hold up across a session? (early third -> last third)
+    ear        0.691 +/- 0.031 -> 0.598 +/- 0.019   (-0.092)
+    ear-rnd    0.772 +/- 0.009 -> 0.778 +/- 0.007   (+0.006)
+    ema        0.769 +/- 0.060 -> 0.751 +/- 0.063   (-0.018)
+    ema-rnd    0.863 +/- 0.043 -> 0.836 +/- 0.042   (-0.027)
+
+  paired differences (same creature, arms differ only in genome fields)
+    ear   - ear-rnd     +16.9 +/- 11.0 Hz, 1.5 SE, 6 of 9 positive
+    ear   - off         +17.3 +/- 9.2 Hz, 1.9 SE, 6 of 9 positive
+    ema   - ema-rnd     +42.2 +/- 14.6 Hz, 2.9 SE, 8 of 9 positive
+    ema   - off         +55.9 +/- 15.1 Hz, 3.7 SE, 7 of 9 positive
+
+  the reference here       oracle 109.3 Hz vs off 16.8 (+92.5, 8.3 SE)
+  the derived index        p = 0.750 +/- 0.060, busiest slice 0.749
+  ...and does it sharpen?  0.769 +/- 0.060 -> 0.751 +/- 0.063 over the session
+  predicted from ctxsrc    52.5 Hz  (p <= 0.740, keeps 48%)
+  predicted from THIS p    54.7 Hz  (keeps 50%)
+  measured                 72.6 Hz  (+55.9 vs off, 2.8 SE)
+  vs matched-marginal      30.5 Hz  (+42.2, 1.7 SE)
+  PAIRED vs matched-marg   +42.2 +/- 14.6 Hz, 2.9 SE  <-- THE GATE
+                           8 of 9 creatures positive
+  paired vs `off`          +55.9 +/- 15.1 Hz, 3.7 SE (diagnostic)
+  unpaired, for the record +42.2 (1.7 SE) vs control, +55.9 (2.8 SE) vs off
+
+  THE CREATURE INDEXES ITSELF -- the voice depends on the word with NO
+  oracle anywhere. +42.2 +/- 14.6 Hz of F1, PAIRED, against a control
+  carrying the same split table and the same derived index and differing
+  only in whether the target tracks the word; 8 of 9 creatures
+  positive, on an index read from the larynx at 0.750. That is 60% of
+  what the host-written index bought IN THIS SAME RUN, against 48%
+  predicted from `ctxsrc`'s upper bound and 50% from this run's own p.
+  The last oracle in the architecture is gone.
