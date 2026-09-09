@@ -1,0 +1,60 @@
+  [13/27] seed 4 binary     aligned 0.05777  |reward| 0.500
+  [19/27] seed 6 binary     aligned 0.04581  |reward| 0.500
+  [7/27] seed 2 binary     aligned 0.03666  |reward| 0.500
+  [10/27] seed 3 binary     aligned 0.06414  |reward| 0.500
+  [12/27] seed 3 graded-1   aligned 0.04806  |reward| 0.499
+  [11/27] seed 3 graded     aligned 0.08042  |reward| 0.506
+  [6/27] seed 1 graded-1   aligned 0.09510  |reward| 0.499
+  [16/27] seed 5 binary     aligned 0.07508  |reward| 0.500
+  [23/27] seed 7 graded     aligned 0.10937  |reward| 0.505
+  [17/27] seed 5 graded     aligned 0.09013  |reward| 0.506
+  [25/27] seed 8 binary     aligned 0.07405  |reward| 0.500
+  [27/27] seed 8 graded-1   aligned 0.03598  |reward| 0.499
+  [1/27] seed 0 binary     aligned 0.08415  |reward| 0.500
+  [22/27] seed 7 binary     aligned 0.06381  |reward| 0.500
+  [4/27] seed 1 binary     aligned 0.04716  |reward| 0.500
+  [2/27] seed 0 graded     aligned 0.07852  |reward| 0.506
+  [5/27] seed 1 graded     aligned 0.07572  |reward| 0.506
+  [21/27] seed 6 graded-1   aligned 0.08697  |reward| 0.499
+  [8/27] seed 2 graded     aligned 0.04285  |reward| 0.507
+  [18/27] seed 5 graded-1   aligned 0.08767  |reward| 0.499
+  [24/27] seed 7 graded-1   aligned 0.11382  |reward| 0.499
+  [3/27] seed 0 graded-1   aligned 0.11110  |reward| 0.499
+  [14/27] seed 4 graded     aligned 0.01757  |reward| 0.506
+  [20/27] seed 6 graded     aligned 0.09767  |reward| 0.506
+  [9/27] seed 2 graded-1   aligned 0.00022  |reward| 0.499
+  [15/27] seed 4 graded-1   aligned 0.02015  |reward| 0.499
+  [26/27] seed 8 graded     aligned 0.03897  |reward| 0.507
+experiment: baseprobe
+  instrument        baseprobe   trial seed 0000000001359d97   9714 trials per session, sampled at 16 checkpoints
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  question          boundprobe's phase 2 -- aligned and outside growing at
+                    the same exponent with gain frozen -- is node perturbation
+                    on its variance floor. Is that floor the RULE's, or the
+                    one-bit-per-trial CRITERION's?
+  the gate          phase-2 gain slope. Rising on a graded arm means the
+                    criterion was the limit; flat on every arm means the rule
+                    is, and 137 Hz is this architecture's number.
+  the confound      graded is divided by the creature's own mean absolute
+                    deviation, so E|reward| = |praise| by construction. The
+                    realised mean is printed; >15% off is CONFOUNDED, not read.
+
+  arm        |reward|    praise      aligned exp 1/2  outside exp 1/2  gain 1->16  dF1 last (Hz)
+  binary     0.500       0.544       0.82 / 0.26      0.40 / 0.31      1.37 -> 3.35   138.8 +/- 11.5
+  graded     0.506       0.538       0.63 / 0.57      0.41 / 0.43      1.62 -> 3.16   91.7 +/- 28.1
+  graded-1   0.499       0.544       0.90 / 0.68      0.45 / 0.45      0.99 -> 2.76   114.9 +/- 34.8
+
+  PHASE 2 IS THE QUESTION. Its signature is aligned and outside growing
+  at the SAME exponent -- separation zero is the floor:
+  binary     aligned 0.26  outside 0.31  separation -0.05 +/- 0.13 (-0.4 SE)  final aligned 0.06060
+  graded     aligned 0.57  outside 0.43  separation +0.14 +/- 0.15 (0.9 SE)  final aligned 0.07014
+  graded-1   aligned 0.68  outside 0.45  separation +0.24 +/- 0.18 (1.3 SE)  final aligned 0.07134
+
+  THE FLOOR IS THE RULE'S, NOT THE CRITERION'S. No graded arm keeps the
+  aligned component outgrowing the useless ones into phase 2 at 2 SE, and
+  none separates from the binary arm at 2 SE. Handing node perturbation
+  the magnitude it was discarding does not move its variance floor, which
+  is what Hiratani's analysis says should happen: the floor is set by the
+  perturbation noise the estimator injects, not by the resolution of the
+  signal it reads. 137 Hz is this architecture's number.

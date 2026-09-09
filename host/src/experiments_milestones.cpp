@@ -4620,36 +4620,13 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
       ++wf_n[label];
     }
 
-    // A trial in which the creature said nothing has no accuracy to score and
-    // must not be counted as a bad one: silence is not a wrong answer, and
-    // scoring it as maximum error would make "say less" the winning strategy.
-    double err;
-    if (score == kVLScoreRate) {
-      // Silence is the correct answer to a low target, so no trial is skipped
-      // for it -- only one in which the window itself was empty.
-      if (n_frames == 0) { ++out.skipped; continue; }
-      err = std::fabs(double(n_events) / double(n_frames) - rate_target);
-    } else if (score == kVLScoreAmp) {
-      // No silence skip: a trial the creature spent quiet is a trial in which
-      // it produced an amplitude of zero, and against a quiet target that is
-      // the right answer rather than a missing measurement.
-      if (n_amp == 0) { ++out.skipped; continue; }
-      err = std::fabs(amp_sum / double(n_amp) - amp_target);
-    } else {
-      if (n_voiced == 0) { ++out.skipped; continue; }
-      err = formant_error(f1_sum / n_voiced, f2_sum / n_voiced, w);
-    }
-    if (err < 0.0) { ++out.skipped; continue; }
-    ++out.scored;
-    // One row per scored trial: what the creature actually said, and which word
-    // it was being taught. See the note on `utt_f1` -- this is the naming
-    // measurement, and it is not the same question as dF1.
-    if (n_voiced > 0 && label < nw) {
-      out.utt_f1.push_back(f1_sum / double(n_voiced));
-      out.utt_f2.push_back(f2_sum / double(n_voiced));
-      out.utt_word.push_back(int(label));
-    }
-
+    // ABOVE THE SILENCE SKIP, and it was below it until 2026-09-09. A trial the
+    // creature spent quiet does a `continue`, so the checkpoint below it did not
+    // fire -- sessions ended with fewer than 16 samples, the pooled curve
+    // averaged a DIFFERENT SEED SET at each checkpoint, and how often a creature
+    // is silent is correlated with the arm. That is a selection effect pointing
+    // the same way as the treatment. The bias table has nothing to do with
+    // whether this particular trial made a sound, so the sample belongs here.
     // The within-session checkpoint. Sampled at the END of a trial so the table
     // reflects every cash-in that trial produced, and spaced by trial count
     // rather than by tick so the x axis is the same quantity `ctxscale` plots.
@@ -4688,6 +4665,36 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
         w_praise = 0;
         w_scold = 0;
       }
+    }
+
+    // A trial in which the creature said nothing has no accuracy to score and
+    // must not be counted as a bad one: silence is not a wrong answer, and
+    // scoring it as maximum error would make "say less" the winning strategy.
+    double err;
+    if (score == kVLScoreRate) {
+      // Silence is the correct answer to a low target, so no trial is skipped
+      // for it -- only one in which the window itself was empty.
+      if (n_frames == 0) { ++out.skipped; continue; }
+      err = std::fabs(double(n_events) / double(n_frames) - rate_target);
+    } else if (score == kVLScoreAmp) {
+      // No silence skip: a trial the creature spent quiet is a trial in which
+      // it produced an amplitude of zero, and against a quiet target that is
+      // the right answer rather than a missing measurement.
+      if (n_amp == 0) { ++out.skipped; continue; }
+      err = std::fabs(amp_sum / double(n_amp) - amp_target);
+    } else {
+      if (n_voiced == 0) { ++out.skipped; continue; }
+      err = formant_error(f1_sum / n_voiced, f2_sum / n_voiced, w);
+    }
+    if (err < 0.0) { ++out.skipped; continue; }
+    ++out.scored;
+    // One row per scored trial: what the creature actually said, and which word
+    // it was being taught. See the note on `utt_f1` -- this is the naming
+    // measurement, and it is not the same question as dF1.
+    if (n_voiced > 0 && label < nw) {
+      out.utt_f1.push_back(f1_sum / double(n_voiced));
+      out.utt_f2.push_back(f2_sum / double(n_voiced));
+      out.utt_word.push_back(int(label));
     }
 
     const int bin = trial < third ? 0 : (trial >= n_trials - third ? 1 : -1);
@@ -11223,7 +11230,7 @@ bool run_baseprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
     bool ok = false;
     uint32_t scored = 0, skipped = 0, n = 0;
     double align[VLRun::kCkpt] = {}, outside[VLRun::kCkpt] = {}, gain[VLRun::kCkpt] = {};
-    double df1[VLRun::kCkpt] = {}, trial[VLRun::kCkpt] = {};
+    double df1[VLRun::kCkpt] = {}, trial[VLRun::kCkpt] = {}, pinned[VLRun::kCkpt] = {};
     double rmag = 0.0, praise_share = 0.0;
   };
   const uint32_t njobs = kReps * kBaseArmCount;
@@ -11257,6 +11264,7 @@ bool run_baseprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
       cell.gain[k] = run.ckpt_gain[k];
       cell.df1[k] = run.ckpt_df1[k];
       cell.trial[k] = run.ckpt_trial[k];
+      cell.pinned[k] = run.ckpt_pinned[k];
     }
     cell.rmag = run.reward_mag;
     const uint32_t tot = run.praises + run.scolds;
@@ -11271,6 +11279,7 @@ bool run_baseprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
   std::vector<double> os[kBaseArmCount][VLRun::kCkpt];
   std::vector<double> gn[kBaseArmCount][VLRun::kCkpt];
   std::vector<double> d1[kBaseArmCount][VLRun::kCkpt];
+  std::vector<double> pin[kBaseArmCount][VLRun::kCkpt];
   std::vector<double> rm[kBaseArmCount], ps[kBaseArmCount];
   double xt[VLRun::kCkpt] = {};
   uint32_t nck = 0, used = 0;
@@ -11287,6 +11296,7 @@ bool run_baseprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
       os[a][k].push_back(c.outside[k]);
       gn[a][k].push_back(c.gain[k]);
       d1[a][k].push_back(c.df1[k]);
+      pin[a][k].push_back(c.pinned[k]);
       xt[k] = c.trial[k];
     }
   }
@@ -11347,6 +11357,35 @@ bool run_baseprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
     for (double x : v) ss += (x - mean) * (x - mean);
     return std::sqrt(double(n - 1) / double(n) * ss);
   };
+
+  // EVERY CHECKPOINT MUST HAVE EVERY SEED, or the curve compares one seed set at
+  // one end with another at the other. The silence skip cost exactly that until
+  // 2026-09-09, so the count is now printed rather than assumed, and an uneven
+  // one refuses the run.
+  uint32_t worst = kReps;
+  for (uint32_t a = 0; a < kBaseArmCount; ++a) {
+    for (uint32_t k = 0; k < nck; ++k) {
+      if (al[a][k].size() < worst) worst = uint32_t(al[a][k].size());
+    }
+  }
+  if (worst < kReps) {
+    std::printf("  UNEVEN CHECKPOINTS -- some checkpoint has only %u of %u seeds, so the\n"
+                "  curve would compare different creatures at its two ends. Refusing.\n",
+                worst, kReps);
+    return false;
+  }
+  std::printf("  THE CURVE, `%s` arm, %u seeds at every checkpoint\n",
+              kBaseArms[0].name, kReps);
+  std::printf("  %-8s %-9s %-20s %-9s %-8s %-9s %s\n", "ckpt", "trials", "aligned (F1)",
+              "outside", "gain", "pinned", "dF1 window (Hz)");
+  for (uint32_t k = 0; k < nck; ++k) {
+    double se, dummy;
+    const double ma = ctx_mean_se(al[0][k], &se);
+    std::printf("  %-8u %-9.0f %.5f +/- %.5f  %-9.5f %-8.2f %-9.3f %.1f\n", k + 1, xt[k],
+                ma, se, ctx_mean_se(os[0][k], &dummy), ctx_mean_se(gn[0][k], &dummy),
+                ctx_mean_se(pin[0][k], &dummy), ctx_mean_se(d1[0][k], &dummy));
+  }
+  std::printf("\n");
 
   std::printf("  %-10s %-11s %-11s %-16s %-16s %-11s %s\n", "arm", "|reward|", "praise",
               "aligned exp 1/2", "outside exp 1/2", "gain 1->16", "dF1 last (Hz)");
