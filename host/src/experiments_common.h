@@ -2033,6 +2033,7 @@ bool run_ctxscale(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_boundprobe(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_baseprobe(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_bankprobe(const std::vector<uint8_t>&, uint64_t, bool);
+bool run_ctxgain(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_pgprobe(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_g2cond(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_coderprobe(const std::vector<uint8_t>&, uint64_t, bool);

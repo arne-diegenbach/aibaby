@@ -285,6 +285,11 @@ DnaStatus Dna::load(const void* blob, size_t size) {
         h->exploration.context_source == 3u) {
       return DnaStatus::kBadPlasticity;
     }
+  
+    // DNA v54. 0 is the per-neuron table, 1 the per-group gains. Anything else is
+    // refused rather than treated as 0, so a genome asking for a parameterisation
+    // this kernel does not have fails loudly.
+    if (h->exploration.ctx_param > 1u) return DnaStatus::kBadPlasticity;
   }
 
   if (h->normalisation.enabled) {

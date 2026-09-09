@@ -159,9 +159,19 @@ class Network {
   uint64_t context_events() const { return ctx_events_; }
   // This neuron's bias in context `c`. Exposed so a probe can show the table
   // diverging (or not) rather than infer it from behaviour.
-  Scalar context_bias(uint32_t i, uint32_t c) const {
-    return (bias_ctx_ && c < ctx_slots_) ? bias_ctx_[size_t(i) * ctx_slots_ + c] : kZero;
+  // The EFFECTIVE bias neuron i carries in context c. Under DNA v54 mode 1 there
+  // is no per-neuron table -- there are per-group gains and a ramp -- so this
+  // returns `gain * ramp(i)`, which is the quantity the neuron actually gets.
+  // Every probe in the tree reads the table through here, so they all keep
+  // working across both parameterisations without knowing which is live.
+  Scalar context_bias(uint32_t i, uint32_t c) const;
+  // DNA v54 mode 1: the gain for articulator group g in context c.
+  Scalar context_gain(uint32_t c, uint32_t g) const {
+    return (gain_ctx_ && c < ctx_slots_ && g < kVocalGroups)
+               ? gain_ctx_[size_t(c) * kVocalGroups + g]
+               : kZero;
   }
+  uint32_t ctx_param() const { return ctx_param_; }
 
   // ANDALMAN & FEE, as an oracle before it is a mechanism. The songbird does not
   // hold its AFP bias; it banks it into the motor pathway within a day and starts
@@ -187,6 +197,8 @@ class Network {
   }
 
  private:
+  // DNA v54. The centred position of neuron i inside its articulator group.
+  bool ctx_ramp(uint32_t i, uint32_t* group_out, Scalar* ramp_out) const;
   void apply_reward_impl(const Scalar* per_module, bool any);
   void capture_ffi_weights();
 
@@ -904,6 +916,20 @@ class Network {
   // therefore inert until an experiment banks into it. `bank_used_` gates the
   // HASH rather than the behaviour: adding a zero array to the hash would move
   // every pinned context hash on file while changing nothing the creature does.
+  // DNA v54. Per-group gains, `ctx_slots_ x kVocalGroups`, context-major. Live
+  // only when ctx_param_ == 1, in which case bias_ctx_ is not written at all.
+  Scalar* gain_ctx_ = nullptr;
+  uint32_t ctx_param_ = 0;
+  // Which module the groups belong to. Resolved at build; -1 when there is none,
+  // in which case mode 1 degrades to no context bias rather than guessing.
+  int32_t ctx_gain_module_ = -1;
+  // Precomputed so the per-tick drive is one lookup and one multiply rather than
+  // a group search. `ctx_group_[i] == kVocalGroups` means "not in the module".
+  Scalar* ctx_ramp_ = nullptr;
+  uint32_t* ctx_group_ = nullptr;
+  // 1/n per group, the normaliser that makes this a PARAMETERISATION test and not
+  // a learning-rate change. See the cash-in for the derivation.
+  Scalar inv_group_n_[kVocalGroups] = {};
   Scalar* bias_bank_ = nullptr;
   bool bank_used_ = false;
   uint32_t ctx_slots_ = 0;

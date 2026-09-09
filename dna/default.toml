@@ -736,6 +736,20 @@ context_slots = 0
 # be learned. See `ctxself` and DnaExploration::context_source.
 context_source = 0
 
+# DNA v54: HOW that bias is parameterised, which is a parameter COUNT and not a
+# new rule. 0 is one bias per neuron per context (252 params, v51, shipped and
+# bit-identical). 1 is one GAIN per articulator group per context (18 params),
+# applied to the centred position ramp inside the group -- the coordinate the
+# larynx's centroid readout actually responds to. Same perturbations, same reward,
+# same cash-in; only the projection differs.
+#
+# Werfel/Xie/Seung: node perturbation's learning time scales with the number of
+# parameters estimated. That law took v51 from ~4000 synaptic params to 252 and
+# produced the first conditional effect on the voice. This applies it once more.
+# See DnaExploration::ctx_param, and note that `aligned`/`gain` are NOT comparable
+# across modes -- mode 1 forces alignment by construction, so gate on dF1.
+ctx_param = 0
+
 
 # DNA v41 — metaplastic consolidation. Node perturbation is an unbiased gradient
 # estimate, so a neuron that cannot affect the current reward is already being

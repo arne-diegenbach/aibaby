@@ -227,6 +227,13 @@ const Spec kSpecs[] = {
      "  leaves that sum exactly unchanged. The arms must be INDISTINGUISHABLE;\n"
      "  a divergence past 1 SE means a premise is wrong, which is the result\n"
      "  worth having. Short on purpose"},
+    {"ctxgain", 13600000, Expect::kOpen, Tier::kTeach,
+     "THE EIGHTH ROUTE, and the only one that does not try to make the bias\n"
+     "  bigger. DNA v54 mode 1: one gain per articulator group per context, 18\n"
+     "  parameters instead of 252, on the ramp the centroid readout responds to.\n"
+     "  Same rule, same reward; the update is the group MEAN so drift is unchanged\n"
+     "  and diffusion falls by sqrt(14). Predicts dF1 119 -> 186 Hz. Gates on dF1\n"
+     "  paired by seed, NOT on aligned -- mode 1 forces alignment by construction"},
     {"ctxfour", 3400000, Expect::kOpen, Tier::kTeach,
      "derived: ctxself's session at FOUR words. partprobe cleared the index at\n"
      "  four (0.895 vs chance 0.250); this asks whether the BIAS holds four\n"
@@ -486,6 +493,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "boundprobe") ok = run_boundprobe(dna_blob, ticks, verbose);
   else if (name == "baseprobe") ok = run_baseprobe(dna_blob, ticks, verbose);
   else if (name == "bankprobe") ok = run_bankprobe(dna_blob, ticks, verbose);
+  else if (name == "ctxgain") ok = run_ctxgain(dna_blob, ticks, verbose);
   else if (name == "partprobe") ok = run_partprobe(dna_blob, ticks, verbose);
   else if (name == "pgprobe") ok = run_pgprobe(dna_blob, ticks, verbose);
   else if (name == "g2cond") ok = run_g2cond(dna_blob, ticks, verbose);

@@ -11782,6 +11782,219 @@ bool run_baseprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
   return true;
 }
 
+// ---------------------------------------------------------------------------
+// ctxgain -- the parameterisation, which is the one route to a bigger bias that
+// nothing has tried.
+//
+// Seven routes are priced and closed: more trials, more rate, a selectivity mask,
+// the commitment brake, the slow store, a graded criterion, daily consolidation.
+// Every one of them tried to make the bias LARGER. None tried to make it CHEAPER
+// TO ESTIMATE, which is what Werfel, Xie & Seung's scaling law actually
+// prescribes -- and that law is already load-bearing here, because it is the
+// argument that took v51 from ~4000 synaptic parameters to 252 and produced the
+// first conditional effect on this creature's voice.
+//
+// Mode 1 applies it a second time: one gain per articulator group per context,
+// 18 parameters instead of 252, on the centred position ramp inside the group.
+// `ctxbias` already licenses the expressiveness -- that ramp shape delivers
+// 236 Hz through this exact readout -- so what is being tested is the estimator,
+// not whether the answer is representable.
+//
+// THE DERIVED PREDICTION, on record before the run. The gain's update is the
+// MEAN of the per-neuron node-perturbation estimates over the group, not the sum.
+// The sum is the true gradient but multiplies the step by n, which would make
+// this a learning-rate change in disguise; the mean leaves the drift at `d`,
+// identical to mode 0, and cuts the noise to `sigma/sqrt(n)`. With 126/9 = 14
+// neurons per group that is sqrt(14) = 3.74x less diffusion at the same drift.
+// Feeding 3.74x more aligned bias through the measured transfer
+// (dF1 = 234*x/(x+0.0507), fitted independently of this experiment) predicts:
+//
+//     13.6M budget:  aligned 0.0526 -> 0.197,  dF1 119 Hz -> 186 Hz
+//
+// That number is suspiciously convenient -- 3.74x against the 3.8x the transfer
+// curve says naming needs -- which is exactly why it is written down before the
+// run rather than after it.
+//
+// WHAT WOULD REFUSE IT: `gains` does not beat `table` on delivered dF1 at 2 SE
+// paired, or `gains` fails to beat its OWN matched-marginal control (which would
+// mean the 18 parameters learn nothing at all rather than learning it better).
+// The gate is on dF1 and not on `aligned` or `gain`, because those are NOT
+// comparable across modes -- mode 1 forces alignment by construction and its
+// `common` term is exactly zero.
+struct GainArm {
+  const char* name;
+  uint32_t param;   // ctx_param: 0 per-neuron table, 1 per-group gains
+  VLTarget target;
+};
+constexpr GainArm kGainArms[] = {
+    {"table", 0, kVLTgtHeard},
+    {"table-rnd", 0, kVLTgtRandom},
+    {"gains", 1, kVLTgtHeard},
+    {"gains-rnd", 1, kVLTgtRandom},
+};
+constexpr uint32_t kGainArmCount = sizeof(kGainArms) / sizeof(kGainArms[0]);
+
+bool run_ctxgain(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  aibaby::Dna dna;
+  if (dna.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) {
+    std::printf("  setup failed: the genome does not load\n");
+    return false;
+  }
+  const int32_t ctx_module = dna.module_with_role(aibaby::ModuleRole::kContext);
+  if (ctx_module < 0) {
+    std::printf("  this genome has no kContext module. Build one with NO output\n"
+                "  weight:  python3 tools/genome_add_context.py dna/default.toml \\\n"
+                "           ctx.toml vocal out_w=0\n");
+    return false;
+  }
+  constexpr uint32_t kReps = 9;
+  const size_t slots_off = offsetof(aibaby::DnaHeader, exploration) +
+                           offsetof(aibaby::DnaExploration, context_slots);
+  const size_t src_off = offsetof(aibaby::DnaHeader, exploration) +
+                         offsetof(aibaby::DnaExploration, context_source);
+  const size_t par_off = offsetof(aibaby::DnaHeader, exploration) +
+                         offsetof(aibaby::DnaExploration, ctx_param);
+  instrument("ctxgain", dna.header().seed ^ 0x6A11u, ticks / kVLTrialTicks,
+             "trials per session");
+  std::printf("  question          seven routes to a BIGGER bias are closed. This is the\n"
+              "                    one nobody tried: make it CHEAPER TO ESTIMATE. 18\n"
+              "                    parameters instead of 252, same rule, same reward.\n");
+  std::printf("  the prediction    the gain update is the MEAN over the group, so drift is\n"
+              "                    unchanged and diffusion falls by sqrt(126/9) = 3.74x.\n"
+              "                    Through the measured transfer that is dF1 119 -> 186 Hz.\n");
+  std::printf("  the gate          dF1(gains) - dF1(table), PAIRED on seed, at 2 SE, and\n"
+              "                    gains must also beat its own matched-marginal control.\n"
+              "                    NOT on aligned or gain: mode 1 forces alignment by\n"
+              "                    construction, so those do not compare across modes.\n\n");
+
+  struct Cell {
+    bool ok = false;
+    uint32_t scored = 0, skipped = 0;
+    double d1 = 0.0, align = 0.0, outside = 0.0, gain = 0.0, chg = 0.0;
+  };
+  const uint32_t njobs = kReps * kGainArmCount;
+  const std::vector<Cell> cells = parallel_reps<Cell>(njobs, [&](uint32_t i) {
+    Cell cell;
+    const uint32_t r = i / kGainArmCount, a = i % kGainArmCount;
+    std::vector<uint8_t> variant = blob;
+    const uint64_t seed = dna.header().seed + r * 7919ull;
+    std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+    const uint32_t sl = 2u, sr = 4u, pr = kGainArms[a].param;
+    std::memcpy(variant.data() + slots_off, &sl, sizeof(sl));
+    std::memcpy(variant.data() + src_off, &sr, sizeof(sr));
+    std::memcpy(variant.data() + par_off, &pr, sizeof(pr));
+    CtxDrive drive;
+    drive.module = ctx_module;
+    drive.slots = kVLWords;
+    drive.gain = 0.10;
+    Regime reg;
+    reg.praise = kPraiseValue;
+    reg.scold = kScoldValue;
+    const VLRun run = run_vocallearn_session(variant, ticks, kVLTaught, nullptr, reg,
+                                             kGainArms[a].target, &drive);
+    cell.scored = run.scored;
+    cell.skipped = run.skipped;
+    if (!run.ok) return cell;
+    cell.d1 = std::fabs(run.f1_by_word[0] - run.f1_by_word[1]);
+    cell.align = run.ctx_align;
+    cell.outside = run.ctx_outside;
+    cell.gain = run.ctx_align_gain;
+    cell.chg = vl_change(run);
+    cell.ok = true;
+    parallel_note("  [%u/%u] seed %u %-10s  dF1 %.1f  aligned %.5f\n", i + 1, njobs, r,
+                  kGainArms[a].name, cell.d1, cell.align);
+    return cell;
+  });
+
+  std::printf("\n  %-11s %-16s %-14s %-11s %s\n", "arm", "dF1 (Hz)", "aligned (F1)",
+              "outside", "gain");
+  std::vector<double> d1[kGainArmCount];
+  double m_d1[kGainArmCount], s_d1[kGainArmCount];
+  for (uint32_t a = 0; a < kGainArmCount; ++a) {
+    std::vector<double> al, os, gn;
+    for (uint32_t r = 0; r < kReps; ++r) {
+      const Cell& c = cells[r * kGainArmCount + a];
+      if (!c.ok) continue;
+      d1[a].push_back(c.d1);
+      al.push_back(c.align);
+      os.push_back(c.outside);
+      gn.push_back(c.gain);
+    }
+    if (d1[a].size() < 3) {
+      std::printf("\n  ctxgain INCONCLUSIVE -- arm `%s` produced %zu creatures.\n",
+                  kGainArms[a].name, d1[a].size());
+      return false;
+    }
+    double se;
+    m_d1[a] = ctx_mean_se(d1[a], &s_d1[a]);
+    const double ma = ctx_mean_se(al, &se);
+    std::printf("  %-11s %6.1f +/- %-7.1f %.5f       %-11.5f %.2f\n", kGainArms[a].name,
+                m_d1[a], s_d1[a], ma, ctx_mean_se(os, &se), ctx_mean_se(gn, &se));
+  }
+
+  const auto arm_index = [](const char* want) {
+    for (uint32_t i = 0; i < kGainArmCount; ++i) {
+      if (std::strcmp(kGainArms[i].name, want) == 0) return int(i);
+    }
+    return -1;
+  };
+  const int kT = arm_index("table"), kTR = arm_index("table-rnd");
+  const int kG = arm_index("gains"), kGR = arm_index("gains-rnd");
+  if (kT < 0 || kTR < 0 || kG < 0 || kGR < 0) {
+    std::printf("\n  ctxgain cannot summarise: an arm it names is missing.\n");
+    return false;
+  }
+
+  // Paired on seed, because the arms run on identical creatures.
+  const auto paired = [&](int a, int b, double* se_out) {
+    std::vector<double> d;
+    for (uint32_t r = 0; r < kReps; ++r) {
+      const Cell& ca = cells[r * kGainArmCount + uint32_t(a)];
+      const Cell& cb = cells[r * kGainArmCount + uint32_t(b)];
+      if (ca.ok && cb.ok) d.push_back(ca.d1 - cb.d1);
+    }
+    return ctx_mean_se(d, se_out);
+  };
+  double se_gt = 0.0, se_g = 0.0, se_t = 0.0;
+  const double d_gt = paired(kG, kT, &se_gt);
+  const double d_g = paired(kG, kGR, &se_g);
+  const double d_t = paired(kT, kTR, &se_t);
+
+  std::printf("\n  PAIRED ON SEED, dF1 in Hz\n");
+  std::printf("  gains  - table       %+7.1f +/- %.1f  (%+.1f SE)   <- THE GATE\n",
+              d_gt, se_gt, se_gt > 0.0 ? d_gt / se_gt : 0.0);
+  std::printf("  gains  - gains-rnd   %+7.1f +/- %.1f  (%+.1f SE)   does mode 1 learn?\n",
+              d_g, se_g, se_g > 0.0 ? d_g / se_g : 0.0);
+  std::printf("  table  - table-rnd   %+7.1f +/- %.1f  (%+.1f SE)   does mode 0 still?\n",
+              d_t, se_t, se_t > 0.0 ? d_t / se_t : 0.0);
+  std::printf("\n  predicted dF1(gains) 186 Hz from sqrt(14) less diffusion; measured %.1f\n",
+              m_d1[kG]);
+
+  const bool learns = se_g > 0.0 && d_g > 2.0 * se_g;
+  const bool beats = se_gt > 0.0 && d_gt > 2.0 * se_gt;
+  if (!learns) {
+    std::printf("\n  MODE 1 DOES NOT LEARN. The 18 parameters do not beat their own\n"
+                "  matched-marginal control, so this is not a worse estimator of the same\n"
+                "  thing -- it is not estimating it. Check the ramp and the projection\n"
+                "  before reading anything else here.\n");
+    return false;
+  }
+  if (!beats) {
+    std::printf("\n  THE PARAMETERISATION DOES NOT BUY IT. Mode 1 learns -- it beats its own\n"
+                "  control -- but it does not deliver more dF1 than the 252-parameter table\n"
+                "  at 2 SE. Fewer parameters lower the diffusion and do not raise the\n"
+                "  delivered formant, which would mean the floor is not where the parameter\n"
+                "  count puts it, and the eighth route closes with the other seven.\n");
+    return false;
+  }
+  std::printf("\n  THE PARAMETERISATION BUYS IT. 18 parameters deliver more than 252 at\n"
+              "  %.1f SE, on the same rule, the same reward and the same creatures. The\n"
+              "  floor was a parameter count, and Werfel's law holds a second time.\n",
+              d_gt / se_gt);
+  return true;
+}
+
 bool run_ctxscale(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
   (void)verbose;
   aibaby::Dna dna;

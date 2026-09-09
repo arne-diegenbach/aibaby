@@ -121,6 +121,13 @@ size_t Network::required_bytes(const Dna& dna) {
   if (dna.header().exploration.context_slots > 1) {
     const size_t slots = size_t(dna.header().exploration.context_slots);
     total += capacity * slots * sizeof(Scalar);
+    // DNA v54's per-group gains. Budgeted unconditionally alongside the table
+    // they replace: 18 scalars is smaller than the rounding on this arena, and
+    // this guard has been got wrong twice, so it is written without a condition
+    // to get wrong.
+    total += size_t(slots) * kVocalGroups * sizeof(Scalar);
+    // ...and the per-neuron ramp/group lookup that keeps the drive cheap.
+    total += capacity * (sizeof(Scalar) + sizeof(uint32_t));
     // The consolidation bank, always budgeted alongside the table it banks from.
     // Written together with the allocation in build() BECAUSE this guard has
     // been got wrong twice; a bank that is budgeted and not allocated wastes a
@@ -429,6 +436,7 @@ bool Network::build(const Dna& dna, Arena& arena, Rng& rng) {
   // genome allocates nothing and hashes exactly as it did.
   ctx_slots_ = h.exploration.context_slots > 1 ? h.exploration.context_slots : 0;
   ctx_source_ = h.exploration.context_source;
+  ctx_param_ = h.exploration.ctx_param;
   ctx_module_ = -1;
   active_ctx_ = 0;
   ctx_present_ = false;
@@ -438,6 +446,35 @@ bool Network::build(const Dna& dna, Arena& arena, Rng& rng) {
     // experiment banks into it.
     bias_bank_ = arena.alloc_zeroed<Scalar>(size_t(capacity_) * ctx_slots_);
     bank_used_ = false;
+    // DNA v54. Allocated in both modes; written only in mode 1.
+    gain_ctx_ = arena.alloc_zeroed<Scalar>(size_t(ctx_slots_) * kVocalGroups);
+    ctx_gain_module_ = -1;
+    for (uint32_t m = 0; m < module_count_; ++m) {
+      if (dna.module(m).role == uint32_t(ModuleRole::kVocal)) {
+        ctx_gain_module_ = int32_t(m);
+        break;
+      }
+    }
+    ctx_ramp_ = arena.alloc_zeroed<Scalar>(capacity_);
+    ctx_group_ = arena.alloc_zeroed<uint32_t>(capacity_);
+    for (uint32_t i = 0; i < capacity_; ++i) ctx_group_[i] = kVocalGroups;
+    for (uint32_t g = 0; g < kVocalGroups; ++g) inv_group_n_[g] = kZero;
+    if (ctx_gain_module_ >= 0) {
+      const ModuleState& gm = modules_[uint32_t(ctx_gain_module_)];
+      for (uint32_t g = 0; g < kVocalGroups; ++g) {
+        const uint32_t beg = slice_begin(gm.count, kVocalGroups, g);
+        const uint32_t end = slice_begin(gm.count, kVocalGroups, g + 1);
+        const uint32_t n = end > beg ? end - beg : 0;
+        if (n < 2) continue;
+        inv_group_n_[g] = kOne / Scalar(n);
+        for (uint32_t local = beg; local < end; ++local) {
+          const uint32_t idx = gm.begin + local;
+          if (idx >= capacity_) continue;
+          ctx_group_[idx] = g;
+          ctx_ramp_[idx] = (Scalar(local - beg) + Scalar(0.5)) / Scalar(n) - Scalar(0.5);
+        }
+      }
+    }
     // DNA v41's slow store, per context. Same guard as required_bytes above.
     if (h.exploration.meta_flow > 0.0f) {
       meta_slow_ctx_ = arena.alloc_zeroed<Scalar>(size_t(capacity_) * ctx_slots_);
@@ -631,6 +668,46 @@ void Network::consolidate_context_bias(Scalar frac) {
     }
   }
   bank_used_ = true;
+}
+
+// DNA v54. The centred position of neuron `i` inside its articulator group, and
+// which group that is. Zero-mean across the group BY CONSTRUCTION, because a
+// uniform lift of a group is invisible to a centroid readout -- the same reason
+// `ctxbias`'s oracle is a ramp and not a constant.
+//
+// Returns false when this neuron is not in the group-bearing module, which is the
+// only honest answer: mode 1 steers what the larynx reads and nothing else.
+bool Network::ctx_ramp(uint32_t i, uint32_t* group_out, Scalar* ramp_out) const {
+  if (ctx_gain_module_ < 0) return false;
+  const ModuleState& ms = modules_[uint32_t(ctx_gain_module_)];
+  if (i < ms.begin || i >= ms.begin + ms.count) return false;
+  const uint32_t local = i - ms.begin;
+  // The decoder's own slicing rule, not a re-derivation of it: a disagreement
+  // here would put the ramp across a boundary the readout does not have.
+  for (uint32_t g = 0; g < kVocalGroups; ++g) {
+    const uint32_t beg = slice_begin(ms.count, kVocalGroups, g);
+    const uint32_t end = slice_begin(ms.count, kVocalGroups, g + 1);
+    if (local >= beg && local < end) {
+      const uint32_t n = end > beg ? end - beg : 0;
+      if (n < 2) return false;
+      *group_out = g;
+      *ramp_out = (Scalar(local - beg) + Scalar(0.5)) / Scalar(n) - Scalar(0.5);
+      return true;
+    }
+  }
+  return false;
+}
+
+Scalar Network::context_bias(uint32_t i, uint32_t c) const {
+  if (c >= ctx_slots_) return kZero;
+  if (ctx_param_ == 1u) {
+    if (!gain_ctx_) return kZero;
+    uint32_t g = 0;
+    Scalar ramp = kZero;
+    if (!ctx_ramp(i, &g, &ramp)) return kZero;
+    return gain_ctx_[size_t(c) * kVocalGroups + g] * ramp;
+  }
+  return bias_ctx_ ? bias_ctx_[size_t(i) * ctx_slots_ + c] : kZero;
 }
 
 Scalar Network::bias_oracle_at(uint32_t i) const {
@@ -1770,11 +1847,21 @@ void Network::step() {
       // the part that depends on which context it is in.
       // The live table PLUS whatever has been banked out of it. The bank is zero
       // on the shipped creature, so this is the same arithmetic it always was.
-      const Scalar ctx_bias =
-          (ctx_slots_ > 0 && ctx_present_)
-              ? bias_ctx_[size_t(i) * ctx_slots_ + active_ctx_] +
-                    (bias_bank_ ? bias_bank_[size_t(i) * ctx_slots_ + active_ctx_] : kZero)
-              : kZero;
+      // DNA v54 mode 1 delivers `gain[context][group] * ramp(i)` -- 18 parameters
+      // rather than 252 -- and mode 0 delivers the per-neuron table plus whatever
+      // has been banked out of it. One lookup and one multiply either way.
+      Scalar ctx_bias = kZero;
+      if (ctx_slots_ > 0 && ctx_present_) {
+        if (ctx_param_ == 1u) {
+          const uint32_t g = ctx_group_ ? ctx_group_[i] : kVocalGroups;
+          if (g < kVocalGroups && gain_ctx_) {
+            ctx_bias = gain_ctx_[size_t(active_ctx_) * kVocalGroups + g] * ctx_ramp_[i];
+          }
+        } else {
+          ctx_bias = bias_ctx_[size_t(i) * ctx_slots_ + active_ctx_] +
+                     (bias_bank_ ? bias_bank_[size_t(i) * ctx_slots_ + active_ctx_] : kZero);
+        }
+      }
       // DNA v40: an interneuron that landed on the tuft is not also subtracted
       // here. It is one population of cells, and it inhibits one compartment.
       const Scalar ffi_soma = ffi_apical_[m] ? kZero : ffi;
@@ -2149,7 +2236,30 @@ void Network::apply_reward_impl(const Scalar* per_module, bool any) {
         // reward's own timescale, so the perturbation being credited happened
         // in the context that is active now. A protocol that switched context
         // mid-trial would break that, and would deserve to.
-        if (ctx_slots_ > 0 && ctx_present_) {
+        if (ctx_slots_ > 0 && ctx_present_ && ctx_param_ == 1u) {
+          // DNA v54. THE SAME ESTIMATOR, PROJECTED. The gradient with respect to a
+          // group's gain is `sum_i ramp(i) * dR/d drive_i`, and node perturbation
+          // already estimates `dR/d drive_i` as `u`. So the projection is the whole
+          // change: same perturbations, same reward, same cash-in.
+          //
+          // DIVIDED BY THE GROUP SIZE, and that normaliser is the difference
+          // between an experiment and a confound. The true gradient is the SUM,
+          // which gives the gain drift `n*d` and noise `sigma*sqrt(n)` -- better
+          // drift-to-diffusion by sqrt(n), but also an n-times bigger step, which
+          // is a learning-rate change, and raising the rate is already known to
+          // grow `outside` 3x and halve `gain`. The MEAN gives drift `d`, identical
+          // to mode 0, and noise `sigma/sqrt(n)`. Same step, sqrt(14) = 3.74x less
+          // diffusion. That isolates the parameterisation and nothing else.
+          const uint32_t g = ctx_group_ ? ctx_group_[i] : kVocalGroups;
+          if (g < kVocalGroups && gain_ctx_) {
+            Scalar& gv = gain_ctx_[size_t(active_ctx_) * kVocalGroups + g];
+            const Scalar step_g = u * gate_meta * ctx_ramp_[i] * inv_group_n_[g];
+            // |ramp| <= 0.5, so clamping the gain at 2x keeps the DELIVERED bias
+            // inside the same +/-perturb_max envelope mode 0 is clamped to. The two
+            // modes are therefore bounded identically in what reaches a neuron.
+            gv = clampf(gv + step_g, -Scalar(2) * perturb_max_, Scalar(2) * perturb_max_);
+          }
+        } else if (ctx_slots_ > 0 && ctx_present_) {
           Scalar& b = bias_ctx_[size_t(i) * ctx_slots_ + active_ctx_];
           b = clampf(b + u * gate_meta, -perturb_max_, perturb_max_);
         } else {
@@ -2661,6 +2771,9 @@ void Network::init_neuron(uint32_t i, uint32_t m, Scalar x, Scalar y, Scalar z) 
     if (meta_slow_) meta_slow_[i] = kZero;
     if (bias_bank_) {
       for (uint32_t c = 0; c < ctx_slots_; ++c) bias_bank_[size_t(i) * ctx_slots_ + c] = kZero;
+    }
+    if (gain_ctx_ && i == 0) {
+      for (uint32_t x = 0; x < ctx_slots_ * kVocalGroups; ++x) gain_ctx_[x] = kZero;
     }
     if (meta_slow_ctx_) {
       for (uint32_t c = 0; c < ctx_slots_; ++c) meta_slow_ctx_[size_t(i) * ctx_slots_ + c] = kZero;
@@ -3181,6 +3294,11 @@ uint64_t Network::state_hash() const {
       // move every pinned context hash on file while changing nothing the
       // creature does. Once something has been banked the state is live and it
       // is covered.
+      // Gated on the mode, not the pointer: hashing a zero array in mode 0 would
+      // move every pinned hash on file while changing nothing the creature does.
+      if (gain_ctx_ && ctx_param_ == 1u && i == 0) {
+        for (uint32_t x = 0; x < ctx_slots_ * kVocalGroups; ++x) hash_scalar(h, gain_ctx_[x]);
+      }
       if (bias_bank_ && bank_used_) {
         for (uint32_t c = 0; c < ctx_slots_; ++c) {
           hash_scalar(h, bias_bank_[size_t(i) * ctx_slots_ + c]);

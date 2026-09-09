@@ -1198,6 +1198,45 @@ struct DnaExploration {
   // can only do worse — so this field buys a measurement, not an expectation.
   uint32_t context_source;
 
+  // --- DNA v54: HOW the context bias is PARAMETERISED -----------------------
+  // Werfel, Xie & Seung 2005: node perturbation's learning time scales with the
+  // number of parameters estimated. That law is already load-bearing here -- it
+  // is the argument that took v51 from ~4000 synaptic parameters down to 252 and
+  // produced the first conditional effect on this creature's voice. It was never
+  // applied a second time.
+  //
+  // `boundprobe` says why a second application is the move: after ~4900 trials
+  // the aligned and useless directions grow at IDENTICAL exponents with the shape
+  // frozen, which is node perturbation sitting on its variance floor. Seven routes
+  // to a bigger bias are priced and closed, and every one of them tried to make
+  // the bias larger. None tried to make it cheaper to estimate.
+  //
+  //   0 — one bias per neuron per context. 126 x 2 = 252 parameters. DNA v51,
+  //       and bit-identical to it.
+  //   1 — one GAIN per articulator group per context, applied to the centred
+  //       position ramp within that group. kVocalGroups x 2 = 18 parameters,
+  //       fourteen times fewer.
+  //
+  // WHY THE RAMP IS NOT CHEATING, which is the obvious objection. The larynx
+  // reads each articulator group as a rate-weighted CENTROID over neuron index,
+  // so a zero-mean ramp across a group is not a hint about the answer -- it is
+  // the readout's own coordinate. A uniform lift of a group is invisible to a
+  // ratio, and `ctxbias` measured that the ramp shape delivers 236 Hz through
+  // this exact readout. Mode 1 expresses the parameter in the coordinates the
+  // thing being steered actually responds to, and drops the 234 directions that
+  // a centroid cannot see.
+  //
+  // AND IT IS THE SAME ESTIMATOR, not a new rule. The gradient with respect to a
+  // group's gain is the projection of the per-neuron node-perturbation estimate
+  // onto that group's ramp: `d gain[c][g] = step * sum_i ramp(i) * perturb_[i]`.
+  // Same perturbations, same reward, same cash-in. Only the projection is new,
+  // which is what makes this a test of the parameterisation and of nothing else.
+  //
+  // NOTE FOR ANY COMPARISON: `aligned`, `common` and `gain` are NOT comparable
+  // across modes. Mode 1 forces alignment by construction -- `common` is exactly
+  // zero because the ramp is zero-mean. The gate has to be on delivered dF1.
+  uint32_t ctx_param;
+
   // --- DNA v41: metaplastic consolidation -----------------------------------
   // The rule above is an unbiased gradient estimate, and `driftprobe` measured
   // what that costs. A neuron with no effect on the current lesson's reward has
