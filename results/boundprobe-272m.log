@@ -1,0 +1,64 @@
+  [4/18] seed 1 ema-rnd  align 0.00205  pinned 0.000
+  [7/18] seed 3 ema  align 0.06414  pinned 0.000
+  [12/18] seed 5 ema-rnd  align 0.00672  pinned 0.000
+  [10/18] seed 4 ema-rnd  align 0.00009  pinned 0.000
+  [16/18] seed 7 ema-rnd  align 0.00362  pinned 0.000
+  [5/18] seed 2 ema  align 0.03666  pinned 0.000
+  [9/18] seed 4 ema  align 0.05777  pinned 0.000
+  [8/18] seed 3 ema-rnd  align 0.00701  pinned 0.000
+  [11/18] seed 5 ema  align 0.07508  pinned 0.000
+  [13/18] seed 6 ema  align 0.04581  pinned 0.000
+  [14/18] seed 6 ema-rnd  align 0.04585  pinned 0.000
+  [15/18] seed 7 ema  align 0.06381  pinned 0.000
+  [17/18] seed 8 ema  align 0.07405  pinned 0.000
+  [6/18] seed 2 ema-rnd  align 0.01247  pinned 0.000
+  [18/18] seed 8 ema-rnd  align 0.01457  pinned 0.000
+  [2/18] seed 0 ema-rnd  align 0.01803  pinned 0.000
+  [3/18] seed 1 ema  align 0.04716  pinned 0.000
+  [1/18] seed 0 ema  align 0.08415  pinned 0.000
+experiment: boundprobe
+  instrument        boundprobe   trial seed 000000000135f5d6   9714 trials per session, sampled at 16 checkpoints
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  question          `bias_ctx_` has NO leak, so a constant drift would grow
+                    the aligned component LINEARLY. It grows at exponent
+                    0.27-0.58. What bounds it?
+  the three tests   H1 drift decays  : second-half exponent < 0.40
+                    H2 pure diffusion: exponent in [0.40,0.60] AND gain flat
+                    H3 clamp binds   : pinned share rises, last > 2x first
+                    They are not exclusive. All three are printed, and the
+                    verdict says so rather than forcing one label.
+  perturb_max       0.300 -- the clamp H3 is about
+
+
+  THE CURVE INSIDE ONE SESSION, `ema` arm, 9 seeds
+  ckpt     trials    aligned (F1)       outside  gain     pinned    dF1 window (Hz)  praise
+  1        614       0.00898 +/- 0.00149  0.02384  1.37     0.000       34.8 +/- 9.4    0.548
+  2        1214      0.02010 +/- 0.00407  0.03384  2.17     0.000       72.1 +/- 11.4   0.542
+  3        1856      0.02689 +/- 0.00561  0.04016  2.40     0.000      109.9 +/- 17.2   0.559
+  4        2428      0.03503 +/- 0.00545  0.04522  2.79     0.000      124.2 +/- 19.9   0.548
+  5        3098      0.04020 +/- 0.00620  0.04869  2.98     0.000      140.6 +/- 14.2   0.554
+  6        3642      0.04444 +/- 0.00553  0.05066  3.21     0.000      148.7 +/- 11.0   0.537
+  7        4249      0.04844 +/- 0.00644  0.05264  3.36     0.000      157.8 +/- 8.3    0.541
+  8        4857      0.04957 +/- 0.00615  0.05486  3.31     0.000      144.6 +/- 10.7   0.543
+  9        5464      0.05292 +/- 0.00544  0.05645  3.47     0.000      151.9 +/- 10.1   0.547
+  10       6083      0.05343 +/- 0.00554  0.05866  3.36     0.000      149.8 +/- 12.0   0.537
+  11       6678      0.05467 +/- 0.00567  0.06021  3.35     0.000      144.4 +/- 13.8   0.540
+  12       7323      0.05749 +/- 0.00551  0.06168  3.44     0.000      148.4 +/- 11.9   0.539
+  13       7892      0.05814 +/- 0.00579  0.06336  3.38     0.000      145.6 +/- 12.4   0.540
+  14       8557      0.05913 +/- 0.00572  0.06565  3.33     0.000      151.7 +/- 12.7   0.540
+  15       9106      0.05965 +/- 0.00536  0.06668  3.31     0.000      162.9 +/- 17.4   0.539
+  16       9714      0.06060 +/- 0.00588  0.06691  3.35     0.000      138.8 +/- 11.5   0.536
+
+  aligned exponent  whole 0.63 | first half 0.82 | second half 0.26
+                    1.0 = constant drift into a leakless accumulator
+                    0.5 = diffusion, 0.0 = stopped
+  outside exponent  0.31 (second half), as the diffusive reference
+  gain              1.37 -> 3.35, ratio 2.45
+  pinned share      0.000 -> 0.000, ratio 0.00
+  praise share      0.548 -> 0.536
+  dF1 vs control    138.8 vs 11.4 Hz in the last window
+
+  H1 drift decays     FIRES  (second-half exponent 0.26 vs 0.40)
+  H2 pure diffusion     no   (exponent 0.26 in [0.40,0.60], gain ratio 2.45)
+  H3 clamp binds        no   (pinned 0.000 >= 0.10 and ratio 0.00 > 2)

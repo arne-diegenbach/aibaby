@@ -8704,6 +8704,76 @@ commitment brake moves it 1.07x where 6.2x is needed, and the slow store moves i
 the wrong way by 12.5x. What remains is not a knob on the bias but a different
 place to put it.
 
+### `boundprobe` — learning has two phases, and the second one is structureless
+
+`bias_ctx_` has **no decay term**. It is a clamped accumulator, so under a
+constant drift the aligned component would grow **linearly** in trials. It grows
+at exponent 0.27-0.58. Something bounds it, and after the slow store was refuted
+that was the last unpriced thing between this creature and the 3.8x more aligned
+bias absolute naming needs.
+
+Three fingerprints were named in advance. 27.2M ticks, 9 seeds, 16 checkpoints
+**inside** one session so the points are paired:
+
+| | pre-registered test | measured | fires |
+|---|---|---|---|
+| H1 drift decays | second-half exponent < 0.40 | **0.29** | **yes** |
+| H2 pure diffusion | exponent in [0.40,0.60] **and** gain flat | gain 1.37 -> 3.35 | no |
+| H3 clamp binds | pinned share rises, last > 2x first | **0.000 throughout** | no |
+
+**H3 is dead on the number that matters, not on an inference.** Not one table
+entry out of 9 seeds x 16 checkpoints ever reached `perturb_max`. The earlier
+"RMS 0.085 against a clamp of 0.30 so it is not clamped" was the right conclusion
+reached by the wrong argument — a mean is not a share, and that is exactly the
+inference `ipctx` demolished for thresholds.
+
+**But the verdict line understates what the rows say.** The session splits into
+two phases with a sharp character change at about 4900 trials:
+
+| phase | trials | aligned exponent | outside exponent | gain |
+|---|---|---|---|---|
+| **1** | 614 -> 4857 | **0.83** | 0.40 | 1.37 -> 3.31 |
+| **2** | 4857 -> 9714 | **0.290** | **0.286** | 3.31 -> 3.35 |
+
+In phase 1 aligned grows nearly linearly — a real drift into a leakless
+accumulator — while the useless directions grow diffusively, and gain climbs from
+structureless to 3.3x. **In phase 2 the two exponents are equal to 0.4%** (ratio
+of growths 1.002) and gain is frozen. The table keeps getting bigger and stops
+getting better. Delivered dF1 goes 144.6 -> 138.8 Hz, x0.96, where the
+compressive law predicts x1.13 off that much more aligned bias.
+
+**So the drift does not decay toward some smaller drift. It goes to zero, and
+the rest is isotropic growth the readout cannot use.**
+
+**Why, and it is the reward criterion rather than anything in the plasticity
+rule.** Praise is `e < baseline[bucket]`, where the baseline is an EMA
+(`kVLBaselineAlpha` 0.02) of the creature's *own recent error*. Praise therefore
+means "closer than you usually get", so the expected drift is proportional to the
+**rate of improvement**, not to the remaining error. Once improvement stalls the
+covariance between reward and perturbation goes to zero on its own, no matter how
+far the voice still is from the target.
+
+**And that makes one column of my own instrument unable to answer the question it
+was put there for.** Praise share was included to test "the teacher runs out". It
+cannot: a self-normalising baseline pins praise near 0.5 by construction. It
+reads 0.548 at the first checkpoint and 0.536 at the sixteenth, never leaving
+0.43-0.68 — which is not evidence that the teaching signal is healthy, it is what
+this criterion prints in every possible world. What it *does* show is that the
+creature was at its own baseline from the very first checkpoint.
+
+**The reframing, and it is the sharpest statement of the limit so far.** The
+ceiling is not that reward cannot build a bigger bias. The readout is
+demonstrably not saturated at 145 Hz — `ctxbias`'s oracle reaches 236 Hz through
+that same readout at aligned 0.507. The creature stops at aligned 0.061 because
+**its own success criterion stops asking for more.** Compression and the baseline
+close a loop: `dF1 ~ aligned^0.61` means each further unit of bias buys less error
+reduction, and an EMA baseline converts "diminishing improvement" into "no
+gradient at all".
+
+That is a different object from every mechanism tried since v41. It is not in the
+genome, not in the plasticity rule, and not in the architecture — it is in the
+protocol, which is the one place this project has not looked for the ceiling.
+
 ### What the literature says to build next, and why it is the cheap option
 
 > **This section is the argument that produced DNA v51, kept as the record of
