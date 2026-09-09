@@ -4003,6 +4003,72 @@ struct BiasDrive {
   uint32_t group_a = 2, group_b = 3;
 };
 
+// The three-way split of a context table, and the pinned share. Factored out
+// because it is now computed at 16 checkpoints INSIDE a session as well as once
+// at the end, and a printf argument list that outlived its arm order has already
+// cost this project three results -- two copies of an arithmetic would be the
+// same bug with a longer fuse.
+struct CtxSplit {
+  double align = 0.0;    // moves F1: the projection onto centred position
+  double common = 0.0;   // uniform inside the F1 group; a ratio cannot see it
+  double outside = 0.0;  // everything outside the F1 group
+  double gain = 0.0;     // aligned as a multiple of a STRUCTURELESS table: 1.0 is the null
+  double div = 0.0;      // mean |b(0) - b(1)| over the whole larynx
+  double mag = 0.0;      // mean table magnitude, the scale to read div against
+  double pinned = 0.0;   // share of table entries AT the perturb_max clamp
+  uint32_t gn = 0;
+};
+
+// `perturb_max` is passed rather than read from the net because the clamp is a
+// genome field and the question this exists to answer is whether the table is
+// against it. Pass 0 to skip the pinned share.
+inline CtxSplit ctx_split(const aibaby::Network& net, const aibaby::ModuleState& vms,
+                          double perturb_max) {
+  CtxSplit o;
+  if (vms.count == 0 || net.context_slots() < 2) return o;
+  double dsum = 0.0, msum = 0.0;
+  uint32_t pinned = 0, pn = 0;
+  const double at = perturb_max > 0.0 ? perturb_max * 0.999 : 0.0;
+  for (uint32_t n = vms.begin; n < vms.begin + vms.count; ++n) {
+    const double b0 = double(net.context_bias(n, 0)), b1 = double(net.context_bias(n, 1));
+    dsum += std::fabs(b0 - b1);
+    msum += 0.5 * (std::fabs(b0) + std::fabs(b1));
+    if (at > 0.0) {
+      pn += 2;
+      if (std::fabs(b0) >= at) ++pinned;
+      if (std::fabs(b1) >= at) ++pinned;
+    }
+  }
+  o.div = dsum / vms.count;
+  o.mag = msum / vms.count;
+  o.pinned = pn ? double(pinned) / double(pn) : 0.0;
+  const uint32_t g_beg = vms.begin + aibaby::slice_begin(vms.count, aibaby::kVocalGroups, 2);
+  const uint32_t g_end = vms.begin + aibaby::slice_begin(vms.count, aibaby::kVocalGroups, 3);
+  const uint32_t gn = g_end > g_beg ? g_end - g_beg : 0;
+  if (gn < 2) return o;
+  double dot = 0.0, unorm = 0.0, mean_in = 0.0, out_ss = 0.0;
+  for (uint32_t n = g_beg; n < g_end; ++n) {
+    const double d = double(net.context_bias(n, 0)) - double(net.context_bias(n, 1));
+    const double u = (double(n - g_beg) + 0.5) / double(gn) - 0.5;
+    dot += d * u;
+    unorm += u * u;
+    mean_in += d;
+  }
+  mean_in /= double(gn);
+  for (uint32_t n = vms.begin; n < vms.begin + vms.count; ++n) {
+    if (n >= g_beg && n < g_end) continue;
+    const double d = double(net.context_bias(n, 0)) - double(net.context_bias(n, 1));
+    out_ss += d * d;
+  }
+  const uint32_t outn = vms.count > gn ? vms.count - gn : 0;
+  o.align = unorm > 0.0 ? std::fabs(dot) / std::sqrt(unorm) / std::sqrt(double(gn)) : 0.0;
+  o.common = std::fabs(mean_in);
+  o.outside = outn ? std::sqrt(out_ss / double(outn)) : 0.0;
+  o.gain = o.outside > 0.0 ? o.align * std::sqrt(double(gn)) / o.outside : 0.0;
+  o.gn = gn;
+  return o;
+}
+
 struct VLRun {
   bool ok = false;
   double err_early = 0.0, err_late = 0.0;
@@ -4070,6 +4136,20 @@ struct VLRun {
   // 1.0 is the null; this is the number the shape question actually turns on.
   double ctx_align_gain = 0.0;
   uint32_t ctx_f1_group_n = 0;
+  double ctx_pinned = 0.0;  // share of table entries AT the perturb_max clamp
+  // Within-session checkpoints. `ctxscale` measured the growth of the aligned
+  // bias ACROSS runs at three budgets, which costs a whole run per point and
+  // pays cross-seed noise for each one. These are the same curve sampled inside
+  // ONE session, so the points are paired by construction.
+  static constexpr uint32_t kCkpt = 16;
+  uint32_t ckpt_n = 0;
+  double ckpt_trial[kCkpt] = {};
+  double ckpt_align[kCkpt] = {};
+  double ckpt_outside[kCkpt] = {};
+  double ckpt_gain[kCkpt] = {};
+  double ckpt_pinned[kCkpt] = {};
+  double ckpt_df1[kCkpt] = {};    // |F1(word 0) - F1(word 1)| over THIS window only
+  double ckpt_praise[kCkpt] = {}; // praise share in the window: does the teacher run out?
   double ctx_shared_mag = 0.0;  // mean |shared bias|, the scale to read it against
   // DNA v52. What the index the creature DERIVED for itself actually was,
   // measured only in the window where reward lands -- `ctxsrc`'s whole finding
@@ -4232,6 +4312,11 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
   uint32_t word_n[kVLMaxWords][2] = {};
   // The voice's own formants per word, over every voiced frame of the session.
   double vf1_sum[kVLMaxWords] = {}, vf2_sum[kVLMaxWords] = {};
+  // Per-checkpoint-window versions of the same, so the transfer curve can be
+  // read INSIDE one session instead of across three runs.
+  double wf1_sum[kVLMaxWords] = {};
+  uint32_t wf_n[kVLMaxWords] = {};
+  uint32_t w_praise = 0, w_scold = 0;
   uint32_t vf_n[kVLMaxWords] = {};
   uint64_t ctx_ticks = 0, ctx_ticks_total = 0;
   // DNA v52. Confusion between the word the caregiver said and the slice the
@@ -4427,14 +4512,14 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
           // first version of this did exactly that.
           last_feedback = now;
           const float value = want_loud ? regime.praise : regime.scold;
-          if (value > 0.0f) ++out.praises; else ++out.scolds;
+          if (value > 0.0f) { ++out.praises; ++w_praise; } else { ++out.scolds; ++w_scold; }
           pending.push_back(Praise{now + regime.delay, value});
           out.feedback.push_back(Praise{now + regime.delay, value});
         } else if (e >= 0.0) {
           last_feedback = now;
           if (baseline[bucket] >= 0.0) {
             const float value = e < baseline[bucket] ? regime.praise : regime.scold;
-            if (value > 0.0f) ++out.praises; else ++out.scolds;
+            if (value > 0.0f) { ++out.praises; ++w_praise; } else { ++out.scolds; ++w_scold; }
             pending.push_back(Praise{now + regime.delay, value});
             out.feedback.push_back(Praise{now + regime.delay, value});
           }
@@ -4465,6 +4550,8 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
       vf1_sum[label] += double(v.f1);
       vf2_sum[label] += double(v.f2);
       ++vf_n[label];
+      wf1_sum[label] += double(v.f1);
+      ++wf_n[label];
     }
 
     // A trial in which the creature said nothing has no accuracy to score and
@@ -4495,6 +4582,46 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
       out.utt_f1.push_back(f1_sum / double(n_voiced));
       out.utt_f2.push_back(f2_sum / double(n_voiced));
       out.utt_word.push_back(int(label));
+    }
+
+    // The within-session checkpoint. Sampled at the END of a trial so the table
+    // reflects every cash-in that trial produced, and spaced by trial count
+    // rather than by tick so the x axis is the same quantity `ctxscale` plots.
+    //
+    // WHY THIS EXISTS. `bias_ctx_` has no leak -- it is a pure clamped
+    // accumulator -- so under a constant drift the aligned component would grow
+    // LINEARLY in trials. It grows at exponent 0.27 to 0.58. Something is
+    // bounding it, and the three candidates leave different fingerprints here:
+    // the drift falling (align concave, praise share moving), pure diffusion
+    // (exponent pinned at 0.5, gain flat), or the clamp binding on a heavy tail
+    // (pinned share rising, which an RMS of 0.085 against a clamp of 0.30 does
+    // NOT rule out -- the same shape `ipctx` found on thresholds).
+    if (out.ckpt_n < VLRun::kCkpt && n_trials > 0) {
+      const uint32_t edge =
+          uint32_t((uint64_t(out.ckpt_n + 1) * n_trials) / VLRun::kCkpt);
+      if (trial + 1 >= edge) {
+        const uint32_t k = out.ckpt_n;
+        const aibaby::Network& cnet = s.brain.network();
+        const int32_t cvm = s.dna.module_with_role(aibaby::ModuleRole::kVocal);
+        if (cvm >= 0) {
+          const CtxSplit sp = ctx_split(cnet, cnet.module(uint32_t(cvm)),
+                                        double(s.dna.header().exploration.perturb_max));
+          out.ckpt_align[k] = sp.align;
+          out.ckpt_outside[k] = sp.outside;
+          out.ckpt_gain[k] = sp.gain;
+          out.ckpt_pinned[k] = sp.pinned;
+        }
+        out.ckpt_trial[k] = double(trial + 1);
+        out.ckpt_df1[k] = (nw >= 2 && wf_n[0] && wf_n[1])
+                              ? std::fabs(wf1_sum[0] / wf_n[0] - wf1_sum[1] / wf_n[1])
+                              : 0.0;
+        const uint32_t wtot = w_praise + w_scold;
+        out.ckpt_praise[k] = wtot ? double(w_praise) / double(wtot) : 0.0;
+        ++out.ckpt_n;
+        for (uint32_t q = 0; q < kVLMaxWords; ++q) { wf1_sum[q] = 0.0; wf_n[q] = 0; }
+        w_praise = 0;
+        w_scold = 0;
+      }
     }
 
     const int bin = trial < third ? 0 : (trial >= n_trials - third ? 1 : -1);
@@ -4594,64 +4721,21 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
     const aibaby::Network& net = s.brain.network();
     const int32_t vmod = s.dna.module_with_role(aibaby::ModuleRole::kVocal);
     if (vmod >= 0 && net.context_slots() >= 2) {
-      const aibaby::ModuleState& vms = net.module(uint32_t(vmod));
-      double dsum = 0.0, msum = 0.0;
-      for (uint32_t n = vms.begin; n < vms.begin + vms.count; ++n) {
-        dsum += std::fabs(double(net.context_bias(n, 0)) - double(net.context_bias(n, 1)));
-        // The scale to read the divergence against is the SIZE of the tables,
-        // not the shared bias. With a context present on every tick the shared
-        // bias is never cashed into at all and sits at zero by construction --
-        // which is correct behaviour and a useless denominator.
-        msum += 0.5 * (std::fabs(double(net.context_bias(n, 0))) +
-                       std::fabs(double(net.context_bias(n, 1))));
-      }
-      if (vms.count) {
-        out.ctx_table_div = dsum / vms.count;
-        out.ctx_shared_mag = msum / vms.count;
-      }
-      // The F1 slice, by the decoder's own rule rather than a guess at it.
-      const uint32_t g_beg =
-          vms.begin + aibaby::slice_begin(vms.count, aibaby::kVocalGroups, 2);
-      const uint32_t g_end =
-          vms.begin + aibaby::slice_begin(vms.count, aibaby::kVocalGroups, 3);
-      const uint32_t gn = g_end > g_beg ? g_end - g_beg : 0;
-      if (gn >= 2) {
-        double dot = 0.0, unorm = 0.0, mean_in = 0.0, out_ss = 0.0;
-        for (uint32_t n = g_beg; n < g_end; ++n) {
-          const double d = double(net.context_bias(n, 0)) - double(net.context_bias(n, 1));
-          const double u = (double(n - g_beg) + 0.5) / double(gn) - 0.5;
-          dot += d * u;
-          unorm += u * u;
-          mean_in += d;
-        }
-        mean_in /= double(gn);
-        for (uint32_t n = vms.begin; n < vms.begin + vms.count; ++n) {
-          if (n >= g_beg && n < g_end) continue;
-          const double d = double(net.context_bias(n, 0)) - double(net.context_bias(n, 1));
-          out_ss += d * d;
-        }
-        const uint32_t outn = vms.count > gn ? vms.count - gn : 0;
-        // Per-neuron RMS in every case, so the three are on one scale.
-        out.ctx_align = unorm > 0.0 ? std::fabs(dot) / std::sqrt(unorm) / std::sqrt(double(gn)) : 0.0;
-        out.ctx_common = std::fabs(mean_in);
-        out.ctx_outside = outn ? std::sqrt(out_ss / double(outn)) : 0.0;
-        // THE NULL THESE MUST BE READ AGAINST, or the comparison is meaningless.
-        // `aligned` and `common` are each a projection onto ONE direction; a
-        // table with no structure at all still puts something there. For a table
-        // whose entries are independent with per-neuron RMS sigma, `outside`
-        // reads sigma while both projections read sigma/sqrt(gn) -- so the raw
-        // columns differ by sqrt(gn) with NOTHING learned, and reporting
-        // "four times as much lands outside" off them would be an artefact of
-        // dimension, not a finding.
-        //
-        // So: gain = 1.0 is exactly what a structureless table gives. Above 1
-        // means reward has preferentially written the direction that moves F1.
-        out.ctx_align_gain =
-            out.ctx_outside > 0.0
-                ? out.ctx_align * std::sqrt(double(gn)) / out.ctx_outside
-                : 0.0;
-        out.ctx_f1_group_n = gn;
-      }
+      // One arithmetic, shared with the within-session checkpoints above. The
+      // scale to read the divergence against is the SIZE of the tables, not the
+      // shared bias: with a context present on every tick the shared bias is
+      // never cashed into at all and sits at zero by construction -- which is
+      // correct behaviour and a useless denominator.
+      const CtxSplit sp = ctx_split(net, net.module(uint32_t(vmod)),
+                                    double(s.dna.header().exploration.perturb_max));
+      out.ctx_table_div = sp.div;
+      out.ctx_shared_mag = sp.mag;
+      out.ctx_align = sp.align;
+      out.ctx_common = sp.common;
+      out.ctx_outside = sp.outside;
+      out.ctx_align_gain = sp.gain;
+      out.ctx_f1_group_n = sp.gn;
+      out.ctx_pinned = sp.pinned;
     }
   }
   {
@@ -10729,6 +10813,259 @@ constexpr uint32_t kCtxScaleArmCount =
 // Longest first, so the tail of the work queue is short jobs rather than one
 // four-times-everything straggler holding thirteen idle cores.
 constexpr uint32_t kCtxScaleBudgets = 3;
+
+// ---------------------------------------------------------------------------
+// `boundprobe` -- WHAT BOUNDS THE ALIGNED BIAS, given that nothing leaks it.
+//
+// `bias_ctx_` has no decay term. It is a clamped accumulator, so under a
+// constant drift the aligned component would grow LINEARLY in trials. It grows
+// at exponent 0.27 to 0.58 (`ctxscale`, `align-split`). Something bounds it, and
+// after the slow store was refuted that bound is the last unpriced thing between
+// this creature and the 3.8x more aligned bias that absolute naming needs.
+//
+// Three candidates, and they leave DIFFERENT fingerprints, which is why this is
+// a measurement and not another sweep:
+//
+//   H1  the drift itself decays -- the teacher runs out, or the credit signal
+//       shrinks as the voice moves. Fingerprint: aligned concave with a
+//       second-half exponent below 0.4, praise share moving.
+//   H2  it was never drift -- aligned is the diffusive component projected onto
+//       one direction. Fingerprint: exponent pinned near 0.5 AND gain flat.
+//       (Already weakened: gain rises 3.57 -> 4.57 across budgets.)
+//   H3  the clamp binds on a heavy tail. Fingerprint: the pinned share rises.
+//       An RMS of 0.085 against a `perturb_max` of 0.30 does NOT rule this out,
+//       and "the RMS is well under the clamp" is exactly the argument `ipctx`
+//       demolished for thresholds -- a quarter to five-sixths of that module sat
+//       AT its clamp while its mean sat nowhere near it.
+//
+// It reads the curve INSIDE one session at 16 checkpoints instead of across
+// three runs at three budgets, so the points are paired by construction and it
+// costs a twelfth of what `ctxscale` costs for twelve times the resolution.
+//
+// Read-only: no genome field is swept and no mechanism is added. If H3 fires it
+// names `perturb_max`, which `tools/vacuity.sh` reported slack at smoke length
+// and which nobody has tested where it could bind.
+struct BoundArm {
+  const char* name;
+  uint32_t slots;
+  uint32_t source;
+  VLTarget target;
+};
+constexpr BoundArm kBoundArms[] = {
+    // The creature's own index off the ear's rate EMA: the only source that has
+    // replicated out of sample.
+    {"ema", 2, 4, kVLTgtHeard},
+    // Matched-marginal control. Its index tracks the word too, so its voice is
+    // word-dependent -- just not in the direction reward asked for. Without it a
+    // rising dF1 is not evidence of anything.
+    {"ema-rnd", 2, 4, kVLTgtRandom},
+};
+constexpr uint32_t kBoundArmCount = sizeof(kBoundArms) / sizeof(kBoundArms[0]);
+
+// Least-squares slope of log(y) on log(x) over [lo, hi). The exponent the
+// hypotheses are stated in: 1.0 is a constant drift into a leakless
+// accumulator, 0.5 is diffusion, 0.0 is stopped.
+inline double drift_exponent(const double* x, const double* y, uint32_t lo, uint32_t hi) {
+  double sx = 0.0, sy = 0.0, sxx = 0.0, sxy = 0.0;
+  uint32_t n = 0;
+  for (uint32_t i = lo; i < hi; ++i) {
+    if (!(x[i] > 0.0) || !(y[i] > 0.0)) continue;
+    const double lx = std::log(x[i]), ly = std::log(y[i]);
+    sx += lx; sy += ly; sxx += lx * lx; sxy += lx * ly;
+    ++n;
+  }
+  if (n < 3) return 0.0;
+  const double den = double(n) * sxx - sx * sx;
+  return den != 0.0 ? (double(n) * sxy - sx * sy) / den : 0.0;
+}
+
+bool run_boundprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  aibaby::Dna dna;
+  if (dna.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) {
+    std::printf("  setup failed: the genome does not load\n");
+    return false;
+  }
+  const int32_t ctx_module = dna.module_with_role(aibaby::ModuleRole::kContext);
+  if (ctx_module < 0) {
+    std::printf("  this genome has no kContext module. Build one with NO output\n"
+                "  weight -- the index is READ, never driven:\n\n"
+                "    python3 tools/genome_add_context.py dna/default.toml ctx.toml \\\n"
+                "        vocal out_w=0\n"
+                "    ./build/aibaby --dna ctx.toml --experiment boundprobe\n");
+    return false;
+  }
+  constexpr uint32_t kReps = 9;
+  const size_t slots_off = offsetof(aibaby::DnaHeader, exploration) +
+                           offsetof(aibaby::DnaExploration, context_slots);
+  const size_t src_off = offsetof(aibaby::DnaHeader, exploration) +
+                         offsetof(aibaby::DnaExploration, context_source);
+  const double pmax = double(dna.header().exploration.perturb_max);
+  instrument("boundprobe", dna.header().seed ^ 0xD21Fu, ticks / kVLTrialTicks,
+             "trials per session, sampled at 16 checkpoints");
+  std::printf("  question          `bias_ctx_` has NO leak, so a constant drift would grow\n"
+              "                    the aligned component LINEARLY. It grows at exponent\n"
+              "                    0.27-0.58. What bounds it?\n");
+  std::printf("  the three tests   H1 drift decays  : second-half exponent < 0.40\n"
+              "                    H2 pure diffusion: exponent in [0.40,0.60] AND gain flat\n"
+              "                    H3 clamp binds   : pinned share rises, last > 2x first\n"
+              "                    They are not exclusive. All three are printed, and the\n"
+              "                    verdict says so rather than forcing one label.\n");
+  std::printf("  perturb_max       %.3f -- the clamp H3 is about\n\n", pmax);
+
+  struct Cell {
+    bool ok = false;
+    uint32_t scored = 0, skipped = 0, n = 0;
+    double trial[VLRun::kCkpt] = {}, align[VLRun::kCkpt] = {}, outside[VLRun::kCkpt] = {};
+    double gain[VLRun::kCkpt] = {}, pinned[VLRun::kCkpt] = {}, df1[VLRun::kCkpt] = {};
+    double praise[VLRun::kCkpt] = {};
+    double match = 0.0;
+  };
+  const uint32_t njobs = kReps * kBoundArmCount;
+  const std::vector<Cell> cells = parallel_reps<Cell>(njobs, [&](uint32_t i) {
+    Cell cell;
+    const uint32_t r = i / kBoundArmCount;
+    const uint32_t a = i % kBoundArmCount;
+    std::vector<uint8_t> variant = blob;
+    // Seeded exactly as `ctxscale` seeds, so a seed index means the same
+    // creature in both and the two are comparable line for line.
+    const uint64_t seed = dna.header().seed + r * 7919ull;
+    std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+    const uint32_t sl = kBoundArms[a].slots;
+    const uint32_t sr = kBoundArms[a].source;
+    std::memcpy(variant.data() + slots_off, &sl, sizeof(sl));
+    std::memcpy(variant.data() + src_off, &sr, sizeof(sr));
+    CtxDrive drive;
+    drive.module = ctx_module;
+    drive.slots = kVLWords;
+    drive.gain = 0.10;
+    Regime reg;
+    reg.praise = kPraiseValue;
+    reg.scold = kScoldValue;
+    const VLRun run = run_vocallearn_session(variant, ticks, kVLTaught, nullptr, reg,
+                                             kBoundArms[a].target, &drive);
+    cell.scored = run.scored;
+    cell.skipped = run.skipped;
+    if (!run.ok) return cell;
+    cell.n = run.ckpt_n;
+    for (uint32_t k = 0; k < run.ckpt_n; ++k) {
+      cell.trial[k] = run.ckpt_trial[k];
+      cell.align[k] = run.ckpt_align[k];
+      cell.outside[k] = run.ckpt_outside[k];
+      cell.gain[k] = run.ckpt_gain[k];
+      cell.pinned[k] = run.ckpt_pinned[k];
+      cell.df1[k] = run.ckpt_df1[k];
+      cell.praise[k] = run.ckpt_praise[k];
+    }
+    cell.match = run.ctx_match;
+    cell.ok = true;
+    parallel_note("  [%u/%u] seed %u %s  align %.5f  pinned %.3f\n", i + 1, njobs, r,
+                  kBoundArms[a].name, cell.align[cell.n ? cell.n - 1 : 0],
+                  cell.pinned[cell.n ? cell.n - 1 : 0]);
+    return cell;
+  });
+
+  std::vector<double> al[kBoundArmCount][VLRun::kCkpt];
+  std::vector<double> os[kBoundArmCount][VLRun::kCkpt];
+  std::vector<double> gn[kBoundArmCount][VLRun::kCkpt];
+  std::vector<double> pn[kBoundArmCount][VLRun::kCkpt];
+  std::vector<double> d1[kBoundArmCount][VLRun::kCkpt];
+  std::vector<double> pr[kBoundArmCount][VLRun::kCkpt];
+  double xt[VLRun::kCkpt] = {};
+  uint32_t nck = 0;
+  uint32_t used = 0;
+  for (uint32_t i = 0; i < njobs; ++i) {
+    const uint32_t a = i % kBoundArmCount;
+    const Cell& c = cells[i];
+    if (!c.ok) continue;
+    ++used;
+    if (c.n > nck) nck = c.n;
+    for (uint32_t k = 0; k < c.n; ++k) {
+      al[a][k].push_back(c.align[k]);
+      os[a][k].push_back(c.outside[k]);
+      gn[a][k].push_back(c.gain[k]);
+      pn[a][k].push_back(c.pinned[k]);
+      d1[a][k].push_back(c.df1[k]);
+      pr[a][k].push_back(c.praise[k]);
+      xt[k] = c.trial[k];
+    }
+  }
+  if (used < njobs / 2 || nck < 8) {
+    std::printf("\n  boundprobe INCONCLUSIVE -- %u of %u sessions produced a curve,\n"
+                "  with %u checkpoints. Nothing is fitted to that.\n", used, njobs, nck);
+    return false;
+  }
+
+  const auto arm_index = [](const char* want) {
+    for (uint32_t i = 0; i < kBoundArmCount; ++i) {
+      if (std::strcmp(kBoundArms[i].name, want) == 0) return int(i);
+    }
+    return -1;
+  };
+  const int kE = arm_index("ema"), kR = arm_index("ema-rnd");
+  if (kE < 0 || kR < 0) {
+    std::printf("\n  boundprobe cannot summarise: an arm it names is missing.\n");
+    return false;
+  }
+
+  double m_al[VLRun::kCkpt], s_al[VLRun::kCkpt], m_gn[VLRun::kCkpt], m_pn[VLRun::kCkpt];
+  double m_os[VLRun::kCkpt], m_d1[VLRun::kCkpt], s_d1[VLRun::kCkpt], m_pr[VLRun::kCkpt];
+  double m_rd[VLRun::kCkpt], s_rd[VLRun::kCkpt];
+  std::printf("\n  THE CURVE INSIDE ONE SESSION, `ema` arm, %u seeds\n", kReps);
+  std::printf("  %-8s %-9s %-18s %-8s %-8s %-9s %-16s %s\n", "ckpt", "trials", "aligned (F1)",
+              "outside", "gain", "pinned", "dF1 window (Hz)", "praise");
+  for (uint32_t k = 0; k < nck; ++k) {
+    double dummy;
+    m_al[k] = ctx_mean_se(al[kE][k], &s_al[k]);
+    m_os[k] = ctx_mean_se(os[kE][k], &dummy);
+    m_gn[k] = ctx_mean_se(gn[kE][k], &dummy);
+    m_pn[k] = ctx_mean_se(pn[kE][k], &dummy);
+    m_d1[k] = ctx_mean_se(d1[kE][k], &s_d1[k]);
+    m_pr[k] = ctx_mean_se(pr[kE][k], &dummy);
+    m_rd[k] = ctx_mean_se(d1[kR][k], &s_rd[k]);
+    std::printf("  %-8u %-9.0f %.5f +/- %.5f  %-8.5f %-8.2f %-9.3f %6.1f +/- %-6.1f %.3f\n",
+                k + 1, xt[k], m_al[k], s_al[k], m_os[k], m_gn[k], m_pn[k], m_d1[k],
+                s_d1[k], m_pr[k]);
+  }
+
+  const uint32_t half = nck / 2;
+  const double e_all = drift_exponent(xt, m_al, 0, nck);
+  const double e_1st = drift_exponent(xt, m_al, 0, half);
+  const double e_2nd = drift_exponent(xt, m_al, half, nck);
+  const double e_out = drift_exponent(xt, m_os, half, nck);
+  const double gain_ratio = m_gn[0] > 0.0 ? m_gn[nck - 1] / m_gn[0] : 0.0;
+  const double pin_first = m_pn[0], pin_last = m_pn[nck - 1];
+  const double pin_ratio = pin_first > 1e-9 ? pin_last / pin_first : (pin_last > 0.01 ? 99.0 : 0.0);
+
+  std::printf("\n  aligned exponent  whole %.2f | first half %.2f | second half %.2f\n",
+              e_all, e_1st, e_2nd);
+  std::printf("                    1.0 = constant drift into a leakless accumulator\n"
+              "                    0.5 = diffusion, 0.0 = stopped\n");
+  std::printf("  outside exponent  %.2f (second half), as the diffusive reference\n", e_out);
+  std::printf("  gain              %.2f -> %.2f, ratio %.2f\n", m_gn[0], m_gn[nck - 1], gain_ratio);
+  std::printf("  pinned share      %.3f -> %.3f, ratio %.2f\n", pin_first, pin_last, pin_ratio);
+  std::printf("  praise share      %.3f -> %.3f\n", m_pr[0], m_pr[nck - 1]);
+  std::printf("  dF1 vs control    %.1f vs %.1f Hz in the last window\n",
+              m_d1[nck - 1], m_rd[nck - 1]);
+
+  const bool h1 = e_2nd < 0.40;
+  const bool h2 = e_2nd >= 0.40 && e_2nd <= 0.60 && gain_ratio > 0.8 && gain_ratio < 1.2;
+  const bool h3 = pin_last >= 0.10 && pin_ratio > 2.0;
+  std::printf("\n  H1 drift decays     %s  (second-half exponent %.2f vs 0.40)\n",
+              h1 ? "FIRES" : "  no ", e_2nd);
+  std::printf("  H2 pure diffusion   %s  (exponent %.2f in [0.40,0.60], gain ratio %.2f)\n",
+              h2 ? "FIRES" : "  no ", e_2nd, gain_ratio);
+  std::printf("  H3 clamp binds      %s  (pinned %.3f >= 0.10 and ratio %.2f > 2)\n",
+              h3 ? "FIRES" : "  no ", pin_last, pin_ratio);
+  if (!h1 && !h2 && !h3) {
+    std::printf("\n  boundprobe INCONCLUSIVE -- none of the three fingerprints fires.\n"
+                "  The bound is real (the exponent is %.2f, not 1.0) and is none of the\n"
+                "  three things named in advance. Do NOT move a threshold to make one\n"
+                "  fit: the ratios above are the result.\n", e_2nd);
+    return false;
+  }
+  return true;
+}
 
 bool run_ctxscale(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
   (void)verbose;

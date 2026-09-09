@@ -205,6 +205,14 @@ const Spec kSpecs[] = {
      "  asymptote? Runs off/ema/ema-rnd at three budgets (1x, 2x, 4x) and gates\n"
      "  on whether dF1 above its matched-marginal control grows. Decides between\n"
      "  the two remaining leads: a longer run, or Kornfeld's compartments"},
+    {"boundprobe", 13600000, Expect::kOpen, Tier::kTeach,
+     "derived: ctxscale's session at ONE budget, because it reads the growth\n"
+     "  curve INSIDE a session at 16 checkpoints instead of across three runs.\n"
+     "  bias_ctx_ has NO leak, so a constant drift would grow the aligned\n"
+     "  component LINEARLY; it grows at exponent 0.27-0.58. Tests the three\n"
+     "  fingerprints -- drift decaying, pure diffusion, the perturb_max clamp\n"
+     "  binding on a heavy tail -- and refuses if none of them fires. Not to be\n"
+     "  confused with driftprobe, which asks about interference BETWEEN lessons"},
     {"ctxfour", 3400000, Expect::kOpen, Tier::kTeach,
      "derived: ctxself's session at FOUR words. partprobe cleared the index at\n"
      "  four (0.895 vs chance 0.250); this asks whether the BIAS holds four\n"
@@ -461,6 +469,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "ctxself") ok = run_ctxself(dna_blob, ticks, verbose);
   else if (name == "ctxfour") ok = run_ctxfour(dna_blob, ticks, verbose);
   else if (name == "ctxscale") ok = run_ctxscale(dna_blob, ticks, verbose);
+  else if (name == "boundprobe") ok = run_boundprobe(dna_blob, ticks, verbose);
   else if (name == "partprobe") ok = run_partprobe(dna_blob, ticks, verbose);
   else if (name == "pgprobe") ok = run_pgprobe(dna_blob, ticks, verbose);
   else if (name == "g2cond") ok = run_g2cond(dna_blob, ticks, verbose);
