@@ -8618,13 +8618,21 @@ print:
   doubling, so trials would need **147x**. Dead by compute, and dead for a reason
   that is now measured rather than inferred.
 
-**The target is therefore the equilibrium magnitude of the learned bias.** It is
-not clamped — `perturb_max` is 0.30 and the tables sit at 0.085 — so an
-equilibrium is being set by the balance between what reward writes and what
-leaks away. That is a different question from every mechanism considered in the
-last week, and it comes with a payoff already priced: 3.8x more aligned bias is
-230 Hz, and 230 Hz is where `nearest` crosses the midpoint and absolute naming
-becomes possible.
+**The target is therefore the equilibrium magnitude of the learned bias.** It
+comes with a payoff already priced: 3.8x more aligned bias is 230 Hz, and 230 Hz
+is where `nearest` crosses the midpoint and absolute naming becomes possible.
+
+**And this paragraph used to say the equilibrium was "a balance between what
+reward writes and what leaks away", which is wrong: nothing leaks.** `bias_ctx_`
+has no decay term at all. It is a clamped accumulator, so under a constant drift
+the aligned component would grow **linearly** in trials — and it grows at
+exponent 0.27 to 0.58. There is no equilibrium in the rule; there is a bound
+coming from somewhere else, and naming that is what `boundprobe` is for. The
+second clause was loose too: "not clamped, because the RMS is 0.085 against a
+`perturb_max` of 0.30" is precisely the inference `ipctx` demolished for
+thresholds, where a mean nowhere near the clamp sat alongside a quarter to
+five-sixths of the module pinned AT it. A mean is not a share, so the share is
+now measured.
 
 ### The slow store, tested at last — refuted, and it validates the transfer curve
 
