@@ -11231,7 +11231,7 @@ bool run_baseprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
     uint32_t scored = 0, skipped = 0, n = 0;
     double align[VLRun::kCkpt] = {}, outside[VLRun::kCkpt] = {}, gain[VLRun::kCkpt] = {};
     double df1[VLRun::kCkpt] = {}, trial[VLRun::kCkpt] = {}, pinned[VLRun::kCkpt] = {};
-    double rmag = 0.0, praise_share = 0.0;
+    double rmag = 0.0, praise_share = 0.0, tail_df1 = 0.0;
   };
   const uint32_t njobs = kReps * kBaseArmCount;
   const std::vector<Cell> cells = parallel_reps<Cell>(njobs, [&](uint32_t i) {
@@ -11270,8 +11270,13 @@ bool run_baseprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
     const uint32_t tot = run.praises + run.scolds;
     cell.praise_share = tot ? double(run.praises) / double(tot) : 0.0;
     cell.ok = true;
-    parallel_note("  [%u/%u] seed %u %-9s  aligned %.5f  |reward| %.3f\n", i + 1, njobs, r,
-                  kBaseArms[a].name, cell.align[cell.n ? cell.n - 1 : 0], cell.rmag);
+    double tail = 0.0;
+    uint32_t tn = 0;
+    for (uint32_t k = cell.n > 4 ? cell.n - 4 : 0; k < cell.n; ++k) { tail += cell.df1[k]; ++tn; }
+    cell.tail_df1 = tn ? tail / double(tn) : 0.0;
+    parallel_note("  [%u/%u] seed %u %-9s  aligned %.5f  dF1tail %.1f  |reward| %.3f\n",
+                  i + 1, njobs, r, kBaseArms[a].name, cell.align[cell.n ? cell.n - 1 : 0],
+                  cell.tail_df1, cell.rmag);
     return cell;
   });
 
@@ -11374,18 +11379,24 @@ bool run_baseprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
                 worst, kReps);
     return false;
   }
-  std::printf("  THE CURVE, `%s` arm, %u seeds at every checkpoint\n",
-              kBaseArms[0].name, kReps);
-  std::printf("  %-8s %-9s %-20s %-9s %-8s %-9s %s\n", "ckpt", "trials", "aligned (F1)",
-              "outside", "gain", "pinned", "dF1 window (Hz)");
-  for (uint32_t k = 0; k < nck; ++k) {
-    double se, dummy;
-    const double ma = ctx_mean_se(al[0][k], &se);
-    std::printf("  %-8u %-9.0f %.5f +/- %.5f  %-9.5f %-8.2f %-9.3f %.1f\n", k + 1, xt[k],
-                ma, se, ctx_mean_se(os[0][k], &dummy), ctx_mean_se(gn[0][k], &dummy),
-                ctx_mean_se(pin[0][k], &dummy), ctx_mean_se(d1[0][k], &dummy));
+  // EVERY arm's curve, not just the first. The 27.2M run printed one and the
+  // question it raised -- is a graded arm escaping the floor, or merely BEHIND
+  // and still in its own phase 1? -- is exactly the one the other two curves
+  // answer at a glance.
+  for (uint32_t a = 0; a < kBaseArmCount; ++a) {
+    std::printf("  THE CURVE, `%s` arm, %u seeds at every checkpoint\n",
+                kBaseArms[a].name, kReps);
+    std::printf("  %-8s %-9s %-20s %-9s %-8s %-9s %s\n", "ckpt", "trials", "aligned (F1)",
+                "outside", "gain", "pinned", "dF1 window (Hz)");
+    for (uint32_t k = 0; k < nck; ++k) {
+      double se, dummy;
+      const double ma = ctx_mean_se(al[a][k], &se);
+      std::printf("  %-8u %-9.0f %.5f +/- %.5f  %-9.5f %-8.2f %-9.3f %.1f\n", k + 1, xt[k],
+                  ma, se, ctx_mean_se(os[a][k], &dummy), ctx_mean_se(gn[a][k], &dummy),
+                  ctx_mean_se(pin[a][k], &dummy), ctx_mean_se(d1[a][k], &dummy));
+    }
+    std::printf("\n");
   }
-  std::printf("\n");
 
   std::printf("  %-10s %-11s %-11s %-16s %-16s %-11s %s\n", "arm", "|reward|", "praise",
               "aligned exp 1/2", "outside exp 1/2", "gain 1->16", "dF1 last (Hz)");
@@ -11431,35 +11442,82 @@ bool run_baseprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
     return false;
   }
 
-  // Pre-registered: a graded arm escapes phase 2 only if its separation is
-  // positive at 2 SE AND it is at least 2 SE above the binary arm's. One of
-  // those alone is not enough -- the first can fire on an arm that merely
-  // learns slower, the second on an arm whose binary partner had a bad draw.
+  // PAIRED ON SEED, and this replaces the gate the 27.2M run shipped with.
+  //
+  // That gate asked whether the aligned component still outgrows the useless
+  // ones in the SECOND HALF OF THE TRIALS. It fired on `graded-1` at 2.8 SE, and
+  // it was the wrong question: the window is a fixed trial index, not a fixed
+  // stage of learning. An arm that simply learns SLOWER is still in its own
+  // phase 1 during that window, and will show exactly that signature while
+  // ending up worse off. Both graded arms did end up worse off -- lower final
+  // gain (3.16 and 2.75 against 3.34) and lower delivered dF1 -- which is the
+  // signature of being behind, not of escaping a floor.
+  //
+  // So the gate is now the two things that actually have to be true, each paired
+  // by seed because the arms run on identical creatures and a paired test is
+  // strictly better powered than comparing two pooled means:
+  //
+  //   more aligned bias at the end, AND at least as much delivered dF1.
+  //
+  // The second clause is what the old gate was missing. An arm can grow a larger
+  // bias and deliver less of it -- `aligned x gain` was already refuted as a
+  // causal model once -- so a magnitude win that does not arrive is not a win.
+  const auto paired = [&](uint32_t arm, bool use_df1, double* se_out) {
+    double sum = 0.0, ss = 0.0;
+    uint32_t n = 0;
+    std::vector<double> d;
+    for (uint32_t r = 0; r < kReps; ++r) {
+      const Cell& cb = cells[r * kBaseArmCount + 0];
+      const Cell& ca = cells[r * kBaseArmCount + arm];
+      if (!cb.ok || !ca.ok || cb.n == 0 || ca.n == 0) continue;
+      const double x = use_df1 ? (ca.tail_df1 - cb.tail_df1)
+                               : (ca.align[ca.n - 1] - cb.align[cb.n - 1]);
+      d.push_back(x);
+      sum += x;
+      ++n;
+    }
+    if (n < 3) { *se_out = 0.0; return 0.0; }
+    const double m = sum / double(n);
+    for (double x : d) ss += (x - m) * (x - m);
+    *se_out = std::sqrt(ss / double(n - 1) / double(n));
+    return m;
+  };
+
+  std::printf("\n  PAIRED ON SEED, which is the gate. dF1 is the mean of the last four\n"
+              "  windows rather than one, because one window carries an SE of ~27 Hz:\n");
+  std::printf("  %-10s %-28s %s\n", "arm", "final aligned vs binary", "tail dF1 vs binary (Hz)");
   int escaped = -1;
   for (uint32_t a = 1; a < kBaseArmCount; ++a) {
-    const double joint = std::sqrt(sep_se[a] * sep_se[a] + sep_se[0] * sep_se[0]);
-    if (sep_se[a] > 0.0 && st[a].sep > 2.0 * sep_se[a] &&
-        joint > 0.0 && (st[a].sep - st[0].sep) > 2.0 * joint) {
+    double se_al = 0.0, se_d = 0.0;
+    const double d_al = paired(a, false, &se_al);
+    const double d_df = paired(a, true, &se_d);
+    std::printf("  %-10s %+.5f +/- %.5f (%+.1f SE)  %+6.1f +/- %.1f (%+.1f SE)\n",
+                kBaseArms[a].name, d_al, se_al, se_al > 0.0 ? d_al / se_al : 0.0,
+                d_df, se_d, se_d > 0.0 ? d_df / se_d : 0.0);
+    // Escapes only if the bias is bigger at 2 SE AND delivery is not worse at
+    // 2 SE. "Not worse" rather than "better" is deliberate: the payoff is priced
+    // on the bias, and this run cannot resolve a dF1 gain of the size it implies.
+    if (se_al > 0.0 && d_al > 2.0 * se_al && (se_d <= 0.0 || d_df > -2.0 * se_d)) {
       escaped = int(a);
-      break;
     }
   }
+
   if (escaped < 0) {
-    std::printf("\n  THE FLOOR IS THE RULE'S, NOT THE CRITERION'S. No graded arm keeps the\n"
-                "  aligned component outgrowing the useless ones into phase 2 at 2 SE, and\n"
-                "  none separates from the binary arm at 2 SE. Handing node perturbation\n"
-                "  the magnitude it was discarding does not move its variance floor, which\n"
-                "  is what Hiratani's analysis says should happen: the floor is set by the\n"
-                "  perturbation noise the estimator injects, not by the resolution of the\n"
-                "  signal it reads. 137 Hz is this architecture's number.\n");
+    std::printf("\n  THE FLOOR IS THE RULE'S, NOT THE CRITERION'S. No graded arm ends with\n"
+                "  more aligned bias at 2 SE while also not delivering less. Handing node\n"
+                "  perturbation the magnitude it was discarding does not move its variance\n"
+                "  floor -- which is what Hiratani's analysis says should happen, since the\n"
+                "  floor is set by the perturbation noise the estimator injects and not by\n"
+                "  the resolution of the signal it reads.\n");
+    std::printf("\n  The second-half separation exponents above are printed as a DIAGNOSTIC\n"
+                "  and must not be read as a result: that window is a fixed trial index, so\n"
+                "  an arm which merely learns slower scores well on it while ending worse.\n");
     return false;
   }
-  std::printf("\n  THE CRITERION WAS THE LIMIT. `%s` keeps aligned outgrowing outside at\n"
-              "  %.1f SE where the binary arm is at %.1f SE, and separates from it by\n"
-              "  %+.2f. The one bit per trial was costing the drift, and that is a\n"
-              "  PROTOCOL change rather than a mechanism -- nothing in the genome moves.\n",
-              kBaseArms[escaped].name, st[escaped].sep / sep_se[escaped],
-              sep_se[0] > 0.0 ? st[0].sep / sep_se[0] : 0.0, st[escaped].sep - st[0].sep);
+  std::printf("\n  THE CRITERION WAS THE LIMIT. `%s` ends with more aligned bias, paired on\n"
+              "  the same creatures, without delivering less. The one bit per trial was\n"
+              "  costing the drift, and that is a PROTOCOL change rather than a mechanism --\n"
+              "  nothing in the genome moves.\n", kBaseArms[escaped].name);
   return true;
 }
 

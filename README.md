@@ -8774,6 +8774,79 @@ That is a different object from every mechanism tried since v41. It is not in th
 genome, not in the plasticity rule, and not in the architecture — it is in the
 protocol, which is the one place this project has not looked for the ceiling.
 
+### `baseprobe` — the gate fired, and I do not believe it
+
+`boundprobe`'s phase 2 is node perturbation on its variance floor. That floor is a
+ratio of systematic drift to diffusive spread, and everything tried so far
+attacked the diffusive half — the commitment brake (1.07x where 6.2x is needed),
+the slow store (12.5x the wrong way), a selectivity mask (nothing). The shipped
+criterion delivers **one bit per trial**: praise if this trial beat the creature's
+own running error, scold if not, magnitude discarded. Graded arms keep the same
+comparison and hand the magnitude over, which raises the drift without touching
+the step size — the thing raising `perturb_rate` cannot do, since that grows
+`outside` 3x and halves `gain`.
+
+**First, `boundprobe` re-measured with the checkpoint bug fixed, because its
+`binary` arm is bit-for-bit the arm `boundprobe` ran:**
+
+| | buggy | fixed |
+|---|---|---|
+| final aligned | 0.06060 | 0.06101 |
+| phase-2 aligned / outside exponent | 0.26 / 0.31 | 0.25 / 0.32 |
+| gain, first to last | 1.37 -> 3.35 | 1.38 -> 3.34 |
+| pinned share | 0.000 | 0.000 |
+
+Unchanged. The selection effect was real and it was small on this arm, so
+`boundprobe`'s two phases stand as reported.
+
+**The pre-registered gate fired.** Phase-2 separation, aligned exponent minus
+outside exponent, jackknifed over seeds:
+
+| arm | separation | vs binary | final aligned |
+|---|---|---|---|
+| binary | -0.07 +/- 0.11 (-0.6 SE) | — | 0.06101 |
+| graded | +0.13 +/- 0.15 (0.9 SE) | +0.20 | 0.07014 |
+| **graded-1** | **+0.23 +/- 0.08 (2.8 SE)** | **+0.30 (2.2 SE)** | 0.06841 |
+
+That clears both pre-registered conditions, and my committed prediction was that
+it would not. **The prediction is refuted as stated. The gate is also wrong, and
+the second thing matters more than the first.**
+
+**Three numbers say the graded arms are not escaping the floor, they are behind
+it.** An arm that escaped a variance floor should end *better*. Both graded arms
+end **worse**:
+
+| | binary | graded | graded-1 |
+|---|---|---|---|
+| gain, first -> last | 1.38 -> **3.34** | 1.65 -> 3.16 | 0.99 -> 2.75 |
+| delivered dF1, last window | **146.7 +/- 12.8** | 91.8 +/- 28.1 | 112.7 +/- 27.4 |
+| final aligned, **paired** on the same 9 seeds | — | +0.86 SE, 6/9 | +0.61 SE, 5/9 |
+
+Lower final gain, lower delivered dF1 (wrong sign, 1.8 and 1.1 SE), and the
+paired test on the quantity the whole thing is about — how much aligned bias the
+creature ends with — reads under 1 SE with the signs near even.
+
+**The defect is in what "phase 2" means.** It is the second half of the *trials*,
+which is a fixed index and not a fixed stage of learning. An arm that simply
+learns slower is still inside its own phase 1 during that window, and will show
+exactly the signature the gate rewards — aligned still outgrowing outside —
+while finishing behind. `graded-1` starts at gain 0.99 against binary's 1.38 and
+ends at 2.75 against 3.34: it is behind at both ends. The gate measured a
+learning-rate difference and called it an escape.
+
+**So the gate is replaced by the two things that actually have to be true, each
+paired by seed since the arms run on identical creatures: more aligned bias at
+the end, and not less delivered dF1.** The second clause is what the old gate
+lacked. `aligned x gain` was already refuted as a causal model once — a bias can
+grow larger and arrive smaller — so a magnitude win that does not arrive is not a
+win. dF1 is now the mean of the last four windows rather than one, because one
+window carries an SE of about 27 Hz against an effect of about 30.
+
+**And the run is repeated longer**, at 40.8M, so that an arm which learns more
+slowly still reaches its own plateau inside the session. Comparing a converged arm
+with an unconverged one at a fixed trial count is the confound above; the only
+clean fix is to let both converge.
+
 ### What the literature says to build next, and why it is the cheap option
 
 > **This section is the argument that produced DNA v51, kept as the record of

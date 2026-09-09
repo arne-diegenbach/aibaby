@@ -1,29 +1,29 @@
-  [13/27] seed 4 binary     aligned 0.05777  |reward| 0.500
+  [10/27] seed 3 binary     aligned 0.06414  |reward| 0.500
   [19/27] seed 6 binary     aligned 0.04581  |reward| 0.500
   [7/27] seed 2 binary     aligned 0.03666  |reward| 0.500
-  [10/27] seed 3 binary     aligned 0.06414  |reward| 0.500
-  [12/27] seed 3 graded-1   aligned 0.04806  |reward| 0.499
-  [11/27] seed 3 graded     aligned 0.08042  |reward| 0.506
-  [6/27] seed 1 graded-1   aligned 0.09510  |reward| 0.499
+  [12/27] seed 3 graded-1   aligned 0.05205  |reward| 0.499
   [16/27] seed 5 binary     aligned 0.07508  |reward| 0.500
-  [23/27] seed 7 graded     aligned 0.10937  |reward| 0.505
+  [6/27] seed 1 graded-1   aligned 0.09510  |reward| 0.499
+  [13/27] seed 4 binary     aligned 0.05777  |reward| 0.500
+  [22/27] seed 7 binary     aligned 0.06428  |reward| 0.500
   [17/27] seed 5 graded     aligned 0.09013  |reward| 0.506
-  [25/27] seed 8 binary     aligned 0.07405  |reward| 0.500
-  [27/27] seed 8 graded-1   aligned 0.03598  |reward| 0.499
+  [23/27] seed 7 graded     aligned 0.10937  |reward| 0.505
+  [11/27] seed 3 graded     aligned 0.08042  |reward| 0.506
   [1/27] seed 0 binary     aligned 0.08415  |reward| 0.500
-  [22/27] seed 7 binary     aligned 0.06381  |reward| 0.500
+  [27/27] seed 8 graded-1   aligned 0.04785  |reward| 0.499
+  [25/27] seed 8 binary     aligned 0.07405  |reward| 0.500
   [4/27] seed 1 binary     aligned 0.04716  |reward| 0.500
-  [2/27] seed 0 graded     aligned 0.07852  |reward| 0.506
-  [5/27] seed 1 graded     aligned 0.07572  |reward| 0.506
-  [21/27] seed 6 graded-1   aligned 0.08697  |reward| 0.499
   [8/27] seed 2 graded     aligned 0.04285  |reward| 0.507
-  [18/27] seed 5 graded-1   aligned 0.08767  |reward| 0.499
+  [21/27] seed 6 graded-1   aligned 0.08771  |reward| 0.499
+  [5/27] seed 1 graded     aligned 0.07572  |reward| 0.506
   [24/27] seed 7 graded-1   aligned 0.11382  |reward| 0.499
+  [2/27] seed 0 graded     aligned 0.07852  |reward| 0.506
   [3/27] seed 0 graded-1   aligned 0.11110  |reward| 0.499
+  [18/27] seed 5 graded-1   aligned 0.08767  |reward| 0.499
   [14/27] seed 4 graded     aligned 0.01757  |reward| 0.506
   [20/27] seed 6 graded     aligned 0.09767  |reward| 0.506
-  [9/27] seed 2 graded-1   aligned 0.00022  |reward| 0.499
   [15/27] seed 4 graded-1   aligned 0.02015  |reward| 0.499
+  [9/27] seed 2 graded-1   aligned 0.00022  |reward| 0.499
   [26/27] seed 8 graded     aligned 0.03897  |reward| 0.507
 experiment: baseprobe
   instrument        baseprobe   trial seed 0000000001359d97   9714 trials per session, sampled at 16 checkpoints
@@ -40,21 +40,37 @@ experiment: baseprobe
                     deviation, so E|reward| = |praise| by construction. The
                     realised mean is printed; >15% off is CONFOUNDED, not read.
 
+  THE CURVE, `binary` arm, 9 seeds at every checkpoint
+  ckpt     trials    aligned (F1)         outside   gain     pinned    dF1 window (Hz)
+  1        607       0.00904 +/- 0.00153  0.02385   1.38     0.000     34.8
+  2        1214      0.02009 +/- 0.00407  0.03384   2.17     0.000     72.1
+  3        1821      0.02709 +/- 0.00557  0.04009   2.42     0.000     109.9
+  4        2428      0.03499 +/- 0.00548  0.04521   2.79     0.000     124.4
+  5        3035      0.03989 +/- 0.00610  0.04849   2.97     0.000     140.4
+  6        3642      0.04434 +/- 0.00558  0.05063   3.21     0.000     148.8
+  7        4249      0.04855 +/- 0.00632  0.05259   3.37     0.000     157.5
+  8        4857      0.04977 +/- 0.00617  0.05481   3.33     0.000     144.6
+  9        5464      0.05302 +/- 0.00540  0.05638   3.48     0.000     151.9
+  10       6071      0.05365 +/- 0.00554  0.05863   3.38     0.000     149.7
+  11       6678      0.05496 +/- 0.00574  0.06018   3.37     0.000     144.5
+  12       7285      0.05755 +/- 0.00552  0.06169   3.44     0.000     148.4
+  13       7892      0.05805 +/- 0.00582  0.06335   3.37     0.000     145.5
+  14       8499      0.05901 +/- 0.00583  0.06566   3.32     0.000     151.8
+  15       9106      0.05949 +/- 0.00521  0.06669   3.30     0.000     162.8
+  16       9714      0.06101 +/- 0.00520  0.06766   3.34     0.000     146.7
+
   arm        |reward|    praise      aligned exp 1/2  outside exp 1/2  gain 1->16  dF1 last (Hz)
-  binary     0.500       0.544       0.82 / 0.26      0.40 / 0.31      1.37 -> 3.35   138.8 +/- 11.5
-  graded     0.506       0.538       0.63 / 0.57      0.41 / 0.43      1.62 -> 3.16   91.7 +/- 28.1
-  graded-1   0.499       0.544       0.90 / 0.68      0.45 / 0.45      0.99 -> 2.76   114.9 +/- 34.8
+  binary     0.500       0.544       0.81 / 0.25      0.40 / 0.32      1.38 -> 3.34   146.7 +/- 12.8
+  graded     0.506       0.538       0.62 / 0.56      0.41 / 0.43      1.65 -> 3.16   91.8 +/- 28.1
+  graded-1   0.499       0.544       0.90 / 0.65      0.46 / 0.42      0.99 -> 2.75   112.7 +/- 27.4
 
   PHASE 2 IS THE QUESTION. Its signature is aligned and outside growing
   at the SAME exponent -- separation zero is the floor:
-  binary     aligned 0.26  outside 0.31  separation -0.05 +/- 0.13 (-0.4 SE)  final aligned 0.06060
-  graded     aligned 0.57  outside 0.43  separation +0.14 +/- 0.15 (0.9 SE)  final aligned 0.07014
-  graded-1   aligned 0.68  outside 0.45  separation +0.24 +/- 0.18 (1.3 SE)  final aligned 0.07134
+  binary     aligned 0.25  outside 0.32  separation -0.07 +/- 0.11 (-0.6 SE)  final aligned 0.06101
+  graded     aligned 0.56  outside 0.43  separation +0.13 +/- 0.15 (0.9 SE)  final aligned 0.07014
+  graded-1   aligned 0.65  outside 0.42  separation +0.23 +/- 0.08 (2.8 SE)  final aligned 0.06841
 
-  THE FLOOR IS THE RULE'S, NOT THE CRITERION'S. No graded arm keeps the
-  aligned component outgrowing the useless ones into phase 2 at 2 SE, and
-  none separates from the binary arm at 2 SE. Handing node perturbation
-  the magnitude it was discarding does not move its variance floor, which
-  is what Hiratani's analysis says should happen: the floor is set by the
-  perturbation noise the estimator injects, not by the resolution of the
-  signal it reads. 137 Hz is this architecture's number.
+  THE CRITERION WAS THE LIMIT. `graded-1` keeps aligned outgrowing outside at
+  2.8 SE where the binary arm is at -0.6 SE, and separates from it by
+  +0.30. The one bit per trial was costing the drift, and that is a
+  PROTOCOL change rather than a mechanism -- nothing in the genome moves.
