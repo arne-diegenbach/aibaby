@@ -277,7 +277,14 @@ DnaStatus Dna::load(const void* blob, size_t size) {
     // DNA v52. An unknown source would fall through to "no context at all",
     // which reads from outside as a mechanism that did nothing rather than as a
     // genome the kernel does not understand.
-    if (h->exploration.context_source > 4u) return DnaStatus::kBadPlasticity;
+    // 0 off, 1 oracle, 2 the larynx cut, 4 the ear's rate EMA. THREE IS GONE:
+    // the derived rate cap cost -0.146 of index on 8 of 9 seeds, and it is
+    // refused rather than ignored so that a genome asking for it fails loudly
+    // instead of silently getting source 2's base rule.
+    if (h->exploration.context_source > 4u ||
+        h->exploration.context_source == 3u) {
+      return DnaStatus::kBadPlasticity;
+    }
   }
 
   if (h->normalisation.enabled) {

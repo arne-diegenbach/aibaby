@@ -1414,42 +1414,25 @@ void Network::step() {
         // MacQueen: each prototype is the running mean of the words it has won,
         // so the learning rate is 1/wins and nothing is guessed.
         //
-        // DNA v53, SOURCE 3: that rate REACHES ZERO, and a prototype that has
-        // stopped moving cannot follow a creature whose own voice is changing.
-        // `ctxself` measured the index DECAYING across a session (0.697 ->
-        // 0.663) in the arm that learns, which is what a frozen prototype under
-        // a drifting input looks like -- and the read-only probe that priced
-        // this at 0.980 could not have seen it, because nothing in a read-only
-        // session drifts.
+        // SOURCE 3 IS DELETED, and the reasoning is kept because it was sound.
         //
-        // The cap is DERIVED rather than floored with a chosen constant.
-        // Average only long enough that the prototype is accurate relative to
-        // the gap it has to resolve, then keep tracking:
+        // MacQueen's 1/wins reaches zero, and a prototype that has stopped moving
+        // cannot follow a creature whose own voice is changing -- `ctxself` had
+        // measured the index decaying across a session (0.697 -> 0.663) in the arm
+        // that learns, which is what a frozen prototype under a drifting input
+        // looks like. So source 3 capped the averaging window at the point where
+        // the prototype is already accurate relative to the gap it must resolve,
+        // deriving the cap rather than guessing it: error of a mean after n
+        // samples is within/sqrt(n), the boundary sits at between/2, so
+        // n_eff = 4 * dscale / gap.
         //
-        //   error of a mean after n samples  =  within / sqrt(n)
-        //   the decision boundary sits at       between / 2
-        //   so  n_eff = (2 * within / between)^2 = 4 * dscale / gap^2
-        //
-        // Both quantities are already maintained by the conscience: `dscale` is
-        // the running mean SQUARED distance from a word to its winner -- the
-        // within-context scatter -- and `gap` is the squared distance between
-        // the two prototypes. The 2 is where a two-way boundary is, which is
-        // arithmetic and not a choice.
-        Scalar lr = kOne / ctx_wins_[winner];
-        if (ctx_source_ == 3 && ctx_slots_ == 2) {
-          Scalar gap = kZero;
-          const Scalar* p0 = ctx_proto_;
-          const Scalar* p1 = ctx_proto_ + sms.capacity;
-          for (uint32_t n = 0; n < sms.count; ++n) {
-            const Scalar e = p0[n] - p1[n];
-            gap += e * e;
-          }
-          if (gap > kZero) {
-            const Scalar n_eff = Scalar(4.0) * dscale / gap;
-            const Scalar cap = n_eff > kOne ? n_eff : kOne;
-            if (ctx_wins_[winner] > cap) lr = kOne / cap;
-          }
-        }
+        // MEASURED AND REFUTED: it cost -0.146 of index on 8 of 9 seeds and made
+        // BOTH arms decay. And the premise fell separately -- injected
+        // feature-space drift to 2 SD costs the frozen rule 0.002, so drift was
+        // never what the decay was. Removed 2026-09-09 rather than left inert,
+        // and `context_source = 3` is now REFUSED by dna.cpp: a genome asking for
+        // a deleted mechanism should not silently get a different one.
+        const Scalar lr = kOne / ctx_wins_[winner];
         Scalar* proto = ctx_proto_ + size_t(winner) * sms.capacity;
         for (uint32_t n = 0; n < sms.count; ++n) {
           proto[n] += lr * (ctx_acc_[n] * inv - proto[n]);

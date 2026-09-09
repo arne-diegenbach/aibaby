@@ -9739,7 +9739,9 @@ bool run_ctxself(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
              "trials per arm");
   std::printf("  question          `areax` proved a context-indexed bias works, keyed on\n"
               "                    an index the HOST wrote from the word label. Can the\n"
-              "                    creature derive that index from its own larynx?\n");
+              "                    creature derive that index for ITSELF? v52 read it\n"
+              "                    off the larynx and was refused; source 4 reads the\n"
+              "                    ear's own rate EMA, which is what replicated.\n");
   std::printf("  the bar           an index right with probability p writes the other\n"
               "                    table 1-p of the time, so the conditional part scales\n"
               "                    as (2p - 1). `ctxsrc` bounds p at %.3f for ANY readout\n"
