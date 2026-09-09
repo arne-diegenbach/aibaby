@@ -1,0 +1,126 @@
+  [10/27] seed 3 binary     aligned 0.07501  dF1tail 141.4  |reward| 0.500
+  [13/27] seed 4 binary     aligned 0.08339  dF1tail 117.3  |reward| 0.500
+  [7/27] seed 2 binary     aligned 0.05013  dF1tail 131.9  |reward| 0.500
+  [16/27] seed 5 binary     aligned 0.08270  dF1tail 182.3  |reward| 0.500
+  [25/27] seed 8 binary     aligned 0.07738  dF1tail 162.4  |reward| 0.500
+  [6/27] seed 1 graded-1   aligned 0.11996  dF1tail 196.3  |reward| 0.499
+  [19/27] seed 6 binary     aligned 0.05345  dF1tail 111.8  |reward| 0.500
+  [22/27] seed 7 binary     aligned 0.07664  dF1tail 34.6  |reward| 0.500
+  [12/27] seed 3 graded-1   aligned 0.07085  dF1tail 119.3  |reward| 0.499
+  [11/27] seed 3 graded     aligned 0.09985  dF1tail 134.6  |reward| 0.506
+  [23/27] seed 7 graded     aligned 0.13506  dF1tail 198.7  |reward| 0.505
+  [17/27] seed 5 graded     aligned 0.12073  dF1tail 188.5  |reward| 0.506
+  [5/27] seed 1 graded     aligned 0.09422  dF1tail 123.2  |reward| 0.506
+  [1/27] seed 0 binary     aligned 0.09507  dF1tail 67.7  |reward| 0.500
+  [4/27] seed 1 binary     aligned 0.04722  dF1tail 111.2  |reward| 0.500
+  [21/27] seed 6 graded-1   aligned 0.11781  dF1tail 165.5  |reward| 0.499
+  [27/27] seed 8 graded-1   aligned 0.06078  dF1tail 8.1  |reward| 0.499
+  [8/27] seed 2 graded     aligned 0.05523  dF1tail 3.4  |reward| 0.506
+  [20/27] seed 6 graded     aligned 0.12019  dF1tail 56.3  |reward| 0.506
+  [2/27] seed 0 graded     aligned 0.11312  dF1tail 169.2  |reward| 0.506
+  [14/27] seed 4 graded     aligned 0.00936  dF1tail 6.0  |reward| 0.506
+  [24/27] seed 7 graded-1   aligned 0.12798  dF1tail 167.7  |reward| 0.499
+  [3/27] seed 0 graded-1   aligned 0.12569  dF1tail 64.8  |reward| 0.499
+  [26/27] seed 8 graded     aligned 0.00439  dF1tail 8.6  |reward| 0.506
+  [18/27] seed 5 graded-1   aligned 0.12040  dF1tail 206.2  |reward| 0.499
+  [9/27] seed 2 graded-1   aligned 0.03494  dF1tail 3.5  |reward| 0.499
+  [15/27] seed 4 graded-1   aligned 0.02451  dF1tail 3.8  |reward| 0.499
+experiment: baseprobe
+  instrument        baseprobe   trial seed 0000000001359d97   14571 trials per session, sampled at 16 checkpoints
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  question          boundprobe's phase 2 -- aligned and outside growing at
+                    the same exponent with gain frozen -- is node perturbation
+                    on its variance floor. Is that floor the RULE's, or the
+                    one-bit-per-trial CRITERION's?
+  the gate          phase-2 gain slope. Rising on a graded arm means the
+                    criterion was the limit; flat on every arm means the rule
+                    is, and 137 Hz is this architecture's number.
+  the confound      graded is divided by the creature's own mean absolute
+                    deviation, so E|reward| = |praise| by construction. The
+                    realised mean is printed; >15% off is CONFOUNDED, not read.
+
+  THE CURVE, `binary` arm, 9 seeds at every checkpoint
+  ckpt     trials    aligned (F1)         outside   gain     pinned    dF1 window (Hz)
+  1        910       0.01472 +/- 0.00234  0.02960   1.82     0.000     41.7
+  2        1821      0.02709 +/- 0.00557  0.04009   2.42     0.000     103.7
+  3        2732      0.03815 +/- 0.00613  0.04695   2.92     0.000     128.2
+  4        3642      0.04434 +/- 0.00558  0.05063   3.21     0.000     147.4
+  5        4553      0.05011 +/- 0.00632  0.05367   3.41     0.000     153.0
+  6        5464      0.05302 +/- 0.00540  0.05638   3.48     0.000     149.8
+  7        6374      0.05389 +/- 0.00571  0.05925   3.35     0.000     147.4
+  8        7285      0.05755 +/- 0.00552  0.06169   3.44     0.000     147.4
+  9        8196      0.05875 +/- 0.00579  0.06422   3.37     0.000     147.2
+  10       9106      0.05949 +/- 0.00521  0.06669   3.30     0.000     160.6
+  11       10017     0.06219 +/- 0.00518  0.06812   3.39     0.000     148.5
+  12       10928     0.06363 +/- 0.00573  0.06866   3.44     0.000     135.4
+  13       11838     0.06666 +/- 0.00513  0.06952   3.57     0.000     117.0
+  14       12749     0.06747 +/- 0.00492  0.07084   3.55     0.000     121.6
+  15       13660     0.06887 +/- 0.00521  0.07253   3.54     0.000     118.5
+  16       14571     0.07122 +/- 0.00561  0.07350   3.61     0.000     114.2
+
+  THE CURVE, `graded` arm, 9 seeds at every checkpoint
+  ckpt     trials    aligned (F1)         outside   gain     pinned    dF1 window (Hz)
+  1        910       0.01688 +/- 0.00421  0.03369   1.81     0.000     55.0
+  2        1821      0.02905 +/- 0.00538  0.04408   2.39     0.000     89.9
+  3        2732      0.03593 +/- 0.00701  0.05221   2.49     0.000     111.6
+  4        3642      0.04063 +/- 0.00842  0.05851   2.56     0.000     113.4
+  5        4553      0.04621 +/- 0.00970  0.06363   2.69     0.000     113.2
+  6        5464      0.04994 +/- 0.00987  0.06728   2.80     0.000     123.1
+  7        6374      0.05520 +/- 0.00896  0.07150   2.96     0.000     114.1
+  8        7285      0.05712 +/- 0.01030  0.07430   2.95     0.000     118.1
+  9        8196      0.06117 +/- 0.01169  0.07900   2.99     0.000     108.6
+  10       9106      0.06576 +/- 0.01095  0.08370   3.03     0.000     107.6
+  11       10017     0.07208 +/- 0.01114  0.08801   3.17     0.000     92.3
+  12       10928     0.07384 +/- 0.01210  0.09236   3.09     0.000     90.4
+  13       11838     0.07699 +/- 0.01187  0.09509   3.11     0.000     95.2
+  14       12749     0.07985 +/- 0.01372  0.09848   3.14     0.000     97.2
+  15       13660     0.08252 +/- 0.01525  0.10212   3.15     0.000     101.8
+  16       14571     0.08357 +/- 0.01633  0.10635   3.10     0.000     100.8
+
+  THE CURVE, `graded-1` arm, 9 seeds at every checkpoint
+  ckpt     trials    aligned (F1)         outside   gain     pinned    dF1 window (Hz)
+  1        910       0.01109 +/- 0.00201  0.03195   1.28     0.000     34.6
+  2        1821      0.02155 +/- 0.00508  0.04438   1.76     0.000     72.5
+  3        2732      0.03319 +/- 0.00658  0.05216   2.31     0.000     87.4
+  4        3642      0.04261 +/- 0.00784  0.05995   2.58     0.000     101.4
+  5        4553      0.04243 +/- 0.00887  0.06623   2.32     0.000     108.3
+  6        5464      0.04723 +/- 0.00925  0.07126   2.39     0.000     107.0
+  7        6374      0.05211 +/- 0.01082  0.07538   2.49     0.000     109.7
+  8        7285      0.05873 +/- 0.01115  0.07950   2.67     0.000     124.4
+  9        8196      0.06368 +/- 0.01130  0.08388   2.74     0.000     128.5
+  10       9106      0.06697 +/- 0.01344  0.08793   2.75     0.000     116.3
+  11       10017     0.06957 +/- 0.01361  0.09187   2.77     0.000     111.5
+  12       10928     0.07027 +/- 0.01276  0.09481   2.74     0.000     110.1
+  13       11838     0.07079 +/- 0.01350  0.09883   2.66     0.000     108.5
+  14       12749     0.07771 +/- 0.01328  0.10101   2.85     0.000     112.0
+  15       13660     0.08597 +/- 0.01478  0.10361   3.08     0.000     98.3
+  16       14571     0.08921 +/- 0.01387  0.10593   3.15     0.000     96.9
+
+  arm        |reward|    praise      aligned exp 1/2  outside exp 1/2  gain 1->16  dF1 last (Hz)
+  binary     0.500       0.541       0.65 / 0.34      0.34 / 0.22      1.82 -> 3.61   114.2 +/- 19.9
+  graded     0.506       0.539       0.57 / 0.54      0.38 / 0.50      1.81 -> 3.10   100.8 +/- 31.9
+  graded-1   0.499       0.545       0.78 / 0.56      0.44 / 0.41      1.28 -> 3.15   96.9 +/- 32.1
+
+  PHASE 2 IS THE QUESTION. Its signature is aligned and outside growing
+  at the SAME exponent -- separation zero is the floor:
+  binary     aligned 0.34  outside 0.22  separation +0.13 +/- 0.09 (1.3 SE)  final aligned 0.07122
+  graded     aligned 0.54  outside 0.50  separation +0.04 +/- 0.21 (0.2 SE)  final aligned 0.08357
+  graded-1   aligned 0.56  outside 0.41  separation +0.16 +/- 0.10 (1.6 SE)  final aligned 0.08921
+
+  PAIRED ON SEED, which is the gate. dF1 is the mean of the last four
+  windows rather than one, because one window carries an SE of ~27 Hz:
+  arm        final aligned vs binary      tail dF1 vs binary (Hz)
+  graded     +0.01235 +/- 0.01745 (+0.7 SE)   -19.1 +/- 35.3 (-0.5 SE)
+  graded-1   +0.01799 +/- 0.01467 (+1.2 SE)   -13.9 +/- 33.4 (-0.4 SE)
+
+  THE FLOOR IS THE RULE'S, NOT THE CRITERION'S. No graded arm ends with
+  more aligned bias at 2 SE while also not delivering less. Handing node
+  perturbation the magnitude it was discarding does not move its variance
+  floor -- which is what Hiratani's analysis says should happen, since the
+  floor is set by the perturbation noise the estimator injects and not by
+  the resolution of the signal it reads.
+
+  The second-half separation exponents above are printed as a DIAGNOSTIC
+  and must not be read as a result: that window is a fixed trial index, so
+  an arm which merely learns slower scores well on it while ending worse.

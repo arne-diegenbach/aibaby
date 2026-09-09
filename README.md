@@ -8847,6 +8847,41 @@ slowly still reaches its own plateau inside the session. Comparing a converged a
 with an unconverged one at a fixed trial count is the confound above; the only
 clean fix is to let both converge.
 
+**The corrected gate, at 40.8M so a slower arm still reaches its own plateau:
+no escape.**
+
+| budget | arm | final aligned, paired | delivered dF1, paired |
+|---|---|---|---|
+| 27.2M | graded | +0.86 SE | (-54.9, unpaired) |
+| 27.2M | graded-1 | +0.61 SE | (-34.0, unpaired) |
+| 40.8M | graded | +0.7 SE | -19.1 +/- 35.3 (-0.5 SE) |
+| 40.8M | graded-1 | **+1.2 SE** | -13.9 +/- 33.4 (-0.4 SE) |
+
+Aligned bias is positive in **4 of 4** comparisons and never reaches 2 SE.
+Delivered dF1 is **negative in 4 of 4**. Graded reward buys a little more bias
+magnitude and arrives with slightly less of it — which is `aligned x gain`'s
+pattern for the third time. More seeds would only sharpen a null on the outcome,
+so the lead closes rather than continues.
+
+**And the old gate's instability is now visible directly.** Binary's own phase-2
+separation reads -0.07 +/- 0.11 at 27.2M and **+0.13 +/- 0.09 at 40.8M** — the
+same arm, the same creatures, a statistic that moved by 2 SE because the budget
+changed. That is what a rate-confounded statistic does, and it is a cleaner
+demonstration of the defect than the argument that caught it.
+
+**So the floor is the rule's.** Node perturbation's variance floor is set by the
+perturbation noise the estimator injects, not by the resolution of the signal it
+reads — which is what Hiratani's analysis says, and handing the estimator the
+magnitude it was discarding does not move it.
+
+**The magnitude question is now closed on six routes**, each priced rather than
+argued: more trials saturate near 137 Hz; more rate grows `outside` 3x and halves
+`gain`; a selectivity mask buys nothing; the commitment brake moves it 1.07x where
+6.2x is needed; the slow store moves it 12.5x the wrong way and is analytically
+bounded from ever helping; and a graded criterion does not escape the floor. What
+is left is not a knob on the bias, and not the information in the reward. It is a
+different **place to put** what the bias has already learned.
+
 ### What the literature says to build next, and why it is the cheap option
 
 > **This section is the argument that produced DNA v51, kept as the record of
