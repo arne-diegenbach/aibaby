@@ -9203,6 +9203,31 @@ papers about the half it does not touch.
   transfer to this substrate, and that is now a measured disagreement rather than
   an oversight.
 
+- **Why the ceiling is the learning rule, not the tuning.** Hiratani, N., Mehta,
+  Y., Lillicrap, T. P. & Latham, P. E. (2022). *On the stability and scalability
+  of node perturbation learning.* NeurIPS 2022.
+  <https://proceedings.neurips.cc/paper_files/paper/2022/file/cf38eb1549024cce4b3d2c1bb87a6c27-Paper-Conference.pdf>
+  — read to full text 2026-09-09. Under model mismatch node perturbation is
+  *always* unstable, the instability is weight diffusion, the parameter norm
+  "increases monotonically with time", and performance against that norm is
+  U-shaped. The only fix they find is weight normalisation, which stabilises
+  learning but biases the rule so "the error no longer goes to zero; instead, it
+  saturates at a finite value". This creature's bias is node-perturbed and
+  normalised twice over — `perturb_max` plus homeostasis — so it sits in the
+  stabilised-but-floored regime by construction, and that is what every route
+  closing at once was telling us.
+
+- **What the biology does instead of holding it in the bias.** Andalman, A. S. &
+  Fee, M. S. (2009). *A basal ganglia-forebrain circuit in the songbird biases
+  motor output to avoid vocal errors.* PNAS 106(30), 12518-12523.
+  <https://www.pnas.org/doi/10.1073/pnas.0903214106> — findings verified from two
+  independent sources; full text paywalled. The AFP builds an error-reducing
+  bias, inactivating its output makes the learned change regress *immediately*,
+  and the bias is consolidated into the motor pathway within one day. So the bias
+  is a **rate, not a store**: it stays inside the stable regime while the
+  cumulative shift is unbounded. `bias_ctx_` here consolidates nowhere, which is
+  why it has to hold everything and cannot.
+
 **Everything else.**
 
 - **Complementary learning systems (DNA v13, the hippocampus role).**
