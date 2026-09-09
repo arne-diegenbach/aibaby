@@ -121,6 +121,11 @@ size_t Network::required_bytes(const Dna& dna) {
   if (dna.header().exploration.context_slots > 1) {
     const size_t slots = size_t(dna.header().exploration.context_slots);
     total += capacity * slots * sizeof(Scalar);
+    // The consolidation bank, always budgeted alongside the table it banks from.
+    // Written together with the allocation in build() BECAUSE this guard has
+    // been got wrong twice; a bank that is budgeted and not allocated wastes a
+    // few kilobytes, and one allocated and not budgeted fails init.
+    total += capacity * slots * sizeof(Scalar);
     // The slow store, per context. Guarded on BOTH flags exactly as build() is:
     // the arena budget and the allocation must agree or init fails, and this
     // guard has been got wrong twice on this project (v51, and v53's `>= 2`
@@ -429,6 +434,10 @@ bool Network::build(const Dna& dna, Arena& arena, Rng& rng) {
   ctx_present_ = false;
   if (ctx_slots_ > 0) {
     bias_ctx_ = arena.alloc_zeroed<Scalar>(size_t(capacity_) * ctx_slots_);
+    // see consolidate_context_bias. Zero, and therefore inert, until an
+    // experiment banks into it.
+    bias_bank_ = arena.alloc_zeroed<Scalar>(size_t(capacity_) * ctx_slots_);
+    bank_used_ = false;
     // DNA v41's slow store, per context. Same guard as required_bytes above.
     if (h.exploration.meta_flow > 0.0f) {
       meta_slow_ctx_ = arena.alloc_zeroed<Scalar>(size_t(capacity_) * ctx_slots_);
@@ -604,6 +613,26 @@ Scalar Network::isp_saturation(uint32_t module) const {
 // See set_bias_oracle in network.h. A ramp from -amp at the low end of the range
 // to +amp at the high end, sampled at neuron centres so the mean over the range
 // is exactly zero.
+void Network::consolidate_context_bias(Scalar frac) {
+  if (!bias_ctx_ || !bias_bank_ || ctx_slots_ == 0) return;
+  if (frac <= kZero) return;
+  if (frac > kOne) frac = kOne;
+  // Moves, rather than copies: what the bank gains the live table loses, so the
+  // creature's total delivered bias is unchanged the instant this runs. That is
+  // the property that makes the next bout's learning a fair test -- if dF1 moved
+  // here, the measurement would be of the transfer and not of the regrowth.
+  for (uint32_t n = 0; n < capacity_; ++n) {
+    for (uint32_t c = 0; c < ctx_slots_; ++c) {
+      const size_t x = size_t(n) * ctx_slots_ + c;
+      const Scalar moved = frac * bias_ctx_[x];
+      bias_bank_[x] = clampf(bias_bank_[x] + moved, -perturb_max_ * Scalar(64.0),
+                             perturb_max_ * Scalar(64.0));
+      bias_ctx_[x] -= moved;
+    }
+  }
+  bank_used_ = true;
+}
+
 Scalar Network::bias_oracle_at(uint32_t i) const {
   Scalar out = kZero;
   for (uint32_t k = 0; k < bias_oracle_n_; ++k) {
@@ -1739,9 +1768,13 @@ void Network::step() {
       // rather than replacing it: the shared term is what G2 learned and what
       // the creature does when it is in no particular context, and the table is
       // the part that depends on which context it is in.
+      // The live table PLUS whatever has been banked out of it. The bank is zero
+      // on the shipped creature, so this is the same arithmetic it always was.
       const Scalar ctx_bias =
           (ctx_slots_ > 0 && ctx_present_)
-              ? bias_ctx_[size_t(i) * ctx_slots_ + active_ctx_] : kZero;
+              ? bias_ctx_[size_t(i) * ctx_slots_ + active_ctx_] +
+                    (bias_bank_ ? bias_bank_[size_t(i) * ctx_slots_ + active_ctx_] : kZero)
+              : kZero;
       // DNA v40: an interneuron that landed on the tuft is not also subtracted
       // here. It is one population of cells, and it inhibits one compartment.
       const Scalar ffi_soma = ffi_apical_[m] ? kZero : ffi;
@@ -2626,6 +2659,9 @@ void Network::init_neuron(uint32_t i, uint32_t m, Scalar x, Scalar y, Scalar z) 
   if (any_burst_) {
     if (meta_m1_) { meta_m1_[i] = kZero; meta_m2_[i] = kZero; }
     if (meta_slow_) meta_slow_[i] = kZero;
+    if (bias_bank_) {
+      for (uint32_t c = 0; c < ctx_slots_; ++c) bias_bank_[size_t(i) * ctx_slots_ + c] = kZero;
+    }
     if (meta_slow_ctx_) {
       for (uint32_t c = 0; c < ctx_slots_; ++c) meta_slow_ctx_[size_t(i) * ctx_slots_ + c] = kZero;
     }
@@ -3141,6 +3177,15 @@ uint64_t Network::state_hash() const {
       // DNA v41. The moments gate plasticity, so a resumed creature has to
       // agree about them; hashed only when a genome actually keeps them.
       if (meta_slow_) hash_scalar(h, meta_slow_[i]);
+      // Gated on `bank_used_`, not on the pointer: hashing a zero array would
+      // move every pinned context hash on file while changing nothing the
+      // creature does. Once something has been banked the state is live and it
+      // is covered.
+      if (bias_bank_ && bank_used_) {
+        for (uint32_t c = 0; c < ctx_slots_; ++c) {
+          hash_scalar(h, bias_bank_[size_t(i) * ctx_slots_ + c]);
+        }
+      }
       if (meta_slow_ctx_) {
         for (uint32_t c = 0; c < ctx_slots_; ++c) {
           hash_scalar(h, meta_slow_ctx_[size_t(i) * ctx_slots_ + c]);

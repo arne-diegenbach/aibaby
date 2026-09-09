@@ -163,6 +163,29 @@ class Network {
     return (bias_ctx_ && c < ctx_slots_) ? bias_ctx_[size_t(i) * ctx_slots_ + c] : kZero;
   }
 
+  // ANDALMAN & FEE, as an oracle before it is a mechanism. The songbird does not
+  // hold its AFP bias; it banks it into the motor pathway within a day and starts
+  // the next day's bias from zero. `boundprobe` is why that matters here: the
+  // learned bias equilibrates on node perturbation's variance floor, so a store
+  // is bounded but a RATE is not -- n bouts can hold n times what one bout can.
+  //
+  // This moves `frac` of the live context table into a bank that keeps being
+  // delivered, and takes the same amount out of the live table. The bank is
+  // NOT a second learning site: nothing writes to it but this call.
+  //
+  // It is an oracle rather than the real thing, and the difference is stated so
+  // nobody mistakes one for the other: the real mechanism has to consolidate
+  // into the larynx's afferent WEIGHTS during a sleep bout, where the context
+  // dependence comes from the presynaptic pattern. This asks the prior question
+  // -- whether the accumulation works at all -- before that is built. If the
+  // live table does not regrow after being emptied, the weight version cannot
+  // help either, and it is refused for a session instead of a fortnight.
+  void consolidate_context_bias(Scalar frac);
+  // What the bank holds for neuron i in context c. Zero until the first call.
+  Scalar banked_bias(uint32_t i, uint32_t c) const {
+    return (bias_bank_ && c < ctx_slots_) ? bias_bank_[size_t(i) * ctx_slots_ + c] : kZero;
+  }
+
  private:
   void apply_reward_impl(const Scalar* per_module, bool any);
   void capture_ffi_weights();
@@ -877,6 +900,12 @@ class Network {
   Scalar* bias_ctx_ = nullptr;
   // DNA v41 x v51: one slow store per context, allocated only when both ask.
   Scalar* meta_slow_ctx_ = nullptr;
+  // see consolidate_context_bias. Allocated with the context table, zero and
+  // therefore inert until an experiment banks into it. `bank_used_` gates the
+  // HASH rather than the behaviour: adding a zero array to the hash would move
+  // every pinned context hash on file while changing nothing the creature does.
+  Scalar* bias_bank_ = nullptr;
+  bool bank_used_ = false;
   uint32_t ctx_slots_ = 0;
   int32_t ctx_module_ = -1;   // the module the index is read from
   // DNA v52. WHICH module that is, and how it is cut. 0 is the kContext

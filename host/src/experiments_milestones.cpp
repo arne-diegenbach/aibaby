@@ -3981,6 +3981,12 @@ struct CtxDrive {
   // then be blamed on selectivity when it was really an amputated task. Groups
   // 2 and 3 are adjacent, so [2, 4) is exactly "may change what it is scored on,
   // and nothing else" -- and `set_reward_mask` takes one contiguous range.
+  // bankprobe. > 0 consolidates the whole live context table into the bank at
+  // every Nth checkpoint. See Network::consolidate_context_bias.
+  uint32_t bank_every = 0;
+  // How much of the live table moves. 0 exercises the call and moves nothing,
+  // which is the no-op control.
+  double bank_frac = 1.0;
   int32_t mask_lo = -1;
   int32_t mask_hi = -1;
 };
@@ -4030,7 +4036,11 @@ inline CtxSplit ctx_split(const aibaby::Network& net, const aibaby::ModuleState&
   uint32_t pinned = 0, pn = 0;
   const double at = perturb_max > 0.0 ? perturb_max * 0.999 : 0.0;
   for (uint32_t n = vms.begin; n < vms.begin + vms.count; ++n) {
-    const double b0 = double(net.context_bias(n, 0)), b1 = double(net.context_bias(n, 1));
+    // The DELIVERED table: live plus whatever has been banked out of it. The
+    // bank is zero everywhere but `bankprobe`, so this is inert elsewhere -- and
+    // it is the right definition, because the larynx reads the sum.
+    const double b0 = double(net.context_bias(n, 0)) + double(net.banked_bias(n, 0));
+    const double b1 = double(net.context_bias(n, 1)) + double(net.banked_bias(n, 1));
     dsum += std::fabs(b0 - b1);
     msum += 0.5 * (std::fabs(b0) + std::fabs(b1));
     if (at > 0.0) {
@@ -4048,7 +4058,8 @@ inline CtxSplit ctx_split(const aibaby::Network& net, const aibaby::ModuleState&
   if (gn < 2) return o;
   double dot = 0.0, unorm = 0.0, mean_in = 0.0, out_ss = 0.0;
   for (uint32_t n = g_beg; n < g_end; ++n) {
-    const double d = double(net.context_bias(n, 0)) - double(net.context_bias(n, 1));
+    const double d = (double(net.context_bias(n, 0)) + double(net.banked_bias(n, 0))) -
+                     (double(net.context_bias(n, 1)) + double(net.banked_bias(n, 1)));
     const double u = (double(n - g_beg) + 0.5) / double(gn) - 0.5;
     dot += d * u;
     unorm += u * u;
@@ -4057,7 +4068,8 @@ inline CtxSplit ctx_split(const aibaby::Network& net, const aibaby::ModuleState&
   mean_in /= double(gn);
   for (uint32_t n = vms.begin; n < vms.begin + vms.count; ++n) {
     if (n >= g_beg && n < g_end) continue;
-    const double d = double(net.context_bias(n, 0)) - double(net.context_bias(n, 1));
+    const double d = (double(net.context_bias(n, 0)) + double(net.banked_bias(n, 0))) -
+                     (double(net.context_bias(n, 1)) + double(net.banked_bias(n, 1)));
     out_ss += d * d;
   }
   const uint32_t outn = vms.count > gn ? vms.count - gn : 0;
@@ -4154,6 +4166,10 @@ struct VLRun {
   double ckpt_pinned[kCkpt] = {};
   double ckpt_df1[kCkpt] = {};    // |F1(word 0) - F1(word 1)| over THIS window only
   double ckpt_praise[kCkpt] = {}; // praise share in the window: does the teacher run out?
+  // bankprobe diagnostics: mean |live| and mean |bank| over the larynx, so a
+  // divergence between banking and holding can be attributed rather than guessed.
+  double ckpt_live_mag[kCkpt] = {};
+  double ckpt_bank_mag[kCkpt] = {};
   double ctx_shared_mag = 0.0;  // mean |shared bias|, the scale to read it against
   // DNA v52. What the index the creature DERIVED for itself actually was,
   // measured only in the window where reward lands -- `ctxsrc`'s whole finding
@@ -4653,6 +4669,17 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
           out.ckpt_outside[k] = sp.outside;
           out.ckpt_gain[k] = sp.gain;
           out.ckpt_pinned[k] = sp.pinned;
+          const aibaby::ModuleState& cvms = cnet.module(uint32_t(cvm));
+          double lm = 0.0, bm = 0.0;
+          for (uint32_t q = cvms.begin; q < cvms.begin + cvms.count; ++q) {
+            for (uint32_t c = 0; c < cnet.context_slots(); ++c) {
+              lm += std::fabs(double(cnet.context_bias(q, c)));
+              bm += std::fabs(double(cnet.banked_bias(q, c)));
+            }
+          }
+          const double dn = double(cvms.count) * double(cnet.context_slots() ? cnet.context_slots() : 1);
+          out.ckpt_live_mag[k] = dn > 0.0 ? lm / dn : 0.0;
+          out.ckpt_bank_mag[k] = dn > 0.0 ? bm / dn : 0.0;
         }
         out.ckpt_trial[k] = double(trial + 1);
         out.ckpt_df1[k] = (nw >= 2 && wf_n[0] && wf_n[1])
@@ -4660,6 +4687,13 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
                               : 0.0;
         const uint32_t wtot = w_praise + w_scold;
         out.ckpt_praise[k] = wtot ? double(w_praise) / double(wtot) : 0.0;
+        // ANDALMAN & FEE, applied AFTER the sample so the row shows what was
+        // learned before the bank took it. Moves the live table into the bank
+        // without changing what the larynx is handed, so the next window starts
+        // from an empty live table and an unchanged creature.
+        if (ctx && ctx->bank_every > 0 && ((k + 1) % ctx->bank_every) == 0) {
+          s.brain.network().consolidate_context_bias(aibaby::Scalar(ctx->bank_frac));
+        }
         ++out.ckpt_n;
         for (uint32_t q = 0; q < kVLMaxWords; ++q) { wf1_sum[q] = 0.0; wf_n[q] = 0; }
         w_praise = 0;
@@ -11191,6 +11225,233 @@ constexpr BaseArm kBaseArms[] = {
     {"graded-1", 1.0f},
 };
 constexpr uint32_t kBaseArmCount = sizeof(kBaseArms) / sizeof(kBaseArms[0]);
+
+// ---------------------------------------------------------------------------
+// bankprobe -- Andalman & Fee's daily consolidation, and why the algebra
+// refuses it before the run does.
+//
+// The songbird does not HOLD its AFP bias. It banks it into the motor pathway
+// within a day and starts the next day from zero, which turns a bounded store
+// into an unbounded rate. `boundprobe` made that look like exactly the right
+// medicine here: the learned bias stops growing after ~4900 trials, so if each
+// bout were banked and reset, n bouts would hold n times what one bout can.
+//
+// IT IS A NO-OP UNDER THIS ARCHITECTURE, and the argument is three lines.
+// The larynx reads live + bank. Consolidation moves mass from one to the other
+// and leaves the sum EXACTLY unchanged. Behaviour depends on the biases only
+// through that sum, so the reward stream is unchanged, so the drift written into
+// the live table is unchanged, so d(sum)/dt is unchanged. Banking changes
+// nothing it could change.
+//
+// The escapes, and why none of them is open here:
+//   - a CLAMP on the live table that banking would relieve. boundprobe measured
+//     the pinned share at 0.000 on every one of 9 x 16 samples.
+//   - a LEAK the bank would protect against. bias_ctx_ has no decay term at all.
+//   - a mechanism READING the live magnitude. v41's brake does, and banking
+//     would genuinely un-brake it -- but the brake is a measured null (1.07x
+//     where 6.2x is needed), and un-braking a null buys nothing.
+//   - a DIFFERENT ROUTE with a different transfer, which is what the songbird
+//     analogy actually pointed at: consolidate into synaptic WEIGHTS. But
+//     `read_group` is a rate-weighted centroid, a function of RATES ONLY, and
+//     every route into the larynx reaches it through the same rates. A weight
+//     that changes rates by the same amount delivers the same F1.
+//
+// So this exists to check that the code agrees with the algebra, which is a
+// sharp prediction -- the arms should be indistinguishable, not merely close --
+// and to leave the refutation on file with a number against it. It is a smoke-
+// length experiment on purpose. If the arms DIVERGE, one of the premises above
+// is wrong and that is worth far more than another long run.
+struct BankArm {
+  const char* name;
+  uint32_t every;  // consolidate every Nth checkpoint; 0 never
+  double frac;     // how much of the live table moves; 0 is the no-op control
+};
+constexpr BankArm kBankArms[] = {
+    {"hold", 0, 0.0},
+    // THE CONTROL I SHOULD HAVE HAD FIRST. Exercises the consolidation call path
+    // at every checkpoint while moving NOTHING (frac 0). If this differs from
+    // `hold` the effect is in the call and not in the split, which is a bug
+    // rather than a finding -- and the 3.4M run diverged at 2.8 SE against an
+    // algebra that says it cannot, so that has to be excluded before anything
+    // else is believed.
+    {"bank-0", 1, 0.0},
+    // THE DISCRIMINATOR. Banks a NEGLIGIBLE fraction every checkpoint: it moves
+    // essentially no mass, but it does change the order in which the live table's
+    // value is accumulated, and therefore perturbs it by about one ULP.
+    //
+    // This creature is deterministic but CHAOTIC -- `verify` gets bit-identical
+    // reruns only because everything is bit-identical. A one-ULP difference will
+    // decorrelate the trajectory, and two decorrelated trajectories from the same
+    // seed are INDEPENDENT DRAWS, not a paired contrast. If `bank-eps` diverges
+    // from `hold` by about as much as `bank-1` does, then the 2.8 SE is chaotic
+    // decorrelation plus a small sample, and the split is doing nothing.
+    //
+    // bank-0 cannot test this: at frac 0 the arithmetic is `x - 0*x` and
+    // `0 + 0*x`, which is exact, and it came back byte-identical to `hold`.
+    {"bank-eps", 1, 1e-6},
+    {"bank-4", 4, 1.0},
+    {"bank-1", 1, 1.0},
+};
+constexpr uint32_t kBankArmCount = sizeof(kBankArms) / sizeof(kBankArms[0]);
+
+bool run_bankprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  aibaby::Dna dna;
+  if (dna.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) {
+    std::printf("  setup failed: the genome does not load\n");
+    return false;
+  }
+  const int32_t ctx_module = dna.module_with_role(aibaby::ModuleRole::kContext);
+  if (ctx_module < 0) {
+    std::printf("  this genome has no kContext module. Build one with NO output\n"
+                "  weight:  python3 tools/genome_add_context.py dna/default.toml \\\n"
+                "           ctx.toml vocal out_w=0\n");
+    return false;
+  }
+  constexpr uint32_t kReps = 12;
+  const size_t slots_off = offsetof(aibaby::DnaHeader, exploration) +
+                           offsetof(aibaby::DnaExploration, context_slots);
+  const size_t src_off = offsetof(aibaby::DnaHeader, exploration) +
+                         offsetof(aibaby::DnaExploration, context_source);
+  instrument("bankprobe", dna.header().seed ^ 0xBA11u, ticks / kVLTrialTicks,
+             "trials per session, banked at 16 / 4 / 1 checkpoint intervals");
+  std::printf("  question          Andalman & Fee bank the bias into the motor pathway\n"
+              "                    daily. Does banking and resetting let this creature\n"
+              "                    accumulate past the floor boundprobe measured?\n");
+  std::printf("  the algebra says  NO, and says it before the run: the larynx reads\n"
+              "                    live + bank, consolidation leaves that sum exactly\n"
+              "                    unchanged, so behaviour, reward and drift are all\n"
+              "                    unchanged. This checks the code agrees.\n");
+  std::printf("  the gate          the arms must be INDISTINGUISHABLE. A divergence past\n"
+              "                    1 SE means a premise is wrong, and that is the result\n"
+              "                    worth having.\n\n");
+
+  struct Cell {
+    bool ok = false;
+    uint32_t n = 0;
+    double align[VLRun::kCkpt] = {}, df1[VLRun::kCkpt] = {}, trial[VLRun::kCkpt] = {};
+    double lmag[VLRun::kCkpt] = {}, bmag[VLRun::kCkpt] = {};
+  };
+  const uint32_t njobs = kReps * kBankArmCount;
+  const std::vector<Cell> cells = parallel_reps<Cell>(njobs, [&](uint32_t i) {
+    Cell cell;
+    const uint32_t r = i / kBankArmCount, a = i % kBankArmCount;
+    std::vector<uint8_t> variant = blob;
+    const uint64_t seed = dna.header().seed + r * 7919ull;
+    std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+    const uint32_t sl = 2u, sr = 4u;
+    std::memcpy(variant.data() + slots_off, &sl, sizeof(sl));
+    std::memcpy(variant.data() + src_off, &sr, sizeof(sr));
+    CtxDrive drive;
+    drive.module = ctx_module;
+    drive.slots = kVLWords;
+    drive.gain = 0.10;
+    drive.bank_every = kBankArms[a].every;
+    drive.bank_frac = kBankArms[a].frac;
+    Regime reg;
+    reg.praise = kPraiseValue;
+    reg.scold = kScoldValue;
+    const VLRun run = run_vocallearn_session(variant, ticks, kVLTaught, nullptr, reg,
+                                             kVLTgtHeard, &drive);
+    if (!run.ok) return cell;
+    cell.n = run.ckpt_n;
+    for (uint32_t k = 0; k < run.ckpt_n; ++k) {
+      cell.align[k] = run.ckpt_align[k];
+      cell.df1[k] = run.ckpt_df1[k];
+      cell.trial[k] = run.ckpt_trial[k];
+      cell.lmag[k] = run.ckpt_live_mag[k];
+      cell.bmag[k] = run.ckpt_bank_mag[k];
+    }
+    cell.ok = true;
+    parallel_note("  [%u/%u] seed %u %-7s  delivered aligned %.5f\n", i + 1, njobs, r,
+                  kBankArms[a].name, cell.align[cell.n ? cell.n - 1 : 0]);
+    return cell;
+  });
+
+  uint32_t nck = 0;
+  for (const Cell& c : cells) if (c.ok && c.n > nck) nck = c.n;
+  if (nck < 4) {
+    std::printf("\n  bankprobe INCONCLUSIVE -- %u checkpoints.\n", nck);
+    return false;
+  }
+  std::printf("\n  DELIVERED aligned bias (live + bank), pooled over %u seeds\n", kReps);
+  std::printf("  %-8s %-9s", "ckpt", "trials");
+  for (uint32_t a = 0; a < kBankArmCount; ++a) std::printf(" %-12s", kBankArms[a].name);
+  std::printf("\n");
+  double xt[VLRun::kCkpt] = {};
+  for (uint32_t k = 0; k < nck; ++k) {
+    std::printf("  %-8u", k + 1);
+    for (uint32_t a = 0; a < kBankArmCount; ++a) {
+      std::vector<double> v;
+      for (uint32_t r = 0; r < kReps; ++r) {
+        const Cell& c = cells[r * kBankArmCount + a];
+        if (c.ok && k < c.n) { v.push_back(c.align[k]); xt[k] = c.trial[k]; }
+      }
+      double se;
+      const double m = ctx_mean_se(v, &se);
+      if (a == 0) std::printf(" %-9.0f", xt[k]);
+      std::printf(" %-12.5f", m);
+    }
+    std::printf("\n");
+  }
+
+  // WHERE THE MASS ACTUALLY IS. If banking diverges from holding, the first
+  // question is whether the bank kept what was moved into it, and that is a
+  // measurement rather than a deduction.
+  std::printf("\n  MEAN |live| and MEAN |bank| over the larynx, per arm\n");
+  std::printf("  %-8s", "ckpt");
+  for (uint32_t a2 = 0; a2 < kBankArmCount; ++a2)
+    std::printf(" %-11s %-11s", kBankArms[a2].name, "  (bank)");
+  std::printf("\n");
+  for (uint32_t k = 0; k < nck; ++k) {
+    std::printf("  %-8u", k + 1);
+    for (uint32_t a2 = 0; a2 < kBankArmCount; ++a2) {
+      std::vector<double> lv, bv;
+      for (uint32_t r = 0; r < kReps; ++r) {
+        const Cell& c = cells[r * kBankArmCount + a2];
+        if (c.ok && k < c.n) { lv.push_back(c.lmag[k]); bv.push_back(c.bmag[k]); }
+      }
+      double se;
+      std::printf(" %-11.5f %-11.5f", ctx_mean_se(lv, &se), ctx_mean_se(bv, &se));
+    }
+    std::printf("\n");
+  }
+
+  // Paired on seed, which is the only honest way to ask whether two arms differ
+  // when they run on identical creatures.
+  std::printf("\n  PAIRED vs `hold`, delivered aligned at the last checkpoint:\n");
+  bool diverged = false;
+  for (uint32_t a = 1; a < kBankArmCount; ++a) {
+    std::vector<double> d;
+    for (uint32_t r = 0; r < kReps; ++r) {
+      const Cell& h = cells[r * kBankArmCount + 0];
+      const Cell& b = cells[r * kBankArmCount + a];
+      if (h.ok && b.ok && h.n && b.n) d.push_back(b.align[b.n - 1] - h.align[h.n - 1]);
+    }
+    double se;
+    const double m = ctx_mean_se(d, &se);
+    const double t = se > 0.0 ? m / se : 0.0;
+    if (t > 1.0 || t < -1.0) diverged = true;
+    std::printf("  %-8s %+.6f +/- %.6f  (%+.1f SE)\n", kBankArms[a].name, m, se, t);
+  }
+
+  if (diverged) {
+    std::printf("\n  A PREMISE IS WRONG -- an arm differs from `hold` past 1 SE, and the\n"
+                "  algebra says it cannot. Either the larynx does not read live + bank,\n"
+                "  or something else reads the live table's magnitude. Worth chasing.\n");
+    return false;
+  }
+  std::printf("\n  NO-OP, AS THE ALGEBRA SAYS. Banking moves mass between two terms the\n"
+              "  larynx adds together, so it cannot change what the creature does or what\n"
+              "  reward writes next. Andalman & Fee's mechanism protects a bias that is\n"
+              "  TRANSIENT and BOUNDED; this creature's is neither -- no leak, and a\n"
+              "  pinned share of 0.000. There is nothing here for it to bite on.\n");
+  std::printf("\n  AND THE WEIGHT VERSION IS REFUSED BY THE SAME ARGUMENT. `read_group` is\n"
+              "  a rate-weighted centroid, a function of RATES ONLY, so every route into\n"
+              "  the larynx reaches the readout through the same rates. Consolidating into\n"
+              "  synaptic weights instead of a bias changes the route and not the transfer.\n");
+  return true;
+}
 
 bool run_baseprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
   (void)verbose;

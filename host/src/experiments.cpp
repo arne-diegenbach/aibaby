@@ -221,6 +221,12 @@ const Spec kSpecs[] = {
      "  the magnitude too, divided by the creature's own mean deviation so the\n"
      "  arms match on |reward| and this is not a learning-rate sweep. Refuses if\n"
      "  no graded arm escapes phase 2, which would make 137 Hz the rule's floor"},
+    {"bankprobe", 3400000, Expect::kOpen, Tier::kTeach,
+     "Andalman & Fee's daily consolidation of the AFP bias, checked against the\n"
+     "  algebra that refuses it: the larynx reads live + bank, and consolidation\n"
+     "  leaves that sum exactly unchanged. The arms must be INDISTINGUISHABLE;\n"
+     "  a divergence past 1 SE means a premise is wrong, which is the result\n"
+     "  worth having. Short on purpose"},
     {"ctxfour", 3400000, Expect::kOpen, Tier::kTeach,
      "derived: ctxself's session at FOUR words. partprobe cleared the index at\n"
      "  four (0.895 vs chance 0.250); this asks whether the BIAS holds four\n"
@@ -479,6 +485,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "ctxscale") ok = run_ctxscale(dna_blob, ticks, verbose);
   else if (name == "boundprobe") ok = run_boundprobe(dna_blob, ticks, verbose);
   else if (name == "baseprobe") ok = run_baseprobe(dna_blob, ticks, verbose);
+  else if (name == "bankprobe") ok = run_bankprobe(dna_blob, ticks, verbose);
   else if (name == "partprobe") ok = run_partprobe(dna_blob, ticks, verbose);
   else if (name == "pgprobe") ok = run_pgprobe(dna_blob, ticks, verbose);
   else if (name == "g2cond") ok = run_g2cond(dna_blob, ticks, verbose);

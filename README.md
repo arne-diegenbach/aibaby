@@ -8882,6 +8882,71 @@ bounded from ever helping; and a graded criterion does not escape the floor. Wha
 is left is not a knob on the bias, and not the information in the reward. It is a
 different **place to put** what the bias has already learned.
 
+### `bankprobe` — consolidation refused, and one scare about the error bars stood down
+
+Andalman & Fee's songbird banks its AFP bias into the motor pathway daily, turning
+a bounded store into an unbounded rate. `boundprobe` made that look like the right
+medicine: the learned bias stops growing, so n bouts should hold n times one bout.
+
+**I closed it analytically and the check refuted me inside the hour.** The argument
+was three lines — the larynx reads `live + bank`, consolidation leaves that sum
+exactly unchanged, so behaviour and the drift written next are unchanged, so
+banking is a no-op. At 6 seeds it came back **-2.8 SE**, with banking making the
+aligned bias *worse*. Something was wrong, and it took three controls to find out
+what.
+
+| arm | what it does | delivered aligned vs `hold` |
+|---|---|---|
+| `bank-0` | exercises the call, moves nothing | **+0.000000 +/- 0.000000** |
+| `bank-eps` | moves 1e-6 — about one ULP of perturbation | +0.000158 +/- 0.000328 (0.5 SE) |
+| `bank-4` | banks four times | -0.003770 +/- 0.003183 (-1.2 SE) |
+| `bank-1` | banks sixteen times | -0.003763 +/- 0.003483 (-1.1 SE) |
+
+**`bank-0` is byte-exact, so the call path is clean** and the effect is genuinely
+in the split, not in my plumbing.
+
+**`bank-eps` was the one that mattered, and it answered a question much bigger
+than consolidation.** This creature is deterministic but chaotic — `verify` gets
+bit-identical reruns only because everything is bit-identical. Banking changes
+whether a value accumulates as `round(T + u)` in one place or `T + round(0 + u)`
+across two, which differs by about one ULP, and one ULP can decorrelate a chaotic
+trajectory. If that were the story, then "same seed, one change" would not be a
+paired contrast at all — it would be two independent draws — and **every SE in
+this project that leans on pairing by seed would be too small.** `bank-eps` moves
+the answer by 0.00016 where real banking moves it by 0.0038, **24x more**. So
+rounding-scale decorrelation is real but small, pairing still buys its variance
+reduction, and the scare stands down. Worth the arm.
+
+**And the effect shrank with the sample, exactly as this project has been caught
+by before:**
+
+| | `bank-4` | `bank-1` |
+|---|---|---|
+| n = 6 | -0.0109 (**-2.8 SE**) | -0.0101 (-1.9 SE) |
+| n = 12 | -0.0038 (-1.2 SE) | -0.0038 (-1.1 SE) |
+
+The effect size fell 2.9x when the sample doubled. The -2.8 SE was small-n, which
+is the `smoothing-sweep` lesson (+0.24 at n=3 became +0.03 at n=6) arriving again
+at twice the sample size.
+
+**Where that leaves it. Consolidation is refused on the outcome, and the mechanism
+stays open.** The split does change the dynamics — `bank-eps` rules out rounding
+as the cause — but nothing in this genome reads the live table's magnitude (the
+commitment brake and the slow store both ship off, and the clamp never binds at a
+pinned share of 0.000), so *why* it changes them is unexplained. It does not
+matter for the decision: banking is neutral at best and mildly negative at worst
+in 4 of 4 measurements across two sample sizes, and it is never the accumulator
+the songbird story promised. **A mechanism whose best case is "no worse" does not
+get built**, so this closes on the number and the anomaly is logged rather than
+chased.
+
+**What the anomaly is worth, if anyone returns to it.** A 4x sample would settle
+whether the -1.2 SE is real. The interesting version of the question is not
+consolidation at all — it is that splitting one plastic quantity into a plastic
+part and a frozen part measurably changes what reward can learn, with nothing in
+the code reading the split. That is either a bug worth finding or a fact about
+this estimator worth knowing.
+
 ### What the literature says to build next, and why it is the cheap option
 
 > **This section is the argument that produced DNA v51, kept as the record of
