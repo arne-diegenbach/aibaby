@@ -9230,6 +9230,46 @@ papers about the half it does not touch.
 
 **Everything else.**
 
+- **The vowel targets themselves — the most load-bearing citation here and it was
+  missing until 2026-09-09.** Hillenbrand, J., Getty, L. A., Clark, M. J. &
+  Wheeler, K. (1995). *Acoustic characteristics of American English vowels.*
+  Journal of the Acoustical Society of America 97(5), 3099-3111.
+  <https://doi.org/10.1121/1.411872> — `kWords`' formants are its adult-male
+  means, so every dF1 in this project, every formant error, and the 460 Hz gap
+  the naming milestone is measured against all rest on this data set. It was
+  credited only in a source comment.
+
+- **The slow store (DNA v41's third gate).** Benna, M. K. & Fusi, S. (2016).
+  *Computational principles of synaptic memory consolidation.* Nature
+  Neuroscience 19(12), 1697-1706. <https://doi.org/10.1038/nn.4401> — the
+  two-compartment fast/slow synapse that `meta_flow` and `meta_ratio` implement.
+  Read alongside Andalman & Fee above: Benna-Fusi leaks a fast variable into a
+  slow store that does not drive output, and the songbird banks its bias into the
+  motor pathway that does. The two predict opposite signs here, which is what
+  makes the distinction worth stating rather than assuming.
+
+- **The bimodality coefficient, and its primary source is a manual.** Sarle,
+  W. S., in SAS Institute Inc. (1990). *SAS/STAT User's Guide, Version 6*, the
+  CLUSTER procedure, "Miscellaneous Formulas", p. 561 — `b = (skew^2 + 1) /
+  kurtosis`, which DNA v32's lateral-competition gate is scored on. Worth being
+  straight about the provenance: the coefficient is attributed to Warren Sarle and
+  first appeared in software documentation rather than a paper, an asymptotic form
+  shows up in Ellison (1987) citing the 1982 guide, and the citable modern
+  discussion is Pfister, R., Schwarz, K. A., Janczyk, M., Dale, R. & Freeman,
+  J. B. (2013), *Good things peak in pairs: a note on the bimodality
+  coefficient*, Frontiers in Psychology 4, 700.
+  <https://doi.org/10.3389/fpsyg.2013.00700>
+
+- **Dale's law, which sets every weight ceiling in the kernel.** Strata, P. &
+  Harvey, R. (1999). *Dale's principle.* Brain Research Bulletin 50(5-6),
+  349-350. <https://doi.org/10.1016/S0361-9230(99)00100-8> — a neuron is
+  excitatory or inhibitory and not both, which is why `weight_ceiling` is a
+  property of the source and not of the synapse. Note that the name is Eccles's
+  restatement rather than Dale's own claim, and that Lipton & Manning (2026),
+  *What Dale never said*, Journal of Neurophysiology, argues the modelling usage
+  overreaches the original — this project uses the modelling sense, so the
+  citation is to that convention rather than to a historical claim.
+
 - **Complementary learning systems (DNA v13, the hippocampus role).**
   McClelland, J. L., McNaughton, B. L. & O'Reilly, R. C. (1995). *Why there are
   complementary learning systems in the hippocampus and neocortex.*
