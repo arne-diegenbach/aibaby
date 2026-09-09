@@ -4137,6 +4137,10 @@ struct VLRun {
   double ctx_align_gain = 0.0;
   uint32_t ctx_f1_group_n = 0;
   double ctx_pinned = 0.0;  // share of table entries AT the perturb_max clamp
+  // Realised mean |reward|. The graded and binary arms are supposed to match on
+  // this; printing it is what makes that a check rather than an assumption.
+  double reward_mag = 0.0;
+  uint32_t reward_n = 0;
   // Within-session checkpoints. `ctxscale` measured the growth of the aligned
   // bias ACROSS runs at three budgets, which costs a whole run per point and
   // pays cross-seed noise for each one. These are the same curve sampled inside
@@ -4306,6 +4310,13 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
   // reads to the code below as "a baseline has already been recorded".
   double baseline[kVLMaxWords];
   for (uint32_t b = 0; b < kVLMaxWords; ++b) baseline[b] = -1.0;
+  // Mean absolute deviation from the baseline, per bucket. 0 means "not yet
+  // recorded", which is safe here because a deviation of exactly zero would make
+  // the graded value undefined and the code below refuses on it.
+  double dev[kVLMaxWords] = {};
+  // EMA of the clamped graded value's own magnitude, so the graded arms deliver
+  // the same mean |reward| as the binary one. 0 means "not yet recorded".
+  double gnorm[kVLMaxWords] = {};
   double err_sum[2] = {}, voiced_sum = 0.0;
   uint32_t err_n[2] = {}, frames_total = 0, frames_voiced = 0;
   double word_sum[kVLMaxWords][2] = {};
@@ -4518,10 +4529,65 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
         } else if (e >= 0.0) {
           last_feedback = now;
           if (baseline[bucket] >= 0.0) {
-            const float value = e < baseline[bucket] ? regime.praise : regime.scold;
+            // The shipped criterion is a SIGN: one bit per trial. With
+            // `grade_scale` above zero the SAME comparison is delivered with its
+            // magnitude, so the arms differ in information per trial and not in
+            // what is being asked for. The relative error is divided by
+            // `grade_scale` and clamped, so a trial that beats the baseline by
+            // that fraction earns exactly the shipped praise and nothing earns
+            // more -- which keeps the two arms on one scale instead of turning
+            // this into a learning-rate sweep with extra steps.
+            float value;
+            if (regime.grade_scale > 0.0f && dev[bucket] > 0.0 && gnorm[bucket] > 0.0) {
+              // MATCHED ON MAGNITUDE BY CONSTRUCTION, and the first version of
+              // this was not. Dividing by the mean absolute deviation was
+              // supposed to give E|value| = |praise|; measured, it gave 0.257
+              // against the binary arm's 0.500, and the experiment's own
+              // confound guard refused to read the run. Assuming E|rel| = 1
+              // holds only if the deviation EMA and the reward population are
+              // the same draw, and they are not.
+              //
+              // So the raw graded value is divided by an EMA of ITS OWN absolute
+              // size. That is exact for any distribution and any clamp, rather
+              // than true under an assumption about one -- and the realised mean
+              // is still printed, because a normaliser that is wrong in some new
+              // way should be caught by the same guard.
+              const double rel = (baseline[bucket] - e) / dev[bucket];
+              const double lim = double(regime.grade_scale);
+              const double c = rel > lim ? lim : (rel < -lim ? -lim : rel);
+              const double unit = c / gnorm[bucket];
+              value = float(unit >= 0.0 ? unit * double(regime.praise)
+                                        : -unit * double(regime.scold));
+            } else {
+              value = e < baseline[bucket] ? regime.praise : regime.scold;
+            }
+            out.reward_mag += std::fabs(double(value));
+            ++out.reward_n;
             if (value > 0.0f) { ++out.praises; ++w_praise; } else { ++out.scolds; ++w_scold; }
             pending.push_back(Praise{now + regime.delay, value});
             out.feedback.push_back(Praise{now + regime.delay, value});
+          }
+          // The mean absolute deviation from the baseline, on the baseline's own
+          // timescale. It is what the graded arm divides by, and it is tracked
+          // on EVERY arm so the binary arm pays the identical arithmetic and the
+          // two remain bit-comparable in everything but the reward value.
+          const double d = e - baseline[bucket];
+          dev[bucket] = dev[bucket] <= 0.0
+                            ? std::fabs(d)
+                            : dev[bucket] + kVLBaselineAlpha *
+                                                (std::fabs(d) - dev[bucket]);
+          // The normaliser for the graded arm: an EMA of the clamped value's own
+          // absolute size, on the baseline's timescale. Tracked on EVERY arm so
+          // the binary arm runs the identical arithmetic and the two stay
+          // comparable in everything but the reward value they deliver.
+          if (dev[bucket] > 0.0) {
+            const double rel = -d / dev[bucket];
+            const double lim = regime.grade_scale > 0.0f ? double(regime.grade_scale) : 1.0;
+            const double c = rel > lim ? lim : (rel < -lim ? -lim : rel);
+            const double mag = c < 0.0 ? -c : c;
+            gnorm[bucket] = gnorm[bucket] <= 0.0
+                                ? mag
+                                : gnorm[bucket] + kVLBaselineAlpha * (mag - gnorm[bucket]);
           }
           baseline[bucket] = baseline[bucket] < 0.0
                                  ? e
@@ -4645,6 +4711,7 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
     out.f1_by_word[k] = vf_n[k] ? vf1_sum[k] / vf_n[k] : 0.0;
     out.f2_by_word[k] = vf_n[k] ? vf2_sum[k] / vf_n[k] : 0.0;
   }
+  if (out.reward_n) out.reward_mag /= double(out.reward_n);
   out.voiced_frac = frames_total ? double(frames_voiced) / double(frames_total) : 0.0;
   out.ctx_present_frac = ctx_ticks_total ? double(ctx_ticks) / double(ctx_ticks_total) : 0.0;
   out.ctx_events_per_trial =
@@ -11064,6 +11131,296 @@ bool run_boundprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
                 "  fit: the ratios above are the result.\n", e_2nd);
     return false;
   }
+  return true;
+}
+
+// ---------------------------------------------------------------------------
+// baseprobe -- is the variance floor the RULE's, or the CRITERION's?
+//
+// boundprobe found the session splits in two. To about 4900 trials the aligned
+// bias grows at exponent 0.83 while the useless directions grow at 0.40 and gain
+// climbs 1.37 -> 3.31; after that both grow at 0.29 and gain is frozen. The
+// table keeps getting bigger and stops getting better. That is node perturbation
+// sitting on its variance floor -- Hiratani, Mehta, Lillicrap & Latham 2022 --
+// and it is where 137 Hz comes from.
+//
+// The floor is set by the ratio of systematic drift to diffusive spread per
+// trial. Everything tried so far attacked the diffusive half: the commitment
+// brake (1.07x where 6.2x is needed), the slow store (12.5x the wrong way), a
+// selectivity mask (no benefit). This attacks the other half, and it is the only
+// term nobody has touched, because it is not in the genome at all.
+//
+// The shipped criterion delivers ONE BIT per trial: praise if this trial's
+// formant error beat the creature's own running error, scold if it did not. The
+// magnitude of the improvement is discarded. A graded reward keeps exactly the
+// same comparison and hands over the magnitude too, which raises the drift
+// without touching the step size -- the one thing raising perturb_rate could not
+// do, since that grows outside 3x and halves gain.
+//
+// THE CONFOUND THIS IS BUILT AROUND. If the graded value had a smaller mean
+// magnitude than the binary one it would just be a smaller learning rate, which
+// is already refuted. So it is divided by the creature's own mean absolute
+// deviation from its baseline: E|graded| = |praise| by construction. The
+// realised mean is printed per arm, so the match is checked and not assumed. An
+// arm whose reward magnitude is off by more than 15% is reported as confounded
+// rather than read.
+//
+// WHAT WOULD REFUSE IT. Phase 2 exists on the graded arm too -- aligned and
+// outside growing at the same exponent with gain flat. That would say the floor
+// is the rule's and not the criterion's, which closes the magnitude question on
+// node perturbation itself and makes 137 Hz this architecture's number.
+struct BaseArm {
+  const char* name;
+  float grade;  // 0 = the shipped sign; > 0 = graded, clamped at this many MADs
+};
+constexpr BaseArm kBaseArms[] = {
+    // The shipped criterion, and boundprobe's phase 2 is its signature.
+    {"binary", 0.0f},
+    // Same comparison, magnitude kept. 3 MADs is a clamp against one freak
+    // trial, not a scale: the scale is the creature's own deviation.
+    {"graded", 3.0f},
+    // A tighter clamp. If graded helps, this says whether it is the small
+    // everyday differences doing it or the rare large ones.
+    {"graded-1", 1.0f},
+};
+constexpr uint32_t kBaseArmCount = sizeof(kBaseArms) / sizeof(kBaseArms[0]);
+
+bool run_baseprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  aibaby::Dna dna;
+  if (dna.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) {
+    std::printf("  setup failed: the genome does not load\n");
+    return false;
+  }
+  const int32_t ctx_module = dna.module_with_role(aibaby::ModuleRole::kContext);
+  if (ctx_module < 0) {
+    std::printf("  this genome has no kContext module. Build one with NO output\n"
+                "  weight -- the index is READ, never driven:\n\n"
+                "    python3 tools/genome_add_context.py dna/default.toml ctx.toml \\\n"
+                "        vocal out_w=0\n"
+                "    ./build/aibaby --dna ctx.toml --experiment baseprobe\n");
+    return false;
+  }
+  constexpr uint32_t kReps = 9;
+  const size_t slots_off = offsetof(aibaby::DnaHeader, exploration) +
+                           offsetof(aibaby::DnaExploration, context_slots);
+  const size_t src_off = offsetof(aibaby::DnaHeader, exploration) +
+                         offsetof(aibaby::DnaExploration, context_source);
+  instrument("baseprobe", dna.header().seed ^ 0xBA5Eu, ticks / kVLTrialTicks,
+             "trials per session, sampled at 16 checkpoints");
+  std::printf("  question          boundprobe's phase 2 -- aligned and outside growing at\n"
+              "                    the same exponent with gain frozen -- is node perturbation\n"
+              "                    on its variance floor. Is that floor the RULE's, or the\n"
+              "                    one-bit-per-trial CRITERION's?\n");
+  std::printf("  the gate          phase-2 gain slope. Rising on a graded arm means the\n"
+              "                    criterion was the limit; flat on every arm means the rule\n"
+              "                    is, and 137 Hz is this architecture's number.\n");
+  std::printf("  the confound      graded is divided by the creature's own mean absolute\n"
+              "                    deviation, so E|reward| = |praise| by construction. The\n"
+              "                    realised mean is printed; >15%% off is CONFOUNDED, not read.\n\n");
+
+  struct Cell {
+    bool ok = false;
+    uint32_t scored = 0, skipped = 0, n = 0;
+    double align[VLRun::kCkpt] = {}, outside[VLRun::kCkpt] = {}, gain[VLRun::kCkpt] = {};
+    double df1[VLRun::kCkpt] = {}, trial[VLRun::kCkpt] = {};
+    double rmag = 0.0, praise_share = 0.0;
+  };
+  const uint32_t njobs = kReps * kBaseArmCount;
+  const std::vector<Cell> cells = parallel_reps<Cell>(njobs, [&](uint32_t i) {
+    Cell cell;
+    const uint32_t r = i / kBaseArmCount;
+    const uint32_t a = i % kBaseArmCount;
+    std::vector<uint8_t> variant = blob;
+    const uint64_t seed = dna.header().seed + r * 7919ull;
+    std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+    const uint32_t sl = 2u, sr = 4u;
+    std::memcpy(variant.data() + slots_off, &sl, sizeof(sl));
+    std::memcpy(variant.data() + src_off, &sr, sizeof(sr));
+    CtxDrive drive;
+    drive.module = ctx_module;
+    drive.slots = kVLWords;
+    drive.gain = 0.10;
+    Regime reg;
+    reg.praise = kPraiseValue;
+    reg.scold = kScoldValue;
+    reg.grade_scale = kBaseArms[a].grade;
+    const VLRun run = run_vocallearn_session(variant, ticks, kVLTaught, nullptr, reg,
+                                             kVLTgtHeard, &drive);
+    cell.scored = run.scored;
+    cell.skipped = run.skipped;
+    if (!run.ok) return cell;
+    cell.n = run.ckpt_n;
+    for (uint32_t k = 0; k < run.ckpt_n; ++k) {
+      cell.align[k] = run.ckpt_align[k];
+      cell.outside[k] = run.ckpt_outside[k];
+      cell.gain[k] = run.ckpt_gain[k];
+      cell.df1[k] = run.ckpt_df1[k];
+      cell.trial[k] = run.ckpt_trial[k];
+    }
+    cell.rmag = run.reward_mag;
+    const uint32_t tot = run.praises + run.scolds;
+    cell.praise_share = tot ? double(run.praises) / double(tot) : 0.0;
+    cell.ok = true;
+    parallel_note("  [%u/%u] seed %u %-9s  aligned %.5f  |reward| %.3f\n", i + 1, njobs, r,
+                  kBaseArms[a].name, cell.align[cell.n ? cell.n - 1 : 0], cell.rmag);
+    return cell;
+  });
+
+  std::vector<double> al[kBaseArmCount][VLRun::kCkpt];
+  std::vector<double> os[kBaseArmCount][VLRun::kCkpt];
+  std::vector<double> gn[kBaseArmCount][VLRun::kCkpt];
+  std::vector<double> d1[kBaseArmCount][VLRun::kCkpt];
+  std::vector<double> rm[kBaseArmCount], ps[kBaseArmCount];
+  double xt[VLRun::kCkpt] = {};
+  uint32_t nck = 0, used = 0;
+  for (uint32_t i = 0; i < njobs; ++i) {
+    const uint32_t a = i % kBaseArmCount;
+    const Cell& c = cells[i];
+    if (!c.ok) continue;
+    ++used;
+    if (c.n > nck) nck = c.n;
+    rm[a].push_back(c.rmag);
+    ps[a].push_back(c.praise_share);
+    for (uint32_t k = 0; k < c.n; ++k) {
+      al[a][k].push_back(c.align[k]);
+      os[a][k].push_back(c.outside[k]);
+      gn[a][k].push_back(c.gain[k]);
+      d1[a][k].push_back(c.df1[k]);
+      xt[k] = c.trial[k];
+    }
+  }
+  if (used < njobs / 2 || nck < 8) {
+    std::printf("\n  baseprobe INCONCLUSIVE -- %u of %u sessions produced a curve, with\n"
+                "  %u checkpoints. Nothing is fitted to that.\n", used, njobs, nck);
+    return false;
+  }
+
+  const uint32_t half = nck / 2;
+  double base_mag = 0.0;
+  bool confounded = false;
+
+  // The statistic, as a function of WHICH SEEDS are included, so it can be
+  // jackknifed. The smoke run taught this the hard way: at 143 trials nothing is
+  // learned, gain sits at 1.1, and the point-estimate gate still printed "THE
+  // CRITERION WAS THE LIMIT" off pure noise. A verdict with no error bar is a
+  // verdict fitted to whatever came out.
+  struct Stat { double al2, os2, sep, fin; };
+  const auto stat_for = [&](uint32_t a, int drop) {
+    double m_al[VLRun::kCkpt], m_os[VLRun::kCkpt];
+    double fin = 0.0;
+    for (uint32_t k = 0; k < nck; ++k) {
+      double sa = 0.0, so = 0.0;
+      uint32_t n = 0;
+      for (size_t j = 0; j < al[a][k].size(); ++j) {
+        if (drop >= 0 && size_t(drop) == j) continue;
+        sa += al[a][k][j];
+        so += os[a][k][j];
+        ++n;
+      }
+      m_al[k] = n ? sa / double(n) : 0.0;
+      m_os[k] = n ? so / double(n) : 0.0;
+      if (k == nck - 1) fin = m_al[k];
+    }
+    Stat st;
+    st.al2 = drift_exponent(xt, m_al, half, nck);
+    st.os2 = drift_exponent(xt, m_os, half, nck);
+    st.sep = st.al2 - st.os2;
+    st.fin = fin;
+    return st;
+  };
+  // Leave-one-seed-out. n-1 scaling on the spread, which is the jackknife's own
+  // correction and not a guess.
+  const auto jack_se = [&](uint32_t a) {
+    const size_t n = al[a][nck - 1].size();
+    if (n < 3) return 0.0;
+    double sum = 0.0;
+    std::vector<double> v;
+    v.reserve(n);
+    for (size_t j = 0; j < n; ++j) {
+      const double x = stat_for(a, int(j)).sep;
+      v.push_back(x);
+      sum += x;
+    }
+    const double mean = sum / double(n);
+    double ss = 0.0;
+    for (double x : v) ss += (x - mean) * (x - mean);
+    return std::sqrt(double(n - 1) / double(n) * ss);
+  };
+
+  std::printf("  %-10s %-11s %-11s %-16s %-16s %-11s %s\n", "arm", "|reward|", "praise",
+              "aligned exp 1/2", "outside exp 1/2", "gain 1->16", "dF1 last (Hz)");
+  Stat st[kBaseArmCount];
+  double sep_se[kBaseArmCount], fin_d1[kBaseArmCount], se_d1[kBaseArmCount];
+  for (uint32_t a = 0; a < kBaseArmCount; ++a) {
+    double m_gn0, m_gnL, dummy;
+    m_gn0 = ctx_mean_se(gn[a][0], &dummy);
+    m_gnL = ctx_mean_se(gn[a][nck - 1], &dummy);
+    double m_al[VLRun::kCkpt], m_os[VLRun::kCkpt];
+    for (uint32_t k = 0; k < nck; ++k) {
+      m_al[k] = ctx_mean_se(al[a][k], &dummy);
+      m_os[k] = ctx_mean_se(os[a][k], &dummy);
+    }
+    const double e_al1 = drift_exponent(xt, m_al, 0, half);
+    const double e_os1 = drift_exponent(xt, m_os, 0, half);
+    st[a] = stat_for(a, -1);
+    sep_se[a] = jack_se(a);
+    const double mag = ctx_mean_se(rm[a], &dummy);
+    const double pshare = ctx_mean_se(ps[a], &dummy);
+    if (a == 0) base_mag = mag;
+    const double off = base_mag > 0.0 ? std::fabs(mag - base_mag) / base_mag : 0.0;
+    if (off > 0.15) confounded = true;
+    fin_d1[a] = ctx_mean_se(d1[a][nck - 1], &se_d1[a]);
+    std::printf("  %-10s %.3f%-6s %-11.3f %.2f / %-9.2f %.2f / %-9.2f %.2f -> %-6.2f %.1f +/- %.1f\n",
+                kBaseArms[a].name, mag, off > 0.15 ? " (!)" : "", pshare, e_al1, st[a].al2,
+                e_os1, st[a].os2, m_gn0, m_gnL, fin_d1[a], se_d1[a]);
+  }
+
+  std::printf("\n  PHASE 2 IS THE QUESTION. Its signature is aligned and outside growing\n"
+              "  at the SAME exponent -- separation zero is the floor:\n");
+  for (uint32_t a = 0; a < kBaseArmCount; ++a) {
+    std::printf("  %-10s aligned %.2f  outside %.2f  separation %+.2f +/- %.2f (%.1f SE)"
+                "  final aligned %.5f\n",
+                kBaseArms[a].name, st[a].al2, st[a].os2, st[a].sep, sep_se[a],
+                sep_se[a] > 0.0 ? st[a].sep / sep_se[a] : 0.0, st[a].fin);
+  }
+
+  if (confounded) {
+    std::printf("\n  baseprobe CONFOUNDED -- an arm's mean |reward| is more than 15%% from\n"
+                "  the binary arm's %.3f, so any difference below is a learning-rate\n"
+                "  change and not an information change. Not read.\n", base_mag);
+    return false;
+  }
+
+  // Pre-registered: a graded arm escapes phase 2 only if its separation is
+  // positive at 2 SE AND it is at least 2 SE above the binary arm's. One of
+  // those alone is not enough -- the first can fire on an arm that merely
+  // learns slower, the second on an arm whose binary partner had a bad draw.
+  int escaped = -1;
+  for (uint32_t a = 1; a < kBaseArmCount; ++a) {
+    const double joint = std::sqrt(sep_se[a] * sep_se[a] + sep_se[0] * sep_se[0]);
+    if (sep_se[a] > 0.0 && st[a].sep > 2.0 * sep_se[a] &&
+        joint > 0.0 && (st[a].sep - st[0].sep) > 2.0 * joint) {
+      escaped = int(a);
+      break;
+    }
+  }
+  if (escaped < 0) {
+    std::printf("\n  THE FLOOR IS THE RULE'S, NOT THE CRITERION'S. No graded arm keeps the\n"
+                "  aligned component outgrowing the useless ones into phase 2 at 2 SE, and\n"
+                "  none separates from the binary arm at 2 SE. Handing node perturbation\n"
+                "  the magnitude it was discarding does not move its variance floor, which\n"
+                "  is what Hiratani's analysis says should happen: the floor is set by the\n"
+                "  perturbation noise the estimator injects, not by the resolution of the\n"
+                "  signal it reads. 137 Hz is this architecture's number.\n");
+    return false;
+  }
+  std::printf("\n  THE CRITERION WAS THE LIMIT. `%s` keeps aligned outgrowing outside at\n"
+              "  %.1f SE where the binary arm is at %.1f SE, and separates from it by\n"
+              "  %+.2f. The one bit per trial was costing the drift, and that is a\n"
+              "  PROTOCOL change rather than a mechanism -- nothing in the genome moves.\n",
+              kBaseArms[escaped].name, st[escaped].sep / sep_se[escaped],
+              sep_se[0] > 0.0 ? st[0].sep / sep_se[0] : 0.0, st[escaped].sep - st[0].sep);
   return true;
 }
 

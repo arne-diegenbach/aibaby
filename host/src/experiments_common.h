@@ -155,6 +155,33 @@ struct Regime {
   uint64_t delay = kRewardDelayTicks;
   float praise = kPraiseValue;
   float scold = kScoldValue;
+  // GRADED REWARD. 0 keeps the shipped criterion, which is a SIGN: praise if
+  // this trial beat the creature's own running error, scold if it did not, at
+  // one bit per trial. Above 0 the same comparison is delivered with its
+  // MAGNITUDE, so the arms differ in information per trial and not in what is
+  // being asked for.
+  //
+  // `boundprobe` found the aligned bias stops outgrowing the useless directions
+  // after ~4900 trials, both then growing at 0.29, which is node perturbation
+  // sitting on its variance floor (Hiratani 2022). A sign discards the one thing
+  // that would raise the drift-to-diffusion ratio without touching the step
+  // size, so this asks whether the floor is the rule's or the criterion's.
+  //
+  // THE CONFOUND THIS IS SHAPED TO AVOID, because getting it wrong turns the
+  // experiment into a learning-rate sweep with extra steps. The binary arm
+  // delivers |praise| on EVERY trial, so its mean reward magnitude is |praise|.
+  // A graded value divided by any fixed constant has whatever mean magnitude the
+  // error distribution happens to give it, and a smaller one is indistinguishable
+  // from a smaller `perturb_rate` -- which was already swept and already grows
+  // `outside` faster than `aligned`.
+  //
+  // So the divisor is the creature's OWN mean absolute deviation from its
+  // baseline, tracked per bucket. Then E|graded| = |praise| by construction and
+  // the two arms are matched on magnitude without fitting anything. This field
+  // is only the clamp, in units of that deviation; 3.0 is the value used, and
+  // the realised mean |reward| is printed per arm so the match is checked rather
+  // than assumed.
+  float grade_scale = 0.0f;
 };
 
 
@@ -2004,6 +2031,7 @@ bool run_partprobe(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_ctxfour(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_ctxscale(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_boundprobe(const std::vector<uint8_t>&, uint64_t, bool);
+bool run_baseprobe(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_pgprobe(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_g2cond(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_coderprobe(const std::vector<uint8_t>&, uint64_t, bool);

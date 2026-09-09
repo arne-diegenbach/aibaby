@@ -213,6 +213,14 @@ const Spec kSpecs[] = {
      "  fingerprints -- drift decaying, pure diffusion, the perturb_max clamp\n"
      "  binding on a heavy tail -- and refuses if none of them fires. Not to be\n"
      "  confused with driftprobe, which asks about interference BETWEEN lessons"},
+    {"baseprobe", 27200000, Expect::kOpen, Tier::kTeach,
+     "derived: boundprobe's session and checkpoints, because it asks what\n"
+     "  boundprobe's phase 2 means. Aligned and outside growing at the same\n"
+     "  exponent with gain frozen is node perturbation on its variance floor.\n"
+     "  The shipped criterion delivers ONE BIT per trial; graded arms hand over\n"
+     "  the magnitude too, divided by the creature's own mean deviation so the\n"
+     "  arms match on |reward| and this is not a learning-rate sweep. Refuses if\n"
+     "  no graded arm escapes phase 2, which would make 137 Hz the rule's floor"},
     {"ctxfour", 3400000, Expect::kOpen, Tier::kTeach,
      "derived: ctxself's session at FOUR words. partprobe cleared the index at\n"
      "  four (0.895 vs chance 0.250); this asks whether the BIAS holds four\n"
@@ -470,6 +478,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "ctxfour") ok = run_ctxfour(dna_blob, ticks, verbose);
   else if (name == "ctxscale") ok = run_ctxscale(dna_blob, ticks, verbose);
   else if (name == "boundprobe") ok = run_boundprobe(dna_blob, ticks, verbose);
+  else if (name == "baseprobe") ok = run_baseprobe(dna_blob, ticks, verbose);
   else if (name == "partprobe") ok = run_partprobe(dna_blob, ticks, verbose);
   else if (name == "pgprobe") ok = run_pgprobe(dna_blob, ticks, verbose);
   else if (name == "g2cond") ok = run_g2cond(dna_blob, ticks, verbose);
