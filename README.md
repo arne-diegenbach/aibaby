@@ -9945,6 +9945,29 @@ papers about the half it does not touch.
   basal ganglia circuit.* PLoS Biology 3(5), e153.
   <https://doi.org/10.1371/journal.pbio.0030153> — the anterior forebrain
   pathway, which is where reward-modulated motor variability comes from.
+- **Context gating is only half of it (`ctxretain`, and the case for `meta_commit`).**
+  Masse, N. Y., Grant, G. D. & Freedman, D. J. (2018). *Alleviating catastrophic
+  forgetting using context-dependent gating and synaptic stabilization.* PNAS
+  115(44), E10467–E10475. <https://doi.org/10.1073/pnas.1803839115>,
+  arXiv:1802.01569 — **gating ALONE reads 61.4% across 100 tasks and does not
+  support continual learning; gating combined with Synaptic Intelligence or
+  Elastic Weight Consolidation reads 95.4%.** That is a prediction about
+  `ctxretain`, which tests gating alone. The stabilisation half already ships here
+  as `meta_commit`, DNA v41's commitment brake — it gates plasticity by how far a
+  neuron has already moved, which is the EWC/SI idea — and `brake-sweep` measured
+  it against the wrong question, the magnitude of the learned bias rather than the
+  protection of an old lesson from a new one.
+
+- **Node perturbation, and what actually speeds it up.** Dalm, S., Offergeld, J.,
+  Ahmad, N. & van Gerven, M. *Effective Learning with Node Perturbation in Deep
+  Neural Networks.* arXiv:2310.00965 — decorrelating unit activities gives
+  orders-of-magnitude faster NP convergence by removing the confounding that makes
+  per-unit credit ambiguous. Recorded rather than acted on, because `ctxgain`
+  established this creature's ceiling is drift-limited and showed the
+  parameterisation does not matter, so the honest prior is that decorrelation buys
+  SPEED and not ceiling — and speed is the one thing `ctxgain` could not measure,
+  since both its arms were saturated.
+
 - **Oriented receptive fields (DNA v7).** Hubel, D. H. & Wiesel, T. N. (1962).
   *Receptive fields, binocular interaction and functional architecture in the
   cat's visual cortex.* Journal of Physiology 160, 106–154.
