@@ -234,6 +234,14 @@ const Spec kSpecs[] = {
      "  Same rule, same reward; the update is the group MEAN so drift is unchanged\n"
      "  and diffusion falls by sqrt(14). Predicts dF1 119 -> 186 Hz. Gates on dF1\n"
      "  paired by seed, NOT on aligned -- mode 1 forces alignment by construction"},
+    {"interleave", 5600000, Expect::kOpen, Tier::kLong,
+     "derived: retain's protocol and length, run as eight arms. A conflicting\n"
+     "  lesson wipes a taught sound to 0.22; does replaying the OLD lesson during\n"
+     "  sleep rescue it? Decomposes the two things that must both hold -- the\n"
+     "  buffer still holding lesson A (an oracle: reward selection cannot keep\n"
+     "  it) and replay actually reinforcing something (DNA v55 replay_credit).\n"
+     "  Gates on retention AND err-after paired, because retention is a ratio an\n"
+     "  arm can inflate by simply learning less"},
     {"ctxfour", 3400000, Expect::kOpen, Tier::kTeach,
      "derived: ctxself's session at FOUR words. partprobe cleared the index at\n"
      "  four (0.895 vs chance 0.250); this asks whether the BIAS holds four\n"
@@ -494,6 +502,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "baseprobe") ok = run_baseprobe(dna_blob, ticks, verbose);
   else if (name == "bankprobe") ok = run_bankprobe(dna_blob, ticks, verbose);
   else if (name == "ctxgain") ok = run_ctxgain(dna_blob, ticks, verbose);
+  else if (name == "interleave") ok = run_interleave(dna_blob, ticks, verbose);
   else if (name == "partprobe") ok = run_partprobe(dna_blob, ticks, verbose);
   else if (name == "pgprobe") ok = run_pgprobe(dna_blob, ticks, verbose);
   else if (name == "g2cond") ok = run_g2cond(dna_blob, ticks, verbose);
