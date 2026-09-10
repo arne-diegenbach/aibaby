@@ -9001,6 +9001,70 @@ parameters* — which is the one thing Werfel, Xie and Seung's scaling law actua
 prescribes, and the same law that licensed v51's drop from ~4000 synaptic
 parameters to 252 and produced the first conditional effect on the voice.
 
+### `ctxgain` — 18 parameters match 252, and the ceiling is not variance
+
+The eighth route, and the only one that did not try to make the bias bigger. DNA
+v54 mode 1 replaces the 252-entry per-neuron table with **one gain per articulator
+group per context — 18 parameters** — on the centred position ramp inside the
+group. Same perturbations, same reward, same cash-in; only the projection differs.
+Werfel, Xie and Seung's scaling law is already load-bearing here, since it is the
+argument that took v51 from ~4000 synaptic parameters to 252 and produced the first
+conditional effect on this creature's voice. This applies it once more.
+
+| arm | dF1 (Hz) | aligned (F1) | outside | gain |
+|---|---|---|---|---|
+| `table` (252 params) | 112.7 +/- 9.8 | 0.04977 | 0.05481 | 3.33 |
+| `table-rnd` | 31.3 +/- 6.3 | 0.01447 | 0.06229 | 0.90 |
+| **`gains` (18 params)** | **108.6 +/- 18.6** | 0.04541 | **0.02162** | **7.47** |
+| `gains-rnd` | 25.9 +/- 13.4 | 0.01513 | 0.01760 | 3.78 |
+
+    PAIRED  gains - table        -4.1 +/- 21.2  (-0.2 SE)   <- the gate
+    PAIRED  gains - gains-rnd   +82.7 +/- 20.2  (+4.1 SE)   mode 1 learns
+    PAIRED  table - table-rnd   +81.4 +/- 12.2  (+6.7 SE)   mode 0 still does
+
+**The parameterisation did exactly what it was designed to do.** `outside` falls
+**2.54x** and `gain` rises **2.24x**, to 7.47 against a structureless table's 1.0.
+Fourteen times fewer parameters write two and a half times less into directions a
+centroid readout cannot see.
+
+**And the thing that was supposed to buy did not move.** `aligned` reads 0.0454
+against 0.0498 — 0.91x, not the predicted 3.74x — and delivered dF1 is 108.6
+against 112.7. Dead even at **-0.2 SE**. The prediction of 186 Hz is refuted, and
+not narrowly.
+
+**That is a direct refutation of the variance-floor explanation, and it is the
+real result here.** `boundprobe`'s phase 2 — aligned and outside growing at
+identical exponents with the shape frozen — was read as node perturbation sitting
+on its variance floor, following Hiratani. If diffusion set the ceiling, then
+cutting diffusion 2.54x had to raise the aligned bias. **It did not raise it at
+all.** The limit was never noise.
+
+**So the account has to change, and `boundprobe`'s own second half already
+supplies it.** Praise is `e < baseline`, an EMA of the creature's *own* recent
+error, so the expected drift is proportional to the **rate of improvement** rather
+than to the remaining error. When improvement stalls the drift goes to zero on its
+own, however far the voice still is from the target — and it stalls because
+`dF1 ~ aligned^0.61` means each further unit of bias buys less error reduction.
+The ongoing isotropic growth in phase 2 is diffusion, and `ctxgain` shows that
+diffusion is a *passenger*: remove 2.54x of it and the aligned level is unchanged,
+because the aligned level was set by a drift that had already stopped.
+
+That also retires the puzzle `baseprobe` left behind. A graded criterion did not
+help because more information about a gradient that is zero is still zero.
+
+**Nine routes are now closed**, and the last one closes the mechanism as well as
+the option: more trials, more rate, a selectivity mask, the commitment brake, the
+slow store, a graded criterion, daily consolidation, and now the parameter count —
+which additionally proves the ceiling is **drift-limited, not variance-limited**.
+
+**One thing worth keeping rather than discarding.** 18 parameters deliver what 252
+deliver, on the same rule and the same creatures, while writing 2.54x less into
+useless directions. That is not a win on naming, but it is a 14x cheaper
+parameterisation at no measured cost, and Werfel's law predicts it should also be
+*faster* to learn. Both arms are saturated at 13.6M so this run cannot see a speed
+difference; a short-budget comparison would, and it is the cheapest open question
+left on this thread.
+
 ### What the literature says to build next, and why it is the cheap option
 
 > **This section is the argument that produced DNA v51, kept as the record of
