@@ -1,0 +1,140 @@
+  [14/90] seed 2 credit            retention 0.18  err after 1.0228
+  [13/90] seed 2 relearn           retention 0.39  err after 0.9899
+  [11/90] seed 2 quiet             retention 1.14  err after 0.8744
+  [3/90] seed 0 relearn           retention 0.37  err after 0.9288
+  [2/90] seed 0 quiet-credit      retention 1.18  err after 0.7592
+  [6/90] seed 1 quiet             retention 1.07  err after 0.7568
+  [9/90] seed 1 credit            retention 0.41  err after 0.9097
+  [1/90] seed 0 quiet             retention 1.13  err after 0.7452
+  [7/90] seed 1 quiet-credit      retention 1.02  err after 0.7778
+  [5/90] seed 0 never taught      retention 175.26  err after 1.0797
+  [8/90] seed 1 relearn           retention 0.08  err after 0.9812
+  [4/90] seed 0 credit            retention 0.53  err after 0.9018
+  [12/90] seed 2 quiet-credit      retention 0.56  err after 0.9632
+  [10/90] seed 1 never taught      retention 4.60  err after 1.0795
+  [21/90] seed 4 quiet             retention 1.16  err after 0.7989
+  [16/90] seed 3 quiet             retention 1.00  err after 0.8458
+  [22/90] seed 4 quiet-credit      retention 0.99  err after 0.7753
+  [26/90] seed 5 quiet             retention 1.02  err after 0.8124
+  [15/90] seed 2 never taught      retention 1.02  err after 1.1001
+  [17/90] seed 3 quiet-credit      retention 1.31  err after 0.7447
+  [19/90] seed 3 credit            retention -0.03  err after 0.9761
+  [27/90] seed 5 quiet-credit      retention 1.15  err after 0.7901
+  [24/90] seed 4 credit            retention 0.62  err after 0.8612
+  [20/90] seed 3 never taught      retention 1.22  err after 1.0747
+  [18/90] seed 3 relearn           retention 0.01  err after 0.9689
+  [25/90] seed 4 never taught      retention 0.70  err after 1.0793
+  [23/90] seed 4 relearn           retention 0.21  err after 0.9673
+  [28/90] seed 5 relearn           retention 0.03  err after 0.9815
+  [31/90] seed 6 quiet             retention 1.25  err after 0.7251
+  [29/90] seed 5 credit            retention 0.30  err after 0.9360
+  [30/90] seed 5 never taught      retention 2.62  err after 1.0875
+  [33/90] seed 6 relearn           retention 0.72  err after 0.8435
+  [36/90] seed 7 quiet             retention 1.21  err after 0.7402
+  [34/90] seed 6 credit            retention 0.73  err after 0.8029
+  [32/90] seed 6 quiet-credit      retention 1.11  err after 0.6983
+  [37/90] seed 7 quiet-credit      retention 1.11  err after 0.7286
+  [39/90] seed 7 credit            retention 0.47  err after 0.8682
+  [35/90] seed 6 never taught      retention 0.20  err after 1.0853
+  [41/90] seed 8 quiet             retention 1.40  err after 0.9328
+  [38/90] seed 7 relearn           retention 0.40  err after 0.8957
+  [42/90] seed 8 quiet-credit      retention 1.51  err after 0.8264
+  [40/90] seed 7 never taught      retention 1.20  err after 1.0792
+  [43/90] seed 8 relearn           retention -0.48  err after 1.0466
+  [44/90] seed 8 credit            retention 0.26  err after 0.9845
+  [53/90] seed 10 relearn           retention 0.14  err after 0.9836
+  [46/90] seed 9 quiet             retention 1.27  err after 0.7468
+  [45/90] seed 8 never taught      retention 0.76  err after 1.0816
+  [56/90] seed 11 quiet             retention 1.24  err after 0.8870
+  [47/90] seed 9 quiet-credit      retention 0.87  err after 0.8217
+  [52/90] seed 10 quiet-credit      retention 1.00  err after 0.7699
+  [48/90] seed 9 relearn           retention -0.12  err after 1.0096
+  [50/90] seed 9 never taught      retention 1.25  err after 1.0785
+  [55/90] seed 10 never taught      retention -13.22  err after 1.0879
+  [51/90] seed 10 quiet             retention 0.82  err after 0.8504
+  [49/90] seed 9 credit            retention 0.18  err after 0.9527
+  [54/90] seed 10 credit            retention 0.29  err after 0.9420
+  [59/90] seed 11 credit            retention 0.21  err after 0.9913
+  [57/90] seed 11 quiet-credit      retention 0.78  err after 0.9165
+  [58/90] seed 11 relearn           retention -0.14  err after 1.0334
+  [68/90] seed 13 relearn           retention 0.14  err after 0.9494
+  [60/90] seed 11 never taught      retention 1.42  err after 1.0792
+  [66/90] seed 13 quiet             retention 1.41  err after 0.7451
+  [63/90] seed 12 relearn           retention 0.27  err after 1.0049
+  [61/90] seed 12 quiet             retention 1.46  err after 0.8720
+  [62/90] seed 12 quiet-credit      retention 1.17  err after 0.9428
+  [65/90] seed 12 never taught      retention 1.51  err after 1.0845
+  [64/90] seed 12 credit            retention 0.10  err after 1.0269
+  [70/90] seed 13 never taught      retention 0.97  err after 1.0846
+  [69/90] seed 13 credit            retention 0.34  err after 0.9232
+  [67/90] seed 13 quiet-credit      retention 1.50  err after 0.7601
+  [71/90] seed 14 quiet             retention 1.19  err after 0.7680
+  [73/90] seed 14 relearn           retention 0.37  err after 0.9318
+  [74/90] seed 14 credit            retention 0.17  err after 0.9748
+  [72/90] seed 14 quiet-credit      retention 1.69  err after 0.7028
+  [75/90] seed 14 never taught      retention 4.93  err after 1.0841
+  [76/90] seed 15 quiet             retention 1.08  err after 0.9320
+  [82/90] seed 16 quiet-credit      retention 1.32  err after 0.8787
+  [78/90] seed 15 relearn           retention -0.20  err after 1.0766
+  [79/90] seed 15 credit            retention 0.37  err after 1.0082
+  [77/90] seed 15 quiet-credit      retention 1.06  err after 0.9237
+  [83/90] seed 16 relearn           retention -0.48  err after 1.0710
+  [80/90] seed 15 never taught      retention 1.21  err after 1.0843
+  [84/90] seed 16 credit            retention 0.05  err after 1.0116
+  [81/90] seed 16 quiet             retention 0.86  err after 0.9212
+  [86/90] seed 17 quiet             retention 1.47  err after 0.7444
+  [88/90] seed 17 relearn           retention 0.53  err after 0.9191
+  [85/90] seed 16 never taught      retention 0.84  err after 1.0751
+  [90/90] seed 17 never taught      retention 0.30  err after 1.0914
+  [89/90] seed 17 credit            retention 0.20  err after 0.9866
+  [87/90] seed 17 quiet-credit      retention 0.99  err after 0.8622
+experiment: interleave
+  instrument        interleave   trial seed 00000000013539b2   2000 trials
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  question          a conflicting lesson wipes a taught sound to 0.22
+                    (`retain`). Does replaying the OLD lesson during sleep
+                    rescue it? Ceiling is `capacity`'s 0.84 for two lessons
+                    that do not conflict.
+  the two factors   FROZEN keeps lesson-A episodes in the buffer (reward
+                    selection cannot -- A stops being rewarded). CREDIT is
+                    DNA v55: store the exploration, so replay reinforces what
+                    was tried instead of crediting sleep noise.
+  the gate          `both` - `relearn`, PAIRED on seed, at 2 SE, on BOTH
+                    retention and err after. Retention alone is a ratio whose
+                    denominator an arm can shrink by simply learning less.
+
+
+  arm                sleeps   err taught    err after     retention     d' t->a  buf B
+  quiet              6.0      0.8443        0.8166       1.18 +/- 0.04   1.75     1.00
+  quiet-credit       6.0      0.8333        0.8134       1.13 +/- 0.06   2.67     1.00
+  relearn            6.0      0.8443        0.9768       0.12 +/- 0.08   5.51     1.00
+  credit             6.0      0.8333        0.9489       0.30 +/- 0.05   4.74     1.00
+  never taught       6.0      1.0832        1.0831       10.38 +/- 9.74   -0.11    0.40
+
+  PAIRED vs `relearn`. Both columns are stated so that they AGREE or the
+  arm does not pass: retention can be inflated by learning less, and
+  err-after improving is what actually means the sound survived.
+  arm                retention gain             err-after improvement
+  credit             +0.174 +/- 0.070 (+2.5 SE)   +0.0279 +/- 0.0107 (+2.6 SE)  <- BOTH
+
+  DID `credit` LEARN THE NEW LESSON BETTER OR WORSE?
+  err vs B's own target, last third of the gap, paired:
+  credit - relearn   -0.0192 +/- 0.0104 (-1.9 SE)  (positive = credit learned B BETTER)
+  -> NEITHER at 2 SE. B is learned about equally well, so the old
+     lesson survives better WITHOUT the new one landing less hard.
+     That refuses both stories and the mechanism stays open.
+
+  MECHANISM: does `credit` help when there is NO CONFLICT to protect
+  against? If its benefit is a stronger lesson going in, it must.
+  quiet-credit vs quiet   retention -0.050 +/- 0.074 (-0.7 SE)   err after +0.0031 +/- 0.0151 (+0.2 SE)
+  -> NOT ESTABLISHED here. If `credit` still passes the gate, its
+     benefit is conflict-specific after all and my account is wrong.
+
+  reference   quiet (no conflict) retention 1.18, never taught settle
+
+  `credit` RESCUES IT, on both measures, paired on the same creatures.
+  Note what that arm is and is not: its buffer is FREE-RUNNING, so this is
+  not interleaving -- the arm that held the buffer on the old lesson is the
+  one that failed. What DNA v55 changes is that replay reinforces the
+  exploration that earned the reward instead of crediting sleep noise.

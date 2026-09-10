@@ -9201,6 +9201,51 @@ learns B better *and* damages A less, then consolidating B at night spares the
 shared parameters by day, and that is measurable with the target the gap phase
 already scores against.
 
+### Absorption or stubbornness — and the answer is not the flattering one
+
+Everything measured so far is scored against lesson A, which is correct for
+retention and completely blind to *why* `credit` protects it. Two stories produce
+identical A-scored numbers:
+
+- **Absorption.** Sleep does some of the new learning, so fewer awake updates are
+  needed and the shared parameters are spared. Predicts `credit` learns B
+  **better** while damaging A less — a free gain.
+- **Stubbornness.** `credit` resists the new lesson, so the old one survives
+  because the new one lands less hard. Predicts `credit` learns B **worse** — a
+  trade, and one that caps how much can ever be taught second.
+
+Scoring against B's own target over the last third of the gap, paired on seed:
+
+    credit - relearn   -0.0192 +/- 0.0104  (-1.9 SE)     positive = learned B BETTER
+
+**Absorption is refuted directionally.** It predicted a positive number and the
+measurement is negative at 1.9 SE. The free-gain story is gone.
+
+**Stubbornness is suggested and not established**, and the pre-registered gate
+correctly printed "neither at 2 SE" rather than rounding 1.9 up. But this is not a
+null sitting at zero — it is 1.9 SE on the stubbornness side, with the only rival
+account pointing the other way.
+
+**So at face value the effect is a TRADE rather than a free gain:**
+
+| | measured | status |
+|---|---|---|
+| gained on the OLD lesson | +0.0279 of `err after` | 2.6 SE, established |
+| cost on the NEW lesson | -0.0192 of `err b` | 1.9 SE, suggestive |
+
+Net +0.0087 in A's favour, but bought rather than free. **That changes what this
+finding is worth.** A memory system that protects old lessons by learning new ones
+worse has a ceiling on what can ever be taught second, and this creature's whole
+naming problem is a second lesson landing on top of a first. It would be a poor
+foundation to build a memory system on without knowing which it is.
+
+**Three mechanism accounts have now been put to this effect and none survives
+intact** — a stronger lesson going in (refuted at -0.7 SE), accidental
+interleaving (refuted at `buf B` = 1.00), and absorption (refuted directionally).
+The effect itself has replicated twice. What is missing is not evidence that it is
+real; it is an explanation, and the one still standing predicts a cost this run
+can see but cannot resolve.
+
 ### What the literature says to build next, and why it is the cheap option
 
 > **This section is the argument that produced DNA v51, kept as the record of
