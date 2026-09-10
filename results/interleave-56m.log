@@ -1,0 +1,117 @@
+  [10/72] seed 1 relearn           retention 0.08  err after 0.9812
+  [6/72] seed 0 both              retention 0.05  err after 1.0069
+  [9/72] seed 1 quiet             retention 1.07  err after 0.7568
+  [4/72] seed 0 frozen            retention 0.20  err after 0.9684
+  [13/72] seed 1 credit            retention 0.41  err after 0.9097
+  [8/72] seed 0 never taught      retention 175.26  err after 1.0797
+  [2/72] seed 0 relearn           retention 0.37  err after 0.9288
+  [1/72] seed 0 quiet             retention 1.13  err after 0.7452
+  [12/72] seed 1 frozen            retention -0.11  err after 1.0239
+  [14/72] seed 1 both              retention 0.30  err after 0.9337
+  [7/72] seed 0 both-32           retention 0.41  err after 0.9113
+  [5/72] seed 0 credit            retention 0.53  err after 0.9018
+  [3/72] seed 0 relearn-noreplay  retention 0.67  err after 0.9132
+  [11/72] seed 1 relearn-noreplay  retention 0.13  err after 0.9774
+  [15/72] seed 1 both-32           retention 0.27  err after 0.9243
+  [16/72] seed 1 never taught      retention 4.60  err after 1.0795
+  [21/72] seed 2 credit            retention 0.18  err after 1.0228
+  [22/72] seed 2 both              retention -0.06  err after 1.0591
+  [19/72] seed 2 relearn-noreplay  retention 0.07  err after 1.0407
+  [17/72] seed 2 quiet             retention 1.14  err after 0.8744
+  [18/72] seed 2 relearn           retention 0.39  err after 0.9899
+  [27/72] seed 3 relearn-noreplay  retention 0.11  err after 0.9536
+  [26/72] seed 3 relearn           retention 0.01  err after 0.9689
+  [24/72] seed 2 never taught      retention 1.02  err after 1.1001
+  [20/72] seed 2 frozen            retention 0.20  err after 1.0192
+  [25/72] seed 3 quiet             retention 1.00  err after 0.8458
+  [23/72] seed 2 both-32           retention -0.16  err after 1.0673
+  [28/72] seed 3 frozen            retention -0.03  err after 0.9734
+  [29/72] seed 3 credit            retention -0.03  err after 0.9761
+  [35/72] seed 4 relearn-noreplay  retention -0.08  err after 1.0185
+  [31/72] seed 3 both-32           retention 0.93  err after 0.8274
+  [30/72] seed 3 both              retention 0.67  err after 0.8543
+  [33/72] seed 4 quiet             retention 1.16  err after 0.7989
+  [32/72] seed 3 never taught      retention 1.22  err after 1.0747
+  [34/72] seed 4 relearn           retention 0.21  err after 0.9673
+  [39/72] seed 4 both-32           retention 0.36  err after 0.9426
+  [36/72] seed 4 frozen            retention 0.12  err after 0.9837
+  [38/72] seed 4 both              retention 0.58  err after 0.8689
+  [37/72] seed 4 credit            retention 0.62  err after 0.8612
+  [40/72] seed 4 never taught      retention 0.70  err after 1.0793
+  [42/72] seed 5 relearn           retention 0.03  err after 0.9815
+  [41/72] seed 5 quiet             retention 1.02  err after 0.8124
+  [43/72] seed 5 relearn-noreplay  retention 0.41  err after 0.9257
+  [44/72] seed 5 frozen            retention -0.12  err after 1.0075
+  [46/72] seed 5 both              retention -0.04  err after 0.9932
+  [48/72] seed 5 never taught      retention 2.62  err after 1.0875
+  [45/72] seed 5 credit            retention 0.30  err after 0.9360
+  [47/72] seed 5 both-32           retention 0.21  err after 0.9474
+  [51/72] seed 6 relearn-noreplay  retention 0.71  err after 0.8284
+  [50/72] seed 6 relearn           retention 0.72  err after 0.8435
+  [49/72] seed 6 quiet             retention 1.25  err after 0.7251
+  [55/72] seed 6 both-32           retention 0.66  err after 0.8651
+  [52/72] seed 6 frozen            retention 0.68  err after 0.8533
+  [54/72] seed 6 both              retention 0.70  err after 0.8128
+  [53/72] seed 6 credit            retention 0.73  err after 0.8029
+  [56/72] seed 6 never taught      retention 0.20  err after 1.0853
+  [58/72] seed 7 relearn           retention 0.40  err after 0.8957
+  [59/72] seed 7 relearn-noreplay  retention 0.05  err after 0.9641
+  [57/72] seed 7 quiet             retention 1.21  err after 0.7402
+  [65/72] seed 8 quiet             retention 1.40  err after 0.9328
+  [60/72] seed 7 frozen            retention 0.67  err after 0.8434
+  [62/72] seed 7 both              retention 0.32  err after 0.9014
+  [61/72] seed 7 credit            retention 0.47  err after 0.8682
+  [66/72] seed 8 relearn           retention -0.48  err after 1.0466
+  [63/72] seed 7 both-32           retention 0.29  err after 0.9229
+  [64/72] seed 7 never taught      retention 1.20  err after 1.0792
+  [68/72] seed 8 frozen            retention -0.38  err after 1.0409
+  [69/72] seed 8 credit            retention 0.26  err after 0.9845
+  [67/72] seed 8 relearn-noreplay  retention -0.10  err after 1.0274
+  [70/72] seed 8 both              retention 0.45  err after 0.9612
+  [71/72] seed 8 both-32           retention -0.31  err after 1.0408
+  [72/72] seed 8 never taught      retention 0.76  err after 1.0816
+experiment: interleave
+  instrument        interleave   trial seed 00000000013539b2   2000 trials
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  question          a conflicting lesson wipes a taught sound to 0.22
+                    (`retain`). Does replaying the OLD lesson during sleep
+                    rescue it? Ceiling is `capacity`'s 0.84 for two lessons
+                    that do not conflict.
+  the two factors   FROZEN keeps lesson-A episodes in the buffer (reward
+                    selection cannot -- A stops being rewarded). CREDIT is
+                    DNA v55: store the exploration, so replay reinforces what
+                    was tried instead of crediting sleep noise.
+  the gate          `both` - `relearn`, PAIRED on seed, at 2 SE, on BOTH
+                    retention and err after. Retention alone is a ratio whose
+                    denominator an arm can shrink by simply learning less.
+
+
+  arm                sleeps   err taught    err after     retention     d' t->a
+  quiet              6.0      0.8282        0.8035       1.15 +/- 0.04   1.52
+  relearn            6.0      0.8282        0.9559       0.19 +/- 0.11   5.78
+  relearn-noreplay   6.0      0.8426        0.9610       0.22 +/- 0.10   5.36
+  frozen             6.0      0.8282        0.9682       0.14 +/- 0.12   6.10
+  credit             6.0      0.8036        0.9181       0.38 +/- 0.08   4.72
+  both               6.0      0.8036        0.9324       0.33 +/- 0.10   5.42
+  both-32            6.0      0.8234        0.9388       0.30 +/- 0.13   5.14
+  never taught       6.0      1.0827        1.0830       20.84 +/- 19.31  0.02
+
+  PAIRED vs `relearn`. Both columns are stated so that they AGREE or the
+  arm does not pass: retention can be inflated by learning less, and
+  err-after improving is what actually means the sound survived.
+  arm                retention gain             err-after improvement
+  relearn-noreplay   +0.028 +/- 0.099 (+0.3 SE)   -0.0051 +/- 0.0139 (-0.4 SE)
+  frozen             -0.056 +/- 0.051 (-1.1 SE)   -0.0123 +/- 0.0097 (-1.3 SE)
+  credit             +0.192 +/- 0.094 (+2.0 SE)   +0.0378 +/- 0.0138 (+2.7 SE)  <- BOTH
+  both               +0.137 +/- 0.150 (+0.9 SE)   +0.0235 +/- 0.0234 (+1.0 SE)
+  both-32            +0.103 +/- 0.128 (+0.8 SE)   +0.0172 +/- 0.0204 (+0.8 SE)
+
+  reference   quiet (no conflict) retention 1.15, never taught settle
+
+  INTERLEAVING DOES NOT RESCUE IT. `both` -- the buffer held to the old
+  lesson AND replay crediting the exploration that earned the reward -- does
+  not beat the untreated conflict on both retention and err after at 2 SE.
+  That is a PERFECT interleaving oracle, so no selection rule built on top
+  of this replay would do better, and the complementary-learning-systems
+  route is refused here rather than merely untried.

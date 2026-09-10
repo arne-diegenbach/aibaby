@@ -9065,6 +9065,88 @@ parameterisation at no measured cost, and Werfel's law predicts it should also b
 difference; a short-budget comparison would, and it is the cheapest open question
 left on this thread.
 
+### `interleave` — replay as shipped does nothing, and what fixes it is not interleaving
+
+`retain` measured a conflicting second lesson wiping a taught sound to 0.22.
+McClelland's complementary learning systems says the fix is **interleaving**:
+replay the old item alongside the new one so the slow store does not overwrite
+it. The replay machinery has shipped since M4, and DNA v13 already refuted the
+other classical route — this creature's episodic module does not pattern-separate.
+
+Two things had to hold, and they were run as separate arms rather than one bundle:
+the buffer must still contain lesson A (`frozen`, an oracle, because reward
+selection cannot keep it — A stops being rewarded the moment B starts), and replay
+must actually reinforce something (`credit`, DNA v55).
+
+| arm | err taught | err after | retention |
+|---|---|---|---|
+| `quiet` (no conflict) | 0.8282 | 0.8035 | **1.15 +/- 0.04** |
+| `relearn` | 0.8282 | 0.9559 | **0.19 +/- 0.11** |
+| `relearn-noreplay` | 0.8426 | 0.9610 | 0.22 +/- 0.10 |
+| `frozen` | 0.8282 | 0.9682 | 0.14 +/- 0.12 |
+| **`credit`** | **0.8036** | **0.9181** | **0.38 +/- 0.08** |
+| `both` | 0.8036 | 0.9324 | 0.33 +/- 0.10 |
+| `both-32` | 0.8234 | 0.9388 | 0.30 +/- 0.13 |
+
+    PAIRED vs relearn        retention gain        err-after improvement
+    relearn-noreplay      +0.028 (+0.3 SE)        -0.0051 (-0.4 SE)
+    frozen                -0.056 (-1.1 SE)        -0.0123 (-1.3 SE)
+    credit                +0.192 (+2.0 SE)        +0.0378 (+2.7 SE)   <- BOTH
+    both                  +0.137 (+0.9 SE)        +0.0235 (+1.0 SE)
+    both-32               +0.103 (+0.8 SE)        +0.0172 (+0.8 SE)
+
+The baseline reproduces `retain` exactly — 0.19 against its 0.22 — so the protocol
+replicates before anything is read off it.
+
+**Replay as shipped does NOTHING, and that confirms a derivation rather than
+merely failing.** Turning replay off entirely is indistinguishable from leaving it
+on: +0.3 SE and -0.4 SE. The prediction was that it must be, because the cash-in
+is `u = step * perturb_[i]` and during sleep `perturb_[i]` is fresh noise, so
+`E[u] = step * E[perturb] = 0`. A stored scalar paid against unrelated noise
+rehearses the cue and reinforces nothing. Six years of this buffer existing, and
+switching it off costs zero.
+
+**MY PREDICTION WAS REFUTED, and precisely.** I predicted `frozen` would not
+rescue (right), `credit` alone would not rescue because it merely reproduces the
+new lesson's updates (**wrong — it is the only arm that passes**), and `both`
+would rescue (**wrong — it is weaker than `credit` alone**).
+
+**And `err taught` says why, which is the column that makes this interpretable.**
+It measures the teaching phase, before any conflict exists. `frozen` reads 0.8282,
+identical to `relearn`, because the freeze only starts when teaching ends — so the
+oracle did exactly what it was supposed to and nothing else. `credit` reads
+**0.8036**: with the exploration stored, replay during the teaching phase makes
+the creature **learn the lesson better in the first place**. Its advantage
+afterwards is a stronger lesson going in, not protection during the conflict.
+
+**So the CLS hypothesis is refused and a different mechanism is what worked.**
+Interleaving — holding the buffer on the old lesson and rehearsing it while the
+new one is taught — is the arm that *hurts* (-1.1 SE), and adding it to `credit`
+costs 0.05 of retention. That is a perfect interleaving oracle, so no selection
+rule built on this replay would do better.
+
+**One conjecture about why freezing hurts, stated as a conjecture.** A frozen
+buffer replays the same eight perturbation vectors over and over. With the
+exploration stored, that re-applies eight fixed random directions repeatedly,
+which is closer to overfitting eight samples than to rehearsing a lesson. A
+free-running buffer at least keeps drawing fresh high-reward moments. `both-32`
+is consistent with this — a bigger frozen buffer is slightly better than a small
+one — but it is 0.8 SE and settles nothing.
+
+**The metric trap is inverted here, which makes the result harder rather than
+easier.** Retention is `(before - after)/(before - taught)`, so `credit`'s lower
+`err taught` gives it a LARGER denominator and *deflates* its retention. It gained
++0.192 anyway, and `err after` improved by +0.0378 independently of the ratio. The
+two columns agree, which is what the gate required.
+
+**What this does not yet establish.** `credit` passes at 2.0 and 2.7 SE with nine
+seeds. This project has watched -2.8 SE become -1.2 SE when the sample doubled,
+today. It needs replication at a larger n before anything is built on it, and the
+mechanism claim — that the gain is consolidation during teaching rather than
+protection during conflict — predicts something testable and cheap: **`credit`
+should help the `quiet` arm too**, where there is no conflict at all to protect
+against.
+
 ### What the literature says to build next, and why it is the cheap option
 
 > **This section is the argument that produced DNA v51, kept as the record of
