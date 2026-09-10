@@ -5875,12 +5875,7 @@ bool run_interleave(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
   // THE MECHANISM TEST, printed separately because it is a different question
   // from the gate. The gate asks whether credit rescues a lesson from a
   // conflicting one; this asks WHY, and the two answers are distinguishable.
-  const int kQ = arm_index("quiet"), kQC = arm_index("quiet-credit");
-  if (kQ >= 0 && kQC >= 0) {
-    double se_r = 0.0, se_a = 0.0;
-    const double d_r = paired(kQC, kQ, false, &se_r);
-    const double d_a = paired(kQC, kQ, true, &se_a);
-    // THE ONE STORY LEFT STANDING. If consolidating B at night spares the shared
+  // THE ONE STORY LEFT STANDING. If consolidating B at night spares the shared
   // parameters by day, `credit` should learn B BETTER while damaging A less. If
   // instead it learns B WORSE, the effect is stubbornness -- resisting the new
   // lesson -- which is a different mechanism with a different consequence. The
@@ -5917,6 +5912,12 @@ bool run_interleave(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
     }
   }
 
+
+  const int kQ = arm_index("quiet"), kQC = arm_index("quiet-credit");
+  if (kQ >= 0 && kQC >= 0) {
+    double se_r = 0.0, se_a = 0.0;
+    const double d_r = paired(kQC, kQ, false, &se_r);
+    const double d_a = paired(kQC, kQ, true, &se_a);
   std::printf("\n  MECHANISM: does `credit` help when there is NO CONFLICT to protect\n"
                 "  against? If its benefit is a stronger lesson going in, it must.\n");
     std::printf("  quiet-credit vs quiet   retention %+.3f +/- %.3f (%+.1f SE)"
@@ -5935,12 +5936,9 @@ bool run_interleave(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
   std::printf("\n  reference   quiet (no conflict) retention %.2f, never taught settle\n",
               m_ret[arm_index("quiet") >= 0 ? uint32_t(arm_index("quiet")) : 0]);
   if (passed < 0) {
-    std::printf("\n  INTERLEAVING DOES NOT RESCUE IT. `both` -- the buffer held to the old\n"
-                "  lesson AND replay crediting the exploration that earned the reward -- does\n"
-                "  not beat the untreated conflict on both retention and err after at 2 SE.\n"
-                "  That is a PERFECT interleaving oracle, so no selection rule built on top\n"
-                "  of this replay would do better, and the complementary-learning-systems\n"
-                "  route is refused here rather than merely untried.\n");
+    std::printf("\n  NO ARM RESCUES IT at 2 SE on both measures. Note which arms were in\n"
+                "  this run: naming an arm that is not present is how a verdict rots, and\n"
+                "  this message named `both` for one run after `both` was dropped.\n");
     return false;
   }
   std::printf("\n  `%s` RESCUES IT, on both measures, paired on the same creatures.\n"
