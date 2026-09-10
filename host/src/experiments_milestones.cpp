@@ -5442,6 +5442,13 @@ struct RTConfig {
   bool no_replay = false;           // consolidate.replay_episodes = 0
   uint32_t replay_credit = 0;       // DNA v55: store the exploration too
   uint32_t replay_episodes = 0;     // 0 keeps the genome's own value
+  // --- ctxretain only --------------------------------------------------------
+  // Which word the caregiver says during the GAP. -1 keeps saying the same one,
+  // which is what `retain` has always done -- and is why its two lessons are
+  // distinguished only by TIME, with no cue the creature could file them under.
+  int second_heard = -1;
+  uint32_t context_slots = 0;       // DNA v51: 0 and 1 both mean the shared bias
+  uint32_t context_source = 0;      // DNA v53: 4 is the ear's rate EMA
 };
 
 // One arm, one creature, one life: teach, intervene, re-measure.
@@ -5462,6 +5469,15 @@ RTRow run_retain_arm(const std::vector<uint8_t>& blob, uint64_t ticks,
     std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, drives) +
                     offsetof(aibaby::DnaDrives, fatigue_rate),
                 &none, sizeof(none));
+  }
+  {
+    const uint32_t sl = cfg.context_slots, sr = cfg.context_source;
+    std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, exploration) +
+                    offsetof(aibaby::DnaExploration, context_slots),
+                &sl, sizeof(sl));
+    std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, exploration) +
+                    offsetof(aibaby::DnaExploration, context_source),
+                &sr, sizeof(sr));
   }
   {
     const uint32_t cr = cfg.replay_credit;
@@ -5496,6 +5512,13 @@ RTRow run_retain_arm(const std::vector<uint8_t>& blob, uint64_t ticks,
   std::vector<float> pcm(acfg.sample_rate / 1000);
   const uint32_t spt = acfg.sample_rate / 1000;
   const Word& heard = kWords[kRTHeard];
+  // What the caregiver says while the SECOND lesson is taught. `retain` says the
+  // same word throughout, so nothing in the creature's input distinguishes lesson
+  // A from lesson B -- they differ only in WHEN they happen. A context index read
+  // off the ear cannot separate them however good it is, which is the thing that
+  // was never tested.
+  const Word& heard2 =
+      cfg.second_heard >= 0 ? kWords[uint32_t(cfg.second_heard)] : kWords[kRTHeard];
   const Word& first = kWords[kRTTarget];
   const Word& second = kRTSecondWord;
   aibaby::Rng rng;
@@ -5557,7 +5580,8 @@ RTRow run_retain_arm(const std::vector<uint8_t>& blob, uint64_t ticks,
         pending.pop_front();
       }
       const bool sounding = t < 900;
-      caregiver.render(sounding ? heard.f0 : 0.0f, heard.f1, heard.f2,
+      const Word& say = relearning ? heard2 : heard;
+      caregiver.render(sounding ? say.f0 : 0.0f, say.f1, say.f2,
                        sounding ? 0.5f : 0.0f, pcm.data(), spt);
       ear.tick(s.brain, pcm.data(), spt);
       s.brain.step();
@@ -5714,6 +5738,204 @@ const ILArm kILArms[] = {
 constexpr uint32_t kILArmCount = sizeof(kILArms) / sizeof(kILArms[0]);
 
 }  // namespace
+
+// ---------------------------------------------------------------------------
+// ctxretain -- the two lessons were never told apart, and the machinery to tell
+// them apart has shipped since v51.
+//
+// `retain` measures a conflicting second lesson wiping the first to 0.22, and
+// every attempt to fix that has attacked the SLEEP side: replay, interleaving,
+// consolidation. None worked. But look at the protocol: the caregiver says
+// "ball" throughout, lesson A teaches toward /i/ and lesson B toward (850,1100),
+// and the two are distinguished only by WHEN THEY HAPPEN. Nothing in the
+// creature's input says these are different lessons. Of course they collide --
+// that is `vocallearn`'s one non-conditional pathway, one lesson at a time.
+//
+// DNA v51 built `bias_ctx_` for exactly this, and its own argument quotes Heald,
+// Lengyel & Wolpert: experiences assigned to one context overwrite, experiences
+// assigned to two do not. `capacity` measured both ends -- 0.84 when two lessons
+// are orthogonal, 0.22 when they conflict. What was never run is `retain` with a
+// CUE that distinguishes the lessons and a context index to file them under.
+//
+// A 2x2, because only one cell should work and the other three say why:
+//
+//                 same cue            different cue
+//   ctx off    the 0.22 baseline    a cue with nothing to file it under
+//   ctx on     an index with        THE CELL: a cue the creature can hear,
+//              nothing to index     and a table with a slot for each
+//
+// PRE-REGISTERED: only `cue+ctx` beats the baseline at 2 SE on BOTH retention and
+// err after. If `cue` alone wins, the second word is doing something other than
+// indexing -- it is also a different sound, and this creature echoes what it
+// hears. If `ctx` alone wins, contexts help with no cue to key them, which should
+// not be possible and would mean the index is keying on something else entirely.
+// The interaction is what the claim rests on, not the one cell.
+constexpr uint32_t kCRSecondHeard = 2;  // "boot" /u/: far from "ball" on both formants
+struct CRArm {
+  const char* name;
+  RTConfig cfg;
+};
+const CRArm kCRArms[] = {
+    // name        no_fat teach relearn freeze norep credit eps second_heard slots source
+    {"baseline",  {"baseline",  false, true, true, false, false, 0, 0, -1, 0, 0}},
+    {"cue",       {"cue",       false, true, true, false, false, 0, 0, int(kCRSecondHeard), 0, 0}},
+    {"ctx",       {"ctx",       false, true, true, false, false, 0, 0, -1, 2, 4}},
+    {"cue+ctx",   {"cue+ctx",   false, true, true, false, false, 0, 0, int(kCRSecondHeard), 2, 4}},
+};
+constexpr uint32_t kCRArmCount = sizeof(kCRArms) / sizeof(kCRArms[0]);
+
+bool run_ctxretain(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  Regime regime;
+  regime.praise = kPraiseValue;
+  regime.scold = kScoldValue;
+  aibaby::Dna dna0;
+  if (dna0.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) {
+    std::printf("  setup failed: the genome does not load\n");
+    return false;
+  }
+  if (dna0.module_with_role(aibaby::ModuleRole::kContext) < 0) {
+    std::printf("  this genome has no kContext module. Build one with NO output\n"
+                "  weight -- the index is READ, never driven:\n\n"
+                "    python3 tools/genome_add_context.py dna/default.toml ctx.toml \\\n"
+                "        vocal out_w=0\n"
+                "    ./build/aibaby --dna ctx.toml --experiment ctxretain\n");
+    return false;
+  }
+  std::string error;
+  Timbre ruler;
+  if (!ruler.configure(dna0.header().audio, error)) {
+    std::printf("  the audibility ruler failed: %s\n", error.c_str());
+    return false;
+  }
+  // THIRTY-SIX FROM THE START. Three findings were retracted today for want of
+  // seeds -- smoothing-sweep at n=3, bankprobe at n=6, interleave at n=9 and 18.
+  // A 2-3 SE result at n <= 18 in this project is a hypothesis, not a finding.
+  constexpr uint32_t kReps = 36;
+  instrument("ctxretain", dna0.header().seed ^ 0xC7A1u, ticks / kRTTrial, "trials");
+  std::printf("  question          a conflicting lesson wipes a taught sound to 0.22. In\n"
+              "                    `retain` the two lessons differ only in WHEN they happen\n"
+              "                    -- the caregiver says one word throughout. Does giving\n"
+              "                    them different CUES, and a context table to file them\n"
+              "                    under, stop the collision?\n");
+  std::printf("  the design        2x2: cue on/off crossed with contexts on/off. Only\n"
+              "                    `cue+ctx` should work; the other three say why.\n");
+  std::printf("  the gate          vs `baseline`, PAIRED on seed, at 2 SE on BOTH retention\n"
+              "                    and err after. Retention alone is a ratio an arm can\n"
+              "                    inflate by simply learning the first lesson less well.\n\n");
+
+  struct Cell { bool ok = false; RTRow row; };
+  const uint32_t njobs = kReps * kCRArmCount;
+  const std::vector<Cell> cells = parallel_reps<Cell>(njobs, [&](uint32_t i) {
+    Cell cell;
+    const uint32_t r = i / kCRArmCount, a = i % kCRArmCount;
+    std::vector<uint8_t> variant = blob;
+    const uint64_t seed = dna0.header().seed + r * 7919ull;
+    std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+    Timbre local_ruler;
+    std::string local_error;
+    if (!local_ruler.configure(dna0.header().audio, local_error)) return cell;
+    bool ok = false;
+    cell.row = run_retain_arm(variant, ticks, kCRArms[a].cfg, local_ruler, regime, &ok);
+    cell.ok = ok;
+    if (ok) {
+      parallel_note("  [%u/%u] seed %u %-10s retention %.2f  err after %.4f\n", i + 1,
+                    njobs, r, kCRArms[a].name, cell.row.retention, cell.row.err_after);
+    }
+    return cell;
+  });
+
+  std::printf("\n  %-12s %-8s %-13s %-13s %-13s %s\n", "arm", "sleeps", "err taught",
+              "err after", "retention", "err vs B");
+  double m_ret[kCRArmCount];
+  for (uint32_t a = 0; a < kCRArmCount; ++a) {
+    std::vector<double> ret, aft, tau, eb;
+    double sleeps = 0.0;
+    uint32_t n = 0;
+    for (uint32_t r = 0; r < kReps; ++r) {
+      const Cell& c = cells[r * kCRArmCount + a];
+      if (!c.ok) continue;
+      ret.push_back(c.row.retention);
+      aft.push_back(c.row.err_after);
+      tau.push_back(c.row.err_taught);
+      eb.push_back(c.row.err_b);
+      sleeps += double(c.row.sleeps);
+      ++n;
+    }
+    if (n < 3) {
+      std::printf("\n  ctxretain INCONCLUSIVE -- arm `%s` produced %u creatures.\n",
+                  kCRArms[a].name, n);
+      return false;
+    }
+    double se, s2;
+    m_ret[a] = ctx_mean_se(ret, &se);
+    std::printf("  %-12s %-8.1f %-13.4f %-13.4f %.2f +/- %-6.2f %.4f\n", kCRArms[a].name,
+                sleeps / double(n), ctx_mean_se(tau, &s2), ctx_mean_se(aft, &s2),
+                m_ret[a], se, ctx_mean_se(eb, &s2));
+  }
+
+  const auto arm_index = [](const char* want) {
+    for (uint32_t i = 0; i < kCRArmCount; ++i) {
+      if (std::strcmp(kCRArms[i].name, want) == 0) return int(i);
+    }
+    return -1;
+  };
+  const int kB = arm_index("baseline"), kBoth = arm_index("cue+ctx");
+  if (kB < 0 || kBoth < 0) {
+    std::printf("\n  ctxretain cannot summarise: an arm it names is missing.\n");
+    return false;
+  }
+  const auto paired = [&](int a, bool use_after, double* se_out) {
+    std::vector<double> d;
+    for (uint32_t r = 0; r < kReps; ++r) {
+      const Cell& ca = cells[r * kCRArmCount + uint32_t(a)];
+      const Cell& cb = cells[r * kCRArmCount + uint32_t(kB)];
+      if (!ca.ok || !cb.ok) continue;
+      d.push_back(use_after ? (cb.row.err_after - ca.row.err_after)
+                            : (ca.row.retention - cb.row.retention));
+    }
+    return ctx_mean_se(d, se_out);
+  };
+
+  std::printf("\n  PAIRED vs `baseline`, on the same creatures\n");
+  std::printf("  %-12s %-28s %s\n", "arm", "retention gain", "err-after improvement");
+  bool win[kCRArmCount] = {};
+  for (uint32_t a = 0; a < kCRArmCount; ++a) {
+    if (int(a) == kB) continue;
+    double se_r = 0.0, se_a = 0.0;
+    const double d_r = paired(int(a), false, &se_r);
+    const double d_a = paired(int(a), true, &se_a);
+    win[a] = se_r > 0.0 && d_r > 2.0 * se_r && se_a > 0.0 && d_a > 2.0 * se_a;
+    std::printf("  %-12s %+.3f +/- %.3f (%+.1f SE)   %+.4f +/- %.4f (%+.1f SE)%s\n",
+                kCRArms[a].name, d_r, se_r, se_r > 0.0 ? d_r / se_r : 0.0, d_a, se_a,
+                se_a > 0.0 ? d_a / se_a : 0.0, win[a] ? "  <- BOTH" : "");
+  }
+
+  const int kCue = arm_index("cue"), kCtx = arm_index("ctx");
+  const bool only_both = win[kBoth] && (kCue < 0 || !win[kCue]) && (kCtx < 0 || !win[kCtx]);
+  if (only_both) {
+    std::printf("\n  THE INTERACTION IS THE RESULT. A cue alone does nothing and a context\n"
+                "  table alone does nothing; together they stop a conflicting lesson from\n"
+                "  wiping the first. The creature does not need to rehearse the old lesson\n"
+                "  in its sleep -- it needs to know that two lessons are two lessons, and\n"
+                "  the machinery to do that has shipped since DNA v51.\n");
+    return true;
+  }
+  if (win[kBoth]) {
+    std::printf("\n  `cue+ctx` WINS BUT SO DOES ANOTHER CELL, so the interaction is not\n"
+                "  established and the claim cannot be that contexts file the lessons apart.\n"
+                "  A cue alone winning would mean the second word is doing something other\n"
+                "  than indexing -- it is also a different sound, and this creature echoes\n"
+                "  what it hears. Read the single cells above, not a story about the 2x2.\n");
+    return false;
+  }
+  std::printf("\n  CONTEXTS DO NOT RESCUE IT EITHER. Giving the two lessons different cues\n"
+              "  and a table with a slot for each does not stop the second from wiping the\n"
+              "  first at 2 SE. That closes the last mechanism this project already had\n"
+              "  built for the problem, and catastrophic interference here is not a\n"
+              "  filing failure.\n");
+  return false;
+}
 
 bool run_interleave(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
   (void)verbose;

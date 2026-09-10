@@ -242,6 +242,13 @@ const Spec kSpecs[] = {
      "  it) and replay actually reinforcing something (DNA v55 replay_credit).\n"
      "  Gates on retention AND err-after paired, because retention is a ratio an\n"
      "  arm can inflate by simply learning less"},
+    {"ctxretain", 5600000, Expect::kOpen, Tier::kLong,
+     "derived: retain's protocol, which distinguishes its two lessons only by\n"
+     "  WHEN they happen -- the caregiver says one word throughout, so nothing in\n"
+     "  the creature's input says these are different lessons. A 2x2: give them\n"
+     "  different cues, crossed with DNA v51's context table to file them under.\n"
+     "  Only `cue+ctx` should work; the interaction is the claim, not the cell.\n"
+     "  36 seeds from the start"},
     {"ctxfour", 3400000, Expect::kOpen, Tier::kTeach,
      "derived: ctxself's session at FOUR words. partprobe cleared the index at\n"
      "  four (0.895 vs chance 0.250); this asks whether the BIAS holds four\n"
@@ -503,6 +510,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "bankprobe") ok = run_bankprobe(dna_blob, ticks, verbose);
   else if (name == "ctxgain") ok = run_ctxgain(dna_blob, ticks, verbose);
   else if (name == "interleave") ok = run_interleave(dna_blob, ticks, verbose);
+  else if (name == "ctxretain") ok = run_ctxretain(dna_blob, ticks, verbose);
   else if (name == "partprobe") ok = run_partprobe(dna_blob, ticks, verbose);
   else if (name == "pgprobe") ok = run_pgprobe(dna_blob, ticks, verbose);
   else if (name == "g2cond") ok = run_g2cond(dna_blob, ticks, verbose);
