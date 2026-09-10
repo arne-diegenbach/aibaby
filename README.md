@@ -9147,6 +9147,60 @@ protection during conflict — predicts something testable and cheap: **`credit`
 should help the `quiet` arm too**, where there is no conflict at all to protect
 against.
 
+### The replication, and the buffer is full of the WRONG lesson
+
+`credit` was the only arm that passed at nine seeds, at 2.0 and 2.7 SE. This
+project watched a -2.8 SE become -1.2 SE when a sample doubled on the same day, so
+it was re-run at eighteen with two settled questions dropped to pay for the seeds.
+
+| | n = 9 | n = 18 |
+|---|---|---|
+| retention gain | +0.192 (2.0 SE) | **+0.174 (2.5 SE)** |
+| err-after gain | +0.0378 (2.7 SE) | **+0.0279 (2.6 SE)** |
+
+The effect shrank slightly and the significance held, which is what a real effect
+does when n doubles and is not what today's other 2.8 SE did. **Storing the
+exploration is what makes replay work**, and it survives replication.
+
+**MY MECHANISM ACCOUNT IS REFUTED.** I claimed the benefit was a stronger lesson
+going in rather than protection during the conflict, and pre-registered the test
+that follows from it: then it must help the arm with no conflict at all. It does
+not — `quiet-credit` vs `quiet` reads **-0.7 SE** on retention and **+0.2 SE** on
+err after.
+
+| arm | err taught | err after | change |
+|---|---|---|---|
+| `quiet` | 0.8443 | 0.8166 | -0.0277 |
+| `quiet-credit` | 0.8333 | 0.8134 | -0.0199 |
+| `relearn` | 0.8443 | 0.9768 | **+0.1325** |
+| `credit` | 0.8333 | 0.9489 | **+0.1156** |
+
+The head start is identical in both protocols — 0.0110 of `err taught`. Without a
+conflict it **shrinks** to 0.0032 by the end; with one it **grows** to 0.0279. And
+the damage itself is smaller: the taught sound degrades by 0.1156 instead of
+0.1325, **13% less**. So `credit` is not merely starting ahead. Under attack it
+loses less.
+
+**And the buffer is full of the wrong lesson, which was the other candidate.**
+`episodes_recorded()` sampled at the phase boundaries gives the fraction of the
+ring overwritten since teaching ended. It reads **1.00** on every taught arm: by
+the time the conflict is underway, replay is rehearsing lesson B and nothing of
+lesson A remains. So `credit` is not accidental interleaving with a naturally
+mixed buffer either.
+
+**That strengthens the earlier refusal rather than qualifying it.** `frozen` was
+the fair test of interleaving — it is the only arm whose buffer actually held the
+old lesson — and it failed at -1.1 SE. `credit`'s buffer holds the *new* lesson
+and it works. Interleaving is refused, and what replaced it is not a variant of it.
+
+**So the position is: a replicated effect with no established mechanism, and two
+explanations refuted.** Replaying the *new* lesson's own successful explorations
+during sleep makes the *old* lesson survive the new one better. The obvious next
+question is whether sleep is absorbing some of the new learning — if `credit`
+learns B better *and* damages A less, then consolidating B at night spares the
+shared parameters by day, and that is measurable with the target the gap phase
+already scores against.
+
 ### What the literature says to build next, and why it is the cheap option
 
 > **This section is the argument that produced DNA v51, kept as the record of
