@@ -5672,14 +5672,25 @@ struct ILArm {
 };
 constexpr uint32_t kILEpisodesBig = 32;  // kMaxReplayEpisodes; 4x the shipped 8
 const ILArm kILArms[] = {
+    // SECOND PASS, 2026-09-10. The first run settled four of the eight arms and
+    // they are dropped rather than re-run: replay-as-shipped does nothing
+    // (switching it off costs 0.3 SE), and `frozen`, `both` and `both-32` all
+    // fail -- interleaving is refused with a perfect oracle. Dropping them buys
+    // twice the seeds at the same cost, which is what the survivor needs.
+    //
     // name              no_fat teach relearn freeze noreplay credit episodes
     {"quiet",           {"quiet",           false, true,  false, false, false, 0, 0}},
+    // THE MECHANISM TEST. `credit` improved `err taught` -- the TEACHING phase,
+    // before any conflict exists -- which says its benefit is a stronger lesson
+    // going in rather than protection during the conflict. If that is right this
+    // arm must beat `quiet`, where there is no conflict to protect against at
+    // all. If it does not, the explanation is wrong and the effect really is
+    // conflict-specific.
+    {"quiet-credit",    {"quiet-credit",    false, true,  false, false, false, 1, 0}},
     {"relearn",         {"relearn",         false, true,  true,  false, false, 0, 0}},
-    {"relearn-noreplay",{"relearn-noreplay",false, true,  true,  false, true,  0, 0}},
-    {"frozen",          {"frozen",          false, true,  true,  true,  false, 0, 0}},
+    // THE REPLICATION. 2.0 and 2.7 SE at n=9, and this project watched -2.8 SE
+    // become -1.2 SE when the sample doubled on the same day.
     {"credit",          {"credit",          false, true,  true,  false, false, 1, 0}},
-    {"both",            {"both",            false, true,  true,  true,  false, 1, 0}},
-    {"both-32",         {"both-32",         false, true,  true,  true,  false, 1, kILEpisodesBig}},
     {"never taught",    {"never taught",    false, false, false, false, false, 0, 0}},
 };
 constexpr uint32_t kILArmCount = sizeof(kILArms) / sizeof(kILArms[0]);
@@ -5702,7 +5713,7 @@ bool run_interleave(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
     std::printf("  the audibility ruler failed: %s\n", error.c_str());
     return false;
   }
-  constexpr uint32_t kReps = 9;
+  constexpr uint32_t kReps = 18;
   instrument("interleave", dna0.header().seed ^ 0x1E7Bu, ticks / kRTTrial, "trials");
   std::printf("  question          a conflicting lesson wipes a taught sound to 0.22\n"
               "                    (`retain`). Does replaying the OLD lesson during sleep\n"
@@ -5773,7 +5784,7 @@ bool run_interleave(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
     }
     return -1;
   };
-  const int kBase = arm_index("relearn"), kBoth = arm_index("both");
+  const int kBase = arm_index("relearn"), kBoth = arm_index("credit");
 
   // MECHANICAL VACUITY GUARD. Every arm here differs from `relearn` only in what
   // happens during a SLEEP BOUT, so a creature that never sleeps makes six of the
@@ -5834,6 +5845,29 @@ bool run_interleave(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
                 kILArms[a].name, d_r, se_r, se_r > 0.0 ? d_r / se_r : 0.0, d_a, se_a,
                 se_a > 0.0 ? d_a / se_a : 0.0, win ? "  <- BOTH" : "");
     if (win && int(a) == kBoth) passed = int(a);
+  }
+
+  // THE MECHANISM TEST, printed separately because it is a different question
+  // from the gate. The gate asks whether credit rescues a lesson from a
+  // conflicting one; this asks WHY, and the two answers are distinguishable.
+  const int kQ = arm_index("quiet"), kQC = arm_index("quiet-credit");
+  if (kQ >= 0 && kQC >= 0) {
+    double se_r = 0.0, se_a = 0.0;
+    const double d_r = paired(kQC, kQ, false, &se_r);
+    const double d_a = paired(kQC, kQ, true, &se_a);
+    std::printf("\n  MECHANISM: does `credit` help when there is NO CONFLICT to protect\n"
+                "  against? If its benefit is a stronger lesson going in, it must.\n");
+    std::printf("  quiet-credit vs quiet   retention %+.3f +/- %.3f (%+.1f SE)"
+                "   err after %+.4f +/- %.4f (%+.1f SE)\n",
+                d_r, se_r, se_r > 0.0 ? d_r / se_r : 0.0, d_a, se_a,
+                se_a > 0.0 ? d_a / se_a : 0.0);
+    if (se_a > 0.0 && d_a > 2.0 * se_a) {
+      std::printf("  -> CONSOLIDATION DURING LEARNING. It helps with no conflict present,\n"
+                  "     so the effect is not protection and not interleaving.\n");
+    } else {
+      std::printf("  -> NOT ESTABLISHED here. If `credit` still passes the gate, its\n"
+                  "     benefit is conflict-specific after all and my account is wrong.\n");
+    }
   }
 
   std::printf("\n  reference   quiet (no conflict) retention %.2f, never taught settle\n",
