@@ -5419,6 +5419,10 @@ struct RTRow {
   double f1_taught = 0.0, f2_taught = 0.0, f1_after = 0.0, f2_after = 0.0;
   // How much of the replay buffer was overwritten AFTER teaching ended -- the
   // difference between replay rehearsing the old lesson and the new one.
+  // How well lesson B was learned, scored against B's OWN target over the last
+  // third of the gap. The whole run is otherwise scored against A, which cannot
+  // distinguish "credit resisted the new lesson" from "credit absorbed it".
+  double err_b = 0.0;
   double gap_overwrite = 0.0;   // 0 = still all lesson A, 1 = fully lesson B
   uint64_t recorded_teach = 0, recorded_gap = 0;
 };
@@ -5505,6 +5509,8 @@ RTRow run_retain_arm(const std::vector<uint8_t>& blob, uint64_t ticks,
 
   std::deque<Praise> pending;
   double baseline1 = -1.0, baseline2 = -1.0;
+  double sum_b = 0.0;
+  uint32_t n_b = 0;
   uint32_t last_frame = 0;
   uint64_t last_feedback = 0;
   bool was_asleep = false;
@@ -5587,6 +5593,13 @@ RTRow run_retain_arm(const std::vector<uint8_t>& blob, uint64_t ticks,
     // That is the quantity retention is about, and scoring the relearn arm
     // against its second lesson would measure something else entirely.
     const double err = formant_error(f1, f2, first);
+    // Lesson B's own error, over the last third of the gap: by then B has had
+    // whatever teaching it is going to get.
+    if (cfg.relearn && trial >= n_teach + n_gap - (n_gap / 3 ? n_gap / 3 : 1) &&
+        trial < n_teach + n_gap) {
+      const double eb = formant_error(f1, f2, second);
+      if (eb >= 0.0) { sum_b += eb; ++n_b; }
+    }
     if (err < 0.0) continue;
     ++row.scored;
 
@@ -5606,6 +5619,7 @@ RTRow run_retain_arm(const std::vector<uint8_t>& blob, uint64_t ticks,
   r.err_before = n_before ? sum_before / n_before : 0.0;
   r.err_taught = n_tt ? sum_taught / n_tt : 0.0;
   r.err_after = n_aa ? sum_after / n_aa : 0.0;
+  r.err_b = n_b ? sum_b / double(n_b) : 0.0;
   r.f1_taught = n_tt ? f1t / n_tt : 0.0;
   r.f2_taught = n_tt ? f2t / n_tt : 0.0;
   r.f1_after = n_aa ? f1a / n_aa : 0.0;
@@ -5874,7 +5888,44 @@ bool run_interleave(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
     double se_r = 0.0, se_a = 0.0;
     const double d_r = paired(kQC, kQ, false, &se_r);
     const double d_a = paired(kQC, kQ, true, &se_a);
-    std::printf("\n  MECHANISM: does `credit` help when there is NO CONFLICT to protect\n"
+    // THE ONE STORY LEFT STANDING. If consolidating B at night spares the shared
+  // parameters by day, `credit` should learn B BETTER while damaging A less. If
+  // instead it learns B WORSE, the effect is stubbornness -- resisting the new
+  // lesson -- which is a different mechanism with a different consequence. The
+  // whole run is otherwise scored against A, so these two are indistinguishable
+  // without this column.
+  {
+    const int kC = arm_index("credit");
+    if (kC >= 0 && kBase >= 0) {
+      std::vector<double> db;
+      for (uint32_t r = 0; r < kReps; ++r) {
+        const Cell& cc = cells[r * kILArmCount + uint32_t(kC)];
+        const Cell& cb = cells[r * kILArmCount + uint32_t(kBase)];
+        if (cc.ok && cb.ok) db.push_back(cb.row.err_b - cc.row.err_b);
+      }
+      double se = 0.0;
+      const double m = ctx_mean_se(db, &se);
+      std::printf("\n  DID `credit` LEARN THE NEW LESSON BETTER OR WORSE?\n"
+                  "  err vs B's own target, last third of the gap, paired:\n"
+                  "  credit - relearn   %+.4f +/- %.4f (%+.1f SE)  (positive = credit learned B BETTER)\n",
+                  m, se, se > 0.0 ? m / se : 0.0);
+      if (se > 0.0 && m > 2.0 * se) {
+        std::printf("  -> ABSORPTION. It learns the new lesson better AND damages the old\n"
+                    "     one less, so sleep is doing some of the new learning and sparing\n"
+                    "     the shared parameters by day.\n");
+      } else if (se > 0.0 && m < -2.0 * se) {
+        std::printf("  -> STUBBORNNESS. It learns the new lesson WORSE, so the old lesson\n"
+                    "     survives because the new one lands less hard -- a trade, not a\n"
+                    "     free gain, and it would cap how much can ever be taught second.\n");
+      } else {
+        std::printf("  -> NEITHER at 2 SE. B is learned about equally well, so the old\n"
+                    "     lesson survives better WITHOUT the new one landing less hard.\n"
+                    "     That refuses both stories and the mechanism stays open.\n");
+      }
+    }
+  }
+
+  std::printf("\n  MECHANISM: does `credit` help when there is NO CONFLICT to protect\n"
                 "  against? If its benefit is a stronger lesson going in, it must.\n");
     std::printf("  quiet-credit vs quiet   retention %+.3f +/- %.3f (%+.1f SE)"
                 "   err after %+.4f +/- %.4f (%+.1f SE)\n",
