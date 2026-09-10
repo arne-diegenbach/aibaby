@@ -9246,6 +9246,51 @@ The effect itself has replicated twice. What is missing is not evidence that it 
 real; it is an explanation, and the one still standing predicts a cost this run
 can see but cannot resolve.
 
+### It does not survive 36 seeds, and "replicated" was my word too early
+
+| n | retention gain | err-after gain |
+|---|---|---|
+| 9 | +0.192 (2.0 SE) | +0.0378 (2.7 SE) |
+| 18 | +0.174 (2.5 SE) | +0.0279 (2.6 SE) |
+| **36** | **+0.106 (1.6 SE)** | **+0.0189 (1.8 SE)** |
+
+**The effect size shrinks monotonically and roughly halves from 9 seeds to 36, on
+both measures.** A real effect holds its size and gains SE as the sample grows;
+this did the opposite, and at 36 seeds it fails the pre-registered gate on both
+columns.
+
+**So the claim is retracted.** At n=18 this page said the effect "shrank slightly
+and the significance held, which is what a real effect does when the sample
+doubles." The shrink was not slight and it did not stop — doubling again took it
+under the bar. **Two underpowered runs agreeing is not replication.**
+
+**This is the third time.** `smoothing-sweep` went +0.24 at n=3 to +0.03 at n=6.
+`bankprobe` went -2.8 SE at n=6 to -1.2 SE at n=12. Now `interleave` goes 2.0/2.7
+SE at n=9 to 1.6/1.8 at n=36. The pattern is specific enough to act on: **a 2-3 SE
+result at n <= 18 in this project is not a finding, it is a hypothesis**, and the
+right response is more seeds before more mechanism.
+
+**What still stands, because it was measured against its own control rather than
+against a difference between arms:**
+
+- **Replay as shipped does nothing.** Switching it off entirely costs +0.3 SE and
+  -0.4 SE. That is a direct test of the `E[u] = 0` derivation and does not depend
+  on `credit` at all.
+- **Interleaving is refused.** `frozen` — the only arm whose buffer actually held
+  the old lesson — failed at -1.1 SE, and `buf B` reads 1.00, so the free-running
+  arms were never doing it accidentally.
+
+**What does not stand:** that storing the exploration rescues a lesson from a
+conflicting one. It may still be true at some size — 1.6 and 1.8 SE are not zero —
+but it is not established, and three mechanism accounts were built on top of an
+effect that has now failed its own gate.
+
+**And a scope bug cost this run its second question.** The `err_b` block, which
+was the entire reason for the previous run, had been nested inside the
+`quiet-credit` guard — so dropping that arm silently skipped the measurement.
+Nothing warned; the section simply did not print. It is now at function scope, and
+the failure message no longer names arms it cannot know are present.
+
 ### What the literature says to build next, and why it is the cheap option
 
 > **This section is the argument that produced DNA v51, kept as the record of
