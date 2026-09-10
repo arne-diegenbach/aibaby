@@ -5417,6 +5417,10 @@ struct RTRow {
   double retention = 0.0, dprime = 0.0, null = 0.0, settle = 0.0;
   uint32_t sleeps = 0, scored = 0;
   double f1_taught = 0.0, f2_taught = 0.0, f1_after = 0.0, f2_after = 0.0;
+  // How much of the replay buffer was overwritten AFTER teaching ended -- the
+  // difference between replay rehearsing the old lesson and the new one.
+  double gap_overwrite = 0.0;   // 0 = still all lesson A, 1 = fully lesson B
+  uint64_t recorded_teach = 0, recorded_gap = 0;
 };
 
 
@@ -5523,6 +5527,14 @@ RTRow run_retain_arm(const std::vector<uint8_t>& blob, uint64_t ticks,
     // this on its own -- the old lesson stops being rewarded the moment the
     // new one starts -- which is the whole reason to price it with an oracle
     // before inventing a selection rule.
+      if (trial == n_teach) {
+        row.recorded_teach = s.brain.episodes_recorded();
+      }
+      if (trial == n_teach + n_gap) {
+        row.recorded_gap = s.brain.episodes_recorded() - row.recorded_teach;
+        const double cap = double(s.dna.header().consolidate.replay_episodes);
+        row.gap_overwrite = cap > 0.0 ? std::min(1.0, double(row.recorded_gap) / cap) : 0.0;
+      }
     if (cfg.freeze_after_teach && trial == n_teach) {
       s.brain.set_episode_recording(false);
     }
@@ -5748,8 +5760,8 @@ bool run_interleave(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
     return cell;
   });
 
-  std::printf("\n  %-18s %-8s %-13s %-13s %-13s %s\n", "arm", "sleeps", "err taught",
-              "err after", "retention", "d' t->a");
+  std::printf("\n  %-18s %-8s %-13s %-13s %-13s %-8s %s\n", "arm", "sleeps",
+              "err taught", "err after", "retention", "d' t->a", "buf B");
   double m_ret[kILArmCount], s_ret[kILArmCount], m_aft[kILArmCount], s_aft[kILArmCount];
   for (uint32_t a = 0; a < kILArmCount; ++a) {
     std::vector<double> ret, aft, tau, dp;
@@ -5773,9 +5785,14 @@ bool run_interleave(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
     double se;
     m_ret[a] = ctx_mean_se(ret, &s_ret[a]);
     m_aft[a] = ctx_mean_se(aft, &s_aft[a]);
-    std::printf("  %-18s %-8.1f %-13.4f %.4f       %.2f +/- %-6.2f %.2f\n",
+    std::vector<double> ovr;
+    for (uint32_t r = 0; r < kReps; ++r) {
+      const Cell& c = cells[r * kILArmCount + a];
+      if (c.ok) ovr.push_back(c.row.gap_overwrite);
+    }
+    std::printf("  %-18s %-8.1f %-13.4f %.4f       %.2f +/- %-6.2f %-8.2f %.2f\n",
                 kILArms[a].name, sleeps / double(n), ctx_mean_se(tau, &se), m_aft[a],
-                m_ret[a], s_ret[a], ctx_mean_se(dp, &se));
+                m_ret[a], s_ret[a], ctx_mean_se(dp, &se), ctx_mean_se(ovr, &se));
   }
 
   const auto arm_index = [](const char* want) {
@@ -5833,10 +5850,12 @@ bool run_interleave(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
   std::printf("  %-18s %-26s %s\n", "arm", "retention gain", "err-after improvement");
   int passed = -1;
   for (uint32_t a = 0; a < kILArmCount; ++a) {
-    if (int(a) == kBase || std::strcmp(kILArms[a].name, "quiet") == 0 ||
-        std::strcmp(kILArms[a].name, "never taught") == 0) {
-      continue;
-    }
+    // Only arms that ACTUALLY FACE THE CONFLICT belong in this table. Pairing a
+    // no-conflict arm against `relearn` compares two different protocols and
+    // prints a large meaningless number -- the first run of this table gave
+    // `quiet-credit` +9.2 SE, which says only that not being attacked beats
+    // being attacked.
+    if (int(a) == kBase || !kILArms[a].cfg.relearn) continue;
     double se_r = 0.0, se_a = 0.0;
     const double d_r = paired(int(a), kBase, false, &se_r);
     const double d_a = paired(int(a), kBase, true, &se_a);
@@ -5881,10 +5900,12 @@ bool run_interleave(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
                 "  route is refused here rather than merely untried.\n");
     return false;
   }
-  std::printf("\n  INTERLEAVING RESCUES IT. Replaying the old lesson during sleep protects\n"
-              "  it from a conflicting new one, on both measures, paired on the same\n"
-              "  creatures. What remains is the SELECTION rule -- this arm was handed the\n"
-              "  right episodes by an oracle, and reward magnitude will not keep them.\n");
+  std::printf("\n  `%s` RESCUES IT, on both measures, paired on the same creatures.\n"
+              "  Note what that arm is and is not: its buffer is FREE-RUNNING, so this is\n"
+              "  not interleaving -- the arm that held the buffer on the old lesson is the\n"
+              "  one that failed. What DNA v55 changes is that replay reinforces the\n"
+              "  exploration that earned the reward instead of crediting sleep noise.\n",
+              kILArms[passed].name);
   return true;
 }
 

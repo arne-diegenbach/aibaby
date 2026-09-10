@@ -177,6 +177,11 @@ class Brain {
   // rewarded the moment a new one starts.
   void set_episode_recording(bool on) { episode_recording_ = on; }
   bool episode_recording() const { return episode_recording_; }
+  // Monotonic: how many episodes have EVER been recorded, as opposed to how many
+  // the ring currently holds. Sampled at a phase boundary it says what fraction
+  // of the buffer has been overwritten since -- which is the difference between
+  // "replay is rehearsing the old lesson" and "replay is rehearsing the new one".
+  uint64_t episodes_recorded() const { return episodes_recorded_; }
 
  private:
   void update_drives();
@@ -252,6 +257,7 @@ class Brain {
   uint32_t episode_capacity_ = 0;
   uint32_t episodes_stored_ = 0;
   bool episode_recording_ = true;
+  uint64_t episodes_recorded_ = 0;
   // DNA v55: the exploration each episode earned its reward for.
   Scalar* episode_perturb_ = nullptr;
   uint32_t episode_perturb_n_ = 0;

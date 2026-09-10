@@ -118,6 +118,7 @@ BrainStatus Brain::init(const void* dna_blob, size_t dna_size, void* memory,
   episode_capacity_ = cons.enabled ? cons.replay_episodes : 0;
   if (episode_capacity_ > kMaxReplayEpisodes) episode_capacity_ = kMaxReplayEpisodes;
   episodes_stored_ = 0;
+  episodes_recorded_ = 0;
   episode_next_ = 0;
   replay_index_ = 0;
   replay_left_ = 0;
@@ -463,6 +464,7 @@ void Brain::record_episode() {
     network_.capture_perturbation(episode_perturb_ + size_t(slot) * episode_perturb_n_);
   }
   episode_reward_[slot] = reward_.effective;
+  ++episodes_recorded_;
   episode_next_ = (slot + 1) % episode_capacity_;
   if (episodes_stored_ < episode_capacity_) ++episodes_stored_;
 }
