@@ -458,7 +458,7 @@ bool Network::build(const Dna& dna, Arena& arena, Rng& rng) {
     ctx_ramp_ = arena.alloc_zeroed<Scalar>(capacity_);
     ctx_group_ = arena.alloc_zeroed<uint32_t>(capacity_);
     for (uint32_t i = 0; i < capacity_; ++i) ctx_group_[i] = kVocalGroups;
-    for (uint32_t g = 0; g < kVocalGroups; ++g) inv_group_n_[g] = kZero;
+    for (uint32_t g = 0; g < kVocalGroups; ++g) inv_ramp_ss_[g] = kZero;
     if (ctx_gain_module_ >= 0) {
       const ModuleState& gm = modules_[uint32_t(ctx_gain_module_)];
       for (uint32_t g = 0; g < kVocalGroups; ++g) {
@@ -466,13 +466,19 @@ bool Network::build(const Dna& dna, Arena& arena, Rng& rng) {
         const uint32_t end = slice_begin(gm.count, kVocalGroups, g + 1);
         const uint32_t n = end > beg ? end - beg : 0;
         if (n < 2) continue;
-        inv_group_n_[g] = kOne / Scalar(n);
+        Scalar ss = kZero;
         for (uint32_t local = beg; local < end; ++local) {
           const uint32_t idx = gm.begin + local;
           if (idx >= capacity_) continue;
           ctx_group_[idx] = g;
-          ctx_ramp_[idx] = (Scalar(local - beg) + Scalar(0.5)) / Scalar(n) - Scalar(0.5);
+          const Scalar r = (Scalar(local - beg) + Scalar(0.5)) / Scalar(n) - Scalar(0.5);
+          ctx_ramp_[idx] = r;
+          ss += r * r;
         }
+        // Summed from the ramp actually stored rather than from the n/12 closed
+        // form, so a group whose last neuron fell off the capacity edge gets the
+        // normaliser its own ramp implies instead of the one it should have had.
+        inv_ramp_ss_[g] = ss > kZero ? kOne / ss : kZero;
       }
     }
     // DNA v41's slow store, per context. Same guard as required_bytes above.
@@ -2247,13 +2253,23 @@ void Network::apply_reward_impl(const Scalar* per_module, bool any) {
           // which gives the gain drift `n*d` and noise `sigma*sqrt(n)` -- better
           // drift-to-diffusion by sqrt(n), but also an n-times bigger step, which
           // is a learning-rate change, and raising the rate is already known to
-          // grow `outside` 3x and halve `gain`. The MEAN gives drift `d`, identical
-          // to mode 0, and noise `sigma/sqrt(n)`. Same step, sqrt(14) = 3.74x less
-          // diffusion. That isolates the parameterisation and nothing else.
+          // grow `outside` 3x and halve `gain`.
+          //
+          // THE RIGHT CONSTANT IS 1/sum(ramp^2), NOT 1/n, and getting that wrong
+          // cost a run. Mode 0 gives neuron i a drift of `d * ramp_i`; mode 1
+          // delivers `g * ramp_i`, so matching it needs `dg/dt = d`. With
+          // `dg/dt = c * sum_j u_j ramp_j`, whose expectation is `c * d * S` for
+          // `S = sum(ramp^2)`, that means `c = 1/S`. S is about n/12, so 1/n was
+          // 12x too small and the first ctxgain arm ran under-driven by exactly
+          // that -- a learning-rate CUT wearing the costume of a parameterisation
+          // test, which is the confound this constant exists to prevent.
+          //
+          // With c = 1/S the drift matches mode 0 and the delivered noise RMS is
+          // 1/sqrt(n) of it: sqrt(14) = 3.74x less diffusion at the same step.
           const uint32_t g = ctx_group_ ? ctx_group_[i] : kVocalGroups;
           if (g < kVocalGroups && gain_ctx_) {
             Scalar& gv = gain_ctx_[size_t(active_ctx_) * kVocalGroups + g];
-            const Scalar step_g = u * gate_meta * ctx_ramp_[i] * inv_group_n_[g];
+            const Scalar step_g = u * gate_meta * ctx_ramp_[i] * inv_ramp_ss_[g];
             // |ramp| <= 0.5, so clamping the gain at 2x keeps the DELIVERED bias
             // inside the same +/-perturb_max envelope mode 0 is clamped to. The two
             // modes are therefore bounded identically in what reaches a neuron.

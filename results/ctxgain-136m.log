@@ -1,0 +1,70 @@
+  [8/36] seed 1 gains-rnd   dF1 16.2  aligned 0.00026
+  [12/36] seed 2 gains-rnd   dF1 10.5  aligned 0.00183
+  [4/36] seed 0 gains-rnd   dF1 8.6  aligned 0.00190
+  [7/36] seed 1 gains       dF1 76.4  aligned 0.00623
+  [10/36] seed 2 table-rnd   dF1 63.6  aligned 0.01745
+  [13/36] seed 3 table       dF1 145.1  aligned 0.06471
+  [9/36] seed 2 table       dF1 63.2  aligned 0.01295
+  [11/36] seed 2 gains       dF1 26.8  aligned 0.01015
+  [14/36] seed 3 table-rnd   dF1 22.5  aligned 0.01941
+  [6/36] seed 1 table-rnd   dF1 24.4  aligned 0.00743
+  [2/36] seed 0 table-rnd   dF1 48.8  aligned 0.02212
+  [3/36] seed 0 gains       dF1 3.0  aligned 0.00008
+  [1/36] seed 0 table       dF1 112.0  aligned 0.06311
+  [5/36] seed 1 table       dF1 128.0  aligned 0.05439
+  [15/36] seed 3 gains       dF1 49.0  aligned 0.00798
+  [16/36] seed 3 gains-rnd   dF1 5.6  aligned 0.00088
+  [20/36] seed 4 gains-rnd   dF1 8.3  aligned 0.00249
+  [23/36] seed 5 gains       dF1 63.0  aligned 0.01071
+  [24/36] seed 5 gains-rnd   dF1 46.8  aligned 0.00058
+  [21/36] seed 5 table       dF1 146.1  aligned 0.06579
+  [18/36] seed 4 table-rnd   dF1 48.8  aligned 0.00434
+  [22/36] seed 5 table-rnd   dF1 35.6  aligned 0.01097
+  [17/36] seed 4 table       dF1 132.3  aligned 0.05060
+  [25/36] seed 6 table       dF1 110.2  aligned 0.04095
+  [19/36] seed 4 gains       dF1 14.9  aligned 0.00047
+  [26/36] seed 6 table-rnd   dF1 18.5  aligned 0.03091
+  [28/36] seed 6 gains-rnd   dF1 18.5  aligned 0.00223
+  [27/36] seed 6 gains       dF1 11.3  aligned 0.00090
+  [30/36] seed 7 table-rnd   dF1 10.0  aligned 0.01250
+  [36/36] seed 8 gains-rnd   dF1 5.7  aligned 0.00062
+  [32/36] seed 7 gains-rnd   dF1 23.3  aligned 0.00107
+  [34/36] seed 8 table-rnd   dF1 9.7  aligned 0.00513
+  [29/36] seed 7 table       dF1 73.1  aligned 0.03014
+  [33/36] seed 8 table       dF1 104.2  aligned 0.06530
+  [35/36] seed 8 gains       dF1 67.3  aligned 0.00852
+  [31/36] seed 7 gains       dF1 48.1  aligned 0.01008
+experiment: ctxgain
+  instrument        ctxgain   trial seed 0000000001354dd8   4857 trials per session
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  question          seven routes to a BIGGER bias are closed. This is the
+                    one nobody tried: make it CHEAPER TO ESTIMATE. 18
+                    parameters instead of 252, same rule, same reward.
+  the prediction    the gain update is the MEAN over the group, so drift is
+                    unchanged and diffusion falls by sqrt(126/9) = 3.74x.
+                    Through the measured transfer that is dF1 119 -> 186 Hz.
+  the gate          dF1(gains) - dF1(table), PAIRED on seed, at 2 SE, and
+                    gains must also beat its own matched-marginal control.
+                    NOT on aligned or gain: mode 1 forces alignment by
+                    construction, so those do not compare across modes.
+
+
+  arm         dF1 (Hz)         aligned (F1)   outside     gain
+  table        112.7 +/- 9.8     0.04977       0.05481     3.33
+  table-rnd     31.3 +/- 6.3     0.01447       0.06229     0.90
+  gains         40.0 +/- 8.9     0.00612       0.00261     7.23
+  gains-rnd     15.9 +/- 4.4     0.00132       0.00144     3.61
+
+  PAIRED ON SEED, dF1 in Hz
+  gains  - table         -72.7 +/- 11.8  (-6.2 SE)   <- THE GATE
+  gains  - gains-rnd     +24.0 +/- 8.6  (+2.8 SE)   does mode 1 learn?
+  table  - table-rnd     +81.4 +/- 12.2  (+6.7 SE)   does mode 0 still?
+
+  predicted dF1(gains) 186 Hz from sqrt(14) less diffusion; measured 40.0
+
+  THE PARAMETERISATION DOES NOT BUY IT. Mode 1 learns -- it beats its own
+  control -- but it does not deliver more dF1 than the 252-parameter table
+  at 2 SE. Fewer parameters lower the diffusion and do not raise the
+  delivered formant, which would mean the floor is not where the parameter
+  count puts it, and the eighth route closes with the other seven.

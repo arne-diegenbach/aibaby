@@ -927,9 +927,12 @@ class Network {
   // a group search. `ctx_group_[i] == kVocalGroups` means "not in the module".
   Scalar* ctx_ramp_ = nullptr;
   uint32_t* ctx_group_ = nullptr;
-  // 1/n per group, the normaliser that makes this a PARAMETERISATION test and not
-  // a learning-rate change. See the cash-in for the derivation.
-  Scalar inv_group_n_[kVocalGroups] = {};
+  // 1 / sum(ramp^2) per group -- the normaliser that makes this a PARAMETERISATION
+  // test and not a learning-rate change. It was 1/n until 2026-09-10, which is
+  // 12x too small and made the first ctxgain run a learning-rate CUT in disguise:
+  // the very confound this constant exists to prevent, introduced in the other
+  // direction. See the cash-in for the derivation.
+  Scalar inv_ramp_ss_[kVocalGroups] = {};
   Scalar* bias_bank_ = nullptr;
   bool bank_used_ = false;
   uint32_t ctx_slots_ = 0;
