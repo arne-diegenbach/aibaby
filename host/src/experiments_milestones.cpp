@@ -5698,26 +5698,18 @@ struct ILArm {
 };
 constexpr uint32_t kILEpisodesBig = 32;  // kMaxReplayEpisodes; 4x the shipped 8
 const ILArm kILArms[] = {
-    // SECOND PASS, 2026-09-10. The first run settled four of the eight arms and
-    // they are dropped rather than re-run: replay-as-shipped does nothing
-    // (switching it off costs 0.3 SE), and `frozen`, `both` and `both-32` all
-    // fail -- interleaving is refused with a perfect oracle. Dropping them buys
-    // twice the seeds at the same cost, which is what the survivor needs.
+    // THIRD PASS, 2026-09-10. Two more questions are settled and dropped to pay
+    // for the seeds the survivor needs. `quiet-credit` refuted the stronger-
+    // lesson-going-in account at -0.7 SE, and `never taught` is a settle control
+    // whose retention denominator is near zero and prints noise. What is left
+    // open is the SIZE of the cost on the new lesson, which read -1.9 SE at
+    // eighteen seeds -- just under the bar, on the stubbornness side, with the
+    // only rival account already refuted by its sign.
     //
-    // name              no_fat teach relearn freeze noreplay credit episodes
-    {"quiet",           {"quiet",           false, true,  false, false, false, 0, 0}},
-    // THE MECHANISM TEST. `credit` improved `err taught` -- the TEACHING phase,
-    // before any conflict exists -- which says its benefit is a stronger lesson
-    // going in rather than protection during the conflict. If that is right this
-    // arm must beat `quiet`, where there is no conflict to protect against at
-    // all. If it does not, the explanation is wrong and the effect really is
-    // conflict-specific.
-    {"quiet-credit",    {"quiet-credit",    false, true,  false, false, false, 1, 0}},
-    {"relearn",         {"relearn",         false, true,  true,  false, false, 0, 0}},
-    // THE REPLICATION. 2.0 and 2.7 SE at n=9, and this project watched -2.8 SE
-    // become -1.2 SE when the sample doubled on the same day.
-    {"credit",          {"credit",          false, true,  true,  false, false, 1, 0}},
-    {"never taught",    {"never taught",    false, false, false, false, false, 0, 0}},
+    // name           no_fat teach relearn freeze noreplay credit episodes
+    {"quiet",       {"quiet",       false, true,  false, false, false, 0, 0}},
+    {"relearn",     {"relearn",     false, true,  true,  false, false, 0, 0}},
+    {"credit",      {"credit",      false, true,  true,  false, false, 1, 0}},
 };
 constexpr uint32_t kILArmCount = sizeof(kILArms) / sizeof(kILArms[0]);
 
@@ -5739,7 +5731,7 @@ bool run_interleave(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
     std::printf("  the audibility ruler failed: %s\n", error.c_str());
     return false;
   }
-  constexpr uint32_t kReps = 18;
+  constexpr uint32_t kReps = 36;
   instrument("interleave", dna0.header().seed ^ 0x1E7Bu, ticks / kRTTrial, "trials");
   std::printf("  question          a conflicting lesson wipes a taught sound to 0.22\n"
               "                    (`retain`). Does replaying the OLD lesson during sleep\n"
