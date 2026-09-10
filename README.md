@@ -9291,6 +9291,54 @@ was the entire reason for the previous run, had been nested inside the
 Nothing warned; the section simply did not print. It is now at function scope, and
 the failure message no longer names arms it cannot know are present.
 
+### `ctxretain` — contexts do not rescue it, and one arm shows why the gate has two columns
+
+The 2x2: give the two lessons different cues, crossed with DNA v51's context table
+to file them under. 36 seeds from the start.
+
+| arm | err taught | err after | retention |
+|---|---|---|---|
+| `baseline` | 0.8615 | 0.9629 | 0.30 |
+| `cue` | 0.8615 | 0.9529 | 0.34 |
+| `ctx` | **0.9138** | 0.9897 | **0.60** |
+| `cue+ctx` | **0.9138** | 0.9851 | 0.41 |
+
+    PAIRED vs baseline    retention gain        err-after improvement
+    cue                 +0.043 (+0.5 SE)       +0.0100 (+1.4 SE)
+    ctx                 +0.303 (+1.6 SE)       -0.0268 (-1.5 SE)
+    cue+ctx             +0.113 (+0.6 SE)       -0.0221 (-1.4 SE)
+
+**No cell passes.** The interaction the whole design rested on is not there.
+
+**And `ctx` is a textbook ratio artefact, caught by the gate.** It reads +0.303 on
+retention at 1.6 SE — the best-looking number in the table — while its `err after`
+is **-0.0268, i.e. WORSE**. The two columns disagree in sign. The reason is the
+`err taught` column: turning contexts on made lesson A **harder to learn**, 0.8615
+to 0.9138, and retention is `(before - after)/(before - taught)`, so a bigger
+`err taught` shrinks the denominator and inflates the ratio. `ctx` and `cue+ctx`
+have *identical* `err taught` because their teaching phases are identical, which is
+the consistency check that pins the cost on the context field rather than on noise.
+
+**That is the second ratio artefact this gate has caught tonight**, after
+`credit`'s. Requiring retention and absolute `err after` to agree is doing real
+work; either column alone would have produced a false positive here.
+
+**Masse, Grant & Freedman predicted this**, and the prediction was written down
+before the run finished. Context gating alone reads 61.4% across 100 tasks in the
+paper that introduced it, against 95.4% when combined with synaptic stabilisation:
+*"XdG alone does not support continual learning."* This run is gating alone. So the
+right reading is **not** "contexts do not work" — it is that gating without
+stabilisation is the insufficient half, exactly as the literature says, and here it
+is worse than insufficient because the context machinery also costs the teaching
+phase 0.05 of error.
+
+**The stabilisation half already ships and has never been tested for this job.**
+`meta_commit` gates plasticity by how far a neuron has already moved from where it
+started, which is the EWC/SI idea. `brake-sweep` measured it as a decisive null on
+the **magnitude** question — whether it grows the learned bias — and that is not
+what the mechanism is for. Protecting an old lesson from a new one is, and nobody
+has run it against `retain`.
+
 ### What the literature says to build next, and why it is the cheap option
 
 > **This section is the argument that produced DNA v51, kept as the record of
