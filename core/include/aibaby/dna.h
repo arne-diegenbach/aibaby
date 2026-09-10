@@ -784,6 +784,27 @@ struct DnaConsolidate {
   uint32_t replay_episodes;     // high-reward episodes kept and replayed
   uint32_t replay_ticks;        // how long each replayed episode is presented
   float replay_threshold;       // effective reward above which one is worth keeping
+
+  // --- DNA v55: WHAT AN EPISODE CONTAINS ------------------------------------
+  // The shipped replay stores a cue and the reward it earned, and pays that
+  // scalar out again at the end of the replayed episode. For a value that is
+  // enough. For a POLICY learned by node perturbation it is structurally not:
+  // the cash-in is `u = step * perturb_[i]`, and during replay `perturb_[i]` is
+  // whatever noise happens to be there now, so `E[u] = step * E[perturb] = 0`.
+  // Replay writes zero drift and non-zero variance -- it rehearses the cue and
+  // reinforces nothing, which is the opposite of consolidation.
+  //
+  // 1 makes an episode store the EXPLORATION as well: the perturbation vector
+  // that was live when the reward landed. Replay restores it just before paying
+  // the stored reward out, so the existing cash-in reproduces the original
+  // update instead of crediting fresh noise. An episode becomes "this is what I
+  // heard, this is what I tried, this is what it earned" -- which is the node
+  // perturbation analogue of an episodic memory, and the minimum an episode has
+  // to contain for replay to consolidate a policy at all.
+  //
+  //   0 — cue + reward. Bit-identical to v54.
+  //   1 — cue + exploration + reward.
+  uint32_t replay_credit;
   uint32_t interval_ticks;      // how often a sleeping brain runs a pass
   uint32_t enabled;
   uint32_t pad;

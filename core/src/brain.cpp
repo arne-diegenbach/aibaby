@@ -28,8 +28,12 @@ static size_t replay_bytes(const Dna& dna) {
   const DnaConsolidate& c = dna.header().consolidate;
   if (!c.enabled || c.replay_episodes == 0) return 0;
   const size_t n = c.replay_episodes;
-  const size_t per = size_t(dna.header().audio.mel_channels) +
-                     size_t(vision_features(dna.header().vision)) + 1;
+  size_t per = size_t(dna.header().audio.mel_channels) +
+               size_t(vision_features(dna.header().vision)) + 1;
+  // DNA v55. One exploration vector per episode when the genome asks for it.
+  // Budgeted from the same `n` and in the same expression as the allocation, so
+  // the two cannot drift apart -- this guard has been got wrong twice here.
+  if (c.replay_credit > 0u) per += size_t(dna.total_neurons_max());
   return n * per * sizeof(Scalar) + 64;  // slack for alignment padding
 }
 
@@ -124,6 +128,11 @@ BrainStatus Brain::init(const void* dna_blob, size_t dna_size, void* memory,
     episode_mel_ = arena_.alloc_zeroed<Scalar>(size_t(episode_capacity_) * mel_n);
     episode_retina_ = arena_.alloc_zeroed<Scalar>(size_t(episode_capacity_) * vis_n);
     episode_reward_ = arena_.alloc_zeroed<Scalar>(episode_capacity_);
+    episode_perturb_n_ = cons.replay_credit > 0u ? network_.perturbation_size() : 0u;
+    if (episode_perturb_n_ > 0u) {
+      episode_perturb_ = arena_.alloc_zeroed<Scalar>(size_t(episode_capacity_) *
+                                                     episode_perturb_n_);
+    }
     if (!arena_.ok()) return BrainStatus::kArenaTooSmall;
   }
 
@@ -430,7 +439,7 @@ void Brain::try_grow() {
 // the buffer with whatever the caregiver does most often, which is the one
 // thing there is no point rehearsing.
 void Brain::record_episode() {
-  if (episode_capacity_ == 0) return;
+  if (episode_capacity_ == 0 || !episode_recording_) return;
   const DnaConsolidate& c = dna_.header().consolidate;
   if (reward_.effective < Scalar(c.replay_threshold)) return;
 
@@ -446,6 +455,13 @@ void Brain::record_episode() {
   Scalar* into_vis = episode_retina_ + size_t(slot) * vis_n;
   for (uint32_t i = 0; i < vis_n; ++i) into_vis[i] = has_vision_ ? eyes[i] : kZero;
 
+  // DNA v55. WHAT WAS TRIED, alongside what was heard and what it paid. Without
+  // this the replayed reward multiplies whatever noise is present during sleep,
+  // and `E[u] = step * E[perturb] = 0` -- replay rehearses the cue and
+  // reinforces nothing.
+  if (episode_perturb_ && episode_perturb_n_ > 0u) {
+    network_.capture_perturbation(episode_perturb_ + size_t(slot) * episode_perturb_n_);
+  }
   episode_reward_[slot] = reward_.effective;
   episode_next_ = (slot + 1) % episode_capacity_;
   if (episodes_stored_ < episode_capacity_) ++episodes_stored_;
@@ -486,6 +502,13 @@ void Brain::drive_replay() {
   // activity — the same shape as the waking loop, which is what makes this
   // consolidation of the original episode rather than a new and different
   // lesson.
+  // DNA v55. Put the original exploration back FIRST, so the cash-in this reward
+  // triggers credits what the creature actually tried when it earned the reward
+  // rather than the noise that happens to be live during sleep. Order matters:
+  // the reward is queued after, and the trace it lands on is the restored one.
+  if (episode_perturb_ && episode_perturb_n_ > 0u) {
+    network_.restore_perturbation(episode_perturb_ + size_t(replay_index_) * episode_perturb_n_);
+  }
   pending_external_ += episode_reward_[replay_index_];
   network_.note_replay();
 

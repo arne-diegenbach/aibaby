@@ -261,6 +261,17 @@ replay_episodes = 8
 replay_ticks = 400               # 400 ms each, against a 2 s eligibility trace
 replay_threshold = 0.05          # only moments that beat expectation are kept
 
+# DNA v55: what an episode CONTAINS. 0 is cue + reward, which is what shipped and
+# is bit-identical. 1 also stores the EXPLORATION that was live when the reward
+# landed, and restores it before paying the reward out again.
+#
+# Why that is not a refinement but the whole thing: the cash-in is
+# u = step * perturb_[i], so replaying a stored reward against whatever noise
+# happens to be present gives E[u] = 0. Replay rehearses the cue and reinforces
+# nothing. Storing the exploration makes replay reproduce the original update.
+# See DnaConsolidate::replay_credit.
+replay_credit = 0
+
 [drives]
 hunger_rate = 0.0000017     # per ms — empty to full in roughly ten minutes
 comfort_decay = 0.0005      # relaxes to neutral with a ~2 s time constant

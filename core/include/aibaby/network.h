@@ -282,6 +282,19 @@ class Network {
   // the third of the three things §3.6 says sleep does and the panel shows
   // them together.
   void note_replay() { ++structural_.replays; }
+  // DNA v55. The exploration that was live at a moment, and putting it back.
+  // `capture_perturbation` copies it out; `restore_perturbation` copies it in,
+  // so a replayed episode is credited with the exploration it actually earned
+  // its reward for rather than with whatever noise is present during sleep.
+  uint32_t perturbation_size() const { return capacity_; }
+  void capture_perturbation(Scalar* out) const {
+    if (!perturb_ || !out) return;
+    for (uint32_t i = 0; i < capacity_; ++i) out[i] = perturb_[i];
+  }
+  void restore_perturbation(const Scalar* in) {
+    if (!perturb_ || !in) return;
+    for (uint32_t i = 0; i < capacity_; ++i) perturb_[i] = in[i];
+  }
 
   // Per-edge learning rate after myelination, as a fraction of eta, averaged
   // over live synapses. One number for "how consolidated is this brain" — 1.0

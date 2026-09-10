@@ -384,6 +384,7 @@ bool compile_dna_toml(const std::string& path, std::vector<uint8_t>& out,
     header.consolidate.replay_episodes = uint32_t(r.number("replay_episodes"));
     header.consolidate.replay_ticks = uint32_t(r.number("replay_ticks"));
     header.consolidate.replay_threshold = float(r.number("replay_threshold"));
+    header.consolidate.replay_credit = uint32_t(r.number("replay_credit"));
     collect(r);
   }
   {

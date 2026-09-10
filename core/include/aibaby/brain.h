@@ -170,6 +170,13 @@ class Brain {
   const GrowthWatch& growth_watch() const { return growth_; }
   bool replaying() const { return replay_left_ > 0; }
   uint32_t episodes_stored() const { return episodes_stored_; }
+  // Experiment oracle. Freezing recording keeps whatever the buffer already
+  // holds, which is how a probe can ask "would replaying the OLD lesson rescue
+  // it?" without first having to invent the selection rule that would keep it.
+  // Reward-magnitude selection cannot keep it: the old lesson stops being
+  // rewarded the moment a new one starts.
+  void set_episode_recording(bool on) { episode_recording_ = on; }
+  bool episode_recording() const { return episode_recording_; }
 
  private:
   void update_drives();
@@ -244,6 +251,10 @@ class Brain {
   Scalar* episode_reward_ = nullptr;   // capacity_episodes
   uint32_t episode_capacity_ = 0;
   uint32_t episodes_stored_ = 0;
+  bool episode_recording_ = true;
+  // DNA v55: the exploration each episode earned its reward for.
+  Scalar* episode_perturb_ = nullptr;
+  uint32_t episode_perturb_n_ = 0;
   uint32_t episode_next_ = 0;          // ring cursor: newest overwrites oldest
   uint32_t replay_index_ = 0;          // episode currently being re-experienced
   uint32_t replay_left_ = 0;           // ticks remaining in it
