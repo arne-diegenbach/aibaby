@@ -5449,6 +5449,12 @@ struct RTConfig {
   int second_heard = -1;
   uint32_t context_slots = 0;       // DNA v51: 0 and 1 both mean the shared bias
   uint32_t context_source = 0;      // DNA v53: 4 is the ear's rate EMA
+  // DNA v41's commitment brake: gate plasticity by how far a neuron has already
+  // moved from where it started. That is the EWC/SI idea, and Masse, Grant &
+  // Freedman say it is the half that context gating needs. `brake-sweep` measured
+  // it on the MAGNITUDE question and found a decisive null, which is not what an
+  // EWC-family mechanism is for. 0 is off and bit-identical.
+  float meta_commit = 0.0f;
 };
 
 // One arm, one creature, one life: teach, intervene, re-measure.
@@ -5469,6 +5475,12 @@ RTRow run_retain_arm(const std::vector<uint8_t>& blob, uint64_t ticks,
     std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, drives) +
                     offsetof(aibaby::DnaDrives, fatigue_rate),
                 &none, sizeof(none));
+  }
+  {
+    const float mc = cfg.meta_commit;
+    std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, exploration) +
+                    offsetof(aibaby::DnaExploration, meta_commit),
+                &mc, sizeof(mc));
   }
   {
     const uint32_t sl = cfg.context_slots, sr = cfg.context_source;
@@ -5776,11 +5788,30 @@ struct CRArm {
   RTConfig cfg;
 };
 const CRArm kCRArms[] = {
-    // name        no_fat teach relearn freeze norep credit eps second_heard slots source
-    {"baseline",  {"baseline",  false, true, true, false, false, 0, 0, -1, 0, 0}},
-    {"cue",       {"cue",       false, true, true, false, false, 0, 0, int(kCRSecondHeard), 0, 0}},
-    {"ctx",       {"ctx",       false, true, true, false, false, 0, 0, -1, 2, 4}},
-    {"cue+ctx",   {"cue+ctx",   false, true, true, false, false, 0, 0, int(kCRSecondHeard), 2, 4}},
+    // SECOND GENERATION, 2026-09-11. The 2x2 that ran here first -- cue crossed
+    // with contexts -- failed on every cell, and its result is in README. Masse,
+    // Grant & Freedman say why: context gating ALONE reads 61.4% across 100 tasks
+    // against 95.4% when paired with synaptic stabilisation. This runs the half
+    // that was never tested for this job.
+    //
+    // `meta_commit` gates plasticity by how far a neuron has already moved from
+    // where it started, which is the EWC/SI idea stated in this creature's terms.
+    // `brake-sweep` measured it as a decisive null on the MAGNITUDE question --
+    // whether it grows the learned bias -- and that is not what the mechanism is
+    // for. Protecting an old lesson from a new one is.
+    //
+    // WHAT WOULD REFUSE IT, and it is the same trap that has fired twice: a brake
+    // slows ALL learning, so it will make the first lesson worse too. That shrinks
+    // retention's denominator and inflates the ratio. The gate therefore requires
+    // absolute `err after` to improve as well, and `err taught` is printed so a
+    // brake that merely freezes the creature is visible rather than inferred.
+    //
+    // name          no_fat teach relearn freeze norep credit eps 2nd  slots src  commit
+    {"baseline",   {"baseline",   false, true, true, false, false, 0, 0, -1, 0, 0, 0.0f}},
+    {"brake-0.5",  {"brake-0.5",  false, true, true, false, false, 0, 0, -1, 0, 0, 0.5f}},
+    {"brake-1.0",  {"brake-1.0",  false, true, true, false, false, 0, 0, -1, 0, 0, 1.0f}},
+    {"cue+ctx+brake", {"cue+ctx+brake", false, true, true, false, false, 0, 0,
+                       int(kCRSecondHeard), 2, 4, 1.0f}},
 };
 constexpr uint32_t kCRArmCount = sizeof(kCRArms) / sizeof(kCRArms[0]);
 
@@ -5818,8 +5849,10 @@ bool run_ctxretain(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
               "                    -- the caregiver says one word throughout. Does giving\n"
               "                    them different CUES, and a context table to file them\n"
               "                    under, stop the collision?\n");
-  std::printf("  the design        2x2: cue on/off crossed with contexts on/off. Only\n"
-              "                    `cue+ctx` should work; the other three say why.\n");
+  std::printf("  the design        the STABILISATION half. Masse, Grant & Freedman: gating\n"
+              "                    alone reads 61.4%% across 100 tasks, gating plus synaptic\n"
+              "                    stabilisation 95.4%%. `meta_commit` is this creature's\n"
+              "                    EWC, and it was measured on the magnitude question.\n");
   std::printf("  the gate          vs `baseline`, PAIRED on seed, at 2 SE on BOTH retention\n"
               "                    and err after. Retention alone is a ratio an arm can\n"
               "                    inflate by simply learning the first lesson less well.\n\n");
@@ -5880,7 +5913,7 @@ bool run_ctxretain(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
     }
     return -1;
   };
-  const int kB = arm_index("baseline"), kBoth = arm_index("cue+ctx");
+  const int kB = arm_index("baseline"), kBoth = arm_index("brake-1.0");
   if (kB < 0 || kBoth < 0) {
     std::printf("\n  ctxretain cannot summarise: an arm it names is missing.\n");
     return false;
@@ -5911,29 +5944,25 @@ bool run_ctxretain(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
                 se_a > 0.0 ? d_a / se_a : 0.0, win[a] ? "  <- BOTH" : "");
   }
 
-  const int kCue = arm_index("cue"), kCtx = arm_index("ctx");
-  const bool only_both = win[kBoth] && (kCue < 0 || !win[kCue]) && (kCtx < 0 || !win[kCtx]);
-  if (only_both) {
-    std::printf("\n  THE INTERACTION IS THE RESULT. A cue alone does nothing and a context\n"
-                "  table alone does nothing; together they stop a conflicting lesson from\n"
-                "  wiping the first. The creature does not need to rehearse the old lesson\n"
-                "  in its sleep -- it needs to know that two lessons are two lessons, and\n"
-                "  the machinery to do that has shipped since DNA v51.\n");
+  bool any = false;
+  for (uint32_t a2 = 0; a2 < kCRArmCount; ++a2) {
+    if (int(a2) != kB && win[a2]) any = true;
+  }
+  if (any) {
+    std::printf("\n  STABILISATION HELPS. An arm beats the untreated conflict on BOTH\n"
+                "  retention and absolute err after, so this is not the ratio artefact that\n"
+                "  the context arms produced -- a brake that merely froze the creature would\n"
+                "  show a worse `err taught` and a worse `err after` together, and the\n"
+                "  columns above say whether it did.\n");
     return true;
   }
-  if (win[kBoth]) {
-    std::printf("\n  `cue+ctx` WINS BUT SO DOES ANOTHER CELL, so the interaction is not\n"
-                "  established and the claim cannot be that contexts file the lessons apart.\n"
-                "  A cue alone winning would mean the second word is doing something other\n"
-                "  than indexing -- it is also a different sound, and this creature echoes\n"
-                "  what it hears. Read the single cells above, not a story about the 2x2.\n");
-    return false;
-  }
-  std::printf("\n  CONTEXTS DO NOT RESCUE IT EITHER. Giving the two lessons different cues\n"
-              "  and a table with a slot for each does not stop the second from wiping the\n"
-              "  first at 2 SE. That closes the last mechanism this project already had\n"
-              "  built for the problem, and catastrophic interference here is not a\n"
-              "  filing failure.\n");
+  std::printf("\n  STABILISATION DOES NOT RESCUE IT EITHER. `meta_commit` gates plasticity\n"
+              "  by how far a neuron has already committed, which is the half Masse, Grant &\n"
+              "  Freedman say context gating needs -- and here it does not beat the\n"
+              "  untreated conflict on both measures at 2 SE. With gating alone already\n"
+              "  refused, BOTH halves of the standard account are now closed on this\n"
+              "  creature, and catastrophic interference here is neither a filing failure\n"
+              "  nor a stabilisation failure.\n");
   return false;
 }
 
