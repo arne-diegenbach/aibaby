@@ -13136,8 +13136,8 @@ bool run_poolbeta(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
       cell.f1sd = std::sqrt(ss / double(run.utt_f1.size() - 1));
     }
     cell.ok = true;
-    parallel_note("  [%u/%u] seed %u %-9s  dF1 %.1f  F1 sd %.1f\n", i + 1, njobs, r,
-                  kPBArms[a].name, cell.d1, cell.f1sd);
+    parallel_note("  [%u/%u] seed %u %-9s  dF1 %.1f  F1 sd %.1f  aligned %.5f\n",
+                  i + 1, njobs, r, kPBArms[a].name, cell.d1, cell.f1sd, cell.align);
     return cell;
   });
 
@@ -13203,11 +13203,59 @@ bool run_poolbeta(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
                 e.se > 0.0 ? e.m / e.se : 0.0);
   }
 
-  const double base = ex[0].m, base_se = ex[0].se;
+  // PAIRED, NOT INDEPENDENT. The first version used sqrt(se_a^2 + se_b^2), which
+  // assumes the two excesses are independent draws. They are not -- every arm runs
+  // on the same creatures -- and the correct comparison is the per-seed difference
+  // of the per-seed excesses. On the 3.4M screen that moved b2.0 from +1.86 SE to
+  // +2.01 SE, i.e. across the bar, which is reason enough never to use the wrong
+  // one again.
+  const auto paired_vs_base = [&](const char* t, const char* c, double* se_out) {
+    const int at = idx(t), ac = idx(c), bt = idx(ex[0].t), bc = idx(ex[0].c);
+    std::vector<double> d;
+    if (at < 0 || ac < 0 || bt < 0 || bc < 0) { *se_out = 0.0; return 0.0; }
+    for (uint32_t r = 0; r < kReps; ++r) {
+      const Cell& ct = cells[r * kPBArmCount + uint32_t(at)];
+      const Cell& cc = cells[r * kPBArmCount + uint32_t(ac)];
+      const Cell& b2t = cells[r * kPBArmCount + uint32_t(bt)];
+      const Cell& b2c = cells[r * kPBArmCount + uint32_t(bc)];
+      if (ct.ok && cc.ok && b2t.ok && b2c.ok) {
+        d.push_back((ct.d1 - cc.d1) - (b2t.d1 - b2c.d1));
+      }
+    }
+    return ctx_mean_se(d, se_out);
+  };
   int best = -1;
+  std::printf("\n  vs the shipped centroid, PAIRED on seed (these arms share creatures)\n");
   for (int k = 1; k < 3; ++k) {
-    const double joint = std::sqrt(ex[k].se * ex[k].se + base_se * base_se);
-    if (joint > 0.0 && (ex[k].m - base) > 2.0 * joint) best = k;
+    double se = 0.0;
+    const double m = paired_vs_base(ex[k].t, ex[k].c, &se);
+    std::printf("  %-10s %+7.1f +/- %.1f (%+.2f SE)\n", ex[k].t, m, se,
+                se > 0.0 ? m / se : 0.0);
+    if (se > 0.0 && m > 2.0 * se) best = k;
+  }
+
+  // THE MECHANISM CLAIM, separate from the gate. Decompression means MORE formant
+  // per unit of aligned bias; a beta that merely adds noise leaves that ratio
+  // alone. Paired per seed so it is not a comparison of two pooled quotients.
+  {
+    const int q1 = idx("b1.0"), q2 = idx("b2.0");
+    if (q1 >= 0 && q2 >= 0) {
+      std::vector<double> d;
+      for (uint32_t r = 0; r < kReps; ++r) {
+        const Cell& c1 = cells[r * kPBArmCount + uint32_t(q1)];
+        const Cell& c2 = cells[r * kPBArmCount + uint32_t(q2)];
+        if (c1.ok && c2.ok && c1.align > 1e-6 && c2.align > 1e-6) {
+          d.push_back(c2.d1 / c2.align - c1.d1 / c1.align);
+        }
+      }
+      double se = 0.0;
+      const double m = ctx_mean_se(d, &se);
+      std::printf("\n  DELIVERY PER UNIT OF ALIGNED BIAS, b2.0 - b1.0, paired:\n"
+                  "  %+.0f +/- %.0f (%+.2f SE) -- the mechanism claim, and it is a\n"
+                  "  different quantity from the gate: decompression delivers more formant\n"
+                  "  from LESS bias, which noise does not do.\n",
+                  m, se, se > 0.0 ? m / se : 0.0);
+    }
   }
   if (best < 0) {
     std::printf("\n  SHARPENING DOES NOT WIDEN THE STEERABLE RANGE. No beta beats the\n"
@@ -13222,7 +13270,7 @@ bool run_poolbeta(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
               "  against its OWN control, so this is steering and not scatter. The readout\n"
               "  was the constraint, which is what the derivative argument predicted and\n"
               "  what nine mechanism routes could not reach.\n",
-              ex[best].t, ex[best].m - base);
+              ex[best].t, ex[best].m - ex[0].m);
   return true;
 }
 

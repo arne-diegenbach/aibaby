@@ -1,0 +1,149 @@
+  [13/108] seed 2 b1.0       dF1 24.4  F1 sd 60.1
+  [12/108] seed 1 b3.0-rnd   dF1 48.0  F1 sd 55.8
+  [11/108] seed 1 b3.0       dF1 104.7  F1 sd 70.0
+  [8/108] seed 1 b1.0-rnd   dF1 17.3  F1 sd 37.0
+  [14/108] seed 2 b1.0-rnd   dF1 29.8  F1 sd 40.9
+  [2/108] seed 0 b1.0-rnd   dF1 31.6  F1 sd 38.8
+  [10/108] seed 1 b2.0-rnd   dF1 84.2  F1 sd 61.3
+  [6/108] seed 0 b3.0-rnd   dF1 20.7  F1 sd 49.3
+  [4/108] seed 0 b2.0-rnd   dF1 4.5  F1 sd 39.0
+  [1/108] seed 0 b1.0       dF1 55.1  F1 sd 59.0
+  [7/108] seed 1 b1.0       dF1 64.0  F1 sd 67.4
+  [5/108] seed 0 b3.0       dF1 52.3  F1 sd 71.8
+  [9/108] seed 1 b2.0       dF1 130.9  F1 sd 92.1
+  [3/108] seed 0 b2.0       dF1 102.8  F1 sd 85.6
+  [17/108] seed 2 b3.0       dF1 144.6  F1 sd 94.4
+  [15/108] seed 2 b2.0       dF1 60.7  F1 sd 64.9
+  [20/108] seed 3 b1.0-rnd   dF1 13.1  F1 sd 36.8
+  [18/108] seed 2 b3.0-rnd   dF1 68.6  F1 sd 58.8
+  [22/108] seed 3 b2.0-rnd   dF1 26.4  F1 sd 44.5
+  [16/108] seed 2 b2.0-rnd   dF1 3.0  F1 sd 46.3
+  [24/108] seed 3 b3.0-rnd   dF1 34.3  F1 sd 43.4
+  [23/108] seed 3 b3.0       dF1 49.7  F1 sd 56.6
+  [25/108] seed 4 b1.0       dF1 46.4  F1 sd 55.7
+  [19/108] seed 3 b1.0       dF1 44.7  F1 sd 48.3
+  [28/108] seed 4 b2.0-rnd   dF1 44.6  F1 sd 51.0
+  [26/108] seed 4 b1.0-rnd   dF1 68.2  F1 sd 48.3
+  [21/108] seed 3 b2.0       dF1 63.8  F1 sd 74.1
+  [27/108] seed 4 b2.0       dF1 68.1  F1 sd 77.2
+  [29/108] seed 4 b3.0       dF1 68.8  F1 sd 76.2
+  [31/108] seed 5 b1.0       dF1 100.6  F1 sd 66.1
+  [34/108] seed 5 b2.0-rnd   dF1 34.9  F1 sd 46.5
+  [32/108] seed 5 b1.0-rnd   dF1 18.4  F1 sd 36.8
+  [30/108] seed 4 b3.0-rnd   dF1 7.6  F1 sd 43.9
+  [38/108] seed 6 b1.0-rnd   dF1 14.7  F1 sd 36.1
+  [36/108] seed 5 b3.0-rnd   dF1 61.1  F1 sd 56.3
+  [40/108] seed 6 b2.0-rnd   dF1 11.9  F1 sd 40.3
+  [37/108] seed 6 b1.0       dF1 50.3  F1 sd 60.6
+  [39/108] seed 6 b2.0       dF1 98.8  F1 sd 77.8
+  [35/108] seed 5 b3.0       dF1 80.5  F1 sd 98.5
+  [33/108] seed 5 b2.0       dF1 124.2  F1 sd 102.1
+  [41/108] seed 6 b3.0       dF1 18.1  F1 sd 48.9
+  [42/108] seed 6 b3.0-rnd   dF1 22.0  F1 sd 50.7
+  [47/108] seed 7 b3.0       dF1 46.2  F1 sd 79.5
+  [45/108] seed 7 b2.0       dF1 108.5  F1 sd 88.7
+  [44/108] seed 7 b1.0-rnd   dF1 11.4  F1 sd 37.8
+  [43/108] seed 7 b1.0       dF1 27.8  F1 sd 56.1
+  [48/108] seed 7 b3.0-rnd   dF1 34.4  F1 sd 49.9
+  [51/108] seed 8 b2.0       dF1 30.3  F1 sd 58.6
+  [50/108] seed 8 b1.0-rnd   dF1 0.6  F1 sd 39.3
+  [52/108] seed 8 b2.0-rnd   dF1 14.7  F1 sd 45.9
+  [49/108] seed 8 b1.0       dF1 53.4  F1 sd 47.8
+  [56/108] seed 9 b1.0-rnd   dF1 35.6  F1 sd 40.7
+  [53/108] seed 8 b3.0       dF1 123.0  F1 sd 94.6
+  [54/108] seed 8 b3.0-rnd   dF1 36.0  F1 sd 60.8
+  [55/108] seed 9 b1.0       dF1 29.3  F1 sd 49.2
+  [46/108] seed 7 b2.0-rnd   dF1 64.2  F1 sd 56.8
+  [57/108] seed 9 b2.0       dF1 107.2  F1 sd 90.8
+  [59/108] seed 9 b3.0       dF1 25.3  F1 sd 61.0
+  [62/108] seed 10 b1.0-rnd   dF1 8.4  F1 sd 33.1
+  [58/108] seed 9 b2.0-rnd   dF1 72.6  F1 sd 64.6
+  [60/108] seed 9 b3.0-rnd   dF1 15.7  F1 sd 53.6
+  [63/108] seed 10 b2.0       dF1 15.2  F1 sd 65.4
+  [64/108] seed 10 b2.0-rnd   dF1 6.2  F1 sd 43.4
+  [61/108] seed 10 b1.0       dF1 16.8  F1 sd 36.2
+  [68/108] seed 11 b1.0-rnd   dF1 12.5  F1 sd 38.8
+  [66/108] seed 10 b3.0-rnd   dF1 85.0  F1 sd 64.5
+  [67/108] seed 11 b1.0       dF1 21.8  F1 sd 44.8
+  [69/108] seed 11 b2.0       dF1 117.4  F1 sd 80.8
+  [65/108] seed 10 b3.0       dF1 50.7  F1 sd 79.0
+  [70/108] seed 11 b2.0-rnd   dF1 5.2  F1 sd 46.8
+  [71/108] seed 11 b3.0       dF1 55.4  F1 sd 72.2
+  [72/108] seed 11 b3.0-rnd   dF1 16.4  F1 sd 57.3
+  [73/108] seed 12 b1.0       dF1 81.7  F1 sd 68.0
+  [76/108] seed 12 b2.0-rnd   dF1 18.4  F1 sd 46.3
+  [75/108] seed 12 b2.0       dF1 63.7  F1 sd 68.4
+  [74/108] seed 12 b1.0-rnd   dF1 40.1  F1 sd 46.7
+  [78/108] seed 12 b3.0-rnd   dF1 43.0  F1 sd 50.2
+  [77/108] seed 12 b3.0       dF1 109.3  F1 sd 110.7
+  [82/108] seed 13 b2.0-rnd   dF1 24.4  F1 sd 50.9
+  [80/108] seed 13 b1.0-rnd   dF1 55.2  F1 sd 48.1
+  [79/108] seed 13 b1.0       dF1 50.7  F1 sd 54.3
+  [83/108] seed 13 b3.0       dF1 100.1  F1 sd 92.0
+  [81/108] seed 13 b2.0       dF1 53.2  F1 sd 86.4
+  [84/108] seed 13 b3.0-rnd   dF1 91.7  F1 sd 71.4
+  [86/108] seed 14 b1.0-rnd   dF1 50.3  F1 sd 43.2
+  [85/108] seed 14 b1.0       dF1 113.6  F1 sd 86.8
+  [88/108] seed 14 b2.0-rnd   dF1 33.4  F1 sd 45.4
+  [89/108] seed 14 b3.0       dF1 35.1  F1 sd 59.3
+  [92/108] seed 15 b1.0-rnd   dF1 26.7  F1 sd 44.1
+  [93/108] seed 15 b2.0       dF1 52.4  F1 sd 95.9
+  [87/108] seed 14 b2.0       dF1 85.0  F1 sd 73.8
+  [91/108] seed 15 b1.0       dF1 82.3  F1 sd 71.9
+  [94/108] seed 15 b2.0-rnd   dF1 5.7  F1 sd 47.7
+  [96/108] seed 15 b3.0-rnd   dF1 89.2  F1 sd 73.7
+  [90/108] seed 14 b3.0-rnd   dF1 18.6  F1 sd 47.6
+  [97/108] seed 16 b1.0       dF1 53.3  F1 sd 53.4
+  [95/108] seed 15 b3.0       dF1 45.3  F1 sd 68.3
+  [98/108] seed 16 b1.0-rnd   dF1 26.9  F1 sd 54.0
+  [99/108] seed 16 b2.0       dF1 89.4  F1 sd 66.5
+  [104/108] seed 17 b1.0-rnd   dF1 23.2  F1 sd 39.3
+  [103/108] seed 17 b1.0       dF1 104.5  F1 sd 72.4
+  [100/108] seed 16 b2.0-rnd   dF1 76.1  F1 sd 64.5
+  [102/108] seed 16 b3.0-rnd   dF1 77.3  F1 sd 64.8
+  [107/108] seed 17 b3.0       dF1 50.4  F1 sd 70.2
+  [101/108] seed 16 b3.0       dF1 76.3  F1 sd 67.7
+  [106/108] seed 17 b2.0-rnd   dF1 18.0  F1 sd 43.8
+  [108/108] seed 17 b3.0-rnd   dF1 6.3  F1 sd 47.2
+  [105/108] seed 17 b2.0       dF1 50.0  F1 sd 70.5
+experiment: poolbeta
+  instrument        poolbeta   trial seed 00000000013594b3   1214 trials
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  question          the larynx compresses -- dF1 ~ aligned^0.61 -- and that
+                    curve both limits delivery AND kills the drift through
+                    its derivative. Does sharpening the pooling widen it?
+  the measure       EXCESS of taught over its own matched-marginal control,
+                    per beta. A beta that lifts both has bought scatter.
+  the real risk     teachability, not delivery. centroid-is-steerability
+                    measured 5 dictionary readouts NOT teachable where 2
+                    centroid ones were, so a hard argmax should fail here.
+
+
+  ARM LIVENESS vs `b1.0` (seeds where the arm differs at all)
+    b1.0-rnd           18/18
+    b2.0               18/18
+    b2.0-rnd           18/18
+    b3.0               18/18
+    b3.0-rnd           18/18
+
+  arm        dF1 (Hz)         F1 scatter  aligned   gain      
+  b1.0         56.7 +/- 6.9     58.8        0.01832   2.02
+  b1.0-rnd     26.9 +/- 4.2     41.1        0.00662   0.79
+  b2.0         79.0 +/- 7.8     78.9        0.01179   1.37
+  b2.0-rnd     30.5 +/- 6.3     49.2        0.00673   0.77
+  b3.0         68.6 +/- 8.3     76.2        0.01521   1.77
+  b3.0-rnd     43.1 +/- 6.8     55.5        0.00724   0.87
+
+  EXCESS over the matched-marginal control at the SAME beta, paired.
+  This is the quantity that separates steering from scatter.
+  b1.0         +29.8 +/- 7.2 (+4.17 SE)
+  b2.0         +48.5 +/- 7.1 (+6.87 SE)
+  b3.0         +25.5 +/- 8.4 (+3.03 SE)
+
+  SHARPENING DOES NOT WIDEN THE STEERABLE RANGE. No beta beats the
+  shipped centroid's excess at 2 SE against the shipped one. If the F1
+  scatter column rose while the excess did not, sharpening bought noise
+  rather than reach -- which is `centroid-is-steerability` again, and it
+  closes the compression alongside the bias, the reward's resolution and
+  the reward's reference. What remains would not be a knob at all.
