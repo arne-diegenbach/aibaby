@@ -5423,6 +5423,12 @@ struct RTRow {
   // third of the gap. The whole run is otherwise scored against A, which cannot
   // distinguish "credit resisted the new lesson" from "credit absorbed it".
   double err_b = 0.0;
+  // DID THE INDEX ACTUALLY SEPARATE THE TWO LESSONS? A context table that is live
+  // -- it changes learning, which err_taught shows -- can still have both lessons
+  // filed under the SAME slot, in which case the arm is vacuous in a way no other
+  // column reveals. These are the share of scored trials spent in slot 0 during
+  // teaching and during the gap; if they are equal, nothing was separated.
+  double slot0_teach = 0.0, slot0_gap = 0.0;
   double gap_overwrite = 0.0;   // 0 = still all lesson A, 1 = fully lesson B
   uint64_t recorded_teach = 0, recorded_gap = 0;
 };
@@ -5546,6 +5552,7 @@ RTRow run_retain_arm(const std::vector<uint8_t>& blob, uint64_t ticks,
   double baseline1 = -1.0, baseline2 = -1.0;
   double sum_b = 0.0;
   uint32_t n_b = 0;
+  double teach0 = 0.0, teach_n = 0.0, gap0 = 0.0, gap_n = 0.0;
   uint32_t last_frame = 0;
   uint64_t last_feedback = 0;
   bool was_asleep = false;
@@ -5570,6 +5577,12 @@ RTRow run_retain_arm(const std::vector<uint8_t>& blob, uint64_t ticks,
     // before inventing a selection rule.
       if (trial == n_teach) {
         row.recorded_teach = s.brain.episodes_recorded();
+      }
+      if (s.brain.network().context_slots() >= 2) {
+        const bool in_gap = trial >= n_teach && trial < n_teach + n_gap;
+        const bool zero = s.brain.network().active_context() == 0;
+        if (in_gap) { gap_n += 1.0; if (zero) gap0 += 1.0; }
+        else if (trial < n_teach) { teach_n += 1.0; if (zero) teach0 += 1.0; }
       }
       if (trial == n_teach + n_gap) {
         row.recorded_gap = s.brain.episodes_recorded() - row.recorded_teach;
@@ -5656,6 +5669,8 @@ RTRow run_retain_arm(const std::vector<uint8_t>& blob, uint64_t ticks,
   r.err_taught = n_tt ? sum_taught / n_tt : 0.0;
   r.err_after = n_aa ? sum_after / n_aa : 0.0;
   r.err_b = n_b ? sum_b / double(n_b) : 0.0;
+  r.slot0_teach = teach_n > 0.0 ? teach0 / teach_n : -1.0;
+  r.slot0_gap = gap_n > 0.0 ? gap0 / gap_n : -1.0;
   r.f1_taught = n_tt ? f1t / n_tt : 0.0;
   r.f2_taught = n_tt ? f2t / n_tt : 0.0;
   r.f1_after = n_aa ? f1a / n_aa : 0.0;
@@ -5878,8 +5893,9 @@ bool run_ctxretain(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
     return cell;
   });
 
-  std::printf("\n  %-12s %-8s %-13s %-13s %-13s %s\n", "arm", "sleeps", "err taught",
-              "err after", "retention", "err vs B");
+  std::printf("\n  %-12s %-8s %-13s %-13s %-13s %-9s %s\n", "arm", "sleeps",
+              "err taught", "err after", "retention", "err vs B",
+              "slot0 teach/gap");
   double m_ret[kCRArmCount];
   for (uint32_t a = 0; a < kCRArmCount; ++a) {
     std::vector<double> ret, aft, tau, eb;
@@ -5902,9 +5918,21 @@ bool run_ctxretain(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
     }
     double se, s2;
     m_ret[a] = ctx_mean_se(ret, &se);
-    std::printf("  %-12s %-8.1f %-13.4f %-13.4f %.2f +/- %-6.2f %.4f\n", kCRArms[a].name,
+    std::vector<double> st, sg;
+    for (uint32_t r = 0; r < kReps; ++r) {
+      const Cell& c = cells[r * kCRArmCount + a];
+      if (c.ok && c.row.slot0_teach >= 0.0) {
+        st.push_back(c.row.slot0_teach);
+        sg.push_back(c.row.slot0_gap);
+      }
+    }
+    const double mt = st.empty() ? -1.0 : ctx_mean_se(st, &s2);
+    const double mg = sg.empty() ? -1.0 : ctx_mean_se(sg, &s2);
+    std::printf("  %-12s %-8.1f %-13.4f %-13.4f %.2f +/- %-6.2f %-9.4f", kCRArms[a].name,
                 sleeps / double(n), ctx_mean_se(tau, &s2), ctx_mean_se(aft, &s2),
                 m_ret[a], se, ctx_mean_se(eb, &s2));
+    if (mt >= 0.0) std::printf("%.2f / %.2f\n", mt, mg);
+    else std::printf("  --\n");
   }
 
   const auto arm_index = [](const char* want) {
