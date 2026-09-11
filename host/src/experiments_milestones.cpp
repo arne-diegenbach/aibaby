@@ -5997,6 +5997,22 @@ bool run_ctxretain(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
     return ctx_mean_se(d, se_out);
   };
 
+  // LIVENESS BEFORE ANYTHING IS READ. Three of this experiment's generations had
+  // an arm that silently did not run its treatment, and each time the pooled means
+  // looked like a clean null. err_taught is the right quantity to watch: every arm
+  // here alters learning somehow, so an arm identical to the control on it on
+  // EVERY seed is a copy rather than a treatment.
+  {
+    ArmLiveness live("ctxretain");
+    for (uint32_t r = 0; r < kReps; ++r) {
+      for (uint32_t a2 = 0; a2 < kCRArmCount; ++a2) {
+        const Cell& c = cells[r * kCRArmCount + a2];
+        if (c.ok) live.observe(kCRArms[a2].name, r, c.row.err_taught);
+      }
+    }
+    if (!live.report("baseline")) return false;
+  }
+
   // THE REAL GATE: the index's INFORMATION, with the table's cost held fixed.
   {
     const int kSame = arm_index("ctx-same"), kOrc = arm_index("ctx-oracle");

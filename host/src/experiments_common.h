@@ -31,6 +31,8 @@
 #include <fstream>
 #include <thread>
 
+#include "arm_liveness.h"
+
 #include "aibaby/brain.h"
 #include "aibaby/snapshot.h"
 #include "host/audio.h"
