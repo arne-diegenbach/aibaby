@@ -13017,6 +13017,215 @@ bool run_baseref(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
   return true;
 }
 
+// ---------------------------------------------------------------------------
+// poolbeta -- the compression itself, which is the last thing standing.
+//
+// `read_group` is a rate-weighted centroid, and its smoothness is measured: the
+// F1 centroid never leaves the middle fifth of its range, and `align-split` fitted
+// delivered formant to the bias that moves it as dF1 ~ aligned^0.61.
+//
+// THAT CURVE DOES TWO JOBS, which is why everything else had to fail. It limits
+// DELIVERY, so a learned bias arrives smaller than it is. And its DERIVATIVE
+// limits LEARNING: the drift is -Cov(e, perturb_i), which factors through
+// dF1/d(drive), and a 0.61 power law's derivative falls as aligned^-0.39. Nine
+// mechanism routes attacked the bias; `baseprobe` attacked the reward's
+// RESOLUTION; `baseref` attacked its REFERENCE. None of them touched this, and
+// none of them could have worked.
+//
+// beta sharpens the pooling to sum(r^beta * p)/sum(r^beta), with 1.0 the shipped
+// centroid. A pre-check is already in: at beta 2 the babble spread widens from
+// F1 638 +/- 25 to 644 +/- 33 Hz with the duty cycle unmoved at 0.50 -> 0.51.
+//
+// BUT A WIDER SPREAD IS NOT A BETTER READOUT, and the whole design turns on that.
+// Decompression widens the range reward can steer; NOISE widens it too, and the
+// two look identical in a standard deviation. So every beta gets a matched-
+// marginal control whose index tracks the word but whose target does not, and the
+// quantity that matters is the EXCESS of taught over control. A beta that lifts
+// both equally has bought scatter, not steering.
+//
+// AND TEACHABILITY IS THE REAL RISK, not delivery. `centroid-is-steerability`
+// measured five dictionary configurations as NOT teachable where two centroid
+// ones both were, so a hard argmax is expected to be untrainable here. If the
+// excess collapses as beta rises while the raw spread grows, that is the same
+// result again and beta is refused for the same reason.
+struct PBArm {
+  const char* name;
+  float beta;
+  VLTarget target;
+};
+const PBArm kPBArms[] = {
+    {"b1.0", 1.0f, kVLTgtHeard},
+    {"b1.0-rnd", 1.0f, kVLTgtRandom},
+    {"b2.0", 2.0f, kVLTgtHeard},
+    {"b2.0-rnd", 2.0f, kVLTgtRandom},
+    {"b3.0", 3.0f, kVLTgtHeard},
+    {"b3.0-rnd", 3.0f, kVLTgtRandom},
+};
+constexpr uint32_t kPBArmCount = sizeof(kPBArms) / sizeof(kPBArms[0]);
+
+bool run_poolbeta(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  aibaby::Dna dna;
+  if (dna.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) {
+    std::printf("  setup failed: the genome does not load\n");
+    return false;
+  }
+  const int32_t ctx_module = dna.module_with_role(aibaby::ModuleRole::kContext);
+  if (ctx_module < 0) {
+    std::printf("  this genome has no kContext module. Build one with NO output\n"
+                "  weight:  python3 tools/genome_add_context.py dna/default.toml \\\n"
+                "           ctx.toml vocal out_w=0\n");
+    return false;
+  }
+  constexpr uint32_t kReps = 18;
+  const size_t slots_off = offsetof(aibaby::DnaHeader, exploration) +
+                           offsetof(aibaby::DnaExploration, context_slots);
+  const size_t src_off = offsetof(aibaby::DnaHeader, exploration) +
+                         offsetof(aibaby::DnaExploration, context_source);
+  const size_t beta_off = offsetof(aibaby::DnaHeader, vocal) +
+                          offsetof(aibaby::DnaVocal, pool_beta);
+  instrument("poolbeta", dna.header().seed ^ 0xB37Au, ticks / kVLTrialTicks, "trials");
+  std::printf("  question          the larynx compresses -- dF1 ~ aligned^0.61 -- and that\n"
+              "                    curve both limits delivery AND kills the drift through\n"
+              "                    its derivative. Does sharpening the pooling widen it?\n");
+  std::printf("  the measure       EXCESS of taught over its own matched-marginal control,\n"
+              "                    per beta. A beta that lifts both has bought scatter.\n");
+  std::printf("  the real risk     teachability, not delivery. centroid-is-steerability\n"
+              "                    measured 5 dictionary readouts NOT teachable where 2\n"
+              "                    centroid ones were, so a hard argmax should fail here.\n\n");
+
+  struct Cell {
+    bool ok = false;
+    double d1 = 0.0, align = 0.0, outside = 0.0, gain = 0.0, f1sd = 0.0;
+  };
+  const uint32_t njobs = kReps * kPBArmCount;
+  const std::vector<Cell> cells = parallel_reps<Cell>(njobs, [&](uint32_t i) {
+    Cell cell;
+    const uint32_t r = i / kPBArmCount, a = i % kPBArmCount;
+    std::vector<uint8_t> variant = blob;
+    const uint64_t seed = dna.header().seed + r * 7919ull;
+    std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+    const uint32_t sl = 2u, sr = 4u;
+    std::memcpy(variant.data() + slots_off, &sl, sizeof(sl));
+    std::memcpy(variant.data() + src_off, &sr, sizeof(sr));
+    const float b = kPBArms[a].beta;
+    std::memcpy(variant.data() + beta_off, &b, sizeof(b));
+    CtxDrive drive;
+    drive.module = ctx_module;
+    drive.slots = kVLWords;
+    drive.gain = 0.10;
+    Regime reg;
+    reg.praise = kPraiseValue;
+    reg.scold = kScoldValue;
+    const VLRun run = run_vocallearn_session(variant, ticks, kVLTaught, nullptr, reg,
+                                             kPBArms[a].target, &drive);
+    if (!run.ok) return cell;
+    cell.d1 = std::fabs(run.f1_by_word[0] - run.f1_by_word[1]);
+    cell.align = run.ctx_align;
+    cell.outside = run.ctx_outside;
+    cell.gain = run.ctx_align_gain;
+    // The raw scatter of what the creature produced, which is what a beta that
+    // merely adds noise moves -- printed beside the excess so the two cannot be
+    // confused.
+    if (run.utt_f1.size() >= 8) {
+      double m = 0.0;
+      for (double v : run.utt_f1) m += v;
+      m /= double(run.utt_f1.size());
+      double ss = 0.0;
+      for (double v : run.utt_f1) ss += (v - m) * (v - m);
+      cell.f1sd = std::sqrt(ss / double(run.utt_f1.size() - 1));
+    }
+    cell.ok = true;
+    parallel_note("  [%u/%u] seed %u %-9s  dF1 %.1f  F1 sd %.1f\n", i + 1, njobs, r,
+                  kPBArms[a].name, cell.d1, cell.f1sd);
+    return cell;
+  });
+
+  {
+    ArmLiveness live("poolbeta");
+    for (uint32_t r = 0; r < kReps; ++r) {
+      for (uint32_t a = 0; a < kPBArmCount; ++a) {
+        const Cell& c = cells[r * kPBArmCount + a];
+        if (c.ok) live.observe(kPBArms[a].name, r, c.d1);
+      }
+    }
+    if (!live.report("b1.0")) return false;
+  }
+
+  std::printf("\n  %-10s %-16s %-11s %-9s %-9s %s\n", "arm", "dF1 (Hz)", "F1 scatter",
+              "aligned", "gain", "");
+  double m_d1[kPBArmCount], s_d1[kPBArmCount];
+  for (uint32_t a = 0; a < kPBArmCount; ++a) {
+    std::vector<double> d1, sd, al, gn;
+    for (uint32_t r = 0; r < kReps; ++r) {
+      const Cell& c = cells[r * kPBArmCount + a];
+      if (!c.ok) continue;
+      d1.push_back(c.d1); sd.push_back(c.f1sd); al.push_back(c.align); gn.push_back(c.gain);
+    }
+    if (d1.size() < 3) {
+      std::printf("\n  poolbeta INCONCLUSIVE -- arm `%s` produced %zu creatures.\n",
+                  kPBArms[a].name, d1.size());
+      return false;
+    }
+    double s2;
+    m_d1[a] = ctx_mean_se(d1, &s_d1[a]);
+    std::printf("  %-10s %6.1f +/- %-7.1f %-11.1f %-9.5f %.2f\n", kPBArms[a].name,
+                m_d1[a], s_d1[a], ctx_mean_se(sd, &s2), ctx_mean_se(al, &s2),
+                ctx_mean_se(gn, &s2));
+  }
+
+  const auto idx = [](const char* w) {
+    for (uint32_t i = 0; i < kPBArmCount; ++i) {
+      if (std::strcmp(kPBArms[i].name, w) == 0) return int(i);
+    }
+    return -1;
+  };
+  // The excess, paired by seed: taught minus its OWN control at the same beta.
+  const auto excess = [&](const char* taught, const char* ctl, double* se_out) {
+    const int a = idx(taught), b = idx(ctl);
+    std::vector<double> d;
+    if (a < 0 || b < 0) { *se_out = 0.0; return 0.0; }
+    for (uint32_t r = 0; r < kReps; ++r) {
+      const Cell& ca = cells[r * kPBArmCount + uint32_t(a)];
+      const Cell& cb = cells[r * kPBArmCount + uint32_t(b)];
+      if (ca.ok && cb.ok) d.push_back(ca.d1 - cb.d1);
+    }
+    return ctx_mean_se(d, se_out);
+  };
+
+  std::printf("\n  EXCESS over the matched-marginal control at the SAME beta, paired.\n"
+              "  This is the quantity that separates steering from scatter.\n");
+  struct { const char* t; const char* c; double m, se; } ex[3] = {
+      {"b1.0", "b1.0-rnd", 0, 0}, {"b2.0", "b2.0-rnd", 0, 0}, {"b3.0", "b3.0-rnd", 0, 0}};
+  for (auto& e : ex) {
+    e.m = excess(e.t, e.c, &e.se);
+    std::printf("  %-10s %+7.1f +/- %.1f (%+.2f SE)\n", e.t, e.m, e.se,
+                e.se > 0.0 ? e.m / e.se : 0.0);
+  }
+
+  const double base = ex[0].m, base_se = ex[0].se;
+  int best = -1;
+  for (int k = 1; k < 3; ++k) {
+    const double joint = std::sqrt(ex[k].se * ex[k].se + base_se * base_se);
+    if (joint > 0.0 && (ex[k].m - base) > 2.0 * joint) best = k;
+  }
+  if (best < 0) {
+    std::printf("\n  SHARPENING DOES NOT WIDEN THE STEERABLE RANGE. No beta beats the\n"
+                "  shipped centroid's excess at 2 SE against the shipped one. If the F1\n"
+                "  scatter column rose while the excess did not, sharpening bought noise\n"
+                "  rather than reach -- which is `centroid-is-steerability` again, and it\n"
+                "  closes the compression alongside the bias, the reward's resolution and\n"
+                "  the reward's reference. What remains would not be a knob at all.\n");
+    return false;
+  }
+  std::printf("\n  SHARPENING WIDENS IT. `%s` beats the shipped centroid's excess by %+.1f Hz\n"
+              "  against its OWN control, so this is steering and not scatter. The readout\n"
+              "  was the constraint, which is what the derivative argument predicted and\n"
+              "  what nine mechanism routes could not reach.\n",
+              ex[best].t, ex[best].m - base);
+  return true;
+}
+
 bool run_ctxscale(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
   (void)verbose;
   aibaby::Dna dna;

@@ -502,6 +502,23 @@ smoothing_ms = 800.0        # articulator inertia: a posture is held for a sylla
 gate_smoothing_ms = 60.0    # the glottis is a valve; it opens and shuts fast
 rate_norm_hz = 10.0         # group rate that reads as full scale
 
+# DNA v56: how SHARPLY the larynx pools. read_group is a rate-weighted centroid,
+# sum(r*p)/sum(r) -- the smoothest readout there is, and measurably so: the F1
+# centroid never leaves the middle fifth of its range, and delivered formant goes
+# as dF1 ~ aligned^0.61.
+#
+# That compression does TWO jobs, which is why it is the last thing standing after
+# nine mechanism routes, the reward's resolution and the reward's reference all
+# failed. It limits DELIVERY, and its DERIVATIVE limits LEARNING -- the drift is
+# -Cov(e, perturb) which factors through dF1/d(drive), and a 0.61 power law's
+# derivative falls as aligned^-0.39.
+#
+# beta > 1 sharpens: sum(r^beta * p)/sum(r^beta). 1.0 is the shipped centroid and
+# is bit-identical. Large beta approaches winner-take-all, which is expected to be
+# untrainable here -- `centroid-is-steerability` measured a dictionary readout as
+# not teachable where a centroid is. The interesting values are in between.
+pool_beta = 1.0
+
 # DNA v48 — a dictionary of postures instead of a centroid. 0 is OFF and is
 # bit-identical to v47.
 #

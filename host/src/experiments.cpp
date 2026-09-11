@@ -258,6 +258,13 @@ const Spec kSpecs[] = {
      "  10x slower one, and a RATCHET that only tightens. Refuses if any praise\n"
      "  share leaves 0.15-0.85 -- a bar always or never beaten is a constant\n"
      "  reward, which is the same death by a different route"},
+    {"poolbeta", 3400000, Expect::kOpen, Tier::kTeach,
+     "the COMPRESSION, which is the last thing standing. read_group is a\n"
+     "  centroid and dF1 ~ aligned^0.61; that curve limits delivery AND kills\n"
+     "  the drift through its derivative. DNA v56 sharpens the pooling to\n"
+     "  sum(r^beta*p)/sum(r^beta). Every beta gets its OWN matched-marginal\n"
+     "  control, because decompression and NOISE both widen a spread and only\n"
+     "  the EXCESS separates steering from scatter. Screens beta 1/2/3"},
     {"ctxfour", 3400000, Expect::kOpen, Tier::kTeach,
      "derived: ctxself's session at FOUR words. partprobe cleared the index at\n"
      "  four (0.895 vs chance 0.250); this asks whether the BIAS holds four\n"
@@ -519,6 +526,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "bankprobe") ok = run_bankprobe(dna_blob, ticks, verbose);
   else if (name == "ctxgain") ok = run_ctxgain(dna_blob, ticks, verbose);
   else if (name == "baseref") ok = run_baseref(dna_blob, ticks, verbose);
+  else if (name == "poolbeta") ok = run_poolbeta(dna_blob, ticks, verbose);
   else if (name == "interleave") ok = run_interleave(dna_blob, ticks, verbose);
   else if (name == "ctxretain") ok = run_ctxretain(dna_blob, ticks, verbose);
   else if (name == "partprobe") ok = run_partprobe(dna_blob, ticks, verbose);

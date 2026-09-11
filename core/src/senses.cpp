@@ -1,3 +1,4 @@
+#include <cmath>
 #include "aibaby/senses.h"
 
 // expf, for DNA v48's softmax over the motor dictionary. The kernel keeps
@@ -31,22 +32,32 @@ struct GroupReading {
 };
 
 GroupReading read_group(const Network& net, uint32_t begin, uint32_t end,
-                        Scalar rate_norm, Scalar fallback) {
+                        Scalar rate_norm, Scalar fallback, Scalar beta) {
   GroupReading out{fallback, kZero};
   if (end <= begin) return out;
   const Scalar n = Scalar(end - begin);
   Scalar weighted = kZero;
   Scalar total = kZero;
+  // DNA v56. `activity` must stay the MEAN RATE whatever beta is -- it is the
+  // gate on voicing and reads against `rate_norm`, so sharpening it would change
+  // the duty cycle rather than the readout and confound every measurement here.
+  // So the weights are sharpened and the activity total is not.
+  Scalar rate_sum = kZero;
+  const bool sharpen = beta != kOne && beta > kZero;
   for (uint32_t i = begin; i < end; ++i) {
     const Scalar r = net.rate_fast(i);
     const Scalar preferred = (Scalar(i - begin) + Scalar(0.5)) / n;
-    weighted += r * preferred;
-    total += r;
+    // beta = 1 takes the unmodified path, so the shipped creature is not put
+    // through a pow() that could round differently.
+    const Scalar w = sharpen ? Scalar(std::pow(double(r), double(beta))) : r;
+    weighted += w * preferred;
+    total += w;
+    rate_sum += r;
   }
   // A silent group has no opinion; holding the previous value is better than
   // snapping the vocal tract to zero every time the module goes quiet.
   if (total > Scalar(1e-6)) out.value = clampf(weighted / total, kZero, kOne);
-  out.activity = clampf((total / n) / rate_norm, kZero, kOne);
+  out.activity = clampf((rate_sum / n) / rate_norm, kZero, kOne);
   return out;
 }
 
@@ -343,7 +354,8 @@ void VocalDecoder::update(const Network& net, bool awake) {
   for (uint32_t g = 0; g < kVocalGroups; ++g) {
     const uint32_t begin = ms.begin + slice_begin(ms.count, kVocalGroups, g);
     const uint32_t end = ms.begin + slice_begin(ms.count, kVocalGroups, g + 1);
-    const GroupReading r = read_group(net, begin, end, rate_norm, group_value_[g]);
+    const GroupReading r =
+        read_group(net, begin, end, rate_norm, group_value_[g], Scalar(cfg_.pool_beta));
     group_value_[g] += smooth_ * (r.value - group_value_[g]);
     group_activity_[g] += gate_smooth_ * (r.activity - group_activity_[g]);
   }
@@ -364,7 +376,10 @@ void VocalDecoder::update(const Network& net, bool awake) {
     for (uint32_t u = 0; u < units_; ++u) {
       const uint32_t b = ms.begin + slice_begin(ms.count, units_, u);
       const uint32_t e = ms.begin + slice_begin(ms.count, units_, u + 1);
-      unit_activity_[u] = read_group(net, b, e, rate_norm, kZero).activity;
+      // Shipped centroid on purpose: this reads ACTIVITY only, and sharpening a
+      // quantity nothing downstream pools would change the duty cycle instead of
+      // the readout.
+      unit_activity_[u] = read_group(net, b, e, rate_norm, kZero, kOne).activity;
       if (unit_activity_[u] > best_act) { best_act = unit_activity_[u]; best = u; }
     }
     // Hysteresis. An argmax over near-equal activities changes its mind at the
@@ -522,9 +537,9 @@ void ExpressionDecoder::update(const Network& net) {
   if (ms.count < 2) return;
   const uint32_t mid = ms.begin + slice_begin(ms.count, 2, 1);
   const GroupReading valence =
-      read_group(net, ms.begin, mid, rate_norm_, value_.valence);
+      read_group(net, ms.begin, mid, rate_norm_, value_.valence, kOne);
   const GroupReading arousal =
-      read_group(net, mid, ms.begin + ms.count, rate_norm_, Scalar(0.5));
+      read_group(net, mid, ms.begin + ms.count, rate_norm_, Scalar(0.5), kOne);
   value_.valence = valence.value;
   value_.arousal = arousal.activity;
 }

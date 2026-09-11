@@ -1399,6 +1399,37 @@ struct DnaVocal {
   float gate_smoothing_ms;      // glottal inertia (voicing and loudness)
   float rate_norm_hz;           // group rate that reads as full scale
 
+  // --- DNA v56: how SHARPLY the larynx pools ---------------------------------
+  // `read_group` is a rate-weighted centroid, sum(r_i * p_i) / sum(r_i). That is
+  // the smoothest readout there is, and the smoothness is measured: over 12000
+  // motor frames the F1 centroid never leaves the middle fifth of its range
+  // (histogram 0 0 0 0 4298 7702 0 0 0 0), and `align-split` fitted the delivered
+  // formant to the bias that moves it as dF1 ~ aligned^0.61.
+  //
+  // THAT COMPRESSION IS NOW KNOWN TO DO TWO JOBS, which is why it is the last
+  // thing standing. It limits DELIVERY, so a learned bias arrives smaller than it
+  // is. And its DERIVATIVE limits LEARNING: the drift is -Cov(e, perturb_i),
+  // which factors through dF1/d(drive), and a 0.61 power law has a derivative
+  // falling as aligned^-0.39. So the same curve that shrinks what arrives also
+  // shrinks the gradient that would build more. Nine mechanism routes attacked
+  // the bias, `baseprobe` attacked the reward's resolution and `baseref` its
+  // reference; all failed, and all of them had to, because none touched this.
+  //
+  // beta sharpens the pooling: sum(r_i^beta * p_i) / sum(r_i^beta). 1.0 is the
+  // shipped centroid and is bit-identical. Large beta approaches winner-take-all,
+  // which the superior-colliculus modelling literature reports as more precise
+  // than a vector average -- but `centroid-is-steerability` measured that a
+  // dictionary readout is NOT TEACHABLE here while a centroid is, on five
+  // configurations against two, so a hard argmax is expected to be untrainable.
+  // The interesting values are the ones in between, and this exists to find out
+  // whether any of them widen the range without losing teachability.
+  //
+  // It does NOT need the group to be differentiated to do anything -- that was
+  // the objection that killed deviation coding on 2026-08-11. Sharpening
+  // amplifies whatever rate asymmetry the bias already creates, rather than
+  // trying to recover structure the group never had.
+  float pool_beta;
+
   // --- DNA v48: a dictionary of postures, instead of a centroid -------------
   //
   // 0 is off and is bit-identical to v47: the larynx is the nine population
