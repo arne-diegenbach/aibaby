@@ -1,0 +1,110 @@
+  [12/72] seed 2 ema-rnd   dF1 63.6  praise 0.509
+  [10/72] seed 2 slow      dF1 48.7  praise 0.648
+  [3/72] seed 0 ratchet   dF1 82.5  praise 0.034
+  [13/72] seed 3 ema       dF1 145.1  praise 0.545
+  [8/72] seed 1 ema-rnd   dF1 24.4  praise 0.500
+  [4/72] seed 0 ema-rnd   dF1 48.8  praise 0.504
+  [7/72] seed 1 ratchet   dF1 6.6  praise 0.034
+  [9/72] seed 2 ema       dF1 63.2  praise 0.556
+  [2/72] seed 0 slow      dF1 70.0  praise 0.579
+  [14/72] seed 3 slow      dF1 128.3  praise 0.610
+  [6/72] seed 1 slow      dF1 47.8  praise 0.595
+  [1/72] seed 0 ema       dF1 112.0  praise 0.553
+  [5/72] seed 1 ema       dF1 128.0  praise 0.545
+  [11/72] seed 2 ratchet   dF1 27.9  praise 0.060
+  [17/72] seed 4 ema       dF1 132.3  praise 0.541
+  [20/72] seed 4 ema-rnd   dF1 48.8  praise 0.506
+  [15/72] seed 3 ratchet   dF1 79.5  praise 0.065
+  [16/72] seed 3 ema-rnd   dF1 22.5  praise 0.507
+  [18/72] seed 4 slow      dF1 6.5  praise 0.619
+  [21/72] seed 5 ema       dF1 146.1  praise 0.544
+  [22/72] seed 5 slow      dF1 97.5  praise 0.571
+  [19/72] seed 4 ratchet   dF1 45.0  praise 0.069
+  [26/72] seed 6 slow      dF1 21.9  praise 0.599
+  [23/72] seed 5 ratchet   dF1 12.3  praise 0.033
+  [25/72] seed 6 ema       dF1 110.2  praise 0.544
+  [24/72] seed 5 ema-rnd   dF1 35.6  praise 0.508
+  [27/72] seed 6 ratchet   dF1 32.3  praise 0.089
+  [28/72] seed 6 ema-rnd   dF1 18.5  praise 0.505
+  [30/72] seed 7 slow      dF1 63.6  praise 0.605
+  [32/72] seed 7 ema-rnd   dF1 10.0  praise 0.506
+  [35/72] seed 8 ratchet   dF1 17.8  praise 0.047
+  [29/72] seed 7 ema       dF1 73.1  praise 0.557
+  [39/72] seed 9 ratchet   dF1 19.5  praise 0.030
+  [31/72] seed 7 ratchet   dF1 31.1  praise 0.051
+  [38/72] seed 9 slow      dF1 47.4  praise 0.602
+  [36/72] seed 8 ema-rnd   dF1 9.7  praise 0.502
+  [33/72] seed 8 ema       dF1 104.2  praise 0.540
+  [40/72] seed 9 ema-rnd   dF1 16.8  praise 0.502
+  [37/72] seed 9 ema       dF1 74.2  praise 0.557
+  [34/72] seed 8 slow      dF1 75.0  praise 0.587
+  [42/72] seed 10 slow      dF1 5.0  praise 0.596
+  [41/72] seed 10 ema       dF1 6.5  praise 0.518
+  [43/72] seed 10 ratchet   dF1 20.8  praise 0.032
+  [46/72] seed 11 slow      dF1 30.3  praise 0.595
+  [44/72] seed 10 ema-rnd   dF1 0.3  praise 0.503
+  [47/72] seed 11 ratchet   dF1 21.5  praise 0.051
+  [50/72] seed 12 slow      dF1 70.2  praise 0.669
+  [52/72] seed 12 ema-rnd   dF1 32.8  praise 0.512
+  [51/72] seed 12 ratchet   dF1 30.2  praise 0.083
+  [54/72] seed 13 slow      dF1 11.1  praise 0.599
+  [49/72] seed 12 ema       dF1 110.4  praise 0.561
+  [48/72] seed 11 ema-rnd   dF1 11.3  praise 0.498
+  [45/72] seed 11 ema       dF1 58.0  praise 0.538
+  [55/72] seed 13 ratchet   dF1 81.4  praise 0.033
+  [53/72] seed 13 ema       dF1 102.7  praise 0.538
+  [56/72] seed 13 ema-rnd   dF1 33.2  praise 0.503
+  [57/72] seed 14 ema       dF1 122.0  praise 0.557
+  [58/72] seed 14 slow      dF1 31.0  praise 0.593
+  [59/72] seed 14 ratchet   dF1 58.3  praise 0.053
+  [60/72] seed 14 ema-rnd   dF1 23.1  praise 0.506
+  [61/72] seed 15 ema       dF1 102.0  praise 0.542
+  [62/72] seed 15 slow      dF1 12.0  praise 0.606
+  [66/72] seed 16 slow      dF1 19.7  praise 0.608
+  [63/72] seed 15 ratchet   dF1 5.8  praise 0.042
+  [64/72] seed 15 ema-rnd   dF1 62.4  praise 0.503
+  [68/72] seed 16 ema-rnd   dF1 4.6  praise 0.502
+  [67/72] seed 16 ratchet   dF1 98.4  praise 0.046
+  [65/72] seed 16 ema       dF1 121.6  praise 0.540
+  [69/72] seed 17 ema       dF1 158.0  praise 0.547
+  [70/72] seed 17 slow      dF1 17.5  praise 0.570
+  [71/72] seed 17 ratchet   dF1 49.1  praise 0.040
+  [72/72] seed 17 ema-rnd   dF1 37.7  praise 0.507
+experiment: baseref
+  instrument        baseref   trial seed 0000000001359d96   4857 trials
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  question          the 137 Hz ceiling is the DRIFT dying, and the drift is
+                    proportional to the rate of improvement because praise is
+                    relative to the creature's own EMA error. Does a bar that
+                    keeps asking for more keep the drift alive?
+  the axis          nine closed routes attacked the BIAS; baseprobe attacked
+                    the reward's RESOLUTION. This attacks its REFERENCE.
+  the gate          dF1 vs `ema`, PAIRED on seed, at 2 SE. The phase-2
+                    separation is a DIAGNOSTIC only -- it is confounded by
+                    learning rate and was wrong at 2.8 SE in baseprobe.
+  what refuses it   praise share collapsing toward 0 or 1. A bar that is
+                    always beaten or never beaten is a CONSTANT reward, which
+                    gives zero drift by a different route.
+
+
+  ARM LIVENESS vs `ema` (seeds where the arm differs at all)
+    slow               18/18
+    ratchet            18/18
+    ema-rnd            18/18
+
+  arm       dF1 (Hz)         aligned     outside     gain     praise    phase-2 exp al/os
+  ema        103.9 +/- 8.8     0.04581     0.05466     3.09     0.546     0.56 / 0.30
+  slow        44.6 +/- 8.1     0.03002     0.05835     1.93     0.603     1.06 / 0.37
+  ratchet     40.0 +/- 6.8     0.01166     0.04795     0.91     0.050     0.95 / 0.43
+  ema-rnd     28.0 +/- 4.4     0.01475     0.06362     0.87     0.505     0.55 / 0.47
+
+  PAIRED vs `ema`, delivered dF1 in Hz -- THE GATE
+  slow        -59.2 +/- 10.0 (-5.94 SE)
+  ratchet     -63.9 +/- 9.2 (-6.97 SE)
+  ema-rnd     -75.9 +/- 8.6 (-8.84 SE)
+
+  A BAR WENT DEAD. Some arm's praise share is outside 0.15-0.85, so it is
+  always beaten or never beaten. That is a CONSTANT reward, which multiplies
+  a zero-mean perturbation and gives zero drift -- the ceiling killed by a
+  different route, not escaped. Read the praise column before anything else.

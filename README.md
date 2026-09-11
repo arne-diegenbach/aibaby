@@ -9471,6 +9471,59 @@ gating alone. The textbook decomposition applies here only weakly, and the hones
 summary is that **catastrophic interference in this creature is mostly not a filing
 problem**.
 
+### `baseref` — "keep asking for more" is self-defeating, and that is structural
+
+`boundprobe` located the 137 Hz ceiling as the drift dying, and named the cause:
+praise is `e < baseline` with the bar an EMA of the creature's *own* recent error,
+so expected drift tracks the **rate of improvement** rather than the remaining
+error. Nine closed routes attacked the bias; `baseprobe` attacked the reward's
+*resolution*. This attacked its **reference**.
+
+| arm | dF1 (Hz) | aligned | gain | praise |
+|---|---|---|---|---|
+| `ema` (shipped) | **103.9 +/- 8.8** | 0.04581 | 3.09 | 0.546 |
+| `slow` (bar lags 10x) | 44.6 +/- 8.1 | 0.03002 | 1.93 | 0.603 |
+| `ratchet` (bar only tightens) | 40.0 +/- 6.8 | 0.01166 | 0.91 | **0.050** |
+| `ema-rnd` (matched marginal) | 28.0 +/- 4.4 | 0.01475 | 0.87 | 0.505 |
+
+    PAIRED vs ema    slow -59.2 (-5.94 SE)   ratchet -63.9 (-6.97 SE)
+
+**The protocol is healthy**: `ema` beats its matched-marginal control by +75.9 Hz,
+so the creature is genuinely learning and this is not a broken run.
+
+**The ratchet is VOID, and it died the death written into the arm table before the
+run.** Praise share **0.050** — 95% scold. A bar the creature can no longer beat is
+a *constant* reward, which multiplies a zero-mean perturbation and gives zero
+drift. `aligned` collapsed to 0.01166 against the shipped 0.04581 and `gain` to
+0.91, which is **structureless**: it did not stall, it stopped learning. The
+pre-registered praise-share guard refused the run rather than letting -63.9 Hz read
+as "a demanding bar hurts."
+
+**The `slow` arm is valid and it loses cleanly.** Praise 0.603 is healthy, and it
+is **-59.2 Hz at -5.94 SE**. A bar that lags improvement is much worse than one
+that tracks it.
+
+**So the shipped EMA is not merely adequate, it is near-optimal on this axis** —
+perturbing it in either direction costs about 60 Hz. And the reason is a conflict
+that no tuning resolves:
+
+> A bar must **track** the creature to keep praise informative at roughly 50%.
+> A bar that tracks the creature **stops asking for more** the moment the creature
+> stops improving. The two requirements are in direct opposition.
+
+**That makes the dying drift a property of using a relative criterion at all, not
+a tuning failure of this one.** It is the same shape as the slow store's
+`ratio/(1+ratio) <= 0.5`: a bound rather than a budget.
+
+**Which names the escape precisely, and it is not on the reference axis.** An
+**absolute** criterion — praise proportional to how close the voice actually is to
+the target, with no baseline subtracted — has no such conflict, because it keeps
+asking for more without needing to track anything. `vocallearn` already hints that
+it works in the unconditional case: reward cuts formant error +24 toward a FIXED
+target. What it costs is that reward acquires a large constant component, and
+`rpeprobe` measured the caregiver as 99.5% of the reward variance already. That is
+the next test on this chain, and it is one arm.
+
 ### What the literature says to build next, and why it is the cheap option
 
 > **This section is the argument that produced DNA v51, kept as the record of
