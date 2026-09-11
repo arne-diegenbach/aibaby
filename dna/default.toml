@@ -257,6 +257,11 @@ prune_traffic = 1.0              # ...and idle. Both, or it is not unused.
 # so nothing could ever qualify and selection had no gradient.
 prune_compete = 0.0
 prune_compete_min_in = 8         # too few afferents to compete is not competition
+# MEASURED 2026-09-10: with replay_credit = 0 this buffer does NOTHING. An arm with
+# replay switched off entirely differs from one with it on by +0.3 SE on retention
+# and -0.4 SE on absolute error. The cash-in is u = step * perturb_[i] and during
+# sleep perturb_[i] is fresh noise, so E[u] = 0 -- it rehearses the cue and
+# reinforces nothing. It has been decorative since M4. See replay_credit below.
 replay_episodes = 8
 replay_ticks = 400               # 400 ms each, against a 2 s eligibility trace
 replay_threshold = 0.05          # only moments that beat expectation are kept

@@ -500,10 +500,29 @@ void Brain::drive_replay() {
   if (replay_left_ > 0) return;
 
   // The episode is over: pay out the reward it earned. It arrives at the end,
-  // against a two-second eligibility trace that now holds the replayed
-  // activity — the same shape as the waking loop, which is what makes this
-  // consolidation of the original episode rather than a new and different
-  // lesson.
+  // against a two-second eligibility trace that now holds the replayed activity.
+  //
+  // THAT COMMENT USED TO END "...the same shape as the waking loop, which is what
+  // makes this consolidation of the original episode rather than a new and
+  // different lesson." IT IS NOT TRUE FOR A POLICY, and it went unchallenged from
+  // M4 until 2026-09-10.
+  //
+  // For a VALUE it holds: re-presenting a cue and paying its reward teaches what
+  // the cue is worth. For a POLICY learned by node perturbation it does not, and
+  // the arithmetic is one line. The cash-in is `u = step * perturb_[i]`; during a
+  // sleep bout `perturb_[i]` is whatever noise is live now, uncorrelated with the
+  // exploration that earned this reward. So `E[u] = step * E[perturb] = 0`. Replay
+  // rehearses the cue and reinforces NOTHING -- zero drift, non-zero variance.
+  //
+  // MEASURED, not merely derived: `interleave` ran an arm with replay switched off
+  // entirely against one with it on, and the difference is +0.3 SE on retention and
+  // -0.4 SE on absolute error. This buffer has shipped since M4 and turning it off
+  // costs nothing. Anything built on it inherits that.
+  //
+  // `replay_credit = 1` is the fix and it is what makes the sentence above true
+  // again: it restores the stored exploration first, so the cash-in credits what
+  // the creature actually did. Note that v55's own retention claim did NOT survive
+  // 36 seeds -- the mechanism is right, the benefit is unproven.
   // DNA v55. Put the original exploration back FIRST, so the cash-in this reward
   // triggers credits what the creature actually tried when it earned the reward
   // rather than the noise that happens to be live during sleep. Order matters:

@@ -9385,6 +9385,38 @@ gating has still not been tried, because making a cue audible is not the same as
 making it an index — and `ctxsrc` said this two weeks ago in different words: the
 word is at 1.000 while it plays and at chance when reward lands.
 
+### The replay buffer has been decorative since M4
+
+Stated plainly because it is the one solid structural finding of the memory work,
+and because the code asserted the opposite for a month.
+
+`drive_replay()` re-presents a stored cue and pays out the stored reward at the end
+of the episode. Its comment claimed this was *"the same shape as the waking loop,
+which is what makes this consolidation of the original episode rather than a new
+and different lesson."* **For a value that is true. For a policy learned by node
+perturbation it is not**, and the arithmetic is one line: the cash-in is
+`u = step * perturb_[i]`, and during a sleep bout `perturb_[i]` is whatever noise
+is live then — uncorrelated with the exploration that earned the reward being paid.
+So `E[u] = step * E[perturb] = 0`. Replay rehearses the cue and reinforces nothing:
+zero drift, non-zero variance.
+
+**Measured, not merely derived.** `interleave` ran an arm with replay switched off
+entirely against one with it on: **+0.3 SE on retention and -0.4 SE on absolute
+error.** The buffer has shipped since M4 and turning it off costs nothing.
+
+Three consequences, and the third is the one that matters:
+
+- **Anything built on this buffer inherits it.** The `frozen` and `both` arms of
+  `interleave` were testing interleaving *through* a mechanism that reinforces
+  nothing, which is part of why they failed.
+- **`replay_credit = 1` is the fix** — restore the stored exploration before paying
+  out, so the cash-in credits what the creature actually did. It makes the original
+  comment true again. But v55's own retention claim did **not** survive 36 seeds,
+  so the mechanism is right and the benefit is unproven.
+- **The comment is now corrected in `brain.cpp` and in the genome**, rather than
+  left for someone to rediscover. A wrong comment on a mechanism that silently does
+  nothing is worse than no comment: it is the reason nobody checked for a month.
+
 ### What the literature says to build next, and why it is the cheap option
 
 > **This section is the argument that produced DNA v51, kept as the record of
