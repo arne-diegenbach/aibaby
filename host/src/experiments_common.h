@@ -184,6 +184,30 @@ struct Regime {
   // the realised mean |reward| is printed per arm so the match is checked rather
   // than assumed.
   float grade_scale = 0.0f;
+
+  // WHAT THE BAR IS MEASURED AGAINST, which is a different axis from how finely
+  // it is measured. `grade_scale` changed the reward's RESOLUTION and found
+  // nothing; this changes its REFERENCE.
+  //
+  // `boundprobe` located the 137 Hz ceiling here: praise is `e < baseline` where
+  // the baseline is an EMA of the creature's OWN recent error, so the expected
+  // drift is proportional to the RATE OF IMPROVEMENT rather than to the remaining
+  // error. Improvement stalls because the larynx compresses -- dF1 ~ aligned^0.61
+  // -- and the drift then goes to zero however far the voice still is from the
+  // target. A bar that tracks the creature is guaranteed to stop asking for more
+  // the moment the creature stops improving.
+  //
+  //   0 — EMA at kVLBaselineAlpha. The shipped criterion, bit-identical.
+  //   1 — the same EMA ten times slower, so the bar LAGS behind improvement.
+  //   2 — a RATCHET: the bar only ever tightens, never loosens.
+  //
+  // THE FAILURE MODE TO WATCH, and vocallearn's own comment already names it for
+  // rate mode: a bar the creature can no longer beat makes every trial a scold,
+  // and a bar it always beats makes every trial praise. Either is a CONSTANT
+  // reward, which multiplies a zero-mean perturbation and gives zero drift -- the
+  // same death by a different route. The ratchet is the interesting middle only
+  // if the creature keeps finding room under it.
+  uint32_t baseline_mode = 0;
 };
 
 
@@ -2036,6 +2060,7 @@ bool run_boundprobe(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_baseprobe(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_bankprobe(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_ctxgain(const std::vector<uint8_t>&, uint64_t, bool);
+bool run_baseref(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_interleave(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_ctxretain(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_pgprobe(const std::vector<uint8_t>&, uint64_t, bool);

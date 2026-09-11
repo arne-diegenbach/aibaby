@@ -249,6 +249,15 @@ const Spec kSpecs[] = {
      "  different cues, crossed with DNA v51's context table to file them under.\n"
      "  Only `cue+ctx` should work; the interaction is the claim, not the cell.\n"
      "  36 seeds from the start"},
+    {"baseref", 13600000, Expect::kOpen, Tier::kTeach,
+     "the reward's REFERENCE, which is the one axis boundprobe's finding implies\n"
+     "  and nobody has run. Nine closed routes attacked the BIAS; baseprobe\n"
+     "  attacked the reward's RESOLUTION. Praise is `e < baseline` where the bar\n"
+     "  is an EMA of the creature's own error, so drift tracks the RATE OF\n"
+     "  IMPROVEMENT and dies when improvement stalls. Arms: the shipped EMA, a\n"
+     "  10x slower one, and a RATCHET that only tightens. Refuses if any praise\n"
+     "  share leaves 0.15-0.85 -- a bar always or never beaten is a constant\n"
+     "  reward, which is the same death by a different route"},
     {"ctxfour", 3400000, Expect::kOpen, Tier::kTeach,
      "derived: ctxself's session at FOUR words. partprobe cleared the index at\n"
      "  four (0.895 vs chance 0.250); this asks whether the BIAS holds four\n"
@@ -509,6 +518,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "baseprobe") ok = run_baseprobe(dna_blob, ticks, verbose);
   else if (name == "bankprobe") ok = run_bankprobe(dna_blob, ticks, verbose);
   else if (name == "ctxgain") ok = run_ctxgain(dna_blob, ticks, verbose);
+  else if (name == "baseref") ok = run_baseref(dna_blob, ticks, verbose);
   else if (name == "interleave") ok = run_interleave(dna_blob, ticks, verbose);
   else if (name == "ctxretain") ok = run_ctxretain(dna_blob, ticks, verbose);
   else if (name == "partprobe") ok = run_partprobe(dna_blob, ticks, verbose);

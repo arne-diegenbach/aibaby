@@ -4605,10 +4605,17 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
                                 ? mag
                                 : gnorm[bucket] + kVLBaselineAlpha * (mag - gnorm[bucket]);
           }
-          baseline[bucket] = baseline[bucket] < 0.0
-                                 ? e
-                                 : baseline[bucket] +
-                                       kVLBaselineAlpha * (e - baseline[bucket]);
+          if (baseline[bucket] < 0.0) {
+            baseline[bucket] = e;
+          } else {
+            const double alpha =
+                regime.baseline_mode == 1u ? kVLBaselineAlpha * 0.1 : kVLBaselineAlpha;
+            const double moved = baseline[bucket] + alpha * (e - baseline[bucket]);
+            // Mode 2 is a ratchet: the bar takes the step only when it TIGHTENS.
+            baseline[bucket] =
+                (regime.baseline_mode == 2u && moved > baseline[bucket]) ? baseline[bucket]
+                                                                        : moved;
+          }
         }
       }
 
@@ -12770,6 +12777,243 @@ bool run_ctxgain(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
               "  %.1f SE, on the same rule, the same reward and the same creatures. The\n"
               "  floor was a parameter count, and Werfel's law holds a second time.\n",
               d_gt / se_gt);
+  return true;
+}
+
+// ---------------------------------------------------------------------------
+// baseref -- change what the bar is measured AGAINST, which is the one axis the
+// deepest result implies and the one nobody has run.
+//
+// `boundprobe` located the 137 Hz ceiling precisely: learning has two phases, and
+// after ~4900 trials the aligned and useless directions grow at IDENTICAL
+// exponents with the shape frozen. `ctxgain` then showed that is NOT a variance
+// floor -- cutting diffusion 2.54x moved the aligned bias not at all. What
+// survives is the drift going to zero, and the reason is the criterion: praise is
+// `e < baseline` where the baseline is an EMA of the creature's OWN recent error,
+// so the expected drift is proportional to the RATE OF IMPROVEMENT and not to the
+// remaining error. Improvement stalls because the larynx compresses
+// (dF1 ~ aligned^0.61), and the drift dies however far the voice still is.
+//
+// NINE ROUTES ARE CLOSED AND ALL NINE ATTACKED THE BIAS, which is the middle of
+// that chain. `baseprobe` attacked the reward's RESOLUTION -- graded instead of
+// binary -- and found nothing. Nothing has attacked its REFERENCE.
+//
+//   ema      the shipped bar, an EMA at kVLBaselineAlpha
+//   slow     the same EMA ten times slower, so the bar LAGS improvement
+//   ratchet  a bar that only ever TIGHTENS, never loosens
+//   ema-rnd  matched-marginal control, so "is any of this learning" has an answer
+//
+// WHAT WOULD REFUSE IT, written before the run. A bar the creature can no longer
+// beat makes every trial a scold; a bar it always beats makes every trial praise.
+// Both are a CONSTANT reward, which multiplies a zero-mean perturbation and gives
+// zero drift -- the same death by a different route, and vocallearn's own comment
+// already names it for rate mode. So the ratchet fails if the praise share
+// collapses toward 0 or 1, and that column is printed rather than inferred.
+//
+// AND THE PHASE-2 SIGNATURE IS THE DIAGNOSTIC, not the gate. If a bar that keeps
+// asking for more keeps the drift alive, `aligned` should outgrow `outside` past
+// the point where the shipped bar has them equal. But that separation statistic is
+// confounded by learning RATE -- it rewarded the slower arm in `baseprobe` at
+// 2.8 SE and was wrong -- so it is printed as a diagnostic and the GATE is
+// delivered dF1, paired by seed.
+struct BRArm {
+  const char* name;
+  uint32_t mode;
+  VLTarget target;
+};
+const BRArm kBRArms[] = {
+    {"ema", 0, kVLTgtHeard},
+    {"slow", 1, kVLTgtHeard},
+    {"ratchet", 2, kVLTgtHeard},
+    {"ema-rnd", 0, kVLTgtRandom},
+};
+constexpr uint32_t kBRArmCount = sizeof(kBRArms) / sizeof(kBRArms[0]);
+
+bool run_baseref(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  aibaby::Dna dna;
+  if (dna.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) {
+    std::printf("  setup failed: the genome does not load\n");
+    return false;
+  }
+  const int32_t ctx_module = dna.module_with_role(aibaby::ModuleRole::kContext);
+  if (ctx_module < 0) {
+    std::printf("  this genome has no kContext module. Build one with NO output\n"
+                "  weight:  python3 tools/genome_add_context.py dna/default.toml \\\n"
+                "           ctx.toml vocal out_w=0\n");
+    return false;
+  }
+  constexpr uint32_t kReps = 18;
+  const size_t slots_off = offsetof(aibaby::DnaHeader, exploration) +
+                           offsetof(aibaby::DnaExploration, context_slots);
+  const size_t src_off = offsetof(aibaby::DnaHeader, exploration) +
+                         offsetof(aibaby::DnaExploration, context_source);
+  instrument("baseref", dna.header().seed ^ 0xBA5Fu, ticks / kVLTrialTicks, "trials");
+  std::printf("  question          the 137 Hz ceiling is the DRIFT dying, and the drift is\n"
+              "                    proportional to the rate of improvement because praise is\n"
+              "                    relative to the creature's own EMA error. Does a bar that\n"
+              "                    keeps asking for more keep the drift alive?\n");
+  std::printf("  the axis          nine closed routes attacked the BIAS; baseprobe attacked\n"
+              "                    the reward's RESOLUTION. This attacks its REFERENCE.\n");
+  std::printf("  the gate          dF1 vs `ema`, PAIRED on seed, at 2 SE. The phase-2\n"
+              "                    separation is a DIAGNOSTIC only -- it is confounded by\n"
+              "                    learning rate and was wrong at 2.8 SE in baseprobe.\n");
+  std::printf("  what refuses it   praise share collapsing toward 0 or 1. A bar that is\n"
+              "                    always beaten or never beaten is a CONSTANT reward, which\n"
+              "                    gives zero drift by a different route.\n\n");
+
+  struct Cell {
+    bool ok = false;
+    double d1 = 0.0, align = 0.0, outside = 0.0, gain = 0.0, praise = 0.0;
+    double al_lo = 0.0, al_hi = 0.0, os_lo = 0.0, os_hi = 0.0, x_lo = 0.0, x_hi = 0.0;
+  };
+  const uint32_t njobs = kReps * kBRArmCount;
+  const std::vector<Cell> cells = parallel_reps<Cell>(njobs, [&](uint32_t i) {
+    Cell cell;
+    const uint32_t r = i / kBRArmCount, a = i % kBRArmCount;
+    std::vector<uint8_t> variant = blob;
+    const uint64_t seed = dna.header().seed + r * 7919ull;
+    std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+    const uint32_t sl = 2u, sr = 4u;
+    std::memcpy(variant.data() + slots_off, &sl, sizeof(sl));
+    std::memcpy(variant.data() + src_off, &sr, sizeof(sr));
+    CtxDrive drive;
+    drive.module = ctx_module;
+    drive.slots = kVLWords;
+    drive.gain = 0.10;
+    Regime reg;
+    reg.praise = kPraiseValue;
+    reg.scold = kScoldValue;
+    reg.baseline_mode = kBRArms[a].mode;
+    const VLRun run = run_vocallearn_session(variant, ticks, kVLTaught, nullptr, reg,
+                                             kBRArms[a].target, &drive);
+    if (!run.ok) return cell;
+    cell.d1 = std::fabs(run.f1_by_word[0] - run.f1_by_word[1]);
+    cell.align = run.ctx_align;
+    cell.outside = run.ctx_outside;
+    cell.gain = run.ctx_align_gain;
+    const uint32_t tot = run.praises + run.scolds;
+    cell.praise = tot ? double(run.praises) / double(tot) : 0.0;
+    // Phase 2 is the back half of the checkpoints, which is where boundprobe found
+    // aligned and outside growing at the same exponent.
+    const uint32_t n = run.ckpt_n, h = n / 2;
+    if (n >= 4) {
+      cell.al_lo = run.ckpt_align[h];
+      cell.al_hi = run.ckpt_align[n - 1];
+      cell.os_lo = run.ckpt_outside[h];
+      cell.os_hi = run.ckpt_outside[n - 1];
+      cell.x_lo = run.ckpt_trial[h];
+      cell.x_hi = run.ckpt_trial[n - 1];
+    }
+    cell.ok = true;
+    parallel_note("  [%u/%u] seed %u %-8s  dF1 %.1f  praise %.3f\n", i + 1, njobs, r,
+                  kBRArms[a].name, cell.d1, cell.praise);
+    return cell;
+  });
+
+  {
+    ArmLiveness live("baseref");
+    for (uint32_t r = 0; r < kReps; ++r) {
+      for (uint32_t a = 0; a < kBRArmCount; ++a) {
+        const Cell& c = cells[r * kBRArmCount + a];
+        if (c.ok) live.observe(kBRArms[a].name, r, c.d1);
+      }
+    }
+    if (!live.report("ema")) return false;
+  }
+
+  std::printf("\n  %-9s %-16s %-11s %-11s %-8s %-9s %s\n", "arm", "dF1 (Hz)", "aligned",
+              "outside", "gain", "praise", "phase-2 exp al/os");
+  double m_d1[kBRArmCount];
+  bool praise_dead = false;
+  for (uint32_t a = 0; a < kBRArmCount; ++a) {
+    std::vector<double> d1, al, os, gn, pr;
+    double e_al = 0.0, e_os = 0.0;
+    uint32_t en = 0;
+    for (uint32_t r = 0; r < kReps; ++r) {
+      const Cell& c = cells[r * kBRArmCount + a];
+      if (!c.ok) continue;
+      d1.push_back(c.d1); al.push_back(c.align); os.push_back(c.outside);
+      gn.push_back(c.gain); pr.push_back(c.praise);
+      if (c.al_lo > 0.0 && c.os_lo > 0.0 && c.x_hi > c.x_lo) {
+        e_al += std::log(c.al_hi / c.al_lo) / std::log(c.x_hi / c.x_lo);
+        e_os += std::log(c.os_hi / c.os_lo) / std::log(c.x_hi / c.x_lo);
+        ++en;
+      }
+    }
+    if (d1.size() < 3) {
+      std::printf("\n  baseref INCONCLUSIVE -- arm `%s` produced %zu creatures.\n",
+                  kBRArms[a].name, d1.size());
+      return false;
+    }
+    double se, s2;
+    m_d1[a] = ctx_mean_se(d1, &se);
+    const double mp = ctx_mean_se(pr, &s2);
+    if (mp < 0.15 || mp > 0.85) praise_dead = true;
+    std::printf("  %-9s %6.1f +/- %-7.1f %-11.5f %-11.5f %-8.2f %-9.3f %.2f / %.2f\n",
+                kBRArms[a].name, m_d1[a], se, ctx_mean_se(al, &s2), ctx_mean_se(os, &s2),
+                ctx_mean_se(gn, &s2), mp, en ? e_al / en : 0.0, en ? e_os / en : 0.0);
+  }
+
+  const auto arm_index = [](const char* want) {
+    for (uint32_t i = 0; i < kBRArmCount; ++i) {
+      if (std::strcmp(kBRArms[i].name, want) == 0) return int(i);
+    }
+    return -1;
+  };
+  const int kE = arm_index("ema");
+  if (kE < 0) {
+    std::printf("\n  baseref cannot summarise: the `ema` arm is missing.\n");
+    return false;
+  }
+  const auto paired = [&](int a, double* se_out) {
+    std::vector<double> d;
+    for (uint32_t r = 0; r < kReps; ++r) {
+      const Cell& ca = cells[r * kBRArmCount + uint32_t(a)];
+      const Cell& cb = cells[r * kBRArmCount + uint32_t(kE)];
+      if (ca.ok && cb.ok) d.push_back(ca.d1 - cb.d1);
+    }
+    return ctx_mean_se(d, se_out);
+  };
+
+  std::printf("\n  PAIRED vs `ema`, delivered dF1 in Hz -- THE GATE\n");
+  int best = -1;
+  double best_se = 0.0, best_m = 0.0;
+  for (uint32_t a = 0; a < kBRArmCount; ++a) {
+    if (int(a) == kE) continue;
+    double se = 0.0;
+    const double m = paired(int(a), &se);
+    const bool win = se > 0.0 && m > 2.0 * se;
+    std::printf("  %-9s %+7.1f +/- %.1f (%+.2f SE)%s\n", kBRArms[a].name, m, se,
+                se > 0.0 ? m / se : 0.0, win ? "  <- beats the shipped bar" : "");
+    if (win && std::strcmp(kBRArms[a].name, "ema-rnd") != 0) {
+      best = int(a); best_se = se; best_m = m;
+    }
+  }
+
+  if (praise_dead) {
+    std::printf("\n  A BAR WENT DEAD. Some arm's praise share is outside 0.15-0.85, so it is\n"
+                "  always beaten or never beaten. That is a CONSTANT reward, which multiplies\n"
+                "  a zero-mean perturbation and gives zero drift -- the ceiling killed by a\n"
+                "  different route, not escaped. Read the praise column before anything else.\n");
+    return false;
+  }
+  if (best < 0) {
+    std::printf("\n  THE REFERENCE IS NOT THE LEVER EITHER. No bar beats the shipped EMA on\n"
+                "  delivered dF1 at 2 SE, with praise shares healthy throughout -- so the\n"
+                "  drift is not dying merely because the bar tracks the creature. That closes\n"
+                "  the reward's reference alongside its resolution, and what is left of the\n"
+                "  chain is the compression itself: dF1 ~ aligned^0.61, which nothing has\n"
+                "  attacked because `read_group` is a centroid and centroids are what made\n"
+                "  this creature teachable at all.\n");
+    return false;
+  }
+  std::printf("\n  THE REFERENCE IS THE LEVER. `%s` delivers %+.1f Hz over the shipped bar at\n"
+              "  %.1f SE with a healthy praise share, so the drift was dying because the bar\n"
+              "  stopped asking rather than because the creature ran out of room. That is a\n"
+              "  PROTOCOL change -- nothing in the genome moves -- against a ceiling nine\n"
+              "  mechanism routes could not shift.\n",
+              kBRArms[best].name, best_m, best_m / best_se);
   return true;
 }
 
