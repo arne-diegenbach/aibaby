@@ -9524,6 +9524,60 @@ target. What it costs is that reward acquires a large constant component, and
 `rpeprobe` measured the caregiver as 99.5% of the reward variance already. That is
 the next test on this chain, and it is one arm.
 
+### `poolbeta` — the readout was a constraint, and this one replicates
+
+Nine mechanism routes attacked the bias. `baseprobe` attacked the reward's
+resolution. `baseref` attacked its reference. All failed, and the algebra says all
+of them had to: the drift is `-Cov(e, perturb_i)`, which factors through
+`dF1/d(drive)`, and `dF1 ~ aligned^0.61` has a derivative falling as
+`aligned^-0.39`. **The same curve that shrinks what arrives shrinks the gradient
+that would build more.** Nothing had touched it, because `read_group` is a centroid
+and `centroid-is-steerability` measured centroids as the only teachable readout
+here.
+
+DNA v56 sharpens the pooling to `sum(r^beta * p)/sum(r^beta)`, with 1.0 the shipped
+centroid. Screened at 3.4M, confirmed at 36 seeds:
+
+| arm | dF1 (Hz) | F1 scatter | aligned | gain |
+|---|---|---|---|---|
+| `b1.0` (shipped) | 63.5 +/- 4.4 | 61.5 | 0.01991 | 2.19 |
+| `b1.0-rnd` | 24.9 +/- 2.8 | 39.7 | 0.00626 | 0.74 |
+| **`b2.0`** | **83.2 +/- 5.8** | 80.0 | 0.01492 | 1.71 |
+| `b2.0-rnd` | 26.4 +/- 3.7 | 48.2 | 0.00772 | 0.90 |
+
+    EXCESS over its own control   b1.0 +38.6 (7.62 SE)   b2.0 +56.8 (10.13 SE)
+    PAIRED difference             b2.0 - b1.0  +18.2 +/- 6.5  (+2.82 SE)
+
+**It replicates, and it replicates the way a real effect does.** At 18 seeds the
+paired difference read +18.7 +/- 9.29 (2.01 SE); at 36 it reads +18.2 +/- 6.50
+(2.82 SE). The effect size is unchanged and the SE fell to 6.50 against the 6.57
+that `1/sqrt(n)` predicts. Compare `credit`, which halved from n=9 to n=36 and
+died — that is the contrast this project needed to see to trust anything in this
+band.
+
+**And the noise explanation dies on its own numbers.** Sharpening raises the F1
+scatter in both arms, which is exactly why every beta carries its own
+matched-marginal control:
+
+- the **taught** arm gains **+19.7 Hz** (63.5 -> 83.2)
+- its **control** gains **+1.5 Hz** (24.9 -> 26.4)
+
+Thirteen times more. Pure scatter would have lifted both equally; it did not. The
+creature is not producing a wider spread, it is **steering a wider range**.
+
+**What is established and what is not.** Established: sharpening the pooling widens
+the steerable range, at 2.82 SE, paired, replicated at two sample sizes. **Not**
+established: the specific "more formant from less bias" framing — pooled it is
+5576 against 3189 Hz per unit of aligned bias, 1.75x, but the paired per-creature
+statistic is only +1.42 SE. The effect is real; that account of its mechanism is
+suggestive.
+
+**Note what it cost, because it is not free.** `gain` falls from 2.19 to 1.71 and
+`aligned` from 0.01991 to 0.01492, so the bias table is *less* structured at
+beta=2 and still delivers more. A hard argmax was expected to be untrainable, and
+beta=3 was already worse than beta=2 on every column in the screen — so this is a
+narrow optimum rather than a direction to push.
+
 ### What the literature says to build next, and why it is the cheap option
 
 > **This section is the argument that produced DNA v51, kept as the record of
