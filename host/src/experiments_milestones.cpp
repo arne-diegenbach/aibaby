@@ -13054,12 +13054,15 @@ struct PBArm {
   VLTarget target;
 };
 const PBArm kPBArms[] = {
+    // CONFIRMATION, 2026-09-11. The 3.4M screen put beta=2 at +2.01 SE over the
+    // shipped centroid once the comparison was correctly paired -- a knife edge in
+    // the exact band that produced three retractions today. beta=3 was worse than
+    // beta=2 on every column, so the candidate is beta=2 and it is dropped to two
+    // doses to buy twice the seeds.
     {"b1.0", 1.0f, kVLTgtHeard},
     {"b1.0-rnd", 1.0f, kVLTgtRandom},
     {"b2.0", 2.0f, kVLTgtHeard},
     {"b2.0-rnd", 2.0f, kVLTgtRandom},
-    {"b3.0", 3.0f, kVLTgtHeard},
-    {"b3.0-rnd", 3.0f, kVLTgtRandom},
 };
 constexpr uint32_t kPBArmCount = sizeof(kPBArms) / sizeof(kPBArms[0]);
 
@@ -13077,7 +13080,7 @@ bool run_poolbeta(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
                 "           ctx.toml vocal out_w=0\n");
     return false;
   }
-  constexpr uint32_t kReps = 18;
+  constexpr uint32_t kReps = 36;
   const size_t slots_off = offsetof(aibaby::DnaHeader, exploration) +
                            offsetof(aibaby::DnaExploration, context_slots);
   const size_t src_off = offsetof(aibaby::DnaHeader, exploration) +
@@ -13195,8 +13198,8 @@ bool run_poolbeta(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
 
   std::printf("\n  EXCESS over the matched-marginal control at the SAME beta, paired.\n"
               "  This is the quantity that separates steering from scatter.\n");
-  struct { const char* t; const char* c; double m, se; } ex[3] = {
-      {"b1.0", "b1.0-rnd", 0, 0}, {"b2.0", "b2.0-rnd", 0, 0}, {"b3.0", "b3.0-rnd", 0, 0}};
+  struct { const char* t; const char* c; double m, se; } ex[2] = {
+      {"b1.0", "b1.0-rnd", 0, 0}, {"b2.0", "b2.0-rnd", 0, 0}};
   for (auto& e : ex) {
     e.m = excess(e.t, e.c, &e.se);
     std::printf("  %-10s %+7.1f +/- %.1f (%+.2f SE)\n", e.t, e.m, e.se,
@@ -13226,7 +13229,7 @@ bool run_poolbeta(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
   };
   int best = -1;
   std::printf("\n  vs the shipped centroid, PAIRED on seed (these arms share creatures)\n");
-  for (int k = 1; k < 3; ++k) {
+  for (int k = 1; k < 2; ++k) {
     double se = 0.0;
     const double m = paired_vs_base(ex[k].t, ex[k].c, &se);
     std::printf("  %-10s %+7.1f +/- %.1f (%+.2f SE)\n", ex[k].t, m, se,
