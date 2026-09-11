@@ -9339,6 +9339,52 @@ the **magnitude** question — whether it grows the learned bias — and that is
 what the mechanism is for. Protecting an old lesson from a new one is, and nobody
 has run it against `retain`.
 
+### The index never separated the lessons, so the context result is VOID
+
+The instrument added to rule this out found it. `slot0 teach/gap` reads
+**0.23 / 0.23**.
+
+The creature hears "ball" for the whole teaching phase and "boot" for the whole
+gap. If the ear's rate-EMA index tracked the *word*, those two numbers would
+differ. They are identical to two decimals. And 0.23 is not 0 or 1 either, so the
+index **is** switching slots — 23% of trials to slot 0 — it is just switching on
+something that varies *within* a trial rather than on which word is playing. In the
+naming protocol that is harmless, because the word alternates every trial and the
+reward window aligns with it. In this protocol, where one word plays for tens of
+thousands of trials and then another does, it is useless.
+
+**So the context arms were never a test of contexts.** The table was live — it cost
+`err taught` 0.8615 -> 0.9138 by splitting one lesson across two slots — and the
+index filed both lessons the same way, so there was nothing to separate.
+
+**The sentence "contexts do not rescue it" in the section above is therefore
+retracted.** What that run measured was the cost of carrying a table nobody
+indexed, which is a fact about `retain`'s protocol and not about DNA v51. The 2x2
+itself was sound; the cue reached the ear, and the arms differed. What failed is
+the assumption that a cue reaching the ear becomes a context index — and nothing
+printed before this column would have shown it.
+
+**What stands, because it involves no contexts at all:** the commitment brake is a
+clean null on the outcome.
+
+| arm | retention gain | err-after improvement |
+|---|---|---|
+| `brake-0.5` | -0.038 (-0.6 SE) | -0.0035 (-0.3 SE) |
+| `brake-1.0` | +0.069 (+0.9 SE) | **+0.0002 (+0.0 SE)** |
+
+`brake-1.0` slows learning as predicted — `err taught` 0.8757 against 0.8615 — so
+its retention gain is partly the denominator effect for the third time tonight. Its
+absolute error after the conflict is **0.0002** better. Not a trade, not an
+artefact: nothing. **`meta_commit` does not protect an old lesson from a new one**,
+and that is now measured on the question the mechanism is actually for rather than
+on the magnitude question `brake-sweep` asked.
+
+**So one half of Masse's prescription is closed here and the other is untested.**
+Synaptic stabilisation, in the form this creature has it, does not help. Context
+gating has still not been tried, because making a cue audible is not the same as
+making it an index — and `ctxsrc` said this two weeks ago in different words: the
+word is at 1.000 while it plays and at chance when reward lands.
+
 ### What the literature says to build next, and why it is the cheap option
 
 > **This section is the argument that produced DNA v51, kept as the record of

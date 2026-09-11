@@ -5987,10 +5987,11 @@ bool run_ctxretain(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
   std::printf("\n  STABILISATION DOES NOT RESCUE IT EITHER. `meta_commit` gates plasticity\n"
               "  by how far a neuron has already committed, which is the half Masse, Grant &\n"
               "  Freedman say context gating needs -- and here it does not beat the\n"
-              "  untreated conflict on both measures at 2 SE. With gating alone already\n"
-              "  refused, BOTH halves of the standard account are now closed on this\n"
-              "  creature, and catastrophic interference here is neither a filing failure\n"
-              "  nor a stabilisation failure.\n");
+              "  untreated conflict on both measures at 2 SE.\n\n"
+              "  READ THE slot0 COLUMN BEFORE SAYING ANYTHING ABOUT CONTEXTS. If teach and\n"
+              "  gap show the same share, the index filed both lessons the same way and the\n"
+              "  context arms tested nothing -- a live table with one lesson in two slots.\n"
+              "  A cue reaching the ear is not the same as a cue becoming an index.\n");
   return false;
 }
 

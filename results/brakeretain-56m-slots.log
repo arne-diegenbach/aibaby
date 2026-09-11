@@ -1,0 +1,181 @@
+  [11/144] seed 2 brake-1.0  retention -0.12  err after 1.0284
+  [10/144] seed 2 brake-0.5  retention 0.81  err after 0.8662
+  [9/144] seed 2 baseline   retention 0.49  err after 0.9345
+  [7/144] seed 1 brake-1.0  retention -0.10  err after 1.0451
+  [13/144] seed 3 baseline   retention 0.16  err after 0.9858
+  [4/144] seed 0 cue+ctx+brake retention 0.71  err after 0.9235
+  [3/144] seed 0 brake-1.0  retention 0.56  err after 0.8957
+  [14/144] seed 3 brake-0.5  retention 0.40  err after 0.9502
+  [6/144] seed 1 brake-0.5  retention 0.03  err after 1.0250
+  [5/144] seed 1 baseline   retention 0.15  err after 0.9978
+  [2/144] seed 0 brake-0.5  retention 0.62  err after 0.8623
+  [12/144] seed 2 cue+ctx+brake retention 0.34  err after 0.9733
+  [1/144] seed 0 baseline   retention 0.45  err after 0.9003
+  [8/144] seed 1 cue+ctx+brake retention -0.68  err after 1.0354
+  [18/144] seed 4 brake-0.5  retention 0.26  err after 0.9666
+  [16/144] seed 3 cue+ctx+brake retention 0.55  err after 0.9516
+  [21/144] seed 5 baseline   retention -0.11  err after 1.0454
+  [15/144] seed 3 brake-1.0  retention 0.26  err after 0.9899
+  [23/144] seed 5 brake-1.0  retention 0.13  err after 1.0155
+  [17/144] seed 4 baseline   retention 0.60  err after 0.9124
+  [22/144] seed 5 brake-0.5  retention 0.15  err after 0.9779
+  [19/144] seed 4 brake-1.0  retention 0.14  err after 0.9881
+  [25/144] seed 6 baseline   retention -0.01  err after 0.9829
+  [26/144] seed 6 brake-0.5  retention 0.80  err after 0.8623
+  [24/144] seed 5 cue+ctx+brake retention 0.08  err after 1.0223
+  [20/144] seed 4 cue+ctx+brake retention 0.69  err after 0.9081
+  [28/144] seed 6 cue+ctx+brake retention -0.09  err after 1.0285
+  [27/144] seed 6 brake-1.0  retention 0.64  err after 0.9224
+  [29/144] seed 7 baseline   retention 0.06  err after 0.9865
+  [33/144] seed 8 baseline   retention 0.08  err after 0.9887
+  [35/144] seed 8 brake-1.0  retention 0.48  err after 0.9489
+  [34/144] seed 8 brake-0.5  retention 0.08  err after 1.0059
+  [32/144] seed 7 cue+ctx+brake retention 1.18  err after 1.1483
+  [30/144] seed 7 brake-0.5  retention 0.24  err after 0.9513
+  [31/144] seed 7 brake-1.0  retention 1.22  err after 0.8259
+  [36/144] seed 8 cue+ctx+brake retention 0.06  err after 1.1268
+  [37/144] seed 9 baseline   retention -0.09  err after 1.0438
+  [39/144] seed 9 brake-1.0  retention 0.61  err after 0.9864
+  [38/144] seed 9 brake-0.5  retention 0.07  err after 1.0350
+  [42/144] seed 10 brake-0.5  retention 0.64  err after 0.8663
+  [40/144] seed 9 cue+ctx+brake retention 0.70  err after 0.8543
+  [41/144] seed 10 baseline   retention 0.56  err after 0.9107
+  [43/144] seed 10 brake-1.0  retention 0.17  err after 0.9800
+  [45/144] seed 11 baseline   retention 0.26  err after 0.9628
+  [46/144] seed 11 brake-0.5  retention 0.23  err after 1.0155
+  [44/144] seed 10 cue+ctx+brake retention -0.14  err after 1.0235
+  [47/144] seed 11 brake-1.0  retention 0.30  err after 1.0109
+  [49/144] seed 12 baseline   retention 0.32  err after 0.9712
+  [53/144] seed 13 baseline   retention 0.68  err after 0.9393
+  [51/144] seed 12 brake-1.0  retention 0.47  err after 0.9744
+  [52/144] seed 12 cue+ctx+brake retention -0.28  err after 1.0217
+  [48/144] seed 11 cue+ctx+brake retention 0.33  err after 0.9974
+  [50/144] seed 12 brake-0.5  retention 0.29  err after 0.9434
+  [54/144] seed 13 brake-0.5  retention 0.37  err after 1.0134
+  [55/144] seed 13 brake-1.0  retention 0.84  err after 0.9050
+  [56/144] seed 13 cue+ctx+brake retention 0.63  err after 0.9347
+  [58/144] seed 14 brake-0.5  retention -0.07  err after 1.0294
+  [61/144] seed 15 baseline   retention 0.73  err after 0.9006
+  [57/144] seed 14 baseline   retention 0.57  err after 0.9495
+  [59/144] seed 14 brake-1.0  retention 0.70  err after 0.9440
+  [62/144] seed 15 brake-0.5  retention 0.11  err after 0.9738
+  [63/144] seed 15 brake-1.0  retention 0.09  err after 0.9868
+  [60/144] seed 14 cue+ctx+brake retention -1.69  err after 1.2091
+  [65/144] seed 16 baseline   retention 0.72  err after 0.9613
+  [67/144] seed 16 brake-1.0  retention 0.34  err after 1.0211
+  [66/144] seed 16 brake-0.5  retention 0.85  err after 0.9225
+  [69/144] seed 17 baseline   retention 0.31  err after 0.9734
+  [64/144] seed 15 cue+ctx+brake retention 0.43  err after 0.9711
+  [68/144] seed 16 cue+ctx+brake retention 0.82  err after 0.8863
+  [70/144] seed 17 brake-0.5  retention 0.09  err after 1.0092
+  [71/144] seed 17 brake-1.0  retention 0.48  err after 0.9050
+  [73/144] seed 18 baseline   retention 0.49  err after 0.8808
+  [72/144] seed 17 cue+ctx+brake retention 3.64  err after 1.1116
+  [75/144] seed 18 brake-1.0  retention 0.10  err after 0.9765
+  [74/144] seed 18 brake-0.5  retention 0.53  err after 0.8756
+  [77/144] seed 19 baseline   retention 0.34  err after 1.0111
+  [79/144] seed 19 brake-1.0  retention 0.57  err after 1.0070
+  [78/144] seed 19 brake-0.5  retention 0.64  err after 0.9419
+  [76/144] seed 18 cue+ctx+brake retention 0.80  err after 0.8909
+  [81/144] seed 20 baseline   retention -0.17  err after 1.0341
+  [83/144] seed 20 brake-1.0  retention 0.39  err after 0.9670
+  [80/144] seed 19 cue+ctx+brake retention 0.53  err after 1.0085
+  [82/144] seed 20 brake-0.5  retention 0.52  err after 0.9837
+  [84/144] seed 20 cue+ctx+brake retention -0.45  err after 1.0374
+  [87/144] seed 21 brake-1.0  retention 0.46  err after 0.9215
+  [85/144] seed 21 baseline   retention 0.58  err after 0.9039
+  [86/144] seed 21 brake-0.5  retention -0.58  err after 1.0743
+  [88/144] seed 21 cue+ctx+brake retention 0.79  err after 0.8944
+  [89/144] seed 22 baseline   retention 0.51  err after 0.9374
+  [91/144] seed 22 brake-1.0  retention -0.07  err after 1.0128
+  [90/144] seed 22 brake-0.5  retention 0.26  err after 0.9653
+  [93/144] seed 23 baseline   retention -0.32  err after 1.0827
+  [92/144] seed 22 cue+ctx+brake retention 0.18  err after 0.9731
+  [94/144] seed 23 brake-0.5  retention 0.56  err after 0.9426
+  [95/144] seed 23 brake-1.0  retention 0.71  err after 0.8732
+  [98/144] seed 24 brake-0.5  retention 0.30  err after 0.9651
+  [96/144] seed 23 cue+ctx+brake retention 0.43  err after 0.9870
+  [97/144] seed 24 baseline   retention 0.59  err after 0.9031
+  [101/144] seed 25 baseline   retention 0.44  err after 0.9066
+  [99/144] seed 24 brake-1.0  retention 0.76  err after 0.9052
+  [100/144] seed 24 cue+ctx+brake retention 0.35  err after 0.9606
+  [102/144] seed 25 brake-0.5  retention 0.21  err after 0.9684
+  [103/144] seed 25 brake-1.0  retention 0.63  err after 0.9497
+  [104/144] seed 25 cue+ctx+brake retention 1.01  err after 0.8600
+  [106/144] seed 26 brake-0.5  retention 0.09  err after 1.0195
+  [107/144] seed 26 brake-1.0  retention 0.56  err after 0.9507
+  [105/144] seed 26 baseline   retention 0.44  err after 0.9540
+  [109/144] seed 27 baseline   retention 0.24  err after 0.9625
+  [110/144] seed 27 brake-0.5  retention -0.06  err after 1.0248
+  [108/144] seed 26 cue+ctx+brake retention 0.12  err after 1.0118
+  [111/144] seed 27 brake-1.0  retention 0.53  err after 0.9864
+  [112/144] seed 27 cue+ctx+brake retention 0.45  err after 0.8867
+  [114/144] seed 28 brake-0.5  retention -0.19  err after 1.0037
+  [113/144] seed 28 baseline   retention -0.24  err after 0.9961
+  [115/144] seed 28 brake-1.0  retention 0.10  err after 0.9658
+  [118/144] seed 29 brake-0.5  retention 0.33  err after 0.9446
+  [117/144] seed 29 baseline   retention 0.10  err after 1.0083
+  [119/144] seed 29 brake-1.0  retention 0.60  err after 0.9228
+  [122/144] seed 30 brake-0.5  retention -0.11  err after 1.0275
+  [121/144] seed 30 baseline   retention 0.11  err after 0.9845
+  [120/144] seed 29 cue+ctx+brake retention -0.01  err after 1.0549
+  [116/144] seed 28 cue+ctx+brake retention -0.02  err after 1.0001
+  [123/144] seed 30 brake-1.0  retention 0.38  err after 0.9072
+  [124/144] seed 30 cue+ctx+brake retention -0.89  err after 1.0577
+  [125/144] seed 31 baseline   retention 0.39  err after 0.9290
+  [126/144] seed 31 brake-0.5  retention -0.29  err after 1.0068
+  [127/144] seed 31 brake-1.0  retention 0.35  err after 0.9309
+  [129/144] seed 32 baseline   retention 0.52  err after 0.9446
+  [130/144] seed 32 brake-0.5  retention 0.34  err after 0.9682
+  [128/144] seed 31 cue+ctx+brake retention 0.87  err after 0.8710
+  [132/144] seed 32 cue+ctx+brake retention 0.42  err after 0.9592
+  [131/144] seed 32 brake-1.0  retention -0.17  err after 1.0320
+  [133/144] seed 33 baseline   retention 0.59  err after 0.9155
+  [134/144] seed 33 brake-0.5  retention 0.40  err after 0.9264
+  [135/144] seed 33 brake-1.0  retention -0.36  err after 1.0288
+  [137/144] seed 34 baseline   retention 0.32  err after 0.9883
+  [136/144] seed 33 cue+ctx+brake retention 0.74  err after 0.8990
+  [138/144] seed 34 brake-0.5  retention 0.52  err after 0.8877
+  [139/144] seed 34 brake-1.0  retention 0.10  err after 1.0211
+  [140/144] seed 34 cue+ctx+brake retention 0.20  err after 0.9841
+  [144/144] seed 35 cue+ctx+brake retention 0.08  err after 1.0023
+  [143/144] seed 35 brake-1.0  retention 0.45  err after 0.9257
+  [141/144] seed 35 baseline   retention -0.06  err after 0.9767
+  [142/144] seed 35 brake-0.5  retention 0.01  err after 0.9889
+experiment: ctxretain
+  instrument        ctxretain   trial seed 000000000135e068   2000 trials
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  question          a conflicting lesson wipes a taught sound to 0.22. In
+                    `retain` the two lessons differ only in WHEN they happen
+                    -- the caregiver says one word throughout. Does giving
+                    them different CUES, and a context table to file them
+                    under, stop the collision?
+  the design        the STABILISATION half. Masse, Grant & Freedman: gating
+                    alone reads 61.4% across 100 tasks, gating plus synaptic
+                    stabilisation 95.4%. `meta_commit` is this creature's
+                    EWC, and it was measured on the magnitude question.
+  the gate          vs `baseline`, PAIRED on seed, at 2 SE on BOTH retention
+                    and err after. Retention alone is a ratio an arm can
+                    inflate by simply learning the first lesson less well.
+
+
+  arm          sleeps   err taught    err after     retention     err vs B  slot0 teach/gap
+  baseline     5.1      0.8615        0.9629        0.30 +/- 0.05   0.7815     --
+  brake-0.5    5.2      0.8626        0.9664        0.26 +/- 0.05   0.7802     --
+  brake-1.0    5.1      0.8757        0.9627        0.37 +/- 0.05   0.7802     --
+  cue+ctx+brake 5.4      0.9144        0.9852        0.36 +/- 0.13   0.7588   0.23 / 0.23
+
+  PAIRED vs `baseline`, on the same creatures
+  arm          retention gain               err-after improvement
+  brake-0.5    -0.038 +/- 0.068 (-0.6 SE)   -0.0035 +/- 0.0110 (-0.3 SE)
+  brake-1.0    +0.069 +/- 0.080 (+0.9 SE)   +0.0002 +/- 0.0120 (+0.0 SE)
+  cue+ctx+brake +0.057 +/- 0.135 (+0.4 SE)   -0.0222 +/- 0.0133 (-1.7 SE)
+
+  STABILISATION DOES NOT RESCUE IT EITHER. `meta_commit` gates plasticity
+  by how far a neuron has already committed, which is the half Masse, Grant &
+  Freedman say context gating needs -- and here it does not beat the
+  untreated conflict on both measures at 2 SE. With gating alone already
+  refused, BOTH halves of the standard account are now closed on this
+  creature, and catastrophic interference here is neither a filing failure
+  nor a stabilisation failure.
