@@ -9417,6 +9417,60 @@ Three consequences, and the third is the one that matters:
   left for someone to rediscover. A wrong comment on a mechanism that silently does
   nothing is worse than no comment: it is the reason nobody checked for a month.
 
+### A perfect index recovers 15% of the damage — partial protection, as predicted
+
+`ctxretain`'s previous generation never tested gating: `slot0 teach/gap` read
+0.23/0.23, so the ear-EMA index filed both lessons the same way. This writes the
+context module directly — slice 0 while lesson A is taught, slice 1 while B is —
+and the slot column confirms it: **1.00 / 0.00**.
+
+The control is `ctx-same`, which carries the identical table at identical cost and
+writes slice 0 in both phases. `ctx-same` and `ctx-oracle` have identical
+`err taught` (1.0344), so the difference between them is the index's *information*
+and nothing else.
+
+| arm | err taught | err after | slot0 teach/gap |
+|---|---|---|---|
+| `quiet` (no conflict, earlier run) | 0.8404 | **0.8116** | — |
+| `baseline` | 0.8615 | 0.9629 | — |
+| `ctx-same` (table, no information) | 1.0344 | **1.0393** | 1.00 / 1.00 |
+| `ctx-oracle` (table + perfect index) | 1.0344 | **0.9404** | 1.00 / 0.00 |
+
+**The retention column is degenerate here and must not be read.** Retention is
+`(before - after)/(before - taught)`, and the context arms' `err taught` is 1.0344
+against an `err before` of about 1.03 — the denominator is nearly zero. That is why
+they print 6.12 +/- 2.74 and 8.16 +/- 7.24 against a baseline of 0.30. Those are not
+large effects, they are divisions by almost nothing, and the table now suppresses
+the ratio and prints the denominator instead when it collapses.
+
+**On `err after`, which is absolute and has no denominator:**
+
+- the conflict costs **0.1513** (0.8116 -> 0.9629)
+- carrying a context table with an **uninformative** index costs a further
+  **+0.0764** on top of that, at -6.9 SE. The machinery is expensive.
+- a **perfect** index recovers **0.0225** against baseline, at +2.1 SE — about
+  **15% of what the conflict destroys**.
+
+**So gating helps, and only a little.** That is the outcome the temper set before
+the run predicted: `ctxfour` found a perfect index at four words holds four
+*distinctions* but not four *targets*, and this is the same shape — the index
+carries which lesson it is, and most of the damage happens anyway. The `ctx-oracle`
+vs `ctx-same` gap is large (+14.6 SE on `err after`) but most of it is the index
+undoing the cost its own table imposes, not protection.
+
+**And the gate refused on a knife-edge worth naming.** It requires 2 SE on both
+columns; retention came in at **1.9893 SE** and printed as "+2.0 SE" because the
+format rounded it. The verdict and the displayed number disagreed. The SE is now
+printed to two decimals so a knife-edge reads as one.
+
+**Where that leaves the standard account.** Stabilisation is a measured null
+(`meta_commit`, +0.0002 on `err after`). Gating, given a perfect index, buys 15% of
+the damage back and costs a great deal when the index is anything less than perfect.
+Masse's combination — `ctx-orc+brake` — reads +1.1 SE and +1.4 SE, no better than
+gating alone. The textbook decomposition applies here only weakly, and the honest
+summary is that **catastrophic interference in this creature is mostly not a filing
+problem**.
+
 ### What the literature says to build next, and why it is the cheap option
 
 > **This section is the argument that produced DNA v51, kept as the record of

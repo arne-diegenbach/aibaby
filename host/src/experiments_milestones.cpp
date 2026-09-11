@@ -5932,6 +5932,14 @@ bool run_ctxretain(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
     return cell;
   });
 
+  // RETENTION IS A RATIO AND ITS DENOMINATOR CAN COLLAPSE. It is
+  // (before - after)/(before - taught), so an arm that barely learned the first
+  // lesson has before ~= taught and the ratio explodes: the 2026-09-11 oracle run
+  // printed 6.12 +/- 2.74 and 8.16 +/- 7.24 against a baseline of 0.30, which are
+  // not large effects but divisions by nearly zero. `learned` below is that
+  // denominator, and any arm where it is small has its retention suppressed rather
+  // than printed, because a number that large is read as a result by anyone
+  // skimming.
   std::printf("\n  %-12s %-8s %-13s %-13s %-13s %-9s %s\n", "arm", "sleeps",
               "err taught", "err after", "retention", "err vs B",
               "slot0 teach/gap");
@@ -5965,11 +5973,23 @@ bool run_ctxretain(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
         sg.push_back(c.row.slot0_gap);
       }
     }
+    std::vector<double> learned;
+    for (uint32_t r = 0; r < kReps; ++r) {
+      const Cell& c = cells[r * kCRArmCount + a];
+      if (c.ok) learned.push_back(c.row.err_before - c.row.err_taught);
+    }
+    const double m_learned = ctx_mean_se(learned, &s2);
     const double mt = st.empty() ? -1.0 : ctx_mean_se(st, &s2);
     const double mg = sg.empty() ? -1.0 : ctx_mean_se(sg, &s2);
-    std::printf("  %-12s %-8.1f %-13.4f %-13.4f %.2f +/- %-6.2f %-9.4f", kCRArms[a].name,
+    char ret_cell[32];
+    if (m_learned < 0.02) {
+      std::snprintf(ret_cell, sizeof ret_cell, "(learned %.3f)", m_learned);
+    } else {
+      std::snprintf(ret_cell, sizeof ret_cell, "%.2f +/- %.2f", m_ret[a], se);
+    }
+    std::printf("  %-12s %-8.1f %-13.4f %-13.4f %-13s %-9.4f", kCRArms[a].name,
                 sleeps / double(n), ctx_mean_se(tau, &s2), ctx_mean_se(aft, &s2),
-                m_ret[a], se, ctx_mean_se(eb, &s2));
+                ret_cell, ctx_mean_se(eb, &s2));
     if (mt >= 0.0) std::printf("%.2f / %.2f\n", mt, mg);
     else std::printf("  --\n");
   }
@@ -6030,7 +6050,7 @@ bool run_ctxretain(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
       std::printf("\n  THE GATE -- `ctx-oracle` vs `ctx-same`, which is the index's\n"
                   "  INFORMATION with the table's cost held fixed. Both arms carry the same\n"
                   "  machinery; only one of them knows which lesson is being taught.\n");
-      std::printf("  retention %+.3f +/- %.3f (%+.1f SE)   err after %+.4f +/- %.4f (%+.1f SE)\n",
+      std::printf("  retention %+.3f +/- %.3f (%+.2f SE)   err after %+.4f +/- %.4f (%+.2f SE)\n",
                   m_r, se_r, se_r > 0.0 ? m_r / se_r : 0.0, m_a, se_a,
                   se_a > 0.0 ? m_a / se_a : 0.0);
       const bool pass = se_r > 0.0 && m_r > 2.0 * se_r && se_a > 0.0 && m_a > 2.0 * se_a;
@@ -6063,11 +6083,10 @@ bool run_ctxretain(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
     if (int(a2) != kB && win[a2]) any = true;
   }
   if (any) {
-    std::printf("\n  STABILISATION HELPS. An arm beats the untreated conflict on BOTH\n"
-                "  retention and absolute err after, so this is not the ratio artefact that\n"
-                "  the context arms produced -- a brake that merely froze the creature would\n"
-                "  show a worse `err taught` and a worse `err after` together, and the\n"
-                "  columns above say whether it did.\n");
+    std::printf("\n  AN ARM BEATS THE UNTREATED CONFLICT on both columns. Check `err taught`\n"
+                "  and the retention denominator before believing the ratio: an arm that\n"
+                "  barely learned the first lesson posts a huge retention and a worse\n"
+                "  absolute error, and only the second of those means anything.\n");
     return true;
   }
   std::printf("\n  STABILISATION DOES NOT RESCUE IT EITHER. `meta_commit` gates plasticity\n"
