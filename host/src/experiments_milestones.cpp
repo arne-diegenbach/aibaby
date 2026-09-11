@@ -5455,6 +5455,25 @@ struct RTConfig {
   int second_heard = -1;
   uint32_t context_slots = 0;       // DNA v51: 0 and 1 both mean the shared bias
   uint32_t context_source = 0;      // DNA v53: 4 is the ear's rate EMA
+  // THE ORACLE INDEX. `ctxretain` learned the hard way that a cue reaching the ear
+  // is not a cue becoming an index: with contexts on and the caregiver switching
+  // words between phases, `slot0 teach/gap` still read 0.23/0.23 -- the ear's rate
+  // EMA switches on within-trial structure, not on which word is playing. So this
+  // writes the context module directly, slice 0 while lesson A is taught and slice
+  // 1 while lesson B is, which is a PERFECT index by construction.
+  //
+  // That makes the test refusal-first: if a perfect index does not protect the old
+  // lesson, context gating is refused here and the whole standard account of
+  // catastrophic interference -- gating plus stabilisation, Masse, Grant & Freedman
+  // -- is closed on this creature, since the stabilisation half is already a
+  // measured null.
+  int32_t ctx_oracle_module = -1;   // -1 writes nothing
+  double ctx_oracle_gain = 0.0;
+  // false writes slice 0 in BOTH phases: the same machinery, the same cost, and no
+  // information about which lesson is being taught. That is the control the
+  // baseline cannot be, because carrying a context table is not free -- it cost
+  // err_taught 0.8615 -> 0.9138 when the index was uninformative by accident.
+  bool ctx_oracle_split = true;
   // DNA v41's commitment brake: gate plasticity by how far a neuron has already
   // moved from where it started. That is the EWC/SI idea, and Masse, Grant &
   // Freedman say it is the half that context gating needs. `brake-sweep` measured
@@ -5605,6 +5624,18 @@ RTRow run_retain_arm(const std::vector<uint8_t>& blob, uint64_t ticks,
         pending.pop_front();
       }
       const bool sounding = t < 900;
+      // The oracle, held for the whole trial exactly as the vocallearn version is:
+      // a context that is gone when reward lands has nothing to bind to.
+      if (cfg.ctx_oracle_module >= 0 && cfg.ctx_oracle_gain > 0.0) {
+        const aibaby::ModuleState& cm =
+            s.brain.network().module(uint32_t(cfg.ctx_oracle_module));
+        const uint32_t slice = (cfg.ctx_oracle_split && relearning) ? 1u : 0u;
+        const uint32_t lo2 = cm.begin + cm.count * slice / 2u;
+        const uint32_t hi2 = cm.begin + cm.count * (slice + 1u) / 2u;
+        for (uint32_t n = lo2; n < hi2; ++n) {
+          s.brain.network().inject(n, aibaby::Scalar(cfg.ctx_oracle_gain));
+        }
+      }
       const Word& say = relearning ? heard2 : heard;
       caregiver.render(sounding ? say.f0 : 0.0f, say.f1, say.f2,
                        sounding ? 0.5f : 0.0f, pcm.data(), spt);
@@ -5803,30 +5834,32 @@ struct CRArm {
   RTConfig cfg;
 };
 const CRArm kCRArms[] = {
-    // SECOND GENERATION, 2026-09-11. The 2x2 that ran here first -- cue crossed
-    // with contexts -- failed on every cell, and its result is in README. Masse,
-    // Grant & Freedman say why: context gating ALONE reads 61.4% across 100 tasks
-    // against 95.4% when paired with synaptic stabilisation. This runs the half
-    // that was never tested for this job.
+    // THIRD GENERATION, 2026-09-11. Gating is the one half of Masse, Grant &
+    // Freedman never actually tested here: the previous run's index read
+    // slot0 teach/gap 0.23/0.23, so both lessons were filed the same way. This
+    // writes the context module directly -- a PERFECT index by construction.
     //
-    // `meta_commit` gates plasticity by how far a neuron has already moved from
-    // where it started, which is the EWC/SI idea stated in this creature's terms.
-    // `brake-sweep` measured it as a decisive null on the MAGNITUDE question --
-    // whether it grows the learned bias -- and that is not what the mechanism is
-    // for. Protecting an old lesson from a new one is.
+    // THE GATE IS `ctx-oracle` AGAINST `ctx-same`, NOT AGAINST `baseline`.
+    // Carrying a context table is not free; it cost err_taught 0.8615 -> 0.9138
+    // when the index was uninformative. `ctx-same` pays that identical cost with
+    // the identical machinery and writes slice 0 in both phases, so the difference
+    // between them is the INDEX'S INFORMATION and nothing else.
     //
-    // WHAT WOULD REFUSE IT, and it is the same trap that has fired twice: a brake
-    // slows ALL learning, so it will make the first lesson worse too. That shrinks
-    // retention's denominator and inflates the ratio. The gate therefore requires
-    // absolute `err after` to improve as well, and `err taught` is printed so a
-    // brake that merely freezes the creature is visible rather than inferred.
+    // Refusal-first: if a perfect index does not protect the old lesson, gating is
+    // refused, and with stabilisation already a measured null (+0.0002 err_after)
+    // the whole standard account of catastrophic interference closes on this
+    // creature.
     //
-    // name          no_fat teach relearn freeze norep credit eps 2nd  slots src  commit
-    {"baseline",   {"baseline",   false, true, true, false, false, 0, 0, -1, 0, 0, 0.0f}},
-    {"brake-0.5",  {"brake-0.5",  false, true, true, false, false, 0, 0, -1, 0, 0, 0.5f}},
-    {"brake-1.0",  {"brake-1.0",  false, true, true, false, false, 0, 0, -1, 0, 0, 1.0f}},
-    {"cue+ctx+brake", {"cue+ctx+brake", false, true, true, false, false, 0, 0,
-                       int(kCRSecondHeard), 2, 4, 1.0f}},
+    // TEMPER SET BEFORE THE RUN: `ctxfour` found a perfect index at four words
+    // holds four DISTINCTIONS but not four TARGETS -- nearest at chance, error
+    // +20%. Partial protection is the expected outcome, so the bar is the same
+    // two-column 2 SE bar as everything else and is not to be lowered afterwards.
+    //
+    // name            no_fat teach relearn freeze norep credit eps 2nd slots src  orc gain split commit
+    {"baseline",     {"baseline",     false, true, true, false, false, 0, 0, -1, 0, 0, -1, 0.0, true,  0.0f}},
+    {"ctx-same",     {"ctx-same",     false, true, true, false, false, 0, 0, -1, 2, 0, -1, 0.10, false, 0.0f}},
+    {"ctx-oracle",   {"ctx-oracle",   false, true, true, false, false, 0, 0, -1, 2, 0, -1, 0.10, true,  0.0f}},
+    {"ctx-orc+brake",{"ctx-orc+brake",false, true, true, false, false, 0, 0, -1, 2, 0, -1, 0.10, true,  1.0f}},
 };
 constexpr uint32_t kCRArmCount = sizeof(kCRArms) / sizeof(kCRArms[0]);
 
@@ -5840,7 +5873,8 @@ bool run_ctxretain(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
     std::printf("  setup failed: the genome does not load\n");
     return false;
   }
-  if (dna0.module_with_role(aibaby::ModuleRole::kContext) < 0) {
+  const int32_t ctx_module = dna0.module_with_role(aibaby::ModuleRole::kContext);
+  if (ctx_module < 0) {
     std::printf("  this genome has no kContext module. Build one with NO output\n"
                 "  weight -- the index is READ, never driven:\n\n"
                 "    python3 tools/genome_add_context.py dna/default.toml ctx.toml \\\n"
@@ -5883,8 +5917,13 @@ bool run_ctxretain(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
     Timbre local_ruler;
     std::string local_error;
     if (!local_ruler.configure(dna0.header().audio, local_error)) return cell;
+    RTConfig cfg = kCRArms[a].cfg;
+    // The arm table cannot know the module index, so it is filled in here. An arm
+    // asking for an oracle with no kContext module would silently write nothing,
+    // which is the failure this whole generation exists to stop being possible.
+    if (cfg.ctx_oracle_gain > 0.0) cfg.ctx_oracle_module = ctx_module;
     bool ok = false;
-    cell.row = run_retain_arm(variant, ticks, kCRArms[a].cfg, local_ruler, regime, &ok);
+    cell.row = run_retain_arm(variant, ticks, cfg, local_ruler, regime, &ok);
     cell.ok = ok;
     if (ok) {
       parallel_note("  [%u/%u] seed %u %-10s retention %.2f  err after %.4f\n", i + 1,
@@ -5941,7 +5980,7 @@ bool run_ctxretain(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
     }
     return -1;
   };
-  const int kB = arm_index("baseline"), kBoth = arm_index("brake-1.0");
+  const int kB = arm_index("baseline"), kBoth = arm_index("ctx-oracle");
   if (kB < 0 || kBoth < 0) {
     std::printf("\n  ctxretain cannot summarise: an arm it names is missing.\n");
     return false;
@@ -5957,6 +5996,37 @@ bool run_ctxretain(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
     }
     return ctx_mean_se(d, se_out);
   };
+
+  // THE REAL GATE: the index's INFORMATION, with the table's cost held fixed.
+  {
+    const int kSame = arm_index("ctx-same"), kOrc = arm_index("ctx-oracle");
+    if (kSame >= 0 && kOrc >= 0) {
+      std::vector<double> dr, da;
+      for (uint32_t r = 0; r < kReps; ++r) {
+        const Cell& co = cells[r * kCRArmCount + uint32_t(kOrc)];
+        const Cell& cs = cells[r * kCRArmCount + uint32_t(kSame)];
+        if (!co.ok || !cs.ok) continue;
+        dr.push_back(co.row.retention - cs.row.retention);
+        da.push_back(cs.row.err_after - co.row.err_after);
+      }
+      double se_r = 0.0, se_a = 0.0;
+      const double m_r = ctx_mean_se(dr, &se_r), m_a = ctx_mean_se(da, &se_a);
+      std::printf("\n  THE GATE -- `ctx-oracle` vs `ctx-same`, which is the index's\n"
+                  "  INFORMATION with the table's cost held fixed. Both arms carry the same\n"
+                  "  machinery; only one of them knows which lesson is being taught.\n");
+      std::printf("  retention %+.3f +/- %.3f (%+.1f SE)   err after %+.4f +/- %.4f (%+.1f SE)\n",
+                  m_r, se_r, se_r > 0.0 ? m_r / se_r : 0.0, m_a, se_a,
+                  se_a > 0.0 ? m_a / se_a : 0.0);
+      const bool pass = se_r > 0.0 && m_r > 2.0 * se_r && se_a > 0.0 && m_a > 2.0 * se_a;
+      std::printf("  -> %s\n", pass
+          ? "A PERFECT INDEX PROTECTS THE LESSON. Gating works here when the index\n"
+            "     actually carries which lesson it is, and the previous null was the\n"
+            "     ear-EMA index failing to, not gating failing to."
+          : "A PERFECT INDEX DOES NOT PROTECT IT. Gating is refused, and with\n"
+            "     stabilisation already a measured null the standard account of\n"
+            "     catastrophic interference is closed on this creature.");
+    }
+  }
 
   std::printf("\n  PAIRED vs `baseline`, on the same creatures\n");
   std::printf("  %-12s %-28s %s\n", "arm", "retention gain", "err-after improvement");
