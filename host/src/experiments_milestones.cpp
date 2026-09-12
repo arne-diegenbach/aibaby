@@ -13324,6 +13324,13 @@ struct StageRow {
   double f1 = 0.0;       // the formant produced
   double pinned = 0.0;   // share of the group AT threshold_max
   double rate = 0.0;     // mean rate of the group
+  // THE CANDIDATE THE PINNED SHARE CANNOT SEE. Every drive-dependent inhibition
+  // on this module is off in the genome -- norm_gain, ffi_gain, lateral_gain and
+  // apical_threshold are all 0.0 -- so the sublinearity is not any of those. What
+  // IS on is intrinsic plasticity, and `pinned` only says whether thresholds hit
+  // their CLAMP. IP can compress the rate response while moving thresholds freely
+  // inside the range, which is exactly what v9 exists to do.
+  double threshold = 0.0;
 };
 
 bool run_stageprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
@@ -13353,13 +13360,36 @@ bool run_stageprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
   const double ks[] = {0.0, 0.25, 0.5, 1.0, 2.0, 4.0};
   constexpr uint32_t kLadder = sizeof(ks) / sizeof(ks[0]);
   constexpr uint32_t kReps = 6;
+  // THE DECISIVE ARM. Every drive-dependent inhibition on this module is off in
+  // the genome, and the threshold column shows intrinsic plasticity climbing
+  // 1.025 -> 1.130 across the learned regime while the pinned share stays 0.000 --
+  // a homeostat cancelling the bias inside its range rather than a clamp being
+  // hit. `vocal` runs ip_wake_scale = 1.0 where most modules run 0.25, which is
+  // v9's deliberate choice to hold the larynx. If IP is the compression, turning
+  // it off during wake should take `bias -> rate` from 0.34 toward 1.0.
+  //
+  // NOT A PROPOSED FIX. v50 already relaxed the larynx's IP and learning got
+  // WORSE (change +16.6 -> -2.3 on 3 of 3). This is a diagnosis, and what it would
+  // license is subtler: IP regulates each neuron's OWN rate, so it cancels the
+  // TILT along with the common mode. A homeostat on the GROUP's mean would leave
+  // the tilt alone.
+  const double ip_scales[] = {1.0, 0.0};
+  constexpr uint32_t kArms = 2;
 
   struct Cell { bool ok = false; StageRow row[kLadder]; };
-  const std::vector<Cell> cells = parallel_reps<Cell>(kReps, [&](uint32_t r) {
+  const std::vector<Cell> cells = parallel_reps<Cell>(kReps * kArms, [&](uint32_t job) {
     Cell cell;
+    const uint32_t r = job / kArms, arm = job % kArms;
     std::vector<uint8_t> variant = blob;
     const uint64_t seed = dna.header().seed + r * 7919ull;
     std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+    {
+      const float ipw = float(ip_scales[arm]);
+      std::memcpy(variant.data() + sizeof(aibaby::DnaHeader) +
+                      sizeof(aibaby::DnaModule) * size_t(vmod) +
+                      offsetof(aibaby::DnaModule, ip_wake_scale),
+                  &ipw, sizeof(ipw));
+    }
     Session s;
     std::string err;
     if (!s.init(variant, err)) return cell;
@@ -13382,7 +13412,7 @@ bool run_stageprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
 
       StageRow& row = cell.row[L];
       row.k = ks[L];
-      double ss = 0.0, dot = 0.0, pp = 0.0, rsum = 0.0, inj = 0.0, pin = 0.0;
+      double ss = 0.0, dot = 0.0, pp = 0.0, rsum = 0.0, inj = 0.0, pin = 0.0, thr = 0.0;
       for (uint32_t i = g_beg; i < g_end; ++i) {
         const double p = (double(i - g_beg) + 0.5) / double(gn) - 0.5;
         const double rate = double(s.brain.network().rate_fast(i));
@@ -13392,6 +13422,7 @@ bool run_stageprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
         rsum += rate;
         inj += b * b;
         ss += rate * rate;
+        thr += double(s.brain.network().threshold(i));
         if (double(s.brain.network().threshold(i)) >= t_max * 0.999) pin += 1.0;
       }
       row.injected = std::sqrt(inj / double(gn));
@@ -13405,6 +13436,7 @@ bool run_stageprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
       row.centroid = double(s.brain.vocal_decoder().groups()[2]);
       row.rate = rsum / double(gn);
       row.pinned = pin / double(gn);
+      row.threshold = thr / double(gn);
       row.f1 = double(s.brain.voice().f1);
     }
     cell.ok = true;
@@ -13413,37 +13445,92 @@ bool run_stageprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
     return cell;
   });
 
-  uint32_t n = 0;
-  StageRow mean[kLadder];
-  for (const Cell& c : cells) {
+  // Per arm, because the whole point is comparing the two.
+  uint32_t n_arm[kArms] = {};
+  StageRow mean_arm[kArms][kLadder];
+  for (uint32_t job = 0; job < kReps * kArms; ++job) {
+    const Cell& c = cells[job];
     if (!c.ok) continue;
-    ++n;
+    const uint32_t arm = job % kArms;
+    ++n_arm[arm];
     for (uint32_t L = 0; L < kLadder; ++L) {
-      mean[L].k = ks[L];
-      mean[L].injected += c.row[L].injected;
-      mean[L].tilt += c.row[L].tilt;
-      mean[L].centroid += c.row[L].centroid;
-      mean[L].f1 += c.row[L].f1;
-      mean[L].pinned += c.row[L].pinned;
-      mean[L].rate += c.row[L].rate;
+      StageRow& m = mean_arm[arm][L];
+      m.k = ks[L];
+      m.injected += c.row[L].injected;
+      m.tilt += c.row[L].tilt;
+      m.centroid += c.row[L].centroid;
+      m.f1 += c.row[L].f1;
+      m.pinned += c.row[L].pinned;
+      m.rate += c.row[L].rate;
+      m.threshold += c.row[L].threshold;
     }
   }
-  if (n < 3) {
-    std::printf("\n  stageprobe INCONCLUSIVE -- %u of %u creatures hatched.\n", n, kReps);
-    return false;
-  }
-  for (uint32_t L = 0; L < kLadder; ++L) {
-    mean[L].injected /= n; mean[L].tilt /= n; mean[L].centroid /= n;
-    mean[L].f1 /= n; mean[L].pinned /= n; mean[L].rate /= n;
+  for (uint32_t arm = 0; arm < kArms; ++arm) {
+    if (n_arm[arm] < 3) {
+      std::printf("\n  stageprobe INCONCLUSIVE -- arm %u had %u creatures.\n", arm,
+                  n_arm[arm]);
+      return false;
+    }
+    for (uint32_t L = 0; L < kLadder; ++L) {
+      StageRow& m = mean_arm[arm][L];
+      m.injected /= n_arm[arm]; m.tilt /= n_arm[arm]; m.centroid /= n_arm[arm];
+      m.f1 /= n_arm[arm]; m.pinned /= n_arm[arm]; m.rate /= n_arm[arm];
+      m.threshold /= n_arm[arm];
+    }
   }
 
+  const auto expo2 = [](double x0, double x1, double y0, double y1) {
+    if (!(x0 > 0.0) || !(x1 > 0.0) || !(y0 > 0.0) || !(y1 > 0.0) || x1 == x0) return 0.0;
+    return std::log(y1 / y0) / std::log(x1 / x0);
+  };
+  std::printf("\n  THE DECISIVE COMPARISON: bias -> rate in the LEARNED regime\n");
+  std::printf("  %-16s %-14s %-16s %s\n", "vocal ip_wake", "bias->rate", "threshold rise",
+              "mean rate");
+  for (uint32_t arm = 0; arm < kArms; ++arm) {
+    const StageRow* m = mean_arm[arm];
+    const double er = expo2(m[1].injected, m[2].injected, std::fabs(m[1].tilt),
+                            std::fabs(m[2].tilt));
+    std::printf("  %-16.2f %-14.2f %.3f -> %-8.3f %.2f -> %.2f\n", ip_scales[arm], er,
+                m[1].threshold, m[2].threshold, m[1].rate, m[2].rate);
+  }
+  {
+    const double e_on = expo2(mean_arm[0][1].injected, mean_arm[0][2].injected,
+                              std::fabs(mean_arm[0][1].tilt), std::fabs(mean_arm[0][2].tilt));
+    const double e_off = expo2(mean_arm[1][1].injected, mean_arm[1][2].injected,
+                               std::fabs(mean_arm[1][1].tilt), std::fabs(mean_arm[1][2].tilt));
+    if (e_off > e_on + 0.25) {
+      std::printf("\n  INTRINSIC PLASTICITY IS THE COMPRESSION. With IP held off during wake\n"
+                  "  `bias -> rate` goes %.2f -> %.2f. The homeostat cancels the bias inside\n"
+                  "  its range -- no clamp is hit, the pinned share stays 0.000 -- and every\n"
+                  "  other drive-dependent inhibition on this module is already off in the\n"
+                  "  genome.\n\n"
+                  "  NOT A FIX: v50 relaxed this and learning got WORSE (+16.6 -> -2.3).\n"
+                  "  What it licenses is subtler -- IP regulates each neuron's OWN rate, so\n"
+                  "  it cancels the TILT along with the common mode. A homeostat on the\n"
+                  "  GROUP's mean rate would leave the tilt intact, and that is a mechanism\n"
+                  "  nobody has built.\n", e_on, e_off);
+    } else {
+      std::printf("\n  IP IS NOT THE COMPRESSION. Holding it off during wake moves\n"
+                  "  `bias -> rate` only %.2f -> %.2f, so the sublinearity survives without\n"
+                  "  the homeostat. With every drive-dependent inhibition on this module\n"
+                  "  already off in the genome, what is left is the spiking transfer itself.\n",
+                  e_on, e_off);
+    }
+  }
+
+  // Everything below reads the SHIPPED arm, which is the creature as it is.
+  uint32_t n = n_arm[0];
+  StageRow mean[kLadder];
+  for (uint32_t L = 0; L < kLadder; ++L) mean[L] = mean_arm[0][L];
+  // mean_arm is already normalised and validated above.
+
   std::printf("\n  THE LADDER, %u creatures\n", n);
-  std::printf("  %-7s %-11s %-11s %-11s %-11s %-9s %s\n", "k", "injected", "mean rate",
-              "rate tilt", "centroid", "F1 (Hz)", "pinned");
+  std::printf("  %-7s %-11s %-11s %-11s %-11s %-9s %-8s %s\n", "k", "injected",
+              "mean rate", "rate tilt", "centroid", "F1 (Hz)", "pinned", "threshold");
   for (uint32_t L = 0; L < kLadder; ++L) {
-    std::printf("  %-7.2f %-11.5f %-11.2f %-11.3f %-11.4f %-9.1f %.3f\n", mean[L].k,
-                mean[L].injected, mean[L].rate, mean[L].tilt, mean[L].centroid,
-                mean[L].f1, mean[L].pinned);
+    std::printf("  %-7.2f %-11.5f %-11.2f %-11.3f %-11.4f %-9.1f %-8.3f %.3f\n",
+                mean[L].k, mean[L].injected, mean[L].rate, mean[L].tilt,
+                mean[L].centroid, mean[L].f1, mean[L].pinned, mean[L].threshold);
   }
 
   // Log-log slope between the first and last rungs that both have positive values

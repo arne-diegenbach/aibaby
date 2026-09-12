@@ -9716,6 +9716,52 @@ the next question, and the candidates are nameable — feedforward inhibition
 scaling with the group's own drive is the obvious one, and would make this the
 ninth appearance of the common-mode wall.
 
+### The compression is intrinsic plasticity, and a per-neuron homeostat is the wrong shape
+
+`stageprobe` put the compression in `bias -> rate` at 0.34. Every drive-dependent
+inhibition on the larynx is already **off** in the genome — `norm_gain`,
+`ffi_gain`, `lateral_gain` and `apical_threshold` are all 0.0 — so it is not any of
+those. What is on is intrinsic plasticity, at `ip_wake_scale = 1.0` where most
+modules run 0.25, which is v9's deliberate choice to hold the larynx.
+
+Holding it off during wake:
+
+| vocal `ip_wake` | `bias -> rate` | threshold | mean rate |
+|---|---|---|---|
+| 1.00 (shipped) | **0.34** | 1.025 -> 1.130 | 5.73 -> **5.18** |
+| 0.00 | **0.91** | 1.000 -> 1.000 | 9.25 -> **16.29** |
+
+**Doubling the drive with the homeostat off raises the rate 1.76x — essentially
+proportional. With it on, the rate FALLS.** The homeostat is not damping the bias,
+it is cancelling it and overshooting, entirely inside its range: the pinned share
+is 0.000 at both of those rungs, so no clamp is involved.
+
+**So the naming ceiling is the larynx regulating its own firing rate.** Twelve
+routes failed upstream of that, and they had to: reward can write as much bias as
+it likes and a homeostat downstream will absorb it.
+
+**And the design point is sharper than "turn it down".** The readout is a centroid
+— it reads the **tilt**, which neuron fires more across the group. A **per-neuron**
+rate homeostat drives every neuron toward the *same* rate. It therefore does not
+merely damp the bias; it actively **flattens the tilt**, which is the one thing the
+centroid can see. A homeostat on the **group's mean** rate would hold the common
+mode and leave the tilt alone.
+
+That mechanism does not exist in this creature, and it is the first genuinely new
+thing this thread has produced rather than another knob.
+
+**Turning IP off is not the fix, and the record already says why.** DNA v50
+relaxed the larynx's IP and learning got *worse* — `change` +16.6 to -2.3 on 3 of
+3 seeds. A creature whose larynx does not regulate has a different problem. The
+diagnosis licenses a *reshaped* homeostat, not an absent one.
+
+**It also unifies nine walls.** Every "common-mode" result in this project —
+pooling destroying the object code, the plateau gate attenuating instead of
+selecting, the topographic tract measuring x1.00, `ipctx`'s saturation — is the
+same shape: a signal that lives in *which* unit fires, meeting machinery that
+regulates *how much* each unit fires. The ninth appearance is the one where the
+mechanism is finally named rather than hit.
+
 ### What the literature says to build next, and why it is the cheap option
 
 > **This section is the argument that produced DNA v51, kept as the record of
