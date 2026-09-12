@@ -265,6 +265,13 @@ const Spec kSpecs[] = {
      "  sum(r^beta*p)/sum(r^beta). Every beta gets its OWN matched-marginal\n"
      "  control, because decompression and NOISE both widen a spread and only\n"
      "  the EXCESS separates steering from scatter. Screens beta 1/2/3"},
+    {"stageprobe", 600000, Expect::kOpen, Tier::kLong,
+     "WHICH STAGE makes dF1 ~ aligned^0.61. Twelve routes have failed against\n"
+     "  that exponent without anyone knowing where it comes from. Read-only:\n"
+     "  injects a known ramp at six amplitudes and fits the local slope of\n"
+     "  bias->rate, rate->centroid and centroid->F1 separately. centroid->F1 is\n"
+     "  a lerp and MUST measure 1.00, which is the self-check; and the three\n"
+     "  must multiply to the end-to-end curve or a stage is missing"},
     {"ctxfour", 3400000, Expect::kOpen, Tier::kTeach,
      "derived: ctxself's session at FOUR words. partprobe cleared the index at\n"
      "  four (0.895 vs chance 0.250); this asks whether the BIAS holds four\n"
@@ -527,6 +534,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "ctxgain") ok = run_ctxgain(dna_blob, ticks, verbose);
   else if (name == "baseref") ok = run_baseref(dna_blob, ticks, verbose);
   else if (name == "poolbeta") ok = run_poolbeta(dna_blob, ticks, verbose);
+  else if (name == "stageprobe") ok = run_stageprobe(dna_blob, ticks, verbose);
   else if (name == "interleave") ok = run_interleave(dna_blob, ticks, verbose);
   else if (name == "ctxretain") ok = run_ctxretain(dna_blob, ticks, verbose);
   else if (name == "partprobe") ok = run_partprobe(dna_blob, ticks, verbose);

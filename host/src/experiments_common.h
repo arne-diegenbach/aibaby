@@ -2062,6 +2062,7 @@ bool run_bankprobe(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_ctxgain(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_baseref(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_poolbeta(const std::vector<uint8_t>&, uint64_t, bool);
+bool run_stageprobe(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_interleave(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_ctxretain(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_pgprobe(const std::vector<uint8_t>&, uint64_t, bool);

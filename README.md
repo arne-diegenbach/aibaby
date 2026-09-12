@@ -9662,6 +9662,60 @@ sharpening the pooling did not change where the curve ends up — only how fast 
 gets there. The compression that sets the ceiling is not the smoothness of the
 centroid.
 
+### `stageprobe` — the compression is in the NEURON, not the pooling
+
+Twelve routes failed against `dF1 ~ aligned^0.61` and not one of them knew which
+stage of the pipeline produced it. The chain is four stages — `bias -> drive ->
+rate -> centroid -> F1` — and only one can be the culprit. This injects a known
+zero-mean ramp with `ctxbias`'s own oracle at six amplitudes and fits the local
+slope of each stage separately. Read-only.
+
+| k range | bias -> rate | rate -> centroid | centroid -> F1 |
+|---|---|---|---|
+| **0.25 -> 0.50** | **0.34** | 0.66 | 1.01 |
+| 0.50 -> 1.00 | 0.46 | 0.56 | 1.01 |
+| 1.00 -> 2.00 | 1.40 | 0.16 | 1.01 |
+| 2.00 -> 4.00 | 1.19 | -0.01 | 1.01 |
+
+**The learned bias lives in the first row.** `ctxscale` and `align-split` put
+`aligned` at about 0.05, which is between k = 0.25 and k = 0.50 on this ladder.
+There the compressive stage is **`bias -> rate` at 0.34**, against 0.66 for the
+pooling.
+
+**And that explains `poolbeta`.** Sharpening the pooling attacked `rate ->
+centroid` — the stage that is *not* the bottleneck where reward operates — which is
+exactly why it bought convergence speed and left the ceiling alone. It was aimed
+one stage too late.
+
+**It is not threshold saturation.** The pinned share is **0.000** at both of the
+rungs that bracket the learned regime, and only reaches 0.357 at k = 4, a magnitude
+only an oracle can produce. So the sublinearity at 0.34 is intrinsic to the
+drive-to-rate transfer rather than a clamp being hit — which also retires the
+`ipctx` pinned-share story as the explanation *at the magnitudes that matter*.
+
+**Two ways this probe caught itself, and both earned their place.**
+
+The self-check is `centroid -> F1`, which is a `lerp` and must measure 1.00. The
+first version recomputed the centroid from a **one-tick snapshot** of `rate_fast`
+and compared it against an equilibrated formant; the check read **0.74** and
+refused the whole table. Reading the decoder's own smoothed `group_value_[2]` —
+the quantity `target_f1` is actually a lerp of — puts it at 1.01.
+
+The second was worse and would have been publishable. The first version fitted
+**one exponent from the first rung to the last** and announced the compression was
+in `rate -> centroid` at 0.21. That is the *high-k* regime: the centroid saturates
+near its bound at 0.84 by k = 2 and drags the whole fit with it. Over the ladder
+the answer **inverts**, and a single fit names the wrong stage. This project has
+made that exact error before — three readings of one curve, the first two wrong —
+so the table is per-interval and the regimes are visible.
+
+**So there is a target for the first time.** Not "the larynx compresses" but: *the
+drive-to-rate transfer is sublinear at 0.34 in the range reward can reach, with no
+clamp involved.* What makes a spiking neuron's rate sublinear in drive at 5-6 Hz is
+the next question, and the candidates are nameable — feedforward inhibition
+scaling with the group's own drive is the obvious one, and would make this the
+ninth appearance of the common-mode wall.
+
 ### What the literature says to build next, and why it is the cheap option
 
 > **This section is the argument that produced DNA v51, kept as the record of

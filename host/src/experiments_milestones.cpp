@@ -13277,6 +13277,265 @@ bool run_poolbeta(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
   return true;
 }
 
+// ---------------------------------------------------------------------------
+// stageprobe -- WHICH STAGE produces dF1 ~ aligned^0.61.
+//
+// Twelve routes have now failed against that exponent: nine knobs on the bias,
+// the reward's resolution, its reference, and the pooling sharpness. Every one of
+// them attacked the curve without knowing WHICH STAGE OF THE PIPELINE MAKES IT,
+// which is the gap this closes. The chain from a bias to a formant has four
+// stages, and only one of them can be the culprit:
+//
+//   bias -> drive    additive by construction, so linear
+//   drive -> rate    the neuron's transfer function -- WHERE SATURATION LIVES
+//   rate -> centroid the ratio sum(r*p)/sum(r)
+//   centroid -> F1   a lerp between f1_min and f1_max
+//
+// `poolbeta` attacked the third stage and bought convergence SPEED, not ceiling.
+// The circumstantial case points at the second: `ipctx` found 25-83% of the larynx
+// pinned at `threshold_max`. But the one attempt to unpin it -- v50's inhibitory
+// plasticity -- HURT, and that test was confounded, because ISP also cost the
+// exploratory pathway (+34.0 -> +15.4 with the tract silent). So "saturation is
+// not it" was never cleanly established.
+//
+// METHOD, and it is read-only: inject a KNOWN zero-mean ramp with the bias oracle
+// at a series of amplitudes -- the same oracle `ctxbias` used to reach 236 Hz --
+// let the creature settle at each, and measure all four quantities. Then fit the
+// LOCAL SLOPE of each stage separately. Whichever is sublinear IS the compression.
+//
+//   tilt      T = sum(r_i * p_i) / sum(p_i^2)   the slope of rate against position
+//   centroid  c = sum(r_i * p_i) / sum(r_i)     what the larynx actually reads
+//   F1        the formant that comes out
+//
+// STAGE C IS THE SELF-CHECK. centroid -> F1 is a lerp, so its measured exponent
+// MUST come out at 1.00. If it does not, the instrument is wrong and nothing else
+// in the table can be read -- which is the check three of this session's failures
+// would have wanted.
+//
+// AND THE PRODUCT MUST RECONSTRUCT THE WHOLE. The three stage exponents multiply
+// to the overall dF1-vs-bias exponent; if they do not, the decomposition is
+// incomplete and there is a stage I have not named. That is printed rather than
+// assumed.
+struct StageRow {
+  double k = 0.0;        // oracle amplitude, multiples of noise_amp
+  double injected = 0.0; // RMS of the injected ramp, per neuron
+  double tilt = 0.0;     // rate slope against position
+  double centroid = 0.0; // what read_group returns for the F1 group
+  double f1 = 0.0;       // the formant produced
+  double pinned = 0.0;   // share of the group AT threshold_max
+  double rate = 0.0;     // mean rate of the group
+};
+
+bool run_stageprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  aibaby::Dna dna;
+  if (dna.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) {
+    std::printf("  setup failed: the genome does not load\n");
+    return false;
+  }
+  const int32_t vmod = dna.module_with_role(aibaby::ModuleRole::kVocal);
+  if (vmod < 0) {
+    std::printf("  this genome has no kVocal module.\n");
+    return false;
+  }
+  instrument("stageprobe", dna.header().seed ^ 0x57A6u, 1, "amplitude ladder");
+  std::printf("  question          twelve routes have failed against dF1 ~ aligned^0.61\n"
+              "                    without anyone knowing WHICH STAGE makes it. Read-only.\n");
+  std::printf("  the stages        bias->drive (linear by construction), drive->RATE (where\n"
+              "                    saturation lives), rate->CENTROID (the ratio),\n"
+              "                    centroid->F1 (a lerp).\n");
+  std::printf("  the self-check    centroid->F1 MUST measure 1.00. If it does not, the\n"
+              "                    instrument is wrong and no other row can be read.\n");
+  std::printf("  and the product   the three stage exponents must multiply to the overall\n"
+              "                    one, or a stage is missing and it says so.\n\n");
+
+  // A ladder wide enough to fit a slope on, centred on the region ctxbias used.
+  const double ks[] = {0.0, 0.25, 0.5, 1.0, 2.0, 4.0};
+  constexpr uint32_t kLadder = sizeof(ks) / sizeof(ks[0]);
+  constexpr uint32_t kReps = 6;
+
+  struct Cell { bool ok = false; StageRow row[kLadder]; };
+  const std::vector<Cell> cells = parallel_reps<Cell>(kReps, [&](uint32_t r) {
+    Cell cell;
+    std::vector<uint8_t> variant = blob;
+    const uint64_t seed = dna.header().seed + r * 7919ull;
+    std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+    Session s;
+    std::string err;
+    if (!s.init(variant, err)) return cell;
+    const aibaby::ModuleState& vms = s.brain.network().module(uint32_t(vmod));
+    const uint32_t g_beg = vms.begin + aibaby::slice_begin(vms.count, aibaby::kVocalGroups, 2);
+    const uint32_t g_end = vms.begin + aibaby::slice_begin(vms.count, aibaby::kVocalGroups, 3);
+    const uint32_t gn = g_end > g_beg ? g_end - g_beg : 0;
+    if (gn < 4) return cell;
+    const double t_max = double(s.dna.header().homeo.threshold_max);
+    const double namp = double(s.dna.module(uint32_t(vmod)).noise_amp);
+
+    for (uint32_t L = 0; L < kLadder; ++L) {
+      // Set the oracle, then let the creature settle for the same span at every
+      // rung so a slow variable cannot masquerade as a slope.
+      s.brain.network().clear_bias_oracle();
+      if (ks[L] > 0.0) {
+        s.brain.network().set_bias_oracle(0, g_beg, g_end, aibaby::Scalar(ks[L] * namp));
+      }
+      for (uint64_t t = 0; t < ticks / kLadder; ++t) s.brain.step();
+
+      StageRow& row = cell.row[L];
+      row.k = ks[L];
+      double ss = 0.0, dot = 0.0, pp = 0.0, rsum = 0.0, inj = 0.0, pin = 0.0;
+      for (uint32_t i = g_beg; i < g_end; ++i) {
+        const double p = (double(i - g_beg) + 0.5) / double(gn) - 0.5;
+        const double rate = double(s.brain.network().rate_fast(i));
+        const double b = double(s.brain.network().bias_oracle_at(i));
+        dot += rate * p;
+        pp += p * p;
+        rsum += rate;
+        inj += b * b;
+        ss += rate * rate;
+        if (double(s.brain.network().threshold(i)) >= t_max * 0.999) pin += 1.0;
+      }
+      row.injected = std::sqrt(inj / double(gn));
+      row.tilt = pp > 0.0 ? dot / pp : 0.0;
+      // THE DECODER'S OWN VALUE, not a recomputation of it. The first version of
+      // this probe recomputed the centroid from a ONE-TICK snapshot of rate_fast
+      // and compared it against an equilibrated formant -- and the self-check
+      // caught it, reading 0.74 where a lerp must read 1.00. `group_value_[2]` is
+      // the SMOOTHED centroid that target_f1 is actually a lerp of, so reading it
+      // makes stage C an identity by construction and the check meaningful.
+      row.centroid = double(s.brain.vocal_decoder().groups()[2]);
+      row.rate = rsum / double(gn);
+      row.pinned = pin / double(gn);
+      row.f1 = double(s.brain.voice().f1);
+    }
+    cell.ok = true;
+    parallel_note("  [%u/%u] seed %u  F1 %.0f -> %.0f Hz across the ladder\n", r + 1,
+                  kReps, r, cell.row[0].f1, cell.row[kLadder - 1].f1);
+    return cell;
+  });
+
+  uint32_t n = 0;
+  StageRow mean[kLadder];
+  for (const Cell& c : cells) {
+    if (!c.ok) continue;
+    ++n;
+    for (uint32_t L = 0; L < kLadder; ++L) {
+      mean[L].k = ks[L];
+      mean[L].injected += c.row[L].injected;
+      mean[L].tilt += c.row[L].tilt;
+      mean[L].centroid += c.row[L].centroid;
+      mean[L].f1 += c.row[L].f1;
+      mean[L].pinned += c.row[L].pinned;
+      mean[L].rate += c.row[L].rate;
+    }
+  }
+  if (n < 3) {
+    std::printf("\n  stageprobe INCONCLUSIVE -- %u of %u creatures hatched.\n", n, kReps);
+    return false;
+  }
+  for (uint32_t L = 0; L < kLadder; ++L) {
+    mean[L].injected /= n; mean[L].tilt /= n; mean[L].centroid /= n;
+    mean[L].f1 /= n; mean[L].pinned /= n; mean[L].rate /= n;
+  }
+
+  std::printf("\n  THE LADDER, %u creatures\n", n);
+  std::printf("  %-7s %-11s %-11s %-11s %-11s %-9s %s\n", "k", "injected", "mean rate",
+              "rate tilt", "centroid", "F1 (Hz)", "pinned");
+  for (uint32_t L = 0; L < kLadder; ++L) {
+    std::printf("  %-7.2f %-11.5f %-11.2f %-11.3f %-11.4f %-9.1f %.3f\n", mean[L].k,
+                mean[L].injected, mean[L].rate, mean[L].tilt, mean[L].centroid,
+                mean[L].f1, mean[L].pinned);
+  }
+
+  // Log-log slope between the first and last rungs that both have positive values
+  // on each axis -- the local exponent of that stage.
+  const auto expo = [&](double x0, double x1, double y0, double y1) {
+    if (!(x0 > 0.0) || !(x1 > 0.0) || !(y0 > 0.0) || !(y1 > 0.0)) return 0.0;
+    if (x1 == x0) return 0.0;
+    return std::log(y1 / y0) / std::log(x1 / x0);
+  };
+  const uint32_t lo = 1, hi = kLadder - 1;  // skip k = 0, which has no log
+  const double d_inj = mean[hi].injected - mean[lo].injected;
+  const double e_rate = expo(mean[lo].injected, mean[hi].injected,
+                             std::fabs(mean[lo].tilt), std::fabs(mean[hi].tilt));
+  const double e_cent = expo(std::fabs(mean[lo].tilt), std::fabs(mean[hi].tilt),
+                             std::fabs(mean[lo].centroid - 0.5) + 1e-9,
+                             std::fabs(mean[hi].centroid - 0.5) + 1e-9);
+  const double e_f1 = expo(std::fabs(mean[lo].centroid - 0.5) + 1e-9,
+                           std::fabs(mean[hi].centroid - 0.5) + 1e-9,
+                           std::fabs(mean[lo].f1 - mean[0].f1) + 1e-9,
+                           std::fabs(mean[hi].f1 - mean[0].f1) + 1e-9);
+  const double e_all = expo(mean[lo].injected, mean[hi].injected,
+                            std::fabs(mean[lo].f1 - mean[0].f1) + 1e-9,
+                            std::fabs(mean[hi].f1 - mean[0].f1) + 1e-9);
+
+  // PER-INTERVAL, NOT ONE FIT ACROSS THE LADDER. The first version of this fitted
+  // a single exponent from the first rung to the last and announced that the
+  // compression was in `rate -> centroid` at 0.21. That is the HIGH-k regime: the
+  // centroid saturates near 0.84 by k = 2 and drags the whole fit down with it. In
+  // the regime the LEARNED bias actually occupies the answer is the other stage.
+  // This project has made that exact error before -- three readings of one curve,
+  // the first two wrong -- so the table is local and the regimes are visible.
+  std::printf("\n  LOCAL EXPONENT BETWEEN CONSECUTIVE RUNGS\n");
+  std::printf("  %-14s %-12s %-12s %-10s %s\n", "k range", "bias->rate", "rate->cent",
+              "cent->F1", "");
+  double learn_rate_e = 0.0, learn_cent_e = 0.0;
+  bool learn_found = false;
+  for (uint32_t L = 1; L + 1 < kLadder; ++L) {
+    const double er = expo(mean[L].injected, mean[L + 1].injected,
+                           std::fabs(mean[L].tilt), std::fabs(mean[L + 1].tilt));
+    const double ec = expo(std::fabs(mean[L].tilt), std::fabs(mean[L + 1].tilt),
+                           std::fabs(mean[L].centroid - 0.5) + 1e-9,
+                           std::fabs(mean[L + 1].centroid - 0.5) + 1e-9);
+    const double ef = expo(std::fabs(mean[L].centroid - 0.5) + 1e-9,
+                           std::fabs(mean[L + 1].centroid - 0.5) + 1e-9,
+                           std::fabs(mean[L].f1 - mean[0].f1) + 1e-9,
+                           std::fabs(mean[L + 1].f1 - mean[0].f1) + 1e-9);
+    // THE REGIME THAT MATTERS: the learned context bias sits at aligned ~0.05
+    // (ctxscale, align-split), so the interval that brackets it is the one whose
+    // exponents describe what reward can actually do. Everything above it is a
+    // regime only an oracle reaches.
+    const bool learned_here =
+        mean[L].injected <= 0.05 && mean[L + 1].injected >= 0.05;
+    if (learned_here) { learn_rate_e = er; learn_cent_e = ec; learn_found = true; }
+    std::printf("  %4.2f -> %-7.2f %-12.2f %-12.2f %-10.2f%s\n", mean[L].k,
+                mean[L + 1].k, er, ec, ef,
+                learned_here ? "  <- where the LEARNED bias lives" : "");
+  }
+  std::printf("\n  end to end, first rung to last   %.2f  (product %.2f)\n", e_all,
+              e_rate * e_cent * e_f1);
+  std::printf("  centroid                         %.4f -> %.4f, and it SATURATES\n",
+              mean[1].centroid, mean[hi].centroid);
+  std::printf("  pinned share                     %.3f -> %.3f\n", mean[0].pinned,
+              mean[hi].pinned);
+
+  if (e_f1 < 0.9 || e_f1 > 1.1) {
+    std::printf("\n  THE INSTRUMENT IS WRONG. centroid -> F1 is a lerp and must measure\n"
+                "  1.00; it reads %.2f. No other row here can be trusted.\n", e_f1);
+    return false;
+  }
+  if (!learn_found) {
+    std::printf("\n  stageprobe INCONCLUSIVE -- no rung interval brackets the learned\n"
+                "  bias magnitude, so the ladder does not cover the regime that matters.\n");
+    return false;
+  }
+  std::printf("\n  IN THE LEARNED REGIME the compressive stage is `%s` at %.2f, against\n"
+              "  %.2f for the other. Over the WHOLE ladder that inverts, because the\n"
+              "  centroid saturates near its bound at high k -- a regime only an oracle\n"
+              "  reaches, and reporting one fit across both would name the wrong stage.\n",
+              learn_rate_e < learn_cent_e ? "bias -> rate" : "rate -> centroid",
+              learn_rate_e < learn_cent_e ? learn_rate_e : learn_cent_e,
+              learn_rate_e < learn_cent_e ? learn_cent_e : learn_rate_e);
+  if (learn_rate_e < learn_cent_e) {
+    std::printf("\n  SO THE TARGET IS THE NEURON, NOT THE POOLING. `bias -> rate` is the\n"
+                "  drive-to-rate transfer, and at the magnitudes reward can reach it is\n"
+                "  already sublinear -- which is why `poolbeta` sharpened the POOLING and\n"
+                "  bought convergence speed rather than ceiling. It was attacking the stage\n"
+                "  that is NOT compressive where the learned bias lives.\n");
+  }
+  (void)d_inj;
+  return true;
+}
+
 bool run_ctxscale(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
   (void)verbose;
   aibaby::Dna dna;
