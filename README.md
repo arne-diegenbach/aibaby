@@ -90,7 +90,7 @@ Three things are worth knowing:
 - **The host's DSP is not in the file.** The cochlea's analysis window and the
   retina's frame are the room's state, not the creature's, so they start clean.
 
-## Experiments
+## Driving the baby by hand
 
 In the browser: **enable microphone** grants permission and opens the device —
 click it again to release it, which also clears the browser's recording
@@ -503,8 +503,34 @@ of an hour.
 | **M1c** taught vocalisation | **met** — praise alone moves the creature's vowel toward a target it never hears: error down **+19.0 points** against its own yoked control and the change is audible at **d′ 7.50** (null −0.03), 3 of 3 seed families — re-measured after M1d shipped; it was +15.9 and d′ 5.57 before. The first taught change to *what* this creature says rather than how often |
 | **M1** closed audio loop | **done — G2 met.** Rewarded vocalisations rise within the session (×1.35) and praise beats its own yoked control in **23 of 27 creatures** across three seed families, and 9 of 9 at 420 s. What closed it was directional exploration (DNA v10), which was not aimed at reward at all |
 | **M2** vision | **done** — camera → retina → B3 → B1, discriminates present from absent at 98%, and 86% with firing rate divided out |
-| **M3** cross-modal association | **CLOSED, NEGATIVE.** Not "still open": eleven mechanisms across four structurally different families were built and measured against it, and the milestone has never moved outside its own noise floor. The shipped creature reads taught−random **+0.060 ± 0.040 SE**, which is 1.5 SE and not a result, and the control genome — mechanism absent by construction — swings ±0.060 across seed families. What the creature *can* do is bounded and known: it learns a fixed vocal target from praise (M1c), and it inherits one conditional map that is innate (the arcuate). It does not acquire a new conditional map |
+| **M3** cross-modal association | **CLOSED, NEGATIVE** on the vision→voice form. Eleven mechanisms across four structurally different families were measured against it and it never moved outside its own noise floor: the shipped creature reads taught−random **+0.060 ± 0.040 SE**, and the control genome — mechanism absent by construction — swings ±0.060 across seed families. **Its "does not acquire a new conditional map" reading is superseded**, see the naming row below: with a context-indexed bias the creature *does* acquire one, from the ear rather than the eye |
+| **Naming (G3)** heard word → spoken word | **DIRECTIONAL NAMING MET; ABSOLUTE NAMING CEILINGED.** On the axis measure the creature moves its voice the right way for the word it just heard — **0.824 and 0.738 across two seed families, pooled +0.276 (7.6 SE) over echo-only and +0.244 (6.0 SE) over a matched-marginal control** — on a measure an echo scores at 0.503 and an arbitrary-but-consistent mapping at 0.406, both closed by construction rather than by argument. It also partly arrives: 0.670 and 0.604 on the strict nearest-of-actual-targets score against 0.495–0.518 for both controls. What is **not** met is absolute naming: delivered dF1 tops out near **137 Hz** against the ~230 needed, and that ceiling now has a cause rather than a shrug — see the row below |
+| **The naming ceiling** | **MEASURED, and twelve routes are closed.** `dF1 ~ aligned^0.61`: the larynx compresses what it is given, and the same curve does two jobs — it limits delivery, and its derivative limits learning, since the drift is `−Cov(e, perturb)` which factors through `dF1/d(drive)`. That is why nine knobs on the bias, the reward's **resolution**, its **reference**, and the pooling **sharpness** all failed, and on that algebra all of them had to. Two independent routes agree the asymptote is 234–236 Hz. The readout is not broken, the shape is not wrong, credit assignment is fine — the learned bias is simply ~3.8x too small and cannot be made bigger by any knob yet found |
 | **M4** growth and sleep | **done** — **G4 passes**: the creature never grows while it is still learning, grows only on a detected plateau, and never passes the DNA cap; myelination, pruning and replay all run |
+| **Memory and interference** | **HALF-MAPPED, and the replay half is negative.** A conflicting second lesson wipes a taught sound to **0.22** (`retain`), and the §3.6 replay buffer does **nothing** about it: switching replay off entirely costs +0.3 SE on retention and −0.4 SE on absolute error. That is not a tuning failure — the cash-in is `u = step·perturb_i` and during sleep `perturb_i` is fresh noise, so `E[u] = 0`; it rehearses the cue and reinforces nothing. Interleaving is refused with a *perfect* oracle (`frozen`, −1.1 SE), synaptic stabilisation is a clean null (`meta_commit`, +0.0002 on absolute error), and context gating with a *perfect* index recovers only **~15%** of the damage while costing a great deal when the index is anything less. Catastrophic interference here is mostly **not** a filing problem |
+
+### Reading this page
+
+It is long, and it is a working journal rather than a narrative: sections below
+supersede earlier ones **in place**, and several claims were published and then
+retracted within a day. That history is kept deliberately — a refuted idea with its
+refutation attached is worth more than a tidy page, and more than one conclusion
+here was reached twice in opposite directions.
+
+So if you want the state rather than the story:
+
+- **the table above** is current, and is the only part guaranteed to be
+- **what is closed and why** — twelve routes on the naming ceiling, each with the
+  measurement that closed it, in the ceiling row above
+- **what to read before touching G3** — `dF1 ~ aligned^0.61` and its two jobs;
+  everything that failed, failed for that reason
+- **what is still open** lives in the memory index, not here, because it changes
+  faster than this page does
+
+Where a later section contradicts an earlier one, **the later one is right** and
+usually says so explicitly. Four claims in the most recent session were retracted
+by the run queued to test them, and in each case the retraction is in the commit
+that superseded the claim rather than appended somewhere quieter.
 
 Every number on this page comes from the genome in [dna/default.toml](dna/default.toml)
 as it currently stands. **The whole suite above passes except `m3`** — G1,
@@ -1190,6 +1216,18 @@ m3's interleaved schedule was already the right one, now for a measured reason.
 > machinery reaches the bar.
 
 ## Why G3 is closed, and what would have to be different
+
+> **PARTLY SUPERSEDED, and the distinction is the point.** G3's own bar is
+> *vision* → voice, and it remains closed negative — nothing below is retracted on
+> that. But this section also says *"the creature has exactly one conditional
+> pathway and it is innate"*, and **that sentence is now false.** DNA v51's
+> context-indexed bias built a **learned** conditional pathway off the *ear*:
+> `areax` reads 112.9 Hz of conditional dF1, the creature derives its own index
+> from the ear's rate EMA (+23.6 +/- 6.6 Hz, 3.6 SE, 16 of 18 creatures,
+> replicated on a fresh seed family), and directional naming is met at 0.82. The
+> reasoning below is kept because it is what produced v51 — the parameter-count
+> argument in it is the argument that worked — but read the naming rows in the
+> table above for where this ended up.
 
 G3 asked for a **held-out classifier to tell cube from ball off the baby's own
 vocalisations at 0.75**, paired beating unpaired. It is not met, and after
@@ -5009,6 +5047,13 @@ exactly one conditional pathway and it is innate.
 That is the same boundary G3 keeps meeting, reached from the one direction that
 was supposed to avoid it — and it is the sharpest statement of it on this page,
 because for once the positive control sits inside the same instrument.
+
+> **SUPERSEDED on its last sentence.** "Exactly one conditional pathway and it is
+> innate" was true when written and is not now: the diagnosis in this section —
+> that a per-neuron bias is *a constant* and so cannot be conditional — is exactly
+> what DNA v51 fixed by indexing that bias, `bias_[i]` -> `bias_[i][c]`. `areax`
+> reads 112.9 Hz of **learned** conditional dF1. The paragraph above is the reason
+> v51 exists and is kept for that, but the boundary it names was crossed.
 
 #### The instrument's own power curve, and why the minimum is 3.4M
 
