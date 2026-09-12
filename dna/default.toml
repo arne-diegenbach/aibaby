@@ -982,6 +982,7 @@ weight_init = 0.12
 noise_amp = 0.28
 # Relaxed while awake and repaid during sleep — see the [homeostasis] note.
 # This is where G2's reward effect was being erased mid-session.
+ip_pool = 0                 # DNA v57: 0 per neuron (shipped), 1 per module mean
 ip_wake_scale = 0.25
 ip_sleep_scale = 4.0
 syn_wake_scale = 0.25
@@ -1261,6 +1262,7 @@ noise_amp = 0.28
 # drives the babble duty cycle to 0.93 and the creature drones; the ears
 # because the dense ears→larynx tract then swamps the reward signal at the
 # motor module. See the table in the [homeostasis] note.
+ip_pool = 0                 # DNA v57: 0 per neuron (shipped), 1 per module mean
 ip_wake_scale = 1.0
 ip_sleep_scale = 1.0
 syn_wake_scale = 1.0
@@ -1391,6 +1393,7 @@ weight_init = 0.12
 noise_amp = 0.28
 # Relaxed while awake and repaid during sleep — see the [homeostasis] note.
 # This is where G2's reward effect was being erased mid-session.
+ip_pool = 0                 # DNA v57: 0 per neuron (shipped), 1 per module mean
 ip_wake_scale = 0.25
 ip_sleep_scale = 4.0
 syn_wake_scale = 0.25
@@ -1520,6 +1523,7 @@ weight_init = 0.12
 noise_amp = 0.28
 # Relaxed while awake and repaid during sleep — see the [homeostasis] note.
 # This is where G2's reward effect was being erased mid-session.
+ip_pool = 0                 # DNA v57: 0 per neuron (shipped), 1 per module mean
 ip_wake_scale = 0.25
 ip_sleep_scale = 4.0
 syn_wake_scale = 0.25
@@ -1649,6 +1653,7 @@ noise_amp = 0.22
 # drives the babble duty cycle to 0.93 and the creature drones; the ears
 # because the dense ears→larynx tract then swamps the reward signal at the
 # motor module. See the table in the [homeostasis] note.
+ip_pool = 0                 # DNA v57: 0 per neuron (shipped), 1 per module mean
 ip_wake_scale = 1.0
 ip_sleep_scale = 1.0
 syn_wake_scale = 1.0
@@ -1980,6 +1985,7 @@ weight_init = 0.12
 noise_amp = 0.28
 # Relaxed while awake and repaid during sleep — see the [homeostasis] note.
 # This is where G2's reward effect was being erased mid-session.
+ip_pool = 0                 # DNA v57: 0 per neuron (shipped), 1 per module mean
 ip_wake_scale = 0.25
 ip_sleep_scale = 4.0
 syn_wake_scale = 0.25

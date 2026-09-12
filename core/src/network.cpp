@@ -2440,6 +2440,35 @@ void Network::homeostasis(bool asleep) {
     // relaxed its threshold regulation also relax its inhibition, which is the
     // opposite of what the split is for.
     const Scalar isp_step = isp * Scalar(hm.ip_rate);
+    // DNA v57. A POOLED homeostat: one step for the whole module, driven by its
+    // MEAN rate error rather than each neuron's own. The common mode is still
+    // regulated -- which is what v9 built IP for, and v50 measured that simply
+    // removing it makes learning worse -- while the tilt inside the module is left
+    // alone, because every neuron gets the identical step.
+    //
+    // Computed BEFORE the loop, so no neuron's update can influence another's
+    // within one pass. A running mean updated inside the loop would make the
+    // result depend on neuron order, which is the kind of thing that reads as a
+    // mechanism doing something when it is only iterating.
+    const uint32_t ip_slices = dna_.module(m).ip_pool;
+    const bool ip_pooled = ip_slices > 0u;
+    // One mean error per slice. `kMaxIpSlices` is a fixed cap so this needs no
+    // allocation; a genome asking for more is refused by dna.cpp.
+    constexpr uint32_t kMaxIpSlices = 32;
+    Scalar slice_err[kMaxIpSlices] = {};
+    if (ip_pooled && ip_scale > kZero) {
+      uint32_t live[kMaxIpSlices] = {};
+      for (uint32_t k2 = 0; k2 < ms.count; ++k2) {
+        const uint32_t i2 = ms.begin + k2;
+        if (dead_[i2]) continue;
+        const uint32_t sl = ip_slices > 1u ? (k2 * ip_slices) / ms.count : 0u;
+        slice_err[sl] += rate_ema_[i2] - target_rate_[i2];
+        ++live[sl];
+      }
+      for (uint32_t sl = 0; sl < ip_slices && sl < kMaxIpSlices; ++sl) {
+        if (live[sl]) slice_err[sl] /= Scalar(live[sl]);
+      }
+    }
     for (uint32_t k = 0; k < ms.count; ++k) {
       const uint32_t i = ms.begin + k;
       if (dead_[i]) continue;
@@ -2448,8 +2477,10 @@ void Network::homeostasis(bool asleep) {
       // lowers the bar. This is what keeps a module alive when reward learning
       // quietly weakens all of its inputs.
       if (ip_scale > kZero) {
-        threshold_[i] = clampf(threshold_[i] + ip_rate * (rate_ema_[i] - target_rate_[i]),
-                               t_min, t_max);
+        const uint32_t sl = ip_slices > 1u ? (k * ip_slices) / ms.count : 0u;
+        const Scalar err =
+            ip_pooled ? slice_err[sl] : (rate_ema_[i] - target_rate_[i]);
+        threshold_[i] = clampf(threshold_[i] + ip_rate * err, t_min, t_max);
       }
       // Inhibitory synaptic plasticity (DNA v50, Vogels et al. 2011). Rate
       // regulation that spends inhibitory weight instead of threshold range.

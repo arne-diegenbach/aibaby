@@ -9762,6 +9762,60 @@ same shape: a signal that lives in *which* unit fires, meeting machinery that
 regulates *how much* each unit fires. The ninth appearance is the one where the
 mechanism is finally named rather than hit.
 
+### DNA v57 — pooling keeps regulation, recovers half the transfer, and fails its own bar
+
+`stageprobe` put the compression in intrinsic plasticity: `bias -> rate` runs at
+0.34 with IP on and 0.91 with it off. The design point was that IP regulates each
+neuron's **own** rate, so it flattens the tilt a centroid reads. v57 pools the rate
+error over N equal slices of a module, so every neuron in a slice gets the same
+step and the tilt inside it survives.
+
+| homeostat | `bias -> rate` | threshold | mean rate |
+|---|---|---|---|
+| shipped (per neuron) | 0.34 | 1.025 -> 1.130 | 5.73 -> **5.18** |
+| off (the diagnosis, not a candidate) | **0.91** | 1.000 -> 1.000 | 9.25 -> **16.29** |
+| pooled x1 (module-wide) | 0.82 | 0.972 -> 1.012 | 10.14 -> 15.98 |
+| **pooled x9** (`kVocalGroups`) | **0.51** | 1.124 -> 1.468 | 7.07 -> **8.90** |
+
+**Regulation passes.** Pooled at the group the mean rate holds at 8.90 against the
+shipped 5.18, where pooled module-wide ran to 15.98 — indistinguishable from
+switching IP off. **The slice count is the design, exactly as predicted:** module-
+wide dilutes the error ninefold because the larynx has nine articulator groups and
+a bias steers one.
+
+**The transfer bar fails.** 0.51 against the 0.59 the pre-registered gate required.
+It recovers 0.17 of a possible 0.57. That bar was set before the run and moving it
+now would be `verdict-fitted-to-data`, so **v57 does not pass.**
+
+**And the threshold column says why the recovery is only partial.** Pooled x9
+pushes back *three times harder* than the shipped rule — +0.344 of threshold
+against +0.105. Per-neuron IP pushes each neuron in proportion to its **own** error,
+so the high-firing ones get pushed most, which is what flattens the tilt. Pooled IP
+pushes every neuron in a slice **equally**, preserving the tilt's *shape* — but the
+slice's mean error is large, so it cuts the *amplitude* harder.
+
+**Why the slice's mean error is large at all is rectification**, and that makes this
+a trade rather than a knob set wrong. A zero-mean drive ramp does not produce a
+zero-mean *rate* change, because a rate cannot go below zero. So any rate
+homeostat, pooled or per-neuron, sees the mean rise and pushes back. A fully linear
+transfer needs no rate regulation, and v50 measured what that costs: `change` +16.6
+to -2.3.
+
+**Two bugs of mine in this thread, and the second is the instructive one.** Pooling
+module-wide was a design error I had reasoned past and then simplified back into.
+Then the four-arm table shipped with a three-entry `ip_scales`, so arm 3 read one
+past the end, got 0.0, and ran with IP **off** — printing numbers byte-identical to
+the `off` arm, which is what gave it away. Two arms agreeing to three decimals
+across four columns is never a coincidence. `ArmLiveness` checks exactly that and
+`stageprobe` was the one experiment built without it; it is wired in now, and the
+array lengths are a `static_assert` rather than a convention.
+
+**What is left is the outcome, and it is a separate pre-registered question.** The
+transfer bar was a proxy. Whether 0.34 -> 0.51 on the compressive stage buys
+delivered dF1 is the thing that matters, and unlike the twelve closed routes this
+one has a measured mechanism acting on the measured bottleneck. That deserves its
+own gate, set before its own run.
+
 ### What the literature says to build next, and why it is the cheap option
 
 > **This section is the argument that produced DNA v51, kept as the record of

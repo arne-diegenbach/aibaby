@@ -292,6 +292,16 @@ DnaStatus Dna::load(const void* blob, size_t size) {
     if (h->exploration.ctx_param > 1u) return DnaStatus::kBadPlasticity;
   }
 
+  // DNA v57. The pooled homeostat slices a module; more slices than the cap would
+  // read past `slice_err`. Refused rather than clamped, because a genome asking
+  // for 64 slices and silently getting 32 is a different creature than it asked
+  // to be.
+  for (uint32_t m = 0; m < h->module_count; ++m) {
+    const DnaModule* mm = reinterpret_cast<const DnaModule*>(
+        reinterpret_cast<const uint8_t*>(h) + sizeof(DnaHeader));
+    if (mm[m].ip_pool > 32u) return DnaStatus::kBadGrowth;
+  }
+
   if (h->normalisation.enabled) {
     // A floor at or below zero lets the divisor invert the sign of every drive
     // in the module, which is not attenuation but a different network.

@@ -13373,8 +13373,31 @@ bool run_stageprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
   // license is subtler: IP regulates each neuron's OWN rate, so it cancels the
   // TILT along with the common mode. A homeostat on the GROUP's mean would leave
   // the tilt alone.
-  const double ip_scales[] = {1.0, 0.0};
-  constexpr uint32_t kArms = 2;
+  // Three arms. `off` is the diagnosis -- it establishes that IP is the
+  // compression -- and is NOT a candidate, because v50 measured that a larynx
+  // whose IP is relaxed learns WORSE (change +16.6 -> -2.3, 3 of 3). `pooled` is
+  // DNA v57: the same homeostat driven by the module's MEAN rate error, so every
+  // neuron gets an identical step and the tilt survives while the common mode is
+  // still regulated.
+  //
+  // WHAT WOULD REFUSE v57, written before the run: the mean rate drifting off
+  // target like the `off` arm's does. Keeping the tilt by giving up regulation is
+  // IP switched off with extra steps, and that is already measured as worse.
+  // FOUR entries, one per arm, and the three arrays below must stay the same
+  // length. They did not: adding the fourth arm left ip_scales at three, so arm 3
+  // read one past the end, got 0.0, and ran with IP OFF -- printing numbers
+  // byte-identical to the `off` arm, which is what gave it away. A static_assert
+  // now makes that a compile error rather than a run.
+  const double ip_scales[] = {1.0, 0.0, 1.0, 1.0};
+  // The slice count is the design. Module-wide (1) dilutes the error nine-fold
+  // because the larynx has nine articulator groups and a bias steers one; that was
+  // measured and refused. kVocalGroups is the unit the READOUT pools over, so a
+  // slice sees the drive undiluted and the tilt it must not flatten is inside it.
+  const uint32_t ip_pools[] = {0u, 0u, 1u, aibaby::kVocalGroups};
+  const char* ip_names[] = {"shipped", "off", "pooled x1", "pooled x9 (v57)"};
+  constexpr uint32_t kArms = 4;
+  static_assert(sizeof(ip_pools) / sizeof(ip_pools[0]) == kArms, "ip_pools length");
+  static_assert(sizeof(ip_names) / sizeof(ip_names[0]) == kArms, "ip_names length");
 
   struct Cell { bool ok = false; StageRow row[kLadder]; };
   const std::vector<Cell> cells = parallel_reps<Cell>(kReps * kArms, [&](uint32_t job) {
@@ -13389,6 +13412,11 @@ bool run_stageprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
                       sizeof(aibaby::DnaModule) * size_t(vmod) +
                       offsetof(aibaby::DnaModule, ip_wake_scale),
                   &ipw, sizeof(ipw));
+      const uint32_t ipp = ip_pools[arm];
+      std::memcpy(variant.data() + sizeof(aibaby::DnaHeader) +
+                      sizeof(aibaby::DnaModule) * size_t(vmod) +
+                      offsetof(aibaby::DnaModule, ip_pool),
+                  &ipp, sizeof(ipp));
     }
     Session s;
     std::string err;
@@ -13483,21 +13511,55 @@ bool run_stageprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
     if (!(x0 > 0.0) || !(x1 > 0.0) || !(y0 > 0.0) || !(y1 > 0.0) || x1 == x0) return 0.0;
     return std::log(y1 / y0) / std::log(x1 / x0);
   };
+  // THE CHECK THAT WOULD HAVE CAUGHT THE OUT-OF-BOUNDS READ. Two arms printing
+  // identical numbers is never a coincidence, and this is the one experiment I
+  // built without it.
+  {
+    ArmLiveness live("stageprobe");
+    for (uint32_t job = 0; job < kReps * kArms; ++job) {
+      const Cell& c = cells[job];
+      if (c.ok) live.observe(ip_names[job % kArms], job / kArms, c.row[2].tilt);
+    }
+    if (!live.report("shipped")) return false;
+  }
+
   std::printf("\n  THE DECISIVE COMPARISON: bias -> rate in the LEARNED regime\n");
-  std::printf("  %-16s %-14s %-16s %s\n", "vocal ip_wake", "bias->rate", "threshold rise",
-              "mean rate");
+  std::printf("  %-15s %-13s %-18s %s\n", "homeostat", "bias->rate", "threshold rise",
+              "mean rate (target-regulated?)");
+  double er_arm[kArms];
   for (uint32_t arm = 0; arm < kArms; ++arm) {
     const StageRow* m = mean_arm[arm];
-    const double er = expo2(m[1].injected, m[2].injected, std::fabs(m[1].tilt),
-                            std::fabs(m[2].tilt));
-    std::printf("  %-16.2f %-14.2f %.3f -> %-8.3f %.2f -> %.2f\n", ip_scales[arm], er,
-                m[1].threshold, m[2].threshold, m[1].rate, m[2].rate);
+    er_arm[arm] = expo2(m[1].injected, m[2].injected, std::fabs(m[1].tilt),
+                        std::fabs(m[2].tilt));
+    std::printf("  %-15s %-13.2f %.3f -> %-10.3f %.2f -> %.2f\n", ip_names[arm],
+                er_arm[arm], m[1].threshold, m[2].threshold, m[1].rate, m[2].rate);
   }
   {
-    const double e_on = expo2(mean_arm[0][1].injected, mean_arm[0][2].injected,
-                              std::fabs(mean_arm[0][1].tilt), std::fabs(mean_arm[0][2].tilt));
-    const double e_off = expo2(mean_arm[1][1].injected, mean_arm[1][2].injected,
-                               std::fabs(mean_arm[1][1].tilt), std::fabs(mean_arm[1][2].tilt));
+    const double e_on = er_arm[0], e_off = er_arm[1], e_pool = er_arm[3];
+    // v57's two requirements, and it has to meet BOTH: recover the transfer that
+    // IP costs, AND keep the mean rate regulated the way `off` does not.
+    const double rate_on = mean_arm[0][2].rate;
+    const double rate_off = mean_arm[1][2].rate;
+    const double rate_pool = mean_arm[3][2].rate;
+    const bool pool_transfer = e_pool > e_on + 0.25;
+    const bool pool_regulates = std::fabs(rate_pool - rate_on) < 0.5 * std::fabs(rate_off - rate_on);
+    std::printf("\n  DNA v57 AT kVocalGroups SLICES -- it has to meet BOTH bars\n");
+    std::printf("  recovers the transfer   %s  (%.2f vs shipped %.2f, off %.2f)\n",
+                pool_transfer ? "YES" : "no ", e_pool, e_on, e_off);
+    std::printf("  keeps regulating        %s  (mean rate %.2f vs shipped %.2f,"
+                " off %.2f)\n", pool_regulates ? "YES" : "no ", rate_pool, rate_on,
+                rate_off);
+    if (pool_transfer && pool_regulates) {
+      std::printf("  -> IT WORKS. A homeostat on the module's MEAN leaves the tilt the\n"
+                  "     centroid reads while still holding the common mode, which is the\n"
+                  "     thing v9 built IP for and v50 showed cannot simply be removed.\n");
+    } else if (pool_transfer) {
+      std::printf("  -> REFUSED: it recovers the transfer by GIVING UP REGULATION, which is\n"
+                  "     IP switched off with extra steps. v50 already measured that as worse.\n");
+    } else {
+      std::printf("  -> REFUSED: pooling the error does not recover the transfer, so the\n"
+                  "     flattening is not the per-neuron TARGETING of the homeostat.\n");
+    }
     if (e_off > e_on + 0.25) {
       std::printf("\n  INTRINSIC PLASTICITY IS THE COMPRESSION. With IP held off during wake\n"
                   "  `bias -> rate` goes %.2f -> %.2f. The homeostat cancels the bias inside\n"

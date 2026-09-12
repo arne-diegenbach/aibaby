@@ -1699,6 +1699,40 @@ struct DnaModule {
   // regulation is a cell-intrinsic conductance change; synaptic scaling is a
   // receptor-trafficking process at the synapse. They share a purpose, not a
   // machine, and they run on different clocks.
+  // --- DNA v57: WHAT the homeostat regulates ---------------------------------
+  // Intrinsic plasticity is `threshold_[i] += ip_rate * (rate_ema_[i] - target)`,
+  // which is PER NEURON: each neuron's own rate error moves its own threshold.
+  //
+  // `stageprobe` measured what that costs. The larynx's readout is a centroid, so
+  // it reads the TILT -- which neuron in a group fires more. A per-neuron rate
+  // homeostat drives every neuron toward the SAME rate, so it does not merely damp
+  // an injected bias, it actively FLATTENS the tilt, which is the one thing the
+  // centroid can see. Measured: `bias -> rate` runs at 0.34 with IP on and 0.91
+  // with it off, and with IP on the mean rate FALLS as drive doubles.
+  //
+  // That is the ninth appearance of this project's common-mode wall, and the first
+  // where the mechanism is named: a signal that lives in WHICH unit fires, meeting
+  // machinery that regulates HOW MUCH each unit fires.
+  //
+  //   0 — per neuron. The shipped rule, and bit-identical.
+  //   N — pool over N equal slices of the module: every live neuron in a slice
+  //       gets the same step, driven by that slice's MEAN rate error. The common
+  //       mode is still regulated -- which is what v9 built IP for and v50 showed
+  //       cannot simply be removed -- while the tilt INSIDE a slice is left alone.
+  //
+  // THE SLICE COUNT IS THE WHOLE DESIGN, and getting it wrong cost a run. Pooling
+  // over the WHOLE vocal module (N = 1) dilutes the error by nine, because the
+  // larynx has nine articulator groups and a bias steers one of them: the
+  // homeostat then pushes back 2.6x less than the per-neuron rule and the module's
+  // mean rate runs away. Measured -- transfer recovered to 0.82, regulation gone,
+  // 15.98 Hz against the shipped 5.18. For the larynx the right N is
+  // `kVocalGroups`, because that is the unit the readout pools over, so a slice
+  // sees the drive undiluted and the tilt it must not flatten is inside it.
+  //
+  // WHAT WOULD REFUSE IT: the slice's mean rate drifting away from target. A
+  // homeostat that keeps the tilt by giving up regulation is just IP turned off
+  // with extra steps, and v50 already measured that as worse.
+  uint32_t ip_pool;
   float ip_wake_scale;
   float ip_sleep_scale;
   float syn_wake_scale;
