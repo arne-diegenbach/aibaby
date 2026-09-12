@@ -120,6 +120,7 @@ refractory_ms = 3.0
 # active slice delivers against what the silent ones do not.
 target_rate_hz = 0.0
 noise_amp = 0.0
+ip_bias_gain = 0.0
 ip_pool = 0
 ip_wake_scale = 0.0
 ip_sleep_scale = 0.0

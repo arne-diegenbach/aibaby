@@ -1732,6 +1732,37 @@ struct DnaModule {
   // WHAT WOULD REFUSE IT: the slice's mean rate drifting away from target. A
   // homeostat that keeps the tilt by giving up regulation is just IP turned off
   // with extra steps, and v50 already measured that as worse.
+  // --- DNA v58: does the homeostat treat LEARNING as a fault? ----------------
+  // The IP error is `rate_ema_[i] - target_rate_[i]`, so a neuron that reward has
+  // deliberately pushed up reads as firing too fast and gets pushed back down.
+  // That is the compression, measured: `bias -> rate` runs 0.34 with the homeostat
+  // on and 0.91 with it off (`stageprobe`).
+  //
+  // Every route tried before this one changed how much bias reward could write or
+  // how it was read, and all thirteen failed. This changes what the regulator
+  // counts as an error:
+  //
+  //     err = rate_ema_[i] - (target_rate_[i] + ip_bias_gain * delivered_bias_i)
+  //
+  // so a neuron carrying a learned bias is ALLOWED to fire faster, by as much as
+  // the bias asked for. Input-driven rate stays fully regulated -- which `ipoff`
+  // proved is essential, dF1 103.9 -> 17.7 and gain to 1.00 without it -- and only
+  // the deliberate, learned offset is exempt. The network stays homeostatic about
+  // everything it did not choose.
+  //
+  // THE UNITS. `delivered_bias_i` is a drive, and the target is a rate in Hz, so
+  // the gain converts one to the other. It is a genome field and not a derived
+  // constant precisely because that conversion is the thing being measured: this
+  // project has had four guessed constants cost a run each, so the sweep is the
+  // experiment rather than a number chosen in advance.
+  //
+  // WHAT WOULD REFUSE IT, and it is the failure `ipoff` already demonstrated: the
+  // larynx's rate running away. Exempting the bias must not become exempting the
+  // neuron. The pair has to move together -- delivered dF1 up AND rate still near
+  // target -- or this is `ipoff` with extra steps.
+  //
+  // 0 is the shipped rule and bit-identical.
+  float ip_bias_gain;
   uint32_t ip_pool;
   float ip_wake_scale;
   float ip_sleep_scale;

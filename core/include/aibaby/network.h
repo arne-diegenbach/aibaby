@@ -932,6 +932,9 @@ class Network {
   // DNA v54. Per-group gains, `ctx_slots_ x kVocalGroups`, context-major. Live
   // only when ctx_param_ == 1, in which case bias_ctx_ is not written at all.
   Scalar* gain_ctx_ = nullptr;
+  // DNA v58: Hz of IP set point per unit of delivered learned bias. 0 is the
+  // shipped rule. Cached per module at the top of the homeostasis pass.
+  Scalar ip_bias_gain_ = Scalar(0);
   uint32_t ctx_param_ = 0;
   // Which module the groups belong to. Resolved at build; -1 when there is none,
   // in which case mode 1 degrades to no context bias rather than guessing.

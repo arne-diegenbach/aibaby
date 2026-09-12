@@ -2450,6 +2450,7 @@ void Network::homeostasis(bool asleep) {
     // within one pass. A running mean updated inside the loop would make the
     // result depend on neuron order, which is the kind of thing that reads as a
     // mechanism doing something when it is only iterating.
+    ip_bias_gain_ = Scalar(dna_.module(m).ip_bias_gain);
     const uint32_t ip_slices = dna_.module(m).ip_pool;
     const bool ip_pooled = ip_slices > 0u;
     // One mean error per slice. `kMaxIpSlices` is a fixed cap so this needs no
@@ -2462,7 +2463,20 @@ void Network::homeostasis(bool asleep) {
         const uint32_t i2 = ms.begin + k2;
         if (dead_[i2]) continue;
         const uint32_t sl = ip_slices > 1u ? (k2 * ip_slices) / ms.count : 0u;
-        slice_err[sl] += rate_ema_[i2] - target_rate_[i2];
+        // The same v58 exemption as the per-neuron path below, or the two modes
+        // would disagree about what an error is and a comparison between them
+        // would measure that disagreement instead of the pooling.
+        Scalar t2 = target_rate_[i2];
+        if (ip_bias_gain_ != kZero) {
+          const Scalar delivered =
+              (ctx_slots_ > 0 && ctx_present_ && bias_ctx_)
+                  ? bias_ctx_[size_t(i2) * ctx_slots_ + active_ctx_] +
+                        (bias_bank_ ? bias_bank_[size_t(i2) * ctx_slots_ + active_ctx_]
+                                    : kZero)
+                  : bias_[i2];
+          t2 += ip_bias_gain_ * delivered;
+        }
+        slice_err[sl] += rate_ema_[i2] - t2;
         ++live[sl];
       }
       for (uint32_t sl = 0; sl < ip_slices && sl < kMaxIpSlices; ++sl) {
@@ -2478,8 +2492,26 @@ void Network::homeostasis(bool asleep) {
       // quietly weakens all of its inputs.
       if (ip_scale > kZero) {
         const uint32_t sl = ip_slices > 1u ? (k * ip_slices) / ms.count : 0u;
-        const Scalar err =
-            ip_pooled ? slice_err[sl] : (rate_ema_[i] - target_rate_[i]);
+        // DNA v58. The set point moves with the LEARNED bias, so a neuron reward
+        // has deliberately pushed up is not read as a fault. `delivered` is what
+        // the neuron actually carries -- the context table plus anything banked out
+        // of it, or the shared bias when there is no context -- which is the same
+        // quantity the drive computation adds, so the exemption matches the cause.
+        //
+        // Only the learned offset is exempt. Input-driven rate is still regulated,
+        // and `ipoff` measured what happens without that: dF1 103.9 -> 17.7 and a
+        // structureless table.
+        Scalar target = target_rate_[i];
+        if (ip_bias_gain_ != kZero) {
+          const Scalar delivered =
+              (ctx_slots_ > 0 && ctx_present_ && bias_ctx_)
+                  ? bias_ctx_[size_t(i) * ctx_slots_ + active_ctx_] +
+                        (bias_bank_ ? bias_bank_[size_t(i) * ctx_slots_ + active_ctx_]
+                                    : kZero)
+                  : bias_[i];
+          target += ip_bias_gain_ * delivered;
+        }
+        const Scalar err = ip_pooled ? slice_err[sl] : (rate_ema_[i] - target);
         threshold_[i] = clampf(threshold_[i] + ip_rate * err, t_min, t_max);
       }
       // Inhibitory synaptic plasticity (DNA v50, Vogels et al. 2011). Rate

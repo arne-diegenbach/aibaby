@@ -559,6 +559,7 @@ bool compile_dna_toml(const std::string& path, std::vector<uint8_t>& out,
     m.inhib_gain = float(r.number("inhib_gain"));
     m.weight_init = float(r.number("weight_init"));
     m.noise_amp = float(r.number("noise_amp"));
+    m.ip_bias_gain = float(r.number("ip_bias_gain"));
     m.ip_pool = uint32_t(r.number("ip_pool"));
     m.ip_wake_scale = float(r.number("ip_wake_scale"));
     m.ip_sleep_scale = float(r.number("ip_sleep_scale"));

@@ -13727,39 +13727,37 @@ struct IPArm2 {
   const char* name;
   uint32_t pool;
   float wake;   // ip_wake_scale on the larynx; 0 turns the homeostat off
+  float bgain;  // DNA v58: Hz of IP set point per unit of delivered learned bias
   VLTarget target;
 };
 const IPArm2 kIPArms[] = {
-    // SECOND GENERATION, 2026-09-12. The first found that relieving HALF the
-    // compression buys nothing: pooled IP improves the transfer 0.34 -> 0.51 and
-    // halves the learned bias, and the two offset (-0.90 SE).
+    // THIRD GENERATION, 2026-09-12. The trade is established: IP is the compression
+    // (bias->rate 0.34 on, 0.91 off), relieving HALF buys nothing because the same
+    // intervention halves the learned bias, and relieving ALL collapses learning
+    // (dF1 103.9 -> 17.7, -7.42 SE, gain to 1.00). So the larynx must regulate to
+    // learn at all, and regulating is what compresses what it learns.
     //
-    // That left the trade resting on three legs, and only two are solid. IP is the
-    // compression (0.34 on, 0.91 off) -- solid. Half-relief buys nothing -- solid.
-    // "Full relief costs learning" rests ENTIRELY on v50, and v50 was CONFOUNDED:
-    // its inhibitory-plasticity arm also cost the exploratory pathway, +34.0 ->
-    // +15.4 with the tract silent, so "the IP-relaxed larynx learns worse" was
-    // never separated from "ISP charged for arriving".
+    // Thirteen routes tried to trade ALONG that. DNA v58 tries to DISSOLVE it: the
+    // IP set point moves with the learned bias, so a neuron reward has deliberately
+    // pushed up is no longer read as firing too fast. Input-driven rate stays fully
+    // regulated -- only the deliberate offset is exempt.
     //
-    // `ipoff` relaxes the larynx's IP DIRECTLY -- no ISP, nothing else moved -- and
-    // measures delivered dF1 against its own matched-marginal control. It is the
-    // leg the whole conclusion hangs on, and it has never been measured cleanly.
+    // THE GAIN IS SWEPT, not chosen. `delivered_bias` is a drive and the target is
+    // a rate in Hz, so the conversion is the thing being measured, and four guessed
+    // constants have cost this project a run each.
     //
-    //   if ipoff LOSES:  the trade is real and the ceiling is structural. The
-    //                    larynx can be steerable or self-regulating, not both.
-    //   if ipoff WINS:   the ceiling is not a trade, thirteen routes missed
-    //                    something simple, and August's confound cost a month.
+    // WHAT WOULD REFUSE IT is the failure `ipoff` already demonstrated: exempting
+    // the bias must not become exempting the neuron. The pair has to move together
+    // -- delivered dF1 up AND the larynx rate still near target -- or this is
+    // `ipoff` with extra steps, and its 17.7 Hz is what that looks like.
     //
-    // name        pool                   wake  target
-    {"ip0",        0u,                    1.0f, kVLTgtHeard},
-    {"ip0-rnd",    0u,                    1.0f, kVLTgtRandom},
-    {"ipoff",      0u,                    0.0f, kVLTgtHeard},
-    {"ipoff-rnd",  0u,                    0.0f, kVLTgtRandom},
-    // ip9 IS NOT RE-RUN. It is already measured at this budget on these seeds --
-    // excess difference -15.6 +/- 17.5 (-0.90 SE) -- so repeating it would cost
-    // 2.4 hours to reproduce a number already on file, and dropping it brings this
-    // run under six hours. The comparison stays valid because the seeds and budget
-    // are identical.
+    // name        pool wake  bgain  target
+    {"g0",         0u, 1.0f,   0.0f, kVLTgtHeard},     // shipped, bit-identical
+    {"g0-rnd",     0u, 1.0f,   0.0f, kVLTgtRandom},
+    {"g10",        0u, 1.0f,  10.0f, kVLTgtHeard},
+    {"g10-rnd",    0u, 1.0f,  10.0f, kVLTgtRandom},
+    {"g40",        0u, 1.0f,  40.0f, kVLTgtHeard},
+    {"g40-rnd",    0u, 1.0f,  40.0f, kVLTgtRandom},
 };
 constexpr uint32_t kIPArmCount = sizeof(kIPArms) / sizeof(kIPArms[0]);
 
@@ -13819,6 +13817,11 @@ bool run_ippool(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) 
                     sizeof(aibaby::DnaModule) * size_t(vmod) +
                     offsetof(aibaby::DnaModule, ip_wake_scale),
                 &wake, sizeof(wake));
+    const float bgain = kIPArms[a].bgain;
+    std::memcpy(variant.data() + sizeof(aibaby::DnaHeader) +
+                    sizeof(aibaby::DnaModule) * size_t(vmod) +
+                    offsetof(aibaby::DnaModule, ip_bias_gain),
+                &bgain, sizeof(bgain));
     CtxDrive drive;
     drive.module = ctx_module;
     drive.slots = kVLWords;
@@ -13848,7 +13851,7 @@ bool run_ippool(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) 
         if (c.ok) live.observe(kIPArms[a].name, r, c.d1);
       }
     }
-    if (!live.report("ip0")) return false;
+    if (!live.report("g0")) return false;
   }
 
   std::printf("\n  %-9s %-16s %-11s %-9s %s\n", "arm", "dF1 (Hz)", "aligned", "gain",
@@ -13882,9 +13885,9 @@ bool run_ippool(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) 
   // Excess per seed, then the PAIRED difference of excesses -- these arms share
   // creatures, so an independent-samples SE would be the wrong one, as it was on
   // poolbeta's screen where it moved a verdict across the bar.
-  const int a0 = idx("ip0"), a0r = idx("ip0-rnd");
+  const int a0 = idx("g0"), a0r = idx("g0-rnd");
   if (a0 < 0 || a0r < 0) {
-    std::printf("\n  ippool cannot summarise: the ip0 baseline is missing.\n");
+    std::printf("\n  ippool cannot summarise: the g0 baseline is missing.\n");
     return false;
   }
   // Excess per seed, then the PAIRED difference of excesses, for each candidate
@@ -13908,10 +13911,10 @@ bool run_ippool(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) 
     return ctx_mean_se(dd, se_out);
   };
 
-  std::printf("\n  EXCESS DIFFERENCE vs `ip0`, paired on seed\n");
+  std::printf("\n  EXCESS DIFFERENCE vs `g0` (the shipped rule), paired on seed\n");
   double m = 0.0, se = 0.0;
   struct { const char* t; const char* c; double m, se; uint32_t pos, tot; } cand[2] = {
-      {"ipoff", "ipoff-rnd", 0, 0, 0, 0}, {"ip9", "ip9-rnd", 0, 0, 0, 0}};
+      {"g10", "g10-rnd", 0, 0, 0, 0}, {"g40", "g40-rnd", 0, 0, 0, 0}};
   for (auto& q : cand) {
     q.m = excess_diff(q.t, q.c, &q.se, &q.pos, &q.tot);
     // An arm that is not in this build must say so rather than print a row of
@@ -13949,30 +13952,39 @@ bool run_ippool(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) 
                   100.0 * std::fabs(m_rate[a9b] - m_rate[a0]) / m_rate[a0]);
     }
   }
-  if (!(se > 0.0 && m > 2.0 * se)) {
-    std::printf("\n  THE TRADE IS REAL. Turning the larynx's homeostat OFF -- directly,\n"
-                "  with no ISP and nothing else moved -- does not buy delivered dF1 at\n"
-                "  2 SE either. So the leg v50 measured through a confound holds when\n"
-                "  measured cleanly: full relief of the compression does not pay. The\n"
-                "  larynx can be steerable or self-regulating and it has to be both, and\n"
-                "  that makes the 137 Hz ceiling STRUCTURAL rather than an unfound knob.\n");
-    std::printf("\n  (the older reading follows, and is superseded by the line above)\n");
-    std::printf("  RELIEVING THE BOTTLENECK DOES NOT BUY dF1. The transfer improves\n"
-                "  0.34 -> 0.51 and the delivered formant does not follow at 2 SE. So the\n"
-                "  compression is necessary for the ceiling but not sufficient to lift it:\n"
-                "  half the relief buys nothing measurable, and the honest reading is that\n"
-                "  the remaining 0.51 -> 0.91 is where any gain would be -- which needs no\n"
-                "  rate regulation at all, and v50 priced that at +16.6 -> -2.3.\n");
+  // The gate is the BEST candidate gain, and it has to clear BOTH bars: more
+  // delivered dF1 than the shipped rule, and a larynx rate that has not run away.
+  int best = -1;
+  for (int q = 0; q < 2; ++q) {
+    if (cand[q].tot == 0) continue;
+    const int ai = idx(cand[q].t);
+    const double drift = (ai >= 0 && m_rate[a0] > 0.0)
+                             ? std::fabs(m_rate[ai] - m_rate[a0]) / m_rate[a0]
+                             : 0.0;
+    const bool wins = cand[q].se > 0.0 && cand[q].m > 2.0 * cand[q].se;
+    std::printf("  %-10s rate %.2f Hz (drift %.0f%%)%s\n", cand[q].t,
+                ai >= 0 ? m_rate[ai] : 0.0, 100.0 * drift,
+                drift > 0.5 ? "   <- RAN AWAY, this is ipoff with extra steps" : "");
+    if (wins && drift <= 0.5) best = q;
+  }
+  if (best < 0) {
+    std::printf("\n  EXEMPTING THE LEARNED BIAS DOES NOT DISSOLVE THE TRADE. No gain\n"
+                "  delivers more dF1 than the shipped rule at 2 SE while keeping the\n"
+                "  larynx's rate regulated. So the opposition is not an accident of the\n"
+                "  homeostat's set point -- a regulator that explicitly permits what\n"
+                "  reward asked for still does not let reward ask for more, and the\n"
+                "  137 Hz ceiling is structural by construction rather than by exhaustion.\n"
+                "  Fourteen routes, and this is the one that was aimed at the mechanism\n"
+                "  rather than the symptom.\n");
     return false;
   }
-  std::printf("\n  THE TRADE IS NOT REAL, AND AUGUST'S CONFOUND COST A MONTH. Turning the\n"
-              "  larynx's homeostat off buys %+.1f Hz of excess at %.1f SE -- so v50's\n"
-              "  \"IP-relaxed larynx learns worse\" was ISP charging for arriving, not the\n"
-              "  homeostat. The ceiling is not a trade, and thirteen routes were aimed\n"
-              "  past something simple.\n"
-              "  NOTE the n: 18 seeds, and a 2-3 SE result at that size is a HYPOTHESIS\n"
-              "  in this project -- three were retracted from that band today. 36 next.\n",
-              m, m / se);
+  std::printf("\n  THE TRADE DISSOLVES. `%s` delivers %+.1f Hz over the shipped rule at\n"
+              "  %.1f SE with the larynx still regulated -- so the compression was the\n"
+              "  homeostat treating LEARNING as a fault, and permitting it costs nothing.\n"
+              "  That breaks a ceiling thirteen routes could not move.\n"
+              "  NOTE the n: 18 seeds. Under 3 SE this is a hypothesis until 36, and this\n"
+              "  project retracted three findings from that band in one day.\n",
+              cand[best].t, cand[best].m, cand[best].m / cand[best].se);
   return true;
 }
 
