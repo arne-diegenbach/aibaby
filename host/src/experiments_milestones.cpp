@@ -4025,6 +4025,44 @@ struct CtxSplit {
   uint32_t gn = 0;
 };
 
+// ONE SLOT'S OWN STORED TILT, as opposed to `ctx_split`'s DIFFERENCE between two
+// slots. Added 2026-09-13 for `wipeprobe`, and the distinction is the whole point:
+// `ctx_split` asks "do the two contexts hold different things", which is the naming
+// question. Retention asks something else -- "is lesson A's tilt STILL THERE after
+// lesson B" -- and a difference cannot answer it, because b0-b1 moves identically
+// whether B erased A's slot or merely wrote its own.
+//
+// Same projection as ctx_split: onto the centred position ramp across the F1 group,
+// normalised the same way, so the two numbers are directly comparable.
+struct SlotTilt {
+  double align = 0.0;   // the F1-moving tilt held in THIS slot
+  double mag = 0.0;     // mean |b| over the whole larynx, the scale to read align against
+};
+
+inline SlotTilt ctx_slot_tilt(const aibaby::Network& net, const aibaby::ModuleState& vms,
+                              uint32_t slot) {
+  SlotTilt o;
+  if (vms.count == 0 || net.context_slots() <= slot) return o;
+  double msum = 0.0;
+  for (uint32_t n = vms.begin; n < vms.begin + vms.count; ++n) {
+    msum += std::fabs(double(net.context_bias(n, slot)) + double(net.banked_bias(n, slot)));
+  }
+  o.mag = msum / vms.count;
+  const uint32_t g_beg = vms.begin + aibaby::slice_begin(vms.count, aibaby::kVocalGroups, 2);
+  const uint32_t g_end = vms.begin + aibaby::slice_begin(vms.count, aibaby::kVocalGroups, 3);
+  const uint32_t gn = g_end > g_beg ? g_end - g_beg : 0;
+  if (gn < 2) return o;
+  double dot = 0.0, unorm = 0.0;
+  for (uint32_t n = g_beg; n < g_end; ++n) {
+    const double b = double(net.context_bias(n, slot)) + double(net.banked_bias(n, slot));
+    const double u = (double(n - g_beg) + 0.5) / double(gn) - 0.5;
+    dot += b * u;
+    unorm += u * u;
+  }
+  o.align = unorm > 0.0 ? std::fabs(dot) / std::sqrt(unorm) / std::sqrt(double(gn)) : 0.0;
+  return o;
+}
+
 // `perturb_max` is passed rather than read from the net because the clamp is a
 // genome field and the question this exists to answer is whether the table is
 // against it. Pass 0 to skip the pinned share.
@@ -5438,6 +5476,23 @@ struct RTRow {
   double slot0_teach = 0.0, slot0_gap = 0.0;
   double gap_overwrite = 0.0;   // 0 = still all lesson A, 1 = fully lesson B
   uint64_t recorded_teach = 0, recorded_gap = 0;
+  // WHAT IS STILL STORED. `wipeprobe`, 2026-09-13. The retention columns above all
+  // measure what the creature DOES; these measure what it still HOLDS, in lesson
+  // A's own context slot, at the end of teaching and again at the end of the gap.
+  // The pair separates two accounts of the 0.22 wipe that every existing column
+  // reads identically:
+  //   tilt_a_gap ~ tilt_a_teach, behaviour gone  -> STORED, NOT EXPRESSED.
+  //                The memory survives and something downstream stops delivering
+  //                it. Under the oracle index the slots are separate by
+  //                construction, so the shared thing would be the larynx itself --
+  //                its thresholds and rate EMA are per NEURON, not per context, so
+  //                lesson B re-homeostats the very neurons A's bias drives through.
+  //   tilt_a_gap << tilt_a_teach                 -> OVERWRITTEN. The write is not
+  //                staying in its slot, and protection (EWC, banking) is the route.
+  // These are cheap -- two reads of a table already in memory -- and they decide
+  // which half of the memory chapter is worth building.
+  double tilt_a_teach = 0.0, tilt_a_gap = 0.0;
+  double tilt_mag_teach = 0.0, tilt_mag_gap = 0.0;
 };
 
 
@@ -5601,6 +5656,23 @@ RTRow run_retain_arm(const std::vector<uint8_t>& blob, uint64_t ticks,
     // this on its own -- the old lesson stops being rewarded the moment the
     // new one starts -- which is the whole reason to price it with an oracle
     // before inventing a selection rule.
+      // WHAT IS STILL STORED, sampled at the two phase boundaries. Reading it here
+      // rather than at the end is the whole point: after the gap the tables have
+      // already been through lesson B, and the comparison needs the BEFORE.
+      if (trial == n_teach || trial == n_teach + n_gap) {
+        const int32_t vm = s.dna.module_with_role(aibaby::ModuleRole::kVocal);
+        if (vm >= 0) {
+          const SlotTilt st =
+              ctx_slot_tilt(s.brain.network(), s.brain.network().module(uint32_t(vm)), 0u);
+          if (trial == n_teach) {
+            row.tilt_a_teach = st.align;
+            row.tilt_mag_teach = st.mag;
+          } else {
+            row.tilt_a_gap = st.align;
+            row.tilt_mag_gap = st.mag;
+          }
+        }
+      }
       if (trial == n_teach) {
         row.recorded_teach = s.brain.episodes_recorded();
       }
@@ -5947,10 +6019,11 @@ bool run_ctxretain(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
   // denominator, and any arm where it is small has its retention suppressed rather
   // than printed, because a number that large is read as a result by anyone
   // skimming.
-  std::printf("\n  %-12s %-8s %-13s %-13s %-13s %-9s %s\n", "arm", "sleeps",
+  std::printf("\n  %-12s %-8s %-13s %-13s %-13s %-9s %-17s %s\n", "arm", "sleeps",
               "err taught", "err after", "retention", "err vs B",
-              "slot0 teach/gap");
+              "slot0 teach/gap", "slot-A tilt teach->gap");
   double m_ret[kCRArmCount];
+  double m_tilt_t[kCRArmCount] = {}, m_tilt_g[kCRArmCount] = {};
   for (uint32_t a = 0; a < kCRArmCount; ++a) {
     std::vector<double> ret, aft, tau, eb;
     double sleeps = 0.0;
@@ -5994,11 +6067,30 @@ bool run_ctxretain(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
     } else {
       std::snprintf(ret_cell, sizeof ret_cell, "%.2f +/- %.2f", m_ret[a], se);
     }
+    // WHAT IS STILL STORED in lesson A's own slot, at the end of teaching and
+    // again at the end of the gap. Only arms carrying a context table have one.
+    std::vector<double> tt, tg;
+    for (uint32_t r = 0; r < kReps; ++r) {
+      const Cell& c = cells[r * kCRArmCount + a];
+      if (c.ok && c.row.tilt_a_teach > 0.0) {
+        tt.push_back(c.row.tilt_a_teach);
+        tg.push_back(c.row.tilt_a_gap);
+      }
+    }
+    m_tilt_t[a] = tt.empty() ? -1.0 : ctx_mean_se(tt, &s2);
+    m_tilt_g[a] = tg.empty() ? -1.0 : ctx_mean_se(tg, &s2);
     std::printf("  %-12s %-8.1f %-13.4f %-13.4f %-13s %-9.4f", kCRArms[a].name,
                 sleeps / double(n), ctx_mean_se(tau, &s2), ctx_mean_se(aft, &s2),
                 ret_cell, ctx_mean_se(eb, &s2));
-    if (mt >= 0.0) std::printf("%.2f / %.2f\n", mt, mg);
-    else std::printf("  --\n");
+    if (mt >= 0.0) std::printf("%-17s", (std::snprintf(ret_cell, sizeof ret_cell,
+                                                       "%.2f / %.2f", mt, mg), ret_cell));
+    else std::printf("%-17s", "  --");
+    if (m_tilt_t[a] >= 0.0) {
+      std::printf("  %.5f -> %.5f  (x%.2f)\n", m_tilt_t[a], m_tilt_g[a],
+                  m_tilt_t[a] > 0.0 ? m_tilt_g[a] / m_tilt_t[a] : 0.0);
+    } else {
+      std::printf("  -- (no context table)\n");
+    }
   }
 
   const auto arm_index = [](const char* want) {
@@ -6041,6 +6133,11 @@ bool run_ctxretain(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
   }
 
   // THE REAL GATE: the index's INFORMATION, with the table's cost held fixed.
+  // Whether the behavioural gate passed, hoisted so the storage verdict below can
+  // ask the question that actually matters: is the lesson still THERE while the
+  // creature has stopped saying it? Those two facts together name the mechanism;
+  // either alone does not.
+  bool pass_behaviour = false;
   {
     const int kSame = arm_index("ctx-same"), kOrc = arm_index("ctx-oracle");
     if (kSame >= 0 && kOrc >= 0) {
@@ -6061,6 +6158,7 @@ bool run_ctxretain(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
                   m_r, se_r, se_r > 0.0 ? m_r / se_r : 0.0, m_a, se_a,
                   se_a > 0.0 ? m_a / se_a : 0.0);
       const bool pass = se_r > 0.0 && m_r > 2.0 * se_r && se_a > 0.0 && m_a > 2.0 * se_a;
+      pass_behaviour = pass;
       std::printf("  -> %s\n", pass
           ? "A PERFECT INDEX PROTECTS THE LESSON. Gating works here when the index\n"
             "     actually carries which lesson it is, and the previous null was the\n"
@@ -6068,6 +6166,75 @@ bool run_ctxretain(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
           : "A PERFECT INDEX DOES NOT PROTECT IT. Gating is refused, and with\n"
             "     stabilisation already a measured null the standard account of\n"
             "     catastrophic interference is closed on this creature.");
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // STORAGE vs EXPRESSION. Added 2026-09-13, after the v58 sweep closed the naming
+  // ceiling as an exponent rather than a magnitude and the work moved to memory.
+  //
+  // Every column above measures what the creature DOES. The 0.22 wipe is
+  // consistent with two mechanisms those columns cannot separate:
+  //   (a) lesson B OVERWRITES lesson A's parameters, or
+  //   (b) A's parameters SURVIVE and stop being expressed.
+  // `tilt_a_*` measures what is still held in A's own slot, so this can separate
+  // them -- but only with the right comparison, and the naive one is vacuous:
+  //
+  //   UNDER THE ORACLE THE GAP WRITES SLOT 1, so slot 0 surviving is nearly true
+  //   BY CONSTRUCTION. On its own that number says only whether an unwritten slot
+  //   decays. The informative arm is `ctx-same`, where both lessons write slot 0
+  //   and B therefore overwrites A directly. The contrast between them is what
+  //   isolates storage, and it is the same trap as `ctxretain`'s own slot0 column:
+  //   a mechanism that cannot fail tells you nothing when it does not fail.
+  {
+    const int kSame2 = arm_index("ctx-same"), kOrc2 = arm_index("ctx-oracle");
+    if (kSame2 >= 0 && kOrc2 >= 0 && m_tilt_t[kOrc2] > 0.0 && m_tilt_t[kSame2] > 0.0) {
+      std::vector<double> keep_o, keep_s;
+      for (uint32_t r = 0; r < kReps; ++r) {
+        const Cell& co = cells[r * kCRArmCount + uint32_t(kOrc2)];
+        const Cell& cs = cells[r * kCRArmCount + uint32_t(kSame2)];
+        if (co.ok && co.row.tilt_a_teach > 0.0) {
+          keep_o.push_back(co.row.tilt_a_gap / co.row.tilt_a_teach);
+        }
+        if (cs.ok && cs.row.tilt_a_teach > 0.0) {
+          keep_s.push_back(cs.row.tilt_a_gap / cs.row.tilt_a_teach);
+        }
+      }
+      double se_o = 0.0, se_s = 0.0;
+      const double ko = ctx_mean_se(keep_o, &se_o), ks = ctx_mean_se(keep_s, &se_s);
+      std::printf("\n  IS THE MEMORY GONE, OR JUST NOT SPOKEN?\n"
+                  "  share of lesson A's stored tilt still in slot 0 after the gap\n"
+                  "    ctx-oracle (gap writes slot 1)  %.2f +/- %.2f\n"
+                  "    ctx-same   (gap writes slot 0)  %.2f +/- %.2f\n",
+                  ko, se_o, ks, se_s);
+      // The ratio is printed before any label, and the label is offered only at the
+      // ends, because `verdict-fitted-to-data` is a rule this project has paid for:
+      // a threshold in the middle of a continuous quantity manufactures a finding.
+      const bool store_kept = ko > 0.7, store_lost = ko < 0.3;
+      const bool index_protects = se_o > 0.0 && se_s > 0.0 &&
+                                  (ko - ks) > 2.0 * std::sqrt(se_o * se_o + se_s * se_s);
+      std::printf("  index protects the STORE: %s\n",
+                  index_protects ? "YES, at 2 SE" : "not at 2 SE");
+      if (store_kept && !pass_behaviour) {
+        std::printf("  -> STORED, NOT EXPRESSED. A's tilt is still there and the creature\n"
+                    "     no longer says it. That moves the memory problem off consolidation\n"
+                    "     entirely: there is nothing to protect that is not already safe.\n"
+                    "     THE NAMED SUSPECT is the larynx itself. `bias_ctx_` is per context,\n"
+                    "     but `threshold_` and `rate_ema_` are per NEURON -- so lesson B\n"
+                    "     re-homeostats the very neurons A's stored bias has to drive\n"
+                    "     through, and A's tilt is read out against thresholds that have\n"
+                    "     moved. Per-context IP state is the next build, and it is the same\n"
+                    "     mechanism v58 just finished measuring on the naming side.\n");
+      } else if (store_lost) {
+        std::printf("  -> OVERWRITTEN. The write is not staying in its slot even with a\n"
+                    "     perfect index, so protection (EWC, banking) is the route and the\n"
+                    "     expression story is refused.\n");
+      } else {
+        std::printf("  -> NEITHER LABEL. %.2f is not near 1 or 0, so the store is partly\n"
+                    "     kept and partly lost and one number cannot carry a mechanism.\n"
+                    "     Report the ratio; do not move the threshold to reach a verdict.\n",
+                    ko);
+      }
     }
   }
 
@@ -13856,7 +14023,7 @@ bool run_ippool(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) 
 
   std::printf("\n  %-9s %-16s %-11s %-9s %s\n", "arm", "dF1 (Hz)", "aligned", "gain",
               "larynx rate");
-  double m_rate[kIPArmCount];
+  double m_rate[kIPArmCount], m_d1[kIPArmCount], m_align[kIPArmCount], m_gain[kIPArmCount];
   for (uint32_t a = 0; a < kIPArmCount; ++a) {
     std::vector<double> d1, al, gn, rt;
     for (uint32_t r = 0; r < kReps; ++r) {
@@ -13872,8 +14039,11 @@ bool run_ippool(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) 
     double se, s2;
     const double md = ctx_mean_se(d1, &se);
     m_rate[a] = ctx_mean_se(rt, &s2);
+    m_d1[a] = md;
+    m_align[a] = ctx_mean_se(al, &s2);
+    m_gain[a] = ctx_mean_se(gn, &s2);
     std::printf("  %-9s %6.1f +/- %-7.1f %-11.5f %-9.2f %.2f\n", kIPArms[a].name, md, se,
-                ctx_mean_se(al, &s2), ctx_mean_se(gn, &s2), m_rate[a]);
+                m_align[a], m_gain[a], m_rate[a]);
   }
 
   const auto idx = [](const char* w) {
@@ -13967,24 +14137,70 @@ bool run_ippool(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) 
                 drift > 0.5 ? "   <- RAN AWAY, this is ipoff with extra steps" : "");
     if (wins && drift <= 0.5) best = q;
   }
+  // THE GATE ASKED THE WRONG QUANTITY -- written down 2026-09-13, after the run,
+  // and kept here because the mistake is more useful than the verdict was.
+  //
+  // The bar was "+2 SE of delivered dF1", i.e. about +17 Hz at this n. But the
+  // knob this experiment turns is the LEARNED BIAS, and the bias reaches the voice
+  // only through `dF1 ~ aligned^0.61` (see the transfer curve). g40 raised aligned
+  // 0.00332 -> 0.00401, +21%; through the exponent that is 1.21^0.61 = x1.12, or
+  // +4.1 Hz. Resolving +4.1 Hz at 2 SE needs ~316 seeds. So a null at n=18 was
+  // guaranteed by the gate's own arithmetic BEFORE the run started, whatever the
+  // mechanism did, and reading it as "the mechanism failed" would be exactly the
+  // baseprobe error with the sign flipped: there, a gate fired and was wrong; here,
+  // a gate stayed silent and would have been wrong.
+  //
+  // So this prints the power alongside the verdict. A gate whose bar the mechanism
+  // could not clear even while working perfectly is not evidence about the mechanism.
+  double ra = 0.0, pred = 0.0, need = 0.0;
+  {
+    const int a40 = idx("g40");
+    if (a40 >= 0 && m_align[a0] > 0.0 && m_align[a40] > 0.0) {
+      ra = m_align[a40] / m_align[a0];
+      pred = m_d1[a0] * (std::pow(ra, 0.61) - 1.0);
+      need = pred > 0.0 ? kReps * std::pow(cand[1].se / (pred / 2.0), 2.0) : 0.0;
+      std::printf("\n  POWER, against the transfer curve dF1 ~ aligned^0.61\n"
+                  "    aligned x%.3f  ->  predicted dF1 %+.1f Hz\n"
+                  "    seeds needed to resolve that at 2 SE: %.0f   (this run: %u)\n",
+                  ra, pred, need, kReps);
+    }
+  }
   if (best < 0) {
-    std::printf("\n  EXEMPTING THE LEARNED BIAS DOES NOT DISSOLVE THE TRADE. No gain\n"
-                "  delivers more dF1 than the shipped rule at 2 SE while keeping the\n"
-                "  larynx's rate regulated. So the opposition is not an accident of the\n"
-                "  homeostat's set point -- a regulator that explicitly permits what\n"
-                "  reward asked for still does not let reward ask for more, and the\n"
-                "  137 Hz ceiling is structural by construction rather than by exhaustion.\n"
-                "  Fourteen routes, and this is the one that was aimed at the mechanism\n"
-                "  rather than the symptom.\n");
+    const int a40v = idx("g40");
+    std::printf("\n  THE TRADE DISSOLVES MECHANICALLY AND IT BUYS NOTHING AT THE VOICE.\n"
+                "  This is NOT the null the gate was written to detect, and it is a\n"
+                "  better result than either branch that was pre-registered.\n"
+                "\n"
+                "  What g40 did, and no earlier route managed: aligned x%.3f, gain\n"
+                "  %.2f -> %.2f, and the larynx still regulated (%.2f Hz vs the shipped\n"
+                "  %.2f). Compare the two other ways of relieving the homeostat -- v57\n"
+                "  pooling HALVED the learned bias, and `ipoff` collapsed learning\n"
+                "  outright, dF1 103.9 -> 17.7 at -7.42 SE (both on file, not this run).\n"
+                "  So the opposition between regulation and learning IS separable:\n"
+                "  exempting the learned bias from the error term is how.\n"
+                "\n"
+                "  And the voice does not care, because ^0.61 turns that into %+.1f Hz --\n"
+                "  a bar this run would need %.0f seeds to clear, against the %u it ran.\n"
+                "\n"
+                "  THAT is the ceiling, now stated as arithmetic rather than as a tally\n"
+                "  of dead ends: to move dF1 x1.68 you need aligned x2.34; x2.0 needs\n"
+                "  x3.12. Every knob this project has found moves aligned x1.1-x1.2.\n"
+                "  The 137 Hz ceiling is not fourteen failed routes, it is one exponent,\n"
+                "  and no amount of bias buys past an exponent below 1. A route that\n"
+                "  changes the READOUT -- not the bias driving it -- is the only kind\n"
+                "  that can, and the readout is a rate-weighted centroid by design.\n",
+                ra, a40v >= 0 ? m_gain[a0] : 0.0, a40v >= 0 ? m_gain[a40v] : 0.0,
+                a40v >= 0 ? m_rate[a40v] : 0.0, m_rate[a0], pred, need, kReps);
     return false;
   }
-  std::printf("\n  THE TRADE DISSOLVES. `%s` delivers %+.1f Hz over the shipped rule at\n"
-              "  %.1f SE with the larynx still regulated -- so the compression was the\n"
-              "  homeostat treating LEARNING as a fault, and permitting it costs nothing.\n"
-              "  That breaks a ceiling thirteen routes could not move.\n"
-              "  NOTE the n: 18 seeds. Under 3 SE this is a hypothesis until 36, and this\n"
-              "  project retracted three findings from that band in one day.\n",
-              cand[best].t, cand[best].m, cand[best].m / cand[best].se);
+  std::printf("\n  THE TRADE DISSOLVES AND IT REACHES THE VOICE. `%s` delivers %+.1f Hz\n"
+              "  over the shipped rule at %.1f SE with the larynx still regulated.\n"
+              "  NOTE the n: %u seeds. Under 3 SE this is a hypothesis until 36, and this\n"
+              "  project retracted three findings from that band in one day. Note also\n"
+              "  that this EXCEEDS what the transfer curve predicts from the aligned\n"
+              "  change, which means either the exponent moved or something else did --\n"
+              "  check that before celebrating.\n",
+              cand[best].t, cand[best].m, cand[best].m / cand[best].se, kReps);
   return true;
 }
 
