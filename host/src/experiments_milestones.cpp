@@ -6194,24 +6194,74 @@ bool run_ctxretain(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
   {
     const int kSame2 = arm_index("ctx-same"), kOrc2 = arm_index("ctx-oracle");
     if (kSame2 >= 0 && kOrc2 >= 0 && m_tilt_t[kOrc2] != 0.0 && m_tilt_t[kSame2] != 0.0) {
-      std::vector<double> keep_o, keep_s;
+      // A PER-SEED RATIO DIVIDES BY A QUANTITY THAT CAN BE NEARLY ZERO, and the
+      // smoke run showed exactly what that does: `ctx-same` read x0.72 as a ratio
+      // of means and -1.66 +/- 1.65 as a mean of per-seed ratios. The second is
+      // dominated by seeds whose taught tilt never grew, which is the SAME failure
+      // this experiment already suppresses on retention's denominator. So the
+      // verdict runs on the ratio of MEANS, and the robust statistic beside it is
+      // a SIGN COUNT -- how many seeds ended with the stored tilt pointing the
+      // opposite way to the one they were taught. A count cannot be blown up by a
+      // small denominator, and "reversed" is exactly a question about sign.
+      std::vector<double> t_o, g_o, t_s, g_s;
+      uint32_t flip_s = 0, n_s = 0, flip_o = 0, n_o = 0;
+      // Seeds whose stored tilt is BIT-IDENTICAL before and after the gap.
+      // This is the vacuity test, and it has to be exact equality rather than
+      // an error bar: the first version keyed on SE < 0.01, which worked while
+      // the statistic was a mean of per-seed ratios and silently stopped working
+      // the moment it became a ratio of means, because THAT SE is nonzero even
+      // when every seed is unchanged. An untouched array is an exact fact, so
+      // test it exactly -- twice now a derived threshold has let this verdict
+      // claim a mechanism from parameters nothing wrote to.
+      uint32_t same_o = 0, same_s = 0, near_o = 0, near_s = 0;
+      std::vector<double> rel_o, rel_s, leak_o;
       for (uint32_t r = 0; r < kReps; ++r) {
         const Cell& co = cells[r * kCRArmCount + uint32_t(kOrc2)];
         const Cell& cs = cells[r * kCRArmCount + uint32_t(kSame2)];
         if (co.ok && co.row.tilt_a_teach != 0.0) {
-          keep_o.push_back(co.row.tilt_a_gap / co.row.tilt_a_teach);
+          t_o.push_back(co.row.tilt_a_teach);
+          g_o.push_back(co.row.tilt_a_gap);
+          ++n_o;
+          if (co.row.tilt_a_gap * co.row.tilt_a_teach < 0.0) ++flip_o;
+          if (co.row.tilt_a_gap == co.row.tilt_a_teach) ++same_o;
+          if (std::fabs(co.row.tilt_a_gap - co.row.tilt_a_teach) <=
+              1e-6 * std::fabs(co.row.tilt_a_teach)) ++near_o;
+          rel_o.push_back(std::fabs(co.row.tilt_a_gap - co.row.tilt_a_teach) /
+                          std::fabs(co.row.tilt_a_teach));
+          if (co.row.slot0_gap >= 0.0) leak_o.push_back(co.row.slot0_gap);
         }
         if (cs.ok && cs.row.tilt_a_teach != 0.0) {
-          keep_s.push_back(cs.row.tilt_a_gap / cs.row.tilt_a_teach);
+          t_s.push_back(cs.row.tilt_a_teach);
+          g_s.push_back(cs.row.tilt_a_gap);
+          ++n_s;
+          if (cs.row.tilt_a_gap * cs.row.tilt_a_teach < 0.0) ++flip_s;
+          if (cs.row.tilt_a_gap == cs.row.tilt_a_teach) ++same_s;
+          if (std::fabs(cs.row.tilt_a_gap - cs.row.tilt_a_teach) <=
+              1e-6 * std::fabs(cs.row.tilt_a_teach)) ++near_s;
+          rel_s.push_back(std::fabs(cs.row.tilt_a_gap - cs.row.tilt_a_teach) /
+                          std::fabs(cs.row.tilt_a_teach));
         }
       }
-      double se_o = 0.0, se_s = 0.0;
-      const double ko = ctx_mean_se(keep_o, &se_o), ks = ctx_mean_se(keep_s, &se_s);
+      double se_o = 0.0, se_s = 0.0, s2o = 0.0, s2s = 0.0;
+      const double mt_o = ctx_mean_se(t_o, &s2o), mg_o = ctx_mean_se(g_o, &se_o);
+      const double mt_s = ctx_mean_se(t_s, &s2s), mg_s = ctx_mean_se(g_s, &se_s);
+      const double ko = mt_o != 0.0 ? mg_o / mt_o : 0.0;
+      const double ks = mt_s != 0.0 ? mg_s / mt_s : 0.0;
+      // The SE of the ratio, propagated from the gap mean only -- the teach mean is
+      // the reference this is expressed in, and treating it as exact is the same
+      // convention the excess-difference columns use.
+      se_o = mt_o != 0.0 ? se_o / std::fabs(mt_o) : 0.0;
+      se_s = mt_s != 0.0 ? se_s / std::fabs(mt_s) : 0.0;
       std::printf("\n  IS THE MEMORY GONE, OR JUST NOT SPOKEN?\n"
-                  "  share of lesson A's stored tilt still in slot 0 after the gap\n"
-                  "    ctx-oracle (gap writes slot 1)  %.2f +/- %.2f\n"
-                  "    ctx-same   (gap writes slot 0)  %.2f +/- %.2f\n",
-                  ko, se_o, ks, se_s);
+                  "  lesson A's stored tilt in slot 0, taught -> after the gap.\n"
+                  "  SIGNED, so a negative share means lesson B wrote A's OPPOSITE\n"
+                  "  rather than wiping it -- a magnitude could not tell those apart.\n"
+                  "    ctx-oracle (gap writes slot 1)  %+.5f -> %+.5f  = %.2f +/- %.2f"
+                  "   sign flipped %u/%u  unchanged %u/%u\n"
+                  "    ctx-same   (gap writes slot 0)  %+.5f -> %+.5f  = %.2f +/- %.2f"
+                  "   sign flipped %u/%u  unchanged %u/%u\n",
+                  mt_o, mg_o, ko, se_o, flip_o, n_o, near_o, n_o,
+                  mt_s, mg_s, ks, se_s, flip_s, n_s, near_s, n_s);
       // THE VACUITY CHECK, and the smoke run needed it. The first version of this
       // verdict fired STORED-NOT-EXPRESSED on `ctx-oracle` reading 1.00 +/- 0.00 --
       // EXACTLY unchanged, zero variance across every seed. That is not a memory
@@ -6219,37 +6269,68 @@ bool run_ctxretain(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
       // comment above predicted and the verdict then believed anyway. A ratio that
       // is 1 by arithmetic is not evidence about a mechanism, and the only honest
       // thing to do with it is refuse.
-      const bool oracle_untouched = std::fabs(ko - 1.0) < 0.01 && se_o < 0.01;
-      if (oracle_untouched) {
-        std::printf("  -> VACUOUS, NOT A RESULT. `ctx-oracle` held A's tilt at %.2f +/- %.2f:\n"
-                    "     exactly unchanged on every seed, because under the oracle the gap\n"
-                    "     writes slot 1 and NOTHING touches slot 0. That is arithmetic, not\n"
-                    "     evidence -- it cannot distinguish a protected memory from an\n"
-                    "     untouched array, and it says nothing about expression.\n"
-                    "     TO MAKE THIS MEASURABLE the gap has to write the slot it is being\n"
-                    "     asked to spare: score `ctx-same` (both lessons in slot 0) against\n"
-                    "     the SIGNED tilt, where B writing the opposite of A is the outcome\n"
-                    "     that a magnitude could never have shown.\n");
-      } else if (ks < -0.05) {
+      // Bit-identical is the ideal test but too strict in practice: the tilt is a
+      // recomputed projection, so an untouched slot can still differ in the low
+      // bits. `near_o` is the same fact at a relative 1e-6, which no real change
+      // to a learned bias comes anywhere near.
+      // THE VERDICT READS `ctx-same`, NOT THE ORACLE, and getting that wrong is
+      // what made this block print STORED-NOT-EXPRESSED three times on an arm that
+      // could not have shown it. Under the oracle the gap writes slot 1, so slot 0
+      // is untouched BY DESIGN -- `ko` is a construction check ("did the index
+      // really isolate the write?"), never evidence about storage. Only `ctx-same`
+      // puts lesson B into the slot lesson A is held in, so only `ks` can
+      // distinguish survived / erased / reversed. The refusal below fires when the
+      // CONTROL misbehaves; the verdict itself is about `ks`.
+      // HOW CLEAN IS THE ORACLE, REALLY. The first version of this block asserted
+      // that under the oracle slot 0 is untouched BY CONSTRUCTION, and the data
+      // refused that on the first smoke: `unchanged 0/36`. Nothing writes across
+      // slots -- both cash-in sites index `active_ctx_` -- but the index itself is
+      // not 100% clean, and `slot0_gap` says so directly: a few percent of gap
+      // trials are still filed under slot 0, and those write lesson B into lesson
+      // A's slot. So the oracle is a 95%-isolated arm, not a perfect one, and the
+      // right thing to print is the size of the leak rather than an alarm.
+      double s2l = 0.0, s2r = 0.0;
+      const double leak = leak_o.empty() ? -1.0 : ctx_mean_se(leak_o, &s2l);
+      std::printf("  isolation   `ctx-oracle` spends %.1f%% of the GAP still filed under slot 0,\n"
+                  "              so A's slot takes that share of B's writes. Mean |change| in the\n"
+                  "              stored tilt: oracle %.1f%%, ctx-same %.1f%%.\n",
+                  leak >= 0.0 ? 100.0 * leak : 0.0,
+                  100.0 * (rel_o.empty() ? 0.0 : ctx_mean_se(rel_o, &s2r)),
+                  100.0 * (rel_s.empty() ? 0.0 : ctx_mean_se(rel_s, &s2r)));
+      // `ctx-same` is the untreated conflict carrying a context table: both lessons
+      // write slot 0, and its behaviour is wiped (that is the 0.22 this chapter
+      // exists to explain). So the only open question is what happened to the
+      // STORE, and the labels are offered only at the ends, per
+      // `verdict-fitted-to-data`.
+      if (n_s == 0) {
+        std::printf("  -> NO READING. `ctx-same` produced no scorable tilt.\n");
+      } else if (se_s > 0.0 && ks + 2.0 * se_s < 0.0) {
         std::printf("  -> REVERSED, NOT ERASED. With both lessons in one slot the stored tilt\n"
-                    "     goes NEGATIVE (%.2f): lesson B does not wipe A, it writes A's\n"
-                    "     opposite into the same parameters. That is why the conflict is so\n"
-                    "     much worse than forgetting, and why protection-style mechanisms\n"
-                    "     (EWC, banking) are the wrong shape -- there is nothing decaying to\n"
-                    "     protect. Separating the WRITE is the route.\n", ks);
-      } else if (ko > 0.7 && !pass_behaviour && !oracle_untouched) {
-        std::printf("  -> STORED, NOT EXPRESSED. A's tilt is still there and the creature no\n"
-                    "     longer says it. The named suspect is the larynx: `bias_ctx_` is per\n"
-                    "     context, but `threshold_` and `rate_ema_` are per NEURON, so lesson\n"
-                    "     B re-homeostats the very neurons A's bias must drive through.\n"
-                    "     Per-context IP state would be the next build.\n");
-      } else if (ko < 0.3) {
-        std::printf("  -> OVERWRITTEN. The write is not staying in its slot even with a\n"
-                    "     perfect index, so protection is the route.\n");
+                    "     ends NEGATIVE (%.2f +/- %.2f, sign flipped on %u of %u seeds):\n"
+                    "     lesson B does not wipe A, it writes A's OPPOSITE into the same\n"
+                    "     parameters. That is why a conflict costs so much more than simple\n"
+                    "     forgetting, and it makes protection-style mechanisms (EWC, banking)\n"
+                    "     the wrong shape -- there is nothing decaying to protect. Separating\n"
+                    "     the WRITE is the route.\n", ks, se_s, flip_s, n_s);
+      } else if (ks > 0.7 && se_s > 0.0 && ks - 2.0 * se_s > 0.3) {
+        std::printf("  -> STORED, NOT EXPRESSED. `ctx-same` keeps %.2f +/- %.2f of A's tilt in\n"
+                    "     the very slot lesson B wrote to, and the creature still stopped\n"
+                    "     saying it. That moves the memory problem off consolidation: there is\n"
+                    "     nothing to protect that is not already safe. The named suspect is the\n"
+                    "     larynx -- `bias_ctx_` is per context, but `threshold_` and\n"
+                    "     `rate_ema_` are per NEURON, so lesson B re-homeostats the very\n"
+                    "     neurons A's stored bias must drive through. Per-context IP state is\n"
+                    "     the next build, and it is the mechanism v58 just measured on the\n"
+                    "     naming side.\n", ks, se_s);
+      } else if (se_s > 0.0 && ks + 2.0 * se_s < 0.3) {
+        std::printf("  -> ERASED. A's tilt is gone from the slot (%.2f +/- %.2f), so the wipe\n"
+                    "     is a storage failure and protecting the write is the route.\n",
+                    ks, se_s);
       } else {
-        std::printf("  -> NEITHER LABEL. %.2f is not near 1 or 0, so the store is partly kept\n"
-                    "     and partly lost, and one number cannot carry a mechanism. Report the\n"
-                    "     ratio; do not move the threshold to reach a verdict.\n", ko);
+        std::printf("  -> NEITHER LABEL. `ctx-same` keeps %.2f +/- %.2f, which spans too much\n"
+                    "     to call survived, erased or reversed -- and the sign flipped on only\n"
+                    "     %u of %u seeds. Report the ratio; do not move the threshold to reach\n"
+                    "     a verdict.\n", ks, se_s, flip_s, n_s);
       }
     }
   }
