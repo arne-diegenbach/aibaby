@@ -9864,6 +9864,55 @@ thirteenth route closed — the first one aimed at the measured bottleneck rathe
 than upstream of it, which is why its failure is informative rather than another
 null.
 
+### `ipoff` — the trade is real, and v50 was right for the wrong reasons
+
+The trade rested on three legs and only two were solid. IP is the compression
+(`bias -> rate` 0.34 on, 0.91 off) — solid. Relieving half buys nothing (`ippool`,
+-0.90 SE) — solid. **"Relieving all of it costs learning" rested entirely on v50,
+which was confounded**: its inhibitory-plasticity arm also charged the exploratory
+pathway (+34.0 to +15.4 with the tract silent), so *the IP-relaxed larynx learns
+worse* was never separated from *ISP charged for arriving*.
+
+This relaxes the larynx's IP directly — no ISP, nothing else moved — and measures
+delivered dF1 against its own matched-marginal control.
+
+| arm | dF1 (Hz) | aligned | gain | excess over own control |
+|---|---|---|---|---|
+| `ip0` (shipped) | **103.9 +/- 8.8** | 0.04581 | 3.09 | **+75.9** |
+| `ipoff` | **17.7 +/- 3.8** | 0.01585 | **1.00** | **+2.8** |
+
+    EXCESS DIFFERENCE, ipoff - ip0, paired on seed:  -73.1 +/- 9.9  (-7.42 SE), 1/18
+
+**Turning the homeostat off does not merely fail to buy dF1 — it destroys vocal
+learning.** dF1 falls to a sixth, the learned bias to a third, and `gain` to
+**1.00**, which is a structureless table. The excess over its own control collapses
+from +75.9 Hz to +2.8. Seventeen of eighteen seeds negative, at **-7.42 SE** — not
+marginal, and nowhere near the 2-3 SE band this project has had to retract from.
+
+**So v50's conclusion survives its own confound.** It saw +16.6 to -2.3 on three
+seeds through an intervention that moved two things; this is -7.42 SE on eighteen
+through one. The confound did not change the answer, which is worth knowing both
+ways: the August reading was lucky rather than sound, and it happened to be right.
+
+**The three legs now hold:**
+
+- the compression **is** intrinsic plasticity — 0.34 against 0.91
+- relieving **half** buys nothing — the same intervention halves the learned bias
+- relieving **all** collapses learning — dF1 103.9 to 17.7
+
+**The larynx must regulate its own rate in order to learn at all, and regulating
+its own rate is what compresses what it learns.** That is a tight trade with no
+setting between the horns, and it makes 137 Hz structural rather than an unfound
+knob. Thirteen routes, and the thirteenth is the one that closes the question
+instead of adding to the list.
+
+**What this does not say.** It does not say a *differently shaped* regulator is
+impossible — v57 was one attempt and it recovered half the transfer at the cost of
+half the bias. It says the two requirements are in genuine opposition in this
+creature, and that anything which relaxes the rate constraint pays for it in the
+estimator. Any future attempt has to measure both halves, and the machinery to do
+that now exists.
+
 ### What the literature says to build next, and why it is the cheap option
 
 > **This section is the argument that produced DNA v51, kept as the record of

@@ -1,0 +1,118 @@
+  [12/72] seed 2 ipoff-rnd  dF1 1.2  aligned 0.00603
+  [4/72] seed 0 ipoff-rnd  dF1 68.1  aligned 0.04271
+  [8/72] seed 1 ipoff-rnd  dF1 18.5  aligned 0.02578
+  [13/72] seed 3 ip0       dF1 145.1  aligned 0.06471
+  [7/72] seed 1 ipoff     dF1 16.4  aligned 0.00972
+  [9/72] seed 2 ip0       dF1 63.2  aligned 0.01295
+  [6/72] seed 1 ip0-rnd   dF1 24.4  aligned 0.00743
+  [1/72] seed 0 ip0       dF1 112.0  aligned 0.06311
+  [10/72] seed 2 ip0-rnd   dF1 63.6  aligned 0.01745
+  [2/72] seed 0 ip0-rnd   dF1 48.8  aligned 0.02212
+  [3/72] seed 0 ipoff     dF1 0.2  aligned 0.02785
+  [14/72] seed 3 ip0-rnd   dF1 22.5  aligned 0.01941
+  [11/72] seed 2 ipoff     dF1 17.1  aligned 0.00547
+  [5/72] seed 1 ip0       dF1 128.0  aligned 0.05439
+  [22/72] seed 5 ip0-rnd   dF1 35.6  aligned 0.01097
+  [20/72] seed 4 ipoff-rnd  dF1 8.8  aligned 0.00409
+  [24/72] seed 5 ipoff-rnd  dF1 36.9  aligned 0.02221
+  [15/72] seed 3 ipoff     dF1 5.8  aligned 0.01582
+  [18/72] seed 4 ip0-rnd   dF1 48.8  aligned 0.00434
+  [17/72] seed 4 ip0       dF1 132.3  aligned 0.05060
+  [21/72] seed 5 ip0       dF1 146.1  aligned 0.06579
+  [16/72] seed 3 ipoff-rnd  dF1 6.8  aligned 0.00190
+  [26/72] seed 6 ip0-rnd   dF1 18.5  aligned 0.03091
+  [23/72] seed 5 ipoff     dF1 26.6  aligned 0.02660
+  [19/72] seed 4 ipoff     dF1 12.9  aligned 0.02584
+  [25/72] seed 6 ip0       dF1 110.2  aligned 0.04095
+  [28/72] seed 6 ipoff-rnd  dF1 14.5  aligned 0.00843
+  [27/72] seed 6 ipoff     dF1 10.0  aligned 0.01644
+  [30/72] seed 7 ip0-rnd   dF1 10.0  aligned 0.01250
+  [32/72] seed 7 ipoff-rnd  dF1 27.1  aligned 0.01625
+  [34/72] seed 8 ip0-rnd   dF1 9.7  aligned 0.00513
+  [31/72] seed 7 ipoff     dF1 14.1  aligned 0.01000
+  [33/72] seed 8 ip0       dF1 104.2  aligned 0.06530
+  [35/72] seed 8 ipoff     dF1 24.8  aligned 0.03049
+  [40/72] seed 9 ipoff-rnd  dF1 5.3  aligned 0.01632
+  [29/72] seed 7 ip0       dF1 73.1  aligned 0.03014
+  [38/72] seed 9 ip0-rnd   dF1 16.8  aligned 0.00734
+  [37/72] seed 9 ip0       dF1 74.2  aligned 0.05523
+  [39/72] seed 9 ipoff     dF1 6.0  aligned 0.01202
+  [42/72] seed 10 ip0-rnd   dF1 0.3  aligned 0.00985
+  [41/72] seed 10 ip0       dF1 6.5  aligned 0.01320
+  [36/72] seed 8 ipoff-rnd  dF1 7.0  aligned 0.01721
+  [50/72] seed 12 ip0-rnd   dF1 32.8  aligned 0.01506
+  [44/72] seed 10 ipoff-rnd  dF1 20.5  aligned 0.01733
+  [46/72] seed 11 ip0-rnd   dF1 11.3  aligned 0.02368
+  [48/72] seed 11 ipoff-rnd  dF1 8.9  aligned 0.01227
+  [43/72] seed 10 ipoff     dF1 6.2  aligned 0.01026
+  [51/72] seed 12 ipoff     dF1 3.3  aligned 0.01524
+  [47/72] seed 11 ipoff     dF1 30.0  aligned 0.01697
+  [49/72] seed 12 ip0       dF1 110.4  aligned 0.07312
+  [54/72] seed 13 ip0-rnd   dF1 33.2  aligned 0.00040
+  [45/72] seed 11 ip0       dF1 58.0  aligned 0.01408
+  [52/72] seed 12 ipoff-rnd  dF1 14.4  aligned 0.02682
+  [56/72] seed 13 ipoff-rnd  dF1 2.8  aligned 0.01834
+  [53/72] seed 13 ip0       dF1 102.7  aligned 0.04863
+  [55/72] seed 13 ipoff     dF1 10.1  aligned 0.01996
+  [60/72] seed 14 ipoff-rnd  dF1 3.7  aligned 0.00473
+  [57/72] seed 14 ip0       dF1 122.0  aligned 0.04909
+  [61/72] seed 15 ip0       dF1 102.0  aligned 0.03958
+  [66/72] seed 16 ip0-rnd   dF1 4.6  aligned 0.00297
+  [58/72] seed 14 ip0-rnd   dF1 23.1  aligned 0.02313
+  [62/72] seed 15 ip0-rnd   dF1 62.4  aligned 0.03512
+  [64/72] seed 15 ipoff-rnd  dF1 8.1  aligned 0.01539
+  [65/72] seed 16 ip0       dF1 121.6  aligned 0.04424
+  [59/72] seed 14 ipoff     dF1 22.8  aligned 0.01622
+  [68/72] seed 16 ipoff-rnd  dF1 3.6  aligned 0.00035
+  [67/72] seed 16 ipoff     dF1 71.0  aligned 0.01972
+  [69/72] seed 17 ip0       dF1 158.0  aligned 0.03947
+  [63/72] seed 15 ipoff     dF1 30.9  aligned 0.00105
+  [70/72] seed 17 ip0-rnd   dF1 37.7  aligned 0.01768
+  [71/72] seed 17 ipoff     dF1 9.8  aligned 0.00565
+  [72/72] seed 17 ipoff-rnd  dF1 12.5  aligned 0.01223
+experiment: ippool
+  instrument        ippool   trial seed 0000000001353e69   4857 trials
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  question          stageprobe put the compression in intrinsic plasticity
+                    (bias->rate 0.34 on, 0.91 off). DNA v57 pools the rate
+                    error per articulator group: regulation holds and the
+                    transfer recovers to 0.51. Does that buy delivered dF1?
+  the gate          EXCESS over each arm's OWN matched-marginal control,
+                    ip9 vs ip0, PAIRED on seed, at 2 SE -- and the ip9 mean
+                    rate must stay regulated, or it is v50's refuted trade.
+  stated up front   n = 18, and a 2-3 SE result at that size is a HYPOTHESIS
+                    in this project; three have been retracted. And a null
+                    here does not rule out a convergence-SPEED effect.
+
+
+  ARM LIVENESS vs `ip0` (seeds where the arm differs at all)
+    ip0-rnd            18/18
+    ipoff              18/18
+    ipoff-rnd          18/18
+
+  arm       dF1 (Hz)         aligned     gain      larynx rate
+  ip0        103.9 +/- 8.8     0.04581     3.09      4.62
+  ip0-rnd     28.0 +/- 4.4     0.01475     0.87      4.74
+  ipoff       17.7 +/- 3.8     0.01585     1.00      6.84
+  ipoff-rnd   14.9 +/- 3.8     0.01491     0.84      6.45
+
+  EXCESS DIFFERENCE vs `ip0`, paired on seed
+  ipoff        -73.1 +/- 9.9  (-7.42 SE)   signs 1/18
+  ip9           +0.0 +/- 0.0  (+0.00 SE)   signs 0/0
+  larynx rate  ip0 4.62 Hz, ipoff 6.84 Hz  <- the cost v50 could not separate from ISP's
+
+  THE TRADE IS REAL. Turning the larynx's homeostat OFF -- directly,
+  with no ISP and nothing else moved -- does not buy delivered dF1 at
+  2 SE either. So the leg v50 measured through a confound holds when
+  measured cleanly: full relief of the compression does not pay. The
+  larynx can be steerable or self-regulating and it has to be both, and
+  that makes the 137 Hz ceiling STRUCTURAL rather than an unfound knob.
+
+  (the older reading follows, and is superseded by the line above)
+  RELIEVING THE BOTTLENECK DOES NOT BUY dF1. The transfer improves
+  0.34 -> 0.51 and the delivered formant does not follow at 2 SE. So the
+  compression is necessary for the ceiling but not sufficient to lift it:
+  half the relief buys nothing measurable, and the honest reading is that
+  the remaining 0.51 -> 0.91 is where any gain would be -- which needs no
+  rate regulation at all, and v50 priced that at +16.6 -> -2.3.

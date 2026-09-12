@@ -13914,6 +13914,12 @@ bool run_ippool(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) 
       {"ipoff", "ipoff-rnd", 0, 0, 0, 0}, {"ip9", "ip9-rnd", 0, 0, 0, 0}};
   for (auto& q : cand) {
     q.m = excess_diff(q.t, q.c, &q.se, &q.pos, &q.tot);
+    // An arm that is not in this build must say so rather than print a row of
+    // zeroes, which reads as a measured null.
+    if (q.tot == 0) {
+      std::printf("  %-10s not in this run\n", q.t);
+      continue;
+    }
     std::printf("  %-10s %+7.1f +/- %.1f  (%+.2f SE)   signs %u/%u\n", q.t, q.m, q.se,
                 q.se > 0.0 ? q.m / q.se : 0.0, q.pos, q.tot);
   }
