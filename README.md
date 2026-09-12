@@ -9816,6 +9816,54 @@ delivered dF1 is the thing that matters, and unlike the twelve closed routes thi
 one has a measured mechanism acting on the measured bottleneck. That deserves its
 own gate, set before its own run.
 
+### `ippool` — relieving the bottleneck does not buy dF1, and the reason is a real trade
+
+`stageprobe` located the compression in intrinsic plasticity and DNA v57 relieved
+half of it while keeping regulation. This asks the only question that matters:
+does the delivered formant follow?
+
+| arm | dF1 (Hz) | aligned | gain | larynx rate |
+|---|---|---|---|---|
+| `ip0` (shipped) | **103.9 +/- 8.8** | 0.04581 | 3.09 | 4.62 |
+| `ip0-rnd` | 28.0 +/- 4.4 | 0.01475 | 0.87 | 4.74 |
+| `ip9` (v57) | 87.5 +/- 13.8 | **0.02373** | **1.71** | 5.50 |
+| `ip9-rnd` | 27.2 +/- 5.3 | 0.01393 | 0.84 | 5.30 |
+
+    EXCESS DIFFERENCE, ip9 - ip0, paired on seed:  -15.6 +/- 17.5  (-0.90 SE), 8/18
+    larynx rate drift 19%, well inside the 50% bar -- regulation held
+
+**No.** And the point estimate is *negative*: v57 is slightly worse, not slightly
+better.
+
+**I predicted a small positive that fails the bar. It is a small negative, and the
+`aligned` column says why — which I did not anticipate.** Pooled IP nearly halves
+the learned bias, 0.04581 to 0.02373, and cuts `gain` from 3.09 to 1.71. So it
+improves the **transfer** and degrades the **estimator** at the same time, and the
+two offset.
+
+**The mechanism is the same number that made it work.** `stageprobe` measured pooled
+x9 pushing the threshold back *three times harder* than the per-neuron rule (+0.344
+against +0.105), because a slice's mean error is large and every neuron in it takes
+that step. A harder-pushed group is a noisier one to estimate a gradient in, and
+`gain` falling to 1.71 is exactly that: the table is less structured, so more of
+what reward writes is diffusion rather than drift. **The thing that preserves the
+tilt also degrades the signal that builds it.**
+
+**So the ceiling is a trade, not an unfound knob.** Three facts now hold together:
+
+- the compression is **necessary** — it is intrinsic plasticity, measured at
+  `bias -> rate` 0.34 against 0.91 with the homeostat off
+- relieving **half** of it buys nothing, because the same intervention costs the
+  estimator what it gains in delivery
+- relieving **all** of it needs no rate regulation at all, and v50 priced that
+  directly: `change` +16.6 to -2.3
+
+**The larynx can be steerable or self-regulating and it has to be both.** That is a
+different statement from "we have not found the right mechanism", and it is the
+thirteenth route closed — the first one aimed at the measured bottleneck rather
+than upstream of it, which is why its failure is informative rather than another
+null.
+
 ### What the literature says to build next, and why it is the cheap option
 
 > **This section is the argument that produced DNA v51, kept as the record of

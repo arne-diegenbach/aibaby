@@ -1,0 +1,109 @@
+  [6/72] seed 1 ip0-rnd   dF1 24.4  aligned 0.00743
+  [13/72] seed 3 ip0       dF1 145.1  aligned 0.06471
+  [14/72] seed 3 ip0-rnd   dF1 22.5  aligned 0.01941
+  [2/72] seed 0 ip0-rnd   dF1 48.8  aligned 0.02212
+  [10/72] seed 2 ip0-rnd   dF1 63.6  aligned 0.01745
+  [1/72] seed 0 ip0       dF1 112.0  aligned 0.06311
+  [9/72] seed 2 ip0       dF1 63.2  aligned 0.01295
+  [5/72] seed 1 ip0       dF1 128.0  aligned 0.05439
+  [3/72] seed 0 ip9       dF1 46.8  aligned 0.01339
+  [8/72] seed 1 ip9-rnd   dF1 6.8  aligned 0.02105
+  [12/72] seed 2 ip9-rnd   dF1 17.4  aligned 0.01423
+  [4/72] seed 0 ip9-rnd   dF1 15.6  aligned 0.00765
+  [11/72] seed 2 ip9       dF1 24.0  aligned 0.02177
+  [17/72] seed 4 ip0       dF1 132.3  aligned 0.05060
+  [22/72] seed 5 ip0-rnd   dF1 35.6  aligned 0.01097
+  [18/72] seed 4 ip0-rnd   dF1 48.8  aligned 0.00434
+  [21/72] seed 5 ip0       dF1 146.1  aligned 0.06579
+  [7/72] seed 1 ip9       dF1 25.8  aligned 0.01378
+  [25/72] seed 6 ip0       dF1 110.2  aligned 0.04095
+  [26/72] seed 6 ip0-rnd   dF1 18.5  aligned 0.03091
+  [16/72] seed 3 ip9-rnd   dF1 64.0  aligned 0.02313
+  [23/72] seed 5 ip9       dF1 137.9  aligned 0.05421
+  [20/72] seed 4 ip9-rnd   dF1 51.4  aligned 0.01414
+  [15/72] seed 3 ip9       dF1 14.2  aligned 0.01913
+  [24/72] seed 5 ip9-rnd   dF1 36.0  aligned 0.03132
+  [19/72] seed 4 ip9       dF1 5.6  aligned 0.00460
+  [30/72] seed 7 ip0-rnd   dF1 10.0  aligned 0.01250
+  [29/72] seed 7 ip0       dF1 73.1  aligned 0.03014
+  [31/72] seed 7 ip9       dF1 148.8  aligned 0.03856
+  [34/72] seed 8 ip0-rnd   dF1 9.7  aligned 0.00513
+  [32/72] seed 7 ip9-rnd   dF1 58.9  aligned 0.01286
+  [33/72] seed 8 ip0       dF1 104.2  aligned 0.06530
+  [37/72] seed 9 ip0       dF1 74.2  aligned 0.05523
+  [38/72] seed 9 ip0-rnd   dF1 16.8  aligned 0.00734
+  [39/72] seed 9 ip9       dF1 129.0  aligned 0.03491
+  [28/72] seed 6 ip9-rnd   dF1 2.9  aligned 0.02601
+  [42/72] seed 10 ip0-rnd   dF1 0.3  aligned 0.00985
+  [41/72] seed 10 ip0       dF1 6.5  aligned 0.01320
+  [27/72] seed 6 ip9       dF1 38.9  aligned 0.01083
+  [35/72] seed 8 ip9       dF1 63.0  aligned 0.02169
+  [40/72] seed 9 ip9-rnd   dF1 51.9  aligned 0.02210
+  [45/72] seed 11 ip0       dF1 58.0  aligned 0.01408
+  [43/72] seed 10 ip9       dF1 151.8  aligned 0.04961
+  [46/72] seed 11 ip0-rnd   dF1 11.3  aligned 0.02368
+  [36/72] seed 8 ip9-rnd   dF1 9.9  aligned 0.00813
+  [49/72] seed 12 ip0       dF1 110.4  aligned 0.07312
+  [50/72] seed 12 ip0-rnd   dF1 32.8  aligned 0.01506
+  [53/72] seed 13 ip0       dF1 102.7  aligned 0.04863
+  [54/72] seed 13 ip0-rnd   dF1 33.2  aligned 0.00040
+  [52/72] seed 12 ip9-rnd   dF1 65.5  aligned 0.01167
+  [44/72] seed 10 ip9-rnd   dF1 1.9  aligned 0.01207
+  [55/72] seed 13 ip9       dF1 79.4  aligned 0.03547
+  [47/72] seed 11 ip9       dF1 42.8  aligned 0.00847
+  [57/72] seed 14 ip0       dF1 122.0  aligned 0.04909
+  [58/72] seed 14 ip0-rnd   dF1 23.1  aligned 0.02313
+  [61/72] seed 15 ip0       dF1 102.0  aligned 0.03958
+  [56/72] seed 13 ip9-rnd   dF1 34.0  aligned 0.00191
+  [48/72] seed 11 ip9-rnd   dF1 4.1  aligned 0.01885
+  [51/72] seed 12 ip9       dF1 154.4  aligned 0.04100
+  [62/72] seed 15 ip0-rnd   dF1 62.4  aligned 0.03512
+  [60/72] seed 14 ip9-rnd   dF1 23.0  aligned 0.01219
+  [65/72] seed 16 ip0       dF1 121.6  aligned 0.04424
+  [66/72] seed 16 ip0-rnd   dF1 4.6  aligned 0.00297
+  [59/72] seed 14 ip9       dF1 53.2  aligned 0.00779
+  [69/72] seed 17 ip0       dF1 158.0  aligned 0.03947
+  [68/72] seed 16 ip9-rnd   dF1 19.3  aligned 0.00099
+  [67/72] seed 16 ip9       dF1 137.7  aligned 0.00687
+  [70/72] seed 17 ip0-rnd   dF1 37.7  aligned 0.01768
+  [64/72] seed 15 ip9-rnd   dF1 2.4  aligned 0.01212
+  [71/72] seed 17 ip9       dF1 181.3  aligned 0.01706
+  [63/72] seed 15 ip9       dF1 139.7  aligned 0.02795
+  [72/72] seed 17 ip9-rnd   dF1 24.9  aligned 0.00026
+experiment: ippool
+  instrument        ippool   trial seed 0000000001353e69   4857 trials
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  question          stageprobe put the compression in intrinsic plasticity
+                    (bias->rate 0.34 on, 0.91 off). DNA v57 pools the rate
+                    error per articulator group: regulation holds and the
+                    transfer recovers to 0.51. Does that buy delivered dF1?
+  the gate          EXCESS over each arm's OWN matched-marginal control,
+                    ip9 vs ip0, PAIRED on seed, at 2 SE -- and the ip9 mean
+                    rate must stay regulated, or it is v50's refuted trade.
+  stated up front   n = 18, and a 2-3 SE result at that size is a HYPOTHESIS
+                    in this project; three have been retracted. And a null
+                    here does not rule out a convergence-SPEED effect.
+
+
+  ARM LIVENESS vs `ip0` (seeds where the arm differs at all)
+    ip0-rnd            18/18
+    ip9                18/18
+    ip9-rnd            18/18
+
+  arm       dF1 (Hz)         aligned     gain      larynx rate
+  ip0        103.9 +/- 8.8     0.04581     3.09      4.62
+  ip0-rnd     28.0 +/- 4.4     0.01475     0.87      4.74
+  ip9         87.5 +/- 13.8    0.02373     1.71      5.50
+  ip9-rnd     27.2 +/- 5.3     0.01393     0.84      5.30
+
+  EXCESS DIFFERENCE, ip9 - ip0, paired on seed
+    -15.6 +/- 17.5  (-0.90 SE)   signs 8/18
+  larynx rate  ip0 4.62 Hz, ip9 5.50 Hz, drift 19%
+
+  RELIEVING THE BOTTLENECK DOES NOT BUY dF1. The transfer improves
+  0.34 -> 0.51 and the delivered formant does not follow at 2 SE. So the
+  compression is necessary for the ceiling but not sufficient to lift it:
+  half the relief buys nothing measurable, and the honest reading is that
+  the remaining 0.51 -> 0.91 is where any gain would be -- which needs no
+  rate regulation at all, and v50 priced that at +16.6 -> -2.3.
