@@ -9578,6 +9578,45 @@ beta=2 and still delivers more. A hard argmax was expected to be untrainable, an
 beta=3 was already worse than beta=2 on every column in the screen — so this is a
 narrow optimum rather than a direction to push.
 
+### The ceiling test says SPEED, not ceiling — and the previous section's headline is wrong
+
+The confirmation run existed to ask one question: does sharpening move the
+asymptote, or only the 3.4M value? It answers **only the 3.4M value.**
+
+| budget | `b1.0` | `b2.0` | raw gap | paired excess difference |
+|---|---|---|---|---|
+| 3.4M | 63.5 | 83.2 | **+19.7** | **+18.2 +/- 6.5 (2.82 SE)** |
+| 13.6M | 109.4 | 117.9 | +8.5 | +9.4 +/- 9.7 (**0.97 SE**) |
+
+**The advantage halves as the budget grows and falls below significance.** That is
+the signature of a speed advantage with a common asymptote: beta=2 gets there
+sooner and does not get further.
+
+**So the previous section's headline — "the first thing to move the naming
+ceiling" — is wrong, and is retracted.** It moved the 3.4M value. The ceiling is
+where it was. I wrote that headline after the 36-seed screen and before the
+confirmation, which is exactly the order that makes a claim premature; the
+confirmation was already queued for this reason and it did its job.
+
+**What survives, and it is not nothing.** At 3.4M the effect is real and
+replicated: 2.01 SE at n=18 and 2.82 SE at n=36, effect size stable, SE falling as
+`1/sqrt(n)`. And it is genuinely steering rather than scatter — the taught arm
+gained 19.7 Hz where its matched-marginal control gained 1.5. **Sharpening the
+readout makes the creature learn faster. It does not let it learn further.**
+
+**Which is a real answer to a question already on file.** `ctxgain` asked whether a
+cheaper parameterisation buys convergence speed and could not see it, because both
+its arms were saturated at 13.6M. This is that question answered from the other
+end: an intervention that clearly buys speed shows up at 3.4M and has vanished by
+13.6M. Any future speed claim in this project should be measured at a budget where
+the arms are **not** saturated, and this pair of runs is the calibration for which
+budgets those are.
+
+**And the asymptote's cause is untouched.** `dF1 ~ aligned^0.61` gave 234 Hz, and
+sharpening the pooling did not change where the curve ends up — only how fast it
+gets there. The compression that sets the ceiling is not the smoothness of the
+centroid.
+
 ### What the literature says to build next, and why it is the cheap option
 
 > **This section is the argument that produced DNA v51, kept as the record of

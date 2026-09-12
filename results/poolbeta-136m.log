@@ -1,0 +1,188 @@
+  [9/144] seed 2 b1.0       dF1 63.2  F1 sd 58.3  aligned 0.01295
+  [13/144] seed 3 b1.0       dF1 145.1  F1 sd 90.4  aligned 0.06471
+  [10/144] seed 2 b1.0-rnd   dF1 63.6  F1 sd 49.6  aligned 0.01745
+  [3/144] seed 0 b2.0       dF1 57.8  F1 sd 73.0  aligned 0.00084
+  [8/144] seed 1 b2.0-rnd   dF1 80.0  F1 sd 61.6  aligned 0.01758
+  [2/144] seed 0 b1.0-rnd   dF1 48.8  F1 sd 41.2  aligned 0.02212
+  [6/144] seed 1 b1.0-rnd   dF1 24.4  F1 sd 37.7  aligned 0.00743
+  [1/144] seed 0 b1.0       dF1 112.0  F1 sd 76.1  aligned 0.06311
+  [14/144] seed 3 b1.0-rnd   dF1 22.5  F1 sd 36.4  aligned 0.01941
+  [4/144] seed 0 b2.0-rnd   dF1 8.5  F1 sd 41.7  aligned 0.00940
+  [11/144] seed 2 b2.0       dF1 164.9  F1 sd 101.1  aligned 0.04275
+  [5/144] seed 1 b1.0       dF1 128.0  F1 sd 78.2  aligned 0.05439
+  [7/144] seed 1 b2.0       dF1 149.7  F1 sd 100.4  aligned 0.06007
+  [12/144] seed 2 b2.0-rnd   dF1 1.7  F1 sd 44.7  aligned 0.00037
+  [17/144] seed 4 b1.0       dF1 132.3  F1 sd 81.2  aligned 0.05060
+  [18/144] seed 4 b1.0-rnd   dF1 48.8  F1 sd 45.8  aligned 0.00434
+  [20/144] seed 4 b2.0-rnd   dF1 70.2  F1 sd 62.4  aligned 0.01701
+  [16/144] seed 3 b2.0-rnd   dF1 1.6  F1 sd 43.4  aligned 0.00617
+  [24/144] seed 5 b2.0-rnd   dF1 28.5  F1 sd 45.7  aligned 0.01184
+  [22/144] seed 5 b1.0-rnd   dF1 35.6  F1 sd 39.1  aligned 0.01097
+  [21/144] seed 5 b1.0       dF1 146.1  F1 sd 86.6  aligned 0.06579
+  [15/144] seed 3 b2.0       dF1 95.5  F1 sd 70.6  aligned 0.01894
+  [23/144] seed 5 b2.0       dF1 106.9  F1 sd 79.6  aligned 0.03687
+  [19/144] seed 4 b2.0       dF1 141.2  F1 sd 99.1  aligned 0.03292
+  [26/144] seed 6 b1.0-rnd   dF1 18.5  F1 sd 38.8  aligned 0.03091
+  [25/144] seed 6 b1.0       dF1 110.2  F1 sd 71.3  aligned 0.04095
+  [28/144] seed 6 b2.0-rnd   dF1 4.4  F1 sd 48.4  aligned 0.02059
+  [27/144] seed 6 b2.0       dF1 146.3  F1 sd 88.0  aligned 0.04576
+  [29/144] seed 7 b1.0       dF1 73.1  F1 sd 65.0  aligned 0.03014
+  [34/144] seed 8 b1.0-rnd   dF1 9.7  F1 sd 39.2  aligned 0.00513
+  [30/144] seed 7 b1.0-rnd   dF1 10.0  F1 sd 35.9  aligned 0.01250
+  [32/144] seed 7 b2.0-rnd   dF1 63.9  F1 sd 56.2  aligned 0.02583
+  [31/144] seed 7 b2.0       dF1 155.7  F1 sd 102.0  aligned 0.04762
+  [39/144] seed 9 b2.0       dF1 179.4  F1 sd 103.7  aligned 0.03764
+  [33/144] seed 8 b1.0       dF1 104.2  F1 sd 70.6  aligned 0.06530
+  [38/144] seed 9 b1.0-rnd   dF1 16.8  F1 sd 35.4  aligned 0.00734
+  [37/144] seed 9 b1.0       dF1 74.2  F1 sd 69.5  aligned 0.05523
+  [35/144] seed 8 b2.0       dF1 67.4  F1 sd 70.4  aligned 0.00008
+  [36/144] seed 8 b2.0-rnd   dF1 5.7  F1 sd 44.3  aligned 0.00593
+  [40/144] seed 9 b2.0-rnd   dF1 85.4  F1 sd 64.0  aligned 0.01200
+  [41/144] seed 10 b1.0       dF1 6.5  F1 sd 48.5  aligned 0.01320
+  [42/144] seed 10 b1.0-rnd   dF1 0.3  F1 sd 33.2  aligned 0.00985
+  [50/144] seed 12 b1.0-rnd   dF1 32.8  F1 sd 43.7  aligned 0.01506
+  [44/144] seed 10 b2.0-rnd   dF1 18.9  F1 sd 44.6  aligned 0.01564
+  [47/144] seed 11 b2.0       dF1 92.2  F1 sd 88.0  aligned 0.02091
+  [49/144] seed 12 b1.0       dF1 110.4  F1 sd 71.4  aligned 0.07312
+  [46/144] seed 11 b1.0-rnd   dF1 11.3  F1 sd 38.3  aligned 0.02368
+  [51/144] seed 12 b2.0       dF1 117.3  F1 sd 82.3  aligned 0.02366
+  [43/144] seed 10 b2.0       dF1 78.6  F1 sd 100.7  aligned 0.02073
+  [45/144] seed 11 b1.0       dF1 58.0  F1 sd 61.9  aligned 0.01408
+  [48/144] seed 11 b2.0-rnd   dF1 8.6  F1 sd 45.2  aligned 0.00036
+  [53/144] seed 13 b1.0       dF1 102.7  F1 sd 64.8  aligned 0.04863
+  [52/144] seed 12 b2.0-rnd   dF1 21.8  F1 sd 46.2  aligned 0.00078
+  [54/144] seed 13 b1.0-rnd   dF1 33.2  F1 sd 41.7  aligned 0.00040
+  [55/144] seed 13 b2.0       dF1 147.5  F1 sd 101.1  aligned 0.03304
+  [56/144] seed 13 b2.0-rnd   dF1 31.4  F1 sd 50.6  aligned 0.03455
+  [57/144] seed 14 b1.0       dF1 122.0  F1 sd 76.9  aligned 0.04909
+  [58/144] seed 14 b1.0-rnd   dF1 23.1  F1 sd 38.8  aligned 0.02313
+  [63/144] seed 15 b2.0       dF1 88.3  F1 sd 84.8  aligned 0.02033
+  [64/144] seed 15 b2.0-rnd   dF1 23.7  F1 sd 47.9  aligned 0.01078
+  [60/144] seed 14 b2.0-rnd   dF1 47.4  F1 sd 50.3  aligned 0.01856
+  [68/144] seed 16 b2.0-rnd   dF1 0.2  F1 sd 57.6  aligned 0.01577
+  [61/144] seed 15 b1.0       dF1 102.0  F1 sd 67.5  aligned 0.03958
+  [62/144] seed 15 b1.0-rnd   dF1 62.4  F1 sd 51.6  aligned 0.03512
+  [67/144] seed 16 b2.0       dF1 154.8  F1 sd 92.2  aligned 0.05933
+  [66/144] seed 16 b1.0-rnd   dF1 4.6  F1 sd 53.8  aligned 0.00297
+  [59/144] seed 14 b2.0       dF1 80.1  F1 sd 68.5  aligned 0.04480
+  [65/144] seed 16 b1.0       dF1 121.6  F1 sd 80.3  aligned 0.04424
+  [69/144] seed 17 b1.0       dF1 158.0  F1 sd 93.6  aligned 0.03947
+  [70/144] seed 17 b1.0-rnd   dF1 37.7  F1 sd 43.1  aligned 0.01768
+  [71/144] seed 17 b2.0       dF1 102.1  F1 sd 75.2  aligned 0.04207
+  [72/144] seed 17 b2.0-rnd   dF1 3.1  F1 sd 41.2  aligned 0.00348
+  [73/144] seed 18 b1.0       dF1 139.6  F1 sd 76.5  aligned 0.06325
+  [76/144] seed 18 b2.0-rnd   dF1 26.3  F1 sd 46.6  aligned 0.01033
+  [77/144] seed 19 b1.0       dF1 54.5  F1 sd 56.5  aligned 0.04801
+  [80/144] seed 19 b2.0-rnd   dF1 33.4  F1 sd 50.7  aligned 0.00102
+  [75/144] seed 18 b2.0       dF1 111.4  F1 sd 77.5  aligned 0.05704
+  [78/144] seed 19 b1.0-rnd   dF1 9.1  F1 sd 35.7  aligned 0.01339
+  [74/144] seed 18 b1.0-rnd   dF1 55.6  F1 sd 48.5  aligned 0.03123
+  [79/144] seed 19 b2.0       dF1 118.7  F1 sd 93.4  aligned 0.03373
+  [82/144] seed 20 b1.0-rnd   dF1 1.9  F1 sd 34.8  aligned 0.00521
+  [81/144] seed 20 b1.0       dF1 112.9  F1 sd 70.5  aligned 0.05556
+  [83/144] seed 20 b2.0       dF1 177.0  F1 sd 103.0  aligned 0.03970
+  [84/144] seed 20 b2.0-rnd   dF1 17.8  F1 sd 45.9  aligned 0.01648
+  [86/144] seed 21 b1.0-rnd   dF1 70.4  F1 sd 53.4  aligned 0.01872
+  [91/144] seed 22 b2.0       dF1 142.1  F1 sd 94.7  aligned 0.04028
+  [90/144] seed 22 b1.0-rnd   dF1 2.6  F1 sd 41.8  aligned 0.02137
+  [85/144] seed 21 b1.0       dF1 117.1  F1 sd 74.3  aligned 0.06571
+  [88/144] seed 21 b2.0-rnd   dF1 8.0  F1 sd 48.6  aligned 0.01794
+  [92/144] seed 22 b2.0-rnd   dF1 3.5  F1 sd 43.0  aligned 0.00192
+  [89/144] seed 22 b1.0       dF1 122.4  F1 sd 84.7  aligned 0.04974
+  [93/144] seed 23 b1.0       dF1 131.2  F1 sd 86.7  aligned 0.05887
+  [94/144] seed 23 b1.0-rnd   dF1 13.4  F1 sd 40.4  aligned 0.00888
+  [96/144] seed 23 b2.0-rnd   dF1 11.4  F1 sd 46.8  aligned 0.00560
+  [95/144] seed 23 b2.0       dF1 61.4  F1 sd 80.3  aligned 0.02480
+  [97/144] seed 24 b1.0       dF1 104.4  F1 sd 71.0  aligned 0.05555
+  [87/144] seed 21 b2.0       dF1 109.9  F1 sd 83.5  aligned 0.06615
+  [98/144] seed 24 b1.0-rnd   dF1 33.2  F1 sd 37.1  aligned 0.02519
+  [101/144] seed 25 b1.0       dF1 134.2  F1 sd 87.1  aligned 0.05427
+  [99/144] seed 24 b2.0       dF1 119.4  F1 sd 83.4  aligned 0.06808
+  [100/144] seed 24 b2.0-rnd   dF1 20.1  F1 sd 44.7  aligned 0.01553
+  [103/144] seed 25 b2.0       dF1 72.2  F1 sd 75.8  aligned 0.02662
+  [102/144] seed 25 b1.0-rnd   dF1 14.8  F1 sd 38.0  aligned 0.00566
+  [104/144] seed 25 b2.0-rnd   dF1 60.7  F1 sd 53.1  aligned 0.03287
+  [110/144] seed 27 b1.0-rnd   dF1 20.5  F1 sd 39.4  aligned 0.00770
+  [108/144] seed 26 b2.0-rnd   dF1 46.7  F1 sd 53.3  aligned 0.03372
+  [106/144] seed 26 b1.0-rnd   dF1 77.8  F1 sd 54.1  aligned 0.03921
+  [109/144] seed 27 b1.0       dF1 89.1  F1 sd 65.0  aligned 0.03836
+  [112/144] seed 27 b2.0-rnd   dF1 8.7  F1 sd 46.8  aligned 0.01669
+  [105/144] seed 26 b1.0       dF1 124.8  F1 sd 74.6  aligned 0.05682
+  [107/144] seed 26 b2.0       dF1 117.0  F1 sd 79.8  aligned 0.05990
+  [111/144] seed 27 b2.0       dF1 133.9  F1 sd 86.2  aligned 0.04882
+  [113/144] seed 28 b1.0       dF1 91.7  F1 sd 65.9  aligned 0.03956
+  [116/144] seed 28 b2.0-rnd   dF1 42.3  F1 sd 52.5  aligned 0.02144
+  [114/144] seed 28 b1.0-rnd   dF1 5.8  F1 sd 36.1  aligned 0.01164
+  [118/144] seed 29 b1.0-rnd   dF1 4.0  F1 sd 35.4  aligned 0.00648
+  [115/144] seed 28 b2.0       dF1 130.4  F1 sd 87.3  aligned 0.03682
+  [117/144] seed 29 b1.0       dF1 151.4  F1 sd 88.8  aligned 0.04551
+  [120/144] seed 29 b2.0-rnd   dF1 32.2  F1 sd 47.6  aligned 0.01331
+  [119/144] seed 29 b2.0       dF1 142.8  F1 sd 89.7  aligned 0.04787
+  [122/144] seed 30 b1.0-rnd   dF1 60.4  F1 sd 47.1  aligned 0.00509
+  [121/144] seed 30 b1.0       dF1 103.0  F1 sd 76.9  aligned 0.06333
+  [124/144] seed 30 b2.0-rnd   dF1 31.0  F1 sd 49.1  aligned 0.02139
+  [123/144] seed 30 b2.0       dF1 162.3  F1 sd 99.8  aligned 0.05564
+  [125/144] seed 31 b1.0       dF1 161.4  F1 sd 89.9  aligned 0.03793
+  [126/144] seed 31 b1.0-rnd   dF1 19.9  F1 sd 48.5  aligned 0.01343
+  [127/144] seed 31 b2.0       dF1 162.4  F1 sd 99.2  aligned 0.03282
+  [130/144] seed 32 b1.0-rnd   dF1 27.1  F1 sd 37.0  aligned 0.01535
+  [132/144] seed 32 b2.0-rnd   dF1 1.9  F1 sd 46.1  aligned 0.01242
+  [128/144] seed 31 b2.0-rnd   dF1 12.7  F1 sd 52.3  aligned 0.01286
+  [129/144] seed 32 b1.0       dF1 122.3  F1 sd 71.5  aligned 0.07879
+  [131/144] seed 32 b2.0       dF1 66.2  F1 sd 77.7  aligned 0.01962
+  [134/144] seed 33 b1.0-rnd   dF1 1.5  F1 sd 34.7  aligned 0.00174
+  [137/144] seed 34 b1.0       dF1 151.2  F1 sd 86.8  aligned 0.04036
+  [138/144] seed 34 b1.0-rnd   dF1 46.0  F1 sd 44.6  aligned 0.00486
+  [133/144] seed 33 b1.0       dF1 111.8  F1 sd 74.2  aligned 0.02529
+  [135/144] seed 33 b2.0       dF1 29.5  F1 sd 57.3  aligned 0.01280
+  [139/144] seed 34 b2.0       dF1 151.4  F1 sd 89.4  aligned 0.05450
+  [140/144] seed 34 b2.0-rnd   dF1 4.7  F1 sd 45.0  aligned 0.00804
+  [136/144] seed 33 b2.0-rnd   dF1 79.4  F1 sd 59.8  aligned 0.03483
+  [141/144] seed 35 b1.0       dF1 46.8  F1 sd 39.7  aligned 0.01631
+  [144/144] seed 35 b2.0-rnd   dF1 11.6  F1 sd 51.1  aligned 0.01760
+  [143/144] seed 35 b2.0       dF1 110.2  F1 sd 78.9  aligned 0.04729
+  [142/144] seed 35 b1.0-rnd   dF1 22.5  F1 sd 37.2  aligned 0.00425
+experiment: poolbeta
+  instrument        poolbeta   trial seed 00000000013594b3   4857 trials
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  question          the larynx compresses -- dF1 ~ aligned^0.61 -- and that
+                    curve both limits delivery AND kills the drift through
+                    its derivative. Does sharpening the pooling widen it?
+  the measure       EXCESS of taught over its own matched-marginal control,
+                    per beta. A beta that lifts both has bought scatter.
+  the real risk     teachability, not delivery. centroid-is-steerability
+                    measured 5 dictionary readouts NOT teachable where 2
+                    centroid ones were, so a hard argmax should fail here.
+
+
+  ARM LIVENESS vs `b1.0` (seeds where the arm differs at all)
+    b1.0-rnd           36/36
+    b2.0               36/36
+    b2.0-rnd           36/36
+
+  arm        dF1 (Hz)         F1 scatter  aligned   gain      
+  b1.0        109.4 +/- 5.7     73.7        0.04772   3.26
+  b1.0-rnd     27.5 +/- 3.6     41.3        0.01403   0.82
+  b2.0        117.9 +/- 6.3     86.6        0.03780   2.55
+  b2.0-rnd     26.6 +/- 4.2     49.4        0.01446   0.87
+
+  EXCESS over the matched-marginal control at the SAME beta, paired.
+  This is the quantity that separates steering from scatter.
+  b1.0         +81.9 +/- 6.1 (+13.48 SE)
+  b2.0         +91.3 +/- 7.3 (+12.49 SE)
+
+  vs the shipped centroid, PAIRED on seed (these arms share creatures)
+  b2.0          +9.4 +/- 9.7 (+0.97 SE)
+
+  DELIVERY PER UNIT OF ALIGNED BIAS, b2.0 - b1.0, paired:
+  +27292 +/- 24728 (+1.10 SE) -- the mechanism claim, and it is a
+  different quantity from the gate: decompression delivers more formant
+  from LESS bias, which noise does not do.
+
+  SHARPENING DOES NOT WIDEN THE STEERABLE RANGE. No beta beats the
+  shipped centroid's excess at 2 SE against the shipped one. If the F1
+  scatter column rose while the excess did not, sharpening bought noise
+  rather than reach -- which is `centroid-is-steerability` again, and it
+  closes the compression alongside the bias, the reward's resolution and
+  the reward's reference. What remains would not be a knob at all.
