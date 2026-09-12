@@ -272,6 +272,13 @@ const Spec kSpecs[] = {
      "  bias->rate, rate->centroid and centroid->F1 separately. centroid->F1 is\n"
      "  a lerp and MUST measure 1.00, which is the self-check; and the three\n"
      "  must multiply to the end-to-end curve or a stage is missing"},
+    {"ippool", 13600000, Expect::kOpen, Tier::kTeach,
+     "does relieving the MEASURED bottleneck buy dF1? stageprobe put the\n"
+     "  compression in intrinsic plasticity (bias->rate 0.34 on, 0.91 off); DNA\n"
+     "  v57 pools the rate error per articulator group, keeping regulation and\n"
+     "  recovering the transfer to 0.51. Gates on the EXCESS over each arm's own\n"
+     "  matched-marginal control, paired by seed -- and refuses if the larynx rate\n"
+     "  drifts, because a win bought by losing regulation is v50's refuted trade"},
     {"ctxfour", 3400000, Expect::kOpen, Tier::kTeach,
      "derived: ctxself's session at FOUR words. partprobe cleared the index at\n"
      "  four (0.895 vs chance 0.250); this asks whether the BIAS holds four\n"
@@ -535,6 +542,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "baseref") ok = run_baseref(dna_blob, ticks, verbose);
   else if (name == "poolbeta") ok = run_poolbeta(dna_blob, ticks, verbose);
   else if (name == "stageprobe") ok = run_stageprobe(dna_blob, ticks, verbose);
+  else if (name == "ippool") ok = run_ippool(dna_blob, ticks, verbose);
   else if (name == "interleave") ok = run_interleave(dna_blob, ticks, verbose);
   else if (name == "ctxretain") ok = run_ctxretain(dna_blob, ticks, verbose);
   else if (name == "partprobe") ok = run_partprobe(dna_blob, ticks, verbose);

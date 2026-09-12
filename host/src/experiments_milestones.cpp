@@ -13685,6 +13685,220 @@ bool run_stageprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
   return true;
 }
 
+// ---------------------------------------------------------------------------
+// ippool -- does relieving the measured bottleneck buy delivered dF1?
+//
+// `stageprobe` located the compression: `bias -> rate` runs at 0.34 with the
+// shipped per-neuron homeostat and 0.91 with it off, because intrinsic plasticity
+// regulates each neuron's OWN rate and so flattens the tilt a centroid reads. DNA
+// v57 pools that error over `kVocalGroups` slices, which keeps regulation (mean
+// rate 8.90 against the shipped 5.18, where module-wide pooling ran to 15.98) and
+// recovers the transfer to 0.51 -- half of what is available.
+//
+// v57 FAILED its own transfer bar, which asked for 0.59. This is a different
+// question and gets its own gate: the transfer was a proxy, and whether
+// 0.34 -> 0.51 on the stage that actually compresses buys delivered formant is the
+// thing that matters. Unlike the twelve closed routes, this one acts on the
+// measured bottleneck rather than upstream of it.
+//
+// THE GATE, written before the run:
+//   PRIMARY   excess (taught minus its OWN matched-marginal control) for ip9
+//             against ip0, PAIRED on seed, at 2 SE. The excess and not raw dF1,
+//             because `poolbeta` showed a readout change widens BOTH arms and only
+//             the excess separates steering from scatter.
+//   AND       the ip9 arm's mean rate must stay regulated. A win bought by giving
+//             up regulation is v50's refuted trade (change +16.6 -> -2.3), and
+//             module-wide pooling already showed how easy that is to do by
+//             accident.
+//   CAVEAT    n = 18, and this project has retracted three findings that read
+//             2-3 SE at n <= 18. If it lands in that band it is a hypothesis and
+//             the answer is 36 seeds, not a write-up.
+//
+// BUDGET: 13.6M, not the 3.4M screen. The compression bites HARDER as the bias
+// grows, so relief should show MORE at the long budget -- and `poolbeta` taught
+// that a 3.4M win can be pure convergence speed that has vanished by 13.6M. A null
+// here does not rule out a speed effect, and that is stated rather than discovered.
+struct IPArm {
+  const char* name;
+  uint32_t pool;
+  VLTarget target;
+};
+const IPArm kIPArms[] = {
+    {"ip0", 0u, kVLTgtHeard},
+    {"ip0-rnd", 0u, kVLTgtRandom},
+    {"ip9", aibaby::kVocalGroups, kVLTgtHeard},
+    {"ip9-rnd", aibaby::kVocalGroups, kVLTgtRandom},
+};
+constexpr uint32_t kIPArmCount = sizeof(kIPArms) / sizeof(kIPArms[0]);
+
+bool run_ippool(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  aibaby::Dna dna;
+  if (dna.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) {
+    std::printf("  setup failed: the genome does not load\n");
+    return false;
+  }
+  const int32_t ctx_module = dna.module_with_role(aibaby::ModuleRole::kContext);
+  const int32_t vmod = dna.module_with_role(aibaby::ModuleRole::kVocal);
+  if (ctx_module < 0 || vmod < 0) {
+    std::printf("  needs a kContext module (built with NO output weight) and a kVocal\n"
+                "  one:  python3 tools/genome_add_context.py dna/default.toml ctx.toml \\\n"
+                "        vocal out_w=0\n");
+    return false;
+  }
+  constexpr uint32_t kReps = 18;
+  const size_t slots_off = offsetof(aibaby::DnaHeader, exploration) +
+                           offsetof(aibaby::DnaExploration, context_slots);
+  const size_t src_off = offsetof(aibaby::DnaHeader, exploration) +
+                         offsetof(aibaby::DnaExploration, context_source);
+  instrument("ippool", dna.header().seed ^ 0x19A0u, ticks / kVLTrialTicks, "trials");
+  std::printf("  question          stageprobe put the compression in intrinsic plasticity\n"
+              "                    (bias->rate 0.34 on, 0.91 off). DNA v57 pools the rate\n"
+              "                    error per articulator group: regulation holds and the\n"
+              "                    transfer recovers to 0.51. Does that buy delivered dF1?\n");
+  std::printf("  the gate          EXCESS over each arm's OWN matched-marginal control,\n"
+              "                    ip9 vs ip0, PAIRED on seed, at 2 SE -- and the ip9 mean\n"
+              "                    rate must stay regulated, or it is v50's refuted trade.\n");
+  std::printf("  stated up front   n = 18, and a 2-3 SE result at that size is a HYPOTHESIS\n"
+              "                    in this project; three have been retracted. And a null\n"
+              "                    here does not rule out a convergence-SPEED effect.\n\n");
+
+  struct Cell {
+    bool ok = false;
+    double d1 = 0.0, align = 0.0, gain = 0.0, rate = 0.0, thr = 0.0;
+  };
+  const uint32_t njobs = kReps * kIPArmCount;
+  const std::vector<Cell> cells = parallel_reps<Cell>(njobs, [&](uint32_t i) {
+    Cell cell;
+    const uint32_t r = i / kIPArmCount, a = i % kIPArmCount;
+    std::vector<uint8_t> variant = blob;
+    const uint64_t seed = dna.header().seed + r * 7919ull;
+    std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+    const uint32_t sl = 2u, sr = 4u;
+    std::memcpy(variant.data() + slots_off, &sl, sizeof(sl));
+    std::memcpy(variant.data() + src_off, &sr, sizeof(sr));
+    const uint32_t pool = kIPArms[a].pool;
+    std::memcpy(variant.data() + sizeof(aibaby::DnaHeader) +
+                    sizeof(aibaby::DnaModule) * size_t(vmod) +
+                    offsetof(aibaby::DnaModule, ip_pool),
+                &pool, sizeof(pool));
+    CtxDrive drive;
+    drive.module = ctx_module;
+    drive.slots = kVLWords;
+    drive.gain = 0.10;
+    Regime reg;
+    reg.praise = kPraiseValue;
+    reg.scold = kScoldValue;
+    const VLRun run = run_vocallearn_session(variant, ticks, kVLTaught, nullptr, reg,
+                                             kIPArms[a].target, &drive);
+    if (!run.ok) return cell;
+    cell.d1 = std::fabs(run.f1_by_word[0] - run.f1_by_word[1]);
+    cell.align = run.ctx_align;
+    cell.gain = run.ctx_align_gain;
+    cell.rate = run.ip_rate_hz;       // the LARYNX's mean rate, not the context module's
+    cell.thr = run.ip_thresh_drift;
+    cell.ok = true;
+    parallel_note("  [%u/%u] seed %u %-8s  dF1 %.1f  aligned %.5f\n", i + 1, njobs, r,
+                  kIPArms[a].name, cell.d1, cell.align);
+    return cell;
+  });
+
+  {
+    ArmLiveness live("ippool");
+    for (uint32_t r = 0; r < kReps; ++r) {
+      for (uint32_t a = 0; a < kIPArmCount; ++a) {
+        const Cell& c = cells[r * kIPArmCount + a];
+        if (c.ok) live.observe(kIPArms[a].name, r, c.d1);
+      }
+    }
+    if (!live.report("ip0")) return false;
+  }
+
+  std::printf("\n  %-9s %-16s %-11s %-9s %s\n", "arm", "dF1 (Hz)", "aligned", "gain",
+              "larynx rate");
+  double m_rate[kIPArmCount];
+  for (uint32_t a = 0; a < kIPArmCount; ++a) {
+    std::vector<double> d1, al, gn, rt;
+    for (uint32_t r = 0; r < kReps; ++r) {
+      const Cell& c = cells[r * kIPArmCount + a];
+      if (!c.ok) continue;
+      d1.push_back(c.d1); al.push_back(c.align); gn.push_back(c.gain); rt.push_back(c.rate);
+    }
+    if (d1.size() < 3) {
+      std::printf("\n  ippool INCONCLUSIVE -- arm `%s` produced %zu creatures.\n",
+                  kIPArms[a].name, d1.size());
+      return false;
+    }
+    double se, s2;
+    const double md = ctx_mean_se(d1, &se);
+    m_rate[a] = ctx_mean_se(rt, &s2);
+    std::printf("  %-9s %6.1f +/- %-7.1f %-11.5f %-9.2f %.2f\n", kIPArms[a].name, md, se,
+                ctx_mean_se(al, &s2), ctx_mean_se(gn, &s2), m_rate[a]);
+  }
+
+  const auto idx = [](const char* w) {
+    for (uint32_t i = 0; i < kIPArmCount; ++i) {
+      if (std::strcmp(kIPArms[i].name, w) == 0) return int(i);
+    }
+    return -1;
+  };
+  // Excess per seed, then the PAIRED difference of excesses -- these arms share
+  // creatures, so an independent-samples SE would be the wrong one, as it was on
+  // poolbeta's screen where it moved a verdict across the bar.
+  std::vector<double> d;
+  const int a0 = idx("ip0"), a0r = idx("ip0-rnd"), a9 = idx("ip9"), a9r = idx("ip9-rnd");
+  if (a0 < 0 || a0r < 0 || a9 < 0 || a9r < 0) {
+    std::printf("\n  ippool cannot summarise: an arm it names is missing.\n");
+    return false;
+  }
+  for (uint32_t r = 0; r < kReps; ++r) {
+    const Cell& c0 = cells[r * kIPArmCount + uint32_t(a0)];
+    const Cell& c0r = cells[r * kIPArmCount + uint32_t(a0r)];
+    const Cell& c9 = cells[r * kIPArmCount + uint32_t(a9)];
+    const Cell& c9r = cells[r * kIPArmCount + uint32_t(a9r)];
+    if (c0.ok && c0r.ok && c9.ok && c9r.ok) {
+      d.push_back((c9.d1 - c9r.d1) - (c0.d1 - c0r.d1));
+    }
+  }
+  double se = 0.0;
+  const double m = ctx_mean_se(d, &se);
+  std::printf("\n  EXCESS DIFFERENCE, ip9 - ip0, paired on seed\n");
+  std::printf("  %+7.1f +/- %.1f  (%+.2f SE)   signs %zu/%zu\n", m, se,
+              se > 0.0 ? m / se : 0.0,
+              size_t(std::count_if(d.begin(), d.end(), [](double x) { return x > 0.0; })),
+              d.size());
+
+  // Regulation carries over from stageprobe: a win bought by losing it is v50's
+  // trade, and module-wide pooling showed how easily that happens by accident.
+  const double reg_drift = m_rate[a0] > 0.0
+                               ? std::fabs(m_rate[a9] - m_rate[a0]) / m_rate[a0]
+                               : 0.0;
+  std::printf("  larynx rate  ip0 %.2f Hz, ip9 %.2f Hz, drift %.0f%%\n", m_rate[a0],
+              m_rate[a9], 100.0 * reg_drift);
+  if (reg_drift > 0.5) {
+    std::printf("\n  REFUSED ON REGULATION. The ip9 arm's larynx rate is %.0f%% off the\n"
+                "  shipped one, so whatever it bought, it bought by giving up the\n"
+                "  regulation v9 built IP for and v50 measured the cost of removing.\n",
+                100.0 * reg_drift);
+    return false;
+  }
+  if (!(se > 0.0 && m > 2.0 * se)) {
+    std::printf("\n  RELIEVING THE BOTTLENECK DOES NOT BUY dF1. The transfer improves\n"
+                "  0.34 -> 0.51 and the delivered formant does not follow at 2 SE. So the\n"
+                "  compression is necessary for the ceiling but not sufficient to lift it:\n"
+                "  half the relief buys nothing measurable, and the honest reading is that\n"
+                "  the remaining 0.51 -> 0.91 is where any gain would be -- which needs no\n"
+                "  rate regulation at all, and v50 priced that at +16.6 -> -2.3.\n");
+    return false;
+  }
+  std::printf("\n  IT BUYS dF1, at %.1f SE, with regulation intact. Relieving the measured\n"
+              "  bottleneck moves the delivered formant -- the first route in thirteen to\n"
+              "  do so, and the only one aimed at the stage that actually compresses.\n"
+              "  NOTE the n: 18 seeds. If this is under 3 SE it is a hypothesis until 36.\n",
+              m / se);
+  return true;
+}
+
 bool run_ctxscale(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
   (void)verbose;
   aibaby::Dna dna;
