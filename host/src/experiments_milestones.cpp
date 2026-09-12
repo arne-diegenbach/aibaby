@@ -13930,12 +13930,12 @@ bool run_ippool(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) 
   // conclusion rests on and the one v50 measured through a confound.
   m = cand[0].m;
   se = cand[0].se;
-  {
-    const int ao = idx("ipoff");
-    const double rate_off = ao >= 0 ? m_rate[ao] : 0.0;
-    std::printf("  larynx rate  ip0 %.2f Hz, ipoff %.2f Hz  <- the cost v50 could not"
-                " separate from ISP's\n", m_rate[a0], rate_off);
-  }
+  // The `ipoff` reference line lived here and named an arm this generation no
+  // longer runs, printing 0.00 Hz as though it had been measured. Its result is on
+  // file -- dF1 17.7 against 103.9, -7.42 SE -- and belongs in the write-up, not in
+  // a row that looks like this run produced it.
+  std::printf("  shipped larynx rate  %.2f Hz  (ipoff ran at 6.84 and collapsed"
+              " learning: -7.42 SE)\n", m_rate[a0]);
 
   // Regulation carries over from stageprobe: a win bought by losing it is v50's
   // trade, and module-wide pooling showed how easily that happens by accident.
