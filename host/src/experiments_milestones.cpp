@@ -13723,11 +13723,43 @@ struct IPArm {
   uint32_t pool;
   VLTarget target;
 };
-const IPArm kIPArms[] = {
-    {"ip0", 0u, kVLTgtHeard},
-    {"ip0-rnd", 0u, kVLTgtRandom},
-    {"ip9", aibaby::kVocalGroups, kVLTgtHeard},
-    {"ip9-rnd", aibaby::kVocalGroups, kVLTgtRandom},
+struct IPArm2 {
+  const char* name;
+  uint32_t pool;
+  float wake;   // ip_wake_scale on the larynx; 0 turns the homeostat off
+  VLTarget target;
+};
+const IPArm2 kIPArms[] = {
+    // SECOND GENERATION, 2026-09-12. The first found that relieving HALF the
+    // compression buys nothing: pooled IP improves the transfer 0.34 -> 0.51 and
+    // halves the learned bias, and the two offset (-0.90 SE).
+    //
+    // That left the trade resting on three legs, and only two are solid. IP is the
+    // compression (0.34 on, 0.91 off) -- solid. Half-relief buys nothing -- solid.
+    // "Full relief costs learning" rests ENTIRELY on v50, and v50 was CONFOUNDED:
+    // its inhibitory-plasticity arm also cost the exploratory pathway, +34.0 ->
+    // +15.4 with the tract silent, so "the IP-relaxed larynx learns worse" was
+    // never separated from "ISP charged for arriving".
+    //
+    // `ipoff` relaxes the larynx's IP DIRECTLY -- no ISP, nothing else moved -- and
+    // measures delivered dF1 against its own matched-marginal control. It is the
+    // leg the whole conclusion hangs on, and it has never been measured cleanly.
+    //
+    //   if ipoff LOSES:  the trade is real and the ceiling is structural. The
+    //                    larynx can be steerable or self-regulating, not both.
+    //   if ipoff WINS:   the ceiling is not a trade, thirteen routes missed
+    //                    something simple, and August's confound cost a month.
+    //
+    // name        pool                   wake  target
+    {"ip0",        0u,                    1.0f, kVLTgtHeard},
+    {"ip0-rnd",    0u,                    1.0f, kVLTgtRandom},
+    {"ipoff",      0u,                    0.0f, kVLTgtHeard},
+    {"ipoff-rnd",  0u,                    0.0f, kVLTgtRandom},
+    // ip9 IS NOT RE-RUN. It is already measured at this budget on these seeds --
+    // excess difference -15.6 +/- 17.5 (-0.90 SE) -- so repeating it would cost
+    // 2.4 hours to reproduce a number already on file, and dropping it brings this
+    // run under six hours. The comparison stays valid because the seeds and budget
+    // are identical.
 };
 constexpr uint32_t kIPArmCount = sizeof(kIPArms) / sizeof(kIPArms[0]);
 
@@ -13782,6 +13814,11 @@ bool run_ippool(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) 
                     sizeof(aibaby::DnaModule) * size_t(vmod) +
                     offsetof(aibaby::DnaModule, ip_pool),
                 &pool, sizeof(pool));
+    const float wake = kIPArms[a].wake;
+    std::memcpy(variant.data() + sizeof(aibaby::DnaHeader) +
+                    sizeof(aibaby::DnaModule) * size_t(vmod) +
+                    offsetof(aibaby::DnaModule, ip_wake_scale),
+                &wake, sizeof(wake));
     CtxDrive drive;
     drive.module = ctx_module;
     drive.slots = kVLWords;
@@ -13845,45 +13882,76 @@ bool run_ippool(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) 
   // Excess per seed, then the PAIRED difference of excesses -- these arms share
   // creatures, so an independent-samples SE would be the wrong one, as it was on
   // poolbeta's screen where it moved a verdict across the bar.
-  std::vector<double> d;
-  const int a0 = idx("ip0"), a0r = idx("ip0-rnd"), a9 = idx("ip9"), a9r = idx("ip9-rnd");
-  if (a0 < 0 || a0r < 0 || a9 < 0 || a9r < 0) {
-    std::printf("\n  ippool cannot summarise: an arm it names is missing.\n");
+  const int a0 = idx("ip0"), a0r = idx("ip0-rnd");
+  if (a0 < 0 || a0r < 0) {
+    std::printf("\n  ippool cannot summarise: the ip0 baseline is missing.\n");
     return false;
   }
-  for (uint32_t r = 0; r < kReps; ++r) {
-    const Cell& c0 = cells[r * kIPArmCount + uint32_t(a0)];
-    const Cell& c0r = cells[r * kIPArmCount + uint32_t(a0r)];
-    const Cell& c9 = cells[r * kIPArmCount + uint32_t(a9)];
-    const Cell& c9r = cells[r * kIPArmCount + uint32_t(a9r)];
-    if (c0.ok && c0r.ok && c9.ok && c9r.ok) {
-      d.push_back((c9.d1 - c9r.d1) - (c0.d1 - c0r.d1));
+  // Excess per seed, then the PAIRED difference of excesses, for each candidate
+  // against the shipped arm. These arms share creatures, so an
+  // independent-samples SE would be the wrong one -- on poolbeta's screen that
+  // error moved a verdict across the bar.
+  const auto excess_diff = [&](const char* t, const char* c, double* se_out,
+                               uint32_t* pos, uint32_t* tot) {
+    const int at = idx(t), ac = idx(c);
+    std::vector<double> dd;
+    if (at < 0 || ac < 0) { *se_out = 0.0; return 0.0; }
+    for (uint32_t r = 0; r < kReps; ++r) {
+      const Cell& ct = cells[r * kIPArmCount + uint32_t(at)];
+      const Cell& cc = cells[r * kIPArmCount + uint32_t(ac)];
+      const Cell& b = cells[r * kIPArmCount + uint32_t(a0)];
+      const Cell& br = cells[r * kIPArmCount + uint32_t(a0r)];
+      if (ct.ok && cc.ok && b.ok && br.ok) dd.push_back((ct.d1 - cc.d1) - (b.d1 - br.d1));
     }
+    *pos = uint32_t(std::count_if(dd.begin(), dd.end(), [](double x) { return x > 0.0; }));
+    *tot = uint32_t(dd.size());
+    return ctx_mean_se(dd, se_out);
+  };
+
+  std::printf("\n  EXCESS DIFFERENCE vs `ip0`, paired on seed\n");
+  double m = 0.0, se = 0.0;
+  struct { const char* t; const char* c; double m, se; uint32_t pos, tot; } cand[2] = {
+      {"ipoff", "ipoff-rnd", 0, 0, 0, 0}, {"ip9", "ip9-rnd", 0, 0, 0, 0}};
+  for (auto& q : cand) {
+    q.m = excess_diff(q.t, q.c, &q.se, &q.pos, &q.tot);
+    std::printf("  %-10s %+7.1f +/- %.1f  (%+.2f SE)   signs %u/%u\n", q.t, q.m, q.se,
+                q.se > 0.0 ? q.m / q.se : 0.0, q.pos, q.tot);
   }
-  double se = 0.0;
-  const double m = ctx_mean_se(d, &se);
-  std::printf("\n  EXCESS DIFFERENCE, ip9 - ip0, paired on seed\n");
-  std::printf("  %+7.1f +/- %.1f  (%+.2f SE)   signs %zu/%zu\n", m, se,
-              se > 0.0 ? m / se : 0.0,
-              size_t(std::count_if(d.begin(), d.end(), [](double x) { return x > 0.0; })),
-              d.size());
+  // The gate is now the `ipoff` leg, because that is the one the whole trade
+  // conclusion rests on and the one v50 measured through a confound.
+  m = cand[0].m;
+  se = cand[0].se;
+  {
+    const int ao = idx("ipoff");
+    const double rate_off = ao >= 0 ? m_rate[ao] : 0.0;
+    std::printf("  larynx rate  ip0 %.2f Hz, ipoff %.2f Hz  <- the cost v50 could not"
+                " separate from ISP's\n", m_rate[a0], rate_off);
+  }
 
   // Regulation carries over from stageprobe: a win bought by losing it is v50's
   // trade, and module-wide pooling showed how easily that happens by accident.
-  const double reg_drift = m_rate[a0] > 0.0
-                               ? std::fabs(m_rate[a9] - m_rate[a0]) / m_rate[a0]
-                               : 0.0;
-  std::printf("  larynx rate  ip0 %.2f Hz, ip9 %.2f Hz, drift %.0f%%\n", m_rate[a0],
-              m_rate[a9], 100.0 * reg_drift);
-  if (reg_drift > 0.5) {
-    std::printf("\n  REFUSED ON REGULATION. The ip9 arm's larynx rate is %.0f%% off the\n"
-                "  shipped one, so whatever it bought, it bought by giving up the\n"
-                "  regulation v9 built IP for and v50 measured the cost of removing.\n",
-                100.0 * reg_drift);
-    return false;
+  // NO REGULATION GUARD ON `ipoff`. It is SUPPOSED to lose regulation -- that is
+  // what turning the homeostat off means, and the question is what that costs in
+  // delivered formant. Refusing it on regulation would refuse the measurement.
+  // The v57 arm still reports its drift, because there a runaway rate WOULD mean
+  // it had quietly become the ipoff arm.
+  {
+    const int a9b = idx("ip9");
+    if (a9b >= 0 && m_rate[a0] > 0.0) {
+      std::printf("  v57 drift    %.0f%% of the shipped rate (a runaway here would mean"
+                  " it had become `ipoff`)\n",
+                  100.0 * std::fabs(m_rate[a9b] - m_rate[a0]) / m_rate[a0]);
+    }
   }
   if (!(se > 0.0 && m > 2.0 * se)) {
-    std::printf("\n  RELIEVING THE BOTTLENECK DOES NOT BUY dF1. The transfer improves\n"
+    std::printf("\n  THE TRADE IS REAL. Turning the larynx's homeostat OFF -- directly,\n"
+                "  with no ISP and nothing else moved -- does not buy delivered dF1 at\n"
+                "  2 SE either. So the leg v50 measured through a confound holds when\n"
+                "  measured cleanly: full relief of the compression does not pay. The\n"
+                "  larynx can be steerable or self-regulating and it has to be both, and\n"
+                "  that makes the 137 Hz ceiling STRUCTURAL rather than an unfound knob.\n");
+    std::printf("\n  (the older reading follows, and is superseded by the line above)\n");
+    std::printf("  RELIEVING THE BOTTLENECK DOES NOT BUY dF1. The transfer improves\n"
                 "  0.34 -> 0.51 and the delivered formant does not follow at 2 SE. So the\n"
                 "  compression is necessary for the ceiling but not sufficient to lift it:\n"
                 "  half the relief buys nothing measurable, and the honest reading is that\n"
@@ -13891,11 +13959,14 @@ bool run_ippool(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) 
                 "  rate regulation at all, and v50 priced that at +16.6 -> -2.3.\n");
     return false;
   }
-  std::printf("\n  IT BUYS dF1, at %.1f SE, with regulation intact. Relieving the measured\n"
-              "  bottleneck moves the delivered formant -- the first route in thirteen to\n"
-              "  do so, and the only one aimed at the stage that actually compresses.\n"
-              "  NOTE the n: 18 seeds. If this is under 3 SE it is a hypothesis until 36.\n",
-              m / se);
+  std::printf("\n  THE TRADE IS NOT REAL, AND AUGUST'S CONFOUND COST A MONTH. Turning the\n"
+              "  larynx's homeostat off buys %+.1f Hz of excess at %.1f SE -- so v50's\n"
+              "  \"IP-relaxed larynx learns worse\" was ISP charging for arriving, not the\n"
+              "  homeostat. The ceiling is not a trade, and thirteen routes were aimed\n"
+              "  past something simple.\n"
+              "  NOTE the n: 18 seeds, and a 2-3 SE result at that size is a HYPOTHESIS\n"
+              "  in this project -- three were retracted from that band today. 36 next.\n",
+              m, m / se);
   return true;
 }
 
