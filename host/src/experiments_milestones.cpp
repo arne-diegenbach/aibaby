@@ -6219,6 +6219,45 @@ bool run_maskretain(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
     }
     return ctx_mean_se(d, se_out);
   };
+  // AND THEY MUST HAVE LEARNED AT ALL. Matching the arms to each other is not
+  // enough: the v2 run matched `oracle` to `fixed` BIT-IDENTICALLY on err taught
+  // (+0.0000 +/- 0.0000, because during teaching both write the lower half and
+  // differ only in the gap) and the comparison still had no power, because BOTH
+  // sat at the learning floor -- 1.0635 against `off`'s 0.8615. Masking half of F1
+  // costs about 0.20 of err taught, which is most of what there is to learn, so
+  // the arms lost less during the gap (0.022 vs 0.101) only because they had
+  // almost nothing to lose. A retention question needs something retained.
+  {
+    std::vector<double> off_t;
+    for (uint32_t r = 0; r < kReps; ++r) {
+      const Cell& c = cells[r * kMRArmCount + uint32_t(a_off)];
+      if (c.ok) off_t.push_back(c.row.err_taught);
+    }
+    double s2 = 0.0;
+    const double m_off = ctx_mean_se(off_t, &s2);
+    for (uint32_t a = 0; a < kMRArmCount; ++a) {
+      if (int(a) == a_off) continue;
+      std::vector<double> t;
+      for (uint32_t r = 0; r < kReps; ++r) {
+        const Cell& c = cells[r * kMRArmCount + a];
+        if (c.ok) t.push_back(c.row.err_taught);
+      }
+      if (t.empty()) continue;
+      const double m_a = ctx_mean_se(t, &s2);
+      // Half of what `off` learned is the floor: below that the arm is not a
+      // treated version of the lesson, it is a creature that never learned it.
+      if (m_off > 0.0 && (m_a - m_off) > 0.5 * m_off * 0.20) {
+        std::printf("\n  REFUSED -- `%s` NEVER LEARNED THE LESSON. err taught %.4f against\n"
+                    "  `off`'s %.4f, so the mask cost most of what there was to learn and\n"
+                    "  there is almost nothing left to retain. Any retention number here is\n"
+                    "  measuring an untaught creature. THE MASK IS UNAFFORDABLE DURING\n"
+                    "  TEACHING, and it does not need to be there: separating the write only\n"
+                    "  requires the SECOND lesson to land elsewhere. Mask the gap, not the\n"
+                    "  teaching.\n", kMRArms[a].name, m_a, m_off);
+        return false;
+      }
+    }
+  }
   // THE ARMS MUST HAVE LEARNED THE SAME AMOUNT, OR err-after IS NOT ABOUT
   // RETENTION. The 5.6M run failed exactly here and I only caught it by hand
   // afterwards: the err-after gaps reproduced the err-TAUGHT gaps almost exactly
