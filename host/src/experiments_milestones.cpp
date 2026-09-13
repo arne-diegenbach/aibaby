@@ -4289,6 +4289,20 @@ inline double formant_error(double f1, double f2, const Word& w) {
   return std::fabs(std::log(f1 / double(w.f1))) + std::fabs(std::log(f2 / double(w.f2)));
 }
 
+// PER-AXIS SCORING, for `orthovocab`. The joint error above makes genuinely
+// orthogonal lessons impossible to express: lesson A's target pins BOTH formants,
+// so a second lesson moving F2 raises A's error even when it never touches the
+// dimension A was taught on. Two lessons are only orthogonal if each is scored on
+// the axis it was taught on.
+//   0 = both (the shipped metric, bit-identical to formant_error)
+//   1 = F1 only      2 = F2 only
+inline double formant_error_axis(double f1, double f2, const Word& w, uint32_t axis) {
+  if (f1 <= 1.0 || f2 <= 1.0) return -1.0;
+  if (axis == 1) return std::fabs(std::log(f1 / double(w.f1)));
+  if (axis == 2) return std::fabs(std::log(f2 / double(w.f2)));
+  return formant_error(f1, f2, w);
+}
+
 VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, VLArm arm,
                              const std::vector<Praise>* yoked, const Regime& regime,
                              int target = -1, const CtxDrive* ctx = nullptr,
@@ -5601,6 +5615,13 @@ struct RTConfig {
   // protocol and costs the lesson here: the two lessons demand different amounts
   // of formant travel. This measures where the cliff is.
   float mask_width = 1.0f;
+  // `orthovocab`. Which axis each lesson is scored on, and where the second
+  // lesson points. 0 keeps the shipped joint metric and the shipped second word,
+  // so every existing arm is bit-identical.
+  uint32_t score_axis = 0;    // how lesson A is scored, in every phase
+  uint32_t second_axis = 0;   // how lesson B is scored during the gap
+  float second_f1 = 0.0f;     // 0 = use kRTSecondWord
+  float second_f2 = 0.0f;
 };
 
 // One arm, one creature, one life: teach, intervene, re-measure.
@@ -5678,7 +5699,12 @@ RTRow run_retain_arm(const std::vector<uint8_t>& blob, uint64_t ticks,
   const Word& heard2 =
       cfg.second_heard >= 0 ? kWords[uint32_t(cfg.second_heard)] : kWords[kRTHeard];
   const Word& first = kWords[kRTTarget];
-  const Word& second = kRTSecondWord;
+  // Per-arm second target; 0 keeps the shipped word so existing arms are
+  // bit-identical.
+  const Word second_override = {kRTSecondWord.f0,
+                                cfg.second_f1 > 0.0f ? cfg.second_f1 : kRTSecondWord.f1,
+                                cfg.second_f2 > 0.0f ? cfg.second_f2 : kRTSecondWord.f2};
+  const Word& second = second_override;
   aibaby::Rng rng;
   rng.seed(s.dna.header().seed ^ 0x2E7Au);
   // The mask's own stream and the vocal module index, hoisted so the trial loop
@@ -5864,7 +5890,10 @@ RTRow run_retain_arm(const std::vector<uint8_t>& blob, uint64_t ticks,
 
       if ((teaching || relearning) && voiced && t >= kRTRewardFrom && t < kRTRewardTo &&
           now - last_feedback >= regime.feedback_period) {
-        const double e = formant_error(double(v.f1), double(v.f2), lesson);
+        // The REWARD uses the live lesson's own axis. Teaching on one axis and
+        // scoring on another would make the whole contrast meaningless.
+        const double e = formant_error_axis(double(v.f1), double(v.f2), lesson,
+                                            relearning ? cfg.second_axis : cfg.score_axis);
         if (e >= 0.0) {
           last_feedback = now;
           double& base = relearning ? baseline2 : baseline1;
@@ -5885,12 +5914,12 @@ RTRow run_retain_arm(const std::vector<uint8_t>& blob, uint64_t ticks,
     // ALWAYS scored against the FIRST lesson, in every phase and every arm.
     // That is the quantity retention is about, and scoring the relearn arm
     // against its second lesson would measure something else entirely.
-    const double err = formant_error(f1, f2, first);
+    const double err = formant_error_axis(f1, f2, first, cfg.score_axis);
     // Lesson B's own error, over the last third of the gap: by then B has had
     // whatever teaching it is going to get.
     if (cfg.relearn && trial >= n_teach + n_gap - (n_gap / 3 ? n_gap / 3 : 1) &&
         trial < n_teach + n_gap) {
-      const double eb = formant_error(f1, f2, second);
+      const double eb = formant_error_axis(f1, f2, second, cfg.second_axis);
       if (eb >= 0.0) { sum_b += eb; ++n_b; }
     }
     if (err < 0.0) continue;
@@ -6140,6 +6169,236 @@ const MRArm kMRArms[] = {
     {"w25",    {"w25",    false, true, true, false, false, 0, 0, -1, 0, 0, -1, 0.0, true, 0.0f, 4, 0.25f}},
 };
 constexpr uint32_t kMRArmCount = sizeof(kMRArms) / sizeof(kMRArms[0]);
+
+// ---------------------------------------------------------------------------
+// `orthovocab` -- is the wipe about MEMORY, or about two lessons sharing one
+// dimension?
+//
+// WHERE THIS COMES FROM. The conflict is a PURE OVERWRITE (store 0.25 and
+// behaviour 0.30 decay together, -1.0 SE, 36 seeds), so there is no hidden memory
+// to retrieve. And write separation by restricting plasticity is refused: blocking
+// even a quarter of the F1 group costs 59% of the lesson, because a blocked neuron
+// still perturbs and is still read by the centroid.
+//
+// Both of those are about DEFENDING a lesson. `capacity` says the collision may not
+// need defending at all: on ORTHOGONAL targets this creature holds TWO lessons at
+// once, 0.84 against the colliding case's 0.22. That is the largest untouched
+// number in this chapter, and it has never been tested inside the retention
+// protocol -- only as a separate capacity measurement.
+//
+// THE DESIGN. Lesson A is taught identically in every arm. Only the second lesson
+// differs, and only in its AXIS:
+//   collide  B moves F1 to 850, scored on F1 -- the same dimension A was taught on
+//   ortho    B moves F2 to 1184, scored on F2 -- a different dimension
+// The creature sits at F1 564 / F2 1784 after lesson A, so both ask for the SAME
+// log-distance move (0.410); only the axis differs.  `none` is the no-second-lesson
+// reference every retention number is read against.
+//
+// PER-AXIS SCORING IS REQUIRED, not a convenience. The shipped metric is
+// |log(f1/t1)| + |log(f2/t2)|, which pins BOTH formants -- so a second lesson
+// moving F2 raises lesson A's error even when it never touches the dimension A was
+// taught on, and "orthogonal" cannot be expressed at all. Each lesson is scored on
+// the axis it was taught on, and the REWARD uses the same axis: teaching on one and
+// scoring on another would make the contrast meaningless.
+//
+// THE CONTROL IS STRUCTURAL, which is why this design is worth trusting after a
+// night of controls that did not control. The teaching phase is IDENTICAL across
+// arms -- same lesson, same axis, same reward -- so err taught is matched BY
+// CONSTRUCTION rather than by luck, and the learning confound that broke three runs
+// cannot occur. The gate checks it anyway.
+//
+// THE REFUSALS, WRITTEN FIRST:
+//   * if `ortho` does not beat `collide` on retention at 2 SE, the wipe is NOT
+//     about sharing a dimension, `capacity`'s 0.84 does not transfer to the
+//     retention protocol, and the overwrite has no remaining named route.
+//   * if err taught differs across arms at 2 SE, something broke the structural
+//     match and the comparison is void regardless of what retention says.
+//   * retention is a ratio whose denominator collapses; err after is reported
+//     beside it and disagreement between them is a refusal, not a choice.
+struct OVArm { const char* name; RTConfig cfg; };
+const OVArm kOVArms[] = {
+    // name     no_fat teach relearn frz norep cred eps 2nd slots src orc gain split commit mask width axisA axisB f1 f2
+    {"none",    {"none",    false, true, false, false, false, 0, 0, -1, 0, 0, -1, 0.0, true, 0.0f, 0, 1.0f, 1, 1, 0.0f,    0.0f}},
+    {"collide", {"collide", false, true, true,  false, false, 0, 0, -1, 0, 0, -1, 0.0, true, 0.0f, 0, 1.0f, 1, 1, 850.0f,  0.0f}},
+    {"ortho",   {"ortho",   false, true, true,  false, false, 0, 0, -1, 0, 0, -1, 0.0, true, 0.0f, 0, 1.0f, 1, 2, 564.0f, 1184.0f}},
+};
+constexpr uint32_t kOVArmCount = sizeof(kOVArms) / sizeof(kOVArms[0]);
+
+bool run_orthovocab(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  Regime regime;
+  regime.praise = kPraiseValue;
+  regime.scold = kScoldValue;
+  aibaby::Dna dna0;
+  if (dna0.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) {
+    std::printf("  setup failed: the genome does not load\n");
+    return false;
+  }
+  std::string error;
+  Timbre ruler;
+  if (!ruler.configure(dna0.header().audio, error)) {
+    std::printf("  the audibility ruler failed: %s\n", error.c_str());
+    return false;
+  }
+  constexpr uint32_t kReps = 36;
+  instrument("orthovocab", dna0.header().seed ^ 0x7C4Eu, ticks / kRTTrial, "trials");
+  std::printf("  question          the conflict is a pure overwrite and cannot be defended:\n"
+              "                    blocking plasticity costs 59%% of the lesson. So does the\n"
+              "                    collision need defending, or just AVOIDING? `capacity`\n"
+              "                    holds two ORTHOGONAL lessons at 0.84 against 0.22.\n");
+  std::printf("  the design        lesson A identical in every arm. Only the second lesson's\n"
+              "                    AXIS differs: collide moves F1 (A's own dimension), ortho\n"
+              "                    moves F2. Same log-distance, 0.410, both.\n");
+  std::printf("  the control       STRUCTURAL: the teaching phase is identical across arms,\n"
+              "                    so err taught is matched by construction rather than by\n"
+              "                    luck. Checked anyway.\n");
+  std::printf("  the refusal       ortho <= collide at 2 SE means the wipe is not about\n"
+              "                    sharing a dimension, and capacity's 0.84 does not\n"
+              "                    transfer. 36 seeds.\n\n");
+
+  struct Cell { bool ok = false; RTRow row; };
+  const uint32_t njobs = kReps * kOVArmCount;
+  const std::vector<Cell> cells = parallel_reps<Cell>(njobs, [&](uint32_t i) {
+    Cell cell;
+    const uint32_t r = i / kOVArmCount, a = i % kOVArmCount;
+    std::vector<uint8_t> variant = blob;
+    const uint64_t seed = dna0.header().seed + r * 7919ull;
+    std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+    Timbre local_ruler;
+    std::string local_error;
+    if (!local_ruler.configure(dna0.header().audio, local_error)) return cell;
+    bool ok = false;
+    cell.row = run_retain_arm(variant, ticks, kOVArms[a].cfg, local_ruler, regime, &ok);
+    cell.ok = ok;
+    if (ok) {
+      parallel_note("  [%u/%u] seed %u %-8s taught %.4f  after %.4f\n", i + 1, njobs, r,
+                    kOVArms[a].name, cell.row.err_taught, cell.row.err_after);
+    }
+    return cell;
+  });
+
+  std::printf("\n  %-9s %-14s %-14s %-15s %s\n", "arm", "err taught", "err after",
+              "retention", "store kept");
+  double m_taught[kOVArmCount] = {}, m_after[kOVArmCount] = {};
+  for (uint32_t a = 0; a < kOVArmCount; ++a) {
+    std::vector<double> tau, aft, ret, sk;
+    for (uint32_t r = 0; r < kReps; ++r) {
+      const Cell& c = cells[r * kOVArmCount + a];
+      if (!c.ok) continue;
+      tau.push_back(c.row.err_taught);
+      aft.push_back(c.row.err_after);
+      ret.push_back(c.row.retention);
+      const double dt = c.row.tilt_a_teach - c.row.tilt_a_before;
+      if (std::fabs(dt) >= 1e-4) sk.push_back((c.row.tilt_a_gap - c.row.tilt_a_before) / dt);
+    }
+    if (tau.size() < 3) {
+      std::printf("\n  orthovocab INCONCLUSIVE -- arm `%s` produced %zu creatures.\n",
+                  kOVArms[a].name, tau.size());
+      return false;
+    }
+    double s2 = 0.0, se_t = 0.0, se_a = 0.0, se_r = 0.0;
+    m_taught[a] = ctx_mean_se(tau, &se_t);
+    m_after[a] = ctx_mean_se(aft, &se_a);
+    const double mr = ctx_mean_se(ret, &se_r);
+    const double msk = sk.size() >= 8 ? ctx_mean_se(sk, &s2) : 0.0;
+    std::printf("  %-9s %.4f +/- %-5.4f %.4f +/- %-5.4f %.2f +/- %-8.2f", kOVArms[a].name,
+                m_taught[a], se_t, m_after[a], se_a, mr, se_r);
+    if (sk.size() >= 8) std::printf("%.2f\n", msk);
+    else std::printf("--\n");
+  }
+
+  {
+    ArmLiveness live("orthovocab");
+    for (uint32_t r = 0; r < kReps; ++r) {
+      for (uint32_t a = 0; a < kOVArmCount; ++a) {
+        const Cell& c = cells[r * kOVArmCount + a];
+        if (c.ok) live.observe(kOVArms[a].name, r, c.row.err_after);
+      }
+    }
+    if (!live.report("none")) return false;
+  }
+
+  const auto idx = [](const char* w) {
+    for (uint32_t i = 0; i < kOVArmCount; ++i) {
+      if (std::strcmp(kOVArms[i].name, w) == 0) return int(i);
+    }
+    return -1;
+  };
+  const int a_none = idx("none"), a_col = idx("collide"), a_ort = idx("ortho");
+  if (a_none < 0 || a_col < 0 || a_ort < 0) {
+    std::printf("\n  orthovocab cannot summarise: an arm it names is missing.\n");
+    return false;
+  }
+  const auto paired = [&](int x, int y, bool after, double* se_out) {
+    std::vector<double> d;
+    for (uint32_t r = 0; r < kReps; ++r) {
+      const Cell& cx = cells[r * kOVArmCount + uint32_t(x)];
+      const Cell& cy = cells[r * kOVArmCount + uint32_t(y)];
+      if (!cx.ok || !cy.ok) continue;
+      d.push_back(after ? (cx.row.err_after - cy.row.err_after)
+                        : (cx.row.err_taught - cy.row.err_taught));
+    }
+    return ctx_mean_se(d, se_out);
+  };
+  // THE STRUCTURAL MATCH, CHECKED. It should be exactly zero.
+  {
+    double se1 = 0.0, se2 = 0.0;
+    const double t1 = paired(a_col, a_none, false, &se1);
+    const double t2 = paired(a_ort, a_none, false, &se2);
+    std::printf("\n  STRUCTURAL MATCH (err taught vs `none`, paired). The teaching phase is\n"
+                "  identical across arms, so these should be ~0 and any drift means the\n"
+                "  arms diverged before the second lesson began.\n"
+                "    collide %+.5f +/- %.5f     ortho %+.5f +/- %.5f\n", t1, se1, t2, se2);
+    if ((se1 > 0.0 && std::fabs(t1) > 2.0 * se1) || (se2 > 0.0 && std::fabs(t2) > 2.0 * se2)) {
+      std::printf("\n  REFUSED -- THE ARMS DIVERGED DURING TEACHING, which they cannot do by\n"
+                  "  construction. Something outside the second lesson differs between them,\n"
+                  "  and no retention number here means anything until that is found.\n");
+      return false;
+    }
+  }
+  // THE GATE: how much damage does each kind of second lesson do, against no
+  // second lesson at all? Lower damage is better; ortho should do less.
+  double se_c = 0.0, se_o = 0.0, se_d = 0.0;
+  const double dmg_c = paired(a_col, a_none, true, &se_c);
+  const double dmg_o = paired(a_ort, a_none, true, &se_o);
+  std::vector<double> diff;
+  for (uint32_t r = 0; r < kReps; ++r) {
+    const Cell& cc = cells[r * kOVArmCount + uint32_t(a_col)];
+    const Cell& co = cells[r * kOVArmCount + uint32_t(a_ort)];
+    if (cc.ok && co.ok) diff.push_back(cc.row.err_after - co.row.err_after);
+  }
+  const double m_diff = ctx_mean_se(diff, &se_d);
+  std::printf("\n  DAMAGE TO LESSON A (err after vs `none`, paired on seed). Lower is better.\n"
+              "    collide  %+.4f +/- %.4f  (%+.1f SE)\n"
+              "    ortho    %+.4f +/- %.4f  (%+.1f SE)\n"
+              "    collide - ortho  %+.4f +/- %.4f  (%+.1f SE)\n",
+              dmg_c, se_c, se_c > 0.0 ? dmg_c / se_c : 0.0,
+              dmg_o, se_o, se_o > 0.0 ? dmg_o / se_o : 0.0,
+              m_diff, se_d, se_d > 0.0 ? m_diff / se_d : 0.0);
+  if (se_d > 0.0 && m_diff > 2.0 * se_d) {
+    std::printf("\n  THE COLLISION IS THE PROBLEM, NOT THE MEMORY. A second lesson on a\n"
+                "  DIFFERENT axis does %.0f%% less damage to the first, at %.1f SE, with the\n"
+                "  teaching phase identical by construction. So the 0.22 wipe is not a\n"
+                "  failure to retain -- it is two lessons steering one scalar, and\n"
+                "  `capacity`'s 0.84 transfers to the retention protocol.\n"
+                "  WHAT THAT IMPLIES is representational rather than mechanical: a\n"
+                "  vocabulary should spread across the nine articulator groups the larynx\n"
+                "  already has, instead of stacking on F1. Defending a lesson was the wrong\n"
+                "  problem; not colliding is the cheap one.\n",
+                dmg_c != 0.0 ? 100.0 * (1.0 - dmg_o / dmg_c) : 0.0, m_diff / se_d);
+    return true;
+  }
+  std::printf("\n  ORTHOGONALITY DOES NOT RESCUE IT. A second lesson on a different axis\n"
+              "  damages the first as much as one on the same axis (%+.1f SE), so the wipe\n"
+              "  is NOT about two lessons sharing a dimension and `capacity`'s 0.84 does not\n"
+              "  transfer to this protocol. That is the last named route for the overwrite:\n"
+              "  it cannot be defended (blocking costs 59%% of the lesson), it cannot be\n"
+              "  retrieved (store and behaviour decay together), and it cannot be avoided.\n"
+              "  The interference is not about WHAT is taught but about the single reward\n"
+              "  channel every lesson shares -- which is where `capacity` said to look.\n",
+              se_d > 0.0 ? m_diff / se_d : 0.0);
+  return false;
+}
 
 bool run_maskretain(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
   (void)verbose;
