@@ -5794,10 +5794,21 @@ RTRow run_retain_arm(const std::vector<uint8_t>& blob, uint64_t ticks,
         switch (cfg.mask_mode) {
           case 1: upper = relearning; break;                          // oracle
           case 2: upper = mnet.active_context() != 0u; break;         // derived
-          // Its OWN stream. Drawing this from the protocol's rng would move every
-          // draw after it and make the control a different protocol rather than a
-          // different mask -- the mistake `credit` records in its own comment.
-          default: upper = (mask_rng.next() & 1u) != 0u; break;       // random
+          // FIXED: the same half throughout, both phases. This is the control, and
+          // the first version got it wrong in a way the 5.6M run made obvious. It
+          // flipped a coin every TICK, so across a phase it wrote BOTH halves and
+          // carried nearly full plasticity, while `oracle` is restricted to ONE
+          // half for the whole of teaching. Different plasticity budgets, so the
+          // arms learned different amounts -- err taught 1.0446 vs 1.0635 -- and
+          // the err-after gaps then reproduced the err-taught gaps almost exactly
+          // (-0.0184 against -0.0189). The experiment measured LEARNING, not
+          // retention, which is the very trap the control existed to prevent.
+          //
+          // Holding one half for the entire run gives the same budget as `oracle`
+          // -- half the F1 neurons writable, for the same duration -- so the only
+          // difference left is whether the half SWITCHES at the lesson boundary.
+          // That is the question, isolated.
+          default: upper = false; break;                              // fixed
         }
         if (upper) mnet.set_reward_mask(vm.begin + mid, vm.begin + g_hi);
         else mnet.set_reward_mask(vm.begin + g_lo, vm.begin + mid);
@@ -6074,7 +6085,7 @@ const MRArm kMRArms[] = {
     {"off",      {"off",      false, true, true, false, false, 0, 0, -1, 0, 0, -1, 0.0, true, 0.0f, 0}},
     {"oracle",   {"oracle",   false, true, true, false, false, 0, 0, -1, 0, 0, -1, 0.0, true, 0.0f, 1}},
     {"derived",  {"derived",  false, true, true, false, false, 0, 0, -1, 2, 4, -1, 0.0, true, 0.0f, 2}},
-    {"random",   {"random",   false, true, true, false, false, 0, 0, -1, 0, 0, -1, 0.0, true, 0.0f, 3}},
+    {"fixed",    {"fixed",    false, true, true, false, false, 0, 0, -1, 0, 0, -1, 0.0, true, 0.0f, 3}},
 };
 constexpr uint32_t kMRArmCount = sizeof(kMRArms) / sizeof(kMRArms[0]);
 
@@ -6192,7 +6203,7 @@ bool run_maskretain(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
     return -1;
   };
   const int a_off = idx("off"), a_orc = idx("oracle");
-  const int a_der = idx("derived"), a_rnd = idx("random");
+  const int a_der = idx("derived"), a_rnd = idx("fixed");
   if (a_off < 0 || a_orc < 0 || a_der < 0 || a_rnd < 0) {
     std::printf("\n  maskretain cannot summarise: an arm it names is missing.\n");
     return false;
@@ -6208,9 +6219,47 @@ bool run_maskretain(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
     }
     return ctx_mean_se(d, se_out);
   };
+  // THE ARMS MUST HAVE LEARNED THE SAME AMOUNT, OR err-after IS NOT ABOUT
+  // RETENTION. The 5.6M run failed exactly here and I only caught it by hand
+  // afterwards: the err-after gaps reproduced the err-TAUGHT gaps almost exactly
+  // (-0.0184 against -0.0189), so the comparison was measuring how much each arm
+  // learned. An arm that learned less has less to lose and posts a flattering
+  // err-after. This now refuses rather than reporting, because a confound found
+  // by eye after the fact is a confound that ships the next time nobody looks.
+  const auto paired_taught = [&](int x, int y, double* se_out) {
+    std::vector<double> d;
+    for (uint32_t r = 0; r < kReps; ++r) {
+      const Cell& cx = cells[r * kMRArmCount + uint32_t(x)];
+      const Cell& cy = cells[r * kMRArmCount + uint32_t(y)];
+      if (cx.ok && cy.ok) d.push_back(cy.row.err_taught - cx.row.err_taught);
+    }
+    return ctx_mean_se(d, se_out);
+  };
+  {
+    double se_to = 0.0, se_td = 0.0;
+    const double t_or = paired_taught(a_orc, a_rnd, &se_to);
+    const double t_dr = paired_taught(a_der, a_rnd, &se_td);
+    std::printf("\n  LEARNING MATCH (err TAUGHT vs `fixed`, paired). These must be flat, or\n"
+                "  err-after is measuring learning rather than retention.\n"
+                "    oracle   %+.4f +/- %.4f  (%+.1f SE)\n"
+                "    derived  %+.4f +/- %.4f  (%+.1f SE)\n",
+                t_or, se_to, se_to > 0.0 ? t_or / se_to : 0.0,
+                t_dr, se_td, se_td > 0.0 ? t_dr / se_td : 0.0);
+    const bool bad_o = se_to > 0.0 && std::fabs(t_or) > 2.0 * se_to;
+    const bool bad_d = se_td > 0.0 && std::fabs(t_dr) > 2.0 * se_td;
+    if (bad_o || bad_d) {
+      std::printf("\n  REFUSED -- THE ARMS DID NOT LEARN THE SAME AMOUNT. %s differs from the\n"
+                  "  control on err TAUGHT at more than 2 SE, so any err-after difference is\n"
+                  "  confounded by how much there was to retain. This is not a null and not a\n"
+                  "  result: it is a broken comparison, and the mask budget has to be matched\n"
+                  "  before the question can be asked.\n",
+                  bad_o && bad_d ? "both oracle and derived" : (bad_o ? "oracle" : "derived"));
+      return false;
+    }
+  }
   double se_or = 0.0, se_dr = 0.0;
-  const double m_or = paired_after(a_orc, a_rnd, &se_or);   // oracle vs random
-  const double m_dr = paired_after(a_der, a_rnd, &se_dr);   // derived vs random
+  const double m_or = paired_after(a_orc, a_rnd, &se_or);   // oracle vs fixed
+  const double m_dr = paired_after(a_der, a_rnd, &se_dr);   // derived vs fixed
   std::printf("\n  ERR-AFTER IMPROVEMENT over `random` (the mask's cost, no information),\n"
               "  paired on seed. Positive means the arm ends CLOSER to lesson A.\n"
               "    oracle   %+.4f +/- %.4f  (%+.1f SE)\n"

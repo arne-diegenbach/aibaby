@@ -1,0 +1,186 @@
+  [14/144] seed 3 oracle   err after 1.0741  taught 1.0519
+  [8/144] seed 1 random   err after 1.0535  taught 1.0613
+  [12/144] seed 2 random   err after 1.0644  taught 1.0627
+  [3/144] seed 0 derived  err after 1.0474  taught 0.9981
+  [2/144] seed 0 oracle   err after 1.0841  taught 1.0668
+  [4/144] seed 0 random   err after 1.0287  taught 1.0380
+  [5/144] seed 1 off      err after 0.9978  taught 0.8802
+  [11/144] seed 2 derived  err after 1.1281  taught 1.1171
+  [7/144] seed 1 derived  err after 1.0868  taught 1.0601
+  [1/144] seed 0 off      err after 0.9003  taught 0.7850
+  [6/144] seed 1 oracle   err after 1.0854  taught 1.0672
+  [9/144] seed 2 off      err after 0.9345  taught 0.8766
+  [10/144] seed 2 oracle   err after 1.0831  taught 1.0599
+  [13/144] seed 3 off      err after 0.9858  taught 0.8640
+  [16/144] seed 3 random   err after 1.0430  taught 1.0422
+  [15/144] seed 3 derived  err after 0.9952  taught 0.9285
+  [22/144] seed 5 oracle   err after 1.0848  taught 1.0678
+  [18/144] seed 4 oracle   err after 1.0832  taught 1.0543
+  [20/144] seed 4 random   err after 1.0813  taught 1.0529
+  [24/144] seed 5 random   err after 1.0251  taught 1.0180
+  [21/144] seed 5 off      err after 1.0454  taught 0.8725
+  [28/144] seed 6 random   err after 1.0652  taught 1.0165
+  [17/144] seed 4 off      err after 0.9124  taught 0.8504
+  [23/144] seed 5 derived  err after 0.9468  taught 0.8863
+  [19/144] seed 4 derived  err after 1.0260  taught 0.9729
+  [27/144] seed 6 derived  err after 1.0412  taught 0.9780
+  [26/144] seed 6 oracle   err after 1.0773  taught 1.0444
+  [25/144] seed 6 off      err after 0.9829  taught 0.8315
+  [30/144] seed 7 oracle   err after 1.0755  taught 1.0518
+  [36/144] seed 8 random   err after 1.0747  taught 1.0459
+  [31/144] seed 7 derived  err after 1.0793  taught 1.0475
+  [32/144] seed 7 random   err after 1.0606  taught 1.0116
+  [29/144] seed 7 off      err after 0.9865  taught 0.8798
+  [34/144] seed 8 oracle   err after 1.0863  taught 1.0625
+  [40/144] seed 9 random   err after 1.0833  taught 1.0630
+  [35/144] seed 8 derived  err after 1.1508  taught 1.1571
+  [38/144] seed 9 oracle   err after 1.0891  taught 1.0654
+  [41/144] seed 10 off      err after 0.9107  taught 0.8402
+  [33/144] seed 8 off      err after 0.9887  taught 0.8273
+  [37/144] seed 9 off      err after 1.0438  taught 0.8980
+  [39/144] seed 9 derived  err after 0.8564  taught 0.8724
+  [42/144] seed 10 oracle   err after 1.0765  taught 1.0509
+  [43/144] seed 10 derived  err after 1.0039  taught 0.9821
+  [47/144] seed 11 derived  err after 1.1005  taught 1.0813
+  [46/144] seed 11 oracle   err after 1.1026  taught 1.0852
+  [44/144] seed 10 random   err after 1.0691  taught 1.0452
+  [45/144] seed 11 off      err after 0.9628  taught 0.8391
+  [50/144] seed 12 oracle   err after 1.0753  taught 1.0296
+  [48/144] seed 11 random   err after 1.0823  taught 1.0525
+  [51/144] seed 12 derived  err after 1.0288  taught 0.9931
+  [52/144] seed 12 random   err after 1.0342  taught 1.0098
+  [55/144] seed 13 derived  err after 1.0461  taught 1.0188
+  [49/144] seed 12 off      err after 0.9712  taught 0.8786
+  [54/144] seed 13 oracle   err after 1.1071  taught 1.0927
+  [56/144] seed 13 random   err after 1.0933  taught 1.0637
+  [53/144] seed 13 off      err after 0.9393  taught 0.8759
+  [58/144] seed 14 oracle   err after 1.0803  taught 1.0599
+  [60/144] seed 14 random   err after 1.0775  taught 1.0404
+  [59/144] seed 14 derived  err after 1.0027  taught 0.9093
+  [63/144] seed 15 derived  err after 0.9531  taught 0.9355
+  [64/144] seed 15 random   err after 1.0671  taught 1.0408
+  [61/144] seed 15 off      err after 0.9006  taught 0.8553
+  [57/144] seed 14 off      err after 0.9495  taught 0.8854
+  [66/144] seed 16 oracle   err after 1.0972  taught 1.0795
+  [62/144] seed 15 oracle   err after 1.0797  taught 1.0561
+  [67/144] seed 16 derived  err after 1.0908  taught 1.0688
+  [65/144] seed 16 off      err after 0.9613  taught 0.9210
+  [70/144] seed 17 oracle   err after 1.0940  taught 1.0570
+  [68/144] seed 16 random   err after 1.0707  taught 1.0376
+  [69/144] seed 17 off      err after 0.9734  taught 0.8740
+  [72/144] seed 17 random   err after 1.0852  taught 1.0700
+  [75/144] seed 18 derived  err after 1.0715  taught 1.0037
+  [71/144] seed 17 derived  err after 1.0790  taught 0.9739
+  [74/144] seed 18 oracle   err after 1.0744  taught 1.0671
+  [76/144] seed 18 random   err after 1.0808  taught 1.0609
+  [78/144] seed 19 oracle   err after 1.0753  taught 1.0609
+  [73/144] seed 18 off      err after 0.8808  taught 0.7550
+  [80/144] seed 19 random   err after 1.0596  taught 1.0532
+  [77/144] seed 19 off      err after 1.0111  taught 0.9058
+  [82/144] seed 20 oracle   err after 1.0876  taught 1.0833
+  [79/144] seed 19 derived  err after 1.0759  taught 1.0323
+  [83/144] seed 20 derived  err after 1.0854  taught 1.0633
+  [81/144] seed 20 off      err after 1.0341  taught 1.0033
+  [84/144] seed 20 random   err after 1.0882  taught 1.0793
+  [85/144] seed 21 off      err after 0.9039  taught 0.8183
+  [87/144] seed 21 derived  err after 1.0231  taught 1.0131
+  [86/144] seed 21 oracle   err after 1.0880  taught 1.0750
+  [88/144] seed 21 random   err after 1.0834  taught 1.0564
+  [89/144] seed 22 off      err after 0.9374  taught 0.8767
+  [94/144] seed 23 oracle   err after 1.0920  taught 1.0702
+  [90/144] seed 22 oracle   err after 1.0749  taught 1.0555
+  [91/144] seed 22 derived  err after 1.1473  taught 1.0992
+  [92/144] seed 22 random   err after 1.0781  taught 1.0587
+  [93/144] seed 23 off      err after 1.0827  taught 0.9624
+  [96/144] seed 23 random   err after 1.0692  taught 1.0558
+  [95/144] seed 23 derived  err after 1.0243  taught 0.9736
+  [97/144] seed 24 off      err after 0.9031  taught 0.8239
+  [98/144] seed 24 oracle   err after 1.0954  taught 1.0707
+  [99/144] seed 24 derived  err after 1.0425  taught 0.9375
+  [102/144] seed 25 oracle   err after 1.0767  taught 1.0572
+  [100/144] seed 24 random   err after 1.0725  taught 1.0443
+  [101/144] seed 25 off      err after 0.9066  taught 0.7915
+  [104/144] seed 25 random   err after 1.0582  taught 1.0350
+  [106/144] seed 26 oracle   err after 1.0954  taught 1.0758
+  [103/144] seed 25 derived  err after 0.9948  taught 0.9497
+  [107/144] seed 26 derived  err after 1.1135  taught 1.1130
+  [108/144] seed 26 random   err after 1.0586  taught 1.0551
+  [105/144] seed 26 off      err after 0.9540  taught 0.8627
+  [111/144] seed 27 derived  err after 1.0242  taught 0.9724
+  [109/144] seed 27 off      err after 0.9625  taught 0.8427
+  [110/144] seed 27 oracle   err after 1.0884  taught 1.0651
+  [112/144] seed 27 random   err after 1.0748  taught 1.0635
+  [113/144] seed 28 off      err after 0.9961  taught 0.9104
+  [116/144] seed 28 random   err after 1.0585  taught 1.0200
+  [115/144] seed 28 derived  err after 1.0681  taught 1.0415
+  [114/144] seed 28 oracle   err after 1.0791  taught 1.0427
+  [118/144] seed 29 oracle   err after 1.0997  taught 1.0797
+  [117/144] seed 29 off      err after 1.0083  taught 0.8683
+  [119/144] seed 29 derived  err after 1.0739  taught 1.0327
+  [120/144] seed 29 random   err after 1.0777  taught 1.0530
+  [122/144] seed 30 oracle   err after 1.0745  taught 1.0553
+  [124/144] seed 30 random   err after 1.0481  taught 1.0199
+  [126/144] seed 31 oracle   err after 1.0770  taught 1.0478
+  [123/144] seed 30 derived  err after 1.0851  taught 1.0503
+  [121/144] seed 30 off      err after 0.9845  taught 0.8290
+  [125/144] seed 31 off      err after 0.9290  taught 0.8310
+  [128/144] seed 31 random   err after 1.0727  taught 1.0403
+  [127/144] seed 31 derived  err after 1.0700  taught 1.0414
+  [130/144] seed 32 oracle   err after 1.0897  taught 1.0775
+  [132/144] seed 32 random   err after 1.0591  taught 1.0243
+  [129/144] seed 32 off      err after 0.9446  taught 0.8783
+  [131/144] seed 32 derived  err after 1.0058  taught 0.9704
+  [134/144] seed 33 oracle   err after 1.0869  taught 1.0596
+  [133/144] seed 33 off      err after 0.9155  taught 0.8446
+  [135/144] seed 33 derived  err after 1.0166  taught 0.9943
+  [138/144] seed 34 oracle   err after 1.1010  taught 1.0831
+  [136/144] seed 33 random   err after 1.0554  taught 1.0126
+  [139/144] seed 34 derived  err after 1.1317  taught 1.1572
+  [140/144] seed 34 random   err after 1.0919  taught 1.0695
+  [137/144] seed 34 off      err after 0.9883  taught 0.8846
+  [144/144] seed 35 random   err after 1.0688  taught 1.0312
+  [142/144] seed 35 oracle   err after 1.0842  taught 1.0563
+  [141/144] seed 35 off      err after 0.9767  taught 0.7903
+  [143/144] seed 35 derived  err after 0.9956  taught 0.9405
+experiment: maskretain
+  instrument        maskretain   trial seed 0000000001351cd4   2000 trials
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  question          the conflict is a PURE OVERWRITE (store 0.25, behaviour
+                    0.30, -1.0 SE), so the damage is in the WRITE. `credit`
+                    removes interference with a per-neuron mask -- but only
+                    with an oracle. What does the mask have to KNOW?
+  the ladder        off / oracle (true lesson) / derived (the creature's own
+                    ear-EMA context index) / random (the mask's cost, none of
+                    its information).
+  the gate          err AFTER, paired on seed, at 2 SE. NOT retention: its
+                    denominator collapses and the last run's headline landed
+                    on 1.99 vs a 2.0 bar because of it.
+  refusals up front oracle <= random refuses the direction outright;
+                    oracle > random but derived <= random makes it an INDEX
+                    problem, not a mask problem.
+
+
+  arm        err taught     err after      retention     store kept
+  off        0.8615         0.9629 +/- 0.0079  0.30         0.25
+  oracle     1.0635         1.0854 +/- 0.0015  -0.03        0.02
+  derived    1.0102         1.0476 +/- 0.0100  0.50         0.11
+  random     1.0446         1.0671 +/- 0.0028  -0.15        0.16
+
+  ARM LIVENESS vs `off` (seeds where the arm differs at all)
+    oracle             36/36
+    derived            36/36
+    random             36/36
+
+  ERR-AFTER IMPROVEMENT over `random` (the mask's cost, no information),
+  paired on seed. Positive means the arm ends CLOSER to lesson A.
+    oracle   -0.0184 +/- 0.0025  (-7.4 SE)
+    derived  +0.0195 +/- 0.0098  (+2.0 SE)
+
+  THE MASK DOES NOT TRANSFER. Even keyed on the TRUE lesson it does not
+  beat its own cost-matched control at 2 SE, so `credit`'s ~1.0 is a fact
+  about that protocol and not about this one. Write separation is refused
+  on the retention conflict, and with protection already refused
+  (`meta_commit` null, `bankprobe` refused) the overwrite has no remaining
+  named route -- which is a harder and more useful place to stand than a
+  fifteenth knob.
