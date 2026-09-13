@@ -6230,7 +6230,7 @@ bool run_maskretain(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
         if (c.ok) live.observe(kMRArms[a].name, r, c.row.err_after);
       }
     }
-    if (!live.report("off")) return false;
+    if (!live.report("w100")) return false;
   }
 
   const auto idx = [](const char* w) {
