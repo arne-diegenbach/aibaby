@@ -6164,6 +6164,24 @@ bool run_ctxretain(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
                   se_a > 0.0 ? m_a / se_a : 0.0);
       const bool pass = se_r > 0.0 && m_r > 2.0 * se_r && se_a > 0.0 && m_a > 2.0 * se_a;
       pass_behaviour = pass;
+      // A KNIFE EDGE IS NOT A VERDICT. The 5.6M run failed this gate on retention
+      // at 1.99 SE against a 2.0 bar while err-after favoured the oracle at 14.56
+      // SE, and "fails at 1.99" is not distinguishable from "passes at 2.01" --
+      // `verdict-fitted-to-data`, in the form where the threshold holds still and
+      // the quantity lands on it. Say so rather than let the label carry it.
+      // RETENTION IS ALSO THE UNTRUSTWORTHY COLUMN HERE: its denominator is
+      // (before - taught), and the oracle arms print 6.12 +/- 2.74 and 8.16 +/-
+      // 7.24, which are divisions by nearly nothing rather than large effects.
+      {
+        const double sr = se_r > 0.0 ? m_r / se_r : 0.0;
+        const double sa = se_a > 0.0 ? m_a / se_a : 0.0;
+        if (std::fabs(sr - 2.0) < 0.25 || std::fabs(sa - 2.0) < 0.25) {
+          std::printf("  !! ON THE BAR: retention %.2f SE, err-after %.2f SE against a 2.0\n"
+                      "     cut. A verdict that turns on this margin is not a result. Read the\n"
+                      "     two columns separately -- and prefer err-after, because retention's\n"
+                      "     denominator collapses when an arm barely learned.\n", sr, sa);
+        }
+      }
       std::printf("  -> %s\n", pass
           ? "A PERFECT INDEX PROTECTS THE LESSON. Gating works here when the index\n"
             "     actually carries which lesson it is, and the previous null was the\n"
@@ -6326,9 +6344,28 @@ bool run_ctxretain(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
         std::printf("  -> ERASED. A's tilt is gone from the slot (%.2f +/- %.2f), so the wipe\n"
                     "     is a storage failure and protecting the write is the route.\n",
                     ks, se_s);
+      } else if (se_s > 0.0 && 2.0 * se_s < 0.15) {
+        // TIGHT BUT INTERMEDIATE IS A RESULT, NOT A REFUSAL. The first version of
+        // this branch printed "spans too much to call" for every value between the
+        // cuts, which was right at smoke length (0.72 +/- 0.35) and wrong at full
+        // length (0.65 +/- 0.06): an interval of +/-0.12 does not span anything.
+        // `verdict-fitted-to-data` says do not MOVE a threshold to capture a point
+        // -- it does not say a well-measured intermediate value must be thrown away.
+        // The honest report is the partial itself, with both ends excluded.
+        std::printf("  -> PARTIAL, AND PRECISELY SO. `ctx-same` keeps %.2f +/- %.2f of A's\n"
+                    "     stored tilt: %.1f SE from ERASED and %.1f SE from INTACT, with the\n"
+                    "     sign flipped on only %u of %u seeds. So lesson B neither wipes A nor\n"
+                    "     reverses it -- it costs about %.0f%% of the stored parameter and\n"
+                    "     leaves the rest in place.\n"
+                    "     THIS IS A STORAGE NUMBER ONLY. Completing the storage-vs-expression\n"
+                    "     inference needs the BEHAVIOUR on a comparably-learned arm, and the\n"
+                    "     context arms here do not qualify: err taught 1.034 against the\n"
+                    "     baseline's 0.862 means they learned far less, so their retention is\n"
+                    "     not measuring the same creature's memory.\n",
+                    ks, se_s, ks / se_s, (1.0 - ks) / se_s, flip_s, n_s, 100.0 * (1.0 - ks));
       } else {
-        std::printf("  -> NEITHER LABEL. `ctx-same` keeps %.2f +/- %.2f, which spans too much\n"
-                    "     to call survived, erased or reversed -- and the sign flipped on only\n"
+        std::printf("  -> NEITHER LABEL. `ctx-same` keeps %.2f +/- %.2f, and that interval is\n"
+                    "     wide enough to contain more than one mechanism -- sign flipped on\n"
                     "     %u of %u seeds. Report the ratio; do not move the threshold to reach\n"
                     "     a verdict.\n", ks, se_s, flip_s, n_s);
       }

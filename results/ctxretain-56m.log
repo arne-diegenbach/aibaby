@@ -1,147 +1,147 @@
-  [5/144] seed 1 baseline   retention 0.15  err after 0.9978
-  [6/144] seed 1 cue        retention 0.46  err after 0.9554
   [9/144] seed 2 baseline   retention 0.49  err after 0.9345
-  [8/144] seed 1 cue+ctx    retention 0.81  err after 0.9175
-  [2/144] seed 0 cue        retention 0.40  err after 0.9121
-  [3/144] seed 0 ctx        retention 0.07  err after 1.0183
-  [1/144] seed 0 baseline   retention 0.45  err after 0.9003
-  [10/144] seed 2 cue        retention 0.70  err after 0.9111
   [13/144] seed 3 baseline   retention 0.16  err after 0.9858
-  [11/144] seed 2 ctx        retention -0.10  err after 1.0077
-  [12/144] seed 2 cue+ctx    retention -0.12  err after 1.0106
-  [4/144] seed 0 cue+ctx    retention 0.09  err after 1.0154
-  [7/144] seed 1 ctx        retention 0.59  err after 0.9487
-  [14/144] seed 3 cue        retention 0.05  err after 1.0019
-  [21/144] seed 5 baseline   retention -0.11  err after 1.0454
-  [18/144] seed 4 cue        retention 0.66  err after 0.9033
-  [19/144] seed 4 ctx        retention 0.61  err after 0.8905
-  [23/144] seed 5 ctx        retention 5.44  err after 1.1115
-  [20/144] seed 4 cue+ctx    retention 0.69  err after 0.8731
+  [5/144] seed 1 baseline   retention 0.15  err after 0.9978
+  [1/144] seed 0 baseline   retention 0.45  err after 0.9003
+  [10/144] seed 2 ctx-same   retention 2.84  err after 1.0356
+  [2/144] seed 0 ctx-same   retention 2.86  err after 1.0321
+  [6/144] seed 1 ctx-same   retention -0.59  err after 1.0578
+  [14/144] seed 3 ctx-same   retention 0.77  err after 1.0016
+  [11/144] seed 2 ctx-oracle retention 17.26  err after 0.9166
+  [3/144] seed 0 ctx-oracle retention 5.75  err after 0.9694
+  [12/144] seed 2 ctx-orc+brake retention 13.28  err after 0.9857
+  [8/144] seed 1 ctx-orc+brake retention 2.20  err after 0.9381
+  [4/144] seed 0 ctx-orc+brake retention 2.33  err after 0.8572
+  [7/144] seed 1 ctx-oracle retention -6.57  err after 0.9630
   [17/144] seed 4 baseline   retention 0.60  err after 0.9124
-  [15/144] seed 3 ctx        retention 0.66  err after 0.8991
-  [24/144] seed 5 cue+ctx    retention 6.01  err after 1.1156
-  [22/144] seed 5 cue        retention -0.02  err after 1.0310
-  [16/144] seed 3 cue+ctx    retention 0.57  err after 0.9129
+  [21/144] seed 5 baseline   retention -0.11  err after 1.0454
+  [18/144] seed 4 ctx-same   retention -0.37  err after 1.0241
+  [16/144] seed 3 ctx-orc+brake retention 1.64  err after 0.9515
   [25/144] seed 6 baseline   retention -0.01  err after 0.9829
-  [26/144] seed 6 cue        retention -0.00  err after 0.9821
-  [27/144] seed 6 ctx        retention 0.37  err after 0.9623
-  [28/144] seed 6 cue+ctx    retention 0.28  err after 0.9760
+  [15/144] seed 3 ctx-oracle retention 2.56  err after 0.8469
+  [22/144] seed 5 ctx-same   retention 0.71  err after 1.0347
+  [20/144] seed 4 ctx-orc+brake retention 7.17  err after 0.9291
+  [26/144] seed 6 ctx-same   retention 1.38  err after 1.0038
+  [19/144] seed 4 ctx-oracle retention -2.57  err after 0.9494
+  [24/144] seed 5 ctx-orc+brake retention 2.13  err after 0.9398
+  [23/144] seed 5 ctx-oracle retention 5.48  err after 0.9516
   [29/144] seed 7 baseline   retention 0.06  err after 0.9865
-  [34/144] seed 8 cue        retention 0.39  err after 0.9341
-  [31/144] seed 7 ctx        retention 0.44  err after 0.9564
-  [38/144] seed 9 cue        retention 1.00  err after 0.8978
-  [37/144] seed 9 baseline   retention -0.09  err after 1.0438
-  [30/144] seed 7 cue        retention 0.20  err after 0.9712
-  [32/144] seed 7 cue+ctx    retention -0.14  err after 1.0243
+  [28/144] seed 6 ctx-orc+brake retention 259.02  err after 0.9129
+  [27/144] seed 6 ctx-oracle retention 4.53  err after 0.8654
   [33/144] seed 8 baseline   retention 0.08  err after 0.9887
+  [30/144] seed 7 ctx-same   retention -0.25  err after 1.0499
+  [37/144] seed 9 baseline   retention -0.09  err after 1.0438
+  [31/144] seed 7 ctx-oracle retention -2.90  err after 0.9836
+  [34/144] seed 8 ctx-same   retention 0.08  err after 1.0612
   [41/144] seed 10 baseline   retention 0.56  err after 0.9107
-  [35/144] seed 8 ctx        retention 0.12  err after 0.9969
-  [36/144] seed 8 cue+ctx    retention -0.01  err after 1.0140
-  [40/144] seed 9 cue+ctx    retention 0.45  err after 0.8666
-  [39/144] seed 9 ctx        retention 0.58  err after 0.8248
-  [42/144] seed 10 cue        retention 0.20  err after 0.9691
-  [46/144] seed 11 cue        retention 0.05  err after 0.9972
-  [48/144] seed 11 cue+ctx    retention 0.57  err after 0.9505
+  [32/144] seed 7 ctx-orc+brake retention 2.13  err after 0.9841
+  [38/144] seed 9 ctx-same   retention 1.98  err after 0.9957
+  [35/144] seed 8 ctx-oracle retention 0.89  err after 0.9965
+  [39/144] seed 9 ctx-oracle retention 6.40  err after 0.8764
+  [36/144] seed 8 ctx-orc+brake retention 1.57  err after 0.9969
+  [42/144] seed 10 ctx-same   retention -3.21  err after 0.9957
+  [40/144] seed 9 ctx-orc+brake retention 3.18  err after 0.9425
   [45/144] seed 11 baseline   retention 0.26  err after 0.9628
-  [43/144] seed 10 ctx        retention 0.31  err after 0.9649
-  [50/144] seed 12 cue        retention 0.76  err after 0.9108
+  [43/144] seed 10 ctx-oracle retention -25.33  err after 0.9191
+  [44/144] seed 10 ctx-orc+brake retention -10.59  err after 0.9621
   [49/144] seed 12 baseline   retention 0.32  err after 0.9712
-  [47/144] seed 11 ctx        retention 0.62  err after 0.9437
-  [51/144] seed 12 ctx        retention -0.79  err after 1.0532
-  [44/144] seed 10 cue+ctx    retention 0.52  err after 0.9302
-  [52/144] seed 12 cue+ctx    retention 0.02  err after 0.9542
+  [46/144] seed 11 ctx-same   retention -0.09  err after 1.0982
   [53/144] seed 13 baseline   retention 0.68  err after 0.9393
-  [54/144] seed 13 cue        retention 0.62  err after 0.9491
-  [56/144] seed 13 cue+ctx    retention 0.21  err after 1.0021
-  [55/144] seed 13 ctx        retention 0.40  err after 0.9752
+  [50/144] seed 12 ctx-same   retention 16.63  err after 0.9915
+  [48/144] seed 11 ctx-orc+brake retention 4.58  err after 0.9361
+  [51/144] seed 12 ctx-oracle retention 31.94  err after 0.9429
+  [47/144] seed 11 ctx-oracle retention 2.84  err after 0.8812
   [57/144] seed 14 baseline   retention 0.57  err after 0.9495
-  [58/144] seed 14 cue        retention 0.58  err after 0.9492
+  [54/144] seed 13 ctx-same   retention 0.33  err after 1.0939
+  [52/144] seed 12 ctx-orc+brake retention -14.63  err after 0.9785
+  [55/144] seed 13 ctx-oracle retention 2.44  err after 0.9605
+  [56/144] seed 13 ctx-orc+brake retention 1.84  err after 0.9489
   [61/144] seed 15 baseline   retention 0.73  err after 0.9006
-  [59/144] seed 14 ctx        retention -0.02  err after 1.0044
-  [62/144] seed 15 cue        retention 0.71  err after 0.9041
+  [58/144] seed 14 ctx-same   retention 0.53  err after 1.0463
   [65/144] seed 16 baseline   retention 0.72  err after 0.9613
-  [60/144] seed 14 cue+ctx    retention 0.65  err after 0.9308
-  [63/144] seed 15 ctx        retention 0.77  err after 1.1168
-  [66/144] seed 16 cue        retention 0.95  err after 0.9280
-  [67/144] seed 16 ctx        retention 0.73  err after 0.9600
-  [64/144] seed 15 cue+ctx    retention 0.63  err after 1.1056
-  [68/144] seed 16 cue+ctx    retention 1.09  err after 0.9118
+  [62/144] seed 15 ctx-same   retention -0.97  err after 1.0867
+  [59/144] seed 14 ctx-oracle retention 1.69  err after 0.9643
+  [60/144] seed 14 ctx-orc+brake retention -8.06  err after 0.9906
   [69/144] seed 17 baseline   retention 0.31  err after 0.9734
-  [70/144] seed 17 cue        retention 0.89  err after 0.8892
-  [74/144] seed 18 cue        retention 0.39  err after 0.9068
-  [75/144] seed 18 ctx        retention 0.19  err after 0.9845
+  [66/144] seed 16 ctx-same   retention 0.95  err after 0.9865
+  [63/144] seed 15 ctx-oracle retention 3.64  err after 0.9583
+  [64/144] seed 15 ctx-orc+brake retention 4.67  err after 0.9530
+  [67/144] seed 16 ctx-oracle retention 1.25  err after 0.9614
+  [70/144] seed 17 ctx-same   retention 0.70  err after 1.0239
+  [68/144] seed 16 ctx-orc+brake retention 1.32  err after 0.9917
   [73/144] seed 18 baseline   retention 0.49  err after 0.8808
-  [76/144] seed 18 cue+ctx    retention -0.28  err after 1.0446
-  [72/144] seed 17 cue+ctx    retention -0.27  err after 1.0656
+  [71/144] seed 17 ctx-oracle retention 4.93  err after 0.8993
   [77/144] seed 19 baseline   retention 0.34  err after 1.0111
-  [71/144] seed 17 ctx        retention 0.55  err after 1.1593
-  [78/144] seed 19 cue        retention 0.24  err after 1.0275
+  [72/144] seed 17 ctx-orc+brake retention 2.14  err after 0.9120
+  [74/144] seed 18 ctx-same   retention 1.41  err after 0.9799
+  [78/144] seed 19 ctx-same   retention 0.17  err after 1.0669
   [81/144] seed 20 baseline   retention -0.17  err after 1.0341
-  [79/144] seed 19 ctx        retention -0.04  err after 1.0404
-  [80/144] seed 19 cue+ctx    retention -0.35  err after 1.0774
-  [82/144] seed 20 cue        retention -2.27  err after 1.0895
-  [83/144] seed 20 ctx        retention 0.88  err after 0.8523
-  [84/144] seed 20 cue+ctx    retention 0.57  err after 0.9172
+  [76/144] seed 18 ctx-orc+brake retention -10.27  err after 0.9688
+  [75/144] seed 18 ctx-oracle retention 3.70  err after 0.8651
   [85/144] seed 21 baseline   retention 0.58  err after 0.9039
-  [86/144] seed 21 cue        retention 0.47  err after 0.9280
-  [88/144] seed 21 cue+ctx    retention 0.28  err after 0.9862
-  [87/144] seed 21 ctx        retention 0.36  err after 0.9715
+  [82/144] seed 20 ctx-same   retention 6.64  err after 1.0534
+  [80/144] seed 19 ctx-orc+brake retention 14.63  err after 0.9642
+  [79/144] seed 19 ctx-oracle retention 1.82  err after 0.9116
+  [83/144] seed 20 ctx-oracle retention 50.19  err after 0.9707
+  [84/144] seed 20 ctx-orc+brake retention 3.30  err after 0.9091
   [89/144] seed 22 baseline   retention 0.51  err after 0.9374
+  [86/144] seed 21 ctx-same   retention 0.42  err after 1.0777
+  [87/144] seed 21 ctx-oracle retention 3.45  err after 0.9662
   [93/144] seed 23 baseline   retention -0.32  err after 1.0827
-  [90/144] seed 22 cue        retention 0.19  err after 0.9767
-  [91/144] seed 22 ctx        retention 0.52  err after 1.1434
-  [92/144] seed 22 cue+ctx    retention -0.30  err after 1.0513
-  [94/144] seed 23 cue        retention -0.13  err after 1.0655
+  [90/144] seed 22 ctx-same   retention -1.32  err after 1.0075
+  [94/144] seed 23 ctx-same   retention 1.35  err after 1.0550
   [97/144] seed 24 baseline   retention 0.59  err after 0.9031
-  [95/144] seed 23 ctx        retention 0.20  err after 1.0203
-  [96/144] seed 23 cue+ctx    retention 0.60  err after 0.9823
-  [98/144] seed 24 cue        retention 0.31  err after 0.9580
-  [99/144] seed 24 ctx        retention 0.70  err after 0.8812
+  [88/144] seed 21 ctx-orc+brake retention 3.64  err after 0.9202
+  [95/144] seed 23 ctx-oracle retention 3.93  err after 0.9834
+  [92/144] seed 22 ctx-orc+brake retention -2.28  err after 0.9299
+  [91/144] seed 22 ctx-oracle retention -2.82  err after 0.9672
+  [96/144] seed 23 ctx-orc+brake retention 2.68  err after 0.9760
   [101/144] seed 25 baseline   retention 0.44  err after 0.9066
-  [100/144] seed 24 cue+ctx    retention 0.72  err after 0.8768
-  [102/144] seed 25 cue        retention 0.60  err after 0.8736
-  [104/144] seed 25 cue+ctx    retention 0.64  err after 1.1594
-  [103/144] seed 25 ctx        retention 0.59  err after 1.1527
+  [98/144] seed 24 ctx-same   retention -0.03  err after 1.0724
+  [99/144] seed 24 ctx-oracle retention 1.85  err after 0.9195
   [105/144] seed 26 baseline   retention 0.44  err after 0.9540
-  [106/144] seed 26 cue        retention 0.46  err after 0.9510
-  [108/144] seed 26 cue+ctx    retention -0.67  err after 1.1038
-  [107/144] seed 26 ctx        retention 3.82  err after 1.1684
+  [102/144] seed 25 ctx-same   retention -0.04  err after 1.0475
+  [100/144] seed 24 ctx-orc+brake retention 2.17  err after 0.9199
+  [103/144] seed 25 ctx-oracle retention 5.13  err after 0.9047
   [109/144] seed 27 baseline   retention 0.24  err after 0.9625
-  [110/144] seed 27 cue        retention 0.13  err after 0.9792
-  [111/144] seed 27 ctx        retention 0.59  err after 0.9244
-  [112/144] seed 27 cue+ctx    retention 0.50  err after 0.9409
-  [114/144] seed 28 cue        retention 0.73  err after 0.9293
+  [104/144] seed 25 ctx-orc+brake retention -3.86  err after 0.9768
+  [106/144] seed 26 ctx-same   retention -0.11  err after 1.1024
   [113/144] seed 28 baseline   retention -0.24  err after 0.9961
+  [107/144] seed 26 ctx-oracle retention 3.68  err after 0.9932
+  [110/144] seed 27 ctx-same   retention 2.40  err after 1.0834
+  [108/144] seed 26 ctx-orc+brake retention 11.16  err after 0.9687
   [117/144] seed 29 baseline   retention 0.10  err after 1.0083
-  [116/144] seed 28 cue+ctx    retention 0.40  err after 0.9441
-  [118/144] seed 29 cue        retention 0.22  err after 0.9890
-  [119/144] seed 29 ctx        retention 0.15  err after 1.0202
+  [111/144] seed 27 ctx-oracle retention -5.51  err after 0.9992
+  [112/144] seed 27 ctx-orc+brake retention 1.97  err after 0.9350
+  [114/144] seed 28 ctx-same   retention -4.58  err after 0.9076
+  [116/144] seed 28 ctx-orc+brake retention -0.93  err after 0.9832
   [121/144] seed 30 baseline   retention 0.11  err after 0.9845
-  [115/144] seed 28 ctx        retention 0.52  err after 0.9313
-  [122/144] seed 30 cue        retention 0.45  err after 0.9248
-  [123/144] seed 30 ctx        retention -0.25  err after 1.0515
-  [120/144] seed 29 cue+ctx    retention 0.35  err after 0.9834
-  [124/144] seed 30 cue+ctx    retention -1.38  err after 1.0997
+  [115/144] seed 28 ctx-oracle retention -5.89  err after 0.8799
+  [118/144] seed 29 ctx-same   retention 1.09  err after 1.0167
+  [122/144] seed 30 ctx-same   retention 1.22  err after 1.0325
+  [119/144] seed 29 ctx-oracle retention 3.25  err after 0.9052
   [125/144] seed 31 baseline   retention 0.39  err after 0.9290
-  [126/144] seed 31 cue        retention 0.26  err after 0.9490
-  [127/144] seed 31 ctx        retention 0.92  err after 0.8484
-  [128/144] seed 31 cue+ctx    retention 0.98  err after 0.8409
+  [120/144] seed 29 ctx-orc+brake retention 2.10  err after 0.9646
+  [123/144] seed 30 ctx-oracle retention 8.21  err after 0.9603
   [129/144] seed 32 baseline   retention 0.52  err after 0.9446
-  [130/144] seed 32 cue        retention 0.44  err after 0.9559
+  [126/144] seed 31 ctx-same   retention -0.87  err after 1.0851
+  [124/144] seed 30 ctx-orc+brake retention -0.68  err after 0.9789
   [133/144] seed 33 baseline   retention 0.59  err after 0.9155
-  [131/144] seed 32 ctx        retention 0.58  err after 0.9404
-  [134/144] seed 33 cue        retention 0.70  err after 0.8965
-  [132/144] seed 32 cue+ctx    retention 0.17  err after 0.9967
-  [136/144] seed 33 cue+ctx    retention 0.38  err after 0.9318
+  [128/144] seed 31 ctx-orc+brake retention -10.69  err after 0.9860
+  [127/144] seed 31 ctx-oracle retention 2.15  err after 1.0031
+  [130/144] seed 32 ctx-same   retention 1.13  err after 1.0258
+  [132/144] seed 32 ctx-orc+brake retention -6.49  err after 0.9121
+  [131/144] seed 32 ctx-oracle retention 3.26  err after 0.9620
+  [134/144] seed 33 ctx-same   retention 0.09  err after 1.0556
   [137/144] seed 34 baseline   retention 0.32  err after 0.9883
-  [135/144] seed 33 ctx        retention 0.07  err after 0.9919
-  [138/144] seed 34 cue        retention 0.21  err after 1.0055
-  [139/144] seed 34 ctx        retention 0.31  err after 0.9332
-  [140/144] seed 34 cue+ctx    retention 0.36  err after 0.9219
-  [143/144] seed 35 ctx        retention 0.25  err after 0.9795
-  [144/144] seed 35 cue+ctx    retention -0.10  err after 1.0274
   [141/144] seed 35 baseline   retention -0.06  err after 0.9767
-  [142/144] seed 35 cue        retention 0.36  err after 0.9029
+  [136/144] seed 33 ctx-orc+brake retention 3.51  err after 0.8906
+  [135/144] seed 33 ctx-oracle retention 3.48  err after 0.9249
+  [140/144] seed 34 ctx-orc+brake retention 4.40  err after 0.9655
+  [138/144] seed 34 ctx-same   retention -7.87  err after 1.1139
+  [142/144] seed 35 ctx-same   retention 1.80  err after 1.0132
+  [139/144] seed 34 ctx-oracle retention 75.30  err after 0.9931
+  [144/144] seed 35 ctx-orc+brake retention 3.57  err after 0.9819
+  [143/144] seed 35 ctx-oracle retention 10.99  err after 0.9401
 experiment: ctxretain
   instrument        ctxretain   trial seed 000000000135e068   2000 trials
                     another probe is another trial sequence: its numbers
@@ -151,27 +151,55 @@ experiment: ctxretain
                     -- the caregiver says one word throughout. Does giving
                     them different CUES, and a context table to file them
                     under, stop the collision?
-  the design        2x2: cue on/off crossed with contexts on/off. Only
-                    `cue+ctx` should work; the other three say why.
+  the design        the STABILISATION half. Masse, Grant & Freedman: gating
+                    alone reads 61.4% across 100 tasks, gating plus synaptic
+                    stabilisation 95.4%. `meta_commit` is this creature's
+                    EWC, and it was measured on the magnitude question.
   the gate          vs `baseline`, PAIRED on seed, at 2 SE on BOTH retention
                     and err after. Retention alone is a ratio an arm can
                     inflate by simply learning the first lesson less well.
 
 
-  arm          sleeps   err taught    err after     retention     err vs B
-  baseline     5.1      0.8615        0.9629        0.30 +/- 0.05   0.7815
-  cue          5.2      0.8615        0.9529        0.34 +/- 0.09   0.7852
-  ctx          5.3      0.9138        0.9897        0.60 +/- 0.18   0.7585
-  cue+ctx      5.4      0.9138        0.9851        0.41 +/- 0.18   0.7515
+  arm          sleeps   err taught    err after     retention     err vs B  slot0 teach/gap   slot-A tilt teach->gap
+  baseline     5.1      0.8615        0.9629        0.30 +/- 0.05 0.7815     --               -- (no context table)
+  ctx-same     7.0      1.0344        1.0393        0.75 +/- 0.59 0.7340   1.00 / 1.00        -0.02342 -> -0.01513  (x0.65)
+  ctx-oracle   7.0      1.0344        0.9404        6.12 +/- 2.74 0.6304   1.00 / 0.00        -0.02342 -> -0.02342  (x1.00)
+  ctx-orc+brake 7.0      1.0391        0.9512        8.16 +/- 7.24 0.6314   1.00 / 0.00        -0.01969 -> -0.01969  (x1.00)
+
+  ARM LIVENESS vs `baseline` (seeds where the arm differs at all)
+    ctx-same           36/36
+    ctx-oracle         36/36
+    ctx-orc+brake      36/36
+
+  THE GATE -- `ctx-oracle` vs `ctx-same`, which is the index's
+  INFORMATION with the table's cost held fixed. Both arms carry the same
+  machinery; only one of them knows which lesson is being taught.
+  retention +5.367 +/- 2.698 (+1.99 SE)   err after +0.0989 +/- 0.0068 (+14.56 SE)
+  -> A PERFECT INDEX DOES NOT PROTECT IT. Gating is refused, and with
+     stabilisation already a measured null the standard account of
+     catastrophic interference is closed on this creature.
+
+  IS THE MEMORY GONE, OR JUST NOT SPOKEN?
+  lesson A's stored tilt in slot 0, taught -> after the gap.
+  SIGNED, so a negative share means lesson B wrote A's OPPOSITE
+  rather than wiping it -- a magnitude could not tell those apart.
+    ctx-oracle (gap writes slot 1)  -0.02342 -> -0.02342  = 1.00 +/- 0.06   sign flipped 0/36  unchanged 3/36
+    ctx-same   (gap writes slot 0)  -0.02342 -> -0.01513  = 0.65 +/- 0.06   sign flipped 1/36  unchanged 0/36
+  isolation   `ctx-oracle` spends 0.2% of the GAP still filed under slot 0,
+              so A's slot takes that share of B's writes. Mean |change| in the
+              stored tilt: oracle 0.0%, ctx-same 39.6%.
+  -> NEITHER LABEL. `ctx-same` keeps 0.65 +/- 0.06, which spans too much
+     to call survived, erased or reversed -- and the sign flipped on only
+     1 of 36 seeds. Report the ratio; do not move the threshold to reach
+     a verdict.
 
   PAIRED vs `baseline`, on the same creatures
   arm          retention gain               err-after improvement
-  cue          +0.043 +/- 0.081 (+0.5 SE)   +0.0100 +/- 0.0073 (+1.4 SE)
-  ctx          +0.303 +/- 0.190 (+1.6 SE)   -0.0268 +/- 0.0174 (-1.5 SE)
-  cue+ctx      +0.113 +/- 0.194 (+0.6 SE)   -0.0221 +/- 0.0156 (-1.4 SE)
+  ctx-same     +0.454 +/- 0.597 (+0.8 SE)   -0.0764 +/- 0.0111 (-6.9 SE)
+  ctx-oracle   +5.821 +/- 2.744 (+2.1 SE)   +0.0225 +/- 0.0106 (+2.1 SE)  <- BOTH
+  ctx-orc+brake +7.861 +/- 7.253 (+1.1 SE)   +0.0118 +/- 0.0087 (+1.4 SE)
 
-  CONTEXTS DO NOT RESCUE IT EITHER. Giving the two lessons different cues
-  and a table with a slot for each does not stop the second from wiping the
-  first at 2 SE. That closes the last mechanism this project already had
-  built for the problem, and catastrophic interference here is not a
-  filing failure.
+  AN ARM BEATS THE UNTREATED CONFLICT on both columns. Check `err taught`
+  and the retention denominator before believing the ratio: an arm that
+  barely learned the first lesson posts a huge retention and a worse
+  absolute error, and only the second of those means anything.
