@@ -6259,8 +6259,16 @@ bool run_ctxretain(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
         const Cell& co = cells[r * kCRArmCount + uint32_t(kOrc2)];
         const Cell& cs = cells[r * kCRArmCount + uint32_t(kSame2)];
         if (co.ok && co.row.tilt_a_teach != 0.0) {
-          t_o.push_back(co.row.tilt_a_teach);
-          g_o.push_back(co.row.tilt_a_gap);
+          // BEFORE-SUBTRACTED, to match the baseline block and behavioural
+          // retention. The 5.6M run reported a RAW gap/teach here (0.65) beside a
+          // before-subtracted 0.25 on baseline and I read them as the same kind of
+          // number -- they are not. On baseline the same correction takes 0.58 to
+          // 0.25, so the raw ratio overstates retention badly: `third` is a third
+          // of the way INTO teaching, not before it, so a raw ratio keeps the
+          // learning that had already happened by then in both numerator and
+          // denominator. Two ratios in one block must share a definition.
+          t_o.push_back(co.row.tilt_a_teach - co.row.tilt_a_before);
+          g_o.push_back(co.row.tilt_a_gap - co.row.tilt_a_before);
           ++n_o;
           if (co.row.tilt_a_gap * co.row.tilt_a_teach < 0.0) ++flip_o;
           if (co.row.tilt_a_gap == co.row.tilt_a_teach) ++same_o;
@@ -6271,8 +6279,8 @@ bool run_ctxretain(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
           if (co.row.slot0_gap >= 0.0) leak_o.push_back(co.row.slot0_gap);
         }
         if (cs.ok && cs.row.tilt_a_teach != 0.0) {
-          t_s.push_back(cs.row.tilt_a_teach);
-          g_s.push_back(cs.row.tilt_a_gap);
+          t_s.push_back(cs.row.tilt_a_teach - cs.row.tilt_a_before);
+          g_s.push_back(cs.row.tilt_a_gap - cs.row.tilt_a_before);
           ++n_s;
           if (cs.row.tilt_a_gap * cs.row.tilt_a_teach < 0.0) ++flip_s;
           if (cs.row.tilt_a_gap == cs.row.tilt_a_teach) ++same_s;
@@ -6293,7 +6301,10 @@ bool run_ctxretain(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
       se_o = mt_o != 0.0 ? se_o / std::fabs(mt_o) : 0.0;
       se_s = mt_s != 0.0 ? se_s / std::fabs(mt_s) : 0.0;
       std::printf("\n  IS THE MEMORY GONE, OR JUST NOT SPOKEN?\n"
-                  "  lesson A's stored tilt in slot 0, taught -> after the gap.\n"
+                  "  lesson A's stored tilt in slot 0, taught -> after the gap, as a\n"
+                  "  fraction of what was GAINED (pre-teaching tilt subtracted, so this\n"
+                  "  is the same statistic as behavioural retention and as the baseline\n"
+                  "  block below -- a RAW gap/teach ratio overstates it badly).\n"
                   "  SIGNED, so a negative share means lesson B wrote A's OPPOSITE\n"
                   "  rather than wiping it -- a magnitude could not tell those apart.\n"
                   "    ctx-oracle (gap writes slot 1)  %+.5f -> %+.5f  = %.2f +/- %.2f"
