@@ -4042,10 +4042,23 @@ struct SlotTilt {
 inline SlotTilt ctx_slot_tilt(const aibaby::Network& net, const aibaby::ModuleState& vms,
                               uint32_t slot) {
   SlotTilt o;
-  if (vms.count == 0 || net.context_slots() <= slot) return o;
+  if (vms.count == 0) return o;
+  // NO CONTEXT TABLE MEANS THE SHARED BIAS, not "no reading". The 5.6M run could
+  // not complete its own inference because the only arms with a tilt column were
+  // the ones carrying a context table, and those learn far less (err taught 1.034
+  // vs the baseline's 0.862) -- so their behaviour could not be read beside their
+  // store. `baseline` writes `bias_[i]` instead of `bias_ctx_[i][c]`, and it is
+  // the SAME parameter doing the same job; reading it here puts the store and the
+  // behaviour on ONE comparably-learned creature and removes the confound entirely.
+  const bool shared = net.context_slots() < 2;
+  if (!shared && net.context_slots() <= slot) return o;
+  const auto param = [&](uint32_t n) {
+    return shared ? double(net.bias(n))
+                  : double(net.context_bias(n, slot)) + double(net.banked_bias(n, slot));
+  };
   double msum = 0.0;
   for (uint32_t n = vms.begin; n < vms.begin + vms.count; ++n) {
-    msum += std::fabs(double(net.context_bias(n, slot)) + double(net.banked_bias(n, slot)));
+    msum += std::fabs(param(n));
   }
   o.mag = msum / vms.count;
   const uint32_t g_beg = vms.begin + aibaby::slice_begin(vms.count, aibaby::kVocalGroups, 2);
@@ -4054,7 +4067,7 @@ inline SlotTilt ctx_slot_tilt(const aibaby::Network& net, const aibaby::ModuleSt
   if (gn < 2) return o;
   double dot = 0.0, unorm = 0.0;
   for (uint32_t n = g_beg; n < g_end; ++n) {
-    const double b = double(net.context_bias(n, slot)) + double(net.banked_bias(n, slot));
+    const double b = param(n);
     const double u = (double(n - g_beg) + 0.5) / double(gn) - 0.5;
     dot += b * u;
     unorm += u * u;
@@ -5496,7 +5509,7 @@ struct RTRow {
   //                staying in its slot, and protection (EWC, banking) is the route.
   // These are cheap -- two reads of a table already in memory -- and they decide
   // which half of the memory chapter is worth building.
-  double tilt_a_teach = 0.0, tilt_a_gap = 0.0;
+  double tilt_a_before = 0.0, tilt_a_teach = 0.0, tilt_a_gap = 0.0;
   double tilt_mag_teach = 0.0, tilt_mag_gap = 0.0;
 };
 
@@ -5664,12 +5677,21 @@ RTRow run_retain_arm(const std::vector<uint8_t>& blob, uint64_t ticks,
       // WHAT IS STILL STORED, sampled at the two phase boundaries. Reading it here
       // rather than at the end is the whole point: after the gap the tables have
       // already been through lesson B, and the comparison needs the BEFORE.
-      if (trial == n_teach || trial == n_teach + n_gap) {
+      if (trial == third || trial == n_teach || trial == n_teach + n_gap) {
         const int32_t vm = s.dna.module_with_role(aibaby::ModuleRole::kVocal);
         if (vm >= 0) {
           const SlotTilt st =
               ctx_slot_tilt(s.brain.network(), s.brain.network().module(uint32_t(vm)), 0u);
-          if (trial == n_teach) {
+          if (trial == third) {
+            // THE PRE-TEACHING TILT. Without it the store ratio is gap/teach, which
+            // is only a retention-of-GAIN if the tilt started at zero -- and that is
+            // an assumption, not a measurement. Behavioural retention is
+            // (before - after)/(before - taught), a fraction of what was GAINED, so
+            // the store has to be expressed the same way or the two are not
+            // comparable and the whole storage-vs-expression comparison is unitless
+            // hand-waving. Sampled at the same boundary `err_before` is.
+            row.tilt_a_before = st.align;
+          } else if (trial == n_teach) {
             row.tilt_a_teach = st.align;
             row.tilt_mag_teach = st.mag;
           } else {
@@ -6368,6 +6390,79 @@ bool run_ctxretain(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
                     "     wide enough to contain more than one mechanism -- sign flipped on\n"
                     "     %u of %u seeds. Report the ratio; do not move the threshold to reach\n"
                     "     a verdict.\n", ks, se_s, flip_s, n_s);
+      }
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // THE INFERENCE THE 5.6M RUN COULD NOT COMPLETE. That run measured the store at
+  // 0.65 +/- 0.06 and could not say whether expression had fallen further, because
+  // the only arms with a tilt column carried a context table and learned far less
+  // (err taught 1.034 vs the baseline's 0.862). Comparing their store to their
+  // behaviour compared two different creatures.
+  //
+  // `baseline` fixes it by being one creature: it learns properly, its retention is
+  // trustworthy, and now that the tilt falls back to the SHARED bias it has a store
+  // reading too. Both are expressed as a fraction of what was GAINED, so they are
+  // the same kind of number:
+  //     store kept     = (tilt_gap - tilt_before) / (tilt_teach - tilt_before)
+  //     behaviour kept = (err_before - err_after) / (err_before - err_taught)
+  // If the store is kept and the behaviour is not, the memory survives unspoken.
+  {
+    const int kBs = arm_index("baseline");
+    if (kBs >= 0) {
+      std::vector<double> sk, bk;
+      uint32_t thin = 0;
+      for (uint32_t r = 0; r < kReps; ++r) {
+        const Cell& c = cells[r * kCRArmCount + uint32_t(kBs)];
+        if (!c.ok) continue;
+        const double dt = c.row.tilt_a_teach - c.row.tilt_a_before;
+        const double db = c.row.err_before - c.row.err_taught;
+        // BOTH DENOMINATORS ARE "HOW MUCH WAS LEARNED" AND BOTH CAN COLLAPSE. This
+        // is the retention-denominator trap in two places at once, so a seed that
+        // barely learned is dropped from BOTH rather than allowed to post a huge
+        // ratio in either. The count of dropped seeds is printed, because a
+        // statistic computed on a third of the arm is a different statistic.
+        if (std::fabs(dt) < 1e-4 || std::fabs(db) < 0.02) { ++thin; continue; }
+        sk.push_back((c.row.tilt_a_gap - c.row.tilt_a_before) / dt);
+        bk.push_back((c.row.err_before - c.row.err_after) / db);
+      }
+      if (sk.size() < 8) {
+        std::printf("\n  STORE vs BEHAVIOUR on `baseline`: only %zu of %u seeds learned\n"
+                    "  enough for both ratios to mean anything (%u dropped). NO READING.\n",
+                    sk.size(), kReps, thin);
+      } else {
+        double se_sk = 0.0, se_bk = 0.0;
+        const double m_sk = ctx_mean_se(sk, &se_sk), m_bk = ctx_mean_se(bk, &se_bk);
+        // PAIRED, because both come from the same creature on the same seed.
+        std::vector<double> d;
+        for (size_t q = 0; q < sk.size(); ++q) d.push_back(sk[q] - bk[q]);
+        double se_d = 0.0;
+        const double m_d = ctx_mean_se(d, &se_d);
+        std::printf("\n  STORE vs BEHAVIOUR, both on `baseline`, both as a fraction of what\n"
+                    "  was GAINED, paired on seed (%zu seeds, %u dropped as barely-learned)\n"
+                    "    store kept      %+.2f +/- %.2f\n"
+                    "    behaviour kept  %+.2f +/- %.2f\n"
+                    "    difference      %+.2f +/- %.2f  (%+.1f SE)\n",
+                    sk.size(), thin, m_sk, se_sk, m_bk, se_bk, m_d, se_d,
+                    se_d > 0.0 ? m_d / se_d : 0.0);
+        if (se_d > 0.0 && m_d > 2.0 * se_d) {
+          std::printf("  -> STORED, NOT SPOKEN. The parameter outlasts the behaviour it drives,\n"
+                      "     on ONE creature with no cross-arm confound. Consolidation is the\n"
+                      "     wrong chapter: what the conflict destroys is not the memory but the\n"
+                      "     creature's ability to express it. The named suspect stands --\n"
+                      "     `threshold_` and `rate_ema_` are per NEURON while the bias that has\n"
+                      "     to drive through them is per lesson, so lesson B re-homeostats the\n"
+                      "     very neurons lesson A's store depends on.\n");
+        } else if (se_d > 0.0 && m_d < -2.0 * se_d) {
+          std::printf("  -> THE BEHAVIOUR OUTLASTS THE STORE, which refuses the expression\n"
+                      "     account outright: something other than this parameter is carrying\n"
+                      "     the retained behaviour, and the tilt is not the memory.\n");
+        } else {
+          std::printf("  -> NO SEPARATION at 2 SE. Store and behaviour decay together, which\n"
+                      "     is what a pure OVERWRITE looks like: protecting the write is then\n"
+                      "     the route, and there is no hidden memory to go and retrieve.\n");
+        }
       }
     }
   }
