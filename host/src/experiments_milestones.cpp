@@ -5560,6 +5560,38 @@ struct RTConfig {
   // it on the MAGNITUDE question and found a decisive null, which is not what an
   // EWC-family mechanism is for. 0 is off and bit-identical.
   float meta_commit = 0.0f;
+  // NEW FIELDS GO AT THE END. The arm tables below use POSITIONAL aggregate
+  // initialisers, so field order is API: inserting this mid-struct silently
+  // shifted meta_commit's 1.0f into it. The compiler caught it here only
+  // because the types differ -- between two uint32_t fields it would have
+  // compiled clean and run the wrong arm.
+  //
+  // THE WRITE-SEPARATION LADDER (`maskretain`, 2026-09-13). The store-vs-behaviour
+  // run said the conflict is a PURE OVERWRITE -- store 0.25 and behaviour 0.30
+  // decay together -- so the damage is in the WRITE and there is no hidden memory
+  // to retrieve. Both protect-the-write mechanisms are already refused
+  // (`meta_commit` a clean null, `bankprobe` refused), which leaves SEPARATING the
+  // write, priced by the credit oracle at ~1.0 with a per-neuron reward mask.
+  //
+  // The question this ladder answers is what that mask has to KNOW:
+  //   0 off      shipped, the 0.22 wipe.
+  //   1 oracle   the mask half is keyed on the TRUE lesson -- the ~1.0 bound, and
+  //              an oracle the creature does not have.
+  //   2 derived  keyed on the creature's OWN context index (`active_context()`),
+  //              which it derives from the ear's rate EMA. This is the buildable
+  //              version, and the whole point of the run.
+  //   3 random   the same machinery with a per-trial coin flip: the mask's COST
+  //              with none of its information. Without this arm, "masking helps"
+  //              cannot be told from "masking removes plasticity and the arm
+  //              simply learned less", which is the trap `credit` documented.
+  //
+  // THE SPLIT IS WITHIN F1, not across the larynx, and `credit` paid for that
+  // lesson: halving `vocal` by neuron index halves it ACROSS the nine articulator
+  // groups, so one lesson gets the bandwidths and the other gets f0 -- which is
+  // `capacity`'s ORTHOGONAL case, where two lessons already coexist at 0.84. The
+  // collision this chapter is about needs both lessons pulling the SAME centroid
+  // to different ends, so the two halves of group 2 are the two masks.
+  uint32_t mask_mode = 0;
 };
 
 // One arm, one creature, one life: teach, intervene, re-measure.
@@ -5640,6 +5672,13 @@ RTRow run_retain_arm(const std::vector<uint8_t>& blob, uint64_t ticks,
   const Word& second = kRTSecondWord;
   aibaby::Rng rng;
   rng.seed(s.dna.header().seed ^ 0x2E7Au);
+  // The mask's own stream and the vocal module index, hoisted so the trial loop
+  // does not look either up per tick. A separate stream matters: drawing the
+  // random arm's coin from `rng` would shift every draw after it, making the
+  // control a different PROTOCOL rather than a different mask.
+  aibaby::Rng mask_rng;
+  mask_rng.seed(s.dna.header().seed ^ 0x4D5Bu);
+  const int32_t vmod_idx = s.dna.module_with_role(aibaby::ModuleRole::kVocal);
 
   const uint32_t n_teach = uint32_t(teach_ticks / kRTTrial);
   const uint32_t n_gap = uint32_t(gap_ticks / kRTTrial);
@@ -5741,6 +5780,27 @@ RTRow run_retain_arm(const std::vector<uint8_t>& blob, uint64_t ticks,
         for (uint32_t n = lo2; n < hi2; ++n) {
           s.brain.network().inject(n, aibaby::Scalar(cfg.ctx_oracle_gain));
         }
+      }
+      // THE WRITE MASK, re-applied every tick because `active_context()` is an
+      // argmax refreshed each tick and the derived arm has to follow it rather
+      // than a value latched once per trial.
+      if (cfg.mask_mode != 0 && vmod_idx >= 0) {
+        aibaby::Network& mnet = s.brain.network();
+        const aibaby::ModuleState& vm = mnet.module(uint32_t(vmod_idx));
+        const uint32_t g_lo = aibaby::slice_begin(vm.count, aibaby::kVocalGroups, 2);
+        const uint32_t g_hi = aibaby::slice_begin(vm.count, aibaby::kVocalGroups, 3);
+        const uint32_t mid = g_lo + (g_hi - g_lo) / 2;
+        bool upper = false;
+        switch (cfg.mask_mode) {
+          case 1: upper = relearning; break;                          // oracle
+          case 2: upper = mnet.active_context() != 0u; break;         // derived
+          // Its OWN stream. Drawing this from the protocol's rng would move every
+          // draw after it and make the control a different protocol rather than a
+          // different mask -- the mistake `credit` records in its own comment.
+          default: upper = (mask_rng.next() & 1u) != 0u; break;       // random
+        }
+        if (upper) mnet.set_reward_mask(vm.begin + mid, vm.begin + g_hi);
+        else mnet.set_reward_mask(vm.begin + g_lo, vm.begin + mid);
       }
       const Word& say = relearning ? heard2 : heard;
       caregiver.render(sounding ? say.f0 : 0.0f, say.f1, say.f2,
@@ -5968,6 +6028,227 @@ const CRArm kCRArms[] = {
     {"ctx-orc+brake",{"ctx-orc+brake",false, true, true, false, false, 0, 0, -1, 2, 0, -1, 0.10, true,  1.0f}},
 };
 constexpr uint32_t kCRArmCount = sizeof(kCRArms) / sizeof(kCRArms[0]);
+
+// ---------------------------------------------------------------------------
+// `maskretain` -- what does the write mask have to KNOW?
+//
+// WHY THIS RUN EXISTS. The store-vs-behaviour run settled that the conflicting
+// lesson is a PURE OVERWRITE: store kept 0.25 +/- 0.05 and behaviour kept
+// 0.30 +/- 0.05 decay together at -1.0 SE on 36 seeds with none dropped. So
+// there is no surviving memory to retrieve, and the damage is in the WRITE.
+// Both protect-the-write routes are already refused -- `meta_commit`
+// stabilisation is a clean null, `bankprobe` refused consolidation -- which
+// leaves SEPARATING the write. `credit` prices that at ~1.0 with a per-neuron
+// reward mask, but only with an ORACLE telling the mask which lesson is live.
+//
+// The one question worth compute is therefore what the mask needs to know, and
+// the ladder answers it by construction:
+//
+//   off      shipped. The wipe.
+//   oracle   mask keyed on the TRUE lesson. The ~1.0 bound, not buildable.
+//   derived  mask keyed on the creature's OWN context index, which it already
+//            derives from the ear's rate EMA. THIS IS THE BUILDABLE ONE.
+//   random   the same machinery, per-trial coin flip. The mask's COST with none
+//            of its information.
+//
+// THE REFUSALS, WRITTEN BEFORE THE RUN:
+//   * If `oracle` does not beat `random` at 2 SE, the mask idea does not transfer
+//     from `credit`'s protocol to this one and the whole direction is refused
+//     here -- no amount of better indexing rescues a mechanism whose own oracle
+//     does nothing.
+//   * If `oracle` beats `random` but `derived` does not, the mask needs
+//     information the creature does not have, and the next question is the INDEX
+//     rather than the mask.
+//   * `random` is not optional. Masking removes plasticity, so a masked arm can
+//     look better simply by learning less -- `credit` documents this trap, and
+//     `err taught` is printed beside every result so it cannot hide.
+//
+// SCORED ON err-after, NOT retention. The 5.6M run landed its headline gate on
+// retention at 1.99 SE against a 2.0 bar, and retention's denominator
+// (before - taught) collapses when an arm barely learned: the oracle arms there
+// printed 6.12 +/- 2.74 and 8.16 +/- 7.24, which are divisions by nearly nothing.
+// err-after is the column that means what it says.
+struct MRArm { const char* name; RTConfig cfg; };
+const MRArm kMRArms[] = {
+    // name        no_fat teach relearn freeze norep credit eps 2nd slots src orc gain split commit mask
+    {"off",      {"off",      false, true, true, false, false, 0, 0, -1, 0, 0, -1, 0.0, true, 0.0f, 0}},
+    {"oracle",   {"oracle",   false, true, true, false, false, 0, 0, -1, 0, 0, -1, 0.0, true, 0.0f, 1}},
+    {"derived",  {"derived",  false, true, true, false, false, 0, 0, -1, 2, 4, -1, 0.0, true, 0.0f, 2}},
+    {"random",   {"random",   false, true, true, false, false, 0, 0, -1, 0, 0, -1, 0.0, true, 0.0f, 3}},
+};
+constexpr uint32_t kMRArmCount = sizeof(kMRArms) / sizeof(kMRArms[0]);
+
+bool run_maskretain(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  aibaby::Dna dna0;
+  if (dna0.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) {
+    std::printf("  setup failed: the genome does not load\n");
+    return false;
+  }
+  Regime regime;
+  regime.praise = kPraiseValue;
+  regime.scold = kScoldValue;
+  // The `derived` arm reads the creature's OWN context index, which needs the
+  // kContext module. Refusing here rather than silently running it with no index
+  // is the point: an arm whose treatment cannot act is the failure this protocol
+  // has shipped three times.
+  if (dna0.module_with_role(aibaby::ModuleRole::kContext) < 0) {
+    std::printf("  this genome has no kContext module, and the `derived` arm is the\n"
+                "  whole experiment. Build one with NO output weight:\n\n"
+                "    python3 tools/genome_add_context.py dna/default.toml ctx.toml \\\n"
+                "        vocal out_w=0\n"
+                "    ./build/aibaby --dna ctx.toml --experiment maskretain\n");
+    return false;
+  }
+  constexpr uint32_t kReps = 36;
+  instrument("maskretain", dna0.header().seed ^ 0x3B1Du, ticks / kRTTrial, "trials");
+  std::printf("  question          the conflict is a PURE OVERWRITE (store 0.25, behaviour\n"
+              "                    0.30, -1.0 SE), so the damage is in the WRITE. `credit`\n"
+              "                    removes interference with a per-neuron mask -- but only\n"
+              "                    with an oracle. What does the mask have to KNOW?\n");
+  std::printf("  the ladder        off / oracle (true lesson) / derived (the creature's own\n"
+              "                    ear-EMA context index) / random (the mask's cost, none of\n"
+              "                    its information).\n");
+  std::printf("  the gate          err AFTER, paired on seed, at 2 SE. NOT retention: its\n"
+              "                    denominator collapses and the last run's headline landed\n"
+              "                    on 1.99 vs a 2.0 bar because of it.\n");
+  std::printf("  refusals up front oracle <= random refuses the direction outright;\n"
+              "                    oracle > random but derived <= random makes it an INDEX\n"
+              "                    problem, not a mask problem.\n\n");
+
+  struct Cell { bool ok = false; RTRow row; };
+  const uint32_t njobs = kReps * kMRArmCount;
+  const std::vector<Cell> cells = parallel_reps<Cell>(njobs, [&](uint32_t i) {
+    Cell cell;
+    const uint32_t r = i / kMRArmCount, a = i % kMRArmCount;
+    std::vector<uint8_t> variant = blob;
+    const uint64_t seed = dna0.header().seed + r * 7919ull;
+    std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+    Timbre local_ruler;
+    std::string local_error;
+    if (!local_ruler.configure(dna0.header().audio, local_error)) return cell;
+    bool ok = false;
+    cell.row = run_retain_arm(variant, ticks, kMRArms[a].cfg, local_ruler, regime, &ok);
+    cell.ok = ok;
+    if (ok) {
+      parallel_note("  [%u/%u] seed %u %-8s err after %.4f  taught %.4f\n", i + 1, njobs,
+                    r, kMRArms[a].name, cell.row.err_after, cell.row.err_taught);
+    }
+    return cell;
+  });
+
+  std::printf("\n  %-10s %-14s %-14s %-13s %s\n", "arm", "err taught", "err after",
+              "retention", "store kept");
+  for (uint32_t a = 0; a < kMRArmCount; ++a) {
+    std::vector<double> tau, aft, ret, sk;
+    for (uint32_t r = 0; r < kReps; ++r) {
+      const Cell& c = cells[r * kMRArmCount + a];
+      if (!c.ok) continue;
+      tau.push_back(c.row.err_taught);
+      aft.push_back(c.row.err_after);
+      ret.push_back(c.row.retention);
+      const double dt = c.row.tilt_a_teach - c.row.tilt_a_before;
+      if (std::fabs(dt) >= 1e-4) sk.push_back((c.row.tilt_a_gap - c.row.tilt_a_before) / dt);
+    }
+    if (tau.size() < 3) {
+      std::printf("\n  maskretain INCONCLUSIVE -- arm `%s` produced %zu creatures.\n",
+                  kMRArms[a].name, tau.size());
+      return false;
+    }
+    // EVALUATED INTO LOCALS FIRST. The first version passed ctx_mean_se(aft,
+    // &se_a2) and se_a2 as two arguments of one printf, and C++ does not sequence
+    // argument evaluation: se_a2 was read before the call that writes it, so every
+    // error bar in this table printed 0.0000. It looked like a suspiciously tidy
+    // column rather than undefined behaviour, which is exactly how this class of
+    // bug survives a read-through.
+    double s2 = 0.0, se_a2 = 0.0;
+    const double m_tau = ctx_mean_se(tau, &s2);
+    const double m_aft = ctx_mean_se(aft, &se_a2);
+    const double m_ret = ctx_mean_se(ret, &s2);
+    const double m_sk = sk.size() >= 8 ? ctx_mean_se(sk, &s2) : 0.0;
+    std::printf("  %-10s %-14.4f %.4f +/- %-7.4f %-13.2f", kMRArms[a].name, m_tau,
+                m_aft, se_a2, m_ret);
+    if (sk.size() >= 8) std::printf("%.2f\n", m_sk);
+    else std::printf("--\n");
+  }
+
+  // LIVENESS FIRST. Three generations of this protocol shipped an arm whose
+  // treatment silently did not run, and each time the pooled means looked clean.
+  {
+    ArmLiveness live("maskretain");
+    for (uint32_t r = 0; r < kReps; ++r) {
+      for (uint32_t a = 0; a < kMRArmCount; ++a) {
+        const Cell& c = cells[r * kMRArmCount + a];
+        if (c.ok) live.observe(kMRArms[a].name, r, c.row.err_after);
+      }
+    }
+    if (!live.report("off")) return false;
+  }
+
+  const auto idx = [](const char* w) {
+    for (uint32_t i = 0; i < kMRArmCount; ++i) {
+      if (std::strcmp(kMRArms[i].name, w) == 0) return int(i);
+    }
+    return -1;
+  };
+  const int a_off = idx("off"), a_orc = idx("oracle");
+  const int a_der = idx("derived"), a_rnd = idx("random");
+  if (a_off < 0 || a_orc < 0 || a_der < 0 || a_rnd < 0) {
+    std::printf("\n  maskretain cannot summarise: an arm it names is missing.\n");
+    return false;
+  }
+  // PAIRED, because every arm shares a creature with every other at each seed.
+  // An independent-samples SE moved a verdict across the bar on `poolbeta`.
+  const auto paired_after = [&](int x, int y, double* se_out) {
+    std::vector<double> d;
+    for (uint32_t r = 0; r < kReps; ++r) {
+      const Cell& cx = cells[r * kMRArmCount + uint32_t(x)];
+      const Cell& cy = cells[r * kMRArmCount + uint32_t(y)];
+      if (cx.ok && cy.ok) d.push_back(cy.row.err_after - cx.row.err_after);
+    }
+    return ctx_mean_se(d, se_out);
+  };
+  double se_or = 0.0, se_dr = 0.0;
+  const double m_or = paired_after(a_orc, a_rnd, &se_or);   // oracle vs random
+  const double m_dr = paired_after(a_der, a_rnd, &se_dr);   // derived vs random
+  std::printf("\n  ERR-AFTER IMPROVEMENT over `random` (the mask's cost, no information),\n"
+              "  paired on seed. Positive means the arm ends CLOSER to lesson A.\n"
+              "    oracle   %+.4f +/- %.4f  (%+.1f SE)\n"
+              "    derived  %+.4f +/- %.4f  (%+.1f SE)\n",
+              m_or, se_or, se_or > 0.0 ? m_or / se_or : 0.0,
+              m_dr, se_dr, se_dr > 0.0 ? m_dr / se_dr : 0.0);
+
+  const bool oracle_works = se_or > 0.0 && m_or > 2.0 * se_or;
+  const bool derived_works = se_dr > 0.0 && m_dr > 2.0 * se_dr;
+  if (!oracle_works) {
+    std::printf("\n  THE MASK DOES NOT TRANSFER. Even keyed on the TRUE lesson it does not\n"
+                "  beat its own cost-matched control at 2 SE, so `credit`'s ~1.0 is a fact\n"
+                "  about that protocol and not about this one. Write separation is refused\n"
+                "  on the retention conflict, and with protection already refused\n"
+                "  (`meta_commit` null, `bankprobe` refused) the overwrite has no remaining\n"
+                "  named route -- which is a harder and more useful place to stand than a\n"
+                "  fifteenth knob.\n");
+    return false;
+  }
+  if (!derived_works) {
+    std::printf("\n  IT IS AN INDEX PROBLEM, NOT A MASK PROBLEM. The oracle mask works\n"
+                "  (%+.1f SE) and the creature's own index cannot drive it (%+.1f SE). So\n"
+                "  separating the write is the right route and the creature cannot yet say\n"
+                "  WHICH lesson it is in well enough to steer it. That moves the work to the\n"
+                "  index -- where `ctxsrc` already found the live limit is PERSISTENCE: the\n"
+                "  word reads 1.000 while it plays and 0.533, chance, when reward lands.\n",
+                m_or / se_or, se_dr > 0.0 ? m_dr / se_dr : 0.0);
+    return false;
+  }
+  std::printf("\n  THE CREATURE CAN STEER ITS OWN WRITE MASK. `derived` beats the\n"
+              "  cost-matched control at %+.1f SE, recovering %.0f%% of the oracle's\n"
+              "  improvement with an index it derives itself. That is the first mechanism\n"
+              "  to touch the conflicting-lesson wipe from the WRITE side.\n"
+              "  CHECK `err taught` BEFORE BELIEVING IT: a mask removes plasticity, and an\n"
+              "  arm that learned less can post a better err-after for the wrong reason.\n",
+              m_dr / se_dr, m_or != 0.0 ? 100.0 * m_dr / m_or : 0.0);
+  return true;
+}
 
 bool run_ctxretain(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
   (void)verbose;

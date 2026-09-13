@@ -242,6 +242,15 @@ const Spec kSpecs[] = {
      "  it) and replay actually reinforcing something (DNA v55 replay_credit).\n"
      "  Gates on retention AND err-after paired, because retention is a ratio an\n"
      "  arm can inflate by simply learning less"},
+    {"maskretain", 5600000, Expect::kOpen, Tier::kLong,
+     "the conflict is a PURE OVERWRITE -- store 0.25 and behaviour 0.30 decay\n"
+     "  together at -1.0 SE -- so there is no hidden memory and the damage is in\n"
+     "  the WRITE. Protection is already refused (meta_commit null, bankprobe\n"
+     "  refused), which leaves SEPARATING the write, priced by `credit` at ~1.0\n"
+     "  with an oracle mask. This asks what the mask must KNOW: off / oracle (true\n"
+     "  lesson) / derived (the creature's own ear-EMA index) / random (the mask's\n"
+     "  cost, none of its information). Scored on err-after, not retention, whose\n"
+     "  denominator collapses. 36 seeds"},
     {"ctxretain", 5600000, Expect::kOpen, Tier::kLong,
      "derived: retain's protocol, which distinguishes its two lessons only by\n"
      "  WHEN they happen -- the caregiver says one word throughout, so nothing in\n"
@@ -545,6 +554,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "ippool") ok = run_ippool(dna_blob, ticks, verbose);
   else if (name == "interleave") ok = run_interleave(dna_blob, ticks, verbose);
   else if (name == "ctxretain") ok = run_ctxretain(dna_blob, ticks, verbose);
+  else if (name == "maskretain") ok = run_maskretain(dna_blob, ticks, verbose);
   else if (name == "partprobe") ok = run_partprobe(dna_blob, ticks, verbose);
   else if (name == "pgprobe") ok = run_pgprobe(dna_blob, ticks, verbose);
   else if (name == "g2cond") ok = run_g2cond(dna_blob, ticks, verbose);
