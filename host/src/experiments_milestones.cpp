@@ -5827,11 +5827,21 @@ RTRow run_retain_arm(const std::vector<uint8_t>& blob, uint64_t ticks,
           // during teaching because measuring its COST on the first lesson is the
           // whole point -- but it is off in the gap so nothing else confounds it.
           if (!relearning) {
+            // BLOCK the rest of the F1 group, rather than ALLOW a slice of it.
+            // set_reward_mask allows its range and freezes the entire rest of the
+            // network -- all nine articulator groups and every other module -- so
+            // the first cost curve measured that global freeze rather than the
+            // width. It came out FLAT at ~0.20 across a 62%->38% change in
+            // reachable range, with every arm ending WORSE than err_before, which
+            // is what a global freeze looks like and not what a range cap looks
+            // like. set_reward_block confines within the group and leaves the
+            // other eight alone, which is what "confine this lesson" meant.
             const uint32_t w = uint32_t(double(g_hi - g_lo) * double(cfg.mask_width));
             const uint32_t hi_w = g_lo + (w < 2u ? 2u : w);
-            mnet.set_reward_mask(vm.begin + g_lo, vm.begin + hi_w);
+            if (hi_w < g_hi) mnet.set_reward_block(vm.begin + hi_w, vm.begin + g_hi);
+            else mnet.clear_reward_block();
           } else {
-            mnet.clear_reward_mask();
+            mnet.clear_reward_block();
           }
         } else if (upper) {
           mnet.set_reward_mask(vm.begin + mid, vm.begin + g_hi);
@@ -6296,6 +6306,44 @@ bool run_maskretain(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
     std::printf("  %-8s %-10.0f%% %+.4f +/- %-12.4f %.0f%%\n", kMRArms[a].name,
                 100.0 * reach, d, se, 100.0 * share);
     if (w >= 0.70 && share > 0.5) cliff_before_half = true;
+  }
+  // TWO SHAPE CHECKS THAT WOULD HAVE CAUGHT THE FIRST COST CURVE, which measured a
+  // global plasticity freeze and reported it as a range cap.
+  //
+  //   FLAT means GLOBAL. If confining the lesson to 38% of the range costs barely
+  //   more than confining it to 62%, the width is not the dominant term and
+  //   something width-independent is doing the damage. The first curve read
+  //   0.1940 / 0.2020 / 0.2040 -- a 5% spread across a 24-point change in
+  //   reachable range -- and that is the signature, not a finding.
+  //
+  //   WORSE THAN UNTAUGHT is not a range cap either. A lesson that cannot reach
+  //   its target should stall near err_before, not end BELOW it. The first curve
+  //   put every arm past 1.0152 against an err_before of exactly that.
+  {
+    double lo_cost = 1e9, hi_cost = -1e9, worst = -1e9;
+    for (uint32_t a = 0; a < kMRArmCount; ++a) {
+      if (int(a) == a_full) continue;
+      double se = 0.0;
+      const double d = paired_taught(int(a), &se);
+      lo_cost = std::min(lo_cost, d);
+      hi_cost = std::max(hi_cost, d);
+      worst = std::max(worst, m_bt + d);
+    }
+    const double spread = lo_cost > 0.0 ? (hi_cost - lo_cost) / lo_cost : 0.0;
+    std::printf("\n  SHAPE CHECKS\n"
+                "    cost spread across the widths  %.0f%%   (flat means the damage is not\n"
+                "                                          about width)\n"
+                "    worst arm's err taught         %.4f  vs err_before %.4f\n",
+                100.0 * spread, worst, m_bb);
+    if (spread < 0.15 && worst > m_bb) {
+      std::printf("\n  REFUSED -- THE MASK IS ACTING GLOBALLY, NOT BY WIDTH. The cost barely\n"
+                  "  moves across the widths and every arm ends worse than it started, which\n"
+                  "  is a plasticity freeze rather than a range cap. Check that the mask\n"
+                  "  confines WITHIN the F1 group and does not freeze the rest of the\n"
+                  "  network: set_reward_mask ALLOWS a range and blocks everything else,\n"
+                  "  which is the opposite of confinement. Use set_reward_block.\n");
+      return false;
+    }
   }
   if (cliff_before_half) {
     std::printf("\n  THE CLIFF IS ABOVE THREE QUARTERS, SO WRITE SEPARATION IS REFUSED ON\n"

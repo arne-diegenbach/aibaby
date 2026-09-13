@@ -113,6 +113,23 @@ class Network {
   }
   void clear_reward_mask() { reward_mask_ = false; }
 
+  // THE COMPLEMENT OF set_reward_mask, and the distinction is not cosmetic.
+  // set_reward_mask ALLOWS a range and blocks everything else in the whole
+  // network -- every module, every group. That is right for "hand the creature
+  // perfect credit assignment", and wrong for "confine one lesson to part of one
+  // articulator group": masking a slice of F1 there silently blocks the other
+  // eight groups too, which cost a 2.4h run whose cost curve came out FLAT at
+  // ~0.20 across a 62%->38% change in reachable range, because the width was
+  // never the dominant term.
+  //
+  // This BLOCKS a range and allows everything else, which is what confinement
+  // actually means. Experiment-only, no genome field, off by default -- the
+  // pinned hash does not move.
+  void set_reward_block(uint32_t lo, uint32_t hi) {
+    reward_block_ = true; rb_lo_ = lo; rb_hi_ = hi;
+  }
+  void clear_reward_block() { reward_block_ = false; }
+
   // --- The bias oracle (experiment only, no genome field) -------------------
   //
   // A graded, zero-mean excitability offset across a range of neurons, added to
@@ -690,6 +707,8 @@ class Network {
   Scalar meta_ratio_ = kZero;
 
   bool reward_mask_ = false;   // see set_reward_mask: experiment oracle, off by default
+  bool reward_block_ = false;  // see set_reward_block: the complement, also off by default
+  uint32_t rb_lo_ = 0, rb_hi_ = 0;
   uint32_t rm_lo_ = 0, rm_hi_ = 0;
   // see set_bias_oracle. `bias_oracle_n_ == 0` is the shipped creature and the
   // tick loop skips the whole thing, so this costs one compare per neuron and

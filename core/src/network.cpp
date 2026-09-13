@@ -2181,6 +2181,10 @@ void Network::apply_reward_impl(const Scalar* per_module, bool any) {
         const uint32_t i = ms.begin + k;
         if (dead_[i]) continue;
         if (reward_mask_ && (i < rm_lo_ || i >= rm_hi_)) continue;
+        // The complement: block INSIDE the range, allow outside. See
+        // set_reward_block -- confining a lesson to part of one articulator group
+        // must not silently freeze the other eight.
+        if (reward_block_ && i >= rb_lo_ && i < rb_hi_) continue;
         const Scalar u = step * perturb_[i];
         Scalar gate_meta = kOne;
         if (meta_alpha_ > kZero && meta_m1_ && per_module[m] != kZero) {
@@ -2384,9 +2388,11 @@ void Network::apply_reward_impl(const Scalar* per_module, bool any) {
           }
         }
         const uint32_t tgt_n = syn_target_[syn];
-        const Scalar r_syn = (reward_mask_ && (tgt_n < rm_lo_ || tgt_n >= rm_hi_))
-                                 ? kZero
-                                 : per_module[module_of_[tgt_n]];
+        // Both oracles apply at the synapse too, or a mask that stops the bias from
+        // moving would leave the weights free and the confinement would leak.
+        const bool rm_out = reward_mask_ && (tgt_n < rm_lo_ || tgt_n >= rm_hi_);
+        const bool rb_in = reward_block_ && tgt_n >= rb_lo_ && tgt_n < rb_hi_;
+        const Scalar r_syn = (rm_out || rb_in) ? kZero : per_module[module_of_[tgt_n]];
         if (r_syn != kZero) {
           // eta_scale is the *postsynaptic* module's, which is why it is read
           // through syn_target_ rather than taken from the loop's module: this
