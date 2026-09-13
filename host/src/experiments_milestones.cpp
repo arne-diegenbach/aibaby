@@ -5592,6 +5592,15 @@ struct RTConfig {
   // collision this chapter is about needs both lessons pulling the SAME centroid
   // to different ends, so the two halves of group 2 are the two masks.
   uint32_t mask_mode = 0;
+  // Mask WIDTH as a fraction of the F1 group, for mask_mode 4. 1.0 masks nothing.
+  // The v2 run priced a half-group mask at ~0.20 of err taught -- most of what
+  // there is to learn -- and the reason is arithmetic rather than tuning: dF1 is a
+  // rate-weighted centroid over the group, so confining a lesson to a fraction of
+  // it caps the reachable |dF1| in proportion (half the group leaves 50% of the
+  // range, a quarter leaves 38%). That is why `credit`'s mask bought ~1.0 on its
+  // protocol and costs the lesson here: the two lessons demand different amounts
+  // of formant travel. This measures where the cliff is.
+  float mask_width = 1.0f;
 };
 
 // One arm, one creature, one life: teach, intervene, re-measure.
@@ -5808,10 +5817,27 @@ RTRow run_retain_arm(const std::vector<uint8_t>& blob, uint64_t ticks,
           // -- half the F1 neurons writable, for the same duration -- so the only
           // difference left is whether the half SWITCHES at the lesson boundary.
           // That is the question, isolated.
+          case 4: break;  // width mode: handled below, `upper` unused
           default: upper = false; break;                              // fixed
         }
-        if (upper) mnet.set_reward_mask(vm.begin + mid, vm.begin + g_hi);
-        else mnet.set_reward_mask(vm.begin + g_lo, vm.begin + mid);
+        if (cfg.mask_mode == 4) {
+          // TEACHING ONLY. The v2 run's design error was masking during teaching
+          // AND the gap; confining the FIRST lesson is what crippled it, and
+          // separation never required that. Here the mask is deliberately on
+          // during teaching because measuring its COST on the first lesson is the
+          // whole point -- but it is off in the gap so nothing else confounds it.
+          if (!relearning) {
+            const uint32_t w = uint32_t(double(g_hi - g_lo) * double(cfg.mask_width));
+            const uint32_t hi_w = g_lo + (w < 2u ? 2u : w);
+            mnet.set_reward_mask(vm.begin + g_lo, vm.begin + hi_w);
+          } else {
+            mnet.clear_reward_mask();
+          }
+        } else if (upper) {
+          mnet.set_reward_mask(vm.begin + mid, vm.begin + g_hi);
+        } else {
+          mnet.set_reward_mask(vm.begin + g_lo, vm.begin + mid);
+        }
       }
       const Word& say = relearning ? heard2 : heard;
       caregiver.render(sounding ? say.f0 : 0.0f, say.f1, say.f2,
@@ -6081,11 +6107,27 @@ constexpr uint32_t kCRArmCount = sizeof(kCRArms) / sizeof(kCRArms[0]);
 // err-after is the column that means what it says.
 struct MRArm { const char* name; RTConfig cfg; };
 const MRArm kMRArms[] = {
-    // name        no_fat teach relearn freeze norep credit eps 2nd slots src orc gain split commit mask
-    {"off",      {"off",      false, true, true, false, false, 0, 0, -1, 0, 0, -1, 0.0, true, 0.0f, 0}},
-    {"oracle",   {"oracle",   false, true, true, false, false, 0, 0, -1, 0, 0, -1, 0.0, true, 0.0f, 1}},
-    {"derived",  {"derived",  false, true, true, false, false, 0, 0, -1, 2, 4, -1, 0.0, true, 0.0f, 2}},
-    {"fixed",    {"fixed",    false, true, true, false, false, 0, 0, -1, 0, 0, -1, 0.0, true, 0.0f, 3}},
+    // THE COST CURVE. The ladder that preceded this asked what the mask must KNOW
+    // and could not get an answer, because a half-group mask left every masked arm
+    // at the learning floor (err taught 1.0635 against `off`'s 0.8615). That is not
+    // a tuning accident: dF1 is a rate-weighted centroid over the F1 group, so
+    // confining a lesson to a fraction of the group caps the reachable |dF1| in
+    // proportion -- 0.75 of the group leaves 62% of the range, 0.50 leaves 50%,
+    // 0.25 leaves 38%. The lesson either fits inside that or it does not.
+    //
+    // So the question that has to be answered first is not what the mask knows but
+    // what it COSTS, and where the cliff is. If the lesson is already broken at
+    // 0.75, there is no width that both leaves room for a second lesson and lets
+    // the first one learn -- and write separation is refused on this readout for a
+    // structural reason rather than a measured one. That would also explain why
+    // `credit`'s mask bought ~1.0 on its own protocol: a lesson that demands less
+    // formant travel fits in half a group.
+    //
+    // name      no_fat teach relearn freeze norep credit eps 2nd slots src orc gain split commit mask width
+    {"w100",   {"w100",   false, true, true, false, false, 0, 0, -1, 0, 0, -1, 0.0, true, 0.0f, 0, 1.00f}},
+    {"w75",    {"w75",    false, true, true, false, false, 0, 0, -1, 0, 0, -1, 0.0, true, 0.0f, 4, 0.75f}},
+    {"w50",    {"w50",    false, true, true, false, false, 0, 0, -1, 0, 0, -1, 0.0, true, 0.0f, 4, 0.50f}},
+    {"w25",    {"w25",    false, true, true, false, false, 0, 0, -1, 0, 0, -1, 0.0, true, 0.0f, 4, 0.25f}},
 };
 constexpr uint32_t kMRArmCount = sizeof(kMRArms) / sizeof(kMRArms[0]);
 
@@ -6099,33 +6141,28 @@ bool run_maskretain(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
   Regime regime;
   regime.praise = kPraiseValue;
   regime.scold = kScoldValue;
-  // The `derived` arm reads the creature's OWN context index, which needs the
-  // kContext module. Refusing here rather than silently running it with no index
-  // is the point: an arm whose treatment cannot act is the failure this protocol
-  // has shipped three times.
-  if (dna0.module_with_role(aibaby::ModuleRole::kContext) < 0) {
-    std::printf("  this genome has no kContext module, and the `derived` arm is the\n"
-                "  whole experiment. Build one with NO output weight:\n\n"
-                "    python3 tools/genome_add_context.py dna/default.toml ctx.toml \\\n"
-                "        vocal out_w=0\n"
-                "    ./build/aibaby --dna ctx.toml --experiment maskretain\n");
-    return false;
-  }
+  // No kContext module is needed any more: the cost curve masks by WIDTH and never
+  // consults an index. The check is dropped rather than left as decoration.
   constexpr uint32_t kReps = 36;
   instrument("maskretain", dna0.header().seed ^ 0x3B1Du, ticks / kRTTrial, "trials");
-  std::printf("  question          the conflict is a PURE OVERWRITE (store 0.25, behaviour\n"
-              "                    0.30, -1.0 SE), so the damage is in the WRITE. `credit`\n"
-              "                    removes interference with a per-neuron mask -- but only\n"
-              "                    with an oracle. What does the mask have to KNOW?\n");
-  std::printf("  the ladder        off / oracle (true lesson) / derived (the creature's own\n"
-              "                    ear-EMA context index) / random (the mask's cost, none of\n"
-              "                    its information).\n");
-  std::printf("  the gate          err AFTER, paired on seed, at 2 SE. NOT retention: its\n"
-              "                    denominator collapses and the last run's headline landed\n"
-              "                    on 1.99 vs a 2.0 bar because of it.\n");
-  std::printf("  refusals up front oracle <= random refuses the direction outright;\n"
-              "                    oracle > random but derived <= random makes it an INDEX\n"
-              "                    problem, not a mask problem.\n\n");
+  std::printf("  question          the conflict is a PURE OVERWRITE, so the damage is in the\n"
+              "                    WRITE and separating it is the remaining route. Before\n"
+              "                    asking what a mask must KNOW, ask what it COSTS.\n");
+  std::printf("  why this changed  the previous ladder could not answer its own question: a\n"
+              "                    half-group mask left every masked arm at the learning\n"
+              "                    floor, err taught 1.0635 against `off`'s 0.8615. So the\n"
+              "                    mask, not the index, was the binding constraint.\n");
+  std::printf("  the arithmetic    dF1 is a rate-weighted centroid over the F1 group, so\n"
+              "                    confining a lesson to a fraction of the group caps the\n"
+              "                    reachable |dF1|: 0.75 leaves 62%%, 0.50 leaves 50%%, 0.25\n"
+              "                    leaves 38%% of the range. The lesson fits or it does not.\n");
+  std::printf("  the gate          err TAUGHT vs the unmasked arm, paired on seed, read as a\n"
+              "                    SHARE of what the unmasked creature learned. A cost near\n"
+              "                    100%% means the lesson is gone, not merely reduced.\n");
+  std::printf("  the refusal       if 0.75 of the group already costs more than half the\n"
+              "                    lesson, no width both leaves room for a second lesson and\n"
+              "                    lets the first one learn, and write separation is refused\n"
+              "                    on this readout for a structural reason.\n\n");
 
   struct Cell { bool ok = false; RTRow row; };
   const uint32_t njobs = kReps * kMRArmCount;
@@ -6202,139 +6239,83 @@ bool run_maskretain(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
     }
     return -1;
   };
-  const int a_off = idx("off"), a_orc = idx("oracle");
-  const int a_der = idx("derived"), a_rnd = idx("fixed");
-  if (a_off < 0 || a_orc < 0 || a_der < 0 || a_rnd < 0) {
-    std::printf("\n  maskretain cannot summarise: an arm it names is missing.\n");
+  const int a_full = idx("w100");
+  if (a_full < 0) {
+    std::printf("\n  maskretain cannot summarise: the w100 reference is missing.\n");
     return false;
   }
-  // PAIRED, because every arm shares a creature with every other at each seed.
-  // An independent-samples SE moved a verdict across the bar on `poolbeta`.
-  const auto paired_after = [&](int x, int y, double* se_out) {
+  // WHAT THE MASK COSTS THE FIRST LESSON, against the unmasked reference, paired
+  // on seed. err TAUGHT is the right column here and retention is irrelevant: the
+  // question is whether the lesson can be learned at all inside a narrowed group.
+  const auto paired_taught = [&](int x, double* se_out) {
     std::vector<double> d;
     for (uint32_t r = 0; r < kReps; ++r) {
       const Cell& cx = cells[r * kMRArmCount + uint32_t(x)];
-      const Cell& cy = cells[r * kMRArmCount + uint32_t(y)];
-      if (cx.ok && cy.ok) d.push_back(cy.row.err_after - cx.row.err_after);
+      const Cell& cf = cells[r * kMRArmCount + uint32_t(a_full)];
+      if (cx.ok && cf.ok) d.push_back(cx.row.err_taught - cf.row.err_taught);
     }
     return ctx_mean_se(d, se_out);
   };
-  // AND THEY MUST HAVE LEARNED AT ALL. Matching the arms to each other is not
-  // enough: the v2 run matched `oracle` to `fixed` BIT-IDENTICALLY on err taught
-  // (+0.0000 +/- 0.0000, because during teaching both write the lower half and
-  // differ only in the gap) and the comparison still had no power, because BOTH
-  // sat at the learning floor -- 1.0635 against `off`'s 0.8615. Masking half of F1
-  // costs about 0.20 of err taught, which is most of what there is to learn, so
-  // the arms lost less during the gap (0.022 vs 0.101) only because they had
-  // almost nothing to lose. A retention question needs something retained.
-  {
-    std::vector<double> off_t;
-    for (uint32_t r = 0; r < kReps; ++r) {
-      const Cell& c = cells[r * kMRArmCount + uint32_t(a_off)];
-      if (c.ok) off_t.push_back(c.row.err_taught);
-    }
-    double s2 = 0.0;
-    const double m_off = ctx_mean_se(off_t, &s2);
-    for (uint32_t a = 0; a < kMRArmCount; ++a) {
-      if (int(a) == a_off) continue;
-      std::vector<double> t;
-      for (uint32_t r = 0; r < kReps; ++r) {
-        const Cell& c = cells[r * kMRArmCount + a];
-        if (c.ok) t.push_back(c.row.err_taught);
-      }
-      if (t.empty()) continue;
-      const double m_a = ctx_mean_se(t, &s2);
-      // Half of what `off` learned is the floor: below that the arm is not a
-      // treated version of the lesson, it is a creature that never learned it.
-      if (m_off > 0.0 && (m_a - m_off) > 0.5 * m_off * 0.20) {
-        std::printf("\n  REFUSED -- `%s` NEVER LEARNED THE LESSON. err taught %.4f against\n"
-                    "  `off`'s %.4f, so the mask cost most of what there was to learn and\n"
-                    "  there is almost nothing left to retain. Any retention number here is\n"
-                    "  measuring an untaught creature. THE MASK IS UNAFFORDABLE DURING\n"
-                    "  TEACHING, and it does not need to be there: separating the write only\n"
-                    "  requires the SECOND lesson to land elsewhere. Mask the gap, not the\n"
-                    "  teaching.\n", kMRArms[a].name, m_a, m_off);
-        return false;
-      }
-    }
+  std::vector<double> base_t, base_b;
+  for (uint32_t r = 0; r < kReps; ++r) {
+    const Cell& c = cells[r * kMRArmCount + uint32_t(a_full)];
+    if (c.ok) { base_t.push_back(c.row.err_taught); base_b.push_back(c.row.err_before); }
   }
-  // THE ARMS MUST HAVE LEARNED THE SAME AMOUNT, OR err-after IS NOT ABOUT
-  // RETENTION. The 5.6M run failed exactly here and I only caught it by hand
-  // afterwards: the err-after gaps reproduced the err-TAUGHT gaps almost exactly
-  // (-0.0184 against -0.0189), so the comparison was measuring how much each arm
-  // learned. An arm that learned less has less to lose and posts a flattering
-  // err-after. This now refuses rather than reporting, because a confound found
-  // by eye after the fact is a confound that ships the next time nobody looks.
-  const auto paired_taught = [&](int x, int y, double* se_out) {
-    std::vector<double> d;
-    for (uint32_t r = 0; r < kReps; ++r) {
-      const Cell& cx = cells[r * kMRArmCount + uint32_t(x)];
-      const Cell& cy = cells[r * kMRArmCount + uint32_t(y)];
-      if (cx.ok && cy.ok) d.push_back(cy.row.err_taught - cx.row.err_taught);
+  double s2 = 0.0;
+  const double m_bt = ctx_mean_se(base_t, &s2), m_bb = ctx_mean_se(base_b, &s2);
+  const double learned = m_bb - m_bt;
+  std::printf("\n  WHAT THE MASK COSTS THE LESSON (err taught vs `w100`, paired on seed).\n"
+              "  The unmasked creature learns %.4f of error (%.4f -> %.4f); a cost near\n"
+              "  that figure means the lesson is gone rather than merely reduced.\n",
+              learned, m_bb, m_bt);
+  std::printf("  %-8s %-10s %-22s %s\n", "arm", "reachable", "cost in err taught",
+              "share of the lesson lost");
+  bool cliff_before_half = false;
+  for (uint32_t a = 0; a < kMRArmCount; ++a) {
+    if (int(a) == a_full) continue;
+    double se = 0.0;
+    const double d = paired_taught(int(a), &se);
+    const double share = learned > 1e-9 ? d / learned : 0.0;
+    // THE REACHABLE SHARE OF |dF1|, computed the way the decoder computes the
+    // centroid rather than from a closed form. My first attempt used
+    // (1 - (1-w)^2), which gives 94/75/44% against the true 62/50/38%: the
+    // formula assumes the block stays on one side of the group's midpoint, and a
+    // block wider than half extends past it, where |u| rises again. Summing it
+    // directly is shorter than getting the piecewise algebra right and cannot
+    // drift from what the readout actually does.
+    const double w = double(kMRArms[a].cfg.mask_width);
+    const uint32_t gn2 = 32;  // shape only; the ratio is scale-free in group size
+    const uint32_t kk = uint32_t(double(gn2) * w) < 1u ? 1u : uint32_t(double(gn2) * w);
+    double blk = 0.0, tot = 0.0;
+    for (uint32_t q = 0; q < gn2; ++q) {
+      const double uu = (double(q) + 0.5) / double(gn2) - 0.5;
+      tot += std::fabs(uu);
+      if (q < kk) blk += std::fabs(uu);
     }
-    return ctx_mean_se(d, se_out);
-  };
-  {
-    double se_to = 0.0, se_td = 0.0;
-    const double t_or = paired_taught(a_orc, a_rnd, &se_to);
-    const double t_dr = paired_taught(a_der, a_rnd, &se_td);
-    std::printf("\n  LEARNING MATCH (err TAUGHT vs `fixed`, paired). These must be flat, or\n"
-                "  err-after is measuring learning rather than retention.\n"
-                "    oracle   %+.4f +/- %.4f  (%+.1f SE)\n"
-                "    derived  %+.4f +/- %.4f  (%+.1f SE)\n",
-                t_or, se_to, se_to > 0.0 ? t_or / se_to : 0.0,
-                t_dr, se_td, se_td > 0.0 ? t_dr / se_td : 0.0);
-    const bool bad_o = se_to > 0.0 && std::fabs(t_or) > 2.0 * se_to;
-    const bool bad_d = se_td > 0.0 && std::fabs(t_dr) > 2.0 * se_td;
-    if (bad_o || bad_d) {
-      std::printf("\n  REFUSED -- THE ARMS DID NOT LEARN THE SAME AMOUNT. %s differs from the\n"
-                  "  control on err TAUGHT at more than 2 SE, so any err-after difference is\n"
-                  "  confounded by how much there was to retain. This is not a null and not a\n"
-                  "  result: it is a broken comparison, and the mask budget has to be matched\n"
-                  "  before the question can be asked.\n",
-                  bad_o && bad_d ? "both oracle and derived" : (bad_o ? "oracle" : "derived"));
-      return false;
-    }
+    const double reach = tot > 0.0 ? blk / tot : 0.0;
+    std::printf("  %-8s %-10.0f%% %+.4f +/- %-12.4f %.0f%%\n", kMRArms[a].name,
+                100.0 * reach, d, se, 100.0 * share);
+    if (w >= 0.70 && share > 0.5) cliff_before_half = true;
   }
-  double se_or = 0.0, se_dr = 0.0;
-  const double m_or = paired_after(a_orc, a_rnd, &se_or);   // oracle vs fixed
-  const double m_dr = paired_after(a_der, a_rnd, &se_dr);   // derived vs fixed
-  std::printf("\n  ERR-AFTER IMPROVEMENT over `random` (the mask's cost, no information),\n"
-              "  paired on seed. Positive means the arm ends CLOSER to lesson A.\n"
-              "    oracle   %+.4f +/- %.4f  (%+.1f SE)\n"
-              "    derived  %+.4f +/- %.4f  (%+.1f SE)\n",
-              m_or, se_or, se_or > 0.0 ? m_or / se_or : 0.0,
-              m_dr, se_dr, se_dr > 0.0 ? m_dr / se_dr : 0.0);
-
-  const bool oracle_works = se_or > 0.0 && m_or > 2.0 * se_or;
-  const bool derived_works = se_dr > 0.0 && m_dr > 2.0 * se_dr;
-  if (!oracle_works) {
-    std::printf("\n  THE MASK DOES NOT TRANSFER. Even keyed on the TRUE lesson it does not\n"
-                "  beat its own cost-matched control at 2 SE, so `credit`'s ~1.0 is a fact\n"
-                "  about that protocol and not about this one. Write separation is refused\n"
-                "  on the retention conflict, and with protection already refused\n"
-                "  (`meta_commit` null, `bankprobe` refused) the overwrite has no remaining\n"
-                "  named route -- which is a harder and more useful place to stand than a\n"
-                "  fifteenth knob.\n");
+  if (cliff_before_half) {
+    std::printf("\n  THE CLIFF IS ABOVE THREE QUARTERS, SO WRITE SEPARATION IS REFUSED ON\n"
+                "  THIS READOUT. Leaving the lesson only 75%% of the F1 group already costs\n"
+                "  it more than half of what it learned, so there is no width that both\n"
+                "  leaves room for a second lesson and lets the first one learn. This is a\n"
+                "  property of the readout rather than of the mask: dF1 is a rate-weighted\n"
+                "  centroid over the whole group, so every neuron in it carries the one\n"
+                "  quantity both lessons steer, and partitioning the group partitions the\n"
+                "  range. Two lessons that both move F1 cannot be given disjoint neurons\n"
+                "  without taking the range away from both.\n"
+                "  That also explains `credit`'s ~1.0: a lesson demanding less formant\n"
+                "  travel fits inside half a group, and this one does not.\n");
     return false;
   }
-  if (!derived_works) {
-    std::printf("\n  IT IS AN INDEX PROBLEM, NOT A MASK PROBLEM. The oracle mask works\n"
-                "  (%+.1f SE) and the creature's own index cannot drive it (%+.1f SE). So\n"
-                "  separating the write is the right route and the creature cannot yet say\n"
-                "  WHICH lesson it is in well enough to steer it. That moves the work to the\n"
-                "  index -- where `ctxsrc` already found the live limit is PERSISTENCE: the\n"
-                "  word reads 1.000 while it plays and 0.533, chance, when reward lands.\n",
-                m_or / se_or, se_dr > 0.0 ? m_dr / se_dr : 0.0);
-    return false;
-  }
-  std::printf("\n  THE CREATURE CAN STEER ITS OWN WRITE MASK. `derived` beats the\n"
-              "  cost-matched control at %+.1f SE, recovering %.0f%% of the oracle's\n"
-              "  improvement with an index it derives itself. That is the first mechanism\n"
-              "  to touch the conflicting-lesson wipe from the WRITE side.\n"
-              "  CHECK `err taught` BEFORE BELIEVING IT: a mask removes plasticity, and an\n"
-              "  arm that learned less can post a better err-after for the wrong reason.\n",
-              m_dr / se_dr, m_or != 0.0 ? 100.0 * m_dr / m_or : 0.0);
+  std::printf("\n  THERE IS ROOM. The lesson survives a narrowed group, so a second lesson\n"
+              "  can be given disjoint neurons without destroying the first, and write\n"
+              "  separation is affordable on this readout after all. The next run is the\n"
+              "  separation itself: lesson B confined to the complement of lesson A's\n"
+              "  block, against a same-width control that overlaps it.\n");
   return true;
 }
 
