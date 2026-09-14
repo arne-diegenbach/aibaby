@@ -208,6 +208,51 @@ struct Regime {
   // same death by a different route. The ratchet is the interesting middle only
   // if the creature keeps finding room under it.
   uint32_t baseline_mode = 0;
+
+  // WHAT THE BAR IS ANCHORED TO. `baseline_mode` changes how fast the bar
+  // tracks the creature; this asks whether it tracks the creature AT ALL.
+  //
+  // WHY IT EXISTS. `travelsweep` found that past roughly 0.6 log units of
+  // target distance, the shipped rule is BIT-IDENTICALLY blind to how far the
+  // target is. While the creature never crosses it, |log(f1/T)| = log T - log
+  // f1, so a further target adds a CONSTANT to the error -- and a constant
+  // cancels against a baseline EMA of that same error. The creature is not
+  // refusing to travel further; it is never asked to.
+  //
+  // WHICH REPLACEMENTS CAN POSSIBLY WORK, derived rather than guessed, because
+  // four guessed constants have each cost a run on this project. Node
+  // perturbation's drift is E[R*u] with E[u] = 0, so write e = C + h(u) with C
+  // the distance constant:
+  //
+  //   linear   R = -k*e     E[R*u] = -k*E[h*u].     C multiplies E[u] = 0 and
+  //                         drops out. PROVABLY INVARIANT -- do not build it.
+  //   quad     R ~ -e^2     E[R*u] = -k(2C*E[h*u] + E[h^2*u]). The leading term
+  //                         SCALES WITH C. The only candidate.
+  //   hard bar R = sign     e always past a fixed bar makes R constant, and a
+  //                         constant times a zero-mean perturbation is zero
+  //                         drift. `baseref`'s prediction, and refutable.
+  //
+  //   0 — the shipped criterion, bit-identical.
+  //   1 — ABSOLUTE QUADRATIC: value = praise * (1 - (e/abs_bar)^2), clamped to
+  //       [-scold, +praise]. Neutral at e = abs_bar, and its magnitude grows
+  //       with the square of the error, which is what makes distance visible.
+  //   2 — ABSOLUTE HARD BAR: praise if e < abs_bar, scold otherwise.
+  //
+  // NOTE WHAT CANNOT BE DONE HERE. The graded arm above matches reward
+  // MAGNITUDE across arms by dividing by an EMA of its own size. Doing that to
+  // mode 1 would destroy the very effect being tested, because the distance
+  // sensitivity IS a magnitude effect: dividing by EMA(|R|) ~ k*C^2 turns a
+  // drift that scales with C into one that scales with 1/C. So mode 1 uses a
+  // FIXED scale and the realised mean |reward| and praise fraction are printed
+  // per arm instead, because an unmatched magnitude is a learning-rate confound
+  // that has to be READ rather than assumed away.
+  uint32_t reward_mode = 0;
+
+  // The absolute bar, in the same units as `formant_error` -- a sum of two
+  // |log| ratios. 0.6 is chosen to sit ABOVE the error at both separations the
+  // first experiment uses (about 0.30 at 0.89 and 0.45 at 1.20) so neither arm
+  // sits on the clamp, where the value would be constant and the drift zero.
+  float abs_bar = 0.6f;
 };
 
 
@@ -2071,6 +2116,7 @@ bool run_orthovocab(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_movability(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_orthoname(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_travelsweep(const std::vector<uint8_t>&, uint64_t, bool);
+bool run_absbar(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_pgprobe(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_g2cond(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_coderprobe(const std::vector<uint8_t>&, uint64_t, bool);

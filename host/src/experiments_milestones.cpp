@@ -4652,6 +4652,21 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
               const double unit = c / gnorm[bucket];
               value = float(unit >= 0.0 ? unit * double(regime.praise)
                                         : -unit * double(regime.scold));
+            } else if (regime.reward_mode == 1u && regime.abs_bar > 0.0f) {
+              // ABSOLUTE QUADRATIC. Neutral at the bar, and its magnitude grows
+              // with the SQUARE of the error, which is the only shape whose
+              // drift scales with the distance to the target -- see the
+              // derivation on `Regime::reward_mode`. No adaptive normaliser,
+              // deliberately: one would divide the distance sensitivity out.
+              const double ratio = e / double(regime.abs_bar);
+              const double unit = 1.0 - ratio * ratio;
+              value = float(unit >= 0.0 ? unit * double(regime.praise)
+                                        : -std::min(-unit, 1.0) * double(regime.scold));
+            } else if (regime.reward_mode == 2u && regime.abs_bar > 0.0f) {
+              // ABSOLUTE HARD BAR. `baseref` predicts this dies: a bar the
+              // creature cannot beat makes every trial a scold, and a constant
+              // reward times a zero-mean perturbation is zero drift.
+              value = e < double(regime.abs_bar) ? regime.praise : regime.scold;
             } else {
               value = e < baseline[bucket] ? regime.praise : regime.scold;
             }
@@ -7056,6 +7071,352 @@ bool run_travelsweep(const std::vector<uint8_t>& blob, uint64_t ticks, bool verb
   return false;
 }
 
+
+// `absbar` -- can ANY bar make the distance to the target visible again?
+//
+// THE QUESTION `travelsweep` LEFT. That run was killed at 30 of 288 jobs because
+// its top three rungs produced BIT-IDENTICAL creatures: past roughly 0.6 log
+// units, moving the target further away adds a CONSTANT to the formant error,
+// and the caregiver's bar is an EMA of that same error, so the constant cancels
+// and the reward sequence does not change. The creature is not refusing to
+// travel further; it is never asked to. The naming ceiling has a cause in the
+// TEACHING PROTOCOL rather than in the larynx -- and this asks whether that is
+// fixable or merely relocatable.
+//
+// WHICH BARS ARE WORTH BUILDING, DERIVED FIRST. Node perturbation's drift is
+// E[R*u] with E[u] = 0. Write e = C + h(u), C the distance constant:
+//
+//   shipped   binary against an EMA of e. C cancels inside the comparison.
+//             INVARIANT -- and measured so, 0/3 seeds differing at 0.89 -> 1.20.
+//   linear    R = -k*e.  E[R*u] = -k*E[h*u]; C multiplies E[u] = 0 and drops.
+//             PROVABLY INVARIANT. Not built, because the algebra is enough.
+//   quadratic R ~ -e^2.  E[R*u] = -k(2C*E[h*u] + E[h^2*u]); the leading term
+//             SCALES WITH C. The only candidate, so it is `absquad`.
+//   hard bar  praise iff e < bar. Past the bar every trial is a scold, and a
+//             constant reward times a zero-mean perturbation is zero drift.
+//             `baseref`'s prediction, and refutable, so it is `abshard`.
+//
+// This is the `derive-the-constant` lesson applied before the run rather than
+// after it: four guessed constants have each cost a run on this project, and
+// three of the four candidate rules here are decided by a line of algebra.
+//
+// THE DESIGN. Two separations, chosen because the shipped rule is PROVABLY blind
+// between them: 0.89 (the shipped vowel pair's own F1 separation) and 1.20.
+// Three rules. The taught arms at both separations test the INVARIANCE; a
+// matched marginal at 0.89 per rule tests whether the rule can still learn at
+// all. Nine arms, 36 seeds.
+//
+// THE TWO GATES ARE SEPARATE AND BOTH MATTER.
+//   1. IS THE INVARIANCE BROKEN? Do 0.89 and 1.20 produce different creatures?
+//      This needs no magnitude matching -- it is structural, not statistical.
+//   2. DOES THE RULE STILL LEARN? Taught vs its own matched marginal at 0.89.
+//      A rule that breaks the invariance and cannot learn has made the distance
+//      visible by removing the praise variance that made learning possible,
+//      which is exactly what `baseref` predicts and is NOT a fix.
+//
+// THE CONFOUND THAT CANNOT BE DESIGNED AWAY, stated rather than hidden. The
+// graded arm elsewhere in this file matches reward MAGNITUDE across arms by
+// dividing by an EMA of its own size. Doing that to `absquad` would destroy the
+// effect: the distance sensitivity IS a magnitude effect, and dividing by
+// EMA(|R|) ~ k*C^2 turns a drift that scales with C into one that scales with
+// 1/C. So the realised mean |reward| and the praise fraction are PRINTED per
+// arm, and a travel difference that arrives together with a large magnitude
+// difference is a learning-rate effect and is reported as one.
+//
+// THE REFUSALS, WRITTEN FIRST:
+//   * if `shipped` is NOT invariant here -- if 0.89 and 1.20 differ on a
+//     meaningful share of seeds -- then `travelsweep`'s finding is wrong and
+//     nothing else in this run should be read. Refuse and chase that instead.
+//   * a rule that breaks the invariance but does not beat its own matched
+//     marginal at 2 SE has bought visibility with the learning signal. Report
+//     it as `baseref` confirmed, not as a fix.
+//   * 2-3 SE is a HYPOTHESIS at this n, not a finding, and is printed as one.
+struct ABArm {
+  const char* name;
+  uint32_t mode;       // Regime::reward_mode
+  uint32_t rung;       // index into kABSep
+  bool conditional;
+};
+constexpr double kABSep[] = {0.89, 1.20};
+const ABArm kABArms[] = {
+    {"shipped-0.89",  0u, 0u, true},
+    {"shipped-1.20",  0u, 1u, true},
+    {"shipped-rnd",   0u, 0u, false},
+    {"absquad-0.89",  1u, 0u, true},
+    {"absquad-1.20",  1u, 1u, true},
+    {"absquad-rnd",   1u, 0u, false},
+    {"abshard-0.89",  2u, 0u, true},
+    {"abshard-1.20",  2u, 1u, true},
+    {"abshard-rnd",   2u, 0u, false},
+};
+constexpr uint32_t kABArmCount = sizeof(kABArms) / sizeof(kABArms[0]);
+constexpr double kABRestF1 = 623.0;
+constexpr double kABRestF2 = 1651.0;
+
+inline void ab_targets(uint32_t rung, Word out[2]) {
+  const double half = kABSep[rung] * 0.5;
+  out[0] = {200.0f, float(kABRestF1 * std::exp(-half)), float(kABRestF2)};
+  out[1] = {200.0f, float(kABRestF1 * std::exp(half)), float(kABRestF2)};
+}
+
+bool run_absbar(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  aibaby::Dna dna0;
+  if (dna0.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) {
+    std::printf("  setup failed: the genome does not load\n");
+    return false;
+  }
+  if (dna0.module_with_role(aibaby::ModuleRole::kContext) < 0) {
+    std::printf("  this genome has no kContext module, and contexts are ON in every arm\n"
+                "  because `g2cond` says conditional learning fails without them. Build one:\n\n"
+                "    tools/ctxgenome.sh ctx.toml\n"
+                "    ./build/aibaby --dna ctx.toml --experiment absbar\n");
+    return false;
+  }
+  constexpr uint32_t kReps = 36;
+  instrument("absbar", dna0.header().seed ^ 0x0AB5u, ticks / kVLTrialTicks, "trials");
+  std::printf("  question          `travelsweep` found the shipped bar is BIT-IDENTICALLY\n"
+              "                    blind to target distance past ~0.6 log units: it is an\n"
+              "                    EMA of the creature's own error, and a further target\n"
+              "                    only adds a constant, which cancels. Can any bar ask?\n");
+  std::printf("  derived first     drift is E[R*u] with E[u]=0, so with e = C + h(u):\n"
+              "                    linear R=-k*e is PROVABLY invariant (C multiplies E[u]);\n"
+              "                    quadratic R~-e^2 has a term scaling with C and is the\n"
+              "                    only candidate; a hard bar makes R constant past it.\n"
+              "                    Three of four rules are settled by algebra, not by runs.\n");
+  std::printf("  the design        0.89 (the shipped vowel pair's own F1 separation) and\n"
+              "                    1.20, between which the shipped rule is provably blind.\n"
+              "                    Taught at both tests INVARIANCE; a matched marginal at\n"
+              "                    0.89 per rule tests whether it can still learn at all.\n");
+  std::printf("  the confound      magnitude CANNOT be matched without destroying the\n"
+              "                    effect -- the distance sensitivity IS a magnitude effect.\n"
+              "                    Mean |reward| and praise fraction are printed per arm so\n"
+              "                    a learning-rate difference is read rather than assumed.\n");
+  std::printf("  the refusal       if `shipped` is NOT invariant here, `travelsweep` was\n"
+              "                    wrong and nothing else is read. A rule that breaks the\n"
+              "                    invariance but cannot beat its own control has bought\n"
+              "                    visibility with the learning signal. %u seeds.\n\n",
+              kReps);
+
+  const size_t slots_off = offsetof(aibaby::DnaHeader, exploration) +
+                           offsetof(aibaby::DnaExploration, context_slots);
+  const size_t src_off = offsetof(aibaby::DnaHeader, exploration) +
+                         offsetof(aibaby::DnaExploration, context_source);
+
+  struct Cell {
+    bool ok = false;
+    double dsep = 0.0;    // delivered separation, late third, log units
+    double frac = 0.0;    // nearest-target fraction, late third
+    double praise = 0.0;  // share of feedback that was praise
+    double rmag = 0.0;    // realised mean |reward|
+  };
+  const uint32_t njobs = kReps * kABArmCount;
+  const std::vector<Cell> cells = parallel_reps<Cell>(njobs, [&](uint32_t i) {
+    Cell cell;
+    const uint32_t r = i / kABArmCount, a = i % kABArmCount;
+    std::vector<uint8_t> variant = blob;
+    const uint64_t seed = dna0.header().seed + r * 7919ull;
+    std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+    const uint32_t slots = 2u, src = 4u;
+    std::memcpy(variant.data() + slots_off, &slots, sizeof(slots));
+    std::memcpy(variant.data() + src_off, &src, sizeof(src));
+    Regime regime;
+    regime.praise = kPraiseValue;
+    regime.scold = kScoldValue;
+    regime.reward_mode = kABArms[a].mode;
+    Word tbl[2];
+    ab_targets(kABArms[a].rung, tbl);
+    const int tgt = kABArms[a].conditional ? int(kVLTgtHeard) : int(kVLTgtRandom);
+    const VLRun run = run_vocallearn_session(variant, ticks, kVLTaught, nullptr, regime, tgt,
+                                             nullptr, kVLScoreFormant, nullptr, 2u, tbl);
+    if (!run.ok) return cell;
+    const size_t rows = run.utt_word.size();
+    if (rows < 6) return cell;
+    // The LATE THIRD, for the reason `travelsweep` gives: a session average
+    // includes the phase before anything is learned, and if one rule learns more
+    // slowly the average understates it more.
+    double s1[2] = {0.0, 0.0}, s2[2] = {0.0, 0.0};
+    uint32_t n[2] = {0u, 0u};
+    for (size_t q = rows - rows / 3; q < rows; ++q) {
+      const int wd = run.utt_word[q];
+      if (wd < 0 || wd > 1) continue;
+      s1[wd] += run.utt_f1[q];
+      s2[wd] += run.utt_f2[q];
+      ++n[wd];
+    }
+    if (!n[0] || !n[1]) return cell;
+    double f1v[2], f2v[2];
+    for (uint32_t w = 0; w < 2u; ++w) { f1v[w] = s1[w] / n[w]; f2v[w] = s2[w] / n[w]; }
+    if (f1v[0] <= 1.0 || f1v[1] <= 1.0) return cell;
+    cell.dsep = std::log(f1v[1]) - std::log(f1v[0]);
+    double fsum = 0.0;
+    for (uint32_t w = 0; w < 2u; ++w) {
+      const Word& own = tbl[w];
+      const Word& oth = tbl[1u - w];
+      const double d_own = std::hypot(std::log(f1v[w] / double(own.f1)),
+                                      std::log(f2v[w] / double(own.f2)));
+      const double d_oth = std::hypot(std::log(f1v[w] / double(oth.f1)),
+                                      std::log(f2v[w] / double(oth.f2)));
+      fsum += d_own < d_oth ? 1.0 : 0.0;
+    }
+    cell.frac = fsum / 2.0;
+    const double fb = double(run.praises + run.scolds);
+    cell.praise = fb > 0.0 ? double(run.praises) / fb : 0.0;
+    cell.rmag = run.reward_n ? run.reward_mag / double(run.reward_n) : 0.0;
+    cell.ok = true;
+    parallel_note("  [%u/%u] seed %u %-13s delivered %+.4f  praise %.3f  |R| %.4f\n", i + 1,
+                  njobs, r, kABArms[a].name, cell.dsep, cell.praise, cell.rmag);
+    return cell;
+  });
+
+  const auto col = [&](uint32_t a, int which, std::vector<double>* out) {
+    out->clear();
+    for (uint32_t r = 0; r < kReps; ++r) {
+      const Cell& c = cells[r * kABArmCount + a];
+      if (!c.ok) continue;
+      out->push_back(which == 0 ? c.dsep : which == 1 ? c.frac
+                                  : which == 2 ? c.praise : c.rmag);
+    }
+  };
+
+  std::printf("\n  %-14s %-20s %-8s %-9s %s\n", "arm", "delivered (log units)", "nearest",
+              "praise", "mean |R|");
+  for (uint32_t a = 0; a < kABArmCount; ++a) {
+    std::vector<double> d, f, p, m;
+    col(a, 0, &d); col(a, 1, &f); col(a, 2, &p); col(a, 3, &m);
+    if (d.size() < 3) {
+      std::printf("\n  absbar INCONCLUSIVE -- arm `%s` produced %zu creatures.\n",
+                  kABArms[a].name, d.size());
+      return false;
+    }
+    double se_d = 0.0, se_f = 0.0, se_p = 0.0, se_m = 0.0;
+    const double m_d = ctx_mean_se(d, &se_d);
+    const double m_f = ctx_mean_se(f, &se_f);
+    const double m_p = ctx_mean_se(p, &se_p);
+    const double m_m = ctx_mean_se(m, &se_m);
+    std::printf("  %-14s %+.4f +/- %-9.4f %-8.3f %-9.3f %.4f\n", kABArms[a].name, m_d, se_d,
+                m_f, m_p, m_m);
+  }
+
+  {
+    ArmLiveness live("absbar");
+    for (uint32_t r = 0; r < kReps; ++r) {
+      for (uint32_t a = 0; a < kABArmCount; ++a) {
+        const Cell& c = cells[r * kABArmCount + a];
+        if (c.ok) live.observe(kABArms[a].name, r, c.dsep);
+      }
+    }
+    if (!live.report("shipped-0.89")) return false;
+  }
+
+  // GATE 1: IS THE INVARIANCE BROKEN? Structural, per rule, no statistics needed.
+  const char* rule_name[3] = {"shipped", "absquad", "abshard"};
+  uint32_t differ[3] = {0u, 0u, 0u}, shared[3] = {0u, 0u, 0u};
+  std::printf("\n  GATE 1 -- IS THE DISTANCE VISIBLE? Taught at 0.89 against taught at\n"
+              "  1.20, same seed. The shipped rule is expected to be BIT-IDENTICAL.\n");
+  for (uint32_t m = 0; m < 3u; ++m) {
+    for (uint32_t r = 0; r < kReps; ++r) {
+      const Cell& lo = cells[r * kABArmCount + m * 3u + 0u];
+      const Cell& hi = cells[r * kABArmCount + m * 3u + 1u];
+      if (!lo.ok || !hi.ok) continue;
+      ++shared[m];
+      if (lo.dsep != hi.dsep) ++differ[m];
+    }
+    std::printf("    %-8s  %u/%u seeds differ%s\n", rule_name[m], differ[m], shared[m],
+                (shared[m] && differ[m] * 2u > shared[m]) ? "   <- distance is VISIBLE"
+                                                          : "   <- BLIND");
+  }
+  if (shared[0] == 0u) {
+    std::printf("\n  absbar INCONCLUSIVE -- the shipped rule produced no comparable pair.\n");
+    return false;
+  }
+  if (differ[0] * 4u > shared[0]) {
+    std::printf("\n  absbar REFUSED -- THE SHIPPED RULE IS NOT BLIND HERE (%u/%u seeds\n"
+                "  differ between 0.89 and 1.20). `travelsweep` reported 0/3 and this run\n"
+                "  contradicts it on many more seeds, so the invariance finding is what\n"
+                "  needs chasing and nothing else in this run should be read. The two runs\n"
+                "  differ in reward path only through `reward_mode`, which is 0 here --\n"
+                "  so the first suspect is that adding the field was not bit-identical.\n",
+                differ[0], shared[0]);
+    return false;
+  }
+
+  // GATE 2: DOES THE RULE STILL LEARN? Taught vs its own matched marginal, paired.
+  std::printf("\n  GATE 2 -- CAN THE RULE STILL LEARN? Taught at 0.89 against its OWN\n"
+              "  matched marginal, paired on seed. A rule that wins gate 1 and loses this\n"
+              "  one bought visibility by removing the praise variance.\n");
+  double exc[3] = {0.0, 0.0, 0.0}, exse[3] = {0.0, 0.0, 0.0};
+  size_t exn[3] = {0u, 0u, 0u};
+  for (uint32_t m = 0; m < 3u; ++m) {
+    std::vector<double> d;
+    for (uint32_t r = 0; r < kReps; ++r) {
+      const Cell& t = cells[r * kABArmCount + m * 3u + 0u];
+      const Cell& c = cells[r * kABArmCount + m * 3u + 2u];
+      if (t.ok && c.ok) d.push_back(t.dsep - c.dsep);
+    }
+    if (d.size() < 3) {
+      std::printf("    %-8s  too few paired creatures (%zu)\n", rule_name[m], d.size());
+      continue;
+    }
+    exn[m] = d.size();
+    exc[m] = ctx_mean_se(d, &exse[m]);
+    std::printf("    %-8s  %+.4f +/- %.4f  (%+.1f SE)  n=%zu\n", rule_name[m], exc[m], exse[m],
+                exse[m] > 0.0 ? exc[m] / exse[m] : 0.0, d.size());
+  }
+
+  const auto learns = [&](uint32_t m) { return exn[m] >= 3 && exse[m] > 0.0 && exc[m] > 2.0 * exse[m]; };
+  const auto visible = [&](uint32_t m) { return shared[m] > 0 && differ[m] * 2u > shared[m]; };
+
+  if (!learns(0)) {
+    std::printf("\n  absbar REFUSED -- THE SHIPPED RULE DOES NOT LEARN HERE either (%+.1f\n"
+                "  SE), so there is no working reference to compare a replacement against.\n"
+                "  At 0.89 the demand is invisible to it, but `orthoname` showed it steers\n"
+                "  at 0.58, so this says the taught arm has stopped steering entirely at\n"
+                "  this separation -- which would itself be worth a run, and is not this\n"
+                "  one.\n", exse[0] > 0.0 ? exc[0] / exse[0] : 0.0);
+    return false;
+  }
+
+  bool any = false;
+  for (uint32_t m = 1; m < 3u; ++m) {
+    if (!visible(m)) {
+      std::printf("\n  %s: STILL BLIND (%u/%u seeds). The distance does not reach the\n"
+                  "  learner under this rule either.\n", rule_name[m], differ[m], shared[m]);
+      continue;
+    }
+    any = true;
+    if (learns(m)) {
+      const double gain = exc[m] - exc[0];
+      std::printf("\n  %s: THE DISTANCE IS VISIBLE AND THE RULE STILL LEARNS (%u/%u seeds\n"
+                  "  differ; %+.1f SE over its own control). Delivered separation is %+.4f\n"
+                  "  against the shipped rule's %+.4f, a difference of %+.4f. READ THE\n"
+                  "  |R| AND praise COLUMNS BEFORE CALLING THIS A FIX: if this arm's mean\n"
+                  "  |reward| is far from the shipped arm's, part of the difference is a\n"
+                  "  learning rate and not a bar.\n",
+                  rule_name[m], differ[m], shared[m], exse[m] > 0.0 ? exc[m] / exse[m] : 0.0,
+                  exc[m], exc[0], gain);
+    } else {
+      std::printf("\n  %s: VISIBILITY BOUGHT WITH THE LEARNING SIGNAL -- `baseref`\n"
+                  "  CONFIRMED. The distance reaches the learner (%u/%u seeds differ) and\n"
+                  "  the rule no longer beats its own matched marginal (%+.1f SE). Making\n"
+                  "  the bar absolute makes it answerable only by a creature that can\n"
+                  "  already reach it, and this one cannot: the praise fraction is the\n"
+                  "  column to read. A bar that tracks the creature stops asking; a bar\n"
+                  "  that does not stops being answered.\n",
+                  rule_name[m], differ[m], shared[m], exse[m] > 0.0 ? exc[m] / exse[m] : 0.0);
+    }
+  }
+  if (!any) {
+    std::printf("\n  NO RULE MAKES THE DISTANCE VISIBLE. The shipped bar's blindness is not\n"
+                "  a property of tracking the creature -- an absolute bar is blind to it\n"
+                "  too -- which moves the cause off the criterion and onto the ERROR the\n"
+                "  criterion is fed. `formant_error` is a sum of |log| ratios, and every\n"
+                "  rule here reads only that scalar. The next place to look is the error\n"
+                "  itself rather than the bar applied to it.\n");
+    return false;
+  }
+  return true;
+}
 
 bool run_movability(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
   (void)verbose;

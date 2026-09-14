@@ -1,0 +1,26 @@
+experiment: absbar
+  instrument        absbar   trial seed 0000000001352d7c   1214 trials
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  question          `travelsweep` found the shipped bar is BIT-IDENTICALLY
+                    blind to target distance past ~0.6 log units: it is an
+                    EMA of the creature's own error, and a further target
+                    only adds a constant, which cancels. Can any bar ask?
+  derived first     drift is E[R*u] with E[u]=0, so with e = C + h(u):
+                    linear R=-k*e is PROVABLY invariant (C multiplies E[u]);
+                    quadratic R~-e^2 has a term scaling with C and is the
+                    only candidate; a hard bar makes R constant past it.
+                    Three of four rules are settled by algebra, not by runs.
+  the design        0.89 (the shipped vowel pair's own F1 separation) and
+                    1.20, between which the shipped rule is provably blind.
+                    Taught at both tests INVARIANCE; a matched marginal at
+                    0.89 per rule tests whether it can still learn at all.
+  the confound      magnitude CANNOT be matched without destroying the
+                    effect -- the distance sensitivity IS a magnitude effect.
+                    Mean |reward| and praise fraction are printed per arm so
+                    a learning-rate difference is read rather than assumed.
+  the refusal       if `shipped` is NOT invariant here, `travelsweep` was
+                    wrong and nothing else is read. A rule that breaks the
+                    invariance but cannot beat its own control has bought
+                    visibility with the learning signal. 36 seeds.
+
