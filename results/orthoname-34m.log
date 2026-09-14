@@ -1,0 +1,187 @@
+  [8/144] seed 1 ortho-rnd    margin -0.0150  nearest 0.00
+  [10/144] seed 2 collide-rnd  margin -0.0554  nearest 0.00
+  [1/144] seed 0 collide      margin +0.2500  nearest 1.00
+  [4/144] seed 0 ortho-rnd    margin -0.0188  nearest 0.00
+  [14/144] seed 3 collide-rnd  margin -0.0739  nearest 0.00
+  [6/144] seed 1 collide-rnd  margin -0.0118  nearest 0.50
+  [9/144] seed 2 collide      margin +0.1655  nearest 1.00
+  [3/144] seed 0 ortho        margin +0.1025  nearest 1.00
+  [13/144] seed 3 collide      margin +0.1396  nearest 1.00
+  [5/144] seed 1 collide      margin +0.1726  nearest 1.00
+  [2/144] seed 0 collide-rnd  margin -0.0235  nearest 0.00
+  [12/144] seed 2 ortho-rnd    margin +0.0064  nearest 1.00
+  [7/144] seed 1 ortho        margin +0.1144  nearest 1.00
+  [11/144] seed 2 ortho        margin +0.0793  nearest 1.00
+  [15/144] seed 3 ortho        margin +0.0854  nearest 1.00
+  [16/144] seed 3 ortho-rnd    margin +0.0459  nearest 1.00
+  [17/144] seed 4 collide      margin +0.2152  nearest 1.00
+  [20/144] seed 4 ortho-rnd    margin +0.0090  nearest 1.00
+  [18/144] seed 4 collide-rnd  margin +0.0302  nearest 1.00
+  [21/144] seed 5 collide      margin +0.1637  nearest 1.00
+  [23/144] seed 5 ortho        margin +0.0971  nearest 1.00
+  [22/144] seed 5 collide-rnd  margin -0.1542  nearest 0.00
+  [25/144] seed 6 collide      margin +0.1932  nearest 1.00
+  [24/144] seed 5 ortho-rnd    margin -0.0327  nearest 0.00
+  [26/144] seed 6 collide-rnd  margin +0.0152  nearest 0.50
+  [19/144] seed 4 ortho        margin +0.1292  nearest 1.00
+  [27/144] seed 6 ortho        margin +0.1013  nearest 1.00
+  [28/144] seed 6 ortho-rnd    margin -0.0106  nearest 0.00
+  [33/144] seed 8 collide      margin +0.2143  nearest 1.00
+  [29/144] seed 7 collide      margin +0.1464  nearest 1.00
+  [30/144] seed 7 collide-rnd  margin -0.0240  nearest 0.00
+  [32/144] seed 7 ortho-rnd    margin -0.0129  nearest 0.50
+  [31/144] seed 7 ortho        margin +0.0746  nearest 1.00
+  [35/144] seed 8 ortho        margin +0.1288  nearest 1.00
+  [34/144] seed 8 collide-rnd  margin +0.0336  nearest 1.00
+  [39/144] seed 9 ortho        margin +0.1087  nearest 1.00
+  [40/144] seed 9 ortho-rnd    margin -0.0024  nearest 0.50
+  [36/144] seed 8 ortho-rnd    margin -0.0078  nearest 0.50
+  [38/144] seed 9 collide-rnd  margin -0.0328  nearest 0.50
+  [37/144] seed 9 collide      margin +0.2119  nearest 1.00
+  [42/144] seed 10 collide-rnd  margin +0.0229  nearest 1.00
+  [41/144] seed 10 collide      margin +0.1770  nearest 1.00
+  [45/144] seed 11 collide      margin +0.1444  nearest 1.00
+  [43/144] seed 10 ortho        margin +0.1235  nearest 1.00
+  [44/144] seed 10 ortho-rnd    margin +0.0169  nearest 1.00
+  [47/144] seed 11 ortho        margin +0.0972  nearest 1.00
+  [46/144] seed 11 collide-rnd  margin -0.0913  nearest 0.00
+  [49/144] seed 12 collide      margin +0.0119  nearest 0.50
+  [52/144] seed 12 ortho-rnd    margin +0.0171  nearest 0.50
+  [48/144] seed 11 ortho-rnd    margin -0.0067  nearest 0.50
+  [54/144] seed 13 collide-rnd  margin +0.0520  nearest 1.00
+  [53/144] seed 13 collide      margin +0.1334  nearest 1.00
+  [50/144] seed 12 collide-rnd  margin +0.0256  nearest 1.00
+  [51/144] seed 12 ortho        margin +0.0864  nearest 1.00
+  [55/144] seed 13 ortho        margin +0.0341  nearest 0.50
+  [56/144] seed 13 ortho-rnd    margin -0.0300  nearest 0.50
+  [58/144] seed 14 collide-rnd  margin +0.0245  nearest 0.50
+  [57/144] seed 14 collide      margin +0.1834  nearest 1.00
+  [59/144] seed 14 ortho        margin +0.1842  nearest 1.00
+  [61/144] seed 15 collide      margin +0.2255  nearest 1.00
+  [60/144] seed 14 ortho-rnd    margin +0.0425  nearest 1.00
+  [65/144] seed 16 collide      margin -0.0812  nearest 0.00
+  [64/144] seed 15 ortho-rnd    margin +0.0022  nearest 0.50
+  [63/144] seed 15 ortho        margin +0.1033  nearest 1.00
+  [66/144] seed 16 collide-rnd  margin -0.0961  nearest 0.00
+  [62/144] seed 15 collide-rnd  margin -0.0501  nearest 0.00
+  [67/144] seed 16 ortho        margin -0.0158  nearest 0.50
+  [68/144] seed 16 ortho-rnd    margin -0.0172  nearest 0.50
+  [69/144] seed 17 collide      margin +0.1884  nearest 1.00
+  [70/144] seed 17 collide-rnd  margin -0.0509  nearest 0.00
+  [72/144] seed 17 ortho-rnd    margin -0.0205  nearest 0.00
+  [73/144] seed 18 collide      margin +0.2401  nearest 1.00
+  [77/144] seed 19 collide      margin +0.2007  nearest 1.00
+  [71/144] seed 17 ortho        margin +0.0655  nearest 1.00
+  [76/144] seed 18 ortho-rnd    margin -0.0057  nearest 0.50
+  [75/144] seed 18 ortho        margin +0.0959  nearest 1.00
+  [74/144] seed 18 collide-rnd  margin -0.0424  nearest 0.00
+  [82/144] seed 20 collide-rnd  margin -0.0721  nearest 0.00
+  [81/144] seed 20 collide      margin +0.1786  nearest 1.00
+  [80/144] seed 19 ortho-rnd    margin +0.0414  nearest 1.00
+  [78/144] seed 19 collide-rnd  margin -0.0586  nearest 0.00
+  [83/144] seed 20 ortho        margin +0.1244  nearest 1.00
+  [84/144] seed 20 ortho-rnd    margin +0.0131  nearest 0.50
+  [79/144] seed 19 ortho        margin +0.1189  nearest 1.00
+  [85/144] seed 21 collide      margin +0.1853  nearest 1.00
+  [86/144] seed 21 collide-rnd  margin -0.0334  nearest 0.50
+  [87/144] seed 21 ortho        margin +0.0547  nearest 1.00
+  [88/144] seed 21 ortho-rnd    margin -0.0159  nearest 0.50
+  [89/144] seed 22 collide      margin +0.2054  nearest 1.00
+  [92/144] seed 22 ortho-rnd    margin +0.0188  nearest 1.00
+  [94/144] seed 23 collide-rnd  margin +0.0020  nearest 0.50
+  [90/144] seed 22 collide-rnd  margin +0.0701  nearest 1.00
+  [91/144] seed 22 ortho        margin +0.1550  nearest 1.00
+  [95/144] seed 23 ortho        margin +0.1059  nearest 1.00
+  [93/144] seed 23 collide      margin +0.2061  nearest 1.00
+  [97/144] seed 24 collide      margin +0.1179  nearest 1.00
+  [96/144] seed 23 ortho-rnd    margin -0.0049  nearest 0.50
+  [98/144] seed 24 collide-rnd  margin -0.0806  nearest 0.00
+  [99/144] seed 24 ortho        margin +0.0668  nearest 1.00
+  [101/144] seed 25 collide      margin +0.2241  nearest 1.00
+  [100/144] seed 24 ortho-rnd    margin +0.0221  nearest 1.00
+  [103/144] seed 25 ortho        margin +0.0960  nearest 1.00
+  [106/144] seed 26 collide-rnd  margin -0.0425  nearest 0.00
+  [102/144] seed 25 collide-rnd  margin -0.0169  nearest 0.00
+  [105/144] seed 26 collide      margin +0.2004  nearest 1.00
+  [104/144] seed 25 ortho-rnd    margin +0.0427  nearest 1.00
+  [107/144] seed 26 ortho        margin +0.0868  nearest 1.00
+  [109/144] seed 27 collide      margin +0.2181  nearest 1.00
+  [108/144] seed 26 ortho-rnd    margin +0.0153  nearest 0.50
+  [110/144] seed 27 collide-rnd  margin +0.0193  nearest 1.00
+  [111/144] seed 27 ortho        margin +0.0870  nearest 1.00
+  [112/144] seed 27 ortho-rnd    margin -0.0367  nearest 0.00
+  [113/144] seed 28 collide      margin +0.1941  nearest 1.00
+  [114/144] seed 28 collide-rnd  margin +0.0189  nearest 1.00
+  [115/144] seed 28 ortho        margin +0.1268  nearest 1.00
+  [118/144] seed 29 collide-rnd  margin -0.0339  nearest 0.00
+  [117/144] seed 29 collide      margin +0.1599  nearest 1.00
+  [119/144] seed 29 ortho        margin +0.0347  nearest 0.50
+  [120/144] seed 29 ortho-rnd    margin -0.0097  nearest 0.50
+  [123/144] seed 30 ortho        margin +0.1455  nearest 1.00
+  [122/144] seed 30 collide-rnd  margin -0.0553  nearest 0.00
+  [121/144] seed 30 collide      margin +0.2046  nearest 1.00
+  [116/144] seed 28 ortho-rnd    margin -0.0249  nearest 0.00
+  [125/144] seed 31 collide      margin +0.1749  nearest 1.00
+  [124/144] seed 30 ortho-rnd    margin +0.0207  nearest 1.00
+  [126/144] seed 31 collide-rnd  margin +0.0346  nearest 1.00
+  [127/144] seed 31 ortho        margin +0.1176  nearest 1.00
+  [128/144] seed 31 ortho-rnd    margin -0.0306  nearest 0.00
+  [130/144] seed 32 collide-rnd  margin -0.0283  nearest 0.00
+  [129/144] seed 32 collide      margin +0.2053  nearest 1.00
+  [131/144] seed 32 ortho        margin +0.1243  nearest 1.00
+  [134/144] seed 33 collide-rnd  margin +0.0648  nearest 1.00
+  [132/144] seed 32 ortho-rnd    margin -0.0014  nearest 0.00
+  [135/144] seed 33 ortho        margin +0.0420  nearest 1.00
+  [137/144] seed 34 collide      margin +0.0839  nearest 1.00
+  [136/144] seed 33 ortho-rnd    margin +0.0125  nearest 1.00
+  [133/144] seed 33 collide      margin +0.1969  nearest 1.00
+  [138/144] seed 34 collide-rnd  margin +0.0028  nearest 0.50
+  [139/144] seed 34 ortho        margin +0.0780  nearest 1.00
+  [140/144] seed 34 ortho-rnd    margin -0.0148  nearest 0.50
+  [142/144] seed 35 collide-rnd  margin +0.0008  nearest 0.50
+  [141/144] seed 35 collide      margin +0.2367  nearest 1.00
+  [143/144] seed 35 ortho        margin +0.1298  nearest 1.00
+  [144/144] seed 35 ortho-rnd    margin +0.0336  nearest 1.00
+experiment: orthoname
+  instrument        orthoname   trial seed 000000000135206e   1214 trials
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  question          `orthovocab` showed two SEQUENTIAL lessons on different
+                    axes coexist (77% less damage, 10.7 SE). Naming is
+                    SIMULTANEOUS and conditional. Does spreading a vocabulary
+                    across articulators make the milestone reachable?
+  the encodings     collide: both words move F1, opposite ways.
+                    ortho:   one word moves F1, the other F2.
+                    MATCHED on target separation (0.58 log units both), so
+                    neither is handed the score. ortho pays 1.41x more per
+                    lesson, which works against the hypothesis.
+  the control       matched marginal per encoding: same targets, same reward
+                    rate, conditionality removed. Contexts ON in every arm.
+  the refusal       neither beating its own control means naming did not
+                    happen at all; ortho not beating collide means the
+                    sequential result does not transfer. 36 seeds.
+
+
+  arm           margin (log units)     nearest-target fraction
+  collide       +0.1747 +/- 0.0000        0.958
+  collide-rnd   -0.0197 +/- 0.0000        0.389
+  ortho         +0.0969 +/- 0.0000        0.958
+  ortho-rnd     +0.0011 +/- 0.0000        0.542
+
+  ARM LIVENESS vs `collide` (seeds where the arm differs at all)
+    collide-rnd        36/36
+    ortho              36/36
+    ortho-rnd          36/36
+
+  EXCESS over each encoding's OWN matched marginal, paired on seed.
+  This is what CONDITIONALITY bought, with the targets held fixed.
+    collide  +0.1944 +/- 0.0119  (+16.3 SE)
+    ortho    +0.0958 +/- 0.0060  (+15.8 SE)
+    ortho - collide  -0.0986 +/- 0.0117  (-8.4 SE)  [paired]
+
+  THE VOCABULARY IS NOT THE PROBLEM (-8.4 SE). An orthogonal encoding does
+  not name better than a colliding one, so `orthovocab`'s result is a fact
+  about SEQUENTIAL lessons that does not transfer to simultaneous conditional
+  ones. Interference between lessons taught one after another, and the
+  failure to condition on the heard word, are different problems -- and this
+  run says only the first is about sharing a dimension.

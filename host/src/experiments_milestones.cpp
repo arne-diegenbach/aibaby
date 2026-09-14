@@ -6446,9 +6446,15 @@ bool run_orthoname(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
                   kONArms[a].name, mg.size());
       return false;
     }
+    // INTO LOCALS FIRST. I made the unsequenced-printf error here AGAIN, hours
+    // after adding a memory rule about it: ctx_mean_se(mg, &se_m) and se_m as two
+    // arguments of one call reads se_m before the call that writes it, and every
+    // SE in this column printed 0.0000. Knowing the rule is not the same as
+    // applying it; the sweep is what catches it.
     double se_m = 0.0, s2 = 0.0;
-    std::printf("  %-13s %+.4f +/- %-13.4f %.3f\n", kONArms[a].name,
-                ctx_mean_se(mg, &se_m), se_m, ctx_mean_se(fr, &s2));
+    const double mm = ctx_mean_se(mg, &se_m);
+    const double mf = ctx_mean_se(fr, &s2);
+    std::printf("  %-13s %+.4f +/- %-13.4f %.3f\n", kONArms[a].name, mm, se_m, mf);
   }
 
   {
@@ -6474,15 +6480,25 @@ bool run_orthoname(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
     std::printf("\n  orthoname cannot summarise: an arm it names is missing.\n");
     return false;
   }
-  // EXCESS over each encoding's OWN matched marginal, paired on seed -- these
-  // arms share creatures, so the SE is paired. That is the poolbeta rule, and I
-  // broke it on `movability` earlier today while citing it.
+  // THE MARGIN IS NOT COMPARABLE ACROSS THE TWO GEOMETRIES, and the first run of
+  // this experiment gated on it anyway and reported collide beating ortho at 8.4
+  // SE.  That number is an artefact.  `collide`'s targets are COLLINEAR about
+  // rest, so moving x toward one's own target gains x on both distances and the
+  // margin is 2x.  `ortho`'s are PERPENDICULAR, so only the own-side distance
+  // shrinks and the margin is hypot(x, d) - (d - x), about half as much for the
+  // same learning.  Predicted inflation 1.8-1.9x at small moves; the observed
+  // excess ratio was 2.03.  The effect was the metric.
+  //
+  // The NEAREST-TARGET FRACTION is geometry-free -- it asks only which target the
+  // utterance is closer to -- and it read 0.958 for BOTH taught arms.  So the gate
+  // moves to the fraction, and the margin is reported as a descriptive column with
+  // a warning rather than used for a verdict.
   const auto excess = [&](int tt, int rr, std::vector<double>* out, double* se) {
     out->clear();
     for (uint32_t r = 0; r < kReps; ++r) {
       const Cell& ct = cells[r * kONArmCount + uint32_t(tt)];
       const Cell& cr = cells[r * kONArmCount + uint32_t(rr)];
-      if (ct.ok && cr.ok) out->push_back(ct.margin - cr.margin);
+      if (ct.ok && cr.ok) out->push_back(ct.frac - cr.frac);
     }
     return ctx_mean_se(*out, se);
   };
@@ -6490,8 +6506,10 @@ bool run_orthoname(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
   double se_c = 0.0, se_o = 0.0;
   const double m_c = excess(c_t, c_r, &ec, &se_c);
   const double m_o = excess(o_t, o_r, &eo, &se_o);
-  std::printf("\n  EXCESS over each encoding's OWN matched marginal, paired on seed.\n"
-              "  This is what CONDITIONALITY bought, with the targets held fixed.\n"
+  std::printf("\n  EXCESS in NEAREST-TARGET FRACTION over each encoding's OWN matched\n"
+              "  marginal, paired on seed. The fraction rather than the margin, because the\n"
+              "  margin rewards COLLINEAR targets about 2x for the same learning -- see the\n"
+              "  note above; gating on it made a metric artefact read as an 8.4 SE effect.\n"
               "    collide  %+.4f +/- %.4f  (%+.1f SE)\n"
               "    ortho    %+.4f +/- %.4f  (%+.1f SE)\n",
               m_c, se_c, se_c > 0.0 ? m_c / se_c : 0.0,
@@ -6528,12 +6546,25 @@ bool run_orthoname(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
                 m_d / se_d, double(dd.size()) * std::pow(4.0 / (m_d / se_d), 2.0));
     return false;
   }
-  std::printf("\n  THE VOCABULARY IS NOT THE PROBLEM (%+.1f SE). An orthogonal encoding does\n"
-              "  not name better than a colliding one, so `orthovocab`'s result is a fact\n"
-              "  about SEQUENTIAL lessons that does not transfer to simultaneous conditional\n"
-              "  ones. Interference between lessons taught one after another, and the\n"
-              "  failure to condition on the heard word, are different problems -- and this\n"
-              "  run says only the first is about sharing a dimension.\n",
+  std::printf("\n  THE VOCABULARY MAKES NO DIFFERENCE (%+.1f SE on the geometry-free\n"
+              "  measure). Spreading the two words across articulators names neither better\n"
+              "  nor worse than stacking them on F1, so `orthovocab`'s collision result is a\n"
+              "  fact about SEQUENTIAL lessons and does not transfer to simultaneous\n"
+              "  conditional ones. Interference between lessons taught one after another,\n"
+              "  and the failure to condition on the heard word, are different problems.\n"
+              "\n"
+              "  BUT READ THE ABSOLUTE NUMBERS BEFORE CALLING THIS A NULL: both encodings\n"
+              "  name, and well -- nearest-target 0.958 against matched marginals at 0.389\n"
+              "  and 0.542, roughly 16 SE of excess each. With contexts on, this creature\n"
+              "  DOES say the right thing for the word it heard.\n"
+              "\n"
+              "  AND DO NOT READ THAT AS THE MILESTONE. These targets sit 0.29-0.41 log\n"
+              "  units from rest and are SYMMETRIC about it; the shipped vowel vocabulary is\n"
+              "  0.89 apart and asymmetric, demanding a 0.67 move on one word alone. Naming\n"
+              "  works here because the required travel is small -- which is exactly what\n"
+              "  `ceiling-is-an-exponent` says: the wall is how FAR reward can move a\n"
+              "  formant, not whether it can steer conditionally. The right next question is\n"
+              "  where between 0.58 and 0.89 the score falls off.\n",
               se_d > 0.0 ? m_d / se_d : 0.0);
   return false;
 }
