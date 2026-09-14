@@ -504,10 +504,10 @@ of an hour.
 | **M1** closed audio loop | **done — G2 met.** Rewarded vocalisations rise within the session (×1.35) and praise beats its own yoked control in **23 of 27 creatures** across three seed families, and 9 of 9 at 420 s. What closed it was directional exploration (DNA v10), which was not aimed at reward at all |
 | **M2** vision | **done** — camera → retina → B3 → B1, discriminates present from absent at 98%, and 86% with firing rate divided out |
 | **M3** cross-modal association | **CLOSED, NEGATIVE** on the vision→voice form. Eleven mechanisms across four structurally different families were measured against it and it never moved outside its own noise floor: the shipped creature reads taught−random **+0.060 ± 0.040 SE**, and the control genome — mechanism absent by construction — swings ±0.060 across seed families. **Its "does not acquire a new conditional map" reading is superseded**, see the naming row below: with a context-indexed bias the creature *does* acquire one, from the ear rather than the eye |
-| **Naming (G3)** heard word → spoken word | **DIRECTIONAL NAMING MET; ABSOLUTE NAMING CEILINGED.** On the axis measure the creature moves its voice the right way for the word it just heard — **0.824 and 0.738 across two seed families, pooled +0.276 (7.6 SE) over echo-only and +0.244 (6.0 SE) over a matched-marginal control** — on a measure an echo scores at 0.503 and an arbitrary-but-consistent mapping at 0.406, both closed by construction rather than by argument. It also partly arrives: 0.670 and 0.604 on the strict nearest-of-actual-targets score against 0.495–0.518 for both controls. What is **not** met is absolute naming: delivered dF1 tops out near **137 Hz** against the ~230 needed, and that ceiling now has a cause rather than a shrug — see the row below |
+| **Naming (G3)** heard word → spoken word | **DIRECTIONAL NAMING MET; ABSOLUTE NAMING CEILINGED.** On the axis measure the creature moves its voice the right way for the word it just heard — **0.824 and 0.738 across two seed families, pooled +0.276 (7.6 SE) over echo-only and +0.244 (6.0 SE) over a matched-marginal control** — on a measure an echo scores at 0.503 and an arbitrary-but-consistent mapping at 0.406, both closed by construction rather than by argument. It also partly arrives: 0.670 and 0.604 on the strict nearest-of-actual-targets score against 0.495–0.518 for both controls. What is **not** met is absolute naming: delivered dF1 tops out near **137 Hz** against the ~230 needed, and that ceiling now has a cause rather than a shrug — see the row below. **AND CONDITIONALITY IS NO LONGER THE BLOCKER** (2026-09-14, `orthoname`, 36 seeds, contexts on): on a two-word vocabulary sitting 0.29–0.41 log units from rest, the creature lands nearest the **right** target **0.958** of the time against matched marginals at 0.389 and 0.542 — about **16 SE** of excess. It says the right thing for the word it heard. That reconciles what looked like a contradiction on this page: `g2cond`'s 12σ closure (unconditional +0.369, conditional +0.022) was measured **without** the context-indexed bias; with v51/v53 contexts on, conditional steering works. **This is not the milestone**, and the reason names the wall precisely: these targets are *symmetric* about rest and 0.58 apart, while the shipped vowel vocabulary is 0.89 apart and asymmetric, demanding a 0.67 move on one word alone. Naming works here because the required **travel** is small — which is what the ceiling row says. The open question is where between 0.58 and 0.89 the score falls off. *A retraction from that run:* it first reported the colliding encoding beating the orthogonal one at 8.4 SE, which was an artefact of scoring by **margin** — collinear targets inflate the margin ~2× for identical learning (predicted 1.8–1.9×, observed 2.03). The geometry-free nearest-target fraction reads 0.958 for both |
 | **The naming ceiling** | **CLOSED — it is one exponent, not a tally of dead ends.** `dF1 ~ aligned^0.61`: the larynx compresses what it is given, and the same curve does two jobs — it limits delivery, and its derivative limits learning, since the drift is `−Cov(e, perturb)` which factors through `dF1/d(drive)`. **DNA v58 settled it by dissolving the trade it was supposed to be stuck on.** Exempting the learned bias from the rate homeostat (`err = rate_ema − (target + gain·delivered_bias)`) raised the aligned bias **+21%**, raised `gain` 0.90 → 1.08, and kept the larynx regulated (5.87 Hz vs 6.23) — where v57 pooling *halved* the bias and `ipoff` collapsed learning outright (103.9 → 17.7, −7.42 SE). So regulation and learning are separable after all. **And it delivered +0.6 ± 8.6 Hz**, because `^0.61` turns +21% of aligned into **+4 Hz** — a bar needing ~316 seeds to resolve, against the 18 that ran. The arithmetic is the result: dF1 ×1.68 needs aligned **×2.34**, ×2.0 needs ×3.12, and every knob this project has found moves aligned ×1.1–×1.2. No amount of bias buys past an exponent below 1; only a change to the **readout** can, and the readout is a rate-weighted centroid by design. Naming stops here |
 | **M4** growth and sleep | **done** — **G4 passes**: the creature never grows while it is still learning, grows only on a detected plateau, and never passes the DNA cap; myelination, pruning and replay all run |
-| **Memory and interference** | **HALF-MAPPED, and the replay half is negative.** A conflicting second lesson wipes a taught sound to **0.22** (`retain`), and the §3.6 replay buffer does **nothing** about it: switching replay off entirely costs +0.3 SE on retention and −0.4 SE on absolute error. That is not a tuning failure — the cash-in is `u = step·perturb_i` and during sleep `perturb_i` is fresh noise, so `E[u] = 0`; it rehearses the cue and reinforces nothing. Interleaving is refused with a *perfect* oracle (`frozen`, −1.1 SE), synaptic stabilisation is a clean null (`meta_commit`, +0.0002 on absolute error), and context gating with a *perfect* index recovers only **~15%** of the damage while costing a great deal when the index is anything less. Catastrophic interference here is mostly **not** a filing problem **AND THE WIPE IS A COLLISION, NOT A MEMORY FAILURE** (2026-09-14, 36 seeds at 5.6M) — the finding that reframes this whole row. Lesson A is taught identically in every arm and only the *second* lesson's **axis** differs, both asking the same log-distance move (0.410): a second lesson on **F1**, the dimension A was taught on, costs **+0.1603 (16.8 SE)** and drops retention to **0.23**; one on **F2** costs **+0.0364 (3.2 SE)** and leaves retention at **1.12** with the store fully intact. The difference is **+0.1238 ± 0.0116 (10.7 SE)** — a different axis does **77% less damage**. The control is structural rather than constructed: `err taught` is **+0.00000 ± 0.00000** across arms because the teaching phase is the same code path, so the learning confound cannot occur; and `collide` reproduces the long-established 0.22 wipe at 0.23, the protocol validating itself. **The effort check runs against the finding**, which is the strongest form: ortho's second lesson moved 0.169 of its required 0.410 where collide's moved 0.030 — it learned **better by 14.9 SE** and *still* damaged the first lesson less, so an effort confound could only have manufactured this had ortho learned *less*. The collision shows in both directions: on one axis the lessons fight, so B learns worse **and** damages A; on different axes B learns better **and** damages A less. (ortho is not harmless — 3.2 SE is real damage, just much less.) **What this implies is representational, not mechanical:** a vocabulary should spread across the nine articulator groups the larynx already has instead of stacking on F1. Defending a lesson was the wrong problem; not colliding is the cheap one. **AND THE STORE IS NOT A HIDDEN MEMORY** (2026-09-13, 36 seeds at 5.6M). Measuring the *stored* parameter beside the behaviour it drives, on **one creature** (`baseline`, which learns properly), both as a fraction of what was gained and paired on seed: **store kept 0.25 ± 0.05, behaviour kept 0.30 ± 0.05, difference −0.05 ± 0.05 (−1.0 SE), 36 seeds with none dropped.** They decay *together*. So the conflicting lesson is a **pure overwrite** — there is no surviving memory that the creature has merely stopped expressing, and the per-neuron-homeostat account of the wipe is refused. **CORRECTION to an earlier number on this page:** a first pass reported the store keeping **0.65 ± 0.06**, which was a *raw* `gap/teach` ratio rather than a fraction of what was gained — the sampling boundary sits a third of the way into teaching, so a raw ratio keeps the already-learned part in both numerator and denominator. On `baseline` the same correction takes 0.58 → 0.25, so the raw figure overstates retention badly; both arms now report the before-subtracted statistic. What survives from that pass is the *shape*: the sign flipped on 1 of 36 seeds, so lesson B does not write lesson A's opposite, it erodes it. Note also that run's "a perfect index does not protect it" verdict rests on retention at **1.99 SE against a 2.0 bar** while `err after` favours the index at **14.56 SE**, and retention is the untrustworthy column there — its denominator is (before − taught), with the index arms printing 6.12 ± 2.74 and 8.16 ± 7.24 |
+| **Memory and interference** | **THE WIPE IS A COLLISION, NOT A MEMORY FAILURE** (2026-09-14). A conflicting second lesson wipes a taught sound to **0.22** (`retain`) — but that is two lessons steering one scalar, not a failure to remember. With lesson A taught identically in every arm and only the *second* lesson's **axis** differing at the same log-distance, a second lesson on **F1** costs +0.1603 (16.8 SE) and drops retention to 0.23; one on **F2** costs +0.0364 (3.2 SE) and leaves retention at 1.12 with the store intact — **77% less damage, +0.1238 ± 0.0116 (10.7 SE)**. The control is *structural*: `err taught` is **+0.00000 ± 0.00000** across arms because the teaching phase is the same code path, and `collide` reproduces the long-established 0.22 at 0.23. The effort check runs **against** the finding — ortho's lesson learned *better* by 14.9 SE and still damaged A less, so a confound could only have manufactured this had it learned *less*. (ortho is not harmless: 3.2 SE is real damage, just much less.) **THERE IS NO HIDDEN MEMORY.** Store and behaviour, measured on one creature and both as a fraction of what was gained: **0.25 ± 0.05 and 0.30 ± 0.05, difference −0.05 ± 0.05 (−1.0 SE)**, 36 seeds none dropped. They decay together, so the conflict is a **pure overwrite** and retrieval work is refused — including the per-neuron-homeostat account. **AND IT CANNOT BE DEFENDED.** Replay reinforces nothing (`E[u]=0` — during sleep `perturb_i` is fresh noise; switching it off costs 0.3 SE); interleaving is refused with a *perfect* oracle (−1.1 SE); stabilisation is a clean null (`meta_commit`); and **write separation by restricting plasticity is refused** — blocking even a *quarter* of the F1 group costs 59% of the lesson, because a blocked neuron still perturbs and is still read by the centroid. A pooled readout cannot be partitioned by restricting plasticity alone. **BUT THE COLLISION RESULT IS ABOUT SEQUENTIAL LESSONS ONLY.** `orthoname` tested the representational implication — spread the vocabulary across articulators — and it **does not transfer** to simultaneous conditional naming: orthogonal and colliding encodings name identically (0.958 each). Interference between lessons taught one after another, and conditioning on the heard word, are different problems. *Corrections on this row:* an early pass reported the store keeping 0.65, a **raw** `gap/teach` ratio rather than a fraction of what was gained (the same correction takes 0.58 → 0.25 on baseline); and the "a perfect index does not protect it" verdict rests on retention at **1.99 SE against a 2.0 bar** while `err after` favours the index at 14.56 SE — prefer `err after`, since retention's denominator (before − taught) collapses and printed 6.12 ± 2.74 there |
 
 ### Reading this page
 
@@ -519,18 +519,26 @@ here was reached twice in opposite directions.
 
 So if you want the state rather than the story:
 
-- **the table above** is current, and is the only part guaranteed to be
-- **what is closed and why** — twelve routes on the naming ceiling, each with the
-  measurement that closed it, in the ceiling row above
-- **what to read before touching G3** — `dF1 ~ aligned^0.61` and its two jobs;
-  everything that failed, failed for that reason
+- **the table above is current**, and is the only part of this page guaranteed to
+  be — everything below it is dated and some of it is superseded
+- **what is closed and why** — the naming ceiling is *one exponent*,
+  `dF1 ~ aligned^0.61`, not a tally of dead ends; see the ceiling row
+- **what to read before touching G3** — that exponent and its two jobs. It limits
+  delivery, and its derivative limits learning, since the drift is
+  `−Cov(e, perturb)` and factors through `dF1/d(drive)`. Everything that failed,
+  failed for that reason
+- **what the memory chapter settled** — the wipe is a *collision*, not a memory
+  failure; see [The memory chapter](#the-memory-chapter-and-what-closed-it)
 - **what is still open** lives in the memory index, not here, because it changes
   faster than this page does
 
 Where a later section contradicts an earlier one, **the later one is right** and
-usually says so explicitly. Four claims in the most recent session were retracted
-by the run queued to test them, and in each case the retraction is in the commit
-that superseded the claim rather than appended somewhere quieter.
+usually says so explicitly. Claims here are retracted often enough that the
+retractions are part of the record: the 2026-09-13/14 session alone retracted six,
+four of them by the run queued to test them. In every case the retraction sits in
+the commit that superseded the claim rather than somewhere quieter, and the
+corrected number replaces the old one *in place* rather than being appended after
+it.
 
 Every number on this page comes from the genome in [dna/default.toml](dna/default.toml)
 as it currently stands. **The whole suite above passes except `m3`** — G1,
@@ -9994,6 +10002,96 @@ build — and `partprobe` priced it and **refused it**: a learned boundary buys
 reachable by seeing the labels the creature is trying to infer. What is left is
 a partition supervised by something the creature has, which is a different
 shape from anything tried here.
+
+## The memory chapter, and what closed it
+
+*2026-09-13/14 — six runs over two days.*
+
+The headline is that **the conflicting-lesson wipe was never a memory failure.**
+The chapter is worth reading as a sequence, because four of its six results were
+things I had to retract or re-read.
+
+**1. There is no hidden memory.** `retain`'s conflicting lesson drops a taught
+sound to 0.22, and that is consistent with two very different mechanisms: the
+parameters being overwritten, or surviving and no longer being expressed. Those
+want opposite machinery — protection versus retrieval — so picking wrong is
+expensive. Measuring the *stored* parameter beside the behaviour it drives, on one
+creature and both as a fraction of what was gained: **store 0.25 ± 0.05, behaviour
+0.30 ± 0.05, difference −0.05 ± 0.05 (−1.0 SE)**, 36 seeds none dropped. They decay
+together. It is a **pure overwrite**, and retrieval work is refused.
+
+**2. It cannot be defended either.** Replay reinforces nothing — the cash-in is
+`u = step·perturb_i` and during sleep `perturb_i` is fresh noise, so `E[u] = 0`.
+Interleaving is refused with a perfect oracle. Stabilisation is a clean null. And
+**write separation by restricting plasticity is refused**: blocking even a quarter
+of the F1 group costs **59%** of the lesson. The reason is not the one I first gave
+— see below.
+
+**3. So it needs avoiding, not defending.** `capacity` had long said this creature
+holds two *orthogonal* lessons at 0.84 against the colliding case's 0.22, and that
+had never been tested inside the retention protocol. With lesson A taught
+identically in every arm and only the second lesson's **axis** differing at equal
+log-distance: a second lesson on F1 costs +0.1603 (16.8 SE); one on F2 costs
++0.0364 (3.2 SE). **77% less damage, 10.7 SE.** The control is structural — `err
+taught` is `+0.00000 ± 0.00000` because the teaching phase is the same code path —
+and the effort check runs *against* the finding, ortho's lesson learning better by
+14.9 SE and still damaging less.
+
+**4. But it does not transfer to naming.** The representational implication —
+spread the vocabulary across the nine articulator groups — was tested directly and
+**refused**: orthogonal and colliding encodings name identically, 0.958 each.
+Interference between sequential lessons and conditioning on a heard word are
+different problems.
+
+**5. What that run did show is larger.** Both encodings name *well*: **0.958**
+against matched marginals at 0.389 and 0.542, ~16 SE of excess. With contexts on,
+the creature says the right thing for the word it heard — which reconciles
+`g2cond`'s 12σ closure, measured *without* the context-indexed bias. Conditionality
+is no longer the blocker. What remains is **travel**: these targets sit 0.29–0.41
+log units from rest, where the shipped vowels demand 0.67 on one word alone.
+
+### Four results from this chapter that were wrong before they were right
+
+Kept because the corrections are the useful part.
+
+- **"The store keeps 0.65"** was a raw `gap/teach` ratio, not a fraction of what
+  was gained. The sampling boundary sits a third of the way into teaching, so a raw
+  ratio keeps the already-learned part in both numerator and denominator. The same
+  correction takes 0.58 → 0.25.
+- **"Write separation is refused because the centroid partitions the range"** was
+  refuted by its own curve. A range cap predicts loss tracking `1 − reachable`
+  (38/50/62%) and a *steep* curve; observed was 59/58/68% — higher everywhere and
+  flat. A quarter blocked costs nearly as much as three quarters. The real reason is
+  that a blocked neuron still perturbs and **is still read by the centroid**: a
+  pooled readout cannot be partitioned by restricting plasticity alone.
+- **"The colliding encoding names better, 8.4 SE"** was an artefact of scoring by
+  *margin*. Collinear targets gain on both distances and inflate the margin ~2× for
+  identical learning (predicted 1.8–1.9×, observed 2.03). The geometry-free
+  nearest-target fraction reads 0.958 for both.
+- **"F2 is the more steerable axis"** is a **hypothesis, not a finding**: 2.9 SE
+  once the SE is correctly *paired* (the arms share a seed, so they are the same
+  creature at birth). It needs ~68 seeds for 4 SE. What is solid is that both axes
+  respond strongly — 18.8 and 19.0 SE over flat untaught baselines — and that the
+  axis gap is ~28%, not the 5.6× an earlier run appeared to show. Most of that gap
+  was the collision.
+
+### Method notes this chapter paid for
+
+- A control must match the treatment on the **resource it spends** — plasticity,
+  trials, updates — not merely on the treatment's presence. A mask control that
+  flipped per tick wrote *both* halves over a phase and carried near-full
+  plasticity, so the arms learned different amounts and `err after` merely
+  reproduced `err taught`.
+- **If you can spot a confound by hand afterwards, the experiment must refuse it
+  automatically.** Gates added after the fact are retrospective; the catches that
+  mattered came from checking a number against the shape it *should* have.
+- `set_reward_mask` **allows** a range and freezes the rest of the network. That is
+  right for "hand the creature perfect credit assignment" and wrong for "confine one
+  lesson"; `set_reward_block` is the complement. Flat-across-a-varied-parameter and
+  ending-worse-than-untaught are the two diagnostics that expose the confusion.
+- A monitor that greps a results file it did not watch being created will report
+  the **previous** run. Clear the log first, and require a marker string only the
+  new build emits.
 
 ## Design decisions that were not obvious
 
