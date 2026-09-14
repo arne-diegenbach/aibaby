@@ -1534,6 +1534,29 @@ struct Word {
   float f0, f1, f2;
 };
 
+// A TARGET THAT MOVES, for `staircase`. Tumer & Brainard drive pitch shifts in
+// adult songbirds with a threshold held for three days and then STEPPED each
+// morning; the bird is never asked for a jump it cannot straddle, and the target
+// recedes as it improves.
+//
+// WHY THIS PROJECT NEEDS ONE. `travelsweep` found the shipped reward
+// bit-identically blind to how far the target is, because the bar is an EMA of
+// the creature's own error and a further target only adds a constant to that
+// error. The invariance holds ONLY while the creature never crosses its target.
+// A ramp guarantees it always does: the demand stays local, always visible, and
+// total travel accumulates across steps instead of being asked for in one jump.
+//
+// The ramp is a fixed SCHEDULE, not a performance-gated loop, which is both
+// faithful to the songbird protocol (the threshold moved daily, not on
+// criterion) and free of any oracle reading the creature's state.
+struct TargetRamp {
+  double s_start = 0.0;       // separation in log units at trial 0
+  double s_final = 0.0;       // ...and after the ramp completes
+  double rest_f1 = 623.0;     // the pair is symmetric about rest on F1
+  double rest_f2 = 1651.0;    // F2 pinned, so this is a one-axis demand
+  uint32_t ramp_trials = 0;   // linear in log units over this many trials, then held
+};
+
 // APPENDED to, never reordered. Every other experiment indexes kWords[0] and
 // kWords[1] by name-of-object, so adding entries at the end is bit-identical
 // for all of them and swapping any two would silently redefine what "cube"
@@ -2117,6 +2140,7 @@ bool run_movability(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_orthoname(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_travelsweep(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_absbar(const std::vector<uint8_t>&, uint64_t, bool);
+bool run_staircase(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_pgprobe(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_g2cond(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_coderprobe(const std::vector<uint8_t>&, uint64_t, bool);

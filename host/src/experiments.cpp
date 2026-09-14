@@ -267,6 +267,15 @@ const Spec kSpecs[] = {
      "  bar makes reward constant past it. Two gates: is the distance visible\n"
      "  (0.89 vs 1.20, same seed), and can the rule still learn (taught vs its\n"
      "  own matched marginal). 36 seeds"},
+    {"staircase", 3400000, Expect::kOpen, Tier::kLong,
+     "if the BAR cannot ask for distance, move the TARGET. Tumer & Brainard\n"
+     "  step a songbird's pitch threshold each morning rather than setting it\n"
+     "  far and waiting -- and our invariance holds only while the creature\n"
+     "  never crosses its target, so a ramp keeps the demand visible. jump sits\n"
+     "  at 0.89 from trial 0; stair ramps 0.15 -> 0.89 over the first half then\n"
+     "  HOLDS, so the scored late third is at the same final target in both.\n"
+     "  A null revives ceiling-is-an-exponent, so it is worth running either\n"
+     "  way. Matched marginal per protocol. 36 seeds"},
     {"movability", 5600000, Expect::kOpen, Tier::kLong,
      "orthovocab left a LEAD: on identical demands the F2 lesson travelled\n"
      "  0.169 and the F1 lesson 0.030 -- but F1's was FIGHTING another lesson on\n"
@@ -601,6 +610,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "orthoname") ok = run_orthoname(dna_blob, ticks, verbose);
   else if (name == "travelsweep") ok = run_travelsweep(dna_blob, ticks, verbose);
   else if (name == "absbar") ok = run_absbar(dna_blob, ticks, verbose);
+  else if (name == "staircase") ok = run_staircase(dna_blob, ticks, verbose);
   else if (name == "partprobe") ok = run_partprobe(dna_blob, ticks, verbose);
   else if (name == "pgprobe") ok = run_pgprobe(dna_blob, ticks, verbose);
   else if (name == "g2cond") ok = run_g2cond(dna_blob, ticks, verbose);

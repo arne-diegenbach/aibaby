@@ -4318,7 +4318,10 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
                              // `orthoname`: the targets the creature is rewarded
                              // toward, overriding the vowel table. nullptr keeps
                              // kWords, so every existing caller is bit-identical.
-                             const Word* tgt_table = nullptr) {
+                             const Word* tgt_table = nullptr,
+                             // `staircase`: a target that moves on a fixed
+                             // schedule. nullptr keeps every caller bit-identical.
+                             const TargetRamp* ramp = nullptr) {
   // -1 is vocallearn's own rule, and passing nothing reproduces it exactly: the
   // positive control aims at one fixed target and every other arm at the word
   // that was heard.
@@ -4497,7 +4500,21 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
                                  : tgt == kVLTgtSwap   ? (label + 1u) % nw
                                  : tgt == kVLTgtRandom ? (rnd & 1u)
                                                        : label;
-    const Word& w = tgt_table ? tgt_table[target_word] : kWords[target_word];
+    // A MOVING TARGET, when one is asked for. Built per trial into a local so
+    // the ramp cannot alias the caller's table, and bit-identical when absent.
+    Word ramp_tbl[2];
+    if (ramp && ramp->ramp_trials > 0) {
+      const double frac = trial >= ramp->ramp_trials
+                              ? 1.0
+                              : double(trial) / double(ramp->ramp_trials);
+      const double sep = ramp->s_start + frac * (ramp->s_final - ramp->s_start);
+      const double half = sep * 0.5;
+      ramp_tbl[0] = {200.0f, float(ramp->rest_f1 * std::exp(-half)), float(ramp->rest_f2)};
+      ramp_tbl[1] = {200.0f, float(ramp->rest_f1 * std::exp(half)), float(ramp->rest_f2)};
+    }
+    const Word& w = ramp && ramp->ramp_trials > 0 ? ramp_tbl[target_word]
+                    : tgt_table                   ? tgt_table[target_word]
+                                                  : kWords[target_word];
     const uint32_t bucket = target_word;
     // The oracle is set once per trial and held, exactly as the context tract
     // is: a condition that vanishes before reward lands has nothing to bind to.
@@ -7554,6 +7571,307 @@ bool run_absbar(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) 
     return false;
   }
   return true;
+}
+
+// `staircase` -- if the bar cannot ask for distance, move the TARGET instead.
+//
+// THE PROBLEM, MEASURED. `travelsweep` found the shipped reward bit-identically
+// blind to how far the target is, past roughly 0.6 log units: the bar is an EMA
+// of the creature's own error, a further target adds only a CONSTANT to that
+// error, and the constant cancels. `absbar` attacks that by changing the BAR.
+// This attacks it by changing the TARGET, which is a different axis and, in the
+// animal, the one that is actually used.
+//
+// THE PROTOCOL IS THE SONGBIRD'S. Tumer & Brainard (2007) drive pitch shifts in
+// adult birds with white-noise bursts past a pitch threshold held for about
+// three days and then STEPPED each morning. The bird is never asked for a jump
+// it cannot straddle. Our invariance holds ONLY while the creature never crosses
+// its target, so a ramp guarantees the demand stays visible: it is always local,
+// and total travel accumulates across steps rather than being demanded at once.
+//
+// THE RAMP IS A SCHEDULE, NOT A LOOP. It moves on trial count alone, reading
+// nothing about the creature. That is faithful to the protocol -- the threshold
+// moved daily, not on criterion -- and it keeps an oracle out of the arm. It
+// also means the comparison is clean: both arms run the same trials against the
+// same FINAL target, and differ only in the path taken to it.
+//
+// THE ARMS, all ending at the same place so the final demand is identical:
+//   jump    the target sits at 0.89 from trial 0. The current protocol.
+//   stair   the target ramps from 0.15 to 0.89 over the FIRST HALF of trials,
+//           then holds. The late third -- which is what is scored -- is entirely
+//           at the final target for both arms, so they are scored on identical
+//           demands and differ only in how they got there.
+//   *-rnd   the matched marginal for each, target drawn independently of the
+//           word. `pgprobe` is why this is not optional.
+//
+// WHAT WOULD MAKE THIS A NULL, and it is a real possibility worth stating. If
+// the creature's delivered separation is set by a travel ceiling in the larynx
+// rather than by what the reward asks, then arriving at 0.89 gradually gets to
+// the same place as arriving at once, and `stair` matches `jump`. That outcome
+// would REVIVE `ceiling-is-an-exponent` as the binding constraint and retire the
+// protocol explanation, which is why the run is worth the time either way.
+//
+// THE REFUSALS, WRITTEN FIRST:
+//   * if `jump` does not beat its own matched marginal at 2 SE, the reference
+//     protocol is not steering at this separation and there is nothing to
+//     improve on. Refuse rather than report a ratio against a dead arm.
+//   * the ramp must actually move: the demanded separation is printed at three
+//     points in the schedule, from the same arithmetic the session runs.
+//   * 2-3 SE is a HYPOTHESIS at this n, not a finding, and is printed as one.
+struct SCArm {
+  const char* name;
+  bool ramped;
+  bool conditional;
+};
+const SCArm kSCArms[] = {
+    {"jump",      false, true},
+    {"jump-rnd",  false, false},
+    {"stair",     true,  true},
+    {"stair-rnd", true,  false},
+};
+constexpr uint32_t kSCArmCount = sizeof(kSCArms) / sizeof(kSCArms[0]);
+constexpr double kSCStart = 0.15;   // where the ramp begins: inside the voice's own spread
+constexpr double kSCFinal = 0.89;   // the shipped vowel pair's own F1 separation
+constexpr double kSCRestF1 = 623.0;
+constexpr double kSCRestF2 = 1651.0;
+
+bool run_staircase(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  aibaby::Dna dna0;
+  if (dna0.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) {
+    std::printf("  setup failed: the genome does not load\n");
+    return false;
+  }
+  if (dna0.module_with_role(aibaby::ModuleRole::kContext) < 0) {
+    std::printf("  this genome has no kContext module, and contexts are ON in every arm\n"
+                "  because `g2cond` says conditional learning fails without them. Build one:\n\n"
+                "    tools/ctxgenome.sh ctx.toml\n"
+                "    ./build/aibaby --dna ctx.toml --experiment staircase\n");
+    return false;
+  }
+  Regime regime;
+  regime.praise = kPraiseValue;
+  regime.scold = kScoldValue;
+  constexpr uint32_t kReps = 36;
+  const uint32_t n_trials = uint32_t(ticks / kVLTrialTicks);
+  const uint32_t ramp_trials = n_trials / 2u;
+  instrument("staircase", dna0.header().seed ^ 0x57A1u, n_trials, "trials");
+  std::printf("  question          `travelsweep` found the shipped bar blind to target\n"
+              "                    distance past ~0.6 log units. `absbar` changes the BAR.\n"
+              "                    This changes the TARGET -- which is the axis the animal\n"
+              "                    protocol actually uses.\n");
+  std::printf("  the protocol      Tumer & Brainard step the pitch threshold each morning\n"
+              "                    rather than setting it far and waiting. The bird is never\n"
+              "                    asked for a jump it cannot straddle, and our invariance\n"
+              "                    holds only while the creature never crosses its target.\n");
+  std::printf("  the arms          jump:  target at %.2f from trial 0, the current protocol.\n"
+              "                    stair: %.2f -> %.2f over the first half, then HELD, so the\n"
+              "                    late third that is scored sits at the same final target\n"
+              "                    in both arms. Matched marginal for each.\n",
+              kSCFinal, kSCStart, kSCFinal);
+  std::printf("  the ramp          a fixed SCHEDULE on trial count, reading nothing about\n"
+              "                    the creature, so no oracle enters the arm.\n");
+  std::printf("  what would null   if the ceiling is the larynx rather than the protocol,\n"
+              "                    arriving gradually reaches the same place as arriving at\n"
+              "                    once and `stair` matches `jump`. That revives\n"
+              "                    `ceiling-is-an-exponent`, so this is worth running either\n"
+              "                    way. %u seeds.\n\n", kReps);
+
+  // THE RAMP AS IT WILL RUN, printed from the same arithmetic the session uses.
+  std::printf("  THE SCHEDULE (%u trials, ramp over the first %u)\n", n_trials, ramp_trials);
+  for (uint32_t q = 0; q <= 4u; ++q) {
+    const uint32_t tr = n_trials * q / 4u;
+    const double frac = tr >= ramp_trials ? 1.0 : double(tr) / double(ramp_trials);
+    const double sep = kSCStart + frac * (kSCFinal - kSCStart);
+    const double half = sep * 0.5;
+    std::printf("    trial %6u   demanded %.4f   targets %.1f / %.1f Hz\n", tr, sep,
+                kSCRestF1 * std::exp(-half), kSCRestF1 * std::exp(half));
+  }
+
+  const size_t slots_off = offsetof(aibaby::DnaHeader, exploration) +
+                           offsetof(aibaby::DnaExploration, context_slots);
+  const size_t src_off = offsetof(aibaby::DnaHeader, exploration) +
+                         offsetof(aibaby::DnaExploration, context_source);
+
+  struct Cell {
+    bool ok = false;
+    double dsep = 0.0;
+    double frac = 0.0;
+    double elate = 0.0;
+  };
+  const uint32_t njobs = kReps * kSCArmCount;
+  const std::vector<Cell> cells = parallel_reps<Cell>(njobs, [&](uint32_t i) {
+    Cell cell;
+    const uint32_t r = i / kSCArmCount, a = i % kSCArmCount;
+    std::vector<uint8_t> variant = blob;
+    const uint64_t seed = dna0.header().seed + r * 7919ull;
+    std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+    const uint32_t slots = 2u, src = 4u;
+    std::memcpy(variant.data() + slots_off, &slots, sizeof(slots));
+    std::memcpy(variant.data() + src_off, &src, sizeof(src));
+    // BOTH ARMS END AT THE SAME TARGET. `jump` is expressed as a ramp that is
+    // already finished, so the two arms run the identical code path and differ
+    // only in where the schedule starts -- there is no second target mechanism
+    // for one of them to disagree with.
+    TargetRamp ramp;
+    ramp.s_start = kSCArms[a].ramped ? kSCStart : kSCFinal;
+    ramp.s_final = kSCFinal;
+    ramp.rest_f1 = kSCRestF1;
+    ramp.rest_f2 = kSCRestF2;
+    ramp.ramp_trials = ramp_trials;
+    const int tgt = kSCArms[a].conditional ? int(kVLTgtHeard) : int(kVLTgtRandom);
+    const VLRun run = run_vocallearn_session(variant, ticks, kVLTaught, nullptr, regime, tgt,
+                                             nullptr, kVLScoreFormant, nullptr, 2u, nullptr,
+                                             &ramp);
+    if (!run.ok) return cell;
+    const size_t rows = run.utt_word.size();
+    if (rows < 6) return cell;
+    double s1[2] = {0.0, 0.0}, s2[2] = {0.0, 0.0};
+    uint32_t n[2] = {0u, 0u};
+    for (size_t q = rows - rows / 3; q < rows; ++q) {
+      const int wd = run.utt_word[q];
+      if (wd < 0 || wd > 1) continue;
+      s1[wd] += run.utt_f1[q];
+      s2[wd] += run.utt_f2[q];
+      ++n[wd];
+    }
+    if (!n[0] || !n[1]) return cell;
+    double f1v[2], f2v[2];
+    for (uint32_t w = 0; w < 2u; ++w) { f1v[w] = s1[w] / n[w]; f2v[w] = s2[w] / n[w]; }
+    if (f1v[0] <= 1.0 || f1v[1] <= 1.0) return cell;
+    cell.dsep = std::log(f1v[1]) - std::log(f1v[0]);
+    const double half = kSCFinal * 0.5;
+    const Word fin[2] = {{200.0f, float(kSCRestF1 * std::exp(-half)), float(kSCRestF2)},
+                         {200.0f, float(kSCRestF1 * std::exp(half)), float(kSCRestF2)}};
+    double fsum = 0.0;
+    for (uint32_t w = 0; w < 2u; ++w) {
+      const double d_own = std::hypot(std::log(f1v[w] / double(fin[w].f1)),
+                                      std::log(f2v[w] / double(fin[w].f2)));
+      const double d_oth = std::hypot(std::log(f1v[w] / double(fin[1u - w].f1)),
+                                      std::log(f2v[w] / double(fin[1u - w].f2)));
+      fsum += d_own < d_oth ? 1.0 : 0.0;
+    }
+    cell.frac = fsum / 2.0;
+    cell.elate = run.err_late;
+    cell.ok = true;
+    parallel_note("  [%u/%u] seed %u %-10s delivered %+.4f  nearest %.2f  err %.4f\n", i + 1,
+                  njobs, r, kSCArms[a].name, cell.dsep, cell.frac, cell.elate);
+    return cell;
+  });
+
+  std::printf("\n  %-11s %-20s %-9s %s\n", "arm", "delivered (log units)", "nearest",
+              "settled err");
+  for (uint32_t a = 0; a < kSCArmCount; ++a) {
+    std::vector<double> d, f, e;
+    for (uint32_t r = 0; r < kReps; ++r) {
+      const Cell& c = cells[r * kSCArmCount + a];
+      if (!c.ok) continue;
+      d.push_back(c.dsep); f.push_back(c.frac); e.push_back(c.elate);
+    }
+    if (d.size() < 3) {
+      std::printf("\n  staircase INCONCLUSIVE -- arm `%s` produced %zu creatures.\n",
+                  kSCArms[a].name, d.size());
+      return false;
+    }
+    double se_d = 0.0, se_f = 0.0, se_e = 0.0;
+    const double m_d = ctx_mean_se(d, &se_d);
+    const double m_f = ctx_mean_se(f, &se_f);
+    const double m_e = ctx_mean_se(e, &se_e);
+    std::printf("  %-11s %+.4f +/- %-9.4f %-9.3f %.4f\n", kSCArms[a].name, m_d, se_d, m_f, m_e);
+  }
+
+  {
+    ArmLiveness live("staircase");
+    for (uint32_t r = 0; r < kReps; ++r) {
+      for (uint32_t a = 0; a < kSCArmCount; ++a) {
+        const Cell& c = cells[r * kSCArmCount + a];
+        if (c.ok) live.observe(kSCArms[a].name, r, c.dsep);
+      }
+    }
+    if (!live.report("jump")) return false;
+  }
+
+  const auto excess = [&](uint32_t t, uint32_t c, std::vector<double>* out, double* se) {
+    out->clear();
+    for (uint32_t r = 0; r < kReps; ++r) {
+      const Cell& ct = cells[r * kSCArmCount + t];
+      const Cell& cc = cells[r * kSCArmCount + c];
+      if (ct.ok && cc.ok) out->push_back(ct.dsep - cc.dsep);
+    }
+    return ctx_mean_se(*out, se);
+  };
+  std::vector<double> ej, es;
+  double se_j = 0.0, se_s = 0.0;
+  const double m_j = excess(0u, 1u, &ej, &se_j);
+  const double m_s = excess(2u, 3u, &es, &se_s);
+  std::printf("\n  EXCESS over each protocol's OWN matched marginal, paired on seed.\n"
+              "  Both scored on the late third, both against the SAME final target.\n"
+              "    jump   %+.4f +/- %.4f  (%+.1f SE)\n"
+              "    stair  %+.4f +/- %.4f  (%+.1f SE)\n",
+              m_j, se_j, se_j > 0.0 ? m_j / se_j : 0.0,
+              m_s, se_s, se_s > 0.0 ? m_s / se_s : 0.0);
+
+  if (!(se_j > 0.0 && m_j > 2.0 * se_j)) {
+    std::printf("\n  staircase REFUSED -- THE REFERENCE PROTOCOL IS NOT STEERING (%+.1f SE\n"
+                "  for `jump` over its own control). At %.2f the demand is invisible to the\n"
+                "  shipped bar, so this may be the invariance showing up as a dead arm\n"
+                "  rather than a fault -- but with no working reference there is nothing for\n"
+                "  the ramp to improve on, and a ratio against a dead arm is not a result.\n",
+                se_j > 0.0 ? m_j / se_j : 0.0, kSCFinal);
+    return false;
+  }
+
+  std::vector<double> dd;
+  const size_t np = std::min(ej.size(), es.size());
+  for (size_t q = 0; q < np; ++q) dd.push_back(es[q] - ej[q]);
+  double se_d = 0.0;
+  const double m_d = ctx_mean_se(dd, &se_d);
+  std::printf("    stair - jump  %+.4f +/- %.4f  (%+.1f SE)  [paired, n=%zu]\n", m_d, se_d,
+              se_d > 0.0 ? m_d / se_d : 0.0, dd.size());
+
+  if (se_d > 0.0 && m_d > 3.0 * se_d) {
+    std::printf("\n  THE PROTOCOL WAS THE CEILING. Walking the target out beats asking for\n"
+                "  it all at once by %.1f SE, with both arms scored on the same final\n"
+                "  demand over the same trials. The creature could always travel this far;\n"
+                "  the shipped protocol had no way to ask, because a bar that is an EMA of\n"
+                "  the creature's own error is blind to a target it never crosses. That\n"
+                "  moves the naming ceiling from the larynx to the teaching, and the next\n"
+                "  question is how far a longer ramp goes -- not whether the voice can.\n",
+                m_d / se_d);
+    return true;
+  }
+  if (se_d > 0.0 && m_d > 2.0 * se_d) {
+    std::printf("\n  A HYPOTHESIS, NOT A FINDING (%.1f SE). Inside the 2-3 SE band this\n"
+                "  project has retracted findings from; it needs ~%.0f seeds for 4 SE.\n",
+                m_d / se_d, double(dd.size()) * std::pow(4.0 / (m_d / se_d), 2.0));
+    return false;
+  }
+  if (se_d > 0.0 && m_d < -2.0 * se_d) {
+    std::printf("\n  THE RAMP IS WORSE (%.1f SE against it). Arriving gradually delivers\n"
+                "  LESS than arriving at once, which is not a null and wants an account:\n"
+                "  the likeliest is that the early close target teaches a small separation\n"
+                "  the later trials then have to undo, so the ramp spends its budget\n"
+                "  learning something it must unlearn. Compare the `settled err` column.\n",
+                -m_d / se_d);
+    return false;
+  }
+  std::printf("\n  THE PROTOCOL IS NOT THE CEILING, ON THIS RAMP (%+.1f SE). Walking the\n"
+              "  target out reaches the same place as demanding it at once, which points\n"
+              "  the limit back at the voice rather than at the reward's blindness, and\n"
+              "  would revive `ceiling-is-an-exponent`: dF1 ~ aligned^0.61, and no amount\n"
+              "  of asking more carefully changes an exponent.\n"
+              "\n"
+              "  BUT THIS NULL IS AMBIGUOUS, AND THE AMBIGUITY WAS WRITTEN DOWN BEFORE THE\n"
+              "  RUN. The ramp moves %.5f log units per trial. If that outran the voice,\n"
+              "  the creature stopped straddling partway up and the later trials were back\n"
+              "  in exactly the invariant regime `travelsweep` measured -- in which case\n"
+              "  this tested a ramp that was too fast, not the idea of ramping. The two\n"
+              "  readings are distinguished by a SLOWER ramp, and that is the follow-up a\n"
+              "  null here buys: ramp over the whole session and score the last tenth.\n"
+              "  Do not retire the protocol explanation on this result alone.\n",
+              se_d > 0.0 ? m_d / se_d : 0.0,
+              (kSCFinal - kSCStart) / double(ramp_trials ? ramp_trials : 1u));
+  return false;
 }
 
 bool run_movability(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
