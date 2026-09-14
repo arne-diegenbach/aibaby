@@ -7444,7 +7444,13 @@ bool run_absbar(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) 
         if (c.ok) live.observe(kABArms[a].name, r, c.dsep);
       }
     }
-    if (!live.report("shipped-0.89")) return false;
+    // THE CONTROL CANNOT BE AN ARM WHOSE IDENTITY TO ANOTHER IS THE FINDING.
+    // This first read `shipped-0.89`, against which `shipped-1.20` is expected
+    // to be byte-identical -- that IS gate 1 -- so ArmLiveness refused the run
+    // on the very result it exists to establish, and did it after four hours of
+    // compute and before either gate printed. `shipped-rnd` is the right
+    // control: every arm here should differ from a word-blind one.
+    if (!live.report("shipped-rnd")) return false;
   }
 
   // GATE 1: IS THE INVARIANCE BROKEN? Structural, per rule, no statistics needed.

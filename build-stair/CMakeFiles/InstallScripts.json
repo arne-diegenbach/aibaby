@@ -1,0 +1,7 @@
+{
+	"InstallScripts" : 
+	[
+		"/home/arne/development/aibaby/build-stair/cmake_install.cmake"
+	],
+	"Parallel" : false
+}

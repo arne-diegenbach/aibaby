@@ -1,0 +1,2 @@
+/usr/bin/ar qc libaibaby_core.a CMakeFiles/aibaby_core.dir/core/src/dna.cpp.o CMakeFiles/aibaby_core.dir/core/src/network.cpp.o CMakeFiles/aibaby_core.dir/core/src/senses.cpp.o CMakeFiles/aibaby_core.dir/core/src/critic.cpp.o CMakeFiles/aibaby_core.dir/core/src/brain.cpp.o CMakeFiles/aibaby_core.dir/core/src/snapshot.cpp.o
+/usr/bin/ranlib libaibaby_core.a

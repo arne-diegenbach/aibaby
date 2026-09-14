@@ -1,0 +1,4 @@
+/home/arne/development/aibaby/build-stair/CMakeFiles/aibaby_core.dir
+/home/arne/development/aibaby/build-stair/CMakeFiles/aibaby.dir
+/home/arne/development/aibaby/build-stair/CMakeFiles/edit_cache.dir
+/home/arne/development/aibaby/build-stair/CMakeFiles/rebuild_cache.dir
