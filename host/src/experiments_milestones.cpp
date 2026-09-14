@@ -6569,6 +6569,433 @@ bool run_orthoname(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
   return false;
 }
 
+// `travelsweep` -- where does naming stop working as the two words move apart?
+//
+// THE CASE FOR RUNNING IT. `orthoname` found that with v51/v53 contexts on, this
+// creature names: nearest-target 0.958 against matched marginals at 0.389 and
+// 0.542. That reconciles `g2cond`'s 12-sigma closure, which was measured WITHOUT
+// contexts. So conditionality is no longer the blocker. But those targets sit
+// 0.29 log units from rest on the F1 axis, and the shipped vowel pair sits 0.89
+// apart -- 0.67 on one word alone. `ceiling-is-an-exponent` says the wall is how
+// FAR reward can move a formant. This sweep puts a number on that wall.
+//
+// THE MEASURE HAD TO CHANGE, AND THIS IS THE POINT OF THE EXPERIMENT. The
+// nearest-target fraction cannot answer this question. The targets are symmetric
+// about rest, so rest is exactly the midpoint, and landing nearer the right target
+// requires only moving in the right DIRECTION by an epsilon -- it is a sign test,
+// very nearly invariant to how far apart the targets are. A creature that moves
+// 5 Hz the correct way scores 1.00 at every separation on this page. `ctxfour`
+// already showed the two come apart: direction 0.484 with nearest AT CHANCE.
+// So the gate is DELIVERED SEPARATION -- log(f1 said for word 1) - log(f1 said for
+// word 0), in log units, against the separation the targets DEMANDED. That is the
+// quantity the milestone actually needs, and it is geometry-free.
+//
+// THE LADDER, all on the F1 axis about rest (623, 1651) from `movability`'s
+// untaught arms, F2 pinned at 1651 in every target so nothing else moves:
+//   s = 0.29  T0 539 Hz  T1 720 Hz
+//   s = 0.58  T0 466 Hz  T1 833 Hz   <- `orthoname`'s `collide`, reproduced exactly
+//   s = 0.89  T0 399 Hz  T1 972 Hz   <- the SHIPPED vowel pair's F1 separation
+//   s = 1.20  T0 342 Hz  T1 1135 Hz  <- past it, to see the roll-off from above
+// A 4.1x range of demand. The 0.58 rung is bit-comparable to `orthoname`, which
+// makes this run a replication of that result as well as an extension of it.
+//
+// THE CONTROL is the matched marginal at EVERY rung: the same target table with
+// the target drawn independently of the word. `pgprobe` is why this is not
+// optional -- a wider target pair widens both arms, and only the excess separates
+// steering from scatter. Here it does specific work: a random-target arm moves
+// toward the mean of the two targets, which is rest, so its delivered separation
+// should sit at zero and every rung's excess is measured against its own scatter.
+//
+// THE PREDICTION, WRITTEN BEFORE THE RUN. `transfer-curve` and `ctxbias` agree
+// independently on an asymptote near 234-236 Hz of F1 from the learned bias. From
+// rest that is +0.32 log units upward and -0.47 downward, so if the same asymptote
+// governs a two-context table, delivered separation should saturate somewhere near
+// 0.6-0.8 log units. That puts the 0.29 and 0.58 rungs under the wall and the 0.89
+// and 1.20 rungs over it. If that is right, the curve BENDS inside this ladder and
+// the milestone's boundary is a measured number rather than an argument.
+//
+// THE REFUSALS, WRITTEN FIRST:
+//   * if the 0.29 rung's taught arm does not beat its own matched marginal at
+//     2 SE, the instrument is dead at the easiest rung and nothing below it is
+//     interpretable. Refuse without reading the curve.
+//   * a FLAT curve across a varied parameter is the shape that hid the
+//     `set_reward_mask` bug for a whole run, so the demanded separations are
+//     printed from the target tables THEMSELVES, not from the constants I meant
+//     to write, and arm liveness is checked before any verdict.
+//   * 2-3 SE is a HYPOTHESIS at this n, not a finding, and is printed as one.
+//
+// WHAT WOULD SETTLE IT EITHER WAY. The per-seed slope d(delivered)/d(demanded)
+// across the ladder: 1.0 is perfect tracking and no wall in this range, 0.0 is a
+// hard ceiling. Anything between is the compressive transfer this project keeps
+// finding, and its value is the thing to quote.
+constexpr double kTSSep[] = {0.29, 0.58, 0.89, 1.20};
+constexpr uint32_t kTSSepCount = sizeof(kTSSep) / sizeof(kTSSep[0]);
+constexpr uint32_t kTSArmCount = kTSSepCount * 2u;
+constexpr double kTSRestF1 = 623.0;
+constexpr double kTSRestF2 = 1651.0;
+
+// Rung r's two targets, built the same way in the worker and in the verdict so
+// the printed demand is the demand that actually ran.
+inline void ts_targets(uint32_t rung, Word out[2]) {
+  const double half = kTSSep[rung] * 0.5;
+  out[0] = {200.0f, float(kTSRestF1 * std::exp(-half)), float(kTSRestF2)};
+  out[1] = {200.0f, float(kTSRestF1 * std::exp(half)), float(kTSRestF2)};
+}
+
+bool run_travelsweep(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  aibaby::Dna dna0;
+  if (dna0.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) {
+    std::printf("  setup failed: the genome does not load\n");
+    return false;
+  }
+  if (dna0.module_with_role(aibaby::ModuleRole::kContext) < 0) {
+    std::printf("  this genome has no kContext module, and contexts are ON in every arm\n"
+                "  because `g2cond` says conditional learning fails without them. Build one:\n\n"
+                "    python3 tools/genome_add_context.py dna/default.toml ctx.toml \\\n"
+                "        vocal out_w=0\n"
+                "    ./build/aibaby --dna ctx.toml --experiment travelsweep\n");
+    return false;
+  }
+  Regime regime;
+  regime.praise = kPraiseValue;
+  regime.scold = kScoldValue;
+  constexpr uint32_t kReps = 36;
+  instrument("travelsweep", dna0.header().seed ^ 0x77A4u, ticks / kVLTrialTicks, "trials");
+  std::printf("  question          `orthoname` says this creature NAMES -- nearest-target\n"
+              "                    0.958 vs matched marginals at 0.389 and 0.542, with\n"
+              "                    contexts on. Its targets were 0.29 log units from rest.\n"
+              "                    The shipped vowels are 0.89 apart. Where does it stop?\n");
+  std::printf("  the measure       DELIVERED SEPARATION, log(f1|word 1) - log(f1|word 0),\n"
+              "                    against the separation demanded. NOT the nearest-target\n"
+              "                    fraction: these targets are symmetric about rest, so that\n"
+              "                    fraction is a SIGN TEST and is nearly invariant to how far\n"
+              "                    apart they sit. It is reported to show exactly that.\n");
+  std::printf("  the ladder        0.29 / 0.58 / 0.89 / 1.20 log units on F1, F2 pinned.\n"
+              "                    0.58 reproduces `orthoname`'s `collide` bit-for-bit;\n"
+              "                    0.89 is the shipped vowel pair's own F1 separation.\n");
+  std::printf("  the control       matched marginal at EVERY rung: same targets, same reward\n"
+              "                    rate, conditionality removed. Its delivered separation\n"
+              "                    should be zero, since a word-blind target averages to rest.\n");
+  std::printf("  the prediction    `transfer-curve` and `ctxbias` agree on a ~234 Hz\n"
+              "                    asymptote, which is +0.32 / -0.47 log units from rest. If\n"
+              "                    that governs here the curve BENDS inside this ladder.\n");
+  std::printf("  the refusal       if the 0.29 rung does not beat its own control at 2 SE\n"
+              "                    the instrument is dead and the curve is not read. %u seeds.\n\n",
+              kReps);
+
+  const size_t slots_off = offsetof(aibaby::DnaHeader, exploration) +
+                           offsetof(aibaby::DnaExploration, context_slots);
+  const size_t src_off = offsetof(aibaby::DnaHeader, exploration) +
+                         offsetof(aibaby::DnaExploration, context_source);
+
+  struct Cell {
+    bool ok = false;
+    double dsep = 0.0;   // delivered separation over the LATE THIRD, log units
+    double frac = 0.0;   // nearest-target fraction, late third
+    double sess = 0.0;   // the same over the WHOLE session, as `orthoname` measured it
+    double sfrac = 0.0;
+  };
+  const uint32_t njobs = kReps * kTSArmCount;
+  const std::vector<Cell> cells = parallel_reps<Cell>(njobs, [&](uint32_t i) {
+    Cell cell;
+    const uint32_t r = i / kTSArmCount, a = i % kTSArmCount;
+    const uint32_t rung = a / 2u;
+    const bool conditional = (a % 2u) == 0u;
+    std::vector<uint8_t> variant = blob;
+    const uint64_t seed = dna0.header().seed + r * 7919ull;
+    std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+    // Identical in every arm: only the target table and the conditionality differ.
+    const uint32_t slots = 2u, src = 4u;
+    std::memcpy(variant.data() + slots_off, &slots, sizeof(slots));
+    std::memcpy(variant.data() + src_off, &src, sizeof(src));
+    Word tbl[2];
+    ts_targets(rung, tbl);
+    const int tgt = conditional ? int(kVLTgtHeard) : int(kVLTgtRandom);
+    const VLRun run = run_vocallearn_session(variant, ticks, kVLTaught, nullptr, regime, tgt,
+                                             nullptr, kVLScoreFormant, nullptr, 2u, tbl);
+    if (!run.ok) return cell;
+    // Per-word means, scored twice. THE GATE USES THE LATE THIRD, because
+    // `f1_by_word` averages the whole session including the phase before the
+    // creature has learned anything -- and if learning is slower at the wider
+    // rungs, a session average understates them MORE and biases the curve
+    // toward exactly the flat shape this run is looking for. The late third is
+    // the learned state. The session column is kept because it is what
+    // `orthoname` reported, and the 0.58 rung has to remain comparable to it.
+    const auto per_word = [&](size_t from, double* f1o, double* f2o) {
+      double s1[2] = {0.0, 0.0}, s2[2] = {0.0, 0.0};
+      uint32_t n[2] = {0u, 0u};
+      for (size_t q = from; q < run.utt_word.size(); ++q) {
+        const int wd = run.utt_word[q];
+        if (wd < 0 || wd > 1) continue;
+        s1[wd] += run.utt_f1[q];
+        s2[wd] += run.utt_f2[q];
+        ++n[wd];
+      }
+      if (!n[0] || !n[1]) return false;
+      for (uint32_t w = 0; w < 2u; ++w) { f1o[w] = s1[w] / n[w]; f2o[w] = s2[w] / n[w]; }
+      return true;
+    };
+    // Rows are one per scored, voiced trial in order, so the last third of them
+    // is the last third of the session that produced a measurement.
+    const size_t rows = run.utt_word.size();
+    if (rows < 6) return cell;
+    double lf1[2], lf2[2], af1[2], af2[2];
+    if (!per_word(rows - rows / 3, lf1, lf2)) return cell;
+    if (!per_word(0, af1, af2)) return cell;
+    if (lf1[0] <= 1.0 || lf1[1] <= 1.0 || af1[0] <= 1.0 || af1[1] <= 1.0) return cell;
+    cell.dsep = std::log(lf1[1]) - std::log(lf1[0]);
+    cell.sess = std::log(af1[1]) - std::log(af1[0]);
+    // The sign-test column, computed exactly as `orthoname` computes it.
+    const auto nearest = [&](const double* f1v, const double* f2v) {
+      double fsum = 0.0;
+      for (uint32_t w = 0; w < 2u; ++w) {
+        const Word& own = tbl[w];
+        const Word& oth = tbl[1u - w];
+        const double d_own = std::hypot(std::log(f1v[w] / double(own.f1)),
+                                        std::log(f2v[w] / double(own.f2)));
+        const double d_oth = std::hypot(std::log(f1v[w] / double(oth.f1)),
+                                        std::log(f2v[w] / double(oth.f2)));
+        fsum += d_own < d_oth ? 1.0 : 0.0;
+      }
+      return fsum / 2.0;
+    };
+    cell.frac = nearest(lf1, lf2);
+    cell.sfrac = nearest(af1, af2);
+    cell.ok = true;
+    parallel_note("  [%u/%u] seed %u s=%.2f %-6s delivered %+.4f  nearest %.2f\n", i + 1, njobs,
+                  r, kTSSep[rung], conditional ? "taught" : "rnd", cell.dsep, cell.frac);
+    return cell;
+  });
+
+  // THE DEMAND, READ BACK OFF THE TABLES THAT RAN. A flat curve across a
+  // parameter that never varied is what `maskretain` printed for a whole run
+  // before anyone noticed the knob was dead.
+  std::printf("\n  THE LADDER AS BUILT (demand read back from the target tables)\n");
+  std::printf("  %-6s %-10s %-10s %s\n", "rung", "T0 f1", "T1 f1", "demanded (log units)");
+  bool ladder_varies = false;
+  double first_demand = -1.0;
+  for (uint32_t q = 0; q < kTSSepCount; ++q) {
+    Word tbl[2];
+    ts_targets(q, tbl);
+    const double dem = std::log(double(tbl[1].f1) / double(tbl[0].f1));
+    if (first_demand < 0.0) first_demand = dem;
+    else if (std::fabs(dem - first_demand) > 1e-6) ladder_varies = true;
+    std::printf("  %-6.2f %-10.1f %-10.1f %.4f\n", kTSSep[q], double(tbl[0].f1),
+                double(tbl[1].f1), dem);
+  }
+  if (!ladder_varies) {
+    std::printf("\n  travelsweep REFUSED -- every rung demands the same separation, so the\n"
+                "  swept parameter is dead and any curve across it is noise with a shape.\n");
+    return false;
+  }
+
+  std::printf("\n  LATE THIRD -- the learned state, and what the verdict gates on.\n");
+  std::printf("  %-6s %-9s %-20s %-20s %s\n", "rung", "demanded", "delivered (taught)",
+              "delivered (rnd)", "nearest taught / rnd");
+  std::vector<std::vector<double>> exc(kTSSepCount);   // paired excess per rung
+  std::vector<std::vector<double>> excf(kTSSepCount);  // ...and in the sign-test column
+  std::vector<double> mean_exc(kTSSepCount, 0.0), se_exc(kTSSepCount, 0.0);
+  for (uint32_t q = 0; q < kTSSepCount; ++q) {
+    std::vector<double> dt, dr, ft, fr;
+    for (uint32_t r = 0; r < kReps; ++r) {
+      const Cell& ct = cells[r * kTSArmCount + q * 2u];
+      const Cell& cr = cells[r * kTSArmCount + q * 2u + 1u];
+      if (ct.ok) { dt.push_back(ct.dsep); ft.push_back(ct.frac); }
+      if (cr.ok) { dr.push_back(cr.dsep); fr.push_back(cr.frac); }
+      if (ct.ok && cr.ok) {
+        exc[q].push_back(ct.dsep - cr.dsep);
+        excf[q].push_back(ct.frac - cr.frac);
+      }
+    }
+    if (dt.size() < 3 || dr.size() < 3) {
+      std::printf("\n  travelsweep INCONCLUSIVE -- rung %.2f produced %zu taught and %zu\n"
+                  "  control creatures.\n", kTSSep[q], dt.size(), dr.size());
+      return false;
+    }
+    // INTO LOCALS FIRST. ctx_mean_se(v, &se) and se as two arguments of one
+    // printf reads se before the call that writes it; that printed 0.0000 for
+    // every SE in `maskretain` and then again in `orthoname`, hours after the
+    // rule went into memory.
+    double se_t = 0.0, se_r = 0.0, se_ft = 0.0, se_fr = 0.0;
+    const double m_t = ctx_mean_se(dt, &se_t);
+    const double m_r = ctx_mean_se(dr, &se_r);
+    const double m_ft = ctx_mean_se(ft, &se_ft);
+    const double m_fr = ctx_mean_se(fr, &se_fr);
+    mean_exc[q] = ctx_mean_se(exc[q], &se_exc[q]);
+    std::printf("  %-6.2f %-9.4f %+.4f +/- %-9.4f %+.4f +/- %-9.4f %.3f / %.3f\n",
+                kTSSep[q], kTSSep[q], m_t, se_t, m_r, se_r, m_ft, m_fr);
+  }
+
+  // THE SAME NUMBERS OVER THE WHOLE SESSION, which is how `orthoname` measured
+  // them. The 0.58 rung of this column is that run's `collide` arm, so a
+  // disagreement here is a disagreement between two runs of the same thing.
+  std::printf("\n  WHOLE SESSION -- `orthoname`'s measure, for comparison. Its `collide`\n"
+              "  arm is the 0.58 rung of this table and read 0.958 / 0.389 on nearest.\n");
+  std::printf("  %-6s %-20s %-20s %s\n", "rung", "delivered (taught)", "delivered (rnd)",
+              "nearest taught / rnd");
+  for (uint32_t q = 0; q < kTSSepCount; ++q) {
+    std::vector<double> dt, dr, ft, fr;
+    for (uint32_t r = 0; r < kReps; ++r) {
+      const Cell& ct = cells[r * kTSArmCount + q * 2u];
+      const Cell& cr = cells[r * kTSArmCount + q * 2u + 1u];
+      if (ct.ok) { dt.push_back(ct.sess); ft.push_back(ct.sfrac); }
+      if (cr.ok) { dr.push_back(cr.sess); fr.push_back(cr.sfrac); }
+    }
+    if (dt.size() < 3 || dr.size() < 3) continue;
+    double se_t = 0.0, se_r = 0.0, se_ft = 0.0, se_fr = 0.0;
+    const double m_t = ctx_mean_se(dt, &se_t);
+    const double m_r = ctx_mean_se(dr, &se_r);
+    const double m_ft = ctx_mean_se(ft, &se_ft);
+    const double m_fr = ctx_mean_se(fr, &se_fr);
+    std::printf("  %-6.2f %+.4f +/- %-9.4f %+.4f +/- %-9.4f %.3f / %.3f\n",
+                kTSSep[q], m_t, se_t, m_r, se_r, m_ft, m_fr);
+  }
+  // AND THE ONE NUMBER `orthoname` NEVER PRINTED: the excess in the nearest-target
+  // FRACTION at that rung, paired on seed. The 16 SE quoted for it was the MARGIN
+  // column's, carried over when the verdict was rewritten and never re-run.
+  {
+    std::vector<double> ef;
+    for (uint32_t r = 0; r < kReps; ++r) {
+      const Cell& ct = cells[r * kTSArmCount + 1u * 2u];
+      const Cell& cr = cells[r * kTSArmCount + 1u * 2u + 1u];
+      if (ct.ok && cr.ok) ef.push_back(ct.sfrac - cr.sfrac);
+    }
+    if (ef.size() >= 3) {
+      double se_f = 0.0;
+      const double m_f = ctx_mean_se(ef, &se_f);
+      std::printf("\n  `orthoname` REPLICATED at s=0.58, on the measure its rewritten verdict\n"
+                  "  gates on and never got to print: nearest-target excess over the matched\n"
+                  "  marginal, whole session, paired on seed: %+.4f +/- %.4f (%+.1f SE).\n",
+                  m_f, se_f, se_f > 0.0 ? m_f / se_f : 0.0);
+    }
+  }
+
+  {
+    ArmLiveness live("travelsweep");
+    for (uint32_t r = 0; r < kReps; ++r) {
+      for (uint32_t a = 0; a < kTSArmCount; ++a) {
+        const Cell& c = cells[r * kTSArmCount + a];
+        if (!c.ok) continue;
+        char nm[32];
+        std::snprintf(nm, sizeof(nm), "%.2f%s", kTSSep[a / 2u], (a % 2u) ? "-rnd" : "");
+        live.observe(nm, r, c.dsep);
+      }
+    }
+    char ctl[32];
+    std::snprintf(ctl, sizeof(ctl), "%.2f", kTSSep[0]);
+    if (!live.report(ctl)) return false;
+  }
+
+  std::printf("\n  EXCESS DELIVERED SEPARATION over each rung's OWN matched marginal,\n"
+              "  paired on seed. This is what CONDITIONALITY bought at that demand.\n");
+  for (uint32_t q = 0; q < kTSSepCount; ++q) {
+    double se_f = 0.0;
+    const double m_f = ctx_mean_se(excf[q], &se_f);
+    const double ratio = kTSSep[q] > 0.0 ? mean_exc[q] / kTSSep[q] : 0.0;
+    std::printf("    s=%.2f  %+.4f +/- %.4f  (%+.1f SE)   %.0f%% of demand    "
+                "nearest excess %+.3f +/- %.3f\n",
+                kTSSep[q], mean_exc[q], se_exc[q],
+                se_exc[q] > 0.0 ? mean_exc[q] / se_exc[q] : 0.0, 100.0 * ratio, m_f, se_f);
+  }
+
+  // THE INSTRUMENT CHECK, at the easiest rung, before the curve is read at all.
+  if (!(se_exc[0] > 0.0 && mean_exc[0] > 2.0 * se_exc[0])) {
+    std::printf("\n  travelsweep REFUSED -- THE INSTRUMENT IS DEAD AT THE EASIEST RUNG.\n"
+                "  At s=%.2f the taught arm does not beat its own matched marginal at 2 SE\n"
+                "  (%+.4f +/- %.4f), so the creature is not steering by the word it heard\n"
+                "  even where the demand is smallest. Nothing further up the ladder is\n"
+                "  interpretable, and this contradicts `orthoname` -- which would make the\n"
+                "  disagreement between the two runs the thing to chase, not the curve.\n",
+                kTSSep[0], mean_exc[0], se_exc[0]);
+    return false;
+  }
+
+  // THE SLOPE, fitted PER SEED across the ladder and then averaged, so the SE is
+  // paired rather than assumed. 1.0 is perfect tracking; 0.0 is a hard ceiling.
+  double sx = 0.0, sxx = 0.0;
+  for (uint32_t q = 0; q < kTSSepCount; ++q) { sx += kTSSep[q]; sxx += kTSSep[q] * kTSSep[q]; }
+  const double xbar = sx / double(kTSSepCount);
+  const double sxx_c = sxx - double(kTSSepCount) * xbar * xbar;
+  std::vector<double> slopes;
+  for (uint32_t r = 0; r < kReps; ++r) {
+    double num = 0.0;
+    bool full = true;
+    for (uint32_t q = 0; q < kTSSepCount && full; ++q) {
+      const Cell& ct = cells[r * kTSArmCount + q * 2u];
+      const Cell& cr = cells[r * kTSArmCount + q * 2u + 1u];
+      if (!ct.ok || !cr.ok) { full = false; break; }
+      num += (kTSSep[q] - xbar) * (ct.dsep - cr.dsep);
+    }
+    if (full && sxx_c > 0.0) slopes.push_back(num / sxx_c);
+  }
+  double se_s = 0.0;
+  const double m_s = slopes.size() >= 3 ? ctx_mean_se(slopes, &se_s) : 0.0;
+  std::printf("\n  THE SLOPE d(delivered)/d(demanded), fitted per seed across the whole\n"
+              "  ladder and averaged over %zu of them: %+.3f +/- %.3f\n",
+              slopes.size(), m_s, se_s);
+  std::printf("    1.0 = the words separate as fast as the targets do, no wall in range.\n"
+              "    0.0 = a hard ceiling: moving the targets apart buys nothing.\n");
+
+  // AND THE ASSUMPTION-FREE VERSION: the top rung against the bottom one, paired.
+  std::vector<double> ends;
+  const size_t npair = std::min(exc[0].size(), exc[kTSSepCount - 1].size());
+  for (size_t q = 0; q < npair; ++q) ends.push_back(exc[kTSSepCount - 1][q] - exc[0][q]);
+  double se_e = 0.0;
+  const double m_e = ends.size() >= 3 ? ctx_mean_se(ends, &se_e) : 0.0;
+  const double gained = m_e;
+  const double offered = kTSSep[kTSSepCount - 1] - kTSSep[0];
+  std::printf("\n  TOP RUNG MINUS BOTTOM RUNG, paired on seed. The targets were moved\n"
+              "  %.2f log units further apart; the voice followed by %+.4f +/- %.4f\n"
+              "  (%+.1f SE), which is %.0f%% of what was offered.\n",
+              offered, gained, se_e, se_e > 0.0 ? gained / se_e : 0.0,
+              offered > 0.0 ? 100.0 * gained / offered : 0.0);
+
+  const double best = *std::max_element(mean_exc.begin(), mean_exc.end());
+  std::printf("\n  THE SIGN TEST, FOR CONTRAST: nearest-target stays high across the whole\n"
+              "  ladder because these targets straddle rest, so it asks only which side the\n"
+              "  creature landed on. Read the delivered column, not that one.\n");
+
+  if (se_e > 0.0 && gained > 2.0 * se_e && gained > 0.5 * offered) {
+    std::printf("\n  NO WALL IN THIS RANGE. The voice tracks the targets at %.0f%% of the\n"
+                "  demand across a %.1fx span (slope %+.3f +/- %.3f), so what limits naming\n"
+                "  here is a GAIN, not a ceiling: asking for twice the separation delivers\n"
+                "  nearly twice the separation. That REFUTES the reading of\n"
+                "  `ceiling-is-an-exponent` under which the shipped vocabulary is out of\n"
+                "  reach, and the next question is what sets the gain.\n",
+                100.0 * gained / offered, kTSSep[kTSSepCount - 1] / kTSSep[0], m_s, se_s);
+    return true;
+  }
+  if (se_e > 0.0 && gained > 2.0 * se_e) {
+    std::printf("\n  THE CURVE BENDS, AND THE BEND IS THE MILESTONE'S BOUNDARY. Delivered\n"
+                "  separation still rises with demand (%+.1f SE) but takes only %.0f%% of\n"
+                "  what is offered, and the largest delivered separation anywhere on this\n"
+                "  ladder is %.4f log units against the %.2f the shipped vowel pair needs.\n"
+                "  Slope %+.3f +/- %.3f. So naming works in `orthoname` for the reason that\n"
+                "  run suspected -- the travel asked of it was small -- and the wall is a\n"
+                "  measured quantity now rather than an inference from a bias curve.\n",
+                gained / se_e, 100.0 * gained / offered, best, 0.89, m_s, se_s);
+    return true;
+  }
+  if (se_e > 0.0 && gained > 0.0 && gained > 1.0 * se_e) {
+    std::printf("\n  A HYPOTHESIS, NOT A FINDING (%.1f SE on the end-to-end difference).\n"
+                "  Inside the band this project has retracted findings from; it needs about\n"
+                "  %.0f seeds for 4 SE before anything is built on it.\n",
+                gained / se_e, double(ends.size()) * std::pow(4.0 / (gained / se_e), 2.0));
+    return false;
+  }
+  std::printf("\n  A HARD CEILING. Moving the targets %.2f log units further apart bought\n"
+              "  %+.4f +/- %.4f of delivered separation -- nothing, at %.1f SE -- and the\n"
+              "  slope across the ladder is %+.3f +/- %.3f. The voice separates the two\n"
+              "  words by about %.4f log units no matter what is asked of it, against the\n"
+              "  %.2f the shipped vowel pair demands. THAT IS THE MILESTONE'S BOUNDARY, and\n"
+              "  it says `orthoname`'s 0.958 was bought by a small ask rather than by the\n"
+              "  contexts being enough. Conditionality is solved; travel is not.\n",
+              offered, gained, se_e, se_e > 0.0 ? gained / se_e : 0.0, m_s, se_s, best, 0.89);
+  return false;
+}
+
+
 bool run_movability(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
   (void)verbose;
   Regime regime;

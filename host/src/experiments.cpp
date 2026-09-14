@@ -249,6 +249,15 @@ const Spec kSpecs[] = {
      "  moves both words along F1; ortho moves one along F1 and one along F2,\n"
      "  MATCHED on target separation so neither is handed the score. Matched\n"
      "  marginal per encoding, contexts ON in every arm. 36 seeds"},
+    {"travelsweep", 3400000, Expect::kOpen, Tier::kLong,
+     "orthoname says this creature NAMES with contexts on -- nearest-target\n"
+     "  0.958 vs matched marginals at 0.389 and 0.542 -- but its targets sat\n"
+     "  0.29 log units from rest and the shipped vowels are 0.89 apart. Sweeps\n"
+     "  target separation 0.29/0.58/0.89/1.20 on F1 and asks how much of the\n"
+     "  demanded separation the voice actually DELIVERS. Gates on delivered\n"
+     "  separation, not the nearest-target fraction, which straddles rest and is\n"
+     "  therefore a sign test invariant to the demand. Matched marginal at every\n"
+     "  rung, contexts ON throughout. 36 seeds"},
     {"movability", 5600000, Expect::kOpen, Tier::kLong,
      "orthovocab left a LEAD: on identical demands the F2 lesson travelled\n"
      "  0.169 and the F1 lesson 0.030 -- but F1's was FIGHTING another lesson on\n"
@@ -581,6 +590,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "orthovocab") ok = run_orthovocab(dna_blob, ticks, verbose);
   else if (name == "movability") ok = run_movability(dna_blob, ticks, verbose);
   else if (name == "orthoname") ok = run_orthoname(dna_blob, ticks, verbose);
+  else if (name == "travelsweep") ok = run_travelsweep(dna_blob, ticks, verbose);
   else if (name == "partprobe") ok = run_partprobe(dna_blob, ticks, verbose);
   else if (name == "pgprobe") ok = run_pgprobe(dna_blob, ticks, verbose);
   else if (name == "g2cond") ok = run_g2cond(dna_blob, ticks, verbose);
