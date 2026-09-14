@@ -6887,6 +6887,67 @@ bool run_travelsweep(const std::vector<uint8_t>& blob, uint64_t ticks, bool verb
     if (!live.report(ctl)) return false;
   }
 
+  // DOES THE DEMAND REACH THE LEARNER? THE CHECK THIS EXPERIMENT EXISTS TO PASS,
+  // and on its first launch it did not. ArmLiveness above is not enough: it asks
+  // whether an arm differs from ONE control, and the bottom rung does differ from
+  // everything, so it reports 7/7 live while the top three rungs are byte-identical
+  // to each other.
+  //
+  // THE MECHANISM. The caregiver's reward is binary against an EMA of the
+  // creature's OWN error: `value = e < baseline ? praise : scold`, with
+  // `e = |log(f1/T1)| + |log(f2/T2)|`. While the creature never crosses the
+  // target, |log(f1/T)| = log T - log f1, so moving T further away adds a
+  // CONSTANT to e -- and a constant cancels exactly against a baseline EMA of the
+  // same quantity. The reward sequence is then bit-identical no matter how far
+  // the target is, and so is the creature. The graded arm does not escape it
+  // either: it divides by `dev`, an EMA of |e - baseline|, in which the constant
+  // has already cancelled.
+  //
+  // So a flat delivered-separation curve across the unreachable rungs would be a
+  // property of the REWARD RULE and not of the creature's ability to travel, and
+  // reporting it as a ceiling would be the `set_reward_mask` mistake again with a
+  // different knob. This is `baseref` exactly -- a bar that tracks the creature
+  // STOPS ASKING -- arriving as an invariance rather than as an argument.
+  std::printf("\n  DOES THE DEMAND REACH THE LEARNER? Adjacent rungs must produce DIFFERENT\n"
+              "  creatures. If they do not, the reward rule is blind to the extra distance\n"
+              "  and any curve across it is the rule's shape, not the creature's.\n");
+  bool demand_reaches = true;
+  for (uint32_t q = 0; q + 1 < kTSSepCount; ++q) {
+    for (uint32_t k = 0; k < 2u; ++k) {  // taught, then the matched marginal
+      uint32_t shared = 0, differ = 0;
+      for (uint32_t r = 0; r < kReps; ++r) {
+        const Cell& lo = cells[r * kTSArmCount + q * 2u + k];
+        const Cell& hi = cells[r * kTSArmCount + (q + 1u) * 2u + k];
+        if (!lo.ok || !hi.ok) continue;
+        ++shared;
+        if (lo.dsep != hi.dsep || lo.sess != hi.sess) ++differ;
+      }
+      const bool live = shared > 0 && differ * 2u > shared;
+      std::printf("    %.2f -> %.2f  %-6s  %u/%u seeds differ%s\n", kTSSep[q], kTSSep[q + 1],
+                  k ? "rnd" : "taught", differ, shared,
+                  live ? "" : "   <- BLIND: the extra demand changed nothing");
+      if (!live) demand_reaches = false;
+    }
+  }
+  if (!demand_reaches) {
+    std::printf("\n  travelsweep REFUSED -- THE DEMAND DOES NOT REACH THE LEARNER, so this\n"
+                "  ladder cannot measure a travel ceiling. Past the point where the creature\n"
+                "  stops crossing its target, moving the target further adds a CONSTANT to\n"
+                "  the formant error, and the caregiver's bar is an EMA of that same error --\n"
+                "  the constant cancels and the reward sequence is bit-identical. The\n"
+                "  creature is not refusing to travel further; it is never asked to.\n"
+                "\n"
+                "  THAT IS THE RESULT, and it is a bigger one than the curve would have\n"
+                "  been: the naming ceiling has a cause in the TEACHING PROTOCOL rather\n"
+                "  than in the larynx. Read the rungs that DO differ for how far the voice\n"
+                "  gets while the demand is still visible, and see `baseref` -- a bar that\n"
+                "  tracks the creature stops asking. The next question is whether an\n"
+                "  ABSOLUTE component in the bar makes the distance visible again, or\n"
+                "  whether it simply removes the praise variance that makes any learning\n"
+                "  possible at all.\n");
+    return false;
+  }
+
   std::printf("\n  EXCESS DELIVERED SEPARATION over each rung's OWN matched marginal,\n"
               "  paired on seed. This is what CONDITIONALITY bought at that demand.\n");
   for (uint32_t q = 0; q < kTSSepCount; ++q) {

@@ -1,0 +1,55 @@
+experiment: travelsweep
+  instrument        travelsweep   trial seed 000000000135506d   1214 trials
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  question          `orthoname` says this creature NAMES -- nearest-target
+                    0.958 vs matched marginals at 0.389 and 0.542, with
+                    contexts on. Its targets were 0.29 log units from rest.
+                    The shipped vowels are 0.89 apart. Where does it stop?
+  the measure       DELIVERED SEPARATION, log(f1|word 1) - log(f1|word 0),
+                    against the separation demanded. NOT the nearest-target
+                    fraction: these targets are symmetric about rest, so that
+                    fraction is a SIGN TEST and is nearly invariant to how far
+                    apart they sit. It is reported to show exactly that.
+  the ladder        0.29 / 0.58 / 0.89 / 1.20 log units on F1, F2 pinned.
+                    0.58 reproduces `orthoname`'s `collide` bit-for-bit;
+                    0.89 is the shipped vowel pair's own F1 separation.
+  the control       matched marginal at EVERY rung: same targets, same reward
+                    rate, conditionality removed. Its delivered separation
+                    should be zero, since a word-blind target averages to rest.
+  the prediction    `transfer-curve` and `ctxbias` agree on a ~234 Hz
+                    asymptote, which is +0.32 / -0.47 log units from rest. If
+                    that governs here the curve BENDS inside this ladder.
+  the refusal       if the 0.29 rung does not beat its own control at 2 SE
+                    the instrument is dead and the curve is not read. 36 seeds.
+
+  [7/288] seed 0 s=1.20 taught delivered +0.3294  nearest 1.00
+  [4/288] seed 0 s=0.58 rnd    delivered -0.0405  nearest 0.00
+  [5/288] seed 0 s=0.89 taught delivered +0.3294  nearest 1.00
+  [1/288] seed 0 s=0.29 taught delivered +0.2905  nearest 1.00
+  [3/288] seed 0 s=0.58 taught delivered +0.3294  nearest 1.00
+  [8/288] seed 0 s=1.20 rnd    delivered -0.0405  nearest 0.00
+  [2/288] seed 0 s=0.29 rnd    delivered -0.0372  nearest 0.00
+  [6/288] seed 0 s=0.89 rnd    delivered -0.0405  nearest 0.00
+  [11/288] seed 1 s=0.58 taught delivered +0.2694  nearest 1.00
+  [9/288] seed 1 s=0.29 taught delivered +0.2188  nearest 1.00
+  [12/288] seed 1 s=0.58 rnd    delivered -0.0306  nearest 0.50
+  [10/288] seed 1 s=0.29 rnd    delivered +0.0715  nearest 1.00
+  [14/288] seed 1 s=0.89 rnd    delivered -0.0306  nearest 0.50
+  [13/288] seed 1 s=0.89 taught delivered +0.2870  nearest 1.00
+  [15/288] seed 1 s=1.20 taught delivered +0.2870  nearest 1.00
+  [16/288] seed 1 s=1.20 rnd    delivered -0.0306  nearest 0.50
+  [17/288] seed 2 s=0.29 taught delivered +0.2100  nearest 1.00
+  [19/288] seed 2 s=0.58 taught delivered +0.2689  nearest 1.00
+  [18/288] seed 2 s=0.29 rnd    delivered +0.0402  nearest 0.50
+  [20/288] seed 2 s=0.58 rnd    delivered -0.0583  nearest 0.00
+  [22/288] seed 2 s=0.89 rnd    delivered -0.0583  nearest 0.00
+  [23/288] seed 2 s=1.20 taught delivered +0.2689  nearest 1.00
+  [21/288] seed 2 s=0.89 taught delivered +0.2689  nearest 1.00
+  [25/288] seed 3 s=0.29 taught delivered +0.1968  nearest 1.00
+  [26/288] seed 3 s=0.29 rnd    delivered -0.0323  nearest 0.00
+  [27/288] seed 3 s=0.58 taught delivered +0.2187  nearest 1.00
+  [24/288] seed 2 s=1.20 rnd    delivered -0.0583  nearest 0.00
+  [30/288] seed 3 s=0.89 rnd    delivered -0.0666  nearest 0.00
+  [29/288] seed 3 s=0.89 taught delivered +0.2187  nearest 1.00
+  [28/288] seed 3 s=0.58 rnd    delivered -0.0666  nearest 0.00
