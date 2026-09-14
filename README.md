@@ -504,7 +504,7 @@ of an hour.
 | **M1** closed audio loop | **done — G2 met.** Rewarded vocalisations rise within the session (×1.35) and praise beats its own yoked control in **23 of 27 creatures** across three seed families, and 9 of 9 at 420 s. What closed it was directional exploration (DNA v10), which was not aimed at reward at all |
 | **M2** vision | **done** — camera → retina → B3 → B1, discriminates present from absent at 98%, and 86% with firing rate divided out |
 | **M3** cross-modal association | **CLOSED, NEGATIVE** on the vision→voice form. Eleven mechanisms across four structurally different families were measured against it and it never moved outside its own noise floor: the shipped creature reads taught−random **+0.060 ± 0.040 SE**, and the control genome — mechanism absent by construction — swings ±0.060 across seed families. **Its "does not acquire a new conditional map" reading is superseded**, see the naming row below: with a context-indexed bias the creature *does* acquire one, from the ear rather than the eye |
-| **Naming (G3)** heard word → spoken word | **DIRECTIONAL NAMING MET; ABSOLUTE NAMING CEILINGED.** On the axis measure the creature moves its voice the right way for the word it just heard — **0.824 and 0.738 across two seed families, pooled +0.276 (7.6 SE) over echo-only and +0.244 (6.0 SE) over a matched-marginal control** — on a measure an echo scores at 0.503 and an arbitrary-but-consistent mapping at 0.406, both closed by construction rather than by argument. It also partly arrives: 0.670 and 0.604 on the strict nearest-of-actual-targets score against 0.495–0.518 for both controls. What is **not** met is absolute naming: delivered dF1 tops out near **137 Hz** against the ~230 needed, and that ceiling now has a cause rather than a shrug — see the row below. **AND CONDITIONALITY IS NO LONGER THE BLOCKER** (2026-09-14, `orthoname`, 36 seeds, contexts on): on a two-word vocabulary sitting 0.29–0.41 log units from rest, the creature lands nearest the **right** target **0.958** of the time against matched marginals at 0.389 and 0.542 — excess **+0.569 ± 0.078 (7.3 SE)** and **+0.417 ± 0.068 (6.2 SE)**, paired on seed. It says the right thing for the word it heard. That reconciles what looked like a contradiction on this page: `g2cond`'s 12σ closure (unconditional +0.369, conditional +0.022) was measured **without** the context-indexed bias; with v51/v53 contexts on, conditional steering works. **This is not the milestone**, and the reason names the wall precisely: these targets are *symmetric* about rest and 0.58 apart, while the shipped vowel vocabulary is 0.89 apart and asymmetric, demanding a 0.67 move on one word alone. Naming works here because the required **travel** is small — which is what the ceiling row says. The open question is where between 0.58 and 0.89 the score falls off. *Two retractions from that run, both now settled off its own per-seed log:* it first reported the colliding encoding beating the orthogonal one at 8.4 SE, which was an artefact of scoring by **margin** — collinear targets inflate the margin ~2× for identical learning (predicted 1.8–1.9×, observed 2.03); on the geometry-free fraction that gate reads **−1.5 SE**, i.e. no difference, which confirms the rewritten verdict that was never re-run. And this page carried **~16 SE** for the excess above: that was the *margin* column's SE, attached to a quantity it was not computed on. The fraction's own paired SEs are the 7.3 and 6.2 now quoted — decisive either way, but not 16 |
+| **Naming (G3)** heard word → spoken word | **DIRECTIONAL NAMING MET; ABSOLUTE NAMING CEILINGED.** On the axis measure the creature moves its voice the right way for the word it just heard — **0.824 and 0.738 across two seed families, pooled +0.276 (7.6 SE) over echo-only and +0.244 (6.0 SE) over a matched-marginal control** — on a measure an echo scores at 0.503 and an arbitrary-but-consistent mapping at 0.406, both closed by construction rather than by argument. It also partly arrives: 0.670 and 0.604 on the strict nearest-of-actual-targets score against 0.495–0.518 for both controls. What is **not** met is absolute naming: delivered dF1 tops out near **137 Hz** against the ~230 needed, and that ceiling now has a cause rather than a shrug — see the row below. **AND CONDITIONALITY IS NO LONGER THE BLOCKER** (2026-09-14, `orthoname`, 36 seeds, contexts on): on a two-word vocabulary sitting 0.29–0.41 log units from rest, the creature lands nearest the **right** target **0.958** of the time against matched marginals at 0.389 and 0.542 — excess **+0.569 ± 0.078 (7.3 SE)** and **+0.417 ± 0.068 (6.2 SE)**, paired on seed. It says the right thing for the word it heard. That reconciles what looked like a contradiction on this page: `g2cond`'s 12σ closure (unconditional +0.369, conditional +0.022) was measured **without** the context-indexed bias; with v51/v53 contexts on, conditional steering works. **This is not the milestone**, and the reason names the wall precisely: these targets are *symmetric* about rest and 0.58 apart, while the shipped vowel vocabulary is 0.89 apart and asymmetric, demanding a 0.67 move on one word alone. Naming works here because the required **travel** is small. **AND THE REASON IT IS SMALL IS THE TEACHING PROTOCOL, NOT THE LARYNX** (2026-09-14, `travelsweep`, killed at 30/288 jobs): sweeping target separation over 0.29/0.58/0.89/1.20 produces **bit-identical creatures** on the top three rungs — `0.89 == 1.20` on 3/3 seeds both taught and control, while `0.29` differs from `0.58` on 6/6, so the target table does reach reward. The reward is binary against an EMA of the creature's *own* error, so while it never crosses its target a further target adds only a **constant** to that error — and a constant cancels exactly against a baseline EMA of the same quantity. Past roughly 0.6 log units **the creature is not refusing to travel further; it is never asked to.** The shipped vowel pair's 0.89 is already past that point. See the section below. *Two retractions from that run, both now settled off its own per-seed log:* it first reported the colliding encoding beating the orthogonal one at 8.4 SE, which was an artefact of scoring by **margin** — collinear targets inflate the margin ~2× for identical learning (predicted 1.8–1.9×, observed 2.03); on the geometry-free fraction that gate reads **−1.5 SE**, i.e. no difference, which confirms the rewritten verdict that was never re-run. And this page carried **~16 SE** for the excess above: that was the *margin* column's SE, attached to a quantity it was not computed on. The fraction's own paired SEs are the 7.3 and 6.2 now quoted — decisive either way, but not 16 |
 | **The naming ceiling** | **CLOSED — it is one exponent, not a tally of dead ends.** `dF1 ~ aligned^0.61`: the larynx compresses what it is given, and the same curve does two jobs — it limits delivery, and its derivative limits learning, since the drift is `−Cov(e, perturb)` which factors through `dF1/d(drive)`. **DNA v58 settled it by dissolving the trade it was supposed to be stuck on.** Exempting the learned bias from the rate homeostat (`err = rate_ema − (target + gain·delivered_bias)`) raised the aligned bias **+21%**, raised `gain` 0.90 → 1.08, and kept the larynx regulated (5.87 Hz vs 6.23) — where v57 pooling *halved* the bias and `ipoff` collapsed learning outright (103.9 → 17.7, −7.42 SE). So regulation and learning are separable after all. **And it delivered +0.6 ± 8.6 Hz**, because `^0.61` turns +21% of aligned into **+4 Hz** — a bar needing ~316 seeds to resolve, against the 18 that ran. The arithmetic is the result: dF1 ×1.68 needs aligned **×2.34**, ×2.0 needs ×3.12, and every knob this project has found moves aligned ×1.1–×1.2. No amount of bias buys past an exponent below 1; only a change to the **readout** can, and the readout is a rate-weighted centroid by design. Naming stops here |
 | **M4** growth and sleep | **done** — **G4 passes**: the creature never grows while it is still learning, grows only on a detected plateau, and never passes the DNA cap; myelination, pruning and replay all run |
 | **Memory and interference** | **THE WIPE IS A COLLISION, NOT A MEMORY FAILURE** (2026-09-14). A conflicting second lesson wipes a taught sound to **0.22** (`retain`) — but that is two lessons steering one scalar, not a failure to remember. With lesson A taught identically in every arm and only the *second* lesson's **axis** differing at the same log-distance, a second lesson on **F1** costs +0.1603 (16.8 SE) and drops retention to 0.23; one on **F2** costs +0.0364 (3.2 SE) and leaves retention at 1.12 with the store intact — **77% less damage, +0.1238 ± 0.0116 (10.7 SE)**. The control is *structural*: `err taught` is **+0.00000 ± 0.00000** across arms because the teaching phase is the same code path, and `collide` reproduces the long-established 0.22 at 0.23. The effort check runs **against** the finding — ortho's lesson learned *better* by 14.9 SE and still damaged A less, so a confound could only have manufactured this had it learned *less*. (ortho is not harmless: 3.2 SE is real damage, just much less.) **THERE IS NO HIDDEN MEMORY.** Store and behaviour, measured on one creature and both as a fraction of what was gained: **0.25 ± 0.05 and 0.30 ± 0.05, difference −0.05 ± 0.05 (−1.0 SE)**, 36 seeds none dropped. They decay together, so the conflict is a **pure overwrite** and retrieval work is refused — including the per-neuron-homeostat account. **AND IT CANNOT BE DEFENDED.** Replay reinforces nothing (`E[u]=0` — during sleep `perturb_i` is fresh noise; switching it off costs 0.3 SE); interleaving is refused with a *perfect* oracle (−1.1 SE); stabilisation is a clean null (`meta_commit`); and **write separation by restricting plasticity is refused** — blocking even a *quarter* of the F1 group costs 59% of the lesson, because a blocked neuron still perturbs and is still read by the centroid. A pooled readout cannot be partitioned by restricting plasticity alone. **BUT THE COLLISION RESULT IS ABOUT SEQUENTIAL LESSONS ONLY.** `orthoname` tested the representational implication — spread the vocabulary across articulators — and it **does not transfer** to simultaneous conditional naming: orthogonal and colliding encodings name identically (0.958 each). Interference between lessons taught one after another, and conditioning on the heard word, are different problems. *Corrections on this row:* an early pass reported the store keeping 0.65, a **raw** `gap/teach` ratio rather than a fraction of what was gained (the same correction takes 0.58 → 0.25 on baseline); and the "a perfect index does not protect it" verdict rests on retention at **1.99 SE against a 2.0 bar** while `err after` favours the index at 14.56 SE — prefer `err after`, since retention's denominator (before − taught) collapses and printed 6.12 ± 2.74 there |
@@ -10095,6 +10095,67 @@ Kept because the corrections are the useful part.
 - A monitor that greps a results file it did not watch being created will report
   the **previous** run. Clear the log first, and require a marker string only the
   new build emits.
+
+## The demand never arrived
+
+`travelsweep` was launched to answer the question the row above leaves open —
+where, between 0.58 and 0.89 log units of target separation, does naming fall
+off? It was **killed after 30 of 288 jobs**, and the reason is a better answer
+than the curve would have been.
+
+**The top three rungs produce bit-identical creatures.**
+
+| adjacent rungs | taught | matched marginal |
+| --- | --- | --- |
+| 0.29 → 0.58 | 3/3 differ | 3/3 differ |
+| 0.58 → 0.89 | 1/3 differ | 0/3 differ |
+| 0.89 → 1.20 | **0/3 differ** | **0/3 differ** |
+
+The bottom rung differing on 6/6 is what proves the target table *does* reach
+the reward — this is not a plumbing bug.
+
+**It is algebra.** The caregiver's reward is binary against an EMA of the
+creature's own error:
+
+```
+value = e < baseline ? praise : scold
+e     = |log(f1/T1)| + |log(f2/T2)|
+```
+
+While the creature never crosses its target, `|log(f1/T)| = log T − log f1`, so
+moving the target further away adds a **constant** to `e` — and a constant
+cancels exactly against a baseline EMA of the same quantity. The reward sequence
+is then identical no matter how far the target is, and so is the creature. The
+graded arm does not escape it either: it divides by `dev`, an EMA of
+`|e − baseline|`, in which the constant has already cancelled.
+
+The boundary is where per-trial crossings stop. The *means* never cross a target
+at any rung; what matters is fluctuation. At 0.29 the targets (539/720 Hz) sit
+essentially **on** the voice's own span (553–702 Hz), so crossings are constant;
+by 0.89 (399/972 Hz against 537–722 Hz) they never happen. The observed 3/3,
+1/3, 0/3 gradient is exactly that.
+
+**Why this matters more than the curve.** The curve would have come out flat
+above 0.58, and there was every reason to read it as the travel ceiling — *the
+voice separates two words by 0.30 log units no matter what is asked*. It is
+never asked. The naming ceiling has a cause in the **teaching protocol** rather
+than in the larynx, and the shipped vowel pair's 0.89 is already past the point
+where asking for more changes anything. This is `baseref` — a bar that tracks
+the creature stops asking — arriving as an invariance rather than as an
+argument.
+
+**`ArmLiveness` could not catch this**, and that is the method lesson. It
+compares every arm against *one* control; the bottom rung differs from
+everything, so it reports 7/7 live while the top three rungs are identical to
+each other. A sweep needs an **adjacent-level** check, on the treatment and the
+control side both. `travelsweep` now refuses on exactly that condition rather
+than printing a ceiling.
+
+**Open:** does an *absolute* component in the bar make the distance visible
+again, or does it merely remove the praise variance that makes any learning
+possible at all? `baseref` predicts the second, which would make this a real
+constraint rather than a fixable protocol detail.
+
 
 ## Design decisions that were not obvious
 
