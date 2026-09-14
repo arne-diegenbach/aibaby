@@ -2069,6 +2069,7 @@ bool run_ctxretain(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_maskretain(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_orthovocab(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_movability(const std::vector<uint8_t>&, uint64_t, bool);
+bool run_orthoname(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_pgprobe(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_g2cond(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_coderprobe(const std::vector<uint8_t>&, uint64_t, bool);

@@ -4308,7 +4308,11 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
                              int target = -1, const CtxDrive* ctx = nullptr,
                              VLScore score = kVLScoreFormant,
                              const BiasDrive* bias = nullptr,
-                             uint32_t words = kVLWords) {
+                             uint32_t words = kVLWords,
+                             // `orthoname`: the targets the creature is rewarded
+                             // toward, overriding the vowel table. nullptr keeps
+                             // kWords, so every existing caller is bit-identical.
+                             const Word* tgt_table = nullptr) {
   // -1 is vocallearn's own rule, and passing nothing reproduces it exactly: the
   // positive control aims at one fixed target and every other arm at the word
   // that was heard.
@@ -4456,8 +4460,12 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
     bias_amp_units = bias->k * double(s.dna.module(uint32_t(bias->module)).noise_amp);
     // Which way each formant has to move to name word 0 rather than word 1,
     // read off the word table rather than typed in.
-    bias_sign[0] = kWords[0].f1 > kWords[1].f1 ? 1.0 : -1.0;
-    bias_sign[1] = kWords[0].f2 > kWords[1].f2 ? 1.0 : -1.0;
+    // The oracle's sign follows whichever targets are in play, or a custom table
+    // would be steered toward the vowel table's geometry instead of its own.
+    const Word& s0 = tgt_table ? tgt_table[0] : kWords[0];
+    const Word& s1 = tgt_table ? tgt_table[1] : kWords[1];
+    bias_sign[0] = s0.f1 > s1.f1 ? 1.0 : -1.0;
+    bias_sign[1] = s0.f2 > s1.f2 ? 1.0 : -1.0;
     // Off the formant axis there is no "toward the target" to point at, so both
     // ramps take the same sign and the condition supplies the direction.
     if (bias->group_a != 2) { bias_sign[0] = 1.0; bias_sign[1] = 1.0; }
@@ -4483,7 +4491,7 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
                                  : tgt == kVLTgtSwap   ? (label + 1u) % nw
                                  : tgt == kVLTgtRandom ? (rnd & 1u)
                                                        : label;
-    const Word& w = kWords[target_word];
+    const Word& w = tgt_table ? tgt_table[target_word] : kWords[target_word];
     const uint32_t bucket = target_word;
     // The oracle is set once per trial and held, exactly as the context tract
     // is: a condition that vanishes before reward lands has nothing to bind to.
@@ -6270,6 +6278,265 @@ const MVArm kMVArms[] = {
     {"f2-none",   {"f2-none",   false, false, false, false, false, 0,0,-1, 0,0,-1, 0.0, true, 0.0f, 0, 1.0f, 2, 2, 0.0f, 0.0f,   0.0f,  987.0f}},
 };
 constexpr uint32_t kMVArmCount = sizeof(kMVArms) / sizeof(kMVArms[0]);
+
+// ---------------------------------------------------------------------------
+// `orthoname` -- does an ORTHOGONAL vocabulary make naming work?
+//
+// THE CASE FOR RUNNING IT. `orthovocab` showed that two lessons on different axes
+// coexist: a second lesson on F2 did 77% less damage to an F1 lesson than one on
+// F1, at 10.7 SE, with a structural control. `movability` showed reward steers
+// BOTH axes strongly -- 18.8 and 19.0 SE over flat untaught baselines -- and that
+// the axes are roughly symmetric, the F2 advantage being only ~28% and a
+// hypothesis at 2.9 SE rather than the 5.6x `orthovocab` appeared to show.
+//
+// Those were SEQUENTIAL lessons. Naming is SIMULTANEOUS and conditional: hear word
+// 0, say one thing; hear word 1, say another. The shipped vocabulary makes both
+// words differ along F1, so the two lessons pull one parameter in opposite
+// directions -- exactly the collision. This asks whether spreading them across
+// articulators makes the milestone reachable.
+//
+// THE ENCODINGS, matched on TARGET SEPARATION rather than on per-lesson demand:
+//   collide  T0 = (466, 1651)  T1 = (832, 1651)   both move F1, opposite ways
+//   ortho    T0 = (413, 1651)  T1 = (623, 1095)   one moves F1, the other F2
+// Rest is (623, 1651), recovered from `movability`'s untaught arms. Both pairs sit
+// 0.58 log units apart, so the two targets are EQUALLY DISCRIMINABLE and the score
+// is not handed to either encoding. The cost is that ortho asks 1.41x more of each
+// lesson (0.410 against 0.290) -- which works AGAINST the hypothesis, and that is
+// the direction an unavoidable asymmetry should point.
+//
+// THE CONTROL IS THE MATCHED MARGINAL, per encoding: the same target table with
+// the target drawn independently of the word. Same targets, same reward rate, same
+// everything -- only the CONDITIONALITY removed. `pgprobe` is why this is not
+// optional: a readout change widens both arms, and only the excess separates
+// steering from scatter.
+//
+// CONTEXTS ARE ON IN EVERY ARM. `g2cond` is the firmest closure of G3 on record --
+// unconditional +0.369 at 12 sigma, conditional +0.022 -- so without the
+// context-indexed bias both encodings would fail for a reason that has nothing to
+// do with the vocabulary. With v51/v53 the creature has the conditional machinery
+// and derives its own index. The genome patch is identical across arms, so the
+// only difference is the target table.
+//
+// SCORED ON THE MARGIN, reported with the nearest-target fraction. Per word, the
+// margin is dist(utterance, other target) - dist(utterance, own target) in LOG
+// space, positive when the creature landed nearer the right one. The fraction is
+// coarse at two words -- it can only be 0, 0.5 or 1 -- so it is reported and the
+// margin is gated on. `direction-null` is why neither is read against 1/k.
+//
+// THE REFUSALS, WRITTEN FIRST:
+//   * if neither encoding beats its own matched marginal at 2 SE, naming did not
+//     happen in either and the comparison says nothing about vocabularies.
+//   * if ortho does not beat collide at 2 SE, spreading the vocabulary across
+//     articulators does NOT rescue naming, and `orthovocab`'s result is a fact
+//     about sequential lessons that does not transfer to conditional ones.
+//   * 2-3 SE is a HYPOTHESIS at this n, not a finding, and is printed as one.
+struct ONArm {
+  const char* name;
+  bool conditional;   // false = the matched-marginal control
+  bool ortho;
+};
+const ONArm kONArms[] = {
+    {"collide",     true,  false},
+    {"collide-rnd", false, false},
+    {"ortho",       true,  true},
+    {"ortho-rnd",   false, true},
+};
+constexpr uint32_t kONArmCount = sizeof(kONArms) / sizeof(kONArms[0]);
+
+// Rest (623, 1651) from `movability`'s untaught arms; both pairs 0.58 log apart.
+constexpr Word kONCollide[2] = {{200.0f, 466.0f, 1651.0f}, {200.0f, 832.0f, 1651.0f}};
+constexpr Word kONOrtho[2]   = {{200.0f, 413.0f, 1651.0f}, {200.0f, 623.0f, 1095.0f}};
+
+bool run_orthoname(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  aibaby::Dna dna0;
+  if (dna0.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) {
+    std::printf("  setup failed: the genome does not load\n");
+    return false;
+  }
+  if (dna0.module_with_role(aibaby::ModuleRole::kContext) < 0) {
+    std::printf("  this genome has no kContext module, and contexts are ON in every arm\n"
+                "  because `g2cond` says conditional learning fails without them. Build one:\n\n"
+                "    python3 tools/genome_add_context.py dna/default.toml ctx.toml \\\n"
+                "        vocal out_w=0\n"
+                "    ./build/aibaby --dna ctx.toml --experiment orthoname\n");
+    return false;
+  }
+  Regime regime;
+  regime.praise = kPraiseValue;
+  regime.scold = kScoldValue;
+  constexpr uint32_t kReps = 36;
+  instrument("orthoname", dna0.header().seed ^ 0x07A7u, ticks / kVLTrialTicks, "trials");
+  std::printf("  question          `orthovocab` showed two SEQUENTIAL lessons on different\n"
+              "                    axes coexist (77%% less damage, 10.7 SE). Naming is\n"
+              "                    SIMULTANEOUS and conditional. Does spreading a vocabulary\n"
+              "                    across articulators make the milestone reachable?\n");
+  std::printf("  the encodings     collide: both words move F1, opposite ways.\n"
+              "                    ortho:   one word moves F1, the other F2.\n"
+              "                    MATCHED on target separation (0.58 log units both), so\n"
+              "                    neither is handed the score. ortho pays 1.41x more per\n"
+              "                    lesson, which works against the hypothesis.\n");
+  std::printf("  the control       matched marginal per encoding: same targets, same reward\n"
+              "                    rate, conditionality removed. Contexts ON in every arm.\n");
+  std::printf("  the refusal       neither beating its own control means naming did not\n"
+              "                    happen at all; ortho not beating collide means the\n"
+              "                    sequential result does not transfer. 36 seeds.\n\n");
+
+  const size_t slots_off = offsetof(aibaby::DnaHeader, exploration) +
+                           offsetof(aibaby::DnaExploration, context_slots);
+  const size_t src_off = offsetof(aibaby::DnaHeader, exploration) +
+                         offsetof(aibaby::DnaExploration, context_source);
+
+  struct Cell { bool ok = false; double margin = 0.0; double frac = 0.0; };
+  const uint32_t njobs = kReps * kONArmCount;
+  const std::vector<Cell> cells = parallel_reps<Cell>(njobs, [&](uint32_t i) {
+    Cell cell;
+    const uint32_t r = i / kONArmCount, a = i % kONArmCount;
+    std::vector<uint8_t> variant = blob;
+    const uint64_t seed = dna0.header().seed + r * 7919ull;
+    std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+    // Identical in every arm: only the target table and the conditionality differ.
+    const uint32_t slots = 2u, src = 4u;
+    std::memcpy(variant.data() + slots_off, &slots, sizeof(slots));
+    std::memcpy(variant.data() + src_off, &src, sizeof(src));
+    const Word* tbl = kONArms[a].ortho ? kONOrtho : kONCollide;
+    const int tgt = kONArms[a].conditional ? int(kVLTgtHeard) : int(kVLTgtRandom);
+    const VLRun run = run_vocallearn_session(variant, ticks, kVLTaught, nullptr, regime, tgt,
+                                             nullptr, kVLScoreFormant, nullptr, 2u, tbl);
+    if (!run.ok) return cell;
+    // THE MARGIN, in log space, per word: how much nearer the creature landed to
+    // its own target than to the other one. Positive is correct.
+    double msum = 0.0, fsum = 0.0;
+    uint32_t nw = 0;
+    for (uint32_t w = 0; w < 2u; ++w) {
+      const double f1 = run.f1_by_word[w], f2 = run.f2_by_word[w];
+      if (f1 <= 1.0 || f2 <= 1.0) continue;
+      const Word& own = tbl[w];
+      const Word& oth = tbl[1u - w];
+      const double d_own = std::hypot(std::log(f1 / double(own.f1)),
+                                      std::log(f2 / double(own.f2)));
+      const double d_oth = std::hypot(std::log(f1 / double(oth.f1)),
+                                      std::log(f2 / double(oth.f2)));
+      msum += d_oth - d_own;
+      fsum += d_own < d_oth ? 1.0 : 0.0;
+      ++nw;
+    }
+    if (nw == 0) return cell;
+    cell.margin = msum / nw;
+    cell.frac = fsum / nw;
+    cell.ok = true;
+    if (nw == 2u) {
+      parallel_note("  [%u/%u] seed %u %-12s margin %+.4f  nearest %.2f\n", i + 1, njobs, r,
+                    kONArms[a].name, cell.margin, cell.frac);
+    }
+    return cell;
+  });
+
+  std::printf("\n  %-13s %-22s %s\n", "arm", "margin (log units)", "nearest-target fraction");
+  for (uint32_t a = 0; a < kONArmCount; ++a) {
+    std::vector<double> mg, fr;
+    for (uint32_t r = 0; r < kReps; ++r) {
+      const Cell& c = cells[r * kONArmCount + a];
+      if (!c.ok) continue;
+      mg.push_back(c.margin);
+      fr.push_back(c.frac);
+    }
+    if (mg.size() < 3) {
+      std::printf("\n  orthoname INCONCLUSIVE -- arm `%s` produced %zu creatures.\n",
+                  kONArms[a].name, mg.size());
+      return false;
+    }
+    double se_m = 0.0, s2 = 0.0;
+    std::printf("  %-13s %+.4f +/- %-13.4f %.3f\n", kONArms[a].name,
+                ctx_mean_se(mg, &se_m), se_m, ctx_mean_se(fr, &s2));
+  }
+
+  {
+    ArmLiveness live("orthoname");
+    for (uint32_t r = 0; r < kReps; ++r) {
+      for (uint32_t a = 0; a < kONArmCount; ++a) {
+        const Cell& c = cells[r * kONArmCount + a];
+        if (c.ok) live.observe(kONArms[a].name, r, c.margin);
+      }
+    }
+    if (!live.report("collide")) return false;
+  }
+
+  const auto idx = [](const char* w) {
+    for (uint32_t i = 0; i < kONArmCount; ++i) {
+      if (std::strcmp(kONArms[i].name, w) == 0) return int(i);
+    }
+    return -1;
+  };
+  const int c_t = idx("collide"), c_r = idx("collide-rnd");
+  const int o_t = idx("ortho"), o_r = idx("ortho-rnd");
+  if (c_t < 0 || c_r < 0 || o_t < 0 || o_r < 0) {
+    std::printf("\n  orthoname cannot summarise: an arm it names is missing.\n");
+    return false;
+  }
+  // EXCESS over each encoding's OWN matched marginal, paired on seed -- these
+  // arms share creatures, so the SE is paired. That is the poolbeta rule, and I
+  // broke it on `movability` earlier today while citing it.
+  const auto excess = [&](int tt, int rr, std::vector<double>* out, double* se) {
+    out->clear();
+    for (uint32_t r = 0; r < kReps; ++r) {
+      const Cell& ct = cells[r * kONArmCount + uint32_t(tt)];
+      const Cell& cr = cells[r * kONArmCount + uint32_t(rr)];
+      if (ct.ok && cr.ok) out->push_back(ct.margin - cr.margin);
+    }
+    return ctx_mean_se(*out, se);
+  };
+  std::vector<double> ec, eo;
+  double se_c = 0.0, se_o = 0.0;
+  const double m_c = excess(c_t, c_r, &ec, &se_c);
+  const double m_o = excess(o_t, o_r, &eo, &se_o);
+  std::printf("\n  EXCESS over each encoding's OWN matched marginal, paired on seed.\n"
+              "  This is what CONDITIONALITY bought, with the targets held fixed.\n"
+              "    collide  %+.4f +/- %.4f  (%+.1f SE)\n"
+              "    ortho    %+.4f +/- %.4f  (%+.1f SE)\n",
+              m_c, se_c, se_c > 0.0 ? m_c / se_c : 0.0,
+              m_o, se_o, se_o > 0.0 ? m_o / se_o : 0.0);
+  const bool live_c = se_c > 0.0 && m_c > 2.0 * se_c;
+  const bool live_o = se_o > 0.0 && m_o > 2.0 * se_o;
+  if (!live_c && !live_o) {
+    std::printf("\n  REFUSED -- NAMING DID NOT HAPPEN IN EITHER ENCODING. Neither beats its\n"
+                "  own matched marginal at 2 SE, so the creature is not steering by the word\n"
+                "  it heard under either vocabulary, and nothing here is about vocabularies.\n"
+                "  That would put the blocker back where `g2cond` left it: conditionality.\n");
+    return false;
+  }
+  std::vector<double> dd;
+  const size_t np = std::min(ec.size(), eo.size());
+  for (size_t q = 0; q < np; ++q) dd.push_back(eo[q] - ec[q]);
+  double se_d = 0.0;
+  const double m_d = ctx_mean_se(dd, &se_d);
+  std::printf("    ortho - collide  %+.4f +/- %.4f  (%+.1f SE)  [paired]\n",
+              m_d, se_d, se_d > 0.0 ? m_d / se_d : 0.0);
+  if (se_d > 0.0 && m_d > 3.0 * se_d) {
+    std::printf("\n  AN ORTHOGONAL VOCABULARY MAKES NAMING WORK BETTER. Spreading the two\n"
+                "  words across articulators beats stacking them on F1 by %.1f SE, with the\n"
+                "  targets equally separated and ortho paying 1.41x more per lesson. The\n"
+                "  collision result transfers from sequential lessons to conditional ones,\n"
+                "  and the vocabulary -- not the machinery -- was part of the problem.\n",
+                m_d / se_d);
+    return true;
+  }
+  if (se_d > 0.0 && m_d > 2.0 * se_d) {
+    std::printf("\n  A HYPOTHESIS, NOT A FINDING (%.1f SE). Inside the 2-3 SE band this\n"
+                "  project has retracted findings from; it needs ~%.0f seeds for 4 SE before\n"
+                "  anything is built on it.\n",
+                m_d / se_d, double(dd.size()) * std::pow(4.0 / (m_d / se_d), 2.0));
+    return false;
+  }
+  std::printf("\n  THE VOCABULARY IS NOT THE PROBLEM (%+.1f SE). An orthogonal encoding does\n"
+              "  not name better than a colliding one, so `orthovocab`'s result is a fact\n"
+              "  about SEQUENTIAL lessons that does not transfer to simultaneous conditional\n"
+              "  ones. Interference between lessons taught one after another, and the\n"
+              "  failure to condition on the heard word, are different problems -- and this\n"
+              "  run says only the first is about sharing a dimension.\n",
+              se_d > 0.0 ? m_d / se_d : 0.0);
+  return false;
+}
 
 bool run_movability(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
   (void)verbose;
