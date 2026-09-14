@@ -242,6 +242,13 @@ const Spec kSpecs[] = {
      "  it) and replay actually reinforcing something (DNA v55 replay_credit).\n"
      "  Gates on retention AND err-after paired, because retention is a ratio an\n"
      "  arm can inflate by simply learning less"},
+    {"movability", 5600000, Expect::kOpen, Tier::kLong,
+     "orthovocab left a LEAD: on identical demands the F2 lesson travelled\n"
+     "  0.169 and the F1 lesson 0.030 -- but F1's was FIGHTING another lesson on\n"
+     "  its own axis. ONE lesson, no conflict, each axis with its own untaught\n"
+     "  control. Scored as the FRACTION of the demanded move achieved, since the\n"
+     "  axes sit at different distances in log space. Matters because the 137 Hz\n"
+     "  naming ceiling is an F1 ceiling. 36 seeds"},
     {"orthovocab", 5600000, Expect::kOpen, Tier::kLong,
      "the conflict is a pure overwrite that cannot be defended (blocking\n"
      "  plasticity costs 59% of the lesson) or retrieved (store and behaviour\n"
@@ -565,6 +572,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "ctxretain") ok = run_ctxretain(dna_blob, ticks, verbose);
   else if (name == "maskretain") ok = run_maskretain(dna_blob, ticks, verbose);
   else if (name == "orthovocab") ok = run_orthovocab(dna_blob, ticks, verbose);
+  else if (name == "movability") ok = run_movability(dna_blob, ticks, verbose);
   else if (name == "partprobe") ok = run_partprobe(dna_blob, ticks, verbose);
   else if (name == "pgprobe") ok = run_pgprobe(dna_blob, ticks, verbose);
   else if (name == "g2cond") ok = run_g2cond(dna_blob, ticks, verbose);

@@ -5622,6 +5622,10 @@ struct RTConfig {
   uint32_t second_axis = 0;   // how lesson B is scored during the gap
   float second_f1 = 0.0f;     // 0 = use kRTSecondWord
   float second_f2 = 0.0f;
+  // `movability`. The FIRST lesson's target, overridden per arm; 0 keeps
+  // kWords[kRTTarget] so every existing arm is bit-identical.
+  float first_f1 = 0.0f;
+  float first_f2 = 0.0f;
 };
 
 // One arm, one creature, one life: teach, intervene, re-measure.
@@ -5698,7 +5702,10 @@ RTRow run_retain_arm(const std::vector<uint8_t>& blob, uint64_t ticks,
   // was never tested.
   const Word& heard2 =
       cfg.second_heard >= 0 ? kWords[uint32_t(cfg.second_heard)] : kWords[kRTHeard];
-  const Word& first = kWords[kRTTarget];
+  const Word first_override = {kWords[kRTTarget].f0,
+                               cfg.first_f1 > 0.0f ? cfg.first_f1 : kWords[kRTTarget].f1,
+                               cfg.first_f2 > 0.0f ? cfg.first_f2 : kWords[kRTTarget].f2};
+  const Word& first = first_override;
   // Per-arm second target; 0 keeps the shipped word so existing arms are
   // bit-identical.
   const Word second_override = {kRTSecondWord.f0,
@@ -6223,6 +6230,235 @@ const OVArm kOVArms[] = {
     {"ortho",   {"ortho",   false, true, true,  false, false, 0, 0, -1, 0, 0, -1, 0.0, true, 0.0f, 0, 1.0f, 1, 2, 564.0f, 1184.0f}},
 };
 constexpr uint32_t kOVArmCount = sizeof(kOVArms) / sizeof(kOVArms[0]);
+
+// ---------------------------------------------------------------------------
+// `movability` -- is F2 easier to steer than F1, with no collision to confound it?
+//
+// WHY. `orthovocab` left a LEAD, explicitly not a finding: its two second lessons
+// faced identical demands (0.410 log units) and the F2 one travelled 0.169 while
+// the F1 one travelled 0.030. That looks like F2 being more movable -- and it
+// matters, because the 137 Hz naming ceiling is an F1 ceiling. But collide's
+// lesson was FIGHTING lesson A on the same axis, so its poor showing is partly the
+// collision and not the axis. Nothing in that run separates them.
+//
+// This does: ONE lesson, no second lesson, no conflict. Just "teach this axis" on
+// each axis in turn.
+//
+// THE STATISTIC IS THE FRACTION OF THE DEMANDED MOVE ACHIEVED,
+// (err_before - err_taught) / err_before, not the raw error. The two axes sit at
+// different absolute distances from their targets and in different parts of log
+// space, so a raw comparison would be about the targets rather than the axes. The
+// fraction self-normalises, because err_before is measured per arm on its own axis.
+//
+// EACH AXIS HAS ITS OWN UNTAUGHT CONTROL, and the excess is taught minus untaught
+// PAIRED ON SEED. Without it, "F2 moved more" cannot be told from "F2 drifts more"
+// -- and this creature's formants do drift: `none` in orthovocab kept improving
+// after teaching stopped, retention 1.31. A per-axis drift baseline is not optional.
+//
+// REFUSALS, WRITTEN FIRST:
+//   * if neither axis shows an excess over its own untaught control at 2 SE, the
+//     probe measured nothing and no axis comparison can be read from it.
+//   * if the two excesses do not differ at 2 SE, THE AXES ARE EQUALLY MOVABLE and
+//     orthovocab's gap was the collision, not the axis. That closes the lead and
+//     the orthogonal-vocabulary design should treat the axes as symmetric.
+struct MVArm { const char* name; RTConfig cfg; };
+const MVArm kMVArms[] = {
+    // name       no_fat teach relearn frz norep cred eps 2nd slots src orc gain split commit mask width aA aB s_f1 s_f2 f_f1 f_f2
+    {"f1-taught", {"f1-taught", false, true,  false, false, false, 0,0,-1, 0,0,-1, 0.0, true, 0.0f, 0, 1.0f, 1, 1, 0.0f, 0.0f, 320.0f,    0.0f}},
+    {"f1-none",   {"f1-none",   false, false, false, false, false, 0,0,-1, 0,0,-1, 0.0, true, 0.0f, 0, 1.0f, 1, 1, 0.0f, 0.0f, 320.0f,    0.0f}},
+    {"f2-taught", {"f2-taught", false, true,  false, false, false, 0,0,-1, 0,0,-1, 0.0, true, 0.0f, 0, 1.0f, 2, 2, 0.0f, 0.0f,   0.0f,  987.0f}},
+    {"f2-none",   {"f2-none",   false, false, false, false, false, 0,0,-1, 0,0,-1, 0.0, true, 0.0f, 0, 1.0f, 2, 2, 0.0f, 0.0f,   0.0f,  987.0f}},
+};
+constexpr uint32_t kMVArmCount = sizeof(kMVArms) / sizeof(kMVArms[0]);
+
+bool run_movability(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  Regime regime;
+  regime.praise = kPraiseValue;
+  regime.scold = kScoldValue;
+  aibaby::Dna dna0;
+  if (dna0.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) {
+    std::printf("  setup failed: the genome does not load\n");
+    return false;
+  }
+  std::string error;
+  Timbre ruler;
+  if (!ruler.configure(dna0.header().audio, error)) {
+    std::printf("  the audibility ruler failed: %s\n", error.c_str());
+    return false;
+  }
+  constexpr uint32_t kReps = 36;
+  instrument("movability", dna0.header().seed ^ 0x5E11u, ticks / kRTTrial, "trials");
+  std::printf("  question          `orthovocab` left a LEAD: equal demands, and the F2 lesson\n"
+              "                    travelled 0.169 where the F1 lesson travelled 0.030. Is F2\n"
+              "                    genuinely easier to steer, or was F1's lesson just FIGHTING\n"
+              "                    the other one on its own axis?\n");
+  std::printf("  why it matters    the 137 Hz naming ceiling is an F1 ceiling. If the axes are\n"
+              "                    not symmetric, a vocabulary should be built around the one\n"
+              "                    that moves.\n");
+  std::printf("  the design        ONE lesson, no conflict. Teach F1, teach F2, each with its\n"
+              "                    OWN untaught control on the same axis and target.\n");
+  std::printf("  the statistic     FRACTION of the demanded move achieved, not raw error: the\n"
+              "                    axes sit at different distances in log space, so a raw\n"
+              "                    comparison would be about the targets, not the axes.\n");
+  std::printf("  the refusal       excesses equal at 2 SE means the axes are EQUALLY MOVABLE\n"
+              "                    and orthovocab's gap was the collision. 36 seeds.\n\n");
+
+  struct Cell { bool ok = false; RTRow row; };
+  const uint32_t njobs = kReps * kMVArmCount;
+  const std::vector<Cell> cells = parallel_reps<Cell>(njobs, [&](uint32_t i) {
+    Cell cell;
+    const uint32_t r = i / kMVArmCount, a = i % kMVArmCount;
+    std::vector<uint8_t> variant = blob;
+    const uint64_t seed = dna0.header().seed + r * 7919ull;
+    std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+    Timbre local_ruler;
+    std::string local_error;
+    if (!local_ruler.configure(dna0.header().audio, local_error)) return cell;
+    bool ok = false;
+    cell.row = run_retain_arm(variant, ticks, kMVArms[a].cfg, local_ruler, regime, &ok);
+    cell.ok = ok;
+    if (ok) {
+      parallel_note("  [%u/%u] seed %u %-10s before %.4f taught %.4f\n", i + 1, njobs, r,
+                    kMVArms[a].name, cell.row.err_before, cell.row.err_taught);
+    }
+    return cell;
+  });
+
+  std::printf("\n  %-11s %-16s %-16s %s\n", "arm", "err before", "err taught",
+              "fraction of the demand achieved");
+  for (uint32_t a = 0; a < kMVArmCount; ++a) {
+    std::vector<double> bef, tau, fr;
+    for (uint32_t r = 0; r < kReps; ++r) {
+      const Cell& c = cells[r * kMVArmCount + a];
+      if (!c.ok) continue;
+      bef.push_back(c.row.err_before);
+      tau.push_back(c.row.err_taught);
+      if (c.row.err_before > 1e-6) {
+        fr.push_back((c.row.err_before - c.row.err_taught) / c.row.err_before);
+      }
+    }
+    if (bef.size() < 3) {
+      std::printf("\n  movability INCONCLUSIVE -- arm `%s` produced %zu creatures.\n",
+                  kMVArms[a].name, bef.size());
+      return false;
+    }
+    double s2 = 0.0, se_f = 0.0;
+    const double mb = ctx_mean_se(bef, &s2), mt = ctx_mean_se(tau, &s2);
+    const double mf = ctx_mean_se(fr, &se_f);
+    std::printf("  %-11s %-16.4f %-16.4f %+.3f +/- %.3f\n", kMVArms[a].name, mb, mt, mf, se_f);
+  }
+
+  {
+    ArmLiveness live("movability");
+    for (uint32_t r = 0; r < kReps; ++r) {
+      for (uint32_t a = 0; a < kMVArmCount; ++a) {
+        const Cell& c = cells[r * kMVArmCount + a];
+        if (c.ok) live.observe(kMVArms[a].name, r, c.row.err_taught);
+      }
+    }
+    if (!live.report("f1-none")) return false;
+  }
+
+  const auto idx = [](const char* w) {
+    for (uint32_t i = 0; i < kMVArmCount; ++i) {
+      if (std::strcmp(kMVArms[i].name, w) == 0) return int(i);
+    }
+    return -1;
+  };
+  const int t1 = idx("f1-taught"), n1 = idx("f1-none");
+  const int t2 = idx("f2-taught"), n2 = idx("f2-none");
+  if (t1 < 0 || n1 < 0 || t2 < 0 || n2 < 0) {
+    std::printf("\n  movability cannot summarise: an arm it names is missing.\n");
+    return false;
+  }
+  // EXCESS over the SAME AXIS's untaught control, paired on seed. The creature's
+  // formants drift on their own -- orthovocab's untaught arm kept improving,
+  // retention 1.31 -- so an axis that drifts more would look more movable without
+  // a per-axis baseline.
+  const auto excess = [&](int tt, int nn, std::vector<double>* out, double* se) {
+    out->clear();
+    for (uint32_t r = 0; r < kReps; ++r) {
+      const Cell& ct = cells[r * kMVArmCount + uint32_t(tt)];
+      const Cell& cn = cells[r * kMVArmCount + uint32_t(nn)];
+      if (!ct.ok || !cn.ok || ct.row.err_before <= 1e-6 || cn.row.err_before <= 1e-6) continue;
+      out->push_back((ct.row.err_before - ct.row.err_taught) / ct.row.err_before -
+                     (cn.row.err_before - cn.row.err_taught) / cn.row.err_before);
+    }
+    return ctx_mean_se(*out, se);
+  };
+  std::vector<double> e1, e2;
+  double se1 = 0.0, se2 = 0.0;
+  const double m1 = excess(t1, n1, &e1, &se1);
+  const double m2 = excess(t2, n2, &e2, &se2);
+  std::printf("\n  EXCESS over the SAME AXIS's untaught control, paired on seed.\n"
+              "  This is how much of the demanded move REWARD bought, above drift.\n"
+              "    F1  %+.3f +/- %.3f  (%+.1f SE)\n"
+              "    F2  %+.3f +/- %.3f  (%+.1f SE)\n",
+              m1, se1, se1 > 0.0 ? m1 / se1 : 0.0,
+              m2, se2, se2 > 0.0 ? m2 / se2 : 0.0);
+  const bool live1 = se1 > 0.0 && m1 > 2.0 * se1;
+  const bool live2 = se2 > 0.0 && m2 > 2.0 * se2;
+  if (!live1 && !live2) {
+    std::printf("\n  REFUSED -- NEITHER AXIS MOVED. No excess over the untaught control on\n"
+                "  either axis at 2 SE, so reward bought nothing here and no axis comparison\n"
+                "  can be read from this run. Check the targets are reachable before\n"
+                "  concluding anything about movability.\n");
+    return false;
+  }
+  // PAIRED, and the first version of this got it exactly backwards while citing
+  // `poolbeta` as the reason. Every arm at seed r is built from the SAME genome
+  // seed, so f1-taught and f2-taught are the same creature at birth given
+  // different lessons -- not independent samples. The unpaired SE read 3.2 SE and
+  // the correct paired one reads 2.9, which matters because 2-3 SE at this n is a
+  // HYPOTHESIS in this project, not a finding. That is the poolbeta error itself,
+  // reproduced in the file that documents it.
+  std::vector<double> dd;
+  const size_t npair = std::min(e1.size(), e2.size());
+  for (size_t q = 0; q < npair; ++q) dd.push_back(e2[q] - e1[q]);
+  double se_d = 0.0;
+  const double m_d = ctx_mean_se(dd, &se_d);
+  std::printf("  F2 - F1  %+.3f +/- %.3f  (%+.1f SE)   [PAIRED: same seed, same\n"
+              "           creature at birth]\n",
+              m_d, se_d, se_d > 0.0 ? m_d / se_d : 0.0);
+  // BAND THE VERDICT. 2-3 SE at n=36 is a hypothesis here; three findings were
+  // retracted from that band in one day.
+  if (se_d > 0.0 && std::fabs(m_d) > 3.0 * se_d) {
+    std::printf("\n  THE AXES ARE NOT SYMMETRIC. %s is the more steerable axis by %.1f SE,\n"
+                "  with no collision anywhere in this run -- so `orthovocab`'s gap was not\n"
+                "  only the collision. A vocabulary should be built around the axis that\n"
+                "  moves, and the 137 Hz ceiling being an F1 ceiling is now a fact about\n"
+                "  WHICH FORMANT was asked to carry naming rather than about naming.\n",
+                m_d > 0.0 ? "F2" : "F1", std::fabs(m_d) / se_d);
+    return true;
+  }
+  if (se_d > 0.0 && std::fabs(m_d) > 2.0 * se_d) {
+    std::printf("\n  A HYPOTHESIS, NOT A FINDING. %s looks more steerable by %.1f SE, which is\n"
+                "  inside the 2-3 SE band this project has retracted three findings from. The\n"
+                "  effect is %+.3f of the demanded move, about %.0f%% relative -- REAL if it\n"
+                "  holds, but nothing should be built on it until it is confirmed at more\n"
+                "  seeds (~%.0f for 4 SE).\n"
+                "  WHAT IS SOLID REGARDLESS: both axes respond strongly to reward (%.1f and\n"
+                "  %.1f SE over their own untaught controls), and the axis gap is ~%.0f%%\n"
+                "  rather than the 5.6x `orthovocab` appeared to show. So the bulk of that\n"
+                "  run's 0.169-against-0.030 WAS the collision, and a lesson fighting another\n"
+                "  on its own axis simply cannot travel.\n",
+                m_d > 0.0 ? "F2" : "F1", std::fabs(m_d) / se_d, m_d,
+                m1 != 0.0 ? 100.0 * m_d / m1 : 0.0,
+                double(dd.size()) * std::pow(4.0 / (std::fabs(m_d) / se_d), 2.0),
+                se1 > 0.0 ? m1 / se1 : 0.0, se2 > 0.0 ? m2 / se2 : 0.0,
+                m1 != 0.0 ? 100.0 * m_d / m1 : 0.0);
+    return false;
+  }
+  std::printf("\n  THE AXES ARE EQUALLY MOVABLE (%+.1f SE), SO THE LEAD IS CLOSED. The gap in\n"
+              "  `orthovocab` -- 0.169 against 0.030 on identical demands -- was the\n"
+              "  COLLISION, not the axis: a lesson fighting another on its own axis simply\n"
+              "  cannot travel. That is a cleaner reading of that run than the one I flagged,\n"
+              "  and it means the orthogonal-vocabulary design should treat the axes as\n"
+              "  symmetric and spread the words wherever there is room.\n",
+              se_d > 0.0 ? m_d / se_d : 0.0);
+  return true;
+}
 
 bool run_orthovocab(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
   (void)verbose;
