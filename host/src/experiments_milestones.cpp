@@ -6277,17 +6277,25 @@ bool run_orthovocab(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
     return cell;
   });
 
-  std::printf("\n  %-9s %-14s %-14s %-15s %s\n", "arm", "err taught", "err after",
-              "retention", "store kept");
-  double m_taught[kOVArmCount] = {}, m_after[kOVArmCount] = {};
+  std::printf("\n  %-9s %-14s %-14s %-15s %-12s %s\n", "arm", "err taught", "err after",
+              "retention", "store kept", "err vs B (did B learn?)");
+  double m_taught[kOVArmCount] = {}, m_after[kOVArmCount] = {}, m_b[kOVArmCount] = {};
   for (uint32_t a = 0; a < kOVArmCount; ++a) {
-    std::vector<double> tau, aft, ret, sk;
+    std::vector<double> tau, aft, ret, sk, eb;
     for (uint32_t r = 0; r < kReps; ++r) {
       const Cell& c = cells[r * kOVArmCount + a];
       if (!c.ok) continue;
       tau.push_back(c.row.err_taught);
       aft.push_back(c.row.err_after);
       ret.push_back(c.row.retention);
+      // HOW WELL LESSON B ITSELF LEARNED, on its OWN axis against its OWN target.
+      // The first run of this experiment did not print it, and without it the
+      // headline is confoundable in exactly the way three runs failed on
+      // 2026-09-13: if F2 is harder to move than F1, ortho's second lesson simply
+      // DID LESS, and would damage the first lesson less for a reason that has
+      // nothing to do with orthogonality. Comparable across arms by construction,
+      // both being log-distances to their own target on their own axis.
+      if (kOVArms[a].cfg.relearn) eb.push_back(c.row.err_b);
       const double dt = c.row.tilt_a_teach - c.row.tilt_a_before;
       if (std::fabs(dt) >= 1e-4) sk.push_back((c.row.tilt_a_gap - c.row.tilt_a_before) / dt);
     }
@@ -6301,10 +6309,14 @@ bool run_orthovocab(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
     m_after[a] = ctx_mean_se(aft, &se_a);
     const double mr = ctx_mean_se(ret, &se_r);
     const double msk = sk.size() >= 8 ? ctx_mean_se(sk, &s2) : 0.0;
+    double se_b = 0.0;
+    m_b[a] = eb.empty() ? -1.0 : ctx_mean_se(eb, &se_b);
     std::printf("  %-9s %.4f +/- %-5.4f %.4f +/- %-5.4f %.2f +/- %-8.2f", kOVArms[a].name,
                 m_taught[a], se_t, m_after[a], se_a, mr, se_r);
-    if (sk.size() >= 8) std::printf("%.2f\n", msk);
-    else std::printf("--\n");
+    if (sk.size() >= 8) std::printf("%-12.2f", msk);
+    else std::printf("%-12s", "--");
+    if (m_b[a] >= 0.0) std::printf("%.4f +/- %.4f\n", m_b[a], se_b);
+    else std::printf("-- (no second lesson)\n");
   }
 
   {
@@ -6375,6 +6387,30 @@ bool run_orthovocab(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
               dmg_c, se_c, se_c > 0.0 ? dmg_c / se_c : 0.0,
               dmg_o, se_o, se_o > 0.0 ? dmg_o / se_o : 0.0,
               m_diff, se_d, se_d > 0.0 ? m_diff / se_d : 0.0);
+  // DID THE TWO SECOND LESSONS LEARN EQUALLY? If not, the damage difference is
+  // confounded by effort rather than by axis.
+  {
+    std::vector<double> d;
+    for (uint32_t r = 0; r < kReps; ++r) {
+      const Cell& cc = cells[r * kOVArmCount + uint32_t(a_col)];
+      const Cell& co = cells[r * kOVArmCount + uint32_t(a_ort)];
+      if (cc.ok && co.ok) d.push_back(co.row.err_b - cc.row.err_b);
+    }
+    double se_eb = 0.0;
+    const double m_eb = ctx_mean_se(d, &se_eb);
+    std::printf("\n  DID LESSON B LEARN EQUALLY? (ortho's err vs B minus collide's, paired).\n"
+                "  Positive means ortho's second lesson learned LESS, and a damage\n"
+                "  difference would then be about effort rather than about axis.\n"
+                "    %+.4f +/- %.4f  (%+.1f SE)\n",
+                m_eb, se_eb, se_eb > 0.0 ? m_eb / se_eb : 0.0);
+    if (se_eb > 0.0 && m_eb > 2.0 * se_eb) {
+      std::printf("\n  REFUSED -- ORTHO'S SECOND LESSON LEARNED LESS. It is %.1f SE short of\n"
+                  "  collide's on its own target, so it had less to interfere WITH and the\n"
+                  "  damage difference cannot be attributed to the axis. Match the two\n"
+                  "  lessons' difficulty before reading this contrast.\n", m_eb / se_eb);
+      return false;
+    }
+  }
   if (se_d > 0.0 && m_diff > 2.0 * se_d) {
     std::printf("\n  THE COLLISION IS THE PROBLEM, NOT THE MEMORY. A second lesson on a\n"
                 "  DIFFERENT axis does %.0f%% less damage to the first, at %.1f SE, with the\n"
