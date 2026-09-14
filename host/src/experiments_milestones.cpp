@@ -4209,6 +4209,12 @@ struct VLRun {
   // this; printing it is what makes that a check rather than an assumption.
   double reward_mag = 0.0;
   uint32_t reward_n = 0;
+  // `absbar` needs the reward's VARIANCE, not just its size: node perturbation's
+  // drift is Cov(R, u), so a reward that never varies gives zero drift whatever
+  // its sign or magnitude. Summed raw here and reduced to an SD at the end.
+  double reward_sum = 0.0;
+  double reward_sq = 0.0;
+  double reward_sd = 0.0;
   // Within-session checkpoints. `ctxscale` measured the growth of the aligned
   // bias ACROSS runs at three budgets, which costs a whole run per point and
   // pays cross-seed noise for each one. These are the same curve sampled inside
@@ -4660,8 +4666,28 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
               // deliberately: one would divide the distance sensitivity out.
               const double ratio = e / double(regime.abs_bar);
               const double unit = 1.0 - ratio * ratio;
-              value = float(unit >= 0.0 ? unit * double(regime.praise)
-                                        : -std::min(-unit, 1.0) * double(regime.scold));
+              // `scold` is ALREADY NEGATIVE (-0.5), so the negative branch is
+              // `clamp * scold`, not `-clamp * scold`. The first version wrote
+              // the second and double-negated: every trial came out positive,
+              // the praise fraction pinned at 1.000 whatever the error, and the
+              // arm was silently a constant-reward arm. The shipped graded path
+              // two branches up is the pattern to match -- it writes
+              // `-unit * scold` with unit already negative.
+              // THE CLAMP IS WIDE ON PURPOSE. A clamp at 1.0 would saturate at
+              // the far separation -- 1 - (0.66/0.31)^2 is -3.5 -- and a
+              // saturated reward is a CONSTANT reward, which is the same death
+              // this rule exists to avoid. The magnitude growing with distance
+              // IS the mechanism under test, so it is allowed four units of
+              // room and the realised mean |R| is printed to be read as the
+              // learning-rate difference it partly is.
+              const double lim = 4.0;
+              const double c = unit > lim ? lim : (unit < -lim ? -lim : unit);
+              // Exactly the shipped graded path's form: for c < 0, -c is
+              // positive and `scold` is already -0.5, so the product is
+              // negative. Written any other way this sign has now been wrong
+              // twice in one sitting.
+              value = float(c >= 0.0 ? c * double(regime.praise)
+                                     : -c * double(regime.scold));
             } else if (regime.reward_mode == 2u && regime.abs_bar > 0.0f) {
               // ABSOLUTE HARD BAR. `baseref` predicts this dies: a bar the
               // creature cannot beat makes every trial a scold, and a constant
@@ -4671,6 +4697,8 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
               value = e < baseline[bucket] ? regime.praise : regime.scold;
             }
             out.reward_mag += std::fabs(double(value));
+            out.reward_sum += double(value);
+            out.reward_sq += double(value) * double(value);
             ++out.reward_n;
             if (value > 0.0f) { ++out.praises; ++w_praise; } else { ++out.scolds; ++w_scold; }
             pending.push_back(Praise{now + regime.delay, value});
@@ -4852,7 +4880,12 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
     out.f1_by_word[k] = vf_n[k] ? vf1_sum[k] / vf_n[k] : 0.0;
     out.f2_by_word[k] = vf_n[k] ? vf2_sum[k] / vf_n[k] : 0.0;
   }
-  if (out.reward_n) out.reward_mag /= double(out.reward_n);
+  if (out.reward_n) {
+    out.reward_mag /= double(out.reward_n);
+    const double mean = out.reward_sum / double(out.reward_n);
+    const double var = out.reward_sq / double(out.reward_n) - mean * mean;
+    out.reward_sd = var > 0.0 ? std::sqrt(var) : 0.0;
+  }
   out.voiced_frac = frames_total ? double(frames_voiced) / double(frames_total) : 0.0;
   out.ctx_present_frac = ctx_ticks_total ? double(ctx_ticks) / double(ctx_ticks_total) : 0.0;
   out.ctx_events_per_trial =
@@ -7153,6 +7186,20 @@ constexpr uint32_t kABArmCount = sizeof(kABArms) / sizeof(kABArms[0]);
 constexpr double kABRestF1 = 623.0;
 constexpr double kABRestF2 = 1651.0;
 
+// THE BAR, AND WHY IT IS ONE CONSTANT ACROSS BOTH SEPARATIONS. A per-rung bar
+// would make gate 1 pass by construction: the bar itself would be carrying the
+// distance, rather than the creature discovering it through the reward. So the
+// bar is calibrated ONCE, at the reference rung, to sit near the error the
+// shipped rule settles at -- which is what makes it answerable in both
+// directions and matches the shipped praise fraction of about 0.55.
+//
+// MEASURED, NOT GUESSED, and the first launch of this experiment is why: 0.6
+// was picked to keep the quadratic arm off its clamp, the settled error turned
+// out to be about 0.31, and both absolute arms pinned their praise fraction at
+// ~1.0 and were dead. `derive-the-constant` again, one level down: the SHAPE
+// was derived correctly and the SCALE was guessed.
+constexpr float kABAbsBar = 0.31f;
+
 inline void ab_targets(uint32_t rung, Word out[2]) {
   const double half = kABSep[rung] * 0.5;
   out[0] = {200.0f, float(kABRestF1 * std::exp(-half)), float(kABRestF2)};
@@ -7209,6 +7256,8 @@ bool run_absbar(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) 
     double frac = 0.0;    // nearest-target fraction, late third
     double praise = 0.0;  // share of feedback that was praise
     double rmag = 0.0;    // realised mean |reward|
+    double rsd = 0.0;     // ...and its SD, which is what drift actually needs
+    double elate = 0.0;   // the settled formant error -- what the bar must sit near
   };
   const uint32_t njobs = kReps * kABArmCount;
   const std::vector<Cell> cells = parallel_reps<Cell>(njobs, [&](uint32_t i) {
@@ -7224,6 +7273,7 @@ bool run_absbar(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) 
     regime.praise = kPraiseValue;
     regime.scold = kScoldValue;
     regime.reward_mode = kABArms[a].mode;
+    regime.abs_bar = kABAbsBar;
     Word tbl[2];
     ab_targets(kABArms[a].rung, tbl);
     const int tgt = kABArms[a].conditional ? int(kVLTgtHeard) : int(kVLTgtRandom);
@@ -7262,10 +7312,14 @@ bool run_absbar(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) 
     cell.frac = fsum / 2.0;
     const double fb = double(run.praises + run.scolds);
     cell.praise = fb > 0.0 ? double(run.praises) / fb : 0.0;
-    cell.rmag = run.reward_n ? run.reward_mag / double(run.reward_n) : 0.0;
+    // reward_mag is ALREADY a mean by this point; dividing again printed 0.0001
+    // for every arm on the first two launches and made the column useless.
+    cell.rmag = run.reward_mag;
+    cell.rsd = run.reward_sd;
+    cell.elate = run.err_late;
     cell.ok = true;
-    parallel_note("  [%u/%u] seed %u %-13s delivered %+.4f  praise %.3f  |R| %.4f\n", i + 1,
-                  njobs, r, kABArms[a].name, cell.dsep, cell.praise, cell.rmag);
+    parallel_note("  [%u/%u] seed %u %-13s delivered %+.4f  praise %.3f  err %.4f\n", i + 1,
+                  njobs, r, kABArms[a].name, cell.dsep, cell.praise, cell.elate);
     return cell;
   });
 
@@ -7274,28 +7328,95 @@ bool run_absbar(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) 
     for (uint32_t r = 0; r < kReps; ++r) {
       const Cell& c = cells[r * kABArmCount + a];
       if (!c.ok) continue;
-      out->push_back(which == 0 ? c.dsep : which == 1 ? c.frac
-                                  : which == 2 ? c.praise : c.rmag);
+      out->push_back(which == 0   ? c.dsep
+                     : which == 1 ? c.frac
+                     : which == 2 ? c.praise
+                     : which == 3 ? c.rmag
+                     : which == 4 ? c.elate
+                                  : c.rsd);
     }
   };
 
-  std::printf("\n  %-14s %-20s %-8s %-9s %s\n", "arm", "delivered (log units)", "nearest",
-              "praise", "mean |R|");
+  std::printf("\n  %-14s %-20s %-8s %-9s %-9s %-10s %s\n", "arm", "delivered (log units)",
+              "nearest", "praise", "mean |R|", "sd(R)", "settled err");
   for (uint32_t a = 0; a < kABArmCount; ++a) {
-    std::vector<double> d, f, p, m;
-    col(a, 0, &d); col(a, 1, &f); col(a, 2, &p); col(a, 3, &m);
+    std::vector<double> d, f, p, m, e, v;
+    col(a, 0, &d); col(a, 1, &f); col(a, 2, &p); col(a, 3, &m); col(a, 4, &e); col(a, 5, &v);
     if (d.size() < 3) {
       std::printf("\n  absbar INCONCLUSIVE -- arm `%s` produced %zu creatures.\n",
                   kABArms[a].name, d.size());
       return false;
     }
-    double se_d = 0.0, se_f = 0.0, se_p = 0.0, se_m = 0.0;
+    double se_d = 0.0, se_f = 0.0, se_p = 0.0, se_m = 0.0, se_e = 0.0, se_v = 0.0;
     const double m_d = ctx_mean_se(d, &se_d);
     const double m_f = ctx_mean_se(f, &se_f);
     const double m_p = ctx_mean_se(p, &se_p);
     const double m_m = ctx_mean_se(m, &se_m);
-    std::printf("  %-14s %+.4f +/- %-9.4f %-8.3f %-9.3f %.4f\n", kABArms[a].name, m_d, se_d,
-                m_f, m_p, m_m);
+    const double m_e = ctx_mean_se(e, &se_e);
+    const double m_v = ctx_mean_se(v, &se_v);
+    std::printf("  %-14s %+.4f +/- %-9.4f %-8.3f %-9.3f %-9.4f %-10.4f %.4f\n",
+                kABArms[a].name, m_d, se_d, m_f, m_p, m_m, m_v, m_e);
+  }
+
+  // THE REWARD MUST VARY, and on this experiment's first launch it did not. Two
+  // separate faults produced the same dead arm. `abs_bar` was set to 0.6 to keep
+  // the quadratic arm off its clamp when the settled error is about 0.31, so
+  // every trial fell below the bar; and the quadratic's negative branch was
+  // written `-clamp * scold` when `scold` is ALREADY -0.5, so it double-negated
+  // and returned a positive value for every error. The praise fraction pinned at
+  // 1.000 and both absolute arms were constant-reward arms. Gate 1 still passed,
+  // because a dead arm is still a DIFFERENT dead arm at each separation -- which
+  // would have printed as "baseref confirmed" and been a verdict fitted to two
+  // bugs rather than to the creature.
+  //
+  // THE GATE IS ON sd(R), NOT ON THE PRAISE FRACTION, and the distinction is the
+  // point. Drift is Cov(R, u), so what kills learning is a reward that does not
+  // VARY -- not one that is always negative. A graded rule can sit entirely below
+  // zero and still teach, provided its magnitude tracks the error; a binary rule
+  // whose praise fraction is 0 or 1 cannot, and it fails this same check because
+  // its SD collapses too. One gate covers both, and it is measured against the
+  // shipped rule rather than against a number I would have had to guess again.
+  double ship_sd = 0.0;
+  {
+    std::vector<double> v;
+    col(0u, 5, &v);
+    if (v.size() >= 3) { double se = 0.0; ship_sd = ctx_mean_se(v, &se); }
+  }
+  if (ship_sd <= 0.0) {
+    std::printf("\n  absbar INCONCLUSIVE -- the shipped arm's reward does not vary at all,\n"
+                "  which means the reference itself is dead and nothing can be read.\n");
+    return false;
+  }
+  // THE REFUSAL IS ASYMMETRIC, and the asymmetry is the argument. A GRADED rule
+  // that is correctly implemented always varies with the error, so if `absquad`
+  // is flat the cause is a bug or a mis-set bar and the run must be refused. A
+  // BINARY rule can legitimately go flat: if the creature's error never crosses a
+  // correctly-placed bar, every trial gets the same sign, and that is `baseref`'s
+  // prediction arriving rather than an artifact. So `abshard` going flat is
+  // REPORTED as a result below, and only `absquad` going flat stops the run.
+  for (uint32_t a = 0; a < kABArmCount; ++a) {
+    if (kABArms[a].mode != 1u) continue;
+    std::vector<double> v;
+    col(a, 5, &v);
+    if (v.size() < 3) continue;
+    double se_v = 0.0;
+    const double m_v = ctx_mean_se(v, &se_v);
+    if (m_v < 0.2 * ship_sd) {
+      std::printf("\n  absbar REFUSED -- THE REWARD DOES NOT VARY. Arm `%s` has sd(R) =\n"
+                  "  %.4f against the shipped rule's %.4f, below a fifth of it. Node\n"
+                  "  perturbation's drift is Cov(R, u), so a reward this constant teaches\n"
+                  "  nothing whatever its sign or size -- the arm is dead by construction,\n"
+                  "  not by any property of an absolute bar, and its gate-1 result is\n"
+                  "  meaningless because a dead arm still differs between separations.\n"
+                  "\n"
+                  "  `abs_bar` is %.3f; compare it against the `settled err` column. The bar\n"
+                  "  has to sit where the creature's error actually lands, and it has to be\n"
+                  "  ONE constant across both separations -- a per-rung bar would make gate\n"
+                  "  1 true by construction, the bar carrying the distance rather than the\n"
+                  "  creature discovering it.\n",
+                  kABArms[a].name, m_v, ship_sd, double(kABAbsBar));
+      return false;
+    }
   }
 
   {
@@ -7396,6 +7517,23 @@ bool run_absbar(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) 
                   rule_name[m], differ[m], shared[m], exse[m] > 0.0 ? exc[m] / exse[m] : 0.0,
                   exc[m], exc[0], gain);
     } else {
+      std::vector<double> v;
+      col(m * 3u + 0u, 5, &v);
+      double se_v = 0.0;
+      const double sd = v.size() >= 3 ? ctx_mean_se(v, &se_v) : 0.0;
+      if (sd < 0.2 * ship_sd) {
+        std::printf("\n  %s: THE BAR IS NEVER CROSSED -- `baseref` CONFIRMED IN ITS\n"
+                    "  SHARPEST FORM. The distance reaches the learner (%u/%u seeds differ),\n"
+                    "  and the reward stops varying: sd(R) %.4f against the shipped rule's\n"
+                    "  %.4f, praise fraction in the table above. A fixed bar placed where\n"
+                    "  the shipped rule SETTLES is a bar the creature has not reached YET,\n"
+                    "  so every trial gets the same sign, drift is zero, and it never will.\n"
+                    "  The tracking bar works precisely because it follows the creature up\n"
+                    "  from wherever it starts. A bar that tracks stops asking; a bar that\n"
+                    "  does not stops being answered, and this is the second half measured.\n",
+                    rule_name[m], differ[m], shared[m], sd, ship_sd);
+        continue;
+      }
       std::printf("\n  %s: VISIBILITY BOUGHT WITH THE LEARNING SIGNAL -- `baseref`\n"
                   "  CONFIRMED. The distance reaches the learner (%u/%u seeds differ) and\n"
                   "  the rule no longer beats its own matched marginal (%+.1f SE). Making\n"

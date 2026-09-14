@@ -24,3 +24,14 @@ experiment: absbar
                     invariance but cannot beat its own control has bought
                     visibility with the learning signal. 36 seeds.
 
+  [4/324] seed 0 absquad-0.89  delivered +0.2579  praise 0.076  err 0.3466
+  [2/324] seed 0 shipped-1.20  delivered +0.3294  praise 0.557  err 0.4616
+  [6/324] seed 0 absquad-rnd   delivered -0.0428  praise 0.001  err 0.4734
+  [5/324] seed 0 absquad-1.20  delivered -0.1474  praise 0.000  err 0.7074
+  [7/324] seed 0 abshard-0.89  delivered +0.0337  praise 0.001  err 0.4558
+  [3/324] seed 0 shipped-rnd   delivered -0.0405  praise 0.524  err 0.4741
+  [1/324] seed 0 shipped-0.89  delivered +0.3294  praise 0.557  err 0.3066
+  [8/324] seed 0 abshard-1.20  delivered -0.0723  praise 0.000  err 0.6651
+  [9/324] seed 0 abshard-rnd   delivered -0.0728  praise 0.000  err 0.4893
+  [12/324] seed 1 shipped-rnd   delivered -0.0306  praise 0.544  err 0.4814
+  [13/324] seed 1 absquad-0.89  delivered +0.1278  praise 0.007  err 0.4105
