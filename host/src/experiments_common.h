@@ -1549,6 +1549,54 @@ struct Word {
 // The ramp is a fixed SCHEDULE, not a performance-gated loop, which is both
 // faithful to the songbird protocol (the threshold moved daily, not on
 // criterion) and free of any oracle reading the creature's state.
+// A TARGET THAT TRACKS THE CREATURE, which is what the songbird paradigm
+// actually does and what `staircase` got wrong.
+//
+// WHY THE FIXED RAMP FAILED. `staircase` moved the target on a trial-count
+// schedule. The creature delivers 0.28 and the schedule passed 0.28 at trial 107
+// of 1214, so 91% of the session ran with the target outside the voice's span --
+// back in exactly the invariant regime the whole line is trying to escape. A
+// fixed schedule cannot recover: once the demand passes what the voice delivers,
+// it never comes back.
+//
+// WHAT THE ANIMAL PROTOCOL DOES INSTEAD. The white-noise threshold is set from
+// the BIRD'S OWN pitch distribution -- around the 20th percentile of baseline --
+// so it sits INSIDE the current variability and most renditions escape. That
+// guarantees straddling by construction, and it needs no hand-chosen rate.
+// Reading the creature's own output distribution is not an oracle: it is not a
+// hidden variable, it is the thing the experimenter measures.
+//
+// THE FIRST VERSION OF THIS RULE COLLAPSED, and the reason is worth keeping.
+// It put the targets at the 20th and 80th percentiles of the creature's F1
+// POOLED ACROSS BOTH WORDS. That has a DOWNWARD fixed point: rewarding the
+// creature toward two specific points reduces its variability, the pooled
+// percentiles move inward, and the demand shrinks with it. Measured: the target
+// ended at 0.13 and the voice delivered 0.105, tracking it faithfully all the
+// way down. The creature obeyed; the rule walked it backwards.
+//
+// SO THE QUANTITY TRACKED IS THE BETWEEN-WORD SEPARATION, which is the thing
+// the milestone actually wants, and the target RATCHETS: it is set to the
+// creature's current delivered separation plus `offset` and is NEVER allowed to
+// decrease. Always a little beyond what the voice just did, never a retreat.
+// Pooled variability cannot drag it down, because pooled variability is no
+// longer what it reads.
+//
+// The centre follows the creature too, so the demand is on SEPARATION alone and
+// the creature is never asked to move its mean as well.
+//
+// THE POLARITY IS UNCHANGED from every other experiment in this line: target 0
+// is the LOW F1 and pairs with word 0, which is the high-F1 vowel /a/. That is
+// deliberately the ANTI-ECHO mapping -- see the note on the targets fighting the
+// echo -- and it is kept so this run stays comparable with `jump`.
+struct TargetChase {
+  uint32_t window = 150;        // scored trials of history defining "currently delivered"
+  uint32_t update_every = 50;   // recompute this often
+  double offset = 0.06;         // how far beyond current delivery to ask
+  double s_min = 0.15;          // where the ratchet starts
+  double s_max = 1.50;          // above the milestone's 0.89 on purpose, so it can pass it
+  double rest_f2 = 1651.0;      // F2 pinned: this is a one-axis demand, as before
+};
+
 struct TargetRamp {
   double s_start = 0.0;       // separation in log units at trial 0
   double s_final = 0.0;       // ...and after the ramp completes
@@ -2141,6 +2189,7 @@ bool run_orthoname(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_travelsweep(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_absbar(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_staircase(const std::vector<uint8_t>&, uint64_t, bool);
+bool run_chase(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_pgprobe(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_g2cond(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_coderprobe(const std::vector<uint8_t>&, uint64_t, bool);

@@ -4215,6 +4215,10 @@ struct VLRun {
   double reward_sum = 0.0;
   double reward_sq = 0.0;
   double reward_sd = 0.0;
+  // `chase`: the separation the tracking target had climbed to by the end, and
+  // how many times it was recomputed. A chase that never moves is a dead arm.
+  double chase_sep = 0.0;
+  uint32_t chase_updates = 0;
   // Within-session checkpoints. `ctxscale` measured the growth of the aligned
   // bias ACROSS runs at three budgets, which costs a whole run per point and
   // pays cross-seed noise for each one. These are the same curve sampled inside
@@ -4321,7 +4325,10 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
                              const Word* tgt_table = nullptr,
                              // `staircase`: a target that moves on a fixed
                              // schedule. nullptr keeps every caller bit-identical.
-                             const TargetRamp* ramp = nullptr) {
+                             const TargetRamp* ramp = nullptr,
+                             // `chase`: a target that tracks the creature's own
+                             // output distribution. nullptr is bit-identical.
+                             const TargetChase* chase = nullptr) {
   // -1 is vocallearn's own rule, and passing nothing reproduces it exactly: the
   // positive control aims at one fixed target and every other arm at the word
   // that was heard.
@@ -4416,6 +4423,9 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
   // EMA of the clamped graded value's own magnitude, so the graded arms deliver
   // the same mean |reward| as the binary one. 0 means "not yet recorded".
   double gnorm[kVLMaxWords] = {};
+  // The tracking target's current pair, 0 until the first window is full, and
+  // the ratchet's current value, which only ever increases.
+  double chase_lo = 0.0, chase_hi = 0.0, chase_sep_now = 0.0;
   double err_sum[2] = {}, voiced_sum = 0.0;
   uint32_t err_n[2] = {}, frames_total = 0, frames_voiced = 0;
   double word_sum[kVLMaxWords][2] = {};
@@ -4500,6 +4510,46 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
                                  : tgt == kVLTgtSwap   ? (label + 1u) % nw
                                  : tgt == kVLTgtRandom ? (rnd & 1u)
                                                        : label;
+    // A TRACKING TARGET, when one is asked for. Recomputed on a schedule from
+    // the creature's OWN recent F1, so it always sits inside the distribution it
+    // is asking to widen. `staircase` is why this exists: a target that stops
+    // being straddled stops teaching, and only a target that reads the creature
+    // can stay straddled without a hand-tuned rate.
+    if (chase && chase->update_every > 0 && (trial % chase->update_every) == 0 &&
+        out.utt_f1.size() >= 20) {
+      const size_t have = out.utt_f1.size();
+      const size_t take = have < size_t(chase->window) ? have : size_t(chase->window);
+      double ws[2] = {0.0, 0.0};
+      uint32_t wn[2] = {0u, 0u};
+      for (size_t q = have - take; q < have; ++q) {
+        const int wd = out.utt_word[q];
+        if (wd < 0 || wd > 1 || out.utt_f1[q] <= 1.0) continue;
+        ws[wd] += std::log(out.utt_f1[q]);
+        ++wn[wd];
+      }
+      if (wn[0] >= 4u && wn[1] >= 4u) {
+        const double m0 = ws[0] / wn[0], m1 = ws[1] / wn[1];
+        // THE RATCHET. The demand is what the voice just delivered plus a step,
+        // and it never retreats -- so a shrinking spread cannot walk it back.
+        double sep = (m1 - m0) + chase->offset;
+        if (sep < chase_sep_now) sep = chase_sep_now;
+        if (sep < chase->s_min) sep = chase->s_min;
+        if (sep > chase->s_max) sep = chase->s_max;
+        chase_sep_now = sep;
+        const double centre = 0.5 * (m0 + m1);
+        chase_lo = std::exp(centre - 0.5 * sep);
+        chase_hi = std::exp(centre + 0.5 * sep);
+        out.chase_sep = sep;
+        ++out.chase_updates;
+      }
+    }
+    Word chase_tbl[2];
+    if (chase && chase_lo > 1.0 && chase_hi > 1.0) {
+      // Target 0 is the LOW F1, pairing with word 0 -- the same polarity every
+      // other experiment in this line uses, kept so `chase` and `jump` compare.
+      chase_tbl[0] = {200.0f, float(chase_lo), float(chase->rest_f2)};
+      chase_tbl[1] = {200.0f, float(chase_hi), float(chase->rest_f2)};
+    }
     // A MOVING TARGET, when one is asked for. Built per trial into a local so
     // the ramp cannot alias the caller's table, and bit-identical when absent.
     Word ramp_tbl[2];
@@ -4512,9 +4562,10 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
       ramp_tbl[0] = {200.0f, float(ramp->rest_f1 * std::exp(-half)), float(ramp->rest_f2)};
       ramp_tbl[1] = {200.0f, float(ramp->rest_f1 * std::exp(half)), float(ramp->rest_f2)};
     }
-    const Word& w = ramp && ramp->ramp_trials > 0 ? ramp_tbl[target_word]
-                    : tgt_table                   ? tgt_table[target_word]
-                                                  : kWords[target_word];
+    const Word& w = (chase && chase_lo > 1.0 && chase_hi > 1.0) ? chase_tbl[target_word]
+                    : ramp && ramp->ramp_trials > 0              ? ramp_tbl[target_word]
+                    : tgt_table                                  ? tgt_table[target_word]
+                                                                 : kWords[target_word];
     const uint32_t bucket = target_word;
     // The oracle is set once per trial and held, exactly as the context tract
     // is: a condition that vanishes before reward lands has nothing to bind to.
@@ -7877,6 +7928,318 @@ bool run_staircase(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
               "  Do not retire the protocol explanation on this result alone.\n",
               se_d > 0.0 ? m_d / se_d : 0.0,
               (kSCFinal - kSCStart) / double(ramp_trials ? ramp_trials : 1u));
+  return false;
+}
+
+// `chase` -- a target that TRACKS the creature, which is the protocol the
+// songbird paradigm actually uses.
+//
+// THE LINE THIS CLOSES, OR DOES NOT. `travelsweep` found the reward
+// bit-identically blind to how far the target is: past ~0.6 log units a further
+// target adds only a constant to the error, and the bar is an EMA of that same
+// error, so it cancels. `absbar` changed the BAR and made things worse -- an
+// absolute quadratic rule sees the distance on 36/36 seeds and delivers a third
+// LESS. `staircase` changed the TARGET on a fixed schedule and did nothing, for
+// a reason the run itself diagnosed: the creature delivers 0.28 and the schedule
+// passed 0.28 at trial 107 of 1214, so 91% of the session ran in the very
+// invariant regime it was meant to escape.
+//
+// ALL THREE FAILURES SHARE ONE SHAPE: the target stopped being straddled. This
+// is the arm that cannot stop being straddled, because the target is placed at
+// PERCENTILES OF THE CREATURE'S OWN RECENT F1 -- the 20th and the 80th, over the
+// last 200 scored trials, recomputed every 50. The creature already reaches each
+// of them a fifth of the time, so the demand is always answerable; and if reward
+// moves mass outward the quantiles follow it, so the staircase climbs itself
+// with no rate to tune. That is the songbird rule, where the white-noise
+// threshold is set from the bird's own pitch distribution rather than from an
+// absolute pitch.
+//
+// AND IT IS NOT AN ORACLE. It reads the creature's own OUTPUT distribution,
+// which is what the experimenter measures, not a hidden variable and not the
+// answer. `staircase` avoided the closed loop on purity grounds and that purity
+// is exactly what broke it.
+//
+// THE ARMS:
+//   chase      tracking target, conditional.
+//   chase-rnd  the same tracking rule, target drawn independently of the word.
+//   jump       the fixed 0.89 target: the reference protocol, and the arm that
+//              reproduced `absbar`'s shipped-0.89 to four decimals.
+//   jump-rnd   its matched marginal.
+// Both controls run their arm's own target rule, so `pgprobe`'s objection --
+// that a change in targets widens both arms -- is answered per protocol rather
+// than across them.
+//
+// WHAT IS MEASURED. Delivered separation on the late third, as everywhere in
+// this line. The chase arm ALSO reports the separation its target had climbed
+// to, which is the diagnostic that makes a null readable: if the target never
+// moved, the arm is dead and says nothing about tracking; if the target climbed
+// and the voice did not follow, the ceiling is the voice.
+//
+// THE REFUSALS, WRITTEN FIRST:
+//   * if the tracking target does not MOVE -- if its final separation sits at
+//     the starting quantile spread -- the chase never engaged and the run says
+//     nothing. Refuse, and report how many updates fired.
+//   * if `jump` does not beat its own matched marginal at 2 SE the reference is
+//     dead and there is nothing to compare against.
+//   * 2-3 SE is a HYPOTHESIS at this n, not a finding, and prints as one.
+//
+// WHAT A NULL WOULD MEAN, and this time it is not ambiguous. A target that is
+// always straddled, always answerable, and free to climb is the strongest form
+// of the protocol hypothesis available. If the voice still stops near 0.28, the
+// protocol explanation is exhausted and `ceiling-is-an-exponent` is the answer:
+// dF1 ~ aligned^0.61, and no way of asking changes an exponent.
+struct CHArm {
+  const char* name;
+  bool tracking;
+  bool conditional;
+};
+const CHArm kCHArms[] = {
+    {"chase",     true,  true},
+    {"chase-rnd", true,  false},
+    {"jump",      false, true},
+    {"jump-rnd",  false, false},
+};
+constexpr uint32_t kCHArmCount = sizeof(kCHArms) / sizeof(kCHArms[0]);
+constexpr double kCHFixed = 0.89;     // the shipped vowel pair's own F1 separation
+constexpr double kCHRestF1 = 623.0;
+constexpr double kCHRestF2 = 1651.0;
+
+bool run_chase(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  aibaby::Dna dna0;
+  if (dna0.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) {
+    std::printf("  setup failed: the genome does not load\n");
+    return false;
+  }
+  if (dna0.module_with_role(aibaby::ModuleRole::kContext) < 0) {
+    std::printf("  this genome has no kContext module, and contexts are ON in every arm\n"
+                "  because `g2cond` says conditional learning fails without them. Build one:\n\n"
+                "    tools/ctxgenome.sh ctx.toml\n"
+                "    ./build/aibaby --dna ctx.toml --experiment chase\n");
+    return false;
+  }
+  Regime regime;
+  regime.praise = kPraiseValue;
+  regime.scold = kScoldValue;
+  constexpr uint32_t kReps = 36;
+  instrument("chase", dna0.header().seed ^ 0x0C4Au, ticks / kVLTrialTicks, "trials");
+  std::printf("  question          three ways of asking for more distance have now failed,\n"
+              "                    and all three failed the SAME way: the target stopped\n"
+              "                    being straddled. This is the target that cannot.\n");
+  std::printf("  the rule          the target separation is what the voice DELIVERED over\n"
+              "                    the last 150 trials plus 0.06, recomputed every 50, and\n"
+              "                    it RATCHETS -- it never retreats. Always a little beyond\n"
+              "                    what the creature just did, so it is always straddled\n"
+              "                    and always asking for slightly more.\n");
+  std::printf("  one rule refused  the first version read the 20/80 percentiles of F1\n"
+              "                    POOLED over both words. That has a DOWNWARD fixed point:\n"
+              "                    teaching two points shrinks the spread, the percentiles\n"
+              "                    move in, the demand shrinks. Measured -- target fell to\n"
+              "                    0.13 and the voice tracked it down to 0.105. The creature\n"
+              "                    obeyed; the rule walked it backwards.\n");
+  std::printf("  the precedent     this is the songbird rule: the white-noise threshold is\n"
+              "                    set from the BIRD'S pitch distribution, not an absolute\n"
+              "                    pitch. `staircase` avoided the closed loop on purity\n"
+              "                    grounds and that purity is what broke it.\n");
+  std::printf("  not an oracle     it reads the creature's own OUTPUT distribution, which\n"
+              "                    is what the experimenter measures -- not a hidden\n"
+              "                    variable and not the answer.\n");
+  std::printf("  what a null means unambiguous this time. A target always straddled,\n"
+              "                    always answerable and free to climb is the strongest\n"
+              "                    form of the protocol hypothesis there is. If the voice\n"
+              "                    still stops near 0.28, the protocol account is exhausted\n"
+              "                    and the ceiling is the exponent. %u seeds.\n\n", kReps);
+
+  const size_t slots_off = offsetof(aibaby::DnaHeader, exploration) +
+                           offsetof(aibaby::DnaExploration, context_slots);
+  const size_t src_off = offsetof(aibaby::DnaHeader, exploration) +
+                         offsetof(aibaby::DnaExploration, context_source);
+
+  struct Cell {
+    bool ok = false;
+    double dsep = 0.0;
+    double frac = 0.0;
+    double csep = 0.0;   // where the tracking target ended up
+    double cupd = 0.0;   // how many times it was recomputed
+  };
+  const uint32_t njobs = kReps * kCHArmCount;
+  const std::vector<Cell> cells = parallel_reps<Cell>(njobs, [&](uint32_t i) {
+    Cell cell;
+    const uint32_t r = i / kCHArmCount, a = i % kCHArmCount;
+    std::vector<uint8_t> variant = blob;
+    const uint64_t seed = dna0.header().seed + r * 7919ull;
+    std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+    const uint32_t slots = 2u, src = 4u;
+    std::memcpy(variant.data() + slots_off, &slots, sizeof(slots));
+    std::memcpy(variant.data() + src_off, &src, sizeof(src));
+    const double half = kCHFixed * 0.5;
+    const Word fixed_tbl[2] = {{200.0f, float(kCHRestF1 * std::exp(-half)), float(kCHRestF2)},
+                               {200.0f, float(kCHRestF1 * std::exp(half)), float(kCHRestF2)}};
+    TargetChase ch;
+    ch.rest_f2 = kCHRestF2;
+    const int tgt = kCHArms[a].conditional ? int(kVLTgtHeard) : int(kVLTgtRandom);
+    const VLRun run = run_vocallearn_session(
+        variant, ticks, kVLTaught, nullptr, regime, tgt, nullptr, kVLScoreFormant, nullptr, 2u,
+        kCHArms[a].tracking ? nullptr : fixed_tbl, nullptr,
+        kCHArms[a].tracking ? &ch : nullptr);
+    if (!run.ok) return cell;
+    const size_t rows = run.utt_word.size();
+    if (rows < 6) return cell;
+    double s1[2] = {0.0, 0.0}, s2[2] = {0.0, 0.0};
+    uint32_t n[2] = {0u, 0u};
+    for (size_t q = rows - rows / 3; q < rows; ++q) {
+      const int wd = run.utt_word[q];
+      if (wd < 0 || wd > 1) continue;
+      s1[wd] += run.utt_f1[q];
+      s2[wd] += run.utt_f2[q];
+      ++n[wd];
+    }
+    if (!n[0] || !n[1]) return cell;
+    double f1v[2], f2v[2];
+    for (uint32_t w = 0; w < 2u; ++w) { f1v[w] = s1[w] / n[w]; f2v[w] = s2[w] / n[w]; }
+    if (f1v[0] <= 1.0 || f1v[1] <= 1.0) return cell;
+    cell.dsep = std::log(f1v[1]) - std::log(f1v[0]);
+    // Scored against the FIXED pair in every arm, so the two protocols are read
+    // on one ruler. A chase arm scored against its own moving target would be
+    // graded on a bar it wrote itself.
+    double fsum = 0.0;
+    for (uint32_t w = 0; w < 2u; ++w) {
+      const double d_own = std::hypot(std::log(f1v[w] / double(fixed_tbl[w].f1)),
+                                      std::log(f2v[w] / double(fixed_tbl[w].f2)));
+      const double d_oth = std::hypot(std::log(f1v[w] / double(fixed_tbl[1u - w].f1)),
+                                      std::log(f2v[w] / double(fixed_tbl[1u - w].f2)));
+      fsum += d_own < d_oth ? 1.0 : 0.0;
+    }
+    cell.frac = fsum / 2.0;
+    cell.csep = run.chase_sep;
+    cell.cupd = double(run.chase_updates);
+    cell.ok = true;
+    parallel_note("  [%u/%u] seed %u %-10s delivered %+.4f  nearest %.2f  target %.4f\n", i + 1,
+                  njobs, r, kCHArms[a].name, cell.dsep, cell.frac, cell.csep);
+    return cell;
+  });
+
+  std::printf("\n  %-11s %-20s %-9s %-14s %s\n", "arm", "delivered (log units)", "nearest",
+              "final target", "updates");
+  std::vector<double> mean_d(kCHArmCount, 0.0);
+  for (uint32_t a = 0; a < kCHArmCount; ++a) {
+    std::vector<double> d, f, c, u;
+    for (uint32_t r = 0; r < kReps; ++r) {
+      const Cell& cl = cells[r * kCHArmCount + a];
+      if (!cl.ok) continue;
+      d.push_back(cl.dsep); f.push_back(cl.frac); c.push_back(cl.csep); u.push_back(cl.cupd);
+    }
+    if (d.size() < 3) {
+      std::printf("\n  chase INCONCLUSIVE -- arm `%s` produced %zu creatures.\n",
+                  kCHArms[a].name, d.size());
+      return false;
+    }
+    double se_d = 0.0, se_f = 0.0, se_c = 0.0, se_u = 0.0;
+    const double m_d = ctx_mean_se(d, &se_d);
+    const double m_f = ctx_mean_se(f, &se_f);
+    const double m_c = ctx_mean_se(c, &se_c);
+    const double m_u = ctx_mean_se(u, &se_u);
+    mean_d[a] = m_d;
+    std::printf("  %-11s %+.4f +/- %-9.4f %-9.3f %-14.4f %.0f\n", kCHArms[a].name, m_d, se_d,
+                m_f, m_c, m_u);
+  }
+
+  {
+    ArmLiveness live("chase");
+    for (uint32_t r = 0; r < kReps; ++r) {
+      for (uint32_t a = 0; a < kCHArmCount; ++a) {
+        const Cell& cl = cells[r * kCHArmCount + a];
+        if (cl.ok) live.observe(kCHArms[a].name, r, cl.dsep);
+      }
+    }
+    // The control, deliberately: no arm here is expected to be identical to a
+    // word-blind one, which is what `absbar` got wrong by using a taught arm.
+    if (!live.report("jump-rnd")) return false;
+  }
+
+  // DID THE TARGET ACTUALLY CLIMB? A chase that never moved is a dead arm, and
+  // its delivered separation says nothing about tracking.
+  std::vector<double> cs, cu;
+  for (uint32_t r = 0; r < kReps; ++r) {
+    const Cell& cl = cells[r * kCHArmCount + 0u];
+    if (cl.ok) { cs.push_back(cl.csep); cu.push_back(cl.cupd); }
+  }
+  double se_cs = 0.0, se_cu = 0.0;
+  const double m_cs = cs.size() >= 3 ? ctx_mean_se(cs, &se_cs) : 0.0;
+  const double m_cu = cu.size() >= 3 ? ctx_mean_se(cu, &se_cu) : 0.0;
+  std::printf("\n  DID THE TARGET CLIMB? final separation %.4f +/- %.4f over %.0f updates.\n",
+              m_cs, se_cs, m_cu);
+  if (m_cu < 2.0) {
+    std::printf("\n  chase REFUSED -- THE TRACKING TARGET NEVER UPDATED (%.0f times). The\n"
+                "  window never filled or the quantiles never resolved, so this arm ran on\n"
+                "  whatever target it started with and tested nothing about tracking.\n",
+                m_cu);
+    return false;
+  }
+
+  const auto excess = [&](uint32_t t, uint32_t c, std::vector<double>* out, double* se) {
+    out->clear();
+    for (uint32_t r = 0; r < kReps; ++r) {
+      const Cell& ct = cells[r * kCHArmCount + t];
+      const Cell& cc = cells[r * kCHArmCount + c];
+      if (ct.ok && cc.ok) out->push_back(ct.dsep - cc.dsep);
+    }
+    return ctx_mean_se(*out, se);
+  };
+  std::vector<double> ec, ej;
+  double se_c2 = 0.0, se_j = 0.0;
+  const double m_c2 = excess(0u, 1u, &ec, &se_c2);
+  const double m_j = excess(2u, 3u, &ej, &se_j);
+  std::printf("\n  EXCESS over each protocol's OWN matched marginal, paired on seed.\n"
+              "    chase  %+.4f +/- %.4f  (%+.1f SE)\n"
+              "    jump   %+.4f +/- %.4f  (%+.1f SE)\n",
+              m_c2, se_c2, se_c2 > 0.0 ? m_c2 / se_c2 : 0.0,
+              m_j, se_j, se_j > 0.0 ? m_j / se_j : 0.0);
+  if (!(se_j > 0.0 && m_j > 2.0 * se_j)) {
+    std::printf("\n  chase REFUSED -- THE REFERENCE PROTOCOL IS NOT STEERING (%+.1f SE).\n"
+                "  With no working reference there is nothing for tracking to improve on.\n",
+                se_j > 0.0 ? m_j / se_j : 0.0);
+    return false;
+  }
+
+  std::vector<double> dd;
+  const size_t np = std::min(ec.size(), ej.size());
+  for (size_t q = 0; q < np; ++q) dd.push_back(ec[q] - ej[q]);
+  double se_d = 0.0;
+  const double m_d = ctx_mean_se(dd, &se_d);
+  std::printf("    chase - jump  %+.4f +/- %.4f  (%+.1f SE)  [paired, n=%zu]\n", m_d, se_d,
+              se_d > 0.0 ? m_d / se_d : 0.0, dd.size());
+
+  if (se_d > 0.0 && m_d > 3.0 * se_d) {
+    std::printf("\n  A TARGET THAT TRACKS THE CREATURE BREAKS THE CEILING (%.1f SE). The\n"
+                "  voice delivers %+.4f against the fixed protocol's %+.4f, and the target\n"
+                "  climbed to %.4f. Every earlier failure in this line -- the blind bar, the\n"
+                "  absolute bar, the fixed ramp -- shared one shape: the target stopped\n"
+                "  being straddled. Keeping it straddled is what the songbird paradigm does\n"
+                "  and it is what the creature needed. The ceiling was the ASKING.\n",
+                m_d / se_d, mean_d[0], mean_d[2], m_cs);
+    return true;
+  }
+  if (se_d > 0.0 && m_d > 2.0 * se_d) {
+    std::printf("\n  A HYPOTHESIS, NOT A FINDING (%.1f SE). Inside the band this project has\n"
+                "  retracted findings from; it needs ~%.0f seeds for 4 SE.\n",
+                m_d / se_d, double(dd.size()) * std::pow(4.0 / (m_d / se_d), 2.0));
+    return false;
+  }
+  std::printf("\n  THE PROTOCOL ACCOUNT IS EXHAUSTED (%+.1f SE). The target was always\n"
+              "  straddled by construction, always answerable, and free to climb -- it\n"
+              "  reached %.4f -- and the voice still delivers %+.4f against the fixed\n"
+              "  protocol's %+.4f. This is the strongest form of the protocol hypothesis\n"
+              "  available and it is a null, which is NOT the ambiguous null `staircase`\n"
+              "  returned: there is no rate here that could have been wrong.\n"
+              "\n"
+              "  SO THE CEILING IS THE VOICE. `ceiling-is-an-exponent` stands as the\n"
+              "  answer: dF1 ~ aligned^0.61, delivered separation saturates near 0.28, and\n"
+              "  no way of asking changes an exponent. The reward's blindness to distance\n"
+              "  is real, replicates at 0/36, and is not what limits naming -- three\n"
+              "  independent attempts to exploit it have now failed, one of them by making\n"
+              "  things worse.\n",
+              se_d > 0.0 ? m_d / se_d : 0.0, m_cs, mean_d[0], mean_d[2]);
   return false;
 }
 

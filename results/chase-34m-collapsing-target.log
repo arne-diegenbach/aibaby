@@ -1,0 +1,33 @@
+experiment: chase
+  instrument        chase   trial seed 0000000001352b83   1214 trials
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  question          three ways of asking for more distance have now failed,
+                    and all three failed the SAME way: the target stopped
+                    being straddled. This is the target that cannot.
+  the rule          targets at the 20th and 80th percentiles of the
+                    creature's OWN recent F1, over 200 scored trials,
+                    recomputed every 50. It already reaches each a fifth of
+                    the time, and the quantiles follow it outward, so the
+                    staircase climbs itself with no rate to tune.
+  the precedent     this is the songbird rule: the white-noise threshold is
+                    set from the BIRD'S pitch distribution, not an absolute
+                    pitch. `staircase` avoided the closed loop on purity
+                    grounds and that purity is what broke it.
+  not an oracle     it reads the creature's own OUTPUT distribution, which
+                    is what the experimenter measures -- not a hidden
+                    variable and not the answer.
+  what a null means unambiguous this time. A target always straddled,
+                    always answerable and free to climb is the strongest
+                    form of the protocol hypothesis there is. If the voice
+                    still stops near 0.28, the protocol account is exhausted
+                    and the ceiling is the exponent. 36 seeds.
+
+  [6/144] seed 1 chase-rnd  delivered -0.0119  nearest 0.00  target 0.0680
+  [5/144] seed 1 chase      delivered +0.0720  nearest 1.00  target 0.0994
+  [3/144] seed 0 jump       delivered +0.3294  nearest 1.00  target 0.0000
+  [4/144] seed 0 jump-rnd   delivered -0.0405  nearest 0.00  target 0.0000
+  [7/144] seed 1 jump       delivered +0.2870  nearest 1.00  target 0.0000
+  [8/144] seed 1 jump-rnd   delivered -0.0306  nearest 0.50  target 0.0000
+  [1/144] seed 0 chase      delivered +0.1054  nearest 1.00  target 0.1300
+  [2/144] seed 0 chase-rnd  delivered +0.0162  nearest 1.00  target 0.0533

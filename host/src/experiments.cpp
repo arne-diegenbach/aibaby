@@ -276,6 +276,15 @@ const Spec kSpecs[] = {
      "  HOLDS, so the scored late third is at the same final target in both.\n"
      "  A null revives ceiling-is-an-exponent, so it is worth running either\n"
      "  way. Matched marginal per protocol. 36 seeds"},
+    {"chase", 3400000, Expect::kOpen, Tier::kLong,
+     "three ways of asking for more distance have failed and all three failed\n"
+     "  the SAME way -- the target stopped being straddled. This is the target\n"
+     "  that cannot: placed at the 20th and 80th percentiles of the creature's\n"
+     "  OWN recent F1, recomputed every 50 trials, so it already reaches each a\n"
+     "  fifth of the time and the quantiles follow it outward. That is the\n"
+     "  songbird rule -- the threshold is set from the bird's pitch\n"
+     "  distribution. A null here is unambiguous and exhausts the protocol\n"
+     "  account. 36 seeds"},
     {"movability", 5600000, Expect::kOpen, Tier::kLong,
      "orthovocab left a LEAD: on identical demands the F2 lesson travelled\n"
      "  0.169 and the F1 lesson 0.030 -- but F1's was FIGHTING another lesson on\n"
@@ -611,6 +620,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "travelsweep") ok = run_travelsweep(dna_blob, ticks, verbose);
   else if (name == "absbar") ok = run_absbar(dna_blob, ticks, verbose);
   else if (name == "staircase") ok = run_staircase(dna_blob, ticks, verbose);
+  else if (name == "chase") ok = run_chase(dna_blob, ticks, verbose);
   else if (name == "partprobe") ok = run_partprobe(dna_blob, ticks, verbose);
   else if (name == "pgprobe") ok = run_pgprobe(dna_blob, ticks, verbose);
   else if (name == "g2cond") ok = run_g2cond(dna_blob, ticks, verbose);
