@@ -504,7 +504,7 @@ of an hour.
 | **M1** closed audio loop | **done — G2 met.** Rewarded vocalisations rise within the session (×1.35) and praise beats its own yoked control in **23 of 27 creatures** across three seed families, and 9 of 9 at 420 s. What closed it was directional exploration (DNA v10), which was not aimed at reward at all |
 | **M2** vision | **done** — camera → retina → B3 → B1, discriminates present from absent at 98%, and 86% with firing rate divided out |
 | **M3** cross-modal association | **CLOSED, NEGATIVE** on the vision→voice form. Eleven mechanisms across four structurally different families were measured against it and it never moved outside its own noise floor: the shipped creature reads taught−random **+0.060 ± 0.040 SE**, and the control genome — mechanism absent by construction — swings ±0.060 across seed families. **Its "does not acquire a new conditional map" reading is superseded**, see the naming row below: with a context-indexed bias the creature *does* acquire one, from the ear rather than the eye |
-| **Naming (G3)** heard word → spoken word | **DIRECTIONAL NAMING MET; ABSOLUTE NAMING CEILINGED.** On the axis measure the creature moves its voice the right way for the word it just heard — **0.824 and 0.738 across two seed families, pooled +0.276 (7.6 SE) over echo-only and +0.244 (6.0 SE) over a matched-marginal control** — on a measure an echo scores at 0.503 and an arbitrary-but-consistent mapping at 0.406, both closed by construction rather than by argument. It also partly arrives: 0.670 and 0.604 on the strict nearest-of-actual-targets score against 0.495–0.518 for both controls. What is **not** met is absolute naming: delivered dF1 tops out near **137 Hz** against the ~230 needed, and that ceiling now has a cause rather than a shrug — see the row below. **AND CONDITIONALITY IS NO LONGER THE BLOCKER** (2026-09-14, `orthoname`, 36 seeds, contexts on): on a two-word vocabulary sitting 0.29–0.41 log units from rest, the creature lands nearest the **right** target **0.958** of the time against matched marginals at 0.389 and 0.542 — excess **+0.569 ± 0.078 (7.3 SE)** and **+0.417 ± 0.068 (6.2 SE)**, paired on seed. It says the right thing for the word it heard. That reconciles what looked like a contradiction on this page: `g2cond`'s 12σ closure (unconditional +0.369, conditional +0.022) was measured **without** the context-indexed bias; with v51/v53 contexts on, conditional steering works. **This is not the milestone**, and the reason names the wall precisely: these targets are *symmetric* about rest and 0.58 apart, while the shipped vowel vocabulary is 0.89 apart and asymmetric, demanding a 0.67 move on one word alone. Naming works here because the required **travel** is small. **AND THE REASON IT IS SMALL IS THE TEACHING PROTOCOL, NOT THE LARYNX** (2026-09-14, `travelsweep`, killed at 30/288 jobs): sweeping target separation over 0.29/0.58/0.89/1.20 produces **bit-identical creatures** on the top three rungs — `0.89 == 1.20` on 3/3 seeds both taught and control, while `0.29` differs from `0.58` on 6/6, so the target table does reach reward. The reward is binary against an EMA of the creature's *own* error, so while it never crosses its target a further target adds only a **constant** to that error — and a constant cancels exactly against a baseline EMA of the same quantity. Past roughly 0.6 log units **the creature is not refusing to travel further; it is never asked to.** The shipped vowel pair's 0.89 is already past that point. See the section below. *Two retractions from that run, both now settled off its own per-seed log:* it first reported the colliding encoding beating the orthogonal one at 8.4 SE, which was an artefact of scoring by **margin** — collinear targets inflate the margin ~2× for identical learning (predicted 1.8–1.9×, observed 2.03); on the geometry-free fraction that gate reads **−1.5 SE**, i.e. no difference, which confirms the rewritten verdict that was never re-run. And this page carried **~16 SE** for the excess above: that was the *margin* column's SE, attached to a quantity it was not computed on. The fraction's own paired SEs are the 7.3 and 6.2 now quoted — decisive either way, but not 16 |
+| **Naming (G3)** heard word → spoken word | **DIRECTIONAL NAMING MET; ABSOLUTE NAMING CEILINGED.** On the axis measure the creature moves its voice the right way for the word it just heard — **0.824 and 0.738 across two seed families, pooled +0.276 (7.6 SE) over echo-only and +0.244 (6.0 SE) over a matched-marginal control** — on a measure an echo scores at 0.503 and an arbitrary-but-consistent mapping at 0.406, both closed by construction rather than by argument. It also partly arrives: 0.670 and 0.604 on the strict nearest-of-actual-targets score against 0.495–0.518 for both controls. What is **not** met is absolute naming: delivered dF1 tops out near **137 Hz** against the ~230 needed, and that ceiling now has a cause rather than a shrug — see the row below. **AND CONDITIONALITY IS NO LONGER THE BLOCKER** (2026-09-14, `orthoname`, 36 seeds, contexts on): on a two-word vocabulary sitting 0.29–0.41 log units from rest, the creature lands nearest the **right** target **0.958** of the time against matched marginals at 0.389 and 0.542 — excess **+0.569 ± 0.078 (7.3 SE)** and **+0.417 ± 0.068 (6.2 SE)**, paired on seed. It says the right thing for the word it heard. That reconciles what looked like a contradiction on this page: `g2cond`'s 12σ closure (unconditional +0.369, conditional +0.022) was measured **without** the context-indexed bias; with v51/v53 contexts on, conditional steering works. **This is not the milestone**, and the reason names the wall precisely: these targets are *symmetric* about rest and 0.58 apart, while the shipped vowel vocabulary is 0.89 apart and asymmetric, demanding a 0.67 move on one word alone. Naming works here because the required **travel** is small. **THE REWARD IS BLIND TO HOW FAR THE TARGET IS — AND THAT IS NOT WHY NAMING CEILINGS** (2026-09-14, `travelsweep` then `absbar`, 36 seeds). Sweeping target separation produces **bit-identical creatures** past ~0.6 log units: `0.89 == 1.20` on **0/36 seeds differing**, because the reward is judged against an EMA of the creature's *own* error, so while it never crosses its target a further target adds only a **constant** — which cancels exactly. Past that point **the creature is not refusing to travel; it is never asked to.** *I concluded from this that the ceiling was the teaching protocol rather than the larynx, and then tested it and it was wrong.* `absbar` built the one replacement rule the algebra leaves standing — an absolute **quadratic** bar, whose drift scales with distance — and it did exactly what was derived: distance visible **36/36**, still learning at **11.5 SE**. It was also **worse**: 0.180 delivered against the blind rule's 0.291 near, and **−9.4 SE** at the far separation. The blindness is real and it is **not the binding constraint**. See the section below. *Two retractions from that run, both now settled off its own per-seed log:* it first reported the colliding encoding beating the orthogonal one at 8.4 SE, which was an artefact of scoring by **margin** — collinear targets inflate the margin ~2× for identical learning (predicted 1.8–1.9×, observed 2.03); on the geometry-free fraction that gate reads **−1.5 SE**, i.e. no difference, which confirms the rewritten verdict that was never re-run. And this page carried **~16 SE** for the excess above: that was the *margin* column's SE, attached to a quantity it was not computed on. The fraction's own paired SEs are the 7.3 and 6.2 now quoted — decisive either way, but not 16 |
 | **The naming ceiling** | **CLOSED — it is one exponent, not a tally of dead ends.** `dF1 ~ aligned^0.61`: the larynx compresses what it is given, and the same curve does two jobs — it limits delivery, and its derivative limits learning, since the drift is `−Cov(e, perturb)` which factors through `dF1/d(drive)`. **DNA v58 settled it by dissolving the trade it was supposed to be stuck on.** Exempting the learned bias from the rate homeostat (`err = rate_ema − (target + gain·delivered_bias)`) raised the aligned bias **+21%**, raised `gain` 0.90 → 1.08, and kept the larynx regulated (5.87 Hz vs 6.23) — where v57 pooling *halved* the bias and `ipoff` collapsed learning outright (103.9 → 17.7, −7.42 SE). So regulation and learning are separable after all. **And it delivered +0.6 ± 8.6 Hz**, because `^0.61` turns +21% of aligned into **+4 Hz** — a bar needing ~316 seeds to resolve, against the 18 that ran. The arithmetic is the result: dF1 ×1.68 needs aligned **×2.34**, ×2.0 needs ×3.12, and every knob this project has found moves aligned ×1.1–×1.2. No amount of bias buys past an exponent below 1; only a change to the **readout** can, and the readout is a rate-weighted centroid by design. Naming stops here |
 | **M4** growth and sleep | **done** — **G4 passes**: the creature never grows while it is still learning, grows only on a detected plateau, and never passes the DNA cap; myelination, pruning and replay all run |
 | **Memory and interference** | **THE WIPE IS A COLLISION, NOT A MEMORY FAILURE** (2026-09-14). A conflicting second lesson wipes a taught sound to **0.22** (`retain`) — but that is two lessons steering one scalar, not a failure to remember. With lesson A taught identically in every arm and only the *second* lesson's **axis** differing at the same log-distance, a second lesson on **F1** costs +0.1603 (16.8 SE) and drops retention to 0.23; one on **F2** costs +0.0364 (3.2 SE) and leaves retention at 1.12 with the store intact — **77% less damage, +0.1238 ± 0.0116 (10.7 SE)**. The control is *structural*: `err taught` is **+0.00000 ± 0.00000** across arms because the teaching phase is the same code path, and `collide` reproduces the long-established 0.22 at 0.23. The effort check runs **against** the finding — ortho's lesson learned *better* by 14.9 SE and still damaged A less, so a confound could only have manufactured this had it learned *less*. (ortho is not harmless: 3.2 SE is real damage, just much less.) **THERE IS NO HIDDEN MEMORY.** Store and behaviour, measured on one creature and both as a fraction of what was gained: **0.25 ± 0.05 and 0.30 ± 0.05, difference −0.05 ± 0.05 (−1.0 SE)**, 36 seeds none dropped. They decay together, so the conflict is a **pure overwrite** and retrieval work is refused — including the per-neuron-homeostat account. **AND IT CANNOT BE DEFENDED.** Replay reinforces nothing (`E[u]=0` — during sleep `perturb_i` is fresh noise; switching it off costs 0.3 SE); interleaving is refused with a *perfect* oracle (−1.1 SE); stabilisation is a clean null (`meta_commit`); and **write separation by restricting plasticity is refused** — blocking even a *quarter* of the F1 group costs 59% of the lesson, because a blocked neuron still perturbs and is still read by the centroid. A pooled readout cannot be partitioned by restricting plasticity alone. **BUT THE COLLISION RESULT IS ABOUT SEQUENTIAL LESSONS ONLY.** `orthoname` tested the representational implication — spread the vocabulary across articulators — and it **does not transfer** to simultaneous conditional naming: orthogonal and colliding encodings name identically (0.958 each). Interference between lessons taught one after another, and conditioning on the heard word, are different problems. *Corrections on this row:* an early pass reported the store keeping 0.65, a **raw** `gap/teach` ratio rather than a fraction of what was gained (the same correction takes 0.58 → 0.25 on baseline); and the "a perfect index does not protect it" verdict rests on retention at **1.99 SE against a 2.0 bar** while `err after` favours the index at 14.56 SE — prefer `err after`, since retention's denominator (before − taught) collapses and printed 6.12 ± 2.74 there |
@@ -10138,11 +10138,8 @@ by 0.89 (399/972 Hz against 537–722 Hz) they never happen. The observed 3/3,
 **Why this matters more than the curve.** The curve would have come out flat
 above 0.58, and there was every reason to read it as the travel ceiling — *the
 voice separates two words by 0.30 log units no matter what is asked*. It is
-never asked. The naming ceiling has a cause in the **teaching protocol** rather
-than in the larynx, and the shipped vowel pair's 0.89 is already past the point
-where asking for more changes anything. This is `baseref` — a bar that tracks
-the creature stops asking — arriving as an invariance rather than as an
-argument.
+never asked. This is `baseref` — a bar that tracks the creature stops asking —
+arriving as an invariance rather than as an argument.
 
 **`ArmLiveness` could not catch this**, and that is the method lesson. It
 compares every arm against *one* control; the bottom rung differs from
@@ -10151,10 +10148,57 @@ each other. A sweep needs an **adjacent-level** check, on the treatment and the
 control side both. `travelsweep` now refuses on exactly that condition rather
 than printing a ceiling.
 
-**Open:** does an *absolute* component in the bar make the distance visible
-again, or does it merely remove the praise variance that makes any learning
-possible at all? `baseref` predicts the second, which would make this a real
-constraint rather than a fixable protocol detail.
+### And then the obvious conclusion from it turned out to be wrong
+
+This section first ended by concluding that the naming ceiling "has a cause in
+the **teaching protocol** rather than in the larynx". `absbar` tested that
+directly, on 36 seeds, and refused it.
+
+Four candidate reward rules; three were settled by algebra before any compute.
+Node perturbation's drift is `E[R·u]` with `E[u]=0`, so writing `e = C + h(u)`
+with `C` the distance constant: the shipped binary-vs-EMA rule cancels `C` in the
+comparison; an absolute **linear** rule `R = −k·e` has `E[R·u] = −k·E[h·u]`, so
+`C` multiplies `E[u]=0` and drops — **provably invariant, never built**; an
+absolute **quadratic** `R ~ −e²` gives `−k(2C·E[h·u] + E[h²·u])`, whose leading
+term **scales with `C`**; and a hard bar makes `R` constant past it, which is
+zero drift.
+
+| | distance visible? | learns at 0.89 | far rung (1.20 − 0.89) |
+| --- | --- | --- | --- |
+| shipped | **0/36** | +19.0 SE | +0.0000 ± 0.0000 |
+| absquad | **36/36** | +11.5 SE | **−0.1651 ± 0.0175 (−9.4 SE)** |
+| abshard | 28/36 | +0.8 SE | −1.4 SE |
+
+The quadratic rule does exactly what the algebra said — it makes the distance
+visible on every seed and still learns at 11.5 SE. **And it is worse**: 0.180
+delivered against the blind rule's 0.291 at the near rung, and backwards by 9.4
+SE at the far one. Seeing the distance bought nothing and cost a third of the
+lesson. **The invariance is real, replicates at 0/36, and is not what limits
+naming.**
+
+`baseref` is confirmed in its sharpest form by the third arm and was also too
+strong: a *hard* bar placed where the shipped rule settles runs at praise 0.005
+and 0.8 SE — dead, exactly as predicted — while the *graded* absolute bar learns
+fine. The prediction holds for binary criteria, not for graded ones.
+
+The likely account, untested: the tracking bar holds praise near 0.55, which is
+the reward's maximum variance per unit magnitude — a free normalisation. An
+absolute bar destroys it, and amplifying the reward's magnitude with distance
+amplifies the gradient estimate's noise along with its mean.
+
+**A method cost worth recording.** `ArmLiveness` refused this run after four
+hours, before either gate printed, because its control was `shipped-0.89` —
+against which `shipped-1.20` is byte-identical *by hypothesis*. The guard fired
+on the result it exists to establish. Never make the liveness control an arm
+whose identity to another arm is the finding. Every number above was recovered
+from the run's own per-seed progress lines, the second time in one day that has
+saved a re-run.
+
+**Still open:** `absbar` changed the **bar**. `staircase` changes the **target
+path** — ramping 0.15 → 0.89 and then holding, the way Tumer & Brainard step a
+songbird's pitch threshold — which keeps the shipped bar in the regime it is
+demonstrably excellent at, straddling at ~55% praise, and accumulates travel
+across steps. This result makes that more worth running, not less.
 
 
 ## Design decisions that were not obvious

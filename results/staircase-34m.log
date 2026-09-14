@@ -1,0 +1,30 @@
+experiment: staircase
+  instrument        staircase   trial seed 0000000001357068   1214 trials
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  question          `travelsweep` found the shipped bar blind to target
+                    distance past ~0.6 log units. `absbar` changes the BAR.
+                    This changes the TARGET -- which is the axis the animal
+                    protocol actually uses.
+  the protocol      Tumer & Brainard step the pitch threshold each morning
+                    rather than setting it far and waiting. The bird is never
+                    asked for a jump it cannot straddle, and our invariance
+                    holds only while the creature never crosses its target.
+  the arms          jump:  target at 0.89 from trial 0, the current protocol.
+                    stair: 0.15 -> 0.89 over the first half, then HELD, so the
+                    late third that is scored sits at the same final target
+                    in both arms. Matched marginal for each.
+  the ramp          a fixed SCHEDULE on trial count, reading nothing about
+                    the creature, so no oracle enters the arm.
+  what would null   if the ceiling is the larynx rather than the protocol,
+                    arriving gradually reaches the same place as arriving at
+                    once and `stair` matches `jump`. That revives
+                    `ceiling-is-an-exponent`, so this is worth running either
+                    way. 36 seeds.
+
+  THE SCHEDULE (1214 trials, ramp over the first 607)
+    trial      0   demanded 0.1500   targets 578.0 / 671.5 Hz
+    trial    303   demanded 0.5194   targets 480.5 / 807.7 Hz
+    trial    607   demanded 0.8900   targets 399.2 / 972.2 Hz
+    trial    910   demanded 0.8900   targets 399.2 / 972.2 Hz
+    trial   1214   demanded 0.8900   targets 399.2 / 972.2 Hz
