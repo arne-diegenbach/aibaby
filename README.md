@@ -10294,6 +10294,75 @@ The reusable part is the process failure, not the law: **a fit is not evidence
 against the points it was fitted to, and the rest of the data was already in
 hand.**
 
+#### What the creature actually does: it silences the top
+
+`leverprobe` measured the F1 group's rates directly, first third of teaching to
+last. The anchor holds — the taught arm learned +0.1718 ± 0.0154 against
+`blockanchor`'s +0.1676 — and the profile is not subtle:
+
+| k | position | early | late | change |
+| --- | --- | --- | --- | --- |
+| 0–6 | 0.036 – 0.464 | ~4.8–5.7 | ~4.8–5.8 | **mixed sign, net −0.13 Hz** |
+| 7 | 0.536 | 5.03 | 4.21 | −0.82 |
+| 9 | 0.679 | 4.67 | 3.37 | −1.30 |
+| 11 | 0.821 | 4.54 | 2.64 | −1.90 |
+| 12 | 0.893 | 4.18 | 1.59 | **−2.58** |
+| 13 | 0.964 | 4.11 | 1.67 | **−2.44** |
+
+**Every upper-half change is negative and large; the lower half's changes are
+small and cancel.** The lesson is learned by *silencing the top of the group*.
+Blocking neurons that never move costs nothing; blocking the ones that move costs
+everything. (This also refutes the prediction I'd drawn from `stageprobe` — that
+intrinsic plasticity would flatten the profile. It refutes my prediction, not
+`stageprobe`'s own measurement.)
+
+**And the position law dies here without a free parameter left.** The centroid was
+*measured* at **0.434** during teaching — the fit had assumed 0.299. At the
+measured value, neuron 0 and neuron 13 sit almost equally far from it (0.399 and
+0.530), yet one costs nothing and the other 30% at 5.8 SE. No law symmetric in
+distance-from-centroid can do that at any scale.
+
+**Most of the ladder I fitted was noise.** Checking the error bars I should have
+checked the first time:
+
+| | cost | | |
+| --- | --- | --- | --- |
+| `top1` | 30% | −5.8 SE | real |
+| `top7` | 53% | −11.1 SE | real |
+| `mid1`, `bot1`, `bot2`, `bot4`, `bot7` | 7–10% | −1.1 to −1.8 SE | **all consistent with zero** |
+
+Only two of seven blocks have a measurable cost. The 7%, 9% and 10% quoted in the
+`blockwhere` and `blockanchor` sections above are point estimates of something
+indistinguishable from zero and should not be read as values — what is solid is
+the *contrast* (mid1−top1 +3.6 SE, bot7−top7 +8.6 SE).
+
+The pre-registered gate returned **no verdict** (0.738 against a 0.75 bar), and
+the honest note is that the statistic was badly chosen: taking the absolute value
+per seed *before* averaging turns per-seed noise into signal in the denominator,
+biasing it toward 0.5 by construction. The conclusion above rests on the sign
+pattern and the two real costs, not on that number.
+
+#### This changes the fix, and opens a route
+
+The first lesson targets /i/ at F1 320 Hz — position **0.093**, far below the
+resting centroid of 0.499. To drag a rate-weighted centroid *down* you suppress
+the high-position neurons, which is exactly what the profile shows. So the
+asymmetry is set by **where the target sits relative to rest**, not by the
+readout's geometry — and making the readout uniform, which is what `blockanchor`
+proposed, would not address it.
+
+It also opens something the old account had closed. Two lessons with targets on
+**opposite sides** of the resting centroid would recruit *different halves* —
+suppress-the-top for a low target, suppress-the-bottom for a high one. That is
+write separation with no mask at all, and it is the F1-internal version of
+`capacity`'s orthogonal case, where two lessons already coexist at 0.84.
+
+The decisive test is pre-registered: **re-run the block ladder with a target above
+the resting centroid** (F1 ~800 Hz, position 0.73). If the asymmetry reverses, the
+direction account holds. If the top stays expensive with the target reversed, then
+those neurons are privileged in themselves — wiring, or an in-degree gradient —
+and that is a different investigation.
+
 *Two corrections from this sequence.* `compartprobe`'s verdict elected dilution
 by elimination the moment silencing came back null — a mechanism claim it had not
 tested. And `blockfloor`'s verdict accused `set_reward_block` of being a faulty

@@ -37,3 +37,82 @@ experiment: leverprobe
                 readout's. Any of these failing means this run is not
                 measuring the creature those costs came from.
 
+  [8/24] seed 3 quiet  taught 1.0710
+  [5/24] seed 2 taught taught 0.8962
+  [3/24] seed 1 taught taught 0.7730
+  [4/24] seed 1 quiet  taught 1.0754
+  [6/24] seed 2 quiet  taught 1.1004
+  [2/24] seed 0 quiet  taught 1.0860
+  [7/24] seed 3 taught taught 0.8461
+  [1/24] seed 0 taught taught 0.7762
+  [12/24] seed 5 quiet  taught 1.0801
+  [9/24] seed 4 taught taught 0.8275
+  [10/24] seed 4 quiet  taught 1.0844
+  [14/24] seed 6 quiet  taught 1.0885
+  [15/24] seed 7 taught taught 0.7805
+  [11/24] seed 5 taught taught 0.8155
+  [13/24] seed 6 taught taught 0.7816
+  [16/24] seed 7 quiet  taught 1.0741
+  [20/24] seed 9 quiet  taught 1.0766
+  [17/24] seed 8 taught taught 0.9570
+  [19/24] seed 9 taught taught 0.7979
+  [21/24] seed 10 taught taught 0.8157
+  [18/24] seed 8 quiet  taught 1.0839
+  [24/24] seed 11 quiet  taught 1.0756
+  [23/24] seed 11 taught taught 0.9124
+  [22/24] seed 10 quiet  taught 1.0870
+
+  THE LESSON, as an anchor against `blockanchor`'s b0
+    taught learned +0.1718 +/- 0.0154   (12 creatures)
+    quiet  learned -0.0065 +/- 0.0031   (12 creatures)
+
+  THE F1 RATE PROFILE, Hz, taught arm (pool_beta 1.00)
+    k   position early     late      change   
+    0   0.036    5.694     5.786     +0.0927
+    1   0.107    5.537     5.497     -0.0399
+    2   0.179    5.623     5.361     -0.2618
+    3   0.250    5.135     5.350     +0.2152
+    4   0.321    5.268     5.012     -0.2565
+    5   0.393    4.932     5.117     +0.1851
+    6   0.464    4.837     4.777     -0.0603
+    7   0.536    5.029     4.210     -0.8184
+    8   0.607    4.765     3.743     -1.0218
+    9   0.679    4.670     3.373     -1.2974
+    10  0.750    4.606     3.731     -0.8748
+    11  0.821    4.539     2.644     -1.8950
+    12  0.893    4.175     1.591     -2.5842
+    13  0.964    4.110     1.667     -2.4435
+
+  THE PRIMARY
+    taught upper-half share of |rate change|  0.738 +/- 0.035
+    quiet  upper-half share of |rate change|  0.481 +/- 0.026
+    taught - quiet  +0.257 +/- 0.043  (+5.9 SE)
+    a flat profile would read 0.500 by construction (7 of 14 neurons).
+
+  THE CENTROID, measured rather than fitted
+    taught mean position over teaching  0.4343
+    quiet  mean position over teaching  0.4993
+    the fit ASSUMED 0.299, chosen to make three one-neuron costs agree.
+
+  THREE ACCOUNTS AGAINST THE FIVE MEASURED COSTS
+    each scaled on `top1` alone, as the original fit was.
+    block  measured   position     w*position   rate change 
+    top1   30         30.0         30.0         30.0        
+    mid1   7          1.7          4.9          0.7         
+    bot1   9          22.6         78.4         1.1         
+    top7   53         125.1        194.0        134.3       
+    bot7   9          76.4         250.8        13.6        
+                      44.6         129.0        36.7           <- RMS residual, pp
+
+  ARM LIVENESS vs `taught` (seeds where the arm differs at all)
+    quiet              12/12
+
+  --- the verdict ---
+  NO VERDICT: upper-half share 0.738 +/- 0.035, +5.9 SE over `quiet`.
+  Between the gates, which is the band where a hypothesis is not a
+  finding. The number is reported and nothing is concluded from it.
+
+  WHAT STANDS REGARDLESS: the leverage law is REFUTED out of sample.
+  It reproduces the three costs it was fitted to and misses the two it
+  was not, and no centroid position reaches the measured 5.89 ratio.
+  Do not quote `cost ~ |p_i - v|` or the 0.299 that came with it.
