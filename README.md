@@ -10194,12 +10194,46 @@ whose identity to another arm is the finding. Every number above was recovered
 from the run's own per-seed progress lines, the second time in one day that has
 saved a re-run.
 
-**Still open:** `absbar` changed the **bar**. `staircase` changes the **target
-path** — ramping 0.15 → 0.89 and then holding, the way Tumer & Brainard step a
-songbird's pitch threshold — which keeps the shipped bar in the regime it is
-demonstrably excellent at, straddling at ~55% praise, and accumulates travel
-across steps. This result makes that more worth running, not less.
+**And the protocol account is now closed** (2026-09-15). Three experiments asked
+whether the ceiling is in *how* the creature is taught. All three failed, and two
+made things worse:
 
+| | | |
+| --- | --- | --- |
+| `absbar` | a bar that **sees** distance | **−9.4 SE** at the far separation |
+| `staircase` | a **ramped** target | −1.0 SE, and the ramp outran the voice at trial 107/1214 |
+| `chase` | a target that **tracks** the creature | **−4.6 SE** excess, **−5.2 SE** taught-only |
+
+`chase` is decisive because it is the strongest form of the hypothesis: the
+target sits at the creature's own delivered separation plus 0.06, **ratchets** so
+it never retreats, and is free to climb past the milestone's 0.89. There is no
+rate that could have been set wrong — which was `staircase`'s escape hatch.
+
+| | target | delivered | shortfall |
+| --- | --- | --- | --- |
+| chase | climbed 0.15 → **0.2820** over 24 updates | 0.2067 | **0.075** — it *caught* it |
+| jump | **fixed at 0.8900** | **0.2701** | 0.620 — never close |
+
+**The arm that caught its target delivered less.** A target the creature can
+catch stops pulling; one it cannot catch keeps pulling. The fixed far target wins
+*because* it is unreachable — which inverts the framing above: the reward's
+blindness means only that it cannot ask for **more than maximum**, and maximum is
+already what it delivers. "A bar that tracks the creature stops asking" is true,
+and is not a defect, because the alternative — a bar it can satisfy — asks for
+less.
+
+**So the ceiling is the voice.** `ceiling-is-an-exponent` stands: `dF1 ~
+aligned^0.61`, delivered separation saturates near 0.27 against the 0.89 the
+shipped vowels need, and no way of *asking* changes an exponent. The blindness is
+real, replicates at 0/36, and is not what limits naming. Further runs on the
+teaching protocol are not worth the time; the live leads are structural.
+
+*One rule that collapsed, worth not rebuilding.* `chase`'s first version put the
+targets at the 20/80 percentiles of F1 **pooled over both words**. That has a
+downward fixed point — teaching two points shrinks the spread, the percentiles
+move inward, the demand shrinks with them. The target fell to 0.13 and the voice
+tracked it faithfully down to 0.105. Track the *between-word* quantity, and
+ratchet it.
 
 ## Design decisions that were not obvious
 
