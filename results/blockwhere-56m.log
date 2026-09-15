@@ -1,0 +1,31 @@
+experiment: blockwhere
+  instrument        blockwhere   trial seed 0000000001352ce7   2000 trials
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  question          `blockfloor` found one neuron of 14 costs 30% of the
+                    lesson and four cost 57%. Is that about HOW MANY cells
+                    are blocked, or about WHICH ONES?
+  the two accounts  a faulty instrument, or LEVERAGE. `read_group` weights
+                    neuron i by (i - begin + 0.5)/n, so index IS position,
+                    and every block ever measured took the TOP of the group
+                    -- the best levers for moving a weighted mean.
+  the design        ONE neuron in every blocked arm, so the count is held
+                    fixed and only its POSITION differs. Any difference is
+                    leverage; no difference refutes it.
+  the prediction    a weighted mean is least sensitive near its own centre,
+                    so `mid1` should cost clearly less than `top1`. The two
+                    ends need not match: the end the lesson travels TOWARD
+                    should matter more.
+  why it matters    `mask-unaffordable` closed write separation on "confining
+                    a lesson is unaffordable". If the cost is leverage that
+                    reads "unaffordable AT THE TOP", and separation bought in
+                    the middle may be nearly free -- reopening a shut line.
+  the anchor        `top1` must reproduce ~30%. If it does not, this run
+                    disagrees with `blockfloor` and THAT is the finding.
+
+  THE BLOCK AS BUILT (group is neurons 28..41 of vocal's 126)
+    b0    nothing blocked
+    top1  blocks index 41  (position 0.964 in the group)
+    mid1  blocks index 34  (position 0.464 in the group)
+    bot1  blocks index 28  (position 0.036 in the group)
+

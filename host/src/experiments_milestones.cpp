@@ -5757,6 +5757,22 @@ struct RTConfig {
   // them apart. Blocking both isolates the second, because the difference
   // between the two conditions is exactly the first. false is bit-identical.
   bool explore_block = false;
+  // `blockwhere`: block an EXPLICIT NUMBER of neurons at an explicit POSITION,
+  // rather than a fraction of the group rounded by uint32_t truncation. 0 keeps
+  // the mask_width path and is bit-identical.
+  //
+  // WHY POSITION IS A FIELD AT ALL. `read_group` weights neuron i by
+  // `(i - begin + 0.5) / n`, so the index IS the articulator position, and every
+  // block measured so far has taken the TOP of the group. `blockfloor` found one
+  // cell of fourteen costs 30% of the lesson and four cost 57% -- steep, then
+  // saturating -- which is what removing the best LEVER first looks like. If
+  // that is right, the same count at the MIDDLE should cost much less, because
+  // a weighted mean is least sensitive to weight near its own centre.
+  //   0 top (the shipped behaviour and every prior measurement)
+  //   1 middle
+  //   2 bottom
+  uint32_t mask_count = 0;
+  uint32_t mask_pos = 0;
 };
 
 // One arm, one creature, one life: teach, intervene, re-measure.
@@ -6000,12 +6016,25 @@ RTRow run_retain_arm(const std::vector<uint8_t>& blob, uint64_t ticks,
             // is what a global freeze looks like and not what a range cap looks
             // like. set_reward_block confines within the group and leaves the
             // other eight alone, which is what "confine this lesson" meant.
-            const uint32_t w = uint32_t(double(g_hi - g_lo) * double(cfg.mask_width));
-            const uint32_t hi_w = g_lo + (w < 2u ? 2u : w);
-            if (hi_w < g_hi) {
-              mnet.set_reward_block(vm.begin + hi_w, vm.begin + g_hi);
+            uint32_t blk_lo = 0u, blk_hi = 0u;
+            if (cfg.mask_count > 0u) {
+              // EXPLICIT COUNT AND POSITION. No fraction, no truncation: the
+              // range is stated in neurons and placed where the arm asks.
+              const uint32_t gsz = g_hi - g_lo;
+              const uint32_t k = cfg.mask_count < gsz ? cfg.mask_count : gsz;
+              blk_lo = cfg.mask_pos == 0u   ? g_hi - k                 // top
+                       : cfg.mask_pos == 1u ? g_lo + (gsz - k) / 2u    // middle
+                                            : g_lo;                    // bottom
+              blk_hi = blk_lo + k;
+            } else {
+              const uint32_t w = uint32_t(double(g_hi - g_lo) * double(cfg.mask_width));
+              const uint32_t hi_w = g_lo + (w < 2u ? 2u : w);
+              if (hi_w < g_hi) { blk_lo = hi_w; blk_hi = g_hi; }
+            }
+            if (blk_hi > blk_lo) {
+              mnet.set_reward_block(vm.begin + blk_lo, vm.begin + blk_hi);
               // `compartprobe`: the same range, silenced as well as frozen.
-              if (cfg.explore_block) mnet.set_explore_block(vm.begin + hi_w, vm.begin + g_hi);
+              if (cfg.explore_block) mnet.set_explore_block(vm.begin + blk_lo, vm.begin + blk_hi);
               else mnet.clear_explore_block();
             } else {
               mnet.clear_reward_block();
@@ -8821,6 +8850,263 @@ bool run_blockfloor(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
               "  not exonerated but it is no longer the leading suspect, and the knee's\n"
               "  position is the quantity that matters for separating a lesson.\n",
               one, anchor);
+  return false;
+}
+
+// `blockwhere` -- is the cost of confining a lesson about HOW MANY neurons are
+// blocked, or about WHICH ONES?
+//
+// THE STATE OF THE LADDER. `blockfloor` measured, on 36 seeds, that blocking ONE
+// neuron of the F1 group's fourteen costs 30% of the lesson, two cost 36% and
+// four cost 57% -- steep, then saturating onto `compartprobe`'s plateau near 55%
+// from a third of the group upward. That is not proportional and not flat.
+//
+// TWO ACCOUNTS SURVIVE IT, and `blockfloor`'s printed verdict picked the wrong
+// one. It concluded `set_reward_block` must be a faulty instrument, because one
+// cell of fourteen cannot carry a third of a lesson. That fired at 30% against a
+// 28.5% threshold picked by guess, and it is wrong on code reading: the block
+// skips exactly the neurons in its range and has no global effect, unlike
+// `set_reward_mask`, whose inverted condition really did freeze the network.
+//
+// THE OTHER ACCOUNT IS LEVERAGE. `read_group` weights neuron i by
+// `(i - begin + 0.5) / n`, so the index IS the articulator position -- and every
+// block ever measured here has taken the TOP of the group. Those are the high-F1
+// cells, the best levers for moving a weighted mean. Removing the best lever
+// first gives exactly a steep-then-saturating curve, with no instrument fault.
+//
+// WHAT SEPARATES THEM IS POSITION, NOT SIZE. Block ONE neuron -- the same count
+// in every arm, so any difference is about WHERE it sits:
+//
+//   b0     nothing blocked: the reference lesson.
+//   top1   the highest-position cell.  The condition every prior run measured.
+//   mid1   the middle cell.            Least leverage on a weighted mean.
+//   bot1   the lowest-position cell.   The other end.
+//
+// THE PREDICTION, WRITTEN FIRST. A weighted mean is least sensitive to weight
+// near its own centre, so if leverage is the mechanism `mid1` should cost
+// clearly less than `top1`, and the two ends need not be symmetric -- whichever
+// end the lesson is travelling TOWARD should matter more. If instead all three
+// cost the same 30%, position is irrelevant, leverage is refused, and the
+// instrument is back under suspicion with a much sharper case against it.
+//
+// WHY IT MATTERS BEYOND THE CURVE. `mask-unaffordable` closed write separation
+// on the claim that confining a lesson is unaffordable. If the cost is leverage,
+// that claim is really "unaffordable AT THE TOP OF THE GROUP" -- and separation
+// bought in the middle might be nearly free, which would reopen a line this
+// project has already declared shut.
+//
+// THE REFUSALS, WRITTEN FIRST:
+//   * if `top1` does not reproduce ~30%, this run disagrees with `blockfloor` on
+//     the same genome and code, and that outranks anything else in it.
+//   * 2-3 SE is a HYPOTHESIS at this n, not a finding, and prints as one.
+//   * the blocked INDEX RANGE is printed per arm, from the same arithmetic the
+//     session runs, because "which neuron" is the entire independent variable.
+struct BWArm { const char* name; uint32_t count; uint32_t pos; };
+const BWArm kBWArms[] = {
+    {"b0",    0u, 0u},
+    {"top1",  1u, 0u},
+    {"mid1",  1u, 1u},
+    {"bot1",  1u, 2u},
+};
+constexpr uint32_t kBWArmCount = sizeof(kBWArms) / sizeof(kBWArms[0]);
+
+bool run_blockwhere(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  aibaby::Dna dna0;
+  if (dna0.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) {
+    std::printf("  setup failed: the genome does not load\n");
+    return false;
+  }
+  const int32_t vm = dna0.module_with_role(aibaby::ModuleRole::kVocal);
+  if (vm < 0) { std::printf("  this genome has no vocal module\n"); return false; }
+  const uint32_t vcount = dna0.module(uint32_t(vm)).neurons;
+  const uint32_t g_lo = aibaby::slice_begin(vcount, aibaby::kVocalGroups, 2u);
+  const uint32_t g_hi = aibaby::slice_begin(vcount, aibaby::kVocalGroups, 3u);
+  const uint32_t gsize = g_hi - g_lo;
+  Regime regime;
+  regime.praise = kPraiseValue;
+  regime.scold = kScoldValue;
+  constexpr uint32_t kReps = 36;
+  instrument("blockwhere", dna0.header().seed ^ 0x0B2Eu, ticks / kRTTrial, "trials");
+  std::printf("  question          `blockfloor` found one neuron of %u costs 30%% of the\n"
+              "                    lesson and four cost 57%%. Is that about HOW MANY cells\n"
+              "                    are blocked, or about WHICH ONES?\n", gsize);
+  std::printf("  the two accounts  a faulty instrument, or LEVERAGE. `read_group` weights\n"
+              "                    neuron i by (i - begin + 0.5)/n, so index IS position,\n"
+              "                    and every block ever measured took the TOP of the group\n"
+              "                    -- the best levers for moving a weighted mean.\n");
+  std::printf("  the design        ONE neuron in every blocked arm, so the count is held\n"
+              "                    fixed and only its POSITION differs. Any difference is\n"
+              "                    leverage; no difference refutes it.\n");
+  std::printf("  the prediction    a weighted mean is least sensitive near its own centre,\n"
+              "                    so `mid1` should cost clearly less than `top1`. The two\n"
+              "                    ends need not match: the end the lesson travels TOWARD\n"
+              "                    should matter more.\n");
+  std::printf("  why it matters    `mask-unaffordable` closed write separation on \"confining\n"
+              "                    a lesson is unaffordable\". If the cost is leverage that\n"
+              "                    reads \"unaffordable AT THE TOP\", and separation bought in\n"
+              "                    the middle may be nearly free -- reopening a shut line.\n");
+  std::printf("  the anchor        `top1` must reproduce ~30%%. If it does not, this run\n"
+              "                    disagrees with `blockfloor` and THAT is the finding.\n");
+  std::printf("\n  THE BLOCK AS BUILT (group is neurons %u..%u of vocal's %u)\n", g_lo,
+              g_hi - 1u, vcount);
+  for (uint32_t a = 0; a < kBWArmCount; ++a) {
+    if (kBWArms[a].count == 0u) {
+      std::printf("    %-5s nothing blocked\n", kBWArms[a].name);
+      continue;
+    }
+    const uint32_t k = kBWArms[a].count < gsize ? kBWArms[a].count : gsize;
+    const uint32_t lo = kBWArms[a].pos == 0u   ? g_hi - k
+                        : kBWArms[a].pos == 1u ? g_lo + (gsize - k) / 2u
+                                               : g_lo;
+    std::printf("    %-5s blocks index %u  (position %.3f in the group)\n", kBWArms[a].name, lo,
+                (double(lo - g_lo) + 0.5) / double(gsize));
+  }
+  std::printf("\n");
+
+  struct Cell { bool ok = false; RTRow row; };
+  const uint32_t njobs = kReps * kBWArmCount;
+  const std::vector<Cell> cells = parallel_reps<Cell>(njobs, [&](uint32_t i) {
+    Cell cell;
+    const uint32_t r = i / kBWArmCount, a = i % kBWArmCount;
+    std::vector<uint8_t> variant = blob;
+    const uint64_t seed = dna0.header().seed + r * 7919ull;
+    std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+    RTConfig cfg;
+    cfg.name = kBWArms[a].name;
+    cfg.teach = true;
+    cfg.relearn = true;
+    cfg.mask_mode = kBWArms[a].count > 0u ? 4u : 0u;
+    cfg.mask_count = kBWArms[a].count;
+    cfg.mask_pos = kBWArms[a].pos;
+    Timbre local_ruler;
+    std::string local_error;
+    if (!local_ruler.configure(dna0.header().audio, local_error)) return cell;
+    bool ok = false;
+    cell.row = run_retain_arm(variant, ticks, cfg, local_ruler, regime, &ok);
+    if (!ok) return cell;
+    cell.ok = true;
+    parallel_note("  [%u/%u] seed %u %-5s before %.4f taught %.4f\n", i + 1, njobs, r,
+                  kBWArms[a].name, cell.row.err_before, cell.row.err_taught);
+    return cell;
+  });
+
+  std::printf("\n  %-6s %-12s %-12s %s\n", "arm", "err before", "err taught", "learned");
+  std::vector<double> mean_l(kBWArmCount, 0.0), se_l(kBWArmCount, 0.0);
+  for (uint32_t a = 0; a < kBWArmCount; ++a) {
+    std::vector<double> b, t, L;
+    for (uint32_t r = 0; r < kReps; ++r) {
+      const Cell& c = cells[r * kBWArmCount + a];
+      if (!c.ok) continue;
+      b.push_back(c.row.err_before);
+      t.push_back(c.row.err_taught);
+      L.push_back(c.row.err_before - c.row.err_taught);
+    }
+    if (b.size() < 3) {
+      std::printf("\n  blockwhere INCONCLUSIVE -- arm `%s` produced %zu creatures.\n",
+                  kBWArms[a].name, b.size());
+      return false;
+    }
+    double se_b = 0.0, se_t = 0.0;
+    const double m_b = ctx_mean_se(b, &se_b);
+    const double m_t = ctx_mean_se(t, &se_t);
+    mean_l[a] = ctx_mean_se(L, &se_l[a]);
+    std::printf("  %-6s %-12.4f %-12.4f %+.4f +/- %.4f\n", kBWArms[a].name, m_b, m_t, mean_l[a],
+                se_l[a]);
+  }
+
+  {
+    ArmLiveness live("blockwhere");
+    for (uint32_t r = 0; r < kReps; ++r) {
+      for (uint32_t a = 0; a < kBWArmCount; ++a) {
+        const Cell& c = cells[r * kBWArmCount + a];
+        if (c.ok) live.observe(kBWArms[a].name, r, c.row.err_taught);
+      }
+    }
+    if (!live.report("b0")) return false;
+  }
+
+  const auto paired = [&](uint32_t x, uint32_t y, double* se) {
+    std::vector<double> d;
+    for (uint32_t r = 0; r < kReps; ++r) {
+      const Cell& cx = cells[r * kBWArmCount + x];
+      const Cell& cy = cells[r * kBWArmCount + y];
+      if (cx.ok && cy.ok) {
+        d.push_back((cx.row.err_before - cx.row.err_taught) -
+                    (cy.row.err_before - cy.row.err_taught));
+      }
+    }
+    return d.size() >= 3 ? ctx_mean_se(d, se) : 0.0;
+  };
+
+  std::printf("\n  THE COST OF BLOCKING ONE NEURON, paired on seed against `b0`\n");
+  double cost[kBWArmCount] = {}, se_c[kBWArmCount] = {};
+  for (uint32_t a = 1; a < kBWArmCount; ++a) {
+    cost[a] = paired(a, 0u, &se_c[a]);
+    std::printf("    %-5s %+.4f +/- %.4f  (%+.1f SE)   %.0f%% of the lesson\n", kBWArms[a].name,
+                cost[a], se_c[a], se_c[a] > 0.0 ? cost[a] / se_c[a] : 0.0,
+                mean_l[0] != 0.0 ? 100.0 * (-cost[a] / mean_l[0]) : 0.0);
+  }
+  const double p_top = mean_l[0] != 0.0 ? 100.0 * (-cost[1] / mean_l[0]) : 0.0;
+  const double p_mid = mean_l[0] != 0.0 ? 100.0 * (-cost[2] / mean_l[0]) : 0.0;
+  const double p_bot = mean_l[0] != 0.0 ? 100.0 * (-cost[3] / mean_l[0]) : 0.0;
+
+  if (p_top < 15.0 || p_top > 50.0) {
+    std::printf("\n  blockwhere REFUSED -- THE ANCHOR DOES NOT REPRODUCE. `top1` costs %.0f%%\n"
+                "  where `blockfloor` measured 30%% on the same genome and the same code.\n"
+                "  Two runs of one condition disagreeing outranks this curve.\n", p_top);
+    return false;
+  }
+
+  double se_tm = 0.0, se_tb = 0.0;
+  const double tm = paired(2u, 1u, &se_tm);   // mid against top
+  const double tb = paired(3u, 1u, &se_tb);   // bottom against top
+  std::printf("\n  DOES POSITION MATTER? paired on seed (positive = cheaper than `top1`)\n"
+              "    mid1 - top1  %+.4f +/- %.4f  (%+.1f SE)\n"
+              "    bot1 - top1  %+.4f +/- %.4f  (%+.1f SE)\n",
+              tm, se_tm, se_tm > 0.0 ? tm / se_tm : 0.0,
+              tb, se_tb, se_tb > 0.0 ? tb / se_tb : 0.0);
+
+  const bool mid_cheaper = se_tm > 0.0 && tm > 3.0 * se_tm;
+  const bool mid_band = se_tm > 0.0 && tm > 2.0 * se_tm;
+  if (mid_cheaper) {
+    std::printf("\n  POSITION IS THE COST, NOT COUNT (%.1f SE). The same ONE neuron costs\n"
+                "  %.0f%% of the lesson at the top of the group and %.0f%% in the middle.\n"
+                "  Nothing about the number blocked changed, so the instrument is exonerated\n"
+                "  -- `set_reward_block` does what it says -- and the readout's GEOMETRY is\n"
+                "  the finding: `read_group` weights neuron i by (i - begin + 0.5)/n, a\n"
+                "  weighted mean is least sensitive near its own centre, and every block\n"
+                "  this project ever measured took the most expensive cells available.\n"
+                "\n"
+                "  THAT REOPENS WRITE SEPARATION. `mask-unaffordable` closed it on \"confining\n"
+                "  a lesson is unaffordable\", measured only at the top. Read here it says\n"
+                "  unaffordable AT THE TOP, and a lesson confined to the middle of the group\n"
+                "  costs a fraction of that. The 59%% was a fact about where the mask was\n"
+                "  put, not about whether a pooled readout can be partitioned.\n",
+                tm / se_tm, p_top, p_mid);
+    return true;
+  }
+  if (mid_band) {
+    std::printf("\n  A HYPOTHESIS, NOT A FINDING (%.1f SE). Position looks like it matters\n"
+                "  -- %.0f%% at the top against %.0f%% in the middle -- but inside the 2-3 SE\n"
+                "  band this project has retracted findings from. It needs ~%.0f seeds for\n"
+                "  4 SE before write separation is reopened on it.\n",
+                tm / se_tm, p_top, p_mid, double(kReps) * std::pow(4.0 / (tm / se_tm), 2.0));
+    return false;
+  }
+  std::printf("\n  POSITION DOES NOT MATTER (%+.1f SE for the middle against the top; the\n"
+              "  bottom reads %+.1f SE). One neuron costs about the same wherever it sits --\n"
+              "  %.0f%% at the top, %.0f%% in the middle, %.0f%% at the bottom -- so LEVERAGE\n"
+              "  IS REFUSED as the account of `blockfloor`'s curve.\n"
+              "\n"
+              "  THAT PUTS THE INSTRUMENT BACK UNDER SUSPICION, and with a sharper case\n"
+              "  than before: a single frozen cell out of %u costing a third of the lesson,\n"
+              "  identically wherever it is placed, is not a property any readout geometry\n"
+              "  explains. The next thing to test is `set_reward_block` itself against a\n"
+              "  hand-checked reference -- count the neurons that actually stop updating,\n"
+              "  rather than inferring it from behaviour.\n",
+              se_tm > 0.0 ? tm / se_tm : 0.0, se_tb > 0.0 ? tb / se_tb : 0.0, p_top, p_mid,
+              p_bot, gsize);
   return false;
 }
 

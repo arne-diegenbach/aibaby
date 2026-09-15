@@ -302,6 +302,15 @@ const Spec kSpecs[] = {
      "  set_reward_block is the suspect, exactly as set_reward_mask once was.\n"
      "  Widths sit at midpoints so each arm blocks a known count, and the count\n"
      "  is printed rather than trusted. 36 seeds"},
+    {"blockwhere", 5600000, Expect::kOpen, Tier::kLong,
+     "blockfloor found ONE neuron of fourteen costs 30% of the lesson and four\n"
+     "  cost 57%. Is that about HOW MANY cells are blocked or WHICH ONES? Every\n"
+     "  block ever measured here took the TOP of the group, and read_group\n"
+     "  weights neuron i by (i-begin+0.5)/n -- so the top cells are the best\n"
+     "  levers for moving a weighted mean. ONE neuron in every blocked arm, at\n"
+     "  top / middle / bottom, so count is fixed and only position differs. If\n"
+     "  the middle is cheaper, mask-unaffordable's 59% was a fact about WHERE\n"
+     "  the mask was put and write separation reopens. 36 seeds"},
     {"movability", 5600000, Expect::kOpen, Tier::kLong,
      "orthovocab left a LEAD: on identical demands the F2 lesson travelled\n"
      "  0.169 and the F1 lesson 0.030 -- but F1's was FIGHTING another lesson on\n"
@@ -640,6 +649,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "chase") ok = run_chase(dna_blob, ticks, verbose);
   else if (name == "compartprobe") ok = run_compartprobe(dna_blob, ticks, verbose);
   else if (name == "blockfloor") ok = run_blockfloor(dna_blob, ticks, verbose);
+  else if (name == "blockwhere") ok = run_blockwhere(dna_blob, ticks, verbose);
   else if (name == "partprobe") ok = run_partprobe(dna_blob, ticks, verbose);
   else if (name == "pgprobe") ok = run_pgprobe(dna_blob, ticks, verbose);
   else if (name == "g2cond") ok = run_g2cond(dna_blob, ticks, verbose);
