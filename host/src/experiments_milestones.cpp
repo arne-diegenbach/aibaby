@@ -8765,13 +8765,42 @@ bool run_blockfloor(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
   const double one = mean_l[0] != 0.0 ? 100.0 * (-cost[1] / mean_l[0]) : 0.0;
   const bool one_costs = se_c[1] > 0.0 && cost[1] < -2.0 * se_c[1];
   if (one_costs && one > 0.5 * anchor) {
-    std::printf("\n  BLOCKING ONE NEURON OF %u COSTS %.0f%% OF THE LESSON, against %.0f%% for\n"
-                "  four. That is not a result about the larynx. A single cell out of\n"
-                "  fourteen cannot carry more than half a lesson, so the cost is being paid\n"
-                "  for the ACT of blocking rather than for what is blocked -- and\n"
-                "  `set_reward_block` is the suspect, exactly as `set_reward_mask` was.\n"
-                "  `mask-unaffordable` and `compartprobe` both need re-reading, and the\n"
-                "  59%% that closed write separation may be an instrument reading.\n",
+    // THIS BRANCH ONCE BLAMED THE INSTRUMENT, AND IT WAS WRONG. It fired at 30%
+    // against a 28.5% threshold -- a 1.5-point margin on a cut-off chosen by
+    // guess -- and concluded `set_reward_block` must be faulty because one cell
+    // of fourteen cannot carry half a lesson. Two things refute that. The code
+    // skips exactly the neurons in range and has no global effect, unlike
+    // `set_reward_mask`'s inverted condition. And there is a better explanation.
+    //
+    // THE BLOCK ALWAYS TAKES THE TOP OF THE GROUP, and the centroid weights each
+    // neuron by `preferred = (i - begin + 0.5) / n` -- so index IS position, and
+    // the top neurons are the high-F1 end. They are the best levers for moving
+    // the centroid up, and the block removes the best lever first. The cost is
+    // proportional to LEVERAGE, not to count: steep at the start, saturating
+    // after, which is the shape measured here and the flat plateau
+    // `compartprobe` saw over 25-50%.
+    //
+    // So a large one-neuron cost is NOT evidence against the instrument. What
+    // separates the two accounts is WHERE the block sits, not how big it is:
+    // block one neuron at the BOTTOM or MIDDLE instead. Same count, different
+    // leverage. That is the run this result asks for.
+    std::printf("\n  ONE NEURON OF %u COSTS %.0f%% OF THE LESSON, against %.0f%% for four --\n"
+                "  a steeply COMPRESSIVE cost, not a proportional one and not the flat one\n"
+                "  `compartprobe` reported over 25-50%% (that ladder sat on the plateau).\n"
+                "\n"
+                "  DO NOT READ THIS AS A FAULTY INSTRUMENT. `set_reward_block` skips exactly\n"
+                "  the neurons in its range and has no global effect -- it is not\n"
+                "  `set_reward_mask`, whose inverted condition froze the whole network. The\n"
+                "  likelier account is LEVERAGE: the block always takes the TOP of the\n"
+                "  group, the centroid weights neuron i by (i - begin + 0.5)/n, so the\n"
+                "  blocked cells are the high-F1 end and the best levers for moving the\n"
+                "  readout. The block removes the best lever first, which is exactly a\n"
+                "  steep-then-saturating curve.\n"
+                "\n"
+                "  WHAT SEPARATES THE TWO is WHERE the block sits, not how big it is: one\n"
+                "  neuron at the BOTTOM or the MIDDLE, same count, different leverage. If\n"
+                "  position matters the instrument is fine and the readout's geometry is\n"
+                "  the finding; if it does not, the instrument is back under suspicion.\n",
                 gsize, one, anchor);
     return false;
   }
