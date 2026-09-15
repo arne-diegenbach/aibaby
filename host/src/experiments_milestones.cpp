@@ -8515,17 +8515,56 @@ bool run_compartprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool ver
                 -rec75, q75 / se_q75);
     return false;
   }
-  std::printf("\n  SILENCING CHANGES NOTHING (%+.1f SE). The cost of confining a lesson is\n"
-              "  NOT the blocked neurons' perturbation -- it is that they are READ at all:\n"
-              "  their rate sits in the centroid's denominator and dilutes the reachable\n"
-              "  range whether they explore or not. `mask-unaffordable`'s first reason is\n"
-              "  refused and its second stands alone.\n"
+  // DOES THE COST SCALE WITH HOW MUCH IS BLOCKED? This has to be ASKED, not
+  // assumed. The first version of this branch concluded "the damage is dilution
+  // -- they are still READ" the moment silencing came back null, which is the
+  // `verdict-fitted-to-data` trap: dilution is a quantitative claim and it makes
+  // a prediction. Blocking twice as many neurons should cost roughly twice as
+  // much. If the curve is FLAT, dilution is refused too and the honest answer is
+  // that neither named mechanism survives.
+  double se_ww = 0.0;
+  const double ww = paired(3u, 1u, &se_ww);   // w50 against w75
+  std::printf("\n  DOES THE COST SCALE WITH THE BLOCKED FRACTION?\n"
+              "    w50 - w75  %+.4f +/- %.4f  (%+.1f SE)  -- twice the block\n"
+              "    lost at 25%% blocked: %.0f%%   at 50%% blocked: %.0f%%\n",
+              ww, se_ww, se_ww > 0.0 ? ww / se_ww : 0.0,
+              mean_l[0] != 0.0 ? 100.0 * (-c75 / mean_l[0]) : 0.0,
+              mean_l[0] != 0.0 ? 100.0 * (-c50 / mean_l[0]) : 0.0);
+  const bool scales = se_ww > 0.0 && ww < -2.0 * se_ww;
+  if (scales) {
+    std::printf("\n  SILENCING CHANGES NOTHING (%+.1f SE) AND THE COST SCALES WITH THE\n"
+                "  BLOCKED FRACTION. The damage is not the blocked neurons' perturbation --\n"
+                "  it is that they are READ at all, their rate sitting in the centroid's\n"
+                "  denominator and diluting the reachable range whether they explore or\n"
+                "  not. `mask-unaffordable`'s first reason is refused and its second\n"
+                "  stands. What the lesson needs is a SMALLER DENOMINATOR, which a\n"
+                "  compartment readout gives and so does anything cheaper that stops the\n"
+                "  non-participating half being summed.\n",
+                se_q75 > 0.0 ? q75 / se_q75 : 0.0);
+    return false;
+  }
+  std::printf("\n  NEITHER NAMED MECHANISM SURVIVES, AND THAT STOPS THE BUILD.\n"
+              "  Silencing the blocked neurons recovers nothing (%+.1f SE), so the cost is\n"
+              "  not their PERTURBATION. And blocking twice as many costs no more\n"
+              "  (%+.1f SE; %.0f%% of the lesson lost at a quarter blocked, %.0f%% at a\n"
+              "  half), so it is not DILUTION either -- dilution is a quantitative claim\n"
+              "  and it predicts a curve this data does not have.\n"
               "\n"
-              "  THAT IS STILL AN ANSWER ABOUT THE READOUT, and it points at a cheaper\n"
-              "  build than the fly's: what the lesson needs is a SMALLER DENOMINATOR, not\n"
-              "  an independently taught one. A compartment readout would work, and so\n"
-              "  would anything that stops the non-participating half being summed.\n",
-              se_q75 > 0.0 ? q75 / se_q75 : 0.0);
+              "  So `mask-unaffordable`'s 59%% is reproduced here at %.0f%% and BOTH of the\n"
+              "  reasons it gave for its own number are now refused. The cost is\n"
+              "  ALL-OR-NOTHING in the blocked fraction: partitioning the group at all\n"
+              "  costs most of the lesson, and partitioning it further costs nothing more.\n"
+              "\n"
+              "  DO NOT BUILD THE COMPARTMENT DECODER. It was motivated as a fix for a\n"
+              "  mechanism that turns out not to be the mechanism, and a readout that\n"
+              "  removes the non-participants would only help if their presence were the\n"
+              "  cost. The question worth the next run is why the cost is FLAT -- what\n"
+              "  breaks the moment the group stops being taught as one.\n",
+              se_q75 > 0.0 ? q75 / se_q75 : 0.0,
+              se_ww > 0.0 ? ww / se_ww : 0.0,
+              mean_l[0] != 0.0 ? 100.0 * (-c75 / mean_l[0]) : 0.0,
+              mean_l[0] != 0.0 ? 100.0 * (-c50 / mean_l[0]) : 0.0,
+              mean_l[0] != 0.0 ? 100.0 * (-c75 / mean_l[0]) : 0.0);
   return false;
 }
 
