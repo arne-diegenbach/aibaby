@@ -10228,11 +10228,42 @@ least sensitive near its own centre — and **every block this project ever
 measured took the most expensive cells available.** Away from the top, freezing a
 neuron costs nothing measurable.
 
-So the 59% is a fact about *where the mask was put*. **Write separation is
-reopened** — but not yet established: one cell away from the top being free is
-not the same as a useful-sized region being free, and separating two lessons
-needed roughly half the group. The decisive follow-up is the width ladder
-re-run anchored at the **bottom**.
+So the 59% is a fact about *where the mask was put*.
+
+`blockanchor` then ran the two **complementary halves** — exactly what a
+separated pair of lessons would occupy:
+
+| | blocked | lesson lost |
+| --- | --- | --- |
+| `top7` | upper half, 35–41 | **53%** (−11.1 SE) |
+| `bot7` | lower half, 28–34 | **9%** (−1.5 SE) |
+| `bot2` / `bot4` | lower 2 / lower 4 | 9% / 10% |
+
+`bot7 − top7` is **+0.0737 ± 0.0086 (+8.6 SE)**, and `top7` reproduces
+`compartprobe`'s 53% for the same seven neurons exactly. **Half the F1 group is
+nearly inert**: freezing the lower seven costs nothing distinguishable from zero,
+and the bottom ladder is flat — 2, 4 and 7 neurons all cost about the same.
+Essentially all the steering authority sits in the upper half.
+
+**That does not make separation affordable, and the sharper statement is the
+point.** Separation needs both halves working *at once*, one lesson in each, and
+the half without the leverage is crippled. "Confining a lesson is unaffordable"
+becomes **"only one lesson can have the leverage."**
+
+**And the fix is the decoder, not the teaching.** `read_group` is a rate-weighted
+mean over a contiguous slice, so a neuron's influence is
+`(preferred_i − value)/Σw` — **zero at the centroid, growing with distance from
+it.** A contiguous half therefore cannot be equal to its complement, by
+construction. Uniform leverage would need a position map that is not monotone in
+index, or a readout that is not a weighted mean over a contiguous slice.
+
+*A caution about the leverage law.* One free parameter — the centroid's position
+— explains all three one-neuron costs to 1.6 percentage points, at 0.30. That is
+consistent with this protocol's operating point (the first lesson targets /i/ at
+F1 320 Hz, position 0.093, from a start near 0.50), but it is a **fit, not a
+measurement**, and should not be quoted as one. The clean check is to record the
+centroid's mean position during teaching and compare it against the costs it is
+meant to explain.
 
 *Two corrections from this sequence.* `compartprobe`'s verdict elected dilution
 by elimination the moment silencing came back null — a mechanism claim it had not
