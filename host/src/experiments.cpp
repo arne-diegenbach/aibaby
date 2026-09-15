@@ -294,6 +294,14 @@ const Spec kSpecs[] = {
      "  plus silence is (b) -- the difference is (a), exactly. If the noise is\n"
      "  most of it, a per-compartment readout removes precisely that and the\n"
      "  build is worth its cost. 36 seeds"},
+    {"blockfloor", 5600000, Expect::kOpen, Tier::kLong,
+     "compartprobe refuted both reasons for mask-unaffordable's 59%, leaving a\n"
+     "  cost that is ALL-OR-NOTHING with no account. Every width ever measured\n"
+     "  was LARGE -- 25/50/75%. Nobody has blocked ONE neuron of the F1 group's\n"
+     "  fourteen. If one costs what four costs, the cost is in the MECHANISM and\n"
+     "  set_reward_block is the suspect, exactly as set_reward_mask once was.\n"
+     "  Widths sit at midpoints so each arm blocks a known count, and the count\n"
+     "  is printed rather than trusted. 36 seeds"},
     {"movability", 5600000, Expect::kOpen, Tier::kLong,
      "orthovocab left a LEAD: on identical demands the F2 lesson travelled\n"
      "  0.169 and the F1 lesson 0.030 -- but F1's was FIGHTING another lesson on\n"
@@ -631,6 +639,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "staircase") ok = run_staircase(dna_blob, ticks, verbose);
   else if (name == "chase") ok = run_chase(dna_blob, ticks, verbose);
   else if (name == "compartprobe") ok = run_compartprobe(dna_blob, ticks, verbose);
+  else if (name == "blockfloor") ok = run_blockfloor(dna_blob, ticks, verbose);
   else if (name == "partprobe") ok = run_partprobe(dna_blob, ticks, verbose);
   else if (name == "pgprobe") ok = run_pgprobe(dna_blob, ticks, verbose);
   else if (name == "g2cond") ok = run_g2cond(dna_blob, ticks, verbose);

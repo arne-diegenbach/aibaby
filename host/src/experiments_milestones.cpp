@@ -8321,7 +8321,56 @@ bool run_chase(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
 //     reproducing `mask-unaffordable`'s condition and the decomposition is of
 //     nothing. Refuse rather than divide by a cost that is not there.
 //   * 2-3 SE is a HYPOTHESIS at this n, not a finding, and prints as one.
+// `blockfloor` -- is the 57% a fact about the POPULATION or about the MECHANISM?
+//
+// `compartprobe` refuted both reasons `mask-unaffordable` gave for its own
+// number: silencing the blocked neurons recovers nothing, and blocking twice as
+// many costs no more. What is left is a cost that is ALL-OR-NOTHING in the
+// blocked fraction -- 57% at a quarter, 53% at a half -- and no account of it.
+//
+// THE CHEAP TEST NOBODY HAS RUN. Every width ever measured has been LARGE:
+// 25/50/75% in `mask-unaffordable`, 25/50% here. If blocking ONE PERCENT also
+// costs ~57%, the cost is triggered by the EXISTENCE of a block and not by its
+// size -- which makes it a fact about `set_reward_block`, not about the larynx.
+// That is exactly the class of fault that already bit once on this file, when
+// `set_reward_mask` turned out to ALLOW its range and freeze the whole network,
+// and produced a flat curve for a whole run before anyone noticed.
+//
+// So this extends the curve DOWNWARD rather than theorising about its shape.
+//   w100  nothing blocked, the reference lesson
+//   w99   one percent blocked
+//   w95   five percent blocked
+//   w75   a quarter blocked: the anchor, which must reproduce ~57% in-run
+//
+// WHAT EACH OUTCOME MEANS, written first:
+//   * w99 costing ~57% -- a one-percent block costing as much as a quarter --
+//     is not a biological result. It says the cost is in the mechanism, and
+//     `mask-unaffordable` and `compartprobe` both need re-reading.
+//   * w99 costing NOTHING and w75 costing 57% puts a real threshold somewhere
+//     between, and the curve's shape becomes the finding rather than the
+//     suspect.
+//   * if w75 does NOT reproduce ~57% here, this run disagrees with the one that
+//     just produced it on the same genome and the same code, and that
+//     disagreement outranks everything else in it.
 struct CPArm { const char* name; float width; bool quiet; };
+// WIDTHS AT MIDPOINTS, so each arm blocks a KNOWN number of neurons. The F1
+// group is 14 (vocal is 126, nine motor groups), and the width is applied as
+// `uint32_t(14 * width)` -- so the obvious 0.99 and 0.95 BOTH truncate to 13 and
+// are the same arm, and a natural-looking 13/14 = 0.9286 truncates to 12 and
+// blocks two when it reads as one. Midpoints land unambiguously, and the
+// realised count is printed rather than trusted.
+//
+// THAT THE GROUP IS ONLY 14 NEURONS is itself most of why this run exists. A
+// "quarter blocked" is FOUR CELLS, and a centroid over ten survivors instead of
+// fourteen is a much coarser thing than the fraction suggests. An all-or-nothing
+// cost is far more plausible at that size than the earlier framing implied.
+const CPArm kBFArms[] = {
+    {"b0",   1.0000f, false},   // nothing blocked: the reference lesson
+    {"b1",   0.9643f, false},   // ONE neuron of 14
+    {"b2",   0.8929f, false},   // two
+    {"b4",   0.7500f, false},   // four -- the anchor, `compartprobe`'s w75 at 57%
+};
+constexpr uint32_t kBFArmCount = sizeof(kBFArms) / sizeof(kBFArms[0]);
 const CPArm kCPArms[] = {
     {"w100",  1.00f, false},
     {"w75",   0.75f, false},
@@ -8565,6 +8614,184 @@ bool run_compartprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool ver
               mean_l[0] != 0.0 ? 100.0 * (-c75 / mean_l[0]) : 0.0,
               mean_l[0] != 0.0 ? 100.0 * (-c50 / mean_l[0]) : 0.0,
               mean_l[0] != 0.0 ? 100.0 * (-c75 / mean_l[0]) : 0.0);
+  return false;
+}
+
+bool run_blockfloor(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  aibaby::Dna dna0;
+  if (dna0.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) {
+    std::printf("  setup failed: the genome does not load\n");
+    return false;
+  }
+  const int32_t vm = dna0.module_with_role(aibaby::ModuleRole::kVocal);
+  if (vm < 0) {
+    std::printf("  this genome has no vocal module\n");
+    return false;
+  }
+  const uint32_t vcount = dna0.module(uint32_t(vm)).neurons;
+  const uint32_t g_lo = aibaby::slice_begin(vcount, aibaby::kVocalGroups, 2u);
+  const uint32_t g_hi = aibaby::slice_begin(vcount, aibaby::kVocalGroups, 3u);
+  const uint32_t gsize = g_hi - g_lo;
+  Regime regime;
+  regime.praise = kPraiseValue;
+  regime.scold = kScoldValue;
+  constexpr uint32_t kReps = 36;
+  instrument("blockfloor", dna0.header().seed ^ 0x0B10u, ticks / kRTTrial, "trials");
+  std::printf("  question          `compartprobe` refuted BOTH reasons `mask-unaffordable`\n"
+              "                    gave for its 59%%: silencing the blocked neurons recovers\n"
+              "                    nothing, and blocking twice as many costs no more. What\n"
+              "                    is left is a cost that is ALL-OR-NOTHING, with no account.\n");
+  std::printf("  the cheap test    every width ever measured has been LARGE -- 25/50/75%%.\n"
+              "                    Nobody has blocked ONE neuron. If one costs what four\n"
+              "                    costs, the cost is in the MECHANISM, not the larynx.\n");
+  std::printf("  the precedent     `set_reward_mask` once ALLOWED its range and froze the\n"
+              "                    whole network, and produced a flat curve for an entire\n"
+              "                    run before anyone noticed. Flat curves have earned this.\n");
+  std::printf("  the F1 group      %u neurons of vocal's %u. A \"quarter blocked\" is FOUR\n"
+              "                    CELLS, and a centroid over ten survivors instead of\n"
+              "                    fourteen is coarser than the fraction makes it sound.\n",
+              gsize, vcount);
+  std::printf("  the anchor        `b4` must reproduce ~57%%. If it does not, this run\n"
+              "                    disagrees with the one that just produced that number on\n"
+              "                    the same genome and code, and THAT outranks the curve.\n");
+  std::printf("  the ladder as built (width -> neurons actually blocked)\n");
+  for (uint32_t a = 0; a < kBFArmCount; ++a) {
+    const uint32_t w = uint32_t(double(gsize) * double(kBFArms[a].width));
+    const uint32_t hi_w = g_lo + (w < 2u ? 2u : w);
+    const uint32_t blocked = kBFArms[a].width >= 1.0f ? 0u : (hi_w < g_hi ? g_hi - hi_w : 0u);
+    std::printf("    %-5s width %.4f  ->  %u of %u blocked\n", kBFArms[a].name,
+                double(kBFArms[a].width), blocked, gsize);
+  }
+  std::printf("\n");
+
+  struct Cell { bool ok = false; RTRow row; };
+  const uint32_t njobs = kReps * kBFArmCount;
+  const std::vector<Cell> cells = parallel_reps<Cell>(njobs, [&](uint32_t i) {
+    Cell cell;
+    const uint32_t r = i / kBFArmCount, a = i % kBFArmCount;
+    std::vector<uint8_t> variant = blob;
+    const uint64_t seed = dna0.header().seed + r * 7919ull;
+    std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+    RTConfig cfg;
+    cfg.name = kBFArms[a].name;
+    cfg.teach = true;
+    cfg.relearn = true;
+    cfg.mask_mode = kBFArms[a].width >= 1.0f ? 0u : 4u;
+    cfg.mask_width = kBFArms[a].width;
+    Timbre local_ruler;
+    std::string local_error;
+    if (!local_ruler.configure(dna0.header().audio, local_error)) return cell;
+    bool ok = false;
+    cell.row = run_retain_arm(variant, ticks, cfg, local_ruler, regime, &ok);
+    if (!ok) return cell;
+    cell.ok = true;
+    parallel_note("  [%u/%u] seed %u %-5s before %.4f taught %.4f\n", i + 1, njobs, r,
+                  kBFArms[a].name, cell.row.err_before, cell.row.err_taught);
+    return cell;
+  });
+
+  std::printf("\n  %-6s %-10s %-12s %-12s %s\n", "arm", "blocked", "err before", "err taught",
+              "learned");
+  std::vector<double> mean_l(kBFArmCount, 0.0), se_l(kBFArmCount, 0.0);
+  for (uint32_t a = 0; a < kBFArmCount; ++a) {
+    std::vector<double> b, t, L;
+    for (uint32_t r = 0; r < kReps; ++r) {
+      const Cell& c = cells[r * kBFArmCount + a];
+      if (!c.ok) continue;
+      b.push_back(c.row.err_before);
+      t.push_back(c.row.err_taught);
+      L.push_back(c.row.err_before - c.row.err_taught);
+    }
+    if (b.size() < 3) {
+      std::printf("\n  blockfloor INCONCLUSIVE -- arm `%s` produced %zu creatures.\n",
+                  kBFArms[a].name, b.size());
+      return false;
+    }
+    const uint32_t w = uint32_t(double(gsize) * double(kBFArms[a].width));
+    const uint32_t hi_w = g_lo + (w < 2u ? 2u : w);
+    const uint32_t blocked = kBFArms[a].width >= 1.0f ? 0u : (hi_w < g_hi ? g_hi - hi_w : 0u);
+    double se_b = 0.0, se_t = 0.0;
+    const double m_b = ctx_mean_se(b, &se_b);
+    const double m_t = ctx_mean_se(t, &se_t);
+    mean_l[a] = ctx_mean_se(L, &se_l[a]);
+    char bl[16];
+    std::snprintf(bl, sizeof(bl), "%u of %u", blocked, gsize);
+    std::printf("  %-6s %-10s %-12.4f %-12.4f %+.4f +/- %.4f\n", kBFArms[a].name, bl, m_b, m_t,
+                mean_l[a], se_l[a]);
+  }
+
+  {
+    ArmLiveness live("blockfloor");
+    for (uint32_t r = 0; r < kReps; ++r) {
+      for (uint32_t a = 0; a < kBFArmCount; ++a) {
+        const Cell& c = cells[r * kBFArmCount + a];
+        if (c.ok) live.observe(kBFArms[a].name, r, c.row.err_taught);
+      }
+    }
+    if (!live.report("b0")) return false;
+  }
+
+  const auto paired = [&](uint32_t x, double* se) {
+    std::vector<double> d;
+    for (uint32_t r = 0; r < kReps; ++r) {
+      const Cell& cx = cells[r * kBFArmCount + x];
+      const Cell& c0 = cells[r * kBFArmCount + 0u];
+      if (cx.ok && c0.ok) {
+        d.push_back((cx.row.err_before - cx.row.err_taught) -
+                    (c0.row.err_before - c0.row.err_taught));
+      }
+    }
+    return d.size() >= 3 ? ctx_mean_se(d, se) : 0.0;
+  };
+  std::printf("\n  THE COST OF BLOCKING, paired on seed against `b0`\n");
+  double cost[kBFArmCount] = {}, se_c[kBFArmCount] = {};
+  for (uint32_t a = 1; a < kBFArmCount; ++a) {
+    cost[a] = paired(a, &se_c[a]);
+    std::printf("    %-5s %+.4f +/- %.4f  (%+.1f SE)   %.0f%% of the lesson\n", kBFArms[a].name,
+                cost[a], se_c[a], se_c[a] > 0.0 ? cost[a] / se_c[a] : 0.0,
+                mean_l[0] != 0.0 ? 100.0 * (-cost[a] / mean_l[0]) : 0.0);
+  }
+
+  const double anchor = mean_l[0] != 0.0 ? 100.0 * (-cost[kBFArmCount - 1] / mean_l[0]) : 0.0;
+  if (anchor < 35.0 || anchor > 80.0) {
+    std::printf("\n  blockfloor REFUSED -- THE ANCHOR DOES NOT REPRODUCE. `b4` costs %.0f%%\n"
+                "  where `compartprobe` measured 57%% on the same genome and the same code.\n"
+                "  Two runs of one condition disagreeing outranks anything this curve says,\n"
+                "  and it is what to chase.\n", anchor);
+    return false;
+  }
+
+  const double one = mean_l[0] != 0.0 ? 100.0 * (-cost[1] / mean_l[0]) : 0.0;
+  const bool one_costs = se_c[1] > 0.0 && cost[1] < -2.0 * se_c[1];
+  if (one_costs && one > 0.5 * anchor) {
+    std::printf("\n  BLOCKING ONE NEURON OF %u COSTS %.0f%% OF THE LESSON, against %.0f%% for\n"
+                "  four. That is not a result about the larynx. A single cell out of\n"
+                "  fourteen cannot carry more than half a lesson, so the cost is being paid\n"
+                "  for the ACT of blocking rather than for what is blocked -- and\n"
+                "  `set_reward_block` is the suspect, exactly as `set_reward_mask` was.\n"
+                "  `mask-unaffordable` and `compartprobe` both need re-reading, and the\n"
+                "  59%% that closed write separation may be an instrument reading.\n",
+                gsize, one, anchor);
+    return false;
+  }
+  if (!one_costs) {
+    std::printf("\n  BLOCKING ONE NEURON COSTS NOTHING (%+.1f SE) AND BLOCKING FOUR COSTS\n"
+                "  %.0f%%. So the cost is real and it is not an artefact of the mechanism:\n"
+                "  there IS a floor, somewhere between one neuron and four, below which\n"
+                "  confining a lesson is free. The curve's shape is now the finding rather\n"
+                "  than the suspect, and the useful next question is where the knee sits --\n"
+                "  because a lesson that fits under it is a lesson that can be separated.\n",
+                se_c[1] > 0.0 ? cost[1] / se_c[1] : 0.0, anchor);
+    return true;
+  }
+  std::printf("\n  THE COST RISES WITH THE BLOCK, BUT NOT PROPORTIONALLY (one neuron %.0f%%,\n"
+              "  four neurons %.0f%%). That is a compressive curve rather than the flat one\n"
+              "  `compartprobe` reported over 25-50%%, which fits: the earlier ladder was\n"
+              "  entirely above the knee and could only see the plateau. The mechanism is\n"
+              "  not exonerated but it is no longer the leading suspect, and the knee's\n"
+              "  position is the quantity that matters for separating a lesson.\n",
+              one, anchor);
   return false;
 }
 

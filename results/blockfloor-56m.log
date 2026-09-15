@@ -1,0 +1,26 @@
+experiment: blockfloor
+  instrument        blockfloor   trial seed 0000000001352cd9   2000 trials
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  question          `compartprobe` refuted BOTH reasons `mask-unaffordable`
+                    gave for its 59%: silencing the blocked neurons recovers
+                    nothing, and blocking twice as many costs no more. What
+                    is left is a cost that is ALL-OR-NOTHING, with no account.
+  the cheap test    every width ever measured has been LARGE -- 25/50/75%.
+                    Nobody has blocked ONE neuron. If one costs what four
+                    costs, the cost is in the MECHANISM, not the larynx.
+  the precedent     `set_reward_mask` once ALLOWED its range and froze the
+                    whole network, and produced a flat curve for an entire
+                    run before anyone noticed. Flat curves have earned this.
+  the F1 group      14 neurons of vocal's 126. A "quarter blocked" is FOUR
+                    CELLS, and a centroid over ten survivors instead of
+                    fourteen is coarser than the fraction makes it sound.
+  the anchor        `b4` must reproduce ~57%. If it does not, this run
+                    disagrees with the one that just produced that number on
+                    the same genome and code, and THAT outranks the curve.
+  the ladder as built (width -> neurons actually blocked)
+    b0    width 1.0000  ->  0 of 14 blocked
+    b1    width 0.9643  ->  1 of 14 blocked
+    b2    width 0.8929  ->  2 of 14 blocked
+    b4    width 0.7500  ->  4 of 14 blocked
+
