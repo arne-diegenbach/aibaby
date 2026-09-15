@@ -9748,6 +9748,315 @@ bool run_leverprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
   return true;
 }
 
+// `blockflip`, 2026-09-16. DOES THE ASYMMETRY FOLLOW THE TARGET?
+//
+// `leverprobe` measured the F1 rate profile over teaching and found the lesson is
+// learned by SILENCING the upper half of the group: every change at k>=7 negative
+// and large, the lower half small and mixed-sign, netting -0.13 Hz of -11.06. That
+// explains the block costs without any fit -- blocking neurons that never move
+// costs nothing, blocking the ones that move costs everything -- and it killed the
+// position/leverage account, which at the MEASURED centroid (0.4343) puts neurons
+// 0 and 13 almost equally far from centre (0.399 vs 0.530) while one costs ~0 and
+// the other 30% at 5.8 SE.
+//
+// It left one question, and it is the whole of this run. WHY the upper half? The
+// shipped lesson targets /i/ at F1 320 Hz -- position 0.093, far BELOW the resting
+// centroid of 0.499 -- and to drag a rate-weighted centroid DOWN you suppress the
+// HIGH-position neurons. On that account the asymmetry belongs to the TARGET'S
+// DIRECTION and nothing about those neurons is special. The alternative is that
+// the upper cells are privileged in themselves -- wiring, an in-degree gradient,
+// something structural -- in which case they stay expensive whatever is taught.
+//
+// So: teach a target as far ABOVE rest as /i/ is below it, and block the same two
+// halves. The two accounts predict opposite results and the run cannot come back
+// agreeing with both.
+//
+//   LOW   F1 320, F2 2500   position 0.093   0.406 BELOW rest  (the shipped target)
+//   HIGH  F1 950, F2 2500   position 0.933   0.434 ABOVE rest
+//
+// F2 IS HELD AT 2500 IN BOTH, so the only thing that differs is F1's direction.
+// That also disposes of the echo: the caregiver says /a/ with F2 1180, so no
+// amount of repeating what it hears reaches an F2 of 2500 in either condition --
+// which matters here because [[aibaby-targets-fight-the-echo]] found every naming
+// experiment in this project teaches the inverse of what the creature hears.
+//
+// ONE RESIDUAL ASYMMETRY, stated rather than hidden: the heard word sits at
+// position 0.707, ABOVE rest, so the echo pushes F1 with the high target and
+// against the low one. The COST is a paired difference against `b0` within the
+// same target, so the echo is present in both sides of it and cancels; the
+// per-condition LESSON size is the number it can inflate, and that is why the
+// learnability gate below is stated in absolute terms as well as SE.
+struct BFlipArm { const char* name; float f1; uint32_t count; uint32_t pos; };
+const BFlipArm kBFlipArms[] = {
+    {"lo-b0", 0.0f, 0u, 0u},       // 0 keeps the shipped /i/ target exactly
+    {"lo-top7", 0.0f, 7u, 0u},     // the anchor: must reproduce ~53%
+    {"lo-bot7", 0.0f, 7u, 2u},     // the anchor: must reproduce ~0
+    {"hi-b0", 950.0f, 0u, 0u},
+    {"hi-top7", 950.0f, 7u, 0u},
+    {"hi-bot7", 950.0f, 7u, 2u},
+};
+constexpr uint32_t kBFlipArmCount = sizeof(kBFlipArms) / sizeof(kBFlipArms[0]);
+constexpr float kBFlipHighF2 = 2500.0f;  // = kWords[kRTTarget].f2, so F2 never moves
+
+bool run_blockflip(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  aibaby::Dna dna0;
+  if (dna0.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) {
+    std::printf("  setup failed: the genome does not load\n");
+    return false;
+  }
+  const int32_t vm = dna0.module_with_role(aibaby::ModuleRole::kVocal);
+  if (vm < 0) { std::printf("  this genome has no vocal module\n"); return false; }
+  const uint32_t vcount = dna0.module(uint32_t(vm)).neurons;
+  const uint32_t g_lo = aibaby::slice_begin(vcount, aibaby::kVocalGroups, 2u);
+  const uint32_t g_hi = aibaby::slice_begin(vcount, aibaby::kVocalGroups, 3u);
+  const uint32_t gsize = g_hi - g_lo;
+  const double f1lo = double(dna0.header().vocal.f1_min);
+  const double f1hi = double(dna0.header().vocal.f1_max);
+  const auto posn = [&](double f) { return (f - f1lo) / (f1hi - f1lo); };
+  Regime regime;
+  regime.praise = kPraiseValue;
+  regime.scold = kScoldValue;
+  constexpr uint32_t kReps = 30;
+  instrument("blockflip", dna0.header().seed ^ 0x0B17u, ticks / kRTTrial, "trials");
+
+  std::printf("  question          `leverprobe` found the lesson is learned by SILENCING the\n"
+              "                    upper half of F1. WHY the upper half? The shipped target\n"
+              "                    sits BELOW rest, and dragging a centroid down means\n"
+              "                    suppressing high-position cells. Is the asymmetry the\n"
+              "                    TARGET'S, or do those neurons own it?\n");
+  std::printf("  the two accounts  DIRECTION says teach a target as far ABOVE rest and the\n"
+              "                    asymmetry REVERSES. STRUCTURE says the upper half is\n"
+              "                    privileged in itself and stays expensive either way.\n"
+              "                    They predict opposite signs; both cannot survive.\n");
+  std::printf("\n  THE TWO TARGETS (F2 held at %.0f in both, so only F1 direction differs)\n",
+              double(kBFlipHighF2));
+  std::printf("    rest (untaught centroid)   position 0.499  = %.0f Hz\n",
+              f1lo + 0.499 * (f1hi - f1lo));
+  std::printf("    LOW   F1 %.0f  position %.3f   %.3f BELOW rest  (shipped /i/)\n",
+              double(kWords[kRTTarget].f1), posn(double(kWords[kRTTarget].f1)),
+              0.499 - posn(double(kWords[kRTTarget].f1)));
+  std::printf("    HIGH  F1 %.0f  position %.3f   %.3f ABOVE rest\n", double(kBFlipArms[3].f1),
+              posn(double(kBFlipArms[3].f1)), posn(double(kBFlipArms[3].f1)) - 0.499);
+  std::printf("    heard /a/ F1 %.0f F2 %.0f -- position %.3f, and its F2 is nowhere near\n"
+              "      the target's, so the echo cannot reach either target.\n",
+              double(kWords[kRTHeard].f1), double(kWords[kRTHeard].f2),
+              posn(double(kWords[kRTHeard].f1)));
+
+  std::printf("\n  PRE-REGISTERED, written before the run\n");
+  std::printf("    primary     (bot7 - top7) at the HIGH target, paired on seed.\n");
+  std::printf("      <= -3 SE and the LOW anchor stays positive -> THE ASYMMETRY FOLLOWS\n"
+              "                THE TARGET. Nothing is special about those neurons; the\n"
+              "                lesson recruits whichever half can move the centroid the\n"
+              "                way it is being asked to.\n");
+  std::printf("      >= +3 SE                                   -> DIRECTION REFUSED. The\n"
+              "                upper half is expensive whatever is taught, so the privilege\n"
+              "                is STRUCTURAL -- wiring or in-degree -- and that is a\n"
+              "                different investigation.\n");
+  std::printf("      between                                    -> report, no verdict.\n");
+  std::printf("    anchors     lo-top7 must reproduce ~53%% (accept 35..70) and lo-b0 must\n"
+              "                learn +0.1676-ish (accept 0.10..0.24). Without those this is\n"
+              "                not the creature the earlier costs came from.\n");
+  std::printf("    learnable   hi-b0 must learn >= 0.06 AND >= 3 SE. A target the creature\n"
+              "                cannot learn has no lesson to cost, and the reversal test\n"
+              "                would be measuring noise. If it fails, that is reported as\n"
+              "                an ASYMMETRIC-LEARNABILITY finding, not as a reversal.\n");
+  std::printf("    secondary   the rate profile at BOTH targets, which says WHICH half moves\n"
+              "                and in WHICH direction -- the mechanism, whatever the costs do.\n\n");
+
+  struct Cell { bool ok = false; RTRow row; };
+  const uint32_t njobs = kReps * kBFlipArmCount;
+  const std::vector<Cell> cells = parallel_reps<Cell>(njobs, [&](uint32_t i) {
+    Cell cell;
+    const uint32_t r = i / kBFlipArmCount, a = i % kBFlipArmCount;
+    std::vector<uint8_t> variant = blob;
+    const uint64_t seed = dna0.header().seed + r * 7919ull;
+    std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+    RTConfig cfg;
+    cfg.name = kBFlipArms[a].name;
+    cfg.teach = true;
+    cfg.relearn = true;
+    cfg.mask_mode = kBFlipArms[a].count > 0u ? 4u : 0u;
+    cfg.mask_count = kBFlipArms[a].count;
+    cfg.mask_pos = kBFlipArms[a].pos;
+    if (kBFlipArms[a].f1 > 0.0f) {
+      cfg.first_f1 = kBFlipArms[a].f1;
+      cfg.first_f2 = kBFlipHighF2;
+    }
+    Timbre local_ruler;
+    std::string local_error;
+    if (!local_ruler.configure(dna0.header().audio, local_error)) return cell;
+    bool ok = false;
+    cell.row = run_retain_arm(variant, ticks, cfg, local_ruler, regime, &ok);
+    if (!ok) return cell;
+    cell.ok = true;
+    parallel_note("  [%u/%u] seed %u %-8s before %.4f taught %.4f\n", i + 1, njobs, r,
+                  kBFlipArms[a].name, cell.row.err_before, cell.row.err_taught);
+    return cell;
+  });
+
+  std::printf("\n  %-8s %-12s %-12s %s\n", "arm", "err before", "err taught", "learned");
+  std::vector<double> mean_l(kBFlipArmCount, 0.0), se_l(kBFlipArmCount, 0.0);
+  std::vector<uint32_t> nseed(kBFlipArmCount, 0u);
+  for (uint32_t a = 0; a < kBFlipArmCount; ++a) {
+    std::vector<double> b, t, L;
+    for (uint32_t r = 0; r < kReps; ++r) {
+      const Cell& c = cells[r * kBFlipArmCount + a];
+      if (!c.ok) continue;
+      b.push_back(c.row.err_before); t.push_back(c.row.err_taught);
+      L.push_back(c.row.err_before - c.row.err_taught);
+    }
+    nseed[a] = uint32_t(b.size());
+    if (b.size() < 3) {
+      std::printf("\n  blockflip INCONCLUSIVE -- arm `%s` produced %zu creatures.\n",
+                  kBFlipArms[a].name, b.size());
+      return false;
+    }
+    double se_b = 0.0, se_t = 0.0;
+    const double m_b = ctx_mean_se(b, &se_b);
+    const double m_t = ctx_mean_se(t, &se_t);
+    mean_l[a] = ctx_mean_se(L, &se_l[a]);
+    std::printf("  %-8s %-12.4f %-12.4f %+.4f +/- %.4f\n", kBFlipArms[a].name, m_b, m_t, mean_l[a],
+                se_l[a]);
+  }
+
+  // --- the rate profile at each target, which is the mechanism ---------------
+  const auto profile = [&](uint32_t a) {
+    std::vector<double> ch(gsize, 0.0);
+    double cent = 0.0;
+    uint32_t n = 0;
+    for (uint32_t r = 0; r < kReps; ++r) {
+      const Cell& c = cells[r * kBFlipArmCount + a];
+      if (!c.ok || c.row.f1_n != gsize) continue;
+      if (c.row.f1_samp_early == 0 || c.row.f1_samp_late == 0) continue;
+      ++n;
+      for (uint32_t k = 0; k < gsize; ++k) {
+        ch[k] += c.row.f1_rate_late[k] / double(c.row.f1_samp_late) -
+                 c.row.f1_rate_early[k] / double(c.row.f1_samp_early);
+      }
+      if (c.row.f1_samp_all > 0) cent += c.row.f1_cent_teach / double(c.row.f1_samp_all);
+    }
+    if (n > 0) {
+      for (uint32_t k = 0; k < gsize; ++k) ch[k] /= double(n);
+      cent /= double(n);
+    }
+    ch.push_back(cent);
+    return ch;
+  };
+  const std::vector<double> plo = profile(0), phi = profile(3);
+  std::printf("\n  THE RATE PROFILE, Hz change over teaching, unblocked arms\n");
+  std::printf("    %-3s %-9s %-12s %-12s\n", "k", "position", "LOW target", "HIGH target");
+  for (uint32_t k = 0; k < gsize; ++k) {
+    std::printf("    %-3u %-9.3f %+-12.4f %+-12.4f\n", k, (double(k) + 0.5) / double(gsize),
+                plo[k], phi[k]);
+  }
+  double net_lo_up = 0.0, net_lo_dn = 0.0, net_hi_up = 0.0, net_hi_dn = 0.0;
+  for (uint32_t k = 0; k < gsize; ++k) {
+    if (k >= gsize / 2u) { net_lo_up += plo[k]; net_hi_up += phi[k]; }
+    else { net_lo_dn += plo[k]; net_hi_dn += phi[k]; }
+  }
+  std::printf("    net lower half   LOW %+.3f Hz   HIGH %+.3f Hz\n", net_lo_dn, net_hi_dn);
+  std::printf("    net upper half   LOW %+.3f Hz   HIGH %+.3f Hz\n", net_lo_up, net_hi_up);
+  std::printf("    centroid over teaching   LOW %.4f   HIGH %.4f   (untaught rest 0.4993)\n",
+              plo[gsize], phi[gsize]);
+
+  {
+    ArmLiveness live("blockflip");
+    for (uint32_t r = 0; r < kReps; ++r) {
+      for (uint32_t a = 0; a < kBFlipArmCount; ++a) {
+        const Cell& c = cells[r * kBFlipArmCount + a];
+        if (c.ok) live.observe(kBFlipArms[a].name, r, c.row.err_taught);
+      }
+    }
+    if (!live.report("lo-b0")) return false;
+  }
+
+  const auto paired = [&](uint32_t x, uint32_t y, double* se) {
+    std::vector<double> d;
+    for (uint32_t r = 0; r < kReps; ++r) {
+      const Cell& cx = cells[r * kBFlipArmCount + x];
+      const Cell& cy = cells[r * kBFlipArmCount + y];
+      if (cx.ok && cy.ok) {
+        d.push_back((cx.row.err_before - cx.row.err_taught) -
+                    (cy.row.err_before - cy.row.err_taught));
+      }
+    }
+    return d.size() >= 3 ? ctx_mean_se(d, se) : 0.0;
+  };
+
+  std::printf("\n  THE COST OF BLOCKING EACH HALF, paired on seed against its OWN b0\n");
+  double pct[kBFlipArmCount] = {};
+  for (uint32_t a = 0; a < kBFlipArmCount; ++a) {
+    if (kBFlipArms[a].count == 0u) continue;
+    const uint32_t base = a < 3u ? 0u : 3u;
+    double se = 0.0;
+    const double c = paired(a, base, &se);
+    pct[a] = mean_l[base] != 0.0 ? 100.0 * (-c / mean_l[base]) : 0.0;
+    std::printf("    %-8s %+.4f +/- %.4f  (%+.1f SE)   %.0f%% of its lesson\n", kBFlipArms[a].name,
+                c, se, se > 0.0 ? c / se : 0.0, pct[a]);
+  }
+
+  double se_lo = 0.0, se_hi = 0.0;
+  const double d_lo = paired(2u, 1u, &se_lo);  // lo: bot7 - top7
+  const double d_hi = paired(5u, 4u, &se_hi);  // hi: bot7 - top7
+  std::printf("\n  THE PRIMARY: (bot7 - top7), positive = the LOWER half is cheaper to block\n");
+  std::printf("    LOW  target  %+.4f +/- %.4f  (%+.1f SE)\n", d_lo, se_lo,
+              se_lo > 0.0 ? d_lo / se_lo : 0.0);
+  std::printf("    HIGH target  %+.4f +/- %.4f  (%+.1f SE)\n", d_hi, se_hi,
+              se_hi > 0.0 ? d_hi / se_hi : 0.0);
+
+  std::printf("\n  --- the verdict ---\n");
+  const double t_lo = se_lo > 0.0 ? d_lo / se_lo : 0.0;
+  const double t_hi = se_hi > 0.0 ? d_hi / se_hi : 0.0;
+  if (mean_l[0] < 0.10 || mean_l[0] > 0.24 || pct[1] < 35.0 || pct[1] > 70.0) {
+    std::printf("  blockflip REFUSED -- THE ANCHOR DOES NOT REPRODUCE. lo-b0 learned %+.4f\n"
+                "  (want 0.10..0.24) and lo-top7 cost %.0f%% (want 35..70, `blockanchor`\n"
+                "  measured 53%%). This is not the creature the earlier costs came from, so\n"
+                "  nothing here can be read against them.\n", mean_l[0], pct[1]);
+    return false;
+  }
+  if (mean_l[3] < 0.06 || (se_l[3] > 0.0 && mean_l[3] / se_l[3] < 3.0)) {
+    std::printf("  ASYMMETRIC LEARNABILITY, and the reversal test is INCONCLUSIVE. The high\n"
+                "  target was learned %+.4f +/- %.4f (%.1f SE) against the low target's\n"
+                "  %+.4f. A lesson that small has no cost to measure, so the primary below\n"
+                "  is reported for the record and nothing is concluded from it.\n",
+                mean_l[3], se_l[3], se_l[3] > 0.0 ? mean_l[3] / se_l[3] : 0.0, mean_l[0]);
+    std::printf("  THAT IS ITSELF A RESULT: the larynx can be taught DOWN from rest and not\n"
+                "  UP, which fits a profile learned by SILENCING cells -- suppression is\n"
+                "  available and excitation is not. It would make the upper half expensive\n"
+                "  for a reason neither account stated.\n");
+    return true;
+  }
+  if (t_hi <= -3.0 && t_lo >= 3.0) {
+    std::printf("  THE ASYMMETRY FOLLOWS THE TARGET. (bot7-top7) is %+.1f SE at the low\n"
+                "  target and %+.1f SE at the high one -- the same two blocks, opposite\n"
+                "  signs. Nothing is special about the upper cells: the lesson recruits\n"
+                "  whichever half can move the centroid the way it is being asked to.\n",
+                t_lo, t_hi);
+    std::printf("  SO WRITE SEPARATION HAS A ROUTE THAT NEEDS NO MASK. Two lessons with\n"
+                "  targets on OPPOSITE sides of rest recruit DIFFERENT halves. That is the\n"
+                "  F1-internal version of `capacity`'s orthogonal case, and it is the first\n"
+                "  time this chapter has pointed at something buildable rather than at a\n"
+                "  readout to redesign.\n");
+  } else if (t_hi >= 3.0) {
+    std::printf("  DIRECTION REFUSED. (bot7-top7) is %+.1f SE at the HIGH target, the same\n"
+                "  sign as the low target's %+.1f: the upper half is expensive whatever is\n"
+                "  taught. The privilege belongs to those neurons, not to the target, and\n"
+                "  the next question is structural -- in-degree, or where the tract lands.\n",
+                t_hi, t_lo);
+    std::printf("  It also RE-OPENS the decoder fix `blockanchor` proposed and `leverprobe`\n"
+                "  set aside, because a structural gradient is what a uniform readout would\n"
+                "  be for.\n");
+  } else {
+    std::printf("  NO VERDICT: (bot7-top7) is %+.1f SE at the high target, inside the +/-3 SE\n"
+                "  band. The low anchor reads %+.1f SE. Reported, nothing concluded.\n",
+                t_hi, t_lo);
+  }
+  std::printf("\n  READ THE PROFILE ABOVE WHATEVER THE COSTS DID: which half moves, and in\n"
+              "  which direction, is the mechanism and it does not depend on the gate.\n");
+  return true;
+}
+
 bool run_movability(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
   (void)verbose;
   Regime regime;

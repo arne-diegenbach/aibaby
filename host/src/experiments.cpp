@@ -328,6 +328,14 @@ const Spec kSpecs[] = {
      "  the thing that should actually predict a block's cost: how much each\n"
      "  neuron's rate MOVES while the lesson is learned. Read-only. stageprobe\n"
      "  predicts a FLAT profile, which refuses the rate account too. 12 seeds"},
+    {"blockflip", 5600000, Expect::kOpen, Tier::kLong,
+     "DOES THE ASYMMETRY FOLLOW THE TARGET? leverprobe found the lesson is\n"
+     "  learned by SILENCING the upper half of F1 -- but the shipped target sits\n"
+     "  BELOW rest, and dragging a centroid down means suppressing high-position\n"
+     "  cells. Teach a target as far ABOVE rest and block the same two halves.\n"
+     "  DIRECTION predicts the asymmetry reverses; STRUCTURE predicts the upper\n"
+     "  half stays expensive. Opposite signs, both cannot survive. F2 is held\n"
+     "  constant so only F1 direction differs. 30 seeds"},
     {"movability", 5600000, Expect::kOpen, Tier::kLong,
      "orthovocab left a LEAD: on identical demands the F2 lesson travelled\n"
      "  0.169 and the F1 lesson 0.030 -- but F1's was FIGHTING another lesson on\n"
@@ -669,6 +677,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "blockwhere") ok = run_blockwhere(dna_blob, ticks, verbose);
   else if (name == "blockanchor") ok = run_blockanchor(dna_blob, ticks, verbose);
   else if (name == "leverprobe") ok = run_leverprobe(dna_blob, ticks, verbose);
+  else if (name == "blockflip") ok = run_blockflip(dna_blob, ticks, verbose);
   else if (name == "partprobe") ok = run_partprobe(dna_blob, ticks, verbose);
   else if (name == "pgprobe") ok = run_pgprobe(dna_blob, ticks, verbose);
   else if (name == "g2cond") ok = run_g2cond(dna_blob, ticks, verbose);

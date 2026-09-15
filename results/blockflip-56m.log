@@ -1,0 +1,42 @@
+experiment: blockflip
+  instrument        blockflip   trial seed 0000000001352cde   2000 trials
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  question          `leverprobe` found the lesson is learned by SILENCING the
+                    upper half of F1. WHY the upper half? The shipped target
+                    sits BELOW rest, and dragging a centroid down means
+                    suppressing high-position cells. Is the asymmetry the
+                    TARGET'S, or do those neurons own it?
+  the two accounts  DIRECTION says teach a target as far ABOVE rest and the
+                    asymmetry REVERSES. STRUCTURE says the upper half is
+                    privileged in itself and stays expensive either way.
+                    They predict opposite signs; both cannot survive.
+
+  THE TWO TARGETS (F2 held at 2500 in both, so only F1 direction differs)
+    rest (untaught centroid)   position 0.499  = 624 Hz
+    LOW   F1 320  position 0.093   0.406 BELOW rest  (shipped /i/)
+    HIGH  F1 950  position 0.933   0.434 ABOVE rest
+    heard /a/ F1 780 F2 1180 -- position 0.707, and its F2 is nowhere near
+      the target's, so the echo cannot reach either target.
+
+  PRE-REGISTERED, written before the run
+    primary     (bot7 - top7) at the HIGH target, paired on seed.
+      <= -3 SE and the LOW anchor stays positive -> THE ASYMMETRY FOLLOWS
+                THE TARGET. Nothing is special about those neurons; the
+                lesson recruits whichever half can move the centroid the
+                way it is being asked to.
+      >= +3 SE                                   -> DIRECTION REFUSED. The
+                upper half is expensive whatever is taught, so the privilege
+                is STRUCTURAL -- wiring or in-degree -- and that is a
+                different investigation.
+      between                                    -> report, no verdict.
+    anchors     lo-top7 must reproduce ~53% (accept 35..70) and lo-b0 must
+                learn +0.1676-ish (accept 0.10..0.24). Without those this is
+                not the creature the earlier costs came from.
+    learnable   hi-b0 must learn >= 0.06 AND >= 3 SE. A target the creature
+                cannot learn has no lesson to cost, and the reversal test
+                would be measuring noise. If it fails, that is reported as
+                an ASYMMETRIC-LEARNABILITY finding, not as a reversal.
+    secondary   the rate profile at BOTH targets, which says WHICH half moves
+                and in WHICH direction -- the mechanism, whatever the costs do.
+
