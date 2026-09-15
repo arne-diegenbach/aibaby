@@ -1812,6 +1812,12 @@ void Network::step() {
       // the module predictable rather than mute. At explore_mult_ == 1 the
       // second term is exactly zero and this is the original expression.
       const Scalar xi = rng_->signed_uniform();
+      // THE DRAW HAPPENS REGARDLESS, and only its effect is removed. Skipping
+      // the draw would shift every subsequent random number and make a blocked
+      // run a different creature for a reason that has nothing to do with
+      // exploration -- see the note on appended modules re-rolling the noise.
+      const Scalar xi_eff =
+          (explore_block_ && i >= eb_lo_ && i < eb_hi_) ? kZero : xi;
       // Normalisation divides the synaptic drive only. Noise is this creature's
       // motor source as much as its jitter (see DnaExploration), and bias is
       // node perturbation's learned excitability — dividing either by how busy
@@ -1872,14 +1878,14 @@ void Network::step() {
       // here. It is one population of cells, and it inhibits one compartment.
       const Scalar ffi_soma = ffi_apical_[m] ? kZero : ffi;
       const Scalar drive = (in[i] * norm - ffi_soma * ffi_w_[i]) * apical_mult +
-                           noise_amp_[i] * (explore_mult_[m] * xi +
+                           noise_amp_[i] * (explore_mult_[m] * xi_eff +
                                             drive_comp_ * (kOne - explore_mult_[m])) +
                            bias_[i] + ctx_bias + osc + lateral + rebound + bias_oracle;
 
       // Node perturbation: remember what this neuron was actually given, so
       // that a reward arriving a second from now can credit it. Decays on the
       // reward's own timescale, not the membrane's.
-      perturb_[i] = perturb_[i] * perturb_decay_ + xi;
+      perturb_[i] = perturb_[i] * perturb_decay_ + xi_eff;
       in[i] = kZero;  // drain as we go; this slot is reused delay_slots_ ticks from now
 
       bool spiked = false;

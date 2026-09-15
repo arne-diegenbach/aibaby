@@ -1,0 +1,19 @@
+experiment: compartprobe
+  instrument        compartprobe   trial seed 0000000001352bc0   2000 trials
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  question          `mask-unaffordable` says blocking a quarter of the F1
+                    group costs 59% of the lesson, for TWO reasons it could
+                    not separate: blocked neurons still PERTURB, and they are
+                    still READ. Which one is it?
+  why it matters    a separate readout -- the mushroom body's motif, one
+                    population read and taught independently per compartment
+                    -- removes both. That build changes the larynx decoder,
+                    which is a transducer, so it wants a number first.
+  the decomposition `set_explore_block` silences exploration on a range
+                    without touching anything else. Freeze alone is (a)+(b);
+                    freeze AND silence is (b). The difference is (a), exactly.
+  the refusal       if `w75` costs nothing against `w100`, this genome is not
+                    reproducing the condition and there is no cost to split.
+                    36 seeds.
+

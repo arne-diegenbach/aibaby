@@ -285,6 +285,15 @@ const Spec kSpecs[] = {
      "  songbird rule -- the threshold is set from the bird's pitch\n"
      "  distribution. A null here is unambiguous and exhausts the protocol\n"
      "  account. 36 seeds"},
+    {"compartprobe", 5600000, Expect::kOpen, Tier::kLong,
+     "GATES a decoder build instead of starting it. mask-unaffordable says\n"
+     "  blocking a quarter of the F1 group costs 59% of the lesson, for two\n"
+     "  reasons it could not separate: blocked neurons still PERTURB, and they\n"
+     "  are still READ. set_explore_block silences exploration on a range\n"
+     "  without touching anything else, so freeze alone is (a)+(b) and freeze\n"
+     "  plus silence is (b) -- the difference is (a), exactly. If the noise is\n"
+     "  most of it, a per-compartment readout removes precisely that and the\n"
+     "  build is worth its cost. 36 seeds"},
     {"movability", 5600000, Expect::kOpen, Tier::kLong,
      "orthovocab left a LEAD: on identical demands the F2 lesson travelled\n"
      "  0.169 and the F1 lesson 0.030 -- but F1's was FIGHTING another lesson on\n"
@@ -621,6 +630,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "absbar") ok = run_absbar(dna_blob, ticks, verbose);
   else if (name == "staircase") ok = run_staircase(dna_blob, ticks, verbose);
   else if (name == "chase") ok = run_chase(dna_blob, ticks, verbose);
+  else if (name == "compartprobe") ok = run_compartprobe(dna_blob, ticks, verbose);
   else if (name == "partprobe") ok = run_partprobe(dna_blob, ticks, verbose);
   else if (name == "pgprobe") ok = run_pgprobe(dna_blob, ticks, verbose);
   else if (name == "g2cond") ok = run_g2cond(dna_blob, ticks, verbose);

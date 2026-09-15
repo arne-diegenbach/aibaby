@@ -130,6 +130,25 @@ class Network {
   }
   void clear_reward_block() { reward_block_ = false; }
 
+  // EXPERIMENT ORACLE, off by default. Silences the EXPLORATION NOISE on a range
+  // of neurons -- they still fire, still project, and are still read, but they no
+  // longer inject the perturbation that node perturbation rides on.
+  //
+  // WHY IT EXISTS. `mask-unaffordable` found that blocking plasticity on a
+  // quarter of the F1 group costs 59% of the lesson, and named two reasons:
+  // blocked neurons still PERTURB, and they are still READ by the shared
+  // centroid. Those imply different fixes and the run could not tell them apart.
+  // Blocking plasticity and silencing exploration together isolates the second,
+  // because the difference between the two conditions is exactly the first.
+  //
+  // This is NOT `set_reward_block`'s job and must not be folded into it: one
+  // stops a neuron LEARNING, this stops it EXPLORING, and a neuron can do either
+  // without the other.
+  void set_explore_block(uint32_t lo, uint32_t hi) {
+    explore_block_ = true; eb_lo_ = lo; eb_hi_ = hi;
+  }
+  void clear_explore_block() { explore_block_ = false; }
+
   // --- The bias oracle (experiment only, no genome field) -------------------
   //
   // A graded, zero-mean excitability offset across a range of neurons, added to
@@ -708,6 +727,8 @@ class Network {
 
   bool reward_mask_ = false;   // see set_reward_mask: experiment oracle, off by default
   bool reward_block_ = false;  // see set_reward_block: the complement, also off by default
+  bool explore_block_ = false; // see set_explore_block: silences exploration, off by default
+  uint32_t eb_lo_ = 0, eb_hi_ = 0;
   uint32_t rb_lo_ = 0, rb_hi_ = 0;
   uint32_t rm_lo_ = 0, rm_hi_ = 0;
   // see set_bias_oracle. `bias_oracle_n_ == 0` is the shipped creature and the

@@ -5750,6 +5750,13 @@ struct RTConfig {
   // kWords[kRTTarget] so every existing arm is bit-identical.
   float first_f1 = 0.0f;
   float first_f2 = 0.0f;
+  // AT THE END, per the note above. `compartprobe`: also silence the EXPLORATION
+  // NOISE on the blocked range, not only its plasticity. `mask-unaffordable`
+  // named two reasons a blocked neuron still costs the lesson -- it still
+  // PERTURBS, and it is still READ by the shared centroid -- and could not tell
+  // them apart. Blocking both isolates the second, because the difference
+  // between the two conditions is exactly the first. false is bit-identical.
+  bool explore_block = false;
 };
 
 // One arm, one creature, one life: teach, intervene, re-measure.
@@ -5995,10 +6002,18 @@ RTRow run_retain_arm(const std::vector<uint8_t>& blob, uint64_t ticks,
             // other eight alone, which is what "confine this lesson" meant.
             const uint32_t w = uint32_t(double(g_hi - g_lo) * double(cfg.mask_width));
             const uint32_t hi_w = g_lo + (w < 2u ? 2u : w);
-            if (hi_w < g_hi) mnet.set_reward_block(vm.begin + hi_w, vm.begin + g_hi);
-            else mnet.clear_reward_block();
+            if (hi_w < g_hi) {
+              mnet.set_reward_block(vm.begin + hi_w, vm.begin + g_hi);
+              // `compartprobe`: the same range, silenced as well as frozen.
+              if (cfg.explore_block) mnet.set_explore_block(vm.begin + hi_w, vm.begin + g_hi);
+              else mnet.clear_explore_block();
+            } else {
+              mnet.clear_reward_block();
+              mnet.clear_explore_block();
+            }
           } else {
             mnet.clear_reward_block();
+            mnet.clear_explore_block();
           }
         } else if (upper) {
           mnet.set_reward_mask(vm.begin + mid, vm.begin + g_hi);
@@ -8240,6 +8255,277 @@ bool run_chase(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
               "  independent attempts to exploit it have now failed, one of them by making\n"
               "  things worse.\n",
               se_d > 0.0 ? m_d / se_d : 0.0, m_cs, mean_d[0], mean_d[2]);
+  return false;
+}
+
+// `compartprobe` -- GATES an expensive build instead of starting it.
+//
+// THE LEAD, AND WHY IT NEEDED REFORMULATING. The fly's mushroom body puts 15
+// compartments along one Kenyon cell axon, each with its own dopaminergic
+// teaching signal and its own output neuron, so the SAME cells are read and
+// taught independently in parallel. Set against `mask-unaffordable` -- write
+// separation by restricting plasticity is refused here, because blocking a
+// quarter of the F1 group costs 59% of the lesson -- that motif looks like the
+// missing piece: separation in the READOUT rather than in which neurons may
+// change.
+//
+// But the straight translation does not survive what is already measured. Two
+// lessons that want DIFFERENT VALUES OF THE SAME SCALAR collide at the output
+// however many compartments exist, unless the context selects the compartment --
+// and `ctxretain` already refused context selection with a PERFECT index. The
+// fly's compartments drive different behaviours; both of ours drive F1.
+//
+// WHAT DOES SURVIVE is the specific mechanism `mask-unaffordable` named. It gave
+// two reasons a blocked neuron still costs the lesson:
+//
+//   (a) it still PERTURBS -- its exploration noise still enters the shared
+//       centroid, so the learning neurons are fighting noise from neurons that
+//       cannot learn;
+//   (b) it is still READ -- its rate still sits in the centroid's denominator,
+//       diluting the reachable range.
+//
+// A separate readout removes BOTH. The build is expensive -- it changes the
+// larynx decoder, which is a transducer with explicit warnings attached -- so
+// the number that gates it is how the 59% SPLITS. This probe measures that, and
+// it needs one new core call rather than a new decoder.
+//
+// THE DECOMPOSITION. `set_explore_block` silences the exploration noise on a
+// range without touching anything else: those neurons still fire, still project
+// and are still read. So blocking plasticity ALONE is condition (a)+(b), and
+// blocking plasticity AND exploration is (b) alone. The difference is (a),
+// exactly.
+//
+//   w100    nothing blocked -- the reference lesson.
+//   w75     top 25% of the F1 group frozen.          (a)+(b)
+//   w75q    the same range frozen AND silenced.      (b)
+//   w50     top 50% frozen.                          (a)+(b)
+//   w50q    the same range frozen AND silenced.      (b)
+//
+// WHAT EACH OUTCOME BUYS, written before the run:
+//   * if quieting recovers MOST of what blocking cost, the damage is (a) --
+//     blocked neurons injecting noise into a shared readout. A separate readout
+//     removes precisely that, and the decoder build is worth its cost.
+//   * if quieting recovers LITTLE, the damage is (b) -- dilution by neurons that
+//     are merely present. A separate readout still removes it, but so does any
+//     cheaper change that shrinks the denominator, and the expensive version is
+//     not the way to buy it.
+//   * if quieting makes it WORSE, exploration on the blocked neurons was helping
+//     the lesson rather than hurting it, which would refute the premise of the
+//     whole separation line -- a blocked neuron would be a CONTRIBUTOR, not a
+//     cost, and `mask-unaffordable`'s account would need rewriting.
+//
+// THE REFUSALS, WRITTEN FIRST:
+//   * if `w100` does not beat the untaught baseline the reference lesson did not
+//     happen and no cost can be read against it.
+//   * if `w75` does not cost anything relative to `w100`, this genome is not
+//     reproducing `mask-unaffordable`'s condition and the decomposition is of
+//     nothing. Refuse rather than divide by a cost that is not there.
+//   * 2-3 SE is a HYPOTHESIS at this n, not a finding, and prints as one.
+struct CPArm { const char* name; float width; bool quiet; };
+const CPArm kCPArms[] = {
+    {"w100",  1.00f, false},
+    {"w75",   0.75f, false},
+    {"w75q",  0.75f, true},
+    {"w50",   0.50f, false},
+    {"w50q",  0.50f, true},
+};
+constexpr uint32_t kCPArmCount = sizeof(kCPArms) / sizeof(kCPArms[0]);
+
+bool run_compartprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  aibaby::Dna dna0;
+  if (dna0.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) {
+    std::printf("  setup failed: the genome does not load\n");
+    return false;
+  }
+  Regime regime;
+  regime.praise = kPraiseValue;
+  regime.scold = kScoldValue;
+  constexpr uint32_t kReps = 36;
+  instrument("compartprobe", dna0.header().seed ^ 0x0C09u, ticks / kRTTrial, "trials");
+  std::printf("  question          `mask-unaffordable` says blocking a quarter of the F1\n"
+              "                    group costs 59%% of the lesson, for TWO reasons it could\n"
+              "                    not separate: blocked neurons still PERTURB, and they are\n"
+              "                    still READ. Which one is it?\n");
+  std::printf("  why it matters    a separate readout -- the mushroom body's motif, one\n"
+              "                    population read and taught independently per compartment\n"
+              "                    -- removes both. That build changes the larynx decoder,\n"
+              "                    which is a transducer, so it wants a number first.\n");
+  std::printf("  the decomposition `set_explore_block` silences exploration on a range\n"
+              "                    without touching anything else. Freeze alone is (a)+(b);\n"
+              "                    freeze AND silence is (b). The difference is (a), exactly.\n");
+  std::printf("  the refusal       if `w75` costs nothing against `w100`, this genome is not\n"
+              "                    reproducing the condition and there is no cost to split.\n"
+              "                    %u seeds.\n\n", kReps);
+
+  struct Cell { bool ok = false; RTRow row; };
+  const uint32_t njobs = kReps * kCPArmCount;
+  const std::vector<Cell> cells = parallel_reps<Cell>(njobs, [&](uint32_t i) {
+    Cell cell;
+    const uint32_t r = i / kCPArmCount, a = i % kCPArmCount;
+    std::vector<uint8_t> variant = blob;
+    const uint64_t seed = dna0.header().seed + r * 7919ull;
+    std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+    // BUILT BY NAME, NOT POSITIONALLY. The arm tables elsewhere in this file use
+    // positional aggregate initialisers and that already shifted one field's
+    // value into another silently; with `explore_block` appended at the end of
+    // RTConfig a positional table here would need every intervening field spelled
+    // out in order, which is the same accident waiting to happen.
+    RTConfig cfg;
+    cfg.name = kCPArms[a].name;
+    cfg.teach = true;
+    cfg.relearn = true;
+    cfg.mask_mode = kCPArms[a].width >= 1.0f ? 0u : 4u;
+    cfg.mask_width = kCPArms[a].width;
+    cfg.explore_block = kCPArms[a].quiet;
+    Timbre local_ruler;
+    std::string local_error;
+    if (!local_ruler.configure(dna0.header().audio, local_error)) return cell;
+    bool ok = false;
+    cell.row = run_retain_arm(variant, ticks, cfg, local_ruler, regime, &ok);
+    if (!ok) return cell;
+    cell.ok = true;
+    parallel_note("  [%u/%u] seed %u %-6s before %.4f taught %.4f\n", i + 1, njobs, r,
+                  kCPArms[a].name, cell.row.err_before, cell.row.err_taught);
+    return cell;
+  });
+
+  // THE LESSON'S STRENGTH is how far the taught error fell BELOW the untaught
+  // one on the same creature. A raw `err_taught` would confound the lesson with
+  // wherever that seed happened to start -- the correction `retention` needed.
+  const auto learned = [&](uint32_t a, std::vector<double>* out) {
+    out->clear();
+    for (uint32_t r = 0; r < kReps; ++r) {
+      const Cell& c = cells[r * kCPArmCount + a];
+      if (c.ok) out->push_back(c.row.err_before - c.row.err_taught);
+    }
+  };
+  std::printf("\n  %-7s %-12s %-12s %s\n", "arm", "err before", "err taught", "learned (before-taught)");
+  std::vector<double> mean_l(kCPArmCount, 0.0), se_l(kCPArmCount, 0.0);
+  std::vector<std::vector<double>> L(kCPArmCount);
+  for (uint32_t a = 0; a < kCPArmCount; ++a) {
+    std::vector<double> b, t;
+    for (uint32_t r = 0; r < kReps; ++r) {
+      const Cell& c = cells[r * kCPArmCount + a];
+      if (!c.ok) continue;
+      b.push_back(c.row.err_before);
+      t.push_back(c.row.err_taught);
+    }
+    if (b.size() < 3) {
+      std::printf("\n  compartprobe INCONCLUSIVE -- arm `%s` produced %zu creatures.\n",
+                  kCPArms[a].name, b.size());
+      return false;
+    }
+    learned(a, &L[a]);
+    double se_b = 0.0, se_t = 0.0;
+    const double m_b = ctx_mean_se(b, &se_b);
+    const double m_t = ctx_mean_se(t, &se_t);
+    mean_l[a] = ctx_mean_se(L[a], &se_l[a]);
+    std::printf("  %-7s %-12.4f %-12.4f %+.4f +/- %.4f\n", kCPArms[a].name, m_b, m_t,
+                mean_l[a], se_l[a]);
+  }
+
+  {
+    ArmLiveness live("compartprobe");
+    for (uint32_t r = 0; r < kReps; ++r) {
+      for (uint32_t a = 0; a < kCPArmCount; ++a) {
+        const Cell& c = cells[r * kCPArmCount + a];
+        if (c.ok) live.observe(kCPArms[a].name, r, c.row.err_taught);
+      }
+    }
+    if (!live.report("w100")) return false;
+  }
+
+  if (!(se_l[0] > 0.0 && mean_l[0] > 2.0 * se_l[0])) {
+    std::printf("\n  compartprobe REFUSED -- THE REFERENCE LESSON DID NOT HAPPEN (%+.1f SE\n"
+                "  for `w100`). With no lesson there is no cost to decompose.\n",
+                se_l[0] > 0.0 ? mean_l[0] / se_l[0] : 0.0);
+    return false;
+  }
+
+  const auto paired = [&](uint32_t x, uint32_t y, double* se) {
+    std::vector<double> d;
+    for (uint32_t r = 0; r < kReps; ++r) {
+      const Cell& cx = cells[r * kCPArmCount + x];
+      const Cell& cy = cells[r * kCPArmCount + y];
+      if (cx.ok && cy.ok) {
+        d.push_back((cx.row.err_before - cx.row.err_taught) -
+                    (cy.row.err_before - cy.row.err_taught));
+      }
+    }
+    return d.size() >= 3 ? ctx_mean_se(d, se) : 0.0;
+  };
+
+  std::printf("\n  WHAT BLOCKING COSTS, paired on seed (negative = the lesson got weaker)\n");
+  double se_75 = 0.0, se_50 = 0.0;
+  const double c75 = paired(1u, 0u, &se_75);
+  const double c50 = paired(3u, 0u, &se_50);
+  std::printf("    w75  - w100  %+.4f +/- %.4f  (%+.1f SE)\n", c75, se_75,
+              se_75 > 0.0 ? c75 / se_75 : 0.0);
+  std::printf("    w50  - w100  %+.4f +/- %.4f  (%+.1f SE)\n", c50, se_50,
+              se_50 > 0.0 ? c50 / se_50 : 0.0);
+  if (!(se_75 > 0.0 && c75 < -2.0 * se_75)) {
+    std::printf("\n  compartprobe REFUSED -- BLOCKING COSTS NOTHING HERE (%+.1f SE), so this\n"
+                "  genome is not reproducing `mask-unaffordable`'s condition and there is no\n"
+                "  59%% to split. That disagreement is the thing to chase, not this\n"
+                "  decomposition: the same block on the same group should cost the same.\n",
+                se_75 > 0.0 ? c75 / se_75 : 0.0);
+    return false;
+  }
+
+  std::printf("\n  WHAT SILENCING RECOVERS, paired on seed (positive = quieting helped)\n");
+  double se_q75 = 0.0, se_q50 = 0.0;
+  const double q75 = paired(2u, 1u, &se_q75);
+  const double q50 = paired(4u, 3u, &se_q50);
+  const double rec75 = c75 != 0.0 ? 100.0 * (-q75 / c75) : 0.0;
+  const double rec50 = c50 != 0.0 ? 100.0 * (-q50 / c50) : 0.0;
+  std::printf("    w75q - w75   %+.4f +/- %.4f  (%+.1f SE)   %.0f%% of what blocking cost\n",
+              q75, se_q75, se_q75 > 0.0 ? q75 / se_q75 : 0.0, -rec75);
+  std::printf("    w50q - w50   %+.4f +/- %.4f  (%+.1f SE)   %.0f%% of what blocking cost\n",
+              q50, se_q50, se_q50 > 0.0 ? q50 / se_q50 : 0.0, -rec50);
+
+  const bool up75 = se_q75 > 0.0 && q75 > 2.0 * se_q75;
+  const bool dn75 = se_q75 > 0.0 && q75 < -2.0 * se_q75;
+  if (dn75) {
+    std::printf("\n  SILENCING MAKES IT WORSE (%.1f SE), WHICH REFUTES THE PREMISE. The\n"
+                "  exploration noise of neurons that cannot learn was HELPING the lesson,\n"
+                "  not costing it -- a blocked neuron is a contributor rather than a drag.\n"
+                "  `mask-unaffordable`'s account of its own 59%% needs rewriting, and a\n"
+                "  separate readout would REMOVE something the lesson is using. Do not\n"
+                "  build the decoder; find out what that noise is doing first.\n",
+                -q75 / se_q75);
+    return false;
+  }
+  if (up75 && -rec75 > 50.0) {
+    std::printf("\n  THE DAMAGE IS THE NOISE, AND A SEPARATE READOUT REMOVES IT. Silencing\n"
+                "  the blocked neurons recovers %.0f%% of what blocking cost (%.1f SE) --\n"
+                "  so most of the price of confining a lesson is paid to neurons that\n"
+                "  cannot learn but still perturb the shared centroid. That is exactly what\n"
+                "  a per-compartment readout removes, because compartment 0's readout does\n"
+                "  not contain compartment 1's neurons at all. BUILD THE DECODER.\n",
+                -rec75, q75 / se_q75);
+    return true;
+  }
+  if (up75) {
+    std::printf("\n  THE NOISE IS PART OF IT, BUT NOT MOST OF IT (%.0f%%, %.1f SE). Silencing\n"
+                "  recovers a real but minority share, so the rest of the cost is DILUTION:\n"
+                "  neurons that are merely present in the centroid's denominator. A separate\n"
+                "  readout removes both, but so does anything cheaper that shrinks the\n"
+                "  denominator, and the decoder build is not the way to buy this much.\n",
+                -rec75, q75 / se_q75);
+    return false;
+  }
+  std::printf("\n  SILENCING CHANGES NOTHING (%+.1f SE). The cost of confining a lesson is\n"
+              "  NOT the blocked neurons' perturbation -- it is that they are READ at all:\n"
+              "  their rate sits in the centroid's denominator and dilutes the reachable\n"
+              "  range whether they explore or not. `mask-unaffordable`'s first reason is\n"
+              "  refused and its second stands alone.\n"
+              "\n"
+              "  THAT IS STILL AN ANSWER ABOUT THE READOUT, and it points at a cheaper\n"
+              "  build than the fly's: what the lesson needs is a SMALLER DENOMINATOR, not\n"
+              "  an independently taught one. A compartment readout would work, and so\n"
+              "  would anything that stops the non-participating half being summed.\n",
+              se_q75 > 0.0 ? q75 / se_q75 : 0.0);
   return false;
 }
 
