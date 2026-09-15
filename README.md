@@ -10250,20 +10250,49 @@ point.** Separation needs both halves working *at once*, one lesson in each, and
 the half without the leverage is crippled. "Confining a lesson is unaffordable"
 becomes **"only one lesson can have the leverage."**
 
-**And the fix is the decoder, not the teaching.** `read_group` is a rate-weighted
-mean over a contiguous slice, so a neuron's influence is
-`(preferred_i − value)/Σw` — **zero at the centroid, growing with distance from
-it.** A contiguous half therefore cannot be equal to its complement, by
-construction. Uniform leverage would need a position map that is not monotone in
-index, or a readout that is not a weighted mean over a contiguous slice.
+**This pointed at the decoder.** `read_group` is a rate-weighted mean over a
+contiguous slice, so a neuron's influence is `(preferred_i − value)/Σw` — **zero
+at the centroid, growing with distance from it.** A contiguous half therefore
+cannot be equal to its complement, by construction. Uniform leverage would need a
+position map that is not monotone in index, or a readout that is not a weighted
+mean over a contiguous slice.
 
-*A caution about the leverage law.* One free parameter — the centroid's position
-— explains all three one-neuron costs to 1.6 percentage points, at 0.30. That is
-consistent with this protocol's operating point (the first lesson targets /i/ at
-F1 320 Hz, position 0.093, from a start near 0.50), but it is a **fit, not a
-measurement**, and should not be quoted as one. The clean check is to record the
-centroid's mean position during teaching and compare it against the costs it is
-meant to explain.
+#### And the law behind that reasoning is refuted
+
+I wrote the account above the same night, with a caution attached: one free
+parameter — the centroid's position — explains all three one-neuron costs to 1.6
+percentage points at 0.30, and that is a **fit, not a measurement**. The caution
+was right and it was not enough. The fit was wrong, and the data that refutes it
+was already in the table three lines above it.
+
+The two **half-block** costs are out of sample for a fit made on the three
+one-neuron costs. The law fails them:
+
+| | top7 / bot7 |
+| --- | --- |
+| measured (53% / 9%) | **5.89** |
+| law, at the fitted v = 0.299 | 3.48 |
+| law, **maximised over every** v ∈ [0,1] | 4.31 |
+
+**No centroid position reaches the measured asymmetry**, so the functional form is
+wrong rather than its parameter. Saturation cannot rescue it either — the law
+already predicts an impossible **142%** for `top7`, and compressing that down
+makes the predicted ratio *smaller*. So `cost ∝ |preferred_i − v|` should not be
+quoted, and neither should the 0.30 that came with it.
+
+Two things it assumed rather than measured: the centroid's own position, and the
+per-neuron weights — the true influence is `w_i·(p_i − v)/Σw`, and only
+`(p_i − v)` was used. But the better question is not a better law. A block removes
+a neuron from the **write**, so what should predict its cost is how much that
+neuron's rate actually *moves* while the lesson is learned — which needs no fitted
+constant at all. `leverprobe` measures that, and `stageprobe` predicts it comes
+back **flat**, since intrinsic plasticity drives every neuron toward the same
+rate. A flat profile would refuse the rate account too, and put the asymmetry in
+the credit path rather than the readout.
+
+The reusable part is the process failure, not the law: **a fit is not evidence
+against the points it was fitted to, and the rest of the data was already in
+hand.**
 
 *Two corrections from this sequence.* `compartprobe`'s verdict elected dilution
 by elimination the moment silencing came back null — a mechanism claim it had not

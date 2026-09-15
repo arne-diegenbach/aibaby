@@ -1,0 +1,39 @@
+experiment: leverprobe
+  instrument        leverprobe   trial seed 0000000001353929   2000 trials
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  question          `blockanchor` says freezing the UPPER half of F1 costs 53%
+                    of the lesson and the LOWER half 9%. My leverage law was
+                    FITTED to three one-neuron costs and FAILS the two
+                    half-block costs from the same run: it predicts a ratio of
+                    3.48 where 5.89 was measured, and no centroid position
+                    reaches 5.89 (the maximum over all v is 4.31).
+  what is measured  the two quantities that law ASSUMED -- the centroid's own
+                    position and the per-neuron weights -- and, the point of
+                    the run, how much each neuron's rate actually MOVES while
+                    the lesson is learned. That needs no fitted constant.
+  the prior         `stageprobe` says IP drives every neuron toward the SAME
+                    rate, which flattens exactly this profile. A FLAT answer
+                    here is the expected one and it REFUSES the rate account
+                    as well as the position account.
+
+  PRE-REGISTERED, written before the run
+    primary     share of total |rate change| in the UPPER half (k=7..13),
+                first third of teaching to last, taught arm.
+      >= 0.75 and >= 2 SE above the `quiet` arm -> THE LESSON IS CARRIED BY
+                THE UPPER HALF. Explains 53-vs-9 with no fitted law, and
+                REPLACES the leverage account rather than repairing it.
+      0.42..0.58                                -> REFUSED. Both halves move
+                alike, so neither position nor rate explains the asymmetry
+                and the cause is downstream of this profile.
+      anything else                             -> report the number, no
+                verdict. This is the 2-3 SE band where a hypothesis is not a
+                finding.
+    secondary   the centroid's MEASURED position, against the 0.299 the fit
+                assumed. A measurement, not a gate.
+    refusals    the group must be 14 neurons, the taught arm must reproduce
+                `blockanchor`'s b0 lesson (+0.1676, accept 0.10..0.24), and
+                pool_beta must be 1.0 or the centroid column is not the
+                readout's. Any of these failing means this run is not
+                measuring the creature those costs came from.
+

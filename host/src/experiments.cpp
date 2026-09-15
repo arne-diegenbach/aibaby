@@ -319,6 +319,15 @@ const Spec kSpecs[] = {
      "  separation affordable -- it says the leverage sits at one end and only\n"
      "  one lesson can have it, which points at making the readout uniform\n"
      "  rather than at finding a cheaper place for a mask. 36 seeds"},
+    {"leverprobe", 5600000, Expect::kOpen, Tier::kLong,
+     "CHECKS ONE OF MY OWN CLAIMS. The leverage law that explained blockanchor's\n"
+     "  53-vs-9 was FITTED to three one-neuron costs and fails the two half-block\n"
+     "  costs from the same run -- it predicts a ratio of 3.48 where 5.89 was\n"
+     "  measured, and no centroid position in [0,1] reaches 5.89. This measures\n"
+     "  what that law assumed (the centroid position, the per-neuron weights) and\n"
+     "  the thing that should actually predict a block's cost: how much each\n"
+     "  neuron's rate MOVES while the lesson is learned. Read-only. stageprobe\n"
+     "  predicts a FLAT profile, which refuses the rate account too. 12 seeds"},
     {"movability", 5600000, Expect::kOpen, Tier::kLong,
      "orthovocab left a LEAD: on identical demands the F2 lesson travelled\n"
      "  0.169 and the F1 lesson 0.030 -- but F1's was FIGHTING another lesson on\n"
@@ -659,6 +668,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "blockfloor") ok = run_blockfloor(dna_blob, ticks, verbose);
   else if (name == "blockwhere") ok = run_blockwhere(dna_blob, ticks, verbose);
   else if (name == "blockanchor") ok = run_blockanchor(dna_blob, ticks, verbose);
+  else if (name == "leverprobe") ok = run_leverprobe(dna_blob, ticks, verbose);
   else if (name == "partprobe") ok = run_partprobe(dna_blob, ticks, verbose);
   else if (name == "pgprobe") ok = run_pgprobe(dna_blob, ticks, verbose);
   else if (name == "g2cond") ok = run_g2cond(dna_blob, ticks, verbose);

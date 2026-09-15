@@ -5649,6 +5649,38 @@ struct RTRow {
   // which half of the memory chapter is worth building.
   double tilt_a_before = 0.0, tilt_a_teach = 0.0, tilt_a_gap = 0.0;
   double tilt_mag_teach = 0.0, tilt_mag_gap = 0.0;
+  // WHICH NEURONS THE LESSON ACTUALLY USES (`leverprobe`, 2026-09-15).
+  //
+  // `blockanchor` measured that freezing the UPPER half of the F1 group costs 53%
+  // of the lesson and the LOWER half 9%. The explanation recorded that night was a
+  // leverage law: a neuron's influence on a centroid readout is (p_i - v)/sum(w),
+  // zero at the centroid and growing with distance. It was FITTED on three
+  // one-neuron costs and never checked against the two half-block costs from the
+  // same run. It fails them: it predicts a top7/bot7 ratio of 3.48 where 5.89 was
+  // measured, and NO centroid position in [0,1] reaches 5.89 (the maximum is 4.31).
+  // The functional form is wrong, not the parameter.
+  //
+  // Two things were assumed rather than measured, and both are read here:
+  //   - the centroid's own position, taken as ~0.30 because the fit wanted it;
+  //   - the per-neuron weights, DROPPED entirely -- true influence is
+  //     w_i * (p_i - v) / sum(w), and only (p_i - v) was used.
+  //
+  // But the sharper question is not a better law. A block removes a neuron from
+  // the WRITE, so what should predict its cost is how much that neuron's rate
+  // actually MOVES while the lesson is learned. That is measured directly here as
+  // the per-neuron rate in the first and last third of teaching, and it needs no
+  // fitted constant at all.
+  //
+  // Read against `stageprobe`, which says IP drives every neuron toward the SAME
+  // rate and so actively flattens exactly this profile. If it is flat, then neither
+  // position nor rate explains 53-vs-9 and the cause is not in the readout at all.
+  static constexpr uint32_t kRTF1Max = 32;
+  double f1_rate_early[kRTF1Max] = {};  // per-neuron mean rate, first third of teaching
+  double f1_rate_late[kRTF1Max] = {};   // per-neuron mean rate, last third
+  double f1_cent_teach = 0.0;           // mean instantaneous read_group centroid
+  double f1_cent_early = 0.0, f1_cent_late = 0.0;
+  uint32_t f1_n = 0;                    // neurons in the F1 group
+  uint64_t f1_samp_early = 0, f1_samp_late = 0, f1_samp_all = 0;
 };
 
 
@@ -6055,6 +6087,43 @@ RTRow run_retain_arm(const std::vector<uint8_t>& blob, uint64_t ticks,
                        sounding ? 0.5f : 0.0f, pcm.data(), spt);
       ear.tick(s.brain, pcm.data(), spt);
       s.brain.step();
+      // THE F1 RATE PROFILE, read-only (`leverprobe`). Sampled every tick of the
+      // TEACH phase only, split into the first and last third so the difference is
+      // what the lesson did rather than what the creature came with. Touches no RNG
+      // and no state, so the pinned hash cannot move -- which is checked, not
+      // assumed. The centroid here is the plain rate-weighted mean, exact for the
+      // shipped `pool_beta = 1.0`; the probe reports beta so a sharpened genome
+      // cannot be read through this column by accident.
+      if (in_teach_phase && vmod_idx >= 0) {
+        const aibaby::Network& rnet = s.brain.network();
+        const aibaby::ModuleState& rvm = rnet.module(uint32_t(vmod_idx));
+        const uint32_t rg_lo = aibaby::slice_begin(rvm.count, aibaby::kVocalGroups, 2);
+        const uint32_t rg_hi = aibaby::slice_begin(rvm.count, aibaby::kVocalGroups, 3);
+        const uint32_t gn = rg_hi - rg_lo;
+        if (gn > 0 && gn <= RTRow::kRTF1Max) {
+          row.f1_n = gn;
+          const bool early = trial < third;
+          const bool late = trial >= n_teach - third;
+          double wsum = 0.0, psum = 0.0;
+          for (uint32_t k = 0; k < gn; ++k) {
+            const double r = double(rnet.rate_fast(rvm.begin + rg_lo + k));
+            const double pref = (double(k) + 0.5) / double(gn);
+            wsum += r;
+            psum += r * pref;
+            if (early) row.f1_rate_early[k] += r;
+            if (late) row.f1_rate_late[k] += r;
+          }
+          if (wsum > 1e-6) {
+            const double cent = psum / wsum;
+            row.f1_cent_teach += cent;
+            ++row.f1_samp_all;
+            if (early) row.f1_cent_early += cent;
+            if (late) row.f1_cent_late += cent;
+          }
+          if (early) ++row.f1_samp_early;
+          if (late) ++row.f1_samp_late;
+        }
+      }
       if (s.brain.asleep() && !was_asleep) ++row.sleeps;
       was_asleep = s.brain.asleep();
 
@@ -9366,6 +9435,317 @@ bool run_blockanchor(const std::vector<uint8_t>& blob, uint64_t ticks, bool verb
               "  actually needs rather than at one neuron. `mask-unaffordable` stands.\n",
               se_h > 0.0 ? h / se_h : 0.0, pct[1], pct[4]);
   return false;
+}
+
+// `leverprobe`, 2026-09-15. WHICH NEURONS THE LESSON ACTUALLY USES.
+//
+// THE CLAIM THIS EXISTS TO CHECK, which is one of my own. `blockanchor` measured
+// that freezing the upper half of the F1 group costs 53% of the lesson and the
+// lower half 9%. I explained it the same night with a leverage law -- influence
+// on a centroid readout is (p_i - v)/sum(w), zero AT the centroid and growing
+// with distance from it -- fitted on the three ONE-neuron costs to 1.6pp and
+// flagged, correctly, as a fit rather than a measurement.
+//
+// It is worse than unmeasured. The two HALF-block costs from the same run are
+// out of sample for that fit and it fails them:
+//
+//     measured   top7/bot7 = 53/9  = 5.89
+//     law at v=0.299                 3.48
+//     law MAXIMISED over every v     4.31   <- at v = 0.179
+//
+// No centroid position reaches the measured asymmetry, so the functional form is
+// wrong rather than the parameter. And saturation cannot rescue it: the law
+// already predicts an impossible 142% for top7, and compressing that DOWN makes
+// the predicted ratio smaller still.
+//
+// TWO THINGS WERE ASSUMED. The centroid's position (taken as ~0.30 because the
+// fit wanted it), and the per-neuron weights -- true influence is
+// w_i * (p_i - v)/sum(w) and only (p_i - v) was used. Both are read here.
+//
+// BUT THE REAL QUESTION IS NOT A BETTER LAW. A block removes a neuron from the
+// WRITE. What should predict its cost is not where it sits but how much its rate
+// actually MOVES while the lesson is learned -- and that needs no fitted constant
+// at all. So the primary statistic is the share of the total rate CHANGE, first
+// third of teaching to last, that falls in the upper half of the group.
+//
+// READ IT AGAINST `stageprobe`, which is why the refusal is informative rather
+// than a dead end: IP drives every neuron toward the SAME rate, so it actively
+// flattens exactly this profile. If the profile is flat, then neither position
+// nor rate-change explains 53-vs-9, and the cause is not in the readout at all.
+struct LPArm { const char* name; bool teach; };
+const LPArm kLPArms[] = {
+    {"taught", true},   // the lesson, unblocked: `blockanchor`'s b0
+    {"quiet", false},   // never taught. The profile the creature came with, so a
+                        // rate change that is just settling cannot read as a lesson.
+};
+constexpr uint32_t kLPArmCount = sizeof(kLPArms) / sizeof(kLPArms[0]);
+
+bool run_leverprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  aibaby::Dna dna0;
+  if (dna0.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) {
+    std::printf("  setup failed: the genome does not load\n");
+    return false;
+  }
+  const int32_t vm = dna0.module_with_role(aibaby::ModuleRole::kVocal);
+  if (vm < 0) { std::printf("  this genome has no vocal module\n"); return false; }
+  const uint32_t vcount = dna0.module(uint32_t(vm)).neurons;
+  const uint32_t g_lo = aibaby::slice_begin(vcount, aibaby::kVocalGroups, 2u);
+  const uint32_t g_hi = aibaby::slice_begin(vcount, aibaby::kVocalGroups, 3u);
+  const uint32_t gsize = g_hi - g_lo;
+  const double beta = double(dna0.header().vocal.pool_beta);
+  Regime regime;
+  regime.praise = kPraiseValue;
+  regime.scold = kScoldValue;
+  constexpr uint32_t kReps = 12;
+  instrument("leverprobe", dna0.header().seed ^ 0x1EE0u, ticks / kRTTrial, "trials");
+
+  std::printf("  question          `blockanchor` says freezing the UPPER half of F1 costs 53%%\n"
+              "                    of the lesson and the LOWER half 9%%. My leverage law was\n"
+              "                    FITTED to three one-neuron costs and FAILS the two\n"
+              "                    half-block costs from the same run: it predicts a ratio of\n"
+              "                    3.48 where 5.89 was measured, and no centroid position\n"
+              "                    reaches 5.89 (the maximum over all v is 4.31).\n");
+  std::printf("  what is measured  the two quantities that law ASSUMED -- the centroid's own\n"
+              "                    position and the per-neuron weights -- and, the point of\n"
+              "                    the run, how much each neuron's rate actually MOVES while\n"
+              "                    the lesson is learned. That needs no fitted constant.\n");
+  std::printf("  the prior         `stageprobe` says IP drives every neuron toward the SAME\n"
+              "                    rate, which flattens exactly this profile. A FLAT answer\n"
+              "                    here is the expected one and it REFUSES the rate account\n"
+              "                    as well as the position account.\n");
+
+  std::printf("\n  PRE-REGISTERED, written before the run\n");
+  std::printf("    primary     share of total |rate change| in the UPPER half (k=%u..%u),\n"
+              "                first third of teaching to last, taught arm.\n",
+              gsize / 2u, gsize - 1u);
+  std::printf("      >= 0.75 and >= 2 SE above the `quiet` arm -> THE LESSON IS CARRIED BY\n"
+              "                THE UPPER HALF. Explains 53-vs-9 with no fitted law, and\n"
+              "                REPLACES the leverage account rather than repairing it.\n");
+  std::printf("      0.42..0.58                                -> REFUSED. Both halves move\n"
+              "                alike, so neither position nor rate explains the asymmetry\n"
+              "                and the cause is downstream of this profile.\n");
+  std::printf("      anything else                             -> report the number, no\n"
+              "                verdict. This is the 2-3 SE band where a hypothesis is not a\n"
+              "                finding.\n");
+  std::printf("    secondary   the centroid's MEASURED position, against the 0.299 the fit\n"
+              "                assumed. A measurement, not a gate.\n");
+  std::printf("    refusals    the group must be %u neurons, the taught arm must reproduce\n"
+              "                `blockanchor`'s b0 lesson (+0.1676, accept 0.10..0.24), and\n"
+              "                pool_beta must be 1.0 or the centroid column is not the\n"
+              "                readout's. Any of these failing means this run is not\n"
+              "                measuring the creature those costs came from.\n\n", gsize);
+
+  if (gsize == 0u || gsize > RTRow::kRTF1Max) {
+    std::printf("  leverprobe REFUSED -- F1 group is %u neurons, outside the %u the probe\n"
+                "  can carry.\n", gsize, RTRow::kRTF1Max);
+    return false;
+  }
+
+  struct Cell { bool ok = false; RTRow row; };
+  const uint32_t njobs = kReps * kLPArmCount;
+  const std::vector<Cell> cells = parallel_reps<Cell>(njobs, [&](uint32_t i) {
+    Cell cell;
+    const uint32_t r = i / kLPArmCount, a = i % kLPArmCount;
+    std::vector<uint8_t> variant = blob;
+    const uint64_t seed = dna0.header().seed + r * 7919ull;
+    std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+    RTConfig cfg;
+    cfg.name = kLPArms[a].name;
+    cfg.teach = kLPArms[a].teach;
+    // `blockanchor`'s b0 exactly, so `err taught` is comparable to its +0.1676.
+    cfg.relearn = true;
+    cfg.mask_mode = 0u;
+    Timbre local_ruler;
+    std::string local_error;
+    if (!local_ruler.configure(dna0.header().audio, local_error)) return cell;
+    bool ok = false;
+    cell.row = run_retain_arm(variant, ticks, cfg, local_ruler, regime, &ok);
+    if (!ok) return cell;
+    cell.ok = true;
+    parallel_note("  [%u/%u] seed %u %-6s taught %.4f\n", i + 1, njobs, r,
+                  kLPArms[a].name, cell.row.err_taught);
+    return cell;
+  });
+
+  // --- the profiles, averaged over seeds ------------------------------------
+  std::vector<std::vector<double>> early(kLPArmCount, std::vector<double>(gsize, 0.0));
+  std::vector<std::vector<double>> late(kLPArmCount, std::vector<double>(gsize, 0.0));
+  std::vector<double> cent(kLPArmCount, 0.0), lesson(kLPArmCount, 0.0);
+  std::vector<double> se_lesson(kLPArmCount, 0.0);
+  std::vector<uint32_t> nseed(kLPArmCount, 0u);
+  std::vector<std::vector<double>> share(kLPArmCount);
+  for (uint32_t a = 0; a < kLPArmCount; ++a) {
+    std::vector<double> L;
+    for (uint32_t r = 0; r < kReps; ++r) {
+      const Cell& c = cells[r * kLPArmCount + a];
+      if (!c.ok || c.row.f1_n != gsize) continue;
+      if (c.row.f1_samp_early == 0 || c.row.f1_samp_late == 0) continue;
+      ++nseed[a];
+      L.push_back(c.row.err_before - c.row.err_taught);
+      if (c.row.f1_samp_all > 0) cent[a] += c.row.f1_cent_teach / double(c.row.f1_samp_all);
+      double dsum = 0.0, dtop = 0.0;
+      for (uint32_t k = 0; k < gsize; ++k) {
+        const double e = c.row.f1_rate_early[k] / double(c.row.f1_samp_early);
+        const double l = c.row.f1_rate_late[k] / double(c.row.f1_samp_late);
+        early[a][k] += e;
+        late[a][k] += l;
+        const double d = l - e;
+        dsum += d < 0.0 ? -d : d;
+        if (k >= gsize / 2u) dtop += d < 0.0 ? -d : d;
+      }
+      // Per SEED, so the share carries a real between-creature SE rather than
+      // one computed from a single pooled profile.
+      if (dsum > 1e-9) share[a].push_back(dtop / dsum);
+    }
+    if (nseed[a] < 3) {
+      std::printf("\n  leverprobe INCONCLUSIVE -- arm `%s` produced %u creatures.\n",
+                  kLPArms[a].name, nseed[a]);
+      return false;
+    }
+    const double n = double(nseed[a]);
+    for (uint32_t k = 0; k < gsize; ++k) { early[a][k] /= n; late[a][k] /= n; }
+    cent[a] /= n;
+    lesson[a] = ctx_mean_se(L, &se_lesson[a]);
+  }
+
+  std::printf("\n  THE LESSON, as an anchor against `blockanchor`'s b0\n");
+  for (uint32_t a = 0; a < kLPArmCount; ++a) {
+    std::printf("    %-6s learned %+.4f +/- %.4f   (%u creatures)\n", kLPArms[a].name,
+                lesson[a], se_lesson[a], nseed[a]);
+  }
+
+  std::printf("\n  THE F1 RATE PROFILE, Hz, taught arm (pool_beta %.2f)\n", beta);
+  std::printf("    %-3s %-8s %-9s %-9s %-9s\n", "k", "position", "early", "late", "change");
+  for (uint32_t k = 0; k < gsize; ++k) {
+    std::printf("    %-3u %-8.3f %-9.3f %-9.3f %+.4f\n", k,
+                (double(k) + 0.5) / double(gsize), early[0][k], late[0][k],
+                late[0][k] - early[0][k]);
+  }
+
+  double m_share[kLPArmCount] = {}, s_share[kLPArmCount] = {};
+  for (uint32_t a = 0; a < kLPArmCount; ++a) {
+    m_share[a] = ctx_mean_se(share[a], &s_share[a]);
+  }
+  const double d_share = m_share[0] - m_share[1];
+  const double se_d = std::sqrt(s_share[0] * s_share[0] + s_share[1] * s_share[1]);
+
+  std::printf("\n  THE PRIMARY\n");
+  for (uint32_t a = 0; a < kLPArmCount; ++a) {
+    std::printf("    %-6s upper-half share of |rate change|  %.3f +/- %.3f\n",
+                kLPArms[a].name, m_share[a], s_share[a]);
+  }
+  std::printf("    taught - quiet  %+.3f +/- %.3f  (%+.1f SE)\n", d_share, se_d,
+              se_d > 0.0 ? d_share / se_d : 0.0);
+  std::printf("    a flat profile would read 0.500 by construction (%u of %u neurons).\n",
+              gsize - gsize / 2u, gsize);
+
+  std::printf("\n  THE CENTROID, measured rather than fitted\n");
+  for (uint32_t a = 0; a < kLPArmCount; ++a) {
+    std::printf("    %-6s mean position over teaching  %.4f\n", kLPArms[a].name, cent[a]);
+  }
+  std::printf("    the fit ASSUMED 0.299, chosen to make three one-neuron costs agree.\n");
+
+  // --- what the measured quantities predict, against what was measured ------
+  // The five costs are from `blockwhere` and `blockanchor` on this genome and
+  // this code. They are quoted, not recomputed, and the probe says so.
+  struct Known { const char* name; uint32_t lo, hi; double pct; };
+  const Known kKnown[] = {
+      {"top1", gsize - 1u, gsize, 30.0}, {"mid1", (gsize - 1u) / 2u, (gsize - 1u) / 2u + 1u, 7.0},
+      {"bot1", 0u, 1u, 9.0},             {"top7", gsize / 2u, gsize, 53.0},
+      {"bot7", 0u, gsize / 2u, 9.0},
+  };
+  const uint32_t nk = sizeof(kKnown) / sizeof(kKnown[0]);
+  const double v = cent[0];
+  // Scale each law on `top1`, exactly as the original fit did, so the comparison
+  // is like for like and the residual is not hiding a free second parameter.
+  double sc_pos = 0.0, sc_w = 0.0, sc_d = 0.0;
+  const auto mass = [&](uint32_t lo, uint32_t hi, int law) {
+    double m = 0.0;
+    for (uint32_t k = lo; k < hi; ++k) {
+      const double p = (double(k) + 0.5) / double(gsize);
+      const double dist = p > v ? p - v : v - p;
+      const double w = late[0][k];
+      const double d = late[0][k] - early[0][k];
+      m += law == 0 ? dist : law == 1 ? w * dist : (d < 0.0 ? -d : d);
+    }
+    return m;
+  };
+  sc_pos = mass(kKnown[0].lo, kKnown[0].hi, 0);
+  sc_w = mass(kKnown[0].lo, kKnown[0].hi, 1);
+  sc_d = mass(kKnown[0].lo, kKnown[0].hi, 2);
+  std::printf("\n  THREE ACCOUNTS AGAINST THE FIVE MEASURED COSTS\n");
+  std::printf("    each scaled on `top1` alone, as the original fit was.\n");
+  std::printf("    %-6s %-10s %-12s %-12s %-12s\n", "block", "measured", "position", "w*position",
+              "rate change");
+  double rms[3] = {};
+  for (uint32_t j = 0; j < nk; ++j) {
+    double pr[3];
+    pr[0] = sc_pos > 0.0 ? 30.0 * mass(kKnown[j].lo, kKnown[j].hi, 0) / sc_pos : 0.0;
+    pr[1] = sc_w > 0.0 ? 30.0 * mass(kKnown[j].lo, kKnown[j].hi, 1) / sc_w : 0.0;
+    pr[2] = sc_d > 0.0 ? 30.0 * mass(kKnown[j].lo, kKnown[j].hi, 2) / sc_d : 0.0;
+    std::printf("    %-6s %-10.0f %-12.1f %-12.1f %-12.1f\n", kKnown[j].name, kKnown[j].pct, pr[0],
+                pr[1], pr[2]);
+    for (int L = 0; L < 3; ++L) rms[L] += (pr[L] - kKnown[j].pct) * (pr[L] - kKnown[j].pct);
+  }
+  std::printf("    %-6s %-10s %-12.1f %-12.1f %-12.1f   <- RMS residual, pp\n", "", "",
+              std::sqrt(rms[0] / double(nk)), std::sqrt(rms[1] / double(nk)),
+              std::sqrt(rms[2] / double(nk)));
+
+  {
+    ArmLiveness live("leverprobe");
+    for (uint32_t r = 0; r < kReps; ++r) {
+      for (uint32_t a = 0; a < kLPArmCount; ++a) {
+        const Cell& c = cells[r * kLPArmCount + a];
+        if (c.ok) live.observe(kLPArms[a].name, r, c.row.err_taught);
+      }
+    }
+    if (!live.report("taught")) return false;
+  }
+
+  std::printf("\n  --- the verdict ---\n");
+  if (beta != 1.0) {
+    std::printf("  leverprobe REFUSED -- pool_beta is %.2f, so the readout sharpens the\n"
+                "  weights and the plain rate-weighted centroid printed above is NOT the\n"
+                "  quantity the larynx reads. Re-derive the column before reading it.\n", beta);
+    return false;
+  }
+  if (lesson[0] < 0.10 || lesson[0] > 0.24) {
+    std::printf("  leverprobe REFUSED -- the taught arm learned %+.4f where `blockanchor`'s\n"
+                "  b0 learned +0.1676. This is not the creature those five costs came from,\n"
+                "  so nothing here can be read against them.\n", lesson[0]);
+    return false;
+  }
+  if (m_share[0] >= 0.75 && d_share >= 2.0 * se_d) {
+    std::printf("  THE LESSON IS CARRIED BY THE UPPER HALF: %.3f of the rate change,\n"
+                "  %+.1f SE above a creature that was never taught. That explains\n"
+                "  53-vs-9 with no fitted constant, and it REPLACES the leverage law\n"
+                "  rather than repairing it -- the upper neurons are not privileged by\n"
+                "  their DISTANCE from the centroid but by being the ones reward moves.\n",
+                m_share[0], se_d > 0.0 ? d_share / se_d : 0.0);
+    std::printf("  It also sharpens the decoder claim. A readout whose leverage is uniform\n"
+                "  does not help if the WRITE is concentrated anyway; the thing to make\n"
+                "  uniform is which neurons reward can move.\n");
+  } else if (m_share[0] >= 0.42 && m_share[0] <= 0.58) {
+    std::printf("  REFUSED: the rate change is spread evenly (%.3f, against 0.500 for a\n"
+                "  flat profile). Both halves move alike, so blocking either should cost\n"
+                "  the same -- and they cost 53%% and 9%%. Neither position nor rate\n"
+                "  explains the asymmetry, and the cause is NOT in this profile.\n",
+                m_share[0]);
+    std::printf("  This is `stageprobe`'s prediction, and it is informative: it says the\n"
+                "  asymmetry is in the CREDIT path, not the readout, and the decoder\n"
+                "  change `blockanchor` named would not have fixed it.\n");
+  } else {
+    std::printf("  NO VERDICT: upper-half share %.3f +/- %.3f, %+.1f SE over `quiet`.\n"
+                "  Between the gates, which is the band where a hypothesis is not a\n"
+                "  finding. The number is reported and nothing is concluded from it.\n",
+                m_share[0], s_share[0], se_d > 0.0 ? d_share / se_d : 0.0);
+  }
+  std::printf("\n  WHAT STANDS REGARDLESS: the leverage law is REFUTED out of sample.\n"
+              "  It reproduces the three costs it was fitted to and misses the two it\n"
+              "  was not, and no centroid position reaches the measured 5.89 ratio.\n"
+              "  Do not quote `cost ~ |p_i - v|` or the 0.299 that came with it.\n");
+  return true;
 }
 
 bool run_movability(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
