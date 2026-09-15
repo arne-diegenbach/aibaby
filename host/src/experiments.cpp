@@ -311,6 +311,14 @@ const Spec kSpecs[] = {
      "  top / middle / bottom, so count is fixed and only position differs. If\n"
      "  the middle is cheaper, mask-unaffordable's 59% was a fact about WHERE\n"
      "  the mask was put and write separation reopens. 36 seeds"},
+    {"blockanchor", 5600000, Expect::kOpen, Tier::kLong,
+     "blockwhere showed ONE neuron costs 30% at the top of the F1 group and 7%\n"
+     "  in the middle. Does that survive at a USEFUL size? The two complementary\n"
+     "  halves are exactly what a separated pair of lessons would occupy. Read\n"
+     "  carefully: a cheap bottom half with an expensive top does NOT make\n"
+     "  separation affordable -- it says the leverage sits at one end and only\n"
+     "  one lesson can have it, which points at making the readout uniform\n"
+     "  rather than at finding a cheaper place for a mask. 36 seeds"},
     {"movability", 5600000, Expect::kOpen, Tier::kLong,
      "orthovocab left a LEAD: on identical demands the F2 lesson travelled\n"
      "  0.169 and the F1 lesson 0.030 -- but F1's was FIGHTING another lesson on\n"
@@ -650,6 +658,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "compartprobe") ok = run_compartprobe(dna_blob, ticks, verbose);
   else if (name == "blockfloor") ok = run_blockfloor(dna_blob, ticks, verbose);
   else if (name == "blockwhere") ok = run_blockwhere(dna_blob, ticks, verbose);
+  else if (name == "blockanchor") ok = run_blockanchor(dna_blob, ticks, verbose);
   else if (name == "partprobe") ok = run_partprobe(dna_blob, ticks, verbose);
   else if (name == "pgprobe") ok = run_pgprobe(dna_blob, ticks, verbose);
   else if (name == "g2cond") ok = run_g2cond(dna_blob, ticks, verbose);

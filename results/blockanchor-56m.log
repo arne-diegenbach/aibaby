@@ -1,0 +1,26 @@
+experiment: blockanchor
+  instrument        blockanchor   trial seed 0000000001352c69   2000 trials
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  question          `blockwhere` showed ONE neuron costs 30% of the lesson at
+                    the top of the group and 7% in the middle. Does that
+                    survive at a USEFUL size -- half the group?
+  the comparison    the two complementary halves, which is exactly what a
+                    separated pair of lessons would occupy. top7 leaves the
+                    lesson the LOWER half; bot7 leaves it the UPPER half.
+  read it carefully a cheap bot7 with an expensive top7 does NOT make
+                    separation affordable. Separation needs BOTH halves at
+                    once, so that result would say the leverage is
+                    CONCENTRATED AT ONE END and only one lesson can have it
+                    -- which points at making the readout uniform, not at
+                    finding a cheaper place to put a mask.
+  the anchor        top7 must reproduce ~53%, which `compartprobe` measured
+                    for these seven neurons on this genome and code.
+
+  THE BLOCK AS BUILT (group is neurons 28..41 of vocal's 126)
+    b0    nothing blocked
+    top7  blocks 7 neurons, indices 35..41  (positions 0.536..0.964)
+    bot2  blocks 2 neurons, indices 28..29  (positions 0.036..0.107)
+    bot4  blocks 4 neurons, indices 28..31  (positions 0.036..0.250)
+    bot7  blocks 7 neurons, indices 28..34  (positions 0.036..0.464)
+

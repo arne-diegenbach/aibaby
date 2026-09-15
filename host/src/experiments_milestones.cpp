@@ -9110,6 +9110,264 @@ bool run_blockwhere(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
   return false;
 }
 
+// `blockanchor` -- is a USEFUL-SIZED confinement affordable away from the top?
+//
+// WHERE THIS SITS. `blockwhere` held the blocked count at ONE neuron and moved
+// it: 30% of the lesson at the top of the F1 group, 7% in the middle, 9% at the
+// bottom, both comparisons past 3 SE. So the cost is the readout's GEOMETRY --
+// `read_group` weights neuron i by (i - begin + 0.5)/n and a weighted mean is
+// least sensitive near its own centre -- and every block this project ever
+// measured was anchored at the TOP, the most expensive place available.
+//
+// THAT REOPENED WRITE SEPARATION WITHOUT ESTABLISHING IT, and the gap is the
+// reason for this run. One cell away from the top being free is not the same as
+// a USEFUL-SIZED region being free: separating two lessons needs roughly half
+// the group, and a half-group block cannot avoid an end.
+//
+// THE COMPARISON THAT DECIDES IT is the two complementary halves, which are
+// exactly what a separated pair of lessons would occupy:
+//
+//   top7   blocks the upper half, leaving the lesson the LOWER half to work in.
+//   bot7   blocks the lower half, leaving the lesson the UPPER half.
+//
+// Plus `bot2` and `bot4` for the bottom-anchored ladder's shape, against the
+// top-anchored ladder already measured on this genome and code -- one neuron
+// 30%, two 36%, four 57%, seven 53%.
+//
+// WHAT THE ANSWER MEANS, AND IT IS NOT THE OBVIOUS ONE. If `bot7` is cheap and
+// `top7` expensive, that does NOT make separation affordable. Separation needs
+// BOTH halves usable at once -- lesson A in one, lesson B in the other -- so a
+// cheap `bot7` and an expensive `top7` says the leverage is CONCENTRATED AT ONE
+// END and only one of the two lessons can have it. That is a sharper statement
+// than "confining a lesson is unaffordable", and it points somewhere different:
+// the fix would be to make the readout's leverage UNIFORM across the group,
+// rather than to find a cheaper place to put a mask.
+//
+// The genuinely good outcome is both halves costing little, which would mean
+// the earlier 59% was entirely an artefact of anchoring and separation is simply
+// affordable. The genuinely bad one is both costing ~55%, which would say the
+// one-neuron result does not scale and the ends stop mattering once a block is
+// large -- the plateau being about size after all.
+//
+// THE REFUSALS, WRITTEN FIRST:
+//   * `top7` must reproduce ~53%, which `compartprobe` measured for the same
+//     seven neurons on the same genome and code. If it does not, two runs of one
+//     condition disagree and that outranks the comparison.
+//   * 2-3 SE is a HYPOTHESIS at this n, not a finding, and prints as one.
+//   * the blocked INDEX RANGE is printed per arm from the arithmetic the session
+//     runs, because which neurons are blocked is the whole independent variable.
+struct BAArm { const char* name; uint32_t count; uint32_t pos; };
+const BAArm kBAArms[] = {
+    {"b0",    0u, 0u},
+    {"top7",  7u, 0u},   // upper half blocked: the lesson keeps the LOWER half
+    {"bot2",  2u, 2u},
+    {"bot4",  4u, 2u},
+    {"bot7",  7u, 2u},   // lower half blocked: the lesson keeps the UPPER half
+};
+constexpr uint32_t kBAArmCount = sizeof(kBAArms) / sizeof(kBAArms[0]);
+
+bool run_blockanchor(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  aibaby::Dna dna0;
+  if (dna0.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) {
+    std::printf("  setup failed: the genome does not load\n");
+    return false;
+  }
+  const int32_t vm = dna0.module_with_role(aibaby::ModuleRole::kVocal);
+  if (vm < 0) { std::printf("  this genome has no vocal module\n"); return false; }
+  const uint32_t vcount = dna0.module(uint32_t(vm)).neurons;
+  const uint32_t g_lo = aibaby::slice_begin(vcount, aibaby::kVocalGroups, 2u);
+  const uint32_t g_hi = aibaby::slice_begin(vcount, aibaby::kVocalGroups, 3u);
+  const uint32_t gsize = g_hi - g_lo;
+  Regime regime;
+  regime.praise = kPraiseValue;
+  regime.scold = kScoldValue;
+  constexpr uint32_t kReps = 36;
+  instrument("blockanchor", dna0.header().seed ^ 0x0BA0u, ticks / kRTTrial, "trials");
+  std::printf("  question          `blockwhere` showed ONE neuron costs 30%% of the lesson at\n"
+              "                    the top of the group and 7%% in the middle. Does that\n"
+              "                    survive at a USEFUL size -- half the group?\n");
+  std::printf("  the comparison    the two complementary halves, which is exactly what a\n"
+              "                    separated pair of lessons would occupy. top7 leaves the\n"
+              "                    lesson the LOWER half; bot7 leaves it the UPPER half.\n");
+  std::printf("  read it carefully a cheap bot7 with an expensive top7 does NOT make\n"
+              "                    separation affordable. Separation needs BOTH halves at\n"
+              "                    once, so that result would say the leverage is\n"
+              "                    CONCENTRATED AT ONE END and only one lesson can have it\n"
+              "                    -- which points at making the readout uniform, not at\n"
+              "                    finding a cheaper place to put a mask.\n");
+  std::printf("  the anchor        top7 must reproduce ~53%%, which `compartprobe` measured\n"
+              "                    for these seven neurons on this genome and code.\n");
+  std::printf("\n  THE BLOCK AS BUILT (group is neurons %u..%u of vocal's %u)\n", g_lo,
+              g_hi - 1u, vcount);
+  for (uint32_t a = 0; a < kBAArmCount; ++a) {
+    if (kBAArms[a].count == 0u) { std::printf("    %-5s nothing blocked\n", kBAArms[a].name); continue; }
+    const uint32_t k = kBAArms[a].count < gsize ? kBAArms[a].count : gsize;
+    const uint32_t lo = kBAArms[a].pos == 0u   ? g_hi - k
+                        : kBAArms[a].pos == 1u ? g_lo + (gsize - k) / 2u
+                                               : g_lo;
+    std::printf("    %-5s blocks %u neurons, indices %u..%u  (positions %.3f..%.3f)\n",
+                kBAArms[a].name, k, lo, lo + k - 1u,
+                (double(lo - g_lo) + 0.5) / double(gsize),
+                (double(lo + k - 1u - g_lo) + 0.5) / double(gsize));
+  }
+  std::printf("\n");
+
+  struct Cell { bool ok = false; RTRow row; };
+  const uint32_t njobs = kReps * kBAArmCount;
+  const std::vector<Cell> cells = parallel_reps<Cell>(njobs, [&](uint32_t i) {
+    Cell cell;
+    const uint32_t r = i / kBAArmCount, a = i % kBAArmCount;
+    std::vector<uint8_t> variant = blob;
+    const uint64_t seed = dna0.header().seed + r * 7919ull;
+    std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+    RTConfig cfg;
+    cfg.name = kBAArms[a].name;
+    cfg.teach = true;
+    cfg.relearn = true;
+    cfg.mask_mode = kBAArms[a].count > 0u ? 4u : 0u;
+    cfg.mask_count = kBAArms[a].count;
+    cfg.mask_pos = kBAArms[a].pos;
+    Timbre local_ruler;
+    std::string local_error;
+    if (!local_ruler.configure(dna0.header().audio, local_error)) return cell;
+    bool ok = false;
+    cell.row = run_retain_arm(variant, ticks, cfg, local_ruler, regime, &ok);
+    if (!ok) return cell;
+    cell.ok = true;
+    parallel_note("  [%u/%u] seed %u %-5s before %.4f taught %.4f\n", i + 1, njobs, r,
+                  kBAArms[a].name, cell.row.err_before, cell.row.err_taught);
+    return cell;
+  });
+
+  std::printf("\n  %-6s %-12s %-12s %s\n", "arm", "err before", "err taught", "learned");
+  std::vector<double> mean_l(kBAArmCount, 0.0), se_l(kBAArmCount, 0.0);
+  for (uint32_t a = 0; a < kBAArmCount; ++a) {
+    std::vector<double> b, t, L;
+    for (uint32_t r = 0; r < kReps; ++r) {
+      const Cell& c = cells[r * kBAArmCount + a];
+      if (!c.ok) continue;
+      b.push_back(c.row.err_before); t.push_back(c.row.err_taught);
+      L.push_back(c.row.err_before - c.row.err_taught);
+    }
+    if (b.size() < 3) {
+      std::printf("\n  blockanchor INCONCLUSIVE -- arm `%s` produced %zu creatures.\n",
+                  kBAArms[a].name, b.size());
+      return false;
+    }
+    double se_b = 0.0, se_t = 0.0;
+    const double m_b = ctx_mean_se(b, &se_b);
+    const double m_t = ctx_mean_se(t, &se_t);
+    mean_l[a] = ctx_mean_se(L, &se_l[a]);
+    std::printf("  %-6s %-12.4f %-12.4f %+.4f +/- %.4f\n", kBAArms[a].name, m_b, m_t, mean_l[a],
+                se_l[a]);
+  }
+
+  {
+    ArmLiveness live("blockanchor");
+    for (uint32_t r = 0; r < kReps; ++r) {
+      for (uint32_t a = 0; a < kBAArmCount; ++a) {
+        const Cell& c = cells[r * kBAArmCount + a];
+        if (c.ok) live.observe(kBAArms[a].name, r, c.row.err_taught);
+      }
+    }
+    if (!live.report("b0")) return false;
+  }
+
+  const auto paired = [&](uint32_t x, uint32_t y, double* se) {
+    std::vector<double> d;
+    for (uint32_t r = 0; r < kReps; ++r) {
+      const Cell& cx = cells[r * kBAArmCount + x];
+      const Cell& cy = cells[r * kBAArmCount + y];
+      if (cx.ok && cy.ok) {
+        d.push_back((cx.row.err_before - cx.row.err_taught) -
+                    (cy.row.err_before - cy.row.err_taught));
+      }
+    }
+    return d.size() >= 3 ? ctx_mean_se(d, se) : 0.0;
+  };
+  std::printf("\n  THE COST, paired on seed against `b0`\n");
+  double cost[kBAArmCount] = {}, se_c[kBAArmCount] = {};
+  double pct[kBAArmCount] = {};
+  for (uint32_t a = 1; a < kBAArmCount; ++a) {
+    cost[a] = paired(a, 0u, &se_c[a]);
+    pct[a] = mean_l[0] != 0.0 ? 100.0 * (-cost[a] / mean_l[0]) : 0.0;
+    std::printf("    %-5s %+.4f +/- %.4f  (%+.1f SE)   %.0f%% of the lesson\n", kBAArms[a].name,
+                cost[a], se_c[a], se_c[a] > 0.0 ? cost[a] / se_c[a] : 0.0, pct[a]);
+  }
+  if (pct[1] < 30.0 || pct[1] > 75.0) {
+    std::printf("\n  blockanchor REFUSED -- THE ANCHOR DOES NOT REPRODUCE. `top7` costs\n"
+                "  %.0f%% where `compartprobe` measured 53%% for the same seven neurons on\n"
+                "  the same genome and code. That disagreement outranks the comparison.\n",
+                pct[1]);
+    return false;
+  }
+
+  double se_h = 0.0;
+  const double h = paired(4u, 1u, &se_h);   // bot7 against top7
+  std::printf("\n  THE TWO HALVES, paired on seed (positive = the LOWER half is cheaper to\n"
+              "  block, i.e. the lesson does better keeping the UPPER half)\n"
+              "    bot7 - top7  %+.4f +/- %.4f  (%+.1f SE)\n", h, se_h,
+              se_h > 0.0 ? h / se_h : 0.0);
+
+  const bool split = se_h > 0.0 && std::fabs(h) > 3.0 * se_h;
+  const bool band = se_h > 0.0 && std::fabs(h) > 2.0 * se_h;
+  const bool bot_cheap = pct[4] < 25.0;
+  const bool top_cheap = pct[1] < 25.0;
+
+  if (bot_cheap && top_cheap) {
+    std::printf("\n  SEPARATION IS AFFORDABLE. BOTH halves cost little -- %.0f%% for the\n"
+                "  upper and %.0f%% for the lower -- so a lesson can be confined to either\n"
+                "  side of the F1 group and still learn. `mask-unaffordable`'s 59%% was an\n"
+                "  artefact of anchoring the mask at the group's most expensive end, and\n"
+                "  the memory chapter's \"write separation is refused\" needs reopening with\n"
+                "  the credit oracle's ~1.0 bound now looking reachable.\n",
+                pct[1], pct[4]);
+    return true;
+  }
+  if (split) {
+    std::printf("\n  THE LEVERAGE IS CONCENTRATED AT ONE END, AND ONLY ONE LESSON CAN HAVE\n"
+                "  IT (%.1f SE). Blocking the lower half costs %.0f%% of the lesson while\n"
+                "  blocking the upper half costs %.0f%%. Both are the same SEVEN neurons;\n"
+                "  only which end differs.\n"
+                "\n"
+                "  READ WHAT THAT DOES AND DOES NOT SAY. It does NOT make separation\n"
+                "  affordable: separation needs both halves working at once, one lesson in\n"
+                "  each, and the half without the leverage is crippled. But it is a much\n"
+                "  sharper diagnosis than \"confining a lesson is unaffordable\" -- the\n"
+                "  problem is that `read_group` puts all the steering authority at one end\n"
+                "  of the group, so the two halves are not interchangeable.\n"
+                "\n"
+                "  AND IT NAMES A DIFFERENT FIX. Do not look for a cheaper place to put a\n"
+                "  mask; make the readout's leverage UNIFORM. A position map that is not\n"
+                "  monotone in index, or a readout that is not a weighted mean over a\n"
+                "  contiguous slice, would give both halves equal authority -- and that is\n"
+                "  a change to the decoder rather than to the teaching.\n",
+                std::fabs(h) / se_h, pct[4], pct[1]);
+    return false;
+  }
+  if (band) {
+    std::printf("\n  A HYPOTHESIS, NOT A FINDING (%.1f SE). The halves look unequal -- %.0f%%\n"
+                "  for the lower against %.0f%% for the upper -- but inside the 2-3 SE band\n"
+                "  this project has retracted findings from. ~%.0f seeds for 4 SE.\n",
+                std::fabs(h) / se_h, pct[4], pct[1],
+                double(kReps) * std::pow(4.0 / (std::fabs(h) / se_h), 2.0));
+    return false;
+  }
+  std::printf("\n  THE ENDS STOP MATTERING AT SIZE (%+.1f SE). Blocking seven neurons costs\n"
+              "  about the same wherever they sit -- %.0f%% at the top, %.0f%% at the bottom\n"
+              "  -- even though ONE neuron cost 30%% at the top and 7%% in the middle. So\n"
+              "  `blockwhere`'s position effect does NOT scale, and the plateau really is\n"
+              "  about size: once a block is large enough, which cells it takes stops\n"
+              "  mattering.\n"
+              "\n"
+              "  THAT CLOSES WRITE SEPARATION AGAIN, and more firmly than before, because\n"
+              "  the cheap-place hypothesis has now been tested at the size separation\n"
+              "  actually needs rather than at one neuron. `mask-unaffordable` stands.\n",
+              se_h > 0.0 ? h / se_h : 0.0, pct[1], pct[4]);
+  return false;
+}
+
 bool run_movability(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
   (void)verbose;
   Regime regime;
