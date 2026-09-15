@@ -10194,6 +10194,53 @@ whose identity to another arm is the finding. Every number above was recovered
 from the run's own per-seed progress lines, the second time in one day that has
 saved a re-run.
 
+### The mask cost was a fact about *where the mask was* (2026-09-15)
+
+`mask-unaffordable` closed write separation on a single number: blocking a
+quarter of the F1 group costs **59% of the lesson**, so a pooled readout cannot
+be partitioned by restricting plasticity. Three runs took that apart.
+
+`compartprobe` split the 59% into the two causes that run had named — blocked
+neurons still *perturb*, and they are still *read* — using a new
+`set_explore_block` that silences exploration on a range without touching
+anything else. **Both were refused.** Silencing recovers nothing (−0.8 SE), and
+blocking twice as many costs no more (+1.0 SE), which dilution cannot survive
+since dilution is a quantitative claim.
+
+`blockfloor` then extended the ladder *down*, which nobody had done — every width
+ever measured was 25–75%, and **the F1 group is only 14 neurons**, so "a quarter"
+is four cells. One neuron costs 30%, two 36%, four 57%: steep, then saturating
+onto the earlier plateau. `compartprobe`'s ladder had straddled the knee, which
+is why it read flat.
+
+`blockwhere` held the count fixed at **one** neuron and moved it:
+
+| | position | lesson lost |
+| --- | --- | --- |
+| `top1` | 0.964 | **30%** (−5.8 SE) |
+| `mid1` | 0.464 | 7% (−1.1 SE) |
+| `bot1` | 0.036 | 9% (−1.4 SE) |
+
+**The same cell costs 30% at the top and 7% in the middle** (`mid1 − top1` +3.6
+SE, `bot1 − top1` +3.3 SE). `read_group` weights neuron *i* by
+`(i − begin + 0.5)/n`, so index *is* articulator position and a weighted mean is
+least sensitive near its own centre — and **every block this project ever
+measured took the most expensive cells available.** Away from the top, freezing a
+neuron costs nothing measurable.
+
+So the 59% is a fact about *where the mask was put*. **Write separation is
+reopened** — but not yet established: one cell away from the top being free is
+not the same as a useful-sized region being free, and separating two lessons
+needed roughly half the group. The decisive follow-up is the width ladder
+re-run anchored at the **bottom**.
+
+*Two corrections from this sequence.* `compartprobe`'s verdict elected dilution
+by elimination the moment silencing came back null — a mechanism claim it had not
+tested. And `blockfloor`'s verdict accused `set_reward_block` of being a faulty
+instrument, on a threshold it cleared by 1.5 points; the code skips exactly the
+neurons in its range, and `blockwhere` exonerates it outright. **A pre-registered
+threshold is not a safe verdict when the data lands on it.**
+
 **And the protocol account is now closed** (2026-09-15). Three experiments asked
 whether the ceiling is in *how* the creature is taught. All three failed, and two
 made things worse:
