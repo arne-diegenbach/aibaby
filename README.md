@@ -10504,6 +10504,45 @@ So the three claims separate:
 The run's own verdict is *partial*, which is the honest label. The fix is an arm
 with `second_axis = 2`, so the gap rewards F2 alone and is silent about F1.
 
+#### The orthogonal claim, and two ways of nearly fooling myself
+
+`axisfree` built that arm. Across two independent seed families:
+
+| arm | B scored | family 0 | family 1 |
+| --- | --- | --- | --- |
+| `keep` | joint | 2.738 | 2.254 |
+| **`f2-axis`** | **F2 only** | **0.948** | **1.012** |
+| `f1-axis` | F1 only | −0.167 | 0.281 |
+| primary (`f2-axis − f1-axis`) | | **+5.7 SE** | **+2.0 SE** |
+
+**`f2-axis` replicates tightly** — 0.948 then 1.012, both indistinguishable from
+1.0. *A lesson silent about A's axis leaves A where teaching left it* is solid.
+**The contrast does not:** family 0's +5.7 SE became +2.0 against a pre-registered
+3 SE bar, because the comparison arm got less lethal, not because the orthogonal
+arm got worse. So the orthogonal claim is **still unconfirmed**, and the fault is
+power rather than design.
+
+Two near-misses on the way there, both mine and both worth recording:
+
+**A malformed gate.** Family 0's gate read "retention ≥ 1.0" — a point estimate
+against a hard constant — and returned 0.948, which is 0.41 SE below the line
+rather than below it. The correct form, *not significantly below 1.0*, is satisfied
+comfortably; but choosing that form after seeing the number is verdict-fitted-to-data
+wearing a statistical hat. It was the second malformed gate of the session, after
+`leverprobe`'s per-seed |Δ| share, which is attenuated toward 0.5 by construction.
+Rule 34: **state every gate as a contrast with an SE attached, and write down the
+SE you expect, so a near-miss can be told from a refutation at the time.**
+
+**A confirmation that confirmed nothing.** The first fresh-seed replication came
+back *bit-identical* to the exploratory family, because the binary was stale: the
+build had run with the shell's cwd left in another directory by an earlier `cd` in
+the same command, cmake printed `Error:` where the check grepped for `error:`, and
+`; echo built` reported success unconditionally. Three faults, each survivable
+alone. The only reason it was caught is that the change was *supposed* to move the
+numbers and they did not move at all — a subtler edit would have been accepted.
+`axisfree` now prints its seed-family offset so a stale run cannot claim to be a
+replication. Rule 35.
+
 *Two corrections from this sequence.* `compartprobe`'s verdict elected dilution
 by elimination the moment silencing came back null — a mechanism claim it had not
 tested. And `blockfloor`'s verdict accused `set_reward_block` of being a faulty

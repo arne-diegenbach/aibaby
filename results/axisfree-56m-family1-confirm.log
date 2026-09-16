@@ -28,3 +28,101 @@ experiment: axisfree
               comparable and says so.
     mechanism gap dUPPER should track retention as it did at -0.9994.
 
+  [2/80] seed 0 f2-axis  ret 1.221
+  [1/80] seed 0 keep     ret 3.601
+  [6/80] seed 1 f2-axis  ret 1.413
+  [8/80] seed 1 f1-full  ret 0.059
+  [4/80] seed 0 f1-full  ret 0.242
+  [5/80] seed 1 keep     ret 2.836
+  [3/80] seed 0 f1-axis  ret -0.085
+  [7/80] seed 1 f1-axis  ret 0.489
+  [10/80] seed 2 f2-axis  ret 1.017
+  [11/80] seed 2 f1-axis  ret -0.996
+  [12/80] seed 2 f1-full  ret -0.707
+  [9/80] seed 2 keep     ret 2.127
+  [14/80] seed 3 f2-axis  ret 1.545
+  [13/80] seed 3 keep     ret 2.617
+  [15/80] seed 3 f1-axis  ret 0.057
+  [17/80] seed 4 keep     ret 1.503
+  [16/80] seed 3 f1-full  ret -0.251
+  [21/80] seed 5 keep     ret 3.582
+  [20/80] seed 4 f1-full  ret 0.773
+  [18/80] seed 4 f2-axis  ret 1.372
+  [23/80] seed 5 f1-axis  ret -0.523
+  [24/80] seed 5 f1-full  ret -0.366
+  [19/80] seed 4 f1-axis  ret 0.086
+  [22/80] seed 5 f2-axis  ret 1.469
+  [25/80] seed 6 keep     ret 2.127
+  [28/80] seed 6 f1-full  ret 0.931
+  [29/80] seed 7 keep     ret 2.796
+  [30/80] seed 7 f2-axis  ret 0.739
+  [26/80] seed 6 f2-axis  ret 0.932
+  [27/80] seed 6 f1-axis  ret 0.665
+  [31/80] seed 7 f1-axis  ret 0.028
+  [32/80] seed 7 f1-full  ret -0.074
+  [33/80] seed 8 keep     ret 1.691
+  [36/80] seed 8 f1-full  ret 0.412
+  [35/80] seed 8 f1-axis  ret 0.238
+  [34/80] seed 8 f2-axis  ret 1.005
+  [38/80] seed 9 f2-axis  ret 1.350
+  [37/80] seed 9 keep     ret 2.198
+  [39/80] seed 9 f1-axis  ret 0.299
+  [41/80] seed 10 keep     ret 2.000
+  [40/80] seed 9 f1-full  ret 0.562
+  [42/80] seed 10 f2-axis  ret 1.030
+  [43/80] seed 10 f1-axis  ret 0.085
+  [44/80] seed 10 f1-full  ret 0.067
+  [47/80] seed 11 f1-axis  ret 0.195
+  [45/80] seed 11 keep     ret 2.600
+  [46/80] seed 11 f2-axis  ret 0.773
+  [48/80] seed 11 f1-full  ret 0.794
+  [52/80] seed 12 f1-full  ret 0.228
+  [50/80] seed 12 f2-axis  ret 1.545
+  [51/80] seed 12 f1-axis  ret 0.030
+  [49/80] seed 12 keep     ret 4.521
+  [53/80] seed 13 keep     ret 2.506
+  [55/80] seed 13 f1-axis  ret -0.480
+  [54/80] seed 13 f2-axis  ret 0.719
+  [56/80] seed 13 f1-full  ret -0.138
+  [58/80] seed 14 f2-axis  ret -0.797
+  [59/80] seed 14 f1-axis  ret 5.130
+  [61/80] seed 15 keep     ret 8.930
+  [62/80] seed 15 f2-axis  ret -0.067
+  [57/80] seed 14 keep     ret -9.379
+  [60/80] seed 14 f1-full  ret 4.633
+  [63/80] seed 15 f1-axis  ret -0.787
+  [65/80] seed 16 keep     ret 1.745
+  [64/80] seed 15 f1-full  ret -0.940
+  [66/80] seed 16 f2-axis  ret 1.240
+  [67/80] seed 16 f1-axis  ret -0.184
+  [68/80] seed 16 f1-full  ret 0.094
+  [69/80] seed 17 keep     ret 1.364
+  [70/80] seed 17 f2-axis  ret 1.029
+  [72/80] seed 17 f1-full  ret 0.620
+  [71/80] seed 17 f1-axis  ret 0.533
+  [73/80] seed 18 keep     ret 2.039
+  [74/80] seed 18 f2-axis  ret 1.528
+  [76/80] seed 18 f1-full  ret 0.378
+  [75/80] seed 18 f1-axis  ret 0.477
+  [77/80] seed 19 keep     ret 3.687
+  [78/80] seed 19 f2-axis  ret 1.172
+  [79/80] seed 19 f1-axis  ret 0.356
+  [80/80] seed 19 f1-full  ret 0.541
+
+  arm       B scored   F1-axis retention      gap dUPPER (Hz)
+  keep      joint      2.254 +/- 0.714          -11.923 +/- 1.002
+  f2-axis   F2 only    1.012 +/- 0.128          -3.624 +/- 0.775
+  f1-axis   F1 only    0.281 +/- 0.273          +5.084 +/- 0.877
+  f1-full   joint      0.393 +/- 0.249          +4.430 +/- 0.876
+
+  ARM LIVENESS vs `keep` (seeds where the arm differs at all)
+    f2-axis            20/20
+    f1-axis            20/20
+    f1-full            20/20
+
+  THE PRIMARY
+    f2-axis - f1-axis  +0.731 +/- 0.365  (+2.0 SE)
+    f2-axis retention  1.012 +/- 0.128 -- -0.09 SE below 1.0 (want <= 2.0)
+
+  --- the verdict ---
+  NO VERDICT: +2.0 SE apart with `f2-axis` at 1.012. Between the gates.
