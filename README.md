@@ -10413,6 +10413,53 @@ restore. The telemetry currently samples only the teach phase; extending it to t
 gap reads which one B does, and that decides whether the separation route survives
 or the 0.22 wipe finally has a mechanism.
 
+#### The second lesson runs back through the first one's write
+
+`gapwrite` extended the telemetry into the gap. The arm that decides it is
+`A-keep` — a gap rewarded *toward A's own target*, so the reward, the plasticity
+and the duration all match `AB` and the only difference is which target.
+
+| gap phase, net Hz | upper half | lower half |
+| --- | --- | --- |
+| `AB` (A then B) | **+5.221** ± 1.210 | −5.170 ± 0.525 |
+| `A-idle` (unrewarded) | −2.291 ± 0.744 | −2.515 ± 0.258 |
+| `A-keep` (rewarded toward A) | **−11.109** ± 1.034 | −1.182 ± 0.490 |
+| `AB − A-keep` | **+16.330 ± 1.732 (+9.4 SE)** | −3.987 ± 0.617 (−6.5 SE) |
+
+**A gap rewarded toward A deepens A's suppression by a further −11.1 Hz.** It
+restores nothing. That kills the alternative reading the first run couldn't
+exclude — that reward simply pulls up whatever is lowest, since the neurons B
+restores most (11, 12, 13) are exactly the ones A drove lowest. Same reward, same
+plasticity, opposite direction.
+
+Worth noting which way the correction went: **the proper control took the effect
+from +7.5 to +16.3 Hz.** A better control is not always a smaller number. And
+`A-keep` independently reproduces `retention`'s "a taught sound is kept and keeps
+improving" at the level of rates.
+
+**So the 0.22 wipe has a mechanism.** Lesson B raises the centroid by letting back
+up the very neurons A silenced — recovering about 48% of A's write inside the gap.
+It is not interference, decay, or competition for capacity; those were
+descriptions. It is B actively reversing the specific thing A wrote, because after
+A those suppressed cells at 1.6–2.6 Hz are the largest lever available for moving
+the centroid the way B is asked to move it. `B-rest` confirms the asymmetry is
+caused by A: the same lesson from rest moves the upper half −0.9, and in `AB` it
+moves +5.2.
+
+The write-separation route is therefore **refused** — two lessons on opposite sides
+of rest do not occupy different halves, because the second one does not start from
+rest.
+
+**And it suggests one account covering two results.** If the wipe is B's route
+running through A's write, retention should depend on the *angle between what the
+two lessons require of the rates*, not the distance between their targets:
+opposite changes to the same neurons collide (`retain`, 0.22), changes to different
+neurons coexist (`capacity`, 0.84 on orthogonal targets). That predicts a second
+lesson can be made retainable by choosing a target whose rate requirement doesn't
+reverse the first — a property of the target *pair*, costing nothing to arrange.
+The obvious way it fails is that almost every F1 target pair is collinear-opposed,
+since one centroid has only one axis. Worth testing before believing.
+
 *Two corrections from this sequence.* `compartprobe`'s verdict elected dilution
 by elimination the moment silencing came back null — a mechanism claim it had not
 tested. And `blockfloor`'s verdict accused `set_reward_block` of being a faulty

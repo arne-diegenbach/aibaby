@@ -36,59 +36,46 @@ experiment: gapwrite
                 SMALL. If it is large, existing data is contradicted and that
                 is reported rather than absorbed.
 
-  [2/48] seed 0 A-idle  taught 0.7762 after 0.7452
-  [6/48] seed 1 A-idle  taught 0.7730 after 0.7568
-  [8/48] seed 1 B-rest  taught 0.5197 after 0.5348
-  [1/48] seed 0 AB      taught 0.7762 after 0.9288
-  [7/48] seed 1 A-keep  taught 0.7730 after 0.5126
-  [3/48] seed 0 A-keep  taught 0.7762 after 0.6411
-  [5/48] seed 1 AB      taught 0.7730 after 0.9812
-  [4/48] seed 0 B-rest  taught 0.4824 after 0.4467
-  [10/48] seed 2 A-idle  taught 0.8962 after 0.8744
-  [9/48] seed 2 AB      taught 0.8962 after 0.9899
-  [11/48] seed 2 A-keep  taught 0.8962 after 0.6885
-  [13/48] seed 3 AB      taught 0.8461 after 0.9689
-  [16/48] seed 3 B-rest  taught 0.5150 after 0.4906
-  [12/48] seed 2 B-rest  taught 0.4068 after 0.3542
-  [15/48] seed 3 A-keep  taught 0.8461 after 0.5620
-  [18/48] seed 4 A-idle  taught 0.8275 after 0.7989
-  [19/48] seed 4 A-keep  taught 0.8275 after 0.6870
-  [20/48] seed 4 B-rest  taught 0.4739 after 0.4711
-  [14/48] seed 3 A-idle  taught 0.8461 after 0.8458
-  [17/48] seed 4 AB      taught 0.8275 after 0.9673
-  [21/48] seed 5 AB      taught 0.8155 after 0.9815
-  [22/48] seed 5 A-idle  taught 0.8155 after 0.8124
-  [24/48] seed 5 B-rest  taught 0.4138 after 0.3550
-  [23/48] seed 5 A-keep  taught 0.8155 after 0.6620
-  [27/48] seed 6 A-keep  taught 0.7816 after 0.6221
-  [26/48] seed 6 A-idle  taught 0.7816 after 0.7251
-  [28/48] seed 6 B-rest  taught 0.5073 after 0.4627
-  [25/48] seed 6 AB      taught 0.7816 after 0.8435
-  [29/48] seed 7 AB      taught 0.7805 after 0.8957
-  [30/48] seed 7 A-idle  taught 0.7805 after 0.7402
-  [32/48] seed 7 B-rest  taught 0.4949 after 0.4479
-  [31/48] seed 7 A-keep  taught 0.7805 after 0.6352
-  [34/48] seed 8 A-idle  taught 0.9570 after 0.9328
-  [37/48] seed 9 AB      taught 0.7979 after 1.0096
-  [33/48] seed 8 AB      taught 0.9570 after 1.0466
-  [36/48] seed 8 B-rest  taught 0.5476 after 0.5254
-  [39/48] seed 9 A-keep  taught 0.7979 after 0.6446
-  [35/48] seed 8 A-keep  taught 0.9570 after 0.6782
-  [43/48] seed 10 A-keep  taught 0.8157 after 0.6342
-  [38/48] seed 9 A-idle  taught 0.7979 after 0.7468
-  [40/48] seed 9 B-rest  taught 0.4937 after 0.3656
-  [44/48] seed 10 B-rest  taught 0.5233 after 0.4607
-  [45/48] seed 11 AB      taught 0.9124 after 1.0334
-  [42/48] seed 10 A-idle  taught 0.8157 after 0.8504
-  [41/48] seed 10 AB      taught 0.8157 after 0.9836
-  [46/48] seed 11 A-idle  taught 0.9124 after 0.8870
-  [47/48] seed 11 A-keep  taught 0.9124 after 0.7926
-  [48/48] seed 11 B-rest  taught 0.5556 after 0.5675
+  [5/36] seed 1 A-idle  taught 0.7730 after 0.7568
+  [8/36] seed 2 A-idle  taught 0.8962 after 0.8744
+  [6/36] seed 1 B-rest  taught 0.5197 after 0.5348
+  [7/36] seed 2 AB      taught 0.8962 after 0.9899
+  [4/36] seed 1 AB      taught 0.7730 after 0.9812
+  [1/36] seed 0 AB      taught 0.7762 after 0.9288
+  [3/36] seed 0 B-rest  taught 0.4824 after 0.4467
+  [2/36] seed 0 A-idle  taught 0.7762 after 0.7452
+  [10/36] seed 3 AB      taught 0.8461 after 0.9689
+  [12/36] seed 3 B-rest  taught 0.5150 after 0.4906
+  [9/36] seed 2 B-rest  taught 0.4068 after 0.3542
+  [11/36] seed 3 A-idle  taught 0.8461 after 0.8458
+  [13/36] seed 4 AB      taught 0.8275 after 0.9673
+  [17/36] seed 5 A-idle  taught 0.8155 after 0.8124
+  [18/36] seed 5 B-rest  taught 0.4138 after 0.3550
+  [20/36] seed 6 A-idle  taught 0.7816 after 0.7251
+  [14/36] seed 4 A-idle  taught 0.8275 after 0.7989
+  [15/36] seed 4 B-rest  taught 0.4739 after 0.4711
+  [21/36] seed 6 B-rest  taught 0.5073 after 0.4627
+  [16/36] seed 5 AB      taught 0.8155 after 0.9815
+  [19/36] seed 6 AB      taught 0.7816 after 0.8435
+  [22/36] seed 7 AB      taught 0.7805 after 0.8957
+  [23/36] seed 7 A-idle  taught 0.7805 after 0.7402
+  [25/36] seed 8 AB      taught 0.9570 after 1.0466
+  [24/36] seed 7 B-rest  taught 0.4949 after 0.4479
+  [26/36] seed 8 A-idle  taught 0.9570 after 0.9328
+  [27/36] seed 8 B-rest  taught 0.5476 after 0.5254
+  [28/36] seed 9 AB      taught 0.7979 after 1.0096
+  [29/36] seed 9 A-idle  taught 0.7979 after 0.7468
+  [30/36] seed 9 B-rest  taught 0.4937 after 0.3656
+  [31/36] seed 10 AB      taught 0.8157 after 0.9836
+  [32/36] seed 10 A-idle  taught 0.8157 after 0.8504
+  [36/36] seed 11 B-rest  taught 0.5556 after 0.5675
+  [33/36] seed 10 B-rest  taught 0.5233 after 0.4607
+  [34/36] seed 11 AB      taught 0.9124 after 1.0334
+  [35/36] seed 11 A-idle  taught 0.9124 after 0.8870
 
   WHAT TEACHING A DID (net Hz over each half, end of teach - start)
     AB      upper -10.935 +/- 1.474   lower -0.125 +/- 0.289
     A-idle  upper -10.935 +/- 1.474   lower -0.125 +/- 0.289
-    A-keep  upper -10.935 +/- 1.474   lower -0.125 +/- 0.289
     B-rest  upper -1.633 +/- 0.483   lower -7.202 +/- 0.926
 
   THE PROFILE ACROSS BOTH PHASES, `AB` arm, Hz
@@ -111,31 +98,21 @@ experiment: gapwrite
   dB = what the GAP did, net Hz over each half
     AB      upper +5.221 +/- 1.210   lower -5.170 +/- 0.525
     A-idle  upper -2.291 +/- 0.744   lower -2.515 +/- 0.258
-    A-keep  upper -11.109 +/- 1.034   lower -1.182 +/- 0.490
     B-rest  upper -0.913 +/- 0.353   lower -3.089 +/- 0.946
 
   THE PRIMARY: AB minus A-idle, so passive relaxation is removed
     upper half  +7.512 +/- 1.413 Hz  (+5.3 SE)
     lower half  -2.654 +/- 0.571 Hz  (-4.6 SE)
 
-  THE MATCHED CONTROL: AB minus A-keep -- same reward, same plasticity,
-  same duration, no conflicting lesson. This is the one that isolates B.
-    upper half  +16.330 +/- 1.732 Hz  (+9.4 SE)
-    lower half  -3.987 +/- 0.617 Hz  (-6.5 SE)
-    for reference, A-keep's OWN upper-half dB is -11.109 +/- 1.034: a rewarded
-    gap with no conflict DEEPENS A's suppression.
-
   ARM LIVENESS vs `AB` (seeds where the arm differs at all)
     A-idle             12/12
-    A-keep             12/12
     B-rest             12/12
 
   --- the verdict ---
-  B DOES BOTH: restores the upper half +16.330 Hz (+9.4 SE) AND suppresses
-  the lower a further -3.987 Hz (-6.5 SE), both against the MATCHED control.
-  That is neither pre-registered outcome. The separation route is still
-  refused -- any restoration of A's half is A being undone -- but B is not
-  purely undoing A either.
+  B DOES BOTH: restores the upper half +7.512 Hz (+5.3 SE) AND suppresses
+  the lower a further -2.654 Hz (-4.6 SE). That is neither pre-registered
+  outcome. The separation route is still refused -- any restoration of A's
+  half is A being undone -- but B is not purely undoing A either.
 
   For reference, `B-rest` is the same lesson taught from rest, where
   `blockflip` found it suppresses the LOWER half. If B's behaviour differs

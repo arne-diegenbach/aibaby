@@ -10117,11 +10117,28 @@ bool run_blockflip(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
 // Note [[aibaby-retention]] says a taught sound is KEPT without a conflict, so
 // A-idle should relax only a little -- if it relaxes a lot, that contradicts
 // existing data and this run says so rather than proceeding.
-struct GWArm { const char* name; bool relearn; float f1; float f2; };
+//
+// THE CONTROL THE FIRST RUN LACKED, added 2026-09-16 after reading its own result.
+// `A-idle` leaves the gap UNREWARDED, so `AB - A-idle` conflates "B's lesson" with
+// "any rewarded plasticity at all". That matters here because the neurons B
+// restores most (11, 12, 13 at +1.75, +1.64, +1.60) are exactly the ones A drove
+// LOWEST (2.64, 1.59, 1.67) -- and a generic reward-driven homeostatic pull-up of
+// the lowest-rate cells predicts the same picture as B specifically undoing A.
+//
+// `A-keep` rewards the gap toward A's OWN target, via `second_f1/f2`. Same reward,
+// same plasticity, same duration, no conflicting lesson. If it also restores the
+// upper half, the restoration is generic and says nothing about B. If it holds the
+// suppression, then undoing A is B's doing.
+//
+// [[aibaby-retention]] argues for the latter -- continuing to teach A KEEPS and
+// improves the lesson (1.31 vs a 0.999 control), which generic restoration would
+// degrade -- but that is behaviour, not rates, and this is the direct test.
+struct GWArm { const char* name; bool relearn; float f1; float f2; float s_f1; float s_f2; };
 const GWArm kGWArms[] = {
-    {"AB", true, 0.0f, 0.0f},      // A then B: the shipped 0.22-wipe protocol
-    {"A-idle", false, 0.0f, 0.0f}, // A then an UNREWARDED gap: passive relaxation
-    {"B-rest", false, 850.0f, 1100.0f},  // B taught from rest, for reference
+    {"AB", true, 0.0f, 0.0f, 0.0f, 0.0f},  // A then B: the shipped 0.22-wipe protocol
+    {"A-idle", false, 0.0f, 0.0f, 0.0f, 0.0f},  // A then an UNREWARDED gap
+    {"A-keep", true, 0.0f, 0.0f, 320.0f, 2500.0f},  // A then a gap rewarded toward A
+    {"B-rest", false, 850.0f, 1100.0f, 0.0f, 0.0f},  // B from rest, for reference
 };
 constexpr uint32_t kGWArmCount = sizeof(kGWArms) / sizeof(kGWArms[0]);
 
@@ -10194,6 +10211,7 @@ bool run_gapwrite(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
     cfg.relearn = kGWArms[a].relearn;
     cfg.mask_mode = 0u;
     if (kGWArms[a].f1 > 0.0f) { cfg.first_f1 = kGWArms[a].f1; cfg.first_f2 = kGWArms[a].f2; }
+    if (kGWArms[a].s_f1 > 0.0f) { cfg.second_f1 = kGWArms[a].s_f1; cfg.second_f2 = kGWArms[a].s_f2; }
     Timbre local_ruler;
     std::string local_error;
     if (!local_ruler.configure(dna0.header().audio, local_error)) return cell;
@@ -10285,6 +10303,22 @@ bool run_gapwrite(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
   std::printf("\n  THE PRIMARY: AB minus A-idle, so passive relaxation is removed\n");
   std::printf("    upper half  %+.3f +/- %.3f Hz  (%+.1f SE)\n", d_u, se_u, t_u);
   std::printf("    lower half  %+.3f +/- %.3f Hz  (%+.1f SE)\n", d_l, se_l, t_l);
+  double se_uk = 0.0, se_lk = 0.0;
+  const double d_uk = paired(dup, 0u, 2u, &se_uk);
+  const double d_lk = paired(dlo, 0u, 2u, &se_lk);
+  const double t_uk = se_uk > 0.0 ? d_uk / se_uk : 0.0;
+  const double t_lk = se_lk > 0.0 ? d_lk / se_lk : 0.0;
+  std::printf("\n  THE MATCHED CONTROL: AB minus A-keep -- same reward, same plasticity,\n"
+              "  same duration, no conflicting lesson. This is the one that isolates B.\n");
+  std::printf("    upper half  %+.3f +/- %.3f Hz  (%+.1f SE)\n", d_uk, se_uk, t_uk);
+  std::printf("    lower half  %+.3f +/- %.3f Hz  (%+.1f SE)\n", d_lk, se_lk, t_lk);
+  {
+    double sk = 0.0;
+    const double mk = ctx_mean_se(dup[2], &sk);
+    std::printf("    for reference, A-keep's OWN upper-half dB is %+.3f +/- %.3f: a rewarded\n"
+                "    gap with no conflict %s A's suppression.\n", mk, sk,
+                mk > 1.0 ? "UNDOES" : (mk < -1.0 ? "DEEPENS" : "roughly HOLDS"));
+  }
 
   {
     ArmLiveness live("gapwrite");
@@ -10296,8 +10330,10 @@ bool run_gapwrite(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
     if (!live.report("AB")) return false;
   }
 
-  const bool restore = d_u >= 2.0 && t_u >= 3.0;
-  const bool separate = d_l <= -2.0 && t_l <= -3.0;
+  // KEYED ON THE MATCHED CONTROL, not on A-idle: `A-keep` is the arm that isolates
+  // B's lesson from reward-driven plasticity in general.
+  const bool restore = d_uk >= 2.0 && t_uk >= 3.0;
+  const bool separate = d_lk <= -2.0 && t_lk <= -3.0;
   std::printf("\n  --- the verdict ---\n");
   double relax_se = 0.0;
   const double relax = ctx_mean_se(dup[1], &relax_se);
@@ -10311,9 +10347,10 @@ bool run_gapwrite(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
   }
   if (restore && !separate) {
     std::printf("  B UNDOES A. The upper half -- the half lesson A suppressed -- is RESTORED\n"
-                "  by %+.3f Hz +/- %.3f (%+.1f SE) beyond what it recovers on its own.\n"
-                "  Lesson B raises the centroid by putting back exactly what A took away.\n",
-                d_u, se_u, t_u);
+                "  by %+.3f Hz +/- %.3f (%+.1f SE) beyond a gap that is rewarded just as\n"
+                "  hard toward A's OWN target. Lesson B raises the centroid by putting back\n"
+                "  exactly what A took away, and that is B's doing rather than reward's.\n",
+                d_uk, se_uk, t_uk);
     std::printf("  THE SEPARATION ROUTE IS REFUSED. Targets on opposite sides of rest do NOT\n"
                 "  write to different halves once the second lesson starts from the first\n"
                 "  one's endpoint, which is why `retain` wipes at 0.22 despite already having\n"
@@ -10323,22 +10360,26 @@ bool run_gapwrite(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
                 "  back through the first lesson's write.\n");
   } else if (separate && !restore) {
     std::printf("  B WRITES BESIDE A. The lower half falls a further %+.3f Hz +/- %.3f\n"
-                "  (%+.1f SE) beyond the control, and the upper half is not restored\n"
+                "  (%+.1f SE) beyond the matched control, and the upper half is not restored\n"
                 "  (%+.1f SE). The two lessons occupy different halves.\n",
-                d_l, se_l, t_l, t_u);
+                d_lk, se_lk, t_lk, t_uk);
     std::printf("  THAT IS IN TENSION WITH THE 0.22 WIPE, and the tension is the finding: if\n"
                 "  the writes are separate then the wipe is NOT an overwrite of the write,\n"
                 "  and `storage-vs-expression`'s pure-overwrite reading needs re-examining\n"
                 "  against this. Do not resolve it by picking whichever is more convenient.\n");
   } else if (restore && separate) {
     std::printf("  B DOES BOTH: restores the upper half %+.3f Hz (%+.1f SE) AND suppresses\n"
-                "  the lower a further %+.3f Hz (%+.1f SE). That is neither pre-registered\n"
-                "  outcome. The separation route is still refused -- any restoration of A's\n"
-                "  half is A being undone -- but B is not purely undoing A either.\n",
-                d_u, t_u, d_l, t_l);
+                "  the lower a further %+.3f Hz (%+.1f SE), both against the MATCHED control.\n"
+                "  That is neither pre-registered outcome. The separation route is still\n"
+                "  refused -- any restoration of A's half is A being undone -- but B is not\n"
+                "  purely undoing A either.\n",
+                d_uk, t_uk, d_lk, t_lk);
   } else {
-    std::printf("  NO VERDICT: upper %+.1f SE, lower %+.1f SE, both inside the gates.\n"
-                "  Reported, nothing concluded.\n", t_u, t_l);
+    std::printf("  NO VERDICT against the matched control: upper %+.1f SE, lower %+.1f SE,\n"
+                "  both inside the gates. Reported, nothing concluded -- and note the\n"
+                "  A-idle comparison reading %+.1f / %+.1f SE is NOT a substitute, because it\n"
+                "  cannot tell B's lesson from rewarded plasticity in general.\n",
+                t_uk, t_lk, t_u, t_l);
   }
   std::printf("\n  For reference, `B-rest` is the same lesson taught from rest, where\n"
               "  `blockflip` found it suppresses the LOWER half. If B's behaviour differs\n"
