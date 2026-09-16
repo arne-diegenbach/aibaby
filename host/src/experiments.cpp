@@ -336,6 +336,15 @@ const Spec kSpecs[] = {
      "  DIRECTION predicts the asymmetry reverses; STRUCTURE predicts the upper\n"
      "  half stays expensive. Opposite signs, both cannot survive. F2 is held\n"
      "  constant so only F1 direction differs. 30 seeds"},
+    {"gapwrite", 5600000, Expect::kOpen, Tier::kLong,
+     "DOES LESSON B UNDO LESSON A, OR WRITE BESIDE IT? blockflip showed the\n"
+     "  creature silences whichever half is on the wrong side of the target, which\n"
+     "  suggests opposite-side lessons write to different halves. retain refutes\n"
+     "  that on its face -- its lessons ARE opposite and it wipes at 0.22. B starts\n"
+     "  from A's endpoint, where the upper half is already at ~1.6 Hz, so it can\n"
+     "  suppress the lower further or RESTORE the upper, which is undoing A. The\n"
+     "  A-idle arm leaves the gap unrewarded so passive relaxation cannot be read\n"
+     "  as B's doing. 12 seeds"},
     {"movability", 5600000, Expect::kOpen, Tier::kLong,
      "orthovocab left a LEAD: on identical demands the F2 lesson travelled\n"
      "  0.169 and the F1 lesson 0.030 -- but F1's was FIGHTING another lesson on\n"
@@ -678,6 +687,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "blockanchor") ok = run_blockanchor(dna_blob, ticks, verbose);
   else if (name == "leverprobe") ok = run_leverprobe(dna_blob, ticks, verbose);
   else if (name == "blockflip") ok = run_blockflip(dna_blob, ticks, verbose);
+  else if (name == "gapwrite") ok = run_gapwrite(dna_blob, ticks, verbose);
   else if (name == "partprobe") ok = run_partprobe(dna_blob, ticks, verbose);
   else if (name == "pgprobe") ok = run_pgprobe(dna_blob, ticks, verbose);
   else if (name == "g2cond") ok = run_g2cond(dna_blob, ticks, verbose);

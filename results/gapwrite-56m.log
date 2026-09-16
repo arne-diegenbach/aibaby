@@ -1,0 +1,38 @@
+experiment: gapwrite
+  instrument        gapwrite   trial seed 000000000135bdb9   2000 trials
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  question          `blockflip` says the creature silences whichever half is
+                    on the wrong side of the target. So do two lessons on
+                    OPPOSITE sides write to different halves? `retain` says no
+                    -- its lessons already are opposite (0.093 and 0.800) and
+                    it is the protocol that produces the 0.22 wipe.
+  what decides it   lesson B starts from A's endpoint, not from rest. The
+                    upper half is already at ~1.6 Hz, so B can suppress the
+                    LOWER half further (writes separate) or RESTORE the UPPER
+                    half (B undoes A). This reads which.
+  my prediction     RESTORE -- little room left to suppress, much to restore.
+                    Written before the run, and it is the outcome that kills
+                    the separation route, which is why it is stated first.
+  the control       `A-idle` teaches A then leaves the gap UNREWARDED, so
+                    passive relaxation cannot be read as B's doing. Every
+                    number below is AB minus A-idle.
+
+  PRE-REGISTERED, written before the run
+    measured    dB = (profile at end of gap) - (profile at end of teaching),
+                summed over each half, per seed.
+    RESTORE     AB's UPPER-half dB exceeds A-idle's by >= +2.0 Hz and >= 3 SE
+                -> B undoes A directly. The separation route is REFUSED and
+                the 0.22 wipe has a mechanism.
+    SEPARATE    AB's LOWER-half dB is below A-idle's by <= -2.0 Hz and >= 3 SE,
+                AND the upper-half test above does NOT fire -> B writes beside
+                A. Then the wipe is not an overwrite of the WRITE, which puts
+                it in tension with storage-vs-expression's pure-overwrite
+                reading and that tension becomes the next question.
+    BOTH/NEITHER-> reported, no verdict. B doing both is a real possibility
+                and it is not the same as either finding.
+    sanity      A-idle's own dB is passive relaxation. `retention` says a
+                taught sound is KEPT with no conflict, so this should be
+                SMALL. If it is large, existing data is contradicted and that
+                is reported rather than absorbed.
+

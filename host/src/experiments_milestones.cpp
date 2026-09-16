@@ -5681,6 +5681,25 @@ struct RTRow {
   double f1_cent_early = 0.0, f1_cent_late = 0.0;
   uint32_t f1_n = 0;                    // neurons in the F1 group
   uint64_t f1_samp_early = 0, f1_samp_late = 0, f1_samp_all = 0;
+  // THE GAP PHASE, i.e. LESSON B (`gapwrite`, 2026-09-16). `blockflip` showed the
+  // creature learns by SILENCING whichever half sits on the wrong side of the
+  // target -- mirror-image profiles, both suppression. That suggested two lessons
+  // on opposite sides of rest would write to different halves, which would be
+  // write separation with no mask at all.
+  //
+  // `retain` REFUTES that on its face: its two lessons are ALREADY on opposite
+  // sides of rest (positions 0.093 and 0.800) and it is the protocol that produces
+  // the 0.22 wipe. The reason is probably that lesson B does not start from rest.
+  // After A the upper half is down at ~1.6 Hz from ~4.6, so to raise the centroid
+  // B can suppress the lower half FURTHER, or RESTORE the upper half -- and
+  // restoring it is directly undoing A. There is little room left to do the first
+  // and a great deal of room to do the second.
+  //
+  // So this records the profile at the END OF THE GAP. The quantity that decides
+  // it is (gap_late - f1_rate_late): what B moved, measured from where A left it.
+  double f1_gap_late[kRTF1Max] = {};
+  double f1_cent_gap = 0.0;
+  uint64_t f1_gap_samp_late = 0, f1_gap_samp_all = 0;
 };
 
 
@@ -6094,7 +6113,8 @@ RTRow run_retain_arm(const std::vector<uint8_t>& blob, uint64_t ticks,
       // assumed. The centroid here is the plain rate-weighted mean, exact for the
       // shipped `pool_beta = 1.0`; the probe reports beta so a sharpened genome
       // cannot be read through this column by accident.
-      if (in_teach_phase && vmod_idx >= 0) {
+      const bool in_gap_phase = trial >= n_teach && trial < n_teach + n_gap;
+      if ((in_teach_phase || in_gap_phase) && vmod_idx >= 0) {
         const aibaby::Network& rnet = s.brain.network();
         const aibaby::ModuleState& rvm = rnet.module(uint32_t(vmod_idx));
         const uint32_t rg_lo = aibaby::slice_begin(rvm.count, aibaby::kVocalGroups, 2);
@@ -6102,8 +6122,12 @@ RTRow run_retain_arm(const std::vector<uint8_t>& blob, uint64_t ticks,
         const uint32_t gn = rg_hi - rg_lo;
         if (gn > 0 && gn <= RTRow::kRTF1Max) {
           row.f1_n = gn;
-          const bool early = trial < third;
-          const bool late = trial >= n_teach - third;
+          // The gap's own last third, so `gap_late - f1_rate_late` is what LESSON B
+          // moved, measured from where lesson A left the creature.
+          const uint32_t gap_third = n_gap / 3 ? n_gap / 3 : 1;
+          const bool early = in_teach_phase && trial < third;
+          const bool late = in_teach_phase && trial >= n_teach - third;
+          const bool gap_late = in_gap_phase && trial >= n_teach + n_gap - gap_third;
           double wsum = 0.0, psum = 0.0;
           for (uint32_t k = 0; k < gn; ++k) {
             const double r = double(rnet.rate_fast(rvm.begin + rg_lo + k));
@@ -6112,16 +6136,18 @@ RTRow run_retain_arm(const std::vector<uint8_t>& blob, uint64_t ticks,
             psum += r * pref;
             if (early) row.f1_rate_early[k] += r;
             if (late) row.f1_rate_late[k] += r;
+            if (gap_late) row.f1_gap_late[k] += r;
           }
           if (wsum > 1e-6) {
             const double cent = psum / wsum;
-            row.f1_cent_teach += cent;
-            ++row.f1_samp_all;
+            if (in_teach_phase) { row.f1_cent_teach += cent; ++row.f1_samp_all; }
+            else { row.f1_cent_gap += cent; ++row.f1_gap_samp_all; }
             if (early) row.f1_cent_early += cent;
             if (late) row.f1_cent_late += cent;
           }
           if (early) ++row.f1_samp_early;
           if (late) ++row.f1_samp_late;
+          if (gap_late) ++row.f1_gap_samp_late;
         }
       }
       if (s.brain.asleep() && !was_asleep) ++row.sleeps;
@@ -10054,6 +10080,270 @@ bool run_blockflip(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
   }
   std::printf("\n  READ THE PROFILE ABOVE WHATEVER THE COSTS DID: which half moves, and in\n"
               "  which direction, is the mechanism and it does not depend on the gate.\n");
+  return true;
+}
+
+// `gapwrite`, 2026-09-16. DOES LESSON B UNDO LESSON A, OR WRITE BESIDE IT?
+//
+// `blockflip` established that the creature learns by SILENCING whichever half of
+// the F1 group sits on the wrong side of the target: mirror-image profiles, -10.26
+// Hz on the upper half for a low target and -10.27 Hz on the lower half for a high
+// one, BOTH suppression, never excitation. The obvious reading is that two lessons
+// on opposite sides of rest write to DIFFERENT halves, which would be write
+// separation with no mask at all.
+//
+// `retain` refutes that on its face, and the check cost nothing: its two lessons
+// are ALREADY on opposite sides of rest -- A at position 0.093, B at 0.800 -- and
+// it is the exact protocol that produces the 0.22 wipe. If opposite-side targets
+// separated the write, retention would already be high.
+//
+// THE LIKELY REASON, AND IT IS MEASURABLE. Lesson B does not start from rest. By
+// the end of A the upper half is down at ~1.6 Hz from ~4.6, so to raise the
+// centroid B has two routes:
+//
+//   suppress the LOWER half further  -> the writes really are separate
+//   RESTORE the UPPER half           -> B is directly undoing A
+//
+// From rest it suppresses. From A's endpoint there is little room left to suppress
+// and a great deal of room to restore. **My prediction, written before the run, is
+// RESTORE** -- and it is the outcome that refuses the separation route I would
+// rather have, which is exactly why it is written down here first.
+//
+// THE CONTROL THAT MAKES IT A MEASUREMENT. A's suppression might simply relax on
+// its own once reward stops -- intrinsic plasticity pulls every neuron back toward
+// its target rate, and that would look like "B undid A" with B doing nothing. So
+// `A-idle` runs the same teaching and then an UNREWARDED gap (`relearn = false`
+// delivers no reward at all), and every number below is read as AB minus A-idle.
+// Note [[aibaby-retention]] says a taught sound is KEPT without a conflict, so
+// A-idle should relax only a little -- if it relaxes a lot, that contradicts
+// existing data and this run says so rather than proceeding.
+struct GWArm { const char* name; bool relearn; float f1; float f2; };
+const GWArm kGWArms[] = {
+    {"AB", true, 0.0f, 0.0f},      // A then B: the shipped 0.22-wipe protocol
+    {"A-idle", false, 0.0f, 0.0f}, // A then an UNREWARDED gap: passive relaxation
+    {"B-rest", false, 850.0f, 1100.0f},  // B taught from rest, for reference
+};
+constexpr uint32_t kGWArmCount = sizeof(kGWArms) / sizeof(kGWArms[0]);
+
+bool run_gapwrite(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  aibaby::Dna dna0;
+  if (dna0.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) {
+    std::printf("  setup failed: the genome does not load\n");
+    return false;
+  }
+  const int32_t vm = dna0.module_with_role(aibaby::ModuleRole::kVocal);
+  if (vm < 0) { std::printf("  this genome has no vocal module\n"); return false; }
+  const uint32_t vcount = dna0.module(uint32_t(vm)).neurons;
+  const uint32_t g_lo = aibaby::slice_begin(vcount, aibaby::kVocalGroups, 2u);
+  const uint32_t g_hi = aibaby::slice_begin(vcount, aibaby::kVocalGroups, 3u);
+  const uint32_t gsize = g_hi - g_lo;
+  const double f1lo = double(dna0.header().vocal.f1_min);
+  const double f1hi = double(dna0.header().vocal.f1_max);
+  Regime regime;
+  regime.praise = kPraiseValue;
+  regime.scold = kScoldValue;
+  constexpr uint32_t kReps = 12;
+  instrument("gapwrite", dna0.header().seed ^ 0x9A70u, ticks / kRTTrial, "trials");
+
+  std::printf("  question          `blockflip` says the creature silences whichever half is\n"
+              "                    on the wrong side of the target. So do two lessons on\n"
+              "                    OPPOSITE sides write to different halves? `retain` says no\n"
+              "                    -- its lessons already are opposite (0.093 and 0.800) and\n"
+              "                    it is the protocol that produces the 0.22 wipe.\n");
+  std::printf("  what decides it   lesson B starts from A's endpoint, not from rest. The\n"
+              "                    upper half is already at ~1.6 Hz, so B can suppress the\n"
+              "                    LOWER half further (writes separate) or RESTORE the UPPER\n"
+              "                    half (B undoes A). This reads which.\n");
+  std::printf("  my prediction     RESTORE -- little room left to suppress, much to restore.\n"
+              "                    Written before the run, and it is the outcome that kills\n"
+              "                    the separation route, which is why it is stated first.\n");
+  std::printf("  the control       `A-idle` teaches A then leaves the gap UNREWARDED, so\n"
+              "                    passive relaxation cannot be read as B's doing. Every\n"
+              "                    number below is AB minus A-idle.\n");
+
+  std::printf("\n  PRE-REGISTERED, written before the run\n");
+  std::printf("    measured    dB = (profile at end of gap) - (profile at end of teaching),\n"
+              "                summed over each half, per seed.\n");
+  std::printf("    RESTORE     AB's UPPER-half dB exceeds A-idle's by >= +2.0 Hz and >= 3 SE\n"
+              "                -> B undoes A directly. The separation route is REFUSED and\n"
+              "                the 0.22 wipe has a mechanism.\n");
+  std::printf("    SEPARATE    AB's LOWER-half dB is below A-idle's by <= -2.0 Hz and >= 3 SE,\n"
+              "                AND the upper-half test above does NOT fire -> B writes beside\n"
+              "                A. Then the wipe is not an overwrite of the WRITE, which puts\n"
+              "                it in tension with storage-vs-expression's pure-overwrite\n"
+              "                reading and that tension becomes the next question.\n");
+  std::printf("    BOTH/NEITHER-> reported, no verdict. B doing both is a real possibility\n"
+              "                and it is not the same as either finding.\n");
+  std::printf("    sanity      A-idle's own dB is passive relaxation. `retention` says a\n"
+              "                taught sound is KEPT with no conflict, so this should be\n"
+              "                SMALL. If it is large, existing data is contradicted and that\n"
+              "                is reported rather than absorbed.\n\n");
+
+  struct Cell { bool ok = false; RTRow row; };
+  const uint32_t njobs = kReps * kGWArmCount;
+  const std::vector<Cell> cells = parallel_reps<Cell>(njobs, [&](uint32_t i) {
+    Cell cell;
+    const uint32_t r = i / kGWArmCount, a = i % kGWArmCount;
+    std::vector<uint8_t> variant = blob;
+    const uint64_t seed = dna0.header().seed + r * 7919ull;
+    std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+    RTConfig cfg;
+    cfg.name = kGWArms[a].name;
+    cfg.teach = true;
+    cfg.relearn = kGWArms[a].relearn;
+    cfg.mask_mode = 0u;
+    if (kGWArms[a].f1 > 0.0f) { cfg.first_f1 = kGWArms[a].f1; cfg.first_f2 = kGWArms[a].f2; }
+    Timbre local_ruler;
+    std::string local_error;
+    if (!local_ruler.configure(dna0.header().audio, local_error)) return cell;
+    bool ok = false;
+    cell.row = run_retain_arm(variant, ticks, cfg, local_ruler, regime, &ok);
+    if (!ok) return cell;
+    cell.ok = true;
+    parallel_note("  [%u/%u] seed %u %-7s taught %.4f after %.4f\n", i + 1, njobs, r,
+                  kGWArms[a].name, cell.row.err_taught, cell.row.err_after);
+    return cell;
+  });
+
+  // Per seed: net dB over each half, so the SEs are between-creature.
+  std::vector<std::vector<double>> dup(kGWArmCount), dlo(kGWArmCount);
+  std::vector<std::vector<double>> teach_up(kGWArmCount), teach_lo(kGWArmCount);
+  std::vector<double> prof_teach(gsize, 0.0), prof_gap(gsize, 0.0);
+  std::vector<double> prof_teach_i(gsize, 0.0), prof_gap_i(gsize, 0.0);
+  uint32_t nprof = 0, nprof_i = 0;
+  std::vector<uint32_t> nseed(kGWArmCount, 0u);
+  for (uint32_t a = 0; a < kGWArmCount; ++a) {
+    for (uint32_t r = 0; r < kReps; ++r) {
+      const Cell& c = cells[r * kGWArmCount + a];
+      if (!c.ok || c.row.f1_n != gsize) continue;
+      if (c.row.f1_samp_late == 0 || c.row.f1_gap_samp_late == 0) continue;
+      if (c.row.f1_samp_early == 0) continue;
+      ++nseed[a];
+      double u = 0.0, l = 0.0, tu = 0.0, tl = 0.0;
+      for (uint32_t k = 0; k < gsize; ++k) {
+        const double e = c.row.f1_rate_early[k] / double(c.row.f1_samp_early);
+        const double t = c.row.f1_rate_late[k] / double(c.row.f1_samp_late);
+        const double g = c.row.f1_gap_late[k] / double(c.row.f1_gap_samp_late);
+        if (k >= gsize / 2u) { u += g - t; tu += t - e; }
+        else { l += g - t; tl += t - e; }
+        if (a == 0) { prof_teach[k] += t; prof_gap[k] += g; }
+        if (a == 1) { prof_teach_i[k] += t; prof_gap_i[k] += g; }
+      }
+      if (a == 0) ++nprof;
+      if (a == 1) ++nprof_i;
+      dup[a].push_back(u); dlo[a].push_back(l);
+      teach_up[a].push_back(tu); teach_lo[a].push_back(tl);
+    }
+    if (nseed[a] < 3) {
+      std::printf("\n  gapwrite INCONCLUSIVE -- arm `%s` produced %u creatures.\n",
+                  kGWArms[a].name, nseed[a]);
+      return false;
+    }
+  }
+  if (nprof > 0) for (uint32_t k = 0; k < gsize; ++k) { prof_teach[k] /= nprof; prof_gap[k] /= nprof; }
+  if (nprof_i > 0) for (uint32_t k = 0; k < gsize; ++k) { prof_teach_i[k] /= nprof_i; prof_gap_i[k] /= nprof_i; }
+
+  std::printf("\n  WHAT TEACHING A DID (net Hz over each half, end of teach - start)\n");
+  for (uint32_t a = 0; a < kGWArmCount; ++a) {
+    double su = 0.0, sl = 0.0;
+    const double mu = ctx_mean_se(teach_up[a], &su), ml = ctx_mean_se(teach_lo[a], &sl);
+    std::printf("    %-7s upper %+.3f +/- %.3f   lower %+.3f +/- %.3f\n", kGWArms[a].name, mu,
+                su, ml, sl);
+  }
+
+  std::printf("\n  THE PROFILE ACROSS BOTH PHASES, `AB` arm, Hz\n");
+  std::printf("    %-3s %-9s %-11s %-11s %-11s\n", "k", "position", "end teach", "end gap",
+              "dB");
+  for (uint32_t k = 0; k < gsize; ++k) {
+    std::printf("    %-3u %-9.3f %-11.3f %-11.3f %+.4f\n", k, (double(k) + 0.5) / double(gsize),
+                prof_teach[k], prof_gap[k], prof_gap[k] - prof_teach[k]);
+  }
+
+  std::printf("\n  dB = what the GAP did, net Hz over each half\n");
+  double m_up[kGWArmCount] = {}, s_up[kGWArmCount] = {};
+  double m_lo[kGWArmCount] = {}, s_lo[kGWArmCount] = {};
+  for (uint32_t a = 0; a < kGWArmCount; ++a) {
+    m_up[a] = ctx_mean_se(dup[a], &s_up[a]);
+    m_lo[a] = ctx_mean_se(dlo[a], &s_lo[a]);
+    std::printf("    %-7s upper %+.3f +/- %.3f   lower %+.3f +/- %.3f\n", kGWArms[a].name,
+                m_up[a], s_up[a], m_lo[a], s_lo[a]);
+  }
+
+  const auto paired = [&](const std::vector<std::vector<double>>& v, uint32_t x, uint32_t y,
+                          double* se) {
+    std::vector<double> d;
+    const size_t n = v[x].size() < v[y].size() ? v[x].size() : v[y].size();
+    for (size_t i = 0; i < n; ++i) d.push_back(v[x][i] - v[y][i]);
+    return d.size() >= 3 ? ctx_mean_se(d, se) : 0.0;
+  };
+  double se_u = 0.0, se_l = 0.0;
+  const double d_u = paired(dup, 0u, 1u, &se_u);
+  const double d_l = paired(dlo, 0u, 1u, &se_l);
+  const double t_u = se_u > 0.0 ? d_u / se_u : 0.0;
+  const double t_l = se_l > 0.0 ? d_l / se_l : 0.0;
+  std::printf("\n  THE PRIMARY: AB minus A-idle, so passive relaxation is removed\n");
+  std::printf("    upper half  %+.3f +/- %.3f Hz  (%+.1f SE)\n", d_u, se_u, t_u);
+  std::printf("    lower half  %+.3f +/- %.3f Hz  (%+.1f SE)\n", d_l, se_l, t_l);
+
+  {
+    ArmLiveness live("gapwrite");
+    for (uint32_t r = 0; r < kReps; ++r)
+      for (uint32_t a = 0; a < kGWArmCount; ++a) {
+        const Cell& c = cells[r * kGWArmCount + a];
+        if (c.ok) live.observe(kGWArms[a].name, r, c.row.err_after);
+      }
+    if (!live.report("AB")) return false;
+  }
+
+  const bool restore = d_u >= 2.0 && t_u >= 3.0;
+  const bool separate = d_l <= -2.0 && t_l <= -3.0;
+  std::printf("\n  --- the verdict ---\n");
+  double relax_se = 0.0;
+  const double relax = ctx_mean_se(dup[1], &relax_se);
+  if (relax >= 2.0 && relax_se > 0.0 && relax / relax_se >= 3.0) {
+    std::printf("  NOTE, AND IT CONTRADICTS EXISTING DATA: A's suppression relaxes %+.3f Hz\n"
+                "  +/- %.3f on its own, with NO second lesson. `retention` reports a taught\n"
+                "  sound is KEPT (1.31 vs a 0.999 control), which a large passive relaxation\n"
+                "  is hard to square with. The primary below is read against this arm so it\n"
+                "  is still a valid comparison, but the discrepancy is flagged, not absorbed.\n",
+                relax, relax_se);
+  }
+  if (restore && !separate) {
+    std::printf("  B UNDOES A. The upper half -- the half lesson A suppressed -- is RESTORED\n"
+                "  by %+.3f Hz +/- %.3f (%+.1f SE) beyond what it recovers on its own.\n"
+                "  Lesson B raises the centroid by putting back exactly what A took away.\n",
+                d_u, se_u, t_u);
+    std::printf("  THE SEPARATION ROUTE IS REFUSED. Targets on opposite sides of rest do NOT\n"
+                "  write to different halves once the second lesson starts from the first\n"
+                "  one's endpoint, which is why `retain` wipes at 0.22 despite already having\n"
+                "  opposite-side targets.\n");
+    std::printf("  AND THE 0.22 WIPE HAS A MECHANISM: it is not interference, competition or\n"
+                "  decay. The second lesson's cheapest route to its own target runs straight\n"
+                "  back through the first lesson's write.\n");
+  } else if (separate && !restore) {
+    std::printf("  B WRITES BESIDE A. The lower half falls a further %+.3f Hz +/- %.3f\n"
+                "  (%+.1f SE) beyond the control, and the upper half is not restored\n"
+                "  (%+.1f SE). The two lessons occupy different halves.\n",
+                d_l, se_l, t_l, t_u);
+    std::printf("  THAT IS IN TENSION WITH THE 0.22 WIPE, and the tension is the finding: if\n"
+                "  the writes are separate then the wipe is NOT an overwrite of the write,\n"
+                "  and `storage-vs-expression`'s pure-overwrite reading needs re-examining\n"
+                "  against this. Do not resolve it by picking whichever is more convenient.\n");
+  } else if (restore && separate) {
+    std::printf("  B DOES BOTH: restores the upper half %+.3f Hz (%+.1f SE) AND suppresses\n"
+                "  the lower a further %+.3f Hz (%+.1f SE). That is neither pre-registered\n"
+                "  outcome. The separation route is still refused -- any restoration of A's\n"
+                "  half is A being undone -- but B is not purely undoing A either.\n",
+                d_u, t_u, d_l, t_l);
+  } else {
+    std::printf("  NO VERDICT: upper %+.1f SE, lower %+.1f SE, both inside the gates.\n"
+                "  Reported, nothing concluded.\n", t_u, t_l);
+  }
+  std::printf("\n  For reference, `B-rest` is the same lesson taught from rest, where\n"
+              "  `blockflip` found it suppresses the LOWER half. If B's behaviour differs\n"
+              "  between the two, the difference is the effect of A having gone first --\n"
+              "  which is the whole question.\n");
   return true;
 }
 
