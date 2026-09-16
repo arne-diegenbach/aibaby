@@ -10721,6 +10721,16 @@ bool run_axisfree(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
   regime.scold = kScoldValue;
   constexpr uint32_t kReps = 20;
   instrument("axisfree", dna0.header().seed ^ 0xAF00u, ticks / kRTTrial, "trials");
+  // SEED PROVENANCE, printed because this run once "confirmed" itself by running a
+  // stale binary: the build had failed in the wrong directory, the failure said
+  // "Error:" where the check grepped for "error:", and the check echoed success
+  // unconditionally. The numbers came back bit-identical to the exploratory family,
+  // which is the ONLY reason it was caught. A run that cannot say which creatures
+  // it used cannot be a replication of anything.
+  std::printf("  seed family       offset %llu -> first creature %016llx  (family 0 is the\n"
+              "                    exploratory run; a confirmation MUST show a nonzero offset)\n",
+              (unsigned long long)kAFSeedOffset,
+              (unsigned long long)(dna0.header().seed + kAFSeedOffset));
 
   std::printf("  question          `axiscollide` showed distance does not predict the wipe,\n"
               "                    but its \"orthogonal\" arms set the second target's F1 to\n"

@@ -2,6 +2,8 @@ experiment: axisfree
   instrument        axisfree   trial seed 00000000013588c9   2000 trials
                     another probe is another trial sequence: its numbers
                     are not comparable with these (~0.05 at 300 trials)
+  seed family       offset 104729 -> first creature 000000000136c0e2  (family 0 is the
+                    exploratory run; a confirmation MUST show a nonzero offset)
   question          `axiscollide` showed distance does not predict the wipe,
                     but its "orthogonal" arms set the second target's F1 to
                     A's OWN F1 target on the joint metric -- so they REAFFIRM

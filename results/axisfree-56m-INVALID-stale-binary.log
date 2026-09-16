@@ -1,0 +1,126 @@
+experiment: axisfree
+  instrument        axisfree   trial seed 00000000013588c9   2000 trials
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  question          `axiscollide` showed distance does not predict the wipe,
+                    but its "orthogonal" arms set the second target's F1 to
+                    A's OWN F1 target on the joint metric -- so they REAFFIRM
+                    A's axis rather than saying nothing about it. This uses
+                    `second_axis` so the gap rewards ONE formant.
+  the prediction    `f2-axis` well ABOVE `f1-axis` but BELOW `keep`: A's axis
+                    is unconstrained, not maintained. Written before the run.
+  what refutes it   `f2-axis` collapsing toward `f1-axis` -- then ANY second
+                    lesson wipes A whatever it asks, and the axis account is a
+                    description of one special case rather than a mechanism.
+
+  PRE-REGISTERED
+    primary   retention(f2-axis) - retention(f1-axis) >= +3 SE AND
+              retention(f2-axis) >= 1.0, i.e. A is no worse than it was at the
+              end of teaching -> A LESSON SILENT ABOUT A's AXIS IS FREE.
+    refused   retention(f2-axis) <= retention(f1-axis) + 2 SE -> the axis
+              account does not carry, and `axiscollide`'s monotone column was
+              about how hard B pulls on F1, not about A being protected.
+    between   reported, no verdict.
+    anchors   `keep` ~2.74 and `f1-full` ~-0.06 from `axiscollide`, same seeds
+              and same protocol. If they do not reproduce, this run is not
+              comparable and says so.
+    mechanism gap dUPPER should track retention as it did at -0.9994.
+
+  [2/80] seed 0 f2-axis  ret 0.247
+  [8/80] seed 1 f1-full  ret 0.115
+  [7/80] seed 1 f1-axis  ret -0.047
+  [6/80] seed 1 f2-axis  ret 0.385
+  [1/80] seed 0 keep     ret 1.473
+  [4/80] seed 0 f1-full  ret 0.171
+  [5/80] seed 1 keep     ret 2.179
+  [3/80] seed 0 f1-axis  ret 0.037
+  [11/80] seed 2 f1-axis  ret -0.124
+  [9/80] seed 2 keep     ret 1.796
+  [12/80] seed 2 f1-full  ret -0.177
+  [10/80] seed 2 f2-axis  ret 1.508
+  [15/80] seed 3 f1-axis  ret -0.761
+  [13/80] seed 3 keep     ret 3.964
+  [14/80] seed 3 f2-axis  ret -0.248
+  [16/80] seed 3 f1-full  ret -0.825
+  [19/80] seed 4 f1-axis  ret -0.039
+  [17/80] seed 4 keep     ret 2.098
+  [20/80] seed 4 f1-full  ret 0.412
+  [22/80] seed 5 f2-axis  ret 0.648
+  [24/80] seed 5 f1-full  ret 0.288
+  [18/80] seed 4 f2-axis  ret 1.153
+  [21/80] seed 5 keep     ret 1.666
+  [23/80] seed 5 f1-axis  ret 0.114
+  [26/80] seed 6 f2-axis  ret 0.794
+  [25/80] seed 6 keep     ret 1.765
+  [28/80] seed 6 f1-full  ret 0.661
+  [27/80] seed 6 f1-axis  ret 0.649
+  [29/80] seed 7 keep     ret 2.482
+  [33/80] seed 8 keep     ret 6.201
+  [34/80] seed 8 f2-axis  ret 0.965
+  [30/80] seed 7 f2-axis  ret 0.904
+  [31/80] seed 7 f1-axis  ret 0.341
+  [32/80] seed 7 f1-full  ret -0.314
+  [35/80] seed 8 f1-axis  ret -1.397
+  [36/80] seed 8 f1-full  ret -0.451
+  [41/80] seed 10 keep     ret 1.697
+  [37/80] seed 9 keep     ret 1.784
+  [39/80] seed 9 f1-axis  ret 0.335
+  [40/80] seed 9 f1-full  ret 0.245
+  [42/80] seed 10 f2-axis  ret 0.719
+  [38/80] seed 9 f2-axis  ret 1.215
+  [44/80] seed 10 f1-full  ret 0.477
+  [43/80] seed 10 f1-axis  ret 0.293
+  [45/80] seed 11 keep     ret 6.185
+  [46/80] seed 11 f2-axis  ret 1.756
+  [51/80] seed 12 f1-axis  ret -0.507
+  [48/80] seed 11 f1-full  ret -1.927
+  [49/80] seed 12 keep     ret 3.388
+  [47/80] seed 11 f1-axis  ret -1.710
+  [50/80] seed 12 f2-axis  ret 1.811
+  [52/80] seed 12 f1-full  ret -0.193
+  [54/80] seed 13 f2-axis  ret 1.664
+  [53/80] seed 13 keep     ret 2.586
+  [56/80] seed 13 f1-full  ret 0.694
+  [55/80] seed 13 f1-axis  ret 0.203
+  [58/80] seed 14 f2-axis  ret 1.893
+  [61/80] seed 15 keep     ret 3.238
+  [60/80] seed 14 f1-full  ret 0.130
+  [57/80] seed 14 keep     ret 1.784
+  [59/80] seed 14 f1-axis  ret 0.211
+  [65/80] seed 16 keep     ret 3.435
+  [64/80] seed 15 f1-full  ret -0.653
+  [62/80] seed 15 f2-axis  ret 1.004
+  [67/80] seed 16 f1-axis  ret -0.827
+  [66/80] seed 16 f2-axis  ret 0.703
+  [63/80] seed 15 f1-axis  ret -0.467
+  [68/80] seed 16 f1-full  ret -0.559
+  [69/80] seed 17 keep     ret 2.550
+  [72/80] seed 17 f1-full  ret 0.682
+  [70/80] seed 17 f2-axis  ret 0.593
+  [71/80] seed 17 f1-axis  ret 0.249
+  [73/80] seed 18 keep     ret 2.334
+  [74/80] seed 18 f2-axis  ret 0.616
+  [75/80] seed 18 f1-axis  ret -0.326
+  [77/80] seed 19 keep     ret 2.152
+  [78/80] seed 19 f2-axis  ret 0.630
+  [80/80] seed 19 f1-full  ret 0.439
+  [76/80] seed 18 f1-full  ret -0.360
+  [79/80] seed 19 f1-axis  ret 0.432
+
+  arm       B scored   F1-axis retention      gap dUPPER (Hz)
+  keep      joint      2.738 +/- 0.305          -10.907 +/- 0.769
+  f2-axis   F2 only    0.948 +/- 0.126          -1.582 +/- 1.075
+  f1-axis   F1 only    -0.167 +/- 0.138          +6.776 +/- 0.824
+  f1-full   joint      -0.057 +/- 0.143          +5.799 +/- 0.934
+
+  ARM LIVENESS vs `keep` (seeds where the arm differs at all)
+    f2-axis            20/20
+    f1-axis            20/20
+    f1-full            20/20
+
+  THE PRIMARY
+    f2-axis - f1-axis  +1.115 +/- 0.197  (+5.7 SE)
+    f2-axis retention  0.948  (want >= 1.0 for "A is no worse than taught")
+
+  --- the verdict ---
+  NO VERDICT: +5.7 SE apart with `f2-axis` at 0.948. Between the gates.
