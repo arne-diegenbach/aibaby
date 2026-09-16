@@ -10460,6 +10460,50 @@ reverse the first — a property of the target *pair*, costing nothing to arrang
 The obvious way it fails is that almost every F1 target pair is collinear-opposed,
 since one centroid has only one axis. Worth testing before believing.
 
+#### Axis, not distance — and the rate signature predicted it
+
+`axiscollide` moved the second lesson's target around the quarter-plane the ranges
+allow, holding lesson A fixed and reading retention on the **F1 axis** so an
+F2-only lesson wouldn't be scored as destroying A.
+
+| arm | dlogF1 | F1-axis retention | gap dUPPER |
+| --- | --- | --- | --- |
+| `keep` | +0.000 | 2.738 ± 0.305 | −10.907 |
+| `f2-full` | +0.000 | 2.829 ± 0.412 | −10.928 |
+| `f1-half` | +0.501 | 1.631 ± 0.265 | −4.046 |
+| `shipped` | +0.977 | −0.007 ± 0.127 | +5.021 |
+| `f1-full` | +1.000 | −0.057 ± 0.143 | +5.799 |
+
+**`f1-full` and `f2-full` are the same L1 distance from A in opposite axes, and
+they retain −0.06 against 2.83** (+5.4 SE). Distance does not predict the wipe.
+Retention falls monotonically with the demand on A's own axis while the F2 demand
+shifts it by only 0.12–0.20. All seven arms learned A identically to four decimals,
+which is the refusal check for a second target leaking into teaching.
+
+**And the rate signature predicted it almost exactly: `corr(retention, gap dUPPER)
+= −0.9994` across the seven arms.** That was written down before the run. Arms that
+keep A deepen the suppression; arms that lose A restore it. `gapwrite`'s mechanism
+generalises beyond the single pair it was measured on.
+
+**But the useful half is not established, and the flaw is mine.** The `f2` arms set
+their second target's F1 to 320 — *A's own F1 target* — on the joint metric, so the
+gap's reward still contains an F1 term pulling toward 320. They don't ask *nothing*
+of F1; they actively reaffirm it. So test B (`f2-full ≈ keep`, +0.4 SE) is close to
+tautological, and it does **not** show that an orthogonal lesson is free. Test C
+also failed (−2.1 SE): a large F2 demand on top of a fixed F1 demand costs a little
+retention — about 7% of F1's effect, small but real.
+
+So the three claims separate:
+
+| | |
+| --- | --- |
+| the wipe tracks **distance** | **refuted**, cleanly |
+| retention tracks the demand on **A's axis** | strongly supported, small residual F2 effect |
+| a lesson **orthogonal** to A is free | **untested** — the arms meant to test it reaffirm A |
+
+The run's own verdict is *partial*, which is the honest label. The fix is an arm
+with `second_axis = 2`, so the gap rewards F2 alone and is silent about F1.
+
 *Two corrections from this sequence.* `compartprobe`'s verdict elected dilution
 by elimination the moment silencing came back null — a mechanism claim it had not
 tested. And `blockfloor`'s verdict accused `set_reward_block` of being a faulty
