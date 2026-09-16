@@ -40,3 +40,242 @@ experiment: blockflip
     secondary   the rate profile at BOTH targets, which says WHICH half moves
                 and in WHICH direction -- the mechanism, whatever the costs do.
 
+  [7/180] seed 1 lo-b0    before 1.0000 taught 0.7730
+  [5/180] seed 0 hi-top7  before 0.7674 taught 0.6551
+  [6/180] seed 0 hi-bot7  before 0.7510 taught 0.6593
+  [4/180] seed 0 hi-b0    before 0.7376 taught 0.5987
+  [1/180] seed 0 lo-b0    before 1.0170 taught 0.7762
+  [8/180] seed 1 lo-top7  before 1.0341 taught 0.9868
+  [2/180] seed 0 lo-top7  before 1.0290 taught 0.9847
+  [3/180] seed 0 lo-bot7  before 1.0357 taught 0.9413
+  [9/180] seed 1 lo-bot7  before 1.0079 taught 0.9107
+  [10/180] seed 1 hi-b0    before 0.7650 taught 0.5882
+  [12/180] seed 1 hi-bot7  before 0.7782 taught 0.7218
+  [11/180] seed 1 hi-top7  before 0.7668 taught 0.6577
+  [13/180] seed 2 lo-b0    before 1.0503 taught 0.8962
+  [16/180] seed 2 hi-b0    before 0.7619 taught 0.5703
+  [14/180] seed 2 lo-top7  before 1.0763 taught 1.0018
+  [15/180] seed 2 lo-bot7  before 1.0851 taught 0.9938
+  [18/180] seed 2 hi-bot7  before 0.8145 taught 0.7959
+  [17/180] seed 2 hi-top7  before 0.7940 taught 0.5776
+  [20/180] seed 3 lo-top7  before 1.0131 taught 1.0118
+  [19/180] seed 3 lo-b0    before 0.9701 taught 0.8461
+  [21/180] seed 3 lo-bot7  before 1.0155 taught 0.8451
+  [26/180] seed 4 lo-top7  before 1.0201 taught 0.9855
+  [22/180] seed 3 hi-b0    before 0.7752 taught 0.5979
+  [23/180] seed 3 hi-top7  before 0.7638 taught 0.6572
+  [27/180] seed 4 lo-bot7  before 1.0085 taught 0.8232
+  [25/180] seed 4 lo-b0    before 1.0041 taught 0.8275
+  [28/180] seed 4 hi-b0    before 0.8021 taught 0.6633
+  [24/180] seed 3 hi-bot7  before 0.7756 taught 0.7124
+  [29/180] seed 4 hi-top7  before 0.8039 taught 0.6264
+  [30/180] seed 4 hi-bot7  before 0.8007 taught 0.6726
+  [35/180] seed 5 hi-top7  before 0.7545 taught 0.6102
+  [37/180] seed 6 lo-b0    before 1.0066 taught 0.7816
+  [34/180] seed 5 hi-b0    before 0.7285 taught 0.6041
+  [33/180] seed 5 lo-bot7  before 0.9907 taught 0.8432
+  [31/180] seed 5 lo-b0    before 0.9864 taught 0.8155
+  [32/180] seed 5 lo-top7  before 1.0223 taught 0.9353
+  [36/180] seed 5 hi-bot7  before 0.7538 taught 0.7352
+  [39/180] seed 6 lo-bot7  before 1.0376 taught 0.8583
+  [38/180] seed 6 lo-top7  before 1.0207 taught 0.9224
+  [40/180] seed 6 hi-b0    before 0.7518 taught 0.6550
+  [41/180] seed 6 hi-top7  before 0.7949 taught 0.7094
+  [42/180] seed 6 hi-bot7  before 0.7749 taught 0.6404
+  [44/180] seed 7 lo-top7  before 0.9816 taught 0.9138
+  [46/180] seed 7 hi-b0    before 0.7511 taught 0.5740
+  [43/180] seed 7 lo-b0    before 0.9721 taught 0.7805
+  [48/180] seed 7 hi-bot7  before 0.7829 taught 0.7088
+  [49/180] seed 8 lo-b0    before 1.0177 taught 0.9570
+  [51/180] seed 8 lo-bot7  before 1.0394 taught 0.9016
+  [45/180] seed 7 lo-bot7  before 0.9885 taught 0.9205
+  [47/180] seed 7 hi-top7  before 0.7731 taught 0.6459
+  [50/180] seed 8 lo-top7  before 1.0422 taught 0.9586
+  [54/180] seed 8 hi-bot7  before 0.7924 taught 0.7152
+  [53/180] seed 8 hi-top7  before 0.7734 taught 0.6173
+  [55/180] seed 9 lo-b0    before 0.9869 taught 0.7979
+  [58/180] seed 9 hi-b0    before 0.7427 taught 0.5918
+  [52/180] seed 8 hi-b0    before 0.7547 taught 0.6414
+  [56/180] seed 9 lo-top7  before 1.0244 taught 0.9123
+  [57/180] seed 9 lo-bot7  before 1.0331 taught 0.9319
+  [59/180] seed 9 hi-top7  before 0.7946 taught 0.6462
+  [61/180] seed 10 lo-b0    before 1.0111 taught 0.8157
+  [65/180] seed 10 hi-top7  before 0.7034 taught 0.6186
+  [60/180] seed 9 hi-bot7  before 0.7851 taught 0.6752
+  [64/180] seed 10 hi-b0    before 0.7508 taught 0.6093
+  [63/180] seed 10 lo-bot7  before 1.0231 taught 0.8919
+  [67/180] seed 11 lo-b0    before 1.0184 taught 0.9124
+  [66/180] seed 10 hi-bot7  before 0.7572 taught 0.6818
+  [62/180] seed 10 lo-top7  before 1.0077 taught 0.9442
+  [71/180] seed 11 hi-top7  before 0.8027 taught 0.6492
+  [73/180] seed 12 lo-b0    before 1.0352 taught 0.9231
+  [69/180] seed 11 lo-bot7  before 1.0522 taught 0.9309
+  [74/180] seed 12 lo-top7  before 1.0184 taught 0.9848
+  [70/180] seed 11 hi-b0    before 0.8227 taught 0.6419
+  [68/180] seed 11 lo-top7  before 1.0313 taught 0.9855
+  [75/180] seed 12 lo-bot7  before 1.0550 taught 0.9234
+  [72/180] seed 11 hi-bot7  before 0.8159 taught 0.6851
+  [76/180] seed 12 hi-b0    before 0.7707 taught 0.6084
+  [80/180] seed 13 lo-top7  before 1.0188 taught 0.9500
+  [77/180] seed 12 hi-top7  before 0.8034 taught 0.5581
+  [79/180] seed 13 lo-b0    before 0.9718 taught 0.8115
+  [78/180] seed 12 hi-bot7  before 0.7875 taught 0.7128
+  [82/180] seed 13 hi-b0    before 0.7807 taught 0.6631
+  [83/180] seed 13 hi-top7  before 0.7928 taught 0.6833
+  [81/180] seed 13 lo-bot7  before 1.0186 taught 0.8781
+  [84/180] seed 13 hi-bot7  before 0.8131 taught 0.7671
+  [86/180] seed 14 lo-top7  before 1.0325 taught 0.9085
+  [85/180] seed 14 lo-b0    before 1.0045 taught 0.8057
+  [88/180] seed 14 hi-b0    before 0.7546 taught 0.6872
+  [87/180] seed 14 lo-bot7  before 1.0309 taught 0.8726
+  [89/180] seed 14 hi-top7  before 0.7785 taught 0.6439
+  [91/180] seed 15 lo-b0    before 1.0542 taught 0.9412
+  [90/180] seed 14 hi-bot7  before 0.7830 taught 0.7150
+  [93/180] seed 15 lo-bot7  before 1.0439 taught 0.9281
+  [94/180] seed 15 hi-b0    before 0.7982 taught 0.6581
+  [98/180] seed 16 lo-top7  before 0.9939 taught 0.9311
+  [99/180] seed 16 lo-bot7  before 1.0149 taught 0.8099
+  [95/180] seed 15 hi-top7  before 0.8015 taught 0.6920
+  [96/180] seed 15 hi-bot7  before 0.8178 taught 0.7159
+  [92/180] seed 15 lo-top7  before 1.0638 taught 0.9950
+  [97/180] seed 16 lo-b0    before 1.0170 taught 0.9053
+  [100/180] seed 16 hi-b0    before 0.7748 taught 0.6285
+  [101/180] seed 16 hi-top7  before 0.8256 taught 0.6449
+  [106/180] seed 17 hi-b0    before 0.7678 taught 0.5763
+  [102/180] seed 16 hi-bot7  before 0.8067 taught 0.7275
+  [103/180] seed 17 lo-b0    before 1.0177 taught 0.8314
+  [104/180] seed 17 lo-top7  before 1.0661 taught 0.9969
+  [105/180] seed 17 lo-bot7  before 1.0454 taught 0.8645
+  [108/180] seed 17 hi-bot7  before 0.7895 taught 0.7823
+  [107/180] seed 17 hi-top7  before 0.7537 taught 0.5291
+  [109/180] seed 18 lo-b0    before 1.0157 taught 0.8729
+  [110/180] seed 18 lo-top7  before 1.0309 taught 0.9122
+  [111/180] seed 18 lo-bot7  before 1.0439 taught 0.8519
+  [112/180] seed 18 hi-b0    before 0.7902 taught 0.6875
+  [113/180] seed 18 hi-top7  before 0.7799 taught 0.5542
+  [114/180] seed 18 hi-bot7  before 0.7881 taught 0.7424
+  [117/180] seed 19 lo-bot7  before 1.0112 taught 0.8765
+  [118/180] seed 19 hi-b0    before 0.7561 taught 0.6267
+  [119/180] seed 19 hi-top7  before 0.7614 taught 0.5876
+  [116/180] seed 19 lo-top7  before 1.0459 taught 0.8979
+  [115/180] seed 19 lo-b0    before 1.0197 taught 0.8616
+  [121/180] seed 20 lo-b0    before 1.0197 taught 0.8308
+  [120/180] seed 19 hi-bot7  before 0.7972 taught 0.7355
+  [122/180] seed 20 lo-top7  before 1.0441 taught 0.9439
+  [124/180] seed 20 hi-b0    before 0.7866 taught 0.6288
+  [125/180] seed 20 hi-top7  before 0.7713 taught 0.5708
+  [127/180] seed 21 lo-b0    before 1.0163 taught 0.8192
+  [126/180] seed 20 hi-bot7  before 0.7856 taught 0.6403
+  [123/180] seed 20 lo-bot7  before 1.0403 taught 0.8025
+  [128/180] seed 21 lo-top7  before 1.0438 taught 0.9763
+  [133/180] seed 22 lo-b0    before 1.0338 taught 0.8416
+  [131/180] seed 21 hi-top7  before 0.7416 taught 0.5102
+  [132/180] seed 21 hi-bot7  before 0.8083 taught 0.7063
+  [134/180] seed 22 lo-top7  before 1.0555 taught 0.9482
+  [129/180] seed 21 lo-bot7  before 0.9682 taught 0.7988
+  [130/180] seed 21 hi-b0    before 0.7792 taught 0.6825
+  [135/180] seed 22 lo-bot7  before 1.0390 taught 0.8676
+  [137/180] seed 22 hi-top7  before 0.7996 taught 0.7218
+  [138/180] seed 22 hi-bot7  before 0.7812 taught 0.6792
+  [140/180] seed 23 lo-top7  before 1.0418 taught 0.8909
+  [136/180] seed 22 hi-b0    before 0.7741 taught 0.6122
+  [141/180] seed 23 lo-bot7  before 1.0175 taught 0.8873
+  [143/180] seed 23 hi-top7  before 0.7611 taught 0.6161
+  [139/180] seed 23 lo-b0    before 0.9872 taught 0.7669
+  [142/180] seed 23 hi-b0    before 0.7304 taught 0.4939
+  [146/180] seed 24 lo-top7  before 1.0449 taught 0.9820
+  [144/180] seed 23 hi-bot7  before 0.7797 taught 0.6810
+  [147/180] seed 24 lo-bot7  before 1.0256 taught 0.9086
+  [151/180] seed 25 lo-b0    before 1.0125 taught 0.8151
+  [145/180] seed 24 lo-b0    before 1.0241 taught 0.9097
+  [148/180] seed 24 hi-b0    before 0.8014 taught 0.5609
+  [149/180] seed 24 hi-top7  before 0.8120 taught 0.6958
+  [152/180] seed 25 lo-top7  before 1.0126 taught 0.9302
+  [150/180] seed 24 hi-bot7  before 0.8047 taught 0.7055
+  [153/180] seed 25 lo-bot7  before 1.0027 taught 0.7972
+  [154/180] seed 25 hi-b0    before 0.7491 taught 0.5181
+  [156/180] seed 25 hi-bot7  before 0.7777 taught 0.6648
+  [159/180] seed 26 lo-bot7  before 0.9941 taught 0.8924
+  [161/180] seed 26 hi-top7  before 0.7955 taught 0.6732
+  [157/180] seed 26 lo-b0    before 0.9869 taught 0.8514
+  [155/180] seed 25 hi-top7  before 0.7414 taught 0.5867
+  [160/180] seed 26 hi-b0    before 0.7492 taught 0.5962
+  [158/180] seed 26 lo-top7  before 1.0037 taught 0.9473
+  [163/180] seed 27 lo-b0    before 1.0227 taught 0.8192
+  [162/180] seed 26 hi-bot7  before 0.7720 taught 0.6859
+  [165/180] seed 27 lo-bot7  before 1.0307 taught 0.8789
+  [168/180] seed 27 hi-bot7  before 0.8055 taught 0.7376
+  [170/180] seed 28 lo-top7  before 1.0236 taught 0.9785
+  [164/180] seed 27 lo-top7  before 1.0483 taught 0.9358
+  [166/180] seed 27 hi-b0    before 0.7788 taught 0.6648
+  [169/180] seed 28 lo-b0    before 0.9721 taught 0.8090
+  [172/180] seed 28 hi-b0    before 0.7640 taught 0.5669
+  [167/180] seed 27 hi-top7  before 0.7978 taught 0.6393
+  [173/180] seed 28 hi-top7  before 0.7979 taught 0.6803
+  [171/180] seed 28 lo-bot7  before 0.9836 taught 0.8854
+  [177/180] seed 29 lo-bot7  before 1.0558 taught 0.8668
+  [174/180] seed 28 hi-bot7  before 0.7732 taught 0.6682
+  [175/180] seed 29 lo-b0    before 1.0223 taught 0.7803
+  [179/180] seed 29 hi-top7  before 0.7672 taught 0.6186
+  [176/180] seed 29 lo-top7  before 1.0480 taught 0.8978
+  [178/180] seed 29 hi-b0    before 0.7307 taught 0.5591
+  [180/180] seed 29 hi-bot7  before 0.7478 taught 0.6815
+
+  arm      err before   err taught   learned
+  lo-b0    1.0091       0.8392       +0.1699 +/- 0.0082
+  lo-top7  1.0313       0.9517       +0.0796 +/- 0.0067
+  lo-bot7  1.0246       0.8794       +0.1452 +/- 0.0075
+  hi-b0    0.7660       0.6118       +0.1542 +/- 0.0077
+  hi-top7  0.7791       0.6292       +0.1499 +/- 0.0084
+  hi-bot7  0.7867       0.7051       +0.0816 +/- 0.0062
+
+  THE RATE PROFILE, Hz change over teaching, unblocked arms
+    k   position  LOW target   HIGH target 
+    0   0.036     +0.1585      -2.6814     
+    1   0.107     +0.0224      -2.3040     
+    2   0.179     -0.1185      -1.9750     
+    3   0.250     +0.2159      -1.0919     
+    4   0.321     -0.2164      -0.8002     
+    5   0.393     +0.1654      -0.8972     
+    6   0.464     -0.1657      -0.5219     
+    7   0.536     -0.4985      -0.2967     
+    8   0.607     -0.8478      -0.1075     
+    9   0.679     -1.1131      +0.0984     
+    10  0.750     -1.0696      +0.1218     
+    11  0.821     -1.9436      -0.2913     
+    12  0.893     -2.2758      +0.0867     
+    13  0.964     -2.5099      -0.0421     
+    net lower half   LOW +0.062 Hz   HIGH -10.272 Hz
+    net upper half   LOW -10.258 Hz   HIGH -0.431 Hz
+    centroid over teaching   LOW 0.4355   HIGH 0.5611   (untaught rest 0.4993)
+
+  ARM LIVENESS vs `lo-b0` (seeds where the arm differs at all)
+    lo-top7            30/30
+    lo-bot7            30/30
+    hi-b0              30/30
+    hi-top7            30/30
+    hi-bot7            30/30
+
+  THE COST OF BLOCKING EACH HALF, paired on seed against its OWN b0
+    lo-top7  -0.0903 +/- 0.0084  (-10.7 SE)   53% of its lesson
+    lo-bot7  -0.0248 +/- 0.0107  (-2.3 SE)   15% of its lesson
+    hi-top7  -0.0043 +/- 0.0117  (-0.4 SE)   3% of its lesson
+    hi-bot7  -0.0725 +/- 0.0095  (-7.6 SE)   47% of its lesson
+
+  THE PRIMARY: (bot7 - top7), positive = the LOWER half is cheaper to block
+    LOW  target  +0.0656 +/- 0.0088  (+7.4 SE)
+    HIGH target  -0.0683 +/- 0.0116  (-5.9 SE)
+
+  --- the verdict ---
+  THE ASYMMETRY FOLLOWS THE TARGET. (bot7-top7) is +7.4 SE at the low
+  target and -5.9 SE at the high one -- the same two blocks, opposite
+  signs. Nothing is special about the upper cells: the lesson recruits
+  whichever half can move the centroid the way it is being asked to.
+  SO WRITE SEPARATION HAS A ROUTE THAT NEEDS NO MASK. Two lessons with
+  targets on OPPOSITE sides of rest recruit DIFFERENT halves. That is the
+  F1-internal version of `capacity`'s orthogonal case, and it is the first
+  time this chapter has pointed at something buildable rather than at a
+  readout to redesign.
+
+  READ THE PROFILE ABOVE WHATEVER THE COSTS DID: which half moves, and in
+  which direction, is the mechanism and it does not depend on the gate.

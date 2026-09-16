@@ -10358,10 +10358,60 @@ write separation with no mask at all, and it is the F1-internal version of
 `capacity`'s orthogonal case, where two lessons already coexist at 0.84.
 
 The decisive test is pre-registered: **re-run the block ladder with a target above
-the resting centroid** (F1 ~800 Hz, position 0.73). If the asymmetry reverses, the
-direction account holds. If the top stays expensive with the target reversed, then
-those neurons are privileged in themselves — wiring, or an in-degree gradient —
-and that is a different investigation.
+the resting centroid**. If the asymmetry reverses, the direction account holds. If
+the top stays expensive with the target reversed, then those neurons are
+privileged in themselves — wiring, or an in-degree gradient — and that is a
+different investigation.
+
+#### It silences whichever half is on the wrong side
+
+`blockflip` ran that test: two targets equidistant from the resting centroid, with
+F2 held at 2500 in both so only F1's *direction* differs.
+
+| | `top7` | `bot7` | `bot7 − top7` |
+| --- | --- | --- | --- |
+| **LOW** target (0.093, below rest) | **53%** (−10.7 SE) | 15% (−2.3 SE) | **+7.4 SE** |
+| **HIGH** target (0.933, above rest) | 3% (−0.4 SE) | **47%** (−7.6 SE) | **−5.9 SE** |
+
+The same two blocks, opposite signs. The anchors reproduce exactly — `lo-b0`
+learned +0.1699 against `blockanchor`'s +0.1676, `lo-top7` cost 53% against its
+53% — and the high target is genuinely learnable at +0.1542, so this is a real
+comparison rather than one against a lesson that never happened.
+
+**The rate profile is a mirror, and it is all suppression:**
+
+| net change over teaching | LOW | HIGH |
+| --- | --- | --- |
+| lower half (k 0–6) | +0.062 Hz | **−10.272 Hz** |
+| upper half (k 7–13) | **−10.258 Hz** | −0.431 Hz |
+| centroid (rest 0.4993) | 0.4355 | 0.5611 |
+
+−10.258 against −10.272: the same magnitude, the other half. And both are
+*negative*. **The creature never learns by exciting anything — it silences
+whichever half sits on the wrong side of the target**, and the centroid moves
+because the other half is left alone.
+
+So **"half the F1 group is inert" was an artifact of only ever teaching one
+direction.** Nothing is special about the upper cells.
+
+#### What this does not buy — and I had written that it did
+
+The verdict I wrote into the experiment *before* the run said the reversal hands
+us write separation with no mask: two lessons on opposite sides of rest recruit
+different halves. That is not established, and data already in hand argues against
+it. **`retain`'s two lessons are already on opposite sides of rest** — lesson A at
+position 0.093, lesson B at 0.800 — and that is the exact protocol that produces
+the 0.22 wipe. If opposite-side targets separated the write, retention would
+already be high.
+
+The likely reason is measurable. Lesson B is taught from where A left the
+creature, not from rest. After A, the upper half is suppressed to ~1.6 Hz, so to
+raise the centroid B can either suppress the lower half further or **restore the
+upper half** — which is directly undoing A. From rest it suppresses; from A's
+endpoint there is little room left to suppress and a great deal of room to
+restore. The telemetry currently samples only the teach phase; extending it to the
+gap reads which one B does, and that decides whether the separation route survives
+or the 0.22 wipe finally has a mechanism.
 
 *Two corrections from this sequence.* `compartprobe`'s verdict elected dilution
 by elimination the moment silencing came back null — a mechanism claim it had not
