@@ -1,0 +1,28 @@
+experiment: axisfree
+  instrument        axisfree   trial seed 00000000013588c9   2000 trials
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  question          `axiscollide` showed distance does not predict the wipe,
+                    but its "orthogonal" arms set the second target's F1 to
+                    A's OWN F1 target on the joint metric -- so they REAFFIRM
+                    A's axis rather than saying nothing about it. This uses
+                    `second_axis` so the gap rewards ONE formant.
+  the prediction    `f2-axis` well ABOVE `f1-axis` but BELOW `keep`: A's axis
+                    is unconstrained, not maintained. Written before the run.
+  what refutes it   `f2-axis` collapsing toward `f1-axis` -- then ANY second
+                    lesson wipes A whatever it asks, and the axis account is a
+                    description of one special case rather than a mechanism.
+
+  PRE-REGISTERED
+    primary   retention(f2-axis) - retention(f1-axis) >= +3 SE AND
+              retention(f2-axis) >= 1.0, i.e. A is no worse than it was at the
+              end of teaching -> A LESSON SILENT ABOUT A's AXIS IS FREE.
+    refused   retention(f2-axis) <= retention(f1-axis) + 2 SE -> the axis
+              account does not carry, and `axiscollide`'s monotone column was
+              about how hard B pulls on F1, not about A being protected.
+    between   reported, no verdict.
+    anchors   `keep` ~2.74 and `f1-full` ~-0.06 from `axiscollide`, same seeds
+              and same protocol. If they do not reproduce, this run is not
+              comparable and says so.
+    mechanism gap dUPPER should track retention as it did at -0.9994.
+

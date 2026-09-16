@@ -353,6 +353,13 @@ const Spec kSpecs[] = {
      "  and f2-full are the SAME L1 distance in opposite axes -- the cleanest\n"
      "  contrast. Retention is read on the F1 axis so an F2-only lesson is not\n"
      "  scored as destroying A. 20 seeds"},
+    {"axisfree", 5600000, Expect::kOpen, Tier::kLong,
+     "IS A LESSON SILENT ABOUT A'S AXIS FREE? axiscollide could not say, because\n"
+     "  its orthogonal arms set the second target's F1 to A's OWN F1 target and so\n"
+     "  REAFFIRMED A's axis instead of saying nothing about it. This uses\n"
+     "  second_axis so the gap rewards ONE formant: f2-axis is silent about F1,\n"
+     "  f1-axis is the pure demand on it. keep and f1-full are carried over as\n"
+     "  anchors. 20 seeds"},
     {"movability", 5600000, Expect::kOpen, Tier::kLong,
      "orthovocab left a LEAD: on identical demands the F2 lesson travelled\n"
      "  0.169 and the F1 lesson 0.030 -- but F1's was FIGHTING another lesson on\n"
@@ -697,6 +704,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "blockflip") ok = run_blockflip(dna_blob, ticks, verbose);
   else if (name == "gapwrite") ok = run_gapwrite(dna_blob, ticks, verbose);
   else if (name == "axiscollide") ok = run_axiscollide(dna_blob, ticks, verbose);
+  else if (name == "axisfree") ok = run_axisfree(dna_blob, ticks, verbose);
   else if (name == "partprobe") ok = run_partprobe(dna_blob, ticks, verbose);
   else if (name == "pgprobe") ok = run_pgprobe(dna_blob, ticks, verbose);
   else if (name == "g2cond") ok = run_g2cond(dna_blob, ticks, verbose);

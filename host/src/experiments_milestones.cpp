@@ -10658,6 +10658,205 @@ bool run_axiscollide(const std::vector<uint8_t>& blob, uint64_t ticks, bool verb
   return true;
 }
 
+// `axisfree`, 2026-09-16. IS A LESSON THAT SAYS NOTHING ABOUT A'S AXIS FREE?
+//
+// `axiscollide` established that DISTANCE does not predict the wipe -- two second
+// lessons the same L1 distance from A in opposite axes retained -0.06 and 2.83 --
+// and that the rate signature predicts retention almost exactly (corr -0.9994).
+//
+// It did NOT establish the half that would be useful, and the flaw was in its
+// design rather than its data. Its `f2` arms set the second target's F1 to 320,
+// which is A's OWN F1 target, on the joint metric -- so the gap's reward still
+// carried an F1 term pulling toward 320. Those arms do not ask NOTHING of F1; they
+// actively REAFFIRM it, which makes "f2-full ~ keep" close to a tautology.
+//
+// The arm that tests it uses `second_axis`, which scores lesson B on ONE formant:
+//
+//   f2-axis  second_axis = 2  -> the gap rewards F2 alone and is SILENT about F1.
+//                               A's axis is left UNCONSTRAINED, not reaffirmed.
+//   f1-axis  second_axis = 1  -> the gap rewards F1 alone, the pure demand on A's
+//                               axis with no F2 term at all.
+//
+// `keep` and `f1-full` are carried over unchanged so this run is anchored to the
+// last one rather than floating free.
+//
+// THE PREDICTION, written first. `f2-axis` should land WELL ABOVE `f1-axis` but
+// BELOW `keep`: F1 is unconstrained rather than taught, and
+// [[aibaby-b-runs-back-through-a]]'s `A-idle` shows an unrewarded gap still drifts
+// the upper half down -2.3 Hz, so A should hold without being actively maintained.
+// If instead `f2-axis` collapses toward `f1-axis`, then ANY second lesson wipes A
+// regardless of what it asks, and the whole axis account is a description of one
+// special case.
+struct AFArm { const char* name; uint32_t second_axis; float f1; float f2; };
+const AFArm kAFArms[] = {
+    {"keep", 0u, 320.0f, 2500.0f},     // B = A's own target, joint: the reference
+    {"f2-axis", 2u, 320.0f, 920.0f},   // rewards F2 ALONE -- silent about F1
+    {"f1-axis", 1u, 870.0f, 2500.0f},  // rewards F1 ALONE -- the pure demand on A
+    {"f1-full", 0u, 870.0f, 2500.0f},  // carried over from `axiscollide`: -0.057
+};
+constexpr uint32_t kAFArmCount = sizeof(kAFArms) / sizeof(kAFArms[0]);
+
+bool run_axisfree(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  aibaby::Dna dna0;
+  if (dna0.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) {
+    std::printf("  setup failed: the genome does not load\n");
+    return false;
+  }
+  const int32_t vmi = dna0.module_with_role(aibaby::ModuleRole::kVocal);
+  if (vmi < 0) { std::printf("  this genome has no vocal module\n"); return false; }
+  const uint32_t vcount = dna0.module(uint32_t(vmi)).neurons;
+  const uint32_t g_lo = aibaby::slice_begin(vcount, aibaby::kVocalGroups, 2u);
+  const uint32_t g_hi = aibaby::slice_begin(vcount, aibaby::kVocalGroups, 3u);
+  const uint32_t gsize = g_hi - g_lo;
+  Regime regime;
+  regime.praise = kPraiseValue;
+  regime.scold = kScoldValue;
+  constexpr uint32_t kReps = 20;
+  instrument("axisfree", dna0.header().seed ^ 0xAF00u, ticks / kRTTrial, "trials");
+
+  std::printf("  question          `axiscollide` showed distance does not predict the wipe,\n"
+              "                    but its \"orthogonal\" arms set the second target's F1 to\n"
+              "                    A's OWN F1 target on the joint metric -- so they REAFFIRM\n"
+              "                    A's axis rather than saying nothing about it. This uses\n"
+              "                    `second_axis` so the gap rewards ONE formant.\n");
+  std::printf("  the prediction    `f2-axis` well ABOVE `f1-axis` but BELOW `keep`: A's axis\n"
+              "                    is unconstrained, not maintained. Written before the run.\n");
+  std::printf("  what refutes it   `f2-axis` collapsing toward `f1-axis` -- then ANY second\n"
+              "                    lesson wipes A whatever it asks, and the axis account is a\n"
+              "                    description of one special case rather than a mechanism.\n");
+  std::printf("\n  PRE-REGISTERED\n");
+  std::printf("    primary   retention(f2-axis) - retention(f1-axis) >= +3 SE AND\n"
+              "              retention(f2-axis) >= 1.0, i.e. A is no worse than it was at the\n"
+              "              end of teaching -> A LESSON SILENT ABOUT A's AXIS IS FREE.\n");
+  std::printf("    refused   retention(f2-axis) <= retention(f1-axis) + 2 SE -> the axis\n"
+              "              account does not carry, and `axiscollide`'s monotone column was\n"
+              "              about how hard B pulls on F1, not about A being protected.\n");
+  std::printf("    between   reported, no verdict.\n");
+  std::printf("    anchors   `keep` ~2.74 and `f1-full` ~-0.06 from `axiscollide`, same seeds\n"
+              "              and same protocol. If they do not reproduce, this run is not\n"
+              "              comparable and says so.\n");
+  std::printf("    mechanism gap dUPPER should track retention as it did at -0.9994.\n\n");
+
+  struct Cell { bool ok = false; RTRow row; };
+  const uint32_t njobs = kReps * kAFArmCount;
+  const std::vector<Cell> cells = parallel_reps<Cell>(njobs, [&](uint32_t i) {
+    Cell cell;
+    const uint32_t r = i / kAFArmCount, a = i % kAFArmCount;
+    std::vector<uint8_t> variant = blob;
+    const uint64_t seed = dna0.header().seed + r * 7919ull;
+    std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+    RTConfig cfg;
+    cfg.name = kAFArms[a].name;
+    cfg.teach = true;
+    cfg.relearn = true;
+    cfg.mask_mode = 0u;
+    cfg.score_axis = 0u;
+    cfg.second_axis = kAFArms[a].second_axis;
+    cfg.report_axis = 1u;
+    cfg.second_f1 = kAFArms[a].f1;
+    cfg.second_f2 = kAFArms[a].f2;
+    Timbre local_ruler;
+    std::string local_error;
+    if (!local_ruler.configure(dna0.header().audio, local_error)) return cell;
+    bool ok = false;
+    cell.row = run_retain_arm(variant, ticks, cfg, local_ruler, regime, &ok);
+    if (!ok) return cell;
+    cell.ok = true;
+    parallel_note("  [%u/%u] seed %u %-8s ret %.3f\n", i + 1, njobs, r, kAFArms[a].name,
+                  cell.row.retention);
+    return cell;
+  });
+
+  std::vector<std::vector<double>> ret(kAFArmCount), gapup(kAFArmCount);
+  for (uint32_t a = 0; a < kAFArmCount; ++a) {
+    for (uint32_t r = 0; r < kReps; ++r) {
+      const Cell& c = cells[r * kAFArmCount + a];
+      if (!c.ok) continue;
+      ret[a].push_back(c.row.retention);
+      if (c.row.f1_n == gsize && c.row.f1_samp_late && c.row.f1_gap_samp_late) {
+        double u = 0.0;
+        for (uint32_t k = gsize / 2u; k < gsize; ++k)
+          u += c.row.f1_gap_late[k] / double(c.row.f1_gap_samp_late) -
+               c.row.f1_rate_late[k] / double(c.row.f1_samp_late);
+        gapup[a].push_back(u);
+      }
+    }
+    if (ret[a].size() < 3) {
+      std::printf("\n  axisfree INCONCLUSIVE -- arm `%s` produced %zu creatures.\n",
+                  kAFArms[a].name, ret[a].size());
+      return false;
+    }
+  }
+
+  std::printf("\n  %-9s %-10s %-22s %s\n", "arm", "B scored", "F1-axis retention",
+              "gap dUPPER (Hz)");
+  double m[kAFArmCount] = {}, se[kAFArmCount] = {}, mg[kAFArmCount] = {}, sg[kAFArmCount] = {};
+  for (uint32_t a = 0; a < kAFArmCount; ++a) {
+    m[a] = ctx_mean_se(ret[a], &se[a]);
+    mg[a] = gapup[a].size() >= 3 ? ctx_mean_se(gapup[a], &sg[a]) : 0.0;
+    const char* ax = kAFArms[a].second_axis == 1u   ? "F1 only"
+                     : kAFArms[a].second_axis == 2u ? "F2 only"
+                                                    : "joint";
+    std::printf("  %-9s %-10s %.3f +/- %-14.3f %+.3f +/- %.3f\n", kAFArms[a].name, ax, m[a],
+                se[a], mg[a], sg[a]);
+  }
+
+  {
+    ArmLiveness live("axisfree");
+    for (uint32_t r = 0; r < kReps; ++r)
+      for (uint32_t a = 0; a < kAFArmCount; ++a) {
+        const Cell& c = cells[r * kAFArmCount + a];
+        if (c.ok) live.observe(kAFArms[a].name, r, c.row.err_after);
+      }
+    if (!live.report("keep")) return false;
+  }
+
+  const auto diff = [&](uint32_t x, uint32_t y, double* s) {
+    std::vector<double> d;
+    const size_t n = ret[x].size() < ret[y].size() ? ret[x].size() : ret[y].size();
+    for (size_t i = 0; i < n; ++i) d.push_back(ret[x][i] - ret[y][i]);
+    return d.size() >= 3 ? ctx_mean_se(d, s) : 0.0;
+  };
+  double sd = 0.0;
+  const double d = diff(1u, 2u, &sd);
+  const double t = sd > 0.0 ? d / sd : 0.0;
+  std::printf("\n  THE PRIMARY\n    f2-axis - f1-axis  %+.3f +/- %.3f  (%+.1f SE)\n", d, sd, t);
+  std::printf("    f2-axis retention  %.3f  (want >= 1.0 for \"A is no worse than taught\")\n",
+              m[1]);
+
+  std::printf("\n  --- the verdict ---\n");
+  if (m[0] < 1.5 || m[3] > 0.6) {
+    std::printf("  axisfree REFUSED -- the anchors do not reproduce. `keep` reads %.3f against\n"
+                "  `axiscollide`'s 2.74 and `f1-full` reads %.3f against its -0.06, on the same\n"
+                "  seeds and protocol. Something differs between the runs and nothing here is\n"
+                "  comparable until it is found.\n", m[0], m[3]);
+    return false;
+  }
+  if (t >= 3.0 && m[1] >= 1.0) {
+    std::printf("  A LESSON SILENT ABOUT A's AXIS IS FREE. `f2-axis` retains %.3f against\n"
+                "  `f1-axis`'s %.3f (%+.1f SE), and A comes out of the gap no worse than it\n"
+                "  went in. The second lesson was rewarded the whole time -- on F2 alone --\n"
+                "  so this is not an idle gap.\n", m[1], m[2], t);
+    std::printf("  THAT COMPLETES THE ACCOUNT: `retain`'s wipe and `capacity`'s coexistence\n"
+                "  are one mechanism seen at two angles, and whether a second lesson costs the\n"
+                "  first is a property of WHAT IT ASKS, not of how far away it is.\n");
+    std::printf("  THE LIMIT IS UNCHANGED AND SHOULD BE SAID IN THE SAME BREATH: within ONE\n"
+                "  formant there is one axis, so two F1 lessons can never be made orthogonal\n"
+                "  this way. This buys coexistence ACROSS articulators, not within one.\n");
+  } else if (t <= 2.0) {
+    std::printf("  THE AXIS ACCOUNT DOES NOT CARRY. `f2-axis` retains %.3f against `f1-axis`'s\n"
+                "  %.3f (%+.1f SE): a second lesson that says NOTHING about F1 costs A about as\n"
+                "  much as one that demands F1 reverse. So `axiscollide`'s monotone column was\n"
+                "  about how hard B pulls on F1 while it is being taught, not about A being\n"
+                "  protected from B.\n", m[1], m[2], t);
+  } else {
+    std::printf("  NO VERDICT: %+.1f SE apart with `f2-axis` at %.3f. Between the gates.\n", t,
+                m[1]);
+  }
+  return true;
+}
+
 bool run_movability(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
   (void)verbose;
   Regime regime;
