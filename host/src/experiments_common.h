@@ -2197,6 +2197,7 @@ bool run_blockanchor(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_leverprobe(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_blockflip(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_gapwrite(const std::vector<uint8_t>&, uint64_t, bool);
+bool run_axiscollide(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_pgprobe(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_g2cond(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_coderprobe(const std::vector<uint8_t>&, uint64_t, bool);

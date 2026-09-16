@@ -5808,6 +5808,13 @@ struct RTConfig {
   // them apart. Blocking both isolates the second, because the difference
   // between the two conditions is exactly the first. false is bit-identical.
   bool explore_block = false;
+  // `axiscollide`: score the REPORTED error on one axis while teaching stays on
+  // the shipped joint metric. `score_axis` drives BOTH the reward and the report,
+  // so using it to measure F1-only retention would also change what lesson A IS,
+  // and the whole point is that A must remain exactly the lesson every earlier
+  // retention number was measured on. 0 means "use score_axis", so every existing
+  // arm is bit-identical; 1 is F1, 2 is F2.
+  uint32_t report_axis = 0;
   // `blockwhere`: block an EXPLICIT NUMBER of neurons at an explicit POSITION,
   // rather than a fraction of the group rounded by uint32_t truncation. 0 keeps
   // the mask_width path and is bit-identical.
@@ -6184,7 +6191,8 @@ RTRow run_retain_arm(const std::vector<uint8_t>& blob, uint64_t ticks,
     // ALWAYS scored against the FIRST lesson, in every phase and every arm.
     // That is the quantity retention is about, and scoring the relearn arm
     // against its second lesson would measure something else entirely.
-    const double err = formant_error_axis(f1, f2, first, cfg.score_axis);
+    const double err = formant_error_axis(f1, f2, first,
+                                         cfg.report_axis ? cfg.report_axis : cfg.score_axis);
     // Lesson B's own error, over the last third of the gap: by then B has had
     // whatever teaching it is going to get.
     if (cfg.relearn && trial >= n_teach + n_gap - (n_gap / 3 ? n_gap / 3 : 1) &&
@@ -10385,6 +10393,268 @@ bool run_gapwrite(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
               "  `blockflip` found it suppresses the LOWER half. If B's behaviour differs\n"
               "  between the two, the difference is the effect of A having gone first --\n"
               "  which is the whole question.\n");
+  return true;
+}
+
+// `axiscollide`, 2026-09-16. IS IT THE ANGLE, OR THE DISTANCE?
+//
+// `gapwrite` found the 0.22 wipe has a mechanism: lesson B's cheapest route to its
+// own target runs back through lesson A's write. B restores the very neurons A
+// silenced (+16.3 Hz, +9.4 SE against a gap rewarded just as hard toward A).
+//
+// If that is right, then what should predict retention is **how much B's target
+// requires A's axis to move**, not how far apart the two targets are. That would
+// cover two results with one account:
+//
+//   opposite demands on the SAME neurons -> collision.  `retain`,   0.22
+//   demands on DIFFERENT neurons         -> coexistence. `capacity`, 0.84
+//
+// THE DESIGN PROBLEM, and it is why this is not a trivial sweep. One centroid has
+// one axis, so two F1 lessons are ALWAYS collinear -- the angle has to be built
+// across F1 and F2, which are disjoint neuron groups. From A (/i/, F1 320, F2 2500)
+// the ranges allow F1 to rise and F2 to fall, which is exactly the quarter-plane
+// needed. Every arm below is one point in it:
+//
+//   arm        F1    F2     dlogF1   dlogF2   asks of A's F1 write
+//   keep       320   2500   +0.000   +0.000   nothing
+//   f1-half    528   2500   +0.500   +0.000   reverse by 0.50
+//   f1-full    870   2500   +1.000   +0.000   reverse by 1.00
+//   f2-half    320   1516   +0.000   -0.500   nothing
+//   f2-full    320    920   +0.000   -1.000   nothing
+//   cross      528    920   +0.500   -1.000   reverse by 0.50
+//   shipped    850   1100   +0.977   -0.821   reverse by 0.98
+//
+// **`f1-full` and `f2-full` are the same L1 distance in opposite axes.** That is the
+// cleanest contrast here: if distance drives the wipe they retain alike, and if the
+// axis drives it they do not.
+//
+// THE MEASUREMENT TRAP THIS AVOIDS. Retention is normally scored on the JOINT
+// formant metric, which would score an F2-only second lesson as having destroyed A
+// even when A's F1 write survived untouched. So retention is reported on the F1
+// AXIS via `report_axis`. That field exists because `score_axis` drives the REWARD
+// as well as the report, and using it here would have changed what lesson A IS --
+// while the whole point is that A stays exactly the lesson every earlier retention
+// number was measured on.
+//
+// CONSEQUENCE, stated so it is not read as a discrepancy later: `retention`'s 0.22
+// is a JOINT-metric number. The `shipped` arm's F1-axis retention here is a new
+// quantity and is not required to equal it.
+struct ACArm { const char* name; float f1; float f2; };
+const ACArm kACArms[] = {
+    {"keep", 320.0f, 2500.0f},   {"f1-half", 528.0f, 2500.0f}, {"f1-full", 870.0f, 2500.0f},
+    {"f2-half", 320.0f, 1516.0f}, {"f2-full", 320.0f, 920.0f},  {"cross", 528.0f, 920.0f},
+    {"shipped", 850.0f, 1100.0f},
+};
+constexpr uint32_t kACArmCount = sizeof(kACArms) / sizeof(kACArms[0]);
+
+bool run_axiscollide(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  aibaby::Dna dna0;
+  if (dna0.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) {
+    std::printf("  setup failed: the genome does not load\n");
+    return false;
+  }
+  const int32_t vmi = dna0.module_with_role(aibaby::ModuleRole::kVocal);
+  if (vmi < 0) { std::printf("  this genome has no vocal module\n"); return false; }
+  const uint32_t vcount = dna0.module(uint32_t(vmi)).neurons;
+  const uint32_t g_lo = aibaby::slice_begin(vcount, aibaby::kVocalGroups, 2u);
+  const uint32_t g_hi = aibaby::slice_begin(vcount, aibaby::kVocalGroups, 3u);
+  const uint32_t gsize = g_hi - g_lo;
+  Regime regime;
+  regime.praise = kPraiseValue;
+  regime.scold = kScoldValue;
+  constexpr uint32_t kReps = 20;
+  instrument("axiscollide", dna0.header().seed ^ 0xAC10u, ticks / kRTTrial, "trials");
+
+  std::printf("  question          `gapwrite` showed B undoes A by restoring the neurons A\n"
+              "                    silenced. If that is the mechanism, retention should turn\n"
+              "                    on how much B's target requires A's AXIS to move -- not on\n"
+              "                    how far apart the two targets are.\n");
+  std::printf("  one account, two  opposite demands on the SAME neurons collide (`retain`,\n"
+              "  results           0.22); demands on DIFFERENT neurons coexist (`capacity`,\n"
+              "                    0.84). This tests whether that is one thing or two.\n");
+  std::printf("\n  THE ARMS (lesson A is always /i/, F1 320, F2 2500, taught as shipped)\n");
+  std::printf("    %-9s %-6s %-6s %-9s %-9s %s\n", "arm", "F1", "F2", "dlogF1", "dlogF2",
+              "asks of A's F1 write");
+  for (uint32_t a = 0; a < kACArmCount; ++a) {
+    const double dx = std::log(double(kACArms[a].f1) / double(kWords[kRTTarget].f1));
+    const double dy = std::log(double(kACArms[a].f2) / double(kWords[kRTTarget].f2));
+    char ask[64];
+    if (dx > 0.05) std::snprintf(ask, sizeof(ask), "reverse by %.2f", dx);
+    else std::snprintf(ask, sizeof(ask), "nothing");
+    std::printf("    %-9s %-6.0f %-6.0f %+-9.3f %+-9.3f %s\n", kACArms[a].name,
+                double(kACArms[a].f1), double(kACArms[a].f2), dx, dy, ask);
+  }
+  std::printf("    `f1-full` and `f2-full` are the SAME L1 distance in OPPOSITE axes.\n");
+
+  std::printf("\n  PRE-REGISTERED, written before the run\n");
+  std::printf("    A  axis matters   retention(f2-full) - retention(f1-full) >= +3 SE.\n"
+              "                      Same distance, opposite axes. If this fails the whole\n"
+              "                      account fails and DISTANCE is what drives the wipe.\n");
+  std::printf("    B  orthogonal is  |retention(f2-full) - retention(keep)| <= 2 SE. A second\n"
+              "       free           lesson that asks nothing of F1 costs A nothing.\n");
+  std::printf("    C  cross-check    |retention(cross) - retention(f1-half)| <= 2 SE. Adding a\n"
+              "                      LARGE F2 demand on top of a fixed F1 demand changes\n"
+              "                      nothing, because only the F1 component counts.\n");
+  std::printf("    ALL THREE -> the claim holds: it is the component along A's own axis.\n"
+              "    A fails   -> REFUTED, and `gapwrite`'s mechanism does not generalise.\n"
+              "    B or C fails with A holding -> PARTIAL, and the run says which.\n");
+  std::printf("    refusal           `keep` must retain >= 0.8. A gap rewarded toward A's OWN\n"
+              "                      target that does not preserve A means the instrument is\n"
+              "                      broken and nothing else here can be read.\n");
+  std::printf("    mechanism         the gap's upper-half rate change per arm, which should\n"
+              "                      track retention: restoring A's neurons is what losing A\n"
+              "                      looks like. Predicted, not fitted.\n");
+  std::printf("    note              retention is on the F1 AXIS (`report_axis`), because the\n"
+              "                      joint metric would score an F2-only lesson as destroying\n"
+              "                      A. So `retention`'s joint-metric 0.22 is NOT the number\n"
+              "                      `shipped` has to reproduce.\n\n");
+
+  struct Cell { bool ok = false; RTRow row; };
+  const uint32_t njobs = kReps * kACArmCount;
+  const std::vector<Cell> cells = parallel_reps<Cell>(njobs, [&](uint32_t i) {
+    Cell cell;
+    const uint32_t r = i / kACArmCount, a = i % kACArmCount;
+    std::vector<uint8_t> variant = blob;
+    const uint64_t seed = dna0.header().seed + r * 7919ull;
+    std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+    RTConfig cfg;
+    cfg.name = kACArms[a].name;
+    cfg.teach = true;
+    cfg.relearn = true;
+    cfg.mask_mode = 0u;
+    cfg.score_axis = 0u;   // A is taught EXACTLY as shipped: the joint metric
+    cfg.second_axis = 0u;  // B is taught toward its own full target
+    cfg.report_axis = 1u;  // but RETENTION is read on F1, which is A's axis
+    cfg.second_f1 = kACArms[a].f1;
+    cfg.second_f2 = kACArms[a].f2;
+    Timbre local_ruler;
+    std::string local_error;
+    if (!local_ruler.configure(dna0.header().audio, local_error)) return cell;
+    bool ok = false;
+    cell.row = run_retain_arm(variant, ticks, cfg, local_ruler, regime, &ok);
+    if (!ok) return cell;
+    cell.ok = true;
+    parallel_note("  [%u/%u] seed %u %-9s taught %.4f after %.4f ret %.3f\n", i + 1, njobs, r,
+                  kACArms[a].name, cell.row.err_taught, cell.row.err_after, cell.row.retention);
+    return cell;
+  });
+
+  std::vector<std::vector<double>> ret(kACArmCount), gapup(kACArmCount), learned(kACArmCount);
+  for (uint32_t a = 0; a < kACArmCount; ++a) {
+    for (uint32_t r = 0; r < kReps; ++r) {
+      const Cell& c = cells[r * kACArmCount + a];
+      if (!c.ok) continue;
+      ret[a].push_back(c.row.retention);
+      learned[a].push_back(c.row.err_before - c.row.err_taught);
+      if (c.row.f1_n == gsize && c.row.f1_samp_late && c.row.f1_gap_samp_late) {
+        double u = 0.0;
+        for (uint32_t k = gsize / 2u; k < gsize; ++k) {
+          u += c.row.f1_gap_late[k] / double(c.row.f1_gap_samp_late) -
+               c.row.f1_rate_late[k] / double(c.row.f1_samp_late);
+        }
+        gapup[a].push_back(u);
+      }
+    }
+    if (ret[a].size() < 3) {
+      std::printf("\n  axiscollide INCONCLUSIVE -- arm `%s` produced %zu creatures.\n",
+                  kACArms[a].name, ret[a].size());
+      return false;
+    }
+  }
+
+  std::printf("\n  %-9s %-9s %-22s %s\n", "arm", "dlogF1", "F1-axis retention",
+              "gap dUPPER (Hz)");
+  double m_ret[kACArmCount] = {}, s_ret[kACArmCount] = {};
+  double m_gap[kACArmCount] = {}, s_gap[kACArmCount] = {};
+  for (uint32_t a = 0; a < kACArmCount; ++a) {
+    m_ret[a] = ctx_mean_se(ret[a], &s_ret[a]);
+    m_gap[a] = gapup[a].size() >= 3 ? ctx_mean_se(gapup[a], &s_gap[a]) : 0.0;
+    const double dx = std::log(double(kACArms[a].f1) / double(kWords[kRTTarget].f1));
+    std::printf("  %-9s %+-9.3f %.3f +/- %-14.3f %+.3f +/- %.3f\n", kACArms[a].name, dx,
+                m_ret[a], s_ret[a], m_gap[a], s_gap[a]);
+  }
+
+  {
+    std::printf("\n  DID EVERY ARM LEARN A THE SAME? (identical through teaching, so they must)\n");
+    double lo = 1e9, hi = -1e9;
+    for (uint32_t a = 0; a < kACArmCount; ++a) {
+      double se = 0.0;
+      const double m = ctx_mean_se(learned[a], &se);
+      if (m < lo) lo = m;
+      if (m > hi) hi = m;
+    }
+    std::printf("    range across arms %.4f .. %.4f\n", lo, hi);
+    if (hi - lo > 0.02) {
+      std::printf("\n  axiscollide REFUSED -- the arms differ in what they LEARNED (%.4f), but\n"
+                  "  they are identical until the gap begins, so they cannot. Something is\n"
+                  "  leaking the second target into the teaching phase.\n", hi - lo);
+      return false;
+    }
+  }
+
+  {
+    ArmLiveness live("axiscollide");
+    for (uint32_t r = 0; r < kReps; ++r)
+      for (uint32_t a = 0; a < kACArmCount; ++a) {
+        const Cell& c = cells[r * kACArmCount + a];
+        if (c.ok) live.observe(kACArms[a].name, r, c.row.err_after);
+      }
+    if (!live.report("keep")) return false;
+  }
+
+  const auto diff = [&](uint32_t x, uint32_t y, double* se) {
+    std::vector<double> d;
+    const size_t n = ret[x].size() < ret[y].size() ? ret[x].size() : ret[y].size();
+    for (size_t i = 0; i < n; ++i) d.push_back(ret[x][i] - ret[y][i]);
+    return d.size() >= 3 ? ctx_mean_se(d, se) : 0.0;
+  };
+  double seA = 0.0, seB = 0.0, seC = 0.0;
+  const double dA = diff(4u, 2u, &seA);  // f2-full - f1-full
+  const double dB = diff(4u, 0u, &seB);  // f2-full - keep
+  const double dC = diff(5u, 1u, &seC);  // cross   - f1-half
+  const double tA = seA > 0.0 ? dA / seA : 0.0;
+  const double tB = seB > 0.0 ? dB / seB : 0.0;
+  const double tC = seC > 0.0 ? dC / seC : 0.0;
+  std::printf("\n  THE THREE TESTS, paired on seed\n");
+  std::printf("    A  f2-full - f1-full  %+.3f +/- %.3f  (%+.1f SE)   want >= +3\n", dA, seA, tA);
+  std::printf("    B  f2-full - keep     %+.3f +/- %.3f  (%+.1f SE)   want |t| <= 2\n", dB, seB, tB);
+  std::printf("    C  cross   - f1-half  %+.3f +/- %.3f  (%+.1f SE)   want |t| <= 2\n", dC, seC, tC);
+
+  std::printf("\n  --- the verdict ---\n");
+  if (m_ret[0] < 0.8) {
+    std::printf("  axiscollide REFUSED -- `keep` retained only %.3f. A gap rewarded toward A's\n"
+                "  OWN target must preserve A; that it does not means the instrument, not the\n"
+                "  hypothesis, is what this run measured.\n", m_ret[0]);
+    return false;
+  }
+  const bool okA = tA >= 3.0, okB = std::fabs(tB) <= 2.0, okC = std::fabs(tC) <= 2.0;
+  if (okA && okB && okC) {
+    std::printf("  IT IS THE COMPONENT ALONG A's OWN AXIS. Same distance in the other axis\n"
+                "  costs A nothing (%+.1f SE against `keep`), the same distance in A's axis\n"
+                "  destroys it (%+.1f SE apart), and piling a large F2 demand on top of a\n"
+                "  fixed F1 demand changes nothing (%+.1f SE).\n", tB, tA, tC);
+    std::printf("  ONE ACCOUNT NOW COVERS `retain`'s 0.22 AND `capacity`'s 0.84: they are the\n"
+                "  same creature measured at two angles, not two phenomena.\n");
+    std::printf("  AND IT IS BUILDABLE: a second lesson is retainable if its target does not\n"
+                "  require A's axis to move -- a property of the TARGET PAIR, arranged for\n"
+                "  free. The limit is equally clear: within ONE formant there is only one\n"
+                "  axis, so two F1 lessons can never be made orthogonal this way.\n");
+  } else if (!okA) {
+    std::printf("  REFUTED: `f2-full` and `f1-full` are the same distance in opposite axes and\n"
+                "  retention does not separate them (%+.1f SE, wanted >= +3). The wipe tracks\n"
+                "  DISTANCE, not the axis, and `gapwrite`'s mechanism does not generalise\n"
+                "  beyond the pair it was measured on.\n", tA);
+  } else {
+    std::printf("  PARTIAL. The axis test passes (A %+.1f SE) but %s. So the component along\n"
+                "  A's axis is not the whole story -- something else contributes and the run\n"
+                "  does not say what.\n", tA,
+                !okB ? "an orthogonal lesson is NOT free (test B)"
+                     : "the cross-check fails (test C)");
+  }
+  std::printf("\n  THE RATE COLUMN IS THE MECHANISM CHECK: `gapwrite` says losing A looks like\n"
+              "  A's suppressed neurons being restored, so gap dUPPER should track retention\n"
+              "  across the arms. That was predicted here, not fitted to what came back.\n");
   return true;
 }
 

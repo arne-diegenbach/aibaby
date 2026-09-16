@@ -345,6 +345,14 @@ const Spec kSpecs[] = {
      "  suppress the lower further or RESTORE the upper, which is undoing A. The\n"
      "  A-idle arm leaves the gap unrewarded so passive relaxation cannot be read\n"
      "  as B's doing. 12 seeds"},
+    {"axiscollide", 5600000, Expect::kOpen, Tier::kLong,
+     "IS IT THE ANGLE OR THE DISTANCE? gapwrite showed B undoes A by restoring\n"
+     "  the neurons A silenced, so retention should turn on how much B's target\n"
+     "  requires A's AXIS to move, not on how far apart the targets are. That\n"
+     "  would cover retain's 0.22 and capacity's 0.84 with one account. f1-full\n"
+     "  and f2-full are the SAME L1 distance in opposite axes -- the cleanest\n"
+     "  contrast. Retention is read on the F1 axis so an F2-only lesson is not\n"
+     "  scored as destroying A. 20 seeds"},
     {"movability", 5600000, Expect::kOpen, Tier::kLong,
      "orthovocab left a LEAD: on identical demands the F2 lesson travelled\n"
      "  0.169 and the F1 lesson 0.030 -- but F1's was FIGHTING another lesson on\n"
@@ -688,6 +696,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "leverprobe") ok = run_leverprobe(dna_blob, ticks, verbose);
   else if (name == "blockflip") ok = run_blockflip(dna_blob, ticks, verbose);
   else if (name == "gapwrite") ok = run_gapwrite(dna_blob, ticks, verbose);
+  else if (name == "axiscollide") ok = run_axiscollide(dna_blob, ticks, verbose);
   else if (name == "partprobe") ok = run_partprobe(dna_blob, ticks, verbose);
   else if (name == "pgprobe") ok = run_pgprobe(dna_blob, ticks, verbose);
   else if (name == "g2cond") ok = run_g2cond(dna_blob, ticks, verbose);

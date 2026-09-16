@@ -1,0 +1,46 @@
+experiment: axiscollide
+  instrument        axiscollide   trial seed 0000000001358bd9   2000 trials
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  question          `gapwrite` showed B undoes A by restoring the neurons A
+                    silenced. If that is the mechanism, retention should turn
+                    on how much B's target requires A's AXIS to move -- not on
+                    how far apart the two targets are.
+  one account, two  opposite demands on the SAME neurons collide (`retain`,
+  results           0.22); demands on DIFFERENT neurons coexist (`capacity`,
+                    0.84). This tests whether that is one thing or two.
+
+  THE ARMS (lesson A is always /i/, F1 320, F2 2500, taught as shipped)
+    arm       F1     F2     dlogF1    dlogF2    asks of A's F1 write
+    keep      320    2500   +0.000    +0.000    nothing
+    f1-half   528    2500   +0.501    +0.000    reverse by 0.50
+    f1-full   870    2500   +1.000    +0.000    reverse by 1.00
+    f2-half   320    1516   +0.000    -0.500    nothing
+    f2-full   320    920    +0.000    -1.000    nothing
+    cross     528    920    +0.501    -1.000    reverse by 0.50
+    shipped   850    1100   +0.977    -0.821    reverse by 0.98
+    `f1-full` and `f2-full` are the SAME L1 distance in OPPOSITE axes.
+
+  PRE-REGISTERED, written before the run
+    A  axis matters   retention(f2-full) - retention(f1-full) >= +3 SE.
+                      Same distance, opposite axes. If this fails the whole
+                      account fails and DISTANCE is what drives the wipe.
+    B  orthogonal is  |retention(f2-full) - retention(keep)| <= 2 SE. A second
+       free           lesson that asks nothing of F1 costs A nothing.
+    C  cross-check    |retention(cross) - retention(f1-half)| <= 2 SE. Adding a
+                      LARGE F2 demand on top of a fixed F1 demand changes
+                      nothing, because only the F1 component counts.
+    ALL THREE -> the claim holds: it is the component along A's own axis.
+    A fails   -> REFUTED, and `gapwrite`'s mechanism does not generalise.
+    B or C fails with A holding -> PARTIAL, and the run says which.
+    refusal           `keep` must retain >= 0.8. A gap rewarded toward A's OWN
+                      target that does not preserve A means the instrument is
+                      broken and nothing else here can be read.
+    mechanism         the gap's upper-half rate change per arm, which should
+                      track retention: restoring A's neurons is what losing A
+                      looks like. Predicted, not fitted.
+    note              retention is on the F1 AXIS (`report_axis`), because the
+                      joint metric would score an F2-only lesson as destroying
+                      A. So `retention`'s joint-metric 0.22 is NOT the number
+                      `shipped` has to reproduce.
+
