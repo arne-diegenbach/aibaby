@@ -1,0 +1,25 @@
+experiment: axispower
+  instrument        axispower   trial seed 0000000001358e29   2000 trials
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  seed family       offset 224737 -> first creature 00000000013895aa  (family 2; a
+                    nonzero offset distinct from 104729 proves this is not a
+                    rerun of family 0 or 1 on a stale binary)
+  question          does a second lesson SILENT about A's axis cost A
+                    anything? `axisfree` replicated the LEVEL (f2-axis ~1.0
+                    twice) but not the CONTRAST (+5.7 SE then +2.0 SE).
+  why n=60          family 1 gave SE 0.365 at n=20, so per-seed SD ~1.63 and
+                    the expected SE here is ~0.21. On a true difference of
+                    ~0.9 this should read about 4.3 SE. Stated first, so a
+                    near-miss can be told from a refutation at the time.
+
+  PRE-REGISTERED
+    holds     f2-axis - f1-axis >= +3 SE AND f2-axis no more than 2 SE below
+              1.0 -> A LESSON SILENT ABOUT A's AXIS IS FREE, at power.
+    refused   f2-axis - f1-axis <= +2 SE -> the contrast is smaller than both
+              families suggested. Then an orthogonal lesson is CHEAPER but not
+              FREE, and the axis account describes a gradient, not a gate.
+    between   no verdict, and at this power that itself means the effect is
+              near 0.6 rather than the 1.1 family 0 showed.
+    do NOT    pool this with families 0 or 1. They generated the hypothesis.
+

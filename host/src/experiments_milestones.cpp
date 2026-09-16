@@ -10878,6 +10878,201 @@ bool run_axisfree(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
   return true;
 }
 
+// `axispower`, 2026-09-16. THE ORTHOGONAL CLAIM AT ADEQUATE POWER.
+//
+// `axisfree` asked whether a second lesson SILENT about A's axis costs A anything.
+// Two families, and the two halves of the answer behaved differently:
+//
+//   f2-axis retention   0.948 (family 0) and 1.012 (family 1) -- replicates tightly
+//   f2-axis - f1-axis  +5.7 SE (family 0) and +2.0 SE (family 1) -- does NOT
+//
+// The confirmation missed its own 3 SE bar. The contrast collapsed not because the
+// orthogonal arm moved (+0.064) but because the COMPARISON arm got less lethal:
+// `f1-axis` went -0.167 -> +0.281 and its SE nearly doubled. So the F1 arms are the
+// noisy ones and n=20 cannot settle this.
+//
+// POWER, WRITTEN DOWN BEFORE THE RUN, which is rule 34's second half. Family 1 gave
+// SE 0.365 at n=20, so the per-seed SD is about 0.365*sqrt(20) = 1.63. At n=60 the
+// expected SE is 1.63/sqrt(60) ~ 0.21. If the true difference is the ~0.9 the two
+// families average to, this run should read about 4.3 SE. **If it comes back near
+// 2 SE again, the effect is smaller than either family suggested and the honest
+// conclusion is that an orthogonal lesson is CHEAPER but not FREE** -- which the
+// f2-axis column already hints at, since 1.0 is "no worse than taught" and nothing
+// here has ever put it above `keep`.
+//
+// A THIRD, INDEPENDENT SEED FAMILY. Not an extension of family 1: pooling the
+// hypothesis-generating sample with the testing one is the error this chapter has
+// already made once, in a pooled estimate that read 5.9 SE and was not cited.
+// `f1-full` is dropped -- it was a joint-metric anchor to `axiscollide` and cannot
+// anchor to anything on fresh seeds.
+struct APArm { const char* name; uint32_t second_axis; float f1; float f2; };
+const APArm kAPArms[] = {
+    {"keep", 0u, 320.0f, 2500.0f},     // B = A's own target: the ceiling
+    {"f2-axis", 2u, 320.0f, 920.0f},   // rewards F2 ALONE -- silent about F1
+    {"f1-axis", 1u, 870.0f, 2500.0f},  // rewards F1 ALONE -- the pure demand on A
+};
+constexpr uint32_t kAPArmCount = sizeof(kAPArms) / sizeof(kAPArms[0]);
+constexpr uint64_t kAPSeedOffset = 224737ull;  // family 2, distinct from 0 and 104729
+
+bool run_axispower(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  aibaby::Dna dna0;
+  if (dna0.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) {
+    std::printf("  setup failed: the genome does not load\n");
+    return false;
+  }
+  const int32_t vmi = dna0.module_with_role(aibaby::ModuleRole::kVocal);
+  if (vmi < 0) { std::printf("  this genome has no vocal module\n"); return false; }
+  const uint32_t vcount = dna0.module(uint32_t(vmi)).neurons;
+  const uint32_t g_lo = aibaby::slice_begin(vcount, aibaby::kVocalGroups, 2u);
+  const uint32_t g_hi = aibaby::slice_begin(vcount, aibaby::kVocalGroups, 3u);
+  const uint32_t gsize = g_hi - g_lo;
+  Regime regime;
+  regime.praise = kPraiseValue;
+  regime.scold = kScoldValue;
+  constexpr uint32_t kReps = 60;
+  instrument("axispower", dna0.header().seed ^ 0xA9E0u, ticks / kRTTrial, "trials");
+  std::printf("  seed family       offset %llu -> first creature %016llx  (family 2; a\n"
+              "                    nonzero offset distinct from 104729 proves this is not a\n"
+              "                    rerun of family 0 or 1 on a stale binary)\n",
+              (unsigned long long)kAPSeedOffset,
+              (unsigned long long)(dna0.header().seed + kAPSeedOffset));
+  std::printf("  question          does a second lesson SILENT about A's axis cost A\n"
+              "                    anything? `axisfree` replicated the LEVEL (f2-axis ~1.0\n"
+              "                    twice) but not the CONTRAST (+5.7 SE then +2.0 SE).\n");
+  std::printf("  why n=60          family 1 gave SE 0.365 at n=20, so per-seed SD ~1.63 and\n"
+              "                    the expected SE here is ~0.21. On a true difference of\n"
+              "                    ~0.9 this should read about 4.3 SE. Stated first, so a\n"
+              "                    near-miss can be told from a refutation at the time.\n");
+  std::printf("\n  PRE-REGISTERED\n");
+  std::printf("    holds     f2-axis - f1-axis >= +3 SE AND f2-axis no more than 2 SE below\n"
+              "              1.0 -> A LESSON SILENT ABOUT A's AXIS IS FREE, at power.\n");
+  std::printf("    refused   f2-axis - f1-axis <= +2 SE -> the contrast is smaller than both\n"
+              "              families suggested. Then an orthogonal lesson is CHEAPER but not\n"
+              "              FREE, and the axis account describes a gradient, not a gate.\n");
+  std::printf("    between   no verdict, and at this power that itself means the effect is\n"
+              "              near 0.6 rather than the 1.1 family 0 showed.\n");
+  std::printf("    do NOT    pool this with families 0 or 1. They generated the hypothesis.\n\n");
+
+  struct Cell { bool ok = false; RTRow row; };
+  const uint32_t njobs = kReps * kAPArmCount;
+  const std::vector<Cell> cells = parallel_reps<Cell>(njobs, [&](uint32_t i) {
+    Cell cell;
+    const uint32_t r = i / kAPArmCount, a = i % kAPArmCount;
+    std::vector<uint8_t> variant = blob;
+    const uint64_t seed = dna0.header().seed + kAPSeedOffset + r * 7919ull;
+    std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+    RTConfig cfg;
+    cfg.name = kAPArms[a].name;
+    cfg.teach = true;
+    cfg.relearn = true;
+    cfg.mask_mode = 0u;
+    cfg.score_axis = 0u;
+    cfg.second_axis = kAPArms[a].second_axis;
+    cfg.report_axis = 1u;
+    cfg.second_f1 = kAPArms[a].f1;
+    cfg.second_f2 = kAPArms[a].f2;
+    Timbre local_ruler;
+    std::string local_error;
+    if (!local_ruler.configure(dna0.header().audio, local_error)) return cell;
+    bool ok = false;
+    cell.row = run_retain_arm(variant, ticks, cfg, local_ruler, regime, &ok);
+    if (!ok) return cell;
+    cell.ok = true;
+    parallel_note("  [%u/%u] seed %u %-8s ret %.3f\n", i + 1, njobs, r, kAPArms[a].name,
+                  cell.row.retention);
+    return cell;
+  });
+
+  std::vector<std::vector<double>> ret(kAPArmCount), gapup(kAPArmCount);
+  for (uint32_t a = 0; a < kAPArmCount; ++a) {
+    for (uint32_t r = 0; r < kReps; ++r) {
+      const Cell& c = cells[r * kAPArmCount + a];
+      if (!c.ok) continue;
+      ret[a].push_back(c.row.retention);
+      if (c.row.f1_n == gsize && c.row.f1_samp_late && c.row.f1_gap_samp_late) {
+        double u = 0.0;
+        for (uint32_t k = gsize / 2u; k < gsize; ++k)
+          u += c.row.f1_gap_late[k] / double(c.row.f1_gap_samp_late) -
+               c.row.f1_rate_late[k] / double(c.row.f1_samp_late);
+        gapup[a].push_back(u);
+      }
+    }
+    if (ret[a].size() < 10) {
+      std::printf("\n  axispower INCONCLUSIVE -- arm `%s` produced %zu creatures.\n",
+                  kAPArms[a].name, ret[a].size());
+      return false;
+    }
+  }
+
+  std::printf("\n  %-9s %-10s %-24s %s\n", "arm", "B scored", "F1-axis retention",
+              "gap dUPPER (Hz)");
+  double m[kAPArmCount] = {}, se[kAPArmCount] = {}, mg[kAPArmCount] = {}, sg[kAPArmCount] = {};
+  for (uint32_t a = 0; a < kAPArmCount; ++a) {
+    m[a] = ctx_mean_se(ret[a], &se[a]);
+    mg[a] = gapup[a].size() >= 3 ? ctx_mean_se(gapup[a], &sg[a]) : 0.0;
+    const char* ax = kAPArms[a].second_axis == 1u   ? "F1 only"
+                     : kAPArms[a].second_axis == 2u ? "F2 only"
+                                                    : "joint";
+    std::printf("  %-9s %-10s %.3f +/- %-16.3f %+.3f +/- %.3f\n", kAPArms[a].name, ax, m[a],
+                se[a], mg[a], sg[a]);
+  }
+
+  {
+    ArmLiveness live("axispower");
+    for (uint32_t r = 0; r < kReps; ++r)
+      for (uint32_t a = 0; a < kAPArmCount; ++a) {
+        const Cell& c = cells[r * kAPArmCount + a];
+        if (c.ok) live.observe(kAPArms[a].name, r, c.row.err_after);
+      }
+    if (!live.report("keep")) return false;
+  }
+
+  std::vector<double> d;
+  const size_t n = ret[1].size() < ret[2].size() ? ret[1].size() : ret[2].size();
+  for (size_t i = 0; i < n; ++i) d.push_back(ret[1][i] - ret[2][i]);
+  double sd = 0.0;
+  const double dm = ctx_mean_se(d, &sd);
+  const double t = sd > 0.0 ? dm / sd : 0.0;
+  const bool level = se[1] > 0.0 && (1.0 - m[1]) / se[1] <= 2.0;
+  std::printf("\n  THE PRIMARY (n=%zu paired)\n", d.size());
+  std::printf("    f2-axis - f1-axis  %+.3f +/- %.3f  (%+.1f SE)   expected SE ~0.21\n", dm, sd,
+              t);
+  std::printf("    f2-axis retention  %.3f +/- %.3f -- %.2f SE below 1.0 (want <= 2.0)\n", m[1],
+              se[1], se[1] > 0.0 ? (1.0 - m[1]) / se[1] : 99.0);
+
+  std::printf("\n  --- the verdict ---\n");
+  if (sd > 0.30) {
+    std::printf("  NOTE: the achieved SE is %.3f against an expected ~0.21, so this run is\n"
+                "  less powered than planned and a null below is weaker than it looks.\n", sd);
+  }
+  if (t >= 3.0 && level) {
+    std::printf("  A LESSON SILENT ABOUT A's AXIS IS FREE, AT POWER. %+.1f SE over a lesson\n"
+                "  that demands A's axis, with A itself coming out of the gap no worse than\n"
+                "  it went in (%.3f). Two families said this and could not prove it; this\n"
+                "  one had the seeds to.\n", t, m[1]);
+    std::printf("  THE ACCOUNT CLOSES: `retain`'s wipe and `capacity`'s coexistence are one\n"
+                "  mechanism at two angles, and whether a second lesson costs the first is a\n"
+                "  property of WHAT IT ASKS. The limit belongs in the same sentence: one\n"
+                "  formant has one axis, so this buys coexistence ACROSS articulators and\n"
+                "  never within one.\n");
+  } else if (t <= 2.0) {
+    std::printf("  CHEAPER, NOT FREE. %+.1f SE at n=%zu, where ~4.3 was expected on the\n"
+                "  difference the first two families averaged to. The orthogonal lesson is\n"
+                "  better for A than an on-axis one, but not by enough to call A protected.\n"
+                "  The axis account describes a GRADIENT, not a gate.\n", t, d.size());
+    std::printf("  Family 0's +5.7 SE is then the outlier of three, and the honest summary of\n"
+                "  this chapter is the LEVEL that replicated -- f2-axis ~1.0 in every family\n"
+                "  -- rather than any contrast built on top of it.\n");
+  } else {
+    std::printf("  NO VERDICT at %+.1f SE. At this power that is itself informative: the true\n"
+                "  difference is nearer 0.6 than the 1.1 family 0 showed, and a fourth run\n"
+                "  would need n~150 to separate those. Not worth it unless something else\n"
+                "  depends on the answer.\n", t);
+  }
+  return true;
+}
+
 bool run_movability(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
   (void)verbose;
   Regime regime;

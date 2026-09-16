@@ -360,6 +360,12 @@ const Spec kSpecs[] = {
      "  second_axis so the gap rewards ONE formant: f2-axis is silent about F1,\n"
      "  f1-axis is the pure demand on it. keep and f1-full are carried over as\n"
      "  anchors. 20 seeds"},
+    {"axispower", 5600000, Expect::kOpen, Tier::kLong,
+     "THE ORTHOGONAL CLAIM AT ADEQUATE POWER. axisfree replicated the LEVEL\\n"
+     "  (f2-axis ~1.0 in two families) but not the CONTRAST (+5.7 SE then +2.0).\\n"
+     "  The F1 arms are the noisy ones: per-seed SD ~1.63, so n=20 gives SE 0.365\\n"
+     "  and n=60 gives ~0.21. Third independent seed family; do NOT pool with the\\n"
+     "  two that generated the hypothesis. 60 seeds"},
     {"movability", 5600000, Expect::kOpen, Tier::kLong,
      "orthovocab left a LEAD: on identical demands the F2 lesson travelled\n"
      "  0.169 and the F1 lesson 0.030 -- but F1's was FIGHTING another lesson on\n"
@@ -705,6 +711,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "gapwrite") ok = run_gapwrite(dna_blob, ticks, verbose);
   else if (name == "axiscollide") ok = run_axiscollide(dna_blob, ticks, verbose);
   else if (name == "axisfree") ok = run_axisfree(dna_blob, ticks, verbose);
+  else if (name == "axispower") ok = run_axispower(dna_blob, ticks, verbose);
   else if (name == "partprobe") ok = run_partprobe(dna_blob, ticks, verbose);
   else if (name == "pgprobe") ok = run_pgprobe(dna_blob, ticks, verbose);
   else if (name == "g2cond") ok = run_g2cond(dna_blob, ticks, verbose);
