@@ -184,3 +184,46 @@ experiment: axispower
   [158/180] seed 52 f2-axis  ret 0.481
   [159/180] seed 52 f1-axis  ret 0.546
   [161/180] seed 53 f2-axis  ret 0.837
+  [164/180] seed 54 f2-axis  ret 0.439
+  [162/180] seed 53 f1-axis  ret 0.410
+  [163/180] seed 54 keep     ret 2.446
+  [166/180] seed 55 keep     ret 1.804
+  [168/180] seed 55 f1-axis  ret -0.180
+  [165/180] seed 54 f1-axis  ret 1.029
+  [167/180] seed 55 f2-axis  ret 0.751
+  [171/180] seed 56 f1-axis  ret 0.459
+  [169/180] seed 56 keep     ret 5.004
+  [170/180] seed 56 f2-axis  ret 1.408
+  [172/180] seed 57 keep     ret 1.724
+  [173/180] seed 57 f2-axis  ret 1.700
+  [174/180] seed 57 f1-axis  ret 0.392
+  [175/180] seed 58 keep     ret 2.121
+  [178/180] seed 59 keep     ret 2.152
+  [179/180] seed 59 f2-axis  ret 1.169
+  [176/180] seed 58 f2-axis  ret 1.010
+  [177/180] seed 58 f1-axis  ret 0.522
+  [180/180] seed 59 f1-axis  ret -0.215
+
+  arm       B scored   F1-axis retention        gap dUPPER (Hz)
+  keep      joint      2.455 +/- 0.096            -10.885 +/- 0.524
+  f2-axis   F2 only    1.024 +/- 0.062            -1.941 +/- 0.541
+  f1-axis   F1 only    0.116 +/- 0.048            +6.428 +/- 0.616
+
+  ARM LIVENESS vs `keep` (seeds where the arm differs at all)
+    f2-axis            60/60
+    f1-axis            60/60
+
+  THE PRIMARY (n=60 paired)
+    f2-axis - f1-axis  +0.909 +/- 0.079  (+11.5 SE)   expected SE ~0.21
+    f2-axis retention  1.024 +/- 0.062 -- -0.39 SE below 1.0 (want <= 2.0)
+
+  --- the verdict ---
+  A LESSON SILENT ABOUT A's AXIS IS FREE, AT POWER. +11.5 SE over a lesson
+  that demands A's axis, with A itself coming out of the gap no worse than
+  it went in (1.024). Two families said this and could not prove it; this
+  one had the seeds to.
+  THE ACCOUNT CLOSES: `retain`'s wipe and `capacity`'s coexistence are one
+  mechanism at two angles, and whether a second lesson costs the first is a
+  property of WHAT IT ASKS. The limit belongs in the same sentence: one
+  formant has one axis, so this buys coexistence ACROSS articulators and
+  never within one.

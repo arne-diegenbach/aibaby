@@ -10543,6 +10543,49 @@ numbers and they did not move at all — a subtler edit would have been accepted
 `axisfree` now prints its seed-family offset so a stale run cannot claim to be a
 replication. Rule 35.
 
+#### Confirmed at power, and what it is worth
+
+`axispower` ran the contrast on a third seed family at n=60, with the expected SE
+written down beforehand:
+
+| arm | B scored | F1-axis retention | gap dUPPER |
+| --- | --- | --- | --- |
+| `keep` | joint | 2.455 ± 0.096 | −10.885 |
+| **`f2-axis`** | **F2 only** | **1.024 ± 0.062** | −1.941 |
+| `f1-axis` | F1 only | 0.116 ± 0.048 | +6.428 |
+
+**`f2-axis − f1-axis` = +0.909 ± 0.079, +11.5 SE against a pre-registered bar of
++3.0.** A second lesson rewarded throughout — on F2 alone — leaves A exactly where
+teaching left it. One rewarded on F1 destroys it.
+
+| family | n | contrast | level | per-seed SD |
+| --- | --- | --- | --- | --- |
+| 0 exploratory | 20 | +1.115 ± 0.197 (5.7) | 0.948 | 0.88 |
+| 1 confirmation | 20 | +0.731 ± 0.365 (2.0) | 1.012 | 1.63 |
+| 2 at power | 60 | **+0.909 ± 0.079 (11.5)** | 1.024 | 0.61 |
+
+The point estimates agreed all along (0.73–1.12); only family 1's *noise* was
+anomalous — its two arms came out negatively correlated across seeds, which
+inflates a paired SE above even the unpaired ones, and at n=20 that is well within
+chance. **My power forecast was wrong in the safe direction for a real reason:** I
+predicted SE ~0.21 and got 0.079, having derived the per-seed SD from family 1, the
+one sample whose pairing was anomalous. Over-powering costs only time, but the same
+reasoning would have under-powered the run had the anomaly pointed the other way.
+
+**So the account closes.** `retain`'s 0.22 wipe and `capacity`'s 0.84 coexistence
+are one mechanism seen at two angles: whether a second lesson costs the first is a
+property of *what it asks*, not how far away its target sits. The rate signature
+carries it the whole way — `f2-axis` leaves A's neurons suppressed (−1.94 Hz),
+`f1-axis` restores them (+6.43), exactly as predicted before any of these runs
+existed.
+
+**And it buys nothing for naming.** One formant has one axis, so this is
+coexistence *across* articulators and never *within* one — and two words needing
+different F1 values are collinear by construction, which is precisely the case the
+mechanism says is hopeless. `capacity` already knew orthogonal lessons coexist;
+what is new is *why*, not *that*. Good as science, thin as progress. The exponent
+ceiling is untouched.
+
 *Two corrections from this sequence.* `compartprobe`'s verdict elected dilution
 by elimination the moment silencing came back null — a mechanism claim it had not
 tested. And `blockfloor`'s verdict accused `set_reward_block` of being a faulty
