@@ -11456,3 +11456,27 @@ cycles:
 2 Hz and 4 Hz are *fully* aligned, so a residual transient would be strongest
 there — and they are the weakest. 3 Hz is only partially aligned and is strongest
 twice. **The artifact account predicts the opposite of the data.**
+
+**The mechanism hunt: four parameters swept, the frequency never moves.**
+
+| parameter | swept | effect on the 3 Hz ring |
+| --- | --- | --- |
+| `self_gain` | 0.0 / 0.25 / 0.5 | **amplifies 3×** (early 1.79 → 5.49), but a deaf creature still rings (+3.1 SE) |
+| vocal `ip_wake_scale` | 0.0 → 1.0 | **flat** (4.40 / 3.41 / 3.56 / 4.54) |
+| `a_plus`, `a_minus` | 0 / half / shipped | **flat** — survives STDP fully off |
+| `voicing_threshold` | 0.30 / 0.42 / 0.55 | **frequency pinned at 3 Hz** in all three |
+
+So it is not learned, not either homeostat, and not a threshold relaxation
+oscillator. It is a **fixed delay** — architecture rather than a dial. No genome
+field sits at ~167 ms in the vocal path (`latency_ms` is the retina, `duration_ms`
+is touch), so the delay is emergent from conduction and membrane constants.
+
+And the *effect* is the stable quantity, not the contrast. Across nine independent
+runs spanning different genomes and seed families, `heard-3` SNR averages 3.95
+(SD 0.72) against `silent-3` at 1.25 (SD 0.61) — the control is what bounces, which
+is why the contrast SEs ranged +1.4 to +4.2 while the effect barely moved.
+
+*Caveat on "pinned":* the experiment samples only 1, 2, 3 and 4 Hz, so this means
+"did not move to another **sampled** arm." A shift from 3.0 to 3.3 Hz would be
+invisible, and resolving the frequency needs a finer sweep before anyone fits a
+delay to it.
