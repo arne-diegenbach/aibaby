@@ -11551,3 +11551,84 @@ character. **A thing that has to be kicked is not a clock. A frame here needs a
 mechanism this creature does not have, not a dial it does** — and the honest
 version of tonight's progress is that we found a preferred timescale in the
 syllable band and proved it cannot be talked into running on its own.
+
+### The syllable band is empty
+
+If a dial will not turn a damped ring into a limit cycle, the next question is not
+which dial to try but what a limit cycle *needs*. So instead of running anything,
+we read the neuron's state list and sorted every time constant in the genome.
+
+The full per-neuron state is membrane voltage and rest, threshold, target rate,
+leak, noise, two rate averages, position, the node-perturbation trace and its
+earned bias, two STDP traces, two synaptic-scaling references, and the refractory
+and last-spike bookkeeping. **Nothing in that list is a spike-triggered
+hyperpolarising process with its own time constant.** The only two things that
+make a neuron less excitable after it fires are `refractory_ms` = 3.0, which is
+all-or-none and does not accumulate across spikes, and the intrinsic-plasticity
+threshold, driven by a rate average whose alpha is hard-coded as `dt_ms / 1000` —
+a time constant of exactly one second, at a gain of 0.0003 threshold-steps per Hz
+of rate error.
+
+Then the ladder:
+
+| band | what lives there |
+| --- | --- |
+| 0.5–6 ms | axonal delays, `chain_delay_ms`, refractory |
+| 5 ms | membrane leak |
+| 15–20 ms | interneuron pool, both STDP windows |
+| 30–60 ms | apical compartment, **the glottal gate** |
+| **100–300 ms** | **nothing.** Only `duration_ms` = 250, and that is touch |
+| 800 ms | **the formant smoothing** |
+| 1000 ms | the rate average that drives intrinsic plasticity |
+| 2 s – 60 s | eligibility, reward baselines, traffic, sleep |
+
+**There is a hole between roughly 60 ms and 800 ms, and a syllable is 150–300 ms
+long.**
+
+A relaxation oscillator needs a fast variable and a slow one, with the slow one on
+the order of the period. A half-center oscillator — Brown's 1911 result, formalised
+by Matsuoka in 1985 — needs mutual inhibition *plus* a fatigue process that makes
+the winner release; without the second ingredient, mutual inhibition settles on a
+winner and stays there. **This project has always had the inhibition and has never
+had the fatigue.**
+
+That retro-explains four separate nulls, and none of them needed to be run again to
+see it. Loop gain could not make the 3 Hz ring self-sustain because gain is not a
+slow variable. The `voicing_threshold` sweep found it was "not a threshold
+relaxation oscillator" — correct, because the threshold is a perfectly good fast
+variable whose only slow partner sits at one second, three times too slow for a
+333 ms period and running at a gain of 3×10⁻⁴. The CPG route was refused at stage 0
+for a kernel that self-cancels as it widens, and this is a second and independent
+reason the same route was dead. And "no module holds a kick for 10 ms" is what a
+5 ms membrane and a 60 ms longest-fast-state predict.
+
+So *this creature cannot keep time* is not a learning failure, a wiring failure, or
+a tuning failure. **It is a missing state variable, and the ladder says exactly
+where the missing one belongs.** Which also means the honest reading of the last
+several experiments changes: they were not weak evidence against rhythm, they were
+correct measurements of a system that structurally cannot produce one.
+
+The constant for the next build is derived rather than guessed, which this project
+has paid for before. A relaxation oscillator's period runs roughly two to four
+times its adaptation constant, so a 3 Hz rhythm wants tau around 85–170 ms — inside
+the empty band, reachable by nothing currently in the genome. The principled pick
+is **≈167 ms, because that is the loop delay the existing 3 Hz resonance already
+implies**: setting the fatigue constant equal to the delay the system already rings
+at is the condition for that resonance to become a limit cycle rather than some
+new and unrelated rhythm.
+
+And the refusals go in before the run, including the one that killed the last
+attempt. The rhythm has to appear with **no caregiver at all**, in `framehold`'s
+`silent` arm, where a nine-run null distribution already exists — a rare luxury,
+since the control was measured before the manipulation was conceived. It has to
+appear in **both halves of the silence**, because that is precisely where loop gain
+failed. It must not merely mute the voice, since adaptation lowers excitability and
+a quieter creature would raise the statistic by shrinking its denominator. And
+`tau` has to be **swept, with the frequency tracking it** — a rhythm that shows up
+at 3 Hz whatever the constant is the old resonance being re-measured, not a new
+oscillator.
+
+Worth keeping past this build: **sort the timescales before proposing a dynamical
+mechanism.** A rhythm at frequency *f* needs state at roughly 1/*f*, and a project
+can carry a hole in its ladder for a very long time without noticing, because every
+individual constant looks entirely reasonable on its own.
