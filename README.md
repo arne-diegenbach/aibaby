@@ -11382,3 +11382,53 @@ formant path never was. Every oscillator this project has built (DNA v26) was
 aimed at *learning* and refuted there; **none has ever been aimed at the voicing
 gate**, which is the one target frame/content says matters. Note the ceiling
 first: a 60 ms gate caps a frame near 2.7 Hz against human speech's 4–5 Hz.
+
+#### A 3 Hz resonance — the first timekeeping structure here
+
+If the frame can't come from inside, can it come from outside? `framecopy` said yes
+and meant nothing: the creature's voice squares up to a caregiver's beat because a
+*shipped inhibitory auditory→vocal tract stops the babbling while it hears
+something*. An interrupt, not a beat.
+
+The discriminator is persistence — the same logic that made M1b a real milestone
+rather than a pass-through. So `framehold` pulses, then goes **silent**, and
+measures the *f*-component of the voice during the silence.
+
+| arm | family 0 | family 1 |
+| --- | --- | --- |
+| heard-1 | +0.1 SE | +0.9 SE |
+| heard-2 | +2.4 | +0.1 |
+| **heard-3** | **+3.5 SE** (SNR 5.01, early 5.23) | **+3.0 SE** (SNR 4.54, early 5.49) |
+| heard-4 | +1.3 | +2.6 |
+
+**Only 3 Hz holds across both seed families**, on the arm specified in advance —
+the others scatter, which is one real effect plus noise. In both it is a *decaying*
+ring-out: early hold ~5.2–5.5, late hold at baseline.
+
+And it has a partial mechanism. Sweeping `self_gain`, the dial that mixes the
+creature's own voice back into its ear:
+
+| `self_gain` | early-hold SNR | vs silent |
+| --- | --- | --- |
+| 0.00 (deaf) | 1.79 | +1.94 (+3.1 SE) |
+| 0.25 | 3.35 | +3.54 (+4.0 SE) |
+| 0.50 (shipped) | 5.49 | +2.90 (+3.0 SE) |
+
+**The ring scales threefold with self-hearing** — that loop is documented negative
+feedback, and delayed negative feedback rings (3 Hz implies a ~167 ms loop delay).
+**But a deaf creature still rings at +3.1 SE**, so self-hearing is a *gain* on the
+resonance, not its origin. The next candidate is the other delayed negative
+feedback that dominates this larynx: intrinsic plasticity, where a lagged homeostat
+overshoots.
+
+**What this is, precisely.** A ~3 Hz damped resonance exists in the voice, can be
+excited from outside, decays over a few hundred ms, replicates, and is amplified
+threefold by self-hearing. **It is not a frame** — a resonance that must be kicked
+is not an oscillator that runs, and free-running the voice still drones. What it
+adds is that the creature has a *preferred timescale in the syllable band*, on the
+fast glottal pathway where a frame would have to live, rather than being flat
+there.
+
+It survived three separate attacks rather than one threshold: a transient fix that
+selectively killed a rival arm, a fresh-seed replication on the pre-registered arm,
+and a graded mechanism sweep.

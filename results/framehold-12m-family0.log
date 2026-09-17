@@ -1,0 +1,161 @@
+experiment: framehold
+  instrument        framehold   trial seed 000000000135d3c8   1200000 ticks
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  what happened     `framecopy` looked spectacular and was trivial: the voice
+                    alternated at the caregiver's rate because a SHIPPED
+                    inhibitory auditory->vocal tract stops the babbling while
+                    the creature hears something. An interrupt, not a frame.
+  the tell          `heard` duty sat BELOW the silent baseline -- gated OFF --
+                    while `oracle` rose to 0.83, driven ON. Anti-phase reflex,
+                    not an oscillator.
+  the discriminator PERSISTENCE, which is what made M1b real rather than a
+                    pass-through: a reflex dies with its driver, an internal
+                    beat rings on. Pulse 4 s, then SILENCE 4 s, and measure the
+                    f-component DURING THE SILENCE.
+  v1 WAS CONFOUNDED and this is the fix. Fixed 4 s holds repeat at 0.25 Hz,
+    and every f tested is an exact harmonic of that -- so the single offset
+    transient deposited power at precisely the measured frequency, with no
+    rhythm required, right where v1's effect sat. The phase-tiling I was
+    careful about is what CAUSED it.
+  the correction    hold lengths now VARY (3.0/4.5/3.5/5.0/4.0 s) so transients
+                    land incoherently, and the phase reference is ABSOLUTE
+                    TIME so a ring-out inheriting the drive's phase still sums.
+  not fakeable by   a slowly decaying inhibition returns the voice SMOOTHLY to
+  a slow leak       baseline, which is broadband. Only continued ALTERNATION
+                    puts power at f.
+
+  PRE-REGISTERED
+    positive control  `heard` SNR during the DRIVE must be large. If it is not,
+                      the reflex is not even engaging and nothing else reads.
+    persistence       `heard` hold-SNR >= 2.0 AND >= 3 SE over the matching
+                      `silent` arm -> the beat outlasts its driver, which is a
+                      FRAME rather than an interrupt.
+    reflex only       hold-SNR at the silent baseline -> it dies with the
+                      driver. No frame, and an internal oscillator on the
+                      voicing gate becomes the next build.
+    decay             early vs late halves of the hold, reported either way.
+                      A real ring-out decays; a constant offset would suggest
+                      the statistic is picking up something structural.
+
+  [1/96] seed 0 silent-1  drive      1.5 hold    0.43 early    0.59 late    0.63
+  [11/96] seed 1 silent-3  drive      2.0 hold    0.42 early    0.58 late    0.07
+  [2/96] seed 0 silent-2  drive      0.6 hold    3.81 early    4.77 late    0.23
+  [9/96] seed 1 silent-1  drive      0.7 hold    1.67 early    1.99 late    2.22
+  [12/96] seed 1 silent-4  drive      2.6 hold    1.33 early    4.08 late    0.19
+  [5/96] seed 0 heard-1   drive    158.4 hold    0.32 early    0.38 late    0.71
+  [7/96] seed 0 heard-3   drive    263.7 hold    8.66 early    8.71 late    0.77
+  [4/96] seed 0 silent-4  drive      0.7 hold    0.55 early    0.68 late    0.31
+  [6/96] seed 0 heard-2   drive    288.0 hold    1.61 early    0.15 late    2.09
+  [3/96] seed 0 silent-3  drive      0.8 hold    5.22 early    0.72 late    6.39
+  [8/96] seed 0 heard-4   drive    449.2 hold    1.28 early    1.29 late    0.30
+  [10/96] seed 1 silent-2  drive      2.2 hold    1.73 early    1.21 late    1.19
+  [13/96] seed 1 heard-1   drive    201.1 hold    0.10 early    0.00 late    0.66
+  [14/96] seed 1 heard-2   drive    445.5 hold    0.28 early    0.00 late    0.25
+  [15/96] seed 1 heard-3   drive    320.2 hold    7.25 early   10.48 late    1.53
+  [16/96] seed 1 heard-4   drive    246.0 hold    0.62 early    0.28 late    0.65
+  [21/96] seed 2 heard-1   drive    213.3 hold    1.14 early    0.17 late    0.95
+  [17/96] seed 2 silent-1  drive      0.0 hold    2.85 early    0.90 late    1.97
+  [18/96] seed 2 silent-2  drive      0.2 hold    0.60 early    0.79 late    0.37
+  [20/96] seed 2 silent-4  drive      0.7 hold    3.89 early    2.31 late    1.69
+  [25/96] seed 3 silent-1  drive      4.1 hold    0.79 early    1.97 late    0.42
+  [22/96] seed 2 heard-2   drive    317.3 hold    6.76 early    4.99 late    0.52
+  [23/96] seed 2 heard-3   drive    495.3 hold    0.88 early    1.14 late    0.12
+  [26/96] seed 3 silent-2  drive      1.2 hold    0.06 early    0.22 late    0.38
+  [19/96] seed 2 silent-3  drive      1.0 hold    1.69 early    0.77 late    1.43
+  [24/96] seed 2 heard-4   drive    470.6 hold    0.92 early    0.75 late    0.20
+  [28/96] seed 3 silent-4  drive      0.3 hold    0.47 early    1.83 late    0.49
+  [27/96] seed 3 silent-3  drive      0.6 hold    0.30 early    1.72 late    0.60
+  [29/96] seed 3 heard-1   drive    173.0 hold    1.56 early    0.22 late    0.40
+  [30/96] seed 3 heard-2   drive    310.4 hold    1.09 early    0.17 late    0.54
+  [33/96] seed 4 silent-1  drive      2.4 hold    0.14 early    0.89 late    0.33
+  [35/96] seed 4 silent-3  drive      2.2 hold    0.29 early    0.74 late    0.27
+  [32/96] seed 3 heard-4   drive    444.1 hold    1.00 early    1.82 late    0.28
+  [38/96] seed 4 heard-2   drive    369.4 hold    7.88 early    1.98 late    2.28
+  [34/96] seed 4 silent-2  drive      0.3 hold    0.30 early    2.93 late    1.02
+  [42/96] seed 5 silent-2  drive      0.7 hold    0.22 early    0.60 late    0.85
+  [31/96] seed 3 heard-3   drive    584.9 hold    4.38 early    2.87 late    0.52
+  [36/96] seed 4 silent-4  drive      1.3 hold    0.26 early    0.63 late    0.01
+  [41/96] seed 5 silent-1  drive      0.2 hold    0.36 early    1.20 late    0.20
+  [37/96] seed 4 heard-1   drive    199.5 hold    1.96 early    0.32 late    1.25
+  [39/96] seed 4 heard-3   drive    362.6 hold    3.40 early    4.60 late    1.93
+  [40/96] seed 4 heard-4   drive    638.8 hold    5.41 early    4.39 late    0.14
+  [43/96] seed 5 silent-3  drive      4.5 hold    0.42 early    0.05 late    1.45
+  [45/96] seed 5 heard-1   drive    166.1 hold    0.26 early    0.05 late    3.28
+  [44/96] seed 5 silent-4  drive      1.2 hold    0.96 early    0.32 late    1.62
+  [47/96] seed 5 heard-3   drive    453.3 hold    8.43 early    4.10 late    1.16
+  [49/96] seed 6 silent-1  drive      0.3 hold    0.16 early    0.97 late    0.31
+  [46/96] seed 5 heard-2   drive    336.1 hold    0.18 early    3.11 late    1.54
+  [50/96] seed 6 silent-2  drive      2.2 hold    3.17 early    1.84 late    2.86
+  [48/96] seed 5 heard-4   drive    802.9 hold    2.06 early    6.27 late    0.06
+  [51/96] seed 6 silent-3  drive      1.8 hold    0.13 early    0.92 late    1.29
+  [52/96] seed 6 silent-4  drive      0.4 hold    0.37 early    0.26 late    1.24
+  [56/96] seed 6 heard-4   drive    374.9 hold    0.71 early    0.46 late    0.28
+  [54/96] seed 6 heard-2   drive    319.1 hold    5.83 early    4.37 late    0.04
+  [53/96] seed 6 heard-1   drive    133.3 hold    2.06 early    0.16 late    0.63
+  [55/96] seed 6 heard-3   drive    218.9 hold    8.95 early    4.56 late    0.40
+  [57/96] seed 7 silent-1  drive      0.5 hold    1.76 early    0.96 late    0.52
+  [58/96] seed 7 silent-2  drive      0.9 hold    3.28 early    3.43 late    1.76
+  [61/96] seed 7 heard-1   drive    187.8 hold    0.52 early    0.01 late    1.54
+  [65/96] seed 8 silent-1  drive      1.4 hold    1.26 early    1.83 late    0.32
+  [59/96] seed 7 silent-3  drive      4.2 hold    1.51 early    1.59 late    1.96
+  [62/96] seed 7 heard-2   drive    353.5 hold    1.51 early    0.32 late    0.70
+  [63/96] seed 7 heard-3   drive    501.5 hold    2.98 early    3.77 late    0.77
+  [60/96] seed 7 silent-4  drive      1.6 hold    1.81 early    1.73 late    0.05
+  [67/96] seed 8 silent-3  drive      0.6 hold    3.33 early    5.45 late    0.11
+  [69/96] seed 8 heard-1   drive    165.9 hold    2.04 early    0.08 late    3.86
+  [68/96] seed 8 silent-4  drive      0.4 hold    0.42 early    0.08 late    0.59
+  [66/96] seed 8 silent-2  drive      3.0 hold    0.65 early    0.84 late    0.61
+  [64/96] seed 7 heard-4   drive    501.9 hold    1.23 early    2.43 late    0.58
+  [70/96] seed 8 heard-2   drive    251.4 hold   10.25 early    2.70 late    4.55
+  [71/96] seed 8 heard-3   drive    414.5 hold    3.44 early    4.56 late    0.59
+  [74/96] seed 9 silent-2  drive      2.6 hold    0.80 early    0.41 late    0.58
+  [73/96] seed 9 silent-1  drive      1.6 hold    0.07 early    0.91 late    0.89
+  [76/96] seed 9 silent-4  drive      1.4 hold    1.54 early    1.99 late    0.08
+  [77/96] seed 9 heard-1   drive    157.6 hold    0.58 early    0.78 late    0.21
+  [75/96] seed 9 silent-3  drive      1.2 hold    0.38 early    1.64 late    4.04
+  [72/96] seed 8 heard-4   drive    201.3 hold    1.25 early    0.62 late    0.96
+  [78/96] seed 9 heard-2   drive    225.2 hold    0.82 early    0.04 late    4.55
+  [79/96] seed 9 heard-3   drive    562.9 hold    1.01 early   10.34 late    2.57
+  [81/96] seed 10 silent-1  drive      5.9 hold    2.13 early    0.55 late    0.69
+  [82/96] seed 10 silent-2  drive      0.3 hold    2.24 early    0.31 late    3.33
+  [80/96] seed 9 heard-4   drive    458.2 hold    2.56 early    2.88 late    0.46
+  [83/96] seed 10 silent-3  drive      3.6 hold    0.02 early    0.67 late    0.97
+  [84/96] seed 10 silent-4  drive      0.0 hold    0.08 early    0.10 late    0.05
+  [88/96] seed 10 heard-4   drive    440.9 hold    1.46 early    2.77 late    0.42
+  [85/96] seed 10 heard-1   drive    204.7 hold    1.72 early    0.26 late    0.68
+  [90/96] seed 11 silent-2  drive      1.4 hold    0.75 early    1.07 late    0.32
+  [86/96] seed 10 heard-2   drive    358.2 hold    5.70 early    3.07 late    0.21
+  [89/96] seed 11 silent-1  drive      0.5 hold    1.51 early    0.66 late    2.29
+  [91/96] seed 11 silent-3  drive      9.5 hold    3.38 early    0.62 late    7.64
+  [93/96] seed 11 heard-1   drive    187.7 hold    1.42 early    0.23 late    0.38
+  [96/96] seed 11 heard-4   drive    495.5 hold    1.42 early    1.38 late    0.27
+  [87/96] seed 10 heard-3   drive    632.3 hold    2.13 early    2.09 late    0.11
+  [92/96] seed 11 silent-4  drive      3.0 hold    0.45 early    1.74 late    0.09
+  [95/96] seed 11 heard-3   drive    472.0 hold    8.65 early    5.54 late    3.61
+  [94/96] seed 11 heard-2   drive    513.9 hold    6.55 early    3.38 late    2.70
+
+  arm       drive SNR    HOLD SNR         early          late           duty d/h
+  silent-1  1.6            1.09 +/- 0.26      1.12 +/- 0.15    0.90 +/- 0.23  0.57/0.57
+  silent-2  1.3            1.47 +/- 0.39      1.54 +/- 0.42    1.13 +/- 0.30  0.57/0.57
+  silent-3  2.7            1.42 +/- 0.49      1.29 +/- 0.40    2.19 +/- 0.72  0.57/0.57
+  silent-4  1.1            1.01 +/- 0.31      1.31 +/- 0.34    0.53 +/- 0.18  0.57/0.57
+  heard-1   179.0          1.14 +/- 0.22      0.22 +/- 0.06    1.21 +/- 0.34  0.49/0.60
+  heard-2   340.7          4.04 +/- 1.01      2.02 +/- 0.53    1.67 +/- 0.47  0.46/0.55
+  heard-3   440.2          5.01 +/- 0.91      5.23 +/- 0.88    1.17 +/- 0.31  0.49/0.55
+  heard-4   460.4          1.66 +/- 0.38      2.11 +/- 0.52    0.38 +/- 0.07  0.51/0.56
+
+  HOLD, heard against its own silent control
+    heard-1   +0.05 over `silent-1`  (+0.1 SE)
+    heard-2   +2.57 over `silent-2`  (+2.4 SE)
+    heard-3   +3.59 over `silent-3`  (+3.5 SE)
+    heard-4   +0.65 over `silent-4`  (+1.3 SE)
+
+  --- the reading ---
+  THE BEAT OUTLASTS ITS DRIVER: `heard-3` holds SNR 5.01 through the silence,
+  +3.5 SE over a creature that never heard anything. The caregiver is gone
+  and the voice is still alternating at its rate.
+  THAT IS A FRAME, not an interrupt, and it is the first thing in this
+  project that keeps time. Check the early/late columns above: a real
+  ring-out DECAYS, and a flat hold would mean the statistic is catching
+  something structural instead.

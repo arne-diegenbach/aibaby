@@ -11864,6 +11864,12 @@ constexpr uint64_t kFHDriveMs = 4000;   // 4 s drive
 // which is the second half of the fix below.
 const uint64_t kFHHoldMs[] = {3000, 4500, 3500, 5000, 4000};
 constexpr uint32_t kFHHoldCount = sizeof(kFHHoldMs) / sizeof(kFHHoldMs[0]);
+// FRESH SEED FAMILY. Family 0 gave ONE arm of four at +3.5 SE (3 Hz) with three
+// null, no mechanistic reason for that frequency, and a gate that fired on the
+// MAXIMUM of four without accounting for the multiplicity. Today `axisfree` went
+// +5.7 SE -> +2.0 SE on fresh seeds, so a single-arm 3.5 SE is exactly the shape
+// this project has learned not to trust. 0 reproduces family 0 exactly.
+constexpr uint64_t kFHSeedOffset = 512821ull;
 
 struct FHRow {
   bool ok = false;
@@ -11972,6 +11978,10 @@ bool run_framehold(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
   }
   constexpr uint32_t kReps = 12;
   instrument("framehold", dna0.header().seed ^ 0xF401u, ticks, "ticks");
+  std::printf("  seed family       offset %llu -> first creature %016llx  (nonzero = the\n"
+              "                    REPLICATION; family 0 gave one arm of four at +3.5 SE)\n",
+              (unsigned long long)kFHSeedOffset,
+              (unsigned long long)(dna0.header().seed + kFHSeedOffset));
   std::printf("  what happened     `framecopy` looked spectacular and was trivial: the voice\n"
               "                    alternated at the caregiver's rate because a SHIPPED\n"
               "                    inhibitory auditory->vocal tract stops the babbling while\n"
@@ -12013,7 +12023,7 @@ bool run_framehold(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
     Cell c;
     const uint32_t r = i / kFHArmCount, a = i % kFHArmCount;
     std::vector<uint8_t> variant = blob;
-    const uint64_t seed = dna0.header().seed + r * 7919ull;
+    const uint64_t seed = dna0.header().seed + kFHSeedOffset + r * 7919ull;
     std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
     c.row = run_framehold_arm(variant, ticks, kFHArms[a]);
     c.ok = c.row.ok;
