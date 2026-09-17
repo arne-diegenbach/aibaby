@@ -12402,6 +12402,372 @@ bool run_glide(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
   return follows;
 }
 
+// ============================================================================
+// `adaptclock` — DOES A FATIGUE CURRENT MAKE THE LARYNX KEEP TIME? (DNA v56)
+//
+// THE GAP THIS FILLS. Reading the per-neuron state list found that NOTHING in it
+// is a spike-triggered hyperpolarising process with its own time constant: the only
+// two things that lower excitability after a spike are `refractory_ms` = 3.0, which
+// is all-or-none and does not accumulate, and the IP threshold, whose slow partner
+// is a rate average hard-coded at tau 1000 ms with gain 3e-4. And sorting every
+// genome time constant found a HOLE from ~60 ms to ~800 ms with a syllable in it.
+//
+// A half-center oscillator (Brown 1911; Matsuoka 1985) needs mutual inhibition PLUS
+// a fatigue process that releases the winner; inhibition alone settles on a winner
+// and stays there. This larynx has had the inhibition since v32 and never the
+// fatigue. That one gap retro-explains four separate nulls -- loop gain could not
+// self-sustain the 3 Hz ring because gain is not a slow variable; the
+// `voicing_threshold` sweep's "not a threshold relaxation oscillator" is right
+// because the threshold's only slow partner is 3x too slow; the CPG route died
+// independently on a self-cancelling kernel; and "no module holds a kick for 10 ms"
+// is what a 5 ms membrane predicts.
+//
+// THE MEASUREMENT IS FREE-RUNNING, WHICH IS THE WHOLE POINT. No caregiver at any
+// time. `framehold` established that an externally kicked rhythm dies with its
+// driver, so the only thing worth measuring is whether the voice alternates with
+// nothing driving it. That also means there is no drive frequency, so EVERY
+// frequency can be scored from ONE run -- the grid is analysis, not arms, which
+// frees the arms for tau_a itself.
+//
+// THE CONSTANT IS DERIVED. A relaxation oscillator's period runs roughly 2-4 tau_a,
+// so each arm carries its own PREDICTED BAND 1/(4*tau) .. 1/(2*tau) Hz:
+//
+//     tau_a     predicted peak
+//      83 ms    3.01 - 6.02 Hz
+//     125 ms    2.00 - 4.00 Hz
+//     167 ms    1.50 - 3.00 Hz   <- the derived pick: the loop delay the measured
+//     250 ms    1.00 - 2.00 Hz      3 Hz resonance already implies
+//     333 ms    0.75 - 1.50 Hz
+//
+// THE PRIMARY TEST IS THAT THE FREQUENCY MOVES, not that it is large. A rhythm that
+// appears at 3 Hz whatever tau_a is set to is the PRE-EXISTING resonance being
+// re-measured, and that is the single most likely way this run fools me. Peak
+// frequency against 1/tau_a is immune to the multiplicity inflation that an argmax
+// over 22 grid points suffers, because it is a shape across arms rather than a
+// height at one point.
+//
+// MULTIPLICITY IS HANDLED BY CONSTRUCTION for the height too: peak SNR is compared
+// against the OFF arm's PEAK over the same grid, not against 1.0, so the null is
+// itself a maximum over 22 points.
+struct ADClockArm {
+  const char* name;
+  float jump;     // 0 = the OFF control, bit-identical to the shipped creature
+  float tau_ms;
+};
+const ADClockArm kADClockArms[] = {
+    {"off", 0.00f, 167.0f},        // the baseline, and the multiplicity-matched null
+    {"tau083", 0.05f, 83.0f},
+    {"tau125", 0.05f, 125.0f},
+    {"tau167", 0.05f, 167.0f},     // the DERIVED pick
+    {"tau250", 0.05f, 250.0f},
+    {"tau333", 0.05f, 333.0f},
+    {"jump15", 0.15f, 167.0f},     // dose on the current, at the derived tau
+    {"jump30", 0.30f, 167.0f},     // stronger dose; watch duty, this may mute it
+};
+constexpr uint32_t kADClockArmCount = sizeof(kADClockArms) / sizeof(kADClockArms[0]);
+constexpr uint64_t kADClockSeedOffset = 911273ull;
+
+// 0.75 to 6.00 Hz in 0.25 steps. Finer than `framehold`'s 1/2/3/4, which is what
+// licenses any claim about WHERE the peak sits -- "pinned at 3 Hz" previously only
+// meant "did not move to another sampled arm".
+constexpr double kADClockFLo = 0.75, kADClockFStep = 0.25;
+constexpr uint32_t kADClockFBins = 22;
+
+struct ADClockRow {
+  bool ok = false;
+  double peak_f = 0.0, peak_snr = 0.0;
+  double peak_f_a = 0.0, peak_f_b = 0.0;   // the two halves, separately
+  double peak_snr_a = 0.0, peak_snr_b = 0.0;
+  double band_snr = 0.0;                   // best SNR inside this arm's predicted band
+  double duty = 0.0;                       // THE KILL SWITCH
+  double rate_hz = 0.0;                    // vocal mean rate: did the current mute it?
+};
+
+// Same local-SNR that survived `babblerhythm` and `framehold`: power at f over the
+// mean of two side-bands, so the 1/f background cancels and no trend is fitted.
+// Phase reference is absolute time.
+static void adclock_peak(const std::vector<double>& x, const std::vector<double>& tms,
+                    double* out_f, double* out_snr) {
+  *out_f = 0.0; *out_snr = 0.0;
+  if (x.size() < 512) return;
+  for (uint32_t b = 0; b < kADClockFBins; ++b) {
+    const double f = kADClockFLo + kADClockFStep * double(b);
+    const double s = fh_snr(x, tms, f, 0.0);
+    if (s > *out_snr) { *out_snr = s; *out_f = f; }
+  }
+}
+
+ADClockRow run_adaptclock_arm(const std::vector<uint8_t>& blob, uint64_t ticks, const ADClockArm& arm) {
+  ADClockRow row;
+  Session s;
+  std::string error;
+  if (!s.init(blob, error)) return row;
+  const aibaby::DnaAudio& acfg = s.dna.header().audio;
+  Ear ear;
+  if (!ear.configure(acfg, error)) return row;
+  VowelSource caregiver(acfg.sample_rate);
+  const uint32_t spt = acfg.sample_rate / 1000;
+  std::vector<float> pcm(spt);
+  int vmod = -1;
+  for (uint32_t m = 0; m < s.dna.header().module_count; ++m) {
+    if (s.dna.module(m).role == uint32_t(aibaby::ModuleRole::kVocal)) { vmod = int(m); break; }
+  }
+
+  const uint64_t settle = ticks / 10;
+  std::vector<double> env, tms;
+  uint64_t last_frame = 0;
+  double on = 0, n = 0, rsum = 0, rn = 0;
+  for (uint64_t t = 0; t < ticks; ++t) {
+    // SILENCE THROUGHOUT. No caregiver, ever.
+    caregiver.render(0.0f, 500.0f, 1500.0f, 0.0f, pcm.data(), spt);
+    ear.tick(s.brain, pcm.data(), spt);
+    s.brain.step();
+    if (t < settle) continue;
+    if (s.brain.vocal_frame() == last_frame) continue;
+    last_frame = s.brain.vocal_frame();
+    const aibaby::VocalParams& v = s.brain.voice();
+    env.push_back((v.voicing > 0.5f ? 1.0 : 0.0) * double(v.amplitude));
+    tms.push_back(double(t));
+    n += 1;
+    if (v.voicing > 0.5f && v.amplitude > 0.05f) on += 1;
+    if (vmod >= 0) {
+      const aibaby::Network& net = s.brain.network();
+      const aibaby::ModuleState& vm = net.module(uint32_t(vmod));
+      double r = 0.0;
+      for (uint32_t k = 0; k < vm.count; ++k) r += double(net.rate_fast(vm.begin + k));
+      rsum += vm.count > 0 ? r / double(vm.count) : 0.0;
+      rn += 1;
+    }
+  }
+  if (env.size() < 1024) return row;
+  adclock_peak(env, tms, &row.peak_f, &row.peak_snr);
+  // Both halves, because the `self_gain` sweep died exactly here: a rhythm that
+  // lives in only one half of a silence is not an oscillator.
+  const size_t half = env.size() / 2;
+  std::vector<double> ea(env.begin(), env.begin() + half), ta(tms.begin(), tms.begin() + half);
+  std::vector<double> eb(env.begin() + half, env.end()), tb(tms.begin() + half, tms.end());
+  adclock_peak(ea, ta, &row.peak_f_a, &row.peak_snr_a);
+  adclock_peak(eb, tb, &row.peak_f_b, &row.peak_snr_b);
+  // Best SNR strictly inside the arm's own predicted band, fixed in advance.
+  const double tau_s = double(arm.tau_ms) / 1000.0;
+  const double lo = 1.0 / (4.0 * tau_s), hi = 1.0 / (2.0 * tau_s);
+  for (uint32_t b = 0; b < kADClockFBins; ++b) {
+    const double f = kADClockFLo + kADClockFStep * double(b);
+    if (f < lo || f > hi) continue;
+    const double v2 = fh_snr(env, tms, f, 0.0);
+    if (v2 > row.band_snr) row.band_snr = v2;
+  }
+  row.duty = n > 0 ? on / n : 0.0;
+  row.rate_hz = rn > 0 ? rsum / rn : 0.0;
+  row.ok = true;
+  return row;
+}
+
+bool run_adaptclock(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  aibaby::Dna dna0;
+  if (dna0.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) {
+    std::printf("  setup failed: the genome does not load\n");
+    return false;
+  }
+  constexpr uint32_t kReps = 12;
+  instrument("adaptclock", dna0.header().seed ^ 0x56ADu, ticks, "ticks");
+  std::printf("  seed family       offset %llu -> first creature %016llx (FRESH)\n",
+              (unsigned long long)kADClockSeedOffset,
+              (unsigned long long)(dna0.header().seed + kADClockSeedOffset));
+  std::printf("  shipped genome    adapt_jump %.2f (OFF, pinned hash ad96f882becbee92)\n",
+              double(dna0.header().vocal.adapt_jump));
+  std::printf("  the gap           NOTHING in the per-neuron state is a spike-triggered\n"
+              "                    hyperpolarising process with its own time constant. The\n"
+              "                    only two things that lower excitability after a spike are\n"
+              "                    a 3 ms all-or-none refractory that does not accumulate,\n"
+              "                    and the IP threshold whose slow partner is hard-coded at\n"
+              "                    tau 1000 ms with gain 3e-4. And the genome's timescale\n"
+              "                    ladder has a HOLE from ~60 ms to ~800 ms -- with a\n"
+              "                    syllable sitting in it.\n");
+  std::printf("  the theory        a half-center oscillator (Brown 1911; Matsuoka 1985) needs\n"
+              "                    mutual inhibition PLUS fatigue to release the winner.\n"
+              "                    Inhibition alone settles on a winner. This larynx has had\n"
+              "                    the inhibition since v32 and never the fatigue.\n");
+  std::printf("  FREE-RUNNING      no caregiver at any point. `framehold` showed a kicked\n"
+              "                    rhythm dies with its driver, so the only question left is\n"
+              "                    whether the voice alternates with NOTHING driving it.\n");
+  std::printf("  grid              %.2f to %.2f Hz in %.2f steps (%u bins) -- finer than\n"
+              "                    framehold's 1/2/3/4, which is what licenses any claim\n"
+              "                    about WHERE the peak sits.\n",
+              kADClockFLo, kADClockFLo + kADClockFStep * double(kADClockFBins - 1), kADClockFStep, kADClockFBins);
+  std::printf("\n  PRE-REGISTERED\n");
+  std::printf("    PRIMARY, and it is the SHAPE not the height: peak frequency must FALL as\n"
+              "      tau_a rises, tracking the predicted band 1/(4 tau) .. 1/(2 tau). A peak\n"
+              "      that sits at the same frequency for every tau_a is the PRE-EXISTING 3 Hz\n"
+              "      resonance being re-measured, which is the most likely way this run\n"
+              "      fools me. This test is immune to argmax multiplicity: it is a shape\n"
+              "      across arms, not a height at one point.\n");
+  std::printf("    height          peak SNR vs the OFF arm's PEAK over the same grid, so the\n"
+              "                    null is itself a maximum over %u bins. Never vs 1.0.\n",
+              kADClockFBins);
+  std::printf("    BOTH HALVES     the `self_gain` sweep died exactly here -- its early\n"
+              "                    window was pinned at ~1.3 across a 3x gain change while\n"
+              "                    only the late half moved. A rhythm in one half of a\n"
+              "                    silence is not an oscillator. Reported per half.\n");
+  std::printf("    KILL SWITCH     duty and vocal rate. Adaptation lowers excitability, so a\n"
+              "                    quieter creature inflates a ratio statistic by shrinking\n"
+              "                    its denominator. If duty collapses the arm is void.\n");
+  std::printf("    refusal         no arm's peak moves with tau_a -> a fatigue current does\n"
+              "                    not build a clock here, the frame needs something else\n"
+              "                    again, and the syllable-band account is refuted in its\n"
+              "                    strong form. A real refusal, not a null.\n\n");
+
+  struct Cell { bool ok = false; ADClockRow row; };
+  const uint32_t njobs = kReps * kADClockArmCount;
+  const size_t off_jump = offsetof(aibaby::DnaHeader, vocal) + offsetof(aibaby::DnaVocal, adapt_jump);
+  const size_t off_tau = offsetof(aibaby::DnaHeader, vocal) + offsetof(aibaby::DnaVocal, adapt_tau_ms);
+  const std::vector<Cell> cells = parallel_reps<Cell>(njobs, [&](uint32_t i) {
+    Cell c;
+    const uint32_t r = i / kADClockArmCount, a = i % kADClockArmCount;
+    std::vector<uint8_t> variant = blob;
+    const uint64_t seed = dna0.header().seed + kADClockSeedOffset + r * 7919ull;
+    std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+    std::memcpy(variant.data() + off_jump, &kADClockArms[a].jump, sizeof(float));
+    std::memcpy(variant.data() + off_tau, &kADClockArms[a].tau_ms, sizeof(float));
+    c.row = run_adaptclock_arm(variant, ticks, kADClockArms[a]);
+    c.ok = c.row.ok;
+    if (c.ok)
+      parallel_note("  [%u/%u] seed %u %-7s peak %.2f Hz SNR %6.2f  duty %.2f rate %5.2f\n",
+                    i + 1, njobs, r, kADClockArms[a].name, c.row.peak_f, c.row.peak_snr,
+                    c.row.duty, c.row.rate_hz);
+    return c;
+  });
+
+  double m_pk[kADClockArmCount] = {}, s_pk[kADClockArmCount] = {};
+  double m_pf[kADClockArmCount] = {}, s_pf[kADClockArmCount] = {};
+  double m_du[kADClockArmCount] = {};
+  std::printf("\n  %-7s %-6s %-6s %-15s %-15s %-13s %-9s %s\n", "arm", "jump", "tau", "peak f (Hz)",
+              "peak SNR", "band SNR", "duty", "rate");
+  for (uint32_t a = 0; a < kADClockArmCount; ++a) {
+    std::vector<double> pf, pk, bs, du, rt, fa, fb;
+    for (uint32_t r = 0; r < kReps; ++r) {
+      const Cell& c = cells[r * kADClockArmCount + a];
+      if (!c.ok) continue;
+      pf.push_back(c.row.peak_f); pk.push_back(c.row.peak_snr);
+      bs.push_back(c.row.band_snr); du.push_back(c.row.duty); rt.push_back(c.row.rate_hz);
+      fa.push_back(c.row.peak_f_a); fb.push_back(c.row.peak_f_b);
+    }
+    if (pf.size() < 3) {
+      std::printf("\n  adaptclock INCONCLUSIVE -- arm `%s` produced %zu creatures.\n",
+                  kADClockArms[a].name, pf.size());
+      return false;
+    }
+    double sb = 0, sd = 0, sr = 0;
+    m_pf[a] = ctx_mean_se(pf, &s_pf[a]);
+    m_pk[a] = ctx_mean_se(pk, &s_pk[a]);
+    const double m_bs = ctx_mean_se(bs, &sb);
+    m_du[a] = ctx_mean_se(du, &sd);
+    const double m_rt = ctx_mean_se(rt, &sr);
+    const double tau_s = double(kADClockArms[a].tau_ms) / 1000.0;
+    std::printf("  %-7s %-6.2f %-6.0f %5.2f +/- %-5.2f %6.2f +/- %-6.2f %6.2f +/- %-5.2f "
+                "%.2f      %5.2f   [predicted %.2f-%.2f]\n",
+                kADClockArms[a].name, double(kADClockArms[a].jump), double(kADClockArms[a].tau_ms),
+                m_pf[a], s_pf[a], m_pk[a], s_pk[a], m_bs, sb, m_du[a], m_rt,
+                1.0 / (4.0 * tau_s), 1.0 / (2.0 * tau_s));
+  }
+
+  // KILL SWITCH FIRST, before any frequency is read out.
+  std::printf("\n  KILL SWITCH -- did the current simply mute the voice?\n");
+  bool voided = false;
+  for (uint32_t a = 1; a < kADClockArmCount; ++a) {
+    const double d = m_du[a] - m_du[0];
+    const bool bad = m_du[a] < 0.5 * m_du[0];
+    std::printf("    %-7s duty %.2f vs off %.2f (%+.3f)%s\n", kADClockArms[a].name, m_du[a],
+                m_du[0], d, bad ? "   <- VOID, denominator collapsed" : "");
+    if (bad) voided = true;
+  }
+
+  // THE PRIMARY: does the peak frequency track 1/tau_a across the five tau arms?
+  std::printf("\n  PRIMARY -- does the peak frequency MOVE with tau_a?\n");
+  const uint32_t taus[5] = {1, 2, 3, 4, 5};
+  double sx = 0, sy = 0, sxx = 0, syy = 0, sxy = 0;
+  uint32_t nin = 0, in_band = 0;
+  for (uint32_t k = 0; k < 5; ++k) {
+    const uint32_t a = taus[k];
+    const double x = 1000.0 / double(kADClockArms[a].tau_ms);  // 1/tau in Hz-ish units
+    const double y = m_pf[a];
+    const double tau_s = double(kADClockArms[a].tau_ms) / 1000.0;
+    const double lo = 1.0 / (4.0 * tau_s), hi = 1.0 / (2.0 * tau_s);
+    const bool ok = y >= lo && y <= hi;
+    if (ok) ++in_band;
+    std::printf("    tau %3.0f ms  peak %.2f Hz  predicted %.2f-%.2f  %s\n",
+                double(kADClockArms[a].tau_ms), y, lo, hi, ok ? "IN BAND" : "outside");
+    sx += x; sy += y; sxx += x * x; syy += y * y; sxy += x * y; ++nin;
+  }
+  double rho = 0.0;
+  {
+    const double nn = double(nin);
+    const double cov = sxy / nn - (sx / nn) * (sy / nn);
+    const double vx = sxx / nn - (sx / nn) * (sx / nn);
+    const double vy = syy / nn - (sy / nn) * (sy / nn);
+    rho = (vx > 0.0 && vy > 0.0) ? cov / std::sqrt(vx * vy) : 0.0;
+  }
+  std::printf("    corr(1/tau, peak f) = %+.3f over %u arms, and %u of 5 peaks land inside\n"
+              "    their own predicted band.\n", rho, nin, in_band);
+
+  // Height, multiplicity-matched against the OFF arm's own peak.
+  std::printf("\n  HEIGHT -- peak SNR against the OFF arm's peak over the same %u bins\n",
+              kADClockFBins);
+  double best_t = -1e9; uint32_t best = 1;
+  for (uint32_t a = 1; a < kADClockArmCount; ++a) {
+    const double d = m_pk[a] - m_pk[0];
+    const double se = std::sqrt(s_pk[a] * s_pk[a] + s_pk[0] * s_pk[0]);
+    const double t = se > 0.0 ? d / se : 0.0;
+    std::printf("    %-7s %+.2f over `off`  (%+.1f SE)\n", kADClockArms[a].name, d, t);
+    if (t > best_t) { best_t = t; best = a; }
+  }
+
+  const bool tracks = rho >= 0.80 && in_band >= 3;
+  const bool tall = best_t >= 3.0;
+
+  std::printf("\n  --- the reading ---\n");
+  if (voided) {
+    std::printf("  AT LEAST ONE ARM IS VOID: duty fell below half the OFF baseline, so its\n"
+                "  SNR is inflated by a collapsing denominator rather than by rhythm. Read\n"
+                "  only the arms that kept their voice.\n");
+  }
+  if (tracks && tall) {
+    std::printf("  THE LARYNX KEEPS TIME. corr(1/tau, peak f) = %+.3f with %u of 5 peaks in\n"
+                "  their predicted bands, and `%s` stands %+.1f SE above an OFF creature's\n"
+                "  own best-of-%u. The frequency MOVES WITH THE CONSTANT, which the\n"
+                "  pre-existing 3 Hz resonance cannot do.\n",
+                rho, in_band, kADClockArms[best].name, best_t, kADClockFBins);
+    std::printf("  A voice alternating with no caregiver, at a rate set by a genome field:\n"
+                "  that is a FRAME, and it is the first clock in this project.\n");
+  } else if (tracks && !tall) {
+    std::printf("  THE FREQUENCY TRACKS BUT THE RHYTHM IS WEAK. corr = %+.3f, %u of 5 in\n"
+                "  band, yet the best arm is only %+.1f SE over OFF. The constant is\n"
+                "  controlling something real; it is not yet a clock you could drive a\n"
+                "  syllable with. Raise the current before touching anything else.\n",
+                rho, in_band, best_t);
+  } else if (!tracks && tall) {
+    std::printf("  A PEAK ROSE AND IT IS NOT THE ONE PROMISED. `%s` stands %+.1f SE over OFF\n"
+                "  but corr(1/tau, peak f) = %+.3f with only %u of 5 in band. A rhythm whose\n"
+                "  frequency ignores its own time constant is the PRE-EXISTING RESONANCE\n"
+                "  being re-measured, exactly the failure this run pre-registered against.\n"
+                "  DO NOT WRITE THIS UP AS A CLOCK.\n",
+                kADClockArms[best].name, best_t, rho, in_band);
+  } else {
+    std::printf("  A FATIGUE CURRENT DOES NOT BUILD A CLOCK HERE. corr(1/tau, peak f) =\n"
+                "  %+.3f, %u of 5 peaks in band, best height %+.1f SE over OFF.\n",
+                rho, in_band, best_t);
+    std::printf("  THAT REFUTES THE SYLLABLE-BAND ACCOUNT IN ITS STRONG FORM: the missing\n"
+                "  rung was added at the derived constant and the voice still does not\n"
+                "  alternate. Mutual inhibition plus fatigue is the textbook half-center and\n"
+                "  it is now been tried, so what is missing is not a state variable but the\n"
+                "  ARCHITECTURE the two are wired into -- v32's lateral kernel is\n"
+                "  local-minus-field-mean, which is not reciprocal inhibition between two\n"
+                "  populations. The next build is the WIRING, not another dial.\n");
+  }
+  return tracks && tall;
+}
+
 bool run_movability(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
   (void)verbose;
   Regime regime;

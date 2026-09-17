@@ -88,11 +88,12 @@ size_t Network::required_bytes(const Dna& dna) {
   }
 
   // Mirrors the allocation block in build(), in the same order.
-  const size_t per_neuron = 19 * sizeof(Scalar)     // v, v_rest, threshold, target_rate,
+  const size_t per_neuron = 20 * sizeof(Scalar)     // v, v_rest, threshold, target_rate,
                                                     // leak, noise, rate, rate_fast, x, y,
                                                     // z, perturb, bias, trace_pre,
                                                     // trace_post, w_in_target, w_in_struct,
-                                                    // ffi_w (DNA v24), v_apical (v25)
+                                                    // ffi_w (DNA v24), v_apical (v25),
+                                                    // adapt (DNA v56)
                             + 4 * sizeof(uint32_t)  // refrac_until, last_spike, syn_base,
                                                     // plateau_until (DNA v25)
                             + 4 * sizeof(uint16_t)  // syn_count, syn_cap, in_count, refrac
@@ -386,6 +387,7 @@ bool Network::build(const Dna& dna, Arena& arena, Rng& rng) {
   noise_amp_ = arena.alloc_zeroed<Scalar>(capacity_);
   rate_ema_ = arena.alloc_zeroed<Scalar>(capacity_);
   rate_fast_ = arena.alloc_zeroed<Scalar>(capacity_);
+  adapt_ = arena.alloc_zeroed<Scalar>(capacity_);
   pos_x_ = arena.alloc_zeroed<Scalar>(capacity_);
   pos_y_ = arena.alloc_zeroed<Scalar>(capacity_);
   pos_z_ = arena.alloc_zeroed<Scalar>(capacity_);
@@ -571,6 +573,25 @@ bool Network::build(const Dna& dna, Arena& arena, Rng& rng) {
   }
 
   for (uint32_t m = 0; m < kMaxModules; ++m) explore_mult_[m] = kOne;
+  // DNA v56. Spike-triggered adaptation, vocal role only. `adapt_jump` 0 leaves
+  // both arrays zero and the integrate loop takes the same branch it always did.
+  for (uint32_t m = 0; m < kMaxModules; ++m) {
+    adapt_jump_[m] = kZero;
+    adapt_decay_[m] = kZero;
+  }
+  if (dna_.header().vocal.adapt_jump > kZero && dna_.header().vocal.adapt_tau_ms > kZero) {
+    const Scalar jump = Scalar(dna_.header().vocal.adapt_jump);
+    // Same one-pole form as every other time constant here: alpha = dt / tau.
+    const Scalar decay = clampf(Scalar(dna_.header().sim.dt_ms) /
+                                    Scalar(dna_.header().vocal.adapt_tau_ms),
+                                kZero, kOne);
+    for (uint32_t m = 0; m < module_count_ && m < kMaxModules; ++m) {
+      if (dna_.module(m).role == uint32_t(ModuleRole::kVocal)) {
+        adapt_jump_[m] = jump;
+        adapt_decay_[m] = decay;
+      }
+    }
+  }
   drive_comp_ = Scalar(dna.header().exploration.drive_compensation);
   {
     const DnaExploration& ex = dna.header().exploration;
@@ -1882,6 +1903,20 @@ void Network::step() {
                                             drive_comp_ * (kOne - explore_mult_[m])) +
                            bias_[i] + ctx_bias + osc + lateral + rebound + bias_oracle;
 
+      // DNA v56. The adaptation current: a spike-triggered hyperpolarising term
+      // with its own time constant, which is the one kind of state this neuron
+      // model has never had. Subtracted from drive and decaying toward zero, so
+      // sustained firing fatigues the cell and lets a mutually-inhibiting partner
+      // take over -- the missing half of a half-center oscillator.
+      //
+      // At adapt_jump_ == 0 this block does not execute and `adapt_` stays zero,
+      // so the shipped creature is bit-identical.
+      Scalar drive_a = drive;
+      if (adapt_jump_[m] > kZero) {
+        adapt_[i] -= adapt_decay_[m] * adapt_[i];
+        drive_a = drive - adapt_[i];
+      }
+
       // Node perturbation: remember what this neuron was actually given, so
       // that a reward arriving a second from now can credit it. Decays on the
       // reward's own timescale, not the membrane's.
@@ -1892,9 +1927,11 @@ void Network::step() {
       if (tick_ < refrac_until_[i]) {
         v_[i] = v_rest_[i];
       } else {
-        v_[i] += leak_alpha_[i] * (v_rest_[i] - v_[i]) + drive;
+        v_[i] += leak_alpha_[i] * (v_rest_[i] - v_[i]) + drive_a;
         if (v_[i] >= threshold_[i]) {
           v_[i] = v_rest_[i];
+          // DNA v56: this spike's contribution to its own fatigue.
+          if (adapt_jump_[m] > kZero) adapt_[i] += adapt_jump_[m];
           // DNA v37. Is this spike part of a burst, and does the tuft get a
           // say in whether the next one is?
           //
@@ -2855,6 +2892,7 @@ void Network::init_neuron(uint32_t i, uint32_t m, Scalar x, Scalar y, Scalar z) 
   w_in_target_[i] = kZero;
   w_in_struct_[i] = kZero;
   refrac_until_[i] = 0;
+  adapt_[i] = kZero;  // DNA v56: a recycled neuron inherits no fatigue
   last_spike_[i] = 0;
   if (any_stp_) prev_spike_[i] = 0;
   if (any_burst_) {

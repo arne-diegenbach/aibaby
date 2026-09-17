@@ -598,6 +598,28 @@ dictionary_temp = 0.05
 # for a between-thirds measure to see.
 dictionary_policy_rate = 0.0
 
+# DNA v56. Spike-triggered adaptation on the larynx -- the slow variable this
+# neuron model has never had, and the reason nothing here keeps time. The only
+# things that lowered excitability after a spike were a 3 ms all-or-none
+# refractory that does not accumulate, and the IP threshold whose slow partner
+# is a rate average hard-coded at tau 1000 ms with gain 3e-4. The genome's
+# timescale ladder has a hole from ~60 ms to ~800 ms and a syllable sits in it.
+#
+# A half-center oscillator (Brown 1911; Matsuoka 1985) needs mutual inhibition
+# PLUS fatigue to release the winner. This larynx has had the inhibition since
+# v32 and never the fatigue.
+#
+# adapt_jump 0 is OFF and BIT-IDENTICAL: the mechanism is one branch on a
+# per-module flag that is only ever set for the vocal role.
+#
+# The constant is DERIVED: a relaxation oscillator's period is roughly 2-4
+# tau_a, so 3 Hz wants tau_a ~ 85-170 ms, and ~167 ms is the loop delay the
+# measured 3 Hz resonance already implies. Sweep it, and REQUIRE THE FREQUENCY
+# TO TRACK IT -- a rhythm at 3 Hz whatever tau_a is set to is the pre-existing
+# resonance being re-measured, not a new oscillator.
+adapt_jump = 0.0
+adapt_tau_ms = 167.0
+
 [curiosity]
 learn_rate = 0.02           # LMS rate of the forward model
 fast_tau_ms = 2000.0

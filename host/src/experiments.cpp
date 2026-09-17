@@ -403,6 +403,15 @@ const Spec kSpecs[] = {
      "  |H| 0.06 and running it there would refute the wrong thing. Arms at\n"
      "  4000/1600/400 ms; the caregiver's amplitude is CONSTANT so the listening\n"
      "  reflex has no envelope to copy. No reward. 12 seeds"},
+    {"adaptclock", 1200000, Expect::kOpen, Tier::kTeach,
+     "DOES A FATIGUE CURRENT MAKE THE LARYNX KEEP TIME? (DNA v56) Nothing in the\n"
+     "  per-neuron state is a spike-triggered hyperpolarising process with its own\n"
+     "  time constant, and the genome's timescale ladder has a hole from ~60 ms to\n"
+     "  ~800 ms with a syllable in it. A half-center needs mutual inhibition PLUS\n"
+     "  fatigue; this larynx has had the inhibition since v32 and never the fatigue.\n"
+     "  FREE-RUNNING -- no caregiver ever, since a kicked rhythm dies with its\n"
+     "  driver. Primary is that peak frequency MOVES with tau_a, not that it is\n"
+     "  large: a peak fixed at 3 Hz is the old resonance re-measured. 12 seeds"},
     {"movability", 5600000, Expect::kOpen, Tier::kLong,
      "orthovocab left a LEAD: on identical demands the F2 lesson travelled\n"
      "  0.169 and the F1 lesson 0.030 -- but F1's was FIGHTING another lesson on\n"
@@ -754,6 +763,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "framecopy") ok = run_framecopy(dna_blob, ticks, verbose);
   else if (name == "framehold") ok = run_framehold(dna_blob, ticks, verbose);
   else if (name == "glide") ok = run_glide(dna_blob, ticks, verbose);
+  else if (name == "adaptclock") ok = run_adaptclock(dna_blob, ticks, verbose);
   else if (name == "partprobe") ok = run_partprobe(dna_blob, ticks, verbose);
   else if (name == "pgprobe") ok = run_pgprobe(dna_blob, ticks, verbose);
   else if (name == "g2cond") ok = run_g2cond(dna_blob, ticks, verbose);

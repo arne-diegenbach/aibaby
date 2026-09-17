@@ -675,6 +675,9 @@ class Network {
   Scalar* noise_amp_ = nullptr;
   Scalar* rate_ema_ = nullptr;
   Scalar* rate_fast_ = nullptr;
+  // DNA v56. The spike-triggered adaptation current — the missing slow variable.
+  // Arena-allocated like every other neuron array, so it travels with a snapshot.
+  Scalar* adapt_ = nullptr;
   Scalar* pos_x_ = nullptr;
   Scalar* pos_y_ = nullptr;
   Scalar* pos_z_ = nullptr;
@@ -956,6 +959,10 @@ class Network {
   // interval after a resume, and sets it directly in load_state so that even
   // the ticks before that one are right.
   Scalar explore_mult_[kMaxModules] = {};
+  // Precomputed per module so the integrate loop costs one compare when off.
+  // Only ever nonzero for the vocal role; zero everywhere is bit-identical.
+  Scalar adapt_jump_[kMaxModules] = {};
+  Scalar adapt_decay_[kMaxModules] = {};
   // DnaExploration::drive_compensation, cached from the genome at build.
   Scalar drive_comp_ = kZero;
   // DNA v51. The context-indexed bias table: `ctx_slots_` scalars per neuron,

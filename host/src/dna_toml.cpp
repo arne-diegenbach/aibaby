@@ -464,6 +464,8 @@ bool compile_dna_toml(const std::string& path, std::vector<uint8_t>& out,
     header.vocal.dictionary_dwell_ms = float(r.number("dictionary_dwell_ms"));
     header.vocal.dictionary_temp = float(r.number("dictionary_temp"));
     header.vocal.dictionary_policy_rate = float(r.number("dictionary_policy_rate"));
+    header.vocal.adapt_jump = float(r.number("adapt_jump"));
+    header.vocal.adapt_tau_ms = float(r.number("adapt_tau_ms"));
     collect(r);
   }
   {

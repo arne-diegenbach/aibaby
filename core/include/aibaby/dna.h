@@ -1548,6 +1548,47 @@ struct DnaVocal {
   // gradient. Sampling is not optional here, it is where the exploration comes
   // from, and it replaces LMAN's role for this readout.
   float dictionary_policy_rate;
+
+  // DNA v56. A SPIKE-TRIGGERED ADAPTATION CURRENT on the larynx — the state
+  // variable this project has never had, and the reason nothing here keeps time.
+  //
+  // WHY. `aibaby-syllable-band-is-empty`: the full per-neuron state carries no
+  // spike-triggered hyperpolarising process with its own time constant. The only
+  // two things that lower excitability after a spike are `refractory_ms` = 3.0,
+  // which is all-or-none and does not accumulate, and the IP threshold, whose
+  // slow partner is a rate average hard-coded at tau 1000 ms with gain 3e-4. And
+  // the genome's timescale ladder has a HOLE from ~60 ms to ~800 ms with a
+  // syllable sitting in it.
+  //
+  // A relaxation oscillator needs a fast variable and a slow one near the period.
+  // A half-center oscillator (Brown 1911; Matsuoka 1985) needs mutual inhibition
+  // PLUS a fatigue process that releases the winner — inhibition alone settles on
+  // a winner and stays there. This larynx has always had the inhibition (v32
+  // lateral competition) and never had the fatigue.
+  //
+  // That one gap retro-explains four separate nulls: loop gain could not make the
+  // 3 Hz ring self-sustain (gain is not a slow variable); the `voicing_threshold`
+  // sweep found it was "not a threshold relaxation oscillator" (correct — the
+  // threshold is a fine fast variable whose only slow partner is 3x too slow); the
+  // CPG route died on a self-cancelling kernel, independently; and "no module
+  // holds a kick for 10 ms" is what a 5 ms membrane predicts.
+  //
+  // THE CONSTANT IS DERIVED, not guessed, because four guessed constants have cost
+  // a run each here. A relaxation oscillator's period runs roughly 2-4 tau_a, so
+  // 3 Hz wants tau_a ~ 85-170 ms. The principled pick is ~167 ms: that is the loop
+  // delay the measured 3 Hz resonance already implies, and equality between the
+  // fatigue constant and the ringing delay is the condition for that resonance to
+  // become a limit cycle rather than some new, unrelated rhythm.
+  //
+  // `adapt_jump` 0 is OFF and bit-identical: the whole mechanism is one branch on
+  // a per-module flag that is only ever set for the vocal role.
+  //
+  // WHAT WOULD REFUSE IT. It must ring with NO caregiver, in BOTH halves of the
+  // silence (loop gain died exactly there), without merely muting the voice — and
+  // sweeping tau_a must MOVE THE FREQUENCY. A rhythm that appears at 3 Hz whatever
+  // tau_a is set to is the pre-existing resonance being re-measured.
+  float adapt_jump;     // added to the adaptation variable on each spike; 0 = OFF
+  float adapt_tau_ms;   // its decay constant, the missing rung of the ladder
 };
 
 // Curiosity (§3.3) is a forward model of the next sensory frame plus two
