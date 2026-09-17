@@ -11632,3 +11632,79 @@ Worth keeping past this build: **sort the timescales before proposing a dynamica
 mechanism.** A rhythm at frequency *f* needs state at roughly 1/*f*, and a project
 can carry a hole in its ladder for a very long time without noticing, because every
 individual constant looks entirely reasonable on its own.
+
+### The voice does not follow
+
+The frame is the rhythm; the content is what rides on it. With the frame refused
+four ways, the content half was still untested — and untested for a reason nobody
+had noticed: `struct Word` is three scalars, so nothing this creature has ever
+heard changes while sounding. A long line of work asked whether the brain can
+*generate* a sequence. None asked whether it can *follow* one, because none had
+ever presented one.
+
+The obvious experiment is a diphthong. The arithmetic refuses it. The formant path
+is one-pole with tau = `smoothing_ms` = 800 ms exactly, corner 0.199 Hz, so a
+human-rate glide of 150–250 ms passes at |H| 0.06–0.10: a 460 Hz heard sweep would
+arrive as 27–45 Hz of produced travel, under the noise floor. Run there, a flat
+voice would have been written up as *the ear-to-voice route carries only steady
+state* — a refusal of the wrong thing, because no amount of learning fixes a
+filter. So the arms went at 4000, 1600 and 400 ms, and the caregiver's amplitude
+was held **constant** so that only timbre moved. The instrument and its
+pre-registration were committed before the run.
+
+| arm | F1-SNR at f | amp-SNR at f | F1 mean | F1 sd | duty |
+| --- | --- | --- | --- | --- | --- |
+| glide-slow | 64.61 ± 48.02 | 328.59 ± 65.83 | 625.0 | 23.4 | 0.55 |
+| glide-mid | 34.14 ± 15.84 | 466.93 ± 119.08 | 624.1 | 23.0 | 0.55 |
+| glide-fast | 37.46 ± 19.73 | 553.88 ± 157.28 | 624.8 | 21.9 | 0.56 |
+| static-mid | 1.37 ± 0.32 | 1.09 ± 0.42 | 624.6 | 21.7 | 0.58 |
+| f2glide-mid | 13.26 ± 5.53 | 174.51 ± 46.13 | 626.1 | 22.3 | 0.57 |
+| silent-mid | 0.91 ± 0.24 | 0.80 ± 0.28 | 624.4 | 22.4 | 0.57 |
+
+**The voice does not follow, and the number that carries it is a plain standard
+deviation.** A coherent sinusoid of amplitude A contributes A/√2 to the spread, so
+following at the pole's allowance predicts 275.8, 174.7 and 50.9 Hz of produced
+F1 spread. Observed excess over the static control: 8.76, 7.62 and 2.95 Hz —
+**3.2%, 4.4% and 5.8%**. And produced-F1 variability in the glide arms (21.9,
+23.0, 23.4) sits *inside* the scatter of the two arms with no formant motion at
+all (21.7 and 22.4). A 460 Hz caregiver sweep leaves the articulator's excursion
+unchanged, and its mean sits at 624–626 Hz in every arm including silence.
+
+**The F1-SNR column, though, is contaminated, and it should not be quoted.** The
+design held caregiver amplitude constant on the argument that there was then no
+envelope at the glide frequency for the listening reflex to copy. That argument was
+wrong. The reflex does not need a *rendered-amplitude* envelope, it needs an
+*auditory-drive* envelope, and a formant sweeping across a 24-band mel filterbank
+manufactures one by moving energy between bands of unequal width. Produced
+amplitude came back carrying 300–550× the power at f that produced F1 did.
+
+The trip-wire that caught this was pre-registered, and so was the control that
+settles it: **`f2glide-mid` reads +2.1 SE over static, identical to `glide-mid`'s
++2.1 SE.** A caregiver that never moves F1 at all produces the same apparent
+effect on produced F1. The instrument check failed too — a statistic measuring
+transmission through an 800 ms pole cannot read 64.6 / 34.1 / 37.5 across a
+fivefold change in that pole's attenuation.
+
+**The 3 SE gate held the line.** `glide-mid` came in at +2.1. Had the bar been set
+at 2 SE, this run would have printed *the voice follows* on contaminated numbers,
+while its own axis control sat at the very same +2.1. The gate was written down
+before the run, and that is the only reason this is a refusal rather than a
+retraction. Two rules came out of it: *excluded by construction* is only as good as
+your list of routes, so ship the trip-wire anyway; and a ratio statistic is the
+wrong scale for a strongly driven signal — `glide-slow`'s 64.61 ± 48.02 is a 47×
+effect that fails a gate purely on instability, where a standard deviation in Hz
+answers the question and can be compared against a prediction instead of only a
+control.
+
+One thing fell out sideways. `static-mid` — a caregiver sounding *continuously* —
+shows duty **above** the silent baseline, no reflex at all, where the pulsed
+caregivers of the earlier experiments produced a clear gate-off. Only the arms
+whose formant moves show the drop. **The listening reflex adapts to a steady sound
+and re-triggers on change**, so it should be read as an onset response rather than
+a sustained one.
+
+What this closes is the more useful half. Hearing a trajectory does not install
+one, so **a driver cannot be borrowed from the caregiver and the generator has to
+be built** — which is what the empty syllable band says is missing, arrived at by
+a completely independent route. The sequence problem is internal. That is a
+refusal, not a null.

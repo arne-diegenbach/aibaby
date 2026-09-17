@@ -1,0 +1,134 @@
+# glide -- DOES THE VOICE FOLLOW A MOVING TARGET? 2026-09-17
+# command: ./build/aibaby --experiment glide --ticks 1200000, AIBABY_JOBS=8
+# 12 seeds x 6 arms = 72 jobs; seed family offset 730151 (FRESH)
+# gated on --experiment verify: determinism PASS, pinned hash PASS, 22 experiments
+# binary 2026-09-17 21:59:07 verified newer than newest source 21:58:37
+# instrument committed with its pre-registration at 7c8ef70, BEFORE this ran
+#
+# VERDICT: refusal STANDS -- produced F1 follows at 3-6% of what the 800 ms
+# formant pole permits, and its variability sits INSIDE the scatter of the two
+# arms with no formant motion at all (21.7-22.4 Hz).
+#
+# BUT THE F1-SNR COLUMN IS CONTAMINATED AND MUST NOT BE QUOTED. The
+# pre-registered amplitude trip-wire fired 300-550x: the listening reflex was
+# NOT excluded by holding caregiver amplitude constant, because a formant
+# sweeping across mel bands manufactures an auditory-drive envelope. The axis
+# control proves it -- f2glide-mid (F1 never moves) reads +2.1 SE, IDENTICAL to
+# glide-mid's +2.1 SE. See memory rules 36 and 37.
+
+=== GATE 1: determinism hash unchanged (glide is additive host code only) ===
+  0      1.000      0.981      0.154      107
+  1      1.000      0.962      0.154      107
+  2      1.000      1.000      0.059      107
+
+  mel (the signal)      1.000
+  auditory (the ear)    0.981
+  shuffled control      0.122   <- must sit at chance 0.125
+
+  DO NOT BUILD IT — the ear already carries one-of-eight at 0.981
+  against the signal's own 1.000. There is no headroom for a better
+  auditory code to occupy, so `vocab`'s 0.210 is a fact about what the
+  creature can SAY and not about what it can hear. A competitive coder
+  would be improving the one stage that is not the bottleneck.
+  [coderprobe took 23.4 s]
+
+
+========================================================
+  determinism       PASS
+  pinned hash       PASS
+  experiments       22 as expected, 0 not
+  wall time         7.9 min, slowest `dwprobe` at 3.2 min
+  verify PASS
+  (this tier only — verify-long adds the minute-scale experiments,
+   verify-teach the hour-scale teaching ones, verify-all both)
+========================================================
+VERIFY_EXIT=0
+
+=== GATE 2: the glide run ===
+experiment: glide
+  instrument        glide   trial seed 000000000135461a   1200000 ticks
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  seed family       offset 730151 -> first creature 0000000001404bf0 (FRESH: nothing
+                    has been measured on these seeds)
+  the observation   `struct Word` is three scalars and every caregiver render
+                    in this codebase passes constants, so NOTHING THIS
+                    CREATURE HAS EVER HEARD CHANGES WHILE SOUNDING. A long
+                    line of work asked whether the brain can GENERATE a
+                    sequence; none asked whether it can FOLLOW one.
+  the rate is DERIVED, and the derivation refuses the obvious design. The
+    formant path is one-pole with tau = smoothing_ms = 800 ms exactly, corner
+    0.199 Hz. A human diphthong (150-250 ms) passes at |H| 0.06-0.10, so a
+    460 Hz heard sweep would arrive as 27-45 Hz of produced travel -- below
+    the noise floor. Run at that rate, a flat voice would have been written up
+    as `the route carries only steady state`, refuting the wrong thing:
+    NO AMOUNT OF LEARNING FIXES A FILTER.
+  so the arms are   slow 4000 ms (|H| 0.85, 390 Hz), mid 1600 ms (0.54,
+                    247 Hz), fast 400 ms (0.16, 72 Hz). `fast` is an
+                    INSTRUMENT CHECK, not a hypothesis.
+  artefact EXCLUDED, not controlled. `framecopy` looked spectacular and was
+    the shipped inhibitory auditory->vocal tract gating babble off while the
+    creature heard something -- a reflex copies ANY envelope. So THE
+    CAREGIVER'S AMPLITUDE IS CONSTANT here and only the formant moves. There
+    is no envelope at f to copy. Produced amplitude is scored at f anyway as a
+    trip-wire.
+  what it CANNOT claim: at 1.6-4 s this is a slowly moving vowel, not a
+    diphthong, so it says nothing about syllable-rate imitation.
+
+  PRE-REGISTERED
+    vacuity guard   the `hear` arms must show a LOWER duty than `silent-mid`.
+                    The listening reflex is documented; if duty is unchanged
+                    the caregiver is not arriving and nothing else reads.
+    FOLLOW          `glide-mid` F1-SNR >= 2.0 AND >= 3 SE over `static-mid`,
+                    with `f2glide-mid` and `silent-mid` at the static
+                    baseline. The voice tracks a heard trajectory.
+    REFUSAL         `glide-mid` at the static baseline -> the auditory->vocal
+                    route carries no timbre, and the sequence problem is
+                    confirmed INTERNAL. A real refusal, not a null.
+    trip-wire       produced AMPLITUDE SNR at f should stay at the static
+                    baseline in every arm. If it rises with F1, something
+                    couples and the F1 reading is suspect.
+    instrument      expect slow >= mid > fast if the 800 ms pole is the
+                    limit. A FLAT profile across rates would mean the
+                    statistic is not measuring following.
+    honest prior    `vocallearn` cuts error +24 toward a FIXED target and
+                    -0.1 toward a HEARD one, so imitation is already a
+                    documented null. This run carries NO REWARD: it asks
+                    whether the echo exists, not whether reward can chase it.
+
+
+  arm         F1-SNR at f      amp-SNR at f     F1 mean        F1 sd    duty
+  glide-slow   64.61 +/- 48.02   328.59 +/- 65.83    625.0 +/- 1.0     23.4   0.55
+  glide-mid    34.14 +/- 15.84   466.93 +/- 119.08   624.1 +/- 1.0     23.0   0.55
+  glide-fast   37.46 +/- 19.73   553.88 +/- 157.28   624.8 +/- 1.0     21.9   0.56
+  static-mid    1.37 +/- 0.32      1.09 +/- 0.42     624.6 +/- 1.1     21.7   0.58
+  f2glide-mid  13.26 +/- 5.53    174.51 +/- 46.13    626.1 +/- 1.4     22.3   0.57
+  silent-mid    0.91 +/- 0.24      0.80 +/- 0.28     624.4 +/- 1.0     22.4   0.57
+
+  VACUITY GUARD -- did the caregiver arrive at all?
+    glide-slow  duty 0.55 vs silent 0.57  (-0.015)
+    glide-mid   duty 0.55 vs silent 0.57  (-0.017)
+    glide-fast  duty 0.56 vs silent 0.57  (-0.008)
+    static-mid  duty 0.58 vs silent 0.57  (+0.011)
+    f2glide-mid duty 0.57 vs silent 0.57  (+0.007)
+
+  F1 power at the glide frequency, against the STATIC control
+    glide-slow  +63.24 over `static-mid`  (+1.3 SE)
+    glide-mid   +32.77 over `static-mid`  (+2.1 SE)
+    glide-fast  +36.09 over `static-mid`  (+1.8 SE)
+    f2glide-mid +11.89 over `static-mid`  (+2.1 SE)
+    silent-mid  -0.46 over `static-mid`  (-1.1 SE)
+
+  --- the reading ---
+  THE VOICE DOES NOT FOLLOW. `glide-mid` sits at 34.14, +2.1 SE over the
+  static control -- the ear sweeps a 460 Hz arc and the articulator does not
+  track it, at a rate the 800 ms pole passes at 54%.
+  READ THE `F1 sd` COLUMN to tell the two nulls apart: a flat production
+  (small sd) means the route carries no timbre, while a large sd with no
+  power at f means the voice moves and is not LISTENING.
+  EITHER WAY THE SEQUENCE PROBLEM IS INTERNAL: hearing a trajectory does not
+  install one, so a driver cannot be borrowed from the caregiver and the
+  generator has to be built. That is a refusal, not a null.
+GLIDE_EXIT=1
+
+[exited with code 0]
