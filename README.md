@@ -11848,3 +11848,69 @@ measurement rather than attempted: taming chaos presupposes rich recurrent dynam
 to tame, and the finding that no module holds a kick for 10 ms suggests there may be
 no trajectory here worth stabilising. Measure the module's autocorrelation time
 first; if the recurrence is that weak, this is refused without a build.
+
+### The blind spot: velocities, not positions
+
+A fair challenge — thirty-odd mechanisms tried and the creature still does not
+talk — deserves a check of what has not been read rather than another dial. So:
+**DIVA appeared in zero of this project's 168 memory files.** It is the canonical
+neural model of speech acquisition, and the goal here is a talking creature. That is
+a gap, not a nuance.
+
+DIVA stands for **Directions Into Velocities of Articulators.** It maps desired
+movement *directions* in auditory space into movement *velocities* in articulator
+space — explicitly not positions — inverting a one-to-many mapping with the
+pseudoinverse of the Jacobian.
+
+This project maps rate to **position**. `senses.cpp:365` reads
+`target_f1 = lerp(f1_min, f1_max, group_value_[2])`, where `group_value_` is the
+rate-weighted centroid behind a one-pole low-pass at 800 ms.
+
+**That is precisely why the glide experiment measured trajectory-following at 3–6%
+of what the filter permits.** A position command has to be re-issued continuously to
+move, and the filter fights every re-issue. The refusal was real, but it was a
+refusal of a positional decoder rather than of the creature. Under a velocity
+decoder a sustained velocity *is* a glide; the 800 ms constant stops being the enemy
+and becomes the integrator that produces trajectories; and a common-mode component
+becomes a constant drift, which is removable in a way a swamped centroid is not —
+the wall seven instruments died to.
+
+The risk is equally concrete. An earlier result here found the centroid *is* the
+steerability, so replacing the decoder threatens the controllability reward depends
+on, and a velocity code drifts to a clamp unless something anchors it. So it gets an
+arithmetic pre-flight first: work out the rate-to-velocity gain that would traverse
+250–1000 Hz within a syllable, check it against the measured free-running vocal rate,
+and if the achievable velocity cannot cover the ~230 Hz that absolute naming needs
+within one dwell, that is the answer with no run at all. And it is a decoder change,
+so every vocal number in the project is invalid until recalibrated.
+
+**Two more things DIVA has that this project does not.**
+
+Targets are **convex regions**, not points. Everything here has taught toward an
+exact value, and a point target's reward never saturates — however close the creature
+gets, the gradient still points inward, so the lesson never stops demanding. Four
+separate results are about that pathology: a tracking bar making target distance
+invisible past ~0.6 log units, a bar having to chase the creature to stay
+informative, an unreachable target beating a reachable one, and a reward that *sees*
+target distance performing 9.4 SE worse. A region has a natural zero — reward zero
+inside, graded outside — so no EMA and no tracking bar are needed at all. And a
+satisfied lesson stops pushing, which aims straight at the measured interference: a
+second lesson restoring the very neurons the first silenced at +9.4 SE, with
+retention tracking demand on the first lesson's own axis at +11.5 SE. That is the
+0.22 wipe, and it is the thing actually standing between this creature and two words.
+
+And the babbling phase learns three mappings *in order*: region targets, then the
+directional mapping, then a forward model that lets feedforward control run
+independent of feedback delay. A forward model was refuted here and ships off — but
+it was not built third, after a directional mapping, and not for that purpose. Worth
+checking before the refutation is treated as covering DIVA's.
+
+Third, from a different literature: **articulatory phonology**, where an utterance is
+a constellation of gestures, each its own dynamical system that forms *and releases*
+its own constriction. Release being intrinsic rather than imposed by a clock is a
+different answer to the frame than an oscillator, which matters given the oscillator
+is now refused four ways. The genome's dormant `dictionary_*` block is half that
+infrastructure. But each gesture needs intrinsic dynamics over ~150 ms, and the
+timescale ladder here is empty between 60 ms and 800 ms — so this one sits downstream
+of the timescale gap rather than routing around it, and the dormant dictionary makes
+it look cheaper than it is.
