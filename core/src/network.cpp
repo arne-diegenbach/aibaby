@@ -1798,9 +1798,27 @@ void Network::step() {
       // high half, so the two offsets sum to exactly zero. Total drive is preserved
       // and the competition is pure REDISTRIBUTION -- which is what mutual inhibition
       // between two balanced populations actually does.
-      const Scalar d = hc_gain_[m] * clampf((m_hi - m_lo) * inv, Scalar(-1), kOne);
-      hc_lo_[m] = d;    // subtracted from the low half
-      hc_hi_[m] = -d;   // ...and handed to the high half, so the sum is zero
+      // THE MATSUOKA FORM, arrived at after two wrong ones. Each half is inhibited
+      // by the OTHER half's ACTIVITY -- both terms non-negative, both SUBTRACTED,
+      // never added.
+      //
+      // v57a used the DIFFERENCE with a one-sided clamp, so only the loser was
+      // suppressed: positive feedback on the gap, and the module bled drive until
+      // the voice went silent. v57b made it zero-mean by handing +d to the winner,
+      // which is positive feedback on the WINNER: vocal ran to 125 Hz against a
+      // baseline of 4.9. Both are v32's documented runaway ("66 Hz against 4.4,
+      // duty pinned at 1.00") in new clothes.
+      //
+      // Inhibiting each half by the other's activity is SELF-LIMITING: suppress a
+      // half and its mean falls, so the inhibition it exerts falls too, and the pair
+      // settles at a fixed point instead of diverging. The differential part still
+      // gives winner-take-all -- which is what adaptation is then there to break.
+      //
+      // Normalised by the group's own mean so the term is scale-free, for the reason
+      // the v32 comment above gives: a term in absolute hertz scales with the rate it
+      // derives from and amplifies itself.
+      hc_lo_[m] = hc_gain_[m] * clampf(m_hi * inv, kZero, Scalar(2));
+      hc_hi_[m] = hc_gain_[m] * clampf(m_lo * inv, kZero, Scalar(2));
     }
 
     Scalar ffi = kZero;

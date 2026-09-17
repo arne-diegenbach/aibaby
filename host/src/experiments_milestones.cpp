@@ -13061,7 +13061,11 @@ bool run_halfcenter(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
     m_hs[a] = ctx_mean_se(hs, &sh);
     const double m_aa = ctx_mean_se(aa, &s1), m_ab = ctx_mean_se(ab, &s2);
     (void)sp;
-    void_arm[a] = m_du[a] < 0.10 || m_du[a] > 0.95 || m_rt[a] > 20.0;
+    // RELATIVE to the control arm, not an absolute constant. A fixed 20 Hz bound let
+    // `both60` through at 19.03 against a 4.9 baseline -- a 4x runaway that read as
+    // healthy. The bound now tracks the arm that has no mechanism in it.
+    const double base_rt = m_rt[0] > 0.0 ? m_rt[0] : 5.0;
+    void_arm[a] = m_du[a] < 0.10 || m_du[a] > 0.95 || m_rt[a] > 2.5 * base_rt;
     std::printf("  %-11s %-5.2f %-5.0f %-5.2f %+.3f +/- %-7.3f %4.2f/%5.2f   %5.2f +/- %-4.2f "
                 "%.2f   %5.2f%s\n",
                 kHCArms[a].name, double(kHCArms[a].jump), double(kHCArms[a].tau_ms),

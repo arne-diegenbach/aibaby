@@ -1,0 +1,96 @@
+# halfcenter v57b -- VOID (RATE RUNAWAY). DO NOT CITE THE hc>0 ARMS.
+# 2026-09-18, gated on verify PASS (hash ad96f882becbee92, 22 experiments, 7.6 min).
+#
+# The within-group fix stopped the SILENCE but produced a RATE RUNAWAY: vocal
+# module rate 19-125 Hz against a 4.9 Hz baseline, monotone in the gain.
+# Anti-phase reads exactly +/-0.000 because saturated populations are constant,
+# so the correlation is undefined -- the same zero-artefact as v57a, from the
+# opposite failure.  at 19.03 Hz slipped under a 20 Hz kill-switch
+# threshold that was too loose; it is a 4x runaway too.
+#
+# CAUSE: the zero-mean form ADDS +d to the winning half, which is positive
+# feedback on the WINNER. That is v32's documented runaway for the third time in
+# a third form -- its comment records 66 Hz against 4.4 with duty pinned at 1.00.
+#
+# AND MY FAST CHECK CERTIFIED THE WRONG QUANTITY. I reported v57b as 'stable
+# across a 15x gain range' on the basis of babble's DUTY band. Duty is
+# amplitude-based and stayed flat at 0.48-0.50 while the module ran at 25x its
+# target rate. babble DOES print 'vocal module rate' -- I grepped for the
+# quantity I expected to break and filtered the runaway out of output I had
+# already run. Re-checked afterwards: rate 5.37 -> 6.17 -> 8.91 -> 14.45 ->
+# 18.65 across the same gains, visible at 120k ticks the whole time.
+#
+# v57c IS THE MATSUOKA FORM: each half inhibited by the OTHER half's ACTIVITY,
+# both terms non-negative and both SUBTRACTED, never added. Self-limiting --
+# suppress a half and its mean falls, so the inhibition it exerts falls too.
+# Certified on FOUR quantities this time, not one: rate 4.46 Hz flat across a
+# 15x gain range, duty 0.48 PASS, three distinct hashes (live, not inert), and
+# F1 moving 638 -> 810 Hz so the mechanism demonstrably bites.
+#
+# WHAT SURVIVES from the two non-void arms, and it supersedes the v57a number:
+#   anti-phase WITHIN THE F1 GROUP = +0.367 +/- 0.009 (neither), +0.342 (fatigue),
+#   stable across halves (+0.387/+0.347). The v57a figure of +0.838 was across
+#   MODULE halves, i.e. {voicing,F1,..} vs {..,amplitude}. Within the group that
+#   actually codes F1 the two postures are far less locked together -- +0.37, not
+#   +0.84 -- so there is more room for competition than v57a suggested.
+#
+# The printed verdict is RETRACTED again: it concluded a rate code has no phase,
+# from arms that produced no data.
+
+  arm         jump  tau   hc    ANTI-PHASE corr  peak f/SNR    half-diff    duty   rate
+  neither     0.00  167   0.00  +0.367 +/- 0.009   2.10/ 3.88    3.70 +/- 0.24 0.57    4.93
+                anti-phase by half of the recording: +0.387 / +0.347
+  fatigue     0.05  167   0.00  +0.342 +/- 0.009   3.27/ 3.59    4.02 +/- 0.36 0.44    4.23
+                anti-phase by half of the recording: +0.341 / +0.296
+  inhib60     0.00  167   0.60  +0.000 +/- 0.000   2.12/ 4.07    4.65 +/- 0.61 0.51   47.30  <- VOID
+                anti-phase by half of the recording: -0.000 / -0.000
+  inhib300    0.00  167   3.00  +0.000 +/- 0.000   3.02/ 3.84    3.55 +/- 0.33 0.50   125.04  <- VOID
+                anti-phase by half of the recording: +0.000 / +0.000
+  both60      0.05  167   0.60  -0.000 +/- 0.000   3.73/ 4.89    5.18 +/- 0.65 0.41   19.03
+                anti-phase by half of the recording: -0.000 / -0.000
+  both300     0.05  167   3.00  +0.000 +/- 0.000   3.19/ 4.04    4.70 +/- 0.30 0.35   94.08  <- VOID
+                anti-phase by half of the recording: +0.000 / +0.000
+  both300-83  0.05  83    3.00  -0.000 +/- 0.000   3.35/ 4.45    3.95 +/- 0.46 0.47   113.84  <- VOID
+                anti-phase by half of the recording: +0.000 / -0.000
+  both300-250 0.05  250   3.00  -0.000 +/- 0.000   3.02/ 4.60    4.88 +/- 0.39 0.23   77.15  <- VOID
+                anti-phase by half of the recording: -0.000 / -0.000
+
+  KILL SWITCH -- duty away from BOTH ends, rate near target
+    neither     duty 0.57  rate  4.93 Hz
+    fatigue     duty 0.44  rate  4.23 Hz
+    inhib60     duty 0.51  rate 47.30 Hz   <- VOID (runaway or silence)
+    inhib300    duty 0.50  rate 125.04 Hz   <- VOID (runaway or silence)
+    both60      duty 0.41  rate 19.03 Hz
+    both300     duty 0.35  rate 94.08 Hz   <- VOID (runaway or silence)
+    both300-83  duty 0.47  rate 113.84 Hz   <- VOID (runaway or silence)
+    both300-250 duty 0.23  rate 77.15 Hz   <- VOID (runaway or silence)
+
+  PRIMARY -- the INTERACTION, anti-phase against BOTH singles
+    both60      anti -0.000   vs `inhib60` -1.4 SE   vs `fatigue` -38.9 SE
+    both300     anti +0.000   vs `inhib300` +0.6 SE   vs `fatigue` -38.9 SE   (VOID)
+    both300-83  anti -0.000   vs `inhib300` -1.4 SE   vs `fatigue` -38.9 SE   (VOID)
+    both300-250 anti -0.000   vs `inhib300` -1.4 SE   vs `fatigue` -38.9 SE   (VOID)
+
+  FREQUENCY -- does the period follow tau_a? (exponent, not correlation)
+    tau  83 ms  peak 3.35 Hz  period 298.1 ms  period/tau  3.59
+    tau 167 ms  peak 3.19 Hz  period 313.7 ms  period/tau  1.88
+    tau 250 ms  peak 3.02 Hz  period 331.0 ms  period/tau  1.32
+    EXPONENT +0.095 over tau 83 -> 250 (required ~1.000 for a relaxation
+    oscillator; adaptclock measured +0.226 here without the inhibition)
+
+  --- the reading ---
+  THE HALVES DO NOT TAKE TURNS. Best non-void `both` arm is `both60` at anti-phase
+  -0.000, and no arm clears -0.20 with 3 SE over both singles.
+  THAT IS A REAL REFUSAL AND IT IS EXPENSIVE FOR THE TEXTBOOK. Reciprocal
+  inhibition plus spike-triggered adaptation is the half-center, both
+  ingredients are now present and individually verified live, and the two
+  populations still do not alternate. So what is missing is not a component
+  but something about how this larynx REPRESENTS activity: every pathway
+  here is rate-coded and pooled, and a rate code averaged over a population
+  has no phase for two groups to be opposite IN.
+  That points at the same wall seven earlier instruments hit, and it is the
+  first time the sequence line has reached it from the DYNAMICS side rather
+  than the learning side.
+HC_EXIT=1
+
+[exited with code 0]
