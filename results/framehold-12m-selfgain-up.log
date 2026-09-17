@@ -1,0 +1,27 @@
+# framehold self_gain UPWARD sweep -- the frame test
+# 2026-09-17. Question: does raising larynx->ear loop gain make the 3 Hz
+# resonance SELF-SUSTAIN, i.e. does silent-3 rise above its ~1.25 baseline?
+# command: ./build/aibaby --dna <variant> --experiment framehold --ticks 1200000
+# variants: per-line sed on self_gain (unique in file), each differing by exactly 2 diff lines
+# seeds: family 1 (kFHSeedOffset 512821), 12 seeds x 8 arms
+# binary 2026-09-17 14:17:18 > source 14:16:56 (fresh); dna/default.toml unmodified, verify PASS ad96f882becbee92
+# columns: arm | drive SNR | hold SNR+/-SE | early+/-SE | late+/-SE | duty(silent/heard)
+# ANSWER: NO. See the write-up in README.md and aibaby-three-hertz-resonance.md.
+
+self_gain=0.75  changed 2 lines -> self_gain = 0.75
+self_gain=1.0  changed 2 lines -> self_gain = 1.0
+self_gain=1.5  changed 2 lines -> self_gain = 1.5
+
+=== the frame test: does silent-3 rise above its ~1.25 baseline? ===
+    (watching duty cycle too -- a mute creature has no envelope to measure)
+--- self_gain = 0.75 (shipped 0.5) ---
+  silent-3  1.2            2.07 +/- 0.32      1.36 +/- 0.34    1.72 +/- 0.47  0.56/0.56
+  heard-3   409.8          2.49 +/- 0.57      3.72 +/- 0.50    0.73 +/- 0.21  0.49/0.56
+--- self_gain = 1.0 (shipped 0.5) ---
+  silent-3  0.7            1.84 +/- 0.35      1.36 +/- 0.42    2.52 +/- 0.83  0.55/0.55
+  heard-3   494.0          2.57 +/- 0.52      3.63 +/- 0.68    1.68 +/- 0.50  0.48/0.56
+--- self_gain = 1.5 (shipped 0.5) ---
+  silent-3  1.5            1.22 +/- 0.39      1.20 +/- 0.29    0.97 +/- 0.31  0.51/0.51
+  heard-3   375.5          3.54 +/- 1.17      4.43 +/- 1.21    1.18 +/- 0.37  0.47/0.55
+
+[exited with code 0]

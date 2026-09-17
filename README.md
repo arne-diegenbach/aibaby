@@ -11480,3 +11480,74 @@ is why the contrast SEs ranged +1.4 to +4.2 while the effect barely moved.
 "did not move to another **sampled** arm." A shift from 3.0 to 3.3 Hz would be
 invisible, and resolving the frequency needs a finer sweep before anyone fits a
 delay to it.
+
+### The resonance stays a resonance
+
+A damped ring becomes a running oscillator when loop gain rises. That is the
+textbook route from the structure we found to the structure we want, and it had
+one elegant property: **`framehold`'s `silent` arm already *is* the frame test.**
+No caregiver, a free-running creature, its own voice measured at 3 Hz with the
+local-SNR statistic that survived `babblerhythm`. It sits at 1.25. If the ring
+self-sustained, that number would climb, and a voice alternating at 3 Hz with no
+input at all is a frame by any definition.
+
+So `self_gain` — the larynx→ear loop, the one dial that amplified the ring
+threefold — was pushed from its shipped 0.5 up to 0.75, 1.0 and 1.5. The risk was
+written down first: this loop is *negative* feedback, so more gain might simply
+mute the voice and leave no envelope to measure. Duty cycle was the kill switch.
+
+| `self_gain` | `heard-3` hold | early | `silent-3` | contrast | duty |
+| --- | --- | --- | --- | --- | --- |
+| 0.00 deaf | 2.62 ± 0.62 | 1.79 | 0.68 ± 0.11 | +1.94 (+3.1 SE) | 0.58 |
+| 0.25 | 4.43 ± 0.87 | 3.35 | 0.89 ± 0.19 | +3.54 (+4.0 SE) | 0.59 |
+| **0.50 shipped** | 4.54 ± 0.90 | 5.49 | 1.64 ± 0.34 | +2.90 (+3.0 SE) | 0.57 |
+| 0.75 | 2.49 ± 0.57 | 3.72 | 2.07 ± 0.32 | +0.42 (+0.6 SE) | 0.56 |
+| 1.00 | 2.57 ± 0.52 | 3.63 | 1.84 ± 0.35 | +0.73 (+1.2 SE) | 0.55 |
+| 1.50 | 3.54 ± 1.17 | 4.43 | 1.22 ± 0.39 | +2.32 (+1.9 SE) | 0.51 |
+
+**The kill switch never fired and the frame never appeared.** The manipulation
+demonstrably took — free-running duty falls monotonically 0.58 → 0.51, the
+negative-feedback dial behaving exactly as documented — and the voice never went
+mute, so this is a null rather than an artifact of silence.
+
+`silent-3`'s best case is 2.07 ± 0.32 at gain 0.75, which is **+2.2 SE** against
+the nine-run control distribution: inside this project's own "hypothesis, not a
+finding" band. Then 1.84 at 1.0. Then 1.22 at 1.5 — gone.
+
+The detail that settles it is *which half of the silence moved.* In the `silent`
+arm there is no drive, so early and late are two halves of the same silence, and a
+sustained oscillation has to be in both.
+
+| `self_gain` | `silent-3` early | `silent-3` late |
+| --- | --- | --- |
+| 0.50 shipped | 1.30 ± 0.49 | 1.60 ± 0.46 |
+| 0.75 | 1.36 ± 0.34 | 1.72 ± 0.47 |
+| 1.00 | 1.36 ± 0.42 | **2.52 ± 0.83** |
+| 1.50 | 1.20 ± 0.29 | 0.97 ± 0.31 |
+
+**The early window is pinned at 1.30 / 1.36 / 1.36 / 1.20 — a range of 0.16
+across a threefold change in loop gain.** Everything that moved, moved in the
+second half only, and not monotonically. A self-sustaining oscillation cannot hide
+from the first half of a silence.
+
+The sweep also cost us a claim we had already written down. The first three points
+of this dial read as a clean threefold dose-response, and that is how it was
+reported. Extended to six, it flattens: the three arms above shipped average
+3.93 ± 0.49, and the apparent peak at 0.50 stands only +1.56 ± 1.20 = **+1.3 SE**
+above them, so neither "threefold dose-response" nor "peaks at the shipped value"
+survives. The gain saturates by 0.5. This is the third time here that a monotone
+three-point curve has died on its fourth point, and the lesson is not getting any
+cheaper.
+
+What is refused, deliberately, is the follow-up: no finer sweep and no fresh seed
+family chasing that late-window +2.2 SE. A late-only, non-monotone bump sitting
+above a flat early window has exactly the shape of the +9.99 dB that `babblerhythm`
+produced when it was really a fit to a low-pass knee, and of the spectacular
+`framecopy` result that turned out to be the shipped listening reflex. Three of my
+own positives died to that pattern in one night. The dial is closed.
+
+Self-hearing loop gain is now the fifth parameter swept without changing the ring's
+character. **A thing that has to be kicked is not a clock. A frame here needs a
+mechanism this creature does not have, not a dial it does** — and the honest
+version of tonight's progress is that we found a preferred timescale in the
+syllable band and proved it cannot be talked into running on its own.
