@@ -11806,6 +11806,250 @@ bool run_framecopy(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
   return entrained;
 }
 
+// `framehold`, 2026-09-17. DOES THE RHYTHM OUTLAST THE CAREGIVER?
+//
+// `framecopy` came back spectacular and trivial. The creature's voice alternated at
+// exactly the caregiver's rate -- SNR in the thousands -- and the cause is a
+// SHIPPED mechanism already in this project's notes: an inhibitory
+// auditory->vocal tract that makes the baby stop babbling while it hears something
+// ([[aibaby-listening-reflex]]). The caregiver pulses on, the creature goes quiet;
+// pulses off, it babbles. A near-perfect square wave at f, and no frame at all.
+//
+// The duty column showed the sign: `heard` arms sat BELOW the silent baseline
+// (0.50-0.54 against 0.572) -- gated OFF -- while `oracle` arms rose to 0.83 --
+// driven ON. A reflex in anti-phase, not an oscillator in phase.
+//
+// **And the pre-registration failed in an instructive way.** It guarded against one
+// artefact -- "meaningless if `heard` reproduces `oracle`'s transfer curve" -- and
+// the reflex passes that check cleanly, because a reflex really does produce a
+// different shape from injection. I defended against the artefact I thought of
+// while the real one was already written down in my own memory.
+//
+// THE DISCRIMINATOR IS PERSISTENCE, and it is the same logic that made M1b a real
+// result rather than a pass-through: the echo of a word persists 200-600 ms after
+// the word stops ([[aibaby-imitation-milestone]]). A reflex stops the instant its
+// driver stops. Something internal holding the beat rings on.
+//
+// So: pulse, then STOP, and measure the f-component of the voice during the
+// SILENCE. Blocks are 4 s drive / 4 s hold, and every f here tiles 4 s in whole
+// cycles (4, 8, 12, 16), so concatenated hold segments keep their phase -- a
+// fractional cycle would smear it and manufacture a null.
+//
+// WHY AN SNR AT f CANNOT BE FAKED BY A SLOW LEAK: if the inhibition merely decayed
+// slowly after the caregiver stopped, the voice would return SMOOTHLY to baseline.
+// That is broadband, not a component at f. Only continued ALTERNATION puts power at
+// the drive frequency, which is what this measures.
+struct FHArm { const char* name; bool hear; double hz; };
+const FHArm kFHArms[] = {
+    {"silent-1", false, 1.0}, {"silent-2", false, 2.0},
+    {"silent-3", false, 3.0}, {"silent-4", false, 4.0},
+    {"heard-1", true, 1.0},   {"heard-2", true, 2.0},
+    {"heard-3", true, 3.0},   {"heard-4", true, 4.0},
+};
+constexpr uint32_t kFHArmCount = sizeof(kFHArms) / sizeof(kFHArms[0]);
+constexpr uint64_t kFHBlockMs = 4000;   // 4 s drive, then 4 s hold
+
+struct FHRow {
+  bool ok = false;
+  double snr_drive = 0.0, snr_hold = 0.0, snr_early = 0.0, snr_late = 0.0;
+  double duty_drive = 0.0, duty_hold = 0.0;
+};
+
+static double fh_snr(const std::vector<double>& x, double f, double fs) {
+  const size_t n = x.size();
+  if (n < 64) return 0.0;
+  double mean = 0.0;
+  for (double v : x) mean += v;
+  mean /= double(n);
+  const auto pw = [&](double fq) {
+    const double w = 2.0 * 3.14159265358979 * fq / fs;
+    double re = 0.0, im = 0.0;
+    for (size_t i = 0; i < n; ++i) {
+      const double v = x[i] - mean;
+      re += v * std::cos(w * double(i)); im += v * std::sin(w * double(i));
+    }
+    return (re * re + im * im) / double(n);
+  };
+  const double p = pw(f);
+  double side = 0.0; uint32_t ns = 0;
+  for (double m = 0.60; m <= 0.86; m += 0.05) { side += pw(f * m); ++ns; }
+  for (double m = 1.15; m <= 1.41; m += 0.05) { side += pw(f * m); ++ns; }
+  if (ns == 0 || side <= 0.0) return 0.0;
+  return p / (side / double(ns));
+}
+
+FHRow run_framehold_arm(const std::vector<uint8_t>& blob, uint64_t ticks, const FHArm& arm) {
+  FHRow row;
+  Session s;
+  std::string error;
+  if (!s.init(blob, error)) return row;
+  const aibaby::DnaAudio& acfg = s.dna.header().audio;
+  Ear ear;
+  if (!ear.configure(acfg, error)) return row;
+  VowelSource caregiver(acfg.sample_rate);
+  std::vector<float> pcm(acfg.sample_rate / 1000);
+  const uint32_t spt = acfg.sample_rate / 1000;
+  const Word& say = kWords[kRTHeard];
+
+  const uint64_t settle = ticks / 10;
+  std::vector<double> e_drive, e_hold, e_early, e_late;
+  uint64_t last_frame = 0;
+  double on_d = 0, n_d = 0, on_h = 0, n_h = 0;
+  for (uint64_t t = 0; t < ticks; ++t) {
+    const uint64_t pos = t % (2 * kFHBlockMs);
+    const bool driving = pos < kFHBlockMs;
+    const uint64_t into_hold = driving ? 0 : pos - kFHBlockMs;
+    const double phase = 2.0 * 3.14159265358979 * arm.hz * double(t) / 1000.0;
+    const double drive = 0.5 * (1.0 + std::sin(phase));
+    if (arm.hear && driving) {
+      caregiver.render(say.f0, say.f1, say.f2, float(0.6 * drive), pcm.data(), spt);
+    } else {
+      caregiver.render(0.0f, say.f1, say.f2, 0.0f, pcm.data(), spt);
+    }
+    ear.tick(s.brain, pcm.data(), spt);
+    s.brain.step();
+    if (t < settle) continue;
+    if (s.brain.vocal_frame() == last_frame) continue;
+    last_frame = s.brain.vocal_frame();
+    const aibaby::VocalParams& v = s.brain.voice();
+    const double a = (v.voicing > 0.5f ? 1.0 : 0.0) * double(v.amplitude);
+    if (driving) { e_drive.push_back(a); n_d += 1; if (a > 0.05) on_d += 1; }
+    else {
+      e_hold.push_back(a); n_h += 1; if (a > 0.05) on_h += 1;
+      if (into_hold < kFHBlockMs / 2) e_early.push_back(a); else e_late.push_back(a);
+    }
+  }
+  if (e_hold.size() < 256 || e_drive.size() < 256) return row;
+  // Frames per second, derived from the run rather than assumed.
+  const double fs = double(e_drive.size() + e_hold.size()) / (double(ticks - settle) / 1000.0);
+  row.snr_drive = fh_snr(e_drive, arm.hz, fs);
+  row.snr_hold = fh_snr(e_hold, arm.hz, fs);
+  row.snr_early = fh_snr(e_early, arm.hz, fs);
+  row.snr_late = fh_snr(e_late, arm.hz, fs);
+  row.duty_drive = n_d > 0 ? on_d / n_d : 0.0;
+  row.duty_hold = n_h > 0 ? on_h / n_h : 0.0;
+  row.ok = true;
+  return row;
+}
+
+bool run_framehold(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  aibaby::Dna dna0;
+  if (dna0.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) {
+    std::printf("  setup failed: the genome does not load\n");
+    return false;
+  }
+  constexpr uint32_t kReps = 12;
+  instrument("framehold", dna0.header().seed ^ 0xF401u, ticks, "ticks");
+  std::printf("  what happened     `framecopy` looked spectacular and was trivial: the voice\n"
+              "                    alternated at the caregiver's rate because a SHIPPED\n"
+              "                    inhibitory auditory->vocal tract stops the babbling while\n"
+              "                    the creature hears something. An interrupt, not a frame.\n");
+  std::printf("  the tell          `heard` duty sat BELOW the silent baseline -- gated OFF --\n"
+              "                    while `oracle` rose to 0.83, driven ON. Anti-phase reflex,\n"
+              "                    not an oscillator.\n");
+  std::printf("  the discriminator PERSISTENCE, which is what made M1b real rather than a\n"
+              "                    pass-through: a reflex dies with its driver, an internal\n"
+              "                    beat rings on. Pulse 4 s, then SILENCE 4 s, and measure the\n"
+              "                    f-component DURING THE SILENCE.\n");
+  std::printf("  phase is kept     every f tiles the 4 s block in whole cycles (4, 8, 12, 16),\n"
+              "                    so concatenated hold segments do not smear. A fractional\n"
+              "                    cycle would manufacture a null.\n");
+  std::printf("  not fakeable by   a slowly decaying inhibition returns the voice SMOOTHLY to\n"
+              "  a slow leak       baseline, which is broadband. Only continued ALTERNATION\n"
+              "                    puts power at f.\n");
+  std::printf("\n  PRE-REGISTERED\n");
+  std::printf("    positive control  `heard` SNR during the DRIVE must be large. If it is not,\n"
+              "                      the reflex is not even engaging and nothing else reads.\n");
+  std::printf("    persistence       `heard` hold-SNR >= 2.0 AND >= 3 SE over the matching\n"
+              "                      `silent` arm -> the beat outlasts its driver, which is a\n"
+              "                      FRAME rather than an interrupt.\n");
+  std::printf("    reflex only       hold-SNR at the silent baseline -> it dies with the\n"
+              "                      driver. No frame, and an internal oscillator on the\n"
+              "                      voicing gate becomes the next build.\n");
+  std::printf("    decay             early vs late halves of the hold, reported either way.\n"
+              "                      A real ring-out decays; a constant offset would suggest\n"
+              "                      the statistic is picking up something structural.\n\n");
+
+  struct Cell { bool ok = false; FHRow row; };
+  const uint32_t njobs = kReps * kFHArmCount;
+  const std::vector<Cell> cells = parallel_reps<Cell>(njobs, [&](uint32_t i) {
+    Cell c;
+    const uint32_t r = i / kFHArmCount, a = i % kFHArmCount;
+    std::vector<uint8_t> variant = blob;
+    const uint64_t seed = dna0.header().seed + r * 7919ull;
+    std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+    c.row = run_framehold_arm(variant, ticks, kFHArms[a]);
+    c.ok = c.row.ok;
+    if (c.ok)
+      parallel_note("  [%u/%u] seed %u %-9s drive %8.1f hold %7.2f early %7.2f late %7.2f\n",
+                    i + 1, njobs, r, kFHArms[a].name, c.row.snr_drive, c.row.snr_hold,
+                    c.row.snr_early, c.row.snr_late);
+    return c;
+  });
+
+  double m_hold[kFHArmCount] = {}, s_hold[kFHArmCount] = {};
+  std::printf("\n  %-9s %-12s %-16s %-14s %-14s %s\n", "arm", "drive SNR", "HOLD SNR",
+              "early", "late", "duty d/h");
+  for (uint32_t a = 0; a < kFHArmCount; ++a) {
+    std::vector<double> dr, ho, ea, la, dd, dh;
+    for (uint32_t r = 0; r < kReps; ++r) {
+      const Cell& c = cells[r * kFHArmCount + a];
+      if (!c.ok) continue;
+      dr.push_back(c.row.snr_drive); ho.push_back(c.row.snr_hold);
+      ea.push_back(c.row.snr_early); la.push_back(c.row.snr_late);
+      dd.push_back(c.row.duty_drive); dh.push_back(c.row.duty_hold);
+    }
+    if (ho.size() < 3) {
+      std::printf("\n  framehold INCONCLUSIVE -- arm `%s` produced %zu creatures.\n",
+                  kFHArms[a].name, ho.size());
+      return false;
+    }
+    double sd = 0, se = 0, sl = 0, sdd = 0, sdh = 0;
+    const double m_dr = ctx_mean_se(dr, &sd);
+    m_hold[a] = ctx_mean_se(ho, &s_hold[a]);
+    const double m_ea = ctx_mean_se(ea, &se), m_la = ctx_mean_se(la, &sl);
+    const double m_dd = ctx_mean_se(dd, &sdd), m_dh = ctx_mean_se(dh, &sdh);
+    std::printf("  %-9s %-12.1f %6.2f +/- %-7.2f %6.2f +/- %-5.2f %6.2f +/- %-5.2f %.2f/%.2f\n",
+                kFHArms[a].name, m_dr, m_hold[a], s_hold[a], m_ea, se, m_la, sl, m_dd, m_dh);
+  }
+
+  std::printf("\n  HOLD, heard against its own silent control\n");
+  bool any = false;
+  double best_t = -1e9; uint32_t best = 4;
+  for (uint32_t a = 4; a < kFHArmCount; ++a) {
+    const uint32_t ctrl = a - 4;
+    const double d = m_hold[a] - m_hold[ctrl];
+    const double se = std::sqrt(s_hold[a] * s_hold[a] + s_hold[ctrl] * s_hold[ctrl]);
+    const double t = se > 0.0 ? d / se : 0.0;
+    std::printf("    %-9s %+.2f over `%s`  (%+.1f SE)\n", kFHArms[a].name, d, kFHArms[ctrl].name, t);
+    if (t > best_t) { best_t = t; best = a; }
+    if (m_hold[a] >= 2.0 && t >= 3.0) any = true;
+  }
+
+  std::printf("\n  --- the reading ---\n");
+  if (any) {
+    std::printf("  THE BEAT OUTLASTS ITS DRIVER: `%s` holds SNR %.2f through the silence,\n"
+                "  %+.1f SE over a creature that never heard anything. The caregiver is gone\n"
+                "  and the voice is still alternating at its rate.\n",
+                kFHArms[best].name, m_hold[best], best_t);
+    std::printf("  THAT IS A FRAME, not an interrupt, and it is the first thing in this\n"
+                "  project that keeps time. Check the early/late columns above: a real\n"
+                "  ring-out DECAYS, and a flat hold would mean the statistic is catching\n"
+                "  something structural instead.\n");
+  } else {
+    std::printf("  IT DIES WITH THE DRIVER. The best hold arm is `%s` at SNR %.2f, %+.1f SE\n"
+                "  over its silent control -- no alternation survives the caregiver going\n"
+                "  quiet. `framecopy` measured the listening reflex and nothing more.\n",
+                kFHArms[best].name, m_hold[best], best_t);
+    std::printf("  SO THE FRAME STILL DOES NOT EXIST, and now it is known that hearing one\n"
+                "  will not install it. The remaining route is an INTERNAL oscillator on the\n"
+                "  voicing gate -- the tau 60 ms path that can carry a syllable rate, and the\n"
+                "  one target no oscillator in this project has ever had.\n");
+  }
+  return any;
+}
+
 bool run_movability(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
   (void)verbose;
   Regime regime;

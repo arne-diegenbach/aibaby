@@ -36,3 +36,141 @@ experiment: framecopy
               same shape, same rolloff. That would be the FILTER again, not
               the brain. Entrainment must look DIFFERENT from injection.
 
+  [4/108] seed 0 oracle-3  SNR 348645.87 depth 0.993 duty 0.74
+  [12/108] seed 1 oracle-2  SNR 828047.06 depth 0.998 duty 0.59
+  [7/108] seed 0 heard-2   SNR 1425.03 depth 0.982 duty 0.48
+  [14/108] seed 1 oracle-4  SNR 363981.80 depth 0.991 duty 0.84
+  [9/108] seed 0 heard-4   SNR 733.04 depth 0.978 duty 0.53
+  [3/108] seed 0 oracle-2  SNR 431321.06 depth 0.998 duty 0.60
+  [8/108] seed 0 heard-3   SNR 603.02 depth 0.976 duty 0.51
+  [13/108] seed 1 oracle-3  SNR 320074.61 depth 0.992 duty 0.73
+  [10/108] seed 1 silent    SNR   2.97 depth 0.963 duty 0.55
+  [1/108] seed 0 silent    SNR   1.38 depth 0.969 duty 0.57
+  [5/108] seed 0 oracle-4  SNR 281859.99 depth 0.990 duty 0.83
+  [6/108] seed 0 heard-1   SNR 1288.87 depth 0.986 duty 0.53
+  [2/108] seed 0 oracle-1  SNR 380843.74 depth 1.000 duty 0.50
+  [11/108] seed 1 oracle-1  SNR 266564.34 depth 1.000 duty 0.49
+  [15/108] seed 1 heard-1   SNR 1689.40 depth 0.989 duty 0.53
+  [16/108] seed 1 heard-2   SNR 1081.87 depth 0.978 duty 0.49
+  [19/108] seed 2 silent    SNR   0.51 depth 0.980 duty 0.58
+  [17/108] seed 1 heard-3   SNR 1217.95 depth 0.972 duty 0.51
+  [18/108] seed 1 heard-4   SNR 1134.78 depth 0.976 duty 0.52
+  [21/108] seed 2 oracle-2  SNR 509409.57 depth 0.998 duty 0.61
+  [24/108] seed 2 heard-1   SNR 2266.07 depth 0.992 duty 0.56
+  [22/108] seed 2 oracle-3  SNR 349593.73 depth 0.993 duty 0.75
+  [23/108] seed 2 oracle-4  SNR 239721.74 depth 0.993 duty 0.83
+  [25/108] seed 2 heard-2   SNR 1132.10 depth 0.985 duty 0.52
+  [20/108] seed 2 oracle-1  SNR 470957.78 depth 1.000 duty 0.50
+  [26/108] seed 2 heard-3   SNR 1364.26 depth 0.975 duty 0.56
+  [27/108] seed 2 heard-4   SNR 1040.73 depth 0.977 duty 0.57
+  [28/108] seed 3 silent    SNR   1.00 depth 0.986 duty 0.56
+  [29/108] seed 3 oracle-1  SNR 276001.11 depth 1.000 duty 0.50
+  [34/108] seed 3 heard-2   SNR 1600.16 depth 0.980 duty 0.50
+  [31/108] seed 3 oracle-3  SNR 232632.26 depth 0.993 duty 0.74
+  [32/108] seed 3 oracle-4  SNR 308697.14 depth 0.992 duty 0.84
+  [33/108] seed 3 heard-1   SNR 2991.54 depth 0.985 duty 0.55
+  [30/108] seed 3 oracle-2  SNR 649124.53 depth 0.998 duty 0.60
+  [35/108] seed 3 heard-3   SNR 1735.44 depth 0.978 duty 0.54
+  [36/108] seed 3 heard-4   SNR 1353.04 depth 0.978 duty 0.54
+  [38/108] seed 4 oracle-1  SNR 311672.97 depth 1.000 duty 0.51
+  [37/108] seed 4 silent    SNR   0.11 depth 0.975 duty 0.59
+  [41/108] seed 4 oracle-4  SNR 157022.38 depth 0.993 duty 0.83
+  [40/108] seed 4 oracle-3  SNR 339988.64 depth 0.993 duty 0.75
+  [39/108] seed 4 oracle-2  SNR 476363.80 depth 0.998 duty 0.61
+  [42/108] seed 4 heard-1   SNR 3027.41 depth 0.987 duty 0.55
+  [43/108] seed 4 heard-2   SNR 2142.27 depth 0.986 duty 0.50
+  [44/108] seed 4 heard-3   SNR 1877.61 depth 0.975 duty 0.54
+  [46/108] seed 5 silent    SNR   0.09 depth 0.975 duty 0.57
+  [48/108] seed 5 oracle-2  SNR 603039.94 depth 0.998 duty 0.60
+  [45/108] seed 4 heard-4   SNR 632.99 depth 0.970 duty 0.54
+  [49/108] seed 5 oracle-3  SNR 401189.11 depth 0.992 duty 0.74
+  [50/108] seed 5 oracle-4  SNR 296928.82 depth 0.992 duty 0.83
+  [54/108] seed 5 heard-4   SNR 2380.27 depth 0.980 duty 0.54
+  [51/108] seed 5 heard-1   SNR 5070.20 depth 0.995 duty 0.54
+  [47/108] seed 5 oracle-1  SNR 337621.27 depth 1.000 duty 0.50
+  [53/108] seed 5 heard-3   SNR 2466.48 depth 0.978 duty 0.52
+  [52/108] seed 5 heard-2   SNR 2951.66 depth 0.991 duty 0.49
+  [55/108] seed 6 silent    SNR   4.89 depth 0.984 duty 0.57
+  [56/108] seed 6 oracle-1  SNR 504491.02 depth 1.000 duty 0.50
+  [59/108] seed 6 oracle-4  SNR 283653.24 depth 0.992 duty 0.84
+  [60/108] seed 6 heard-1   SNR 2379.71 depth 0.982 duty 0.54
+  [57/108] seed 6 oracle-2  SNR 784287.46 depth 0.998 duty 0.60
+  [58/108] seed 6 oracle-3  SNR 516548.21 depth 0.992 duty 0.75
+  [62/108] seed 6 heard-3   SNR 1580.42 depth 0.977 duty 0.53
+  [61/108] seed 6 heard-2   SNR 1809.83 depth 0.985 duty 0.50
+  [63/108] seed 6 heard-4   SNR 1950.34 depth 0.967 duty 0.54
+  [64/108] seed 7 silent    SNR   0.12 depth 0.964 duty 0.57
+  [65/108] seed 7 oracle-1  SNR 601654.95 depth 1.000 duty 0.50
+  [66/108] seed 7 oracle-2  SNR 1123643.59 depth 0.998 duty 0.60
+  [67/108] seed 7 oracle-3  SNR 198968.78 depth 0.993 duty 0.74
+  [70/108] seed 7 heard-2   SNR 1576.50 depth 0.981 duty 0.49
+  [69/108] seed 7 heard-1   SNR 1868.42 depth 0.984 duty 0.53
+  [68/108] seed 7 oracle-4  SNR 358493.24 depth 0.992 duty 0.84
+  [71/108] seed 7 heard-3   SNR 1563.07 depth 0.983 duty 0.51
+  [77/108] seed 8 oracle-4  SNR 360472.04 depth 0.994 duty 0.83
+  [73/108] seed 8 silent    SNR   1.32 depth 0.981 duty 0.58
+  [72/108] seed 7 heard-4   SNR 2089.06 depth 0.966 duty 0.52
+  [75/108] seed 8 oracle-2  SNR 657658.93 depth 0.998 duty 0.60
+  [76/108] seed 8 oracle-3  SNR 247724.85 depth 0.993 duty 0.74
+  [78/108] seed 8 heard-1   SNR 2337.96 depth 0.981 duty 0.54
+  [74/108] seed 8 oracle-1  SNR 375526.79 depth 1.000 duty 0.50
+  [84/108] seed 9 oracle-2  SNR 1010677.15 depth 0.998 duty 0.60
+  [79/108] seed 8 heard-2   SNR 1235.98 depth 0.981 duty 0.50
+  [80/108] seed 8 heard-3   SNR 1410.40 depth 0.975 duty 0.53
+  [81/108] seed 8 heard-4   SNR 709.40 depth 0.971 duty 0.54
+  [82/108] seed 9 silent    SNR   2.61 depth 0.972 duty 0.59
+  [83/108] seed 9 oracle-1  SNR 441785.89 depth 1.000 duty 0.50
+  [87/108] seed 9 heard-1   SNR 2015.05 depth 0.984 duty 0.56
+  [86/108] seed 9 oracle-4  SNR 256657.98 depth 0.992 duty 0.84
+  [88/108] seed 9 heard-2   SNR 1727.15 depth 0.973 duty 0.52
+  [89/108] seed 9 heard-3   SNR 1775.99 depth 0.966 duty 0.54
+  [85/108] seed 9 oracle-3  SNR 558310.01 depth 0.992 duty 0.73
+  [90/108] seed 9 heard-4   SNR 714.61 depth 0.965 duty 0.54
+  [91/108] seed 10 silent    SNR   0.73 depth 0.972 duty 0.58
+  [96/108] seed 10 heard-1   SNR 3250.47 depth 0.990 duty 0.56
+  [94/108] seed 10 oracle-3  SNR 301814.83 depth 0.993 duty 0.74
+  [93/108] seed 10 oracle-2  SNR 662457.22 depth 0.998 duty 0.61
+  [95/108] seed 10 oracle-4  SNR 214281.71 depth 0.992 duty 0.83
+  [98/108] seed 10 heard-3   SNR 1812.33 depth 0.988 duty 0.54
+  [97/108] seed 10 heard-2   SNR 3160.68 depth 0.978 duty 0.51
+  [92/108] seed 10 oracle-1  SNR 257545.58 depth 1.000 duty 0.50
+  [99/108] seed 10 heard-4   SNR 2424.23 depth 0.971 duty 0.55
+  [103/108] seed 11 oracle-3  SNR 630761.76 depth 0.992 duty 0.74
+  [100/108] seed 11 silent    SNR   2.27 depth 0.976 duty 0.56
+  [104/108] seed 11 oracle-4  SNR 328269.90 depth 0.990 duty 0.84
+  [101/108] seed 11 oracle-1  SNR 812144.03 depth 1.000 duty 0.50
+  [102/108] seed 11 oracle-2  SNR 569038.63 depth 0.998 duty 0.60
+  [105/108] seed 11 heard-1   SNR 3646.47 depth 0.985 duty 0.53
+  [107/108] seed 11 heard-3   SNR 1580.74 depth 0.981 duty 0.52
+  [108/108] seed 11 heard-4   SNR 1505.58 depth 0.969 duty 0.53
+  [106/108] seed 11 heard-2   SNR 2118.57 depth 0.980 duty 0.49
+
+  arm       f Hz    envelope SNR at f    depth            duty
+  silent    0.0       1.50 +/- 0.42         0.975 +/- 0.002    0.572
+  oracle-1  1.0     419734.12 +/- 46846.49     1.000 +/- 0.000    0.499
+  oracle-2  2.0     692089.08 +/- 60903.09     0.998 +/- 0.000    0.603
+  oracle-3  3.0     370521.06 +/- 38719.16     0.993 +/- 0.000    0.741
+  oracle-4  4.0     287503.33 +/- 18274.17     0.992 +/- 0.000    0.834
+  heard-1   1.0     2652.63 +/- 296.15       0.987 +/- 0.001    0.543
+  heard-2   2.0     1830.15 +/- 192.69       0.982 +/- 0.001    0.499
+  heard-3   3.0     1582.31 +/- 127.69       0.977 +/- 0.002    0.528
+  heard-4   4.0     1389.00 +/- 194.21       0.972 +/- 0.002    0.538
+
+  AGAINST `silent`, in SE
+    oracle-1  +9.0 SE
+    oracle-2  +11.4 SE
+    oracle-3  +9.6 SE
+    oracle-4  +15.7 SE
+    heard-1   +9.0 SE
+    heard-2   +9.5 SE
+    heard-3   +12.4 SE
+    heard-4   +7.1 SE
+
+  --- the reading ---
+  chain ceiling   `oracle` peaks at SNR 692089.08; carried to 4 Hz
+  THE CREATURE CATCHES THE RHYTHM: `heard-1` reads SNR 2652.63, +9.0 SE over a
+  silent creature. Its own voice alternates at the rate its caregiver does,
+  with no formant information in the signal at all.
+  CHECK THE SHAPE BEFORE BELIEVING IT: if `heard` falls off with f exactly
+  as `oracle` does, this is the filter and not the brain. Compare the two
+  curves above -- they must differ.
