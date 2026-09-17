@@ -12096,6 +12096,312 @@ bool run_framehold(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
   return any;
 }
 
+// ============================================================================
+// `glide` — DOES THE VOICE FOLLOW A MOVING TARGET?
+//
+// THE OBSERVATION THIS COMES FROM. Every caregiver render in this codebase passes
+// constant f0/f1/f2, and `struct Word` is three scalars. Nothing this creature has
+// ever heard CHANGES WHILE SOUNDING. The project has spent a long line of work
+// asking whether the brain can GENERATE a sequence (v42 synfire, chain-trigger,
+// no-sequence, the WLC/CPG route) and has never asked whether it can FOLLOW one,
+// because it has never presented one.
+//
+// The struct never needed widening: `VowelSource::render` is called PER TICK, so a
+// time-varying f1 is a change at the call site and nothing else.
+//
+// THE RATE WAS DERIVED, NOT GUESSED, and the derivation REFUSES the obvious design.
+// The formant path is a one-pole EMA `x += (update_ms/smoothing_ms)*(u-x)` with
+// update_ms = kVocalUpdateMs = 10 and smoothing_ms = 800, so tau is 800 ms exactly
+// and the corner is 0.199 Hz. A glide of half-period T is a sinusoid at f = 1/(2T),
+// passed at |H| = 1/sqrt(1+(2*pi*f*tau)^2):
+//
+//     glide     f Hz   |H|      a 460 Hz F1 sweep arrives as
+//     150 ms    3.33   0.060     27 Hz   <- HUMAN DIPHTHONG RATE: unfollowable
+//     250 ms    2.00   0.099     45 Hz   <- HUMAN DIPHTHONG RATE: unfollowable
+//     400 ms    1.25   0.157     72 Hz      marginal
+//     1600 ms   0.31   0.537    247 Hz      followable
+//     4000 ms   0.12   0.847    390 Hz      followable
+//
+// Had this been run at a human diphthong rate, the flat production would have been
+// written up as "the ear-to-voice route carries only steady state" — a refusal of
+// the wrong thing, because no amount of learning fixes a filter. So the arms sit at
+// 4000/1600/400 ms, and `fast` is included DELIBERATELY as an instrument check: if
+// the creature follows slow and not fast, the pole is doing what the arithmetic
+// says and the statistic is measuring following rather than an artefact.
+//
+// WHAT IT CAN AND CANNOT CLAIM. At 1.6–4 s this is not a diphthong, it is a slowly
+// moving vowel target, so it cannot test syllable-rate imitation and saying
+// otherwise would be overclaiming. What it tests is whether the auditory->vocal
+// route carries formant CONTENT at all, or only amplitude. That route is known real
+// and fast on the amplitude path (the listening reflex); whether it passes timbre
+// is unasked.
+//
+// THE ARTEFACT IS EXCLUDED BY CONSTRUCTION, not merely controlled. `framecopy`'s
+// spectacular result was the shipped inhibitory auditory->vocal tract gating the
+// babble off while the creature heard something — a reflex that produces a lagged
+// copy of ANY caregiver envelope. So THE CAREGIVER'S AMPLITUDE HERE IS CONSTANT.
+// It sounds continuously and only the formant moves, so there is no envelope at f
+// for a reflex to copy, and the only thing oscillating at the measured frequency is
+// timbre. Produced amplitude is scored at f anyway as a trip-wire: if the envelope
+// shows power at f, something couples and the F1 reading is suspect.
+//
+// F1 is sampled UNCONDITIONALLY, not only while voicing. F1 is articulator
+// position; the glottis is a separate valve. Gating the sample on voicing would
+// hand the listening reflex a route into the statistic through missing data.
+//
+// The statistic is the local-SNR that survived `babblerhythm` and `framehold`:
+// power at f over the mean of two side-bands, so a 1/f background cancels and no
+// trend is fitted. Phase reference is absolute time.
+struct GLArm {
+  const char* name;
+  bool hear;        // is there a caregiver at all
+  double hz;        // glide frequency, and the frequency scored
+  double f1_swing;  // Hz of F1 excursion either side of the midpoint
+  double f2_swing;  // Hz of F2 excursion — the axis control
+};
+// /a/ is f1 780, /i/ is f1 320: midpoint 550, swing 230. F2 /a/ 1180, /i/ 2500:
+// midpoint 1840, swing 660. Both inside the genome's f1/f2 min-max.
+constexpr double kGLF1Mid = 550.0, kGLF1Swing = 230.0;
+constexpr double kGLF2Mid = 1840.0, kGLF2Swing = 660.0;
+constexpr double kGLMidHz = 0.3125;  // 1600 ms half-period — the PRE-REGISTERED arm
+const GLArm kGLArms[] = {
+    {"glide-slow", true, 0.1250, kGLF1Swing, 0.0},   // 4000 ms, |H| 0.85
+    {"glide-mid", true, kGLMidHz, kGLF1Swing, 0.0},  // 1600 ms, |H| 0.54 <- PRIMARY
+    {"glide-fast", true, 1.2500, kGLF1Swing, 0.0},   // 400 ms,  |H| 0.16
+    {"static-mid", true, kGLMidHz, 0.0, 0.0},        // THE NULL: same sound, no motion
+    {"f2glide-mid", true, kGLMidHz, 0.0, kGLF2Swing},  // axis control, scored on F1
+    {"silent-mid", false, kGLMidHz, 0.0, 0.0},         // drift baseline
+};
+constexpr uint32_t kGLArmCount = sizeof(kGLArms) / sizeof(kGLArms[0]);
+// Fresh seed family again. Nothing here has been measured on these seeds.
+constexpr uint64_t kGLSeedOffset = 730151ull;
+
+struct GLRow {
+  bool ok = false;
+  double snr_f1 = 0.0;    // produced F1 power at f — THE PRIMARY
+  double snr_amp = 0.0;   // produced envelope at f — the artefact trip-wire
+  double f1_sd = 0.0;     // raw produced-F1 spread, so a null can be read as
+                          // "did not move" vs "moved incoherently"
+  double f1_mean = 0.0;
+  double duty = 0.0;      // the vacuity guard: the reflex must lower this
+};
+
+GLRow run_glide_arm(const std::vector<uint8_t>& blob, uint64_t ticks, const GLArm& arm) {
+  GLRow row;
+  Session s;
+  std::string error;
+  if (!s.init(blob, error)) return row;
+  const aibaby::DnaAudio& acfg = s.dna.header().audio;
+  Ear ear;
+  if (!ear.configure(acfg, error)) return row;
+  VowelSource caregiver(acfg.sample_rate);
+  const uint32_t spt = acfg.sample_rate / 1000;
+  std::vector<float> pcm(spt);
+  const Word& say = kWords[kRTHeard];
+
+  const uint64_t settle = ticks / 10;
+  std::vector<double> f1s, amps, tms;
+  uint64_t last_frame = 0;
+  double on = 0, n = 0;
+  for (uint64_t t = 0; t < ticks; ++t) {
+    // Constant amplitude. Only the formant moves.
+    const double phase = 2.0 * 3.14159265358979 * arm.hz * double(t) / 1000.0;
+    const double sw = std::sin(phase);
+    const float hf1 = float(kGLF1Mid + arm.f1_swing * sw);
+    const float hf2 = float(kGLF2Mid + arm.f2_swing * sw);
+    if (arm.hear) {
+      caregiver.render(say.f0, hf1, hf2, 0.6f, pcm.data(), spt);
+    } else {
+      caregiver.render(0.0f, hf1, hf2, 0.0f, pcm.data(), spt);
+    }
+    ear.tick(s.brain, pcm.data(), spt);
+    s.brain.step();
+    if (t < settle) continue;
+    if (s.brain.vocal_frame() == last_frame) continue;
+    last_frame = s.brain.vocal_frame();
+    const aibaby::VocalParams& v = s.brain.voice();
+    f1s.push_back(double(v.f1));
+    amps.push_back((v.voicing > 0.5f ? 1.0 : 0.0) * double(v.amplitude));
+    tms.push_back(double(t));
+    n += 1;
+    if (v.voicing > 0.5f && v.amplitude > 0.05f) on += 1;
+  }
+  if (f1s.size() < 256) return row;
+  row.snr_f1 = fh_snr(f1s, tms, arm.hz, 0.0);
+  row.snr_amp = fh_snr(amps, tms, arm.hz, 0.0);
+  double m = 0.0;
+  for (double v : f1s) m += v;
+  m /= double(f1s.size());
+  double var = 0.0;
+  for (double v : f1s) var += (v - m) * (v - m);
+  row.f1_mean = m;
+  row.f1_sd = std::sqrt(var / double(f1s.size()));
+  row.duty = n > 0 ? on / n : 0.0;
+  row.ok = true;
+  return row;
+}
+
+bool run_glide(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  aibaby::Dna dna0;
+  if (dna0.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) {
+    std::printf("  setup failed: the genome does not load\n");
+    return false;
+  }
+  constexpr uint32_t kReps = 12;
+  instrument("glide", dna0.header().seed ^ 0x61D3u, ticks, "ticks");
+  std::printf("  seed family       offset %llu -> first creature %016llx (FRESH: nothing\n"
+              "                    has been measured on these seeds)\n",
+              (unsigned long long)kGLSeedOffset,
+              (unsigned long long)(dna0.header().seed + kGLSeedOffset));
+  std::printf("  the observation   `struct Word` is three scalars and every caregiver render\n"
+              "                    in this codebase passes constants, so NOTHING THIS\n"
+              "                    CREATURE HAS EVER HEARD CHANGES WHILE SOUNDING. A long\n"
+              "                    line of work asked whether the brain can GENERATE a\n"
+              "                    sequence; none asked whether it can FOLLOW one.\n");
+  std::printf("  the rate is DERIVED, and the derivation refuses the obvious design. The\n"
+              "    formant path is one-pole with tau = smoothing_ms = 800 ms exactly, corner\n"
+              "    0.199 Hz. A human diphthong (150-250 ms) passes at |H| 0.06-0.10, so a\n"
+              "    460 Hz heard sweep would arrive as 27-45 Hz of produced travel -- below\n"
+              "    the noise floor. Run at that rate, a flat voice would have been written up\n"
+              "    as `the route carries only steady state`, refuting the wrong thing:\n"
+              "    NO AMOUNT OF LEARNING FIXES A FILTER.\n");
+  std::printf("  so the arms are   slow 4000 ms (|H| 0.85, 390 Hz), mid 1600 ms (0.54,\n"
+              "                    247 Hz), fast 400 ms (0.16, 72 Hz). `fast` is an\n"
+              "                    INSTRUMENT CHECK, not a hypothesis.\n");
+  std::printf("  artefact EXCLUDED, not controlled. `framecopy` looked spectacular and was\n"
+              "    the shipped inhibitory auditory->vocal tract gating babble off while the\n"
+              "    creature heard something -- a reflex copies ANY envelope. So THE\n"
+              "    CAREGIVER'S AMPLITUDE IS CONSTANT here and only the formant moves. There\n"
+              "    is no envelope at f to copy. Produced amplitude is scored at f anyway as a\n"
+              "    trip-wire.\n");
+  std::printf("  what it CANNOT claim: at 1.6-4 s this is a slowly moving vowel, not a\n"
+              "    diphthong, so it says nothing about syllable-rate imitation.\n");
+  std::printf("\n  PRE-REGISTERED\n");
+  std::printf("    vacuity guard   the `hear` arms must show a LOWER duty than `silent-mid`.\n"
+              "                    The listening reflex is documented; if duty is unchanged\n"
+              "                    the caregiver is not arriving and nothing else reads.\n");
+  std::printf("    FOLLOW          `glide-mid` F1-SNR >= 2.0 AND >= 3 SE over `static-mid`,\n"
+              "                    with `f2glide-mid` and `silent-mid` at the static\n"
+              "                    baseline. The voice tracks a heard trajectory.\n");
+  std::printf("    REFUSAL         `glide-mid` at the static baseline -> the auditory->vocal\n"
+              "                    route carries no timbre, and the sequence problem is\n"
+              "                    confirmed INTERNAL. A real refusal, not a null.\n");
+  std::printf("    trip-wire       produced AMPLITUDE SNR at f should stay at the static\n"
+              "                    baseline in every arm. If it rises with F1, something\n"
+              "                    couples and the F1 reading is suspect.\n");
+  std::printf("    instrument      expect slow >= mid > fast if the 800 ms pole is the\n"
+              "                    limit. A FLAT profile across rates would mean the\n"
+              "                    statistic is not measuring following.\n");
+  std::printf("    honest prior    `vocallearn` cuts error +24 toward a FIXED target and\n"
+              "                    -0.1 toward a HEARD one, so imitation is already a\n"
+              "                    documented null. This run carries NO REWARD: it asks\n"
+              "                    whether the echo exists, not whether reward can chase it.\n\n");
+
+  struct Cell { bool ok = false; GLRow row; };
+  const uint32_t njobs = kReps * kGLArmCount;
+  const std::vector<Cell> cells = parallel_reps<Cell>(njobs, [&](uint32_t i) {
+    Cell c;
+    const uint32_t r = i / kGLArmCount, a = i % kGLArmCount;
+    std::vector<uint8_t> variant = blob;
+    const uint64_t seed = dna0.header().seed + kGLSeedOffset + r * 7919ull;
+    std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+    c.row = run_glide_arm(variant, ticks, kGLArms[a]);
+    c.ok = c.row.ok;
+    if (c.ok)
+      parallel_note("  [%u/%u] seed %u %-11s F1-SNR %6.2f amp-SNR %6.2f F1 %6.1f +/- %5.1f\n",
+                    i + 1, njobs, r, kGLArms[a].name, c.row.snr_f1, c.row.snr_amp,
+                    c.row.f1_mean, c.row.f1_sd);
+    return c;
+  });
+
+  double m_f1[kGLArmCount] = {}, s_f1[kGLArmCount] = {};
+  double m_duty[kGLArmCount] = {};
+  std::printf("\n  %-11s %-16s %-16s %-14s %-8s %s\n", "arm", "F1-SNR at f", "amp-SNR at f",
+              "F1 mean", "F1 sd", "duty");
+  for (uint32_t a = 0; a < kGLArmCount; ++a) {
+    std::vector<double> f1, am, mn, sd, du;
+    for (uint32_t r = 0; r < kReps; ++r) {
+      const Cell& c = cells[r * kGLArmCount + a];
+      if (!c.ok) continue;
+      f1.push_back(c.row.snr_f1); am.push_back(c.row.snr_amp);
+      mn.push_back(c.row.f1_mean); sd.push_back(c.row.f1_sd);
+      du.push_back(c.row.duty);
+    }
+    if (f1.size() < 3) {
+      std::printf("\n  glide INCONCLUSIVE -- arm `%s` produced %zu creatures.\n",
+                  kGLArms[a].name, f1.size());
+      return false;
+    }
+    double sa = 0, sm = 0, ss = 0, sdu = 0;
+    m_f1[a] = ctx_mean_se(f1, &s_f1[a]);
+    const double m_am = ctx_mean_se(am, &sa);
+    const double m_mn = ctx_mean_se(mn, &sm), m_sd = ctx_mean_se(sd, &ss);
+    m_duty[a] = ctx_mean_se(du, &sdu);
+    std::printf("  %-11s %6.2f +/- %-7.2f %6.2f +/- %-7.2f %6.1f +/- %-5.1f %6.1f   %.2f\n",
+                kGLArms[a].name, m_f1[a], s_f1[a], m_am, sa, m_mn, sm, m_sd, m_duty[a]);
+  }
+
+  // The vacuity guard runs BEFORE anything is read out of the arms.
+  const uint32_t kStatic = 3, kF2 = 4, kSilent = 5, kMid = 1;
+  std::printf("\n  VACUITY GUARD -- did the caregiver arrive at all?\n");
+  bool heard_ok = false;
+  for (uint32_t a = 0; a < kGLArmCount; ++a) {
+    if (!kGLArms[a].hear) continue;
+    const double d = m_duty[a] - m_duty[kSilent];
+    std::printf("    %-11s duty %.2f vs silent %.2f  (%+.3f)\n", kGLArms[a].name, m_duty[a],
+                m_duty[kSilent], d);
+    if (d < -0.01) heard_ok = true;
+  }
+  if (!heard_ok) {
+    std::printf("  REFUSED: no `hear` arm shows the listening reflex, so the caregiver is not\n"
+                "  reaching the creature and NOTHING in the table above is readable. This is\n"
+                "  the vacuity failure the open-leads file asks every experiment to check.\n");
+    return false;
+  }
+
+  std::printf("\n  F1 power at the glide frequency, against the STATIC control\n");
+  for (uint32_t a = 0; a < kGLArmCount; ++a) {
+    if (a == kStatic) continue;
+    const double d = m_f1[a] - m_f1[kStatic];
+    const double se = std::sqrt(s_f1[a] * s_f1[a] + s_f1[kStatic] * s_f1[kStatic]);
+    std::printf("    %-11s %+.2f over `static-mid`  (%+.1f SE)\n", kGLArms[a].name, d,
+                se > 0.0 ? d / se : 0.0);
+  }
+
+  const double d_mid = m_f1[kMid] - m_f1[kStatic];
+  const double se_mid =
+      std::sqrt(s_f1[kMid] * s_f1[kMid] + s_f1[kStatic] * s_f1[kStatic]);
+  const double t_mid = se_mid > 0.0 ? d_mid / se_mid : 0.0;
+  const bool follows = m_f1[kMid] >= 2.0 && t_mid >= 3.0;
+
+  std::printf("\n  --- the reading ---\n");
+  if (follows) {
+    std::printf("  THE VOICE FOLLOWS. `glide-mid` carries F1 power %.2f at the caregiver's\n"
+                "  glide rate, %+.1f SE over an identical sound that does not move. The\n"
+                "  caregiver's amplitude was CONSTANT, so this is not the listening reflex.\n",
+                m_f1[kMid], t_mid);
+    std::printf("  Check three things before believing it: `f2glide-mid` (%.2f) and\n"
+                "  `silent-mid` (%.2f) must sit at the static baseline %.2f, and the\n"
+                "  amp-SNR column must not have risen with F1.\n",
+                m_f1[kF2], m_f1[kSilent], m_f1[kStatic]);
+    std::printf("  IF IT HOLDS: this creature can produce a formant TRAJECTORY, the driver\n"
+                "  already exists, and the sequence problem becomes generator-OR-driver.\n");
+  } else {
+    std::printf("  THE VOICE DOES NOT FOLLOW. `glide-mid` sits at %.2f, %+.1f SE over the\n"
+                "  static control -- the ear sweeps a 460 Hz arc and the articulator does not\n"
+                "  track it, at a rate the 800 ms pole passes at 54%%.\n",
+                m_f1[kMid], t_mid);
+    std::printf("  READ THE `F1 sd` COLUMN to tell the two nulls apart: a flat production\n"
+                "  (small sd) means the route carries no timbre, while a large sd with no\n"
+                "  power at f means the voice moves and is not LISTENING.\n");
+    std::printf("  EITHER WAY THE SEQUENCE PROBLEM IS INTERNAL: hearing a trajectory does not\n"
+                "  install one, so a driver cannot be borrowed from the caregiver and the\n"
+                "  generator has to be built. That is a refusal, not a null.\n");
+  }
+  return follows;
+}
+
 bool run_movability(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
   (void)verbose;
   Regime regime;
