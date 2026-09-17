@@ -11327,3 +11327,58 @@ carries content. It has only ever been asked to carry a constant.
 
 **The creature is not failing to talk. It has never been asked to say anything that
 takes time.**
+
+#### The voice drones, and the result that said otherwise was my own fit
+
+The sequence work had aimed at the wrong pathway the whole time. The genome
+carries two time constants:
+
+| | τ | usable to |
+| --- | --- | --- |
+| formants (`smoothing_ms`) | 800 ms | ~0.2 Hz |
+| **glottis (`gate_smoothing_ms`)** | **60 ms** | **~2.7 Hz** |
+
+Synfire waves, chain triggers, travelling bumps and the refused CPG route all
+aimed at the formant path, which is *four syllables long*. And the split is exact
+in the code: `amplitude` and `voicing` are smoothed with the **fast** constant,
+only the formant centroids with the slow one. **Loudness and voicing are fast;
+vowel identity is slow** — which is the order [MacNeilage's frame/content
+theory](https://pubmed.ncbi.nlm.nih.gov/10097020/) says development takes. The
+syllable *is* an open-close alternation, and babbling is mostly frame with little
+content under independent control. This creature is accidentally built that way
+round.
+
+So: does its loudness already oscillate? `babble PASS — duty cycle 0.50` says how
+*often* it is on, never how fast it alternates. A drone and a babble both read
+0.50.
+
+First reading: **+9.99 ± 0.29 dB** over the fitted aperiodic trend at **2.34 Hz**,
+against a pre-registered 3 dB bar. It looked like the creature already babbles.
+
+**It doesn't.** The gate's corner sits at 2.65 Hz and the peak appeared at 2.34 Hz
+— and a first-order low-pass is flat below its corner and falls above it, so
+fitting *one straight line* in log-log to that bend leaves a positive residual at
+the knee. A gate sweep decided it:
+
+| gate ms | corner Hz | peak Hz | per-seed SD | range | peak dB |
+| --- | --- | --- | --- | --- | --- |
+| 30 | 5.31 | 3.34 | **1.56** | **1.35 – 5.78** | 10.63 |
+| 60 | 2.65 | 2.34 | — | — | 9.99 |
+| 150 | 1.06 | 1.73 | 0.76 | 1.01 – 3.84 | 9.10 |
+
+The peak tracks the corner; the amplitude stays flat at 9–11 dB across a 5× corner
+change, where a genuinely filtered rhythm would change sharply; and decisively, **at
+gate 30 the per-seed peaks span the entire search band.** A real 2.3 Hz rhythm
+gives a tight per-seed distribution. This is "wherever the residual of noise
+happened to be largest."
+
+The pooled number looked overwhelming at *every* gate setting. Only the per-seed
+rows showed the peak frequency was unstable — which is an argument for logging
+per-creature values even when the summary looks decisive.
+
+**What this leaves is sharper than what it took away.** The frame does not exist
+and has to be built, and the glottal path is fast enough to carry one where the
+formant path never was. Every oscillator this project has built (DNA v26) was
+aimed at *learning* and refuted there; **none has ever been aimed at the voicing
+gate**, which is the one target frame/content says matters. Note the ceiling
+first: a 60 ms gate caps a frame near 2.7 Hz against human speech's 4–5 Hz.

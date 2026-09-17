@@ -2201,6 +2201,7 @@ bool run_axiscollide(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_axisfree(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_axispower(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_bumpwalk(const std::vector<uint8_t>&, uint64_t, bool);
+bool run_babblerhythm(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_pgprobe(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_g2cond(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_coderprobe(const std::vector<uint8_t>&, uint64_t, bool);

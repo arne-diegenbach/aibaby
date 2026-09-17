@@ -11317,6 +11317,223 @@ bool run_bumpwalk(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
   return m_ac >= 0.20 && t_ac >= 3.0;
 }
 
+// `babblerhythm`, 2026-09-17. IS THERE A SYLLABIC RHYTHM IN THE VOICE ALREADY?
+//
+// THE REFRAME, and it came from this creature's own two time constants.
+//
+//   smoothing_ms      = 800   the FORMANT path. tau 800 ms -> usable to ~0.2 Hz.
+//   gate_smoothing_ms =  60   the GLOTTIS.     tau  60 ms -> usable to ~2.7 Hz.
+//
+// Every sequence attempt in this project has aimed at the FORMANT path -- synfire
+// waves, chain triggers, travelling bumps, and `bumpwalk`'s refused CPG route. That
+// path cannot carry a syllable rate by construction; 800 ms of inertia is four
+// syllables long. **The glottal path can, and nobody has looked at it.**
+//
+// And in the code the split is exact: `params_.amplitude = group_activity_[8]` and
+// `params_.voicing = group_activity_[1] > voicing_threshold`, where
+// `group_activity_` is smoothed with `gate_smooth_` -- the FAST constant. Only
+// `group_value_`, the formant centroids, uses the slow one. **Loudness and voicing
+// are fast; vowel identity is slow.**
+//
+// MacNeilage's frame/content theory says that is the right way round. The syllable
+// is a mouth open-close alternation -- the FRAME -- derived from rhythmic
+// mandibular oscillation, and in babbling "relatively little of the intrasyllabic
+// and intersyllabic CONTENT is under mandible-independent control". Frames first,
+// content later. This creature is accidentally built as a frame/content machine: a
+// fast gate and a slow posture.
+//
+// So the question stops being "can it move its formants" and becomes **"does its
+// loudness already oscillate at a syllable rate"** -- which nobody has measured.
+// `babble PASS -- vocal duty cycle 0.50` says how OFTEN it is on, and nothing at
+// all about how fast it alternates. A drone and a babble both read 0.50.
+//
+// WHAT THE NUMBER WOULD BE IF THE MECHANISM WORKED, written before the threshold,
+// because four gates today were set without doing this:
+//   - clean on-off babbling at f Hz is near-square, so its envelope spectrum has a
+//     strong narrow peak -- easily >6 dB over the aperiodic trend.
+//   - a smoothed random walk of amplitude, which is the likely default, is pure
+//     1/f^a with NO peak: residual 0-1 dB anywhere.
+//   So 3 dB -- a factor of two in power -- sits well clear of the null and well
+//   below what a real rhythm produces. That is why it is 3 and not 0.20.
+//
+// Human speech envelopes peak at 4-5 Hz across languages. This creature's gate
+// caps it near 2.7 Hz, so a rhythm here should be SLOWER than human and should sit
+// in 1-6 Hz. A peak found ABOVE ~5 Hz would be suspicious rather than exciting --
+// the gate cannot follow it, and it would more likely be a rendering artefact.
+struct BRRow {
+  bool ok = false;
+  double peak_db = 0.0, peak_hz = 0.0, slope = 0.0, duty = 0.0, mean_amp = 0.0;
+};
+
+BRRow run_babblerhythm_arm(const std::vector<uint8_t>& blob, uint64_t ticks) {
+  BRRow row;
+  Session s;
+  std::string err;
+  if (!s.init(blob, err)) return row;
+  const uint64_t settle = ticks / 10;
+  std::vector<double> env;
+  env.reserve(size_t(ticks - settle));
+  uint64_t last_frame = 0;
+  double amp_sum = 0.0, on = 0.0;
+  for (uint64_t t = 0; t < ticks; ++t) {
+    s.brain.step();
+    if (t < settle) continue;
+    if (s.brain.vocal_frame() == last_frame) continue;
+    last_frame = s.brain.vocal_frame();
+    const aibaby::VocalParams& v = s.brain.voice();
+    // The ENVELOPE the ear would hear: amplitude gated by voicing, which is what
+    // an open-close alternation actually modulates.
+    const double a = (v.voicing > 0.5f ? 1.0 : 0.0) * double(v.amplitude);
+    env.push_back(a);
+    amp_sum += a;
+    if (a > 0.05) on += 1.0;
+  }
+  const size_t n = env.size();
+  if (n < 256) return row;
+  row.mean_amp = amp_sum / double(n);
+  row.duty = on / double(n);
+  // Remove the mean so the DC bin does not dominate, then a plain DFT over the
+  // band of interest. The frame rate is one sample per vocal frame.
+  double mean = row.mean_amp;
+  for (double& e : env) e -= mean;
+  // Vocal frames are emitted at a fixed divisor of the tick rate; derive the
+  // sample rate from the run rather than assuming it.
+  const double frames_per_sec = double(n) / (double(ticks - settle) / 1000.0);
+  std::vector<double> fr, pw;
+  for (double f = 0.5; f <= 20.0; f *= 1.06) {
+    const double w = 2.0 * 3.14159265358979 * f / frames_per_sec;
+    double re = 0.0, im = 0.0;
+    for (size_t i = 0; i < n; ++i) { re += env[i] * std::cos(w * double(i));
+                                     im += env[i] * std::sin(w * double(i)); }
+    const double p = (re * re + im * im) / double(n);
+    if (p > 0.0) { fr.push_back(f); pw.push_back(10.0 * std::log10(p)); }
+  }
+  if (fr.size() < 8) return row;
+  // Fit the APERIODIC component: log-power linear in log-frequency. A peak is what
+  // stands above that fit, which is the only way to tell a rhythm from 1/f.
+  double sx = 0, sy = 0, sxx = 0, sxy = 0;
+  for (size_t i = 0; i < fr.size(); ++i) {
+    const double x = std::log10(fr[i]);
+    sx += x; sy += pw[i]; sxx += x * x; sxy += x * pw[i];
+  }
+  const double nn = double(fr.size());
+  const double den = nn * sxx - sx * sx;
+  const double slope = den != 0.0 ? (nn * sxy - sx * sy) / den : 0.0;
+  const double icpt = (sy - slope * sx) / nn;
+  row.slope = slope;
+  double best = -1e9, best_f = 0.0;
+  for (size_t i = 0; i < fr.size(); ++i) {
+    if (fr[i] < 1.0 || fr[i] > 6.0) continue;       // the syllable band
+    const double resid = pw[i] - (slope * std::log10(fr[i]) + icpt);
+    if (resid > best) { best = resid; best_f = fr[i]; }
+  }
+  row.peak_db = best;
+  row.peak_hz = best_f;
+  row.ok = true;
+  return row;
+}
+
+bool run_babblerhythm(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  aibaby::Dna dna0;
+  if (dna0.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) {
+    std::printf("  setup failed: the genome does not load\n");
+    return false;
+  }
+  constexpr uint32_t kReps = 12;
+  instrument("babblerhythm", dna0.header().seed ^ 0xBABEu, ticks, "ticks");
+  const double gate_ms = double(dna0.header().vocal.gate_smoothing_ms);
+  const double sm_ms = double(dna0.header().vocal.smoothing_ms);
+  std::printf("  the reframe       every sequence attempt here has aimed at the FORMANT\n"
+              "                    path, which has tau %.0f ms and cannot carry a syllable\n"
+              "                    rate. The GLOTTIS has tau %.0f ms and can. Nobody has\n"
+              "                    looked at it.\n", sm_ms, gate_ms);
+  std::printf("  in the code       params_.amplitude = group_activity_[8] and voicing =\n"
+              "                    group_activity_[1] > threshold, both smoothed with the\n"
+              "                    FAST constant. Only the formant centroids are slow.\n");
+  std::printf("  the theory        MacNeilage's frame/content: the syllable is an open-close\n"
+              "                    alternation (the FRAME) and babbling is mostly frame with\n"
+              "                    little content under independent control. Frames first.\n"
+              "                    This creature is accidentally built that way round.\n");
+  std::printf("  what is asked     does the loudness ALREADY oscillate at a syllable rate?\n"
+              "                    `babble PASS -- duty cycle 0.50` says how often it is on\n"
+              "                    and nothing about how fast it alternates. A drone and a\n"
+              "                    babble both read 0.50.\n");
+  std::printf("\n  PRE-REGISTERED, with the expected magnitude derived BEFORE the threshold\n");
+  std::printf("    if it worked  clean on-off babbling is near-square, so its envelope\n"
+              "                  spectrum peaks >6 dB over the aperiodic trend. A smoothed\n"
+              "                  random walk -- the likely default -- is pure 1/f^a with a\n"
+              "                  residual of 0-1 dB anywhere.\n");
+  std::printf("    rhythm        peak >= 3 dB above the fitted 1/f trend, in 1-6 Hz, and\n"
+              "                  >= 3 SE. Three sits clear of the null and well under what a\n"
+              "                  real rhythm gives -- which is WHY it is 3.\n");
+  std::printf("    no rhythm     peak < 3 dB. The voice is amplitude-modulated only\n"
+              "                  aperiodically: there is no frame, and the frame is what\n"
+              "                  would have to be built first.\n");
+  std::printf("    suspicious    a peak above ~5 Hz. The gate cannot follow it, so that is\n"
+              "                  more likely a rendering artefact than a rhythm.\n\n");
+
+  const std::vector<BRRow> rows = parallel_reps<BRRow>(kReps, [&](uint32_t r) {
+    std::vector<uint8_t> variant = blob;
+    const uint64_t seed = dna0.header().seed + r * 7919ull;
+    std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+    BRRow row = run_babblerhythm_arm(variant, ticks);
+    if (row.ok)
+      parallel_note("  [%u/%u] seed %u peak %+.2f dB at %.2f Hz, 1/f slope %.2f, duty %.2f\n",
+                    r + 1, kReps, r, row.peak_db, row.peak_hz, row.slope, row.duty);
+    return row;
+  });
+
+  std::vector<double> pd, ph, sl, du, ma;
+  for (const BRRow& r : rows) {
+    if (!r.ok) continue;
+    pd.push_back(r.peak_db); ph.push_back(r.peak_hz); sl.push_back(r.slope);
+    du.push_back(r.duty); ma.push_back(r.mean_amp);
+  }
+  if (pd.size() < 3) {
+    std::printf("\n  babblerhythm INCONCLUSIVE -- %zu creatures produced a reading.\n", pd.size());
+    return false;
+  }
+  double s_pd = 0, s_ph = 0, s_sl = 0, s_du = 0, s_ma = 0;
+  const double m_pd = ctx_mean_se(pd, &s_pd);
+  const double m_ph = ctx_mean_se(ph, &s_ph);
+  const double m_sl = ctx_mean_se(sl, &s_sl);
+  const double m_du = ctx_mean_se(du, &s_du);
+  const double m_ma = ctx_mean_se(ma, &s_ma);
+  std::printf("\n  THE VOICE'S OWN ENVELOPE, free-running, %zu creatures\n", pd.size());
+  std::printf("    peak over 1/f   %+.2f +/- %.2f dB   <- THE PRIMARY\n", m_pd, s_pd);
+  std::printf("    at              %.2f +/- %.2f Hz\n", m_ph, s_ph);
+  std::printf("    1/f slope       %.2f +/- %.2f dB per decade\n", m_sl, s_sl);
+  std::printf("    duty cycle      %.3f +/- %.3f   (the number `babble` already reports)\n",
+              m_du, s_du);
+  std::printf("    mean amplitude  %.3f +/- %.3f\n", m_ma, s_ma);
+
+  const double t_pd = s_pd > 0.0 ? (m_pd - 3.0) / s_pd : 0.0;
+  std::printf("\n  --- the reading ---\n");
+  if (m_pd >= 3.0 && t_pd >= 0.0 && s_pd > 0.0 && m_pd / s_pd >= 3.0) {
+    std::printf("  THERE IS ALREADY A RHYTHM: %+.2f dB over the aperiodic trend at %.2f Hz.\n"
+                "  The voice is not droning, it is ALTERNATING, and at a rate the glottal\n"
+                "  gate can actually carry.\n", m_pd, m_ph);
+    std::printf("  THAT MOVES THE GOAL. The FRAME exists and only CONTENT is missing, which\n"
+                "  is the order MacNeilage says development takes. The sequence problem\n"
+                "  stops being 'build an oscillator' and becomes 'modulate what is already\n"
+                "  oscillating' -- a much smaller ask, and one the slow formant path may be\n"
+                "  able to meet at this rate even with 800 ms of inertia.\n");
+  } else {
+    std::printf("  NO FRAME: the peak is %+.2f +/- %.2f dB over the aperiodic trend, against\n"
+                "  the 3 dB a rhythm would need and the >6 dB a clean alternation gives.\n"
+                "  The envelope is 1/f with slope %.2f -- amplitude wanders, it does not\n"
+                "  alternate. Duty cycle %.3f is a drone, not a babble.\n",
+                m_pd, s_pd, m_sl, m_du);
+    std::printf("  AND THAT NAMES THE NEXT BUILD PRECISELY. The frame has to come from\n"
+                "  somewhere, and the glottal path is fast enough to carry one. Every\n"
+                "  oscillator this project has built (DNA v26) was aimed at LEARNING and\n"
+                "  refuted there. None was ever aimed at the VOICING GATE, which is the\n"
+                "  one target frame/content says matters.\n");
+  }
+  return m_pd >= 3.0 && s_pd > 0.0 && m_pd / s_pd >= 3.0;
+}
+
 bool run_movability(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
   (void)verbose;
   Regime regime;
