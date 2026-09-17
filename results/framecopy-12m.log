@@ -1,0 +1,38 @@
+experiment: framecopy
+  instrument        framecopy   trial seed 000000000135dbc9   1200000 ticks
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  question          `babblerhythm` showed the voice DRONES, so the frame has
+                    to come from somewhere. Can the creature catch one from
+                    its caregiver?
+  the caregiver     says ONE STEADY VOWEL switched on and off. No formant
+                    motion at all -- this is FRAME, not content, and it
+                    exercises the tau 60 ms glottal path rather than the
+                    tau 800 ms formant path.
+  the three arms    `silent` drones. `oracle` injects the rhythm straight
+                    into vocal groups 1 and 8, bypassing the brain, and so
+                    measures THE CHAIN'S CEILING. `heard` makes the brain do
+                    the work.
+  why the oracle    a flat `heard` ALONE cannot tell "the brain cannot lock"
+                    from "the chain cannot carry", and those have different
+                    next steps.
+
+  THE STATISTIC, designed against the failure that killed `babblerhythm`
+    that run fitted a 1/f trend across two decades and read the residual,
+    which planted a spurious peak at the filter's knee. Here the drive
+    frequency is KNOWN, so this is a LOCAL SNR: power at f over the mean of
+    side-bands at 0.60-0.85f and 1.15-1.40f. Both sit on the same part of the
+    1/f curve, the slope cancels, and NO trend is fitted. A drone reads ~1.0.
+
+  PRE-REGISTERED
+    null      `silent` must read SNR ~1.0. If it does not, the statistic is
+              picking up something structural and nothing else can be read.
+    ceiling   `oracle` says how far the CHAIN carries a frame. I calculated
+              ~2.7 Hz from tau 60 ms; this MEASURES it, including the voicing
+              threshold's hysteresis and the renderer, which the formula
+              ignores.
+    entrained `heard` SNR >= 2.0 and >= 3 SE over `silent`, at any f.
+    MEANINGLESS if `heard` merely reproduces `oracle`'s transfer curve --
+              same shape, same rolloff. That would be the FILTER again, not
+              the brain. Entrainment must look DIFFERENT from injection.
+

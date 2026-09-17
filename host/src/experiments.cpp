@@ -366,20 +366,27 @@ const Spec kSpecs[] = {
      "  The F1 arms are the noisy ones: per-seed SD ~1.63, so n=20 gives SE 0.365\\n"
      "  and n=60 gives ~0.21. Third independent seed family; do NOT pool with the\\n"
      "  two that generated the hypothesis. 60 seeds"},
-    {"bumpwalk", 1200000, Expect::kOpen, Tier::kFast,
+    {"bumpwalk", 1200000, Expect::kOpen, Tier::kTeach,
      "DOES THE F1 GROUP FORM A BUMP? A talking creature needs syllables and this\n"
      "  one holds a vowel. The articulator and the centroid both PASS syllable-rate\n"
      "  change (the genome's dwell sweep: F1 sd 70 Hz at a 120 ms dwell); nothing\n"
      "  upstream produces any. Null is ANALYTIC: a uniform group has positional SD\n"
      "  1/sqrt(12) = 0.2887. Run with vocal lateral_gain 0.0 and 0.020 and compare.\n"
      "  Stage 0 of the WLC/CPG route; refuses it cheaply if no bump forms. 12 seeds"},
-    {"babblerhythm", 1200000, Expect::kOpen, Tier::kFast,
+    {"babblerhythm", 1200000, Expect::kOpen, Tier::kTeach,
      "DOES THE VOICE ALREADY HAVE A SYLLABIC RHYTHM? Every sequence attempt here\n"
      "  aimed at the FORMANT path (tau 800 ms, cannot carry a syllable). The\n"
      "  GLOTTIS is tau 60 ms and can -- amplitude and voicing are both smoothed\n"
      "  with the FAST constant, only vowel identity is slow. MacNeilage: frames\n"
      "  before content. `duty cycle 0.50` says how OFTEN it is on, not how fast it\n"
      "  alternates; a drone and a babble both read 0.50. 12 seeds"},
+    {"framecopy", 1200000, Expect::kOpen, Tier::kTeach,
+     "CAN THE CREATURE CATCH A RHYTHM FROM ITS CAREGIVER? babblerhythm showed the\n"
+     "  voice DRONES, so the frame must come from somewhere. The caregiver says ONE\n"
+     "  STEADY VOWEL switched on and off -- frame, not content, on the tau 60 ms\n"
+     "  glottal path. An ORACLE arm injects the rhythm straight into the vocal\n"
+     "  groups to measure the chain ceiling, so a flat `heard` can be told from a\n"
+     "  chain that cannot carry one. Local-SNR statistic, no 1/f fit. 12 seeds"},
     {"movability", 5600000, Expect::kOpen, Tier::kLong,
      "orthovocab left a LEAD: on identical demands the F2 lesson travelled\n"
      "  0.169 and the F1 lesson 0.030 -- but F1's was FIGHTING another lesson on\n"
@@ -728,6 +735,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "axispower") ok = run_axispower(dna_blob, ticks, verbose);
   else if (name == "bumpwalk") ok = run_bumpwalk(dna_blob, ticks, verbose);
   else if (name == "babblerhythm") ok = run_babblerhythm(dna_blob, ticks, verbose);
+  else if (name == "framecopy") ok = run_framecopy(dna_blob, ticks, verbose);
   else if (name == "partprobe") ok = run_partprobe(dna_blob, ticks, verbose);
   else if (name == "pgprobe") ok = run_pgprobe(dna_blob, ticks, verbose);
   else if (name == "g2cond") ok = run_g2cond(dna_blob, ticks, verbose);

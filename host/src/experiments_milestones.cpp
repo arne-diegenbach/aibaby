@@ -11534,6 +11534,278 @@ bool run_babblerhythm(const std::vector<uint8_t>& blob, uint64_t ticks, bool ver
   return m_pd >= 3.0 && s_pd > 0.0 && m_pd / s_pd >= 3.0;
 }
 
+// `framecopy`, 2026-09-17. CAN THE CREATURE CATCH A RHYTHM FROM ITS CAREGIVER?
+//
+// `babblerhythm` established that the voice DRONES: duty cycle 0.58 with no
+// periodicity, once a gate sweep killed the apparent 10 dB peak as a straight-line
+// fit failing on the low-pass knee. So the FRAME does not exist and has to come
+// from somewhere.
+//
+// The frame is an amplitude alternation, not a formant movement -- MacNeilage's
+// frame/content, and this creature is built for it: `amplitude` and `voicing` are
+// smoothed at tau 60 ms while the formant centroids sit behind tau 800 ms. The
+// caregiver here therefore says ONE STEADY VOWEL, switched on and off. No formant
+// motion at all. Frame, not content.
+//
+// THREE ARMS, AND THE STRUCTURE IS THE POINT:
+//
+//   silent   nothing drives anything            -- the baseline, known to drone
+//   oracle   the rhythm is injected STRAIGHT into the vocal groups, bypassing the
+//            brain entirely -- this measures THE CHAIN'S CEILING
+//   heard    the caregiver pulses and the BRAIN has to do the work -- entrainment
+//
+// **The oracle arm is what makes `heard` interpretable.** A flat `heard` alone
+// cannot distinguish "the brain cannot lock to a rhythm" from "the chain cannot
+// carry one", and those have completely different next steps. Pricing a mechanism
+// with an oracle before building it is what `credit-oracle` and `ctxbias` did.
+//
+// THE STATISTIC, and it is designed against the failure that killed `babblerhythm`.
+// That run fitted a 1/f trend across two decades and read the residual, which put a
+// spurious peak at the filter's knee. Here the drive frequency is KNOWN, so the
+// measure is a LOCAL signal-to-noise ratio: power exactly at f, divided by the mean
+// power in side-bands just below and above f. Both numerator and denominator sit on
+// the same part of the 1/f curve, so the slope cancels and no trend has to be
+// fitted at all. A silent creature reads ~1.0 at every f by construction.
+//
+// WHAT WOULD MAKE A POSITIVE RESULT MEANINGLESS, pre-registered: if `heard` merely
+// reproduces `oracle`'s transfer curve -- same shape, same rolloff -- then what is
+// being measured is the filter again, not the brain. Entrainment has to look
+// DIFFERENT from injection, not identical to it.
+struct FCArm { const char* name; int mode; double hz; };   // mode 0 silent, 1 oracle, 2 heard
+const FCArm kFCArms[] = {
+    {"silent", 0, 0.0},
+    {"oracle-1", 1, 1.0}, {"oracle-2", 1, 2.0}, {"oracle-3", 1, 3.0}, {"oracle-4", 1, 4.0},
+    {"heard-1", 2, 1.0},  {"heard-2", 2, 2.0},  {"heard-3", 2, 3.0},  {"heard-4", 2, 4.0},
+};
+constexpr uint32_t kFCArmCount = sizeof(kFCArms) / sizeof(kFCArms[0]);
+constexpr double kFCInject = 0.35;   // drive amplitude for the oracle arm
+
+struct FCRow { bool ok = false; double snr = 0.0, depth = 0.0, duty = 0.0; };
+
+// Local SNR of a real signal at frequency f: power at f over the mean power in
+// side-bands at 0.6-0.85f and 1.15-1.4f. Slope-free by construction.
+static double fc_local_snr(const std::vector<double>& x, double f, double fs) {
+  const size_t n = x.size();
+  const auto power_at = [&](double fq) {
+    const double w = 2.0 * 3.14159265358979 * fq / fs;
+    double re = 0.0, im = 0.0;
+    for (size_t i = 0; i < n; ++i) { re += x[i] * std::cos(w * double(i));
+                                     im += x[i] * std::sin(w * double(i)); }
+    return (re * re + im * im) / double(n);
+  };
+  const double p = power_at(f);
+  double side = 0.0; uint32_t ns = 0;
+  for (double m = 0.60; m <= 0.86; m += 0.05) { side += power_at(f * m); ++ns; }
+  for (double m = 1.15; m <= 1.41; m += 0.05) { side += power_at(f * m); ++ns; }
+  if (ns == 0 || side <= 0.0) return 0.0;
+  return p / (side / double(ns));
+}
+
+FCRow run_framecopy_arm(const std::vector<uint8_t>& blob, uint64_t ticks, const FCArm& arm) {
+  FCRow row;
+  Session s;
+  std::string error;
+  if (!s.init(blob, error)) return row;
+  const aibaby::DnaAudio& acfg = s.dna.header().audio;
+  Ear ear;
+  if (!ear.configure(acfg, error)) return row;
+  VowelSource caregiver(acfg.sample_rate);
+  std::vector<float> pcm(acfg.sample_rate / 1000);
+  const uint32_t spt = acfg.sample_rate / 1000;
+  const Word& say = kWords[kRTHeard];
+
+  const int32_t vmi = s.dna.module_with_role(aibaby::ModuleRole::kVocal);
+  if (vmi < 0) return row;
+  const aibaby::ModuleState& vm = s.brain.network().module(uint32_t(vmi));
+  // Group 1 gates voicing and group 8 sets amplitude -- the two the frame lives in.
+  const uint32_t a_lo = aibaby::slice_begin(vm.count, aibaby::kVocalGroups, 8);
+  const uint32_t a_hi = aibaby::slice_begin(vm.count, aibaby::kVocalGroups, 9);
+  const uint32_t v_lo = aibaby::slice_begin(vm.count, aibaby::kVocalGroups, 1);
+  const uint32_t v_hi = aibaby::slice_begin(vm.count, aibaby::kVocalGroups, 2);
+
+  const uint64_t settle = ticks / 10;
+  std::vector<double> env;
+  env.reserve(size_t(ticks - settle));
+  uint64_t last_frame = 0;
+  double on = 0.0;
+  for (uint64_t t = 0; t < ticks; ++t) {
+    // The drive: a raised sinusoid at the arm's frequency, ticks are ms.
+    const double phase = 2.0 * 3.14159265358979 * arm.hz * double(t) / 1000.0;
+    const double drive = 0.5 * (1.0 + std::sin(phase));
+    if (arm.mode == 1) {
+      aibaby::Network& net = s.brain.network();
+      for (uint32_t n = a_lo; n < a_hi; ++n)
+        net.inject(vm.begin + n, aibaby::Scalar(kFCInject * drive));
+      for (uint32_t n = v_lo; n < v_hi; ++n)
+        net.inject(vm.begin + n, aibaby::Scalar(kFCInject * drive));
+    }
+    if (arm.mode == 2) {
+      // ONE STEADY VOWEL, switched on and off. No formant motion whatsoever.
+      caregiver.render(say.f0, say.f1, say.f2, float(0.6 * drive), pcm.data(), spt);
+    } else {
+      caregiver.render(0.0f, say.f1, say.f2, 0.0f, pcm.data(), spt);
+    }
+    ear.tick(s.brain, pcm.data(), spt);
+    s.brain.step();
+    if (t < settle) continue;
+    if (s.brain.vocal_frame() == last_frame) continue;
+    last_frame = s.brain.vocal_frame();
+    const aibaby::VocalParams& v = s.brain.voice();
+    const double a = (v.voicing > 0.5f ? 1.0 : 0.0) * double(v.amplitude);
+    env.push_back(a);
+    if (a > 0.05) on += 1.0;
+  }
+  const size_t n = env.size();
+  if (n < 512) return row;
+  row.duty = on / double(n);
+  double mean = 0.0;
+  for (double e : env) mean += e;
+  mean /= double(n);
+  double peak_lo = 1e9, peak_hi = -1e9;
+  for (double& e : env) { peak_lo = std::min(peak_lo, e); peak_hi = std::max(peak_hi, e); e -= mean; }
+  row.depth = peak_hi - peak_lo;
+  const double fs = double(n) / (double(ticks - settle) / 1000.0);
+  // A silent arm has no drive frequency of its own; score it at 2 Hz so the null
+  // is measured at the same place the real arms are, not at zero.
+  row.snr = fc_local_snr(env, arm.hz > 0.0 ? arm.hz : 2.0, fs);
+  row.ok = true;
+  return row;
+}
+
+bool run_framecopy(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  aibaby::Dna dna0;
+  if (dna0.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) {
+    std::printf("  setup failed: the genome does not load\n");
+    return false;
+  }
+  constexpr uint32_t kReps = 12;
+  instrument("framecopy", dna0.header().seed ^ 0xFC00u, ticks, "ticks");
+  std::printf("  question          `babblerhythm` showed the voice DRONES, so the frame has\n"
+              "                    to come from somewhere. Can the creature catch one from\n"
+              "                    its caregiver?\n");
+  std::printf("  the caregiver     says ONE STEADY VOWEL switched on and off. No formant\n"
+              "                    motion at all -- this is FRAME, not content, and it\n"
+              "                    exercises the tau 60 ms glottal path rather than the\n"
+              "                    tau 800 ms formant path.\n");
+  std::printf("  the three arms    `silent` drones. `oracle` injects the rhythm straight\n"
+              "                    into vocal groups 1 and 8, bypassing the brain, and so\n"
+              "                    measures THE CHAIN'S CEILING. `heard` makes the brain do\n"
+              "                    the work.\n");
+  std::printf("  why the oracle    a flat `heard` ALONE cannot tell \"the brain cannot lock\"\n"
+              "                    from \"the chain cannot carry\", and those have different\n"
+              "                    next steps.\n");
+  std::printf("\n  THE STATISTIC, designed against the failure that killed `babblerhythm`\n");
+  std::printf("    that run fitted a 1/f trend across two decades and read the residual,\n"
+              "    which planted a spurious peak at the filter's knee. Here the drive\n"
+              "    frequency is KNOWN, so this is a LOCAL SNR: power at f over the mean of\n"
+              "    side-bands at 0.60-0.85f and 1.15-1.40f. Both sit on the same part of the\n"
+              "    1/f curve, the slope cancels, and NO trend is fitted. A drone reads ~1.0.\n");
+  std::printf("\n  PRE-REGISTERED\n");
+  std::printf("    null      `silent` must read SNR ~1.0. If it does not, the statistic is\n"
+              "              picking up something structural and nothing else can be read.\n");
+  std::printf("    ceiling   `oracle` says how far the CHAIN carries a frame. I calculated\n"
+              "              ~2.7 Hz from tau 60 ms; this MEASURES it, including the voicing\n"
+              "              threshold's hysteresis and the renderer, which the formula\n"
+              "              ignores.\n");
+  std::printf("    entrained `heard` SNR >= 2.0 and >= 3 SE over `silent`, at any f.\n");
+  std::printf("    MEANINGLESS if `heard` merely reproduces `oracle`'s transfer curve --\n"
+              "              same shape, same rolloff. That would be the FILTER again, not\n"
+              "              the brain. Entrainment must look DIFFERENT from injection.\n\n");
+
+  struct Cell { bool ok = false; FCRow row; };
+  const uint32_t njobs = kReps * kFCArmCount;
+  const std::vector<Cell> cells = parallel_reps<Cell>(njobs, [&](uint32_t i) {
+    Cell c;
+    const uint32_t r = i / kFCArmCount, a = i % kFCArmCount;
+    std::vector<uint8_t> variant = blob;
+    const uint64_t seed = dna0.header().seed + r * 7919ull;
+    std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+    c.row = run_framecopy_arm(variant, ticks, kFCArms[a]);
+    c.ok = c.row.ok;
+    if (c.ok)
+      parallel_note("  [%u/%u] seed %u %-9s SNR %6.2f depth %.3f duty %.2f\n", i + 1, njobs, r,
+                    kFCArms[a].name, c.row.snr, c.row.depth, c.row.duty);
+    return c;
+  });
+
+  std::printf("\n  %-9s %-7s %-20s %-16s %s\n", "arm", "f Hz", "envelope SNR at f", "depth",
+              "duty");
+  double m_snr[kFCArmCount] = {}, s_snr[kFCArmCount] = {};
+  std::vector<std::vector<double>> per(kFCArmCount);
+  for (uint32_t a = 0; a < kFCArmCount; ++a) {
+    std::vector<double> sn, dp, du;
+    for (uint32_t r = 0; r < kReps; ++r) {
+      const Cell& c = cells[r * kFCArmCount + a];
+      if (!c.ok) continue;
+      sn.push_back(c.row.snr); dp.push_back(c.row.depth); du.push_back(c.row.duty);
+    }
+    if (sn.size() < 3) {
+      std::printf("\n  framecopy INCONCLUSIVE -- arm `%s` produced %zu creatures.\n",
+                  kFCArms[a].name, sn.size());
+      return false;
+    }
+    per[a] = sn;
+    double sd = 0, sdp = 0, sdu = 0;
+    m_snr[a] = ctx_mean_se(sn, &s_snr[a]);
+    const double m_dp = ctx_mean_se(dp, &sdp), m_du = ctx_mean_se(du, &sdu);
+    (void)sd;
+    std::printf("  %-9s %-7.1f %6.2f +/- %-12.2f %.3f +/- %-8.3f %.3f\n", kFCArms[a].name,
+                kFCArms[a].hz, m_snr[a], s_snr[a], m_dp, sdp, m_du);
+  }
+
+  const auto unpaired_t = [&](uint32_t x) {
+    const double d = m_snr[x] - m_snr[0];
+    const double se = std::sqrt(s_snr[x] * s_snr[x] + s_snr[0] * s_snr[0]);
+    return se > 0.0 ? d / se : 0.0;
+  };
+  std::printf("\n  AGAINST `silent`, in SE\n");
+  for (uint32_t a = 1; a < kFCArmCount; ++a)
+    std::printf("    %-9s %+.1f SE\n", kFCArms[a].name, unpaired_t(a));
+
+  std::printf("\n  --- the reading ---\n");
+  if (m_snr[0] > 1.6) {
+    std::printf("  framecopy REFUSED -- `silent` reads SNR %.2f where a drone must read ~1.0.\n"
+                "  The statistic is picking up something structural, so no other arm here\n"
+                "  can be read. Fix the measure before the mechanism.\n", m_snr[0]);
+    return false;
+  }
+  double best_h = 0.0; uint32_t best_hi = 0;
+  for (uint32_t a = 5; a < kFCArmCount; ++a)
+    if (m_snr[a] > best_h) { best_h = m_snr[a]; best_hi = a; }
+  double best_o = 0.0;
+  for (uint32_t a = 1; a <= 4; ++a) best_o = std::max(best_o, m_snr[a]);
+  const bool entrained = best_h >= 2.0 && unpaired_t(best_hi) >= 3.0;
+  std::printf("  chain ceiling   `oracle` peaks at SNR %.2f; carried to %s\n", best_o,
+              m_snr[4] >= 2.0 ? "4 Hz" : m_snr[3] >= 2.0 ? "3 Hz" : m_snr[2] >= 2.0 ? "2 Hz"
+                                                                                    : "1 Hz or less");
+  if (entrained) {
+    std::printf("  THE CREATURE CATCHES THE RHYTHM: `%s` reads SNR %.2f, %+.1f SE over a\n"
+                "  silent creature. Its own voice alternates at the rate its caregiver does,\n"
+                "  with no formant information in the signal at all.\n",
+                kFCArms[best_hi].name, best_h, unpaired_t(best_hi));
+    std::printf("  CHECK THE SHAPE BEFORE BELIEVING IT: if `heard` falls off with f exactly\n"
+                "  as `oracle` does, this is the filter and not the brain. Compare the two\n"
+                "  curves above -- they must differ.\n");
+  } else {
+    std::printf("  NO ENTRAINMENT: the best `heard` arm is %s at SNR %.2f (%+.1f SE). The\n"
+                "  caregiver's rhythm does not reach the voice.\n", kFCArms[best_hi].name,
+                best_h, unpaired_t(best_hi));
+    if (best_o >= 2.0)
+      std::printf("  AND THE ORACLE SEPARATES THE TWO EXPLANATIONS: the chain DOES carry a\n"
+                  "  frame when one is injected (SNR %.2f), so the failure is the BRAIN not\n"
+                  "  locking to a heard rhythm, not the voice being unable to alternate.\n"
+                  "  That makes an internal oscillator on the voicing gate the next build,\n"
+                  "  and it is the one target no oscillator here has ever had.\n", best_o);
+    else
+      std::printf("  AND THE ORACLE SAYS WHY: even INJECTED straight into the vocal groups a\n"
+                  "  rhythm does not reach the rendered voice (best SNR %.2f). The chain is\n"
+                  "  the blocker, so building an oscillator would have been wasted -- fix\n"
+                  "  the gate before building anything upstream of it.\n", best_o);
+  }
+  return entrained;
+}
+
 bool run_movability(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
   (void)verbose;
   Regime regime;
