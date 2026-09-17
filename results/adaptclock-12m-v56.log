@@ -1,0 +1,79 @@
+# adaptclock -- DOES A FATIGUE CURRENT MAKE THE LARYNX KEEP TIME? (DNA v56)
+# 2026-09-17. ./build/aibaby --experiment adaptclock --ticks 1200000, AIBABY_JOBS=8
+# 12 seeds x 8 arms = 96 jobs; seed family offset 911273 (FRESH)
+# gated on --experiment verify: determinism PASS, pinned hash ad96f882becbee92 PASS,
+#   22 experiments, 7.6 min. DNA v56 ships OFF and bit-identical.
+# vacuity checked BEFORE the run: adapt_jump 0.02/0.10/0.50 give three distinct
+#   hashes, so the mechanism is live rather than inert.
+# instrument + pre-registration committed at b25471b BEFORE this ran.
+#
+# VERDICT: REFUSED. A relaxation oscillator needs period proportional to tau_a
+# (exponent 1.0). Observed exponent is +0.104 on the three arms that kept their
+# voice and +0.226 on the widest non-void span. period/tau falls 3.13 -> 1.33
+# instead of holding constant, and the peak never leaves 3.0-3.9 Hz -- where the
+# pre-existing resonance already lives. This is that resonance being modulated.
+#
+# THE PRINTED VERDICT OVERCLAIMS AND IS CORRECTED IN THE WRITE-UP: only ONE of
+# the half-center's two ingredients was added. Matsuoka 1985 requires mutual
+# inhibition between two populations AND adaptation; v32's lateral kernel is
+# local-minus-field-mean, which is not reciprocal inhibition between two
+# populations. So this refutes 'adaptation alone suffices here' -- which is what
+# Matsuoka predicts anyway. The half-center itself remains UNTESTED.
+#
+# ALSO: corr printed as +0.493 includes tau333, a VOIDED arm (duty 0.16). On the
+# four arms with a voice it is +0.853, which passes the 0.80 bar -- the in-band
+# count and the exponent are what refuse it. Quote the exponent, not the corr.
+
+  arm     jump   tau    peak f (Hz)     peak SNR        band SNR      duty      rate
+  off     0.00   167     1.90 +/- 0.25    3.93 +/- 0.43     3.08 +/- 0.39  0.57       4.93   [predicted 1.50-2.99]
+  tau083  0.05   83      3.85 +/- 0.40    5.33 +/- 1.12     4.60 +/- 1.20  0.57       4.64   [predicted 3.01-6.02]
+  tau125  0.05   125     3.75 +/- 0.42    5.33 +/- 0.72     4.60 +/- 0.85  0.51       4.44   [predicted 2.00-4.00]
+  tau167  0.05   167     3.58 +/- 0.29    6.35 +/- 1.16     2.76 +/- 0.38  0.45       4.23   [predicted 1.50-2.99]
+  tau250  0.05   250     3.00 +/- 0.47    4.25 +/- 0.48     3.20 +/- 0.56  0.30       3.67   [predicted 1.00-2.00]
+  tau333  0.05   333     3.79 +/- 0.40    3.70 +/- 0.26     1.99 +/- 0.24  0.16       3.05   [predicted 0.75-1.50]
+  jump15  0.15   167     2.96 +/- 0.35    4.58 +/- 0.74     3.31 +/- 0.80  0.06       2.76   [predicted 1.50-2.99]
+  jump30  0.30   167     2.85 +/- 0.47    4.38 +/- 0.66     2.81 +/- 0.28  0.01       2.14   [predicted 1.50-2.99]
+
+  KILL SWITCH -- did the current simply mute the voice?
+    tau083  duty 0.57 vs off 0.57 (-0.006)
+    tau125  duty 0.51 vs off 0.57 (-0.067)
+    tau167  duty 0.45 vs off 0.57 (-0.126)
+    tau250  duty 0.30 vs off 0.57 (-0.272)
+    tau333  duty 0.16 vs off 0.57 (-0.417)   <- VOID, denominator collapsed
+    jump15  duty 0.06 vs off 0.57 (-0.518)   <- VOID, denominator collapsed
+    jump30  duty 0.01 vs off 0.57 (-0.567)   <- VOID, denominator collapsed
+
+  PRIMARY -- does the peak frequency MOVE with tau_a?
+    tau  83 ms  peak 3.85 Hz  predicted 3.01-6.02  IN BAND
+    tau 125 ms  peak 3.75 Hz  predicted 2.00-4.00  IN BAND
+    tau 167 ms  peak 3.58 Hz  predicted 1.50-2.99  outside
+    tau 250 ms  peak 3.00 Hz  predicted 1.00-2.00  outside
+    tau 333 ms  peak 3.79 Hz  predicted 0.75-1.50  outside
+    corr(1/tau, peak f) = +0.495 over 5 arms, and 2 of 5 peaks land inside
+    their own predicted band.
+
+  HEIGHT -- peak SNR against the OFF arm's peak over the same 22 bins
+    tau083  +1.40 over `off`  (+1.2 SE)
+    tau125  +1.41 over `off`  (+1.7 SE)
+    tau167  +2.42 over `off`  (+2.0 SE)
+    tau250  +0.32 over `off`  (+0.5 SE)
+    tau333  -0.23 over `off`  (-0.4 SE)
+    jump15  +0.65 over `off`  (+0.8 SE)
+    jump30  +0.46 over `off`  (+0.6 SE)
+
+  --- the reading ---
+  AT LEAST ONE ARM IS VOID: duty fell below half the OFF baseline, so its
+  SNR is inflated by a collapsing denominator rather than by rhythm. Read
+  only the arms that kept their voice.
+  A FATIGUE CURRENT DOES NOT BUILD A CLOCK HERE. corr(1/tau, peak f) =
+  +0.495, 2 of 5 peaks in band, best height +2.0 SE over OFF.
+  THAT REFUTES THE SYLLABLE-BAND ACCOUNT IN ITS STRONG FORM: the missing
+  rung was added at the derived constant and the voice still does not
+  alternate. Mutual inhibition plus fatigue is the textbook half-center and
+  it is now been tried, so what is missing is not a state variable but the
+  ARCHITECTURE the two are wired into -- v32's lateral kernel is
+  local-minus-field-mean, which is not reciprocal inhibition between two
+  populations. The next build is the WIRING, not another dial.
+ADAPTCLOCK_EXIT=1
+
+[exited with code 0]

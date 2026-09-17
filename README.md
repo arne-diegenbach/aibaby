@@ -11708,3 +11708,78 @@ one, so **a driver cannot be borrowed from the caregiver and the generator has t
 be built** — which is what the empty syllable band says is missing, arrived at by
 a completely independent route. The sequence problem is internal. That is a
 refusal, not a null.
+
+### Fatigue is not a clock — but only half the hypothesis was built
+
+The timescale audit named a missing state variable, so we built it: DNA v56, a
+spike-triggered adaptation current on the larynx. It ships off and bit-identical —
+hash `ad96f882becbee92`, re-checked after every edit — and the vacuity check ran
+*before* the experiment rather than after, since three distinct hashes at
+`adapt_jump` 0.02, 0.10 and 0.50 are what distinguish a live mechanism from an
+inert one. Forgetting to widen `required_bytes` from 19 to 20 Scalars per neuron
+surfaced immediately as `brain init failed (2)`, which is the right way for that
+mistake to arrive.
+
+`adaptclock` then measured a **free-running** creature — no caregiver at any
+point, because a kicked rhythm was already known to die with its driver. With no
+drive there is no drive frequency, so every frequency scores from one run, which
+freed the arms for `tau_a` itself.
+
+| arm | jump | tau | peak f | peak SNR | duty | rate |
+| --- | --- | --- | --- | --- | --- | --- |
+| off | 0.00 | 167 | 1.90 ± 0.25 | 3.93 ± 0.43 | 0.57 | 4.93 |
+| tau083 | 0.05 | 83 | 3.85 ± 0.40 | 5.33 ± 1.12 | 0.57 | 4.64 |
+| tau125 | 0.05 | 125 | 3.75 ± 0.42 | 5.33 ± 0.72 | 0.51 | 4.44 |
+| tau167 | 0.05 | 167 | 3.58 ± 0.29 | 6.35 ± 1.16 | 0.45 | 4.23 |
+| tau250 | 0.05 | 250 | 3.00 ± 0.47 | 4.25 ± 0.48 | 0.30 | 3.67 |
+| tau333 | 0.05 | 333 | 3.79 ± 0.40 | 3.70 ± 0.26 | **0.16** | 3.05 |
+| jump15 | 0.15 | 167 | 2.96 ± 0.35 | 4.58 ± 0.74 | **0.06** | 2.76 |
+| jump30 | 0.30 | 167 | 2.85 ± 0.47 | 4.38 ± 0.66 | **0.01** | 2.14 |
+
+**The kill switch fired on three arms.** Duty falls monotonically 0.57 → 0.01 and
+vocal rate 4.93 → 2.14 Hz, so the current is first and foremost a mute dial —
+a considerably stronger one than `self_gain`, which spans only 0.58 → 0.51.
+Intrinsic plasticity never compensated, which is what a gain of 3×10⁻⁴ predicts.
+
+**The refusal rests on an exponent, not a correlation.** A relaxation oscillator
+requires period *proportional* to its adaptation constant, so `period/tau` should
+be flat. Instead it falls from 3.13 to 1.33 across the sweep, and on the three arms
+that kept their voice, doubling `tau_a` moves the peak by 7% — an exponent of
+**+0.104** against a required **1.000**. The peak never leaves 3.0–3.9 Hz, which is
+exactly where the pre-existing resonance already sits. This is that resonance being
+modulated, and it is the precise failure the run was pre-registered against.
+
+There is a gate caution in here worth more than the result. The experiment printed
+`corr(1/tau, peak f) = +0.493` computed over all five `tau` arms — including the
+one whose duty had collapsed to 0.16. On the four arms that kept a voice the
+correlation is **+0.853, which passes the pre-registered 0.80 bar.** It was refused
+by the in-band count and then decisively by the exponent. So: compute the primary
+over the arms the kill switch left alive, and prefer a statistic with a predicted
+*value* over one with only a predicted *sign*. A correlation can pass on four
+points while the slope is ten times too shallow.
+
+And one null fell out by accident that will be useful repeatedly: the off arm's
+peak is 3.93 ± 0.43, and that is an **argmax over 22 bins**. A raw local-SNR near 4
+is unremarkable once a maximum has been taken, so any future argmax over this grid
+must be compared against ~3.9 rather than against 1.0. The earlier 3 Hz result is
+unaffected — it scored a pre-specified frequency against a matched silent control,
+not an argmax.
+
+**Now the correction, and it matters more than the numbers.** The experiment's own
+closing text claims that mutual inhibition plus fatigue is the textbook half-center
+and has now been tried. That is wrong, and the earlier chapter here stated the
+reason without acting on it: **only fatigue was added.** Matsuoka's 1985 result is
+that mutual inhibition *alone* settles into a winner and that adaptation is the
+ingredient which makes it oscillate — you need both, wired as two mutually
+inhibiting populations. The lateral kernel on this larynx is local-minus-field-mean,
+a bump kernel, not reciprocal inhibition between two populations. So what this run
+refutes is *adaptation alone suffices here*, which is what the theory predicts
+should fail.
+
+The empty-syllable-band account therefore splits. Its weak form is untouched and
+isn't really in doubt: the rung genuinely is missing, and that is a fact about the
+code rather than an inference. Its strong form — add the rung at the derived
+constant and a clock appears — is refuted. **The half-center itself remains
+untested**, and the next build is the wiring rather than another dial: two vocal
+sub-populations with reciprocal inhibition between them, with the v56 current
+already in place to release whichever one is winning.
