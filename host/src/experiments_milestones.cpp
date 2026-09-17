@@ -11847,7 +11847,23 @@ const FHArm kFHArms[] = {
     {"heard-3", true, 3.0},   {"heard-4", true, 4.0},
 };
 constexpr uint32_t kFHArmCount = sizeof(kFHArms) / sizeof(kFHArms[0]);
-constexpr uint64_t kFHBlockMs = 4000;   // 4 s drive, then 4 s hold
+constexpr uint64_t kFHDriveMs = 4000;   // 4 s drive
+// HOLD LENGTHS VARY, and this is the whole correction. v1 held for a fixed 4 s, so
+// the concatenated holds repeated at 0.25 Hz and EVERY drive frequency tested
+// (1, 2, 3, 4 Hz) was an exact harmonic of that. The single offset transient --
+// the step when the caregiver stops -- therefore deposited power at precisely the
+// frequency being measured, with no rhythm required, and it sits at the START of
+// the hold which is exactly where v1's effect lived.
+//
+// The bitter part: the phase-tiling I was careful about CAUSED this. Making each f
+// tile the block in whole cycles is what made f a harmonic of the block rate.
+//
+// With the hold length cycling through these, offset transients land at varying
+// positions and sum INCOHERENTLY at f, while a ring-out that inherits the drive's
+// phase still sums coherently -- provided the phase reference is absolute time,
+// which is the second half of the fix below.
+const uint64_t kFHHoldMs[] = {3000, 4500, 3500, 5000, 4000};
+constexpr uint32_t kFHHoldCount = sizeof(kFHHoldMs) / sizeof(kFHHoldMs[0]);
 
 struct FHRow {
   bool ok = false;
@@ -11855,18 +11871,23 @@ struct FHRow {
   double duty_drive = 0.0, duty_hold = 0.0;
 };
 
-static double fh_snr(const std::vector<double>& x, double f, double fs) {
+// Phase reference is ABSOLUTE TIME (the tick each sample was taken at), not the
+// sample's index in the concatenated vector. A ring-out inherits the drive's phase
+// and so stays coherent across segments; a transient at a varying offset does not.
+static double fh_snr(const std::vector<double>& x, const std::vector<double>& tms, double f,
+                     double fs) {
+  (void)fs;
   const size_t n = x.size();
   if (n < 64) return 0.0;
   double mean = 0.0;
   for (double v : x) mean += v;
   mean /= double(n);
   const auto pw = [&](double fq) {
-    const double w = 2.0 * 3.14159265358979 * fq / fs;
     double re = 0.0, im = 0.0;
     for (size_t i = 0; i < n; ++i) {
       const double v = x[i] - mean;
-      re += v * std::cos(w * double(i)); im += v * std::sin(w * double(i));
+      const double w = 2.0 * 3.14159265358979 * fq * tms[i] / 1000.0;
+      re += v * std::cos(w); im += v * std::sin(w);
     }
     return (re * re + im * im) / double(n);
   };
@@ -11893,12 +11914,20 @@ FHRow run_framehold_arm(const std::vector<uint8_t>& blob, uint64_t ticks, const 
 
   const uint64_t settle = ticks / 10;
   std::vector<double> e_drive, e_hold, e_early, e_late;
+  std::vector<double> t_drive, t_hold, t_early, t_late;
   uint64_t last_frame = 0;
   double on_d = 0, n_d = 0, on_h = 0, n_h = 0;
+  // Walk the varying drive/hold schedule rather than a fixed modulus.
+  uint64_t cycle_start = 0, hold_idx = 0;
   for (uint64_t t = 0; t < ticks; ++t) {
-    const uint64_t pos = t % (2 * kFHBlockMs);
-    const bool driving = pos < kFHBlockMs;
-    const uint64_t into_hold = driving ? 0 : pos - kFHBlockMs;
+    uint64_t hold_ms = kFHHoldMs[hold_idx % kFHHoldCount];
+    if (t >= cycle_start + kFHDriveMs + hold_ms) {
+      cycle_start = t; ++hold_idx;
+      hold_ms = kFHHoldMs[hold_idx % kFHHoldCount];
+    }
+    const uint64_t pos = t - cycle_start;
+    const bool driving = pos < kFHDriveMs;
+    const uint64_t into_hold = driving ? 0 : pos - kFHDriveMs;
     const double phase = 2.0 * 3.14159265358979 * arm.hz * double(t) / 1000.0;
     const double drive = 0.5 * (1.0 + std::sin(phase));
     if (arm.hear && driving) {
@@ -11913,19 +11942,21 @@ FHRow run_framehold_arm(const std::vector<uint8_t>& blob, uint64_t ticks, const 
     last_frame = s.brain.vocal_frame();
     const aibaby::VocalParams& v = s.brain.voice();
     const double a = (v.voicing > 0.5f ? 1.0 : 0.0) * double(v.amplitude);
-    if (driving) { e_drive.push_back(a); n_d += 1; if (a > 0.05) on_d += 1; }
+    const double tm = double(t);
+    if (driving) { e_drive.push_back(a); t_drive.push_back(tm); n_d += 1; if (a > 0.05) on_d += 1; }
     else {
-      e_hold.push_back(a); n_h += 1; if (a > 0.05) on_h += 1;
-      if (into_hold < kFHBlockMs / 2) e_early.push_back(a); else e_late.push_back(a);
+      e_hold.push_back(a); t_hold.push_back(tm); n_h += 1; if (a > 0.05) on_h += 1;
+      if (into_hold < hold_ms / 2) { e_early.push_back(a); t_early.push_back(tm); }
+      else { e_late.push_back(a); t_late.push_back(tm); }
     }
   }
   if (e_hold.size() < 256 || e_drive.size() < 256) return row;
   // Frames per second, derived from the run rather than assumed.
   const double fs = double(e_drive.size() + e_hold.size()) / (double(ticks - settle) / 1000.0);
-  row.snr_drive = fh_snr(e_drive, arm.hz, fs);
-  row.snr_hold = fh_snr(e_hold, arm.hz, fs);
-  row.snr_early = fh_snr(e_early, arm.hz, fs);
-  row.snr_late = fh_snr(e_late, arm.hz, fs);
+  row.snr_drive = fh_snr(e_drive, t_drive, arm.hz, fs);
+  row.snr_hold = fh_snr(e_hold, t_hold, arm.hz, fs);
+  row.snr_early = fh_snr(e_early, t_early, arm.hz, fs);
+  row.snr_late = fh_snr(e_late, t_late, arm.hz, fs);
   row.duty_drive = n_d > 0 ? on_d / n_d : 0.0;
   row.duty_hold = n_h > 0 ? on_h / n_h : 0.0;
   row.ok = true;
@@ -11952,9 +11983,14 @@ bool run_framehold(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
               "                    pass-through: a reflex dies with its driver, an internal\n"
               "                    beat rings on. Pulse 4 s, then SILENCE 4 s, and measure the\n"
               "                    f-component DURING THE SILENCE.\n");
-  std::printf("  phase is kept     every f tiles the 4 s block in whole cycles (4, 8, 12, 16),\n"
-              "                    so concatenated hold segments do not smear. A fractional\n"
-              "                    cycle would manufacture a null.\n");
+  std::printf("  v1 WAS CONFOUNDED and this is the fix. Fixed 4 s holds repeat at 0.25 Hz,\n"
+              "    and every f tested is an exact harmonic of that -- so the single offset\n"
+              "    transient deposited power at precisely the measured frequency, with no\n"
+              "    rhythm required, right where v1's effect sat. The phase-tiling I was\n"
+              "    careful about is what CAUSED it.\n");
+  std::printf("  the correction    hold lengths now VARY (3.0/4.5/3.5/5.0/4.0 s) so transients\n"
+              "                    land incoherently, and the phase reference is ABSOLUTE\n"
+              "                    TIME so a ring-out inheriting the drive's phase still sums.\n");
   std::printf("  not fakeable by   a slowly decaying inhibition returns the voice SMOOTHLY to\n"
               "  a slow leak       baseline, which is broadband. Only continued ALTERNATION\n"
               "                    puts power at f.\n");

@@ -13,9 +13,14 @@ experiment: framehold
                     pass-through: a reflex dies with its driver, an internal
                     beat rings on. Pulse 4 s, then SILENCE 4 s, and measure the
                     f-component DURING THE SILENCE.
-  phase is kept     every f tiles the 4 s block in whole cycles (4, 8, 12, 16),
-                    so concatenated hold segments do not smear. A fractional
-                    cycle would manufacture a null.
+  v1 WAS CONFOUNDED and this is the fix. Fixed 4 s holds repeat at 0.25 Hz,
+    and every f tested is an exact harmonic of that -- so the single offset
+    transient deposited power at precisely the measured frequency, with no
+    rhythm required, right where v1's effect sat. The phase-tiling I was
+    careful about is what CAUSED it.
+  the correction    hold lengths now VARY (3.0/4.5/3.5/5.0/4.0 s) so transients
+                    land incoherently, and the phase reference is ABSOLUTE
+                    TIME so a ring-out inheriting the drive's phase still sums.
   not fakeable by   a slowly decaying inhibition returns the voice SMOOTHLY to
   a slow leak       baseline, which is broadband. Only continued ALTERNATION
                     puts power at f.
