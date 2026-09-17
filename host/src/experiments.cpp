@@ -366,6 +366,13 @@ const Spec kSpecs[] = {
      "  The F1 arms are the noisy ones: per-seed SD ~1.63, so n=20 gives SE 0.365\\n"
      "  and n=60 gives ~0.21. Third independent seed family; do NOT pool with the\\n"
      "  two that generated the hypothesis. 60 seeds"},
+    {"bumpwalk", 1200000, Expect::kOpen, Tier::kFast,
+     "DOES THE F1 GROUP FORM A BUMP? A talking creature needs syllables and this\n"
+     "  one holds a vowel. The articulator and the centroid both PASS syllable-rate\n"
+     "  change (the genome's dwell sweep: F1 sd 70 Hz at a 120 ms dwell); nothing\n"
+     "  upstream produces any. Null is ANALYTIC: a uniform group has positional SD\n"
+     "  1/sqrt(12) = 0.2887. Run with vocal lateral_gain 0.0 and 0.020 and compare.\n"
+     "  Stage 0 of the WLC/CPG route; refuses it cheaply if no bump forms. 12 seeds"},
     {"movability", 5600000, Expect::kOpen, Tier::kLong,
      "orthovocab left a LEAD: on identical demands the F2 lesson travelled\n"
      "  0.169 and the F1 lesson 0.030 -- but F1's was FIGHTING another lesson on\n"
@@ -712,6 +719,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "axiscollide") ok = run_axiscollide(dna_blob, ticks, verbose);
   else if (name == "axisfree") ok = run_axisfree(dna_blob, ticks, verbose);
   else if (name == "axispower") ok = run_axispower(dna_blob, ticks, verbose);
+  else if (name == "bumpwalk") ok = run_bumpwalk(dna_blob, ticks, verbose);
   else if (name == "partprobe") ok = run_partprobe(dna_blob, ticks, verbose);
   else if (name == "pgprobe") ok = run_pgprobe(dna_blob, ticks, verbose);
   else if (name == "g2cond") ok = run_g2cond(dna_blob, ticks, verbose);

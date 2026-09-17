@@ -11254,3 +11254,76 @@ has no history and nothing recovers it if it is overwritten.
 
 **So: any claim that matters belongs in the README or in a run log, not only in
 memory.** That is why the scientific content of each chapter is duplicated here.
+
+### The creature cannot hand a packet, and has never heard a glide (2026-09-17)
+
+Two results aimed at the thing that makes this a vowel-holding creature rather
+than a talking one.
+
+#### The CPG route is refused at stage 0
+
+Armstrong & Abarbanel model songbird HVC as **winnerless competition** rather than
+a synfire chain — rate-coded, oscillatory sequences instead of precise spike
+timing. That mattered here because `chain-trigger` had already diagnosed why
+synfire failed: chains propagate synchrony, and every pathway in this creature is
+rate-coded. So we built the wrong mechanism for our substrate.
+
+Winnerless competition hands a *localised packet* between ensembles. `bumpwalk`
+asked whether this creature can form one, using lag-1 spatial autocorrelation of
+the F1 rate profile — distribution-free, unlike anything scored against a uniform
+null:
+
+| vocal lateral | width | lag-1 autocorrelation |
+| --- | --- | --- |
+| gain 0.000 | — | **−0.0708** (−54.6 SE) |
+| gain 0.020, σ 0.10 | 1.4 neurons | **+0.1361** (+62.8 SE) |
+| gain 0.020, σ 0.25 | 3.5 neurons | +0.0910 (+49.1 SE) |
+| gain 0.020, σ 0.45 | 6.3 neurons | +0.0320 (+20.4 SE) |
+
+Lateral competition genuinely flips the group from **anti-correlated to
+correlated** — without it, neighbours form a checkerboard, which is what
+competition without cooperation gives. But coherence **peaks at the narrowest
+kernel and falls as it widens**, which is backwards for a bump, and the reason is
+the kernel's own algebra: it computes *local excitation minus the field mean*, so
+as the neighbourhood approaches the field the difference self-cancels. **A wide
+coherent packet is not something this kernel failed to make by a margin — it is
+something it cannot make by construction.**
+
+Scope, so it isn't over-read: tested at gain 0.020 across a 4.5× range of width.
+Gain wasn't swept jointly, but v32's own numbers cap the affordable range (0.035
+fails G2, 0.045 makes babble drone), and the algebra above doesn't depend on gain.
+
+#### And the instrument was wrong twice before it was right
+
+The first version scored positional SD against an **analytic** uniform null of
+1/√12 and read 79.6 SE below it — which looks decisive and is worthless, because
+that null assumes every neuron fires at the same rate. They don't, so the gap
+measured rate heterogeneity rather than spatial structure. The replacement then
+carried a hard bar of 0.20 that the data missed at 0.136 while sitting +62.8 SE
+from zero, and the verdict prose asserted "no more alike than distant ones" about
+data showing the opposite.
+
+The bar was picked with no model of the kernel producing the number — vocal's σ is
+0.10, about 1.4 neurons of a 14-neuron group, and a packet that narrow *cannot*
+give high lag-1 autocorrelation. The rule that would have caught it: **state what
+the number would be if the mechanism worked, from the mechanism's own parameters,
+before choosing a threshold.**
+
+#### The finding that outranks both: it has never heard a glide
+
+```
+struct Word { float f0, f1, f2; };
+```
+
+A word in this project is three numbers. **A trajectory is not representable**, and
+every caregiver render passes those constants for the full 900-tick word — no
+render argument anywhere depends on the tick. Nothing this creature has ever heard
+has changed while sounding.
+
+This project has spent a long line of work asking whether the brain can *generate*
+a sequence. It has never asked whether it can *follow* one, because it has never
+presented one — while `M1b` is met at 0.890, so the ear-to-voice route demonstrably
+carries content. It has only ever been asked to carry a constant.
+
+**The creature is not failing to talk. It has never been asked to say anything that
+takes time.**

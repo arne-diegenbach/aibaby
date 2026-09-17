@@ -11073,6 +11073,250 @@ bool run_axispower(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
   return true;
 }
 
+// `bumpwalk` stage 0, 2026-09-17. DOES THE F1 GROUP FORM A BUMP AT ALL?
+//
+// A talking creature needs syllables, and this one has none: [[aibaby-no-sequence]]
+// found an utterance is a HELD VOWEL. The chain is generator -> centroid ->
+// articulator, and only the first link is missing:
+//
+//   the articulator PASSES syllable-rate change. The genome's own dwell sweep
+//   records F1 sd 70 Hz at a 120 ms dwell against 119 Hz at 800 ms, and v32 cuts
+//   the 800 ms inertia's attenuation of F1 from 4.2x to 1.6x. So smoothing_ms is
+//   not the wall it looks like.
+//   the centroid PASSES a moving hump, because a rate-weighted mean over position
+//   follows the hump. What it cannot pass is a pattern that alternates
+//   symmetrically about the centre, which averages back to the middle.
+//
+// So the question is whether anything makes the group's activity MOVE. And before
+// asking that, the prior question this stage answers: **is there a localised bump
+// to move at all?** v32's lateral competition is a symmetric centre-surround, which
+// produces a STABLE bump -- exactly a held vowel -- and the genome already reserves
+// `lateral_fields = 9` for vocal, "one competitive field per motor group", with
+// `lateral_gain` at 0.0. Stage 0 turns only that on.
+//
+// STAGE 1, ONLY IF THIS PASSES: make the bump travel, either by asymmetry in the
+// kernel (Armstrong & Abarbanel's winnerless competition, in continuous form) or
+// by adaptation -- and note this creature's intrinsic plasticity IS a slow
+// threshold adaptation, so the mechanism that compresses learning is the same one
+// that could make a bump walk, at a different time constant.
+//
+// WHAT THIS MEASURES, on a FREE-RUNNING creature with no teaching:
+//   spread   the rate-weighted SD of position across the F1 group. A UNIFORM group
+//            gives 1/sqrt(12) = 0.2887 exactly -- an analytic null, not a fitted
+//            one. A bump gives less. This is the whole test.
+//   peak     max rate over mean rate. Flat = 1.0. Reported beside `spread` because
+//            a group can concentrate without being contiguous, and only `spread`
+//            can tell those apart.
+//   drift    mean |change in centroid| per 100 ms, which says whether whatever
+//            forms is parked or wandering. Descriptive at this stage; it is
+//            Stage 1's primary.
+//
+// THE COST IS REPORTED, NOT HIDDEN: v32 at 0.020 is measured to take G2's rate to
+// +0.507x from +0.777x and 6/9 from 7/9. This is not a free switch, and a bump
+// that costs the conditioning milestone is a finding about a trade, not a win.
+struct BWRow {
+  bool ok = false;
+  double spread = 0.0, peak = 0.0, drift = 0.0, mean_rate = 0.0;
+  // THE PRIMARY, and it replaces `spread` as of the first run's own result.
+  // `spread` was scored against an analytic uniform null of 1/sqrt(12), which
+  // assumes every neuron fires at the SAME rate. They do not -- heterogeneous
+  // thresholds give a spread of mean rates -- so a deviation from 0.2887 measures
+  // RATE heterogeneity and not spatial structure. The first run read 79.6 SE below
+  // that null with a peak/mean of 4.44 and a spread of 0.2602, which is one hot
+  // neuron on a BROAD pedestal: spiky, not contiguous. Winnerless competition
+  // needs a contiguous packet, so contiguity is what has to be measured.
+  //
+  // Lag-1 spatial autocorrelation of the rate profile is distribution-free: it is
+  // ~0 for any arrangement of rates that is not spatially ordered, however uneven
+  // those rates are, and strongly positive for a bump.
+  double autocorr = 0.0;
+  uint32_t n = 0;
+};
+
+BWRow run_bumpwalk_arm(const std::vector<uint8_t>& blob, uint64_t ticks) {
+  BWRow row;
+  Session s;
+  std::string err;
+  if (!s.init(blob, err)) return row;
+  const int32_t vmi = s.dna.module_with_role(aibaby::ModuleRole::kVocal);
+  if (vmi < 0) return row;
+  const aibaby::ModuleState& vm = s.brain.network().module(uint32_t(vmi));
+  const uint32_t g_lo = aibaby::slice_begin(vm.count, aibaby::kVocalGroups, 2);
+  const uint32_t g_hi = aibaby::slice_begin(vm.count, aibaby::kVocalGroups, 3);
+  const uint32_t gn = g_hi - g_lo;
+  if (gn < 4) return row;
+
+  // Free-running: no caregiver, no reward, no teaching. Whatever the group does
+  // here it does on its own, which is the only condition in which "it forms a
+  // bump" means anything.
+  const uint64_t settle = ticks / 10;
+  double sum_spread = 0.0, sum_peak = 0.0, sum_rate = 0.0, sum_drift = 0.0, sum_ac = 0.0;
+  uint64_t nsamp = 0, ndrift = 0;
+  double last_cent = -1.0;
+  uint64_t last_cent_tick = 0;
+  for (uint64_t t = 0; t < ticks; ++t) {
+    s.brain.step();
+    if (t < settle) continue;
+    const aibaby::Network& net = s.brain.network();
+    double wsum = 0.0, psum = 0.0, p2sum = 0.0, mx = 0.0;
+    for (uint32_t k = 0; k < gn; ++k) {
+      const double r = double(net.rate_fast(vm.begin + g_lo + k));
+      const double p = (double(k) + 0.5) / double(gn);
+      wsum += r; psum += r * p; p2sum += r * p * p;
+      if (r > mx) mx = r;
+    }
+    if (wsum <= 1e-6) continue;
+    // Lag-1 spatial autocorrelation across the group, this tick.
+    {
+      const double mean = wsum / double(gn);
+      double num = 0.0, den = 0.0;
+      for (uint32_t k = 0; k < gn; ++k) {
+        const double a = double(net.rate_fast(vm.begin + g_lo + k)) - mean;
+        den += a * a;
+        if (k + 1 < gn) {
+          const double b = double(net.rate_fast(vm.begin + g_lo + k + 1)) - mean;
+          num += a * b;
+        }
+      }
+      if (den > 1e-9) sum_ac += num / den;
+    }
+    const double cent = psum / wsum;
+    const double var = p2sum / wsum - cent * cent;
+    sum_spread += var > 0.0 ? std::sqrt(var) : 0.0;
+    sum_peak += mx / (wsum / double(gn));
+    sum_rate += wsum / double(gn);
+    ++nsamp;
+    // 100 ms at 1 kHz. Sampled on a fixed grid so the number means the same thing
+    // whatever the tick rate does elsewhere.
+    if (last_cent >= 0.0 && t - last_cent_tick >= 100) {
+      sum_drift += std::fabs(cent - last_cent);
+      ++ndrift;
+      last_cent = cent; last_cent_tick = t;
+    } else if (last_cent < 0.0) {
+      last_cent = cent; last_cent_tick = t;
+    }
+  }
+  if (nsamp == 0) return row;
+  row.spread = sum_spread / double(nsamp);
+  row.autocorr = sum_ac / double(nsamp);
+  row.peak = sum_peak / double(nsamp);
+  row.mean_rate = sum_rate / double(nsamp);
+  row.drift = ndrift ? sum_drift / double(ndrift) : 0.0;
+  row.n = gn;
+  row.ok = true;
+  return row;
+}
+
+bool run_bumpwalk(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  aibaby::Dna dna0;
+  if (dna0.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) {
+    std::printf("  setup failed: the genome does not load\n");
+    return false;
+  }
+  const int32_t vmi = dna0.module_with_role(aibaby::ModuleRole::kVocal);
+  if (vmi < 0) { std::printf("  this genome has no vocal module\n"); return false; }
+  const double lat = double(dna0.module(uint32_t(vmi)).lateral_gain);
+  const uint32_t fields = dna0.module(uint32_t(vmi)).lateral_fields;
+  constexpr uint32_t kReps = 12;
+  instrument("bumpwalk", dna0.header().seed ^ 0xB0A7u, ticks, "ticks");
+
+  std::printf("  question          does the F1 group form a LOCALISED BUMP? A talking\n"
+              "                    creature needs syllables and this one holds a vowel. The\n"
+              "                    articulator and the centroid both PASS syllable-rate\n"
+              "                    change; nothing upstream produces any.\n");
+  std::printf("  this genome       vocal lateral_gain = %.3f, lateral_fields = %u\n", lat,
+              fields);
+  std::printf("  the null is ANALYTIC, not fitted: a uniform group has rate-weighted\n"
+              "    positional SD of 1/sqrt(12) = %.4f exactly. A bump reads BELOW it.\n",
+              1.0 / std::sqrt(12.0));
+  std::printf("\n  PRE-REGISTERED\n");
+  std::printf("    bump      spread <= 0.26 -- comfortably below the uniform 0.2887 -- and\n"
+              "              below the lateral_gain = 0 arm by >= 3 SE. Then there is\n"
+              "              something for Stage 1 to make travel.\n");
+  std::printf("    no bump   spread within 2 SE of 0.2887, or of the gain = 0 arm. Then this\n"
+              "              substrate does not do continuous-attractor dynamics and the\n"
+              "              WLC / CPG route is REFUSED here, cheaply, before any\n"
+              "              architecture work.\n");
+  std::printf("    read too  `peak` distinguishes concentrated-but-scattered from\n"
+              "              concentrated-and-contiguous; only `spread` tests the bump.\n");
+  std::printf("    the cost  v32 at 0.020 is measured to take G2 to +0.507x from +0.777x and\n"
+              "              6/9 from 7/9. A bump bought at that price is a TRADE, and this\n"
+              "              run does not get to report the bump without it.\n\n");
+
+  const std::vector<BWRow> rows = parallel_reps<BWRow>(kReps, [&](uint32_t r) {
+    std::vector<uint8_t> variant = blob;
+    const uint64_t seed = dna0.header().seed + r * 7919ull;
+    std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+    BWRow row = run_bumpwalk_arm(variant, ticks);
+    if (row.ok)
+      parallel_note("  [%u/%u] seed %u spread %.4f peak %.2f drift %.4f\n", r + 1, kReps, r,
+                    row.spread, row.peak, row.drift);
+    return row;
+  });
+
+  std::vector<double> sp, pk, dr, mr, ac;
+  for (const BWRow& r : rows) {
+    if (!r.ok) continue;
+    sp.push_back(r.spread); pk.push_back(r.peak); dr.push_back(r.drift);
+    mr.push_back(r.mean_rate); ac.push_back(r.autocorr);
+  }
+  if (sp.size() < 3) {
+    std::printf("\n  bumpwalk INCONCLUSIVE -- %zu creatures produced a reading.\n", sp.size());
+    return false;
+  }
+  double s_sp = 0.0, s_pk = 0.0, s_dr = 0.0, s_mr = 0.0;
+  const double m_sp = ctx_mean_se(sp, &s_sp);
+  const double m_pk = ctx_mean_se(pk, &s_pk);
+  const double m_dr = ctx_mean_se(dr, &s_dr);
+  const double m_mr = ctx_mean_se(mr, &s_mr);
+  double s_ac = 0.0;
+  const double m_ac = ctx_mean_se(ac, &s_ac);
+  const double uni = 1.0 / std::sqrt(12.0);
+  std::printf("\n  F1 GROUP, free-running, %zu creatures\n", sp.size());
+  std::printf("    positional SD   %.4f +/- %.4f    uniform null %.4f  (%+.1f SE from it)\n",
+              m_sp, s_sp, uni, s_sp > 0.0 ? (m_sp - uni) / s_sp : 0.0);
+  std::printf("    peak / mean     %.3f +/- %.3f    flat would be 1.000\n", m_pk, s_pk);
+  std::printf("    centroid drift  %.4f +/- %.4f    per 100 ms\n", m_dr, s_dr);
+  std::printf("    mean rate       %.3f +/- %.3f Hz\n", m_mr, s_mr);
+  std::printf("    lag-1 autocorr  %.4f +/- %.4f   <- THE PRIMARY. ~0 = not contiguous,\n"
+              "                                       distribution-free, unlike `spread`.\n",
+              m_ac, s_ac);
+
+  std::printf("\n  --- stage 0 reading ---\n");
+  const double t_uni = s_sp > 0.0 ? (uni - m_sp) / s_sp : 0.0;
+  const double t_ac = s_ac > 0.0 ? m_ac / s_ac : 0.0;
+  if (m_ac >= 0.20 && t_ac >= 3.0) {
+    std::printf("  A CONTIGUOUS BUMP FORMS: lag-1 autocorrelation %.4f (%+.1f SE), so\n"
+                "  neighbouring neurons move together rather than independently. That is\n"
+                "  the packet winnerless competition needs, and Stage 1 has something to\n"
+                "  try to move.\n", m_ac, t_ac);
+    std::printf("  NEXT, AND IT IS THE REAL QUESTION: does it TRAVEL? Drift is %.4f per\n"
+                "  100 ms here. Stage 1 adds kernel asymmetry or adaptation and looks for\n"
+                "  PERIODICITY in the 100-400 ms band, which is the syllable range.\n", m_dr);
+  } else {
+    std::printf("  NO CONTIGUOUS BUMP: lag-1 autocorrelation %.4f +/- %.4f (%+.1f SE).\n"
+                "  Neighbouring neurons are no more alike than distant ones, so whatever\n"
+                "  concentration the rates show is SPIKY, not a packet.\n", m_ac, s_ac, t_ac);
+    std::printf("  NOTE on `spread`: it reads %.4f against an analytic uniform null of\n"
+                "  %.4f, which looks decisive and is NOT. That null assumes every neuron\n"
+                "  fires at the same rate; these do not, so the gap measures rate\n"
+                "  heterogeneity rather than spatial structure. Do not quote it.\n",
+                m_sp, uni);
+    std::printf("  THAT REFUSES THE CPG ROUTE CHEAPLY. Winnerless competition needs a\n"
+                "  localised packet to hand between ensembles; with no packet there is\n"
+                "  nothing to hand. Stage 1 should NOT be built on this substrate, and the\n"
+                "  sequence problem is upstream of the sequencer.\n");
+  }
+  std::printf("\n  COMPARE THE TWO GENOMES: run this with lateral_gain 0.0 and 0.020 on the\n"
+              "  vocal module. One number decides it, and neither run means anything alone.\n");
+  // An open milestone returns FALSE until it is met, which is what the tier table's
+  // Expect::kOpen means. The first version returned true unconditionally and
+  // `verify` correctly flagged a REFUSAL as a milestone this project had never met
+  // suddenly passing.
+  return m_ac >= 0.20 && t_ac >= 3.0;
+}
+
 bool run_movability(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
   (void)verbose;
   Regime regime;
