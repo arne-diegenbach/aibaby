@@ -12768,6 +12768,366 @@ bool run_adaptclock(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
   return tracks && tall;
 }
 
+// ============================================================================
+// `halfcenter` — BOTH INGREDIENTS AT ONCE (DNA v56 + v57)
+//
+// `adaptclock` added a fatigue current at the derived constant and found no clock:
+// peak frequency followed tau_a with exponent +0.104 where a relaxation oscillator
+// requires 1.000. Re-reading Matsuoka 1985 is what found the mistake. His result is
+// that mutual inhibition ALONE settles into a winner, and that ADAPTATION is what
+// makes it oscillate -- you need BOTH, wired as two mutually inhibiting
+// populations. v56 supplied the fatigue; this larynx has never had the wiring,
+// because v32's lateral kernel is local-minus-field-mean, a bump kernel, not two
+// populations taking turns. So v56 was a PREREQUISITE, not a failed attempt.
+//
+// THE DESIGN IS A 2x2 AND THE THEORY MAKES TWO NULL PREDICTIONS, which is what
+// makes this stronger than any main effect this project has tested:
+//
+//     arm        fatigue  inhibition   Matsuoka predicts
+//     neither       -         -        nothing
+//     fatigue       +         -        nothing  <- and adaptclock already measured it
+//     inhibNN       -         +        SETTLES into a winner, no rhythm
+//     bothNN        +         +        OSCILLATES
+//
+// So the primary is an INTERACTION: a `both` arm must beat BOTH of its own singles,
+// not merely the double-off baseline. Two pre-registered nulls are two chances for
+// the theory to be wrong in a way a single contrast could not see.
+//
+// AND THERE IS A DIRECT MECHANISM READOUT, which every rhythm experiment here has
+// so far lacked. A half-center ALTERNATES: while one population fires the other is
+// suppressed. So corr(mean rate of lower half, mean rate of upper half) must go
+// NEGATIVE. That is the signature itself rather than a spectral proxy, it needs no
+// frequency grid and no argmax, and it cannot be produced by the pre-existing
+// resonance -- a resonance moves both halves TOGETHER.
+//
+// THE INHIBITION GAIN IS BOUNDED, NOT GUESSED. The contrast term is clamped to
+// [0,1] and subtracted from drive, and the vocal threshold is 0.645, so a fully-won
+// competition suppresses the loser by hc_gain. Full suppression therefore needs
+// hc_gain ~ 0.6 and partial ~ 0.2. Both are run rather than one picked, because a
+// bound is not a point estimate.
+//
+// THE ANTI-INSTABILITY CHECK IS NEW AND IT IS v32's OWN FAILURE. Its first lateral
+// formulation ran vocal at 66 Hz against a target of 4.4 with duty pinned at 1.00.
+// A runaway looks like a strong result on any ratio statistic, so duty must be
+// bounded AWAY FROM BOTH ENDS and rate must stay near target, or the arm is void.
+struct HCArm {
+  const char* name;
+  float jump;
+  float tau_ms;
+  float hc;
+};
+const HCArm kHCArms[] = {
+    {"neither",  0.00f, 167.0f, 0.00f},
+    {"fatigue",  0.05f, 167.0f, 0.00f},   // v56 only -- predicted null, and measured
+    {"inhib20",  0.00f, 167.0f, 0.20f},   // v57 only -- predicted to SETTLE
+    {"inhib60",  0.00f, 167.0f, 0.60f},   // v57 only, stronger
+    {"both20",   0.05f, 167.0f, 0.20f},
+    {"both60",   0.05f, 167.0f, 0.60f},   // the derived tau, full-suppression gain
+    {"both60-83", 0.05f, 83.0f, 0.60f},
+    {"both60-250", 0.05f, 250.0f, 0.60f},
+};
+constexpr uint32_t kHCArmCount = sizeof(kHCArms) / sizeof(kHCArms[0]);
+constexpr uint64_t kHCSeedOffset = 604553ull;
+constexpr double kHCFLo = 0.75, kHCFStep = 0.25;
+constexpr uint32_t kHCFBins = 22;
+
+struct HCRow {
+  bool ok = false;
+  double peak_f = 0.0, peak_snr = 0.0;
+  double peak_f_a = 0.0, peak_f_b = 0.0;
+  double anti = 0.0;        // corr(lower half rate, upper half rate) -- THE SIGNATURE
+  double anti_a = 0.0, anti_b = 0.0;   // per half of the recording
+  double duty = 0.0, rate_hz = 0.0;
+  double half_snr = 0.0;    // spectral peak of the half-DIFFERENCE signal
+};
+
+static double hc_corr(const std::vector<double>& x, const std::vector<double>& y) {
+  const size_t n = x.size() < y.size() ? x.size() : y.size();
+  if (n < 64) return 0.0;
+  double sx = 0, sy = 0;
+  for (size_t i = 0; i < n; ++i) { sx += x[i]; sy += y[i]; }
+  const double mx = sx / double(n), my = sy / double(n);
+  double cxy = 0, cxx = 0, cyy = 0;
+  for (size_t i = 0; i < n; ++i) {
+    const double a = x[i] - mx, b = y[i] - my;
+    cxy += a * b; cxx += a * a; cyy += b * b;
+  }
+  if (cxx <= 0.0 || cyy <= 0.0) return 0.0;
+  return cxy / std::sqrt(cxx * cyy);
+}
+
+static void hc_peak(const std::vector<double>& x, const std::vector<double>& tms,
+                    double* out_f, double* out_snr) {
+  *out_f = 0.0; *out_snr = 0.0;
+  if (x.size() < 512) return;
+  for (uint32_t b = 0; b < kHCFBins; ++b) {
+    const double f = kHCFLo + kHCFStep * double(b);
+    const double s = fh_snr(x, tms, f, 0.0);
+    if (s > *out_snr) { *out_snr = s; *out_f = f; }
+  }
+}
+
+HCRow run_halfcenter_arm(const std::vector<uint8_t>& blob, uint64_t ticks, const HCArm& arm) {
+  (void)arm;
+  HCRow row;
+  Session s;
+  std::string error;
+  if (!s.init(blob, error)) return row;
+  const aibaby::DnaAudio& acfg = s.dna.header().audio;
+  Ear ear;
+  if (!ear.configure(acfg, error)) return row;
+  VowelSource caregiver(acfg.sample_rate);
+  const uint32_t spt = acfg.sample_rate / 1000;
+  std::vector<float> pcm(spt);
+  int vmod = -1;
+  for (uint32_t m = 0; m < s.dna.header().module_count; ++m) {
+    if (s.dna.module(m).role == uint32_t(aibaby::ModuleRole::kVocal)) { vmod = int(m); break; }
+  }
+  if (vmod < 0) return row;
+
+  const uint64_t settle = ticks / 10;
+  std::vector<double> env, tms, lo, hi, diff;
+  uint64_t last_frame = 0;
+  double on = 0, n = 0, rsum = 0;
+  for (uint64_t t = 0; t < ticks; ++t) {
+    caregiver.render(0.0f, 500.0f, 1500.0f, 0.0f, pcm.data(), spt);   // SILENCE throughout
+    ear.tick(s.brain, pcm.data(), spt);
+    s.brain.step();
+    if (t < settle) continue;
+    if (s.brain.vocal_frame() == last_frame) continue;
+    last_frame = s.brain.vocal_frame();
+    const aibaby::VocalParams& v = s.brain.voice();
+    env.push_back((v.voicing > 0.5f ? 1.0 : 0.0) * double(v.amplitude));
+    tms.push_back(double(t));
+    n += 1;
+    if (v.voicing > 0.5f && v.amplitude > 0.05f) on += 1;
+    const aibaby::Network& net = s.brain.network();
+    const aibaby::ModuleState& vm = net.module(uint32_t(vmod));
+    const uint32_t mid = vm.count / 2;
+    double sl = 0.0, sh = 0.0;
+    for (uint32_t k = 0; k < mid; ++k) sl += double(net.rate_fast(vm.begin + k));
+    for (uint32_t k = mid; k < vm.count; ++k) sh += double(net.rate_fast(vm.begin + k));
+    const double ml = mid > 0 ? sl / double(mid) : 0.0;
+    const double mh = vm.count > mid ? sh / double(vm.count - mid) : 0.0;
+    lo.push_back(ml); hi.push_back(mh); diff.push_back(ml - mh);
+    rsum += 0.5 * (ml + mh);
+  }
+  if (env.size() < 1024) return row;
+  hc_peak(env, tms, &row.peak_f, &row.peak_snr);
+  double f_ignored = 0.0;
+  hc_peak(diff, tms, &f_ignored, &row.half_snr);
+  row.anti = hc_corr(lo, hi);
+  const size_t half = lo.size() / 2;
+  row.anti_a = hc_corr(std::vector<double>(lo.begin(), lo.begin() + half),
+                       std::vector<double>(hi.begin(), hi.begin() + half));
+  row.anti_b = hc_corr(std::vector<double>(lo.begin() + half, lo.end()),
+                       std::vector<double>(hi.begin() + half, hi.end()));
+  {
+    const size_t h2 = env.size() / 2;
+    double sn = 0.0;
+    hc_peak(std::vector<double>(env.begin(), env.begin() + h2),
+            std::vector<double>(tms.begin(), tms.begin() + h2), &row.peak_f_a, &sn);
+    hc_peak(std::vector<double>(env.begin() + h2, env.end()),
+            std::vector<double>(tms.begin() + h2, tms.end()), &row.peak_f_b, &sn);
+  }
+  row.duty = n > 0 ? on / n : 0.0;
+  row.rate_hz = n > 0 ? rsum / n : 0.0;
+  row.ok = true;
+  return row;
+}
+
+bool run_halfcenter(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  aibaby::Dna dna0;
+  if (dna0.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) {
+    std::printf("  setup failed: the genome does not load\n");
+    return false;
+  }
+  constexpr uint32_t kReps = 12;
+  instrument("halfcenter", dna0.header().seed ^ 0x57C0u, ticks, "ticks");
+  std::printf("  seed family       offset %llu -> first creature %016llx (FRESH)\n",
+              (unsigned long long)kHCSeedOffset,
+              (unsigned long long)(dna0.header().seed + kHCSeedOffset));
+  std::printf("  shipped genome    adapt_jump %.2f, halfcenter_gain %.2f (both OFF,\n"
+              "                    pinned hash ad96f882becbee92)\n",
+              double(dna0.header().vocal.adapt_jump),
+              double(dna0.header().vocal.halfcenter_gain));
+  std::printf("  what adaptclock   a fatigue current at the DERIVED constant produced no\n"
+              "  actually showed   clock: peak frequency followed tau_a with exponent +0.104\n"
+              "                    where a relaxation oscillator requires 1.000, and the peak\n"
+              "                    never left the 3.0-3.9 Hz band the pre-existing resonance\n"
+              "                    already occupies.\n");
+  std::printf("  what was WRONG    only ONE of two ingredients had been built. Matsuoka 1985:\n"
+              "  with it           mutual inhibition ALONE settles into a winner, ADAPTATION\n"
+              "                    is what makes it oscillate. Both, wired as two mutually\n"
+              "                    inhibiting populations. v32's kernel is local-minus-field-\n"
+              "                    mean -- a bump kernel, not two populations taking turns.\n"
+              "                    So v56 is a PREREQUISITE, not a failed attempt.\n");
+  std::printf("\n  THE 2x2, AND THE THEORY MAKES TWO NULL PREDICTIONS\n");
+  std::printf("    neither   -/-   nothing\n");
+  std::printf("    fatigue   +/-   nothing (and adaptclock already measured exactly that)\n");
+  std::printf("    inhibNN   -/+   SETTLES into a winner, no rhythm\n");
+  std::printf("    bothNN    +/+   OSCILLATES\n");
+  std::printf("  Two pre-registered nulls are two chances for the theory to be wrong in a\n"
+              "  way a single contrast against the double-off baseline could not see.\n");
+  std::printf("\n  PRE-REGISTERED\n");
+  std::printf("    PRIMARY, an INTERACTION: a `both` arm's anti-phase correlation must beat\n"
+              "      BOTH its own singles, not merely `neither`.\n");
+  std::printf("    THE SIGNATURE     corr(lower-half rate, upper-half rate) must go NEGATIVE.\n"
+              "                      A half-center ALTERNATES; a resonance moves both halves\n"
+              "                      TOGETHER. This is the mechanism itself rather than a\n"
+              "                      spectral proxy -- no frequency grid, no argmax, and the\n"
+              "                      pre-existing 3 Hz ring cannot produce it. Bar: <= -0.20\n"
+              "                      and >= 3 SE below each single.\n");
+  std::printf("    frequency         within the `both` tau arms, report the EXPONENT on\n"
+              "                      log(peak f) vs log(1/tau) -- adaptclock's lesson: a\n"
+              "                      correlation passed 0.80 there while the slope was ten\n"
+              "                      times too shallow. Required ~1.0.\n");
+  std::printf("    KILL SWITCH       duty bounded AWAY FROM BOTH ENDS and rate near target.\n"
+              "                      v32's first lateral form ran vocal at 66 Hz against 4.4\n"
+              "                      with duty pinned at 1.00, and a runaway looks like a\n"
+              "                      strong result on any ratio statistic.\n");
+  std::printf("    BOTH HALVES       anti-phase reported per half of the recording, because\n"
+              "                      the self_gain sweep died exactly there.\n");
+  std::printf("    argmax null       peak SNR vs `neither`'s PEAK over the same %u bins.\n"
+              "                      adaptclock measured that null at ~3.9, never 1.0.\n", kHCFBins);
+  std::printf("    refusal           anti-phase stays >= 0 in every `both` arm -> reciprocal\n"
+              "                      inhibition plus fatigue does not alternate HERE even\n"
+              "                      though the textbook says it must, which would point at\n"
+              "                      the rate code itself rather than at any missing part.\n\n");
+
+  struct Cell { bool ok = false; HCRow row; };
+  const uint32_t njobs = kReps * kHCArmCount;
+  const size_t o_jump = offsetof(aibaby::DnaHeader, vocal) + offsetof(aibaby::DnaVocal, adapt_jump);
+  const size_t o_tau = offsetof(aibaby::DnaHeader, vocal) + offsetof(aibaby::DnaVocal, adapt_tau_ms);
+  const size_t o_hc = offsetof(aibaby::DnaHeader, vocal) + offsetof(aibaby::DnaVocal, halfcenter_gain);
+  const std::vector<Cell> cells = parallel_reps<Cell>(njobs, [&](uint32_t i) {
+    Cell c;
+    const uint32_t r = i / kHCArmCount, a = i % kHCArmCount;
+    std::vector<uint8_t> variant = blob;
+    const uint64_t seed = dna0.header().seed + kHCSeedOffset + r * 7919ull;
+    std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+    std::memcpy(variant.data() + o_jump, &kHCArms[a].jump, sizeof(float));
+    std::memcpy(variant.data() + o_tau, &kHCArms[a].tau_ms, sizeof(float));
+    std::memcpy(variant.data() + o_hc, &kHCArms[a].hc, sizeof(float));
+    c.row = run_halfcenter_arm(variant, ticks, kHCArms[a]);
+    c.ok = c.row.ok;
+    if (c.ok)
+      parallel_note("  [%u/%u] seed %u %-11s anti %+.3f  peak %.2f Hz SNR %5.2f  duty %.2f\n",
+                    i + 1, njobs, r, kHCArms[a].name, c.row.anti, c.row.peak_f,
+                    c.row.peak_snr, c.row.duty);
+    return c;
+  });
+
+  double m_an[kHCArmCount] = {}, s_an[kHCArmCount] = {};
+  double m_pk[kHCArmCount] = {}, s_pk[kHCArmCount] = {};
+  double m_pf[kHCArmCount] = {}, m_du[kHCArmCount] = {}, m_rt[kHCArmCount] = {};
+  double m_hs[kHCArmCount] = {};
+  bool void_arm[kHCArmCount] = {};
+  std::printf("\n  %-11s %-5s %-5s %-5s %-16s %-13s %-12s %-6s %s\n", "arm", "jump", "tau",
+              "hc", "ANTI-PHASE corr", "peak f/SNR", "half-diff", "duty", "rate");
+  for (uint32_t a = 0; a < kHCArmCount; ++a) {
+    std::vector<double> an, pk, pf, du, rt, hs, aa, ab;
+    for (uint32_t r = 0; r < kReps; ++r) {
+      const Cell& c = cells[r * kHCArmCount + a];
+      if (!c.ok) continue;
+      an.push_back(c.row.anti); pk.push_back(c.row.peak_snr); pf.push_back(c.row.peak_f);
+      du.push_back(c.row.duty); rt.push_back(c.row.rate_hz); hs.push_back(c.row.half_snr);
+      aa.push_back(c.row.anti_a); ab.push_back(c.row.anti_b);
+    }
+    if (an.size() < 3) {
+      std::printf("\n  halfcenter INCONCLUSIVE -- arm `%s` produced %zu creatures.\n",
+                  kHCArms[a].name, an.size());
+      return false;
+    }
+    double sp = 0, sf = 0, sd = 0, sr = 0, sh = 0, s1 = 0, s2 = 0;
+    m_an[a] = ctx_mean_se(an, &s_an[a]);
+    m_pk[a] = ctx_mean_se(pk, &s_pk[a]);
+    m_pf[a] = ctx_mean_se(pf, &sf);
+    m_du[a] = ctx_mean_se(du, &sd);
+    m_rt[a] = ctx_mean_se(rt, &sr);
+    m_hs[a] = ctx_mean_se(hs, &sh);
+    const double m_aa = ctx_mean_se(aa, &s1), m_ab = ctx_mean_se(ab, &s2);
+    (void)sp;
+    void_arm[a] = m_du[a] < 0.10 || m_du[a] > 0.95 || m_rt[a] > 20.0;
+    std::printf("  %-11s %-5.2f %-5.0f %-5.2f %+.3f +/- %-7.3f %4.2f/%5.2f   %5.2f +/- %-4.2f "
+                "%.2f   %5.2f%s\n",
+                kHCArms[a].name, double(kHCArms[a].jump), double(kHCArms[a].tau_ms),
+                double(kHCArms[a].hc), m_an[a], s_an[a], m_pf[a], m_pk[a], m_hs[a], sh,
+                m_du[a], m_rt[a], void_arm[a] ? "  <- VOID" : "");
+    std::printf("  %-11s   anti-phase by half of the recording: %+.3f / %+.3f\n", "", m_aa, m_ab);
+  }
+
+  std::printf("\n  KILL SWITCH -- duty away from BOTH ends, rate near target\n");
+  for (uint32_t a = 0; a < kHCArmCount; ++a) {
+    std::printf("    %-11s duty %.2f  rate %5.2f Hz%s\n", kHCArms[a].name, m_du[a], m_rt[a],
+                void_arm[a] ? "   <- VOID (runaway or silence)" : "");
+  }
+
+  // THE PRIMARY: each `both` arm against BOTH of its own singles.
+  std::printf("\n  PRIMARY -- the INTERACTION, anti-phase against BOTH singles\n");
+  const uint32_t both_idx[4] = {4, 5, 6, 7};
+  const uint32_t single_i[4] = {2, 3, 3, 3};   // both20->inhib20; the rest -> inhib60
+  bool alternates = false; double best = 1.0; uint32_t bestarm = 4;
+  for (uint32_t k = 0; k < 4; ++k) {
+    const uint32_t a = both_idx[k], si = single_i[k], sf = 1;  // sf = `fatigue`
+    const double d_i = m_an[a] - m_an[si];
+    const double e_i = std::sqrt(s_an[a] * s_an[a] + s_an[si] * s_an[si]);
+    const double d_f = m_an[a] - m_an[sf];
+    const double e_f = std::sqrt(s_an[a] * s_an[a] + s_an[sf] * s_an[sf]);
+    const double t_i = e_i > 0 ? d_i / e_i : 0.0, t_f = e_f > 0 ? d_f / e_f : 0.0;
+    std::printf("    %-11s anti %+.3f   vs `%s` %+.1f SE   vs `fatigue` %+.1f SE%s\n",
+                kHCArms[a].name, m_an[a], kHCArms[si].name, t_i, t_f,
+                void_arm[a] ? "   (VOID)" : "");
+    if (!void_arm[a] && m_an[a] <= -0.20 && t_i <= -3.0 && t_f <= -3.0) alternates = true;
+    if (!void_arm[a] && m_an[a] < best) { best = m_an[a]; bestarm = a; }
+  }
+
+  // Frequency exponent across the both-60 tau arms: 83 / 167 / 250.
+  std::printf("\n  FREQUENCY -- does the period follow tau_a? (exponent, not correlation)\n");
+  const uint32_t tarms[3] = {6, 5, 7};   // tau 83, 167, 250 at hc 0.60
+  for (uint32_t k = 0; k < 3; ++k)
+    std::printf("    tau %3.0f ms  peak %.2f Hz  period %5.1f ms  period/tau %5.2f\n",
+                double(kHCArms[tarms[k]].tau_ms), m_pf[tarms[k]],
+                1000.0 / (m_pf[tarms[k]] > 0 ? m_pf[tarms[k]] : 1e9),
+                (1000.0 / (m_pf[tarms[k]] > 0 ? m_pf[tarms[k]] : 1e9)) /
+                    double(kHCArms[tarms[k]].tau_ms));
+  double expo = 0.0;
+  if (m_pf[tarms[0]] > 0 && m_pf[tarms[2]] > 0) {
+    expo = std::log(m_pf[tarms[0]] / m_pf[tarms[2]]) /
+           std::log(double(kHCArms[tarms[2]].tau_ms) / double(kHCArms[tarms[0]].tau_ms));
+  }
+  std::printf("    EXPONENT %+.3f over tau 83 -> 250 (required ~1.000 for a relaxation\n"
+              "    oscillator; adaptclock measured +0.226 here without the inhibition)\n", expo);
+
+  std::printf("\n  --- the reading ---\n");
+  if (alternates) {
+    std::printf("  THE TWO HALVES TAKE TURNS. `%s` reaches anti-phase %+.3f, beating BOTH of\n"
+                "  its own singles by at least 3 SE -- so it is the COMBINATION and not\n"
+                "  either ingredient, which is Matsuoka's prediction and the interaction this\n"
+                "  run pre-registered.\n", kHCArms[bestarm].name, best);
+    std::printf("  A resonance moves both halves TOGETHER, so this cannot be the 3 Hz ring\n"
+                "  being re-measured -- the failure that killed adaptclock.\n");
+    std::printf("  CHECK THE EXPONENT (%+.3f) BEFORE CALLING IT A CLOCK: alternation with a\n"
+                "  frequency that ignores tau_a is competition without timekeeping.\n", expo);
+  } else {
+    std::printf("  THE HALVES DO NOT TAKE TURNS. Best non-void `both` arm is `%s` at anti-phase\n"
+                "  %+.3f, and no arm clears -0.20 with 3 SE over both singles.\n",
+                kHCArms[bestarm].name, best);
+    std::printf("  THAT IS A REAL REFUSAL AND IT IS EXPENSIVE FOR THE TEXTBOOK. Reciprocal\n"
+                "  inhibition plus spike-triggered adaptation is the half-center, both\n"
+                "  ingredients are now present and individually verified live, and the two\n"
+                "  populations still do not alternate. So what is missing is not a component\n"
+                "  but something about how this larynx REPRESENTS activity: every pathway\n"
+                "  here is rate-coded and pooled, and a rate code averaged over a population\n"
+                "  has no phase for two groups to be opposite IN.\n");
+    std::printf("  That points at the same wall seven earlier instruments hit, and it is the\n"
+                "  first time the sequence line has reached it from the DYNAMICS side rather\n"
+                "  than the learning side.\n");
+  }
+  return alternates;
+}
+
 bool run_movability(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
   (void)verbose;
   Regime regime;

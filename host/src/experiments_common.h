@@ -2206,6 +2206,7 @@ bool run_framecopy(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_framehold(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_glide(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_adaptclock(const std::vector<uint8_t>&, uint64_t, bool);
+bool run_halfcenter(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_pgprobe(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_g2cond(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_coderprobe(const std::vector<uint8_t>&, uint64_t, bool);

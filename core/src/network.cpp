@@ -579,6 +579,18 @@ bool Network::build(const Dna& dna, Arena& arena, Rng& rng) {
     adapt_jump_[m] = kZero;
     adapt_decay_[m] = kZero;
   }
+  // DNA v57. Reciprocal inhibition between two vocal halves, vocal role only.
+  for (uint32_t m = 0; m < kMaxModules; ++m) {
+    hc_gain_[m] = kZero;
+    hc_lo_[m] = kZero;
+    hc_hi_[m] = kZero;
+  }
+  if (dna_.header().vocal.halfcenter_gain > kZero) {
+    const Scalar g = Scalar(dna_.header().vocal.halfcenter_gain);
+    for (uint32_t m = 0; m < module_count_ && m < kMaxModules; ++m) {
+      if (dna_.module(m).role == uint32_t(ModuleRole::kVocal)) hc_gain_[m] = g;
+    }
+  }
   if (dna_.header().vocal.adapt_jump > kZero && dna_.header().vocal.adapt_tau_ms > kZero) {
     const Scalar jump = Scalar(dna_.header().vocal.adapt_jump);
     // Same one-pole form as every other time constant here: alpha = dt / tau.
@@ -1734,6 +1746,33 @@ void Network::step() {
       }
     }
 
+    // DNA v57. The half-center: two sub-populations, each inhibited in proportion
+    // to how much BUSIER the other one is. Matsuoka's mutual inhibition, in the
+    // bounded-contrast units v32 had to learn the hard way -- the difference of the
+    // half-means over the module's own mean, clamped, so the term cannot amplify
+    // itself the way a hertz-minus-hertz version did.
+    //
+    // Read off rate_fast_ rather than afferent drive, and deliberately: this is
+    // the one place where a term computed from the neurons' own OUTPUT is what is
+    // wanted. An oscillator needs the loop. v32 avoided output-derived terms
+    // because a bump forming from its own noise is positive feedback; here the
+    // sign is opposite across the two halves, so the loop is competitive rather
+    // than self-amplifying, and that competition is the mechanism.
+    if (hc_gain_[m] > kZero && ms.count >= 2) {
+      const uint32_t mid = ms.count / 2;
+      Scalar sum_lo = kZero, sum_hi = kZero;
+      for (uint32_t k = 0; k < mid; ++k) sum_lo += rate_fast_[ms.begin + k];
+      for (uint32_t k = mid; k < ms.count; ++k) sum_hi += rate_fast_[ms.begin + k];
+      const Scalar m_lo = sum_lo / Scalar(mid);
+      const Scalar m_hi = sum_hi / Scalar(ms.count - mid);
+      const Scalar mean = (m_lo + m_hi) * Scalar(0.5);
+      const Scalar scale = mean > Scalar(1e-4) ? mean : Scalar(1e-4);
+      const Scalar inv = kOne / scale;
+      // Positive when the OTHER half is busier, so it is subtracted from drive.
+      hc_lo_[m] = hc_gain_[m] * clampf((m_hi - m_lo) * inv, kZero, kOne);
+      hc_hi_[m] = hc_gain_[m] * clampf((m_lo - m_hi) * inv, kZero, kOne);
+    }
+
     Scalar ffi = kZero;
     if (dna_.module(m).ffi_source >= 0) {
       const uint32_t src = uint32_t(dna_.module(m).ffi_source);
@@ -1915,6 +1954,13 @@ void Network::step() {
       if (adapt_jump_[m] > kZero) {
         adapt_[i] -= adapt_decay_[m] * adapt_[i];
         drive_a = drive - adapt_[i];
+      }
+      // DNA v57: whichever half this neuron sits in, suppressed by how much
+      // busier the other half is. At hc_gain_ == 0 both offsets are zero.
+      if (hc_gain_[m] > kZero) {
+        const ModuleState& hms = modules_[m];
+        const uint32_t hmid = hms.count / 2;
+        drive_a -= (i - hms.begin) < hmid ? hc_lo_[m] : hc_hi_[m];
       }
 
       // Node perturbation: remember what this neuron was actually given, so

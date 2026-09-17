@@ -620,6 +620,25 @@ dictionary_policy_rate = 0.0
 adapt_jump = 0.0
 adapt_tau_ms = 167.0
 
+# DNA v57. THE OTHER HALF OF THE HALF-CENTER: reciprocal inhibition between two
+# vocal sub-populations. v56 added fatigue at the derived constant and adaptclock
+# measured no clock -- peak frequency followed tau_a with exponent +0.104 where a
+# relaxation oscillator requires 1.000. Re-reading Matsuoka 1985 found the mistake:
+# his result is that mutual inhibition ALONE settles into a winner and adaptation
+# is what makes it OSCILLATE. Both are needed, wired as two mutually inhibiting
+# populations, and this larynx has never had that wiring -- v32's lateral kernel is
+# local-minus-field-mean, a bump kernel, not two populations taking turns.
+#
+# So v56 is a PREREQUISITE, not a failed attempt.
+#
+# The form is a BOUNDED CONTRAST because v32 paid for the alternative: its first
+# formulation subtracted hertz from hertz and was unstable at every gain tried,
+# vocal free-running at 66 Hz against 4.4 with duty pinned at 1.00. This is the
+# difference of the two half-means over the module's own mean, clamped.
+#
+# 0 is OFF and BIT-IDENTICAL.
+halfcenter_gain = 0.0
+
 [curiosity]
 learn_rate = 0.02           # LMS rate of the forward model
 fast_tau_ms = 2000.0

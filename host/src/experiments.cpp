@@ -412,6 +412,15 @@ const Spec kSpecs[] = {
      "  FREE-RUNNING -- no caregiver ever, since a kicked rhythm dies with its\n"
      "  driver. Primary is that peak frequency MOVES with tau_a, not that it is\n"
      "  large: a peak fixed at 3 Hz is the old resonance re-measured. 12 seeds"},
+    {"halfcenter", 1200000, Expect::kOpen, Tier::kTeach,
+     "BOTH INGREDIENTS AT ONCE (DNA v56 + v57). adaptclock added fatigue at the\n"
+     "  derived constant and found no clock. Re-reading Matsuoka 1985 found the\n"
+     "  mistake: mutual inhibition ALONE settles, ADAPTATION is what makes it\n"
+     "  oscillate -- both, wired as two mutually inhibiting populations, which this\n"
+     "  larynx has never had. A 2x2 in which the theory makes TWO NULL predictions,\n"
+     "  so the primary is an INTERACTION. And the readout is the signature itself:\n"
+     "  a half-center ALTERNATES, so corr(lower half, upper half) must go NEGATIVE,\n"
+     "  which a resonance cannot fake -- it moves both halves together. 12 seeds"},
     {"movability", 5600000, Expect::kOpen, Tier::kLong,
      "orthovocab left a LEAD: on identical demands the F2 lesson travelled\n"
      "  0.169 and the F1 lesson 0.030 -- but F1's was FIGHTING another lesson on\n"
@@ -764,6 +773,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "framehold") ok = run_framehold(dna_blob, ticks, verbose);
   else if (name == "glide") ok = run_glide(dna_blob, ticks, verbose);
   else if (name == "adaptclock") ok = run_adaptclock(dna_blob, ticks, verbose);
+  else if (name == "halfcenter") ok = run_halfcenter(dna_blob, ticks, verbose);
   else if (name == "partprobe") ok = run_partprobe(dna_blob, ticks, verbose);
   else if (name == "pgprobe") ok = run_pgprobe(dna_blob, ticks, verbose);
   else if (name == "g2cond") ok = run_g2cond(dna_blob, ticks, verbose);

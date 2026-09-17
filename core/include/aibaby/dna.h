@@ -1589,6 +1589,36 @@ struct DnaVocal {
   // tau_a is set to is the pre-existing resonance being re-measured.
   float adapt_jump;     // added to the adaptation variable on each spike; 0 = OFF
   float adapt_tau_ms;   // its decay constant, the missing rung of the ladder
+
+  // DNA v57. THE OTHER HALF OF THE HALF-CENTER: reciprocal inhibition between two
+  // vocal sub-populations.
+  //
+  // WHY v56 WAS NOT ENOUGH, and `adaptclock` measured it. A fatigue current was
+  // added at the derived constant and the voice still did not alternate: peak
+  // frequency followed tau_a with exponent +0.104 where a relaxation oscillator
+  // requires 1.000, and the peak never left the 3.0-3.9 Hz band the pre-existing
+  // resonance already occupies. That is exactly what Matsuoka 1985 predicts, and
+  // re-reading it is what found the mistake: the result there is that mutual
+  // inhibition ALONE settles into a winner, and that adaptation is what makes it
+  // OSCILLATE. You need both, wired as two mutually inhibiting populations.
+  //
+  // This larynx has never had that wiring. v32's lateral kernel is
+  // local-minus-field-mean -- a bump kernel where each neuron is suppressed by its
+  // own neighbourhood's mean. That produces a place code, not two populations
+  // taking turns. So v56 is a prerequisite rather than a failed attempt, and this
+  // field supplies the piece it was missing.
+  //
+  // THE FORM IS A BOUNDED CONTRAST, and that is not a stylistic choice. The v32
+  // comment records that the first lateral formulation subtracted hertz from hertz
+  // and was unstable at every gain tried including the smallest, because a term
+  // that scales with the quantity it is derived from amplifies itself -- vocal
+  // free-ran at 66 Hz against 4.4 with duty pinned at 1.00. So the inhibition here
+  // is the DIFFERENCE of the two half-means normalised by the module's own mean and
+  // clamped: "the other half is busier than this one, by this fraction", never "by
+  // this many hertz". Bounded by construction, scale-free, and it cannot run away.
+  //
+  // 0 is OFF and bit-identical.
+  float halfcenter_gain;
 };
 
 // Curiosity (§3.3) is a forward model of the next sensory frame plus two
