@@ -11432,3 +11432,27 @@ there.
 It survived three separate attacks rather than one threshold: a transient fix that
 selectively killed a rival arm, a fresh-seed replication on the pre-registered arm,
 and a graded mechanism sweep.
+
+**Intrinsic plasticity is not the oscillator.** Sweeping `ip_wake_scale` on vocal
+gave 4.40 / 3.41 / 3.56 / 4.54 across 0.0 → 1.0 — flat, including fully off. The
+duty cycle moved substantially (0.44 vs 0.57), so the creature changed while the
+ring didn't, which is a stronger refusal than a flat curve alone. Both major
+feedback loops are now eliminated as the source: self-hearing amplifies it, IP
+doesn't touch it. **The origin is open** — something with a ~167 ms delay that is
+neither.
+
+**And the randomisation's imperfection turned into an accidental control.** Drive
+length is fixed at 4000 ms, so only hold length varies, and whether a residual
+transient stays coherent at *f* depends on each hold being a whole number of
+cycles:
+
+| f | holds in cycles | aligned | observed |
+| --- | --- | --- | --- |
+| 1 Hz | 3.0 4.5 3.5 5.0 4.0 | 3 of 5 | +0.1 / +0.9 SE |
+| 2 Hz | 6.0 9.0 7.0 10.0 8.0 | **5 of 5** | +2.4 / +0.1 SE |
+| **3 Hz** | 9.0 13.5 10.5 15.0 12.0 | 3 of 5 | **+3.5 / +3.0 SE** |
+| 4 Hz | 12.0 18.0 14.0 20.0 16.0 | **5 of 5** | +1.3 / +2.6 SE |
+
+2 Hz and 4 Hz are *fully* aligned, so a residual transient would be strongest
+there — and they are the weakest. 3 Hz is only partially aligned and is strongest
+twice. **The artifact account predicts the opposite of the data.**
