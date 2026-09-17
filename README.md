@@ -11783,3 +11783,68 @@ constant and a clock appears — is refuted. **The half-center itself remains
 untested**, and the next build is the wiring rather than another dial: two vocal
 sub-populations with reciprocal inhibition between them, with the v56 current
 already in place to release whichever one is winning.
+
+### The queue, from the literature
+
+Four leads came out of reading rather than running, and they are ordered by
+cost-to-information rather than by how appealing they are.
+
+**1. Sweep input strength to the larynx — first, because it is cheap and because it
+gates the interpretation of the run already in flight.** Shpiro, Curtu, Rinzel and
+Rubin analysed several mutual-inhibition-with-adaptation models and found the same
+structure in all of them: as input rises, the circuit passes through fusion,
+antiphase oscillation, **winner-take-all**, antiphase oscillation again, and finally
+simultaneous high activity. There are two oscillation windows and they are not
+adjacent. Two consequences matter here. Period is *proportional* to the adaptation
+time constant, which means demanding an exponent of 1.0 was the right bar and
+`adaptclock`'s measured +0.104 really does mean "not adaptation-driven." And the
+regime boundaries **do not move with the time constants** — they are set by input
+strength and cross-inhibition. `halfcenter` sweeps tau and inhibition and never
+touches input strength, so it samples a single point on the only axis that selects
+the regime. The handle is `noise_amp`, since motor noise is motor drive in this
+creature. The sweep must be dense: a coarse bracket can step straight over a narrow
+window, and there are two of them with a winner-take-all gap in between.
+
+**2. A differential two-pool readout — the oldest wall here, and the smallest
+build.** Seven instruments died to common-mode swamping in a pooled readout, and
+`read_group` is a rate-weighted centroid over an all-positive rate vector, which is
+exactly the shape common mode swamps: every neuron firing harder moves numerator and
+denominator together. The textbook fix for common mode is to subtract two pools.
+DNA v57 already split the vocal module in half and computes both means every tick,
+so the pools exist, and it needs no new learning rule and no new state — the
+opposite of the last eight attempts on this wall. It gets an arithmetic pre-flight
+before any code: a difference of two half-means is far coarser than a 14-point
+centroid, so count the distinguishable F1 levels first, and if it cannot resolve the
+~230 Hz that absolute naming needs, that is the answer without a run. Its refusal is
+a *pair* — delivered spread must rise **while steerability does not fall** — because
+an earlier result found the centroid *is* the steerability, so replacing it risks
+costing exactly the controllability reward depends on.
+
+**3. Release versus escape — free, from data already being collected.** Two things
+can end a dominance period: the dominant population's adaptation building until it
+lets go, or the suppressed population's adaptation decaying until it breaks through.
+The first makes dominance *lengthen* with input, the second makes it *shorten*, and
+they are distinguishable by whether the dominant half declines into the switch or the
+suppressed half rises into it. `halfcenter` already records both half-mean time
+series, so this is pure analysis — and it says which window we are in, which says
+which way to move the drive in lead 1.
+
+**4. Noise-driven alternation — the version that needs no fatigue at all.**
+Moreno-Bote, Rinzel and Rubin obtain alternation from noise alone, absent without
+it, and the companion paper shows a model can be moved smoothly between
+adaptation-driven and noise-driven rhythmogenesis with realistic behaviour requiring
+a balance of the two. This creature already carries a large noise term, so it may sit
+nearer the noise-driven end — which would be a clean explanation for why a fatigue
+current at the derived constant did nothing. It composes with lead 1, and the two can
+be separated because `threshold` changes drive without changing noise.
+
+**5. Taming chaos — filed as a lead on the learning rule, not on the frame.** Laje
+and Buonomano get seconds-scale timing out of a recurrent network by tuning its
+weights until one trajectory is stable against perturbation. It is rate-based, which
+is what this creature is, and it needs neither a CPG nor a fatigue current nor a
+synfire chain — all three now refused here. But it requires a *trained* recurrent
+matrix, and none of the rules in this project fits trajectories. So it is gated on a
+measurement rather than attempted: taming chaos presupposes rich recurrent dynamics
+to tame, and the finding that no module holds a kick for 10 ms suggests there may be
+no trajectory here worth stabilising. Measure the module's autocorrelation time
+first; if the recurrence is that weak, this is refused without a build.
