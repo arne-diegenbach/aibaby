@@ -11236,3 +11236,21 @@ papers about the half it does not touch.
   v8 is V4's computation at V2's position in the hierarchy.
 
 [bp]: https://www.nature.com/articles/s41593-021-00857-x
+
+### A note on where this project's record actually lives
+
+Two stores, and they are not the same store:
+
+- **In this repo** — `README.md`, `host/src/`, `core/`, and every run log under
+  `results/`. Version-controlled, recoverable, and the authority for any number.
+- **Outside it** — the assistant's memory directory
+  (`~/.claude/projects/.../memory`), which holds the working notes, the refutation
+  records and the literature citations. **It is not version-controlled.**
+
+Commit messages in this history sometimes describe memory-file changes as though
+they were part of the commit. They were not: those files sit outside the repo
+tree, so `git add -A` never staged them. The content is real and on disk, but it
+has no history and nothing recovers it if it is overwritten.
+
+**So: any claim that matters belongs in the README or in a run log, not only in
+memory.** That is why the scientific content of each chapter is duplicated here.
