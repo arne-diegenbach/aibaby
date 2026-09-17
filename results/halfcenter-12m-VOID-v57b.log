@@ -5,7 +5,7 @@
 # module rate 19-125 Hz against a 4.9 Hz baseline, monotone in the gain.
 # Anti-phase reads exactly +/-0.000 because saturated populations are constant,
 # so the correlation is undefined -- the same zero-artefact as v57a, from the
-# opposite failure.  at 19.03 Hz slipped under a 20 Hz kill-switch
+# opposite failure. The both60 arm at 19.03 Hz slipped under a 20 Hz kill-switch
 # threshold that was too loose; it is a 4x runaway too.
 #
 # CAUSE: the zero-mean form ADDS +d to the winning half, which is positive
