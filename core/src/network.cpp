@@ -588,7 +588,10 @@ bool Network::build(const Dna& dna, Arena& arena, Rng& rng) {
   if (dna_.header().vocal.halfcenter_gain > kZero) {
     const Scalar g = Scalar(dna_.header().vocal.halfcenter_gain);
     for (uint32_t m = 0; m < module_count_ && m < kMaxModules; ++m) {
-      if (dna_.module(m).role == uint32_t(ModuleRole::kVocal)) hc_gain_[m] = g;
+      if (dna_.module(m).role == uint32_t(ModuleRole::kVocal)) {
+        hc_gain_[m] = g;
+        hc_group_[m] = dna_.header().vocal.halfcenter_group;
+      }
     }
   }
   if (dna_.header().vocal.adapt_jump > kZero && dna_.header().vocal.adapt_tau_ms > kZero) {
@@ -1759,18 +1762,45 @@ void Network::step() {
     // sign is opposite across the two halves, so the loop is competitive rather
     // than self-amplifying, and that competition is the mechanism.
     if (hc_gain_[m] > kZero && ms.count >= 2) {
-      const uint32_t mid = ms.count / 2;
+      // WITHIN ONE READOUT GROUP. See the DnaVocal comment: splitting the whole
+      // module put voicing and F1 in one half and amplitude in the other, so the
+      // competition throttled a gate instead of moving a formant.
+      const uint32_t gsel = hc_group_[m] < kVocalGroups ? hc_group_[m] : 2u;
+      const uint32_t gb = slice_begin(ms.count, kVocalGroups, gsel);
+      const uint32_t ge = slice_begin(ms.count, kVocalGroups, gsel + 1);
+      hc_begin_[m] = ms.begin + gb;
+      hc_end_[m] = ms.begin + ge;
+      const uint32_t gn = ge > gb ? ge - gb : 0;
+      if (gn < 2) { hc_lo_[m] = kZero; hc_hi_[m] = kZero; continue; }
+      const uint32_t mid = gn / 2;
       Scalar sum_lo = kZero, sum_hi = kZero;
-      for (uint32_t k = 0; k < mid; ++k) sum_lo += rate_fast_[ms.begin + k];
-      for (uint32_t k = mid; k < ms.count; ++k) sum_hi += rate_fast_[ms.begin + k];
+      for (uint32_t k = 0; k < mid; ++k) sum_lo += rate_fast_[hc_begin_[m] + k];
+      for (uint32_t k = mid; k < gn; ++k) sum_hi += rate_fast_[hc_begin_[m] + k];
       const Scalar m_lo = sum_lo / Scalar(mid);
-      const Scalar m_hi = sum_hi / Scalar(ms.count - mid);
+      const Scalar m_hi = sum_hi / Scalar(gn - mid);
       const Scalar mean = (m_lo + m_hi) * Scalar(0.5);
       const Scalar scale = mean > Scalar(1e-4) ? mean : Scalar(1e-4);
       const Scalar inv = kOne / scale;
-      // Positive when the OTHER half is busier, so it is subtracted from drive.
-      hc_lo_[m] = hc_gain_[m] * clampf((m_hi - m_lo) * inv, kZero, kOne);
-      hc_hi_[m] = hc_gain_[m] * clampf((m_lo - m_hi) * inv, kZero, kOne);
+      // ZERO-MEAN BY CONSTRUCTION, and v1 of this was not, which voided a whole run.
+      //
+      // v1 clamped BOTH offsets to [0,1] and SUBTRACTED both, so at any instant one
+      // was zero and the other positive: only the LOSING half was suppressed and the
+      // winner was untouched. Two things followed, and the second is fatal. The term
+      // was net inhibitory, so the module bled drive until `group_activity_[1]` fell
+      // under `voicing_threshold` and the voice went silent -- duty 0.00 in every arm
+      // with the gain on. And crushing the loser INCREASES (m_hi - m_lo), which
+      // increases the suppression, which crushes it further: positive feedback on the
+      // difference, running away to full separation. The clamp bounded the term's
+      // MAGNITUDE and left its SIGN STRUCTURE self-amplifying, which is the v32
+      // failure mode above wearing a different hat.
+      //
+      // The fix: one signed difference, subtracted from the low half and ADDED to the
+      // high half, so the two offsets sum to exactly zero. Total drive is preserved
+      // and the competition is pure REDISTRIBUTION -- which is what mutual inhibition
+      // between two balanced populations actually does.
+      const Scalar d = hc_gain_[m] * clampf((m_hi - m_lo) * inv, Scalar(-1), kOne);
+      hc_lo_[m] = d;    // subtracted from the low half
+      hc_hi_[m] = -d;   // ...and handed to the high half, so the sum is zero
     }
 
     Scalar ffi = kZero;
@@ -1957,10 +1987,9 @@ void Network::step() {
       }
       // DNA v57: whichever half this neuron sits in, suppressed by how much
       // busier the other half is. At hc_gain_ == 0 both offsets are zero.
-      if (hc_gain_[m] > kZero) {
-        const ModuleState& hms = modules_[m];
-        const uint32_t hmid = hms.count / 2;
-        drive_a -= (i - hms.begin) < hmid ? hc_lo_[m] : hc_hi_[m];
+      if (hc_gain_[m] > kZero && i >= hc_begin_[m] && i < hc_end_[m]) {
+        const uint32_t hn = hc_end_[m] - hc_begin_[m];
+        drive_a -= (i - hc_begin_[m]) < hn / 2 ? hc_lo_[m] : hc_hi_[m];
       }
 
       // Node perturbation: remember what this neuron was actually given, so

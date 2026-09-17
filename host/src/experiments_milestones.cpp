@@ -12819,12 +12819,12 @@ struct HCArm {
 const HCArm kHCArms[] = {
     {"neither",  0.00f, 167.0f, 0.00f},
     {"fatigue",  0.05f, 167.0f, 0.00f},   // v56 only -- predicted null, and measured
-    {"inhib20",  0.00f, 167.0f, 0.20f},   // v57 only -- predicted to SETTLE
-    {"inhib60",  0.00f, 167.0f, 0.60f},   // v57 only, stronger
-    {"both20",   0.05f, 167.0f, 0.20f},
-    {"both60",   0.05f, 167.0f, 0.60f},   // the derived tau, full-suppression gain
-    {"both60-83", 0.05f, 83.0f, 0.60f},
-    {"both60-250", 0.05f, 250.0f, 0.60f},
+    {"inhib60",  0.00f, 167.0f, 0.60f},   // v57 only -- predicted to SETTLE
+    {"inhib300", 0.00f, 167.0f, 3.00f},   // v57 only, strong: duty 0.50, babble PASS
+    {"both60",   0.05f, 167.0f, 0.60f},
+    {"both300",  0.05f, 167.0f, 3.00f},   // the derived tau, strong competition
+    {"both300-83", 0.05f, 83.0f, 3.00f},
+    {"both300-250", 0.05f, 250.0f, 3.00f},
 };
 constexpr uint32_t kHCArmCount = sizeof(kHCArms) / sizeof(kHCArms[0]);
 constexpr uint64_t kHCSeedOffset = 604553ull;
@@ -12903,12 +12903,21 @@ HCRow run_halfcenter_arm(const std::vector<uint8_t>& blob, uint64_t ticks, const
     if (v.voicing > 0.5f && v.amplitude > 0.05f) on += 1;
     const aibaby::Network& net = s.brain.network();
     const aibaby::ModuleState& vm = net.module(uint32_t(vmod));
-    const uint32_t mid = vm.count / 2;
+    // MEASURE WHERE THE COMPETITION ACTUALLY IS. v1 of this read the two halves of
+    // the whole MODULE, which with 126 neurons and 9 groups is {voicing, F1, ...}
+    // against {..., amplitude} -- two different control parameters rather than two
+    // competing states, and that mismatch voided a whole run. The mechanism now
+    // lives inside one readout group, so the readout follows it there: group 2's
+    // lower half is a low-F1 posture and its upper half a high-F1 one.
+    const uint32_t gb = aibaby::slice_begin(vm.count, aibaby::kVocalGroups, 2);
+    const uint32_t ge = aibaby::slice_begin(vm.count, aibaby::kVocalGroups, 3);
+    const uint32_t gn = ge > gb ? ge - gb : 0;
+    const uint32_t mid = gn / 2;
     double sl = 0.0, sh = 0.0;
-    for (uint32_t k = 0; k < mid; ++k) sl += double(net.rate_fast(vm.begin + k));
-    for (uint32_t k = mid; k < vm.count; ++k) sh += double(net.rate_fast(vm.begin + k));
+    for (uint32_t k = 0; k < mid; ++k) sl += double(net.rate_fast(vm.begin + gb + k));
+    for (uint32_t k = mid; k < gn; ++k) sh += double(net.rate_fast(vm.begin + gb + k));
     const double ml = mid > 0 ? sl / double(mid) : 0.0;
-    const double mh = vm.count > mid ? sh / double(vm.count - mid) : 0.0;
+    const double mh = gn > mid ? sh / double(gn - mid) : 0.0;
     lo.push_back(ml); hi.push_back(mh); diff.push_back(ml - mh);
     rsum += 0.5 * (ml + mh);
   }
@@ -13001,6 +13010,8 @@ bool run_halfcenter(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
   const size_t o_jump = offsetof(aibaby::DnaHeader, vocal) + offsetof(aibaby::DnaVocal, adapt_jump);
   const size_t o_tau = offsetof(aibaby::DnaHeader, vocal) + offsetof(aibaby::DnaVocal, adapt_tau_ms);
   const size_t o_hc = offsetof(aibaby::DnaHeader, vocal) + offsetof(aibaby::DnaVocal, halfcenter_gain);
+  const size_t o_hg = offsetof(aibaby::DnaHeader, vocal) + offsetof(aibaby::DnaVocal, halfcenter_group);
+  const uint32_t hc_group = 2u;   // F1 -- where a formant gesture lives
   const std::vector<Cell> cells = parallel_reps<Cell>(njobs, [&](uint32_t i) {
     Cell c;
     const uint32_t r = i / kHCArmCount, a = i % kHCArmCount;
@@ -13010,6 +13021,7 @@ bool run_halfcenter(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
     std::memcpy(variant.data() + o_jump, &kHCArms[a].jump, sizeof(float));
     std::memcpy(variant.data() + o_tau, &kHCArms[a].tau_ms, sizeof(float));
     std::memcpy(variant.data() + o_hc, &kHCArms[a].hc, sizeof(float));
+    std::memcpy(variant.data() + o_hg, &hc_group, sizeof(uint32_t));
     c.row = run_halfcenter_arm(variant, ticks, kHCArms[a]);
     c.ok = c.row.ok;
     if (c.ok)

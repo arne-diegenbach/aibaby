@@ -638,6 +638,13 @@ adapt_tau_ms = 167.0
 #
 # 0 is OFF and BIT-IDENTICAL.
 halfcenter_gain = 0.0
+# Which readout group hosts the competition. 2 = F1. v57a split the whole module
+# at its midpoint, which put the VOICING GATE and F1 in one half and AMPLITUDE in
+# the other -- so the competition throttled a gate instead of moving a formant, and
+# voided a run (duty 0.00 suppressing the loser, 0.999 boosting the winner). A
+# half-center needs two populations coding the SAME variable in OPPOSITE directions,
+# and inside one group the two halves are exactly that.
+halfcenter_group = 2
 
 [curiosity]
 learn_rate = 0.02           # LMS rate of the forward model

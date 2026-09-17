@@ -1619,6 +1619,28 @@ struct DnaVocal {
   //
   // 0 is OFF and bit-identical.
   float halfcenter_gain;
+  // DNA v57b. WHICH READOUT GROUP hosts the competition, and getting this wrong
+  // voided an entire run. v57a split the whole vocal module at its midpoint, which
+  // with 126 neurons and 9 groups puts the VOICING GATE (group 1) and F1 (group 2)
+  // entirely in the lower half and AMPLITUDE (group 8) entirely in the upper. So
+  // "reciprocal inhibition between the two halves" was competition between
+  // {voicing, F1, ...} and {..., amplitude} -- not two competing STATES of one
+  // variable but two different control PARAMETERS. Suppressing the loser killed
+  // voicing (duty 0.00); boosting the winner pinned amplitude (0.999).
+  //
+  // A half-center needs two populations coding the SAME variable in OPPOSITE
+  // directions. Inside one readout group that is exactly what the two halves are:
+  // group 2's lower half is a low-F1 posture and its upper half a high-F1 one
+  // (`preferred_i = (i - begin + 0.5)/n`, so position IS the coded value). Their
+  // alternation moves the rate-weighted centroid, which IS F1 sweeping down and up
+  // -- an articulatory gesture rather than a gate being throttled.
+  //
+  // And because the term is zero-mean, the group's TOTAL activity is preserved, so
+  // voicing and amplitude are untouched. That is what v57a broke.
+  //
+  // 2 = F1, which is where a formant gesture lives. Only read when
+  // `halfcenter_gain` > 0.
+  uint32_t halfcenter_group;
 };
 
 // Curiosity (§3.3) is a forward model of the next sensory frame plus two

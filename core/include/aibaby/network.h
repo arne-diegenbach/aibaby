@@ -968,6 +968,9 @@ class Network {
   Scalar hc_gain_[kMaxModules] = {};
   Scalar hc_lo_[kMaxModules] = {};
   Scalar hc_hi_[kMaxModules] = {};
+  uint32_t hc_group_[kMaxModules] = {};
+  uint32_t hc_begin_[kMaxModules] = {};
+  uint32_t hc_end_[kMaxModules] = {};
   // DnaExploration::drive_compensation, cached from the genome at build.
   Scalar drive_comp_ = kZero;
   // DNA v51. The context-indexed bias table: `ctx_slots_` scalars per neuron,

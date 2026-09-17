@@ -1,0 +1,101 @@
+# halfcenter v57a -- VOID. DO NOT CITE ANY NUMBER FROM THE `hc > 0` ARMS.
+# 2026-09-18. Gated on verify PASS (hash ad96f882becbee92, 22 experiments, 7.8 min).
+#
+# WHY IT IS VOID, not a refusal: every arm with halfcenter_gain > 0 has duty 0.00,
+# anti-phase EXACTLY +0.000, peak 0.00 and SNR 0.00. Those are not measurements --
+# they are what the statistics return on a constant input. The voice was silent.
+# inhib20 and inhib60 are bit-identical to each other (rate 2.47, half-diff
+# 4.97+/-0.56), as are both20/both60 -- two different gains giving identical output.
+#
+# TWO BUGS, BOTH MINE.
+# 1. The term was ONE-SIDED. Both offsets were clamped to [0,1] and both SUBTRACTED,
+#    so only the LOSING half was suppressed: net inhibitory, and positive feedback on
+#    the difference (crushing the loser widens the gap, which crushes it further).
+#    v32's comment warned a term scaling with what it derives from amplifies itself;
+#    the clamp bounded the MAGNITUDE and left the SIGN STRUCTURE self-amplifying.
+#    Fixed to zero-mean (subtract from one half, add to the other, sum exactly 0) --
+#    which then SATURATED instead: duty 1.00, amplitude 0.999.
+# 2. THE REAL ERROR, and it explains both failures. Splitting the module at its
+#    midpoint (neuron 63 of 126, 9 groups of 14) puts the VOICING GATE (group 1) and
+#    F1 (group 2) entirely in the lower half and AMPLITUDE (group 8) entirely in the
+#    upper. So "reciprocal inhibition between the two halves" was competition between
+#    two different CONTROL PARAMETERS, not two competing STATES of one variable.
+#    Suppressing the loser killed voicing; boosting the winner pinned amplitude.
+#    A half-center needs populations coding the SAME variable in OPPOSITE directions.
+#    Fixed in v57b: the competition lives INSIDE one readout group (group 2 = F1),
+#    where the two halves are a low-F1 and a high-F1 posture, and the zero-mean form
+#    preserves the group's total activity so voicing and amplitude are untouched.
+#    v57b measured: duty 0.48-0.50 and babble PASS across a 15x gain range
+#    (0.20/0.60/1.20/3.00), with distinct hashes, so it is stable AND live.
+#
+# THE PRINTED VERDICT IS RETRACTED. It concluded "a rate code averaged over a
+# population has no phase for two groups to be opposite in" -- drawn entirely from
+# arms that produced no data. Nothing here supports it.
+#
+# WHAT DOES SURVIVE, from the two NON-void arms and it is worth having:
+#   anti-phase corr = +0.838 +/- 0.003 (neither) and +0.824 +/- 0.004 (fatigue),
+#   stable across both halves of the recording (+0.850/+0.825, +0.823/+0.792).
+#   THE TWO HALVES OF THE LARYNX MOVE TOGETHER, very tightly. That is a direct
+#   measurement of common-mode dominance and the baseline any half-center must beat.
+#   NOTE the module-halves definition, so this number is {voicing,F1,..} vs
+#   {..,amplitude}; the v57b readout measures within group 2 instead.
+#
+# INSTRUMENT FLAW: the "-208.3 SE" lines are an artefact of comparing 0.000 +/- 0.000
+# against 0.824 +/- 0.004. A contrast needs a guard when either SE is ~0.
+  arm         jump  tau   hc    ANTI-PHASE corr  peak f/SNR    half-diff    duty   rate
+  neither     0.00  167   0.00  +0.838 +/- 0.003   2.10/ 3.88    4.50 +/- 0.33 0.57    4.92
+                anti-phase by half of the recording: +0.850 / +0.825
+  fatigue     0.05  167   0.00  +0.824 +/- 0.004   3.27/ 3.59    4.66 +/- 0.49 0.44    4.21
+                anti-phase by half of the recording: +0.823 / +0.792
+  inhib20     0.00  167   0.20  +0.000 +/- 0.000   0.00/ 0.00    4.97 +/- 0.56 0.00    2.47  <- VOID
+                anti-phase by half of the recording: -0.000 / +0.000
+  inhib60     0.00  167   0.60  +0.000 +/- 0.000   0.00/ 0.00    4.97 +/- 0.56 0.00    2.47  <- VOID
+                anti-phase by half of the recording: -0.000 / +0.000
+  both20      0.05  167   0.20  +0.000 +/- 0.000   0.00/ 0.00    5.42 +/- 0.68 0.00    2.10  <- VOID
+                anti-phase by half of the recording: -0.000 / +0.000
+  both60      0.05  167   0.60  +0.000 +/- 0.000   0.00/ 0.00    5.42 +/- 0.68 0.00    2.10  <- VOID
+                anti-phase by half of the recording: -0.000 / +0.000
+  both60-83   0.05  83    0.60  +0.000 +/- 0.000   0.00/ 0.00    4.67 +/- 0.38 0.00    2.31  <- VOID
+                anti-phase by half of the recording: +0.000 / -0.000
+  both60-250  0.05  250   0.60  +0.000 +/- 0.000   0.00/ 0.00    5.07 +/- 0.58 0.00    1.79  <- VOID
+                anti-phase by half of the recording: +0.000 / +0.000
+
+  KILL SWITCH -- duty away from BOTH ends, rate near target
+    neither     duty 0.57  rate  4.92 Hz
+    fatigue     duty 0.44  rate  4.21 Hz
+    inhib20     duty 0.00  rate  2.47 Hz   <- VOID (runaway or silence)
+    inhib60     duty 0.00  rate  2.47 Hz   <- VOID (runaway or silence)
+    both20      duty 0.00  rate  2.10 Hz   <- VOID (runaway or silence)
+    both60      duty 0.00  rate  2.10 Hz   <- VOID (runaway or silence)
+    both60-83   duty 0.00  rate  2.31 Hz   <- VOID (runaway or silence)
+    both60-250  duty 0.00  rate  1.79 Hz   <- VOID (runaway or silence)
+
+  PRIMARY -- the INTERACTION, anti-phase against BOTH singles
+    both20      anti +0.000   vs `inhib20` +0.8 SE   vs `fatigue` -208.3 SE   (VOID)
+    both60      anti +0.000   vs `inhib60` +0.8 SE   vs `fatigue` -208.3 SE   (VOID)
+    both60-83   anti +0.000   vs `inhib60` +0.9 SE   vs `fatigue` -208.3 SE   (VOID)
+    both60-250  anti +0.000   vs `inhib60` -0.0 SE   vs `fatigue` -208.3 SE   (VOID)
+
+  FREQUENCY -- does the period follow tau_a? (exponent, not correlation)
+    tau  83 ms  peak 0.00 Hz  period   0.0 ms  period/tau  0.00
+    tau 167 ms  peak 0.00 Hz  period   0.0 ms  period/tau  0.00
+    tau 250 ms  peak 0.00 Hz  period   0.0 ms  period/tau  0.00
+    EXPONENT +0.000 over tau 83 -> 250 (required ~1.000 for a relaxation
+    oscillator; adaptclock measured +0.226 here without the inhibition)
+
+  --- the reading ---
+  THE HALVES DO NOT TAKE TURNS. Best non-void `both` arm is `both20` at anti-phase
+  +1.000, and no arm clears -0.20 with 3 SE over both singles.
+  THAT IS A REAL REFUSAL AND IT IS EXPENSIVE FOR THE TEXTBOOK. Reciprocal
+  inhibition plus spike-triggered adaptation is the half-center, both
+  ingredients are now present and individually verified live, and the two
+  populations still do not alternate. So what is missing is not a component
+  but something about how this larynx REPRESENTS activity: every pathway
+  here is rate-coded and pooled, and a rate code averaged over a population
+  has no phase for two groups to be opposite IN.
+  That points at the same wall seven earlier instruments hit, and it is the
+  first time the sequence line has reached it from the DYNAMICS side rather
+  than the learning side.
+HC_EXIT=1
+
+[exited with code 0]
