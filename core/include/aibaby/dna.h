@@ -1641,6 +1641,27 @@ struct DnaVocal {
   // 2 = F1, which is where a formant gesture lives. Only read when
   // `halfcenter_gain` > 0.
   uint32_t halfcenter_group;
+  // DNA v57d. A TONIC DRIVE to the competing populations -- Matsuoka's S parameter,
+  // and the axis the regime map is actually about.
+  //
+  // WHY IT IS NEEDED, derived rather than guessed. At steady state the adaptation
+  // variable balances at `adapt = jump * rate * tau_a/1000`. At the jump that is
+  // strong enough to release a settled winner (1.00) and the derived tau (167 ms),
+  // the free-running rate of ~4.9 Hz implies adapt ~0.835 -- ABOVE the vocal spike
+  // threshold of 0.645. So the only stable fixed point is a nearly silent one, which
+  // is exactly what was measured: rate fell to 0.54 Hz, 9x below baseline, and the
+  // one arm that looked like alternation was drift plus sparsity in a population the
+  // fatigue had almost switched off.
+  //
+  // A tonic drive of ~0.8 cancels that, and Shpiro/Curtu/Rinzel/Rubin say the
+  // oscillating regime is a BOUNDED WINDOW in exactly this parameter -- with a
+  // winner-take-all gap in the middle, fusion below and simultaneous activity above,
+  // and boundaries that do NOT move with the time constants. Every run before this
+  // swept tau and inhibition and left this axis at the shipped operating point.
+  //
+  // 0 is OFF and bit-identical. Applies only inside `halfcenter_group`, and only
+  // when `halfcenter_gain` > 0.
+  float halfcenter_drive;
 };
 
 // Curiosity (§3.3) is a forward model of the next sensory frame plus two

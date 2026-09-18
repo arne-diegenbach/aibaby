@@ -645,6 +645,13 @@ halfcenter_gain = 0.0
 # half-center needs two populations coding the SAME variable in OPPOSITE directions,
 # and inside one group the two halves are exactly that.
 halfcenter_group = 2
+# DNA v57d. Tonic drive to the competing populations -- Matsuoka's S, and the axis
+# the regime map is about. At jump 1.00 and tau 167 ms the steady-state fatigue at
+# the free-running rate of ~4.9 Hz is ~0.835, ABOVE the 0.645 spike threshold, so
+# without compensation the only stable point is near-silence (measured: 0.54 Hz).
+# ~0.8 cancels it. Oscillation is a BOUNDED WINDOW in this parameter with a
+# winner-take-all gap in the middle. 0 is OFF and bit-identical.
+halfcenter_drive = 0.0
 
 [curiosity]
 learn_rate = 0.02           # LMS rate of the forward model

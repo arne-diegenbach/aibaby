@@ -591,6 +591,7 @@ bool Network::build(const Dna& dna, Arena& arena, Rng& rng) {
       if (dna_.module(m).role == uint32_t(ModuleRole::kVocal)) {
         hc_gain_[m] = g;
         hc_group_[m] = dna_.header().vocal.halfcenter_group;
+        hc_drive_[m] = Scalar(dna_.header().vocal.halfcenter_drive);
       }
     }
   }
@@ -2020,6 +2021,8 @@ void Network::step() {
       if (hc_gain_[m] > kZero && i >= hc_begin_[m] && i < hc_end_[m]) {
         const uint32_t hn = hc_end_[m] - hc_begin_[m];
         drive_a -= (i - hc_begin_[m]) < hn / 2 ? hc_lo_[m] : hc_hi_[m];
+        // DNA v57d: Matsuoka's tonic input S, which the fatigue is competing against.
+        drive_a += hc_drive_[m];
       }
 
       // Node perturbation: remember what this neuron was actually given, so

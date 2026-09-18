@@ -468,6 +468,7 @@ bool compile_dna_toml(const std::string& path, std::vector<uint8_t>& out,
     header.vocal.adapt_tau_ms = float(r.number("adapt_tau_ms"));
     header.vocal.halfcenter_gain = float(r.number("halfcenter_gain"));
     header.vocal.halfcenter_group = uint32_t(r.number("halfcenter_group"));
+    header.vocal.halfcenter_drive = float(r.number("halfcenter_drive"));
     collect(r);
   }
   {

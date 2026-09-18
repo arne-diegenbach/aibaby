@@ -12815,19 +12815,29 @@ struct HCArm {
   float jump;
   float tau_ms;
   float hc;
+  float drive;   // DNA v57d: Matsuoka's tonic S, the regime axis
 };
 const HCArm kHCArms[] = {
-    {"neither",  0.00f, 167.0f, 0.00f},
-    {"fatigue",  0.05f, 167.0f, 0.00f},   // v56 only -- predicted null, and measured
-    {"inhib60",  0.00f, 167.0f, 0.60f},   // v57 only -- predicted to SETTLE
-    {"inhib300", 0.00f, 167.0f, 3.00f},   // v57 only, strong: duty 0.50, babble PASS
-    {"rel100-250", 1.00f, 250.0f, 0.60f},
-    {"rel100-83", 1.00f, 83.0f, 0.60f},   // tau sweep AT a jump that can release
-    // The settled winner needs a jump big enough to RELEASE it. With adaptation now
-    // scoped to the competing populations, the jump can go far above the 0.05 that
-    // muted the whole larynx in `adaptclock`.
-    {"rel30",    0.30f, 167.0f, 0.60f},
-    {"rel100",   1.00f, 167.0f, 0.60f},
+    // A MAPPING RUN, not a hypothesis test. Shpiro/Curtu/Rinzel/Rubin: oscillation is
+    // a BOUNDED WINDOW in tonic drive, with a winner-take-all gap in its middle,
+    // fusion below and simultaneous activity above -- and boundaries that do NOT move
+    // with the time constants, which is the axis every previous run left alone.
+    //
+    // Fatigue and inhibition are held where they were shown to release a settled
+    // winner (jump 1.00, hc 0.60, tau 167). The derived compensation point is 0.835,
+    // since adapt = jump * rate * tau/1000 puts the fatigue at the free-running rate
+    // ABOVE the 0.645 spike threshold -- which is why rate collapsed to 0.54 Hz.
+    {"drive000", 1.00f, 167.0f, 0.60f, 0.00f},   // the old rel100: rate 0.76 Hz
+    {"drive030", 1.00f, 167.0f, 0.60f, 0.30f},
+    {"drive050", 1.00f, 167.0f, 0.60f, 0.50f},
+    {"drive070", 1.00f, 167.0f, 0.60f, 0.70f},
+    {"drive085", 1.00f, 167.0f, 0.60f, 0.85f},   // the DERIVED compensation point
+    {"drive100", 1.00f, 167.0f, 0.60f, 1.00f},
+    {"drive140", 1.00f, 167.0f, 0.60f, 1.40f},
+    // MATCHED-DRIVE CONTROL: both mechanisms OFF at the derived drive. Without it a
+    // tonic drive that merely raises rate could produce an anti-phase reading on its
+    // own and nothing would distinguish the two.
+    {"ctrl085",  0.00f, 167.0f, 0.00f, 0.85f},
 };
 constexpr uint32_t kHCArmCount = sizeof(kHCArms) / sizeof(kHCArms[0]);
 constexpr uint64_t kHCSeedOffset = 604553ull;
@@ -13040,6 +13050,7 @@ bool run_halfcenter(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
   const size_t o_hc = offsetof(aibaby::DnaHeader, vocal) + offsetof(aibaby::DnaVocal, halfcenter_gain);
   const size_t o_hg = offsetof(aibaby::DnaHeader, vocal) + offsetof(aibaby::DnaVocal, halfcenter_group);
   const uint32_t hc_group = 2u;   // F1 -- where a formant gesture lives
+  const size_t o_hd = offsetof(aibaby::DnaHeader, vocal) + offsetof(aibaby::DnaVocal, halfcenter_drive);
   const std::vector<Cell> cells = parallel_reps<Cell>(njobs, [&](uint32_t i) {
     Cell c;
     const uint32_t r = i / kHCArmCount, a = i % kHCArmCount;
@@ -13050,6 +13061,7 @@ bool run_halfcenter(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
     std::memcpy(variant.data() + o_tau, &kHCArms[a].tau_ms, sizeof(float));
     std::memcpy(variant.data() + o_hc, &kHCArms[a].hc, sizeof(float));
     std::memcpy(variant.data() + o_hg, &hc_group, sizeof(uint32_t));
+    std::memcpy(variant.data() + o_hd, &kHCArms[a].drive, sizeof(float));
     c.row = run_halfcenter_arm(variant, ticks, kHCArms[a]);
     c.ok = c.row.ok;
     if (c.ok)
@@ -13092,7 +13104,10 @@ bool run_halfcenter(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
     // RELATIVE to the control arm, not an absolute constant. A fixed 20 Hz bound let
     // `both60` through at 19.03 against a 4.9 baseline -- a 4x runaway that read as
     // healthy. The bound now tracks the arm that has no mechanism in it.
-    const double base_rt = m_rt[0] > 0.0 ? m_rt[0] : 5.0;
+    // Baseline is the MATCHED-DRIVE CONTROL (last arm), not arm 0 -- arm 0 now runs
+    // both mechanisms with a collapsed rate, and normalising by it would hide exactly
+    // the artefact that voided the previous run.
+    const double base_rt = m_rt[kHCArmCount - 1] > 0.0 ? m_rt[kHCArmCount - 1] : 5.0;
     // BOUNDED ON BOTH SIDES. The upward bound caught v57b's runaway; the DOWNWARD one
     // is what let `rel100-250` through at 0.54 Hz -- 9x BELOW baseline -- and it was
     // the only arm to show anti-phase. A near-silenced population is the
@@ -13133,45 +13148,44 @@ bool run_halfcenter(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
                 void_arm[a] ? "   <- VOID (runaway or silence)" : "");
   }
 
-  // THE PRIMARY: each `both` arm against BOTH of its own singles.
-  std::printf("\n  PRIMARY -- the INTERACTION, anti-phase against BOTH singles\n");
-  // Indices track the arm table above: 0 neither, 1 fatigue, 2 inhib60, 3 inhib300,
-  // 4 rel100-250, 5 rel100-83, 6 rel30, 7 rel100. Every `rel` arm runs hc 0.60, so
-  // its inhibition-only single is `inhib60` (index 2) and its fatigue-only single is
-  // `fatigue` (index 1).
-  const uint32_t both_idx[4] = {4, 5, 6, 7};
-  const uint32_t single_i[4] = {2, 2, 2, 2};
-  bool alternates = false; double best = 1.0; uint32_t bestarm = 4;
-  for (uint32_t k = 0; k < 4; ++k) {
-    const uint32_t a = both_idx[k], si = single_i[k], sf = 1;  // sf = `fatigue`
-    const double d_i = m_an[a] - m_an[si];
-    const double e_i = std::sqrt(s_an[a] * s_an[a] + s_an[si] * s_an[si]);
-    const double d_f = m_an[a] - m_an[sf];
-    const double e_f = std::sqrt(s_an[a] * s_an[a] + s_an[sf] * s_an[sf]);
-    const double t_i = e_i > 0 ? d_i / e_i : 0.0, t_f = e_f > 0 ? d_f / e_f : 0.0;
-    std::printf("    %-11s anti %+.3f   vs `%s` %+.1f SE   vs `fatigue` %+.1f SE%s\n",
-                kHCArms[a].name, m_an[a], kHCArms[si].name, t_i, t_f,
-                void_arm[a] ? "   (VOID)" : "");
-    if (!void_arm[a] && m_an[a] <= -0.20 && t_i <= -3.0 && t_f <= -3.0) alternates = true;
-    if (!void_arm[a] && m_an[a] < best) { best = m_an[a]; bestarm = a; }
+  // MAPPING: does an oscillating WINDOW exist anywhere on the drive axis?
+  const uint32_t kCtrl = kHCArmCount - 1;
+  std::printf("\n  THE REGIME PROFILE -- anti-phase and rate across the drive axis\n");
+  std::printf("    fusion below the window, winner-take-all in its middle, simultaneous\n"
+              "    activity above (Shpiro/Curtu/Rinzel/Rubin)\n");
+  bool alternates = false; double best = 1.0; uint32_t bestarm = 0;
+  for (uint32_t a = 0; a < kHCArmCount; ++a) {
+    uint32_t ndeg = 0, nn = 0;
+    double wa = 0.0, ha = 0.0;
+    for (uint32_t r = 0; r < kReps; ++r) {
+      const Cell& c = cells[r * kHCArmCount + a];
+      if (!c.ok) continue;
+      if (c.row.degenerate) ++ndeg;
+      wa += c.row.anti; ha += 0.5 * (c.row.anti_a + c.row.anti_b); ++nn;
+    }
+    if (nn > 0) { wa /= double(nn); ha /= double(nn); }
+    const double dd = m_an[a] - m_an[kCtrl];
+    const double se = std::sqrt(s_an[a] * s_an[a] + s_an[kCtrl] * s_an[kCtrl]);
+    const double t = se > 0.0 ? dd / se : 0.0;
+    const bool drift = wa < ha - 0.02;
+    const char* tag = void_arm[a] ? "VOID"
+                    : (ndeg > kReps / 2 ? "settled winner"
+                    : (drift ? "DRIFT not alternation" : ""));
+    std::printf("    drive %-5.2f anti %+.3f (%+.1f SE vs ctrl)  rate %5.2f  %u/%u deg  %s\n",
+                double(kHCArms[a].drive), m_an[a], t, m_rt[a], ndeg, nn, tag);
+    if (a == kCtrl) continue;
+    if (!void_arm[a] && ndeg <= kReps / 2 && !drift && m_an[a] <= -0.20 && t <= -3.0) {
+      alternates = true;
+      if (m_an[a] < best) { best = m_an[a]; bestarm = a; }
+    }
   }
-
-  // Frequency exponent across the both-60 tau arms: 83 / 167 / 250.
-  std::printf("\n  FREQUENCY -- does the period follow tau_a? (exponent, not correlation)\n");
-  const uint32_t tarms[3] = {5, 7, 4};   // tau 83 / 167 / 250, all at jump 1.00, hc 0.60
-  for (uint32_t k = 0; k < 3; ++k)
-    std::printf("    tau %3.0f ms  peak %.2f Hz  period %5.1f ms  period/tau %5.2f\n",
-                double(kHCArms[tarms[k]].tau_ms), m_pf[tarms[k]],
-                1000.0 / (m_pf[tarms[k]] > 0 ? m_pf[tarms[k]] : 1e9),
-                (1000.0 / (m_pf[tarms[k]] > 0 ? m_pf[tarms[k]] : 1e9)) /
-                    double(kHCArms[tarms[k]].tau_ms));
-  double expo = 0.0;
-  if (m_pf[tarms[0]] > 0 && m_pf[tarms[2]] > 0) {
-    expo = std::log(m_pf[tarms[0]] / m_pf[tarms[2]]) /
-           std::log(double(kHCArms[tarms[2]].tau_ms) / double(kHCArms[tarms[0]].tau_ms));
+  std::printf("\n  PERIOD ACROSS THE SWEEP -- inside an oscillating regime the period\n"
+              "  varies with drive: rising on the `release` side, falling on `escape`\n");
+  for (uint32_t a = 0; a < kHCArmCount; ++a) {
+    if (a == kCtrl || m_pf[a] <= 0.0) continue;
+    std::printf("    drive %-5.2f peak %.2f Hz  period %5.1f ms\n",
+                double(kHCArms[a].drive), m_pf[a], 1000.0 / m_pf[a]);
   }
-  std::printf("    EXPONENT %+.3f over tau 83 -> 250 (required ~1.000 for a relaxation\n"
-              "    oscillator; adaptclock measured +0.226 here without the inhibition)\n", expo);
 
   std::printf("\n  --- the reading ---\n");
   if (alternates) {
@@ -13181,8 +13195,10 @@ bool run_halfcenter(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
                 "  run pre-registered.\n", kHCArms[bestarm].name, best);
     std::printf("  A resonance moves both halves TOGETHER, so this cannot be the 3 Hz ring\n"
                 "  being re-measured -- the failure that killed adaptclock.\n");
-    std::printf("  CHECK THE EXPONENT (%+.3f) BEFORE CALLING IT A CLOCK: alternation with a\n"
-                "  frequency that ignores tau_a is competition without timekeeping.\n", expo);
+    std::printf("  THIS RUN DOES NOT SWEEP tau, SO IT CANNOT CALL THIS A CLOCK. It locates a\n"
+                "  candidate WINDOW on the drive axis; whether the period tracks tau_a is the\n"
+                "  NEXT run, at this drive. adaptclock measured +0.226 and the released-jump\n"
+                "  run -0.121, against the ~1.000 a relaxation oscillator requires.\n");
   } else {
     uint32_t deg_any = 0;
     for (uint32_t a = 0; a < kHCArmCount; ++a) {
