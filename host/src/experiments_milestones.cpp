@@ -12821,10 +12821,13 @@ const HCArm kHCArms[] = {
     {"fatigue",  0.05f, 167.0f, 0.00f},   // v56 only -- predicted null, and measured
     {"inhib60",  0.00f, 167.0f, 0.60f},   // v57 only -- predicted to SETTLE
     {"inhib300", 0.00f, 167.0f, 3.00f},   // v57 only, strong: duty 0.50, babble PASS
-    {"both60",   0.05f, 167.0f, 0.60f},
-    {"both300",  0.05f, 167.0f, 3.00f},   // the derived tau, strong competition
-    {"both300-83", 0.05f, 83.0f, 3.00f},
-    {"both300-250", 0.05f, 250.0f, 3.00f},
+    {"rel100-250", 1.00f, 250.0f, 0.60f},
+    {"rel100-83", 1.00f, 83.0f, 0.60f},   // tau sweep AT a jump that can release
+    // The settled winner needs a jump big enough to RELEASE it. With adaptation now
+    // scoped to the competing populations, the jump can go far above the 0.05 that
+    // muted the whole larynx in `adaptclock`.
+    {"rel30",    0.30f, 167.0f, 0.60f},
+    {"rel100",   1.00f, 167.0f, 0.60f},
 };
 constexpr uint32_t kHCArmCount = sizeof(kHCArms) / sizeof(kHCArms[0]);
 constexpr uint64_t kHCSeedOffset = 604553ull;
@@ -12839,11 +12842,21 @@ struct HCRow {
   double anti_a = 0.0, anti_b = 0.0;   // per half of the recording
   double duty = 0.0, rate_hz = 0.0;
   double half_snr = 0.0;    // spectral peak of the half-DIFFERENCE signal
+  double m_lo = 0.0, m_hi = 0.0;   // the two competing postures' mean rates
+  double sd_lo = 0.0, sd_hi = 0.0; // and their spreads -- zero means SILENCED
+  bool degenerate = false;         // one half constant -> a settled winner
 };
 
-static double hc_corr(const std::vector<double>& x, const std::vector<double>& y) {
+// Returns the correlation, and sets `*degenerate` when one series is CONSTANT so a
+// guard value can never be read as a measurement. Three runs in a row reported
+// `+0.000 +/- 0.000` across twelve seeds -- an SE of exactly zero is impossible for a
+// real correlation, and it meant this function was returning its guard every time
+// while the caller printed it as "no anti-phase".
+static double hc_corr(const std::vector<double>& x, const std::vector<double>& y,
+                      bool* degenerate = nullptr) {
+  if (degenerate) *degenerate = false;
   const size_t n = x.size() < y.size() ? x.size() : y.size();
-  if (n < 64) return 0.0;
+  if (n < 64) { if (degenerate) *degenerate = true; return 0.0; }
   double sx = 0, sy = 0;
   for (size_t i = 0; i < n; ++i) { sx += x[i]; sy += y[i]; }
   const double mx = sx / double(n), my = sy / double(n);
@@ -12852,7 +12865,10 @@ static double hc_corr(const std::vector<double>& x, const std::vector<double>& y
     const double a = x[i] - mx, b = y[i] - my;
     cxy += a * b; cxx += a * a; cyy += b * b;
   }
-  if (cxx <= 0.0 || cyy <= 0.0) return 0.0;
+  if (cxx <= 0.0 || cyy <= 0.0) {
+    if (degenerate) *degenerate = true;   // one half is CONSTANT: a settled winner
+    return 0.0;
+  }
   return cxy / std::sqrt(cxx * cyy);
 }
 
@@ -12925,7 +12941,19 @@ HCRow run_halfcenter_arm(const std::vector<uint8_t>& blob, uint64_t ticks, const
   hc_peak(env, tms, &row.peak_f, &row.peak_snr);
   double f_ignored = 0.0;
   hc_peak(diff, tms, &f_ignored, &row.half_snr);
-  row.anti = hc_corr(lo, hi);
+  row.anti = hc_corr(lo, hi, &row.degenerate);
+  {
+    const auto stats = [](const std::vector<double>& v, double* m, double* sd) {
+      double s0 = 0.0;
+      for (double q : v) s0 += q;
+      *m = v.empty() ? 0.0 : s0 / double(v.size());
+      double s2 = 0.0;
+      for (double q : v) s2 += (q - *m) * (q - *m);
+      *sd = v.empty() ? 0.0 : std::sqrt(s2 / double(v.size()));
+    };
+    stats(lo, &row.m_lo, &row.sd_lo);
+    stats(hi, &row.m_hi, &row.sd_hi);
+  }
   const size_t half = lo.size() / 2;
   row.anti_a = hc_corr(std::vector<double>(lo.begin(), lo.begin() + half),
                        std::vector<double>(hi.begin(), hi.begin() + half));
@@ -13072,6 +13100,23 @@ bool run_halfcenter(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
                 double(kHCArms[a].hc), m_an[a], s_an[a], m_pf[a], m_pk[a], m_hs[a], sh,
                 m_du[a], m_rt[a], void_arm[a] ? "  <- VOID" : "");
     std::printf("  %-11s   anti-phase by half of the recording: %+.3f / %+.3f\n", "", m_aa, m_ab);
+    {
+      std::vector<double> ml, mh, sl2, sh2;
+      uint32_t ndeg = 0;
+      for (uint32_t r = 0; r < kReps; ++r) {
+        const Cell& c = cells[r * kHCArmCount + a];
+        if (!c.ok) continue;
+        ml.push_back(c.row.m_lo); mh.push_back(c.row.m_hi);
+        sl2.push_back(c.row.sd_lo); sh2.push_back(c.row.sd_hi);
+        if (c.row.degenerate) ++ndeg;
+      }
+      double e1=0,e2=0,e3=0,e4=0;
+      const double a1 = ctx_mean_se(ml,&e1), a2 = ctx_mean_se(mh,&e2);
+      const double a3 = ctx_mean_se(sl2,&e3), a4 = ctx_mean_se(sh2,&e4);
+      std::printf("  %-11s   low-F1 posture %.3f +/- %.3f Hz, high-F1 %.3f +/- %.3f Hz"
+                  "   [%u/%zu seeds DEGENERATE: one posture CONSTANT]\n",
+                  "", a1, a3, a2, a4, ndeg, ml.size());
+    }
   }
 
   std::printf("\n  KILL SWITCH -- duty away from BOTH ends, rate near target\n");
@@ -13082,8 +13127,12 @@ bool run_halfcenter(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
 
   // THE PRIMARY: each `both` arm against BOTH of its own singles.
   std::printf("\n  PRIMARY -- the INTERACTION, anti-phase against BOTH singles\n");
+  // Indices track the arm table above: 0 neither, 1 fatigue, 2 inhib60, 3 inhib300,
+  // 4 rel100-250, 5 rel100-83, 6 rel30, 7 rel100. Every `rel` arm runs hc 0.60, so
+  // its inhibition-only single is `inhib60` (index 2) and its fatigue-only single is
+  // `fatigue` (index 1).
   const uint32_t both_idx[4] = {4, 5, 6, 7};
-  const uint32_t single_i[4] = {2, 3, 3, 3};   // both20->inhib20; the rest -> inhib60
+  const uint32_t single_i[4] = {2, 2, 2, 2};
   bool alternates = false; double best = 1.0; uint32_t bestarm = 4;
   for (uint32_t k = 0; k < 4; ++k) {
     const uint32_t a = both_idx[k], si = single_i[k], sf = 1;  // sf = `fatigue`
@@ -13101,7 +13150,7 @@ bool run_halfcenter(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
 
   // Frequency exponent across the both-60 tau arms: 83 / 167 / 250.
   std::printf("\n  FREQUENCY -- does the period follow tau_a? (exponent, not correlation)\n");
-  const uint32_t tarms[3] = {6, 5, 7};   // tau 83, 167, 250 at hc 0.60
+  const uint32_t tarms[3] = {5, 7, 4};   // tau 83 / 167 / 250, all at jump 1.00, hc 0.60
   for (uint32_t k = 0; k < 3; ++k)
     std::printf("    tau %3.0f ms  peak %.2f Hz  period %5.1f ms  period/tau %5.2f\n",
                 double(kHCArms[tarms[k]].tau_ms), m_pf[tarms[k]],
@@ -13127,10 +13176,34 @@ bool run_halfcenter(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
     std::printf("  CHECK THE EXPONENT (%+.3f) BEFORE CALLING IT A CLOCK: alternation with a\n"
                 "  frequency that ignores tau_a is competition without timekeeping.\n", expo);
   } else {
-    std::printf("  THE HALVES DO NOT TAKE TURNS. Best non-void `both` arm is `%s` at anti-phase\n"
-                "  %+.3f, and no arm clears -0.20 with 3 SE over both singles.\n",
-                kHCArms[bestarm].name, best);
-    std::printf("  THAT IS A REAL REFUSAL AND IT IS EXPENSIVE FOR THE TEXTBOOK. Reciprocal\n"
+    uint32_t deg_any = 0;
+    for (uint32_t a = 0; a < kHCArmCount; ++a) {
+      if (kHCArms[a].hc <= 0.0f) continue;
+      for (uint32_t r = 0; r < kReps; ++r) {
+        const Cell& c = cells[r * kHCArmCount + a];
+        if (c.ok && c.row.degenerate) { ++deg_any; break; }
+      }
+    }
+    if (deg_any > 0) {
+      std::printf("  A SETTLED WINNER, NOT AN ABSENCE OF STRUCTURE -- and this is what the\n"
+                  "  theory predicts. %u of the arms with inhibition on have at least one seed\n"
+                  "  where a posture is CONSTANT, i.e. one half of the F1 group is silenced and\n"
+                  "  stays silenced. Matsuoka's result is precisely that mutual inhibition ALONE\n"
+                  "  settles into a winner; adaptation is what releases it, and at these jumps it\n"
+                  "  is too weak to. Read the `low-F1 / high-F1 posture` lines above.\n", deg_any);
+      std::printf("  DO NOT READ THE +0.000 ANTI-PHASE AS `NO RHYTHM`: a correlation needs both\n"
+                  "  series to vary, and a settled winner makes one of them constant. That is a\n"
+                  "  GUARD VALUE, and three runs in a row printed it as a measurement.\n");
+      std::printf("  THE NEXT MOVE IS ALREADY WRITTEN DOWN: per Shpiro/Curtu/Rinzel/Rubin the\n"
+                  "  oscillating regime is a bounded window in INPUT STRENGTH with a\n"
+                  "  winner-take-all gap in the middle -- and this run never swept input at all.\n"
+                  "  Raise adaptation until it can break the winner, or move the drive.\n");
+    } else {
+      std::printf("  THE HALVES DO NOT TAKE TURNS. Best non-void `both` arm is `%s` at anti-phase\n"
+                  "  %+.3f, and no arm clears -0.20 with 3 SE over both singles.\n",
+                  kHCArms[bestarm].name, best);
+    }
+    if (deg_any == 0) std::printf("  THAT IS A REAL REFUSAL AND IT IS EXPENSIVE FOR THE TEXTBOOK. Reciprocal\n"
                 "  inhibition plus spike-triggered adaptation is the half-center, both\n"
                 "  ingredients are now present and individually verified live, and the two\n"
                 "  populations still do not alternate. So what is missing is not a component\n"

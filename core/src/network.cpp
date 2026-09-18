@@ -1999,7 +1999,19 @@ void Network::step() {
       // At adapt_jump_ == 0 this block does not execute and `adapt_` stays zero,
       // so the shipped creature is bit-identical.
       Scalar drive_a = drive;
-      if (adapt_jump_[m] > kZero) {
+      // DNA v57c. When a half-center is running, the fatigue belongs to the COMPETING
+      // populations and nowhere else. Module-wide adaptation was the blocker: raising
+      // `adapt_jump` enough to release a settled winner inside group 2 also hit the
+      // voicing gate (group 1) and amplitude (group 8) and muted the voice, which is
+      // why the winner never broke. Scoping it to the competition lets the jump go as
+      // high as the release needs without touching the gate.
+      //
+      // `halfcenter_gain` ships at 0, so this branch never changes the shipped
+      // creature and never touches an hc-off experiment such as `adaptclock`.
+      const bool adapt_here =
+          adapt_jump_[m] > kZero &&
+          (hc_gain_[m] <= kZero || (i >= hc_begin_[m] && i < hc_end_[m]));
+      if (adapt_here) {
         adapt_[i] -= adapt_decay_[m] * adapt_[i];
         drive_a = drive - adapt_[i];
       }
@@ -2024,7 +2036,7 @@ void Network::step() {
         if (v_[i] >= threshold_[i]) {
           v_[i] = v_rest_[i];
           // DNA v56: this spike's contribution to its own fatigue.
-          if (adapt_jump_[m] > kZero) adapt_[i] += adapt_jump_[m];
+          if (adapt_here) adapt_[i] += adapt_jump_[m];
           // DNA v37. Is this spike part of a burst, and does the tuft get a
           // say in whether the next one is?
           //
