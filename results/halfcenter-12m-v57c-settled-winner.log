@@ -31,7 +31,7 @@
 # retroactively changes -- adaptclock ran hc off and is untouched.
 #
 # INSTRUMENT REPAIRED, because three runs in a row printed a guard as a result:
-#   - hc_corr now sets a  flag when a series is constant;
+#   - hc_corr now sets a "degenerate" flag when a series is constant;
 #   - the table prints each posture's mean rate AND spread, so a silenced
 #     population is visible directly rather than inferred;
 #   - the verdict names a settled winner and REFUSES to print the sweeping
