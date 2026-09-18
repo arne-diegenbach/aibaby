@@ -13563,7 +13563,14 @@ bool run_regionband(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
     cfg.region_band = kRBArms[a].band;
     const bool keep = kRBArms[a].name[0] == 'k';
     if (keep) { cfg.second_f1 = kRBKeepF1; cfg.second_f2 = kRBKeepF2; }
+    // CONFIGURE THE RULER. Omitting this segfaulted the first run: run_retain_arm
+    // calls ruler.of(...) and an unconfigured Timbre has no filterbank to read. The
+    // call site was copied without its setup block, and the crash produced NO output
+    // at all because stdout is block-buffered through a pipe and the buffer is lost
+    // on SIGSEGV -- so the exit code 139 was the only evidence.
     Timbre local_ruler;
+    std::string local_error;
+    if (!local_ruler.configure(dna0.header().audio, local_error)) return cell;
     bool ok = false;
     cell.row = run_retain_arm(variant, ticks, cfg, local_ruler, regime, &ok);
     cell.ok = ok;
