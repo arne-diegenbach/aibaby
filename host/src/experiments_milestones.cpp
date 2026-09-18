@@ -13880,14 +13880,24 @@ bool run_credgate(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
   double m_after[kCGArmCount] = {}, s_after[kCGArmCount] = {};
   double m_taught[kCGArmCount] = {}, s_taught[kCGArmCount] = {};
   double m_agree[kCGArmCount] = {};
+  double m_ret[kCGArmCount] = {}, s_ret[kCGArmCount] = {};
   std::printf("\n  %-13s %-9s %-20s %-20s %s\n", "arm", "mode", "err TAUGHT (A)",
               "err AFTER (A kept?)", "agree");
   for (uint32_t a = 0; a < kCGArmCount; ++a) {
-    std::vector<double> af, tg, ag;
+    // RETENTION AS A FRACTION OF WHAT WAS GAINED -- the statistic credit-oracle
+    // actually scored (0.84 broadcast -> 1.03 targeted). A reward mask COSTS learning
+    // rate: it confines node perturbation to 7 neurons of 126, so err_taught degrades
+    // under every mask (0.9439 -> 1.0266 -> 1.0624). The raw AB-minus-keep gap then
+    // confounds "interference reduced" with "everything slowed", because the mask
+    // moves both arms. (before - after)/(before - taught) divides the loss by the
+    // GAIN, so a slower learner keeping the same proportion reads the same.
+    std::vector<double> af, tg, ag, rt;
     for (uint32_t r = 0; r < kReps; ++r) {
       const Cell& c = cells[r * kCGArmCount + a];
       if (!c.ok) continue;
       af.push_back(c.row.err_after); tg.push_back(c.row.err_taught);
+      const double gain = c.row.err_before - c.row.err_taught;
+      if (gain > 1e-6) rt.push_back((c.row.err_before - c.row.err_after) / gain);
       ag.push_back(c.row.credit_trials
                        ? double(c.row.credit_agree) / double(c.row.credit_trials) : 0.0);
     }
@@ -13896,12 +13906,31 @@ bool run_credgate(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
                   kCGArms[a].name, af.size());
       return false;
     }
-    double sg = 0.0;
+    double sg = 0.0, sr = 0.0;
     m_after[a] = ctx_mean_se(af, &s_after[a]);
     m_taught[a] = ctx_mean_se(tg, &s_taught[a]);
     m_agree[a] = ctx_mean_se(ag, &sg);
+    m_ret[a] = rt.size() >= 3 ? ctx_mean_se(rt, &sr) : 0.0;
+    s_ret[a] = sr;
     std::printf("  %-13s %-9u %.4f +/- %-12.4f %.4f +/- %-12.4f %.3f\n", kCGArms[a].name,
                 kCGArms[a].mode, m_taught[a], s_taught[a], m_after[a], s_after[a], m_agree[a]);
+  }
+
+  {
+    const char* mn[4] = {"broadcast", "oracle", "derived", "shuffled"};
+    std::printf("\n  RETENTION -- the fraction of the GAIN that survived, which is what\n"
+                "  credit-oracle scored (0.84 broadcast -> 1.03 targeted). Unlike the raw\n"
+                "  gap this is not confounded by the mask's learning-rate cost.\n");
+    for (uint32_t k = 0; k < 4; ++k)
+      std::printf("    %-10s AB %.3f +/- %.3f    keep %.3f +/- %.3f\n", mn[k],
+                  m_ret[k * 2], s_ret[k * 2], m_ret[k * 2 + 1], s_ret[k * 2 + 1]);
+    for (uint32_t k = 1; k < 4; ++k) {
+      const double d = m_ret[k * 2] - m_ret[0];
+      const double se = std::sqrt(s_ret[k * 2] * s_ret[k * 2] + s_ret[0] * s_ret[0]);
+      std::printf("    %-10s AB retention vs broadcast: %+.3f +/- %.3f  (%+.1f SE)%s\n",
+                  mn[k], d, se, se > 0.0 ? d / se : 0.0,
+                  k == 3 ? "   <- must NOT" : "");
+    }
   }
 
   std::printf("\n  AGREEMENT GUARD -- did the mask land where the live lesson wanted?\n");
