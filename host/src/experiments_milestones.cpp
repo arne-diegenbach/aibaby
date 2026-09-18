@@ -13093,7 +13093,15 @@ bool run_halfcenter(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
     // `both60` through at 19.03 against a 4.9 baseline -- a 4x runaway that read as
     // healthy. The bound now tracks the arm that has no mechanism in it.
     const double base_rt = m_rt[0] > 0.0 ? m_rt[0] : 5.0;
-    void_arm[a] = m_du[a] < 0.10 || m_du[a] > 0.95 || m_rt[a] > 2.5 * base_rt;
+    // BOUNDED ON BOTH SIDES. The upward bound caught v57b's runaway; the DOWNWARD one
+    // is what let `rel100-250` through at 0.54 Hz -- 9x BELOW baseline -- and it was
+    // the only arm to show anti-phase. A near-silenced population is the
+    // denominator-shrinking artefact this project's own pre-registrations keep
+    // naming, and two sparse trains that rarely overlap are anti-correlated by
+    // construction with no oscillator anywhere. A competition that has to nearly
+    // switch the population off to look like alternation has not demonstrated one.
+    void_arm[a] = m_du[a] < 0.10 || m_du[a] > 0.95 ||
+                  m_rt[a] > 2.5 * base_rt || m_rt[a] < 0.40 * base_rt;
     std::printf("  %-11s %-5.2f %-5.0f %-5.2f %+.3f +/- %-7.3f %4.2f/%5.2f   %5.2f +/- %-4.2f "
                 "%.2f   %5.2f%s\n",
                 kHCArms[a].name, double(kHCArms[a].jump), double(kHCArms[a].tau_ms),
