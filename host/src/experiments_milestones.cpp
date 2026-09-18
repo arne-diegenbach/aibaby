@@ -6070,13 +6070,24 @@ RTRow run_retain_arm(const std::vector<uint8_t>& blob, uint64_t ticks,
       const uint32_t cg_lo = aibaby::slice_begin(cvm.count, aibaby::kVocalGroups, 2);
       const uint32_t cg_hi = aibaby::slice_begin(cvm.count, aibaby::kVocalGroups, 3);
       const uint32_t cmid = cg_lo + (cg_hi - cg_lo) / 2;
-      bool upper = !relearning;   // mode 1: A (low target) takes the UPPER half
+      // THE HALF IS KEYED OFF THE TARGET, NOT THE PHASE, and v1 got this wrong.
+      // `silences-the-wrong-side` measured mirror-image profiles: a LOW target works
+      // by suppressing the UPPER half, a HIGH one the LOWER. v1 wrote
+      // `upper = !relearning`, which keys off teach-vs-gap instead -- and the `keep`
+      // control's second lesson targets A's OWN f1 320, a LOW target that wants the
+      // UPPER half, while `relearning` was true so it got the LOWER. The
+      // matched-reward control was masked to the half its target does not use, in
+      // every masked arm, which crushed it and invalidated every AB-minus-keep
+      // contrast in the run.
+      const double f1mid = 0.5 * (double(s.dna.header().vocal.f1_min) +
+                                  double(s.dna.header().vocal.f1_max));
+      const bool want = double(lesson.f1) < f1mid;   // low target -> UPPER half
+      bool upper = want;
       if (cfg.credit_mode == 2) upper = cnet.active_context() == 0u;
       else if (cfg.credit_mode == 3) upper = (credit_rng.next() & 1u) != 0u;
       if (upper) cnet.set_reward_mask(cvm.begin + cmid, cvm.begin + cg_hi);
       else cnet.set_reward_mask(cvm.begin + cg_lo, cvm.begin + cmid);
       // AGREEMENT TELEMETRY, so a null can be told from an index that never moved.
-      const bool want = !relearning;
       ++row.credit_trials;
       if (upper == want) ++row.credit_agree;
     }

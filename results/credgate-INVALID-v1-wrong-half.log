@@ -1,0 +1,71 @@
+# credgate v1 -- the matched-reward control was masked to the WRONG HALF.
+# Every AB-minus-keep contrast in this run is invalid. 2026-09-18, verify PASS.
+#
+# THE BUG: the half was keyed off the PHASE (upper = !relearning) rather than the
+# TARGET. silences-the-wrong-side measured mirror-image profiles -- a LOW target
+# works by suppressing the UPPER half, a HIGH one the LOWER. The keep arm's second
+# lesson targets A's own f1 320, a LOW target wanting the UPPER half, but
+# relearning was true so it was masked to the LOWER. The control was confined to
+# the half its own target does not use, in every masked arm.
+#
+# The data shows it plainly: keep degrades 0.8685 -> 0.9966 (oracle) / 0.9448
+# (derived) / 1.0531 (shuffled). So every gap closure here is the control being
+# crushed, including the oracle's +5.4 SE and the shuffled arm's +5.3 SE.
+# THE 'A COIN FLIP WORKS AS WELL AS THE ORACLE' READING IS RETRACTED -- it is an
+# artefact of a broken control, not a finding about masking.
+#
+# WHAT SURVIVES, and it is the more interesting half: THE AGREEMENT ROW.
+#   oracle   1.000  (by construction)
+#   derived  0.720  <- the creature's own ear-EMA index
+#   shuffled 0.477  (chance)
+# The derived index's binarised context agrees with the live phase 72% of the
+# time against a 47.7% coin flip. That is real information about which lesson is
+# live, and it is measured independently of the retention contrast. It does not
+# contradict ctxretain's 0.23/0.23 -- different statistic, slot occupancy vs
+# argmax agreement -- but it does say the index is not empty.
+#
+# Also worth keeping: the oracle's gap is +0.0138 +/- 0.0147 (+0.9 SE), i.e. the
+# wipe is GONE under a perfect mask. That direction is right even though the
+# magnitude is contaminated by the broken control.
+
+  arm           mode      err TAUGHT (A)       err AFTER (A kept?)  agree
+  bcast-AB      0         0.9439 +/- 0.0082       1.0168 +/- 0.0130       0.000
+  bcast-keep    0         0.9439 +/- 0.0082       0.8685 +/- 0.0151       0.000
+  oracle-AB     1         1.0266 +/- 0.0077       1.0104 +/- 0.0100       1.000
+  oracle-keep   1         1.0266 +/- 0.0077       0.9966 +/- 0.0107       1.000
+  derived-AB    2         1.0266 +/- 0.0077       1.0322 +/- 0.0128       0.720
+  derived-keep  2         1.0266 +/- 0.0077       0.9448 +/- 0.0185       0.720
+  shuf-AB       3         1.0624 +/- 0.0042       1.0835 +/- 0.0067       0.477
+  shuf-keep     3         1.0624 +/- 0.0042       1.0531 +/- 0.0068       0.477
+
+  AGREEMENT GUARD -- did the mask land where the live lesson wanted?
+    oracle  1.000   (must be 1.000 by construction)
+    derived 0.720   <- THE WHOLE QUESTION
+    shuffled 0.477  (must be ~0.500)
+
+  PRIMARY -- the AB-minus-keep gap, per mode
+    broadcast  AB 1.0168   keep 0.8685   gap +0.1483 +/- 0.0200  (+7.4 SE)
+    oracle     AB 1.0104   keep 0.9966   gap +0.0138 +/- 0.0147  (+0.9 SE)
+    derived    AB 1.0322   keep 0.9448   gap +0.0874 +/- 0.0225  (+3.9 SE)
+    shuffled   AB 1.0835   keep 1.0531   gap +0.0304 +/- 0.0095  (+3.2 SE)
+
+    oracle   shrinks the gap by +0.1345 +/- 0.0248  (+5.4 SE)
+    derived  shrinks the gap by +0.0609 +/- 0.0301  (+2.0 SE)
+    shuffled shrinks the gap by +0.1179 +/- 0.0221  (+5.3 SE)  <- must NOT
+
+  THE COST -- err_taught, which the oracle bought its 1.03 with
+    broadcast  AB 0.9439   keep 0.9439
+    oracle     AB 1.0266   keep 1.0266
+    derived    AB 1.0266   keep 1.0266
+    shuffled   AB 1.0624   keep 1.0624
+
+  --- the reading ---
+  THE DERIVED INDEX DOES NOT TARGET THE REWARD. The oracle shrinks the gap
+  +5.4 SE and the creature's own index +2.0 SE.
+  READ THE AGREEMENT ROW BEFORE CONCLUDING ANYTHING GENERAL: if `derived`
+  sat at chance, this refutes THIS INDEX and not gating. Masse has gating at
+  61.4% alone, so the mechanism is not supposed to be sufficient anyway --
+  what would be refuted is the ear-EMA index as its carrier.
+RB_EXIT=1
+
+[exited with code 0]
