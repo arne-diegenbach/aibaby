@@ -11914,3 +11914,62 @@ infrastructure. But each gesture needs intrinsic dynamics over ~150 ms, and the
 timescale ladder here is empty between 60 ms and 800 ms — so this one sits downstream
 of the timescale gap rather than routing around it, and the dormant dictionary makes
 it look cheaper than it is.
+
+### The larynx makes a gesture
+
+The half-center was placed inside the F1 group on a specific argument: the two halves
+code low-F1 and high-F1 postures, so their alternation should move the rate-weighted
+centroid and F1 should sweep. Five runs measured neural anti-phase, within-half
+coherence, the amplitude envelope and F1 *means* — and none of them recorded produced
+F1 as a time series, which is the output the whole mechanism was built to make.
+
+The means had been carrying the answer the entire time. The settled-winner arms read
+F1 at **438** and **813 Hz**, and the centroid extremes for a 126-neuron, nine-group
+module are 437.5 and 812.5. **The two competing postures are the ends of the F1
+range**, so a complete alternation is a **375 Hz neural swing** — larger than the
+~230 Hz that absolute naming has been short of for this project's entire history.
+
+| arm | neural anti-phase | alternation | produced swing | excess over control | lagged coherence |
+| --- | --- | --- | --- | --- | --- |
+| tau083 | −0.753 | 2.83 Hz | 47.3 Hz | −20.6 | **0.699** |
+| tau167 | −0.555 | 1.25 Hz | 74.8 Hz | +6.9 | **0.709** |
+| tau250 | −0.395 | 2.31 Hz | 106.9 Hz | **+39.0** | **0.597** |
+| tau333 | −0.297 | 1.00 Hz | **135.6 Hz** | **+67.7** | **0.522** |
+| control, both off | +0.367 | — | 67.9 Hz | — | 0.312 |
+| inhibition only | +0.069 | — | 2.7 Hz | — | 0.312 |
+| fatigue only | +0.097 | — | 72.4 Hz | — | 0.228 |
+
+**The formant follows.** All four combination arms sit well above the null while both
+singles sit at or below it — the interaction again, on a measure independent of
+everything that established it. The sign is a prediction rather than an observation:
+the half-difference is (low − high) and F1 rises when the high half wins, so
+transmission has to be negative, and all four are.
+
+Three quantities pull in opposite directions across tau and all three hold. Deeper
+neural alternation gives higher coherence, because there is a cleaner signal to
+follow. Slower alternation gives a larger produced swing, because more of it survives
+the 800 ms pole. And the two slowest arms land on that pole's own prediction — +39.0
+against 32.1, +67.7 against 73.2.
+
+**So `tau333`, free-running, produces 135.6 Hz of F1 swing against a control's 67.9.
+An extra 67.7 Hz of articulatory excursion, with no caregiver and no reward.** That is
+a repeated articulatory gesture arising from the dynamics rather than from teaching,
+which is a fair description of what babbling is. It is two of four arms and carries no
+standard error, so it wants a fresh seed family before it is banked.
+
+**And the statistic that nearly buried it is the most instructive failure of the
+night.** The first version measured coherence at zero lag and read +0.082 / +0.014 /
++0.069 / −0.094 — a flat null, apparently. It was nothing of the kind. A one-pole
+filter phase-shifts by `atan(2πfτ)`, which at these rates is 79 to 86 degrees, so a
+zero-lag correlation is *capped* at `cos(lag)` = 0.195 / 0.157 / 0.086 / 0.070. The
+measured values were a large fraction of the maximum attainable; `tau250` reached 80%
+of its ceiling. **The filter that attenuates a signal also rotates it** — and the same
+pole was being used to compute the prediction while the measurement was taken in a way
+its phase made impossible. Every other instrument repair in this line caught a false
+positive after the fact. This one would have produced a false negative and discarded
+the result.
+
+The finding also sharpens the decoder question rather than settling it. The mechanism
+generates 375 Hz of neural swing; the positional decoder delivers 68 Hz of it at best,
+and only when the alternation is slow enough to creep under an 800 ms pole. A velocity
+decoder would not be fighting that filter — it would be using it as the integrator.
