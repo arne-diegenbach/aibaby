@@ -421,6 +421,14 @@ const Spec kSpecs[] = {
      "  so the primary is an INTERACTION. And the readout is the signature itself:\n"
      "  a half-center ALTERNATES, so corr(lower half, upper half) must go NEGATIVE,\n"
      "  which a resonance cannot fake -- it moves both halves together. 12 seeds"},
+    {"regionband", 3400000, Expect::kOpen, Tier::kTeach,
+     "DOES A SATISFIED LESSON STOP WIPING THE ONE BEFORE IT? The shipped teacher\n"
+     "  rewards e < base with base an EMA of the creature's own error -- a bar that\n"
+     "  chases it, so the reward never saturates and a lesson never stops demanding.\n"
+     "  DIVA's targets are convex REGIONS, giving the reward a natural zero. Aimed at\n"
+     "  the 0.22 wipe: B restores the neurons A silenced at +9.4 SE. Width DERIVED\n"
+     "  from the creature's own F1 jitter (0.033 log units = 1 sd). gapwrite's AB vs\n"
+     "  A-keep design at every band, so reward is matched. 12 seeds"},
     {"movability", 5600000, Expect::kOpen, Tier::kLong,
      "orthovocab left a LEAD: on identical demands the F2 lesson travelled\n"
      "  0.169 and the F1 lesson 0.030 -- but F1's was FIGHTING another lesson on\n"
@@ -774,6 +782,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "glide") ok = run_glide(dna_blob, ticks, verbose);
   else if (name == "adaptclock") ok = run_adaptclock(dna_blob, ticks, verbose);
   else if (name == "halfcenter") ok = run_halfcenter(dna_blob, ticks, verbose);
+  else if (name == "regionband") ok = run_regionband(dna_blob, ticks, verbose);
   else if (name == "partprobe") ok = run_partprobe(dna_blob, ticks, verbose);
   else if (name == "pgprobe") ok = run_pgprobe(dna_blob, ticks, verbose);
   else if (name == "g2cond") ok = run_g2cond(dna_blob, ticks, verbose);

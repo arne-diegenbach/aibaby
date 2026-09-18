@@ -5831,6 +5831,31 @@ struct RTConfig {
   //   2 bottom
   uint32_t mask_count = 0;
   uint32_t mask_pos = 0;
+  // A CONVEX REGION TARGET instead of a point, in the error's own log units.
+  //
+  // WHY. The shipped rule rewards `e < base`, where `base` is an EMA of the creature's
+  // OWN recent error -- a bar that chases it. Four measured results are symptoms of
+  // the pathology that creates: past ~0.6 log units a tracking bar makes target
+  // distance invisible (demand-never-arrives); a bar must track to stay informative at
+  // all (baseref); an UNREACHABLE target beats a reachable one (protocol-line-closed);
+  // and a reward that SEES target distance is 9.4 SE WORSE
+  // (blindness-is-not-the-ceiling). All four follow from a reward that never
+  // SATURATES: however close the creature gets, the gradient still points inward and
+  // the lesson never stops demanding.
+  //
+  // DIVA's targets are convex REGIONS, which gives the reward a natural zero. A
+  // satisfied lesson that STOPS PUSHING is the direct attack on the measured
+  // interference: b-runs-back-through-a found lesson B restoring the very neurons A
+  // silenced at +9.4 SE, and axis-not-distance confirmed at +11.5 SE that retention
+  // tracks the DEMAND on A's own axis.
+  //
+  // THE WIDTH IS DERIVED. The error is |log(f1/target)|, so the natural unit is the
+  // creature's own F1 jitter as a fraction: halfcenter's free-running control measured
+  // sd 20.9 Hz at a rest of 627 Hz = 0.033 log units. 1-3 sd is 0.033 / 0.067 / 0.100,
+  // which around a 320 Hz target are half-widths of 11 / 21 / 32 Hz.
+  //
+  // 0 keeps the shipped EMA rule and is bit-identical.
+  double region_band = 0.0;
 };
 
 // One arm, one creature, one life: teach, intervene, re-measure.
@@ -6174,11 +6199,26 @@ RTRow run_retain_arm(const std::vector<uint8_t>& blob, uint64_t ticks,
         if (e >= 0.0) {
           last_feedback = now;
           double& base = relearning ? baseline2 : baseline1;
-          if (base >= 0.0) {
-            pending.push_back(Praise{now + regime.delay,
-                                     e < base ? regime.praise : regime.scold});
+          if (cfg.region_band > 0.0) {
+            // INSIDE the region the lesson is satisfied and praises unconditionally,
+            // so it stops demanding. OUTSIDE it still praises improvement, so there is
+            // a gradient to follow in. The EMA bar survives only for the outside case,
+            // computed on the region-relative error.
+            const double e_eff = e > cfg.region_band ? e - cfg.region_band : 0.0;
+            if (e_eff <= 0.0) {
+              pending.push_back(Praise{now + regime.delay, regime.praise});
+            } else if (base >= 0.0) {
+              pending.push_back(Praise{now + regime.delay,
+                                       e_eff < base ? regime.praise : regime.scold});
+            }
+            base = base < 0.0 ? e_eff : base + kRTBaselineAlpha * (e_eff - base);
+          } else {
+            if (base >= 0.0) {
+              pending.push_back(Praise{now + regime.delay,
+                                       e < base ? regime.praise : regime.scold});
+            }
+            base = base < 0.0 ? e : base + kRTBaselineAlpha * (e - base);
           }
-          base = base < 0.0 ? e : base + kRTBaselineAlpha * (e - base);
         }
       }
       if (t < kRTEchoFrom || t >= kRTEchoTo || !voiced) continue;
@@ -13411,6 +13451,213 @@ bool run_halfcenter(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
                 "  than the learning side.\n");
   }
   return alternates;
+}
+
+// ============================================================================
+// `regionband` — DOES A SATISFIED LESSON STOP WIPING THE ONE BEFORE IT?
+//
+// The shipped teacher rewards `e < base`, where `base` is an EMA of the creature's
+// OWN recent error. That bar chases the creature, so the reward NEVER SATURATES:
+// however close it gets, the gradient still points inward and the lesson never stops
+// demanding. Four measured results are symptoms of exactly that -- a tracking bar
+// making target distance invisible past ~0.6 log units; a bar having to track to stay
+// informative at all; an UNREACHABLE target beating a reachable one; and a reward that
+// SEES target distance being 9.4 SE WORSE.
+//
+// DIVA's targets are convex REGIONS, which gives the reward a natural zero. The
+// prediction that follows is specific and mechanical: a lesson that is SATISFIED stops
+// pushing, and a lesson that stops pushing cannot keep demanding the first lesson's
+// axis. That is aimed straight at the measured interference -- `b-runs-back-through-a`
+// found lesson B restoring the very neurons A had silenced at +9.4 SE against a
+// matched-reward control, and `axis-not-distance` confirmed at +11.5 SE that retention
+// tracks the DEMAND on A's own axis. The 0.22 wipe is the thing standing between this
+// creature and two words.
+//
+// THE WIDTH IS DERIVED, NOT SWEPT BLIND. The error is |log(f1/target)|, so its natural
+// unit is the creature's own F1 jitter as a fraction: `halfcenter`'s free-running
+// control measured sd 20.9 Hz at a rest of 627 Hz, i.e. 0.033 log units. The arms are
+// 0 / 1 / 2 / 3 sd, which around a 320 Hz target are half-widths of 0 / 11 / 21 / 32 Hz.
+//
+// THE DESIGN IS `gapwrite`'s, because that is the one that PRICED the interference:
+// AB (teach A, then teach a conflicting B) against A-keep (teach A, then a gap rewarded
+// toward A). The difference between them is interference proper, with the reward
+// itself matched. Both arms run at every band.
+struct RBArm { const char* name; bool relearn; double band; };
+// A-keep is `relearn` with the second lesson's target set to A's own, so the creature
+// is rewarded just as hard during the gap but toward where it already is.
+const RBArm kRBArms[] = {
+    {"AB-0",    true, 0.000},   // the shipped point target: the 0.22-wipe protocol
+    {"keep-0",  true, 0.000},
+    {"AB-1sd",  true, 0.033},
+    {"keep-1sd", true, 0.033},
+    {"AB-2sd",  true, 0.067},
+    {"keep-2sd", true, 0.067},
+    {"AB-3sd",  true, 0.100},
+    {"keep-3sd", true, 0.100},
+};
+constexpr uint32_t kRBArmCount = sizeof(kRBArms) / sizeof(kRBArms[0]);
+constexpr uint64_t kRBSeedOffset = 447701ull;
+// `keep` arms point lesson B at A's own target. kWords[1] is /i/ {250, 320, 2500}.
+constexpr float kRBKeepF1 = 320.0f, kRBKeepF2 = 2500.0f;
+
+bool run_regionband(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  aibaby::Dna dna0;
+  if (dna0.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) {
+    std::printf("  setup failed: the genome does not load\n");
+    return false;
+  }
+  Regime regime;
+  regime.praise = kPraiseValue;
+  regime.scold = kScoldValue;
+  constexpr uint32_t kReps = 12;
+  instrument("regionband", dna0.header().seed ^ 0x4B17u, ticks / kRTTrial, "trials");
+  std::printf("  seed family       offset %llu -> first creature %016llx (FRESH)\n",
+              (unsigned long long)kRBSeedOffset,
+              (unsigned long long)(dna0.header().seed + kRBSeedOffset));
+  std::printf("  the pathology     the shipped teacher rewards `e < base` where base is an\n"
+              "                    EMA of the creature's OWN error -- a bar that chases it, so\n"
+              "                    the reward NEVER SATURATES and a lesson never stops\n"
+              "                    demanding. Four measured results are symptoms: a tracking\n"
+              "                    bar making distance invisible past ~0.6 log units; a bar\n"
+              "                    having to track to stay informative; an UNREACHABLE target\n"
+              "                    beating a reachable one; and a distance-SEEING reward being\n"
+              "                    9.4 SE worse.\n");
+  std::printf("  the change        a convex REGION target: reward zero INSIDE, graded outside.\n"
+              "                    A satisfied lesson STOPS PUSHING -- and a lesson that stops\n"
+              "                    pushing cannot keep demanding the first lesson's axis.\n");
+  std::printf("  width DERIVED     |log(f1/target)| has the creature's own F1 jitter as its\n"
+              "                    natural unit: sd 20.9 Hz at rest 627 = 0.033 log units. Arms\n"
+              "                    are 0/1/2/3 sd = half-widths of 0/11/21/32 Hz at 320 Hz.\n");
+  std::printf("  design            `gapwrite`'s, the one that PRICED the interference: AB\n"
+              "                    (teach A, then a conflicting B) vs A-keep (teach A, then a\n"
+              "                    gap rewarded toward A). Their difference is interference\n"
+              "                    proper, with reward matched. Both at every band.\n");
+  std::printf("\n  PRE-REGISTERED\n");
+  std::printf("    PRIMARY         the AB-minus-keep gap must SHRINK as the band widens. That\n"
+              "                    gap is interference with reward held constant.\n");
+  std::printf("    AND IT MUST SHRINK THE RIGHT WAY: AB must IMPROVE. If the gap closes only\n"
+              "      because `keep` gets WORSE, the band is degrading teaching rather than\n"
+              "      protecting memory, and that is a refusal. Both arms are reported\n"
+              "      separately for exactly this reason.\n");
+  std::printf("    NON-MONOTONE    a band wide enough to satisfy everything teaches nothing,\n"
+              "                    so err_taught must eventually DEGRADE. A monotone `wider is\n"
+              "                    always better` means the metric is measuring satisfaction\n"
+              "                    rather than learning -- refuse it.\n");
+  std::printf("    not the primary single-lesson accuracy is already MET (m1c: +15.9 points,\n"
+              "                    d' 5.57) and is not what is short. RETENTION is.\n\n");
+
+  struct Cell { bool ok = false; RTRow row; };
+  const uint32_t njobs = kReps * kRBArmCount;
+  const std::vector<Cell> cells = parallel_reps<Cell>(njobs, [&](uint32_t i) {
+    Cell cell;
+    const uint32_t r = i / kRBArmCount, a = i % kRBArmCount;
+    std::vector<uint8_t> variant = blob;
+    const uint64_t seed = dna0.header().seed + kRBSeedOffset + r * 7919ull;
+    std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+    RTConfig cfg;
+    cfg.name = kRBArms[a].name;
+    cfg.teach = true;
+    cfg.relearn = kRBArms[a].relearn;
+    cfg.mask_mode = 0u;
+    cfg.region_band = kRBArms[a].band;
+    const bool keep = kRBArms[a].name[0] == 'k';
+    if (keep) { cfg.second_f1 = kRBKeepF1; cfg.second_f2 = kRBKeepF2; }
+    Timbre local_ruler;
+    bool ok = false;
+    cell.row = run_retain_arm(variant, ticks, cfg, local_ruler, regime, &ok);
+    cell.ok = ok;
+    if (cell.ok)
+      parallel_note("  [%u/%u] seed %u %-9s taught %.4f after %.4f\n", i + 1, njobs, r,
+                    kRBArms[a].name, cell.row.err_taught, cell.row.err_after);
+    return cell;
+  });
+
+  double m_after[kRBArmCount] = {}, s_after[kRBArmCount] = {};
+  double m_taught[kRBArmCount] = {}, s_taught[kRBArmCount] = {};
+  std::printf("\n  %-10s %-6s %-20s %-20s %s\n", "arm", "band", "err TAUGHT (A)",
+              "err AFTER (A kept?)", "n");
+  for (uint32_t a = 0; a < kRBArmCount; ++a) {
+    std::vector<double> af, tg;
+    for (uint32_t r = 0; r < kReps; ++r) {
+      const Cell& c = cells[r * kRBArmCount + a];
+      if (!c.ok) continue;
+      af.push_back(c.row.err_after); tg.push_back(c.row.err_taught);
+    }
+    if (af.size() < 3) {
+      std::printf("\n  regionband INCONCLUSIVE -- arm `%s` produced %zu creatures.\n",
+                  kRBArms[a].name, af.size());
+      return false;
+    }
+    m_after[a] = ctx_mean_se(af, &s_after[a]);
+    m_taught[a] = ctx_mean_se(tg, &s_taught[a]);
+    std::printf("  %-10s %-6.3f %.4f +/- %-12.4f %.4f +/- %-12.4f %zu\n", kRBArms[a].name,
+                kRBArms[a].band, m_taught[a], s_taught[a], m_after[a], s_after[a], af.size());
+  }
+
+  std::printf("\n  PRIMARY -- the AB-minus-keep gap, i.e. interference with reward matched\n");
+  double gap[4] = {}, gse[4] = {};
+  const double bands[4] = {0.000, 0.033, 0.067, 0.100};
+  for (uint32_t k = 0; k < 4; ++k) {
+    const uint32_t ab = k * 2, kp = k * 2 + 1;
+    gap[k] = m_after[ab] - m_after[kp];
+    gse[k] = std::sqrt(s_after[ab] * s_after[ab] + s_after[kp] * s_after[kp]);
+    std::printf("    band %.3f   AB %.4f   keep %.4f   gap %+.4f +/- %.4f  (%+.1f SE)\n",
+                bands[k], m_after[ab], m_after[kp], gap[k], gse[k],
+                gse[k] > 0.0 ? gap[k] / gse[k] : 0.0);
+  }
+  const double shrink = gap[0] - gap[3];
+  const double sse = std::sqrt(gse[0] * gse[0] + gse[3] * gse[3]);
+  std::printf("    gap at band 0 minus gap at band 0.100: %+.4f +/- %.4f  (%+.1f SE)\n",
+              shrink, sse, sse > 0.0 ? shrink / sse : 0.0);
+
+  std::printf("\n  AND DID IT SHRINK THE RIGHT WAY? AB must IMPROVE, not `keep` degrade\n");
+  const double ab_gain = m_after[0] - m_after[6];
+  const double ab_se = std::sqrt(s_after[0] * s_after[0] + s_after[6] * s_after[6]);
+  const double kp_gain = m_after[1] - m_after[7];
+  const double kp_se = std::sqrt(s_after[1] * s_after[1] + s_after[7] * s_after[7]);
+  std::printf("    AB   band 0 -> 0.100:  %+.4f +/- %.4f  (%+.1f SE)  %s\n", ab_gain, ab_se,
+              ab_se > 0.0 ? ab_gain / ab_se : 0.0,
+              ab_gain > 0.0 ? "AB IMPROVED" : "AB did not improve");
+  std::printf("    keep band 0 -> 0.100:  %+.4f +/- %.4f  (%+.1f SE)  %s\n", kp_gain, kp_se,
+              kp_se > 0.0 ? kp_gain / kp_se : 0.0,
+              kp_gain < 0.0 ? "keep DEGRADED" : "keep held up");
+
+  std::printf("\n  NON-MONOTONE CHECK -- a band that satisfies everything teaches nothing\n");
+  for (uint32_t k = 0; k < 4; ++k)
+    std::printf("    band %.3f   err_taught  AB %.4f   keep %.4f\n", bands[k],
+                m_taught[k * 2], m_taught[k * 2 + 1]);
+
+  const bool shrank = shrink >= 3.0 * sse && sse > 0.0;
+  const bool right_way = ab_gain > 0.0 && ab_gain >= 3.0 * ab_se;
+
+  std::printf("\n  --- the reading ---\n");
+  if (shrank && right_way) {
+    std::printf("  A SATISFIED LESSON STOPS WIPING THE ONE BEFORE IT. The interference gap\n"
+                "  narrows by %+.4f (%+.1f SE) from a point target to a 3-sd region, and it\n"
+                "  narrows because AB IMPROVED by %+.4f (%+.1f SE) rather than because the\n"
+                "  matched-reward control degraded.\n",
+                shrink, shrink / sse, ab_gain, ab_gain / ab_se);
+    std::printf("  CHECK err_taught ABOVE BEFORE BANKING IT: if it did not degrade at the\n"
+                "  widest band, the metric may be measuring satisfaction rather than learning.\n");
+  } else if (shrank && !right_way) {
+    std::printf("  THE GAP CLOSED FOR THE WRONG REASON. It narrows %+.4f (%+.1f SE), but AB\n"
+                "  moved %+.4f (%+.1f SE) -- so the band is degrading the matched-reward\n"
+                "  control rather than protecting the first lesson. REFUSED, and this is the\n"
+                "  failure the run pre-registered against.\n",
+                shrink, shrink / sse, ab_gain, ab_se > 0.0 ? ab_gain / ab_se : 0.0);
+  } else {
+    std::printf("  A REGION TARGET DOES NOT PROTECT THE FIRST LESSON. The interference gap\n"
+                "  moves %+.4f +/- %.4f from a point target to a 3-sd region -- %+.1f SE\n"
+                "  against a 3 SE bar.\n", shrink, sse, sse > 0.0 ? shrink / sse : 0.0);
+    std::printf("  THAT IS A REAL REFUSAL AND IT IS EXPENSIVE FOR THE DIVA ACCOUNT. The reward\n"
+                "  was given a natural zero, a satisfied lesson genuinely stopped demanding,\n"
+                "  and lesson B still ran back through A's write. So the wipe is NOT caused by\n"
+                "  the target's failure to saturate, and the remaining suspect is the one\n"
+                "  `axis-not-distance` already named: B's cheapest route to its own target\n"
+                "  simply PASSES THROUGH the neurons A used, whatever the reward geometry.\n");
+  }
+  return shrank && right_way;
 }
 
 bool run_movability(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
