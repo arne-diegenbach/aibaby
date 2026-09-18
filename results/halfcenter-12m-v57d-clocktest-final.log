@@ -1,0 +1,120 @@
+# halfcenter v57d, clock test FINAL -- real competition, NOT a clock.
+# 2026-09-18. verify PASS, pinned hash ad96f882becbee92.
+#
+# Period must be PROPORTIONAL to tau_a for a relaxation oscillator (exponent 1.0,
+# points on the line). Measured on the HALF-DIFFERENCE, grid floor 0.25 Hz:
+#
+#   tau      alternation    period     predicted 2-4 tau
+#    83 ms   2.83+/-0.61    353 ms     166- 332 ms   outside
+#   167 ms   1.25+/-0.00    800 ms     334- 668 ms   outside
+#   250 ms   2.31+/-0.23    432 ms     500-1000 ms   outside
+#   333 ms   1.00+/-0.17   1000 ms     666-1332 ms   IN BAND
+#
+# FOUR-POINT slope +0.548, R^2 0.448, ONE of four in band, series NON-MONOTONE.
+# The printed +0.750 is an ENDPOINT fit and must not be quoted.
+#
+# THE PREDICTION I WROTE BEFORE THIS RUN FAILED. I predicted tau 250 would fall to
+# 0.5-1.0 Hz and tau 333 to 0.375-0.75 once the grid floor moved from 0.75 to
+# 0.25 Hz. Neither moved (2.31 and 1.00, unchanged); only tau 83 shifted 3.19->2.83.
+#
+# AND THE ARGUMENT BEHIND THAT PREDICTION WAS MY OWN ARITHMETIC ERROR. I inverted
+# period -> frequency. Period 2-4 tau means frequency 1000/period, so the true bands
+# are 3.01-6.02 / 1.50-2.99 / 1.00-2.00 / 0.75-1.50 Hz -- ABOVE the old 0.75 floor
+# for every arm. The grid was never hiding anything. Convert units before building an
+# argument on them.
+#
+# WHAT STANDS, and it does not depend on the clock question:
+#   - a POPULATION half-center: within-half coherence +0.967-0.975 in every mechanism
+#     arm against +0.217 control, +0.152 inhibition-only, +0.051 fatigue-only;
+#   - anti-phase DEPTH tracks tau_a monotonically: -0.753 / -0.555 / -0.395 / -0.297,
+#     against +0.367 in the shipped larynx, 0/12 degenerate, all passing drift;
+#   - BOTH ingredients required and MUTUALLY STABILISING: inhibition alone runs away
+#     at 121.98 Hz, fatigue alone silences the voice at duty 0.00, together stable;
+#   - mutual inhibition alone SETTLES (11-12 of 12 seeds degenerate), as Matsuoka says.
+#
+# So: genuine population competition in the larynx, with the fatigue constant setting
+# its DEPTH and something else setting its FREQUENCY. The envelope sat flat at
+# 2.5-3.5 Hz across every tau, which points at the pre-existing 3 Hz resonance.
+  arm         jump  tau   hc    ANTI-PHASE corr  peak f/SNR    half-diff    duty   rate
+  tau083      1.00  83    0.60  -0.753 +/- 0.001   2.56/ 4.52   12.15 +/- 2.17 0.56   10.21
+                anti-phase by half of the recording: -0.752 / -0.762
+                low-F1 posture 10.220 +/- 8.147 Hz, high-F1 10.205 +/- 8.145 Hz   [0/12 seeds DEGENERATE]
+                WITHIN-half coherence +0.971 +/- 0.001  (a population half-center is strongly POSITIVE here; per-neuron bursting is not)
+  tau167      1.00  167   0.60  -0.555 +/- 0.000   3.19/ 4.52   1559.00 +/- 224.88 0.57    6.38
+                anti-phase by half of the recording: -0.554 / -0.556
+                low-F1 posture 6.380 +/- 6.765 Hz, high-F1 6.379 +/- 6.767 Hz   [0/12 seeds DEGENERATE]
+                WITHIN-half coherence +0.970 +/- 0.001  (a population half-center is strongly POSITIVE here; per-neuron bursting is not)
+  tau250      1.00  250   0.60  -0.395 +/- 0.000   2.65/ 4.57   35.55 +/- 6.33 0.57    4.67
+                anti-phase by half of the recording: -0.396 / -0.394
+                low-F1 posture 4.668 +/- 6.184 Hz, high-F1 4.668 +/- 6.182 Hz   [0/12 seeds DEGENERATE]
+                WITHIN-half coherence +0.969 +/- 0.001  (a population half-center is strongly POSITIVE here; per-neuron bursting is not)
+  tau333      1.00  333   0.60  -0.297 +/- 0.000   2.52/ 4.33   376.71 +/- 116.09 0.57    3.67
+                anti-phase by half of the recording: -0.302 / -0.292
+                low-F1 posture 3.669 +/- 5.760 Hz, high-F1 3.668 +/- 5.757 Hz   [0/12 seeds DEGENERATE]
+                WITHIN-half coherence +0.967 +/- 0.000  (a population half-center is strongly POSITIVE here; per-neuron bursting is not)
+  inhib140    0.00  167   0.60  +0.069 +/- 0.010   2.98/ 4.68    4.13 +/- 0.44 0.51   121.98  <- VOID
+                anti-phase by half of the recording: +0.074 / +0.061
+                low-F1 posture 122.091 +/- 2.882 Hz, high-F1 121.873 +/- 2.898 Hz   [0/12 seeds DEGENERATE]
+                WITHIN-half coherence +0.152 +/- 0.005  (a population half-center is strongly POSITIVE here; per-neuron bursting is not)
+  fat140      1.00  167   0.00  +0.097 +/- 0.004   3.15/ 3.87    5.33 +/- 1.01 0.00    1.51  <- VOID
+                anti-phase by half of the recording: +0.097 / +0.096
+                low-F1 posture 1.515 +/- 1.424 Hz, high-F1 1.513 +/- 1.421 Hz   [0/12 seeds DEGENERATE]
+                WITHIN-half coherence +0.051 +/- 0.003  (a population half-center is strongly POSITIVE here; per-neuron bursting is not)
+  drive200    1.00  167   0.60  -0.651 +/- 0.002   2.08/ 3.75   208.82 +/- 114.67 0.56    9.26
+                anti-phase by half of the recording: -0.673 / -0.628
+                low-F1 posture 9.260 +/- 7.664 Hz, high-F1 9.260 +/- 7.662 Hz   [0/12 seeds DEGENERATE]
+                WITHIN-half coherence +0.975 +/- 0.001  (a population half-center is strongly POSITIVE here; per-neuron bursting is not)
+  ctrl140     0.00  167   0.00  +0.367 +/- 0.009   1.60/ 4.18    3.88 +/- 0.28 0.57    4.93
+                anti-phase by half of the recording: +0.387 / +0.347
+                low-F1 posture 4.928 +/- 3.176 Hz, high-F1 4.929 +/- 3.185 Hz   [0/12 seeds DEGENERATE]
+                WITHIN-half coherence +0.217 +/- 0.005  (a population half-center is strongly POSITIVE here; per-neuron bursting is not)
+
+  KILL SWITCH -- duty away from BOTH ends, rate near target
+    tau083      duty 0.56  rate 10.21 Hz
+    tau167      duty 0.57  rate  6.38 Hz
+    tau250      duty 0.57  rate  4.67 Hz
+    tau333      duty 0.57  rate  3.67 Hz
+    inhib140    duty 0.51  rate 121.98 Hz   <- VOID (runaway or silence)
+    fat140      duty 0.00  rate  1.51 Hz   <- VOID (runaway or silence)
+    drive200    duty 0.56  rate  9.26 Hz
+    ctrl140     duty 0.57  rate  4.93 Hz
+
+  THE REGIME PROFILE -- anti-phase and rate across the drive axis
+    fusion below the window, winner-take-all in its middle, simultaneous
+    activity above (Shpiro/Curtu/Rinzel/Rubin)
+    drive 1.40  anti -0.753 (-117.7 SE vs ctrl)  rate 10.21  0/12 deg  
+    drive 1.40  anti -0.555 (-97.1 SE vs ctrl)  rate  6.38  0/12 deg  
+    drive 1.40  anti -0.395 (-80.3 SE vs ctrl)  rate  4.67  0/12 deg  
+    drive 1.40  anti -0.297 (-70.0 SE vs ctrl)  rate  3.67  0/12 deg  
+    drive 1.40  anti +0.069 (-22.1 SE vs ctrl)  rate 121.98  0/12 deg  VOID
+    drive 1.40  anti +0.097 (-26.0 SE vs ctrl)  rate  1.51  0/12 deg  VOID
+    drive 2.00  anti -0.651 (-105.9 SE vs ctrl)  rate  9.26  0/12 deg  
+    drive 1.40  anti +0.367 (+0.0 SE vs ctrl)  rate  4.93  0/12 deg  
+
+  THE CLOCK TEST -- does the period follow tau_a at drive 1.40?
+    measured on the HALF-DIFFERENCE -- the alternation itself. The envelope
+    peak is group 8's amplitude rhythm and is NOT this mechanism.
+    tau  83 ms  alternation 2.83 +/- 0.61 Hz  period  352.9 ms  predicted   166-  332 ms  outside
+    tau 167 ms  alternation 1.25 +/- 0.00 Hz  period  800.0 ms  predicted   334-  668 ms  outside
+    tau 250 ms  alternation 2.31 +/- 0.23 Hz  period  432.4 ms  predicted   500- 1000 ms  outside
+    tau 333 ms  alternation 1.00 +/- 0.17 Hz  period 1000.0 ms  predicted   666- 1332 ms  IN BAND
+    EXPONENT +0.750 over tau 83 -> 333 ms.  REQUIRED ~1.000.
+
+  UPPER EDGE -- drive 2.00 probes above the window (Shpiro predicts
+  simultaneous high activity there, not oscillation)
+    drive 2.00  anti -0.651  rate  9.26  peak 2.08 Hz
+
+  --- the reading ---
+  THE TWO HALVES TAKE TURNS. `tau083` reaches anti-phase -0.753, beating BOTH of
+  its own singles by at least 3 SE -- so it is the COMBINATION and not
+  either ingredient, which is Matsuoka's prediction and the interaction this
+  run pre-registered.
+  A resonance moves both halves TOGETHER, so this cannot be the 3 Hz ring
+  being re-measured -- the failure that killed adaptclock.
+  OLD TEXT, SUPERSEDED BY THE EXPONENT GATE ABOVE. It locates a
+  candidate WINDOW on the drive axis; whether the period tracks tau_a is the
+  NEXT run, at this drive. adaptclock measured +0.226 and the released-jump
+  run -0.121, against the ~1.000 a relaxation oscillator requires.
+HC_EXIT=0
+
+[exited with code 0]
