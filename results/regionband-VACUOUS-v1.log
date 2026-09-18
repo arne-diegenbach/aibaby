@@ -1,0 +1,68 @@
+# regionband v1 -- VACUOUS. The mechanism never executed. Cite nothing from it.
+# 2026-09-18. verify PASS, hash ad96f882becbee92.
+#
+# Every band returned BIT-IDENTICAL numbers to four decimals: err_taught 0.9485
+# in all eight arms, err_after 1.0130 in every AB and 0.8508 in every keep,
+# across bands 0.000 / 0.033 / 0.067 / 0.100.
+#
+# CAUSE, and it is ALGEBRA rather than a coding bug. Outside the region the rule
+# computes e_eff = e - band and compares it against an EMA of e_eff, which is
+# EMA(e) - band. Subtracting the same constant from both sides cancels exactly,
+# so e_eff < base reduces to e < EMA(e) -- the shipped rule, unchanged. The band
+# can ONLY bite through the e_eff <= 0 branch, i.e. when the creature is INSIDE.
+#
+# AND IT NEVER WAS. err_taught is 0.9485 log units -- F1 off by 2.58x -- while my
+# bands topped out at 0.100, i.e. 1.11x. I derived the width from the creature's
+# F1 JITTER (how tightly it holds a posture, sd 20.9 Hz = 0.033 log units) when
+# what governs is its ACHIEVED ERROR (how far it lands from the target, ~0.85-1.01).
+# Those differ by an order of magnitude. A region has to be REACHABLE to bind.
+#
+# The derivation was the right instinct applied to the wrong quantity, which is
+# this session's recurring shape -- but here it produced a silent no-op rather
+# than a misleading number.
+#
+# FIXED: bands rescaled to 0.00 / 0.70 / 0.85 / 1.00 so they straddle where the
+# creature actually lives, and the instrument now COUNTS the fraction of reward
+# events that landed inside the region and REFUSES the run as vacuous if no
+# nonzero band was ever entered. That guard is what was missing.
+
+  arm        band   err TAUGHT (A)       err AFTER (A kept?)  n
+  AB-0       0.000  0.9485 +/- 0.0072       1.0130 +/- 0.0110       12
+  keep-0     0.000  0.9485 +/- 0.0072       0.8508 +/- 0.0109       12
+  AB-1sd     0.033  0.9485 +/- 0.0072       1.0130 +/- 0.0110       12
+  keep-1sd   0.033  0.9485 +/- 0.0072       0.8508 +/- 0.0109       12
+  AB-2sd     0.067  0.9485 +/- 0.0072       1.0130 +/- 0.0110       12
+  keep-2sd   0.067  0.9485 +/- 0.0072       0.8508 +/- 0.0109       12
+  AB-3sd     0.100  0.9485 +/- 0.0072       1.0130 +/- 0.0110       12
+  keep-3sd   0.100  0.9485 +/- 0.0072       0.8508 +/- 0.0109       12
+
+  PRIMARY -- the AB-minus-keep gap, i.e. interference with reward matched
+    band 0.000   AB 1.0130   keep 0.8508   gap +0.1622 +/- 0.0155  (+10.5 SE)
+    band 0.033   AB 1.0130   keep 0.8508   gap +0.1622 +/- 0.0155  (+10.5 SE)
+    band 0.067   AB 1.0130   keep 0.8508   gap +0.1622 +/- 0.0155  (+10.5 SE)
+    band 0.100   AB 1.0130   keep 0.8508   gap +0.1622 +/- 0.0155  (+10.5 SE)
+    gap at band 0 minus gap at band 0.100: +0.0000 +/- 0.0219  (+0.0 SE)
+
+  AND DID IT SHRINK THE RIGHT WAY? AB must IMPROVE, not `keep` degrade
+    AB   band 0 -> 0.100:  +0.0000 +/- 0.0156  (+0.0 SE)  AB did not improve
+    keep band 0 -> 0.100:  +0.0000 +/- 0.0154  (+0.0 SE)  keep held up
+
+  NON-MONOTONE CHECK -- a band that satisfies everything teaches nothing
+    band 0.000   err_taught  AB 0.9485   keep 0.9485
+    band 0.033   err_taught  AB 0.9485   keep 0.9485
+    band 0.067   err_taught  AB 0.9485   keep 0.9485
+    band 0.100   err_taught  AB 0.9485   keep 0.9485
+
+  --- the reading ---
+  A REGION TARGET DOES NOT PROTECT THE FIRST LESSON. The interference gap
+  moves +0.0000 +/- 0.0219 from a point target to a 3-sd region -- +0.0 SE
+  against a 3 SE bar.
+  THAT IS A REAL REFUSAL AND IT IS EXPENSIVE FOR THE DIVA ACCOUNT. The reward
+  was given a natural zero, a satisfied lesson genuinely stopped demanding,
+  and lesson B still ran back through A's write. So the wipe is NOT caused by
+  the target's failure to saturate, and the remaining suspect is the one
+  `axis-not-distance` already named: B's cheapest route to its own target
+  simply PASSES THROUGH the neurons A used, whatever the reward geometry.
+RB_EXIT=1
+
+[exited with code 0]

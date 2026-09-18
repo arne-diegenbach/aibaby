@@ -5679,7 +5679,13 @@ struct RTRow {
   double f1_rate_late[kRTF1Max] = {};   // per-neuron mean rate, last third
   double f1_cent_teach = 0.0;           // mean instantaneous read_group centroid
   double f1_cent_early = 0.0, f1_cent_late = 0.0;
-  uint32_t f1_n = 0;                    // neurons in the F1 group
+  uint32_t f1_n = 0;
+  // HOW OFTEN THE REGION ACTUALLY BOUND. Without this a band far smaller than the
+  // achieved error is invisible: outside the region the rule reduces ALGEBRAICALLY to
+  // the shipped one, because subtracting a constant from both the error and the EMA
+  // of that same error cancels exactly. The first run swept four bands and returned
+  // bit-identical numbers to four decimals for exactly that reason.
+  uint64_t region_events = 0, region_inside = 0;                    // neurons in the F1 group
   uint64_t f1_samp_early = 0, f1_samp_late = 0, f1_samp_all = 0;
   // THE GAP PHASE, i.e. LESSON B (`gapwrite`, 2026-09-16). `blockflip` showed the
   // creature learns by SILENCING whichever half sits on the wrong side of the
@@ -6205,7 +6211,9 @@ RTRow run_retain_arm(const std::vector<uint8_t>& blob, uint64_t ticks,
             // a gradient to follow in. The EMA bar survives only for the outside case,
             // computed on the region-relative error.
             const double e_eff = e > cfg.region_band ? e - cfg.region_band : 0.0;
+            ++row.region_events;
             if (e_eff <= 0.0) {
+              ++row.region_inside;   // THE VACUITY CHECK, and its absence voided a run
               pending.push_back(Praise{now + regime.delay, regime.praise});
             } else if (base >= 0.0) {
               pending.push_back(Praise{now + regime.delay,
@@ -13486,14 +13494,20 @@ struct RBArm { const char* name; bool relearn; double band; };
 // A-keep is `relearn` with the second lesson's target set to A's own, so the creature
 // is rewarded just as hard during the gap but toward where it already is.
 const RBArm kRBArms[] = {
+    // BANDS RESCALED TO THE ACHIEVED ERROR. v1 derived them from the creature's F1
+    // JITTER (0.033 log units, how tightly it holds a posture) when what matters is
+    // its ACHIEVED ERROR (how far it lands from the target), which the first run
+    // measured at 0.85-1.01 log units -- roughly 10x larger. A region that the
+    // creature never enters cannot bind, and outside it the rule is algebraically the
+    // shipped one. So the bands now straddle where the creature actually lives.
     {"AB-0",    true, 0.000},   // the shipped point target: the 0.22-wipe protocol
     {"keep-0",  true, 0.000},
-    {"AB-1sd",  true, 0.033},
-    {"keep-1sd", true, 0.033},
-    {"AB-2sd",  true, 0.067},
-    {"keep-2sd", true, 0.067},
-    {"AB-3sd",  true, 0.100},
-    {"keep-3sd", true, 0.100},
+    {"AB-70",   true, 0.700},   // rarely inside
+    {"keep-70", true, 0.700},
+    {"AB-85",   true, 0.850},   // inside roughly half the time
+    {"keep-85", true, 0.850},
+    {"AB-100",  true, 1.000},   // inside most of the time
+    {"keep-100", true, 1.000},
 };
 constexpr uint32_t kRBArmCount = sizeof(kRBArms) / sizeof(kRBArms[0]);
 constexpr uint64_t kRBSeedOffset = 447701ull;
@@ -13602,9 +13616,31 @@ bool run_regionband(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
                 kRBArms[a].band, m_taught[a], s_taught[a], m_after[a], s_after[a], af.size());
   }
 
+  std::printf("\n  VACUITY GUARD -- did the region ever BIND? Outside it the rule reduces\n"
+              "  algebraically to the shipped one, so a band the creature never enters is\n"
+              "  a no-op and every arm returns identical numbers.\n");
+  bool bound = false;
+  for (uint32_t a = 0; a < kRBArmCount; ++a) {
+    uint64_t ev = 0, in = 0;
+    for (uint32_t r = 0; r < kReps; ++r) {
+      const Cell& c = cells[r * kRBArmCount + a];
+      if (!c.ok) continue;
+      ev += c.row.region_events; in += c.row.region_inside;
+    }
+    const double frac = ev > 0 ? 100.0 * double(in) / double(ev) : 0.0;
+    std::printf("    %-10s band %.3f   inside the region %5.1f%% of reward events\n",
+                kRBArms[a].name, kRBArms[a].band, frac);
+    if (kRBArms[a].band > 0.0 && frac > 1.0) bound = true;
+  }
+  if (!bound) {
+    std::printf("  REFUSED AS VACUOUS: no band with a nonzero width was ever entered, so the\n"
+                "  mechanism never executed and nothing below is readable.\n");
+    return false;
+  }
+
   std::printf("\n  PRIMARY -- the AB-minus-keep gap, i.e. interference with reward matched\n");
   double gap[4] = {}, gse[4] = {};
-  const double bands[4] = {0.000, 0.033, 0.067, 0.100};
+  const double bands[4] = {0.000, 0.700, 0.850, 1.000};
   for (uint32_t k = 0; k < 4; ++k) {
     const uint32_t ab = k * 2, kp = k * 2 + 1;
     gap[k] = m_after[ab] - m_after[kp];
