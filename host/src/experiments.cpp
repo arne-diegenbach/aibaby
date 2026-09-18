@@ -429,6 +429,14 @@ const Spec kSpecs[] = {
      "  the 0.22 wipe: B restores the neurons A silenced at +9.4 SE. Width DERIVED\n"
      "  from the creature's own F1 jitter (0.033 log units = 1 sd). gapwrite's AB vs\n"
      "  A-keep design at every band, so reward is matched. 12 seeds"},
+    {"credgate", 3400000, Expect::kOpen, Tier::kTeach,
+     "CAN THE CREATURE TARGET ITS OWN REWARD? credit-oracle settled that the 0.22\n"
+     "  wipe is credit assignment, not a collision: capacity found two lessons\n"
+     "  interfering while driving DISJOINT groups, because node perturbation nudges\n"
+     "  every neuron on one broadcast scalar. A per-neuron mask fixes it (1.03 vs\n"
+     "  0.84) but that is an oracle. This drives the mask from the creature's OWN\n"
+     "  ear-EMA context index, with a coin-flip arm to separate the index CONTENT\n"
+     "  from the mere act of masking. 12 seeds"},
     {"movability", 5600000, Expect::kOpen, Tier::kLong,
      "orthovocab left a LEAD: on identical demands the F2 lesson travelled\n"
      "  0.169 and the F1 lesson 0.030 -- but F1's was FIGHTING another lesson on\n"
@@ -783,6 +791,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "adaptclock") ok = run_adaptclock(dna_blob, ticks, verbose);
   else if (name == "halfcenter") ok = run_halfcenter(dna_blob, ticks, verbose);
   else if (name == "regionband") ok = run_regionband(dna_blob, ticks, verbose);
+  else if (name == "credgate") ok = run_credgate(dna_blob, ticks, verbose);
   else if (name == "partprobe") ok = run_partprobe(dna_blob, ticks, verbose);
   else if (name == "pgprobe") ok = run_pgprobe(dna_blob, ticks, verbose);
   else if (name == "g2cond") ok = run_g2cond(dna_blob, ticks, verbose);

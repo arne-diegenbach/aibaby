@@ -5685,7 +5685,11 @@ struct RTRow {
   // the shipped one, because subtracting a constant from both the error and the EMA
   // of that same error cancels exactly. The first run swept four bands and returned
   // bit-identical numbers to four decimals for exactly that reason.
-  uint64_t region_events = 0, region_inside = 0;                    // neurons in the F1 group
+  uint64_t region_events = 0, region_inside = 0;
+  // Did the mask land on the half the live lesson actually wants? For mode 1 this is
+  // 100% by construction; for mode 2 it is the index's accuracy, which is the whole
+  // question; for mode 3 it should sit at chance.
+  uint64_t credit_trials = 0, credit_agree = 0;                    // neurons in the F1 group
   uint64_t f1_samp_early = 0, f1_samp_late = 0, f1_samp_all = 0;
   // THE GAP PHASE, i.e. LESSON B (`gapwrite`, 2026-09-16). `blockflip` showed the
   // creature learns by SILENCING whichever half sits on the wrong side of the
@@ -5862,6 +5866,26 @@ struct RTConfig {
   //
   // 0 keeps the shipped EMA rule and is bit-identical.
   double region_band = 0.0;
+  // WHO GETS THE REWARD. `credit-oracle` established that the 0.22 wipe is not a
+  // representational collision -- `capacity` found two lessons interfering while
+  // driving DISJOINT neuron groups, because node perturbation nudges bias_[i] for
+  // EVERY neuron in the module scaled by one BROADCAST scalar. The groups are
+  // disjoint; the REWARD is what they share. A per-neuron mask fixes it (retention
+  // 1.03 vs 0.84) but that is an oracle.
+  //
+  // This asks whether the creature's OWN derived context can drive that mask.
+  //   0  broadcast -- the shipped rule, bit-identical
+  //   1  oracle    -- the host masks by which lesson is actually live
+  //   2  derived   -- the mask follows Network::active_context(), the ear-EMA index
+  //   3  shuffled  -- the mask follows a per-trial coin flip, so the index CONTENT
+  //                   is tested rather than the mere act of masking
+  //
+  // WHICH HALF GOES TO WHICH LESSON IS MEASURED, NOT ARBITRARY.
+  // `silences-the-wrong-side` found mirror-image profiles: a LOW target works by
+  // suppressing the UPPER half, a HIGH target by suppressing the LOWER. Lesson A is
+  // /i/ at f1 320 (low) and B is f1 850 (high), so A is given the UPPER half and B
+  // the LOWER -- each the half it actually uses, and disjoint.
+  uint32_t credit_mode = 0;
 };
 
 // One arm, one creature, one life: teach, intervene, re-measure.
@@ -5870,6 +5894,8 @@ RTRow run_retain_arm(const std::vector<uint8_t>& blob, uint64_t ticks,
                      bool* ok_out) {
   RTRow row;
   *ok_out = false;
+  aibaby::Rng credit_rng;   // mode 3 only: a coin flip independent of the lesson
+  credit_rng.seed(0x51DEu);
   std::string error;
   std::vector<uint8_t> variant = blob;
   if (cfg.no_fatigue) {
@@ -6037,6 +6063,23 @@ RTRow run_retain_arm(const std::vector<uint8_t>& blob, uint64_t ticks,
     const bool relearning =
         cfg.relearn && trial >= n_teach && trial < n_teach + n_gap;
     const Word& lesson = relearning ? second : first;
+    // CREDIT ASSIGNMENT: hand the reward to one half of F1 or the other, per trial.
+    if (cfg.credit_mode > 0 && vmod_idx >= 0) {
+      aibaby::Network& cnet = s.brain.network();
+      const aibaby::ModuleState& cvm = cnet.module(uint32_t(vmod_idx));
+      const uint32_t cg_lo = aibaby::slice_begin(cvm.count, aibaby::kVocalGroups, 2);
+      const uint32_t cg_hi = aibaby::slice_begin(cvm.count, aibaby::kVocalGroups, 3);
+      const uint32_t cmid = cg_lo + (cg_hi - cg_lo) / 2;
+      bool upper = !relearning;   // mode 1: A (low target) takes the UPPER half
+      if (cfg.credit_mode == 2) upper = cnet.active_context() == 0u;
+      else if (cfg.credit_mode == 3) upper = (credit_rng.next() & 1u) != 0u;
+      if (upper) cnet.set_reward_mask(cvm.begin + cmid, cvm.begin + cg_hi);
+      else cnet.set_reward_mask(cvm.begin + cg_lo, cvm.begin + cmid);
+      // AGREEMENT TELEMETRY, so a null can be told from an index that never moved.
+      const bool want = !relearning;
+      ++row.credit_trials;
+      if (upper == want) ++row.credit_agree;
+    }
     double f1_acc = 0, f2_acc = 0;
     uint32_t nv = 0;
 
@@ -13701,6 +13744,233 @@ bool run_regionband(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
                 "  simply PASSES THROUGH the neurons A used, whatever the reward geometry.\n");
   }
   return shrank && right_way;
+}
+
+// ============================================================================
+// `credgate` — CAN THE CREATURE TARGET ITS OWN REWARD?
+//
+// `credit-oracle` settled what the 0.22 wipe actually is. `capacity` found two
+// lessons interfering while driving DISJOINT neuron groups, and the reason is one
+// line: THE GROUPS ARE DISJOINT; THE REWARD IS WHAT THEY SHARE. Node perturbation
+// nudges bias_[i] for EVERY neuron in the motor module, scaled by a single broadcast
+// scalar, so teaching B keeps updating A's neurons with a reward uncorrelated with
+// anything they did and A's setting random-walks. It is not a representational
+// collision -- it is credit assignment.
+//
+// A per-neuron reward mask fixes it: retention 1.03 against 0.84 broadcast, at ~30%
+// of the learning rate (the F1 group is 14 neurons of 126, so confining the reward
+// also confines the perturbation search). But that is an ORACLE -- the host knows
+// which lesson is live.
+//
+// THE QUESTION HERE IS WHETHER THE CREATURE'S OWN DERIVED CONTEXT CAN DRIVE THAT
+// MASK. `ema-index` shows it derives a usable context off the ear rate EMA at 16/18.
+// `ctxretain` tried gating and the index never separated -- 0.23/0.23 -- because that
+// index switches on within-trial structure rather than on which word is playing. So
+// the two halves exist and have never been connected.
+//
+// WHICH HALF GOES TO WHICH LESSON IS MEASURED, NOT CHOSEN. `silences-the-wrong-side`
+// found mirror-image profiles: a LOW target works by suppressing the UPPER half, a
+// HIGH target by suppressing the LOWER. A is /i/ at f1 320 and B is at 850, so A gets
+// the UPPER half and B the LOWER -- each the half it actually uses, and disjoint.
+struct CGArm { const char* name; uint32_t mode; bool keep; };
+const CGArm kCGArms[] = {
+    {"bcast-AB",   0u, false},   // the shipped broadcast rule: the 0.22 wipe
+    {"bcast-keep", 0u, true},
+    {"oracle-AB",  1u, false},   // the host masks by which lesson is live
+    {"oracle-keep", 1u, true},
+    {"derived-AB", 2u, false},   // the mask follows the creature's own index
+    {"derived-keep", 2u, true},
+    {"shuf-AB",    3u, false},   // a coin flip: does the index CONTENT matter?
+    {"shuf-keep",  3u, true},
+};
+constexpr uint32_t kCGArmCount = sizeof(kCGArms) / sizeof(kCGArms[0]);
+constexpr uint64_t kCGSeedOffset = 318211ull;
+constexpr float kCGKeepF1 = 320.0f, kCGKeepF2 = 2500.0f;
+
+bool run_credgate(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  aibaby::Dna dna0;
+  if (dna0.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) {
+    std::printf("  setup failed: the genome does not load\n");
+    return false;
+  }
+  Regime regime;
+  regime.praise = kPraiseValue;
+  regime.scold = kScoldValue;
+  constexpr uint32_t kReps = 12;
+  instrument("credgate", dna0.header().seed ^ 0xC6A7u, ticks / kRTTrial, "trials");
+  std::printf("  seed family       offset %llu -> first creature %016llx (FRESH)\n",
+              (unsigned long long)kCGSeedOffset,
+              (unsigned long long)(dna0.header().seed + kCGSeedOffset));
+  std::printf("  what the wipe IS  not a representational collision. `capacity` found two\n"
+              "                    lessons interfering while driving DISJOINT groups, and\n"
+              "                    `credit-oracle` gave the reason: the groups are disjoint,\n"
+              "                    the REWARD is what they share. Node perturbation nudges\n"
+              "                    bias_[i] for EVERY neuron in the module on one broadcast\n"
+              "                    scalar, so teaching B random-walks A's setting.\n");
+  std::printf("  the ceiling       a per-neuron reward mask gives retention 1.03 vs 0.84\n"
+              "                    broadcast, at ~30%% of the learning rate. But it is an\n"
+              "                    ORACLE: the host knows which lesson is live.\n");
+  std::printf("  the question      can the creature's OWN derived context drive that mask?\n"
+              "                    `ema-index` derives a usable context off the ear rate EMA\n"
+              "                    at 16/18; `ctxretain` gated on it and the index never\n"
+              "                    separated (0.23/0.23). The halves have never been joined.\n");
+  std::printf("  halves MEASURED   `silences-the-wrong-side`: a LOW target works by\n"
+              "                    suppressing the UPPER half, a HIGH one the LOWER. A is\n"
+              "                    f1 320 and B is 850, so A takes the UPPER and B the LOWER.\n");
+  std::printf("\n  PRE-REGISTERED\n");
+  std::printf("    AGREEMENT FIRST, before any retention number is read. `credit_agree` is\n"
+              "      the fraction of trials where the mask landed on the half the LIVE lesson\n"
+              "      wants. oracle must read 100%% by construction -- if it does not, the\n"
+              "      mechanism is miswired and nothing else is readable. shuf must sit at\n"
+              "      ~50%%. DERIVED IS THE WHOLE QUESTION: at ~50%% the index carries nothing\n"
+              "      about which lesson is live and a null retention result says nothing\n"
+              "      about gating, only about this index.\n");
+  std::printf("    PRIMARY         the AB-minus-keep gap per mode. oracle should shrink it\n"
+              "                    (that is credit-oracle replicating); derived shrinking it\n"
+              "                    too is the finding.\n");
+  std::printf("    SPECIFICITY     `shuf` must NOT shrink it. If a coin flip works as well as\n"
+              "                    the index, what helps is the masking itself -- halving the\n"
+              "                    write -- and not credit assignment at all.\n");
+  std::printf("    THE COST        the oracle bought 1.03 at ~30%% of the learning rate, so\n"
+              "                    err_taught is expected to DEGRADE under every mask. A gap\n"
+              "                    that closes while err_taught collapses is the `regionband`\n"
+              "                    failure again, and it is refused the same way.\n\n");
+
+  struct Cell { bool ok = false; RTRow row; };
+  const uint32_t njobs = kReps * kCGArmCount;
+  const std::vector<Cell> cells = parallel_reps<Cell>(njobs, [&](uint32_t i) {
+    Cell cell;
+    const uint32_t r = i / kCGArmCount, a = i % kCGArmCount;
+    std::vector<uint8_t> variant = blob;
+    const uint64_t seed = dna0.header().seed + kCGSeedOffset + r * 7919ull;
+    std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+    RTConfig cfg;
+    cfg.name = kCGArms[a].name;
+    cfg.teach = true;
+    cfg.relearn = true;
+    cfg.mask_mode = 0u;
+    cfg.credit_mode = kCGArms[a].mode;
+    if (kCGArms[a].keep) { cfg.second_f1 = kCGKeepF1; cfg.second_f2 = kCGKeepF2; }
+    Timbre local_ruler;
+    std::string local_error;
+    if (!local_ruler.configure(dna0.header().audio, local_error)) return cell;
+    bool ok = false;
+    cell.row = run_retain_arm(variant, ticks, cfg, local_ruler, regime, &ok);
+    cell.ok = ok;
+    if (cell.ok)
+      parallel_note("  [%u/%u] seed %u %-13s taught %.4f after %.4f agree %.2f\n", i + 1,
+                    njobs, r, kCGArms[a].name, cell.row.err_taught, cell.row.err_after,
+                    cell.row.credit_trials ? double(cell.row.credit_agree) /
+                                                 double(cell.row.credit_trials) : 0.0);
+    return cell;
+  });
+
+  double m_after[kCGArmCount] = {}, s_after[kCGArmCount] = {};
+  double m_taught[kCGArmCount] = {}, s_taught[kCGArmCount] = {};
+  double m_agree[kCGArmCount] = {};
+  std::printf("\n  %-13s %-9s %-20s %-20s %s\n", "arm", "mode", "err TAUGHT (A)",
+              "err AFTER (A kept?)", "agree");
+  for (uint32_t a = 0; a < kCGArmCount; ++a) {
+    std::vector<double> af, tg, ag;
+    for (uint32_t r = 0; r < kReps; ++r) {
+      const Cell& c = cells[r * kCGArmCount + a];
+      if (!c.ok) continue;
+      af.push_back(c.row.err_after); tg.push_back(c.row.err_taught);
+      ag.push_back(c.row.credit_trials
+                       ? double(c.row.credit_agree) / double(c.row.credit_trials) : 0.0);
+    }
+    if (af.size() < 3) {
+      std::printf("\n  credgate INCONCLUSIVE -- arm `%s` produced %zu creatures.\n",
+                  kCGArms[a].name, af.size());
+      return false;
+    }
+    double sg = 0.0;
+    m_after[a] = ctx_mean_se(af, &s_after[a]);
+    m_taught[a] = ctx_mean_se(tg, &s_taught[a]);
+    m_agree[a] = ctx_mean_se(ag, &sg);
+    std::printf("  %-13s %-9u %.4f +/- %-12.4f %.4f +/- %-12.4f %.3f\n", kCGArms[a].name,
+                kCGArms[a].mode, m_taught[a], s_taught[a], m_after[a], s_after[a], m_agree[a]);
+  }
+
+  std::printf("\n  AGREEMENT GUARD -- did the mask land where the live lesson wanted?\n");
+  const double or_ag = m_agree[2], sh_ag = m_agree[6], dv_ag = m_agree[4];
+  std::printf("    oracle  %.3f   (must be 1.000 by construction)\n", or_ag);
+  std::printf("    derived %.3f   <- THE WHOLE QUESTION\n", dv_ag);
+  std::printf("    shuffled %.3f  (must be ~0.500)\n", sh_ag);
+  if (or_ag < 0.99) {
+    std::printf("  REFUSED: the oracle arm does not agree with itself, so the masking is\n"
+                "  miswired and no retention number below is readable.\n");
+    return false;
+  }
+  if (dv_ag > 0.45 && dv_ag < 0.55) {
+    std::printf("  NOTE: the derived index sits at CHANCE. Whatever the retention numbers do,\n"
+                "  this run then says nothing about gating in general -- only that THIS index\n"
+                "  does not carry which lesson is live, which is `ctxretain`'s finding again.\n");
+  }
+
+  std::printf("\n  PRIMARY -- the AB-minus-keep gap, per mode\n");
+  double gap[4] = {}, gse[4] = {};
+  const char* mode_name[4] = {"broadcast", "oracle", "derived", "shuffled"};
+  for (uint32_t k = 0; k < 4; ++k) {
+    const uint32_t ab = k * 2, kp = k * 2 + 1;
+    gap[k] = m_after[ab] - m_after[kp];
+    gse[k] = std::sqrt(s_after[ab] * s_after[ab] + s_after[kp] * s_after[kp]);
+    std::printf("    %-10s AB %.4f   keep %.4f   gap %+.4f +/- %.4f  (%+.1f SE)\n",
+                mode_name[k], m_after[ab], m_after[kp], gap[k], gse[k],
+                gse[k] > 0.0 ? gap[k] / gse[k] : 0.0);
+  }
+  const double d_or = gap[0] - gap[1], se_or = std::sqrt(gse[0] * gse[0] + gse[1] * gse[1]);
+  const double d_dv = gap[0] - gap[2], se_dv = std::sqrt(gse[0] * gse[0] + gse[2] * gse[2]);
+  const double d_sh = gap[0] - gap[3], se_sh = std::sqrt(gse[0] * gse[0] + gse[3] * gse[3]);
+  std::printf("\n    oracle   shrinks the gap by %+.4f +/- %.4f  (%+.1f SE)\n", d_or, se_or,
+              se_or > 0.0 ? d_or / se_or : 0.0);
+  std::printf("    derived  shrinks the gap by %+.4f +/- %.4f  (%+.1f SE)\n", d_dv, se_dv,
+              se_dv > 0.0 ? d_dv / se_dv : 0.0);
+  std::printf("    shuffled shrinks the gap by %+.4f +/- %.4f  (%+.1f SE)  <- must NOT\n",
+              d_sh, se_sh, se_sh > 0.0 ? d_sh / se_sh : 0.0);
+
+  std::printf("\n  THE COST -- err_taught, which the oracle bought its 1.03 with\n");
+  for (uint32_t k = 0; k < 4; ++k)
+    std::printf("    %-10s AB %.4f   keep %.4f\n", mode_name[k], m_taught[k * 2],
+                m_taught[k * 2 + 1]);
+
+  const bool oracle_works = d_or >= 3.0 * se_or && se_or > 0.0;
+  const bool derived_works = d_dv >= 3.0 * se_dv && se_dv > 0.0;
+  const bool shuf_clean = d_sh < 3.0 * se_sh;
+
+  std::printf("\n  --- the reading ---\n");
+  if (!oracle_works) {
+    std::printf("  THE ORACLE DID NOT REPRODUCE. credit-oracle measured retention 1.03 vs\n"
+                "  0.84 with this same mask, and here it shrinks the gap only %+.1f SE. Until\n"
+                "  that is explained nothing about the derived arm is interpretable -- the\n"
+                "  protocol differs from credit's (relearn vs its own design), so the first\n"
+                "  suspect is that this design does not expose what that one did.\n",
+                se_or > 0.0 ? d_or / se_or : 0.0);
+  } else if (derived_works && shuf_clean) {
+    std::printf("  THE CREATURE CAN TARGET ITS OWN REWARD. The derived index shrinks the\n"
+                "  interference gap by %+.4f (%+.1f SE) where a coin flip does not (%+.1f SE),\n"
+                "  so it is the index CONTENT and not the act of masking.\n",
+                d_dv, d_dv / se_dv, se_sh > 0.0 ? d_sh / se_sh : 0.0);
+    std::printf("  CHECK err_taught ABOVE: the oracle bought its retention at ~30%% of the\n"
+                "  learning rate, so a gap that closes while teaching collapses is the\n"
+                "  regionband failure again.\n");
+  } else if (derived_works && !shuf_clean) {
+    std::printf("  IT IS THE MASKING, NOT THE INDEX. Derived shrinks the gap %+.1f SE but so\n"
+                "  does a COIN FLIP (%+.1f SE) -- so what helps is confining the write to half\n"
+                "  the group, whatever half that is, and no credit assignment is happening.\n"
+                "  REFUSED, and this is the control the run pre-registered for.\n",
+                d_dv / se_dv, d_sh / se_sh);
+  } else {
+    std::printf("  THE DERIVED INDEX DOES NOT TARGET THE REWARD. The oracle shrinks the gap\n"
+                "  %+.1f SE and the creature's own index %+.1f SE.\n",
+                d_or / se_or, se_dv > 0.0 ? d_dv / se_dv : 0.0);
+    std::printf("  READ THE AGREEMENT ROW BEFORE CONCLUDING ANYTHING GENERAL: if `derived`\n"
+                "  sat at chance, this refutes THIS INDEX and not gating. Masse has gating at\n"
+                "  61.4%% alone, so the mechanism is not supposed to be sufficient anyway --\n"
+                "  what would be refuted is the ear-EMA index as its carrier.\n");
+  }
+  return oracle_works && derived_works && shuf_clean;
 }
 
 bool run_movability(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
