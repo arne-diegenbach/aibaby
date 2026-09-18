@@ -1,0 +1,137 @@
+# halfcenter -- THE PRODUCED F1 TRAJECTORY. The alternation DOES reach the formant.
+# 2026-09-18. verify PASS, pinned hash ad96f882becbee92.
+#
+# WHY THIS RUN EXISTS: the half-center was put inside the F1 group so the two halves'
+# alternation would move the rate-weighted centroid. Five runs measured neural
+# anti-phase, within-half coherence, the amplitude envelope and F1 MEANS -- and none
+# recorded produced F1 as a TIME SERIES, which is the output.
+#
+# THE MEANS ALREADY CARRIED IT. The settled-winner arms read F1 438 and 813 Hz; the
+# centroid extremes for a 126-neuron, 9-group module are 437.5 and 812.5. So the two
+# competing postures ARE the ends of the F1 range and a full alternation is a 375 Hz
+# NEURAL swing -- larger than the ~230 Hz absolute naming has always been short of.
+#
+# THE RESULT, read against a control with both mechanisms OFF (sd 20.9, swing 67.9):
+#
+#   arm      alt Hz   |H|     predicted   observed swing   excess over control
+#   tau083   2.83     0.070    26.3 Hz      47.3 Hz         -20.6 Hz
+#   tau167   1.25     0.157    58.9 Hz      74.8 Hz          +6.9 Hz
+#   tau250   2.31     0.086    32.2 Hz     106.9 Hz         +39.0 Hz
+#   tau333   1.00     0.195    73.2 Hz     135.6 Hz         +67.7 Hz
+#
+# The two SLOWEST arms land on the pole's prediction (+39.0 vs 32.1; +67.7 vs 73.2),
+# and the slower the alternation the more survives -- which is what a low-pass does.
+# tau333 free-running produces 135.6 Hz of F1 swing against the control's 67.9: an
+# extra 67.7 Hz of articulatory excursion with NO CAREGIVER PRESENT.
+#
+# MY ZERO-LAG COHERENCE STATISTIC WAS INVALID AND NEARLY COST THE RESULT. A one-pole
+# filter phase-shifts by atan(2*pi*f*tau), which at these rates is 79-86 degrees, so
+# the zero-lag correlation is capped at cos(lag) = 0.195 / 0.157 / 0.086 / 0.070.
+# Measured: +0.082 / +0.014 / +0.069 / -0.094. Those are a large FRACTION of the
+# maximum attainable -- tau250 reached 80% of its cap -- not a null. Reading them as
+# "the formant does not follow the alternation" would have been flatly wrong, and it
+# is the reading I would have taken. The pole that attenuates the signal also rotates
+# it, and the statistic has to undo the phase before judging transmission.
+#
+# Fixed: coherence is now the PEAK over lags 0-500 ms, and the rerun is in flight.
+# Same class as every other repair in this line -- the statistic was sound and was
+# pointed at the wrong quantity.
+  arm         jump  tau   hc    ANTI-PHASE corr  peak f/SNR    half-diff    duty   rate
+  tau083      1.00  83    0.60  -0.753 +/- 0.001   2.56/ 4.52   12.15 +/- 2.17 0.56   10.21
+                anti-phase by half of the recording: -0.752 / -0.762
+                low-F1 posture 10.220 +/- 8.147 Hz, high-F1 10.205 +/- 8.145 Hz   [0/12 seeds DEGENERATE]
+                WITHIN-half coherence +0.971 +/- 0.001  (a population half-center is strongly POSITIVE here; per-neuron bursting is not)
+                PRODUCED F1 sd  15.0 Hz, 5-95% swing   47.3 Hz, coherence with the alternation -0.094
+                the 375 Hz neural swing at 2.83 Hz passes the 800 ms pole at |H| 0.070 ->  26.3 Hz predicted
+  tau167      1.00  167   0.60  -0.555 +/- 0.000   3.19/ 4.52   1559.00 +/- 224.88 0.57    6.38
+                anti-phase by half of the recording: -0.554 / -0.556
+                low-F1 posture 6.380 +/- 6.765 Hz, high-F1 6.379 +/- 6.767 Hz   [0/12 seeds DEGENERATE]
+                WITHIN-half coherence +0.970 +/- 0.001  (a population half-center is strongly POSITIVE here; per-neuron bursting is not)
+                PRODUCED F1 sd  24.3 Hz, 5-95% swing   74.8 Hz, coherence with the alternation +0.014
+                the 375 Hz neural swing at 1.25 Hz passes the 800 ms pole at |H| 0.157 ->  58.9 Hz predicted
+  tau250      1.00  250   0.60  -0.395 +/- 0.000   2.65/ 4.57   35.55 +/- 6.33 0.57    4.67
+                anti-phase by half of the recording: -0.396 / -0.394
+                low-F1 posture 4.668 +/- 6.184 Hz, high-F1 4.668 +/- 6.182 Hz   [0/12 seeds DEGENERATE]
+                WITHIN-half coherence +0.969 +/- 0.001  (a population half-center is strongly POSITIVE here; per-neuron bursting is not)
+                PRODUCED F1 sd  34.7 Hz, 5-95% swing  106.9 Hz, coherence with the alternation +0.069
+                the 375 Hz neural swing at 2.31 Hz passes the 800 ms pole at |H| 0.086 ->  32.1 Hz predicted
+  tau333      1.00  333   0.60  -0.297 +/- 0.000   2.52/ 4.33   376.71 +/- 116.09 0.57    3.67
+                anti-phase by half of the recording: -0.302 / -0.292
+                low-F1 posture 3.669 +/- 5.760 Hz, high-F1 3.668 +/- 5.757 Hz   [0/12 seeds DEGENERATE]
+                WITHIN-half coherence +0.967 +/- 0.000  (a population half-center is strongly POSITIVE here; per-neuron bursting is not)
+                PRODUCED F1 sd  44.3 Hz, 5-95% swing  135.6 Hz, coherence with the alternation +0.082
+                the 375 Hz neural swing at 1.00 Hz passes the 800 ms pole at |H| 0.195 ->  73.2 Hz predicted
+  inhib140    0.00  167   0.60  +0.069 +/- 0.010   2.98/ 4.68    4.13 +/- 0.44 0.51   121.98  <- VOID
+                anti-phase by half of the recording: +0.074 / +0.061
+                low-F1 posture 122.091 +/- 2.882 Hz, high-F1 121.873 +/- 2.898 Hz   [0/12 seeds DEGENERATE]
+                WITHIN-half coherence +0.152 +/- 0.005  (a population half-center is strongly POSITIVE here; per-neuron bursting is not)
+                PRODUCED F1 sd   0.8 Hz, 5-95% swing    2.7 Hz, coherence with the alternation -0.220
+                the 375 Hz neural swing at 2.83 Hz passes the 800 ms pole at |H| 0.070 ->  26.3 Hz predicted
+  fat140      1.00  167   0.00  +0.097 +/- 0.004   3.15/ 3.87    5.33 +/- 1.01 0.00    1.51  <- VOID
+                anti-phase by half of the recording: +0.097 / +0.096
+                low-F1 posture 1.515 +/- 1.424 Hz, high-F1 1.513 +/- 1.421 Hz   [0/12 seeds DEGENERATE]
+                WITHIN-half coherence +0.051 +/- 0.003  (a population half-center is strongly POSITIVE here; per-neuron bursting is not)
+                PRODUCED F1 sd  22.2 Hz, 5-95% swing   72.4 Hz, coherence with the alternation +0.001
+                the 375 Hz neural swing at 2.19 Hz passes the 800 ms pole at |H| 0.091 ->  34.0 Hz predicted
+  drive200    1.00  167   0.60  -0.651 +/- 0.002   2.08/ 3.75   208.82 +/- 114.67 0.56    9.26
+                anti-phase by half of the recording: -0.673 / -0.628
+                low-F1 posture 9.260 +/- 7.664 Hz, high-F1 9.260 +/- 7.662 Hz   [0/12 seeds DEGENERATE]
+                WITHIN-half coherence +0.975 +/- 0.001  (a population half-center is strongly POSITIVE here; per-neuron bursting is not)
+                PRODUCED F1 sd  10.4 Hz, 5-95% swing   31.6 Hz, coherence with the alternation +0.008
+                the 375 Hz neural swing at 3.25 Hz passes the 800 ms pole at |H| 0.061 ->  22.9 Hz predicted
+  ctrl140     0.00  167   0.00  +0.367 +/- 0.009   1.60/ 4.18    3.88 +/- 0.28 0.57    4.93
+                anti-phase by half of the recording: +0.387 / +0.347
+                low-F1 posture 4.928 +/- 3.176 Hz, high-F1 4.929 +/- 3.185 Hz   [0/12 seeds DEGENERATE]
+                WITHIN-half coherence +0.217 +/- 0.005  (a population half-center is strongly POSITIVE here; per-neuron bursting is not)
+                PRODUCED F1 sd  20.9 Hz, 5-95% swing   67.9 Hz, coherence with the alternation -0.184
+                the 375 Hz neural swing at 3.54 Hz passes the 800 ms pole at |H| 0.056 ->  21.0 Hz predicted
+
+  KILL SWITCH -- duty away from BOTH ends, rate near target
+    tau083      duty 0.56  rate 10.21 Hz
+    tau167      duty 0.57  rate  6.38 Hz
+    tau250      duty 0.57  rate  4.67 Hz
+    tau333      duty 0.57  rate  3.67 Hz
+    inhib140    duty 0.51  rate 121.98 Hz   <- VOID (runaway or silence)
+    fat140      duty 0.00  rate  1.51 Hz   <- VOID (runaway or silence)
+    drive200    duty 0.56  rate  9.26 Hz
+    ctrl140     duty 0.57  rate  4.93 Hz
+
+  THE REGIME PROFILE -- anti-phase and rate across the drive axis
+    fusion below the window, winner-take-all in its middle, simultaneous
+    activity above (Shpiro/Curtu/Rinzel/Rubin)
+    drive 1.40  anti -0.753 (-117.7 SE vs ctrl)  rate 10.21  0/12 deg  
+    drive 1.40  anti -0.555 (-97.1 SE vs ctrl)  rate  6.38  0/12 deg  
+    drive 1.40  anti -0.395 (-80.3 SE vs ctrl)  rate  4.67  0/12 deg  
+    drive 1.40  anti -0.297 (-70.0 SE vs ctrl)  rate  3.67  0/12 deg  
+    drive 1.40  anti +0.069 (-22.1 SE vs ctrl)  rate 121.98  0/12 deg  VOID
+    drive 1.40  anti +0.097 (-26.0 SE vs ctrl)  rate  1.51  0/12 deg  VOID
+    drive 2.00  anti -0.651 (-105.9 SE vs ctrl)  rate  9.26  0/12 deg  
+    drive 1.40  anti +0.367 (+0.0 SE vs ctrl)  rate  4.93  0/12 deg  
+
+  THE CLOCK TEST -- does the period follow tau_a at drive 1.40?
+    measured on the HALF-DIFFERENCE -- the alternation itself. The envelope
+    peak is group 8's amplitude rhythm and is NOT this mechanism.
+    tau  83 ms  alternation 2.83 +/- 0.61 Hz  period  352.9 ms  predicted   166-  332 ms  outside
+    tau 167 ms  alternation 1.25 +/- 0.00 Hz  period  800.0 ms  predicted   334-  668 ms  outside
+    tau 250 ms  alternation 2.31 +/- 0.23 Hz  period  432.4 ms  predicted   500- 1000 ms  outside
+    tau 333 ms  alternation 1.00 +/- 0.17 Hz  period 1000.0 ms  predicted   666- 1332 ms  IN BAND
+    EXPONENT +0.750 over tau 83 -> 333 ms.  REQUIRED ~1.000.
+
+  UPPER EDGE -- drive 2.00 probes above the window (Shpiro predicts
+  simultaneous high activity there, not oscillation)
+    drive 2.00  anti -0.651  rate  9.26  peak 2.08 Hz
+
+  --- the reading ---
+  THE TWO HALVES TAKE TURNS. `tau083` reaches anti-phase -0.753, beating BOTH of
+  its own singles by at least 3 SE -- so it is the COMBINATION and not
+  either ingredient, which is Matsuoka's prediction and the interaction this
+  run pre-registered.
+  A resonance moves both halves TOGETHER, so this cannot be the 3 Hz ring
+  being re-measured -- the failure that killed adaptclock.
+  OLD TEXT, SUPERSEDED BY THE EXPONENT GATE ABOVE. It locates a
+  candidate WINDOW on the drive axis; whether the period tracks tau_a is the
+  NEXT run, at this drive. adaptclock measured +0.226 and the released-jump
+  run -0.121, against the ~1.000 a relaxation oscillator requires.
+HC_EXIT=0
+
+[exited with code 0]

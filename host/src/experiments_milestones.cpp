@@ -13051,7 +13051,26 @@ HCRow run_halfcenter_arm(const std::vector<uint8_t>& blob, uint64_t ticks, const
     // Does the F1 motion FOLLOW the alternation? |corr| near 1 means the produced
     // formant is the competition, attenuated. Near 0 means the two are unrelated and
     // whatever F1 does is not this mechanism.
-    row.f1_coh = hc_corr(f1s, diff);
+    // CROSS-CORRELATE OVER LAGS, and take the peak magnitude. v1 of this used the
+    // ZERO-LAG correlation, which is capped at cos(phase lag) -- and the 800 ms pole
+    // that attenuates the signal also phase-shifts it by nearly 90 degrees at these
+    // frequencies, so the cap was 0.07-0.20. The measured +0.01 to +0.08 was
+    // therefore a large FRACTION of the maximum attainable rather than a null, and
+    // reading it as "the formant does not follow" would have been wrong. The pole
+    // has to be undone in phase before transmission can be judged.
+    {
+      const size_t n = f1s.size() < diff.size() ? f1s.size() : diff.size();
+      double best = 0.0;
+      // Lags out to 500 ms at the vocal frame rate (10 ms), which covers the pole's
+      // quarter-cycle delay at every alternation rate seen.
+      for (size_t lag = 0; lag <= 50 && lag + 64 < n; ++lag) {
+        std::vector<double> x(f1s.begin() + long(lag), f1s.begin() + long(n));
+        std::vector<double> y(diff.begin(), diff.begin() + long(n - lag));
+        const double c = hc_corr(x, y);
+        if (std::fabs(c) > std::fabs(best)) best = c;
+      }
+      row.f1_coh = best;
+    }
   }
   row.duty = n > 0 ? on / n : 0.0;
   row.rate_hz = n > 0 ? rsum / n : 0.0;
@@ -13243,8 +13262,8 @@ bool run_halfcenter(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
         const double fa = m_hf[a] > 0.0 ? m_hf[a] : 0.0;
         const double H = fa > 0.0 ? 1.0 / std::sqrt(1.0 + std::pow(2.0 * 3.14159265358979 *
                                                                    fa * 0.8, 2.0)) : 0.0;
-        std::printf("  %-11s   PRODUCED F1 sd %5.1f Hz, 5-95%% swing %6.1f Hz, coherence "
-                    "with the alternation %+.3f\n", "", msd, mpp, mco);
+        std::printf("  %-11s   PRODUCED F1 sd %5.1f Hz, 5-95%% swing %6.1f Hz, LAGGED "
+                    "coherence with the alternation %+.3f\n", "", msd, mpp, mco);
         if (fa > 0.0)
           std::printf("  %-11s   the 375 Hz neural swing at %.2f Hz passes the 800 ms pole "
                       "at |H| %.3f -> %5.1f Hz predicted\n", "", fa, H, 375.0 * H);
