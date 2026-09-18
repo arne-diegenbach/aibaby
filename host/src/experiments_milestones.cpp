@@ -12855,6 +12855,7 @@ struct HCRow {
   double anti_a = 0.0, anti_b = 0.0;   // per half of the recording
   double duty = 0.0, rate_hz = 0.0;
   double half_snr = 0.0;    // spectral peak of the half-DIFFERENCE signal
+  double half_f = 0.0;      // peak frequency OF THE ALTERNATION ITSELF
   double m_lo = 0.0, m_hi = 0.0;   // the two competing postures' mean rates
   double sd_lo = 0.0, sd_hi = 0.0; // and their spreads -- zero means SILENCED
   bool degenerate = false;         // one half constant -> a settled winner
@@ -12972,8 +12973,13 @@ HCRow run_halfcenter_arm(const std::vector<uint8_t>& blob, uint64_t ticks, const
   }
   if (env.size() < 1024) return row;
   hc_peak(env, tms, &row.peak_f, &row.peak_snr);
-  double f_ignored = 0.0;
-  hc_peak(diff, tms, &f_ignored, &row.half_snr);
+  // THE ALTERNATION'S OWN FREQUENCY. v1 of this discarded it into `f_ignored` and
+  // ran the clock test on `peak_f` instead -- which is the VOICE AMPLITUDE ENVELOPE,
+  // driven by group 8, while the competition is inside group 2. So the exponent was
+  // computed on the wrong time series entirely and its +0.035 said nothing about
+  // whether the alternation tracks tau_a. The alternation lives in the
+  // half-DIFFERENCE, so that is the signal whose frequency has to be tested.
+  hc_peak(diff, tms, &row.half_f, &row.half_snr);
   row.anti = hc_corr(lo, hi, &row.degenerate);
   {
     const auto stats = [](const std::vector<double>& v, double* m, double* sd) {
@@ -13102,11 +13108,12 @@ bool run_halfcenter(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
   double m_pk[kHCArmCount] = {}, s_pk[kHCArmCount] = {};
   double m_pf[kHCArmCount] = {}, m_du[kHCArmCount] = {}, m_rt[kHCArmCount] = {};
   double m_hs[kHCArmCount] = {};
+  double m_hf[kHCArmCount] = {};   // the ALTERNATION's peak frequency, per arm
   bool void_arm[kHCArmCount] = {};
   std::printf("\n  %-11s %-5s %-5s %-5s %-16s %-13s %-12s %-6s %s\n", "arm", "jump", "tau",
               "hc", "ANTI-PHASE corr", "peak f/SNR", "half-diff", "duty", "rate");
   for (uint32_t a = 0; a < kHCArmCount; ++a) {
-    std::vector<double> an, pk, pf, du, rt, hs, aa, ab;
+    std::vector<double> an, pk, pf, du, rt, hs, aa, ab, hf;
     for (uint32_t r = 0; r < kReps; ++r) {
       const Cell& c = cells[r * kHCArmCount + a];
       if (!c.ok) continue;
@@ -13126,6 +13133,7 @@ bool run_halfcenter(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
     m_du[a] = ctx_mean_se(du, &sd);
     m_rt[a] = ctx_mean_se(rt, &sr);
     m_hs[a] = ctx_mean_se(hs, &sh);
+    { double e=0.0; m_hf[a] = ctx_mean_se(hf, &e); }
     const double m_aa = ctx_mean_se(aa, &s1), m_ab = ctx_mean_se(ab, &s2);
     (void)sp;
     // RELATIVE to the control arm, not an absolute constant. A fixed 20 Hz bound let
@@ -13222,15 +13230,19 @@ bool run_halfcenter(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
   // re-measured -- which is what killed adaptclock (+0.226) and the released-jump run
   // (-0.121).
   std::printf("\n  THE CLOCK TEST -- does the period follow tau_a at drive 1.40?\n");
+  std::printf("    measured on the HALF-DIFFERENCE -- the alternation itself. The envelope\n"
+              "    peak is group 8's amplitude rhythm and is NOT this mechanism.\n");
   for (uint32_t a = 0; a < 4; ++a) {
-    if (m_pf[a] <= 0.0) continue;
-    const double per = 1000.0 / m_pf[a];
-    std::printf("    tau %3.0f ms  peak %.2f Hz  period %5.1f ms  period/tau %5.2f\n",
-                double(kHCArms[a].tau_ms), m_pf[a], per, per / double(kHCArms[a].tau_ms));
+    if (m_hf[a] <= 0.0) continue;
+    const double per = 1000.0 / m_hf[a];
+    std::printf("    tau %3.0f ms  alternation %.2f Hz  period %5.1f ms  period/tau %5.2f"
+                "   (envelope was %.2f Hz)\n",
+                double(kHCArms[a].tau_ms), m_hf[a], per, per / double(kHCArms[a].tau_ms),
+                m_pf[a]);
   }
   double expo = 0.0;
-  if (m_pf[0] > 0.0 && m_pf[3] > 0.0) {
-    expo = std::log(m_pf[0] / m_pf[3]) /
+  if (m_hf[0] > 0.0 && m_hf[3] > 0.0) {
+    expo = std::log(m_hf[0] / m_hf[3]) /
            std::log(double(kHCArms[3].tau_ms) / double(kHCArms[0].tau_ms));
   }
   std::printf("    EXPONENT %+.3f over tau 83 -> 333 ms.  REQUIRED ~1.000.\n", expo);
