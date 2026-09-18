@@ -12818,26 +12818,29 @@ struct HCArm {
   float drive;   // DNA v57d: Matsuoka's tonic S, the regime axis
 };
 const HCArm kHCArms[] = {
-    // A MAPPING RUN, not a hypothesis test. Shpiro/Curtu/Rinzel/Rubin: oscillation is
-    // a BOUNDED WINDOW in tonic drive, with a winner-take-all gap in its middle,
-    // fusion below and simultaneous activity above -- and boundaries that do NOT move
-    // with the time constants, which is the axis every previous run left alone.
+    // THE CLOCK TEST, at the drive where anti-phase appeared (1.40). The previous run
+    // found anti-phase -0.555, 0/12 degenerate, identical across both halves of the
+    // record -- a stable alternation rather than the drift that killed the run before
+    // it. Two doubts remain and this run settles both.
     //
-    // Fatigue and inhibition are held where they were shown to release a settled
-    // winner (jump 1.00, hc 0.60, tau 167). The derived compensation point is 0.835,
-    // since adapt = jump * rate * tau/1000 puts the fatigue at the free-running rate
-    // ABOVE the 0.645 spike threshold -- which is why rate collapsed to 0.54 Hz.
-    {"drive000", 1.00f, 167.0f, 0.60f, 0.00f},   // the old rel100: rate 0.76 Hz
-    {"drive030", 1.00f, 167.0f, 0.60f, 0.30f},
-    {"drive050", 1.00f, 167.0f, 0.60f, 0.50f},
-    {"drive070", 1.00f, 167.0f, 0.60f, 0.70f},
-    {"drive085", 1.00f, 167.0f, 0.60f, 0.85f},   // the DERIVED compensation point
-    {"drive100", 1.00f, 167.0f, 0.60f, 1.00f},
-    {"drive140", 1.00f, 167.0f, 0.60f, 1.40f},
-    // MATCHED-DRIVE CONTROL: both mechanisms OFF at the derived drive. Without it a
-    // tonic drive that merely raises rate could produce an anti-phase reading on its
-    // own and nothing would distinguish the two.
-    {"ctrl085",  0.00f, 167.0f, 0.00f, 0.85f},
+    // DOUBT 1, the decisive one: every arm of every run so far has peaked at 2.5-3.5
+    // Hz, which is the band the pre-existing damped resonance already occupies. If
+    // the period does not move with tau_a this is that resonance being re-measured,
+    // which is exactly what killed adaptclock. Period is PROPORTIONAL to tau_a for a
+    // relaxation oscillator (Shpiro/Curtu/Rinzel/Rubin), so the exponent must be ~1.
+    {"tau083",  1.00f,  83.0f, 0.60f, 1.40f},
+    {"tau167",  1.00f, 167.0f, 0.60f, 1.40f},   // replicates the -0.555 arm
+    {"tau250",  1.00f, 250.0f, 0.60f, 1.40f},
+    {"tau333",  1.00f, 333.0f, 0.60f, 1.40f},
+    // BOTH SINGLES AT THE WINNING DRIVE. The interaction was previously shown against
+    // a control at drive 0.85, which is the wrong drive to compare against.
+    {"inhib140", 0.00f, 167.0f, 0.60f, 1.40f},  // inhibition only: must SETTLE
+    {"fat140",  1.00f, 167.0f, 0.00f, 1.40f},   // fatigue only: must do nothing
+    // UPPER EDGE. The last sweep found the effect only at its TOP arm, so the window
+    // was bracketed on one side only and its upper boundary is unmeasured. Shpiro
+    // predicts simultaneous high activity above the window.
+    {"drive200", 1.00f, 167.0f, 0.60f, 2.00f},
+    {"ctrl140",  0.00f, 167.0f, 0.00f, 1.40f},  // matched-drive control, both OFF
 };
 constexpr uint32_t kHCArmCount = sizeof(kHCArms) / sizeof(kHCArms[0]);
 constexpr uint64_t kHCSeedOffset = 604553ull;
@@ -12855,6 +12858,7 @@ struct HCRow {
   double m_lo = 0.0, m_hi = 0.0;   // the two competing postures' mean rates
   double sd_lo = 0.0, sd_hi = 0.0; // and their spreads -- zero means SILENCED
   bool degenerate = false;         // one half constant -> a settled winner
+  double within = 0.0;             // coherence INSIDE a half: population vs per-neuron
 };
 
 // Returns the correlation, and sets `*degenerate` when one series is CONSTANT so a
@@ -12913,6 +12917,7 @@ HCRow run_halfcenter_arm(const std::vector<uint8_t>& blob, uint64_t ticks, const
 
   const uint64_t settle = ticks / 10;
   std::vector<double> env, tms, lo, hi, diff;
+  std::vector<double> loq1, loq2, hiq1, hiq2;
   uint64_t last_frame = 0;
   double on = 0, n = 0, rsum = 0;
   for (uint64_t t = 0; t < ticks; ++t) {
@@ -12945,6 +12950,24 @@ HCRow run_halfcenter_arm(const std::vector<uint8_t>& blob, uint64_t ticks, const
     const double ml = mid > 0 ? sl / double(mid) : 0.0;
     const double mh = gn > mid ? sh / double(gn - mid) : 0.0;
     lo.push_back(ml); hi.push_back(mh); diff.push_back(ml - mh);
+    // WITHIN-HALF COHERENCE, the discriminator between a POPULATION half-center and
+    // per-NEURON bursting. At a tonic drive 2.2x threshold each neuron can
+    // relaxation-oscillate on its own, which would produce anti-phase between the
+    // halves without any population competition. In a real half-center the neurons
+    // INSIDE one half move together, so correlating the two quarters of a half
+    // should be strongly POSITIVE; under independent per-neuron bursting it is not.
+    {
+      const uint32_t q = mid / 2, q2 = (gn - mid) / 2;
+      double a1 = 0, a2 = 0, b1 = 0, b2 = 0;
+      for (uint32_t k = 0; k < q; ++k) a1 += double(net.rate_fast(vm.begin + gb + k));
+      for (uint32_t k = q; k < mid; ++k) a2 += double(net.rate_fast(vm.begin + gb + k));
+      for (uint32_t k = mid; k < mid + q2; ++k) b1 += double(net.rate_fast(vm.begin + gb + k));
+      for (uint32_t k = mid + q2; k < gn; ++k) b2 += double(net.rate_fast(vm.begin + gb + k));
+      loq1.push_back(q ? a1 / double(q) : 0.0);
+      loq2.push_back(mid > q ? a2 / double(mid - q) : 0.0);
+      hiq1.push_back(q2 ? b1 / double(q2) : 0.0);
+      hiq2.push_back(gn > mid + q2 ? b2 / double(gn - mid - q2) : 0.0);
+    }
     rsum += 0.5 * (ml + mh);
   }
   if (env.size() < 1024) return row;
@@ -12976,6 +12999,10 @@ HCRow run_halfcenter_arm(const std::vector<uint8_t>& blob, uint64_t ticks, const
             std::vector<double>(tms.begin(), tms.begin() + h2), &row.peak_f_a, &sn);
     hc_peak(std::vector<double>(env.begin() + h2, env.end()),
             std::vector<double>(tms.begin() + h2, tms.end()), &row.peak_f_b, &sn);
+  }
+  {
+    const double c1 = hc_corr(loq1, loq2), c2 = hc_corr(hiq1, hiq2);
+    row.within = 0.5 * (c1 + c2);
   }
   row.duty = n > 0 ? on / n : 0.0;
   row.rate_hz = n > 0 ? rsum / n : 0.0;
@@ -13136,9 +13163,19 @@ bool run_halfcenter(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
       double e1=0,e2=0,e3=0,e4=0;
       const double a1 = ctx_mean_se(ml,&e1), a2 = ctx_mean_se(mh,&e2);
       const double a3 = ctx_mean_se(sl2,&e3), a4 = ctx_mean_se(sh2,&e4);
+      std::vector<double> wi;
+      for (uint32_t r = 0; r < kReps; ++r) {
+        const Cell& c = cells[r * kHCArmCount + a];
+        if (c.ok) wi.push_back(c.row.within);
+      }
+      double ew = 0.0;
+      const double mw = ctx_mean_se(wi, &ew);
       std::printf("  %-11s   low-F1 posture %.3f +/- %.3f Hz, high-F1 %.3f +/- %.3f Hz"
-                  "   [%u/%zu seeds DEGENERATE: one posture CONSTANT]\n",
+                  "   [%u/%zu seeds DEGENERATE]\n",
                   "", a1, a3, a2, a4, ndeg, ml.size());
+      std::printf("  %-11s   WITHIN-half coherence %+.3f +/- %.3f  (a population "
+                  "half-center is strongly POSITIVE here; per-neuron bursting is not)\n",
+                  "", mw, ew);
     }
   }
 
@@ -13179,13 +13216,33 @@ bool run_halfcenter(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
       if (m_an[a] < best) { best = m_an[a]; bestarm = a; }
     }
   }
-  std::printf("\n  PERIOD ACROSS THE SWEEP -- inside an oscillating regime the period\n"
-              "  varies with drive: rising on the `release` side, falling on `escape`\n");
-  for (uint32_t a = 0; a < kHCArmCount; ++a) {
-    if (a == kCtrl || m_pf[a] <= 0.0) continue;
-    std::printf("    drive %-5.2f peak %.2f Hz  period %5.1f ms\n",
-                double(kHCArms[a].drive), m_pf[a], 1000.0 / m_pf[a]);
+  // THE CLOCK TEST. Period is PROPORTIONAL to tau_a for a relaxation oscillator, so
+  // the exponent on log(peak f) vs log(1/tau) must be ~1.0. Anything near 0 means the
+  // rhythm ignores its own time constant, i.e. the pre-existing 3 Hz resonance being
+  // re-measured -- which is what killed adaptclock (+0.226) and the released-jump run
+  // (-0.121).
+  std::printf("\n  THE CLOCK TEST -- does the period follow tau_a at drive 1.40?\n");
+  for (uint32_t a = 0; a < 4; ++a) {
+    if (m_pf[a] <= 0.0) continue;
+    const double per = 1000.0 / m_pf[a];
+    std::printf("    tau %3.0f ms  peak %.2f Hz  period %5.1f ms  period/tau %5.2f\n",
+                double(kHCArms[a].tau_ms), m_pf[a], per, per / double(kHCArms[a].tau_ms));
   }
+  double expo = 0.0;
+  if (m_pf[0] > 0.0 && m_pf[3] > 0.0) {
+    expo = std::log(m_pf[0] / m_pf[3]) /
+           std::log(double(kHCArms[3].tau_ms) / double(kHCArms[0].tau_ms));
+  }
+  std::printf("    EXPONENT %+.3f over tau 83 -> 333 ms.  REQUIRED ~1.000.\n", expo);
+  if (expo < 0.60) {
+    std::printf("    THE PERIOD IGNORES ITS OWN TIME CONSTANT. Whatever the anti-phase is,\n"
+                "    it is not a relaxation oscillator's clock, and the 2.5-3.5 Hz band it\n"
+                "    sits in is where the damped resonance already lives. NOT A CLOCK.\n");
+  }
+  std::printf("\n  UPPER EDGE -- drive 2.00 probes above the window (Shpiro predicts\n"
+              "  simultaneous high activity there, not oscillation)\n");
+  std::printf("    drive 2.00  anti %+.3f  rate %5.2f  peak %.2f Hz\n",
+              m_an[6], m_rt[6], m_pf[6]);
 
   std::printf("\n  --- the reading ---\n");
   if (alternates) {
@@ -13195,7 +13252,14 @@ bool run_halfcenter(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
                 "  run pre-registered.\n", kHCArms[bestarm].name, best);
     std::printf("  A resonance moves both halves TOGETHER, so this cannot be the 3 Hz ring\n"
                 "  being re-measured -- the failure that killed adaptclock.\n");
-    std::printf("  THIS RUN DOES NOT SWEEP tau, SO IT CANNOT CALL THIS A CLOCK. It locates a\n"
+    if (expo < 0.60) {
+      std::printf("  BUT IT IS NOT A CLOCK. The exponent is %+.3f against ~1.000 required, so\n"
+                  "  the period ignores tau_a -- competition WITHOUT timekeeping, in the same\n"
+                  "  2.5-3.5 Hz band the pre-existing resonance occupies. Report the\n"
+                  "  alternation and refuse the clock.\n", expo);
+      return false;
+    }
+    std::printf("  OLD TEXT, SUPERSEDED BY THE EXPONENT GATE ABOVE. It locates a\n"
                 "  candidate WINDOW on the drive axis; whether the period tracks tau_a is the\n"
                 "  NEXT run, at this drive. adaptclock measured +0.226 and the released-jump\n"
                 "  run -0.121, against the ~1.000 a relaxation oscillator requires.\n");

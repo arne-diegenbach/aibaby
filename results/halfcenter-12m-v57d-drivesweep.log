@@ -1,0 +1,113 @@
+# halfcenter v57d -- THE DRIVE SWEEP. A candidate window, NOT yet a clock.
+# 2026-09-18. Gated on verify PASS (hash ad96f882becbee92, 22 experiments, 7.6 min).
+#
+# drive140 (tonic 1.40, jump 1.00, hc 0.60, tau 167) reaches anti-phase -0.555 with
+# 0/12 seeds degenerate, and it PASSES the drift check that killed the previous
+# positive: halves -0.554 / -0.556 against -0.555 whole, i.e. identical. Rate 6.38 Hz
+# (ctrl 4.93), duty 0.57. The interaction is -97.1 SE against the matched-drive
+# control.
+#
+# THE SE OF 0.000 IS NOT THE DEGENERATE GUARD. That guard returns exactly 0.0; this
+# is a computed correlation all twelve seeds agree on to three decimals, which is
+# what a strongly locked, seed-independent limit cycle looks like.
+#
+# TWO DOUBTS REMAIN, AND NEITHER IS SETTLED BY THIS RUN:
+#
+# 1. PERIOD vs RESONANCE. Every arm of every run so far peaks at 2.5-3.5 Hz, which is
+#    the band the pre-existing damped resonance already occupies:
+#      drive 0.00 3.15 Hz | 0.30 2.48 | 0.50 2.71 | 0.70 2.96 | 0.85 2.85 |
+#      1.00 3.35 | 1.40 3.46
+#    Period is PROPORTIONAL to tau_a for a relaxation oscillator, so the exponent must
+#    be ~1.0. This run held tau at 167 ms and cannot test it. adaptclock measured
+#    +0.226 and the released-jump run -0.121.
+#
+# 2. POPULATION vs PER-NEURON. Drive 1.40 is 2.2x the 0.645 spike threshold, so each
+#    neuron can relaxation-oscillate ALONE -- fire, fatigue, shut off, recover -- which
+#    would give anti-phase between halves with no population competition at all. The
+#    rate sd (6.765) EXCEEDS the mean (6.38), so firing is strongly bursty.
+#    Discriminator: within a half, neurons should be POSITIVELY correlated with each
+#    other under a population half-center and not under per-neuron bursting. Not
+#    measured here.
+#
+# AND THE PROFILE IS NOT SHPIRO'S WINDOW SHAPE:
+#   drive 0.00 11/12 deg VOID | 0.30 3/12 VOID | 0.50 0/12 anti 0.000 |
+#   0.70 12/12 settled | 0.85 11/12 settled | 1.00 12/12 settled | 1.40 0/12 -0.555
+# A winner-take-all plateau from 0.70 to 1.00 with the effect appearing only at the
+# TOP arm, so the sweep is one-sided and the window's upper edge is unmeasured.
+#
+# THE FOLLOW-UP IS RUNNING: tau swept 83/167/250/333 AT drive 1.40 (the clock test),
+# both singles at that same drive rather than at 0.85, a within-half coherence
+# readout, and drive 2.00 to probe above the window. The verdict is now GATED on the
+# exponent: below 0.60 it prints "not a clock" and returns false.
+  arm         jump  tau   hc    ANTI-PHASE corr  peak f/SNR    half-diff    duty   rate
+  drive000    1.00  167   0.60  -0.000 +/- 0.000   3.15/ 4.30    6.39 +/- 0.73 0.57    0.76  <- VOID
+                anti-phase by half of the recording: -0.000 / +0.000
+                low-F1 posture 0.512 +/- 0.484 Hz, high-F1 1.016 +/- 0.965 Hz   [11/12 seeds DEGENERATE: one posture CONSTANT]
+  drive030    1.00  167   0.60  -0.000 +/- 0.000   2.48/ 4.04   224.84 +/- 65.62 0.57    1.86  <- VOID
+                anti-phase by half of the recording: -0.000 / +0.000
+                low-F1 posture 1.865 +/- 0.996 Hz, high-F1 1.856 +/- 0.970 Hz   [3/12 seeds DEGENERATE: one posture CONSTANT]
+  drive050    1.00  167   0.60  +0.000 +/- 0.000   2.71/ 4.33   218.82 +/- 53.31 0.57    2.41
+                anti-phase by half of the recording: -0.000 / -0.000
+                low-F1 posture 2.410 +/- 1.016 Hz, high-F1 2.404 +/- 1.035 Hz   [0/12 seeds DEGENERATE: one posture CONSTANT]
+  drive070    1.00  167   0.60  +0.000 +/- 0.000   2.96/ 4.46   145.47 +/- 46.34 0.57    2.93
+                anti-phase by half of the recording: +0.000 / +0.000
+                low-F1 posture 2.925 +/- 1.035 Hz, high-F1 2.925 +/- 1.061 Hz   [12/12 seeds DEGENERATE: one posture CONSTANT]
+  drive085    1.00  167   0.60  -0.000 +/- 0.000   2.85/ 5.02    5.35 +/- 0.41 0.57    3.30
+                anti-phase by half of the recording: +0.000 / -0.000
+                low-F1 posture 3.856 +/- 1.241 Hz, high-F1 2.751 +/- 0.893 Hz   [11/12 seeds DEGENERATE: one posture CONSTANT]
+  drive100    1.00  167   0.60  +0.000 +/- 0.000   3.35/ 3.86    4.38 +/- 0.54 0.57    3.69
+                anti-phase by half of the recording: +0.000 / +0.000
+                low-F1 posture 1.844 +/- 0.533 Hz, high-F1 5.527 +/- 1.597 Hz   [12/12 seeds DEGENERATE: one posture CONSTANT]
+  drive140    1.00  167   0.60  -0.555 +/- 0.000   3.46/ 4.45   1559.00 +/- 224.88 0.57    6.38
+                anti-phase by half of the recording: -0.554 / -0.556
+                low-F1 posture 6.380 +/- 6.765 Hz, high-F1 6.379 +/- 6.767 Hz   [0/12 seeds DEGENERATE: one posture CONSTANT]
+  ctrl085     0.00  167   0.00  +0.367 +/- 0.009   2.10/ 3.88    3.70 +/- 0.24 0.57    4.93
+                anti-phase by half of the recording: +0.387 / +0.347
+                low-F1 posture 4.928 +/- 3.176 Hz, high-F1 4.929 +/- 3.185 Hz   [0/12 seeds DEGENERATE: one posture CONSTANT]
+
+  KILL SWITCH -- duty away from BOTH ends, rate near target
+    drive000    duty 0.57  rate  0.76 Hz   <- VOID (runaway or silence)
+    drive030    duty 0.57  rate  1.86 Hz   <- VOID (runaway or silence)
+    drive050    duty 0.57  rate  2.41 Hz
+    drive070    duty 0.57  rate  2.93 Hz
+    drive085    duty 0.57  rate  3.30 Hz
+    drive100    duty 0.57  rate  3.69 Hz
+    drive140    duty 0.57  rate  6.38 Hz
+    ctrl085     duty 0.57  rate  4.93 Hz
+
+  THE REGIME PROFILE -- anti-phase and rate across the drive axis
+    fusion below the window, winner-take-all in its middle, simultaneous
+    activity above (Shpiro/Curtu/Rinzel/Rubin)
+    drive 0.00  anti -0.000 (-38.7 SE vs ctrl)  rate  0.76  11/12 deg  VOID
+    drive 0.30  anti -0.000 (-38.7 SE vs ctrl)  rate  1.86  3/12 deg  VOID
+    drive 0.50  anti +0.000 (-38.7 SE vs ctrl)  rate  2.41  0/12 deg  
+    drive 0.70  anti +0.000 (-38.7 SE vs ctrl)  rate  2.93  12/12 deg  settled winner
+    drive 0.85  anti -0.000 (-38.7 SE vs ctrl)  rate  3.30  11/12 deg  settled winner
+    drive 1.00  anti +0.000 (-38.7 SE vs ctrl)  rate  3.69  12/12 deg  settled winner
+    drive 1.40  anti -0.555 (-97.1 SE vs ctrl)  rate  6.38  0/12 deg  
+    drive 0.85  anti +0.367 (+0.0 SE vs ctrl)  rate  4.93  0/12 deg  
+
+  PERIOD ACROSS THE SWEEP -- inside an oscillating regime the period
+  varies with drive: rising on the `release` side, falling on `escape`
+    drive 0.00  peak 3.15 Hz  period 317.9 ms
+    drive 0.30  peak 2.48 Hz  period 403.4 ms
+    drive 0.50  peak 2.71 Hz  period 369.2 ms
+    drive 0.70  peak 2.96 Hz  period 338.0 ms
+    drive 0.85  peak 2.85 Hz  period 350.4 ms
+    drive 1.00  peak 3.35 Hz  period 298.1 ms
+    drive 1.40  peak 3.46 Hz  period 289.2 ms
+
+  --- the reading ---
+  THE TWO HALVES TAKE TURNS. `drive140` reaches anti-phase -0.555, beating BOTH of
+  its own singles by at least 3 SE -- so it is the COMBINATION and not
+  either ingredient, which is Matsuoka's prediction and the interaction this
+  run pre-registered.
+  A resonance moves both halves TOGETHER, so this cannot be the 3 Hz ring
+  being re-measured -- the failure that killed adaptclock.
+  THIS RUN DOES NOT SWEEP tau, SO IT CANNOT CALL THIS A CLOCK. It locates a
+  candidate WINDOW on the drive axis; whether the period tracks tau_a is the
+  NEXT run, at this drive. adaptclock measured +0.226 and the released-jump
+  run -0.121, against the ~1.000 a relaxation oscillator requires.
+HC_EXIT=0
+
+[exited with code 0]
