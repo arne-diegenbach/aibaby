@@ -5896,6 +5896,10 @@ RTRow run_retain_arm(const std::vector<uint8_t>& blob, uint64_t ticks,
   *ok_out = false;
   aibaby::Rng credit_rng;   // mode 3 only: a coin flip independent of the lesson
   credit_rng.seed(0x51DEu);
+  // Mode 4's latch state: the last context sampled while the creature was hearing.
+  uint32_t latched_ctx = 0;
+  double aud_ema = -1.0;
+  int32_t aud_idx = -1;   // resolved once the session's DNA is loaded
   std::string error;
   std::vector<uint8_t> variant = blob;
   if (cfg.no_fatigue) {
@@ -5983,6 +5987,7 @@ RTRow run_retain_arm(const std::vector<uint8_t>& blob, uint64_t ticks,
   aibaby::Rng mask_rng;
   mask_rng.seed(s.dna.header().seed ^ 0x4D5Bu);
   const int32_t vmod_idx = s.dna.module_with_role(aibaby::ModuleRole::kVocal);
+  aud_idx = s.dna.module_with_role(aibaby::ModuleRole::kAuditory);
 
   const uint32_t n_teach = uint32_t(teach_ticks / kRTTrial);
   const uint32_t n_gap = uint32_t(gap_ticks / kRTTrial);
@@ -6085,6 +6090,28 @@ RTRow run_retain_arm(const std::vector<uint8_t>& blob, uint64_t ticks,
       bool upper = want;
       if (cfg.credit_mode == 2) upper = cnet.active_context() == 0u;
       else if (cfg.credit_mode == 3) upper = (credit_rng.next() & 1u) != 0u;
+      else if (cfg.credit_mode == 4) {
+        // THE LATCH. `ctxsrc` measured the word at 1.000 while it PLAYS and 0.533 --
+        // chance -- when reward LANDS. The index is not weak; it is being read about
+        // two seconds too late. So sample it while the creature is hearing something
+        // and HOLD it until the next time it does.
+        //
+        // The trigger is the creature's own auditory drive rising above its running
+        // mean, not the host's knowledge of when the caregiver speaks. That matters:
+        // the listening reflex is standing evidence the creature detects sound onset,
+        // so this is a mechanism it could plausibly have rather than a timing oracle.
+        // Only the TRIGGER is new -- the index CONTENT is still the creature's own.
+        if (aud_idx >= 0) {
+          const aibaby::ModuleState& am = cnet.module(uint32_t(aud_idx));
+          double asum = 0.0;
+          for (uint32_t k = 0; k < am.count; ++k) asum += double(cnet.rate_fast(am.begin + k));
+          const double arate = am.count ? asum / double(am.count) : 0.0;
+          if (aud_ema < 0.0) aud_ema = arate;
+          if (arate > aud_ema * 1.10) latched_ctx = cnet.active_context();
+          aud_ema += 0.02 * (arate - aud_ema);
+        }
+        upper = latched_ctx == 0u;
+      }
       if (upper) cnet.set_reward_mask(cvm.begin + cmid, cvm.begin + cg_hi);
       else cnet.set_reward_mask(cvm.begin + cg_lo, cvm.begin + cmid);
       // AGREEMENT TELEMETRY, so a null can be told from an index that never moved.
@@ -13791,8 +13818,14 @@ const CGArm kCGArms[] = {
     {"oracle-keep", 1u, true},
     {"derived-AB", 2u, false},   // the mask follows the creature's own index
     {"derived-keep", 2u, true},
-    {"shuf-AB",    3u, false},   // a coin flip: does the index CONTENT matter?
-    {"shuf-keep",  3u, true},
+    // THE LATCH replaces the coin-flip arm, whose specificity result is already
+    // banked at -2.285 +/- 2.556 (-0.9 SE) -- a coin flip does NOT reproduce the
+    // oracle, so the benefit is credit assignment and not merely halving the write.
+    // `ctxsrc` measured the word at 1.000 while it PLAYS and 0.533 when reward LANDS,
+    // so the index is read about two seconds too late. Mode 4 samples it while the
+    // creature's own auditory drive is above its running mean and HOLDS it.
+    {"latch-AB",   4u, false},
+    {"latch-keep", 4u, true},
 };
 constexpr uint32_t kCGArmCount = sizeof(kCGArms) / sizeof(kCGArms[0]);
 constexpr uint64_t kCGSeedOffset = 318211ull;
@@ -13917,7 +13950,7 @@ bool run_credgate(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
   }
 
   {
-    const char* mn[4] = {"broadcast", "oracle", "derived", "shuffled"};
+    const char* mn[4] = {"broadcast", "oracle", "derived", "latch"};
     std::printf("\n  RETENTION -- the fraction of the GAIN that survived, which is what\n"
                 "  credit-oracle scored (0.84 broadcast -> 1.03 targeted). Unlike the raw\n"
                 "  gap this is not confounded by the mask's learning-rate cost.\n");
@@ -13937,7 +13970,8 @@ bool run_credgate(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
   const double or_ag = m_agree[2], sh_ag = m_agree[6], dv_ag = m_agree[4];
   std::printf("    oracle  %.3f   (must be 1.000 by construction)\n", or_ag);
   std::printf("    derived %.3f   <- THE WHOLE QUESTION\n", dv_ag);
-  std::printf("    shuffled %.3f  (must be ~0.500)\n", sh_ag);
+  std::printf("    latched %.3f   <- THE PREDICTION: reading the index while the\n"
+              "                     creature HEARS should raise this well above 0.720\n", sh_ag);
   if (or_ag < 0.99) {
     std::printf("  REFUSED: the oracle arm does not agree with itself, so the masking is\n"
                 "  miswired and no retention number below is readable.\n");
@@ -13951,7 +13985,7 @@ bool run_credgate(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
 
   std::printf("\n  PRIMARY -- the AB-minus-keep gap, per mode\n");
   double gap[4] = {}, gse[4] = {};
-  const char* mode_name[4] = {"broadcast", "oracle", "derived", "shuffled"};
+  const char* mode_name[4] = {"broadcast", "oracle", "derived", "latch"};
   for (uint32_t k = 0; k < 4; ++k) {
     const uint32_t ab = k * 2, kp = k * 2 + 1;
     gap[k] = m_after[ab] - m_after[kp];
