@@ -12014,3 +12014,47 @@ None of this retracts the diagnosis. The decoder is positional, the 800 ms pole 
 the glide experiment measured 3–6% of allowance, and the half-center really does
 generate 375 Hz of swing that arrives as 68. The bottleneck is real. The one-line fix
 was not.
+
+### The wipe is credit assignment, not a collision
+
+With region targets refused, the obvious next question looked like: can two lessons be
+made to occupy non-overlapping neurons? It turns out that question was answered some
+time ago, and answered the other way.
+
+**They already do occupy non-overlapping neurons, and it still wipes.** An earlier
+capacity experiment found two lessons competing while driving *disjoint* groups, and
+the credit oracle put the reason in one line: **the groups are disjoint; the reward is
+what they share.** Node perturbation nudges `bias_[i]` for every neuron in the motor
+module, scaled by a single broadcast scalar — so teaching B keeps updating A's neurons
+with a reward uncorrelated with anything they did, and A's setting random-walks.
+
+That also re-reads the axis result. Retention tracking demand on the first lesson's own
+axis is exactly what a broadcast reward predicts: the arms that demand A's axis are the
+ones whose reward signal is most correlated with A's neurons. It looked like a
+representational collision and it is a credit-assignment failure wearing that shape.
+
+The ceiling is already measured. Confining node perturbation to a neuron range gives
+retention **1.03 against 0.84** broadcast — but at about 30% of the learning rate,
+because the F1 group is 14 neurons of 126 and confining the reward also confines the
+perturbation search. **Perfect credit assignment converts an interference problem into
+a slower-learning one.** That is the trade, and it is worth knowing before anyone
+designs for it.
+
+And the best local rule already reached those numbers once without transferring. The
+commitment brake hit retention 1.10 against the oracle's 1.03 with no new state at
+all — then, against the actual milestone, moved relearn 0.22 → 0.26 against seed
+swings of 0.45 / −0.32 / 0.65, cost the headline retention, and dropped the babble duty
+cycle from 0.78 to 0.50. It does not ship, and that verdict stands.
+
+So the open question is narrower than the one I posed. Not whether two lessons can use
+different neurons — they do. Not whether targeted credit helps — it does. **It is
+whether the creature can target its own reward without an oracle.** The standard
+account is gating plus stabilisation, with gating alone at 61.4% and gating with EWC at
+95.4%; here the stabilisation half is refused, and the gating half has never been tested
+with an index that actually separates the lessons — the one attempt read 0.23/0.23
+because the ear-EMA index switches on within-trial structure rather than on which word
+is playing. The one buildable combination left is to drive the reward mask *from* that
+derived index, which does work at 16/18 in its own right.
+
+Worth recording the cheapest part of this: reading the existing notes before building
+saved a redundant run, and corrected a direction I had already stated out loud.
