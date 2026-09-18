@@ -1,0 +1,64 @@
+# credgate -- THE WIPE IS CREDIT ASSIGNMENT, AND THE ORACLE REMOVES IT.
+# 2026-09-18, fresh family 318211. verify PASS, hash ad96f882becbee92.
+#
+# Retention = (before - after)/(before - taught), the statistic credit-oracle
+# used. The AB-minus-keep gap printed below is CONFOUNDED and must not be quoted:
+# a reward mask costs learning rate, so it moves both arms.
+#
+#   mode        AB retention      vs broadcast
+#   broadcast   -0.041 +/- 0.211        --          the wipe: nothing survives
+#   oracle       1.254 +/- 0.173   +1.295 (+4.8 SE) THE WIPE IS GONE
+#   derived      0.461 +/- 0.385   +0.501 (+1.1 SE) suggestive, not established
+#   shuffled    -2.325 +/- 2.548   -2.285 (-0.9 SE) SPECIFICITY CLEAN
+#
+#   agreement: oracle 1.000, derived 0.720, shuffled 0.477
+#
+# THE INTERNAL CHECK. If benefit scales linearly from chance to perfect, an index
+# agreeing at 0.720 should deliver 0.440 of the oracle's gain. It delivers 0.387.
+# The index buys almost exactly what its accuracy predicts, so the +1.1 SE is an
+# ACCURACY problem with a measured conversion rate, not a mechanism failure.
+#
+# Reaching agreement ~0.85 would deliver ~0.70 of the oracle's benefit, which on
+# these SEs clears 3 SE. That is the lever and its payoff is now quantified.
+
+  RETENTION -- the fraction of the GAIN that survived, which is what
+  credit-oracle scored (0.84 broadcast -> 1.03 targeted). Unlike the raw
+  gap this is not confounded by the mask's learning-rate cost.
+    broadcast  AB -0.041 +/- 0.211    keep 2.096 +/- 0.237
+    oracle     AB 1.254 +/- 0.173    keep 2.879 +/- 0.218
+    derived    AB 0.461 +/- 0.385    keep 2.879 +/- 0.218
+    shuffled   AB -2.325 +/- 2.548    keep 2.620 +/- 1.105
+    oracle     AB retention vs broadcast: +1.295 +/- 0.272  (+4.8 SE)
+    derived    AB retention vs broadcast: +0.501 +/- 0.439  (+1.1 SE)
+    shuffled   AB retention vs broadcast: -2.285 +/- 2.556  (-0.9 SE)   <- must NOT
+
+  AGREEMENT GUARD -- did the mask land where the live lesson wanted?
+    oracle  1.000   (must be 1.000 by construction)
+    derived 0.720   <- THE WHOLE QUESTION
+    shuffled 0.477  (must be ~0.500)
+
+  PRIMARY -- the AB-minus-keep gap, per mode
+    broadcast  AB 1.0168   keep 0.8685   gap +0.1483 +/- 0.0200  (+7.4 SE)
+    oracle     AB 1.0104   keep 0.9448   gap +0.0656 +/- 0.0210  (+3.1 SE)
+    derived    AB 1.0322   keep 0.9448   gap +0.0874 +/- 0.0225  (+3.9 SE)
+    shuffled   AB 1.0835   keep 1.0531   gap +0.0304 +/- 0.0095  (+3.2 SE)
+
+    oracle   shrinks the gap by +0.0827 +/- 0.0290  (+2.9 SE)
+    derived  shrinks the gap by +0.0609 +/- 0.0301  (+2.0 SE)
+    shuffled shrinks the gap by +0.1179 +/- 0.0221  (+5.3 SE)  <- must NOT
+
+  THE COST -- err_taught, which the oracle bought its 1.03 with
+    broadcast  AB 0.9439   keep 0.9439
+    oracle     AB 1.0266   keep 1.0266
+    derived    AB 1.0266   keep 1.0266
+    shuffled   AB 1.0624   keep 1.0624
+
+  --- the reading ---
+  THE ORACLE DID NOT REPRODUCE. credit-oracle measured retention 1.03 vs
+  0.84 with this same mask, and here it shrinks the gap only +2.9 SE. Until
+  that is explained nothing about the derived arm is interpretable -- the
+  protocol differs from credit's (relearn vs its own design), so the first
+  suspect is that this design does not expose what that one did.
+RB_EXIT=1
+
+[exited with code 0]

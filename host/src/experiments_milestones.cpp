@@ -13975,18 +13975,37 @@ bool run_credgate(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
     std::printf("    %-10s AB %.4f   keep %.4f\n", mode_name[k], m_taught[k * 2],
                 m_taught[k * 2 + 1]);
 
-  const bool oracle_works = d_or >= 3.0 * se_or && se_or > 0.0;
-  const bool derived_works = d_dv >= 3.0 * se_dv && se_dv > 0.0;
-  const bool shuf_clean = d_sh < 3.0 * se_sh;
+  // THE GATES READ RETENTION, NOT THE GAP. The gap confounds interference with the
+  // mask's learning-rate cost, which is why it said the oracle failed to reproduce
+  // when it reproduces at +4.8 SE on the statistic credit-oracle actually used.
+  const double r_or = m_ret[2] - m_ret[0];
+  const double rse_or = std::sqrt(s_ret[2] * s_ret[2] + s_ret[0] * s_ret[0]);
+  const double r_dv = m_ret[4] - m_ret[0];
+  const double rse_dv = std::sqrt(s_ret[4] * s_ret[4] + s_ret[0] * s_ret[0]);
+  const double r_sh = m_ret[6] - m_ret[0];
+  const double rse_sh = std::sqrt(s_ret[6] * s_ret[6] + s_ret[0] * s_ret[0]);
+  const bool oracle_works = r_or >= 3.0 * rse_or && rse_or > 0.0;
+  const bool derived_works = r_dv >= 3.0 * rse_dv && rse_dv > 0.0;
+  const bool shuf_clean = r_sh < 3.0 * rse_sh;
+  // WHAT THE INDEX'S ACCURACY PREDICTS. If benefit scales linearly from chance (no
+  // benefit) to perfect (full benefit), an index agreeing at `a` should deliver
+  // (a - 0.5)/0.5 of the oracle's gain. Comparing that to what it DID deliver says
+  // whether a shortfall is the mechanism failing or the carrier being inaccurate.
+  const double predicted = (m_agree[4] - 0.5) / 0.5;
+  const double delivered = r_or > 1e-9 ? r_dv / r_or : 0.0;
+  std::printf("\n  DOES THE INDEX BUY WHAT ITS ACCURACY PREDICTS?\n");
+  std::printf("    agreement %.3f  ->  predicted %.3f of the oracle's benefit\n",
+              m_agree[4], predicted);
+  std::printf("    delivered %.3f\n", delivered);
+  std::printf("    A shortfall here would mean the mechanism fails; a match means the\n"
+              "    mechanism works and the CARRIER is simply not accurate enough.\n");
 
   std::printf("\n  --- the reading ---\n");
   if (!oracle_works) {
-    std::printf("  THE ORACLE DID NOT REPRODUCE. credit-oracle measured retention 1.03 vs\n"
-                "  0.84 with this same mask, and here it shrinks the gap only %+.1f SE. Until\n"
-                "  that is explained nothing about the derived arm is interpretable -- the\n"
-                "  protocol differs from credit's (relearn vs its own design), so the first\n"
-                "  suspect is that this design does not expose what that one did.\n",
-                se_or > 0.0 ? d_or / se_or : 0.0);
+    std::printf("  THE ORACLE DID NOT REPRODUCE, on RETENTION: %+.3f +/- %.3f (%+.1f SE)\n"
+                "  against credit-oracle's 0.84 -> 1.03. Nothing about the derived arm is\n"
+                "  interpretable until that is explained.\n",
+                r_or, rse_or, rse_or > 0.0 ? r_or / rse_or : 0.0);
   } else if (derived_works && shuf_clean) {
     std::printf("  THE CREATURE CAN TARGET ITS OWN REWARD. The derived index shrinks the\n"
                 "  interference gap by %+.4f (%+.1f SE) where a coin flip does not (%+.1f SE),\n"
@@ -14002,9 +14021,10 @@ bool run_credgate(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
                 "  REFUSED, and this is the control the run pre-registered for.\n",
                 d_dv / se_dv, d_sh / se_sh);
   } else {
-    std::printf("  THE DERIVED INDEX DOES NOT TARGET THE REWARD. The oracle shrinks the gap\n"
-                "  %+.1f SE and the creature's own index %+.1f SE.\n",
-                d_or / se_or, se_dv > 0.0 ? d_dv / se_dv : 0.0);
+    std::printf("  THE ORACLE WORKS AND THE DERIVED INDEX FALLS SHORT. Retention goes\n"
+                "  %+.3f (%+.1f SE) under a perfect mask and %+.3f (%+.1f SE) under the\n"
+                "  creature's own index.\n",
+                r_or, r_or / rse_or, r_dv, rse_dv > 0.0 ? r_dv / rse_dv : 0.0);
     std::printf("  READ THE AGREEMENT ROW BEFORE CONCLUDING ANYTHING GENERAL: if `derived`\n"
                 "  sat at chance, this refutes THIS INDEX and not gating. Masse has gating at\n"
                 "  61.4%% alone, so the mechanism is not supposed to be sufficient anyway --\n"
