@@ -13120,6 +13120,7 @@ bool run_halfcenter(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
       an.push_back(c.row.anti); pk.push_back(c.row.peak_snr); pf.push_back(c.row.peak_f);
       du.push_back(c.row.duty); rt.push_back(c.row.rate_hz); hs.push_back(c.row.half_snr);
       aa.push_back(c.row.anti_a); ab.push_back(c.row.anti_b);
+      hf.push_back(c.row.half_f);
     }
     if (an.size() < 3) {
       std::printf("\n  halfcenter INCONCLUSIVE -- arm `%s` produced %zu creatures.\n",
