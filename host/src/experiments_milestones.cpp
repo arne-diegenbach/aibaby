@@ -12844,8 +12844,21 @@ const HCArm kHCArms[] = {
 };
 constexpr uint32_t kHCArmCount = sizeof(kHCArms) / sizeof(kHCArms[0]);
 constexpr uint64_t kHCSeedOffset = 604553ull;
-constexpr double kHCFLo = 0.75, kHCFStep = 0.25;
-constexpr uint32_t kHCFBins = 22;
+// GRID EXTENDED DOWN, and the old floor was hiding the prediction. A relaxation
+// oscillator's period is 2-4 tau_a, so the expected alternation frequency is
+// 1.5-3.0 Hz at tau 83, 0.75-1.5 at tau 167, 0.5-1.0 at tau 250 and 0.375-0.75 at
+// tau 333. The old grid started at 0.75 Hz, so for HALF the tau arms the predicted
+// value lay at or below its floor and the argmax had nowhere to go but up. tau 250
+// duly read 2.31 Hz where theory says 0.5-1.0, and tau 333 read exactly 1.00 with
+// all twelve seeds pinned there.
+//
+// THE PREDICTION THIS MAKES, written before the run: with the floor at 0.25 Hz,
+// tau 250 should FALL to roughly 0.5-1.0 Hz and tau 333 to 0.375-0.75, turning the
+// non-monotone 3.19 / 1.25 / 2.31 / 1.00 into a monotone series and raising the
+// four-point slope from +0.636 (R^2 0.509) toward 1.0. If instead they stay high,
+// the tracking was a grid artefact and the alternation is not a clock.
+constexpr double kHCFLo = 0.25, kHCFStep = 0.25;
+constexpr uint32_t kHCFBins = 24;
 
 struct HCRow {
   bool ok = false;
@@ -13109,6 +13122,8 @@ bool run_halfcenter(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
   double m_pf[kHCArmCount] = {}, m_du[kHCArmCount] = {}, m_rt[kHCArmCount] = {};
   double m_hs[kHCArmCount] = {};
   double m_hf[kHCArmCount] = {};   // the ALTERNATION's peak frequency, per arm
+  double s_hf[kHCArmCount] = {};   // ...and its SPREAD: averaging an argmax hides
+                                   // whether the seeds actually agree
   bool void_arm[kHCArmCount] = {};
   std::printf("\n  %-11s %-5s %-5s %-5s %-16s %-13s %-12s %-6s %s\n", "arm", "jump", "tau",
               "hc", "ANTI-PHASE corr", "peak f/SNR", "half-diff", "duty", "rate");
@@ -13134,7 +13149,7 @@ bool run_halfcenter(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
     m_du[a] = ctx_mean_se(du, &sd);
     m_rt[a] = ctx_mean_se(rt, &sr);
     m_hs[a] = ctx_mean_se(hs, &sh);
-    { double e=0.0; m_hf[a] = ctx_mean_se(hf, &e); }
+    { double e = 0.0; m_hf[a] = ctx_mean_se(hf, &e); s_hf[a] = e; }
     const double m_aa = ctx_mean_se(aa, &s1), m_ab = ctx_mean_se(ab, &s2);
     (void)sp;
     // RELATIVE to the control arm, not an absolute constant. A fixed 20 Hz bound let
@@ -13236,10 +13251,12 @@ bool run_halfcenter(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
   for (uint32_t a = 0; a < 4; ++a) {
     if (m_hf[a] <= 0.0) continue;
     const double per = 1000.0 / m_hf[a];
-    std::printf("    tau %3.0f ms  alternation %.2f Hz  period %5.1f ms  period/tau %5.2f"
-                "   (envelope was %.2f Hz)\n",
-                double(kHCArms[a].tau_ms), m_hf[a], per, per / double(kHCArms[a].tau_ms),
-                m_pf[a]);
+    const double tl = 2.0 * double(kHCArms[a].tau_ms), th = 4.0 * double(kHCArms[a].tau_ms);
+    const bool in_band = per >= tl && per <= th;
+    std::printf("    tau %3.0f ms  alternation %.2f +/- %.2f Hz  period %6.1f ms"
+                "  predicted %5.0f-%5.0f ms  %s\n",
+                double(kHCArms[a].tau_ms), m_hf[a], s_hf[a], per, tl, th,
+                in_band ? "IN BAND" : "outside");
   }
   double expo = 0.0;
   if (m_hf[0] > 0.0 && m_hf[3] > 0.0) {
