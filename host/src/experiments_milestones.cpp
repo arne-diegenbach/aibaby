@@ -12873,6 +12873,16 @@ struct HCRow {
   double sd_lo = 0.0, sd_hi = 0.0; // and their spreads -- zero means SILENCED
   bool degenerate = false;         // one half constant -> a settled winner
   double within = 0.0;             // coherence INSIDE a half: population vs per-neuron
+  // THE PRODUCED F1 TRAJECTORY -- what the mechanism was built to make, and what no
+  // run has looked at. The two competing postures are the ENDS of the F1 range: the
+  // settled-winner arms measured 438 and 813 Hz, which are the centroid extremes
+  // (437.5 / 812.5) to within a few Hz. So a full alternation is a 375 Hz neural
+  // swing -- larger than the ~230 Hz absolute naming has always been short of. The
+  // question is how much of it survives the 800 ms formant pole.
+  double f1_sd = 0.0;     // spread of produced F1 over the record
+  double f1_p2p = 0.0;    // robust peak-to-peak, 5th to 95th percentile
+  double f1_coh = 0.0;    // corr(produced F1, half-difference): IS the F1 motion the
+                          // alternation, or something else moving at the same time?
 };
 
 // Returns the correlation, and sets `*degenerate` when one series is CONSTANT so a
@@ -12932,6 +12942,7 @@ HCRow run_halfcenter_arm(const std::vector<uint8_t>& blob, uint64_t ticks, const
   const uint64_t settle = ticks / 10;
   std::vector<double> env, tms, lo, hi, diff;
   std::vector<double> loq1, loq2, hiq1, hiq2;
+  std::vector<double> f1s;
   uint64_t last_frame = 0;
   double on = 0, n = 0, rsum = 0;
   for (uint64_t t = 0; t < ticks; ++t) {
@@ -12964,6 +12975,7 @@ HCRow run_halfcenter_arm(const std::vector<uint8_t>& blob, uint64_t ticks, const
     const double ml = mid > 0 ? sl / double(mid) : 0.0;
     const double mh = gn > mid ? sh / double(gn - mid) : 0.0;
     lo.push_back(ml); hi.push_back(mh); diff.push_back(ml - mh);
+    f1s.push_back(double(v.f1));   // the articulator itself, per vocal frame
     // WITHIN-HALF COHERENCE, the discriminator between a POPULATION half-center and
     // per-NEURON bursting. At a tonic drive 2.2x threshold each neuron can
     // relaxation-oscillate on its own, which would produce anti-phase between the
@@ -13022,6 +13034,24 @@ HCRow run_halfcenter_arm(const std::vector<uint8_t>& blob, uint64_t ticks, const
   {
     const double c1 = hc_corr(loq1, loq2), c2 = hc_corr(hiq1, hiq2);
     row.within = 0.5 * (c1 + c2);
+  }
+  {
+    double m = 0.0;
+    for (double q : f1s) m += q;
+    m /= double(f1s.size());
+    double s2 = 0.0;
+    for (double q : f1s) s2 += (q - m) * (q - m);
+    row.f1_sd = std::sqrt(s2 / double(f1s.size()));
+    std::vector<double> srt = f1s;
+    std::sort(srt.begin(), srt.end());
+    // 5th-95th percentile rather than min-max: a single transient must not be
+    // reported as the excursion.
+    row.f1_p2p = srt[size_t(0.95 * double(srt.size() - 1))] -
+                 srt[size_t(0.05 * double(srt.size() - 1))];
+    // Does the F1 motion FOLLOW the alternation? |corr| near 1 means the produced
+    // formant is the competition, attenuated. Near 0 means the two are unrelated and
+    // whatever F1 does is not this mechanism.
+    row.f1_coh = hc_corr(f1s, diff);
   }
   row.duty = n > 0 ? on / n : 0.0;
   row.rate_hz = n > 0 ? rsum / n : 0.0;
@@ -13129,6 +13159,7 @@ bool run_halfcenter(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
               "hc", "ANTI-PHASE corr", "peak f/SNR", "half-diff", "duty", "rate");
   for (uint32_t a = 0; a < kHCArmCount; ++a) {
     std::vector<double> an, pk, pf, du, rt, hs, aa, ab, hf;
+    std::vector<double> fsd, fpp, fco;
     for (uint32_t r = 0; r < kReps; ++r) {
       const Cell& c = cells[r * kHCArmCount + a];
       if (!c.ok) continue;
@@ -13136,6 +13167,7 @@ bool run_halfcenter(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
       du.push_back(c.row.duty); rt.push_back(c.row.rate_hz); hs.push_back(c.row.half_snr);
       aa.push_back(c.row.anti_a); ab.push_back(c.row.anti_b);
       hf.push_back(c.row.half_f);
+      fsd.push_back(c.row.f1_sd); fpp.push_back(c.row.f1_p2p); fco.push_back(c.row.f1_coh);
     }
     if (an.size() < 3) {
       std::printf("\n  halfcenter INCONCLUSIVE -- arm `%s` produced %zu creatures.\n",
@@ -13200,6 +13232,23 @@ bool run_halfcenter(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
       std::printf("  %-11s   WITHIN-half coherence %+.3f +/- %.3f  (a population "
                   "half-center is strongly POSITIVE here; per-neuron bursting is not)\n",
                   "", mw, ew);
+      {
+        double e1 = 0, e2 = 0, e3 = 0;
+        const double msd = ctx_mean_se(fsd, &e1), mpp = ctx_mean_se(fpp, &e2);
+        const double mco = ctx_mean_se(fco, &e3);
+        // The two postures are the ENDS of the F1 range (438 and 813 Hz measured, the
+        // centroid extremes to within a few Hz), so a full alternation is a 375 Hz
+        // NEURAL swing. The 800 ms formant pole passes |H| = 1/sqrt(1+(2*pi*f*tau)^2)
+        // of it, and that is the number the produced trajectory has to be read against.
+        const double fa = m_hf[a] > 0.0 ? m_hf[a] : 0.0;
+        const double H = fa > 0.0 ? 1.0 / std::sqrt(1.0 + std::pow(2.0 * 3.14159265358979 *
+                                                                   fa * 0.8, 2.0)) : 0.0;
+        std::printf("  %-11s   PRODUCED F1 sd %5.1f Hz, 5-95%% swing %6.1f Hz, coherence "
+                    "with the alternation %+.3f\n", "", msd, mpp, mco);
+        if (fa > 0.0)
+          std::printf("  %-11s   the 375 Hz neural swing at %.2f Hz passes the 800 ms pole "
+                      "at |H| %.3f -> %5.1f Hz predicted\n", "", fa, H, 375.0 * H);
+      }
     }
   }
 
