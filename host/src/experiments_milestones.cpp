@@ -12843,7 +12843,13 @@ const HCArm kHCArms[] = {
     {"ctrl140",  0.00f, 167.0f, 0.00f, 1.40f},  // matched-drive control, both OFF
 };
 constexpr uint32_t kHCArmCount = sizeof(kHCArms) / sizeof(kHCArms[0]);
-constexpr uint64_t kHCSeedOffset = 604553ull;
+// FRESH SEED FAMILY for the replication. 604553 produced the original result; nothing
+// has been measured on these seeds. The thing being replicated is specific and was
+// named in advance: produced-F1 LAGGED COHERENCE well above the matched control null,
+// with both singles at or below it, and a produced-swing EXCESS at the slow arms.
+// Two of four arms carried the swing result and none of it had an SE, which is the
+// shape this project has repeatedly watched die.
+constexpr uint64_t kHCSeedOffset = 288559ull;
 // GRID EXTENDED DOWN, and the old floor was hiding the prediction. A relaxation
 // oscillator's period is 2-4 tau_a, so the expected alternation frequency is
 // 1.5-3.0 Hz at tau 83, 0.75-1.5 at tau 167, 0.5-1.0 at tau 250 and 0.375-0.75 at
@@ -13262,8 +13268,12 @@ bool run_halfcenter(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
         const double fa = m_hf[a] > 0.0 ? m_hf[a] : 0.0;
         const double H = fa > 0.0 ? 1.0 / std::sqrt(1.0 + std::pow(2.0 * 3.14159265358979 *
                                                                    fa * 0.8, 2.0)) : 0.0;
-        std::printf("  %-11s   PRODUCED F1 sd %5.1f Hz, 5-95%% swing %6.1f Hz, LAGGED "
-                    "coherence with the alternation %+.3f\n", "", msd, mpp, mco);
+        // e1/e2/e3 were computed and discarded. An effect without its uncertainty is
+        // the thing this project's rule 34 exists to prevent.
+        std::printf("  %-11s   PRODUCED F1 sd %5.1f +/- %.1f Hz, 5-95%% swing %6.1f +/- %.1f Hz\n",
+                    "", msd, e1, mpp, e2);
+        std::printf("  %-11s   LAGGED coherence with the alternation %+.3f +/- %.3f\n",
+                    "", mco, e3);
         if (fa > 0.0)
           std::printf("  %-11s   the 375 Hz neural swing at %.2f Hz passes the 800 ms pole "
                       "at |H| %.3f -> %5.1f Hz predicted\n", "", fa, H, 375.0 * H);
