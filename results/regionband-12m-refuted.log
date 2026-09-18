@@ -1,0 +1,78 @@
+# regionband -- REFUTED. A region target does NOT protect the first lesson.
+# 2026-09-18, fresh family 447701. verify PASS, hash ad96f882becbee92.
+#
+# The mechanism BOUND this time: 6.0% / 25.8% / 62.1% of reward events fell
+# inside the region at bands 0.70 / 0.85 / 1.00, so the run is readable.
+#
+# The interference gap narrows +0.1622 -> +0.0544, a change of +0.1079 (+5.5 SE).
+# WITHOUT THE SECOND PRE-REGISTERED CHECK THAT WOULD HAVE BEEN A SUCCESS.
+#
+#   AB   band 0 -> 1.00:  +0.0168 +/- 0.0148  (+1.1 SE)  not significant
+#   keep band 0 -> 1.00:  -0.0911 +/- 0.0127  (-7.1 SE)  SIGNIFICANT DEGRADATION
+#
+# The gap closed because the CONTROL got worse, not because retention improved.
+# Intermediate bands do not rescue it: at 0.85 -- the only band that both binds
+# meaningfully and still teaches -- nothing moves (AB +1.7 SE, keep -1.0 SE, gap
+# -1.8 SE). At 1.00 the gap moves and teaching pays for it.
+#
+# The non-monotone check fired as pre-registered: err_taught degrades 0.9485 ->
+# 0.9465 -> 0.9551 -> 0.9772. A band wide enough to satisfy everything teaches
+# nothing, confirmed.
+#
+# WHAT IT CLOSES: the 0.22 wipe is NOT caused by the reward failing to saturate.
+# The reward was given a natural zero, a satisfied lesson genuinely stopped
+# demanding (62% unconditional praise), and B still ran back through A's write.
+# The remaining suspect is the one axis-not-distance named at +11.5 SE: B's
+# cheapest route to its target PASSES THROUGH the neurons A used, whatever the
+# reward geometry. That is about the REPRESENTATION, not the teacher.
+#
+# BASELINE WORTH KEEPING: the interference reproduces on fresh seeds at
+# AB 1.0130 vs keep 0.8508, gap +0.1622 +/- 0.0155 (+10.5 SE).
+
+  arm        band   err TAUGHT (A)       err AFTER (A kept?)  n
+  AB-0       0.000  0.9485 +/- 0.0072       1.0130 +/- 0.0110       12
+  keep-0     0.000  0.9485 +/- 0.0072       0.8508 +/- 0.0109       12
+  AB-70      0.700  0.9465 +/- 0.0067       1.0113 +/- 0.0090       12
+  keep-70    0.700  0.9465 +/- 0.0067       0.8566 +/- 0.0121       12
+  AB-85      0.850  0.9551 +/- 0.0084       0.9900 +/- 0.0084       12
+  keep-85    0.850  0.9551 +/- 0.0084       0.8709 +/- 0.0161       12
+  AB-100     1.000  0.9772 +/- 0.0051       0.9962 +/- 0.0099       12
+  keep-100   1.000  0.9772 +/- 0.0051       0.9419 +/- 0.0066       12
+
+  VACUITY GUARD -- did the region ever BIND? Outside it the rule reduces
+  algebraically to the shipped one, so a band the creature never enters is
+  a no-op and every arm returns identical numbers.
+    AB-0       band 0.000   inside the region   0.0% of reward events
+    keep-0     band 0.000   inside the region   0.0% of reward events
+    AB-70      band 0.700   inside the region   6.0% of reward events
+    keep-70    band 0.700   inside the region   0.2% of reward events
+    AB-85      band 0.850   inside the region  25.8% of reward events
+    keep-85    band 0.850   inside the region  11.4% of reward events
+    AB-100     band 1.000   inside the region  62.1% of reward events
+    keep-100   band 1.000   inside the region  57.1% of reward events
+
+  PRIMARY -- the AB-minus-keep gap, i.e. interference with reward matched
+    band 0.000   AB 1.0130   keep 0.8508   gap +0.1622 +/- 0.0155  (+10.5 SE)
+    band 0.700   AB 1.0113   keep 0.8566   gap +0.1547 +/- 0.0151  (+10.3 SE)
+    band 0.850   AB 0.9900   keep 0.8709   gap +0.1191 +/- 0.0182  (+6.5 SE)
+    band 1.000   AB 0.9962   keep 0.9419   gap +0.0544 +/- 0.0119  (+4.6 SE)
+    gap at band 0 minus gap at band 0.100: +0.1079 +/- 0.0195  (+5.5 SE)
+
+  AND DID IT SHRINK THE RIGHT WAY? AB must IMPROVE, not `keep` degrade
+    AB   band 0 -> 0.100:  +0.0168 +/- 0.0148  (+1.1 SE)  AB IMPROVED
+    keep band 0 -> 0.100:  -0.0911 +/- 0.0127  (-7.1 SE)  keep DEGRADED
+
+  NON-MONOTONE CHECK -- a band that satisfies everything teaches nothing
+    band 0.000   err_taught  AB 0.9485   keep 0.9485
+    band 0.700   err_taught  AB 0.9465   keep 0.9465
+    band 0.850   err_taught  AB 0.9551   keep 0.9551
+    band 1.000   err_taught  AB 0.9772   keep 0.9772
+
+  --- the reading ---
+  THE GAP CLOSED FOR THE WRONG REASON. It narrows +0.1079 (+5.5 SE), but AB
+  moved +0.0168 (+1.1 SE) -- so the band is degrading the matched-reward
+  control rather than protecting the first lesson. REFUSED, and this is the
+  failure the run pre-registered against.
+RB_EXIT=1
+
+[exited with code 0]
