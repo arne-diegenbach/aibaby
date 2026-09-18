@@ -11973,3 +11973,44 @@ The finding also sharpens the decoder question rather than settling it. The mech
 generates 375 Hz of neural swing; the positional decoder delivers 68 Hz of it at best,
 and only when the alternation is slow enough to creep under an 800 ms pole. A velocity
 decoder would not be fighting that filter — it would be using it as the integrator.
+
+### The pre-flight that refused a build
+
+With the gesture replicated, the queue said the velocity decoder was next: DIVA maps
+neural activity to articulator *velocities*, this creature maps it to positions, and
+the half-center generates 375 Hz of neural swing of which the positional decoder
+delivers about a fifth. The build looked obvious. It gets an arithmetic pre-flight
+first, because four guessed constants have each cost a run here.
+
+The pre-flight refused it, and in two directions at once.
+
+**With a leak, a velocity decoder is a position decoder.** Write the system out:
+`f1' = k(c − 0.5) − (f1 − rest)/τ`. That is a first-order low-pass with DC gain `k·τ`
+and time constant `τ` — algebraically the same object as `lerp(min, max, c)` behind a
+one-pole at `smoothing_ms`, with the gain and the constant renamed. And the leak has
+to be long enough to preserve a 500 ms sweep, which means seconds — *slower* than the
+800 ms pole it was meant to escape. At 1 Hz, τ = 2 s passes 0.079 where the current
+pole passes 0.195.
+
+**Without a leak, it is a random walk.** A pure integrator on a noisy centroid parks
+F1 at a clamp. The excursion becomes bang-bang between the limits: acceptable for
+babbling, useless for holding a target, and holding a target is exactly what absolute
+naming requires.
+
+**DIVA does not have this problem because its velocity command is not raw neural
+activity.** It is computed from the *error* between the current and target auditory
+state, through a forward model and convex region targets. The loop is closed. Velocity
+coding without an error signal is not well-posed — it drifts, or it degenerates into
+the decoder already in place.
+
+So the ordering inverts. Region targets were filed as the cheaper sibling of the
+velocity decoder; they are its **prerequisite**. They are also independently motivated,
+and by the thing that actually blocks two-word naming: a point target's reward never
+saturates, so a lesson never stops demanding, and the measured consequence is a second
+lesson restoring the very neurons the first silenced at +9.4 SE. A satisfied lesson
+that stops pushing is the direct attack on that.
+
+None of this retracts the diagnosis. The decoder is positional, the 800 ms pole is why
+the glide experiment measured 3–6% of allowance, and the half-center really does
+generate 375 Hz of swing that arrives as 68. The bottleneck is real. The one-line fix
+was not.
