@@ -1484,6 +1484,26 @@ void Network::step() {
       // before it. A different measurement of the same module, not a better
       // decoder of the same quantity.)
       if (ctx_source_ == 4) {
+        // THE CONSCIENCE, WHICH SOURCE 4 NEVER HAD. The episode path below carries
+        // DeSieno's win-balance penalty, and its own comment says why: "a unit that
+        // wins early becomes the running mean of what it won, and in high dimensions
+        // a mean is nearer every point than any single point is, so it keeps winning
+        // and the other starves ... which partprobe measured killing 78% of random
+        // inits and which the conscience took to 0/16."
+        //
+        // Source 4 was built as "NO EPISODE AT ALL", and in skipping the episode it
+        // skipped the conscience with it: its winner selection is plain nearest
+        // prototype. Prototypes are allocated ZEROED and rate_ema_ is all-positive,
+        // so the first update moves proto[0] toward the data while proto[1] stays at
+        // the origin -- and thereafter |x - 0|^2 beats nothing. Slot 0 wins forever
+        // and the second cluster is dead, which makes p(slot0|A) = p(slot0|B) = 1 and
+        // the measured separation 0.002 against a feature ceiling of 0.978.
+        //
+        // At ctx_proto_gate 2 the same penalty is applied here. 0 and 1 are unchanged.
+        Scalar total_wins = kZero;
+        if (ctx_proto_gate_ == 2u)
+          for (uint32_t c = 0; c < ctx_slots_; ++c) total_wins += ctx_wins_[c];
+        const Scalar cdscale = ctx_dn_ > kZero ? ctx_dsum_ / ctx_dn_ : kZero;
         Scalar best_d = kZero;
         uint32_t winner = 0;
         for (uint32_t c = 0; c < ctx_slots_; ++c) {
@@ -1492,6 +1512,9 @@ void Network::step() {
           for (uint32_t n = 0; n < sms.count; ++n) {
             const Scalar e = rate_ema_[sms.begin + n] - proto[n];
             d += e * e;
+          }
+          if (ctx_proto_gate_ == 2u && total_wins > kZero) {
+            d += (Scalar(ctx_slots_) * (ctx_wins_[c] / total_wins) - kOne) * cdscale;
           }
           if (c == 0 || d < best_d) { best_d = d; winner = c; }
         }
@@ -1509,7 +1532,12 @@ void Network::step() {
         // computed from, so the classifier is fitted to the distribution it is
         // actually scored on. At ctx_proto_gate 0 this branch never runs and the
         // shipped creature is bit-identical.
-        if (ctx_proto_gate_ == 1u) {
+        if (ctx_proto_gate_ >= 1u) {
+          // The conscience needs a distance SCALE, which the episode path keeps in
+          // ctx_dsum_/ctx_dn_. Feed it from the winning distance here too, or the
+          // penalty is in the wrong units and either does nothing or dominates.
+          ctx_dsum_ += best_d;
+          ctx_dn_ += kOne;
           ctx_wins_[winner] += kOne;
           const Scalar lr = kOne / ctx_wins_[winner];
           Scalar* proto = ctx_proto_ + size_t(winner) * sms.capacity;

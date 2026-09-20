@@ -14176,6 +14176,10 @@ const CFArm kCFArms[] = {
     {"a-u g1", 0u, 2u, 1u},
     {"i-u g0", 1u, 2u, 0u},   // nearly pure F2 -- the hardest pair for a rate code
     {"i-u g1", 1u, 2u, 1u},
+    // GATE 2 adds DeSieno's conscience to source 4's winner selection -- the
+    // win-balance penalty the episode path has and source 4 never got.
+    {"a-i g2", 0u, 1u, 2u},
+    {"i-u g2", 1u, 2u, 2u},
 };
 constexpr uint32_t kCFArmCount = sizeof(kCFArms) / sizeof(kCFArms[0]);
 constexpr uint64_t kCFSeedOffset = 774611ull;
@@ -14335,8 +14339,8 @@ bool run_ctxfeat(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
     return c;
   });
 
-  std::printf("\n  %-10s %-20s %-16s %-20s %s\n", "arm", "FEATURE accuracy",
-              "d' on the axis", "INDEX separation", "n");
+  std::printf("\n  %-10s %-18s %-15s %-18s %-6s %s\n", "arm", "FEATURE accuracy",
+              "d' on the axis", "INDEX separation", "p(s0)", "n");
   bool any_separable = false;
   for (uint32_t a = 0; a < kCFArmCount; ++a) {
     std::vector<double> ac, dp, sp;
@@ -14353,8 +14357,19 @@ bool run_ctxfeat(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
     double sa = 0, sd = 0, ss = 0;
     const double m_ac = ctx_mean_se(ac, &sa), m_dp = ctx_mean_se(dp, &sd);
     const double m_sp = ctx_mean_se(sp, &ss);
-    std::printf("  %-10s %.3f +/- %-12.3f %.2f +/- %-8.2f %.3f +/- %-12.3f %u\n",
-                kCFArms[a].name, m_ac, sa, m_dp, sd, m_sp, ss, n);
+    // p(slot0) OVERALL. A dead second cluster pins this at 1.000 and forces
+    // separation to zero whatever the feature carries, so it tells a dead unit apart
+    // from a live-but-uninformative index. Inferring it would be guessing.
+    std::vector<double> p0;
+    for (uint32_t r = 0; r < kReps; ++r) {
+      const Cell& c = cells[r * kCFArmCount + a];
+      if (!c.ok || (c.ia + c.ib) == 0) continue;
+      p0.push_back(double(c.i0a + c.i0b) / double(c.ia + c.ib));
+    }
+    double sp0 = 0.0;
+    const double m_p0 = p0.size() >= 3 ? ctx_mean_se(p0, &sp0) : 0.0;
+    std::printf("  %-10s %.3f +/- %-10.3f %.2f +/- %-7.2f %.3f +/- %-10.3f %.3f  %u\n",
+                kCFArms[a].name, m_ac, sa, m_dp, sd, m_sp, ss, m_p0, n);
     if (m_ac - 3.0 * sa > 0.5) any_separable = true;
   }
 
