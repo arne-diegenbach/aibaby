@@ -14217,6 +14217,11 @@ bool run_credgate(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
 struct CFArm {
   const char* name; uint32_t word_a; uint32_t word_b; uint32_t gate;
   uint32_t shuffle;   // 1 = randomise which word comes first within each PAIR
+  // 1 = word A ALONE for the first half, then the shuffled alternation. This is the
+  // shape of the TEACHING protocol, where lesson A runs for a long phase before B
+  // ever sounds -- and it is the difference between ctxpc's 0.999 separation and
+  // credgate's 0.084 on the same pair with the same conscience.
+  uint32_t late;
 };
 // Each pair runs under BOTH prototype gates, so the ceiling (what the feature
 // carries) and the achieved (what the index extracts) are measured on the same
@@ -14241,6 +14246,16 @@ const CFArm kCFArms[] = {
     {"a-u g2s", 0u, 2u, 2u, 1u},   // the third pair, under the two live mechanisms only
     {"a-u g3s", 0u, 2u, 3u, 1u},
     {"a-i g2",  0u, 1u, 2u, 0u},   // ALTERNATING: kept to show the confound, not to read
+    // THE REPRODUCTION. credgate's derived2 arm read separation 0.084 +/- 0.039 where
+    // ctxpc reads 0.999 on the same pair under the same conscience. The difference is
+    // WHEN the second word arrives: credgate teaches lesson A for roughly a third of
+    // 3.4M ticks before B sounds, and MacQueen's 1/wins has decayed to about 1e-6 by
+    // then, so the prototypes cannot move. These arms reproduce that at 600k ticks.
+    // WHAT WOULD REFUSE THE ACCOUNT: `a-i g2L` still separating near 0.999, which
+    // would mean the freeze is not why credgate fails and the two protocols differ
+    // for some other reason.
+    {"a-i g2L", 0u, 1u, 2u, 1u, 1u},
+    {"a-i g0L", 0u, 1u, 0u, 1u, 1u},
 };
 constexpr uint32_t kCFArmCount = sizeof(kCFArms) / sizeof(kCFArms[0]);
 constexpr uint64_t kCFSeedOffset = 774611ull;
@@ -14271,7 +14286,7 @@ bool run_ctxfeat_impl(const std::vector<uint8_t>& blob, uint64_t ticks, bool ver
     uint32_t k = 0;
     for (uint32_t x = 0; x < kNWords; ++x)
       for (uint32_t y = x + 1; y < kNWords; ++y)
-        arms.push_back(CFArm{names[k++].c_str(), x, y, 2u, 1u});
+        arms.push_back(CFArm{names[k++].c_str(), x, y, 2u, 1u, 0u});
   } else {
     for (uint32_t a = 0; a < kCFArmCount; ++a) arms.push_back(kCFArms[a]);
   }
@@ -14349,6 +14364,8 @@ bool run_ctxfeat_impl(const std::vector<uint8_t>& blob, uint64_t ticks, bool ver
     std::vector<std::vector<double>> fa, fb;
     const uint64_t settle = ticks / 10;
     const uint32_t shuffled = arms[a].shuffle;
+    const uint32_t late_b = arms[a].late;
+    const uint64_t late_until = late_b ? (ticks / 2) : 0;
     for (uint64_t t = 0; t < ticks; ++t) {
       const uint64_t pres = t / 1000;
       bool is_a = (pres & 1u) == 0u;
@@ -14359,6 +14376,7 @@ bool run_ctxfeat_impl(const std::vector<uint8_t>& blob, uint64_t ticks, bool ver
         const bool first_a = (h & 1ull) == 0ull;
         is_a = ((pres & 1u) == 0u) == first_a;
       }
+      if (late_b && t < late_until) is_a = true;
       const Word& w = is_a ? wa : wb;
       const bool sounding = (t % 1000) < 900;
       caregiver.render(sounding ? w.f0 : 0.0f, w.f1, w.f2, sounding ? 0.5f : 0.0f,

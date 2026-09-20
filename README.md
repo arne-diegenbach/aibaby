@@ -12215,3 +12215,50 @@ Those three — a-vs-O, i-vs-E, a-vs-i, at 0.999 on every creature — are the p
 question this whole line exists to answer is whether retention moves when the index
 separates, and until now there was no index that separated. Now there are three pairs
 where it does, unanimously. More geometry would be the wrong next move.
+
+### The carrier was fixed under the wrong protocol (2026-09-21)
+
+The claim two sections up — that the conscience takes the context index from 0.002 to
+0.999 and hands the retention question its prerequisite — is **protocol-specific, and
+I stated it more broadly than the evidence supported.** It holds under alternating
+presentation. It does not hold under the protocol that actually teaches.
+
+`credgate` ran the derived reward mask on the conscience index, against the same mask
+on the shipped index, at 3.4M ticks and 12 creatures per arm:
+
+| arm | gate | GAINED | EROSION | separation | agree |
+|---|---|---|---|---|---|
+| derived-AB | 0 | −0.0069 ± 0.0096 | +0.0355 ± 0.0093 | 0.012 ± 0.003 | 0.501 |
+| derived2-AB | 2 | +0.0062 ± 0.0109 | +0.0376 ± 0.0151 | 0.084 ± 0.039 | 0.633 |
+
+Erosion is identical with `GAINED` matched, so the mask buys nothing — refused on the
+criterion registered before the run. But the diagnostic column is the separation:
+**0.084, not 0.999.** The conscience improves the index sevenfold and lands nowhere
+near a usable carrier. Agreement rises from 0.501 to 0.633, which is the same story in
+a different unit: better than chance, far from the 1.000 the oracle has by
+construction.
+
+The new `GAINED`/`EROSION` pair earned its place here. The ratio statistic on this
+genome reported `oracle AB −5.166 ± 5.263` and `oracle keep −7.468 ± 10.419` — noise
+wearing the costume of a measurement, because the denominator is a gain of 0.0135. The
+undivided numbers are small, stable, and say plainly that nothing moved.
+
+**The mechanism is one this project already wrote down and I did not connect.** An
+earlier section names it while chasing a different asymmetry: *"MacQueen's `1/wins`
+means the prototypes FREEZE — after N words the learning rate is 1/N."* credgate
+teaches lesson A for roughly the first third of 3.4M ticks before lesson B ever
+sounds. By then `ctx_wins_` is around 10⁶ and the update rate is about 10⁻⁶, so the
+prototypes physically cannot move to accommodate a second word. Under `ctxpc` the two
+words alternate from the start and both are learned while the rate is still large.
+
+So the conscience fixes **who wins**, and cannot fix **when the prototypes are still
+plastic**. Those are different failures and the conscience addresses only the first.
+The result from last night stands exactly as measured and means less than I said it
+did: an index that separates two words is not the same thing as an index that can
+*acquire* a second word introduced late, and teaching only ever introduces words late.
+
+That is a testable claim rather than a story, and testing it does not need another
+2.7-hour run: playing word A alone for the first half of a 600k-tick session and then
+alternating should reproduce credgate's collapse at a sixth of the cost. It is
+pre-registered to refuse itself — if the late arm still separates near 0.999, the
+freeze is not the reason and the two protocols differ for some other cause.
