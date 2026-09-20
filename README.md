@@ -12143,3 +12143,50 @@ a-vs-i it now does, nearly perfectly — but whether retention moves when it doe
 retention is not currently quotable on the context genome at all: it divides by the
 gain and blew up there. That statistic needs replacing before any retention contrast
 from that genome is reported.
+
+### The geometry account dies, and the thing it was explaining turns out to be a race (2026-09-20)
+
+Three vowel pairs in the right order looked like an explanation: the conscience took
+a-vs-i to 0.999 separation, a-vs-u to ~0.5 and i-vs-u to 0.000, and a quantity called
+`pcratio` — the class gap measured in units of spread along the data's top principal
+component — ordered them 2.25 / 2.08 / 1.87. The reasoning was sound as far as it
+went: k-means splits along the direction of largest variance, so a class distinction
+lying off that direction is invisible to any prototype rule however cleanly the
+classes separate. And `pcratio` was *stable*, varying by 0.02–0.04 within a pair
+across five gates and six seeds, where d′ wobbled more than that.
+
+It is also three points in the right order, which happens by chance one time in six,
+and a fourth point has already reversed a three-point read once in this project. So
+it went to all 28 pairs of the eight caregiver words, 168 creatures.
+
+| predictor | r with separation | t |
+|---|---|---|
+| pcratio | +0.600 | 3.83 |
+| d′ | +0.561 | 3.46 |
+| held-out accuracy | +0.543 | 3.29 |
+| pcalign | +0.522 | 3.12 |
+
+**Refused.** `pcratio` barely beats plain d′, so the variance-direction story adds
+essentially nothing over "this pair is easier to hear". The pre-registered bar —
+across-pair r clearly positive — passed, and passing it was not sufficient. The
+control that mattered was *does it beat the trivial predictor*, and it was not written
+down beforehand. The apparent dissociation on three pairs (a-vs-u at d′ 3.08 reaching
+0.514 while i-vs-u at d′ 3.34 reached 0.000) was noise.
+
+**What the sweep established instead is worth more than what it refuted.** Every
+pair-level separation lands on a sixth — 0.999, 0.664, 0.514, 0.167, 0.000 — because
+per creature the outcome is *binary*. Each creature either locks its index onto the
+word or never does, and the pair number is simply the fraction of six that won. The
+conscience does not produce a graded index quality; it produces a race, won or lost
+per creature. That is why a-vs-u read 0.514 ± 0.214 rather than a tight middling
+value, and it means the SE on those middle pairs was never measurement noise.
+
+The race is decided by neither factor alone. Pair fractions span the whole 0/6 to 6/6
+range, so it is not a property of the seed; intermediate fractions are common, so it
+is not a property of the words. Twelve of 28 pairs never succeed on any creature, and
+three succeed on all six.
+
+Those three — a-vs-O, i-vs-E, a-vs-i, at 0.999 on every creature — are the point. The
+question this whole line exists to answer is whether retention moves when the index
+separates, and until now there was no index that separated. Now there are three pairs
+where it does, unanimously. More geometry would be the wrong next move.
