@@ -11070,6 +11070,19 @@ papers about the half it does not touch.
   mean of what it has won, so the learning rate is `1/wins` and **no constant is
   guessed**. `partprobe` also scores the batch version beside it, because batch
   with restarts is what a probe can do and a creature cannot.
+- Ding, C. & He, X. (2004). *K-means clustering via principal component analysis.*
+  Proceedings of the Twenty-First International Conference on Machine Learning
+  (ICML '04), 29. <https://doi.org/10.1145/1015330.1015408>
+  — the ground for this project's `pcratio` account, **and the account was refused.**
+  Their result is that the relaxed k-means cluster indicators span the top principal
+  directions, so a prototype rule sees the distinctions that lie along the data's
+  largest variance and is blind to ones that do not. The prediction was that the
+  context index should separate exactly those word pairs whose class difference is
+  large relative to the spread along the leading component. Across 28 pairs it
+  correlates at +0.600 — and plain d′ correlates at +0.561, so the geometry adds
+  essentially nothing over "this pair is easier to hear". The theory is not in
+  question; what it predicted here was not distinguishable from the trivial
+  predictor, and three pairs in the right order had made it look as though it was.
 - DeSieno, D. (1988). *Adding a conscience to competitive learning.*
   Proceedings of the IEEE International Conference on Neural Networks, San Diego,
   Vol. I, 117–124. IEEE Press.
@@ -11077,9 +11090,16 @@ papers about the half it does not touch.
   — **the difference between 0.584 and 1.000 in `partprobe`.** A unit that wins
   early becomes the running mean of what it won, and in high dimensions a mean is
   nearer every point than any single point is, so it keeps winning and the other
-  starves. Penalising a unit for exceeding its share fixes it, and this creature
-  already runs the biological form of that fix — per-module homeostasis drives
-  each unit toward a target rate and DNA v32's lateral competition is what makes
+  starves. Penalising a unit for exceeding its share fixes it. **Measured again on
+  2026-09-20 and it is the whole mechanism:** source 4 was built as "no episode at
+  all" and skipped the conscience along with the episode, and adding it back takes
+  the context index from 0.002 separation to 0.999 on a-vs-i, on every one of six
+  creatures, under a shuffled presentation order. Removing the origin instead (DNA
+  v59 gate 3) does nothing, and seeding without the conscience is inert to the bit —
+  so it is the win-balance penalty carrying it and not the initialisation.
+  This creature also runs the biological form of that fix — per-module homeostasis
+  drives each unit toward a target rate and DNA v32's lateral competition is what
+  makes
   them compete at all. The strength here is derived from the data's own distance
   scale rather than taken from the paper.
 
@@ -12091,9 +12111,12 @@ the shipped gate**: both slots live, splitting the ticks roughly 1:3, with separ
 still 0.002. A live index that carries nothing about the word is a different disease
 from a dead one, and the diagnosis asserted as fact in a code comment was simply false.
 
-**It works anyway, and on one pair it works completely.** Adding the win-balance
-penalty to source 4's winner selection takes a-vs-i separation from 0.002 to
-**0.999 ± 0.001** across six seeds.
+**It works anyway, and on one pair it works completely.** Adding DeSieno's
+win-balance penalty — the conscience, which penalises a unit for exceeding its share
+of wins — to source 4's winner selection takes a-vs-i separation from 0.002 to
+**0.999 ± 0.001** across six seeds. The prototype update itself is MacQueen's, each
+unit the running mean of what it has won at a `1/wins` rate, so no constant is
+guessed anywhere in the rule.
 
 The first read of that was 0.814 ± 0.163 on the alternating protocol, and it should
 not have been believed: **a conscience balances wins, which makes the index alternate,
@@ -12150,9 +12173,11 @@ Three vowel pairs in the right order looked like an explanation: the conscience 
 a-vs-i to 0.999 separation, a-vs-u to ~0.5 and i-vs-u to 0.000, and a quantity called
 `pcratio` — the class gap measured in units of spread along the data's top principal
 component — ordered them 2.25 / 2.08 / 1.87. The reasoning was sound as far as it
-went: k-means splits along the direction of largest variance, so a class distinction
-lying off that direction is invisible to any prototype rule however cleanly the
-classes separate. And `pcratio` was *stable*, varying by 0.02–0.04 within a pair
+went, and it is Ding and He's result rather than an intuition: k-means and principal
+component analysis are the same relaxation, so the cluster assignment a prototype rule
+finds is a rotation of the top principal directions. A class distinction lying off
+those directions is invisible to any prototype rule however cleanly the classes
+separate. And `pcratio` was *stable*, varying by 0.02–0.04 within a pair
 across five gates and six seeds, where d′ wobbled more than that.
 
 It is also three points in the right order, which happens by chance one time in six,
