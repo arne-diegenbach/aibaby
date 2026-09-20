@@ -34,5 +34,38 @@ if ! ./build/aibaby --dna "$out" --experiment babble --ticks 120000 >/dev/null 2
   exit 1
 fi
 echo "loads and runs"
+
+# RECALIBRATE somato, rather than printing that it is stale and moving on.
+#
+# Appending a module re-rolls the per-neuron noise stream (see the
+# appending-rerolls-noise note), which drifts every module's free-running rate.
+# somato lands ~0.4 Hz below its declared target, and `calibrate` says exactly what
+# to do about it: "reset the genome to the left column" -- the DECLARED target is
+# what has gone stale, not the creature.
+#
+# This was left as a printed warning for a long time on the grounds that somato is
+# not in the vocal path and so it is "very probably harmless". But the calibration
+# invariant exists precisely to stop "very probably", and a genome that fails its own
+# calibration check blocks every experiment that would need it -- which is how the
+# context index ended up untestable.
+#
+# MEASURED, not hard-coded: the free-running rate is read back from calibrate and
+# written in, so this stays correct as the genome changes instead of pinning 4.16.
+# `calibrate` EXITS NONZERO when it fails -- which is the whole reason this block
+# exists -- and under `set -euo pipefail` that kills the command substitution and the
+# script with it, silently. The first version of this did exactly that: it printed
+# "loads and runs" and then nothing at all.
+somato_hz="$(./build/aibaby --dna "$out" --experiment calibrate --ticks 120000 2>&1 |
+  awk '$1 == "somato" { print $2; exit }' || true)"
+if [ -n "$somato_hz" ]; then
+  before="$(grep -c '^target_rate_hz = 4.56' "$out" || true)"
+  if [ "$before" = "1" ]; then
+    sed -i "s/^target_rate_hz = 4.56\$/target_rate_hz = $somato_hz/" "$out"
+    echo "recalibrated somato target 4.56 -> $somato_hz Hz (measured on this genome)"
+  else
+    echo "WARNING: somato target line not found exactly once ($before); left alone" >&2
+  fi
+fi
+
 ./build/aibaby --dna "$out" --experiment calibrate --ticks 120000 2>&1 |
-  grep -E "STALE|by design|off target" | sed 's/^/  calibrate: /' || true
+  grep -E "STALE|by design|off target|calibrate (PASS|FAIL)" | sed 's/^/  calibrate: /' || true

@@ -13895,6 +13895,17 @@ bool run_credgate(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
     cfg.relearn = true;
     cfg.mask_mode = 0u;
     cfg.credit_mode = kCGArms[a].mode;
+    // TURN THE CONTEXT MACHINERY ON. ctx_slots_ is set from
+    // `exploration.context_slots > 1`, so at the shipped 0 the whole thing is inert
+    // and active_context() returns 0 on every tick -- which is why the derived and
+    // latch arms came back bit-identical and their "0.720 agreement" was really the
+    // teach-plus-after trial ratio. RTConfig already carries the field and
+    // run_retain_arm patches it into the blob; it was simply never set here.
+    //
+    // Source 4 is the ear's rate EMA, the creature's own index. REQUIRES a genome
+    // with a context module: run this with --dna ctx.toml from tools/ctxgenome.sh.
+    cfg.context_slots = 2u;
+    cfg.context_source = 4u;
     if (kCGArms[a].keep) { cfg.second_f1 = kCGKeepF1; cfg.second_f2 = kCGKeepF2; }
     Timbre local_ruler;
     std::string local_error;
