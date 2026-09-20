@@ -12321,7 +12321,23 @@ Either would mean the context module stops being k-means with a fixed slot count
 starts deciding when a word deserves a slot of its own — which is also, finally, a
 mechanism for the vocabulary question rather than a mechanism for two words.
 
-The measurement that got here is worth keeping on its own: **the float32 stagnation
-applies to every `+= lr * (target − current)` update in this kernel, not only to the
-prototypes,** and there are several. Any of them with a rate below roughly 10⁻⁶
-against a unit-scale state is not slow — it is stopped.
+The measurement that got here looked like it might reach further, so it was audited
+rather than left as a worry. Every `+= lr * (target − current)` update in the kernel:
+
+| update | rate | |
+|---|---|---|
+| `rate_ema_` | 1/1000 | ~8000× eps |
+| `rate_fast_` | 1/50 | safe |
+| `pool_fast_` | 1/15 (interneuron tau) | safe |
+| `burst_base_` | `burst_baseline_tau_ms = 0` | ships off |
+| `syn_elig_mean_` | `elig_baseline_tau_ms = 0` | ships off |
+| `meta_m1_`, `meta_m2_` | `meta_window = 0` | ships off |
+
+**Clean: no existing result is invalidated.** And the reason is exact rather than
+lucky. Every one of those is a *fixed* alpha, and the prototype rule is the only
+update in this kernel whose rate **decays without bound** — MacQueen's `1/wins` walks
+down through the danger zone as a run proceeds and then stays there. A constant alpha
+is either always above eps or always below it, and the shipped ones are all far
+above. So the hazard is specific to the one rule that has no floor, which is the rule
+this section is about. It is still worth knowing for anything that later sets one of
+those three taus long, or adds another decaying rate.
