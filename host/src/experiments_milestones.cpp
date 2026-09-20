@@ -14196,7 +14196,12 @@ const CFArm kCFArms[] = {
 constexpr uint32_t kCFArmCount = sizeof(kCFArms) / sizeof(kCFArms[0]);
 constexpr uint64_t kCFSeedOffset = 774611ull;
 
-bool run_ctxfeat(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+// `ctxpc` runs the SAME measurement over every pair of the eight caregiver words at
+// gate 2, to test the pcratio account on 28 points instead of 3. Three points in the
+// right order is a 1-in-6 coincidence, and a fourth point has reversed a three-point
+// read in this project before.
+bool run_ctxfeat_impl(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose,
+                      bool sweep) {
   (void)verbose;
   aibaby::Dna dna0;
   if (dna0.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) {
@@ -14204,7 +14209,25 @@ bool run_ctxfeat(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
     return false;
   }
   constexpr uint32_t kReps = 6;
-  instrument("ctxfeat", dna0.header().seed ^ 0xFEA7u, ticks, "ticks");
+  // In sweep mode the arms are every unordered pair of the eight words, all at gate 2
+  // under the shuffled order. The names are owned here so the CFArm char* stays valid.
+  std::vector<CFArm> arms;
+  std::vector<std::string> names;
+  constexpr uint32_t kNWords = sizeof(kWords) / sizeof(kWords[0]);
+  static const char* kVowel[kNWords] = {"a", "i", "u", "e", "o", "ae", "E", "O"};
+  if (sweep) {
+    for (uint32_t x = 0; x < kNWords; ++x)
+      for (uint32_t y = x + 1; y < kNWords; ++y)
+        names.push_back(std::string(kVowel[x]) + "-" + kVowel[y]);
+    uint32_t k = 0;
+    for (uint32_t x = 0; x < kNWords; ++x)
+      for (uint32_t y = x + 1; y < kNWords; ++y)
+        arms.push_back(CFArm{names[k++].c_str(), x, y, 2u, 1u});
+  } else {
+    for (uint32_t a = 0; a < kCFArmCount; ++a) arms.push_back(kCFArms[a]);
+  }
+  const uint32_t kCFArmN = uint32_t(arms.size());
+  instrument(sweep ? "ctxpc" : "ctxfeat", dna0.header().seed ^ 0xFEA7u, ticks, "ticks");
   std::printf("  question          credgate found the ear-EMA index separating two lessons\n"
               "                    at 0.012 +/- 0.003 even with acoustically distinct words.\n"
               "                    Two things can fail and they need OPPOSITE fixes: the\n"
@@ -14238,10 +14261,10 @@ bool run_ctxfeat(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
     uint64_t nsamp = 0, nflip = 0, nwflip = 0;
     uint32_t last_slot = 0; bool last_a = false;
   };
-  const uint32_t njobs = kReps * kCFArmCount;
+  const uint32_t njobs = kReps * kCFArmN;
   const std::vector<Cell> cells = parallel_reps<Cell>(njobs, [&](uint32_t i) {
     Cell c;
-    const uint32_t r = i / kCFArmCount, a = i % kCFArmCount;
+    const uint32_t r = i / kCFArmN, a = i % kCFArmN;
     std::vector<uint8_t> variant = blob;
     const uint64_t seed = dna0.header().seed + kCFSeedOffset + r * 7919ull;
     std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
@@ -14249,7 +14272,7 @@ bool run_ctxfeat(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
     // context_slots > 1 AND a context module, so this arm requires the ctx genome.
     {
       const size_t base = offsetof(aibaby::DnaHeader, exploration);
-      const uint32_t slots = 2u, src = 4u, gate = kCFArms[a].gate;
+      const uint32_t slots = 2u, src = 4u, gate = arms[a].gate;
       std::memcpy(variant.data() + base + offsetof(aibaby::DnaExploration, context_slots),
                   &slots, sizeof(uint32_t));
       std::memcpy(variant.data() + base + offsetof(aibaby::DnaExploration, context_source),
@@ -14268,15 +14291,15 @@ bool run_ctxfeat(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
     VowelSource caregiver(acfg.sample_rate);
     const uint32_t spt = acfg.sample_rate / 1000;
     std::vector<float> pcm(spt);
-    const Word& wa = kWords[kCFArms[a].word_a];
-    const Word& wb = kWords[kCFArms[a].word_b];
+    const Word& wa = kWords[arms[a].word_a];
+    const Word& wb = kWords[arms[a].word_b];
 
     // Presentations alternate, 1000 ticks each: 900 sounding, 100 silent -- the same
     // duty the retain protocol uses, so the feature is sampled the way it is in the
     // experiment this is diagnosing.
     std::vector<std::vector<double>> fa, fb;
     const uint64_t settle = ticks / 10;
-    const uint32_t shuffled = kCFArms[a].shuffle;
+    const uint32_t shuffled = arms[a].shuffle;
     for (uint64_t t = 0; t < ticks; ++t) {
       const uint64_t pres = t / 1000;
       bool is_a = (pres & 1u) == 0u;
@@ -14428,26 +14451,26 @@ bool run_ctxfeat(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
     }
     c.ok = true;
     parallel_note("  [%u/%u] seed %u %-8s acc %.3f  d' %.2f  (n=%u)\n", i + 1, njobs, r,
-                  kCFArms[a].name, c.acc, c.dprime, c.n);
+                  arms[a].name, c.acc, c.dprime, c.n);
     return c;
   });
 
   std::printf("\n  %-10s %-18s %-15s %-18s %-6s %-6s %-6s %s\n", "arm", "FEATURE accuracy",
               "d' on the axis", "INDEX separation", "p(s0)", "flip", "wflip", "pcalign/pcratio  n");
   bool any_separable = false;
-  std::vector<double> arm_sep(kCFArmCount, -1.0), arm_sep_se(kCFArmCount, 0.0);
-  for (uint32_t a = 0; a < kCFArmCount; ++a) {
+  std::vector<double> arm_sep(kCFArmN, -1.0), arm_sep_se(kCFArmN, 0.0);
+  for (uint32_t a = 0; a < kCFArmN; ++a) {
     std::vector<double> ac, dp, sp, fl, wf, pa, pr;
     uint32_t n = 0;
     for (uint32_t r = 0; r < kReps; ++r) {
-      const Cell& c = cells[r * kCFArmCount + a];
+      const Cell& c = cells[r * kCFArmN + a];
       if (!c.ok) continue;
       ac.push_back(c.acc); dp.push_back(c.dprime); sp.push_back(c.sep); n = c.n;
       fl.push_back(c.flip); wf.push_back(c.wflip);
       pa.push_back(c.pcalign); pr.push_back(c.pcratio);
     }
     if (ac.size() < 3) {
-      std::printf("  %-10s INCONCLUSIVE (%zu creatures)\n", kCFArms[a].name, ac.size());
+      std::printf("  %-10s INCONCLUSIVE (%zu creatures)\n", arms[a].name, ac.size());
       continue;
     }
     double sa = 0, sd = 0, ss = 0;
@@ -14458,7 +14481,7 @@ bool run_ctxfeat(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
     // from a live-but-uninformative index. Inferring it would be guessing.
     std::vector<double> p0;
     for (uint32_t r = 0; r < kReps; ++r) {
-      const Cell& c = cells[r * kCFArmCount + a];
+      const Cell& c = cells[r * kCFArmN + a];
       if (!c.ok || (c.ia + c.ib) == 0) continue;
       p0.push_back(double(c.i0a + c.i0b) / double(c.ia + c.ib));
     }
@@ -14471,7 +14494,7 @@ bool run_ctxfeat(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
     const double m_pa = ctx_mean_se(pa, &spa), m_pr = ctx_mean_se(pr, &spr);
     (void)spa; (void)spr;
     std::printf("  %-10s %.3f +/- %-10.3f %.2f +/- %-7.2f %.3f +/- %-10.3f %.3f  %.3f  %.3f  %.3f / %.3f   %u\n",
-                kCFArms[a].name, m_ac, sa, m_dp, sd, m_sp, ss, m_p0, m_fl, m_wf, m_pa, m_pr, n);
+                arms[a].name, m_ac, sa, m_dp, sd, m_sp, ss, m_p0, m_fl, m_wf, m_pa, m_pr, n);
     if (m_ac - 3.0 * sa > 0.5) any_separable = true;
   }
 
@@ -14483,8 +14506,8 @@ bool run_ctxfeat(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
   // broken. TO SURVIVE: shuffled separation must stay above 0.1 and above its own
   // 3 SE. Anything less and the number was the alternation.
   const auto find_arm = [&](const char* nm) -> int32_t {
-    for (uint32_t a = 0; a < kCFArmCount; ++a)
-      if (std::strcmp(kCFArms[a].name, nm) == 0) return int32_t(a);
+    for (uint32_t a = 0; a < kCFArmN; ++a)
+      if (std::strcmp(arms[a].name, nm) == 0) return int32_t(a);
     return -1;
   };
   bool gate2_survives = false;
@@ -14538,6 +14561,48 @@ bool run_ctxfeat(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
     }
   }
 
+  // THE PCRATIO ACCOUNT, ON 28 PAIRS INSTEAD OF 3. Across pairs it can be confounded
+  // by anything that covaries with vowel geometry; WITHIN a pair the words, the
+  // mechanism and the protocol are identical and only the seed differs, so the
+  // within-pair correlation is the one that carries weight.
+  if (sweep) {
+    const auto pearson = [](const std::vector<double>& x, const std::vector<double>& y) {
+      const size_t n = x.size();
+      if (n < 3) return 0.0;
+      double mx = 0, my = 0;
+      for (size_t k = 0; k < n; ++k) { mx += x[k] / double(n); my += y[k] / double(n); }
+      double sxy = 0, sxx = 0, syy = 0;
+      for (size_t k = 0; k < n; ++k) {
+        const double a = x[k] - mx, b = y[k] - my;
+        sxy += a * b; sxx += a * a; syy += b * b;
+      }
+      return (sxx > 1e-12 && syy > 1e-12) ? sxy / std::sqrt(sxx * syy) : 0.0;
+    };
+    std::vector<double> ax, ay, wx, wy;
+    for (uint32_t a = 0; a < kCFArmN; ++a) {
+      std::vector<double> pr, sp;
+      for (uint32_t r = 0; r < kReps; ++r) {
+        const Cell& c = cells[r * kCFArmN + a];
+        if (!c.ok) continue;
+        pr.push_back(c.pcratio); sp.push_back(c.sep);
+      }
+      if (pr.size() < 3) continue;
+      double mp = 0, ms = 0;
+      for (size_t k = 0; k < pr.size(); ++k) { mp += pr[k] / double(pr.size()); ms += sp[k] / double(sp.size()); }
+      ax.push_back(mp); ay.push_back(ms);
+      for (size_t k = 0; k < pr.size(); ++k) { wx.push_back(pr[k] - mp); wy.push_back(sp[k] - ms); }
+    }
+    std::printf("\n  --- does the variance geometry predict it? ---\n");
+    std::printf("  ACROSS %zu pairs   r(pcratio, separation) = %+.3f\n", ax.size(),
+                pearson(ax, ay));
+    std::printf("  WITHIN pairs      r = %+.3f over %zu creatures, each centred on its\n"
+                "                    own pair's mean, so the words cannot carry it\n",
+                pearson(wx, wy), wx.size());
+    std::printf("  REFUSED IF: the across-pair r is not clearly positive, or the\n"
+                "  within-pair r is near zero -- that would make pcratio a correlate of\n"
+                "  vowel geometry rather than the thing that decides the split.\n");
+  }
+
   std::printf("\n  --- the reading ---\n");
   if (any_separable) {
     std::printf("  THE FEATURE IS SEPARABLE. The ear's rate_ema does distinguish the words at\n"
@@ -14557,6 +14622,14 @@ bool run_ctxfeat(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
                 "  the feature WHILE THE WORD PLAYS, and this samples it where reward lands.\n");
   }
   return any_separable;
+}
+
+bool run_ctxfeat(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  return run_ctxfeat_impl(blob, ticks, verbose, false);
+}
+
+bool run_ctxpc(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  return run_ctxfeat_impl(blob, ticks, verbose, true);
 }
 
 bool run_movability(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {

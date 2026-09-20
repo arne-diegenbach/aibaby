@@ -437,6 +437,13 @@ const Spec kSpecs[] = {
      "  0.84) but that is an oracle. This drives the mask from the creature's OWN\n"
      "  ear-EMA context index, with a coin-flip arm to separate the index CONTENT\n"
      "  from the mere act of masking. 12 seeds"},
+    {"ctxpc", 600000, Expect::kOpen, Tier::kLong,
+     "DOES THE VARIANCE GEOMETRY DECIDE WHICH WORDS THE INDEX CAN TELL APART? The\n"
+     "  conscience takes a-vs-i to 0.999 separation, a-vs-u to ~0.5 and i-vs-u to\n"
+     "  0.000, while the FEATURE separates all three at 0.92-0.98 held-out. k-means\n"
+     "  splits along the direction of largest VARIANCE, so a distinction lying off\n"
+     "  that direction is invisible to any prototype rule. Runs all 28 word pairs at\n"
+     "  gate 2 and correlates pcratio with separation, across pairs and within them"},
     {"ctxfeat", 600000, Expect::kOpen, Tier::kLong,
      "IS THE EAR FEATURE SEPARABLE, OR IS THE CLASSIFIER THE PROBLEM? credgate found\n"
      "  the ear-EMA index separating two lessons at 0.012 even with acoustically\n"
@@ -801,6 +808,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "regionband") ok = run_regionband(dna_blob, ticks, verbose);
   else if (name == "credgate") ok = run_credgate(dna_blob, ticks, verbose);
   else if (name == "ctxfeat") ok = run_ctxfeat(dna_blob, ticks, verbose);
+  else if (name == "ctxpc") ok = run_ctxpc(dna_blob, ticks, verbose);
   else if (name == "partprobe") ok = run_partprobe(dna_blob, ticks, verbose);
   else if (name == "pgprobe") ok = run_pgprobe(dna_blob, ticks, verbose);
   else if (name == "g2cond") ok = run_g2cond(dna_blob, ticks, verbose);
