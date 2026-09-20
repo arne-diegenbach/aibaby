@@ -1,0 +1,87 @@
+# credgate + latch -- CARRIES A RETRACTION. The  and  arms never
+# consulted the creature's context index.
+# 2026-09-19. verify PASS, hash ad96f882becbee92.
+#
+# THE TELL: the latch arm came back BIT-IDENTICAL to derived -- retention
+# 0.461 +/- 0.385 and agreement 0.720 in both. Two different masking rules cannot
+# agree to three decimals unless both are constant.
+#
+# THE CAUSE: dna/default.toml has context_slots = 0. There is no context module,
+# so Network::active_context() returns 0 on every tick:
+#   derived: upper = (active_context() == 0) = TRUE always
+#   latch:   upper = (latched_ctx == 0)      = TRUE always, the latch never fires
+# Both arms are one fixed policy: ALWAYS MASK TO A'S HALF.
+#
+# AND 0.720 IS NOT AN INDEX ACCURACY.  counts upper == want, and with
+# upper constantly TRUE it reduces to the fraction of trials where want is TRUE:
+# the teach phase (60%) plus the after phase (12%) = EXACTLY 0.720. A trial-ratio.
+# The keep arms read 1.000 for the same reason -- their second lesson also targets
+# 320, so want is TRUE in every phase.
+#
+# WITHDRAWN: 'the index carries which lesson is live at 0.720 vs a 0.477 coin
+# flip'; 'it delivers 0.387 of the 0.440 its accuracy predicts'; and 'this is an
+# accuracy problem with a measured conversion rate'. None of those were measured.
+#
+# WHAT SURVIVES:
+#   - the ORACLE removes the wipe: -0.041 -> 1.254, +1.295 (+4.8 SE);
+#   - a COIN FLIP does not: -2.285 +/- 2.556 (-0.9 SE), so it is credit
+#     assignment and not merely halving the write;
+#   - a FIXED CONTEXT-FREE policy ('always mask to A's half') buys +0.501 +/-
+#     0.439 (+1.1 SE) -- suggestive, and interesting because it needs no context
+#     signal at all;
+#   - the mask costs learning rate: err_taught 0.9439 -> 1.0266.
+#
+# THE INDEX CANNOT BE TESTED ON THIS GENOME. A context genome must come from
+# tools/ctxgenome.sh, and it FAILS calibrate (somato 4.16 Hz vs a 4.56 target,
+# -0.40). Fixing that is the prerequisite for the whole gating question.
+
+  RETENTION -- the fraction of the GAIN that survived, which is what
+  credit-oracle scored (0.84 broadcast -> 1.03 targeted). Unlike the raw
+  gap this is not confounded by the mask's learning-rate cost.
+    broadcast  AB -0.041 +/- 0.211    keep 2.096 +/- 0.237
+    oracle     AB 1.254 +/- 0.173    keep 2.879 +/- 0.218
+    derived    AB 0.461 +/- 0.385    keep 2.879 +/- 0.218
+    latch      AB 0.461 +/- 0.385    keep 2.879 +/- 0.218
+    oracle     AB retention vs broadcast: +1.295 +/- 0.272  (+4.8 SE)
+    derived    AB retention vs broadcast: +0.501 +/- 0.439  (+1.1 SE)
+    latch      AB retention vs broadcast: +0.501 +/- 0.439  (+1.1 SE)   <- must NOT
+
+  AGREEMENT GUARD -- did the mask land where the live lesson wanted?
+    oracle  1.000   (must be 1.000 by construction)
+    derived 0.720   <- THE WHOLE QUESTION
+    latched 0.720   <- THE PREDICTION: reading the index while the
+                     creature HEARS should raise this well above 0.720
+
+  PRIMARY -- the AB-minus-keep gap, per mode
+    broadcast  AB 1.0168   keep 0.8685   gap +0.1483 +/- 0.0200  (+7.4 SE)
+    oracle     AB 1.0104   keep 0.9448   gap +0.0656 +/- 0.0210  (+3.1 SE)
+    derived    AB 1.0322   keep 0.9448   gap +0.0874 +/- 0.0225  (+3.9 SE)
+    latch      AB 1.0322   keep 0.9448   gap +0.0874 +/- 0.0225  (+3.9 SE)
+
+    oracle   shrinks the gap by +0.0827 +/- 0.0290  (+2.9 SE)
+    derived  shrinks the gap by +0.0609 +/- 0.0301  (+2.0 SE)
+    shuffled shrinks the gap by +0.0609 +/- 0.0301  (+2.0 SE)  <- must NOT
+
+  THE COST -- err_taught, which the oracle bought its 1.03 with
+    broadcast  AB 0.9439   keep 0.9439
+    oracle     AB 1.0266   keep 1.0266
+    derived    AB 1.0266   keep 1.0266
+    latch      AB 1.0266   keep 1.0266
+
+  DOES THE INDEX BUY WHAT ITS ACCURACY PREDICTS?
+    agreement 0.720  ->  predicted 0.439 of the oracle's benefit
+    delivered 0.387
+    A shortfall here would mean the mechanism fails; a match means the
+    mechanism works and the CARRIER is simply not accurate enough.
+
+  --- the reading ---
+  THE ORACLE WORKS AND THE DERIVED INDEX FALLS SHORT. Retention goes
+  +1.295 (+4.8 SE) under a perfect mask and +0.501 (+1.1 SE) under the
+  creature's own index.
+  READ THE AGREEMENT ROW BEFORE CONCLUDING ANYTHING GENERAL: if `derived`
+  sat at chance, this refutes THIS INDEX and not gating. Masse has gating at
+  61.4% alone, so the mechanism is not supposed to be sufficient anyway --
+  what would be refuted is the ear-EMA index as its carrier.
+RB_EXIT=1
+
+[exited with code 0]
