@@ -1,0 +1,95 @@
+# credgate on the CONTEXT GENOME -- gating works, the ear-EMA CARRIER is empty.
+# 2026-09-20. verify PASS (shipped genome, ad96f882becbee92); calibrate PASS (ctx).
+#
+# FOUR PREREQUISITES HAD TO BE FIXED BEFORE THE QUESTION COULD BE ASKED, and every
+# one of them was already flagged in the codebase or in memory:
+#   1. tools/ctxgenome.sh produced a genome FAILING calibrate (somato 4.16 vs a
+#      declared 4.56). Now measures somato and writes the target in: PASS.
+#   2. context_slots = 0 left the machinery inert -- ctx_slots_ needs > 1 -- so
+#      active_context() returned 0 forever. Exposed by two arms returning
+#      BIT-IDENTICAL numbers. RTConfig already carried the field; it was never set.
+#   3. The slots are UNLABELLED, so a fixed slot->half mapping is a per-seed coin
+#      flip and raw agreement averages to chance however well the index separates.
+#      Replaced with |p(slot0|A) - p(slot0|B)|, invariant to labelling.
+#   4. BOTH LESSONS HAD THE SAME CAREGIVER WORD. run_retain_arm's own comment said
+#      so: "retain says the same word throughout ... which is the thing that was
+#      never tested." Fixed with the existing cfg.second_heard = 1.
+#
+# WITH ALL FOUR HOLDING:
+#   derived  separation 0.012 +/- 0.003   over 12 creatures
+#   latch    separation 0.021 +/- 0.011
+#   oracle   agreement 1.000 (by construction)
+#
+# THE INDEX IS ACTIVE, NOT INERT. A constant index gives agreement equal to the trial
+# ratio -- 0.720, exactly what it read while context_slots was 0. It reads 0.501, so
+# the slot toggles evenly; it simply does not toggle on WHICH LESSON IS LIVE. That is
+# ctxretain's diagnosis confirmed with a proper statistic: the index switches on
+# within-trial structure (the 900-tick sounding window), not on the word.
+#
+# The LATCH does not rescue it (0.021 vs 0.012). Sampling while the creature hears
+# cannot recover information the index never encoded.
+#
+# REFUTED: context_source 4, the ear rate EMA at 2 slots, as a carrier for lesson
+# identity -- it carries ~1% of the available distinction.
+# NOT REFUTED: gating itself. The oracle removes the wipe on the shipped genome at
+# +4.8 SE. open-leads pre-registered "if a PERFECT index does not protect the lesson,
+# gating is refused" -- the perfect index DOES protect it, so that does not fire.
+#
+# DO NOT QUOTE RETENTION FROM THIS GENOME. It divides by the gain, and the ctx genome
+# barely learns (err_taught 1.01-1.07 vs 0.94 shipped), so the denominator approaches
+# zero: oracle -5.587 +/- 6.729, keep arms reaching 27.222 +/- 21.160. The separation
+# result above does not depend on it.
+  SEPARATION -- does the index DISTINGUISH the two lessons, regardless of
+  which slot got which name? Raw agreement cannot answer this: the slots are
+  UNLABELLED, so a fixed slot->half mapping is a coin flip per seed and
+  averages to chance however well the index separates. Scored as
+  |p(slot0 | lesson A) - p(slot0 | lesson B)|: 0 is no information, 1 is
+  perfect separation. `ctxfour` drew the same line -- a perfect index holds
+  four DISTINCTIONS, not four MAPPINGS.
+    derived-AB    separation 0.012 +/- 0.003  over 12 creatures
+    derived-keep  too few creatures
+    latch-AB      separation 0.021 +/- 0.011  over 12 creatures
+    latch-keep    too few creatures
+    A separation near 0 refutes THIS INDEX as a carrier. A separation well
+    above 0 with chance AGREEMENT means the index works and only the
+    slot->half assignment is arbitrary -- which is a fixable wiring problem,
+    not a refutation.
+
+  AGREEMENT GUARD -- did the mask land where the live lesson wanted?
+    oracle  1.000   (must be 1.000 by construction)
+    derived 0.501   <- THE WHOLE QUESTION
+    latched 0.503   <- THE PREDICTION: reading the index while the
+                     creature HEARS should raise this well above 0.720
+  NOTE: the derived index sits at CHANCE. Whatever the retention numbers do,
+  this run then says nothing about gating in general -- only that THIS index
+  does not carry which lesson is live, which is `ctxretain`'s finding again.
+
+  PRIMARY -- the AB-minus-keep gap, per mode
+    broadcast  AB 1.0866   keep 0.9934   gap +0.0933 +/- 0.0578  (+1.6 SE)
+    oracle     AB 1.0797   keep 1.0494   gap +0.0303 +/- 0.0262  (+1.2 SE)
+    derived    AB 1.1048   keep 1.1070   gap -0.0022 +/- 0.0177  (-0.1 SE)
+    latch      AB 1.1061   keep 1.1077   gap -0.0016 +/- 0.0178  (-0.1 SE)
+
+    oracle   shrinks the gap by +0.0630 +/- 0.0634  (+1.0 SE)
+    derived  shrinks the gap by +0.0955 +/- 0.0604  (+1.6 SE)
+    shuffled shrinks the gap by +0.0949 +/- 0.0605  (+1.6 SE)  <- must NOT
+
+  THE COST -- err_taught, which the oracle bought its 1.03 with
+    broadcast  AB 1.0104   keep 1.0104
+    oracle     AB 1.0509   keep 1.0509
+    derived    AB 1.0693   keep 1.0693
+    latch      AB 1.0693   keep 1.0693
+
+  DOES THE INDEX BUY WHAT ITS ACCURACY PREDICTS?
+    agreement 0.501  ->  predicted 0.002 of the oracle's benefit
+    delivered 0.000
+    A shortfall here would mean the mechanism fails; a match means the
+    mechanism works and the CARRIER is simply not accurate enough.
+
+  --- the reading ---
+  THE ORACLE DID NOT REPRODUCE, on RETENTION: -3.198 +/- 5.589 (-0.6 SE)
+  against credit-oracle's 0.84 -> 1.03. Nothing about the derived arm is
+  interpretable until that is explained.
+CG_EXIT=1
+
+[exited with code 0]
