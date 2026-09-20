@@ -1493,15 +1493,50 @@ void Network::step() {
         //
         // Source 4 was built as "NO EPISODE AT ALL", and in skipping the episode it
         // skipped the conscience with it: its winner selection is plain nearest
-        // prototype. Prototypes are allocated ZEROED and rate_ema_ is all-positive,
-        // so the first update moves proto[0] toward the data while proto[1] stays at
-        // the origin -- and thereafter |x - 0|^2 beats nothing. Slot 0 wins forever
-        // and the second cluster is dead, which makes p(slot0|A) = p(slot0|B) = 1 and
-        // the measured separation 0.002 against a feature ceiling of 0.978.
+        // prototype. At ctx_proto_gate 2 the same penalty is applied here; 0 and 1
+        // are unchanged.
         //
-        // At ctx_proto_gate 2 the same penalty is applied here. 0 and 1 are unchanged.
+        // MEASURED, and it corrects what this comment used to claim. `ctxfeat` reads
+        // p(slot0) at 0.19-0.34 under gate 0, so the second cluster is NOT dead the
+        // way a zero-initialised prototype suggests -- both slots are live and the
+        // split simply has nothing to do with the word (separation 0.002 against a
+        // feature ceiling of 0.978). Under gate 2 the a-i pair goes to 0.999 +/- 0.001
+        // with the index flipping exactly when the word does, under a SHUFFLED
+        // presentation order it cannot anticipate. The i-u pair goes the other way:
+        // p(slot0) 1.000, a total monopoly, which is the failure a conscience exists
+        // to prevent.
+        //
+        // THE ACCOUNT, and gate 3 is its test: the penalty is scaled by `cdscale`,
+        // the mean ACHIEVED distance, which is the within-class spread and therefore
+        // small. A prototype left at the ORIGIN sits at the full |x|, which is much
+        // larger, because rate_ema_ is all-positive. So the conscience can KEEP two
+        // live units balanced but cannot RESCUE one that died at initialisation --
+        // a-i wins that race and i-u loses it. Gate 3 removes the origin instead of
+        // strengthening the penalty: seed every prototype from the first sample, so
+        // no unit starts stranded. Gate 4 is the seeding WITHOUT the conscience, so
+        // the two can be told apart.
+        const bool ctx_conscience = ctx_proto_gate_ == 2u || ctx_proto_gate_ == 3u;
+        // NOT "the first sample": at tick 0 `rate_ema_` is the ZERO VECTOR, so seeding
+        // there seeds from the origin -- the very thing being removed. The vacuity
+        // check caught it, as gate 3 hashing identically to gate 2 and gate 4 to gate
+        // 1. Wait for the first sample that is not degenerate; no constant, just not
+        // the zero vector.
+        if (ctx_proto_gate_ >= 3u && ctx_seeded_ == 0u) {
+          Scalar fnorm = kZero;
+          for (uint32_t n = 0; n < sms.count; ++n) {
+            const Scalar v = rate_ema_[sms.begin + n];
+            fnorm += v * v;
+          }
+          if (fnorm > kZero) {
+            for (uint32_t c = 0; c < ctx_slots_; ++c) {
+              Scalar* proto = ctx_proto_ + size_t(c) * sms.capacity;
+              for (uint32_t n = 0; n < sms.count; ++n) proto[n] = rate_ema_[sms.begin + n];
+            }
+            ctx_seeded_ = 1u;
+          }
+        }
         Scalar total_wins = kZero;
-        if (ctx_proto_gate_ == 2u)
+        if (ctx_conscience)
           for (uint32_t c = 0; c < ctx_slots_; ++c) total_wins += ctx_wins_[c];
         const Scalar cdscale = ctx_dn_ > kZero ? ctx_dsum_ / ctx_dn_ : kZero;
         Scalar best_d = kZero;
@@ -1513,7 +1548,7 @@ void Network::step() {
             const Scalar e = rate_ema_[sms.begin + n] - proto[n];
             d += e * e;
           }
-          if (ctx_proto_gate_ == 2u && total_wins > kZero) {
+          if (ctx_conscience && total_wins > kZero) {
             d += (Scalar(ctx_slots_) * (ctx_wins_[c] / total_wins) - kOne) * cdscale;
           }
           if (c == 0 || d < best_d) { best_d = d; winner = c; }

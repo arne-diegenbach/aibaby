@@ -14165,21 +14165,33 @@ bool run_credgate(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
 // same phase of each presentation, and score a nearest-CLASS-MEAN classifier on
 // held-out samples. That is the best any prototype rule could do, so it is an upper
 // bound on the classifier -- if this is at chance, the feature is the problem.
-struct CFArm { const char* name; uint32_t word_a; uint32_t word_b; uint32_t gate; };
+struct CFArm {
+  const char* name; uint32_t word_a; uint32_t word_b; uint32_t gate;
+  uint32_t shuffle;   // 1 = randomise which word comes first within each PAIR
+};
 // Each pair runs under BOTH prototype gates, so the ceiling (what the feature
 // carries) and the achieved (what the index extracts) are measured on the same
 // creatures, and the gate is the only thing that differs between paired arms.
 const CFArm kCFArms[] = {
-    {"a-i g0", 0u, 1u, 0u},   // shipped: prototypes learn only while the larynx is quiet
-    {"a-i g1", 0u, 1u, 1u},   // v59: prototypes learn where the index is READ
-    {"a-u g0", 0u, 2u, 0u},
-    {"a-u g1", 0u, 2u, 1u},
-    {"i-u g0", 1u, 2u, 0u},   // nearly pure F2 -- the hardest pair for a rate code
-    {"i-u g1", 1u, 2u, 1u},
-    // GATE 2 adds DeSieno's conscience to source 4's winner selection -- the
-    // win-balance penalty the episode path has and source 4 never got.
-    {"a-i g2", 0u, 1u, 2u},
-    {"i-u g2", 1u, 2u, 2u},
+    // SHUFFLED ORDER THROUGHOUT. Strict alternation is a period-2 process and so is
+    // any index that balances its wins; locked together they agree perfectly with no
+    // information passing between them. Shuffling which word comes first within each
+    // PAIR keeps the classes exactly balanced and breaks the lock, so an index that
+    // merely alternates now agrees on only half the pairs. `a-i g2` is kept
+    // unshuffled as the documented example of that artefact.
+    {"a-i g0s", 0u, 1u, 0u, 1u},   // shipped: prototypes learn only while the larynx is quiet
+    {"a-i g1s", 0u, 1u, 1u, 1u},   // v59: prototypes learn where the index is READ
+    {"a-i g2s", 0u, 1u, 2u, 1u},   // + DeSieno's conscience, the win-balance penalty
+    {"a-i g3s", 0u, 1u, 3u, 1u},   // + seeded from data, so no unit starts at the origin
+    {"a-i g4s", 0u, 1u, 4u, 1u},   // seeding WITHOUT the conscience
+    {"i-u g0s", 1u, 2u, 0u, 1u},   // nearly pure F2 -- the hardest pair for a rate code
+    {"i-u g1s", 1u, 2u, 1u, 1u},
+    {"i-u g2s", 1u, 2u, 2u, 1u},
+    {"i-u g3s", 1u, 2u, 3u, 1u},
+    {"i-u g4s", 1u, 2u, 4u, 1u},
+    {"a-u g2s", 0u, 2u, 2u, 1u},   // the third pair, under the two live mechanisms only
+    {"a-u g3s", 0u, 2u, 3u, 1u},
+    {"a-i g2",  0u, 1u, 2u, 0u},   // ALTERNATING: kept to show the confound, not to read
 };
 constexpr uint32_t kCFArmCount = sizeof(kCFArms) / sizeof(kCFArms[0]);
 constexpr uint64_t kCFSeedOffset = 774611ull;
@@ -14213,6 +14225,12 @@ bool run_ctxfeat(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
     bool ok = false; double acc = 0.0; double dprime = 0.0; uint32_t n = 0;
     double sep = 0.0;        // |p(slot0|A) - p(slot0|B)|: what the INDEX extracts
     uint64_t ia = 0, i0a = 0, ib = 0, i0b = 0;
+    // HOW OFTEN THE INDEX CHANGES between consecutive samples, against how often the
+    // WORD does. An index locked to alternation reads flip 1.00 whatever the words
+    // do; an index following the word tracks wflip.
+    double flip = 0.0, wflip = 0.0;
+    uint64_t nsamp = 0, nflip = 0, nwflip = 0;
+    uint32_t last_slot = 0; bool last_a = false;
   };
   const uint32_t njobs = kReps * kCFArmCount;
   const std::vector<Cell> cells = parallel_reps<Cell>(njobs, [&](uint32_t i) {
@@ -14252,9 +14270,17 @@ bool run_ctxfeat(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
     // experiment this is diagnosing.
     std::vector<std::vector<double>> fa, fb;
     const uint64_t settle = ticks / 10;
+    const uint32_t shuffled = kCFArms[a].shuffle;
     for (uint64_t t = 0; t < ticks; ++t) {
       const uint64_t pres = t / 1000;
-      const bool is_a = (pres & 1u) == 0u;
+      bool is_a = (pres & 1u) == 0u;
+      if (shuffled) {
+        uint64_t h = (seed ^ 0x9E3779B97F4A7C15ull) + (pres >> 1) * 0xBF58476D1CE4E5B9ull;
+        h ^= h >> 30; h *= 0xBF58476D1CE4E5B9ull;
+        h ^= h >> 27; h *= 0x94D049BB133111EBull; h ^= h >> 31;
+        const bool first_a = (h & 1ull) == 0ull;
+        is_a = ((pres & 1u) == 0u) == first_a;
+      }
       const Word& w = is_a ? wa : wb;
       const bool sounding = (t % 1000) < 900;
       caregiver.render(sounding ? w.f0 : 0.0f, w.f1, w.f2, sounding ? 0.5f : 0.0f,
@@ -14277,6 +14303,11 @@ bool run_ctxfeat(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
       const uint32_t slot = net.active_context();
       if (is_a) { ++c.ia; if (slot == 0u) ++c.i0a; }
       else { ++c.ib; if (slot == 0u) ++c.i0b; }
+      if (c.nsamp > 0) {
+        if (slot != c.last_slot) ++c.nflip;
+        if (is_a != c.last_a) ++c.nwflip;
+      }
+      c.last_slot = slot; c.last_a = is_a; ++c.nsamp;
     }
     if (fa.size() < 8 || fb.size() < 8) return c;
 
@@ -14333,22 +14364,28 @@ bool run_ctxfeat(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
     if (c.ia > 0 && c.ib > 0) {
       c.sep = std::fabs(double(c.i0a) / double(c.ia) - double(c.i0b) / double(c.ib));
     }
+    if (c.nsamp > 1) {
+      c.flip = double(c.nflip) / double(c.nsamp - 1);
+      c.wflip = double(c.nwflip) / double(c.nsamp - 1);
+    }
     c.ok = true;
     parallel_note("  [%u/%u] seed %u %-8s acc %.3f  d' %.2f  (n=%u)\n", i + 1, njobs, r,
                   kCFArms[a].name, c.acc, c.dprime, c.n);
     return c;
   });
 
-  std::printf("\n  %-10s %-18s %-15s %-18s %-6s %s\n", "arm", "FEATURE accuracy",
-              "d' on the axis", "INDEX separation", "p(s0)", "n");
+  std::printf("\n  %-10s %-18s %-15s %-18s %-6s %-6s %-6s %s\n", "arm", "FEATURE accuracy",
+              "d' on the axis", "INDEX separation", "p(s0)", "flip", "wflip", "n");
   bool any_separable = false;
+  std::vector<double> arm_sep(kCFArmCount, -1.0), arm_sep_se(kCFArmCount, 0.0);
   for (uint32_t a = 0; a < kCFArmCount; ++a) {
-    std::vector<double> ac, dp, sp;
+    std::vector<double> ac, dp, sp, fl, wf;
     uint32_t n = 0;
     for (uint32_t r = 0; r < kReps; ++r) {
       const Cell& c = cells[r * kCFArmCount + a];
       if (!c.ok) continue;
       ac.push_back(c.acc); dp.push_back(c.dprime); sp.push_back(c.sep); n = c.n;
+      fl.push_back(c.flip); wf.push_back(c.wflip);
     }
     if (ac.size() < 3) {
       std::printf("  %-10s INCONCLUSIVE (%zu creatures)\n", kCFArms[a].name, ac.size());
@@ -14366,11 +14403,51 @@ bool run_ctxfeat(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
       if (!c.ok || (c.ia + c.ib) == 0) continue;
       p0.push_back(double(c.i0a + c.i0b) / double(c.ia + c.ib));
     }
-    double sp0 = 0.0;
+    double sp0 = 0.0, sfl = 0.0, swf = 0.0;
     const double m_p0 = p0.size() >= 3 ? ctx_mean_se(p0, &sp0) : 0.0;
-    std::printf("  %-10s %.3f +/- %-10.3f %.2f +/- %-7.2f %.3f +/- %-10.3f %.3f  %u\n",
-                kCFArms[a].name, m_ac, sa, m_dp, sd, m_sp, ss, m_p0, n);
+    const double m_fl = ctx_mean_se(fl, &sfl), m_wf = ctx_mean_se(wf, &swf);
+    (void)sfl; (void)swf;
+    arm_sep[a] = m_sp; arm_sep_se[a] = ss;
+    std::printf("  %-10s %.3f +/- %-10.3f %.2f +/- %-7.2f %.3f +/- %-10.3f %.3f  %.3f  %.3f  %u\n",
+                kCFArms[a].name, m_ac, sa, m_dp, sd, m_sp, ss, m_p0, m_fl, m_wf, n);
     if (m_ac - 3.0 * sa > 0.5) any_separable = true;
+  }
+
+  // THE PRE-REGISTERED ATTACK ON GATE 2. The conscience balances wins, which makes
+  // the index alternate; the protocol alternates the words. Two synchronised
+  // period-2 processes give separation 1.0 with no information passing between
+  // them, and that artefact is indistinguishable from the real thing in the
+  // alternating arms alone. The shuffled arm runs the SAME mechanism with the lock
+  // broken. TO SURVIVE: shuffled separation must stay above 0.1 and above its own
+  // 3 SE. Anything less and the number was the alternation.
+  const auto find_arm = [&](const char* nm) -> int32_t {
+    for (uint32_t a = 0; a < kCFArmCount; ++a)
+      if (std::strcmp(kCFArms[a].name, nm) == 0) return int32_t(a);
+    return -1;
+  };
+  bool gate2_survives = false;
+  {
+    const int32_t alt = find_arm("a-i g2"), shf = find_arm("a-i g2s"), ctl = find_arm("a-i g0s");
+    if (alt >= 0 && shf >= 0 && ctl >= 0 && arm_sep[alt] >= 0.0 && arm_sep[shf] >= 0.0) {
+      const double d = arm_sep[alt] - arm_sep[shf];
+      const double se = std::sqrt(arm_sep_se[alt] * arm_sep_se[alt] +
+                                  arm_sep_se[shf] * arm_sep_se[shf]);
+      std::printf("\n  --- gate 2 under a shuffled order ---\n");
+      std::printf("  a-i g2  alternating  %.3f +/- %.3f\n", arm_sep[alt], arm_sep_se[alt]);
+      std::printf("  a-i g2s shuffled     %.3f +/- %.3f   (loss %+.3f +/- %.3f)\n",
+                  arm_sep[shf], arm_sep_se[shf], -d, se);
+      std::printf("  a-i g0s shuffled ctl %.3f +/- %.3f\n", arm_sep[ctl], arm_sep_se[ctl]);
+      gate2_survives = arm_sep[shf] > 0.1 && arm_sep[shf] - 3.0 * arm_sep_se[shf] > 0.0;
+      if (gate2_survives) {
+        std::printf("  THE SEPARATION SURVIVES A SHUFFLED ORDER. The index is following the\n"
+                    "  WORD, not the alternation, so the conscience is doing real work.\n");
+      } else {
+        std::printf("  REFUSED: the separation does not survive a shuffled order, so what the\n"
+                    "  alternating arm measured was two period-2 processes locked together --\n"
+                    "  a win-balancing index and a strictly alternating protocol -- and not\n"
+                    "  the index carrying the word.\n");
+      }
+    }
   }
 
   std::printf("\n  --- the reading ---\n");

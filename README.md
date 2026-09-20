@@ -12058,3 +12058,88 @@ derived index, which does work at 16/18 in its own right.
 
 Worth recording the cheapest part of this: reading the existing notes before building
 saved a redundant run, and corrected a direction I had already stated out loud.
+
+### The index that never separated now separates almost perfectly (2026-09-20)
+
+The last section ended on one buildable combination: drive the reward mask from the
+creature's own derived context index. That required an index that separates the
+lessons, and every measurement said it did not — `credgate` read separation at
+0.012 ± 0.003 even with acoustically distinct words.
+
+`ctxfeat` split the failure in two. The ear's per-neuron rate EMA — the feature the
+index is built on, sampled at the end of the silent tail where reward actually lands —
+classifies the two words at **97.8% held-out, d′ 3.51**, on a nearest-class-mean rule
+scored on samples it never fitted. Even /i/ vs /u/, differing almost purely in F2 and
+the hardest case for a rate code, reads 0.929. **The feature carries the word and the
+classifier throws away 98.8% of it.** The source was never the problem.
+
+So the target became the prototype learning. Three hypotheses, in order:
+
+**Refused.** `ctx_proto_gate` 1 lets the prototypes learn wherever the index is read,
+instead of only while the larynx is quiet. Separation stayed at ~0.002 on all three
+vowel pairs. *When* the prototypes learn is not the story.
+
+**Wrong, and the instrument caught it.** The next hypothesis was a dead second
+cluster: prototypes are allocated zeroed, the feature is all-positive, so slot 0 walks
+to the data while slot 1 stays at the origin and loses forever. The codebase documents
+exactly this failure in the episode path's own comment — DeSieno's dead unit, which an
+earlier probe measured killing 78% of random inits — and source 4, built as "no episode
+at all", skipped the conscience along with the episode. Before running it, the
+experiment was changed to *print* p(slot0) rather than infer it, on the grounds that
+inferring had already gone wrong three times in this line. It reads **0.19–0.34 under
+the shipped gate**: both slots live, splitting the ticks roughly 1:3, with separation
+still 0.002. A live index that carries nothing about the word is a different disease
+from a dead one, and the diagnosis asserted as fact in a code comment was simply false.
+
+**It works anyway, and on one pair it works completely.** Adding the win-balance
+penalty to source 4's winner selection takes a-vs-i separation from 0.002 to
+**0.999 ± 0.001** across six seeds.
+
+The first read of that was 0.814 ± 0.163 on the alternating protocol, and it should
+not have been believed: **a conscience balances wins, which makes the index alternate,
+and the protocol alternates the words.** Two synchronised period-2 processes agree
+perfectly with no information passing between them, and at a different phase lock they
+alias to a constant — which is exactly what the i-vs-u arm's p(slot0) = 1.000 with
+separation 0.000 ± 0.000 looked like. One confound, both numbers, no word involved.
+
+The test was to shuffle which word comes first within each *pair*: classes stay exactly
+balanced, the period-2 lock breaks, and an index that merely alternates now agrees on
+only half the pairs. Pre-registered in the code — shuffled separation must clear 0.1
+and its own 3 SE.
+
+| arm (shuffled) | separation | p(slot0) | flip | wflip |
+|---|---|---|---|---|
+| a-i, shipped gate | 0.035 ± 0.020 | 0.191 | 0.028 | 0.755 |
+| **a-i, conscience** | **0.999 ± 0.001** | 0.500 | 0.755 | 0.755 |
+| i-u, conscience | 0.000 ± 0.000 | 1.000 | 0.000 | 0.755 |
+
+`flip` — how often the index changes slot between samples — equals `wflip`, how often
+the word changes, **to three decimals**, under an order the creature cannot anticipate.
+That column settles alternation-versus-information directly rather than by argument,
+and it is one counter. The alternating protocol had been *understating* the effect.
+
+**The open failure is real and is being tested, not explained away.** i-vs-u goes to a
+total monopoly under the very mechanism that exists to prevent monopolies. The account:
+the penalty is scaled by the mean *achieved* distance, which is the within-class spread
+and therefore small, while a prototype left at the origin sits at the full ‖x‖. So the
+conscience can *keep* two live units balanced and cannot *rescue* one that died at
+initialisation — a-i wins that race, i-u loses it. The test removes the origin rather
+than strengthening the penalty, by seeding the prototypes from data.
+
+That test found its own bug before it ran. The first version seeded "from the first
+sample", and the vacuity check refused it: gate 3 hashed identically to gate 2. At tick
+zero the rate EMA *is* the zero vector, so seeding from the first sample seeds from the
+origin — the fix was the bug. A second arm, seeding without the conscience, still hashes
+identically to plain nearest-prototype, and that one is not a bug but the point:
+seeding every prototype to the same point breaks the tie to slot 0, slot 0 becomes the
+running mean of what it wins, and a mean is nearer every point than any single point is.
+**Seeding alone cannot rescue a unit**, and the identical hash is the proof.
+
+**Temper all of this before quoting it.** This fixes a carrier, not a behaviour. The
+credit oracle measured what a *perfect* index converts into: +4.8 SE of retention, no
+more. An earlier four-word probe holds four distinctions at a perfect index but not
+four targets. The question worth asking next is not whether the index separates — on
+a-vs-i it now does, nearly perfectly — but whether retention moves when it does. And
+retention is not currently quotable on the context genome at all: it divides by the
+gain and blew up there. That statistic needs replacing before any retention contrast
+from that genome is reported.
