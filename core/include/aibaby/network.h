@@ -1016,6 +1016,7 @@ class Network {
   // loop rather than a context. The runs are recomputed from `count` each tick
   // rather than cached, so a module that grows cannot leave them stale.
   uint32_t ctx_source_ = 0;
+  uint32_t ctx_proto_gate_ = 0;   // DNA v59: 0 = larynx-quiet gate, 1 = where read
   static constexpr uint32_t kCtxSelfSkipA = 2;  // F1
   static constexpr uint32_t kCtxSelfSkipB = 3;  // F2
   // DNA v53, source 2. One prototype per context over the source module's

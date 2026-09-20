@@ -437,6 +437,7 @@ bool Network::build(const Dna& dna, Arena& arena, Rng& rng) {
   // for more than one -- 0 and 1 both mean "the shared bias alone", so a v50
   // genome allocates nothing and hashes exactly as it did.
   ctx_slots_ = h.exploration.context_slots > 1 ? h.exploration.context_slots : 0;
+  ctx_proto_gate_ = h.exploration.ctx_proto_gate;
   ctx_source_ = h.exploration.context_source;
   ctx_param_ = h.exploration.ctx_param;
   ctx_module_ = -1;
@@ -1496,6 +1497,26 @@ void Network::step() {
         }
         active_ctx_ = winner;
         ctx_latched_ = true;
+        // DNA v59. UPDATE THE PROTOTYPES WHERE THE INDEX IS READ.
+        //
+        // The shipped rule learns them only inside the `fast_on` block below, which
+        // gates on the LARYNX being quiet -- so they are fitted at moments chosen by
+        // the creature's own vocal state rather than by which word is playing. The
+        // feature carries the word at 97.8% held-out (`ctxfeat`) and the index
+        // extracts 1.2% of it (`credgate`); this is the suspect for that gap.
+        //
+        // Same online k-means as below, on the SAME vector the index was just
+        // computed from, so the classifier is fitted to the distribution it is
+        // actually scored on. At ctx_proto_gate 0 this branch never runs and the
+        // shipped creature is bit-identical.
+        if (ctx_proto_gate_ == 1u) {
+          ctx_wins_[winner] += kOne;
+          const Scalar lr = kOne / ctx_wins_[winner];
+          Scalar* proto = ctx_proto_ + size_t(winner) * sms.capacity;
+          for (uint32_t n = 0; n < sms.count; ++n) {
+            proto[n] += lr * (rate_ema_[sms.begin + n] - proto[n]);
+          }
+        }
       }
       if (fast_on) {
         for (uint32_t n = 0; n < sms.count; ++n) {

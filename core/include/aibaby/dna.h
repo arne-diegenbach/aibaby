@@ -1354,6 +1354,29 @@ struct DnaExploration {
 
 
   uint32_t enabled;
+
+  // DNA v59. WHEN THE CONTEXT PROTOTYPES LEARN.
+  //
+  // `ctxfeat` measured the ear's per-neuron rate_ema distinguishing two words at
+  // 97.8% held-out (d' 3.51) AT THE MOMENT REWARD LANDS, while `credgate` measured
+  // the index built on that same feature separating the same two lessons at 0.012.
+  // The index extracts about 1.2% of what the feature carries, so the SOURCE is
+  // right and the classifier is what fails.
+  //
+  // The suspect is the sampling. For `context_source` 4 the INDEX is read every tick
+  // from the EMA, but the PROTOTYPES only learn inside a gate on the LARYNX BEING
+  // QUIET (`gms.mean_rate < ctx_gate_target_`). So they are fitted at moments chosen
+  // by the creature's own vocal state rather than by which word is playing -- a
+  // nearest-prototype rule fitted to the wrong sampling distribution.
+  //
+  //   0  the shipped larynx-quiet gate. BIT-IDENTICAL.
+  //   1  update the prototypes wherever the index is READ, on the same feature
+  //      vector the index is computed from. Source 4 only.
+  //
+  // WHAT WOULD REFUSE IT: separation staying near credgate's 0.012. The feature
+  // ceiling is 0.978, so a gate that is the whole story should move it a long way;
+  // a small move means the sampling was only part of the problem.
+  uint32_t ctx_proto_gate;
 };
 
 // Divisive normalisation (§3.1, DNA v12). The per-module strength lives on

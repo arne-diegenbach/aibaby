@@ -14165,11 +14165,17 @@ bool run_credgate(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
 // same phase of each presentation, and score a nearest-CLASS-MEAN classifier on
 // held-out samples. That is the best any prototype rule could do, so it is an upper
 // bound on the classifier -- if this is at chance, the feature is the problem.
-struct CFArm { const char* name; uint32_t word_a; uint32_t word_b; };
+struct CFArm { const char* name; uint32_t word_a; uint32_t word_b; uint32_t gate; };
+// Each pair runs under BOTH prototype gates, so the ceiling (what the feature
+// carries) and the achieved (what the index extracts) are measured on the same
+// creatures, and the gate is the only thing that differs between paired arms.
 const CFArm kCFArms[] = {
-    {"a-vs-i", 0u, 1u},   // the pair credgate used, and every naming experiment
-    {"a-vs-u", 0u, 2u},   // /u/: f1 within 30 Hz of /i/, f2 1600 Hz away
-    {"i-vs-u", 1u, 2u},   // nearly pure F2 -- the hardest pair for a rate code
+    {"a-i g0", 0u, 1u, 0u},   // shipped: prototypes learn only while the larynx is quiet
+    {"a-i g1", 0u, 1u, 1u},   // v59: prototypes learn where the index is READ
+    {"a-u g0", 0u, 2u, 0u},
+    {"a-u g1", 0u, 2u, 1u},
+    {"i-u g0", 1u, 2u, 0u},   // nearly pure F2 -- the hardest pair for a rate code
+    {"i-u g1", 1u, 2u, 1u},
 };
 constexpr uint32_t kCFArmCount = sizeof(kCFArms) / sizeof(kCFArms[0]);
 constexpr uint64_t kCFSeedOffset = 774611ull;
@@ -14199,7 +14205,11 @@ bool run_ctxfeat(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
               "                    PROTOTYPES only learn while the larynx is quiet.\n");
   std::printf("  chance is 0.500 on two classes with balanced presentations.\n\n");
 
-  struct Cell { bool ok = false; double acc = 0.0; double dprime = 0.0; uint32_t n = 0; };
+  struct Cell {
+    bool ok = false; double acc = 0.0; double dprime = 0.0; uint32_t n = 0;
+    double sep = 0.0;        // |p(slot0|A) - p(slot0|B)|: what the INDEX extracts
+    uint64_t ia = 0, i0a = 0, ib = 0, i0b = 0;
+  };
   const uint32_t njobs = kReps * kCFArmCount;
   const std::vector<Cell> cells = parallel_reps<Cell>(njobs, [&](uint32_t i) {
     Cell c;
@@ -14207,6 +14217,18 @@ bool run_ctxfeat(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
     std::vector<uint8_t> variant = blob;
     const uint64_t seed = dna0.header().seed + kCFSeedOffset + r * 7919ull;
     std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+    // Turn the context machinery on and select the prototype gate. ctx_slots_ needs
+    // context_slots > 1 AND a context module, so this arm requires the ctx genome.
+    {
+      const size_t base = offsetof(aibaby::DnaHeader, exploration);
+      const uint32_t slots = 2u, src = 4u, gate = kCFArms[a].gate;
+      std::memcpy(variant.data() + base + offsetof(aibaby::DnaExploration, context_slots),
+                  &slots, sizeof(uint32_t));
+      std::memcpy(variant.data() + base + offsetof(aibaby::DnaExploration, context_source),
+                  &src, sizeof(uint32_t));
+      std::memcpy(variant.data() + base + offsetof(aibaby::DnaExploration, ctx_proto_gate),
+                  &gate, sizeof(uint32_t));
+    }
     Session s;
     std::string error;
     if (!s.init(variant, error)) return c;
@@ -14245,6 +14267,12 @@ bool run_ctxfeat(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
       std::vector<double> v(ms.count);
       for (uint32_t n = 0; n < ms.count; ++n) v[n] = double(net.rate_fast(ms.begin + n));
       (is_a ? fa : fb).push_back(std::move(v));
+      // WHAT THE INDEX ACTUALLY SAYS, at the same instant the feature is sampled.
+      // Labelling-invariant, as in credgate: the slots are unnamed, so score
+      // |p(slot0|A) - p(slot0|B)| rather than agreement with a fixed mapping.
+      const uint32_t slot = net.active_context();
+      if (is_a) { ++c.ia; if (slot == 0u) ++c.i0a; }
+      else { ++c.ib; if (slot == 0u) ++c.i0b; }
     }
     if (fa.size() < 8 || fb.size() < 8) return c;
 
@@ -14298,30 +14326,35 @@ bool run_ctxfeat(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
       }
     }
     c.n = uint32_t(total);
+    if (c.ia > 0 && c.ib > 0) {
+      c.sep = std::fabs(double(c.i0a) / double(c.ia) - double(c.i0b) / double(c.ib));
+    }
     c.ok = true;
     parallel_note("  [%u/%u] seed %u %-8s acc %.3f  d' %.2f  (n=%u)\n", i + 1, njobs, r,
                   kCFArms[a].name, c.acc, c.dprime, c.n);
     return c;
   });
 
-  std::printf("\n  %-10s %-22s %-18s %s\n", "pair", "held-out accuracy", "d' on the axis", "n");
+  std::printf("\n  %-10s %-20s %-16s %-20s %s\n", "arm", "FEATURE accuracy",
+              "d' on the axis", "INDEX separation", "n");
   bool any_separable = false;
   for (uint32_t a = 0; a < kCFArmCount; ++a) {
-    std::vector<double> ac, dp;
+    std::vector<double> ac, dp, sp;
     uint32_t n = 0;
     for (uint32_t r = 0; r < kReps; ++r) {
       const Cell& c = cells[r * kCFArmCount + a];
       if (!c.ok) continue;
-      ac.push_back(c.acc); dp.push_back(c.dprime); n = c.n;
+      ac.push_back(c.acc); dp.push_back(c.dprime); sp.push_back(c.sep); n = c.n;
     }
     if (ac.size() < 3) {
       std::printf("  %-10s INCONCLUSIVE (%zu creatures)\n", kCFArms[a].name, ac.size());
       continue;
     }
-    double sa = 0, sd = 0;
+    double sa = 0, sd = 0, ss = 0;
     const double m_ac = ctx_mean_se(ac, &sa), m_dp = ctx_mean_se(dp, &sd);
-    std::printf("  %-10s %.3f +/- %-14.3f %.2f +/- %-10.2f %u\n", kCFArms[a].name, m_ac, sa,
-                m_dp, sd, n);
+    const double m_sp = ctx_mean_se(sp, &ss);
+    std::printf("  %-10s %.3f +/- %-12.3f %.2f +/- %-8.2f %.3f +/- %-12.3f %u\n",
+                kCFArms[a].name, m_ac, sa, m_dp, sd, m_sp, ss, n);
     if (m_ac - 3.0 * sa > 0.5) any_separable = true;
   }
 

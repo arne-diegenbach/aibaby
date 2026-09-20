@@ -809,6 +809,17 @@ perturb_max = 0.30          # |bias| ceiling, in the same units as threshold
 # it is read as an index and never as drive. See `areax`, and the long note on
 # DnaExploration::context_slots for why this parameterisation and not another.
 context_slots = 0
+
+# DNA v59. When the context prototypes learn. `ctxfeat` measured the ear's rate_ema
+# distinguishing two words at 97.8% held-out where reward lands, while `credgate`
+# measured the INDEX built on that feature separating the same lessons at 0.012 --
+# so the source is right and the classifier throws the distinction away. The suspect
+# is sampling: for source 4 the index is read every tick but the PROTOTYPES only
+# learn while the LARYNX IS QUIET, i.e. fitted at moments chosen by the creature's
+# own vocal state rather than by the word.
+#   0 = the shipped larynx-quiet gate, BIT-IDENTICAL
+#   1 = update wherever the index is read, on the same feature vector
+ctx_proto_gate = 0
 # DNA v52: WHERE that index is read from. 0 is the kContext module (v51, and
 # bit-identical to it); 1 reads the larynx's own slices instead, over the
 # neurons outside the two articulator groups the F1/F2 score is computed from.
