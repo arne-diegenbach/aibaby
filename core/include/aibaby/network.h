@@ -188,6 +188,16 @@ class Network {
   // a table that is never indexed and a table that is indexed and useless are
   // the same flat result from outside.
   uint32_t active_context() const { return active_ctx_; }
+  // HOW MANY TIMES THE PROTOTYPES HAVE ACTUALLY BEEN UPDATED. MacQueen's rate is
+  // 1/wins, so this is the only thing that says whether a learning-rate floor can
+  // bind at all -- a floor of 3e-5 is inert if wins never passes a few thousand.
+  // The tau sweep's bracket was derived from wall-clock time without this, and two
+  // of its three points turned out never to engage.
+  Scalar ctx_wins_total() const {
+    Scalar t = kZero;
+    for (uint32_t c = 0; c < ctx_slots_; ++c) t += ctx_wins_[c];
+    return t;
+  }
   bool context_present() const { return ctx_present_; }
   uint32_t context_slots() const { return ctx_slots_; }
   uint32_t context_source() const { return ctx_source_; }

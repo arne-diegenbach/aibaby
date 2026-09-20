@@ -14337,6 +14337,7 @@ bool run_ctxfeat_impl(const std::vector<uint8_t>& blob, uint64_t ticks, bool ver
     // |cos| between the top principal component and the class-mean axis; `pcratio`
     // is the class gap measured in units of the spread along that component.
     double pcalign = 0.0, pcratio = 0.0;
+    double wins = 0.0;   // prototype updates over the run: whether a floor can bind
     uint64_t nsamp = 0, nflip = 0, nwflip = 0;
     uint32_t last_slot = 0; bool last_a = false;
   };
@@ -14526,6 +14527,7 @@ bool run_ctxfeat_impl(const std::vector<uint8_t>& blob, uint64_t ticks, bool ver
       c.pcalign = an > 1e-12 ? std::fabs(dotp) / an : 0.0;
       c.pcratio = sv > 1e-12 ? gap / sv : 0.0;
     }
+    c.wins = double(s.brain.network().ctx_wins_total());
     c.n = uint32_t(total);
     if (c.ia > 0 && c.ib > 0) {
       c.sep = std::fabs(double(c.i0a) / double(c.ia) - double(c.i0b) / double(c.ib));
@@ -14540,19 +14542,20 @@ bool run_ctxfeat_impl(const std::vector<uint8_t>& blob, uint64_t ticks, bool ver
     return c;
   });
 
-  std::printf("\n  %-10s %-18s %-15s %-18s %-6s %-6s %-6s %s\n", "arm", "FEATURE accuracy",
-              "d' on the axis", "INDEX separation", "p(s0)", "flip", "wflip", "pcalign/pcratio  n");
+  std::printf("\n  %-10s %-18s %-15s %-18s %-6s %-6s %-6s %-16s %s\n", "arm", "FEATURE accuracy",
+              "d' on the axis", "INDEX separation", "p(s0)", "flip", "wflip",
+              "pcalign/pcratio", "WINS  n");
   bool any_separable = false;
   std::vector<double> arm_sep(kCFArmN, -1.0), arm_sep_se(kCFArmN, 0.0);
   for (uint32_t a = 0; a < kCFArmN; ++a) {
-    std::vector<double> ac, dp, sp, fl, wf, pa, pr;
+    std::vector<double> ac, dp, sp, fl, wf, pa, pr, wn;
     uint32_t n = 0;
     for (uint32_t r = 0; r < kReps; ++r) {
       const Cell& c = cells[r * kCFArmN + a];
       if (!c.ok) continue;
       ac.push_back(c.acc); dp.push_back(c.dprime); sp.push_back(c.sep); n = c.n;
       fl.push_back(c.flip); wf.push_back(c.wflip);
-      pa.push_back(c.pcalign); pr.push_back(c.pcratio);
+      pa.push_back(c.pcalign); pr.push_back(c.pcratio); wn.push_back(c.wins);
     }
     if (ac.size() < 3) {
       std::printf("  %-10s INCONCLUSIVE (%zu creatures)\n", arms[a].name, ac.size());
@@ -14578,8 +14581,9 @@ bool run_ctxfeat_impl(const std::vector<uint8_t>& blob, uint64_t ticks, bool ver
     double spa = 0.0, spr = 0.0;
     const double m_pa = ctx_mean_se(pa, &spa), m_pr = ctx_mean_se(pr, &spr);
     (void)spa; (void)spr;
-    std::printf("  %-10s %.3f +/- %-10.3f %.2f +/- %-7.2f %.3f +/- %-10.3f %.3f  %.3f  %.3f  %.3f / %.3f   %u\n",
-                arms[a].name, m_ac, sa, m_dp, sd, m_sp, ss, m_p0, m_fl, m_wf, m_pa, m_pr, n);
+    std::printf("  %-10s %.3f +/- %-10.3f %.2f +/- %-7.2f %.3f +/- %-10.3f %.3f  %.3f  %.3f  %.3f / %.3f   %8.0f  %u\n",
+                arms[a].name, m_ac, sa, m_dp, sd, m_sp, ss, m_p0, m_fl, m_wf, m_pa, m_pr,
+                ctx_mean_se(wn, &spa), n);
     if (m_ac - 3.0 * sa > 0.5) any_separable = true;
   }
 
