@@ -5616,6 +5616,14 @@ enum RTArm { kRTQuiet = 0, kRTNoSleep, kRTRelearn, kRTNever, kRTArmCount };
 struct RTRow {
   double err_before = 0.0, err_taught = 0.0, err_after = 0.0;
   double retention = 0.0, dprime = 0.0, null = 0.0, settle = 0.0;
+  // DENOMINATOR-FREE. `retention` divides by (err_before - err_taught), the gain
+  // from teaching, and on the ctx genome that gain is small enough to blow the ratio
+  // up (oracle -5.587 +/- 6.729, keep arms 27.222 +/- 21.160). These two are the
+  // same facts without the division: how much teaching bought, and how much of it
+  // drifted back. Both in log units, both directly comparable across arms -- but
+  // ONLY when `gained` is matched, so any contrast on `erosion` must show it.
+  double gained = 0.0;    // err_before - err_taught: what teaching bought
+  double erosion = 0.0;   // err_after - err_taught: what came back, positive = forgot
   uint32_t sleeps = 0, scored = 0;
   double f1_taught = 0.0, f2_taught = 0.0, f1_after = 0.0, f2_after = 0.0;
   // How much of the replay buffer was overwritten AFTER teaching ended -- the
@@ -5891,6 +5899,16 @@ struct RTConfig {
   // /i/ at f1 320 (low) and B is f1 850 (high), so A is given the UPPER half and B
   // the LOWER -- each the half it actually uses, and disjoint.
   uint32_t credit_mode = 0;
+  // APPENDED AT THE END, because RTConfig is built with POSITIONAL aggregate
+  // initialisers in several arm tables -- putting this next to `context_source`,
+  // where it belongs logically, silently shifted every field after it and turned an
+  // oracle-index -1 into a gate of 4294967295. The compiler caught it as a narrowing
+  // conversion; nothing would have caught it if the neighbour had been unsigned.
+  //
+  // DNA v59. 2 adds DeSieno's conscience to source 4's winner selection, which is
+  // what takes the a-vs-i index from 0.002 separation to 0.999 on every creature
+  // (`ctxpc`). Without it the derived arms run on an index that carries nothing.
+  uint32_t ctx_proto_gate = 0;
 };
 
 // One arm, one creature, one life: teach, intervene, re-measure.
@@ -5926,12 +5944,16 @@ RTRow run_retain_arm(const std::vector<uint8_t>& blob, uint64_t ticks,
   }
   {
     const uint32_t sl = cfg.context_slots, sr = cfg.context_source;
+    const uint32_t pg = cfg.ctx_proto_gate;
     std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, exploration) +
                     offsetof(aibaby::DnaExploration, context_slots),
                 &sl, sizeof(sl));
     std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, exploration) +
                     offsetof(aibaby::DnaExploration, context_source),
                 &sr, sizeof(sr));
+    std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, exploration) +
+                    offsetof(aibaby::DnaExploration, ctx_proto_gate),
+                &pg, sizeof(pg));
   }
   {
     const uint32_t cr = cfg.replay_credit;
@@ -6377,6 +6399,8 @@ RTRow run_retain_arm(const std::vector<uint8_t>& blob, uint64_t ticks,
   r.f2_after = n_aa ? f2a / n_aa : 0.0;
   const double gained = r.err_before - r.err_taught;
   r.retention = std::fabs(gained) > 1e-6 ? (r.err_before - r.err_after) / gained : 0.0;
+  r.gained = gained;
+  r.erosion = r.err_after - r.err_taught;
   // What the same window does with no lesson in it at all.
   r.settle = r.err_taught > 1e-6 ? r.err_after / r.err_taught : 1.0;
   if (ceps.size() >= 24) {
@@ -13830,22 +13854,31 @@ bool run_regionband(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
 // found mirror-image profiles: a LOW target works by suppressing the UPPER half, a
 // HIGH target by suppressing the LOWER. A is /i/ at f1 320 and B is at 850, so A gets
 // the UPPER half and B the LOWER -- each the half it actually uses, and disjoint.
-struct CGArm { const char* name; uint32_t mode; bool keep; };
+struct CGArm { const char* name; uint32_t mode; bool keep; uint32_t gate; };
 const CGArm kCGArms[] = {
-    {"bcast-AB",   0u, false},   // the shipped broadcast rule: the 0.22 wipe
-    {"bcast-keep", 0u, true},
-    {"oracle-AB",  1u, false},   // the host masks by which lesson is live
-    {"oracle-keep", 1u, true},
-    {"derived-AB", 2u, false},   // the mask follows the creature's own index
-    {"derived-keep", 2u, true},
+    {"bcast-AB",   0u, false, 0u},   // the shipped broadcast rule: the 0.22 wipe
+    {"bcast-keep", 0u, true,  0u},
+    {"oracle-AB",  1u, false, 0u},   // the host masks by which lesson is live
+    {"oracle-keep", 1u, true, 0u},
+    // THE DERIVED ARMS, ON THE INDEX AS SHIPPED. `ctxpc` measured that index
+    // separating a-vs-i at 0.035 under the shipped prototype gate: it carries almost
+    // nothing, so these are the control, not the test.
+    {"derived-AB", 2u, false, 0u},
+    {"derived-keep", 2u, true, 0u},
+    // AND ON AN INDEX THAT ACTUALLY SEPARATES. Gate 2 is DeSieno's conscience, which
+    // takes a-vs-i to 0.999 separation on 6 of 6 creatures. THIS IS THE EXPERIMENT:
+    // the derived mask has never once run on an index that could tell the lessons
+    // apart, so every previous derived result priced a mask over noise.
+    {"derived2-AB", 2u, false, 2u},
+    {"derived2-keep", 2u, true, 2u},
     // THE LATCH replaces the coin-flip arm, whose specificity result is already
     // banked at -2.285 +/- 2.556 (-0.9 SE) -- a coin flip does NOT reproduce the
     // oracle, so the benefit is credit assignment and not merely halving the write.
     // `ctxsrc` measured the word at 1.000 while it PLAYS and 0.533 when reward LANDS,
     // so the index is read about two seconds too late. Mode 4 samples it while the
     // creature's own auditory drive is above its running mean and HOLDS it.
-    {"latch-AB",   4u, false},
-    {"latch-keep", 4u, true},
+    {"latch-AB",   4u, false, 0u},
+    {"latch-keep", 4u, true,  0u},
 };
 constexpr uint32_t kCGArmCount = sizeof(kCGArms) / sizeof(kCGArms[0]);
 constexpr uint64_t kCGSeedOffset = 318211ull;
@@ -13915,6 +13948,7 @@ bool run_credgate(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
     cfg.relearn = true;
     cfg.mask_mode = 0u;
     cfg.credit_mode = kCGArms[a].mode;
+    cfg.ctx_proto_gate = kCGArms[a].gate;
     // TURN THE CONTEXT MACHINERY ON. ctx_slots_ is set from
     // `exploration.context_slots > 1`, so at the shipped 0 the whole thing is inert
     // and active_context() returns 0 on every tick -- which is why the derived and
@@ -13957,8 +13991,11 @@ bool run_credgate(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
   double m_taught[kCGArmCount] = {}, s_taught[kCGArmCount] = {};
   double m_agree[kCGArmCount] = {};
   double m_ret[kCGArmCount] = {}, s_ret[kCGArmCount] = {};
-  std::printf("\n  %-13s %-9s %-20s %-20s %s\n", "arm", "mode", "err TAUGHT (A)",
-              "err AFTER (A kept?)", "agree");
+  double m_gain[kCGArmCount] = {}, s_gain[kCGArmCount] = {};
+  double m_ero[kCGArmCount] = {}, s_ero[kCGArmCount] = {};
+  std::printf("\n  %-13s %-5s %-5s %-18s %-18s %-16s %-16s %s\n", "arm", "mode",
+              "gate", "err TAUGHT (A)", "err AFTER (A kept?)", "GAINED", "EROSION",
+              "agree");
   for (uint32_t a = 0; a < kCGArmCount; ++a) {
     // RETENTION AS A FRACTION OF WHAT WAS GAINED -- the statistic credit-oracle
     // actually scored (0.84 broadcast -> 1.03 targeted). A reward mask COSTS learning
@@ -13967,11 +14004,18 @@ bool run_credgate(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
     // confounds "interference reduced" with "everything slowed", because the mask
     // moves both arms. (before - after)/(before - taught) divides the loss by the
     // GAIN, so a slower learner keeping the same proportion reads the same.
-    std::vector<double> af, tg, ag, rt;
+    std::vector<double> af, tg, ag, rt, gn, er;
     for (uint32_t r = 0; r < kReps; ++r) {
       const Cell& c = cells[r * kCGArmCount + a];
       if (!c.ok) continue;
       af.push_back(c.row.err_after); tg.push_back(c.row.err_taught);
+      // DENOMINATOR-FREE. On the ctx genome `err_taught` is 1.01-1.07 against 0.94
+      // on the shipped one, so the gain is small and the ratio explodes -- the
+      // oracle arm read -5.587 +/- 6.729 and the keep arms 27.222 +/- 21.160, which
+      // is a broken statistic reporting nothing. `gained` and `erosion` are the same
+      // facts without the division, and the contrast is only readable when `gained`
+      // is matched, which is now printed rather than assumed.
+      gn.push_back(c.row.gained); er.push_back(c.row.erosion);
       const double gain = c.row.err_before - c.row.err_taught;
       if (gain > 1e-6) rt.push_back((c.row.err_before - c.row.err_after) / gain);
       ag.push_back(c.row.credit_trials
@@ -13988,8 +14032,13 @@ bool run_credgate(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
     m_agree[a] = ctx_mean_se(ag, &sg);
     m_ret[a] = rt.size() >= 3 ? ctx_mean_se(rt, &sr) : 0.0;
     s_ret[a] = sr;
-    std::printf("  %-13s %-9u %.4f +/- %-12.4f %.4f +/- %-12.4f %.3f\n", kCGArms[a].name,
-                kCGArms[a].mode, m_taught[a], s_taught[a], m_after[a], s_after[a], m_agree[a]);
+    double sgn = 0.0, ser = 0.0;
+    m_gain[a] = ctx_mean_se(gn, &sgn); s_gain[a] = sgn;
+    m_ero[a] = ctx_mean_se(er, &ser); s_ero[a] = ser;
+    std::printf("  %-13s %-5u %-5u %.4f +/- %-10.4f %.4f +/- %-10.4f %+.4f +/- %-8.4f %+.4f +/- %-8.4f %.3f\n",
+                kCGArms[a].name, kCGArms[a].mode, kCGArms[a].gate,
+                m_taught[a], s_taught[a], m_after[a], s_after[a],
+                m_gain[a], sgn, m_ero[a], ser, m_agree[a]);
   }
 
   {
