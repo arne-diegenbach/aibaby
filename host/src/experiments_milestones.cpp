@@ -13926,6 +13926,18 @@ bool run_credgate(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
     // with a context module: run this with --dna ctx.toml from tools/ctxgenome.sh.
     cfg.context_slots = 2u;
     cfg.context_source = 4u;
+    // GIVE THE TWO LESSONS DIFFERENT SOUNDS, or the index has nothing to separate.
+    // `retain` says the SAME word throughout by default -- run_retain_arm's own
+    // comment spells it out: "nothing in the creature's input distinguishes lesson A
+    // from lesson B, they differ only in WHEN they happen. A context index read off
+    // the ear cannot separate them however good it is, which is the thing that was
+    // never tested."
+    //
+    // That is exactly why separation measured 0.011 +/- 0.003: the task had no
+    // acoustic difference to detect. kWords[0] is /a/ (f1 780) and kWords[1] is /i/
+    // (f1 320) -- the pair the mel filterbank resolves best, and the pair every
+    // naming experiment uses.
+    cfg.second_heard = 1;
     if (kCGArms[a].keep) { cfg.second_f1 = kCGKeepF1; cfg.second_f2 = kCGKeepF2; }
     Timbre local_ruler;
     std::string local_error;
