@@ -13871,14 +13871,14 @@ const CGArm kCGArms[] = {
     // apart, so every previous derived result priced a mask over noise.
     {"derived2-AB", 2u, false, 2u},
     {"derived2-keep", 2u, true, 2u},
-    // THE LATCH replaces the coin-flip arm, whose specificity result is already
-    // banked at -2.285 +/- 2.556 (-0.9 SE) -- a coin flip does NOT reproduce the
-    // oracle, so the benefit is credit assignment and not merely halving the write.
-    // `ctxsrc` measured the word at 1.000 while it PLAYS and 0.533 when reward LANDS,
-    // so the index is read about two seconds too late. Mode 4 samples it while the
-    // creature's own auditory drive is above its running mean and HOLDS it.
-    {"latch-AB",   4u, false, 0u},
-    {"latch-keep", 4u, true,  0u},
+    // THE LATCH ARMS (mode 4) ARE DROPPED FROM THIS RUN, not from the design. They
+    // test a different mechanism -- sampling the index while auditory drive is above
+    // its running mean and holding it -- and they run on gate 0, so they would price
+    // a latch over the same noisy index everything else here already prices. At 3.4M
+    // ticks each they cost about an hour of the run and answer a question this one is
+    // not asking. Their banked result stands: a coin flip does NOT reproduce the
+    // oracle (-2.285 +/- 2.556), so the benefit is credit assignment rather than
+    // merely halving the write.
 };
 constexpr uint32_t kCGArmCount = sizeof(kCGArms) / sizeof(kCGArms[0]);
 constexpr uint64_t kCGSeedOffset = 318211ull;
