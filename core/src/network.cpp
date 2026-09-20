@@ -438,6 +438,9 @@ bool Network::build(const Dna& dna, Arena& arena, Rng& rng) {
   // genome allocates nothing and hashes exactly as it did.
   ctx_slots_ = h.exploration.context_slots > 1 ? h.exploration.context_slots : 0;
   ctx_proto_gate_ = h.exploration.ctx_proto_gate;
+  ctx_proto_lr_floor_ = h.exploration.ctx_proto_tau_ms > 0u
+                            ? dt_ms_ / Scalar(h.exploration.ctx_proto_tau_ms)
+                            : kZero;
   ctx_source_ = h.exploration.context_source;
   ctx_param_ = h.exploration.ctx_param;
   ctx_module_ = -1;
@@ -1574,7 +1577,17 @@ void Network::step() {
           ctx_dsum_ += best_d;
           ctx_dn_ += kOne;
           ctx_wins_[winner] += kOne;
-          const Scalar lr = kOne / ctx_wins_[winner];
+          // DNA v60. MacQueen's 1/wins is optimal for a STATIONARY distribution and
+          // wrong for a creature being taught: after a long first lesson the rate is
+          // about 1e-6 and a second word introduced later cannot move the prototypes
+          // at all. `ctxfeat` measures that directly -- a-vs-i separates at 0.999
+          // when the words alternate from the start and at EXACTLY 0.000 when the
+          // second arrives halfway through, same creatures, same conscience. The
+          // floor makes the prototype an EMA with time constant ctx_proto_tau_ms
+          // once 1/wins falls below it. 0 is off and bit-identical.
+          Scalar lr = kOne / ctx_wins_[winner];
+          if (ctx_proto_lr_floor_ > kZero && lr < ctx_proto_lr_floor_)
+            lr = ctx_proto_lr_floor_;
           Scalar* proto = ctx_proto_ + size_t(winner) * sms.capacity;
           for (uint32_t n = 0; n < sms.count; ++n) {
             proto[n] += lr * (rate_ema_[sms.begin + n] - proto[n]);

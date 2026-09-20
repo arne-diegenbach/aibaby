@@ -1377,6 +1377,28 @@ struct DnaExploration {
   // ceiling is 0.978, so a gate that is the whole story should move it a long way;
   // a small move means the sampling was only part of the problem.
   uint32_t ctx_proto_gate;
+
+  // DNA v60: A FLOOR UNDER THE PROTOTYPE LEARNING RATE, in milliseconds. 0 is OFF
+  // and bit-identical.
+  //
+  // MacQueen's rule makes each prototype the running mean of what it has won, at a
+  // rate of 1/wins. That is optimal for a STATIONARY distribution and wrong for a
+  // creature being taught: `ctxfeat` measures a-vs-i separating at 0.999 when the
+  // two words alternate from the start and at EXACTLY 0.000 when the second word
+  // arrives halfway through, on the same creatures with the same conscience. By
+  // then the rate has decayed to about 1e-6 and the prototypes cannot move. That is
+  // also why `credgate` reads 0.084 where `ctxpc` reads 0.999: teaching introduces
+  // the second word late, and teaching is the only protocol that matters.
+  //
+  // The floor is `lr >= dt_ms / ctx_proto_tau_ms`, which makes the prototype an EMA
+  // with time constant tau once 1/wins drops below it.
+  //
+  // THE CONSTANT IS BRACKETED, NOT GUESSED. Below the feature's own EMA window
+  // (1000 ms, `rate_alpha_ = dt_ms/1000`) the prototype merely tracks the
+  // instantaneous feature and cannot be a class mean. Above the length of a lesson
+  // phase it cannot track a change of word at all. Everything useful is between
+  // those two, so the value is swept across that bracket rather than picked.
+  uint32_t ctx_proto_tau_ms;
 };
 
 // Divisive normalisation (§3.1, DNA v12). The per-module strength lives on

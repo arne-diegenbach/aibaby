@@ -1019,6 +1019,7 @@ class Network {
   uint32_t ctx_proto_gate_ = 0;   // DNA v59: 0 = larynx-quiet gate, 1 = where read,
                                   // 2 = + conscience, 3 = + data seeding, 4 = seeding only
   uint32_t ctx_seeded_ = 0;       // 1 once the prototypes have been seeded from data
+  Scalar ctx_proto_lr_floor_ = kZero;  // DNA v60: dt_ms / ctx_proto_tau_ms, 0 = off
   static constexpr uint32_t kCtxSelfSkipA = 2;  // F1
   static constexpr uint32_t kCtxSelfSkipB = 3;  // F2
   // DNA v53, source 2. One prototype per context over the source module's

@@ -14222,6 +14222,8 @@ struct CFArm {
   // ever sounds -- and it is the difference between ctxpc's 0.999 separation and
   // credgate's 0.084 on the same pair with the same conscience.
   uint32_t late;
+  // DNA v60: floor under the prototype learning rate, in ms. 0 = off.
+  uint32_t tau_ms;
 };
 // Each pair runs under BOTH prototype gates, so the ceiling (what the feature
 // carries) and the achieved (what the index extracts) are measured on the same
@@ -14254,8 +14256,21 @@ const CFArm kCFArms[] = {
     // WHAT WOULD REFUSE THE ACCOUNT: `a-i g2L` still separating near 0.999, which
     // would mean the freeze is not why credgate fails and the two protocols differ
     // for some other reason.
-    {"a-i g2L", 0u, 1u, 2u, 1u, 1u},
-    {"a-i g0L", 0u, 1u, 0u, 1u, 1u},
+    {"a-i g2L", 0u, 1u, 2u, 1u, 1u, 0u},
+    {"a-i g0L", 0u, 1u, 0u, 1u, 1u, 0u},
+    // DNA v60, THE FIX, SWEPT ACROSS A DERIVED BRACKET rather than set to a guess.
+    // Below the feature's own EMA window (1000 ms) the prototype merely tracks the
+    // instantaneous feature and cannot be a class mean; above the length of a lesson
+    // phase (300k ticks here) it cannot track a change of word at all. Everything
+    // useful is between those, so three points span it geometrically.
+    // WHAT WOULD REFUSE IT: the late arms staying at 0.000 at every tau, which would
+    // mean the freeze is not the binding constraint after all.
+    {"a-i L-t3",   0u, 1u, 2u, 1u, 1u, 3000u},
+    {"a-i L-t30",  0u, 1u, 2u, 1u, 1u, 30000u},
+    {"a-i L-t300", 0u, 1u, 2u, 1u, 1u, 300000u},
+    // AND THE SAME FLOOR WITHOUT THE LATE PROTOCOL, so a tau that helps the late arm
+    // can be checked for what it costs the one that already worked.
+    {"a-i s-t30",  0u, 1u, 2u, 1u, 0u, 30000u},
 };
 constexpr uint32_t kCFArmCount = sizeof(kCFArms) / sizeof(kCFArms[0]);
 constexpr uint64_t kCFSeedOffset = 774611ull;
@@ -14286,7 +14301,7 @@ bool run_ctxfeat_impl(const std::vector<uint8_t>& blob, uint64_t ticks, bool ver
     uint32_t k = 0;
     for (uint32_t x = 0; x < kNWords; ++x)
       for (uint32_t y = x + 1; y < kNWords; ++y)
-        arms.push_back(CFArm{names[k++].c_str(), x, y, 2u, 1u, 0u});
+        arms.push_back(CFArm{names[k++].c_str(), x, y, 2u, 1u, 0u, 0u});
   } else {
     for (uint32_t a = 0; a < kCFArmCount; ++a) arms.push_back(kCFArms[a]);
   }
@@ -14337,6 +14352,9 @@ bool run_ctxfeat_impl(const std::vector<uint8_t>& blob, uint64_t ticks, bool ver
     {
       const size_t base = offsetof(aibaby::DnaHeader, exploration);
       const uint32_t slots = 2u, src = 4u, gate = arms[a].gate;
+      const uint32_t tau = arms[a].tau_ms;
+      std::memcpy(variant.data() + base + offsetof(aibaby::DnaExploration, ctx_proto_tau_ms),
+                  &tau, sizeof(uint32_t));
       std::memcpy(variant.data() + base + offsetof(aibaby::DnaExploration, context_slots),
                   &slots, sizeof(uint32_t));
       std::memcpy(variant.data() + base + offsetof(aibaby::DnaExploration, context_source),
