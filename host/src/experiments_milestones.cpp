@@ -5689,7 +5689,12 @@ struct RTRow {
   // Did the mask land on the half the live lesson actually wants? For mode 1 this is
   // 100% by construction; for mode 2 it is the index's accuracy, which is the whole
   // question; for mode 3 it should sit at chance.
-  uint64_t credit_trials = 0, credit_agree = 0;                    // neurons in the F1 group
+  uint64_t credit_trials = 0, credit_agree = 0;
+  // The joint distribution of context slot against which lesson is live. Separation
+  // is scored from these as |p(slot0|A) - p(slot0|B)|, which is invariant to the
+  // arbitrary slot labelling that makes raw agreement average to chance.
+  uint64_t ctx_want_n = 0, ctx_want_slot0 = 0;
+  uint64_t ctx_other_n = 0, ctx_other_slot0 = 0;                    // neurons in the F1 group
   uint64_t f1_samp_early = 0, f1_samp_late = 0, f1_samp_all = 0;
   // THE GAP PHASE, i.e. LESSON B (`gapwrite`, 2026-09-16). `blockflip` showed the
   // creature learns by SILENCING whichever half sits on the wrong side of the
@@ -6117,6 +6122,21 @@ RTRow run_retain_arm(const std::vector<uint8_t>& blob, uint64_t ticks,
       // AGREEMENT TELEMETRY, so a null can be told from an index that never moved.
       ++row.credit_trials;
       if (upper == want) ++row.credit_agree;
+      // SEPARATION, NOT LABELLING -- and the distinction is the whole measurement.
+      // The context slots are UNLABELLED: which slot means "lesson A" is arbitrary
+      // and seed-dependent, so `upper = (active_context() == 0)` is a coin flip PER
+      // SEED -- right for half of them, wrong for the rest, averaging to exactly the
+      // chance agreement observed. That says nothing about whether the index
+      // separates the lessons. `ctxfour` drew the same line: a perfect index holds
+      // four DISTINCTIONS, not four MAPPINGS.
+      //
+      // So count the joint distribution instead, and score separation afterwards as
+      // max(p, 1-p) -- invariant to which slot got which name.
+      if (cfg.credit_mode == 2 || cfg.credit_mode == 4) {
+        const uint32_t slot = cfg.credit_mode == 4 ? latched_ctx : cnet.active_context();
+        if (want) { ++row.ctx_want_n; if (slot == 0u) ++row.ctx_want_slot0; }
+        else { ++row.ctx_other_n; if (slot == 0u) ++row.ctx_other_slot0; }
+      }
     }
     double f1_acc = 0, f2_acc = 0;
     uint32_t nv = 0;
@@ -13976,6 +13996,34 @@ bool run_credgate(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
                   k == 3 ? "   <- must NOT" : "");
     }
   }
+
+  std::printf("\n  SEPARATION -- does the index DISTINGUISH the two lessons, regardless of\n"
+              "  which slot got which name? Raw agreement cannot answer this: the slots are\n"
+              "  UNLABELLED, so a fixed slot->half mapping is a coin flip per seed and\n"
+              "  averages to chance however well the index separates. Scored as\n"
+              "  |p(slot0 | lesson A) - p(slot0 | lesson B)|: 0 is no information, 1 is\n"
+              "  perfect separation. `ctxfour` drew the same line -- a perfect index holds\n"
+              "  four DISTINCTIONS, not four MAPPINGS.\n");
+  for (uint32_t a = 0; a < kCGArmCount; ++a) {
+    if (kCGArms[a].mode != 2u && kCGArms[a].mode != 4u) continue;
+    std::vector<double> sep;
+    for (uint32_t r = 0; r < kReps; ++r) {
+      const Cell& c = cells[r * kCGArmCount + a];
+      if (!c.ok || c.row.ctx_want_n == 0 || c.row.ctx_other_n == 0) continue;
+      const double pa = double(c.row.ctx_want_slot0) / double(c.row.ctx_want_n);
+      const double pb = double(c.row.ctx_other_slot0) / double(c.row.ctx_other_n);
+      sep.push_back(std::fabs(pa - pb));
+    }
+    if (sep.size() < 3) { std::printf("    %-13s too few creatures\n", kCGArms[a].name); continue; }
+    double se = 0.0;
+    const double m = ctx_mean_se(sep, &se);
+    std::printf("    %-13s separation %.3f +/- %.3f  over %zu creatures\n",
+                kCGArms[a].name, m, se, sep.size());
+  }
+  std::printf("    A separation near 0 refutes THIS INDEX as a carrier. A separation well\n"
+              "    above 0 with chance AGREEMENT means the index works and only the\n"
+              "    slot->half assignment is arbitrary -- which is a fixable wiring problem,\n"
+              "    not a refutation.\n");
 
   std::printf("\n  AGREEMENT GUARD -- did the mask land where the live lesson wanted?\n");
   const double or_ag = m_agree[2], sh_ag = m_agree[6], dv_ag = m_agree[4];
