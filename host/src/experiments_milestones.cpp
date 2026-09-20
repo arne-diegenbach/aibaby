@@ -14271,6 +14271,18 @@ const CFArm kCFArms[] = {
     // AND THE SAME FLOOR WITHOUT THE LATE PROTOCOL, so a tau that helps the late arm
     // can be checked for what it costs the one that already worked.
     {"a-i s-t30",  0u, 1u, 2u, 1u, 0u, 30000u},
+    // RATES THAT DEFINITELY CLEAR FLOAT EPSILON. tau 30000 and 300000 turned out to
+    // be bit-identical to the floor being OFF -- not because 1/wins was already
+    // larger, but because `lr * (x - proto)` fell under eps = 1.2e-7 against a
+    // prototype of order 1. Only tau 3000 engaged, and it did not rescue the late
+    // arm. These two sit an order of magnitude above it, BELOW the feature's own
+    // 1000 ms EMA window, so they are outside the bracket I derived and are run to
+    // answer a different question: can the mechanism work AT ALL?
+    // WHAT WOULD REFUSE DNA v60 OUTRIGHT: the late arms staying at 0.000 here too,
+    // at rates where the prototype demonstrably does move.
+    {"a-i L-t1k",  0u, 1u, 2u, 1u, 1u, 1000u},
+    {"a-i L-t300ms", 0u, 1u, 2u, 1u, 1u, 300u},
+    {"a-i s-t1k",  0u, 1u, 2u, 1u, 0u, 1000u},
 };
 constexpr uint32_t kCFArmCount = sizeof(kCFArms) / sizeof(kCFArms[0]);
 constexpr uint64_t kCFSeedOffset = 774611ull;

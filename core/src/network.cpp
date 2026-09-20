@@ -1585,6 +1585,16 @@ void Network::step() {
           // second arrives halfway through, same creatures, same conscience. The
           // floor makes the prototype an EMA with time constant ctx_proto_tau_ms
           // once 1/wins falls below it. 0 is off and bit-identical.
+          //
+          // AND THERE IS A SECOND FLOOR UNDER THIS ONE, WHICH IS NUMERICAL. The
+          // update is `proto += lr * (x - proto)`, so with |proto| of order 1 the
+          // increment vanishes into float32 whenever `lr * |x - proto|` falls below
+          // eps = 1.2e-7. Measured: tau 3000 (increment ~27x eps) moves the pinned
+          // hash, tau 30000 (~2.8x eps) and tau 300000 (below eps) DO NOT -- they are
+          // bit-identical to the floor being off, at 600k ticks, with the field
+          // verified as loaded. So MacQueen's decay and float32 stagnation freeze the
+          // prototypes for two INDEPENDENT reasons, and any floor must clear eps
+          // relative to |proto|/|residual| before it can clear 1/wins.
           Scalar lr = kOne / ctx_wins_[winner];
           if (ctx_proto_lr_floor_ > kZero && lr < ctx_proto_lr_floor_)
             lr = ctx_proto_lr_floor_;
