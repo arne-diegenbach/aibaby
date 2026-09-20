@@ -1,4 +1,4 @@
-# credgate + latch -- CARRIES A RETRACTION. The  and  arms never
+# credgate + latch -- CARRIES A RETRACTION. The derived and latch arms never
 # consulted the creature's context index.
 # 2026-09-19. verify PASS, hash ad96f882becbee92.
 #
@@ -12,7 +12,7 @@
 #   latch:   upper = (latched_ctx == 0)      = TRUE always, the latch never fires
 # Both arms are one fixed policy: ALWAYS MASK TO A'S HALF.
 #
-# AND 0.720 IS NOT AN INDEX ACCURACY.  counts upper == want, and with
+# AND 0.720 IS NOT AN INDEX ACCURACY. agreement counts upper == want, and with
 # upper constantly TRUE it reduces to the fraction of trials where want is TRUE:
 # the teach phase (60%) plus the after phase (12%) = EXACTLY 0.720. A trial-ratio.
 # The keep arms read 1.000 for the same reason -- their second lesson also targets
