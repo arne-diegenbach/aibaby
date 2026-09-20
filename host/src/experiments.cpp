@@ -437,6 +437,14 @@ const Spec kSpecs[] = {
      "  0.84) but that is an oracle. This drives the mask from the creature's OWN\n"
      "  ear-EMA context index, with a coin-flip arm to separate the index CONTENT\n"
      "  from the mere act of masking. 12 seeds"},
+    {"ctxfeat", 600000, Expect::kOpen, Tier::kLong,
+     "IS THE EAR FEATURE SEPARABLE, OR IS THE CLASSIFIER THE PROBLEM? credgate found\n"
+     "  the ear-EMA index separating two lessons at 0.012 even with acoustically\n"
+     "  distinct words. Two things can fail and they need OPPOSITE fixes. This scores\n"
+     "  a nearest-CLASS-MEAN classifier on HELD-OUT ear rate_ema samples taken where\n"
+     "  reward lands -- the best any prototype rule could do, so it upper-bounds the\n"
+     "  classifier. At chance the FEATURE is wrong; above it the prototype learning\n"
+     "  is. 6 seeds, 3 vowel pairs"},
     {"movability", 5600000, Expect::kOpen, Tier::kLong,
      "orthovocab left a LEAD: on identical demands the F2 lesson travelled\n"
      "  0.169 and the F1 lesson 0.030 -- but F1's was FIGHTING another lesson on\n"
@@ -792,6 +800,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "halfcenter") ok = run_halfcenter(dna_blob, ticks, verbose);
   else if (name == "regionband") ok = run_regionband(dna_blob, ticks, verbose);
   else if (name == "credgate") ok = run_credgate(dna_blob, ticks, verbose);
+  else if (name == "ctxfeat") ok = run_ctxfeat(dna_blob, ticks, verbose);
   else if (name == "partprobe") ok = run_partprobe(dna_blob, ticks, verbose);
   else if (name == "pgprobe") ok = run_pgprobe(dna_blob, ticks, verbose);
   else if (name == "g2cond") ok = run_g2cond(dna_blob, ticks, verbose);

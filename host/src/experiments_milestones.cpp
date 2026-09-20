@@ -14138,6 +14138,214 @@ bool run_credgate(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
   return oracle_works && derived_works && shuf_clean;
 }
 
+// ============================================================================
+// `ctxfeat` — IS THE EAR FEATURE SEPARABLE, OR IS THE CLASSIFIER THE PROBLEM?
+//
+// `credgate` established that the ear-EMA context index separates two lessons at
+// 0.012 +/- 0.003 -- essentially not at all -- even when they are accompanied by
+// acoustically distinct words (/a/ f1 780 against /i/ f1 320, the pair the mel
+// filterbank resolves best). The index is ACTIVE, not inert: it toggles evenly, it
+// just does not toggle on the word.
+//
+// There are exactly two places that can fail, and they call for opposite fixes:
+//   FEATURE   -- the ear's per-neuron `rate_ema_` does not distinguish the words at
+//                the moment the index is read, in which case no classifier can help
+//                and the source is wrong;
+//   CLASSIFIER -- the feature does distinguish them and the nearest-prototype rule
+//                does not extract it, in which case the source is fine and the
+//                prototype learning is the target.
+//
+// The prototype update is the suspect: for source 4 the INDEX is read every tick
+// from the EMA, but the PROTOTYPES only learn inside a gate on the larynx being
+// quiet (`gms.mean_rate < ctx_gate_target_`). So the prototypes are sampled at
+// moments selected by the creature's own vocal state rather than by the word.
+//
+// This measures the FEATURE directly and under the rule source 4 actually runs:
+// play the two words in alternation, collect the ear's per-neuron rate_ema at the
+// same phase of each presentation, and score a nearest-CLASS-MEAN classifier on
+// held-out samples. That is the best any prototype rule could do, so it is an upper
+// bound on the classifier -- if this is at chance, the feature is the problem.
+struct CFArm { const char* name; uint32_t word_a; uint32_t word_b; };
+const CFArm kCFArms[] = {
+    {"a-vs-i", 0u, 1u},   // the pair credgate used, and every naming experiment
+    {"a-vs-u", 0u, 2u},   // /u/: f1 within 30 Hz of /i/, f2 1600 Hz away
+    {"i-vs-u", 1u, 2u},   // nearly pure F2 -- the hardest pair for a rate code
+};
+constexpr uint32_t kCFArmCount = sizeof(kCFArms) / sizeof(kCFArms[0]);
+constexpr uint64_t kCFSeedOffset = 774611ull;
+
+bool run_ctxfeat(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  aibaby::Dna dna0;
+  if (dna0.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) {
+    std::printf("  setup failed: the genome does not load\n");
+    return false;
+  }
+  constexpr uint32_t kReps = 6;
+  instrument("ctxfeat", dna0.header().seed ^ 0xFEA7u, ticks, "ticks");
+  std::printf("  question          credgate found the ear-EMA index separating two lessons\n"
+              "                    at 0.012 +/- 0.003 even with acoustically distinct words.\n"
+              "                    Two things can fail and they need OPPOSITE fixes: the\n"
+              "                    FEATURE does not distinguish the words, or the CLASSIFIER\n"
+              "                    does not extract it.\n");
+  std::printf("  the measurement   collect the ear's per-neuron rate_ema at the same phase of\n"
+              "                    each presentation and score a nearest-CLASS-MEAN classifier\n"
+              "                    on HELD-OUT samples. That is the best any prototype rule\n"
+              "                    could do, so it upper-bounds the classifier.\n");
+  std::printf("  reading it        at chance -> the FEATURE is the problem and source 4 is the\n"
+              "                    wrong source. Well above chance -> the feature is fine and\n"
+              "                    the prototype learning is the target, which is the suspect:\n"
+              "                    for source 4 the index is read every tick but the\n"
+              "                    PROTOTYPES only learn while the larynx is quiet.\n");
+  std::printf("  chance is 0.500 on two classes with balanced presentations.\n\n");
+
+  struct Cell { bool ok = false; double acc = 0.0; double dprime = 0.0; uint32_t n = 0; };
+  const uint32_t njobs = kReps * kCFArmCount;
+  const std::vector<Cell> cells = parallel_reps<Cell>(njobs, [&](uint32_t i) {
+    Cell c;
+    const uint32_t r = i / kCFArmCount, a = i % kCFArmCount;
+    std::vector<uint8_t> variant = blob;
+    const uint64_t seed = dna0.header().seed + kCFSeedOffset + r * 7919ull;
+    std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+    Session s;
+    std::string error;
+    if (!s.init(variant, error)) return c;
+    const aibaby::DnaAudio& acfg = s.dna.header().audio;
+    Ear ear;
+    if (!ear.configure(acfg, error)) return c;
+    const int32_t am = s.dna.module_with_role(aibaby::ModuleRole::kAuditory);
+    if (am < 0) return c;
+    VowelSource caregiver(acfg.sample_rate);
+    const uint32_t spt = acfg.sample_rate / 1000;
+    std::vector<float> pcm(spt);
+    const Word& wa = kWords[kCFArms[a].word_a];
+    const Word& wb = kWords[kCFArms[a].word_b];
+
+    // Presentations alternate, 1000 ticks each: 900 sounding, 100 silent -- the same
+    // duty the retain protocol uses, so the feature is sampled the way it is in the
+    // experiment this is diagnosing.
+    std::vector<std::vector<double>> fa, fb;
+    const uint64_t settle = ticks / 10;
+    for (uint64_t t = 0; t < ticks; ++t) {
+      const uint64_t pres = t / 1000;
+      const bool is_a = (pres & 1u) == 0u;
+      const Word& w = is_a ? wa : wb;
+      const bool sounding = (t % 1000) < 900;
+      caregiver.render(sounding ? w.f0 : 0.0f, w.f1, w.f2, sounding ? 0.5f : 0.0f,
+                       pcm.data(), spt);
+      ear.tick(s.brain, pcm.data(), spt);
+      s.brain.step();
+      if (t < settle) continue;
+      // SAMPLED AT THE END OF THE SILENT TAIL, which is where the retain protocol's
+      // reward lands -- the EMA still carries the word that just ended, which is the
+      // whole premise of source 4.
+      if ((t % 1000) != 999) continue;
+      const aibaby::Network& net = s.brain.network();
+      const aibaby::ModuleState& ms = net.module(uint32_t(am));
+      std::vector<double> v(ms.count);
+      for (uint32_t n = 0; n < ms.count; ++n) v[n] = double(net.rate_fast(ms.begin + n));
+      (is_a ? fa : fb).push_back(std::move(v));
+    }
+    if (fa.size() < 8 || fb.size() < 8) return c;
+
+    // HELD-OUT: first half fits the class means, second half is scored. Fitting and
+    // scoring on the same samples would make any feature look separable.
+    const size_t ha = fa.size() / 2, hb = fb.size() / 2;
+    const size_t dim = fa[0].size();
+    std::vector<double> ma(dim, 0.0), mb(dim, 0.0);
+    for (size_t k = 0; k < ha; ++k)
+      for (size_t d = 0; d < dim; ++d) ma[d] += fa[k][d] / double(ha);
+    for (size_t k = 0; k < hb; ++k)
+      for (size_t d = 0; d < dim; ++d) mb[d] += fb[k][d] / double(hb);
+    uint32_t right = 0, total = 0;
+    const auto score = [&](const std::vector<std::vector<double>>& f, size_t from, bool want_a) {
+      for (size_t k = from; k < f.size(); ++k) {
+        double da = 0.0, db = 0.0;
+        for (size_t d = 0; d < dim; ++d) {
+          const double ea = f[k][d] - ma[d], eb = f[k][d] - mb[d];
+          da += ea * ea; db += eb * eb;
+        }
+        const bool said_a = da < db;
+        if (said_a == want_a) ++right;
+        ++total;
+      }
+    };
+    score(fa, ha, true);
+    score(fb, hb, false);
+    c.acc = total ? double(right) / double(total) : 0.0;
+    // d' on the projection onto the class-mean difference: a scale-free read of how
+    // far apart the two clouds are, independent of the classifier.
+    {
+      std::vector<double> ax(dim);
+      double nrm = 0.0;
+      for (size_t d = 0; d < dim; ++d) { ax[d] = ma[d] - mb[d]; nrm += ax[d] * ax[d]; }
+      nrm = std::sqrt(nrm);
+      if (nrm > 1e-9) {
+        for (size_t d = 0; d < dim; ++d) ax[d] /= nrm;
+        const auto proj = [&](const std::vector<double>& v) {
+          double p = 0.0;
+          for (size_t d = 0; d < dim; ++d) p += v[d] * ax[d];
+          return p;
+        };
+        double m1 = 0, m2 = 0, s1 = 0, s2 = 0;
+        for (const auto& v : fa) m1 += proj(v) / double(fa.size());
+        for (const auto& v : fb) m2 += proj(v) / double(fb.size());
+        for (const auto& v : fa) { const double e = proj(v) - m1; s1 += e * e; }
+        for (const auto& v : fb) { const double e = proj(v) - m2; s2 += e * e; }
+        s1 = std::sqrt(s1 / double(fa.size())); s2 = std::sqrt(s2 / double(fb.size()));
+        const double pooled = std::sqrt(0.5 * (s1 * s1 + s2 * s2));
+        c.dprime = pooled > 1e-9 ? std::fabs(m1 - m2) / pooled : 0.0;
+      }
+    }
+    c.n = uint32_t(total);
+    c.ok = true;
+    parallel_note("  [%u/%u] seed %u %-8s acc %.3f  d' %.2f  (n=%u)\n", i + 1, njobs, r,
+                  kCFArms[a].name, c.acc, c.dprime, c.n);
+    return c;
+  });
+
+  std::printf("\n  %-10s %-22s %-18s %s\n", "pair", "held-out accuracy", "d' on the axis", "n");
+  bool any_separable = false;
+  for (uint32_t a = 0; a < kCFArmCount; ++a) {
+    std::vector<double> ac, dp;
+    uint32_t n = 0;
+    for (uint32_t r = 0; r < kReps; ++r) {
+      const Cell& c = cells[r * kCFArmCount + a];
+      if (!c.ok) continue;
+      ac.push_back(c.acc); dp.push_back(c.dprime); n = c.n;
+    }
+    if (ac.size() < 3) {
+      std::printf("  %-10s INCONCLUSIVE (%zu creatures)\n", kCFArms[a].name, ac.size());
+      continue;
+    }
+    double sa = 0, sd = 0;
+    const double m_ac = ctx_mean_se(ac, &sa), m_dp = ctx_mean_se(dp, &sd);
+    std::printf("  %-10s %.3f +/- %-14.3f %.2f +/- %-10.2f %u\n", kCFArms[a].name, m_ac, sa,
+                m_dp, sd, n);
+    if (m_ac - 3.0 * sa > 0.5) any_separable = true;
+  }
+
+  std::printf("\n  --- the reading ---\n");
+  if (any_separable) {
+    std::printf("  THE FEATURE IS SEPARABLE. The ear's rate_ema does distinguish the words at\n"
+                "  the moment the index is read, so source 4 is not the wrong source and the\n"
+                "  0.012 separation credgate measured is the CLASSIFIER failing to extract\n"
+                "  what is there.\n");
+    std::printf("  THE SUSPECT IS THE PROTOTYPE UPDATE: for source 4 the index is read every\n"
+                "  tick from the EMA, but the prototypes only learn inside a gate on the\n"
+                "  LARYNX BEING QUIET. They are sampled at moments chosen by the creature's\n"
+                "  own vocal state rather than by the word, so they need not converge on the\n"
+                "  distinction the feature carries.\n");
+  } else {
+    std::printf("  THE FEATURE IS NOT SEPARABLE at the moment the index is read. No prototype\n"
+                "  rule can extract a distinction the feature does not carry, so the\n"
+                "  classifier is not the problem and source 4 is the wrong source.\n");
+    std::printf("  That would also explain `partprobe` scoring this rule at 1.000: it scored\n"
+                "  the feature WHILE THE WORD PLAYS, and this samples it where reward lands.\n");
+  }
+  return any_separable;
+}
+
 bool run_movability(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
   (void)verbose;
   Regime regime;
