@@ -11083,6 +11083,23 @@ papers about the half it does not touch.
   essentially nothing over "this pair is easier to hear". The theory is not in
   question; what it predicted here was not distinguishable from the trivial
   predictor, and three pairs in the right order had made it look as though it was.
+- Carpenter, G. A. & Grossberg, S. (1987). *A massively parallel architecture for a
+  self-organizing neural pattern recognition machine.* Computer Vision, Graphics, and
+  Image Processing 37(1), 54–115. <https://doi.org/10.1016/S0734-189X(87)80014-2>
+  — **named the wall DNA v60 hit, forty years earlier.** The stability–plasticity
+  dilemma is exactly this project's measurement: a prototype rate fast enough to
+  acquire a word introduced late is fast enough to destroy the pair that already
+  worked (0.999 → 0.480), and a rate slow enough to preserve it cannot learn the new
+  one at all. Their answer is not a rate but a vigilance test — an input far enough
+  from every existing prototype commits a NEW unit rather than dragging an old one.
+  Not built here; it is the direction the refusal points to, and it would also turn
+  the context module from k-means with a fixed slot count into something that decides
+  when a word deserves a slot.
+- Platt, J. (1991). *A resource-allocating network for function interpolation.*
+  Neural Computation 3(2), 213–225. <https://doi.org/10.1162/neco.1991.3.2.213>
+  — the same allocation idea for function approximation: allocate a new unit when the
+  input is both novel and badly predicted, otherwise adapt existing ones. Listed
+  beside ART because it is the cheaper of the two to build on this kernel.
 - DeSieno, D. (1988). *Adding a conscience to competitive learning.*
   Proceedings of the IEEE International Conference on Neural Networks, San Diego,
   Vol. I, 117–124. IEEE Press.
@@ -12262,3 +12279,49 @@ That is a testable claim rather than a story, and testing it does not need anoth
 alternating should reproduce credgate's collapse at a sixth of the cost. It is
 pre-registered to refuse itself — if the late arm still separates near 0.999, the
 freeze is not the reason and the two protocols differ for some other cause.
+
+### DNA v60 refused, and the wall has a name (2026-09-21)
+
+A floor under the prototype learning rate was the obvious fix for the freeze. It is
+refused, and the way it fails is more useful than the fix would have been.
+
+| arm | index separation |
+|---|---|
+| alternating, no floor | 0.999 ± 0.001 |
+| late word, tau 3 s | 0.000 ± 0.000 |
+| late word, tau 1 s | 0.000 ± 0.000 |
+| late word, tau 300 ms | 0.011 ± 0.004 |
+| **alternating, tau 1 s** | **0.480 ± 0.019** |
+
+At every rate that demonstrably moves the prototype, a word introduced halfway
+through is never acquired. And the floor does not merely fail to help: at tau = 1 s
+it takes the protocol that *worked* from 0.999 to 0.480.
+
+**The usable region is empty and both its walls are now measured.** From below, the
+update is `proto += lr * (x − proto)`, so with `|proto|` of order 1 the increment
+vanishes into float32 whenever `lr × |x − proto|` falls under eps = 1.2 × 10⁻⁷ — tau
+30 s and 300 s are bit-identical to the floor being switched off, at 600k ticks, with
+the field verified as loaded from inside the kernel. From above, a prototype whose
+time constant approaches the feature's own 1-second EMA window stops being a class
+mean and starts tracking the instantaneous feature, which is what the 0.480 is. The
+one point between those walls does not rescue the late arm.
+
+That makes this structural rather than a tuning failure. **A word introduced late
+cannot be acquired by this prototype rule at any rate that also keeps the prototype a
+class mean** — a rate fast enough to learn the new one is fast enough to erase the
+old. That is Grossberg's stability–plasticity dilemma in its textbook form, and it
+says the fix is not a rate.
+
+Two directions follow from the literature, and both are about *allocation* rather
+than speed. Carpenter and Grossberg's adaptive resonance answers it with a vigilance
+test: an input far enough from every existing prototype commits a *new* unit instead
+of dragging an old one, so learning something new never costs what is already stored.
+Platt's resource-allocating network is the same idea for function approximation.
+Either would mean the context module stops being k-means with a fixed slot count and
+starts deciding when a word deserves a slot of its own — which is also, finally, a
+mechanism for the vocabulary question rather than a mechanism for two words.
+
+The measurement that got here is worth keeping on its own: **the float32 stagnation
+applies to every `+= lr * (target − current)` update in this kernel, not only to the
+prototypes,** and there are several. Any of them with a rate below roughly 10⁻⁶
+against a unit-scale state is not slow — it is stopped.
