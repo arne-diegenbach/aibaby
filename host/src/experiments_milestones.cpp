@@ -14229,6 +14229,12 @@ bool run_ctxfeat(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
     // WORD does. An index locked to alternation reads flip 1.00 whatever the words
     // do; an index following the word tracks wflip.
     double flip = 0.0, wflip = 0.0;
+    // WHERE THE VARIANCE IS. k-means splits along the direction of largest variance,
+    // not along the class distinction; a distinction lying off that direction is one
+    // no prototype rule can find however cleanly the classes separate. `pcalign` is
+    // |cos| between the top principal component and the class-mean axis; `pcratio`
+    // is the class gap measured in units of the spread along that component.
+    double pcalign = 0.0, pcratio = 0.0;
     uint64_t nsamp = 0, nflip = 0, nwflip = 0;
     uint32_t last_slot = 0; bool last_a = false;
   };
@@ -14360,6 +14366,58 @@ bool run_ctxfeat(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
         c.dprime = pooled > 1e-9 ? std::fabs(m1 - m2) / pooled : 0.0;
       }
     }
+    // TOP PRINCIPAL COMPONENT of the pooled, centred samples, by power iteration.
+    // Deterministic start vector -- no RNG, and not the class axis, which would beg
+    // the question.
+    {
+      const size_t na = fa.size(), nb = fb.size(), nt = na + nb;
+      std::vector<double> gm(dim, 0.0);
+      for (const auto& v : fa) for (size_t d = 0; d < dim; ++d) gm[d] += v[d] / double(nt);
+      for (const auto& v : fb) for (size_t d = 0; d < dim; ++d) gm[d] += v[d] / double(nt);
+      std::vector<double> pc(dim), nx(dim);
+      for (size_t d = 0; d < dim; ++d)
+        pc[d] = double((d * 2654435761u) & 1023u) / 1023.0 - 0.5;
+      const auto renorm = [](std::vector<double>& v) {
+        double n = 0.0;
+        for (double x : v) n += x * x;
+        n = std::sqrt(n);
+        if (n > 1e-12) for (double& x : v) x /= n;
+        return n;
+      };
+      renorm(pc);
+      for (int it = 0; it < 60; ++it) {
+        std::fill(nx.begin(), nx.end(), 0.0);
+        const auto accum = [&](const std::vector<std::vector<double>>& f) {
+          for (const auto& v : f) {
+            double dot = 0.0;
+            for (size_t d = 0; d < dim; ++d) dot += (v[d] - gm[d]) * pc[d];
+            for (size_t d = 0; d < dim; ++d) nx[d] += (v[d] - gm[d]) * dot;
+          }
+        };
+        accum(fa); accum(fb);
+        if (renorm(nx) < 1e-12) break;
+        pc = nx;
+      }
+      // Spread along the component, and the class gap in those units.
+      double sv = 0.0;
+      const auto spread = [&](const std::vector<std::vector<double>>& f) {
+        for (const auto& v : f) {
+          double dot = 0.0;
+          for (size_t d = 0; d < dim; ++d) dot += (v[d] - gm[d]) * pc[d];
+          sv += dot * dot;
+        }
+      };
+      spread(fa); spread(fb);
+      sv = std::sqrt(sv / double(nt));
+      double gap = 0.0, an = 0.0, dotp = 0.0;
+      for (size_t d = 0; d < dim; ++d) {
+        const double e = ma[d] - mb[d];
+        gap += e * e; an += e * e; dotp += e * pc[d];
+      }
+      gap = std::sqrt(gap); an = std::sqrt(an);
+      c.pcalign = an > 1e-12 ? std::fabs(dotp) / an : 0.0;
+      c.pcratio = sv > 1e-12 ? gap / sv : 0.0;
+    }
     c.n = uint32_t(total);
     if (c.ia > 0 && c.ib > 0) {
       c.sep = std::fabs(double(c.i0a) / double(c.ia) - double(c.i0b) / double(c.ib));
@@ -14375,17 +14433,18 @@ bool run_ctxfeat(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
   });
 
   std::printf("\n  %-10s %-18s %-15s %-18s %-6s %-6s %-6s %s\n", "arm", "FEATURE accuracy",
-              "d' on the axis", "INDEX separation", "p(s0)", "flip", "wflip", "n");
+              "d' on the axis", "INDEX separation", "p(s0)", "flip", "wflip", "pcalign/pcratio  n");
   bool any_separable = false;
   std::vector<double> arm_sep(kCFArmCount, -1.0), arm_sep_se(kCFArmCount, 0.0);
   for (uint32_t a = 0; a < kCFArmCount; ++a) {
-    std::vector<double> ac, dp, sp, fl, wf;
+    std::vector<double> ac, dp, sp, fl, wf, pa, pr;
     uint32_t n = 0;
     for (uint32_t r = 0; r < kReps; ++r) {
       const Cell& c = cells[r * kCFArmCount + a];
       if (!c.ok) continue;
       ac.push_back(c.acc); dp.push_back(c.dprime); sp.push_back(c.sep); n = c.n;
       fl.push_back(c.flip); wf.push_back(c.wflip);
+      pa.push_back(c.pcalign); pr.push_back(c.pcratio);
     }
     if (ac.size() < 3) {
       std::printf("  %-10s INCONCLUSIVE (%zu creatures)\n", kCFArms[a].name, ac.size());
@@ -14408,8 +14467,11 @@ bool run_ctxfeat(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
     const double m_fl = ctx_mean_se(fl, &sfl), m_wf = ctx_mean_se(wf, &swf);
     (void)sfl; (void)swf;
     arm_sep[a] = m_sp; arm_sep_se[a] = ss;
-    std::printf("  %-10s %.3f +/- %-10.3f %.2f +/- %-7.2f %.3f +/- %-10.3f %.3f  %.3f  %.3f  %u\n",
-                kCFArms[a].name, m_ac, sa, m_dp, sd, m_sp, ss, m_p0, m_fl, m_wf, n);
+    double spa = 0.0, spr = 0.0;
+    const double m_pa = ctx_mean_se(pa, &spa), m_pr = ctx_mean_se(pr, &spr);
+    (void)spa; (void)spr;
+    std::printf("  %-10s %.3f +/- %-10.3f %.2f +/- %-7.2f %.3f +/- %-10.3f %.3f  %.3f  %.3f  %.3f / %.3f   %u\n",
+                kCFArms[a].name, m_ac, sa, m_dp, sd, m_sp, ss, m_p0, m_fl, m_wf, m_pa, m_pr, n);
     if (m_ac - 3.0 * sa > 0.5) any_separable = true;
   }
 
@@ -14450,17 +14512,43 @@ bool run_ctxfeat(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
     }
   }
 
+  // GATE 3's PRE-REGISTERED TEST, AND IT WAS REFUSED (2026-09-20). The account was
+  // that the conscience cannot RESCUE a prototype stranded at the origin because the
+  // penalty scales with the mean achieved distance (small) while the origin sits at
+  // the full |x| (large). Gate 3 removes the origin by seeding from data. WHAT WOULD
+  // REFUSE IT: i-u staying at p(slot0) 1.000. It did -- 0.000 +/- 0.000 separation,
+  // identical to gate 2 on every pair. The origin is not why i-u fails, and gate 4
+  // shows seeding alone is inert (identical to gate 1 on every arm, and identical in
+  // hash). So the conscience is the whole mechanism and its failure is elsewhere.
+  {
+    const int32_t g2 = find_arm("i-u g2s"), g3 = find_arm("i-u g3s");
+    if (g2 >= 0 && g3 >= 0 && arm_sep[g2] >= 0.0 && arm_sep[g3] >= 0.0) {
+      std::printf("\n  --- gate 3: does removing the origin rescue i-u? ---\n");
+      std::printf("  i-u g2s conscience        %.3f +/- %.3f\n", arm_sep[g2], arm_sep_se[g2]);
+      std::printf("  i-u g3s + seeded          %.3f +/- %.3f\n", arm_sep[g3], arm_sep_se[g3]);
+      if (arm_sep[g3] > 0.1 && arm_sep[g3] > arm_sep[g2] + 3.0 * arm_sep_se[g2]) {
+        std::printf("  THE ORIGIN WAS THE PROBLEM: seeding from data rescues the pair.\n");
+      } else {
+        std::printf("  REFUSED: seeding from data does not rescue i-u, so a prototype stranded\n"
+                    "  at the origin is NOT why the conscience fails there. Read the\n"
+                    "  pcalign/pcratio columns instead: k-means splits along the direction of\n"
+                    "  largest VARIANCE, and a class distinction lying off that direction is\n"
+                    "  one no prototype rule can find however cleanly the classes separate.\n");
+      }
+    }
+  }
+
   std::printf("\n  --- the reading ---\n");
   if (any_separable) {
     std::printf("  THE FEATURE IS SEPARABLE. The ear's rate_ema does distinguish the words at\n"
                 "  the moment the index is read, so source 4 is not the wrong source and the\n"
                 "  0.012 separation credgate measured is the CLASSIFIER failing to extract\n"
                 "  what is there.\n");
-    std::printf("  THE SUSPECT IS THE PROTOTYPE UPDATE: for source 4 the index is read every\n"
-                "  tick from the EMA, but the prototypes only learn inside a gate on the\n"
-                "  LARYNX BEING QUIET. They are sampled at moments chosen by the creature's\n"
-                "  own vocal state rather than by the word, so they need not converge on the\n"
-                "  distinction the feature carries.\n");
+    std::printf("  AND THE FITTING RULE IS THE TARGET, not the sampling gate -- gate 1 was\n"
+                "  refused, gate 2 (DeSieno's conscience) takes a-vs-i from 0.002 to 0.999\n"
+                "  under a shuffled order, gate 3 (seeding from data) adds nothing and gate 4\n"
+                "  (seeding without the conscience) is inert to the bit. What remains\n"
+                "  unexplained is WHICH pairs it works on: a-i 0.999, a-u ~0.5, i-u 0.000.\n");
   } else {
     std::printf("  THE FEATURE IS NOT SEPARABLE at the moment the index is read. No prototype\n"
                 "  rule can extract a distinction the feature does not carry, so the\n"
