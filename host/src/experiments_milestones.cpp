@@ -14038,7 +14038,7 @@ bool run_credgate(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
   double m_ero[kCGArmCount] = {}, s_ero[kCGArmCount] = {};
   std::printf("\n  %-13s %-5s %-5s %-18s %-18s %-16s %-16s %s\n", "arm", "mode",
               "gate", "err TAUGHT (A)", "err AFTER (A kept?)", "GAINED", "EROSION",
-              "agree");
+              "agree  slot0 teach/gap");
   for (uint32_t a = 0; a < kCGArmCount; ++a) {
     // RETENTION AS A FRACTION OF WHAT WAS GAINED -- the statistic credit-oracle
     // actually scored (0.84 broadcast -> 1.03 targeted). A reward mask COSTS learning
@@ -14047,11 +14047,19 @@ bool run_credgate(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
     // confounds "interference reduced" with "everything slowed", because the mask
     // moves both arms. (before - after)/(before - taught) divides the loss by the
     // GAIN, so a slower learner keeping the same proportion reads the same.
-    std::vector<double> af, tg, ag, rt, gn, er;
+    std::vector<double> af, tg, ag, rt, gn, er, st, sg2;
     for (uint32_t r = 0; r < kReps; ++r) {
       const Cell& c = cells[r * kCGArmCount + a];
       if (!c.ok) continue;
       af.push_back(c.row.err_after); tg.push_back(c.row.err_taught);
+      // WHAT THE INDEX ACTUALLY DID, which this table has never shown. bcast7 gains
+      // MORE than context-off and loses FOUR TIMES LESS, and with separation at
+      // 0.001 that cannot be credit assignment -- while a merely CONSTANT index
+      // should have behaved like context-off, which it does not. These are the two
+      // quantities that say which: whether the index sat still, and whether it moved
+      // between the teaching phase and the gap.
+      if (c.row.slot0_teach >= 0.0) st.push_back(c.row.slot0_teach);
+      if (c.row.slot0_gap >= 0.0) sg2.push_back(c.row.slot0_gap);
       // DENOMINATOR-FREE. On the ctx genome `err_taught` is 1.01-1.07 against 0.94
       // on the shipped one, so the gain is small and the ratio explodes -- the
       // oracle arm read -5.587 +/- 6.729 and the keep arms 27.222 +/- 21.160, which
@@ -14078,10 +14086,13 @@ bool run_credgate(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
     double sgn = 0.0, ser = 0.0;
     m_gain[a] = ctx_mean_se(gn, &sgn); s_gain[a] = sgn;
     m_ero[a] = ctx_mean_se(er, &ser); s_ero[a] = ser;
-    std::printf("  %-13s %-5u %-5u %.4f +/- %-10.4f %.4f +/- %-10.4f %+.4f +/- %-8.4f %+.4f +/- %-8.4f %.3f\n",
+    double sst = 0.0, ssg = 0.0;
+    const double m_st = st.size() >= 3 ? ctx_mean_se(st, &sst) : -1.0;
+    const double m_sg = sg2.size() >= 3 ? ctx_mean_se(sg2, &ssg) : -1.0;
+    std::printf("  %-13s %-5u %-5u %.4f +/- %-10.4f %.4f +/- %-10.4f %+.4f +/- %-8.4f %+.4f +/- %-8.4f %.3f  %.3f/%.3f\n",
                 kCGArms[a].name, kCGArms[a].mode, kCGArms[a].gate,
                 m_taught[a], s_taught[a], m_after[a], s_after[a],
-                m_gain[a], sgn, m_ero[a], ser, m_agree[a]);
+                m_gain[a], sgn, m_ero[a], ser, m_agree[a], m_st, m_sg);
   }
 
   {

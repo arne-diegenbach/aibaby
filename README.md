@@ -12341,3 +12341,54 @@ is either always above eps or always below it, and the shipped ones are all far
 above. So the hazard is specific to the one rule that has no floor, which is the rule
 this section is about. It is still worth knowing for anything that later sets one of
 those three taus long, or adds another decaying rate.
+
+### The context machinery has been taxing teaching all along (2026-09-21)
+
+The vigilance index was refused on the real teaching protocol — separation 0.001,
+below even the conscience index it was meant to beat. But refusing it exposed a
+baseline that had never been run, and the baseline is the finding.
+
+Every `credgate` arm ever run set `context_slots = 2`. So the arm this experiment
+calls its *broadcast baseline* is a creature whose learned bias is split across two
+tables by an index that flickers on nothing — p(slot0) between 0.19 and 0.34, with a
+measured lesson separation of 0.012. Running it with the machinery switched off
+entirely, and alongside vigilance's near-constant index:
+
+| arm | index | gained | AB−keep gap |
+|---|---|---|---|
+| broadcast | 2 slots, flickering | +0.0193 | +0.0933 |
+| context off | none | +0.0553 | +0.1760 |
+| **vigilance, unmasked** | **2 slots, near-constant** | **+0.0640** | **+0.0436** |
+| oracle (masked) | perfect | +0.0135 | +0.0303 |
+
+**The tax is real and large.** Both alternatives teach about three times better than
+the flickering baseline (err_taught 0.96 against 1.01). Roughly two-thirds of the
+teaching gain has been going to an index that carries no information about the
+lesson — and every context-genome number in this project was measured through it.
+
+**But "context is harmful" is the wrong conclusion**, which is why the third arm
+matters. Switching the machinery off gives the *worst* interference gap of anything
+measured here, nearly double the flickering baseline. Context is not a tax being paid
+for nothing; it is buying interference resistance and being charged for it in
+teaching gain.
+
+**And vigilance gets both.** It gains more than context-off *and* loses four times
+less — an ordering that rules out the obvious deflation, since a smaller gap is
+usually just the mark of having learned less. This one learned more and kept more,
+and its gap is the closest any unmasked arm has come to the oracle's.
+
+**There is no mechanism for that yet, and the honest thing is to say so.** With index
+separation at 0.001 it cannot be context-indexed credit assignment. If the index were
+simply *constant* the creature should behave like context-off, and it emphatically
+does not. Three accounts were proposed and refuted in this line already — a dead
+cluster, a variance geometry, a learning-rate floor — each of which looked obvious
+before it was measured. So the next run prints what the index actually did during
+teaching rather than inferring it, which is the same correction that caught the dead
+cluster: `p(slot0)` during the lesson against `p(slot0)` during the gap.
+
+Also worth stating plainly: the masked arms are *worse* than the unmasked one on the
+same brain. Vigilance with the derived mask gained 0.0211 where the identical brain
+unmasked gained 0.0640. The mask costs learning rate, which the credit oracle priced
+at ~30% long ago, and the low erosion it appeared to buy was substantially just
+having learned less. That is the AB-minus-keep confound in a new costume, and it was
+caught only because the unmasked control was run.
