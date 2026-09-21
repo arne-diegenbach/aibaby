@@ -5624,6 +5624,13 @@ struct RTRow {
   // ONLY when `gained` is matched, so any contrast on `erosion` must show it.
   double gained = 0.0;    // err_before - err_taught: what teaching bought
   double erosion = 0.0;   // err_after - err_taught: what came back, positive = forgot
+  // WHEN THE CONTEXT INDEX MOVES, counted per phase rather than inferred. The
+  // sparse-switch result rests on 0.2% of ticks doing the work, and the story for
+  // WHY -- that the switches land at the lesson-B boundary, so B's writes miss A's
+  // table -- is inference. Inference has been wrong five times in this line, so
+  // these count it: switches in each phase, and the trial of the first one.
+  double sw_teach = 0.0, sw_gap = 0.0, sw_after = 0.0;
+  double sw_first = -1.0;   // trial index of the first switch, -1 = never switched
   uint32_t sleeps = 0, scored = 0;
   double f1_taught = 0.0, f2_taught = 0.0, f1_after = 0.0, f2_after = 0.0;
   // How much of the replay buffer was overwritten AFTER teaching ended -- the
@@ -6033,6 +6040,9 @@ RTRow run_retain_arm(const std::vector<uint8_t>& blob, uint64_t ticks,
   const uint32_t n_gap = uint32_t(gap_ticks / kRTTrial);
   const uint32_t n_after = uint32_t(after_ticks / kRTTrial);
   const uint32_t n_total = n_teach + n_gap + n_after;
+  // Read-only context-switch bookkeeping; touches no RNG and no state.
+  uint32_t ctx_last = 0;
+  bool ctx_seen = false;
   const uint32_t third = n_teach / 3 ? n_teach / 3 : 1;
 
   std::deque<Praise> pending;
@@ -6280,6 +6290,19 @@ RTRow run_retain_arm(const std::vector<uint8_t>& blob, uint64_t ticks,
                        sounding ? 0.5f : 0.0f, pcm.data(), spt);
       ear.tick(s.brain, pcm.data(), spt);
       s.brain.step();
+      // CONTEXT SWITCHES, COUNTED WHERE THEY HAPPEN rather than inferred from the
+      // protocol. active_context() is a plain read, so the pinned hash cannot move.
+      {
+        const uint32_t cx = s.brain.network().active_context();
+        if (ctx_seen && cx != ctx_last) {
+          if (row.sw_first < 0.0) row.sw_first = double(trial);
+          if (trial < n_teach) row.sw_teach += 1.0;
+          else if (trial < n_teach + n_gap) row.sw_gap += 1.0;
+          else row.sw_after += 1.0;
+        }
+        ctx_last = cx;
+        ctx_seen = true;
+      }
       // THE F1 RATE PROFILE, read-only (`leverprobe`). Sampled every tick of the
       // TEACH phase only, split into the first and last third so the difference is
       // what the lesson did rather than what the creature came with. Touches no RNG
@@ -14083,7 +14106,7 @@ bool run_credgate(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
   double m_ero[kCGArmCount] = {}, s_ero[kCGArmCount] = {};
   std::printf("\n  %-13s %-5s %-5s %-18s %-18s %-16s %-16s %s\n", "arm", "mode",
               "gate", "err TAUGHT (A)", "err AFTER (A kept?)", "GAINED", "EROSION",
-              "agree  slot0 teach/gap");
+              "agree  slot0 t/g   SWITCHES teach/gap @first");
   for (uint32_t a = 0; a < kCGArmCount; ++a) {
     // RETENTION AS A FRACTION OF WHAT WAS GAINED -- the statistic credit-oracle
     // actually scored (0.84 broadcast -> 1.03 targeted). A reward mask COSTS learning
@@ -14092,7 +14115,7 @@ bool run_credgate(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
     // confounds "interference reduced" with "everything slowed", because the mask
     // moves both arms. (before - after)/(before - taught) divides the loss by the
     // GAIN, so a slower learner keeping the same proportion reads the same.
-    std::vector<double> af, tg, ag, rt, gn, er, st, sg2;
+    std::vector<double> af, tg, ag, rt, gn, er, st, sg2, swt, swg, swf;
     for (uint32_t r = 0; r < kReps; ++r) {
       const Cell& c = cells[r * kCGArmCount + a];
       if (!c.ok) continue;
@@ -14105,6 +14128,8 @@ bool run_credgate(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
       // between the teaching phase and the gap.
       if (c.row.slot0_teach >= 0.0) st.push_back(c.row.slot0_teach);
       if (c.row.slot0_gap >= 0.0) sg2.push_back(c.row.slot0_gap);
+      swt.push_back(c.row.sw_teach); swg.push_back(c.row.sw_gap);
+      if (c.row.sw_first >= 0.0) swf.push_back(c.row.sw_first);
       // DENOMINATOR-FREE. On the ctx genome `err_taught` is 1.01-1.07 against 0.94
       // on the shipped one, so the gain is small and the ratio explodes -- the
       // oracle arm read -5.587 +/- 6.729 and the keep arms 27.222 +/- 21.160, which
@@ -14134,10 +14159,15 @@ bool run_credgate(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
     double sst = 0.0, ssg = 0.0;
     const double m_st = st.size() >= 3 ? ctx_mean_se(st, &sst) : -1.0;
     const double m_sg = sg2.size() >= 3 ? ctx_mean_se(sg2, &ssg) : -1.0;
-    std::printf("  %-13s %-5u %-5u %.4f +/- %-10.4f %.4f +/- %-10.4f %+.4f +/- %-8.4f %+.4f +/- %-8.4f %.3f  %.3f/%.3f\n",
+    double e1 = 0.0, e2 = 0.0, e3 = 0.0;
+    const double m_swt = swt.size() >= 3 ? ctx_mean_se(swt, &e1) : 0.0;
+    const double m_swg = swg.size() >= 3 ? ctx_mean_se(swg, &e2) : 0.0;
+    const double m_swf = swf.size() >= 3 ? ctx_mean_se(swf, &e3) : -1.0;
+    std::printf("  %-13s %-5u %-5u %.4f +/- %-10.4f %.4f +/- %-10.4f %+.4f +/- %-8.4f %+.4f +/- %-8.4f %.3f  %.3f/%.3f  %7.0f/%7.0f @%.0f\n",
                 kCGArms[a].name, kCGArms[a].mode, kCGArms[a].gate,
                 m_taught[a], s_taught[a], m_after[a], s_after[a],
-                m_gain[a], sgn, m_ero[a], ser, m_agree[a], m_st, m_sg);
+                m_gain[a], sgn, m_ero[a], ser, m_agree[a], m_st, m_sg,
+                m_swt, m_swg, m_swf);
   }
 
   {
