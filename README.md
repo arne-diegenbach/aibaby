@@ -12500,3 +12500,40 @@ Worth being plain about the sequence: the structural results were exact on both 
 and needed no replication to be trustworthy, while the two magnitude claims both moved
 — and the one I had led with moved enough to reverse. Twelve creatures at one offset
 was not enough for a headline, and the queue said so before the run confirmed it.
+
+### A fresh family keeps the result and takes the tax away (2026-09-21)
+
+The stronger replication — a different wiring family entirely, not another creature
+draw from the same one — was recorded as blocked. It was not blocked; the diagnosis
+was wrong, and fixing the real defect made it a twenty-minute job. It then split the
+two claims apart cleanly.
+
+| arm | err TAUGHT | gained | AB−keep gap | gap per unit gained |
+|---|---|---|---|---|
+| broadcast | 0.9399 | +0.0802 | +0.1076 | 1.34 |
+| context off | 0.9304 | +0.0786 | +0.1410 | 1.79 |
+| vigilance, unmasked | 0.9583 | +0.0625 | +0.0732 | 1.17 |
+| pinned / vigilance-pinned | 0.9304 | +0.0786 | +0.1410 | 1.79 |
+
+**The core result holds on three draws out of three.** The structural closures are
+exact again — a pinned index, a pinned vigilance index, and no context at all are the
+same creature to four decimals — and the interference-gap reduction lands at **5.4,
+5.1 and 2.8 SE** across the three. Its magnitude falls as the test gets more
+independent, 4.0× then 4.3× then 1.9×, which is the ordinary shape of an effect under
+stricter replication. The direction never moves.
+
+**The teaching tax does not survive.** Broadcast against context-off, gained:
+−0.0360 ± 0.0239 (1.5 SE), −0.0215 ± 0.0103 (2.1 SE), and **+0.0016 ± 0.0176 (0.1 SE),
+sign reversed**. On a fresh family the context-on baseline gains marginally *more*.
+Only one draw ever reached 2 SE, and I wrote it up as "a caution over every
+context-genome number in this project". **That was one family's quirk presented as a
+property of the machinery, and it is retracted.** The narrower statement that survives
+is the one that was exact from the start: a context index held perfectly still is
+identical to having no context, which is arithmetic rather than a measurement.
+
+The sequence is worth keeping as a caution about what needs replicating. Every claim
+that was an *identity* — pin0 = pin1, pinned = no context, vigilance-pinned = no
+context — came out exact on all three draws and never needed a replication to be
+trusted. Every claim that was a *magnitude* moved: one halved, one reversed on the
+second draw, and one vanished on the third. Three draws produced three different
+pictures of the same mechanism, and only the parts that were structural stayed put.
