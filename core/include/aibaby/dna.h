@@ -1399,6 +1399,28 @@ struct DnaExploration {
   // phase it cannot track a change of word at all. Everything useful is between
   // those two, so the value is swept across that bracket rather than picked.
   uint32_t ctx_proto_tau_ms;
+
+  // DNA v61: ART VIGILANCE. 0 is OFF and bit-identical.
+  //
+  // DNA v60 is REFUSED and no learning RATE can work: a rate fast enough to acquire
+  // a word introduced late is fast enough to destroy the pair that already worked
+  // (0.999 -> 0.480), and a rate slow enough to preserve it cannot learn the new one
+  // (0.000 at every tau that moves the prototype at all). That is Grossberg's
+  // stability-plasticity dilemma, so the answer has to be ALLOCATION rather than
+  // speed: Carpenter & Grossberg's vigilance test commits a NEW unit when an input
+  // is far enough from every committed prototype, instead of dragging an old one.
+  //
+  // Slots start UNCOMMITTED. The first non-degenerate feature commits slot 0.
+  // Thereafter, if the winning distance exceeds `ctx_vigilance` times the running
+  // mean winning distance and a slot is still free, the input commits the next slot
+  // instead of updating the winner.
+  //
+  // THE THRESHOLD IS A MULTIPLE OF A MEASURED QUANTITY, NOT A GUESS. The scale is
+  // `ctx_dsum_/ctx_dn_`, the running mean winner distance the conscience is already
+  // fed from, so the field is dimensionless. Below 1 every input commits a slot;
+  // the useful range is bounded above by the ratio of between-word to within-word
+  // distance, which the ear's measured d' of about 3.5 puts in the low tens.
+  float ctx_vigilance;
 };
 
 // Divisive normalisation (§3.1, DNA v12). The per-module strength lives on

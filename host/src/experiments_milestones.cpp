@@ -14224,6 +14224,8 @@ struct CFArm {
   uint32_t late;
   // DNA v60: floor under the prototype learning rate, in ms. 0 = off.
   uint32_t tau_ms;
+  // DNA v61: ART vigilance, as a multiple of the running mean winner distance. 0=off.
+  float vig;
 };
 // Each pair runs under BOTH prototype gates, so the ceiling (what the feature
 // carries) and the achieved (what the index extracts) are measured on the same
@@ -14282,7 +14284,22 @@ const CFArm kCFArms[] = {
     // at rates where the prototype demonstrably does move.
     {"a-i L-t1k",  0u, 1u, 2u, 1u, 1u, 1000u},
     {"a-i L-t300ms", 0u, 1u, 2u, 1u, 1u, 300u},
-    {"a-i s-t1k",  0u, 1u, 2u, 1u, 0u, 1000u},
+    {"a-i s-t1k",  0u, 1u, 2u, 1u, 0u, 1000u, 0.0f},
+    // DNA v61, GATE 6: ART VIGILANCE. No RATE can work (v60 refused at every tau
+    // that moves the prototype, while halving the case that worked), so this
+    // allocates instead: an input far enough from every COMMITTED prototype takes a
+    // free slot rather than dragging an old one.
+    // THE THRESHOLD IS SWEPT ACROSS A BRACKET THE MEASUREMENTS SET. Below 1 every
+    // input commits a slot, since the test is against the running MEAN distance.
+    // Above it, the useful range ends where between-word distance sits relative to
+    // within-word -- the ear's d' of ~3.5 puts that in the low tens. 2 / 5 / 15.
+    {"a-i L-v2",   0u, 1u, 6u, 1u, 1u, 0u, 2.0f},
+    {"a-i L-v5",   0u, 1u, 6u, 1u, 1u, 0u, 5.0f},
+    {"a-i L-v15",  0u, 1u, 6u, 1u, 1u, 0u, 15.0f},
+    // AND ON THE PROTOCOL THAT ALREADY WORKED, so what vigilance costs the good case
+    // is priced the way the v60 floor's 0.999 -> 0.480 was.
+    {"a-i s-v5",   0u, 1u, 6u, 1u, 0u, 0u, 5.0f},
+    {"i-u L-v5",   1u, 2u, 6u, 1u, 1u, 0u, 5.0f},
 };
 constexpr uint32_t kCFArmCount = sizeof(kCFArms) / sizeof(kCFArms[0]);
 constexpr uint64_t kCFSeedOffset = 774611ull;
@@ -14313,7 +14330,7 @@ bool run_ctxfeat_impl(const std::vector<uint8_t>& blob, uint64_t ticks, bool ver
     uint32_t k = 0;
     for (uint32_t x = 0; x < kNWords; ++x)
       for (uint32_t y = x + 1; y < kNWords; ++y)
-        arms.push_back(CFArm{names[k++].c_str(), x, y, 2u, 1u, 0u, 0u});
+        arms.push_back(CFArm{names[k++].c_str(), x, y, 2u, 1u, 0u, 0u, 0.0f});
   } else {
     for (uint32_t a = 0; a < kCFArmCount; ++a) arms.push_back(kCFArms[a]);
   }
@@ -14350,6 +14367,10 @@ bool run_ctxfeat_impl(const std::vector<uint8_t>& blob, uint64_t ticks, bool ver
     // is the class gap measured in units of the spread along that component.
     double pcalign = 0.0, pcratio = 0.0;
     double wins = 0.0;   // prototype updates over the run: whether a floor can bind
+    // HOW MANY SLOTS VIGILANCE COMMITTED. A mechanism that commits every slot at once
+    // is splitting within-word variation rather than allocating per word, and that
+    // reads as success on separation alone.
+    double committed = 0.0;
     uint64_t nsamp = 0, nflip = 0, nwflip = 0;
     uint32_t last_slot = 0; bool last_a = false;
   };
@@ -14368,6 +14389,9 @@ bool run_ctxfeat_impl(const std::vector<uint8_t>& blob, uint64_t ticks, bool ver
       const uint32_t tau = arms[a].tau_ms;
       std::memcpy(variant.data() + base + offsetof(aibaby::DnaExploration, ctx_proto_tau_ms),
                   &tau, sizeof(uint32_t));
+      const float vig = arms[a].vig;
+      std::memcpy(variant.data() + base + offsetof(aibaby::DnaExploration, ctx_vigilance),
+                  &vig, sizeof(float));
       std::memcpy(variant.data() + base + offsetof(aibaby::DnaExploration, context_slots),
                   &slots, sizeof(uint32_t));
       std::memcpy(variant.data() + base + offsetof(aibaby::DnaExploration, context_source),
@@ -14540,6 +14564,7 @@ bool run_ctxfeat_impl(const std::vector<uint8_t>& blob, uint64_t ticks, bool ver
       c.pcratio = sv > 1e-12 ? gap / sv : 0.0;
     }
     c.wins = double(s.brain.network().ctx_wins_total());
+    c.committed = double(s.brain.network().ctx_committed());
     c.n = uint32_t(total);
     if (c.ia > 0 && c.ib > 0) {
       c.sep = std::fabs(double(c.i0a) / double(c.ia) - double(c.i0b) / double(c.ib));
@@ -14554,13 +14579,13 @@ bool run_ctxfeat_impl(const std::vector<uint8_t>& blob, uint64_t ticks, bool ver
     return c;
   });
 
-  std::printf("\n  %-10s %-18s %-15s %-18s %-6s %-6s %-6s %-16s %s\n", "arm", "FEATURE accuracy",
+  std::printf("\n  %-10s %-18s %-15s %-18s %-6s %-6s %-6s %-16s %-8s %s\n", "arm", "FEATURE accuracy",
               "d' on the axis", "INDEX separation", "p(s0)", "flip", "wflip",
-              "pcalign/pcratio", "WINS  n");
+              "pcalign/pcratio", "WINS", "SLOTS  n");
   bool any_separable = false;
   std::vector<double> arm_sep(kCFArmN, -1.0), arm_sep_se(kCFArmN, 0.0);
   for (uint32_t a = 0; a < kCFArmN; ++a) {
-    std::vector<double> ac, dp, sp, fl, wf, pa, pr, wn;
+    std::vector<double> ac, dp, sp, fl, wf, pa, pr, wn, cm;
     uint32_t n = 0;
     for (uint32_t r = 0; r < kReps; ++r) {
       const Cell& c = cells[r * kCFArmN + a];
@@ -14568,6 +14593,7 @@ bool run_ctxfeat_impl(const std::vector<uint8_t>& blob, uint64_t ticks, bool ver
       ac.push_back(c.acc); dp.push_back(c.dprime); sp.push_back(c.sep); n = c.n;
       fl.push_back(c.flip); wf.push_back(c.wflip);
       pa.push_back(c.pcalign); pr.push_back(c.pcratio); wn.push_back(c.wins);
+      cm.push_back(c.committed);
     }
     if (ac.size() < 3) {
       std::printf("  %-10s INCONCLUSIVE (%zu creatures)\n", arms[a].name, ac.size());
@@ -14593,9 +14619,9 @@ bool run_ctxfeat_impl(const std::vector<uint8_t>& blob, uint64_t ticks, bool ver
     double spa = 0.0, spr = 0.0;
     const double m_pa = ctx_mean_se(pa, &spa), m_pr = ctx_mean_se(pr, &spr);
     (void)spa; (void)spr;
-    std::printf("  %-10s %.3f +/- %-10.3f %.2f +/- %-7.2f %.3f +/- %-10.3f %.3f  %.3f  %.3f  %.3f / %.3f   %8.0f  %u\n",
+    std::printf("  %-10s %.3f +/- %-10.3f %.2f +/- %-7.2f %.3f +/- %-10.3f %.3f  %.3f  %.3f  %.3f / %.3f   %8.0f  %.2f  %u\n",
                 arms[a].name, m_ac, sa, m_dp, sd, m_sp, ss, m_p0, m_fl, m_wf, m_pa, m_pr,
-                ctx_mean_se(wn, &spa), n);
+                ctx_mean_se(wn, &spa), ctx_mean_se(cm, &spr), n);
     if (m_ac - 3.0 * sa > 0.5) any_separable = true;
   }
 

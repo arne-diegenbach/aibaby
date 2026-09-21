@@ -193,6 +193,10 @@ class Network {
   // bind at all -- a floor of 3e-5 is inert if wins never passes a few thousand.
   // The tau sweep's bracket was derived from wall-clock time without this, and two
   // of its three points turned out never to engage.
+  // HOW MANY SLOTS VIGILANCE HAS ACTUALLY COMMITTED. A mechanism that commits every
+  // slot immediately is splitting within-word variation, not allocating per word,
+  // and that reads as success on separation alone.
+  uint32_t ctx_committed() const { return ctx_committed_; }
   Scalar ctx_wins_total() const {
     Scalar t = kZero;
     for (uint32_t c = 0; c < ctx_slots_; ++c) t += ctx_wins_[c];
@@ -1030,6 +1034,8 @@ class Network {
                                   // 2 = + conscience, 3 = + data seeding, 4 = seeding only
   uint32_t ctx_seeded_ = 0;       // 1 once the prototypes have been seeded from data
   Scalar ctx_proto_lr_floor_ = kZero;  // DNA v60: dt_ms / ctx_proto_tau_ms, 0 = off
+  Scalar ctx_vigilance_ = kZero;  // DNA v61: multiple of the mean winner distance
+  uint32_t ctx_committed_ = 0;    // slots actually allocated so far, 0 = none yet
   static constexpr uint32_t kCtxSelfSkipA = 2;  // F1
   static constexpr uint32_t kCtxSelfSkipB = 3;  // F2
   // DNA v53, source 2. One prototype per context over the source module's

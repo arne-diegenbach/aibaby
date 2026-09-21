@@ -438,6 +438,8 @@ bool Network::build(const Dna& dna, Arena& arena, Rng& rng) {
   // genome allocates nothing and hashes exactly as it did.
   ctx_slots_ = h.exploration.context_slots > 1 ? h.exploration.context_slots : 0;
   ctx_proto_gate_ = h.exploration.ctx_proto_gate;
+  ctx_vigilance_ = Scalar(h.exploration.ctx_vigilance);
+  ctx_committed_ = 0;
   ctx_proto_lr_floor_ = h.exploration.ctx_proto_tau_ms > 0u
                             ? dt_ms_ / Scalar(h.exploration.ctx_proto_tau_ms)
                             : kZero;
@@ -1518,7 +1520,31 @@ void Network::step() {
         // strengthening the penalty: seed every prototype from the first sample, so
         // no unit starts stranded. Gate 4 is the seeding WITHOUT the conscience, so
         // the two can be told apart.
-        const bool ctx_conscience = ctx_proto_gate_ == 2u || ctx_proto_gate_ == 3u;
+        const bool ctx_conscience =
+            ctx_proto_gate_ == 2u || ctx_proto_gate_ == 3u || ctx_proto_gate_ == 6u;
+        // DNA v61, GATE 6: ART VIGILANCE. Slots start UNCOMMITTED and only committed
+        // ones can win, so a word introduced late takes a FREE slot instead of having
+        // to drag an old prototype -- which DNA v60 proved no learning rate can do.
+        const bool ctx_vigilant = ctx_proto_gate_ == 6u && ctx_vigilance_ > kZero;
+        if (ctx_vigilant && ctx_committed_ == 0u) {
+          // Same degeneracy guard gate 3 needed: at tick 0 rate_ema_ is the ZERO
+          // vector, and committing slot 0 to the origin is the failure being avoided.
+          Scalar fnorm = kZero;
+          for (uint32_t n = 0; n < sms.count; ++n) {
+            const Scalar v = rate_ema_[sms.begin + n];
+            fnorm += v * v;
+          }
+          if (fnorm > kZero) {
+            Scalar* proto = ctx_proto_;
+            for (uint32_t n = 0; n < sms.count; ++n) proto[n] = rate_ema_[sms.begin + n];
+            ctx_committed_ = 1u;
+          }
+        }
+        // Only committed slots compete. With none committed yet the index is 0 and
+        // nothing is learned, which is the correct reading of "no category yet".
+        const uint32_t ctx_live = ctx_vigilant
+                                      ? (ctx_committed_ > 0u ? ctx_committed_ : 1u)
+                                      : ctx_slots_;
         // NOT "the first sample": at tick 0 `rate_ema_` is the ZERO VECTOR, so seeding
         // there seeds from the origin -- the very thing being removed. The vacuity
         // check caught it, as gate 3 hashing identically to gate 2 and gate 4 to gate
@@ -1540,21 +1566,51 @@ void Network::step() {
         }
         Scalar total_wins = kZero;
         if (ctx_conscience)
-          for (uint32_t c = 0; c < ctx_slots_; ++c) total_wins += ctx_wins_[c];
+          for (uint32_t c = 0; c < ctx_live; ++c) total_wins += ctx_wins_[c];
         const Scalar cdscale = ctx_dn_ > kZero ? ctx_dsum_ / ctx_dn_ : kZero;
-        Scalar best_d = kZero;
+        Scalar best_d = kZero, best_raw = kZero;
         uint32_t winner = 0;
-        for (uint32_t c = 0; c < ctx_slots_; ++c) {
+        for (uint32_t c = 0; c < ctx_live; ++c) {
           const Scalar* proto = ctx_proto_ + size_t(c) * sms.capacity;
           Scalar d = kZero;
           for (uint32_t n = 0; n < sms.count; ++n) {
             const Scalar e = rate_ema_[sms.begin + n] - proto[n];
             d += e * e;
           }
+          const Scalar raw = d;
           if (ctx_conscience && total_wins > kZero) {
-            d += (Scalar(ctx_slots_) * (ctx_wins_[c] / total_wins) - kOne) * cdscale;
+            d += (Scalar(ctx_live) * (ctx_wins_[c] / total_wins) - kOne) * cdscale;
           }
-          if (c == 0 || d < best_d) { best_d = d; winner = c; }
+          if (c == 0 || d < best_d) { best_d = d; best_raw = raw; winner = c; }
+        }
+        // THE VIGILANCE TEST. Carpenter & Grossberg: an input far enough from every
+        // committed prototype gets a NEW unit rather than dragging an old one, so
+        // learning something new never costs what is already stored. The distance is
+        // the RAW one, not the conscience-adjusted one -- the penalty exists to
+        // balance wins between live units and has no business deciding whether a
+        // category is novel.
+        //
+        // AND IT MUST NOT FIRE DURING THE STARTUP TRANSIENT, which is what the first
+        // build did: the SLOTS column read 2.00 at every threshold, three different
+        // vigilance values gave ONE hash, and separation on the protocol that worked
+        // fell 0.999 -> 0.000. Slot 0 commits at the first non-degenerate feature,
+        // while rate_ema_ is still climbing from zero and the distance scale rests on
+        // a handful of samples -- so every input on that ramp looks far from slot 0
+        // and the second slot is spent on the ramp rather than on a word.
+        //
+        // The guard is the kernel's own quantity, not a new constant: the scale must
+        // be estimated over at least the feature's OWN EMA window (rate_alpha_ =
+        // dt_ms/1000, so 1/rate_alpha_ samples) before it can be trusted to judge
+        // what is novel. Below that it is measuring the transient.
+        const Scalar ctx_warm = rate_alpha_ > kZero ? kOne / rate_alpha_ : kZero;
+        bool ctx_new_slot = false;
+        if (ctx_vigilant && ctx_committed_ > 0u && ctx_committed_ < ctx_slots_ &&
+            ctx_dn_ >= ctx_warm && best_raw > ctx_vigilance_ * cdscale) {
+          Scalar* proto = ctx_proto_ + size_t(ctx_committed_) * sms.capacity;
+          for (uint32_t n = 0; n < sms.count; ++n) proto[n] = rate_ema_[sms.begin + n];
+          winner = ctx_committed_;
+          ++ctx_committed_;
+          ctx_new_slot = true;
         }
         active_ctx_ = winner;
         ctx_latched_ = true;
@@ -1574,8 +1630,19 @@ void Network::step() {
           // The conscience needs a distance SCALE, which the episode path keeps in
           // ctx_dsum_/ctx_dn_. Feed it from the winning distance here too, or the
           // penalty is in the wrong units and either does nothing or dominates.
-          ctx_dsum_ += best_d;
-          ctx_dn_ += kOne;
+          // The scale must stay a measure of how far a MATCHED input sits from its
+          // own prototype. A commit step has distance 0 by construction and a
+          // rejected input is by definition not matched, so neither belongs in it --
+          // feeding either one in would drag the threshold toward the thing it is
+          // supposed to detect.
+          // best_raw ONLY under vigilance. Gates 0-4 must keep accumulating the
+          // conscience-adjusted distance they always did, or the banked 0.999 on
+          // gate 2 stops reproducing -- a silent change to a result already in the
+          // record, which is worse than a wrong new one.
+          if (!ctx_new_slot) {
+            ctx_dsum_ += ctx_vigilant ? best_raw : best_d;
+            ctx_dn_ += kOne;
+          }
           ctx_wins_[winner] += kOne;
           // DNA v60. MacQueen's 1/wins is optimal for a STATIONARY distribution and
           // wrong for a creature being taught: after a long first lesson the rate is
