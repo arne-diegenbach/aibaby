@@ -1796,6 +1796,11 @@ void Network::step() {
       if (ctx_present_) active_ctx_ = best_slice;
     }
   }
+  // EXPERIMENT-ONLY PIN, applied after every source has had its say so it overrides
+  // all of them. Off by default (-1) and the shipped creature never sets it, which
+  // is why the pinned hash does not move.
+  if (ctx_pin_ >= 0 && ctx_slots_ > 0)
+    active_ctx_ = uint32_t(ctx_pin_) < ctx_slots_ ? uint32_t(ctx_pin_) : 0u;
   const uint32_t slot = uint32_t(tick_ % delay_slots_);
   Scalar* in = inbox_ + size_t(slot) * capacity_;
   Scalar* in_ap = inbox_apical_ + size_t(slot) * capacity_;

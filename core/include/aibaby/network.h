@@ -197,6 +197,23 @@ class Network {
   // slot immediately is splitting within-word variation, not allocating per word,
   // and that reads as success on separation alone.
   uint32_t ctx_committed() const { return ctx_committed_; }
+
+  // EXPERIMENT ONLY -- pins the context index to one slot, no genome field, off by
+  // default, so the pinned hash does not move. It exists to settle one question that
+  // four refuted accounts have circled.
+  //
+  // `credgate` measures the shipped index sitting on slot 1 about 90% of the time
+  // and gaining +0.0193, while DNA v61's index sits on slot 0 99.8% of the time and
+  // gains +0.0640 with a quarter of the interference. Both are NEARLY CONSTANT, so
+  // "a flickering index splits the lesson" is refuted in its stated form. What is
+  // left is a 2x2 that no run can answer by inference: pin to slot 0 and to slot 1,
+  // each with the prototypes frozen, and the difference between constancy and slot
+  // IDENTITY separates cleanly. The bias tables look symmetric in the kernel --
+  // drive is bias_[i] + bias_ctx_[i * slots + active], written to the active slot --
+  // so if identity matters anyway, something else is not symmetric and this says so
+  // before another mechanism is built on a guess.
+  void pin_context(uint32_t slot) { ctx_pin_ = int32_t(slot); }
+  void clear_context_pin() { ctx_pin_ = -1; }
   Scalar ctx_wins_total() const {
     Scalar t = kZero;
     for (uint32_t c = 0; c < ctx_slots_; ++c) t += ctx_wins_[c];
@@ -1036,6 +1053,7 @@ class Network {
   Scalar ctx_proto_lr_floor_ = kZero;  // DNA v60: dt_ms / ctx_proto_tau_ms, 0 = off
   Scalar ctx_vigilance_ = kZero;  // DNA v61: multiple of the mean winner distance
   uint32_t ctx_committed_ = 0;    // slots actually allocated so far, 0 = none yet
+  int32_t ctx_pin_ = -1;          // experiment-only forced context slot, -1 = off
   static constexpr uint32_t kCtxSelfSkipA = 2;  // F1
   static constexpr uint32_t kCtxSelfSkipB = 3;  // F2
   // DNA v53, source 2. One prototype per context over the source module's
