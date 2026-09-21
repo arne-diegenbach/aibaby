@@ -1521,11 +1521,13 @@ void Network::step() {
         // no unit starts stranded. Gate 4 is the seeding WITHOUT the conscience, so
         // the two can be told apart.
         const bool ctx_conscience =
-            ctx_proto_gate_ == 2u || ctx_proto_gate_ == 3u || ctx_proto_gate_ == 6u;
+            ctx_proto_gate_ == 2u || ctx_proto_gate_ == 3u || ctx_proto_gate_ == 6u ||
+            ctx_proto_gate_ == 7u;
         // DNA v61, GATE 6: ART VIGILANCE. Slots start UNCOMMITTED and only committed
         // ones can win, so a word introduced late takes a FREE slot instead of having
         // to drag an old prototype -- which DNA v60 proved no learning rate can do.
-        const bool ctx_vigilant = ctx_proto_gate_ == 6u && ctx_vigilance_ > kZero;
+        const bool ctx_vigilant =
+            (ctx_proto_gate_ == 6u || ctx_proto_gate_ == 7u) && ctx_vigilance_ > kZero;
         if (ctx_vigilant && ctx_committed_ == 0u) {
           // Same degeneracy guard gate 3 needed: at tick 0 rate_ema_ is the ZERO
           // vector, and committing slot 0 to the origin is the failure being avoided.
@@ -1611,6 +1613,24 @@ void Network::step() {
           winner = ctx_committed_;
           ++ctx_committed_;
           ctx_new_slot = true;
+          // GATE 7: THE WIN COUNTS START FRESH WHEN A CATEGORY IS ADDED.
+          //
+          // Gate 6 measured 0.615 +/- 0.001 separation on the late protocol and it is
+          // NOT the index following the word -- flip reads 0.004 against wflip 0.422,
+          // so the index changes slot 0.4% as often as the word does. The arithmetic
+          // is exact: 240 word-A samples before the regime change and ~150 after give
+          // p(slot0|A) = 240/390 = 0.615 and p(slot0|B) = 0 if the index switches ONCE
+          // and never returns. It commits a slot to "after the change", not to "word
+          // B".
+          //
+          // The lock-in is an interaction between the two mechanisms here. At commit
+          // time slot 0 already holds ~240000 wins, so DeSieno's penalty punishes it
+          // hard enough that the new slot wins everything for the rest of the run --
+          // balancing would take 240000 more wins than remain. The conscience
+          // balances wins among the CURRENT category set, and committing a category
+          // changes that set, so the counts belong to the old one.
+          if (ctx_proto_gate_ == 7u)
+            for (uint32_t c = 0; c < ctx_slots_; ++c) ctx_wins_[c] = kZero;
         }
         active_ctx_ = winner;
         ctx_latched_ = true;

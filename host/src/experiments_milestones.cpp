@@ -14300,6 +14300,16 @@ const CFArm kCFArms[] = {
     // is priced the way the v60 floor's 0.999 -> 0.480 was.
     {"a-i s-v5",   0u, 1u, 6u, 1u, 0u, 0u, 5.0f},
     {"i-u L-v5",   1u, 2u, 6u, 1u, 1u, 0u, 5.0f},
+    // GATE 7: vigilance with the win counts RESET when a category is committed.
+    // Gate 6's 0.615 is the index switching ONCE at the regime change and never
+    // returning, because the conscience punishes a slot holding 240000 wins far too
+    // hard for the new slot ever to give it back. WHAT WOULD REFUSE GATE 7: flip
+    // staying far below wflip, which is what says the index tracks TIME and not the
+    // word -- separation alone cannot tell those apart and read 0.615 as a success.
+    {"a-i L-w5",   0u, 1u, 7u, 1u, 1u, 0u, 5.0f},
+    {"a-i L-w2",   0u, 1u, 7u, 1u, 1u, 0u, 2.0f},
+    {"i-u L-w5",   1u, 2u, 7u, 1u, 1u, 0u, 5.0f},
+    {"a-i s-w5",   0u, 1u, 7u, 1u, 0u, 0u, 5.0f},
 };
 constexpr uint32_t kCFArmCount = sizeof(kCFArms) / sizeof(kCFArms[0]);
 constexpr uint64_t kCFSeedOffset = 774611ull;
