@@ -13962,7 +13962,12 @@ const CGArm kCGArms[] = {
     {"vigpin-keep", 0u, true,  7u, 5.0f, 2u, 0},
 };
 constexpr uint32_t kCGArmCount = sizeof(kCGArms) / sizeof(kCGArms[0]);
-constexpr uint64_t kCGSeedOffset = 318211ull;
+// CHANGED 2026-09-21 from 318211 to draw a FRESH set of creatures from the same
+// genome, which replicates the creature sample without re-rolling the wiring --
+// reseeding the genome itself fails calibrate (3 modules off target) because the
+// homeostatic targets are fitted to one draw. The banked numbers above were taken at
+// 318211 and are reproducible by setting it back.
+constexpr uint64_t kCGSeedOffset = 904837ull;
 constexpr float kCGKeepF1 = 320.0f, kCGKeepF2 = 2500.0f;
 
 bool run_credgate(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {

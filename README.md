@@ -12431,8 +12431,30 @@ sampled instants, and the mechanism really does deliver the interference resista
 both readings were correct about different things, and only running the unmasked and
 pinned controls separated them.
 
-The remaining attack is direct rather than theoretical: run vigilance with the index
-pinned, so the prototypes still commit and only the switching is removed. If the
-advantage vanishes the sparse switch is the mechanism; if it survives, committing the
-prototypes matters even when the index never moves, and the question moves to the
-commit itself.
+The remaining attack was direct rather than theoretical: run vigilance with the index
+pinned, so the prototypes still commit and only the switching is removed.
+
+| arm | index | gained | AB−keep gap |
+|---|---|---|---|
+| vigilance, free | 0.998 | +0.0640 | +0.0436 |
+| vigilance, pinned | 1.000 | +0.0553 | +0.1760 |
+| no context | — | +0.0553 | +0.1760 |
+
+**It collapses to the context-off numbers identically.** The commits contribute
+nothing; removing only the switching removes the whole advantage. **The sparse switch
+is the entire mechanism**, confirmed on the criterion registered before the run.
+
+So the account that survives, after four that did not: the context machinery pays for
+itself only when the index moves *rarely and at the right moment*. Held still it is
+exactly a single shared bias. Moved 10% of the time on nothing, it costs two-thirds of
+the teaching gain. Moved 0.2% of the time on novelty, it costs nothing and cuts
+interference fourfold. Carpenter and Grossberg's vigilance test earns its place here
+not by classifying words — its separation is 0.001, it classifies nothing — but by
+switching at the boundaries where a new lesson begins.
+
+That last point is the one worth carrying forward. **A sparse, well-timed mechanism is
+invisible to a statistic sampled on a schedule.** `separation` called this refused and
+was right about the index and wrong about the mechanism; only the unmasked and pinned
+controls could tell those apart. Four accounts were refuted in this line by adding a
+column — p(slot0), flip against wflip, WINS, slot0 teach/gap — and the fifth was
+settled by removing one thing at a time instead of proposing anything at all.
