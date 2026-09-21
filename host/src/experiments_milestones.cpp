@@ -13861,29 +13861,36 @@ bool run_regionband(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
 // found mirror-image profiles: a LOW target works by suppressing the UPPER half, a
 // HIGH target by suppressing the LOWER. A is /i/ at f1 320 and B is at 850, so A gets
 // the UPPER half and B the LOWER -- each the half it actually uses, and disjoint.
-struct CGArm { const char* name; uint32_t mode; bool keep; uint32_t gate; float vig; };
+struct CGArm {
+  const char* name; uint32_t mode; bool keep; uint32_t gate; float vig;
+  // Context slots. EVERY ARM HERE HAS ALWAYS SET 2, so what this experiment calls
+  // the "broadcast" baseline is a creature whose learned bias is split across two
+  // tables by an index that flickers on nothing. 0 turns the machinery off, and
+  // that comparison has never been run.
+  uint32_t slots;
+};
 const CGArm kCGArms[] = {
-    {"bcast-AB",   0u, false, 0u, 0.0f},   // the shipped broadcast rule: the 0.22 wipe
-    {"bcast-keep", 0u, true,  0u, 0.0f},
-    {"oracle-AB",  1u, false, 0u, 0.0f},   // the host masks by which lesson is live
-    {"oracle-keep", 1u, true, 0u, 0.0f},
+    {"bcast-AB",   0u, false, 0u, 0.0f, 2u},   // the shipped broadcast rule: the 0.22 wipe
+    {"bcast-keep", 0u, true,  0u, 0.0f, 2u},
+    {"oracle-AB",  1u, false, 0u, 0.0f, 2u},   // the host masks by which lesson is live
+    {"oracle-keep", 1u, true, 0u, 0.0f, 2u},
     // THE DERIVED ARMS ON THE INDEX AS SHIPPED, which `ctxpc` measured separating
     // a-vs-i at 0.035. They price a mask over NOISE and are the control here.
-    {"derived-AB", 2u, false, 0u, 0.0f},
-    {"derived-keep", 2u, true, 0u, 0.0f},
+    {"derived-AB", 2u, false, 0u, 0.0f, 2u},
+    {"derived-keep", 2u, true, 0u, 0.0f, 2u},
     // ON THE CONSCIENCE INDEX. It separates at 0.999 when words ALTERNATE and at
     // 0.084 here, because teaching introduces the second word LATE and no learning
     // rate can fix that (DNA v60, refused).
-    {"derived2-AB", 2u, false, 2u, 0.0f},
-    {"derived2-keep", 2u, true, 2u, 0.0f},
+    {"derived2-AB", 2u, false, 2u, 0.0f, 2u},
+    {"derived2-keep", 2u, true, 2u, 0.0f, 2u},
     // AND ON THE VIGILANCE INDEX. DNA v61 gate 7 allocates a NEW slot for a word
     // introduced late and resets the win counts so the older category can still win:
     // on the late protocol that reads separation 0.932 (a-vs-i) and 0.988 (i-vs-u)
     // with flip matching wflip, which is the first index in this line to survive the
     // shape teaching actually has. THIS IS THE TEST -- the late protocol is a
     // stand-in built here, and `retain` is the real thing.
-    {"derived3-AB", 2u, false, 7u, 5.0f},
-    {"derived3-keep", 2u, true, 7u, 5.0f},
+    {"derived3-AB", 2u, false, 7u, 5.0f, 2u},
+    {"derived3-keep", 2u, true, 7u, 5.0f, 2u},
     // THE CONTROL derived3 NEEDS AND DID NOT HAVE. Gate 7 reads erosion -0.0036
     // against broadcast's +0.0762 with the HIGHEST gained of any arm -- but its
     // index separation is 0.001, so the mask cannot be doing context-indexed credit
@@ -13895,8 +13902,25 @@ const CGArm kCGArms[] = {
     // gate 7 simply makes a better learner, which is a different finding and not the
     // one this experiment is about. Without this the improvement cannot be
     // attributed at all.
-    {"bcast7-AB",   0u, false, 7u, 5.0f},
-    {"bcast7-keep", 0u, true,  7u, 5.0f},
+    {"bcast7-AB",   0u, false, 7u, 5.0f, 2u},
+    {"bcast7-keep", 0u, true,  7u, 5.0f, 2u},
+    // THE BASELINE THAT WAS NEVER RUN. bcast7 -- gate 7's brain with BROADCAST
+    // reward and no mask -- posts GAINED +0.0640 against broadcast's +0.0193 and an
+    // interference gap of +0.0436 against +0.0933. With its index separation at
+    // 0.001 that cannot be credit assignment, and the likely reason is far more
+    // basic: under vigilance only ONE slot is ever committed, so the index is
+    // CONSTANT, while gate 0 has both slots live from zero-init and an index that
+    // flickers on nothing (p(slot0) 0.19-0.34, separation 0.012). A learned bias is
+    // written into whichever slot is active, so a flickering index splits every
+    // lesson across two tables and a constant one keeps it whole.
+    //
+    // If that is right, turning the machinery OFF should match bcast7. These arms
+    // are context_slots = 0: no context, one shared bias, nothing to flicker.
+    // WHAT WOULD REFUSE THE ACCOUNT: plain landing at broadcast's +0.0193 rather
+    // than near bcast7's +0.0640, which would mean vigilance does something for
+    // teaching beyond holding the index still.
+    {"plain-AB",   0u, false, 0u, 0.0f, 0u},
+    {"plain-keep", 0u, true,  0u, 0.0f, 0u},
 };
 constexpr uint32_t kCGArmCount = sizeof(kCGArms) / sizeof(kCGArms[0]);
 constexpr uint64_t kCGSeedOffset = 318211ull;
@@ -13977,7 +14001,7 @@ bool run_credgate(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
     //
     // Source 4 is the ear's rate EMA, the creature's own index. REQUIRES a genome
     // with a context module: run this with --dna ctx.toml from tools/ctxgenome.sh.
-    cfg.context_slots = 2u;
+    cfg.context_slots = kCGArms[a].slots;
     cfg.context_source = 4u;
     // GIVE THE TWO LESSONS DIFFERENT SOUNDS, or the index has nothing to separate.
     // `retain` says the SAME word throughout by default -- run_retain_arm's own
