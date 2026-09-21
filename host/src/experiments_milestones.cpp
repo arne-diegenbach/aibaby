@@ -5909,6 +5909,9 @@ struct RTConfig {
   // what takes the a-vs-i index from 0.002 separation to 0.999 on every creature
   // (`ctxpc`). Without it the derived arms run on an index that carries nothing.
   uint32_t ctx_proto_gate = 0;
+  // DNA v61, also appended at the END for the same reason. Vigilance as a multiple
+  // of the kernel's own running mean winner distance; 0 is off.
+  float ctx_vigilance = 0.0f;
 };
 
 // One arm, one creature, one life: teach, intervene, re-measure.
@@ -5954,6 +5957,10 @@ RTRow run_retain_arm(const std::vector<uint8_t>& blob, uint64_t ticks,
     std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, exploration) +
                     offsetof(aibaby::DnaExploration, ctx_proto_gate),
                 &pg, sizeof(pg));
+    const float vg = cfg.ctx_vigilance;
+    std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, exploration) +
+                    offsetof(aibaby::DnaExploration, ctx_vigilance),
+                &vg, sizeof(vg));
   }
   {
     const uint32_t cr = cfg.replay_credit;
@@ -13854,31 +13861,29 @@ bool run_regionband(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
 // found mirror-image profiles: a LOW target works by suppressing the UPPER half, a
 // HIGH target by suppressing the LOWER. A is /i/ at f1 320 and B is at 850, so A gets
 // the UPPER half and B the LOWER -- each the half it actually uses, and disjoint.
-struct CGArm { const char* name; uint32_t mode; bool keep; uint32_t gate; };
+struct CGArm { const char* name; uint32_t mode; bool keep; uint32_t gate; float vig; };
 const CGArm kCGArms[] = {
-    {"bcast-AB",   0u, false, 0u},   // the shipped broadcast rule: the 0.22 wipe
-    {"bcast-keep", 0u, true,  0u},
-    {"oracle-AB",  1u, false, 0u},   // the host masks by which lesson is live
-    {"oracle-keep", 1u, true, 0u},
-    // THE DERIVED ARMS, ON THE INDEX AS SHIPPED. `ctxpc` measured that index
-    // separating a-vs-i at 0.035 under the shipped prototype gate: it carries almost
-    // nothing, so these are the control, not the test.
-    {"derived-AB", 2u, false, 0u},
-    {"derived-keep", 2u, true, 0u},
-    // AND ON AN INDEX THAT ACTUALLY SEPARATES. Gate 2 is DeSieno's conscience, which
-    // takes a-vs-i to 0.999 separation on 6 of 6 creatures. THIS IS THE EXPERIMENT:
-    // the derived mask has never once run on an index that could tell the lessons
-    // apart, so every previous derived result priced a mask over noise.
-    {"derived2-AB", 2u, false, 2u},
-    {"derived2-keep", 2u, true, 2u},
-    // THE LATCH ARMS (mode 4) ARE DROPPED FROM THIS RUN, not from the design. They
-    // test a different mechanism -- sampling the index while auditory drive is above
-    // its running mean and holding it -- and they run on gate 0, so they would price
-    // a latch over the same noisy index everything else here already prices. At 3.4M
-    // ticks each they cost about an hour of the run and answer a question this one is
-    // not asking. Their banked result stands: a coin flip does NOT reproduce the
-    // oracle (-2.285 +/- 2.556), so the benefit is credit assignment rather than
-    // merely halving the write.
+    {"bcast-AB",   0u, false, 0u, 0.0f},   // the shipped broadcast rule: the 0.22 wipe
+    {"bcast-keep", 0u, true,  0u, 0.0f},
+    {"oracle-AB",  1u, false, 0u, 0.0f},   // the host masks by which lesson is live
+    {"oracle-keep", 1u, true, 0u, 0.0f},
+    // THE DERIVED ARMS ON THE INDEX AS SHIPPED, which `ctxpc` measured separating
+    // a-vs-i at 0.035. They price a mask over NOISE and are the control here.
+    {"derived-AB", 2u, false, 0u, 0.0f},
+    {"derived-keep", 2u, true, 0u, 0.0f},
+    // ON THE CONSCIENCE INDEX. It separates at 0.999 when words ALTERNATE and at
+    // 0.084 here, because teaching introduces the second word LATE and no learning
+    // rate can fix that (DNA v60, refused).
+    {"derived2-AB", 2u, false, 2u, 0.0f},
+    {"derived2-keep", 2u, true, 2u, 0.0f},
+    // AND ON THE VIGILANCE INDEX. DNA v61 gate 7 allocates a NEW slot for a word
+    // introduced late and resets the win counts so the older category can still win:
+    // on the late protocol that reads separation 0.932 (a-vs-i) and 0.988 (i-vs-u)
+    // with flip matching wflip, which is the first index in this line to survive the
+    // shape teaching actually has. THIS IS THE TEST -- the late protocol is a
+    // stand-in built here, and `retain` is the real thing.
+    {"derived3-AB", 2u, false, 7u, 5.0f},
+    {"derived3-keep", 2u, true, 7u, 5.0f},
 };
 constexpr uint32_t kCGArmCount = sizeof(kCGArms) / sizeof(kCGArms[0]);
 constexpr uint64_t kCGSeedOffset = 318211ull;
@@ -13949,6 +13954,7 @@ bool run_credgate(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
     cfg.mask_mode = 0u;
     cfg.credit_mode = kCGArms[a].mode;
     cfg.ctx_proto_gate = kCGArms[a].gate;
+    cfg.ctx_vigilance = kCGArms[a].vig;
     // TURN THE CONTEXT MACHINERY ON. ctx_slots_ is set from
     // `exploration.context_slots > 1`, so at the shipped 0 the whole thing is inert
     // and active_context() returns 0 on every tick -- which is why the derived and
