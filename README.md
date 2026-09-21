@@ -12458,3 +12458,45 @@ was right about the index and wrong about the mechanism; only the unmasked and p
 controls could tell those apart. Four accounts were refuted in this line by adding a
 column — p(slot0), flip against wflip, WINS, slot0 teach/gap — and the fifth was
 settled by removing one thing at a time instead of proposing anything at all.
+
+### The replication took the headline back (2026-09-21)
+
+The sparse-switch result was written up from twelve creatures at one seed offset, with
+the replication queued rather than done. It is now done, on a fresh draw from the same
+genome, and it splits: the structure survives exactly, the headline does not.
+
+| arm | err TAUGHT | gained | AB−keep gap | gap per unit gained |
+|---|---|---|---|---|
+| broadcast | 0.9709 | +0.0490 | +0.1651 | 3.37 |
+| context off | 0.9380 | +0.0705 | +0.1780 | 2.52 |
+| vigilance, unmasked | 0.9593 | +0.0434 | +0.0414 | 0.95 |
+| pinned / vigilance-pinned | 0.9380 | +0.0705 | +0.1780 | 2.52 |
+
+**What replicates.** Both structural closures come out identical to four decimals
+again: slot identity is irrelevant, a pinned index is precisely no context, and
+vigilance with the index pinned is precisely no context — so the commits contribute
+nothing and the switching is the whole mechanism. And the interference-gap reduction
+holds at **4.3×**, against 4.0× on the first draw.
+
+**What does not, and it was the headline.** The previous section said vigilance "gains
+more than context-off *and* loses four times less — an ordering that rules out the
+obvious deflation." **On fresh creatures that ordering reverses.** Vigilance gains
+0.0434 where context-off gains 0.0705, so it costs roughly 38% of the teaching gain
+here, and the argument used to rule out deflation does not survive. *At no cost in
+teaching gain* was true of one draw and is not true in general. Retracted.
+
+The gap reduction is still not simply deflation, but the surviving claim has to be
+stated the narrower way: **per unit of gain**, vigilance sits at 0.95 against
+context-off's 2.52 and broadcast's 3.37, and that ordering holds on both draws (0.68
+against 3.18 on the first). A mechanism that buys interference resistance at a real
+price in learning rate is a different and smaller finding than one that buys it free.
+
+**The teaching tax shrank too.** Two-thirds of the gain on the first draw, about 30%
+here, with the baseline index sitting at slot0 0.177 rather than 0.103. The direction
+replicates and the magnitude does not, so the tax should be quoted as a direction with
+a range, not as a factor.
+
+Worth being plain about the sequence: the structural results were exact on both draws
+and needed no replication to be trustworthy, while the two magnitude claims both moved
+— and the one I had led with moved enough to reverse. Twelve creatures at one offset
+was not enough for a headline, and the queue said so before the run confirmed it.
