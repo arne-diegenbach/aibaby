@@ -13944,6 +13944,22 @@ const CGArm kCGArms[] = {
     {"pin0-keep", 0u, true,  0u, 0.0f, 2u, 0},
     {"pin1-AB",   0u, false, 0u, 0.0f, 2u, 1},
     {"pin1-keep", 0u, true,  0u, 0.0f, 2u, 1},
+    // THE DIRECT ATTACK ON WHAT IS LEFT. pin0 and pin1 came out IDENTICAL to each
+    // other and to context-off, to four decimals, so slot identity is irrelevant and
+    // a perfectly constant index is exactly no context. bcast7 sits at 0.998, NOT
+    // 1.000 -- so about 0.2% of ticks on the second slot is the whole difference
+    // between a +0.176 interference gap and a +0.044 one, at no cost in gain.
+    //
+    // These arms run vigilance WITH the index pinned: the prototypes still commit,
+    // the switching is removed, and nothing else changes. If the advantage vanishes,
+    // the sparse well-timed switch IS the mechanism and the separation statistic was
+    // simply the wrong instrument for it -- sampled at fixed moments, it cannot see
+    // a switch that happens rarely and at the right time.
+    // WHAT WOULD REFUSE THAT: vig-pin0 keeping bcast7's +0.0436 gap, which would
+    // mean committing the prototypes matters even when the index never moves, and
+    // the mechanism is in the commit rather than in the switch.
+    {"vigpin-AB",   0u, false, 7u, 5.0f, 2u, 0},
+    {"vigpin-keep", 0u, true,  7u, 5.0f, 2u, 0},
 };
 constexpr uint32_t kCGArmCount = sizeof(kCGArms) / sizeof(kCGArms[0]);
 constexpr uint64_t kCGSeedOffset = 318211ull;

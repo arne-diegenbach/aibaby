@@ -12392,3 +12392,47 @@ unmasked gained 0.0640. The mask costs learning rate, which the credit oracle pr
 at ~30% long ago, and the low erosion it appeared to buy was substantially just
 having learned less. That is the AB-minus-keep confound in a new costume, and it was
 caught only because the unmasked control was run.
+
+### It is not the index being still — it is when it moves (2026-09-21)
+
+The previous section left vigilance with a large, unexplained advantage and four
+refuted accounts behind it. A 2×2 settles two of the three possibilities outright,
+and the two it settles come out exact.
+
+| arm | slot0 teach/gap | err TAUGHT | gained | AB−keep gap |
+|---|---|---|---|---|
+| broadcast | 0.103 / 0.106 | 1.0104 | +0.0193 | +0.0933 |
+| context off | — | 0.9599 | +0.0553 | +0.1760 |
+| pinned to slot 0 | 1.000 / 1.000 | 0.9599 | +0.0553 | +0.1760 |
+| pinned to slot 1 | 0.001 / 0.000 | 0.9599 | +0.0553 | +0.1760 |
+| vigilance, unmasked | 0.998 / 0.994 | 0.9566 | +0.0640 | +0.0436 |
+
+**Slot identity is irrelevant** — the two pinned arms are identical to four decimals
+on every column, so the bias tables are symmetric exactly as the kernel reads them.
+**And a perfectly constant index is precisely no context at all**: pinning reproduces
+the context-off arm identically, which makes sense once stated, since one table used
+forever is a single shared bias.
+
+So the third possibility is what is left, and it is the one worth having. Vigilance
+sits at 0.998, *not* 1.000. Pinning it to a true 1.000 collapses it to the context-off
+numbers. **Roughly 0.2% of ticks on the second slot is the entire difference between a
++0.176 interference gap and a +0.044 one — and it costs nothing in teaching gain.**
+
+That also puts the flickering account in a quantified form it never had. A **10%**
+minority costs two-thirds of the teaching gain; a **0.2%** minority costs none and
+buys a fourfold reduction in interference. The index is not good or bad by being
+split. What matters is *when* it splits — which is what a vigilance test is for, since
+it fires on novelty rather than on a schedule.
+
+It also explains why `separation` called this mechanism refused. A statistic sampled
+at fixed moments cannot see a switch that is rare and well-timed; it reported 0.001
+while the mechanism was working. The index really does fail to track the word at the
+sampled instants, and the mechanism really does deliver the interference resistance —
+both readings were correct about different things, and only running the unmasked and
+pinned controls separated them.
+
+The remaining attack is direct rather than theoretical: run vigilance with the index
+pinned, so the prototypes still commit and only the switching is removed. If the
+advantage vanishes the sparse switch is the mechanism; if it survives, committing the
+prototypes matters even when the index never moves, and the question moves to the
+commit itself.
