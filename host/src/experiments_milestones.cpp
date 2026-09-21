@@ -14005,6 +14005,27 @@ const CGArm kCGArms[] = {
     // ticks are chosen matters and a matched coin flip cannot stand in.
     {"noise-AB",   0u, false, 0u, 0.0f, 2u, -1, 0.001f, 2u},
     {"noise-keep", 0u, true,  0u, 0.0f, 2u, -1, 0.001f, 2u},
+    // AND THE ARM ABOVE IS VOID AS A CONTROL, MEASURED 2026-09-22. It has pin = -1,
+    // so the live gate-0 prototype index runs UNDERNEATH the coin flip, and that
+    // index is not still: it reads slot0 0.173 in `bcast` and moved to 0.375 here,
+    // because the excursions perturb the trajectory that feeds the index. Two things
+    // changed at once. The switch counter says the same: 2564 where p*T predicts
+    // ~2040 per phase-pair, short because forcing slot 1 while the base index is
+    // ALREADY on slot 1 produces no visible switch at all.
+    //
+    // THE FIX IS TO PIN THE BASE. pin0 == context-off exactly, on three draws and
+    // every column, so pin0 + noise isolates the coin flip and nothing else. Slot 1
+    // is then written only during the excursions, which is precisely the "drive
+    // reads a near-empty table" condition dropout needs.
+    //
+    // MATCHED ON BOTH STATISTICS vigilance actually showed -- 0.2% of ticks on slot
+    // 1 AND ~7651 switches per teach phase. Those two together imply SINGLE-tick
+    // excursions (0.002 * 2.04M teach ticks / (7651/2) ~ 1.07), so dwell 1 with
+    // p = 0.002 matches both; the dwell-2 arm at half the event count brackets it.
+    {"nzpin-AB",    0u, false, 0u, 0.0f, 2u, 0, 0.002f, 1u},
+    {"nzpin-keep",  0u, true,  0u, 0.0f, 2u, 0, 0.002f, 1u},
+    {"nzpin2-AB",   0u, false, 0u, 0.0f, 2u, 0, 0.001f, 2u},
+    {"nzpin2-keep", 0u, true,  0u, 0.0f, 2u, 0, 0.001f, 2u},
 };
 constexpr uint32_t kCGArmCount = sizeof(kCGArms) / sizeof(kCGArms[0]);
 // CHANGED 2026-09-21 from 318211 to draw a FRESH set of creatures from the same
@@ -14128,6 +14149,9 @@ bool run_credgate(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
   double m_ret[kCGArmCount] = {}, s_ret[kCGArmCount] = {};
   double m_gain[kCGArmCount] = {}, s_gain[kCGArmCount] = {};
   double m_ero[kCGArmCount] = {}, s_ero[kCGArmCount] = {};
+  // KEPT FOR THE VACUITY GUARD BELOW: an excursion arm whose switch count is zero is
+  // not a control, it is the arm it was meant to differ from.
+  double m_swtch[kCGArmCount] = {};
   std::printf("\n  %-13s %-5s %-5s %-18s %-18s %-16s %-16s %s\n", "arm", "mode",
               "gate", "err TAUGHT (A)", "err AFTER (A kept?)", "GAINED", "EROSION",
               "agree  slot0 t/g   SWITCHES teach/gap @first");
@@ -14187,6 +14211,7 @@ bool run_credgate(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
     const double m_swt = swt.size() >= 3 ? ctx_mean_se(swt, &e1) : 0.0;
     const double m_swg = swg.size() >= 3 ? ctx_mean_se(swg, &e2) : 0.0;
     const double m_swf = swf.size() >= 3 ? ctx_mean_se(swf, &e3) : -1.0;
+    m_swtch[a] = m_swt;
     std::printf("  %-13s %-5u %-5u %.4f +/- %-10.4f %.4f +/- %-10.4f %+.4f +/- %-8.4f %+.4f +/- %-8.4f %.3f  %.3f/%.3f  %7.0f/%7.0f @%.0f\n",
                 kCGArms[a].name, kCGArms[a].mode, kCGArms[a].gate,
                 m_taught[a], s_taught[a], m_after[a], s_after[a],
@@ -14307,6 +14332,90 @@ bool run_credgate(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
   std::printf("    A shortfall here would mean the mechanism fails; a match means the\n"
               "    mechanism works and the CARRIER is simply not accurate enough.\n");
 
+  // VACUITY GUARD ON THE EXCURSION ARMS, because the previous version of this
+  // control ran for four hours and answered nothing. The pinned-noise arms must
+  // (a) actually switch, and (b) differ from the arm they are the control FOR.
+  // If either fails the arm is not a control and the run refuses itself rather
+  // than inviting a reading.
+  {
+    int i_pin0 = -1, i_nz = -1, i_nz2 = -1;
+    for (uint32_t a = 0; a < kCGArmCount; ++a) {
+      if (std::strcmp(kCGArms[a].name, "pin0-AB") == 0) i_pin0 = int(a);
+      if (std::strcmp(kCGArms[a].name, "nzpin-AB") == 0) i_nz = int(a);
+      if (std::strcmp(kCGArms[a].name, "nzpin2-AB") == 0) i_nz2 = int(a);
+    }
+    if (i_pin0 >= 0 && i_nz >= 0 && i_nz2 >= 0) {
+      std::printf("\n  VACUITY -- the coin flip must MOVE something\n");
+      std::printf("    pin0   switches/teach %7.0f   err_taught %.4f\n",
+                  m_swtch[i_pin0], m_taught[i_pin0]);
+      std::printf("    nzpin  switches/teach %7.0f   err_taught %.4f\n",
+                  m_swtch[i_nz], m_taught[i_nz]);
+      std::printf("    nzpin2 switches/teach %7.0f   err_taught %.4f\n",
+                  m_swtch[i_nz2], m_taught[i_nz2]);
+      const bool inert =
+          m_swtch[i_nz] < 1.0 || m_swtch[i_nz2] < 1.0 ||
+          std::fabs(m_taught[i_nz] - m_taught[i_pin0]) < 1e-4 ||
+          std::fabs(m_taught[i_nz2] - m_taught[i_pin0]) < 1e-4;
+      if (inert) {
+        std::printf("\n  credgate REFUSES ITSELF -- an excursion arm is inert against\n"
+                    "  pin0, so there is no coin flip to compare with vigilance and\n"
+                    "  any reading of the gap would be a reading of pin0 twice.\n");
+        return false;
+      }
+      std::printf("    both arms move and both differ from pin0 -- the contrast is real\n");
+    }
+  }
+
+  // THE DROPOUT CONTRAST, COMPUTED RATHER THAN READ OFF THE TABLE BY HAND. The gap
+  // is err_after(AB) - err_after(keep) and its SE is the quadrature of the two arms',
+  // matching how the PRIMARY block below prices every other gap.
+  {
+    auto idx = [&](const char* n) {
+      for (uint32_t a = 0; a < kCGArmCount; ++a)
+        if (std::strcmp(kCGArms[a].name, n) == 0) return int(a);
+      return -1;
+    };
+    struct G { const char* label; const char* ab; const char* kp; };
+    const G gs[] = {
+        {"context OFF (pin0)", "pin0-AB", "pin0-keep"},
+        {"broadcast", "bcast-AB", "bcast-keep"},
+        {"VIGILANCE (bcast7)", "bcast7-AB", "bcast7-keep"},
+        {"noise, UNPINNED (void)", "noise-AB", "noise-keep"},
+        {"noise on pin0, p.002 d1", "nzpin-AB", "nzpin-keep"},
+        {"noise on pin0, p.001 d2", "nzpin2-AB", "nzpin2-keep"},
+    };
+    double gap[6] = {}, gse[6] = {};
+    bool have[6] = {};
+    std::printf("\n  THE DROPOUT CONTRAST -- does a matched coin flip buy the gap?\n");
+    for (int k = 0; k < 6; ++k) {
+      const int ia = idx(gs[k].ab), ik = idx(gs[k].kp);
+      if (ia < 0 || ik < 0) continue;
+      gap[k] = m_after[ia] - m_after[ik];
+      gse[k] = std::sqrt(s_after[ia] * s_after[ia] + s_after[ik] * s_after[ik]);
+      have[k] = true;
+      std::printf("    %-26s gap %+.4f +/- %.4f  (%+.1f SE)   gained %+.4f\n",
+                  gs[k].label, gap[k], gse[k],
+                  gse[k] > 0.0 ? gap[k] / gse[k] : 0.0, m_gain[ia]);
+    }
+    // The two differences that decide it. The coin flip is a stand-in for vigilance
+    // only if it lands on vigilance and away from context-off; if it sits at
+    // context-off then WHICH ticks are chosen is doing the work.
+    for (int k = 4; k <= 5; ++k) {
+      if (!have[k] || !have[0] || !have[2]) continue;
+      const double d_off = gap[0] - gap[k];
+      const double e_off = std::sqrt(gse[0] * gse[0] + gse[k] * gse[k]);
+      const double d_vig = gap[k] - gap[2];
+      const double e_vig = std::sqrt(gse[2] * gse[2] + gse[k] * gse[k]);
+      std::printf("    %-26s vs context-off %+.4f +/- %.4f (%+.1f SE)"
+                  "   vs vigilance %+.4f +/- %.4f (%+.1f SE)\n",
+                  gs[k].label, d_off, e_off, e_off > 0.0 ? d_off / e_off : 0.0,
+                  d_vig, e_vig, e_vig > 0.0 ? d_vig / e_vig : 0.0);
+    }
+    std::printf("    REFUSES INDEXING: a pinned-noise gap AT vigilance and away from\n"
+                "    context-off. SUPPORTS INDEXING: a pinned-noise gap at context-off.\n"
+                "    NEITHER: both differences under ~2 SE, which is this test failing\n"
+                "    to resolve and NOT evidence for either side.\n");
+  }
   std::printf("\n  --- the reading ---\n");
   if (!oracle_works) {
     std::printf("  THE ORACLE DID NOT REPRODUCE, on RETENTION: %+.3f +/- %.3f (%+.1f SE)\n"

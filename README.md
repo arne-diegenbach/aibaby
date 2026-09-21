@@ -12537,7 +12537,43 @@ reproduces ~0.2% of ticks on the second slot with no context information at all.
 coin flip reproduces the effect, the mechanism is not indexing — the same demand this
 project already makes of the oracle.
 
-**The core result holds on three draws out of three.****The core result holds on three draws out of three.** The structural closures are
+**That control ran, and it was void — the fault was mine, in the arm's configuration.**
+The `noise` arm left the context index *unpinned*, so the live prototype index was
+still running underneath the coin flip. Two things changed at once, and the index was
+one of them: it reads slot0 0.173 in the broadcast arm and **0.375 in the noise arm**,
+because the excursions perturb the very trajectory that feeds the index. The switch
+counter says the same thing independently. The teach phase is 728 trials of 1214, so
+about 2.04M of the 3.4M ticks; at p = 0.001 with dwell 2 a *still* base index would
+show ~2040 excursions and therefore ~4080 switches. It shows **2564** — short, and
+short in exactly the direction the confound predicts, because forcing the second slot
+while the base index is *already* sitting on the second slot produces no visible
+switch at all. With the base on slot 1 some 62% of the time, ~1500 is what a fully
+invisible overlap would give, and the measurement sits between the two bounds.
+
+Taken at face value the arm decides nothing anyway. Its gap is **+0.0973 ± 0.0500**,
+which is 0.8 SE from context-off's +0.1410 and 0.4 SE from vigilance's +0.0732 — under
+1 SE from both sides of the question it was built to settle. Against its *actual*
+comparator, the broadcast arm that shares its gate-0 base, it is 0.15 SE away. Four
+hours of compute that answered neither the question asked nor any other.
+
+**The error has a name and this is its second appearance in this same experiment.** A
+control that shares the live mechanism with the arm it controls for is not a control.
+The first instance was `credgate`'s broadcast baseline, which set two context slots
+and so carried the machinery every derived and oracle arm was compared against. Here
+the coin flip was layered on top of a moving index instead of replacing it. Both times
+the arm looked like a difference of one thing and was a difference of two.
+
+The fix follows from an identity already established three times over: `pin0` is
+*exactly* context-off, on every column and every draw. So the coin flip belongs on top
+of the pin, where the excursions are the only thing in motion and the second slot is
+written during those ticks and no others — which is precisely the near-empty table the
+dropout account requires. Two arms now bracket the rate, matched to the two statistics
+vigilance actually showed: 0.2% of ticks on the second slot *and* ~7651 switches per
+teach phase. Those two together imply single-tick excursions, so p = 0.002 with dwell 1
+matches both, and p = 0.001 with dwell 2 matches the occupancy at half the event count.
+The run now refuses itself if either arm fails to move against `pin0`.
+
+**The core result holds on three draws out of three.** The structural closures are
 exact again — a pinned index, a pinned vigilance index, and no context at all are the
 same creature to four decimals — and the interference-gap reduction lands at **5.4,
 5.1 and 2.8 SE** across the three. Its magnitude falls as the test gets more
