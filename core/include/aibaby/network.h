@@ -214,6 +214,28 @@ class Network {
   // before another mechanism is built on a guess.
   void pin_context(uint32_t slot) { ctx_pin_ = int32_t(slot); }
   void clear_context_pin() { ctx_pin_ = -1; }
+
+  // EXPERIMENT ONLY -- MATCHED RANDOM EXCURSIONS, the control the sparse-switch
+  // result needs. No genome field, off by default, pinned hash unmoved.
+  //
+  // Measured: vigilance's index makes ~4556 excursions to slot 1 averaging ~1.5
+  // ticks, totalling 0.2% of ticks, and they are 2.4x MORE frequent during teaching
+  // than during the gap with the first at trial 10 of 728. So they are NOT a rare
+  // well-timed switch at the lesson boundary -- they are thousands of single-tick
+  // flickers. That makes the live hypothesis DROPOUT rather than context: for those
+  // ticks the drive reads an empty second table instead of the learned one, and any
+  // reward writes there.
+  //
+  // This reproduces the statistics with no context information at all: start an
+  // excursion with probability `p` per tick and hold it `dwell` ticks. If it
+  // reproduces the benefit, the mechanism is regularisation and not indexing -- the
+  // same demand this project already makes of the oracle, that a coin flip must not
+  // reproduce it. Deterministic from the tick counter, so no RNG stream is disturbed
+  // and the arm is reproducible.
+  void set_context_noise(Scalar p, uint32_t dwell) {
+    ctx_noise_p_ = p; ctx_noise_dwell_ = dwell; ctx_noise_left_ = 0;
+  }
+  void clear_context_noise() { ctx_noise_p_ = kZero; ctx_noise_dwell_ = 0; }
   Scalar ctx_wins_total() const {
     Scalar t = kZero;
     for (uint32_t c = 0; c < ctx_slots_; ++c) t += ctx_wins_[c];
@@ -1054,6 +1076,9 @@ class Network {
   Scalar ctx_vigilance_ = kZero;  // DNA v61: multiple of the mean winner distance
   uint32_t ctx_committed_ = 0;    // slots actually allocated so far, 0 = none yet
   int32_t ctx_pin_ = -1;          // experiment-only forced context slot, -1 = off
+  Scalar ctx_noise_p_ = kZero;    // experiment-only excursion probability per tick
+  uint32_t ctx_noise_dwell_ = 0;  // ...and how many ticks each excursion lasts
+  uint32_t ctx_noise_left_ = 0;   // ticks remaining in the current excursion
   static constexpr uint32_t kCtxSelfSkipA = 2;  // F1
   static constexpr uint32_t kCtxSelfSkipB = 3;  // F2
   // DNA v53, source 2. One prototype per context over the source module's

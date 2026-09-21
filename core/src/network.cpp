@@ -1801,6 +1801,24 @@ void Network::step() {
   // is why the pinned hash does not move.
   if (ctx_pin_ >= 0 && ctx_slots_ > 0)
     active_ctx_ = uint32_t(ctx_pin_) < ctx_slots_ ? uint32_t(ctx_pin_) : 0u;
+  // EXPERIMENT-ONLY MATCHED EXCURSIONS, applied last so it overrides the pin too.
+  // Deterministic from the tick counter (splitmix64), so no RNG stream moves and the
+  // arm reproduces exactly. Off by default; the pinned hash does not move.
+  if (ctx_noise_p_ > kZero && ctx_slots_ > 1) {
+    if (ctx_noise_left_ > 0) {
+      --ctx_noise_left_;
+      active_ctx_ = 1u;
+    } else {
+      uint64_t h = tick_ * 0x9E3779B97F4A7C15ull;
+      h ^= h >> 30; h *= 0xBF58476D1CE4E5B9ull;
+      h ^= h >> 27; h *= 0x94D049BB133111EBull; h ^= h >> 31;
+      const Scalar u = Scalar(h >> 40) / Scalar(1u << 24);
+      if (u < ctx_noise_p_) {
+        ctx_noise_left_ = ctx_noise_dwell_ > 0 ? ctx_noise_dwell_ - 1 : 0;
+        active_ctx_ = 1u;
+      }
+    }
+  }
   const uint32_t slot = uint32_t(tick_ % delay_slots_);
   Scalar* in = inbox_ + size_t(slot) * capacity_;
   Scalar* in_ap = inbox_apical_ + size_t(slot) * capacity_;

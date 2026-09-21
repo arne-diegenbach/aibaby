@@ -5923,6 +5923,9 @@ struct RTConfig {
   // is how "constancy" and "slot identity" are told apart. Appended at the END for
   // the reason the field-shift bug taught.
   int ctx_pin = -1;
+  // EXPERIMENT-ONLY matched random excursions: probability per tick, and dwell.
+  float ctx_noise_p = 0.0f;
+  uint32_t ctx_noise_dwell = 0;
 };
 
 // One arm, one creature, one life: teach, intervene, re-measure.
@@ -5998,6 +6001,8 @@ RTRow run_retain_arm(const std::vector<uint8_t>& blob, uint64_t ticks,
   }
   // EXPERIMENT-ONLY CONTEXT PIN. -1 leaves every source alone.
   if (cfg.ctx_pin >= 0) s.brain.network().pin_context(uint32_t(cfg.ctx_pin));
+  if (cfg.ctx_noise_p > 0.0f)
+    s.brain.network().set_context_noise(aibaby::Scalar(cfg.ctx_noise_p), cfg.ctx_noise_dwell);
   const aibaby::DnaAudio& acfg = s.dna.header().audio;
   Ear ear;
   if (!ear.configure(acfg, error)) {
@@ -13899,29 +13904,32 @@ struct CGArm {
   uint32_t slots;
   // EXPERIMENT-ONLY forced context slot; -1 leaves the index alone.
   int pin;
+  // Matched random excursions: per-tick probability and dwell. 0 = off.
+  float noise_p;
+  uint32_t noise_dwell;
 };
 const CGArm kCGArms[] = {
-    {"bcast-AB",   0u, false, 0u, 0.0f, 2u, -1},   // the shipped broadcast rule: the 0.22 wipe
-    {"bcast-keep", 0u, true,  0u, 0.0f, 2u, -1},
-    {"oracle-AB",  1u, false, 0u, 0.0f, 2u, -1},   // the host masks by which lesson is live
-    {"oracle-keep", 1u, true, 0u, 0.0f, 2u, -1},
+    {"bcast-AB",   0u, false, 0u, 0.0f, 2u, -1, 0.0f, 0u},   // the shipped broadcast rule: the 0.22 wipe
+    {"bcast-keep", 0u, true,  0u, 0.0f, 2u, -1, 0.0f, 0u},
+    {"oracle-AB",  1u, false, 0u, 0.0f, 2u, -1, 0.0f, 0u},   // the host masks by which lesson is live
+    {"oracle-keep", 1u, true, 0u, 0.0f, 2u, -1, 0.0f, 0u},
     // THE DERIVED ARMS ON THE INDEX AS SHIPPED, which `ctxpc` measured separating
     // a-vs-i at 0.035. They price a mask over NOISE and are the control here.
-    {"derived-AB", 2u, false, 0u, 0.0f, 2u, -1},
-    {"derived-keep", 2u, true, 0u, 0.0f, 2u, -1},
+    {"derived-AB", 2u, false, 0u, 0.0f, 2u, -1, 0.0f, 0u},
+    {"derived-keep", 2u, true, 0u, 0.0f, 2u, -1, 0.0f, 0u},
     // ON THE CONSCIENCE INDEX. It separates at 0.999 when words ALTERNATE and at
     // 0.084 here, because teaching introduces the second word LATE and no learning
     // rate can fix that (DNA v60, refused).
-    {"derived2-AB", 2u, false, 2u, 0.0f, 2u, -1},
-    {"derived2-keep", 2u, true, 2u, 0.0f, 2u, -1},
+    {"derived2-AB", 2u, false, 2u, 0.0f, 2u, -1, 0.0f, 0u},
+    {"derived2-keep", 2u, true, 2u, 0.0f, 2u, -1, 0.0f, 0u},
     // AND ON THE VIGILANCE INDEX. DNA v61 gate 7 allocates a NEW slot for a word
     // introduced late and resets the win counts so the older category can still win:
     // on the late protocol that reads separation 0.932 (a-vs-i) and 0.988 (i-vs-u)
     // with flip matching wflip, which is the first index in this line to survive the
     // shape teaching actually has. THIS IS THE TEST -- the late protocol is a
     // stand-in built here, and `retain` is the real thing.
-    {"derived3-AB", 2u, false, 7u, 5.0f, 2u, -1},
-    {"derived3-keep", 2u, true, 7u, 5.0f, 2u, -1},
+    {"derived3-AB", 2u, false, 7u, 5.0f, 2u, -1, 0.0f, 0u},
+    {"derived3-keep", 2u, true, 7u, 5.0f, 2u, -1, 0.0f, 0u},
     // THE CONTROL derived3 NEEDS AND DID NOT HAVE. Gate 7 reads erosion -0.0036
     // against broadcast's +0.0762 with the HIGHEST gained of any arm -- but its
     // index separation is 0.001, so the mask cannot be doing context-indexed credit
@@ -13933,8 +13941,8 @@ const CGArm kCGArms[] = {
     // gate 7 simply makes a better learner, which is a different finding and not the
     // one this experiment is about. Without this the improvement cannot be
     // attributed at all.
-    {"bcast7-AB",   0u, false, 7u, 5.0f, 2u, -1},
-    {"bcast7-keep", 0u, true,  7u, 5.0f, 2u, -1},
+    {"bcast7-AB",   0u, false, 7u, 5.0f, 2u, -1, 0.0f, 0u},
+    {"bcast7-keep", 0u, true,  7u, 5.0f, 2u, -1, 0.0f, 0u},
     // THE BASELINE THAT WAS NEVER RUN. bcast7 -- gate 7's brain with BROADCAST
     // reward and no mask -- posts GAINED +0.0640 against broadcast's +0.0193 and an
     // interference gap of +0.0436 against +0.0933. With its index separation at
@@ -13950,8 +13958,8 @@ const CGArm kCGArms[] = {
     // WHAT WOULD REFUSE THE ACCOUNT: plain landing at broadcast's +0.0193 rather
     // than near bcast7's +0.0640, which would mean vigilance does something for
     // teaching beyond holding the index still.
-    {"plain-AB",   0u, false, 0u, 0.0f, 0u, -1},
-    {"plain-keep", 0u, true,  0u, 0.0f, 0u, -1},
+    {"plain-AB",   0u, false, 0u, 0.0f, 0u, -1, 0.0f, 0u},
+    {"plain-keep", 0u, true,  0u, 0.0f, 0u, -1, 0.0f, 0u},
     // THE 2x2 THAT SETTLES IT. The diagnostic refuted the flickering account: the
     // shipped index sits on slot 1 about 90% of the time and vigilance's sits on
     // slot 0 99.8% of the time, so BOTH are nearly constant and they differ by a
@@ -13963,10 +13971,10 @@ const CGArm kCGArms[] = {
     // slot IDENTITY matters, and the bias tables are not as symmetric as the kernel
     // reads. Neither near bcast7: vigilance does something beyond holding the index
     // still, and the next question is what.
-    {"pin0-AB",   0u, false, 0u, 0.0f, 2u, 0},
-    {"pin0-keep", 0u, true,  0u, 0.0f, 2u, 0},
-    {"pin1-AB",   0u, false, 0u, 0.0f, 2u, 1},
-    {"pin1-keep", 0u, true,  0u, 0.0f, 2u, 1},
+    {"pin0-AB",   0u, false, 0u, 0.0f, 2u, 0, 0.0f, 0u},
+    {"pin0-keep", 0u, true,  0u, 0.0f, 2u, 0, 0.0f, 0u},
+    {"pin1-AB",   0u, false, 0u, 0.0f, 2u, 1, 0.0f, 0u},
+    {"pin1-keep", 0u, true,  0u, 0.0f, 2u, 1, 0.0f, 0u},
     // THE DIRECT ATTACK ON WHAT IS LEFT. pin0 and pin1 came out IDENTICAL to each
     // other and to context-off, to four decimals, so slot identity is irrelevant and
     // a perfectly constant index is exactly no context. bcast7 sits at 0.998, NOT
@@ -13981,8 +13989,22 @@ const CGArm kCGArms[] = {
     // WHAT WOULD REFUSE THAT: vig-pin0 keeping bcast7's +0.0436 gap, which would
     // mean committing the prototypes matters even when the index never moves, and
     // the mechanism is in the commit rather than in the switch.
-    {"vigpin-AB",   0u, false, 7u, 5.0f, 2u, 0},
-    {"vigpin-keep", 0u, true,  7u, 5.0f, 2u, 0},
+    {"vigpin-AB",   0u, false, 7u, 5.0f, 2u, 0, 0.0f, 0u},
+    {"vigpin-keep", 0u, true,  7u, 5.0f, 2u, 0, 0.0f, 0u},
+    // THE DROPOUT CONTROL. Vigilance's excursions are NOT a rare well-timed switch:
+    // ~4556 of them averaging ~1.5 ticks, 0.2% of ticks in total, 2.4x more frequent
+    // during TEACHING than during the gap, first at trial 10 of 728. So the live
+    // hypothesis is regularisation, not indexing -- for those ticks the drive reads
+    // an empty second table instead of the learned one, and any reward writes there.
+    //
+    // These arms reproduce the statistics with NO context information at all:
+    // p = 0.001 per tick with dwell 2 gives ~3400 excursions and 0.2% of ticks on
+    // slot 1, matching what was measured. WHAT WOULD REFUSE THE SPARSE-SWITCH
+    // MECHANISM AS INDEXING: noise reproducing vigilance's gap. WHAT WOULD SUPPORT
+    // IT: noise leaving the gap at the context-off value, which would mean WHICH
+    // ticks are chosen matters and a matched coin flip cannot stand in.
+    {"noise-AB",   0u, false, 0u, 0.0f, 2u, -1, 0.001f, 2u},
+    {"noise-keep", 0u, true,  0u, 0.0f, 2u, -1, 0.001f, 2u},
 };
 constexpr uint32_t kCGArmCount = sizeof(kCGArms) / sizeof(kCGArms[0]);
 // CHANGED 2026-09-21 from 318211 to draw a FRESH set of creatures from the same
@@ -14060,6 +14082,8 @@ bool run_credgate(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
     cfg.ctx_proto_gate = kCGArms[a].gate;
     cfg.ctx_vigilance = kCGArms[a].vig;
     cfg.ctx_pin = kCGArms[a].pin;
+    cfg.ctx_noise_p = kCGArms[a].noise_p;
+    cfg.ctx_noise_dwell = kCGArms[a].noise_dwell;
     // TURN THE CONTEXT MACHINERY ON. ctx_slots_ is set from
     // `exploration.context_slots > 1`, so at the shipped 0 the whole thing is inert
     // and active_context() returns 0 on every tick -- which is why the derived and

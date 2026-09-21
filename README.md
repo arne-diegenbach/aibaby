@@ -12515,7 +12515,29 @@ two claims apart cleanly.
 | vigilance, unmasked | 0.9583 | +0.0625 | +0.0732 | 1.17 |
 | pinned / vigilance-pinned | 0.9304 | +0.0786 | +0.1410 | 1.79 |
 
-**The core result holds on three draws out of three.** The structural closures are
+**CORRECTION, from measuring the switches instead of describing them.** Everything
+above that calls this "a rare, well-timed switch" is wrong in its second half, and the
+phrase appears more than once. Counted rather than inferred, vigilance's index makes
+**7651 switches during teaching against 1461 in the gap** — 0.375% of teach ticks
+against 0.154% of gap ticks, so **2.4× more frequent in the wrong phase** — with the
+first at **trial 10 of 728**, 1.4% into teaching rather than at the lesson boundary.
+The excursions average ~1.5 ticks and there are roughly 4556 of them.
+
+So "rare" is true of *time on the second slot* (0.2% of ticks) and false of *events*.
+"Well-timed" is refuted outright: the switches are not tracking the lesson change, and
+the story that they land at the boundary so the second lesson's writes miss the first
+lesson's table is dead. Both pre-registered refusal conditions fired.
+
+What thousands of single-tick excursions to an empty table look like is **dropout** —
+for those ticks the drive reads a near-empty second table instead of the learned one,
+and any reward lands there. That would make the benefit regularisation rather than
+indexing. It is also inference number six in this line, so it gets a control instead
+of a paragraph: matched random excursions at p = 0.001 per tick with dwell 2, which
+reproduces ~0.2% of ticks on the second slot with no context information at all. If a
+coin flip reproduces the effect, the mechanism is not indexing — the same demand this
+project already makes of the oracle.
+
+**The core result holds on three draws out of three.****The core result holds on three draws out of three.** The structural closures are
 exact again — a pinned index, a pinned vigilance index, and no context at all are the
 same creature to four decimals — and the interference-gap reduction lands at **5.4,
 5.1 and 2.8 SE** across the three. Its magnitude falls as the test gets more
