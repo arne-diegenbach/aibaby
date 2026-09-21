@@ -13884,6 +13884,19 @@ const CGArm kCGArms[] = {
     // stand-in built here, and `retain` is the real thing.
     {"derived3-AB", 2u, false, 7u, 5.0f},
     {"derived3-keep", 2u, true, 7u, 5.0f},
+    // THE CONTROL derived3 NEEDS AND DID NOT HAVE. Gate 7 reads erosion -0.0036
+    // against broadcast's +0.0762 with the HIGHEST gained of any arm -- but its
+    // index separation is 0.001, so the mask cannot be doing context-indexed credit
+    // assignment. Gate 7 changes the BRAIN (the index feeds bias selection), so the
+    // creature differs in more than the mask.
+    //
+    // These arms are gate 7 with BROADCAST reward -- the same creature, no mask at
+    // all. If they show the same erosion improvement, the mask is irrelevant and
+    // gate 7 simply makes a better learner, which is a different finding and not the
+    // one this experiment is about. Without this the improvement cannot be
+    // attributed at all.
+    {"bcast7-AB",   0u, false, 7u, 5.0f},
+    {"bcast7-keep", 0u, true,  7u, 5.0f},
 };
 constexpr uint32_t kCGArmCount = sizeof(kCGArms) / sizeof(kCGArms[0]);
 constexpr uint64_t kCGSeedOffset = 318211ull;
