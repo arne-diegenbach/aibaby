@@ -12777,6 +12777,67 @@ would have licensed a conclusion the numbers do not support. Carpenter & Grossbe
 vigilance test still has no replacement here, but it has not been shown to need one
 either.
 
+### The milestone: NOT MET
+
+Every number above is an interference *gap* — a difference of differences. That is not
+a retained lesson in behaviour, and this line had never asked for one. The project's
+retention milestone is a plain quantity: of the vowel error the lesson removed, how
+much is still gone after a conflicting lesson?
+
+    retention = (err_before − err_after) / (err_before − err_taught)
+
+`retain` reports **0.22** for that, the wipe this project has been trying to move.
+
+It has to be computed as a ratio of means. Per creature the denominator is a small
+teaching gain that sometimes lands near zero, and the mean of those ratios once
+reported `oracle AB −5.166 ± 5.263` — noise in the costume of a measurement. The ratio
+of means has no such denominator, and a paired bootstrap over creatures (2000
+resamples, the same resampled indices for every arm) gives it an interval.
+
+**The block checks out arithmetically before anything is read from it.** From the
+gained and erosion figures already in hand, context-off had to come out at 0.295 and
+vigilance at 0.736. They print **+0.294** and **+0.737**.
+
+| arm | retention | 95% interval |
+|---|---|---|
+| context off (`pin0`) | +0.294 | [−0.052, +0.553] |
+| broadcast | −0.178 | [−0.641, +0.239] |
+| **vigilance** (`bcast7`) | **+0.737** | **[+0.335, +1.003]** |
+| oracle (masked) | +0.233 | [−0.427, +0.833] |
+| uniform flip | +0.267 | [−0.138, +0.585] |
+| flip in the silence | +0.658 | [+0.489, +0.808] |
+
+**Pre-registered, both halves required — and one of them fails.** Vigilance's interval
+runs from **+0.335**, not entirely above 0.5. The paired difference against context-off
+is +0.442 [+0.020, +0.884], which does exclude zero but with a lower bound of 0.020,
+essentially at the boundary. So: **difference yes, level no, MILESTONE NOT MET.**
+
+**And the ceiling is not demonstrated here either, which is what "not met" should be
+read against.** The oracle — the arm that is supposed to be the upper bound, and that
+`credit-oracle` measured at 0.84 → 1.03 — reads **+0.233 [−0.427, +0.833]**, sitting
+below context-off with an interval four times as wide. That is the same failure this
+experiment's own guard reports on every run (`THE ORACLE DID NOT REPRODUCE`, +1.2 SE),
+and it means this genome and protocol cannot currently demonstrate the bar at all.
+Vigilance did not fall short of a bar shown to be reachable; **the bar is not shown to
+be reachable.** Twelve creatures is the likeliest reason, and it caps every interval
+in the table.
+
+**An observation that bears on the unresolved placement question, and it points the
+other way.** On this statistic the silence-placed coin flip reads **+0.658 [+0.489,
++0.808]** — close to vigilance's +0.737, with a *tighter* interval, and the two overlap
+almost entirely. On the gap statistic that same arm sat 1.3 SE from vigilance and was
+recorded as unresolved. Two statistics on one run, pulling in the same direction:
+silence placement may account for much of what vigilance does. That is not established
+— it was not the pre-registered question here, and the paired vigilance-minus-silence
+difference was not computed — but it is now the strongest hint in this line, and it
+argues the placement question deserves the creatures rather than being dropped.
+
+**What this closes.** The sparse switch is real, replicated three times, not dropout,
+and located in the silence — but on the quantity that would make it a milestone it
+reaches +0.737 with a lower bound of +0.335, against an oracle that cannot be
+demonstrated on the same run. **No milestone.** The honest summary of this whole line
+is that it produced a well-characterised interference effect and no retained lesson.
+
 **The core result holds on three draws out of three.** The structural closures are
 exact again — a pinned index, a pinned vigilance index, and no context at all are the
 same creature to four decimals — and the interference-gap reduction lands at **5.4,

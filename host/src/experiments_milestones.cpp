@@ -14481,6 +14481,124 @@ bool run_credgate(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
                 "    to resolve and NOT evidence for either side.\n");
   }
 
+  // DOES IT REACH A MILESTONE? Everything above is an interference GAP, a difference
+  // of differences. The project's retention milestone is a plain behavioural quantity
+  // instead: of the vowel error the lesson removed, how much is still gone after a
+  // conflicting lesson? That is `retain`'s own statistic,
+  //     retention = (err_before - err_after) / (err_before - err_taught)
+  // and [[aibaby-retention]]'s 0.22 is the wipe it reports for a conflicting lesson.
+  //
+  // IT HAS TO BE COMPUTED AS A RATIO OF MEANS, NOT A MEAN OF RATIOS. Per creature the
+  // denominator is a small teaching gain that sometimes lands near zero, and the mean
+  // of those ratios reported `oracle AB -5.166 +/- 5.263` -- noise in the costume of a
+  // measurement. The ratio of means has no such denominator, and a PAIRED bootstrap
+  // over creatures gives it an interval: the same resampled creature indices are used
+  // for every arm, so arm-to-arm differences keep the pairing that the shared wiring
+  // seeds create.
+  {
+    auto idx = [&](const char* n) {
+      for (uint32_t a2 = 0; a2 < kCGArmCount; ++a2)
+        if (std::strcmp(kCGArms[a2].name, n) == 0) return int(a2);
+      return -1;
+    };
+    struct RArm { const char* label; const char* arm; };
+    const RArm rs[] = {
+        {"context OFF (pin0)", "pin0-AB"},
+        {"broadcast", "bcast-AB"},
+        {"VIGILANCE (bcast7)", "bcast7-AB"},
+        {"oracle (masked)", "oracle-AB"},
+        {"uniform flip", "nzpin-AB"},
+        {"flip in the SILENCE", "nzsil-AB"},
+    };
+    constexpr int kNR = 6;
+    // Per-creature triples, gathered once and shared by every bootstrap replicate.
+    std::vector<double> bef[kNR], tau[kNR], aft[kNR];
+    bool ok[kNR] = {};
+    uint32_t ncre = 0;
+    for (int k = 0; k < kNR; ++k) {
+      const int ia = idx(rs[k].arm);
+      if (ia < 0) continue;
+      for (uint32_t r2 = 0; r2 < kReps; ++r2) {
+        const Cell& c = cells[r2 * kCGArmCount + uint32_t(ia)];
+        if (!c.ok) continue;
+        bef[k].push_back(c.row.err_before);
+        tau[k].push_back(c.row.err_taught);
+        aft[k].push_back(c.row.err_after);
+      }
+      ok[k] = bef[k].size() >= 3;
+      if (ok[k]) ncre = uint32_t(bef[k].size());
+    }
+    auto ratio = [](const std::vector<double>& b, const std::vector<double>& t,
+                    const std::vector<double>& a2, const std::vector<uint32_t>& pick) {
+      double sb = 0.0, st = 0.0, sa = 0.0;
+      for (uint32_t i : pick) { sb += b[i]; st += t[i]; sa += a2[i]; }
+      const double n = double(pick.size());
+      const double gain = sb / n - st / n;
+      if (std::fabs(gain) < 1e-9) return std::numeric_limits<double>::quiet_NaN();
+      return (sb / n - sa / n) / gain;
+    };
+    std::printf("\n  DOES IT REACH A MILESTONE? -- retention, the fraction of the taught\n"
+                "  gain still gone after the conflicting lesson. This is `retain`'s own\n"
+                "  statistic, whose conflicting-lesson value is 0.22. Ratio of MEANS with\n"
+                "  a paired bootstrap (2000 resamples, 95%% interval); a mean of per-\n"
+                "  creature ratios is unusable here and reported -5.166 +/- 5.263.\n");
+    constexpr int kB = 2000;
+    std::vector<double> boot[kNR];
+    std::vector<uint32_t> pick(ncre);
+    uint64_t rng = 0x9E3779B97F4A7C15ull ^ uint64_t(kCGSeedOffset);
+    for (int b = 0; b < kB; ++b) {
+      for (uint32_t i = 0; i < ncre; ++i) {
+        rng += 0x9E3779B97F4A7C15ull;
+        uint64_t z = rng;
+        z = (z ^ (z >> 30)) * 0xBF58476D1CE4E5B9ull;
+        z = (z ^ (z >> 27)) * 0x94D049BB133111EBull;
+        z ^= z >> 31;
+        pick[i] = uint32_t(z % ncre);
+      }
+      for (int k = 0; k < kNR; ++k) {
+        if (!ok[k] || bef[k].size() != ncre) continue;
+        const double v = ratio(bef[k], tau[k], aft[k], pick);
+        if (v == v) boot[k].push_back(v);
+      }
+    }
+    std::vector<uint32_t> all(ncre);
+    for (uint32_t i = 0; i < ncre; ++i) all[i] = i;
+    double point[kNR] = {}, lo[kNR] = {}, hi[kNR] = {};
+    for (int k = 0; k < kNR; ++k) {
+      if (!ok[k]) continue;
+      point[k] = ratio(bef[k], tau[k], aft[k], all);
+      std::vector<double> v = boot[k];
+      if (v.size() < 100) { ok[k] = false; continue; }
+      std::sort(v.begin(), v.end());
+      lo[k] = v[size_t(0.025 * double(v.size()))];
+      hi[k] = v[size_t(0.975 * double(v.size()))];
+      std::printf("    %-22s retention %+.3f   95%% [%+.3f, %+.3f]\n", rs[k].label,
+                  point[k], lo[k], hi[k]);
+    }
+    std::printf("    1.0 keeps the whole lesson, 0.0 loses it entirely, and `retain`\n"
+                "    measured 0.22 for a conflicting lesson on the shipped genome.\n");
+    std::printf("\n    PRE-REGISTERED. MILESTONE MET only if VIGILANCE's interval lies\n"
+                "    ENTIRELY ABOVE 0.5 -- more than half the taught lesson survives a\n"
+                "    conflicting one -- AND its paired difference against context-off\n"
+                "    excludes zero. Either one alone is NOT the milestone.\n");
+    const int kv = 2, kc = 0;
+    if (ok[kv] && ok[kc] && boot[kv].size() == boot[kc].size()) {
+      std::vector<double> d(boot[kv].size());
+      for (size_t i = 0; i < d.size(); ++i) d[i] = boot[kv][i] - boot[kc][i];
+      std::sort(d.begin(), d.end());
+      const double dlo = d[size_t(0.025 * double(d.size()))];
+      const double dhi = d[size_t(0.975 * double(d.size()))];
+      const double dpt = point[kv] - point[kc];
+      std::printf("    vigilance - context-off: %+.3f   95%% [%+.3f, %+.3f]\n", dpt,
+                  dlo, dhi);
+      const bool above = lo[kv] > 0.5;
+      const bool beats = dlo > 0.0 || dhi < 0.0;
+      std::printf("    interval above 0.5: %s;  difference excludes zero: %s\n",
+                  above ? "YES" : "NO", beats ? "YES" : "NO");
+      std::printf("    --> MILESTONE %s\n", (above && beats) ? "MET" : "NOT MET");
+    }
+  }
+
   // WHAT THE EXCURSIONS ARE KEYED TO. Not the lesson (separation 0.001-0.012) and not
   // the lesson boundary (measured: first switch at trial 10 of 728, 2.4x denser in the
   // wrong phase). The matched coin flip then said WHICH ticks matter -- so this asks
