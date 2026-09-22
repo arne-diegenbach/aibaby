@@ -11256,6 +11256,67 @@ papers about the half it does not touch.
   it against the wrong question, the magnitude of the learned bias rather than the
   protection of an old lesson from a new one.
 
+- **The multi-timescale gate, and the ratio that prices it (not built).** Astrocyte-
+  gated multi-timescale plasticity (AGMP). *Frontiers in Neuroscience* (2026).
+  <https://doi.org/10.3389/fnins.2025.1768235> — three timescales: fast membrane and
+  eligibility traces, and a slow astrocytic state that **gates when updates happen**
+  rather than how fast they are. Reported at 82.6% accuracy / 15.4% forgetting on
+  Split N-MNIST against EWC's 72.4% / 24.5%.
+
+  **Three things make this the most useful paper found for this project.** First, no
+  task identity is supplied — the constraint the creature actually works under.
+  Second, it is a *gate*, not a *store* and not a *brake*, which is exactly the
+  distinction that killed DNA v60: flooring the prototype's learning rate was refused
+  as Grossberg's dilemma, *a rate fast enough to learn the new word is fast enough to
+  erase the old*, and Benna–Fusi was refused as a 21× brake on the quantity we are
+  short of. Third, it converges on something measured here independently — the
+  vigilance switches turn out to sit in the silence, keyed to the ear-EMA decaying
+  away from its prototypes, and AGMP's gate "suppresses updates in stable regimes
+  while enabling adaptation during distribution shifts" is the same shape. The
+  difference is *what* is gated: this project gates which table is written, AGMP
+  gates whether a write happens at all. **A plasticity gate needs no context slot,
+  so it does not care that the index carries nothing** (separation 0.001–0.012),
+  which is the dead end every arm in the sparse-switch line ran into.
+
+  **And it supplies a derived constant rather than a guessed one, which is where it
+  bites.** AGMP requires the slow timescale to be **50–500× the eligibility trace**.
+  This genome has `tau_elig_ms = 2000` against an ear-rate EMA of ~1000 ms, so the
+  candidate slow signal is **0.5×** the eligibility trace where the band wants 50–500×
+  — two to three orders of magnitude out. If the account is right, the ear EMA is not
+  a slow stability signal at all. The band it implies is 100 s–1000 s, and DNA v60's
+  sweep did test 300 s, where it came out **bit-identical to OFF** because of the
+  float32 stagnation measured here (`+= lr*(x−cur)` stops moving below eps 1.2e-7).
+  **So the timescale the literature recommends is precisely the one the current
+  integrator form cannot represent** — a constraint on any implementation, not a
+  reason it cannot work. Anything built here needs a different integrator, not a
+  longer tau.
+
+- **Context gating in SNNs — CONSIDERED AND IT DOES NOT APPLY HERE, recorded so it is
+  not chased twice.** Context Gating in Spiking Neural Networks: Achieving Lifelong
+  Learning through Integration of Local and Global Plasticity. arXiv:2406.01883 —
+  by title this is the closest match in the literature to what this project builds,
+  and that is why it is worth writing down that it is not usable. It works by
+  "strengthening the connections between **task neurons** and hidden neurons", which
+  means a task identity is supplied. In this project's terms that is the **oracle
+  class**, already priced by `credit-oracle` and by `credgate`'s masked arms, and it
+  is the thing being avoided rather than a solution to it. The whole difficulty here
+  is that the creature has to *derive* its context from its own ear; a method that is
+  handed the context solves a different problem. Note also that its lifelong-learning
+  claims in the abstract are qualitative, with no retention figures to compare
+  against.
+
+- **Noise as the gradient estimator, same family as this creature's rule.**
+  Noise-based reward-modulated learning (NRL). arXiv:2503.23972 (2025) — uses
+  inherent hardware noise to estimate gradients with local updates, reported
+  comparable to backpropagation on standard RL benchmarks. This is the same family as
+  the node perturbation that drives every lesson here, and
+  [[aibaby-variance-not-credit]] already established that node perturbation *is* the
+  credit-assignment mechanism in this creature rather than something bolted on. Read
+  alongside Dalm et al. above (arXiv:2310.00965, already recorded under its earlier
+  title *Effective Learning with Node Perturbation in Deep Neural Networks*): both
+  point at the estimator's variance rather than its ceiling, which is the half
+  `ctxgain` could not measure because both its arms were saturated.
+
 - **Node perturbation, and what actually speeds it up.** Dalm, S., Offergeld, J.,
   Ahmad, N. & van Gerven, M. *Effective Learning with Node Perturbation in Deep
   Neural Networks.* arXiv:2310.00965 — decorrelating unit activities gives
