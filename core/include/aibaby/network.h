@@ -235,7 +235,17 @@ class Network {
   void set_context_noise(Scalar p, uint32_t dwell) {
     ctx_noise_p_ = p; ctx_noise_dwell_ = dwell; ctx_noise_left_ = 0;
   }
-  void clear_context_noise() { ctx_noise_p_ = kZero; ctx_noise_dwell_ = 0; }
+  void clear_context_noise() {
+    ctx_noise_p_ = kZero; ctx_noise_dwell_ = 0; ctx_noise_open_ = true;
+  }
+  // EXPERIMENT-ONLY WINDOW GATE for the excursions above. The measured profile says
+  // vigilance's switches sit in the SILENCE -- 16.9% of them in the word against a
+  // 31.3% flat null -- so the control that matters is a coin flip PLACED there rather
+  // than spread uniformly. The caller drives this per tick from its own protocol,
+  // which avoids assuming the network's tick counter is aligned to a trial boundary;
+  // it is not obviously so, and measuring beats assuming. Open by default, so an
+  // arm that never calls it behaves exactly as before and the pinned hash cannot move.
+  void set_context_noise_window(bool open) { ctx_noise_open_ = open; }
   Scalar ctx_wins_total() const {
     Scalar t = kZero;
     for (uint32_t c = 0; c < ctx_slots_; ++c) t += ctx_wins_[c];
@@ -1079,6 +1089,7 @@ class Network {
   Scalar ctx_noise_p_ = kZero;    // experiment-only excursion probability per tick
   uint32_t ctx_noise_dwell_ = 0;  // ...and how many ticks each excursion lasts
   uint32_t ctx_noise_left_ = 0;   // ticks remaining in the current excursion
+  bool ctx_noise_open_ = true;    // ...and whether a NEW excursion may start now
   static constexpr uint32_t kCtxSelfSkipA = 2;  // F1
   static constexpr uint32_t kCtxSelfSkipB = 3;  // F2
   // DNA v53, source 2. One prototype per context over the source module's

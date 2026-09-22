@@ -12720,6 +12720,63 @@ and a half times. Identities hold exactly, magnitudes move, and a number is wort
 quoting only once a longer or more independent run has seen it. Labelling the first
 pass *provisional* is what made this a correction rather than a retraction.
 
+### Placement is not the answer, and half the test did not resolve
+
+The histogram said the excursions sit in the silence, so the uniform coin flip was
+never the matched control — it is a *mixture* of the two placements, and vigilance uses
+only one of them. Splitting it: `nzsil` fires only while the caregiver is silent,
+`nzwrd` only while it sounds, both matched to vigilance's total event count so that
+**placement is the only thing that differs** from the uniform flip.
+
+The instrument checks out exactly. `nzsil` reads **0.0%** of its switches in the word
+and `nzwrd` reads **99.9%** — the window gate does precisely what it claims, and
+neither arm is the arm it was not meant to be.
+
+| arm | gap | vs context-off | vs vigilance | gained | gap per unit gained |
+|---|---|---|---|---|---|
+| context off (`pin0`) | +0.1410 ± 0.0226 | — | — | +0.0786 | 1.79 |
+| **vigilance** (`bcast7`) | **+0.0732 ± 0.0259** | — | — | +0.0625 | **1.17** |
+| uniform flip, p.002 d1 | +0.1511 ± 0.0292 | −0.3 SE | +2.0 SE | +0.0601 | 2.51 |
+| uniform flip, p.001 d2 | +0.1357 ± 0.0234 | +0.2 SE | +1.8 SE | +0.0760 | 1.79 |
+| flip in the **silence** | +0.1245 ± 0.0294 | +0.4 SE | **+1.3 SE** | +0.0720 | 1.73 |
+| flip in the **word** | +0.1479 ± 0.0249 | −0.2 SE | +2.1 SE | +0.0584 | 2.53 |
+
+**The word arm resolves and refuses itself: 2.1 SE from vigilance, 0.2 SE from
+context-off.** Placing excursions inside the word buys nothing, and costs the most
+teaching gain of any arm here.
+
+**The silence arm does not resolve, and the pre-registered criterion says so.** It sits
+0.4 SE from context-off and **1.3 SE from vigilance** — under 2 SE on both sides, which
+is exactly the case registered in advance as *this test failing to resolve, and not
+evidence for either side*. It is also the only flip that moves toward vigilance at all,
+closing 24% of the distance, with an uncertainty that spans roughly −85% to +134%. That
+interval is uninformative, and the honest statement is that this run does not know
+whether silence-placement contributes nothing or contributes a third.
+
+**An internal check that did pass.** A uniform flip should be the mixture of the two
+placements weighted by their share of the trial, 1900/2800 silence and 900/2800 word.
+That predicts a uniform gap of +0.1320 against measured +0.1511 and +0.1357 — **0.7 SE
+and 0.2 SE**. The four arms are describing one consistent system, which is the reason
+to trust the columns even where they fail to separate.
+
+**Where that leaves the mechanism.** Four matched schedules have now been tried —
+uniform at two rates, silence-only, word-only — and every one of them lands within 0.4
+SE of context-off while vigilance sits 0.0678 below. No schedule has reproduced it. But
+"no schedule reproduces it" is carried by the aggregate pattern and by the word arm;
+the single comparison that would have made it clean is the silence arm, and that one is
+underpowered. Resolving it properly needs roughly four times the creatures — about
+thirteen hours — which is not obviously worth it for this question.
+
+**A method note, because I got this wrong in a way worth recording.** I pre-registered
+this run twice, in two places, and the two did not agree: the run script's prose said
+"neither arm reaching vigilance means placement is not sufficient", while the criterion
+compiled into the experiment said "both differences under ~2 SE is this test failing to
+resolve". The silence arm satisfies the first and fails the second. **One criterion, in
+the code, is the only version that counts** — the prose was looser and, read alone,
+would have licensed a conclusion the numbers do not support. Carpenter & Grossberg's
+vigilance test still has no replacement here, but it has not been shown to need one
+either.
+
 **The core result holds on three draws out of three.** The structural closures are
 exact again — a pinned index, a pinned vigilance index, and no context at all are the
 same creature to four decimals — and the interference-gap reduction lands at **5.4,

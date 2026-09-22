@@ -1813,7 +1813,10 @@ void Network::step() {
       h ^= h >> 30; h *= 0xBF58476D1CE4E5B9ull;
       h ^= h >> 27; h *= 0x94D049BB133111EBull; h ^= h >> 31;
       const Scalar u = Scalar(h >> 40) / Scalar(1u << 24);
-      if (u < ctx_noise_p_) {
+      // The window gates only the START of an excursion; one already running finishes,
+      // which at dwell 1 is moot and at longer dwells keeps the excursion LENGTH
+      // matched rather than truncating it at the window edge.
+      if (u < ctx_noise_p_ && ctx_noise_open_) {
         ctx_noise_left_ = ctx_noise_dwell_ > 0 ? ctx_noise_dwell_ - 1 : 0;
         active_ctx_ = 1u;
       }

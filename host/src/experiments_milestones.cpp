@@ -5937,6 +5937,11 @@ struct RTConfig {
   // EXPERIMENT-ONLY matched random excursions: probability per tick, and dwell.
   float ctx_noise_p = 0.0f;
   uint32_t ctx_noise_dwell = 0;
+  // WHERE IN THE TRIAL THE EXCURSIONS MAY START. 0 = anywhere (the uniform flip that
+  // already ran), 1 = only while the caregiver is SILENT, 2 = only while it SOUNDS.
+  // The measured profile put vigilance's switches in the silence, so a uniform flip
+  // was never the matched control -- these are. Appended at the END.
+  uint32_t ctx_noise_where = 0;
 };
 
 // One arm, one creature, one life: teach, intervene, re-measure.
@@ -6209,6 +6214,13 @@ RTRow run_retain_arm(const std::vector<uint8_t>& blob, uint64_t ticks,
         pending.pop_front();
       }
       const bool sounding = t < 900;
+      // The window is driven from the protocol rather than from the network's own tick
+      // counter, which is not known to be aligned to a trial boundary. Only arms that
+      // set ctx_noise_where touch it at all.
+      if (cfg.ctx_noise_where == 1u)
+        s.brain.network().set_context_noise_window(!sounding);
+      else if (cfg.ctx_noise_where == 2u)
+        s.brain.network().set_context_noise_window(sounding);
       // The oracle, held for the whole trial exactly as the vocallearn version is:
       // a context that is gone when reward lands has nothing to bind to.
       if (cfg.ctx_oracle_module >= 0 && cfg.ctx_oracle_gain > 0.0) {
@@ -13931,29 +13943,32 @@ struct CGArm {
   // Matched random excursions: per-tick probability and dwell. 0 = off.
   float noise_p;
   uint32_t noise_dwell;
+  // Where in the trial an excursion may START: 0 anywhere, 1 silence only, 2 word
+  // only. Appended at the END, which is why every existing row needs one more value.
+  uint32_t noise_where;
 };
 const CGArm kCGArms[] = {
-    {"bcast-AB",   0u, false, 0u, 0.0f, 2u, -1, 0.0f, 0u},   // the shipped broadcast rule: the 0.22 wipe
-    {"bcast-keep", 0u, true,  0u, 0.0f, 2u, -1, 0.0f, 0u},
-    {"oracle-AB",  1u, false, 0u, 0.0f, 2u, -1, 0.0f, 0u},   // the host masks by which lesson is live
-    {"oracle-keep", 1u, true, 0u, 0.0f, 2u, -1, 0.0f, 0u},
+    {"bcast-AB",   0u, false, 0u, 0.0f, 2u, -1, 0.0f, 0u, 0u},   // the shipped broadcast rule: the 0.22 wipe
+    {"bcast-keep", 0u, true,  0u, 0.0f, 2u, -1, 0.0f, 0u, 0u},
+    {"oracle-AB",  1u, false, 0u, 0.0f, 2u, -1, 0.0f, 0u, 0u},   // the host masks by which lesson is live
+    {"oracle-keep", 1u, true, 0u, 0.0f, 2u, -1, 0.0f, 0u, 0u},
     // THE DERIVED ARMS ON THE INDEX AS SHIPPED, which `ctxpc` measured separating
     // a-vs-i at 0.035. They price a mask over NOISE and are the control here.
-    {"derived-AB", 2u, false, 0u, 0.0f, 2u, -1, 0.0f, 0u},
-    {"derived-keep", 2u, true, 0u, 0.0f, 2u, -1, 0.0f, 0u},
+    {"derived-AB", 2u, false, 0u, 0.0f, 2u, -1, 0.0f, 0u, 0u},
+    {"derived-keep", 2u, true, 0u, 0.0f, 2u, -1, 0.0f, 0u, 0u},
     // ON THE CONSCIENCE INDEX. It separates at 0.999 when words ALTERNATE and at
     // 0.084 here, because teaching introduces the second word LATE and no learning
     // rate can fix that (DNA v60, refused).
-    {"derived2-AB", 2u, false, 2u, 0.0f, 2u, -1, 0.0f, 0u},
-    {"derived2-keep", 2u, true, 2u, 0.0f, 2u, -1, 0.0f, 0u},
+    {"derived2-AB", 2u, false, 2u, 0.0f, 2u, -1, 0.0f, 0u, 0u},
+    {"derived2-keep", 2u, true, 2u, 0.0f, 2u, -1, 0.0f, 0u, 0u},
     // AND ON THE VIGILANCE INDEX. DNA v61 gate 7 allocates a NEW slot for a word
     // introduced late and resets the win counts so the older category can still win:
     // on the late protocol that reads separation 0.932 (a-vs-i) and 0.988 (i-vs-u)
     // with flip matching wflip, which is the first index in this line to survive the
     // shape teaching actually has. THIS IS THE TEST -- the late protocol is a
     // stand-in built here, and `retain` is the real thing.
-    {"derived3-AB", 2u, false, 7u, 5.0f, 2u, -1, 0.0f, 0u},
-    {"derived3-keep", 2u, true, 7u, 5.0f, 2u, -1, 0.0f, 0u},
+    {"derived3-AB", 2u, false, 7u, 5.0f, 2u, -1, 0.0f, 0u, 0u},
+    {"derived3-keep", 2u, true, 7u, 5.0f, 2u, -1, 0.0f, 0u, 0u},
     // THE CONTROL derived3 NEEDS AND DID NOT HAVE. Gate 7 reads erosion -0.0036
     // against broadcast's +0.0762 with the HIGHEST gained of any arm -- but its
     // index separation is 0.001, so the mask cannot be doing context-indexed credit
@@ -13965,8 +13980,8 @@ const CGArm kCGArms[] = {
     // gate 7 simply makes a better learner, which is a different finding and not the
     // one this experiment is about. Without this the improvement cannot be
     // attributed at all.
-    {"bcast7-AB",   0u, false, 7u, 5.0f, 2u, -1, 0.0f, 0u},
-    {"bcast7-keep", 0u, true,  7u, 5.0f, 2u, -1, 0.0f, 0u},
+    {"bcast7-AB",   0u, false, 7u, 5.0f, 2u, -1, 0.0f, 0u, 0u},
+    {"bcast7-keep", 0u, true,  7u, 5.0f, 2u, -1, 0.0f, 0u, 0u},
     // THE BASELINE THAT WAS NEVER RUN. bcast7 -- gate 7's brain with BROADCAST
     // reward and no mask -- posts GAINED +0.0640 against broadcast's +0.0193 and an
     // interference gap of +0.0436 against +0.0933. With its index separation at
@@ -13982,8 +13997,8 @@ const CGArm kCGArms[] = {
     // WHAT WOULD REFUSE THE ACCOUNT: plain landing at broadcast's +0.0193 rather
     // than near bcast7's +0.0640, which would mean vigilance does something for
     // teaching beyond holding the index still.
-    {"plain-AB",   0u, false, 0u, 0.0f, 0u, -1, 0.0f, 0u},
-    {"plain-keep", 0u, true,  0u, 0.0f, 0u, -1, 0.0f, 0u},
+    {"plain-AB",   0u, false, 0u, 0.0f, 0u, -1, 0.0f, 0u, 0u},
+    {"plain-keep", 0u, true,  0u, 0.0f, 0u, -1, 0.0f, 0u, 0u},
     // THE 2x2 THAT SETTLES IT. The diagnostic refuted the flickering account: the
     // shipped index sits on slot 1 about 90% of the time and vigilance's sits on
     // slot 0 99.8% of the time, so BOTH are nearly constant and they differ by a
@@ -13995,10 +14010,10 @@ const CGArm kCGArms[] = {
     // slot IDENTITY matters, and the bias tables are not as symmetric as the kernel
     // reads. Neither near bcast7: vigilance does something beyond holding the index
     // still, and the next question is what.
-    {"pin0-AB",   0u, false, 0u, 0.0f, 2u, 0, 0.0f, 0u},
-    {"pin0-keep", 0u, true,  0u, 0.0f, 2u, 0, 0.0f, 0u},
-    {"pin1-AB",   0u, false, 0u, 0.0f, 2u, 1, 0.0f, 0u},
-    {"pin1-keep", 0u, true,  0u, 0.0f, 2u, 1, 0.0f, 0u},
+    {"pin0-AB",   0u, false, 0u, 0.0f, 2u, 0, 0.0f, 0u, 0u},
+    {"pin0-keep", 0u, true,  0u, 0.0f, 2u, 0, 0.0f, 0u, 0u},
+    {"pin1-AB",   0u, false, 0u, 0.0f, 2u, 1, 0.0f, 0u, 0u},
+    {"pin1-keep", 0u, true,  0u, 0.0f, 2u, 1, 0.0f, 0u, 0u},
     // THE DIRECT ATTACK ON WHAT IS LEFT. pin0 and pin1 came out IDENTICAL to each
     // other and to context-off, to four decimals, so slot identity is irrelevant and
     // a perfectly constant index is exactly no context. bcast7 sits at 0.998, NOT
@@ -14013,8 +14028,8 @@ const CGArm kCGArms[] = {
     // WHAT WOULD REFUSE THAT: vig-pin0 keeping bcast7's +0.0436 gap, which would
     // mean committing the prototypes matters even when the index never moves, and
     // the mechanism is in the commit rather than in the switch.
-    {"vigpin-AB",   0u, false, 7u, 5.0f, 2u, 0, 0.0f, 0u},
-    {"vigpin-keep", 0u, true,  7u, 5.0f, 2u, 0, 0.0f, 0u},
+    {"vigpin-AB",   0u, false, 7u, 5.0f, 2u, 0, 0.0f, 0u, 0u},
+    {"vigpin-keep", 0u, true,  7u, 5.0f, 2u, 0, 0.0f, 0u, 0u},
     // THE DROPOUT CONTROL. Vigilance's excursions are NOT a rare well-timed switch:
     // ~4556 of them averaging ~1.5 ticks, 0.2% of ticks in total, 2.4x more frequent
     // during TEACHING than during the gap, first at trial 10 of 728. So the live
@@ -14027,8 +14042,8 @@ const CGArm kCGArms[] = {
     // MECHANISM AS INDEXING: noise reproducing vigilance's gap. WHAT WOULD SUPPORT
     // IT: noise leaving the gap at the context-off value, which would mean WHICH
     // ticks are chosen matters and a matched coin flip cannot stand in.
-    {"noise-AB",   0u, false, 0u, 0.0f, 2u, -1, 0.001f, 2u},
-    {"noise-keep", 0u, true,  0u, 0.0f, 2u, -1, 0.001f, 2u},
+    {"noise-AB",   0u, false, 0u, 0.0f, 2u, -1, 0.001f, 2u, 0u},
+    {"noise-keep", 0u, true,  0u, 0.0f, 2u, -1, 0.001f, 2u, 0u},
     // AND THE ARM ABOVE IS VOID AS A CONTROL, MEASURED 2026-09-22. It has pin = -1,
     // so the live gate-0 prototype index runs UNDERNEATH the coin flip, and that
     // index is not still: it reads slot0 0.173 in `bcast` and moved to 0.375 here,
@@ -14046,10 +14061,32 @@ const CGArm kCGArms[] = {
     // 1 AND ~7651 switches per teach phase. Those two together imply SINGLE-tick
     // excursions (0.002 * 2.04M teach ticks / (7651/2) ~ 1.07), so dwell 1 with
     // p = 0.002 matches both; the dwell-2 arm at half the event count brackets it.
-    {"nzpin-AB",    0u, false, 0u, 0.0f, 2u, 0, 0.002f, 1u},
-    {"nzpin-keep",  0u, true,  0u, 0.0f, 2u, 0, 0.002f, 1u},
-    {"nzpin2-AB",   0u, false, 0u, 0.0f, 2u, 0, 0.001f, 2u},
-    {"nzpin2-keep", 0u, true,  0u, 0.0f, 2u, 0, 0.001f, 2u},
+    {"nzpin-AB",    0u, false, 0u, 0.0f, 2u, 0, 0.002f, 1u, 0u},
+    {"nzpin-keep",  0u, true,  0u, 0.0f, 2u, 0, 0.002f, 1u, 0u},
+    {"nzpin2-AB",   0u, false, 0u, 0.0f, 2u, 0, 0.001f, 2u, 0u},
+    {"nzpin2-keep", 0u, true,  0u, 0.0f, 2u, 0, 0.001f, 2u, 0u},
+    // PLACEMENT, NOW THAT THE PROFILE IS MEASURED. The uniform flip above was never
+    // the matched control: vigilance puts only 16.9% of its switches in the word
+    // against a 31.3% flat null, so it is concentrated in the SILENCE and a uniform
+    // flip is a mixture of the two placements. These separate them, matched to
+    // vigilance's TOTAL event count (~3825 excursions per teach phase, ~7650
+    // switches) so that PLACEMENT is the only thing that differs from `nzpin`.
+    //   silence is 1900/2800 of a trial -> p = 3825 / (0.679 * 2.04M) = 0.00276
+    //   the word is   900/2800         -> p = 3825 / (0.321 * 2.04M) = 0.00584
+    //
+    // REFUTES THE NOVELTY TEST AS NECESSARY: nzsil reproducing vigilance's +0.0732
+    // while nzwrd does not. Placement in the silence would then be the whole
+    // mechanism, and a clock would do as well as Carpenter & Grossberg's vigilance.
+    // SUPPORTS IT: neither reproducing the gap, which would mean placement in the
+    // silence is not sufficient and WHICH silent ticks are chosen carries something.
+    // REFUSES THE INSTRUMENT: BOTH reproducing it. A uniform flip is a mixture of
+    // these two placements at the same total rate, and it already failed -- so if
+    // both halves succeed where the mixture failed, something here is wrong and
+    // nothing in the table may be read.
+    {"nzsil-AB",   0u, false, 0u, 0.0f, 2u, 0, 0.00276f, 1u, 1u},
+    {"nzsil-keep", 0u, true,  0u, 0.0f, 2u, 0, 0.00276f, 1u, 1u},
+    {"nzwrd-AB",   0u, false, 0u, 0.0f, 2u, 0, 0.00584f, 1u, 2u},
+    {"nzwrd-keep", 0u, true,  0u, 0.0f, 2u, 0, 0.00584f, 1u, 2u},
 };
 constexpr uint32_t kCGArmCount = sizeof(kCGArms) / sizeof(kCGArms[0]);
 // CHANGED 2026-09-21 from 318211 to draw a FRESH set of creatures from the same
@@ -14129,6 +14166,7 @@ bool run_credgate(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
     cfg.ctx_pin = kCGArms[a].pin;
     cfg.ctx_noise_p = kCGArms[a].noise_p;
     cfg.ctx_noise_dwell = kCGArms[a].noise_dwell;
+    cfg.ctx_noise_where = kCGArms[a].noise_where;
     // TURN THE CONTEXT MACHINERY ON. ctx_slots_ is set from
     // `exploration.context_slots > 1`, so at the shipped 0 the whole thing is inert
     // and active_context() returns 0 on every tick -- which is why the derived and
@@ -14407,11 +14445,13 @@ bool run_credgate(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
         {"noise, UNPINNED (void)", "noise-AB", "noise-keep"},
         {"noise on pin0, p.002 d1", "nzpin-AB", "nzpin-keep"},
         {"noise on pin0, p.001 d2", "nzpin2-AB", "nzpin2-keep"},
+        {"noise in the SILENCE", "nzsil-AB", "nzsil-keep"},
+        {"noise in the WORD", "nzwrd-AB", "nzwrd-keep"},
     };
-    double gap[6] = {}, gse[6] = {};
-    bool have[6] = {};
+    double gap[8] = {}, gse[8] = {};
+    bool have[8] = {};
     std::printf("\n  THE DROPOUT CONTRAST -- does a matched coin flip buy the gap?\n");
-    for (int k = 0; k < 6; ++k) {
+    for (int k = 0; k < 8; ++k) {
       const int ia = idx(gs[k].ab), ik = idx(gs[k].kp);
       if (ia < 0 || ik < 0) continue;
       gap[k] = m_after[ia] - m_after[ik];
@@ -14424,7 +14464,7 @@ bool run_credgate(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
     // The two differences that decide it. The coin flip is a stand-in for vigilance
     // only if it lands on vigilance and away from context-off; if it sits at
     // context-off then WHICH ticks are chosen is doing the work.
-    for (int k = 4; k <= 5; ++k) {
+    for (int k = 4; k <= 7; ++k) {
       if (!have[k] || !have[0] || !have[2]) continue;
       const double d_off = gap[0] - gap[k];
       const double e_off = std::sqrt(gse[0] * gse[0] + gse[k] * gse[k]);
@@ -14454,7 +14494,7 @@ bool run_credgate(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
       return -1;
     };
     const char* names[] = {"bcast-AB", "bcast7-AB", "derived2-AB", "nzpin-AB",
-                           "nzpin2-AB"};
+                           "nzpin2-AB", "nzsil-AB", "nzwrd-AB"};
     std::printf("\n  WHERE IN THE TRIAL THE SWITCHES FALL -- teach phase, 14 bins of\n"
                 "  200 ticks. The caregiver sounds for t < 900, so bins 0-3 are the\n"
                 "  word and 5-13 are silence; a FLAT profile puts 32.1%% in the word\n"
