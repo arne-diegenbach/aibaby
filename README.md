@@ -12573,6 +12573,68 @@ teach phase. Those two together imply single-tick excursions, so p = 0.002 with 
 matches both, and p = 0.001 with dwell 2 matches the occupancy at half the event count.
 The run now refuses itself if either arm fails to move against `pin0`.
 
+### The coin flip buys nothing, so dropout is refused
+
+The rebuilt control ran for 3h10m and resolved. Every pre-existing arm reproduced
+**bit-identically** across the two runs, so the four new arms perturbed nothing and the
+comparison is clean.
+
+| arm | switches/teach | slot0 | gained | AB−keep gap | gap per unit gained |
+|---|---|---|---|---|---|
+| context off (`pin0`) | 0 | 1.000 | +0.0786 ± 0.0144 | +0.1410 ± 0.0226 | 1.79 |
+| vigilance (`bcast7`) | 7651 | 0.998 | +0.0625 ± 0.0124 | **+0.0732 ± 0.0259** | 1.17 |
+| noise on pin0, p.002 d1 | 8195 | 0.999 | +0.0601 ± 0.0084 | **+0.1511 ± 0.0292** | 2.51 |
+| noise on pin0, p.001 d2 | 4163 | 0.997 | +0.0760 ± 0.0081 | **+0.1357 ± 0.0234** | 1.79 |
+
+Both excursion arms land **on** context-off — −0.3 SE and +0.2 SE, which is as tight a
+null as twelve creatures can show — and away from vigilance at 2.0 SE and 1.8 SE. A
+matched random excursion buys none of the interference reduction.
+
+**The dissociation is sharper than the gap alone, and it kills the deflation account.**
+The matched arm reproduces vigilance's *cost* as well as its rate: 0.999 occupancy
+against 0.998, 8195 switches against 7651, and teaching gain +0.0601 against +0.0625,
+which are **0.16 SE apart**. So "vigilance's gap is small because it learned less" is
+refuted directly — an arm that learned equally less has the *largest* gap measured, and
+the worst gap per unit gained of anything in the table at 2.51 against context-off's
+1.79. Random excursions at this rate are actively harmful per unit learned.
+
+**What this does and does not license.** It says *which* ticks go to the second slot
+matters, and that a matched-rate coin flip cannot stand in. It does **not** say the
+index carries lesson identity — that is separately refuted, at separation 0.001 to
+0.012. So the mechanism is neither random dropout nor lesson labelling, and the honest
+statement is narrower than either: the *timing* of the excursions is informative while
+the *slot* is not.
+
+**The residual mismatch, and the bracket arm closes most of it.** The coin flip is
+uniform in time; vigilance is 2.4× denser during teaching than during the gap. Per
+trial, `nzpin` matches vigilance's teach rate (11.26 against 10.51) and over-fires in
+the gap by 2.6×, while `nzpin2` under-fires in teaching by half and nearly matches the
+gap rate (5.72 against 4.39). The two therefore bracket the phase distribution from
+opposite sides, and neither shows any benefit. A flip matched to vigilance's phase
+density would close it completely; on this evidence it would be closing a door already
+shut.
+
+**Read from a run that refused itself, and that needs saying.** `credgate` returns
+failure because its oracle guard did not reproduce on retention (+0.629 ± 0.517, 1.2
+SE). That guard gates the *masked* derived arms. Every arm in the table above is
+unmasked, so the guard does not bear on it — but the number was read past a refusal,
+which is worth stating rather than leaving for someone to find.
+
+The regularisation account being tested is Srivastava, Hinton, Krizhevsky, Sutskever &
+Salakhutdinov's dropout (JMLR 2014), whose mechanism — briefly removing units so no
+one of them can be relied on — is what thousands of single-tick excursions to an empty
+table would amount to. It is refused here as an explanation of Carpenter & Grossberg's
+vigilance test earning its keep.
+
+**Seventh account in this line, and the first that survived its own control.** What
+would refuse it: a phase-matched coin flip reproducing the gap reduction, or the
+excursions turning out to be keyed to something that carries no information about the
+lesson at all. The next measurement follows from the second — the ear-EMA novelty test
+plausibly fires at acoustic transitions, so the excursions may cluster at word onset
+and offset within a trial. That would decompose the tables by acoustic phase rather
+than by word, which would explain a separation near zero *and* why timing matters. It
+is a within-trial histogram, read-only, and cheap.
+
 **The core result holds on three draws out of three.** The structural closures are
 exact again — a pinned index, a pinned vigilance index, and no context at all are the
 same creature to four decimals — and the interference-gap reduction lands at **5.4,
