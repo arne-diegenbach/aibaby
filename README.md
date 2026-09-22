@@ -12838,6 +12838,58 @@ reaches +0.737 with a lower bound of +0.335, against an oracle that cannot be
 demonstrated on the same run. **No milestone.** The honest summary of this whole line
 is that it produced a well-characterised interference effect and no retained lesson.
 
+### The guard that failed every run was asking the wrong question
+
+`credgate` prints **"THE ORACLE DID NOT REPRODUCE, against credit-oracle's 0.84 →
+1.03"** on every run in this line, and its own text says *nothing about the derived arm
+is interpretable until that is explained*. I read past it five times with the argument
+that it gates only the masked arms. That argument is about scope; it explains nothing
+about why a mechanism known to work had stopped working. The milestone run forced the
+issue, because the oracle's interval [−0.427, +0.833] **excludes** 1.03 — a different
+value, not a wide one.
+
+**First, the oracle is fine.** Re-running `credit` at its own 5.6M ticks gives targeted
+retention **1.06**, inside the recorded 0.95–1.09, with A gains of **+0.283 to +0.376**
+against the recorded 0.23–0.33. Nothing regressed since 2026-08-25.
+
+**The benchmark belongs to a different regime and a different mask.**
+
+| | `credit` | `credgate` |
+|---|---|---|
+| the two lessons | **orthogonal** — A on F1, B on F2 | **conflicting** — both on F1 |
+| neurons involved | **disjoint** groups (7708..7722 vs 7722..7736) | the **same** F1 group |
+| targets | separate axes | f1 **320** against f1 **850** |
+| what the mask does | confines reward to the live lesson's own group | splits **one** group into halves by target direction |
+| published result | 0.84 → **1.03** | none — never tested |
+
+So the guard quotes an orthogonal, disjoint-group number as the expectation for a
+same-axis, split-half oracle. **It has failed on every run because it is
+mis-specified**, not because anything is broken. The project's own notes already draw
+the line it ignores: `capacity` records that *orthogonal targets hold two at once, 0.84
+against 0.22*. The 0.84 the guard cites is the **orthogonal** broadcast retention. The
+conflicting case is the **0.22 wipe**, and credit-oracle never moved it.
+
+**What that costs the milestone result above.** It said the bar was not shown to be
+reachable, and now we know why: **the bar was borrowed from another experiment.** There
+is no validated ceiling for credgate's regime at all, so vigilance's +0.737 was being
+priced against a number that does not apply. The "NOT MET" verdict stands — it was
+decided by the pre-registered 0.5 level, not by the oracle — but the oracle column in
+that table is a within-experiment reference and not a bound, and it should never have
+been read as one.
+
+**The guard still refuses, and deliberately.** I rewrote its text to state the regime
+mismatch rather than claim a reproduction failure, and left it returning failure,
+because "this regime has no validated ceiling" is true and worth tripping over.
+Softening it to a pass would hide the one fact that matters most about every derived
+number in this experiment. A guard that fires for five runs and is narrated past each
+time is worse than no guard: **a failing guard is a lead, not a footnote.**
+
+This also explains the mask's cost here without any new hypothesis. The oracle arm's
+`err_taught` is 1.0256 against plain's 0.9304 — it learns markedly worse — which is
+what `mask-unaffordable` already measured when masking half the F1 group, and is
+expected when the mask splits the very group the lesson needs rather than fencing off
+a group it does not.
+
 **The core result holds on three draws out of three.** The structural closures are
 exact again — a pinned index, a pinned vigilance index, and no context at all are the
 same creature to four decimals — and the interference-gap reduction lands at **5.4,

@@ -14660,9 +14660,40 @@ bool run_credgate(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
   }
   std::printf("\n  --- the reading ---\n");
   if (!oracle_works) {
-    std::printf("  THE ORACLE DID NOT REPRODUCE, on RETENTION: %+.3f +/- %.3f (%+.1f SE)\n"
-                "  against credit-oracle's 0.84 -> 1.03. Nothing about the derived arm is\n"
-                "  interpretable until that is explained.\n",
+    // EXPLAINED 2026-09-22, AND THE GUARD WAS MIS-SPECIFIED. This printed "the
+    // oracle did not reproduce, against credit-oracle's 0.84 -> 1.03" on EVERY run
+    // of this experiment, and that benchmark belongs to a DIFFERENT REGIME and a
+    // DIFFERENT MASK:
+    //
+    //   `credit`   teaches two ORTHOGONAL lessons on DISJOINT neuron groups -- A on
+    //              the F1 group, B on the F2 group -- and its mask confines reward
+    //              to the live lesson's own group. 0.84 -> 1.03 is THAT number, and
+    //              re-running `credit` at 5.6M reproduces it: targeted 1.06, gains
+    //              +0.283..+0.376, both inside the recorded bands. Nothing regressed.
+    //
+    //   `credgate` teaches two CONFLICTING lessons on the SAME F1 group -- A wants
+    //              f1 320 and B wants f1 850 -- and its mask splits that ONE group
+    //              into halves by target direction. There is no published ceiling
+    //              for this, because credit-oracle never tested it.
+    //
+    // [[aibaby-capacity]] already separates the two: "ORTHOGONAL targets hold TWO at
+    // once (0.84 vs 0.22)". The 0.84 the guard quotes is the ORTHOGONAL broadcast
+    // retention; the conflicting case is the 0.22 wipe, which credit-oracle never
+    // moved. So this arm failing to reach 1.03 was never evidence of a fault.
+    //
+    // THE GUARD STILL REFUSES, and deliberately. What it may no longer claim is a
+    // reproduction failure; what remains true is that this regime has NO VALIDATED
+    // CEILING, so the oracle arm is a within-experiment reference and not a bound.
+    // Softening it to a pass would hide exactly that.
+    std::printf("  NO VALIDATED CEILING FOR THIS REGIME -- the oracle arm reads %+.3f\n"
+                "  +/- %.3f (%+.1f SE). This is NOT a reproduction failure: credit-oracle's\n"
+                "  0.84 -> 1.03 is for ORTHOGONAL lessons on DISJOINT groups, and `credit`\n"
+                "  still reproduces it (targeted 1.06 at 5.6M). THIS experiment teaches a\n"
+                "  CONFLICTING pair on the SAME F1 group (320 against 850) and masks by\n"
+                "  splitting that one group in half, which credit-oracle never tested --\n"
+                "  capacity's own split is 0.84 orthogonal against the 0.22 wipe. So the\n"
+                "  oracle here is a within-experiment REFERENCE, not a bound, and the\n"
+                "  derived arms cannot be priced against a ceiling that does not exist.\n",
                 r_or, rse_or, rse_or > 0.0 ? r_or / rse_or : 0.0);
   } else if (derived_works && shuf_clean) {
     std::printf("  THE CREATURE CAN TARGET ITS OWN REWARD. The derived index shrinks the\n"
