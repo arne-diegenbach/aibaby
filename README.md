@@ -12798,6 +12798,13 @@ resamples, the same resampled indices for every arm) gives it an interval.
 gained and erosion figures already in hand, context-off had to come out at 0.295 and
 vigilance at 0.736. They print **+0.294** and **+0.737**.
 
+The resampling is Efron's bootstrap (*Annals of Statistics* 7(1), 1979) — percentile
+intervals over 2000 resamples, paired across arms because every arm runs the same
+wiring seeds. The equivalence framing used later against a half-effect reference is
+Schuirmann's two one-sided tests (*J. Pharmacokinet. Biopharm.* 15(6), 1987): a
+comparison that merely *includes* zero says nothing, whereas an interval lying wholly
+inside a stated reference size says the two agree to within it.
+
 | arm | retention | 95% interval |
 |---|---|---|
 | context off (`pin0`) | +0.294 | [−0.052, +0.553] |

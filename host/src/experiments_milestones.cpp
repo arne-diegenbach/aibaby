@@ -14596,6 +14596,60 @@ bool run_credgate(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
       std::printf("    interval above 0.5: %s;  difference excludes zero: %s\n",
                   above ? "YES" : "NO", beats ? "YES" : "NO");
       std::printf("    --> MILESTONE %s\n", (above && beats) ? "MET" : "NOT MET");
+
+      // IS VIGILANCE DOING ANYTHING THE SILENCE-PLACED COIN FLIP IS NOT? The two
+      // MARGINAL intervals overlap heavily -- [+0.335, +1.003] against [+0.489,
+      // +0.808] -- but overlapping marginals are NOT a null result. Both are
+      // inflated by creature-to-creature variance that the arms SHARE, because
+      // every arm runs the same wiring seeds; the paired difference removes it.
+      // On the GAP statistic this pair read 1.3 SE and was recorded as unresolved,
+      // and that comparison was NOT paired either.
+      //
+      // PRE-REGISTERED, AND IT IS AN EQUIVALENCE TEST, NOT A NULL TEST. "Includes
+      // zero" would prove nothing on its own. The reference size is HALF of
+      // vigilance's own advantage over context-off, +0.442/2 = 0.221:
+      //   DIFFERENT      the interval excludes 0 -> vigilance does something the
+      //                  matched coin flip does not, and placement is not the whole
+      //                  mechanism.
+      //   EQUIVALENT     the interval lies entirely inside +/-0.221 -> the two agree
+      //                  to within half the effect, and placement in the silence
+      //                  accounts for essentially all of what vigilance does.
+      //   UNRESOLVED     anything else, which is this test lacking the creatures --
+      //                  reported as a failure to resolve and NOT as evidence.
+      // The three indices below are positions in rs[], and a reorder would silently
+      // point them at the wrong arms -- which is how the RTConfig field-shift bug
+      // turned an oracle -1 into 4294967295. Checked rather than trusted.
+      int ks = -1;
+      for (int k = 0; k < kNR; ++k)
+        if (std::strcmp(rs[k].arm, "nzsil-AB") == 0) ks = k;
+      if (std::strcmp(rs[kv].arm, "bcast7-AB") != 0 ||
+          std::strcmp(rs[kc].arm, "pin0-AB") != 0 || ks < 0) {
+        std::printf("\n    ARM INDICES MOVED -- rs[] was reordered and the milestone\n"
+                    "    comparison would be against the wrong arms. Refusing to print\n"
+                    "    it rather than printing a number for a pair nobody chose.\n");
+        return false;
+      }
+      if (ok[ks] && boot[kv].size() == boot[ks].size()) {
+        std::vector<double> d2(boot[kv].size());
+        for (size_t i = 0; i < d2.size(); ++i) d2[i] = boot[kv][i] - boot[ks][i];
+        std::sort(d2.begin(), d2.end());
+        const double slo = d2[size_t(0.025 * double(d2.size()))];
+        const double shi = d2[size_t(0.975 * double(d2.size()))];
+        const double spt = point[kv] - point[ks];
+        const double kRef = 0.221;
+        const bool diff = slo > 0.0 || shi < 0.0;
+        const bool equiv = slo > -kRef && shi < kRef;
+        std::printf("\n    VIGILANCE minus SILENCE-PLACED FLIP, paired: %+.3f"
+                    "   95%% [%+.3f, %+.3f]\n", spt, slo, shi);
+        std::printf("    excludes zero: %s;  inside +/-%.3f: %s\n",
+                    diff ? "YES" : "NO", kRef, equiv ? "YES" : "NO");
+        std::printf("    --> %s\n",
+                    diff ? "DIFFERENT -- placement is NOT the whole mechanism"
+                         : (equiv ? "EQUIVALENT -- placement accounts for essentially "
+                                    "all of it"
+                                  : "UNRESOLVED -- this test lacks the creatures, and "
+                                    "that is NOT evidence either way"));
+      }
     }
   }
 
