@@ -12635,6 +12635,63 @@ and offset within a trial. That would decompose the tables by acoustic phase rat
 than by word, which would explain a separation near zero *and* why timing matters. It
 is a within-trial histogram, read-only, and cheap.
 
+### The switches happen in the silence, not in the word
+
+That histogram ran, and the prediction just above is wrong in its direction.
+**Provisional — measured at 600k ticks, with a full-length confirmation running.**
+
+The instrument checks itself first. A trial is 2800 ticks with the caregiver sounding
+for the first 900, so a flat profile puts 32.1% of switches in the word. The
+pinned-noise arms are uniform in time by construction, and they read **32.1% and
+31.2%** — the calculated null, recovered empirically on this protocol. The binning is
+right.
+
+| arm | sound% (null 32.1) | onset% | offs% | per-bin share, 14 bins of 200 ticks |
+|---|---|---|---|---|
+| `nzpin`, flat null | **32.1** | 2.4 | 4.0 | 8.3 7.0 7.0 6.3 7.7 5.5 8.6 7.2 7.0 7.8 6.1 7.1 6.3 8.4 |
+| `nzpin2`, flat null | **31.2** | 3.2 | 5.7 | 8.8 5.8 6.3 6.5 9.4 6.1 8.1 6.9 5.9 7.6 7.3 7.0 8.4 5.9 |
+| vigilance, `bcast7` | **6.9** | 3.2 | 0.1 | 4.6 1.3 0.6 0.4 0.1 3.7 8.3 11.6 13.5 12.0 12.7 10.7 10.5 10.1 |
+| conscience, `derived2` | **49.0** | 16.8 | 1.4 | 17.4 11.6 13.7 4.3 3.4 2.7 8.9 8.9 6.8 3.6 1.4 4.6 4.4 8.5 |
+| plain prototype, `bcast` | 36.9 | 2.5 | 8.4 | 2.8 2.0 12.1 12.8 15.6 12.0 11.3 10.6 6.4 3.1 3.2 2.2 4.0 1.8 |
+
+**Vigilance's excursions are 4.6× depleted in the word.** They are not keyed to the
+word, and not to the offset either — the 800–1000 bin that straddles it reads **0.1%**,
+the emptiest cell in the table. Whatever the novelty test fires on, it is in the
+silence.
+
+**And there is a lag, which is the part that names a mechanism.** Switches do not
+resume when the word stops at tick 900. They resume around 1000–1200 and peak at
+1600–1800, some 700–900 ticks after offset. The feature driving the index is an ear
+rate EMA with a **1000-tick time constant**, so when the word stops the feature decays
+away from prototypes learned while it sounded and crosses the vigilance threshold most
+of a time constant later. The peak sits at roughly 0.7–0.9 τ. That is a quantitative
+coincidence rather than a demonstration, and it is checkable: moving `rate_alpha`
+should move the peak, and if it does not, the account is wrong.
+
+**The instrument discriminates, which is the reason to believe the columns at all.**
+Three gates give three clearly different profiles on the same protocol — the
+conscience front-loads into the word at 49.0% with 16.8% in the first 100 ticks, the
+plain prototype index sits mid-trial at 36.9%, and vigilance is late and silent at
+6.9% — while both coin flips come out flat. A broken histogram does not produce three
+distinct shapes and two flat ones.
+
+**What this does not establish.** It says where the excursions fall, not why that
+helps. The candidate account is that reward lands in the silence — `ctxsrc` measured
+the word at 1.000 while it plays and **0.533, chance,** when reward arrives — so the
+excursions overlap the reward window, and a fraction of each lesson's reward-driven
+writes land in the other table. That is a story about a correlation, and stories about
+correlations are what this line has got wrong six times. The control it needs is a coin
+flip *restricted to the silent window*, matched on rate and on silence-concentration at
+once. If that reproduces the gap reduction, the novelty test is doing nothing a clock
+could not do.
+
+**Read from a run that fails by construction.** This used `--allow-short` at 600k
+ticks, so `credgate` refuses itself and its teaching, gap and retention numbers are not
+interpretable — its oracle guard reads +2.7 SE here against +1.2 SE at full length,
+exactly the kind of drift that makes the rest of a short run unreadable. The profile is
+the only quantity taken from it, and it has no error bars yet. Both defects are the
+reason for the confirmation run, which adds an SE to every column.
+
 **The core result holds on three draws out of three.** The structural closures are
 exact again — a pinned index, a pinned vigilance index, and no context at all are the
 same creature to four decimals — and the interference-gap reduction lands at **5.4,

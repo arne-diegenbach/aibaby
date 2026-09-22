@@ -5730,6 +5730,17 @@ struct RTRow {
   double f1_gap_late[kRTF1Max] = {};
   double f1_cent_gap = 0.0;
   uint64_t f1_gap_samp_late = 0, f1_gap_samp_all = 0;
+  // WHERE IN THE TRIAL THE CONTEXT SWITCHES FALL. The phase counters said the
+  // excursions are NOT at the lesson boundary, and the matched coin flip said WHICH
+  // ticks are chosen matters -- so the remaining question is what they ARE keyed to.
+  // A trial is kRTTrial ticks with the caregiver sounding for the first 900, so an
+  // excursion keyed to acoustic content concentrates in that 32% and one keyed to
+  // nothing spreads flat. The pinned-noise arm supplies the uniform null EMPIRICALLY
+  // on this same protocol rather than by calculation.
+  static constexpr uint32_t kRTSwBins = 14;   // 200 ticks each across the trial
+  double sw_bin[kRTSwBins] = {};
+  double sw_snd = 0.0, sw_sil = 0.0;          // sounding (t < 900) vs silent
+  double sw_onset = 0.0, sw_offset = 0.0;     // 100 ticks after each transition
 };
 
 
@@ -6304,6 +6315,19 @@ RTRow run_retain_arm(const std::vector<uint8_t>& blob, uint64_t ticks,
           if (trial < n_teach) row.sw_teach += 1.0;
           else if (trial < n_teach + n_gap) row.sw_gap += 1.0;
           else row.sw_after += 1.0;
+          // WHERE IN THE TRIAL, counted over the TEACH phase only so the profile is
+          // what the lesson saw. `sounding` is t < 900 of kRTTrial, so a flat
+          // distribution puts 900/2800 = 32.1% of switches in the sounding window.
+          if (trial < n_teach) {
+            const uint32_t bin =
+                uint32_t(t * RTRow::kRTSwBins / kRTTrial) < RTRow::kRTSwBins
+                    ? uint32_t(t * RTRow::kRTSwBins / kRTTrial)
+                    : RTRow::kRTSwBins - 1u;
+            row.sw_bin[bin] += 1.0;
+            if (t < 900) row.sw_snd += 1.0; else row.sw_sil += 1.0;
+            if (t < 100) row.sw_onset += 1.0;
+            if (t >= 900 && t < 1000) row.sw_offset += 1.0;
+          }
         }
         ctx_last = cx;
         ctx_seen = true;
@@ -14415,6 +14439,66 @@ bool run_credgate(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
                 "    context-off. SUPPORTS INDEXING: a pinned-noise gap at context-off.\n"
                 "    NEITHER: both differences under ~2 SE, which is this test failing\n"
                 "    to resolve and NOT evidence for either side.\n");
+  }
+
+  // WHAT THE EXCURSIONS ARE KEYED TO. Not the lesson (separation 0.001-0.012) and not
+  // the lesson boundary (measured: first switch at trial 10 of 728, 2.4x denser in the
+  // wrong phase). The matched coin flip then said WHICH ticks matter -- so this asks
+  // where in the trial they land. A trial is 2800 ticks with the caregiver sounding
+  // for the first 900, and the pinned-noise arms give the flat null on this same
+  // protocol, so the comparison needs no analytic expectation.
+  {
+    auto idx = [&](const char* n) {
+      for (uint32_t a2 = 0; a2 < kCGArmCount; ++a2)
+        if (std::strcmp(kCGArms[a2].name, n) == 0) return int(a2);
+      return -1;
+    };
+    const char* names[] = {"bcast-AB", "bcast7-AB", "derived2-AB", "nzpin-AB",
+                           "nzpin2-AB"};
+    std::printf("\n  WHERE IN THE TRIAL THE SWITCHES FALL -- teach phase, 14 bins of\n"
+                "  200 ticks. The caregiver sounds for t < 900, so bins 0-3 are the\n"
+                "  word and 5-13 are silence; a FLAT profile puts 32.1%% in the word\n"
+                "  and the pinned-noise arms measure that null on this protocol.\n");
+    std::printf("  %-12s %-10s %-9s %-9s %s\n", "arm", "sound%", "onset%",
+                "offs%", "profile, per-bin share of switches");
+    for (const char* nm : names) {
+      const int ia = idx(nm);
+      if (ia < 0) continue;
+      double bins[RTRow::kRTSwBins] = {}, tot = 0.0;
+      // PER-CREATURE SHARES, so the sounding column gets an SE. Without one "6.9%
+      // against a 32.1% null" is a pair of point estimates and not a comparison.
+      std::vector<double> vs, vo, vf;
+      uint32_t nrep = 0;
+      for (uint32_t r2 = 0; r2 < kReps; ++r2) {
+        const Cell& c = cells[r2 * kCGArmCount + uint32_t(ia)];
+        if (!c.ok) continue;
+        const double n = c.row.sw_snd + c.row.sw_sil;
+        if (n <= 0.0) continue;
+        for (uint32_t b2 = 0; b2 < RTRow::kRTSwBins; ++b2)
+          bins[b2] += c.row.sw_bin[b2] / n;
+        vs.push_back(100.0 * c.row.sw_snd / n);
+        vo.push_back(100.0 * c.row.sw_onset / n);
+        vf.push_back(100.0 * c.row.sw_offset / n);
+        tot += 1.0; ++nrep;
+      }
+      if (nrep < 3) {
+        std::printf("  %-12s (fewer than 3 creatures switched at all)\n", nm);
+        continue;
+      }
+      double es = 0.0, eo = 0.0, ef = 0.0;
+      const double msnd = ctx_mean_se(vs, &es);
+      const double mons = ctx_mean_se(vo, &eo);
+      const double moff = ctx_mean_se(vf, &ef);
+      std::printf("  %-12s %5.1f+/-%-4.1f %4.1f+/-%-4.1f %4.1f+/-%-4.1f ", nm,
+                  msnd, es, mons, eo, moff, ef);
+      for (uint32_t b2 = 0; b2 < RTRow::kRTSwBins; ++b2)
+        std::printf("%4.1f", 100.0 * bins[b2] / tot);
+      std::printf("\n");
+    }
+    std::printf("  A vigilance profile matching the pinned-noise profile means the\n"
+                "  excursions are keyed to nothing in the trial and the account moves\n"
+                "  elsewhere. A profile concentrated in the word, or at either\n"
+                "  transition, names what the novelty test is actually firing on.\n");
   }
   std::printf("\n  --- the reading ---\n");
   if (!oracle_works) {
