@@ -13946,29 +13946,33 @@ struct CGArm {
   // Where in the trial an excursion may START: 0 anywhere, 1 silence only, 2 word
   // only. Appended at the END, which is why every existing row needs one more value.
   uint32_t noise_where;
+  // FOCUS. true = do not run this arm at all. Most arms in this table are settled
+  // and only cost creatures; skipping them buys reps for the pair still in question
+  // at the same wall-clock. Appended at the END for the field-shift reason.
+  bool skip;
 };
 const CGArm kCGArms[] = {
-    {"bcast-AB",   0u, false, 0u, 0.0f, 2u, -1, 0.0f, 0u, 0u},   // the shipped broadcast rule: the 0.22 wipe
-    {"bcast-keep", 0u, true,  0u, 0.0f, 2u, -1, 0.0f, 0u, 0u},
-    {"oracle-AB",  1u, false, 0u, 0.0f, 2u, -1, 0.0f, 0u, 0u},   // the host masks by which lesson is live
-    {"oracle-keep", 1u, true, 0u, 0.0f, 2u, -1, 0.0f, 0u, 0u},
+    {"bcast-AB",   0u, false, 0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, false},   // the shipped broadcast rule: the 0.22 wipe
+    {"bcast-keep", 0u, true,  0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, false},
+    {"oracle-AB",  1u, false, 0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, false},   // the host masks by which lesson is live
+    {"oracle-keep", 1u, true, 0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, false},
     // THE DERIVED ARMS ON THE INDEX AS SHIPPED, which `ctxpc` measured separating
     // a-vs-i at 0.035. They price a mask over NOISE and are the control here.
-    {"derived-AB", 2u, false, 0u, 0.0f, 2u, -1, 0.0f, 0u, 0u},
-    {"derived-keep", 2u, true, 0u, 0.0f, 2u, -1, 0.0f, 0u, 0u},
+    {"derived-AB", 2u, false, 0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, true},
+    {"derived-keep", 2u, true, 0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, true},
     // ON THE CONSCIENCE INDEX. It separates at 0.999 when words ALTERNATE and at
     // 0.084 here, because teaching introduces the second word LATE and no learning
     // rate can fix that (DNA v60, refused).
-    {"derived2-AB", 2u, false, 2u, 0.0f, 2u, -1, 0.0f, 0u, 0u},
-    {"derived2-keep", 2u, true, 2u, 0.0f, 2u, -1, 0.0f, 0u, 0u},
+    {"derived2-AB", 2u, false, 2u, 0.0f, 2u, -1, 0.0f, 0u, 0u, true},
+    {"derived2-keep", 2u, true, 2u, 0.0f, 2u, -1, 0.0f, 0u, 0u, true},
     // AND ON THE VIGILANCE INDEX. DNA v61 gate 7 allocates a NEW slot for a word
     // introduced late and resets the win counts so the older category can still win:
     // on the late protocol that reads separation 0.932 (a-vs-i) and 0.988 (i-vs-u)
     // with flip matching wflip, which is the first index in this line to survive the
     // shape teaching actually has. THIS IS THE TEST -- the late protocol is a
     // stand-in built here, and `retain` is the real thing.
-    {"derived3-AB", 2u, false, 7u, 5.0f, 2u, -1, 0.0f, 0u, 0u},
-    {"derived3-keep", 2u, true, 7u, 5.0f, 2u, -1, 0.0f, 0u, 0u},
+    {"derived3-AB", 2u, false, 7u, 5.0f, 2u, -1, 0.0f, 0u, 0u, true},
+    {"derived3-keep", 2u, true, 7u, 5.0f, 2u, -1, 0.0f, 0u, 0u, true},
     // THE CONTROL derived3 NEEDS AND DID NOT HAVE. Gate 7 reads erosion -0.0036
     // against broadcast's +0.0762 with the HIGHEST gained of any arm -- but its
     // index separation is 0.001, so the mask cannot be doing context-indexed credit
@@ -13980,8 +13984,8 @@ const CGArm kCGArms[] = {
     // gate 7 simply makes a better learner, which is a different finding and not the
     // one this experiment is about. Without this the improvement cannot be
     // attributed at all.
-    {"bcast7-AB",   0u, false, 7u, 5.0f, 2u, -1, 0.0f, 0u, 0u},
-    {"bcast7-keep", 0u, true,  7u, 5.0f, 2u, -1, 0.0f, 0u, 0u},
+    {"bcast7-AB",   0u, false, 7u, 5.0f, 2u, -1, 0.0f, 0u, 0u, false},
+    {"bcast7-keep", 0u, true,  7u, 5.0f, 2u, -1, 0.0f, 0u, 0u, false},
     // THE BASELINE THAT WAS NEVER RUN. bcast7 -- gate 7's brain with BROADCAST
     // reward and no mask -- posts GAINED +0.0640 against broadcast's +0.0193 and an
     // interference gap of +0.0436 against +0.0933. With its index separation at
@@ -13997,8 +14001,8 @@ const CGArm kCGArms[] = {
     // WHAT WOULD REFUSE THE ACCOUNT: plain landing at broadcast's +0.0193 rather
     // than near bcast7's +0.0640, which would mean vigilance does something for
     // teaching beyond holding the index still.
-    {"plain-AB",   0u, false, 0u, 0.0f, 0u, -1, 0.0f, 0u, 0u},
-    {"plain-keep", 0u, true,  0u, 0.0f, 0u, -1, 0.0f, 0u, 0u},
+    {"plain-AB",   0u, false, 0u, 0.0f, 0u, -1, 0.0f, 0u, 0u, true},
+    {"plain-keep", 0u, true,  0u, 0.0f, 0u, -1, 0.0f, 0u, 0u, true},
     // THE 2x2 THAT SETTLES IT. The diagnostic refuted the flickering account: the
     // shipped index sits on slot 1 about 90% of the time and vigilance's sits on
     // slot 0 99.8% of the time, so BOTH are nearly constant and they differ by a
@@ -14010,10 +14014,10 @@ const CGArm kCGArms[] = {
     // slot IDENTITY matters, and the bias tables are not as symmetric as the kernel
     // reads. Neither near bcast7: vigilance does something beyond holding the index
     // still, and the next question is what.
-    {"pin0-AB",   0u, false, 0u, 0.0f, 2u, 0, 0.0f, 0u, 0u},
-    {"pin0-keep", 0u, true,  0u, 0.0f, 2u, 0, 0.0f, 0u, 0u},
-    {"pin1-AB",   0u, false, 0u, 0.0f, 2u, 1, 0.0f, 0u, 0u},
-    {"pin1-keep", 0u, true,  0u, 0.0f, 2u, 1, 0.0f, 0u, 0u},
+    {"pin0-AB",   0u, false, 0u, 0.0f, 2u, 0, 0.0f, 0u, 0u, false},
+    {"pin0-keep", 0u, true,  0u, 0.0f, 2u, 0, 0.0f, 0u, 0u, false},
+    {"pin1-AB",   0u, false, 0u, 0.0f, 2u, 1, 0.0f, 0u, 0u, true},
+    {"pin1-keep", 0u, true,  0u, 0.0f, 2u, 1, 0.0f, 0u, 0u, true},
     // THE DIRECT ATTACK ON WHAT IS LEFT. pin0 and pin1 came out IDENTICAL to each
     // other and to context-off, to four decimals, so slot identity is irrelevant and
     // a perfectly constant index is exactly no context. bcast7 sits at 0.998, NOT
@@ -14028,8 +14032,8 @@ const CGArm kCGArms[] = {
     // WHAT WOULD REFUSE THAT: vig-pin0 keeping bcast7's +0.0436 gap, which would
     // mean committing the prototypes matters even when the index never moves, and
     // the mechanism is in the commit rather than in the switch.
-    {"vigpin-AB",   0u, false, 7u, 5.0f, 2u, 0, 0.0f, 0u, 0u},
-    {"vigpin-keep", 0u, true,  7u, 5.0f, 2u, 0, 0.0f, 0u, 0u},
+    {"vigpin-AB",   0u, false, 7u, 5.0f, 2u, 0, 0.0f, 0u, 0u, true},
+    {"vigpin-keep", 0u, true,  7u, 5.0f, 2u, 0, 0.0f, 0u, 0u, true},
     // THE DROPOUT CONTROL. Vigilance's excursions are NOT a rare well-timed switch:
     // ~4556 of them averaging ~1.5 ticks, 0.2% of ticks in total, 2.4x more frequent
     // during TEACHING than during the gap, first at trial 10 of 728. So the live
@@ -14042,8 +14046,8 @@ const CGArm kCGArms[] = {
     // MECHANISM AS INDEXING: noise reproducing vigilance's gap. WHAT WOULD SUPPORT
     // IT: noise leaving the gap at the context-off value, which would mean WHICH
     // ticks are chosen matters and a matched coin flip cannot stand in.
-    {"noise-AB",   0u, false, 0u, 0.0f, 2u, -1, 0.001f, 2u, 0u},
-    {"noise-keep", 0u, true,  0u, 0.0f, 2u, -1, 0.001f, 2u, 0u},
+    {"noise-AB",   0u, false, 0u, 0.0f, 2u, -1, 0.001f, 2u, 0u, true},
+    {"noise-keep", 0u, true,  0u, 0.0f, 2u, -1, 0.001f, 2u, 0u, true},
     // AND THE ARM ABOVE IS VOID AS A CONTROL, MEASURED 2026-09-22. It has pin = -1,
     // so the live gate-0 prototype index runs UNDERNEATH the coin flip, and that
     // index is not still: it reads slot0 0.173 in `bcast` and moved to 0.375 here,
@@ -14061,10 +14065,10 @@ const CGArm kCGArms[] = {
     // 1 AND ~7651 switches per teach phase. Those two together imply SINGLE-tick
     // excursions (0.002 * 2.04M teach ticks / (7651/2) ~ 1.07), so dwell 1 with
     // p = 0.002 matches both; the dwell-2 arm at half the event count brackets it.
-    {"nzpin-AB",    0u, false, 0u, 0.0f, 2u, 0, 0.002f, 1u, 0u},
-    {"nzpin-keep",  0u, true,  0u, 0.0f, 2u, 0, 0.002f, 1u, 0u},
-    {"nzpin2-AB",   0u, false, 0u, 0.0f, 2u, 0, 0.001f, 2u, 0u},
-    {"nzpin2-keep", 0u, true,  0u, 0.0f, 2u, 0, 0.001f, 2u, 0u},
+    {"nzpin-AB",    0u, false, 0u, 0.0f, 2u, 0, 0.002f, 1u, 0u, true},
+    {"nzpin-keep",  0u, true,  0u, 0.0f, 2u, 0, 0.002f, 1u, 0u, true},
+    {"nzpin2-AB",   0u, false, 0u, 0.0f, 2u, 0, 0.001f, 2u, 0u, true},
+    {"nzpin2-keep", 0u, true,  0u, 0.0f, 2u, 0, 0.001f, 2u, 0u, true},
     // PLACEMENT, NOW THAT THE PROFILE IS MEASURED. The uniform flip above was never
     // the matched control: vigilance puts only 16.9% of its switches in the word
     // against a 31.3% flat null, so it is concentrated in the SILENCE and a uniform
@@ -14083,10 +14087,10 @@ const CGArm kCGArms[] = {
     // these two placements at the same total rate, and it already failed -- so if
     // both halves succeed where the mixture failed, something here is wrong and
     // nothing in the table may be read.
-    {"nzsil-AB",   0u, false, 0u, 0.0f, 2u, 0, 0.00276f, 1u, 1u},
-    {"nzsil-keep", 0u, true,  0u, 0.0f, 2u, 0, 0.00276f, 1u, 1u},
-    {"nzwrd-AB",   0u, false, 0u, 0.0f, 2u, 0, 0.00584f, 1u, 2u},
-    {"nzwrd-keep", 0u, true,  0u, 0.0f, 2u, 0, 0.00584f, 1u, 2u},
+    {"nzsil-AB",   0u, false, 0u, 0.0f, 2u, 0, 0.00276f, 1u, 1u, false},
+    {"nzsil-keep", 0u, true,  0u, 0.0f, 2u, 0, 0.00276f, 1u, 1u, false},
+    {"nzwrd-AB",   0u, false, 0u, 0.0f, 2u, 0, 0.00584f, 1u, 2u, true},
+    {"nzwrd-keep", 0u, true,  0u, 0.0f, 2u, 0, 0.00584f, 1u, 2u, true},
 };
 constexpr uint32_t kCGArmCount = sizeof(kCGArms) / sizeof(kCGArms[0]);
 // CHANGED 2026-09-21 from 318211 to draw a FRESH set of creatures from the same
@@ -14107,7 +14111,11 @@ bool run_credgate(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
   Regime regime;
   regime.praise = kPraiseValue;
   regime.scold = kScoldValue;
-  constexpr uint32_t kReps = 12;
+  // 12 was capped by running 30 arms. With the settled ones skipped only 10 run, so
+  // the same wall-clock buys ~3x the creatures -- which is exactly what the
+  // vigilance-vs-silence comparison lacks: its paired interval came out +/-0.36
+  // where +/-0.221 is needed, so it needs ~2.6x the creatures and nothing else.
+  constexpr uint32_t kReps = 32;
   instrument("credgate", dna0.header().seed ^ 0xC6A7u, ticks / kRTTrial, "trials");
   std::printf("  seed family       offset %llu -> first creature %016llx (FRESH)\n",
               (unsigned long long)kCGSeedOffset,
@@ -14152,6 +14160,7 @@ bool run_credgate(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
   const std::vector<Cell> cells = parallel_reps<Cell>(njobs, [&](uint32_t i) {
     Cell cell;
     const uint32_t r = i / kCGArmCount, a = i % kCGArmCount;
+    if (kCGArms[a].skip) return cell;   // cell.ok stays false; never scored
     std::vector<uint8_t> variant = blob;
     const uint64_t seed = dna0.header().seed + kCGSeedOffset + r * 7919ull;
     std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
@@ -14252,6 +14261,7 @@ bool run_credgate(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
       ag.push_back(c.row.credit_trials
                        ? double(c.row.credit_agree) / double(c.row.credit_trials) : 0.0);
     }
+    if (kCGArms[a].skip) continue;   // settled arm, deliberately not run
     if (af.size() < 3) {
       std::printf("\n  credgate INCONCLUSIVE -- arm `%s` produced %zu creatures.\n",
                   kCGArms[a].name, af.size());
@@ -14286,10 +14296,19 @@ bool run_credgate(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
     std::printf("\n  RETENTION -- the fraction of the GAIN that survived, which is what\n"
                 "  credit-oracle scored (0.84 broadcast -> 1.03 targeted). Unlike the raw\n"
                 "  gap this is not confounded by the mask's learning-rate cost.\n");
-    for (uint32_t k = 0; k < 4; ++k)
+    // Positional again (k*2, k*2+1). A skipped arm reads 0.000 and the "vs broadcast"
+    // differences below -- one of which carries a "must NOT" refusal criterion --
+    // would be computed against it.
+    for (uint32_t k = 0; k < 4; ++k) {
+      if (kCGArms[k * 2].skip || kCGArms[k * 2 + 1].skip) {
+        std::printf("    %-10s not in this focus set\n", mn[k]);
+        continue;
+      }
       std::printf("    %-10s AB %.3f +/- %.3f    keep %.3f +/- %.3f\n", mn[k],
                   m_ret[k * 2], s_ret[k * 2], m_ret[k * 2 + 1], s_ret[k * 2 + 1]);
+    }
     for (uint32_t k = 1; k < 4; ++k) {
+      if (kCGArms[k * 2].skip || kCGArms[0].skip) continue;
       const double d = m_ret[k * 2] - m_ret[0];
       const double se = std::sqrt(s_ret[k * 2] * s_ret[k * 2] + s_ret[0] * s_ret[0]);
       std::printf("    %-10s AB retention vs broadcast: %+.3f +/- %.3f  (%+.1f SE)%s\n",
@@ -14350,6 +14369,13 @@ bool run_credgate(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
     const uint32_t ab = k * 2, kp = k * 2 + 1;
     gap[k] = m_after[ab] - m_after[kp];
     gse[k] = std::sqrt(s_after[ab] * s_after[ab] + s_after[kp] * s_after[kp]);
+    // These index arms POSITIONALLY (k*2, k*2+1), so a skipped arm reads 0.0000 and
+    // every difference below becomes a number for a comparison nobody made. The
+    // smoke test printed derived and latch at 0.0000 under the focus set.
+    if (kCGArms[ab].skip || kCGArms[kp].skip) {
+      std::printf("    %-10s not in this focus set\n", mode_name[k]);
+      continue;
+    }
     std::printf("    %-10s AB %.4f   keep %.4f   gap %+.4f +/- %.4f  (%+.1f SE)\n",
                 mode_name[k], m_after[ab], m_after[kp], gap[k], gse[k],
                 gse[k] > 0.0 ? gap[k] / gse[k] : 0.0);
@@ -14357,17 +14383,25 @@ bool run_credgate(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
   const double d_or = gap[0] - gap[1], se_or = std::sqrt(gse[0] * gse[0] + gse[1] * gse[1]);
   const double d_dv = gap[0] - gap[2], se_dv = std::sqrt(gse[0] * gse[0] + gse[2] * gse[2]);
   const double d_sh = gap[0] - gap[3], se_sh = std::sqrt(gse[0] * gse[0] + gse[3] * gse[3]);
-  std::printf("\n    oracle   shrinks the gap by %+.4f +/- %.4f  (%+.1f SE)\n", d_or, se_or,
-              se_or > 0.0 ? d_or / se_or : 0.0);
-  std::printf("    derived  shrinks the gap by %+.4f +/- %.4f  (%+.1f SE)\n", d_dv, se_dv,
-              se_dv > 0.0 ? d_dv / se_dv : 0.0);
-  std::printf("    shuffled shrinks the gap by %+.4f +/- %.4f  (%+.1f SE)  <- must NOT\n",
-              d_sh, se_sh, se_sh > 0.0 ? d_sh / se_sh : 0.0);
+  if (!kCGArms[2].skip && !kCGArms[3].skip)
+    std::printf("\n    oracle   shrinks the gap by %+.4f +/- %.4f  (%+.1f SE)\n", d_or,
+                se_or, se_or > 0.0 ? d_or / se_or : 0.0);
+  if (!kCGArms[4].skip && !kCGArms[5].skip)
+    std::printf("    derived  shrinks the gap by %+.4f +/- %.4f  (%+.1f SE)\n", d_dv, se_dv,
+                se_dv > 0.0 ? d_dv / se_dv : 0.0);
+  if (!kCGArms[6].skip && !kCGArms[7].skip)
+    std::printf("    shuffled shrinks the gap by %+.4f +/- %.4f  (%+.1f SE)  <- must NOT\n",
+                d_sh, se_sh, se_sh > 0.0 ? d_sh / se_sh : 0.0);
 
   std::printf("\n  THE COST -- err_taught, which the oracle bought its 1.03 with\n");
-  for (uint32_t k = 0; k < 4; ++k)
+  for (uint32_t k = 0; k < 4; ++k) {
+    if (kCGArms[k * 2].skip || kCGArms[k * 2 + 1].skip) {
+      std::printf("    %-10s not in this focus set\n", mode_name[k]);
+      continue;
+    }
     std::printf("    %-10s AB %.4f   keep %.4f\n", mode_name[k], m_taught[k * 2],
                 m_taught[k * 2 + 1]);
+  }
 
   // THE GATES READ RETENTION, NOT THE GAP. The gap confounds interference with the
   // mask's learning-rate cost, which is why it said the oracle failed to reproduce
@@ -14406,7 +14440,19 @@ bool run_credgate(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
       if (std::strcmp(kCGArms[a].name, "nzpin-AB") == 0) i_nz = int(a);
       if (std::strcmp(kCGArms[a].name, "nzpin2-AB") == 0) i_nz2 = int(a);
     }
-    if (i_pin0 >= 0 && i_nz >= 0 && i_nz2 >= 0) {
+    // NOT RUN is not the same as RAN AND DID NOTHING, and conflating them makes this
+    // guard fire on a focus set that deliberately omits the uniform-flip arms. The
+    // check is about whether a coin flip that RAN moved anything; if it did not run
+    // there is nothing to check and saying so is honest, whereas refusing would be a
+    // false alarm and passing silently would hide that the arms are absent.
+    const bool nz_absent =
+        i_nz >= 0 && i_nz2 >= 0 && (kCGArms[i_nz].skip || kCGArms[i_nz2].skip);
+    if (nz_absent) {
+      std::printf("\n  VACUITY -- not applicable: the uniform-flip arms are not in this\n"
+                  "  focus set, so there is no coin flip that ran and could be inert.\n"
+                  "  Their contrast against pin0 was settled at 12 creatures (commit\n"
+                  "  27944a3) and is not re-measured here.\n");
+    } else if (i_pin0 >= 0 && i_nz >= 0 && i_nz2 >= 0) {
       std::printf("\n  VACUITY -- the coin flip must MOVE something\n");
       std::printf("    pin0   switches/teach %7.0f   err_taught %.4f\n",
                   m_swtch[i_pin0], m_taught[i_pin0]);
@@ -14454,6 +14500,10 @@ bool run_credgate(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
     for (int k = 0; k < 8; ++k) {
       const int ia = idx(gs[k].ab), ik = idx(gs[k].kp);
       if (ia < 0 || ik < 0) continue;
+      // An arm that was never run reads 0.0000 in every column, and differencing
+      // against it produces a confident-looking number for a comparison nobody made.
+      // The smoke test printed "vs vigilance -0.0632 (-5.3 SE)" for three such arms.
+      if (kCGArms[ia].skip || kCGArms[ik].skip) continue;
       gap[k] = m_after[ia] - m_after[ik];
       gse[k] = std::sqrt(s_after[ia] * s_after[ia] + s_after[ik] * s_after[ik]);
       have[k] = true;
@@ -14517,7 +14567,7 @@ bool run_credgate(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
     uint32_t ncre = 0;
     for (int k = 0; k < kNR; ++k) {
       const int ia = idx(rs[k].arm);
-      if (ia < 0) continue;
+      if (ia < 0 || kCGArms[ia].skip) continue;
       for (uint32_t r2 = 0; r2 < kReps; ++r2) {
         const Cell& c = cells[r2 * kCGArmCount + uint32_t(ia)];
         if (!c.ok) continue;
@@ -14675,7 +14725,7 @@ bool run_credgate(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
                 "offs%", "profile, per-bin share of switches");
     for (const char* nm : names) {
       const int ia = idx(nm);
-      if (ia < 0) continue;
+      if (ia < 0 || kCGArms[ia].skip) continue;
       double bins[RTRow::kRTSwBins] = {}, tot = 0.0;
       // PER-CREATURE SHARES, so the sounding column gets an SE. Without one "6.9%
       // against a 32.1% null" is a pair of point estimates and not a comparison.
