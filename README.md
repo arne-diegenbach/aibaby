@@ -12638,7 +12638,9 @@ is a within-trial histogram, read-only, and cheap.
 ### The switches happen in the silence, not in the word
 
 That histogram ran, and the prediction just above is wrong in its direction.
-**Provisional — measured at 600k ticks, with a full-length confirmation running.**
+**Confirmed at full length, and the confirmation cut the effect by two and a half
+times** — the provisional numbers below are the 600k-tick ones, kept visible because
+they are what got corrected.
 
 The instrument checks itself first. A trial is 2800 ticks with the caregiver sounding
 for the first 900, so a flat profile puts 32.1% of switches in the word. The
@@ -12646,27 +12648,47 @@ pinned-noise arms are uniform in time by construction, and they read **32.1% and
 31.2%** — the calculated null, recovered empirically on this protocol. The binning is
 right.
 
-| arm | sound% (null 32.1) | onset% | offs% | per-bin share, 14 bins of 200 ticks |
+At 3.4M ticks, with an SE per column and the 600k value in brackets:
+
+| arm | sound% | onset% | offs% | per-bin share, 14 bins of 200 ticks |
 |---|---|---|---|---|
-| `nzpin`, flat null | **32.1** | 2.4 | 4.0 | 8.3 7.0 7.0 6.3 7.7 5.5 8.6 7.2 7.0 7.8 6.1 7.1 6.3 8.4 |
-| `nzpin2`, flat null | **31.2** | 3.2 | 5.7 | 8.8 5.8 6.3 6.5 9.4 6.1 8.1 6.9 5.9 7.6 7.3 7.0 8.4 5.9 |
-| vigilance, `bcast7` | **6.9** | 3.2 | 0.1 | 4.6 1.3 0.6 0.4 0.1 3.7 8.3 11.6 13.5 12.0 12.7 10.7 10.5 10.1 |
-| conscience, `derived2` | **49.0** | 16.8 | 1.4 | 17.4 11.6 13.7 4.3 3.4 2.7 8.9 8.9 6.8 3.6 1.4 4.6 4.4 8.5 |
-| plain prototype, `bcast` | 36.9 | 2.5 | 8.4 | 2.8 2.0 12.1 12.8 15.6 12.0 11.3 10.6 6.4 3.1 3.2 2.2 4.0 1.8 |
+| `nzpin`, flat null | **31.3 ± 0.0** (32.1) | 3.0 | 3.6 | 6.7 7.6 7.1 6.7 6.9 7.5 7.7 7.9 6.9 7.8 5.9 7.1 6.8 7.2 |
+| `nzpin2`, flat null | **30.2 ± 0.0** (31.2) | 3.3 | 3.9 | 6.7 7.7 6.6 6.1 7.1 7.8 7.6 7.5 6.5 8.2 6.4 7.7 6.9 7.2 |
+| vigilance, `bcast7` | **16.9 ± 0.7** (6.9) | 3.1 ± 0.1 | 1.3 ± 0.1 | 5.5 5.1 3.4 2.2 2.1 8.0 10.4 10.6 10.2 9.3 8.6 8.3 8.1 8.2 |
+| conscience, `derived2` | **48.5 ± 0.5** (49.0) | 17.7 ± 6.9 | 0.3 ± 0.2 | 20.1 20.7 5.9 1.3 0.9 0.9 3.0 7.8 11.5 5.6 2.6 5.5 5.1 9.1 |
+| plain prototype, `bcast` | 36.9 ± 4.4 (36.9) | 2.5 ± 2.5 | 8.4 ± 4.5 | 2.8 2.0 12.1 12.8 15.6 12.0 11.3 10.6 6.4 3.1 3.2 2.2 4.0 1.8 |
 
-**Vigilance's excursions are 4.6× depleted in the word.** They are not keyed to the
-word, and not to the offset either — the 800–1000 bin that straddles it reads **0.1%**,
-the emptiest cell in the table. Whatever the novelty test fires on, it is in the
-silence.
+**The direction survives and the magnitude does not.** Vigilance sits at 16.9 ± 0.7%
+against a measured null of 31.3% — **21 SE below it**, so "the excursions avoid the
+word" is solid. But the depletion is **1.85×, not the 4.6× the short run showed**, and
+the 4.6× is retracted. The offset is still avoided, 1.3 ± 0.1% against a 3.6% null, a
+2.8× depletion rather than the near-total absence that 0.1% suggested.
 
-**And there is a lag, which is the part that names a mechanism.** Switches do not
-resume when the word stops at tick 900. They resume around 1000–1200 and peak at
-1600–1800, some 700–900 ticks after offset. The feature driving the index is an ear
-rate EMA with a **1000-tick time constant**, so when the word stops the feature decays
-away from prototypes learned while it sounded and crosses the vigilance threshold most
-of a time constant later. The peak sits at roughly 0.7–0.9 τ. That is a quantitative
-coincidence rather than a demonstration, and it is checkable: moving `rate_alpha`
-should move the peak, and if it does not, the account is wrong.
+**Why the short run overstated it, and it is not a defect in the instrument.** At 600k
+ticks only about 128 of the 728 teach trials exist, so that run measured vigilance's
+*early* profile. `bcast` is identical across the two runs to every decimal — all 143 of
+its switches happen in the first few trials, so both runs saw the same events — which
+is the consistency check that makes the comparison trustworthy. The implication is that
+vigilance's profile **changes over training**, sharp early and flatter later. That is
+untested and is not being claimed.
+
+**One property of the null worth recording:** the noise arms read ± 0.0 because the
+excursions are deterministic from the tick counter, so every creature gets the same
+excursion ticks. The null is therefore exact, and carries no sampling error *by
+construction* rather than by being well estimated. It is also 31.3 rather than the
+calculated 32.1, a boundary effect of counting a switch at both ends of each excursion.
+Compare against the measured value, not the arithmetic one.
+
+**The lag survives in shape and not in sharpness.** Switches do not resume when the
+word stops at tick 900: the profile bottoms out at 2.1% in the 800–1000 bin, rises from
+1000–1200, and peaks at 1200–1800. The feature driving the index is an ear rate EMA
+with a **1000-tick time constant**, so when the word stops the feature decays away from
+prototypes learned while it sounded and crosses the vigilance threshold within about
+one τ. At 600k the peak looked like 0.7–0.9 τ; at full length it is broader and earlier,
+roughly 0.3–0.9 τ, so **the peak position is not a stable quantity and should not be
+quoted as one.** What is stable is the ordering: word, then a trough spanning the
+offset, then a rise through the silence. The account remains checkable the same way —
+moving `rate_alpha` should move the rise, and if it does not, it is wrong.
 
 **The instrument discriminates, which is the reason to believe the columns at all.**
 Three gates give three clearly different profiles on the same protocol — the
@@ -12685,12 +12707,18 @@ flip *restricted to the silent window*, matched on rate and on silence-concentra
 once. If that reproduces the gap reduction, the novelty test is doing nothing a clock
 could not do.
 
-**Read from a run that fails by construction.** This used `--allow-short` at 600k
-ticks, so `credgate` refuses itself and its teaching, gap and retention numbers are not
-interpretable — its oracle guard reads +2.7 SE here against +1.2 SE at full length,
-exactly the kind of drift that makes the rest of a short run unreadable. The profile is
-the only quantity taken from it, and it has no error bars yet. Both defects are the
-reason for the confirmation run, which adds an SE to every column.
+**Both runs fail by construction, and the full-length one still does.** The 600k pass
+used `--allow-short`, where `credgate` refuses itself and its oracle guard drifted to
++2.7 SE against +1.2 SE at length. The 3.4M pass fails on that same oracle guard, which
+gates the *masked* arms; every arm in this histogram is unmasked, so it does not bear
+on the profile — but the numbers are again read past a refusal and that belongs on the
+record rather than in a footnote.
+
+**The pattern this line keeps producing, now for the seventh time.** The short run gave
+a direction and a magnitude; the direction held at 21 SE and the magnitude fell by two
+and a half times. Identities hold exactly, magnitudes move, and a number is worth
+quoting only once a longer or more independent run has seen it. Labelling the first
+pass *provisional* is what made this a correction rather than a retraction.
 
 **The core result holds on three draws out of three.** The structural closures are
 exact again — a pinned index, a pinned vigilance index, and no context at all are the
