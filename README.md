@@ -12952,6 +12952,65 @@ Softening it to a pass would hide the one fact that matters most about every der
 number in this experiment. A guard that fires for five runs and is narrated past each
 time is worse than no guard: **a failing guard is a lead, not a footnote.**
 
+### A clock cannot stand in — resolved at 32 creatures
+
+The comparison that had been unresolved twice was run with the 20 settled arms skipped
+and 32 creatures instead of 12. **On the interference gap it resolves.**
+
+| | gap | vs context-off | vs vigilance |
+|---|---|---|---|
+| context off (`pin0`) | +0.1424 ± 0.0136 | — | — |
+| **vigilance** (`bcast7`) | **+0.0746 ± 0.0138** | — | — |
+| flip in the **silence** | +0.1396 ± 0.0144 | **+0.0028 (0.1 SE)** | **+0.0650 (3.3 SE)** |
+
+At 12 creatures this pair read 1.3 SE and was recorded as a failure to resolve. At 32
+it reads **3.3 SE from vigilance and 0.1 SE from context-off** — the silence-placed
+coin flip is indistinguishable from having no context at all, and clearly distinct
+from vigilance. That is the case pre-registered as *a pinned-noise gap staying at
+context-off, meaning which ticks are chosen matters and a matched coin flip cannot
+stand in.*
+
+**Three placements have now been tested and all three land on context-off** — uniform
+(68/32 silence/word), word-only (0/100), and silence-only (100/0). Vigilance's own
+measured split is **83/17**, which lies *between* the uniform and silence-only arms.
+Both of those bracketing points are nulls, so the one untested variant — a clock
+matched to vigilance's exact distribution — is an interpolation between two nulls.
+That is not proof, and it is the honest remaining gap, but it is a much weaker gap
+than "the matched version was never tried".
+
+**This retracts something I wrote two sections ago.** At 12 creatures the silence flip
+read +0.658 on retention against vigilance's +0.737 and I recorded it as *the strongest
+hint in this line — silence placement may account for much of what vigilance does*. At
+32 creatures it reads **+0.368** against vigilance's **+0.615**, sitting much nearer
+context-off's +0.289. **That hint is withdrawn.** Both magnitudes moved under more
+creatures while the ordering held — the eighth time in this line that a magnitude has
+moved and a direction has not.
+
+**The retention statistic agrees in direction and is still formally unresolved.** The
+paired vigilance-minus-silence difference is **+0.247 [−0.028, +0.514]**: it does not
+exclude zero, so by its own pre-registered criterion it is UNRESOLVED and is reported
+as such. What it does do is effectively refuse *equivalence* — the point estimate alone
+exceeds the ±0.221 bound. Two statistics, one run, pointing the same way, with the
+tighter one resolving and the noisier one not.
+
+**And the milestone is still not met.** Vigilance's retention interval is [+0.387,
++0.822], whose lower bound sits below the pre-registered 0.5. Its difference against
+context-off is now +0.326 [+0.053, +0.582], excluding zero more comfortably than
+before. Difference yes, level no — unchanged from the 12-creature verdict.
+
+**What this leaves standing, and it is the strongest positive claim in the line.** The
+sparse switch cuts interference; no matched schedule reproduces it — not at two
+uniform rates, not placed in the word, not placed in the silence; and it carries no
+lesson identity, since its separation is 0.001–0.012. So the switches are keyed to
+something in the creature's own state that a timetable cannot imitate, while saying
+nothing about *which* lesson is live. That is a narrow result, it is not a retained
+lesson in behaviour, and it is what the evidence supports.
+
+It also sharpens the AGMP lead recorded in the references: if a schedule cannot
+reproduce the effect but the creature's own slow state can, then a gate driven by that
+state — rather than an index that selects a table — is the mechanism worth building,
+and it needs no context slot at all.
+
 This also explains the mask's cost here without any new hypothesis. The oracle arm's
 `err_taught` is 1.0256 against plain's 0.9304 — it learns markedly worse — which is
 what `mask-unaffordable` already measured when masking half the F1 group, and is
