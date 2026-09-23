@@ -11,6 +11,8 @@
 #ifndef AIBABY_NETWORK_H
 #define AIBABY_NETWORK_H
 
+#include <vector>
+
 #include "aibaby/arena.h"
 #include "aibaby/config.h"
 #include "aibaby/dna.h"
@@ -246,6 +248,53 @@ class Network {
   // it is not obviously so, and measuring beats assuming. Open by default, so an
   // arm that never calls it behaves exactly as before and the pinned hash cannot move.
   void set_context_noise_window(bool open) { ctx_noise_open_ = open; }
+
+  // EXPERIMENT-ONLY ACTIVITY GATE ON PLASTICITY -- AGMP (Frontiers 2026), priced
+  // before any genome field exists, the way credit-oracle priced DNA v41.
+  //
+  // THE MECHANISM, as the paper states it rather than as I first summarised it: a
+  // SLOW leaky accumulator of each neuron's own activity, a[t] = lambda*a[t-1] +
+  // phi[t], squashed to a graded gate g = sigmoid(a_normalised) that MULTIPLIES the
+  // learning rate per POSTSYNAPTIC neuron. High recent activity -> plastic; quiet ->
+  // frozen. It is NOT a fast-vs-slow change detector, which is what I assumed before
+  // reading the equation.
+  //
+  // WHY IT IS WORTH PRICING HERE, and this is a DERIVED prediction rather than a
+  // hope. Two measurements in this project say lessons act by SUPPRESSION: an F1
+  // lesson with a LOW target silences the UPPER half, one with a HIGH target silences
+  // the LOWER half. So after lesson A (f1 320, low) its trace is stored AS QUIESCENCE
+  // in the upper half -- and an activity gate freezes precisely what is quiet. A's
+  // memory would be self-protecting, with no context slot, no index and no task
+  // identity, which is the wall every arm in the sparse-switch line ran into.
+  //
+  // THE FAILURE MODE IS NAMED IN ADVANCE: lesson B (f1 850, high) must silence the
+  // LOWER half, which is still active and therefore still plastic -- but anything B
+  // needs to RAISE in the frozen half cannot move. If B stops landing, the gate is
+  // buying retention by refusing to learn, which is the `regionband` failure and is
+  // refused the same way.
+  //
+  // tau_ms is the SLOW constant. AGMP wants 50-500x the eligibility trace, and this
+  // genome's tau_elig_ms is 2000, so the derived band is 100-1000 s -- NOT a guess.
+  // The accumulator is DOUBLE because the EMA form stagnates in float32 at these
+  // constants (`+= lr*(x-cur)` stops under eps 1.2e-7), which is the measured wall
+  // that refused DNA v60. Off by default; the shipped creature never calls it.
+  void set_activity_gate(double tau_ms, Scalar strength);
+  void clear_activity_gate() {
+    act_gate_lambda_ = 0.0; act_gate_strength_ = kZero; act_slow_.clear();
+    act_gate_sum_ = kZero; act_gate_sq_ = 0.0; act_gate_n_ = 0;
+  }
+  // What fraction of the gate's range is actually being used, so an arm that is
+  // inert can refuse itself instead of being read as a null.
+  Scalar act_gate_mean() const;
+  // THE MEAN OF g IS 0.5 BY CONSTRUCTION and cannot say whether the gate is
+  // selective: z is centred on the module mean, so sigmoid(z) averages to 0.5
+  // however wide or narrow its spread. Measured 0.5007/0.5006/0.5006 across a 10x
+  // range of tau, which looked like three live arms and was three readings of the
+  // same tautology. This returns mean |g - 0.5| instead -- near 0 means every neuron
+  // got the same gate and the arm is a blanket learning-rate cut, not a gate.
+  // SD of the EFFECTIVE gate -- the multiplier actually applied, 1 - strength*(1-g).
+  // Recording the raw sigmoid instead made `strength` invisible by construction.
+  Scalar act_gate_spread() const;
   Scalar ctx_wins_total() const {
     Scalar t = kZero;
     for (uint32_t c = 0; c < ctx_slots_; ++c) t += ctx_wins_[c];
@@ -1090,6 +1139,14 @@ class Network {
   uint32_t ctx_noise_dwell_ = 0;  // ...and how many ticks each excursion lasts
   uint32_t ctx_noise_left_ = 0;   // ticks remaining in the current excursion
   bool ctx_noise_open_ = true;    // ...and whether a NEW excursion may start now
+  // EXPERIMENT-ONLY activity gate. Empty unless set_activity_gate() is called, so the
+  // shipped path allocates nothing and the pinned hash cannot move.
+  std::vector<double> act_slow_;
+  double act_gate_lambda_ = 0.0;
+  Scalar act_gate_strength_ = kZero;
+  Scalar act_gate_sum_ = kZero;
+  double act_gate_sq_ = 0.0;       // sum of g_eff^2, for the SD in one pass
+  uint64_t act_gate_n_ = 0;
   static constexpr uint32_t kCtxSelfSkipA = 2;  // F1
   static constexpr uint32_t kCtxSelfSkipB = 3;  // F2
   // DNA v53, source 2. One prototype per context over the source module's

@@ -5741,6 +5741,11 @@ struct RTRow {
   double sw_bin[kRTSwBins] = {};
   double sw_snd = 0.0, sw_sil = 0.0;          // sounding (t < 900) vs silent
   double sw_onset = 0.0, sw_offset = 0.0;     // 100 ticks after each transition
+  // Mean of AGMP's gate over every cash-in. 1.0 means the gate never closed and the
+  // arm is INERT; near 0 means it froze everything. Without this a null arm cannot
+  // tell "the mechanism does nothing" from "the mechanism never ran".
+  double act_gate = 0.0;
+  double act_spread = 0.0;   // mean |g - 0.5|; the mean of g alone is 0.5 by construction
 };
 
 
@@ -5942,6 +5947,9 @@ struct RTConfig {
   // The measured profile put vigilance's switches in the silence, so a uniform flip
   // was never the matched control -- these are. Appended at the END.
   uint32_t ctx_noise_where = 0;
+  // AGMP activity gate: slow accumulator tau in ms, and gate strength. 0 = off.
+  double act_gate_tau_ms = 0.0;
+  float act_gate_strength = 0.0f;
 };
 
 // One arm, one creature, one life: teach, intervene, re-measure.
@@ -6019,6 +6027,9 @@ RTRow run_retain_arm(const std::vector<uint8_t>& blob, uint64_t ticks,
   if (cfg.ctx_pin >= 0) s.brain.network().pin_context(uint32_t(cfg.ctx_pin));
   if (cfg.ctx_noise_p > 0.0f)
     s.brain.network().set_context_noise(aibaby::Scalar(cfg.ctx_noise_p), cfg.ctx_noise_dwell);
+  if (cfg.act_gate_tau_ms > 0.0 && cfg.act_gate_strength > 0.0f)
+    s.brain.network().set_activity_gate(cfg.act_gate_tau_ms,
+                                        aibaby::Scalar(cfg.act_gate_strength));
   const aibaby::DnaAudio& acfg = s.dna.header().audio;
   Ear ear;
   if (!ear.configure(acfg, error)) {
@@ -6464,6 +6475,8 @@ RTRow run_retain_arm(const std::vector<uint8_t>& blob, uint64_t ticks,
   }
 
   RTRow& r = row;
+  r.act_gate = double(s.brain.network().act_gate_mean());
+  r.act_spread = double(s.brain.network().act_gate_spread());
   r.err_before = n_before ? sum_before / n_before : 0.0;
   r.err_taught = n_tt ? sum_taught / n_tt : 0.0;
   r.err_after = n_aa ? sum_after / n_aa : 0.0;
@@ -13950,29 +13963,33 @@ struct CGArm {
   // and only cost creatures; skipping them buys reps for the pair still in question
   // at the same wall-clock. Appended at the END for the field-shift reason.
   bool skip;
+  // AGMP activity gate, priced experiment-only before any genome field exists.
+  // tau in ms (0 = off) and strength. Appended at the END.
+  double act_tau_ms;
+  float act_strength;
 };
 const CGArm kCGArms[] = {
-    {"bcast-AB",   0u, false, 0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, false},   // the shipped broadcast rule: the 0.22 wipe
-    {"bcast-keep", 0u, true,  0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, false},
-    {"oracle-AB",  1u, false, 0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, false},   // the host masks by which lesson is live
-    {"oracle-keep", 1u, true, 0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, false},
+    {"bcast-AB",   0u, false, 0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, false, 0.0, 0.0f},   // the shipped broadcast rule: the 0.22 wipe
+    {"bcast-keep", 0u, true,  0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, false, 0.0, 0.0f},
+    {"oracle-AB",  1u, false, 0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, false, 0.0, 0.0f},   // the host masks by which lesson is live
+    {"oracle-keep", 1u, true, 0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, false, 0.0, 0.0f},
     // THE DERIVED ARMS ON THE INDEX AS SHIPPED, which `ctxpc` measured separating
     // a-vs-i at 0.035. They price a mask over NOISE and are the control here.
-    {"derived-AB", 2u, false, 0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, true},
-    {"derived-keep", 2u, true, 0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, true},
+    {"derived-AB", 2u, false, 0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, true, 0.0, 0.0f},
+    {"derived-keep", 2u, true, 0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, true, 0.0, 0.0f},
     // ON THE CONSCIENCE INDEX. It separates at 0.999 when words ALTERNATE and at
     // 0.084 here, because teaching introduces the second word LATE and no learning
     // rate can fix that (DNA v60, refused).
-    {"derived2-AB", 2u, false, 2u, 0.0f, 2u, -1, 0.0f, 0u, 0u, true},
-    {"derived2-keep", 2u, true, 2u, 0.0f, 2u, -1, 0.0f, 0u, 0u, true},
+    {"derived2-AB", 2u, false, 2u, 0.0f, 2u, -1, 0.0f, 0u, 0u, true, 0.0, 0.0f},
+    {"derived2-keep", 2u, true, 2u, 0.0f, 2u, -1, 0.0f, 0u, 0u, true, 0.0, 0.0f},
     // AND ON THE VIGILANCE INDEX. DNA v61 gate 7 allocates a NEW slot for a word
     // introduced late and resets the win counts so the older category can still win:
     // on the late protocol that reads separation 0.932 (a-vs-i) and 0.988 (i-vs-u)
     // with flip matching wflip, which is the first index in this line to survive the
     // shape teaching actually has. THIS IS THE TEST -- the late protocol is a
     // stand-in built here, and `retain` is the real thing.
-    {"derived3-AB", 2u, false, 7u, 5.0f, 2u, -1, 0.0f, 0u, 0u, true},
-    {"derived3-keep", 2u, true, 7u, 5.0f, 2u, -1, 0.0f, 0u, 0u, true},
+    {"derived3-AB", 2u, false, 7u, 5.0f, 2u, -1, 0.0f, 0u, 0u, true, 0.0, 0.0f},
+    {"derived3-keep", 2u, true, 7u, 5.0f, 2u, -1, 0.0f, 0u, 0u, true, 0.0, 0.0f},
     // THE CONTROL derived3 NEEDS AND DID NOT HAVE. Gate 7 reads erosion -0.0036
     // against broadcast's +0.0762 with the HIGHEST gained of any arm -- but its
     // index separation is 0.001, so the mask cannot be doing context-indexed credit
@@ -13984,8 +14001,8 @@ const CGArm kCGArms[] = {
     // gate 7 simply makes a better learner, which is a different finding and not the
     // one this experiment is about. Without this the improvement cannot be
     // attributed at all.
-    {"bcast7-AB",   0u, false, 7u, 5.0f, 2u, -1, 0.0f, 0u, 0u, false},
-    {"bcast7-keep", 0u, true,  7u, 5.0f, 2u, -1, 0.0f, 0u, 0u, false},
+    {"bcast7-AB",   0u, false, 7u, 5.0f, 2u, -1, 0.0f, 0u, 0u, false, 0.0, 0.0f},
+    {"bcast7-keep", 0u, true,  7u, 5.0f, 2u, -1, 0.0f, 0u, 0u, false, 0.0, 0.0f},
     // THE BASELINE THAT WAS NEVER RUN. bcast7 -- gate 7's brain with BROADCAST
     // reward and no mask -- posts GAINED +0.0640 against broadcast's +0.0193 and an
     // interference gap of +0.0436 against +0.0933. With its index separation at
@@ -14001,8 +14018,8 @@ const CGArm kCGArms[] = {
     // WHAT WOULD REFUSE THE ACCOUNT: plain landing at broadcast's +0.0193 rather
     // than near bcast7's +0.0640, which would mean vigilance does something for
     // teaching beyond holding the index still.
-    {"plain-AB",   0u, false, 0u, 0.0f, 0u, -1, 0.0f, 0u, 0u, true},
-    {"plain-keep", 0u, true,  0u, 0.0f, 0u, -1, 0.0f, 0u, 0u, true},
+    {"plain-AB",   0u, false, 0u, 0.0f, 0u, -1, 0.0f, 0u, 0u, true, 0.0, 0.0f},
+    {"plain-keep", 0u, true,  0u, 0.0f, 0u, -1, 0.0f, 0u, 0u, true, 0.0, 0.0f},
     // THE 2x2 THAT SETTLES IT. The diagnostic refuted the flickering account: the
     // shipped index sits on slot 1 about 90% of the time and vigilance's sits on
     // slot 0 99.8% of the time, so BOTH are nearly constant and they differ by a
@@ -14014,10 +14031,10 @@ const CGArm kCGArms[] = {
     // slot IDENTITY matters, and the bias tables are not as symmetric as the kernel
     // reads. Neither near bcast7: vigilance does something beyond holding the index
     // still, and the next question is what.
-    {"pin0-AB",   0u, false, 0u, 0.0f, 2u, 0, 0.0f, 0u, 0u, false},
-    {"pin0-keep", 0u, true,  0u, 0.0f, 2u, 0, 0.0f, 0u, 0u, false},
-    {"pin1-AB",   0u, false, 0u, 0.0f, 2u, 1, 0.0f, 0u, 0u, true},
-    {"pin1-keep", 0u, true,  0u, 0.0f, 2u, 1, 0.0f, 0u, 0u, true},
+    {"pin0-AB",   0u, false, 0u, 0.0f, 2u, 0, 0.0f, 0u, 0u, false, 0.0, 0.0f},
+    {"pin0-keep", 0u, true,  0u, 0.0f, 2u, 0, 0.0f, 0u, 0u, false, 0.0, 0.0f},
+    {"pin1-AB",   0u, false, 0u, 0.0f, 2u, 1, 0.0f, 0u, 0u, true, 0.0, 0.0f},
+    {"pin1-keep", 0u, true,  0u, 0.0f, 2u, 1, 0.0f, 0u, 0u, true, 0.0, 0.0f},
     // THE DIRECT ATTACK ON WHAT IS LEFT. pin0 and pin1 came out IDENTICAL to each
     // other and to context-off, to four decimals, so slot identity is irrelevant and
     // a perfectly constant index is exactly no context. bcast7 sits at 0.998, NOT
@@ -14032,8 +14049,8 @@ const CGArm kCGArms[] = {
     // WHAT WOULD REFUSE THAT: vig-pin0 keeping bcast7's +0.0436 gap, which would
     // mean committing the prototypes matters even when the index never moves, and
     // the mechanism is in the commit rather than in the switch.
-    {"vigpin-AB",   0u, false, 7u, 5.0f, 2u, 0, 0.0f, 0u, 0u, true},
-    {"vigpin-keep", 0u, true,  7u, 5.0f, 2u, 0, 0.0f, 0u, 0u, true},
+    {"vigpin-AB",   0u, false, 7u, 5.0f, 2u, 0, 0.0f, 0u, 0u, true, 0.0, 0.0f},
+    {"vigpin-keep", 0u, true,  7u, 5.0f, 2u, 0, 0.0f, 0u, 0u, true, 0.0, 0.0f},
     // THE DROPOUT CONTROL. Vigilance's excursions are NOT a rare well-timed switch:
     // ~4556 of them averaging ~1.5 ticks, 0.2% of ticks in total, 2.4x more frequent
     // during TEACHING than during the gap, first at trial 10 of 728. So the live
@@ -14046,8 +14063,8 @@ const CGArm kCGArms[] = {
     // MECHANISM AS INDEXING: noise reproducing vigilance's gap. WHAT WOULD SUPPORT
     // IT: noise leaving the gap at the context-off value, which would mean WHICH
     // ticks are chosen matters and a matched coin flip cannot stand in.
-    {"noise-AB",   0u, false, 0u, 0.0f, 2u, -1, 0.001f, 2u, 0u, true},
-    {"noise-keep", 0u, true,  0u, 0.0f, 2u, -1, 0.001f, 2u, 0u, true},
+    {"noise-AB",   0u, false, 0u, 0.0f, 2u, -1, 0.001f, 2u, 0u, true, 0.0, 0.0f},
+    {"noise-keep", 0u, true,  0u, 0.0f, 2u, -1, 0.001f, 2u, 0u, true, 0.0, 0.0f},
     // AND THE ARM ABOVE IS VOID AS A CONTROL, MEASURED 2026-09-22. It has pin = -1,
     // so the live gate-0 prototype index runs UNDERNEATH the coin flip, and that
     // index is not still: it reads slot0 0.173 in `bcast` and moved to 0.375 here,
@@ -14065,10 +14082,10 @@ const CGArm kCGArms[] = {
     // 1 AND ~7651 switches per teach phase. Those two together imply SINGLE-tick
     // excursions (0.002 * 2.04M teach ticks / (7651/2) ~ 1.07), so dwell 1 with
     // p = 0.002 matches both; the dwell-2 arm at half the event count brackets it.
-    {"nzpin-AB",    0u, false, 0u, 0.0f, 2u, 0, 0.002f, 1u, 0u, true},
-    {"nzpin-keep",  0u, true,  0u, 0.0f, 2u, 0, 0.002f, 1u, 0u, true},
-    {"nzpin2-AB",   0u, false, 0u, 0.0f, 2u, 0, 0.001f, 2u, 0u, true},
-    {"nzpin2-keep", 0u, true,  0u, 0.0f, 2u, 0, 0.001f, 2u, 0u, true},
+    {"nzpin-AB",    0u, false, 0u, 0.0f, 2u, 0, 0.002f, 1u, 0u, true, 0.0, 0.0f},
+    {"nzpin-keep",  0u, true,  0u, 0.0f, 2u, 0, 0.002f, 1u, 0u, true, 0.0, 0.0f},
+    {"nzpin2-AB",   0u, false, 0u, 0.0f, 2u, 0, 0.001f, 2u, 0u, true, 0.0, 0.0f},
+    {"nzpin2-keep", 0u, true,  0u, 0.0f, 2u, 0, 0.001f, 2u, 0u, true, 0.0, 0.0f},
     // PLACEMENT, NOW THAT THE PROFILE IS MEASURED. The uniform flip above was never
     // the matched control: vigilance puts only 16.9% of its switches in the word
     // against a 31.3% flat null, so it is concentrated in the SILENCE and a uniform
@@ -14087,10 +14104,40 @@ const CGArm kCGArms[] = {
     // these two placements at the same total rate, and it already failed -- so if
     // both halves succeed where the mixture failed, something here is wrong and
     // nothing in the table may be read.
-    {"nzsil-AB",   0u, false, 0u, 0.0f, 2u, 0, 0.00276f, 1u, 1u, false},
-    {"nzsil-keep", 0u, true,  0u, 0.0f, 2u, 0, 0.00276f, 1u, 1u, false},
-    {"nzwrd-AB",   0u, false, 0u, 0.0f, 2u, 0, 0.00584f, 1u, 2u, true},
-    {"nzwrd-keep", 0u, true,  0u, 0.0f, 2u, 0, 0.00584f, 1u, 2u, true},
+    {"nzsil-AB",   0u, false, 0u, 0.0f, 2u, 0, 0.00276f, 1u, 1u, true, 0.0, 0.0f},
+    {"nzsil-keep", 0u, true,  0u, 0.0f, 2u, 0, 0.00276f, 1u, 1u, true, 0.0, 0.0f},
+    {"nzwrd-AB",   0u, false, 0u, 0.0f, 2u, 0, 0.00584f, 1u, 2u, true, 0.0, 0.0f},
+    {"nzwrd-keep", 0u, true,  0u, 0.0f, 2u, 0, 0.00584f, 1u, 2u, true, 0.0, 0.0f},
+    // THE ACTIVITY GATE (AGMP, Frontiers 2026), priced experiment-only. Config is
+    // EXACTLY pin0 -- slots 2, pinned to slot 0 -- which this experiment established
+    // is bit-identical to context-off on three draws, so the ONLY thing that differs
+    // from the pin0 arm is the gate. No context slot is needed by the mechanism; the
+    // pin is there to make the comparison exact.
+    //
+    // THE TAUS ARE DERIVED, NOT GUESSED. AGMP requires the slow constant at 50-500x
+    // the eligibility trace, and this genome's tau_elig_ms is 2000, so the band is
+    // 100-1000 s. These three are its two edges and its middle. Four guessed
+    // constants cost a run each on v41 and this project does not guess any more.
+    // THE TAU SWEEP IS VACUOUS BY CONSTRUCTION, measured and then derived. At steady
+    // state the leaky accumulator gives a_i ~ rate_i * tau, so the z-score
+    // (a_i - mean)/MAD = (rate_i - mean_rate)/MAD_rate and TAU CANCELS EXACTLY.
+    // Measured spreads at tau 100/300/1000 s: 0.2039, 0.2038, 0.2037 -- identical to
+    // 0.1% across a 10x range. Tau survives only in the TRANSIENT. So the derived
+    // 100-1000 s band, correct for AGMP's un-normalised state, buys nothing once the
+    // state is z-scored, and these arms are respent on GATE STRENGTH instead, which
+    // does not cancel. actg1k is kept as the tau control that documents it.
+    {"actgS05-AB",   0u, false, 0u, 0.0f, 2u, 0, 0.0f, 0u, 0u, false, 300000.0, 0.5f},
+    {"actgS05-keep", 0u, true,  0u, 0.0f, 2u, 0, 0.0f, 0u, 0u, false, 300000.0, 0.5f},
+    {"actg300-AB",   0u, false, 0u, 0.0f, 2u, 0, 0.0f, 0u, 0u, false, 300000.0, 1.0f},
+    {"actg300-keep", 0u, true,  0u, 0.0f, 2u, 0, 0.0f, 0u, 0u, false, 300000.0, 1.0f},
+    // TAU IS MEASURED INERT, so this arm is respent on a third STRENGTH and the three
+    // become a DOSE-RESPONSE. At tau 300 s and 1000 s the effective gate read
+    // 0.485/0.239 and 0.485/0.239 -- identical to three decimals, exactly as the
+    // cancellation predicts. Re-demonstrating that would cost 32 creatures to learn
+    // nothing; a dose-response on strength is the strongest evidence this project
+    // accepts for a mechanism, and it is the axis that does NOT cancel.
+    {"actgS025-AB",   0u, false, 0u, 0.0f, 2u, 0, 0.0f, 0u, 0u, false, 300000.0, 0.25f},
+    {"actgS025-keep", 0u, true,  0u, 0.0f, 2u, 0, 0.0f, 0u, 0u, false, 300000.0, 0.25f},
 };
 constexpr uint32_t kCGArmCount = sizeof(kCGArms) / sizeof(kCGArms[0]);
 // CHANGED 2026-09-21 from 318211 to draw a FRESH set of creatures from the same
@@ -14176,6 +14223,8 @@ bool run_credgate(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
     cfg.ctx_noise_p = kCGArms[a].noise_p;
     cfg.ctx_noise_dwell = kCGArms[a].noise_dwell;
     cfg.ctx_noise_where = kCGArms[a].noise_where;
+    cfg.act_gate_tau_ms = kCGArms[a].act_tau_ms;
+    cfg.act_gate_strength = kCGArms[a].act_strength;
     // TURN THE CONTEXT MACHINERY ON. ctx_slots_ is set from
     // `exploration.context_slots > 1`, so at the shipped 0 the whole thing is inert
     // and active_context() returns 0 on every tick -- which is why the derived and
@@ -14545,6 +14594,117 @@ bool run_credgate(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
   // over creatures gives it an interval: the same resampled creature indices are used
   // for every arm, so arm-to-arm differences keep the pairing that the shared wiring
   // seeds create.
+  // THE ACTIVITY GATE (AGMP, Frontiers 2026), PRICED BEFORE IT IS BUILT.
+  //
+  // Its config is EXACTLY pin0's, so the only difference from that arm is the gate.
+  // It needs no context slot, no index and no task identity, which is the wall every
+  // arm in the sparse-switch line ran into.
+  //
+  // PRE-REGISTERED HERE, IN THE CODE, AND ALL THREE OUTCOMES ARE NAMED:
+  //   INERT     gate mean within 0.02 of 1.0, or err_taught equal to pin0's to four
+  //             decimals. The gate never closed, so the arm is vacuous and refuses
+  //             itself rather than being read as a null.
+  //   REFUSED   retention up while lesson B stops landing (err_b worse than pin0's
+  //             by more than 2 SE) or err_taught collapses. That is buying retention
+  //             by refusing to learn -- the `regionband` failure, refused the same
+  //             way. THIS IS THE PREDICTED FAILURE MODE, named before the run.
+  //   WORKS     retention above pin0's with the paired difference excluding zero,
+  //             AND B still landing. Only then is it worth a genome field.
+  {
+    auto idx = [&](const char* n) {
+      for (uint32_t a2 = 0; a2 < kCGArmCount; ++a2)
+        if (std::strcmp(kCGArms[a2].name, n) == 0) return int(a2);
+      return -1;
+    };
+    const char* gates[3] = {"actgS025-AB", "actgS05-AB", "actg300-AB"};
+    const int ip = idx("pin0-AB");
+    bool any = false;
+    for (const char* g : gates) {
+      const int ia = idx(g);
+      if (ia >= 0 && !kCGArms[ia].skip) any = true;
+    }
+    if (any && ip >= 0 && !kCGArms[ip].skip) {
+      std::printf("\n  THE ACTIVITY GATE -- AGMP priced before it is built. Config is\n"
+                  "  exactly pin0's, so the gate is the only difference. Taus are\n"
+                  "  DERIVED: AGMP wants 50-500x the eligibility trace and this genome's\n"
+                  "  tau_elig_ms is 2000, so the band is 100-1000 s.\n");
+      std::printf("    %-12s %-12s %-18s %-18s %s\n", "arm", "gate mean/SD",
+                  "err TAUGHT", "GAINED", "B landed (err_b)");
+      // AND THE ARMS MUST DIFFER FROM EACH OTHER. A tau sweep on a z-scored state is
+      // three readings of one arm, because tau cancels -- that is why these vary
+      // STRENGTH. Collected here and checked after the rows are printed.
+      std::vector<double> arm_spread;
+      double pin_b = 0.0, pin_bse = 0.0;
+      {
+        std::vector<double> v;
+        for (uint32_t r2 = 0; r2 < kReps; ++r2) {
+          const Cell& c = cells[r2 * kCGArmCount + uint32_t(ip)];
+          if (c.ok) v.push_back(c.row.err_b);
+        }
+        if (v.size() >= 3) pin_b = ctx_mean_se(v, &pin_bse);
+      }
+      std::printf("    %-12s %-8s %.4f +/- %-8.4f %+.4f +/- %-8.4f %.4f +/- %.4f\n",
+                  "pin0 (ref)", "--", m_taught[ip], s_taught[ip], m_gain[ip],
+                  s_gain[ip], pin_b, pin_bse);
+      for (const char* g : gates) {
+        const int ia = idx(g);
+        if (ia < 0 || kCGArms[ia].skip) continue;
+        std::vector<double> vg, vb, vm2;
+        for (uint32_t r2 = 0; r2 < kReps; ++r2) {
+          const Cell& c = cells[r2 * kCGArmCount + uint32_t(ia)];
+          if (!c.ok) continue;
+          vg.push_back(c.row.act_spread);
+          vm2.push_back(c.row.act_gate);
+          vb.push_back(c.row.err_b);
+        }
+        if (vg.size() < 3) continue;
+        double gse = 0.0, bse = 0.0, mse = 0.0;
+        const double gm = ctx_mean_se(vg, &gse);
+        const double bm = ctx_mean_se(vb, &bse);
+        const double mg = vm2.size() >= 3 ? ctx_mean_se(vm2, &mse) : 0.0;
+        std::printf("    %-12s %.3f/%-6.3f %.4f +/- %-8.4f %+.4f +/- %-8.4f %.4f +/- %.4f\n",
+                    kCGArms[ia].name, mg, gm, m_taught[ia], s_taught[ia], m_gain[ia],
+                    s_gain[ia], bm, bse);
+        // gm is now mean |g - 0.5|. A gate that hands every neuron the same value is
+        // a blanket learning-rate cut wearing a gate's name, and 0.5007 vs 0.5006 vs
+        // 0.5006 across a 10x tau range is what that looked like when the MEAN was
+        // reported -- a number pinned at 0.5 by the mean-centring, not a measurement.
+        const bool inert = gm < 0.02 || mg > 0.98 ||
+                           std::fabs(m_taught[ia] - m_taught[ip]) < 1e-4;
+        const double db = bm - pin_b;
+        const double dbse = std::sqrt(bse * bse + pin_bse * pin_bse);
+        const bool b_died = dbse > 0.0 && db / dbse > 2.0;
+        arm_spread.push_back(gm);
+        std::printf("      -> %s\n",
+                    inert ? "INERT/FLAT: every neuron got the same gate, so this is a "
+                            "blanket learning-rate cut and NOT a gate"
+                          : (b_died ? "REFUSED: lesson B stopped landing, so any "
+                                      "retention is bought by not learning"
+                                    : "live and B still lands -- read its retention"));
+      }
+      if (arm_spread.size() >= 2) {
+        double lo = arm_spread[0], hi = arm_spread[0];
+        for (double v : arm_spread) { lo = v < lo ? v : lo; hi = v > hi ? v : hi; }
+        const double rel = hi > 1e-12 ? (hi - lo) / hi : 0.0;
+        std::printf("    arm-to-arm spread range %.4f..%.4f (%.1f%%)%s\n", lo, hi,
+                    100.0 * rel,
+                    rel < 0.05 ? "  <- VACUOUS: these are one arm read three times"
+                               : "  <- the arms genuinely differ");
+        // PAIRWISE, because min-to-max hides a DUPLICATE PAIR inside a spread that
+        // one distinct arm makes look wide. tau 300 s and tau 1000 s read
+        // 0.239/0.239 while the range across all three read 52.8% and passed.
+        for (size_t x = 0; x + 1 < arm_spread.size(); ++x)
+          for (size_t y = x + 1; y < arm_spread.size(); ++y) {
+            const double d = std::fabs(arm_spread[x] - arm_spread[y]);
+            const double ref = std::fabs(arm_spread[y]) > 1e-12 ? std::fabs(arm_spread[y]) : 1.0;
+            if (d / ref < 0.05)
+              std::printf("      DUPLICATE: arms %zu and %zu differ by %.1f%% -- one of\n"
+                          "      them is spending creatures to re-measure the other\n",
+                          x, y, 100.0 * d / ref);
+          }
+      }
+    }
+  }
   {
     auto idx = [&](const char* n) {
       for (uint32_t a2 = 0; a2 < kCGArmCount; ++a2)
@@ -14559,8 +14719,9 @@ bool run_credgate(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
         {"oracle (masked)", "oracle-AB"},
         {"uniform flip", "nzpin-AB"},
         {"flip in the SILENCE", "nzsil-AB"},
+        {"activity gate 300 s", "actg300-AB"},
     };
-    constexpr int kNR = 6;
+    constexpr int kNR = 7;
     // Per-creature triples, gathered once and shared by every bootstrap replicate.
     std::vector<double> bef[kNR], tau[kNR], aft[kNR];
     bool ok[kNR] = {};

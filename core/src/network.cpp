@@ -2309,6 +2309,13 @@ void Network::step() {
       }
 
       const Scalar inst = spiked ? spike_rate_unit_ : kZero;
+      // AGMP's slow astrocytic accumulator, a[t] = lambda*a[t-1] + phi[t], in DOUBLE.
+      // The leaky-accumulator form is the paper's, and it is also the one that
+      // survives these time constants: the normalised EMA form stalls in float32
+      // under eps 1.2e-7, which is the wall that refused DNA v60. Experiment-only,
+      // so act_slow_ is empty on the shipped path and this costs a null check.
+      if (!act_slow_.empty())
+        act_slow_[i] = act_gate_lambda_ * act_slow_[i] + double(inst);
       rate_ema_[i] += rate_alpha_ * (inst - rate_ema_[i]);
       rate_fast_[i] += rate_fast_alpha_ * (inst - rate_fast_[i]);
       rate_sum += rate_ema_[i];
@@ -2575,6 +2582,43 @@ void Network::apply_reward_impl(const Scalar* per_module, bool any) {
           // implicit, because "u is zero so it does not matter" stops being
           // true the moment anyone adds a term here.
           gate_meta = kOne;
+        }
+        // AGMP'S ACTIVITY GATE, a third multiplicative term on the same per-neuron
+        // multiplier the SNR gate and the commitment brake already share. Graded, as
+        // the paper has it, not binary. Normalised against the MODULE's own mean so
+        // there is no guessed threshold -- the constant this project keeps paying for
+        // is the one nobody derived.
+        if (!act_slow_.empty() && act_gate_strength_ > kZero) {
+          // NORMALISE BY THE SPREAD, NOT BY THE MEAN. Dividing by the mean gives a
+          // RELATIVE DEVIATION, and this creature's per-module homeostasis holds that
+          // near 0.2 -- which lands every neuron in the sigmoid's linear midpoint and
+          // turns the gate into a uniform ~0.5 multiplier. Measured: mean |g - 0.5|
+          // of 0.048/0.050/0.051 across a 10x tau range, with GAINED roughly halved.
+          // That was a blanket learning-rate tax wearing a gate's name, and it was my
+          // normalisation rather than the mechanism. A z-score needs the spread.
+          double msum = 0.0;
+          for (uint32_t kk = 0; kk < ms.count; ++kk) msum += act_slow_[ms.begin + kk];
+          const double mmean = ms.count ? msum / double(ms.count) : 0.0;
+          double dsum = 0.0;
+          for (uint32_t kk = 0; kk < ms.count; ++kk)
+            dsum += std::fabs(act_slow_[ms.begin + kk] - mmean);
+          const double mad = ms.count ? dsum / double(ms.count) : 0.0;
+          const double scale = mad > 1e-12 ? mad : 1.0;
+          const double z = (act_slow_[i] - mmean) / scale;
+          const Scalar g_act = Scalar(1.0 / (1.0 + std::exp(-z)));
+          // strength 1 is the full sigmoid; below that it lerps toward no gating, so
+          // a sweep can find where it starts to bite instead of being all-or-nothing.
+          // RECORD THE GATE THAT ACTS, NOT THE SIGMOID THAT FEEDS IT. Accumulating
+          // the raw g_act made `strength` invisible by construction -- the vacuity
+          // check then read 0.9% across a 2x strength change and called three
+          // genuinely different arms one arm, while err_taught (1.0460 vs 1.0612)
+          // said plainly that they differ. Third time on this mechanism that the
+          // recorded number could not answer the question being asked of it.
+          const Scalar g_eff = kOne - act_gate_strength_ * (kOne - g_act);
+          gate_meta *= g_eff;
+          act_gate_sum_ += g_eff;
+          act_gate_sq_ += double(g_eff) * double(g_eff);
+          ++act_gate_n_;
         }
         // The commitment brake. Reads `bias_` before this update, so a neuron
         // is judged on what it had already committed to and not on where this
@@ -3857,4 +3901,27 @@ void Network::load_state(SnapshotReader& r) {
   }
 }
 
+}  // namespace aibaby
+
+namespace aibaby {
+void Network::set_activity_gate(double tau_ms, Scalar strength) {
+  // lambda = exp(-dt/tau). tau_ms 0 clears the gate.
+  if (tau_ms <= 0.0 || strength <= kZero) { clear_activity_gate(); return; }
+  act_gate_lambda_ = std::exp(-double(dt_ms_) / tau_ms);
+  act_gate_strength_ = strength;
+  act_slow_.assign(capacity_, 0.0);
+  act_gate_sum_ = kZero;
+  act_gate_sq_ = 0.0;
+  act_gate_n_ = 0;
+}
+Scalar Network::act_gate_mean() const {
+  return act_gate_n_ ? act_gate_sum_ / Scalar(act_gate_n_) : kZero;
+}
+Scalar Network::act_gate_spread() const {
+  if (!act_gate_n_) return kZero;
+  const double n = double(act_gate_n_);
+  const double m = double(act_gate_sum_) / n;
+  const double var = act_gate_sq_ / n - m * m;
+  return Scalar(var > 0.0 ? std::sqrt(var) : 0.0);
+}
 }  // namespace aibaby
