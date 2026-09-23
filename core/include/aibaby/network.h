@@ -281,7 +281,7 @@ class Network {
   void set_activity_gate(double tau_ms, Scalar strength);
   void clear_activity_gate() {
     act_gate_lambda_ = 0.0; act_gate_strength_ = kZero; act_slow_.clear();
-    act_gate_sum_ = kZero; act_gate_sq_ = 0.0; act_gate_n_ = 0;
+    act_gate_sum_ = 0.0; act_gate_sq_ = 0.0; act_gate_n_ = 0;
   }
   // What fraction of the gate's range is actually being used, so an arm that is
   // inert can refuse itself instead of being read as a null.
@@ -1144,7 +1144,16 @@ class Network {
   std::vector<double> act_slow_;
   double act_gate_lambda_ = 0.0;
   Scalar act_gate_strength_ = kZero;
-  Scalar act_gate_sum_ = kZero;
+  // DOUBLE, and the reason is recorded three lines above in this same file: a float
+  // accumulating billions of ~0.5 increments SATURATES once the running sum passes
+  // ~1e7, which is the float32 stagnation `prototypes-freeze` measured and which
+  // refused DNA v60. I cited that hazard in the comments of this very mechanism and
+  // then used a float for its diagnostic. It read gate mean 0.392 for an arm whose
+  // gate is bounded BELOW by 0.75, and an SD of 0.787 where a [0,1] variable with
+  // that mean cannot exceed 0.488 -- impossible values, which is the only reason it
+  // was caught. The gate itself was always correct: g_eff is recomputed per tick
+  // from a double accumulator, so only the diagnostic was wrong.
+  double act_gate_sum_ = 0.0;
   double act_gate_sq_ = 0.0;       // sum of g_eff^2, for the SD in one pass
   uint64_t act_gate_n_ = 0;
   static constexpr uint32_t kCtxSelfSkipA = 2;  // F1

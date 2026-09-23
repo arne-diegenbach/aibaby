@@ -3910,17 +3910,17 @@ void Network::set_activity_gate(double tau_ms, Scalar strength) {
   act_gate_lambda_ = std::exp(-double(dt_ms_) / tau_ms);
   act_gate_strength_ = strength;
   act_slow_.assign(capacity_, 0.0);
-  act_gate_sum_ = kZero;
+  act_gate_sum_ = 0.0;
   act_gate_sq_ = 0.0;
   act_gate_n_ = 0;
 }
 Scalar Network::act_gate_mean() const {
-  return act_gate_n_ ? act_gate_sum_ / Scalar(act_gate_n_) : kZero;
+  return act_gate_n_ ? Scalar(act_gate_sum_ / double(act_gate_n_)) : kZero;
 }
 Scalar Network::act_gate_spread() const {
   if (!act_gate_n_) return kZero;
   const double n = double(act_gate_n_);
-  const double m = double(act_gate_sum_) / n;
+  const double m = act_gate_sum_ / n;
   const double var = act_gate_sq_ / n - m * m;
   return Scalar(var > 0.0 ? std::sqrt(var) : 0.0);
 }

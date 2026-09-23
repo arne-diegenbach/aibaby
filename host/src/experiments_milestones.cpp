@@ -3,6 +3,7 @@
 // Shared scaffolding is in experiments_common.h.
 
 #include <cstring>
+#include <numeric>
 #include "experiments_common.h"
 #include "host/mel.h"
 #include "host/wav.h"
@@ -14719,9 +14720,11 @@ bool run_credgate(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
         {"oracle (masked)", "oracle-AB"},
         {"uniform flip", "nzpin-AB"},
         {"flip in the SILENCE", "nzsil-AB"},
-        {"activity gate 300 s", "actg300-AB"},
+        {"activity gate s0.25", "actgS025-AB"},
+        {"activity gate s0.50", "actgS05-AB"},
+        {"activity gate s1.00", "actg300-AB"},
     };
-    constexpr int kNR = 7;
+    constexpr int kNR = 9;
     // Per-creature triples, gathered once and shared by every bootstrap replicate.
     std::vector<double> bef[kNR], tau[kNR], aft[kNR];
     bool ok[kNR] = {};
@@ -14777,6 +14780,21 @@ bool run_credgate(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
     double point[kNR] = {}, lo[kNR] = {}, hi[kNR] = {};
     for (int k = 0; k < kNR; ++k) {
       if (!ok[k]) continue;
+      // RETAIN'S OWN taught_ok GUARD, which this block was missing. `retain` refuses
+      // to report retention when the lesson gained under 0.02, because "retention of
+      // a change that did not happen is not a measurement" -- and the strength-1.0
+      // gate arm gained +0.0139, under that bar, then printed retention -1.681. A
+      // ratio whose denominator collapsed is not evidence that the arm forgets.
+      const double gain_k = (std::accumulate(bef[k].begin(), bef[k].end(), 0.0) -
+                             std::accumulate(tau[k].begin(), tau[k].end(), 0.0)) /
+                            double(bef[k].size());
+      if (gain_k <= 0.02) {
+        std::printf("    %-22s UNDERPOWERED -- gained %+.4f, under retain's 0.02 bar,\n"
+                    "                           so its retention is NOT a measurement\n",
+                    rs[k].label, gain_k);
+        ok[k] = false;
+        continue;
+      }
       point[k] = ratio(bef[k], tau[k], aft[k], all);
       std::vector<double> v = boot[k];
       if (v.size() < 100) { ok[k] = false; continue; }

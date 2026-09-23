@@ -13011,6 +13011,69 @@ reproduce the effect but the creature's own slow state can, then a gate driven b
 state — rather than an index that selects a table — is the mechanism worth building,
 and it needs no context slot at all.
 
+### AGMP's activity gate is refused: it cuts learning without cutting forgetting
+
+The lead from the literature search, built experiment-only and priced before any
+genome field, the way `credit-oracle` priced DNA v41. The prediction was derived from
+this project's own measurements rather than hoped for: lessons here act by
+**suppression**, a low F1 target silencing the upper half, so lesson A (f1 320) stores
+its trace **as quiescence** — and an activity gate freezes precisely what is quiet.
+A's memory should be self-protecting, with no context slot, no index and no task
+identity.
+
+**It is refused, on a monotonic dose–response in the wrong direction.**
+
+| arm | gained | erosion | retention |
+|---|---|---|---|
+| context off (`pin0`) | +0.0742 ± 0.0071 | +0.0528 | **+0.288** |
+| vigilance (`bcast7`) | +0.0644 | +0.0248 | +0.615 |
+| gate, strength 0.25 | +0.0453 ± 0.0051 | +0.0426 | **+0.060** |
+| gate, strength 0.50 | +0.0291 ± 0.0044 | +0.0455 | **−0.564** |
+| gate, strength 1.00 | +0.0139 ± 0.0037 | +0.0373 | −1.683 *(underpowered)* |
+
+**The mechanism of the failure is visible in the two columns beside the ratio.**
+Erosion barely moves — 0.0528 down to 0.0426/0.0455/0.0373, at most 19% — while gained
+collapses from 0.0742 to 0.0139, 81%. **The gate cuts learning without cutting
+forgetting.** Retention falls because the denominator is destroyed, not because the
+numerator improves. The derived prediction is refuted directly: if A's quiescent trace
+were self-protecting, erosion would have dropped, and it did not.
+
+**And the refutation does not rest on the underpowered arm.** The strength-1.0 arm
+gained +0.0139, below `retain`'s own 0.02 `taught_ok` bar — *retention of a change that
+did not happen is not a measurement* — so its −1.683 must not be read, and the code now
+refuses to print it. The two arms that clear the bar already carry the result: +0.060
+and −0.564 against context-off's +0.288.
+
+**The predicted failure mode did not fire, and a different one did.** I registered in
+advance that lesson B might stop landing, since B must raise what the gate has frozen.
+B landed fine everywhere (`err_b` 0.6816–0.7161 against pin0's 0.7250 — slightly
+*better*). What collapsed was **A's acquisition**. So the gate is not selectively
+protecting an old lesson at a new one's expense; it is a broad learning-rate tax whose
+selectivity does not align with what a suppression-based lesson needs.
+
+**One reading from the cheap pass did not survive the expensive one.** At 300k ticks
+strength 0.25 looked free — +0.0368 against pin0's +0.0365. At 3.4M it costs 39%
+(+0.0453 against +0.0742). A magnitude that moved under a longer run, for the ninth
+time in this line.
+
+**A bug worth recording against myself.** The gate's diagnostic column printed a mean
+of 0.392 for an arm whose gate is bounded *below* by 0.75, with an SD of 0.787 where a
+[0,1] variable with that mean cannot exceed 0.488 — impossible values, which is the
+only reason it was caught. The accumulator was a `float` summing billions of ~0.5
+increments, so it saturated past ~1e7: the float32 stagnation this project measured in
+`prototypes-freeze` and which refused DNA v60. **I cited that hazard in the comments of
+this very mechanism and then used a float for its diagnostic.** The gate itself was
+never affected — `g_eff` is recomputed per tick from a double — so the science above
+stands and only the diagnostic was wrong. Now a double.
+
+Credit to the AGMP authors stands regardless: the paper is specific enough that its
+mechanism could be implemented faithfully, its ratio was precise enough to be tested
+and found inert here, and its failure in this creature is informative rather than
+ambiguous. It reports 82.6% against EWC's 72.4% on Split N-MNIST, a task where units
+differentiate by activity; this creature's per-module homeostasis regulates rates
+toward a common target, and a gate keyed on activity magnitude has correspondingly
+little to grip.
+
 This also explains the mask's cost here without any new hypothesis. The oracle arm's
 `err_taught` is 1.0256 against plain's 0.9304 — it learns markedly worse — which is
 what `mask-unaffordable` already measured when masking half the F1 group, and is
