@@ -1,0 +1,267 @@
+experiment: glide
+  instrument        glide   trial seed 000000000135461a   1200000 ticks
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  seed family       offset 730151 -> first creature 0000000001404bf0 (FRESH: nothing
+                    has been measured on these seeds)
+  the observation   `struct Word` is three scalars and every caregiver render
+                    in this codebase passes constants, so NOTHING THIS
+                    CREATURE HAS EVER HEARD CHANGES WHILE SOUNDING. A long
+                    line of work asked whether the brain can GENERATE a
+                    sequence; none asked whether it can FOLLOW one.
+  the rate is DERIVED, and the derivation refuses the obvious design. The
+    formant path is one-pole with tau = smoothing_ms = 800 ms exactly, corner
+    0.199 Hz. A human diphthong (150-250 ms) passes at |H| 0.06-0.10, so a
+    460 Hz heard sweep would arrive as 27-45 Hz of produced travel -- below
+    the noise floor. Run at that rate, a flat voice would have been written up
+    as `the route carries only steady state`, refuting the wrong thing:
+    NO AMOUNT OF LEARNING FIXES A FILTER.
+  so the arms are   slow 4000 ms (|H| 0.85, 390 Hz), mid 1600 ms (0.54,
+                    247 Hz), fast 400 ms (0.16, 72 Hz). `fast` is an
+                    INSTRUMENT CHECK, not a hypothesis.
+  artefact EXCLUDED, not controlled. `framecopy` looked spectacular and was
+    the shipped inhibitory auditory->vocal tract gating babble off while the
+    creature heard something -- a reflex copies ANY envelope. So THE
+    CAREGIVER'S AMPLITUDE IS CONSTANT here and only the formant moves. There
+    is no envelope at f to copy. Produced amplitude is scored at f anyway as a
+    trip-wire.
+  what it CANNOT claim: at 1.6-4 s this is a slowly moving vowel, not a
+    diphthong, so it says nothing about syllable-rate imitation.
+
+  PRE-REGISTERED
+    vacuity guard   the `hear` arms must show a LOWER duty than `silent-mid`.
+                    The listening reflex is documented; if duty is unchanged
+                    the caregiver is not arriving and nothing else reads.
+    FOLLOW          `glide-mid` F1-SNR >= 2.0 AND >= 3 SE over `static-mid`,
+                    with `f2glide-mid` and `silent-mid` at the static
+                    baseline. The voice tracks a heard trajectory.
+    REFUSAL         `glide-mid` at the static baseline -> the auditory->vocal
+                    route carries no timbre, and the sequence problem is
+                    confirmed INTERNAL. A real refusal, not a null.
+    trip-wire       produced AMPLITUDE SNR at f should stay at the static
+                    baseline in every arm. If it rises with F1, something
+                    couples and the F1 reading is suspect.
+    instrument      expect slow >= mid > fast if the 800 ms pole is the
+                    limit. A FLAT profile across rates would mean the
+                    statistic is not measuring following.
+    honest prior    `vocallearn` cuts error +24 toward a FIXED target and
+                    -0.1 toward a HEARD one, so imitation is already a
+                    documented null. This run carries NO REWARD: it asks
+                    whether the echo exists, not whether reward can chase it.
+
+  [8/144] seed 0 vel-mid     F1-SNR   3.62 amp-SNR 276.29 F1  601.3 +/- 159.8
+  [1/144] seed 0 glide-slow  F1-SNR   6.38 amp-SNR 137.32 F1  621.0 +/-  24.2
+  [5/144] seed 0 f2glide-mid F1-SNR   6.20 amp-SNR 349.45 F1  619.1 +/-  27.2
+  [4/144] seed 0 static-mid  F1-SNR   2.68 amp-SNR   0.69 F1  624.2 +/-  22.0
+  [3/144] seed 0 glide-fast  F1-SNR   4.03 amp-SNR 152.01 F1  620.5 +/-  23.9
+  [6/144] seed 0 silent-mid  F1-SNR   2.90 amp-SNR   0.41 F1  626.6 +/-  23.5
+  [7/144] seed 0 vel-slow    F1-SNR   2.65 amp-SNR 100.00 F1  607.3 +/- 166.6
+  [2/144] seed 0 glide-mid   F1-SNR   2.86 amp-SNR 255.61 F1  619.5 +/-  26.9
+  [9/144] seed 0 vel-fast    F1-SNR   1.66 amp-SNR 197.54 F1  609.1 +/- 156.6
+  [11/144] seed 0 vel-lo      F1-SNR   5.49 amp-SNR 421.86 F1  612.1 +/-  53.9
+  [15/144] seed 1 glide-fast  F1-SNR  32.02 amp-SNR 212.37 F1  631.2 +/-  21.5
+  [13/144] seed 1 glide-slow  F1-SNR  22.99 amp-SNR 132.78 F1  632.3 +/-  23.1
+  [10/144] seed 0 vel-static  F1-SNR   1.24 amp-SNR   0.95 F1  596.4 +/- 174.2
+  [12/144] seed 0 vel-hi      F1-SNR   8.99 amp-SNR 188.65 F1  627.0 +/- 220.9
+  [14/144] seed 1 glide-mid   F1-SNR  21.43 amp-SNR 406.00 F1  631.7 +/-  22.4
+  [18/144] seed 1 silent-mid  F1-SNR   0.36 amp-SNR   0.20 F1  629.9 +/-  21.9
+  [16/144] seed 1 static-mid  F1-SNR   0.70 amp-SNR   5.35 F1  627.6 +/-  23.7
+  [17/144] seed 1 f2glide-mid F1-SNR   5.22 amp-SNR 121.15 F1  631.9 +/-  22.4
+  [19/144] seed 1 vel-slow    F1-SNR   1.40 amp-SNR 114.14 F1  680.4 +/- 152.2
+  [20/144] seed 1 vel-mid     F1-SNR  20.05 amp-SNR 455.74 F1  689.9 +/- 145.3
+  [27/144] seed 2 glide-fast  F1-SNR  31.16 amp-SNR 494.66 F1  625.4 +/-  20.5
+  [21/144] seed 1 vel-fast    F1-SNR  27.92 amp-SNR 275.26 F1  692.6 +/- 150.0
+  [24/144] seed 1 vel-hi      F1-SNR   5.29 amp-SNR 392.58 F1  700.4 +/- 226.6
+  [26/144] seed 2 glide-mid   F1-SNR  53.37 amp-SNR 513.24 F1  624.0 +/-  22.3
+  [22/144] seed 1 vel-static  F1-SNR   0.86 amp-SNR   3.26 F1  675.2 +/- 150.9
+  [28/144] seed 2 static-mid  F1-SNR   0.31 amp-SNR   0.48 F1  626.3 +/-  21.0
+  [23/144] seed 1 vel-lo      F1-SNR  17.34 amp-SNR 398.34 F1  644.5 +/-  49.5
+  [25/144] seed 2 glide-slow  F1-SNR  38.02 amp-SNR 366.94 F1  624.3 +/-  23.6
+  [29/144] seed 2 f2glide-mid F1-SNR  61.66 amp-SNR 177.02 F1  632.0 +/-  24.0
+  [32/144] seed 2 vel-mid     F1-SNR  13.99 amp-SNR 739.67 F1  653.2 +/- 152.9
+  [34/144] seed 2 vel-static  F1-SNR   1.06 amp-SNR   0.70 F1  642.8 +/- 162.6
+  [33/144] seed 2 vel-fast    F1-SNR  10.18 amp-SNR 513.48 F1  639.4 +/- 152.1
+  [30/144] seed 2 silent-mid  F1-SNR   0.87 amp-SNR   0.87 F1  620.5 +/-  21.9
+  [31/144] seed 2 vel-slow    F1-SNR  22.87 amp-SNR 311.55 F1  679.0 +/- 177.4
+  [37/144] seed 3 glide-slow  F1-SNR   8.03 amp-SNR 403.65 F1  619.0 +/-  24.0
+  [38/144] seed 3 glide-mid   F1-SNR   4.93 amp-SNR 972.52 F1  619.2 +/-  23.4
+  [35/144] seed 2 vel-lo      F1-SNR  12.76 amp-SNR 408.45 F1  634.1 +/-  45.8
+  [36/144] seed 2 vel-hi      F1-SNR   2.73 amp-SNR 380.07 F1  647.8 +/- 234.6
+  [39/144] seed 3 glide-fast  F1-SNR   3.08 amp-SNR 1871.90 F1  620.1 +/-  23.0
+  [40/144] seed 3 static-mid  F1-SNR   0.68 amp-SNR   1.07 F1  617.9 +/-  22.6
+  [42/144] seed 3 silent-mid  F1-SNR   1.74 amp-SNR   0.03 F1  623.6 +/-  19.3
+  [44/144] seed 3 vel-mid     F1-SNR  10.24 amp-SNR 1281.02 F1  615.8 +/- 172.9
+  [41/144] seed 3 f2glide-mid F1-SNR   1.64 amp-SNR 349.47 F1  617.9 +/-  22.4
+  [47/144] seed 3 vel-lo      F1-SNR  23.32 amp-SNR 1590.29 F1  615.1 +/-  57.1
+  [43/144] seed 3 vel-slow    F1-SNR  20.31 amp-SNR 304.85 F1  576.6 +/- 160.8
+  [49/144] seed 4 glide-slow  F1-SNR 590.67 amp-SNR 389.48 F1  626.0 +/-  29.7
+  [46/144] seed 3 vel-static  F1-SNR   0.28 amp-SNR   1.69 F1  595.5 +/- 159.2
+  [45/144] seed 3 vel-fast    F1-SNR  24.83 amp-SNR 956.93 F1  584.1 +/- 159.4
+  [50/144] seed 4 glide-mid   F1-SNR 190.57 amp-SNR 602.09 F1  625.7 +/-  25.4
+  [48/144] seed 3 vel-hi      F1-SNR  20.59 amp-SNR 1551.28 F1  606.5 +/- 226.6
+  [54/144] seed 4 silent-mid  F1-SNR   0.57 amp-SNR   0.10 F1  626.8 +/-  23.2
+  [52/144] seed 4 static-mid  F1-SNR   1.73 amp-SNR   0.59 F1  626.8 +/-  20.5
+  [53/144] seed 4 f2glide-mid F1-SNR  19.24 amp-SNR  62.01 F1  626.6 +/-  21.2
+  [55/144] seed 4 vel-slow    F1-SNR 320.67 amp-SNR 273.78 F1  648.1 +/- 170.5
+  [51/144] seed 4 glide-fast  F1-SNR 246.02 amp-SNR 709.13 F1  628.3 +/-  27.5
+  [56/144] seed 4 vel-mid     F1-SNR 156.50 amp-SNR 636.15 F1  663.4 +/- 157.7
+  [57/144] seed 4 vel-fast    F1-SNR 118.61 amp-SNR 1176.01 F1  650.2 +/- 142.9
+  [58/144] seed 4 vel-static  F1-SNR   1.55 amp-SNR   1.18 F1  658.6 +/- 155.3
+  [59/144] seed 4 vel-lo      F1-SNR 141.96 amp-SNR 804.64 F1  635.3 +/-  50.8
+  [61/144] seed 5 glide-slow  F1-SNR  21.27 amp-SNR 128.73 F1  627.3 +/-  22.5
+  [66/144] seed 5 silent-mid  F1-SNR   1.09 amp-SNR   0.18 F1  619.2 +/-  27.3
+  [60/144] seed 4 vel-hi      F1-SNR 279.14 amp-SNR 734.15 F1  649.9 +/- 228.1
+  [62/144] seed 5 glide-mid   F1-SNR  26.72 amp-SNR 210.27 F1  626.1 +/-  21.7
+  [67/144] seed 5 vel-slow    F1-SNR  18.68 amp-SNR  99.90 F1  635.3 +/- 135.3
+  [68/144] seed 5 vel-mid     F1-SNR  16.50 amp-SNR 174.95 F1  648.6 +/- 136.8
+  [63/144] seed 5 glide-fast  F1-SNR  27.47 amp-SNR 301.92 F1  625.5 +/-  20.5
+  [65/144] seed 5 f2glide-mid F1-SNR  16.01 amp-SNR  29.98 F1  625.9 +/-  21.2
+  [64/144] seed 5 static-mid  F1-SNR   1.95 amp-SNR   0.17 F1  623.3 +/-  20.6
+  [69/144] seed 5 vel-fast    F1-SNR  27.32 amp-SNR 189.98 F1  625.5 +/- 131.6
+  [73/144] seed 6 glide-slow  F1-SNR  49.20 amp-SNR 253.31 F1  623.6 +/-  22.4
+  [72/144] seed 5 vel-hi      F1-SNR   9.55 amp-SNR 144.51 F1  624.3 +/- 216.6
+  [76/144] seed 6 static-mid  F1-SNR   2.19 amp-SNR   0.12 F1  620.1 +/-  22.9
+  [70/144] seed 5 vel-static  F1-SNR   0.18 amp-SNR   0.95 F1  640.3 +/- 136.8
+  [71/144] seed 5 vel-lo      F1-SNR   9.45 amp-SNR 249.09 F1  627.8 +/-  41.5
+  [77/144] seed 6 f2glide-mid F1-SNR   0.16 amp-SNR   4.73 F1  623.2 +/-  20.9
+  [74/144] seed 6 glide-mid   F1-SNR  80.41 amp-SNR  99.43 F1  622.8 +/-  22.2
+  [78/144] seed 6 silent-mid  F1-SNR   0.07 amp-SNR   0.39 F1  622.1 +/-  21.9
+  [75/144] seed 6 glide-fast  F1-SNR  66.35 amp-SNR 125.90 F1  621.4 +/-  21.5
+  [80/144] seed 6 vel-mid     F1-SNR  50.32 amp-SNR  65.58 F1  628.6 +/- 158.3
+  [83/144] seed 6 vel-lo      F1-SNR  17.06 amp-SNR  65.23 F1  626.1 +/-  50.3
+  [79/144] seed 6 vel-slow    F1-SNR  10.65 amp-SNR 144.20 F1  597.0 +/- 188.7
+  [85/144] seed 7 glide-slow  F1-SNR   3.55 amp-SNR 412.57 F1  623.8 +/-  22.2
+  [87/144] seed 7 glide-fast  F1-SNR   1.07 amp-SNR 425.40 F1  625.1 +/-  21.4
+  [81/144] seed 6 vel-fast    F1-SNR  23.31 amp-SNR 216.91 F1  617.7 +/- 160.0
+  [82/144] seed 6 vel-static  F1-SNR   0.26 amp-SNR   0.19 F1  612.9 +/- 161.8
+  [86/144] seed 7 glide-mid   F1-SNR   4.51 amp-SNR 459.20 F1  623.6 +/-  21.7
+  [84/144] seed 6 vel-hi      F1-SNR  39.06 amp-SNR  47.96 F1  639.8 +/- 243.9
+  [88/144] seed 7 static-mid  F1-SNR   3.56 amp-SNR   2.02 F1  625.3 +/-  21.2
+  [91/144] seed 7 vel-slow    F1-SNR   1.67 amp-SNR 380.25 F1  630.1 +/- 137.1
+  [89/144] seed 7 f2glide-mid F1-SNR   4.48 amp-SNR 109.76 F1  624.7 +/-  20.8
+  [90/144] seed 7 silent-mid  F1-SNR   0.08 amp-SNR   0.47 F1  624.3 +/-  22.4
+  [92/144] seed 7 vel-mid     F1-SNR   5.19 amp-SNR 751.43 F1  626.7 +/- 136.8
+  [93/144] seed 7 vel-fast    F1-SNR   2.49 amp-SNR 870.59 F1  640.3 +/- 142.6
+  [97/144] seed 8 glide-slow  F1-SNR  21.47 amp-SNR 956.31 F1  627.9 +/-  24.4
+  [94/144] seed 7 vel-static  F1-SNR   0.24 amp-SNR   0.17 F1  633.5 +/- 152.5
+  [96/144] seed 7 vel-hi      F1-SNR   6.14 amp-SNR 604.58 F1  637.1 +/- 216.8
+  [100/144] seed 8 static-mid  F1-SNR   0.27 amp-SNR   0.49 F1  633.2 +/-  20.7
+  [95/144] seed 7 vel-lo      F1-SNR   4.84 amp-SNR 461.48 F1  624.6 +/-  44.3
+  [98/144] seed 8 glide-mid   F1-SNR   9.29 amp-SNR 1507.81 F1  627.4 +/-  23.7
+  [99/144] seed 8 glide-fast  F1-SNR  13.74 amp-SNR 1381.01 F1  629.5 +/-  20.6
+  [102/144] seed 8 silent-mid  F1-SNR   1.67 amp-SNR   1.70 F1  628.0 +/-  21.7
+  [105/144] seed 8 vel-fast    F1-SNR  22.72 amp-SNR 1487.92 F1  672.8 +/- 134.9
+  [104/144] seed 8 vel-mid     F1-SNR  34.15 amp-SNR 2139.64 F1  679.4 +/- 149.0
+  [107/144] seed 8 vel-lo      F1-SNR  28.25 amp-SNR 1220.00 F1  649.0 +/-  55.2
+  [101/144] seed 8 f2glide-mid F1-SNR   0.19 amp-SNR 427.95 F1  632.1 +/-  20.6
+  [103/144] seed 8 vel-slow    F1-SNR  44.29 amp-SNR 1396.25 F1  669.9 +/- 169.2
+  [106/144] seed 8 vel-static  F1-SNR   1.19 amp-SNR   2.41 F1  680.7 +/- 150.4
+  [110/144] seed 9 glide-mid   F1-SNR   2.44 amp-SNR 337.05 F1  624.3 +/-  22.4
+  [111/144] seed 9 glide-fast  F1-SNR  17.91 amp-SNR 474.69 F1  625.3 +/-  21.0
+  [112/144] seed 9 static-mid  F1-SNR   0.66 amp-SNR   0.48 F1  622.6 +/-  24.0
+  [109/144] seed 9 glide-slow  F1-SNR   8.44 amp-SNR 138.85 F1  626.4 +/-  22.0
+  [108/144] seed 8 vel-hi      F1-SNR  11.92 amp-SNR 1614.88 F1  651.9 +/- 236.1
+  [117/144] seed 9 vel-fast    F1-SNR  13.93 amp-SNR 625.25 F1  630.2 +/- 149.4
+  [116/144] seed 9 vel-mid     F1-SNR   0.83 amp-SNR 474.15 F1  639.3 +/- 149.9
+  [113/144] seed 9 f2glide-mid F1-SNR   0.95 amp-SNR 389.35 F1  631.1 +/-  23.2
+  [118/144] seed 9 vel-static  F1-SNR   1.66 amp-SNR   1.48 F1  623.6 +/- 152.6
+  [114/144] seed 9 silent-mid  F1-SNR   0.57 amp-SNR   0.12 F1  623.7 +/-  21.8
+  [115/144] seed 9 vel-slow    F1-SNR   0.82 amp-SNR 140.85 F1  634.5 +/- 151.5
+  [119/144] seed 9 vel-lo      F1-SNR   4.24 amp-SNR 286.42 F1  620.3 +/-  48.5
+  [121/144] seed 10 glide-slow  F1-SNR   4.27 amp-SNR 272.38 F1  623.3 +/-  21.0
+  [122/144] seed 10 glide-mid   F1-SNR   1.17 amp-SNR  69.01 F1  623.4 +/-  21.6
+  [120/144] seed 9 vel-hi      F1-SNR   5.43 amp-SNR 393.72 F1  643.5 +/- 220.5
+  [127/144] seed 10 vel-slow    F1-SNR   1.07 amp-SNR 297.15 F1  656.7 +/- 168.8
+  [124/144] seed 10 static-mid  F1-SNR   1.59 amp-SNR   1.37 F1  623.1 +/-  20.4
+  [123/144] seed 10 glide-fast  F1-SNR   1.25 amp-SNR  45.60 F1  622.9 +/-  20.5
+  [128/144] seed 10 vel-mid     F1-SNR   5.44 amp-SNR  85.73 F1  633.2 +/- 149.0
+  [129/144] seed 10 vel-fast    F1-SNR   0.28 amp-SNR  49.87 F1  633.4 +/- 155.5
+  [125/144] seed 10 f2glide-mid F1-SNR  40.16 amp-SNR   5.81 F1  624.4 +/-  21.9
+  [126/144] seed 10 silent-mid  F1-SNR   0.90 amp-SNR   1.85 F1  620.2 +/-  22.5
+  [131/144] seed 10 vel-lo      F1-SNR   1.00 amp-SNR  96.51 F1  621.6 +/-  44.7
+  [132/144] seed 10 vel-hi      F1-SNR   0.70 amp-SNR  61.08 F1  670.1 +/- 236.4
+  [130/144] seed 10 vel-static  F1-SNR   2.27 amp-SNR   1.38 F1  618.9 +/- 157.6
+  [135/144] seed 11 glide-fast  F1-SNR   5.40 amp-SNR 451.95 F1  622.2 +/-  21.3
+  [138/144] seed 11 silent-mid  F1-SNR   0.09 amp-SNR   3.22 F1  627.9 +/-  21.8
+  [133/144] seed 11 glide-slow  F1-SNR   1.02 amp-SNR 350.75 F1  625.3 +/-  21.5
+  [139/144] seed 11 vel-slow    F1-SNR   1.44 amp-SNR 231.77 F1  633.7 +/- 142.3
+  [136/144] seed 11 static-mid  F1-SNR   0.07 amp-SNR   0.26 F1  625.2 +/-  21.0
+  [134/144] seed 11 glide-mid   F1-SNR  11.97 amp-SNR 170.86 F1  621.7 +/-  22.4
+  [137/144] seed 11 f2glide-mid F1-SNR   3.20 amp-SNR  67.46 F1  624.5 +/-  22.5
+  [141/144] seed 11 vel-fast    F1-SNR   5.39 amp-SNR 420.85 F1  613.6 +/- 143.6
+  [142/144] seed 11 vel-static  F1-SNR   1.10 amp-SNR   0.63 F1  622.8 +/- 139.2
+  [144/144] seed 11 vel-hi      F1-SNR   1.56 amp-SNR 238.87 F1  650.8 +/- 235.9
+  [140/144] seed 11 vel-mid     F1-SNR   1.55 amp-SNR 308.81 F1  615.8 +/- 142.6
+  [143/144] seed 11 vel-lo      F1-SNR   4.43 amp-SNR 274.68 F1  621.8 +/-  44.0
+
+  arm         F1-SNR at f      amp-SNR at f     F1 mean        F1 sd    duty
+  glide-slow   64.61 +/- 48.02   328.59 +/- 65.83    625.0 +/- 1.0     23.4   0.55
+  glide-mid    34.14 +/- 15.84   466.93 +/- 119.08   624.1 +/- 1.0     23.0   0.55
+  glide-fast   37.46 +/- 19.73   553.88 +/- 157.28   624.8 +/- 1.0     21.9   0.56
+  static-mid    1.37 +/- 0.32      1.09 +/- 0.42     624.6 +/- 1.1     21.7   0.58
+  f2glide-mid  13.26 +/- 5.53    174.51 +/- 46.13    626.1 +/- 1.4     22.3   0.57
+  silent-mid    0.91 +/- 0.24      0.80 +/- 0.28     624.4 +/- 1.0     22.4   0.57
+  vel-slow     37.21 +/- 26.05   316.22 +/- 102.05   637.4 +/- 9.3    160.0   0.56
+  vel-mid      26.53 +/- 12.55   615.76 +/- 170.38   641.3 +/- 7.7    150.9   0.55
+  vel-fast     23.22 +/- 9.18    581.71 +/- 130.32   634.1 +/- 8.3    148.2   0.56
+  vel-static    0.99 +/- 0.19      1.25 +/- 0.26     633.4 +/- 8.0    154.4   0.57
+  vel-lo       22.51 +/- 11.13   523.08 +/- 132.89   627.7 +/- 3.2     48.8   0.55
+  vel-hi       32.59 +/- 22.62   529.36 +/- 153.97   645.8 +/- 6.8    228.6   0.55
+
+  VACUITY GUARD -- did the caregiver arrive at all?
+    glide-slow  duty 0.55 vs silent 0.57  (-0.015)
+    glide-mid   duty 0.55 vs silent 0.57  (-0.017)
+    glide-fast  duty 0.56 vs silent 0.57  (-0.008)
+    static-mid  duty 0.58 vs silent 0.57  (+0.011)
+    f2glide-mid duty 0.57 vs silent 0.57  (+0.007)
+    vel-slow    duty 0.56 vs silent 0.57  (-0.011)
+    vel-mid     duty 0.55 vs silent 0.57  (-0.015)
+    vel-fast    duty 0.56 vs silent 0.57  (-0.010)
+    vel-static  duty 0.57 vs silent 0.57  (+0.007)
+    vel-lo      duty 0.55 vs silent 0.57  (-0.017)
+    vel-hi      duty 0.55 vs silent 0.57  (-0.014)
+
+  F1 power at the glide frequency, against the STATIC control
+    glide-slow  +63.24 over `static-mid`  (+1.3 SE)
+    glide-mid   +32.77 over `static-mid`  (+2.1 SE)
+    glide-fast  +36.09 over `static-mid`  (+1.8 SE)
+    f2glide-mid +11.89 over `static-mid`  (+2.1 SE)
+    silent-mid  -0.46 over `static-mid`  (-1.1 SE)
+    vel-slow    +35.84 over `static-mid`  (+1.4 SE)
+    vel-mid     +25.17 over `static-mid`  (+2.0 SE)
+    vel-fast    +21.85 over `static-mid`  (+2.4 SE)
+    vel-static  -0.38 over `static-mid`  (-1.0 SE)
+    vel-lo      +21.14 over `static-mid`  (+1.9 SE)
+    vel-hi      +31.23 over `static-mid`  (+1.4 SE)
+
+  DNA v62 -- TRACKING AS A FRACTION OF THE CAREGIVER'S EXCURSION
+  coherent amplitude of produced F1 at the glide rate, over the 230 Hz
+  the caregiver actually sweeps. An effect size, not a power ratio.
+    glide-slow     7.1 Hz +/- 1.9    =   3.1% of allowance   (gain 0)
+    glide-mid      4.5 Hz +/- 1.1    =   2.0% of allowance   (gain 0)
+    glide-fast     1.2 Hz +/- 0.3    =   0.5% of allowance   (gain 0)
+    vel-slow      38.0 Hz +/- 10.9   =  16.5% of allowance   (gain 7123)
+    vel-mid       22.7 Hz +/- 5.6    =   9.8% of allowance   (gain 7123)
+    vel-fast       5.3 Hz +/- 1.1    =   2.3% of allowance   (gain 7123)
+    vel-lo         7.2 Hz +/- 1.6    =   3.1% of allowance   (gain 2015)
+    vel-hi        36.4 Hz +/- 9.4    =  15.8% of allowance   (gain 20000)
+
+    position decoder (`glide-mid`)  2.0% of allowance
+    velocity decoder (`vel-mid`)    9.8% of allowance
+    vel-mid over its OWN matched null `vel-static`: +25.54 (+2.0 SE)
+
+    VERDICT: REFUSED -- `vel-mid` does not beat its own matched null
+    (+2.0 SE, 3.0 required). Whatever moved is not the caregiver's
+    trajectory, and a larger fraction than the position decoder would
+    only mean the integrator wanders further.
+
+  --- the reading ---
+  THE VOICE DOES NOT FOLLOW. `glide-mid` sits at 34.14, +2.1 SE over the
+  static control -- the ear sweeps a 460 Hz arc and the articulator does not
+  track it, at a rate the 800 ms pole passes at 54%.
+  READ THE `F1 sd` COLUMN to tell the two nulls apart: a flat production
+  (small sd) means the route carries no timbre, while a large sd with no
+  power at f means the voice moves and is not LISTENING.
+  EITHER WAY THE SEQUENCE PROBLEM IS INTERNAL: hearing a trajectory does not
+  install one, so a driver cannot be borrowed from the caregiver and the
+  generator has to be built. That is a refusal, not a null.

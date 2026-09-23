@@ -213,6 +213,20 @@ class VocalDecoder {
   Scalar smooth_ = Scalar(1);
   Scalar gate_smooth_ = Scalar(1);
   bool configured_ = false;
+  // DNA v62. The velocity decoder's integrator: F1 in Hz, carried across frames
+  // because under velocity control the tract's position IS accumulated history
+  // rather than a function of the current rate. Untouched while
+  // `f1_velocity_gain` is 0, which is why v61 stays bit-identical.
+  Scalar f1_state_ = kZero;
+  Scalar f1_rest_ = kZero;        // where the anchor pulls to: the range midpoint
+  Scalar f1_return_ = kZero;      // per-frame return coefficient, silence only
+  Scalar update_ms_ = Scalar(1);  // frame duration, needed to integrate in Hz/s
+  // The F1 command under velocity control, smoothed on the FAST constant. The
+  // 800 ms pole exists to make a position command persist; under velocity that
+  // job belongs to the integrator, so the command itself is read quickly. This
+  // is the same change, not a second one: the pole moves from the command to
+  // the integral. Unused while the gain is 0.
+  Scalar f1_cmd_ = Scalar(0.5);
 
   // DNA v48. The dictionary's own state: which slice holds the tract, how long
   // it is still entitled to, and the smoothed formant targets it names. The

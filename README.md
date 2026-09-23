@@ -10906,6 +10906,69 @@ exist.
 The open item is unchanged: there is still no validated ceiling for the
 conflicting same-group regime, and this was not a route to one.
 
+## DNA v62: the decoder reads velocity, and passive following is refused
+
+The naming ceiling is an identity, not a tuning failure.
+`target_f1 = lerp(f1_min, f1_max, centroid)` maps a bounded quantity onto a
+bounded one: the creature can push the centroid ±0.063 from rest (measured
+0.4343 teaching toward 320 Hz, 0.5611 toward 950, rest 0.4993), so the lerp
+delivers a 95.1 Hz swing between two words — against an independently recorded
+dF1 of 93, and against the ~230 Hz absolute naming needs. **No gain fixes it**,
+because the lerp already spans all 750 Hz; the binding constraint is the 0.063,
+and `dF1 ~ aligned^0.61` is that constraint wearing a curve. Fourteen routes at
+the naming ceiling all returned ×1.1 because none of them touched it.
+
+So DNA v62 makes F1 a velocity: `dF1/dt = gain·(centroid − 0.5)`, integrated
+only while voicing, with an anchor that returns the tract to rest in the
+silence. The gain is derived rather than guessed — 2015 Hz/s covers naming's
+230 Hz across the 900 ms a word sounds, and that is a peak velocity ×5–10 below
+real formant transitions. Ships OFF and bit-identical; the pinned hash is
+unmoved. The idea is Guenther's DIVA — Directions Into Velocities of
+Articulators.
+
+**The mechanism is live and graded.** Tracking as a fraction of the caregiver's
+230 Hz excursion, 12 creatures:
+
+    gain      2015      7123     20000
+    at 0.3125 Hz    3.1%      9.8%     15.8%
+
+    frequency      0.125 Hz  0.3125 Hz  1.25 Hz
+    at gain 7123     16.5%      9.8%      2.3%
+
+Monotone in gain, falling with frequency exactly as an integrator's bandwidth
+predicts, and 9.8% against the position decoder's 2.0% on the identical
+protocol — a 4.9× improvement on the quantity `never-heard-a-glide` measured at
+3–6% of allowance.
+
+**And it is refused anyway, on the pre-registered criterion.** `vel-mid` beats
+its own matched null by +2.0 SE where 3.0 was required. The matched null is what
+makes this readable: `vel-static` carries the velocity decoder and the same
+sound and differs only in whether the target moves.
+
+**The `F1 sd` column says why, and it is the predicted failure.** `vel-static`
+produces an F1 spread of **154.4 Hz** — against the position decoder's 21.7 —
+while carrying no power at the glide frequency at all (snr 0.99). That is this
+experiment's own diagnostic for "the voice moves and is not listening": the
+integrator is random-walking, and the 9.8% of coherent tracking rides on top of
+a walk seven times larger. The open-leads file predicted exactly this: *without
+an anchor it is a random walk that parks F1 at a clamp.*
+
+**A stronger anchor cannot rescue it, and that is arithmetic rather than another
+run.** Through a leaky integrator the coherent signal at f goes as
+τ/√(1+(2πfτ)²) while the random-walk SD goes as √τ, so the ratio peaks at
+τ = 1/(2πf) = 509 ms. The shipped 633 ms is within 2% of that optimum. A shorter
+τ suppresses the walk and the signal together; a longer one is the random walk.
+**The trade is at its best and still does not clear the bar.**
+
+**What this does and does not settle.** It refuses *passive following* — the
+creature does not track a heard trajectory better than its own wander, even
+under a decoder built for trajectories. It does **not** touch the argument the
+change was made for, which is an identity about the lerp and is unaffected. And
+it does not test the claim that matters: whether a taught lesson lands further
+under velocity control, where reward can shape the walk rather than fight it.
+`glide` cannot ask that. Until it is asked, v62 is a decoder that moves more and
+listens no better, and it stays OFF.
+
 ## Layout
 
 ```

@@ -653,6 +653,31 @@ halfcenter_group = 2
 # winner-take-all gap in the middle. 0 is OFF and bit-identical.
 halfcenter_drive = 0.0
 
+# DNA v62 -- THE DECODER READS VELOCITY, NOT POSITION. 0 is OFF and bit-identical.
+#
+# `target_f1 = lerp(f1_min, f1_max, centroid)` maps a BOUNDED quantity onto a
+# bounded one. The creature can push the centroid +-0.063 from rest (measured
+# 0.4343 toward a 320 Hz target, 0.5611 toward 950, rest 0.4993), so the lerp
+# delivers +-47 Hz and a 95.1 Hz swing between two words -- against an
+# independently measured dF1 of 93, and against the ~230 Hz absolute naming
+# needs. NO GAIN FIXES THAT: the lerp already spans all 750 Hz, so the limit is
+# the 0.063 and `dF1 ~ aligned^0.61` is that limit wearing a curve.
+#
+# Under velocity the same 0.063 buys TIME instead of DISTANCE. DERIVED: 230 Hz
+# across the 900 ms a word sounds, from the 0.1268 of measured centroid swing,
+# needs 2015 Hz/s. The largest deflection the centroid can reach is 0.5, so that
+# is a peak velocity of 1008 Hz/s, traversing the whole range in 744 ms -- where
+# real formant transitions run 5000-10000 Hz/s. The gain this needs is x5-x10
+# BELOW the slowest real transition. (An earlier draft said 372 ms by using a
+# deflection of 1.0, which the centroid cannot reach; the corrected figure makes
+# the case stronger, not weaker.)
+f1_velocity_gain = 0.0
+# The anchor, and it runs ONLY in the silence: inside the word the integrator
+# must be pure or the leak is algebraically a position decoder with a renamed
+# constant. DERIVED from the protocol -- 1900 ms of silence per 2800 ms trial,
+# 95% of the way back to rest in that window is tau = 633 ms.
+f1_return_tau_ms = 633.0
+
 [curiosity]
 learn_rate = 0.02           # LMS rate of the forward model
 fast_tau_ms = 2000.0

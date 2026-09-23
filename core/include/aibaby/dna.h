@@ -1729,6 +1729,44 @@ struct DnaVocal {
   // 0 is OFF and bit-identical. Applies only inside `halfcenter_group`, and only
   // when `halfcenter_gain` > 0.
   float halfcenter_drive;
+  // DNA v62 — THE ARTICULATOR DECODER READS VELOCITY, NOT POSITION.
+  //
+  // WHY. `target_f1 = lerp(f1_min, f1_max, group_value_[2])` maps a bounded
+  // quantity onto a bounded one. The centroid is a ratio in [0,1]; the creature
+  // can push it +-0.063 from rest (measured: 0.4343 teaching toward 320 Hz,
+  // 0.5611 toward 950, rest 0.4993), and the lerp turns that straight into
+  // +-47 Hz. The measured swing is 95.1 Hz against an independently recorded
+  // dF1 of 93. Absolute naming needs ~230. **No gain can fix this** -- the lerp
+  // already spans the full 750 Hz, so the binding constraint is the 0.063, and
+  // `dF1 ~ aligned^0.61` is that constraint wearing a curve. Fourteen routes at
+  // the naming ceiling all returned x1.1 because none of them touched it.
+  //
+  // Under velocity the same 0.063 buys TIME instead of DISTANCE, and a sustained
+  // drive IS a glide -- which is what `never-heard-a-glide` measured at 3-6% of
+  // allowance, because a position command must be re-issued to move and the
+  // 800 ms pole fights every re-issue. Here the pole becomes the integrator.
+  //
+  // 0 is OFF and is bit-identical to v61: the decoder takes the lerp path and
+  // neither field below is read. DIVA (Guenther) is the source of the idea:
+  // Directions Into Velocities of Articulators.
+  //
+  // dF1/dt = f1_velocity_gain * (centroid - 0.5), integrated only while VOICING,
+  // so an unvoiced stretch cannot random-walk the tract. DERIVED, not guessed:
+  // covering naming's 230 Hz across the 900 ms a caregiver word sounds, from the
+  // 0.1268 of centroid swing actually measured, needs 2015 Hz/s. The largest
+  // deflection a centroid can reach is 0.5, so that is a peak velocity of
+  // 1008 Hz/s and 744 ms to traverse the range, against real formant
+  // transitions at 5000-10000 Hz/s -- x5 to x10 BELOW the slowest real one, so
+  // this is not asking the tract to be fast.
+  float f1_velocity_gain;
+  // The anchor. Without one a velocity code is a random walk that parks at a
+  // clamp. It runs ONLY in the silence: inside the word the integrator must be
+  // pure, or the leak is algebraically a position decoder with a renamed time
+  // constant and the whole change is vacuous. DERIVED from the protocol: a
+  // trial is 2800 ms with the caregiver sounding for the first 900, so 1900 ms
+  // of silence; returning 95% of the way to rest in that window is tau = 633 ms.
+  float f1_return_tau_ms;
+
 };
 
 // Curiosity (§3.3) is a forward model of the next sensory frame plus two

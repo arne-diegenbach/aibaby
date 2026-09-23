@@ -286,6 +286,15 @@ void VocalDecoder::configure(const Dna& dna, uint32_t module_index, Scalar updat
   smooth_ = cfg_.smoothing_ms > kZero
                 ? clampf(update_ms / Scalar(cfg_.smoothing_ms), kZero, kOne)
                 : kOne;
+  // DNA v62. The integrator's own constants. `f1_rest_` is the range midpoint --
+  // the same place the position decoder sits when the group is undifferentiated,
+  // so switching modes does not also move the creature's resting vowel.
+  update_ms_ = update_ms;
+  f1_rest_ = lerp(Scalar(cfg_.f1_min), Scalar(cfg_.f1_max), Scalar(0.5));
+  f1_state_ = f1_rest_;
+  f1_return_ = cfg_.f1_return_tau_ms > kZero
+                   ? clampf(update_ms / Scalar(cfg_.f1_return_tau_ms), kZero, kOne)
+                   : kZero;
   gate_smooth_ = cfg_.gate_smoothing_ms > kZero
                      ? clampf(update_ms / Scalar(cfg_.gate_smoothing_ms), kZero, kOne)
                      : kOne;
@@ -358,6 +367,10 @@ void VocalDecoder::update(const Network& net, bool awake) {
         read_group(net, begin, end, rate_norm, group_value_[g], Scalar(cfg_.pool_beta));
     group_value_[g] += smooth_ * (r.value - group_value_[g]);
     group_activity_[g] += gate_smooth_ * (r.activity - group_activity_[g]);
+    // DNA v62's command, on the fast constant. Guarded on the gain so the
+    // shipped creature does not take an extra float op per group per frame.
+    if (g == 2u && cfg_.f1_velocity_gain > kZero)
+      f1_cmd_ += gate_smooth_ * (r.value - f1_cmd_);
   }
 
   // Group order is fixed: it is the wiring between motor cortex and larynx.
@@ -504,6 +517,30 @@ void VocalDecoder::update(const Network& net, bool awake) {
     target_f1 = dict_f1_;
     target_f2 = dict_f2_;
   }
+  // DNA v62. THE DECODER READS VELOCITY. Placed after the dictionary block so
+  // it overrides whichever earlier stage produced a POSITION for F1 -- the two
+  // are alternative readouts of the same group and only one can hold the tract.
+  //
+  // Integrated only while VOICING. An unvoiced stretch cannot move the tract, so
+  // the walk is bounded by how long the creature actually sounds rather than by
+  // the clamp; in the silence the anchor returns it to rest. Inside the word
+  // there is NO leak on purpose: a leak makes the steady state
+  // gain*tau*(c-0.5), which is a position decoder with a renamed constant, and
+  // the whole change would be vacuous.
+  if (cfg_.f1_velocity_gain > kZero) {
+    const bool voiced = group_activity_[1] > Scalar(cfg_.voicing_threshold);
+    if (voiced) {
+      // Hz per second, times seconds. `update_ms_` is the frame, not the tick.
+      const Scalar dv = Scalar(cfg_.f1_velocity_gain) * (f1_cmd_ - Scalar(0.5)) *
+                        update_ms_ * Scalar(0.001);
+      f1_state_ += dv;
+    } else {
+      f1_state_ += f1_return_ * (f1_rest_ - f1_state_);
+    }
+    f1_state_ = clampf(f1_state_, Scalar(cfg_.f1_min), Scalar(cfg_.f1_max));
+    target_f1 = f1_state_;
+  }
+
   const Scalar target_f3 = lerp(Scalar(cfg_.f3_min), Scalar(cfg_.f3_max), group_value_[4]);
   const Scalar target_bw1 = lerp(Scalar(cfg_.bw_min), Scalar(cfg_.bw_max), group_value_[5]);
   const Scalar target_bw2 = lerp(Scalar(cfg_.bw_min), Scalar(cfg_.bw_max), group_value_[6]);

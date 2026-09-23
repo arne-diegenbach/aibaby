@@ -12645,6 +12645,10 @@ struct GLArm {
   double hz;        // glide frequency, and the frequency scored
   double f1_swing;  // Hz of F1 excursion either side of the midpoint
   double f2_swing;  // Hz of F2 excursion — the axis control
+  // DNA v62, appended at the END. 0 leaves the shipped POSITION decoder and is
+  // bit-identical, so every arm above is unchanged. > 0 switches F1 to velocity
+  // control at this gain in Hz/s per unit centroid.
+  float vel_gain;
 };
 // /a/ is f1 780, /i/ is f1 320: midpoint 550, swing 230. F2 /a/ 1180, /i/ 2500:
 // midpoint 1840, swing 660. Both inside the genome's f1/f2 min-max.
@@ -12652,12 +12656,38 @@ constexpr double kGLF1Mid = 550.0, kGLF1Swing = 230.0;
 constexpr double kGLF2Mid = 1840.0, kGLF2Swing = 660.0;
 constexpr double kGLMidHz = 0.3125;  // 1600 ms half-period — the PRE-REGISTERED arm
 const GLArm kGLArms[] = {
-    {"glide-slow", true, 0.1250, kGLF1Swing, 0.0},   // 4000 ms, |H| 0.85
-    {"glide-mid", true, kGLMidHz, kGLF1Swing, 0.0},  // 1600 ms, |H| 0.54 <- PRIMARY
-    {"glide-fast", true, 1.2500, kGLF1Swing, 0.0},   // 400 ms,  |H| 0.16
-    {"static-mid", true, kGLMidHz, 0.0, 0.0},        // THE NULL: same sound, no motion
-    {"f2glide-mid", true, kGLMidHz, 0.0, kGLF2Swing},  // axis control, scored on F1
-    {"silent-mid", false, kGLMidHz, 0.0, 0.0},         // drift baseline
+    {"glide-slow", true, 0.1250, kGLF1Swing, 0.0, 0.0f},   // 4000 ms, |H| 0.85
+    {"glide-mid", true, kGLMidHz, kGLF1Swing, 0.0, 0.0f},  // 1600 ms, |H| 0.54 <- PRIMARY
+    {"glide-fast", true, 1.2500, kGLF1Swing, 0.0, 0.0f},   // 400 ms,  |H| 0.16
+    {"static-mid", true, kGLMidHz, 0.0, 0.0, 0.0f},        // THE NULL: same sound, no motion
+    {"f2glide-mid", true, kGLMidHz, 0.0, kGLF2Swing, 0.0f},  // axis control, scored on F1
+    {"silent-mid", false, kGLMidHz, 0.0, 0.0, 0.0f},         // drift baseline
+    // DNA v62 -- THE SAME GLIDE, READ AS A VELOCITY. This is the whole point of
+    // the decoder change and it is tested where the position decoder was
+    // measured failing: `never-heard-a-glide` recorded produced F1 tracking a
+    // moving target at 3-6% of allowance, because a position command must be
+    // RE-ISSUED to move and the 800 ms pole fights every re-issue.
+    //
+    // A DOSE-RESPONSE, not a guessed constant, and the two ends are DERIVED.
+    // 2015 Hz/s is what absolute naming needs: 230 Hz of separation across the
+    // 900 ms a word sounds, from the 0.1268 of centroid swing measured in
+    // `leverprobe` and `blockflip`. 7123 Hz/s is what THIS glide needs: a
+    // +-230 Hz sinusoid at 0.3125 Hz has a peak velocity of 452 Hz/s, and the
+    // centroid deflects +-0.0634. 20000 is deliberately over-driven, to show
+    // what saturation against the f1_min/f1_max clamp looks like.
+    //
+    // WHAT WOULD REFUSE v62: `vel-mid` failing to beat `vel-static` on snr_f1.
+    // That arm hears the same sound with NO motion, so it carries the velocity
+    // decoder AND the acoustic input and differs only in whether the target
+    // moves -- a control that shares the live mechanism is the only kind worth
+    // having here. A rise over `static-mid` alone would only show that the
+    // decoder changed something.
+    {"vel-slow", true, 0.1250, kGLF1Swing, 0.0, 7123.0f},
+    {"vel-mid", true, kGLMidHz, kGLF1Swing, 0.0, 7123.0f},   // <- THE PRIMARY
+    {"vel-fast", true, 1.2500, kGLF1Swing, 0.0, 7123.0f},
+    {"vel-static", true, kGLMidHz, 0.0, 0.0, 7123.0f},       // <- THE MATCHED NULL
+    {"vel-lo", true, kGLMidHz, kGLF1Swing, 0.0, 2015.0f},    // naming-derived gain
+    {"vel-hi", true, kGLMidHz, kGLF1Swing, 0.0, 20000.0f},   // over-driven
 };
 constexpr uint32_t kGLArmCount = sizeof(kGLArms) / sizeof(kGLArms[0]);
 // Fresh seed family again. Nothing here has been measured on these seeds.
@@ -12671,13 +12701,27 @@ struct GLRow {
                           // "did not move" vs "moved incoherently"
   double f1_mean = 0.0;
   double duty = 0.0;      // the vacuity guard: the reflex must lower this
+  // DNA v62. The COHERENT AMPLITUDE of produced F1 at the glide frequency, in Hz.
+  // `snr_f1` is a power ratio and cannot be compared with the target's excursion
+  // or with the "3-6% of allowance" this line was measured at; this can. Standard
+  // quadrature detection, so a pure sinusoid of amplitude A returns A.
+  double f1_amp = 0.0;
 };
 
 GLRow run_glide_arm(const std::vector<uint8_t>& blob, uint64_t ticks, const GLArm& arm) {
   GLRow row;
   Session s;
   std::string error;
-  if (!s.init(blob, error)) return row;
+  // DNA v62 is written into the genome BLOB before the creature is hatched --
+  // the decoder reads `cfg_` once in configure(), so setting it afterwards would
+  // be silently inert and every velocity arm would be the position arm again.
+  std::vector<uint8_t> local = blob;
+  {
+    const size_t off = offsetof(aibaby::DnaHeader, vocal) +
+                       offsetof(aibaby::DnaVocal, f1_velocity_gain);
+    std::memcpy(local.data() + off, &arm.vel_gain, sizeof(arm.vel_gain));
+  }
+  if (!s.init(local, error)) return row;
   const aibaby::DnaAudio& acfg = s.dna.header().audio;
   Ear ear;
   if (!ear.configure(acfg, error)) return row;
@@ -12716,6 +12760,16 @@ GLRow run_glide_arm(const std::vector<uint8_t>& blob, uint64_t ticks, const GLAr
   if (f1s.size() < 256) return row;
   row.snr_f1 = fh_snr(f1s, tms, arm.hz, 0.0);
   row.snr_amp = fh_snr(amps, tms, arm.hz, 0.0);
+  {
+    double sc = 0.0, ss = 0.0;
+    for (size_t i2 = 0; i2 < f1s.size(); ++i2) {
+      const double ph = 2.0 * 3.14159265358979 * arm.hz * tms[i2] / 1000.0;
+      sc += f1s[i2] * std::cos(ph);
+      ss += f1s[i2] * std::sin(ph);
+    }
+    const double nn = double(f1s.size());
+    row.f1_amp = nn > 0.0 ? 2.0 * std::sqrt(sc * sc + ss * ss) / nn : 0.0;
+  }
   double m = 0.0;
   for (double v : f1s) m += v;
   m /= double(f1s.size());
@@ -12803,15 +12857,17 @@ bool run_glide(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
   });
 
   double m_f1[kGLArmCount] = {}, s_f1[kGLArmCount] = {};
+  double m_camp[kGLArmCount] = {}, s_camp[kGLArmCount] = {};
   double m_duty[kGLArmCount] = {};
   std::printf("\n  %-11s %-16s %-16s %-14s %-8s %s\n", "arm", "F1-SNR at f", "amp-SNR at f",
               "F1 mean", "F1 sd", "duty");
   for (uint32_t a = 0; a < kGLArmCount; ++a) {
-    std::vector<double> f1, am, mn, sd, du;
+    std::vector<double> f1, am, mn, sd, du, camp;
     for (uint32_t r = 0; r < kReps; ++r) {
       const Cell& c = cells[r * kGLArmCount + a];
       if (!c.ok) continue;
       f1.push_back(c.row.snr_f1); am.push_back(c.row.snr_amp);
+      camp.push_back(c.row.f1_amp);
       mn.push_back(c.row.f1_mean); sd.push_back(c.row.f1_sd);
       du.push_back(c.row.duty);
     }
@@ -12825,6 +12881,7 @@ bool run_glide(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
     const double m_am = ctx_mean_se(am, &sa);
     const double m_mn = ctx_mean_se(mn, &sm), m_sd = ctx_mean_se(sd, &ss);
     m_duty[a] = ctx_mean_se(du, &sdu);
+    m_camp[a] = ctx_mean_se(camp, &s_camp[a]);
     std::printf("  %-11s %6.2f +/- %-7.2f %6.2f +/- %-7.2f %6.1f +/- %-5.1f %6.1f   %.2f\n",
                 kGLArms[a].name, m_f1[a], s_f1[a], m_am, sa, m_mn, sm, m_sd, m_duty[a]);
   }
@@ -12854,6 +12911,68 @@ bool run_glide(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
     const double se = std::sqrt(s_f1[a] * s_f1[a] + s_f1[kStatic] * s_f1[kStatic]);
     std::printf("    %-11s %+.2f over `static-mid`  (%+.1f SE)\n", kGLArms[a].name, d,
                 se > 0.0 ? d / se : 0.0);
+  }
+
+
+  // --- DNA v62: DOES A VELOCITY DECODER TRACK WHERE A POSITION DECODER DOES NOT?
+  //
+  // PRE-REGISTERED, ONCE, HERE. The primary is the COHERENT AMPLITUDE of produced
+  // F1 at the glide frequency, in Hz, as a fraction of the caregiver's own
+  // excursion -- an effect size, not a power ratio, so it is comparable with the
+  // "3-6% of allowance" the position decoder was measured at.
+  //
+  // The control is `vel-static`, NOT `static-mid`. It carries the velocity
+  // decoder AND the same acoustic input and differs only in whether the target
+  // moves; a control that does not share the live mechanism would only show that
+  // v62 changed something. `glide-mid` is the position decoder on the identical
+  // protocol, so the two are a matched pair on everything but the readout.
+  //
+  // MET only if BOTH hold: `vel-mid` tracks a materially larger fraction than
+  // `glide-mid`, AND `vel-mid` beats its own matched null `vel-static` by 3 SE.
+  // Either alone is not the result -- the first without the second is a decoder
+  // that moves F1 around without listening, which is exactly the failure mode the
+  // `F1 sd` column exists to expose.
+  {
+    const uint32_t kVelMid = 7, kVelStatic = 9;
+    const double allow = kGLF1Swing;
+    std::printf("\n  DNA v62 -- TRACKING AS A FRACTION OF THE CAREGIVER'S EXCURSION\n"
+                "  coherent amplitude of produced F1 at the glide rate, over the %.0f Hz\n"
+                "  the caregiver actually sweeps. An effect size, not a power ratio.\n", allow);
+    for (uint32_t a = 0; a < kGLArmCount; ++a) {
+      if (kGLArms[a].f1_swing <= 0.0) continue;
+      std::printf("    %-11s %6.1f Hz +/- %-5.1f  = %5.1f%% of allowance   (gain %.0f)\n",
+                  kGLArms[a].name, m_camp[a], s_camp[a], 100.0 * m_camp[a] / allow,
+                  double(kGLArms[a].vel_gain));
+    }
+    const double f_pos = 100.0 * m_camp[kMid] / allow;
+    const double f_vel = 100.0 * m_camp[kVelMid] / allow;
+    const double d_null = m_f1[kVelMid] - m_f1[kVelStatic];
+    const double se_null =
+        std::sqrt(s_f1[kVelMid] * s_f1[kVelMid] + s_f1[kVelStatic] * s_f1[kVelStatic]);
+    const double t_null = se_null > 0.0 ? d_null / se_null : 0.0;
+    std::printf("\n    position decoder (`glide-mid`)  %.1f%% of allowance\n", f_pos);
+    std::printf("    velocity decoder (`vel-mid`)    %.1f%% of allowance\n", f_vel);
+    std::printf("    vel-mid over its OWN matched null `vel-static`: %+.2f (%+.1f SE)\n",
+                d_null, t_null);
+    const bool bigger = f_vel > 1.5 * f_pos;
+    const bool real = t_null >= 3.0;
+    std::printf("\n    VERDICT: ");
+    if (bigger && real)
+      std::printf("v62 TRACKS. The velocity decoder follows a moving target at\n"
+                  "    %.1f%% of allowance where the position decoder manages %.1f%%, and it\n"
+                  "    beats its own matched null at %+.1f SE. The next question is whether\n"
+                  "    the tracking is TEACHABLE, which this experiment does not ask.\n",
+                  f_vel, f_pos, t_null);
+    else if (!real)
+      std::printf("REFUSED -- `vel-mid` does not beat its own matched null\n"
+                  "    (%+.1f SE, 3.0 required). Whatever moved is not the caregiver's\n"
+                  "    trajectory, and a larger fraction than the position decoder would\n"
+                  "    only mean the integrator wanders further.\n", t_null);
+    else
+      std::printf("REFUSED -- `vel-mid` beats its null but does not track a\n"
+                  "    materially larger fraction than the position decoder (%.1f%% vs\n"
+                  "    %.1f%%, 1.5x required). The readout changed and the ceiling did not.\n",
+                  f_vel, f_pos);
   }
 
   const double d_mid = m_f1[kMid] - m_f1[kStatic];
