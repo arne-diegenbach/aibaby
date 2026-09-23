@@ -5747,6 +5747,22 @@ struct RTRow {
   // tell "the mechanism does nothing" from "the mechanism never ran".
   double act_gate = 0.0;
   double act_spread = 0.0;   // mean |g - 0.5|; the mean of g alone is 0.5 by construction
+  // THE TWO-POOL PRE-FLIGHT (2026-09-23). Whether a differential (upper - lower)
+  // readout beats the shipped centroid is NOT a question about gain -- the mapping
+  // constant is free, so it scales signal and noise together and any "it moves
+  // further" comparison is vacuous. It is a question about the NOISE STRUCTURE:
+  // the difference has weights summing to zero and so cancels a shared mode
+  // exactly, while the centroid's linearised weights do not; but the centroid
+  // up-weights the high-index neurons, which is where the lesson's signal was
+  // measured to sit. Which wins depends on how much of the group's rate variance
+  // is SHARED, and that number has never been measured.
+  //
+  // A compound-symmetry model puts the crossover at rho = 0.466, but rather than
+  // assume that shape this records the FULL second moments of the group, so the
+  // SNR of any linear readout w is |w.D| / sqrt(w' C w) computed exactly.
+  double f1_cov[kRTF1Max * kRTF1Max] = {};  // sum of r_j * r_k over teach-phase samples
+  double f1_csum[kRTF1Max] = {};            // sum of r_k over the SAME samples
+  uint64_t f1_cov_n = 0;                    // and their count, so C is a covariance
 };
 
 
@@ -6379,14 +6395,33 @@ RTRow run_retain_arm(const std::vector<uint8_t>& blob, uint64_t ticks,
           const bool late = in_teach_phase && trial >= n_teach - third;
           const bool gap_late = in_gap_phase && trial >= n_teach + n_gap - gap_third;
           double wsum = 0.0, psum = 0.0;
+          double rr[RTRow::kRTF1Max];
           for (uint32_t k = 0; k < gn; ++k) {
             const double r = double(rnet.rate_fast(rvm.begin + rg_lo + k));
             const double pref = (double(k) + 0.5) / double(gn);
+            rr[k] = r;
             wsum += r;
             psum += r * pref;
             if (early) row.f1_rate_early[k] += r;
             if (late) row.f1_rate_late[k] += r;
             if (gap_late) row.f1_gap_late[k] += r;
+          }
+          // Second moments over the teach phase, for the two-pool pre-flight. The
+          // rates are already in hand, so this is one fused pass and no extra reads
+          // of the network. Accumulated in DOUBLE on purpose: `multitimescale-gate`
+          // lost a diagnostic to a float accumulator saturating on exactly this
+          // shape of sum, and the impossible values were the only reason it showed.
+          // Every 8th tick, not every tick: `rate_fast` is an EMA over ~50 ticks,
+          // so consecutive samples carry almost no new information while the
+          // covariance costs gn*gn multiply-adds each. Thinning cannot bias the
+          // SPATIAL covariance -- every neuron is sampled at the same instant.
+          if (in_teach_phase && (t % 8u) == 0u) {
+            for (uint32_t k = 0; k < gn; ++k) {
+              row.f1_csum[k] += rr[k];
+              double* crow = row.f1_cov + size_t(k) * RTRow::kRTF1Max;
+              for (uint32_t j = 0; j < gn; ++j) crow[j] += rr[k] * rr[j];
+            }
+            ++row.f1_cov_n;
           }
           if (wsum > 1e-6) {
             const double cent = psum / wsum;
@@ -9943,6 +9978,194 @@ bool run_leverprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
     std::printf("    %-6s mean position over teaching  %.4f\n", kLPArms[a].name, cent[a]);
   }
   std::printf("    the fit ASSUMED 0.299, chosen to make three one-neuron costs agree.\n");
+
+  // --- THE TWO-POOL PRE-FLIGHT (2026-09-23) --------------------------------
+  // Does a differential (upper - lower) readout beat the shipped centroid? NOT a
+  // question about gain: the mapping constant is free, so "it moves further" is
+  // vacuous -- gain scales signal and noise together. It is a question about the
+  // NOISE STRUCTURE. The difference's weights sum to zero, so a shared mode
+  // cancels exactly; the centroid's linearised weights sum to something positive,
+  // so it does not cancel one -- but the centroid up-weights the high-index
+  // neurons, and that is exactly where the lesson's signal was measured to sit.
+  //
+  // PRE-REGISTERED HERE, ONCE: the statistic is the ratio of SNRs, SNR(w) =
+  // |w.D| / sqrt(w' C w), computed on the MEASURED covariance rather than under a
+  // compound-symmetry guess. Interval entirely ABOVE 1 -> building the two-pool
+  // readout is licensed. Entirely BELOW 1 -> it is REFUSED by the creature's own
+  // noise structure, with no readout built. Straddling 1 -> UNRESOLVED, and it
+  // must be reported as unresolved rather than read in whichever direction suits.
+  {
+    std::vector<double> D(gsize, 0.0);
+    for (uint32_t k = 0; k < gsize; ++k) D[k] = late[0][k] - early[0][k];
+    double S0 = 0.0;
+    for (uint32_t k = 0; k < gsize; ++k) S0 += early[0][k];
+    if (S0 < 1e-9) S0 = 1.0;
+    const double vcent = cent[0];
+    std::vector<double> w_cent(gsize, 0.0), w_diff(gsize, 0.0);
+    for (uint32_t k = 0; k < gsize; ++k) {
+      w_cent[k] = ((double(k) + 0.5) / double(gsize) - vcent) / S0;
+      w_diff[k] = k >= gsize / 2u ? 1.0 : -1.0;
+    }
+    // The second signal: the idealised ANTISYMMETRIC lesson pair. `blockflip`
+    // measured the opposite lesson as the mirror image (lower half -10.272
+    // against this one's upper -10.258, both suppression), so the two-word
+    // naming signal is close to antisymmetric. Reported alongside the measured
+    // single-direction D because it brackets what naming actually asks for.
+    std::vector<double> Dsym(gsize, 0.0);
+    for (uint32_t k = 0; k < gsize; ++k) Dsym[k] = k >= gsize / 2u ? -1.0 : 1.0;
+    // AND THE ONE THAT IS ACTUALLY MEASURED (added 2026-09-23, after the first two
+    // split -- recorded as a revision, not as a pre-registration). `Dsym` above is
+    // an IDEALISATION I wrote: flat within each half. `blockflip` did not measure a
+    // flat half. It measured the MIRROR of this profile -- the other lesson
+    // suppresses the other half by the same total, with the same concentration at
+    // the extreme. So the naming signal is D(k) - D(n-1-k): antisymmetric in WHICH
+    // half, but still concentrated at the ends of the group. A flat half and a
+    // concentrated half are different signals and the two readouts rank differently
+    // on them, so this distinction decides the verdict rather than decorating it.
+    std::vector<double> Dmir(gsize, 0.0);
+    for (uint32_t k = 0; k < gsize; ++k) Dmir[k] = D[k] - D[gsize - 1u - k];
+
+    const auto snr = [&](const std::vector<double>& w, const std::vector<double>& sig,
+                         const std::vector<double>& C, bool* bad) {
+      double num = 0.0, q = 0.0;
+      for (uint32_t j = 0; j < gsize; ++j) {
+        num += w[j] * sig[j];
+        for (uint32_t k = 0; k < gsize; ++k) q += w[j] * C[j * gsize + k] * w[k];
+      }
+      if (!(q > 1e-18)) { *bad = true; return 0.0; }
+      return (num < 0.0 ? -num : num) / std::sqrt(q);
+    };
+
+    std::printf("\n  THE TWO-POOL PRE-FLIGHT -- can a differential readout resolve more\n"
+                "  than the centroid? SNR = |w.D| / sqrt(w' C w) on the MEASURED\n"
+                "  covariance of the F1 group. Gain cancels, so this is scale-free.\n");
+    for (uint32_t a = 0; a < kLPArmCount; ++a) {
+      std::vector<double> sc, sd, sc2, sd2, sc3, sd3, rho;
+      uint32_t degen = 0;
+      for (uint32_t r = 0; r < kReps; ++r) {
+        const Cell& c = cells[r * kLPArmCount + a];
+        if (!c.ok || c.row.f1_n != gsize || c.row.f1_cov_n < 64) continue;
+        const double nn = double(c.row.f1_cov_n);
+        std::vector<double> C(size_t(gsize) * gsize, 0.0);
+        for (uint32_t j = 0; j < gsize; ++j)
+          for (uint32_t k = 0; k < gsize; ++k)
+            C[j * gsize + k] = c.row.f1_cov[j * RTRow::kRTF1Max + k] / nn -
+                               (c.row.f1_csum[j] / nn) * (c.row.f1_csum[k] / nn);
+        bool bad = false;
+        const double a1 = snr(w_cent, D, C, &bad), a2 = snr(w_diff, D, C, &bad);
+        const double b1 = snr(w_cent, Dsym, C, &bad), b2 = snr(w_diff, Dsym, C, &bad);
+        const double c1 = snr(w_cent, Dmir, C, &bad), c2 = snr(w_diff, Dmir, C, &bad);
+        if (bad) { ++degen; continue; }
+        sc.push_back(a1); sd.push_back(a2); sc2.push_back(b1); sd2.push_back(b2);
+        sc3.push_back(c1); sd3.push_back(c2);
+        // Descriptive only: the intraclass correlation, i.e. the shared fraction
+        // of variance under compound symmetry, whose crossover is rho = 0.466.
+        double vbar = 0.0, vm = 0.0;
+        for (uint32_t j = 0; j < gsize; ++j) vbar += C[j * gsize + j];
+        vbar /= double(gsize);
+        for (uint32_t j = 0; j < gsize; ++j)
+          for (uint32_t k = 0; k < gsize; ++k) vm += C[j * gsize + k];
+        vm /= double(gsize) * double(gsize);
+        if (vbar > 1e-18)
+          rho.push_back((double(gsize) * vm / vbar - 1.0) / (double(gsize) - 1.0));
+      }
+      if (degen > 0)
+        std::printf("    %-6s %u creature(s) had a DEGENERATE covariance and were\n"
+                    "           dropped -- not folded in as a zero.\n", kLPArms[a].name, degen);
+      if (sc.size() < 3) {
+        std::printf("    %-6s INCONCLUSIVE -- %zu usable creatures.\n",
+                    kLPArms[a].name, sc.size());
+        continue;
+      }
+      double e1, e2, e3, e4, e5, e6, er;
+      const double m1 = ctx_mean_se(sc, &e1), m2 = ctx_mean_se(sd, &e2);
+      const double m3 = ctx_mean_se(sc2, &e3), m4 = ctx_mean_se(sd2, &e4);
+      const double m5 = ctx_mean_se(sc3, &e5), m6 = ctx_mean_se(sd3, &e6);
+      const double mr = ctx_mean_se(rho, &er);
+      std::printf("    %-6s (%zu creatures)   shared variance rho %.3f +/- %.3f"
+                  "  [crossover 0.466]\n", kLPArms[a].name, sc.size(), mr, er);
+      std::printf("           measured D        centroid %6.3f +/- %.3f   two-pool %6.3f +/- %.3f\n",
+                  m1, e1, m2, e2);
+      std::printf("           flat +-1 (IDEAL)  centroid %6.3f +/- %.3f   two-pool %6.3f +/- %.3f\n",
+                  m3, e3, m4, e4);
+      std::printf("           mirror D (MEASD)  centroid %6.3f +/- %.3f   two-pool %6.3f +/- %.3f\n",
+                  m5, e5, m6, e6);
+
+      // Ratio of MEANS with a paired bootstrap, per house rule: a per-creature
+      // ratio has the arm's own SNR in the denominator and is not a statistic.
+      constexpr int kB = 2000;
+      const uint32_t ncre = uint32_t(sc.size());
+      uint64_t rng = 0x9E3779B97F4A7C15ull ^ uint64_t(a + 1u);
+      std::vector<double> boot, boot2, boot3;
+      std::vector<uint32_t> pick(ncre);
+      for (int b = 0; b < kB; ++b) {
+        for (uint32_t i = 0; i < ncre; ++i) {
+          rng += 0x9E3779B97F4A7C15ull;
+          uint64_t z = rng;
+          z = (z ^ (z >> 30)) * 0xBF58476D1CE4E5B9ull;
+          z = (z ^ (z >> 27)) * 0x94D049BB133111EBull;
+          z ^= z >> 31;
+          pick[i] = uint32_t(z % ncre);
+        }
+        double p1 = 0.0, p2 = 0.0, p3 = 0.0, p4 = 0.0, p5 = 0.0, p6 = 0.0;
+        for (uint32_t i : pick) {
+          p1 += sc[i]; p2 += sd[i]; p3 += sc2[i]; p4 += sd2[i]; p5 += sc3[i]; p6 += sd3[i];
+        }
+        if (p1 > 1e-12) boot.push_back(p2 / p1);
+        if (p3 > 1e-12) boot2.push_back(p4 / p3);
+        if (p5 > 1e-12) boot3.push_back(p6 / p5);
+      }
+      std::sort(boot.begin(), boot.end());
+      std::sort(boot2.begin(), boot2.end());
+      std::sort(boot3.begin(), boot3.end());
+      const auto qtl = [](const std::vector<double>& v, double f) {
+        if (v.empty()) return std::numeric_limits<double>::quiet_NaN();
+        size_t i = size_t(f * double(v.size()));
+        if (i >= v.size()) i = v.size() - 1;
+        return v[i];
+      };
+      const double r1 = m1 > 1e-12 ? m2 / m1 : 0.0, r2 = m3 > 1e-12 ? m4 / m3 : 0.0;
+      std::printf("           RATIO two-pool / centroid   measured D %.3f [%.3f, %.3f]\n",
+                  r1, qtl(boot, 0.025), qtl(boot, 0.975));
+      std::printf("                                       flat+-1 I %.3f [%.3f, %.3f]\n",
+                  r2, qtl(boot2, 0.025), qtl(boot2, 0.975));
+      const double r3 = m5 > 1e-12 ? m6 / m5 : 0.0;
+      std::printf("                                       mirror  M %.3f [%.3f, %.3f]\n",
+                  r3, qtl(boot3, 0.025), qtl(boot3, 0.975));
+      if (a == 1u) {   // `quiet` is the primary: no lesson drift inflating the shared mode
+        // REVISED 2026-09-23, AFTER SEEING THE FIRST TWO SIGNALS SPLIT, and recorded
+        // as a revision rather than dressed up as the original plan. The verdict was
+        // first registered over `measured D` and `flat +-1`. Those disagreed -- and
+        // the disagreement is not noise, both intervals are tight and on opposite
+        // sides of 1. The reason is that `flat +-1` is an IDEALISATION I wrote, and
+        // nothing measured in this creature has that shape: `blockflip`'s mirror
+        // lesson is concentrated at the extreme of its half exactly as this one is.
+        // So the verdict now takes the two MEASUREMENT-DERIVED signals and `flat`
+        // becomes a diagnostic: it shows what shape WOULD favour a two-pool readout.
+        const double lo1 = qtl(boot, 0.025), hi1 = qtl(boot, 0.975);
+        const double lo2 = qtl(boot3, 0.025), hi2 = qtl(boot3, 0.975);
+        const bool up = lo1 > 1.0 && lo2 > 1.0, dn = hi1 < 1.0 && hi2 < 1.0;
+        std::printf("\n    VERDICT on the primary (`quiet`, no lesson drift in the shared mode):\n");
+        if (up)
+          std::printf("      LICENSED -- both signals put the two-pool readout above the\n"
+                      "      centroid with the interval clear of 1. Build it, and hold it to\n"
+                      "      its PAIRED refusal: delivered dF1 spread up while steerability\n"
+                      "      does not fall.\n");
+        else if (dn)
+          std::printf("      REFUSED -- the creature's own noise structure puts the two-pool\n"
+                      "      readout BELOW the centroid on both signals. The shared mode it\n"
+                      "      cancels is smaller than the weighting it throws away. No readout\n"
+                      "      is built, and this costs one run instead of a rebuild.\n");
+        else
+          std::printf("      UNRESOLVED -- the interval straddles 1 on at least one signal.\n"
+                      "      Report it as unresolved; do NOT read it in the convenient\n"
+                      "      direction. More creatures, not more arms, is what closes it.\n");
+        std::printf("      (the two verdict signals are BOTH measurement-derived; `flat +-1`\n"
+                    "       is reported above as a diagnostic only -- see the comment.)\n");
+      }
+    }
+  }
+
 
   // --- what the measured quantities predict, against what was measured ------
   // The five costs are from `blockwhere` and `blockanchor` on this genome and

@@ -10799,6 +10799,74 @@ the few fields outside it, with no pointers in the file and no fixups on load �
 and it makes the format's rule ("only against the genome it came from") a
 consequence of the design rather than a policy that has to be enforced by hand.
 
+## The two-pool readout is refused, and it is the premise that fails
+
+The oldest wall in this project is that seven instruments died to common-mode
+swamping in a pooled readout, and `read_group` is a rate-weighted centroid over
+an all-positive vector — the exact shape common mode is supposed to swamp. The
+standard fix is a differential readout: read F1 as (upper pool − lower pool),
+whose weights sum to zero and so cancel a shared mode exactly. DNA v57 already
+splits vocal into halves and computes both means every tick, so the build is
+small. `leverprobe` now prices it before building it.
+
+**The first framing was vacuous and it was mine.** Asking whether the two-pool
+readout "moves F1 further" is meaningless: the constant mapping (upper − lower)
+onto Hz is free, so it scales signal and noise together. A first pass computed a
+×1.24 advantage that way; the number says nothing and was discarded. The
+scale-free question is signal-to-noise, SNR(w) = |w·D| / √(wᵀCw), and that is
+what is measured here — on the **full measured covariance** of the F1 group,
+not under an assumed shape. The formula was checked against a Monte Carlo
+simulation to 0.05% before the run, because a sign or index error in a
+quadratic form drives a verdict silently.
+
+**The premise fails on one number.** The shared fraction of the F1 group's rate
+variance is **ρ = 0.101 ± 0.004** on the never-taught arm (0.094 ± 0.004 on the
+taught arm), against a compound-symmetry crossover of 0.466. Common-mode
+rejection is the entire reason to prefer a differential readout, and there is
+little common mode here to reject. That also sharpens what killed those seven
+instruments: the centroid's compression toward 0.5 is not shared *noise*, it is
+the group being undifferentiated — which is what `senses.cpp` has said in a
+comment since 2026-08-11, that a centroid weighted by anything returns the
+centre when nothing differentiates the group.
+
+**What is left is signal shape, and each readout wins on the shape it matches.**
+The centroid's linearised weights rise monotonically with neuron index, so it is
+close to a matched filter for a signal concentrated at the ends of the group.
+The two-pool's flat ±1 is matched to a signal flat within each half.
+
+    SNR ratio, two-pool / centroid, quiet arm, 12 creatures, paired bootstrap
+
+      measured D (one lesson)        0.821 [0.815, 0.828]    centroid wins
+      mirror D  (two lessons)        1.001 [0.993, 1.010]    EQUIVALENT
+      flat +-1  (an idealisation)    1.229 [1.219, 1.239]    diagnostic only
+
+The anchor holds: the taught arm learned +0.1718 ± 0.0154 against
+`blockanchor`'s +0.1676, so this is the creature those costs came from.
+
+**The verdict is refusal on cost, not on a null.** On the naming-relevant
+signal the two readouts are indistinguishable to ±1%; on the single-lesson
+signal the centroid is decisively ahead; and the only signal favouring the
+two-pool is one nothing in this creature has. A readout change invalidates
+every vocal number until recalibration. Paying that to land at 1.001 is not a
+trade worth making.
+
+**Two process findings outlive the mechanism.** First, the `flat ±1` signal was
+an idealisation I wrote, and it was the sole reason the first pass looked
+favourable — `blockflip` had already measured the mirror lesson as suppression
+*concentrated at the extreme of its half*, so the real naming signal is
+D(k) − D(n−1−k), antisymmetric in which half but still concentrated at the ends.
+The verdict was re-registered over the two measurement-derived signals after the
+original pair split; that revision was made with sight of a valid run and is
+recorded as a revision, in the code comment and here, rather than presented as
+the original plan. Second, a compound-symmetry approximation at the measured ρ
+put the mirror ratio at 0.939 where the exact covariance gives 1.001 — 6% off,
+and in the direction that would have changed the write-up from "equivalent" to
+"worse". A covariance that has been measured should not then be modelled.
+
+The differential readout is due to Ding and He's discriminative framing and is
+standard practice in population decoding; the refusal here is specific to this
+creature's noise structure and says nothing about the method in general.
+
 ## Layout
 
 ```
