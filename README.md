@@ -10867,6 +10867,45 @@ The differential readout is due to Ding and He's discriminative framing and is
 standard practice in population decoding; the refusal here is specific to this
 creature's noise structure and says nothing about the method in general.
 
+## A guard that refused my own wrong premise, for the price of one smoke run
+
+Chasing the open item that this line has no validated ceiling, I read
+`credgate`'s oracle as handing each lesson the half it does not use — lesson A
+(target 320, a low F1) confined to the lower half when `leverprobe` had just
+measured A writing to the upper half at −10.935 Hz against −0.126. I added a
+naturally-matched arm to fix it.
+
+**The reading was wrong.** `credgate` masks through `cfg.credit_mode`;
+`cfg.mask_mode` is a separate mechanism belonging to `blockwhere`, `blockflip`
+and `leverprobe`, with its own switch. The credit_mode block keys the half off
+`lesson.f1` against the range midpoint, so a low target already gets the upper
+half. The oracle was already naturally matched, and the expression I proposed as
+the fix — `upper = !relearning` — is documented in that same block as the v1 bug
+that was found and corrected months ago, together with a subtlety I had missed:
+the `keep` control's second lesson also targets 320, so keying off the phase
+mismatches the control too.
+
+**What caught it was a vacuity guard, not review.** The new arm came out
+bit-identical to the one it was supposed to improve on — lesson A's
+upper-minus-lower read −0.778 in both, to three decimals — because
+`credit_mode 5` matched no branch and fell through to the default, which is
+mode 1. The guard refused the run:
+
+    credgate REFUSES ITSELF -- `natural` and `oracle` steered lesson A
+    into the same half. The two masks are not different mechanisms and
+    any retention contrast between them would be noise with a label.
+
+That cost one 600k smoke run. Without it the premise would have cost a
+multi-hour run at 3.4M ticks and a write-up built on a misattribution. The rule
+it enforces is the one this project keeps relearning: **two arms with different
+mechanisms must actually differ, and the experiment should refuse itself when
+they do not.** The guard is kept, rewritten to check that the oracle mask moves
+where the lessons write at all rather than to compare two arms that no longer
+exist.
+
+The open item is unchanged: there is still no validated ceiling for the
+conflicting same-group regime, and this was not a route to one.
+
 ## Layout
 
 ```

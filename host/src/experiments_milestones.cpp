@@ -14350,18 +14350,18 @@ const CGArm kCGArms[] = {
     // 100-1000 s band, correct for AGMP's un-normalised state, buys nothing once the
     // state is z-scored, and these arms are respent on GATE STRENGTH instead, which
     // does not cancel. actg1k is kept as the tau control that documents it.
-    {"actgS05-AB",   0u, false, 0u, 0.0f, 2u, 0, 0.0f, 0u, 0u, false, 300000.0, 0.5f},
-    {"actgS05-keep", 0u, true,  0u, 0.0f, 2u, 0, 0.0f, 0u, 0u, false, 300000.0, 0.5f},
-    {"actg300-AB",   0u, false, 0u, 0.0f, 2u, 0, 0.0f, 0u, 0u, false, 300000.0, 1.0f},
-    {"actg300-keep", 0u, true,  0u, 0.0f, 2u, 0, 0.0f, 0u, 0u, false, 300000.0, 1.0f},
+    {"actgS05-AB",   0u, false, 0u, 0.0f, 2u, 0, 0.0f, 0u, 0u, true, 300000.0, 0.5f},
+    {"actgS05-keep", 0u, true,  0u, 0.0f, 2u, 0, 0.0f, 0u, 0u, true, 300000.0, 0.5f},
+    {"actg300-AB",   0u, false, 0u, 0.0f, 2u, 0, 0.0f, 0u, 0u, true, 300000.0, 1.0f},
+    {"actg300-keep", 0u, true,  0u, 0.0f, 2u, 0, 0.0f, 0u, 0u, true, 300000.0, 1.0f},
     // TAU IS MEASURED INERT, so this arm is respent on a third STRENGTH and the three
     // become a DOSE-RESPONSE. At tau 300 s and 1000 s the effective gate read
     // 0.485/0.239 and 0.485/0.239 -- identical to three decimals, exactly as the
     // cancellation predicts. Re-demonstrating that would cost 32 creatures to learn
     // nothing; a dose-response on strength is the strongest evidence this project
     // accepts for a mechanism, and it is the axis that does NOT cancel.
-    {"actgS025-AB",   0u, false, 0u, 0.0f, 2u, 0, 0.0f, 0u, 0u, false, 300000.0, 0.25f},
-    {"actgS025-keep", 0u, true,  0u, 0.0f, 2u, 0, 0.0f, 0u, 0u, false, 300000.0, 0.25f},
+    {"actgS025-AB",   0u, false, 0u, 0.0f, 2u, 0, 0.0f, 0u, 0u, true, 300000.0, 0.25f},
+    {"actgS025-keep", 0u, true,  0u, 0.0f, 2u, 0, 0.0f, 0u, 0u, true, 300000.0, 0.25f},
 };
 constexpr uint32_t kCGArmCount = sizeof(kCGArms) / sizeof(kCGArms[0]);
 // CHANGED 2026-09-21 from 318211 to draw a FRESH set of creatures from the same
@@ -14744,6 +14744,70 @@ bool run_credgate(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
         return false;
       }
       std::printf("    both arms move and both differ from pin0 -- the contrast is real\n");
+    }
+  }
+
+
+  // --- WHERE EACH LESSON ACTUALLY WROTE (2026-09-23) ------------------------
+  // Kept from a retracted experiment, because the table is worth having and its
+  // guard is what caught the retraction. I read `mask_mode` (blockwhere's
+  // mechanism) and attributed it to credgate, which uses `credit_mode`, and
+  // concluded the oracle was handing each lesson the wrong half. It is not: the
+  // credit_mode block keys `upper` off `lesson.f1` against the range midpoint,
+  // so a LOW target already gets the UPPER half. The arm I added to "fix" it was
+  // bit-identical to `oracle-AB` and this guard refused the run before it cost
+  // anything. An arm that cannot be told from its control is not an arm.
+  {
+    auto idx = [&](const char* n) {
+      for (uint32_t a2 = 0; a2 < kCGArmCount; ++a2)
+        if (std::strcmp(kCGArms[a2].name, n) == 0) return int(a2);
+      return -1;
+    };
+    const char* wnames[] = {"bcast-AB", "oracle-AB"};
+    std::printf("\n  WHERE EACH LESSON WROTE -- net rate change per half, Hz.\n"
+                "  A is the teach phase (target 320, LOW); B is the gap (850, HIGH).\n"
+                "  A LOW target is learned by suppressing the UPPER half, so the oracle\n"
+                "  gives A the upper half and B the lower one.\n"
+                "  %-12s %-9s %-9s   %-9s %-9s\n", "arm", "A lower", "A upper",
+                "B lower", "B upper");
+    double asym[2] = {0.0, 0.0};
+    bool have[2] = {false, false};
+    for (uint32_t w = 0; w < 2u; ++w) {
+      const int ia = idx(wnames[w]);
+      if (ia < 0 || kCGArms[ia].skip) continue;
+      double la = 0.0, ua = 0.0, lb = 0.0, ub = 0.0;
+      uint32_t nc = 0;
+      for (uint32_t r2 = 0; r2 < kReps; ++r2) {
+        const Cell& c = cells[r2 * kCGArmCount + uint32_t(ia)];
+        if (!c.ok || c.row.f1_n == 0) continue;
+        if (!c.row.f1_samp_early || !c.row.f1_samp_late || !c.row.f1_gap_samp_late) continue;
+        const uint32_t g = c.row.f1_n, mid = g / 2u;
+        for (uint32_t k = 0; k < g; ++k) {
+          const double e = c.row.f1_rate_early[k] / double(c.row.f1_samp_early);
+          const double t = c.row.f1_rate_late[k] / double(c.row.f1_samp_late);
+          const double gl = c.row.f1_gap_late[k] / double(c.row.f1_gap_samp_late);
+          if (k < mid) { la += t - e; lb += gl - t; }
+          else         { ua += t - e; ub += gl - t; }
+        }
+        ++nc;
+      }
+      if (nc == 0) { std::printf("    %-12s no usable creatures\n", wnames[w]); continue; }
+      la /= double(nc); ua /= double(nc); lb /= double(nc); ub /= double(nc);
+      std::printf("    %-12s %+9.3f %+9.3f   %+9.3f %+9.3f  (%u)\n",
+                  wnames[w], la, ua, lb, ub, nc);
+      asym[w] = (ua - la) - (ub - lb);
+      have[w] = true;
+    }
+    if (have[0] && have[1]) {
+      std::printf("    (A upper-lower) - (B upper-lower):  bcast %+.3f, oracle %+.3f\n",
+                  asym[0], asym[1]);
+      if (std::fabs(asym[0] - asym[1]) < 0.05) {
+        std::printf("\n  credgate REFUSES ITSELF -- the oracle mask left the two lessons\n"
+                    "  writing exactly where broadcast did. The mask is INERT and any\n"
+                    "  retention contrast resting on it would be broadcast read twice.\n");
+        return false;
+      }
+      std::printf("    the mask moves where the lessons write -- it is not inert\n");
     }
   }
 
