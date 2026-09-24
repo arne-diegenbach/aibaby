@@ -2205,6 +2205,7 @@ bool run_babblerhythm(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_framecopy(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_framehold(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_glide(const std::vector<uint8_t>&, uint64_t, bool);
+bool run_selfloop(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_adaptclock(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_halfcenter(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_regionband(const std::vector<uint8_t>&, uint64_t, bool);

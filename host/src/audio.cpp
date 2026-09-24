@@ -69,7 +69,13 @@ void Ear::tick(aibaby::Brain& brain, const float* room, size_t count) {
     // Voicing is a valve: shut, the glottis makes no pulses, and an amplitude
     // still ramping down must not leak through it.
     const float f0 = v.voicing > 0.5f ? float(v.f0) : 0.0f;
-    larynx_.render(f0, float(v.f1), float(v.f2), float(v.amplitude) * self_gain_,
+    // `selfloop`'s altered auditory feedback. Clamped to the tract's own range
+    // so a large shift cannot synthesise a formant the creature could never
+    // produce, which would confound "did not respond" with "heard nonsense".
+    float heard_f1 = float(v.f1) + self_f1_shift_;
+    if (heard_f1 < 250.0f) heard_f1 = 250.0f;
+    if (heard_f1 > 1000.0f) heard_f1 = 1000.0f;
+    larynx_.render(f0, heard_f1, float(v.f2), float(v.amplitude) * self_gain_,
                    self_.data(), count);
     float peak = 0.0f;
     for (size_t i = 0; i < count; ++i) {

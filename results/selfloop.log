@@ -1,0 +1,77 @@
+experiment: selfloop
+  instrument        selfloop   trial seed 0000000001357635   1200000 ticks
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  the question    how long is larynx -> ear -> larynx? `loop-latency`
+                  could only SUM it: 165 ms under v62, 905 under the
+                  position decoder, against ~200 ms for a gesture --
+                  and two of its four terms were estimates.
+  the method      altered auditory feedback (Houde & Jordan): shift the
+                  F1 the creature hears OF ITSELF on a 1500 ms square
+                  wave, leave the room SILENT, and cross-correlate
+                  produced F1 against the shift at lag.
+  [5/48] seed 1 shift0    r -0.013 at 138 ms
+  [7/48] seed 1 shift300  r +0.037 at 53 ms
+  [6/48] seed 1 shift150  r +0.020 at 628 ms
+  [3/48] seed 0 shift300  r -0.045 at 186 ms
+  [2/48] seed 0 shift150  r +0.002 at 27 ms
+  [1/48] seed 0 shift0    r +0.010 at 51 ms
+  [9/48] seed 2 shift0    r +0.011 at 591 ms
+  [11/48] seed 2 shift300  r -0.045 at 188 ms
+  [10/48] seed 2 shift150  r +0.040 at 564 ms
+  [8/48] seed 1 deaf      r +0.010 at 370 ms
+  [4/48] seed 0 deaf      r +0.006 at 265 ms
+  [15/48] seed 3 shift300  r +0.018 at 160 ms
+  [17/48] seed 4 shift0    r +0.007 at 66 ms
+  [16/48] seed 3 deaf      r -0.017 at 546 ms
+  [13/48] seed 3 shift0    r +0.014 at 155 ms
+  [14/48] seed 3 shift150  r -0.055 at 415 ms
+  [21/48] seed 5 shift0    r +0.013 at 102 ms
+  [20/48] seed 4 deaf      r +0.023 at 109 ms
+  [18/48] seed 4 shift150  r +0.023 at 626 ms
+  [22/48] seed 5 shift150  r -0.054 at 561 ms
+  [19/48] seed 4 shift300  r -0.017 at 409 ms
+  [12/48] seed 2 deaf      r +0.007 at 337 ms
+  [25/48] seed 6 shift0    r +0.027 at 548 ms
+  [23/48] seed 5 shift300  r -0.093 at 422 ms
+  [26/48] seed 6 shift150  r +0.046 at 486 ms
+  [27/48] seed 6 shift300  r +0.031 at 54 ms
+  [31/48] seed 7 shift300  r +0.010 at 521 ms
+  [29/48] seed 7 shift0    r -0.014 at 10 ms
+  [34/48] seed 8 shift150  r -0.019 at 561 ms
+  [33/48] seed 8 shift0    r -0.008 at 104 ms
+  [30/48] seed 7 shift150  r -0.029 at 578 ms
+  [28/48] seed 6 deaf      r +0.003 at 520 ms
+  [24/48] seed 5 deaf      r +0.002 at 253 ms
+  [38/48] seed 9 shift150  r +0.055 at 118 ms
+  [35/48] seed 8 shift300  r +0.013 at 117 ms
+  [37/48] seed 9 shift0    r +0.005 at 582 ms
+  [40/48] seed 9 deaf      r +0.022 at 78 ms
+  [32/48] seed 7 deaf      r +0.011 at 522 ms
+  [42/48] seed 10 shift150  r -0.037 at 333 ms
+  [39/48] seed 9 shift300  r +0.068 at 254 ms
+  [41/48] seed 10 shift0    r -0.008 at 617 ms
+  [43/48] seed 10 shift300  r +0.019 at 410 ms
+  [45/48] seed 11 shift0    r +0.024 at 482 ms
+  [47/48] seed 11 shift300  r -0.016 at 602 ms
+  [36/48] seed 8 deaf      r +0.012 at 513 ms
+  [44/48] seed 10 deaf      r +0.004 at 60 ms
+  [46/48] seed 11 shift150  r -0.051 at 189 ms
+  [48/48] seed 11 deaf      r +0.009 at 82 ms
+
+  arm       peak r           argmax lag       |r|            phase lag   coherent Hz  self level
+    shift0    +0.006 +/- 0.004        287 +/- 72     0.013 +/- 0.002     801 +/- 138    1.83 +/- 0.16 0.1076
+    shift150  -0.005 +/- 0.012        424 +/- 60     0.036 +/- 0.005     652 +/- 148    1.06 +/- 0.15 0.1480
+    shift300  -0.002 +/- 0.013        281 +/- 53     0.034 +/- 0.007     902 +/- 120    1.84 +/- 0.17 0.1363
+    deaf      +0.008 +/- 0.003        305 +/- 55     0.010 +/- 0.002     877 +/- 128    1.46 +/- 0.25 0.0000
+
+  AGAINST THE ZERO-SHIFT NULL (its own machinery, no shift)
+    shift150 - shift0  +0.023 +/- 0.005  (+4.3 SE)
+    shift300 - shift0  +0.022 +/- 0.008  (+2.9 SE)
+    deaf     - shift0  -0.002            (must be at the floor)
+
+  --- the reading ---
+  REFUSED ON MONOTONICITY -- a shifted arm beats the null but the
+  effect does not grow with shift size (0.036 at 150, 0.034 at 300).
+  A lone peak is what cross-correlating against a periodic signal
+  produces by chance, because the creature's babbling is periodic too.

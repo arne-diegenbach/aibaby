@@ -11205,6 +11205,53 @@ cross-correlate the vocal module's response against the shift at lag. Houde &
 Jordan's paradigm, and the first thing here that would use the larynx→ear loop
 as a **controller** rather than as the duty-cycle dial it currently is.
 
+### `selfloop`: the creature does not use self-audition to control F1
+
+The closed-loop direction was gated on a round-trip delay that `loop-latency`
+could only *sum* — 165 ms under v62, 905 under the position decoder. `selfloop`
+measures the loop instead, with Houde & Jordan's altered auditory feedback:
+shift the F1 the creature hears **of itself** on a 1500 ms square wave, leave the
+room silent, and ask whether production follows. The shift is applied in
+`Ear::tick`, host-side, so the pinned hash cannot move.
+
+    arm        |r| (max over lags)   coherent Hz at the shift rate   phase lag
+    shift0        0.013 +/- 0.002          1.83 +/- 0.16             801 +/- 138
+    shift150      0.036 +/- 0.005          1.06 +/- 0.15             652 +/- 148
+    shift300      0.034 +/- 0.007          1.84 +/- 0.17             902 +/- 120
+    deaf          0.010 +/- 0.002          1.46 +/- 0.25             877 +/- 128
+
+**REFUSED.** The coherent response at the shift frequency is
+**+0.01 Hz ± 0.23 (0.0 SE)** for the 300 Hz shift against its own zero-shift
+null — a dead null — and every phase lag is indistinguishable from the two
+control arms. A closed loop requires produced F1 to move *at* the shift rate at
+a consistent delay. Neither happens. **The creature does not use self-audition
+to control F1**, which independently explains why v62's integrator drifts
+freely: nothing is watching it. It also means the latency budget was answering
+the wrong question — loop *speed* never mattered, because there is no loop in
+use.
+
+**The instrument's own null held.** `deaf` (self_gain forced to 0) reads a self
+level of exactly 0.0000 and sits at the floor on every statistic. That was the
+one failure that would have voided the experiment.
+
+**And the primary I pre-registered was the wrong statistic.** `max|r|` over 700
+lags *did* rise in both shifted arms, at +4.3 and +2.9 SE, with both nulls at
+the floor — which is not the chance pattern the monotonicity guard was built to
+catch, so that guard refused for a reason that did not apply. But a maximum over
+700 lags is a maximum over *noise*: it rises with anything that lowers the
+effective sample count and imposes no requirement that the response occur at the
+shift's frequency. The corrected primary is the coherent amplitude at that
+frequency, which is what distinguishes control from wander. **The correction
+turned a detection into a refusal** — it went against the hypothesis being
+pursued, which is the direction that makes it trustworthy rather than
+convenient.
+
+**Scope, stated rather than implied.** This measures the untrained creature in
+free babbling. It does not show the loop *cannot* be installed by reward — only
+that it is not in use. The ingredients are all present: `self_gain` is 0.5, the
+measured self level is 0.11–0.15, and a direct `auditory → vocal` tract exists
+at 5 ms. They are simply not wired into F1 control.
+
 ## Layout
 
 ```

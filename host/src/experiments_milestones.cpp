@@ -13721,6 +13721,333 @@ bool run_adaptclock(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
   return tracks && tall;
 }
 
+
+// ---------------------------------------------------------------------------
+// `selfloop` — HOW LONG IS THE LARYNX -> EAR -> LARYNX ROUND TRIP?
+//
+// The closed-loop direction is gated on this number and `loop-latency` could
+// only SUM it from parts: 165 ms under v62, 905 ms under the position decoder,
+// against the ~200 ms a gesture has. Two of those four terms were estimates
+// (B2's 50 ms is a classifier resolving WORD IDENTITY, not an F1 magnitude; the
+// rate EMA's 50 ms is a time constant standing in for a group delay), so the
+// sum is not something to build on. This measures it instead.
+//
+// THE METHOD is Houde & Jordan's altered auditory feedback, the standard way
+// loop delay is measured in speakers and songbirds: shift the F1 the creature
+// hears OF ITSELF by a known amount on a known schedule, leave the room alone,
+// and cross-correlate the creature's PRODUCED F1 against the shift at lag. The
+// lag of the peak is the round trip.
+//
+// SIGN IS INFORMATIVE AND IS NOT PRE-JUDGED. Human speakers COMPENSATE -- shift
+// their feedback up and they push their production down -- so a negative peak
+// is the textbook result. A positive peak would mean the creature follows what
+// it hears instead of opposing it, which `deaf-to-itself` would have predicted
+// from the loop being negative feedback on the duty cycle. Both are reported.
+//
+// PRE-REGISTERED, ONCE, HERE:
+//   * MEASURED if the |peak| of a shifted arm exceeds the zero-shift arm's own
+//     peak by 3 SE, AND the effect is monotone in shift size. One without the
+//     other is not the result: a lone large peak at one amplitude is what a
+//     cross-correlation against a periodic signal produces by chance, because
+//     the creature's own babbling is periodic too.
+//   * REFUSED, and it closes the closed-loop direction, if no shifted arm beats
+//     the null. That would mean the creature does not use self-audition for F1
+//     at all -- which would independently explain why v62's integrator drifts
+//     freely, since nothing would be watching it.
+//   * The `deaf` arm (self_gain 0, shift live) is the structural null: with no
+//     self signal there is nothing for the shift to act on, so it MUST read the
+//     floor. If it does not, the instrument is measuring itself.
+struct SLArm {
+  const char* name;
+  float shift_hz;   // amplitude of the square-wave shift applied to heard F1
+  bool deaf;        // self_gain forced to 0 -- the structural null
+};
+const SLArm kSLArms[] = {
+    {"shift0",   0.0f,   false},   // THE NULL: same machinery, no shift
+    {"shift150", 150.0f, false},
+    {"shift300", 300.0f, false},   // the dose-response partner
+    {"deaf",     300.0f, true},    // shift with nothing to shift
+};
+constexpr uint32_t kSLArmCount = sizeof(kSLArms) / sizeof(kSLArms[0]);
+// The shift alternates on this period. Long enough that a round trip of up to
+// half of it is unambiguous, and not a harmonic of kRTTrial (2800) so the
+// creature's own trial rhythm cannot masquerade as a response.
+constexpr uint64_t kSLPeriod = 1500;
+constexpr uint32_t kSLMaxLag = 700;   // ms of lag searched, > any budgeted delay
+constexpr uint64_t kSLSeedOffset = 914233ull;
+
+struct SLRow {
+  bool ok = false;
+  double peak_r = 0.0;      // signed correlation at the peak |r|
+  double peak_lag = 0.0;    // ms
+  // A SECOND, BETTER-CONDITIONED LAG. `peak_lag` is the argmax of |r| over 700
+  // lags, which is a MAXIMUM OVER NOISE: the zero-shift and deaf arms report
+  // |r| ~0.03 for exactly that reason, and when the signal is barely above that
+  // floor the argmax location is arbitrary. The shift is a square wave of known
+  // period, so the phase of the response at its FUNDAMENTAL gives the delay
+  // directly, with every sample contributing instead of one lucky lag.
+  double phase_lag = 0.0;   // ms, from the phase at the shift's fundamental
+  double fund_amp = 0.0;    // Hz of produced F1 moving coherently at that rate
+  double self_level = 0.0;  // proof the loop is closed at all
+  double f1_sd = 0.0;
+};
+
+SLRow run_selfloop_arm(const std::vector<uint8_t>& blob, uint64_t ticks, const SLArm& arm) {
+  SLRow row;
+  Session s;
+  std::string error;
+  std::vector<uint8_t> local = blob;
+  if (arm.deaf) {
+    const float z = 0.0f;
+    std::memcpy(local.data() + offsetof(aibaby::DnaHeader, audio) +
+                    offsetof(aibaby::DnaAudio, self_gain),
+                &z, sizeof(z));
+  }
+  if (!s.init(local, error)) return row;
+  const aibaby::DnaAudio& acfg = s.dna.header().audio;
+  Ear ear;
+  if (!ear.configure(acfg, error)) return row;
+  const uint32_t spt = acfg.sample_rate / 1000;
+  std::vector<float> pcm(spt, 0.0f);
+
+  const uint64_t settle = ticks / 10;
+  std::vector<double> f1s, shifts;
+  double slevel = 0.0;
+  uint64_t nlev = 0, last_frame = 0;
+  for (uint64_t t = 0; t < ticks; ++t) {
+    // A SILENT ROOM on purpose. With a caregiver sounding, the creature's own
+    // production correlates with the caregiver and the cross-correlation would
+    // read that instead. Here the only thing moving on a schedule is the shift.
+    const double ph = double(t % kSLPeriod) / double(kSLPeriod);
+    const double sq = ph < 0.5 ? 1.0 : -1.0;
+    ear.set_self_f1_shift(float(arm.shift_hz * sq));
+    ear.tick(s.brain, nullptr, spt);
+    s.brain.step();
+    slevel += double(ear.self_level());
+    ++nlev;
+    if (t < settle) continue;
+    if (s.brain.vocal_frame() == last_frame) continue;
+    last_frame = s.brain.vocal_frame();
+    f1s.push_back(double(s.brain.voice().f1));
+    shifts.push_back(sq);
+  }
+  if (f1s.size() < 512) return row;
+  row.self_level = nlev ? slevel / double(nlev) : 0.0;
+
+  // Cross-correlate produced F1 against the shift at lag. Both series are
+  // centred, so a constant offset in either cannot manufacture a peak.
+  double mf = 0.0, ms = 0.0;
+  for (size_t i = 0; i < f1s.size(); ++i) { mf += f1s[i]; ms += shifts[i]; }
+  mf /= double(f1s.size());
+  ms /= double(shifts.size());
+  double vf = 0.0;
+  for (double v : f1s) vf += (v - mf) * (v - mf);
+  row.f1_sd = std::sqrt(vf / double(f1s.size()));
+
+  // Frames are ~1 ms apart here; the lag index is therefore ms to within the
+  // vocal frame period, and the reported lag says so rather than pretending
+  // to a precision the frame rate does not have.
+  double best_abs = -1.0;
+  for (uint32_t lag = 0; lag <= kSLMaxLag && size_t(lag) + 64 < f1s.size(); ++lag) {
+    double num = 0.0, df = 0.0, ds = 0.0;
+    const size_t n = f1s.size() - lag;
+    for (size_t i = 0; i < n; ++i) {
+      const double a = f1s[i + lag] - mf;   // production LAGS the shift
+      const double b = shifts[i] - ms;
+      num += a * b; df += a * a; ds += b * b;
+    }
+    if (!(df > 1e-12 && ds > 1e-12)) continue;
+    const double r = num / std::sqrt(df * ds);
+    const double ar = r < 0.0 ? -r : r;
+    if (ar > best_abs) { best_abs = ar; row.peak_r = r; row.peak_lag = double(lag); }
+  }
+  // The phase estimator. Both series are projected onto the shift's fundamental;
+  // the phase difference is the delay, modulo the period. Quadrature detection,
+  // so `fund_amp` is in Hz of produced F1 and is comparable with the shift size.
+  {
+    const double w = 2.0 * 3.14159265358979 / double(kSLPeriod);
+    double fc = 0.0, fs = 0.0, sc = 0.0, ss = 0.0;
+    for (size_t i = 0; i < f1s.size(); ++i) {
+      const double ph2 = w * double(i);
+      const double a = f1s[i] - mf, b = shifts[i] - ms;
+      fc += a * std::cos(ph2); fs += a * std::sin(ph2);
+      sc += b * std::cos(ph2); ss += b * std::sin(ph2);
+    }
+    const double n2 = double(f1s.size());
+    row.fund_amp = 2.0 * std::sqrt(fc * fc + fs * fs) / n2;
+    if (std::fabs(sc) + std::fabs(ss) > 1e-12) {
+      double d = std::atan2(fs, fc) - std::atan2(ss, sc);
+      while (d > 0.0) d -= 2.0 * 3.14159265358979;      // production LAGS
+      while (d < -2.0 * 3.14159265358979) d += 2.0 * 3.14159265358979;
+      row.phase_lag = -d / w;                            // ms, in [0, period)
+    }
+  }
+  row.ok = best_abs >= 0.0;
+  return row;
+}
+
+bool run_selfloop(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  aibaby::Dna dna0;
+  if (dna0.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) {
+    std::printf("  setup failed: the genome does not load\n");
+    return false;
+  }
+  constexpr uint32_t kReps = 12;
+  instrument("selfloop", dna0.header().seed ^ 0x51FCu, ticks, "ticks");
+  std::printf("  the question    how long is larynx -> ear -> larynx? `loop-latency`\n"
+              "                  could only SUM it: 165 ms under v62, 905 under the\n"
+              "                  position decoder, against ~200 ms for a gesture --\n"
+              "                  and two of its four terms were estimates.\n"
+              "  the method      altered auditory feedback (Houde & Jordan): shift the\n"
+              "                  F1 the creature hears OF ITSELF on a %llu ms square\n"
+              "                  wave, leave the room SILENT, and cross-correlate\n"
+              "                  produced F1 against the shift at lag.\n",
+              (unsigned long long)kSLPeriod);
+
+  struct Cell { bool ok = false; SLRow row; };
+  const uint32_t njobs = kReps * kSLArmCount;
+  const std::vector<Cell> cells = parallel_reps<Cell>(njobs, [&](uint32_t i) {
+    Cell cell;
+    const uint32_t r = i / kSLArmCount, a = i % kSLArmCount;
+    std::vector<uint8_t> variant = blob;
+    const uint64_t seed = dna0.header().seed + kSLSeedOffset + r * 7919ull;
+    std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+    cell.row = run_selfloop_arm(variant, ticks, kSLArms[a]);
+    cell.ok = cell.row.ok;
+    parallel_note("  [%u/%u] seed %u %-9s r %+.3f at %.0f ms\n", i + 1, njobs, r,
+                  kSLArms[a].name, cell.row.peak_r, cell.row.peak_lag);
+    return cell;
+  });
+
+  double m_r[kSLArmCount] = {}, s_r[kSLArmCount] = {};
+  double m_lag[kSLArmCount] = {}, s_lag[kSLArmCount] = {};
+  double m_abs[kSLArmCount] = {}, s_abs[kSLArmCount] = {};
+  double m_lev[kSLArmCount] = {}, m_ph[kSLArmCount] = {}, m_fa[kSLArmCount] = {};
+  double s_fa[kSLArmCount] = {};
+  uint32_t nseed[kSLArmCount] = {};
+  std::printf("\n  %-9s %-16s %-16s %-14s %-11s %-12s %s\n", "arm", "peak r",
+              "argmax lag", "|r|", "phase lag", "coherent Hz", "self level");
+  for (uint32_t a = 0; a < kSLArmCount; ++a) {
+    std::vector<double> rr, ll, aa, lv;
+    for (uint32_t r = 0; r < kReps; ++r) {
+      const Cell& c = cells[r * kSLArmCount + a];
+      if (!c.ok) continue;
+      rr.push_back(c.row.peak_r);
+      ll.push_back(c.row.peak_lag);
+      aa.push_back(c.row.peak_r < 0.0 ? -c.row.peak_r : c.row.peak_r);
+      lv.push_back(c.row.self_level);
+    }
+    nseed[a] = uint32_t(rr.size());
+    if (rr.size() < 3) { std::printf("    %-9s too few creatures (%zu)\n", kSLArms[a].name, rr.size()); continue; }
+    double q = 0.0;
+    m_r[a] = ctx_mean_se(rr, &s_r[a]);
+    m_lag[a] = ctx_mean_se(ll, &s_lag[a]);
+    m_abs[a] = ctx_mean_se(aa, &s_abs[a]);
+    m_lev[a] = ctx_mean_se(lv, &q);
+    std::vector<double> pl, fa;
+    for (uint32_t r = 0; r < kReps; ++r) {
+      const Cell& c = cells[r * kSLArmCount + a];
+      if (!c.ok) continue;
+      pl.push_back(c.row.phase_lag);
+      fa.push_back(c.row.fund_amp);
+    }
+    double q1 = 0.0, q2 = 0.0;
+    m_ph[a] = ctx_mean_se(pl, &q1);
+    m_fa[a] = ctx_mean_se(fa, &q2);
+    s_fa[a] = q2;
+    std::printf("    %-9s %+.3f +/- %-8.3f %7.0f +/- %-6.0f %.3f +/- %-6.3f %6.0f +/- %-4.0f %6.2f +/- %-4.2f %.4f\n",
+                kSLArms[a].name, m_r[a], s_r[a], m_lag[a], s_lag[a], m_abs[a],
+                s_abs[a], m_ph[a], q1, m_fa[a], q2, m_lev[a]);
+  }
+
+  // THE STRUCTURAL NULL, checked before anything is read. With self_gain 0 there
+  // is no self signal for the shift to act on, so `deaf` must sit at the floor.
+  const uint32_t kZero = 0, kS150 = 1, kS300 = 2, kDeaf = 3;
+  if (nseed[kDeaf] >= 3 && m_lev[kDeaf] > 1e-6) {
+    std::printf("\n  selfloop REFUSES ITSELF -- the `deaf` arm still hears itself at\n"
+                "  %.4f, so self_gain was not actually silenced and the structural\n"
+                "  null is not one.\n", m_lev[kDeaf]);
+    return false;
+  }
+  if (nseed[kZero] < 3 || nseed[kS150] < 3 || nseed[kS300] < 3) {
+    std::printf("\n  selfloop INCONCLUSIVE -- an arm produced too few creatures.\n");
+    return false;
+  }
+
+  const double d150 = m_abs[kS150] - m_abs[kZero];
+  const double e150 = std::sqrt(s_abs[kS150] * s_abs[kS150] + s_abs[kZero] * s_abs[kZero]);
+  const double d300 = m_abs[kS300] - m_abs[kZero];
+  const double e300 = std::sqrt(s_abs[kS300] * s_abs[kS300] + s_abs[kZero] * s_abs[kZero]);
+  const double t150 = e150 > 0.0 ? d150 / e150 : 0.0;
+  const double t300 = e300 > 0.0 ? d300 / e300 : 0.0;
+  std::printf("\n  AGAINST THE ZERO-SHIFT NULL (its own machinery, no shift)\n");
+  std::printf("    shift150 - shift0  %+.3f +/- %.3f  (%+.1f SE)\n", d150, e150, t150);
+  std::printf("    shift300 - shift0  %+.3f +/- %.3f  (%+.1f SE)\n", d300, e300, t300);
+  std::printf("    deaf     - shift0  %+.3f            (must be at the floor)\n",
+              m_abs[kDeaf] - m_abs[kZero]);
+
+  // PRIMARY CORRECTED 2026-09-25, after the first full run. I registered max|r|
+  // over 700 lags as the primary and it is the WRONG STATISTIC: it is a maximum
+  // over noise, so it rises with anything that lowers the effective sample count
+  // and it carries no requirement that the response be at the shift's frequency.
+  // Both shifted arms beat the null on it (4.3 and 2.9 SE) while the coherent
+  // amplitude AT the shift frequency was flat -- shift0, which applies no shift
+  // at all, read 1.83 Hz against shift300's 1.84.
+  //
+  // A closed loop requires a PHASE-LOCKED response: produced F1 moving at the
+  // shift frequency, at a consistent delay. That is what `fund_amp` measures and
+  // what the verdict now rests on. The |r| columns stay in the table because the
+  // contrast between them is the finding.
+  const double dc150 = m_fa[kS150] - m_fa[kZero];
+  const double dc300 = m_fa[kS300] - m_fa[kZero];
+  const double ec150 = std::sqrt(s_fa[kS150] * s_fa[kS150] + s_fa[kZero] * s_fa[kZero]);
+  const double ec300 = std::sqrt(s_fa[kS300] * s_fa[kS300] + s_fa[kZero] * s_fa[kZero]);
+  const double tc150 = ec150 > 0.0 ? dc150 / ec150 : 0.0;
+  const double tc300 = ec300 > 0.0 ? dc300 / ec300 : 0.0;
+  std::printf("\n  THE PRIMARY -- COHERENT RESPONSE AT THE SHIFT FREQUENCY. A closed\n"
+              "  loop moves produced F1 AT the shift rate; max|r| over 700 lags does\n"
+              "  not require that and is a maximum over noise.\n");
+  std::printf("    shift150 - shift0  %+.2f Hz +/- %.2f  (%+.1f SE)\n", dc150, ec150, tc150);
+  std::printf("    shift300 - shift0  %+.2f Hz +/- %.2f  (%+.1f SE)\n", dc300, ec300, tc300);
+  const bool beats = tc300 >= 3.0 || tc150 >= 3.0;
+  const bool monotone = m_fa[kS300] >= m_fa[kS150] && m_fa[kS150] >= m_fa[kZero];
+  std::printf("\n  --- the reading ---\n");
+  if (beats && monotone) {
+    std::printf("  THE LOOP IS CLOSED. Delay %.0f ms by the PHASE estimator and\n"
+                "  %.0f +/- %.0f ms by the argmax -- quote the phase, the argmax is a\n"
+                "  maximum over 700 lags and the null arms show its floor.\n"
+                "  Coherent response %.2f Hz of produced F1 against a %.0f Hz shift.\n",
+                m_ph[kS300], m_lag[kS300], s_lag[kS300], m_fa[kS300],
+                double(kSLArms[kS300].shift_hz));
+    std::printf("  Sign %+.3f: the creature %s what it hears.\n", m_r[kS300],
+                m_r[kS300] < 0.0 ? "OPPOSES (compensates, as human speakers do)"
+                                 : "FOLLOWS");
+    std::printf("  Against the budget: a gesture has ~200 ms and syllable-rate\n"
+                "  control needs the round trip well under that. %s\n",
+                m_ph[kS300] <= 200.0
+                    ? "This clears it."
+                    : "This does NOT clear it, so closed-loop control at gesture\n  rate is refused on a MEASURED delay rather than a summed one.");
+  } else if (!beats) {
+    std::printf("  REFUSED -- no shifted arm produces a COHERENT response at the\n"
+                "  shift frequency (%.1f and %.1f SE, 3.0 required), and every phase lag\n"
+                "  is indistinguishable from the two nulls. There is no phase-locked\n"
+                "  compensation, so the creature does not use self-audition to control\n"
+                "  F1. That CLOSES the closed-loop direction and independently explains\n"
+                "  why v62's integrator drifts freely: nothing is watching it.\n"
+                "  (max|r| over lags DID rise, %.1f and %.1f SE -- that statistic is a\n"
+                "  maximum over noise and is why the primary was corrected.)\n",
+                tc150, tc300, t150, t300);
+  } else {
+    std::printf("  REFUSED ON MONOTONICITY -- a shifted arm beats the null but the\n"
+                "  effect does not grow with shift size (%.3f at 150, %.3f at 300).\n"
+                "  A lone peak is what cross-correlating against a periodic signal\n"
+                "  produces by chance, because the creature's babbling is periodic too.\n",
+                m_abs[kS150], m_abs[kS300]);
+  }
+  return beats && monotone;
+}
+
 // ============================================================================
 // `halfcenter` — BOTH INGREDIENTS AT ONCE (DNA v56 + v57)
 //

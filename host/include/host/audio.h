@@ -89,6 +89,15 @@ class Ear {
   // it, and so a howl is visible as a number before it is audible.
   float self_level() const { return self_level_; }
 
+  // EXPERIMENT ONLY (`selfloop`). Shift, in Hz, added to the F1 the creature
+  // hears OF ITSELF before the larynx is re-rendered into its own ear. The
+  // room is untouched, so a caregiver still sounds correct and only the
+  // creature's self-perception is displaced -- Houde & Jordan's altered
+  // auditory feedback, which is how loop delay is measured in speakers and
+  // songbirds. 0 is OFF and leaves the mix bit-identical.
+  void set_self_f1_shift(float hz) { self_f1_shift_ = hz; }
+  float self_f1_shift() const { return self_f1_shift_; }
+
  private:
   Cochlea cochlea_;
   VowelSource larynx_;
@@ -97,6 +106,7 @@ class Ear {
   std::vector<float> self_;
   float self_gain_ = 0.0f;
   float self_level_ = 0.0f;
+  float self_f1_shift_ = 0.0f;
   bool had_frame_ = false;
 };
 

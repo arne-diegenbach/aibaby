@@ -394,6 +394,14 @@ const Spec kSpecs[] = {
      "  pulses 4 s then goes SILENT and measures the f-component during the silence\n"
      "  -- the M1b logic that separates an echo from a pass-through. Every f tiles\n"
      "  the block in whole cycles so concatenated holds keep phase. 12 seeds"},
+    {"selfloop", 1200000, Expect::kOpen, Tier::kTeach,
+     "HOW LONG IS larynx -> ear -> larynx? The closed-loop direction is gated\n"
+     "  on this and `loop-latency` could only SUM it -- 165 ms under v62, 905\n"
+     "  under the position decoder, against ~200 ms for a gesture, with two of\n"
+     "  four terms estimated. Altered auditory feedback (Houde & Jordan): shift\n"
+     "  the F1 the creature hears OF ITSELF on a square wave, silent room, and\n"
+     "  cross-correlate produced F1 against the shift at lag. Dose-response on\n"
+     "  shift size plus a self_gain=0 structural null. 12 seeds"},
     {"glide", 1200000, Expect::kOpen, Tier::kTeach,
      "DOES THE VOICE FOLLOW A MOVING TARGET? `struct Word` is three scalars and\n"
      "  every caregiver render passes constants, so nothing this creature has heard\n"
@@ -803,6 +811,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "framecopy") ok = run_framecopy(dna_blob, ticks, verbose);
   else if (name == "framehold") ok = run_framehold(dna_blob, ticks, verbose);
   else if (name == "glide") ok = run_glide(dna_blob, ticks, verbose);
+  else if (name == "selfloop") ok = run_selfloop(dna_blob, ticks, verbose);
   else if (name == "adaptclock") ok = run_adaptclock(dna_blob, ticks, verbose);
   else if (name == "halfcenter") ok = run_halfcenter(dna_blob, ticks, verbose);
   else if (name == "regionband") ok = run_regionband(dna_blob, ticks, verbose);
