@@ -11161,6 +11161,50 @@ makes it worse; command smoothing cannot touch it. Closing the loop would —
 which is what DIVA does with a forward model, and
 `critic-is-not-a-forward-model` already refused the cheap version.
 
+### The loop-latency pre-flight, which partly reverses the recommendation above
+
+I said the velocity line should stop. The latency budget for closing the loop
+says v62 is the thing that makes a loop possible at all, so the line is
+incomplete rather than dead.
+
+**The loop is direct.** There is an `auditory → vocal` projection at 5 ms, so
+self-feedback need not pass through `central` — which matters, because
+`audprobe` measured central needing more than a second to resolve a word while
+B2 has it at 50 ms.
+
+    round trip                        POSITION   VELOCITY (v62)
+      command smoothing                 800 ms       60 ms
+      B2 resolves the sound              50 ms       50 ms
+      auditory->vocal synaptic delay      5 ms        5 ms
+      vocal rate_fast EMA                50 ms       50 ms
+      TOTAL                             905 ms      165 ms
+      usable bandwidth ~1/(2*pi*tau)    0.18 Hz     0.96 Hz
+
+**What needs what.** Shaping a *syllable* — ~200 ms, ~5 Hz — needs at least
+5 Hz of loop bandwidth and is **refused under both decoders**, by a factor of
+5 even in the best case. Holding a vowel steady across the 900 ms a word sounds
+needs about 1 Hz, and only the velocity decoder reaches it.
+
+So the loop is far too slow to *shape* a gesture and marginally fast enough to
+*hold* one — which is exactly the thing v62 cannot do on its own. And it is only
+fast enough under v62: the position decoder's 800 ms pole alone blows the budget
+by more than four times.
+
+**Read the margin honestly: 0.96 Hz against ~1 Hz is not a margin.** A loop
+operating at its bandwidth limit is marginally stable at best. Two of the four
+terms are also approximations rather than measurements — the 50 ms for B2 is a
+classifier resolving *word identity*, which is not the same task as resolving an
+F1 magnitude and may well be faster, and the rate EMA's 50 ms is a filter time
+constant standing in for a group delay. **The right next step is to measure the
+round trip rather than sum estimates of it**, which the project's own rule
+already says: prefer a null measured on the same protocol over one calculated.
+
+The measurement is the standard altered-auditory-feedback design — shift the F1
+the creature hears of *itself* by a known amount at a known time, and
+cross-correlate the vocal module's response against the shift at lag. Houde &
+Jordan's paradigm, and the first thing here that would use the larynx→ear loop
+as a **controller** rather than as the duty-cycle dial it currently is.
+
 ## Layout
 
 ```
