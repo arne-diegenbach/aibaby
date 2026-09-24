@@ -21769,7 +21769,8 @@ bool run_partprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
 struct AreaxArm {
   const char* name;
   uint32_t slots;
-  int target;      // VLTarget
+  int target;        // VLTarget
+  float vel_gain;    // DNA v62; 0 is the position decoder and is bit-identical
 };
 
 // `fixed+on` WAS THIS EXPERIMENT'S POWER GATE AND IT IS NOT ONE. Kept as a
@@ -21798,10 +21799,30 @@ struct AreaxArm {
 // marginals and an identical split, differing only in whether the target tracks
 // the word. That bounds what it claims to bound.
 constexpr AreaxArm kAreaxArms[] = {
-    {"off",      0, kVLTgtHeard},
-    {"on",       2, kVLTgtHeard},
-    {"random",   2, kVLTgtRandom},
-    {"fixed+on", 2, kVLTgtFixed},
+    {"off",      0, kVLTgtHeard, 0.0f},
+    {"on",       2, kVLTgtHeard, 0.0f},
+    {"random",   2, kVLTgtRandom, 0.0f},
+    {"fixed+on", 2, kVLTgtFixed, 0.0f},
+    // DNA v62 -- DOES THE EXTRA RANGE BUY NAMING? This is the only question that
+    // decides whether the velocity decoder matters. `leverprobe` showed it moves
+    // delivered F1 275.7 Hz against the position decoder's 82.5, past the ~230
+    // naming has always been short of. But that was ONE target. Naming needs
+    // DIFFERENT F1 for DIFFERENT WORDS, and `df1` here is exactly that.
+    //
+    // PRE-REGISTERED RISK, and it is specific: under velocity control a
+    // conditional bias produces a context-dependent VELOCITY, not a position. If
+    // the creature cannot null its velocity -- and 12/12 creatures ran to the
+    // 250 Hz clamp in leverprobe -- then two words may differ only in their RATE
+    // of approach and land at the SAME endpoint. That would make dF1 SMALLER
+    // under v62, not larger, and it would be the clamp finding predicting its own
+    // consequence. Either way this is decisive.
+    //
+    // `random-vel` is the matched control: identical structure, identical
+    // marginals, identical split, differing only in whether the target tracks the
+    // word -- and now also carrying the velocity decoder, so it shares the live
+    // mechanism with the arm it controls for.
+    {"on-vel",     2, kVLTgtHeard,  7123.0f},
+    {"random-vel", 2, kVLTgtRandom, 7123.0f},
 };
 constexpr uint32_t kAreaxArmCount = sizeof(kAreaxArms) / sizeof(kAreaxArms[0]);
 
@@ -21826,7 +21847,7 @@ bool run_areax(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
                 "    ./build/aibaby --dna ctx.toml --experiment areax\n");
     return false;
   }
-  constexpr uint32_t kReps = 3;
+  constexpr uint32_t kReps = 12;
   const size_t slots_off = offsetof(aibaby::DnaHeader, exploration) +
                            offsetof(aibaby::DnaExploration, context_slots);
   instrument("areax", dna.header().seed, ticks / kVLTrialTicks, "trials per arm");
@@ -21847,13 +21868,33 @@ bool run_areax(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
 
   std::printf("  %-6s %-8s %-9s %-9s %-10s %-10s %s\n", "seed", "arm", "dF1 (Hz)",
               "in ctx", "table div", "shared", "change");
-  for (uint32_t r = 0; r < kReps; ++r) {
-    for (uint32_t a = 0; a < kAreaxArmCount; ++a) {
+  // PARALLELISED 2026-09-24. The sequential loop capped this at kReps = 3, and at
+  // 3 creatures the experiment refused itself on its own power gate -- the
+  // conditional arm's error reduction was +10.5 +/- 7.4 against a bar of
+  // 2*(7.4+0.4). `parallel_reps` is bit-identical and `run_vocallearn_session` is
+  // already called inside it elsewhere in this file, so this buys creatures and
+  // changes no number. Power arithmetic for the gate: 9.9 > 2*7.8*sqrt(3/n)
+  // needs n > 7.4, so 12.
+  struct AXCell {
+    bool ok = false;
+    double d1 = 0, ch = 0, pr = 0, dv = 0, sh = 0;
+    uint32_t scored = 0, skipped = 0;
+  };
+  const uint32_t njobs = kReps * kAreaxArmCount;
+  const std::vector<AXCell> cells = parallel_reps<AXCell>(njobs, [&](uint32_t i) {
+    AXCell cell;
+    const uint32_t r = i / kAreaxArmCount, a = i % kAreaxArmCount;
+    {
       std::vector<uint8_t> variant = blob;
       const uint64_t seed = dna.header().seed + r * 7919ull;
       std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
       const uint32_t slots = kAreaxArms[a].slots;
       std::memcpy(variant.data() + slots_off, &slots, sizeof(slots));
+      {
+        const size_t voff = offsetof(aibaby::DnaHeader, vocal) +
+                            offsetof(aibaby::DnaVocal, f1_velocity_gain);
+        std::memcpy(variant.data() + voff, &kAreaxArms[a].vel_gain, sizeof(float));
+      }
 
       CtxDrive drive;
       drive.module = ctx_module;
@@ -21867,20 +21908,35 @@ bool run_areax(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
       reg.scold = kScoldValue;
       const VLRun run = run_vocallearn_session(variant, ticks, kVLTaught, nullptr, reg,
                                                kAreaxArms[a].target, &drive);
-      if (!run.ok) {
+      cell.scored = run.scored;
+      cell.skipped = run.skipped;
+      if (!run.ok) return cell;
+      cell.ok = true;
+      cell.d1 = std::fabs(run.f1_by_word[0] - run.f1_by_word[1]);
+      cell.ch = vl_change(run);
+      cell.pr = run.ctx_present_frac;
+      cell.dv = run.ctx_table_div;
+      cell.sh = run.ctx_shared_mag;
+      parallel_note("  [%u/%u] seed %u %-10s dF1 %.1f\n", i + 1, njobs, r,
+                    kAreaxArms[a].name, cell.d1);
+    }
+    return cell;
+  });
+  for (uint32_t r = 0; r < kReps; ++r) {
+    for (uint32_t a = 0; a < kAreaxArmCount; ++a) {
+      const AXCell& c = cells[r * kAreaxArmCount + a];
+      if (!c.ok) {
         std::printf("  %-6u %-8s (inconclusive: %u scored, %u skipped)\n", r,
-                    kAreaxArms[a].name, run.scored, run.skipped);
+                    kAreaxArms[a].name, c.scored, c.skipped);
         continue;
       }
-      const double d1 = std::fabs(run.f1_by_word[0] - run.f1_by_word[1]);
-      df1[a].push_back(d1);
-      change[a].push_back(vl_change(run));
-      present[a].push_back(run.ctx_present_frac);
-      div[a].push_back(run.ctx_table_div);
-      shared[a].push_back(run.ctx_shared_mag);
+      df1[a].push_back(c.d1);
+      change[a].push_back(c.ch);
+      present[a].push_back(c.pr);
+      div[a].push_back(c.dv);
+      shared[a].push_back(c.sh);
       std::printf("  %-6u %-8s %-9.1f %-9.2f %-10.4f %-10.4f %+.1f\n", r,
-                  kAreaxArms[a].name, d1, run.ctx_present_frac, run.ctx_table_div,
-                  run.ctx_shared_mag, vl_change(run));
+                  kAreaxArms[a].name, c.d1, c.pr, c.dv, c.sh, c.ch);
     }
   }
 
@@ -21954,6 +22010,53 @@ bool run_areax(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
                 "  one level up. Check that reward is reaching the larynx at all.\n",
                 m_dv[kOn], s_dv[kOn], m_sh[kOn]);
     return false;
+  }
+
+  // --- DNA v62: DOES THE EXTRA RANGE BUY NAMING? --------------------------
+  // The only question that decides whether the velocity decoder matters.
+  // `leverprobe` moved delivered F1 275.7 Hz against the position decoder's
+  // 82.5, past the ~230 naming needs -- but on ONE target. Naming needs
+  // DIFFERENT F1 for DIFFERENT words, which is `df1`.
+  //
+  // PRE-REGISTERED, and the risk is specific: under velocity a conditional bias
+  // sets a context-dependent VELOCITY, not a position. If the creature cannot
+  // null it -- 12/12 ran to the 250 Hz clamp in leverprobe -- two words may
+  // differ only in RATE OF APPROACH and land at the SAME endpoint, making dF1
+  // SMALLER under v62. Both outcomes are decisive and both are reported.
+  {
+    const uint32_t kOnV = 4, kRndV = 5;
+    const double pos_gap = m_d1[kOn] - m_d1[kRnd];
+    const double pos_se = s_d1[kOn] + s_d1[kRnd];
+    const double vel_gap = m_d1[kOnV] - m_d1[kRndV];
+    const double vel_se = s_d1[kOnV] + s_d1[kRndV];
+    std::printf("\n  DNA v62 -- DOES THE RANGE BUY NAMING?\n");
+    std::printf("    position   on %.1f  random %.1f   conditional gap %+.1f +/- %.1f\n",
+                m_d1[kOn], m_d1[kRnd], pos_gap, pos_se);
+    std::printf("    velocity   on %.1f  random %.1f   conditional gap %+.1f +/- %.1f\n",
+                m_d1[kOnV], m_d1[kRndV], vel_gap, vel_se);
+    std::printf("    the bar is `ctxbias`'s %.1f Hz -- a PERFECT conditional bias on\n"
+                "    this readout. position reaches %.0f%%, velocity %.0f%%.\n",
+                kAreaxOracleDF1, 100.0 * m_d1[kOn] / kAreaxOracleDF1,
+                100.0 * m_d1[kOnV] / kAreaxOracleDF1);
+    const bool vel_real = vel_gap > 2.0 * vel_se;
+    const bool vel_better = vel_gap > pos_gap + (pos_se + vel_se);
+    std::printf("\n    VERDICT: ");
+    if (vel_better && vel_real)
+      std::printf("THE RANGE BUYS NAMING. The conditional gap is %+.1f Hz under\n"
+                  "    velocity against %+.1f under position, clear of both SEs. The extra\n"
+                  "    range reaches the quantity naming is short of.\n", vel_gap, pos_gap);
+    else if (!vel_real)
+      std::printf("REFUSED -- the velocity arm's conditional gap is %+.1f +/- %.1f,\n"
+                  "    inside 2 SE of its own matched control. Whatever v62 buys on ONE\n"
+                  "    target does not become naming. Check whether both words ran to the\n"
+                  "    clamp: that is the pre-registered failure and it would show as a\n"
+                  "    LOW gap with HIGH single-target movement.\n", vel_gap, vel_se);
+    else
+      std::printf("NO GAIN -- velocity's conditional gap %+.1f does not beat\n"
+                  "    position's %+.1f once both SEs are allowed. The extra range exists\n"
+                  "    and naming does not use it, which closes the velocity line for the\n"
+                  "    naming ceiling whatever it does on a single target.\n",
+                  vel_gap, pos_gap);
   }
 
   const double lift = m_d1[kOn] - m_d1[kOff];

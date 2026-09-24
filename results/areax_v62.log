@@ -1,0 +1,48 @@
+experiment: areax
+  instrument        areax   trial seed 00000000013527c9   1214 trials per arm
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  question          DNA v51 splits node perturbation's excitability table
+                    one-per-context. Can the estimator that met G2 at
+                    twelve sigma find a CONDITIONAL optimum now that one
+                    is representable?
+  the bar           236 Hz of dF1 -- what `ctxbias` measured a PERFECT
+                    conditional bias achieves on this readout. Reaching a
+                    small fraction of it is a real result: it would say the
+                    estimator cannot find the optimum even when it exists.
+  arm               taught, conditional target. `random` is the
+                    matched-marginal control pgprobe exists for.
+
+  seed   arm      dF1 (Hz)  in ctx    table div  shared     change
+  0      off      0.1       0.00      0.0000     0.0000     +1.4
+  0      on       10.1      1.00      0.0199     0.0131     -4.3
+  0      random   20.5      1.00      0.0300     0.0192     +0.8
+  0      fixed+on 68.1      1.00      0.0232     0.0145     -4.2
+  0      on-vel   123.4     1.00      0.0264     0.0175     +15.5
+  0      random-vel 17.5      1.00      0.0188     0.0176     +4.2
+  1      off      94.2      0.00      0.0000     0.0000     +2.4
+  1      on       98.7      1.00      0.0281     0.0171     +17.2
+  1      random   1.0       1.00      0.0233     0.0167     -0.2
+  1      fixed+on 20.9      1.00      0.0311     0.0189     -11.7
+  1      on-vel   16.1      1.00      0.0210     0.0133     -10.3
+  1      random-vel 76.0      1.00      0.0249     0.0190     -1.1
+  2      off      29.4      0.00      0.0000     0.0000     -2.0
+  2      on       108.0     1.00      0.0301     0.0188     +18.7
+  2      random   56.0      1.00      0.0255     0.0182     +1.2
+  2      fixed+on 44.5      1.00      0.0258     0.0154     -0.8
+  2      on-vel   24.3      1.00      0.0234     0.0158     +3.8
+  2      random-vel 40.7      1.00      0.0225     0.0163     +0.8
+
+  arm       dF1 (Hz)         in ctx        table div       |ctx bias|    change
+  off       41.2 +/- 27.8    0.00 +/- 0.00 0.0000 +/- 0.0000 0.0000 +/- 0.0000 +0.6 +/- 1.3
+  on        72.3 +/- 31.2    1.00 +/- 0.00 0.0260 +/- 0.0031 0.0164 +/- 0.0017 +10.5 +/- 7.4
+  random    25.8 +/- 16.1    1.00 +/- 0.00 0.0262 +/- 0.0020 0.0180 +/- 0.0007 +0.6 +/- 0.4
+  fixed+on  44.5 +/- 13.6    1.00 +/- 0.00 0.0267 +/- 0.0023 0.0163 +/- 0.0013 -5.6 +/- 3.2
+  on-vel    54.6 +/- 34.5    1.00 +/- 0.00 0.0236 +/- 0.0016 0.0155 +/- 0.0012 +3.0 +/- 7.5
+  random-vel 44.8 +/- 17.0    1.00 +/- 0.00 0.0220 +/- 0.0018 0.0176 +/- 0.0008 +1.3 +/- 1.6
+
+  NOTHING WAS LEARNED -- the conditional arm reduces its own error by
+  +10.5 +/- 7.4 against +0.6 +/- 0.4 for a target drawn independently of
+  the word. The mechanism is running (the tables diverged) and reward is
+  not moving the creature toward the conditional target at all, so the
+  dF1 numbers below are not about conditional behaviour.

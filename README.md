@@ -11082,6 +11082,46 @@ velocity*, which is what DIVA gets from a forward model and this creature does
 not have.
 
 
+### The range does not become naming, and the matched control is what shows it
+
+v62 moves delivered F1 275.7 Hz on **one** target. Naming needs *different* F1
+for *different words*, which is `areax`'s `df1`, scored against `ctxbias`'s
+235.9 Hz — what a perfect conditional bias achieves on this readout.
+
+    arm          dF1 (Hz)        conditional gap vs its own matched control
+    position     on     51.5     +31.9 +/- 16.2   (2.0 SE)
+    velocity     on     85.4     +18.9 +/- 40.1   (0.5 SE)
+    position     random 19.6
+    velocity     random 66.5     <- the tell
+
+**REFUSED.** The velocity arm's conditional gap sits inside 2 SE of its own
+control. And the reason is legible in one number: `random-vel` reads 66.5 Hz
+against `random`'s 19.6. That control's target is drawn *independently of the
+word*, so its dF1 carries no conditional information whatsoever — yet it more
+than triples under velocity.
+
+**The arithmetic confirms it exactly.** `dF1 = |F1(word0) − F1(word1)|` is a
+difference of two noisy means, so noise alone biases it upward: for independent
+normals `E|X−Y| = σ√2·√(2/π)`. Inverting, `random`'s 19.6 Hz implies a per-word
+σ of 17.4 and `random-vel`'s 66.5 implies 58.9 — a ratio of **3.39×** against
+the **3.82×** ratio of delivered-F1 standard deviations measured independently
+in `leverprobe` (108.5 vs 28.4 Hz). The control's entire apparent gain is the
+velocity decoder's own wander.
+
+So v62 raises the *noise floor* of the naming statistic rather than its signal.
+The extra range is real, it is reward-driven on a single target, and it does not
+become conditional behaviour. The matched-marginal control absorbed it precisely
+as designed — this is what `pgprobe` was built for, working.
+
+**Two process notes.** The first attempt refused itself at `areax`'s own power
+gate (conditional error reduction +10.5 ± 7.4 against a bar of 15.6) at
+`kReps = 3`, before reaching the v62 block — the gate doing its job on a number
+I would otherwise have read. Power arithmetic set the fix at n > 7.4, so 12, and
+the sequential loop was parallelised to afford it. `run_vocallearn_session` is
+already called inside `parallel_reps` elsewhere, and **the first three seeds
+reproduce the sequential run to every printed decimal**, which is the check that
+the refactor changed nothing.
+
 ## Layout
 
 ```
