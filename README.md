@@ -11122,6 +11122,45 @@ already called inside `parallel_reps` elsewhere, and **the first three seeds
 reproduce the sequential run to every printed decimal**, which is the check that
 the refactor changed nothing.
 
+### Why the velocity line closes on an argument rather than a null
+
+The obvious repair for v62 is to smooth the motor command harder and cut the
+3.8× variance that stopped the range becoming naming. **It cannot work, and that
+is arithmetic rather than another run.**
+
+Under velocity control `F1(T) = g·∫c(t)dt`, so `Var[F1(T)] = g²·S_c(0)·T`, where
+`S_c(0)` is the command noise's power spectral density **at DC**. A first-order
+low-pass with constant τ attenuates `S_c(f)` for `f > 1/τ` and leaves `S_c(0)`
+exactly unchanged. The random walk is driven by the low-frequency part of the
+command noise — precisely the part any smoothing passes untouched. More
+smoothing removes the jitter you can see and none of the walk that matters.
+
+Only two things bound an integrator: a **leak**, which makes the steady state
+`g·τ·(c−0.5)` — a position decoder with a renamed constant, already measured and
+refused — or **feedback**.
+
+So the 3.8× variance is not a tuning defect of v62. It is what open-loop
+velocity control *is*. The position decoder's ceiling and the velocity decoder's
+variance are the same fact seen twice: a bounded command mapped to position
+gives bounded reach, and the same command mapped to velocity gives unbounded
+reach with unbounded drift. **Reach and aim trade off, and nothing inside the
+decoder changes the exchange rate.**
+
+**What the line established, and it is worth keeping.** The naming ceiling is an
+identity, not a tuning failure — the centroid moves ±0.063, the lerp spans
+750 Hz, and the position decoder delivers 82.5 Hz where 95 was predicted. That
+prediction was made before the measurement and confirmed on an independent
+statistic in a different experiment. Fourteen routes at the naming ceiling
+returned ×1.1 because none of them touched it, and v62 touched it: 275.7 Hz,
+×3.3, past the ~230 Hz naming has always been short of.
+
+**And what it refuted was my own framing of the problem.** I took the ceiling to
+be a *reach* problem, and it is a *control* problem. The creature can produce a
+275 Hz excursion and cannot aim it. Region targets do not fix that; more gain
+makes it worse; command smoothing cannot touch it. Closing the loop would —
+which is what DIVA does with a forward model, and
+`critic-is-not-a-forward-model` already refused the cheap version.
+
 ## Layout
 
 ```
