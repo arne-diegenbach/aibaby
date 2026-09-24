@@ -5760,6 +5760,28 @@ struct RTRow {
   // A compound-symmetry model puts the crossover at rho = 0.466, but rather than
   // assume that shape this records the FULL second moments of the group, so the
   // SNR of any linear readout w is |w.D| / sqrt(w' C w) computed exactly.
+  // DNA v62. The DELIVERED F1 in Hz, first and last third of teaching. Every
+  // other F1 quantity here is a centroid or a normalised error, and neither can
+  // be compared with the ~230 Hz naming needs or with the position decoder's
+  // 95 Hz ceiling. Under velocity control the centroid no longer maps to F1 at
+  // all, so this is the only quantity the two decoders can be scored on.
+  double f1_hz_early = 0.0, f1_hz_late = 0.0;
+  // AND F2, because v62 changes ONLY F1's readout and the reported err is a SUM
+  // over both formants. The first v62 run improved delivered F1 x3.3 while total
+  // err moved only +13%, which by subtraction means F2 got WORSE by ~0.34 in
+  // |log| -- a factor of 1.4. Inferred from two printed numbers is not measured,
+  // so this records it. If v62 trades F2 for F1 the win is hollow: naming needs
+  // the right VOWEL, not the right F1.
+  double f2_hz_early = 0.0, f2_hz_late = 0.0;
+  // The clamp check. f1_min is a hard floor and a mean 116 Hz clear of it can
+  // still hide creatures sitting on it.
+  double f1_hz_min = 1e9;
+  // THE VARIANCE, and the gap it opens. `err` averages |log(f1/320)| PER SAMPLE,
+  // so a creature whose F1 straddles the target scores far worse than its MEAN
+  // suggests. Run 2 implied a gap of 0.50 against 0.13 by subtraction; this
+  // measures both sides of it instead.
+  double f1_hz_sq = 0.0;      // for the SD of delivered F1 over late teaching
+  double f1_err_late = 0.0;   // mean per-sample |log(f1/target)| over the same
   double f1_cov[kRTF1Max * kRTF1Max] = {};  // sum of r_j * r_k over teach-phase samples
   double f1_csum[kRTF1Max] = {};            // sum of r_k over the SAME samples
   uint64_t f1_cov_n = 0;                    // and their count, so C is a covariance
@@ -6429,6 +6451,18 @@ RTRow run_retain_arm(const std::vector<uint8_t>& blob, uint64_t ticks,
             else { row.f1_cent_gap += cent; ++row.f1_gap_samp_all; }
             if (early) row.f1_cent_early += cent;
             if (late) row.f1_cent_late += cent;
+          }
+          {
+            const double fhz = double(s.brain.voice().f1);
+            const double f2hz = double(s.brain.voice().f2);
+            if (early) { row.f1_hz_early += fhz; row.f2_hz_early += f2hz; }
+            if (late)  { row.f1_hz_late  += fhz; row.f2_hz_late  += f2hz; }
+            if (in_teach_phase && fhz < row.f1_hz_min) row.f1_hz_min = fhz;
+            if (late) {
+              row.f1_hz_sq += fhz * fhz;
+              if (fhz > 1.0)
+                row.f1_err_late += std::fabs(std::log(fhz / double(first.f1)));
+            }
           }
           if (early) ++row.f1_samp_early;
           if (late) ++row.f1_samp_late;
@@ -9805,11 +9839,35 @@ bool run_blockanchor(const std::vector<uint8_t>& blob, uint64_t ticks, bool verb
 // than a dead end: IP drives every neuron toward the SAME rate, so it actively
 // flattens exactly this profile. If the profile is flat, then neither position
 // nor rate-change explains 53-vs-9, and the cause is not in the readout at all.
-struct LPArm { const char* name; bool teach; };
+struct LPArm { const char* name; bool teach; float vel_gain; };
 const LPArm kLPArms[] = {
-    {"taught", true},   // the lesson, unblocked: `blockanchor`'s b0
-    {"quiet", false},   // never taught. The profile the creature came with, so a
-                        // rate change that is just settling cannot read as a lesson.
+    {"taught", true, 0.0f},   // the lesson, unblocked: `blockanchor`'s b0
+    {"quiet", false, 0.0f},   // never taught. The profile the creature came with, so a
+                              // rate change that is just settling cannot read as a lesson.
+    // DNA v62 -- THE DECISIVE TEST, and the one `glide` structurally could not ask.
+    // glide measured PASSIVE FOLLOWING and refused it: the velocity decoder tracks
+    // 9.8% of allowance against the position decoder's 2.0%, but its integrator
+    // random-walks at 154 Hz sd and it beat its matched null by only 2.0 SE.
+    //
+    // The claim the architecture change was made for is different and untested:
+    // that REWARD CAN SHAPE the walk. The position decoder's ceiling is an
+    // identity -- the centroid moves +-0.063, the lerp spans 750 Hz, so a taught
+    // lesson can deliver at most ~47 Hz from rest and a two-word swing of 95 Hz,
+    // against the ~230 Hz absolute naming needs. Under velocity that bound does
+    // not exist, because the same deflection buys time rather than distance.
+    //
+    // PRE-REGISTERED: the statistic is DELIVERED F1 in Hz, |late - early| over
+    // teaching toward the 320 Hz target. v62 EARNS ITS PLACE only if the taught
+    // velocity arm moves delivered F1 materially further than the taught position
+    // arm AND its own untaught control does not move as far -- the second half
+    // matters because a 154 Hz random walk will happily produce a large |late -
+    // early| with no lesson in it at all. That is why `quiet-vel` exists.
+    //
+    // WHAT REFUSES THE WHOLE LINE: taught velocity not exceeding the position
+    // arm's movement, which would mean the extra range is unreachable BY REWARD
+    // and the walk is noise to the learner rather than exploration.
+    {"taught-vel", true, 7123.0f},
+    {"quiet-vel", false, 7123.0f},
 };
 constexpr uint32_t kLPArmCount = sizeof(kLPArms) / sizeof(kLPArms[0]);
 
@@ -9883,6 +9941,11 @@ bool run_leverprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
     std::vector<uint8_t> variant = blob;
     const uint64_t seed = dna0.header().seed + r * 7919ull;
     std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+    {
+      const size_t off = offsetof(aibaby::DnaHeader, vocal) +
+                         offsetof(aibaby::DnaVocal, f1_velocity_gain);
+      std::memcpy(variant.data() + off, &kLPArms[a].vel_gain, sizeof(float));
+    }
     RTConfig cfg;
     cfg.name = kLPArms[a].name;
     cfg.teach = kLPArms[a].teach;
@@ -10166,6 +10229,145 @@ bool run_leverprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
     }
   }
 
+
+
+  // --- DNA v62: DOES REWARD REACH THE EXTRA RANGE? -------------------------
+  // Delivered F1 in Hz, early third of teaching to late. Every other F1 number
+  // in this probe is a centroid or a normalised error; neither can be compared
+  // with the position decoder's 95 Hz ceiling or with the ~230 Hz naming needs,
+  // and under velocity control the centroid does not map to F1 at all.
+  {
+    std::printf("\n  DNA v62 -- DELIVERED F1 IN Hz, early third of teaching to late.\n"
+                "  The target is 320 Hz and the creature rests near 624, so a lesson\n"
+                "  that reaches moves DOWN. The position decoder's identity bound is\n"
+                "  ~47 Hz from rest; naming needs ~230.\n");
+    std::printf("    %-11s %-11s %-11s %-11s %s\n", "arm", "early Hz", "late Hz",
+                "change", "creatures");
+    double mv[kLPArmCount] = {}, sv[kLPArmCount] = {};
+    bool okv[kLPArmCount] = {};
+    for (uint32_t a = 0; a < kLPArmCount; ++a) {
+      std::vector<double> d;
+      double me = 0.0, ml = 0.0;
+      uint32_t nc = 0;
+      for (uint32_t r = 0; r < kReps; ++r) {
+        const Cell& c = cells[r * kLPArmCount + a];
+        if (!c.ok || !c.row.f1_samp_early || !c.row.f1_samp_late) continue;
+        const double e = c.row.f1_hz_early / double(c.row.f1_samp_early);
+        const double l = c.row.f1_hz_late / double(c.row.f1_samp_late);
+        d.push_back(l - e);
+        me += e; ml += l; ++nc;
+      }
+      if (nc < 3) { std::printf("    %-11s too few creatures\n", kLPArms[a].name); continue; }
+      mv[a] = ctx_mean_se(d, &sv[a]);
+      okv[a] = true;
+      std::printf("    %-11s %-11.1f %-11.1f %+7.1f +/- %-5.1f %u\n", kLPArms[a].name,
+                  me / double(nc), ml / double(nc), mv[a], sv[a], nc);
+    }
+    // THE ATTACK ON THE FIRST v62 RUN, added after it came back positive.
+    // Three holes in |late - early|, and the second one is the dangerous one.
+    //   1. The early baselines are NOT matched -- the velocity arm read 484 Hz
+    //      where the position arm read 600, so it had already moved 158 Hz before
+    //      the window opened and the two statistics span different parts of two
+    //      different trajectories. Scoring each decoder against ITS OWN untaught
+    //      control removes that completely, and it is paired by seed.
+    //   2. `err` is a SUM over BOTH formants and v62 changes only F1's readout.
+    //      Run 1 improved delivered F1 x3.3 while total err moved +13%, which by
+    //      subtraction puts F2 WORSE by ~0.34 in |log| -- a factor of 1.4. If v62
+    //      trades F2 for F1 the win is hollow.
+    //   3. f1_min is a hard floor; a mean clear of it can hide creatures on it.
+    {
+      std::printf("\n  THE ATTACK -- each decoder against ITS OWN untaught control,\n"
+                  "  paired by seed, plus the F2 it may be paying with.\n");
+      std::printf("    %-11s %-14s %-14s %-12s %s\n", "decoder", "F1 from rest",
+                  "F2 from rest", "min F1 Hz", "at clamp");
+      const uint32_t pos[2] = {0u, 1u}, vel[2] = {2u, 3u};
+      for (uint32_t k = 0; k < 2u; ++k) {
+        const uint32_t ta = k ? vel[0] : pos[0], qa = k ? vel[1] : pos[1];
+        std::vector<double> d1, d2;
+        double fmin = 1e9;
+        uint32_t nclamp = 0, nc = 0;
+        for (uint32_t r = 0; r < kReps; ++r) {
+          const Cell& ct = cells[r * kLPArmCount + ta];
+          const Cell& cq = cells[r * kLPArmCount + qa];
+          if (!ct.ok || !cq.ok) continue;
+          if (!ct.row.f1_samp_late || !cq.row.f1_samp_late) continue;
+          d1.push_back(cq.row.f1_hz_late / double(cq.row.f1_samp_late) -
+                       ct.row.f1_hz_late / double(ct.row.f1_samp_late));
+          d2.push_back(cq.row.f2_hz_late / double(cq.row.f1_samp_late) -
+                       ct.row.f2_hz_late / double(ct.row.f1_samp_late));
+          if (ct.row.f1_hz_min < fmin) fmin = ct.row.f1_hz_min;
+          if (ct.row.f1_hz_min <= double(dna0.header().vocal.f1_min) + 1.0) ++nclamp;
+          ++nc;
+        }
+        if (nc < 3) continue;
+        double s1 = 0.0, s2 = 0.0;
+        const double m1 = ctx_mean_se(d1, &s1), m2 = ctx_mean_se(d2, &s2);
+        std::printf("    %-11s %+7.1f +/- %-5.1f %+7.1f +/- %-5.1f %-12.1f %u/%u\n",
+                    k ? "velocity" : "position", m1, s1, m2, s2, fmin, nclamp, nc);
+        // THE VARIANCE GAP, measured. `err` averages |log(f1/320)| per sample, so
+        // a creature straddling the target scores far worse than its mean says.
+        std::vector<double> sdv, eavg, emean;
+        for (uint32_t r = 0; r < kReps; ++r) {
+          const Cell& ct = cells[r * kLPArmCount + ta];
+          if (!ct.ok || !ct.row.f1_samp_late) continue;
+          const double n2 = double(ct.row.f1_samp_late);
+          const double mu = ct.row.f1_hz_late / n2;
+          const double va = ct.row.f1_hz_sq / n2 - mu * mu;
+          sdv.push_back(va > 0.0 ? std::sqrt(va) : 0.0);
+          eavg.push_back(ct.row.f1_err_late / n2);
+          emean.push_back(std::fabs(std::log(mu / 320.0)));
+        }
+        if (sdv.size() >= 3) {
+          double q1, q2, q3;
+          const double msd = ctx_mean_se(sdv, &q1);
+          const double mea = ctx_mean_se(eavg, &q2);
+          const double mem = ctx_mean_se(emean, &q3);
+          std::printf("      delivered F1 sd %.1f Hz | err on the MEAN %.3f | err AVERAGED"
+                      " %.3f | gap %.3f\n", msd, mem, mea, mea - mem);
+        }
+      }
+      // SIGN, stated once because I got it wrong in the first draft of this very
+      // block: both columns are QUIET minus TAUGHT. F1's target (320) is BELOW
+      // rest, so POSITIVE means the lesson moved F1 down = good. F2's target
+      // (2500) is ABOVE rest, so NEGATIVE means taught sits higher = good. The
+      // two columns therefore want OPPOSITE signs, which is exactly the trap.
+      std::printf("    both columns are QUIET minus TAUGHT. F1's target is BELOW rest so\n"
+                  "    POSITIVE is good; F2's is ABOVE rest so NEGATIVE is good. The two\n"
+                  "    want opposite signs.\n");
+    }
+    if (okv[0] && okv[2] && okv[3]) {
+      // The taught contrast, and the control that stops a random walk being read
+      // as a lesson. `quiet-vel` carries the SAME integrator and no teaching, so
+      // whatever it moves is the walk alone.
+      const double d_pos = mv[0] < 0.0 ? -mv[0] : mv[0];
+      const double d_vel = mv[2] < 0.0 ? -mv[2] : mv[2];
+      const double d_walk = mv[3] < 0.0 ? -mv[3] : mv[3];
+      const double se_tv = std::sqrt(sv[2] * sv[2] + sv[3] * sv[3]);
+      const double t_tv = se_tv > 0.0 ? (d_vel - d_walk) / se_tv : 0.0;
+      std::printf("\n    position, taught      %6.1f Hz\n", d_pos);
+      std::printf("    velocity, taught      %6.1f Hz\n", d_vel);
+      std::printf("    velocity, UNTAUGHT    %6.1f Hz   <- the walk, with no lesson\n", d_walk);
+      std::printf("    taught minus walk     %+6.1f Hz  (%+.1f SE)\n", d_vel - d_walk, t_tv);
+      const bool further = d_vel > 1.5 * d_pos;
+      const bool real = t_tv >= 3.0;
+      std::printf("\n    VERDICT: ");
+      if (further && real)
+        std::printf("v62 REACHES FURTHER BY REWARD. Delivered F1 moves %.1f Hz\n"
+                    "    under velocity against %.1f under position, and %+.1f SE above its\n"
+                    "    own untaught walk. The identity bound is broken by teaching, not\n"
+                    "    by wandering.\n", d_vel, d_pos, t_tv);
+      else if (!real)
+        std::printf("REFUSED -- the taught velocity arm is only %+.1f SE above\n"
+                    "    its own UNTAUGHT control (3.0 required). Whatever moved delivered\n"
+                    "    F1 is the integrator's walk, not the lesson. This is the failure\n"
+                    "    `glide` already showed, now measured where it matters.\n", t_tv);
+      else
+        std::printf("REFUSED -- teaching under velocity does not move delivered\n"
+                    "    F1 materially further than under position (%.1f vs %.1f Hz, 1.5x\n"
+                    "    required). The extra range exists and reward does not reach it,\n"
+                    "    which closes the velocity line.\n", d_vel, d_pos);
+    }
+  }
 
   // --- what the measured quantities predict, against what was measured ------
   // The five costs are from `blockwhere` and `blockanchor` on this genome and

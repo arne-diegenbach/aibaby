@@ -10969,6 +10969,66 @@ under velocity control, where reward can shape the walk rather than fight it.
 `glide` cannot ask that. Until it is asked, v62 is a decoder that moves more and
 listens no better, and it stays OFF.
 
+
+### And under teaching it breaks the bound — the first thing in this project to
+
+`glide` refused passive following, but the architecture was never changed for
+passive following. The claim was that **reward** could reach range a position
+decoder cannot, and `leverprobe` asks it directly: teach a fixed 320 Hz target
+and measure delivered F1 in Hz. The anchor holds — the position arm learned
++0.1718 against `blockanchor`'s +0.1676 — so this is the creature those costs
+came from.
+
+Each decoder scored against **its own untaught control**, paired by seed,
+12 creatures:
+
+    decoder     F1 from rest      F2 from rest      min F1   at clamp
+    position    + 82.5 +/-  8.1   -180.4 +/- 15.1   400.0    0/12
+    velocity    +275.7 +/- 11.8   - 49.5 +/- 13.3   250.0    12/12
+
+    (both columns are quiet minus taught; F1's target is BELOW rest so
+     positive is good, F2's is ABOVE rest so negative is good)
+
+**The position arm lands at 82.5 Hz against the 95 Hz identity bound predicted
+from the lerp.** That is the strongest check the argument has: the ceiling was
+derived from the centroid's ±0.063 and it shows up where it was predicted, on a
+different statistic, in a different experiment. The velocity arm reaches
+275.7 Hz — ×3.3, and past the ~230 Hz absolute naming has always been short of.
+
+**And it survives the variance penalty it pays.** `err` averages
+`|log(f1/320)|` per sample, so a creature straddling the target scores worse
+than its mean:
+
+    decoder    delivered F1 sd    err on the MEAN    err AVERAGED    gap
+    position        28.4 Hz            0.527            0.525      -0.001
+    velocity       108.5 Hz            0.133            0.236      +0.103
+
+The velocity decoder is **3.8× more variable**, and pays 0.103 for it. After
+paying, the F1 error reward actually sees is **0.236 against 0.525 — more than
+halved.**
+
+**Four things keep this honest.** Every velocity creature touches the 250 Hz
+floor (12/12), so the mechanism is running against its clamp and 275.7 Hz is not
+a clean measure of an unclamped decoder. F2, which v62 does not touch, improves
+less under velocity (−49.5 against −180.4). This is one seed family. And it is a
+**fixed-target** lesson, not naming: 230 Hz was the requirement for producing
+*different* F1 for *different words*, which needs conditional production and is
+untested here. Clearing 230 on one target is necessary, not sufficient.
+
+**Two of my own inferences died on the way.** I deduced by subtraction that v62
+traded F2 for F1, losing 0.34 in log terms; measured, F2 moves the right way in
+both arms and there is no trade. I then estimated the variance gap at ~0.37;
+measured, it is 0.103. Both errors came from the same source: `err_before` is
+taken in the first third of teaching, by which point the velocity creature has
+already moved 158 Hz, so `err_before − err_taught` is not comparable across
+arms — the same unmatched-baseline flaw as the `|late − early|` statistic I
+pre-registered. **Only the absolute end-state numbers above are clean, and only
+those are quoted.**
+
+**The next move is not more gain.** It is less variance, or a soft boundary
+instead of a hard clamp — which is what region targets were for, and this is the
+first context in which that idea has something to bite on.
+
 ## Layout
 
 ```
