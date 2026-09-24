@@ -5780,6 +5780,10 @@ struct RTRow {
   // so a creature whose F1 straddles the target scores far worse than its MEAN
   // suggests. Run 2 implied a gap of 0.50 against 0.13 by subtraction; this
   // measures both sides of it instead.
+  // TIME AT THE FLOOR. `min F1` said 12/12 creatures TOUCH the clamp; it cannot
+  // say whether they PARK there. Those need different fixes -- parking is a
+  // controller that cannot null its velocity, touching is ordinary overshoot.
+  uint64_t f1_at_floor = 0;
   double f1_hz_sq = 0.0;      // for the SD of delivered F1 over late teaching
   double f1_err_late = 0.0;   // mean per-sample |log(f1/target)| over the same
   double f1_cov[kRTF1Max * kRTF1Max] = {};  // sum of r_j * r_k over teach-phase samples
@@ -6460,6 +6464,7 @@ RTRow run_retain_arm(const std::vector<uint8_t>& blob, uint64_t ticks,
             if (in_teach_phase && fhz < row.f1_hz_min) row.f1_hz_min = fhz;
             if (late) {
               row.f1_hz_sq += fhz * fhz;
+              if (fhz <= double(s.dna.header().vocal.f1_min) + 5.0) ++row.f1_at_floor;
               if (fhz > 1.0)
                 row.f1_err_late += std::fabs(std::log(fhz / double(first.f1)));
             }
@@ -9839,10 +9844,10 @@ bool run_blockanchor(const std::vector<uint8_t>& blob, uint64_t ticks, bool verb
 // than a dead end: IP drives every neuron toward the SAME rate, so it actively
 // flattens exactly this profile. If the profile is flat, then neither position
 // nor rate-change explains 53-vs-9, and the cause is not in the readout at all.
-struct LPArm { const char* name; bool teach; float vel_gain; };
+struct LPArm { const char* name; bool teach; float vel_gain; double band; };
 const LPArm kLPArms[] = {
-    {"taught", true, 0.0f},   // the lesson, unblocked: `blockanchor`'s b0
-    {"quiet", false, 0.0f},   // never taught. The profile the creature came with, so a
+    {"taught", true, 0.0f, 0.0},   // the lesson, unblocked: `blockanchor`'s b0
+    {"quiet", false, 0.0f, 0.0},   // never taught. The profile the creature came with, so a
                               // rate change that is just settling cannot read as a lesson.
     // DNA v62 -- THE DECISIVE TEST, and the one `glide` structurally could not ask.
     // glide measured PASSIVE FOLLOWING and refused it: the velocity decoder tracks
@@ -9866,8 +9871,45 @@ const LPArm kLPArms[] = {
     // WHAT REFUSES THE WHOLE LINE: taught velocity not exceeding the position
     // arm's movement, which would mean the extra range is unreachable BY REWARD
     // and the walk is noise to the learner rather than exploration.
-    {"taught-vel", true, 7123.0f},
-    {"quiet-vel", false, 7123.0f},
+    {"taught-vel", true, 7123.0f, 0.0},
+    {"quiet-vel", false, 7123.0f, 0.0},
+    // v62 + REGION TARGETS. 12/12 velocity creatures touch the 250 Hz floor, so
+    // the 275.7 Hz result is measured against a wall. WHY it overshoots is
+    // structural rather than a tuning slip: under velocity control, HOLDING a
+    // position means nulling the command to exactly 0.5, and any residual
+    // deflection keeps integrating. A point target's error never saturates, so
+    // there is always gradient pushing further in.
+    //
+    // A REGION target has a natural zero -- `e_eff = e - band` clamped at 0 --
+    // so a lesson that has arrived STOPS DEMANDING and the integrator can null.
+    // `region-targets` was refused for RETENTION; this is a different failure and
+    // the first place the idea has something to bite on.
+    //
+    // Bands DERIVED, not guessed, in the error's own |log| units. The position
+    // decoder's delivered F1 sd is 28.4 Hz -- the creature's natural precision --
+    // and log(348.4/320) = 0.085 is one of those. Then 2x and ~3.4x it.
+    //
+    // PRE-REGISTERED REFUSAL, carried over from `region-targets` and it is the
+    // one that matters: the band sweep must show a NON-MONOTONE optimum. Monotone
+    // "wider is better" means the metric is measuring SATISFACTION rather than
+    // learning, because a wide enough band scores every creature as correct.
+    // All arms are scored on the RAW |log(f1/320)|, never the band-adjusted
+    // error, or each arm would be graded on its own easier exam.
+    // BANDS RESIZED 2026-09-24, after the first sweep was VACUOUS. I derived
+    // 0.085/0.170/0.290 from F1 JITTER and the band is applied to the JOINT error
+    // `|log(f1/320)| + |log(f2/2500)|`, which runs ~0.52 under velocity and ~0.94
+    // on the shipped genome. `e` was essentially never inside, so `e_eff = e -
+    // band` was a CONSTANT OFFSET -- and because the EMA bar is itself computed on
+    // the region-relative error, the offset cancels EXACTLY. Two arms came back
+    // bit-identical to their control, to every printed decimal.
+    //
+    // Resized against the error the band is actually applied to: ~0.52 measured
+    // under velocity, so 0.3 / 0.5 / 0.7 brackets it. Keeping score_axis at 0
+    // means the region is a convex region in FORMANT SPACE, which is what DIVA's
+    // targets are, rather than a band on one formant.
+    {"vel-band1", true, 7123.0f, 0.30},
+    {"vel-band2", true, 7123.0f, 0.50},
+    {"vel-band3", true, 7123.0f, 0.70},
 };
 constexpr uint32_t kLPArmCount = sizeof(kLPArms) / sizeof(kLPArms[0]);
 
@@ -9952,6 +9994,7 @@ bool run_leverprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
     // `blockanchor`'s b0 exactly, so `err taught` is comparable to its +0.1676.
     cfg.relearn = true;
     cfg.mask_mode = 0u;
+    cfg.region_band = kLPArms[a].band;
     Timbre local_ruler;
     std::string local_error;
     if (!local_ruler.configure(dna0.header().audio, local_error)) return cell;
@@ -10280,9 +10323,19 @@ bool run_leverprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
                   "  paired by seed, plus the F2 it may be paying with.\n");
       std::printf("    %-11s %-14s %-14s %-12s %s\n", "decoder", "F1 from rest",
                   "F2 from rest", "min F1 Hz", "at clamp");
-      const uint32_t pos[2] = {0u, 1u}, vel[2] = {2u, 3u};
-      for (uint32_t k = 0; k < 2u; ++k) {
-        const uint32_t ta = k ? vel[0] : pos[0], qa = k ? vel[1] : pos[1];
+      // Each taught arm against the untaught control that shares its DECODER.
+      // A band arm's control is `quiet-vel`: with teach=false there is no reward
+      // at all, so the band cannot change it and one control serves them all.
+      struct Pair { uint32_t taught, quiet; const char* label; };
+      const Pair prs[] = {
+          {0u, 1u, "position"},   {2u, 3u, "velocity"},
+          {4u, 3u, "vel+band.30"}, {5u, 3u, "vel+band.50"},
+          {6u, 3u, "vel+band.70"},
+      };
+      const uint32_t npr = sizeof(prs) / sizeof(prs[0]);
+      double err_avg[8] = {}, floor_pct[8] = {};
+      for (uint32_t k = 0; k < npr; ++k) {
+        const uint32_t ta = prs[k].taught, qa = prs[k].quiet;
         std::vector<double> d1, d2;
         double fmin = 1e9;
         uint32_t nclamp = 0, nc = 0;
@@ -10302,8 +10355,8 @@ bool run_leverprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
         if (nc < 3) continue;
         double s1 = 0.0, s2 = 0.0;
         const double m1 = ctx_mean_se(d1, &s1), m2 = ctx_mean_se(d2, &s2);
-        std::printf("    %-11s %+7.1f +/- %-5.1f %+7.1f +/- %-5.1f %-12.1f %u/%u\n",
-                    k ? "velocity" : "position", m1, s1, m2, s2, fmin, nclamp, nc);
+        std::printf("    %-13s %+7.1f +/- %-5.1f %+7.1f +/- %-5.1f %-9.1f %u/%u\n",
+                    prs[k].label, m1, s1, m2, s2, fmin, nclamp, nc);
         // THE VARIANCE GAP, measured. `err` averages |log(f1/320)| per sample, so
         // a creature straddling the target scores far worse than its mean says.
         std::vector<double> sdv, eavg, emean;
@@ -10322,8 +10375,20 @@ bool run_leverprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
           const double msd = ctx_mean_se(sdv, &q1);
           const double mea = ctx_mean_se(eavg, &q2);
           const double mem = ctx_mean_se(emean, &q3);
+          std::vector<double> floorfrac;
+          for (uint32_t r = 0; r < kReps; ++r) {
+            const Cell& c2 = cells[r * kLPArmCount + ta];
+            if (!c2.ok || !c2.row.f1_samp_late) continue;
+            floorfrac.push_back(double(c2.row.f1_at_floor) /
+                                double(c2.row.f1_samp_late));
+          }
+          double qf = 0.0;
+          const double mff = floorfrac.size() >= 3 ? ctx_mean_se(floorfrac, &qf) : -1.0;
           std::printf("      delivered F1 sd %.1f Hz | err on the MEAN %.3f | err AVERAGED"
-                      " %.3f | gap %.3f\n", msd, mem, mea, mea - mem);
+                      " %.3f | gap %.3f | at floor %.1f%%\n", msd, mem, mea, mea - mem,
+                      100.0 * mff);
+          err_avg[k] = mea;
+          floor_pct[k] = 100.0 * mff;
         }
       }
       // SIGN, stated once because I got it wrong in the first draft of this very
@@ -10334,6 +10399,86 @@ bool run_leverprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
       std::printf("    both columns are QUIET minus TAUGHT. F1's target is BELOW rest so\n"
                   "    POSITIVE is good; F2's is ABOVE rest so NEGATIVE is good. The two\n"
                   "    want opposite signs.\n");
+
+      // THE VACUITY GUARD THAT ALREADY EXISTED AND THAT I DID NOT WIRE UP.
+      // `row.region_inside` carries the comment "THE VACUITY CHECK, and its
+      // absence voided a run". leverprobe never printed it, and its absence
+      // voided a run again: bands sized for F1 jitter, applied to the joint
+      // error, never engaged, and two arms came back bit-identical to control.
+      {
+        std::printf("\n    DID THE BAND ENGAGE AT ALL? share of reward events INSIDE\n"
+                    "    the region. A band the error never enters is a constant offset,\n"
+                    "    and the EMA bar cancels it exactly.\n");
+        bool any_live = false;
+        for (uint32_t k = 2; k < npr; ++k) {
+          uint64_t ev = 0, in = 0;
+          for (uint32_t r = 0; r < kReps; ++r) {
+            const Cell& c2 = cells[r * kLPArmCount + prs[k].taught];
+            if (!c2.ok) continue;
+            ev += c2.row.region_events;
+            in += c2.row.region_inside;
+          }
+          const double frac = ev ? double(in) / double(ev) : 0.0;
+          std::printf("      %-13s inside %5.1f%%  (%llu of %llu events)\n", prs[k].label,
+                      100.0 * frac, (unsigned long long)in, (unsigned long long)ev);
+          if (frac > 0.01 && frac < 0.99) any_live = true;
+        }
+        if (!any_live) {
+          std::printf("\n  leverprobe REFUSES ITSELF -- no band arm spends between 1%% and\n"
+                      "  99%% of its reward events inside the region. The band is either\n"
+                      "  never entered or always satisfied, and in both cases it is not a\n"
+                      "  region target. Nothing below is readable.\n");
+          return false;
+        }
+        std::printf("      at least one band is genuinely straddled -- the sweep is live\n");
+      }
+
+      // THE BAND SWEEP, and its refusal is the one `region-targets` pre-registered.
+      // Every arm is scored on the RAW |log(f1/320)| -- never the band-adjusted
+      // error -- or each would be graded on its own easier exam and a wide band
+      // would win by definition.
+      std::printf("\n    THE BAND SWEEP -- raw averaged F1 error (lower is better),\n"
+                  "    and the share of late teaching spent on the 250 Hz floor.\n");
+      std::printf("      %-13s %-16s %s\n", "arm", "raw err AVG", "at floor");
+      for (uint32_t k = 1; k < npr; ++k)
+        std::printf("      %-13s %-16.3f %.1f%%\n", prs[k].label, err_avg[k], floor_pct[k]);
+      {
+        // NON-MONOTONE is required. A monotone fall with band width means the
+        // metric is measuring satisfaction, not learning.
+        // FIXED 2026-09-24. The monotonicity test belongs to the BANDS, which is
+        // what `region-targets` pre-registered -- "the band-width sweep must show
+        // a NON-MONOTONE optimum". My first version included the NO-BAND arm as
+        // the first point, and a 0.002 tick between it and the narrowest band was
+        // enough to call a strictly monotone band sweep non-monotone. The verdict
+        // came out inverted: it printed a real effect where the pre-registered
+        // refusal should have fired.
+        const double b0 = err_avg[1];
+        const double bb[3] = {err_avg[2], err_avg[3], err_avg[4]};
+        const bool monotone = (bb[1] <= bb[0] && bb[2] <= bb[1]);
+        (void)b0;
+        double best = err_avg[1]; uint32_t bi = 1;
+        for (uint32_t k = 2; k < npr; ++k)
+          if (err_avg[k] < best) { best = err_avg[k]; bi = k; }
+        std::printf("\n      best: %s at raw err %.3f (no-band velocity is %.3f)\n",
+                    prs[bi].label, best, b0);
+        if (monotone)
+          std::printf("      REFUSED -- raw error falls MONOTONICALLY across the BANDS.\n"
+                      "      That is what a metric measuring SATISFACTION looks like: a wide\n"
+                      "      enough band scores every creature correct. `region-targets`\n"
+                      "      pre-registered this refusal and it fires. Read it with the AT\n"
+                      "      FLOOR column, which rises with band width -- a wider region puts\n"
+                      "      the creature ON the clamp more often, so the region target is\n"
+                      "      not curing the overshoot it was brought in to cure.\n");
+        else if (bi == 1u)
+          std::printf("      REFUSED -- no band beats the unbanded velocity decoder. The\n"
+                      "      overshoot is not the point target's doing, so a region target is\n"
+                      "      not the fix for the clamp.\n");
+        else
+          std::printf("      A NON-MONOTONE OPTIMUM. The band at %s beats both the unbanded\n"
+                      "      decoder and the wider bands, which is the shape a real effect has\n"
+                      "      here and the shape satisfaction-scoring cannot produce.\n",
+                      prs[bi].label);
+      }
     }
     if (okv[0] && okv[2] && okv[3]) {
       // The taught contrast, and the control that stops a random walk being read

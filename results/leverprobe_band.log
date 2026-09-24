@@ -1,0 +1,311 @@
+experiment: leverprobe
+  instrument        leverprobe   trial seed 0000000001353929   2000 trials
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  question          `blockanchor` says freezing the UPPER half of F1 costs 53%
+                    of the lesson and the LOWER half 9%. My leverage law was
+                    FITTED to three one-neuron costs and FAILS the two
+                    half-block costs from the same run: it predicts a ratio of
+                    3.48 where 5.89 was measured, and no centroid position
+                    reaches 5.89 (the maximum over all v is 4.31).
+  what is measured  the two quantities that law ASSUMED -- the centroid's own
+                    position and the per-neuron weights -- and, the point of
+                    the run, how much each neuron's rate actually MOVES while
+                    the lesson is learned. That needs no fitted constant.
+  the prior         `stageprobe` says IP drives every neuron toward the SAME
+                    rate, which flattens exactly this profile. A FLAT answer
+                    here is the expected one and it REFUSES the rate account
+                    as well as the position account.
+
+  PRE-REGISTERED, written before the run
+    primary     share of total |rate change| in the UPPER half (k=7..13),
+                first third of teaching to last, taught arm.
+      >= 0.75 and >= 2 SE above the `quiet` arm -> THE LESSON IS CARRIED BY
+                THE UPPER HALF. Explains 53-vs-9 with no fitted law, and
+                REPLACES the leverage account rather than repairing it.
+      0.42..0.58                                -> REFUSED. Both halves move
+                alike, so neither position nor rate explains the asymmetry
+                and the cause is downstream of this profile.
+      anything else                             -> report the number, no
+                verdict. This is the 2-3 SE band where a hypothesis is not a
+                finding.
+    secondary   the centroid's MEASURED position, against the 0.299 the fit
+                assumed. A measurement, not a gate.
+    refusals    the group must be 14 neurons, the taught arm must reproduce
+                `blockanchor`'s b0 lesson (+0.1676, accept 0.10..0.24), and
+                pool_beta must be 1.0 or the centroid column is not the
+                readout's. Any of these failing means this run is not
+                measuring the creature those costs came from.
+
+  [1/84] seed 0 taught taught 0.7762
+  [5/84] seed 0 vel-band1 taught 0.6666
+  [6/84] seed 0 vel-band2 taught 0.6666
+  [3/84] seed 0 taught-vel taught 0.6666
+  [7/84] seed 0 vel-band3 taught 0.6666
+  [2/84] seed 0 quiet  taught 1.0860
+  [8/84] seed 1 taught taught 0.7730
+  [4/84] seed 0 quiet-vel taught 1.0796
+  [9/84] seed 1 quiet  taught 1.0754
+  [11/84] seed 1 quiet-vel taught 1.1013
+  [12/84] seed 1 vel-band1 taught 0.6413
+  [16/84] seed 2 quiet  taught 1.1004
+  [10/84] seed 1 taught-vel taught 0.6413
+  [15/84] seed 2 taught taught 0.8962
+  [13/84] seed 1 vel-band2 taught 0.6413
+  [14/84] seed 1 vel-band3 taught 0.6413
+  [22/84] seed 3 taught taught 0.8461
+  [19/84] seed 2 vel-band1 taught 0.6374
+  [17/84] seed 2 taught-vel taught 0.6374
+  [23/84] seed 3 quiet  taught 1.0710
+  [24/84] seed 3 taught-vel taught 0.6120
+  [18/84] seed 2 quiet-vel taught 1.1140
+  [20/84] seed 2 vel-band2 taught 0.6374
+  [21/84] seed 2 vel-band3 taught 0.6374
+  [26/84] seed 3 vel-band1 taught 0.6120
+  [25/84] seed 3 quiet-vel taught 1.0707
+  [31/84] seed 4 taught-vel taught 0.6835
+  [32/84] seed 4 quiet-vel taught 1.0671
+  [29/84] seed 4 taught taught 0.8275
+  [30/84] seed 4 quiet  taught 1.0844
+  [28/84] seed 3 vel-band3 taught 0.6120
+  [33/84] seed 4 vel-band1 taught 0.6835
+  [27/84] seed 3 vel-band2 taught 0.6120
+  [35/84] seed 4 vel-band3 taught 0.6835
+  [36/84] seed 5 taught taught 0.8155
+  [34/84] seed 4 vel-band2 taught 0.6835
+  [39/84] seed 5 quiet-vel taught 1.0628
+  [40/84] seed 5 vel-band1 taught 0.6418
+  [38/84] seed 5 taught-vel taught 0.6418
+  [37/84] seed 5 quiet  taught 1.0801
+  [41/84] seed 5 vel-band2 taught 0.6418
+  [42/84] seed 5 vel-band3 taught 0.6418
+  [44/84] seed 6 quiet  taught 1.0885
+  [43/84] seed 6 taught taught 0.7816
+  [46/84] seed 6 quiet-vel taught 1.1015
+  [45/84] seed 6 taught-vel taught 0.5668
+  [47/84] seed 6 vel-band1 taught 0.5668
+  [48/84] seed 6 vel-band2 taught 0.5668
+  [49/84] seed 6 vel-band3 taught 0.5668
+  [50/84] seed 7 taught taught 0.7805
+  [52/84] seed 7 taught-vel taught 0.6582
+  [51/84] seed 7 quiet  taught 1.0741
+  [58/84] seed 8 quiet  taught 1.0839
+  [54/84] seed 7 vel-band1 taught 0.6582
+  [55/84] seed 7 vel-band2 taught 0.6582
+  [56/84] seed 7 vel-band3 taught 0.6582
+  [53/84] seed 7 quiet-vel taught 1.0987
+  [57/84] seed 8 taught taught 0.9570
+  [59/84] seed 8 taught-vel taught 0.6240
+  [63/84] seed 8 vel-band3 taught 0.6240
+  [60/84] seed 8 quiet-vel taught 1.1059
+  [66/84] seed 9 taught-vel taught 0.6066
+  [64/84] seed 9 taught taught 0.7979
+  [61/84] seed 8 vel-band1 taught 0.6240
+  [62/84] seed 8 vel-band2 taught 0.6240
+  [65/84] seed 9 quiet  taught 1.0766
+  [70/84] seed 9 vel-band3 taught 0.6066
+  [68/84] seed 9 vel-band1 taught 0.6066
+  [71/84] seed 10 taught taught 0.8157
+  [69/84] seed 9 vel-band2 taught 0.6066
+  [67/84] seed 9 quiet-vel taught 1.1125
+  [72/84] seed 10 quiet  taught 1.0870
+  [73/84] seed 10 taught-vel taught 0.5614
+  [77/84] seed 10 vel-band3 taught 0.5525
+  [76/84] seed 10 vel-band2 taught 0.5614
+  [74/84] seed 10 quiet-vel taught 1.0877
+  [78/84] seed 11 taught taught 0.9124
+  [75/84] seed 10 vel-band1 taught 0.5614
+  [79/84] seed 11 quiet  taught 1.0756
+  [80/84] seed 11 taught-vel taught 0.7189
+  [82/84] seed 11 vel-band1 taught 0.7189
+  [83/84] seed 11 vel-band2 taught 0.7189
+  [81/84] seed 11 quiet-vel taught 1.0521
+  [84/84] seed 11 vel-band3 taught 0.7189
+
+  THE LESSON, as an anchor against `blockanchor`'s b0
+    taught learned +0.1718 +/- 0.0154   (12 creatures)
+    quiet  learned -0.0065 +/- 0.0031   (12 creatures)
+    taught-vel learned +0.1943 +/- 0.0192   (12 creatures)
+    quiet-vel learned -0.0018 +/- 0.0102   (12 creatures)
+    vel-band1 learned +0.1943 +/- 0.0192   (12 creatures)
+    vel-band2 learned +0.1943 +/- 0.0192   (12 creatures)
+    vel-band3 learned +0.1951 +/- 0.0194   (12 creatures)
+
+  THE F1 RATE PROFILE, Hz, taught arm (pool_beta 1.00)
+    k   position early     late      change   
+    0   0.036    5.694     5.786     +0.0927
+    1   0.107    5.537     5.497     -0.0399
+    2   0.179    5.623     5.361     -0.2618
+    3   0.250    5.135     5.350     +0.2152
+    4   0.321    5.268     5.012     -0.2565
+    5   0.393    4.932     5.117     +0.1851
+    6   0.464    4.837     4.777     -0.0603
+    7   0.536    5.029     4.210     -0.8184
+    8   0.607    4.765     3.743     -1.0218
+    9   0.679    4.670     3.373     -1.2974
+    10  0.750    4.606     3.731     -0.8748
+    11  0.821    4.539     2.644     -1.8950
+    12  0.893    4.175     1.591     -2.5842
+    13  0.964    4.110     1.667     -2.4435
+
+  THE PRIMARY
+    taught upper-half share of |rate change|  0.738 +/- 0.035
+    quiet  upper-half share of |rate change|  0.481 +/- 0.026
+    taught-vel upper-half share of |rate change|  0.669 +/- 0.029
+    quiet-vel upper-half share of |rate change|  0.499 +/- 0.028
+    vel-band1 upper-half share of |rate change|  0.669 +/- 0.029
+    vel-band2 upper-half share of |rate change|  0.669 +/- 0.029
+    vel-band3 upper-half share of |rate change|  0.671 +/- 0.029
+    taught - quiet  +0.257 +/- 0.043  (+5.9 SE)
+    a flat profile would read 0.500 by construction (7 of 14 neurons).
+
+  THE CENTROID, measured rather than fitted
+    taught mean position over teaching  0.4343
+    quiet  mean position over teaching  0.4993
+    taught-vel mean position over teaching  0.4570
+    quiet-vel mean position over teaching  0.5014
+    vel-band1 mean position over teaching  0.4570
+    vel-band2 mean position over teaching  0.4570
+    vel-band3 mean position over teaching  0.4567
+    the fit ASSUMED 0.299, chosen to make three one-neuron costs agree.
+
+  THE TWO-POOL PRE-FLIGHT -- can a differential readout resolve more
+  than the centroid? SNR = |w.D| / sqrt(w' C w) on the MEASURED
+  covariance of the F1 group. Gain cancels, so this is scale-free.
+    taught (12 creatures)   shared variance rho 0.094 +/- 0.004  [crossover 0.466]
+           measured D        centroid  0.529 +/- 0.006   two-pool  0.419 +/- 0.002
+           flat +-1 (IDEAL)  centroid  0.458 +/- 0.005   two-pool  0.543 +/- 0.002
+           mirror D (MEASD)  centroid  0.868 +/- 0.010   two-pool  0.839 +/- 0.003
+           RATIO two-pool / centroid   measured D 0.793 [0.777, 0.809]
+                                       flat+-1 I 1.186 [1.162, 1.210]
+                                       mirror  M 0.966 [0.947, 0.986]
+    quiet  (12 creatures)   shared variance rho 0.101 +/- 0.004  [crossover 0.466]
+           measured D        centroid  0.523 +/- 0.003   two-pool  0.430 +/- 0.002
+           flat +-1 (IDEAL)  centroid  0.453 +/- 0.002   two-pool  0.556 +/- 0.002
+           mirror D (MEASD)  centroid  0.858 +/- 0.004   two-pool  0.859 +/- 0.003
+           RATIO two-pool / centroid   measured D 0.821 [0.815, 0.828]
+                                       flat+-1 I 1.229 [1.219, 1.239]
+                                       mirror  M 1.001 [0.993, 1.010]
+
+    VERDICT on the primary (`quiet`, no lesson drift in the shared mode):
+      UNRESOLVED -- the interval straddles 1 on at least one signal.
+      Report it as unresolved; do NOT read it in the convenient
+      direction. More creatures, not more arms, is what closes it.
+      (the two verdict signals are BOTH measurement-derived; `flat +-1`
+       is reported above as a diagnostic only -- see the comment.)
+    taught-vel (12 creatures)   shared variance rho 0.099 +/- 0.004  [crossover 0.466]
+           measured D        centroid  0.510 +/- 0.005   two-pool  0.420 +/- 0.002
+           flat +-1 (IDEAL)  centroid  0.441 +/- 0.004   two-pool  0.543 +/- 0.003
+           mirror D (MEASD)  centroid  0.836 +/- 0.008   two-pool  0.839 +/- 0.004
+           RATIO two-pool / centroid   measured D 0.823 [0.813, 0.833]
+                                       flat+-1 I 1.231 [1.217, 1.246]
+                                       mirror  M 1.003 [0.991, 1.015]
+    quiet-vel (12 creatures)   shared variance rho 0.103 +/- 0.004  [crossover 0.466]
+           measured D        centroid  0.523 +/- 0.003   two-pool  0.429 +/- 0.001
+           flat +-1 (IDEAL)  centroid  0.453 +/- 0.002   two-pool  0.556 +/- 0.002
+           mirror D (MEASD)  centroid  0.859 +/- 0.004   two-pool  0.858 +/- 0.003
+           RATIO two-pool / centroid   measured D 0.819 [0.813, 0.826]
+                                       flat+-1 I 1.226 [1.217, 1.236]
+                                       mirror  M 0.999 [0.991, 1.007]
+    vel-band1 (12 creatures)   shared variance rho 0.099 +/- 0.004  [crossover 0.466]
+           measured D        centroid  0.510 +/- 0.005   two-pool  0.420 +/- 0.002
+           flat +-1 (IDEAL)  centroid  0.441 +/- 0.004   two-pool  0.543 +/- 0.003
+           mirror D (MEASD)  centroid  0.836 +/- 0.008   two-pool  0.839 +/- 0.004
+           RATIO two-pool / centroid   measured D 0.823 [0.813, 0.832]
+                                       flat+-1 I 1.231 [1.217, 1.245]
+                                       mirror  M 1.003 [0.991, 1.015]
+    vel-band2 (12 creatures)   shared variance rho 0.099 +/- 0.004  [crossover 0.466]
+           measured D        centroid  0.510 +/- 0.005   two-pool  0.420 +/- 0.002
+           flat +-1 (IDEAL)  centroid  0.441 +/- 0.004   two-pool  0.543 +/- 0.003
+           mirror D (MEASD)  centroid  0.836 +/- 0.008   two-pool  0.839 +/- 0.004
+           RATIO two-pool / centroid   measured D 0.823 [0.813, 0.832]
+                                       flat+-1 I 1.231 [1.216, 1.245]
+                                       mirror  M 1.003 [0.991, 1.014]
+    vel-band3 (12 creatures)   shared variance rho 0.099 +/- 0.004  [crossover 0.466]
+           measured D        centroid  0.510 +/- 0.005   two-pool  0.419 +/- 0.002
+           flat +-1 (IDEAL)  centroid  0.442 +/- 0.004   two-pool  0.543 +/- 0.003
+           mirror D (MEASD)  centroid  0.837 +/- 0.008   two-pool  0.839 +/- 0.004
+           RATIO two-pool / centroid   measured D 0.822 [0.812, 0.832]
+                                       flat+-1 I 1.230 [1.215, 1.245]
+                                       mirror  M 1.002 [0.990, 1.014]
+
+  DNA v62 -- DELIVERED F1 IN Hz, early third of teaching to late.
+  The target is 320 Hz and the creature rests near 624, so a lesson
+  that reaches moves DOWN. The position decoder's identity bound is
+  ~47 Hz from rest; naming needs ~230.
+    arm         early Hz    late Hz     change      creatures
+    taught      600.4       542.3         -58.1 +/- 8.1   12
+    quiet       623.8       624.9          +1.1 +/- 1.9   12
+    taught-vel  484.1       366.2        -117.9 +/- 10.4  12
+    quiet-vel   643.6       642.0          -1.7 +/- 7.3   12
+    vel-band1   484.1       366.2        -117.9 +/- 10.4  12
+    vel-band2   484.1       366.2        -117.9 +/- 10.4  12
+    vel-band3   484.1       365.1        -119.0 +/- 10.6  12
+
+  THE ATTACK -- each decoder against ITS OWN untaught control,
+  paired by seed, plus the F2 it may be paying with.
+    decoder     F1 from rest   F2 from rest   min F1 Hz    at clamp
+    position        +82.5 +/- 8.1    -180.4 +/- 15.1  400.0     0/12
+      delivered F1 sd 28.4 Hz | err on the MEAN 0.527 | err AVERAGED 0.525 | gap -0.001 | at floor 0.0%
+    velocity       +275.7 +/- 11.8    -49.5 +/- 13.3  250.0     12/12
+      delivered F1 sd 108.5 Hz | err on the MEAN 0.133 | err AVERAGED 0.236 | gap 0.103 | at floor 15.2%
+    vel+band.085   +275.7 +/- 11.8    -49.5 +/- 13.3  250.0     12/12
+      delivered F1 sd 108.5 Hz | err on the MEAN 0.133 | err AVERAGED 0.236 | gap 0.103 | at floor 15.2%
+    vel+band.170   +275.7 +/- 11.8    -49.5 +/- 13.3  250.0     12/12
+      delivered F1 sd 108.5 Hz | err on the MEAN 0.133 | err AVERAGED 0.236 | gap 0.103 | at floor 15.2%
+    vel+band.290   +276.8 +/- 12.3    -48.5 +/- 12.7  250.0     12/12
+      delivered F1 sd 108.6 Hz | err on the MEAN 0.130 | err AVERAGED 0.238 | gap 0.108 | at floor 16.6%
+    both columns are QUIET minus TAUGHT. F1's target is BELOW rest so
+    POSITIVE is good; F2's is ABOVE rest so NEGATIVE is good. The two
+    want opposite signs.
+
+    THE BAND SWEEP -- raw averaged F1 error (lower is better),
+    and the share of late teaching spent on the 250 Hz floor.
+      arm           raw err AVG      at floor
+      velocity      0.236            15.2%
+      vel+band.085  0.236            15.2%
+      vel+band.170  0.236            15.2%
+      vel+band.290  0.238            16.6%
+
+      best: velocity at raw err 0.236 (no-band velocity is 0.236)
+      REFUSED -- no band beats the unbanded velocity decoder. The
+      overshoot is not the point target's doing, so a region target is
+      not the fix for the clamp.
+
+    position, taught        58.1 Hz
+    velocity, taught       117.9 Hz
+    velocity, UNTAUGHT       1.7 Hz   <- the walk, with no lesson
+    taught minus walk     +116.3 Hz  (+9.1 SE)
+
+    VERDICT: v62 REACHES FURTHER BY REWARD. Delivered F1 moves 117.9 Hz
+    under velocity against 58.1 under position, and +9.1 SE above its
+    own untaught walk. The identity bound is broken by teaching, not
+    by wandering.
+
+  THREE ACCOUNTS AGAINST THE FIVE MEASURED COSTS
+    each scaled on `top1` alone, as the original fit was.
+    block  measured   position     w*position   rate change 
+    top1   30         30.0         30.0         30.0        
+    mid1   7          1.7          4.9          0.7         
+    bot1   9          22.6         78.4         1.1         
+    top7   53         125.1        194.0        134.3       
+    bot7   9          76.4         250.8        13.6        
+                      44.6         129.0        36.7           <- RMS residual, pp
+
+  ARM LIVENESS vs `taught` (seeds where the arm differs at all)
+    quiet              12/12
+    taught-vel         12/12
+    quiet-vel          12/12
+    vel-band1          12/12
+    vel-band2          12/12
+    vel-band3          12/12
+
+  --- the verdict ---
+  NO VERDICT: upper-half share 0.738 +/- 0.035, +5.9 SE over `quiet`.
+  Between the gates, which is the band where a hypothesis is not a
+  finding. The number is reported and nothing is concluded from it.
+
+  WHAT STANDS REGARDLESS: the leverage law is REFUTED out of sample.
+  It reproduces the three costs it was fitted to and misses the two it
+  was not, and no centroid position reaches the measured 5.89 ratio.
+  Do not quote `cost ~ |p_i - v|` or the 0.299 that came with it.

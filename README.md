@@ -11028,6 +11028,59 @@ those are quoted.**
 **The next move is not more gain.** It is less variance, or a soft boundary
 instead of a hard clamp — which is what region targets were for, and this is the
 first context in which that idea has something to bite on.
+### Region targets do not cure the overshoot, and the run took two tries to say so
+
+12/12 velocity creatures touch the 250 Hz floor, so the 275.7 Hz result is
+measured against a wall. The overshoot is structural rather than a tuning slip:
+under velocity control, *holding* a position means nulling the command to
+exactly 0.5, and any residual deflection keeps integrating. A point target's
+error never saturates, so there is always gradient pushing further in. A region
+target has a natural zero — `e_eff = e − band`, clamped at 0 — so a lesson that
+has arrived stops demanding. `region-targets` was refused for *retention*; this
+is a different failure and the first place the idea has something to bite on.
+
+**The first sweep was vacuous and the guard that would have caught it already
+existed.** I derived bands from F1 jitter (28.4 Hz → 0.085 in log units) and the
+band is applied to the **joint** error `|log(f1/320)| + |log(f2/2500)|`, which
+runs ~0.52 under velocity. The error was essentially never inside, so
+`e_eff = e − band` was a constant offset — and because the EMA bar is itself
+computed on the region-relative error, the offset cancels exactly. Two band arms
+came back **bit-identical** to their control, to every printed decimal.
+`row.region_inside` is an existing counter whose own comment reads *"THE VACUITY
+CHECK, and its absence voided a run"*. `leverprobe` never printed it. Its absence
+voided a run once before and I reproduced the omission, inside a block written
+to catch vacuity.
+
+Resized against the error the band is actually applied to, and with that counter
+wired up as a hard refusal:
+
+    band    inside the region    raw averaged F1 error    at the 250 Hz floor
+    none                  —              0.236                   15.2%
+    0.30                0.0%             0.238                   16.6%
+    0.50               13.8%             0.220                   20.1%
+    0.70               47.0%             0.201                   28.6%
+
+**REFUSED.** Raw error falls monotonically across the bands — wider is better,
+which is precisely the satisfaction-scoring failure `region-targets`
+pre-registered a refusal for: a wide enough band scores every creature correct.
+And the floor column says the same thing from the other side. **Time on the
+clamp rises with band width, 15.2% → 28.6%.** A wider region puts the creature
+*on* the floor more often, so the region target is not curing the overshoot it
+was brought in to cure. It is buying a better score by asking for less.
+
+**The compiled verdict printed the opposite, and that is my bug.** The
+monotonicity test included the no-band arm as its first point, and a 0.002 tick
+between it and the narrowest band — noise, at that scale — was enough to call a
+strictly monotone band sweep non-monotone. The pre-registration was about the
+*bands*; the test is now over the bands alone. The log at
+`results/leverprobe_band2.log` still carries the wrong text, and the numbers in
+it are unchanged and correct.
+
+**So the clamp stands as the live constraint on v62.** Not more gain, and not a
+softer reward either — what the creature lacks is a way to *null its own
+velocity*, which is what DIVA gets from a forward model and this creature does
+not have.
+
 
 ## Layout
 
