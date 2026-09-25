@@ -11388,6 +11388,48 @@ suspect": **a pre-flight may bound what information exists, and may not predict
 what a new policy will deliver, because the activity it reads is a consequence of
 the policy it is replacing.** Pricing a readout change requires running it.
 
+
+### The slow loop too — and the sham is what makes the reading possible
+
+`selfloop`'s square wave measured the **fast** reflexive loop. Houde & Jordan's
+adaptation is a **slow** learning process over minutes, and a 1500 ms alternation
+structurally cannot show it: the shift reverses long before learning could
+accumulate, and averaging over both polarities cancels whatever did. So that run
+closed half the question, and saying it closed the direction was an overstatement.
+Sustained arms hold the shift across the middle third instead:
+
+    arm        baseline   adapt    after    compensation      aftereffect
+    sus150       626.0    625.4    621.9     +0.6 +/- 0.9     +4.1 +/- 4.3
+    sus300       626.0    624.9    623.2     +1.1 +/- 0.8     +2.7 +/- 6.0
+    sus-sham     626.0    625.3    619.5     +0.7 +/- 0.7     +6.5 +/- 4.7
+    sus-deaf     625.8    625.9    620.0     -0.1 +/- 0.5     +5.8 +/- 2.7
+
+**REFUSED.** Compensation against the sham is −0.1 and +0.4 SE. Against shifts of
+150 and 300 Hz the creature moves about 1 Hz — 0.3% — which is not a weak effect
+but the absence of one.
+
+**And the sham is the whole reason this is readable.** Every arm shows an
+"aftereffect" of 3–7 Hz, including the sham and the deaf arm, which have nothing
+to adapt to. That is drift across a long run, and inside a single arm it would
+have looked exactly like a residual mapping change — the signature the experiment
+was built to find. Scored against the sham it vanishes: −3.8 ± 7.6.
+
+**Scope, and my compiled verdict first got this wrong.** There is **no reward in
+this experiment**. That is faithful to Houde & Jordan, whose adaptation is
+unsupervised and driven by sensory prediction error rather than by reward — but
+the verdict text said "reward cannot install the loop", which overclaims on a run
+containing none. What is refused is **sensorimotor adaptation at both
+timescales**: no fast reflexive compensation, no slow recalibration. Whether a
+reward explicitly contingent on the *heard* signal could teach the mapping is a
+different experiment and is untested.
+
+The coherent reading is that this creature has no forward model — no machinery
+that predicts the sensory consequence of its own motor command and corrects on
+the difference. `critic-is-not-a-forward-model` already refused v15's attempt at
+one, so this is two independent measurements agreeing rather than a surprise. The
+larynx→ear loop is anatomically present, carries a measurable self level of
+0.11–0.15, and is functionally unused for F1 at either timescale.
+
 ## Layout
 
 ```

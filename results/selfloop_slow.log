@@ -17,3 +17,145 @@ experiment: selfloop
   [4/96] seed 0 deaf      r +0.006 at 265 ms
   [5/96] seed 0 sus150    r -0.076 at 447 ms
   [6/96] seed 0 sus300    r -0.030 at 686 ms
+  [9/96] seed 1 shift0    r -0.013 at 138 ms
+  [10/96] seed 1 shift150  r +0.020 at 628 ms
+  [8/96] seed 0 sus-deaf  r -0.098 at 85 ms
+  [15/96] seed 1 sus-sham  r +0.173 at 139 ms
+  [13/96] seed 1 sus150    r +0.127 at 151 ms
+  [14/96] seed 1 sus300    r +0.196 at 24 ms
+  [11/96] seed 1 shift300  r +0.037 at 53 ms
+  [17/96] seed 2 shift0    r +0.011 at 591 ms
+  [21/96] seed 2 sus150    r +0.044 at 700 ms
+  [16/96] seed 1 sus-deaf  r -0.024 at 215 ms
+  [12/96] seed 1 deaf      r +0.010 at 370 ms
+  [19/96] seed 2 shift300  r -0.045 at 188 ms
+  [22/96] seed 2 sus300    r -0.100 at 0 ms
+  [18/96] seed 2 shift150  r +0.040 at 564 ms
+  [23/96] seed 2 sus-sham  r -0.036 at 0 ms
+  [20/96] seed 2 deaf      r +0.007 at 337 ms
+  [25/96] seed 3 shift0    r +0.014 at 155 ms
+  [26/96] seed 3 shift150  r -0.055 at 415 ms
+  [30/96] seed 3 sus300    r +0.047 at 378 ms
+  [28/96] seed 3 deaf      r -0.017 at 546 ms
+  [27/96] seed 3 shift300  r +0.018 at 160 ms
+  [31/96] seed 3 sus-sham  r +0.066 at 0 ms
+  [29/96] seed 3 sus150    r +0.067 at 0 ms
+  [24/96] seed 2 sus-deaf  r -0.017 at 26 ms
+  [34/96] seed 4 shift150  r +0.023 at 626 ms
+  [35/96] seed 4 shift300  r -0.017 at 409 ms
+  [33/96] seed 4 shift0    r +0.007 at 66 ms
+  [39/96] seed 4 sus-sham  r -0.010 at 0 ms
+  [41/96] seed 5 shift0    r +0.013 at 102 ms
+  [37/96] seed 4 sus150    r +0.068 at 402 ms
+  [38/96] seed 4 sus300    r +0.045 at 391 ms
+  [40/96] seed 4 sus-deaf  r +0.048 at 700 ms
+  [36/96] seed 4 deaf      r +0.023 at 109 ms
+  [32/96] seed 3 sus-deaf  r -0.010 at 440 ms
+  [42/96] seed 5 shift150  r -0.054 at 561 ms
+  [47/96] seed 5 sus-sham  r +0.135 at 700 ms
+  [44/96] seed 5 deaf      r +0.002 at 253 ms
+  [43/96] seed 5 shift300  r -0.093 at 422 ms
+  [45/96] seed 5 sus150    r +0.174 at 700 ms
+  [46/96] seed 5 sus300    r +0.186 at 700 ms
+  [48/96] seed 5 sus-deaf  r +0.132 at 700 ms
+  [51/96] seed 6 shift300  r +0.031 at 54 ms
+  [49/96] seed 6 shift0    r +0.027 at 548 ms
+  [53/96] seed 6 sus150    r +0.053 at 32 ms
+  [50/96] seed 6 shift150  r +0.046 at 486 ms
+  [52/96] seed 6 deaf      r +0.003 at 520 ms
+  [54/96] seed 6 sus300    r +0.079 at 182 ms
+  [57/96] seed 7 shift0    r -0.014 at 10 ms
+  [55/96] seed 6 sus-sham  r +0.060 at 425 ms
+  [61/96] seed 7 sus150    r +0.068 at 0 ms
+  [59/96] seed 7 shift300  r +0.010 at 521 ms
+  [56/96] seed 6 sus-deaf  r -0.021 at 0 ms
+  [58/96] seed 7 shift150  r -0.029 at 578 ms
+  [65/96] seed 8 shift0    r -0.008 at 104 ms
+  [67/96] seed 8 shift300  r +0.013 at 117 ms
+  [66/96] seed 8 shift150  r -0.019 at 561 ms
+  [63/96] seed 7 sus-sham  r +0.147 at 0 ms
+  [62/96] seed 7 sus300    r -0.036 at 414 ms
+  [69/96] seed 8 sus150    r -0.126 at 411 ms
+  [60/96] seed 7 deaf      r +0.011 at 522 ms
+  [71/96] seed 8 sus-sham  r -0.129 at 406 ms
+  [68/96] seed 8 deaf      r +0.012 at 513 ms
+  [70/96] seed 8 sus300    r -0.177 at 609 ms
+  [72/96] seed 8 sus-deaf  r -0.064 at 573 ms
+  [73/96] seed 9 shift0    r +0.005 at 582 ms
+  [64/96] seed 7 sus-deaf  r +0.051 at 209 ms
+  [77/96] seed 9 sus150    r +0.055 at 608 ms
+  [74/96] seed 9 shift150  r +0.055 at 118 ms
+  [79/96] seed 9 sus-sham  r +0.072 at 606 ms
+  [75/96] seed 9 shift300  r +0.068 at 254 ms
+  [78/96] seed 9 sus300    r +0.057 at 700 ms
+  [76/96] seed 9 deaf      r +0.022 at 78 ms
+  [82/96] seed 10 shift150  r -0.037 at 333 ms
+  [81/96] seed 10 shift0    r -0.008 at 617 ms
+  [86/96] seed 10 sus300    r -0.004 at 0 ms
+  [84/96] seed 10 deaf      r +0.004 at 60 ms
+  [89/96] seed 11 shift0    r +0.024 at 482 ms
+  [83/96] seed 10 shift300  r +0.019 at 410 ms
+  [85/96] seed 10 sus150    r -0.025 at 221 ms
+  [87/96] seed 10 sus-sham  r -0.011 at 329 ms
+  [80/96] seed 9 sus-deaf  r +0.092 at 0 ms
+  [90/96] seed 11 shift150  r -0.051 at 189 ms
+  [93/96] seed 11 sus150    r -0.050 at 0 ms
+  [88/96] seed 10 sus-deaf  r +0.041 at 259 ms
+  [92/96] seed 11 deaf      r +0.009 at 82 ms
+  [91/96] seed 11 shift300  r -0.016 at 602 ms
+  [94/96] seed 11 sus300    r -0.145 at 0 ms
+  [95/96] seed 11 sus-sham  r -0.082 at 700 ms
+  [96/96] seed 11 sus-deaf  r +0.140 at 700 ms
+
+  arm       peak r           argmax lag       |r|            phase lag   coherent Hz  self level
+    shift0    +0.006 +/- 0.004        287 +/- 72     0.013 +/- 0.002     801 +/- 138    1.83 +/- 0.16 0.1076
+    shift150  -0.005 +/- 0.012        424 +/- 60     0.036 +/- 0.005     652 +/- 148    1.06 +/- 0.15 0.1480
+    shift300  -0.002 +/- 0.013        281 +/- 53     0.034 +/- 0.007     902 +/- 120    1.84 +/- 0.17 0.1363
+    deaf      +0.008 +/- 0.003        305 +/- 55     0.010 +/- 0.002     877 +/- 128    1.46 +/- 0.25 0.0000
+    sus150    +0.032 +/- 0.025        306 +/- 79     0.078 +/- 0.012     692 +/- 141    1.79 +/- 0.16 0.1138
+    sus300    +0.010 +/- 0.034        340 +/- 84     0.092 +/- 0.019     754 +/- 136    1.63 +/- 0.15 0.1046
+    sus-sham  +0.033 +/- 0.027        334 +/- 86     0.078 +/- 0.016     801 +/- 138    1.83 +/- 0.16 0.1076
+    sus-deaf  +0.023 +/- 0.021        326 +/- 82     0.061 +/- 0.013     878 +/- 128    1.46 +/- 0.25 0.0000
+
+  THE SLOW LOOP -- sustained shift across the middle third.
+  compensation = baseline - adapt (positive means the creature
+  lowered production against the shift); aftereffect = baseline -
+  after, which is a changed MAPPING rather than a changed target.
+    arm        baseline     adapt        after        compensation     aftereffect
+    sus150     626.0        625.4        621.9           +0.6 +/- 0.9       +4.1 +/- 4.3
+    sus300     626.0        624.9        623.2           +1.1 +/- 0.8       +2.7 +/- 6.0
+    sus-sham   626.0        625.3        619.5           +0.7 +/- 0.7       +6.5 +/- 4.7
+    sus-deaf   625.8        625.9        620.0           -0.1 +/- 0.5       +5.8 +/- 2.7
+
+    against `sus-sham` (identical phases, zero shift)
+      sus150 compensation -0.1 +/- 1.2  (-0.0 SE)
+      sus300 compensation +0.4 +/- 1.1  (+0.3 SE)
+      sus300 AFTEREFFECT  -3.8 +/- 7.6  (-0.5 SE)
+      sus-deaf compensation -0.8 (must sit at the sham)
+
+    VERDICT: REFUSED -- compensation does not beat its own sham (-0.0 and
+    +0.3 SE, 3.0 required). Reward cannot install the loop either, so the
+    self-audition direction is closed WHOLE and not by half. Node
+    perturbation correlates its own perturbations with reward and never
+    needs to hear the result, which is the structural reason.
+
+  AGAINST THE ZERO-SHIFT NULL (its own machinery, no shift)
+    shift150 - shift0  +0.023 +/- 0.005  (+4.3 SE)
+    shift300 - shift0  +0.022 +/- 0.008  (+2.9 SE)
+    deaf     - shift0  -0.002            (must be at the floor)
+
+  THE PRIMARY -- COHERENT RESPONSE AT THE SHIFT FREQUENCY. A closed
+  loop moves produced F1 AT the shift rate; max|r| over 700 lags does
+  not require that and is a maximum over noise.
+    shift150 - shift0  -0.77 Hz +/- 0.22  (-3.4 SE)
+    shift300 - shift0  +0.01 Hz +/- 0.23  (+0.0 SE)
+
+  --- the reading ---
+  REFUSED -- no shifted arm produces a COHERENT response at the
+  shift frequency (-3.4 and 0.0 SE, 3.0 required), and every phase lag
+  is indistinguishable from the two nulls. There is no phase-locked
+  compensation, so the creature does not use self-audition to control
+  F1. That CLOSES the closed-loop direction and independently explains
+  why v62's integrator drifts freely: nothing is watching it.
+  (max|r| over lags DID rise, 4.3 and 2.9 SE -- that statistic is a
+  maximum over noise and is why the primary was corrected.)

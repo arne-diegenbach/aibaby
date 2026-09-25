@@ -14275,11 +14275,24 @@ bool run_selfloop(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
                     "    one is learnable, which is a different creature than selfloop's\n"
                     "    square wave suggested.\n", a1, ea > 0.0 ? a1 / ea : 0.0);
       else if (!real)
+        // PRECISION, corrected 2026-09-25: this experiment contains NO REWARD.
+        // The creature babbles freely with its self-audition shifted, which is
+        // faithful to Houde & Jordan -- their adaptation is unsupervised, driven
+        // by sensory prediction error rather than by reward. So what is refused
+        // is SENSORIMOTOR ADAPTATION, fast and slow. Whether a reward explicitly
+        // contingent on the HEARD signal could teach the mapping is a different
+        // experiment and is untested. The first draft of this text said "reward
+        // cannot install the loop", which overclaimed on a run with no reward in
+        // it.
         std::printf("REFUSED -- compensation does not beat its own sham (%+.1f and\n"
-                    "    %+.1f SE, 3.0 required). Reward cannot install the loop either, so the\n"
-                    "    self-audition direction is closed WHOLE and not by half. Node\n"
-                    "    perturbation correlates its own perturbations with reward and never\n"
-                    "    needs to hear the result, which is the structural reason.\n",
+                    "    %+.1f SE, 3.0 required). With the square-wave arms this closes\n"
+                    "    SENSORIMOTOR ADAPTATION at both timescales: no fast reflexive\n"
+                    "    compensation and no slow recalibration. NOTE THE SCOPE -- there is no\n"
+                    "    reward in this experiment, faithful to Houde & Jordan, whose\n"
+                    "    adaptation is unsupervised. A reward contingent on the HEARD signal is\n"
+                    "    a different test and is untested. The absence of a forward model is\n"
+                    "    the coherent reading, and `critic-is-not-a-forward-model` already\n"
+                    "    refused v15's version of one.\n",
                     e1 > 0.0 ? d1 / e1 : 0.0, e2 > 0.0 ? d2 / e2 : 0.0);
       else
         std::printf("REFUSED ON DOSE -- compensation beats the sham but does not\n"
