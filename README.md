@@ -11352,6 +11352,42 @@ of change more cheaply than running it. Naud & Sprekeler's multiplexed code is
 not in question; what is refused is the assumption that a channel measured under
 one policy stays available under another.
 
+### The audit that v63 forced, and the distinction that survives it
+
+v63 failed because a profile recorded under one readout was used to predict what
+a different readout would deliver — and the profile was itself a learned
+consequence of the readout being replaced. That pattern is common in this
+project, so every result of its shape was checked. **The damage is bounded, and
+the reason is a distinction worth keeping.**
+
+**An upper bound on information PRESENT in a signal is policy-independent. A
+prediction of what a new readout would DELIVER is not.**
+
+- `coderprobe` (the ear reads one-of-eight at 0.981 against a 1.000 ceiling) and
+  `pcprobe` (the best any linear readout of a module's rates could do) are
+  **bounds on information present**. The ear's activity is driven by the
+  caregiver's sound, not by the vocal readout, and "this much is there" stays
+  true whatever reads it. **Unaffected.**
+- `shapeprobe` (a radial mass profile pools at 0.960 where the retina manages
+  0.570) is also a bound, and it was independently validated by building: DNA
+  v46's shape bank moved delivery on 4/4 seeds. **Unaffected, and confirmed the
+  expensive way.**
+- `partprobe` (a learned boundary buys +0.019 over the fixed cut) decomposes
+  information between representation and cut. It is a decomposition, not a
+  delivery prediction. **Unaffected.**
+- `invprobe` (raising the creature on displaced toys buys no position tolerance)
+  is an actual intervention, not a projection. **Unaffected.**
+- **The two that are affected are both readout pre-flights, and both are mine
+  from today**: the two-pool SNR calculation, whose covariance was recorded under
+  the shipped centroid, and v63's burst pre-flight. The first returned
+  "equivalent" so nothing rested on it — but had it returned "licensed" it would
+  have licensed a number with exactly v63's defect, and I would not have known.
+
+So the rule to carry is narrower and sharper than "profile pre-flights are
+suspect": **a pre-flight may bound what information exists, and may not predict
+what a new policy will deliver, because the activity it reads is a consequence of
+the policy it is replacing.** Pricing a readout change requires running it.
+
 ## Layout
 
 ```
