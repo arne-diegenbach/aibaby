@@ -13948,14 +13948,42 @@ bool run_adaptclock(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
 //     floor. If it does not, the instrument is measuring itself.
 struct SLArm {
   const char* name;
-  float shift_hz;   // amplitude of the square-wave shift applied to heard F1
+  float shift_hz;   // amplitude of the shift applied to heard F1
   bool deaf;        // self_gain forced to 0 -- the structural null
+  // SUSTAINED (2026-09-25). The square-wave arms above measure the FAST
+  // reflexive loop, and refused it. But Houde & Jordan's adaptation is a SLOW
+  // learning process over MANY TRIALS -- minutes of exposure -- and a 1500 ms
+  // alternation cannot show it: the shift reverses long before learning could
+  // accumulate, and averaging over both polarities cancels whatever did. So the
+  // square wave closed HALF the question, and this opens the other half.
+  //
+  // A sustained arm holds the shift CONSTANT across the middle third of the run,
+  // with nothing before and nothing after. Three quantities then matter:
+  //   baseline  produced F1 in the first third, no shift
+  //   adapt     produced F1 during the shift -- compensation drives it DOWN,
+  //             since the creature would be lowering production to hold what it
+  //             HEARS where it was
+  //   after     produced F1 once the shift is removed. THE AFTEREFFECT, and the
+  //             whole point: it separates a changed MAPPING from a changed
+  //             TARGET, and it is why Houde & Jordan is a landmark rather than a
+  //             demonstration. A creature that merely tracked reward would snap
+  //             straight back.
+  bool sustained;
 };
 const SLArm kSLArms[] = {
-    {"shift0",   0.0f,   false},   // THE NULL: same machinery, no shift
-    {"shift150", 150.0f, false},
-    {"shift300", 300.0f, false},   // the dose-response partner
-    {"deaf",     300.0f, true},    // shift with nothing to shift
+    {"shift0",   0.0f,   false, false},   // THE NULL: same machinery, no shift
+    {"shift150", 150.0f, false, false},
+    {"shift300", 300.0f, false, false},   // the dose-response partner
+    {"deaf",     300.0f, true, false},    // shift with nothing to shift
+    // THE SLOW LOOP -- can reward INSTALL the mapping the fast one does not use?
+    // `sus-sham` is the matched control: identical machinery, identical phase
+    // structure, shift amplitude 0. It absorbs any drift the creature has anyway
+    // across a long run, which a baseline-to-after comparison inside one arm
+    // cannot: a creature that simply drifts would fake an aftereffect.
+    {"sus150",   150.0f, false, true},
+    {"sus300",   300.0f, false, true},
+    {"sus-sham",   0.0f, false, true},
+    {"sus-deaf", 300.0f, true,  true},
 };
 constexpr uint32_t kSLArmCount = sizeof(kSLArms) / sizeof(kSLArms[0]);
 // The shift alternates on this period. Long enough that a round trip of up to
@@ -13979,6 +14007,9 @@ struct SLRow {
   double fund_amp = 0.0;    // Hz of produced F1 moving coherently at that rate
   double self_level = 0.0;  // proof the loop is closed at all
   double f1_sd = 0.0;
+  // THE SUSTAINED ARMS' THREE PHASES, produced F1 in Hz.
+  double f1_base = 0.0, f1_adapt = 0.0, f1_after = 0.0;
+  uint64_t n_base = 0, n_adapt = 0, n_after = 0;
 };
 
 SLRow run_selfloop_arm(const std::vector<uint8_t>& blob, uint64_t ticks, const SLArm& arm) {
@@ -14007,8 +14038,18 @@ SLRow run_selfloop_arm(const std::vector<uint8_t>& blob, uint64_t ticks, const S
     // A SILENT ROOM on purpose. With a caregiver sounding, the creature's own
     // production correlates with the caregiver and the cross-correlation would
     // read that instead. Here the only thing moving on a schedule is the shift.
-    const double ph = double(t % kSLPeriod) / double(kSLPeriod);
-    const double sq = ph < 0.5 ? 1.0 : -1.0;
+    // Square-wave arms alternate; sustained arms hold the shift across the
+    // MIDDLE THIRD only, so the run is baseline / adapt / after in one pass.
+    const uint64_t third = ticks / 3;
+    const bool in_adapt = arm.sustained && t >= third && t < 2 * third;
+    const bool in_after = arm.sustained && t >= 2 * third;
+    double sq;
+    if (arm.sustained) {
+      sq = in_adapt ? 1.0 : 0.0;
+    } else {
+      const double ph = double(t % kSLPeriod) / double(kSLPeriod);
+      sq = ph < 0.5 ? 1.0 : -1.0;
+    }
     ear.set_self_f1_shift(float(arm.shift_hz * sq));
     ear.tick(s.brain, nullptr, spt);
     s.brain.step();
@@ -14017,8 +14058,21 @@ SLRow run_selfloop_arm(const std::vector<uint8_t>& blob, uint64_t ticks, const S
     if (t < settle) continue;
     if (s.brain.vocal_frame() == last_frame) continue;
     last_frame = s.brain.vocal_frame();
-    f1s.push_back(double(s.brain.voice().f1));
+    const double pf1 = double(s.brain.voice().f1);
+    f1s.push_back(pf1);
     shifts.push_back(sq);
+    if (arm.sustained) {
+      // The LAST HALF of each phase, so a phase's mean is what the creature
+      // settled to rather than what it was still moving through. Adaptation and
+      // its aftereffect are both slow, and averaging the transient into the
+      // plateau is how a real effect gets diluted into nothing.
+      const uint64_t ph_lo = in_adapt ? third : (in_after ? 2 * third : 0);
+      if (t >= ph_lo + third / 2) {
+        if (in_adapt) { row.f1_adapt += pf1; ++row.n_adapt; }
+        else if (in_after) { row.f1_after += pf1; ++row.n_after; }
+        else { row.f1_base += pf1; ++row.n_base; }
+      }
+    }
   }
   if (f1s.size() < 512) return row;
   row.self_level = nlev ? slevel / double(nlev) : 0.0;
@@ -14148,6 +14202,91 @@ bool run_selfloop(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
     std::printf("    %-9s %+.3f +/- %-8.3f %7.0f +/- %-6.0f %.3f +/- %-6.3f %6.0f +/- %-4.0f %6.2f +/- %-4.2f %.4f\n",
                 kSLArms[a].name, m_r[a], s_r[a], m_lag[a], s_lag[a], m_abs[a],
                 s_abs[a], m_ph[a], q1, m_fa[a], q2, m_lev[a]);
+  }
+
+  // --- THE SLOW LOOP: CAN REWARD INSTALL WHAT THE FAST ONE DOES NOT USE? ----
+  // PRE-REGISTERED. Compensation is baseline MINUS adapt: the creature lowers
+  // production to hold what it HEARS where it was, so a real effect is POSITIVE
+  // and scales with shift size. The aftereffect is baseline MINUS after, and it
+  // is the quantity that matters -- it separates a changed MAPPING from a changed
+  // TARGET, because a creature merely tracking reward snaps straight back.
+  //
+  // Both are scored against `sus-sham`, which has the identical phase structure
+  // and a shift of ZERO. A creature that simply drifts across a long run would
+  // fake an aftereffect inside a single arm, and only the sham absorbs that.
+  //
+  //   MEASURED only if compensation beats the sham by 3 SE AND grows with shift
+  //   size AND `sus-deaf` sits at the sham. Any one alone is not the result.
+  //   REFUSED otherwise -- and then reward cannot install the loop either, which
+  //   closes the whole self-audition direction rather than half of it.
+  {
+    const uint32_t su[4] = {4u, 5u, 6u, 7u};   // sus150, sus300, sus-sham, sus-deaf
+    double comp[4] = {}, s_comp[4] = {}, aft[4] = {}, s_aft[4] = {};
+    bool ok4[4] = {};
+    std::printf("\n  THE SLOW LOOP -- sustained shift across the middle third.\n"
+                "  compensation = baseline - adapt (positive means the creature\n"
+                "  lowered production against the shift); aftereffect = baseline -\n"
+                "  after, which is a changed MAPPING rather than a changed target.\n");
+    std::printf("    %-10s %-12s %-12s %-12s %-16s %s\n", "arm", "baseline", "adapt",
+                "after", "compensation", "aftereffect");
+    for (uint32_t q = 0; q < 4u; ++q) {
+      std::vector<double> cv, av;
+      double mb = 0.0, ma = 0.0, mf = 0.0;
+      uint32_t nc = 0;
+      for (uint32_t r = 0; r < kReps; ++r) {
+        const Cell& c = cells[r * kSLArmCount + su[q]];
+        if (!c.ok || !c.row.n_base || !c.row.n_adapt || !c.row.n_after) continue;
+        const double b = c.row.f1_base / double(c.row.n_base);
+        const double a2 = c.row.f1_adapt / double(c.row.n_adapt);
+        const double f = c.row.f1_after / double(c.row.n_after);
+        cv.push_back(b - a2);
+        av.push_back(b - f);
+        mb += b; ma += a2; mf += f; ++nc;
+      }
+      if (nc < 3) { std::printf("    %-10s too few creatures\n", kSLArms[su[q]].name); continue; }
+      comp[q] = ctx_mean_se(cv, &s_comp[q]);
+      aft[q] = ctx_mean_se(av, &s_aft[q]);
+      ok4[q] = true;
+      std::printf("    %-10s %-12.1f %-12.1f %-12.1f %+7.1f +/- %-6.1f %+7.1f +/- %.1f\n",
+                  kSLArms[su[q]].name, mb / nc, ma / nc, mf / nc, comp[q], s_comp[q],
+                  aft[q], s_aft[q]);
+    }
+    if (ok4[0] && ok4[1] && ok4[2]) {
+      const double d1 = comp[0] - comp[2], e1 = std::sqrt(s_comp[0] * s_comp[0] + s_comp[2] * s_comp[2]);
+      const double d2 = comp[1] - comp[2], e2 = std::sqrt(s_comp[1] * s_comp[1] + s_comp[2] * s_comp[2]);
+      const double a1 = aft[1] - aft[2], ea = std::sqrt(s_aft[1] * s_aft[1] + s_aft[2] * s_aft[2]);
+      std::printf("\n    against `sus-sham` (identical phases, zero shift)\n");
+      std::printf("      sus150 compensation %+.1f +/- %.1f  (%+.1f SE)\n", d1, e1,
+                  e1 > 0.0 ? d1 / e1 : 0.0);
+      std::printf("      sus300 compensation %+.1f +/- %.1f  (%+.1f SE)\n", d2, e2,
+                  e2 > 0.0 ? d2 / e2 : 0.0);
+      std::printf("      sus300 AFTEREFFECT  %+.1f +/- %.1f  (%+.1f SE)\n", a1, ea,
+                  ea > 0.0 ? a1 / ea : 0.0);
+      if (ok4[3])
+        std::printf("      sus-deaf compensation %+.1f (must sit at the sham)\n",
+                    comp[3] - comp[2]);
+      const bool real = (e2 > 0.0 && d2 / e2 >= 3.0) || (e1 > 0.0 && d1 / e1 >= 3.0);
+      const bool dose = comp[1] >= comp[0] && comp[0] >= comp[2];
+      std::printf("\n    VERDICT: ");
+      if (real && dose)
+        std::printf("REWARD CAN INSTALL IT. Compensation beats the sham and grows\n"
+                    "    with shift size, and the aftereffect is %+.1f (%+.1f SE) -- a changed\n"
+                    "    MAPPING, not a changed target. The fast loop is unused and the slow\n"
+                    "    one is learnable, which is a different creature than selfloop's\n"
+                    "    square wave suggested.\n", a1, ea > 0.0 ? a1 / ea : 0.0);
+      else if (!real)
+        std::printf("REFUSED -- compensation does not beat its own sham (%+.1f and\n"
+                    "    %+.1f SE, 3.0 required). Reward cannot install the loop either, so the\n"
+                    "    self-audition direction is closed WHOLE and not by half. Node\n"
+                    "    perturbation correlates its own perturbations with reward and never\n"
+                    "    needs to hear the result, which is the structural reason.\n",
+                    e1 > 0.0 ? d1 / e1 : 0.0, e2 > 0.0 ? d2 / e2 : 0.0);
+      else
+        std::printf("REFUSED ON DOSE -- compensation beats the sham but does not\n"
+                    "    grow with shift size (%+.1f at 150, %+.1f at 300, sham %+.1f). A lone\n"
+                    "    elevated arm is what a long run's drift produces.\n",
+                    comp[0], comp[1], comp[2]);
+    }
   }
 
   // THE STRUCTURAL NULL, checked before anything is read. With self_gain 0 there

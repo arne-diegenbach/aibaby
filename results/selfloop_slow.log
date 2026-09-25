@@ -1,0 +1,19 @@
+experiment: selfloop
+  instrument        selfloop   trial seed 0000000001357635   1200000 ticks
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  the question    how long is larynx -> ear -> larynx? `loop-latency`
+                  could only SUM it: 165 ms under v62, 905 under the
+                  position decoder, against ~200 ms for a gesture --
+                  and two of its four terms were estimates.
+  the method      altered auditory feedback (Houde & Jordan): shift the
+                  F1 the creature hears OF ITSELF on a 1500 ms square
+                  wave, leave the room SILENT, and cross-correlate
+                  produced F1 against the shift at lag.
+  [1/96] seed 0 shift0    r +0.010 at 51 ms
+  [3/96] seed 0 shift300  r -0.045 at 186 ms
+  [2/96] seed 0 shift150  r +0.002 at 27 ms
+  [7/96] seed 0 sus-sham  r +0.012 at 700 ms
+  [4/96] seed 0 deaf      r +0.006 at 265 ms
+  [5/96] seed 0 sus150    r -0.076 at 447 ms
+  [6/96] seed 0 sus300    r -0.030 at 686 ms

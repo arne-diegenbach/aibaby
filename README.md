@@ -11973,6 +11973,71 @@ papers about the half it does not touch.
   differ is the multiplexing these papers describe, and the reason it matters
   here is that homeostasis regulates only one of the two channels.
 
+- **Reward the TRANSIENT, not the distance to a target — the strongest unbuilt
+  lead in this project.** Warlaumont, A. S. & Finnegan, M. K. (2016). *Learning
+  to produce syllabic speech sounds via reward-modulated neural plasticity.*
+  PLoS ONE 11(1), e0145096.
+  <https://doi.org/10.1371/journal.pone.0145096> — a spiking reservoir (1000
+  Izhikevich neurons, 80/20 E/I) drives agonist/antagonist jaw muscles in Praat's
+  articulatory synthesiser, and **canonical babbling emerges from
+  dopamine-modulated STDP alone.** The paper is explicit that there is **no
+  central pattern generator**: recurrent E/I dynamics supply the oscillation and
+  learning shapes it.
+  - **Why this matters here.** Every reward in this project is a distance to a
+    target, and four measured results are about that pathology —
+    `demand-never-arrives`, `baseref`, `protocol-line-closed` (an unreachable
+    target beats a reachable one) and `blindness-is-not-the-ceiling`. Warlaumont's
+    reward has **no target at all**: salience is estimated as summed
+    spectrotemporal **transients** (Coath & Denham's cochlear→cortical→edge
+    model, first 150 ms excluded), and the bar is a staircase on the creature's
+    own hit rate — it starts at 4.5 and rises by 0.1 whenever 30% of the last ten
+    vocalisations clear it.
+  - **And it aims at the frame, which this project has refused four ways.**
+    Rewarding transients rewards **change**, which is exactly what this creature
+    never produces: `the-voice-drones` found no syllabic rhythm, `struct Word`
+    never moves while sounding, and every frame attempt here looked for an
+    oscillator rather than a reason to modulate. Amplitude and voicing already
+    sit on the 60 ms fast path, so transients are expressible even though this
+    larynx has no jaw.
+  - **What would refuse it before a build.** This project's staircase was tried
+    and **outran the voice at trial 107 of 1214** (`staircase-result`), and
+    `protocol-line-closed` recorded three protocol attempts failing and two
+    making things worse. The difference is that those moved a **target**;
+    Warlaumont moves a **bar on a target-free measure**. If a transient measure
+    computed on this creature's own output is flat — no headroom between its
+    drone and its best — the reward has nothing to grade and the lead dies on
+    arithmetic. Measure that first.
+- **The forgetting–adaptation trade-off is structural, and this is the
+  independent confirmation.** Ibrahim, M. (2026). *Sequential learning and
+  catastrophic forgetting in differentiable resistor networks.* Physical Review E;
+  arXiv:2605.01383. <https://arxiv.org/abs/2605.01383>,
+  <https://doi.org/10.1103/584w-2mxq> — a physical network governed by
+  Kirchhoff's laws, nothing neural about it, and it reproduces this project's
+  central memory result: forgetting is set by **task conflict**, and *"uniform
+  anchoring and normalised gradient-weighted anchoring reduce forgetting only by
+  increasing the final loss on the new task."*
+  - That is `region-targets-refuted` almost word for word — the gap narrowed
+    **only by degrading teaching** — and it is the same shape as every
+    stabilisation mechanism tried here: Benna–Fusi's slow store, the
+    metaplasticity brake, context gating, AGMP's activity gate. **Ibrahim shows
+    that trade is generic to gradient-based anchoring in a physical network, not
+    a defect of this creature.** The 0.22 wipe's resistance to anchoring is
+    therefore expected rather than anomalous, which is worth more than another
+    anchoring mechanism would have been.
+  - It also localises forgetting to **high-current edges** — the dominant
+    transport pathways — which is the same asymmetry `position-is-the-cost` and
+    `leverage-at-one-end` measured from the other side: blocking one F1 neuron
+    costs 30% at the top of the group and 7% in the middle.
+- **Diffusive homeostasis, re-checked and still the right shape.** The literature
+  match already recorded in `diffusive-homeostasis` — nitric-oxide-style
+  volume-diffusing homeostatic signals resolving the conflict between homeostatic
+  intrinsic plasticity and Hebbian plasticity *"by limiting the impact of
+  homeostasis on individual synaptic modifications"* — is directly the wall DNA
+  v63 ran into, where IP defends a flat rate profile against the differentiation
+  a population-vector readout needs. `ippool` failed the crude version at
+  −0.90 SE, so the lead survives only as *the crude version is not the
+  mechanism*, and it should not be re-opened without reading why.
+
 ### A note on where this project's record actually lives
 
 Two stores, and they are not the same store:
