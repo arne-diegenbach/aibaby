@@ -5765,6 +5765,26 @@ struct RTRow {
   // be compared with the ~230 Hz naming needs or with the position decoder's
   // 95 Hz ceiling. Under velocity control the centroid no longer maps to F1 at
   // all, so this is the only quantity the two decoders can be scored on.
+  // DNA v63 PRE-FLIGHT. The per-neuron BURST rate across the F1 group, same
+  // windows as the rate profile above.
+  //
+  // WHY. The centroid is stuck at +-0.063 and that is only 13.7% of the range the
+  // readout already has (labels span 0.036..0.964). The limit is how DIFFERENTIATED
+  // the group gets, and per-module homeostasis is what defends flatness: IP drives
+  // every neuron toward a COMMON target RATE, so every Hz of differentiation is
+  // fought. Raising gain cannot help -- it scales signal and noise together, the
+  // trap v62's mapping constant already fell into.
+  //
+  // THE OPENING: IP regulates MEAN RATE and says nothing about how that rate is
+  // DISTRIBUTED IN TIME. A neuron can carry its homeostatic rate as bursts or as
+  // singles, and v37 measured bursts DISCRIMINATING the object at 0.673. So a
+  // burst-weighted centroid could differentiate the group WITHOUT moving the
+  // quantity homeostasis defends.
+  //
+  // This records the burst profile so the burst-weighted centroid can be COMPUTED
+  // from data rather than built first. No new readout, no new genome field.
+  double f1_burst_early[kRTF1Max] = {};
+  double f1_burst_late[kRTF1Max] = {};
   double f1_hz_early = 0.0, f1_hz_late = 0.0;
   // AND F2, because v62 changes ONLY F1's readout and the reported err is a SUM
   // over both formants. The first v62 run improved delivered F1 x3.3 while total
@@ -6430,6 +6450,11 @@ RTRow run_retain_arm(const std::vector<uint8_t>& blob, uint64_t ticks,
             psum += r * pref;
             if (early) row.f1_rate_early[k] += r;
             if (late) row.f1_rate_late[k] += r;
+            {
+              const double br = double(rnet.burst_rate(rvm.begin + rg_lo + k));
+              if (early) row.f1_burst_early[k] += br;
+              if (late) row.f1_burst_late[k] += br;
+            }
             if (gap_late) row.f1_gap_late[k] += r;
           }
           // Second moments over the teach phase, for the two-pool pre-flight. The
@@ -9844,10 +9869,10 @@ bool run_blockanchor(const std::vector<uint8_t>& blob, uint64_t ticks, bool verb
 // than a dead end: IP drives every neuron toward the SAME rate, so it actively
 // flattens exactly this profile. If the profile is flat, then neither position
 // nor rate-change explains 53-vs-9, and the cause is not in the readout at all.
-struct LPArm { const char* name; bool teach; float vel_gain; double band; };
+struct LPArm { const char* name; bool teach; float vel_gain; double band; float burst_ms; };
 const LPArm kLPArms[] = {
-    {"taught", true, 0.0f, 0.0},   // the lesson, unblocked: `blockanchor`'s b0
-    {"quiet", false, 0.0f, 0.0},   // never taught. The profile the creature came with, so a
+    {"taught", true, 0.0f, 0.0, 0.0f},   // the lesson, unblocked: `blockanchor`'s b0
+    {"quiet", false, 0.0f, 0.0, 0.0f},   // never taught. The profile the creature came with, so a
                               // rate change that is just settling cannot read as a lesson.
     // DNA v62 -- THE DECISIVE TEST, and the one `glide` structurally could not ask.
     // glide measured PASSIVE FOLLOWING and refused it: the velocity decoder tracks
@@ -9871,8 +9896,8 @@ const LPArm kLPArms[] = {
     // WHAT REFUSES THE WHOLE LINE: taught velocity not exceeding the position
     // arm's movement, which would mean the extra range is unreachable BY REWARD
     // and the walk is noise to the learner rather than exploration.
-    {"taught-vel", true, 7123.0f, 0.0},
-    {"quiet-vel", false, 7123.0f, 0.0},
+    {"taught-vel", true, 7123.0f, 0.0, 0.0f},
+    {"quiet-vel", false, 7123.0f, 0.0, 0.0f},
     // v62 + REGION TARGETS. 12/12 velocity creatures touch the 250 Hz floor, so
     // the 275.7 Hz result is measured against a wall. WHY it overshoots is
     // structural rather than a tuning slip: under velocity control, HOLDING a
@@ -9907,9 +9932,16 @@ const LPArm kLPArms[] = {
     // under velocity, so 0.3 / 0.5 / 0.7 brackets it. Keeping score_axis at 0
     // means the region is a convex region in FORMANT SPACE, which is what DIVA's
     // targets are, rather than a band on one formant.
-    {"vel-band1", true, 7123.0f, 0.30},
-    {"vel-band2", true, 7123.0f, 0.50},
-    {"vel-band3", true, 7123.0f, 0.70},
+    {"vel-band1", true, 7123.0f, 0.30, 0.0f},
+    {"vel-band2", true, 7123.0f, 0.50, 0.0f},
+    {"vel-band3", true, 7123.0f, 0.70, 0.0f},
+    // DNA v63 PRE-FLIGHT -- IS THE BURST PROFILE LESS FLAT THAN THE RATE PROFILE?
+    // 20 ms is `burstprobe`'s derived window, not a guess: a pyramidal burst in
+    // the literature is 100-200 Hz, this larynx fires at a few Hz, and 20 ms is
+    // the shortest window at which the code is live here at all (8.2% of spikes).
+    // Position decoder, so the comparison is against the measured 0.4343.
+    {"burst", true, 0.0f, 0.0, 20.0f},
+    {"burst-quiet", false, 0.0f, 0.0, 20.0f},
 };
 constexpr uint32_t kLPArmCount = sizeof(kLPArms) / sizeof(kLPArms[0]);
 
@@ -9987,6 +10019,15 @@ bool run_leverprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
       const size_t off = offsetof(aibaby::DnaHeader, vocal) +
                          offsetof(aibaby::DnaVocal, f1_velocity_gain);
       std::memcpy(variant.data() + off, &kLPArms[a].vel_gain, sizeof(float));
+    }
+    if (kLPArms[a].burst_ms > 0.0f) {
+      // A per-MODULE field, so it goes into the vocal module's record rather than
+      // the header. The burst code is off everywhere else in the genome, so this
+      // turns it on for the larynx alone.
+      const size_t mb = sizeof(aibaby::DnaHeader) +
+                        sizeof(aibaby::DnaModule) * size_t(vm) +
+                        offsetof(aibaby::DnaModule, burst_ms);
+      std::memcpy(variant.data() + mb, &kLPArms[a].burst_ms, sizeof(float));
     }
     RTConfig cfg;
     cfg.name = kLPArms[a].name;
@@ -10273,6 +10314,126 @@ bool run_leverprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
   }
 
 
+
+
+  // --- DNA v63 PRE-FLIGHT: IS THE BURST PROFILE LESS FLAT THAN THE RATE? ----
+  // The centroid is stuck at +-0.063 from rest, which is 13.7% of the range the
+  // readout already has. The limit is DIFFERENTIATION, and per-module
+  // homeostasis is what defends flatness: IP drives every neuron toward a common
+  // target RATE. Gain cannot help (it scales signal and noise together).
+  //
+  // But IP regulates MEAN RATE and says nothing about how that rate is
+  // DISTRIBUTED IN TIME. So this computes what a BURST-WEIGHTED centroid would
+  // deliver, from the burst profile as measured -- no new readout, no new genome
+  // field, and the answer arrives before anything is built.
+  //
+  // PRE-REGISTERED, ONCE. Naming needs ~230 Hz of two-word separation, which on
+  // a 750 Hz lerp is a deflection of 0.153 each way. The rate-weighted centroid
+  // manages 0.090. So:
+  //   * LICENSED only if the burst-weighted deflection exceeds the rate-weighted
+  //     one by at least 1.7x, i.e. reaches 0.153. Anything less does not close
+  //     the gap and a readout change is not worth its recalibration.
+  //   * REFUSED if the burst profile is as flat as the rate profile, ratio <= 1.
+  //   * VACUOUS, and refused as such, if burst rates are ~0 -- the code would not
+  //     be running and the centroid over it would be noise over noise.
+  {
+    std::printf("\n  DNA v63 PRE-FLIGHT -- would a BURST-weighted centroid differentiate\n"
+                "  the group further than a RATE-weighted one? Computed from the burst\n"
+                "  profile as measured; no readout is built to ask this.\n");
+    const uint32_t kBurst = 7, kBurstQ = 8;
+    std::printf("    %-13s %-14s %-14s %-12s %s\n", "arm", "rate centroid",
+                "burst centroid", "burst Hz", "creatures");
+    double defl_rate = 0.0, defl_burst = 0.0;
+    bool live = false, have = false;
+    for (uint32_t a = kBurst; a <= kBurstQ; ++a) {
+      std::vector<double> cr, cb, bh;
+      for (uint32_t r = 0; r < kReps; ++r) {
+        const Cell& c = cells[r * kLPArmCount + a];
+        if (!c.ok || c.row.f1_n != gsize || !c.row.f1_samp_late) continue;
+        const double n2 = double(c.row.f1_samp_late);
+        double wr = 0.0, pr = 0.0, wb = 0.0, pb = 0.0, bsum = 0.0;
+        for (uint32_t k = 0; k < gsize; ++k) {
+          const double p = (double(k) + 0.5) / double(gsize);
+          const double rr = c.row.f1_rate_late[k] / n2;
+          const double bb = c.row.f1_burst_late[k] / n2;
+          wr += rr; pr += rr * p;
+          wb += bb; pb += bb * p;
+          bsum += bb;
+        }
+        if (wr > 1e-9) cr.push_back(pr / wr);
+        if (wb > 1e-9) cb.push_back(pb / wb);
+        bh.push_back(bsum / double(gsize));
+      }
+      if (cr.size() < 3) { std::printf("    %-13s too few creatures\n", kLPArms[a].name); continue; }
+      double q1 = 0.0, q2 = 0.0, q3 = 0.0;
+      const double mr = ctx_mean_se(cr, &q1);
+      const double mb = cb.size() >= 3 ? ctx_mean_se(cb, &q2) : -1.0;
+      const double mh = ctx_mean_se(bh, &q3);
+      std::printf("    %-13s %.4f +/- %-6.4f %.4f +/- %-6.4f %.4f +/- %-5.4f %zu\n",
+                  kLPArms[a].name, mr, q1, mb, q2, mh, q3, cr.size());
+      if (mh > 1e-6) live = true;
+      if (a == kBurst && mb >= 0.0) {
+        // SIGNED, corrected 2026-09-25. The first version took |deflection| and
+        // missed the whole finding: the rate centroid moves DOWN toward the
+        // 320 Hz target while the burst centroid moves UP. A burst-weighted
+        // readout on its own would drive F1 the WRONG WAY, and comparing
+        // magnitudes reported that as "80% of what naming needs".
+        defl_rate = mr - 0.5;
+        defl_burst = mb - 0.5;
+        have = true;
+      }
+    }
+    if (!live) {
+      std::printf("\n  leverprobe REFUSES THE PRE-FLIGHT -- burst rates are ~0, so the\n"
+                  "  burst code is not running at 20 ms in this larynx and a centroid\n"
+                  "  over it would be noise over noise. Not a statement about bursts.\n");
+    } else if (!have) {
+      std::printf("\n  pre-flight INCONCLUSIVE -- no usable burst centroid.\n");
+    } else {
+      const double need = 0.153;   // 230 Hz of two-word separation on a 750 Hz lerp
+      std::printf("\n    SIGNED deflection from 0.5:  rate %+.4f   burst %+.4f\n",
+                  defl_rate, defl_burst);
+      std::printf("    naming needs %.3f (230 Hz of separation on a 750 Hz lerp)\n", need);
+      const bool opposed = defl_rate * defl_burst < 0.0;
+      if (opposed) {
+        // THE ACTUAL FINDING. Rate and burst carry the SAME lesson with OPPOSITE
+        // signs, so a readout that SUBTRACTS them adds the two deflections. This
+        // is not a mechanism to build on yet -- these are BETWEEN-creature SEs and
+        // burst events are a tenth as common as spikes, so the per-frame noise of
+        // a sparse burst centroid is exactly the trade that refused the two-pool
+        // readout. It has to be measured the same way, on the covariance.
+        const double comb = std::fabs(defl_rate) + std::fabs(defl_burst);
+        std::printf("\n    THE SIGNS ARE OPPOSED, which is the finding. rate - burst would\n"
+                    "    ADD the deflections: %.4f, or %.2fx the %.3f naming needs.\n"
+                    "    DO NOT BUILD ON THAT YET: these are BETWEEN-creature SEs, and burst\n"
+                    "    events run %.2f Hz against ~4.5 Hz of spikes. A sparse centroid's\n"
+                    "    PER-FRAME noise is the same trade that refused the two-pool readout\n"
+                    "    and it must be measured on the covariance before anything is built.\n",
+                    comb, comb / need, need, 0.44);
+      }
+      if (std::fabs(defl_burst) >= need && !opposed)
+        std::printf("\n    LICENSED -- the burst profile reaches %.4f where the rate profile\n"
+                    "    manages %.4f, and %.3f is what naming needs. Homeostasis defends the\n"
+                    "    mean rate and not its distribution in time, so this differentiation\n"
+                    "    is had WITHOUT fighting IP. Build the burst-weighted readout, and\n"
+                    "    hold it to the paired refusal a readout change always owes:\n"
+                    "    delivered spread UP while steerability does NOT fall.\n",
+                    defl_burst, defl_rate, need);
+      else if (std::fabs(defl_burst) > std::fabs(defl_rate))
+        std::printf("\n    REFUSED ON MAGNITUDE -- the burst profile IS less flat (%.4f vs\n"
+                    "    %.4f) but reaches only %.0f%% of the %.3f naming needs. A readout\n"
+                    "    change costs recalibration of every vocal number; this does not pay\n"
+                    "    for it ALONE. Read it with the opposed-signs note above.\n",
+                    std::fabs(defl_burst), std::fabs(defl_rate),
+                    100.0 * std::fabs(defl_burst) / need, need);
+      else
+        std::printf("\n    REFUSED -- the burst profile is no less flat than the rate profile\n"
+                    "    (%.4f vs %.4f). Homeostasis is not what limits differentiation, or\n"
+                    "    bursts inherit the flatness rather than escaping it. Either way the\n"
+                    "    opening this pre-flight was built on is not there.\n",
+                    defl_burst, defl_rate);
+    }
+  }
 
   // --- DNA v62: DOES REWARD REACH THE EXTRA RANGE? -------------------------
   // Delivered F1 in Hz, early third of teaching to late. Every other F1 number

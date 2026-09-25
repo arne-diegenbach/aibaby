@@ -11252,6 +11252,56 @@ that it is not in use. The ingredients are all present: `self_gain` is 0.5, the
 measured self level is 0.11–0.15, and a direct `auditory → vocal` tract exists
 at 5 ms. They are simply not wired into F1 control.
 
+### The burst channel is differentiated where homeostasis is not looking
+
+**The ceiling is not the readout's range — the creature uses a seventh of it.**
+A centroid over labels spanning 0.036–0.964 could reach either end; teaching in
+both directions moves it 0.4343 to 0.5611, which is **13.7%** of the range
+already available. So the limit is *differentiation*: how unequal the group's
+activity can get. And differentiation has a named opponent — per-module
+homeostasis drives every neuron toward a common target **rate**, so every Hz of
+it is fought. Gain cannot help; it scales signal and noise together.
+
+**But IP regulates mean rate and says nothing about how that rate is
+distributed in time.** A neuron can carry its homeostatic rate as bursts or as
+singles. So the burst channel is differentiated where homeostasis is not
+looking — and `burstprobe` had already measured bursts discriminating the object
+at 0.673. `burst_rate` exists per-neuron in the kernel, so this could be
+*computed* from a recorded profile instead of built first.
+
+    arm           rate centroid       burst centroid      burst Hz
+    burst         0.4074 +/- 0.0099   0.6228 +/- 0.0113   0.44
+    burst-quiet   0.5004 +/- 0.0001   0.5024 +/- 0.0109   0.41
+
+**The burst centroid moves the other way, and that is the finding.** Rate goes
+down toward the 320 Hz target; burst goes *up*. The untaught control sits at
+chance (0.5024), so the burst signal is the lesson's — **10.7 SE** from its own
+control. Rate and burst carry the same lesson with **opposite signs**, so a
+readout that subtracts them *adds* the deflections:
+
+    rate            -0.0926
+    burst           +0.1228
+    rate - burst ->  0.2154  =  1.41x the 0.153 naming needs
+
+That clears a bar fourteen routes and two decoder rewrites did not, and it has a
+mechanism rather than a fit behind it: the two channels are anti-correlated
+because one is regulated and the other is not.
+
+**It is not built, and the reason is the morning's result.** These are
+between-creature SEs, and burst events run 0.44 Hz against ~4.5 Hz of spikes — a
+tenth the events. The per-frame noise of a sparse centroid is exactly the trade
+that refused the two-pool readout (ρ = 0.101, equivalence at 1.001), and it has
+to be measured on the covariance the same way before a readout change earns its
+recalibration cost.
+
+**And my own analysis hid this at first.** The pre-flight compared
+`|deflection|` and so reported the burst channel as "80% of what naming needs",
+when a burst-weighted readout alone would drive F1 the *wrong way*. That is the
+third sign error of the day and the second inside a block written to catch this
+class of mistake — the two formants want opposite signs, the two channels want
+opposite signs, and magnitude comparisons quietly discard exactly the
+information that matters. The verdict is now signed.
+
 ## Layout
 
 ```
