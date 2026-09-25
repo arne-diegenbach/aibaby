@@ -1,0 +1,97 @@
+experiment: salience
+  instrument        salience   trial seed 0000000001357dd7   600000 ticks
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  the gate       Warlaumont & Finnegan (2016) reward summed
+                 spectrotemporal TRANSIENTS, with no target and no CPG,
+                 and get canonical babbling. A reward can only grade
+                 what it can TELL APART, so before building it: does
+                 this creature's own voice VARY on that measure?
+  the measure    summed |frame-to-frame change| of the mel spectrogram,
+                 on the creature's own rendered voice in a silent room.
+  [2/60] seed 0 caregiver  p50 0.89 p90 0.92
+  [7/60] seed 1 caregiver  p50 0.89 p90 0.92
+  [8/60] seed 1 silence    p50 0.00 p90 0.00
+  [5/60] seed 0 sweep      p50 1.27 p90 1.63
+  [1/60] seed 0 creature   p50 14.77 p90 20.13
+  [4/60] seed 0 rhythm     p50 13.00 p90 13.61
+  [3/60] seed 0 silence    p50 0.00 p90 0.00
+  [10/60] seed 1 sweep      p50 1.27 p90 1.63
+  [6/60] seed 1 creature   p50 14.46 p90 19.78
+  [9/60] seed 1 rhythm     p50 13.00 p90 13.61
+  [11/60] seed 2 creature   p50 13.98 p90 19.90
+  [12/60] seed 2 caregiver  p50 0.89 p90 0.92
+  [13/60] seed 2 silence    p50 0.00 p90 0.00
+  [14/60] seed 2 rhythm     p50 13.00 p90 13.61
+  [16/60] seed 3 creature   p50 12.89 p90 19.18
+  [19/60] seed 3 rhythm     p50 13.00 p90 13.61
+  [20/60] seed 3 sweep      p50 1.27 p90 1.63
+  [15/60] seed 2 sweep      p50 1.27 p90 1.63
+  [17/60] seed 3 caregiver  p50 0.89 p90 0.92
+  [18/60] seed 3 silence    p50 0.00 p90 0.00
+  [21/60] seed 4 creature   p50 12.38 p90 19.26
+  [22/60] seed 4 caregiver  p50 0.89 p90 0.92
+  [25/60] seed 4 sweep      p50 1.27 p90 1.63
+  [29/60] seed 5 rhythm     p50 13.00 p90 13.61
+  [24/60] seed 4 rhythm     p50 13.00 p90 13.61
+  [28/60] seed 5 silence    p50 0.00 p90 0.00
+  [23/60] seed 4 silence    p50 0.00 p90 0.00
+  [30/60] seed 5 sweep      p50 1.27 p90 1.63
+  [26/60] seed 5 creature   p50 14.09 p90 20.25
+  [27/60] seed 5 caregiver  p50 0.89 p90 0.92
+  [31/60] seed 6 creature   p50 12.15 p90 18.68
+  [36/60] seed 7 creature   p50 14.73 p90 20.37
+  [37/60] seed 7 caregiver  p50 0.89 p90 0.92
+  [33/60] seed 6 silence    p50 0.00 p90 0.00
+  [35/60] seed 6 sweep      p50 1.27 p90 1.63
+  [32/60] seed 6 caregiver  p50 0.89 p90 0.92
+  [34/60] seed 6 rhythm     p50 13.00 p90 13.61
+  [39/60] seed 7 rhythm     p50 13.00 p90 13.61
+  [42/60] seed 8 caregiver  p50 0.89 p90 0.92
+  [41/60] seed 8 creature   p50 12.49 p90 18.72
+  [38/60] seed 7 silence    p50 0.00 p90 0.00
+  [40/60] seed 7 sweep      p50 1.27 p90 1.63
+  [47/60] seed 9 caregiver  p50 0.89 p90 0.92
+  [45/60] seed 8 sweep      p50 1.27 p90 1.63
+  [44/60] seed 8 rhythm     p50 13.00 p90 13.61
+  [43/60] seed 8 silence    p50 0.00 p90 0.00
+  [48/60] seed 9 silence    p50 0.00 p90 0.00
+  [50/60] seed 9 sweep      p50 1.27 p90 1.63
+  [49/60] seed 9 rhythm     p50 13.00 p90 13.61
+  [46/60] seed 9 creature   p50 14.17 p90 19.99
+  [51/60] seed 10 creature   p50 12.71 p90 19.02
+  [54/60] seed 10 rhythm     p50 13.00 p90 13.61
+  [56/60] seed 11 creature   p50 13.46 p90 19.80
+  [55/60] seed 10 sweep      p50 1.27 p90 1.63
+  [52/60] seed 10 caregiver  p50 0.89 p90 0.92
+  [53/60] seed 10 silence    p50 0.00 p90 0.00
+  [58/60] seed 11 silence    p50 0.00 p90 0.00
+  [57/60] seed 11 caregiver  p50 0.89 p90 0.92
+  [59/60] seed 11 rhythm     p50 13.00 p90 13.61
+  [60/60] seed 11 sweep      p50 1.27 p90 1.63
+
+  arm        p10            p50            p90            mean amp   windows
+    creature   7.65           13.52 +/- 0.28   19.59 +/- 0.17   0.309      1080
+    caregiver  0.87           0.89 +/- 0.00   0.92 +/- 0.00   0.000      1080
+    silence    0.00           0.00 +/- 0.00   0.00 +/- 0.00   0.000      1080
+    rhythm     10.96          13.00 +/- 0.00   13.61 +/- 0.00   0.000      1080
+    sweep      0.90           1.27 +/- 0.00   1.63 +/- 0.00   0.000      1080
+
+  HEADROOM (can a staircase climb?)   p90/p50 = 1.45   [1.25 required]
+  SCALE (is the range worth having?)  creature p90 / caregiver p50 = 22.01
+  the measure reads 0.00 on silence, 0.89 on real speech.
+
+  DOES THE INSTRUMENT RANK STRUCTURE ABOVE JITTER?
+    3 Hz rhythm (the FRAME)   13.00
+    moving formants (CONTENT) 1.27
+    held vowel                0.89
+    the creature              13.52
+
+  salience REFUSES ITSELF -- a real 3 Hz amplitude rhythm scores 13.00
+  against the creature's 13.52. The measure ranks a jittery drone at or
+  above the structure the reward exists to find, so it is reading JITTER
+  (noise_amp 0.28, vocal parameters fluctuating every tick) and not
+  spectrotemporal structure. The headroom below is headroom in noise.
+  Warlaumont's salience runs through Coath & Denham's cortical filtering
+  and edge detection; a raw frame-to-frame difference is not that, and
+  this is where the simplification fails.

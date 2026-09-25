@@ -394,6 +394,14 @@ const Spec kSpecs[] = {
      "  pulses 4 s then goes SILENT and measures the f-component during the silence\n"
      "  -- the M1b logic that separates an echo from a pass-through. Every f tiles\n"
      "  the block in whole cycles so concatenated holds keep phase. 12 seeds"},
+    {"salience", 600000, Expect::kOpen, Tier::kLong,
+     "THE GATE ON WARLAUMONT'S REWARD, before any reward is built. Warlaumont &\n"
+     "  Finnegan (2016) get canonical babbling from R-STDP with NO target and no\n"
+     "  CPG, rewarding summed spectrotemporal TRANSIENTS against a staircase on\n"
+     "  the creature's own hit rate. A reward can only grade what it can tell\n"
+     "  apart, so: do this creature's vocalisations VARY on that measure? Summed\n"
+     "  |frame-to-frame change| of the mel spectrogram on its own voice, with a\n"
+     "  caregiver arm for scale and a silence arm for the floor. 12 seeds"},
     {"selfloop", 1200000, Expect::kOpen, Tier::kTeach,
      "HOW LONG IS larynx -> ear -> larynx? The closed-loop direction is gated\n"
      "  on this and `loop-latency` could only SUM it -- 165 ms under v62, 905\n"
@@ -812,6 +820,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "framehold") ok = run_framehold(dna_blob, ticks, verbose);
   else if (name == "glide") ok = run_glide(dna_blob, ticks, verbose);
   else if (name == "selfloop") ok = run_selfloop(dna_blob, ticks, verbose);
+  else if (name == "salience") ok = run_salience(dna_blob, ticks, verbose);
   else if (name == "adaptclock") ok = run_adaptclock(dna_blob, ticks, verbose);
   else if (name == "halfcenter") ok = run_halfcenter(dna_blob, ticks, verbose);
   else if (name == "regionband") ok = run_regionband(dna_blob, ticks, verbose);

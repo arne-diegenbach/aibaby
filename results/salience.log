@@ -1,0 +1,63 @@
+experiment: salience
+  instrument        salience   trial seed 0000000001357dd7   600000 ticks
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  the gate       Warlaumont & Finnegan (2016) reward summed
+                 spectrotemporal TRANSIENTS, with no target and no CPG,
+                 and get canonical babbling. A reward can only grade
+                 what it can TELL APART, so before building it: does
+                 this creature's own voice VARY on that measure?
+  the measure    summed |frame-to-frame change| of the mel spectrogram,
+                 on the creature's own rendered voice in a silent room.
+  [8/36] seed 2 caregiver  p50 0.89 p90 0.92
+  [4/36] seed 1 creature   p50 14.46 p90 19.78
+  [5/36] seed 1 caregiver  p50 0.89 p90 0.92
+  [2/36] seed 0 caregiver  p50 0.89 p90 0.92
+  [3/36] seed 0 silence    p50 0.00 p90 0.00
+  [6/36] seed 1 silence    p50 0.00 p90 0.00
+  [1/36] seed 0 creature   p50 14.77 p90 20.13
+  [7/36] seed 2 creature   p50 13.98 p90 19.90
+  [10/36] seed 3 creature   p50 12.89 p90 19.18
+  [11/36] seed 3 caregiver  p50 0.89 p90 0.92
+  [9/36] seed 2 silence    p50 0.00 p90 0.00
+  [14/36] seed 4 caregiver  p50 0.89 p90 0.92
+  [13/36] seed 4 creature   p50 12.38 p90 19.26
+  [16/36] seed 5 creature   p50 14.09 p90 20.25
+  [17/36] seed 5 caregiver  p50 0.89 p90 0.92
+  [12/36] seed 3 silence    p50 0.00 p90 0.00
+  [15/36] seed 4 silence    p50 0.00 p90 0.00
+  [21/36] seed 6 silence    p50 0.00 p90 0.00
+  [20/36] seed 6 caregiver  p50 0.89 p90 0.92
+  [22/36] seed 7 creature   p50 14.73 p90 20.37
+  [23/36] seed 7 caregiver  p50 0.89 p90 0.92
+  [18/36] seed 5 silence    p50 0.00 p90 0.00
+  [19/36] seed 6 creature   p50 12.15 p90 18.68
+  [26/36] seed 8 caregiver  p50 0.89 p90 0.92
+  [27/36] seed 8 silence    p50 0.00 p90 0.00
+  [28/36] seed 9 creature   p50 14.17 p90 19.99
+  [24/36] seed 7 silence    p50 0.00 p90 0.00
+  [25/36] seed 8 creature   p50 12.49 p90 18.72
+  [29/36] seed 9 caregiver  p50 0.89 p90 0.92
+  [34/36] seed 11 creature   p50 13.46 p90 19.80
+  [30/36] seed 9 silence    p50 0.00 p90 0.00
+  [33/36] seed 10 silence    p50 0.00 p90 0.00
+  [32/36] seed 10 caregiver  p50 0.89 p90 0.92
+  [31/36] seed 10 creature   p50 12.71 p90 19.02
+  [35/36] seed 11 caregiver  p50 0.89 p90 0.92
+  [36/36] seed 11 silence    p50 0.00 p90 0.00
+
+  arm        p10            p50            p90            mean amp   windows
+    creature   7.65           13.52 +/- 0.28   19.59 +/- 0.17   0.309      1080
+    caregiver  0.87           0.89 +/- 0.00   0.92 +/- 0.00   0.000      1080
+    silence    0.00           0.00 +/- 0.00   0.00 +/- 0.00   0.000      1080
+
+  HEADROOM (can a staircase climb?)   p90/p50 = 1.45   [1.25 required]
+  SCALE (is the range worth having?)  creature p90 / caregiver p50 = 22.01
+  the measure reads 0.00 on silence, 0.89 on real speech.
+
+  --- the reading ---
+  THERE IS HEADROOM. The creature's best windows score 1.45x its median,
+  so a bar that tracks its own hit rate has something to climb. Build the
+  reward -- and hold it to the refusal that matters: salience must rise
+  WITH a rhythm appearing, not merely with the voice getting louder,
+  which `mean amp` is carried here to separate.

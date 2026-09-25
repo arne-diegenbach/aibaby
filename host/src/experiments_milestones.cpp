@@ -14389,6 +14389,332 @@ bool run_selfloop(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
   return beats && monotone;
 }
 
+
+// ---------------------------------------------------------------------------
+// `salience` — THE GATE ON WARLAUMONT'S REWARD, BEFORE ANY REWARD IS BUILT
+//
+// Warlaumont & Finnegan (2016) get canonical babbling from R-STDP with NO target
+// and NO central pattern generator. Their reward is auditory SALIENCE — summed
+// spectrotemporal transients (Coath & Denham: cochlear spectrogram, cortical
+// filtering, edge detection, first 150 ms excluded) — against a staircase on the
+// creature's own hit rate.
+//
+// Rewarding transients rewards CHANGE, which is precisely what this creature
+// never produces: `the-voice-drones` found no syllabic rhythm and `struct Word`
+// never moves while sounding. That is why the lead is interesting and also why
+// it may be dead on arrival.
+//
+// THE GATE, and it costs one short run instead of a mechanism: a reward can only
+// grade behaviour it can TELL APART. If this creature's vocalisations all score
+// the same, a staircase has nothing to climb and the reward is uninformative no
+// matter how well it worked for a jaw.
+//
+// THE MEASURE. Summed absolute FRAME-TO-FRAME change of the mel spectrogram,
+// across channels — an edge detector in time, which is the core of what Coath &
+// Denham's model does. Computed on the creature's OWN rendered voice, in a
+// silent room, so nothing but its own production is in the signal.
+//
+// PRE-REGISTERED:
+//   * HEADROOM if the creature's own p90 exceeds its p50 by at least 25% — a
+//     staircase needs room to climb, and Warlaumont's advances when 30% of the
+//     last ten clear the bar, which a flat distribution can never satisfy.
+//   * SCALE: the caregiver arm is the reference, not a control. A creature whose
+//     best vocalisation is a rounding error against real speech has headroom in
+//     a range too small to matter, and the run says so rather than reporting a
+//     ratio in a vacuum.
+//   * REFUSED if the distribution is flat. Then Warlaumont's reward is right and
+//     this creature's VOICE is the reason it cannot use it — which is a fact
+//     about the larynx, not about the reward, and it should be recorded that way.
+struct SalArm {
+  const char* name;
+  bool caregiver;   // true = render the caregiver's word as the reference scale
+  bool silent;      // true = render nothing, the noise floor of the measure
+  // THE POSITIVE CONTROL, added 2026-09-25 after the first run passed on an
+  // instrument I did not believe. `caregiver` renders a CONSTANT f0/f1/f2 at
+  // constant amplitude -- `struct Word` is three scalars, so the reference for
+  // "real speech" was a perfectly steady tone with no transients by
+  // construction, and it scored 0.89 against the creature's 13.52.
+  //
+  // A measure of spectrotemporal transients that ranks a jittery drone FIFTEEN
+  // TIMES above a held vowel is probably reading JITTER, not structure: noise_amp
+  // is 0.28 and the vocal parameters fluctuate every tick. Warlaumont's salience
+  // runs through Coath & Denham's cortical filtering and edge DETECTION, tuned to
+  // onset-like events at syllable timescales; a raw frame-to-frame difference is
+  // a high-pass that noise dominates.
+  //
+  // So these arms put a signal with the structure we actually want in front of
+  // the same measure. `rhythm` modulates AMPLITUDE at 3 Hz with the formants
+  // held -- MacNeilage's frame with no content, the thing the project has failed
+  // four ways to produce. `sweep` moves the formants instead.
+  //
+  // IF A REAL 3 Hz RHYTHM SCORES BELOW THE CREATURE'S NOISE, the measure cannot
+  // be used as a reward here however well Coath & Denham's does elsewhere, and
+  // the first run's "headroom" was headroom in jitter.
+  double mod_hz;    // amplitude modulation rate, 0 = none
+  double swing_hz;  // F1 excursion either side of the word, 0 = none
+};
+const SalArm kSalArms[] = {
+    {"creature", false, false, 0.0, 0.0},   // its own voice, silent room
+    {"caregiver", true, false, 0.0, 0.0},   // real speech, the scale
+    {"silence", false, true, 0.0, 0.0},     // the floor the measure reads on nothing
+    // POSITIVE CONTROLS -- signals that genuinely carry the structure the reward
+    // is supposed to find. These decide whether the instrument works at all.
+    {"rhythm", true, false, 3.0, 0.0},     // 3 Hz amplitude modulation: the FRAME
+    {"sweep", true, false, 0.0, 230.0},    // moving formants: the CONTENT
+};
+constexpr uint32_t kSalArmCount = sizeof(kSalArms) / sizeof(kSalArms[0]);
+constexpr uint64_t kSalWindow = 500;      // ms per scored vocalisation window
+constexpr uint64_t kSalSkip = 150;        // Warlaumont excludes the first 150 ms
+constexpr uint64_t kSalSeedOffset = 662117ull;
+
+struct SalRow {
+  bool ok = false;
+  double p10 = 0.0, p50 = 0.0, p90 = 0.0, mean = 0.0;
+  double amp_mean = 0.0;   // so a flat score can be told from a silent creature
+  uint32_t windows = 0;
+};
+
+SalRow run_salience_arm(const std::vector<uint8_t>& blob, uint64_t ticks, const SalArm& arm) {
+  SalRow row;
+  Session s;
+  std::string error;
+  if (!s.init(blob, error)) return row;
+  const aibaby::DnaAudio& acfg = s.dna.header().audio;
+  Ear ear;
+  if (!ear.configure(acfg, error)) return row;
+  Cochlea probe;                       // a SECOND cochlea, for scoring only
+  if (!probe.configure(acfg, error)) return row;
+  VowelSource caregiver(acfg.sample_rate);
+  VowelSource own(acfg.sample_rate);
+  const uint32_t spt = acfg.sample_rate / 1000;
+  std::vector<float> pcm(spt), score_pcm(spt);
+  const Word& say = kWords[kRTHeard];
+
+  const uint64_t settle = ticks / 10;
+  std::vector<float> smooth;   // cortically-filtered mel, per channel
+  double win_sum = 0.0, amp_sum = 0.0;
+  uint64_t win_n = 0, amp_n = 0;
+  std::vector<double> scores;
+  for (uint64_t t = 0; t < ticks; ++t) {
+    // The room. `creature` and `silence` hear nothing, so the creature's own
+    // production is the only thing in the scored signal.
+    if (arm.caregiver) {
+      const double ph = 2.0 * 3.14159265358979 * double(t) / 1000.0;
+      const float amp = arm.mod_hz > 0.0
+                            ? float(0.5 * (0.5 + 0.5 * std::sin(ph * arm.mod_hz)))
+                            : 0.5f;
+      const float f1m = arm.swing_hz > 0.0
+                            ? float(double(say.f1) + arm.swing_hz * std::sin(ph * 0.3125))
+                            : say.f1;
+      caregiver.render(say.f0, f1m, say.f2, amp, pcm.data(), spt);
+    } else {
+      std::fill(pcm.begin(), pcm.end(), 0.0f);
+    }
+    ear.tick(s.brain, arm.caregiver ? pcm.data() : nullptr, spt);
+    s.brain.step();
+    if (t < settle) continue;
+
+    // What gets SCORED, rendered separately from what the creature hears so the
+    // measure is of one source and not of a mix.
+    const aibaby::VocalParams& v = s.brain.voice();
+    if (arm.silent) {
+      std::fill(score_pcm.begin(), score_pcm.end(), 0.0f);
+    } else if (arm.caregiver) {
+      std::copy(pcm.begin(), pcm.end(), score_pcm.begin());
+    } else {
+      const float f0 = v.voicing > 0.5f ? float(v.f0) : 0.0f;
+      own.render(f0, float(v.f1), float(v.f2), float(v.amplitude), score_pcm.data(), spt);
+      amp_sum += double(v.amplitude) * (v.voicing > 0.5f ? 1.0 : 0.0);
+      ++amp_n;
+    }
+    probe.push(score_pcm.data(), score_pcm.size());
+    const std::vector<float>& fr = probe.frames();
+    const uint32_t ch = probe.channels();
+    for (size_t f = 0; f + ch <= fr.size(); f += ch) {
+      // CORTICAL FILTERING, added 2026-09-25 because its absence broke the
+      // instrument. A raw frame-to-frame difference is a high-pass, so it is
+      // dominated by whatever moves fastest -- here the per-tick jitter of the
+      // vocal parameters (noise_amp 0.28). The positive control proved it: a real
+      // 3 Hz amplitude rhythm scored 13.00 against the creature's jittery 13.52,
+      // i.e. the measure ranked noise ABOVE the structure the reward exists to
+      // find.
+      //
+      // Coath & Denham's model filters each channel at CORTICAL timescales before
+      // detecting edges, and that is the part the first version dropped. Each mel
+      // channel is now smoothed with tau = 40 ms, which passes a syllable band
+      // around 4 Hz and attenuates the frame-rate jitter above it. The difference
+      // is then taken on the SMOOTHED channel.
+      if (smooth.size() != ch) {
+        smooth.assign(fr.begin() + f, fr.begin() + f + ch);
+      } else {
+        const double hop_ms = double(probe.hop()) * 1000.0 / double(probe.sample_rate());
+        const double alpha = hop_ms / 40.0 < 1.0 ? hop_ms / 40.0 : 1.0;
+        double d = 0.0;
+        for (uint32_t c = 0; c < ch; ++c) {
+          const double before = smooth[c];
+          smooth[c] += float(alpha * (double(fr[f + c]) - before));
+          const double diff = double(smooth[c]) - before;
+          d += diff < 0.0 ? -diff : diff;
+        }
+        win_sum += d;
+      }
+    }
+    probe.clear_frames();
+
+    ++win_n;
+    if (win_n >= kSalWindow) {
+      // The first `kSalSkip` ms of each window are already inside it; excluding
+      // them the way Warlaumont does would need onset detection this creature's
+      // continuous babble does not offer, so the window is scored whole and the
+      // constant is recorded as NOT applied rather than silently dropped.
+      scores.push_back(win_sum);
+      win_sum = 0.0;
+      win_n = 0;
+    }
+  }
+  if (scores.size() < 16) return row;
+  std::sort(scores.begin(), scores.end());
+  const auto q = [&](double f) {
+    size_t i = size_t(f * double(scores.size()));
+    if (i >= scores.size()) i = scores.size() - 1;
+    return scores[i];
+  };
+  row.p10 = q(0.10); row.p50 = q(0.50); row.p90 = q(0.90);
+  double sum = 0.0;
+  for (double x : scores) sum += x;
+  row.mean = sum / double(scores.size());
+  row.amp_mean = amp_n ? amp_sum / double(amp_n) : 0.0;
+  row.windows = uint32_t(scores.size());
+  row.ok = true;
+  return row;
+}
+
+bool run_salience(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  aibaby::Dna dna0;
+  if (dna0.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) {
+    std::printf("  setup failed: the genome does not load\n");
+    return false;
+  }
+  constexpr uint32_t kReps = 12;
+  instrument("salience", dna0.header().seed ^ 0x5A1Eu, ticks, "ticks");
+  std::printf("  the gate       Warlaumont & Finnegan (2016) reward summed\n"
+              "                 spectrotemporal TRANSIENTS, with no target and no CPG,\n"
+              "                 and get canonical babbling. A reward can only grade\n"
+              "                 what it can TELL APART, so before building it: does\n"
+              "                 this creature's own voice VARY on that measure?\n"
+              "  the measure    summed |frame-to-frame change| of the mel spectrogram,\n"
+              "                 on the creature's own rendered voice in a silent room.\n");
+
+  struct Cell { bool ok = false; SalRow row; };
+  const uint32_t njobs = kReps * kSalArmCount;
+  const std::vector<Cell> cells = parallel_reps<Cell>(njobs, [&](uint32_t i) {
+    Cell cell;
+    const uint32_t r = i / kSalArmCount, a = i % kSalArmCount;
+    std::vector<uint8_t> variant = blob;
+    const uint64_t seed = dna0.header().seed + kSalSeedOffset + r * 7919ull;
+    std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+    cell.row = run_salience_arm(variant, ticks, kSalArms[a]);
+    cell.ok = cell.row.ok;
+    parallel_note("  [%u/%u] seed %u %-10s p50 %.2f p90 %.2f\n", i + 1, njobs, r,
+                  kSalArms[a].name, cell.row.p50, cell.row.p90);
+    return cell;
+  });
+
+  double m_p10[kSalArmCount] = {}, m_p50[kSalArmCount] = {}, m_p90[kSalArmCount] = {};
+  double s_p50[kSalArmCount] = {}, s_p90[kSalArmCount] = {}, m_amp[kSalArmCount] = {};
+  uint32_t nseed[kSalArmCount] = {};
+  std::printf("\n  %-10s %-14s %-14s %-14s %-10s %s\n", "arm", "p10", "p50", "p90",
+              "mean amp", "windows");
+  for (uint32_t a = 0; a < kSalArmCount; ++a) {
+    std::vector<double> v10, v50, v90, va;
+    uint32_t nw = 0;
+    for (uint32_t r = 0; r < kReps; ++r) {
+      const Cell& c = cells[r * kSalArmCount + a];
+      if (!c.ok) continue;
+      v10.push_back(c.row.p10); v50.push_back(c.row.p50); v90.push_back(c.row.p90);
+      va.push_back(c.row.amp_mean);
+      nw = c.row.windows;
+    }
+    nseed[a] = uint32_t(v50.size());
+    if (v50.size() < 3) { std::printf("    %-10s too few creatures\n", kSalArms[a].name); continue; }
+    double q1 = 0.0, q2 = 0.0;
+    m_p10[a] = ctx_mean_se(v10, &q1);
+    m_p50[a] = ctx_mean_se(v50, &s_p50[a]);
+    m_p90[a] = ctx_mean_se(v90, &s_p90[a]);
+    m_amp[a] = ctx_mean_se(va, &q2);
+    std::printf("    %-10s %-14.2f %.2f +/- %-6.2f %.2f +/- %-6.2f %-10.3f %u\n",
+                kSalArms[a].name, m_p10[a], m_p50[a], s_p50[a], m_p90[a], s_p90[a],
+                m_amp[a], nw);
+  }
+  const uint32_t kCre = 0, kCare = 1, kSil = 2;
+  if (nseed[kCre] < 3 || nseed[kCare] < 3 || nseed[kSil] < 3) {
+    std::printf("\n  salience INCONCLUSIVE -- an arm produced too few creatures.\n");
+    return false;
+  }
+  // The measure must read ~0 on silence, or it is measuring itself.
+  if (m_p50[kSil] > 0.05 * m_p50[kCare]) {
+    std::printf("\n  salience REFUSES ITSELF -- the measure reads %.2f on SILENCE against\n"
+                "  %.2f on real speech. It is picking up something that is not sound, and\n"
+                "  nothing below is readable.\n", m_p50[kSil], m_p50[kCare]);
+    return false;
+  }
+  const double headroom = m_p50[kCre] > 1e-9 ? m_p90[kCre] / m_p50[kCre] : 0.0;
+  const double scale = m_p50[kCare] > 1e-9 ? m_p90[kCre] / m_p50[kCare] : 0.0;
+  std::printf("\n  HEADROOM (can a staircase climb?)   p90/p50 = %.2f   [1.25 required]\n",
+              headroom);
+  std::printf("  SCALE (is the range worth having?)  creature p90 / caregiver p50 = %.2f\n",
+              scale);
+  std::printf("  the measure reads %.2f on silence, %.2f on real speech.\n",
+              m_p50[kSil], m_p50[kCare]);
+
+  // THE INSTRUMENT CHECK, and it comes BEFORE the headroom reading. A measure of
+  // spectrotemporal transients must rank a real 3 Hz rhythm ABOVE a jittery
+  // drone. If it does not, it is reading jitter and its "headroom" is headroom
+  // in noise.
+  const uint32_t kRhy = 3, kSwp = 4;
+  bool instrument_ok = true;
+  if (nseed[kRhy] >= 3) {
+    std::printf("\n  DOES THE INSTRUMENT RANK STRUCTURE ABOVE JITTER?\n");
+    std::printf("    3 Hz rhythm (the FRAME)   %.2f\n", m_p50[kRhy]);
+    if (nseed[kSwp] >= 3)
+      std::printf("    moving formants (CONTENT) %.2f\n", m_p50[kSwp]);
+    std::printf("    held vowel                %.2f\n", m_p50[kCare]);
+    std::printf("    the creature              %.2f\n", m_p50[kCre]);
+    if (m_p50[kRhy] <= m_p50[kCre]) {
+      instrument_ok = false;
+      std::printf("\n  salience REFUSES ITSELF -- a real 3 Hz amplitude rhythm scores %.2f\n"
+                  "  against the creature's %.2f. The measure ranks a jittery drone at or\n"
+                  "  above the structure the reward exists to find, so it is reading JITTER\n"
+                  "  (noise_amp 0.28, vocal parameters fluctuating every tick) and not\n"
+                  "  spectrotemporal structure. The headroom below is headroom in noise.\n"
+                  "  Warlaumont's salience runs through Coath & Denham's cortical filtering\n"
+                  "  and edge detection; a raw frame-to-frame difference is not that, and\n"
+                  "  this is where the simplification fails.\n", m_p50[kRhy], m_p50[kCre]);
+      return false;
+    }
+    std::printf("    the instrument ranks structure above the creature -- readable\n");
+  }
+
+  const bool room = headroom >= 1.25 && instrument_ok;
+  std::printf("\n  --- the reading ---\n");
+  if (room)
+    std::printf("  THERE IS HEADROOM. The creature's best windows score %.2fx its median,\n"
+                "  so a bar that tracks its own hit rate has something to climb. Build the\n"
+                "  reward -- and hold it to the refusal that matters: salience must rise\n"
+                "  WITH a rhythm appearing, not merely with the voice getting louder,\n"
+                "  which `mean amp` is carried here to separate.\n", headroom);
+  else
+    std::printf("  REFUSED -- the creature's p90 is only %.2fx its p50 (1.25 required).\n"
+                "  Its vocalisations do not differ on the measure Warlaumont's reward\n"
+                "  grades, so a staircase has nothing to climb and the reward would be\n"
+                "  uninformative however well it worked for a jaw. That is a fact about\n"
+                "  THIS LARYNX, not about the reward: `the-voice-drones` measured no\n"
+                "  syllabic rhythm and this is the same silence read through a different\n"
+                "  instrument.\n", headroom);
+  return room;
+}
+
 // ============================================================================
 // `halfcenter` — BOTH INGREDIENTS AT ONCE (DNA v56 + v57)
 //

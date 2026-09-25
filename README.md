@@ -11430,6 +11430,60 @@ one, so this is two independent measurements agreeing rather than a surprise. Th
 larynx→ear loop is anatomically present, carries a measurable self level of
 0.11–0.15, and is functionally unused for F1 at either timescale.
 
+## Warlaumont's reward, gated before it is built — and the gate took three tries
+
+Warlaumont & Finnegan get canonical babbling from R-STDP with **no target and no
+central pattern generator**, rewarding summed spectrotemporal transients against
+a staircase on the creature's own hit rate. Rewarding transients rewards
+**change**, which is exactly what this creature never produces — so the lead is
+interesting and might be dead on arrival. A reward can only grade what it can
+tell apart, so the gate is whether this creature's vocalisations vary on that
+measure at all.
+
+**It took three attempts, and my own controls caught the first two.**
+
+**Attempt 1 passed and was wrong.** Summed absolute frame-to-frame mel change
+gave the creature 13.52 against the caregiver's **0.89** — a drone scoring
+fifteen times *above* "real speech". The reference was the flaw: `struct Word` is
+three scalars, so the caregiver renders a perfectly steady tone with no
+transients by construction. "22× real speech" meant "the creature's jitter
+exceeds a pure tone", which is not a finding.
+
+**Attempt 2 refused itself, on a positive control I added because I disbelieved
+attempt 1.** A genuine 3 Hz amplitude rhythm — MacNeilage's frame with no
+content — scored **13.00 against the creature's 13.52.** The measure ranked a
+jittery drone *above* the structure the reward exists to find, so it was reading
+jitter: `noise_amp` is 0.28 and the vocal parameters fluctuate every tick. A raw
+frame-to-frame difference is a high-pass, and noise wins a high-pass.
+
+**Attempt 3 fixed the instrument rather than the threshold.** Coath & Denham
+filter each channel at cortical timescales *before* detecting edges, and that was
+the part my simplification dropped. With each mel channel smoothed at τ = 40 ms —
+passing a ~4 Hz syllable band, attenuating frame-rate jitter:
+
+    3 Hz rhythm (the FRAME)     11.30
+    creature                    10.66
+    moving formants (CONTENT)    0.89
+    held vowel                   0.25
+    silence                      0.00
+
+    headroom, creature p90/p50   1.40   [1.25 required]
+
+**The gate passes, and the margin is the finding.** The instrument now ranks
+structure above the creature, so it is readable. But the creature sits at **94%
+of a genuine 3 Hz frame**, and at **43× a held vowel** — so its voice is not
+steady on this measure at all. It is *unsteady without being rhythmic*, which is
+a sharper statement than `the-voice-drones` could make: the energy exists, it is
+simply not organised.
+
+That reframes what the reward would have to do. It is not adding modulation to a
+flat signal; it is **organising modulation that is already there.** And a
+staircase climbing the last 6% could get there by becoming noisier just as
+easily as by becoming rhythmic. So the refusal I pre-registered — salience must
+rise *with a rhythm appearing*, not with the voice merely getting louder — is not
+a footnote to the build. It is the build's primary, and `mean amp` (0.309 here)
+is carried for exactly that separation.
+
 ## Layout
 
 ```
