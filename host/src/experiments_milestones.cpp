@@ -14715,6 +14715,464 @@ bool run_salience(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
   return room;
 }
 
+
+// ---------------------------------------------------------------------------
+// `salrew` — WARLAUMONT'S REWARD, BUILT
+//
+// Warlaumont & Finnegan (2016) get canonical babbling from R-STDP with NO target
+// and no central pattern generator: reward when auditory SALIENCE clears a bar
+// that ratchets on the creature's own hit rate. `salience` validated the measure
+// here and passed its gate at 1.40 headroom -- but with the creature already at
+// 94% of a genuine 3 Hz frame, which sets what this experiment has to prove.
+//
+// THE PRIMARY IS NOT SALIENCE. Salience can rise by the voice getting louder or
+// noisier, and neither is a syllable. The primary is the SYLLABLE-BAND MODULATION
+// DEPTH of the produced amplitude envelope -- sd of the 2-6 Hz band over the mean
+// envelope -- because that is what "a frame appeared" means. Mean amplitude is
+// carried beside it so loudness can be subtracted from the claim rather than
+// argued about afterwards.
+//
+// THE CONTROL IS YOKED PRAISE, which is the only control that works here. It
+// replays the taught arm's praise TIMES to a fresh creature, so reward rate,
+// reward timing statistics and total dopamine are identical and only the
+// CONTINGENCY differs. A `none` arm cannot do that job: it differs in how much
+// reward arrives as well as in whether it is earned.
+//
+//   MET only if modulation depth beats YOKED by 3 SE and mean amplitude does not
+//   account for it. REFUSED if salience rises and modulation depth does not --
+//   the creature found the cheap way up, which at 94% of a frame is the likely
+//   one.
+//
+// CONSTANTS, all derived (see the run header): the syllable band's two time
+// constants are 1/(2*pi*f) at 6 Hz and 2 Hz; the staircase step is 2.22% of the
+// bar, which is Warlaumont's +0.1 on 4.5 expressed as a rate because their
+// salience scale is not ours; their 30%-of-the-last-10 advance rule is a rate and
+// transfers verbatim; and the bar starts at each creature's OWN median over its
+// first 20 windows rather than importing 4.5 from a different vocal tract.
+constexpr uint64_t kSRWindow = 500;      // ms per scored vocalisation
+constexpr uint32_t kSRPrime = 20;        // windows used to set the creature's bar
+constexpr double kSRStep = 0.0222;       // staircase step, as a fraction of the bar
+constexpr uint32_t kSRHist = 10;         // Warlaumont's window for the advance rule
+constexpr double kSRAdvance = 0.30;      // ... and its rate
+constexpr double kSRTauFast = 26.5;      // ms, 6 Hz
+constexpr double kSRTauSlow = 79.6;      // ms, 2 Hz
+constexpr uint64_t kSRSeedOffset = 774431ull;
+
+// ADDED 2026-09-26. The first full run earned only 51 rewards in 2400 windows --
+// a 2.1% hit rate, where a bar starting at the creature's own MEDIAN should clear
+// about half. The ratchet is why: it advances 2.22% whenever 30% of the last ten
+// clear and NEVER RETREATS, so reaching p90 from p50 takes ln(1.40)/ln(1.0222) =
+// 15 advances, about 8 seconds. After that nothing clears and the reward stops.
+// The staircase outran the voice, which is `staircase-result` all over again --
+// "the ramp OUTRAN the voice at trial 107 of 1214".
+//
+// So that run could not tell (a) the reward cannot shape a frame here from (b)
+// the reward stopped being delivered. `fixedbar` separates them: the bar is
+// pinned at the creature's own median and never moves, so praise keeps arriving
+// at ~50% of windows for the whole run. If a frame still does not appear with the
+// reward firing continuously, (a) is the answer and it is about this larynx. If
+// one appears, the ratchet was the problem and Warlaumont's schedule needs a
+// creature that can keep up with it.
+// AND `kSRFixYoke`, added 2026-09-26 because `fixedbar` had no matched control.
+// `yoked` replays the RATCHETING arm's times, so it matches that arm at 51
+// rewards -- and comparing fixedbar's 1177 against it is a DOSE difference (23x
+// the dopamine), not a contingency difference. Its +2.5 SE could be entirely
+// "more reward". The matched control for fixedbar is a creature receiving
+// FIXEDBAR's own times: same rate, same total, wrong times.
+enum SRArm { kSRTaught = 0, kSRYoked, kSRNone, kSRFixed, kSRFixYoke, kSRArmCount };
+
+struct SRRow {
+  bool ok = false;
+  double mod_early = 0.0, mod_late = 0.0;   // syllable-band modulation depth
+  double amp_mean = 0.0;                    // loudness, so it can be subtracted
+  double sal_early = 0.0, sal_late = 0.0;   // did the reward's own measure move
+  double bar_final = 0.0;                   // how far the staircase climbed
+  uint32_t rewards = 0;
+};
+
+SRRow run_salrew_arm(const std::vector<uint8_t>& blob, uint64_t ticks, SRArm arm,
+                     const std::vector<uint64_t>* yoke, std::vector<uint64_t>* record) {
+  SRRow row;
+  Session s;
+  std::string error;
+  if (!s.init(blob, error)) return row;
+  const aibaby::DnaAudio& acfg = s.dna.header().audio;
+  Ear ear;
+  if (!ear.configure(acfg, error)) return row;
+  Cochlea probe;
+  if (!probe.configure(acfg, error)) return row;
+  VowelSource own(acfg.sample_rate);
+  const uint32_t spt = acfg.sample_rate / 1000;
+  std::vector<float> score_pcm(spt);
+
+  std::vector<float> smooth;               // cortically-filtered mel
+  double win_sum = 0.0;
+  uint64_t win_n = 0;
+  std::vector<double> prime;               // first windows, to set the bar
+  double bar = -1.0;
+  std::deque<bool> hist;                   // did the last kSRHist windows clear it
+  std::deque<Praise> pending;
+  size_t yi = 0;
+
+  // The envelope's two smoothers, for the 2-6 Hz band, plus the running moments
+  // of the band-passed envelope in each half of the run.
+  double env_fast = 0.0, env_slow = 0.0;
+  double band_sum[2] = {}, band_sq[2] = {}, env_mean[2] = {}, sal_sum[2] = {};
+  uint64_t band_n[2] = {}, sal_n[2] = {};
+  double amp_sum = 0.0;
+  uint64_t amp_n = 0;
+  const uint64_t half = ticks / 2;
+  const uint64_t settle = ticks / 10;
+
+  for (uint64_t t = 0; t < ticks; ++t) {
+    ear.tick(s.brain, nullptr, spt);       // silent room: only its own voice
+    while (!pending.empty() && pending.front().tick <= t) {
+      s.brain.praise(pending.front().value);
+      pending.pop_front();
+    }
+    s.brain.step();
+
+    const aibaby::VocalParams& v = s.brain.voice();
+    const float f0 = v.voicing > 0.5f ? float(v.f0) : 0.0f;
+    own.render(f0, float(v.f1), float(v.f2), float(v.amplitude), score_pcm.data(), spt);
+    probe.push(score_pcm.data(), score_pcm.size());
+    const std::vector<float>& fr = probe.frames();
+    const uint32_t ch = probe.channels();
+    for (size_t f = 0; f + ch <= fr.size(); f += ch) {
+      if (smooth.size() != ch) {
+        smooth.assign(fr.begin() + f, fr.begin() + f + ch);
+      } else {
+        const double hop_ms = double(probe.hop()) * 1000.0 / double(probe.sample_rate());
+        const double a = hop_ms / 40.0 < 1.0 ? hop_ms / 40.0 : 1.0;
+        double d = 0.0;
+        for (uint32_t c = 0; c < ch; ++c) {
+          const double before = smooth[c];
+          smooth[c] += float(a * (double(fr[f + c]) - before));
+          const double diff = double(smooth[c]) - before;
+          d += diff < 0.0 ? -diff : diff;
+        }
+        win_sum += d;
+      }
+    }
+    probe.clear_frames();
+
+    // THE PRIMARY. The amplitude envelope, band-passed to the syllable band as a
+    // difference of two first-order smoothers, and its spread over its own mean.
+    const double env = (v.voicing > 0.5f ? 1.0 : 0.0) * double(v.amplitude);
+    env_fast += (1.0 / kSRTauFast) * (env - env_fast);
+    env_slow += (1.0 / kSRTauSlow) * (env - env_slow);
+    if (t >= settle) {
+      const uint32_t h = t < half ? 0u : 1u;
+      const double band = env_fast - env_slow;
+      band_sum[h] += band;
+      band_sq[h] += band * band;
+      env_mean[h] += env;
+      ++band_n[h];
+      amp_sum += env;
+      ++amp_n;
+    }
+
+    ++win_n;
+    if (win_n >= kSRWindow) {
+      const double sal = win_sum;
+      win_sum = 0.0;
+      win_n = 0;
+      if (t >= settle) {
+        const uint32_t h = t < half ? 0u : 1u;
+        sal_sum[h] += sal;
+        ++sal_n[h];
+      }
+      // The bar: each creature's own median over its first windows.
+      if (bar < 0.0) {
+        prime.push_back(sal);
+        if (prime.size() >= kSRPrime) {
+          std::vector<double> p = prime;
+          std::sort(p.begin(), p.end());
+          bar = p[p.size() / 2];
+        }
+      } else if (arm == kSRTaught || arm == kSRFixed) {   // kSRFixYoke replays
+        const bool clear = sal >= bar;
+        hist.push_back(clear);
+        if (hist.size() > kSRHist) hist.pop_front();
+        if (clear) {
+          pending.push_back(Praise{t + kRewardDelayTicks, kPraiseValue});
+          ++row.rewards;
+          if (record) record->push_back(t);
+        }
+        // Warlaumont's ratchet, verbatim as a rate. `fixedbar` skips it on purpose.
+        if (arm == kSRTaught && hist.size() == kSRHist) {
+          uint32_t hits = 0;
+          for (bool b : hist) hits += b ? 1u : 0u;
+          if (double(hits) / double(kSRHist) >= kSRAdvance) bar *= (1.0 + kSRStep);
+        }
+      }
+    }
+    // YOKED: the taught arm's praise TIMES, replayed. Identical reward rate and
+    // timing, uncorrelated with this creature's own salience.
+    if ((arm == kSRYoked || arm == kSRFixYoke) && yoke) {
+      while (yi < yoke->size() && (*yoke)[yi] <= t) {
+        pending.push_back(Praise{t + kRewardDelayTicks, kPraiseValue});
+        ++row.rewards;
+        ++yi;
+      }
+    }
+  }
+  if (band_n[0] < 1000 || band_n[1] < 1000) return row;
+  const auto depth = [&](uint32_t h) {
+    const double n = double(band_n[h]);
+    const double m = band_sum[h] / n;
+    const double var = band_sq[h] / n - m * m;
+    const double em = env_mean[h] / n;
+    return em > 1e-6 ? std::sqrt(var > 0.0 ? var : 0.0) / em : 0.0;
+  };
+  row.mod_early = depth(0);
+  row.mod_late = depth(1);
+  row.sal_early = sal_n[0] ? sal_sum[0] / double(sal_n[0]) : 0.0;
+  row.sal_late = sal_n[1] ? sal_sum[1] / double(sal_n[1]) : 0.0;
+  row.amp_mean = amp_n ? amp_sum / double(amp_n) : 0.0;
+  row.bar_final = bar;
+  row.ok = true;
+  return row;
+}
+
+bool run_salrew(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  aibaby::Dna dna0;
+  if (dna0.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) {
+    std::printf("  setup failed: the genome does not load\n");
+    return false;
+  }
+  constexpr uint32_t kReps = 12;
+  instrument("salrew", dna0.header().seed ^ 0x5A2Eu, ticks, "ticks");
+  std::printf("  the reward     Warlaumont & Finnegan (2016): praise when auditory\n"
+              "                 SALIENCE clears a bar that ratchets on the creature's\n"
+              "                 own hit rate. No target anywhere.\n"
+              "  the primary    NOT salience -- the SYLLABLE-BAND MODULATION DEPTH of\n"
+              "                 the produced envelope (sd of the 2-6 Hz band over its\n"
+              "                 mean). Salience can rise by getting louder or noisier\n"
+              "                 and neither is a syllable. `salience` measured this\n"
+              "                 creature at 94%% of a real 3 Hz frame already, so the\n"
+              "                 cheap way up is the likely one.\n"
+              "  the control    YOKED praise -- the taught arm's reward TIMES replayed\n"
+              "                 to a fresh creature. Identical rate, timing and total\n"
+              "                 dopamine; only the CONTINGENCY differs. `none` cannot\n"
+              "                 do that job.\n"
+              "  constants      band tau = 1/(2 pi f) at 6 and 2 Hz = %.1f / %.1f ms;\n"
+              "                 staircase step %.2f%%%% of the bar, which is Warlaumont's\n"
+              "                 +0.1 on 4.5 as a RATE because their scale is not ours;\n"
+              "                 their 30%%%%-of-10 advance rule taken verbatim; the bar\n"
+              "                 starts at each creature's OWN median over %u windows.\n",
+              kSRTauFast, kSRTauSlow, 100.0 * kSRStep, kSRPrime);
+
+  // TWO PASSES, and the first version got this wrong in a way that made the
+  // control vacuous. Replaying a creature's OWN praise times back to the SAME
+  // seed reproduces its trajectory exactly -- taught and yoked came out
+  // bit-identical to four decimals, 34 rewards each. That is a re-run, not a
+  // control.
+  //
+  // A yoked control needs praise EARNED BY A DIFFERENT CREATURE. Tightest form:
+  // creature r keeps its own seed and receives the times creature (r+1) earned.
+  // Same creature, same reward count, WRONG TIMES -- so only the contingency
+  // differs, which is the whole point of yoking.
+  struct Cell { bool ok = false; SRRow row[kSRArmCount]; };
+  std::vector<std::vector<uint64_t>> yokes(kReps);
+  const auto seed_of = [&](uint32_t r) {
+    return dna0.header().seed + kSRSeedOffset + uint64_t(r) * 7919ull;
+  };
+  // Pass 1: the taught arms, each recording the praise times it earned.
+  struct P1 { bool ok = false; SRRow row, frow; std::vector<uint64_t> yoke, fyoke; };
+  const std::vector<P1> pass1 = parallel_reps<P1>(kReps, [&](uint32_t r) {
+    P1 p;
+    std::vector<uint8_t> variant = blob;
+    const uint64_t seed = seed_of(r);
+    std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+    p.row = run_salrew_arm(variant, ticks, kSRTaught, nullptr, &p.yoke);
+    p.frow = run_salrew_arm(variant, ticks, kSRFixed, nullptr, &p.fyoke);
+    p.ok = p.row.ok && p.frow.ok;
+    parallel_note("  [earn %u/%u] seed %u  ratchet %u  fixed %u\n", r + 1, kReps, r,
+                  p.row.rewards, p.frow.rewards);
+    return p;
+  });
+  std::vector<std::vector<uint64_t>> fyokes(kReps);
+  for (uint32_t r = 0; r < kReps; ++r) {
+    yokes[r] = pass1[r].yoke;
+    fyokes[r] = pass1[r].fyoke;
+  }
+  // Pass 2: yoked and none. Creature r receives creature (r+1)'s praise times.
+  const std::vector<Cell> cells = parallel_reps<Cell>(kReps, [&](uint32_t r) {
+    Cell cell;
+    std::vector<uint8_t> variant = blob;
+    const uint64_t seed = seed_of(r);
+    std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+    cell.row[kSRTaught] = pass1[r].row;
+    const std::vector<uint64_t>& other = yokes[(r + 1u) % kReps];
+    cell.row[kSRYoked] = run_salrew_arm(variant, ticks, kSRYoked, &other, nullptr);
+    cell.row[kSRNone] = run_salrew_arm(variant, ticks, kSRNone, nullptr, nullptr);
+    cell.row[kSRFixed] = pass1[r].frow;
+    const std::vector<uint64_t>& fother = fyokes[(r + 1u) % kReps];
+    cell.row[kSRFixYoke] = run_salrew_arm(variant, ticks, kSRFixYoke, &fother, nullptr);
+    cell.ok = cell.row[kSRTaught].ok && cell.row[kSRYoked].ok && cell.row[kSRNone].ok &&
+              cell.row[kSRFixed].ok && cell.row[kSRFixYoke].ok;
+    parallel_note("  [yoked %u/%u] seed %u  rewards %u (from creature %u)\n", r + 1, kReps,
+                  r, cell.row[kSRYoked].rewards, (r + 1u) % kReps);
+    return cell;
+  });
+
+  const char* names[kSRArmCount] = {"taught", "yoked", "none", "fixedbar", "fix-yoked"};
+  double m_mod[kSRArmCount] = {}, s_mod[kSRArmCount] = {};
+  double m_amp[kSRArmCount] = {}, s_amp[kSRArmCount] = {};
+  double m_sal[kSRArmCount] = {}, s_sal[kSRArmCount] = {};
+  uint32_t nseed = 0, m_rew[kSRArmCount] = {};
+  const double nwin = double(ticks) / double(kSRWindow);
+  std::printf("\n  %-9s %-18s %-18s %-16s %-9s %s\n", "arm", "mod depth late",
+              "mod early->late", "mean amp", "rewards", "hit rate");
+  for (uint32_t a = 0; a < kSRArmCount; ++a) {
+    std::vector<double> md, mdd, am, sl;
+    uint64_t rw = 0;
+    uint32_t nc = 0;
+    for (uint32_t r = 0; r < kReps; ++r) {
+      if (!cells[r].ok) continue;
+      const SRRow& x = cells[r].row[a];
+      md.push_back(x.mod_late);
+      mdd.push_back(x.mod_late - x.mod_early);
+      am.push_back(x.amp_mean);
+      sl.push_back(x.sal_late - x.sal_early);
+      rw += x.rewards;
+      ++nc;
+    }
+    if (nc < 3) { std::printf("    %-8s too few creatures\n", names[a]); continue; }
+    nseed = nc;
+    m_rew[a] = uint32_t(rw / nc);
+    double q = 0.0;
+    m_mod[a] = ctx_mean_se(md, &s_mod[a]);
+    const double dd = ctx_mean_se(mdd, &q);
+    m_amp[a] = ctx_mean_se(am, &s_amp[a]);
+    m_sal[a] = ctx_mean_se(sl, &s_sal[a]);
+    std::printf("    %-9s %.4f +/- %-9.4f %+.4f +/- %-8.4f %.4f +/- %-6.4f %-9u %.1f%%\n",
+                names[a], m_mod[a], s_mod[a], dd, q, m_amp[a], s_amp[a], m_rew[a],
+                100.0 * double(m_rew[a]) / nwin);
+  }
+  if (nseed < 3) { std::printf("\n  salrew INCONCLUSIVE.\n"); return false; }
+
+  // VACUITY: the yoked arm must actually receive the praise it is replaying, and
+  // the taught arm must have earned some. A reward that never fires is not a
+  // control condition, it is a second `none`.
+  if (m_rew[kSRTaught] == 0u) {
+    std::printf("\n  salrew REFUSES ITSELF -- the taught arm earned NO rewards, so the bar\n"
+                "  was never cleared and nothing below is about a reward.\n");
+    return false;
+  }
+  if (m_rew[kSRYoked] == 0u) {
+    std::printf("\n  salrew REFUSES ITSELF -- the yoked arm received no praise, so it is a\n"
+                "  second `none` arm and not a matched control.\n");
+    return false;
+  }
+  // AND THEY MUST DIFFER. Checking only that both arms FIRED is what let the
+  // first version report a bit-identical re-run as a control.
+  if (std::fabs(m_mod[kSRTaught] - m_mod[kSRYoked]) < 1e-9 &&
+      std::fabs(m_amp[kSRTaught] - m_amp[kSRYoked]) < 1e-9) {
+    std::printf("\n  salrew REFUSES ITSELF -- taught and yoked are IDENTICAL to within\n"
+                "  1e-9 on both modulation depth and amplitude. The yoked arm is not a\n"
+                "  control, it is the taught arm run twice, and no contrast between them\n"
+                "  means anything.\n");
+    return false;
+  }
+  std::printf("    both reward arms fired (%u taught, %u yoked) and the arms DIFFER\n",
+              m_rew[kSRTaught], m_rew[kSRYoked]);
+
+  const double dm = m_mod[kSRTaught] - m_mod[kSRYoked];
+  const double em = std::sqrt(s_mod[kSRTaught] * s_mod[kSRTaught] +
+                              s_mod[kSRYoked] * s_mod[kSRYoked]);
+  const double da = m_amp[kSRTaught] - m_amp[kSRYoked];
+  const double ea = std::sqrt(s_amp[kSRTaught] * s_amp[kSRTaught] +
+                              s_amp[kSRYoked] * s_amp[kSRYoked]);
+  const double ds = m_sal[kSRTaught] - m_sal[kSRYoked];
+  const double es = std::sqrt(s_sal[kSRTaught] * s_sal[kSRTaught] +
+                              s_sal[kSRYoked] * s_sal[kSRYoked]);
+  std::printf("\n  AGAINST YOKED PRAISE (same rate and timing, no contingency)\n");
+  std::printf("    modulation depth  %+.4f +/- %.4f  (%+.1f SE)   <- THE PRIMARY\n", dm, em,
+              em > 0.0 ? dm / em : 0.0);
+  std::printf("    mean amplitude    %+.4f +/- %.4f  (%+.1f SE)   <- loudness\n", da, ea,
+              ea > 0.0 ? da / ea : 0.0);
+  std::printf("    salience drift    %+.2f +/- %.2f  (%+.1f SE)   <- the reward's own measure\n",
+              ds, es, es > 0.0 ? ds / es : 0.0);
+
+  // THE FIXED-BAR CONTRAST, which is what decides whether the ratchet or the
+  // larynx is the limit. Scored against the SAME yoked arm: fixedbar has no
+  // ratchet, so praise keeps arriving all run.
+  // Scored against ITS OWN yoked arm, matched on reward COUNT as well as timing.
+  // Comparing it with `yoked` (51 rewards) would be a dose difference of 23x.
+  const double df = m_mod[kSRFixed] - m_mod[kSRFixYoke];
+  const double ef = std::sqrt(s_mod[kSRFixed] * s_mod[kSRFixed] +
+                              s_mod[kSRFixYoke] * s_mod[kSRFixYoke]);
+  const double dfa = m_amp[kSRFixed] - m_amp[kSRFixYoke];
+  const double efa = std::sqrt(s_amp[kSRFixed] * s_amp[kSRFixed] +
+                               s_amp[kSRFixYoke] * s_amp[kSRFixYoke]);
+  std::printf("\n  FIXED BAR AGAINST ITS OWN YOKED ARM (matched on reward COUNT too)\n");
+  std::printf("    modulation depth  %+.4f +/- %.4f  (%+.1f SE)   <- THE PRIMARY\n", df, ef,
+              ef > 0.0 ? df / ef : 0.0);
+  std::printf("    mean amplitude    %+.4f +/- %.4f  (%+.1f SE)\n", dfa, efa,
+              efa > 0.0 ? dfa / efa : 0.0);
+  if (m_rew[kSRFixed] > 0u && m_rew[kSRFixYoke] > 0u) {
+    const double ratio = double(m_rew[kSRFixed]) / double(m_rew[kSRFixYoke]);
+    std::printf("    reward counts %u vs %u (ratio %.2f -- must be ~1.00)\n",
+                m_rew[kSRFixed], m_rew[kSRFixYoke], ratio);
+    if (ratio < 0.8 || ratio > 1.25)
+      std::printf("    WARNING: the counts are NOT matched, so this contrast carries a dose\n"
+                  "    difference and cannot be read as contingency.\n");
+  }
+
+  const bool rhythm = em > 0.0 && dm / em >= 3.0;
+  const bool louder = ea > 0.0 && da / ea >= 3.0;
+  const bool fixed_rhythm = ef > 0.0 && df / ef >= 3.0 &&
+                            !(efa > 0.0 && dfa / efa >= 3.0);
+  // A hit rate this low means the reward was barely delivered, and then the
+  // taught arm cannot speak to whether the reward WORKS. The first run asserted
+  // it could, on 51 rewards in 2400 windows.
+  const double hit_taught = 100.0 * double(m_rew[kSRTaught]) / nwin;
+  const double hit_fixed = 100.0 * double(m_rew[kSRFixed]) / nwin;
+  std::printf("\n  hit rates: taught %.1f%%, fixedbar %.1f%%\n", hit_taught, hit_fixed);
+  if (hit_taught < 10.0 && hit_fixed >= 10.0)
+    std::printf("  NOTE: the ratcheting bar delivered almost no reward (%.1f%%) while the\n"
+                "  fixed bar kept firing (%.1f%%). The taught arm therefore cannot speak to\n"
+                "  whether the reward WORKS -- only the fixedbar arm can, and the verdict\n"
+                "  below rests on it.\n", hit_taught, hit_fixed);
+  std::printf("\n  --- the reading ---\n");
+  if (rhythm && !louder)
+    std::printf("  A FRAME APPEARED, AND IT IS NOT LOUDNESS. Syllable-band modulation\n"
+                "  depth beats yoked praise by %+.1f SE while mean amplitude does not move\n"
+                "  (%+.1f SE). This creature has never produced a rhythm and four routes to\n"
+                "  one were refused; a target-free reward on transients found it.\n"
+                "  NEXT, before believing it: a fresh seed family, and whether the rhythm\n"
+                "  survives the reward being switched off.\n",
+                dm / em, ea > 0.0 ? da / ea : 0.0);
+  else if (rhythm && louder)
+    std::printf("  CONFOUNDED -- modulation depth rose %+.1f SE but so did mean amplitude\n"
+                "  (%+.1f SE). A louder voice has a larger envelope and therefore a larger\n"
+                "  band, so this cannot be called a frame. The separation this experiment\n"
+                "  was built for did not come out clean, and the honest next step is a\n"
+                "  loudness-matched comparison rather than a claim.\n",
+                dm / em, da / ea);
+  else if (!fixed_rhythm && hit_fixed >= 10.0)
+    std::printf("  REFUSED, AND ON THE ARM THAT CAN CARRY IT. With the bar FIXED the reward\n"
+                "  fired on %.1f%% of windows all run, and syllable-band modulation depth\n"
+                "  still does not beat yoked praise (%+.1f SE; the ratcheting arm %+.1f SE).\n"
+                "  So it is not that the reward stopped arriving -- it arrived continuously\n"
+                "  and did not build a frame. Warlaumont's reward is NOT refuted: what is\n"
+                "  refused is that it installs a frame in THIS larynx, which has no jaw and,\n"
+                "  per `no-sequence`, no module that holds a kick for 10 ms. Their\n"
+                "  oscillation comes from a 1000-neuron recurrent reservoir; this vocal\n"
+                "  module is 126 neurons in 9 groups.\n",
+                hit_fixed, ef > 0.0 ? df / ef : 0.0, em > 0.0 ? dm / em : 0.0);
+  else
+    std::printf("  UNRESOLVED -- modulation depth does not beat yoked praise (%+.1f SE)\n"
+                "  and the fixed-bar arm cannot settle it either (hit rate %.1f%%). Both\n"
+                "  reward schedules under-delivered, so this says nothing about whether the\n"
+                "  reward can build a frame. Fix the delivery before reading it.\n",
+                em > 0.0 ? dm / em : 0.0, hit_fixed);
+  return (rhythm || fixed_rhythm) && !louder;
+}
+
 // ============================================================================
 // `halfcenter` — BOTH INGREDIENTS AT ONCE (DNA v56 + v57)
 //

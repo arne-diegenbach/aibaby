@@ -11484,6 +11484,82 @@ rise *with a rhythm appearing*, not with the voice merely getting louder — is 
 a footnote to the build. It is the build's primary, and `mean amp` (0.309 here)
 is carried for exactly that separation.
 
+## Warlaumont's reward, built: refused at +1.6 SE, and the control is a third of the story
+
+    arm         mod depth late      early->late    mean amp    rewards  hit rate
+    taught      0.3640 +/- 0.0040   -0.0091        0.3006        51      2.1%
+    yoked       0.3637 +/- 0.0034   -0.0084        0.2999        51      2.1%
+    none        0.3624 +/- 0.0036   -0.0106        0.2998         0      0.0%
+    fixedbar    0.3761 +/- 0.0037   -0.0012        0.2974      1177     49.0%
+    fix-yoked   0.3682 +/- 0.0035   -0.0037        0.2993      1177     49.0%
+
+**The ratcheting arm cannot speak to the question.** It earned 51 rewards in 2400
+windows — a 2.1% hit rate, where a bar starting at the creature's own median
+should clear half. Warlaumont's ratchet advances 2.22% whenever 30% of the last
+ten clear and never retreats, so reaching p90 from p50 takes ~15 advances, about
+eight seconds. **The staircase outran the voice**, which is `staircase-result`
+repeating itself: *the ramp outran the voice at trial 107 of 1214.* I imported
+their schedule and walked into a failure this repo had already recorded.
+
+**So the verdict rests on `fixedbar`**, which pins the bar and keeps the reward
+firing on 49% of windows all run. Against its own matched control — same reward
+count, same rate, wrong times — syllable-band modulation depth reads
+**+0.0080 ± 0.0051, +1.6 SE.** Below the pre-registered 3.0, so **refused.**
+
+**Getting the control right cost a third of the effect.** Scored against the
+original `yoked` arm it read +2.5 SE — but that arm was matched to the
+*ratcheting* schedule at 51 rewards, so comparing `fixedbar`'s 1177 against it
+was a **23× dose difference**, not a contingency difference. A matched arm
+receiving `fixedbar`'s own 1177 praise times drops it to +1.6. The reward-count
+ratio is now printed with a warning outside 0.8–1.25, so a dose mismatch cannot
+hide inside the contrast again.
+
+**Two things point the right way and neither is a result.** Mean amplitude is
+*lower* in `fixedbar` (−0.9 SE), so whatever moved is not loudness — that was the
+separation the experiment existed to make. And `fixedbar`'s modulation barely
+declines (−0.0012) where the unrewarded arm loses −0.0106, so it nearly holds
+structure the others shed. At +1.6 SE this is underpowered rather than null;
+reaching 3.0 would need about 3.5× the creatures.
+
+## And the reason may be that the frame is a body part
+
+Five routes to the frame are now refused and **every one of them is neural** — a
+CPG kernel that self-cancels, no free-running rhythm, loop gain that will not
+self-sustain, a fatigue current that was mostly a mute dial, and now a
+target-free transient reward. The literature says why that list was always going
+to end this way.
+
+MacNeilage's frames-then-content has the syllabic frame *being* rhythmic
+**mandibular** oscillation, with content riding each cycle. Babbling contains
+**silent** mandibular oscillations, so the rhythm is not a by-product of making
+sound — it is there first. The rate is the syllable rate: jaw movement at ~4 Hz
+in motor cortex, the speech envelope peaking at 4–5 Hz, pure motor productions
+most precise at 4.5–5.5 Hz. And Gafos & Kuberski (2025) put a **limit cycle** at
+the level of individual articulatory actions, explicitly not in a neural
+pacemaker. Warlaumont's model had a jaw — Praat's synthesiser, coupled
+mass-spring walls, masseter and orbicularis oris as muscles.
+
+**This project's synthesiser is a formant filter driven by scalars. No mass, no
+spring, no resonance, no mandible.** Five neural routes failed to produce a
+mandibular oscillation because there is nothing to oscillate. That is one
+structural fact explaining five failures, which is worth more than a sixth
+mechanism — and it fills a hole already named: `syllable-band-is-empty` found the
+timescale ladder empty from 60 to 800 ms with a syllable in it, and 4.5 Hz is
+222 ms. A resonant jaw fills it **mechanically**, where every attempt to fill it
+neurally has failed.
+
+The build would be a second-order mass-spring-damper aperture driven by the motor
+module, and the division of labour is the point: a kick makes it ring, so the
+brain modulates cycles rather than inventing them. Its refusals are already
+written down, and the second is where `adaptclock` died — a jaw that closes the
+tract is an excellent way to get quieter without getting rhythmic, so modulation
+depth must be scored against mean amplitude exactly as `salrew` does.
+
+One caveat of mine is also removed: I had worried 126 neurons was too few against
+Warlaumont's 1000-neuron reservoir, but the sequence literature reports a
+sequence learned in a chain of ~120 excitatory neurons. That objection should not
+be carried forward.
+
 ## Layout
 
 ```
@@ -12133,6 +12209,48 @@ papers about the half it does not touch.
   a population-vector readout needs. `ippool` failed the crude version at
   −0.90 SE, so the lead survives only as *the crude version is not the
   mechanism*, and it should not be re-opened without reading why.
+
+- **The syllabic frame is a MANDIBLE, and this creature does not have one.** The
+  citations behind `frame-is-a-body-part`, which is one structural fact explaining
+  five refused routes to a frame.
+  - MacNeilage's frames-then-content, already cited above for the frame/content
+    split, is the load-bearing claim read literally: the frame *is* rhythmic
+    **mandibular oscillation**, with content riding each cycle and little of it
+    under mandible-independent control.
+  - *Silent mandibular oscillations in vocal babbling.* Folia Phoniatrica et
+    Logopaedica; <https://doi.org/10.1159/000262219>,
+    <https://pubmed.ncbi.nlm.nih.gov/9396166/> — cited by title and DOI rather
+    than by a guessed author list, per this section's own rule. **The jaw
+    oscillates without phonation**, so the rhythm is not a by-product of making
+    sound; it is there first. That is the observation that makes the frame a body
+    part rather than an acoustic consequence.
+  - Gafos, A. I. & Kuberski, S. R. (2025). *Limit cycles for speech.*
+    arXiv:2512.04642. <https://arxiv.org/abs/2512.04642> — a **limit cycle**
+    organisation at the level of individual articulatory actions, explicitly *not*
+    a separate neural pacemaker. This is the strongest recent statement that the
+    rhythm lives in articulator dynamics, which is precisely the layer this
+    project's synthesiser does not have.
+  - Ruspantini, I. et al. (2012). *Corticomuscular coherence is tuned to the
+    spontaneous rhythmicity of speech at 2–3 Hz.* Journal of Neuroscience
+    32(11), 3786–3792. <https://www.jneurosci.org/content/32/11/3786> — the rate,
+    from the muscle side.
+  - And the rate again from the behavioural side: the speech amplitude envelope
+    peaks at 4–5 Hz, jaw movement shows ~4 Hz in motor cortex, and "pure" motor
+    productions are most precisely generated at 4.5–5.5 Hz with phase locking
+    boosted near 4.5 Hz —
+    <https://www.ncbi.nlm.nih.gov/pmc/articles/PMC10205147/>. 4.5 Hz is 222 ms,
+    which lands inside the 60–800 ms hole `syllable-band-is-empty` named.
+  - *Why it matters that Warlaumont had one:* their model drives **masseter and
+    orbicularis oris** in Praat's articulatory synthesiser, with coupled
+    mass-spring walls. Their reward shaped a body that could already oscillate.
+    Ours is a formant filter driven by scalars.
+- **And a caveat of this project's own is removed by the sequence literature.** A
+  sequence has been learned in a chain of roughly **120 excitatory neurons**, so
+  this vocal module's 126 is not disqualifying against Warlaumont's 1000-neuron
+  reservoir, and that objection should not be carried forward. See
+  <https://pubmed.ncbi.nlm.nih.gov/26971945/> (Recurrent network models of
+  sequence generation and memory) and, for sequences arising spontaneously under
+  unstructured input, <https://elifesciences.org/reviewed-preprints/110718>.
 
 ### A note on where this project's record actually lives
 

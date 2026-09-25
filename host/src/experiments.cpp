@@ -394,6 +394,13 @@ const Spec kSpecs[] = {
      "  pulses 4 s then goes SILENT and measures the f-component during the silence\n"
      "  -- the M1b logic that separates an echo from a pass-through. Every f tiles\n"
      "  the block in whole cycles so concatenated holds keep phase. 12 seeds"},
+    {"salrew", 1200000, Expect::kOpen, Tier::kTeach,
+     "WARLAUMONT'S REWARD, BUILT: praise when auditory salience clears a bar that\n"
+     "  ratchets on the creature's own hit rate, no target anywhere. The PRIMARY is\n"
+     "  NOT salience but the syllable-band modulation depth of the produced\n"
+     "  envelope -- salience can rise by getting louder or noisier and neither is a\n"
+     "  syllable. Control is YOKED praise: the taught arm's reward times replayed,\n"
+     "  identical rate and timing, only the contingency differs. 12 seeds x 3 arms"},
     {"salience", 600000, Expect::kOpen, Tier::kLong,
      "THE GATE ON WARLAUMONT'S REWARD, before any reward is built. Warlaumont &\n"
      "  Finnegan (2016) get canonical babbling from R-STDP with NO target and no\n"
@@ -821,6 +828,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "glide") ok = run_glide(dna_blob, ticks, verbose);
   else if (name == "selfloop") ok = run_selfloop(dna_blob, ticks, verbose);
   else if (name == "salience") ok = run_salience(dna_blob, ticks, verbose);
+  else if (name == "salrew") ok = run_salrew(dna_blob, ticks, verbose);
   else if (name == "adaptclock") ok = run_adaptclock(dna_blob, ticks, verbose);
   else if (name == "halfcenter") ok = run_halfcenter(dna_blob, ticks, verbose);
   else if (name == "regionband") ok = run_regionband(dna_blob, ticks, verbose);
