@@ -11308,6 +11308,50 @@ class of mistake — the two formants want opposite signs, the two channels want
 opposite signs, and magnitude comparisons quietly discard exactly the
 information that matters. The verdict is now signed.
 
+
+### And built, it is refused — the pre-flight measured a consequence, not a resource
+
+    decoder            F1 from rest      delivered sd   err AVERAGED
+    position           + 82.5 +/-  8.1      28.4 Hz        0.525
+    burst (rate rd)    + 82.5 +/-  8.1      28.4 Hz        0.525   <- identical
+    v63 burst-read     - 34.1 +/- 11.4      80.1 Hz        0.701
+
+**REFUSED, and not marginally.** The lesson moves delivered F1 the *wrong way* —
+−34.1 Hz where positive is toward the 320 Hz target — the averaged error rises
+to 0.701 against the position decoder's 0.525, and the error on the mean is
+0.709 against the 0.668 an *untaught* creature sits at. **The taught creature
+ends farther from the target than if it had never been taught.**
+
+**The control is clean and it is what makes the diagnosis possible.**
+`burst (rate rd)` — burst tracking on, plain rate readout — is bit-identical to
+`position` on every column. So enabling the burst code perturbs nothing, the
+readout change is the entire effect, and the profile the pre-flight was computed
+from was measured on a creature identical to the baseline.
+
+**So why did a 1.41× prediction become a wrong-way result?** Because the burst
+profile I measured was recorded on a creature *whose F1 was being controlled by
+the rate centroid*. The opposed sign was a **consequence of learning under that
+readout**, not an independent resource sitting there to be harvested. Change the
+readout and the creature learns a different profile — one that no longer has the
+convenient anti-correlation, because the anti-correlation was an artefact of the
+policy that produced it.
+
+**That is the transferable finding, and it is worth more than the mechanism
+would have been.** *A pre-flight computed from profiles recorded under decoder A
+does not predict behaviour under decoder B, because the profile is itself
+learned.* Every pre-flight in this project that reads a recorded profile and
+projects a different readout onto it inherits this error — including the
+two-pool pre-flight, whose covariance was also measured under the shipped
+centroid. That one happened to return "equivalent", so nothing rested on it; had
+it returned "licensed", it would have been licensing a number with the same flaw.
+
+The honest form of this pre-flight is a **closed loop**: record the profile under
+the candidate readout, not under the incumbent. Which means it is not a
+pre-flight at all — it is the experiment, and there is no way to price this class
+of change more cheaply than running it. Naud & Sprekeler's multiplexed code is
+not in question; what is refused is the assumption that a channel measured under
+one policy stays available under another.
+
 ## Layout
 
 ```
