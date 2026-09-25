@@ -678,6 +678,22 @@ f1_velocity_gain = 0.0
 # 95% of the way back to rest in that window is tau = 633 ms.
 f1_return_tau_ms = 633.0
 
+# DNA v63 -- THE BURST CHANNEL, SUBTRACTED. 0 is OFF and bit-identical.
+#
+# The centroid uses 13.7% of the range it already has; the limit is how
+# DIFFERENTIATED the group gets, and per-module homeostasis defends flatness by
+# driving every neuron to a common target RATE. But IP says nothing about how
+# that rate is DISTRIBUTED IN TIME. Measured on 12 creatures: the burst centroid
+# carries the lesson at +0.1228 where the rate centroid carries it at -0.0926 --
+# OPPOSITE SIGNS, untaught control at chance, burst 10.7 SE from its own control.
+#
+#   c_eff = c_rate - f1_burst_weight * (c_burst - 0.5)
+#
+# Subtracting ADDS the deflections: 0.2154, or 1.41x the 0.153 that 230 Hz of
+# two-word separation needs. Requires the vocal module's `burst_ms` > 0 or there
+# are no bursts to weight, in which case the readout falls back to c_rate.
+f1_burst_weight = 0.0
+
 [curiosity]
 learn_rate = 0.02           # LMS rate of the forward model
 fast_tau_ms = 2000.0

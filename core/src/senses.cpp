@@ -292,6 +292,7 @@ void VocalDecoder::configure(const Dna& dna, uint32_t module_index, Scalar updat
   update_ms_ = update_ms;
   f1_rest_ = lerp(Scalar(cfg_.f1_min), Scalar(cfg_.f1_max), Scalar(0.5));
   f1_state_ = f1_rest_;
+  f1_burst_c_ = Scalar(0.5);
   f1_return_ = cfg_.f1_return_tau_ms > kZero
                    ? clampf(update_ms / Scalar(cfg_.f1_return_tau_ms), kZero, kOne)
                    : kZero;
@@ -517,6 +518,39 @@ void VocalDecoder::update(const Network& net, bool awake) {
     target_f1 = dict_f1_;
     target_f2 = dict_f2_;
   }
+  // DNA v63. THE BURST CHANNEL, SUBTRACTED FROM THE RATE CHANNEL. Placed before
+  // v62 so the velocity decoder, if also on, integrates the COMBINED command --
+  // the two changes compose rather than one overwriting the other.
+  //
+  // The burst centroid is the same population vector read over `burst_rate`
+  // instead of `rate_fast`. Homeostasis regulates the mean rate and not its
+  // distribution in time, so this channel is differentiated where IP is not
+  // looking, and it was measured carrying the lesson with the OPPOSITE sign --
+  // which is why it is SUBTRACTED and why the two deflections add.
+  if (cfg_.f1_burst_weight > kZero) {
+    const uint32_t b2 = ms.begin + slice_begin(ms.count, kVocalGroups, 2);
+    const uint32_t e2 = ms.begin + slice_begin(ms.count, kVocalGroups, 3);
+    const Scalar n2 = Scalar(e2 - b2);
+    Scalar wsum = kZero, psum = kZero;
+    for (uint32_t i = b2; i < e2; ++i) {
+      const Scalar b = net.burst_rate(i);
+      const Scalar pref = (Scalar(i - b2) + Scalar(0.5)) / n2;
+      wsum += b;
+      psum += b * pref;
+    }
+    // A group with no bursts has no opinion. Holding the previous value is the
+    // same rule `read_group` uses for a silent group, and it means a genome with
+    // `burst_ms` 0 degrades to the plain rate centroid instead of failing oddly.
+    if (wsum > Scalar(1e-6)) {
+      const Scalar cb = clampf(psum / wsum, kZero, kOne);
+      f1_burst_c_ += smooth_ * (cb - f1_burst_c_);
+    }
+    const Scalar c_eff =
+        clampf(group_value_[2] - Scalar(cfg_.f1_burst_weight) * (f1_burst_c_ - Scalar(0.5)),
+               kZero, kOne);
+    target_f1 = lerp(Scalar(cfg_.f1_min), Scalar(cfg_.f1_max), c_eff);
+  }
+
   // DNA v62. THE DECODER READS VELOCITY. Placed after the dictionary block so
   // it overrides whichever earlier stage produced a POSITION for F1 -- the two
   // are alternative readouts of the same group and only one can hold the tract.

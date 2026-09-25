@@ -11209,7 +11209,8 @@ as a **controller** rather than as the duty-cycle dial it currently is.
 
 The closed-loop direction was gated on a round-trip delay that `loop-latency`
 could only *sum* — 165 ms under v62, 905 under the position decoder. `selfloop`
-measures the loop instead, with Houde & Jordan's altered auditory feedback:
+measures the loop instead, with Houde & Jordan's altered auditory feedback
+(Science 1998, the paradigm that established formant compensation in speakers):
 shift the F1 the creature hears **of itself** on a 1500 ms square wave, leave the
 room silent, and ask whether production follows. The shift is applied in
 `Ear::tick`, host-side, so the pinned hash cannot move.
@@ -11264,7 +11265,12 @@ it is fought. Gain cannot help; it scales signal and noise together.
 
 **But IP regulates mean rate and says nothing about how that rate is
 distributed in time.** A neuron can carry its homeostatic rate as bursts or as
-singles. So the burst channel is differentiated where homeostasis is not
+singles. That a single spike train can carry two independent signals this way —
+one in its rate, one in its burst fraction — is Naud & Sprekeler's multiplexed
+code (PNAS 2018), with Lisman (1997) the earlier argument for bursts as a unit
+of information in their own right. The homeostasis being escaped is Desai,
+Rutherford & Turrigiano's intrinsic plasticity (1999), which regulates rate and
+only rate. So the burst channel is differentiated where homeostasis is not
 looking — and `burstprobe` had already measured bursts discriminating the object
 at 0.673. `burst_rate` exists per-neuron in the kernel, so this could be
 *computed* from a recorded profile instead of built first.
@@ -11837,6 +11843,55 @@ papers about the half it does not touch.
   v8 is V4's computation at V2's position in the hierarchy.
 
 [bp]: https://www.nature.com/articles/s41593-021-00857-x
+
+- **Speech production as velocities, not positions (DNA v62).** Guenther, F. H.
+  (1995). *Speech sound acquisition, coarticulation, and rate effects in a neural
+  network model of speech production.* Psychological Review 102(3), 594–621.
+  <https://doi.org/10.1037/0033-295X.102.3.594>; and Guenther, F. H., Ghosh, S.
+  S. & Tourville, J. A. (2006). *Neural modeling and imaging of the cortical
+  interactions underlying syllable production.* Brain and Language 96(3),
+  280–301. <https://doi.org/10.1016/j.bandl.2005.06.001>. The model is DIVA —
+  **Directions Into Velocities of Articulators** — and it is where this project's
+  v62 comes from: neural activity sets articulator **velocity**, where this
+  creature had always set position. The identity v62 confirmed is Guenther's
+  point arriving as arithmetic: a bounded command mapped to position gives
+  bounded reach. What DIVA has and this creature does not is the forward model
+  that closes the loop, which is why v62 reaches further and cannot aim.
+- **Altered auditory feedback, and the method `selfloop` is built on.** Houde, J.
+  F. & Jordan, M. I. (1998). *Sensorimotor adaptation in speech production.*
+  Science 279(5354), 1213–1216. <https://doi.org/10.1126/science.279.5354.1213>
+  — shift a speaker's formants in their own headphones and they compensate in the
+  opposite direction, which is how loop delay and feedback gain are measured in
+  speakers and songbirds. `selfloop` is that paradigm applied to this creature,
+  and it came back negative: no coherent response at the shift frequency
+  (+0.01 Hz ± 0.23), so this creature does not use self-audition to control F1.
+  The method is not in question — it is what made a clean refusal possible.
+- **Homeostatic and intrinsic plasticity, which is what defends the flat rate
+  profile.** Desai, N. S., Rutherford, L. C. & Turrigiano, G. G. (1999).
+  *Plasticity in the intrinsic excitability of cortical pyramidal neurons.*
+  Nature Neuroscience 2(6), 515–520. <https://doi.org/10.1038/9165>; and
+  Turrigiano, G. G. (2008). *The self-tuning neuron: synaptic scaling of
+  excitatory synapses.* Cell 135(3), 422–435.
+  <https://doi.org/10.1016/j.cell.2008.10.008> — the rule §3.1's per-module
+  `ip_*` fields implement. It is cited here as the **named opponent** of this
+  project's naming ceiling: it regulates each neuron toward a common target rate,
+  so every Hz of the differentiation a population-vector readout needs is fought
+  by it. That is why the centroid uses 13.7% of its own range, and it is the
+  reason gain cannot buy the rest.
+- **Bursts and rates as two multiplexed channels — the basis of DNA v63.** Naud,
+  R. & Sprekeler, H. (2018). *Sparse bursts optimize information transmission in
+  a multiplexed neural code.* PNAS 115(27), E6329–E6338.
+  <https://doi.org/10.1073/pnas.1720995115>; and Lisman, J. E. (1997). *Bursts as
+  a unit of neural information: making unreliable synapses reliable.* Trends in
+  Neurosciences 20(1), 38–43.
+  <https://doi.org/10.1016/S0166-2236(96)10070-9>. Naud & Sprekeler is the
+  load-bearing one: a single spike train can carry **two** signals at once, one
+  in its rate and one in its burst fraction, and they can be read out
+  independently. That is exactly what this project measured — the burst centroid
+  carries the lesson at +0.1228 while the rate centroid carries it at −0.0926,
+  opposite signs, untaught controls at chance. The mechanism for **why** they can
+  differ is the multiplexing these papers describe, and the reason it matters
+  here is that homeostasis regulates only one of the two channels.
 
 ### A note on where this project's record actually lives
 

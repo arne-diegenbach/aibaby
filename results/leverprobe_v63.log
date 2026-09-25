@@ -1,0 +1,121 @@
+experiment: leverprobe
+  instrument        leverprobe   trial seed 0000000001353929   2000 trials
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  question          `blockanchor` says freezing the UPPER half of F1 costs 53%
+                    of the lesson and the LOWER half 9%. My leverage law was
+                    FITTED to three one-neuron costs and FAILS the two
+                    half-block costs from the same run: it predicts a ratio of
+                    3.48 where 5.89 was measured, and no centroid position
+                    reaches 5.89 (the maximum over all v is 4.31).
+  what is measured  the two quantities that law ASSUMED -- the centroid's own
+                    position and the per-neuron weights -- and, the point of
+                    the run, how much each neuron's rate actually MOVES while
+                    the lesson is learned. That needs no fitted constant.
+  the prior         `stageprobe` says IP drives every neuron toward the SAME
+                    rate, which flattens exactly this profile. A FLAT answer
+                    here is the expected one and it REFUSES the rate account
+                    as well as the position account.
+
+  PRE-REGISTERED, written before the run
+    primary     share of total |rate change| in the UPPER half (k=7..13),
+                first third of teaching to last, taught arm.
+      >= 0.75 and >= 2 SE above the `quiet` arm -> THE LESSON IS CARRIED BY
+                THE UPPER HALF. Explains 53-vs-9 with no fitted law, and
+                REPLACES the leverage account rather than repairing it.
+      0.42..0.58                                -> REFUSED. Both halves move
+                alike, so neither position nor rate explains the asymmetry
+                and the cause is downstream of this profile.
+      anything else                             -> report the number, no
+                verdict. This is the 2-3 SE band where a hypothesis is not a
+                finding.
+    secondary   the centroid's MEASURED position, against the 0.299 the fit
+                assumed. A measurement, not a gate.
+    refusals    the group must be 14 neurons, the taught arm must reproduce
+                `blockanchor`'s b0 lesson (+0.1676, accept 0.10..0.24), and
+                pool_beta must be 1.0 or the centroid column is not the
+                readout's. Any of these failing means this run is not
+                measuring the creature those costs came from.
+
+  [6/132] seed 0 vel-band2 taught 0.5763
+  [3/132] seed 0 taught-vel taught 0.6666
+  [7/132] seed 0 vel-band3 taught 0.6444
+  [8/132] seed 0 burst  taught 0.7762
+  [2/132] seed 0 quiet  taught 1.0860
+  [4/132] seed 0 quiet-vel taught 1.0796
+  [1/132] seed 0 taught taught 0.7762
+  [5/132] seed 0 vel-band1 taught 0.6666
+  [9/132] seed 0 burst-quiet taught 1.0860
+  [14/132] seed 1 taught-vel taught 0.6413
+  [13/132] seed 1 quiet  taught 1.0754
+  [15/132] seed 1 quiet-vel taught 1.1013
+  [12/132] seed 1 taught taught 0.7730
+  [11/132] seed 0 burst-read-q taught 1.1067
+  [16/132] seed 1 vel-band1 taught 0.6413
+  [10/132] seed 0 burst-read taught 1.0815
+  [18/132] seed 1 vel-band3 taught 0.5717
+  [17/132] seed 1 vel-band2 taught 0.5296
+  [19/132] seed 1 burst  taught 0.7730
+  [23/132] seed 2 taught taught 0.8962
+  [21/132] seed 1 burst-read taught 1.1197
+  [20/132] seed 1 burst-quiet taught 1.0754
+  [24/132] seed 2 quiet  taught 1.1004
+  [22/132] seed 1 burst-read-q taught 1.0890
+  [25/132] seed 2 taught-vel taught 0.6374
+  [26/132] seed 2 quiet-vel taught 1.1140
+  [27/132] seed 2 vel-band1 taught 0.6374
+  [28/132] seed 2 vel-band2 taught 0.6426
+  [29/132] seed 2 vel-band3 taught 0.6091
+  [30/132] seed 2 burst  taught 0.8962
+  [34/132] seed 3 taught taught 0.8461
+  [33/132] seed 2 burst-read-q taught 1.1517
+  [31/132] seed 2 burst-quiet taught 1.1004
+  [32/132] seed 2 burst-read taught 1.1680
+  [35/132] seed 3 quiet  taught 1.0710
+  [36/132] seed 3 taught-vel taught 0.6120
+  [37/132] seed 3 quiet-vel taught 1.0707
+  [38/132] seed 3 vel-band1 taught 0.6120
+  [39/132] seed 3 vel-band2 taught 0.5904
+  [42/132] seed 3 burst-quiet taught 1.0710
+  [44/132] seed 3 burst-read-q taught 0.9842
+  [43/132] seed 3 burst-read taught 1.0419
+  [41/132] seed 3 burst  taught 0.8461
+  [40/132] seed 3 vel-band3 taught 0.6175
+  [47/132] seed 4 taught-vel taught 0.6835
+  [46/132] seed 4 quiet  taught 1.0844
+  [45/132] seed 4 taught taught 0.8275
+  [48/132] seed 4 quiet-vel taught 1.0671
+  [50/132] seed 4 vel-band2 taught 0.6174
+  [49/132] seed 4 vel-band1 taught 0.6835
+  [53/132] seed 4 burst-quiet taught 1.0844
+  [51/132] seed 4 vel-band3 taught 0.6281
+  [54/132] seed 4 burst-read taught 1.1493
+  [56/132] seed 5 taught taught 0.8155
+  [57/132] seed 5 quiet  taught 1.0801
+  [52/132] seed 4 burst  taught 0.8275
+  [58/132] seed 5 taught-vel taught 0.6418
+  [55/132] seed 4 burst-read-q taught 1.0230
+  [60/132] seed 5 vel-band1 taught 0.6418
+  [61/132] seed 5 vel-band2 taught 0.5907
+  [59/132] seed 5 quiet-vel taught 1.0628
+  [62/132] seed 5 vel-band3 taught 0.6392
+  [63/132] seed 5 burst  taught 0.8155
+  [66/132] seed 5 burst-read-q taught 1.0860
+  [67/132] seed 6 taught taught 0.7816
+  [64/132] seed 5 burst-quiet taught 1.0801
+  [68/132] seed 6 quiet  taught 1.0885
+  [65/132] seed 5 burst-read taught 1.0570
+  [70/132] seed 6 quiet-vel taught 1.1015
+  [71/132] seed 6 vel-band1 taught 0.5668
+  [69/132] seed 6 taught-vel taught 0.5668
+  [74/132] seed 6 burst  taught 0.7816
+  [72/132] seed 6 vel-band2 taught 0.6550
+  [73/132] seed 6 vel-band3 taught 0.6046
+  [76/132] seed 6 burst-read taught 1.0969
+  [75/132] seed 6 burst-quiet taught 1.0885
+  [78/132] seed 7 taught taught 0.7805
+  [77/132] seed 6 burst-read-q taught 1.0898
+  [79/132] seed 7 quiet  taught 1.0741
+  [80/132] seed 7 taught-vel taught 0.6582
+  [81/132] seed 7 quiet-vel taught 1.0987
+  [83/132] seed 7 vel-band2 taught 0.5683

@@ -9869,10 +9869,11 @@ bool run_blockanchor(const std::vector<uint8_t>& blob, uint64_t ticks, bool verb
 // than a dead end: IP drives every neuron toward the SAME rate, so it actively
 // flattens exactly this profile. If the profile is flat, then neither position
 // nor rate-change explains 53-vs-9, and the cause is not in the readout at all.
-struct LPArm { const char* name; bool teach; float vel_gain; double band; float burst_ms; };
+struct LPArm { const char* name; bool teach; float vel_gain; double band; float burst_ms;
+               float burst_w; };
 const LPArm kLPArms[] = {
-    {"taught", true, 0.0f, 0.0, 0.0f},   // the lesson, unblocked: `blockanchor`'s b0
-    {"quiet", false, 0.0f, 0.0, 0.0f},   // never taught. The profile the creature came with, so a
+    {"taught", true, 0.0f, 0.0, 0.0f, 0.0f},   // the lesson, unblocked: `blockanchor`'s b0
+    {"quiet", false, 0.0f, 0.0, 0.0f, 0.0f},   // never taught. The profile the creature came with, so a
                               // rate change that is just settling cannot read as a lesson.
     // DNA v62 -- THE DECISIVE TEST, and the one `glide` structurally could not ask.
     // glide measured PASSIVE FOLLOWING and refused it: the velocity decoder tracks
@@ -9896,8 +9897,8 @@ const LPArm kLPArms[] = {
     // WHAT REFUSES THE WHOLE LINE: taught velocity not exceeding the position
     // arm's movement, which would mean the extra range is unreachable BY REWARD
     // and the walk is noise to the learner rather than exploration.
-    {"taught-vel", true, 7123.0f, 0.0, 0.0f},
-    {"quiet-vel", false, 7123.0f, 0.0, 0.0f},
+    {"taught-vel", true, 7123.0f, 0.0, 0.0f, 0.0f},
+    {"quiet-vel", false, 7123.0f, 0.0, 0.0f, 0.0f},
     // v62 + REGION TARGETS. 12/12 velocity creatures touch the 250 Hz floor, so
     // the 275.7 Hz result is measured against a wall. WHY it overshoots is
     // structural rather than a tuning slip: under velocity control, HOLDING a
@@ -9932,16 +9933,33 @@ const LPArm kLPArms[] = {
     // under velocity, so 0.3 / 0.5 / 0.7 brackets it. Keeping score_axis at 0
     // means the region is a convex region in FORMANT SPACE, which is what DIVA's
     // targets are, rather than a band on one formant.
-    {"vel-band1", true, 7123.0f, 0.30, 0.0f},
-    {"vel-band2", true, 7123.0f, 0.50, 0.0f},
-    {"vel-band3", true, 7123.0f, 0.70, 0.0f},
+    {"vel-band1", true, 7123.0f, 0.30, 0.0f, 0.0f},
+    {"vel-band2", true, 7123.0f, 0.50, 0.0f, 0.0f},
+    {"vel-band3", true, 7123.0f, 0.70, 0.0f, 0.0f},
     // DNA v63 PRE-FLIGHT -- IS THE BURST PROFILE LESS FLAT THAN THE RATE PROFILE?
     // 20 ms is `burstprobe`'s derived window, not a guess: a pyramidal burst in
     // the literature is 100-200 Hz, this larynx fires at a few Hz, and 20 ms is
     // the shortest window at which the code is live here at all (8.2% of spikes).
     // Position decoder, so the comparison is against the measured 0.4343.
-    {"burst", true, 0.0f, 0.0, 20.0f},
-    {"burst-quiet", false, 0.0f, 0.0, 20.0f},
+    {"burst", true, 0.0f, 0.0, 20.0f, 0.0f},
+    {"burst-quiet", false, 0.0f, 0.0, 20.0f, 0.0f},
+    // DNA v63 BUILT AND SWITCHED ON. c_eff = c_rate - w*(c_burst - 0.5).
+    //
+    // The pre-flight above computed 0.2154 of deflection from the two channels'
+    // opposed signs -- 1.41x what naming needs -- from BETWEEN-creature means.
+    // What it could not see is the PER-FRAME noise of a sparse centroid: burst
+    // events run 0.44 Hz against ~4.5 Hz of spikes, and that trade is exactly
+    // what refused the two-pool readout. This arm measures it in DELIVERED terms,
+    // which is what the existing v62 instrumentation already reports.
+    //
+    // PRE-REGISTERED: v63 EARNS ITS PLACE only if delivered F1 moves further from
+    // its own untaught control AND the AVERAGED error falls. Excursion alone is
+    // not enough -- v62 moved 275.7 Hz and raised averaged error by straddling
+    // the target, and a sparse burst centroid is a better candidate for that
+    // failure, not a worse one. If sd explodes and the averaged error rises, the
+    // channel is real and unusable, and that is the honest finding.
+    {"burst-read", true, 0.0f, 0.0, 20.0f, 1.0f},
+    {"burst-read-q", false, 0.0f, 0.0, 20.0f, 1.0f},
 };
 constexpr uint32_t kLPArmCount = sizeof(kLPArms) / sizeof(kLPArms[0]);
 
@@ -10028,6 +10046,11 @@ bool run_leverprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
                         sizeof(aibaby::DnaModule) * size_t(vm) +
                         offsetof(aibaby::DnaModule, burst_ms);
       std::memcpy(variant.data() + mb, &kLPArms[a].burst_ms, sizeof(float));
+    }
+    {
+      const size_t bw = offsetof(aibaby::DnaHeader, vocal) +
+                        offsetof(aibaby::DnaVocal, f1_burst_weight);
+      std::memcpy(variant.data() + bw, &kLPArms[a].burst_w, sizeof(float));
     }
     RTConfig cfg;
     cfg.name = kLPArms[a].name;
@@ -10492,6 +10515,11 @@ bool run_leverprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
           {0u, 1u, "position"},   {2u, 3u, "velocity"},
           {4u, 3u, "vel+band.30"}, {5u, 3u, "vel+band.50"},
           {6u, 3u, "vel+band.70"},
+          // DNA v63. `burst` tracks bursts with the PLAIN rate readout, so it
+          // isolates what merely enabling the burst code costs; `burst-read`
+          // subtracts the burst centroid. Each against the control sharing its
+          // decoder, which for the burst arms is their own untaught partner.
+          {7u, 8u, "burst(rate rd)"}, {9u, 10u, "v63 burst-read"},
       };
       const uint32_t npr = sizeof(prs) / sizeof(prs[0]);
       double err_avg[8] = {}, floor_pct[8] = {};

@@ -227,6 +227,12 @@ class VocalDecoder {
   // is the same change, not a second one: the pole moves from the command to
   // the integral. Unused while the gain is 0.
   Scalar f1_cmd_ = Scalar(0.5);
+  // DNA v63. The burst-weighted centroid, smoothed on the SAME constant as the
+  // rate centroid so switching channels does not also switch articulator
+  // inertia. Held at 0.5 -- the undifferentiated centre -- whenever the group
+  // produces no bursts, so a silent burst channel contributes nothing rather
+  // than snapping the tract somewhere arbitrary.
+  Scalar f1_burst_c_ = Scalar(0.5);
 
   // DNA v48. The dictionary's own state: which slice holds the tract, how long
   // it is still entitled to, and the smoothed formant targets it names. The

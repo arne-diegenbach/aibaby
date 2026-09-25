@@ -1766,6 +1766,37 @@ struct DnaVocal {
   // trial is 2800 ms with the caregiver sounding for the first 900, so 1900 ms
   // of silence; returning 95% of the way to rest in that window is tau = 633 ms.
   float f1_return_tau_ms;
+  // DNA v63 — THE BURST CHANNEL, SUBTRACTED FROM THE RATE CHANNEL.
+  //
+  // WHY. The ceiling is not the readout's range: the centroid's labels span
+  // 0.036..0.964 and teaching in both directions moves it 0.4343..0.5611, which
+  // is 13.7% of what is already there. The limit is DIFFERENTIATION, and
+  // per-module homeostasis defends flatness by driving every neuron toward a
+  // common target RATE. Gain cannot help — it scales signal and noise together.
+  //
+  // THE OPENING: IP regulates MEAN RATE and says nothing about how that rate is
+  // DISTRIBUTED IN TIME. A neuron can carry its homeostatic rate as bursts or as
+  // singles, so the burst channel is differentiated where homeostasis is not
+  // looking. MEASURED on 12 creatures: the burst centroid carries the lesson at
+  // +0.1228 while the rate centroid carries it at -0.0926 — OPPOSITE SIGNS, with
+  // the untaught control at chance (0.5024) and the burst signal 10.7 SE from it.
+  //
+  // So SUBTRACTING the burst centroid ADDS the two deflections: 0.2154, or 1.41x
+  // the 0.153 that 230 Hz of two-word separation needs on a 750 Hz lerp. The two
+  // channels are anti-correlated because one is regulated and the other is not.
+  //
+  //   c_eff = c_rate - f1_burst_weight * (c_burst - 0.5)
+  //
+  // 0 is OFF and bit-identical. Requires the vocal module's `burst_ms` > 0, or
+  // there are no bursts to weight and the readout falls back to c_rate alone —
+  // which is the guard, not a silent failure.
+  //
+  // THE RISK THIS SHIPS WITH: burst events run 0.44 Hz against ~4.5 Hz of spikes,
+  // a tenth the events, so the burst centroid is a SPARSE estimate. Per-frame
+  // noise is exactly the trade that refused the two-pool readout, and the run
+  // that turns this on measures delivered F1's sd and averaged error, not just
+  // its excursion.
+  float f1_burst_weight;
 
 };
 
