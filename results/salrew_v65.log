@@ -1,0 +1,22 @@
+experiment: salrew
+  instrument        salrew   trial seed 0000000001357de7   1200000 ticks
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  the reward     Warlaumont & Finnegan (2016): praise when auditory
+                 SALIENCE clears a bar that ratchets on the creature's
+                 own hit rate. No target anywhere.
+  the primary    NOT salience -- the SYLLABLE-BAND MODULATION DEPTH of
+                 the produced envelope (sd of the 2-6 Hz band over its
+                 mean). Salience can rise by getting louder or noisier
+                 and neither is a syllable. `salience` measured this
+                 creature at 94% of a real 3 Hz frame already, so the
+                 cheap way up is the likely one.
+  the control    YOKED praise -- the taught arm's reward TIMES replayed
+                 to a fresh creature. Identical rate, timing and total
+                 dopamine; only the CONTINGENCY differs. `none` cannot
+                 do that job.
+  constants      band tau = 1/(2 pi f) at 6 and 2 Hz = 26.5 / 79.6 ms;
+                 staircase step 2.22%% of the bar, which is Warlaumont's
+                 +0.1 on 4.5 as a RATE because their scale is not ours;
+                 their 30%%-of-10 advance rule taken verbatim; the bar
+                 starts at each creature's OWN median over 20 windows.

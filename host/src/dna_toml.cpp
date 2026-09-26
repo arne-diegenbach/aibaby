@@ -474,6 +474,8 @@ bool compile_dna_toml(const std::string& path, std::vector<uint8_t>& out,
     header.vocal.f1_burst_weight = float(r.number("f1_burst_weight"));
     header.vocal.jaw_hz = float(r.number("jaw_hz"));
     header.vocal.jaw_damping = float(r.number("jaw_damping"));
+    header.vocal.jaw_selfosc = float(r.number("jaw_selfosc"));
+    header.vocal.jaw_limit = float(r.number("jaw_limit"));
     collect(r);
   }
   {

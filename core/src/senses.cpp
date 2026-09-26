@@ -602,8 +602,22 @@ void VocalDecoder::update(const Network& net, bool awake) {
     const Scalar dt = update_ms_ * Scalar(0.001) / Scalar(kJawSub);
     const Scalar w0 = Scalar(6.283185307179586) * Scalar(cfg_.jaw_hz);
     const Scalar zeta = Scalar(cfg_.jaw_damping);
+    // DNA v65. Damping is NEGATIVE near the drive and positive beyond it, so the
+    // jaw grows out of rest onto a limit cycle instead of decaying onto the
+    // command. `jaw_selfosc` is mu as a RATIO to w0, which keeps the cycle's
+    // shape -- and so its frequency -- independent of `jaw_hz`; that matters
+    // because the tracking test scores a slope against jaw_hz and a relaxation
+    // oscillator's period depends on mu as much as on w0.
+    const Scalar mu = Scalar(cfg_.jaw_selfosc) * w0;
+    const Scalar lim = Scalar(cfg_.jaw_limit) > kZero ? Scalar(cfg_.jaw_limit) : Scalar(0.25);
     for (uint32_t sub = 0; sub < kJawSub; ++sub) {
-    jaw_v_ += dt * (-Scalar(2) * zeta * w0 * jaw_v_ - w0 * w0 * (jaw_ - jaw_raw_drive_));
+    const Scalar u = jaw_ - jaw_raw_drive_;
+    if (mu > kZero) {
+      const Scalar un = u / lim;
+      jaw_v_ += dt * (mu * (kOne - un * un) * jaw_v_ - w0 * w0 * u);
+    } else {
+      jaw_v_ += dt * (-Scalar(2) * zeta * w0 * jaw_v_ - w0 * w0 * u);
+    }
     jaw_ += dt * jaw_v_;
     // A jaw cannot open past its hinge or close past its teeth. Clamping the
     // POSITION alone would let velocity keep accumulating against the stop and

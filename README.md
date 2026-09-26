@@ -12310,6 +12310,48 @@ papers about the half it does not touch.
   sequence generation and memory) and, for sequences arising spontaneously under
   unstructured input, <https://elifesciences.org/reviewed-preprints/110718>.
 
+- **Why a partially-tracking jaw is a measurement and not a fudge — Arnold
+  tongues.** v65's self-oscillating jaw tracks `jaw_hz` at slope 0.60, not 1.00,
+  and the entrainment literature says that number is a point on a known curve
+  rather than a defect. An **Arnold tongue** charts entrainment against how far
+  the driving rhythm sits from the oscillator's own eigenfrequency *and* how
+  strong the driving is — see *Entrainment, Arnold tongues, and duality in a
+  periodically driven integrate-and-fire model*
+  <https://www.sciencedirect.com/science/article/abs/pii/S0925231202003661>, with
+  *Entrainment of noise-induced and limit cycle oscillators under weak noise*
+  <https://arxiv.org/abs/1301.2440> for the limit-cycle case this jaw actually is,
+  and *Arnold tongues in the forced Kuramoto model with matrix coupling*
+  <https://arxiv.org/abs/2603.04207> for the general forced picture.
+  - **This makes the slope a dose-response rather than an anecdote.** The jaw
+    couples to the neural drive through `ω₀²(x − drive)`. Weaken that coupling and
+    the jaw should keep its own frequency, slope → 1.0; strengthen it and the
+    drive should capture the jaw, slope → 0.0. **If the slope does not move with
+    coupling strength, the entrainment account is wrong** and something else
+    explains 0.60. Recorded as the prediction *before* the run, which is the
+    difference between this and the `adaptclock` τ-tracking test it otherwise
+    resembles.
+- **Independent statement that the frame is mechanical.** *Entrainment of
+  traveling waves to rhythmic motor acts* <https://arxiv.org/abs/1606.02372>
+  describes frame/content as proposing that syllable features are determined by
+  **mechanical properties of the speech apparatus, such as natural oscillatory
+  rhythms** — arrived at from the cortical-wave side rather than from
+  articulation, and it is the same claim `frame-is-a-body-part` was built on.
+- **Frames-then-content is a validated engineering architecture, not only a
+  developmental theory.** The locomotion literature routinely pairs an oscillator
+  supplying rhythm with reinforcement learning supplying modulation — hierarchical
+  RL over a central pattern generator, e.g.
+  <https://www.researchgate.net/publication/224261138_Hierarchical_reinforcement_learning_and_central_pattern_generators_for_modeling_the_development_of_rhythmic_manipulation_skills>
+  and, for quadrupeds across terrain,
+  <https://www.researchgate.net/publication/390440733>. That division of labour is
+  exactly what v65 plus the salience reward is, and it is worth knowing the shape
+  is standard before claiming novelty for it.
+  - And a caution from the same literature that cuts the other way: an LSTM
+    trained end-to-end with RL **converged to a CPG with no oscillator structure
+    imposed** (<https://arxiv.org/html/2607.26434>). So reward *can* discover
+    rhythm given a substrate that supports it — which is a reason to keep asking
+    why five neural routes here did not, rather than treating the body as the only
+    possible answer.
+
 ### A note on where this project's record actually lives
 
 Two stores, and they are not the same store:

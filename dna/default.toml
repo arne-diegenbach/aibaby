@@ -721,6 +721,25 @@ jaw_hz = 0.0
 # gives no second cycle, which is a low-pass and not an oscillator.
 jaw_damping = 0.15
 
+# DNA v65 -- THE JAW SELF-OSCILLATES. 0 keeps v64's damped spring exactly.
+#
+# v64's resonant jaw was REFUSED on tracking at slope 0.01: the envelope peak sat
+# at 3.2-3.7 Hz whatever jaw_hz said. A damped spring is a band-amplifying FILTER
+# and cannot create a rhythm that is not in its input -- it follows a drive whose
+# energy lies below w0. Gafos & Kuberski said LIMIT CYCLE, which self-oscillates
+# with NO periodic input, and building a passive resonance was the wrong physics.
+#
+#   u = x - drive
+#   u'' - mu*(1 - (u/jaw_limit)^2)*u' + w0^2*u = 0
+#
+# van der Pol centred on the drive: damping NEGATIVE inside |u| < jaw_limit,
+# positive outside, so the jaw grows out of rest onto a cycle. mu is a RATIO to
+# w0 so the shape needs no re-tuning per frequency; small keeps the cycle near w0,
+# which the tracking test requires because a relaxation oscillator's period is set
+# by mu as much as by w0.
+jaw_selfosc = 0.0
+jaw_limit = 0.25
+
 [curiosity]
 learn_rate = 0.02           # LMS rate of the forward model
 fast_tau_ms = 2000.0

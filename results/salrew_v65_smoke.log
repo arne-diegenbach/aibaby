@@ -1,0 +1,109 @@
+  [earn 5/12] seed 4  ratchet 68  fixed 760
+  [earn 7/12] seed 6  ratchet 31  fixed 495
+  [earn 11/12] seed 10  ratchet 12  fixed 140
+  [earn 2/12] seed 1  ratchet 35  fixed 426
+  [earn 1/12] seed 0  ratchet 34  fixed 100
+  [earn 12/12] seed 11  ratchet 21  fixed 113
+  [earn 4/12] seed 3  ratchet 51  fixed 528
+  [earn 8/12] seed 7  ratchet 75  fixed 755
+  [earn 3/12] seed 2  ratchet 9  fixed 87
+  [earn 6/12] seed 5  ratchet 52  fixed 684
+  [earn 10/12] seed 9  ratchet 39  fixed 628
+  [earn 9/12] seed 8  ratchet 29  fixed 564
+  [yoked 4/12] seed 3  rewards 68 (from creature 4)
+  [yoked 7/12] seed 6  rewards 75 (from creature 7)
+  [yoked 10/12] seed 9  rewards 12 (from creature 10)
+  [yoked 3/12] seed 2  rewards 51 (from creature 3)
+  [yoked 12/12] seed 11  rewards 34 (from creature 0)
+  [yoked 1/12] seed 0  rewards 35 (from creature 1)
+  [yoked 5/12] seed 4  rewards 52 (from creature 5)
+  [yoked 11/12] seed 10  rewards 21 (from creature 11)
+  [yoked 8/12] seed 7  rewards 29 (from creature 8)
+  [yoked 2/12] seed 1  rewards 9 (from creature 2)
+  [yoked 9/12] seed 8  rewards 39 (from creature 9)
+  [yoked 6/12] seed 5  rewards 31 (from creature 6)
+experiment: salrew
+  SHORT RUN — 400000 ticks against a minimum of 1200000. WARLAUMONT'S REWARD, BUILT: praise when auditory salience clears a bar that
+  ratchets on the creature's own hit rate, no target anywhere. The PRIMARY is
+  NOT salience but the syllable-band modulation depth of the produced
+  envelope -- salience can rise by getting louder or noisier and neither is a
+  syllable. Control is YOKED praise: the taught arm's reward times replayed,
+  identical rate and timing, only the contingency differs. 12 seeds x 3 arms
+  Everything below is printed for debugging and is NOT a
+  measurement; this run cannot pass whatever it reads.
+
+  instrument        salrew   trial seed 0000000001357de7   400000 ticks
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  the reward     Warlaumont & Finnegan (2016): praise when auditory
+                 SALIENCE clears a bar that ratchets on the creature's
+                 own hit rate. No target anywhere.
+  the primary    NOT salience -- the SYLLABLE-BAND MODULATION DEPTH of
+                 the produced envelope (sd of the 2-6 Hz band over its
+                 mean). Salience can rise by getting louder or noisier
+                 and neither is a syllable. `salience` measured this
+                 creature at 94% of a real 3 Hz frame already, so the
+                 cheap way up is the likely one.
+  the control    YOKED praise -- the taught arm's reward TIMES replayed
+                 to a fresh creature. Identical rate, timing and total
+                 dopamine; only the CONTINGENCY differs. `none` cannot
+                 do that job.
+  constants      band tau = 1/(2 pi f) at 6 and 2 Hz = 26.5 / 79.6 ms;
+                 staircase step 2.22%% of the bar, which is Warlaumont's
+                 +0.1 on 4.5 as a RATE because their scale is not ours;
+                 their 30%%-of-10 advance rule taken verbatim; the bar
+                 starts at each creature's OWN median over 20 windows.
+
+  arm         mod depth late    mod early->late   mean amp         rewd   hit     env peak Hz  snr
+    taught      0.3792 +/- 0.0081   -0.0972 +/- 0.0125  0.2839 +/- 0.0068 38       4.8%  3.36 +/- 0.35   7.0
+    yoked       0.3804 +/- 0.0084   -0.0854 +/- 0.0124  0.2848 +/- 0.0070 38       4.8%  2.48 +/- 0.25   6.3
+    none        0.3778 +/- 0.0069   -0.0920 +/- 0.0134  0.2842 +/- 0.0059 0        0.0%  2.54 +/- 0.33   6.2
+    fixedbar    0.3821 +/- 0.0071   -0.0951 +/- 0.0131  0.2845 +/- 0.0058 440     55.0%  3.13 +/- 0.48   6.7
+    fix-yoked   0.3776 +/- 0.0087   -0.0946 +/- 0.0124  0.2856 +/- 0.0072 440     55.0%  2.97 +/- 0.30   6.5
+    jaw3.0      0.4946 +/- 0.0046   -0.0725 +/- 0.0096  0.3072 +/- 0.0048 0        0.0%  3.37 +/- 0.05  14.4
+    jaw4.5      0.4900 +/- 0.0031   -0.0731 +/- 0.0114  0.3001 +/- 0.0050 0        0.0%  4.44 +/- 0.52   7.9
+    jaw7.0      0.4715 +/- 0.0062   -0.0832 +/- 0.0130  0.2866 +/- 0.0054 0        0.0%  5.81 +/- 0.74   7.5
+    jaw4.5+rew  0.4775 +/- 0.0057   -0.0883 +/- 0.0097  0.3093 +/- 0.0056 380     47.5%  4.26 +/- 0.21   7.8
+    both reward arms fired (38 taught, 38 yoked) and the arms DIFFER
+
+  AGAINST YOKED PRAISE (same rate and timing, no contingency)
+    modulation depth  -0.0012 +/- 0.0117  (-0.1 SE)   <- THE PRIMARY
+    mean amplitude    -0.0009 +/- 0.0098  (-0.1 SE)   <- loudness
+    salience drift    -0.01 +/- 0.33  (-0.0 SE)   <- the reward's own measure
+
+  FIXED BAR AGAINST ITS OWN YOKED ARM (matched on reward COUNT too)
+    modulation depth  +0.0045 +/- 0.0112  (+0.4 SE)   <- THE PRIMARY
+    mean amplitude    -0.0012 +/- 0.0093  (-0.1 SE)
+    reward counts 440 vs 440 (ratio 1.00 -- must be ~1.00)
+
+  hit rates: taught 4.8%, fixedbar 55.0%
+  NOTE: the ratcheting bar delivered almost no reward (4.8%) while the
+  fixed bar kept firing (55.0%). The taught arm therefore cannot speak to
+  whether the reward WORKS -- only the fixedbar arm can, and the verdict
+  below rests on it.
+
+  DNA v64 -- DOES THE RHYTHM TRACK THE JAW?
+    jaw_hz 3.0  ->  envelope peak 3.37 +/- 0.05 Hz   snr 14.4   amp 0.3072
+    jaw_hz 4.5  ->  envelope peak 4.44 +/- 0.52 Hz   snr 7.9   amp 0.3001
+    jaw_hz 7.0  ->  envelope peak 5.81 +/- 0.74 Hz   snr 7.5   amp 0.2866
+    TRACKING SLOPE 0.60  [1.00 is the jaw; 0.00 is a fixed resonance]
+    mean |peak - jaw_hz| 0.54 Hz
+    mean amplitude, jaw 4.5 0.3001 vs no jaw 0.2842 (a mute dial would fall)
+    modulation depth, jaw 4.5 0.4900 vs no jaw 0.3778
+
+    THE BODY OSCILLATES. The envelope peak tracks jaw_hz at slope 0.60
+    without the voice going quiet. Five NEURAL routes to a frame were
+    refused; the frame was a body part. NEXT, before believing it: a
+    fresh seed family, and whether reward can now shape what the body
+    supplies -- which `jaw4.5+rew` begins and full power would settle.
+
+  --- the reading ---
+  REFUSED, AND ON THE ARM THAT CAN CARRY IT. With the bar FIXED the reward
+  fired on 55.0% of windows all run, and syllable-band modulation depth
+  still does not beat yoked praise (+0.4 SE; the ratcheting arm -0.1 SE).
+  So it is not that the reward stopped arriving -- it arrived continuously
+  and did not build a frame. Warlaumont's reward is NOT refuted: what is
+  refused is that it installs a frame in THIS larynx, which has no jaw and,
+  per `no-sequence`, no module that holds a kick for 10 ms. Their
+  oscillation comes from a 1000-neuron recurrent reservoir; this vocal
+  module is 126 neurons in 9 groups.

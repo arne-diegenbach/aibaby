@@ -1839,6 +1839,36 @@ struct DnaVocal {
   // kick produces no second cycle, which is a low-pass rather than an oscillator
   // and is what `halfcenter` kept measuring.
   float jaw_damping;
+  // DNA v65 — THE JAW SELF-OSCILLATES. 0 keeps v64's damped spring exactly.
+  //
+  // v64 built a damped resonator and it was refused on TRACKING at slope 0.01:
+  // the envelope peak sat at 3.2-3.7 Hz whatever `jaw_hz` said. The reason is
+  // structural rather than a tuning miss. `x'' + 2*zeta*w0*x' + w0^2*(x - drive)`
+  // is a band-amplifying FILTER: driven by a signal whose energy lies below w0 it
+  // FOLLOWS the drive, and rings at its own frequency only when kicked
+  // impulsively. A damped spring cannot create a rhythm that is not in its input.
+  //
+  // Gafos & Kuberski (2025) said LIMIT CYCLE, and a limit cycle is not a damped
+  // spring -- it self-oscillates with NO periodic input. Reading "limit cycle
+  // organisation at the level of individual articulatory actions" and building a
+  // passive resonance was the wrong physics for the claim.
+  //
+  //   u = x - drive
+  //   u'' - mu*(1 - (u/jaw_limit)^2)*u' + w0^2*u = 0
+  //
+  // van der Pol, centred on the drive rather than on zero: damping is NEGATIVE
+  // inside |u| < jaw_limit and positive outside, so the jaw grows out of rest and
+  // settles onto a cycle instead of decaying to the command.
+  //
+  // This is mu as a RATIO to w0, so the cycle's SHAPE does not need re-tuning at
+  // every frequency. Small values keep the cycle near w0, which the tracking test
+  // requires: a relaxation oscillator's period is set by mu as much as by w0 and
+  // would blur the very slope being scored. 0.10 is nearly sinusoidal.
+  float jaw_selfosc;
+  // The limit cycle's half-amplitude. 0.25 gives u in [-0.5, 0.5], so against a
+  // drive near 0.3 the jaw swings roughly 0 to 0.8 -- a real open and close. The
+  // position clamp at 0 and 1 already catches the ends.
+  float jaw_limit;
 
 };
 

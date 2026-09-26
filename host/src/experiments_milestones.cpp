@@ -6613,6 +6613,38 @@ RTRow run_retain_arm(const std::vector<uint8_t>& blob, uint64_t ticks,
 // unit are the same namespace, so a declaration here is the same entity.
 double ctx_mean_se(const std::vector<double>& v, double* se);
 
+// EVERY ARM AGAINST EVERY OTHER, because checking one named pair is what let
+// three vacuous arms through in a single session: `credgate`'s `natural` arm came
+// back bit-identical to the `oracle` it was meant to improve on, `salrew`'s first
+// yoked arm was the taught arm re-run, and its `jaw4.5+rew` earned no rewards and
+// so was `jaw4.5` again. Each time a guard existed and each time it policed the
+// pair I happened to be thinking about rather than the whole table.
+//
+// `stats` holds one row per arm -- whatever summary numbers that experiment
+// reports. Two arms matching across ALL of them to within `eps` means they are
+// not two arms, and no contrast between them carries information. Returns false
+// and names the pair, so the caller can refuse.
+inline bool arms_are_distinct(const std::vector<std::vector<double>>& stats,
+                             const char* const* names, double eps = 1e-9) {
+  bool ok = true;
+  for (size_t a = 0; a + 1 < stats.size(); ++a) {
+    for (size_t b = a + 1; b < stats.size(); ++b) {
+      if (stats[a].size() != stats[b].size() || stats[a].empty()) continue;
+      bool same = true;
+      for (size_t k = 0; k < stats[a].size(); ++k)
+        if (std::fabs(stats[a][k] - stats[b][k]) > eps) { same = false; break; }
+      if (same) {
+        std::printf("  VACUOUS ARMS -- `%s` and `%s` are identical across every\n"
+                    "  reported statistic to within %g. They are not two arms, and any\n"
+                    "  contrast between them is noise with a label.\n",
+                    names[a], names[b], eps);
+        ok = false;
+      }
+    }
+  }
+  return ok;
+}
+
 // ---------------------------------------------------------------------------
 // interleave -- does replaying the OLD lesson during sleep rescue it from a
 // conflicting new one?
@@ -14791,6 +14823,16 @@ enum SRArm { kSRTaught = 0, kSRYoked, kSRNone, kSRFixed, kSRFixYoke,
              kSRJawRew, kSRArmCount };
 // `jaw_hz` per arm. 4.5 Hz is the envelope peak in the speech literature; 3.0 and
 // 7.0 bracket it so the tracking test has a range to track over.
+// DNA v65. The jaw arms now SELF-OSCILLATE. v64's resonant jaw tracked at slope
+// 0.01, and the same three frequencies are kept so the slopes are comparable --
+// changing the frequencies as well as the physics would make the comparison
+// useless.
+inline double sr_jaw_selfosc(SRArm a) {
+  switch (a) {
+    case kSRJaw30: case kSRJaw45: case kSRJaw70: case kSRJawRew: return 0.10;
+    default: return 0.0;
+  }
+}
 inline double sr_jaw_hz(SRArm a) {
   switch (a) {
     case kSRJaw30: return 3.0;
@@ -14825,6 +14867,10 @@ SRRow run_salrew_arm(const std::vector<uint8_t>& blob, uint64_t ticks, SRArm arm
     std::memcpy(local.data() + offsetof(aibaby::DnaHeader, vocal) +
                     offsetof(aibaby::DnaVocal, jaw_hz),
                 &jh, sizeof(jh));
+    const float js = float(sr_jaw_selfosc(arm));
+    std::memcpy(local.data() + offsetof(aibaby::DnaHeader, vocal) +
+                    offsetof(aibaby::DnaVocal, jaw_selfosc),
+                &js, sizeof(js));
   }
   if (!s.init(local, error)) return row;
   const aibaby::DnaAudio& acfg = s.dna.header().audio;
@@ -15132,15 +15178,17 @@ bool run_salrew(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) 
                 "  second `none` arm and not a matched control.\n");
     return false;
   }
-  // AND THEY MUST DIFFER. Checking only that both arms FIRED is what let the
-  // first version report a bit-identical re-run as a control.
-  if (std::fabs(m_mod[kSRTaught] - m_mod[kSRYoked]) < 1e-9 &&
-      std::fabs(m_amp[kSRTaught] - m_amp[kSRYoked]) < 1e-9) {
-    std::printf("\n  salrew REFUSES ITSELF -- taught and yoked are IDENTICAL to within\n"
-                "  1e-9 on both modulation depth and amplitude. The yoked arm is not a\n"
-                "  control, it is the taught arm run twice, and no contrast between them\n"
-                "  means anything.\n");
-    return false;
+  // AND EVERY ARM MUST DIFFER FROM EVERY OTHER, not just the pair I had in mind.
+  // The single-pair version of this check passed a bit-identical re-run as a
+  // control, and then passed `jaw4.5+rew` earning no rewards as a reward arm.
+  {
+    std::vector<std::vector<double>> stats(kSRArmCount);
+    for (uint32_t a = 0; a < kSRArmCount; ++a)
+      stats[a] = {m_mod[a], m_amp[a], m_pk[a], double(m_rew[a])};
+    if (!arms_are_distinct(stats, names)) {
+      std::printf("\n  salrew REFUSES ITSELF -- see the vacuous pair above.\n");
+      return false;
+    }
   }
   std::printf("    both reward arms fired (%u taught, %u yoked) and the arms DIFFER\n",
               m_rew[kSRTaught], m_rew[kSRYoked]);
@@ -15213,7 +15261,17 @@ bool run_salrew(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) 
   // closes the tract is an excellent way to get a modulated envelope by being
   // quiet rather than by being rhythmic.
   {
-    std::printf("\n  DNA v64 -- DOES THE RHYTHM TRACK THE JAW?\n");
+    // LABEL, and the scope of the claim. v64 was the damped spring (slope 0.01);
+    // v65 is the limit cycle. And the honest reading of a tracking result here is
+    // narrow: `target_amp = jaw_`, so an oscillator is wired straight to the
+    // amplitude output and the envelope modulating at its frequency is close to a
+    // DEFINITION. What tracking establishes is that the MECHANISM WORKS AS BUILT
+    // -- which v64's resonator did not -- and NOT that the creature gained
+    // anything. A frame is only a frame if something can use it, and that is what
+    // `jaw4.5+rew` asks.
+    std::printf("\n  DNA v64/v65 -- DOES THE RHYTHM TRACK THE JAW?\n"
+                "  NOTE THE SCOPE: target_amp = jaw_, so tracking shows the mechanism\n"
+                "  works as built, not that the creature gained a usable frame.\n");
     const SRArm js[3] = {kSRJaw30, kSRJaw45, kSRJaw70};
     const double want[3] = {3.0, 4.5, 7.0};
     double err = 0.0;
@@ -15255,12 +15313,21 @@ bool run_salrew(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) 
                   "    buys a modulated envelope by being quiet, which is how `adaptclock`\n"
                   "    died, and it is not a frame.\n", slope, amp_none, m_amp[kSRJaw45]);
     else
-      std::printf("\n    THE BODY OSCILLATES. The envelope peak tracks jaw_hz at slope %.2f\n"
-                  "    without the voice going quiet. Five NEURAL routes to a frame were\n"
-                  "    refused; the frame was a body part. NEXT, before believing it: a\n"
-                  "    fresh seed family, and whether reward can now shape what the body\n"
-                  "    supplies -- which `jaw4.5+rew` begins and full power would settle.\n",
-                  slope);
+      std::printf("\n    THE MECHANISM WORKS AS BUILT. The envelope peak tracks jaw_hz at\n"
+                  "    slope %.2f without the voice going quiet, where v64's damped spring\n"
+                  "    managed 0.01 -- a limit cycle can impose a frequency and a resonator\n"
+                  "    structurally cannot.\n"
+                  "    BUT READ IT NARROWLY: an oscillator is wired to the amplitude output,\n"
+                  "    so the envelope following it is nearly a definition. What is NOT shown\n"
+                  "    is that the creature gained a usable frame.\n"
+                  "    The slope being %.2f rather than 1.00 is the informative part: the jaw\n"
+                  "    is coupled to the drive through w0^2*(x - drive), so a drive with\n"
+                  "    energy near 2.5-3 Hz ENTRAINS it and the peak is a compromise between\n"
+                  "    the body's rate and the brain's. That is frames-then-content with the\n"
+                  "    brain able to influence timing.\n"
+                  "    NEXT: a fresh seed family, and whether reward can shape what the body\n"
+                  "    supplies -- `jaw4.5+rew` begins it and full power would settle it.\n",
+                  slope, slope);
   }
 
   std::printf("\n  --- the reading ---\n");
