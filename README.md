@@ -11618,6 +11618,60 @@ branch that delivers praise — the third bit-identical-arm bug of the session, 
 the "arms must differ" guard only polices the taught/yoked pair rather than arms
 added later.
 
+## DNA v65: the body oscillates, and the reward buys volume instead
+
+v64's damped spring could not impose a frequency; a limit cycle can. v65 replaces
+it with van der Pol centred on the drive — negative damping inside
+`|u| < jaw_limit`, positive outside — so the jaw grows out of rest onto a cycle
+instead of decaying onto the command.
+
+    jaw_hz 3.0  ->  envelope peak 3.04 +/- 0.23 Hz   snr 14.3
+    jaw_hz 4.5  ->  envelope peak 4.24 +/- 0.25 Hz   snr  7.5
+    jaw_hz 7.0  ->  envelope peak 6.46 +/- 0.73 Hz   snr  7.6
+    TRACKING SLOPE 0.86   (v64's damped spring: 0.01)   |peak - jaw_hz| 0.28 Hz
+
+Modulation depth rises 0.3624 → 0.4889 and mean amplitude *rises* (0.2998 →
+0.3067), so it is not the mute dial that killed `adaptclock`. **Read narrowly:**
+`target_amp = jaw_`, so an oscillator wired to the amplitude output producing a
+modulated envelope is nearly a definition. What this establishes is that the
+mechanism works as built — necessary, not sufficient.
+
+**The 0.86 is the informative part.** The jaw couples to the drive through
+`ω₀²(x − drive)`, so a drive with energy near 2.5–3 Hz entrains it and the peak is
+a compromise between the body's rate and the brain's. That is an **Arnold
+tongue**, which makes the number a point on a known curve rather than a fudge —
+and it predicts its own test: weaken the coupling and the slope should rise toward
+1.0, strengthen it and fall toward 0.0, and if it does not move the entrainment
+account is wrong.
+
+**Then the question that matters, and the answer is no.**
+
+    jaw4.5       mod 0.4889 +/- 0.0027   amp 0.3067   (no reward)
+    jaw4.5+rew   mod 0.4798 +/- 0.0032   amp 0.3171   (1046 rewards)
+
+Given a frame to sharpen, the salience reward made modulation **worse** (−0.0091)
+and loudness **higher** (+0.0104). It took the cheap axis — precisely the failure
+pre-registered when the gate passed with the creature already at 94% of a real
+frame.
+
+**And the fault is in my measure, not the creature.** Salience is summed
+`|Δmel|`, which scales with signal level: a louder voice has larger transients
+trivially, so the reward pays for volume. **Warlaumont did not hit this because
+their jaw could only get louder by opening wider — which *is* modulation. The body
+closed the loophole for them.** Ours can get louder without moving, so the
+loophole is open, and that is a consequence of giving the creature a jaw that
+gates amplitude rather than one that physically must move to be heard.
+
+The fix is small and follows from the diagnosis: divide salience by the window's
+mean amplitude, making the reward scale-invariant so volume buys nothing. That is
+the same normalisation the *primary* already uses, and the reward should have used
+it from the start — measuring transients in absolute terms while scoring the
+outcome in relative ones was an inconsistency I built in and did not notice until
+the creature exploited it.
+
+So the state is: **the body can supply a frame, and the reward as specified does
+not sharpen it.** Those are separable results and only the second is a refusal.
+
 ## Layout
 
 ```
