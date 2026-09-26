@@ -1,0 +1,135 @@
+experiment: salrew
+  instrument        salrew   trial seed 0000000001357de7   1200000 ticks
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  the reward     Warlaumont & Finnegan (2016): praise when auditory
+                 SALIENCE clears a bar that ratchets on the creature's
+                 own hit rate. No target anywhere.
+  the primary    NOT salience -- the SYLLABLE-BAND MODULATION DEPTH of
+                 the produced envelope (sd of the 2-6 Hz band over its
+                 mean). Salience can rise by getting louder or noisier
+                 and neither is a syllable. `salience` measured this
+                 creature at 94% of a real 3 Hz frame already, so the
+                 cheap way up is the likely one.
+  the control    YOKED praise -- the taught arm's reward TIMES replayed
+                 to a fresh creature. Identical rate, timing and total
+                 dopamine; only the CONTINGENCY differs. `none` cannot
+                 do that job.
+  constants      band tau = 1/(2 pi f) at 6 and 2 Hz = 26.5 / 79.6 ms;
+                 staircase step 2.22%% of the bar, which is Warlaumont's
+                 +0.1 on 4.5 as a RATE because their scale is not ours;
+                 their 30%%-of-10 advance rule taken verbatim; the bar
+                 starts at each creature's OWN median over 20 windows.
+  [earn 11/16] seed 10  ratchet 17  fixed 264
+  [earn 6/16] seed 5  ratchet 82  fixed 1917
+  [earn 12/16] seed 11  ratchet 25  fixed 224
+  [earn 2/16] seed 1  ratchet 35  fixed 1106
+  [earn 8/16] seed 7  ratchet 96  fixed 2053
+  [earn 14/16] seed 13  ratchet 53  fixed 893
+  [earn 9/16] seed 8  ratchet 34  fixed 1608
+  [earn 15/16] seed 14  ratchet 108  fixed 2168
+  [earn 5/16] seed 4  ratchet 77  fixed 2111
+  [earn 3/16] seed 2  ratchet 12  fixed 166
+  [earn 4/16] seed 3  ratchet 85  fixed 1387
+  [earn 7/16] seed 6  ratchet 46  fixed 1177
+  [earn 10/16] seed 9  ratchet 40  fixed 1896
+  [earn 1/16] seed 0  ratchet 70  fixed 216
+  [earn 16/16] seed 15  ratchet 44  fixed 603
+  [earn 13/16] seed 12  ratchet 48  fixed 613
+  [yoked 16/16] seed 15  rewards 70 (from creature 0)
+  [yoked 2/16] seed 1  rewards 12 (from creature 2)
+  [yoked 5/16] seed 4  rewards 82 (from creature 5)
+  [yoked 3/16] seed 2  rewards 85 (from creature 3)
+  [yoked 8/16] seed 7  rewards 34 (from creature 8)
+  [yoked 15/16] seed 14  rewards 44 (from creature 15)
+  [yoked 13/16] seed 12  rewards 53 (from creature 13)
+  [yoked 11/16] seed 10  rewards 25 (from creature 11)
+  [yoked 12/16] seed 11  rewards 48 (from creature 12)
+  [yoked 14/16] seed 13  rewards 108 (from creature 14)
+  [yoked 10/16] seed 9  rewards 17 (from creature 10)
+  [yoked 1/16] seed 0  rewards 35 (from creature 1)
+  [yoked 4/16] seed 3  rewards 77 (from creature 4)
+  [yoked 6/16] seed 5  rewards 46 (from creature 6)
+  [yoked 7/16] seed 6  rewards 96 (from creature 7)
+  [yoked 9/16] seed 8  rewards 40 (from creature 9)
+
+  arm         mod depth late    mod early->late   mean amp         rewd   hit     env peak Hz  snr
+    taught      0.3658 +/- 0.0034   -0.0088 +/- 0.0030  0.3005 +/- 0.0013 54       2.2%  3.33 +/- 0.38   6.2
+    yoked       0.3654 +/- 0.0033   -0.0075 +/- 0.0042  0.2999 +/- 0.0014 54       2.2%  3.23 +/- 0.43   5.7
+    none        0.3649 +/- 0.0032   -0.0090 +/- 0.0028  0.2994 +/- 0.0012 0        0.0%  4.21 +/- 0.61   6.3
+    fixedbar    0.3787 +/- 0.0044   +0.0002 +/- 0.0032  0.2979 +/- 0.0017 1150    47.9%  4.11 +/- 0.63   6.4
+    fix-yoked   0.3691 +/- 0.0038   -0.0034 +/- 0.0038  0.2997 +/- 0.0018 1150    47.9%  3.87 +/- 0.67   5.2
+    jaw3.0      0.4977 +/- 0.0024   +0.0072 +/- 0.0023  0.3119 +/- 0.0020 0        0.0%  3.11 +/- 0.18  13.5
+    jaw4.5      0.4903 +/- 0.0025   +0.0061 +/- 0.0022  0.3072 +/- 0.0016 0        0.0%  4.03 +/- 0.28   7.2
+    jaw7.0      0.4636 +/- 0.0034   -0.0014 +/- 0.0025  0.2984 +/- 0.0013 0        0.0%  5.96 +/- 0.59   7.3
+    jaw4.5+rew  0.4828 +/- 0.0031   +0.0108 +/- 0.0036  0.3176 +/- 0.0014 1026    42.8%  4.14 +/- 0.23   8.0
+    jaw+rewNORM 0.5064 +/- 0.0042   +0.0185 +/- 0.0024  0.3009 +/- 0.0018 1818    75.8%  4.68 +/- 0.10   6.9
+    jaw+rewN-yok 0.4946 +/- 0.0028   +0.0067 +/- 0.0035  0.3055 +/- 0.0019 1818    75.8%  4.18 +/- 0.24   8.3
+    both reward arms fired (54 taught, 54 yoked) and the arms DIFFER
+
+  AGAINST YOKED PRAISE (same rate and timing, no contingency)
+    modulation depth  +0.0004 +/- 0.0048  (+0.1 SE)   <- THE PRIMARY
+    mean amplitude    +0.0007 +/- 0.0019  (+0.4 SE)   <- loudness
+    salience drift    -0.01 +/- 0.15  (-0.0 SE)   <- the reward's own measure
+
+  FIXED BAR AGAINST ITS OWN YOKED ARM (matched on reward COUNT too)
+    modulation depth  +0.0096 +/- 0.0058  (+1.6 SE)   <- THE PRIMARY
+    mean amplitude    -0.0017 +/- 0.0025  (-0.7 SE)
+    reward counts 1150 vs 1150 (ratio 1.00 -- must be ~1.00)
+
+  hit rates: taught 2.2%, fixedbar 47.9%
+  NOTE: the ratcheting bar delivered almost no reward (2.2%) while the
+  fixed bar kept firing (47.9%). The taught arm therefore cannot speak to
+  whether the reward WORKS -- only the fixedbar arm can, and the verdict
+  below rests on it.
+
+  DNA v64/v65 -- DOES THE RHYTHM TRACK THE JAW?
+  NOTE THE SCOPE: target_amp = jaw_, so tracking shows the mechanism
+  works as built, not that the creature gained a usable frame.
+    jaw_hz 3.0  ->  envelope peak 3.11 +/- 0.18 Hz   snr 13.5   amp 0.3119
+    jaw_hz 4.5  ->  envelope peak 4.03 +/- 0.28 Hz   snr 7.2   amp 0.3072
+    jaw_hz 7.0  ->  envelope peak 5.96 +/- 0.59 Hz   snr 7.3   amp 0.2984
+    TRACKING SLOPE 0.72  [1.00 is the jaw; 0.00 is a fixed resonance]
+    mean |peak - jaw_hz| 0.54 Hz
+    mean amplitude, jaw 4.5 0.3072 vs no jaw 0.2994 (a mute dial would fall)
+    modulation depth, jaw 4.5 0.4903 vs no jaw 0.3649
+
+    THE MECHANISM WORKS AS BUILT. The envelope peak tracks jaw_hz at
+    slope 0.72 without the voice going quiet, where v64's damped spring
+    managed 0.01 -- a limit cycle can impose a frequency and a resonator
+    structurally cannot.
+    BUT READ IT NARROWLY: an oscillator is wired to the amplitude output,
+    so the envelope following it is nearly a definition. What is NOT shown
+    is that the creature gained a usable frame.
+    The slope being 0.72 rather than 1.00 is the informative part: the jaw
+    is coupled to the drive through w0^2*(x - drive), so a drive with
+    energy near 2.5-3 Hz ENTRAINS it and the peak is a compromise between
+    the body's rate and the brain's. That is frames-then-content with the
+    brain able to influence timing.
+    NEXT: a fresh seed family, and whether reward can shape what the body
+    supplies -- `jaw4.5+rew` begins it and full power would settle it.
+
+  SCALE-INVARIANT SALIENCE, against its OWN yoked control
+    modulation depth  +0.0118 +/- 0.0050  (+2.4 SE)   <- THE PRIMARY
+    mean amplitude    -0.0046 +/- 0.0026  (-1.8 SE)   <- the loophole
+    for comparison, the ABSOLUTE reward moved mod -0.0076 and amp +0.0105
+    against the unrewarded jaw.
+
+    REFUSED AT THE BAR, BUT THE FIX CHANGED THE SIGN OF BOTH CHANNELS.
+    Modulation +2.4 SE (3.0 required) so the pre-registered bar is not
+    cleared -- and the absolute reward moved modulation -0.0076 with
+    amplitude +0.0105 where the normalised one moves +0.0118 and -0.0046. Volume
+    WAS part of what stood between the reward and the rhythm. This is
+    UNDERPOWERED rather than null: 1.62x the creatures reaches 3.0, i.e.
+    26 instead of 16. Do not write it up as a refusal of the mechanism.
+
+  --- the reading ---
+  REFUSED, AND ON THE ARM THAT CAN CARRY IT. With the bar FIXED the reward
+  fired on 47.9% of windows all run, and syllable-band modulation depth
+  still does not beat yoked praise (+1.6 SE; the ratcheting arm +0.1 SE).
+  So it is not that the reward stopped arriving -- it arrived continuously
+  and did not build a frame. Warlaumont's reward is NOT refuted: what is
+  refused is that it installs a frame in THIS larynx, which has no jaw and,
+  per `no-sequence`, no module that holds a kick for 10 ms. Their
+  oscillation comes from a 1000-neuron recurrent reservoir; this vocal
+  module is 126 neurons in 9 groups.

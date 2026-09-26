@@ -11719,6 +11719,49 @@ a careless replacement, caught by the compiler.
 a frame — tracking slope 0.86, amplitude not falling. Reward sharpening that frame
 points the right way on both channels and is not yet demonstrated at the bar.
 
+## And at 16 creatures the effect shrank, which closes it
+
+The verdict computed its own resolving count — 16 creatures to take +2.6 SE past
+3.0 — so I ran it. The effect did not grow.
+
+    n = 12    modulation +0.0150 +/- 0.0058   (+2.6 SE)
+    n = 16    modulation +0.0118 +/- 0.0050   (+2.4 SE)
+
+**The SE tightened exactly as expected and the effect fell.** Backing out the four
+new creatures alone: `(16·0.0118 − 12·0.0150)/4 = +0.0022`, against the original
+twelve's +0.0150. The new creatures show almost nothing.
+
+That is the signature of **noise plus a favourable draw**, not of an underpowered
+real effect — and this project has the shape on file.
+`smoothing-sweep-closed` recorded "+0.24 at n=3 became +0.03 at n=6" and the
+warning that three seeds with unanimous signs was not enough. So the honest
+reading is that the scale-invariant reward does **not** sharpen the frame, and the
++2.6 SE was a pleasant-looking draw.
+
+**My verdict text asserted the opposite, and that is the more useful failure.** It
+printed *"underpowered rather than null: 1.32× the creatures reaches 3.0"* — a
+power projection that **assumes the effect size is fixed**, which is precisely
+what an underpowered estimate cannot be assumed to be. The projection presumed the
+thing it was trying to establish. It then moved from 1.32× to 1.62× between the
+two runs, which is the treadmill giving itself away: each round of extra creatures
+buys a smaller effect and a larger demand.
+
+The branch now states the projection *and* distrusts it, reports whether the
+effect held as n rose, and says outright not to keep buying creatures against a
+shrinking target. A refusal that recommends spending more compute should have to
+justify that recommendation against its own history, and mine did not.
+
+**What survives, and it is the half that was always the stronger claim.** The body
+can supply a frame: v65's limit-cycle jaw tracks `jaw_hz` at slope 0.86 with
+amplitude not falling, where v64's damped spring managed 0.01. That is measured,
+large, and mechanistically explained by the resonator-versus-limit-cycle
+distinction. **Reward sharpening that frame is refused** — by the absolute measure
+it bought volume, and by the scale-invariant one it bought nothing that survived
+more creatures.
+
+So frames-then-content stands half-built here: the frame is real and mechanical,
+and nothing yet puts content into its cycles.
+
 ## Layout
 
 ```
