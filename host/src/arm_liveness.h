@@ -56,6 +56,26 @@ class ArmLiveness {
  public:
   explicit ArmLiveness(const char* experiment) : experiment_(experiment) {}
 
+  // AN ARM THAT IS SUPPOSED TO BE INERT, and this exists because the guard was
+  // MIS-SPECIFIED for exactly one arm and refused three runs for it.
+  //
+  // `leverprobe`'s `burst` arm enables the burst code with `f1_burst_weight = 0`, so
+  // the burst centroid is computed and never read. Its whole purpose is to show that
+  // merely enabling the code costs NOTHING -- which is a precondition for
+  // interpreting `burst-read`, because if switching the machinery on moved the voice
+  // by itself then `burst-read`'s effect could not be attributed to the readout.
+  //
+  // Identity is therefore the RESULT for that arm, not a failure. The guard read it
+  // as "the treatment did not run" and returned false on `leverprobe_burst2`,
+  // `leverprobe_v63` and `leverprobe_v66` -- and the v63 burst numbers were written
+  // up off runs that had declared themselves void. A failing guard is a lead, not a
+  // footnote, and this one was right about every other arm and wrong about this one.
+  //
+  // So the test is INVERTED for a declared-inert arm: identical on every shared seed
+  // is a PASS, and any difference REFUSES -- because a difference would mean the
+  // burst code leaks into the rate path.
+  void expect_inert(const std::string& arm) { inert_.push_back(arm); }
+
   // One observation: which arm, which seed, and a quantity the arm's treatment
   // is expected to move. Anything the treatment touches will do -- the point is
   // not what it measures but that it is NOT the same number as the control's.
@@ -89,15 +109,27 @@ class ArmLiveness {
         ++shared;
         if (kv.second != c->second) ++differ;
       }
+      const bool declared_inert =
+          std::find(inert_.begin(), inert_.end(), arm) != inert_.end();
+      if (declared_inert) {
+        const bool ok = shared > 0 && differ == 0;
+        std::printf("    %-18s %u/%u   <- declared INERT: %s\n", arm.c_str(), differ,
+                    shared,
+                    ok ? "identical as required"
+                       : "MOVED, and it must not -- the mechanism leaks");
+        if (!ok) all_live = false;
+        continue;
+      }
       const bool live = shared > 0 && differ > 0;
       std::printf("    %-18s %u/%u%s\n", arm.c_str(), differ, shared,
                   live ? "" : "   <- DEAD: identical to the control on every seed");
       if (!live) all_live = false;
     }
     if (!all_live) {
-      std::printf("\n  %s REFUSED -- an arm is byte-identical to its control on every\n"
-                  "  seed, so its treatment did not run. Pooled means over identical\n"
-                  "  creatures look exactly like a clean null and are not one.\n",
+      std::printf("\n  %s REFUSED -- an arm did not behave as declared. A live arm that is\n"
+                  "  byte-identical to its control did not run its treatment, and pooled means\n"
+                  "  over identical creatures look exactly like a clean null. An arm declared\n"
+                  "  INERT that MOVED is the opposite failure and just as disqualifying.\n",
                   experiment_.c_str());
     }
     return all_live;
@@ -106,6 +138,7 @@ class ArmLiveness {
  private:
   std::string experiment_;
   std::vector<std::string> order_;
+  std::vector<std::string> inert_;   // arms whose identity to the control is required
   std::map<std::string, std::map<uint32_t, double>> by_arm_;
 };
 

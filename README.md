@@ -11894,6 +11894,50 @@ clean limit cycle as "rising 21% of the time" and refused all five arms. The gua
 was right and the sampling was wrong; `Brain::vocal_interval()` now exposes the
 rate so it is read rather than guessed.
 
+### Under teaching it is the trade the arithmetic predicted
+
+`leverprobe` at 5.6M ticks, twelve creatures, each taught arm paired against the
+untaught control sharing both its decoder and its gate:
+
+    jaw, ungated   F1 from rest  +282.5 +/- 7.2    at floor 15.0%
+    jaw, GATED     F1 from rest  +157.0 +/- 13.7   at floor  0.8%
+    gated - ungated              -125.4 +/- 19.3  (-6.5 SE), paired
+
+**Reach down 44%, clamp time down 95%** — the reset bounds the excursion by making
+it smaller, exactly as `gain · deflection · cycle` requires. Not a cure for the
+overshoot but a cheaper one, and pre-registered as such *before* the run so the
+clamp column could not be read as a win on its own. 157 Hz still clears the
+position decoder's 82.5, so the choice is a clean unclamped 157 against an ungated
+282 that spends a seventh of its time pinned at the floor. Which is preferable
+depends on whether clamping or undershoot hurts more — an aiming question, and the
+untaught run already showed the jaw does not help with aiming.
+
+### The guard that refused three runs, two of which were published anyway
+
+That `leverprobe` run **refused itself**. Its arm-liveness check flagged the
+`burst` arm as dead — byte-identical to `taught` on 12/12 seeds. It had fired
+identically on the two earlier runs, and **the v63 burst-channel numbers were
+written up off runs that had declared themselves void.**
+
+The guard was mis-specified for that one arm. `burst` enables the burst code with
+`f1_burst_weight = 0`, so the burst centroid is computed and never read — identity
+to `taught` is the arm's *purpose*, since it is what licenses attributing
+`burst-read`'s effect to the readout rather than to switching the machinery on.
+`ArmLiveness::expect_inert()` now inverts the test for a declared-inert arm:
+identical is a pass, and any movement refuses, because movement would mean the
+burst code leaks into the rate path. On the rerun the arm reads `0/12 <- declared
+INERT: identical as required` and every number reproduces to the decimal.
+
+The burst channel's substantive conclusion survives — the burst readout drove F1
+−34.1 Hz, the wrong way — but it survives on a re-reading, not on the runs it was
+published from.
+
+**The rule, and this session was wrong in both directions.** When a guard fires,
+the first question is whether the guard or the arm is mis-specified. A guard too
+strict for a deliberate no-op refused three runs; a "control" that shared the live
+mechanism with its arm tested nothing and passed cleanly. Neither failure
+announces which kind it is.
+
 ### Where this leaves the frame
 
 Three routes from a frame to content are now closed. Reward will not sharpen the

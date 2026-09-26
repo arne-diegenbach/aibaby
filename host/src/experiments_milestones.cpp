@@ -10896,6 +10896,12 @@ bool run_leverprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
 
   {
     ArmLiveness live("leverprobe");
+    // `burst` enables the burst code with `f1_burst_weight = 0`, so the burst centroid
+    // is computed and never read. Identity to `taught` is the POINT of the arm -- it
+    // is what licenses attributing `burst-read`'s effect to the readout rather than to
+    // switching the machinery on. Read as a dead arm it refused three runs, and the
+    // v63 burst numbers were written up off two of them.
+    live.expect_inert("burst");
     for (uint32_t r = 0; r < kReps; ++r) {
       for (uint32_t a = 0; a < kLPArmCount; ++a) {
         const Cell& c = cells[r * kLPArmCount + a];
