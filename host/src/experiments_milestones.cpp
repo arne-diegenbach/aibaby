@@ -14820,7 +14820,26 @@ enum SRArm { kSRTaught = 0, kSRYoked, kSRNone, kSRFixed, kSRFixYoke,
              kSRJaw30, kSRJaw45, kSRJaw70,
              // And the jaw WITH the fixed-bar reward: if the body supplies a
              // frame, the reward finally has something to shape.
-             kSRJawRew, kSRArmCount };
+             kSRJawRew,
+             // DNA v65 + SCALE-INVARIANT SALIENCE. `jaw4.5+rew` made modulation
+             // WORSE (-0.0091) and loudness HIGHER (+0.0104): summed |delta mel|
+             // scales with signal level, so a louder voice has larger transients
+             // trivially and the reward pays for volume. Warlaumont did not hit
+             // this because their jaw could only get louder by OPENING WIDER,
+             // which IS modulation -- their body closed the loophole.
+             //
+             // Dividing salience by the window's mean amplitude makes it
+             // scale-invariant, so volume buys nothing. That is the normalisation
+             // the PRIMARY already uses; scoring the outcome in relative terms
+             // while rewarding absolute transients was an inconsistency the
+             // creature found before I did.
+             //
+             // BOTH rewards are kept so the fix is DEMONSTRATED rather than
+             // asserted: if `+rewN` sharpens where `+rew` did not, the loophole
+             // was the whole story.
+             kSRJawRewN,
+             // And its matched yoked control, on the same reward count.
+             kSRJawRewNY, kSRArmCount };
 // `jaw_hz` per arm. 4.5 Hz is the envelope peak in the speech literature; 3.0 and
 // 7.0 bracket it so the tracking test has a range to track over.
 // DNA v65. The jaw arms now SELF-OSCILLATE. v64's resonant jaw tracked at slope
@@ -14829,16 +14848,21 @@ enum SRArm { kSRTaught = 0, kSRYoked, kSRNone, kSRFixed, kSRFixYoke,
 // useless.
 inline double sr_jaw_selfosc(SRArm a) {
   switch (a) {
-    case kSRJaw30: case kSRJaw45: case kSRJaw70: case kSRJawRew: return 0.10;
+    case kSRJaw30: case kSRJaw45: case kSRJaw70: case kSRJawRew:
+    case kSRJawRewN: case kSRJawRewNY: return 0.10;
     default: return 0.0;
   }
+}
+// Scale-invariant salience: divide by the window's mean amplitude.
+inline bool sr_norm_salience(SRArm a) {
+  return a == kSRJawRewN || a == kSRJawRewNY;
 }
 inline double sr_jaw_hz(SRArm a) {
   switch (a) {
     case kSRJaw30: return 3.0;
     case kSRJaw45: return 4.5;
     case kSRJaw70: return 7.0;
-    case kSRJawRew: return 4.5;
+    case kSRJawRew: case kSRJawRewN: case kSRJawRewNY: return 4.5;
     default: return 0.0;
   }
 }
@@ -14883,7 +14907,7 @@ SRRow run_salrew_arm(const std::vector<uint8_t>& blob, uint64_t ticks, SRArm arm
   std::vector<float> score_pcm(spt);
 
   std::vector<float> smooth;               // cortically-filtered mel
-  double win_sum = 0.0;
+  double win_sum = 0.0, win_amp = 0.0;
   uint64_t win_n = 0;
   std::vector<double> prime;               // first windows, to set the bar
   double bar = -1.0;
@@ -14955,10 +14979,19 @@ SRRow run_salrew_arm(const std::vector<uint8_t>& blob, uint64_t ticks, SRArm arm
       ++amp_n;
     }
 
+    win_amp += env;
     ++win_n;
     if (win_n >= kSRWindow) {
-      const double sal = win_sum;
+      // SCALE-INVARIANT when the arm asks for it. Summed |delta mel| scales with
+      // signal level, so an absolute measure pays for volume. Dividing by the
+      // window's own mean amplitude removes that. The floor stops a SILENT window
+      // dividing by ~0 and scoring infinitely salient -- a silent window has no
+      // transients to reward and must not win the staircase.
+      const double wa = win_amp / double(win_n);
+      const double sal = sr_norm_salience(arm) ? win_sum / (wa > 0.02 ? wa : 0.02)
+                                               : win_sum;
       win_sum = 0.0;
+      win_amp = 0.0;
       win_n = 0;
       if (t >= settle) {
         const uint32_t h = t < half ? 0u : 1u;
@@ -14973,7 +15006,8 @@ SRRow run_salrew_arm(const std::vector<uint8_t>& blob, uint64_t ticks, SRArm arm
           std::sort(p.begin(), p.end());
           bar = p[p.size() / 2];
         }
-      } else if (arm == kSRTaught || arm == kSRFixed || arm == kSRJawRew) {
+      } else if (arm == kSRTaught || arm == kSRFixed || arm == kSRJawRew ||
+                 arm == kSRJawRewN) {
         const bool clear = sal >= bar;
         hist.push_back(clear);
         if (hist.size() > kSRHist) hist.pop_front();
@@ -14992,7 +15026,7 @@ SRRow run_salrew_arm(const std::vector<uint8_t>& blob, uint64_t ticks, SRArm arm
     }
     // YOKED: the taught arm's praise TIMES, replayed. Identical reward rate and
     // timing, uncorrelated with this creature's own salience.
-    if ((arm == kSRYoked || arm == kSRFixYoke) && yoke) {
+    if ((arm == kSRYoked || arm == kSRFixYoke || arm == kSRJawRewNY) && yoke) {
       while (yi < yoke->size() && (*yoke)[yi] <= t) {
         pending.push_back(Praise{t + kRewardDelayTicks, kPraiseValue});
         ++row.rewards;
@@ -15074,7 +15108,8 @@ bool run_salrew(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) 
     return dna0.header().seed + kSRSeedOffset + uint64_t(r) * 7919ull;
   };
   // Pass 1: the taught arms, each recording the praise times it earned.
-  struct P1 { bool ok = false; SRRow row, frow; std::vector<uint64_t> yoke, fyoke; };
+  struct P1 { bool ok = false; SRRow row, frow, nrow;
+              std::vector<uint64_t> yoke, fyoke, nyoke; };
   const std::vector<P1> pass1 = parallel_reps<P1>(kReps, [&](uint32_t r) {
     P1 p;
     std::vector<uint8_t> variant = blob;
@@ -15082,15 +15117,21 @@ bool run_salrew(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) 
     std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
     p.row = run_salrew_arm(variant, ticks, kSRTaught, nullptr, &p.yoke);
     p.frow = run_salrew_arm(variant, ticks, kSRFixed, nullptr, &p.fyoke);
-    p.ok = p.row.ok && p.frow.ok;
+    // The NORMALISED reward earns here too, so pass 2 can yoke it to a DIFFERENT
+    // creature. Adding an arm outside this structure is how the same-seed yoking
+    // bug came back a second time -- the fix lives in the two passes, not in the
+    // call site.
+    p.nrow = run_salrew_arm(variant, ticks, kSRJawRewN, nullptr, &p.nyoke);
+    p.ok = p.row.ok && p.frow.ok && p.nrow.ok;
     parallel_note("  [earn %u/%u] seed %u  ratchet %u  fixed %u\n", r + 1, kReps, r,
                   p.row.rewards, p.frow.rewards);
     return p;
   });
-  std::vector<std::vector<uint64_t>> fyokes(kReps);
+  std::vector<std::vector<uint64_t>> fyokes(kReps), nyokes(kReps);
   for (uint32_t r = 0; r < kReps; ++r) {
     yokes[r] = pass1[r].yoke;
     fyokes[r] = pass1[r].fyoke;
+    nyokes[r] = pass1[r].nyoke;
   }
   // Pass 2: yoked and none. Creature r receives creature (r+1)'s praise times.
   const std::vector<Cell> cells = parallel_reps<Cell>(kReps, [&](uint32_t r) {
@@ -15107,17 +15148,27 @@ bool run_salrew(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) 
     cell.row[kSRFixYoke] = run_salrew_arm(variant, ticks, kSRFixYoke, &fother, nullptr);
     for (int ja = int(kSRJaw30); ja <= int(kSRJawRew); ++ja)
       cell.row[ja] = run_salrew_arm(variant, ticks, SRArm(ja), nullptr, nullptr);
+    // The normalised reward from pass 1, and its yoked control on ANOTHER
+    // creature's times -- matched on reward count, wrong contingency. Feeding an
+    // arm its OWN times at its OWN seed reproduces its trajectory exactly, which
+    // is what `arms_are_distinct` caught here.
+    cell.row[kSRJawRewN] = pass1[r].nrow;
+    const std::vector<uint64_t>& nother = nyokes[(r + 1u) % kReps];
+    cell.row[kSRJawRewNY] =
+        run_salrew_arm(variant, ticks, kSRJawRewNY, &nother, nullptr);
     cell.ok = cell.row[kSRTaught].ok && cell.row[kSRYoked].ok && cell.row[kSRNone].ok &&
               cell.row[kSRFixed].ok && cell.row[kSRFixYoke].ok &&
               cell.row[kSRJaw30].ok && cell.row[kSRJaw45].ok && cell.row[kSRJaw70].ok &&
-              cell.row[kSRJawRew].ok;
+              cell.row[kSRJawRew].ok && cell.row[kSRJawRewN].ok &&
+              cell.row[kSRJawRewNY].ok;
     parallel_note("  [yoked %u/%u] seed %u  rewards %u (from creature %u)\n", r + 1, kReps,
                   r, cell.row[kSRYoked].rewards, (r + 1u) % kReps);
     return cell;
   });
 
   const char* names[kSRArmCount] = {"taught", "yoked", "none", "fixedbar", "fix-yoked",
-                                    "jaw3.0", "jaw4.5", "jaw7.0", "jaw4.5+rew"};
+                                    "jaw3.0", "jaw4.5", "jaw7.0", "jaw4.5+rew",
+                                    "jaw+rewNORM", "jaw+rewN-yok"};
   double m_mod[kSRArmCount] = {}, s_mod[kSRArmCount] = {};
   double m_amp[kSRArmCount] = {}, s_amp[kSRArmCount] = {};
   double m_sal[kSRArmCount] = {}, s_sal[kSRArmCount] = {};
@@ -15328,6 +15379,77 @@ bool run_salrew(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) 
                   "    NEXT: a fresh seed family, and whether reward can shape what the body\n"
                   "    supplies -- `jaw4.5+rew` begins it and full power would settle it.\n",
                   slope, slope);
+  }
+
+  // --- DOES SCALE-INVARIANT SALIENCE CLOSE THE LOOPHOLE? -------------------
+  // `jaw4.5+rew` made modulation WORSE (-0.0091) and loudness HIGHER (+0.0104):
+  // summed |delta mel| scales with signal level, so the reward paid for volume.
+  // `jaw+rewNORM` divides by the window's mean amplitude, which is the
+  // normalisation the primary already uses. Both are kept so the fix is
+  // DEMONSTRATED rather than asserted.
+  //
+  // PRE-REGISTERED: the fix works only if modulation depth beats the normalised
+  // arm's OWN yoked control by 3 SE while mean amplitude does not. Closing a
+  // loophole that merely moves the exploit elsewhere is not a fix.
+  {
+    const double dn = m_mod[kSRJawRewN] - m_mod[kSRJawRewNY];
+    const double en = std::sqrt(s_mod[kSRJawRewN] * s_mod[kSRJawRewN] +
+                                s_mod[kSRJawRewNY] * s_mod[kSRJawRewNY]);
+    const double dna_ = m_amp[kSRJawRewN] - m_amp[kSRJawRewNY];
+    const double ena = std::sqrt(s_amp[kSRJawRewN] * s_amp[kSRJawRewN] +
+                                 s_amp[kSRJawRewNY] * s_amp[kSRJawRewNY]);
+    std::printf("\n  SCALE-INVARIANT SALIENCE, against its OWN yoked control\n");
+    std::printf("    modulation depth  %+.4f +/- %.4f  (%+.1f SE)   <- THE PRIMARY\n",
+                dn, en, en > 0.0 ? dn / en : 0.0);
+    std::printf("    mean amplitude    %+.4f +/- %.4f  (%+.1f SE)   <- the loophole\n",
+                dna_, ena, ena > 0.0 ? dna_ / ena : 0.0);
+    std::printf("    for comparison, the ABSOLUTE reward moved mod %+.4f and amp %+.4f\n"
+                "    against the unrewarded jaw.\n",
+                m_mod[kSRJawRew] - m_mod[kSRJaw45], m_amp[kSRJawRew] - m_amp[kSRJaw45]);
+    const bool sharper = en > 0.0 && dn / en >= 3.0;
+    const bool louder2 = ena > 0.0 && dna_ / ena >= 3.0;
+    if (sharper && !louder2)
+      std::printf("\n    THE LOOPHOLE WAS THE STORY. With volume paying nothing, the reward\n"
+                  "    sharpens the frame the body supplies: %+.1f SE on modulation with\n"
+                  "    amplitude flat. A body that oscillates plus a reward that cannot be\n"
+                  "    gamed by loudness is the frames-then-content division working.\n"
+                  "    BEFORE BELIEVING IT: a fresh seed family.\n", dn / en);
+    else if (louder2)
+      std::printf("\n    THE EXPLOIT MOVED. Modulation %+.1f SE but amplitude ALSO rose\n"
+                  "    %+.1f SE, so normalising by mean amplitude did not stop the reward\n"
+                  "    buying volume -- it found another route to it. Closing one loophole\n"
+                  "    and reporting the result would have been wrong.\n",
+                  dn / en, dna_ / ena);
+    else {
+      // SPLIT 2026-09-26. The first version of this branch asserted that volume
+      // was not the obstacle -- which the data can contradict, and did: the
+      // absolute reward moved modulation -0.0091 with amplitude +0.0104 and the
+      // normalised one +0.0150 with -0.0058, BOTH SIGNS FLIPPED. A refusal branch
+      // that cannot tell "the fix did nothing" from "the fix worked and is
+      // underpowered" will mislead whoever reads it, so it now checks.
+      const double d_abs = m_mod[kSRJawRew] - m_mod[kSRJaw45];
+      const bool flipped = dn > 0.0 && d_abs < 0.0 &&
+                           (m_amp[kSRJawRew] - m_amp[kSRJaw45]) > 0.0 && dna_ < 0.0;
+      if (flipped)
+        std::printf("\n    REFUSED AT THE BAR, BUT THE FIX CHANGED THE SIGN OF BOTH CHANNELS.\n"
+                    "    Modulation %+.1f SE (3.0 required) so the pre-registered bar is not\n"
+                    "    cleared -- and the absolute reward moved modulation %+.4f with\n"
+                    "    amplitude %+.4f where the normalised one moves %+.4f and %+.4f. Volume\n"
+                    "    WAS part of what stood between the reward and the rhythm. This is\n"
+                    "    UNDERPOWERED rather than null: %.2fx the creatures reaches 3.0, i.e.\n"
+                    "    %u instead of %u. Do not write it up as a refusal of the mechanism.\n",
+                    dn / en, d_abs, m_amp[kSRJawRew] - m_amp[kSRJaw45], dn, dna_,
+                    (3.0 / (dn / en)) * (3.0 / (dn / en)),
+                    uint32_t(double(kReps) * (3.0 / (dn / en)) * (3.0 / (dn / en)) + 0.5),
+                    kReps);
+      else
+        std::printf("\n    REFUSED -- with the loophole closed the reward does not sharpen the\n"
+                    "    frame either (%+.1f SE, 3.0 required), and the fix did not move the\n"
+                    "    channels' signs. So volume was not what stood between the reward and\n"
+                    "    the rhythm, and this reward cannot shape this frame. The body\n"
+                    "    supplying a rhythm and reward being able to USE one are separate\n"
+                    "    claims, and only the first survives.\n", en > 0.0 ? dn / en : 0.0);
+      }
   }
 
   std::printf("\n  --- the reading ---\n");

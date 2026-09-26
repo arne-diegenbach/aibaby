@@ -11672,6 +11672,53 @@ the creature exploited it.
 So the state is: **the body can supply a frame, and the reward as specified does
 not sharpen it.** Those are separable results and only the second is a refusal.
 
+## Closing the loudness loophole flips both channels, at +2.6 SE
+
+The absolute salience reward made modulation worse and the voice louder, because
+summed `|Δmel|` scales with signal level and so pays for volume. Dividing by the
+window's mean amplitude removes that — the normalisation the primary already
+used. Both rewards were kept in the same run so the fix would be demonstrated
+rather than asserted.
+
+    scale-invariant salience, against its OWN yoked control
+      modulation depth  +0.0150 +/- 0.0058  (+2.6 SE)
+      mean amplitude    -0.0058 +/- 0.0030  (-1.9 SE)
+      absolute reward, for comparison:  mod -0.0091   amp +0.0104
+
+**Both signs flipped.** The absolute reward: modulation down, amplitude up. The
+normalised one: modulation up, amplitude down. So volume genuinely *was* part of
+what stood between the reward and the rhythm, and the fix addressed the thing it
+was aimed at rather than moving the exploit elsewhere — which was the third
+outcome this experiment pre-registered precisely because it is the likely one.
+
+**REFUSED at the bar, and the bar stands.** +2.6 SE against a pre-registered 3.0,
+set before the run. But this is underpowered rather than null, and unusually
+cheaply so: **1.32× the creatures reaches 3.0 — 16 instead of 12.**
+
+**And the compiled refusal text was wrong, which matters more than the number.**
+I had written that branch for the case where the fix changes nothing, so it
+asserted "volume was not what stood between the reward and the rhythm" while
+printing data showing it was. A refusal that cannot distinguish *the fix did
+nothing* from *the fix worked and is underpowered* misleads whoever reads it next,
+which on this project is me. It now checks both channels' signs, names which case
+it is in, and prints the creature count that would settle it.
+
+**Two more instrument failures on the way, and the first one the guard caught by
+itself.** The normalised arm's yoked control came back bit-identical to it,
+because I fed the arm its own praise times at its own seed — the same yoking bug
+fixed hours earlier for `yoked`, reintroduced because the new arm was added
+*outside* the two-pass structure the fix lives in. `arms_are_distinct` refused the
+run unprompted. That guard was generalised earlier the same day after three
+single-pair checks had each policed only the pair I happened to be thinking about,
+and it has now paid for itself on the fourth instance. **A fix at one call site
+does not protect arms added later; the normalised reward now earns inside pass 1
+where the yoking is structural.** The second failure was a duplicated `else` from
+a careless replacement, caught by the compiler.
+
+**The two claims stay separate, and only one is established.** The body can supply
+a frame — tracking slope 0.86, amplitude not falling. Reward sharpening that frame
+points the right way on both channels and is not yet demonstrated at the bar.
+
 ## Layout
 
 ```
