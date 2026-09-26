@@ -1,0 +1,242 @@
+  [4/132] seed 0  v66-sign    cycles 2289  start sd   52.4 Hz  range   25.5 Hz
+  [5/132] seed 0  v66-narrow  cycles 2293  start sd   39.6 Hz  range   20.3 Hz
+  [1/132] seed 0  position    cycles 2296  start sd   20.0 Hz  range   13.5 Hz
+  [3/132] seed 0  v66-thin    cycles 2299  start sd   75.4 Hz  range   38.7 Hz
+  [2/132] seed 0  v62-nogate  cycles 2304  start sd  137.0 Hz  range   48.8 Hz
+  [6/132] seed 0  thin+tau150 cycles 2294  start sd   40.8 Hz  range   40.8 Hz
+  [7/132] seed 0  thin+tau60  cycles 2304  start sd   31.8 Hz  range   44.9 Hz
+  [11/132] seed 0  nogate+tau60 cycles 2295  start sd   60.8 Hz  range   60.9 Hz
+  [8/132] seed 0  leak60      cycles 2294  start sd   14.9 Hz  range   24.0 Hz
+  [9/132] seed 0  leak120     cycles 2295  start sd   26.9 Hz  range   35.2 Hz
+  [10/132] seed 0  leak200     cycles 2322  start sd   36.6 Hz  range   41.4 Hz
+  [12/132] seed 1  position    cycles 2289  start sd   22.0 Hz  range   13.9 Hz
+  [13/132] seed 1  v62-nogate  cycles 2213  start sd  114.8 Hz  range   52.1 Hz
+  [14/132] seed 1  v66-thin    cycles 2269  start sd   82.9 Hz  range   38.9 Hz
+  [15/132] seed 1  v66-sign    cycles 2253  start sd   54.0 Hz  range   26.5 Hz
+  [18/132] seed 1  thin+tau60  cycles 2276  start sd   30.0 Hz  range   43.1 Hz
+  [16/132] seed 1  v66-narrow  cycles 2273  start sd   38.0 Hz  range   19.4 Hz
+  [17/132] seed 1  thin+tau150 cycles 2244  start sd   43.3 Hz  range   41.4 Hz
+  [21/132] seed 1  leak200     cycles 2284  start sd   41.4 Hz  range   42.4 Hz
+  [19/132] seed 1  leak60      cycles 2288  start sd   14.9 Hz  range   22.5 Hz
+  [24/132] seed 2  v62-nogate  cycles 2297  start sd  148.5 Hz  range   53.4 Hz
+  [20/132] seed 1  leak120     cycles 2313  start sd   26.6 Hz  range   33.2 Hz
+  [22/132] seed 1  nogate+tau60 cycles 2293  start sd   65.2 Hz  range   61.9 Hz
+  [23/132] seed 2  position    cycles 2349  start sd   22.4 Hz  range   13.1 Hz
+  [26/132] seed 2  v66-sign    cycles 2352  start sd   54.6 Hz  range   25.3 Hz
+  [25/132] seed 2  v66-thin    cycles 2320  start sd   92.5 Hz  range   39.7 Hz
+  [30/132] seed 2  leak60      cycles 2340  start sd   13.9 Hz  range   22.5 Hz
+  [27/132] seed 2  v66-narrow  cycles 2334  start sd   37.4 Hz  range   18.9 Hz
+  [28/132] seed 2  thin+tau150 cycles 2342  start sd   40.7 Hz  range   40.6 Hz
+  [29/132] seed 2  thin+tau60  cycles 2319  start sd   28.9 Hz  range   42.0 Hz
+  [32/132] seed 2  leak200     cycles 2365  start sd   36.0 Hz  range   39.2 Hz
+  [35/132] seed 3  v62-nogate  cycles 2276  start sd  129.2 Hz  range   53.7 Hz
+  [31/132] seed 2  leak120     cycles 2344  start sd   24.4 Hz  range   33.0 Hz
+  [36/132] seed 3  v66-thin    cycles 2282  start sd   92.8 Hz  range   39.5 Hz
+  [33/132] seed 2  nogate+tau60 cycles 2335  start sd   64.2 Hz  range   60.3 Hz
+  [34/132] seed 3  position    cycles 2276  start sd   22.0 Hz  range   13.8 Hz
+  [37/132] seed 3  v66-sign    cycles 2260  start sd   52.4 Hz  range   25.8 Hz
+  [39/132] seed 3  thin+tau150 cycles 2287  start sd   40.2 Hz  range   39.0 Hz
+  [42/132] seed 3  leak120     cycles 2292  start sd   25.6 Hz  range   32.3 Hz
+  [38/132] seed 3  v66-narrow  cycles 2266  start sd   40.3 Hz  range   19.3 Hz
+  [43/132] seed 3  leak200     cycles 2278  start sd   38.5 Hz  range   40.6 Hz
+  [40/132] seed 3  thin+tau60  cycles 2293  start sd   29.0 Hz  range   41.3 Hz
+  [44/132] seed 3  nogate+tau60 cycles 2270  start sd   53.4 Hz  range   59.1 Hz
+  [41/132] seed 3  leak60      cycles 2284  start sd   14.9 Hz  range   22.8 Hz
+  [46/132] seed 4  v62-nogate  cycles 2304  start sd  128.2 Hz  range   50.7 Hz
+  [48/132] seed 4  v66-sign    cycles 2319  start sd   49.1 Hz  range   25.5 Hz
+  [45/132] seed 4  position    cycles 2280  start sd   20.8 Hz  range   13.5 Hz
+  [50/132] seed 4  thin+tau150 cycles 2318  start sd   41.3 Hz  range   41.4 Hz
+  [47/132] seed 4  v66-thin    cycles 2318  start sd   83.9 Hz  range   39.1 Hz
+  [49/132] seed 4  v66-narrow  cycles 2319  start sd   36.2 Hz  range   18.9 Hz
+  [53/132] seed 4  leak120     cycles 2303  start sd   25.0 Hz  range   33.7 Hz
+  [52/132] seed 4  leak60      cycles 2310  start sd   14.4 Hz  range   22.9 Hz
+  [51/132] seed 4  thin+tau60  cycles 2335  start sd   29.0 Hz  range   44.1 Hz
+  [54/132] seed 4  leak200     cycles 2317  start sd   36.4 Hz  range   41.3 Hz
+  [55/132] seed 4  nogate+tau60 cycles 2298  start sd   62.1 Hz  range   61.4 Hz
+  [56/132] seed 5  position    cycles 2282  start sd   21.4 Hz  range   13.4 Hz
+  [57/132] seed 5  v62-nogate  cycles 2263  start sd  118.3 Hz  range   50.6 Hz
+  [58/132] seed 5  v66-thin    cycles 2288  start sd   75.3 Hz  range   36.8 Hz
+  [60/132] seed 5  v66-narrow  cycles 2286  start sd   36.7 Hz  range   18.5 Hz
+  [59/132] seed 5  v66-sign    cycles 2270  start sd   48.8 Hz  range   24.6 Hz
+  [61/132] seed 5  thin+tau150 cycles 2257  start sd   34.7 Hz  range   37.3 Hz
+  [63/132] seed 5  leak60      cycles 2315  start sd   13.5 Hz  range   21.5 Hz
+  [62/132] seed 5  thin+tau60  cycles 2255  start sd   25.8 Hz  range   38.7 Hz
+  [64/132] seed 5  leak120     cycles 2281  start sd   23.6 Hz  range   31.8 Hz
+  [65/132] seed 5  leak200     cycles 2256  start sd   34.4 Hz  range   38.2 Hz
+  [66/132] seed 5  nogate+tau60 cycles 2271  start sd   42.9 Hz  range   55.7 Hz
+  [67/132] seed 6  position    cycles 2315  start sd   20.8 Hz  range   13.1 Hz
+  [68/132] seed 6  v62-nogate  cycles 2276  start sd  154.0 Hz  range   57.5 Hz
+  [69/132] seed 6  v66-thin    cycles 2256  start sd   91.5 Hz  range   41.6 Hz
+  [70/132] seed 6  v66-sign    cycles 2267  start sd   59.1 Hz  range   27.2 Hz
+  [71/132] seed 6  v66-narrow  cycles 2258  start sd   38.3 Hz  range   19.9 Hz
+  [72/132] seed 6  thin+tau150 cycles 2284  start sd   43.1 Hz  range   41.9 Hz
+  [73/132] seed 6  thin+tau60  cycles 2281  start sd   30.6 Hz  range   44.3 Hz
+  [74/132] seed 6  leak60      cycles 2279  start sd   15.2 Hz  range   23.4 Hz
+  [75/132] seed 6  leak120     cycles 2264  start sd   27.4 Hz  range   35.1 Hz
+  [76/132] seed 6  leak200     cycles 2295  start sd   38.8 Hz  range   41.4 Hz
+  [77/132] seed 6  nogate+tau60 cycles 2273  start sd   57.5 Hz  range   65.7 Hz
+  [78/132] seed 7  position    cycles 2278  start sd   22.7 Hz  range   14.4 Hz
+  [79/132] seed 7  v62-nogate  cycles 2259  start sd  123.4 Hz  range   51.4 Hz
+  [80/132] seed 7  v66-thin    cycles 2266  start sd   79.4 Hz  range   37.3 Hz
+  [81/132] seed 7  v66-sign    cycles 2274  start sd   50.7 Hz  range   24.4 Hz
+  [82/132] seed 7  v66-narrow  cycles 2280  start sd   39.7 Hz  range   18.1 Hz
+  [83/132] seed 7  thin+tau150 cycles 2269  start sd   38.9 Hz  range   38.0 Hz
+  [85/132] seed 7  leak60      cycles 2299  start sd   14.1 Hz  range   22.5 Hz
+  [84/132] seed 7  thin+tau60  cycles 2285  start sd   27.5 Hz  range   39.9 Hz
+  [86/132] seed 7  leak120     cycles 2283  start sd   26.0 Hz  range   32.9 Hz
+  [87/132] seed 7  leak200     cycles 2243  start sd   38.3 Hz  range   41.2 Hz
+  [89/132] seed 8  position    cycles 2305  start sd   21.5 Hz  range   13.5 Hz
+  [88/132] seed 7  nogate+tau60 cycles 2283  start sd   58.5 Hz  range   58.5 Hz
+  [90/132] seed 8  v62-nogate  cycles 2302  start sd  132.2 Hz  range   51.2 Hz
+  [92/132] seed 8  v66-sign    cycles 2303  start sd   61.3 Hz  range   26.7 Hz
+  [91/132] seed 8  v66-thin    cycles 2291  start sd   89.5 Hz  range   37.1 Hz
+  [94/132] seed 8  thin+tau150 cycles 2304  start sd   43.0 Hz  range   40.2 Hz
+  [93/132] seed 8  v66-narrow  cycles 2277  start sd   42.1 Hz  range   19.5 Hz
+  [95/132] seed 8  thin+tau60  cycles 2288  start sd   31.9 Hz  range   44.2 Hz
+  [96/132] seed 8  leak60      cycles 2301  start sd   15.8 Hz  range   24.1 Hz
+  [97/132] seed 8  leak120     cycles 2324  start sd   26.8 Hz  range   34.9 Hz
+  [98/132] seed 8  leak200     cycles 2288  start sd   38.8 Hz  range   41.7 Hz
+  [99/132] seed 8  nogate+tau60 cycles 2293  start sd   75.5 Hz  range   62.5 Hz
+  [100/132] seed 9  position    cycles 2326  start sd   22.7 Hz  range   13.4 Hz
+  [101/132] seed 9  v62-nogate  cycles 2311  start sd  136.5 Hz  range   52.3 Hz
+  [102/132] seed 9  v66-thin    cycles 2288  start sd   86.3 Hz  range   39.3 Hz
+  [103/132] seed 9  v66-sign    cycles 2307  start sd   47.5 Hz  range   24.2 Hz
+  [104/132] seed 9  v66-narrow  cycles 2285  start sd   40.7 Hz  range   19.9 Hz
+  [105/132] seed 9  thin+tau150 cycles 2301  start sd   41.5 Hz  range   39.8 Hz
+  [106/132] seed 9  thin+tau60  cycles 2310  start sd   26.9 Hz  range   39.9 Hz
+  [107/132] seed 9  leak60      cycles 2299  start sd   14.8 Hz  range   23.3 Hz
+  [108/132] seed 9  leak120     cycles 2309  start sd   26.1 Hz  range   33.9 Hz
+  [109/132] seed 9  leak200     cycles 2306  start sd   36.2 Hz  range   40.5 Hz
+  [110/132] seed 9  nogate+tau60 cycles 2304  start sd   61.2 Hz  range   60.1 Hz
+  [111/132] seed 10  position    cycles 2234  start sd   23.0 Hz  range   14.4 Hz
+  [112/132] seed 10  v62-nogate  cycles 2225  start sd  137.4 Hz  range   51.7 Hz
+  [114/132] seed 10  v66-sign    cycles 2233  start sd   50.5 Hz  range   25.5 Hz
+  [113/132] seed 10  v66-thin    cycles 2215  start sd   84.5 Hz  range   37.3 Hz
+  [115/132] seed 10  v66-narrow  cycles 2216  start sd   37.9 Hz  range   18.8 Hz
+  [116/132] seed 10  thin+tau150 cycles 2237  start sd   37.7 Hz  range   39.1 Hz
+  [117/132] seed 10  thin+tau60  cycles 2218  start sd   29.8 Hz  range   42.5 Hz
+  [118/132] seed 10  leak60      cycles 2259  start sd   14.9 Hz  range   22.8 Hz
+  [119/132] seed 10  leak120     cycles 2243  start sd   25.5 Hz  range   33.1 Hz
+  [120/132] seed 10  leak200     cycles 2252  start sd   37.7 Hz  range   39.3 Hz
+  [121/132] seed 10  nogate+tau60 cycles 2225  start sd   60.0 Hz  range   61.5 Hz
+  [122/132] seed 11  position    cycles 2256  start sd   22.7 Hz  range   13.6 Hz
+  [123/132] seed 11  v62-nogate  cycles 2203  start sd  130.3 Hz  range   52.7 Hz
+  [124/132] seed 11  v66-thin    cycles 2238  start sd   93.6 Hz  range   39.2 Hz
+  [125/132] seed 11  v66-sign    cycles 2256  start sd   52.4 Hz  range   25.0 Hz
+  [126/132] seed 11  v66-narrow  cycles 2231  start sd   40.1 Hz  range   19.4 Hz
+  [127/132] seed 11  thin+tau150 cycles 2224  start sd   41.7 Hz  range   40.9 Hz
+  [128/132] seed 11  thin+tau60  cycles 2229  start sd   31.8 Hz  range   42.2 Hz
+  [129/132] seed 11  leak60      cycles 2250  start sd   13.9 Hz  range   21.0 Hz
+  [130/132] seed 11  leak120     cycles 2279  start sd   25.9 Hz  range   31.5 Hz
+  [131/132] seed 11  leak200     cycles 2252  start sd   37.1 Hz  range   38.8 Hz
+  [132/132] seed 11  nogate+tau60 cycles 2251  start sd   57.2 Hz  range   59.0 Hz
+experiment: syllf1b
+  instrument        syllf1b   trial seed 000000000133ea75   600000 ticks
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  the build      DNA v66 gates the v62 F1 integrator on JAW PHASE --
+                 integrate while the jaw opens, anchor toward rest
+                 while it closes. One excursion per cycle.
+  NOT an aim fix Derived before building: one 222 ms cycle buys 34-68
+                 Hz at the taught deflection, and the clamp caps the
+                 mean per-cycle excursion near 65 Hz whatever the gain.
+                 Below the position decoder's measured 82.5.
+  the primary    sd of CYCLE-START F1 must FALL against `v62-nogate`
+                 (same jaw, no gate) AND per-cycle RANGE must not
+                 collapse. Either alone is a mute dial.
+  the null       for the sequence statistic: E|X-Y| over ALL cycle
+                 pairs, which equals the adjacent mean exactly for
+                 independent draws. Reported, gates nothing.
+  untaught       silent room, no praise: what the BODY can do, as
+                 `selfloop` measured the untrained creature.
+
+  arm           cycles   start sd Hz     range Hz        adj |dpeak|     all-pairs      at floor  amp     mod     gate duty  F1 sd
+    position      2290    21.8 +/-  0.3    13.6 +/-  0.1    11.0 +/-  0.1    30.7 +/-  0.3    0.0%  0.3219  0.4862   51.6%    21.8
+    v62-nogate    2269   132.5 +/-  3.3    52.2 +/-  0.6    45.1 +/-  0.4   176.8 +/-  4.0    0.5%  0.3137  0.4944   51.5%   134.4
+    v66-thin      2277    85.6 +/-  1.9    38.7 +/-  0.4    35.9 +/-  0.4   117.3 +/-  2.3    0.0%  0.3178  0.4905   74.8%    87.9
+    v66-sign      2281    52.7 +/-  1.2    25.5 +/-  0.3    25.3 +/-  0.2    73.1 +/-  1.5    0.0%  0.3200  0.4883   51.6%    53.2
+    v66-narrow    2276    38.9 +/-  0.5    19.2 +/-  0.2    20.0 +/-  0.2    54.6 +/-  0.6    0.0%  0.3192  0.4894   37.4%    39.5
+    thin+tau150   2280    40.6 +/-  0.7    40.0 +/-  0.4    41.9 +/-  0.4    71.4 +/-  0.9    0.0%  0.3171  0.4932   74.7%    44.8
+    thin+tau60    2282    29.4 +/-  0.6    42.3 +/-  0.6    46.9 +/-  0.6    62.4 +/-  0.8    0.0%  0.3213  0.4875   74.7%    32.9
+    leak60        2293    14.6 +/-  0.2    22.8 +/-  0.3    22.6 +/-  0.2    29.4 +/-  0.3    0.0%  0.3207  0.4869   51.5%    15.6
+    leak120       2294    25.8 +/-  0.3    33.4 +/-  0.4    33.4 +/-  0.3    47.9 +/-  0.5    0.0%  0.3213  0.4863   51.5%    27.6
+    leak200       2288    37.5 +/-  0.5    40.5 +/-  0.4    39.6 +/-  0.4    64.4 +/-  0.6    0.0%  0.3231  0.4847   51.5%    39.5
+    nogate+tau60   2282    59.9 +/-  2.2    60.6 +/-  0.7    63.1 +/-  0.5   102.1 +/-  2.0    0.1%  0.3184  0.4918   51.6%    64.7
+
+  DOSE LADDER   anchoring time vs accumulated drift
+    v62-nogate  duty  51.5%   start sd  132.5 Hz
+    v66-thin    duty  74.8%   start sd   85.6 Hz
+    v66-sign    duty  51.6%   start sd   52.7 Hz
+    v66-narrow  duty  37.4%   start sd   38.9 Hz
+
+  --- the reading: PAIRED against `v62-nogate`, per creature ---
+    position     start sd  -110.6 +/-  3.3 Hz (-33.4 SE)   range   -38.5 +/-  0.7 Hz (-58.0 SE)
+    v66-thin     start sd   -46.9 +/-  2.9 Hz (-16.4 SE)   range   -13.5 +/-  0.4 Hz (-32.4 SE)
+    v66-sign     start sd   -79.7 +/-  3.0 Hz (-26.5 SE)   range   -26.6 +/-  0.5 Hz (-49.1 SE)
+    v66-narrow   start sd   -93.6 +/-  3.3 Hz (-28.5 SE)   range   -32.9 +/-  0.6 Hz (-53.7 SE)
+    thin+tau150  start sd   -91.9 +/-  3.1 Hz (-29.4 SE)   range   -12.1 +/-  0.6 Hz (-19.7 SE)
+    thin+tau60   start sd  -103.1 +/-  3.1 Hz (-32.8 SE)   range    -9.9 +/-  0.8 Hz (-12.1 SE)
+    leak60       start sd  -117.9 +/-  3.2 Hz (-36.5 SE)   range   -29.4 +/-  0.7 Hz (-43.4 SE)
+    leak120      start sd  -106.7 +/-  3.2 Hz (-33.3 SE)   range   -18.8 +/-  0.7 Hz (-26.9 SE)
+    leak200      start sd   -95.0 +/-  3.4 Hz (-28.0 SE)   range   -11.7 +/-  0.7 Hz (-16.3 SE)
+    nogate+tau60  start sd   -72.6 +/-  3.5 Hz (-20.5 SE)   range    +8.4 +/-  0.7 Hz (+12.5 SE)
+
+  --- the second half: per-cycle range against the NO-INTEGRATOR floor ---
+    v62-nogate   range over `position`   +38.5 +/-  0.7 Hz (+58.0 SE)
+    v66-thin     range over `position`   +25.1 +/-  0.5 Hz (+52.2 SE)
+    v66-sign     range over `position`   +11.9 +/-  0.3 Hz (+37.5 SE)
+    v66-narrow   range over `position`    +5.6 +/-  0.3 Hz (+21.4 SE)
+    thin+tau150  range over `position`   +26.4 +/-  0.5 Hz (+55.0 SE)
+    thin+tau60   range over `position`   +28.6 +/-  0.6 Hz (+46.6 SE)
+    leak60       range over `position`    +9.1 +/-  0.3 Hz (+30.4 SE)
+    leak120      range over `position`   +19.8 +/-  0.4 Hz (+48.4 SE)
+    leak200      range over `position`   +26.9 +/-  0.4 Hz (+69.5 SE)
+    nogate+tau60  range over `position`   +46.9 +/-  0.7 Hz (+62.8 SE)
+
+  --- the leak attack: phase-locked reset vs an ALWAYS-ON leak ---
+    v66-sign     drift   52.7   range   25.5   range/drift 0.484
+    thin+tau150  drift   40.6   range   40.0   range/drift 0.987
+    thin+tau60   drift   29.4   range   42.3   range/drift 1.436   <- best phase-locked
+    leak60       drift   14.6   range   22.8   range/drift 1.559   (v67 leak)
+    leak120      drift   25.8   range   33.4   range/drift 1.293   (v67 leak)
+    leak200      drift   37.5   range   40.5   range/drift 1.079   (v67 leak)
+    interpolated leak range at drift 29.4 Hz:   35.6   (phase-locked   42.3)
+    the phase-locked arm carries +18.8% of the leak's range at matched drift
+    ALIGNMENT CHECK  overall F1 sd 32.9 phase-locked vs 31.3 interpolated leak (+5.2%)
+    ALIGNMENT -- total F1 movement is comparable while the per-cycle
+    excursion is larger, so the gain is in WHEN the movement happens.
+    THE PHASE STRUCTURE PAYS. At matched drift the cycle-locked gate carries
+    more per-cycle range than a leak reaching the same drift, and a renamed
+    position decoder cannot do that. Replicate on a fresh seed family before
+    it is quoted -- one draw, and this project's standard is replication.
+
+  --- the gate or the anchor? ---
+    v62-nogate    (tau 633, no gate)  drift  132.5
+    nogate+tau60  (tau  60, no gate)  drift   59.9
+    thin+tau60    (tau  60, GATED)    drift   29.4
+    the short anchor alone accounts for 70% of the bounding
+    THE GATE IS DOING THE WORK. The same anchor without the phase gate
+    leaves most of the drift in place, so the gate is what lets the anchor
+    act -- the creature is voiced too much of the time for an idle-only
+    anchor to bound anything.
+
+  --- the sequence statistic, and it gates nothing ---
+    position    adjacent   11.0   all-pairs   30.7   ratio 0.359  successive cycles CORRELATED
+    v62-nogate  adjacent   45.1   all-pairs  176.8   ratio 0.255  successive cycles CORRELATED
+    v66-thin    adjacent   35.9   all-pairs  117.3   ratio 0.306  successive cycles CORRELATED
+    v66-sign    adjacent   25.3   all-pairs   73.1   ratio 0.347  successive cycles CORRELATED
+    v66-narrow  adjacent   20.0   all-pairs   54.6   ratio 0.367  successive cycles CORRELATED
+    thin+tau150 adjacent   41.9   all-pairs   71.4   ratio 0.587  successive cycles CORRELATED
+    thin+tau60  adjacent   46.9   all-pairs   62.4   ratio 0.752  successive cycles CORRELATED
+    leak60      adjacent   22.6   all-pairs   29.4   ratio 0.770  successive cycles CORRELATED
+    leak120     adjacent   33.4   all-pairs   47.9   ratio 0.698  successive cycles CORRELATED
+    leak200     adjacent   39.6   all-pairs   64.4   ratio 0.615  successive cycles CORRELATED
+    nogate+tau60 adjacent   63.1   all-pairs  102.1   ratio 0.618  successive cycles CORRELATED
+
+  --- the verdict ---
+  DNA v66 BOUNDS THE WALK. Cycle-start F1 sd falls past 3 SE against the
+  same jaw ungated, and the per-cycle range does not collapse with it --
+  the two halves the pre-registration required. The jaw cycle is now a
+  boundary for F1 and not only for volume. Read it NARROWLY: this is a
+  structural property of the decoder, and whether anything can USE the
+  boundary is the next question, not this one.

@@ -9902,10 +9902,13 @@ bool run_blockanchor(const std::vector<uint8_t>& blob, uint64_t ticks, bool verb
 // flattens exactly this profile. If the profile is flat, then neither position
 // nor rate-change explains 53-vs-9, and the cause is not in the readout at all.
 struct LPArm { const char* name; bool teach; float vel_gain; double band; float burst_ms;
-               float burst_w; };
+               float burst_w;
+               // DNA v66. Jaw frequency and the phase gate. Both zero on every arm
+               // that predates it, so the whole existing table is unchanged.
+               float jaw_hz; float jaw_gate; };
 const LPArm kLPArms[] = {
-    {"taught", true, 0.0f, 0.0, 0.0f, 0.0f},   // the lesson, unblocked: `blockanchor`'s b0
-    {"quiet", false, 0.0f, 0.0, 0.0f, 0.0f},   // never taught. The profile the creature came with, so a
+    {"taught", true, 0.0f, 0.0, 0.0f, 0.0f, 0.0f, 0.0f},   // the lesson, unblocked: `blockanchor`'s b0
+    {"quiet", false, 0.0f, 0.0, 0.0f, 0.0f, 0.0f, 0.0f},   // never taught. The profile the creature came with, so a
                               // rate change that is just settling cannot read as a lesson.
     // DNA v62 -- THE DECISIVE TEST, and the one `glide` structurally could not ask.
     // glide measured PASSIVE FOLLOWING and refused it: the velocity decoder tracks
@@ -9929,8 +9932,8 @@ const LPArm kLPArms[] = {
     // WHAT REFUSES THE WHOLE LINE: taught velocity not exceeding the position
     // arm's movement, which would mean the extra range is unreachable BY REWARD
     // and the walk is noise to the learner rather than exploration.
-    {"taught-vel", true, 7123.0f, 0.0, 0.0f, 0.0f},
-    {"quiet-vel", false, 7123.0f, 0.0, 0.0f, 0.0f},
+    {"taught-vel", true, 7123.0f, 0.0, 0.0f, 0.0f, 0.0f, 0.0f},
+    {"quiet-vel", false, 7123.0f, 0.0, 0.0f, 0.0f, 0.0f, 0.0f},
     // v62 + REGION TARGETS. 12/12 velocity creatures touch the 250 Hz floor, so
     // the 275.7 Hz result is measured against a wall. WHY it overshoots is
     // structural rather than a tuning slip: under velocity control, HOLDING a
@@ -9965,16 +9968,16 @@ const LPArm kLPArms[] = {
     // under velocity, so 0.3 / 0.5 / 0.7 brackets it. Keeping score_axis at 0
     // means the region is a convex region in FORMANT SPACE, which is what DIVA's
     // targets are, rather than a band on one formant.
-    {"vel-band1", true, 7123.0f, 0.30, 0.0f, 0.0f},
-    {"vel-band2", true, 7123.0f, 0.50, 0.0f, 0.0f},
-    {"vel-band3", true, 7123.0f, 0.70, 0.0f, 0.0f},
+    {"vel-band1", true, 7123.0f, 0.30, 0.0f, 0.0f, 0.0f, 0.0f},
+    {"vel-band2", true, 7123.0f, 0.50, 0.0f, 0.0f, 0.0f, 0.0f},
+    {"vel-band3", true, 7123.0f, 0.70, 0.0f, 0.0f, 0.0f, 0.0f},
     // DNA v63 PRE-FLIGHT -- IS THE BURST PROFILE LESS FLAT THAN THE RATE PROFILE?
     // 20 ms is `burstprobe`'s derived window, not a guess: a pyramidal burst in
     // the literature is 100-200 Hz, this larynx fires at a few Hz, and 20 ms is
     // the shortest window at which the code is live here at all (8.2% of spikes).
     // Position decoder, so the comparison is against the measured 0.4343.
-    {"burst", true, 0.0f, 0.0, 20.0f, 0.0f},
-    {"burst-quiet", false, 0.0f, 0.0, 20.0f, 0.0f},
+    {"burst", true, 0.0f, 0.0, 20.0f, 0.0f, 0.0f, 0.0f},
+    {"burst-quiet", false, 0.0f, 0.0, 20.0f, 0.0f, 0.0f, 0.0f},
     // DNA v63 BUILT AND SWITCHED ON. c_eff = c_rate - w*(c_burst - 0.5).
     //
     // The pre-flight above computed 0.2154 of deflection from the two channels'
@@ -9990,8 +9993,34 @@ const LPArm kLPArms[] = {
     // the target, and a sparse burst centroid is a better candidate for that
     // failure, not a worse one. If sd explodes and the averaged error rises, the
     // channel is real and unusable, and that is the honest finding.
-    {"burst-read", true, 0.0f, 0.0, 20.0f, 1.0f},
-    {"burst-read-q", false, 0.0f, 0.0, 20.0f, 1.0f},
+    {"burst-read", true, 0.0f, 0.0, 20.0f, 1.0f, 0.0f, 0.0f},
+    {"burst-read-q", false, 0.0f, 0.0, 20.0f, 1.0f, 0.0f, 0.0f},
+    // DNA v66 -- THE JAW CYCLE GATES THE INTEGRATOR, UNDER TEACHING.
+    //
+    // `syllf1` measures the structural half on an UNTAUGHT creature and finds the
+    // walk bounded. It cannot measure the other half, because the arithmetic this
+    // build was derived from is about the TAUGHT deflection: one 222 ms cycle buys
+    // 34-68 Hz at centroid 0.4570 against 0.4993 rest, and an untaught creature's
+    // deflection is smaller again. Asking whether a cycle can carry a GESTURE
+    // therefore needs the lesson, and it needs it in the same delivered-Hz terms as
+    // the 275.7 / 82.5 numbers above -- which is this experiment, not that one.
+    //
+    // `jaw-vel` is the MATCHED CONTROL and it is not optional: the jaw changes the
+    // amplitude envelope, so a jaw arm and a no-jaw arm differ in how much the
+    // creature is audible to itself as well as in the gate. Only `jaw-vel` vs
+    // `jaw-gate-vel` isolates the gating.
+    //
+    // PRE-REGISTERED, and the first clause is the one the arithmetic predicts will
+    // fail: v66 EARNS ITS PLACE UNDER TEACHING only if delivered F1 from rest is
+    // NOT materially below `jaw-vel` (the reset must not cost the reach) AND time at
+    // the 250 Hz clamp FALLS (the reset must buy the bounded excursion it was built
+    // for). The honest expectation from the derivation is reach DOWN and clamp DOWN,
+    // which is a TRADE and not a win -- and saying so before the run is what stops
+    // the clamp column being read as a result on its own.
+    {"jaw-vel", true, 7123.0f, 0.0, 0.0f, 0.0f, 4.5f, 0.0f},
+    {"jaw-gate-vel", true, 7123.0f, 0.0, 0.0f, 0.0f, 4.5f, 1.0f},
+    {"jaw-quiet-vel", false, 7123.0f, 0.0, 0.0f, 0.0f, 4.5f, 0.0f},
+    {"jaw-gate-quiet", false, 7123.0f, 0.0, 0.0f, 0.0f, 4.5f, 1.0f},
 };
 constexpr uint32_t kLPArmCount = sizeof(kLPArms) / sizeof(kLPArms[0]);
 
@@ -10083,6 +10112,19 @@ bool run_leverprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
       const size_t bw = offsetof(aibaby::DnaHeader, vocal) +
                         offsetof(aibaby::DnaVocal, f1_burst_weight);
       std::memcpy(variant.data() + bw, &kLPArms[a].burst_w, sizeof(float));
+    }
+    // DNA v66. The jaw and its phase gate. `jaw_selfosc` comes with `jaw_hz`: v64's
+    // damped spring was refused on tracking at slope 0.01, so a jaw without the
+    // limit cycle is not the mechanism and would quietly re-measure v64.
+    if (kLPArms[a].jaw_hz > 0.0f) {
+      const size_t base = offsetof(aibaby::DnaHeader, vocal);
+      const float js = 0.10f;   // v65's near-sinusoidal setting
+      std::memcpy(variant.data() + base + offsetof(aibaby::DnaVocal, jaw_hz),
+                  &kLPArms[a].jaw_hz, sizeof(float));
+      std::memcpy(variant.data() + base + offsetof(aibaby::DnaVocal, jaw_selfosc),
+                  &js, sizeof(js));
+      std::memcpy(variant.data() + base + offsetof(aibaby::DnaVocal, jaw_gate_f1),
+                  &kLPArms[a].jaw_gate, sizeof(float));
     }
     RTConfig cfg;
     cfg.name = kLPArms[a].name;
@@ -10552,9 +10594,15 @@ bool run_leverprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
           // subtracts the burst centroid. Each against the control sharing its
           // decoder, which for the burst arms is their own untaught partner.
           {7u, 8u, "burst(rate rd)"}, {9u, 10u, "v63 burst-read"},
+          // DNA v66. Each against the untaught control sharing BOTH its decoder and
+          // its gate -- the gate changes the untaught walk too, so `quiet-vel` is not
+          // the right control for a gated arm.
+          {11u, 13u, "jaw+vel"}, {12u, 14u, "v66 jaw-gate"},
       };
       const uint32_t npr = sizeof(prs) / sizeof(prs[0]);
-      double err_avg[8] = {}, floor_pct[8] = {};
+      double err_avg[16] = {}, floor_pct[16] = {};
+      static_assert(sizeof(prs) / sizeof(prs[0]) <= 16,
+                    "err_avg/floor_pct are indexed by pair, not by arm");
       for (uint32_t k = 0; k < npr; ++k) {
         const uint32_t ta = prs[k].taught, qa = prs[k].quiet;
         std::vector<double> d1, d2;
@@ -10677,8 +10725,12 @@ bool run_leverprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
         const double bb[3] = {err_avg[2], err_avg[3], err_avg[4]};
         const bool monotone = (bb[1] <= bb[0] && bb[2] <= bb[1]);
         (void)b0;
+        // SCOPED TO THE BAND ARMS, which is what this comparison is about. It used
+        // to scan every pair past index 1, so the burst arms could already win "best
+        // band" -- and the v66 jaw arms would have made that worse. A sweep's winner
+        // has to come from the sweep.
         double best = err_avg[1]; uint32_t bi = 1;
-        for (uint32_t k = 2; k < npr; ++k)
+        for (uint32_t k = 2; k <= 4 && k < npr; ++k)
           if (err_avg[k] < best) { best = err_avg[k]; bi = k; }
         std::printf("\n      best: %s at raw err %.3f (no-band velocity is %.3f)\n",
                     prs[bi].label, best, b0);
@@ -10699,6 +10751,67 @@ bool run_leverprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
                       "      decoder and the wider bands, which is the shape a real effect has\n"
                       "      here and the shape satisfaction-scoring cannot produce.\n",
                       prs[bi].label);
+      }
+
+      // --- DNA v66 UNDER TEACHING, AND THE EXPECTATION IS A TRADE -----------
+      // Paired per creature, each taught arm against the untaught control that
+      // shares its decoder AND its gate. Two columns, and BOTH have to be read:
+      // the reach (does gating cost the excursion) and the clamp (does gating buy
+      // the bounded one). Pre-registered before the run: reach DOWN and clamp
+      // DOWN, which is a trade and not a win. Saying that in advance is what stops
+      // the clamp column being reported on its own as a success.
+      if (npr >= 9) {
+        std::printf("\n      DNA v66 -- THE JAW CYCLE GATES THE INTEGRATOR, UNDER TEACHING\n");
+        std::vector<double> dg, dj;
+        for (uint32_t r = 0; r < kReps; ++r) {
+          const Cell& cj = cells[r * kLPArmCount + 11u];   // jaw-vel
+          const Cell& cg = cells[r * kLPArmCount + 12u];   // jaw-gate-vel
+          const Cell& qj = cells[r * kLPArmCount + 13u];
+          const Cell& qg = cells[r * kLPArmCount + 14u];
+          if (!cj.ok || !cg.ok || !qj.ok || !qg.ok) continue;
+          if (!cj.row.f1_samp_late || !cg.row.f1_samp_late) continue;
+          if (!qj.row.f1_samp_late || !qg.row.f1_samp_late) continue;
+          dj.push_back(qj.row.f1_hz_late / double(qj.row.f1_samp_late) -
+                       cj.row.f1_hz_late / double(cj.row.f1_samp_late));
+          dg.push_back(qg.row.f1_hz_late / double(qg.row.f1_samp_late) -
+                       cg.row.f1_hz_late / double(cg.row.f1_samp_late));
+        }
+        if (dj.size() >= 3 && dg.size() == dj.size()) {
+          std::vector<double> diff;
+          for (size_t i = 0; i < dj.size(); ++i) diff.push_back(dg[i] - dj[i]);
+          double sj, sg, sd_;
+          const double mj = ctx_mean_se(dj, &sj), mg = ctx_mean_se(dg, &sg);
+          const double md = ctx_mean_se(diff, &sd_);
+          std::printf("        jaw, ungated   F1 from rest %+7.1f +/- %-5.1f  at floor %.1f%%\n",
+                      mj, sj, floor_pct[7]);
+          std::printf("        jaw, GATED     F1 from rest %+7.1f +/- %-5.1f  at floor %.1f%%\n",
+                      mg, sg, floor_pct[8]);
+          std::printf("        gated - ungated             %+7.1f +/- %-5.1f (%+.1f SE), paired\n",
+                      md, sd_, sd_ > 1e-9 ? md / sd_ : 0.0);
+          const bool reach_kept = !(sd_ > 1e-9 && md / sd_ < -3.0);
+          const bool clamp_fell = floor_pct[8] < 0.5 * floor_pct[7];
+          std::printf("        ");
+          if (reach_kept && clamp_fell)
+            std::printf("BOTH HALVES. Gating halves the time on the clamp without\n"
+                        "        costing the reach -- the per-cycle reset bounds the excursion\n"
+                        "        and the lesson still arrives. Read it against the derivation:\n"
+                        "        this is MORE than the arithmetic predicted, so replicate it on a\n"
+                        "        fresh seed family before it is quoted.\n");
+          else if (clamp_fell)
+            printf("THE TRADE, AS DERIVED. Time on the clamp falls and the reach\n"
+                   "        falls with it past 3 SE. The reset bounds the excursion by making\n"
+                   "        it smaller, which is what `gain * deflection * cycle` says it must\n"
+                   "        do -- 34-68 Hz per cycle against the 275.7 an unbounded integrator\n"
+                   "        reaches. NOT a cure for the overshoot: a cheaper overshoot.\n");
+          else if (reach_kept)
+            std::printf("NEITHER. The reach survives and the clamp does not clear, so\n"
+                        "        the gate is not bounding the excursion under teaching at all --\n"
+                        "        which contradicts `syllf1`'s untaught result and is the more\n"
+                        "        interesting of the two failures. Check the duty first.\n");
+          else
+            std::printf("REFUSED ON BOTH. Reach down, clamp not cleared: the gate costs\n"
+                        "        the lesson and buys nothing measurable for it.\n");
+        }
       }
     }
     if (okv[0] && okv[2] && okv[3]) {
@@ -15505,6 +15618,857 @@ bool run_salrew(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) 
                 "  reward can build a frame. Fix the delivery before reading it.\n",
                 em > 0.0 ? dm / em : 0.0, hit_fixed);
   return (rhythm || fixed_rhythm) && !louder;
+}
+
+// ---------------------------------------------------------------------------
+// syllf1 -- DNA v66. DOES THE JAW CYCLE ORGANISE F1?
+//
+// v65 gave this creature a rhythm that TRACKS its own genome field (slope 0.86,
+// against v64's 0.01) and wired it to AMPLITUDE alone. Nothing else read the jaw,
+// so the frame and the content channel had no relation -- which is why a tracking
+// jaw did not make the voice more speech-like, and why the entry recording it says
+// "a frame is only a frame if something can use it".
+//
+// v66 gates the F1 integrator on jaw PHASE: integrate while the jaw opens, anchor
+// toward rest while it closes. One bounded articulatory excursion per cycle.
+//
+// WHAT THIS IS NOT, DERIVED BEFORE THE BUILD AND REPEATED HERE SO NO ARM IS READ
+// AS TESTING IT. It is not a fix for v62's aim. Gain 7123 Hz/s at the taught
+// deflection (centroid 0.4570 against 0.4993 rest) is 306 Hz/s, so one 222 ms
+// cycle buys 34-68 Hz; and staying off the 250 Hz clamp caps the mean per-cycle
+// excursion near 750/(peak/mean deflection) ~ 65 Hz WHATEVER the gain or the cycle
+// length, which is below the position decoder's measured 82.5 Hz. A per-cycle
+// reset does not change the reach/aim exchange rate. [[aibaby-velocity-decoder-v62]]
+//
+// WHAT IT IS FOR. A syllable sequence does not need absolute formants -- "ba-di"
+// needs consecutive cycles to DIFFER, and 65 Hz is the scale of the two-word swing
+// the creature already produces (93 Hz measured against a 95 Hz identity bound).
+//
+// THE PRIMARY IS THE ANCHORING, AND IT IS THE ONE PREDICTION THE ARITHMETIC MAKES.
+// Under free v62 the integrator random-walks (154 Hz sd) and 12/12 creatures reach
+// the 250 Hz clamp, so successive stretches start from wherever the walk left off.
+// Under v66 every cycle starts from near rest. So:
+//
+//   PRE-REGISTERED: `sd of cycle-start F1` must FALL materially in the gated arms
+//   against the UNGATED arm that has the same jaw, AND `per-cycle F1 range` must
+//   not collapse. Either alone is not the result: a dead integrator scores a
+//   perfect anchoring with no gesture in it, which is the shape of every mute-dial
+//   refusal in this project.
+//
+// THE SEQUENCE STATISTIC IS REPORTED WITH ITS NULL AND GATES NOTHING. Whether
+// successive cycles differ is the talking-relevant question, and the honest null
+// for it is E|X-Y| over ALL PAIRS of cycles: for independent per-cycle draws the
+// adjacent-pair mean equals the all-pairs mean exactly. Adjacent BELOW all-pairs
+// means successive cycles are correlated; above means they alternate; equal means
+// the cycles are independent draws, which is a capability and not yet a sequence.
+//
+// WHY NO TEACHING. This measures what the body CAN do, as `selfloop` measured the
+// untrained creature: teaching would confound the anchoring statistic with the
+// lesson's own drift. A silent room, so the only sound is its own voice.
+//
+// WHY BOUNDARIES COME OFF THE AMPLITUDE. With the jaw on, `target_amp = jaw_`, so
+// the produced amplitude IS the jaw position and its upward mean-crossings are the
+// cycle starts -- no new accessor, and the segmentation is identical in every arm
+// including the two that do not gate. The per-cycle RANGE is then partly
+// definitional under gating (F1 integrates on the opening stroke by construction).
+// The CONTRAST BETWEEN CYCLES is not: a constant command would give every cycle
+// the same excursion and a contrast of exactly zero.
+constexpr uint64_t kSYSeedOffset = 991733ull;
+// FRESH SEED FAMILY for the replication, and it is a SECOND REGISTERED EXPERIMENT
+// rather than an edit to the constant above. `halfcenter` replicated by changing its
+// offset in place, which means the original family's numbers cannot be reproduced
+// from the same binary. Both families run from this one, so either can be re-read.
+// Nothing has been measured on these seeds.
+constexpr uint64_t kSYSeedOffset2 = 437021ull;
+constexpr double kSYJawHz = 4.5;        // the envelope literature's syllable rate
+constexpr double kSYSelfosc = 0.10;     // v65's near-sinusoidal limit cycle
+constexpr float kSYVelGain = 7123.0f;   // v62's gain, unchanged, so the numbers
+                                        // stay comparable with leverprobe's
+constexpr uint32_t kSYSettleDiv = 10;   // drop the first tenth: the limit cycle
+                                        // has to grow out of rest first
+
+enum SYArm { kSYPos = 0,   // position decoder + jaw. F1 has no integrator at all,
+                           // so this is the floor for every F1 statistic here
+             kSYVel,       // v62 + jaw on amplitude, NO phase gate. THE MATCHED
+                           // CONTROL: same rhythm, same integrator, no gating
+             kSYThin,      // a THIN gate: threshold -0.95*peak, so it anchors only
+                           // through the fastest part of the closing stroke. The
+                           // bottom rung of a DOSE LADDER, not a control -- see the
+                           // note on the knob check below
+             kSYGate,      // v66 at the sign test: the cycle split at its own
+                           // turning points
+             kSYNarrow,    // v66 with a narrower open window
+             // THE LEAK ATTACK, added after the first full run came back positive on
+             // both pre-registered halves. The dose ladder moved drift and per-cycle
+             // range TOGETHER at a nearly fixed ratio (0.439 / 0.479 / 0.489 across
+             // the three duties), which is the signature of ONE scalar knob on the
+             // integrator's effective time constant -- and [[aibaby-velocity-decoder-v62]]
+             // already argued that "only a LEAK (= a position decoder renamed) or
+             // FEEDBACK bounds an integrator". A duty-cycled anchor IS a leak, so the
+             // frame may be contributing nothing that its duty does not.
+             //
+             // THE DISCRIMINATOR. Anchoring has TWO knobs: how much of the cycle is
+             // spent anchoring (duty) and how hard it anchors per frame
+             // (`f1_return_tau_ms`, 633 ms shipped). If the mechanism is one scalar,
+             // every (drift, range) pair lies on a SINGLE curve however it was
+             // reached. These arms reach a drift near `v66-sign`'s by the OTHER route
+             // -- a thin gate with a much stronger anchor -- so they land off that
+             // curve if the phase structure matters and on it if it does not.
+             //
+             // PRE-REGISTERED: v66 is A LEAK WITH A RHYTHM ATTACHED unless, at
+             // matched cycle-start sd, the phase-locked arm carries MORE per-cycle
+             // range than the strong-anchor arm. Equal range at equal drift means the
+             // jaw cycle contributed nothing but its duty, and the "boundary" reading
+             // has to go.
+             // MISNAMED ON THE FIRST RUN, AND THE MISNAMING WAS THE WHOLE ERROR.
+             // These vary `f1_return_tau_ms`, which fires only while the gate is
+             // SHUT -- so they anchor harder inside the SAME phase-locked structure
+             // and are not leak controls at all. The bracketing guard refused the
+             // comparison, correctly, and the reason it gave was not the real one.
+             //
+             // They are kept because they found something: a THIN gate with a HARD
+             // anchor dominates the sign test on every statistic here -- lower drift,
+             // LARGER per-cycle excursion, and successive cycles closer to
+             // independent. A long opening phase with a quick reset, which is what
+             // jaw kinematics look like, rather than a symmetric half-duty split.
+             kSYThinFast,   // thin gate, 150 ms anchor
+             kSYThinFast2,  // thin gate, 60 ms anchor
+             // DNA v67 -- THE ACTUAL LEAK CONTROL, applied EVERY frame including
+             // while integrating, so it is not phase-locked to anything. Three taus,
+             // to bracket the phase-locked arms' drift rather than hope one lands on
+             // it: sd ~ gain * deflection_sd * tau puts 60/120/200 ms near 16/32/54 Hz
+             // against `thin+tau60`'s measured 29.0.
+             kSYLeak60, kSYLeak120, kSYLeak200,
+             // THE CONTROL THE WINNING ARM NEEDS, and its absence was a real hole.
+             // `thin+tau60` combines the v66 gate with a 60 ms anchor instead of the
+             // shipped 633, so the short anchor alone could be doing the work: under
+             // v62 the anchor already fires whenever the creature is UNVOICED, and
+             // nothing here had measured how much of the time that is. This arm is
+             // tau 60 with NO gate. If it lands near `v62-nogate`'s unbounded drift
+             // the gate is what lets the anchor act at all; if it lands near
+             // `thin+tau60` the gate is decoration and the tau did everything.
+             kSYNoGateFast,
+             // AND THE CURVE IT TURNED INTO. `nogate+tau60` came back with the LARGEST
+             // per-cycle range in the table -- 60.1 Hz at drift 55.1, above even the
+             // unbounded arm -- which reverses the leak reading. A continuous leak is
+             // not the right control after all: what the gated arm and this one share
+             // is an INTERMITTENT hard anchor, firing in brief windows rather than
+             // every frame. The gate supplies those windows from the jaw; this arm
+             // gets them from the creature's own unvoiced stretches.
+             //
+             // So the comparison that isolates the JAW is gated-intermittent against
+             // UNGATED-intermittent at matched drift, and these two shorter anchors
+             // bracket `thin+tau60`'s 29.0 Hz from above and below.
+             //
+             // PRE-REGISTERED, AND IT REPLACES THE LEAK TEST AS THE DECIDING ONE: the
+             // jaw contributes something only if the GATED arm carries more per-cycle
+             // range than this ungated curve at matched drift. Equal or less means the
+             // intermittency was the whole effect and the jaw's phase is irrelevant.
+             kSYNoGate30, kSYNoGate15,
+             kSYArmCount };
+
+const char* const kSYNames[kSYArmCount] = {"position", "v62-nogate", "v66-thin",
+                                           "v66-sign", "v66-narrow",
+                                           "thin+tau150", "thin+tau60",
+                                           "leak60", "leak120", "leak200",
+                                           "nogate+tau60", "nogate+tau30",
+                                           "nogate+tau15"};
+
+inline float sy_vel_gain(SYArm a) { return a == kSYPos ? 0.0f : kSYVelGain; }
+// The anchor's time constant. 0 means "leave the genome's own value" (633 ms), so
+// every arm that predates the leak attack is untouched.
+inline float sy_ret_tau(SYArm a) {
+  switch (a) {
+    case kSYThinFast: return 150.0f;
+    case kSYThinFast2: case kSYNoGateFast: return 60.0f;
+    case kSYNoGate30: return 30.0f;
+    case kSYNoGate15: return 15.0f;
+    default: return 0.0f;
+  }
+}
+// DNA v67. The always-on leak, on the control arms only.
+inline float sy_leak_tau(SYArm a) {
+  switch (a) {
+    case kSYLeak60: return 60.0f;
+    case kSYLeak120: return 120.0f;
+    case kSYLeak200: return 200.0f;
+    default: return 0.0f;
+  }
+}
+inline float sy_gate(SYArm a) {
+  switch (a) {
+    case kSYThin: case kSYThinFast: case kSYThinFast2:
+      return 0.05f;                // threshold -0.95*peak: anchors ~10% of a cycle
+    case kSYGate: return 1.00f;    // threshold 0: the half-cycle split
+    case kSYNarrow: return 1.50f;  // threshold +0.5*peak: the middle of the stroke
+    default: return 0.0f;
+  }
+}
+
+struct SYRow {
+  bool ok = false;
+  double start_sd = 0.0;      // THE PRIMARY. sd of cycle-start F1, Hz
+  double range = 0.0;         // mean per-cycle F1 range, Hz
+  double adj = 0.0;           // mean |peak_{k+1} - peak_k|, Hz
+  double allpairs = 0.0;      // E|X-Y| over all cycle pairs -- the independence null
+  double f1_mean = 0.0, f1_sd = 0.0;
+  double clamp_frac = 0.0;    // fraction of samples within 0.5 Hz of the 250 floor
+  double amp_mean = 0.0, mod_depth = 0.0;   // the mute-dial check
+  double rising = 0.0;        // fraction of samples with amplitude rising ~ 0.5 if
+                              // the jaw really oscillates. VACUITY
+  double duty = 0.0;          // fraction of samples where the GATE was open,
+                              // recomputed host-side from the amplitude series --
+                              // must be strictly inside (0, 1) or the arm is not
+                              // the mechanism it is labelled as
+  uint32_t cycles = 0;
+};
+
+SYRow run_syllf1_arm(const std::vector<uint8_t>& blob, uint64_t ticks, SYArm arm) {
+  SYRow row;
+  Session s;
+  std::string error;
+  std::vector<uint8_t> local = blob;
+  {
+    const float jh = float(kSYJawHz), js = float(kSYSelfosc);
+    const float vg = sy_vel_gain(arm), gt = sy_gate(arm), rt = sy_ret_tau(arm);
+    const float lt = sy_leak_tau(arm);
+    const size_t base = offsetof(aibaby::DnaHeader, vocal);
+    if (lt > 0.0f)
+      std::memcpy(local.data() + base + offsetof(aibaby::DnaVocal, f1_leak_tau_ms),
+                  &lt, sizeof(lt));
+    if (rt > 0.0f)
+      std::memcpy(local.data() + base + offsetof(aibaby::DnaVocal, f1_return_tau_ms),
+                  &rt, sizeof(rt));
+    std::memcpy(local.data() + base + offsetof(aibaby::DnaVocal, jaw_hz), &jh, sizeof(jh));
+    std::memcpy(local.data() + base + offsetof(aibaby::DnaVocal, jaw_selfosc), &js, sizeof(js));
+    std::memcpy(local.data() + base + offsetof(aibaby::DnaVocal, f1_velocity_gain), &vg, sizeof(vg));
+    std::memcpy(local.data() + base + offsetof(aibaby::DnaVocal, jaw_gate_f1), &gt, sizeof(gt));
+  }
+  if (!s.init(local, error)) return row;
+  const aibaby::DnaAudio& acfg = s.dna.header().audio;
+  Ear ear;
+  if (!ear.configure(acfg, error)) return row;
+  const uint32_t spt = acfg.sample_rate / 1000;
+  const double f1_floor = double(s.dna.header().vocal.f1_min);
+
+  // SAMPLED AT THE DECODER'S OWN RATE, READ FROM THE KERNEL RATHER THAN GUESSED.
+  // The first version sampled every 4th tick against a 10-tick update, so 60% of
+  // samples were exact repeats of the one before -- and the oscillation guard,
+  // which counts strictly-rising samples, read a clean limit cycle as "rising 21%
+  // of the time" and refused all five arms. The guard was right and the sampling
+  // was wrong. At 100 Hz there are ~22 samples per 4.5 Hz cycle.
+  const uint64_t kStride = s.brain.vocal_interval() ? s.brain.vocal_interval() : 1;
+  std::vector<double> f1s, amps;
+  const uint64_t settle = ticks / kSYSettleDiv;
+  // The envelope band, same two smoothers and same taus as `salrew`, so the
+  // modulation depth reported here is the number that experiment reports.
+  double env_fast = 0.0, env_slow = 0.0;
+  double band_sum = 0.0, band_sq = 0.0, amp_sum = 0.0;
+  uint64_t band_n = 0;
+  uint64_t clamp_n = 0, samp_n = 0;
+
+  for (uint64_t t = 0; t < ticks; ++t) {
+    ear.tick(s.brain, nullptr, spt);       // silent room: only its own voice
+    s.brain.step();
+    const aibaby::VocalParams& v = s.brain.voice();
+    const double env = (v.voicing > 0.5f ? 1.0 : 0.0) * double(v.amplitude);
+    env_fast += (1.0 / kSRTauFast) * (env - env_fast);
+    env_slow += (1.0 / kSRTauSlow) * (env - env_slow);
+    if (t < settle) continue;
+    const double band = env_fast - env_slow;
+    band_sum += band;
+    band_sq += band * band;
+    amp_sum += env;
+    ++band_n;
+    if (double(v.f1) <= f1_floor + 0.5) ++clamp_n;
+    ++samp_n;
+    if ((t % kStride) == 0) {
+      f1s.push_back(double(v.f1));
+      amps.push_back(double(v.amplitude));
+    }
+  }
+  if (band_n == 0 || f1s.size() < 64) return row;
+  row.amp_mean = amp_sum / double(band_n);
+  const double bm = band_sum / double(band_n);
+  const double bv = band_sq / double(band_n) - bm * bm;
+  row.mod_depth = row.amp_mean > 1e-9 ? std::sqrt(bv > 0.0 ? bv : 0.0) / row.amp_mean : 0.0;
+  row.clamp_frac = double(clamp_n) / double(samp_n);
+
+  double fs = 0.0, fq = 0.0;
+  for (double x : f1s) { fs += x; fq += x * x; }
+  row.f1_mean = fs / double(f1s.size());
+  const double fv = fq / double(f1s.size()) - row.f1_mean * row.f1_mean;
+  row.f1_sd = std::sqrt(fv > 0.0 ? fv : 0.0);
+
+  // CYCLE BOUNDARIES: upward crossings of the amplitude series' own mean. A limit
+  // cycle at jaw_selfosc 0.10 is near sinusoidal, so a mean crossing is a robust
+  // boundary and needs no peak-picking heuristic with a guessed separation in it.
+  double am = 0.0;
+  for (double x : amps) am += x;
+  am /= double(amps.size());
+  uint64_t rising_n = 0;
+  for (size_t i = 1; i < amps.size(); ++i) if (amps[i] > amps[i - 1]) ++rising_n;
+  row.rising = double(rising_n) / double(amps.size() - 1);
+  // THE GATE'S DUTY, recomputed from the observable. With the jaw on, amplitude IS
+  // jaw position, so the decoder's own condition `jaw_v_ > (g - 1) * w0 * limit` can
+  // be evaluated here on the sampled series -- the series is sampled at exactly the
+  // decoder's update rate, so this is the same difference quotient the kernel used.
+  // Reported for every arm, including the two that do not gate, where it is the
+  // fraction of the cycle that WOULD have been open at that setting.
+  {
+    const double lim = double(s.dna.header().vocal.jaw_limit) > 0.0
+                           ? double(s.dna.header().vocal.jaw_limit) : 0.25;
+    const double peak = 6.283185307179586 * kSYJawHz * lim;
+    const double g = double(sy_gate(arm));
+    const double thr = (g > 0.0 ? g - 1.0 : 0.0) * peak;
+    const double dt_s = double(kStride) * 0.001;
+    uint64_t open_n = 0;
+    for (size_t i = 1; i < amps.size(); ++i)
+      if ((amps[i] - amps[i - 1]) / dt_s > thr) ++open_n;
+    row.duty = double(open_n) / double(amps.size() - 1);
+  }
+  std::vector<size_t> cuts;
+  for (size_t i = 1; i < amps.size(); ++i)
+    if (amps[i - 1] <= am && amps[i] > am) cuts.push_back(i);
+  if (cuts.size() < 8) return row;   // no oscillation to segment: refuse the row
+
+  std::vector<double> start, peak, rng;
+  const double rest = 0.5 * (double(s.dna.header().vocal.f1_min) +
+                             double(s.dna.header().vocal.f1_max));
+  for (size_t c = 0; c + 1 < cuts.size(); ++c) {
+    const size_t a = cuts[c], b = cuts[c + 1];
+    if (b <= a + 2) continue;
+    double lo = f1s[a], hi = f1s[a], ext = f1s[a];
+    for (size_t i = a; i < b; ++i) {
+      if (f1s[i] < lo) lo = f1s[i];
+      if (f1s[i] > hi) hi = f1s[i];
+      if (std::fabs(f1s[i] - rest) > std::fabs(ext - rest)) ext = f1s[i];
+    }
+    start.push_back(f1s[a]);
+    peak.push_back(ext);
+    rng.push_back(hi - lo);
+  }
+  if (start.size() < 8) return row;
+  row.cycles = uint32_t(start.size());
+  double ss = 0.0, sq = 0.0;
+  for (double x : start) { ss += x; sq += x * x; }
+  const double sm = ss / double(start.size());
+  const double sv = sq / double(start.size()) - sm * sm;
+  row.start_sd = std::sqrt(sv > 0.0 ? sv : 0.0);
+  double rs = 0.0;
+  for (double x : rng) rs += x;
+  row.range = rs / double(rng.size());
+  double as_ = 0.0;
+  for (size_t i = 0; i + 1 < peak.size(); ++i) as_ += std::fabs(peak[i + 1] - peak[i]);
+  row.adj = as_ / double(peak.size() - 1);
+  // E|X-Y| over ALL pairs. For independent per-cycle draws this equals the
+  // adjacent-pair mean exactly, which is why it is the null and not a second
+  // statistic. O(n^2) on a few thousand cycles is nothing next to the run.
+  double ps = 0.0;
+  uint64_t pn = 0;
+  for (size_t i = 0; i < peak.size(); ++i)
+    for (size_t j = i + 1; j < peak.size(); ++j) { ps += std::fabs(peak[i] - peak[j]); ++pn; }
+  row.allpairs = pn ? ps / double(pn) : 0.0;
+  row.ok = true;
+  return row;
+}
+
+bool run_syllf1_family(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose,
+                       uint64_t seed_offset) {
+  (void)verbose;
+  aibaby::Dna dna0;
+  if (dna0.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) {
+    std::printf("  setup failed: the genome does not load\n");
+    return false;
+  }
+  constexpr uint32_t kReps = 12;
+  instrument(seed_offset == kSYSeedOffset ? "syllf1" : "syllf1b",
+             dna0.header().seed ^ 0x66A1u ^ uint32_t(seed_offset), ticks, "ticks");
+  std::printf("  the build      DNA v66 gates the v62 F1 integrator on JAW PHASE --\n"
+              "                 integrate while the jaw opens, anchor toward rest\n"
+              "                 while it closes. One excursion per cycle.\n"
+              "  NOT an aim fix Derived before building: one %.0f ms cycle buys 34-68\n"
+              "                 Hz at the taught deflection, and the clamp caps the\n"
+              "                 mean per-cycle excursion near 65 Hz whatever the gain.\n"
+              "                 Below the position decoder's measured 82.5.\n"
+              "  the primary    sd of CYCLE-START F1 must FALL against `v62-nogate`\n"
+              "                 (same jaw, no gate) AND per-cycle RANGE must not\n"
+              "                 collapse. Either alone is a mute dial.\n"
+              "  the null       for the sequence statistic: E|X-Y| over ALL cycle\n"
+              "                 pairs, which equals the adjacent mean exactly for\n"
+              "                 independent draws. Reported, gates nothing.\n"
+              "  untaught       silent room, no praise: what the BODY can do, as\n"
+              "                 `selfloop` measured the untrained creature.\n",
+              1000.0 / kSYJawHz);
+
+  struct Cell { bool ok = false; SYRow row[kSYArmCount]; };
+  const uint32_t njobs = kReps * kSYArmCount;
+  const std::vector<Cell> cells_raw = parallel_reps<Cell>(njobs, [&](uint32_t i) {
+    const uint32_t r = i / kSYArmCount, a = i % kSYArmCount;
+    Cell c;
+    std::vector<uint8_t> variant = blob;
+    const uint64_t seed = dna0.header().seed + seed_offset + uint64_t(r) * 7919ull;
+    std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+    c.row[a] = run_syllf1_arm(variant, ticks, SYArm(a));
+    c.ok = c.row[a].ok;
+    parallel_note("  [%u/%u] seed %u  %-11s cycles %u  start sd %6.1f Hz  range %6.1f Hz\n",
+                  i + 1, njobs, r, kSYNames[a], c.row[a].cycles,
+                  c.row[a].start_sd, c.row[a].range);
+    return c;
+  });
+  std::vector<std::vector<SYRow>> rows(kSYArmCount, std::vector<SYRow>());
+  for (uint32_t i = 0; i < njobs; ++i)
+    if (cells_raw[i].ok) rows[i % kSYArmCount].push_back(cells_raw[i].row[i % kSYArmCount]);
+
+  std::printf("\n  arm           cycles   start sd Hz     range Hz        adj |dpeak|     "
+              "all-pairs      at floor  amp     mod     gate duty  F1 sd\n");
+  std::vector<std::vector<double>> guard(kSYArmCount);
+  std::vector<double> m_start(kSYArmCount, 0.0), s_start(kSYArmCount, 0.0);
+  std::vector<double> m_range(kSYArmCount, 0.0), s_range(kSYArmCount, 0.0);
+  for (uint32_t a = 0; a < kSYArmCount; ++a) {
+    if (rows[a].size() < 3) { std::printf("    %-13s too few creatures\n", kSYNames[a]); continue; }
+    std::vector<double> st, rg, ad, ap, cl, am, md, ri, du, fsd;
+    for (const SYRow& r : rows[a]) {
+      st.push_back(r.start_sd); rg.push_back(r.range); ad.push_back(r.adj);
+      ap.push_back(r.allpairs); cl.push_back(r.clamp_frac); am.push_back(r.amp_mean);
+      md.push_back(r.mod_depth); ri.push_back(r.rising); du.push_back(r.duty);
+      fsd.push_back(r.f1_sd);
+    }
+    double se_st, se_rg, se_ad, se_ap, se_cl, se_am, se_md, se_ri, se_du;
+    const double mst = ctx_mean_se(st, &se_st), mrg = ctx_mean_se(rg, &se_rg);
+    const double mad = ctx_mean_se(ad, &se_ad), map_ = ctx_mean_se(ap, &se_ap);
+    const double mcl = ctx_mean_se(cl, &se_cl), mam = ctx_mean_se(am, &se_am);
+    const double mmd = ctx_mean_se(md, &se_md), mri = ctx_mean_se(ri, &se_ri);
+    const double mdu = ctx_mean_se(du, &se_du);
+    double se_fs;
+    const double mfs = ctx_mean_se(fsd, &se_fs);
+    (void)se_fs;
+    (void)se_cl; (void)se_am; (void)se_md; (void)se_ri; (void)se_du;
+    m_start[a] = mst; s_start[a] = se_st;
+    m_range[a] = mrg; s_range[a] = se_rg;
+    uint32_t cyc = 0;
+    for (const SYRow& r : rows[a]) cyc += r.cycles;
+    std::printf("    %-11s %6u  %6.1f +/- %4.1f  %6.1f +/- %4.1f  %6.1f +/- %4.1f  "
+                "%6.1f +/- %4.1f  %5.1f%%  %.4f  %.4f  %5.1f%%  %6.1f\n",
+                kSYNames[a], cyc / uint32_t(rows[a].size()), mst, se_st, mrg, se_rg,
+                mad, se_ad, map_, se_ap, 100.0 * mcl, mam, mmd, 100.0 * mdu, mfs);
+    guard[a] = {mst, mrg, mad, map_, mcl, mam, mmd, mri, mdu, mfs};
+  }
+
+  // VACUITY, IN THE ORDER THAT MATTERS.
+  bool ok = arms_are_distinct(guard, kSYNames);
+  // 1. The jaw must actually oscillate, or there is nothing to cut on and every
+  //    per-cycle number is a segmentation artefact.
+  for (uint32_t a = 0; a < kSYArmCount; ++a) {
+    if (guard[a].size() != 10) continue;
+    if (guard[a][7] < 0.25 || guard[a][7] > 0.75) {
+      std::printf("  NO OSCILLATION -- `%s` has amplitude rising %.1f%% of samples;\n"
+                  "  a limit cycle is near 50%%. The segmentation is not cutting cycles\n"
+                  "  and no per-cycle statistic from this arm means anything.\n",
+                  kSYNames[a], 100.0 * guard[a][7]);
+      ok = false;
+    }
+  }
+  // 2. THE DUTY MUST BE A DUTY -- strictly inside (0, 1) for every gated arm. A
+  //    gate that is always open is `v62-nogate` with extra code; one that is always
+  //    shut is a dead integrator, and both would produce a readable-looking table.
+  // The three rungs at the SHIPPED anchor. The leak-attack arms change the anchor
+  // instead of the duty, so they are not rungs of this ladder and including them
+  // would make a two-knob scan read as a one-knob dose-response.
+  const SYArm ladder[3] = {kSYThin, kSYGate, kSYNarrow};
+  for (SYArm a : ladder) {
+    if (guard[a].size() != 10) continue;
+    if (guard[a][8] < 0.02 || guard[a][8] > 0.98) {
+      std::printf("  NOT A GATE -- `%s` has gate duty %.1f%%. Always open is the ungated\n"
+                  "  arm with extra code; always shut is a dead integrator. Either way the\n"
+                  "  arm is not the mechanism its name claims.\n",
+                  kSYNames[a], 100.0 * guard[a][8]);
+      ok = false;
+    }
+  }
+  // 3. THE DOSE LADDER MUST ORDER, and this REPLACES a check that was mis-specified.
+  //    I first wrote `v66-thin` as a reduce-to-control: threshold -0.95*peak looked
+  //    like "open essentially always". It is not. A limit cycle reaches its peak
+  //    speed EVERY cycle, so |v| > 0.95*peak for roughly a tenth of it -- and that
+  //    tenth sits exactly on the fastest closing stroke, so the arm anchors once per
+  //    cycle and bounds the walk substantially. The check refused the run for
+  //    disagreeing with the ungated arm by 39%, which was the arm behaving correctly
+  //    and my arithmetic being wrong.
+  //
+  //    What the three settings ARE is a dose ladder in anchoring time, and the
+  //    mechanism makes a monotone prediction: more time anchoring, less accumulated
+  //    drift. That is a stronger structural check than a reduce-check, because it
+  //    can fail. NOTE THE DIFFERENCE from `region-targets`, where monotone was the
+  //    REFUSAL: there monotone meant the metric was scoring satisfaction; here it is
+  //    the mechanism's own dose-response, and its ABSENCE is what refuses.
+  if (guard[kSYVel].size() == 10) {
+    std::printf("\n  DOSE LADDER   anchoring time vs accumulated drift\n");
+    double prev = guard[kSYVel][0];
+    bool mono = true;
+    std::printf("    %-11s duty %5.1f%%   start sd %6.1f Hz\n", kSYNames[kSYVel],
+                100.0 * guard[kSYVel][8], guard[kSYVel][0]);
+    for (SYArm a : ladder) {
+      if (guard[a].size() != 10) continue;
+      std::printf("    %-11s duty %5.1f%%   start sd %6.1f Hz\n", kSYNames[a],
+                  100.0 * guard[a][8], guard[a][0]);
+      if (guard[a][0] > prev) mono = false;
+      prev = guard[a][0];
+    }
+    if (!mono) {
+      std::printf("  THE LADDER DOES NOT ORDER -- start sd does not fall as the gate\n"
+                  "  spends more of the cycle anchoring. The gate is not bounding the\n"
+                  "  integrator by the route claimed, so read nothing else here.\n");
+      ok = false;
+    }
+  }
+  if (!ok) {
+    std::printf("\n  syllf1 REFUSES ITSELF -- see the guard above.\n");
+    return false;
+  }
+
+  // THE PRE-REGISTERED READ. Paired per creature against `v62-nogate`, because the
+  // arms share seeds and an unpaired SE throws away the pairing.
+  std::printf("\n  --- the reading: PAIRED against `v62-nogate`, per creature ---\n");
+  const size_t n = rows[kSYVel].size();
+  bool anchored = false, articulates = false;
+  // Set by the two controls below, so the verdict cannot claim more than they allow.
+  bool jaw_phase_pays = false;
+  double anchor_share = -1.0;   // fraction of the bounding the short anchor alone buys
+  for (uint32_t a = 0; a < kSYArmCount; ++a) {
+    if (a == kSYVel || rows[a].size() != n) continue;
+    std::vector<double> dst, drg;
+    for (size_t i = 0; i < n; ++i) {
+      dst.push_back(rows[a][i].start_sd - rows[kSYVel][i].start_sd);
+      drg.push_back(rows[a][i].range - rows[kSYVel][i].range);
+    }
+    double se_d, se_r;
+    const double md = ctx_mean_se(dst, &se_d), mr = ctx_mean_se(drg, &se_r);
+    std::printf("    %-11s  start sd %+7.1f +/- %4.1f Hz (%+.1f SE)   range %+7.1f +/- %4.1f Hz (%+.1f SE)\n",
+                kSYNames[a], md, se_d, se_d > 1e-9 ? md / se_d : 0.0,
+                mr, se_r, se_r > 1e-9 ? mr / se_r : 0.0);
+    if (a == kSYGate) anchored = se_d > 1e-9 && md / se_d < -3.0;
+  }
+
+  // THE SECOND HALF, AND THE REFERENCE FOR IT CHANGED WITH SIGHT OF A VALID SMOKE.
+  // I first required per-cycle RANGE not to fall against `v62-nogate`. That is the
+  // wrong reference and it penalises v66 for the thing it fixes: the ungated arm's
+  // within-window range is inflated by an unbounded 154 Hz walk, and a walk is not a
+  // gesture. The no-integrator floor is `position` -- the same jaw, the same
+  // segmentation, F1 read straight off the centroid. v66 articulates only if its
+  // per-cycle range EXCEEDS that floor.
+  //
+  // Both halves are now required, so the pair is STRICTER than either reference
+  // alone and the change cannot have loosened the gate: anchor below `v62-nogate`
+  // AND articulate above `position`.
+  std::printf("\n  --- the second half: per-cycle range against the NO-INTEGRATOR floor ---\n");
+  if (rows[kSYPos].size() == n) {
+    for (uint32_t a = 0; a < kSYArmCount; ++a) {
+      if (a == kSYPos || rows[a].size() != n) continue;
+      std::vector<double> d;
+      for (size_t i = 0; i < n; ++i) d.push_back(rows[a][i].range - rows[kSYPos][i].range);
+      double se;
+      const double m = ctx_mean_se(d, &se);
+      std::printf("    %-11s  range over `position` %+7.1f +/- %4.1f Hz (%+.1f SE)\n",
+                  kSYNames[a], m, se, se > 1e-9 ? m / se : 0.0);
+      if (a == kSYGate) articulates = se > 1e-9 && m / se > 3.0;
+    }
+  }
+
+  // --- THE LEAK ATTACK, WITH A CONTROL THAT IS ACTUALLY A LEAK ---------------
+  // The first version of this compared against arms that varied
+  // `f1_return_tau_ms`, which fires only while the gate is SHUT -- so they anchored
+  // harder inside the same phase-locked structure and tested nothing about phase.
+  // DNA v67's leak runs EVERY frame, integration included, and its steady state is
+  // gain*tau*(centroid - 0.5): a position decoder with a renamed constant.
+  //
+  // Scored against the BEST phase-locked arm rather than a nominated one, because
+  // `thin+tau60` dominates `v66-sign` on drift AND range and comparing the loser
+  // would flatter the mechanism. The leak arms bracket its drift, so the matched
+  // comparison is an interpolation between measured points.
+  //
+  // PRE-REGISTERED: v66 is A SCALAR BOUND WITH A RHYTHM ATTACHED unless, at matched
+  // cycle-start drift, the phase-locked arm carries materially MORE per-cycle range
+  // than the interpolated leak.
+  std::printf("\n  --- the leak attack: phase-locked reset vs an ALWAYS-ON leak ---\n");
+  {
+    const SYArm locked[3] = {kSYGate, kSYThinFast, kSYThinFast2};
+    const SYArm leak[3] = {kSYLeak60, kSYLeak120, kSYLeak200};
+    bool have = true;
+    for (SYArm a : locked) have = have && guard[a].size() == 10;
+    for (SYArm a : leak) have = have && guard[a].size() == 10;
+    if (!have) {
+      std::printf("    arms missing -- the attack is NOT answered\n");
+    } else {
+      // The best phase-locked arm: most per-cycle range per unit of drift. A single
+      // ratio, so it cannot be chosen after seeing the leak arms.
+      SYArm best = locked[0];
+      double bestr = -1.0;
+      for (SYArm a : locked) {
+        const double r = guard[a][0] > 1e-9 ? guard[a][1] / guard[a][0] : 0.0;
+        if (r > bestr) { bestr = r; best = a; }
+      }
+      for (SYArm a : locked)
+        std::printf("    %-12s drift %6.1f   range %6.1f   range/drift %.3f%s\n",
+                    kSYNames[a], guard[a][0], guard[a][1],
+                    guard[a][0] > 1e-9 ? guard[a][1] / guard[a][0] : 0.0,
+                    a == best ? "   <- best phase-locked" : "");
+      for (SYArm a : leak)
+        std::printf("    %-12s drift %6.1f   range %6.1f   range/drift %.3f   (v67 leak)\n",
+                    kSYNames[a], guard[a][0], guard[a][1],
+                    guard[a][0] > 1e-9 ? guard[a][1] / guard[a][0] : 0.0);
+      const double xb = guard[best][0], yb = guard[best][1];
+      // Interpolate the leak curve at the phase-locked arm's drift. The three leak
+      // taus are monotone in drift, so the bracketing pair is whichever two straddle.
+      int i0 = -1;
+      for (int k = 0; k + 1 < 3; ++k) {
+        const double a0 = guard[leak[k]][0], a1 = guard[leak[k + 1]][0];
+        if ((xb >= a0 && xb <= a1) || (xb <= a0 && xb >= a1)) { i0 = k; break; }
+      }
+      if (i0 < 0) {
+        double lo = guard[leak[0]][0], hi = lo;
+        for (SYArm a : leak) { if (guard[a][0] < lo) lo = guard[a][0];
+                               if (guard[a][0] > hi) hi = guard[a][0]; }
+        std::printf("    NOT BRACKETED -- `%s` drift %.1f Hz lies outside the leak arms'\n"
+                    "    [%.1f, %.1f], so a matched comparison would be an extrapolation.\n"
+                    "    The attack is NOT answered and the leak taus need re-choosing.\n",
+                    kSYNames[best], xb, lo, hi);
+      } else {
+        const double x0 = guard[leak[i0]][0], y0 = guard[leak[i0]][1];
+        const double x1 = guard[leak[i0 + 1]][0], y1 = guard[leak[i0 + 1]][1];
+        const double w = std::fabs(x1 - x0) > 1e-9 ? (xb - x0) / (x1 - x0) : 0.0;
+        const double y_leak = y0 + w * (y1 - y0);
+        std::printf("    interpolated leak range at drift %.1f Hz: %6.1f   (phase-locked %6.1f)\n",
+                    xb, y_leak, yb);
+        const double gainpct = y_leak > 1e-9 ? 100.0 * (yb - y_leak) / y_leak : 0.0;
+        std::printf("    the phase-locked arm carries %+.1f%% of the leak's range at matched drift\n",
+                    gainpct);
+        // ALIGNMENT OR JUST MORE MOVEMENT? Per-cycle range is measured in windows
+        // the JAW defines, so an excursion that is not cycle-aligned is split across
+        // two windows and counts less in each. That is the claim rather than a bias
+        // -- but it only means ALIGNMENT if the total F1 movement is the same. If the
+        // phase-locked arm's overall F1 sd is also higher, it is simply moving more
+        // and alignment is not established.
+        {
+          const double fsb = guard[best][9];
+          const double f0 = guard[leak[i0]][9], f1_ = guard[leak[i0 + 1]][9];
+          const double f_leak = f0 + w * (f1_ - f0);
+          const double fpct = f_leak > 1e-9 ? 100.0 * (fsb - f_leak) / f_leak : 0.0;
+          std::printf("    ALIGNMENT CHECK  overall F1 sd %.1f phase-locked vs %.1f interpolated"
+                      " leak (%+.1f%%)\n", fsb, f_leak, fpct);
+          if (fpct > 0.5 * gainpct)
+            std::printf("    NOT ALIGNMENT -- the phase-locked arm's TOTAL F1 movement is up by\n"
+                        "    a comparable amount, so it is moving more rather than moving in\n"
+                        "    time with the jaw. The per-cycle advantage is not evidence that the\n"
+                        "    cycle organises anything.\n");
+          else
+            std::printf("    ALIGNMENT -- total F1 movement is comparable while the per-cycle\n"
+                        "    excursion is larger, so the gain is in WHEN the movement happens.\n");
+        }
+        if (gainpct < 10.0)
+          std::printf("    A SCALAR BOUND WITH A RHYTHM ATTACHED. At matched drift the cycle-locked\n"
+                      "    gate carries no more articulation than an always-on leak -- which is a\n"
+                      "    position decoder with a renamed time constant. The bounding is REAL and\n"
+                      "    it is not a frame: `the jaw cycle is a boundary for F1` has to go.\n");
+        else
+          std::printf("    THE PHASE STRUCTURE PAYS. At matched drift the cycle-locked gate carries\n"
+                      "    more per-cycle range than a leak reaching the same drift, and a renamed\n"
+                      "    position decoder cannot do that. Replicate on a fresh seed family before\n"
+                      "    it is quoted -- one draw, and this project's standard is replication.\n");
+      }
+    }
+  }
+
+  // --- THE DECIDING TEST: DOES THE JAW'S PHASE ADD ANYTHING? -----------------
+  // This replaces the leak test as the one the verdict turns on, and the reason is a
+  // measurement rather than a preference. `nogate+tau60` came back with the LARGEST
+  // per-cycle range in the table, above even the unbounded arm, so a continuous leak
+  // is not the relevant comparison: what the gated arm and that one share is an
+  // INTERMITTENT hard anchor, and the gate's only distinctive contribution is that
+  // its windows come from the JAW rather than from the creature's own silences.
+  //
+  // So: gated-intermittent against UNGATED-intermittent, at matched drift, with the
+  // ungated curve bracketing the gated arm rather than extrapolated to it.
+  std::printf("\n  --- the deciding test: gated vs UNGATED intermittent anchoring ---\n");
+  {
+    // TWO CURVES, COMPARED WHERE THEY OVERLAP, and the first version could only
+    // interpolate one of them. It asked for the UNGATED curve to bracket the gated
+    // arm's drift and refused when it did not -- but the ungated curve SATURATES:
+    // cutting its anchor from 60 ms to 15 moves drift only 55.1 -> 46.5 and leaves
+    // range flat, because that mechanism anchors only while the creature is UNVOICED
+    // and is limited by how OFTEN that happens rather than by how hard it pulls.
+    //
+    // The gated curve, swept on the same anchor knob, spans 29 to 88 Hz of drift and
+    // does contain the ungated points. So the comparison is made at the MIDPOINT OF
+    // THE OVERLAP, interpolating whichever curve needs it -- symmetric, and it does
+    // not depend on which mechanism happens to bracket the other.
+    const SYArm ung[3] = {kSYNoGateFast, kSYNoGate30, kSYNoGate15};
+    const SYArm gat[3] = {kSYThinFast2, kSYThinFast, kSYThin};   // tau 60 / 150 / 633
+    bool have = true;
+    for (SYArm a : ung) have = have && guard[a].size() == 10;
+    for (SYArm a : gat) have = have && guard[a].size() == 10;
+    if (!have) {
+      std::printf("    arms missing -- the deciding test is NOT answered\n");
+    } else {
+      for (SYArm a : ung)
+        std::printf("    %-13s drift %6.1f   range %6.1f   (UNGATED: anchors in its own silences)\n",
+                    kSYNames[a], guard[a][0], guard[a][1]);
+      for (SYArm a : gat)
+        std::printf("    %-13s drift %6.1f   range %6.1f   (JAW-GATED, same anchor sweep)\n",
+                    kSYNames[a], guard[a][0], guard[a][1]);
+      // Each curve's drift span, then the overlap.
+      double ulo = 1e9, uhi = -1e9, glo = 1e9, ghi = -1e9;
+      for (SYArm a : ung) { if (guard[a][0] < ulo) ulo = guard[a][0];
+                            if (guard[a][0] > uhi) uhi = guard[a][0]; }
+      for (SYArm a : gat) { if (guard[a][0] < glo) glo = guard[a][0];
+                            if (guard[a][0] > ghi) ghi = guard[a][0]; }
+      const double olo = ulo > glo ? ulo : glo, ohi = uhi < ghi ? uhi : ghi;
+      std::printf("    ungated drift span [%.1f, %.1f]   gated [%.1f, %.1f]\n",
+                  ulo, uhi, glo, ghi);
+      if (ohi <= olo) {
+        std::printf("    NO OVERLAP -- the two mechanisms do not reach a common drift, so no\n"
+                    "    matched comparison exists and the deciding test is NOT answered.\n");
+      } else {
+        const double x = 0.5 * (olo + ohi);
+        // Piecewise-linear interpolation of a curve given as three (drift, range)
+        // points, which need not be sorted by drift.
+        const auto interp = [&](const SYArm* arms) {
+          double xs[3], ys[3];
+          for (int i = 0; i < 3; ++i) { xs[i] = guard[arms[i]][0]; ys[i] = guard[arms[i]][1]; }
+          for (int i = 0; i < 2; ++i)
+            for (int j = 0; j + 1 < 3 - i; ++j)
+              if (xs[j] > xs[j + 1]) { std::swap(xs[j], xs[j + 1]); std::swap(ys[j], ys[j + 1]); }
+          if (x <= xs[0]) return ys[0];
+          if (x >= xs[2]) return ys[2];
+          const int k = x <= xs[1] ? 0 : 1;
+          const double w = (x - xs[k]) / (xs[k + 1] - xs[k]);
+          return ys[k] + w * (ys[k + 1] - ys[k]);
+        };
+        const double yu = interp(ung), yg = interp(gat);
+        std::printf("    at the overlap midpoint, drift %.1f Hz:  UNGATED range %.1f, JAW-GATED %.1f\n",
+                    x, yu, yg);
+        const double pct = yu > 1e-9 ? 100.0 * (yg - yu) / yu : 0.0;
+        std::printf("    the jaw's phase is worth %+.1f%% of per-cycle range at matched drift\n", pct);
+        jaw_phase_pays = pct >= 10.0;
+        if (pct < -10.0)
+          std::printf("    THE JAW IS THE WORSE SCHEDULE. At matched drift the anchor scheduled by\n"
+                      "    the creature's OWN silences carries MORE per-cycle excursion than the\n"
+                      "    jaw-scheduled one. The pre-registered claim is not merely unsupported,\n"
+                      "    it comes out backwards -- so `the jaw cycle is a boundary for F1` is\n"
+                      "    REFUSED, and what the jaw buys is a LOWER floor on drift (it reaches\n"
+                      "    %.1f Hz where the ungated schedule saturates at %.1f) rather than any\n"
+                      "    gain in articulation. Two trade-off points on two curves, neither\n"
+                      "    dominating, and the frame reading has no measurement behind it.\n",
+                      glo, ulo);
+        else if (pct < 10.0)
+          std::printf("    THE JAW'S PHASE IS NOT THE INGREDIENT. At matched drift the two\n"
+                      "    schedules carry the same per-cycle excursion, so what pays is an\n"
+                      "    INTERMITTENT hard anchor and the jaw is one way to schedule it among\n"
+                      "    others. v66 is a schedule, not a frame.\n");
+        else
+          std::printf("    THE JAW'S PHASE PAYS. At matched drift the jaw-scheduled anchor carries\n"
+                      "    more per-cycle excursion than one scheduled by the creature's own\n"
+                      "    silences, which intermittency alone cannot explain.\n");
+      }
+    }
+  }
+
+  // --- IS IT THE GATE OR THE ANCHOR? ----------------------------------------
+  // `thin+tau60` changes two things at once against the shipped decoder: it gates on
+  // jaw phase AND shortens the anchor from 633 ms to 60. Under v62 the anchor already
+  // fires whenever the creature is unvoiced, so the short tau alone could account for
+  // the bounding. `nogate+tau60` is the same tau with no gate.
+  if (guard[kSYNoGateFast].size() == 10 && guard[kSYThinFast2].size() == 10 &&
+      guard[kSYVel].size() == 10) {
+    const double dn = guard[kSYNoGateFast][0], dt_ = guard[kSYThinFast2][0];
+    const double du = guard[kSYVel][0];
+    std::printf("\n  --- the gate or the anchor? ---\n");
+    std::printf("    v62-nogate    (tau 633, no gate)  drift %6.1f\n", du);
+    std::printf("    nogate+tau60  (tau  60, no gate)  drift %6.1f\n", dn);
+    std::printf("    thin+tau60    (tau  60, GATED)    drift %6.1f\n", dt_);
+    const double span = du - dt_;
+    const double by_tau = span > 1e-9 ? (du - dn) / span : 0.0;
+    // NO THRESHOLD HERE, AND THE FIRST VERSION PUT ONE IN THE WORST PLACE. It
+    // branched at 0.75 and the two seed families read 0.76 and 0.70, so the printed
+    // LABEL flipped between families while the quantity barely moved --
+    // [[aibaby-verdict-fitted-to-data]]: a label that flips across families means the
+    // quantity, not the label. The fraction is reported and nothing branches on it;
+    // the verdict turns on the deciding test instead, which is about the JAW rather
+    // than about which of two knobs contributed more.
+    anchor_share = by_tau;
+    std::printf("    REPORTED AS A QUANTITY, NOT A LABEL: the short anchor alone accounts for\n"
+                "    %.0f%% of the bounding, so most of what v66 achieves is available with no\n"
+                "    gate at all -- `f1_return_tau_ms` at 633 ms was simply too long. Whether\n"
+                "    the remainder is the JAW is the deciding test above, not this split.\n",
+                100.0 * by_tau);
+  }
+
+  std::printf("\n  --- the sequence statistic, and it gates nothing ---\n");
+  for (uint32_t a = 0; a < kSYArmCount; ++a) {
+    if (guard[a].size() != 10) continue;
+    const double adj = guard[a][2], all = guard[a][3];
+    std::printf("    %-11s adjacent %6.1f   all-pairs %6.1f   ratio %.3f  %s\n",
+                kSYNames[a], adj, all, all > 1e-9 ? adj / all : 0.0,
+                all < 1e-9 ? "no cycles" :
+                adj / all < 0.90 ? "successive cycles CORRELATED" :
+                adj / all > 1.10 ? "successive cycles ALTERNATE" :
+                "independent draws -- a capability, not a sequence");
+  }
+
+  std::printf("\n  --- the verdict ---\n");
+  // THE TWO PRE-REGISTERED HALVES ARE NECESSARY AND NO LONGER SUFFICIENT, and the
+  // controls are why. Both halves can pass on a mechanism that has nothing to do with
+  // the jaw: `nogate+tau60` shows the short anchor alone does most of the bounding,
+  // and the ungated-intermittent curve shows the creature's own silences schedule an
+  // anchor as well as the jaw cycle does. So a v66 claim needs all four.
+  if (anchored && articulates && jaw_phase_pays) {
+    std::printf("  DNA v66 IS A FRAME FOR F1. The walk is bounded, the per-cycle excursion\n"
+                "  clears the no-integrator floor, the bounding survives removing the short\n"
+                "  anchor, and the jaw's PHASE beats an anchor scheduled by the creature's\n"
+                "  own silences at matched drift. That last one is the whole claim, and it is\n"
+                "  the one three earlier readings of this experiment did not test. Replicate\n"
+                "  on the fresh family before quoting it.\n");
+  } else if (anchored && articulates) {
+    if (anchor_share >= 0.0)
+      std::printf("  [the short anchor alone accounts for %.0f%% of the bounding]\n",
+                  100.0 * anchor_share);
+    std::printf("  THE BOUNDING IS REAL AND IT IS NOT A FRAME. Both pre-registered halves\n"
+                "  pass -- drift down, per-cycle excursion above the no-integrator floor --\n"
+                "  and the surviving controls say the jaw is not what did it:\n"
+                "    - %s\n    - %s\n"
+                "  What the run establishes is a fact about the DECODER: an intermittent hard\n"
+                "  anchor beats both a long anchor and a continuous leak, and\n"
+                "  `f1_return_tau_ms` at 633 ms was far too long. The jaw is ONE schedule for\n"
+                "  that anchor and not a privileged one, so `the jaw cycle is a boundary for\n"
+                "  F1` is REFUSED and the useful finding is a mis-set constant.\n",
+                "the short anchor alone buys most of the bounding",
+                "the creature's own silences schedule it just as well");
+  } else if (anchored) {
+    std::printf("  HALF, AND THE MISSING HALF IS THE ONE THAT MATTERS. The walk IS bounded --\n"
+                "  cycle-start F1 sd falls past 3 SE against the same jaw ungated -- but the\n"
+                "  per-cycle range does not clear the no-integrator floor, so the integrator\n"
+                "  contributes no gesture of its own. That is what a mute dial looks like: a\n"
+                "  dead integrator anchors perfectly and articulates nothing. REFUSED on the\n"
+                "  pre-registered pair, and the arithmetic said this was the risk -- one\n"
+                "  cycle buys 34-68 Hz at the taught deflection and this creature is\n"
+                "  UNTAUGHT, so its deflection is smaller again.\n");
+  } else {
+    std::printf("  DNA v66 REFUSED. Cycle-start F1 sd does not fall past 3 SE against the\n"
+                "  same jaw ungated, so the phase gate does not bound the integrator's\n"
+                "  walk. The jaw cycle is not a boundary for F1, and frames-then-content\n"
+                "  has no content channel in this architecture.\n");
+  }
+  return true;
+}
+
+bool run_syllf1(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  return run_syllf1_family(blob, ticks, verbose, kSYSeedOffset);
+}
+
+// The replication. Same code, same arms, twelve creatures nothing has been measured
+// on -- so a result that holds here held on two families, and one that does not was
+// a draw.
+bool run_syllf1b(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  return run_syllf1_family(blob, ticks, verbose, kSYSeedOffset2);
 }
 
 // ============================================================================

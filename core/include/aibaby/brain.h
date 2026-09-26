@@ -133,6 +133,12 @@ class Brain {
   uint32_t vision_features_count() const { return vision_.features(); }
   bool has_vision() const { return has_vision_; }
   const VocalParams& voice() const { return vocal_.params(); }
+  // Ticks between decoder updates. Exposed so an instrument can sample the voice
+  // at the rate it actually changes: `syllf1` sampled every 4 ticks against a
+  // 10-tick update and 60% of its samples were exact repeats, which made a clean
+  // limit cycle read as "rising 21% of the time" and tripped its own oscillation
+  // guard. Read-only, and derived in configure() from the genome's dt.
+  uint32_t vocal_interval() const { return vocal_interval_; }
   const Scalar* vocal_groups() const { return vocal_.groups(); }
   const Scalar* vocal_activities() const { return vocal_.activities(); }
   uint32_t vocal_frame() const { return vocal_.frame(); }

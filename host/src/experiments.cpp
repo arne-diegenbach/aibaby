@@ -394,6 +394,19 @@ const Spec kSpecs[] = {
      "  pulses 4 s then goes SILENT and measures the f-component during the silence\n"
      "  -- the M1b logic that separates an echo from a pass-through. Every f tiles\n"
      "  the block in whole cycles so concatenated holds keep phase. 12 seeds"},
+    {"syllf1b", 600000, Expect::kOpen, Tier::kTeach,
+     "THE REPLICATION OF `syllf1` ON A FRESH SEED FAMILY. Same arms, twelve creatures\n"
+     "  nothing has been measured on. What is being replicated was named in advance:\n"
+     "  the phase-locked gate carrying MORE per-cycle F1 range than an always-on leak\n"
+     "  reaching the SAME cycle-start drift. 12 seeds x 10 arms"},
+    {"syllf1", 600000, Expect::kOpen, Tier::kTeach,
+     "DNA v66: DOES THE JAW CYCLE ORGANISE F1? v65's jaw tracked its own frequency\n"
+     "  at 0.86 and drove AMPLITUDE alone, so the frame and the content channel had\n"
+     "  no relation. v66 gates the v62 F1 integrator on jaw PHASE -- integrate while\n"
+     "  the jaw opens, anchor toward rest while it closes. PRE-REGISTERED: sd of\n"
+     "  cycle-start F1 must fall against the same jaw UNGATED while per-cycle range\n"
+     "  does not collapse; either alone is a mute dial. Untaught, silent room.\n"
+     "  12 seeds x 5 arms"},
     {"salrew", 1200000, Expect::kOpen, Tier::kTeach,
      "WARLAUMONT'S REWARD, BUILT: praise when auditory salience clears a bar that\n"
      "  ratchets on the creature's own hit rate, no target anywhere. The PRIMARY is\n"
@@ -829,6 +842,8 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "selfloop") ok = run_selfloop(dna_blob, ticks, verbose);
   else if (name == "salience") ok = run_salience(dna_blob, ticks, verbose);
   else if (name == "salrew") ok = run_salrew(dna_blob, ticks, verbose);
+  else if (name == "syllf1") ok = run_syllf1(dna_blob, ticks, verbose);
+  else if (name == "syllf1b") ok = run_syllf1b(dna_blob, ticks, verbose);
   else if (name == "adaptclock") ok = run_adaptclock(dna_blob, ticks, verbose);
   else if (name == "halfcenter") ok = run_halfcenter(dna_blob, ticks, verbose);
   else if (name == "regionband") ok = run_regionband(dna_blob, ticks, verbose);

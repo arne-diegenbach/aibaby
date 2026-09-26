@@ -566,7 +566,23 @@ void VocalDecoder::update(const Network& net, bool awake) {
   // gain*tau*(c-0.5), which is a position decoder with a renamed constant, and
   // the whole change would be vacuous.
   if (cfg_.f1_velocity_gain > kZero) {
-    const bool voiced = group_activity_[1] > Scalar(cfg_.voicing_threshold);
+    bool voiced = group_activity_[1] > Scalar(cfg_.voicing_threshold);
+    // DNA v66. THE JAW CYCLE GATES THE INTEGRATOR. Integrate while the jaw is
+    // OPENING, anchor toward rest while it is CLOSING -- one bounded excursion per
+    // cycle instead of one per voiced stretch. The glottis is NOT gated: only this
+    // integrator reads the jaw, so `params_.voicing` below is untouched and the
+    // creature does not fall silent on the closing stroke.
+    //
+    // `jaw_v_` here is the PREVIOUS frame's jaw velocity, because the jaw block
+    // runs later in this function. On a 222 ms cycle a 10 ms frame is 4.5% of
+    // phase, deterministic and the same in every arm.
+    if (cfg_.jaw_gate_f1 > kZero && cfg_.jaw_hz > kZero) {
+      const Scalar lim = Scalar(cfg_.jaw_limit) > kZero ? Scalar(cfg_.jaw_limit)
+                                                        : Scalar(0.25);
+      const Scalar peak = Scalar(6.283185307179586) * Scalar(cfg_.jaw_hz) * lim;
+      const Scalar thr = (Scalar(cfg_.jaw_gate_f1) - kOne) * peak;
+      if (jaw_v_ <= thr) voiced = false;
+    }
     if (voiced) {
       // Hz per second, times seconds. `update_ms_` is the frame, not the tick.
       const Scalar dv = Scalar(cfg_.f1_velocity_gain) * (f1_cmd_ - Scalar(0.5)) *
@@ -574,6 +590,14 @@ void VocalDecoder::update(const Network& net, bool awake) {
       f1_state_ += dv;
     } else {
       f1_state_ += f1_return_ * (f1_rest_ - f1_state_);
+    }
+    // DNA v67. An ALWAYS-ON leak, applied during integration too. This is a CONTROL
+    // and not a mechanism: its steady state is gain*tau*(c - 0.5), i.e. a position
+    // decoder with a renamed constant, and it exists so that v66's phase-locked
+    // reset can be scored against the only other way to bound an integrator.
+    if (cfg_.f1_leak_tau_ms > kZero) {
+      const Scalar k = clampf(update_ms_ / Scalar(cfg_.f1_leak_tau_ms), kZero, kOne);
+      f1_state_ += k * (f1_rest_ - f1_state_);
     }
     f1_state_ = clampf(f1_state_, Scalar(cfg_.f1_min), Scalar(cfg_.f1_max));
     target_f1 = f1_state_;

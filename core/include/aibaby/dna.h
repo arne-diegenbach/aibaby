@@ -1869,6 +1869,75 @@ struct DnaVocal {
   // drive near 0.3 the jaw swings roughly 0 to 0.8 -- a real open and close. The
   // position clamp at 0 and 1 already catches the ends.
   float jaw_limit;
+  // DNA v66 -- THE JAW CYCLE GATES THE F1 INTEGRATOR. 0 keeps v62/v65 exactly.
+  //
+  // v65 gave the creature a rhythm that TRACKS (slope 0.86) and wired it to
+  // amplitude ALONE: `target_amp = jaw_` and nothing else reads the jaw. v62 gave
+  // it an F1 integrator gated on the neural VOICING group. So the frame and the
+  // content channel were mechanically unconnected -- a rhythm and a formant with
+  // no relation between them, which is why a tracking jaw did not make the voice
+  // any more speech-like.
+  //
+  // This gates the integrator on jaw PHASE instead: F1 integrates while the jaw
+  // is OPENING and anchors back toward rest while it is CLOSING. One bounded
+  // articulatory excursion per cycle, which is frames-then-content as mechanism
+  // rather than as metaphor.
+  //
+  // WHAT THIS IS NOT FOR, DERIVED BEFORE BUILDING. It does not fix v62's aim.
+  // Gain 7123 Hz/s at the taught deflection (centroid 0.4570 against 0.4993 rest)
+  // is 306 Hz/s, so one 222 ms cycle buys 34-68 Hz. Raising the gain scales the
+  // within-cycle command noise identically, and staying off the 250 Hz clamp caps
+  // the mean excursion near 750/(peak/mean deflection) ~ 65 Hz per cycle
+  // IRRESPECTIVE of gain or cycle length. That is a second identity bound of the
+  // same shape as the position decoder's 95 Hz, and it sits BELOW position's
+  // measured 82.5 Hz. A per-cycle reset does not change the reach/aim exchange
+  // rate, exactly as the v62 close argued.
+  //
+  // WHAT IT IS FOR. 65 Hz is useless for an absolute vowel target (~230 Hz) and
+  // is the scale of the two-word SWING the creature already produces (93 Hz
+  // measured against a 95 Hz bound). A syllable sequence does not need absolute
+  // formants -- "ba-di" needs consecutive cycles to DIFFER. The jaw supplies a
+  // boundary to differ across, which is the one thing `no-sequence-anywhere` and
+  // `the-voice-drones` never had.
+  //
+  // 0 is OFF. Otherwise the jaw counts as OPENING while its velocity clears
+  //
+  //   threshold = (jaw_gate_f1 - 1) * peak_speed,   peak_speed = w0 * jaw_limit
+  //
+  // so 1.0 is the pure sign test -- threshold zero, the cycle split in half at
+  // its own turning points -- and the knob is centred on that. Above 1.0 narrows
+  // the open window toward the middle of the opening stroke; just above 0 puts the
+  // threshold near -peak, which holds the gate open all cycle and recovers plain
+  // v62 with the jaw still on amplitude. That bottom end is a MATCHED CONTROL
+  // rather than a wasted setting: same jaw, same amplitude rhythm, no phase gate.
+  //
+  // A fraction of peak speed rather than an absolute rate because peak speed
+  // scales with w0 * jaw_limit, and a fixed threshold would silently change the
+  // duty cycle at every jaw_hz -- which would confound the tracking sweep. Same
+  // reason `jaw_selfosc` is a ratio to w0.
+  float jaw_gate_f1;
+  // DNA v67 -- AN ALWAYS-ON LEAK, AND IT EXISTS TO BE A CONTROL. 0 is OFF.
+  //
+  // This is the arm v66 has to beat, not a mechanism anyone should want. v62's
+  // anchor fires only when the integrator is NOT integrating -- unvoiced under v62,
+  // or gate-closed under v66 -- so it is part of the phase-locked structure and
+  // cannot test whether the phase locking matters. Varying `f1_return_tau_ms` was my
+  // first attempt at that test and it was not one: it changes how hard the LOCKED
+  // anchor pulls, so both of its arms were phase-locked too.
+  //
+  // A leak applied EVERY frame, during integration included, is the honest control.
+  // Its steady state is `f1_velocity_gain * tau * (centroid - 0.5)`, which is a
+  // position decoder with a renamed time constant -- exactly what
+  // [[aibaby-velocity-decoder-v62]] said is the only other way to bound an
+  // integrator, and exactly what v66 must outperform to be more than decoration.
+  //
+  // THE TEST IT SERVES: at MATCHED cycle-start drift, does the phase-locked reset
+  // carry more per-cycle F1 range than this? Equal range at equal drift means the
+  // jaw cycle contributed nothing a scalar could not, and v66's "boundary for F1"
+  // reading has to go.
+  //
+  // Milliseconds, as a first-order return toward `f1_rest_`.
+  float f1_leak_tau_ms;
 
 };
 

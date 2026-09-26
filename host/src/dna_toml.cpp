@@ -476,6 +476,8 @@ bool compile_dna_toml(const std::string& path, std::vector<uint8_t>& out,
     header.vocal.jaw_damping = float(r.number("jaw_damping"));
     header.vocal.jaw_selfosc = float(r.number("jaw_selfosc"));
     header.vocal.jaw_limit = float(r.number("jaw_limit"));
+    header.vocal.jaw_gate_f1 = float(r.number("jaw_gate_f1"));
+    header.vocal.f1_leak_tau_ms = float(r.number("f1_leak_tau_ms"));
     collect(r);
   }
   {

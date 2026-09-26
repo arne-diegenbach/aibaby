@@ -11762,6 +11762,146 @@ more creatures.
 So frames-then-content stands half-built here: the frame is real and mechanical,
 and nothing yet puts content into its cycles.
 
+## The jaw cycle does not organise F1, and three controls were needed to see it
+
+v65 left the frame half-built: a limit-cycle jaw that tracks its own genome field
+at slope 0.86, wired to **amplitude and nothing else**. `target_amp = jaw_` was the
+only line that read it, while the F1 integrator was gated on the neural voicing
+group. So the creature had a rhythm and a formant with no relation between them,
+which is why a tracking jaw did not make the voice more speech-like.
+
+**DNA v66** gates the v62 F1 integrator on jaw *phase* — integrate while the jaw
+opens, anchor toward rest while it closes, one bounded excursion per cycle. That is
+frames-then-content as mechanism rather than metaphor, after
+MacNeilage's frames-then-content and Gafos & Kuberski's limit-cycle account,
+both cited in full below.
+
+**What it was not for was settled by arithmetic before the build.** At gain 7123
+Hz/s and the taught centroid deflection (0.4570 against 0.4993 at rest) the
+velocity is 306 Hz/s, so one 222 ms cycle buys 34–68 Hz — and staying off the
+250 Hz clamp caps the mean per-cycle excursion near `750 / (peak/mean deflection)`
+≈ 65 Hz *whatever the gain or the cycle length*. That is a second identity bound of
+the same shape as the position decoder's 95 Hz, and it sits below position's
+measured 82.5. **A per-cycle reset does not change the reach/aim exchange rate.**
+What it could plausibly buy is cycle-to-cycle *contrast*, which is what a syllable
+sequence needs — "ba-di" needs consecutive cycles to differ, not to hit absolute
+formants.
+
+### Both pre-registered halves passed, and both were beside the point
+
+Twelve creatures, ~2,260 cycles each, untaught, silent room. Cycle boundaries are
+the upward mean-crossings of the produced amplitude, which *is* jaw position when
+the jaw is on — so the segmentation needs no new accessor and is identical in every
+arm.
+
+    arm            drift (cycle-start F1 sd)   per-cycle range
+    position               21.9                     13.7    <- no integrator at all
+    v62-nogate            137.5                     53.2    <- the unbounded walk
+    v66-sign               52.4  (-22.5 SE)         25.1    (+35.5 SE over the floor)
+
+Drift down past 3 SE against the same jaw ungated, excursion clear of the
+no-integrator floor. Both halves, as required. **Neither is evidence about the
+jaw**, and it took three controls to establish that.
+
+### Control 1: the continuous leak. This one looked like a win.
+
+An integrator can only be bounded by a leak or by feedback, and a leak is a
+position decoder with a renamed constant — so **DNA v67** adds an always-on leak
+purely as the arm v66 has to beat. Three taus bracket the phase-locked arm's drift,
+so the matched comparison interpolates between measured points:
+
+    family A   phase-locked carries +17.1% more range   (total F1 sd +2.7%)
+    family B   phase-locked carries +18.8% more range   (total F1 sd +5.2%)
+
+The second column is the check that decides what the first one means. Per-cycle
+range is measured in windows the jaw defines, so an unaligned excursion is split
+across two windows and counts less in each — that is the claim rather than a bias,
+**but only if total movement is unchanged**. It was: same total F1 movement, ~18%
+larger per-cycle excursion, replicated on a fresh family. The gain was in *when*
+the movement happened. It was still the wrong attribution.
+
+### Control 2: the same anchor with no gate takes 70–76% of it away
+
+`thin+tau60` changes two things at once — it gates on jaw phase *and* shortens the
+anchor from the shipped 633 ms to 60. Under v62 the anchor already fires whenever
+the creature is unvoiced, so the short constant alone could account for the
+bounding. It largely does:
+
+    v62-nogate    (tau 633, no gate)  drift 137.5 / 132.5
+    nogate+tau60  (tau  60, no gate)  drift  55.1 /  59.9
+    thin+tau60    (tau  60, GATED)    drift  29.0 /  29.4
+    -> the short anchor alone accounts for 76% / 70% of the bounding
+
+**`f1_return_tau_ms` at 633 ms was far too long.** Most of what v66 achieves needs
+no gate at all. That is a real finding about a v62 constant, arrived at by building
+something else — the same shape as v64's `kVocalUpdateMs` substep bug, where a
+derived constant had been checked at the wrong timescale.
+
+### Control 3: the deciding one, and it comes out backwards
+
+`nogate+tau60` returned the **largest per-cycle range in the table** — 60.1 Hz,
+above even the unbounded arm. That reverses the leak reading. A continuous leak was
+never the relevant comparison: what it and the gated arm share is an
+**intermittent hard anchor**, and the jaw's only distinctive contribution is that
+its reset windows come from the cycle rather than from the creature's own silences.
+
+Swept on the same anchor knob, the two mechanisms are two curves:
+
+    UNGATED  tau 60/30/15   drift 55.1 / 48.9 / 46.5   range 60.1 / 61.0 / 60.8
+    GATED    tau 60/150/633 drift 29.0 / 39.2 / 87.6   range 41.6 / 39.8 / 38.5
+
+    at the overlap midpoint, drift 50.8 Hz:  UNGATED 60.8, JAW-GATED 39.5
+    family A   the jaw's phase is worth -35.1%
+    family B   the jaw's phase is worth -36.2%
+
+**Refused, and not merely unsupported — backwards on both families.** At matched
+drift the anchor scheduled by the creature's own unvoiced stretches carries about
+35% *more* per-cycle excursion than the jaw-scheduled one.
+
+**What the jaw does buy, narrowly.** A lower floor on drift: it reaches 29 Hz where
+the ungated schedule **saturates** at 46.5. Cutting that anchor from 60 ms to 15
+moves drift only 55.1 → 46.5 and leaves range flat, because its reset windows are
+however often the creature falls silent — past a point, more anchor strength buys
+nothing. Two trade-off points on two curves, neither dominating, and no measurement
+behind the frame reading.
+
+And the sequence statistic never favoured the jaw either: adjacent-pair over
+all-pairs `|dpeak|` reads 0.756 for `thin+tau60` against **0.776** for `leak60`.
+Decorrelating successive cycles is a property of any tight bound. It was
+pre-registered as gating nothing, and it is as well that it was.
+
+### Four method faults, and the first is the general one
+
+**A control that shares the live mechanism with its arm is not a control.** The
+first leak attack varied `f1_return_tau_ms` — which fires *only while the gate is
+shut*. Both its arms were phase-locked, so it tested nothing about phase. The
+bracketing guard refused the comparison and the reason it printed was not the real
+one. That rule was already on file and I broke it inside the fix for it.
+
+**A threshold placed where the data is will flip the label between families.** The
+gate-versus-anchor split branched at 0.75; the families read 0.76 and 0.70, so the
+printed *label* reversed while the quantity barely moved. The branch is gone and
+the fraction is reported.
+
+**When two curves must meet at a matched x, compare at the overlap midpoint** and
+interpolate whichever curve needs it. Demanding that one named curve bracket the
+other fails silently when one saturates — which is exactly what happened, and the
+saturation turned out to be the informative part.
+
+**Sample the voice at the decoder's update rate.** Sampling every 4 ticks against a
+10-tick update made 60% of samples exact repeats, so the oscillation guard read a
+clean limit cycle as "rising 21% of the time" and refused all five arms. The guard
+was right and the sampling was wrong; `Brain::vocal_interval()` now exposes the
+rate so it is read rather than guessed.
+
+### Where this leaves the frame
+
+Three routes from a frame to content are now closed. Reward will not sharpen the
+rhythm, and the rhythm does not organise F1. **The body can supply a rhythm and
+nothing has yet used one.** Do not re-open "gate something on the jaw" without a
+schedule-matched control: the creature's own voicing pattern is a competing
+schedule, and on excursion it wins.
+
 ## Layout
 
 ```

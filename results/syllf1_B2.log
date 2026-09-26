@@ -1,0 +1,13 @@
+  [5/156] seed 0  v66-narrow  cycles 2293  start sd   39.6 Hz  range   20.3 Hz
+  [3/156] seed 0  v66-thin    cycles 2299  start sd   75.4 Hz  range   38.7 Hz
+  [4/156] seed 0  v66-sign    cycles 2289  start sd   52.4 Hz  range   25.5 Hz
+  [1/156] seed 0  position    cycles 2296  start sd   20.0 Hz  range   13.5 Hz
+  [2/156] seed 0  v62-nogate  cycles 2304  start sd  137.0 Hz  range   48.8 Hz
+  [7/156] seed 0  thin+tau60  cycles 2304  start sd   31.8 Hz  range   44.9 Hz
+  [6/156] seed 0  thin+tau150 cycles 2294  start sd   40.8 Hz  range   40.8 Hz
+  [9/156] seed 0  leak120     cycles 2295  start sd   26.9 Hz  range   35.2 Hz
+  [8/156] seed 0  leak60      cycles 2294  start sd   14.9 Hz  range   24.0 Hz
+  [11/156] seed 0  nogate+tau60 cycles 2295  start sd   60.8 Hz  range   60.9 Hz
+  [10/156] seed 0  leak200     cycles 2322  start sd   36.6 Hz  range   41.4 Hz
+  [12/156] seed 0  nogate+tau30 cycles 2302  start sd   53.9 Hz  range   61.7 Hz
+  [15/156] seed 1  v62-nogate  cycles 2213  start sd  114.8 Hz  range   52.1 Hz

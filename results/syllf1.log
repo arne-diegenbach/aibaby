@@ -1,0 +1,119 @@
+  [3/60] seed 0  v66-thin    cycles 2234  start sd   85.7 Hz  range   40.1 Hz
+  [6/60] seed 1  position    cycles 2313  start sd   19.6 Hz  range   12.8 Hz
+  [2/60] seed 0  v62-nogate  cycles 2267  start sd  121.9 Hz  range   51.1 Hz
+  [7/60] seed 1  v62-nogate  cycles 2267  start sd  134.0 Hz  range   51.3 Hz
+  [8/60] seed 1  v66-thin    cycles 2261  start sd   87.1 Hz  range   37.9 Hz
+  [4/60] seed 0  v66-sign    cycles 2248  start sd   46.2 Hz  range   24.8 Hz
+  [1/60] seed 0  position    cycles 2269  start sd   20.4 Hz  range   13.7 Hz
+  [5/60] seed 0  v66-narrow  cycles 2264  start sd   36.1 Hz  range   18.8 Hz
+  [9/60] seed 1  v66-sign    cycles 2282  start sd   51.8 Hz  range   25.5 Hz
+  [10/60] seed 1  v66-narrow  cycles 2283  start sd   38.2 Hz  range   18.6 Hz
+  [12/60] seed 2  v62-nogate  cycles 2282  start sd  152.7 Hz  range   52.8 Hz
+  [11/60] seed 2  position    cycles 2313  start sd   21.8 Hz  range   13.7 Hz
+  [13/60] seed 2  v66-thin    cycles 2277  start sd   82.8 Hz  range   35.8 Hz
+  [18/60] seed 3  v66-thin    cycles 2273  start sd   84.8 Hz  range   39.0 Hz
+  [14/60] seed 2  v66-sign    cycles 2291  start sd   53.0 Hz  range   25.4 Hz
+  [15/60] seed 2  v66-narrow  cycles 2320  start sd   40.1 Hz  range   18.7 Hz
+  [16/60] seed 3  position    cycles 2281  start sd   22.2 Hz  range   13.6 Hz
+  [17/60] seed 3  v62-nogate  cycles 2294  start sd  129.1 Hz  range   53.4 Hz
+  [21/60] seed 4  position    cycles 2250  start sd   22.6 Hz  range   14.0 Hz
+  [20/60] seed 3  v66-narrow  cycles 2298  start sd   38.4 Hz  range   20.3 Hz
+  [19/60] seed 3  v66-sign    cycles 2284  start sd   48.7 Hz  range   24.5 Hz
+  [22/60] seed 4  v62-nogate  cycles 2219  start sd  122.2 Hz  range   54.7 Hz
+  [23/60] seed 4  v66-thin    cycles 2227  start sd   70.8 Hz  range   36.8 Hz
+  [27/60] seed 5  v62-nogate  cycles 2227  start sd  132.6 Hz  range   53.0 Hz
+  [25/60] seed 4  v66-narrow  cycles 2260  start sd   37.0 Hz  range   18.4 Hz
+  [24/60] seed 4  v66-sign    cycles 2269  start sd   51.4 Hz  range   24.9 Hz
+  [30/60] seed 5  v66-narrow  cycles 2233  start sd   35.6 Hz  range   17.8 Hz
+  [26/60] seed 5  position    cycles 2277  start sd   23.1 Hz  range   14.0 Hz
+  [28/60] seed 5  v66-thin    cycles 2241  start sd   83.4 Hz  range   37.0 Hz
+  [29/60] seed 5  v66-sign    cycles 2251  start sd   47.8 Hz  range   23.3 Hz
+  [34/60] seed 6  v66-sign    cycles 2232  start sd   58.5 Hz  range   26.7 Hz
+  [32/60] seed 6  v62-nogate  cycles 2241  start sd  143.5 Hz  range   54.8 Hz
+  [35/60] seed 6  v66-narrow  cycles 2235  start sd   43.0 Hz  range   20.1 Hz
+  [31/60] seed 6  position    cycles 2230  start sd   24.7 Hz  range   14.3 Hz
+  [37/60] seed 7  v62-nogate  cycles 2251  start sd  171.0 Hz  range   53.0 Hz
+  [33/60] seed 6  v66-thin    cycles 2235  start sd  102.2 Hz  range   41.1 Hz
+  [36/60] seed 7  position    cycles 2281  start sd   21.7 Hz  range   13.6 Hz
+  [43/60] seed 8  v66-thin    cycles 2250  start sd   77.1 Hz  range   37.6 Hz
+  [38/60] seed 7  v66-thin    cycles 2272  start sd  111.9 Hz  range   39.0 Hz
+  [41/60] seed 8  position    cycles 2271  start sd   22.0 Hz  range   13.8 Hz
+  [39/60] seed 7  v66-sign    cycles 2285  start sd   57.4 Hz  range   26.1 Hz
+  [42/60] seed 8  v62-nogate  cycles 2253  start sd  116.4 Hz  range   53.4 Hz
+  [40/60] seed 7  v66-narrow  cycles 2294  start sd   41.8 Hz  range   19.4 Hz
+  [44/60] seed 8  v66-sign    cycles 2232  start sd   49.6 Hz  range   24.0 Hz
+  [45/60] seed 8  v66-narrow  cycles 2215  start sd   37.9 Hz  range   19.3 Hz
+  [46/60] seed 9  position    cycles 2269  start sd   21.7 Hz  range   13.7 Hz
+  [50/60] seed 9  v66-narrow  cycles 2282  start sd   41.0 Hz  range   19.2 Hz
+  [47/60] seed 9  v62-nogate  cycles 2237  start sd  132.9 Hz  range   55.6 Hz
+  [48/60] seed 9  v66-thin    cycles 2262  start sd   86.6 Hz  range   39.8 Hz
+  [52/60] seed 10  v62-nogate  cycles 2216  start sd  155.0 Hz  range   53.8 Hz
+  [51/60] seed 10  position    cycles 2303  start sd   21.2 Hz  range   13.7 Hz
+  [49/60] seed 9  v66-sign    cycles 2251  start sd   55.8 Hz  range   26.0 Hz
+  [53/60] seed 10  v66-thin    cycles 2246  start sd   96.8 Hz  range   39.8 Hz
+  [55/60] seed 10  v66-narrow  cycles 2257  start sd   41.9 Hz  range   19.7 Hz
+  [56/60] seed 11  position    cycles 2268  start sd   21.9 Hz  range   13.9 Hz
+  [54/60] seed 10  v66-sign    cycles 2284  start sd   58.3 Hz  range   26.1 Hz
+  [60/60] seed 11  v66-narrow  cycles 2275  start sd   38.0 Hz  range   19.0 Hz
+  [59/60] seed 11  v66-sign    cycles 2240  start sd   50.8 Hz  range   24.2 Hz
+  [58/60] seed 11  v66-thin    cycles 2243  start sd   81.9 Hz  range   37.8 Hz
+  [57/60] seed 11  v62-nogate  cycles 2239  start sd  139.2 Hz  range   51.7 Hz
+experiment: syllf1
+  instrument        syllf1   trial seed 0000000001354168   600000 ticks
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  the build      DNA v66 gates the v62 F1 integrator on JAW PHASE --
+                 integrate while the jaw opens, anchor toward rest
+                 while it closes. One excursion per cycle.
+  NOT an aim fix Derived before building: one 222 ms cycle buys 34-68
+                 Hz at the taught deflection, and the clamp caps the
+                 mean per-cycle excursion near 65 Hz whatever the gain.
+                 Below the position decoder's measured 82.5.
+  the primary    sd of CYCLE-START F1 must FALL against `v62-nogate`
+                 (same jaw, no gate) AND per-cycle RANGE must not
+                 collapse. Either alone is a mute dial.
+  the null       for the sequence statistic: E|X-Y| over ALL cycle
+                 pairs, which equals the adjacent mean exactly for
+                 independent draws. Reported, gates nothing.
+  untaught       silent room, no praise: what the BODY can do, as
+                 `selfloop` measured the untrained creature.
+
+  arm           cycles   start sd Hz     range Hz        adj |dpeak|     all-pairs      at floor  amp     mod     gate duty
+    position      2277    21.9 +/-  0.4    13.7 +/-  0.1    11.2 +/-  0.1    30.9 +/-  0.4    0.0%  0.3177  0.5016   52.4%
+    v62-nogate    2249   137.5 +/-  4.6    53.2 +/-  0.4    45.8 +/-  0.5   183.4 +/-  5.3    0.5%  0.3151  0.5057   52.4%
+    v66-thin      2251    87.6 +/-  3.2    38.5 +/-  0.5    35.4 +/-  0.4   119.0 +/-  3.8    0.0%  0.3158  0.5061   74.7%
+    v66-sign      2262    52.4 +/-  1.2    25.1 +/-  0.3    25.0 +/-  0.2    72.1 +/-  1.4    0.0%  0.3172  0.5025   52.4%
+    v66-narrow    2268    39.1 +/-  0.7    19.1 +/-  0.2    20.0 +/-  0.2    54.6 +/-  0.8    0.0%  0.3177  0.5024   37.5%
+
+  DOSE LADDER   anchoring time vs accumulated drift
+    v62-nogate  duty  52.4%   start sd  137.5 Hz
+    v66-thin    duty  74.7%   start sd   87.6 Hz
+    v66-sign    duty  52.4%   start sd   52.4 Hz
+    v66-narrow  duty  37.5%   start sd   39.1 Hz
+
+  --- the reading: PAIRED against `v62-nogate`, per creature ---
+    position     start sd  -115.6 +/-  4.6 Hz (-25.3 SE)   range   -39.5 +/-  0.4 Hz (-108.1 SE)
+    v66-thin     start sd   -50.0 +/-  2.8 Hz (-17.8 SE)   range   -14.7 +/-  0.5 Hz (-27.4 SE)
+    v66-sign     start sd   -85.1 +/-  3.8 Hz (-22.5 SE)   range   -28.1 +/-  0.4 Hz (-70.1 SE)
+    v66-narrow   start sd   -98.5 +/-  4.1 Hz (-24.0 SE)   range   -34.1 +/-  0.4 Hz (-86.9 SE)
+
+  --- the second half: per-cycle range against the NO-INTEGRATOR floor ---
+    v62-nogate   range over `position`   +39.5 +/-  0.4 Hz (+108.1 SE)
+    v66-thin     range over `position`   +24.8 +/-  0.5 Hz (+54.6 SE)
+    v66-sign     range over `position`   +11.4 +/-  0.3 Hz (+35.5 SE)
+    v66-narrow   range over `position`    +5.4 +/-  0.2 Hz (+25.1 SE)
+
+  --- the sequence statistic, and it gates nothing ---
+    position    adjacent   11.2   all-pairs   30.9   ratio 0.361  successive cycles CORRELATED
+    v62-nogate  adjacent   45.8   all-pairs  183.4   ratio 0.249  successive cycles CORRELATED
+    v66-thin    adjacent   35.4   all-pairs  119.0   ratio 0.297  successive cycles CORRELATED
+    v66-sign    adjacent   25.0   all-pairs   72.1   ratio 0.346  successive cycles CORRELATED
+    v66-narrow  adjacent   20.0   all-pairs   54.6   ratio 0.365  successive cycles CORRELATED
+
+  --- the verdict ---
+  DNA v66 BOUNDS THE WALK. Cycle-start F1 sd falls past 3 SE against the
+  same jaw ungated, and the per-cycle range does not collapse with it --
+  the two halves the pre-registration required. The jaw cycle is now a
+  boundary for F1 and not only for volume. Read it NARROWLY: this is a
+  structural property of the decoder, and whether anything can USE the
+  boundary is the next question, not this one.

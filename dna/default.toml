@@ -739,6 +739,33 @@ jaw_damping = 0.15
 # by mu as much as by w0.
 jaw_selfosc = 0.0
 jaw_limit = 0.25
+# DNA v66 -- THE JAW CYCLE GATES THE F1 INTEGRATOR. 0 is OFF.
+#
+# v65's jaw drove amplitude and NOTHING else; v62's F1 integrator was gated on the
+# neural voicing group. The frame and the content channel had no relation, which is
+# why a jaw that tracks its own frequency at 0.86 did not make the voice more
+# speech-like. Here F1 integrates while the jaw OPENS and anchors toward rest while
+# it CLOSES: one bounded excursion per cycle.
+#
+# It is NOT an aim fix, and that was settled arithmetically before the build. At
+# gain 7123 Hz/s and the taught deflection (0.4570 vs 0.4993 rest) one 222 ms cycle
+# buys 34-68 Hz, and staying off the 250 Hz clamp caps the mean per-cycle excursion
+# near 750/(peak/mean deflection) ~ 65 Hz whatever the gain -- below the position
+# decoder's measured 82.5. What it buys is CYCLE-TO-CYCLE CONTRAST, which is the
+# scale of the two-word swing (93 Hz) and is what a syllable sequence needs.
+#
+# Threshold = (jaw_gate_f1 - 1) * w0 * jaw_limit, so 1.0 is the sign test (the
+# cycle split at its turning points) and a value just above 0 holds the gate open
+# all cycle -- plain v62 with the jaw still on amplitude, i.e. the matched control.
+jaw_gate_f1 = 0.0
+# DNA v67 -- AN ALWAYS-ON LEAK. 0 is OFF, and it is a CONTROL rather than a
+# mechanism. v62's anchor fires only when the integrator is idle, so it is part of
+# the phase-locked structure and cannot test whether the phase locking matters.
+# A leak applied every frame has steady state gain*tau*(centroid - 0.5) -- a position
+# decoder with a renamed constant, which is the only other way to bound an
+# integrator. v66 has to carry more per-cycle F1 range than this at MATCHED drift, or
+# its cycle contributed nothing a scalar could not.
+f1_leak_tau_ms = 0.0
 
 [curiosity]
 learn_rate = 0.02           # LMS rate of the forward model
