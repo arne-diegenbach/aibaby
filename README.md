@@ -11560,6 +11560,64 @@ Warlaumont's 1000-neuron reservoir, but the sequence literature reports a
 sequence learned in a chain of ~120 excitatory neurons. That objection should not
 be carried forward.
 
+## DNA v64: a jaw, refused on tracking — and I built the wrong kind of oscillator
+
+The reframe said the frame is a body part: five neural routes to a syllabic
+rhythm are refused, MacNeilage's frame *is* mandibular oscillation, babbling
+contains **silent** jaw oscillations, and this synthesiser is a formant filter
+driven by scalars with no mass and no mandible. So v64 adds one — a
+mass-spring-damper aperture whose position gates amplitude, with the spring's
+rest position set to the neural drive so the gain is fixed by identity rather
+than guessed, resonance at 4.5 Hz and ζ = 0.15.
+
+    jaw_hz 3.0  ->  envelope peak 3.73 +/- 0.48 Hz   snr 10.8   amp 0.2994
+    jaw_hz 4.5  ->  envelope peak 3.23 +/- 0.30 Hz   snr  6.3   amp 0.2993
+    jaw_hz 7.0  ->  envelope peak 3.69 +/- 0.60 Hz   snr  5.9   amp 0.2896
+    TRACKING SLOPE 0.01   [1.00 is the jaw, 0.00 is a fixed resonance]
+
+**REFUSED ON TRACKING.** The peak sits at 3.2–3.7 Hz whatever `jaw_hz` says.
+That is the refusal `three-hertz-resonance` pre-registered — a rhythm at one
+frequency regardless of the mechanism's constant is the old resonance
+re-measured — and it fires on a mechanism built specifically to escape it.
+
+**The jaw does something real, and it is not a frame.** Modulation depth rises
+from 0.3778 with no jaw to 0.4749 with one, +26%, while mean amplitude *rises*
+(0.2842 → 0.2993) rather than falling, so it is not the mute dial that killed
+`adaptclock`. It amplifies fluctuation already near its band. It does not impose
+timing.
+
+**And the reason is structural: a damped resonator cannot create a rhythm that is
+not in its input.** `x'' + 2ζω₀x' + ω₀²(x − drive) = 0` is a band-amplifying
+filter. Driven by a signal whose energy sits below ω₀ it *follows the drive*; it
+rings at its own frequency only when kicked impulsively, and the creature's
+group-8 activity varies smoothly around its own ~2.5 Hz.
+
+**Gafos & Kuberski said LIMIT CYCLE, and a limit cycle is not a damped spring.**
+A limit cycle self-oscillates with no periodic input — negative damping at small
+amplitude, positive at large, as in van der Pol's
+`x'' − μ(1 − x²)x' + ω₀²x = F`. I read "limit cycle organisation at the level of
+individual articulatory actions" and built a passive resonance. **That is the
+wrong physics for the claim I was testing**, and it is exactly why the frequency
+came out as the drive's rather than the body's.
+
+So the reframe survives and its first implementation does not. The body is still
+the right place to look — a jaw genuinely raised modulation without costing
+loudness, which no neural route managed — but it has to be a **self-oscillating**
+jaw, not a resonant one. That is a one-term change to the damping and it keeps
+every refusal already written down, including the mute-dial check that this run
+passed.
+
+**Two instrument bugs were caught on the way, and the first would have faked the
+answer.** The decoder runs every `kVocalUpdateMs = 10 ms`, not every tick, so
+ω₀dt reached **0.44** at 7 Hz — outside where semi-implicit Euler keeps its
+frequency, and it shifted the resonance *down*: a 7 Hz jaw rang at 4.16 Hz before
+the fix. I had checked stability at dt = 1 ms. The jaw now takes ten 1 ms
+substeps per update. And `jaw4.5+rew` earned zero rewards and came back
+bit-identical to `jaw4.5`, because I added the arm without adding it to the
+branch that delivers praise — the third bit-identical-arm bug of the session, and
+the "arms must differ" guard only polices the taught/yoked pair rather than arms
+added later.
+
 ## Layout
 
 ```

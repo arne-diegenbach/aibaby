@@ -233,6 +233,12 @@ class VocalDecoder {
   // produces no bursts, so a silent burst channel contributes nothing rather
   // than snapping the tract somewhere arbitrary.
   Scalar f1_burst_c_ = Scalar(0.5);
+  // DNA v64. The jaw's position and velocity -- a real second-order state, which
+  // is what makes it able to ring rather than merely follow. Untouched while
+  // `jaw_hz` is 0.
+  Scalar jaw_ = kZero;
+  Scalar jaw_v_ = kZero;
+  Scalar jaw_raw_drive_ = kZero;   // group 8's UNSMOOTHED activity
 
   // DNA v48. The dictionary's own state: which slice holds the tract, how long
   // it is still entitled to, and the smoothed formant targets it names. The

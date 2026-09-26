@@ -14478,7 +14478,6 @@ SalRow run_salience_arm(const std::vector<uint8_t>& blob, uint64_t ticks, const 
   SalRow row;
   Session s;
   std::string error;
-  if (!s.init(blob, error)) return row;
   const aibaby::DnaAudio& acfg = s.dna.header().audio;
   Ear ear;
   if (!ear.configure(acfg, error)) return row;
@@ -14779,7 +14778,28 @@ constexpr uint64_t kSRSeedOffset = 774431ull;
 // the dopamine), not a contingency difference. Its +2.5 SE could be entirely
 // "more reward". The matched control for fixedbar is a creature receiving
 // FIXEDBAR's own times: same rate, same total, wrong times.
-enum SRArm { kSRTaught = 0, kSRYoked, kSRNone, kSRFixed, kSRFixYoke, kSRArmCount };
+enum SRArm { kSRTaught = 0, kSRYoked, kSRNone, kSRFixed, kSRFixYoke,
+             // DNA v64. Three jaws with NO reward, to ask whether a body part
+             // oscillates where five neural mechanisms did not -- and whether the
+             // rhythm TRACKS the jaw. A rhythm that sits at one frequency
+             // whatever `jaw_hz` says is the old 3 Hz resonance re-measured,
+             // which is the trap `three-hertz-resonance` set and the reason a
+             // single jaw would prove nothing.
+             kSRJaw30, kSRJaw45, kSRJaw70,
+             // And the jaw WITH the fixed-bar reward: if the body supplies a
+             // frame, the reward finally has something to shape.
+             kSRJawRew, kSRArmCount };
+// `jaw_hz` per arm. 4.5 Hz is the envelope peak in the speech literature; 3.0 and
+// 7.0 bracket it so the tracking test has a range to track over.
+inline double sr_jaw_hz(SRArm a) {
+  switch (a) {
+    case kSRJaw30: return 3.0;
+    case kSRJaw45: return 4.5;
+    case kSRJaw70: return 7.0;
+    case kSRJawRew: return 4.5;
+    default: return 0.0;
+  }
+}
 
 struct SRRow {
   bool ok = false;
@@ -14788,6 +14808,10 @@ struct SRRow {
   double sal_early = 0.0, sal_late = 0.0;   // did the reward's own measure move
   double bar_final = 0.0;                   // how far the staircase climbed
   uint32_t rewards = 0;
+  // DNA v64. The envelope's spectral PEAK, found by scanning the syllable band.
+  // Modulation depth says "something moves"; only the peak's LOCATION says the
+  // movement is the jaw's and not whatever the creature already did.
+  double env_peak_hz = 0.0, env_peak_snr = 0.0;
 };
 
 SRRow run_salrew_arm(const std::vector<uint8_t>& blob, uint64_t ticks, SRArm arm,
@@ -14795,7 +14819,14 @@ SRRow run_salrew_arm(const std::vector<uint8_t>& blob, uint64_t ticks, SRArm arm
   SRRow row;
   Session s;
   std::string error;
-  if (!s.init(blob, error)) return row;
+  std::vector<uint8_t> local = blob;
+  {
+    const float jh = float(sr_jaw_hz(arm));
+    std::memcpy(local.data() + offsetof(aibaby::DnaHeader, vocal) +
+                    offsetof(aibaby::DnaVocal, jaw_hz),
+                &jh, sizeof(jh));
+  }
+  if (!s.init(local, error)) return row;
   const aibaby::DnaAudio& acfg = s.dna.header().audio;
   Ear ear;
   if (!ear.configure(acfg, error)) return row;
@@ -14817,6 +14848,7 @@ SRRow run_salrew_arm(const std::vector<uint8_t>& blob, uint64_t ticks, SRArm arm
   // The envelope's two smoothers, for the 2-6 Hz band, plus the running moments
   // of the band-passed envelope in each half of the run.
   double env_fast = 0.0, env_slow = 0.0;
+  std::vector<double> env_series, env_times;
   double band_sum[2] = {}, band_sq[2] = {}, env_mean[2] = {}, sal_sum[2] = {};
   uint64_t band_n[2] = {}, sal_n[2] = {};
   double amp_sum = 0.0;
@@ -14861,6 +14893,11 @@ SRRow run_salrew_arm(const std::vector<uint8_t>& blob, uint64_t ticks, SRArm arm
     const double env = (v.voicing > 0.5f ? 1.0 : 0.0) * double(v.amplitude);
     env_fast += (1.0 / kSRTauFast) * (env - env_fast);
     env_slow += (1.0 / kSRTauSlow) * (env - env_slow);
+    if (t >= settle && (t % 4) == 0) {
+      // Every 4th tick: 250 Hz is far above a 7 Hz jaw and keeps the series small.
+      env_series.push_back(env);
+      env_times.push_back(double(t));
+    }
     if (t >= settle) {
       const uint32_t h = t < half ? 0u : 1u;
       const double band = env_fast - env_slow;
@@ -14890,7 +14927,7 @@ SRRow run_salrew_arm(const std::vector<uint8_t>& blob, uint64_t ticks, SRArm arm
           std::sort(p.begin(), p.end());
           bar = p[p.size() / 2];
         }
-      } else if (arm == kSRTaught || arm == kSRFixed) {   // kSRFixYoke replays
+      } else if (arm == kSRTaught || arm == kSRFixed || arm == kSRJawRew) {
         const bool clear = sal >= bar;
         hist.push_back(clear);
         if (hist.size() > kSRHist) hist.pop_front();
@@ -14931,6 +14968,17 @@ SRRow run_salrew_arm(const std::vector<uint8_t>& blob, uint64_t ticks, SRArm arm
   row.sal_late = sal_n[1] ? sal_sum[1] / double(sal_n[1]) : 0.0;
   row.amp_mean = amp_n ? amp_sum / double(amp_n) : 0.0;
   row.bar_final = bar;
+  // THE PEAK. Scanned across the syllable band rather than tested at one
+  // frequency, because the question is WHERE the rhythm sits, not whether there
+  // is power at a frequency chosen in advance.
+  if (env_series.size() >= 512) {
+    double best = -1.0;
+    for (double f = 1.0; f <= 10.0; f += 0.1) {
+      const double snr = fh_snr(env_series, env_times, f, 0.0);
+      if (snr > best) { best = snr; row.env_peak_hz = f; }
+    }
+    row.env_peak_snr = best;
+  }
   row.ok = true;
   return row;
 }
@@ -15011,21 +15059,28 @@ bool run_salrew(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) 
     cell.row[kSRFixed] = pass1[r].frow;
     const std::vector<uint64_t>& fother = fyokes[(r + 1u) % kReps];
     cell.row[kSRFixYoke] = run_salrew_arm(variant, ticks, kSRFixYoke, &fother, nullptr);
+    for (int ja = int(kSRJaw30); ja <= int(kSRJawRew); ++ja)
+      cell.row[ja] = run_salrew_arm(variant, ticks, SRArm(ja), nullptr, nullptr);
     cell.ok = cell.row[kSRTaught].ok && cell.row[kSRYoked].ok && cell.row[kSRNone].ok &&
-              cell.row[kSRFixed].ok && cell.row[kSRFixYoke].ok;
+              cell.row[kSRFixed].ok && cell.row[kSRFixYoke].ok &&
+              cell.row[kSRJaw30].ok && cell.row[kSRJaw45].ok && cell.row[kSRJaw70].ok &&
+              cell.row[kSRJawRew].ok;
     parallel_note("  [yoked %u/%u] seed %u  rewards %u (from creature %u)\n", r + 1, kReps,
                   r, cell.row[kSRYoked].rewards, (r + 1u) % kReps);
     return cell;
   });
 
-  const char* names[kSRArmCount] = {"taught", "yoked", "none", "fixedbar", "fix-yoked"};
+  const char* names[kSRArmCount] = {"taught", "yoked", "none", "fixedbar", "fix-yoked",
+                                    "jaw3.0", "jaw4.5", "jaw7.0", "jaw4.5+rew"};
   double m_mod[kSRArmCount] = {}, s_mod[kSRArmCount] = {};
   double m_amp[kSRArmCount] = {}, s_amp[kSRArmCount] = {};
   double m_sal[kSRArmCount] = {}, s_sal[kSRArmCount] = {};
   uint32_t nseed = 0, m_rew[kSRArmCount] = {};
+  double m_pk[kSRArmCount] = {}, s_pk[kSRArmCount] = {}, m_ps[kSRArmCount] = {};
   const double nwin = double(ticks) / double(kSRWindow);
-  std::printf("\n  %-9s %-18s %-18s %-16s %-9s %s\n", "arm", "mod depth late",
-              "mod early->late", "mean amp", "rewards", "hit rate");
+  std::printf("\n  %-11s %-17s %-17s %-16s %-6s %-7s %-12s %s\n", "arm",
+              "mod depth late", "mod early->late", "mean amp", "rewd", "hit",
+              "env peak Hz", "snr");
   for (uint32_t a = 0; a < kSRArmCount; ++a) {
     std::vector<double> md, mdd, am, sl;
     uint64_t rw = 0;
@@ -15048,9 +15103,19 @@ bool run_salrew(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) 
     const double dd = ctx_mean_se(mdd, &q);
     m_amp[a] = ctx_mean_se(am, &s_amp[a]);
     m_sal[a] = ctx_mean_se(sl, &s_sal[a]);
-    std::printf("    %-9s %.4f +/- %-9.4f %+.4f +/- %-8.4f %.4f +/- %-6.4f %-9u %.1f%%\n",
+    std::vector<double> pk, ps;
+    for (uint32_t r = 0; r < kReps; ++r) {
+      if (!cells[r].ok) continue;
+      pk.push_back(cells[r].row[a].env_peak_hz);
+      ps.push_back(cells[r].row[a].env_peak_snr);
+    }
+    double qp = 0.0, qs = 0.0;
+    m_pk[a] = ctx_mean_se(pk, &qp);
+    s_pk[a] = qp;
+    m_ps[a] = ctx_mean_se(ps, &qs);
+    std::printf("    %-11s %.4f +/- %-8.4f %+.4f +/- %-7.4f %.4f +/- %-6.4f %-6u %5.1f%%  %4.2f +/- %-4.2f %5.1f\n",
                 names[a], m_mod[a], s_mod[a], dd, q, m_amp[a], s_amp[a], m_rew[a],
-                100.0 * double(m_rew[a]) / nwin);
+                100.0 * double(m_rew[a]) / nwin, m_pk[a], qp, m_ps[a]);
   }
   if (nseed < 3) { std::printf("\n  salrew INCONCLUSIVE.\n"); return false; }
 
@@ -15137,6 +15202,67 @@ bool run_salrew(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) 
                 "  fixed bar kept firing (%.1f%%). The taught arm therefore cannot speak to\n"
                 "  whether the reward WORKS -- only the fixedbar arm can, and the verdict\n"
                 "  below rests on it.\n", hit_taught, hit_fixed);
+  // --- DNA v64: DOES THE BODY OSCILLATE WHERE FIVE NEURAL ROUTES DID NOT? ----
+  // THE PRIMARY IS TRACKING, not the presence of a rhythm. `three-hertz-resonance`
+  // set exactly this trap: a rhythm sitting at one frequency whatever the
+  // mechanism's constant says is the old resonance re-measured. So the envelope's
+  // spectral peak must FOLLOW jaw_hz across 3.0 / 4.5 / 7.0, and the statistic is
+  // the SLOPE across those three settings.
+  //
+  // And it must not be a mute dial. `adaptclock` was mostly one, and a jaw that
+  // closes the tract is an excellent way to get a modulated envelope by being
+  // quiet rather than by being rhythmic.
+  {
+    std::printf("\n  DNA v64 -- DOES THE RHYTHM TRACK THE JAW?\n");
+    const SRArm js[3] = {kSRJaw30, kSRJaw45, kSRJaw70};
+    const double want[3] = {3.0, 4.5, 7.0};
+    double err = 0.0;
+    bool have = true;
+    for (uint32_t k = 0; k < 3u; ++k) {
+      std::printf("    jaw_hz %.1f  ->  envelope peak %.2f +/- %.2f Hz   snr %.1f   amp %.4f\n",
+                  want[k], m_pk[js[k]], s_pk[js[k]], m_ps[js[k]], m_amp[js[k]]);
+      err += std::fabs(m_pk[js[k]] - want[k]);
+      if (m_ps[js[k]] <= 0.0) have = false;
+    }
+    err /= 3.0;
+    const double xm = (want[0] + want[1] + want[2]) / 3.0;
+    const double ym = (m_pk[js[0]] + m_pk[js[1]] + m_pk[js[2]]) / 3.0;
+    double num = 0.0, den = 0.0;
+    for (uint32_t k = 0; k < 3u; ++k) {
+      num += (want[k] - xm) * (m_pk[js[k]] - ym);
+      den += (want[k] - xm) * (want[k] - xm);
+    }
+    const double slope = den > 0.0 ? num / den : 0.0;
+    std::printf("    TRACKING SLOPE %.2f  [1.00 is the jaw; 0.00 is a fixed resonance]\n",
+                slope);
+    std::printf("    mean |peak - jaw_hz| %.2f Hz\n", err);
+    const double amp_none = m_amp[kSRNone];
+    std::printf("    mean amplitude, jaw 4.5 %.4f vs no jaw %.4f (a mute dial would fall)\n",
+                m_amp[kSRJaw45], amp_none);
+    std::printf("    modulation depth, jaw 4.5 %.4f vs no jaw %.4f\n",
+                m_mod[kSRJaw45], m_mod[kSRNone]);
+    if (!have)
+      std::printf("\n    REFUSED -- no envelope peak was found at all, so the jaw is not\n"
+                  "    moving the amplitude and the tracking question does not arise.\n");
+    else if (slope < 0.5)
+      std::printf("\n    REFUSED ON TRACKING -- slope %.2f where 1.00 is the jaw. The rhythm\n"
+                  "    does not follow jaw_hz, so whatever the peak is, it is not the jaw\n"
+                  "    ringing. That is `three-hertz-resonance` again, and the trap it set.\n",
+                  slope);
+    else if (m_amp[kSRJaw45] < 0.75 * amp_none)
+      std::printf("\n    REFUSED AS A MUTE DIAL -- the rhythm tracks (slope %.2f) but mean\n"
+                  "    amplitude fell from %.4f to %.4f. A jaw that mostly shuts the tract\n"
+                  "    buys a modulated envelope by being quiet, which is how `adaptclock`\n"
+                  "    died, and it is not a frame.\n", slope, amp_none, m_amp[kSRJaw45]);
+    else
+      std::printf("\n    THE BODY OSCILLATES. The envelope peak tracks jaw_hz at slope %.2f\n"
+                  "    without the voice going quiet. Five NEURAL routes to a frame were\n"
+                  "    refused; the frame was a body part. NEXT, before believing it: a\n"
+                  "    fresh seed family, and whether reward can now shape what the body\n"
+                  "    supplies -- which `jaw4.5+rew` begins and full power would settle.\n",
+                  slope);
+  }
+
   std::printf("\n  --- the reading ---\n");
   if (rhythm && !louder)
     std::printf("  A FRAME APPEARED, AND IT IS NOT LOUDNESS. Syllable-band modulation\n"

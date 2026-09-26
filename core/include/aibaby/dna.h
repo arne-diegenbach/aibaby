@@ -1797,6 +1797,48 @@ struct DnaVocal {
   // that turns this on measures delivered F1's sd and averaged error, not just
   // its excursion.
   float f1_burst_weight;
+  // DNA v64 — A JAW. THE FRAME IS A BODY PART, NOT A NEURAL MECHANISM.
+  //
+  // Five routes to a syllabic frame are refused and every one was NEURAL: a CPG
+  // kernel that self-cancels as it widens, no free-running rhythm, loop gain that
+  // will not self-sustain, a fatigue current that was mostly a mute dial, and a
+  // target-free transient reward. The literature says why that list had to end
+  // this way. MacNeilage's frames-then-content has the syllabic frame BEING
+  // rhythmic MANDIBULAR oscillation; babbling contains SILENT mandibular
+  // oscillations, so the rhythm is there before the sound is; the rate is the
+  // syllable rate (~4 Hz jaw in motor cortex, envelope peaking 4-5 Hz, pure motor
+  // productions most precise at 4.5-5.5 Hz); and Gafos & Kuberski (2025) put a
+  // LIMIT CYCLE at the level of individual articulatory actions, explicitly not
+  // in a neural pacemaker. Warlaumont's model, which got canonical babbling,
+  // drove masseter and orbicularis oris in Praat's synthesiser with coupled
+  // mass-spring walls.
+  //
+  // THIS SYNTHESISER IS A FORMANT FILTER DRIVEN BY SCALARS. No mass, no spring,
+  // no resonance, no mandible. Five neural routes failed to produce a mandibular
+  // oscillation because there was nothing to oscillate. This adds the missing
+  // body part and fills a hole already named: `syllable-band-is-empty` found the
+  // timescale ladder empty from 60 to 800 ms, and 4.5 Hz is 222 ms.
+  //
+  //   x'' + 2*zeta*w0*x' + w0^2*(x - drive) = 0
+  //
+  // The spring's REST POSITION is the neural drive, which fixes the gain instead
+  // of leaving it to be guessed: at DC the jaw follows the command exactly, and
+  // transients ring at w0. The jaw's position then IS the aperture, so amplitude
+  // is what it gates.
+  //
+  // The drive is the RAW group reading, NOT the 60 ms smoothed one: that pole
+  // sits at 2.65 Hz, below a 4.5 Hz jaw, and would attenuate the kick to 0.51.
+  // The jaw supplies its own smoothing — the same relocation v62 made.
+  //
+  // 0 is OFF and bit-identical. Resonance in Hz.
+  float jaw_hz;
+  // Damping ratio, and it is bounded on BOTH sides. zeta 0.1-0.2 rings 1.6-3.2
+  // cycles (350-700 ms) -- long enough to be a frame carrying two or three
+  // syllables, short enough to stop between utterances. Below that it never
+  // stops, which is v32's runaway and a jaw stuck open is a mute dial. Above it a
+  // kick produces no second cycle, which is a low-pass rather than an oscillator
+  // and is what `halfcenter` kept measuring.
+  float jaw_damping;
 
 };
 

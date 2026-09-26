@@ -372,6 +372,10 @@ void VocalDecoder::update(const Network& net, bool awake) {
     // shipped creature does not take an extra float op per group per frame.
     if (g == 2u && cfg_.f1_velocity_gain > kZero)
       f1_cmd_ += gate_smooth_ * (r.value - f1_cmd_);
+    // DNA v64. Group 8 is the amplitude group, and the jaw is driven by its RAW
+    // activity: `group_activity_` is smoothed at gate_smoothing_ms 60, a pole at
+    // 2.65 Hz, which sits BELOW a 4.5 Hz jaw and would attenuate the kick to 0.51.
+    if (g == 8u && cfg_.jaw_hz > kZero) jaw_raw_drive_ = r.activity;
   }
 
   // Group order is fixed: it is the wiring between motor cortex and larynx.
@@ -579,7 +583,37 @@ void VocalDecoder::update(const Network& net, bool awake) {
   const Scalar target_bw1 = lerp(Scalar(cfg_.bw_min), Scalar(cfg_.bw_max), group_value_[5]);
   const Scalar target_bw2 = lerp(Scalar(cfg_.bw_min), Scalar(cfg_.bw_max), group_value_[6]);
   const Scalar target_bw3 = lerp(Scalar(cfg_.bw_min), Scalar(cfg_.bw_max), group_value_[7]);
-  const Scalar target_amp = group_activity_[8];
+  Scalar target_amp = group_activity_[8];
+
+  // DNA v64. THE JAW. A mass-spring-damper whose rest position is the neural
+  // drive, integrated semi-implicitly: velocity is updated from the CURRENT
+  // position and position from the NEW velocity, which is stable where the
+  // explicit form drifts energy upward and would manufacture the oscillation the
+  // experiment is trying to detect.
+  if (cfg_.jaw_hz > kZero) {
+    // SUBSTEPPED, and the first version was not. This decoder runs every
+    // kVocalUpdateMs = 10 ms, not every tick, so w0*dt reaches 0.44 at 7 Hz --
+    // far outside the range where semi-implicit Euler keeps its frequency, and it
+    // shifts the resonance DOWN. Measured: a 7 Hz jaw rang at 4.16 Hz, which is
+    // the integrator and not the body. The jaw's physics must not be limited by
+    // the frame rate of the thing reading it, so each update takes 10 substeps of
+    // 1 ms and w0*dt_sub stays under 0.05 across the whole usable band.
+    constexpr uint32_t kJawSub = 10;
+    const Scalar dt = update_ms_ * Scalar(0.001) / Scalar(kJawSub);
+    const Scalar w0 = Scalar(6.283185307179586) * Scalar(cfg_.jaw_hz);
+    const Scalar zeta = Scalar(cfg_.jaw_damping);
+    for (uint32_t sub = 0; sub < kJawSub; ++sub) {
+    jaw_v_ += dt * (-Scalar(2) * zeta * w0 * jaw_v_ - w0 * w0 * (jaw_ - jaw_raw_drive_));
+    jaw_ += dt * jaw_v_;
+    // A jaw cannot open past its hinge or close past its teeth. Clamping the
+    // POSITION alone would let velocity keep accumulating against the stop and
+    // fire the jaw back out, which is a bounce and not a damped oscillation, so
+    // the velocity is zeroed at each limit.
+    if (jaw_ < kZero) { jaw_ = kZero; if (jaw_v_ < kZero) jaw_v_ = kZero; }
+    if (jaw_ > kOne) { jaw_ = kOne; if (jaw_v_ > kZero) jaw_v_ = kZero; }
+    }
+    target_amp = jaw_;
+  }
 
   params_.f0 = target_f0;
   params_.f1 = target_f1;
