@@ -11946,6 +11946,102 @@ nothing has yet used one.** Do not re-open "gate something on the jaw" without a
 schedule-matched control: the creature's own voicing pattern is a competing
 schedule, and on excursion it wins.
 
+## The voicing gate alternates at 3.02 Hz and carries no clock
+
+`syllf1` left one quantity doing all the work and unmeasured: the creature's own
+unvoiced stretches schedule an F1 anchor ~35% better than a 4.5 Hz jaw, and that
+schedule *saturates*, so what caps it is when the creature falls silent.
+
+Duty was on record — 0.67 — but **a fraction is not a structure**: 33% silent can be
+one long block or a hundred brief gaps. And the two results that call this band empty,
+*the voice drones* and *the syllable band is empty*, both measured the amplitude
+**envelope**. The voicing gate is a threshold crossing of group 1, a binary signal,
+and nobody had computed its interval statistics.
+
+### The primary, with its number fixed before the run
+
+If the drift floor is set by how long F1 integrates between silences, then
+`drift = gain · σ · T`. At gain 7123 Hz/s and σ ≈ 0.038 — the position decoder's
+28.4 Hz F1 sd over a 750 Hz span — `syllf1`'s measured 46.5 Hz floor requires
+`T ≈ 172 ms`.
+
+    predicted mean voiced stretch   172 ms
+    measured (12 creatures, 600k)   194.8 +/- 4.7 ms    ratio 1.13
+
+Inside the pre-registered factor of two, from two inputs that have nothing to do with
+the voicing gate. The account stands at order of magnitude and no better — σ is itself
+approximate and the relation assumes coherent rather than random-walk accumulation.
+
+**The smoke's precision was luck, which is why it was refused at the time.** At 60k
+ticks it read 168.2 ms, a ratio of 0.98, and that 2% agreement was explicitly not
+claimed. At full length it is 13% off.
+
+### A schedule in the right band, and not a rhythm
+
+    gate duty            0.587
+    voiced stretch       194.8 +/- 4.7 ms    CV 0.78
+    unvoiced stretch     136.5 +/- 2.4 ms    CV 0.85
+    implied gate rate    3.02 Hz
+    spectral peak        2.23 Hz at snr 6.1  <- 26% off the interval rate
+
+**3.02 Hz is syllable-scale and the intervals are near-memoryless.** A memoryless
+point process sits at CV 1.0 and a clock well below; 0.78 and 0.85 are near the
+former. So there *is* syllable-scale activity in a channel nobody had measured, and
+there is no timing in it.
+
+*The syllable band is empty* survives intact — its claim is that no oscillator here
+runs free for want of a slow state variable, and an irregular gate is not a
+counterexample. What this adds is that **an irregular schedule anchors an integrator
+perfectly well while carrying no timing**, which is exactly why it beat the jaw.
+
+The spectral peak disagrees with the interval rate by 26%, so it is flagged and not
+quoted: a scanned argmax is a maximum over noise, and `selfloop` already lost a result
+to one. The interval rate is the primary.
+
+### The control failed, and that is how the record got corrected
+
+The first control here was the recorded `self_gain` duty ladder — 0.84 / 0.67 / 0.39,
+"louder self-hearing makes the creature quieter, monotonically". It did not reproduce,
+and chasing why corrected the record in two ways.
+
+**The magnitudes are stale.** Twelve creatures read 0.537 / 0.513 / 0.401: the span
+has collapsed from 0.45 to 0.136 across ~60 genome versions, and `babble` no longer
+reproduces its own recorded numbers at its own length. So "the loop is negative
+feedback" stands and "this is the duty-cycle dial" does not — a 0.136 span is not a
+dial.
+
+**The sign is run-length dependent, and a reversal was announced off short runs before
+being retracted.** At 600k the ordering falls as recorded; at 60k it rises, and so
+does `babble` at 120k. That is what the recorded mechanism predicts: the feedback is
+negative *through* intrinsic plasticity, which needs time to raise thresholds, so a
+short run sees only the excitatory leg. The output now prints the direction with the
+tick count attached and refuses to quote a sign without it.
+
+Two lessons came out of that, and the first is the more useful:
+
+**Control on a recorded number rather than a fresh one.** When it fails, one of the
+two is stale, and that is information either way. A control invented for the run can
+only ever tell you the instrument works.
+
+**One word, two quantities.** This project's "duty cycle" has always meant
+`amplitude > kAmplitudeFloor` — a threshold on the amplitude group, not the voicing
+flag. The first version of the experiment scored the gate's duty against the recorded
+*amplitude* duty and refused the run over a disagreement that was purely a
+mislabelling.
+
+The control that works is arithmetic: `voicing_threshold` 0.30 / 0.42 / 0.55 gives
+gate duty 0.847 / 0.587 / 0.301, monotone **by construction**, since a higher
+threshold cannot admit more frames whatever the activity distribution. That tests the
+instrument without resting on any empirical claim, and it is the kind to prefer where
+one exists.
+
+### One open connection, deliberately not chased
+
+*The 3 Hz resonance* recorded a timekeeping structure that loop gain does not
+self-sustain. The gate alternates at 3.02 Hz. These may be the same structure, and it
+is checkable — does the gate rate move with the parameters that set the resonance?
+Until that is run, the coincidence is not evidence in either direction.
+
 ## Layout
 
 ```

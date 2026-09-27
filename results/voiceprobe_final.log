@@ -1,0 +1,127 @@
+  [6/60] seed 1  thr 0.30      duty 0.868  on  505.0 ms  off   76.8 ms
+  [8/60] seed 1  thr 0.55      duty 0.299  on  116.9 ms  off  273.3 ms
+  [4/60] seed 0  deaf(sg 0)    duty 0.662  on  262.7 ms  off  134.2 ms
+  [2/60] seed 0  shipped       duty 0.655  on  221.5 ms  off  116.8 ms
+  [7/60] seed 1  shipped       duty 0.600  on  209.8 ms  off  139.8 ms
+  [1/60] seed 0  thr 0.30      duty 0.897  on  609.7 ms  off   70.6 ms
+  [9/60] seed 1  deaf(sg 0)    duty 0.627  on  240.7 ms  off  143.0 ms
+  [5/60] seed 0  loud(sg 2)    duty 0.492  on  176.2 ms  off  182.2 ms
+  [3/60] seed 0  thr 0.55      duty 0.330  on  114.3 ms  off  232.5 ms
+  [12/60] seed 2  shipped       duty 0.561  on  171.4 ms  off  133.8 ms
+  [10/60] seed 1  loud(sg 2)    duty 0.449  on  165.3 ms  off  202.6 ms
+  [11/60] seed 2  thr 0.30      duty 0.812  on  370.2 ms  off   85.6 ms
+  [14/60] seed 2  deaf(sg 0)    duty 0.582  on  226.2 ms  off  162.6 ms
+  [13/60] seed 2  thr 0.55      duty 0.311  on  107.5 ms  off  238.0 ms
+  [16/60] seed 3  thr 0.30      duty 0.850  on  471.6 ms  off   83.4 ms
+  [19/60] seed 3  deaf(sg 0)    duty 0.611  on  225.2 ms  off  143.3 ms
+  [22/60] seed 4  shipped       duty 0.576  on  185.3 ms  off  136.6 ms
+  [23/60] seed 4  thr 0.55      duty 0.305  on  110.9 ms  off  252.0 ms
+  [17/60] seed 3  shipped       duty 0.587  on  195.3 ms  off  137.7 ms
+  [15/60] seed 2  loud(sg 2)    duty 0.458  on  152.2 ms  off  180.6 ms
+  [20/60] seed 3  loud(sg 2)    duty 0.441  on  165.8 ms  off  210.3 ms
+  [21/60] seed 4  thr 0.30      duty 0.834  on  431.4 ms  off   85.7 ms
+  [24/60] seed 4  deaf(sg 0)    duty 0.585  on  224.8 ms  off  159.3 ms
+  [18/60] seed 3  thr 0.55      duty 0.283  on  112.9 ms  off  286.7 ms
+  [26/60] seed 5  thr 0.30      duty 0.841  on  459.4 ms  off   86.7 ms
+  [28/60] seed 5  thr 0.55      duty 0.290  on  117.4 ms  off  287.3 ms
+  [31/60] seed 6  thr 0.30      duty 0.846  on  472.0 ms  off   85.8 ms
+  [29/60] seed 5  deaf(sg 0)    duty 0.598  on  221.7 ms  off  149.2 ms
+  [27/60] seed 5  shipped       duty 0.589  on  199.3 ms  off  139.2 ms
+  [34/60] seed 6  deaf(sg 0)    duty 0.602  on  231.9 ms  off  153.5 ms
+  [25/60] seed 4  loud(sg 2)    duty 0.458  on  167.4 ms  off  198.2 ms
+  [35/60] seed 6  loud(sg 2)    duty 0.488  on  198.2 ms  off  208.1 ms
+  [36/60] seed 7  thr 0.30      duty 0.804  on  355.7 ms  off   86.7 ms
+  [32/60] seed 6  shipped       duty 0.579  on  192.3 ms  off  139.9 ms
+  [33/60] seed 6  thr 0.55      duty 0.296  on  116.8 ms  off  277.2 ms
+  [30/60] seed 5  loud(sg 2)    duty 0.461  on  178.5 ms  off  208.6 ms
+  [39/60] seed 7  deaf(sg 0)    duty 0.552  on  219.7 ms  off  178.6 ms
+  [37/60] seed 7  shipped       duty 0.537  on  170.6 ms  off  147.2 ms
+  [42/60] seed 8  shipped       duty 0.618  on  216.4 ms  off  133.5 ms
+  [44/60] seed 8  deaf(sg 0)    duty 0.634  on  244.5 ms  off  141.2 ms
+  [47/60] seed 9  shipped       duty 0.617  on  203.9 ms  off  126.7 ms
+  [41/60] seed 8  thr 0.30      duty 0.873  on  539.5 ms  off   78.3 ms
+  [45/60] seed 8  loud(sg 2)    duty 0.525  on  211.4 ms  off  191.3 ms
+  [38/60] seed 7  thr 0.55      duty 0.291  on  110.0 ms  off  268.0 ms
+  [46/60] seed 9  thr 0.30      duty 0.874  on  527.2 ms  off   76.1 ms
+  [40/60] seed 7  loud(sg 2)    duty 0.429  on  153.6 ms  off  204.7 ms
+  [43/60] seed 8  thr 0.55      duty 0.316  on  122.4 ms  off  265.5 ms
+  [49/60] seed 9  deaf(sg 0)    duty 0.633  on  238.7 ms  off  138.6 ms
+  [48/60] seed 9  thr 0.55      duty 0.328  on  114.3 ms  off  233.9 ms
+  [51/60] seed 10  thr 0.30      duty 0.832  on  410.7 ms  off   83.2 ms
+  [50/60] seed 9  loud(sg 2)    duty 0.443  on  173.6 ms  off  218.0 ms
+  [56/60] seed 11  thr 0.30      duty 0.838  on  434.5 ms  off   83.7 ms
+  [53/60] seed 10  thr 0.55      duty 0.286  on  111.3 ms  off  277.7 ms
+  [54/60] seed 10  deaf(sg 0)    duty 0.580  on  213.6 ms  off  154.8 ms
+  [57/60] seed 11  shipped       duty 0.564  on  187.7 ms  off  145.3 ms
+  [52/60] seed 10  shipped       duty 0.565  on  183.7 ms  off  141.6 ms
+  [58/60] seed 11  thr 0.55      duty 0.273  on  115.6 ms  off  308.1 ms
+  [60/60] seed 11  loud(sg 2)    duty 0.480  on  191.4 ms  off  206.9 ms
+  [59/60] seed 11  deaf(sg 0)    duty 0.580  on  221.0 ms  off  159.9 ms
+  [55/60] seed 10  loud(sg 2)    duty 0.444  on  172.9 ms  off  216.2 ms
+experiment: voiceprobe
+  instrument        voiceprobe   trial seed 0000000001355bd4   600000 ticks
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  the question   the voicing gate is a BINARY signal and its interval
+                 statistics have never been measured. `the-voice-drones`
+                 and `syllable-band-is-empty` both measured the amplitude
+                 ENVELOPE, which is a different channel.
+  why now        the creature's own silences schedule an F1 anchor ~35%
+                 BETTER than a 4.5 Hz jaw, and that schedule SATURATES.
+                 What caps it is when the creature falls silent.
+  the primary    MEAN VOICED-STRETCH DURATION, predicted 172 ms BEFORE the
+                 run from drift = gain * sigma * T at the measured 46.5 Hz
+                 floor. Far off that and the account is wrong.
+  and separately is the schedule REGULAR? CV of the intervals: >= 0.70 is a
+                 memoryless process with no rhythm, well below is a clock.
+  the control    `self_gain` is the recorded duty dial -- 0.84 deaf, 0.67 at
+                 0.5, 0.39 at 2.0. The ORDERING must reproduce or this
+                 instrument is broken. Magnitudes need not: that entry is
+                 five creatures on an older genome.
+  untaught       silent room, no praise: the creature's own structure.
+
+  arm           gate duty  voiced ms        CV     unvoiced ms      CV     gate Hz   spec peak   snr   amp duty
+    thr 0.30      0.847    465.6 +/- 21.0  0.99     81.9 +/-  1.5  0.79     1.85     1.66 Hz    5.3   0.521
+    shipped       0.587    194.8 +/-  4.7  0.78    136.5 +/-  2.4  0.85     3.02     2.23 Hz    6.1   0.513
+    thr 0.55      0.301    114.2 +/-  1.2  0.59    266.7 +/-  6.8  1.07     2.64     2.64 Hz    5.3   0.508
+    deaf(sg 0)    0.604    230.9 +/-  3.9  0.91    151.5 +/-  3.6  0.97     2.62     1.13 Hz    6.5   0.537
+    loud(sg 2)    0.464    175.5 +/-  5.0  0.67    202.3 +/-  3.5  2.29     2.65     3.11 Hz    7.1   0.401
+
+  POSITIVE CONTROL   gate duty must FALL as voicing_threshold RISES
+    threshold 0.30 / 0.42 / 0.55  ->  0.847 / 0.587 / 0.301
+    reproduces. The instrument reads the gate.
+
+  A STALE RECORDED LADDER, and the DIRECTION has reversed
+    `deaf-to-itself` (5 creatures, ~60 genome versions ago, self_gain
+    0 / 0.5 / 2.0):  amplitude duty 0.84 / 0.67 / 0.39, falling --
+    "louder self-hearing makes the creature quieter, monotonically".
+    measured here (12 creatures):  0.537 / 0.513 / 0.401
+    the recorded DIRECTION reproduces at this length -- falling, so the loop
+    is still net negative feedback. The MAGNITUDES are stale: the deaf end
+    reads 0.537 against a recorded 0.84 and the loud end 0.401 against 0.39, so
+    the SPAN has collapsed from 0.45 to 0.136. Quote the sign, not the values.
+    AND NOTE THE LENGTH: at 60k ticks this ordering RISES, and so does
+    `babble` at its own 120k. Intrinsic plasticity needs time to raise
+    thresholds, so a short run sees only the excitatory leg of the loop.
+
+  --- the primary, against a number fixed before the run ---
+    predicted mean voiced stretch  172 ms   (from drift = gain * sigma * T)
+    measured                       194.8 ms   ratio 1.13
+    THE ACCOUNT HOLDS within a factor of two. The ungated schedule's drift
+    floor IS set by how long F1 integrates between silences, which is why
+    shortening its anchor past that point bought nothing.
+
+  --- is it a RHYTHM or just a schedule? ---
+    interval CV   voiced 0.78   unvoiced 0.85   (1.0 = memoryless, bar 0.70)
+    implied gate rate 3.02 Hz   spectral peak 2.23 Hz at snr 6.1
+    margins: voiced CV is 0.08 from the bar, unvoiced 0.15 -- the UNVOICED
+    intervals are what decide it, and the voiced side sits ON the bar: claim nothing from it.
+    rate agreement: intervals 3.02 Hz vs spectral peak 2.23 Hz, 26% apart at snr 6.1
+    THEY DISAGREE by more than a fifth. The interval rate is the primary --
+    the peak is a scanned argmax and this project has already lost a result
+    to one. Do not quote the peak as the gate's frequency.
+    A SCHEDULE IN THE RIGHT BAND, AND NOT A RHYTHM. The mean rate is 3.02 Hz
+    -- syllable-scale -- but the intervals are near-memoryless (CV 0.78), so
+    there is no clock here. That is consistent with everything: an irregular
+    schedule can anchor an integrator perfectly well and still carry no
+    timing, which is exactly what beat the jaw.

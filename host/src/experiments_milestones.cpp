@@ -16477,6 +16477,435 @@ bool run_syllf1b(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
   return run_syllf1_family(blob, ticks, verbose, kSYSeedOffset2);
 }
 
+// ---------------------------------------------------------------------------
+// voiceprobe -- WHAT IS THE TIME STRUCTURE OF THE VOICING GATE?
+//
+// [[aibaby-jaw-gate-refused]] found that the creature's OWN unvoiced stretches
+// schedule an F1 anchor ~35% better than a 4.5 Hz jaw cycle does, and that the
+// schedule SATURATES: cutting its anchor from 60 ms to 15 moves drift only
+// 55.1 -> 46.5 Hz. Whatever caps it is WHEN THE CREATURE FALLS SILENT, and that has
+// never been measured.
+//
+// Duty is on record -- 0.67 voiced at the shipped `self_gain` 0.5
+// ([[aibaby-deaf-to-itself]]) -- but a FRACTION is not a STRUCTURE. 33% silent can
+// be one long block or a hundred brief gaps, and nothing here distinguishes them.
+//
+// AND THE TWO RESULTS THAT SAY THIS BAND IS EMPTY MEASURED A DIFFERENT SIGNAL.
+// [[aibaby-the-voice-drones]] and [[aibaby-syllable-band-is-empty]] both measured the
+// amplitude ENVELOPE. The voicing gate is a threshold crossing of group 1, a BINARY
+// signal, and its interval statistics have never been looked at. If its silences
+// recur in the 4-8 Hz band then this creature has had an endogenous frame all along
+// in a channel nobody measured, and "the syllable band is empty" was a statement
+// about the envelope rather than about the creature.
+//
+// PRE-REGISTERED PRIMARY, WITH A NUMBER DERIVED BEFORE THE RUN. If the ungated
+// schedule's drift floor is set by how long F1 integrates between silences, then
+// drift ~ gain * sigma_deflection * T_voiced. At gain 7123 Hz/s and sigma ~ 0.038
+// (the position decoder's delivered F1 sd of 28.4 Hz over the 750 Hz span), the
+// measured 46.5 Hz floor requires
+//
+//     T_voiced ~ 46.5 / (7123 * 0.038) ~ 172 ms
+//
+// So MEAN VOICED-STRETCH DURATION SHOULD COME OUT NEAR 170 ms. Far off that and the
+// "reset windows are the silences" account is WRONG and the saturation needs another
+// explanation. Registered in advance because 172 ms sits awkwardly close to a
+// syllable at 4.5 Hz (222 ms), which is exactly the coincidence that would otherwise
+// be found meaningful after the fact.
+//
+// AND THE SEPARATE QUESTION, WHICH THE MEAN CANNOT ANSWER: is the schedule REGULAR?
+// A frame has to be. The coefficient of variation of the intervals decides it -- CV
+// near 1 is a memoryless point process with no rhythm in it, CV well below 1 is a
+// clock. PRE-REGISTERED: CV >= 0.7 means the silences are near-random, there is no
+// endogenous frame, and what beat the jaw was an effective SCHEDULE rather than a
+// rhythm.
+//
+// THE POSITIVE CONTROL IS A RECORDED RESULT, not a hope. `self_gain` is the
+// duty-cycle dial: [[aibaby-deaf-to-itself]] measured duty 0.84 deaf, 0.67 at 0.5,
+// 0.39 at 2.0. If this instrument does not reproduce that ORDERING it is broken, and
+// no interval statistic from it means anything. Magnitudes are not required to match
+// -- that entry is five creatures on an older genome.
+constexpr uint64_t kVPSeedOffset = 550339ull;
+constexpr double kVPPredictedVoicedMs = 172.0;   // derived above, before the run
+constexpr double kVPCvBar = 0.70;                // above this: no rhythm
+
+// THE CONTROL CHANGED, AND THE REASON IS A STALE RECORDED NUMBER.
+//
+// The first version controlled on [[aibaby-deaf-to-itself]]'s `self_gain` duty
+// ladder -- 0.84 deaf, 0.67 at 0.5, 0.39 at 2.0, "louder self-hearing makes the
+// creature quieter, monotonically". It does NOT reproduce. Twelve creatures here read
+// amplitude duty 0.389 / 0.428 / 0.535, RISING, and `babble` -- the instrument that
+// produced the recorded numbers -- gives 0.48 / 0.50 / 0.55 on the shipped genome.
+// The magnitudes moved and THE DIRECTION REVERSED, across ~60 genome versions.
+//
+// So `self_gain` cannot be this instrument's control: a control has to be a
+// manipulation whose direction is known TODAY. `voicing_threshold` is, and by
+// construction rather than by measurement -- it is the threshold the gate compares
+// group 1 against, so raising it can only reduce the voiced fraction whatever the
+// activity distribution is. That makes it an arithmetic control, which is the
+// strongest kind available here.
+//
+// The `self_gain` arms are KEPT, because the reversal is a correction to the record
+// worth reporting rather than a failed control to delete.
+enum VPArm { kVPThrLow = 0,   // voicing_threshold 0.30
+             kVPShipped,      // 0.42 as shipped, self_gain 0.5 -- THE ARM THAT MATTERS
+             kVPThrHigh,      // voicing_threshold 0.55
+             kVPDeaf,         // self_gain 0.0 -- for the record, not the control
+             kVPLoud,         // self_gain 2.0 -- ditto
+             kVPArmCount };
+const char* const kVPNames[kVPArmCount] = {"thr 0.30", "shipped", "thr 0.55",
+                                           "deaf(sg 0)", "loud(sg 2)"};
+inline float vp_self_gain(VPArm a) {
+  switch (a) {
+    case kVPDeaf: return 0.0f;
+    case kVPLoud: return 2.0f;
+    default: return 0.5f;
+  }
+}
+// 0 means "leave the genome's own 0.42".
+inline float vp_threshold(VPArm a) {
+  switch (a) {
+    case kVPThrLow: return 0.30f;
+    case kVPThrHigh: return 0.55f;
+    default: return 0.0f;
+  }
+}
+
+struct VPRow {
+  bool ok = false;
+  // TWO DUTIES, BECAUSE THEY ARE NOT THE SAME QUANTITY AND I CONFLATED THEM ONCE.
+  // This project's recorded "duty cycle" -- [[aibaby-deaf-to-itself]]'s 0.84 / 0.67 /
+  // 0.39 ladder, and `babble`'s PASS band -- is `amplitude > kAmplitudeFloor`, a
+  // threshold on the AMPLITUDE group's output. The voicing gate is a threshold on
+  // group 1. The first positive control here compared the second against the first
+  // and refused the run for a disagreement that was my own mislabelling.
+  //
+  // `amp_duty` is therefore the CONTROL quantity, matching the record, and `duty` is
+  // the new one: the voicing gate's own duty, which nothing had measured.
+  double amp_duty = 0.0;          // amplitude > kAmplitudeFloor: the RECORDED duty
+  double duty = 0.0;              // fraction of ticks voiced
+  double on_mean = 0.0, on_cv = 0.0, on_median = 0.0;
+  double off_mean = 0.0, off_cv = 0.0, off_median = 0.0;
+  double cycle_hz = 0.0;          // 1 / (on_mean + off_mean)
+  double peak_hz = 0.0, peak_snr = 0.0;   // spectrum of the BINARY gate
+  uint32_t n_on = 0, n_off = 0;
+};
+
+inline void vp_stats(std::vector<double>& v, double* mean, double* cv, double* med) {
+  *mean = 0.0; *cv = 0.0; *med = 0.0;
+  if (v.empty()) return;
+  double s = 0.0;
+  for (double x : v) s += x;
+  *mean = s / double(v.size());
+  double q = 0.0;
+  for (double x : v) q += (x - *mean) * (x - *mean);
+  const double sd = std::sqrt(q / double(v.size()));
+  *cv = *mean > 1e-9 ? sd / *mean : 0.0;
+  std::sort(v.begin(), v.end());
+  *med = v[v.size() / 2];
+}
+
+VPRow run_voiceprobe_arm(const std::vector<uint8_t>& blob, uint64_t ticks, VPArm arm) {
+  VPRow row;
+  Session s;
+  std::string error;
+  std::vector<uint8_t> local = blob;
+  {
+    const float sg = vp_self_gain(arm);
+    std::memcpy(local.data() + offsetof(aibaby::DnaHeader, audio) +
+                    offsetof(aibaby::DnaAudio, self_gain),
+                &sg, sizeof(sg));
+    const float th = vp_threshold(arm);
+    if (th > 0.0f)
+      std::memcpy(local.data() + offsetof(aibaby::DnaHeader, vocal) +
+                      offsetof(aibaby::DnaVocal, voicing_threshold),
+                  &th, sizeof(th));
+  }
+  if (!s.init(local, error)) return row;
+  const aibaby::DnaAudio& acfg = s.dna.header().audio;
+  Ear ear;
+  if (!ear.configure(acfg, error)) return row;
+  const uint32_t spt = acfg.sample_rate / 1000;
+
+  const uint64_t settle = ticks / 10;
+  std::vector<double> on_runs, off_runs;
+  std::vector<double> gate;              // the binary series, for its spectrum
+  uint64_t voiced_n = 0, total_n = 0, loud_n = 0;
+  int cur = -1;
+  uint64_t run_len = 0;
+
+  for (uint64_t t = 0; t < ticks; ++t) {
+    ear.tick(s.brain, nullptr, spt);     // silent room: its own voice only
+    s.brain.step();
+    if (t < settle) continue;
+    const aibaby::VocalParams& vp = s.brain.voice();
+    const int v = vp.voicing > 0.5f ? 1 : 0;
+    if (v) ++voiced_n;
+    if (vp.amplitude > kAmplitudeFloor) ++loud_n;
+    ++total_n;
+    gate.push_back(double(v));
+    if (cur < 0) { cur = v; run_len = 1; continue; }
+    if (v == cur) { ++run_len; continue; }
+    // A completed run. Both edges are dropped, which is why only CLOSED runs are
+    // recorded -- an open run at either end is right-censored and would pull the
+    // mean down by exactly the amount that makes a long structure look short.
+    (cur ? on_runs : off_runs).push_back(double(run_len));
+    cur = v;
+    run_len = 1;
+  }
+  if (total_n == 0 || on_runs.size() < 8 || off_runs.size() < 8) return row;
+  row.duty = double(voiced_n) / double(total_n);
+  row.amp_duty = double(loud_n) / double(total_n);
+  vp_stats(on_runs, &row.on_mean, &row.on_cv, &row.on_median);
+  vp_stats(off_runs, &row.off_mean, &row.off_cv, &row.off_median);
+  row.n_on = uint32_t(on_runs.size());
+  row.n_off = uint32_t(off_runs.size());
+  const double period = row.on_mean + row.off_mean;   // ms, ticks are 1 ms
+  row.cycle_hz = period > 1e-9 ? 1000.0 / period : 0.0;
+
+  // The gate's own spectrum, scanned across the syllable band and wider. A
+  // Goertzel-style coherent sum at each trial frequency, against the mean of the
+  // rest of the band as the noise floor -- the same shape `salrew` uses on the
+  // envelope, applied here to the BINARY signal instead.
+  {
+    double m = 0.0;
+    for (double x : gate) m += x;
+    m /= double(gate.size());
+    double best = 0.0, bf = 0.0, sum = 0.0;
+    uint32_t nb = 0;
+    for (double f = 0.5; f <= 20.0; f += 0.1) {
+      const double w = 6.283185307179586 * f / 1000.0;   // per tick, 1 ms ticks
+      double re = 0.0, im = 0.0;
+      for (size_t i = 0; i < gate.size(); ++i) {
+        const double p = w * double(i);
+        re += (gate[i] - m) * std::cos(p);
+        im += (gate[i] - m) * std::sin(p);
+      }
+      const double a = std::sqrt(re * re + im * im) / double(gate.size());
+      sum += a; ++nb;
+      if (a > best) { best = a; bf = f; }
+    }
+    row.peak_hz = bf;
+    const double floor_ = nb ? (sum - best) / double(nb - 1) : 0.0;
+    row.peak_snr = floor_ > 1e-12 ? best / floor_ : 0.0;
+  }
+  row.ok = true;
+  return row;
+}
+
+bool run_voiceprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  aibaby::Dna dna0;
+  if (dna0.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) {
+    std::printf("  setup failed: the genome does not load\n");
+    return false;
+  }
+  constexpr uint32_t kReps = 12;
+  instrument("voiceprobe", dna0.header().seed ^ 0x7C1Du, ticks, "ticks");
+  std::printf("  the question   the voicing gate is a BINARY signal and its interval\n"
+              "                 statistics have never been measured. `the-voice-drones`\n"
+              "                 and `syllable-band-is-empty` both measured the amplitude\n"
+              "                 ENVELOPE, which is a different channel.\n"
+              "  why now        the creature's own silences schedule an F1 anchor ~35%%\n"
+              "                 BETTER than a 4.5 Hz jaw, and that schedule SATURATES.\n"
+              "                 What caps it is when the creature falls silent.\n"
+              "  the primary    MEAN VOICED-STRETCH DURATION, predicted %.0f ms BEFORE the\n"
+              "                 run from drift = gain * sigma * T at the measured 46.5 Hz\n"
+              "                 floor. Far off that and the account is wrong.\n"
+              "  and separately is the schedule REGULAR? CV of the intervals: >= %.2f is a\n"
+              "                 memoryless process with no rhythm, well below is a clock.\n"
+              "  the control    `self_gain` is the recorded duty dial -- 0.84 deaf, 0.67 at\n"
+              "                 0.5, 0.39 at 2.0. The ORDERING must reproduce or this\n"
+              "                 instrument is broken. Magnitudes need not: that entry is\n"
+              "                 five creatures on an older genome.\n"
+              "  untaught       silent room, no praise: the creature's own structure.\n",
+              kVPPredictedVoicedMs, kVPCvBar);
+
+  struct Cell { bool ok = false; VPRow row; };
+  const uint32_t njobs = kReps * kVPArmCount;
+  const std::vector<Cell> cells = parallel_reps<Cell>(njobs, [&](uint32_t i) {
+    const uint32_t r = i / kVPArmCount, a = i % kVPArmCount;
+    Cell c;
+    std::vector<uint8_t> variant = blob;
+    const uint64_t seed = dna0.header().seed + kVPSeedOffset + uint64_t(r) * 7919ull;
+    std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+    c.row = run_voiceprobe_arm(variant, ticks, VPArm(a));
+    c.ok = c.row.ok;
+    parallel_note("  [%u/%u] seed %u  %-13s duty %.3f  on %6.1f ms  off %6.1f ms\n",
+                  i + 1, njobs, r, kVPNames[a], c.row.duty, c.row.on_mean,
+                  c.row.off_mean);
+    return c;
+  });
+  std::vector<std::vector<VPRow>> rows(kVPArmCount);
+  for (uint32_t i = 0; i < njobs; ++i)
+    if (cells[i].ok) rows[i % kVPArmCount].push_back(cells[i].row);
+
+  std::printf("\n  arm           gate duty  voiced ms        CV     unvoiced ms      CV"
+              "     gate Hz   spec peak   snr   amp duty\n");
+  std::vector<std::vector<double>> guard(kVPArmCount);
+  for (uint32_t a = 0; a < kVPArmCount; ++a) {
+    if (rows[a].size() < 3) { std::printf("    %-13s too few creatures\n", kVPNames[a]); continue; }
+    std::vector<double> du, on, oc, of, fc, hz, pk, sn, ad;
+    for (const VPRow& r : rows[a]) {
+      ad.push_back(r.amp_duty);
+      du.push_back(r.duty); on.push_back(r.on_mean); oc.push_back(r.on_cv);
+      of.push_back(r.off_mean); fc.push_back(r.off_cv); hz.push_back(r.cycle_hz);
+      pk.push_back(r.peak_hz); sn.push_back(r.peak_snr);
+    }
+    double e1, e2, e3, e4, e5, e6, e7, e8, e9;
+    const double mdu = ctx_mean_se(du, &e1), mon = ctx_mean_se(on, &e2);
+    const double moc = ctx_mean_se(oc, &e3), mof = ctx_mean_se(of, &e4);
+    const double mfc = ctx_mean_se(fc, &e5), mhz = ctx_mean_se(hz, &e6);
+    const double mpk = ctx_mean_se(pk, &e7), msn = ctx_mean_se(sn, &e8);
+    const double mad = ctx_mean_se(ad, &e9);
+    (void)e1; (void)e3; (void)e5; (void)e7; (void)e8; (void)e9;
+    std::printf("    %-13s %.3f   %6.1f +/- %4.1f  %.2f   %6.1f +/- %4.1f  %.2f"
+                "   %6.2f    %5.2f Hz   %4.1f   %.3f\n",
+                kVPNames[a], mdu, mon, e2, moc, mof, e4, mfc, mhz, mpk, msn, mad);
+    guard[a] = {mdu, mon, moc, mof, mfc, mhz, mpk, msn, mad};
+  }
+
+  bool ok = arms_are_distinct(guard, kVPNames);
+  // THE POSITIVE CONTROL, and it is a recorded ordering rather than a guess.
+  if (guard[kVPDeaf].size() == 9 && guard[kVPShipped].size() == 9 &&
+      guard[kVPLoud].size() == 9 && guard[kVPThrLow].size() == 9 &&
+      guard[kVPThrHigh].size() == 9) {
+    // AN ARITHMETIC CONTROL: raising the threshold the gate compares group 1 against
+    // can only reduce the voiced fraction, whatever the activity distribution is. If
+    // this instrument cannot see that, it is not reading the gate.
+    const double g0 = guard[kVPThrLow][0], g5 = guard[kVPShipped][0],
+                 g2 = guard[kVPThrHigh][0];
+    std::printf("\n  POSITIVE CONTROL   gate duty must FALL as voicing_threshold RISES\n"
+                "    threshold 0.30 / 0.42 / 0.55  ->  %.3f / %.3f / %.3f\n", g0, g5, g2);
+    if (!(g0 > g5 && g5 > g2)) {
+      std::printf("    THE ORDERING DOES NOT REPRODUCE, and it is arithmetic rather than\n"
+                  "    empirical -- a higher threshold cannot admit more frames. This instrument\n"
+                  "    is not reading the voicing gate and no interval statistic here means\n"
+                  "    anything.\n");
+      ok = false;
+    } else {
+      std::printf("    reproduces. The instrument reads the gate.\n");
+    }
+    // AND THE RECORD IS WRONG, which is reported rather than guarded on.
+    const double a0 = guard[kVPDeaf][8], a5 = guard[kVPShipped][8], a2 = guard[kVPLoud][8];
+    std::printf("\n  A STALE RECORDED LADDER -- the MAGNITUDES, and the sign is LENGTH-DEPENDENT\n"
+                "    `deaf-to-itself` (5 creatures, ~60 genome versions ago, self_gain\n"
+                "    0 / 0.5 / 2.0):  amplitude duty 0.84 / 0.67 / 0.39, falling --\n"
+                "    \"louder self-hearing makes the creature quieter, monotonically\".\n"
+                "    measured here (12 creatures):  %.3f / %.3f / %.3f\n", a0, a5, a2);
+    // THE SIGN DEPENDS ON RUN LENGTH, and reading it off a short run is how I
+    // briefly concluded the loop had reversed. At 60k ticks this reads 0.389 / 0.428 /
+    // 0.535 (RISING) and `babble` at its own 120k gives 0.48 / 0.50 / 0.55 (rising
+    // too); at 600k it falls. That is what the recorded MECHANISM predicts -- the loop
+    // is negative feedback THROUGH intrinsic plasticity, which needs time to raise
+    // thresholds, so a short run sees only the excitatory leg. So: report the
+    // direction WITH the length, and never quote a sign from a short run.
+    if (a0 > a5 && a5 > a2)
+      std::printf("    the recorded DIRECTION reproduces at this length -- falling, so the loop\n"
+                  "    is still net negative feedback. The MAGNITUDES are stale: the deaf end\n"
+                  "    reads %.3f against a recorded 0.84 and the loud end %.3f against 0.39, so\n"
+                  "    the SPAN has collapsed from 0.45 to %.3f. Quote the sign, not the values.\n"
+                  "    AND NOTE THE LENGTH: at 60k ticks this ordering RISES, and so does\n"
+                  "    `babble` at its own 120k. Intrinsic plasticity needs time to raise\n"
+                  "    thresholds, so a short run sees only the excitatory leg of the loop.\n",
+                  a0, a2, a0 - a2);
+    else if (a0 < a5 && a5 < a2)
+      std::printf("    RISING at this length, against a recorded fall. Before calling the loop\n"
+                  "    reversed, check a LONGER run: the recorded mechanism is negative feedback\n"
+                  "    through intrinsic plasticity, which needs time, and at 600k ticks the\n"
+                  "    ordering falls as recorded.\n");
+    else
+      std::printf("    not monotone either way at this length; report the numbers and draw no\n"
+                  "    sign from them.\n");
+  }
+  // Vacuity: a gate that never closes has no intervals to measure.
+  for (uint32_t a = 0; a < kVPArmCount; ++a) {
+    if (guard[a].size() != 9) continue;
+    if (guard[a][0] <= 0.02 || guard[a][0] >= 0.98) {
+      std::printf("  NO GATE -- `%s` is voiced %.1f%% of the time, so there are no stretches\n"
+                  "  to measure and its intervals are an artefact of the run's edges.\n",
+                  kVPNames[a], 100.0 * guard[a][0]);
+      ok = false;
+    }
+  }
+  if (!ok) {
+    std::printf("\n  voiceprobe REFUSES ITSELF -- see the guard above.\n");
+    return false;
+  }
+
+  std::printf("\n  --- the primary, against a number fixed before the run ---\n");
+  {
+    const double mon = guard[kVPShipped][1];
+    const double ratio = kVPPredictedVoicedMs > 1e-9 ? mon / kVPPredictedVoicedMs : 0.0;
+    std::printf("    predicted mean voiced stretch  %.0f ms   (from drift = gain * sigma * T)\n",
+                kVPPredictedVoicedMs);
+    std::printf("    measured                       %.1f ms   ratio %.2f\n", mon, ratio);
+    if (ratio > 0.5 && ratio < 2.0)
+      std::printf("    THE ACCOUNT HOLDS within a factor of two. The ungated schedule's drift\n"
+                  "    floor IS set by how long F1 integrates between silences, which is why\n"
+                  "    shortening its anchor past that point bought nothing.\n");
+    else
+      std::printf("    THE ACCOUNT IS WRONG. The voiced stretch is a factor %.1f from what the\n"
+                  "    drift floor requires, so 'the reset windows are the silences' does not\n"
+                  "    explain the saturation and something else caps that schedule.\n",
+                  ratio > 1.0 ? ratio : (ratio > 1e-9 ? 1.0 / ratio : 0.0));
+  }
+
+  std::printf("\n  --- is it a RHYTHM or just a schedule? ---\n");
+  {
+    const double cv_on = guard[kVPShipped][2], cv_off = guard[kVPShipped][4];
+    const double hz = guard[kVPShipped][5], pk = guard[kVPShipped][6];
+    const double snr = guard[kVPShipped][7];
+    std::printf("    interval CV   voiced %.2f   unvoiced %.2f   (1.0 = memoryless, bar %.2f)\n",
+                cv_on, cv_off, kVPCvBar);
+    std::printf("    implied gate rate %.2f Hz   spectral peak %.2f Hz at snr %.1f\n",
+                hz, pk, snr);
+    const bool regular = cv_on < kVPCvBar && cv_off < kVPCvBar;
+    const bool in_band = hz >= 2.0 && hz <= 8.0;
+    // WHICH SIDE IS LOAD-BEARING, because a bar at 0.70 and a voiced CV near it is
+    // the same trap the gate/anchor split fell into. State the margins so the label
+    // cannot be read as a claim about the tighter of the two.
+    std::printf("    margins: voiced CV is %.2f from the bar, unvoiced %.2f -- the %s\n"
+                "    intervals are what decide it, and %s\n",
+                std::fabs(cv_on - kVPCvBar), std::fabs(cv_off - kVPCvBar),
+                std::fabs(cv_off - kVPCvBar) > std::fabs(cv_on - kVPCvBar) ? "UNVOICED"
+                                                                           : "VOICED",
+                std::fabs(cv_on - kVPCvBar) < 0.10
+                    ? "the voiced side sits ON the bar: claim nothing from it."
+                    : "both sides are clear of it.");
+    // THE TWO RATE ESTIMATES MUST AGREE, or one of them is an artefact. The interval
+    // rate is 1/(mean on + mean off); the spectral peak is found by scanning. A
+    // scanned argmax over a noisy spectrum is a maximum over noise
+    // ([[aibaby-selfloop]] lost a result to exactly that), so the interval rate is
+    // the primary and the peak is the check.
+    {
+      const double rel = hz > 1e-9 ? std::fabs(pk - hz) / hz : 0.0;
+      std::printf("    rate agreement: intervals %.2f Hz vs spectral peak %.2f Hz, %.0f%% apart"
+                  " at snr %.1f\n", hz, pk, 100.0 * rel, snr);
+      if (rel > 0.20)
+        std::printf("    THEY DISAGREE by more than a fifth. The interval rate is the primary --\n"
+                    "    the peak is a scanned argmax and this project has already lost a result\n"
+                    "    to one. Do not quote the peak as the gate's frequency.\n");
+    }
+    if (regular && in_band)
+      std::printf("    AN ENDOGENOUS FRAME, IN A CHANNEL NOBODY MEASURED. The gate alternates\n"
+                  "    regularly in the syllable band, and the two results that called this band\n"
+                  "    empty measured the amplitude ENVELOPE instead. Replicate on a fresh\n"
+                  "    family before quoting it -- and check the spectral peak agrees with the\n"
+                  "    interval rate, because one of them can be an artefact and the other not.\n");
+    else if (in_band)
+      std::printf("    A SCHEDULE IN THE RIGHT BAND, AND NOT A RHYTHM. The mean rate is %.2f Hz\n"
+                  "    -- syllable-scale -- but the intervals are near-memoryless (CV %.2f), so\n"
+                  "    there is no clock here. That is consistent with everything: an irregular\n"
+                  "    schedule can anchor an integrator perfectly well and still carry no\n"
+                  "    timing, which is exactly what beat the jaw.\n", hz, cv_on);
+    else
+      std::printf("    NOT IN THE BAND. The gate alternates at %.2f Hz, outside 2-8, so whatever\n"
+                  "    schedules the anchor is not syllable-scale and the frame reading has\n"
+                  "    nothing to stand on here either.\n", hz);
+  }
+  return true;
+}
+
 // ============================================================================
 // `halfcenter` — BOTH INGREDIENTS AT ONCE (DNA v56 + v57)
 //

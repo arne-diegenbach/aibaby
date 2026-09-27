@@ -394,6 +394,14 @@ const Spec kSpecs[] = {
      "  pulses 4 s then goes SILENT and measures the f-component during the silence\n"
      "  -- the M1b logic that separates an echo from a pass-through. Every f tiles\n"
      "  the block in whole cycles so concatenated holds keep phase. 12 seeds"},
+    {"voiceprobe", 600000, Expect::kOpen, Tier::kLong,
+     "WHAT IS THE TIME STRUCTURE OF THE VOICING GATE? The creature's own silences\n"
+     "  schedule an F1 anchor ~35%% better than a 4.5 Hz jaw, and that schedule\n"
+     "  SATURATES -- so what caps it is when it falls silent, never measured. Duty is\n"
+     "  on record (0.67) but a fraction is not a structure. PRIMARY: mean voiced\n"
+     "  stretch, predicted 172 ms BEFORE the run from drift = gain*sigma*T. And the\n"
+     "  CV decides rhythm vs schedule. Control is ARITHMETIC: raising\n"
+     "  voicing_threshold cannot admit more frames. 12 seeds x 5 arms"},
     {"syllf1b", 600000, Expect::kOpen, Tier::kTeach,
      "THE REPLICATION OF `syllf1` ON A FRESH SEED FAMILY. Same arms, twelve creatures\n"
      "  nothing has been measured on. What is being replicated was named in advance:\n"
@@ -844,6 +852,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "salrew") ok = run_salrew(dna_blob, ticks, verbose);
   else if (name == "syllf1") ok = run_syllf1(dna_blob, ticks, verbose);
   else if (name == "syllf1b") ok = run_syllf1b(dna_blob, ticks, verbose);
+  else if (name == "voiceprobe") ok = run_voiceprobe(dna_blob, ticks, verbose);
   else if (name == "adaptclock") ok = run_adaptclock(dna_blob, ticks, verbose);
   else if (name == "halfcenter") ok = run_halfcenter(dna_blob, ticks, verbose);
   else if (name == "regionband") ok = run_regionband(dna_blob, ticks, verbose);
