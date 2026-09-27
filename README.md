@@ -12035,12 +12035,40 @@ threshold cannot admit more frames whatever the activity distribution. That test
 instrument without resting on any empirical claim, and it is the kind to prefer where
 one exists.
 
-### One open connection, deliberately not chased
+### The 3 Hz coincidence, tested and closed
 
 *The 3 Hz resonance* recorded a timekeeping structure that loop gain does not
-self-sustain. The gate alternates at 3.02 Hz. These may be the same structure, and it
-is checkable — does the gate rate move with the parameters that set the resonance?
-Until that is run, the coincidence is not evidence in either direction.
+self-sustain. The gate alternates at 3.02 Hz. Those could have been the same thing, and
+the gate measurement supplies the manipulation that decides it: `voicing_threshold`
+0.42 → 0.30 moves the gate from **3.02 Hz to 1.85 Hz**, a 39% shift, because duty rises
+to 0.847 and voiced stretches stretch to 465 ms. If the resonance were the gate,
+`framehold`'s peak should move from `heard-3` toward `heard-2`.
+
+    arm        baseline (thr 0.42)   thr 0.30
+    heard-2    2.16 +/- 0.37         2.45 +/- 0.75
+    heard-3    4.54 +/- 0.90         3.86 +/- 0.75   <- still strongest, +3.3 SE
+    heard-4    2.43 +/- 0.54         1.51 +/- 0.28
+    silent duty  0.57                 0.80           <- the manipulation took
+    drive SNR    183-548              187-503        <- instrument still readable
+
+It does not move. **Different structures, and the agreement at shipped values is
+coincidence** — consistent with the resonance having survived five swept parameters
+already. One more candidate off its origin hunt, which stays open and is the oldest
+unexplained structure in the project.
+
+**The near-miss is worth recording, because the contrast column would have
+manufactured a result.** `heard-2`'s contrast went +0.1 SE → +2.1 SE, which reads like
+partial coupling toward 2 Hz. But its own HOLD barely moved — 2.16 → 2.45 on SEs of
+0.37 and 0.75 — while its control `silent-2` fell 2.05 → 0.81. **82% of that contrast
+change is the control dropping.** The resonance write-up's own warning, that "the
+control is what bounces, which is what inflates the contrast SEs", is what caught it.
+
+**And the sweep is auditable now, which it was not.** The record claimed this test had
+been run — "`voicing_threshold` 0.30/0.42/0.55 → frequency pinned at 3 Hz in all
+three" — with no saved log behind it. It has one now, on the same seed family as its
+baseline and with both readability controls passing. After finding one recorded ladder
+whose magnitudes were stale, an unauditable recorded sweep is not something to test a
+coincidence against.
 
 ## Layout
 
