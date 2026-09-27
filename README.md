@@ -12115,6 +12115,64 @@ is narrow: **an experiment that documents a measurement must pin the constant th
 measurement was taken at, rather than inherit it.** Those arms now pin 633 explicitly,
 and the whole table re-runs bit-identical to the log it is quoted from.
 
+## The glottal smoother moves the 3 Hz ring and is not its origin
+
+The ~3 Hz resonance has been the oldest unexplained structure here since 2026-09-17,
+and its own write-up concluded it "is in the plumbing — a fixed delay, i.e. architecture
+rather than a parameter." `gate_smoothing_ms` is the candidate that list never tested: a
+first-order pole at `1/(2πτ)` sitting directly on the amplitude path where the ring is
+measured — 2.65 Hz at the shipped 60 ms, 1.33 at 120, 5.31 at 30.
+
+**On the coarse 1/2/3/4 Hz grid it looked like the answer.** Early-window SNR argmax:
+
+    tau 120 (pole 1.33 Hz)   h1 0.47  h2 2.02  h3 1.78  h4 0.86   -> 2 Hz
+    tau  60 (pole 2.65 Hz)   h1 0.43  h2 1.20  h3 5.49  h4 2.87   -> 3 Hz
+    tau  30 (pole 5.31 Hz)   h1 0.39  h2 1.37  h3 3.01  h4 5.97   -> 4 Hz
+
+Monotone, and the first of six parameters to move the ring at all. But 5.31 Hz sits
+*above* the top arm, so `heard-4` winning at τ=30 could not be told from any other
+off-grid value — **the argmax was censored and `f ∝ 1/τ` was not testable.** The stated
+τ=30 prediction was also wrong in its letter: "off-grid, so all arms weak" was the
+prediction, and `heard-4` caught it instead. The hypothesis was being supported by a
+route that had not been specified in advance, which is weaker than it looks.
+
+**Extending the grid to 5, 6 and 8 Hz refuses it.** At τ=30, against a predicted 5.31:
+
+    heard-5  +0.5 SE (early 1.31)     heard-6  +1.3 SE (early 0.95)
+    heard-8  -2.1 SE (early 0.99)     heard-4  +2.2 SE (early 5.97)  <- the peak
+
+Nothing at 5–6 Hz. With those arms present the peak near 4 Hz is real rather than a
+censored tail, so the law can finally be evaluated:
+
+    exponent = log(4/3) / log(60/30) = 0.288 / 0.693 = 0.42      [1.0 required]
+
+**Refused on its quantitative test** — the same shape as `adaptclock`, which followed
+its time constant at exponent 0.10 where 1.0 was required. The smoother partially
+*shapes* the ring; it does not set its frequency. Moving something by less than half the
+required exponent is not an origin.
+
+**Un-censoring changed the answer**, and that is the transferable part. The coarse grid
+said "consistent with the pole"; the wide grid says "refuses the pole". A grid whose top
+arm sits below the prediction cannot test the prediction — which the resonance's own
+write-up had already flagged, in the caveat that "pinned" only ever meant "did not move
+to another *sampled* arm".
+
+Two cautions on these numbers. Seven frequencies means the argmax gate now picks a
+maximum over seven rather than four, a failure this experiment's record carries once
+already; `heard-2`'s +3.2 SE at τ=30 is a max-of-seven, and `heard-8`'s −2.1 SE is the
+scatter fourteen contrasts produce. Neither is a finding.
+
+And the extension found a live bug: the heard/silent pairing was a hardcoded `a - 4`,
+correct for four frequencies and silently wrong for any other count — it would have
+scored `heard-5` against `silent-2` at mismatched frequencies with nothing failing. Now
+derived from the arm count, with a `static_assert` and a per-pair frequency check. Same
+class as the inherited anchor default caught the day before: a constant encoding an
+assumption about a table, invalidated by the very edit that needed it.
+
+So the origin stays open, with the eliminated list now at six: self-hearing (a deaf
+creature still rings), intrinsic plasticity (flat including off), STDP (survives fully
+off), `voicing_threshold`, the voicing gate, and the glottal pole.
+
 ## Layout
 
 ```

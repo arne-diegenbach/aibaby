@@ -13014,13 +13014,43 @@ bool run_framecopy(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
 // That is broadband, not a component at f. Only continued ALTERNATION puts power at
 // the drive frequency, which is what this measures.
 struct FHArm { const char* name; bool hear; double hz; };
+// GRID EXTENDED UPWARD 2026-09-28, AND THE OLD TOP WAS CENSORING A PREDICTION.
+// `gate_smoothing_ms` is a first-order pole at 1/(2*pi*tau): 2.65 Hz at the shipped
+// 60 ms, 1.33 at 120, 5.31 at 30. Sweeping it moved the ring's peak monotonically
+// (argmax arm 2 -> 3 -> 4 Hz as tau went 120 -> 60 -> 30), which is the FIRST of six
+// parameters to move it at all -- but 5.31 Hz sits ABOVE the old top arm, so
+// `heard-4` winning at tau 30 could not be told from any other off-grid value. The
+// argmax was censored and `f ~ 1/tau` was not testable.
+//
+// 5, 6 and 8 Hz put tau 30's prediction INSIDE the grid. PRE-REGISTERED: the peak
+// should sit at 5.3 +/- 1 Hz at tau 30 against 2.65 +/- 0.5 at tau 60, a RATIO near
+// 2. "Moves monotonically" is much weaker than "moves as 1/tau", and only the second
+// identifies the pole as the ring.
+//
+// THE NEW ARMS ARE MORE EXPOSED TO THE CONFOUND THAT VOIDED v1, NOT LESS. Whether an
+// offset transient stays coherent at f depends on each hold being a whole number of
+// cycles, and against the 3000/4500/3500/5000/4000 ms holds: 6 and 8 Hz tile ALL
+// FIVE, where 3 and 5 Hz tile three. So the alignment count is printed per arm below,
+// and a strong result on a fully-tiled arm has to be read against the accidental
+// control this experiment already carries -- 2 and 4 Hz are fully tiled and were the
+// WEAKEST, so the artefact account predicts the opposite of the data.
 const FHArm kFHArms[] = {
     {"silent-1", false, 1.0}, {"silent-2", false, 2.0},
     {"silent-3", false, 3.0}, {"silent-4", false, 4.0},
+    {"silent-5", false, 5.0}, {"silent-6", false, 6.0},
+    {"silent-8", false, 8.0},
     {"heard-1", true, 1.0},   {"heard-2", true, 2.0},
     {"heard-3", true, 3.0},   {"heard-4", true, 4.0},
+    {"heard-5", true, 5.0},   {"heard-6", true, 6.0},
+    {"heard-8", true, 8.0},
 };
 constexpr uint32_t kFHArmCount = sizeof(kFHArms) / sizeof(kFHArms[0]);
+// DERIVED, NOT HARDCODED. The pairing used a literal 4 -- correct while there were
+// four frequencies and silently wrong the moment a fifth was added, which would have
+// scored every heard arm against the wrong control with nothing failing.
+constexpr uint32_t kFHHalf = kFHArmCount / 2;
+static_assert(kFHArmCount % 2 == 0,
+              "every heard arm needs its own silent control at the same frequency");
 constexpr uint64_t kFHDriveMs = 4000;   // 4 s drive
 // HOLD LENGTHS VARY, and this is the whole correction. v1 held for a fixed 4 s, so
 // the concatenated holds repeated at 0.25 Hz and EVERY drive frequency tested
@@ -13234,11 +13264,38 @@ bool run_framehold(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
                 kFHArms[a].name, m_dr, m_hold[a], s_hold[a], m_ea, se, m_la, sl, m_dd, m_dh);
   }
 
+  // THE ALIGNMENT AUDIT, printed so the v1 confound stays checkable. A hold that
+  // contains a whole number of cycles at f lets the offset transient sum coherently
+  // at exactly the measured frequency; the accidental control is that 2 and 4 Hz tile
+  // ALL FIVE holds and were the weakest arms, so the artefact account predicts the
+  // opposite of the data. The new 6 and 8 Hz arms also tile all five, which makes
+  // them the most exposed arms in the table -- read a strong result there against
+  // that, not past it.
+  std::printf("\n  TRANSIENT ALIGNMENT (holds tiled in whole cycles, of %u)\n",
+              kFHHoldCount);
+  for (uint32_t a = kFHHalf; a < kFHArmCount; ++a) {
+    uint32_t aligned = 0;
+    for (uint32_t h = 0; h < kFHHoldCount; ++h) {
+      const double cycles = double(kFHHoldMs[h]) * kFHArms[a].hz / 1000.0;
+      if (std::fabs(cycles - std::floor(cycles + 0.5)) < 1e-9) ++aligned;
+    }
+    std::printf("    %-9s %.1f Hz   %u/%u%s\n", kFHArms[a].name, kFHArms[a].hz,
+                aligned, kFHHoldCount,
+                aligned == kFHHoldCount ? "   <- FULLY tiled: most exposed" : "");
+  }
+
   std::printf("\n  HOLD, heard against its own silent control\n");
   bool any = false;
-  double best_t = -1e9; uint32_t best = 4;
-  for (uint32_t a = 4; a < kFHArmCount; ++a) {
-    const uint32_t ctrl = a - 4;
+  double best_t = -1e9; uint32_t best = kFHHalf;
+  for (uint32_t a = kFHHalf; a < kFHArmCount; ++a) {
+    const uint32_t ctrl = a - kFHHalf;
+    // The pair must be the SAME frequency, or the contrast is against the wrong
+    // control. Cheap, and it is the assertion the literal 4 never had.
+    if (kFHArms[a].hz != kFHArms[ctrl].hz) {
+      std::printf("    MISPAIRED -- `%s` (%.1f Hz) scored against `%s` (%.1f Hz).\n",
+                  kFHArms[a].name, kFHArms[a].hz, kFHArms[ctrl].name, kFHArms[ctrl].hz);
+      continue;
+    }
     const double d = m_hold[a] - m_hold[ctrl];
     const double se = std::sqrt(s_hold[a] * s_hold[a] + s_hold[ctrl] * s_hold[ctrl]);
     const double t = se > 0.0 ? d / se : 0.0;
