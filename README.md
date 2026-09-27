@@ -12070,6 +12070,51 @@ baseline and with both readability controls passing. After finding one recorded 
 whose magnitudes were stale, an unauditable recorded sweep is not something to test a
 coincidence against.
 
+## A constant derived from the protocol instead of from the creature
+
+`f1_return_tau_ms` shipped at 633 ms. It is now 45.5, and **the arithmetic was never
+the problem** — the original derivation reads:
+
+> a trial is 2800 ms with the caregiver sounding for the first 900, so 1900 ms of
+> silence; returning 95% of the way back to rest in that window is tau = 633 ms.
+
+The rule is right and the window is wrong. 1900 ms is the **caregiver's** silence. This
+anchor gates on the **creature's** voicing, and the creature is not silent in one
+block: its gate alternates at 3.02 Hz with a mean unvoiced stretch of **136.5 ms**. The
+available window was overestimated **13.9×**, so the anchor closed 19% of the gap per
+silence — `exp(−136.5/633) = 0.81` — where it was meant to close 95%.
+
+Re-derived with the same rule and the measured window: `3τ = 136.5` → **τ = 45.5 ms**.
+
+**And the derivation predicts the sweep rather than fitting it.** `syllf1` measured
+drift against this constant at 137.5 Hz (633 ms), 55.1 (60), 48.9 (30), 46.5 (15) — a
+curve that saturates. Shortening must stop buying anything once the anchor completes
+inside a typical silence, i.e. near τ = 45, and the measured knee sits between 30 and
+60. The prediction locates the knee; it was not read off it.
+
+**The constant was unfalsifiable until the gate was measured**, which is the general
+point. A constant derived from the *protocol* rather than from the *creature* cannot be
+audited until the creature's own version of that quantity exists. This one sat wrong
+for as long as nobody had looked at the creature's silences.
+
+`verify` PASS with the pinned hash unmoved: v62 ships OFF, so the value is only read
+when `f1_velocity_gain > 0`. Nothing in the current creature changes and every future
+velocity-decoder run does.
+
+### The second bug, which shipping the first one created
+
+`syllf1`'s per-arm anchor helper used `default: return 0.0f`, meaning "leave the
+genome's value". That was fine while the genome said 633 and became a bug the instant
+it did not: **every arm inheriting the default would have silently re-measured itself
+at 45.5 — including `v62-nogate`, whose 137.5 Hz drift is the baseline the entire leak
+comparison is read against.** The published table and the code would have stopped
+matching, with nothing failing to announce it.
+
+That is the shared-constants class this project already has on file. The rule it earns
+is narrow: **an experiment that documents a measurement must pin the constant that
+measurement was taken at, rather than inherit it.** Those arms now pin 633 explicitly,
+and the whole table re-runs bit-identical to the log it is quoted from.
+
 ## Layout
 
 ```

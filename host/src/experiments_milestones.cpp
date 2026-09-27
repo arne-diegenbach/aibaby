@@ -15789,7 +15789,19 @@ inline float sy_ret_tau(SYArm a) {
     case kSYThinFast2: case kSYNoGateFast: return 60.0f;
     case kSYNoGate30: return 30.0f;
     case kSYNoGate15: return 15.0f;
-    default: return 0.0f;
+    // PINNED AT 633, NOT LEFT TO THE GENOME, and this arm list is why the default
+    // used to be `0.0f = leave the genome's value`. That was fine while the genome
+    // said 633 and became a bug the moment it didn't: the re-derivation shipped
+    // `f1_return_tau_ms = 45.5`, and every arm here that inherited the default would
+    // have quietly re-measured itself at the new constant -- including `v62-nogate`,
+    // whose published 137.5 Hz drift is the baseline the whole leak comparison is
+    // read against.
+    //
+    // This is the shared-constants bug class this project already has on file: an
+    // experiment that inherits a default silently changes when the default does, and
+    // its old logs stop matching its code with nothing failing. An experiment that
+    // documents a measurement must pin the constant that measurement was taken at.
+    default: return 633.0f;
   }
 }
 // DNA v67. The always-on leak, on the control arms only.

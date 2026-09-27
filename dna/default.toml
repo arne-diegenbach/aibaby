@@ -674,9 +674,24 @@ halfcenter_drive = 0.0
 f1_velocity_gain = 0.0
 # The anchor, and it runs ONLY in the silence: inside the word the integrator
 # must be pure or the leak is algebraically a position decoder with a renamed
-# constant. DERIVED from the protocol -- 1900 ms of silence per 2800 ms trial,
-# 95% of the way back to rest in that window is tau = 633 ms.
-f1_return_tau_ms = 633.0
+# constant.
+#
+# WAS 633 ms, DERIVED FROM THE WRONG SILENCE. That came from the PROTOCOL -- 1900 ms
+# with no caregiver sounding, per 2800 ms trial -- but this anchor gates on the
+# CREATURE's voicing, and the creature is not silent in one block: its gate alternates
+# at 3.02 Hz with a mean UNVOICED stretch of 136.5 ms (`voiceprobe`). The window was
+# overestimated 13.9x, so the anchor closed 19% of the gap per silence where it was
+# meant to close 95%.
+#
+# RE-DERIVED, same rule and the measured window: 95% back to rest within one typical
+# unvoiced stretch is 3*tau = 136.5, tau = 45.5 ms. `syllf1`'s sweep of this constant
+# reads drift 137.5 Hz at 633, 55.1 at 60, 48.9 at 30, 46.5 at 15 -- and the
+# derivation PREDICTS the saturation knee it shows, near 45, rather than being read
+# off it.
+#
+# Changes nothing that ships: v62 is OFF, so this is only read when
+# f1_velocity_gain > 0. The pinned hash is unmoved.
+f1_return_tau_ms = 45.5
 
 # DNA v63 -- THE BURST CHANNEL, SUBTRACTED. 0 is OFF and bit-identical.
 #

@@ -1762,9 +1762,33 @@ struct DnaVocal {
   // The anchor. Without one a velocity code is a random walk that parks at a
   // clamp. It runs ONLY in the silence: inside the word the integrator must be
   // pure, or the leak is algebraically a position decoder with a renamed time
-  // constant and the whole change is vacuous. DERIVED from the protocol: a
-  // trial is 2800 ms with the caregiver sounding for the first 900, so 1900 ms
-  // of silence; returning 95% of the way to rest in that window is tau = 633 ms.
+  // constant and the whole change is vacuous.
+  //
+  // WAS 633 ms, AND THAT WAS DERIVED FROM THE WRONG SILENCE. The original
+  // derivation read: "a trial is 2800 ms with the caregiver sounding for the first
+  // 900, so 1900 ms of silence; returning 95% of the way to rest in that window is
+  // tau = 633 ms." The arithmetic is right and the window is not. 1900 ms is the
+  // CAREGIVER's silence -- the part of the trial with no caregiver sound in it. This
+  // anchor gates on the CREATURE's voicing (group 1 against `voicing_threshold`),
+  // and the creature is not silent in one long block: [[aibaby-voicing-gate]]
+  // measures its gate alternating at 3.02 Hz with a mean UNVOICED stretch of
+  // 136.5 ms. So the available window was overestimated 13.9x, and the anchor closed
+  // only 19% of the gap per silence (exp(-136.5/633) = 0.81) where it was meant to
+  // close 95%.
+  //
+  // RE-DERIVED WITH THE SAME RULE AND THE MEASURED WINDOW: 95% back to rest within
+  // one typical unvoiced stretch is 3*tau = 136.5, tau = 45.5 ms.
+  //
+  // AND THE SWEEP CONFIRMS THE DERIVATION RATHER THAN FITTING IT. `syllf1` swept this
+  // constant with no gate and read cycle-start F1 drift 137.5 Hz at 633 ms, 55.1 at
+  // 60, 48.9 at 30, 46.5 at 15 -- a curve that SATURATES. The derivation predicts
+  // where: shortening stops buying anything once the anchor completes inside a
+  // typical silence, i.e. near tau = 45. The measured knee sits between 30 and 60.
+  // The prediction locates the knee; it was not read off it.
+  //
+  // This changes nothing that ships, because v62 ships OFF (`f1_velocity_gain` 0) and
+  // this value is only read inside that branch -- the pinned hash is unmoved. It
+  // changes what every FUTURE velocity-decoder run does.
   float f1_return_tau_ms;
   // DNA v63 — THE BURST CHANNEL, SUBTRACTED FROM THE RATE CHANNEL.
   //
