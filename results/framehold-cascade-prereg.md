@@ -182,3 +182,72 @@ Both failures are the same shape: a summary that is DEFINED whether or not the
 effect exists. The fix in both cases is to ask whether the effect is present PER
 SEED before asking where it is. The seed-vote count is immune to both and should
 have been the primary from the start; it is what the third column above reports.
+
+---
+
+# ROUND 3: NAMING THE LOOP. Pre-registered 2026-09-28, before these arms ran.
+
+## THE ARGUMENT THAT MAKES THIS DECIDABLE
+
+`gate_smoothing_ms` appears in exactly TWO places in the whole system:
+
+  1. it smooths `group_activity_` -> `params_.amplitude`, which goes to the
+     synthesiser and therefore INTO THE MEASUREMENT; and
+  2. `audio.cpp` renders `v.amplitude * self_gain_` into the cochlea, which is
+     the ONLY path by which it re-enters the brain.
+
+Everywhere else the gate smoother is a TERMINAL READOUT. A filter that is not in
+a loop cannot set the frequency of an oscillation -- it can only attenuate one.
+Yet rounds 1 and 2 showed the ring's frequency tracks it at exponent ~0.5.
+
+So exactly one of these is true, and `self_gain = 0` separates them.
+
+## THE CELLS
+
+    cell  self_gain  gate   status
+    A           0.5    60    HAVE -- peak 3 Hz, 7/12 seeds, p 0.0005
+    -           0.5    30    HAVE -- peak 4 Hz, 8/12 seeds, p 0.00005
+    G           0.0    60    TO RUN
+    H           0.0    30    TO RUN
+
+`rate_fast_tau_ms` stays at its shipped 50 in all four: this round moves the
+LOOP, not the cascade.
+
+## THE THREE OUTCOMES, NAMED IN ADVANCE
+
+  1. THE DEAF CELLS STILL SHIFT 3 -> 4 WITH THE GATE.
+     Then gate_smoothing sets the frequency while provably outside any loop, so
+     there is NO LOOP through it and the "ring frequency" is a property of the
+     MEASUREMENT CHAIN. This is the artefact outcome and it would close the 3 Hz
+     resonance as a structure rather than name its loop.
+
+  2. THE DEAF CELLS BOTH PEAK ON THE SAME ARM, wherever that is.
+     Then the frequency is set WITHOUT the gate, i.e. by an INTERNAL loop whose
+     lag is `rate_fast`; and self-hearing is what inserts the gate smoother as a
+     SECOND lag when it is on. THE LOOP IS THEN NAMED: internal, closed through
+     the larynx-ear path only when the creature can hear itself. This is the
+     outcome that answers the question asked.
+
+  3. THE DEAF CELLS BOTH SCATTER (3-4 of 12, as product 750 did).
+     Then the ring needs self-hearing to exist at all, and the loop IS the
+     larynx -> ear -> brain -> larynx path. NOTE THIS WOULD QUALIFY A STANDING
+     RESULT: `aibaby-three-hertz-resonance` records "a DEAF creature still rings
+     at +3.1 SE", but that was measured AT 3 Hz ONLY -- the self_gain sweep never
+     scanned frequency, so it could not see a ring that moved or thinned.
+
+## THE STATISTIC, primary from the start this time
+
+Per-seed vote: how many of the 12 seeds independently put their own maximum on
+the same arm, null Binomial(12, 1/7), expectation 1.7. Round 1 pre-registered an
+argmax and round 2 a ratio of means, and BOTH were fooled -- an argmax is defined
+on a flat profile, a ratio of means is manufactured by one outlier seed. Means
+and argmaxes are reported alongside but decide nothing.
+
+Reference: concentrated cells ran 6-9 of 12 (p 0.0036 to <1e-5), scattered cells
+3-4 of 12 (p 0.24 to 0.08).
+
+## WHAT IS NOT BEING CLAIMED
+
+Outcome 2 names a loop but does not identify what closes it internally. Round 2
+already excluded the obvious internal candidate: vocal's `norm_gain` is 0.0, so
+divisive normalisation is off in the larynx.

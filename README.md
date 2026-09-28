@@ -12391,6 +12391,70 @@ misreads `adaptclock` — its 4.93 is the `rate` column, the module's mean FIRIN
 rate, not a rhythm. The free-running voice's spectral peak is 1.90 +/- 0.25 Hz,
 below the ring, so it supplies no ceiling and nothing here was fitted to it.
 
+## The loop is named: it runs through the creature's own ear
+
+`gate_smoothing_ms` exists in exactly two places. It smooths `group_activity_`
+into `params_.amplitude`, which reaches the synthesiser and therefore the
+measurement; and `audio.cpp` renders `v.amplitude * self_gain_` into the cochlea.
+**That second line is the only path by which the gate smoother re-enters the
+brain.** A filter outside a loop cannot set an oscillation's frequency — it can
+only attenuate one — and rounds 1 and 2 showed the ring's frequency tracks it.
+So `self_gain = 0` decides it, with `rate_fast_tau_ms` held at its shipped 50.
+
+    HOLD contrast, heard-f vs its own silent-f (SE)   early-window localisation
+    cell                 2Hz   3Hz   4Hz             peak  seeds   median peak/next
+    self 0.5  gate 60    0.1   3.0   2.6              3    7/12        2.64
+    self 0.5  gate 30    3.2   2.4   2.2              4    8/12        2.21
+    DEAF      gate 60    5.8   3.1   0.9              4    4/12        1.10
+    DEAF      gate 30    4.6   2.8   1.3              4    5/12        1.06
+
+**Hearing, the response localises sharply and its location tracks the gate**
+(3 -> 4 Hz, p <= 5e-4, peak 2.2-2.6x its runner-up). **Deaf, the gate does
+nothing:** both cells sit on the same arm, the profile is a broad plateau across
+2-4 Hz, and the peak is 1.06-1.10x its runner-up.
+
+**THAT EXCLUDES THE ARTEFACT READING.** The measurement path is IDENTICAL with
+and without `self_gain` — nothing about the synthesiser or the statistic changes.
+If the gate were shaping where the SNR peaks, it would shape it the same way in a
+deaf creature. It does not. So the gate acts from INSIDE a loop, and there is only
+one loop it is inside:
+
+    vocal neurons -> rate_fast (50 ms) -> group_activity -> gate smoother (60 ms)
+      -> params_.amplitude -> larynx render -> cochlea -> auditory -> ... -> vocal
+
+Both cascade lags sit in that loop, which is why the frequency reads their
+product.
+
+**AND IT RESOLVES A CONTRADICTION ROUND 1 CALLED UNRESOLVABLE.** Round 1 stated
+that the clean 2.91 Hz geometric-mean match needs loop gain K ~ 0 while a visible
+ring needs K >> 1, so both could not hold and the absolute agreement must not be
+quoted. With the loop identified they can both hold: **`self_gain` IS the loop
+gain**, it is small, so `w_n = sqrt(1+K)/sqrt(tau1*tau2)` stays near the corner
+AND the system stays weakly damped — which is exactly why it must be kicked and
+why raising `self_gain` never made it self-sustain. It also explains why the old
+`self_gain` sweep moved amplitude without moving frequency: K from ~0.2 to ~0.6
+shifts f by about 1.15x, invisible on an integer-Hz grid.
+
+**A STANDING CLAIM IS NOW QUALIFIED, AND THE RUN THAT DID IT REPRODUCED IT
+EXACTLY.** Cell G returns `heard-3 2.62 +/- 0.62`, contrast `+1.94 (+3.1 SE)` —
+matching the recorded `self_gain 0.00` row digit for digit, which is the validity
+check on this run. But "a deaf creature still rings" was measured **at 3 Hz
+only**: the `self_gain` sweep never scanned frequency. With the scan, 3 Hz sits on
+the deaf creature's broad plateau rather than on a peak, and 2 Hz is the largest
+arm in both deaf cells. The number was right; the inference from it was not.
+
+**AND MY PRE-REGISTRATION WAS NOT A PARTITION.** Outcomes 2 ("both deaf cells
+peak on the same arm") and 3 ("both scatter") were written as alternatives and
+both happened at once. The conclusion does not depend on which — both exclude the
+artefact — but a pre-registered outcome set should be exhaustive AND exclusive,
+and this one was only exhaustive.
+
+Credit: **Houde & Jordan**'s altered-auditory-feedback paradigm is why the
+self-hearing path was instrumented at all, and `selfloop` built on it. Note the
+tension this creates with `selfloop`'s own null, taken up in the open leads: it
+found the creature does not use self-audition to control **F1**, and this finds a
+working self-audition loop on **amplitude**.
+
 ## Layout
 
 ```
