@@ -44,7 +44,7 @@ plasticity_interval_ticks = 10   # cash eligibility in at 100 Hz
 # 25.0 and 100.0 are the arms `framehold` uses to test the product law: halving
 # this must move the ring the same way halving the gate does, and halving one
 # while doubling the other must leave it exactly where it is.
-rate_fast_tau_ms = 50.0
+rate_fast_tau_ms = 25.0
 
 [stdp]
 a_plus = 0.010
@@ -519,7 +519,7 @@ bw_min = 50.0
 bw_max = 250.0
 voicing_threshold = 0.42    # normalised group activity that opens the glottis
 smoothing_ms = 800.0        # articulator inertia: a posture is held for a syllable
-gate_smoothing_ms = 60.0    # the glottis is a valve; it opens and shuts fast
+gate_smoothing_ms = 30.0    # the glottis is a valve; it opens and shuts fast
 rate_norm_hz = 10.0         # group rate that reads as full scale
 
 # DNA v56: how SHARPLY the larynx pools. read_group is a rate-weighted centroid,

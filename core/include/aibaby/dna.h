@@ -560,6 +560,30 @@ struct DnaSim {
   uint32_t max_delay_ticks;           // ring-buffer depth for axonal delay
   float conduction_velocity;          // spatial units per ms
   uint32_t plasticity_interval_ticks; // how often eligibility is cashed in
+  // DNA v68. The fast per-neuron rate estimator's time constant, which was
+  // HARDCODED at 50 ms in network.cpp from the beginning. Appended at the end,
+  // default 50.0, so the shipped creature is bit-identical and the pinned hash
+  // does not move.
+  //
+  // WHY IT BECAME A FIELD. The motor readout reads `rate_fast`, and the larynx
+  // then smooths that again at `gate_smoothing_ms` (60 ms) -- TWO cascaded
+  // first-order lags in series on the amplitude path, which is exactly where
+  // `framehold` measures the 3 Hz ring. Their geometric mean is
+  // sqrt(50*60) = 54.8 ms, a corner at 2.91 Hz.
+  //
+  // That predicts the gate sweep's argmax where a single pole does not. Over the
+  // FULL swept range the measured exponent is log(4/2)/log(120/30) = 0.500 --
+  // the signature of moving ONE pole of a PAIR -- and 0.5 reproduces all three
+  // argmaxes (2.05 / 2.91 / 4.11 Hz -> arms 2 / 3 / 4) where the single-pole
+  // prediction of 1.0 (1.33 / 2.65 / 5.31 -> arms 1 / 3 / 5) is wrong at both
+  // ends. The earlier refusal of `gate_smoothing_ms` as the ring's origin was
+  // fitted on ONE leg of that sweep (0.42) and tested only against 1.0.
+  //
+  // This is the one lag in the vocal path with no genome field, which is why
+  // six parameter sweeps missed it and why the origin hunt concluded "it is in
+  // the plumbing -- architecture rather than a parameter". Correct, and this is
+  // the line.
+  float rate_fast_tau_ms;
 };
 
 // The plasticity interval is a real design constant, not a performance hack:

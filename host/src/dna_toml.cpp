@@ -324,6 +324,7 @@ bool compile_dna_toml(const std::string& path, std::vector<uint8_t>& out,
     header.sim.conduction_velocity = float(r.number("conduction_velocity"));
     header.sim.plasticity_interval_ticks =
         uint32_t(r.number("plasticity_interval_ticks"));
+    header.sim.rate_fast_tau_ms = float(r.number("rate_fast_tau_ms"));
     collect(r);
   }
   {

@@ -12237,6 +12237,101 @@ agreement gate — *"oracle must read 100% by construction, or nothing else is r
 refused a focus set that omitted the oracle. **A gate is not something to route around to
 save compute**; it was given the oracle at a small sample instead.
 
+## The 3 Hz ring reads the PRODUCT of two time constants, and one of them was never in the genome
+
+Yesterday's entry refused `gate_smoothing_ms` as the ring's origin: it moved the
+ring at exponent **0.42** where a single pole requires 1.0, the same shape as
+`adaptclock`'s 0.10. That refusal was fitted on ONE LEG of a three-point sweep.
+Over the full swept range the exponent is exactly **0.500**:
+
+    tau 120 -> 60    argmax 2 -> 3 Hz    exponent 0.585
+    tau  60 -> 30    argmax 3 -> 4 Hz    exponent 0.415
+    tau 120 -> 30    argmax 2 -> 4 Hz    exponent 0.500
+
+The two legs bracket 0.5, which is what quantising a square-root law onto an
+integer grid of arms does. **0.5 is what you get by moving ONE pole of a PAIR,
+and the refusal only ever tested against 1.0.**
+
+**THE SECOND POLE IS TWENTY LINES AWAY AND WAS NEVER A GENOME FIELD.**
+`read_group` reads `net.rate_fast`, and `network.cpp` set its estimator with a
+hardcoded constant — `rate_fast_alpha_ = dt_ms / 50`. The larynx then smooths
+that output *again* at `gate_smoothing_ms` = 60 ms. Two cascaded first-order
+lags in series on the amplitude path, which is exactly the signal `framehold`
+measures. That is why six parameter sweeps missed it, and it is what the earlier
+entry meant by "it is in the plumbing — architecture rather than a parameter".
+DNA v68 makes it a field (default 50.0, hash `ad96f882becbee92` unmoved).
+
+**THE PRE-REGISTRATION** (`results/framehold-cascade-prereg.md`, written and
+committed before any arm ran) demanded three cells, all three required to land:
+
+    cell   rate  gate   predicted   predicted argmax
+    B        25    60     4.11 Hz          4
+    C       100    30     2.91 Hz          3     <- decisive
+    D        25    30     5.81 Hz        5 or 6
+
+C carries the discrimination: each of its constants moved ALONE sends the argmax
+to 4, their product is unchanged, so the cascade says it lands back on 3. No
+account of the form "perturbing the creature shifts the ring" predicts a return
+to baseline.
+
+**RESULT: B AND C LANDED, D DID NOT, SO IT IS REFUSED AS WRITTEN.** What the
+cells say when sorted by the product of the two constants:
+
+    cell         rate  gate  product   peak at   peak early      peak/next
+    A shipped      50    60     3000      3       5.49 +/- 1.09    1.91
+    C             100    30     3000      3       3.64 +/- 0.84    1.95
+    -              50    30     1500      4       5.97 +/- 0.91    1.98
+    B              25    60     1500      4       4.19 +/- 0.86    1.49
+    D              25    30      750      4       2.21 +/- 0.35    1.08
+
+**TWO MATCHED PAIRS, AND I ONLY DESIGNED ONE.** At product 3000 the constants
+differ by 2x and both peak at 3; at product 1500 they differ by 4x and both peak
+at 4. The ring does not read either constant — it reads their product. The
+second pair came free, because the existing 50/30 cell turned out to be B's
+partner.
+
+**AND D IS NOT "THE RING STAYED AT 4".** Its profile runs 2.04 / 2.21 / 1.77 /
+1.74 across four arms: a peak/next ratio of **1.08**, which is no peak at any
+location. **The ring did not move to 6 — it vanished.** So the product law is
+supported where it was tested and refused as an extrapolation; below some
+product the ring stops existing rather than moving up.
+
+**THE FLAW THIS EXPOSED IN MY OWN PRE-REGISTERED STATISTIC.** I pre-registered
+the argmax, and an argmax is DEFINED on a flat profile — it reports a location
+for a peak that is not there. D would have been scored "the ring held at 4"
+by the statistic as written. The peak/next ratio was added afterwards and is
+labelled as such in `tools/cascade_verdict.py`; it is reported as a QUANTITY and
+not against a cut, because a cut placed now would fall between B (1.49) and the
+rest (1.91-1.98), which is a threshold placed where the data is. Note also that
+the old coarse `gate 120` cell reads 1.13 — that reading was weak too, and
+nobody had asked.
+
+**WHAT I SAID IN ADVANCE I WOULD NOT QUOTE, AND STILL WILL NOT.** sqrt(50*60) =
+54.8 ms is a corner at 2.906 Hz against a ring measured at 3 Hz. That 3% match
+looks like the confirmation and is not one: two cascaded low-passes are
+overdamped and do not ring, so a visible ring needs loop gain K around them, and
+the natural frequency then rises as sqrt(1+K). The clean agreement needs K ~ 0
+while the ring's existence needs K >> 1. No loop is identified — vocal's
+`norm_gain` is **0.0**, so divisive normalisation, the one delayed negative
+feedback whose lag IS `rate_fast`, is switched off in the larynx. The scaling
+law stands; the absolute number is a coincidence until a loop is named.
+
+**THIS IS BAD NEWS FOR THE RING, AND THAT WAS STATED BEFORE THE RUN.** Its
+frequency is set by two READOUT filters, which is consistent with there being no
+oscillator at all — the peak may be the shape of an SNR ratio taken through a
+low-pass cascade. Every existing defence of the ring (a deaf creature still
+rings; the transient fix selectively killed `heard-1`; 2 and 4 Hz fully tiled
+yet weakest) attacks a TRANSIENT artefact and leaves a FILTER-SHAPE artefact
+completely untouched. The 3 Hz resonance was this project's "first timekeeping
+structure"; after this it is a number about two smoothing constants until
+something identifies a loop.
+
+Credit where it is due: **Peter MacNeilage**'s frame/content theory is why the
+frame was looked for on the amplitude path at all, and the cross-linguistic
+~4-5 Hz syllable envelope rate is why 3 Hz looked meaningful rather than
+arbitrary. Both are why this took four sessions to catch: the number agreed with
+a real literature, and agreement with the literature is not a mechanism.
+
 ## Layout
 
 ```

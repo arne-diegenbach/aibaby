@@ -180,7 +180,14 @@ bool Network::build(const Dna& dna, Arena& arena, Rng& rng) {
   // A 1-second EMA for homeostasis, a 50 ms one for the motor readout, and
   // the Hz value a single spike represents.
   rate_alpha_ = dt_ms_ / Scalar(1000);
-  rate_fast_alpha_ = clampf(dt_ms_ / Scalar(50), kZero, kOne);
+  // DNA v68. Was a hardcoded 50. The genome default is 50.0, so this is the
+  // same float and the pinned hash does not move; it is a field because it is
+  // one of the two cascaded lags that set the measured 3 Hz ring, and it was
+  // the one that no sweep could reach.
+  rate_fast_alpha_ = clampf(dt_ms_ / Scalar(h.sim.rate_fast_tau_ms > 0.0f
+                                                ? h.sim.rate_fast_tau_ms
+                                                : 50.0f),
+                            kZero, kOne);
   spike_rate_unit_ = Scalar(1000) / dt_ms_;
 
   pre_decay_ = decay_per(dt_ms_, Scalar(h.stdp.tau_plus_ms));

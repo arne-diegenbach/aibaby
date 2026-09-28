@@ -44,7 +44,7 @@ plasticity_interval_ticks = 10   # cash eligibility in at 100 Hz
 # 25.0 and 100.0 are the arms `framehold` uses to test the product law: halving
 # this must move the ring the same way halving the gate does, and halving one
 # while doubling the other must leave it exactly where it is.
-rate_fast_tau_ms = 50.0
+rate_fast_tau_ms = 25.0
 
 [stdp]
 a_plus = 0.010
