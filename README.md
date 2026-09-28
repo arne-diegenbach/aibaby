@@ -12173,6 +12173,70 @@ So the origin stays open, with the eliminated list now at six: self-hearing (a d
 creature still rings), intrinsic plasticity (flat including off), STDP (survives fully
 off), `voicing_threshold`, the voicing gate, and the glottal pole.
 
+## The retention milestone at 96 creatures: not met, and the estimate fell
+
+`retain`'s retention under vigilance read +0.737 [+0.335, +1.003] at 32 creatures
+against a required lower bound of 0.5 — failing only on the interval's low side, which
+is the shape of a power problem. A focused build (`vigmile`: the four arms the milestone
+reads, three times the sample) settles it.
+
+    n = 32    VIGILANCE retention +0.737   95% [+0.335, +1.003]
+    n = 96    VIGILANCE retention +0.594   95% [+0.421, +0.769]
+
+    interval above 0.5: NO;  difference excludes zero: YES   -> MILESTONE NOT MET
+
+**The interval tightened exactly as predicted** — half-width 0.402 → 0.173, a factor
+2.3 where √3 = 1.73 was expected — **and the point estimate fell.** Backing out the 64
+new creatures gives `(96·0.594 − 32·0.737)/64 = 0.522`, below the bar on their own.
+
+That was the pre-registered stopping condition, written before the run: *the point
+estimate must hold as n rises, not merely the interval tighten.* It is the same shape as
+the salience reward going +2.6 SE at 12 creatures to +2.4 at 16, and the same as
+`smoothing-sweep-closed`. The difference this time is that it was called in advance
+rather than explained afterwards. Clearing 0.5 from here would need a half-width under
+0.094 — roughly 326 creatures — and that assumes 0.594 holds when it just didn't. **No
+third round.**
+
+### What survives, and it got stronger
+
+    vigilance - context-off:  +0.419   95% [+0.218, +0.613]
+    (was +0.442 [+0.020, +0.884] at 32 creatures)
+
+At 32 creatures that excluded zero *barely*; at 96 it excludes zero decisively with an
+interval less than half as wide. **Vigilance does beat context-off**, roughly tripling
+retention against the 0.22 conflicting-lesson wipe. What it does not do is keep half the
+lesson, which is what the milestone asked for.
+
+One consistency check makes the rest of the table credible: context-off reads +0.175
+[+0.061, +0.290] against `retain`'s independently measured 0.22. The baseline reproduces
+the known wipe.
+
+### The bug that cost a four-hour run, and it was an optimisation
+
+To keep the run near four hours the gate arms ran at 12 creatures and the milestone arms
+at 96. The milestone block takes `ncre` from the *last* valid arm — the oracle — so
+`ncre` became 12, and the paired bootstrap then dropped every 96-creature arm for
+mismatching. Silently. Only the oracle survived, it fails retain's 0.02 gain bar, and
+the run printed one `UNDERPOWERED` line and no milestone at all.
+
+A paired bootstrap pairs by creature *index*, so arms of different sizes cannot be in it
+— there is no creature 50 of a 12-creature arm. The gate arm was correctly given fewer
+creatures (oracle agreement is 1.000 *by construction*, a wiring fact rather than an
+estimate) and incorrectly left in the ratio table downstream.
+
+**The real fault is the silent skip.** `size() != ncre -> continue` made a broken run
+look exactly like one that found nothing: no error, no warning, an absent result. There
+is now a ragged-sample guard that refuses loudly. The output of a broken run must never
+be indistinguishable from a null.
+
+Two other guards fired on the way and both were right to. `credgate INCONCLUSIVE — arm
+bcast-AB produced 0 creatures` caught focused mode returning early from the job without
+marking arms skipped, so 22 of them looked live-but-empty; all 26 `.skip` checks now go
+through one predicate, making "settled" and "out of focus" the same fact. And the
+agreement gate — *"oracle must read 100% by construction, or nothing else is readable"* —
+refused a focus set that omitted the oracle. **A gate is not something to route around to
+save compute**; it was given the oracle at a small sample instead.
+
 ## Layout
 
 ```

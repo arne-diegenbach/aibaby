@@ -18092,7 +18092,70 @@ constexpr uint32_t kCGArmCount = sizeof(kCGArms) / sizeof(kCGArms[0]);
 constexpr uint64_t kCGSeedOffset = 904837ull;
 constexpr float kCGKeepF1 = 320.0f, kCGKeepF2 = 2500.0f;
 
-bool run_credgate(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+// THE FOCUSED ARMS, and this exists because the milestone is POWER-LIMITED rather
+// than absent. `retain`'s retention under vigilance reads +0.737 [+0.335, +1.003]
+// against a required lower bound of 0.5 -- it fails only on the interval's low side.
+// The full experiment is 26 arms at 32 creatures; the milestone reads two of them, so
+// the cheapest way to more creatures is fewer arms, which is what the open-leads file
+// concluded before any of this was built ("a focused run -- fewer arms, more reps --
+// buys more than another mechanism would").
+//
+// The `-keep` partners come along because the retention triple needs them.
+//
+// ARITHMETIC STATED BEFORE THE RUN. The lower half-width is 0.402 and shrinks as
+// 1/sqrt(n): 64 creatures reaches ~0.45 and still fails, 96 reaches ~0.505 and only
+// just clears IF the point estimate holds exactly, 128 reaches ~0.536. At 96 this run
+// can produce a bound near 0.50 against a 0.5 bar, and THAT MUST BE READ AS MARGINAL
+// rather than as a clean milestone.
+//
+// AND THE PRE-REGISTRATION IS THE ONE THIS SESSION LEARNED THE HARD WAY: the POINT
+// ESTIMATE must HOLD as n rises, not merely the interval tighten. `salrew` went +2.6
+// SE at 12 creatures to +2.4 at 16 while its effect shrank, and the power projection
+// that justified buying those creatures assumed a fixed effect size -- which is what
+// an underpowered estimate cannot be assumed to have. If retention drifts down here,
+// the milestone is ABSENT rather than underpowered and no third round follows.
+// The arms the RETENTION STATISTIC needs, which get the full sample.
+inline bool cg_milestone_arm(const char* name) {
+  return std::strcmp(name, "pin0-AB") == 0 || std::strcmp(name, "pin0-keep") == 0 ||
+         std::strcmp(name, "bcast7-AB") == 0 || std::strcmp(name, "bcast7-keep") == 0;
+}
+// The arms this experiment's own PRE-REGISTERED GATE needs, and it is not optional:
+// "AGREEMENT FIRST, before any retention number is read. oracle must read 100% by
+// construction -- if it does not, the mechanism is miswired and nothing else is
+// readable." The first focused run left the oracle arm out and was refused by that
+// gate, correctly. A gate is not something to route around to save compute.
+//
+// But it does not need the full sample. Oracle agreement is 1.000 BY CONSTRUCTION -- a
+// wiring fact, not an estimate -- so it is checked at a small sample while the
+// statistic that actually needs power gets all of it. That keeps the run near four
+// hours instead of six.
+inline bool cg_gate_arm(const char* name) {
+  return std::strcmp(name, "oracle-AB") == 0 || std::strcmp(name, "oracle-keep") == 0;
+}
+inline bool cg_focused_arm(const char* name) {
+  return cg_milestone_arm(name) || cg_gate_arm(name);
+}
+constexpr uint32_t kCGGateReps = 12;
+
+// ONE PREDICATE FOR "THIS ARM DID NOT RUN", and the first focused run needed it.
+// `skip` marks an arm settled and deliberately unrun, and every block here consults it
+// before reading that arm. Focused mode returned early from the JOB without setting
+// skip, so 22 of 26 arms looked live-but-empty -- and the first guard that requires
+// three creatures returned false on `bcast-AB` before the milestone block was ever
+// reached. The prediction that missing arms would merely print "too few creatures" was
+// wrong: one of those guards is fatal.
+//
+// Routing every check through here makes "skipped" and "out of focus" the same fact,
+// which is what they are.
+inline bool cg_skip(uint32_t a, bool focused) {
+  return kCGArms[a].skip || (focused && !cg_focused_arm(kCGArms[a].name));
+}
+inline bool cg_skip(int a, bool focused) {
+  return a < 0 || cg_skip(uint32_t(a), focused);
+}
+
+bool run_credgate_impl(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose,
+                       bool focused) {
   (void)verbose;
   aibaby::Dna dna0;
   if (dna0.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) {
@@ -18106,7 +18169,15 @@ bool run_credgate(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
   // the same wall-clock buys ~3x the creatures -- which is exactly what the
   // vigilance-vs-silence comparison lacks: its paired interval came out +/-0.36
   // where +/-0.221 is needed, so it needs ~2.6x the creatures and nothing else.
-  constexpr uint32_t kReps = 32;
+  const uint32_t kReps = focused ? 96u : 32u;
+  if (focused)
+    std::printf("  FOCUSED  only the four arms the retention milestone reads, at %u\n"
+                "           creatures instead of 32. Every other arm is skipped and its\n"
+                "           cells stay unscored, exactly as `skip` already does -- so the\n"
+                "           protocol is byte-for-byte the one that produced +0.737 and\n"
+                "           only the sample size differs. Blocks needing the skipped arms\n"
+                "           will say `too few creatures`; that is expected, not a fault.\n",
+                kReps);
   instrument("credgate", dna0.header().seed ^ 0xC6A7u, ticks / kRTTrial, "trials");
   std::printf("  seed family       offset %llu -> first creature %016llx (FRESH)\n",
               (unsigned long long)kCGSeedOffset,
@@ -18151,7 +18222,10 @@ bool run_credgate(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
   const std::vector<Cell> cells = parallel_reps<Cell>(njobs, [&](uint32_t i) {
     Cell cell;
     const uint32_t r = i / kCGArmCount, a = i % kCGArmCount;
-    if (kCGArms[a].skip) return cell;   // cell.ok stays false; never scored
+    if (cg_skip(a, focused)) return cell;   // cell.ok stays false; never scored
+    if (focused && !cg_focused_arm(kCGArms[a].name)) return cell;
+    // The gate arms are a wiring check, not an estimate: 12 creatures, not 96.
+    if (focused && cg_gate_arm(kCGArms[a].name) && r >= kCGGateReps) return cell;
     std::vector<uint8_t> variant = blob;
     const uint64_t seed = dna0.header().seed + kCGSeedOffset + r * 7919ull;
     std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
@@ -18254,7 +18328,7 @@ bool run_credgate(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
       ag.push_back(c.row.credit_trials
                        ? double(c.row.credit_agree) / double(c.row.credit_trials) : 0.0);
     }
-    if (kCGArms[a].skip) continue;   // settled arm, deliberately not run
+    if (cg_skip(a, focused)) continue;   // settled arm, deliberately not run
     if (af.size() < 3) {
       std::printf("\n  credgate INCONCLUSIVE -- arm `%s` produced %zu creatures.\n",
                   kCGArms[a].name, af.size());
@@ -18293,7 +18367,7 @@ bool run_credgate(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
     // differences below -- one of which carries a "must NOT" refusal criterion --
     // would be computed against it.
     for (uint32_t k = 0; k < 4; ++k) {
-      if (kCGArms[k * 2].skip || kCGArms[k * 2 + 1].skip) {
+      if (cg_skip(k * 2, focused) || cg_skip(k * 2 + 1, focused)) {
         std::printf("    %-10s not in this focus set\n", mn[k]);
         continue;
       }
@@ -18301,7 +18375,7 @@ bool run_credgate(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
                   m_ret[k * 2], s_ret[k * 2], m_ret[k * 2 + 1], s_ret[k * 2 + 1]);
     }
     for (uint32_t k = 1; k < 4; ++k) {
-      if (kCGArms[k * 2].skip || kCGArms[0].skip) continue;
+      if (cg_skip(k * 2, focused) || cg_skip(0, focused)) continue;
       const double d = m_ret[k * 2] - m_ret[0];
       const double se = std::sqrt(s_ret[k * 2] * s_ret[k * 2] + s_ret[0] * s_ret[0]);
       std::printf("    %-10s AB retention vs broadcast: %+.3f +/- %.3f  (%+.1f SE)%s\n",
@@ -18365,7 +18439,7 @@ bool run_credgate(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
     // These index arms POSITIONALLY (k*2, k*2+1), so a skipped arm reads 0.0000 and
     // every difference below becomes a number for a comparison nobody made. The
     // smoke test printed derived and latch at 0.0000 under the focus set.
-    if (kCGArms[ab].skip || kCGArms[kp].skip) {
+    if (cg_skip(ab, focused) || cg_skip(kp, focused)) {
       std::printf("    %-10s not in this focus set\n", mode_name[k]);
       continue;
     }
@@ -18376,19 +18450,19 @@ bool run_credgate(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
   const double d_or = gap[0] - gap[1], se_or = std::sqrt(gse[0] * gse[0] + gse[1] * gse[1]);
   const double d_dv = gap[0] - gap[2], se_dv = std::sqrt(gse[0] * gse[0] + gse[2] * gse[2]);
   const double d_sh = gap[0] - gap[3], se_sh = std::sqrt(gse[0] * gse[0] + gse[3] * gse[3]);
-  if (!kCGArms[2].skip && !kCGArms[3].skip)
+  if (!cg_skip(2, focused) && !cg_skip(3, focused))
     std::printf("\n    oracle   shrinks the gap by %+.4f +/- %.4f  (%+.1f SE)\n", d_or,
                 se_or, se_or > 0.0 ? d_or / se_or : 0.0);
-  if (!kCGArms[4].skip && !kCGArms[5].skip)
+  if (!cg_skip(4, focused) && !cg_skip(5, focused))
     std::printf("    derived  shrinks the gap by %+.4f +/- %.4f  (%+.1f SE)\n", d_dv, se_dv,
                 se_dv > 0.0 ? d_dv / se_dv : 0.0);
-  if (!kCGArms[6].skip && !kCGArms[7].skip)
+  if (!cg_skip(6, focused) && !cg_skip(7, focused))
     std::printf("    shuffled shrinks the gap by %+.4f +/- %.4f  (%+.1f SE)  <- must NOT\n",
                 d_sh, se_sh, se_sh > 0.0 ? d_sh / se_sh : 0.0);
 
   std::printf("\n  THE COST -- err_taught, which the oracle bought its 1.03 with\n");
   for (uint32_t k = 0; k < 4; ++k) {
-    if (kCGArms[k * 2].skip || kCGArms[k * 2 + 1].skip) {
+    if (cg_skip(k * 2, focused) || cg_skip(k * 2 + 1, focused)) {
       std::printf("    %-10s not in this focus set\n", mode_name[k]);
       continue;
     }
@@ -18439,7 +18513,7 @@ bool run_credgate(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
     // there is nothing to check and saying so is honest, whereas refusing would be a
     // false alarm and passing silently would hide that the arms are absent.
     const bool nz_absent =
-        i_nz >= 0 && i_nz2 >= 0 && (kCGArms[i_nz].skip || kCGArms[i_nz2].skip);
+        i_nz >= 0 && i_nz2 >= 0 && (cg_skip(i_nz, focused) || cg_skip(i_nz2, focused));
     if (nz_absent) {
       std::printf("\n  VACUITY -- not applicable: the uniform-flip arms are not in this\n"
                   "  focus set, so there is no coin flip that ran and could be inert.\n"
@@ -18494,7 +18568,7 @@ bool run_credgate(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
     bool have[2] = {false, false};
     for (uint32_t w = 0; w < 2u; ++w) {
       const int ia = idx(wnames[w]);
-      if (ia < 0 || kCGArms[ia].skip) continue;
+      if (ia < 0 || cg_skip(ia, focused)) continue;
       double la = 0.0, ua = 0.0, lb = 0.0, ub = 0.0;
       uint32_t nc = 0;
       for (uint32_t r2 = 0; r2 < kReps; ++r2) {
@@ -18560,7 +18634,7 @@ bool run_credgate(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
       // An arm that was never run reads 0.0000 in every column, and differencing
       // against it produces a confident-looking number for a comparison nobody made.
       // The smoke test printed "vs vigilance -0.0632 (-5.3 SE)" for three such arms.
-      if (kCGArms[ia].skip || kCGArms[ik].skip) continue;
+      if (cg_skip(ia, focused) || cg_skip(ik, focused)) continue;
       gap[k] = m_after[ia] - m_after[ik];
       gse[k] = std::sqrt(s_after[ia] * s_after[ia] + s_after[ik] * s_after[ik]);
       have[k] = true;
@@ -18629,9 +18703,9 @@ bool run_credgate(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
     bool any = false;
     for (const char* g : gates) {
       const int ia = idx(g);
-      if (ia >= 0 && !kCGArms[ia].skip) any = true;
+      if (ia >= 0 && !cg_skip(ia, focused)) any = true;
     }
-    if (any && ip >= 0 && !kCGArms[ip].skip) {
+    if (any && ip >= 0 && !cg_skip(ip, focused)) {
       std::printf("\n  THE ACTIVITY GATE -- AGMP priced before it is built. Config is\n"
                   "  exactly pin0's, so the gate is the only difference. Taus are\n"
                   "  DERIVED: AGMP wants 50-500x the eligibility trace and this genome's\n"
@@ -18656,7 +18730,7 @@ bool run_credgate(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
                   s_gain[ip], pin_b, pin_bse);
       for (const char* g : gates) {
         const int ia = idx(g);
-        if (ia < 0 || kCGArms[ia].skip) continue;
+        if (ia < 0 || cg_skip(ia, focused)) continue;
         std::vector<double> vg, vb, vm2;
         for (uint32_t r2 = 0; r2 < kReps; ++r2) {
           const Cell& c = cells[r2 * kCGArmCount + uint32_t(ia)];
@@ -18738,7 +18812,20 @@ bool run_credgate(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
     uint32_t ncre = 0;
     for (int k = 0; k < kNR; ++k) {
       const int ia = idx(rs[k].arm);
-      if (ia < 0 || kCGArms[ia].skip) continue;
+      if (ia < 0 || cg_skip(ia, focused)) continue;
+      // THE GATE-ONLY ARMS ARE NOT IN THIS TABLE, and leaving them in cost a run.
+      // Focused mode runs the oracle at 12 creatures (a wiring check) and the
+      // milestone arms at 96. `ncre` below takes the LAST ok arm's size, so the oracle
+      // set it to 12 and the paired bootstrap then DROPPED every 96-creature arm for
+      // mismatching -- silently -- leaving only the oracle, which fails the gain bar.
+      // The whole milestone vanished from the output.
+      //
+      // A PAIRED bootstrap pairs by creature INDEX, so arms of different sizes cannot
+      // be in it at all: there is no creature 50 of a 12-creature arm. The oracle
+      // belongs to the AGREEMENT gate, not to this ratio table -- and this
+      // experiment's own verdict already calls it "a within-experiment REFERENCE, not
+      // a bound", so excluding it costs nothing.
+      if (focused && !cg_milestone_arm(rs[k].arm)) continue;
       for (uint32_t r2 = 0; r2 < kReps; ++r2) {
         const Cell& c = cells[r2 * kCGArmCount + uint32_t(ia)];
         if (!c.ok) continue;
@@ -18763,6 +18850,24 @@ bool run_credgate(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
                 "  statistic, whose conflicting-lesson value is 0.22. Ratio of MEANS with\n"
                 "  a paired bootstrap (2000 resamples, 95%% interval); a mean of per-\n"
                 "  creature ratios is unusable here and reported -5.166 +/- 5.263.\n");
+    // EVERY ARM IN THE BOOTSTRAP MUST SHARE A CREATURE COUNT, refused LOUDLY rather
+    // than skipped quietly. The silent skip is what hid the bug this guard was written
+    // for: the `size() != ncre -> continue` below dropped the two arms the milestone
+    // is about and printed nothing, so a broken run looked like one that had simply
+    // found no effect. A size mismatch is a wiring fault, not a null.
+    {
+      bool ragged = false;
+      for (int k = 0; k < kNR; ++k) {
+        if (!ok[k] || bef[k].size() == ncre) continue;
+        std::printf("  RAGGED SAMPLE -- `%s` has %zu creatures against %u elsewhere.\n"
+                    "  A PAIRED bootstrap pairs by creature index and cannot mix sizes,\n"
+                    "  and dropping the odd arm silently is how a whole milestone went\n"
+                    "  missing from an earlier run. Refusing instead.\n",
+                    rs[k].label, bef[k].size(), ncre);
+        ragged = true;
+      }
+      if (ragged) return false;
+    }
     constexpr int kB = 2000;
     std::vector<double> boot[kNR];
     std::vector<uint32_t> pick(ncre);
@@ -18911,7 +19016,7 @@ bool run_credgate(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
                 "offs%", "profile, per-bin share of switches");
     for (const char* nm : names) {
       const int ia = idx(nm);
-      if (ia < 0 || kCGArms[ia].skip) continue;
+      if (ia < 0 || cg_skip(ia, focused)) continue;
       double bins[RTRow::kRTSwBins] = {}, tot = 0.0;
       // PER-CREATURE SHARES, so the sounding column gets an SE. Without one "6.9%
       // against a 32.1% null" is a pair of point estimates and not a comparison.
@@ -19781,6 +19886,17 @@ bool run_movability(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
               "  symmetric and spread the words wherever there is room.\n",
               se_d > 0.0 ? m_d / se_d : 0.0);
   return true;
+}
+
+
+bool run_credgate(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  return run_credgate_impl(blob, ticks, verbose, false);
+}
+
+// The focused replication of the retention milestone at 96 creatures. Same protocol,
+// same arms, three times the sample.
+bool run_vigmile(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  return run_credgate_impl(blob, ticks, verbose, true);
 }
 
 bool run_orthovocab(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {

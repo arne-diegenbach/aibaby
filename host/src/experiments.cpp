@@ -473,6 +473,14 @@ const Spec kSpecs[] = {
      "  the 0.22 wipe: B restores the neurons A silenced at +9.4 SE. Width DERIVED\n"
      "  from the creature's own F1 jitter (0.033 log units = 1 sd). gapwrite's AB vs\n"
      "  A-keep design at every band, so reward is matched. 12 seeds"},
+    {"vigmile", 3400000, Expect::kOpen, Tier::kTeach,
+     "THE RETENTION MILESTONE AT 96 CREATURES. Under vigilance it reads +0.737\n"
+     "  [+0.335, +1.003] against a required lower bound of 0.5 -- it fails only on the\n"
+     "  interval's low side. Same protocol as `credgate`, only the four arms the\n"
+     "  milestone reads, three times the sample. PRE-REGISTERED: the POINT ESTIMATE\n"
+     "  must HOLD, not merely the interval tighten -- a drifting estimate means the\n"
+     "  milestone is ABSENT rather than underpowered. At 96 the bound lands near 0.505\n"
+     "  if the estimate holds exactly, which is MARGINAL and not a clean pass."},
     {"credgate", 3400000, Expect::kOpen, Tier::kTeach,
      "CAN THE CREATURE TARGET ITS OWN REWARD? credit-oracle settled that the 0.22\n"
      "  wipe is credit assignment, not a collision: capacity found two lessons\n"
@@ -857,6 +865,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "halfcenter") ok = run_halfcenter(dna_blob, ticks, verbose);
   else if (name == "regionband") ok = run_regionband(dna_blob, ticks, verbose);
   else if (name == "credgate") ok = run_credgate(dna_blob, ticks, verbose);
+  else if (name == "vigmile") ok = run_vigmile(dna_blob, ticks, verbose);
   else if (name == "ctxfeat") ok = run_ctxfeat(dna_blob, ticks, verbose);
   else if (name == "ctxpc") ok = run_ctxpc(dna_blob, ticks, verbose);
   else if (name == "partprobe") ok = run_partprobe(dna_blob, ticks, verbose);
