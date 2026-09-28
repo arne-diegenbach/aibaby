@@ -85,3 +85,100 @@ FILTER-SHAPE artefact untouched. So a positive result here is bad news for
 The argmax is a maximum over 7 arms and the grid is integer-spaced, so single
 contrasts at +2 to +3 SE in this experiment are scatter. The claim rests on
 THREE argmaxes landing where they were predicted, not on any one SE.
+
+---
+
+# ROUND 2, pre-registered 2026-09-28 after round 1 and before these arms ran
+
+Round 1 refused the product law as an EXTRAPOLATION: cell D (25/30, product 750)
+did not move the ring to its predicted 5.81 Hz, and at peak/next 1.08 it has no
+peak at any location. D moved BOTH constants, so it cannot say whether the death
+is about the product or about one constant being too fast.
+
+## THE TWO CELLS, one on each side
+
+    cell   tau_rate  tau_gate  product   predicted   note
+    E          50.0      15.0      750     5.81 Hz    gate fast, rate SHIPPED
+    F          12.5      60.0      750     5.81 Hz    rate fast, gate SHIPPED
+
+Same product as D, same predicted frequency, opposite splits.
+
+## WHAT EACH OUTCOME MEANS, fixed in advance
+
+  - BOTH flat (peak/next near 1.0, as D)  ->  the death follows the PRODUCT, so
+    the ring stops existing once the law predicts a frequency past some ceiling.
+    The product law survives as a law about frequency and gains a stated range.
+  - BOTH peak at 5 or 6  ->  D was the fluke, not the law; the product law
+    extends to 750 and round 1's refusal was a max-of-7 accident. This is the
+    outcome that would REVERSE round 1's refusal, and it is why two cells are
+    being run rather than one.
+  - EXACTLY ONE flat  ->  the death is about a single constant being too fast,
+    not about the product. Which one is flat names it, and the product law is
+    then narrower than the two matched pairs suggest.
+
+## THE STATISTIC, fixed this time
+
+PRIMARY: peak/next — the highest `heard` early-window SNR divided by the second
+highest. Round 1 pre-registered the ARGMAX and that was a mistake: an argmax is
+defined on a flat profile and would have scored D as "the ring held at 4". The
+argmax is reported second, and only for cells whose peak/next says there is a
+peak to locate.
+
+Reference values from round 1, quoted as quantities with no cut applied:
+clear peaks 1.91 / 1.95 / 1.98, marginal 1.49, flat 1.08 and 1.13.
+
+## A CORRECTION MADE BEFORE THIS RAN, NOT AFTER
+
+The round-1 write-up said D's predicted 5.81 Hz "exceeds the free-running vocal
+rate of ~4.9 Hz". That misreads `adaptclock`: its 4.93 is the `rate` column, the
+module's mean FIRING rate, not a rhythm. The free-running voice's spectral peak
+is 1.90 +/- 0.25 Hz — BELOW the ring — so it supplies no ceiling at 4-5 Hz.
+**The ceiling, if these cells find one, has no independently measured number to
+agree with, and nothing here should be made to agree with 4.9.**
+
+---
+
+# ROUND 2 OUTCOME: "BOTH FLAT" — the death follows the PRODUCT
+
+    cell        rate  gate  product  pred Hz   median  arg   seeds peaking there   p
+    gate120       50   120     6000     2.05     1.59    2         6/12          0.054 (4-arm grid)
+    A shipped     50    60     3000     2.91     2.64    3         7/12          0.0005
+    C            100    30     3000     2.91     1.92    3         9/12          <1e-5
+    -             50    30     1500     4.11     2.21    4         8/12          0.00005
+    B             25    60     1500     4.11     1.08    4         6/12          0.0036
+    D             25    30      750     5.81     1.05    4         3/12          0.24
+    E             50    15      750     5.81     1.06    5         3/12          0.24
+    F           12.5    60      750     5.81     1.15    4         4/12          0.08
+
+"Seeds peaking there" counts how many of the 12 seeds independently put their OWN
+maximum on that arm; the null is Binomial(12, 1/7) with expectation 1.7.
+
+**Every cell at product 1500-3000 concentrates (p <= 0.004). All three at product
+750 fail (0.24, 0.24, 0.08).** Two of those three keep one constant at its shipped
+value, so the death is NOT one constant being too fast -- it follows the product.
+
+**E LOOKED LIKE THE EXCEPTION AND WAS ONE SEED.** Its mean peak/next was 1.62 with
+an argmax at the predicted 5 Hz. Per seed, heard-5 reads 28.97 on seed 1 and
+0.34-2.82 on the other eleven. Median ratio 1.06, 3/12 seeds. Flat.
+
+## SO THE LAW, WITH THE RANGE IT EARNED
+
+The ring's frequency reads the PRODUCT of the two cascaded constants across
+products 6000 -> 1500, an argmax ladder of 2 -> 3 -> 4 Hz against predictions of
+2.05 / 2.91 / 4.11. Two MATCHED PAIRS confirm it is the product and not either
+constant: at 3000 the constants differ by 2x, at 1500 by 4x, and each pair agrees.
+Below 1500 the ring CEASES TO EXIST rather than moving higher. The cut-off sits
+between 4.11 Hz (alive) and 5.81 Hz (dead) and has no independently measured
+number to match.
+
+## MY PRIMARY STATISTIC FAILED TWICE, DIFFERENTLY EACH TIME
+
+  round 1   ARGMAX -- defined on a flat profile, so it reports a location for a
+            peak that is not there. D would have scored "the ring held at 4".
+  round 2   PEAK/NEXT ON MEANS -- a ratio of means, which one outlier seed
+            manufactures. E scored 1.62 off a single seed's 28.97.
+
+Both failures are the same shape: a summary that is DEFINED whether or not the
+effect exists. The fix in both cases is to ask whether the effect is present PER
+SEED before asking where it is. The seed-vote count is immune to both and should
+have been the primary from the start; it is what the third column above reports.

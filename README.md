@@ -12332,6 +12332,65 @@ frame was looked for on the amplitude path at all, and the cross-linguistic
 arbitrary. Both are why this took four sessions to catch: the number agreed with
 a real literature, and agreement with the literature is not a mechanism.
 
+## The ring dies at a product, not at a constant — and my statistic failed twice
+
+Round 1 left one question: cell D (product 750) moved BOTH constants, so it could
+not say whether the ring died because of the product or because one constant got
+too fast. Two cells settle it, pre-registered before either ran, sitting on
+opposite sides of the same product — E (rate 50, gate 15) and F (rate 12.5,
+gate 60), both predicting 5.81 Hz.
+
+**The statistic is per-seed this time**, and that is the real content of this
+entry. Count how many of the 12 seeds independently put their OWN maximum on the
+same arm; the null is exactly Binomial(12, 1/7), expectation 1.7.
+
+    cell        rate  gate  product  pred Hz  peak  seeds      p
+    gate120       50   120     6000     2.05    2    6/12    0.054  (4-arm grid)
+    A shipped     50    60     3000     2.91    3    7/12    0.0005
+    C            100    30     3000     2.91    3    9/12    <1e-5
+    -             50    30     1500     4.11    4    8/12    0.00005
+    B             25    60     1500     4.11    4    6/12    0.0036
+    D             25    30      750     5.81    4    3/12    0.24
+    E             50    15      750     5.81    5    3/12    0.24
+    F           12.5    60      750     5.81    4    4/12    0.08
+
+**Every cell at product 1500-3000 concentrates. All three at 750 scatter** — and
+two of those three hold one constant at its shipped value, so the death follows
+the PRODUCT and is not one constant being too fast. That is the "both flat"
+branch of the pre-registration, written down before the runs.
+
+**So the law, with the range it earned.** The ring's frequency reads the product
+of the two cascaded constants from 6000 down to 1500 — an argmax ladder of
+2 -> 3 -> 4 Hz against predictions of 2.05 / 2.91 / 4.11 — confirmed by two
+matched pairs whose constants differ by 2x and by 4x. Below 1500 the ring ceases
+to exist rather than moving higher. The cut-off sits between 4.11 Hz (alive) and
+5.81 Hz (dead) and has no independently measured number to agree with.
+
+**E LOOKED LIKE THE EXCEPTION AND WAS ONE SEED.** Its mean peak/next was 1.62
+with the argmax at exactly the predicted 5 Hz — the most flattering possible
+result. Per seed, `heard-5` reads **28.97 on seed 1 and 0.34-2.82 on the other
+eleven**. Median ratio 1.06, 3/12 seeds. It is flat, and I would have reported it
+as the law extending to product 750 if I had stopped at the summary row.
+
+**MY PRIMARY STATISTIC FAILED IN BOTH ROUNDS, DIFFERENTLY EACH TIME.**
+
+    round 1   ARGMAX          defined on a flat profile, so it names a location
+                              for a peak that is not there (D scored "held at 4")
+    round 2   PEAK/NEXT       a ratio of MEANS, manufactured by one outlier seed
+                              (E scored 1.62 off a single 28.97)
+
+Both are the same shape: **a summary that is defined whether or not the effect
+exists.** The fix both times is to ask whether the effect is present PER SEED
+before asking where it is, which is what the seed-vote count does and what should
+have been primary from the start. `tools/cascade_verdict.py` is kept and marked
+superseded, because the failure is worth more than the file.
+
+A correction made before spending a run rather than after: round 1's write-up
+said D's predicted 5.81 Hz "exceeds the free-running vocal rate of ~4.9 Hz". That
+misreads `adaptclock` — its 4.93 is the `rate` column, the module's mean FIRING
+rate, not a rhythm. The free-running voice's spectral peak is 1.90 +/- 0.25 Hz,
+below the ring, so it supplies no ceiling and nothing here was fitted to it.
+
 ## Layout
 
 ```

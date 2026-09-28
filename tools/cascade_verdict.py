@@ -1,6 +1,12 @@
 #!/usr/bin/env python3
 """Apply the pre-registered cascade test to a set of framehold logs.
 
+SUPERSEDED AS A PRIMARY, 2026-09-28, and kept because the failure is the lesson.
+This scores the ARGMAX of the mean early-window SNR. Round 1 showed an argmax is
+defined on a FLAT profile; round 2 showed the peak/next ratio of MEANS is
+manufactured by one outlier seed. Use tools/cascade_votes.py, which counts how
+many seeds independently peak on the same arm and has an exact binomial null.
+
 Written BEFORE arms B, C and D were run (see results/framehold-cascade-prereg.md).
 The verdict is a function of the logs, not of my reading of them.
 
