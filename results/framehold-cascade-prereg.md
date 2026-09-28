@@ -251,3 +251,69 @@ Reference: concentrated cells ran 6-9 of 12 (p 0.0036 to <1e-5), scattered cells
 Outcome 2 names a loop but does not identify what closes it internally. Round 2
 already excluded the obvious internal candidate: vocal's `norm_gain` is 0.0, so
 divisive normalisation is off in the larynx.
+
+---
+
+# ROUND 4: DOES HOMEOSTASIS CLAMP THE LOOP GAIN? Pre-registered 2026-09-28.
+
+## WHY THIS IS THE FRAME TEST THE PREVIOUS FIVE WERE NOT
+
+The frame has been refused five ways, and every one of them RAISED GAIN in a
+system whose gain is regulated. Intrinsic plasticity is
+`threshold += ip_rate * (rate_ema - target)`: drive the larynx harder through its
+own ear and its rates rise, IP raises thresholds, and the loop gain comes back
+down. **That is a gain controller sitting directly on the loop round 3 just
+named.** So "raising `self_gain` does not make it self-sustain" may be a fact
+about the regulator rather than about the loop.
+
+The `ip_wake_scale` sweep exists and was read as flat — but it ran at SHIPPED
+`self_gain`, where the loop gain is already small and there is nothing to
+compensate. **The 2x2 has never been run.** One detail in that old table points
+the predicted way and was dismissed as control noise: at `ip_wake_scale 0.00` the
+heard-3 contrast was `+3.60 (+4.2 SE)`, the LARGEST in its table, while heard-3
+itself barely moved (4.40 vs 4.54).
+
+## THE CELLS
+
+    cell  self_gain  vocal ip_wake_scale   status
+    A           0.5              1.0       HAVE (wide grid)
+    I           1.5              1.0       TO RUN -- high gain, regulated
+    J           1.5              0.0       TO RUN -- high gain, UNREGULATED
+    K           0.5              0.0       TO RUN -- shipped gain, unregulated
+
+`gate_smoothing_ms` and `rate_fast_tau_ms` stay shipped in all four.
+
+## THE PRIMARY IS THE SILENT ARMS, NOT THE HEARD ONES
+
+A resonance that must be kicked is not a clock. `framehold`'s `silent` arms are
+free-running creatures with no caregiver at all, so they ARE the frame test, and
+this entry's own history says what counts:
+
+  - silent-f early-window SNR must RISE against the 9-run control distribution
+    (mean 1.25, SD 0.61), and
+  - it must appear in BOTH halves of the silence. In a silent arm there is no
+    drive, so early and late are two halves of the same silence and a sustained
+    oscillation must be in both. The previous frame test died exactly here: the
+    early window was pinned at 1.30 / 1.36 / 1.36 / 1.20 across a 3x loop-gain
+    change while only the late window moved.
+  - and it must LOCALISE: per-seed votes concentrated on one arm, not a plateau.
+
+## WHAT REFUSES IT
+
+Silent arms flat across the whole 2x2, in both windows. **That would be the sixth
+refusal of the frame, and the first one that raised gain on a NAMED loop with its
+regulator explicitly switched off** — a much stronger negative than any of the
+five, because it removes the obvious escape ("the gain was being compensated").
+
+## THE KILL SWITCH, stated in advance
+
+Duty cycle must stay away from BOTH ends (v32's runaway precedent). If IP off plus
+high self_gain sends duty to a rail, the creature has gone mute or saturated and
+the cell is void rather than negative. Watch `duty d/h` in every row.
+
+## WHAT THIS CANNOT SHOW
+
+A self-sustaining loop at gain 1.5 with homeostasis OFF is not a frame the shipped
+creature has. It would price the mechanism and say where to look for a regulated
+version, the way `credit-oracle` prices credit assignment. Do not report a corner
+cell as a behaviour the creature owns.

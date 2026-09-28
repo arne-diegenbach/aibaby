@@ -12455,6 +12455,69 @@ tension this creates with `selfloop`'s own null, taken up in the open leads: it
 found the creature does not use self-audition to control **F1**, and this finds a
 working self-audition loop on **amplitude**.
 
+## The frame is refused a sixth time — with the regulator switched off
+
+Round 3 named the loop, which made one thing worth testing: **all five previous
+frame attempts raised gain in a system whose gain is regulated.** Intrinsic
+plasticity is `threshold += ip_rate * (rate_ema - target)`, a gain controller
+sitting directly on the loop. So "raising `self_gain` does not self-sustain" might
+have been a fact about the regulator. The 2x2 had never been run.
+
+    silent arms (free-running, no caregiver) -- max early SNR vs the 9-run
+    control distribution (mean 1.25, SD 0.61)
+
+    cell                      max early   at     vs control   late at that arm
+    A  self 0.5  ip 1.0          1.64     2 Hz     +0.6 SD        1.09
+    I  self 1.5  ip 1.0          1.27     1 Hz     +0.0 SD        1.00
+    K  self 0.5  ip 0.0          1.65     4 Hz     +0.7 SD        1.10
+    J  self 1.5  ip 0.0          1.95     3 Hz     +1.1 SD        0.85
+
+Duty stayed 0.44-0.51 in every cell, so the pre-registered kill switch never
+fired and no cell is void. **Nothing reaches 2 SD, and the location of the maximum
+wanders across 2, 1, 4 and 3 Hz** — the signature of taking a maximum over seven
+noisy arms. The reference distribution is itself generous here, since it was built
+partly on 4-arm grids and a max over 7 is larger by construction.
+
+**J, the predicted cell, fails the both-halves requirement outright.** In a silent
+arm there is no drive, so early and late are two halves of the same silence and a
+sustained oscillation must be in both. J reads early 1.95 and **late 0.85**. The
+previous frame test died in the mirror image of this — late moved and early was
+pinned. A window that moves, and a different window each time, is noise.
+
+**K IS THE CLEAN TEST AND IT REFUSES THE HYPOTHESIS.** With IP off at shipped gain
+the heard ring survives almost intact (`heard-3` hold 4.40 +/- 0.81, early
+4.55 +/- 0.91, localisation ratio 1.95, 7/12 seeds, p 0.0005) while its silent
+arms are **the weakest of all four cells** — 1/12 seeds, p 0.84. Removing the
+regulator does not release an oscillation; it does not even nudge one.
+
+**AND RAISING THE GAIN WEAKENS THE RING INSTEAD OF SHARPENING IT.** `heard-3`
+early goes 5.49 (shipped) -> 2.62 at `self_gain` 1.5, with the localisation ratio
+falling to 1.00 — no longer distinguishable from any other arm. That reproduces
+the recorded `self_gain` up-sweep, which read heard-3 at 2.49 / 2.57 / 3.54 above
+shipped. **The loop's response to gain is non-monotone with a maximum near the
+shipped value, which is the opposite of what a gain-driven route to self-sustaining
+needs.**
+
+So the escape hatch is closed from both sides: with the regulator off the free
+creature is flat, and turning the gain up makes the resonance worse. **This is the
+sixth refusal of the frame and the strongest, because it is the first one where the
+loop was named, its gain was raised 3x, and its regulator was explicitly off.**
+
+**A CORRECTION I ALMOST PUBLISHED.** I first read mean drive SNR falling 390 -> 233
+in the high-gain cells as the creature's own voice swamping the caregiver, and was
+about to void cells I and J as instrument failures. That mean is taken over heard
+arms whose drive levels differ by frequency. At `heard-3` specifically the drive is
+411.7 -> 327.8, a 20% drop. **The instrument did not break; the ring genuinely
+weakened**, which is the result rather than an artefact of it.
+
+**AND MY GUARD WAS AGAIN THE WRONG GUARD.** I pre-registered a duty kill switch.
+Duty passed everywhere while the thing that actually needed watching was whether
+the positive control survived the manipulation — the heard ring's own localisation,
+which fell to 1.00 in J. Three rounds out of four now: the argmax that is defined
+on a flat profile, the ratio of means that one seed manufactures, and a kill switch
+watching the wrong quantity. **The guard has to watch the thing the conclusion
+rests on, not the thing most likely to break.**
+
 ## Layout
 
 ```
