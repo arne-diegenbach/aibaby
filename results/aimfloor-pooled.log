@@ -1,0 +1,40 @@
+experiment: aimfloor
+  instrument        aimfloor   trial seed 0000000001358638   6 creatures
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  the question      is the 13 Hz within-target sd a property of the
+                    PLANT or of the STATISTIC? It reads ~13 in every
+                    arm that has a sustained bias and ~21 in every
+                    arm that does not, across nine arms.
+  why it matters    aimhold and aimpool refused feedback on that
+                    number, at a gain that was DERIVED and never
+                    optimised. A two-level statistic cannot grade
+                    precision.
+
+  gain (k/Hz)  |F1-target|  CLOSED     SCRAM       closed-scram   within sd   bias   clamp
+  0.00025                  76.9+/-0.8   128.9+/-2.7     +52.0 +/- 3.4    17.4/17.3   75.2     0%
+  0.00100                  42.3+/-0.7   161.2+/-1.9    +118.9 +/- 2.5    12.5/12.8   40.7     0%
+  0.00200                  27.3+/-0.6   175.4+/-1.2    +148.1 +/- 1.8    10.0/10.2   25.8     0%
+  0.00400                  16.5+/-0.4   185.5+/-0.8    +169.0 +/- 1.2     7.8/7.7    15.1     0%
+  0.00800                   9.8+/-0.2   191.9+/-0.4    +182.1 +/- 0.6     6.0/6.0     8.4     0%
+  0.01600                   6.0+/-0.1   195.5+/-0.2    +189.5 +/- 0.3     4.8/4.8     4.6     2%
+
+  GUARD  reach responds to gain?  bias range 70.6 Hz over 64x  OK
+
+  Q1  IS 13 Hz A FLOOR?   lowest within-target sd 4.8 Hz at gain 0.01600,
+      against 12.5 at the derived gain 0.00100
+      -> NOT A FLOOR. Every earlier arm ran at ONE gain, so the two-level
+         statistic was a property of the protocol, not of the larynx.
+
+  Q2  IS THE AIM INFORMATION-SPECIFIC?  at the best gain 0.01600
+      closed |error| 6.0, scrambled 195.5, difference +189.5 +/- 0.3  (623.3 SE)
+      gain chosen by the CLOSED arm's own error over 6 rungs, so the
+      scrambled contrast at it is not selected on its own value
+
+  THE FEEDBACK LINE RE-OPENS, AND THE REASON IT CLOSED WAS THE GAIN.
+  A PERFECT controller holds F1 to 6.0 Hz of an arbitrary target and
+  the scrambled control cannot, so this is aim and not drive. aimhold
+  measured ONE gain, derived by matching the correction to the error --
+  which sets loop gain near 1, where residual error is ~1/2. A
+  proportional controller needs L >> 1. The learned-controller question
+  is live again, and its upper bound is 6.0 Hz rather than 66.

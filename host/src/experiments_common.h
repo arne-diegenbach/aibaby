@@ -2224,6 +2224,7 @@ bool run_coderprobe(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_selfcode(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_aimgain(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_aimhold(const std::vector<uint8_t>&, uint64_t, bool);
+bool run_aimfloor(const std::vector<uint8_t>&, uint64_t, bool);
 
 // What `m3probe` measured, keyed by module name, for a caller that needs the
 // numbers rather than the table. It is an out-parameter on the existing runner

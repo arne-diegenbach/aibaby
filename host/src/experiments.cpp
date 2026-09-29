@@ -169,6 +169,11 @@ const Spec kSpecs[] = {
      "  8x. Local recurrence cannot carry activity forward at all"},
     {"curriculum", 1200000, Expect::kOpen, Tier::kLong,
      "derived: m3's protocol at a length where teaching works"},
+    {"aimfloor", 600000, Expect::kOpen, Tier::kLong,
+     "  is the 13 Hz precision floor the PLANT or the STATISTIC? aimhold and\n"
+     "  aimpool refused feedback on a within-target sd that reads ~13 in every\n"
+     "  arm with a sustained bias and ~21 in every arm without, at a gain that\n"
+     "  was DERIVED. A 64x gain ladder, scrambled control paired on seed"},
     {"aimhold", 600000, Expect::kOpen, Tier::kLong,
      "  can a PERFECT controller HOLD F1 at a target? The pre-flight for the\n"
      "  feedback experiment, minutes instead of an hour. 2x2 of feedback x IP,\n"
@@ -891,6 +896,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "selfcode") ok = run_selfcode(dna_blob, ticks, verbose);
   else if (name == "aimgain") ok = run_aimgain(dna_blob, ticks, verbose);
   else if (name == "aimhold") ok = run_aimhold(dna_blob, ticks, verbose);
+  else if (name == "aimfloor") ok = run_aimfloor(dna_blob, ticks, verbose);
   else if (name == "vocabcurve") ok = run_vocabcurve(dna_blob, ticks, verbose);
   else if (name == "ctxprobe") ok = run_ctxprobe(dna_blob, ticks, verbose);
   else if (name == "shapeprobe") ok = run_shapeprobe(dna_blob, ticks, verbose);

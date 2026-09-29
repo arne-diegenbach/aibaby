@@ -30905,6 +30905,341 @@ AHRow run_aimhold_arm(const std::vector<uint8_t>& blob, uint64_t ticks, uint64_t
   return row;
 }
 
+// --- aimfloor: is the 13 Hz precision floor the PLANT or the STATISTIC? --------
+//
+// `aimhold` and `aimpool` refused feedback on the precision bar, and the number
+// that bar rests on has a property nobody checked: within-target sd takes TWO
+// values across all nine arms ever run -- ~21 Hz with no sustained drive, ~13 Hz
+// with any -- regardless of plant, information or whether the controller aimed at
+// the right target at all.
+//
+// A statistic with two levels across nine arms cannot GRADE precision. So
+// "closing the loop is not information-specific" is safe, while "no controller can
+// get below 13 Hz" was never tested. If 13 is a hard floor the refusal stands on
+// the plant; if it moves with controller gain, the refusal was a statement about
+// one gain setting, and the gain was DERIVED (0.001 k-units per Hz) rather than
+// optimised.
+//
+// THE LADDER IS GAIN, over 64x, on whichever plant the genome gives -- run it on
+// the POOLED larynx, which `aimpool` showed is history-free, so the controller is
+// not fighting 107 Hz of backlash while being asked about 13 Hz of scatter.
+//
+// TWO GUARDS, AND THE FIRST IS THE VACUITY CHECK.
+//   1. REACH must respond to gain. If `bias` is flat across a 64x ladder the knob
+//      is inert and every sd on the table is the same arm measured six times --
+//      the shape that cost two sweeps a day in this project.
+//   2. THE CLAMP must be reported, not assumed. `kAHClamp` bounds the correction
+//      at 0.25 k-units, so a high-gain arm is not a proportional controller at
+//      all: it is bang-bang, and bang-bang on this plant should CHATTER, which
+//      would show up as sd rising again. An arm whose correction is clamped most
+//      of the time is labelled, because "high gain did not help" and "high gain
+//      was never applied" are different findings.
+//
+// The scrambled control is PAIRED on seed with its closed arm at the same gain,
+// which `aimhold` had available and did not use.
+// Rung 0 is gain 0: the OPEN loop, measured inside this run rather than quoted
+// from aimhold. At gain 0 the closed and scrambled arms are bit-identical by
+// construction, which is a free check that the job layout is what it claims.
+constexpr double kAFGainMul[] = {0.0, 0.25, 1.0, 2.0, 4.0, 8.0, 16.0};
+constexpr uint32_t kAFGains = sizeof(kAFGainMul) / sizeof(kAFGainMul[0]);
+constexpr uint32_t kAFReps = 6;
+
+// THE DELAY AXIS, AND IT IS THE ATTACK ON THIS EXPERIMENT'S OWN RESULT.
+//
+// The oracle controller acts within the tick it measures. No loop the creature
+// could build does: [[aibaby-loop-latency]] costed the round trip at 905 ms under
+// the shipped position decoder and 165 ms under v62, and a high-gain loop with
+// transport delay is the one configuration classical control forbids -- the phase
+// crosses 180 degrees while the gain is still above 1, which is the Barkhausen
+// argument that closed the 3 Hz ring.
+//
+//   0 ms    the oracle as run: an upper bound on the PLANT, not on any controller
+//  55 ms    the irreducible part of the budget (B2 resolves the sound 50, the
+//           direct auditory->vocal synapse 5) -- no decoder choice removes it
+// 165 ms    the v62 round trip
+// 905 ms    the SHIPPED round trip; v62 is off in the default genome
+//
+// MODELLING THE WHOLE BUDGET AS PURE TRANSPORT DELAY IS THE WORST CASE and is
+// stated as such: most of those milliseconds are EMA lag, whose phase approaches
+// 90 degrees rather than growing without bound. The truth for a real controller is
+// between the 0 ms row and the row for its budget, and this brackets it.
+constexpr double kAFDelayMs[] = {0.0, 55.0, 165.0, 905.0};
+constexpr uint32_t kAFDelays = sizeof(kAFDelayMs) / sizeof(kAFDelayMs[0]);
+
+struct AFRow {
+  double sd = 0.0, sd_late = 0.0, bias = 0.0, clamped = 0.0, abs_err = 0.0;
+  bool ok = false;
+};
+
+AFRow run_aimfloor_arm(const std::vector<uint8_t>& blob, uint64_t ticks, uint64_t seed,
+                       int32_t vmod, double gain, bool scrambled, double delay_ms) {
+  AFRow row;
+  std::vector<uint8_t> variant = blob;
+  std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+  Session s;
+  std::string err;
+  if (!s.init(variant, err)) return row;
+  const aibaby::ModuleState& vms = s.brain.network().module(uint32_t(vmod));
+  const uint32_t g_beg = vms.begin + aibaby::slice_begin(vms.count, aibaby::kVocalGroups, 2);
+  const uint32_t g_end = vms.begin + aibaby::slice_begin(vms.count, aibaby::kVocalGroups, 3);
+  if (g_end <= g_beg + 3) return row;
+  const double namp = double(s.dna.module(uint32_t(vmod)).noise_amp);
+
+  // The controller sees F1 as it was `delay_ms` ago. Sized from the genome's own
+  // dt so a genome with a different timestep delays by the same WALL time.
+  const double dt = double(s.dna.header().sim.dt_ms) > 0.0
+                        ? double(s.dna.header().sim.dt_ms) : 1.0;
+  const size_t dn = size_t(delay_ms / dt + 0.5);
+  std::vector<double> hist(dn + 1, 0.0);
+  size_t hw = 0;
+  bool hist_warm = false;
+
+  double within_sq = 0.0, late_sq = 0.0, bias_sum = 0.0, abs_sum = 0.0;
+  uint64_t scored = 0;
+  uint64_t clamp_hits = 0, clamp_tot = 0;
+  const uint64_t per = ticks / kAHNTargets;
+  for (uint32_t ti = 0; ti < kAHNTargets; ++ti) {
+    const double target = kAHTargets[ti];
+    const double drive_target = scrambled ? kAHTargets[(ti + 1) % kAHNTargets] : target;
+    double blk_sum = 0.0, blk_sq = 0.0; uint32_t blk_n = 0;
+    double lt_sum = 0.0, lt_sq = 0.0; uint32_t lt_n = 0;
+    for (uint64_t t = 0; t < per; ++t) {
+      const double f1_now = double(s.brain.voice().f1);
+      hist[hw] = f1_now;
+      hw = (hw + 1) % hist.size();
+      if (!hist_warm && hw == 0) hist_warm = true;
+      // Before the buffer has filled once, the controller sees the current value:
+      // a cold buffer of zeros would command a full-scale correction at t=0 and
+      // the transient would be the measurement.
+      const double f1_seen = (dn == 0 || !hist_warm) ? f1_now : hist[hw];
+      const double e = drive_target - f1_seen;
+      double k = gain * e;
+      ++clamp_tot;
+      if (k > kAHClamp) { k = kAHClamp; ++clamp_hits; }
+      if (k < -kAHClamp) { k = -kAHClamp; ++clamp_hits; }
+      s.brain.network().clear_bias_oracle();
+      if (k != 0.0)
+        s.brain.network().set_bias_oracle(0, g_beg, g_end, aibaby::Scalar(k * namp));
+      s.brain.step();
+      if (t < per / 2) continue;
+      const double f1 = double(s.brain.voice().f1);
+      abs_sum += std::fabs(f1 - target); ++scored;
+      blk_sum += f1; blk_sq += f1 * f1; ++blk_n;
+      // THE SETTLE AXIS, free inside the same run: the last quarter of the block
+      // has had twice the settling of the scored half. If sd shrinks there, the
+      // 13 Hz is a transient the protocol did not wait out rather than a floor.
+      if (t >= per - per / 4) { lt_sum += f1; lt_sq += f1 * f1; ++lt_n; }
+    }
+    if (blk_n) {
+      const double bm = blk_sum / double(blk_n);
+      within_sq += std::fabs(blk_sq / double(blk_n) - bm * bm);
+      bias_sum += std::fabs(bm - target);
+    }
+    if (lt_n) {
+      const double lm = lt_sum / double(lt_n);
+      late_sq += std::fabs(lt_sq / double(lt_n) - lm * lm);
+    }
+  }
+  row.sd = std::sqrt(within_sq / double(kAHNTargets));
+  row.sd_late = std::sqrt(late_sq / double(kAHNTargets));
+  row.bias = bias_sum / double(kAHNTargets);
+  row.clamped = clamp_tot ? double(clamp_hits) / double(clamp_tot) : 0.0;
+  row.abs_err = scored ? abs_sum / double(scored) : 0.0;
+  row.ok = true;
+  return row;
+}
+
+bool run_aimfloor(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  aibaby::Dna dna;
+  if (dna.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) return false;
+  const int32_t vmod = dna.module_with_role(aibaby::ModuleRole::kVocal);
+  if (vmod < 0) { std::printf("  no vocal module\n"); return false; }
+
+  instrument("aimfloor", dna.header().seed ^ 0xA1F1u, kAFReps, "creatures");
+  std::printf("  the question      is the 13 Hz within-target sd a property of the\n"
+              "                    PLANT or of the STATISTIC? It reads ~13 in every\n"
+              "                    arm that has a sustained bias and ~21 in every\n"
+              "                    arm that does not, across nine arms.\n");
+  std::printf("  why it matters    aimhold and aimpool refused feedback on that\n"
+              "                    number, at a gain that was DERIVED and never\n"
+              "                    optimised. A two-level statistic cannot grade\n"
+              "                    precision.\n\n");
+
+  // job = ((rep * kAFDelays + d) * kAFGains + g) * 2 + scrambled, so closed and
+  // scrambled at the same gain AND delay share a seed and every contrast is paired.
+  const std::vector<AFRow> rows = parallel_reps<AFRow>(
+      kAFReps * kAFDelays * kAFGains * 2, [&](uint32_t job) {
+    const uint32_t scram = job % 2;
+    const uint32_t g = (job / 2) % kAFGains;
+    const uint32_t d = (job / (2 * kAFGains)) % kAFDelays;
+    const uint32_t r = job / (2 * kAFGains * kAFDelays);
+    const uint64_t seed = dna.header().seed + r * 7919ull;
+    return run_aimfloor_arm(blob, ticks, seed, vmod, kAHGain * kAFGainMul[g],
+                            scram != 0, kAFDelayMs[d]);
+  });
+
+  auto at = [&](uint32_t r, uint32_t d, uint32_t g, bool scram) -> const AFRow& {
+    return rows[((size_t(r) * kAFDelays + d) * kAFGains + g) * 2 + (scram ? 1u : 0u)];
+  };
+
+  // THE SPECIFICITY STATISTIC IS THE COMPOSITE, AND THE FIRST VERSION GOT IT WRONG
+  // IN TWO WAYS (fixed 2026-09-29, after seeing the first table).
+  //
+  // 1. IT ASKED ABOUT `sd`. Within-target sd is the scatter around wherever the arm
+  //    ended up, so a controller aiming at the WRONG target is just as tight -- and
+  //    read so at every gain (+/-0.3 Hz against sds of 5-17). That is not a failure
+  //    of aim, it is a statistic conditional on the destination. What carries the
+  //    information is |F1 - target|, which a scrambled controller cannot get right.
+  // 2. IT TOOK THE BEST OF SIX RUNGS against a 2 SE cut -- a multiple comparison at
+  //    family-wise ~14% -- and duly fired on the one rung that cleared it while the
+  //    sign flipped at the other five. The gap is now read at the gain that
+  //    minimises the CLOSED arm's own error, so the contrast is not selected on its
+  //    own value, and the rung count is printed beside it.
+  std::printf("  |F1 - target| by controller gain and LOOP DELAY, closed arm\n");
+  std::printf("  delay     ");
+  for (uint32_t g = 0; g < kAFGains; ++g) std::printf("%8.4f", kAHGain * kAFGainMul[g]);
+  std::printf("      best\n");
+
+  double best_abs[kAFDelays], best_gap[kAFDelays], best_gap_se[kAFDelays];
+  double best_sd[kAFDelays], open_abs[kAFDelays];
+  uint32_t best_g[kAFDelays];
+  double sd_at_derived = 0.0, sd_best_d0 = 1e9, bias_min = 1e9, bias_max = -1e9;
+  bool any = false;
+
+  for (uint32_t d = 0; d < kAFDelays; ++d) {
+    best_abs[d] = 1e9; best_gap[d] = 0.0; best_gap_se[d] = 0.0;
+    best_sd[d] = 0.0; best_g[d] = 0; open_abs[d] = 0.0;
+    std::printf("  %5.0f ms  ", kAFDelayMs[d]);
+    for (uint32_t g = 0; g < kAFGains; ++g) {
+      std::vector<double> ca, dabs, cs, bi;
+      for (uint32_t r = 0; r < kAFReps; ++r) {
+        const AFRow& c = at(r, d, g, false);
+        const AFRow& x = at(r, d, g, true);
+        if (!c.ok || !x.ok) continue;
+        ca.push_back(c.abs_err);
+        dabs.push_back(x.abs_err - c.abs_err);   // positive = closed is CLOSER
+        cs.push_back(c.sd); bi.push_back(c.bias);
+      }
+      if (ca.empty()) { std::printf("       -"); continue; }
+      any = true;
+      double e1, e3, e4, e6;
+      const double mca = ctx_mean_se(ca, &e1);
+      const double mda = ctx_mean_se(dabs, &e3);
+      const double mcs = ctx_mean_se(cs, &e4);
+      const double mb = ctx_mean_se(bi, &e6);
+      std::printf("%8.1f", mca);
+      if (kAFGainMul[g] == 0.0) open_abs[d] = mca;
+      if (kAFGainMul[g] == 1.0 && d == 0) sd_at_derived = mcs;
+      if (kAFGainMul[g] != 0.0 && mca < best_abs[d]) {
+        best_abs[d] = mca; best_g[d] = g; best_gap[d] = mda; best_gap_se[d] = e3;
+        best_sd[d] = mcs;
+      }
+      if (d == 0 && kAFGainMul[g] != 0.0) {
+        if (mcs < sd_best_d0) sd_best_d0 = mcs;
+        if (mb < bias_min) bias_min = mb;
+        if (mb > bias_max) bias_max = mb;
+      }
+    }
+    std::printf("  %8.1f\n", best_abs[d]);
+  }
+  if (!any) { std::printf("  every arm failed to init\n"); return false; }
+
+  // GUARD 0, THE JOB-INDEXING CHECK. At gain 0 the oracle is never set, so the
+  // closed and scrambled arms of one rep are the same simulation and must agree
+  // exactly. `aimhold` was bitten by precisely this class of bug -- a failed cell
+  // shifting a flattened vector so rep r paired against rep r+1 while the table
+  // still printed a confident number -- and the check costs one line.
+  {
+    double worst = 0.0;
+    for (uint32_t d = 0; d < kAFDelays; ++d)
+      for (uint32_t r = 0; r < kAFReps; ++r) {
+        const AFRow& c = at(r, d, 0, false);
+        const AFRow& x = at(r, d, 0, true);
+        if (c.ok && x.ok) worst = std::fmax(worst, std::fabs(c.abs_err - x.abs_err));
+      }
+    std::printf("\n  GUARD  gain-0 identity (closed == scrambled when no correction is\n"
+                "         applied): worst disagreement %.6f Hz%s\n", worst,
+                worst > 1e-9 ? "   <- THE PAIRING IS WRONG" : "   OK");
+  }
+
+  // The optimum gain FALLS as the delay rises, which is the whole finding, and at
+  // the shipped 905 ms it lands on the gain `aimgain` derived. Printed so the
+  // reconciliation is in the log and not only in the write-up.
+  std::printf("\n  optimum gain by delay  ");
+  for (uint32_t d = 0; d < kAFDelays; ++d)
+    std::printf("%.0f ms: %.5f   ", kAFDelayMs[d], kAHGain * kAFGainMul[best_g[d]]);
+  std::printf("\n  the derived 0.00100 is the OPTIMUM for the shipped round trip\n");
+
+  // GUARD 1, the vacuity check: the knob must do something.
+  const double bias_range = bias_max - bias_min;
+  std::printf("\n  GUARD  reach responds to gain?  bias range %.1f Hz over 64x%s\n",
+              bias_range, bias_range >= 10.0 ? "  OK"
+                                             : "   <- INERT, table is one arm six times");
+  if (bias_range < 10.0) {
+    std::printf("  VOID: the gain knob did not move reach, so the columns are not\n"
+                "  measurements of different controllers. No verdict.\n");
+    return true;
+  }
+
+  std::printf("\n  Q1  IS 13 Hz A FLOOR?   lowest within-target sd %.1f Hz at zero delay,\n"
+              "      against %.1f at the derived gain 0.00100\n", sd_best_d0, sd_at_derived);
+  const bool floor_moves = sd_best_d0 < sd_at_derived - 1.5;
+  std::printf("      -> %s\n", floor_moves
+      ? "NOT A FLOOR. Every earlier arm ran at ONE gain, so the two-level\n"
+        "         statistic was a property of the protocol, not of the larynx."
+      : "THE FLOOR HOLDS across the ladder: it is the plant.");
+
+  std::printf("\n  Q2  AT ZERO DELAY, IS THE AIM INFORMATION-SPECIFIC?  gain %.5f\n"
+              "      closed |error| %.1f, open %.1f, scrambled %.1f\n"
+              "      closed vs scrambled %+.1f +/- %.1f (%.1f SE), over %u rungs\n",
+              kAHGain * kAFGainMul[best_g[0]], best_abs[0], open_abs[0],
+              best_abs[0] + best_gap[0], best_gap[0], best_gap_se[0],
+              best_gap_se[0] > 0.0 ? best_gap[0] / best_gap_se[0] : 0.0, kAFGains);
+  const bool specific = best_gap_se[0] > 0.0 && best_gap[0] > 2.0 * best_gap_se[0];
+
+  // Q3 IS THE ONE THAT DECIDES IT, and it is this experiment's attack on itself.
+  std::printf("\n  Q3  DOES IT SURVIVE THE LOOP DELAY THE CREATURE ACTUALLY HAS?\n");
+  for (uint32_t d = 0; d < kAFDelays; ++d) {
+    const double keep = open_abs[d] > 0.0
+                            ? 100.0 * (open_abs[d] - best_abs[d]) / open_abs[d] : 0.0;
+    std::printf("      %5.0f ms   best |error| %6.1f at gain %.5f   open %6.1f"
+                "   error removed %5.1f%%\n",
+                kAFDelayMs[d], best_abs[d], kAHGain * kAFGainMul[best_g[d]],
+                open_abs[d], keep);
+  }
+  // The shipped decoder is POSITION, so 905 ms is the row a learned controller in
+  // the default genome would face; 165 ms is v62's, and v62 ships OFF.
+  const uint32_t d165 = 2, d905 = 3;
+  const bool v62_survives = best_abs[d165] < 0.5 * open_abs[d165];
+  const bool shipped_survives = best_abs[d905] < 0.5 * open_abs[d905];
+
+  if (floor_moves && specific && v62_survives) {
+    std::printf("\n  THE FEEDBACK LINE RE-OPENS, WITH A NAMED REQUIREMENT. A perfect\n"
+                "  controller holds F1 to %.1f Hz at zero delay and still removes half\n"
+                "  the open-loop error at v62's %0.f ms round trip%s. aimhold measured ONE\n"
+                "  gain, derived by matching the correction to the error, which sets loop\n"
+                "  gain near 1 where residual error is ~1/2 -- and a proportional\n"
+                "  controller needs L >> 1. The learned-controller question is live again.\n",
+                best_abs[0], kAFDelayMs[d165],
+                shipped_survives ? " and at the shipped 905 ms"
+                                 : ", but NOT at the shipped 905 ms, so it needs v62 ON");
+  } else if (floor_moves && specific) {
+    std::printf("\n  THE PLANT PERMITS IT AND THE LOOP DOES NOT. At zero delay a perfect\n"
+                "  controller reaches %.1f Hz, but at the round trip this creature\n"
+                "  actually has the same ladder cannot remove half the open-loop error.\n"
+                "  The 6 Hz bound is a fact about the LARYNX, not about any controller\n"
+                "  that has to hear itself. aimhold's refusal stands, for a reason it\n"
+                "  did not give: not the gain, the delay.\n", best_abs[0]);
+  } else if (floor_moves) {
+    std::printf("\n  THE FLOOR IS SOFT AND THE REFUSAL STANDS: harder pushing cuts the\n"
+                "  error whatever it pushes toward, so the gain buys DRIVE and not aim.\n");
+  } else {
+    std::printf("\n  THE FLOOR IS THE PLANT and aimhold's refusal is safe.\n");
+  }
+  return true;
+}
+
 bool run_aimhold(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
   (void)verbose;
   aibaby::Dna dna;

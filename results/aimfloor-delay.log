@@ -1,0 +1,43 @@
+experiment: aimfloor
+  instrument        aimfloor   trial seed 0000000001358638   6 creatures
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  the question      is the 13 Hz within-target sd a property of the
+                    PLANT or of the STATISTIC? It reads ~13 in every
+                    arm that has a sustained bias and ~21 in every
+                    arm that does not, across nine arms.
+  why it matters    aimhold and aimpool refused feedback on that
+                    number, at a gain that was DERIVED and never
+                    optimised. A two-level statistic cannot grade
+                    precision.
+
+  |F1 - target| by controller gain and LOOP DELAY, closed arm
+  delay       0.0000  0.0003  0.0010  0.0020  0.0040  0.0080  0.0160      best
+      0 ms     107.9    76.9    42.3    27.3    16.5     9.8     6.0       6.0
+     55 ms     107.9    76.8    42.8    27.8    17.4    12.2    13.1      12.2
+    165 ms     107.9    76.8    43.1    28.7    21.4    25.5    31.0      21.4
+    905 ms     107.9    77.1    47.5    71.3    88.2    96.3    98.3      47.5
+
+  GUARD  reach responds to gain?  bias range 70.6 Hz over 64x  OK
+
+  Q1  IS 13 Hz A FLOOR?   lowest within-target sd 4.8 Hz at zero delay,
+      against 12.5 at the derived gain 0.00100
+      -> NOT A FLOOR. Every earlier arm ran at ONE gain, so the two-level
+         statistic was a property of the protocol, not of the larynx.
+
+  Q2  AT ZERO DELAY, IS THE AIM INFORMATION-SPECIFIC?  gain 0.01600
+      closed |error| 6.0, open 107.9, scrambled 195.5
+      closed vs scrambled +189.5 +/- 0.3 (623.3 SE), over 7 rungs
+
+  Q3  DOES IT SURVIVE THE LOOP DELAY THE CREATURE ACTUALLY HAS?
+          0 ms   best |error|    6.0 at gain 0.01600   open  107.9   error removed  94.5%
+         55 ms   best |error|   12.2 at gain 0.00800   open  107.9   error removed  88.7%
+        165 ms   best |error|   21.4 at gain 0.00400   open  107.9   error removed  80.1%
+        905 ms   best |error|   47.5 at gain 0.00100   open  107.9   error removed  55.9%
+
+  THE FEEDBACK LINE RE-OPENS, WITH A NAMED REQUIREMENT. A perfect
+  controller holds F1 to 6.0 Hz at zero delay and still removes half
+  the open-loop error at v62's 165 ms round trip and at the shipped 905 ms. aimhold measured ONE
+  gain, derived by matching the correction to the error, which sets loop
+  gain near 1 where residual error is ~1/2 -- and a proportional
+  controller needs L >> 1. The learned-controller question is live again.

@@ -12913,6 +12913,107 @@ and Michael Jordan for altered auditory feedback, the design `aimhold` and
 this line has now refused on three plants.
 
 
+## aimfloor: the feedback line RE-OPENS, and what closed it was a gain derived without a delay
+
+`aimhold` and `aimpool` refused feedback on a precision bar, and the number that bar
+rests on had a property nobody checked. Within-target sd read ~13 Hz in every arm
+with a sustained bias and ~21 Hz in every arm without, across nine arms, regardless
+of plant or information. **A statistic with two levels across nine arms cannot GRADE
+precision** — so "closing the loop is not information-specific" was safe, and "no
+controller can get below 13 Hz" had never been tested. Every one of those nine arms
+ran at ONE controller gain.
+
+A 64x gain ladder on the pooled larynx, crossed with the loop delay the creature
+actually has. `|F1 - target|`, closed arm, rung 0 being the open loop measured
+in-run rather than quoted:
+
+    delay       0.0000  0.0003  0.0010  0.0020  0.0040  0.0080  0.0160     best
+      0 ms     107.9    76.9    42.3    27.3    16.5     9.8     6.0       6.0
+     55 ms     107.9    76.8    42.8    27.8    17.4    12.2    13.1      12.2
+    165 ms     107.9    76.8    43.1    28.7    21.4    25.5    31.0      21.4
+    905 ms     107.9    77.1    47.5    71.3    88.2    96.3    98.3      47.5
+
+**THE 13 Hz WAS NOT A FLOOR:** within-target sd falls 17.4 -> 4.8 Hz across the
+ladder. The two-level statistic was a property of the protocol, not of the larynx.
+
+**AND THE STATISTIC WAS THE WRONG ONE ANYWAY.** `sd` is scatter around wherever the
+arm ended up, so a controller aiming at the WRONG target is just as tight — and read
+so at every rung, +/-0.3 Hz against sds of 5 to 17. That is not a failure of aim; it
+is a statistic conditional on its destination. What carries the information is
+`|F1 - target|`, which a scrambled controller cannot get right: closed **6.0 Hz**
+against open 107.9 and scrambled **195.5**, a gap of +189.5 +/- 0.3. Aiming at the
+wrong target is WORSE than not aiming, which is the signature drive can never fake.
+
+### Why it looked closed, in one line of algebra
+
+The derived gain is 0.001 k-units per Hz and the plant's static curve is ~750 Hz per
+k-unit, so **loop gain L = 0.75.** A proportional controller leaves residual error
+`1/(1+L)` = 57% of open-loop — and `aimhold` measured 106 -> 66, which is 62%. The
+gain was derived by matching the correction to the error, and *that criterion sets
+L near 1 by construction.* A proportional controller needs L >> 1. At gain 0.016,
+L = 12, residual 7.7%, predicted 8.2 Hz against a measured 6.0.
+
+### The attack that decided it, and it came from this project's own measurements
+
+The oracle acts within the tick it measures; no loop the creature could build does.
+`aibaby-loop-latency` costed the round trip at **165 ms under v62 and 905 ms under
+the shipped position decoder**, and a high-gain loop with transport delay is the one
+configuration classical control forbids — the phase crosses 180 degrees while the
+gain is still above 1, the same Barkhausen argument that closed the 3 Hz ring.
+
+**The delay rows are the textbook trade, and each turns around past its own
+optimum.** The optimal gain falls 0.016 -> 0.008 -> 0.004 -> 0.001 as the delay
+rises 0 -> 55 -> 165 -> 905 ms, and the error removed falls 94.5% -> 88.7% -> 80.1%
+-> 55.9%. Modelling the whole budget as pure transport delay is the WORST case and
+is labelled as such: most of those milliseconds are EMA lag, whose phase approaches
+90 degrees rather than growing without bound, so a real controller sits between the
+0 ms row and its own budget row.
+
+**AND THE RECONCILIATION IS THE BEST PART: at the shipped 905 ms round trip the
+optimum IS the derived 0.001.** The derivation was not wrong — it was right for a
+delay it never mentioned, and `aimhold` was accidentally measuring near the best
+achievable for the loop this creature has. Its 42.3 Hz on the pooled plant sits
+beside this run's 47.5 Hz optimum at 905 ms.
+
+**So the line re-opens even on the shipped decoder** — 55.9% of the open-loop error
+is removable at 905 ms — and v62 is worth 21.4 Hz against 47.5.
+
+### What this is an upper bound ON, which is narrower than it sounds
+
+Two oracles, not one: the error signal is PERFECT, and the controller is
+hand-written proportional control rather than anything learned. What it refutes is
+the specific claim `aimhold` made — *a perfect controller cannot aim, so no learned
+one can.* A perfect controller aims to 6.0 Hz, and to 47.5 Hz through the shipped
+loop's delay. What it does NOT establish is that the creature's own error estimate
+suffices: `selfcode` measured the ear's own-F1 decode at 0.623 held-out, two-class,
+which is a coarse signal. **The named next step is to degrade the error signal to
+that quality and re-run this ladder** — the bound moves from the plant to the
+sensor, which is where `selfcode` always said the work was.
+
+### Two instrument checks and two bugs of my own
+
+The gain-0 rung reads 107.9 Hz, matching `aimhold`'s open arm exactly, and the
+derived-gain rung reads 42.3, matching `aimhold`'s pooled CLOSED arm exactly. Two
+experiments written days apart, same two numbers. The gain-0 identity check also
+confirms the job indexing: with no correction applied the closed and scrambled arms
+are the same simulation and must agree to zero, which is the bug class that bit
+`aimhold` when a failed cell shifted a flattened vector.
+
+**And the verdict code I pre-registered was wrong twice, both caught by reading the
+first table instead of its conclusion.** It scored specificity on `sd`, the quantity
+that cannot carry it; and it took the best of six rungs against a 2 SE cut, a
+multiple comparison at family-wise ~14%, which duly fired on the one rung that
+cleared it while the sign flipped at the other five. **A pre-registered verdict is
+not self-validating — it is code, and it can be wrong in the ordinary way.** The
+cuts and the guards were sound; the statistic behind them was not.
+
+Credit: Harry Nyquist and Hendrik Bode, whose gain-and-phase margin is the whole
+content of the delay rows; John Houde and Michael Jordan for altered auditory
+feedback, the design this line borrows; Frank Guenther, whose DIVA feedback
+controller is the thing now un-refused; Heinrich Barkhausen for the oscillation
+condition that supplies the turnaround past each optimum.
+
+
 ## Layout
 
 ```
