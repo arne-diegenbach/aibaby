@@ -12705,6 +12705,66 @@ Credit: **Houde & Jordan**'s altered-auditory-feedback paradigm is the design
 `selfloop` used and the reason its null can be reused as a validity check here;
 **Guenther**'s DIVA is why an F1 error signal was worth looking for at all.
 
+## aimgain: intrinsic plasticity is the backlash, and the plant moves under the controller
+
+Built only to derive a gain before spending an hour on `selfcode`'s follow-up. It
+found something better than a gain.
+
+    arm        hysteresis   static swing        sweep asymmetry
+    IP on       107.1 Hz    +186.1 / -192.2    -1.49 asc, +1.48 desc  (VOID)
+    IP off        2.0 Hz    +222.5 / -232.4    -0.03 asc, -0.02 desc  (holds)
+
+**A 54x collapse**, and with IP off the order control stops firing at all. IP also
+compresses the actuator, but modestly — swing +-189 to +-227, about 18%.
+
+**WHY IT MATTERS.** The F1 jitter a controller must correct is sd 70-119 Hz.
+**The plant's response depends on its own recent history by 107 Hz — the same size
+as the error.** A proportional controller whose backlash matches its error signal
+DEAD-ZONES rather than converging. That is a mechanism-level obstacle to AIM, and a
+different one from anything the naming line found: not a gain too small, not a
+readout saturating, but an articulator that moves under the controller.
+
+**IT UNIFIES WITH `stageprobe`.** That found `bias -> rate` is the compressive
+stage at exponent 0.34 where the learned bias lives, and named IP as the cause: IP
+regulates each neuron's OWN rate, so it cancels the TILT a sustained bias creates
+along with the common mode. The same mechanism produces exactly this hysteresis.
+**One mechanism, two walls.**
+
+**IP OFF IS NOT THE FIX** — v50 relaxed it and learning got WORSE (+16.6 -> -2.3),
+and the ring line's round 4 found IP off releases no frame. What this identifies is
+the TRADE, and `stageprobe` already named the unbuilt alternative: a homeostat on
+the GROUP's mean rate would leave the tilt intact. There are now **two independent
+reasons** to build it rather than one.
+
+The by-product that was the original goal, a history-free static curve:
+
+    k       -0.25  -0.12  -0.06   0.00  +0.06  +0.12  +0.25
+    dF1    -192.2 -125.9  -67.7    0.0  +67.9 +122.5 +186.1
+
+Symmetric to **0.2 Hz** at +-0.06, and its rest F1 of 629.7 reproduces
+`stageprobe`'s independent 626.3 — the validity check. Derived gain 0.001 k-units
+per Hz.
+
+**TWO INSTRUMENT BUGS OF MY OWN, AND THEY ARE THE LESSON.** The first ladder swept
+k ascending in ONE session, so every positive rung inherited what the strong
+negative ones left. It read "up +41, down -284" and **refused the feedback
+experiment on an actuator that can only pull one way.** Run descending it reads
++287 / -42 — the sign flips. The refusal was my ladder order, and the tell was
+visible and nearly missed: rest F1 read 721.8 against `stageprobe`'s 626.3 at the
+same k, differing only in what the creature had done beforehand.
+
+Then the guard I added to catch that **hid its own evidence** — the VOID returned
+before printing the hysteresis and the static curve, the two numbers needed to
+interpret it. **A guard may invalidate a CLAIM; it must not withhold the
+measurements that explain why.**
+
+And a third, caught by an assert rather than by me: the IP-off variant edited
+vocal's `ip_wake_scale` by hardcoded line 1879, which my own earlier edits to
+`dna/default.toml` — v68's `rate_fast_tau_ms`, v69's `self_delay_ms` — had pushed
+to 1900. Nothing was written and the run failed loudly. Same class as `framehold`'s
+hardcoded `a - 4` and `syllf1`'s inherited default: **a constant encoding an
+assumption about a file, invalidated by an edit elsewhere in that file.**
+
 ## Layout
 
 ```

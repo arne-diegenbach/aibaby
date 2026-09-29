@@ -1,0 +1,33 @@
+experiment: aimgain
+  instrument        aimgain   trial seed 00000000013586c7   6 creatures
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  the question      WHERE IS THE F1 ACTUATOR LINEAR, and is it
+                    SYMMETRIC? stageprobe put 61% of the usable swing
+                    in its first rung and never tested negative k.
+  why it matters    a feedback controller lives below k=0.25 and must
+                    correct BOTH ways. An asymmetric actuator biases
+                    the voice rather than steadying it.
+
+  k        F1 (Hz)        dF1 from 0  Hz per 0.06 k
+  -0.25    437.57 +/- 1.33 -284.3      -
+  -0.18    534.94 +/- 3.00 -186.9      83.458
+  -0.12    634.05 +/- 3.66 -87.8       99.115
+  -0.06    691.27 +/- 1.72 -30.6       57.213
+  0.00     721.84 +/- 1.59 +0.0        30.570
+  0.06     735.14 +/- 0.83 +13.3       13.306
+  0.12     743.19 +/- 1.54 +21.4       8.0441
+  0.18     751.55 +/- 1.21 +29.7       8.3663
+  0.25     763.20 +/- 1.70 +41.4       9.9804
+
+  swing UP   (k 0 -> +0.25)  +41.4 Hz
+  swing DOWN (k 0 -> -0.25)  -284.3 Hz
+  asymmetry  -1.49   (0 = equal both ways; +2 = up only)
+  F1 jitter to correct is sd 70-119 Hz (vowel-space), so a usable
+  controller needs at least that much swing in EACH direction.
+
+  REFUSED -- the actuator cannot cover the creature's own F1 jitter
+  in at least one direction. A proportional controller built on it
+  would correct one way and not the other, which BIASES the voice
+  rather than steadying it. Do not build the feedback experiment on
+  this actuator.

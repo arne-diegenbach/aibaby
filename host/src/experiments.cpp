@@ -169,6 +169,12 @@ const Spec kSpecs[] = {
      "  8x. Local recurrence cannot carry activity forward at all"},
     {"curriculum", 1200000, Expect::kOpen, Tier::kLong,
      "derived: m3's protocol at a length where teaching works"},
+    {"aimgain", 600000, Expect::kOpen, Tier::kLong,
+     "  WHERE the F1 actuator is linear and whether it is SYMMETRIC. stageprobe\n"
+     "  put 61% of the usable swing in its first rung and never tested negative\n"
+     "  k, so a feedback controller would be designed by extrapolating into an\n"
+     "  unsampled region. Refuses if the swing cannot cover the creature's own\n"
+     "  F1 jitter in BOTH directions. 6 creatures"},
     {"selfcode", 300000, Expect::kPass, Tier::kFast,
      "  does the ear encode the creature's OWN F1? selfloop measured the\n"
      "  RESPONSE and found a null; this asks whether the SIGNAL is there.\n"
@@ -878,6 +884,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "g2cond") ok = run_g2cond(dna_blob, ticks, verbose);
   else if (name == "coderprobe") ok = run_coderprobe(dna_blob, ticks, verbose);
   else if (name == "selfcode") ok = run_selfcode(dna_blob, ticks, verbose);
+  else if (name == "aimgain") ok = run_aimgain(dna_blob, ticks, verbose);
   else if (name == "vocabcurve") ok = run_vocabcurve(dna_blob, ticks, verbose);
   else if (name == "ctxprobe") ok = run_ctxprobe(dna_blob, ticks, verbose);
   else if (name == "shapeprobe") ok = run_shapeprobe(dna_blob, ticks, verbose);

@@ -30761,6 +30761,278 @@ SCRow run_selfcode_arm(const std::vector<uint8_t>& blob, uint64_t ticks, uint64_
   return row;
 }
 
+// --- aimgain: where is the F1 actuator linear, and is it symmetric? ---------
+//
+// DERIVING A CONSTANT BEFORE SPENDING AN HOUR ON IT. `selfcode` showed the ear
+// carries the creature's own F1, so an F1 feedback controller has an error signal
+// to run on. A controller also needs an ACTUATOR, and the only one available is a
+// graded bias on the F1 group -- the same pathway the naming line found saturating.
+//
+// `stageprobe`'s ladder prices it and says the controller cannot be designed from
+// that table:
+//
+//     k      0.00   0.25   0.50   1.00   2.00   4.00
+//     F1 Hz  626.3  781.8  808.3  844.4  880.5  879.2
+//
+// **The FIRST rung is 61% of the entire usable swing** and a further 16x buys the
+// rest, so any proportional controller lives BELOW k = 0.25 -- precisely the region
+// that ladder never sampled. Designing a gain by extrapolating into it would repeat
+// the censored-grid error that cost the `gate_smoothing_ms` refusal a round.
+//
+// AND IT ONLY EVER TESTED POSITIVE k. A controller must correct in BOTH directions,
+// and the rest centroid is 0.50 while the actuator saturates at 0.84 going up -- so
+// the two directions have visibly different headroom and the asymmetry has never
+// been measured. An asymmetric actuator makes a proportional controller correct
+// harder one way than the other, which shows up as BIAS, not as noise.
+//
+// Read-only: the bias oracle is experiment-only, no genome field, pinned hash
+// unmoved.
+constexpr uint32_t kAGReps = 6;
+constexpr double kAGLadder[] = {-0.25, -0.18, -0.12, -0.06, 0.0,
+                                 0.06,  0.12,  0.18,  0.25};
+constexpr uint32_t kAGRungs = sizeof(kAGLadder) / sizeof(kAGLadder[0]);
+
+struct AGRow { double f1 = 0.0, f1_sd = 0.0, centroid = 0.0, pinned = 0.0; };
+struct AGCell { bool ok = false; bool descending = false; int32_t static_rung = -1;
+                AGRow row[kAGRungs]; };
+
+bool run_aimgain(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  aibaby::Dna dna;
+  if (dna.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) return false;
+  const int32_t vmod = dna.module_with_role(aibaby::ModuleRole::kVocal);
+  if (vmod < 0) return false;
+  instrument("aimgain", dna.header().seed ^ 0xA10Eu, kAGReps, "creatures");
+  std::printf("  the question      WHERE IS THE F1 ACTUATOR LINEAR, and is it\n"
+              "                    SYMMETRIC? stageprobe put 61%% of the usable swing\n"
+              "                    in its first rung and never tested negative k.\n");
+  std::printf("  why it matters    a feedback controller lives below k=0.25 and must\n"
+              "                    correct BOTH ways. An asymmetric actuator biases\n"
+              "                    the voice rather than steadying it.\n\n");
+
+  // THE ORDER CONTROL, and the first version of this experiment needed it.
+  // The rungs run SEQUENTIALLY in one session, so every rung inherits the state
+  // the previous one left -- and ascending order means each positive rung follows
+  // the strong NEGATIVE ones. Threshold adaptation persists, so an apparent
+  // asymmetry between up and down could be HYSTERESIS rather than a property of
+  // the actuator. Running the identical ladder in both directions separates them:
+  // a real asymmetry holds, an order effect flips.
+  // STATIC ARM, added after the order control fired. Averaging an ascending and a
+  // descending sweep CANCELS first-order hysteresis, and the result came out
+  // symmetric to within 1 Hz -- but that is an ESTIMATE of the static curve, not a
+  // measurement of it. Here each rung gets a FRESH creature that has never seen
+  // another bias, so there is no history to inherit. This is the curve a controller
+  // would actually act on.
+  const std::vector<AGCell> statics = parallel_reps<AGCell>(kAGReps * kAGRungs,
+                                                            [&](uint32_t job) {
+    AGCell cell;
+    const uint32_t r = job / kAGRungs, L = job % kAGRungs;
+    std::vector<uint8_t> variant = blob;
+    const uint64_t seed = dna.header().seed + r * 7919ull;
+    std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+    Session s;
+    std::string err;
+    if (!s.init(variant, err)) return cell;
+    const aibaby::ModuleState& vms = s.brain.network().module(uint32_t(vmod));
+    const uint32_t g_beg =
+        vms.begin + aibaby::slice_begin(vms.count, aibaby::kVocalGroups, 2);
+    const uint32_t g_end =
+        vms.begin + aibaby::slice_begin(vms.count, aibaby::kVocalGroups, 3);
+    if (g_end <= g_beg + 3) return cell;
+    const double namp = double(s.dna.module(uint32_t(vmod)).noise_amp);
+    if (kAGLadder[L] != 0.0) {
+      s.brain.network().set_bias_oracle(0, g_beg, g_end,
+                                        aibaby::Scalar(kAGLadder[L] * namp));
+    }
+    const uint64_t per = ticks / kAGRungs;
+    double f1_sum = 0.0; uint32_t n = 0;
+    for (uint64_t t = 0; t < per; ++t) {
+      s.brain.step();
+      if (t < per / 2) continue;
+      f1_sum += double(s.brain.voice().f1);
+      ++n;
+    }
+    cell.row[L].f1 = n ? f1_sum / double(n) : 0.0;
+    cell.static_rung = int32_t(L);
+    cell.ok = true;
+    return cell;
+  });
+
+  const std::vector<AGCell> cells = parallel_reps<AGCell>(kAGReps * 2, [&](uint32_t job) {
+    const uint32_t r = job / 2;
+    const bool descending = (job % 2) != 0;
+    AGCell cell;
+    cell.descending = descending;
+    std::vector<uint8_t> variant = blob;
+    const uint64_t seed = dna.header().seed + r * 7919ull;
+    std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+    Session s;
+    std::string err;
+    if (!s.init(variant, err)) return cell;
+    const aibaby::ModuleState& vms = s.brain.network().module(uint32_t(vmod));
+    const uint32_t g_beg =
+        vms.begin + aibaby::slice_begin(vms.count, aibaby::kVocalGroups, 2);
+    const uint32_t g_end =
+        vms.begin + aibaby::slice_begin(vms.count, aibaby::kVocalGroups, 3);
+    if (g_end <= g_beg + 3) return cell;
+    const double namp = double(s.dna.module(uint32_t(vmod)).noise_amp);
+    const double t_max = double(s.dna.header().homeo.threshold_max);
+
+    for (uint32_t step = 0; step < kAGRungs; ++step) {
+      const uint32_t L = descending ? (kAGRungs - 1 - step) : step;
+      s.brain.network().clear_bias_oracle();
+      if (kAGLadder[L] != 0.0) {
+        s.brain.network().set_bias_oracle(0, g_beg, g_end,
+                                          aibaby::Scalar(kAGLadder[L] * namp));
+      }
+      // Equal settle at every rung, so a slow variable cannot masquerade as slope.
+      const uint64_t per = ticks / kAGRungs;
+      double f1_sum = 0.0, f1_sq = 0.0; uint32_t n = 0;
+      for (uint64_t t = 0; t < per; ++t) {
+        s.brain.step();
+        if (t < per / 2) continue;   // discard the first half as transient
+        const double f1 = double(s.brain.voice().f1);
+        f1_sum += f1; f1_sq += f1 * f1; ++n;
+      }
+      AGRow& row = cell.row[L];
+      row.f1 = n ? f1_sum / double(n) : 0.0;
+      row.f1_sd = n ? std::sqrt(std::fabs(f1_sq / double(n) - row.f1 * row.f1)) : 0.0;
+      uint32_t pin = 0;
+      for (uint32_t i = g_beg; i < g_end; ++i)
+        if (double(s.brain.network().threshold(i)) >= 0.999 * t_max) ++pin;
+      row.pinned = double(pin) / double(g_end - g_beg);
+    }
+    cell.ok = true;
+    return cell;
+  });
+
+  std::vector<double> f1[kAGRungs], f1_asc[kAGRungs], f1_desc[kAGRungs];
+  uint32_t n_ok = 0;
+  for (const AGCell& c : cells) {
+    if (!c.ok) continue;
+    ++n_ok;
+    for (uint32_t L = 0; L < kAGRungs; ++L) {
+      f1[L].push_back(c.row[L].f1);
+      (c.descending ? f1_desc[L] : f1_asc[L]).push_back(c.row[L].f1);
+    }
+  }
+  if (n_ok < 6) { std::printf("  INCONCLUSIVE -- fewer than six sessions.\n"); return false; }
+
+  std::printf("  %-8s %-14s %-11s %s\n", "k", "F1 (Hz)", "dF1 from 0", "Hz per 0.06 k");
+  double m[kAGRungs], se[kAGRungs];
+  for (uint32_t L = 0; L < kAGRungs; ++L) m[L] = ctx_mean_se(f1[L], &se[L]);
+  const uint32_t zero = kAGRungs / 2;
+  for (uint32_t L = 0; L < kAGRungs; ++L) {
+    const double local = L ? (m[L] - m[L - 1]) / ((kAGLadder[L] - kAGLadder[L - 1]) / 0.06)
+                           : 0.0;
+    std::printf("  %-8.2f %-14s %+-11.1f %s\n", kAGLadder[L],
+                (std::string(std::to_string(m[L]).substr(0, 6)) + " +/- " +
+                 std::to_string(se[L]).substr(0, 4)).c_str(),
+                m[L] - m[zero], L ? (std::to_string(local).substr(0, 6)).c_str() : "-");
+  }
+
+  // ORDER, HYSTERESIS AND THE STATIC CURVE.
+  //
+  // THE VOID BELOW USED TO RETURN EARLY, AND THAT WAS ITS OWN BUG: it suppressed
+  // the hysteresis magnitude and the static curve, which are exactly the numbers
+  // needed to interpret the void. A guard may invalidate a CLAIM; it must not
+  // withhold the measurements that explain why.
+  bool sweep_void = false;
+  {
+    double sa[kAGRungs], sd[kAGRungs], ma[kAGRungs], md[kAGRungs];
+    for (uint32_t L = 0; L < kAGRungs; ++L) {
+      ma[L] = ctx_mean_se(f1_asc[L], &sa[L]);
+      md[L] = ctx_mean_se(f1_desc[L], &sd[L]);
+    }
+    const double up_a = ma[kAGRungs - 1] - ma[zero], dn_a = ma[zero] - ma[0];
+    const double up_d = md[kAGRungs - 1] - md[zero], dn_d = md[zero] - md[0];
+    auto asy = [](double u, double d) {
+      const double s2 = 0.5 * (std::fabs(u) + std::fabs(d));
+      return s2 > 0.0 ? (std::fabs(u) - std::fabs(d)) / s2 : 0.0;
+    };
+    std::printf("\n  ORDER CONTROL -- the identical ladder run both ways\n");
+    std::printf("    ascending  (-0.25 first)   up %+7.1f   down %+7.1f   asym %+.2f\n",
+                up_a, -dn_a, asy(up_a, dn_a));
+    std::printf("    descending (+0.25 first)   up %+7.1f   down %+7.1f   asym %+.2f\n",
+                up_d, -dn_d, asy(up_d, dn_d));
+    sweep_void = asy(up_a, dn_a) * asy(up_d, dn_d) <= 0.0;
+    if (sweep_void) {
+      std::printf("    -> the asymmetry FLIPS SIGN with order: it is HYSTERESIS, and\n"
+                  "       the SWEEP asymmetry is VOID. The static curve below is not\n"
+                  "       affected -- it has no history to inherit.\n");
+    } else {
+      std::printf("    -> the asymmetry holds in BOTH orders, so it is the actuator\n");
+    }
+    double gap = 0.0;
+    for (uint32_t L = 0; L < kAGRungs; ++L) gap += std::fabs(ma[L] - md[L]);
+    std::printf("\n  HYSTERESIS   mean |ascending - descending| at the same k = %.1f Hz\n",
+                gap / double(kAGRungs));
+    std::printf("  A controller must beat F1 jitter of sd 70-119 Hz. Backlash of the\n"
+                "  same order as the error gives a DEAD ZONE rather than convergence,\n"
+                "  so this number is a RESULT and not only a nuisance.\n");
+  }
+
+  // THE STATIC CURVE -- fresh creature per rung, no history at all. THE REFUSAL
+  // IS EVALUATED ON THIS, not on the order-contaminated sweeps.
+  double su = 0.0, sdn = 0.0;
+  bool have_static = false;
+  {
+    std::vector<double> st[kAGRungs];
+    for (const AGCell& c : statics)
+      if (c.ok && c.static_rung >= 0) st[c.static_rung].push_back(c.row[c.static_rung].f1);
+    double sm[kAGRungs], ss[kAGRungs];
+    have_static = true;
+    for (uint32_t L = 0; L < kAGRungs; ++L) {
+      if (st[L].size() < 3) { have_static = false; break; }
+      sm[L] = ctx_mean_se(st[L], &ss[L]);
+    }
+    if (have_static) {
+      std::printf("\n  STATIC CURVE -- a FRESH creature at every rung, no history\n");
+      std::printf("  %-8s %-18s %s\n", "k", "F1 (Hz)", "dF1 from 0");
+      for (uint32_t L = 0; L < kAGRungs; ++L)
+        std::printf("  %-8.2f %8.1f +/- %-7.1f %+.1f\n", kAGLadder[L], sm[L], ss[L],
+                    sm[L] - sm[zero]);
+      su = sm[kAGRungs - 1] - sm[zero];
+      sdn = sm[zero] - sm[0];
+      std::printf("  static swing   up %+.1f Hz   down %+.1f Hz\n", su, -sdn);
+      std::printf("  -> THIS is the curve a controller acts on.\n");
+    } else {
+      std::printf("\n  STATIC CURVE UNAVAILABLE -- too few creatures per rung.\n");
+    }
+  }
+
+  // THE TWO THINGS THIS WAS BUILT TO ANSWER -- read off the STATIC curve when it
+  // exists, because the sweeps carry their own order.
+  if (!have_static) {
+    std::printf("\n  INCONCLUSIVE -- no history-free curve, and the sweeps cannot\n"
+                "  stand in for one.\n");
+    return false;
+  }
+  const double up = su;
+  const double dn = sdn;
+  std::printf("\n  swing UP   (k 0 -> +0.25)  %+.1f Hz\n", up);
+  std::printf("  swing DOWN (k 0 -> -0.25)  %+.1f Hz\n", -dn);
+  const double asym = (std::fabs(up) + std::fabs(dn)) > 0.0
+                          ? (std::fabs(up) - std::fabs(dn)) /
+                                (0.5 * (std::fabs(up) + std::fabs(dn)))
+                          : 0.0;
+  std::printf("  asymmetry  %+.2f   (0 = equal both ways; +2 = up only)\n", asym);
+  std::printf("  F1 jitter to correct is sd 70-119 Hz (vowel-space), so a usable\n"
+              "  controller needs at least that much swing in EACH direction.\n");
+  if (std::fabs(up) < 70.0 || std::fabs(dn) < 70.0) {
+    std::printf("\n  REFUSED -- the actuator cannot cover the creature's own F1 jitter\n"
+                "  in at least one direction. A proportional controller built on it\n"
+                "  would correct one way and not the other, which BIASES the voice\n"
+                "  rather than steadying it. Do not build the feedback experiment on\n"
+                "  this actuator.\n");
+    return false;
+  }
+  std::printf("\n  The actuator covers the jitter both ways. A controller gain of\n"
+              "  about %.3f k-units per Hz of error keeps the correction matched to\n"
+              "  the error inside this range.\n", 0.25 / (std::fabs(up) > 0 ? up : 1.0));
+  return true;
+}
+
 bool run_selfcode(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
   (void)verbose;
   aibaby::Dna dna;
