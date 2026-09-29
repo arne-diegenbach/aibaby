@@ -169,6 +169,11 @@ const Spec kSpecs[] = {
      "  8x. Local recurrence cannot carry activity forward at all"},
     {"curriculum", 1200000, Expect::kOpen, Tier::kLong,
      "derived: m3's protocol at a length where teaching works"},
+    {"aimhold", 600000, Expect::kOpen, Tier::kLong,
+     "  can a PERFECT controller HOLD F1 at a target? The pre-flight for the\n"
+     "  feedback experiment, minutes instead of an hour. 2x2 of feedback x IP,\n"
+     "  because aimgain's backlash predicts an INTERACTION. Each closed arm has\n"
+     "  a scrambled control separating information from drive. 6 creatures"},
     {"aimgain", 600000, Expect::kOpen, Tier::kLong,
      "  WHERE the F1 actuator is linear and whether it is SYMMETRIC. stageprobe\n"
      "  put 61% of the usable swing in its first rung and never tested negative\n"
@@ -885,6 +890,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "coderprobe") ok = run_coderprobe(dna_blob, ticks, verbose);
   else if (name == "selfcode") ok = run_selfcode(dna_blob, ticks, verbose);
   else if (name == "aimgain") ok = run_aimgain(dna_blob, ticks, verbose);
+  else if (name == "aimhold") ok = run_aimhold(dna_blob, ticks, verbose);
   else if (name == "vocabcurve") ok = run_vocabcurve(dna_blob, ticks, verbose);
   else if (name == "ctxprobe") ok = run_ctxprobe(dna_blob, ticks, verbose);
   else if (name == "shapeprobe") ok = run_shapeprobe(dna_blob, ticks, verbose);

@@ -30796,6 +30796,235 @@ struct AGRow { double f1 = 0.0, f1_sd = 0.0, centroid = 0.0, pinned = 0.0; };
 struct AGCell { bool ok = false; bool descending = false; int32_t static_rung = -1;
                 AGRow row[kAGRungs]; };
 
+// --- aimhold: can a PERFECT controller hold F1 on this plant? ----------------
+//
+// THE PRE-FLIGHT FOR THE FEEDBACK EXPERIMENT, and it costs minutes instead of an
+// hour. `selfcode` showed the ear carries the creature's own F1, so an error
+// signal exists. `aimgain` derived the actuator (symmetric, +-190 Hz, gain 0.001
+// k-units per Hz) and found the plant has 107 Hz of HYSTERESIS with IP on and
+// 2.0 Hz with it off.
+//
+// A proportional controller whose backlash matches its error signal dead-zones. So
+// before building any learning rule, hand the creature a PERFECT error signal with
+// NO learning at all and ask the pure control question: can it HOLD F1 at a target?
+// If a perfect controller cannot, no learned one can, and the teaching experiment
+// is refused for the price of this run.
+//
+// THE ARMS ARE A 2x2 OF FEEDBACK x IP, because the backlash hypothesis predicts an
+// INTERACTION and not a main effect: feedback should work with IP off and
+// dead-zone with IP on. A main effect either way refutes it.
+//
+// `scrambled` is the control that separates information from drive: the same
+// correction magnitude, computed against a DIFFERENT target than the one being
+// scored. Without it "the controller helped" cannot be told from "injecting
+// current into the F1 group helped", which is a shape this project has been
+// caught by before.
+constexpr uint32_t kAHReps = 6;
+constexpr double kAHTargets[] = {480.0, 630.0, 780.0};   // within the +-190 swing
+constexpr uint32_t kAHNTargets = sizeof(kAHTargets) / sizeof(kAHTargets[0]);
+constexpr double kAHGain = 0.001;      // k-units per Hz, DERIVED by aimgain
+constexpr double kAHClamp = 0.25;      // the ladder's measured linear range
+
+// `sd` is WITHIN-target, pooled across targets, and the first version got this
+// wrong in a way that inverted its meaning. Accumulating across all three target
+// blocks makes the sd CONTAIN the intended between-target movement, so a
+// controller that successfully moves F1 to 480, 630 and 780 scores a LARGE sd by
+// design while an open loop that cannot move at all scores a small one. The
+// broken column read open 20.9 against closed 77.5 and would have been reported
+// as the controller making aim worse.
+//
+// `bias` is the remaining systematic offset per target, and `sd` the scatter
+// around it. Aim is the PAIR: reach shows up in bias, precision in sd, and this
+// project has twice bought the first while losing the second.
+struct AHRow {
+  double abs_err = 0.0, sd = 0.0, bias = 0.0, mean_f1 = 0.0;
+  bool ok = false;
+};
+
+AHRow run_aimhold_arm(const std::vector<uint8_t>& blob, uint64_t ticks, uint64_t seed,
+                      int32_t vmod, bool closed, bool ip_off, bool scrambled) {
+  AHRow row;
+  std::vector<uint8_t> variant = blob;
+  std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+  if (ip_off) {
+    const float z = 0.0f;
+    std::memcpy(variant.data() + sizeof(aibaby::DnaHeader) +
+                    sizeof(aibaby::DnaModule) * size_t(vmod) +
+                    offsetof(aibaby::DnaModule, ip_wake_scale),
+                &z, sizeof(z));
+  }
+  Session s;
+  std::string err;
+  if (!s.init(variant, err)) return row;
+  const aibaby::ModuleState& vms = s.brain.network().module(uint32_t(vmod));
+  const uint32_t g_beg = vms.begin + aibaby::slice_begin(vms.count, aibaby::kVocalGroups, 2);
+  const uint32_t g_end = vms.begin + aibaby::slice_begin(vms.count, aibaby::kVocalGroups, 3);
+  if (g_end <= g_beg + 3) return row;
+  const double namp = double(s.dna.module(uint32_t(vmod)).noise_amp);
+
+  double abs_sum = 0.0, f1_sum = 0.0;
+  double within_sq = 0.0, bias_sum = 0.0;   // pooled WITHIN-target scatter
+  uint32_t n = 0;
+  const uint64_t per = ticks / kAHNTargets;
+  for (uint32_t ti = 0; ti < kAHNTargets; ++ti) {
+    const double target = kAHTargets[ti];
+    // The scrambled arm corrects toward a DIFFERENT target, so it injects the same
+    // kind and size of drive while carrying no information about the scored one.
+    const double drive_target = scrambled ? kAHTargets[(ti + 1) % kAHNTargets] : target;
+    double blk_sum = 0.0, blk_sq = 0.0; uint32_t blk_n = 0;
+    for (uint64_t t = 0; t < per; ++t) {
+      if (closed) {
+        const double e = drive_target - double(s.brain.voice().f1);
+        double k = kAHGain * e;
+        if (k > kAHClamp) k = kAHClamp;
+        if (k < -kAHClamp) k = -kAHClamp;
+        s.brain.network().clear_bias_oracle();
+        if (k != 0.0)
+          s.brain.network().set_bias_oracle(0, g_beg, g_end, aibaby::Scalar(k * namp));
+      }
+      s.brain.step();
+      if (t < per / 2) continue;      // first half is settling toward the target
+      const double f1 = double(s.brain.voice().f1);
+      abs_sum += std::fabs(f1 - target);
+      f1_sum += f1;
+      blk_sum += f1; blk_sq += f1 * f1; ++blk_n;
+      ++n;
+    }
+    if (blk_n) {
+      const double bm = blk_sum / double(blk_n);
+      within_sq += std::fabs(blk_sq / double(blk_n) - bm * bm);
+      bias_sum += std::fabs(bm - target);
+    }
+  }
+  if (!n) return row;
+  row.abs_err = abs_sum / double(n);
+  row.mean_f1 = f1_sum / double(n);
+  row.sd = std::sqrt(within_sq / double(kAHNTargets));   // WITHIN-target, pooled
+  row.bias = bias_sum / double(kAHNTargets);
+  row.ok = true;
+  return row;
+}
+
+bool run_aimhold(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  aibaby::Dna dna;
+  if (dna.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) return false;
+  const int32_t vmod = dna.module_with_role(aibaby::ModuleRole::kVocal);
+  if (vmod < 0) return false;
+  instrument("aimhold", dna.header().seed ^ 0xA10Du, kAHReps, "creatures");
+  std::printf("  the question      can a PERFECT controller HOLD F1 at a target on\n"
+              "                    this plant? No learning -- the error is handed over.\n");
+  std::printf("  the hypothesis    aimgain found 107 Hz of backlash with IP on and\n"
+              "                    2.0 with it off, against jitter of sd 70-119. So\n"
+              "                    feedback should work with IP OFF and dead-zone\n"
+              "                    with IP ON: an INTERACTION, not a main effect.\n");
+  std::printf("  gain              %.4f k-units/Hz, DERIVED by aimgain, clamp +-%.2f\n\n",
+              kAHGain, kAHClamp);
+
+  struct Arm { const char* name; bool closed, ip_off, scram; };
+  const Arm arms[] = {
+      {"open  IP on",   false, false, false},
+      {"CLOSED IP on",  true,  false, false},
+      {"scram  IP on",  true,  false, true },
+      {"open  IP off",  false, true,  false},
+      {"CLOSED IP off", true,  true,  false},
+      {"scram  IP off", true,  true,  true },
+  };
+  constexpr uint32_t kArms = sizeof(arms) / sizeof(arms[0]);
+
+  const std::vector<AHRow> rows = parallel_reps<AHRow>(kAHReps * kArms, [&](uint32_t job) {
+    const uint32_t r = job / kArms, a = job % kArms;
+    return run_aimhold_arm(blob, ticks, dna.header().seed + r * 7919ull, vmod,
+                           arms[a].closed, arms[a].ip_off, arms[a].scram);
+  });
+
+  std::vector<double> err[kArms], sdv[kArms], bia[kArms];
+  for (uint32_t job = 0; job < rows.size(); ++job) {
+    if (!rows[job].ok) continue;
+    err[job % kArms].push_back(rows[job].abs_err);
+    sdv[job % kArms].push_back(rows[job].sd);
+    bia[job % kArms].push_back(rows[job].bias);
+  }
+  double me[kArms], se[kArms], ms[kArms], ss[kArms], mb[kArms], sb[kArms];
+  std::printf("  %-15s %-16s %-16s %s\n", "arm", "|F1-target|",
+              "BIAS (reach)", "WITHIN sd (precision)");
+  for (uint32_t a = 0; a < kArms; ++a) {
+    if (err[a].size() < 3) { std::printf("  %-15s INCONCLUSIVE\n", arms[a].name); return false; }
+    me[a] = ctx_mean_se(err[a], &se[a]);
+    ms[a] = ctx_mean_se(sdv[a], &ss[a]);
+    mb[a] = ctx_mean_se(bia[a], &sb[a]);
+    std::printf("  %-15s %6.1f +/- %-7.1f %6.1f +/- %-7.1f %6.1f +/- %.1f\n",
+                arms[a].name, me[a], se[a], mb[a], sb[a], ms[a], ss[a]);
+  }
+
+  const double gain_on  = me[0] - me[1];   // open - closed, IP on
+  const double gain_off = me[3] - me[4];   // open - closed, IP off
+  const double sc_on    = me[0] - me[2];
+  const double sc_off   = me[3] - me[5];
+  std::printf("\n  error REMOVED by closing the loop (positive = better aim)\n");
+  std::printf("    IP on    %+7.1f Hz   scrambled control %+7.1f Hz\n", gain_on, sc_on);
+  std::printf("    IP off   %+7.1f Hz   scrambled control %+7.1f Hz\n", gain_off, sc_off);
+  std::printf("    INTERACTION (off - on)  %+7.1f Hz\n", gain_off - gain_on);
+
+  // AIM IS THE PAIR, and the pre-registration said so before any of this ran:
+  // "a loop that improves AIM has to show up as reduced F1 VARIANCE around a
+  // taught target, not as a bigger excursion -- excursion is what v62 already
+  // bought and it did not become naming." So reach alone is NOT the verdict.
+  std::printf("\n  REACH (bias) and PRECISION (within-target sd), closed minus open\n");
+  std::printf("    IP on    bias %+7.1f   sd %+7.1f\n", mb[1] - mb[0], ms[1] - ms[0]);
+  std::printf("    IP off   bias %+7.1f   sd %+7.1f\n", mb[4] - mb[3], ms[4] - ms[3]);
+  // PRECISION MUST BEAT THE SCRAMBLED ARM, NOT THE OPEN ONE. The first version
+  // compared closed against open and reported "precision improved: YES" on both
+  // arms -- but the scrambled controller, aiming at the WRONG target, improves it
+  // identically. Any sustained bias pins the group and cuts its wander, so
+  // closed-vs-open on this column measures DRIVE. The scrambled control exists
+  // precisely for that and was built and then not applied to it.
+  const double dp_on  = ms[2] - ms[1];       // scrambled minus closed, IP on
+  const double dp_off = ms[5] - ms[4];       // scrambled minus closed, IP off
+  const double dp_on_se  = std::sqrt(ss[1] * ss[1] + ss[2] * ss[2]);
+  const double dp_off_se = std::sqrt(ss[4] * ss[4] + ss[5] * ss[5]);
+  std::printf("    precision vs OPEN       IP on %+6.1f   IP off %+6.1f   (drive)\n",
+              ms[1] - ms[0], ms[4] - ms[3]);
+  std::printf("    precision vs SCRAMBLED  IP on %+6.1f +/- %.1f   IP off %+6.1f +/- %.1f\n",
+              dp_on, dp_on_se, dp_off, dp_off_se);
+  const bool prec_on  = dp_on  > 2.0 * dp_on_se;
+  const bool prec_off = dp_off > 2.0 * dp_off_se;
+  std::printf("    precision INFORMATION-specific?   IP on %s   IP off %s\n",
+              prec_on ? "YES" : "NO", prec_off ? "YES" : "NO");
+
+  std::printf("\n");
+  if (!prec_on && !prec_off) {
+    std::printf("  REFUSED ON THE PRE-REGISTERED BAR. Closing the loop buys REACH --\n"
+                "  the bias falls, information-specifically, and the IP-off interaction\n"
+                "  is real -- but PRECISION does not beat the scrambled control on\n"
+                "  either arm. Any sustained bias cuts the scatter equally well while\n"
+                "  aiming at the WRONG target, so that gain is DRIVE and not\n"
+                "  information.\n\n"
+                "  REACH is what v62 already bought and it did not become naming. A\n"
+                "  PERFECT error signal, with no learning to blame, does not improve\n"
+                "  the precision of F1 production -- so no LEARNED controller can. The\n"
+                "  feedback line is refused on this actuator, and the hour-scale\n"
+                "  teaching experiment is not worth building.\n");
+    return true;
+  }
+  if (gain_off - gain_on > 0.0 && gain_off > 2.0 * sc_off) {
+    std::printf("  THE BACKLASH IS WHAT STOPS AIM. Closing the loop buys more with the\n"
+                "  homeostat off than on, and beats its own scrambled control, so it is\n"
+                "  the INFORMATION and not the drive. A learned controller is worth\n"
+                "  building -- but only alongside a homeostat that leaves the tilt.\n");
+  } else if (gain_on > 2.0 * sc_on) {
+    std::printf("  FEEDBACK WORKS ANYWAY -- the backlash does not stop it, so the\n"
+                "  interaction predicted from aimgain is REFUSED and the 107 Hz is a\n"
+                "  smaller obstacle than its size suggested.\n");
+  } else {
+    std::printf("  REFUSED -- a PERFECT error signal with no learning at all does not\n"
+                "  improve aim beyond its own scrambled control. No learned controller\n"
+                "  can do better than a perfect one, so the feedback line is closed on\n"
+                "  this actuator and the teaching experiment is not worth its hour.\n");
+  }
+  return true;
+}
+
 bool run_aimgain(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
   (void)verbose;
   aibaby::Dna dna;

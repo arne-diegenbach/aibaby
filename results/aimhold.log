@@ -1,0 +1,29 @@
+experiment: aimhold
+  instrument        aimhold   trial seed 00000000013586c4   6 creatures
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  the question      can a PERFECT controller HOLD F1 at a target on
+                    this plant? No learning -- the error is handed over.
+  the hypothesis    aimgain found 107 Hz of backlash with IP on and
+                    2.0 with it off, against jitter of sd 70-119. So
+                    feedback should work with IP OFF and dead-zone
+                    with IP ON: an INTERACTION, not a main effect.
+  gain              0.0010 k-units/Hz, DERIVED by aimgain, clamp +-0.25
+
+  arm             mean |F1 - target| F1 sd
+  open  IP on        106.1 +/- 0.9         20.9 +/- 0.3
+  CLOSED IP on        66.3 +/- 0.8         53.6 +/- 0.5
+  scram  IP on       145.4 +/- 1.0         58.5 +/- 0.5
+  open  IP off       108.6 +/- 1.1         22.5 +/- 0.8
+  CLOSED IP off       41.9 +/- 0.8         77.5 +/- 0.8
+  scram  IP off      162.3 +/- 2.0         77.5 +/- 1.1
+
+  error REMOVED by closing the loop (positive = better aim)
+    IP on      +39.8 Hz   scrambled control   -39.3 Hz
+    IP off     +66.7 Hz   scrambled control   -53.7 Hz
+    INTERACTION (off - on)    +26.9 Hz
+
+  THE BACKLASH IS WHAT STOPS AIM. Closing the loop buys more with the
+  homeostat off than on, and beats its own scrambled control, so it is
+  the INFORMATION and not the drive. A learned controller is worth
+  building -- but only alongside a homeostat that leaves the tilt.

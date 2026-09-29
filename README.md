@@ -12765,6 +12765,59 @@ to 1900. Nothing was written and the run failed loudly. Same class as `framehold
 hardcoded `a - 4` and `syllf1`'s inherited default: **a constant encoding an
 assumption about a file, invalidated by an edit elsewhere in that file.**
 
+## aimhold: a PERFECT error signal buys reach and not aim, which closes the feedback line
+
+The pre-flight for the hour-scale feedback experiment, run for minutes. It refused
+the experiment.
+
+Hand the creature a perfect F1 error signal — no learning, no credit assignment —
+through the actuator `aimgain` validated, and ask the pure control question: can it
+HOLD F1 at a target?
+
+    arm             |F1-target|   BIAS (reach)   WITHIN sd (precision)
+    open  IP on        106.1         102.1            20.7
+    CLOSED IP on        66.3          66.1            13.7 +/- 0.2
+    scram  IP on       145.4         145.4            13.8 +/- 0.2
+    open  IP off       108.6         106.9            22.4
+    CLOSED IP off       41.9          40.1            13.4 +/- 0.4
+    scram  IP off      162.3         162.3            13.7 +/- 0.5
+
+**REACH WORKS AND IS INFORMATION-SPECIFIC.** Bias falls 102 -> 66 with IP on and
+107 -> 40 with it off, while the scrambled arm — aiming at the WRONG target — is
+WORSE than open (145, 162), exactly as it must be. The IP-off interaction is real:
+66.8 Hz of reach recovered against 36.0, so the backlash genuinely limits reach.
+
+**AIM DOES NOT.** Within-target sd falls 20.7 -> 13.7 and 22.4 -> 13.4, which looks
+like precision — **but the scrambled controller reads 13.8 and 13.7.** Closed minus
+scrambled is +0.1 +/- 0.3 and +0.3 +/- 0.6. Any sustained bias pins the group and
+cuts its wander; the information adds nothing.
+
+The bar was written before `selfcode` even finished: *a loop that improves AIM has
+to show up as reduced variance around a target, not as a bigger excursion —
+excursion is what v62 already bought and it did not become naming.* **A perfect
+error signal, with no learning to blame, does not improve the precision of F1
+production, so no learned controller can.** The feedback line is refused on this
+actuator and the teaching experiment is not worth its hour.
+
+What survives untouched: `selfcode`'s finding that the signal exists, and
+`aimgain`'s backlash. They simply do not add up to aim.
+
+**THREE READINGS I NEARLY PUBLISHED, ALL THE SAME MISTAKE.** The first `sd` column
+accumulated across all three target blocks, so it *contained* the intended
+between-target movement — a controller that successfully visits 480/630/780 scores
+a large sd by design (77.5) and an open loop that cannot move scores a small one
+(20.9). The first verdict scored mean error, which is mostly reach: open-loop
+|error| is 106.1 against an arithmetic prediction of (150+0+150)/3 = 100.0. And the
+precision column was judged against the OPEN arm, printing "precision improved:
+YES" on both, when the scrambled control built for exactly that comparison shows
+the gain vanishing.
+
+**The pattern is worth more than the result: I kept building the right control and
+then scoring against the wrong comparison.** The order control, the within-target
+sd and the scrambled arm were each constructed correctly and each initially read
+against a baseline that could not refuse anything. **A control that exists but is
+not the denominator is not a control.**
+
 ## Layout
 
 ```

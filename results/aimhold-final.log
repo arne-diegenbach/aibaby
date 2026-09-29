@@ -1,0 +1,44 @@
+experiment: aimhold
+  instrument        aimhold   trial seed 00000000013586c4   6 creatures
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  the question      can a PERFECT controller HOLD F1 at a target on
+                    this plant? No learning -- the error is handed over.
+  the hypothesis    aimgain found 107 Hz of backlash with IP on and
+                    2.0 with it off, against jitter of sd 70-119. So
+                    feedback should work with IP OFF and dead-zone
+                    with IP ON: an INTERACTION, not a main effect.
+  gain              0.0010 k-units/Hz, DERIVED by aimgain, clamp +-0.25
+
+  arm             |F1-target|      BIAS (reach)     WITHIN sd (precision)
+  open  IP on      106.1 +/- 0.9      102.1 +/- 0.8       20.7 +/- 0.3
+  CLOSED IP on      66.3 +/- 0.8       66.1 +/- 0.8       13.7 +/- 0.2
+  scram  IP on     145.4 +/- 1.0      145.4 +/- 1.0       13.8 +/- 0.2
+  open  IP off     108.6 +/- 1.1      106.9 +/- 1.5       22.4 +/- 0.8
+  CLOSED IP off     41.9 +/- 0.8       40.1 +/- 1.1       13.4 +/- 0.4
+  scram  IP off    162.3 +/- 2.0      162.3 +/- 2.0       13.7 +/- 0.5
+
+  error REMOVED by closing the loop (positive = better aim)
+    IP on      +39.8 Hz   scrambled control   -39.3 Hz
+    IP off     +66.7 Hz   scrambled control   -53.7 Hz
+    INTERACTION (off - on)    +26.9 Hz
+
+  REACH (bias) and PRECISION (within-target sd), closed minus open
+    IP on    bias   -36.0   sd    -6.9
+    IP off   bias   -66.8   sd    -9.0
+    precision vs OPEN       IP on   -6.9   IP off   -9.0   (drive)
+    precision vs SCRAMBLED  IP on   +0.1 +/- 0.3   IP off   +0.3 +/- 0.6
+    precision INFORMATION-specific?   IP on NO   IP off NO
+
+  REFUSED ON THE PRE-REGISTERED BAR. Closing the loop buys REACH --
+  the bias falls, information-specifically, and the IP-off interaction
+  is real -- but PRECISION does not beat the scrambled control on
+  either arm. Any sustained bias cuts the scatter equally well while
+  aiming at the WRONG target, so that gain is DRIVE and not
+  information.
+
+  REACH is what v62 already bought and it did not become naming. A
+  PERFECT error signal, with no learning to blame, does not improve
+  the precision of F1 production -- so no LEARNED controller can. The
+  feedback line is refused on this actuator, and the hour-scale
+  teaching experiment is not worth building.
