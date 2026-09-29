@@ -1,0 +1,48 @@
+experiment: selfcode
+  instrument        selfcode   trial seed 0000000000043930   18 creatures
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  the question      selfloop measured the RESPONSE to altered feedback
+                    and found a dead null. This asks whether the
+                    SIGNAL is there at all, which implies the opposite
+                    next move.
+  the control       `deaf` (self_gain 0) cuts the ACOUSTIC path and
+                    leaves every internal path, so it IS the common-
+                    mode term. Read self MINUS deaf, never self vs 0.5.
+  chance            0.500 by construction (median split)
+
+  seed  self     fixedF1  deaf     shuffled caregvr  F1 sd    r(F1,amp)
+  0     0.667    0.479    0.487    0.436    0.949    16.0     -0.078
+  1     0.547    0.470    0.513    0.538    0.949    18.8     +0.120
+  2     0.641    0.607    0.504    0.419    1.000    20.5     -0.033
+  3     0.547    0.530    0.521    0.496    1.000    19.5     +0.132
+  4     0.632    0.496    0.479    0.410    1.000    22.1     +0.279
+  5     0.615    0.590    0.496    0.530    1.000    18.9     -0.094
+  6     0.709    0.521    0.504    0.521    0.957    20.2     +0.227
+  7     0.607    0.470    0.419    0.521    0.991    25.7     +0.343
+  8     0.735    0.513    0.487    0.530    0.966    18.8     -0.176
+  9     0.632    0.530    0.521    0.402    0.991    17.7     +0.037
+  10    0.641    0.504    0.547    0.496    0.966    19.9     -0.043
+  11    0.641    0.470    0.487    0.453    0.991    17.9     -0.045
+  12    0.573    0.470    0.581    0.513    0.872    18.7     +0.102
+  13    0.624    0.556    0.496    0.556    0.991    19.6     -0.094
+  14    0.479    0.504    0.496    0.444    0.709    19.2     +0.327
+  15    0.658    0.573    0.436    0.462    0.983    21.3     +0.073
+  16    0.564    0.521    0.513    0.479    0.949    19.0     -0.263
+  17    0.744    0.393    0.462    0.564    0.991    17.6     -0.077
+
+  self       0.625 +/- 0.016
+  deaf       0.497 +/- 0.009   <- the common-mode term
+  shuffled   0.487 +/- 0.012   <- chance floor
+  caregiver  0.959 +/- 0.016   <- positive control
+  fixed F1   0.511 +/- 0.012   <- THE MATCHED CONTROL
+  |r(F1,amp)| 0.141 +/- 0.024  <- how much room the loudness
+                              confound has
+
+  self - deaf     +0.128 +/- 0.020  (6.3 SE)   unmatched
+  self - fixedF1  +0.114 +/- 0.021  (5.4 SE)   <- THE MEASUREMENT
+
+  THE SIGNAL IS THERE AND UNUSED. The ear encodes the creature's own
+  F1 above the common-mode term, so selfloop's null is a MISSING
+  MAPPING rather than a missing signal -- and `can reward install the
+  loop` is worth its cost.

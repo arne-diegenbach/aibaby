@@ -12645,6 +12645,66 @@ mix. That is a specific, derived, falsifiable target rather than another dial:
 number in the project, so it trips the calibration invariant — and it is the last
 one. If it fails, both axes of the loop are closed.
 
+## selfcode: the ear DOES hear its own F1, so the null was a missing mapping
+
+`selfloop` measured the creature's RESPONSE to altered auditory feedback and found
+a dead null, +0.01 Hz +/- 0.23, and I filed it as "the creature does not use
+self-audition to control F1". That is a fact about the MAPPING. It never asked
+whether the SIGNAL is there — and the two imply opposite next moves.
+
+                        fam 0 (n=18)      fam 1 (n=18)
+    self                0.623 +/- 0.017   0.625 +/- 0.016
+    fixed F1 (matched)  0.500 +/- 0.013   0.511 +/- 0.012   <- EXACTLY chance
+    deaf                0.507 +/- 0.015   0.497 +/- 0.009
+    shuffled floor      0.504 +/- 0.009   0.487 +/- 0.012
+    caregiver (pos ctl) 0.982 +/- 0.006   0.959 +/- 0.016
+
+    self - fixedF1      +0.124 +/- 0.020  +0.114 +/- 0.021
+                          (6.2 SE)          (5.4 SE)
+
+**The point estimate HELD as the sample tripled** — +0.111 at n=6 to +0.124 at
+n=18, half-width 0.032 -> 0.020 against the 1.73 expected. That is this project's
+own stopping condition, and it is the test the retention milestone FAILED three
+days ago when its estimate fell at 3x sample.
+
+**THE FIRST RUN USED THE WRONG CONTROL AND I ALMOST SHIPPED IT.** It compared
+`self` against `deaf` (`self_gain` 0) and read +0.117 at 3.3 SE. But with
+`self_gain` 0 in a SILENT room the auditory module receives **nothing** — so
+self-minus-deaf confounds "carries F1" with "has any input at all". And the ring
+line had just proved the ear tracks the creature's amplitude, so the classifier
+could have been reading loudness.
+
+The matched control renders the self-voice at a **fixed F1**, keeping amplitude,
+voicing, f0 and timing exactly and removing only the quantity under test. It lands
+on 0.500 and 0.511 — the shuffled floor.
+
+**AND `selfloop`'S NULL IS WHAT LICENSES THAT CONTROL.** Freezing the F1 the
+creature hears would itself be a confound if the creature responded to it.
+`selfloop` measured that response at +0.01 Hz +/- 0.23. So the control differs from
+the arm ONLY in the information available to the ear — one experiment's null is
+another's validity check. Drift is controlled by the same arm: `holdout_accuracy`
+trains on the first half and tests on the second, so a drifting F1 plus a drifting
+auditory module could be read as decoding, and the fixed-F1 arm carries the same
+drift in both and reads chance. The loudness confound is measured rather than
+assumed: |r(F1, amplitude)| is 0.121 +/- 0.027 and 0.141 +/- 0.024.
+
+**WHAT IT MEANS.** The error signal an F1 controller would need EXISTS and is not
+used. The synthesis's chain says the binding constraint is AIM rather than reach,
+aim needs an error signal, and the signal is present. So "can reward install the
+loop" moves from speculation to a costed experiment — the one untested move left in
+the vocal family.
+
+**WHAT IT DOES NOT MEAN.** 0.62 on a binary median split is modest; the caregiver
+reads 0.98 on the same instrument, so self-F1 is a far weaker signal than
+caregiver-F1, which the self level of 0.08-0.12 predicts. **A present signal is a
+CARRIER, not a behaviour** — `credgate` measured a perfect index converting into
++4.8 SE and no more, and `ctxfour` holds four distinctions but not four targets.
+The bar for the follow-up goes in before the run, not after.
+
+Credit: **Houde & Jordan**'s altered-auditory-feedback paradigm is the design
+`selfloop` used and the reason its null can be reused as a validity check here;
+**Guenther**'s DIVA is why an F1 error signal was worth looking for at all.
+
 ## Layout
 
 ```

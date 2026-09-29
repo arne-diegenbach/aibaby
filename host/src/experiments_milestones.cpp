@@ -30577,6 +30577,280 @@ bool run_g2cond(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) 
 //
 // A gate that can only say "build it" is not a gate. This one says do not, if
 // the ear is already at ceiling.
+// --- selfcode: does the ear encode the creature's OWN F1? --------------------
+//
+// THE QUESTION selfloop DID NOT ASK. `selfloop` measured the creature's RESPONSE
+// to altered auditory feedback and found a dead null (+0.01 Hz +/- 0.23), and
+// concluded the creature does not use self-audition to control F1. That is a fact
+// about the MAPPING. It says nothing about whether the SIGNAL is there, and the
+// two imply opposite next moves:
+//
+//   - signal ABSENT -> no learning rule can build an F1 controller, selfloop's
+//     null is STRUCTURAL, and the fix is upstream (too quiet to itself, masked);
+//   - signal PRESENT -> it is there and unused, the null means the mapping is
+//     missing, and "can reward install the loop" becomes worth its cost.
+//
+// THE DESIGN. The creature babbles in SILENCE, so the only thing in its ear is
+// its own voice. Each trial records the auditory population's spike-bin profile
+// and the mean produced F1. The label is above/below THAT CREATURE'S OWN median
+// F1, so chance is exactly 0.500 and the classes are balanced by construction --
+// and `holdout_accuracy` is a two-class classifier, which is why the split is
+// binary rather than quartiles.
+//
+// THE CONTROL THAT MATTERS IS `deaf`, and it is not the shuffle. Auditory
+// activity could track F1 through a COMMON CAUSE inside the brain rather than
+// through the air -- the vocal module projects, and a tract could carry the same
+// fluctuation to both. At self_gain 0 the acoustic path is physically cut while
+// every internal path is untouched, so whatever `deaf` reads IS the common-mode
+// term. The measurement is self MINUS deaf, never self against 0.5.
+// 18, not 6. The first run read self - fixedF1 = +0.111 +/- 0.032 (3.5 SE) at
+// SIX creatures, and 3 SE at small n is exactly the size this project has watched
+// collapse twice -- the salience reward (+2.6 SE at 12, +2.4 at 16) and the
+// smoothing sweep (unanimous at n=3, nothing at n=6). The point estimate has to
+// HOLD as n rises, not merely the interval tighten.
+constexpr uint32_t kSCReps = 18;
+constexpr uint64_t kSCTrialTicks = 1200;
+constexpr uint64_t kSCSettle = 20000;
+
+struct SCRow {
+  double self_acc = 0.0, deaf_acc = 0.0, shuf_acc = 0.0, care_acc = 0.0;
+  double self_f1_sd = 0.0, self_level = 0.0, f1_amp_r = 0.0;
+  double fixed_acc = 0.0;
+  uint32_t trials = 0;
+  bool ok = false;
+};
+
+// One creature, one condition. `deaf` cuts self_gain; `caregiver` presents a word
+// at one of two F1 levels and labels by which -- the positive control, since the
+// ear is known to carry caregiver words at 0.981.
+SCRow run_selfcode_arm(const std::vector<uint8_t>& blob, uint64_t ticks, uint64_t seed,
+                       bool deaf, bool caregiver_arm, bool fixed_f1) {
+  SCRow row;
+  std::vector<uint8_t> local = blob;
+  std::memcpy(local.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+  if (deaf) {
+    const float z = 0.0f;
+    std::memcpy(local.data() + offsetof(aibaby::DnaHeader, audio) +
+                    offsetof(aibaby::DnaAudio, self_gain),
+                &z, sizeof(z));
+  }
+  Session s;
+  std::string error;
+  if (!s.init(local, error)) return row;
+  const aibaby::DnaAudio& acfg = s.dna.header().audio;
+  Ear ear;
+  if (!ear.configure(acfg, error)) return row;
+  VowelSource care(acfg.sample_rate);
+  const uint32_t spt = acfg.sample_rate / 1000;
+  std::vector<float> pcm(spt, 0.0f);
+  const int32_t am = s.dna.module_with_role(aibaby::ModuleRole::kAuditory);
+  if (am < 0) return row;
+  const aibaby::ModuleState& ams = s.brain.network().module(uint32_t(am));
+
+  // Two caregiver F1 levels, far apart, for the positive control.
+  const float kLoF1 = 320.0f, kHiF1 = 780.0f;
+  aibaby::Rng order;
+  order.seed(seed ^ 0x5E1Fu);
+  // THE MATCHED CONTROL. Freeze the F1 the creature hears of itself at its own
+  // range midpoint, leaving amplitude, voicing, f0 and timing untouched.
+  if (fixed_f1) {
+    const aibaby::DnaVocal& vc = s.dna.header().vocal;
+    ear.set_self_f1_fixed(0.5f * (vc.f1_min + vc.f1_max));
+  }
+
+  for (uint64_t t = 0; t < kSCSettle; ++t) {
+    ear.tick(s.brain, pcm.data(), spt);
+    s.brain.step();
+  }
+
+  const uint32_t n_trials = uint32_t((ticks > kSCSettle ? ticks - kSCSettle : 0) /
+                                     kSCTrialTicks);
+  std::vector<std::vector<double>> fx;
+  std::vector<double> f1_mean, amp_mean;
+  std::vector<int> care_label;
+  double lvl_sum = 0.0; uint32_t lvl_n = 0;
+
+  for (uint32_t trial = 0; trial < n_trials; ++trial) {
+    std::vector<double> bins(kFeatureBins, 0.0);
+    double f1_sum = 0.0, amp_sum = 0.0; uint32_t f1_n = 0;
+    const bool hi = (order.next() & 1u) != 0u;
+    for (uint64_t t = 0; t < kSCTrialTicks; ++t) {
+      if (caregiver_arm) {
+        care.render(140.0f, hi ? kHiF1 : kLoF1, 1200.0f, 0.5f, pcm.data(), spt);
+      } else {
+        std::fill(pcm.begin(), pcm.end(), 0.0f);  // SILENCE: only its own voice
+      }
+      ear.tick(s.brain, pcm.data(), spt);
+      s.brain.step();
+      const aibaby::Network& net = s.brain.network();
+      const uint32_t* fired = net.spikes();
+      for (uint32_t k = 0; k < net.spike_count(); ++k) {
+        const uint32_t n = fired[k];
+        if (n < ams.begin || n >= ams.begin + ams.count) continue;
+        const uint32_t b = ((n - ams.begin) * kFeatureBins) / ams.count;
+        if (b < kFeatureBins) bins[b] += 1.0;
+      }
+      const aibaby::VocalParams& v = s.brain.voice();
+      f1_sum += double(v.f1);
+      amp_sum += double(v.amplitude);
+      ++f1_n;
+    }
+    lvl_sum += double(ear.self_level()); ++lvl_n;
+    fx.push_back(bins);
+    f1_mean.push_back(f1_n ? f1_sum / double(f1_n) : 0.0);
+    amp_mean.push_back(f1_n ? amp_sum / double(f1_n) : 0.0);
+    care_label.push_back(hi ? 1 : 0);
+  }
+  if (fx.size() < 8) return row;
+
+  row.trials = uint32_t(fx.size());
+  row.self_level = lvl_n ? lvl_sum / double(lvl_n) : 0.0;
+  double se = 0.0;
+  row.self_f1_sd = ctx_mean_se(f1_mean, &se) > 0.0 ? 0.0 : 0.0;
+  {   // sd of produced F1 across trials -- if this is ~0 the label is noise
+    double m = 0.0;
+    for (double v : f1_mean) m += v;
+    m /= double(f1_mean.size());
+    double q = 0.0;
+    for (double v : f1_mean) q += (v - m) * (v - m);
+    row.self_f1_sd = std::sqrt(q / double(f1_mean.size()));
+  }
+
+  {   // THE OTHER CONFOUND, measured rather than assumed. The ear demonstrably
+      // tracks the creature's AMPLITUDE (that is the 3 Hz ring). If F1 and
+      // amplitude covary across trials, a classifier reading "F1" may be reading
+      // loudness. Reported so the reader can see how much room that leaves.
+    double mf = 0.0, ma = 0.0;
+    const double n = double(f1_mean.size());
+    for (size_t i = 0; i < f1_mean.size(); ++i) { mf += f1_mean[i]; ma += amp_mean[i]; }
+    mf /= n; ma /= n;
+    double sff = 0.0, saa = 0.0, sfa = 0.0;
+    for (size_t i = 0; i < f1_mean.size(); ++i) {
+      const double df = f1_mean[i] - mf, da = amp_mean[i] - ma;
+      sff += df * df; saa += da * da; sfa += df * da;
+    }
+    row.f1_amp_r = (sff > 0.0 && saa > 0.0) ? sfa / std::sqrt(sff * saa) : 0.0;
+  }
+
+  // Label by THIS creature's own median, so chance is exactly 0.500.
+  std::vector<double> sorted = f1_mean;
+  std::sort(sorted.begin(), sorted.end());
+  const double med = sorted[sorted.size() / 2];
+  std::vector<int> y;
+  y.reserve(f1_mean.size());
+  for (double v : f1_mean) y.push_back(v > med ? 1 : 0);
+
+  const size_t train = fx.size() / 2;
+  if (caregiver_arm) {
+    row.care_acc = holdout_accuracy(fx, care_label, train);
+  } else {
+    const double acc = holdout_accuracy(fx, y, train);
+    if (deaf) row.deaf_acc = acc;
+    else if (fixed_f1) row.fixed_acc = acc;
+    else row.self_acc = acc;
+    // Shuffled labels on the SAME features: the chance floor for this design.
+    std::vector<int> ys = y;
+    aibaby::Rng sh; sh.seed(seed ^ 0xB1A5u);
+    for (size_t i = ys.size(); i > 1; --i) {
+      const size_t j = size_t(sh.next() % i);
+      std::swap(ys[i - 1], ys[j]);
+    }
+    row.shuf_acc = holdout_accuracy(fx, ys, train);
+  }
+  row.ok = true;
+  return row;
+}
+
+bool run_selfcode(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  aibaby::Dna dna;
+  if (dna.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) return false;
+  instrument("selfcode", dna.header().seed ^ 0x5E1Fu, kSCReps, "creatures");
+  std::printf("  the question      selfloop measured the RESPONSE to altered feedback\n"
+              "                    and found a dead null. This asks whether the\n"
+              "                    SIGNAL is there at all, which implies the opposite\n"
+              "                    next move.\n");
+  std::printf("  the control       `deaf` (self_gain 0) cuts the ACOUSTIC path and\n"
+              "                    leaves every internal path, so it IS the common-\n"
+              "                    mode term. Read self MINUS deaf, never self vs 0.5.\n");
+  std::printf("  chance            0.500 by construction (median split)\n\n");
+
+  std::vector<double> self_v, deaf_v, shuf_v, care_v, diff_v, fix_v, fdiff_v, r_v;
+  std::printf("  %-5s %-8s %-8s %-8s %-8s %-8s %-8s %s\n", "seed", "self",
+              "fixedF1", "deaf", "shuffled", "caregvr", "F1 sd", "r(F1,amp)");
+  for (uint32_t r = 0; r < kSCReps; ++r) {
+    const uint64_t seed = dna.header().seed + r * 7919ull;
+    const SCRow a = run_selfcode_arm(blob, ticks, seed, false, false, false);
+    const SCRow f = run_selfcode_arm(blob, ticks, seed, false, false, true);
+    const SCRow d = run_selfcode_arm(blob, ticks, seed, true, false, false);
+    const SCRow c = run_selfcode_arm(blob, ticks, seed, false, true, false);
+    if (!a.ok || !d.ok || !c.ok || !f.ok) {
+      std::printf("  %-5u INCONCLUSIVE -- an arm produced too few trials\n", r);
+      continue;
+    }
+    std::printf("  %-5u %-8.3f %-8.3f %-8.3f %-8.3f %-8.3f %-8.1f %+.3f\n", r,
+                a.self_acc, f.fixed_acc, d.deaf_acc, a.shuf_acc, c.care_acc,
+                a.self_f1_sd, a.f1_amp_r);
+    self_v.push_back(a.self_acc); deaf_v.push_back(d.deaf_acc);
+    shuf_v.push_back(a.shuf_acc); care_v.push_back(c.care_acc);
+    fix_v.push_back(f.fixed_acc);
+    diff_v.push_back(a.self_acc - d.deaf_acc);
+    fdiff_v.push_back(a.self_acc - f.fixed_acc);
+    r_v.push_back(std::fabs(a.f1_amp_r));
+  }
+  if (self_v.size() < 3) {
+    std::printf("\n  INCONCLUSIVE -- fewer than three creatures completed.\n");
+    return false;
+  }
+  double se_s=0, se_d=0, se_c=0, se_x=0, se_h=0;
+  const double m_s = ctx_mean_se(self_v, &se_s);
+  const double m_d = ctx_mean_se(deaf_v, &se_d);
+  const double m_h = ctx_mean_se(shuf_v, &se_h);
+  const double m_c = ctx_mean_se(care_v, &se_c);
+  const double m_x = ctx_mean_se(diff_v, &se_x);
+  std::printf("\n  self       %.3f +/- %.3f\n", m_s, se_s);
+  std::printf("  deaf       %.3f +/- %.3f   <- the common-mode term\n", m_d, se_d);
+  std::printf("  shuffled   %.3f +/- %.3f   <- chance floor\n", m_h, se_h);
+  std::printf("  caregiver  %.3f +/- %.3f   <- positive control\n", m_c, se_c);
+  double se_f=0, se_fx=0, se_r=0;
+  const double m_f = ctx_mean_se(fix_v, &se_f);
+  const double m_fx = ctx_mean_se(fdiff_v, &se_fx);
+  const double m_r = ctx_mean_se(r_v, &se_r);
+  std::printf("  fixed F1   %.3f +/- %.3f   <- THE MATCHED CONTROL\n", m_f, se_f);
+  std::printf("  |r(F1,amp)| %.3f +/- %.3f  <- how much room the loudness\n"
+              "                              confound has\n", m_r, se_r);
+  std::printf("\n  self - deaf     %+.3f +/- %.3f  (%.1f SE)   unmatched\n", m_x, se_x,
+              se_x > 0 ? m_x / se_x : 0.0);
+  std::printf("  self - fixedF1  %+.3f +/- %.3f  (%.1f SE)   <- THE MEASUREMENT\n",
+              m_fx, se_fx, se_fx > 0 ? m_fx / se_fx : 0.0);
+
+  // GUARD 1: the positive control must work, or nothing here is readable.
+  if (m_c < 0.65) {
+    std::printf("\n  REFUSED -- the caregiver control reads %.3f. The ear is known to\n"
+                "  carry caregiver words at 0.981; below 0.65 the instrument is\n"
+                "  broken and the self arm cannot be interpreted either way.\n", m_c);
+    return false;
+  }
+  // GUARD 2: the label must vary, or the classifier is sorting noise.
+  std::printf("\n");
+  // THE VERDICT RESTS ON THE MATCHED CONTROL, NOT ON `deaf`. With self_gain 0 in
+  // a silent room the auditory module receives NOTHING, so self-minus-deaf
+  // confounds "carries F1" with "has any input at all". `fixed F1` keeps the
+  // creature's own loudness, voicing, f0 and timing and removes only F1.
+  if (m_fx > 2.0 * se_fx && se_fx > 0.0) {
+    std::printf("  THE SIGNAL IS THERE AND UNUSED. The ear encodes the creature's own\n"
+                "  F1 above the common-mode term, so selfloop's null is a MISSING\n"
+                "  MAPPING rather than a missing signal -- and `can reward install the\n"
+                "  loop` is worth its cost.\n");
+  } else {
+    std::printf("  THE SIGNAL IS NOT THERE. self does not beat its own deaf control,\n"
+                "  so no learning rule can build an F1 controller off this ear and\n"
+                "  selfloop's null is STRUCTURAL. The fix, if any, is upstream: the\n"
+                "  creature is too quiet to itself, or its own voice is masked.\n");
+  }
+  return true;
+}
+
 bool run_coderprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
   aibaby::Dna dna;
   if (dna.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) return false;

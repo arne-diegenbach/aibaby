@@ -169,6 +169,11 @@ const Spec kSpecs[] = {
      "  8x. Local recurrence cannot carry activity forward at all"},
     {"curriculum", 1200000, Expect::kOpen, Tier::kLong,
      "derived: m3's protocol at a length where teaching works"},
+    {"selfcode", 300000, Expect::kPass, Tier::kFast,
+     "  does the ear encode the creature's OWN F1? selfloop measured the\n"
+     "  RESPONSE and found a null; this asks whether the SIGNAL is there.\n"
+     "  The control is `deaf`, which cuts the acoustic path and leaves every\n"
+     "  internal one, so it IS the common-mode term. 6 creatures"},
     {"coderprobe", 300000, Expect::kPass, Tier::kFast,
      "the auditory front end carries one-of-eight at ceiling (0.981 against a\n"
      "  1.000 signal). PASSES while that holds: it is a regression check on the\n"
@@ -872,6 +877,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "pgprobe") ok = run_pgprobe(dna_blob, ticks, verbose);
   else if (name == "g2cond") ok = run_g2cond(dna_blob, ticks, verbose);
   else if (name == "coderprobe") ok = run_coderprobe(dna_blob, ticks, verbose);
+  else if (name == "selfcode") ok = run_selfcode(dna_blob, ticks, verbose);
   else if (name == "vocabcurve") ok = run_vocabcurve(dna_blob, ticks, verbose);
   else if (name == "ctxprobe") ok = run_ctxprobe(dna_blob, ticks, verbose);
   else if (name == "shapeprobe") ok = run_shapeprobe(dna_blob, ticks, verbose);

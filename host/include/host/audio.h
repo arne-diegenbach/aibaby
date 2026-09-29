@@ -98,6 +98,18 @@ class Ear {
   void set_self_f1_shift(float hz) { self_f1_shift_ = hz; }
   float self_f1_shift() const { return self_f1_shift_; }
 
+  // EXPERIMENT ONLY (`selfcode`). Render the creature's own voice at a FIXED F1
+  // instead of its actual one, leaving amplitude, voicing, f0 and timing exactly
+  // as produced. 0 is OFF.
+  //
+  // THIS IS THE CONTROL `deaf` CANNOT BE. With self_gain 0 in a silent room the
+  // auditory module receives NOTHING, so "self vs deaf" confounds "carries F1"
+  // with "has any input at all" -- a classifier could be reading the loudness
+  // envelope, which the 3 Hz ring proves the ear tracks. Freezing F1 keeps every
+  // other property of the self-signal and removes only the quantity under test.
+  void set_self_f1_fixed(float hz) { self_f1_fixed_ = hz; }
+  float self_f1_fixed() const { return self_f1_fixed_; }
+
  private:
   Cochlea cochlea_;
   VowelSource larynx_;
@@ -112,6 +124,7 @@ class Ear {
   float self_gain_ = 0.0f;
   float self_level_ = 0.0f;
   float self_f1_shift_ = 0.0f;
+  float self_f1_fixed_ = 0.0f;
   bool had_frame_ = false;
 };
 
