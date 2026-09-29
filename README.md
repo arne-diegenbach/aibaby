@@ -12601,6 +12601,50 @@ first three. Those were statistics that were defined when the effect was absent.
 **This was a guard reading the wrong artifact entirely — and unlike a bad
 statistic, it would have failed identically for every field anyone ever added.**
 
+## And the loop cannot be a frame at any delay — which closes it by arithmetic
+
+The delay cells do something the seven nulls could not: they **bound the loop
+gain from both sides**, because a cell that did not self-sustain puts a ceiling on
+K at its own crossing.
+
+    d = 86 ms   crossing 2.91 Hz   attenuation 2.009   -> K < 2.009
+    d = 150 ms  crossing 2.04 Hz   attenuation 1.496   -> K < 1.496
+    d = 300 ms  crossing 1.24 Hz   attenuation 1.184   -> K < 1.184
+
+and a resonant peak exists at all only if K > 1.017. So
+
+    1.02 < K < 1.18
+
+from two independent constraints. Now ask what self-sustaining would take. It
+needs the attenuation at the crossing to fall below K, and more delay buys that
+margin **only by moving the crossing DOWN in frequency**:
+
+    d (ms)    crossing f    attenuation   self-sustains at K = 1.18?
+      300        1.24 Hz       1.184            no
+      400        0.99 Hz       1.117            YES
+      600        0.71 Hz       1.060            YES
+     1200        0.38 Hz       1.018            YES
+
+**The threshold is d = 304 ms, and it would oscillate at 1.22 Hz.** A syllable is
+3-5 Hz. **Every self-sustaining oscillation this loop can produce is at least 3.3x
+too slow to be a frame, and no delay fixes that, because the two requirements pull
+in opposite directions.** Gain margin is bought with frequency.
+
+That is a structural result rather than another null, and it is what seven
+refusals were circling without being able to say. **The self-hearing loop is not a
+candidate frame at its measured gain, at any delay.**
+
+**THE ONE MOVE LEFT, ON RECORD WITH A NUMBER.** Raising K instead of d would work:
+at the derived 86 ms delay, oscillation at 2.91 Hz needs K >= 2.009, against a
+measured 1.02-1.18 — a factor of about 1.8. `self_gain` is the wrong knob for it
+(round 4: raising it WEAKENS the ring, because it is the acoustic mix level and
+changes what the creature hears). The untried knob is the **neural** side, the
+`auditory -> vocal` projection weight, which raises loop gain without touching the
+mix. That is a specific, derived, falsifiable target rather than another dial:
+**K ~ 2 at d = 86 ms.** It is also expensive — that tract governs every vocal
+number in the project, so it trips the calibration invariant — and it is the last
+one. If it fails, both axes of the loop are closed.
+
 ## Layout
 
 ```
