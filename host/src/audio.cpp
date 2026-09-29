@@ -48,6 +48,13 @@ bool Ear::configure(const aibaby::DnaAudio& cfg, std::string& error) {
   if (!cochlea_.configure(cfg, error)) return false;
   larynx_.configure(cfg.sample_rate);
   self_gain_ = cfg.self_gain;
+  // DNA v69. Sized from the genome, in samples. Zero length means the delay is
+  // off and tick() keeps its original branch.
+  const uint32_t n = cfg.self_delay_ms > 0.0f
+                         ? uint32_t(cfg.self_delay_ms * float(cfg.sample_rate) / 1000.0f + 0.5f)
+                         : 0u;
+  self_delay_.assign(n, 0.0f);
+  self_delay_w_ = 0;
   latest_.assign(cochlea_.channels(), 0.0f);
   return true;
 }
@@ -78,10 +85,26 @@ void Ear::tick(aibaby::Brain& brain, const float* room, size_t count) {
     larynx_.render(f0, heard_f1, float(v.f2), float(v.amplitude) * self_gain_,
                    self_.data(), count);
     float peak = 0.0f;
-    for (size_t i = 0; i < count; ++i) {
-      mix_[i] += self_[i];
-      const float a = self_[i] < 0.0f ? -self_[i] : self_[i];
-      if (a > peak) peak = a;
+    if (self_delay_.empty()) {
+      for (size_t i = 0; i < count; ++i) {
+        mix_[i] += self_[i];
+        const float a = self_[i] < 0.0f ? -self_[i] : self_[i];
+        if (a > peak) peak = a;
+      }
+    } else {
+      // DNA v69. The ear receives what the larynx emitted `self_delay_ms` ago.
+      // `self_level_` is measured on the DELAYED signal, i.e. on what the
+      // cochlea actually gets, so the did-it-take check reads the real thing
+      // rather than the undelayed render.
+      const size_t n = self_delay_.size();
+      for (size_t i = 0; i < count; ++i) {
+        const float d = self_delay_[self_delay_w_];
+        self_delay_[self_delay_w_] = self_[i];
+        self_delay_w_ = self_delay_w_ + 1 == n ? 0 : self_delay_w_ + 1;
+        mix_[i] += d;
+        const float a = d < 0.0f ? -d : d;
+        if (a > peak) peak = a;
+      }
     }
     self_level_ = peak;
   }

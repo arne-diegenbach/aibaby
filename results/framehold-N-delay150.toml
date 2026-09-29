@@ -362,7 +362,7 @@ self_gain = 0.5
 #
 # NOT A BIOLOGICAL CLAIM: real auditory feedback is 10-30 ms, under threshold.
 # This prices a mechanism, like the credit oracle.
-self_delay_ms = 0.0
+self_delay_ms = 150.0
 gain = 0.40                 # injected current per unit normalised band energy
 
 [vision]

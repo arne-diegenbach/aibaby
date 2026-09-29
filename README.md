@@ -12518,6 +12518,89 @@ on a flat profile, the ratio of means that one seed manufactures, and a kill swi
 watching the wrong quantity. **The guard has to watch the thing the conclusion
 rests on, not the thing most likely to break.**
 
+## DNA v69: the delay does exactly what the algebra said, and there is still no frame
+
+Round 4 closed the gain axis. The phase account says why: at the geometric-mean
+frequency the two cascaded lags supply **exactly 90 degrees**, and oscillation
+needs 180. Two lags reach 180 only asymptotically, where the gain has already
+fallen to zero — a structural fact no gain knob touches. A pure DELAY supplies
+unbounded phase at finite attenuation, and the delay that closes a 90-degree gap
+is a quarter of the ring's own period:
+
+    d = (pi/2)/w0,  w0 = 1/sqrt(0.050*0.060) = 18.26 rad/s  ->  86 ms
+
+DNA v69 adds `self_delay_ms` on the self-hearing path. Default 0.0, verify PASS,
+hash `ad96f882becbee92` unmoved.
+
+**THE MECHANISM ENGAGED AND BEHAVED AS DERIVED.** On the DRIVEN ring:
+
+    delay   predicted crossing   |L| pred   measured peak   seeds     peak/next
+      0        2.91 (resonance)      —          3 Hz         7/12       2.64
+     40        4.54              0.585         3 Hz         9/12       5.59
+     86        2.91              1.006         2 Hz        11/12       6.16
+    150        2.04              1.350         2 Hz        12/12       3.27
+    300        1.24              1.706         1 Hz        11/12       2.51
+
+**At 40 ms, sub-threshold, the peak correctly does NOT move** — it stays on the
+3 Hz resonance while sharpening from 2.64 to 5.59. That is what the account
+predicts: the delay adds phase, damping falls, the resonance sharpens, and there
+is not yet enough phase to relocate the peak. **At 86 / 150 / 300 ms the peak
+lands at 2 / 2 / 1 Hz against predicted 2.91 / 2.04 / 1.24 — three for three to
+the arm**, off a prediction made from two time constants and phase algebra alone.
+Seed agreement runs 7/12 -> 9 -> 11 -> 12 -> 11; at 150 ms **twelve of twelve
+seeds** put their own peak on the same arm (p = 2e-10 against Binomial(12, 1/7)).
+
+That is the first quantitative confirmation that the loop named in round 3 is real
+and correctly characterised.
+
+**AND THE FRAME IS REFUSED A SEVENTH TIME.** The silent arms — free-running, no
+caregiver, which is what a frame has to move:
+
+    delay    max early    at      vs control (1.25, SD 0.61)    late there
+      0        1.64      2 Hz            +0.6 SD                  1.09
+     40        1.34      2 Hz            +0.1 SD                  1.07
+     86        1.83      2 Hz            +1.0 SD                  3.17
+    150        1.00      5 Hz            -0.4 SD                  2.06
+    300        2.09      3 Hz            +1.4 SD                  1.23
+
+Nothing reaches 2 SD, the location wanders across 2, 2, 2, 5 and 3 Hz, and there
+is no monotone dose-response. The one cell that looks like something — 86 ms,
+where silent-2 reads early 1.83 and late 3.17 — **fails localisation** (median
+peak/next 1.07, 5/12 seeds) and is the same late-heavy shape this project already
+refused once, when a late-only bump with a flat early window turned out to be the
+`self_gain` sweep's artefact. It is refused on the criterion written before the
+run, not discovered afterwards.
+
+**THIS IS THE STRONGEST OF THE SEVEN REFUSALS, BECAUSE THE MECHANISM WORKED.** The
+previous six raised a gain and saw nothing. This one moved the loop's resonance to
+three separately predicted frequencies, sharpened it 2.3x, got twelve seeds out of
+twelve to agree — and the free-running creature still does not oscillate.
+
+**AND IT BOUNDS THE LOOP GAIN, REFUTING MY OWN INFERRED VALUE.** Round 5's
+pre-registration inferred K ~ 2.02 from the peak sitting at the geometric mean. If
+K were 2.02 the 86 ms cell would have `|L| = 1.006` and would have self-sustained.
+It did not. **So K < ~2 at the crossing and the peak-at-geometric-mean inference
+was wrong.** What the loop is: a driven resonator whose damping the delay reduces,
+approaching instability without reaching it. Left open and not papered over: Q
+rises 2.64 -> 6.16 to 86 ms and then FALLS again (3.27, 2.51), which the simple
+model does not predict.
+
+**THE GUARD THAT CAUGHT A LIE BEFORE THE RUN.** `tools/vacuity.sh` first reported
+`self_delay_ms` **DEAD — byte-identical**, which would have sent me looking for a
+gate that does not exist. It hardcoded `./build/aibaby` while this work builds
+`build-par`; that binary predates the field and `strings` finds no mention of it,
+so it ignored the key and produced identical output by construction. Pointed at the
+right binary: **LIVE, 22 lines differ.** The script now takes `AIBABY_BIN` and
+REFUSES when the binary contains no reference to the field — checked by looking
+inside the binary, which is direct, rather than by comparing timestamps, which is
+circumstantial. Its DEAD guidance gained a third case: the binary predates the
+field.
+
+That is the fourth guard failure in five rounds and a different species from the
+first three. Those were statistics that were defined when the effect was absent.
+**This was a guard reading the wrong artifact entirely — and unlike a bad
+statistic, it would have failed identically for every field anyone ever added.**
+
 ## Layout
 
 ```

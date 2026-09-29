@@ -104,6 +104,11 @@ class Ear {
   std::vector<float> mix_;
   std::vector<float> latest_;
   std::vector<float> self_;
+  // DNA v69. A sample-domain ring buffer delaying the creature's own voice on
+  // its way to its own cochlea. Empty at self_delay_ms 0, where tick() takes the
+  // original branch and the mix is bit-identical.
+  std::vector<float> self_delay_;
+  size_t self_delay_w_ = 0;
   float self_gain_ = 0.0f;
   float self_level_ = 0.0f;
   float self_f1_shift_ = 0.0f;

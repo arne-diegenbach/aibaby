@@ -317,3 +317,82 @@ A self-sustaining loop at gain 1.5 with homeostasis OFF is not a frame the shipp
 creature has. It would price the mechanism and say where to look for a regulated
 version, the way `credit-oracle` prices credit assignment. Do not report a corner
 cell as a behaviour the creature owns.
+
+---
+
+# ROUND 5: THE LOOP IS SHORT OF PHASE, NOT GAIN. Pre-registered 2026-09-29.
+
+## A CORRECTION TO ROUND 3 THAT CHANGES THE WHOLE PICTURE
+
+Round 3 wrote: "`self_gain` IS the loop gain, it is small, so w_n stays near the
+corner AND the system stays weakly damped". **That is wrong.** For two lags in
+negative feedback, zeta = 1.0042/sqrt(1+K) -- SMALL K means HEAVILY damped and NO
+RESONANT PEAK AT ALL. A peak requires K > 1.02, and a peak sitting exactly at the
+geometric mean requires
+
+    1+K = 3.02,  so K = 2.02,  giving zeta = 0.578, Q = 0.86
+
+a BROAD peak, which is what is measured. So the loop gain is about 2, not small.
+(Inferred from the peak's location under a two-lag model -- a fit, not a
+measurement. The experiment below does not depend on the exact value.) The product
+law is untouched: at fixed K the peak frequency still scales as 1/sqrt(t1*t2).
+
+## WHICH EXPLAINS WHY EVERY GAIN MANIPULATION FAILED
+
+**The loop already has |L| > 1. It is short of PHASE.** At the geometric-mean
+frequency the two lags supply exactly 90 degrees; oscillation needs 180. Two lags
+reach 180 only asymptotically, where the gain has fallen to zero. That is a
+structural fact and no amount of gain fixes it -- which is why six frame attempts
+on gain knobs all failed, and why round 4's regulator-off cell was flat.
+
+A pure DELAY supplies unbounded phase at finite attenuation.
+
+## THE DERIVED CONSTANT: A QUARTER OF THE RING'S OWN PERIOD
+
+    d = (pi/2)/w0,  w0 = 1/sqrt(0.050*0.060) = 18.26 rad/s  ->  d = 86 ms
+
+    d (ms)   crossing f (Hz)   |L| there   self-sustains?
+        40          4.54          0.584        no     <- NEGATIVE CONTROL
+        86          2.91          1.004        YES    <- threshold, derived
+       150          2.04          1.348        YES
+       300          1.24          1.703        YES
+
+## THE CELLS, and the prediction for each
+
+DNA v69 adds `self_delay_ms`, a sample-domain delay on the self-hearing path.
+Default 0.0 leaves the mix bit-identical. Four cells at 40 / 86 / 150 / 300 ms.
+
+PRIMARY IS THE SILENT ARMS -- free-running, no caregiver. A self-sustaining loop
+must show there, in BOTH halves of the silence, and must LOCALISE (per-seed votes
+concentrated, null Binomial(12, 1/7)).
+
+    40 ms   silent arms FLAT. This is the negative control and it must fail.
+    86 ms   silent arms rise and localise at 3 Hz.
+   150 ms   silent arms rise and localise at 2 Hz.
+   300 ms   silent arms rise and localise at 1 Hz.
+
+**THE DOSE-RESPONSE IS THE CLAIM, NOT ANY ONE CELL.** A frequency that falls
+2.91 -> 2.04 -> 1.24 Hz as the delay rises is what a delay-driven oscillator does
+and what the existing resonance cannot do. One cell going up is a max-over-7.
+
+## WHAT REFUSES IT
+
+  - the 40 ms control ALSO shows silent arms rising -> the manipulation is doing
+    something other than what the phase account says, and the whole thing is void;
+  - silent arms flat at every delay -> seventh refusal, and now the phase axis is
+    closed as well as the gain axis;
+  - silent arms rise but the frequency does NOT fall with delay -> not a
+    delay-driven oscillator, whatever else it is.
+
+## THE GUARD, chosen from round 4's lesson
+
+Round 4 pre-registered a DUTY kill switch, duty passed everywhere, and the
+quantity that actually mattered -- whether the positive control survived -- was
+not being watched. So this round watches BOTH:
+
+  - duty away from both rails (0.02, 0.98), and
+  - the HEARD ring's own localisation must survive. If `heard-*` collapses to a
+    ratio near 1.0 as it did in round 4's cell J, the cell is VOID rather than
+    negative, because a broken instrument cannot report a frame.
+  - `self_level` is measured on the DELAYED signal, so it reads what the cochlea
+    actually receives rather than the undelayed render.

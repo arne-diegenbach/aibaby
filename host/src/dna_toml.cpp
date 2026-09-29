@@ -413,6 +413,7 @@ bool compile_dna_toml(const std::string& path, std::vector<uint8_t>& out,
     header.audio.mel_high_hz = float(r.number("mel_high_hz"));
     header.audio.floor_db = float(r.number("floor_db"));
     header.audio.self_gain = float(r.number("self_gain"));
+    header.audio.self_delay_ms = float(r.number("self_delay_ms"));
     header.audio.gain = float(r.number("gain"));
     collect(r);
   }

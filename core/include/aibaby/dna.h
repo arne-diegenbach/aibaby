@@ -868,6 +868,30 @@ struct DnaAudio {
   // before DNA v6 was taken on.
   float self_gain;
   float gain;                   // injected current per unit normalised energy
+  // DNA v69. Delay, in ms, on the creature's own voice before it reaches its own
+  // cochlea. Appended at the end, default 0.0, and at 0.0 the mix is the same
+  // float it always was -- the pinned hash does not move.
+  //
+  // WHY IT EXISTS, AND THE CONSTANT IS DERIVED. The 3 Hz ring is a negative
+  // feedback loop through this path with two lags, `rate_fast_tau_ms` (50) and
+  // `gate_smoothing_ms` (60). At the geometric-mean frequency those two supply
+  // EXACTLY 90 degrees of phase, so the loop is 90 degrees short of the 180 it
+  // needs to oscillate rather than merely ring. Two lags can only reach 180
+  // asymptotically, where the gain has already fallen to zero; a pure DELAY
+  // supplies unbounded phase at finite attenuation.
+  //
+  // The delay that closes the gap is a QUARTER OF THE RING'S OWN PERIOD:
+  //   d = (pi/2) / w0, w0 = 1/sqrt(0.050*0.060) = 18.26 rad/s  ->  d = 86 ms.
+  //
+  // At that point |L| = 1.00 and the loop self-sustains AT 2.91 Hz; past it the
+  // crossing moves DOWN in frequency (2.65 Hz at 100 ms, 2.04 at 150, 1.24 at
+  // 300), which is the dose-response that distinguishes a delay-driven
+  // oscillator from the resonance already there.
+  //
+  // NOT A BIOLOGICAL CLAIM. Real auditory feedback is 10-30 ms, well under the
+  // threshold, so this prices a mechanism rather than proposing the creature
+  // should have one -- the same footing as the credit oracle.
+  float self_delay_ms;
 };
 
 // The retina (§5.1). As with the cochlea, the sampling itself is host code and
