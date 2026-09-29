@@ -12818,6 +12818,101 @@ sd and the scrambled arm were each constructed correctly and each initially read
 against a baseline that could not refuse anything. **A control that exists but is
 not the denominator is not a control.**
 
+## aimpool: the backlash is PER-NEURON regulation, and fixing it buys reach and still not aim
+
+`aimgain` found 107 Hz of hysteresis in the F1 actuator with the larynx's homeostat
+on and 2.0 Hz with it off, and named the homeostat as the cause. That leaves the
+question a genome field can answer: is the backlash rate regulation, or regulation
+**per neuron**?
+
+**And the entry that asked it opened with a correction of my own.** Writing `aimgain`
+up, I named a group-mean homeostat as "a mechanism nobody has built", carrying
+`stageprobe`'s sentence *"that mechanism does not exist here"* forward as current. It
+is **DNA v57**, the field `ip_pool`, shipped the same day that sentence was written,
+and `ippool` measured it at 13.6M x 18. My own reference note on Sweeney's diffusive
+homeostasis says so in a heading — *read `ippool` before getting excited* — and I
+quoted the derivation while skipping the file that had already corrected it.
+
+Three arms, one field each, hysteresis **paired per creature** (ascending rep *r* and
+descending rep *r* are the same seed, `base + r*7919`, so the recorded 107.1 and 2.0
+were differences of means that nobody had paired):
+
+    plant                       hysteresis      static swing      rest F1
+    per-neuron  ip_pool = 0     107.1 +/- 1.7   +186.1 / -192.2   629.7
+    POOLED      ip_pool = 9       7.0 +/- 0.7   +226.8 / -239.8   633.4
+    off         ip_wake = 0.0     3.6 +/- 0.5   +222.5 / -232.4   631.8
+
+`f = (7.0 - 3.6) / (107.1 - 3.6) = +0.03` against a cut pre-registered at 0.25.
+**THE BACKLASH IS GRANULARITY, NOT REGULATION** — and the mechanism is the same
+sentence that predicted the swing. A per-neuron homeostat is fourteen independent
+slow integrators whose states the centroid reads as tilt, so history becomes F1. A
+slice homeostat is ONE integrator that moves all fourteen thresholds together; the
+tilt is unchanged, so its history is **invisible to the readout**. The same argument
+predicts the larger swing, and pooled swings +22% wider than shipped.
+
+**THE GUARD THAT MATTERS: A DEAD ACTUATOR HAS NO HYSTERESIS.** Zero backlash is
+exactly what a larynx that cannot move F1 reads, so the primary was void unless the
+pooled arm still swung >= 150 Hz each way with rest F1 within 100 Hz. It swings
+wider than shipped, so the guard passes in the direction that cannot be mistaken.
+
+**AND POOLED IS NOT `ipoff` WITH EXTRA STEPS** — evidence recorded before today, by
+a guard written to catch exactly this. `ippool`'s regulation line reads larynx rate
+4.62 Hz per-neuron, **5.50 Hz pooled (drift 19%)**, against `ipoff`'s 6.84 Hz (48%).
+Different experiment, longer budget, independent instrument.
+
+### Then the pre-registration's own claimed licence was refused
+
+I wrote that `f <= 0.25` would make the closed loop worth re-opening, since
+`aimhold` was measured on a plant with 107 Hz of backlash. So rather than argue it,
+`aimhold` was re-run on the pooled plant. Its IP-off rows reproduce the recorded run
+to the decimal — `ip_pool` is inert when `ip_wake_scale = 0`, both update paths
+being guarded on `ip_scale > 0`, so with the same seeds they must — which is a free
+instrument check that the pooled genome is understood.
+
+    plant          hysteresis   reach recovered   interaction (off-on)   precision
+    per-neuron     107.1        -36.0 Hz          +26.9 Hz               +0.1 +/- 0.3  NO
+    POOLED           7.0        -65.5 Hz          +1.1 Hz                +0.3 +/- 0.4  NO
+    off              3.6        -66.8 Hz          --                     +0.3 +/- 0.6  NO
+
+**THE DEAD-ZONE HYPOTHESIS IS CONFIRMED THE CLEAN WAY: fix the cause and the
+interaction it predicted disappears.** The backlash was eating 30 Hz of reach, and
+pooling gives all of it back — 36.0 -> 65.5 Hz, the full IP-off figure, with
+regulation kept. The interaction that made backlash visible collapses from +26.9 Hz
+to +1.1. A prediction confirmed by the removal of its cause is worth more than one
+confirmed by its presence.
+
+**AND AIM STILL DOES NOT IMPROVE.** +0.3 +/- 0.4 against the scrambled control on a
+plant that is backlash-free AND regulated. `aimhold`'s refusal now stands on three
+plants, and the precision failure was never about the backlash — which is what my
+pre-registration got wrong, on evidence that already existed when I wrote it.
+
+**THE ONE THING THAT COULD RE-OPEN IT, and it is a property of the statistic.**
+Within-target sd takes essentially two values across all nine arms: ~21 Hz with no
+sustained drive and ~13 Hz with any, regardless of plant, gain or information. A
+statistic with two levels across nine arms cannot GRADE precision, so "no
+information-specific gain" is safe while "no gain is possible below 13 Hz" is not
+tested. What would test it: does 13 move under ANY intervention — a higher
+controller gain, a longer settle? Until something moves it, the floor is unexplained
+rather than established.
+
+**What this does and does not buy.** Pooling gives a better PLANT — history-free,
++22% swing, symmetric to 0.06, regulation retained — and `ippool` already priced
+what it buys in learning at -0.90 SE on 18 creatures. So the trade `stageprobe`
+named holds with a third leg measured: **granularity fixes the actuator and does not
+move the ceiling.** Sweeney's diffusive homeostat remains the version that has not
+been tried, and its refusal-first diagnostic is unchanged — it earns its place only
+if it raises the transfer WITHOUT halving the learned bias, which is exactly what
+`ippool` failed.
+
+Credit: Gina Turrigiano and Niraj Desai on homeostatic intrinsic plasticity, whose
+per-neuron set point is what `ip_pool = 0` implements and what this measures the
+cost of; Yann Sweeney, Jeanette Hellgren Kotaleski and Matthias Hennig (2015) for
+diffusive homeostasis, the published form of the group-mean regulator; John Houde
+and Michael Jordan for altered auditory feedback, the design `aimhold` and
+`selfloop` borrow; Frank Guenther for DIVA, whose feedback controller is the thing
+this line has now refused on three plants.
+
+
 ## Layout
 
 ```

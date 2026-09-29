@@ -31196,6 +31196,42 @@ bool run_aimgain(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
     for (uint32_t L = 0; L < kAGRungs; ++L) gap += std::fabs(ma[L] - md[L]);
     std::printf("\n  HYSTERESIS   mean |ascending - descending| at the same k = %.1f Hz\n",
                 gap / double(kAGRungs));
+
+    // AND THE SAME NUMBER PAIRED, WHICH IS THE ONE WITH AN ERROR BAR (2026-09-29).
+    //
+    // The line above is a difference of MEANS, and this project has been caught
+    // twice by exactly that shape: one outlier creature manufactures the gap and
+    // the statistic cannot say so. Ascending job 2r and descending job 2r+1 are
+    // the SAME creature -- `seed = base + r * 7919` depends on r alone -- so the
+    // contrast is paired by construction and nobody had used the pairing.
+    //
+    // Indexed through `cells` rather than through the flattened per-rung vectors,
+    // because a failed cell would shift those and pair rep r against rep r+1
+    // while still printing a confident number.
+    //
+    // It matters now because `aimpool` asks where a THIRD arm sits between 107.1
+    // and 2.0 Hz. A verdict on an intermediate value needs an SE; a verdict on a
+    // 54x gap did not, which is why the unpaired form survived this long.
+    std::vector<double> hys;
+    for (uint32_t r = 0; r < kAGReps; ++r) {
+      const AGCell& a = cells[size_t(r) * 2];
+      const AGCell& d = cells[size_t(r) * 2 + 1];
+      if (!a.ok || !d.ok || a.descending || !d.descending) continue;
+      double h = 0.0;
+      for (uint32_t L = 0; L < kAGRungs; ++L) h += std::fabs(a.row[L].f1 - d.row[L].f1);
+      hys.push_back(h / double(kAGRungs));
+    }
+    if (!hys.empty()) {
+      double hse = 0.0;
+      const double hm = ctx_mean_se(hys, &hse);
+      std::printf("               PAIRED per creature              = %.1f +/- %.1f Hz"
+                  "  (n=%zu)\n", hm, hse, hys.size());
+      // Where this arm sits on the axis the two known arms span: per-neuron IP
+      // read 107.1 Hz and no IP at all read 2.0 Hz, both on this experiment.
+      const double frac = (hm - 2.0) / (107.1 - 2.0);
+      std::printf("               position on the per-neuron(1.00) to none(0.00)"
+                  " axis = %+.2f\n", frac);
+    }
     std::printf("  A controller must beat F1 jitter of sd 70-119 Hz. Backlash of the\n"
                 "  same order as the error gives a DEAD ZONE rather than convergence,\n"
                 "  so this number is a RESULT and not only a nuisance.\n");

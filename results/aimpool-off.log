@@ -1,0 +1,57 @@
+experiment: aimgain
+  instrument        aimgain   trial seed 00000000013586c7   6 creatures
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  the question      WHERE IS THE F1 ACTUATOR LINEAR, and is it
+                    SYMMETRIC? stageprobe put 61% of the usable swing
+                    in its first rung and never tested negative k.
+  why it matters    a feedback controller lives below k=0.25 and must
+                    correct BOTH ways. An asymmetric actuator biases
+                    the voice rather than steadying it.
+
+  k        F1 (Hz)        dF1 from 0  Hz per 0.06 k
+  -0.25    399.72 +/- 1.73 -229.7      -
+  -0.18    421.98 +/- 1.68 -207.4      19.084
+  -0.12    464.62 +/- 2.00 -164.8      42.635
+  -0.06    531.44 +/- 4.36 -97.9       66.822
+  0.00     629.38 +/- 6.49 +0.0        97.934
+  0.06     726.26 +/- 7.40 +96.9       96.883
+  0.12     792.88 +/- 6.00 +163.5      66.620
+  0.18     832.28 +/- 4.36 +202.9      39.400
+  0.25     853.51 +/- 2.71 +224.1      18.198
+
+  ORDER CONTROL -- the identical ladder run both ways
+    ascending  (-0.25 first)   up  +223.5   down  -229.9   asym -0.03
+    descending (+0.25 first)   up  +224.8   down  -229.5   asym -0.02
+    -> the asymmetry holds in BOTH orders, so it is the actuator
+
+  HYSTERESIS   mean |ascending - descending| at the same k = 2.0 Hz
+               PAIRED per creature              = 3.6 +/- 0.5 Hz  (n=6)
+               position on the per-neuron(1.00) to none(0.00) axis = +0.01
+  A controller must beat F1 jitter of sd 70-119 Hz. Backlash of the
+  same order as the error gives a DEAD ZONE rather than convergence,
+  so this number is a RESULT and not only a nuisance.
+
+  STATIC CURVE -- a FRESH creature at every rung, no history
+  k        F1 (Hz)            dF1 from 0
+  -0.25       399.4 +/- 2.7     -232.4
+  -0.18       421.1 +/- 2.3     -210.7
+  -0.12       459.4 +/- 2.3     -172.4
+  -0.06       530.8 +/- 5.5     -101.1
+  0.00        631.8 +/- 10.2    +0.0
+  0.06        732.8 +/- 12.1    +101.0
+  0.12        796.4 +/- 8.1     +164.6
+  0.18        832.7 +/- 5.6     +200.9
+  0.25        854.3 +/- 4.1     +222.5
+  static swing   up +222.5 Hz   down -232.4 Hz
+  -> THIS is the curve a controller acts on.
+
+  swing UP   (k 0 -> +0.25)  +222.5 Hz
+  swing DOWN (k 0 -> -0.25)  -232.4 Hz
+  asymmetry  -0.04   (0 = equal both ways; +2 = up only)
+  F1 jitter to correct is sd 70-119 Hz (vowel-space), so a usable
+  controller needs at least that much swing in EACH direction.
+
+  The actuator covers the jitter both ways. A controller gain of
+  about 0.001 k-units per Hz of error keeps the correction matched to
+  the error inside this range.
