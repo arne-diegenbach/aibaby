@@ -6770,6 +6770,14 @@ const CRArm kCRArms[] = {
     // +20%. Partial protection is the expected outcome, so the bar is the same
     // two-column 2 SE bar as everything else and is not to be lowered afterwards.
     //
+    // CORRECTED 2026-09-30: ctxfour's "nearest at chance" was a NULL ERROR. It
+    // scored 0.279 against 1/k = 0.250 while its OWN off arm read 0.161, so its
+    // oracle beat its control by +0.118 at 3.8 SE. `ctxgrid` has the full account.
+    // The temper above was set from a verdict that did not hold -- and the BAR was
+    // never lowered on account of it, so this run's conclusion is unaffected. The
+    // note stays because a premise that turned out false is worth seeing where it
+    // was used.
+    //
     // name            no_fat teach relearn freeze norep credit eps 2nd slots src  orc gain split commit
     {"baseline",     {"baseline",     false, true, true, false, false, 0, 0, -1, 0, 0, -1, 0.0, true,  0.0f}},
     {"ctx-same",     {"ctx-same",     false, true, true, false, false, 0, 0, -1, 2, 0, -1, 0.10, false, 0.0f}},
@@ -7244,6 +7252,14 @@ bool run_orthoname(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
 // very nearly invariant to how far apart the targets are. A creature that moves
 // 5 Hz the correct way scores 1.00 at every separation on this page. `ctxfour`
 // already showed the two come apart: direction 0.484 with nearest AT CHANCE.
+//
+// 2026-09-30: the argument above is RIGHT and it is the one `ctxfour` needed. Its
+// "nearest AT CHANCE" was a null error -- 0.279 against 1/k where its own off arm
+// read 0.161 -- and the reason is exactly what this comment says: nearest depends
+// on the targets' geometry relative to where the creature already talks, so 1/k is
+// not its chance level. An informationless voice reads 0.161 on ctxfour's vowel
+// corners and 0.306 on `ctxgrid`'s 2x2. **The insight was in the codebase, in this
+// comment, and did not reach the experiment that needed it.**
 // So the gate is DELIVERED SEPARATION -- log(f1 said for word 1) - log(f1 said for
 // word 0), in log units, against the separation the targets DEMANDED. That is the
 // quantity the milestone actually needs, and it is geometry-free.
@@ -26356,7 +26372,13 @@ bool run_ctxgrid(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
   // smoothing sweep from +0.24 at n=3 to +0.03 at n=6. The test of
   // underpowered-versus-absent is whether the effect HOLDS as n rises, so it is
   // bought rather than projected. The F1 axis was already 6.9 SE and does not need it.
-  constexpr uint32_t kReps = 18;
+  // THIRTY-SIX. The F2 axis read +0.076 +/- 0.034 (2.3 SE) paired at n=18, under the
+  // 3 SE bar -- but it GREW from n=9 to n=18 (midline 0.571 -> 0.612), which is the
+  // opposite of salience-reward's shrinking effect and the one pattern that justifies
+  // buying creatures rather than projecting. Doubling again halves the SE: if the
+  // effect holds at +0.076 it lands near 3.2 SE and is established; if it falls, it
+  // follows salience into a null and that is the answer.
+  constexpr uint32_t kReps = 36;
   // The slot count lives in the HEADER's exploration block, not the module -- taken
   // from ctxfour rather than guessed, so the two experiments configure the index
   // identically and any difference between them is the vocabulary alone.
@@ -26632,10 +26654,16 @@ bool run_ctxgrid(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
                 "  and the 2-D claim does not stand yet.\n",
                 near_m[orc], z, z2, mp1[orc] * 0.5);
   } else if (z >= 2.0) {
-    std::printf("  THE LAYOUT IS WORTH REAL NAMING, ON BOTH AXES. Against its OWN\n"
-                "  no-index control the 2x2 grid buys %+.3f of `nearest` (%.1f SE), with\n"
-                "  BOTH axes contributing: F1 %+.3f and F2 %+.3f. ctxfour's same contrast\n"
-                "  on vowel-corner words is +0.118.\n"
+    // The headline says NAMING, not LAYOUT, and that is a correction of this very
+    // string. At n=36 the grid buys +0.137 against ctxfour's +0.118 -- a gap of 0.019,
+    // SMALLER than at n=18 and nowhere near significant. Both layouts name; this one
+    // is a second demonstration, not an improvement, and the label must not claim
+    // otherwise while the numbers qualifying it sit two lines below.
+    std::printf("  FOUR-WORD NAMING WORKS, ON BOTH AXES. Against its OWN no-index\n"
+                "  control the 2x2 grid buys %+.3f of `nearest` (%.1f SE), with BOTH\n"
+                "  axes contributing: F1 %+.3f and F2 %+.3f. ctxfour's same contrast on\n"
+                "  vowel-corner words is +0.118, so the LAYOUT is not what did it --\n"
+                "  both layouts name and the difference is not significant.\n""
                 "\n"
                 "  AND IT CORRECTS ctxfour's VERDICT AS WELL AS ITS LAYOUT. That run read\n"
                 "  its oracle at 0.279 against 0.250 and called it chance, while its own\n"

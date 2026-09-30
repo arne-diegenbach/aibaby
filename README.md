@@ -13490,6 +13490,67 @@ through; Anne Warlaumont and Megan Finnegan, whose refused salience result suppl
 3 SE bar that keeps the F2 claim honest.
 
 
+## The second formant axis is settled: four-word naming works in two dimensions
+
+`ctxgrid` at n=9 put the F2 axis at 2.3 SE above its own control — inside the band this
+project has retracted three findings from. The rule it wrote for itself after
+`salience-reward` (which fell from +2.6 SE at n=12 to a null at n=16) is that the test of
+underpowered-versus-absent is whether the effect **holds as n rises**. So it was bought,
+twice:
+
+    paired excess, F2 midline accuracy over the no-index arm
+      n = 9     +0.076 (raw midline 0.571, 2.2 SE unpaired)
+      n = 18    +0.076 +/- 0.034   2.3 SE     (midline 0.612)
+      n = 36    +0.082 +/- 0.021   4.0 SE     (midline 0.607)
+
+**It held and it clears the bar.** Three sample sizes in the same direction, the opposite
+of the salience pattern. The full n=36 table, paired on seed:
+
+    paired excess (oracle - off)
+      nearest   +0.137 +/- 0.023   6.0 SE
+      F1 side   +0.126 +/- 0.023   5.6 SE
+      F2 side   +0.082 +/- 0.021   4.0 SE
+    factorisation check: off p1*p2 = 0.298 against its measured nearest 0.305
+
+**So the creature names four words in two dimensions at once**, with both articulator
+axes carrying information — which is what `aimaxes` predicted from the actuator side
+(F2 steerable over 961 Hz with 0.00 cross-talk into F1, both axes covering the same ~50%
+of their range) and what makes the vocabulary bound a **product** rather than a sum.
+
+**And the layout claim still does not stand, at three sample sizes.** +0.137 against
+`ctxfour`'s +0.118 is a gap of 0.019 — *smaller* than at n=18 and nowhere near
+significant. Both layouts name. The 2×2 grid is a second demonstration, not an
+improvement, and what `ctxfour` got wrong was its null, not its vocabulary.
+
+**A note on the committed log.** `results/ctxgrid-n36.log` closes with the headline "THE
+LAYOUT IS WORTH REAL NAMING", which over-attributes to the layout with the numbers that
+qualify it printed two lines below. The code now prints "FOUR-WORD NAMING WORKS, ON BOTH
+AXES" and says explicitly that the layout is not what did it. The log's table and PRIMARY
+block are correct; only that label was wrong.
+
+### The re-read of every k-word number scored against 1/k
+
+`ctxfour`'s null error prompted a sweep of the others, and it is contained:
+
+- **`vocab`'s one-of-eight 0.371** carries a shuffled control at **0.149**. Quoting "chance
+  0.125" was loose, but the control exists and the effect survives it.
+- **`orthoname`'s 0.958** was scored against matched marginals at 0.389 and 0.542.
+- **`ctxfour` alone** used 1/k, and its own off arm read 0.161.
+
+**But its verdict had propagated as a premise into two other experiments, and the second
+is the sharp one.** The separation sweep's header already argues, in its own words, that
+*"the nearest-target fraction cannot answer this question... it is a sign test, very
+nearly invariant to how far apart the targets are"* — exactly the reasoning `ctxfour`
+needed, written in another experiment, and it never reached the one it would have saved.
+`credgate`'s use was expectation-setting only and its bar was never lowered, so its
+conclusion is unaffected. Both comments now carry the correction where they sit, because
+a premise that turned out false is worth seeing at the place it was used.
+
+Credit: Gunnar Fant for the formant coordinates that make a two-dimensional vocabulary
+expressible; Anne Warlaumont and Megan Finnegan, whose refused salience result supplied
+the 3 SE bar and the hold-as-n-rises test that this finding had to pass three times.
+
+
 ## Layout
 
 ```
