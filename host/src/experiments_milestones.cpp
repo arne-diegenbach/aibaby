@@ -32002,6 +32002,214 @@ ALRow run_aimslice_arm(const std::vector<uint8_t>& blob, uint64_t ticks, uint64_
   return row;
 }
 
+// --- aimaxes: is there a SECOND steerable axis, and are the two independent? ------
+//
+// The whole aim line biased ONE group. `senses.cpp` maps group 2 -> F1 and group 3 ->
+// F2 (0 -> F0, 4 -> F3, 5-7 -> bandwidths), and every dF1 in this project comes from
+// group 2. F2's FREE spread is known -- the shipped larynx produces F1 638 +/- 25 Hz
+// and F2 1620 +/- 51 ([[aibaby-centroid-is-steerability]]) -- but whether a bias can
+// STEER F2 has never been measured.
+//
+// WHY IT DECIDES THE VOCABULARY SIZE, and this is arithmetic over results on file.
+// Naming k words needs produced spread of order the target span. `orthoname` named two
+// words at 0.958 with 118 Hz of learned bias against a 181 Hz span. `ctxfour` gave a
+// PERFECT index four words and got 71.6 Hz of spread against a 460 Hz span, with
+// `nearest` at chance -- and the spread SHRINKS as k grows. Compressing the ask does
+// not save it: four targets inside 72 Hz sit ~24 Hz apart against a production scatter
+// of 13-21 Hz. **Four-word naming on F1 alone is at the edge whatever the ask is.**
+//
+// Unless there is a second axis. Four words need 4 levels on one axis or 2x2 on two,
+// and 2x2 is the easier ask by far. So: how far does a bias move F2, and is that
+// movement INDEPENDENT of F1's?
+//
+// THE DESIGN IS A 2x2 AND THE OFF-DIAGONALS ARE THE POINT. Bias group 2 and read both
+// formants; bias group 3 and read both. If biasing F2's group also moves F1, the two
+// "axes" are one axis and the 2x2 vocabulary argument dies. Nobody has measured that
+// cross-talk, and a centroid readout over a shared population is exactly where it
+// would live.
+//
+// History-free by construction: a FRESH creature at every rung, which is the arm
+// `aimgain` had to add after its ladder turned out to measure its own order.
+//
+// GUARD: the F1 column of the group-2 row must reproduce aimgain -- swing +186/-192
+// with rest 629.7 -- or the instrument is not the one those numbers came from.
+constexpr double kAXLadder[] = {-0.25, -0.12, 0.0, 0.12, 0.25};
+constexpr uint32_t kAXRungs = sizeof(kAXLadder) / sizeof(kAXLadder[0]);
+constexpr uint32_t kAXGroups[] = {2, 3};        // F1, F2
+constexpr uint32_t kAXNGroups = 2;
+constexpr uint32_t kAXReps = 6;
+// THE PER-RUNG WINDOW IS aimgain's, AS A CONSTANT, and the guard is why.
+//
+// The first run held each bias for 100,000 scored ticks where aimgain's static arm
+// scored 33,333, and got F1 swing 247.3 Hz against aimgain's 378.3. The guard caught
+// it. The cause is not a bug: IP CANCELS A SUSTAINED BIAS OVER TIME, so the actuator's
+// swing DEPENDS ON HOW LONG THE BIAS IS HELD -- stageprobe's compression and aimpool's
+// backlash showing up a third way, as a duration effect.
+//
+// So the window is pinned to aimgain's rather than derived from `ticks`, which makes
+// the two protocols identical by construction instead of by coincidence. A number this
+// experiment wants to compare against another experiment's cannot be left to depend on
+// a command-line argument.
+constexpr uint64_t kAXPerRung = 66666;   // = aimgain's 600000 / 9 rungs
+
+struct AXCell {
+  double f1 = 0.0, f2 = 0.0, f1_sd = 0.0, f2_sd = 0.0;
+  bool ok = false;
+};
+
+bool run_aimaxes(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  aibaby::Dna dna;
+  if (dna.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) return false;
+  const int32_t vmod = dna.module_with_role(aibaby::ModuleRole::kVocal);
+  if (vmod < 0) { std::printf("  no vocal module\n"); return false; }
+
+  instrument("aimaxes", dna.header().seed ^ 0xA1E5u, kAXReps, "creatures");
+  std::printf("  the question      the aim line biased ONE group. Is F2 steerable, and\n"
+              "                    is its movement INDEPENDENT of F1's?\n");
+  std::printf("  why it matters    four words need 4 levels on one axis or 2x2 on two.\n"
+              "                    ctxfour got 71.6 Hz of spread at k=4 against a 460 Hz\n"
+              "                    span with a PERFECT index, so one axis is at its edge\n"
+              "                    whatever the ask. A second axis is the only way 2x2\n"
+              "                    becomes available -- IF the two are independent.\n\n");
+
+  // job = rep * (kAXNGroups * kAXRungs) + gi * kAXRungs + L. A fresh Session per rung,
+  // so no rung inherits another's state.
+  const std::vector<AXCell> cells = parallel_reps<AXCell>(
+      kAXReps * kAXNGroups * kAXRungs, [&](uint32_t job) {
+    const uint32_t L = job % kAXRungs;
+    const uint32_t gi = (job / kAXRungs) % kAXNGroups;
+    const uint32_t r = job / (kAXRungs * kAXNGroups);
+    AXCell cell;
+    std::vector<uint8_t> variant = blob;
+    const uint64_t seed = dna.header().seed + r * 7919ull;
+    std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+    Session s;
+    std::string err;
+    if (!s.init(variant, err)) return cell;
+    const aibaby::ModuleState& vms = s.brain.network().module(uint32_t(vmod));
+    const uint32_t g = kAXGroups[gi];
+    const uint32_t beg = vms.begin + aibaby::slice_begin(vms.count, aibaby::kVocalGroups, g);
+    const uint32_t end = vms.begin + aibaby::slice_begin(vms.count, aibaby::kVocalGroups, g + 1);
+    if (end <= beg + 3) return cell;
+    const double namp = double(s.dna.module(uint32_t(vmod)).noise_amp);
+    if (kAXLadder[L] != 0.0)
+      s.brain.network().set_bias_oracle(0, beg, end,
+                                        aibaby::Scalar(kAXLadder[L] * namp));
+    double s1 = 0.0, s2 = 0.0, q1 = 0.0, q2 = 0.0;
+    uint32_t n = 0;
+    for (uint64_t t = 0; t < kAXPerRung; ++t) {
+      s.brain.step();
+      if (t < kAXPerRung / 2) continue;   // discard the settle half, as aimgain does
+      const double a = double(s.brain.voice().f1), b = double(s.brain.voice().f2);
+      s1 += a; s2 += b; q1 += a * a; q2 += b * b; ++n;
+    }
+    if (!n) return cell;
+    cell.f1 = s1 / double(n);
+    cell.f2 = s2 / double(n);
+    cell.f1_sd = std::sqrt(std::fabs(q1 / double(n) - cell.f1 * cell.f1));
+    cell.f2_sd = std::sqrt(std::fabs(q2 / double(n) - cell.f2 * cell.f2));
+    cell.ok = true;
+    return cell;
+  });
+  auto at = [&](uint32_t r, uint32_t gi, uint32_t L) -> const AXCell& {
+    return cells[(size_t(r) * kAXNGroups + gi) * kAXRungs + L];
+  };
+
+  const char* gname[] = {"group 2 (F1)", "group 3 (F2)"};
+  double swing_f1[kAXNGroups] = {}, swing_f2[kAXNGroups] = {};
+  double rest_f1 = 0.0, rest_f2 = 0.0, sd_f1 = 0.0, sd_f2 = 0.0;
+  const uint32_t zero = kAXRungs / 2;
+
+  for (uint32_t gi = 0; gi < kAXNGroups; ++gi) {
+    std::printf("  biasing %s -- a fresh creature at every rung\n", gname[gi]);
+    std::printf("    k         F1 (Hz)          F2 (Hz)\n");
+    double m1[kAXRungs] = {}, m2[kAXRungs] = {};
+    for (uint32_t L = 0; L < kAXRungs; ++L) {
+      std::vector<double> v1, v2, d1, d2;
+      for (uint32_t r = 0; r < kAXReps; ++r) {
+        const AXCell& c = at(r, gi, L);
+        if (!c.ok) continue;
+        v1.push_back(c.f1); v2.push_back(c.f2);
+        d1.push_back(c.f1_sd); d2.push_back(c.f2_sd);
+      }
+      if (v1.empty()) { std::printf("    %-8.2f  (no usable creature)\n", kAXLadder[L]); continue; }
+      double e1, e2, x1, x2;
+      m1[L] = ctx_mean_se(v1, &e1);
+      m2[L] = ctx_mean_se(v2, &e2);
+      const double s1 = ctx_mean_se(d1, &x1), s2 = ctx_mean_se(d2, &x2);
+      std::printf("    %-8.2f  %7.1f +/- %-5.1f  %7.1f +/- %-5.1f   (within-run sd"
+                  " %.1f / %.1f)\n",
+                  kAXLadder[L], m1[L], e1, m2[L], e2, s1, s2);
+      if (L == zero && gi == 0) { rest_f1 = m1[L]; rest_f2 = m2[L]; sd_f1 = s1; sd_f2 = s2; }
+    }
+    swing_f1[gi] = m1[kAXRungs - 1] - m1[0];
+    swing_f2[gi] = m2[kAXRungs - 1] - m2[0];
+    std::printf("    -> full-ladder swing   F1 %+7.1f Hz   F2 %+7.1f Hz\n\n",
+                swing_f1[gi], swing_f2[gi]);
+  }
+
+  // GUARD: the F1 column of the F1 row must be aimgain's instrument.
+  const double want = 186.1 + 192.2;   // aimgain's static swing, up + down
+  const bool repro = std::fabs(swing_f1[0] - want) < 60.0 &&
+                     std::fabs(rest_f1 - 629.7) < 25.0;
+  std::printf("  GUARD  does the F1 axis reproduce aimgain?  swing %.1f against its"
+              " %.1f,\n         rest %.1f against its 629.7   -> %s\n",
+              swing_f1[0], want, rest_f1, repro ? "OK" : "NO -- different instrument");
+
+  // THE CROSS-TALK, which is the result.
+  std::printf("\n  CROSS-TALK  what each bias moves, as a fraction of what it moves most\n");
+  for (uint32_t gi = 0; gi < kAXNGroups; ++gi) {
+    const double own = gi == 0 ? swing_f1[gi] : swing_f2[gi];
+    const double other = gi == 0 ? swing_f2[gi] : swing_f1[gi];
+    std::printf("    %s   own axis %+7.1f Hz   other axis %+7.1f Hz   ratio %.2f\n",
+                gname[gi], own, other, own != 0.0 ? std::fabs(other / own) : 0.0);
+  }
+
+  // RESOLVABLE LEVELS, under the LEARNED bias rather than the oracle. ctxscale's
+  // asymptote is 118 Hz of dF1 and the creature sits at 94% of it; scaling the oracle
+  // swing by that fraction is the only honest way to put a learned bias on this axis.
+  const double learned_f1 = 118.0;
+  const double frac = swing_f1[0] != 0.0 ? learned_f1 / std::fabs(swing_f1[0]) : 0.0;
+  const double learned_f2 = std::fabs(swing_f2[1]) * frac;
+  std::printf("\n  RESOLVABLE LEVELS under a LEARNED bias (oracle swing scaled by\n"
+              "  ctxscale's 118 Hz dF1 asymptote, i.e. x%.2f of the ladder)\n", frac);
+  std::printf("    F1   reach %5.1f Hz / scatter %4.1f Hz  ->  %.1f levels\n",
+              learned_f1, sd_f1, sd_f1 > 0.0 ? learned_f1 / (2.0 * sd_f1) : 0.0);
+  std::printf("    F2   reach %5.1f Hz / scatter %4.1f Hz  ->  %.1f levels\n",
+              learned_f2, sd_f2, sd_f2 > 0.0 ? learned_f2 / (2.0 * sd_f2) : 0.0);
+  const double n1 = sd_f1 > 0.0 ? learned_f1 / (2.0 * sd_f1) : 0.0;
+  const double n2 = sd_f2 > 0.0 ? learned_f2 / (2.0 * sd_f2) : 0.0;
+  std::printf("    -> distinguishable words, 2-D:  %.1f x %.1f = %.1f\n", n1, n2, n1 * n2);
+
+  std::printf("\n");
+  if (!repro) {
+    std::printf("  VOID: the F1 axis does not reproduce aimgain, so this is not the\n"
+                "  instrument those numbers came from. Fix that before reading the rest.\n");
+    return true;
+  }
+  const double xtalk = swing_f2[1] != 0.0 ? std::fabs(swing_f1[1] / swing_f2[1]) : 9.9;
+  if (std::fabs(swing_f2[1]) < 40.0) {
+    std::printf("  F2 IS NOT STEERABLE (%.1f Hz over the full ladder, against F1's %.1f).\n"
+                "  There is no second axis, so naming is bounded by F1 resolution alone\n"
+                "  at about %.1f words -- and that is a HARD ceiling, not a tuning\n"
+                "  failure. It explains ctxfour's chance result at four words.\n",
+                std::fabs(swing_f2[1]), std::fabs(swing_f1[0]), n1);
+  } else if (xtalk > 0.5) {
+    std::printf("  THE TWO AXES ARE ONE. Biasing group 3 moves F1 by %.0f%% of what it\n"
+                "  moves F2, so the 2x2 vocabulary argument dies: a centroid readout over\n"
+                "  a shared population does not give independent formants.\n", 100.0 * xtalk);
+  } else {
+    std::printf("  A SECOND INDEPENDENT AXIS EXISTS: F2 swings %.1f Hz with %.0f%% of\n"
+                "  that leaking into F1. Under a learned bias that is %.1f x %.1f = %.1f\n"
+                "  distinguishable words, against ctxfour's four-word failure on F1\n"
+                "  alone. The next teaching run should spread the vocabulary across BOTH\n"
+                "  formants and score it on the k-word statistic.\n",
+                std::fabs(swing_f2[1]), 100.0 * xtalk, n1, n2, n1 * n2);
+  }
+  return true;
+}
+
 bool run_aimslice(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
   (void)verbose;
   aibaby::Dna dna;

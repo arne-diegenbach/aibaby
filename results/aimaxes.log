@@ -1,0 +1,45 @@
+experiment: aimaxes
+  instrument        aimaxes   trial seed 000000000135862c   6 creatures
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  the question      the aim line biased ONE group. Is F2 steerable, and
+                    is its movement INDEPENDENT of F1's?
+  why it matters    four words need 4 levels on one axis or 2x2 on two.
+                    ctxfour got 71.6 Hz of spread at k=4 against a 460 Hz
+                    span with a PERFECT index, so one axis is at its edge
+                    whatever the ask. A second axis is the only way 2x2
+                    becomes available -- IF the two are independent.
+
+  biasing group 2 (F1) -- a fresh creature at every rung
+    k         F1 (Hz)          F2 (Hz)
+    -0.25       502.2 +/- 1.4     1660.0 +/- 6.1     (within-run sd 24.6 / 56.6)
+    -0.12       564.8 +/- 2.8     1659.7 +/- 5.1     (within-run sd 25.2 / 55.9)
+    0.00        626.6 +/- 2.5     1662.1 +/- 5.4     (within-run sd 21.0 / 56.0)
+    0.12        686.9 +/- 3.3     1657.6 +/- 5.9     (within-run sd 24.7 / 57.0)
+    0.25        749.4 +/- 3.3     1657.8 +/- 5.9     (within-run sd 25.1 / 56.6)
+    -> full-ladder swing   F1  +247.3 Hz   F2    -2.2 Hz
+
+  biasing group 3 (F2) -- a fresh creature at every rung
+    k         F1 (Hz)          F2 (Hz)
+    -0.25       625.5 +/- 2.4     1345.0 +/- 8.9     (within-run sd 21.3 / 61.2)
+    -0.12       625.9 +/- 2.7     1505.2 +/- 8.8     (within-run sd 20.6 / 60.8)
+    0.00        626.6 +/- 2.5     1662.1 +/- 5.4     (within-run sd 21.0 / 56.0)
+    0.12        625.3 +/- 2.9     1815.8 +/- 4.2     (within-run sd 21.5 / 66.1)
+    0.25        626.0 +/- 2.8     1973.9 +/- 3.8     (within-run sd 20.9 / 62.4)
+    -> full-ladder swing   F1    +0.6 Hz   F2  +628.9 Hz
+
+  GUARD  does the F1 axis reproduce aimgain?  swing 247.3 against its 378.3,
+         rest 626.6 against its 629.7   -> NO -- different instrument
+
+  CROSS-TALK  what each bias moves, as a fraction of what it moves most
+    group 2 (F1)   own axis  +247.3 Hz   other axis    -2.2 Hz   ratio 0.01
+    group 3 (F2)   own axis  +628.9 Hz   other axis    +0.6 Hz   ratio 0.00
+
+  RESOLVABLE LEVELS under a LEARNED bias (oracle swing scaled by
+  ctxscale's 118 Hz dF1 asymptote, i.e. x0.48 of the ladder)
+    F1   reach 118.0 Hz / scatter 21.0 Hz  ->  2.8 levels
+    F2   reach 300.2 Hz / scatter 56.0 Hz  ->  2.7 levels
+    -> distinguishable words, 2-D:  2.8 x 2.7 = 7.5
+
+  VOID: the F1 axis does not reproduce aimgain, so this is not the
+  instrument those numbers came from. Fix that before reading the rest.

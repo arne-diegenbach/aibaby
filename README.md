@@ -13353,6 +13353,74 @@ is refused here on its own numbers; Frank Guenther, whose DIVA controller this p
 has now priced against its own feed-forward alternative.
 
 
+## aimaxes: there is a second steerable formant axis, it is independent, and nothing has ever used it
+
+Every dF1 in this project comes from biasing vocal group 2. `senses.cpp` maps group 2 to
+F1 and **group 3 to F2**, and whether a bias can steer F2 had never been measured — its
+*free* spread is on file (F1 638 ± 25 Hz, F2 1620 ± 51) but not its steerability. A 2×2
+of bias-group × formant-read, fresh creature at every rung:
+
+    biasing group 2 (F1)   own axis  +378.2 Hz   other axis  +3.8 Hz   ratio 0.01
+    biasing group 3 (F2)   own axis  +961.1 Hz   other axis  -1.7 Hz   ratio 0.00
+
+**F2 is steerable over 961 Hz — 2.5× F1's range — with essentially zero cross-talk.**
+Two independent axes out of one shared population of 126 neurons, which had no
+obligation to behave that way: a centroid readout over a common population is precisely
+where cross-talk would live.
+
+**The instrument check passes to the decimal:** the F1 column reads swing 378.2 against
+`aimgain`'s 378.3 and rest 629.7 against its 629.7. That took a second run — the first
+held each bias for 100,000 scored ticks where `aimgain` scored 33,333 and got only
+247.3 Hz of swing, and the guard caught it. The cause is not a bug but a third face of
+the same mechanism: **IP cancels a sustained bias over time, so the actuator's swing
+depends on how long the bias is held.** The per-rung window is now pinned to `aimgain`'s
+as a constant, because a number meant for comparison with another experiment should not
+depend on a command-line argument.
+
+**And the arithmetic is prettier than expected:**
+
+    F1   swing 378.2 of a  750 Hz range  =  50.4%     scatter 22.9 Hz
+    F2   swing 961.1 of a 1900 Hz range  =  50.6%     scatter 57.8 Hz
+         swing ratio 2.54                             scatter ratio 2.52
+
+Both axes cover **the same fraction of their range**, which is what
+`lerp(min, max, group_value)` predicts and is confirmed to 0.2%; and F2's extra range is
+offset by proportionally more scatter. **So F2 is not a better axis, it is an independent
+one** — the gain is a product, 2.6 × 2.6, not a bigger number on either.
+
+**Corroborated from a month earlier, by an experiment built for something else.**
+`ctxbias`'s `offaxis` arm ramps a different articulator group as a control and reads dF1
+of **−4.3 and −0.8 Hz**. Two independent designs, same conclusion.
+
+### What it reframes
+
+Scaled to `ctxscale`'s measured 118 Hz learned-bias asymptote, each axis gives about
+2.6 resolvable levels — honestly 2–3 — so **4 to 9 words in two dimensions, with four at
+the edge rather than comfortably inside.**
+
+**And it explains `ctxfour`'s four-word failure as a vocabulary-layout artefact.** That
+run gave a PERFECT index four words and got `nearest` at chance. Its words were
+`kWords[0..3]`, F1 at 780 / 320 / 350 / 550: **/i/ at 320 and /u/ at 350 sit 30 Hz apart
+on F1** against a produced spread of 71.6 Hz — and 1600 Hz apart on F2, the axis it never
+steered. Two of its four words were near-degenerate on the only axis in play. That is not
+a ceiling on vocabulary; it is a vocabulary laid along the wrong axis.
+
+### The one thing still a projection, and it is the gate
+
+**The learned bias on F2 has never been measured.** `ctxscale` measured dF1; `ctxbias`'s
+F2 movement came from an oracle. The 2.6 levels on F2 assume a learned bias reaches the
+same fraction of range on both axes — plausible given the identical 50.4%/50.6% and the
+identical scatter ratio, but an assumption. **Measure dF2 under teaching before spending
+a multi-hour run on a two-formant vocabulary.** WHAT WOULD REFUSE IT: dF2 coming out at a
+much smaller fraction of F2's range than dF1 does of F1's, which would mean reward can
+reach group 2 and not group 3.
+
+Credit: Gunnar Fant, whose source-filter account is why two formants are the right
+coordinates to ask this in; Michale Fee and Adam Goldberg, whose bias-from-outside
+architecture `ctxbias` priced and whose `offaxis` control turns out to corroborate this
+result; Gina Turrigiano on the homeostat whose duration-dependence the guard caught.
+
+
 ## Layout
 
 ```
