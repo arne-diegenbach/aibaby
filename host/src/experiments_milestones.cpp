@@ -26663,7 +26663,7 @@ bool run_ctxgrid(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
                 "  control the 2x2 grid buys %+.3f of `nearest` (%.1f SE), with BOTH\n"
                 "  axes contributing: F1 %+.3f and F2 %+.3f. ctxfour's same contrast on\n"
                 "  vowel-corner words is +0.118, so the LAYOUT is not what did it --\n"
-                "  both layouts name and the difference is not significant.\n""
+                "  both layouts name and the difference is not significant.\n"
                 "\n"
                 "  AND IT CORRECTS ctxfour's VERDICT AS WELL AS ITS LAYOUT. That run read\n"
                 "  its oracle at 0.279 against 0.250 and called it chance, while its own\n"
