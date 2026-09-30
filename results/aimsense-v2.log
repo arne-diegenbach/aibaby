@@ -1,0 +1,97 @@
+experiment: aimsense
+  instrument        aimsense   trial seed 0000000001358697   6 creatures
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  the question      aimfloor's 6.0 Hz used a PERFECT error signal.
+                    selfcode measured what the ear actually knows
+                    about the creature's own F1: 0.623 held-out
+                    two-class. Does a signal THAT coarse still buy
+                    error worth having?
+  why it matters    it moves the bound from the PLANT to the SENSOR,
+                    and it decides whether a learning rule is worth
+                    building at all.
+  the design        the noise level is NOT converted from 0.623. The
+                    sensor is corrupted on a wide ladder and the
+                    achieved accuracy is MEASURED with selfcode's own
+                    statistic, so the x-axis needs no assumption.
+
+  delay 0 ms, sensor noise white
+    sigma(Hz)  measured acc   open       g=0.0003   g=0.0010   g=0.0040     best   removed
+           0      1.000       107.9    76.9    42.3    16.5     6.0      6.0   94.5%
+          25      0.987       107.9    76.5    42.4    17.0    11.0     11.0   89.8%
+          56      0.971       107.9    76.5    42.4    21.6    19.1     19.1   82.3%
+         112      0.936       107.9    76.8    43.4    31.4    30.6     30.6   71.6%
+         240      0.879       107.9    76.7    52.0    48.4    48.2     48.2   55.3%
+
+  delay 0 ms, sensor noise CORRELATED tau 60 ms   <- MEASURED
+    sigma(Hz)  measured acc   open       g=0.0003   g=0.0010   g=0.0040     best   removed
+           0      1.000       107.9    76.9    42.3    16.5     6.0      6.0   94.5%
+          25      0.874       107.9    76.7    43.2    20.9    18.1     18.1   83.2%
+          56      0.760       107.9    76.9    45.3    31.1    30.7     30.7   71.6%
+         112      0.655       107.9    77.8    50.9    45.5    45.7     45.5   57.9%
+         240      0.552       107.9    80.1    66.3    65.6    65.5     65.5   39.3%
+
+  delay 0 ms, sensor noise CORRELATED tau 200 ms
+    sigma(Hz)  measured acc   open       g=0.0003   g=0.0010   g=0.0040     best   removed
+           0      1.000       107.9    76.9    42.3    16.5     6.0      6.0   94.5%
+          25      0.802       107.9    77.0    43.8    22.3    20.0     20.0   81.5%
+          56      0.684       107.9    77.4    47.4    35.2    35.1     35.1   67.4%
+         112      0.610       107.9    78.6    55.4    52.3    52.7     52.3   51.5%
+         240      0.551       107.9    82.8    75.1    75.7    75.8     75.1   30.4%
+
+  delay 905 ms, sensor noise white
+    sigma(Hz)  measured acc   open       g=0.0003   g=0.0010   g=0.0040     best   removed
+           0      1.000       107.9    77.1    47.5    88.2    98.3     47.5   55.9%
+          25      0.986       107.9    77.4    48.0    86.7    94.3     48.0   55.5%
+          56      0.969       107.9    77.4    47.7    78.7    83.2     47.7   55.8%
+         112      0.943       107.9    77.5    48.5    57.4    59.6     48.5   55.1%
+         240      0.875       107.9    77.3    54.3    51.8    51.6     51.6   52.2%
+
+  delay 905 ms, sensor noise CORRELATED tau 60 ms   <- MEASURED
+    sigma(Hz)  measured acc   open       g=0.0003   g=0.0010   g=0.0040     best   removed
+           0      1.000       107.9    77.1    47.5    88.2    98.3     47.5   55.9%
+          25      0.871       107.9    77.3    49.2    85.2    93.5     49.2   54.4%
+          56      0.753       107.9    77.3    51.6    77.2    80.7     51.6   52.2%
+         112      0.637       107.9    77.7    57.5    63.7    65.1     57.5   46.7%
+         240      0.579       107.9    81.1    71.2    71.4    71.2     71.2   34.0%
+
+  delay 905 ms, sensor noise CORRELATED tau 200 ms
+    sigma(Hz)  measured acc   open       g=0.0003   g=0.0010   g=0.0040     best   removed
+           0      1.000       107.9    77.1    47.5    88.2    98.3     47.5   55.9%
+          25      0.795       107.9    77.3    50.2    86.8    95.0     50.2   53.5%
+          56      0.669       107.9    78.0    56.2    82.2    87.1     56.2   47.9%
+         112      0.596       107.9    79.8    68.9    80.7    81.8     68.9   36.2%
+         240      0.543       107.9    84.9    84.8    88.3    88.6     84.8   21.4%
+
+  GUARD  sigma=0 reproduces aimfloor AT MATCHED GAIN?
+            0 ms, gain 0.01600      6.0 against aimfloor's    6.0   OK
+            0 ms, gain 0.00400     16.5 against aimfloor's   16.5   OK
+          905 ms, gain 0.00100     47.5 against aimfloor's   47.5   OK
+         -> the sensor model is transparent at zero noise
+  GUARD  sigma=0 white == correlated?  0.000000 Hz apart   OK
+
+  FOR CONTEXT  where does selfcode's 0.623 fall on each ladder?
+         white                    accuracy 0.875 .. 1.000   does not reach 0.623
+         CORRELATED               accuracy 0.579 .. 1.000   spans 0.623
+         CORRELATED               accuracy 0.543 .. 1.000   spans 0.623
+
+  PRIMARY  the CALIBRATED cell from sensefit: sigma 56.0 Hz at tau 60 ms,
+           at the shipped 905 ms round trip
+           open  107.9   best   51.6 at gain 0.00100   removed  52.2%   CLEARS THE 25% BAR
+           measured trial accuracy here 0.753  (selfcode 0.623, sensefit's own decoder 0.764)
+           same sigma at the other correlation times:  0 ms 55.8%   60 ms 52.2%   200 ms 47.9%  
+           bracket on sigma: 25 Hz -> 54.4%,  112 Hz -> 46.7%  BOTH clear the bar
+
+  GUARD  correlation axis live AT THE OPERATING POINT?  white removes 55.8%
+         and the measured tau 52.2%, 3.7 points apart -> INERT HERE. Read the top of the
+         sigma ladder for where it bites: correlation costs nothing at the
+         measured noise and a great deal at 2-4x it, so the operating point
+         sits below the level where the error's TIME STRUCTURE matters.
+
+  THE CREATURE'S OWN ERROR SIGNAL IS ENOUGH. At the sensor sensefit
+  measured -- 56 Hz input-referred at tau 60 ms, against an F1
+  whose own sd is 21 Hz -- feedback still removes 52.2% of the
+  open-loop error through the SHIPPED 905 ms round trip. That is more
+  than the entire measured naming effect, so the learning rule is worth
+  building and its target is a controller at gain 0.00100 with the
+  attenuation undone.

@@ -169,6 +169,17 @@ const Spec kSpecs[] = {
      "  8x. Local recurrence cannot carry activity forward at all"},
     {"curriculum", 1200000, Expect::kOpen, Tier::kLong,
      "derived: m3's protocol at a length where teaching works"},
+    {"sensefit", 300000, Expect::kOpen, Tier::kLong,
+     "  what the creature's OWN error signal looks like: a CONTINUOUS own-F1\n"
+     "  decoder off the auditory rate code, reporting the per-tick residual\n"
+     "  sigma and its correlation time -- the two numbers aimsense needs and\n"
+     "  selfcode never measured. Carries selfcode's FIXED-F1 control"},
+    {"aimsense", 600000, Expect::kOpen, Tier::kLong,
+     "  aimfloor's bound used a PERFECT error signal. selfcode measured the\n"
+     "  ear's own-F1 decode at 0.623 held-out. Corrupt the sensor on a ladder,\n"
+     "  MEASURE the achieved accuracy with selfcode's own statistic, and cross\n"
+     "  it with noise CORRELATION -- white error averages out, a decode's does\n"
+     "  not. Moves the bound from the plant to the sensor"},
     {"aimfloor", 600000, Expect::kOpen, Tier::kLong,
      "  is the 13 Hz precision floor the PLANT or the STATISTIC? aimhold and\n"
      "  aimpool refused feedback on a within-target sd that reads ~13 in every\n"
@@ -897,6 +908,8 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "aimgain") ok = run_aimgain(dna_blob, ticks, verbose);
   else if (name == "aimhold") ok = run_aimhold(dna_blob, ticks, verbose);
   else if (name == "aimfloor") ok = run_aimfloor(dna_blob, ticks, verbose);
+  else if (name == "aimsense") ok = run_aimsense(dna_blob, ticks, verbose);
+  else if (name == "sensefit") ok = run_sensefit(dna_blob, ticks, verbose);
   else if (name == "vocabcurve") ok = run_vocabcurve(dna_blob, ticks, verbose);
   else if (name == "ctxprobe") ok = run_ctxprobe(dna_blob, ticks, verbose);
   else if (name == "shapeprobe") ok = run_shapeprobe(dna_blob, ticks, verbose);

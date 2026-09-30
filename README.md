@@ -13014,6 +13014,114 @@ controller is the thing now un-refused; Heinrich Barkhausen for the oscillation
 condition that supplies the turnaround past each optimum.
 
 
+## sensefit + aimsense: the creature's own ear is good enough to steer by, and the delay that ruins the gain is what rescues the sensor
+
+`aimfloor` re-opened the feedback line under two oracles: a PERFECT error signal and
+a hand-written proportional controller. These two experiments spend the first one.
+
+### sensefit: what the ear's own-F1 estimate actually looks like
+
+`selfcode` proved the signal exists — held-out 0.623 against a fixed-F1 control at
+exactly chance — but 0.623 is a TRIAL-level number, 1200-tick means on a median
+split, and a per-tick controller lives on something else. So fit a CONTINUOUS own-F1
+decoder off the auditory `rate_fast` code (not binned spikes: a module firing at 5 Hz
+emits about one spike per millisecond across its whole population, so a per-tick
+spike vector is nearly empty) and report what a controller would be handed.
+
+    r held out        +0.352 +/- 0.018
+    shuffled control  +0.001 +/- 0.002
+    FIXED-F1 control  +0.017 +/- 0.018       <- selfcode's matched control
+    excess over fixed +0.335 +/- 0.025       13.4 SE
+
+**That independently confirms `selfcode` on a different statistic** — a continuous
+regression against a binary median split — and it confirms it against the control
+that makes the number mean *carries F1* rather than *carries the amplitude envelope*,
+which the ear demonstrably tracks (that is the 3 Hz ring).
+
+**AND THE FIRST VERSION OF THIS EXPERIMENT MEASURED THE WRONG THING, which a guard
+caught.** The raw residual `pred - F1` reads sigma 19.7 Hz at tau 282 ms against an F1
+whose own sd is 21.0 Hz and tau 337 ms — 94% of the signal's size and 84% of its
+correlation time. A guard asking *is the residual faster than the signal?* fired, and
+it was right to: **what an attenuated decoder misses is F1-SHAPED**, so calling the
+residual "sensor noise" is a category error. The decomposition:
+
+    observed = b + alpha*F1 + eta
+      alpha (attenuation)      0.1504 +/- 0.0135    -> undone by gain x6.6
+      eta sigma (independent)     8.4 +/- 0.6 Hz
+      eta correlation tau        61.6 +/- 3.9 ms    (vs F1's own 337)
+      INPUT-REFERRED sigma       56.3 +/- 2.6 Hz
+      self-check  sd(F1)*sqrt(1-r^2)/r = 55.9 against the measured 56.3
+      signal-to-noise            0.37
+
+**ATTENUATION IS FREE TO A PROPORTIONAL CONTROLLER.** Fed `alpha*e` it behaves like
+gain `g*alpha`, so raising the gain by 1/alpha undoes it exactly, up to the delay
+limit `aimfloor` mapped. Only `eta` costs anything, and what the controller faces is
+`eta` referred back to the input — a formula in two measured quantities with no free
+constants. **REPLICATED on the shipped genome at 56.2 +/- 3.1 Hz and tau 61.8 ms**, so
+the calibration is a property of the EAR and not of which larynx measured it.
+
+### aimsense: and it is enough
+
+The gain x delay grid again, with the sensor corrupted at the measured point and
+bracketed either side. At the shipped 905 ms round trip:
+
+    sigma(Hz)  meas acc   open    g=.0003  g=.0010  g=.0040  g=.0160   best  removed
+    --- white ---
+          56      0.969   107.9    77.4     47.7     78.7     83.2     47.7   55.8%
+    --- CORRELATED tau 60 ms  <- MEASURED ---
+          25      0.871   107.9    77.3     49.2     85.2     93.5     49.2   54.4%
+          56      0.753   107.9    77.3     51.6     77.2     80.7     51.6   52.2%
+         112      0.637   107.9    77.7     57.5     63.7     65.1     57.5   46.7%
+         240      0.579   107.9    81.1     71.2     71.4     71.2     71.2   34.0%
+
+**52.2% of the open-loop error removed at the sensor the creature actually has**,
+against a bar of 25% — and both bracket rungs clear it, 54.4% at 25 Hz and 46.7% at
+112 Hz. The perfect sensor removes 55.9%. **Spending the sensing oracle costs 3.7
+points.**
+
+**I PREDICTED THIS WOULD FAIL, from SNR 0.37, and the mechanism I missed is the
+interesting part. THE DELAY THAT RUINS THE GAIN IS WHAT RESCUES THE SENSOR.** At
+905 ms the optimal loop gain is 0.75, so the loop's own bandwidth is ~0.18 Hz and its
+time constant ~880 ms, while `eta`'s correlation time is 62 ms. A loop that slow
+averages the noise down by about `sqrt(880/62)` = 3.8x, taking an effective SNR of
+0.37 to ~1.4. **A controller does not care about accuracy per trial or accuracy per
+tick — it cares about noise power inside its own bandwidth**, which is why matching
+arms on `selfcode`'s trial accuracy was the wrong variable and why a slow loop is
+cheap to feed.
+
+The correlation axis is INERT at the operating point (white 55.8% against the
+measured tau's 52.2%, 3.7 points) and decisive well above it — at 240 Hz it is 52.2%
+against 21.4%. So the creature sits below the noise level where the error's TIME
+structure starts to matter, and that is luck rather than design.
+
+### What was wrong along the way, because most of the work was that
+
+**A pre-registered matching variable, changed mid-flight for a measured reason.** The
+smoke test showed trial-level accuracy does not identify a controller: to reach 0.623
+a white sensor needs sigma 2430 Hz per tick and a correlated one 90 Hz, removing
+10.5% and 37.6%. **My written prediction — that correlated error would be the WORSE
+case — came out backwards**, because a 1200-tick average divides white noise by
+sqrt(1200) and correlated noise by far less. `sensefit` exists because of that
+failure.
+
+**A VOID guard that fired on a compound claim.** Guard 2 compared this grid's `best`
+against `aimfloor`'s `best` and voided a perfectly good run — because I had shrunk the
+gain ladder, so at 0 ms `aimfloor`'s optimum (0.016) was outside it. It was testing
+*the sensor model is transparent* AND *the grid contains aimfloor's optimum*. Only the
+first is a guard's business. **At matched gain it reproduces exactly: 6.0, 16.5 and
+47.5 against aimfloor's 6.0, 16.5 and 47.5.**
+
+**And a number written twice.** The verdict sentence carried `77 Hz` and `SNR 0.28` as
+literals from the smoke test while the table above it was correct — the
+shared-constants bug class in its smallest form. It now prints from the constants.
+
+Credit: Harry Nyquist and Hendrik Bode for the bandwidth argument that turns out to
+cut both ways here; John Houde and Michael Jordan for altered auditory feedback;
+Frank Guenther, whose DIVA feedback controller this line now has a measured budget
+for; Gina Turrigiano and Niraj Desai on the homeostat whose granularity `aimpool`
+priced.
+
+
 ## Layout
 
 ```

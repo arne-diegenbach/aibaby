@@ -31049,6 +31049,860 @@ AFRow run_aimfloor_arm(const std::vector<uint8_t>& blob, uint64_t ticks, uint64_
   return row;
 }
 
+// --- aimsense: the bound moves from the PLANT to the SENSOR ---------------------
+//
+// `aimfloor` showed a PERFECT error signal holds F1 to 6.0 Hz at zero delay and
+// removes 55.9% of the open-loop error through the shipped 905 ms round trip. Both
+// of its oracles remain: perfect sensing and hand-written proportional control. This
+// one spends the first.
+//
+// `selfcode` measured what the creature's ear actually knows about its own F1:
+// held-out two-class accuracy **0.623** against a fixed-F1 control at exactly chance,
+// on a median split of trial-mean F1. That is a coarse signal, and the question this
+// experiment exists to answer is whether a controller fed a signal THAT coarse still
+// removes error worth having.
+//
+// THE NOISE LEVEL IS NOT GUESSED, WHICH IS THE WHOLE POINT OF THE DESIGN. Converting
+// "0.623 two-class accuracy" into a noise sd needs a distributional assumption, a
+// value for the free F1 spread, and a choice about what the classes are -- three
+// guessed constants, and this project has paid a run each for guessed constants
+// before. So the sensor is corrupted at a wide geometric ladder and the ACHIEVED
+// accuracy is MEASURED in-run with selfcode's own statistic: trial means over 1200
+// ticks, median split, fraction of trials on which the noisy sensor agrees with the
+// truth about which side of the median F1 fell. The x-axis is then directly
+// comparable to 0.623 with no conversion at all.
+//
+// THE AXIS THAT SHOULD DECIDE IT IS THE CORRELATION TIME, and it is the reason a
+// single noise level would have been misleading. Per-tick WHITE noise is the
+// friendliest error a sensor can have: the plant's own rate_fast low-pass averages
+// it away, so a controller can be fed garbage per tick and still track. A population
+// decode's error is not white -- it is correlated over the timescale the code itself
+// varies on -- and correlated error cannot be averaged out. Two sensors matched on
+// the accuracy selfcode measured, differing only in correlation time, should
+// therefore behave completely differently, and the WHITE arm is the upper bound while
+// the CORRELATED arm is the honest one.
+//
+// PRE-REGISTERED, and the cut has a derivation rather than a round number:
+//   PRIMARY  at the rung whose MEASURED accuracy brackets 0.623, at the shipped
+//            905 ms delay, does the best gain still remove >= 25% of the open-loop
+//            error? 25% of 107.9 Hz is 27 Hz, which is the size of the entire
+//            measured naming effect in this project (dF1 ~93 Hz against a 460 Hz
+//            gap, and ctxscale's asymptote ~118). A feedback controller worth
+//            building has to be worth at least as much as the mechanism it would
+//            sit beside.
+//   GUARD 1  the ladder must SPAN 0.623. If every rung is above or below, the run
+//            cannot answer its own question and says so instead of interpolating.
+//   GUARD 2  the sigma = 0 rungs must reproduce aimfloor (6.0 at 0 ms, 47.5 at
+//            905 ms). A sensor model that changes the perfect-sensor answer is
+//            broken, and this catches it before anything is read.
+//   GUARD 3  white and correlated must DIFFER at matched accuracy. If they agree,
+//            the correlation axis is inert and the finding is about accuracy alone.
+// CALIBRATED ON `sensefit`, AND THE MATCHING VARIABLE CHANGED FOR A MEASURED REASON.
+//
+// The first version matched arms on selfcode's TRIAL-level accuracy, and a smoke test
+// showed that does not identify a controller: to reach trial-accuracy 0.623 a white
+// sensor needs sigma 2430 Hz per tick and a correlated one 90 Hz, removing 10.5% and
+// 37.6% of the open-loop error. Same statistic, two completely different controllers,
+// because a 1200-tick average divides white noise by sqrt(1200) and correlated noise
+// by far less. The prediction written into the header -- that correlated error would
+// be the WORSE case -- came out backwards for exactly that reason.
+//
+// `sensefit` supplies the calibration instead of an argument. A continuous own-F1
+// decoder off the auditory rate code, decomposed as `observed = b + alpha*F1 + eta`:
+// alpha 0.150 (undone by gain x6.6, and attenuation is FREE to a proportional
+// controller), eta 8.4 Hz at tau 62 ms, INPUT-REFERRED sigma 56.3 +/- 2.6 Hz against
+// an F1 whose own sd is 21.0 -- signal-to-noise 0.37. REPLICATED on the shipped
+// genome at 56.2 +/- 3.1 and tau 61.8, so the calibration is a property of the EAR
+// and not of which larynx it was measured on. The ladder is centred on 56 and
+// brackets it, and no attenuation is injected here because a gain change undoes it.
+constexpr double kASSigma[] = {0.0, 25.0, 56.0, 112.0, 240.0};  // Hz, input-referred
+constexpr uint32_t kASSigmas = sizeof(kASSigma) / sizeof(kASSigma[0]);
+constexpr uint32_t kASCalSigma = 2;                       // the MEASURED rung
+constexpr double kASCorrTauMs[] = {0.0, 60.0, 200.0};     // 0 = white; 60 = MEASURED
+constexpr uint32_t kASCorrs = sizeof(kASCorrTauMs) / sizeof(kASCorrTauMs[0]);
+constexpr uint32_t kASCalCorr = 1;
+constexpr double kASGainMul[] = {0.0, 0.25, 1.0, 4.0, 16.0};
+constexpr uint32_t kASGains = sizeof(kASGainMul) / sizeof(kASGainMul[0]);
+constexpr double kASDelayMs[] = {0.0, 905.0};
+constexpr uint32_t kASDelays = sizeof(kASDelayMs) / sizeof(kASDelayMs[0]);
+constexpr uint32_t kASReps = 6;
+constexpr uint64_t kASTrialTicks = 1200;   // selfcode's trial length
+
+struct ASRow {
+  double abs_err = 0.0, sd = 0.0, acc = 0.0;
+  bool ok = false;
+};
+
+// A local stream, so the sensor noise cannot touch the creature's own RNG and the
+// run stays bit-identical to aimfloor at sigma = 0.
+struct ASNoise {
+  uint64_t st;
+  double spare = 0.0;
+  bool have_spare = false;
+  double ou = 0.0;
+  explicit ASNoise(uint64_t seed) : st(seed | 1ull) {}
+  double u01() {
+    st ^= st >> 12; st ^= st << 25; st ^= st >> 27;
+    return double((st * 0x2545F4914F6CDD1Dull) >> 11) / 9007199254740992.0;
+  }
+  double normal() {
+    if (have_spare) { have_spare = false; return spare; }
+    double u = u01(), v = u01();
+    if (u < 1e-12) u = 1e-12;
+    const double r = std::sqrt(-2.0 * std::log(u));
+    spare = r * std::sin(6.283185307179586 * v);
+    have_spare = true;
+    return r * std::cos(6.283185307179586 * v);
+  }
+  // Unit-variance OU: a = exp(-dt/tau) keeps the marginal sd at 1 whatever tau is,
+  // so the sigma ladder means the same thing for white and correlated sensors.
+  double step(double a) {
+    if (a <= 0.0) return normal();
+    ou = a * ou + std::sqrt(1.0 - a * a) * normal();
+    return ou;
+  }
+};
+
+ASRow run_aimsense_arm(const std::vector<uint8_t>& blob, uint64_t ticks, uint64_t seed,
+                       int32_t vmod, double gain, double delay_ms, double sigma,
+                       double corr_tau_ms, uint64_t nseed) {
+  ASRow row;
+  std::vector<uint8_t> variant = blob;
+  std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+  Session s;
+  std::string err;
+  if (!s.init(variant, err)) return row;
+  const aibaby::ModuleState& vms = s.brain.network().module(uint32_t(vmod));
+  const uint32_t g_beg = vms.begin + aibaby::slice_begin(vms.count, aibaby::kVocalGroups, 2);
+  const uint32_t g_end = vms.begin + aibaby::slice_begin(vms.count, aibaby::kVocalGroups, 3);
+  if (g_end <= g_beg + 3) return row;
+  const double namp = double(s.dna.module(uint32_t(vmod)).noise_amp);
+  const double dt = double(s.dna.header().sim.dt_ms) > 0.0
+                        ? double(s.dna.header().sim.dt_ms) : 1.0;
+  const size_t dn = size_t(delay_ms / dt + 0.5);
+  std::vector<double> hist(dn + 1, 0.0);
+  size_t hw = 0;
+  bool hist_warm = false;
+  ASNoise ns(nseed);
+  const double a = corr_tau_ms > 0.0 ? std::exp(-dt / corr_tau_ms) : 0.0;
+
+  // Trial-level record, which is selfcode's statistic and not a per-tick one.
+  std::vector<double> tr_true, tr_obs;
+  double tt_sum = 0.0, to_sum = 0.0; uint64_t tt_n = 0;
+
+  double within_sq = 0.0, abs_sum = 0.0;
+  uint64_t scored = 0;
+  const uint64_t per = ticks / kAHNTargets;
+  for (uint32_t ti = 0; ti < kAHNTargets; ++ti) {
+    const double target = kAHTargets[ti];
+    double blk_sum = 0.0, blk_sq = 0.0; uint32_t blk_n = 0;
+    for (uint64_t t = 0; t < per; ++t) {
+      const double f1_now = double(s.brain.voice().f1);
+      hist[hw] = f1_now;
+      hw = (hw + 1) % hist.size();
+      if (!hist_warm && hw == 0) hist_warm = true;
+      const double f1_seen = (dn == 0 || !hist_warm) ? f1_now : hist[hw];
+      const double observed = f1_seen + sigma * ns.step(a);
+      const double e = target - observed;
+      double k = gain * e;
+      if (k > kAHClamp) k = kAHClamp;
+      if (k < -kAHClamp) k = -kAHClamp;
+      s.brain.network().clear_bias_oracle();
+      if (k != 0.0)
+        s.brain.network().set_bias_oracle(0, g_beg, g_end, aibaby::Scalar(k * namp));
+      s.brain.step();
+
+      // The sensor's own accuracy, accumulated whatever the controller does with it.
+      tt_sum += f1_seen; to_sum += observed; ++tt_n;
+      if (tt_n == kASTrialTicks) {
+        tr_true.push_back(tt_sum / double(tt_n));
+        tr_obs.push_back(to_sum / double(tt_n));
+        tt_sum = to_sum = 0.0; tt_n = 0;
+      }
+
+      if (t < per / 2) continue;
+      const double f1 = double(s.brain.voice().f1);
+      abs_sum += std::fabs(f1 - target); ++scored;
+      blk_sum += f1; blk_sq += f1 * f1; ++blk_n;
+    }
+    if (blk_n) {
+      const double bm = blk_sum / double(blk_n);
+      within_sq += std::fabs(blk_sq / double(blk_n) - bm * bm);
+    }
+  }
+  row.abs_err = scored ? abs_sum / double(scored) : 0.0;
+  row.sd = std::sqrt(within_sq / double(kAHNTargets));
+
+  // Median split on each series separately, then agreement: exactly selfcode's
+  // two-class readout, and it reads 1.000 at sigma = 0 by construction.
+  if (tr_true.size() >= 8) {
+    std::vector<double> a1 = tr_true, a2 = tr_obs;
+    std::sort(a1.begin(), a1.end());
+    std::sort(a2.begin(), a2.end());
+    const double m1 = a1[a1.size() / 2], m2 = a2[a2.size() / 2];
+    uint64_t agree = 0;
+    for (size_t i = 0; i < tr_true.size(); ++i)
+      if ((tr_true[i] >= m1) == (tr_obs[i] >= m2)) ++agree;
+    row.acc = double(agree) / double(tr_true.size());
+  } else {
+    row.acc = -1.0;
+  }
+  row.ok = true;
+  return row;
+}
+
+// --- sensefit: what the ear's own-F1 estimate actually looks like ---------------
+//
+// `aimsense` needs two numbers about the creature's own error signal and `selfcode`
+// measured neither. selfcode's 0.623 is a TRIAL-level statistic -- 1200-tick means,
+// median split -- and a per-tick controller lives on per-tick SNR. The smoke test
+// made the gap concrete: to reach trial-accuracy 0.623 a WHITE sensor needs sigma
+// 2430 Hz per tick while a CORRELATED one needs 90, and they remove 10.5% and 37.6%
+// of the open-loop error respectively. Matched on selfcode's statistic, they are not
+// the same controller at all.
+//
+// So the sensor model gets calibrated on the ear rather than argued about. Fit a
+// CONTINUOUS decoder of the creature's own F1 from the auditory rate code and report
+// what a controller reading it would actually be handed:
+//
+//   r, held out            how well the estimate tracks F1 at all
+//   residual sd (Hz)       the per-tick sigma aimsense needs
+//   residual tau (ms)      the correlation time aimsense needs
+//   trial-level accuracy   selfcode's own statistic, for comparability with 0.623
+//
+// FEATURES ARE `rate_fast`, NOT SPIKES. selfcode binned spike counts over 1200
+// ticks, which is unavailable to a controller that must act now; a module firing at
+// 5 Hz emits about one spike per millisecond across its whole population, so a
+// per-tick spike vector is nearly empty. `rate_fast` is the smoothed rate the kernel
+// already maintains, it is what any downstream tract sees, and its 50 ms lag is part
+// of the latency budget [[aibaby-loop-latency]] already counts.
+//
+// THE SPLIT IS CONTIGUOUS, NOT INTERLEAVED, and that is forced by the question. An
+// interleaved split puts a sample's neighbours in the training set, which for a
+// signal with a 50 ms time constant leaks the test set outright and would make the
+// residual look whiter than it is -- and the residual's correlation time is the
+// number this experiment exists to produce. [[aibaby-holdout-exact-half]] is about
+// the opposite failure and does not apply here.
+//
+// THREE CONTROLS, because "the ear carries F1" has two ways of being false:
+//   SHUFFLED   test targets permuted: r must collapse to ~0, or the fit is overfit
+//              (33 parameters against thousands of samples, but check rather than
+//              assume).
+//   FIXED F1   selfcode's matched control -- render the self-voice at a constant F1,
+//              keeping amplitude, voicing, f0 and timing. If r survives this, the
+//              decoder is reading the amplitude envelope, which the ear demonstrably
+//              tracks (that is the 3 Hz ring).
+//   SIGNAL ACF F1's OWN correlation time, printed beside the residual's. If they
+//              match, the residual is not sensor noise at all -- it is a slow
+//              component the decoder simply missed, and calling it noise would be a
+//              category error.
+constexpr uint32_t kSFBins = 32;
+constexpr uint64_t kSFSettle = 20000;
+constexpr uint64_t kSFStride = 10;      // sample every 10 ms, = kVocalUpdateMs
+constexpr uint32_t kSFLags = 40;        // ACF out to 400 ms
+constexpr uint32_t kSFReps = 6;
+constexpr double kSFRidge = 1e-3;
+
+struct SFRow {
+  double r = 0.0, resid_sd = 0.0, resid_tau = 0.0, sig_sd = 0.0, sig_tau = 0.0;
+  double shuf_r = 0.0, trial_acc = 0.0;
+  // THE DECOMPOSITION, and it is what the first version of this experiment got
+  // wrong. `pred - F1` is not sensor noise: an attenuated estimate misses a
+  // fraction of F1, and what it misses is F1-SHAPED, which is why the raw residual
+  // came out as slow as the signal (279 ms against 334) and tripped the guard.
+  //
+  //     observed = b + alpha * F1 + eta,   eta independent of F1
+  //
+  // ATTENUATION IS FREE TO A PROPORTIONAL CONTROLLER: fed alpha*e it behaves like
+  // gain g*alpha, so raising the gain by 1/alpha undoes it exactly, up to the
+  // delay limit aimfloor mapped. Only `eta` costs anything, and what a controller
+  // actually faces is eta referred back to the input, eta_sd / alpha, which works
+  // out to sd(F1) * sqrt(1 - r^2) / r -- a formula in the two quantities measured
+  // here and no free constants.
+  double alpha = 0.0, eta_sd = 0.0, eta_tau = 0.0, input_sigma = 0.0;
+  bool ok = false;
+};
+
+// Solve (X'X + lambda I) w = X'y by Gauss-Jordan with partial pivoting. n is small
+// and fixed (kSFBins + 1), so no library and no allocation beyond the matrix.
+bool sf_solve(std::vector<double>& A, std::vector<double>& b, uint32_t n) {
+  for (uint32_t c = 0; c < n; ++c) {
+    uint32_t piv = c;
+    for (uint32_t r2 = c + 1; r2 < n; ++r2)
+      if (std::fabs(A[r2 * n + c]) > std::fabs(A[piv * n + c])) piv = r2;
+    if (std::fabs(A[piv * n + c]) < 1e-12) return false;
+    if (piv != c) {
+      for (uint32_t k = 0; k < n; ++k) std::swap(A[piv * n + k], A[c * n + k]);
+      std::swap(b[piv], b[c]);
+    }
+    const double d = A[c * n + c];
+    for (uint32_t k = 0; k < n; ++k) A[c * n + k] /= d;
+    b[c] /= d;
+    for (uint32_t r2 = 0; r2 < n; ++r2) {
+      if (r2 == c) continue;
+      const double f = A[r2 * n + c];
+      if (f == 0.0) continue;
+      for (uint32_t k = 0; k < n; ++k) A[r2 * n + k] -= f * A[c * n + k];
+      b[r2] -= f * b[c];
+    }
+  }
+  return true;
+}
+
+// Correlation time from the autocorrelation function: the integral of the ACF up to
+// its first crossing of zero, which is the standard estimator and needs no
+// exponential assumption. Reported in ms.
+double sf_tau(const std::vector<double>& x, double dt_ms) {
+  const size_t n = x.size();
+  if (n < kSFLags * 4) return 0.0;
+  double m = 0.0;
+  for (double v : x) m += v;
+  m /= double(n);
+  double v0 = 0.0;
+  for (double v : x) v0 += (v - m) * (v - m);
+  v0 /= double(n);
+  if (v0 <= 0.0) return 0.0;
+  double integral = 0.5;   // lag 0 contributes 1/2 in the trapezoid sum
+  for (uint32_t L = 1; L <= kSFLags; ++L) {
+    double c = 0.0;
+    for (size_t i = 0; i + L < n; ++i) c += (x[i] - m) * (x[i + L] - m);
+    c /= double(n - L);
+    const double rho = c / v0;
+    if (rho <= 0.0) break;
+    integral += rho;
+  }
+  return integral * dt_ms;
+}
+
+SFRow run_sensefit_arm(const std::vector<uint8_t>& blob, uint64_t ticks, uint64_t seed,
+                       bool fixed_f1) {
+  SFRow row;
+  std::vector<uint8_t> local = blob;
+  std::memcpy(local.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+  Session s;
+  std::string error;
+  if (!s.init(local, error)) return row;
+  const aibaby::DnaAudio& acfg = s.dna.header().audio;
+  Ear ear;
+  if (!ear.configure(acfg, error)) return row;
+  const uint32_t spt = acfg.sample_rate / 1000;
+  std::vector<float> pcm(spt, 0.0f);
+  const int32_t am = s.dna.module_with_role(aibaby::ModuleRole::kAuditory);
+  if (am < 0) return row;
+  const aibaby::ModuleState& ams = s.brain.network().module(uint32_t(am));
+  if (fixed_f1) {
+    const aibaby::DnaVocal& vc = s.dna.header().vocal;
+    ear.set_self_f1_fixed(0.5f * (vc.f1_min + vc.f1_max));
+  }
+  for (uint64_t t = 0; t < kSFSettle; ++t) {
+    ear.tick(s.brain, pcm.data(), spt);
+    s.brain.step();
+  }
+
+  const uint32_t nf = kSFBins + 1;   // + intercept
+  std::vector<std::vector<double>> X;
+  std::vector<double> y;
+  const uint64_t run = ticks > kSFSettle ? ticks - kSFSettle : 0;
+  for (uint64_t t = 0; t < run; ++t) {
+    std::fill(pcm.begin(), pcm.end(), 0.0f);   // silent room: only its own voice
+    ear.tick(s.brain, pcm.data(), spt);
+    s.brain.step();
+    if (t % kSFStride) continue;
+    std::vector<double> f(nf, 0.0);
+    const aibaby::Network& net = s.brain.network();
+    std::vector<uint32_t> cnt(kSFBins, 0);
+    for (uint32_t k = 0; k < ams.count; ++k) {
+      const uint32_t b = (k * kSFBins) / ams.count;
+      f[b] += double(net.rate_fast(ams.begin + k));
+      ++cnt[b];
+    }
+    for (uint32_t b = 0; b < kSFBins; ++b) if (cnt[b]) f[b] /= double(cnt[b]);
+    f[kSFBins] = 1.0;
+    X.push_back(std::move(f));
+    y.push_back(double(s.brain.voice().f1));
+  }
+  if (X.size() < 400) return row;
+
+  // CONTIGUOUS halves. See the header: an interleaved split leaks a 50 ms-smoothed
+  // signal into its own test set and would whiten the residual being measured.
+  const size_t ntr = X.size() / 2;
+  std::vector<double> A(size_t(nf) * nf, 0.0), bvec(nf, 0.0);
+  for (size_t i = 0; i < ntr; ++i) {
+    for (uint32_t a = 0; a < nf; ++a) {
+      bvec[a] += X[i][a] * y[i];
+      for (uint32_t b = 0; b < nf; ++b) A[size_t(a) * nf + b] += X[i][a] * X[i][b];
+    }
+  }
+  for (uint32_t a = 0; a < nf; ++a) A[size_t(a) * nf + a] += kSFRidge * double(ntr);
+  if (!sf_solve(A, bvec, nf)) return row;
+
+  std::vector<double> resid, truth, pred;
+  for (size_t i = ntr; i < X.size(); ++i) {
+    double p = 0.0;
+    for (uint32_t a = 0; a < nf; ++a) p += bvec[a] * X[i][a];
+    pred.push_back(p); truth.push_back(y[i]); resid.push_back(p - y[i]);
+  }
+  auto corr = [](const std::vector<double>& u, const std::vector<double>& v) {
+    const size_t n = u.size();
+    double mu = 0.0, mv = 0.0;
+    for (size_t i = 0; i < n; ++i) { mu += u[i]; mv += v[i]; }
+    mu /= double(n); mv /= double(n);
+    double su = 0.0, sv = 0.0, c = 0.0;
+    for (size_t i = 0; i < n; ++i) {
+      su += (u[i] - mu) * (u[i] - mu);
+      sv += (v[i] - mv) * (v[i] - mv);
+      c += (u[i] - mu) * (v[i] - mv);
+    }
+    return (su > 0.0 && sv > 0.0) ? c / std::sqrt(su * sv) : 0.0;
+  };
+  row.r = corr(pred, truth);
+  {
+    double m = 0.0;
+    for (double v : resid) m += v;
+    m /= double(resid.size());
+    double q = 0.0;
+    for (double v : resid) q += (v - m) * (v - m);
+    row.resid_sd = std::sqrt(q / double(resid.size()));
+  }
+  {
+    double m = 0.0;
+    for (double v : truth) m += v;
+    m /= double(truth.size());
+    double q = 0.0;
+    for (double v : truth) q += (v - m) * (v - m);
+    row.sig_sd = std::sqrt(q / double(truth.size()));
+  }
+  row.resid_tau = sf_tau(resid, double(kSFStride));
+  row.sig_tau = sf_tau(truth, double(kSFStride));
+
+  // alpha = cov(pred, F1) / var(F1), then eta = pred - alpha * F1 with its own ACF.
+  {
+    double mp = 0.0, mt = 0.0;
+    for (size_t i = 0; i < pred.size(); ++i) { mp += pred[i]; mt += truth[i]; }
+    mp /= double(pred.size()); mt /= double(truth.size());
+    double cov = 0.0, vt = 0.0;
+    for (size_t i = 0; i < pred.size(); ++i) {
+      cov += (pred[i] - mp) * (truth[i] - mt);
+      vt += (truth[i] - mt) * (truth[i] - mt);
+    }
+    cov /= double(pred.size()); vt /= double(truth.size());
+    row.alpha = vt > 0.0 ? cov / vt : 0.0;
+    std::vector<double> eta(pred.size(), 0.0);
+    for (size_t i = 0; i < pred.size(); ++i)
+      eta[i] = (pred[i] - mp) - row.alpha * (truth[i] - mt);
+    double q = 0.0;
+    for (double v : eta) q += v * v;
+    row.eta_sd = std::sqrt(q / double(eta.size()));
+    row.eta_tau = sf_tau(eta, double(kSFStride));
+    // Input-referred: what the controller sees on the F1 scale once the gain has
+    // undone the attenuation. Equals sd(F1)*sqrt(1-r^2)/r analytically, and the
+    // two agree here because alpha and r are measured on the same samples.
+    row.input_sigma = row.alpha != 0.0 ? row.eta_sd / std::fabs(row.alpha) : 0.0;
+  }
+
+  // SHUFFLED control: permute the held-out targets and re-score. r must collapse.
+  {
+    std::vector<double> sh = truth;
+    aibaby::Rng g;
+    g.seed(seed ^ 0x5F17u);
+    for (size_t i = sh.size(); i > 1; --i) {
+      const size_t j = size_t(g.next() % uint32_t(i));
+      std::swap(sh[i - 1], sh[j]);
+    }
+    row.shuf_r = corr(pred, sh);
+  }
+  // selfcode's statistic on the same held-out data, so 0.623 is comparable.
+  {
+    const size_t per = size_t(1200 / kSFStride);
+    std::vector<double> tt, tp;
+    for (size_t i = 0; i + per <= truth.size(); i += per) {
+      double a = 0.0, b = 0.0;
+      for (size_t k = 0; k < per; ++k) { a += truth[i + k]; b += pred[i + k]; }
+      tt.push_back(a / double(per)); tp.push_back(b / double(per));
+    }
+    if (tt.size() >= 8) {
+      std::vector<double> s1 = tt, s2 = tp;
+      std::sort(s1.begin(), s1.end());
+      std::sort(s2.begin(), s2.end());
+      const double m1 = s1[s1.size() / 2], m2 = s2[s2.size() / 2];
+      uint32_t agree = 0;
+      for (size_t i = 0; i < tt.size(); ++i)
+        if ((tt[i] >= m1) == (tp[i] >= m2)) ++agree;
+      row.trial_acc = double(agree) / double(tt.size());
+    }
+  }
+  row.ok = true;
+  return row;
+}
+
+bool run_sensefit(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  aibaby::Dna dna;
+  if (dna.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) return false;
+  instrument("sensefit", dna.header().seed ^ 0x5F17u, kSFReps, "creatures");
+  std::printf("  the question      what does the creature's OWN error signal look\n"
+              "                    like? aimsense needs a per-tick sigma and a\n"
+              "                    correlation time; selfcode measured neither.\n");
+  std::printf("  why it matters    matched on selfcode's TRIAL accuracy, a white and\n"
+              "                    a correlated sensor remove 10.5%% and 37.6%% of the\n"
+              "                    open-loop error. The difference is the number\n"
+              "                    below, so it is measured and not argued.\n\n");
+
+  struct Both { SFRow live, fixed; bool ok = false; };
+  const std::vector<Both> cells = parallel_reps<Both>(kSFReps, [&](uint32_t r) {
+    Both o;
+    const uint64_t seed = dna.header().seed + r * 7919ull;
+    o.live = run_sensefit_arm(blob, ticks, seed, false);
+    o.fixed = run_sensefit_arm(blob, ticks, seed, true);
+    o.ok = o.live.ok && o.fixed.ok;
+    return o;
+  });
+
+  std::printf("  seed   r(held out)  shuffled   FIXED-F1 r   resid sd   resid tau"
+              "   F1 sd   F1 tau   trial acc\n");
+  std::vector<double> vr, vsh, vfx, vsd, vtau, vssd, vstau, vacc;
+  std::vector<double> val, vet, vett, vis;
+  for (uint32_t r = 0; r < cells.size(); ++r) {
+    if (!cells[r].ok) { std::printf("  %-5u INCONCLUSIVE\n", r); continue; }
+    const SFRow& a = cells[r].live;
+    const SFRow& f = cells[r].fixed;
+    std::printf("  %-5u %+10.3f  %+8.3f   %+10.3f  %8.1f  %8.1f  %6.1f  %6.1f"
+                "     %.3f\n",
+                r, a.r, a.shuf_r, f.r, a.resid_sd, a.resid_tau, a.sig_sd, a.sig_tau,
+                a.trial_acc);
+    vr.push_back(a.r); vsh.push_back(a.shuf_r); vfx.push_back(f.r);
+    vsd.push_back(a.resid_sd); vtau.push_back(a.resid_tau);
+    vssd.push_back(a.sig_sd); vstau.push_back(a.sig_tau); vacc.push_back(a.trial_acc);
+    val.push_back(a.alpha); vet.push_back(a.eta_sd); vett.push_back(a.eta_tau);
+    vis.push_back(a.input_sigma);
+  }
+  if (vr.size() < 3) { std::printf("\n  too few usable creatures\n"); return false; }
+  double e[8];
+  const double mr = ctx_mean_se(vr, &e[0]), msh = ctx_mean_se(vsh, &e[1]);
+  const double mfx = ctx_mean_se(vfx, &e[2]), msd = ctx_mean_se(vsd, &e[3]);
+  const double mtau = ctx_mean_se(vtau, &e[4]), mssd = ctx_mean_se(vssd, &e[5]);
+  const double mstau = ctx_mean_se(vstau, &e[6]), macc = ctx_mean_se(vacc, &e[7]);
+  std::printf("\n  r held out        %+.3f +/- %.3f\n", mr, e[0]);
+  std::printf("  shuffled control  %+.3f +/- %.3f   (must be ~0)\n", msh, e[1]);
+  std::printf("  FIXED-F1 control  %+.3f +/- %.3f   (selfcode's matched control)\n",
+              mfx, e[2]);
+  std::printf("  excess over fixed %+.3f +/- %.3f\n", mr - mfx,
+              std::sqrt(e[0] * e[0] + e[2] * e[2]));
+  double e2[4];
+  const double mal = ctx_mean_se(val, &e2[0]), met = ctx_mean_se(vet, &e2[1]);
+  const double mett = ctx_mean_se(vett, &e2[2]), mis = ctx_mean_se(vis, &e2[3]);
+  std::printf("\n  THE RAW RESIDUAL, which is NOT the sensor's noise\n");
+  std::printf("    pred - F1 sigma           %.1f +/- %.1f Hz\n", msd, e[3]);
+  std::printf("    its correlation tau       %.1f +/- %.1f ms\n", mtau, e[4]);
+  std::printf("    F1's own sd / tau         %.1f Hz / %.1f ms\n", mssd, mstau);
+  std::printf("    -> the raw residual is %.0f%% of the signal's size and %.0f%% of its\n"
+              "       correlation time, because what an attenuated decoder misses IS\n"
+              "       F1-shaped. Decompose before calling any of it noise.\n",
+              mssd > 0.0 ? 100.0 * msd / mssd : 0.0,
+              mstau > 0.0 ? 100.0 * mtau / mstau : 0.0);
+  std::printf("\n  THE DECOMPOSITION: observed = b + alpha*F1 + eta\n");
+  std::printf("    alpha (attenuation)       %.4f +/- %.4f   -> a controller undoes\n"
+              "                                                 this with gain x%.1f\n",
+              mal, e2[0], mal != 0.0 ? 1.0 / mal : 0.0);
+  std::printf("    eta sigma (independent)   %.1f +/- %.1f Hz\n", met, e2[1]);
+  std::printf("    eta correlation tau       %.1f +/- %.1f ms\n", mett, e2[2]);
+  std::printf("    INPUT-REFERRED sigma      %.1f +/- %.1f Hz   <- what aimsense needs\n",
+              mis, e2[3]);
+  {   // The analytic form, as a self-check on the arithmetic rather than a result.
+    const double pred_form = mr != 0.0 ? mssd * std::sqrt(std::fabs(1.0 - mr * mr)) / mr
+                                       : 0.0;
+    std::printf("    self-check  sd(F1)*sqrt(1-r^2)/r = %.1f Hz against the measured"
+                " %.1f\n", pred_form, mis);
+  }
+  std::printf("    against F1's own sd       %.1f Hz  -> signal-to-noise %.2f\n",
+              mssd, mis > 0.0 ? mssd / mis : 0.0);
+  std::printf("    trial-level accuracy      %.3f +/- %.3f   (selfcode: 0.623)\n",
+              macc, e[7]);
+
+  // GUARDS.
+  const bool shuf_ok = std::fabs(msh) < 0.1;
+  const bool fixed_ok = (mr - mfx) > 2.0 * std::sqrt(e[0] * e[0] + e[2] * e[2]);
+  // GUARD 3 now runs on `eta`, because on the RAW residual it fired on the
+  // attenuation -- correctly, which is how the decomposition got built. eta must be
+  // faster than F1 itself, or there is still signal structure hiding in it.
+  const bool tau_distinct = mstau > 0.0 && mett < 0.6 * mstau;
+  std::printf("\n  GUARD  shuffled collapses?            %s\n", shuf_ok ? "OK" : "NO -- the fit is not honest");
+  std::printf("  GUARD  beats the FIXED-F1 control?    %s\n", fixed_ok ? "OK" : "NO -- it may be reading amplitude");
+  std::printf("  GUARD  eta faster than F1 itself?     %s\n",
+              tau_distinct ? "OK, eta is genuinely noise"
+                           : "NO -- signal structure is still hiding in eta");
+  if (!shuf_ok || !fixed_ok) {
+    std::printf("\n  VOID: a control failed, so the two numbers above are not a\n"
+                "  description of the creature's error signal. Do not feed them to\n"
+                "  aimsense.\n");
+    return true;
+  }
+  std::printf("\n  HAND THESE TO aimsense: input-referred sigma %.0f Hz at tau %.0f ms,\n"
+              "  with the controller gain raised x%.1f to undo the attenuation. The raw\n"
+              "  residual (%.0f Hz) is the WRONG number to hand over and it is the one\n"
+              "  this experiment was built to compute before the decomposition existed.\n",
+              mis, mett, mal != 0.0 ? 1.0 / mal : 0.0, msd);
+  std::printf("  Trial accuracy %.3f against selfcode's 0.623 is the comparability\n"
+              "  check: a CONTINUOUS regression and a binary median split on binned\n"
+              "  spike counts are different decoders, so they need not agree exactly,\n"
+              "  but both must be well clear of 0.500 and both are.\n", macc);
+  return true;
+}
+
+bool run_aimsense(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  aibaby::Dna dna;
+  if (dna.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) return false;
+  const int32_t vmod = dna.module_with_role(aibaby::ModuleRole::kVocal);
+  if (vmod < 0) { std::printf("  no vocal module\n"); return false; }
+
+  instrument("aimsense", dna.header().seed ^ 0xA15Eu, kASReps, "creatures");
+  std::printf("  the question      aimfloor's 6.0 Hz used a PERFECT error signal.\n"
+              "                    selfcode measured what the ear actually knows\n"
+              "                    about the creature's own F1: 0.623 held-out\n"
+              "                    two-class. Does a signal THAT coarse still buy\n"
+              "                    error worth having?\n");
+  std::printf("  why it matters    it moves the bound from the PLANT to the SENSOR,\n"
+              "                    and it decides whether a learning rule is worth\n"
+              "                    building at all.\n");
+  std::printf("  the design        the noise level is NOT converted from 0.623. The\n"
+              "                    sensor is corrupted on a wide ladder and the\n"
+              "                    achieved accuracy is MEASURED with selfcode's own\n"
+              "                    statistic, so the x-axis needs no assumption.\n\n");
+
+  const uint32_t njobs = kASReps * kASDelays * kASCorrs * kASSigmas * kASGains;
+  const std::vector<ASRow> rows = parallel_reps<ASRow>(njobs, [&](uint32_t job) {
+    uint32_t q = job;
+    const uint32_t g = q % kASGains;           q /= kASGains;
+    const uint32_t si = q % kASSigmas;         q /= kASSigmas;
+    const uint32_t c = q % kASCorrs;           q /= kASCorrs;
+    const uint32_t d = q % kASDelays;          q /= kASDelays;
+    const uint32_t r = q;
+    const uint64_t seed = dna.header().seed + r * 7919ull;
+    // The noise stream depends on the sensor configuration and the rep, never on the
+    // gain -- so the four gain arms of one cell see the SAME noise realisation and
+    // the gain contrast is not a contrast between two draws of noise.
+    const uint64_t nseed = 0x9E3779B97F4A7C15ull * (seed + 1ull) ^
+                           (uint64_t(si) << 17) ^ (uint64_t(c) << 29) ^
+                           (uint64_t(d) << 41);
+    return run_aimsense_arm(blob, ticks, seed, vmod, kAHGain * kASGainMul[g],
+                            kASDelayMs[d], kASSigma[si], kASCorrTauMs[c], nseed);
+  });
+  auto at = [&](uint32_t r, uint32_t d, uint32_t c, uint32_t si, uint32_t g)
+      -> const ASRow& {
+    return rows[(((size_t(r) * kASDelays + d) * kASCorrs + c) * kASSigmas + si) *
+                    kASGains + g];
+  };
+
+  // Per (delay, corr, sigma): measured accuracy, open-loop error, best closed error.
+  double acc[kASDelays][kASCorrs][kASSigmas];
+  double open_e[kASDelays][kASCorrs][kASSigmas];
+  double best_e[kASDelays][kASCorrs][kASSigmas];
+  uint32_t best_g[kASDelays][kASCorrs][kASSigmas];
+  double best_se[kASDelays][kASCorrs][kASSigmas];
+
+  for (uint32_t d = 0; d < kASDelays; ++d) {
+    for (uint32_t c = 0; c < kASCorrs; ++c) {
+      if (kASCorrTauMs[c] > 0.0)
+        std::printf("  delay %.0f ms, sensor noise CORRELATED tau %.0f ms%s\n",
+                    kASDelayMs[d], kASCorrTauMs[c],
+                    c == kASCalCorr ? "   <- MEASURED" : "");
+      else
+        std::printf("  delay %.0f ms, sensor noise white\n", kASDelayMs[d]);
+      std::printf("    sigma(Hz)  measured acc   open       g=%.4f   g=%.4f   g=%.4f"
+                  "     best   removed\n",
+                  kAHGain * kASGainMul[1], kAHGain * kASGainMul[2],
+                  kAHGain * kASGainMul[3]);
+      for (uint32_t si = 0; si < kASSigmas; ++si) {
+        std::vector<double> va;
+        for (uint32_t r = 0; r < kASReps; ++r) {
+          const ASRow& x = at(r, d, c, si, 0);
+          if (x.ok && x.acc >= 0.0) va.push_back(x.acc);
+        }
+        double dummy;
+        acc[d][c][si] = va.empty() ? -1.0 : ctx_mean_se(va, &dummy);
+        best_e[d][c][si] = 1e9; best_g[d][c][si] = 0; best_se[d][c][si] = 0.0;
+        std::printf("    %8.0f   %8.3f    ", kASSigma[si], acc[d][c][si]);
+        for (uint32_t g = 0; g < kASGains; ++g) {
+          std::vector<double> ve;
+          for (uint32_t r = 0; r < kASReps; ++r) {
+            const ASRow& x = at(r, d, c, si, g);
+            if (x.ok) ve.push_back(x.abs_err);
+          }
+          if (ve.empty()) { std::printf("       -"); continue; }
+          double se;
+          const double m = ctx_mean_se(ve, &se);
+          std::printf("%8.1f", m);
+          if (g == 0) open_e[d][c][si] = m;
+          else if (m < best_e[d][c][si]) {
+            best_e[d][c][si] = m; best_g[d][c][si] = g; best_se[d][c][si] = se;
+          }
+        }
+        const double rem = open_e[d][c][si] > 0.0
+            ? 100.0 * (open_e[d][c][si] - best_e[d][c][si]) / open_e[d][c][si] : 0.0;
+        std::printf("  %7.1f  %5.1f%%\n", best_e[d][c][si], rem);
+      }
+      std::printf("\n");
+    }
+  }
+
+  // GUARD 2, AND IT HAS TO COMPARE AT MATCHED GAIN. The first version compared
+  // `best` against aimfloor's `best` and VOIDED a perfectly good run, because this
+  // grid's gain ladder is not aimfloor's -- at 0 ms aimfloor's optimum was 0.016 and
+  // an earlier version of this grid stopped at 0.004, so the two `best` columns were
+  // never the same quantity. It was testing a compound claim: "the sensor model is
+  // transparent" AND "the grid contains aimfloor's optimum". Only the first is the
+  // guard's business, and matched-gain cells test exactly it.
+  //
+  // aimfloor on this plant, sigma = 0: at 0 ms, gain 0.016 -> 6.0 and gain 0.004 ->
+  // 16.5; at 905 ms, gain 0.001 -> 47.5.
+  bool repro = true;
+  {
+    struct Ref { uint32_t d; uint32_t g; double want; };
+    // gain indices into kASGainMul: 2 = 0.001, 3 = 0.004, 4 = 0.016
+    const Ref refs[] = {{0, 4, 6.0}, {0, 3, 16.5}, {kASDelays - 1, 2, 47.5}};
+    std::printf("  GUARD  sigma=0 reproduces aimfloor AT MATCHED GAIN?\n");
+    for (const Ref& rf : refs) {
+      std::vector<double> ve;
+      for (uint32_t r = 0; r < kASReps; ++r) {
+        const ASRow& x = at(r, rf.d, 0, 0, rf.g);
+        if (x.ok) ve.push_back(x.abs_err);
+      }
+      if (ve.empty()) { repro = false; continue; }
+      double se;
+      const double m = ctx_mean_se(ve, &se);
+      const bool ok = std::fabs(m - rf.want) < 2.0;
+      if (!ok) repro = false;
+      std::printf("         %4.0f ms, gain %.5f   %6.1f against aimfloor's %6.1f   %s\n",
+                  kASDelayMs[rf.d], kAHGain * kASGainMul[rf.g], m, rf.want,
+                  ok ? "OK" : "<- MISMATCH");
+    }
+    std::printf("         -> %s\n", repro
+        ? "the sensor model is transparent at zero noise"
+        : "FAILED: the sensor model changed the perfect-sensor answer");
+  }
+  // And the two correlation arms must be IDENTICAL at sigma = 0, since neither adds
+  // anything -- a free check on the job indexing.
+  std::printf("  GUARD  sigma=0 white == correlated?  %.6f Hz apart   %s\n",
+              std::fabs(best_e[0][0][0] - best_e[0][1][0]),
+              std::fabs(best_e[0][0][0] - best_e[0][1][0]) < 1e-9 ? "OK" : "<- INDEXING IS WRONG");
+
+  // INFORMATIONAL, no longer a guard. It mattered while the primary was matched on
+  // selfcode's trial accuracy; the primary is now the cell sensefit measured, so
+  // where 0.623 falls is context and not a gate. Kept because the comparison to
+  // selfcode is the only bridge between the two experiments' statistics.
+  std::printf("\n  FOR CONTEXT  where does selfcode's 0.623 fall on each ladder?\n");
+  bool spans[kASCorrs] = {false, false, false};
+  for (uint32_t c = 0; c < kASCorrs; ++c) {
+    double lo = 2.0, hi = -1.0;
+    for (uint32_t si = 0; si < kASSigmas; ++si) {
+      const double v = acc[kASDelays - 1][c][si];
+      if (v < 0.0) continue;
+      lo = std::fmin(lo, v); hi = std::fmax(hi, v);
+    }
+    spans[c] = (lo <= 0.623 && hi >= 0.623);
+    std::printf("         %-24s accuracy %.3f .. %.3f   %s\n",
+                kASCorrTauMs[c] > 0.0 ? "CORRELATED" : "white", lo, hi,
+                spans[c] ? "spans 0.623" : "does not reach 0.623");
+  }
+
+  // THE PRIMARY IS THE CALIBRATED CELL, not the rung nearest 0.623. The
+  // trial-accuracy match was shown by this experiment's own smoke test not to
+  // identify a controller, and `sensefit` measured the cell that does. The full grid
+  // stays, because it brackets the +/- 14 Hz on that measurement.
+  std::printf("\n  PRIMARY  the CALIBRATED cell from sensefit: sigma %.1f Hz at tau"
+              " %.0f ms,\n           at the shipped %.0f ms round trip\n",
+              kASSigma[kASCalSigma], kASCorrTauMs[kASCalCorr],
+              kASDelayMs[kASDelays - 1]);
+  double at_rem[kASCorrs];
+  bool cal_ok = false, white_ok = false;
+  {
+    const uint32_t d = kASDelays - 1, si = kASCalSigma;
+    for (uint32_t c = 0; c < kASCorrs; ++c)
+      at_rem[c] = open_e[d][c][si] > 0.0
+          ? 100.0 * (open_e[d][c][si] - best_e[d][c][si]) / open_e[d][c][si] : 0.0;
+    const uint32_t c = kASCalCorr;
+    std::printf("           open %6.1f   best %6.1f at gain %.5f   removed %5.1f%%"
+                "   %s\n", open_e[d][c][si], best_e[d][c][si],
+                kAHGain * kASGainMul[best_g[d][c][si]], at_rem[c],
+                at_rem[c] >= 25.0 ? "CLEARS THE 25% BAR" : "UNDER THE BAR");
+    std::printf("           measured trial accuracy here %.3f  (selfcode 0.623,"
+                " sensefit's own decoder 0.764)\n", acc[d][c][si]);
+    std::printf("           same sigma at the other correlation times: ");
+    for (uint32_t cc = 0; cc < kASCorrs; ++cc)
+      std::printf(" %.0f ms %.1f%%  ", kASCorrTauMs[cc], at_rem[cc]);
+    std::printf("\n");
+    cal_ok = at_rem[c] >= 25.0;
+    white_ok = at_rem[0] >= 25.0;
+    // THE MEASUREMENT HAS AN SE (+/- 2.6 Hz on sigma), so the rungs either side of
+    // it are printed and the verdict is only worth quoting if BOTH clear the bar.
+    if (kASCalSigma > 0 && kASCalSigma + 1 < kASSigmas) {
+      const uint32_t lo = kASCalSigma - 1, hi = kASCalSigma + 1;
+      auto rem_at = [&](uint32_t sj) {
+        return open_e[d][c][sj] > 0.0
+            ? 100.0 * (open_e[d][c][sj] - best_e[d][c][sj]) / open_e[d][c][sj] : 0.0;
+      };
+      const double rl = rem_at(lo), rh = rem_at(hi);
+      std::printf("           bracket on sigma: %.0f Hz -> %.1f%%,  %.0f Hz -> %.1f%%"
+                  "  %s\n", kASSigma[lo], rl, kASSigma[hi], rh,
+                  (rl >= 25.0 && rh >= 25.0) ? "BOTH clear the bar"
+                                             : "<- the bracket straddles the bar");
+      if (!(rl >= 25.0 && rh >= 25.0)) cal_ok = false;
+    }
+  }
+
+  // GUARD 3: the correlation axis must not be inert.
+  const double corr_gap = std::fabs(at_rem[0] - at_rem[kASCalCorr]);
+  std::printf("\n  GUARD  correlation axis live AT THE OPERATING POINT?  white removes"
+              " %.1f%%\n         and the measured tau %.1f%%, %.1f points apart -> %s\n",
+              at_rem[0], at_rem[kASCalCorr], corr_gap,
+              corr_gap >= 5.0 ? "LIVE"
+                              : "INERT HERE. Read the top of the\n"
+                                "         sigma ladder for where it bites: correlation costs nothing at the\n"
+                                "         measured noise and a great deal at 2-4x it, so the operating point\n"
+                                "         sits below the level where the error's TIME STRUCTURE matters.");
+
+  if (!repro) {
+    std::printf("\n  VOID: the sensor model is not transparent at zero noise, so no\n"
+                "  row above is interpretable. Fix that before reading anything.\n");
+    return true;
+  }
+  std::printf("\n");
+  if (cal_ok) {
+    // The sensor's numbers are printed FROM THE CONSTANTS. An earlier version had
+    // them as literals in this sentence and they went stale the moment sensefit ran
+    // at full length -- 77 Hz became 56 -- while the table above was correct. That is
+    // the shared-constants bug class in its smallest form: a number written twice.
+    std::printf("  THE CREATURE'S OWN ERROR SIGNAL IS ENOUGH. At the sensor sensefit\n"
+                "  measured -- %.0f Hz input-referred at tau %.0f ms, against an F1\n"
+                "  whose own sd is 21 Hz -- feedback still removes %.1f%% of the\n"
+                "  open-loop error through the SHIPPED %.0f ms round trip. That is more\n"
+                "  than the entire measured naming effect, so the learning rule is worth\n"
+                "  building and its target is a controller at gain %.5f with the\n"
+                "  attenuation undone.\n",
+                kASSigma[kASCalSigma], kASCorrTauMs[kASCalCorr],
+                at_rem[kASCalCorr], kASDelayMs[kASDelays - 1],
+                kAHGain * kASGainMul[best_g[kASDelays - 1][kASCalCorr][kASCalSigma]]);
+  } else if (white_ok) {
+    std::printf("  ONLY IF THE ERROR WERE WHITE, AND IT IS NOT. At the measured sigma\n"
+                "  the white sensor removes %.1f%% and the measured tau of 60 ms removes\n"
+                "  %.1f%%. sensefit measured eta's correlation time directly, so the\n"
+                "  honest row is the second one and it is under the bar. What a\n"
+                "  controller needs here is not a better error signal but a\n"
+                "  DECORRELATED one -- a statement about the readout, not the loop.\n",
+                at_rem[0], at_rem[kASCalCorr]);
+  } else {
+    std::printf("  THE SENSOR IS THE BOUND. At the error signal the creature actually\n"
+                "  has, the loop removes %.1f%% (white) and %.1f%% (measured tau) of the\n"
+                "  open-loop error at the shipped delay, both under the 25%% bar the\n"
+                "  naming effect sets. aimfloor's 6.0 Hz is a fact about the LARYNX and\n"
+                "  no learning rule fed THIS ear's estimate of its own F1 can collect\n"
+                "  it. The work is in the READOUT selfcode measured, not the controller.\n",
+                at_rem[0], at_rem[kASCalCorr]);
+  }
+  return true;
+}
+
 bool run_aimfloor(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
   (void)verbose;
   aibaby::Dna dna;

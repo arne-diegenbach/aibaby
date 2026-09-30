@@ -1,0 +1,55 @@
+experiment: sensefit
+  instrument        sensefit   trial seed 00000000013578de   6 creatures
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  the question      what does the creature's OWN error signal look
+                    like? aimsense needs a per-tick sigma and a
+                    correlation time; selfcode measured neither.
+  why it matters    matched on selfcode's TRIAL accuracy, a white and
+                    a correlated sensor remove 10.5% and 37.6% of the
+                    open-loop error. The difference is the number
+                    below, so it is measured and not argued.
+
+  seed   r(held out)  shuffled   FIXED-F1 r   resid sd   resid tau   F1 sd   F1 tau   trial acc
+  0         +0.300    +0.001       +0.017      19.6     266.7    20.1   334.2     0.655
+  1         +0.347    +0.012       -0.016      20.7     304.1    22.1   344.1     0.793
+  2         +0.406    -0.003       +0.090      21.3     259.6    23.2   335.9     0.724
+  3         +0.310    +0.001       +0.004      17.9     288.1    18.8   330.7     0.741
+  4         +0.396    -0.006       -0.034      18.1     277.7    19.7   334.2     0.793
+  5         +0.353    +0.001       +0.038      20.8     293.7    22.2   342.0     0.828
+
+  r held out        +0.352 +/- 0.018
+  shuffled control  +0.001 +/- 0.002   (must be ~0)
+  FIXED-F1 control  +0.017 +/- 0.018   (selfcode's matched control)
+  excess over fixed +0.335 +/- 0.025
+
+  THE RAW RESIDUAL, which is NOT the sensor's noise
+    pred - F1 sigma           19.7 +/- 0.6 Hz
+    its correlation tau       281.6 +/- 6.9 ms
+    F1's own sd / tau         21.0 Hz / 336.9 ms
+    -> the raw residual is 94% of the signal's size and 84% of its
+       correlation time, because what an attenuated decoder misses IS
+       F1-shaped. Decompose before calling any of it noise.
+
+  THE DECOMPOSITION: observed = b + alpha*F1 + eta
+    alpha (attenuation)       0.1504 +/- 0.0135   -> a controller undoes
+                                                 this with gain x6.6
+    eta sigma (independent)   8.4 +/- 0.6 Hz
+    eta correlation tau       61.6 +/- 3.9 ms
+    INPUT-REFERRED sigma      56.3 +/- 2.6 Hz   <- what aimsense needs
+    self-check  sd(F1)*sqrt(1-r^2)/r = 55.9 Hz against the measured 56.3
+    against F1's own sd       21.0 Hz  -> signal-to-noise 0.37
+    trial-level accuracy      0.756 +/- 0.025   (selfcode: 0.623)
+
+  GUARD  shuffled collapses?            OK
+  GUARD  beats the FIXED-F1 control?    OK
+  GUARD  eta faster than F1 itself?     OK, eta is genuinely noise
+
+  HAND THESE TO aimsense: input-referred sigma 56 Hz at tau 62 ms,
+  with the controller gain raised x6.6 to undo the attenuation. The raw
+  residual (20 Hz) is the WRONG number to hand over and it is the one
+  this experiment was built to compute before the decomposition existed.
+  Trial accuracy 0.756 against selfcode's 0.623 is the comparability
+  check: a CONTINUOUS regression and a binary median split on binned
+  spike counts are different decoders, so they need not agree exactly,
+  but both must be well clear of 0.500 and both are.
