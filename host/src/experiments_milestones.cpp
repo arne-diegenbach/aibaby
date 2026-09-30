@@ -31115,10 +31115,25 @@ AFRow run_aimfloor_arm(const std::vector<uint8_t>& blob, uint64_t ticks, uint64_
 // genome at 56.2 +/- 3.1 and tau 61.8, so the calibration is a property of the EAR
 // and not of which larynx it was measured on. The ladder is centred on 56 and
 // brackets it, and no attenuation is injected here because a gain change undoes it.
-constexpr double kASSigma[] = {0.0, 25.0, 56.0, 112.0, 240.0};  // Hz, input-referred
+// Rungs 2-5 are the readouts `sensefit` measured, each converted through its
+// validated sigma formula: 56 = the full weighted decoder (the calibrated cell),
+// 124 = the best SINGLE bin, 355 = the population mean, which is all `ffi_gain` can
+// subtract. 25 and 240 bracket. They are RUN rather than read off a ladder, because
+// a projection interpolated into a measurement is how this project has been wrong
+// before.
+// THE EXACT READOUT SIGMAS from a full-length `sensefit`, because the first pass ran
+// the SMOKE test's projections (124, 355) and full length moved them to 92 and 411 --
+// leaving the buildable readout one rung past the last measurement, which is precisely
+// the interpolation this ladder exists to avoid. 56 = the full weighted decoder,
+// 92 = the best SINGLE bin, 411 = the population mean (all `ffi_gain` can subtract),
+// 448 = the two-pool difference.
+constexpr double kASSigma[] = {0.0, 56.0, 92.0, 411.0, 448.0};  // input-referred
 constexpr uint32_t kASSigmas = sizeof(kASSigma) / sizeof(kASSigma[0]);
-constexpr uint32_t kASCalSigma = 2;                       // the MEASURED rung
-constexpr double kASCorrTauMs[] = {0.0, 60.0, 200.0};     // 0 = white; 60 = MEASURED
+constexpr uint32_t kASCalSigma = 1;                       // the MEASURED rung, 56 Hz
+// tau 200 has done its job -- it showed correlation costs nothing at the operating
+// point and a great deal at 2-4x it -- so this pass keeps white (for the sigma=0
+// identity guard) and the MEASURED 60 ms, and spends the arms on sigma instead.
+constexpr double kASCorrTauMs[] = {0.0, 60.0};            // 0 = white; 60 = MEASURED
 constexpr uint32_t kASCorrs = sizeof(kASCorrTauMs) / sizeof(kASCorrTauMs[0]);
 constexpr uint32_t kASCalCorr = 1;
 constexpr double kASGainMul[] = {0.0, 0.25, 1.0, 4.0, 16.0};
@@ -31320,6 +31335,24 @@ struct SFRow {
   // out to sd(F1) * sqrt(1 - r^2) / r -- a formula in the two quantities measured
   // here and no free constants.
   double alpha = 0.0, eta_sd = 0.0, eta_tau = 0.0, input_sigma = 0.0;
+  // WHICH READOUTS CARRY IT, and this is a question about the HARDWARE. A
+  // proportional controller is `g*(target - F1_est)`. The first term is a
+  // context-indexed bias, which [[aibaby-areax-v51]] already built and which works.
+  // The second needs a NEGATIVE weight from auditory onto vocal, and the genome has
+  // exactly one mechanism for that: `ffi_source` + `ffi_gain`, which subtracts
+  // `ffi_gain * pool_fast_[src]` -- the source module's POOLED MEAN RATE, one scalar,
+  // currently 0.0 on vocal.
+  //
+  // So the full 32-bin weighted decoder is not the relevant number for asking what
+  // can be built today. These are:
+  //   r_mean  the population mean alone -- exactly what `ffi_gain` can subtract
+  //   r_bin   the best single bin, CHOSEN ON THE TRAINING HALF so the held-out score
+  //           is not a best-of-32 selection effect
+  //   r_diff  upper half minus lower half, the two-pool readout
+  //           ([[aibaby-differential-readout]]), implementable as ffi from a
+  //           sub-population
+  double r_mean = 0.0, r_bin = 0.0, r_diff = 0.0;
+  uint32_t best_bin = 0;
   bool ok = false;
 };
 
@@ -31442,7 +31475,7 @@ SFRow run_sensefit_arm(const std::vector<uint8_t>& blob, uint64_t ticks, uint64_
     for (uint32_t a = 0; a < nf; ++a) p += bvec[a] * X[i][a];
     pred.push_back(p); truth.push_back(y[i]); resid.push_back(p - y[i]);
   }
-  auto corr = [](const std::vector<double>& u, const std::vector<double>& v) {
+  const auto corr = [](const std::vector<double>& u, const std::vector<double>& v) {
     const size_t n = u.size();
     double mu = 0.0, mv = 0.0;
     for (size_t i = 0; i < n; ++i) { mu += u[i]; mv += v[i]; }
@@ -31498,6 +31531,55 @@ SFRow run_sensefit_arm(const std::vector<uint8_t>& blob, uint64_t ticks, uint64_
     // undone the attenuation. Equals sd(F1)*sqrt(1-r^2)/r analytically, and the
     // two agree here because alpha and r are measured on the same samples.
     row.input_sigma = row.alpha != 0.0 ? row.eta_sd / std::fabs(row.alpha) : 0.0;
+  }
+
+  // THE HARDWARE-CONSTRAINED READOUTS. Same samples, same contiguous split, same
+  // ridge: only the feature set differs, so the comparison is of what a readout can
+  // SEE and not of how it was fitted.
+  {
+    auto fit_r = [&](auto&& feat) {   // generic lambda: no <functional> needed
+      // One feature plus intercept: a 2x2 solve.
+      double s11 = 0.0, s1 = 0.0, n2 = 0.0, sy = 0.0, s1y = 0.0;
+      for (size_t i = 0; i < ntr; ++i) {
+        const double u = feat(X[i]);
+        s11 += u * u; s1 += u; n2 += 1.0; sy += y[i]; s1y += u * y[i];
+      }
+      std::vector<double> A2{s11 + kSFRidge * n2, s1, s1, n2};
+      std::vector<double> b2{s1y, sy};
+      if (!sf_solve(A2, b2, 2)) return 0.0;
+      std::vector<double> pr, tr2;
+      for (size_t i = ntr; i < X.size(); ++i) {
+        pr.push_back(b2[0] * feat(X[i]) + b2[1]);
+        tr2.push_back(y[i]);
+      }
+      return corr(pr, tr2);
+    };
+    row.r_mean = fit_r([](const std::vector<double>& f) {
+      double m = 0.0;
+      for (uint32_t b = 0; b < kSFBins; ++b) m += f[b];
+      return m / double(kSFBins);
+    });
+    row.r_diff = fit_r([](const std::vector<double>& f) {
+      double lo = 0.0, hi = 0.0;
+      for (uint32_t b = 0; b < kSFBins / 2; ++b) lo += f[b];
+      for (uint32_t b = kSFBins / 2; b < kSFBins; ++b) hi += f[b];
+      return (hi - lo) / double(kSFBins / 2);
+    });
+    // The best bin is chosen on the TRAINING half by its training correlation, then
+    // scored once on the held-out half. Choosing it on the held-out score would be a
+    // best-of-32 selection effect reported as a measurement.
+    {
+      uint32_t pick = 0;
+      double bestc = -2.0;
+      for (uint32_t b = 0; b < kSFBins; ++b) {
+        std::vector<double> u, v;
+        for (size_t i = 0; i < ntr; ++i) { u.push_back(X[i][b]); v.push_back(y[i]); }
+        const double c = std::fabs(corr(u, v));
+        if (c > bestc) { bestc = c; pick = b; }
+      }
+      row.best_bin = pick;
+      row.r_bin = fit_r([pick](const std::vector<double>& f) { return f[pick]; });
+    }
   }
 
   // SHUFFLED control: permute the held-out targets and re-score. r must collapse.
@@ -31561,7 +31643,7 @@ bool run_sensefit(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
   std::printf("  seed   r(held out)  shuffled   FIXED-F1 r   resid sd   resid tau"
               "   F1 sd   F1 tau   trial acc\n");
   std::vector<double> vr, vsh, vfx, vsd, vtau, vssd, vstau, vacc;
-  std::vector<double> val, vet, vett, vis;
+  std::vector<double> val, vet, vett, vis, vrm, vrb, vrd;
   for (uint32_t r = 0; r < cells.size(); ++r) {
     if (!cells[r].ok) { std::printf("  %-5u INCONCLUSIVE\n", r); continue; }
     const SFRow& a = cells[r].live;
@@ -31570,11 +31652,19 @@ bool run_sensefit(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
                 "     %.3f\n",
                 r, a.r, a.shuf_r, f.r, a.resid_sd, a.resid_tau, a.sig_sd, a.sig_tau,
                 a.trial_acc);
+    // WHICH bin, and it decides what can be BUILT rather than learned. If every
+    // creature's best bin is the same slice of the auditory module, a genome can
+    // hardwire that projection. If they scatter, the weight has to be FOUND, and the
+    // learning rule needs to search even to get its one number.
+    std::printf("        best bin %2u of %u   |r| %.3f\n", a.best_bin, kSFBins,
+                std::fabs(a.r_bin));
     vr.push_back(a.r); vsh.push_back(a.shuf_r); vfx.push_back(f.r);
     vsd.push_back(a.resid_sd); vtau.push_back(a.resid_tau);
     vssd.push_back(a.sig_sd); vstau.push_back(a.sig_tau); vacc.push_back(a.trial_acc);
     val.push_back(a.alpha); vet.push_back(a.eta_sd); vett.push_back(a.eta_tau);
     vis.push_back(a.input_sigma);
+    vrm.push_back(std::fabs(a.r_mean)); vrb.push_back(std::fabs(a.r_bin));
+    vrd.push_back(std::fabs(a.r_diff));
   }
   if (vr.size() < 3) { std::printf("\n  too few usable creatures\n"); return false; }
   double e[8];
@@ -31618,6 +31708,54 @@ bool run_sensefit(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
               mssd, mis > 0.0 ? mssd / mis : 0.0);
   std::printf("    trial-level accuracy      %.3f +/- %.3f   (selfcode: 0.623)\n",
               macc, e[7]);
+
+  // WHAT THE EXISTING HARDWARE CAN SEE. The full decoder is 32 weighted bins; the
+  // genome's only auditory->vocal SUBTRACTION is `ffi_gain * pool_fast_[auditory]`,
+  // which is the population mean and nothing else.
+  {
+    double q[3];
+    const double mm = ctx_mean_se(vrm, &q[0]), mb2 = ctx_mean_se(vrb, &q[1]);
+    const double md2 = ctx_mean_se(vrd, &q[2]);
+    std::printf("\n  WHICH READOUT CARRIES THE ERROR  (|r| held out, same samples,\n"
+                "                                    same split, only the features differ)\n");
+    std::printf("    32 weighted bins          %.3f +/- %.3f\n", std::fabs(mr), e[0]);
+    std::printf("    POPULATION MEAN alone     %.3f +/- %.3f   <- all `ffi_gain` can"
+                " subtract\n", mm, q[0]);
+    std::printf("    upper half minus lower    %.3f +/- %.3f   <- two-pool readout\n",
+                md2, q[2]);
+    std::printf("    best single bin           %.3f +/- %.3f   (bin chosen on the"
+                " TRAINING half)\n", mb2, q[1]);
+    const double frac = std::fabs(mr) > 0.0 ? mm / std::fabs(mr) : 0.0;
+    std::printf("    -> the mean keeps %.0f%% of the weighted decoder's correlation\n",
+                100.0 * frac);
+    // Each readout's implied input-referred sigma, through the formula this
+    // experiment already validated against a direct measurement (55.9 analytic
+    // against 56.3 measured). These are the sigmas aimsense must be RUN at -- quoting
+    // an error-removal by reading across its ladder would be interpolating a
+    // projection into a measurement, and this project has paid for that before.
+    auto sig = [&](double rr) {
+      return rr > 0.0 ? mssd * std::sqrt(std::fabs(1.0 - rr * rr)) / rr : 0.0;
+    };
+    std::printf("    IMPLIED input-referred sigma, sd(F1)*sqrt(1-r^2)/r:\n");
+    std::printf("      weighted %.0f Hz   best bin %.0f Hz   two-pool %.0f Hz"
+                "   MEAN %.0f Hz\n",
+                sig(std::fabs(mr)), sig(mb2), sig(md2), sig(mm));
+    std::printf("      -> RUN aimsense at those sigmas. Do not read them off its\n"
+                "         existing ladder; the formula is validated, the rung is not.\n");
+    if (mm < 2.0 * q[0]) {
+      std::printf("    THE POPULATION MEAN DOES NOT CARRY IT (under 2 SE of zero), so\n"
+                  "    `ffi_gain` cannot serve as the feedback term and the loop needs a\n"
+                  "    WEIGHTED readout. That is a STRUCTURAL requirement -- a new tract\n"
+                  "    or plastic weights -- not a genome number to sweep.\n");
+    } else if (frac >= 0.5) {
+      std::printf("    THE MEAN CARRIES MOST OF IT, so `ffi_source = auditory` with a\n"
+                  "    swept `ffi_gain` on vocal is a ONE-NUMBER controller and is the\n"
+                  "    cheapest thing to try next, before any learning rule.\n");
+    } else {
+      std::printf("    PARTIAL: the mean carries some of it. Worth one ffi_gain sweep,\n"
+                  "    but the weighted readout is where the rest lives.\n");
+    }
+  }
 
   // GUARDS.
   const bool shuf_ok = std::fabs(msh) < 0.1;
@@ -31792,7 +31930,12 @@ bool run_aimsense(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
   // where 0.623 falls is context and not a gate. Kept because the comparison to
   // selfcode is the only bridge between the two experiments' statistics.
   std::printf("\n  FOR CONTEXT  where does selfcode's 0.623 fall on each ladder?\n");
-  bool spans[kASCorrs] = {false, false, false};
+  // Sized from kASCorrs with an empty initialiser. A literal list here goes stale the
+  // moment the axis is resized, and this one did -- three initialisers for bool[2].
+  // The compile error was then swallowed by a `cmake | grep | tail` chain whose exit
+  // status came from `tail`, so a STALE BINARY ran and produced a log that passed
+  // every guard while answering the previous question.
+  bool spans[kASCorrs] = {};
   for (uint32_t c = 0; c < kASCorrs; ++c) {
     double lo = 2.0, hi = -1.0;
     for (uint32_t si = 0; si < kASSigmas; ++si) {

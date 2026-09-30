@@ -13122,6 +13122,96 @@ for; Gina Turrigiano and Niraj Desai on the homeostat whose granularity `aimpool
 priced.
 
 
+## The error signal is localised at F1's own frequency, and the existing hardware destroys it by averaging
+
+`aimsense` showed the creature's own ear is good enough to steer by. That leaves the
+question of what could actually carry it. A proportional controller is
+`g*(target - F1_est)`: the first term is a context-indexed bias, which
+`areax` (DNA v51/v53) already built and proved, and the second needs a NEGATIVE
+auditory->vocal weight. The genome has exactly one mechanism for that — `ffi_source`
+plus `ffi_gain`, subtracting `ffi_gain * pool_fast[src]`, one scalar, sitting at 0.0
+on vocal.
+
+So: does the quantity that hardware can subtract carry the error? Four readouts, same
+samples, same contiguous split, same ridge — only the features differ — each converted
+through the sigma formula `sensefit` validated against a direct measurement, and then
+RUN on `aimsense`'s ladder rather than read across it:
+
+    readout                     |r| held out      sigma     error removed at 905 ms
+    32 weighted bins            0.373 +/- 0.016    56 Hz         51.9%
+    best SINGLE bin             0.236 +/- 0.027    92 Hz         47.9%
+    population mean             0.054 +/- 0.016   411 Hz         25.3%   <- ffi_gain
+    upper half minus lower      0.050 +/- 0.017   448 Hz         22.4%
+
+**ONE WELL-CHOSEN BIN DELIVERS 92% OF WHAT THE FULL 32-WEIGHT DECODER ACHIEVES.** And
+the only readout the existing hardware can subtract lands at **25.3% against a 25%
+bar** — not refused, but with no margin at all, which is the worst place a mechanism
+can sit. The two-pool difference that `differential-readout` proposed for a different
+wall is under the bar.
+
+### And the bin is the same bin, at the frequency you would guess
+
+Chosen on the TRAINING half per creature, so the held-out score is not a best-of-32
+selection effect. Across 12 creatures on two genomes it is bin 4, 5 or 8 of 32 —
+modal 8 — a narrow slice in the lowest quarter of the module. `senses.cpp:132` writes
+cochlear channel `c` into slice `c`, so neuron index is TONOTOPIC and those bins are a
+frequency band:
+
+    bin 4 of 32  ->  342-420 Hz
+    bin 5 of 32  ->  420-504 Hz          F1 targets: 480, 630, 780
+    bin 8 of 32  ->  691-796 Hz          genome F1 range: 250-1000
+
+**The most informative slice of the auditory module is the tonotopic location of F1
+itself.** Not an arbitrary index — the place in the cochlea where F1 lives. That is
+also the whole explanation for the population mean's failure: `ffi_gain` averages that
+slice together with 27 others spanning 50 to 7000 Hz, diluting the signal about
+thirtyfold, which is the gap between r = 0.236 and r = 0.054.
+
+### What to build, and it is not a learning rule
+
+Because the bin is consistent across creatures and genomes, **a genome can hardwire
+it**. The next step is a SLICED inhibitory `auditory->vocal` projection from the
+low-frequency slice onto the F1 group — a DNA change ships OFF and bit-identical —
+rather than a rule that has to search for the weight. `ffi_gain` as it stands is
+refused, and refused for a reason that names its replacement: the mechanism is right
+and its POOLING is wrong.
+
+That also shrinks what any future learning rule would have to do. The search is
+roughly one weight, not thirty-two, which is a far smaller problem than the naming
+line ever faced.
+
+### Two guard bugs in one run, failing in opposite directions
+
+**One failed OPEN and cost a wrong answer I believed.** The run was launched as
+`cmake --build … | grep -E "error:|Built target" | tail -3 && … && ./run.sh`. A
+pipeline's exit status is its LAST command's, so `tail` returned 0 over a compile error
+(`too many initializers for 'bool [2]'` — a literal list that went stale when the
+correlation axis was resized from 3 to 2), `&&` continued, and the STALE binary ran. It
+passed the verify gate, passed the hash check, and passed every guard in the experiment
+— including `sigma=0 reproduces aimfloor at matched gain`, which of course passed,
+because the stale binary is the one that produced those reference numbers. The log it
+wrote was internally consistent and answered the PREVIOUS question. **A guard built to
+catch a broken sensor model cannot catch a binary that predates the question**, and
+this is the same failure `tools/vacuity.sh` had a day earlier, answering off the wrong
+build.
+
+**One failed CLOSED and cost a minute.** The replacement freshness guard,
+`find core host -name '*.cpp' -o -name '*.h' -newer "$BIN"`, binds as
+`(every .cpp) OR (.h AND newer)` because find's `-a` is tighter than `-o`, so it
+refused everything — naming five `core/*.cpp` files as newer than a binary just linked
+from them, which is what gave it away immediately. The parentheses are load-bearing.
+
+Same carelessness, two very different prices. **Write guards so their failure mode is
+refusal.** The build now lives inside the run script under `set -euo pipefail`, and the
+freshness check asks whether the artifact is newer than every input rather than whether
+the tool said OK.
+
+Credit: Gunnar Fant and the source-filter tradition for the reason a formant is
+localised in a tonotopic map at all; Harry Nyquist and Hendrik Bode for the bandwidth
+argument; John Houde and Michael Jordan for altered auditory feedback; Frank Guenther,
+whose DIVA feedback controller now has both a budget and a named wiring target.
+
+
 ## Layout
 
 ```
