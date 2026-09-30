@@ -13421,6 +13421,75 @@ architecture `ctxbias` priced and whose `offaxis` control turns out to corrobora
 result; Gina Turrigiano on the homeostat whose duration-dependence the guard caught.
 
 
+## ctxgrid: four-word naming was never failing — it was scored against a chance level that does not exist
+
+`ctxfour` gave four words a PERFECT context index, read `nearest` at 0.279 against a
+"genuine chance of 0.250", and concluded **four distinctions, not four mappings**. That
+has stood as this project's vocabulary ceiling since 2026-09-06. `aimaxes` suggested it
+might be a layout artefact — its words put /i/ and /u/ 30 Hz apart on F1, the only axis
+anything has ever steered — so this ran the identical experiment with the words moved to
+a 2×2 grid inside the measured reach, two F1 levels × two F2 levels.
+
+    arm       F1 spread      F2 spread      dir - null       nearest
+    off        38.3 +/- 4.2   88.2 +/- 8.2   +0.057 +/- 0.029  0.306 +/- 0.027
+    oracle     46.3 +/- 3.4  101.0 +/- 7.8   +0.202 +/- 0.027  0.466 +/- 0.028
+
+**AND THE `off` ARM IS THE RESULT.** It reads `nearest` **0.306**, not 0.250 — and
+`direction-null` established long ago that a k-word task reads ~0.30 on an
+informationless voice, because the creature's output distribution does not sit
+symmetrically among the targets. `ctxfour`'s off arm read **0.161**. There is no fixed
+chance level for `nearest`: it depends on the vocabulary's geometry relative to where the
+creature already talks, so 1/k is meaningless and only the arm's own control will do.
+
+The arms share seeds, so the contrast is paired and nobody had used the pairing:
+
+    paired excess (oracle - off, n=18)
+      nearest   +0.160 +/- 0.032   5.0 SE
+      F1 side   +0.149 +/- 0.033   4.5 SE
+      F2 side   +0.076 +/- 0.034   2.3 SE
+    ctxfour's same contrast, from its recorded table:  0.279 - 0.161 = +0.118 (3.8 SE)
+
+**SO `ctxfour` WAS NEVER A FAILURE.** Its oracle beat its own control by +0.118 at
+3.8 SE while being reported at chance. The four-word ceiling was a null error, not a
+capacity limit, and it has been on the books for three weeks.
+
+**AND THE LAYOUT CLAIM I SET OUT TO MAKE DOES NOT STAND.** +0.160 against +0.118 is a
+difference of ~0.042 ± 0.045 — under one SE, across different runs, genomes and n. The
+2×2 grid is *not* demonstrably better than the vowel corners. What it is, is a second
+independent demonstration that four-word conditional naming works.
+
+**The second axis contributes and is not established.** F2's paired excess is +0.076 at
+2.3 SE, under the 3 SE bar this project's retractions demand — and the bar is there for a
+reason: `salience-reward` went from +2.6 SE at n=12 to a null at n=16. The one encouraging
+sign is direction: doubling from n=9 to n=18 moved F2's midline accuracy 0.571 → 0.612 and
+its raw significance 2.2 → 4.5 SE, which is the opposite of the salience pattern. Against
+its own control it is still only 2.3 SE.
+
+**The gate passed on its own terms**, and it is the first direct measurement of learned
+dF2 in this project: F2 spread 101.0 Hz, 34% of its projected reach, against F1's 46.3 Hz
+at 39%. Reward writes group 3 at comparable efficiency to group 2 — which `orthovocab`
+had implied (its off-axis lesson moved 0.169 of a 0.410 ask where a colliding one moved
+0.030) but nothing had measured.
+
+**A validity check worth keeping:** on a 2×2 grid `nearest` should factorise as p₁·p₂ if
+the axes are independent, and the off arm's 0.305 predicts its measured 0.306 to two
+thousandths. That is what let the joint number be decomposed at all — and the decomposition
+mattered, because 0.444 at n=9 fitted both "0.70 × 0.63, both axes working" and
+"0.89 × 0.50, F2 at pure chance".
+
+**Fourth appearance of one mistake in one session**, and the sharpest: `aimhold`'s
+precision judged against OPEN when SCRAMBLED was in the table; `aimsense`'s 25% bar that a
+sensorless controller clears; `aimslice`'s projection check comparing two feed-forward
+numbers; and now a verdict scored against 1/k with the real control printed one line
+above it. **A control that exists but is not the denominator is not a control** — and it
+is not enough to build the control, or even to print it.
+
+Credit: Gunnar Fant, whose formant coordinates are what makes a 2×2 vocabulary expressible
+at all; Michale Fee and Adam Goldberg for the bias-from-outside architecture this teaches
+through; Anne Warlaumont and Megan Finnegan, whose refused salience result supplied the
+3 SE bar that keeps the F2 claim honest.
+
+
 ## Layout
 
 ```

@@ -169,6 +169,11 @@ const Spec kSpecs[] = {
      "  8x. Local recurrence cannot carry activity forward at all"},
     {"curriculum", 1200000, Expect::kOpen, Tier::kLong,
      "derived: m3's protocol at a length where teaching works"},
+    {"ctxgrid", 6800000, Expect::kOpen, Tier::kTeach,
+     "  ctxfour's four words laid out 2x2 on BOTH formants and inside the\n"
+     "  MEASURED reach, instead of vowel corners where /i/ and /u/ sit 30 Hz\n"
+     "  apart on the only axis it steered. Was the ceiling the vocabulary or\n"
+     "  its LAYOUT? Measures the learned F2 reach as its own gate"},
     {"aimaxes", 66666, Expect::kOpen, Tier::kLong,
      "  is there a SECOND steerable formant axis, and are the two INDEPENDENT?\n"
      "  The aim line biased one group; senses.cpp maps group 2 to F1 and 3 to F2.\n"
@@ -922,6 +927,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "sensefit") ok = run_sensefit(dna_blob, ticks, verbose);
   else if (name == "aimslice") ok = run_aimslice(dna_blob, ticks, verbose);
   else if (name == "aimaxes") ok = run_aimaxes(dna_blob, ticks, verbose);
+  else if (name == "ctxgrid") ok = run_ctxgrid(dna_blob, ticks, verbose);
   else if (name == "vocabcurve") ok = run_vocabcurve(dna_blob, ticks, verbose);
   else if (name == "ctxprobe") ok = run_ctxprobe(dna_blob, ticks, verbose);
   else if (name == "shapeprobe") ok = run_shapeprobe(dna_blob, ticks, verbose);

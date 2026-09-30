@@ -26292,6 +26292,366 @@ constexpr CtxFourArm kCtxFourArms[] = {
 constexpr uint32_t kCtxFourArmCount = sizeof(kCtxFourArms) / sizeof(kCtxFourArms[0]);
 constexpr uint32_t kCFWords = 4;
 
+// --- ctxgrid: ctxfour's four words, laid out on BOTH formants ---------------------
+//
+// `ctxfour` gave four words a PERFECT context index and got `nearest` at chance
+// (0.279 against 0.250) with formant error GROWING 20%, and that has stood as a
+// vocabulary ceiling: "four distinctions, not four mappings".
+//
+// `aimaxes` says it may have been a vocabulary-LAYOUT artefact instead. ctxfour used
+// `kWords[0..3]`, whose F1 values are 780 / 320 / 350 / 550: **/i/ at 320 and /u/ at
+// 350 are 30 Hz apart on F1** against a produced spread of 71.6 Hz, and 1600 Hz apart
+// on F2 -- the axis nothing in this project has ever steered. Two of its four words
+// were near-degenerate on the only axis in play.
+//
+// And there IS a second axis: biasing vocal group 3 swings F2 by 961 Hz with 0.00
+// cross-talk into F1, both axes covering the same ~50% of their genome range.
+//
+// SO THIS IS THE SAME EXPERIMENT WITH THE WORDS MOVED. A 2x2 grid, two F1 levels x two
+// F2 levels, every target inside the MEASURED learned reach rather than at the corners
+// of the vowel space:
+//
+//   rest F1 629.7, learned reach 118 Hz (ctxscale's asymptote)  ->  +-59  = 571 / 689
+//   rest F2 1666.8, projected reach 300 Hz (aimaxes, scaled)    ->  +-150 = 1517 / 1817
+//
+// The F2 reach is the one number still projected rather than measured, so THIS RUN
+// MEASURES IT: the F2 spread column is the gate, folded into the experiment it gates
+// instead of costing a separate teaching run of the same size.
+//
+// WHAT WOULD REFUSE IT: `nearest` staying at chance. Then the ceiling is real and is
+// about holding four MAPPINGS, exactly as ctxfour concluded, and the axis was never
+// the problem. A second refusal, and it is the one to watch: F2 spread coming out near
+// zero while F1 spread is healthy would mean reward reaches group 2 and not group 3 --
+// the gate failing inside its own run, which voids the naming claim but is itself the
+// finding.
+//
+// `orthovocab` already licenses the attempt: its off-axis second lesson moved 0.169 of
+// a 0.410 ask where a colliding same-axis lesson moved 0.030, at 14.9 SE. Reward does
+// write the other formant.
+constexpr Word kGridWords[4] = {
+    {200.0f, 571.0f, 1517.0f},   // low F1,  low F2
+    {200.0f, 571.0f, 1817.0f},   // low F1,  high F2
+    {200.0f, 689.0f, 1517.0f},   // high F1, low F2
+    {200.0f, 689.0f, 1817.0f},   // high F1, high F2
+};
+
+bool run_ctxgrid(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  aibaby::Dna dna;
+  if (dna.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) {
+    std::printf("  setup failed: the genome does not load\n");
+    return false;
+  }
+  const int32_t ctx_module = dna.module_with_role(aibaby::ModuleRole::kContext);
+  if (ctx_module < 0) {
+    std::printf("  this genome has no kContext module. Build one with NO output\n"
+                "  weight, as ctxfour needs:\n\n"
+                "    python3 tools/genome_add_context.py dna/default.toml ctx.toml \\\n"
+                "        vocal out_w=0\n");
+    return false;
+  }
+  // EIGHTEEN, not ctxfour's nine. The first run put the F2 axis at 2.2 SE above
+  // chance, and this project has RETRACTED THREE FINDINGS that read 2-3 SE at n <= 18
+  // -- salience-reward went from +2.6 SE at n=12 to a null at n=16, and the
+  // smoothing sweep from +0.24 at n=3 to +0.03 at n=6. The test of
+  // underpowered-versus-absent is whether the effect HOLDS as n rises, so it is
+  // bought rather than projected. The F1 axis was already 6.9 SE and does not need it.
+  constexpr uint32_t kReps = 18;
+  // The slot count lives in the HEADER's exploration block, not the module -- taken
+  // from ctxfour rather than guessed, so the two experiments configure the index
+  // identically and any difference between them is the vocabulary alone.
+  const size_t slots_off = offsetof(aibaby::DnaHeader, exploration) +
+                           offsetof(aibaby::DnaExploration, context_slots);
+
+  instrument("ctxgrid", dna.header().seed ^ 0xC61Du, ticks / kVLTrialTicks, "trials");
+  std::printf("  the question      ctxfour got `nearest` at CHANCE on four words with a\n"
+              "                    PERFECT index. Was that a vocabulary ceiling, or a\n"
+              "                    vocabulary laid along ONE axis?\n");
+  std::printf("  the change        the same experiment with the words moved: a 2x2 of\n"
+              "                    two F1 levels x two F2 levels, all inside the\n"
+              "                    MEASURED reach, instead of kWords' vowel corners\n"
+              "                    where /i/ and /u/ sit 30 Hz apart on F1.\n");
+  std::printf("  the gate, folded in   F2 spread is the one number still projected.\n"
+              "                    This run measures it. Near-zero F2 spread with a\n"
+              "                    healthy F1 spread voids the naming claim and IS the\n"
+              "                    finding: reward reaching group 2 and not group 3.\n\n");
+
+  // GUARD 0: the targets must actually be inside the measured reach, or this is not
+  // the experiment it claims to be. Checked here rather than trusted to the comment.
+  {
+    const double rest_f1 = 629.7, rest_f2 = 1666.8, reach_f1 = 59.0, reach_f2 = 150.0;
+    bool inside = true;
+    for (uint32_t q = 0; q < 4; ++q) {
+      if (std::fabs(double(kGridWords[q].f1) - rest_f1) > reach_f1 + 1.0) inside = false;
+      if (std::fabs(double(kGridWords[q].f2) - rest_f2) > reach_f2 + 1.0) inside = false;
+    }
+    std::printf("  GUARD  every target inside the measured reach (F1 %.0f+/-%.0f,"
+                " F2 %.0f+/-%.0f)?  %s\n\n", rest_f1, reach_f1, rest_f2, reach_f2,
+                inside ? "OK" : "NO -- the grid is outside what a bias can deliver");
+    if (!inside) return true;
+  }
+
+  std::vector<std::pair<double, double>> tg;
+  for (uint32_t q = 0; q < kCFWords; ++q)
+    tg.push_back({double(kGridWords[q].f1), double(kGridWords[q].f2)});
+
+  std::printf("  %-6s %-8s %-11s %-11s %-9s %-10s %-10s %s\n", "seed", "arm",
+              "F1 spread", "F2 spread", "ctx_match", "direction", "dir-null", "nearest");
+
+  struct Cell {
+    bool ok = false;
+    uint32_t scored = 0, skipped = 0;
+    double sp1 = 0.0, sp2 = 0.0, match = 0.0, dir = 0.0, dnull = 0.0, near = 0.0;
+    // PER-AXIS accuracy, and it is what decides whether this is 2-D naming at all.
+    // `nearest` on a 2x2 grid factorises: if the F1 side is right with probability p1
+    // and the F2 side with p2, independently, nearest ~ p1*p2. The measured 0.444 fits
+    // 0.70 x 0.63 (both axes working) AND 0.89 x 0.50 (F1 strong, F2 at pure chance),
+    // so the joint number CANNOT tell those apart -- and only the first is a 2x2.
+    double p1 = 0.0, p2 = 0.0;
+  };
+  const std::vector<Cell> cells =
+      parallel_reps<Cell>(kReps * kCtxFourArmCount, [&](uint32_t i) {
+        const uint32_t r = i / kCtxFourArmCount;
+        const uint32_t a = i % kCtxFourArmCount;
+        Cell cell;
+        std::vector<uint8_t> variant = blob;
+        const uint64_t seed = dna.header().seed + r * 7919ull;
+        std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed,
+                    sizeof(seed));
+        const uint32_t sl = kCtxFourArms[a].slots;
+        std::memcpy(variant.data() + slots_off, &sl, sizeof(sl));
+        CtxDrive drive;
+        drive.module = ctx_module;
+        drive.slots = kCFWords;
+        drive.gain = 0.10;
+        Regime reg;
+        reg.praise = kPraiseValue;
+        reg.scold = kScoldValue;
+        // The ONLY difference from ctxfour: the target table.
+        const VLRun run = run_vocallearn_session(variant, ticks, kVLTaught, nullptr, reg,
+                                                 kCtxFourArms[a].target, &drive,
+                                                 kVLScoreFormant, nullptr, kCFWords,
+                                                 kGridWords);
+        cell.scored = run.scored;
+        cell.skipped = run.skipped;
+        if (!run.ok) return cell;
+        // Mean absolute pairwise separation, PER AXIS. ctxfour reported F1 alone,
+        // which is exactly the blind spot this run exists to remove.
+        double s1 = 0.0, s2 = 0.0;
+        uint32_t np = 0;
+        for (uint32_t x = 0; x < kCFWords; ++x)
+          for (uint32_t y = x + 1; y < kCFWords; ++y) {
+            double m1[2] = {0.0, 0.0}, m2[2] = {0.0, 0.0};
+            uint32_t n1[2] = {0u, 0u};
+            for (size_t u = 0; u < run.utt_word.size(); ++u) {
+              const int wd = run.utt_word[u];
+              if (wd == int(x)) { m1[0] += run.utt_f1[u]; m2[0] += run.utt_f2[u]; ++n1[0]; }
+              else if (wd == int(y)) { m1[1] += run.utt_f1[u]; m2[1] += run.utt_f2[u]; ++n1[1]; }
+            }
+            if (!n1[0] || !n1[1]) continue;
+            s1 += std::fabs(m1[0] / n1[0] - m1[1] / n1[1]);
+            s2 += std::fabs(m2[0] / n1[0] - m2[1] / n1[1]);
+            ++np;
+          }
+        cell.sp1 = np ? s1 / np : 0.0;
+        cell.sp2 = np ? s2 / np : 0.0;
+        cell.dir = direction_accuracy(run.utt_f1, run.utt_f2, run.utt_word, tg);
+        cell.dnull = direction_null(run.utt_f1, run.utt_f2, run.utt_word, tg);
+        uint32_t hit = 0, tot = 0;
+        for (size_t u = 0; u < run.utt_word.size(); ++u) {
+          double best = 0.0;
+          int pick = 0;
+          for (uint32_t q = 0; q < kCFWords; ++q) {
+            const double e = formant_error(run.utt_f1[u], run.utt_f2[u], kGridWords[q]);
+            if (e < 0.0) { pick = -1; break; }
+            if (q == 0 || e < best) { best = e; pick = int(q); }
+          }
+          if (pick < 0) continue;
+          if (pick == run.utt_word[u]) ++hit;
+          ++tot;
+        }
+        cell.near = tot ? double(hit) / double(tot) : 0.0;
+        // Which side of each midline, against the side the target word is on. The
+        // midlines are the grid's own, not the creature's, so a creature that never
+        // moves scores 0.5 on each by construction.
+        {
+          const double mid1 = 0.5 * (double(kGridWords[0].f1) + double(kGridWords[2].f1));
+          const double mid2 = 0.5 * (double(kGridWords[0].f2) + double(kGridWords[1].f2));
+          uint32_t h1 = 0, h2 = 0, n = 0;
+          for (size_t u = 0; u < run.utt_word.size(); ++u) {
+            const int wd = run.utt_word[u];
+            if (wd < 0 || wd >= int(kCFWords)) continue;
+            if (run.utt_f1[u] <= 1.0 || run.utt_f2[u] <= 1.0) continue;
+            const bool want1 = double(kGridWords[wd].f1) > mid1;
+            const bool want2 = double(kGridWords[wd].f2) > mid2;
+            if ((run.utt_f1[u] > mid1) == want1) ++h1;
+            if ((run.utt_f2[u] > mid2) == want2) ++h2;
+            ++n;
+          }
+          cell.p1 = n ? double(h1) / double(n) : 0.0;
+          cell.p2 = n ? double(h2) / double(n) : 0.0;
+        }
+        cell.match = run.ctx_match;
+        cell.ok = true;
+        parallel_note("  [%u/%u] seed %u %s  F1 %.1f  F2 %.1f  near %.3f\n",
+                      i + 1, kReps * kCtxFourArmCount, r, kCtxFourArms[a].name,
+                      cell.sp1, cell.sp2, cell.near);
+        return cell;
+      });
+
+  std::vector<double> sp1[kCtxFourArmCount], sp2[kCtxFourArmCount];
+  std::vector<double> dir[kCtxFourArmCount], dnul[kCtxFourArmCount];
+  std::vector<double> near[kCtxFourArmCount], mat[kCtxFourArmCount];
+  std::vector<double> ax1[kCtxFourArmCount], ax2[kCtxFourArmCount];
+  for (uint32_t i = 0; i < kReps * kCtxFourArmCount; ++i) {
+    const uint32_t r = i / kCtxFourArmCount;
+    const uint32_t a = i % kCtxFourArmCount;
+    const Cell& c = cells[i];
+    if (!c.ok) {
+      std::printf("  %-6u %-8s (inconclusive: %u scored, %u skipped)\n", r,
+                  kCtxFourArms[a].name, c.scored, c.skipped);
+      continue;
+    }
+    std::printf("  %-6u %-8s %-11.1f %-11.1f %-9.3f %-10.3f %-10.3f %.3f\n", r,
+                kCtxFourArms[a].name, c.sp1, c.sp2, c.match, c.dir,
+                c.dir - c.dnull, c.near);
+    sp1[a].push_back(c.sp1); sp2[a].push_back(c.sp2);
+    ax1[a].push_back(c.p1); ax2[a].push_back(c.p2);
+    dir[a].push_back(c.dir); dnul[a].push_back(c.dnull);
+    near[a].push_back(c.near); mat[a].push_back(c.match);
+  }
+
+  std::printf("\n  arm       F1 spread      F2 spread      dir - null       nearest\n");
+  double near_m[kCtxFourArmCount] = {}, near_e[kCtxFourArmCount] = {};
+  double sp2_m[kCtxFourArmCount] = {}, sp1_m[kCtxFourArmCount] = {};
+  for (uint32_t a = 0; a < kCtxFourArmCount; ++a) {
+    if (sp1[a].size() < 3) { std::printf("  %-8s too few usable creatures\n",
+                                          kCtxFourArms[a].name); continue; }
+    double e1, e2, e3, e4, e5;
+    sp1_m[a] = ctx_mean_se(sp1[a], &e1);
+    sp2_m[a] = ctx_mean_se(sp2[a], &e2);
+    std::vector<double> exc;
+    for (size_t q = 0; q < dir[a].size() && q < dnul[a].size(); ++q)
+      exc.push_back(dir[a][q] - dnul[a][q]);
+    const double dx = ctx_mean_se(exc, &e3);
+    near_m[a] = ctx_mean_se(near[a], &near_e[a]);
+    (void)e4; (void)e5;
+    std::printf("  %-8s  %6.1f +/- %-5.1f %6.1f +/- %-5.1f  %+.3f +/- %-6.3f  %.3f +/- %.3f\n",
+                kCtxFourArms[a].name, sp1_m[a], e1, sp2_m[a], e2, dx, e3,
+                near_m[a], near_e[a]);
+  }
+
+  // THE DECOMPOSITION, and it decides whether this is 2-D naming or one axis.
+  std::printf("\n  PER-AXIS  which side of each midline, against the target's side\n");
+  double mp1[kCtxFourArmCount] = {}, mp2[kCtxFourArmCount] = {};
+  double ep1[kCtxFourArmCount] = {}, ep2[kCtxFourArmCount] = {};
+  for (uint32_t a = 0; a < kCtxFourArmCount; ++a) {
+    if (ax1[a].size() < 3) continue;
+    mp1[a] = ctx_mean_se(ax1[a], &ep1[a]);
+    mp2[a] = ctx_mean_se(ax2[a], &ep2[a]);
+    std::printf("    %-8s F1 side %.3f +/- %.3f   F2 side %.3f +/- %.3f"
+                "   product %.3f\n",
+                kCtxFourArms[a].name, mp1[a], ep1[a], mp2[a], ep2[a], mp1[a] * mp2[a]);
+  }
+
+  // THE GATE, MEASURED HERE RATHER THAN ASSUMED. aimaxes projected the learned F2
+  // reach by scaling its oracle ladder; this is the first direct number.
+  std::printf("\n  THE GATE  learned reach per axis, in the oracle arm\n");
+  const uint32_t orc = kCtxFourArmCount - 1;
+  std::printf("    F1 spread %.1f Hz of a 118 Hz learned reach   (%.0f%%)\n",
+              sp1_m[orc], 100.0 * sp1_m[orc] / 118.0);
+  std::printf("    F2 spread %.1f Hz of a 300 Hz projected reach (%.0f%%)\n",
+              sp2_m[orc], 100.0 * sp2_m[orc] / 300.0);
+  const bool f2_reached = sp2_m[orc] > 0.25 * sp1_m[orc] * (300.0 / 118.0);
+  std::printf("    -> %s\n", f2_reached
+      ? "reward DOES write group 3: the second axis is usable"
+      : "F2 BARELY MOVES while F1 does -- reward reaches group 2 and not group 3,\n"
+        "       which VOIDS the naming claim below and is itself the finding");
+
+  // THE PRIMARY IS THE PAIRED EXCESS OVER `off`, NOT THE DISTANCE FROM 1/k.
+  //
+  // Scoring `nearest` against 0.250 is the wrong null and this run proved it on its
+  // own table: the `off` arm -- taught, but with no context index -- reads 0.306, and
+  // [[aibaby-direction-null]] already established that a k-word task reads ~0.30 on an
+  // INFORMATIONLESS voice because the creature's own output distribution does not sit
+  // symmetrically among the targets. The same applies to the per-axis midline test:
+  // off reads 0.570 and 0.536 where an unbiased creature would read 0.500.
+  //
+  // The arms share seeds, so the contrast is PAIRED by construction and nobody had
+  // used the pairing. This also revisits ctxfour: its off arm read 0.161 against its
+  // oracle's 0.279, so its oracle beat its OWN control by +0.118 while being reported
+  // "at chance" against 0.250. Both runs were scored against a null their own tables
+  // contradicted.
+  std::printf("\n  PRIMARY  `nearest` in the oracle arm against chance 0.250,"
+              " ctxfour read 0.279\n");
+  // Paired per creature: arm index a of rep r shares rep r's seed.
+  std::vector<double> pn, pa1, pa2;
+  for (uint32_t r = 0; r < kReps; ++r) {
+    const Cell& o = cells[r * kCtxFourArmCount + 0];
+    const Cell& x = cells[r * kCtxFourArmCount + (kCtxFourArmCount - 1)];
+    if (!o.ok || !x.ok) continue;
+    pn.push_back(x.near - o.near);
+    pa1.push_back(x.p1 - o.p1);
+    pa2.push_back(x.p2 - o.p2);
+  }
+  double en = 0.0, e_a1 = 0.0, e_a2 = 0.0;
+  const double mn = pn.empty() ? 0.0 : ctx_mean_se(pn, &en);
+  const double ma1 = pa1.empty() ? 0.0 : ctx_mean_se(pa1, &e_a1);
+  const double ma2 = pa2.empty() ? 0.0 : ctx_mean_se(pa2, &e_a2);
+  const double z = en > 0.0 ? mn / en : 0.0;
+  std::printf("    oracle %.3f, off %.3f (NOT 0.250 -- see direction-null)\n",
+              near_m[orc], near_m[0]);
+  std::printf("    paired excess  nearest  %+.3f +/- %.3f  (%.1f SE, n=%zu)\n",
+              mn, en, z, pn.size());
+  std::printf("    paired excess  F1 side  %+.3f +/- %.3f  (%.1f SE)\n",
+              ma1, e_a1, e_a1 > 0.0 ? ma1 / e_a1 : 0.0);
+  std::printf("    paired excess  F2 side  %+.3f +/- %.3f  (%.1f SE)\n",
+              ma2, e_a2, e_a2 > 0.0 ? ma2 / e_a2 : 0.0);
+  std::printf("    ctxfour's same contrast, from its recorded table: 0.279 - 0.161"
+              " = +0.118\n");
+  // Does the joint number factorise? If p1*p2 tracks `nearest`, the two axes are
+  // independent and both must be above 0.5 for this to be 2-D naming.
+  const double z1 = e_a1 > 0.0 ? ma1 / e_a1 : 0.0;
+  const double z2 = e_a2 > 0.0 ? ma2 / e_a2 : 0.0;
+  std::printf("    factorisation check: off p1*p2 = %.3f against its nearest %.3f;"
+              " oracle %.3f against %.3f\n",
+              mp1[0] * mp2[0], near_m[0], mp1[orc] * mp2[orc], near_m[orc]);
+  // 3.0, not 2.0. A 2 SE cut is where this project's retractions live; the first
+  // ctxgrid run read F2 at exactly 2.2 and that is not a number to build on.
+  const bool two_d = z1 >= 3.0 && z2 >= 3.0;
+
+  std::printf("\n");
+  if (!f2_reached) {
+    std::printf("  VOID ON THE GATE. Read the F2 spread line, not the naming line.\n");
+  } else if (z >= 2.0 && !two_d) {
+    std::printf("  NAMING IMPROVED, AND THE SECOND AXIS IS NOT ESTABLISHED. `nearest`\n"
+                "  reads %.3f (%.1f SE above chance) while the F2 side is %.1f SE above\n"
+                "  0.5, under the 3 SE bar this project's retractions demand. With F2 at\n"
+                "  exactly chance the F1 axis alone predicts %.3f, still well above\n"
+                "  ctxfour's 0.279 -- so the LAYOUT result stands on F1 being in reach,\n"
+                "  and the 2-D claim does not stand yet.\n",
+                near_m[orc], z, z2, mp1[orc] * 0.5);
+  } else if (z >= 2.0) {
+    std::printf("  THE LAYOUT IS WORTH REAL NAMING, ON BOTH AXES. Against its OWN\n"
+                "  no-index control the 2x2 grid buys %+.3f of `nearest` (%.1f SE), with\n"
+                "  BOTH axes contributing: F1 %+.3f and F2 %+.3f. ctxfour's same contrast\n"
+                "  on vowel-corner words is +0.118.\n"
+                "\n"
+                "  AND IT CORRECTS ctxfour's VERDICT AS WELL AS ITS LAYOUT. That run read\n"
+                "  its oracle at 0.279 against 0.250 and called it chance, while its own\n"
+                "  off arm sat at 0.161 -- so its oracle beat its control too. Both runs\n"
+                "  were scored against a null their own tables contradicted.\n",
+                mn, z, ma1, ma2);
+  } else {
+    std::printf("  THE CEILING IS REAL. Four words laid out 2x2 INSIDE the measured\n"
+                "  reach, on two axes shown to be independent, still name at %.3f\n"
+                "  (%.1f SE above chance). ctxfour's conclusion stands on its own terms:\n"
+                "  the creature holds four DISTINCTIONS and not four MAPPINGS, and the\n"
+                "  axis was never the problem.\n", near_m[orc], z);
+  }
+  return true;
+}
+
 bool run_ctxfour(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
   (void)verbose;
   aibaby::Dna dna;

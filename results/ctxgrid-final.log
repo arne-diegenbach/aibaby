@@ -1,0 +1,119 @@
+  [5/36] seed 2 off  F1 25.7  F2 53.5  near 0.114
+  [6/36] seed 2 oracle  F1 46.1  F2 65.3  near 0.494
+  [9/36] seed 4 off  F1 68.3  F2 29.8  near 0.131
+  [13/36] seed 6 off  F1 20.6  F2 74.5  near 0.161
+  [4/36] seed 1 oracle  F1 52.3  F2 130.0  near 0.472
+  [7/36] seed 3 off  F1 32.7  F2 51.3  near 0.320
+  [10/36] seed 4 oracle  F1 28.0  F2 91.2  near 0.425
+  [11/36] seed 5 off  F1 54.6  F2 91.5  near 0.429
+  [14/36] seed 6 oracle  F1 34.7  F2 59.6  near 0.290
+  [1/36] seed 0 off  F1 9.9  F2 116.2  near 0.252
+  [8/36] seed 3 oracle  F1 22.8  F2 113.1  near 0.419
+  [12/36] seed 5 oracle  F1 56.4  F2 67.3  near 0.444
+  [2/36] seed 0 oracle  F1 63.4  F2 37.8  near 0.366
+  [3/36] seed 1 off  F1 36.3  F2 63.9  near 0.234
+  [16/36] seed 7 oracle  F1 46.9  F2 122.4  near 0.395
+  [19/36] seed 9 off  F1 36.4  F2 91.9  near 0.371
+  [22/36] seed 10 oracle  F1 38.3  F2 176.9  near 0.428
+  [21/36] seed 10 off  F1 29.8  F2 114.8  near 0.533
+  [17/36] seed 8 off  F1 42.9  F2 56.6  near 0.263
+  [24/36] seed 11 oracle  F1 38.5  F2 89.9  near 0.254
+  [23/36] seed 11 off  F1 16.2  F2 98.0  near 0.242
+  [15/36] seed 7 off  F1 31.5  F2 145.5  near 0.361
+  [26/36] seed 12 oracle  F1 22.7  F2 101.8  near 0.353
+  [25/36] seed 12 off  F1 31.5  F2 133.8  near 0.296
+  [20/36] seed 9 oracle  F1 46.2  F2 101.9  near 0.575
+  [18/36] seed 8 oracle  F1 55.6  F2 97.8  near 0.689
+  [28/36] seed 13 oracle  F1 60.5  F2 140.8  near 0.647
+  [27/36] seed 13 off  F1 53.7  F2 110.1  near 0.400
+  [34/36] seed 16 oracle  F1 46.5  F2 97.5  near 0.507
+  [31/36] seed 15 off  F1 52.4  F2 77.0  near 0.483
+  [30/36] seed 14 oracle  F1 76.7  F2 104.0  near 0.526
+  [36/36] seed 17 oracle  F1 38.8  F2 83.6  near 0.447
+  [33/36] seed 16 off  F1 79.4  F2 34.4  near 0.290
+  [35/36] seed 17 off  F1 31.0  F2 131.1  near 0.358
+  [29/36] seed 14 off  F1 36.8  F2 113.1  near 0.273
+  [32/36] seed 15 oracle  F1 58.5  F2 137.9  near 0.655
+experiment: ctxgrid
+  instrument        ctxgrid   trial seed 000000000135e1d4   2428 trials
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  the question      ctxfour got `nearest` at CHANCE on four words with a
+                    PERFECT index. Was that a vocabulary ceiling, or a
+                    vocabulary laid along ONE axis?
+  the change        the same experiment with the words moved: a 2x2 of
+                    two F1 levels x two F2 levels, all inside the
+                    MEASURED reach, instead of kWords' vowel corners
+                    where /i/ and /u/ sit 30 Hz apart on F1.
+  the gate, folded in   F2 spread is the one number still projected.
+                    This run measures it. Near-zero F2 spread with a
+                    healthy F1 spread voids the naming claim and IS the
+                    finding: reward reaching group 2 and not group 3.
+
+  GUARD  every target inside the measured reach (F1 630+/-59, F2 1667+/-150)?  OK
+
+  seed   arm      F1 spread   F2 spread   ctx_match direction  dir-null   nearest
+  0      off      9.9         116.2       0.000     0.167      -0.082     0.252
+  0      oracle   63.4        37.8        0.782     0.308      0.049      0.366
+  1      off      36.3        63.9        0.000     0.168      -0.077     0.234
+  1      oracle   52.3        130.0       0.804     0.446      0.187      0.472
+  2      off      25.7        53.5        0.000     0.108      -0.135     0.114
+  2      oracle   46.1        65.3        0.824     0.489      0.223      0.494
+  3      off      32.7        51.3        0.000     0.344      0.081      0.320
+  3      oracle   22.8        113.1       0.784     0.335      0.098      0.419
+  4      off      68.3        29.8        0.000     0.185      -0.052     0.131
+  4      oracle   28.0        91.2        0.806     0.405      0.142      0.425
+  5      off      54.6        91.5        0.000     0.437      0.187      0.429
+  5      oracle   56.4        67.3        0.792     0.451      0.161      0.444
+  6      off      20.6        74.5        0.000     0.132      -0.117     0.161
+  6      oracle   34.7        59.6        0.750     0.310      0.063      0.290
+  7      off      31.5        145.5       0.000     0.408      0.143      0.361
+  7      oracle   46.9        122.4       0.820     0.449      0.214      0.395
+  8      off      42.9        56.6        0.000     0.255      -0.000     0.263
+  8      oracle   55.6        97.8        0.618     0.683      0.387      0.689
+  9      off      36.4        91.9        0.000     0.399      0.145      0.371
+  9      oracle   46.2        101.9       0.811     0.533      0.265      0.575
+  10     off      29.8        114.8       0.000     0.529      0.260      0.533
+  10     oracle   38.3        176.9       0.756     0.406      0.160      0.428
+  11     off      16.2        98.0        0.000     0.251      0.006      0.242
+  11     oracle   38.5        89.9        0.608     0.319      0.053      0.254
+  12     off      31.5        133.8       0.000     0.268      0.013      0.296
+  12     oracle   22.7        101.8       0.444     0.343      0.095      0.353
+  13     off      53.7        110.1       0.000     0.484      0.210      0.400
+  13     oracle   60.5        140.8       0.778     0.633      0.369      0.647
+  14     off      36.8        113.1       0.000     0.295      0.053      0.273
+  14     oracle   76.7        104.0       0.796     0.548      0.286      0.526
+  15     off      52.4        77.0        0.000     0.483      0.234      0.483
+  15     oracle   58.5        137.9       0.803     0.661      0.406      0.655
+  16     off      79.4        34.4        0.000     0.314      0.065      0.290
+  16     oracle   46.5        97.5        0.815     0.536      0.286      0.507
+  17     off      31.0        131.1       0.000     0.336      0.086      0.358
+  17     oracle   38.8        83.6        0.794     0.442      0.199      0.447
+
+  arm       F1 spread      F2 spread      dir - null       nearest
+  off         38.3 +/- 4.2     88.2 +/- 8.2    +0.057 +/- 0.029   0.306 +/- 0.027
+  oracle      46.3 +/- 3.4    101.0 +/- 7.8    +0.202 +/- 0.027   0.466 +/- 0.028
+
+  PER-AXIS  which side of each midline, against the target's side
+    off      F1 side 0.570 +/- 0.035   F2 side 0.536 +/- 0.029   product 0.305
+    oracle   F1 side 0.718 +/- 0.025   F2 side 0.612 +/- 0.025   product 0.440
+
+  THE GATE  learned reach per axis, in the oracle arm
+    F1 spread 46.3 Hz of a 118 Hz learned reach   (39%)
+    F2 spread 101.0 Hz of a 300 Hz projected reach (34%)
+    -> reward DOES write group 3: the second axis is usable
+
+  PRIMARY  `nearest` in the oracle arm against chance 0.250, ctxfour read 0.279
+    oracle 0.466, off 0.306 (NOT 0.250 -- see direction-null)
+    paired excess  nearest  +0.160 +/- 0.032  (5.0 SE, n=18)
+    paired excess  F1 side  +0.149 +/- 0.033  (4.5 SE)
+    paired excess  F2 side  +0.076 +/- 0.034  (2.3 SE)
+    ctxfour's same contrast, from its recorded table: 0.279 - 0.161 = +0.118
+    factorisation check: off p1*p2 = 0.305 against its nearest 0.306; oracle 0.440 against 0.466
+
+  NAMING IMPROVED, AND THE SECOND AXIS IS NOT ESTABLISHED. `nearest`
+  reads 0.466 (5.0 SE above chance) while the F2 side is 2.3 SE above
+  0.5, under the 3 SE bar this project's retractions demand. With F2 at
+  exactly chance the F1 axis alone predicts 0.359, still well above
+  ctxfour's 0.279 -- so the LAYOUT result stands on F1 being in reach,
+  and the 2-D claim does not stand yet.

@@ -2229,6 +2229,7 @@ bool run_aimsense(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_sensefit(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_aimslice(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_aimaxes(const std::vector<uint8_t>&, uint64_t, bool);
+bool run_ctxgrid(const std::vector<uint8_t>&, uint64_t, bool);
 
 // What `m3probe` measured, keyed by module name, for a caller that needs the
 // numbers rather than the table. It is an out-parameter on the existing runner
