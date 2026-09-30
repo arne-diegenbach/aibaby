@@ -13300,6 +13300,59 @@ has now priced against its own feed-forward alternative and found wanting at thi
 delay.
 
 
+## Where the vocal line stands: the ASK is the constraint, not the bias
+
+No run behind this section — it is arithmetic over measurements already on file, written
+because two leads I reached for next turned out to be already measured and null, and
+because the aim line's numbers turn out to answer a question the naming line had been
+asking in different units. Full version in `results/SYNTHESIS-2026-09-30.md`.
+
+**The aim line measured every stage downstream of the bias, and none of them binds:**
+the actuator (±190 Hz, symmetric), the backlash (107 Hz, and it is per-neuron IP
+granularity — pooling gives 7 Hz and returns 30 Hz of reach), the controller gain
+(0.001 k/Hz, and it is the *optimum* for the shipped 905 ms delay), the sensor
+(`observed = b + 0.150*F1 + eta`, eta 56 Hz input-referred at tau 62 ms, replicated on
+two genomes) and the loop itself, which is refused — **a blind feed-forward controller
+beats a perfect sensor by 10.4 Hz.**
+
+**And the best controller found is the one `areax` already builds.** A constant bias per
+target is a context-indexed bias, so the aim line prices the existing mechanism rather
+than adding one. Putting both lines on the same axis for the first time — the naming
+line measures MOVEMENT, the aim line measures ERROR, which is why nobody had:
+
+    the ORACLE bias on a ±150 Hz task   delivers ~150 Hz, lands 37.2 Hz out
+    the LEARNED bias (ctxscale)         delivers  118 Hz asymptote, creature at 94%
+    the SHIPPED naming task             demands  ~230 Hz to cross a 460 Hz gap
+
+**The learned bias is roughly sufficient for a ±150 Hz ask and about half of the shipped
+one.** A factor of two, not an order of magnitude — and three results already said so
+from three directions: `ctxscale`'s ~118 Hz asymptote with the creature at 94% of it;
+`ceiling-is-an-exponent`'s `dF1 ~ aligned^0.61`, which prices dF1 ×2 at aligned ×3.12
+where every knob gives ×1.1–1.2; and `orthoname`, where **naming works at 0.958** with
+targets 0.29 log units from rest against the shipped vowels' 0.67.
+
+**So the direction with headroom is the ASK.** Fourteen routes have tried to raise the
+bias and returned ×1.1. One result shows the machinery names *well* inside its reach, and
+nobody has asked whether that scales past two words. That is the next build: a vocabulary
+whose F1 contrasts sit inside the measured reach, across four or more words, scored on
+the k-word statistic rather than a two-word margin — with `ctxfour`'s warning as the
+refusal condition, since a perfect index holds four *distinctions* but not four
+*targets*.
+
+**And the habit this section exists to break.** Twice in one session I proposed a
+mechanism that was already built and measured: the group-mean homeostat (it is DNA v57
+`ip_pool`), and then its recovered reach under teaching (`ippool`, −0.90 SE on 18
+creatures). Both times the correction was one `grep` away in the genome or the memory
+store. Four things are now marked do-not-run for the same reason: pooling under teaching,
+the sliced inhibitory tract, a learned feedback controller, and salience reward — whose
+effect *shrank* from n=12 to n=16.
+
+Credit: Gunnar Fant for the source-filter account behind the formant arithmetic; Anne
+Warlaumont and Megan Finnegan, whose target-free salience reward was the right idea and
+is refused here on its own numbers; Frank Guenther, whose DIVA controller this project
+has now priced against its own feed-forward alternative.
+
+
 ## Layout
 
 ```
