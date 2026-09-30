@@ -13212,6 +13212,94 @@ argument; John Houde and Michael Jordan for altered auditory feedback; Frank Gue
 whose DIVA feedback controller now has both a budget and a named wiring target.
 
 
+## THE AIM LINE IS REFUSED, AND BY THE CONTROL IT NEVER HAD: a blind controller beats feedback at this creature's delay
+
+`aimsense` reported that the creature's own ear is good enough to steer by, removing
+52.2% of the open-loop error through the shipped 905 ms round trip. **That headline is
+wrong, and the reason is the denominator.** Every arm was scored against gain 0 — a
+controller that does nothing at all — and the missing arm is a **BLIND** controller:
+no sensor, the estimate pinned at the creature's own rest F1, so its command is
+`g*(target - 629.7)`, a constant bias per target. Pure feed-forward reach.
+
+    at the SHIPPED 905 ms delay            at 0 ms delay
+    BLIND (no sensor)     37.2 Hz          BLIND            37.2 Hz
+    a PERFECT sensor      47.5 Hz          a PERFECT sensor   6.0 Hz
+    the measured sensor   51.6 Hz          the measured      30.7 Hz
+
+**FEEDBACK LOSES TO A BLIND CONTROLLER AT THE SHIPPED DELAY, AND SO DOES A PERFECT
+SENSOR** — by 10.4 Hz. Of the 107.9 Hz the open loop starts with, reach removes 70.7
+and feedback then **adds 14.5 back**. A constant bias per target has no loop, therefore
+no stability limit, therefore no delay penalty; a 905 ms loop has all three. Feedback
+wins only at delays this creature does not have: at 0 ms a perfect sensor reaches
+6.0 Hz against blind's 37.2.
+
+### And on the real ear, the localised readout buys nothing
+
+`aimslice` closed the loop on the ACTUAL auditory slice rather than a noise model of
+it — the decoder fitted open-loop in a settle phase, because fitting while the
+controller drives would let it learn its own command — and ran the control that decides
+it: a **wrong band**, bin 24 of 32, where there is no F1.
+
+    BLIND (no sensor)     36.2 Hz    <- feed-forward reach alone
+    SLICE bin 8           36.1 Hz      -0.1 Hz against blind
+    weighted 32           32.6 Hz      -3.6 Hz against blind
+    pop MEAN              37.2 Hz      +0.9 Hz against blind
+    WRONG bin 24          37.2 Hz      +1.0 Hz against blind
+
+Scored against gain 0 every readout looks like a triumph — including the F1-free band,
+at 65.3%. The mechanism is plain once seen: **an uninformative feature has its weight
+shrunk to ~0 by the ridge, leaving the INTERCEPT**, so the command becomes
+`g*(target - meanF1)` and the "controller" degenerates into exactly the blind one.
+Against blind, the measured F1 band buys **0.1 Hz** and the full 32-bin decoder buys
+3.6 Hz of 107.3. **The sliced inhibitory tract is refused, and the DNA change that was
+one tick from being built is not worth building.**
+
+### What survives, and it is the measurements
+
+- **`aimgain`**: the plant. Symmetric ±190 Hz swing, gain 0.001 k-units/Hz derived.
+- **`aimpool`**: the backlash is per-neuron IP granularity, 107.1 → 7.0 Hz, and
+  pooling returns the 30 Hz of reach it was eating.
+- **`aimfloor`**: the gain-delay budget, and the optimum gain falling 0.016 → 0.001 as
+  delay rises 0 → 905 ms. Still correct as a budget; its conclusion that the feedback
+  line re-opens is refused by the arm it never ran.
+- **`sensefit`**: the sensor. `observed = b + 0.150*F1 + eta`, attenuation free to a
+  proportional controller, eta 56 Hz input-referred at tau 62 ms, replicated on two
+  genomes. A measurement, unaffected.
+- **the readout localisation**: F1 information sits in bins 4–8 of 32, = 342–796 Hz,
+  the tonotopic location of F1 itself, consistent across 12 creatures and two genomes.
+  Also a measurement. What is refused is the control claim built on it.
+
+**And the line ends by pointing where it started.** The delay-immune feed-forward
+controller *is* a context-indexed bias, and `areax` (DNA v51/v53) already built one and
+proved it works. So the question is what it always was — how large a bias reward can
+build — and this night's contribution is knowing that feedback is not the way around it.
+
+### The same error, four times, in four disguises
+
+Each control was CONSTRUCTED correctly and each was first read against a baseline that
+could not refuse anything.
+
+1. `aimhold`'s precision judged against the OPEN arm when the SCRAMBLED arm built for
+   that comparison sat in the same table.
+2. `aimfloor`'s specificity scored on `sd`, a quantity conditional on where the arm
+   ended up, and then taken as best-of-six rungs against a 2 SE cut.
+3. `aimsense`'s 25%-of-open-loop bar, cleared in full by a controller with no sensor.
+4. `aimslice`'s projection check, comparing two percentages that were both dominated by
+   feed-forward, so their agreement said nothing about the sensor.
+
+**A control that exists but is not the denominator is not a control** — and the harder
+version, learned here: *when the honest baseline does not exist yet, build it before
+reading the table.* The wrong-band arm is what caught this, which is the one case where
+the control was both built and used correctly, and it saved a DNA change.
+
+Credit: Gunnar Fant for the source-filter account that makes a formant localised in a
+tonotopic map; Harry Nyquist and Hendrik Bode, whose stability margin is exactly what
+the blind controller escapes by having no loop; John Houde and Michael Jordan for
+altered auditory feedback; Frank Guenther, whose DIVA feedback controller this project
+has now priced against its own feed-forward alternative and found wanting at this
+delay.
+
+
 ## Layout
 
 ```

@@ -169,6 +169,11 @@ const Spec kSpecs[] = {
      "  8x. Local recurrence cannot carry activity forward at all"},
     {"curriculum", 1200000, Expect::kOpen, Tier::kLong,
      "derived: m3's protocol at a length where teaching works"},
+    {"aimslice", 600000, Expect::kOpen, Tier::kLong,
+     "  closes the loop on the REAL auditory slice rather than a noise model of\n"
+     "  it, before a DNA change rests on the sigma projection. Four readouts --\n"
+     "  the measured F1 band, all 32 bins, the population mean, and a WRONG band\n"
+     "  with no F1 in it, which is the information control"},
     {"sensefit", 300000, Expect::kOpen, Tier::kLong,
      "  what the creature's OWN error signal looks like: a CONTINUOUS own-F1\n"
      "  decoder off the auditory rate code, reporting the per-tick residual\n"
@@ -910,6 +915,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "aimfloor") ok = run_aimfloor(dna_blob, ticks, verbose);
   else if (name == "aimsense") ok = run_aimsense(dna_blob, ticks, verbose);
   else if (name == "sensefit") ok = run_sensefit(dna_blob, ticks, verbose);
+  else if (name == "aimslice") ok = run_aimslice(dna_blob, ticks, verbose);
   else if (name == "vocabcurve") ok = run_vocabcurve(dna_blob, ticks, verbose);
   else if (name == "ctxprobe") ok = run_ctxprobe(dna_blob, ticks, verbose);
   else if (name == "shapeprobe") ok = run_shapeprobe(dna_blob, ticks, verbose);

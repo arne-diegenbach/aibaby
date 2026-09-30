@@ -1,0 +1,44 @@
+experiment: aimslice
+  instrument        aimslice   trial seed 0000000001358698   6 creatures
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  the question      aimsense ran the controller on a NOISE MODEL of the
+                    sensor. Close the loop on the REAL slice rate and
+                    see whether the projected number comes out.
+  predictions       from aimsense at the shipped 905 ms delay:
+                      one bin  47.9%    mean  25.3%   weighted 51.9%
+  why it matters    a DNA change and new kernel state would otherwise
+                    rest on a sigma projection validated once.
+
+  readout        fit r    open   g=0.0003   g=0.0010   g=0.0040      best   removed   predicted
+  SLICE bin 8   0.170    107.3    65.6    36.1    94.3     36.1    66.3%      47.9%
+  weighted 32   0.395    107.3    66.3    32.6    89.7     32.6    69.6%      51.9%
+  pop MEAN      0.084    107.3    65.7    37.2    96.3     37.2    65.3%      25.3%
+  WRONG bin 24  0.024    107.3    65.3    37.2    96.6     37.2    65.3%       0.0%
+  BLIND (none)  0.000    107.3    64.9    36.2    96.3     36.2    66.2%       0.0%
+
+  THE REAL COMPARISON: |F1 - target| against the BLIND controller
+    BLIND (no sensor)     36.2 Hz    <- feed-forward reach alone
+    SLICE bin 8           36.1 Hz      -0.1 Hz against blind
+    weighted 32           32.6 Hz      -3.6 Hz against blind
+    pop MEAN              37.2 Hz      +0.9 Hz against blind
+    WRONG bin 24          37.2 Hz      +1.0 Hz against blind
+
+  GUARD  is it INFORMATION or just inhibition?
+         SLICE beats blind by +0.1 Hz, the WRONG band by -1.0 Hz
+         -> NOT INFORMATION: a band with no F1 does as well, so the gain is DRIVE
+
+  AND THE PROJECTION CHECK IS VOID as it was written. It compared
+  percentages-removed-against-gain-0 to aimsense's numbers, which are
+  also against gain 0 -- so both sides were dominated by feed-forward and
+  the agreement or disagreement said nothing about the sensor. The
+  quantity that means anything is the column above.
+
+  REFUSED, AND IT REFUSES MORE THAN ITSELF. Against a BLIND controller
+  the measured slice buys 0.1 Hz and an F1-free band buys -1.0 Hz: the
+  loop is collecting DRIVE. Do not build the tract.
+
+  AND aimsense's headline INHERITS THIS. Its ladder scored every arm
+  against gain 0 and never ran a blind controller, so its 51.9% may be
+  mostly reach. That result needs re-measuring against this baseline
+  before it is quoted again.

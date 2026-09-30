@@ -1,0 +1,30 @@
+experiment: aimslice
+  instrument        aimslice   trial seed 0000000001358698   6 creatures
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  the question      aimsense ran the controller on a NOISE MODEL of the
+                    sensor. Close the loop on the REAL slice rate and
+                    see whether the projected number comes out.
+  predictions       from aimsense at the shipped 905 ms delay:
+                      one bin  47.9%    mean  25.3%   weighted 51.9%
+  why it matters    a DNA change and new kernel state would otherwise
+                    rest on a sigma projection validated once.
+
+  readout        fit r    open   g=0.0003   g=0.0010   g=0.0040      best   removed   predicted
+  SLICE bin 8   0.170    107.3    65.6    36.1    94.3     36.1    66.3%      47.9%
+  weighted 32   0.395    107.3    66.3    32.6    89.7     32.6    69.6%      51.9%
+  pop MEAN      0.084    107.3    65.7    37.2    96.3     37.2    65.3%      25.3%
+  WRONG bin 24  0.024    107.3    65.3    37.2    96.6     37.2    65.3%       0.0%
+
+  GUARD  is it INFORMATION or just inhibition?  SLICE 66.3% against WRONG-bin 65.3%
+         -> NOT INFORMATION: a band with no F1 in it does as well, so the gain is drive
+
+  PROJECTION CHECK  predicted from aimsense vs measured on the real slice
+    SLICE bin 8   predicted  47.9%   measured  66.3%   +18.4 points
+    weighted 32   predicted  51.9%   measured  69.6%   +17.7 points
+    pop MEAN      predicted  25.3%   measured  65.3%   +40.0 points
+    -> the sigma projection DOES NOT HOLD on the slice
+
+  REFUSED ON THE INFORMATION CONTROL. A band with no F1 in it does as
+  well as the measured one, so what the loop is collecting is DRIVE.
+  Do not build the tract; the readout finding needs re-examining.

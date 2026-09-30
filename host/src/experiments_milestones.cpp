@@ -31127,9 +31127,11 @@ AFRow run_aimfloor_arm(const std::vector<uint8_t>& blob, uint64_t ticks, uint64_
 // the interpolation this ladder exists to avoid. 56 = the full weighted decoder,
 // 92 = the best SINGLE bin, 411 = the population mean (all `ffi_gain` can subtract),
 // 448 = the two-pool difference.
-constexpr double kASSigma[] = {0.0, 56.0, 92.0, 411.0, 448.0};  // input-referred
+constexpr double kASSigma[] = {-1.0, 0.0, 56.0, 92.0, 411.0, 448.0};  // -1 = BLIND
 constexpr uint32_t kASSigmas = sizeof(kASSigma) / sizeof(kASSigma[0]);
-constexpr uint32_t kASCalSigma = 1;                       // the MEASURED rung, 56 Hz
+constexpr uint32_t kASCalSigma = 2;                       // the MEASURED rung, 56 Hz
+constexpr uint32_t kASBlindRung = 0;                      // no sensor at all
+constexpr uint32_t kASZeroSigma = 1;                      // the PERFECT sensor
 // tau 200 has done its job -- it showed correlation costs nothing at the operating
 // point and a great deal at 2-4x it -- so this pass keeps white (for the sigma=0
 // identity guard) and the MEASURED 60 ms, and spends the arms on sigma instead.
@@ -31178,6 +31180,14 @@ struct ASNoise {
   }
 };
 
+// A sigma of -1 means BLIND: no sensor at all, the estimate pinned at the creature's
+// rest F1. Its command is g*(target - rest), a constant bias per target -- pure
+// feed-forward reach. `aimslice` found this is worth ~65% of the open-loop error by
+// itself, which means scoring any feedback arm against gain 0 measures reach and not
+// feedback. This arm is the denominator that was missing.
+constexpr double kASBlindF1 = 629.7;   // aimgain's measured rest F1, independently
+                                       // reproduced by stageprobe at 626.3
+
 ASRow run_aimsense_arm(const std::vector<uint8_t>& blob, uint64_t ticks, uint64_t seed,
                        int32_t vmod, double gain, double delay_ms, double sigma,
                        double corr_tau_ms, uint64_t nseed) {
@@ -31217,7 +31227,8 @@ ASRow run_aimsense_arm(const std::vector<uint8_t>& blob, uint64_t ticks, uint64_
       hw = (hw + 1) % hist.size();
       if (!hist_warm && hw == 0) hist_warm = true;
       const double f1_seen = (dn == 0 || !hist_warm) ? f1_now : hist[hw];
-      const double observed = f1_seen + sigma * ns.step(a);
+      const double observed = (sigma < 0.0) ? kASBlindF1
+                                            : f1_seen + sigma * ns.step(a);
       const double e = target - observed;
       double k = gain * e;
       if (k > kAHClamp) k = kAHClamp;
@@ -31787,6 +31798,326 @@ bool run_sensefit(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
   return true;
 }
 
+// --- aimslice: close the loop on the REAL slice, before touching the genome -------
+//
+// `aimsense` established the loop works at the sensor the ear actually has, and the
+// readout comparison found the information is LOCALISED: one bin of 32 (bins 4-8,
+// = 342-796 Hz, which is where F1 lives) carries 92% of what all 32 weighted bins
+// carry, while the population mean -- the only thing `ffi_gain` can subtract --
+// carries 15% and lands exactly on the 25% bar.
+//
+// Both of those ran the controller on a NOISE MODEL of the sensor: true F1 plus
+// calibrated noise. The projection from a readout's |r| to its sigma went through
+// sd(F1)*sqrt(1-r^2)/r, which `sensefit` validated once, for the full decoder. Before
+// spending a DNA change and new kernel state on a sliced tract, close the loop on the
+// REAL slice rate and check the predicted number comes out.
+//
+//   THE PREDICTIONS, from aimsense's measured ladder at the shipped 905 ms delay:
+//     one bin (bin 8 of 32)      sigma  92 Hz  ->  47.9% of open-loop error removed
+//     population mean            sigma 411 Hz  ->  25.3%
+//     32 weighted bins           sigma  56 Hz  ->  51.9%
+//
+// If the real slice lands near 48% this is a validated projection and the tract is
+// worth building. If it does not, the sigma mapping is wrong somewhere and a DNA
+// change would have been built on it -- which is the whole reason this runs first.
+//
+// READ-ONLY: the decoder is fitted in the host during a settle phase and drives the
+// existing bias oracle. No genome field, pinned hash untouched.
+//
+// FOUR READOUTS, and the last two are the controls that matter:
+//   SLICE      bin 8 of 32 of the auditory module -- the measured F1 band
+//   WEIGHTED   all 32 bins, the upper bound
+//   MEAN       the population mean, what ffi_gain would get
+//   WRONG      bin 24 of 32 -- a high-frequency band with no F1 information. This is
+//              the control that separates INFORMATION from generic inhibition: drive
+//              proportional to any activity might damp F1 error by itself, and
+//              without this arm "the slice worked" cannot be told from "subtracting
+//              something worked".
+constexpr uint32_t kALBins = 32;
+constexpr uint32_t kALSliceBin = 8;    // measured: bins 4-8, modal 8 (691-796 Hz)
+constexpr uint32_t kALWrongBin = 24;   // no F1 there
+constexpr double kALGainMul[] = {0.0, 0.25, 1.0, 4.0};
+constexpr uint32_t kALGains = sizeof(kALGainMul) / sizeof(kALGainMul[0]);
+constexpr uint32_t kALReps = 6;
+constexpr uint64_t kALSettle = 20000;
+constexpr uint64_t kALFit = 120000;    // ticks of fitting before the loop closes
+constexpr double kALDelayMs = 905.0;   // the SHIPPED round trip
+
+// kBlind is the control this experiment was missing and the one that refuses it: a
+// decoder with NO features at all, only an intercept. Its estimate is the mean of F1,
+// so its command is g*(target - meanF1) -- a CONSTANT bias per target, pure
+// feed-forward reach with no sensor. Any feedback arm must be scored against THIS,
+// not against gain 0, which does nothing whatever.
+enum class ALReadout { kSlice, kWeighted, kMean, kWrong, kBlind };
+
+struct ALRow {
+  double abs_err = 0.0, fit_r = 0.0;
+  bool ok = false;
+};
+
+ALRow run_aimslice_arm(const std::vector<uint8_t>& blob, uint64_t ticks, uint64_t seed,
+                       int32_t vmod, ALReadout ro, double gain) {
+  ALRow row;
+  std::vector<uint8_t> local = blob;
+  std::memcpy(local.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+  Session s;
+  std::string error;
+  if (!s.init(local, error)) return row;
+  const aibaby::DnaAudio& acfg = s.dna.header().audio;
+  Ear ear;
+  if (!ear.configure(acfg, error)) return row;
+  const uint32_t spt = acfg.sample_rate / 1000;
+  std::vector<float> pcm(spt, 0.0f);
+  const int32_t am = s.dna.module_with_role(aibaby::ModuleRole::kAuditory);
+  if (am < 0) return row;
+  const aibaby::ModuleState& ams = s.brain.network().module(uint32_t(am));
+  const aibaby::ModuleState& vms = s.brain.network().module(uint32_t(vmod));
+  const uint32_t g_beg = vms.begin + aibaby::slice_begin(vms.count, aibaby::kVocalGroups, 2);
+  const uint32_t g_end = vms.begin + aibaby::slice_begin(vms.count, aibaby::kVocalGroups, 3);
+  if (g_end <= g_beg + 3) return row;
+  const double namp = double(s.dna.module(uint32_t(vmod)).noise_amp);
+  const double dt = double(s.dna.header().sim.dt_ms) > 0.0
+                        ? double(s.dna.header().sim.dt_ms) : 1.0;
+
+  // The feature vector for this readout, straight off the live rate code.
+  auto features = [&](std::vector<double>& f) {
+    const aibaby::Network& net = s.brain.network();
+    if (ro == ALReadout::kWeighted) {
+      f.assign(kALBins + 1, 0.0);
+      std::vector<uint32_t> cnt(kALBins, 0);
+      for (uint32_t k = 0; k < ams.count; ++k) {
+        const uint32_t b = (k * kALBins) / ams.count;
+        f[b] += double(net.rate_fast(ams.begin + k));
+        ++cnt[b];
+      }
+      for (uint32_t b = 0; b < kALBins; ++b) if (cnt[b]) f[b] /= double(cnt[b]);
+      f[kALBins] = 1.0;
+      return;
+    }
+    if (ro == ALReadout::kBlind) { f.assign(1, 1.0); return; }
+    f.assign(2, 0.0);
+    f[1] = 1.0;
+    if (ro == ALReadout::kMean) {
+      double m = 0.0;
+      for (uint32_t k = 0; k < ams.count; ++k) m += double(net.rate_fast(ams.begin + k));
+      f[0] = ams.count ? m / double(ams.count) : 0.0;
+      return;
+    }
+    const uint32_t bin = (ro == ALReadout::kSlice) ? kALSliceBin : kALWrongBin;
+    const uint32_t lo = (bin * ams.count) / kALBins;
+    const uint32_t hi = ((bin + 1) * ams.count) / kALBins;
+    double m = 0.0; uint32_t n = 0;
+    for (uint32_t k = lo; k < hi && k < ams.count; ++k) {
+      m += double(net.rate_fast(ams.begin + k)); ++n;
+    }
+    f[0] = n ? m / double(n) : 0.0;
+  };
+
+  for (uint64_t t = 0; t < kALSettle; ++t) {
+    std::fill(pcm.begin(), pcm.end(), 0.0f);
+    ear.tick(s.brain, pcm.data(), spt);
+    s.brain.step();
+  }
+
+  // FIT the decoder open-loop. It must be fitted with the loop OPEN: fitting while
+  // the controller drives would let the decoder learn its own command, and the
+  // held-out r would measure that instead of the ear.
+  std::vector<std::vector<double>> X;
+  std::vector<double> y;
+  for (uint64_t t = 0; t < kALFit; ++t) {
+    std::fill(pcm.begin(), pcm.end(), 0.0f);
+    ear.tick(s.brain, pcm.data(), spt);
+    s.brain.step();
+    if (t % 10) continue;
+    std::vector<double> f;
+    features(f);
+    X.push_back(std::move(f));
+    y.push_back(double(s.brain.voice().f1));
+  }
+  if (X.size() < 400) return row;
+  const uint32_t nf = uint32_t(X[0].size());
+  std::vector<double> A(size_t(nf) * nf, 0.0), b(nf, 0.0);
+  for (size_t i = 0; i < X.size(); ++i)
+    for (uint32_t a2 = 0; a2 < nf; ++a2) {
+      b[a2] += X[i][a2] * y[i];
+      for (uint32_t b2 = 0; b2 < nf; ++b2)
+        A[size_t(a2) * nf + b2] += X[i][a2] * X[i][b2];
+    }
+  for (uint32_t a2 = 0; a2 < nf; ++a2) A[size_t(a2) * nf + a2] += kSFRidge * double(X.size());
+  if (!sf_solve(A, b, nf)) return row;
+  {   // in-sample r, reported so a readout that cannot fit at all is visible
+    double mp = 0.0, mt = 0.0;
+    std::vector<double> pr(X.size());
+    for (size_t i = 0; i < X.size(); ++i) {
+      double p = 0.0;
+      for (uint32_t a2 = 0; a2 < nf; ++a2) p += b[a2] * X[i][a2];
+      pr[i] = p; mp += p; mt += y[i];
+    }
+    mp /= double(X.size()); mt /= double(y.size());
+    double su = 0.0, sv = 0.0, c = 0.0;
+    for (size_t i = 0; i < X.size(); ++i) {
+      su += (pr[i] - mp) * (pr[i] - mp);
+      sv += (y[i] - mt) * (y[i] - mt);
+      c += (pr[i] - mp) * (y[i] - mt);
+    }
+    row.fit_r = (su > 0.0 && sv > 0.0) ? c / std::sqrt(su * sv) : 0.0;
+  }
+
+  // CLOSE THE LOOP. The estimate is delayed by the shipped round trip, exactly as
+  // aimfloor's ladder delayed the true value.
+  const size_t dn = size_t(kALDelayMs / dt + 0.5);
+  std::vector<double> hist(dn + 1, 0.0);
+  size_t hw = 0;
+  bool warm = false;
+  double abs_sum = 0.0;
+  uint64_t scored = 0;
+  const uint64_t per = ticks / kAHNTargets;
+  for (uint32_t ti = 0; ti < kAHNTargets; ++ti) {
+    const double target = kAHTargets[ti];
+    for (uint64_t t = 0; t < per; ++t) {
+      std::vector<double> f;
+      features(f);
+      double est = 0.0;
+      for (uint32_t a2 = 0; a2 < nf; ++a2) est += b[a2] * f[a2];
+      hist[hw] = est;
+      hw = (hw + 1) % hist.size();
+      if (!warm && hw == 0) warm = true;
+      const double seen = (dn == 0 || !warm) ? est : hist[hw];
+      double k = gain * (target - seen);
+      if (k > kAHClamp) k = kAHClamp;
+      if (k < -kAHClamp) k = -kAHClamp;
+      s.brain.network().clear_bias_oracle();
+      if (k != 0.0)
+        s.brain.network().set_bias_oracle(0, g_beg, g_end, aibaby::Scalar(k * namp));
+      std::fill(pcm.begin(), pcm.end(), 0.0f);
+      ear.tick(s.brain, pcm.data(), spt);
+      s.brain.step();
+      if (t < per / 2) continue;
+      abs_sum += std::fabs(double(s.brain.voice().f1) - target);
+      ++scored;
+    }
+  }
+  row.abs_err = scored ? abs_sum / double(scored) : 0.0;
+  row.ok = true;
+  return row;
+}
+
+bool run_aimslice(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  aibaby::Dna dna;
+  if (dna.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) return false;
+  const int32_t vmod = dna.module_with_role(aibaby::ModuleRole::kVocal);
+  if (vmod < 0) { std::printf("  no vocal module\n"); return false; }
+
+  instrument("aimslice", dna.header().seed ^ 0xA151u, kALReps, "creatures");
+  std::printf("  the question      aimsense ran the controller on a NOISE MODEL of the\n"
+              "                    sensor. Close the loop on the REAL slice rate and\n"
+              "                    see whether the projected number comes out.\n");
+  std::printf("  predictions       from aimsense at the shipped 905 ms delay:\n"
+              "                      one bin  47.9%%    mean  25.3%%   weighted 51.9%%\n");
+  std::printf("  why it matters    a DNA change and new kernel state would otherwise\n"
+              "                    rest on a sigma projection validated once.\n\n");
+
+  const ALReadout ros[] = {ALReadout::kSlice, ALReadout::kWeighted, ALReadout::kMean,
+                           ALReadout::kWrong, ALReadout::kBlind};
+  const char* names[] = {"SLICE bin 8", "weighted 32", "pop MEAN", "WRONG bin 24",
+                         "BLIND (none)"};
+  const uint32_t nro = 5;
+
+  const std::vector<ALRow> rows = parallel_reps<ALRow>(kALReps * nro * kALGains,
+                                                       [&](uint32_t job) {
+    const uint32_t g = job % kALGains;
+    const uint32_t ri = (job / kALGains) % nro;
+    const uint32_t r = job / (kALGains * nro);
+    const uint64_t seed = dna.header().seed + r * 7919ull;
+    return run_aimslice_arm(blob, ticks, seed, vmod, ros[ri], kAHGain * kALGainMul[g]);
+  });
+  auto at = [&](uint32_t r, uint32_t ri, uint32_t g) -> const ALRow& {
+    return rows[(size_t(r) * nro + ri) * kALGains + g];
+  };
+
+  std::printf("  readout        fit r    open");
+  for (uint32_t g = 1; g < kALGains; ++g) std::printf("   g=%.4f", kAHGain * kALGainMul[g]);
+  std::printf("      best   removed   predicted\n");
+  const double pred[] = {47.9, 51.9, 25.3, 0.0, 0.0};
+  double got[5] = {0, 0, 0, 0, 0};
+  double best_abs[5] = {0, 0, 0, 0, 0};
+  for (uint32_t ri = 0; ri < nro; ++ri) {
+    std::vector<double> vr;
+    for (uint32_t r = 0; r < kALReps; ++r) {
+      const ALRow& x = at(r, ri, 0);
+      if (x.ok) vr.push_back(std::fabs(x.fit_r));
+    }
+    double q;
+    std::printf("  %-13s %5.3f ", names[ri], vr.empty() ? 0.0 : ctx_mean_se(vr, &q));
+    double open = 0.0, best = 1e9;
+    for (uint32_t g = 0; g < kALGains; ++g) {
+      std::vector<double> ve;
+      for (uint32_t r = 0; r < kALReps; ++r) {
+        const ALRow& x = at(r, ri, g);
+        if (x.ok) ve.push_back(x.abs_err);
+      }
+      if (ve.empty()) { std::printf("        -"); continue; }
+      double se;
+      const double m = ctx_mean_se(ve, &se);
+      std::printf(" %7.1f", m);
+      if (g == 0) open = m;
+      else if (m < best) best = m;
+    }
+    const double rem = open > 0.0 ? 100.0 * (open - best) / open : 0.0;
+    got[ri] = rem;
+    best_abs[ri] = best;
+    std::printf("  %7.1f   %5.1f%%     %5.1f%%\n", best, rem, pred[ri]);
+  }
+
+  // THE VERDICT RESTS ON slice-vs-BLIND, not on slice-vs-open.
+  //
+  // Scored against gain 0 every readout looks like a triumph, including a band with no
+  // F1 in it -- because an uninformative feature has its weight shrunk to ~0 by the
+  // ridge, leaving the INTERCEPT, so the command becomes g*(target - meanF1): a
+  // constant bias per target. That is feed-forward reach, which aimgain measured at
+  // +-190 Hz, and it removes most of the error by itself.
+  std::printf("\n  THE REAL COMPARISON: |F1 - target| against the BLIND controller\n");
+  std::printf("    BLIND (no sensor)   %6.1f Hz    <- feed-forward reach alone\n",
+              best_abs[4]);
+  for (uint32_t ri = 0; ri < 4; ++ri)
+    std::printf("    %-13s       %6.1f Hz    %+6.1f Hz against blind\n",
+                names[ri], best_abs[ri], best_abs[ri] - best_abs[4]);
+
+  const double gain_over_blind = best_abs[4] - best_abs[0];
+  const double wrong_over_blind = best_abs[4] - best_abs[3];
+  std::printf("\n  GUARD  is it INFORMATION or just inhibition?\n");
+  std::printf("         SLICE beats blind by %+.1f Hz, the WRONG band by %+.1f Hz\n",
+              gain_over_blind, wrong_over_blind);
+  const bool informative = gain_over_blind > wrong_over_blind + 5.0;
+  std::printf("         -> %s\n", informative
+      ? "INFORMATION: the wrong band cannot do it"
+      : "NOT INFORMATION: a band with no F1 does as well, so the gain is DRIVE");
+
+  std::printf("\n  AND THE PROJECTION CHECK IS VOID as it was written. It compared\n"
+              "  percentages-removed-against-gain-0 to aimsense's numbers, which are\n"
+              "  also against gain 0 -- so both sides were dominated by feed-forward and\n"
+              "  the agreement or disagreement said nothing about the sensor. The\n"
+              "  quantity that means anything is the column above.\n");
+
+  std::printf("\n");
+  if (informative) {
+    std::printf("  BUILD THE SLICED TRACT. Reading one tonotopic band of the real ear\n"
+                "  beats a blind feed-forward controller by %.1f Hz where a band with no\n"
+                "  F1 in it beats it by %.1f Hz.\n", gain_over_blind, wrong_over_blind);
+  } else {
+    std::printf("  REFUSED, AND IT REFUSES MORE THAN ITSELF. Against a BLIND controller\n"
+                "  the measured slice buys %.1f Hz and an F1-free band buys %.1f Hz: the\n"
+                "  loop is collecting DRIVE. Do not build the tract.\n"
+                "\n"
+                "  AND aimsense's headline INHERITS THIS. Its ladder scored every arm\n"
+                "  against gain 0 and never ran a blind controller, so its 51.9%% may be\n"
+                "  mostly reach. That result needs re-measuring against this baseline\n"
+                "  before it is quoted again.\n", gain_over_blind, wrong_over_blind);
+  }
+  return true;
+}
+
 bool run_aimsense(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
   (void)verbose;
   aibaby::Dna dna;
@@ -31860,7 +32191,8 @@ bool run_aimsense(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
         double dummy;
         acc[d][c][si] = va.empty() ? -1.0 : ctx_mean_se(va, &dummy);
         best_e[d][c][si] = 1e9; best_g[d][c][si] = 0; best_se[d][c][si] = 0.0;
-        std::printf("    %8.0f   %8.3f    ", kASSigma[si], acc[d][c][si]);
+        if (kASSigma[si] < 0.0) std::printf("    %8s   %8.3f    ", "BLIND", acc[d][c][si]);
+        else std::printf("    %8.0f   %8.3f    ", kASSigma[si], acc[d][c][si]);
         for (uint32_t g = 0; g < kASGains; ++g) {
           std::vector<double> ve;
           for (uint32_t r = 0; r < kASReps; ++r) {
@@ -31899,11 +32231,15 @@ bool run_aimsense(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
     struct Ref { uint32_t d; uint32_t g; double want; };
     // gain indices into kASGainMul: 2 = 0.001, 3 = 0.004, 4 = 0.016
     const Ref refs[] = {{0, 4, 6.0}, {0, 3, 16.5}, {kASDelays - 1, 2, 47.5}};
+    // kASZeroSigma, not 0: inserting BLIND at index 0 shifted every sigma index, and
+    // the first version of this guard compared the BLIND arm against aimfloor's
+    // perfect-sensor numbers. A constant named for what it MEANS cannot drift the way
+    // a literal 0 did -- the third indexing-shift bug of this session.
     std::printf("  GUARD  sigma=0 reproduces aimfloor AT MATCHED GAIN?\n");
     for (const Ref& rf : refs) {
       std::vector<double> ve;
       for (uint32_t r = 0; r < kASReps; ++r) {
-        const ASRow& x = at(r, rf.d, 0, 0, rf.g);
+        const ASRow& x = at(r, rf.d, 0, kASZeroSigma, rf.g);
         if (x.ok) ve.push_back(x.abs_err);
       }
       if (ve.empty()) { repro = false; continue; }
@@ -31922,8 +32258,9 @@ bool run_aimsense(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
   // And the two correlation arms must be IDENTICAL at sigma = 0, since neither adds
   // anything -- a free check on the job indexing.
   std::printf("  GUARD  sigma=0 white == correlated?  %.6f Hz apart   %s\n",
-              std::fabs(best_e[0][0][0] - best_e[0][1][0]),
-              std::fabs(best_e[0][0][0] - best_e[0][1][0]) < 1e-9 ? "OK" : "<- INDEXING IS WRONG");
+              std::fabs(best_e[0][0][kASZeroSigma] - best_e[0][1][kASZeroSigma]),
+              std::fabs(best_e[0][0][kASZeroSigma] - best_e[0][1][kASZeroSigma]) < 1e-9
+                  ? "OK" : "<- INDEXING IS WRONG");
 
   // INFORMATIONAL, no longer a guard. It mattered while the primary was matched on
   // selfcode's trial accuracy; the primary is now the cell sensefit measured, so
@@ -31968,15 +32305,31 @@ bool run_aimsense(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
     std::printf("           open %6.1f   best %6.1f at gain %.5f   removed %5.1f%%"
                 "   %s\n", open_e[d][c][si], best_e[d][c][si],
                 kAHGain * kASGainMul[best_g[d][c][si]], at_rem[c],
-                at_rem[c] >= 25.0 ? "CLEARS THE 25% BAR" : "UNDER THE BAR");
+                at_rem[c] >= 25.0 ? "(SUPERSEDED STATISTIC -- see the blind row)"
+                                  : "(superseded statistic)");
     std::printf("           measured trial accuracy here %.3f  (selfcode 0.623,"
                 " sensefit's own decoder 0.764)\n", acc[d][c][si]);
     std::printf("           same sigma at the other correlation times: ");
     for (uint32_t cc = 0; cc < kASCorrs; ++cc)
       std::printf(" %.0f ms %.1f%%  ", kASCorrTauMs[cc], at_rem[cc]);
     std::printf("\n");
-    cal_ok = at_rem[c] >= 25.0;
-    white_ok = at_rem[0] >= 25.0;
+    // AGAINST THE BLIND CONTROLLER, which is the comparison that means anything.
+    const double blind = best_e[d][c][kASBlindRung];
+    std::printf("\n           BLIND (no sensor)    %6.1f Hz   <- feed-forward reach alone\n",
+                blind);
+    std::printf("           the measured sensor  %6.1f Hz   %+6.1f Hz against blind\n",
+                best_e[d][c][si], best_e[d][c][si] - blind);
+    std::printf("           a PERFECT sensor     %6.1f Hz   %+6.1f Hz against blind\n",
+                best_e[d][c][1], best_e[d][c][1] - blind);
+    std::printf("           -> of the %.1f Hz the open loop starts with, REACH removes\n"
+                "              %.1f Hz and FEEDBACK then %s %.1f Hz\n",
+                open_e[d][c][si], open_e[d][c][si] - blind,
+                blind >= best_e[d][c][si] ? "removes a further" : "ADDS BACK",
+                std::fabs(blind - best_e[d][c][si]));
+    // THE VERDICT IS AGAINST BLIND. The 25%-of-open-loop bar was the wrong test: it
+    // is cleared by a controller with no sensor at all, so it measured reach.
+    cal_ok = best_e[d][c][si] < blind - 2.0;
+    white_ok = best_e[d][c][0] < blind - 2.0;
     // THE MEASUREMENT HAS AN SE (+/- 2.6 Hz on sigma), so the rungs either side of
     // it are printed and the verdict is only worth quoting if BOTH clear the bar.
     if (kASCalSigma > 0 && kASCalSigma + 1 < kASSigmas) {
@@ -31987,9 +32340,8 @@ bool run_aimsense(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
       };
       const double rl = rem_at(lo), rh = rem_at(hi);
       std::printf("           bracket on sigma: %.0f Hz -> %.1f%%,  %.0f Hz -> %.1f%%"
-                  "  %s\n", kASSigma[lo], rl, kASSigma[hi], rh,
-                  (rl >= 25.0 && rh >= 25.0) ? "BOTH clear the bar"
-                                             : "<- the bracket straddles the bar");
+                  "  (both against gain 0, superseded)\n",
+                  kASSigma[lo], rl, kASSigma[hi], rh);
       if (!(rl >= 25.0 && rh >= 25.0)) cal_ok = false;
     }
   }
@@ -32012,36 +32364,22 @@ bool run_aimsense(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
   }
   std::printf("\n");
   if (cal_ok) {
-    // The sensor's numbers are printed FROM THE CONSTANTS. An earlier version had
-    // them as literals in this sentence and they went stale the moment sensefit ran
-    // at full length -- 77 Hz became 56 -- while the table above was correct. That is
-    // the shared-constants bug class in its smallest form: a number written twice.
-    std::printf("  THE CREATURE'S OWN ERROR SIGNAL IS ENOUGH. At the sensor sensefit\n"
-                "  measured -- %.0f Hz input-referred at tau %.0f ms, against an F1\n"
-                "  whose own sd is 21 Hz -- feedback still removes %.1f%% of the\n"
-                "  open-loop error through the SHIPPED %.0f ms round trip. That is more\n"
-                "  than the entire measured naming effect, so the learning rule is worth\n"
-                "  building and its target is a controller at gain %.5f with the\n"
-                "  attenuation undone.\n",
-                kASSigma[kASCalSigma], kASCorrTauMs[kASCalCorr],
-                at_rem[kASCalCorr], kASDelayMs[kASDelays - 1],
-                kAHGain * kASGainMul[best_g[kASDelays - 1][kASCalCorr][kASCalSigma]]);
-  } else if (white_ok) {
-    std::printf("  ONLY IF THE ERROR WERE WHITE, AND IT IS NOT. At the measured sigma\n"
-                "  the white sensor removes %.1f%% and the measured tau of 60 ms removes\n"
-                "  %.1f%%. sensefit measured eta's correlation time directly, so the\n"
-                "  honest row is the second one and it is under the bar. What a\n"
-                "  controller needs here is not a better error signal but a\n"
-                "  DECORRELATED one -- a statement about the readout, not the loop.\n",
-                at_rem[0], at_rem[kASCalCorr]);
+    std::printf("  THE CREATURE'S OWN ERROR SIGNAL BEATS A BLIND CONTROLLER at the\n"
+                "  shipped delay, by %.1f Hz. Feedback is worth building.\n",
+                best_e[kASDelays - 1][kASCalCorr][kASBlindRung] -
+                    best_e[kASDelays - 1][kASCalCorr][kASCalSigma]);
   } else {
-    std::printf("  THE SENSOR IS THE BOUND. At the error signal the creature actually\n"
-                "  has, the loop removes %.1f%% (white) and %.1f%% (measured tau) of the\n"
-                "  open-loop error at the shipped delay, both under the 25%% bar the\n"
-                "  naming effect sets. aimfloor's 6.0 Hz is a fact about the LARYNX and\n"
-                "  no learning rule fed THIS ear's estimate of its own F1 can collect\n"
-                "  it. The work is in the READOUT selfcode measured, not the controller.\n",
-                at_rem[0], at_rem[kASCalCorr]);
+    std::printf("  FEEDBACK LOSES TO A BLIND CONTROLLER AT THE SHIPPED DELAY, and so\n"
+                "  does a PERFECT sensor. A constant bias per target has no loop, so it\n"
+                "  has no stability limit and is DELAY-IMMUNE; a 905 ms loop is neither.\n"
+                "  Feedback wins only at delays this creature does not have -- at 0 ms a\n"
+                "  perfect sensor reaches 6.0 Hz against blind's 37.2.\n"
+                "\n"
+                "  THIS CORRECTS THIS EXPERIMENT'S OWN EARLIER HEADLINE. Scoring arms\n"
+                "  against gain 0 measured REACH, which a sensorless controller collects\n"
+                "  in full, and the 25%%-of-open-loop bar was cleared by exactly that.\n"
+                "  What survives is the sensor characterisation and the gain-delay\n"
+                "  budget; what does not is 'the ear is good enough to steer by'.\n");
   }
   return true;
 }
