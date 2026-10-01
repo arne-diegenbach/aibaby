@@ -255,6 +255,16 @@ DnaStatus Dna::load(const void* blob, size_t size) {
     return DnaStatus::kBadAudio;
   }
 
+  // REFUSE an unbuildable context count instead of silently disabling the index.
+  // `Network::build` used to set ctx_slots_ = 0 when this was exceeded, so a genome
+  // asking for nine contexts hatched happily with NO index -- and an experiment
+  // comparing an indexed arm against an unindexed one then ran two identical arms and
+  // reported a paired excess of exactly +0.000 as a capacity limit. Checked outside
+  // `exploration.enabled` because the slot count is read whatever that flag says.
+  if (h->exploration.context_slots > kMaxContextSlots) {
+    return DnaStatus::kBadGrowth;
+  }
+
   if (h->exploration.enabled) {
     if (h->exploration.fast_tau_ms <= 0.0f || h->exploration.slow_tau_ms <= 0.0f) {
       return DnaStatus::kBadPlasticity;

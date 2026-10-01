@@ -1165,7 +1165,14 @@ class Network {
   Scalar* ctx_proto_ = nullptr;   // ctx_slots_ x source count, context-major
   Scalar* ctx_acc_ = nullptr;     // source count, the current word's sum
   Scalar ctx_acc_n_ = kZero;      // ticks accumulated into it
-  Scalar ctx_wins_[8] = {};       // per-context win counts; MacQueen's 1/wins
+  // SIZED BY THE CAP, NOT BY A LITERAL. This was `ctx_wins_[8]`, a duplicate of
+  // kMaxContextSlots back when the cap was 8. Raising the cap to 16 left the array at
+  // 8, so `ctx_slots_ = 9` wrote one element PAST THE END -- straight into `ctx_dsum_`
+  // below, the conscience's winner-distance accumulator. Nine slots did not crash, it
+  // silently corrupted the mechanism ctx-conscience measured; fifteen segfaulted. The
+  // shared-constant trap of aibaby-shared-constants-audit, in its worst form: a
+  // constant COPIED as a literal cannot be raised in one place.
+  Scalar ctx_wins_[aibaby::kMaxContextSlots] = {};  // per-context win counts, MacQueen 1/wins
   Scalar ctx_dsum_ = kZero;       // running sum of winner distances...
   Scalar ctx_dn_ = kZero;         // ...and its count, so the conscience scales
   bool ctx_src_active_ = false;   // was the source active on the previous tick?
@@ -1184,7 +1191,9 @@ class Network {
   // 0.010 while a word plays, so "quiet" IS "listening".
   int32_t ctx_gate_module_ = -1;
   Scalar ctx_gate_target_ = kZero;
-  static constexpr uint32_t kMaxContextSlots = 8;
+  // The cap lives in config.h: dna.cpp validates against it and must not depend on
+  // the kernel. Kept as a member alias so existing references still read naturally.
+  static constexpr uint32_t kMaxContextSlots = aibaby::kMaxContextSlots;
   uint32_t active_ctx_ = 0;   // argmax slice, refreshed each tick
   bool ctx_present_ = false;  // is any slice actually driven this tick?
   // When a slice counts as driven, in Hz. NOT a guessed constant: a kContext

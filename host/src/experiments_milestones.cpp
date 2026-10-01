@@ -3843,7 +3843,10 @@ constexpr uint32_t kVLWords = 2;
 // Sizing only. Four is where the word table's own comments say the hard cases
 // live -- /i/ and /u/ within 30 Hz on F1 and 1600 apart on F2, /e/ between /a/
 // and /i/ on both.
-constexpr uint32_t kVLMaxWords = 4;
+// NINE, raised from 4 on 2026-09-30 so a 3x3 grid can be taught. Every array sized
+// by this is written only for k < nw, so the extra slots stay zero and behaviour below
+// four words is bit-identical -- checked by verify, hash unmoved.
+constexpr uint32_t kVLMaxWords = 9;
 // How fast the per-word expectation follows. Slow enough that a run of good
 // trials does not immediately raise the bar out of reach, fast enough that it
 // tracks a creature that is genuinely improving.
@@ -4335,9 +4338,25 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
   // that was heard.
   const VLTarget tgt =
       target < 0 ? (arm == kVLFixed ? kVLTgtFixed : kVLTgtHeard) : VLTarget(target);
-  // Clamped, because a caller asking for more words than the table holds should
-  // get the table's worth rather than read past it.
-  const uint32_t nw = words < 2 ? 2u : (words > kVLMaxWords ? kVLMaxWords : words);
+  // REFUSED, NOT CLAMPED, and the clamp is why this comment is long.
+  //
+  // This used to read `nw = words > kVLMaxWords ? kVLMaxWords : words`, silently
+  // giving a caller asking for nine words a four-word session. An experiment whose
+  // CONCLUSION is about k would then have reported a confident nine-word number
+  // computed on four -- vacuous, and invisible in the output because the arms simply
+  // agree. That is the shape `vacuity.sh` exists for, arriving in a shared helper
+  // where no per-experiment guard would see it.
+  //
+  // A bound that a caller can exceed by accident must REFUSE. No existing caller
+  // passes more than four, so nothing is broken by making it strict.
+  if (words > kVLMaxWords) {
+    std::printf("  REFUSED: %u words asked for, kVLMaxWords is %u. Raise the constant\n"
+                "  and the arrays sized by it rather than accepting a clamped session:\n"
+                "  a k-word conclusion computed on fewer words is vacuous and silent.\n",
+                words, kVLMaxWords);
+    return VLRun{};
+  }
+  const uint32_t nw = words < 2 ? 2u : words;
   VLRun out;
   // The amplitude and rate lessons are `word == 0 ? loud : quiet`, which is a
   // two-way distinction and cannot be stretched over four words. Refusing is
@@ -26350,6 +26369,607 @@ constexpr Word kGridWords[4] = {
     {200.0f, 689.0f, 1517.0f},   // high F1, low F2
     {200.0f, 689.0f, 1817.0f},   // high F1, high F2
 };
+
+// --- ctxvocab: how many words fit on the 2-D grid? --------------------------------
+//
+// `ctxgrid` established four-word naming on BOTH articulator axes: paired excess over
+// its own no-index arm of +0.137 +/- 0.023 (6.0 SE) at n=36, with F1 +0.126 and F2
+// +0.082 (4.0 SE, held across three sample sizes). `aimaxes` put ~2.6 resolvable levels
+// on each axis under a learned bias, which predicts a capacity of about 2.6 x 2.6 = 6.7
+// words -- a PRODUCT, not a sum.
+//
+// This tests the product. Same grid spacing, more of it:
+//
+//   k = 4   2x2   F1 {571, 689}       x F2 {1517, 1817}        <- ctxgrid, the anchor
+//   k = 6   3x2   F1 {571, 630, 689}  x F2 {1517, 1817}
+//   k = 9   3x3   F1 {571, 630, 689}  x F2 {1517, 1667, 1817}
+//
+// THAT TABLE IS NOT WHAT THE CODE BUILDS, and the first full run's verdict rested on
+// the difference. `tbl[q] = {200, kVGF1[q / n2], kVGF2[q % n2]}` takes the FIRST n2
+// entries, so k=6 gets F2 {1517, 1667} and not {1517, 1817}. Worse, the SPAN is held
+// fixed while the spacing HALVES against the anchor: F1 118 Hz apart at k=4 becomes 59
+// at k=6 and k=9, F2 300 becomes 150. k=6 and k=9 are consistent with each other, but
+// every "against k=4" number mixes a capacity change with a 2x resolution change.
+//
+// The shipped comment claimed 59 Hz against a within-target scatter of 22.9 (2.6 sd).
+// If that were the operative geometry the model would predict ~0.87 per-axis accuracy
+// at three levels; the oracle delivers 0.364. The missing term is COMPRESSION: ctxgrid
+// measured 46.3 Hz DELIVERED against its 118 Hz demand, so three levels commanded 59 Hz
+// apart are produced ~23 Hz apart, inside decision boundaries +-29.5 Hz wide. Nearly
+// every utterance lands in the middle level's region, which scores exactly 1/3.
+//
+// WIDENING CANNOT FIX THIS. ctxgrid placed the k=4 corners AT the edge of the learned
+// reach -- its own comment reads "learned reach 118 Hz (ctxscale's asymptote)" -- so a
+// wide grid would demand targets outside it, and protocol-line-closed showed an
+// UNREACHABLE target beats a reachable one. Capacity and resolution are therefore not
+// separable by geometry in this creature: the reach is fixed, so more words can only
+// mean closer words. What IS separable is whether the fall is FULLY predicted by the
+// delivered spacing and the scatter, which is what the resolution model below asks.
+//
+// SCORED ON THE PAIRED EXCESS OVER EACH k's OWN no-index ARM, never against 1/k.
+// `ctxgrid` established that `nearest` has no fixed chance level -- an informationless
+// voice reads 0.161 on vowel corners and 0.306 on a 2x2 -- and at k=6 and k=9 the
+// geometry changes again, so each k must bring its own null.
+//
+// PER-AXIS accuracy generalises from "which side of the midline" to "which LEVEL is
+// nearest", so it works at 2 or 3 levels and `nearest` should still factorise as
+// p1*p2 if the axes are independent. The off arm's factorisation is the validity
+// check: at k=4 its 0.298 predicted its measured 0.305.
+//
+// THE MODEL IS A VALIDITY CHECK, NOT THE RESULT. It takes the DELIVERED spacing as an
+// input, so "meets geometry" says the readout is honest -- not that nothing degraded.
+// The first model run (results/ctxvocab-model.log) matched to three decimals on both
+// axes at both k, and the interesting number was one of its INPUTS: F1 delivered 24.5
+// Hz at k=6 and 6.0 Hz at k=9 on an IDENTICAL 59 Hz demand. F1 resolution cannot
+// explain that. So the real question is what shrinks the delivery.
+//
+// PRE-REGISTERED, on the F1 axis, whose demand is 59 Hz in all three arms:
+//   VALIDITY  per-axis accuracy must NOT fall more than 2 SE below the model, or
+//             nothing downstream can be read.
+//   BUDGET    k9+ minus k9 -- the same nine words with 1.5x the ticks. Positive means
+//             the fall was teaching per word, and every capacity number this
+//             experiment has quoted at fixed total ticks is confounded.
+//   VOCABULARY  k9+ minus k6 at MATCHED trials per word, PAIRED WITHIN CREATURE (the
+//             seed is base + r*7919 in every grid, so creature r is the same genome in
+//             all three arms -- combining grid SEs in quadrature throws that pairing
+//             away). Three outcomes, and the n=36 run showed the first:
+//               REALLOCATION  F1 delivery falls, F2 delivery is spared, and the TOTAL
+//                 naming excess is conserved -> the axes share one bias budget and
+//                 adding an F2 level moves reach from F1 to F2. Not a ceiling. The
+//                 direction aimaxes predicts, F2 having 961 Hz of swing against F1's 378.
+//               LOSS  F1 delivery falls AND the total excess falls with it -> a
+//                 vocabulary ceiling proper, on the REACH, where ctxscale's ~118 Hz
+//                 asymptote already puts it.
+//               NO COST  total conserved and neither axis's delivery clears the bar ->
+//                 the earlier collapse was an artefact of comparing grids unpaired.
+// A PER-AXIS NUMBER IS NOT A CAPACITY. Two verdicts were written off F1 alone while the
+// F2 column beside it was holding delivery and quadrupling its excess (+0.021 -> +0.100
+// from six words to nine) and the total excess moved 0.5 SE. Read all three together.
+// The excess is still reported per k, but NOT as a capacity curve: a 2.4 SE excess at
+// n=18 is also under this project's 3 SE bar, which exists because salience-reward went
+// +2.6 SE at n=12 to a null at n=16 and the smoothing sweep +0.24 at n=3 to +0.03 at 6.
+// GUARD: the k>kVLMaxWords refusal must not fire; each off arm's own `nearest` is
+// printed so a reader can see the null moving with k; and the arms must not be
+// bit-identical, which is the guard this experiment's first run needed.
+// THE THIRD GRID IS THE ONE THAT SEPARATES BUDGET FROM VOCABULARY. F1's geometry is
+// IDENTICAL at k=6 and k=9 -- three levels at 571/630/689, 59 Hz apart in both -- yet
+// the first run delivered 24.5 Hz of F1 separation at k=6 and only 6.0 at k=9. F1
+// resolution cannot explain that, because F1 resolution did not change. Two things did:
+// the extra F2 level, and TRIALS PER WORD, which falls from 405 to 270 when the same
+// tick budget is split nine ways instead of six. `tnum/tden` scales a grid's ticks so
+// the second cause can be removed: the k9+ arm runs 1.5x longer, matching k=6's trials
+// per word exactly, with the SAME nine words.
+// REPS ARE PER GRID, because the arms do not carry equal weight. k6 and k9+ carry the
+// headline contrast and get 36 creatures, the number ctxgrid had to buy before its F2
+// axis cleared the bar. k9 exists only to BOUND the teaching-budget term, which came
+// out a 0.8 SE null at 18, so it keeps 18 -- power goes where the claim is, and no
+// control is dropped to buy it.
+struct VocabGrid { uint32_t k, n1, n2, tnum, tden, reps; const char* tag; };
+constexpr VocabGrid kVGGrids[] = {
+    {6u, 3u, 2u, 1u, 1u, 36u, "k6 "},
+    {9u, 3u, 3u, 1u, 1u, 18u, "k9 "},
+    {9u, 3u, 3u, 3u, 2u, 36u, "k9+"},  // 1.5x ticks: trials per word matched to k=6
+};
+
+// THE BAR, DEFINED ONCE. The previous run printed "NOT YET A FINDING" for a 2.9 SE
+// excess against this 3 SE bar and then declared a 2.7 SE delivery contrast to be the
+// headline, because the verdict's own test was coded against 2.0. A threshold written
+// twice diverges; this one is written once and every test below reads it.
+constexpr double kVGBar = 3.0;
+constexpr uint32_t kVGCount = sizeof(kVGGrids) / sizeof(kVGGrids[0]);
+constexpr double kVGF1[3] = {571.0, 630.0, 689.0};
+constexpr double kVGF2[3] = {1517.0, 1667.0, 1817.0};
+constexpr uint32_t kVGTotalReps() {
+  uint32_t t = 0;
+  for (uint32_t g = 0; g < kVGCount; ++g) t += kVGGrids[g].reps;
+  return t;
+}
+// Where each grid's block of cells starts: 2 arms x reps, grids in order.
+constexpr uint32_t kVGOffset(uint32_t g) {
+  uint32_t t = 0;
+  for (uint32_t i = 0; i < g; ++i) t += 2u * kVGGrids[i].reps;
+  return t;
+}
+
+// Normal CDF, for the resolution model's decision regions.
+inline double vg_phi(double z) { return 0.5 * std::erfc(-z / std::sqrt(2.0)); }
+
+// PREDICTED "which level is nearest" accuracy. The produced formant for commanded level
+// j is taken as N(mean[j], sd) -- the MEASURED mean, so compression is carried rather
+// than assumed away -- and the decision boundaries are the midpoints of the COMMANDED
+// values `lvl`, which is exactly what the scorer compares against. Unweighted over
+// levels, matching the balanced word schedule.
+inline double vg_predict(const double* mean, const double* lvl, uint32_t n, double sd) {
+  if (n < 2 || sd <= 0.0) return 0.0;
+  double acc = 0.0;
+  for (uint32_t j = 0; j < n; ++j) {
+    const double lo = j == 0 ? -1e12 : 0.5 * (lvl[j - 1] + lvl[j]);
+    const double hi = j + 1 == n ? 1e12 : 0.5 * (lvl[j] + lvl[j + 1]);
+    acc += vg_phi((hi - mean[j]) / sd) - vg_phi((lo - mean[j]) / sd);
+  }
+  return acc / double(n);
+}
+
+bool run_ctxvocab(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  aibaby::Dna dna;
+  if (dna.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) return false;
+  const int32_t ctx_module = dna.module_with_role(aibaby::ModuleRole::kContext);
+  if (ctx_module < 0) {
+    std::printf("  this genome has no kContext module; see ctxgrid\n");
+    return false;
+  }
+  const size_t slots_off = offsetof(aibaby::DnaHeader, exploration) +
+                           offsetof(aibaby::DnaExploration, context_slots);
+
+  instrument("ctxvocab", dna.header().seed ^ 0xC0CAu, ticks / kVLTrialTicks, "trials");
+  std::printf("  the question      ctxgrid names FOUR words on two axes at +0.137.\n"
+              "                    aimaxes put ~2.6 levels on each axis, predicting a\n"
+              "                    capacity near 2.6 x 2.6 = 6.7 -- a PRODUCT. Does the\n"
+              "                    excess survive six words, and nine?\n");
+  std::printf("  the design        the SPAN is fixed and the spacing HALVES against the\n"
+              "                    k=4 anchor: more words inside the same learned reach.\n"
+              "                    So a falling excess is what resolution ALONE predicts,\n"
+              "                    and the headline cannot be a capacity curve. THREE arms\n"
+              "                    instead: k6, k9, and k9+ (the same nine words with 1.5x\n"
+              "                    the ticks, matching k=6's TRIALS PER WORD). F1 demands\n"
+              "                    59 Hz in all three, so delivered F1 spacing separates\n"
+              "                    teaching budget from word interference.\n");
+  std::printf("  the spacing       F1 %.0f Hz and F2 %.0f Hz adjacent at k=6 and k=9,\n"
+              "                    against 118 / 300 at ctxgrid's k=4: HALF.\n",
+              kVGF1[1] - kVGF1[0], kVGF2[1] - kVGF2[0]);
+  std::printf("  the null          each k brings its OWN no-index arm. `nearest` has no\n"
+              "                    fixed chance level and the geometry changes with k.\n\n");
+
+  struct Cell {
+    bool ok = false; double near = 0.0, p1 = 0.0, p2 = 0.0; uint32_t scored = 0;
+    // THE RESOLUTION MODEL. Delivered spacing between adjacent commanded levels, the
+    // within-level scatter of the produced formant, and the per-axis accuracy those two
+    // PREDICT. If the creature matches its own geometry, a falling excess is geometry
+    // and this run has not measured capacity at all.
+    double d1 = 0.0, d2 = 0.0;   // delivered spacing, Hz, from produced means
+    double s1 = 0.0, s2 = 0.0;   // within-level sd of the produced formant, Hz
+    double q1 = 0.0, q2 = 0.0;   // predicted "nearest level" accuracy from d and s
+  };
+  // Grids hold blocks of 2 x reps, laid out in order; arm 0 = off (no index), 1 = oracle.
+  const uint32_t njobs = 2u * kVGTotalReps();
+  const std::vector<Cell> cells = parallel_reps<Cell>(njobs, [&](uint32_t job) {
+    uint32_t g = 0;
+    while (g + 1u < kVGCount && job >= kVGOffset(g + 1u)) ++g;
+    const uint32_t local = job - kVGOffset(g);
+    const uint32_t arm = local / kVGGrids[g].reps;
+    const uint32_t r = local % kVGGrids[g].reps;
+    const VocabGrid& gr = kVGGrids[g];
+    Cell cell;
+    // The target table for this grid, built row-major so word index -> (i1, i2).
+    Word tbl[kVLMaxWords];
+    for (uint32_t q = 0; q < gr.k; ++q)
+      tbl[q] = {200.0f, float(kVGF1[q / gr.n2]), float(kVGF2[q % gr.n2])};
+    std::vector<uint8_t> variant = blob;
+    const uint64_t seed = dna.header().seed + r * 7919ull;
+    std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+    const uint32_t sl = arm ? gr.k : 0u;
+    std::memcpy(variant.data() + slots_off, &sl, sizeof(sl));
+    CtxDrive drive;
+    drive.module = ctx_module;
+    drive.slots = gr.k;
+    drive.gain = 0.10;
+    Regime reg;
+    reg.praise = kPraiseValue;
+    reg.scold = kScoldValue;
+    // Integer-exact, and derived from the argument rather than hardcoded, so the
+    // ratio between arms cannot drift with --ticks.
+    const uint64_t tk = ticks * uint64_t(gr.tnum) / uint64_t(gr.tden);
+    const VLRun run = run_vocallearn_session(variant, tk, kVLTaught, nullptr, reg,
+                                             int(kVLTgtHeard), &drive, kVLScoreFormant,
+                                             nullptr, gr.k, tbl);
+    cell.scored = run.scored;
+    if (!run.ok) return cell;
+    uint32_t hit = 0, h1 = 0, h2 = 0, tot = 0;
+    for (size_t u = 0; u < run.utt_word.size(); ++u) {
+      const int wd = run.utt_word[u];
+      if (wd < 0 || wd >= int(gr.k)) continue;
+      if (run.utt_f1[u] <= 1.0 || run.utt_f2[u] <= 1.0) continue;
+      double best = 0.0; int pick = -1;
+      for (uint32_t q = 0; q < gr.k; ++q) {
+        const double e = formant_error(run.utt_f1[u], run.utt_f2[u], tbl[q]);
+        if (e < 0.0) { pick = -1; break; }
+        if (pick < 0 || e < best) { best = e; pick = int(q); }
+      }
+      if (pick < 0) continue;
+      if (pick == wd) ++hit;
+      // PER-AXIS: which LEVEL is nearest, generalising the midline test to 3 levels.
+      uint32_t l1 = 0, l2 = 0;
+      for (uint32_t i = 1; i < gr.n1; ++i)
+        if (std::fabs(run.utt_f1[u] - kVGF1[i]) < std::fabs(run.utt_f1[u] - kVGF1[l1])) l1 = i;
+      for (uint32_t i = 1; i < gr.n2; ++i)
+        if (std::fabs(run.utt_f2[u] - kVGF2[i]) < std::fabs(run.utt_f2[u] - kVGF2[l2])) l2 = i;
+      if (l1 == uint32_t(wd) / gr.n2) ++h1;
+      if (l2 == uint32_t(wd) % gr.n2) ++h2;
+      ++tot;
+    }
+    if (!tot) return cell;
+    cell.near = double(hit) / double(tot);
+    cell.p1 = double(h1) / double(tot);
+    cell.p2 = double(h2) / double(tot);
+    // THE RESOLUTION MODEL on this creature's own utterances. Produced formants are
+    // COMPRESSED toward the centre -- ctxgrid delivered 46.3 Hz of a 118 Hz demand --
+    // so the prediction uses the produced MEANS against the commanded decision
+    // boundaries rather than assuming the creature lands on its target.
+    {
+      double m1[3] = {}, m2[3] = {}, v1s = 0.0, v2s = 0.0;
+      uint32_t c1[3] = {}, c2[3] = {}, t1 = 0, t2 = 0;
+      for (size_t u = 0; u < run.utt_word.size(); ++u) {
+        const int wd = run.utt_word[u];
+        if (wd < 0 || wd >= int(gr.k)) continue;
+        if (run.utt_f1[u] <= 1.0 || run.utt_f2[u] <= 1.0) continue;
+        m1[uint32_t(wd) / gr.n2] += run.utt_f1[u]; ++c1[uint32_t(wd) / gr.n2];
+        m2[uint32_t(wd) % gr.n2] += run.utt_f2[u]; ++c2[uint32_t(wd) % gr.n2];
+      }
+      for (uint32_t i = 0; i < gr.n1; ++i) if (c1[i]) m1[i] /= double(c1[i]);
+      for (uint32_t i = 0; i < gr.n2; ++i) if (c2[i]) m2[i] /= double(c2[i]);
+      for (size_t u = 0; u < run.utt_word.size(); ++u) {
+        const int wd = run.utt_word[u];
+        if (wd < 0 || wd >= int(gr.k)) continue;
+        if (run.utt_f1[u] <= 1.0 || run.utt_f2[u] <= 1.0) continue;
+        const uint32_t i1 = uint32_t(wd) / gr.n2, i2 = uint32_t(wd) % gr.n2;
+        if (c1[i1]) { const double e = run.utt_f1[u] - m1[i1]; v1s += e * e; ++t1; }
+        if (c2[i2]) { const double e = run.utt_f2[u] - m2[i2]; v2s += e * e; ++t2; }
+      }
+      cell.s1 = t1 > gr.n1 ? std::sqrt(v1s / double(t1 - gr.n1)) : 0.0;
+      cell.s2 = t2 > gr.n2 ? std::sqrt(v2s / double(t2 - gr.n2)) : 0.0;
+      cell.d1 = gr.n1 > 1 ? (m1[gr.n1 - 1] - m1[0]) / double(gr.n1 - 1) : 0.0;
+      cell.d2 = gr.n2 > 1 ? (m2[gr.n2 - 1] - m2[0]) / double(gr.n2 - 1) : 0.0;
+      cell.q1 = vg_predict(m1, kVGF1, gr.n1, cell.s1);
+      cell.q2 = vg_predict(m2, kVGF2, gr.n2, cell.s2);
+    }
+    cell.ok = true;
+    parallel_note("  [%u/%u] %s %s seed %u  near %.3f\n", job + 1, njobs, gr.tag,
+                  arm ? "oracle" : "off   ", r, cell.near);
+    return cell;
+  });
+  auto at = [&](uint32_t g, uint32_t arm, uint32_t r) -> const Cell& {
+    return cells[kVGOffset(g) + size_t(arm) * kVGGrids[g].reps + r];
+  };
+
+  std::printf("  k    arm      nearest         F1 level        F2 level     1/k\n");
+  double exc[kVGCount] = {}, exce[kVGCount] = {};
+  bool vacuous[kVGCount] = {};
+  // The resolution model, per grid: predicted and measured per-axis accuracy on the
+  // oracle arm, and the SE of their difference.
+  double mp1[kVGCount] = {}, mm1[kVGCount] = {}, mse1[kVGCount] = {};
+  double mp2[kVGCount] = {}, mm2[kVGCount] = {}, mse2[kVGCount] = {};
+  double dl1[kVGCount] = {}, dl1e[kVGCount] = {}, sc1[kVGCount] = {};
+  double e1[kVGCount] = {}, e1e[kVGCount] = {}, e2[kVGCount] = {}, e2e[kVGCount] = {};
+  for (uint32_t g = 0; g < kVGCount; ++g) {
+    const VocabGrid& gr = kVGGrids[g];
+    for (uint32_t arm = 0; arm < 2; ++arm) {
+      std::vector<double> vn, v1, v2;
+      for (uint32_t r = 0; r < gr.reps; ++r) {
+        const Cell& c = at(g, arm, r);
+        if (!c.ok) continue;
+        vn.push_back(c.near); v1.push_back(c.p1); v2.push_back(c.p2);
+      }
+      if (vn.empty()) { std::printf("  %-4s %-8s (no usable creature)\n", gr.tag,
+                                    arm ? "oracle" : "off"); continue; }
+      double a1, a2, a3;
+      const double mn = ctx_mean_se(vn, &a1), m1 = ctx_mean_se(v1, &a2),
+                   m2 = ctx_mean_se(v2, &a3);
+      std::printf("  %-4s %-8s %.3f +/- %.3f   %.3f +/- %.3f  %.3f +/- %.3f  %.3f"
+                  "   product %.3f\n", gr.tag, arm ? "oracle" : "off", mn, a1, m1, a2,
+                  m2, a3, 1.0 / double(gr.k), m1 * m2);
+    }
+    // PAIRED on seed, which is the only sound contrast.
+    std::vector<double> pn, pa1, pa2;
+    for (uint32_t r = 0; r < gr.reps; ++r) {
+      const Cell& o = at(g, 0, r);
+      const Cell& x = at(g, 1, r);
+      if (!o.ok || !x.ok) continue;
+      pn.push_back(x.near - o.near);
+      pa1.push_back(x.p1 - o.p1);
+      pa2.push_back(x.p2 - o.p2);
+    }
+    if (!pn.empty()) {
+      exc[g] = ctx_mean_se(pn, &exce[g]);
+      e1[g] = ctx_mean_se(pa1, &e1e[g]);
+      e2[g] = ctx_mean_se(pa2, &e2e[g]);
+    }
+    std::printf("       -> paired excess  nearest %+.3f +/- %.3f (%.1f SE)   F1 %+.3f"
+                " +/- %.3f   F2 %+.3f +/- %.3f\n", exc[g], exce[g],
+                exce[g] > 0.0 ? exc[g] / exce[g] : 0.0, e1[g], e1e[g], e2[g], e2e[g]);
+    // ARMS_ARE_DISTINCT, and this experiment needed it on its first run. At k=9 the
+    // old kMaxContextSlots of 8 silently disabled the index, so the oracle arm WAS the
+    // off arm: identical to every decimal, paired excess exactly +0.000 +/- 0.000, and
+    // the verdict printed "capacity is four". A vacuous cell must REFUSE, not score.
+    // The project has this guard elsewhere and the lesson is that it does not travel:
+    // a guard at one call site protects nothing added later.
+    {
+      uint32_t same = 0, pairs = 0;
+      for (uint32_t r = 0; r < gr.reps; ++r) {
+        const Cell& o = at(g, 0, r);
+        const Cell& x = at(g, 1, r);
+        if (!o.ok || !x.ok) continue;
+        ++pairs;
+        if (o.near == x.near && o.p1 == x.p1 && o.p2 == x.p2) ++same;
+      }
+      vacuous[g] = pairs > 0 && same == pairs;
+      std::printf("          GUARD arms differ?  %u of %u pairs BIT-IDENTICAL%s\n",
+                  same, pairs,
+                  vacuous[g] ? "   <- VACUOUS, this k is not measured" : "   OK");
+    }
+    // THE RESOLUTION MODEL, on the oracle arm: what the creature's own delivered
+    // spacing and scatter predict, against what it delivered.
+    {
+      std::vector<double> vd1, vd2, vs1, vs2, vq1, vq2, vp1, vp2;
+      for (uint32_t r = 0; r < gr.reps; ++r) {
+        const Cell& c = at(g, 1, r);
+        if (!c.ok) continue;
+        vd1.push_back(c.d1); vd2.push_back(c.d2);
+        vs1.push_back(c.s1); vs2.push_back(c.s2);
+        vq1.push_back(c.q1); vq2.push_back(c.q2);
+        vp1.push_back(c.p1); vp2.push_back(c.p2);
+      }
+      if (!vd1.empty()) {
+        double a = 0.0, de1 = 0.0, qe1 = 0.0, qe2 = 0.0, pe1 = 0.0, pe2 = 0.0;
+        const double dd1 = ctx_mean_se(vd1, &de1), dd2 = ctx_mean_se(vd2, &a);
+        const double ss1 = ctx_mean_se(vs1, &a), ss2 = ctx_mean_se(vs2, &a);
+        const double qq1 = ctx_mean_se(vq1, &qe1), qq2 = ctx_mean_se(vq2, &qe2);
+        const double pp1 = ctx_mean_se(vp1, &pe1), pp2 = ctx_mean_se(vp2, &pe2);
+        std::printf("          MODEL   demanded     delivered      scatter"
+                    "    predicted         measured\n");
+        std::printf("            F1    %6.1f    %6.1f +/- %4.1f   %6.1f     %.3f +/- %.3f"
+                    "    %.3f +/- %.3f\n", kVGF1[1] - kVGF1[0], dd1, de1, ss1,
+                    qq1, qe1, pp1, pe1);
+        std::printf("            F2    %6.1f    %6.1f          %6.1f     %.3f +/- %.3f"
+                    "    %.3f +/- %.3f\n", kVGF2[1] - kVGF2[0], dd2, ss2,
+                    qq2, qe2, pp2, pe2);
+        mp1[g] = qq1; mm1[g] = pp1; mse1[g] = std::sqrt(qe1 * qe1 + pe1 * pe1);
+        mp2[g] = qq2; mm2[g] = pp2; mse2[g] = std::sqrt(qe2 * qe2 + pe2 * pe2);
+        dl1[g] = dd1; dl1e[g] = de1; sc1[g] = ss1;
+      }
+    }
+    std::printf("\n");
+  }
+
+  // THE COMPARISON, against ctxgrid's k=4 anchor measured at n=36.
+  const double k4 = 0.137, k4e = 0.023;
+  std::printf("  CAPACITY  paired excess by vocabulary size\n");
+  std::printf("    k = 4   %+.3f +/- %.3f   (ctxgrid, n=36)\n", k4, k4e);
+  for (uint32_t g = 0; g < kVGCount; ++g)
+    std::printf("    %-3s     %+.3f +/- %.3f   %+.3f against k=4   (%.0f trials/word)\n",
+                kVGGrids[g].tag, exc[g], exce[g], exc[g] - k4,
+                double(ticks * kVGGrids[g].tnum / kVGGrids[g].tden) /
+                    double(kVLTrialTicks) / double(kVGGrids[g].k));
+
+  // A vacuous cell cannot carry the verdict, whatever it printed.
+  {
+    bool any_vac = false;
+    for (uint32_t g = 0; g < kVGCount; ++g) if (vacuous[g]) any_vac = true;
+    if (any_vac) {
+      std::printf("\n  VOID: at least one k ran two IDENTICAL arms, so its cell is not a\n"
+                  "  measurement. Read only the k values whose guard says OK.\n");
+      return true;
+    }
+  }
+  const double last = exc[kVGCount - 1], laste = exce[kVGCount - 1];
+  const double drop = k4 - last;
+  const double drop_se = std::sqrt(k4e * k4e + laste * laste);
+  std::printf("\n  at k=9 the excess is %+.3f, a change of %+.3f +/- %.3f against k=4"
+              " (%.1f SE)\n", last, -drop, drop_se,
+              drop_se > 0.0 ? drop / drop_se : 0.0);
+  std::printf("  -- and that change is NOT a capacity curve: k=4's spacing is DOUBLE,\n"
+              "     so it mixes vocabulary size with a 2x resolution change.\n");
+
+  // THE 3 SE BAR. ctxgrid bought creatures to n=36 because this project has RETRACTED
+  // THREE findings that read 2-3 SE at n <= 18: salience-reward +2.6 SE at n=12 to a
+  // null at n=16, the smoothing sweep +0.24 at n=3 to +0.03 at n=6, vigilance 0.737 to
+  // 0.594 at 96. A 2.4 SE excess at n=18 is that exact pattern, so it is not called
+  // real here on its own.
+  std::printf("  k9+ excess against this project's own %.0f SE bar (n=%u):  %.1f SE"
+              "  -> %s\n", kVGBar, kVGGrids[kVGCount - 1].reps,
+              laste > 0.0 ? last / laste : 0.0,
+              laste > 0.0 && last > kVGBar * laste ? "REAL" : "NOT YET A FINDING");
+
+  // ONE-SIDED, because the question is whether the creature falls SHORT of its own
+  // geometry. Beating the model is not a capacity limit.
+  const uint32_t g6 = 0, g9 = 1, g9p = 2;
+  // 2 SE, NOT kVGBar, and deliberately: this is a REFUSAL rather than a claim, so it
+  // must fire on weaker evidence than a finding needs.
+  const bool short1 = mse1[g9p] > 0.0 && (mp1[g9p] - mm1[g9p]) > 2.0 * mse1[g9p];
+  const bool short2 = mse2[g9p] > 0.0 && (mp2[g9p] - mm2[g9p]) > 2.0 * mse2[g9p];
+  std::printf("  the model at k9+   F1 measured %.3f vs predicted %.3f  (%s)\n"
+              "                     F2 measured %.3f vs predicted %.3f  (%s)\n",
+              mm1[g9p], mp1[g9p], short1 ? "SHORT" : "meets geometry",
+              mm2[g9p], mp2[g9p], short2 ? "SHORT" : "meets geometry");
+
+  // THE MODEL EXPLAINS THE SCORE. It takes the DELIVERED spacing as an input, so
+  // "meets geometry" says the readout is honest -- NOT that nothing degraded. What
+  // degraded is the delivery itself, and F1 is the clean place to read it: three
+  // levels 59 Hz apart in EVERY arm, so any difference in delivered F1 spacing is not
+  // F1 resolution. These two contrasts split the cause.
+  std::printf("\n  WHAT DAMAGES THE DELIVERY  (F1 demand is 59 Hz in all three arms)\n");
+  std::printf("    k6   delivered %6.1f +/- %4.1f Hz\n", dl1[g6], dl1e[g6]);
+  std::printf("    k9   delivered %6.1f +/- %4.1f Hz\n", dl1[g9], dl1e[g9]);
+  std::printf("    k9+  delivered %6.1f +/- %4.1f Hz   (same nine words, 1.5x ticks)\n",
+              dl1[g9p], dl1e[g9p]);
+  const double budget = dl1[g9p] - dl1[g9];
+  const double budget_se = std::sqrt(dl1e[g9p] * dl1e[g9p] + dl1e[g9] * dl1e[g9]);
+  const double vocab = dl1[g9p] - dl1[g6];
+  const double vocab_se = std::sqrt(dl1e[g9p] * dl1e[g9p] + dl1e[g6] * dl1e[g6]);
+  std::printf("    BUDGET      k9+ - k9  %+6.1f +/- %4.1f Hz (%.1f SE)  <- teaching per word\n",
+              budget, budget_se, budget_se > 0.0 ? std::fabs(budget) / budget_se : 0.0);
+  std::printf("    VOCABULARY  k9+ - k6  %+6.1f +/- %4.1f Hz (%.1f SE)  <- nine words vs six,\n"
+              "                                                      trials/word MATCHED\n",
+              vocab, vocab_se, vocab_se > 0.0 ? std::fabs(vocab) / vocab_se : 0.0);
+  // How many levels the DELIVERED reach actually holds: adjacent produced means must
+  // clear ~2 sd to be told apart at all.
+  if (sc1[g9p] > 0.0)
+    std::printf("    levels the F1 reach holds at k9+:  span %.1f Hz / 2 x scatter %.1f"
+                "  ->  %.1f levels\n",
+                dl1[g9p] * double(kVGGrids[g9p].n1 - 1), sc1[g9p],
+                1.0 + dl1[g9p] * double(kVGGrids[g9p].n1 - 1) / (2.0 * sc1[g9p]));
+  // THE SAME BAR AS THE EXCESS ABOVE. kVGBar, not a literal.
+  const bool budget_binds = budget_se > 0.0 && budget > kVGBar * budget_se;
+  const bool vocab_binds = vocab_se > 0.0 && vocab < -kVGBar * vocab_se;
+
+  // PAIRED ACROSS GRIDS, which the delivery contrast above is not. The creature seed is
+  // `base + r * 7919` in EVERY grid, so creature r is the same genome at k6 and k9+ and
+  // the nine-vs-six contrast can be taken WITHIN creature. Combining two grids' SEs in
+  // quadrature throws that away and overstates the error.
+  auto cross = [&](uint32_t ga, uint32_t gb, double (*pick)(const Cell&, const Cell&),
+                   double* se) -> double {
+    std::vector<double> v;
+    const uint32_t n = std::min(kVGGrids[ga].reps, kVGGrids[gb].reps);
+    for (uint32_t r = 0; r < n; ++r) {
+      const Cell& ao = at(ga, 0, r); const Cell& ax = at(ga, 1, r);
+      const Cell& bo = at(gb, 0, r); const Cell& bx = at(gb, 1, r);
+      if (!ao.ok || !ax.ok || !bo.ok || !bx.ok) continue;
+      v.push_back(pick(bx, bo) - pick(ax, ao));
+    }
+    *se = 0.0;
+    return v.empty() ? 0.0 : ctx_mean_se(v, se);
+  };
+  double cn_se = 0.0, c1_se = 0.0, c2_se = 0.0, cd1_se = 0.0, cd2_se = 0.0;
+  const double cn = cross(g6, g9p, [](const Cell& x, const Cell& o) { return x.near - o.near; }, &cn_se);
+  const double c1 = cross(g6, g9p, [](const Cell& x, const Cell& o) { return x.p1 - o.p1; }, &c1_se);
+  const double c2 = cross(g6, g9p, [](const Cell& x, const Cell& o) { return x.p2 - o.p2; }, &c2_se);
+  const double cd1 = cross(g6, g9p, [](const Cell& x, const Cell& o) { (void)o; return x.d1; }, &cd1_se);
+  const double cd2 = cross(g6, g9p, [](const Cell& x, const Cell& o) { (void)o; return x.d2; }, &cd2_se);
+  std::printf("\n  NINE WORDS AGAINST SIX, PAIRED WITHIN CREATURE (k9+ - k6, trials/word matched)\n");
+  std::printf("    total naming excess  %+.3f +/- %.3f (%.1f SE)\n", cn, cn_se,
+              cn_se > 0.0 ? std::fabs(cn) / cn_se : 0.0);
+  std::printf("    F1 side excess       %+.3f +/- %.3f (%.1f SE)\n", c1, c1_se,
+              c1_se > 0.0 ? std::fabs(c1) / c1_se : 0.0);
+  std::printf("    F2 side excess       %+.3f +/- %.3f (%.1f SE)\n", c2, c2_se,
+              c2_se > 0.0 ? std::fabs(c2) / c2_se : 0.0);
+  std::printf("    F1 delivered Hz      %+.1f +/- %.1f (%.1f SE)\n", cd1, cd1_se,
+              cd1_se > 0.0 ? std::fabs(cd1) / cd1_se : 0.0);
+  std::printf("    F2 delivered Hz      %+.1f +/- %.1f (%.1f SE)\n", cd2, cd2_se,
+              cd2_se > 0.0 ? std::fabs(cd2) / cd2_se : 0.0);
+  // Is the total CONSERVED while the axes swap, or is naming simply worse?
+  const bool total_conserved = cn_se > 0.0 && std::fabs(cn) < kVGBar * cn_se;
+  const bool f1_pays = cd1_se > 0.0 && cd1 < -kVGBar * cd1_se;
+  // IS THE F2 CONTRAST INFORMATIVE AT ALL? `cd2 > -kVGBar * cd2_se` is VACUOUS when
+  // cd2_se is large: at 13.1 Hz it reads "greater than -39", which nearly any data
+  // satisfies, and the first version of this verdict reported that as "F2 delivery is
+  // SPARED". It is not spared, it is UNMEASURED -- and for a structural reason, that
+  // F2 has 2 levels at k6 and 3 at k9+, so the two estimates are not the same
+  // estimator. F1 is 3 levels in both arms, which is why F1 is the clean axis. A
+  // contrast only counts as sparing F2 if it could have DETECTED a loss the size of
+  // F1's.
+  const bool f2_measured = cd2_se > 0.0 && kVGBar * cd2_se < std::fabs(cd1);
+  const bool f2_spared = f2_measured && cd2 > -kVGBar * cd2_se;
+  // And the reallocation story needs F2 to actually TAKE the excess, at the same bar
+  // as everything else.
+  const bool f2_takes = c2_se > 0.0 && c2 > kVGBar * c2_se;
+  std::printf("    F2 delivered contrast is %s: %.0f x SE = %.1f Hz against F1's"
+              " %.1f Hz of movement\n",
+              f2_measured ? "INFORMATIVE" : "TOO NOISY TO READ", kVGBar,
+              kVGBar * cd2_se, std::fabs(cd1));
+  std::printf("\n");
+  if (short1 || short2) {
+    std::printf("  THE READOUT IS NOT HONEST. At k9+ the creature scores BELOW what its\n"
+                "  own delivered spacing and scatter predict (%.3f / %.3f predicted,\n"
+                "  %.3f / %.3f delivered, short on %s). Everything below assumes the\n"
+                "  model, so read nothing further until this is explained.\n",
+                mp1[g9p], mp2[g9p], mm1[g9p], mm2[g9p],
+                short1 && short2 ? "both axes" : (short1 ? "F1" : "F2"));
+    return true;
+  }
+  std::printf("  THE SCORE IS GEOMETRY. At every k the creature's per-axis accuracy is\n"
+              "  within 2 SE of what its own DELIVERED spacing and scatter predict, so\n"
+              "  the falling excess is not a readout failure and `nearest` is behaving.\n"
+              "  The question is what shrinks the DELIVERY, and F1 answers it cleanly\n"
+              "  because its demand is 59 Hz in all three arms.\n\n");
+  // THE COST IS ASYMMETRIC, which both earlier verdicts missed. "VOCABULARY COSTS
+  // REACH" was read off F1 alone; the F2 column one line over was holding its delivery
+  // and QUADRUPLING its naming excess, and the total excess barely moved. A per-axis
+  // number is not a capacity.
+  if (f1_pays && total_conserved && f2_takes && f2_spared) {
+    std::printf("  THE AXES SHARE ONE REACH, AND F1 PAYS. Nine words against six at\n"
+                "  MATCHED trials per word: F1 delivery falls %+.1f +/- %.1f Hz (%.1f SE)\n"
+                "  while F2 delivery is spared (%+.1f +/- %.1f, a contrast tight enough to\n"
+                "  have caught F1's loss) -- and the F2 SIDE TAKES the excess F1 gives up\n"
+                "  (%+.3f +/- %.3f, %.1f SE) with the TOTAL naming excess conserved\n"
+                "  (%+.3f +/- %.3f, %.1f SE). Nine words name as well as six and the axes\n"
+                "  swap which carries them: REALLOCATION of a shared bias budget, not a\n"
+                "  vocabulary ceiling. The direction is what aimaxes predicts -- F2 swings\n"
+                "  961 Hz against F1's 378, so a shared budget tilts to the axis with\n"
+                "  more leverage (position-is-the-cost, leverage-at-one-end).\n",
+                cd1, cd1_se, std::fabs(cd1) / cd1_se, cd2, cd2_se,
+                c2, c2_se, c2 / c2_se, cn, cn_se, std::fabs(cn) / cn_se);
+  } else if (f1_pays && total_conserved) {
+    std::printf("  MORE WORDS COST F1 REACH AND COST NAMING NOTHING. The two results that\n"
+                "  clear the %.0f SE bar, paired within creature: F1 delivery falls %+.1f\n"
+                "  +/- %.1f Hz (%.1f SE) from six words to nine at matched teaching, and\n"
+                "  the TOTAL naming excess is conserved (%+.3f +/- %.3f, %.1f SE). So the\n"
+                "  creature gives up F1 separation without naming any worse.\n\n",
+                kVGBar, cd1, cd1_se, std::fabs(cd1) / cd1_se, cn, cn_se,
+                std::fabs(cn) / cn_se);
+    std::printf("  THE MECHANISM IS NOT ESTABLISHED. The obvious reading -- F2 absorbs\n"
+                "  what F1 gives up -- does NOT clear the bar and must not be written as\n"
+                "  if it did:\n"
+                "    F2 side excess   %+.3f +/- %.3f (%.1f SE)   %s\n"
+                "    F2 delivered Hz  %+.1f +/- %.1f (%.1f SE)   %s\n"
+                "    F1 side excess   %+.3f +/- %.3f (%.1f SE)   a null, not a value\n"
+                "  F2 is the WRONG AXIS to read this on by construction: it has 2 levels\n"
+                "  at k6 and 3 at k9+, so its two delivery estimates are not the same\n"
+                "  estimator. The arm that would settle it is a 2x3 grid -- six words\n"
+                "  with THREE F2 levels -- which holds the F2 estimator fixed and moves\n"
+                "  word count alone.\n",
+                c2, c2_se, c2_se > 0.0 ? c2 / c2_se : 0.0,
+                f2_takes ? "clears the bar" : "UNDER the bar",
+                cd2, cd2_se, cd2_se > 0.0 ? std::fabs(cd2) / cd2_se : 0.0,
+                f2_measured ? "informative" : "TOO NOISY TO READ",
+                c1, c1_se, c1_se > 0.0 ? std::fabs(c1) / c1_se : 0.0);
+  } else if (f1_pays && !total_conserved && cn < 0.0) {
+    std::printf("  NINE WORDS NAME WORSE, AND F1 PAYS FOR IT. F1 delivery falls %+.1f\n"
+                "  +/- %.1f Hz (%.1f SE) and the total naming excess falls with it\n"
+                "  (%+.3f +/- %.3f, %.1f SE), so this is not a reallocation between axes\n"
+                "  but a real loss: a vocabulary ceiling, on the REACH the bias can\n"
+                "  build, where ctxscale's ~118 Hz asymptote already puts it.\n",
+                cd1, cd1_se, std::fabs(cd1) / cd1_se, cn, cn_se,
+                cn_se > 0.0 ? std::fabs(cn) / cn_se : 0.0);
+  } else if (total_conserved && !f1_pays) {
+    std::printf("  NINE WORDS COST NOTHING MEASURABLE. The total naming excess is\n"
+                "  conserved (%+.3f +/- %.3f, %.1f SE) and neither axis's delivery falls\n"
+                "  past the %.0f SE bar (F1 %+.1f +/- %.1f, F2 %+.1f +/- %.1f). The\n"
+                "  earlier collapse in delivered F1 does not survive pairing within\n"
+                "  creature, which is the only sound contrast here.\n",
+                cn, cn_se, cn_se > 0.0 ? std::fabs(cn) / cn_se : 0.0, kVGBar,
+                cd1, cd1_se, cd2, cd2_se);
+  } else {
+    std::printf("  THE PATTERN DOES NOT RESOLVE. Paired within creature: total excess\n"
+                "  %+.3f +/- %.3f, F1 delivered %+.1f +/- %.1f, F2 delivered %+.1f +/-\n"
+                "  %.1f. Report the columns and name no mechanism.\n",
+                cn, cn_se, cd1, cd1_se, cd2, cd2_se);
+  }
+  std::printf("  The teaching budget is bounded, not excluded: k9+ - k9 is %+.1f +/- %.1f"
+              " Hz\n  (%.1f SE, n=%u), which at the %.0f SE bar still admits %.1f Hz.\n",
+              budget, budget_se, budget_se > 0.0 ? std::fabs(budget) / budget_se : 0.0,
+              kVGGrids[g9].reps, kVGBar, budget + kVGBar * budget_se);
+  return true;
+}
 
 bool run_ctxgrid(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
   (void)verbose;

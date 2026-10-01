@@ -16052,3 +16052,131 @@ context — came out exact on all three draws and never needed a replication to 
 trusted. Every claim that was a *magnitude* moved: one halved, one reversed on the
 second draw, and one vanished on the third. Three draws produced three different
 pictures of the same mechanism, and only the parts that were structural stayed put.
+
+
+## Nine words cost F1 reach and cost naming nothing (2026-10-01)
+
+`ctxgrid` left a clean arithmetic question. It named four words on a 2×2 formant grid at
++0.137 ± 0.023 against its own no-index control, and `aimaxes` put about 2.6
+distinguishable levels on each articulator axis — which multiplies to 6.7 words. So:
+does naming survive six, and nine?
+
+**It does, and the interesting number is not the one the question asked for.** Paired
+within creature, with trials per word matched, nine words against six:
+
+| contrast | value | |
+|---|---|---|
+| F1 delivered separation | **−11.8 ± 3.5 Hz** | **3.3 SE** |
+| total naming excess | −0.012 ± 0.019 | 0.6 SE — conserved |
+| F2 side excess | +0.079 ± 0.027 | 2.9 SE — under the bar |
+| F1 side excess | −0.026 ± 0.026 | 1.0 SE — a null |
+| F2 delivered separation | +1.8 ± 13.1 Hz | uninformative |
+
+**The creature gives up F1 separation without naming any worse.** Those two results
+clear this project's 3 SE bar at n=36; nothing else here does.
+
+### What the experiment is not allowed to say
+
+The tempting headline — F2 absorbs what F1 gives up — **does not clear the bar**, and I
+published it anyway for one run on the strength of a test that could not fail.
+`f2_spared` asked whether `cd2 > −3 × cd2_se`, and with `cd2_se = 13.1 Hz` that reads
+"greater than −39 Hz". Nearly any data passes. **A test that nearly all possible
+outcomes satisfy is not a test**: it reported "F2 is spared" when it meant "F2 is
+unmeasured". The guard now demands a contrast tight enough to have *detected* a loss the
+size of F1's, and prints INFORMATIVE or TOO NOISY TO READ.
+
+The noise is structural rather than unlucky. **F2 has two levels at k=6 and three at
+k=9**, so its two delivery estimates are not the same estimator — while F1 is three
+levels in both arms, which is the entire reason F1 is the clean axis. The arm that would
+settle it is a 2×3 grid: six words with *three* F2 levels, holding the F2 estimator
+fixed and moving word count alone. Not yet built.
+
+### The capacity curve was never a capacity curve
+
+The shipped design comment claimed "same spacing, more of it — adjacent levels stay 2.6
+sd apart at every k, so this tests CAPACITY and not resolution." **That was false about
+the table its own code builds.** `tbl[q] = {200, kVGF1[q/n2], kVGF2[q%n2]}` holds the
+*span* fixed and halves the spacing: F1 levels 118 Hz apart at k=4 become 59 Hz at k=6
+and k=9. Every "excess against k=4" therefore mixes vocabulary size with a 2× resolution
+change. The same comment also listed k=6's F2 levels as {1517, 1817} where the code
+yields {1517, 1667}.
+
+Widening the grid to restore the spacing is refused by `ctxgrid`'s own notes, which put
+its k=4 corners *at* the edge of the learned reach — "learned reach 118 Hz, ctxscale's
+asymptote". A wider grid demands unreachable targets, and `protocol-line-closed` already
+showed an unreachable target *beats* a reachable one. **In this creature capacity and
+resolution are not separable by geometry: the reach is fixed, so more words can only
+mean closer words.**
+
+### A validity gate is not a result
+
+The replacement is a resolution model: predict each creature's per-axis accuracy from
+its *own* delivered spacing and within-level scatter, using produced means against the
+commanded decision boundaries so that compression is carried rather than assumed away.
+It matched to three decimals on every arm — at k=9, measured 0.362 against predicted
+0.363.
+
+That accuracy is what made it dangerous. **The model takes delivery as an input**, so
+"meets geometry" says the readout is honest, not that nothing degraded. I read it as the
+result and wrote "no vocabulary limit is shown" while the collapse sat in the model's own
+input column: F1 delivering 24.5 Hz at k=6 and 6.0 Hz at k=9 **on an identical 59 Hz
+demand**. F1's resolution never changed, so resolution could not be the explanation.
+
+The model also disposes of the scatter figure the design assumed. At 22.9 Hz scatter and
+59 Hz spacing it predicts ~0.87 per-axis accuracy; measured is 0.362, because delivery
+is ~6 Hz on a 59 Hz demand. Three levels compressed inside a single scatter width all
+fall in the middle level's decision region, which scores exactly 1/3. At k=9 the F1 reach
+holds **~1.1 distinguishable levels**.
+
+### The teaching budget is bounded, not excluded
+
+At fixed total ticks nine words get 270 trials each where six get 405, so any capacity
+claim at fixed ticks is confounded — **including this experiment's own first two runs.**
+The `k9+` arm removes it: the same nine words with 1.5× the ticks, matching k=6's 405
+trials per word. The budget term is +0.1 ± 3.5 Hz (0.0 SE). But a 0.0 SE null is not a
+demonstration of absence: at the 3 SE bar that arm still admits ~10.8 Hz. More teaching
+is a *smaller* effect than more words, and that is the whole of what it shows.
+
+### Four verdicts, each refused by the next number
+
+1. "CAPACITY IS FOUR, OR NEAR IT" — off two bit-identical arms.
+2. "CAPACITY IS BETWEEN FOUR AND NINE" — against the halved-spacing anchor.
+3. "NO vocabulary limit is shown" — read the validity gate as the result.
+4. "THE AXES SHARE ONE REACH, AND F1 PAYS" — off the vacuous `f2_spared`.
+
+Every one was pre-registered before its run. **A pre-registered verdict is code, and can
+be wrong in the ordinary way code is wrong.** A fifth correction belongs in the same
+list: the verdict held `nearest` to the 3 SE bar and printed "NOT YET A FINDING" for 2.9
+SE, then declared a 2.7 SE delivery contrast to be the headline, because that test was
+coded against 2.0. The bar existed twice and diverged; it is now `kVGBar`, defined once
+and read by every test.
+
+### Two silent failures and a buffer overrun
+
+The first full run printed a confident capacity ceiling off **two copies of the same
+simulation**. `kVLMaxWords = 4` clamped nine words to four without a word, and
+`kMaxContextSlots = 8` had the kernel respond to nine slots with `ctx_slots_ = 0` —
+switching the context index off entirely, so the oracle arm *was* the control. All 18
+pairs came out bit-identical, paired excess exactly +0.000, and the verdict read
+"CAPACITY IS FOUR". **A clamp or disable on a parameter the conclusion depends on must
+refuse, not degrade**, because degrading yields a well-formed, plausible, wrong answer.
+The clamp now refuses, the cap lives in `config.h` at 16, `dna.cpp` returns
+`kBadGrowth` so the genome will not hatch, and `ctxvocab` carries its own
+arms-are-distinct guard that prints the bit-identical count even when it is zero. This
+project had that guard elsewhere already — a guard at one call site protects nothing
+added later.
+
+**Raising the cap was itself a bug.** `ctx_wins_[8]` was a literal copy of the old cap,
+so nine slots wrote one element past the end — directly into `ctx_dsum_`, the
+conscience's winner-distance accumulator behind `ctx-conscience`'s 0.002 → 0.999
+separation. Nine slots silently corrupted it and produced a well-formed capacity number;
+**fifteen and sixteen segfaulted.** The severity is non-monotone in the parameter, which
+is why it hid: a boundary test at only the new cap finds the crash, and a test at only
+the value the experiment uses finds nothing. `verify` could never have caught it either,
+since the shipped genome has `context_slots = 0` — **a passing hash says the shipped
+configuration is unchanged, not that the code is correct.**
+
+Credit: Gunnar Fant, whose source-filter account is what makes a formant grid a
+vocabulary at all; Michale Fee and Adam Goldberg for the bias-from-outside architecture
+this teaches through; Anne Warlaumont and Megan Finnegan, whose refused salience result
+supplied the 3 SE bar that refused three of the four verdicts above.

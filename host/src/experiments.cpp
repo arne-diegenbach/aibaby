@@ -169,6 +169,11 @@ const Spec kSpecs[] = {
      "  8x. Local recurrence cannot carry activity forward at all"},
     {"curriculum", 1200000, Expect::kOpen, Tier::kLong,
      "derived: m3's protocol at a length where teaching works"},
+    {"ctxvocab", 6800000, Expect::kOpen, Tier::kTeach,
+     "  how many words fit on the 2-D grid? ctxgrid names four at +0.137 and\n"
+     "  aimaxes predicts ~6.7 from 2.6 levels per axis. Six and nine words at\n"
+     "  the SAME spacing, each scored on its OWN no-index arm -- a capacity\n"
+     "  test, not a resolution one"},
     {"ctxgrid", 6800000, Expect::kOpen, Tier::kTeach,
      "  ctxfour's four words laid out 2x2 on BOTH formants and inside the\n"
      "  MEASURED reach, instead of vowel corners where /i/ and /u/ sit 30 Hz\n"
@@ -928,6 +933,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "aimslice") ok = run_aimslice(dna_blob, ticks, verbose);
   else if (name == "aimaxes") ok = run_aimaxes(dna_blob, ticks, verbose);
   else if (name == "ctxgrid") ok = run_ctxgrid(dna_blob, ticks, verbose);
+  else if (name == "ctxvocab") ok = run_ctxvocab(dna_blob, ticks, verbose);
   else if (name == "vocabcurve") ok = run_vocabcurve(dna_blob, ticks, verbose);
   else if (name == "ctxprobe") ok = run_ctxprobe(dna_blob, ticks, verbose);
   else if (name == "shapeprobe") ok = run_shapeprobe(dna_blob, ticks, verbose);

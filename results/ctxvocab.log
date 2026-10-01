@@ -1,0 +1,108 @@
+  [2/72] k=6 off    seed 1  near 0.248
+  [12/72] k=6 off    seed 11  near 0.191
+  [3/72] k=6 off    seed 2  near 0.087
+  [14/72] k=6 off    seed 13  near 0.221
+  [8/72] k=6 off    seed 7  near 0.099
+  [1/72] k=6 off    seed 0  near 0.128
+  [6/72] k=6 off    seed 5  near 0.259
+  [10/72] k=6 off    seed 9  near 0.172
+  [13/72] k=6 off    seed 12  near 0.054
+  [11/72] k=6 off    seed 10  near 0.117
+  [4/72] k=6 off    seed 3  near 0.115
+  [9/72] k=6 off    seed 8  near 0.214
+  [7/72] k=6 off    seed 6  near 0.107
+  [5/72] k=6 off    seed 4  near 0.149
+  [16/72] k=6 off    seed 15  near 0.173
+  [20/72] k=6 oracle seed 1  near 0.148
+  [15/72] k=6 off    seed 14  near 0.083
+  [18/72] k=6 off    seed 17  near 0.198
+  [19/72] k=6 oracle seed 0  near 0.374
+  [17/72] k=6 off    seed 16  near 0.152
+  [23/72] k=6 oracle seed 4  near 0.327
+  [21/72] k=6 oracle seed 2  near 0.183
+  [24/72] k=6 oracle seed 5  near 0.160
+  [27/72] k=6 oracle seed 8  near 0.101
+  [25/72] k=6 oracle seed 6  near 0.192
+  [22/72] k=6 oracle seed 3  near 0.265
+  [28/72] k=6 oracle seed 9  near 0.118
+  [26/72] k=6 oracle seed 7  near 0.287
+  [29/72] k=6 oracle seed 10  near 0.254
+  [30/72] k=6 oracle seed 11  near 0.255
+  [34/72] k=6 oracle seed 15  near 0.166
+  [32/72] k=6 oracle seed 13  near 0.463
+  [35/72] k=6 oracle seed 16  near 0.298
+  [31/72] k=6 oracle seed 12  near 0.247
+  [33/72] k=6 oracle seed 14  near 0.268
+  [37/72] k=9 off    seed 0  near 0.092
+  [38/72] k=9 off    seed 1  near 0.185
+  [36/72] k=6 oracle seed 17  near 0.274
+  [39/72] k=9 off    seed 2  near 0.035
+  [40/72] k=9 off    seed 3  near 0.069
+  [42/72] k=9 off    seed 5  near 0.091
+  [41/72] k=9 off    seed 4  near 0.064
+  [43/72] k=9 off    seed 6  near 0.100
+  [44/72] k=9 off    seed 7  near 0.093
+  [46/72] k=9 off    seed 9  near 0.081
+  [45/72] k=9 off    seed 8  near 0.077
+  [48/72] k=9 off    seed 11  near 0.122
+  [49/72] k=9 off    seed 12  near 0.045
+  [47/72] k=9 off    seed 10  near 0.195
+  [50/72] k=9 off    seed 13  near 0.114
+  [51/72] k=9 off    seed 14  near 0.087
+  [52/72] k=9 off    seed 15  near 0.087
+  [53/72] k=9 off    seed 16  near 0.128
+  [54/72] k=9 off    seed 17  near 0.138
+  [56/72] k=9 oracle seed 1  near 0.204
+  [55/72] k=9 oracle seed 0  near 0.200
+  [58/72] k=9 oracle seed 3  near 0.160
+  [60/72] k=9 oracle seed 5  near 0.122
+  [57/72] k=9 oracle seed 2  near 0.100
+  [59/72] k=9 oracle seed 4  near 0.078
+  [62/72] k=9 oracle seed 7  near 0.151
+  [61/72] k=9 oracle seed 6  near 0.142
+  [63/72] k=9 oracle seed 8  near 0.124
+  [64/72] k=9 oracle seed 9  near 0.061
+  [65/72] k=9 oracle seed 10  near 0.122
+  [66/72] k=9 oracle seed 11  near 0.131
+  [70/72] k=9 oracle seed 15  near 0.065
+  [68/72] k=9 oracle seed 13  near 0.106
+  [67/72] k=9 oracle seed 12  near 0.138
+  [69/72] k=9 oracle seed 14  near 0.157
+  [72/72] k=9 oracle seed 17  near 0.165
+  [71/72] k=9 oracle seed 16  near 0.077
+experiment: ctxvocab
+  instrument        ctxvocab   trial seed 000000000135e703   2428 trials
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  the question      ctxgrid names FOUR words on two axes at +0.137.
+                    aimaxes put ~2.6 levels on each axis, predicting a
+                    capacity near 2.6 x 2.6 = 6.7 -- a PRODUCT. Does the
+                    excess survive six words, and nine?
+  the design        same spacing, more of it. Adjacent levels stay 2.6 sd
+                    apart at every k, so this tests CAPACITY and not
+                    resolution.
+  the null          each k brings its OWN no-index arm. `nearest` has no
+                    fixed chance level and the geometry changes with k.
+
+  k    arm      nearest         F1 level        F2 level     1/k
+  6    off      0.154 +/- 0.014   0.339 +/- 0.019  0.483 +/- 0.019  0.167   product 0.164
+  6    oracle   0.243 +/- 0.022   0.452 +/- 0.022  0.524 +/- 0.029  0.167   product 0.237
+       -> paired excess  nearest +0.089 +/- 0.028 (3.2 SE)   F1 +0.113   F2 +0.040
+          GUARD arms differ?  0 of 18 pairs BIT-IDENTICAL   OK
+
+  9    off      0.100 +/- 0.010   0.312 +/- 0.018  0.308 +/- 0.017  0.111   product 0.096
+  9    oracle   0.128 +/- 0.010   0.364 +/- 0.013  0.380 +/- 0.015  0.111   product 0.138
+       -> paired excess  nearest +0.028 +/- 0.012 (2.4 SE)   F1 +0.052   F2 +0.072
+          GUARD arms differ?  0 of 18 pairs BIT-IDENTICAL   OK
+
+  CAPACITY  paired excess by vocabulary size
+    k = 4   +0.137 +/- 0.023   (ctxgrid, n=36)
+    k = 6   +0.089 +/- 0.028   -0.048 against k=4
+    k = 9   +0.028 +/- 0.012   -0.109 against k=4
+
+  at k=9 the excess is +0.028, a change of -0.109 +/- 0.026 against k=4 (4.2 SE)
+
+  CAPACITY IS BETWEEN FOUR AND NINE. The excess is still real at k=9
+  (2.4 SE) but has fallen -0.109 +/- 0.026 from its four-word value, so
+  something beyond per-axis resolution is binding. aimaxes predicted
+  6.7 words and this brackets it.

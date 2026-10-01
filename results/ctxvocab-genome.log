@@ -1,0 +1,6 @@
+wrote results/ctxvocab.toml: context, 2 slices of 32 (64 neurons, zero baseline) -> vocal at d=0.50 w=0
+wrote results/ctxvocab.toml
+loads and runs
+  recalibrated somato -> 4.16 Hz  (was: target_rate_hz = 4.56)
+  calibrate:   vocal             3.85 Hz      5.00 Hz   -1.15  by design — holds the duty cycle down
+  calibrate:   calibrate PASS — 0 modules off target, 0 seeds wiring badly. Amplitude floor thin (structural).

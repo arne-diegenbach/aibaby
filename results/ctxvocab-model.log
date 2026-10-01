@@ -1,0 +1,129 @@
+  [10/72] k=6 off    seed 9  near 0.172
+  [12/72] k=6 off    seed 11  near 0.191
+  [9/72] k=6 off    seed 8  near 0.214
+  [3/72] k=6 off    seed 2  near 0.087
+  [4/72] k=6 off    seed 3  near 0.115
+  [14/72] k=6 off    seed 13  near 0.221
+  [2/72] k=6 off    seed 1  near 0.248
+  [8/72] k=6 off    seed 7  near 0.099
+  [11/72] k=6 off    seed 10  near 0.117
+  [1/72] k=6 off    seed 0  near 0.128
+  [6/72] k=6 off    seed 5  near 0.259
+  [5/72] k=6 off    seed 4  near 0.149
+  [13/72] k=6 off    seed 12  near 0.054
+  [7/72] k=6 off    seed 6  near 0.107
+  [20/72] k=6 oracle seed 1  near 0.148
+  [19/72] k=6 oracle seed 0  near 0.374
+  [17/72] k=6 off    seed 16  near 0.152
+  [23/72] k=6 oracle seed 4  near 0.327
+  [16/72] k=6 off    seed 15  near 0.173
+  [15/72] k=6 off    seed 14  near 0.083
+  [24/72] k=6 oracle seed 5  near 0.160
+  [22/72] k=6 oracle seed 3  near 0.265
+  [21/72] k=6 oracle seed 2  near 0.183
+  [18/72] k=6 off    seed 17  near 0.198
+  [28/72] k=6 oracle seed 9  near 0.118
+  [25/72] k=6 oracle seed 6  near 0.192
+  [26/72] k=6 oracle seed 7  near 0.287
+  [27/72] k=6 oracle seed 8  near 0.101
+  [29/72] k=6 oracle seed 10  near 0.254
+  [33/72] k=6 oracle seed 14  near 0.268
+  [30/72] k=6 oracle seed 11  near 0.255
+  [35/72] k=6 oracle seed 16  near 0.298
+  [31/72] k=6 oracle seed 12  near 0.247
+  [34/72] k=6 oracle seed 15  near 0.166
+  [38/72] k=9 off    seed 1  near 0.185
+  [37/72] k=9 off    seed 0  near 0.092
+  [32/72] k=6 oracle seed 13  near 0.463
+  [39/72] k=9 off    seed 2  near 0.035
+  [36/72] k=6 oracle seed 17  near 0.274
+  [40/72] k=9 off    seed 3  near 0.069
+  [41/72] k=9 off    seed 4  near 0.064
+  [42/72] k=9 off    seed 5  near 0.091
+  [43/72] k=9 off    seed 6  near 0.100
+  [46/72] k=9 off    seed 9  near 0.081
+  [45/72] k=9 off    seed 8  near 0.077
+  [44/72] k=9 off    seed 7  near 0.093
+  [47/72] k=9 off    seed 10  near 0.195
+  [50/72] k=9 off    seed 13  near 0.114
+  [48/72] k=9 off    seed 11  near 0.122
+  [49/72] k=9 off    seed 12  near 0.045
+  [51/72] k=9 off    seed 14  near 0.087
+  [54/72] k=9 off    seed 17  near 0.138
+  [52/72] k=9 off    seed 15  near 0.087
+  [53/72] k=9 off    seed 16  near 0.128
+  [55/72] k=9 oracle seed 0  near 0.268
+  [56/72] k=9 oracle seed 1  near 0.147
+  [57/72] k=9 oracle seed 2  near 0.113
+  [58/72] k=9 oracle seed 3  near 0.060
+  [63/72] k=9 oracle seed 8  near 0.047
+  [62/72] k=9 oracle seed 7  near 0.108
+  [61/72] k=9 oracle seed 6  near 0.157
+  [59/72] k=9 oracle seed 4  near 0.106
+  [65/72] k=9 oracle seed 10  near 0.092
+  [60/72] k=9 oracle seed 5  near 0.169
+  [64/72] k=9 oracle seed 9  near 0.078
+  [66/72] k=9 oracle seed 11  near 0.175
+  [68/72] k=9 oracle seed 13  near 0.139
+  [70/72] k=9 oracle seed 15  near 0.106
+  [67/72] k=9 oracle seed 12  near 0.107
+  [69/72] k=9 oracle seed 14  near 0.118
+  [72/72] k=9 oracle seed 17  near 0.182
+  [71/72] k=9 oracle seed 16  near 0.191
+experiment: ctxvocab
+  instrument        ctxvocab   trial seed 000000000135e703   2428 trials
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  the question      ctxgrid names FOUR words on two axes at +0.137.
+                    aimaxes put ~2.6 levels on each axis, predicting a
+                    capacity near 2.6 x 2.6 = 6.7 -- a PRODUCT. Does the
+                    excess survive six words, and nine?
+  the design        the SPAN is fixed and the spacing HALVES against the
+                    k=4 anchor: more words inside the same learned reach.
+                    A falling excess is what resolution ALONE predicts, so
+                    the test is whether the fall is FULLY predicted by the
+                    delivered spacing and the within-level scatter.
+  the spacing       F1 59 Hz and F2 150 Hz adjacent at k=6 and k=9,
+                    against 118 / 300 at ctxgrid's k=4: HALF.
+  the null          each k brings its OWN no-index arm. `nearest` has no
+                    fixed chance level and the geometry changes with k.
+
+  k    arm      nearest         F1 level        F2 level     1/k
+  6    off      0.154 +/- 0.014   0.339 +/- 0.019  0.483 +/- 0.019  0.167   product 0.164
+  6    oracle   0.243 +/- 0.022   0.452 +/- 0.022  0.524 +/- 0.029  0.167   product 0.237
+       -> paired excess  nearest +0.089 +/- 0.028 (3.2 SE)   F1 +0.113   F2 +0.040
+          GUARD arms differ?  0 of 18 pairs BIT-IDENTICAL   OK
+          MODEL   demanded  delivered   scatter    predicted         measured
+            F1      59.0      24.5       45.0     0.444 +/- 0.020    0.452 +/- 0.022
+            F2     150.0      31.5      112.3     0.553 +/- 0.026    0.524 +/- 0.029
+
+  9    off      0.100 +/- 0.010   0.312 +/- 0.018  0.308 +/- 0.017  0.111   product 0.096
+  9    oracle   0.131 +/- 0.013   0.362 +/- 0.019  0.371 +/- 0.016  0.111   product 0.134
+       -> paired excess  nearest +0.031 +/- 0.014 (2.3 SE)   F1 +0.050   F2 +0.062
+          GUARD arms differ?  0 of 18 pairs BIT-IDENTICAL   OK
+          MODEL   demanded  delivered   scatter    predicted         measured
+            F1      59.0       6.0       41.3     0.363 +/- 0.015    0.362 +/- 0.019
+            F2     150.0       9.6      111.1     0.362 +/- 0.013    0.371 +/- 0.016
+
+  CAPACITY  paired excess by vocabulary size
+    k = 4   +0.137 +/- 0.023   (ctxgrid, n=36)
+    k = 6   +0.089 +/- 0.028   -0.048 against k=4
+    k = 9   +0.031 +/- 0.014   -0.106 against k=4
+
+  at k=9 the excess is +0.031, a change of -0.106 +/- 0.027 against k=4 (3.9 SE)
+  -- and that change is NOT a capacity curve: k=4's spacing is DOUBLE,
+     so it mixes vocabulary size with a 2x resolution change.
+  k=9 excess against this project's own 3 SE bar at n=18:  2.3 SE  -> NOT YET A FINDING
+  the model at k=9   F1 measured 0.362 vs predicted 0.363  (meets geometry)
+                     F2 measured 0.371 vs predicted 0.362  (meets geometry)
+  levels the F1 reach holds:  delivered span 12.1 Hz / 2 x scatter 41.3 Hz  ->  0.1 intervals, 1.1 levels
+
+  CAPACITY IS NOT WHAT THIS MEASURES. At k=9 the creature meets its own
+  geometry on both axes: per-axis accuracy is within 2 SE of what the
+  DELIVERED spacing and the within-level scatter predict. The fall from
+  k=4's +0.137 is resolution, not vocabulary -- the span is pinned at the
+  learned reach and nine words subdivide it until adjacent levels sit
+  inside the creature's own scatter. NO vocabulary limit is shown. The
+  binding constraint is reach / scatter, and it is the REACH that must
+  grow: ctxscale's ~118 Hz asymptote already holds only ~2 levels per
+  axis, which is exactly the 2x2 that ctxgrid found working.

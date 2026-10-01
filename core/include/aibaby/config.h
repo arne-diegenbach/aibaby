@@ -60,6 +60,18 @@ constexpr uint32_t kVocalGroups = kVocalParams + 1;  // + voicing
 // larger than its vocabulary is a readout it cannot use.
 constexpr uint32_t kMaxDictionaryUnits = 64;
 
+// DNA v51. Most context slots a brain may hold -- one learned bias table each.
+// Lives here rather than on Network because `dna.cpp` validates against it and must
+// not depend on the kernel, and because the check it replaces was a SILENT DISABLE:
+// Network::build set ctx_slots_ = 0 when the old cap of 8 was exceeded, so a genome
+// asking for nine contexts hatched with no index at all. An experiment comparing an
+// indexed arm against an unindexed one then ran two IDENTICAL arms and reported a
+// paired excess of exactly +0.000 as if it were a measured capacity limit.
+//
+// 16, raised from 8 on 2026-09-30. Every shipped genome asks for <= 4, so the change
+// is behaviour-neutral and the pinned hash is unmoved.
+constexpr uint32_t kMaxContextSlots = 16;
+
 // Population bins used to summarise a module's activity for the curiosity
 // forward model. Binning rather than per-neuron features is what keeps the
 // critic the same size before and after growth (M4).

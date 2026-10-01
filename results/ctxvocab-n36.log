@@ -1,0 +1,265 @@
+  [4/180] k6  off    seed 3  near 0.115
+  [10/180] k6  off    seed 9  near 0.172
+  [8/180] k6  off    seed 7  near 0.099
+  [3/180] k6  off    seed 2  near 0.087
+  [14/180] k6  off    seed 13  near 0.221
+  [11/180] k6  off    seed 10  near 0.117
+  [2/180] k6  off    seed 1  near 0.248
+  [12/180] k6  off    seed 11  near 0.191
+  [6/180] k6  off    seed 5  near 0.259
+  [13/180] k6  off    seed 12  near 0.054
+  [9/180] k6  off    seed 8  near 0.214
+  [1/180] k6  off    seed 0  near 0.128
+  [7/180] k6  off    seed 6  near 0.107
+  [5/180] k6  off    seed 4  near 0.149
+  [17/180] k6  off    seed 16  near 0.152
+  [15/180] k6  off    seed 14  near 0.083
+  [16/180] k6  off    seed 15  near 0.173
+  [18/180] k6  off    seed 17  near 0.198
+  [23/180] k6  off    seed 22  near 0.135
+  [26/180] k6  off    seed 25  near 0.109
+  [25/180] k6  off    seed 24  near 0.327
+  [20/180] k6  off    seed 19  near 0.095
+  [19/180] k6  off    seed 18  near 0.110
+  [22/180] k6  off    seed 21  near 0.131
+  [24/180] k6  off    seed 23  near 0.322
+  [27/180] k6  off    seed 26  near 0.161
+  [21/180] k6  off    seed 20  near 0.338
+  [28/180] k6  off    seed 27  near 0.120
+  [29/180] k6  off    seed 28  near 0.101
+  [30/180] k6  off    seed 29  near 0.173
+  [32/180] k6  off    seed 31  near 0.191
+  [33/180] k6  off    seed 32  near 0.083
+  [37/180] k6  oracle seed 0  near 0.374
+  [31/180] k6  off    seed 30  near 0.161
+  [34/180] k6  off    seed 33  near 0.125
+  [35/180] k6  off    seed 34  near 0.132
+  [36/180] k6  off    seed 35  near 0.158
+  [39/180] k6  oracle seed 2  near 0.183
+  [41/180] k6  oracle seed 4  near 0.327
+  [38/180] k6  oracle seed 1  near 0.148
+  [40/180] k6  oracle seed 3  near 0.265
+  [42/180] k6  oracle seed 5  near 0.160
+  [48/180] k6  oracle seed 11  near 0.255
+  [46/180] k6  oracle seed 9  near 0.118
+  [43/180] k6  oracle seed 6  near 0.192
+  [53/180] k6  oracle seed 16  near 0.298
+  [51/180] k6  oracle seed 14  near 0.268
+  [52/180] k6  oracle seed 15  near 0.166
+  [49/180] k6  oracle seed 12  near 0.247
+  [45/180] k6  oracle seed 8  near 0.101
+  [47/180] k6  oracle seed 10  near 0.254
+  [50/180] k6  oracle seed 13  near 0.463
+  [44/180] k6  oracle seed 7  near 0.287
+  [54/180] k6  oracle seed 17  near 0.274
+  [55/180] k6  oracle seed 18  near 0.129
+  [56/180] k6  oracle seed 19  near 0.223
+  [57/180] k6  oracle seed 20  near 0.238
+  [58/180] k6  oracle seed 21  near 0.205
+  [61/180] k6  oracle seed 24  near 0.275
+  [60/180] k6  oracle seed 23  near 0.134
+  [59/180] k6  oracle seed 22  near 0.138
+  [62/180] k6  oracle seed 25  near 0.128
+  [66/180] k6  oracle seed 29  near 0.303
+  [64/180] k6  oracle seed 27  near 0.239
+  [63/180] k6  oracle seed 26  near 0.132
+  [65/180] k6  oracle seed 28  near 0.282
+  [67/180] k6  oracle seed 30  near 0.269
+  [69/180] k6  oracle seed 32  near 0.330
+  [68/180] k6  oracle seed 31  near 0.111
+  [70/180] k6  oracle seed 33  near 0.284
+  [74/180] k9  off    seed 1  near 0.185
+  [77/180] k9  off    seed 4  near 0.064
+  [71/180] k6  oracle seed 34  near 0.189
+  [72/180] k6  oracle seed 35  near 0.174
+  [76/180] k9  off    seed 3  near 0.069
+  [75/180] k9  off    seed 2  near 0.035
+  [73/180] k9  off    seed 0  near 0.092
+  [79/180] k9  off    seed 6  near 0.100
+  [78/180] k9  off    seed 5  near 0.091
+  [80/180] k9  off    seed 7  near 0.093
+  [82/180] k9  off    seed 9  near 0.081
+  [81/180] k9  off    seed 8  near 0.077
+  [83/180] k9  off    seed 10  near 0.195
+  [84/180] k9  off    seed 11  near 0.122
+  [86/180] k9  off    seed 13  near 0.114
+  [87/180] k9  off    seed 14  near 0.087
+  [85/180] k9  off    seed 12  near 0.045
+  [88/180] k9  off    seed 15  near 0.087
+  [90/180] k9  off    seed 17  near 0.138
+  [89/180] k9  off    seed 16  near 0.128
+  [92/180] k9  oracle seed 1  near 0.147
+  [91/180] k9  oracle seed 0  near 0.268
+  [93/180] k9  oracle seed 2  near 0.113
+  [94/180] k9  oracle seed 3  near 0.060
+  [95/180] k9  oracle seed 4  near 0.106
+  [97/180] k9  oracle seed 6  near 0.157
+  [96/180] k9  oracle seed 5  near 0.169
+  [98/180] k9  oracle seed 7  near 0.108
+  [99/180] k9  oracle seed 8  near 0.047
+  [101/180] k9  oracle seed 10  near 0.092
+  [103/180] k9  oracle seed 12  near 0.107
+  [100/180] k9  oracle seed 9  near 0.078
+  [102/180] k9  oracle seed 11  near 0.175
+  [105/180] k9  oracle seed 14  near 0.118
+  [104/180] k9  oracle seed 13  near 0.139
+  [106/180] k9  oracle seed 15  near 0.106
+  [107/180] k9  oracle seed 16  near 0.191
+  [108/180] k9  oracle seed 17  near 0.182
+  [110/180] k9+ off    seed 1  near 0.189
+  [109/180] k9+ off    seed 0  near 0.088
+  [112/180] k9+ off    seed 3  near 0.066
+  [111/180] k9+ off    seed 2  near 0.037
+  [115/180] k9+ off    seed 6  near 0.100
+  [113/180] k9+ off    seed 4  near 0.047
+  [114/180] k9+ off    seed 5  near 0.083
+  [118/180] k9+ off    seed 9  near 0.071
+  [120/180] k9+ off    seed 11  near 0.133
+  [116/180] k9+ off    seed 7  near 0.091
+  [117/180] k9+ off    seed 8  near 0.059
+  [119/180] k9+ off    seed 10  near 0.215
+  [121/180] k9+ off    seed 12  near 0.041
+  [122/180] k9+ off    seed 13  near 0.099
+  [123/180] k9+ off    seed 14  near 0.077
+  [124/180] k9+ off    seed 15  near 0.078
+  [125/180] k9+ off    seed 16  near 0.112
+  [126/180] k9+ off    seed 17  near 0.139
+  [127/180] k9+ off    seed 18  near 0.073
+  [128/180] k9+ off    seed 19  near 0.067
+  [133/180] k9+ off    seed 24  near 0.085
+  [129/180] k9+ off    seed 20  near 0.094
+  [130/180] k9+ off    seed 21  near 0.055
+  [131/180] k9+ off    seed 22  near 0.057
+  [132/180] k9+ off    seed 23  near 0.102
+  [135/180] k9+ off    seed 26  near 0.075
+  [134/180] k9+ off    seed 25  near 0.094
+  [136/180] k9+ off    seed 27  near 0.144
+  [137/180] k9+ off    seed 28  near 0.027
+  [138/180] k9+ off    seed 29  near 0.034
+  [139/180] k9+ off    seed 30  near 0.133
+  [140/180] k9+ off    seed 31  near 0.063
+  [141/180] k9+ off    seed 32  near 0.074
+  [142/180] k9+ off    seed 33  near 0.046
+  [144/180] k9+ off    seed 35  near 0.057
+  [143/180] k9+ off    seed 34  near 0.070
+  [146/180] k9+ oracle seed 1  near 0.118
+  [148/180] k9+ oracle seed 3  near 0.091
+  [145/180] k9+ oracle seed 0  near 0.303
+  [147/180] k9+ oracle seed 2  near 0.124
+  [149/180] k9+ oracle seed 4  near 0.132
+  [150/180] k9+ oracle seed 5  near 0.155
+  [152/180] k9+ oracle seed 7  near 0.086
+  [153/180] k9+ oracle seed 8  near 0.065
+  [151/180] k9+ oracle seed 6  near 0.179
+  [154/180] k9+ oracle seed 9  near 0.107
+  [157/180] k9+ oracle seed 12  near 0.124
+  [156/180] k9+ oracle seed 11  near 0.166
+  [155/180] k9+ oracle seed 10  near 0.117
+  [158/180] k9+ oracle seed 13  near 0.137
+  [159/180] k9+ oracle seed 14  near 0.136
+  [161/180] k9+ oracle seed 16  near 0.170
+  [160/180] k9+ oracle seed 15  near 0.134
+  [163/180] k9+ oracle seed 18  near 0.137
+  [164/180] k9+ oracle seed 19  near 0.120
+  [162/180] k9+ oracle seed 17  near 0.202
+  [167/180] k9+ oracle seed 22  near 0.128
+  [166/180] k9+ oracle seed 21  near 0.137
+  [165/180] k9+ oracle seed 20  near 0.156
+  [168/180] k9+ oracle seed 23  near 0.150
+  [172/180] k9+ oracle seed 27  near 0.173
+  [170/180] k9+ oracle seed 25  near 0.126
+  [169/180] k9+ oracle seed 24  near 0.142
+  [171/180] k9+ oracle seed 26  near 0.141
+  [178/180] k9+ oracle seed 33  near 0.106
+  [174/180] k9+ oracle seed 29  near 0.085
+  [173/180] k9+ oracle seed 28  near 0.144
+  [175/180] k9+ oracle seed 30  near 0.180
+  [176/180] k9+ oracle seed 31  near 0.178
+  [180/180] k9+ oracle seed 35  near 0.119
+  [177/180] k9+ oracle seed 32  near 0.225
+  [179/180] k9+ oracle seed 34  near 0.086
+experiment: ctxvocab
+  instrument        ctxvocab   trial seed 000000000135e703   2428 trials
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  the question      ctxgrid names FOUR words on two axes at +0.137.
+                    aimaxes put ~2.6 levels on each axis, predicting a
+                    capacity near 2.6 x 2.6 = 6.7 -- a PRODUCT. Does the
+                    excess survive six words, and nine?
+  the design        the SPAN is fixed and the spacing HALVES against the
+                    k=4 anchor: more words inside the same learned reach.
+                    So a falling excess is what resolution ALONE predicts,
+                    and the headline cannot be a capacity curve. THREE arms
+                    instead: k6, k9, and k9+ (the same nine words with 1.5x
+                    the ticks, matching k=6's TRIALS PER WORD). F1 demands
+                    59 Hz in all three, so delivered F1 spacing separates
+                    teaching budget from word interference.
+  the spacing       F1 59 Hz and F2 150 Hz adjacent at k=6 and k=9,
+                    against 118 / 300 at ctxgrid's k=4: HALF.
+  the null          each k brings its OWN no-index arm. `nearest` has no
+                    fixed chance level and the geometry changes with k.
+
+  k    arm      nearest         F1 level        F2 level     1/k
+  k6   off      0.160 +/- 0.012   0.337 +/- 0.013  0.487 +/- 0.017  0.167   product 0.164
+  k6   oracle   0.227 +/- 0.014   0.432 +/- 0.014  0.508 +/- 0.019  0.167   product 0.219
+       -> paired excess  nearest +0.067 +/- 0.019 (3.5 SE)   F1 +0.095   F2 +0.021
+          GUARD arms differ?  0 of 36 pairs BIT-IDENTICAL   OK
+          MODEL   demanded     delivered      scatter    predicted         measured
+            F1      59.0      18.0 +/-  2.8     42.8     0.423 +/- 0.013    0.432 +/- 0.014
+            F2     150.0      17.8           113.4     0.532 +/- 0.018    0.508 +/- 0.019
+
+  k9   off      0.100 +/- 0.010   0.312 +/- 0.018  0.308 +/- 0.017  0.111   product 0.096
+  k9   oracle   0.131 +/- 0.013   0.362 +/- 0.019  0.371 +/- 0.016  0.111   product 0.134
+       -> paired excess  nearest +0.031 +/- 0.014 (2.3 SE)   F1 +0.050   F2 +0.062
+          GUARD arms differ?  0 of 18 pairs BIT-IDENTICAL   OK
+          MODEL   demanded     delivered      scatter    predicted         measured
+            F1      59.0       6.0 +/-  2.9     41.3     0.363 +/- 0.015    0.362 +/- 0.019
+            F2     150.0       9.6           111.1     0.362 +/- 0.013    0.371 +/- 0.016
+
+  k9+  off      0.085 +/- 0.007   0.292 +/- 0.012  0.301 +/- 0.011  0.111   product 0.088
+  k9+  oracle   0.141 +/- 0.007   0.361 +/- 0.011  0.401 +/- 0.012  0.111   product 0.145
+       -> paired excess  nearest +0.056 +/- 0.009 (6.3 SE)   F1 +0.069   F2 +0.100
+          GUARD arms differ?  0 of 36 pairs BIT-IDENTICAL   OK
+          MODEL   demanded     delivered      scatter    predicted         measured
+            F1      59.0       6.2 +/-  2.1     44.0     0.362 +/- 0.010    0.361 +/- 0.011
+            F2     150.0      19.6           120.1     0.380 +/- 0.010    0.401 +/- 0.012
+
+  CAPACITY  paired excess by vocabulary size
+    k = 4   +0.137 +/- 0.023   (ctxgrid, n=36)
+    k6      +0.067 +/- 0.019   -0.070 against k=4   (405 trials/word)
+    k9      +0.031 +/- 0.014   -0.106 against k=4   (270 trials/word)
+    k9+     +0.056 +/- 0.009   -0.081 against k=4   (405 trials/word)
+
+  at k=9 the excess is +0.056, a change of -0.081 +/- 0.025 against k=4 (3.3 SE)
+  -- and that change is NOT a capacity curve: k=4's spacing is DOUBLE,
+     so it mixes vocabulary size with a 2x resolution change.
+  k9+ excess against this project's own 3 SE bar (n=36):  6.3 SE  -> REAL
+  the model at k9+   F1 measured 0.361 vs predicted 0.362  (meets geometry)
+                     F2 measured 0.401 vs predicted 0.380  (meets geometry)
+
+  WHAT DAMAGES THE DELIVERY  (F1 demand is 59 Hz in all three arms)
+    k6   delivered   18.0 +/-  2.8 Hz
+    k9   delivered    6.0 +/-  2.9 Hz
+    k9+  delivered    6.2 +/-  2.1 Hz   (same nine words, 1.5x ticks)
+    BUDGET      k9+ - k9    +0.1 +/-  3.5 Hz (0.0 SE)  <- teaching per word
+    VOCABULARY  k9+ - k6   -11.8 +/-  3.5 Hz (3.4 SE)  <- nine words vs six,
+                                                      trials/word MATCHED
+    levels the F1 reach holds at k9+:  span 12.4 Hz / 2 x scatter 44.0  ->  1.1 levels
+
+  THE SCORE IS GEOMETRY. At every k the creature's per-axis accuracy is
+  within 2 SE of what its own DELIVERED spacing and scatter predict, so
+  the falling excess is not a readout failure and `nearest` is behaving.
+  The question is what shrinks the DELIVERY, and F1 answers it cleanly
+  because its demand is 59 Hz in all three arms.
+
+  VOCABULARY COSTS REACH. With trials per word MATCHED, nine words
+  deliver -11.8 +/- 3.5 Hz of F1 separation against six (3.4 SE,
+  clearing the 3 SE bar). The words INTERFERE: each one added costs
+  the others reach, and at k=9 the delivered span holds ~1.1
+  distinguishable levels. A capacity limit proper -- on the REACH the
+  bias can build, where ctxscale's ~118 Hz asymptote and
+  ceiling-is-an-exponent already put the ceiling.
+  The teaching budget is NOT excluded: k9+ - k9 is +0.1 +/- 3.5 Hz
+  (0.0 SE, n=18), which at the 3 SE bar still admits up to 10.8 Hz --
+  91% of the vocabulary term. More teaching is a SMALLER effect than
+  more words, and that is the whole of what this arm shows.
