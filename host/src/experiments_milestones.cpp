@@ -26132,11 +26132,81 @@ bool run_ctxself(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
   // session, and only in the arm whose target tracks the word -- the arm whose
   // voice actually changes. Printed per arm so the hypothesis is falsifiable on
   // its own terms rather than only through the `adapt` arm's score.
+  // THE DRIFT TEST, AND IT IS PAIRED NOW. areax-v53 left this as the named next step
+  // ("the index DECAYS across a session in the learning arm... Test: that split per
+  // arm") and the means alone were already printed -- but a bare (+0.016) with no SE
+  // is not a test, which is the same objection that voided two verdicts this week. The
+  // early and late thirds are the SAME creature, so the difference pairs exactly.
+  //
+  // THE PREDICTION DRIFT MAKES: MacQueen's 1/wins freezes the prototypes, and the
+  // TAUGHT arm is the one whose own voice keeps moving under them -- so `ear` should
+  // decay MOST, and the gap to `ear-rnd` should WIDEN from early to late. v53b
+  // reported 0.697 -> 0.663, a decay of -0.034, as the supporting observation.
   std::printf("\n  does the index hold up across a session? (early third -> last third)\n");
+  constexpr double kV53bDecay = -0.034;  // the decay drift is predicted to reproduce
+  double dr[kCtxSelfArmCount] = {}, dr_se[kCtxSelfArmCount] = {};
   for (uint32_t a = kEar; a < kCtxSelfArmCount; ++a) {
-    std::printf("    %-10s %.3f +/- %.3f -> %.3f +/- %.3f   (%+.3f)\n",
-                kCtxSelfArms[a].name, m_me[a], s_me[a], m_ml[a], s_ml[a],
-                m_ml[a] - m_me[a]);
+    std::vector<double> d;
+    const size_t n = std::min(mte[a].size(), mtl[a].size());
+    for (size_t i = 0; i < n; ++i) d.push_back(mtl[a][i] - mte[a][i]);
+    if (d.size() >= 2) dr[a] = ctx_mean_se(d, &dr_se[a]);
+    std::printf("    %-13s %.3f -> %.3f   PAIRED %+.3f +/- %.3f (%.1f SE)\n",
+                kCtxSelfArms[a].name, m_me[a], m_ml[a], dr[a], dr_se[a],
+                dr_se[a] > 0.0 ? std::fabs(dr[a]) / dr_se[a] : 0.0);
+  }
+  {
+    // THE REFERENCE POINT IS THE PREDICTION, NOT ZERO. The first version of this
+    // guard asked whether a -0.034 decay could be told apart from NO decay (is
+    // 3 x SE < 0.034), got 0.039 > 0.034, and REFUSED -- but drift makes a POINT
+    // prediction, so the question is whether the measurement is inconsistent with
+    // -0.034, which is |measured - predicted| / SE. That reads 3.8 SE and EXCLUDES it.
+    // Testing against zero when the hypothesis names a value is the same family of
+    // error as scoring against 1/k when the real control is sitting in the table: a
+    // reference that exists but is not the one the claim is about.
+    const double bar = 3.0;
+    const double miss = std::fabs(dr[kEar] - kV53bDecay);
+    const double miss_se = dr_se[kEar] > 0.0 ? miss / dr_se[kEar] : 0.0;
+    const bool pred_excluded = dr_se[kEar] > 0.0 && miss > bar * dr_se[kEar];
+    std::printf("    AGAINST THE PREDICTION  drift says %+.3f, measured %+.3f: off by\n"
+                "      %.3f = %.1f SE  -> %s\n", kV53bDecay, dr[kEar], miss, miss_se,
+                pred_excluded ? "PREDICTION EXCLUDED" : "not excluded");
+    std::printf("    what is NOT excluded: the %.0f SE interval is [%+.3f, %+.3f], so a\n"
+                "      decay smaller than %.3f remains possible\n",
+                bar, dr[kEar] - bar * dr_se[kEar], dr[kEar] + bar * dr_se[kEar],
+                std::fabs(dr[kEar] - bar * dr_se[kEar]));
+    // The gap itself, early against late. Drift says it WIDENS.
+    const double gap_e = m_me[kEar] - m_me[kERnd], gap_l = m_ml[kEar] - m_ml[kERnd];
+    std::printf("    the gap   early %+.3f  ->  late %+.3f   (%s)\n", gap_e, gap_l,
+                gap_l < gap_e ? "WIDENS, as drift predicts" : "NARROWS, against drift");
+    if (!pred_excluded && dr[kEar] > -bar * dr_se[kEar]) {
+      std::printf("    REFUSED: the measurement is consistent BOTH with no decay and\n"
+                  "    with drift's %+.3f, so it does not separate them. It needs about\n"
+                  "    %.0f creatures.\n", kV53bDecay,
+                  double(kReps) * std::pow(bar * dr_se[kEar] / miss, 2.0));
+    } else if (dr[kEar] < -bar * dr_se[kEar]) {
+      std::printf("    DRIFT SURVIVES. The learning arm decays %+.3f +/- %.3f (%.1f SE),\n"
+                  "    which is what MacQueen's frozen prototypes predict under a voice\n"
+                  "    that keeps moving. Its named fix is a learning rate that does not\n"
+                  "    reach zero, DERIVED -- and note `adapt` already tried a rate cap\n"
+                  "    and cost -0.146 of index on 8 of 9 seeds.\n",
+                  dr[kEar], dr_se[kEar], std::fabs(dr[kEar]) / dr_se[kEar]);
+    } else {
+      std::printf("    DRIFT IS REFUSED ON BOTH OF ITS CLAIMS. It predicts %+.3f in the\n"
+                  "    learning arm and that the learning arm decays MOST. Measured:\n"
+                  "    %+.3f +/- %.3f, which is %.1f SE off the prediction, and the\n"
+                  "    learning arm is the arm that decays LEAST -- the only one that\n"
+                  "    rises, with every control falling below it. The gap %s, where\n"
+                  "    drift requires it to widen. With own voice refused by\n"
+                  "    intervention and gate corruption refused at the wrong sign\n"
+                  "    (+0.72), ALL THREE named causes of the -0.056 gap are dead. The\n"
+                  "    gap is real at 6.0 SE and UNEXPLAINED -- record it that way\n"
+                  "    rather than reaching for a fourth guess. A decay smaller than\n"
+                  "    %.3f is still not excluded, so what dies is drift AT THE SIZE IT\n"
+                  "    PREDICTED, not every conceivable drift.\n",
+                  kV53bDecay, dr[kEar], dr_se[kEar], miss_se,
+                  gap_l < gap_e ? "widens" : "NARROWS",
+                  std::fabs(dr[kEar] - bar * dr_se[kEar]));
+    }
   }
   // Each mechanism against ITS OWN matched-marginal control, and against the
   // no-mechanism arm. v52's rows used to sit here and were removed with its

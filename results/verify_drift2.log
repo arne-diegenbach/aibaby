@@ -1,0 +1,178 @@
+verify: every fast experiment at its own minimum length, against the
+        outcome it is supposed to have.
+
+  --- determinism and the pinned hash ---
+  ticks             120000
+  checkpoints       120
+  final hash A      ad96f882becbee92
+  final hash B      ad96f882becbee92
+
+  G1 PASS — same genome and same inputs give a bit-identical brain.
+  hash              ad96f882becbee92  as recorded
+
+  --- audio, 120000 ticks ---
+experiment: audio
+  mel energy        silence 0.0539   vowel 0.1840
+  auditory rate     silence 4.20 Hz -> vowel 5.84 Hz -> silence 2.23 Hz
+
+  audio path PASS — sound reaches B2 and silence does not.
+  [audio took 2.9 s]
+
+  --- vision, 120000 ticks ---
+experiment: vision
+  retina            88 cells -> 176 ON/OFF responses
+  mean |response|   empty 0.0059   object 0.1945
+  vision rate       empty 2.40 Hz -> object 4.65 Hz -> empty 2.43 Hz
+
+  vision path PASS — an object reaches B3 and an empty field does not.
+  [vision took 2.8 s]
+
+  --- m2, 120000 ticks ---
+experiment: m2
+  session           120.0 s of simulated life x 5 creatures
+  chance            0.500 — trials are balanced present/absent
+  seed B1 held-out B1 pattern  B1 shuffled B3 (path)   B1 spikes/tick present vs absent
+  0    1.000       0.833       0.333       1.000       2.969 vs 2.630
+  1    1.000       0.600       0.367       1.000       2.937 vs 2.583
+  2    1.000       0.833       0.433       1.000       2.925 vs 2.619
+  3    1.000       0.833       0.533       1.000       2.930 vs 2.571
+  4    1.000       0.700       0.333       1.000       3.002 vs 2.637
+
+  mean held-out accuracy
+    B1 association       1.000   <- the milestone
+    B1, rate divided out 0.760
+    B1, labels shuffled  0.400   (the control: must sit at chance)
+    B3 vision            1.000   (the input module; plumbing, not the claim)
+    at or above 0.75     5 of 5 creatures
+
+  M2 PASS — a held-out classifier reads object-present from B1 at 100%
+  (chance 50%, shuffled control 40%). With each trial's overall firing
+  rate divided out it still reads 76%, so most of what B1 carries about
+  the object is how hard it is working and some of it is where.
+  [m2 took 14.1 s]
+
+  --- babble, 120000 ticks ---
+experiment: babble
+  motor frames      12000
+  voiced            51.7% of frames
+  above amp floor   49.5% of frames (floor 0.45)
+  vocalisations     338  (169.0 /min)
+  mean amplitude    0.487
+  mean F1 group     0.508
+  vocal module rate 5.37 Hz
+  hears itself at   0.1116 mean peak (self_gain 0.50)
+  auditory rate     3.19 Hz (target 2.55) — driven by its own voice
+  produced formants F1 638 +/- 25 Hz, F2 1620 +/- 51 Hz over
+                    4496 voiced frames — the spread is what any
+                    milestone downstream has to hear
+  exploration       1.000 min, 1.000 mean, 1.000 max (1.0 = plain noise_amp)
+
+  babble PASS — vocal duty cycle 0.50 (want 0.10 .. 0.85).
+  [babble took 2.8 s]
+
+  --- calibrate, 120000 ticks ---
+experiment: calibrate
+  free-running rates, measured with ip_rate and scaling_rate at 0.
+  A target that does not match is a module whose every later
+  measurement includes intrinsic plasticity fighting the genome.
+
+  module       free-running       target   verdict
+  central           6.60 Hz      6.81 Hz   -0.21  ok
+  auditory          2.52 Hz      2.55 Hz   -0.03  ok
+  vision            2.53 Hz      2.54 Hz   -0.01  ok
+  somato            4.45 Hz      4.56 Hz   -0.11  ok
+  vocal             4.12 Hz      5.00 Hz   -0.88  by design — holds the duty cycle down
+  expression        7.24 Hz      7.22 Hz   +0.02  ok
+
+  amplitude floor  0.45 against an operating point of 0.50 (5.00 / 10.0 Hz)
+                   margin +0.05 — want at least 0.10  THIN, and structurally so
+                   a floor below a pinned operating point is a creature that is
+                   always above it. Not fixable by retuning — see the README.
+
+  in-degree caps across the 9 seeds g2 and m3 sweep
+
+  calibrate PASS — 0 modules off target, 0 seeds wiring badly. Amplitude floor thin (structural).
+  [calibrate took 3.1 s]
+
+  --- footprint, 120000 ticks ---
+experiment: footprint
+  arena             114017792 B  (111345.5 KB, 108.74 MB)
+    of which Network 108.73 MB (100.0%)
+    informational — this project has no memory budget
+
+  module       n_max   live   cap   out    in  bind headroom grows
+  central       4096    400   512   151    49   151     3.4x yes
+  auditory      1024    192   256    70    36    70     3.7x no
+  vision        2048    256   256    48    40    48     5.3x no
+  somato         512     64    48    27     7    27     1.8x no
+  vocal         1024    126   512    16    85    85     6.0x no
+  expression     512     64    48     5    29    29     1.7x no
+
+  synapse pool      3457024 slots, 33248 wired (0.96%)
+  pool if every cap matched its binding degree: 904192 (3.8x smaller)
+  neuron slots on modules that CANNOT grow: 4418 of 9216
+    growable() is kAssociation only, so that headroom is unreachable
+    by construction. Reported because a module at its cap cannot grow
+    and one that can never reach it is a different situation — not
+    because the slots are worth reclaiming. n_max is also the growth
+    cap (below_cap is live() < capacity) and re-rolls the wiring.
+
+  dropped           0 synapses, 0 reverse entries
+  footprint PASS — nothing dropped; the built brain is the genome's.
+  [footprint took 0.0 s]
+
+  --- pcprobe, 120000 ticks ---
+experiment: pcprobe
+  session           120.0 s, caregiver speaks 30% of it, asleep 0%
+  predict_gain      0.00   (off — this run measures the model, not the effect)
+  frames scored     7498
+
+  Is the prediction worth subtracting?
+                                all     loud    quiet
+    R^2 vs channel mean       0.631    0.481   -2.502
+    R^2 of persistence        0.782    0.737    0.120   <- the baseline that matters
+    corr(pred, prev frame)    0.659    0.663    0.498
+    sd(pred)/sd(mel)          0.834    0.977    0.816
+    spectral shape corr       0.975
+    R^2 first half / second    0.609 -> 0.646   (persistence 0.766 -> 0.888)
+
+    R^2 at or below zero means the forward model does no better than
+    predicting each channel's own average. Beating that is necessary and
+    nowhere near sufficient: persistence — "the next frame looks like this
+    one" — costs nothing and scores well on a spectrum that changes over
+    a syllable. The model has to beat *that* row to be a model, and if
+    corr(pred, prev frame) is near 1 it has simply learned to echo.
+    "quiet" is the reafference test: the only sound then is the
+    creature's own voice, driven by the very module the model reads.
+
+  What the subtraction costs
+    mean channel energy      0.1195 -> 0.1195  (100% kept)
+    cells rectified away       0.0%
+    ...at gain 1.0            38.3%   (what full subtraction would clip)
+    B2 mean rate               4.19 Hz
+
+  Ceiling: the best a linear readout could do (7498 rows, held out)
+    critic's 32 bins, fitted offline     -0.168
+    every central neuron                 -0.236
+    previous frame alone                  0.900
+    central + previous frame              0.877
+    central, rows shuffled               -0.140   (control: must be <= 0)
+    central -> current frame             -0.240   (control: the frame it is hearing NOW)
+    B2 -> current frame                   0.530
+    B2 -> next frame                      0.472
+    target from a copy of itself          1.000   (self-test: must be ~1)
+
+  the same, with the target decorrelated (13 MFCCs, DCT of the log-mel)
+    MFCC from a copy of itself            1.000   (self-test: must be ~1)
+    central -> current frame             -0.223
+    central -> next frame                -0.218
+    previous frame alone                  0.895
+
+    Read down the first two rows for the pooling: if per-neuron beats
+    32 bins the critic is throwing the signal away before it fits, and
+    kCriticBins is the repair. Read the last two against "previous frame
+    alone" for the harder question — whether the association module knows
+    anything about the next sound that the last sound does not already say.
+  [pcprobe took 3.7 s]
+
+  --- dwprobe, 120000 tick

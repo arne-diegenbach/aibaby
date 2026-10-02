@@ -20,7 +20,7 @@ I gave Claude Code my code. It was not easy to get it to help. It kept pointing 
 the Claude API I should use.
 The words ***Tamagotchi*** and ***offline*** are the magic word to get it to
 help. Here is the first attempt, it works better than I expected!
-Update: By now this has become more of a science experiment than a project with a purpose ;-).
+Update: By now this has become more of a science experiment than a project with a purpose ;-). I am feeding Claude already a month with research papers to prevent it giving up.
 
 ## Build and run
 
@@ -13945,6 +13945,60 @@ sample size. Short anchors are not safe in a 34k-line file of near-identical lin
 Credit: Michale Fee and Adam Goldberg for the bias-from-outside architecture this index
 feeds; James MacQueen, whose `1/wins` rate is now the last suspect; Gunnar Fant for the
 formant coordinates throughout.
+
+
+## Drift is refused too, and the gap now has no candidate left (2026-10-03)
+
+`areax-v53` left drift as the last hypothesis for its 18/18 result, with a named test:
+*"the index decays across a session in the learning arm… test that split per arm"*, and
+v53b's **−0.034** as the decay to reproduce. The early/late means were already being
+printed — but as a bare `(+0.016)` with no SE, which is not a test. The early and late
+thirds are the same creature, so the difference pairs exactly:
+
+| arm | early → late | paired | |
+|---|---|---|---|
+| **`ear` (learning)** | 0.694 → 0.710 | **+0.016 ± 0.013** | 1.2 SE |
+| `ear-rnd` | 0.758 → 0.752 | −0.006 ± 0.007 | 0.9 SE |
+| `ema` | 0.793 → 0.767 | −0.026 ± 0.005 | 5.5 SE |
+| `ear-deaf` | 0.721 → 0.685 | −0.036 ± 0.014 | 2.5 SE |
+| `ema-rnd` | 0.855 → 0.812 | −0.043 ± 0.005 | 9.3 SE |
+| `ear-deaf-rnd` | 0.814 → 0.767 | −0.048 ± 0.006 | 8.4 SE |
+
+**Drift is refused on both of its claims.** Its point prediction of −0.034 sits **3.8
+SE** from the measured +0.016. And it requires the *learning* arm to decay most, where
+that arm decays least — the only one that rises, with every control falling below it.
+The gap also **narrows** across the session (−0.064 early → −0.042 late) where drift
+needs it to widen.
+
+What is not excluded: the 3 SE interval is [−0.023, +0.055], so a decay smaller than
+0.023 remains possible. **Drift dies at the size it predicted, not in every conceivable
+form** — worth stating, because the arms that *do* decay (8.4 and 9.3 SE in the controls)
+show the measurement is perfectly capable of seeing one.
+
+So the −0.056 gap is real at 6.0 SE and **unexplained**: gate corruption refused at the
+wrong sign (+0.72), own voice refused by intervention, drift refused here. That is the
+honest state and it is worth recording as such rather than reaching for a fourth guess.
+Also worth keeping in view: the gap may not be the thing worth fixing. `ema` (source 4)
+already beats `ear` on both index (0.786 vs 0.707) and delivery (49.4 vs 30.9 Hz) while
+carrying the same gap.
+
+### The guard tested the wrong reference point
+
+My power guard asked whether a −0.034 decay could be told apart from **zero** — 3 × SE =
+0.039 against 0.034 — and refused. But drift names a *value*, so the question is whether
+the data is inconsistent with **that value**: `|measured − predicted| / SE` = 3.8 SE,
+which excludes it.
+
+**Testing against zero when the hypothesis makes a point prediction is the same family
+of error as scoring against 1/k while the real control sits in the table** — a reference
+that exists but is not the one the claim is about. This project has caught that twice
+already in two weeks; this is the third shape of it. The guard now reports
+distance-to-prediction, prints what remains unexcluded, and refuses only when the data
+separates neither hypothesis. `results/ctxself-drift.log` carries the over-cautious
+refusal over correct numbers; `ctxself-drift2.log` is the regeneration.
+
+Credit: James MacQueen, whose `1/wins` rate made a prediction specific enough to refuse;
+Michale Fee and Adam Goldberg for the bias-from-outside architecture this index feeds.
 
 
 ## Layout
