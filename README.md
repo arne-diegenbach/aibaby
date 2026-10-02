@@ -13551,6 +13551,402 @@ expressible; Anne Warlaumont and Megan Finnegan, whose refused salience result s
 the 3 SE bar and the hold-as-n-rises test that this finding had to pass three times.
 
 
+## Nine words cost F1 reach and cost naming nothing (2026-10-01)
+
+`ctxgrid` left a clean arithmetic question. It named four words on a 2×2 formant grid at
++0.137 ± 0.023 against its own no-index control, and `aimaxes` put about 2.6
+distinguishable levels on each articulator axis — which multiplies to 6.7 words. So:
+does naming survive six, and nine?
+
+**It does, and the interesting number is not the one the question asked for.** Paired
+within creature, with trials per word matched, nine words against six:
+
+| contrast | value | |
+|---|---|---|
+| F1 delivered separation | **−11.8 ± 3.5 Hz** | **3.3 SE** |
+| total naming excess | −0.012 ± 0.019 | 0.6 SE — conserved |
+| F2 side excess | +0.079 ± 0.027 | 2.9 SE — under the bar |
+| F1 side excess | −0.026 ± 0.026 | 1.0 SE — a null |
+| F2 delivered separation | +1.8 ± 13.1 Hz | uninformative |
+
+**The creature gives up F1 separation without naming any worse.** Those two results
+clear this project's 3 SE bar at n=36; nothing else here does.
+
+### What the experiment is not allowed to say
+
+The tempting headline — F2 absorbs what F1 gives up — **does not clear the bar**, and I
+published it anyway for one run on the strength of a test that could not fail.
+`f2_spared` asked whether `cd2 > −3 × cd2_se`, and with `cd2_se = 13.1 Hz` that reads
+"greater than −39 Hz". Nearly any data passes. **A test that nearly all possible
+outcomes satisfy is not a test**: it reported "F2 is spared" when it meant "F2 is
+unmeasured". The guard now demands a contrast tight enough to have *detected* a loss the
+size of F1's, and prints INFORMATIVE or TOO NOISY TO READ.
+
+The noise is structural rather than unlucky. **F2 has two levels at k=6 and three at
+k=9**, so its two delivery estimates are not the same estimator — while F1 is three
+levels in both arms, which is the entire reason F1 is the clean axis. The arm that would
+settle it is a 2×3 grid: six words with *three* F2 levels, holding the F2 estimator
+fixed and moving word count alone. Not yet built.
+
+### The capacity curve was never a capacity curve
+
+The shipped design comment claimed "same spacing, more of it — adjacent levels stay 2.6
+sd apart at every k, so this tests CAPACITY and not resolution." **That was false about
+the table its own code builds.** `tbl[q] = {200, kVGF1[q/n2], kVGF2[q%n2]}` holds the
+*span* fixed and halves the spacing: F1 levels 118 Hz apart at k=4 become 59 Hz at k=6
+and k=9. Every "excess against k=4" therefore mixes vocabulary size with a 2× resolution
+change. The same comment also listed k=6's F2 levels as {1517, 1817} where the code
+yields {1517, 1667}.
+
+Widening the grid to restore the spacing is refused by `ctxgrid`'s own notes, which put
+its k=4 corners *at* the edge of the learned reach — "learned reach 118 Hz, ctxscale's
+asymptote". A wider grid demands unreachable targets, and `protocol-line-closed` already
+showed an unreachable target *beats* a reachable one. **In this creature capacity and
+resolution are not separable by geometry: the reach is fixed, so more words can only
+mean closer words.**
+
+### A validity gate is not a result
+
+The replacement is a resolution model: predict each creature's per-axis accuracy from
+its *own* delivered spacing and within-level scatter, using produced means against the
+commanded decision boundaries so that compression is carried rather than assumed away.
+It matched to three decimals on every arm — at k=9, measured 0.362 against predicted
+0.363.
+
+That accuracy is what made it dangerous. **The model takes delivery as an input**, so
+"meets geometry" says the readout is honest, not that nothing degraded. I read it as the
+result and wrote "no vocabulary limit is shown" while the collapse sat in the model's own
+input column: F1 delivering 24.5 Hz at k=6 and 6.0 Hz at k=9 **on an identical 59 Hz
+demand**. F1's resolution never changed, so resolution could not be the explanation.
+
+The model also disposes of the scatter figure the design assumed. At 22.9 Hz scatter and
+59 Hz spacing it predicts ~0.87 per-axis accuracy; measured is 0.362, because delivery
+is ~6 Hz on a 59 Hz demand. Three levels compressed inside a single scatter width all
+fall in the middle level's decision region, which scores exactly 1/3. At k=9 the F1 reach
+holds **~1.1 distinguishable levels**.
+
+### The teaching budget is bounded, not excluded
+
+At fixed total ticks nine words get 270 trials each where six get 405, so any capacity
+claim at fixed ticks is confounded — **including this experiment's own first two runs.**
+The `k9+` arm removes it: the same nine words with 1.5× the ticks, matching k=6's 405
+trials per word. The budget term is +0.1 ± 3.5 Hz (0.0 SE). But a 0.0 SE null is not a
+demonstration of absence: at the 3 SE bar that arm still admits ~10.8 Hz. More teaching
+is a *smaller* effect than more words, and that is the whole of what it shows.
+
+### Four verdicts, each refused by the next number
+
+1. "CAPACITY IS FOUR, OR NEAR IT" — off two bit-identical arms.
+2. "CAPACITY IS BETWEEN FOUR AND NINE" — against the halved-spacing anchor.
+3. "NO vocabulary limit is shown" — read the validity gate as the result.
+4. "THE AXES SHARE ONE REACH, AND F1 PAYS" — off the vacuous `f2_spared`.
+
+Every one was pre-registered before its run. **A pre-registered verdict is code, and can
+be wrong in the ordinary way code is wrong.** A fifth correction belongs in the same
+list: the verdict held `nearest` to the 3 SE bar and printed "NOT YET A FINDING" for 2.9
+SE, then declared a 2.7 SE delivery contrast to be the headline, because that test was
+coded against 2.0. The bar existed twice and diverged; it is now `kVGBar`, defined once
+and read by every test.
+
+### Two silent failures and a buffer overrun
+
+The first full run printed a confident capacity ceiling off **two copies of the same
+simulation**. `kVLMaxWords = 4` clamped nine words to four without a word, and
+`kMaxContextSlots = 8` had the kernel respond to nine slots with `ctx_slots_ = 0` —
+switching the context index off entirely, so the oracle arm *was* the control. All 18
+pairs came out bit-identical, paired excess exactly +0.000, and the verdict read
+"CAPACITY IS FOUR". **A clamp or disable on a parameter the conclusion depends on must
+refuse, not degrade**, because degrading yields a well-formed, plausible, wrong answer.
+The clamp now refuses, the cap lives in `config.h` at 16, `dna.cpp` returns
+`kBadGrowth` so the genome will not hatch, and `ctxvocab` carries its own
+arms-are-distinct guard that prints the bit-identical count even when it is zero. This
+project had that guard elsewhere already — a guard at one call site protects nothing
+added later.
+
+**Raising the cap was itself a bug.** `ctx_wins_[8]` was a literal copy of the old cap,
+so nine slots wrote one element past the end — directly into `ctx_dsum_`, the
+conscience's winner-distance accumulator behind `ctx-conscience`'s 0.002 → 0.999
+separation. Nine slots silently corrupted it and produced a well-formed capacity number;
+**fifteen and sixteen segfaulted.** The severity is non-monotone in the parameter, which
+is why it hid: a boundary test at only the new cap finds the crash, and a test at only
+the value the experiment uses finds nothing. `verify` could never have caught it either,
+since the shipped genome has `context_slots = 0` — **a passing hash says the shipped
+configuration is unchanged, not that the code is correct.**
+
+Credit: Gunnar Fant, whose source-filter account is what makes a formant grid a
+vocabulary at all; Michale Fee and Adam Goldberg for the bias-from-outside architecture
+this teaches through; Anne Warlaumont and Megan Finnegan, whose refused salience result
+supplied the 3 SE bar that refused three of the four verdicts above.
+
+
+## The 2×3 arm: nine words name as well as six, and F2's response has a price on it (2026-10-01)
+
+The committed run could read F1 and not F2. F1 had three levels in both arms, so its
+delivered-spacing contrast was sound; F2 had two levels at k=6 against three at k=9, so
+its two estimates were not the same estimator, and the contrast came out +1.8 ± 13.1 Hz.
+`k6b` is the fix — a 2×3 grid, six words with *three* F2 levels — so that against k9+
+the F2 estimator is fixed and word count alone moves.
+
+**Holding the estimator fixed helped and was still not enough.** F2's SE falls from 13.1
+to 8.0 Hz, and 3 × SE = 23.9 Hz still exceeds the 11.8 Hz F1 gave up. The guard refuses a
+third time rather than reading a point estimate of −0.2 ± 8.0. The reallocation account —
+that F2 absorbs what F1 surrenders — is **open: neither established nor refuted**, and the
+verdict now prints what settling it would cost: about 148 creatures, or a statistic less
+noisy than endpoint spacing.
+
+Worth recording for whoever picks that up: the obvious candidate is not a candidate. An
+OLS slope over the levels equals the endpoint estimate *exactly* for three equally spaced
+levels, so it buys nothing. A paired log-ratio is the untried option, since an SE of 8.0
+on a mean of 19.7 suggests the creature-to-creature spread is multiplicative rather than
+additive.
+
+### What the run settled instead
+
+| 6-word grid | shape | excess | paired vs k9+ |
+|---|---|---|---|
+| k6 | 3×2 | +0.067 ± 0.019 | **−0.012 ± 0.019** |
+| k6b | 2×3 | +0.036 ± 0.015 | **+0.020 ± 0.018** |
+
+**Two independent six-word grid shapes, two nulls, opposite signs.** Nine words name as
+well as six — the strongest form that result can take, and it is now replicated rather
+than single-shot. F2's side excess rose in both comparisons as well (+0.079 and +0.066,
+each 2.9 SE), but they share the k9+ arm and so cannot be combined into one number.
+
+Two cautions attach to this table. The two six-word shapes differ from each other more
+than nine words differs from either, which hints that grid *shape* matters more than word
+*count* — but that difference is itself 1.3 SE, so it is suggested and not established.
+And the SEs are not comparable across arms: k9+ runs 1.5× the ticks to match trials per
+word, so its tighter SE is partly the longer session.
+
+### The same trap one level up, caught before it fired
+
+The contrast code read `g6 = 0, g9 = 1, g9p = 2` — hardcoded positions into the grid
+list. Editing that list is exactly what adding the 2×3 arm requires, and doing so would
+have silently repointed every contrast at the wrong arm, with no error and entirely
+plausible numbers out the other end. **This is the `ctx_wins_[8]` failure from the same
+day, one level up: a constant copied instead of derived.** Lookup is now by tag and
+*refuses* when a contrast's arms are absent, and a dropped arm's number is cited with a
+label saying so rather than recomputed from arms no longer in the run.
+
+F1 is now the unreadable axis here, going from two levels to three, so its committed
+figure is cited rather than recomputed. Reading an axis whose level count differs between
+arms would have been the identical error in the opposite direction.
+
+Credit: Gunnar Fant, whose source-filter account makes a formant grid a vocabulary;
+Michale Fee and Adam Goldberg for the bias-from-outside architecture; Anne Warlaumont and
+Megan Finnegan, whose refused salience result supplied the 3 SE bar that has now refused
+the same tempting mechanism three times.
+
+
+## Shape does not matter at this power, and pairing bought nothing (2026-10-02)
+
+The previous run left a hint worth chasing: the two six-word grids differed from each
+other (+0.067 for 3×2 against +0.036 for 2×3) by more than nine words differed from
+either. But that was an unpaired comparison across two separate runs, at 1.3 SE. Both
+shapes share creature seeds, so they can be put in one run and paired within creature.
+
+It also carried a prediction that could fail. `aimaxes` measured F2 swinging 961 Hz
+against F1's 378, and I had invoked that leverage to explain the reallocation account.
+Leverage says spend your levels on the axis that moves most, so 2×3 — three levels on
+F2 — should win.
+
+**Paired within creature, 2×3 minus 3×2 is −0.032 ± 0.027 (1.2 SE).** Under the bar. The
+gap between the two earlier runs does not survive the only sound contrast, so "shape
+beats count" is withdrawn and word count stays the variable these results are indexed
+on. The leverage prediction is neither confirmed nor refuted: the point estimate sits 1.2
+SE in the direction *opposite* to it, which is suggestive and nothing more. Leverage has
+now been invoked twice as a mechanism and has never passed a test of its own.
+
+**Pairing bought nothing, and that is itself a result.** The unpaired SE was 0.024 and
+the paired SE is 0.027 — slightly worse, meaning the two arms are if anything
+anti-correlated across creatures. Creature identity does not predict which shape suits
+it, so there is no per-creature "preferred axis" to go looking for.
+
+### Two defects in the output, both of a kind this project keeps meeting
+
+**The per-axis rows of the shape contrast are not comparable.** The contrast swaps each
+axis's level count — F1 has three levels at 3×2 and two at 2×3 — so "which level is
+nearest" is scored against chance 1/3 in one arm and 1/2 in the other. This is precisely
+the estimator mismatch that made the delivered-F2 contrast unreadable, reappearing in the
+excess columns, and I printed it beside the total as though it were an effect. The total
+is the only comparable row. The per-axis rows now print with their level counts and the
+words NOT COMPARABLE attached.
+
+**And two lines called k6b "k=9".** With no nine-word arm in the run, `last` is the
+six-word k6b, but the format strings read "at k=9 the excess is" and "k9+ excess against
+the 3 SE bar". A label hardcoded next to a computed value is the same failure as a number
+written twice: it goes stale the moment the value moves. Labels now come from the grid's
+own tag. `results/ctxvocab-shape.log` carries the mislabelled version;
+`ctxvocab-shape2.log` is the corrected regeneration.
+
+Credit: Gunnar Fant for the formant coordinates; Michale Fee and Adam Goldberg for the
+bias-from-outside architecture; Anne Warlaumont and Megan Finnegan, whose refused
+salience result is the origin of the 3 SE bar that has now withdrawn a hint of mine as
+well as three verdicts.
+
+
+## Two corrections found by reading the code, not by running anything (2026-10-02)
+
+With the vocabulary lead closed, the next item in the queue was its oldest unexplained
+result: *"the control's index is sometimes better than the mechanism's — `ear` worse than
+`ear-rnd` on 18/18 creatures across two builds, and the obvious cause refuted by its own
+data at the wrong sign."* An unanimous 18/18 with no account is worth attacking. Reading
+the code first turned up two things, and neither changes a measured number.
+
+### That result is not about two indices
+
+`ear-rnd` is `kVLTgtRandom` — a matched-marginal control on the **target**. Both arms run
+the *identical* index machinery off the real ear; the only difference is whether the
+target tracks the word. There are not two index mechanisms being compared, so "the
+control's index is better than the mechanism's" misdescribes it. The v53 note's own
+phrasing was right all along: **the index is worse when the target tracks the word.**
+
+Two things belong next to it. `ear` *delivers more* — dF1 36.0 ± 5.5 against `ear-rnd`'s
+22.6 ± 5.6 — while scoring worse on `p`. And `p` is `ctx_match`, the best agreement over
+all k! slot-to-word permutations, which rewards **consistency** and has a chance level
+around 0.5 at two words. So `ear-rnd`'s 0.729 sits well above chance and is not a null
+either.
+
+Own-voice contamination of the ear feature looked like the explanation — the creature's
+F1 becomes word-dependent exactly when it has something conditional to learn, and
+`selfcode` already established the ear hears its own F1. But it predicts the same sign as
+the already-refuted gate-corruption cause: more learning should mean a worse index, where
+the measurement reads **+0.72, better index → more learning**. A between-arm offset
+combined with a within-arm positive slope is consistent with both stories, and no
+correlation can separate them.
+
+**It needs an intervention, and the machinery exists.** Run `ear` with `self_gain = 0` —
+`selfcode`'s `deaf` arm, which cuts the acoustic self-path and leaves every internal path
+intact. If the index gap to `ear-rnd` closes, the creature's own voice is implicated; if
+it holds, drift survives as the leading hypothesis. Recorded, not run.
+
+### The echo arithmetic is regime-specific, and I had the sign backwards
+
+`targets-fight-the-echo` showed that the naming targets are the mirror image of the heard
+vowels, so every naming number was measured against the imitation reflex. It derives that
+from a *constructed* table (T0 399 Hz, T1 972 Hz, built so the separation equals the
+shipped vowels' own). But `run_vocallearn_session` falls back to `kWords` whenever
+`tgt_table` is null:
+
+| table | `heard` target for /a/ | vs the reflex |
+|---|---|---|
+| constructed, s = 0.89 | 399 Hz, low | **anti-aligned** |
+| default `kWords` | 780 Hz, its own vowel | **aligned** |
+
+With the default table `heard` is echo-*aligned* and `kVLTgtSwap` is the arm the arcuate
+fights — which is exactly what the mode comment says, and is correct for that table. Under
+a constructed inverse table the two roles swap. The v53 arms pass `nullptr`, so they sit
+in the aligned regime and the below-chance reasoning does not transfer to them.
+
+I had generalised the echo finding across both regimes and was one step from writing the
+inverted sign into this file. Checking which table the call actually passes is what caught
+it — the same habit that caught a stale queue item earlier in this session, where a lead
+asked for a statistic that another memory had already reported.
+
+Credit: Gunnar Fant for the formant coordinates; Michale Fee and Adam Goldberg for the
+bias-from-outside architecture; Anne Warlaumont and Megan Finnegan for the 3 SE bar.
+
+
+## Own voice is refused by intervention, and drift is the last hypothesis standing (2026-10-02)
+
+`areax-v53` left the oldest unexplained result in the queue: `ear` − `ear-rnd` on the
+index reads **−0.086 and −0.088 on 18/18 creatures across two builds** — the creature's
+own context index is *worse* exactly when the target tracks the word. Two causes had been
+proposed and both predict the sign the data refutes (+0.72 across creatures: better index
+→ *more* learning). Gate corruption was already recorded as refuted. Own-voice
+contamination was still live, because `selfcode` had measured the ear hearing its own F1.
+
+The trouble is that a between-arm offset combined with a within-arm positive slope fits
+either story, and **no correlation can separate them.** So this is an intervention:
+`self_gain = 0` on `ear-deaf` *and* `ear-deaf-rnd`, scored as a difference of gaps
+because the finding is itself a gap. The control arm had to be deafened too, or deafness
+would confound with the target. `self_gain = 0` cuts the acoustic self-path and leaves
+every internal path intact.
+
+| | gap |
+|---|---|
+| hearing, `ear` − `ear-rnd` | **−0.056 ± 0.009 (6.0 SE)** |
+| deaf, `ear-deaf` − `ear-deaf-rnd` | **−0.093 ± 0.012 (7.9 SE)** |
+| difference of gaps | **−0.037 ± 0.015 (2.4 SE)** |
+
+**The test had the power to see a closure** — 3 × SE = 0.045 against the 0.056 a full
+closure would move — and saw none. The gap went the other way. So the creature hearing
+itself is not why its index degrades when the target tracks the word, and **drift is the
+last hypothesis standing**: MacQueen's `1/wins` freezes the prototypes under a voice that
+is still moving.
+
+### The widening was predicted by something measured the day before
+
+```
+ear      0.707 -> ear-deaf      0.700    -0.007   tracking arm: flat
+ear-rnd  0.763 -> ear-deaf-rnd  0.793    +0.030   control arm: improves
+```
+
+Own voice is **noise** in the control arm, where the creature's voice is
+word-independent, and roughly **neutral** in the tracking arm, where it is
+word-correlated. And under the default `kWords` table `heard` is echo-*aligned* — the
+regime distinction established one day earlier, with the v53 arms passing
+`tgt_table = nullptr` — so there the own voice reinforces the caregiver's word, and
+cutting it removes signal along with the noise. The two effects cancel.
+
+The paired statistics show the driver clears the bar even though the interaction does
+not:
+
+| effect | | |
+|---|---|---|
+| deafening, control arm | **+0.030 ± 0.004** | **7.1 SE** |
+| deafening, tracking arm | −0.007 ± 0.015 | 0.5 SE |
+| the interaction | −0.037 ± 0.015 | 2.4 SE |
+
+So **own voice measurably degrades the index when the target does not track the word,
+and does not when it does.** The main effect is the solid part; the interaction is
+suggestive at 2.4 SE.
+
+**The tracking arm's null is not "nothing happened", though.** Its index becomes
+significantly more *lopsided* — busiest-slice occupancy 0.606 → 0.672, +0.066 ± 0.018
+(3.7 SE), against +0.009 ± 0.014 in the control arm. Deafening changes that partition's
+shape without making it more word-aligned, which is v53's own remark that "the
+lopsidedness is the cost of the creature finding its own window" — now moving under an
+intervention rather than merely observed. Those two are unpaired, computed from the
+printed means; paired occupancy is not in the code.
+
+Also worth quoting correctly: the gap's own magnitude decays with sample size —
+−0.086 at n=9 (the record, a different genome family), −0.070 at n=9 here, **−0.056 ±
+0.009 at n=36**. Direction holds at 6.0 SE, magnitude falls. The ordinary pattern in this
+project, and the n=36 figure is the one to cite.
+
+### Two verdict bugs, both the shape this project keeps meeting
+
+**A test that could not fail.** The first run, at n=9, printed "OWN VOICE IS CLEARED"
+from `dd = −0.002 ± 0.030`. But a full closure moves that statistic by exactly 0.070, and
+3 × SE was **0.090** — the branch was unreachable and the negative verdict guaranteed
+before the run started. That is the sibling of `ctxvocab`'s `f2_spared`, which passed on
+anything; this one passed on nothing. The verdict now prints its own power as `CAN DETECT
+ONE` / `CANNOT DETECT ONE` and refuses outright when it cannot, with the required sample
+size computed.
+
+**A null and a reversal reported as the same thing.** At n=36, `moved` tests only for a
+closure, so a gap that *widens* fell through to the null branch and printed "own voice is
+cleared" over a 2.4 SE move in the opposite direction. An `else` that catches both
+reports the wrong one. There is now a dedicated widening branch.
+`results/ctxself-deaf36.log` keeps the mis-worded verdict over correct numbers;
+`ctxself-deaf36b.log` is the regeneration.
+
+**And the arm indices were positional** — `kEar = 2, kERnd = 3, kAda = 4` hardcoded into
+the arm table. Inserting the deaf arms at 4 and 5 shifted `ema`/`ema-rnd` to 6 and 7, so
+`kAda`/`kARnd` would have pointed at the new arms while every printed label still said
+"ema". Third occurrence this week of a constant copied instead of derived, after
+`ctx_wins_[8]` and `kVGGrids`-by-position. Lookup is by name now and refuses on a miss.
+
+One stray edit of my own, caught and reverted: setting `kReps = 18` matched the first of
+many identical lines and landed in `ctxsrc`, silently doubling an unrelated experiment's
+sample size. Short anchors are not safe in a 34k-line file of near-identical lines.
+
+Credit: Michale Fee and Adam Goldberg for the bias-from-outside architecture this index
+feeds; James MacQueen, whose `1/wins` rate is now the last suspect; Gunnar Fant for the
+formant coordinates throughout.
+
+
 ## Layout
 
 ```
@@ -16052,399 +16448,3 @@ context — came out exact on all three draws and never needed a replication to 
 trusted. Every claim that was a *magnitude* moved: one halved, one reversed on the
 second draw, and one vanished on the third. Three draws produced three different
 pictures of the same mechanism, and only the parts that were structural stayed put.
-
-
-## Nine words cost F1 reach and cost naming nothing (2026-10-01)
-
-`ctxgrid` left a clean arithmetic question. It named four words on a 2×2 formant grid at
-+0.137 ± 0.023 against its own no-index control, and `aimaxes` put about 2.6
-distinguishable levels on each articulator axis — which multiplies to 6.7 words. So:
-does naming survive six, and nine?
-
-**It does, and the interesting number is not the one the question asked for.** Paired
-within creature, with trials per word matched, nine words against six:
-
-| contrast | value | |
-|---|---|---|
-| F1 delivered separation | **−11.8 ± 3.5 Hz** | **3.3 SE** |
-| total naming excess | −0.012 ± 0.019 | 0.6 SE — conserved |
-| F2 side excess | +0.079 ± 0.027 | 2.9 SE — under the bar |
-| F1 side excess | −0.026 ± 0.026 | 1.0 SE — a null |
-| F2 delivered separation | +1.8 ± 13.1 Hz | uninformative |
-
-**The creature gives up F1 separation without naming any worse.** Those two results
-clear this project's 3 SE bar at n=36; nothing else here does.
-
-### What the experiment is not allowed to say
-
-The tempting headline — F2 absorbs what F1 gives up — **does not clear the bar**, and I
-published it anyway for one run on the strength of a test that could not fail.
-`f2_spared` asked whether `cd2 > −3 × cd2_se`, and with `cd2_se = 13.1 Hz` that reads
-"greater than −39 Hz". Nearly any data passes. **A test that nearly all possible
-outcomes satisfy is not a test**: it reported "F2 is spared" when it meant "F2 is
-unmeasured". The guard now demands a contrast tight enough to have *detected* a loss the
-size of F1's, and prints INFORMATIVE or TOO NOISY TO READ.
-
-The noise is structural rather than unlucky. **F2 has two levels at k=6 and three at
-k=9**, so its two delivery estimates are not the same estimator — while F1 is three
-levels in both arms, which is the entire reason F1 is the clean axis. The arm that would
-settle it is a 2×3 grid: six words with *three* F2 levels, holding the F2 estimator
-fixed and moving word count alone. Not yet built.
-
-### The capacity curve was never a capacity curve
-
-The shipped design comment claimed "same spacing, more of it — adjacent levels stay 2.6
-sd apart at every k, so this tests CAPACITY and not resolution." **That was false about
-the table its own code builds.** `tbl[q] = {200, kVGF1[q/n2], kVGF2[q%n2]}` holds the
-*span* fixed and halves the spacing: F1 levels 118 Hz apart at k=4 become 59 Hz at k=6
-and k=9. Every "excess against k=4" therefore mixes vocabulary size with a 2× resolution
-change. The same comment also listed k=6's F2 levels as {1517, 1817} where the code
-yields {1517, 1667}.
-
-Widening the grid to restore the spacing is refused by `ctxgrid`'s own notes, which put
-its k=4 corners *at* the edge of the learned reach — "learned reach 118 Hz, ctxscale's
-asymptote". A wider grid demands unreachable targets, and `protocol-line-closed` already
-showed an unreachable target *beats* a reachable one. **In this creature capacity and
-resolution are not separable by geometry: the reach is fixed, so more words can only
-mean closer words.**
-
-### A validity gate is not a result
-
-The replacement is a resolution model: predict each creature's per-axis accuracy from
-its *own* delivered spacing and within-level scatter, using produced means against the
-commanded decision boundaries so that compression is carried rather than assumed away.
-It matched to three decimals on every arm — at k=9, measured 0.362 against predicted
-0.363.
-
-That accuracy is what made it dangerous. **The model takes delivery as an input**, so
-"meets geometry" says the readout is honest, not that nothing degraded. I read it as the
-result and wrote "no vocabulary limit is shown" while the collapse sat in the model's own
-input column: F1 delivering 24.5 Hz at k=6 and 6.0 Hz at k=9 **on an identical 59 Hz
-demand**. F1's resolution never changed, so resolution could not be the explanation.
-
-The model also disposes of the scatter figure the design assumed. At 22.9 Hz scatter and
-59 Hz spacing it predicts ~0.87 per-axis accuracy; measured is 0.362, because delivery
-is ~6 Hz on a 59 Hz demand. Three levels compressed inside a single scatter width all
-fall in the middle level's decision region, which scores exactly 1/3. At k=9 the F1 reach
-holds **~1.1 distinguishable levels**.
-
-### The teaching budget is bounded, not excluded
-
-At fixed total ticks nine words get 270 trials each where six get 405, so any capacity
-claim at fixed ticks is confounded — **including this experiment's own first two runs.**
-The `k9+` arm removes it: the same nine words with 1.5× the ticks, matching k=6's 405
-trials per word. The budget term is +0.1 ± 3.5 Hz (0.0 SE). But a 0.0 SE null is not a
-demonstration of absence: at the 3 SE bar that arm still admits ~10.8 Hz. More teaching
-is a *smaller* effect than more words, and that is the whole of what it shows.
-
-### Four verdicts, each refused by the next number
-
-1. "CAPACITY IS FOUR, OR NEAR IT" — off two bit-identical arms.
-2. "CAPACITY IS BETWEEN FOUR AND NINE" — against the halved-spacing anchor.
-3. "NO vocabulary limit is shown" — read the validity gate as the result.
-4. "THE AXES SHARE ONE REACH, AND F1 PAYS" — off the vacuous `f2_spared`.
-
-Every one was pre-registered before its run. **A pre-registered verdict is code, and can
-be wrong in the ordinary way code is wrong.** A fifth correction belongs in the same
-list: the verdict held `nearest` to the 3 SE bar and printed "NOT YET A FINDING" for 2.9
-SE, then declared a 2.7 SE delivery contrast to be the headline, because that test was
-coded against 2.0. The bar existed twice and diverged; it is now `kVGBar`, defined once
-and read by every test.
-
-### Two silent failures and a buffer overrun
-
-The first full run printed a confident capacity ceiling off **two copies of the same
-simulation**. `kVLMaxWords = 4` clamped nine words to four without a word, and
-`kMaxContextSlots = 8` had the kernel respond to nine slots with `ctx_slots_ = 0` —
-switching the context index off entirely, so the oracle arm *was* the control. All 18
-pairs came out bit-identical, paired excess exactly +0.000, and the verdict read
-"CAPACITY IS FOUR". **A clamp or disable on a parameter the conclusion depends on must
-refuse, not degrade**, because degrading yields a well-formed, plausible, wrong answer.
-The clamp now refuses, the cap lives in `config.h` at 16, `dna.cpp` returns
-`kBadGrowth` so the genome will not hatch, and `ctxvocab` carries its own
-arms-are-distinct guard that prints the bit-identical count even when it is zero. This
-project had that guard elsewhere already — a guard at one call site protects nothing
-added later.
-
-**Raising the cap was itself a bug.** `ctx_wins_[8]` was a literal copy of the old cap,
-so nine slots wrote one element past the end — directly into `ctx_dsum_`, the
-conscience's winner-distance accumulator behind `ctx-conscience`'s 0.002 → 0.999
-separation. Nine slots silently corrupted it and produced a well-formed capacity number;
-**fifteen and sixteen segfaulted.** The severity is non-monotone in the parameter, which
-is why it hid: a boundary test at only the new cap finds the crash, and a test at only
-the value the experiment uses finds nothing. `verify` could never have caught it either,
-since the shipped genome has `context_slots = 0` — **a passing hash says the shipped
-configuration is unchanged, not that the code is correct.**
-
-Credit: Gunnar Fant, whose source-filter account is what makes a formant grid a
-vocabulary at all; Michale Fee and Adam Goldberg for the bias-from-outside architecture
-this teaches through; Anne Warlaumont and Megan Finnegan, whose refused salience result
-supplied the 3 SE bar that refused three of the four verdicts above.
-
-
-## The 2×3 arm: nine words name as well as six, and F2's response has a price on it (2026-10-01)
-
-The committed run could read F1 and not F2. F1 had three levels in both arms, so its
-delivered-spacing contrast was sound; F2 had two levels at k=6 against three at k=9, so
-its two estimates were not the same estimator, and the contrast came out +1.8 ± 13.1 Hz.
-`k6b` is the fix — a 2×3 grid, six words with *three* F2 levels — so that against k9+
-the F2 estimator is fixed and word count alone moves.
-
-**Holding the estimator fixed helped and was still not enough.** F2's SE falls from 13.1
-to 8.0 Hz, and 3 × SE = 23.9 Hz still exceeds the 11.8 Hz F1 gave up. The guard refuses a
-third time rather than reading a point estimate of −0.2 ± 8.0. The reallocation account —
-that F2 absorbs what F1 surrenders — is **open: neither established nor refuted**, and the
-verdict now prints what settling it would cost: about 148 creatures, or a statistic less
-noisy than endpoint spacing.
-
-Worth recording for whoever picks that up: the obvious candidate is not a candidate. An
-OLS slope over the levels equals the endpoint estimate *exactly* for three equally spaced
-levels, so it buys nothing. A paired log-ratio is the untried option, since an SE of 8.0
-on a mean of 19.7 suggests the creature-to-creature spread is multiplicative rather than
-additive.
-
-### What the run settled instead
-
-| 6-word grid | shape | excess | paired vs k9+ |
-|---|---|---|---|
-| k6 | 3×2 | +0.067 ± 0.019 | **−0.012 ± 0.019** |
-| k6b | 2×3 | +0.036 ± 0.015 | **+0.020 ± 0.018** |
-
-**Two independent six-word grid shapes, two nulls, opposite signs.** Nine words name as
-well as six — the strongest form that result can take, and it is now replicated rather
-than single-shot. F2's side excess rose in both comparisons as well (+0.079 and +0.066,
-each 2.9 SE), but they share the k9+ arm and so cannot be combined into one number.
-
-Two cautions attach to this table. The two six-word shapes differ from each other more
-than nine words differs from either, which hints that grid *shape* matters more than word
-*count* — but that difference is itself 1.3 SE, so it is suggested and not established.
-And the SEs are not comparable across arms: k9+ runs 1.5× the ticks to match trials per
-word, so its tighter SE is partly the longer session.
-
-### The same trap one level up, caught before it fired
-
-The contrast code read `g6 = 0, g9 = 1, g9p = 2` — hardcoded positions into the grid
-list. Editing that list is exactly what adding the 2×3 arm requires, and doing so would
-have silently repointed every contrast at the wrong arm, with no error and entirely
-plausible numbers out the other end. **This is the `ctx_wins_[8]` failure from the same
-day, one level up: a constant copied instead of derived.** Lookup is now by tag and
-*refuses* when a contrast's arms are absent, and a dropped arm's number is cited with a
-label saying so rather than recomputed from arms no longer in the run.
-
-F1 is now the unreadable axis here, going from two levels to three, so its committed
-figure is cited rather than recomputed. Reading an axis whose level count differs between
-arms would have been the identical error in the opposite direction.
-
-Credit: Gunnar Fant, whose source-filter account makes a formant grid a vocabulary;
-Michale Fee and Adam Goldberg for the bias-from-outside architecture; Anne Warlaumont and
-Megan Finnegan, whose refused salience result supplied the 3 SE bar that has now refused
-the same tempting mechanism three times.
-
-
-## Shape does not matter at this power, and pairing bought nothing (2026-10-02)
-
-The previous run left a hint worth chasing: the two six-word grids differed from each
-other (+0.067 for 3×2 against +0.036 for 2×3) by more than nine words differed from
-either. But that was an unpaired comparison across two separate runs, at 1.3 SE. Both
-shapes share creature seeds, so they can be put in one run and paired within creature.
-
-It also carried a prediction that could fail. `aimaxes` measured F2 swinging 961 Hz
-against F1's 378, and I had invoked that leverage to explain the reallocation account.
-Leverage says spend your levels on the axis that moves most, so 2×3 — three levels on
-F2 — should win.
-
-**Paired within creature, 2×3 minus 3×2 is −0.032 ± 0.027 (1.2 SE).** Under the bar. The
-gap between the two earlier runs does not survive the only sound contrast, so "shape
-beats count" is withdrawn and word count stays the variable these results are indexed
-on. The leverage prediction is neither confirmed nor refuted: the point estimate sits 1.2
-SE in the direction *opposite* to it, which is suggestive and nothing more. Leverage has
-now been invoked twice as a mechanism and has never passed a test of its own.
-
-**Pairing bought nothing, and that is itself a result.** The unpaired SE was 0.024 and
-the paired SE is 0.027 — slightly worse, meaning the two arms are if anything
-anti-correlated across creatures. Creature identity does not predict which shape suits
-it, so there is no per-creature "preferred axis" to go looking for.
-
-### Two defects in the output, both of a kind this project keeps meeting
-
-**The per-axis rows of the shape contrast are not comparable.** The contrast swaps each
-axis's level count — F1 has three levels at 3×2 and two at 2×3 — so "which level is
-nearest" is scored against chance 1/3 in one arm and 1/2 in the other. This is precisely
-the estimator mismatch that made the delivered-F2 contrast unreadable, reappearing in the
-excess columns, and I printed it beside the total as though it were an effect. The total
-is the only comparable row. The per-axis rows now print with their level counts and the
-words NOT COMPARABLE attached.
-
-**And two lines called k6b "k=9".** With no nine-word arm in the run, `last` is the
-six-word k6b, but the format strings read "at k=9 the excess is" and "k9+ excess against
-the 3 SE bar". A label hardcoded next to a computed value is the same failure as a number
-written twice: it goes stale the moment the value moves. Labels now come from the grid's
-own tag. `results/ctxvocab-shape.log` carries the mislabelled version;
-`ctxvocab-shape2.log` is the corrected regeneration.
-
-Credit: Gunnar Fant for the formant coordinates; Michale Fee and Adam Goldberg for the
-bias-from-outside architecture; Anne Warlaumont and Megan Finnegan, whose refused
-salience result is the origin of the 3 SE bar that has now withdrawn a hint of mine as
-well as three verdicts.
-
-
-## Two corrections found by reading the code, not by running anything (2026-10-02)
-
-With the vocabulary lead closed, the next item in the queue was its oldest unexplained
-result: *"the control's index is sometimes better than the mechanism's — `ear` worse than
-`ear-rnd` on 18/18 creatures across two builds, and the obvious cause refuted by its own
-data at the wrong sign."* An unanimous 18/18 with no account is worth attacking. Reading
-the code first turned up two things, and neither changes a measured number.
-
-### That result is not about two indices
-
-`ear-rnd` is `kVLTgtRandom` — a matched-marginal control on the **target**. Both arms run
-the *identical* index machinery off the real ear; the only difference is whether the
-target tracks the word. There are not two index mechanisms being compared, so "the
-control's index is better than the mechanism's" misdescribes it. The v53 note's own
-phrasing was right all along: **the index is worse when the target tracks the word.**
-
-Two things belong next to it. `ear` *delivers more* — dF1 36.0 ± 5.5 against `ear-rnd`'s
-22.6 ± 5.6 — while scoring worse on `p`. And `p` is `ctx_match`, the best agreement over
-all k! slot-to-word permutations, which rewards **consistency** and has a chance level
-around 0.5 at two words. So `ear-rnd`'s 0.729 sits well above chance and is not a null
-either.
-
-Own-voice contamination of the ear feature looked like the explanation — the creature's
-F1 becomes word-dependent exactly when it has something conditional to learn, and
-`selfcode` already established the ear hears its own F1. But it predicts the same sign as
-the already-refuted gate-corruption cause: more learning should mean a worse index, where
-the measurement reads **+0.72, better index → more learning**. A between-arm offset
-combined with a within-arm positive slope is consistent with both stories, and no
-correlation can separate them.
-
-**It needs an intervention, and the machinery exists.** Run `ear` with `self_gain = 0` —
-`selfcode`'s `deaf` arm, which cuts the acoustic self-path and leaves every internal path
-intact. If the index gap to `ear-rnd` closes, the creature's own voice is implicated; if
-it holds, drift survives as the leading hypothesis. Recorded, not run.
-
-### The echo arithmetic is regime-specific, and I had the sign backwards
-
-`targets-fight-the-echo` showed that the naming targets are the mirror image of the heard
-vowels, so every naming number was measured against the imitation reflex. It derives that
-from a *constructed* table (T0 399 Hz, T1 972 Hz, built so the separation equals the
-shipped vowels' own). But `run_vocallearn_session` falls back to `kWords` whenever
-`tgt_table` is null:
-
-| table | `heard` target for /a/ | vs the reflex |
-|---|---|---|
-| constructed, s = 0.89 | 399 Hz, low | **anti-aligned** |
-| default `kWords` | 780 Hz, its own vowel | **aligned** |
-
-With the default table `heard` is echo-*aligned* and `kVLTgtSwap` is the arm the arcuate
-fights — which is exactly what the mode comment says, and is correct for that table. Under
-a constructed inverse table the two roles swap. The v53 arms pass `nullptr`, so they sit
-in the aligned regime and the below-chance reasoning does not transfer to them.
-
-I had generalised the echo finding across both regimes and was one step from writing the
-inverted sign into this file. Checking which table the call actually passes is what caught
-it — the same habit that caught a stale queue item earlier in this session, where a lead
-asked for a statistic that another memory had already reported.
-
-Credit: Gunnar Fant for the formant coordinates; Michale Fee and Adam Goldberg for the
-bias-from-outside architecture; Anne Warlaumont and Megan Finnegan for the 3 SE bar.
-
-
-## Own voice is refused by intervention, and drift is the last hypothesis standing (2026-10-02)
-
-`areax-v53` left the oldest unexplained result in the queue: `ear` − `ear-rnd` on the
-index reads **−0.086 and −0.088 on 18/18 creatures across two builds** — the creature's
-own context index is *worse* exactly when the target tracks the word. Two causes had been
-proposed and both predict the sign the data refutes (+0.72 across creatures: better index
-→ *more* learning). Gate corruption was already recorded as refuted. Own-voice
-contamination was still live, because `selfcode` had measured the ear hearing its own F1.
-
-The trouble is that a between-arm offset combined with a within-arm positive slope fits
-either story, and **no correlation can separate them.** So this is an intervention:
-`self_gain = 0` on `ear-deaf` *and* `ear-deaf-rnd`, scored as a difference of gaps
-because the finding is itself a gap. The control arm had to be deafened too, or deafness
-would confound with the target. `self_gain = 0` cuts the acoustic self-path and leaves
-every internal path intact.
-
-| | gap |
-|---|---|
-| hearing, `ear` − `ear-rnd` | **−0.056 ± 0.009 (6.0 SE)** |
-| deaf, `ear-deaf` − `ear-deaf-rnd` | **−0.093 ± 0.012 (7.9 SE)** |
-| difference of gaps | **−0.037 ± 0.015 (2.4 SE)** |
-
-**The test had the power to see a closure** — 3 × SE = 0.045 against the 0.056 a full
-closure would move — and saw none. The gap went the other way. So the creature hearing
-itself is not why its index degrades when the target tracks the word, and **drift is the
-last hypothesis standing**: MacQueen's `1/wins` freezes the prototypes under a voice that
-is still moving.
-
-### The widening was predicted by something measured the day before
-
-```
-ear      0.707 -> ear-deaf      0.700    -0.007   tracking arm: flat
-ear-rnd  0.763 -> ear-deaf-rnd  0.793    +0.030   control arm: improves
-```
-
-Own voice is **noise** in the control arm, where the creature's voice is
-word-independent, and roughly **neutral** in the tracking arm, where it is
-word-correlated. And under the default `kWords` table `heard` is echo-*aligned* — the
-regime distinction established one day earlier, with the v53 arms passing
-`tgt_table = nullptr` — so there the own voice reinforces the caregiver's word, and
-cutting it removes signal along with the noise. The two effects cancel.
-
-The paired statistics show the driver clears the bar even though the interaction does
-not:
-
-| effect | | |
-|---|---|---|
-| deafening, control arm | **+0.030 ± 0.004** | **7.1 SE** |
-| deafening, tracking arm | −0.007 ± 0.015 | 0.5 SE |
-| the interaction | −0.037 ± 0.015 | 2.4 SE |
-
-So **own voice measurably degrades the index when the target does not track the word,
-and does not when it does.** The main effect is the solid part; the interaction is
-suggestive at 2.4 SE.
-
-**The tracking arm's null is not "nothing happened", though.** Its index becomes
-significantly more *lopsided* — busiest-slice occupancy 0.606 → 0.672, +0.066 ± 0.018
-(3.7 SE), against +0.009 ± 0.014 in the control arm. Deafening changes that partition's
-shape without making it more word-aligned, which is v53's own remark that "the
-lopsidedness is the cost of the creature finding its own window" — now moving under an
-intervention rather than merely observed. Those two are unpaired, computed from the
-printed means; paired occupancy is not in the code.
-
-Also worth quoting correctly: the gap's own magnitude decays with sample size —
-−0.086 at n=9 (the record, a different genome family), −0.070 at n=9 here, **−0.056 ±
-0.009 at n=36**. Direction holds at 6.0 SE, magnitude falls. The ordinary pattern in this
-project, and the n=36 figure is the one to cite.
-
-### Two verdict bugs, both the shape this project keeps meeting
-
-**A test that could not fail.** The first run, at n=9, printed "OWN VOICE IS CLEARED"
-from `dd = −0.002 ± 0.030`. But a full closure moves that statistic by exactly 0.070, and
-3 × SE was **0.090** — the branch was unreachable and the negative verdict guaranteed
-before the run started. That is the sibling of `ctxvocab`'s `f2_spared`, which passed on
-anything; this one passed on nothing. The verdict now prints its own power as `CAN DETECT
-ONE` / `CANNOT DETECT ONE` and refuses outright when it cannot, with the required sample
-size computed.
-
-**A null and a reversal reported as the same thing.** At n=36, `moved` tests only for a
-closure, so a gap that *widens* fell through to the null branch and printed "own voice is
-cleared" over a 2.4 SE move in the opposite direction. An `else` that catches both
-reports the wrong one. There is now a dedicated widening branch.
-`results/ctxself-deaf36.log` keeps the mis-worded verdict over correct numbers;
-`ctxself-deaf36b.log` is the regeneration.
-
-**And the arm indices were positional** — `kEar = 2, kERnd = 3, kAda = 4` hardcoded into
-the arm table. Inserting the deaf arms at 4 and 5 shifted `ema`/`ema-rnd` to 6 and 7, so
-`kAda`/`kARnd` would have pointed at the new arms while every printed label still said
-"ema". Third occurrence this week of a constant copied instead of derived, after
-`ctx_wins_[8]` and `kVGGrids`-by-position. Lookup is by name now and refuses on a miss.
-
-One stray edit of my own, caught and reverted: setting `kReps = 18` matched the first of
-many identical lines and landed in `ctxsrc`, silently doubling an unrelated experiment's
-sample size. Short anchors are not safe in a 34k-line file of near-identical lines.
-
-Credit: Michale Fee and Adam Goldberg for the bias-from-outside architecture this index
-feeds; James MacQueen, whose `1/wins` rate is now the last suspect; Gunnar Fant for the
-formant coordinates throughout.
