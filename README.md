@@ -16180,3 +16180,109 @@ Credit: Gunnar Fant, whose source-filter account is what makes a formant grid a
 vocabulary at all; Michale Fee and Adam Goldberg for the bias-from-outside architecture
 this teaches through; Anne Warlaumont and Megan Finnegan, whose refused salience result
 supplied the 3 SE bar that refused three of the four verdicts above.
+
+
+## The 2×3 arm: nine words name as well as six, and F2's response has a price on it (2026-10-01)
+
+The committed run could read F1 and not F2. F1 had three levels in both arms, so its
+delivered-spacing contrast was sound; F2 had two levels at k=6 against three at k=9, so
+its two estimates were not the same estimator, and the contrast came out +1.8 ± 13.1 Hz.
+`k6b` is the fix — a 2×3 grid, six words with *three* F2 levels — so that against k9+
+the F2 estimator is fixed and word count alone moves.
+
+**Holding the estimator fixed helped and was still not enough.** F2's SE falls from 13.1
+to 8.0 Hz, and 3 × SE = 23.9 Hz still exceeds the 11.8 Hz F1 gave up. The guard refuses a
+third time rather than reading a point estimate of −0.2 ± 8.0. The reallocation account —
+that F2 absorbs what F1 surrenders — is **open: neither established nor refuted**, and the
+verdict now prints what settling it would cost: about 148 creatures, or a statistic less
+noisy than endpoint spacing.
+
+Worth recording for whoever picks that up: the obvious candidate is not a candidate. An
+OLS slope over the levels equals the endpoint estimate *exactly* for three equally spaced
+levels, so it buys nothing. A paired log-ratio is the untried option, since an SE of 8.0
+on a mean of 19.7 suggests the creature-to-creature spread is multiplicative rather than
+additive.
+
+### What the run settled instead
+
+| 6-word grid | shape | excess | paired vs k9+ |
+|---|---|---|---|
+| k6 | 3×2 | +0.067 ± 0.019 | **−0.012 ± 0.019** |
+| k6b | 2×3 | +0.036 ± 0.015 | **+0.020 ± 0.018** |
+
+**Two independent six-word grid shapes, two nulls, opposite signs.** Nine words name as
+well as six — the strongest form that result can take, and it is now replicated rather
+than single-shot. F2's side excess rose in both comparisons as well (+0.079 and +0.066,
+each 2.9 SE), but they share the k9+ arm and so cannot be combined into one number.
+
+Two cautions attach to this table. The two six-word shapes differ from each other more
+than nine words differs from either, which hints that grid *shape* matters more than word
+*count* — but that difference is itself 1.3 SE, so it is suggested and not established.
+And the SEs are not comparable across arms: k9+ runs 1.5× the ticks to match trials per
+word, so its tighter SE is partly the longer session.
+
+### The same trap one level up, caught before it fired
+
+The contrast code read `g6 = 0, g9 = 1, g9p = 2` — hardcoded positions into the grid
+list. Editing that list is exactly what adding the 2×3 arm requires, and doing so would
+have silently repointed every contrast at the wrong arm, with no error and entirely
+plausible numbers out the other end. **This is the `ctx_wins_[8]` failure from the same
+day, one level up: a constant copied instead of derived.** Lookup is now by tag and
+*refuses* when a contrast's arms are absent, and a dropped arm's number is cited with a
+label saying so rather than recomputed from arms no longer in the run.
+
+F1 is now the unreadable axis here, going from two levels to three, so its committed
+figure is cited rather than recomputed. Reading an axis whose level count differs between
+arms would have been the identical error in the opposite direction.
+
+Credit: Gunnar Fant, whose source-filter account makes a formant grid a vocabulary;
+Michale Fee and Adam Goldberg for the bias-from-outside architecture; Anne Warlaumont and
+Megan Finnegan, whose refused salience result supplied the 3 SE bar that has now refused
+the same tempting mechanism three times.
+
+
+## Shape does not matter at this power, and pairing bought nothing (2026-10-02)
+
+The previous run left a hint worth chasing: the two six-word grids differed from each
+other (+0.067 for 3×2 against +0.036 for 2×3) by more than nine words differed from
+either. But that was an unpaired comparison across two separate runs, at 1.3 SE. Both
+shapes share creature seeds, so they can be put in one run and paired within creature.
+
+It also carried a prediction that could fail. `aimaxes` measured F2 swinging 961 Hz
+against F1's 378, and I had invoked that leverage to explain the reallocation account.
+Leverage says spend your levels on the axis that moves most, so 2×3 — three levels on
+F2 — should win.
+
+**Paired within creature, 2×3 minus 3×2 is −0.032 ± 0.027 (1.2 SE).** Under the bar. The
+gap between the two earlier runs does not survive the only sound contrast, so "shape
+beats count" is withdrawn and word count stays the variable these results are indexed
+on. The leverage prediction is neither confirmed nor refuted: the point estimate sits 1.2
+SE in the direction *opposite* to it, which is suggestive and nothing more. Leverage has
+now been invoked twice as a mechanism and has never passed a test of its own.
+
+**Pairing bought nothing, and that is itself a result.** The unpaired SE was 0.024 and
+the paired SE is 0.027 — slightly worse, meaning the two arms are if anything
+anti-correlated across creatures. Creature identity does not predict which shape suits
+it, so there is no per-creature "preferred axis" to go looking for.
+
+### Two defects in the output, both of a kind this project keeps meeting
+
+**The per-axis rows of the shape contrast are not comparable.** The contrast swaps each
+axis's level count — F1 has three levels at 3×2 and two at 2×3 — so "which level is
+nearest" is scored against chance 1/3 in one arm and 1/2 in the other. This is precisely
+the estimator mismatch that made the delivered-F2 contrast unreadable, reappearing in the
+excess columns, and I printed it beside the total as though it were an effect. The total
+is the only comparable row. The per-axis rows now print with their level counts and the
+words NOT COMPARABLE attached.
+
+**And two lines called k6b "k=9".** With no nine-word arm in the run, `last` is the
+six-word k6b, but the format strings read "at k=9 the excess is" and "k9+ excess against
+the 3 SE bar". A label hardcoded next to a computed value is the same failure as a number
+written twice: it goes stale the moment the value moves. Labels now come from the grid's
+own tag. `results/ctxvocab-shape.log` carries the mislabelled version;
+`ctxvocab-shape2.log` is the corrected regeneration.
+
+Credit: Gunnar Fant for the formant coordinates; Michale Fee and Adam Goldberg for the
+bias-from-outside architecture; Anne Warlaumont and Megan Finnegan, whose refused
+salience result is the origin of the 3 SE bar that has now withdrawn a hint of mine as
+well as three verdicts.

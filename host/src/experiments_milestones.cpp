@@ -26492,8 +26492,8 @@ struct VocabGrid { uint32_t k, n1, n2, tnum, tden, reps; const char* tag; };
 // shape. k6 and k9 are dropped from this run: their numbers are committed, deterministic
 // and cited below, and keeping them would put the run past six hours.
 constexpr VocabGrid kVGGrids[] = {
-    {6u, 2u, 3u, 1u, 1u, 36u, "k6b"},  // 6 words, THREE F2 levels: F2 estimator fixed
-    {9u, 3u, 3u, 3u, 2u, 36u, "k9+"},  // 1.5x ticks: trials per word matched to k6b
+    {6u, 3u, 2u, 1u, 1u, 36u, "k6 "},  // SIX words, 3 F1 levels x 2 F2
+    {6u, 2u, 3u, 1u, 1u, 36u, "k6b"},  // SIX words, 2 F1 levels x 3 F2 -- same count
 };
 
 // THE BAR, DEFINED ONCE. The previous run printed "NOT YET A FINDING" for a 2.9 SE
@@ -26801,8 +26801,12 @@ bool run_ctxvocab(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
   const double last = exc[kVGCount - 1], laste = exce[kVGCount - 1];
   const double drop = k4 - last;
   const double drop_se = std::sqrt(k4e * k4e + laste * laste);
-  std::printf("\n  at k=9 the excess is %+.3f, a change of %+.3f +/- %.3f against k=4"
-              " (%.1f SE)\n", last, -drop, drop_se,
+  // LABELLED FROM THE GRID'S OWN TAG. These two lines said "k=9" and "k9+" literally,
+  // so a run whose last grid was the six-word k6b reported its number as k=9's. A label
+  // hardcoded beside a computed value is the same failure as a number written twice.
+  const char* last_tag = kVGGrids[kVGCount - 1].tag;
+  std::printf("\n  at %s the excess is %+.3f, a change of %+.3f +/- %.3f against k=4"
+              " (%.1f SE)\n", last_tag, last, -drop, drop_se,
               drop_se > 0.0 ? drop / drop_se : 0.0);
   std::printf("  -- and that change is NOT a capacity curve: k=4's spacing is DOUBLE,\n"
               "     so it mixes vocabulary size with a 2x resolution change.\n");
@@ -26812,8 +26816,8 @@ bool run_ctxvocab(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
   // null at n=16, the smoothing sweep +0.24 at n=3 to +0.03 at n=6, vigilance 0.737 to
   // 0.594 at 96. A 2.4 SE excess at n=18 is that exact pattern, so it is not called
   // real here on its own.
-  std::printf("  k9+ excess against this project's own %.0f SE bar (n=%u):  %.1f SE"
-              "  -> %s\n", kVGBar, kVGGrids[kVGCount - 1].reps,
+  std::printf("  %s excess against this project's own %.0f SE bar (n=%u):  %.1f SE"
+              "  -> %s\n", last_tag, kVGBar, kVGGrids[kVGCount - 1].reps,
               laste > 0.0 ? last / laste : 0.0,
               laste > 0.0 && last > kVGBar * laste ? "REAL" : "NOT YET A FINDING");
 
@@ -26826,10 +26830,90 @@ bool run_ctxvocab(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
       if (std::strcmp(kVGGrids[g].tag, tag) == 0) return int(g);
     return -1;
   };
-  const int i6b = find_grid("k6b"), i9p = find_grid("k9+");
+  const int i6 = find_grid("k6 "), i6b = find_grid("k6b"), i9p = find_grid("k9+");
+
+  // THE SHAPE CONTRAST. Both arms are SIX words, same trials per word, same seeds, so
+  // they pair within creature -- which is the whole point: the unpaired comparison
+  // across two earlier runs read 1.3 SE and could not settle anything.
+  //
+  // IT CARRIES A PREDICTION THAT CAN FAIL. aimaxes measured F2 swinging 961 Hz against
+  // F1's 378, and I invoked that leverage to explain the reallocation account. Leverage
+  // says spend your levels on the axis that moves most: 2x3 (three levels on F2) should
+  // BEAT 3x2. The unpaired point estimates say the opposite (+0.067 for 3x2 against
+  // +0.036 for 2x3). If the paired contrast confirms the reverse, the leverage story
+  // is refuted on its own prediction, and "vocabulary size" is the wrong variable --
+  // six words name differently depending only on how the grid is shaped.
+  if (i6 >= 0 && i6b >= 0) {
+    const uint32_t ga = uint32_t(i6), gb = uint32_t(i6b);
+    std::vector<double> vn, v1, v2;
+    const uint32_t n = std::min(kVGGrids[ga].reps, kVGGrids[gb].reps);
+    for (uint32_t r = 0; r < n; ++r) {
+      const Cell& ao = at(ga, 0, r); const Cell& ax = at(ga, 1, r);
+      const Cell& bo = at(gb, 0, r); const Cell& bx = at(gb, 1, r);
+      if (!ao.ok || !ax.ok || !bo.ok || !bx.ok) continue;
+      vn.push_back((bx.near - bo.near) - (ax.near - ao.near));
+      v1.push_back((bx.p1 - bo.p1) - (ax.p1 - ao.p1));
+      v2.push_back((bx.p2 - bo.p2) - (ax.p2 - ao.p2));
+    }
+    if (vn.empty()) {
+      std::printf("\n  REFUSED: no creature usable in both six-word shapes.\n");
+      return true;
+    }
+    double sn = 0.0, s1 = 0.0, s2 = 0.0;
+    const double dn = ctx_mean_se(vn, &sn), d1 = ctx_mean_se(v1, &s1),
+                 d2 = ctx_mean_se(v2, &s2);
+    std::printf("\n  SHAPE AT FIXED WORD COUNT: 2x3 MINUS 3x2, PAIRED WITHIN CREATURE\n");
+    std::printf("    (both six words, both 405 trials/word, n=%zu)\n", vn.size());
+    std::printf("    total naming excess  %+.3f +/- %.3f (%.1f SE)   <- the ONLY\n"
+                "                                                    comparable row\n",
+                dn, sn, sn > 0.0 ? std::fabs(dn) / sn : 0.0);
+    // THE PER-AXIS ROWS ARE NOT COMPARABLE IN THIS CONTRAST, and printing them beside
+    // the total invites exactly the error this experiment has already made twice. The
+    // shape contrast swaps each axis's LEVEL COUNT -- F1 is 3 levels at 3x2 and 2 at
+    // 2x3 -- so "which level is nearest" is scored against a different chance level in
+    // each arm (1/3 against 1/2). Same estimator mismatch that made the delivered-F2
+    // contrast unreadable, now in the excess columns. Shown for the record, labelled.
+    std::printf("    F1 side excess       %+.3f +/- %.3f   NOT COMPARABLE: 3 levels at\n"
+                "                                           3x2 vs 2 at 2x3 (chance 1/3 vs 1/2)\n",
+                d1, s1);
+    std::printf("    F2 side excess       %+.3f +/- %.3f   NOT COMPARABLE: 2 levels at\n"
+                "                                           3x2 vs 3 at 2x3 (chance 1/2 vs 1/3)\n",
+                d2, s2);
+    std::printf("    PREDICTED by aimaxes leverage: 2x3 BETTER, so the total should be"
+                " POSITIVE\n\n");
+    const bool shape_matters = sn > 0.0 && std::fabs(dn) > kVGBar * sn;
+    if (shape_matters && dn < 0.0) {
+      std::printf("  LEVERAGE IS REFUSED ON ITS OWN PREDICTION. Six words shaped 2x3 name\n"
+                  "  %+.3f +/- %.3f WORSE than the same six shaped 3x2 (%.1f SE), where\n"
+                  "  aimaxes' 961-vs-378 Hz swing predicted BETTER. Spending levels on\n"
+                  "  the higher-leverage axis is the wrong move, so actuator range is not\n"
+                  "  what sets a vocabulary's accuracy -- and WORD COUNT IS THE WRONG\n"
+                  "  VARIABLE: the same six words differ by %+.3f on shape alone, against\n"
+                  "  the -0.012 and +0.020 that nine-vs-six produced. Any capacity claim\n"
+                  "  must hold shape fixed, which no run in this project has done.\n",
+                  dn, sn, std::fabs(dn) / sn, dn);
+    } else if (shape_matters && dn > 0.0) {
+      std::printf("  LEVERAGE CONFIRMED, AND SHAPE BEATS COUNT. Six words shaped 2x3 name\n"
+                  "  %+.3f +/- %.3f BETTER than the same six shaped 3x2 (%.1f SE), the\n"
+                  "  direction aimaxes predicts from F2's 961 Hz against F1's 378. Levels\n"
+                  "  belong on the higher-leverage axis. The earlier unpaired estimates\n"
+                  "  pointed the other way and were 1.3 SE -- pairing reversed them.\n",
+                  dn, sn, dn / sn);
+    } else {
+      std::printf("  SHAPE DOES NOT MATTER AT THIS POWER. 2x3 minus 3x2 is %+.3f +/- %.3f\n"
+                  "  (%.1f SE, under the %.0f SE bar) paired within creature, so the\n"
+                  "  +0.067-vs-+0.036 gap between the two earlier runs does not survive\n"
+                  "  the only sound contrast. Both the leverage prediction and\n"
+                  "  \"shape beats count\" are unsupported, and word count stays the\n"
+                  "  variable the vocabulary results are indexed on.\n",
+                  dn, sn, sn > 0.0 ? std::fabs(dn) / sn : 0.0, kVGBar);
+    }
+    return true;
+  }
+
   if (i9p < 0) {
-    std::printf("\n  REFUSED: no grid tagged \"k9+\" in kVGGrids, so the nine-word arm\n"
-                "  this verdict is written about is not in this run.\n");
+    std::printf("\n  REFUSED: no grid tagged \"k9+\" in kVGGrids, and not both six-word\n"
+                "  shapes either, so neither contrast this verdict covers is in the run.\n");
     return true;
   }
   const uint32_t g9p = uint32_t(i9p);
