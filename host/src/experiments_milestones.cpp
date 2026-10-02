@@ -26193,6 +26193,17 @@ bool run_ctxself(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
       const double dd_se = std::sqrt(gh_se * gh_se + gd_se * gd_se);
       std::printf("    DIFFERENCE OF GAPS  deaf - hearing     %+.3f +/- %.3f (%.1f SE)\n",
                   dd, dd_se, dd_se > 0.0 ? std::fabs(dd) / dd_se : 0.0);
+      // THE PER-ARM MAIN EFFECTS, PAIRED. The difference of gaps hides which arm
+      // moved, and in the n=36 run that is the whole story: deafening helped the
+      // CONTROL arm and left the TRACKING arm flat.
+      double me_se = 0.0, mr_se = 0.0;
+      uint32_t me_n = 0, mr_n = 0;
+      const double me = mpaired(kEar0, kEar, &me_se, &me_n);
+      const double mr = mpaired(kERnd0, kERnd, &mr_se, &mr_n);
+      std::printf("    deafening, TRACKING arm   ear-deaf     - ear      %+.3f +/- %.3f (%.1f SE)\n",
+                  me, me_se, me_se > 0.0 ? std::fabs(me) / me_se : 0.0);
+      std::printf("    deafening, CONTROL arm    ear-deaf-rnd - ear-rnd  %+.3f +/- %.3f (%.1f SE)\n",
+                  mr, mr_se, mr_se > 0.0 ? std::fabs(mr) / mr_se : 0.0);
       // Also report the deaf index LEVELS, because a deafened creature could close
       // the gap by getting worse everywhere rather than by losing the contamination.
       std::printf("    index levels  ear %.3f  ear-rnd %.3f  ear-deaf %.3f  ear-deaf-rnd %.3f\n",
@@ -26230,6 +26241,33 @@ bool run_ctxself(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
                     "    selfcode's own-F1 signal, arriving as a confound. DRIFT is not\n"
                     "    needed to explain it.\n",
                     dd, dd_se, dd / dd_se, kBar, gd, gd_se);
+      } else if (dd_se > 0.0 && dd < -2.0 * dd_se) {
+        // THE BRANCH THIS VERDICT WAS MISSING. `moved` only tests for a CLOSURE
+        // (dd positive), so a gap that WIDENS fell through to the null branch and
+        // printed "own voice is cleared" over a 2.4 SE move in the opposite
+        // direction. A null and a reversal are not the same result, and an else
+        // that catches both reports the wrong one.
+        std::printf("    OWN VOICE IS REFUSED, AND THE GAP WIDENS WITHOUT IT. The test\n"
+                    "    had the power to see a closure (%.0f x SE = %.3f against the\n"
+                    "    %.3f one would move) and the gap went the OTHER WAY instead:\n"
+                    "    %+.3f +/- %.3f (%.1f SE). So the creature hearing itself is not\n"
+                    "    why its index degrades when the target tracks the word -- and\n"
+                    "    DRIFT survives as the remaining hypothesis (MacQueen's 1/wins\n"
+                    "    freezing prototypes under a voice that is still moving).\n",
+                    kBar, kBar * dd_se, std::fabs(gh), dd, dd_se,
+                    std::fabs(dd) / dd_se);
+        std::printf("    WHERE THE WIDENING COMES FROM: deafening moves the CONTROL arm\n"
+                    "    %+.3f +/- %.3f and the TRACKING arm %+.3f +/- %.3f. Own voice is\n"
+                    "    NOISE in the control arm, where the voice is word-independent,\n"
+                    "    and roughly NEUTRAL in the tracking arm, where it is\n"
+                    "    word-correlated -- and under the default kWords table `heard` is\n"
+                    "    echo-ALIGNED (targets-fight-the-echo is regime-specific), so\n"
+                    "    there the own voice REINFORCES the caregiver's word and cutting\n"
+                    "    it removes signal along with the noise.%s\n",
+                    mr, mr_se, me, me_se,
+                    std::fabs(dd) > kBar * dd_se
+                        ? ""
+                        : " At this n the widening\n    is under the 3 SE bar: suggestive, not established.");
       } else if (moved) {
         std::printf("    OWN VOICE CONTRIBUTES, BUT DOES NOT ACCOUNT FOR IT. Deafening\n"
                     "    moves the gap %+.3f +/- %.3f (%.1f SE) and yet the deaf gap is\n"

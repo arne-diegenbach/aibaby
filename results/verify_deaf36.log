@@ -16,7 +16,7 @@ experiment: audio
   auditory rate     silence 4.20 Hz -> vowel 5.84 Hz -> silence 2.23 Hz
 
   audio path PASS — sound reaches B2 and silence does not.
-  [audio took 2.8 s]
+  [audio took 3.2 s]
 
   --- vision, 120000 ticks ---
 experiment: vision
@@ -25,7 +25,7 @@ experiment: vision
   vision rate       empty 2.40 Hz -> object 4.65 Hz -> empty 2.43 Hz
 
   vision path PASS — an object reaches B3 and an empty field does not.
-  [vision took 2.9 s]
+  [vision took 3.0 s]
 
   --- m2, 120000 ticks ---
 experiment: m2
@@ -49,7 +49,7 @@ experiment: m2
   (chance 50%, shuffled control 40%). With each trial's overall firing
   rate divided out it still reads 76%, so most of what B1 carries about
   the object is how hard it is working and some of it is where.
-  [m2 took 13.6 s]
+  [m2 took 15.6 s]
 
   --- babble, 120000 ticks ---
 experiment: babble
@@ -68,7 +68,7 @@ experiment: babble
   exploration       1.000 min, 1.000 mean, 1.000 max (1.0 = plain noise_amp)
 
   babble PASS — vocal duty cycle 0.50 (want 0.10 .. 0.85).
-  [babble took 2.7 s]
+  [babble took 3.3 s]
 
   --- calibrate, 120000 ticks ---
 experiment: calibrate
@@ -92,7 +92,7 @@ experiment: calibrate
   in-degree caps across the 9 seeds g2 and m3 sweep
 
   calibrate PASS — 0 modules off target, 0 seeds wiring badly. Amplitude floor thin (structural).
-  [calibrate took 2.9 s]
+  [calibrate took 3.5 s]
 
   --- footprint, 120000 ticks ---
 experiment: footprint
@@ -119,7 +119,7 @@ experiment: footprint
 
   dropped           0 synapses, 0 reverse entries
   footprint PASS — nothing dropped; the built brain is the genome's.
-  [footprint took 0.0 s]
+  [footprint took 0.1 s]
 
   --- pcprobe, 120000 ticks ---
 experiment: pcprobe
@@ -173,7 +173,7 @@ experiment: pcprobe
     kCriticBins is the repair. Read the last two against "previous frame
     alone" for the harder question — whether the association module knows
     anything about the next sound that the last sound does not already say.
-  [pcprobe took 3.6 s]
+  [pcprobe took 3.9 s]
 
   --- dwprobe, 120000 ticks ---
 experiment: dwprobe
@@ -321,12 +321,12 @@ experiment: dwprobe
     and R-STDP cannot build a conditional mapping on this tract. If the
     object correlation is clearly lower, the rule does differentiate and
     G3's failure is downstream of it.
-  [dwprobe took 161.4 s]
+  [dwprobe took 183.4 s]
 
   --- v1probe, 120000 ticks ---
 experiment: v1probe
   genome has no visual cortex — nothing to probe
-  [v1probe took 0.0 s]
+  [v1probe took 0.1 s]
 
   --- m3probe, 200000 ticks ---
 experiment: m3probe
@@ -430,7 +430,7 @@ experiment: m3probe
 
   m3probe is a microscope, not a criterion — both delivery controls
   are lit (0.980, 1.000), so the rows above are about the creature.
-  [m3probe took 9.8 s]
+  [m3probe took 10.5 s]
 
   --- shapeprobe, 200000 ticks ---
 experiment: shapeprobe
@@ -598,7 +598,7 @@ experiment: gazeprobe
     The radius where this stops being 'acquired' is what a peripheral
     channel would have to cover, and whether it stops by REFUSING or by
     aiming short says whether the fix is the floor or the rings.
-  [gazeprobe took 138.6 s]
+  [gazeprobe took 137.6 s]
 
   --- apicalprobe, 200000 ticks ---
 experiment: apicalprobe
@@ -607,7 +607,7 @@ experiment: apicalprobe
                     are not comparable with these (~0.05 at 300 trials)
   apical tracts in this genome:
     none — this genome is a point-neuron creature, nothing to probe
-  [apicalprobe took 0.0 s]
+  [apicalprobe took 0.1 s]
 
   --- oscprobe, 200000 ticks ---
 experiment: oscprobe
@@ -616,7 +616,7 @@ experiment: oscprobe
                     are not comparable with these (~0.05 at 300 trials)
   oscillating modules:
     none — this genome has no rhythm, nothing to probe
-  [oscprobe took 0.0 s]
+  [oscprobe took 0.1 s]
 
   --- audprobe, 240000 ticks ---
 experiment: audprobe
@@ -645,7 +645,7 @@ experiment: audprobe
   audprobe: with nothing to look at, the word is legible in B2 at 100%
   and in the association module at 100%. This is the auditory half of
   the cross-modal task, which the cube-versus-ball cascade cannot see.
-  [audprobe took 29.9 s]
+  [audprobe took 30.2 s]
 
   --- relayprobe, 240000 ticks ---
 experiment: relayprobe
@@ -745,7 +745,7 @@ experiment: pruneprobe
   PASS — competition removes synapses the absolute floor did not,
   the survivors are stronger than the population it selected from,
   and no neuron was stripped.
-  [pruneprobe took 2.9 s]
+  [pruneprobe took 3.0 s]
 
   --- stpprobe, 120000 ticks ---
 experiment: stpprobe
@@ -816,7 +816,7 @@ experiment: stpprobe
   genome can express that today: a relay module between auditory and
   central, depressing on the way in and facilitating on the way out.
   It has not been built.
-  [stpprobe took 5.0 s]
+  [stpprobe took 5.1 s]
 
   --- selfcode, 300000 ticks ---
 experiment: selfcode
@@ -867,7 +867,7 @@ experiment: selfcode
   F1 above the common-mode term, so selfloop's null is a MISSING
   MAPPING rather than a missing signal -- and `can reward install the
   loop` is worth its cost.
-  [selfcode took 482.0 s]
+  [selfcode took 479.5 s]
 
   --- coderprobe, 300000 ticks ---
 experiment: coderprobe
@@ -894,14 +894,14 @@ experiment: coderprobe
   auditory code to occupy, so `vocab`'s 0.210 is a fact about what the
   creature can SAY and not about what it can hear. A competitive coder
   would be improving the one stage that is not the bottleneck.
-  [coderprobe took 21.1 s]
+  [coderprobe took 21.3 s]
 
 
 ========================================================
   determinism       PASS
   pinned hash       PASS
   experiments       23 as expected, 0 not
-  wall time         15.0 min, slowest `selfcode` at 8.0 min
+  wall time         15.4 min, slowest `selfcode` at 8.0 min
   verify PASS
   (this tier only — verify-long adds the minute-scale experiments,
    verify-teach the hour-scale teaching ones, verify-all both)

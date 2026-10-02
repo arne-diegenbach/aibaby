@@ -16348,3 +16348,83 @@ asked for a statistic that another memory had already reported.
 
 Credit: Gunnar Fant for the formant coordinates; Michale Fee and Adam Goldberg for the
 bias-from-outside architecture; Anne Warlaumont and Megan Finnegan for the 3 SE bar.
+
+
+## Own voice is refused by intervention, and drift is the last hypothesis standing (2026-10-02)
+
+`areax-v53` left the oldest unexplained result in the queue: `ear` − `ear-rnd` on the
+index reads **−0.086 and −0.088 on 18/18 creatures across two builds** — the creature's
+own context index is *worse* exactly when the target tracks the word. Two causes had been
+proposed and both predict the sign the data refutes (+0.72 across creatures: better index
+→ *more* learning). Gate corruption was already recorded as refuted. Own-voice
+contamination was still live, because `selfcode` had measured the ear hearing its own F1.
+
+The trouble is that a between-arm offset combined with a within-arm positive slope fits
+either story, and **no correlation can separate them.** So this is an intervention:
+`self_gain = 0` on `ear-deaf` *and* `ear-deaf-rnd`, scored as a difference of gaps
+because the finding is itself a gap. The control arm had to be deafened too, or deafness
+would confound with the target. `self_gain = 0` cuts the acoustic self-path and leaves
+every internal path intact.
+
+| | gap |
+|---|---|
+| hearing, `ear` − `ear-rnd` | **−0.056 ± 0.009 (6.0 SE)** |
+| deaf, `ear-deaf` − `ear-deaf-rnd` | **−0.093 ± 0.012 (7.9 SE)** |
+| difference of gaps | **−0.037 ± 0.015 (2.4 SE)** |
+
+**The test had the power to see a closure** — 3 × SE = 0.045 against the 0.056 a full
+closure would move — and saw none. The gap went the other way. So the creature hearing
+itself is not why its index degrades when the target tracks the word, and **drift is the
+last hypothesis standing**: MacQueen's `1/wins` freezes the prototypes under a voice that
+is still moving.
+
+### The widening was predicted by something measured the day before
+
+```
+ear      0.707 -> ear-deaf      0.700    -0.007   tracking arm: flat
+ear-rnd  0.763 -> ear-deaf-rnd  0.793    +0.030   control arm: improves
+```
+
+Own voice is **noise** in the control arm, where the creature's voice is
+word-independent, and roughly **neutral** in the tracking arm, where it is
+word-correlated. And under the default `kWords` table `heard` is echo-*aligned* — the
+regime distinction established one day earlier, with the v53 arms passing
+`tgt_table = nullptr` — so there the own voice reinforces the caregiver's word, and
+cutting it removes signal along with the noise. The two effects cancel. At n=36 the
+widening is 2.4 SE, under the 3 SE bar: suggestive, not established.
+
+Also worth quoting correctly: the gap's own magnitude decays with sample size —
+−0.086 at n=9 (the record, a different genome family), −0.070 at n=9 here, **−0.056 ±
+0.009 at n=36**. Direction holds at 6.0 SE, magnitude falls. The ordinary pattern in this
+project, and the n=36 figure is the one to cite.
+
+### Two verdict bugs, both the shape this project keeps meeting
+
+**A test that could not fail.** The first run, at n=9, printed "OWN VOICE IS CLEARED"
+from `dd = −0.002 ± 0.030`. But a full closure moves that statistic by exactly 0.070, and
+3 × SE was **0.090** — the branch was unreachable and the negative verdict guaranteed
+before the run started. That is the sibling of `ctxvocab`'s `f2_spared`, which passed on
+anything; this one passed on nothing. The verdict now prints its own power as `CAN DETECT
+ONE` / `CANNOT DETECT ONE` and refuses outright when it cannot, with the required sample
+size computed.
+
+**A null and a reversal reported as the same thing.** At n=36, `moved` tests only for a
+closure, so a gap that *widens* fell through to the null branch and printed "own voice is
+cleared" over a 2.4 SE move in the opposite direction. An `else` that catches both
+reports the wrong one. There is now a dedicated widening branch.
+`results/ctxself-deaf36.log` keeps the mis-worded verdict over correct numbers;
+`ctxself-deaf36b.log` is the regeneration.
+
+**And the arm indices were positional** — `kEar = 2, kERnd = 3, kAda = 4` hardcoded into
+the arm table. Inserting the deaf arms at 4 and 5 shifted `ema`/`ema-rnd` to 6 and 7, so
+`kAda`/`kARnd` would have pointed at the new arms while every printed label still said
+"ema". Third occurrence this week of a constant copied instead of derived, after
+`ctx_wins_[8]` and `kVGGrids`-by-position. Lookup is by name now and refuses on a miss.
+
+One stray edit of my own, caught and reverted: setting `kReps = 18` matched the first of
+many identical lines and landed in `ctxsrc`, silently doubling an unrelated experiment's
+sample size. Short anchors are not safe in a 34k-line file of near-identical lines.
+
+Credit: Michale Fee and Adam Goldberg for the bias-from-outside architecture this index
+feeds; James MacQueen, whose `1/wins` rate is now the last suspect; Gunnar Fant for the
+formant coordinates throughout.
