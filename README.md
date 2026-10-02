@@ -16390,8 +16390,28 @@ word-independent, and roughly **neutral** in the tracking arm, where it is
 word-correlated. And under the default `kWords` table `heard` is echo-*aligned* — the
 regime distinction established one day earlier, with the v53 arms passing
 `tgt_table = nullptr` — so there the own voice reinforces the caregiver's word, and
-cutting it removes signal along with the noise. The two effects cancel. At n=36 the
-widening is 2.4 SE, under the 3 SE bar: suggestive, not established.
+cutting it removes signal along with the noise. The two effects cancel.
+
+The paired statistics show the driver clears the bar even though the interaction does
+not:
+
+| effect | | |
+|---|---|---|
+| deafening, control arm | **+0.030 ± 0.004** | **7.1 SE** |
+| deafening, tracking arm | −0.007 ± 0.015 | 0.5 SE |
+| the interaction | −0.037 ± 0.015 | 2.4 SE |
+
+So **own voice measurably degrades the index when the target does not track the word,
+and does not when it does.** The main effect is the solid part; the interaction is
+suggestive at 2.4 SE.
+
+**The tracking arm's null is not "nothing happened", though.** Its index becomes
+significantly more *lopsided* — busiest-slice occupancy 0.606 → 0.672, +0.066 ± 0.018
+(3.7 SE), against +0.009 ± 0.014 in the control arm. Deafening changes that partition's
+shape without making it more word-aligned, which is v53's own remark that "the
+lopsidedness is the cost of the creature finding its own window" — now moving under an
+intervention rather than merely observed. Those two are unpaired, computed from the
+printed means; paired occupancy is not in the code.
 
 Also worth quoting correctly: the gap's own magnitude decays with sample size —
 −0.086 at n=9 (the record, a different genome family), −0.070 at n=9 here, **−0.056 ±
