@@ -25575,11 +25575,14 @@ struct CtxSelfArm {
   uint32_t slots;
   uint32_t source;  // DnaExploration::context_source
   int target;       // VLTarget
+  // DnaAudio::self_gain for this arm, or -1 to leave the genome's own value.
+  // Shipped is 0.5; 0 is the DEAF creature of every pre-v6 measurement.
+  float self_gain;
 };
 
 constexpr CtxSelfArm kCtxSelfArms[] = {
-    {"off",      0, 0, kVLTgtHeard},
-    {"oracle",   2, 0, kVLTgtHeard},
+    {"off",      0, 0, kVLTgtHeard,  -1.0f},
+    {"oracle",   2, 0, kVLTgtHeard,  -1.0f},
     // DNA v52's arms are retired from the run and kept in the record: it was
     // refused on two seed families and its numbers are in the README. The slots
     // they free go to the drift test, which is what this run is now for.
@@ -25595,16 +25598,36 @@ constexpr CtxSelfArm kCtxSelfArms[] = {
     // `partprobe` said so before this was built, because a clean split of the
     // ear would look identical whether it tracks the WORD or something merely
     // correlated with it in this protocol.
-    {"ear",      2, 2, kVLTgtHeard},
-    {"ear-rnd",  2, 2, kVLTgtRandom},
+    {"ear",      2, 2, kVLTgtHeard,  -1.0f},
+    {"ear-rnd",  2, 2, kVLTgtRandom, -1.0f},
+    // THE INTERVENTION (2026-10-02). `ear` - `ear-rnd` is -0.086 and -0.088 on
+    // 18/18 creatures across two builds: the index is WORSE when the target tracks
+    // the word. Two causes have been proposed and BOTH predict the same sign that
+    // the data refutes (+0.72 across creatures: better index -> MORE learning) --
+    // gate corruption, and own-voice contamination of the ear feature, which is
+    // live because selfcode measured the ear hearing its own F1. A between-arm
+    // offset plus a within-arm positive slope fits either, and NO CORRELATION CAN
+    // SEPARATE THEM. This is the intervention that can.
+    //
+    // `self_gain = 0` cuts the ACOUSTIC self-path and leaves every internal path,
+    // so it is selfcode's `deaf` arm and isolates exactly the own-voice term. The
+    // quantity is a DIFFERENCE OF GAPS, because the finding is itself a gap:
+    //   gap(hearing) = ear      - ear-rnd        (measured: -0.086, 4.8 SE)
+    //   gap(deaf)    = ear-deaf - ear-deaf-rnd
+    // PRE-REGISTERED: gap(deaf) at zero while gap(hearing) stays negative means the
+    // creature's OWN VOICE causes it. Both gaps negative and equal means own voice
+    // is cleared and DRIFT survives as the leading hypothesis. The rnd arm must be
+    // deafened too, or the contrast would confound deafness with the target.
+    {"ear-deaf",     2, 2, kVLTgtHeard,  0.0f},
+    {"ear-deaf-rnd", 2, 2, kVLTgtRandom, 0.0f},
     // `adapt` (source 3, the derived rate cap) is retired: it cost -0.146 of
     // index on 8 of 9 seeds and made both arms decay. Its slots go to source 4,
     // which needs no episode at all -- `partprobe` scores the ear's own rate EMA
     // at reward time at 1.000 under this kernel's exact rule, with no gate, no
     // accumulator and no latch, because an EMA carries the preceding second
     // where an accumulator that resets carries whatever the last fragment held.
-    {"ema",      2, 4, kVLTgtHeard},
-    {"ema-rnd",  2, 4, kVLTgtRandom},
+    {"ema",      2, 4, kVLTgtHeard,  -1.0f},
+    {"ema-rnd",  2, 4, kVLTgtRandom, -1.0f},
 };
 constexpr uint32_t kCtxSelfArmCount = sizeof(kCtxSelfArms) / sizeof(kCtxSelfArms[0]);
 
@@ -25640,11 +25663,19 @@ bool run_ctxself(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
   // read 0.740 and refused. The quantity this run turns on is a difference of
   // tens of Hz between arms whose per-creature spread is tens of Hz, which is
   // exactly the regime where three seeds decide nothing.
-  constexpr uint32_t kReps = 9;
+  // THIRTY-SIX. At nine, 3 x SE on the DIFFERENCE OF GAPS is 0.090 while a FULL
+  // closure of the -0.070 hearing gap would move it only +0.070 -- so the test
+  // COULD NOT HAVE PASSED even if the own-voice account were entirely right, and
+  // it printed "OWN VOICE IS CLEARED" from a branch that was guaranteed. Same
+  // shape as ctxvocab's f2_spared. At 36 the bar is 0.045, comfortably inside
+  // the effect a closure would produce, and the run costs ~72 min.
+  constexpr uint32_t kReps = 36;
   const size_t slots_off = offsetof(aibaby::DnaHeader, exploration) +
                            offsetof(aibaby::DnaExploration, context_slots);
   const size_t src_off = offsetof(aibaby::DnaHeader, exploration) +
                          offsetof(aibaby::DnaExploration, context_source);
+  const size_t sg_off = offsetof(aibaby::DnaHeader, audio) +
+                        offsetof(aibaby::DnaAudio, self_gain);
   instrument("ctxself", dna.header().seed ^ 0x5E1Fu, ticks / kVLTrialTicks,
              "trials per arm");
   std::printf("  question          `areax` proved a context-indexed bias works, keyed on\n"
@@ -25710,6 +25741,12 @@ bool run_ctxself(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
         const uint32_t source = kCtxSelfArms[a].source;
         std::memcpy(variant.data() + slots_off, &slots, sizeof(slots));
         std::memcpy(variant.data() + src_off, &source, sizeof(source));
+        // Only written when the arm asks for it, so every other arm's bytes are
+        // untouched and the pre-existing arms stay bit-identical to the record.
+        if (kCtxSelfArms[a].self_gain >= 0.0f) {
+          const float sg = kCtxSelfArms[a].self_gain;
+          std::memcpy(variant.data() + sg_off, &sg, sizeof(sg));
+        }
 
         CtxDrive drive;
         drive.module = ctx_module;
@@ -25917,8 +25954,31 @@ bool run_ctxself(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
     std::printf("  %-9s %-16s %-15s %-14s %-13s %s\n", kCtxSelfArms[a].name, b, c, d, e, f);
   }
 
-  const uint32_t kOff = 0, kOra = 1, kEar = 2, kERnd = 3, kAda = 4, kARnd = 5;
-  const uint32_t kEma = kAda, kMRnd = kARnd;  // source 4 occupies those slots
+  // BY NAME, NOT BY POSITION. This read `kOff = 0, kOra = 1, kEar = 2, kERnd = 3,
+  // kAda = 4, kARnd = 5` -- hardcoded indices into kCtxSelfArms. Inserting the two
+  // deaf arms at 4 and 5 shifted ema/ema-rnd to 6 and 7, so kAda/kARnd would have
+  // pointed at the NEW arms while every printed label still said "ema": both rows
+  // silently mislabelled, no error, plausible numbers. THIRD time today this project
+  // has been bitten by a constant copied instead of derived (ctx_wins_[8], then
+  // kVGGrids by position, now this), and the right pattern was already in this file
+  // at run_ctxgain's `arm_index("off")`. Lookup REFUSES on a missing name.
+  auto arm_of = [&](const char* nm) -> uint32_t {
+    for (uint32_t a = 0; a < kCtxSelfArmCount; ++a)
+      if (std::strcmp(kCtxSelfArms[a].name, nm) == 0) return a;
+    std::printf("\n  REFUSED: no arm named \"%s\" in kCtxSelfArms.\n", nm);
+    return kCtxSelfArmCount;
+  };
+  const uint32_t kOff = arm_of("off"), kOra = arm_of("oracle");
+  const uint32_t kEar = arm_of("ear"), kERnd = arm_of("ear-rnd");
+  const uint32_t kEar0 = arm_of("ear-deaf"), kERnd0 = arm_of("ear-deaf-rnd");
+  const uint32_t kEma = arm_of("ema"), kMRnd = arm_of("ema-rnd");
+  const uint32_t kAda = kEma, kARnd = kMRnd;  // source 4 occupies the old slots
+  if (kOff >= kCtxSelfArmCount || kOra >= kCtxSelfArmCount ||
+      kEar >= kCtxSelfArmCount || kERnd >= kCtxSelfArmCount ||
+      kEar0 >= kCtxSelfArmCount || kERnd0 >= kCtxSelfArmCount ||
+      kEma >= kCtxSelfArmCount || kMRnd >= kCtxSelfArmCount) {
+    return true;
+  }
 
   // The paired differences, computed and printed HERE -- above every gate --
   // because they are descriptive statistics rather than verdicts, and a run
@@ -26087,6 +26147,107 @@ bool run_ctxself(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
   uint32_t a_rnd_pos = 0, a_off_pos = 0, a_rnd_n = 0, a_off_n = 0;
   const double a_rnd = paired(kAda, kARnd, &a_rnd_se, &a_rnd_pos, &a_rnd_n);
   const double a_off = paired(kAda, kOff, &a_off_se, &a_off_pos, &a_off_n);
+  // THE INTERVENTION, on the INDEX rather than on dF1. The finding being tested is
+  // `ear` - `ear-rnd` on p, so the contrast is a DIFFERENCE OF TWO GAPS, paired
+  // within creature on both legs.
+  {
+    auto mpaired = [&](uint32_t A, uint32_t B, double* se, uint32_t* n) {
+      std::vector<double> d;
+      for (size_t i = 0; i < reps[A].size(); ++i)
+        for (size_t j = 0; j < reps[B].size(); ++j)
+          if (reps[A][i] == reps[B][j]) { d.push_back(match[A][i] - match[B][j]); break; }
+      *n = uint32_t(d.size());
+      if (d.size() < 2) { *se = 0.0; return 0.0; }
+      return ctx_mean_se(d, se);
+    };
+    // VACUITY FIRST. self_gain 0.5 -> 0 must actually change the creature. If the
+    // deaf arms come back identical to the hearing ones, the intervention never ran
+    // and any verdict below is about two copies of the same simulation -- the exact
+    // failure ctxvocab shipped a confident capacity ceiling from this week.
+    uint32_t same = 0, pairs = 0;
+    for (size_t i = 0; i < reps[kEar].size(); ++i)
+      for (size_t j = 0; j < reps[kEar0].size(); ++j)
+        if (reps[kEar][i] == reps[kEar0][j]) {
+          ++pairs;
+          if (match[kEar][i] == match[kEar0][j] && df1[kEar][i] == df1[kEar0][j]) ++same;
+          break;
+        }
+    std::printf("\n  OWN VOICE: does cutting the acoustic self-path close the gap?\n");
+    std::printf("    GUARD deafness changed the creature?  %u of %u pairs IDENTICAL%s\n",
+                same, pairs,
+                pairs > 0 && same == pairs ? "   <- VACUOUS, self_gain never took"
+                                           : "   OK");
+    if (pairs > 0 && same == pairs) {
+      std::printf("    VOID: self_gain 0.5 -> 0 produced bit-identical creatures, so the\n"
+                  "    intervention did not run. Nothing below is a measurement.\n");
+    } else {
+      double gh_se = 0.0, gd_se = 0.0;
+      uint32_t gh_n = 0, gd_n = 0;
+      const double gh = mpaired(kEar, kERnd, &gh_se, &gh_n);
+      const double gd = mpaired(kEar0, kERnd0, &gd_se, &gd_n);
+      std::printf("    gap HEARING  ear      - ear-rnd       %+.3f +/- %.3f (%.1f SE, n=%u)\n",
+                  gh, gh_se, gh_se > 0.0 ? std::fabs(gh) / gh_se : 0.0, gh_n);
+      std::printf("    gap DEAF     ear-deaf - ear-deaf-rnd  %+.3f +/- %.3f (%.1f SE, n=%u)\n",
+                  gd, gd_se, gd_se > 0.0 ? std::fabs(gd) / gd_se : 0.0, gd_n);
+      const double dd = gd - gh;
+      const double dd_se = std::sqrt(gh_se * gh_se + gd_se * gd_se);
+      std::printf("    DIFFERENCE OF GAPS  deaf - hearing     %+.3f +/- %.3f (%.1f SE)\n",
+                  dd, dd_se, dd_se > 0.0 ? std::fabs(dd) / dd_se : 0.0);
+      // Also report the deaf index LEVELS, because a deafened creature could close
+      // the gap by getting worse everywhere rather than by losing the contamination.
+      std::printf("    index levels  ear %.3f  ear-rnd %.3f  ear-deaf %.3f  ear-deaf-rnd %.3f\n",
+                  m_mt[kEar], m_mt[kERnd], m_mt[kEar0], m_mt[kERnd0]);
+      const double kBar = 3.0;
+      const bool hearing_gap = gh_se > 0.0 && gh < -2.0 * gh_se;
+      const bool deaf_closed = gd_se > 0.0 && std::fabs(gd) < 2.0 * gd_se;
+      const bool moved = dd_se > 0.0 && dd > kBar * dd_se;
+      // COULD THIS TEST HAVE PASSED? A FULL closure moves the difference of gaps
+      // by exactly |gh|, so unless kBar * dd_se is SMALLER than that, the `moved`
+      // branch is unreachable and the negative verdict is guaranteed rather than
+      // measured. The first run printed "OWN VOICE IS CLEARED" with kBar * dd_se =
+      // 0.090 against a closure worth 0.070 -- it could not have said anything
+      // else. Same failure as ctxvocab's f2_spared: a test nearly all outcomes
+      // pass, or in this case one that no outcome passes.
+      const bool can_detect = dd_se > 0.0 && kBar * dd_se < std::fabs(gh);
+      std::printf("    POWER  a full closure moves this by %.3f; %.0f x SE = %.3f"
+                  "  -> %s\n", std::fabs(gh), kBar, kBar * dd_se,
+                  can_detect ? "CAN DETECT ONE" : "CANNOT DETECT ONE");
+      if (hearing_gap && !can_detect) {
+        std::printf("    REFUSED: this contrast cannot distinguish a full closure from\n"
+                    "    none, so it says nothing about the own-voice account either way.\n"
+                    "    It needs about %.0f creatures.\n",
+                    double(kReps) * std::pow(kBar * dd_se / std::fabs(gh), 2.0));
+      } else if (!hearing_gap) {
+        std::printf("    REFUSED: the HEARING gap does not reproduce here (%+.3f +/- %.3f).\n"
+                    "    areax-v53 measured -0.086 +/- 0.018 on two builds; without it there\n"
+                    "    is nothing for the intervention to close.\n", gh, gh_se);
+      } else if (moved && deaf_closed) {
+        std::printf("    THE CREATURE'S OWN VOICE CAUSES IT. Deafening moves the gap\n"
+                    "    %+.3f +/- %.3f (%.1f SE, clearing %.0f SE) and the deaf gap is\n"
+                    "    indistinguishable from zero (%+.3f +/- %.3f). The index degrades\n"
+                    "    when the target tracks the word BECAUSE the creature then hears\n"
+                    "    its own word-dependent voice in the feature it clusters on --\n"
+                    "    selfcode's own-F1 signal, arriving as a confound. DRIFT is not\n"
+                    "    needed to explain it.\n",
+                    dd, dd_se, dd / dd_se, kBar, gd, gd_se);
+      } else if (moved) {
+        std::printf("    OWN VOICE CONTRIBUTES, BUT DOES NOT ACCOUNT FOR IT. Deafening\n"
+                    "    moves the gap %+.3f +/- %.3f (%.1f SE) and yet the deaf gap is\n"
+                    "    still %+.3f +/- %.3f, away from zero. Part own voice, part\n"
+                    "    something else -- drift stays live for the remainder.\n",
+                    dd, dd_se, dd / dd_se, gd, gd_se);
+      } else {
+        std::printf("    OWN VOICE IS CLEARED, AND DRIFT SURVIVES. Cutting the acoustic\n"
+                    "    self-path moves the gap %+.3f +/- %.3f (%.1f SE, under %.0f SE)\n"
+                    "    while the hearing gap is %+.3f. The creature hearing itself is\n"
+                    "    NOT why its index degrades when the target tracks the word, so\n"
+                    "    the remaining hypothesis is MacQueen drift: 1/wins freezes the\n"
+                    "    prototypes under a voice that is still moving.\n",
+                    dd, dd_se, dd_se > 0.0 ? std::fabs(dd) / dd_se : 0.0, kBar, gh);
+      }
+    }
+  }
+
   std::printf("\n  paired differences (same creature, arms differ only in genome fields)\n"
               "    ear   - ear-rnd     %+.1f +/- %.1f Hz, %.1f SE, %u of %u positive\n"
               "    ear   - off         %+.1f +/- %.1f Hz, %.1f SE, %u of %u positive\n"
