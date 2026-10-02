@@ -16286,3 +16286,65 @@ Credit: Gunnar Fant for the formant coordinates; Michale Fee and Adam Goldberg f
 bias-from-outside architecture; Anne Warlaumont and Megan Finnegan, whose refused
 salience result is the origin of the 3 SE bar that has now withdrawn a hint of mine as
 well as three verdicts.
+
+
+## Two corrections found by reading the code, not by running anything (2026-10-02)
+
+With the vocabulary lead closed, the next item in the queue was its oldest unexplained
+result: *"the control's index is sometimes better than the mechanism's — `ear` worse than
+`ear-rnd` on 18/18 creatures across two builds, and the obvious cause refuted by its own
+data at the wrong sign."* An unanimous 18/18 with no account is worth attacking. Reading
+the code first turned up two things, and neither changes a measured number.
+
+### That result is not about two indices
+
+`ear-rnd` is `kVLTgtRandom` — a matched-marginal control on the **target**. Both arms run
+the *identical* index machinery off the real ear; the only difference is whether the
+target tracks the word. There are not two index mechanisms being compared, so "the
+control's index is better than the mechanism's" misdescribes it. The v53 note's own
+phrasing was right all along: **the index is worse when the target tracks the word.**
+
+Two things belong next to it. `ear` *delivers more* — dF1 36.0 ± 5.5 against `ear-rnd`'s
+22.6 ± 5.6 — while scoring worse on `p`. And `p` is `ctx_match`, the best agreement over
+all k! slot-to-word permutations, which rewards **consistency** and has a chance level
+around 0.5 at two words. So `ear-rnd`'s 0.729 sits well above chance and is not a null
+either.
+
+Own-voice contamination of the ear feature looked like the explanation — the creature's
+F1 becomes word-dependent exactly when it has something conditional to learn, and
+`selfcode` already established the ear hears its own F1. But it predicts the same sign as
+the already-refuted gate-corruption cause: more learning should mean a worse index, where
+the measurement reads **+0.72, better index → more learning**. A between-arm offset
+combined with a within-arm positive slope is consistent with both stories, and no
+correlation can separate them.
+
+**It needs an intervention, and the machinery exists.** Run `ear` with `self_gain = 0` —
+`selfcode`'s `deaf` arm, which cuts the acoustic self-path and leaves every internal path
+intact. If the index gap to `ear-rnd` closes, the creature's own voice is implicated; if
+it holds, drift survives as the leading hypothesis. Recorded, not run.
+
+### The echo arithmetic is regime-specific, and I had the sign backwards
+
+`targets-fight-the-echo` showed that the naming targets are the mirror image of the heard
+vowels, so every naming number was measured against the imitation reflex. It derives that
+from a *constructed* table (T0 399 Hz, T1 972 Hz, built so the separation equals the
+shipped vowels' own). But `run_vocallearn_session` falls back to `kWords` whenever
+`tgt_table` is null:
+
+| table | `heard` target for /a/ | vs the reflex |
+|---|---|---|
+| constructed, s = 0.89 | 399 Hz, low | **anti-aligned** |
+| default `kWords` | 780 Hz, its own vowel | **aligned** |
+
+With the default table `heard` is echo-*aligned* and `kVLTgtSwap` is the arm the arcuate
+fights — which is exactly what the mode comment says, and is correct for that table. Under
+a constructed inverse table the two roles swap. The v53 arms pass `nullptr`, so they sit
+in the aligned regime and the below-chance reasoning does not transfer to them.
+
+I had generalised the echo finding across both regimes and was one step from writing the
+inverted sign into this file. Checking which table the call actually passes is what caught
+it — the same habit that caught a stale queue item earlier in this session, where a lead
+asked for a statistic that another memory had already reported.
+
+Credit: Gunnar Fant for the formant coordinates; Michale Fee and Adam Goldberg for the
+bias-from-outside architecture; Anne Warlaumont and Megan Finnegan for the 3 SE bar.
