@@ -17721,6 +17721,9 @@ const RBArm kRBArms[] = {
     {"keep-100", true, 1.000},
 };
 constexpr uint32_t kRBArmCount = sizeof(kRBArms) / sizeof(kRBArms[0]);
+static_assert(kRBArmCount % 2 == 0,
+              "regionband pairs arms as (k*2, k*2+1); the table must be in pairs");
+constexpr uint32_t kRBBands = kRBArmCount / 2;
 constexpr uint64_t kRBSeedOffset = 447701ull;
 // `keep` arms point lesson B at A's own target. kWords[1] is /i/ {250, 320, 2500}.
 constexpr float kRBKeepF1 = 320.0f, kRBKeepF2 = 2500.0f;
@@ -17850,9 +17853,31 @@ bool run_regionband(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
   }
 
   std::printf("\n  PRIMARY -- the AB-minus-keep gap, i.e. interference with reward matched\n");
-  double gap[4] = {}, gse[4] = {};
-  const double bands[4] = {0.000, 0.700, 0.850, 1.000};
-  for (uint32_t k = 0; k < 4; ++k) {
+  double gap[kRBBands] = {}, gse[kRBBands] = {};
+  // DERIVED FROM THE TABLE, NOT COPIED ALONGSIDE IT (2026-10-03). `bands[4]` repeated
+  // the values already sitting in kRBArms rows 0,2,4,6, and every block below pairs
+  // arms as (k*2, k*2+1) against them -- the same shape that mislabelled `credgate`
+  // when two rows went in mid-table. Nothing has been inserted here, so the pairing
+  // was still correct; what was NOT correct is that three labels below said
+  // "band 0.100" while row 6 is band 1.000. The table was rescaled from v1's
+  // jitter-derived 0.033/0.067/0.100 to the achieved-error 0.700/0.850/1.000 and the
+  // printed labels kept the old constant, so this experiment has been reporting its
+  // widest band as a tenth of its real width. The numbers were right; the labels were
+  // a copy. Derive them, and refuse if the layout the pairing assumes ever breaks.
+  double bands[kRBBands];
+  for (uint32_t k = 0; k < kRBBands; ++k) {
+    const RBArm& ab = kRBArms[k * 2];
+    const RBArm& kp = kRBArms[k * 2 + 1];
+    if (std::strncmp(ab.name, "AB-", 3) != 0 || std::strncmp(kp.name, "keep-", 5) != 0 ||
+        ab.band != kp.band) {
+      std::printf("  REFUSED: kRBArms rows %u,%u are not an (AB-, keep-) pair at one\n"
+                  "  band (`%s`, `%s`). Every block here reads arms positionally.\n",
+                  k * 2, k * 2 + 1, ab.name, kp.name);
+      return false;
+    }
+    bands[k] = ab.band;
+  }
+  for (uint32_t k = 0; k < kRBBands; ++k) {
     const uint32_t ab = k * 2, kp = k * 2 + 1;
     gap[k] = m_after[ab] - m_after[kp];
     gse[k] = std::sqrt(s_after[ab] * s_after[ab] + s_after[kp] * s_after[kp]);
@@ -17862,23 +17887,26 @@ bool run_regionband(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
   }
   const double shrink = gap[0] - gap[3];
   const double sse = std::sqrt(gse[0] * gse[0] + gse[3] * gse[3]);
-  std::printf("    gap at band 0 minus gap at band 0.100: %+.4f +/- %.4f  (%+.1f SE)\n",
-              shrink, sse, sse > 0.0 ? shrink / sse : 0.0);
+  std::printf("    gap at band %.3f minus gap at band %.3f: %+.4f +/- %.4f  (%+.1f SE)\n",
+              bands[0], bands[kRBBands - 1], shrink, sse, sse > 0.0 ? shrink / sse : 0.0);
 
   std::printf("\n  AND DID IT SHRINK THE RIGHT WAY? AB must IMPROVE, not `keep` degrade\n");
-  const double ab_gain = m_after[0] - m_after[6];
-  const double ab_se = std::sqrt(s_after[0] * s_after[0] + s_after[6] * s_after[6]);
-  const double kp_gain = m_after[1] - m_after[7];
-  const double kp_se = std::sqrt(s_after[1] * s_after[1] + s_after[7] * s_after[7]);
-  std::printf("    AB   band 0 -> 0.100:  %+.4f +/- %.4f  (%+.1f SE)  %s\n", ab_gain, ab_se,
+  const uint32_t wab = (kRBBands - 1) * 2, wkp = wab + 1;
+  const double ab_gain = m_after[0] - m_after[wab];
+  const double ab_se = std::sqrt(s_after[0] * s_after[0] + s_after[wab] * s_after[wab]);
+  const double kp_gain = m_after[1] - m_after[wkp];
+  const double kp_se = std::sqrt(s_after[1] * s_after[1] + s_after[wkp] * s_after[wkp]);
+  std::printf("    AB   band %.3f -> %.3f:  %+.4f +/- %.4f  (%+.1f SE)  %s\n",
+              bands[0], bands[kRBBands - 1], ab_gain, ab_se,
               ab_se > 0.0 ? ab_gain / ab_se : 0.0,
               ab_gain > 0.0 ? "AB IMPROVED" : "AB did not improve");
-  std::printf("    keep band 0 -> 0.100:  %+.4f +/- %.4f  (%+.1f SE)  %s\n", kp_gain, kp_se,
+  std::printf("    keep band %.3f -> %.3f:  %+.4f +/- %.4f  (%+.1f SE)  %s\n",
+              bands[0], bands[kRBBands - 1], kp_gain, kp_se,
               kp_se > 0.0 ? kp_gain / kp_se : 0.0,
               kp_gain < 0.0 ? "keep DEGRADED" : "keep held up");
 
   std::printf("\n  NON-MONOTONE CHECK -- a band that satisfies everything teaches nothing\n");
-  for (uint32_t k = 0; k < 4; ++k)
+  for (uint32_t k = 0; k < kRBBands; ++k)
     std::printf("    band %.3f   err_taught  AB %.4f   keep %.4f\n", bands[k],
                 m_taught[k * 2], m_taught[k * 2 + 1]);
 
@@ -18160,6 +18188,18 @@ const CGArm kCGArms[] = {
     // mid-table insertion also moves which creature each surviving arm gets.
     {"myel-hard",  0u, false, 0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, true, 0.0, 0.0f, 0.1f},
     {"myel-off",   0u, false, 0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, true, 0.0, 0.0f, 1.0f},
+    // THE SPECIFICITY CONTROL, RESTORED (2026-10-03). `credit_mode == 3` masks to a
+    // RANDOM half each trial, and it is this experiment's pre-registered control: if a
+    // coin flip retains as well as the index, what helps is confining the write to half
+    // the group and no credit assignment is happening. The kernel code for mode 3 was
+    // never removed -- only these two rows were, at some point after
+    // `results/credgate-12m.log` was recorded, which quotes a `shuffled` row at
+    // -2.285 +/- 2.556. Because every block read arms POSITIONALLY, rows 6,7 silently
+    // took over the label and the "must NOT" criterion was computed from `derived2`.
+    // NOT skipped: with these absent the report prints SPECIFICITY UNTESTED and no
+    // verdict can clear its own bar, so a credgate verdict needs them in the run.
+    {"shuf-AB",    3u, false, 0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, false, 0.0, 0.0f},
+    {"shuf-keep",  3u, true,  0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, false, 0.0, 0.0f},
 };
 constexpr uint32_t kCGArmCount = sizeof(kCGArms) / sizeof(kCGArms[0]);
 // CHANGED 2026-09-21 from 318211 to draw a FRESH set of creatures from the same

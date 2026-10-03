@@ -14279,6 +14279,88 @@ And one more, which is the one I keep paying for: `regionband` at
 correct today because that table has not been edited. It is the same latent
 instance, and it is in the queue.
 
+### The deleted control, and an experiment that mislabelled its own axis
+
+Two follow-ons from the positional-arm bug, both found by asking the same question
+of neighbouring code: *is this label attached to the data, or merely next to it?*
+
+#### credgate's coin-flip control: the kernel kept it, the table lost it
+
+`credgate` pre-registers a specificity control in its own output — *"`shuf` must NOT
+shrink it. If a coin flip works as well as the index, what helps is the masking
+itself — halving the write — and not credit assignment at all."* The record's log
+quotes it: `shuffled AB retention vs broadcast: -2.285 +/- 2.556 (-0.9 SE) <-
+must NOT`, reported as SPECIFICITY CLEAN.
+
+The arms are not in the table. `shuf-AB`/`shuf-keep` were removed at some point after
+`results/credgate-12m.log` was recorded, and because every block resolved arms
+positionally, rows 6 and 7 — `derived2-*` — silently inherited the label *and* the
+`must NOT` criterion. **The `shuf_clean` boolean that gates the milestone verdict and
+the function's return value has been computed from arms that are not the control.**
+
+`credit_mode == 3` is still there in the kernel and still masks to a random half each
+trial:
+
+```cpp
+else if (cfg.credit_mode == 3) upper = (credit_rng.next() & 1u) != 0u;
+```
+
+So only the two rows were lost, and restoring them restores the control. They go at
+the **end** of the table, unskipped — with them absent the report now prints
+`SPECIFICITY UNTESTED` and no verdict can clear its own bar, which is the correct
+behaviour and also means a credgate verdict requires them in the run. There are no
+`credit_mode == 4` (latch) arms either, but that absence is deliberate: those results
+were retracted, and `results/credgate-12m-latch-RETRACTED.log` records it.
+
+#### regionband has been reporting its widest band as a tenth of its width
+
+The same question, asked of the next experiment along, found a live defect rather
+than a latent one. `regionband` sweeps a reward-region width and carried
+
+```cpp
+const double bands[4] = {0.000, 0.700, 0.850, 1.000};
+```
+
+beside a table whose rows already hold those values. The table comment records that
+the bands were **rescaled**: v1 derived them from the creature's F1 jitter
+(0.033 / 0.067 / 0.100 log units) and they were replaced by the achieved-error scale
+0.700 / 0.850 / 1.000. Three printed labels kept the old constant:
+
+```
+    gap at band 0 minus gap at band 0.100: ...
+    AB   band 0 -> 0.100: ...
+    keep band 0 -> 0.100: ...
+```
+
+The widest band is **1.000**. The experiment has been printing it as `0.100`, off by
+a factor of ten, on the line carrying its headline contrast.
+
+**The numbers were never wrong** — `m_after[0]` against `m_after[6]` is band 0.000
+against band 1.000, correctly the widest pair — and the defect did not reach a
+conclusion: the write-up in `aibaby-region-targets-refuted` transcribes those lines
+as `AB band 0 -> 1.00` and `keep band 0 -> 1.00`, corrected by hand at the time. So
+this is an output bug with no downstream damage, which is worth saying plainly rather
+than inflating. It is still the same failure: a constant copied beside the table it
+came from, where the copy does not move when the table does.
+
+Fixed by deriving `bands[k]` from `kRBArms[k*2].band`, deriving the band count from
+the table size, resolving the widest pair as `(kRBBands-1)*2` rather than `6`, and
+refusing outright if the rows are ever not `(AB-*, keep-*)` pairs at one band:
+
+```cpp
+if (std::strncmp(ab.name, "AB-", 3) != 0 || std::strncmp(kp.name, "keep-", 5) != 0 ||
+    ab.band != kp.band) { /* REFUSED, naming the rows */ return false; }
+```
+
+#### What generalises
+
+The four earlier instances were all *indices* copied instead of derived. These two
+are the other half of the same class: a **label** copied instead of derived, and a
+**row deleted while its label stayed behind**. Both are invisible in the output,
+because a mislabelled number still prints with an SE and still reads as a result. The
+check that finds them is not a test — it is reading the table and the thing that
+claims to describe it, side by side, and asking which one the data actually came from.
+
 ## Layout
 
 ```
