@@ -13964,7 +13964,7 @@ thirds are the same creature, so the difference pairs exactly:
 | `ema-rnd` | 0.855 → 0.812 | −0.043 ± 0.005 | 9.3 SE |
 | `ear-deaf-rnd` | 0.814 → 0.767 | −0.048 ± 0.006 | 8.4 SE |
 
-**Drift is refused on both of its claims.** Its point prediction of −0.034 sits **3.8
+**Drift is refused on both of its claims.** Its point prediction of −0.034 sits **3.9
 SE** from the measured +0.016. And it requires the *learning* arm to decay most, where
 that arm decays least — the only one that rises, with every control falling below it.
 The gap also **narrows** across the session (−0.064 early → −0.042 late) where drift
@@ -13986,7 +13986,7 @@ carrying the same gap.
 
 My power guard asked whether a −0.034 decay could be told apart from **zero** — 3 × SE =
 0.039 against 0.034 — and refused. But drift names a *value*, so the question is whether
-the data is inconsistent with **that value**: `|measured − predicted| / SE` = 3.8 SE,
+the data is inconsistent with **that value**: `|measured − predicted| / SE` = 3.9 SE,
 which excludes it.
 
 **Testing against zero when the hypothesis makes a point prediction is the same family
@@ -13997,8 +13997,20 @@ distance-to-prediction, prints what remains unexcluded, and refuses only when th
 separates neither hypothesis. `results/ctxself-drift.log` carries the over-cautious
 refusal over correct numbers; `ctxself-drift2.log` is the regeneration.
 
+One note on reading the verdict's closing line. It says to record the gap as unexplained
+"rather than reaching for a fourth guess" — and a fourth candidate has since been added
+to the queue from the literature: MacQueen's `1/wins` *is* a uniform cluster prior, and
+Assran et al. (ICLR 2023) show that prior hurts precisely when the data is imbalanced,
+which this creature's slot occupancy (0.61–0.79 against 0.50 for balanced) measurably
+is. That is not in tension with the verdict: what it warns against is *guessing*, and
+that candidate arrives with a read-only `partprobe` pre-flight and a refusal bar set in
+advance — it must buy 0.056 of `ctx_match` read-only or the kernel change is refused for
+free. See `aibaby-uniform-cluster-prior` in the memory store.
+
 Credit: James MacQueen, whose `1/wins` rate made a prediction specific enough to refuse;
-Michale Fee and Adam Goldberg for the bias-from-outside architecture this index feeds.
+Michale Fee and Adam Goldberg for the bias-from-outside architecture this index feeds;
+Mido Assran and colleagues, whose uniform-cluster-prior result supplies the one
+candidate that survived this round.
 
 
 ## Layout
