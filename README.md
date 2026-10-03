@@ -14138,6 +14138,147 @@ Michale Fee and Adam Goldberg for the bias-from-outside architecture; Stefano Fu
 whose protected-pathway account is what `eta_floor_frac` implements.
 
 
+### The credgate headline rests on a statistic this file had already called broken
+
+The 12M reproduction on family 318211 finished, and its report **refused itself**:
+
+```
+  AGREEMENT GUARD -- did the mask land where the live lesson wanted?
+    oracle  0.000   (must be 1.000 by construction)
+    derived 1.000   <- THE WHOLE QUESTION
+  REFUSED: the oracle arm does not agree with itself, so the masking is
+  miswired and no retention number below is readable.
+```
+
+The refusal was spurious. The arm table printed directly above it shows
+`oracle-AB` and `oracle-keep` agreeing at **1.000**, exactly as construction
+requires. Three separate defects stacked up to produce that line, and only one
+of them is new.
+
+**(1) Mine.** I added `myel-hard` and `myel-off` to `kCGArms` **after
+`bcast-AB`**, two rows into a 38-row table. Every aggregation block below the
+arm table resolved arms positionally as `(k*2, k*2+1)` against the label list
+`{broadcast, oracle, derived, latch}`. Inserting two rows shifted everything
+below row 0 by two:
+
+| label printed | rows read | arms actually there |
+|---|---|---|
+| broadcast | 0,1 | `bcast-AB`, `myel-hard` (skipped) |
+| oracle | 2,3 | `myel-off` (skipped), `bcast-keep` |
+| derived | 4,5 | **`oracle-AB`, `oracle-keep`** |
+| latch | 6,7 | `derived-AB`, `derived-keep` (skipped) |
+
+So the agreement guard took `m_agree[2]` for the oracle, read a skipped arm's
+zero, and refused a correctly wired run. The oracle's retention was printed
+under the label `derived`.
+
+**(2) Not mine, and older.** `shuf-AB`/`shuf-keep` **no longer exist in the arm
+table.** Rows 6 and 7 are `derived2-*`. The row printed as `latch`/`shuffled`
+— the row carrying this experiment's pre-registered SPECIFICITY criterion, the
+one marked `<- must NOT` — has been reading the *derived* arms. The control that
+separates credit assignment from merely halving the write has not run for an
+unknown number of runs, and the `shuf_clean` boolean that gates the milestone
+verdict was computed from arms that are not the control. A refusal criterion
+computed off the wrong arm cannot refuse anything.
+
+**(3) The statistic itself.** `retention` is
+`(before - after)/(before - taught)` averaged **per creature**, and the
+denominator is floored only at `1e-6`. A creature that barely learned
+contributes a ratio in the hundreds. This file already knew:
+
+```
+      // DENOMINATOR-FREE. On the ctx genome `err_taught` is 1.01-1.07 against 0.94
+      // on the shipped one, so the gain is small and the ratio explodes -- the
+      // oracle arm read -5.587 +/- 6.729 and the keep arms 27.222 +/- 21.160, which
+      // is a broken statistic reporting nothing.
+```
+
+That comment was written, `gained` and `erosion` were added beside it as the
+denominator-free replacement — and the headline, the milestone gate and the
+specificity criterion all went on reading the exploded ratio. **Diagnosing a
+broken statistic does not retire it. The consumers have to be rewired, and
+nobody rewired them.**
+
+#### What the finished run actually says
+
+The arm table is labelled correctly (it prints `kCGArms[a].name` beside that
+arm's own data), and the per-job seed is `seed + offset + r * 7919` — it does
+not depend on the arm. So the run's numbers are sound and recoverable; only the
+labels were wrong. Reading rows 0 and 4 as what they are:
+
+| statistic | this run, 318211 @ 12M | the record, 318211 @ 12M | apart |
+|---|---|---|---|
+| broadcast AB retention | −0.300 ± 0.632 | −0.041 ± 0.211 | 0.4 SE |
+| **oracle AB retention** | **−0.118 ± 0.199** | **+1.254 ± 0.173** | **5.2 SE** |
+
+(`bcast-AB`'s row is recovered from the printed difference `+0.182 ± 0.663`:
+`m_ret[0] = -0.118 - 0.182`, `s_ret[0] = sqrt(0.663^2 - 0.199^2)`.)
+
+The broadcast arm reproduces. The oracle arm does not, on the record's **own
+family at the record's own budget** — which retires the budget explanation I
+committed one tick earlier. `results/credgate-12m.log` is 12M on 318211, so
+family and budget were matched all along; what differs is the creature (15
+commits have touched `dna/default.toml` since 2026-09-17, through the version
+the commit messages call DNA v69) and the statistic.
+
+**This is not yet a retraction, and the reason is defect (3).** Both the
+`+1.254` and the `−0.118` are means of per-creature ratios over a denominator
+floored at `1e-6`. "5.2 SE apart" is computed on the statistic this file calls
+broken, so it inherits the pathology. A number cannot refute a number when both
+are the same unsound estimator.
+
+#### The fix, and what it is gated on
+
+- **Mode rows resolve by name.** `kCGModes` pairs each label with its two arm
+  *names*; `cg_mode_arm` returns −1 for absent and −2 for not-in-this-run, and
+  the two print differently, because "not in this focus set" and "not in the
+  table at all" licence completely different conclusions. New arms go at the
+  **end** of the table, with a comment saying why.
+- **Retention as a ratio of sums**, one denominator per arm instead of one per
+  creature, with a **jackknife** SE and the creatures **paired across arms**
+  (licensed by the arm-independent seed). On the smoke run the mean of ratios
+  gave ±2.811 and ±3.110 where the ratio of sums gave ±0.230 and ±0.331.
+- **Swept over a floor on the per-creature gain** (0.00 / 0.05 / 0.10 / 0.20),
+  because the creatures that make the mean of ratios explode are exactly the
+  ones that never learned the lesson. A result that survives the sweep is in the
+  mechanism; one that appears only at floor 0.00 is in the creatures that
+  learned nothing.
+- **The verdict gates read the robust estimator** and require 3 SE at *every*
+  floor that retains ≥3 creatures in both arms, which avoids choosing a floor
+  constant — the `derive-the-constant` rule cost this project a run each on four
+  guessed ones.
+- **A floor with too few creatures is skipped, not failed**, and the number of
+  floors actually evaluated is printed. Counting an empty floor as a failure
+  made the criterion unsatisfiable at short tick counts: the same shape as the
+  deaf intervention's branch that no outcome could reach.
+- **Specificity reports as UNTESTED** when `shuf-*` is absent, and cannot
+  satisfy the verdict by default.
+
+The ratio-of-sums estimator is Cochran's; the jackknife is Quenouille's, named
+and extended to variance estimation by Tukey. A jackknife rather than a
+bootstrap because it is deterministic, which this project's gate requires.
+
+Gated: `verify PASS`, hash `ad96f882becbee92` unmoved, and the run script
+refuses if the binary predates the source or does not contain the arm names the
+run resolves by.
+
+#### The transferable part
+
+Four instances of one bug class are now on the record in this file —
+`ctx_wins_[8]`, `g6=0, g9=1, g9p=2`, `kOff=0…kARnd=5`, and these `(k*2, k*2+1)`
+pairs. The pattern that makes it survive review is specific: **each site had a
+comment acknowledging it was positional, and the comment was treated as the
+fix.** The `(k*2, k*2+1)` block even carried a warning about a *skipped* arm
+reading `0.0000` — which is a different hazard from a *shifted* arm, and the
+guard written for the first does nothing about the second. A constant copied
+instead of derived does not become safe by being documented.
+
+And one more, which is the one I keep paying for: `regionband` at
+`experiments_milestones.cpp:17869` indexes `m_after[0]`, `m_after[6]`,
+`m_after[1]`, `m_after[7]` positionally against its own 8-row table. It is
+correct today because that table has not been edited. It is the same latent
+instance, and it is in the queue.
+
 ## Layout
 
 ```

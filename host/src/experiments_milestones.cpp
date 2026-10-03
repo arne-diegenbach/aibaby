@@ -17985,8 +17985,6 @@ const CGArm kCGArms[] = {
     // MORE; `myel-off` (1.0) removes the defence entirely and should retain LESS.
     // If neither moves, §3.5's forgetting defence is refused on its own purpose.
     // vacuity pre-flight: tools/vacuity.sh says LIVE on vocallearn, 46 lines differ.
-    {"myel-hard",  0u, false, 0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, true, 0.0, 0.0f, 0.1f},
-    {"myel-off",   0u, false, 0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, true, 0.0, 0.0f, 1.0f},
     {"bcast-keep", 0u, true,  0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, false, 0.0, 0.0f},
     {"oracle-AB",  1u, false, 0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, false, 0.0, 0.0f},   // the host masks by which lesson is live
     {"oracle-keep", 1u, true, 0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, false, 0.0, 0.0f},
@@ -18155,6 +18153,13 @@ const CGArm kCGArms[] = {
     // accepts for a mechanism, and it is the axis that does NOT cancel.
     {"actgS025-AB",   0u, false, 0u, 0.0f, 2u, 0, 0.0f, 0u, 0u, true, 300000.0, 0.25f},
     {"actgS025-keep", 0u, true,  0u, 0.0f, 2u, 0, 0.0f, 0u, 0u, true, 300000.0, 0.25f},
+    // APPENDED, AND IT MUST STAY APPENDED. These two rows first went in after
+    // `bcast-AB`, which shifted every arm below them by two and mislabelled every
+    // block that read arms positionally. The blocks now resolve by name, but new
+    // arms still belong at the END: `cells` is indexed r * kCGArmCount + a, so a
+    // mid-table insertion also moves which creature each surviving arm gets.
+    {"myel-hard",  0u, false, 0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, true, 0.0, 0.0f, 0.1f},
+    {"myel-off",   0u, false, 0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, true, 0.0, 0.0f, 1.0f},
 };
 constexpr uint32_t kCGArmCount = sizeof(kCGArms) / sizeof(kCGArms[0]);
 // CHANGED 2026-09-21 from 318211 to draw a FRESH set of creatures from the same
@@ -18225,6 +18230,46 @@ inline bool cg_skip(uint32_t a, bool focused) {
 }
 inline bool cg_skip(int a, bool focused) {
   return a < 0 || cg_skip(uint32_t(a), focused);
+}
+
+// THE MODE ROWS ARE RESOLVED BY NAME (2026-10-03). Every block below used to index
+// arms as (k*2, k*2+1), which is correct only while the first eight rows are exactly
+// the four AB/keep pairs in this order. Two separate things broke that, and both were
+// silent:
+//
+//   (1) `shuf-AB`/`shuf-keep` were DELETED from the table. Rows 6,7 are now
+//       `derived-*`, so the row printed as "shuffled"/"latch" -- which carries this
+//       experiment's pre-registered SPECIFICITY criterion, the one marked "must NOT"
+//       -- has been reading the DERIVED arms. A refusal criterion computed off the
+//       wrong arm cannot refuse anything.
+//   (2) Inserting `myel-hard`/`myel-off` after `bcast-AB` shifted every row below it
+//       by two. The run of 2026-10-03 printed the ORACLE's retention under the label
+//       "derived" and read the oracle's agreement off a skipped arm, so the
+//       construction guard refused a run whose masking was in fact correctly wired.
+//
+// The existing `cg_skip` guards did not catch either one: they protect against an arm
+// that is absent from the RUN, not against a label pointing at the wrong arm. "Not in
+// this focus set" and "not in the table at all" are different facts and now read
+// differently. This is the fourth instance in this file of a constant copied instead
+// of derived; the rule is the same every time -- resolve by name, and refuse.
+struct CGMode { const char* label; const char* ab; const char* keep; };
+constexpr CGMode kCGModes[] = {
+    {"broadcast", "bcast-AB", "bcast-keep"},
+    {"oracle", "oracle-AB", "oracle-keep"},
+    {"derived", "derived-AB", "derived-keep"},
+    {"shuffled", "shuf-AB", "shuf-keep"},
+};
+constexpr uint32_t kCGModeCount = sizeof(kCGModes) / sizeof(kCGModes[0]);
+inline int cg_arm_of(const char* name) {
+  for (uint32_t a = 0; a < kCGArmCount; ++a)
+    if (std::strcmp(kCGArms[a].name, name) == 0) return int(a);
+  return -1;   // absent from the table entirely
+}
+// -1 absent, -2 present but not in this run. Callers must print those differently.
+inline int cg_mode_arm(const char* name, bool focused) {
+  const int a = cg_arm_of(name);
+  if (a < 0) return -1;
+  return cg_skip(uint32_t(a), focused) ? -2 : a;
 }
 
 bool run_credgate_impl(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose,
@@ -18364,6 +18409,22 @@ bool run_credgate_impl(const std::vector<uint8_t>& blob, uint64_t ticks, bool ve
   // KEPT FOR THE VACUITY GUARD BELOW: an excursion arm whose switch count is zero is
   // not a control, it is the arm it was meant to differ from.
   double m_swtch[kCGArmCount] = {};
+  // PER-CREATURE, AND KEPT, BECAUSE RETENTION AS A MEAN OF RATIOS IS NOT READABLE.
+  // `retention` is (before - after)/(before - taught) averaged over creatures, and the
+  // denominator is floored only at 1e-6 -- so a creature that barely learned anything
+  // contributes a ratio in the hundreds and the mean follows it rather than the
+  // mechanism. The note 20 lines up already recorded this happening (the oracle arm
+  // read -5.587 +/- 6.729 and a keep arm 27.222 +/- 21.160, "a broken statistic
+  // reporting nothing") -- and the headline, the milestone verdict and the "must NOT"
+  // specificity criterion all went on reading it anyway. Keeping the three errors per
+  // creature lets the same quantity be formed as a RATIO OF SUMS, which has one
+  // denominator for the whole arm instead of one per creature, with a jackknife SE and
+  // the creatures PAIRED across arms (the per-job seed is r * 7919 and does not depend
+  // on the arm, so arm X creature r and arm Y creature r are the same creature).
+  std::vector<double> cbef(size_t(kCGArmCount) * kReps, 0.0);
+  std::vector<double> ctau(size_t(kCGArmCount) * kReps, 0.0);
+  std::vector<double> caft(size_t(kCGArmCount) * kReps, 0.0);
+  std::vector<char> cok(size_t(kCGArmCount) * kReps, 0);
   std::printf("\n  %-13s %-5s %-5s %-18s %-18s %-16s %-16s %s\n", "arm", "mode",
               "gate", "err TAUGHT (A)", "err AFTER (A kept?)", "GAINED", "EROSION",
               "agree  slot0 t/g   SWITCHES teach/gap @first");
@@ -18399,6 +18460,9 @@ bool run_credgate_impl(const std::vector<uint8_t>& blob, uint64_t ticks, bool ve
       gn.push_back(c.row.gained); er.push_back(c.row.erosion);
       const double gain = c.row.err_before - c.row.err_taught;
       if (gain > 1e-6) rt.push_back((c.row.err_before - c.row.err_after) / gain);
+      const size_t ci = size_t(a) * kReps + r;
+      cbef[ci] = c.row.err_before; ctau[ci] = c.row.err_taught;
+      caft[ci] = c.row.err_after; cok[ci] = 1;
       ag.push_back(c.row.credit_trials
                        ? double(c.row.credit_agree) / double(c.row.credit_trials) : 0.0);
     }
@@ -18432,30 +18496,180 @@ bool run_credgate_impl(const std::vector<uint8_t>& blob, uint64_t ticks, bool ve
                 m_swt, m_swg, m_swf);
   }
 
+  // RATIO OF SUMS, JACKKNIFED, PAIRED. One denominator per arm instead of one per
+  // creature. `floor` drops creatures whose lesson barely moved -- they are the ones
+  // that make the per-creature ratio explode -- so sweeping it shows whether a result
+  // lives in the mechanism or in the creatures that never learned.
+  auto ret_ratio = [&](int a, double floor_gain, int drop, uint32_t* n) {
+    double num = 0.0, den = 0.0;
+    uint32_t cnt = 0;
+    if (a < 0) { if (n) *n = 0; return 0.0; }
+    for (uint32_t r = 0; r < kReps; ++r) {
+      if (int(r) == drop) continue;
+      const size_t ci = size_t(a) * kReps + r;
+      if (!cok[ci]) continue;
+      const double g = cbef[ci] - ctau[ci];
+      if (g <= floor_gain) continue;
+      num += cbef[ci] - caft[ci];
+      den += g;
+      ++cnt;
+    }
+    if (n) *n = cnt;
+    return den > 1e-9 ? num / den : 0.0;
+  };
+  // Jackknife over creatures, on whatever functional is passed -- a single arm's
+  // ratio or the paired difference of two. Deterministic, which a bootstrap is not.
+  auto jackknife = [&](auto&& f, double* se) {
+    const double full = f(-1);
+    std::vector<double> loo;
+    for (uint32_t r = 0; r < kReps; ++r) loo.push_back(f(int(r)));
+    const double nn = double(loo.size());
+    if (nn < 3.0) { *se = 0.0; return full; }
+    double mean = 0.0;
+    for (double v : loo) mean += v;
+    mean /= nn;
+    double acc = 0.0;
+    for (double v : loo) acc += (v - mean) * (v - mean);
+    *se = std::sqrt(acc * (nn - 1.0) / nn);
+    return full;
+  };
+
+  // Resolved once, by name, and reused by every block below.
+  int mode_ab[kCGModeCount], mode_kp[kCGModeCount];
+  for (uint32_t k = 0; k < kCGModeCount; ++k) {
+    mode_ab[k] = cg_mode_arm(kCGModes[k].ab, focused);
+    mode_kp[k] = cg_mode_arm(kCGModes[k].keep, focused);
+  }
+  // One line per mode saying WHY it has no numbers, since "absent from the table"
+  // and "not run in this focus set" licence completely different conclusions.
+  auto mode_why = [&](uint32_t k) -> const char* {
+    if (mode_ab[k] == -1 || mode_kp[k] == -1) return "ABSENT from the arm table";
+    return "not in this focus set";
+  };
+  auto mode_live = [&](uint32_t k) { return mode_ab[k] >= 0 && mode_kp[k] >= 0; };
+  const int bc_ab = mode_ab[0];
+
+  // THE VERDICT READS THESE, not the mean of ratios. A mode "works" only if its
+  // paired ratio-of-sums advantage over broadcast clears 3 SE at EVERY floor in the
+  // sweep. Requiring it across the sweep rather than at one chosen floor avoids
+  // picking a constant -- `derive-the-constant` cost this project a run each on four
+  // guessed ones -- and a result that survives every floor is not an artefact of the
+  // creatures that never learned.
+  double rr_d[kCGModeCount] = {}, rr_se[kCGModeCount] = {};
+  bool rr_all[kCGModeCount] = {}, rr_ran[kCGModeCount] = {};
+  uint32_t rr_nf[kCGModeCount] = {};
+
   {
-    const char* mn[4] = {"broadcast", "oracle", "derived", "latch"};
     std::printf("\n  RETENTION -- the fraction of the GAIN that survived, which is what\n"
                 "  credit-oracle scored (0.84 broadcast -> 1.03 targeted). Unlike the raw\n"
                 "  gap this is not confounded by the mask's learning-rate cost.\n");
-    // Positional again (k*2, k*2+1). A skipped arm reads 0.000 and the "vs broadcast"
-    // differences below -- one of which carries a "must NOT" refusal criterion --
-    // would be computed against it.
-    for (uint32_t k = 0; k < 4; ++k) {
-      if (cg_skip(k * 2, focused) || cg_skip(k * 2 + 1, focused)) {
-        std::printf("    %-10s not in this focus set\n", mn[k]);
+    for (uint32_t k = 0; k < kCGModeCount; ++k) {
+      if (!mode_live(k)) {
+        std::printf("    %-10s %s\n", kCGModes[k].label, mode_why(k));
         continue;
       }
-      std::printf("    %-10s AB %.3f +/- %.3f    keep %.3f +/- %.3f\n", mn[k],
-                  m_ret[k * 2], s_ret[k * 2], m_ret[k * 2 + 1], s_ret[k * 2 + 1]);
+      std::printf("    %-10s AB %.3f +/- %.3f    keep %.3f +/- %.3f\n", kCGModes[k].label,
+                  m_ret[mode_ab[k]], s_ret[mode_ab[k]], m_ret[mode_kp[k]], s_ret[mode_kp[k]]);
     }
-    for (uint32_t k = 1; k < 4; ++k) {
-      if (cg_skip(k * 2, focused) || cg_skip(0, focused)) continue;
-      const double d = m_ret[k * 2] - m_ret[0];
-      const double se = std::sqrt(s_ret[k * 2] * s_ret[k * 2] + s_ret[0] * s_ret[0]);
+    for (uint32_t k = 1; k < kCGModeCount; ++k) {
+      if (mode_ab[k] < 0 || bc_ab < 0) continue;
+      const double d = m_ret[mode_ab[k]] - m_ret[bc_ab];
+      const double se = std::sqrt(s_ret[mode_ab[k]] * s_ret[mode_ab[k]] +
+                                  s_ret[bc_ab] * s_ret[bc_ab]);
       std::printf("    %-10s AB retention vs broadcast: %+.3f +/- %.3f  (%+.1f SE)%s\n",
-                  mn[k], d, se, se > 0.0 ? d / se : 0.0,
+                  kCGModes[k].label, d, se, se > 0.0 ? d / se : 0.0,
                   k == 3 ? "   <- must NOT" : "");
     }
+    std::printf("      ^ MEAN OF PER-CREATURE RATIOS. Read the ratio-of-sums below before\n"
+                "        quoting any of these: the denominator above is per creature and\n"
+                "        floored at 1e-6, so one creature that barely learned moves it.\n");
+
+    std::printf("\n  RETENTION AS A RATIO OF SUMS -- one denominator per arm, jackknife SE\n"
+                "  over creatures, and the creatures PAIRED across arms. Swept over a floor\n"
+                "  on the per-creature gain, because the creatures that make the mean of\n"
+                "  ratios explode are exactly the ones that never learned the lesson.\n");
+    const double floors[4] = {0.0, 0.05, 0.10, 0.20};
+    for (uint32_t fi = 0; fi < 4; ++fi) {
+      const double fl = floors[fi];
+      std::printf("    gain floor %.2f\n", fl);
+      for (uint32_t k = 0; k < kCGModeCount; ++k) {
+        if (mode_ab[k] < 0) {
+          std::printf("      %-10s %s\n", kCGModes[k].label, mode_why(k));
+          continue;
+        }
+        uint32_t n_ab = 0;
+        double se_ab = 0.0;
+        const double r_ab = jackknife(
+            [&](int drop) { return ret_ratio(mode_ab[k], fl, drop, nullptr); }, &se_ab);
+        ret_ratio(mode_ab[k], fl, -1, &n_ab);
+        if (n_ab < 3) {
+          std::printf("      %-10s AB too few creatures above the floor (%u)\n",
+                      kCGModes[k].label, n_ab);
+          continue;
+        }
+        if (k == 0 || bc_ab < 0) {
+          std::printf("      %-10s AB %+.3f +/- %.3f   n %u\n", kCGModes[k].label, r_ab,
+                      se_ab, n_ab);
+          continue;
+        }
+        // PAIRED: the same creature is dropped from BOTH arms, so the difference's SE
+        // is not the quadrature sum of two independent ones.
+        double se_d = 0.0;
+        const double d = jackknife(
+            [&](int drop) {
+              return ret_ratio(mode_ab[k], fl, drop, nullptr) -
+                     ret_ratio(bc_ab, fl, drop, nullptr);
+            },
+            &se_d);
+        std::printf("      %-10s AB %+.3f +/- %.3f   n %u   vs broadcast %+.3f +/- %.3f"
+                    "  (%+.1f SE)%s\n",
+                    kCGModes[k].label, r_ab, se_ab, n_ab, d, se_d,
+                    se_d > 0.0 ? d / se_d : 0.0, k == 3 ? "   <- must NOT" : "");
+      }
+    }
+    std::printf("    A result that holds across the floor sweep is in the mechanism. One\n"
+                "    that appears only at floor 0.00 is in the creatures that never learned.\n");
+
+    for (uint32_t k = 1; k < kCGModeCount; ++k) {
+      if (mode_ab[k] < 0 || bc_ab < 0) continue;
+      // A FLOOR THAT RETAINS TOO FEW CREATURES IS NOT EVIDENCE EITHER WAY, and must
+      // not count against the mode. Counting it as a failure made the criterion
+      // unsatisfiable at short tick counts, where the high floors empty out -- the
+      // same shape as the deaf intervention's branch that no outcome could reach.
+      // The number of floors actually evaluated is printed, so a criterion that
+      // nothing could have cleared is visible instead of silent.
+      bool all = true;
+      uint32_t evaluated = 0;
+      for (uint32_t fi = 0; fi < 4; ++fi) {
+        uint32_t n_ab = 0, n_bc = 0;
+        ret_ratio(mode_ab[k], floors[fi], -1, &n_ab);
+        ret_ratio(bc_ab, floors[fi], -1, &n_bc);
+        if (n_ab < 3 || n_bc < 3) continue;   // no power at this floor; not a failure
+        double se_d = 0.0;
+        const double d = jackknife(
+            [&](int drop) {
+              return ret_ratio(mode_ab[k], floors[fi], drop, nullptr) -
+                     ret_ratio(bc_ab, floors[fi], drop, nullptr);
+            },
+            &se_d);
+        if (evaluated == 0) { rr_d[k] = d; rr_se[k] = se_d; }
+        ++evaluated;
+        if (!(se_d > 0.0 && d >= 3.0 * se_d)) all = false;
+      }
+      // Two evaluable floors is the minimum that makes "holds across the sweep" mean
+      // anything; one floor is a single test wearing a sweep's clothes.
+      rr_ran[k] = evaluated >= 2;
+      rr_all[k] = all && rr_ran[k];
+      rr_nf[k] = evaluated;
+    }
+    std::printf("\n    VERDICT GATES (paired ratio-of-sums, must hold at EVERY floor that\n"
+                "    retains >=3 creatures in both arms; >=2 such floors needed to decide):\n");
+    for (uint32_t k = 1; k < kCGModeCount; ++k)
+      std::printf("      %-10s %-32s  %u floor(s) evaluated\n", kCGModes[k].label,
+                  !rr_ran[k] ? "UNDECIDABLE on this run"
+                             : (rr_all[k] ? "CLEARS 3 SE at every floor"
+                                          : "does NOT hold across the sweep"),
+                  rr_nf[k]);
   }
 
   std::printf("\n  SEPARATION -- does the index DISTINGUISH the two lessons, regardless of\n"
@@ -18487,16 +18701,33 @@ bool run_credgate_impl(const std::vector<uint8_t>& blob, uint64_t ticks, bool ve
               "    not a refutation.\n");
 
   std::printf("\n  AGREEMENT GUARD -- did the mask land where the live lesson wanted?\n");
-  const double or_ag = m_agree[2], sh_ag = m_agree[6], dv_ag = m_agree[4];
-  std::printf("    oracle  %.3f   (must be 1.000 by construction)\n", or_ag);
-  std::printf("    derived %.3f   <- THE WHOLE QUESTION\n", dv_ag);
-  std::printf("    latched %.3f   <- THE PREDICTION: reading the index while the\n"
-              "                     creature HEARS should raise this well above 0.720\n", sh_ag);
-  if (or_ag < 0.99) {
+  // BY NAME. Read positionally, this guard took `m_agree[2]` for the oracle; after
+  // `myel-*` went in at rows 1,2 that was a skipped arm reading 0.000, and the guard
+  // refused a run in which the real oracle arms both agreed at 1.000. A construction
+  // check that can fire on an arm it never meant to read is worse than no check.
+  const int or_ab = mode_ab[1], dv_ab = mode_ab[2], sh_ab = mode_ab[3];
+  auto ag_str = [&](int a, char* buf, size_t n) -> const char* {
+    if (a == -1) std::snprintf(buf, n, "  --   (absent from the arm table)");
+    else if (a < 0) std::snprintf(buf, n, "  --   (not in this focus set)");
+    else std::snprintf(buf, n, "%.3f", m_agree[a]);
+    return buf;
+  };
+  char b1[64], b2[64], b3[64];
+  std::printf("    oracle  %s   (must be 1.000 by construction)\n", ag_str(or_ab, b1, sizeof(b1)));
+  std::printf("    derived %s   <- THE WHOLE QUESTION\n", ag_str(dv_ab, b2, sizeof(b2)));
+  std::printf("    shuffled %s  <- SPECIFICITY: must sit near 0.500\n",
+              ag_str(sh_ab, b3, sizeof(b3)));
+  const double or_ag = or_ab >= 0 ? m_agree[or_ab] : 0.0;
+  const double dv_ag = dv_ab >= 0 ? m_agree[dv_ab] : 0.0;
+  if (or_ab >= 0 && or_ag < 0.99) {
     std::printf("  REFUSED: the oracle arm does not agree with itself, so the masking is\n"
                 "  miswired and no retention number below is readable.\n");
     return false;
   }
+  if (or_ab < 0)
+    std::printf("  NOTE: the oracle arm is %s, so the construction check did not run.\n"
+                "  Nothing below is anchored to a verified mask.\n",
+                or_ab == -1 ? "absent from the table" : "not in this focus set");
   if (dv_ag > 0.45 && dv_ag < 0.55) {
     std::printf("  NOTE: the derived index sits at CHANCE. Whatever the retention numbers do,\n"
                 "  this run then says nothing about gating in general -- only that THIS index\n"
@@ -18504,67 +18735,87 @@ bool run_credgate_impl(const std::vector<uint8_t>& blob, uint64_t ticks, bool ve
   }
 
   std::printf("\n  PRIMARY -- the AB-minus-keep gap, per mode\n");
-  double gap[4] = {}, gse[4] = {};
-  const char* mode_name[4] = {"broadcast", "oracle", "derived", "latch"};
-  for (uint32_t k = 0; k < 4; ++k) {
-    const uint32_t ab = k * 2, kp = k * 2 + 1;
+  double gap[kCGModeCount] = {}, gse[kCGModeCount] = {};
+  bool gap_ok[kCGModeCount] = {};
+  for (uint32_t k = 0; k < kCGModeCount; ++k) {
+    if (!mode_live(k)) {
+      std::printf("    %-10s %s\n", kCGModes[k].label, mode_why(k));
+      continue;
+    }
+    const int ab = mode_ab[k], kp = mode_kp[k];
     gap[k] = m_after[ab] - m_after[kp];
     gse[k] = std::sqrt(s_after[ab] * s_after[ab] + s_after[kp] * s_after[kp]);
-    // These index arms POSITIONALLY (k*2, k*2+1), so a skipped arm reads 0.0000 and
-    // every difference below becomes a number for a comparison nobody made. The
-    // smoke test printed derived and latch at 0.0000 under the focus set.
-    if (cg_skip(ab, focused) || cg_skip(kp, focused)) {
-      std::printf("    %-10s not in this focus set\n", mode_name[k]);
-      continue;
-    }
+    gap_ok[k] = true;
     std::printf("    %-10s AB %.4f   keep %.4f   gap %+.4f +/- %.4f  (%+.1f SE)\n",
-                mode_name[k], m_after[ab], m_after[kp], gap[k], gse[k],
+                kCGModes[k].label, m_after[ab], m_after[kp], gap[k], gse[k],
                 gse[k] > 0.0 ? gap[k] / gse[k] : 0.0);
   }
-  const double d_or = gap[0] - gap[1], se_or = std::sqrt(gse[0] * gse[0] + gse[1] * gse[1]);
-  const double d_dv = gap[0] - gap[2], se_dv = std::sqrt(gse[0] * gse[0] + gse[2] * gse[2]);
-  const double d_sh = gap[0] - gap[3], se_sh = std::sqrt(gse[0] * gse[0] + gse[3] * gse[3]);
-  if (!cg_skip(2, focused) && !cg_skip(3, focused))
-    std::printf("\n    oracle   shrinks the gap by %+.4f +/- %.4f  (%+.1f SE)\n", d_or,
-                se_or, se_or > 0.0 ? d_or / se_or : 0.0);
-  if (!cg_skip(4, focused) && !cg_skip(5, focused))
-    std::printf("    derived  shrinks the gap by %+.4f +/- %.4f  (%+.1f SE)\n", d_dv, se_dv,
-                se_dv > 0.0 ? d_dv / se_dv : 0.0);
-  if (!cg_skip(6, focused) && !cg_skip(7, focused))
-    std::printf("    shuffled shrinks the gap by %+.4f +/- %.4f  (%+.1f SE)  <- must NOT\n",
-                d_sh, se_sh, se_sh > 0.0 ? d_sh / se_sh : 0.0);
+  // A difference is printed only when BOTH its modes produced a gap, so no row is
+  // ever differenced against a 0.0000 that stands for "never ran".
+  for (uint32_t k = 1; k < kCGModeCount; ++k) {
+    if (!gap_ok[0] || !gap_ok[k]) continue;
+    const double d = gap[0] - gap[k];
+    const double se = std::sqrt(gse[0] * gse[0] + gse[k] * gse[k]);
+    std::printf("%s    %-8s shrinks the gap by %+.4f +/- %.4f  (%+.1f SE)%s\n",
+                k == 1 ? "\n" : "", kCGModes[k].label, d, se, se > 0.0 ? d / se : 0.0,
+                k == 3 ? "   <- must NOT" : "");
+  }
+  std::printf("    THE GAP IS CONFOUNDED and must not be quoted as the headline: a reward\n"
+              "    mask costs learning rate, so it moves BOTH arms. Retention above is the\n"
+              "    statistic `credit-oracle` used. Kept here because a gap that closes\n"
+              "    while err_taught collapses is the `regionband` failure.\n");
 
   std::printf("\n  THE COST -- err_taught, which the oracle bought its 1.03 with\n");
-  for (uint32_t k = 0; k < 4; ++k) {
-    if (cg_skip(k * 2, focused) || cg_skip(k * 2 + 1, focused)) {
-      std::printf("    %-10s not in this focus set\n", mode_name[k]);
+  for (uint32_t k = 0; k < kCGModeCount; ++k) {
+    if (!mode_live(k)) {
+      std::printf("    %-10s %s\n", kCGModes[k].label, mode_why(k));
       continue;
     }
-    std::printf("    %-10s AB %.4f   keep %.4f\n", mode_name[k], m_taught[k * 2],
-                m_taught[k * 2 + 1]);
+    std::printf("    %-10s AB %.4f   keep %.4f\n", kCGModes[k].label,
+                m_taught[mode_ab[k]], m_taught[mode_kp[k]]);
   }
 
   // THE GATES READ RETENTION, NOT THE GAP. The gap confounds interference with the
   // mask's learning-rate cost, which is why it said the oracle failed to reproduce
   // when it reproduces at +4.8 SE on the statistic credit-oracle actually used.
-  const double r_or = m_ret[2] - m_ret[0];
-  const double rse_or = std::sqrt(s_ret[2] * s_ret[2] + s_ret[0] * s_ret[0]);
-  const double r_dv = m_ret[4] - m_ret[0];
-  const double rse_dv = std::sqrt(s_ret[4] * s_ret[4] + s_ret[0] * s_ret[0]);
-  const double r_sh = m_ret[6] - m_ret[0];
-  const double rse_sh = std::sqrt(s_ret[6] * s_ret[6] + s_ret[0] * s_ret[0]);
-  const bool oracle_works = r_or >= 3.0 * rse_or && rse_or > 0.0;
-  const bool derived_works = r_dv >= 3.0 * rse_dv && rse_dv > 0.0;
-  const bool shuf_clean = r_sh < 3.0 * rse_sh;
+  auto ret_vs_bcast = [&](int a, double* se) {
+    if (a < 0 || bc_ab < 0) { *se = 0.0; return 0.0; }
+    *se = std::sqrt(s_ret[a] * s_ret[a] + s_ret[bc_ab] * s_ret[bc_ab]);
+    return m_ret[a] - m_ret[bc_ab];
+  };
+  double rse_or = 0.0, rse_dv = 0.0, rse_sh = 0.0;
+  const double r_or = ret_vs_bcast(or_ab, &rse_or);
+  const double r_dv = ret_vs_bcast(dv_ab, &rse_dv);
+  const double r_sh = ret_vs_bcast(sh_ab, &rse_sh);
+  // THE GATES MOVED OFF THE MEAN OF RATIOS (2026-10-03). They used to read
+  // `m_ret`, the per-creature mean whose denominator is floored at 1e-6; this file
+  // had already recorded that statistic reading -5.587 +/- 6.729 and 27.222 +/-
+  // 21.160 and called it "a broken statistic reporting nothing", and the gates went
+  // on reading it. They now read the paired ratio-of-sums, and require it to hold
+  // across the whole gain-floor sweep.
+  const bool oracle_works = rr_all[1];
+  const bool derived_works = rr_all[2];
+  // SPECIFICITY IS A CRITERION, NOT A DEFAULT. `shuf-*` is not in the arm table, so
+  // this run cannot execute its own pre-registered control. Read positionally it was
+  // computed off `derived-*` and looked like a passing test; absent, it must read as
+  // UNTESTED and must not be allowed to satisfy the verdict by default.
+  const bool shuf_ran = rr_ran[3];
+  const bool shuf_clean = shuf_ran && !rr_all[3];
+  if (!shuf_ran)
+    std::printf("\n  SPECIFICITY UNTESTED: `shuf-AB`/`shuf-keep` are %s, so the control\n"
+                "  that distinguishes credit assignment from merely halving the write did\n"
+                "  not run. No verdict here can clear that bar.\n",
+                cg_arm_of("shuf-AB") < 0 ? "absent from the arm table"
+                                         : "not in this focus set");
   // WHAT THE INDEX'S ACCURACY PREDICTS. If benefit scales linearly from chance (no
   // benefit) to perfect (full benefit), an index agreeing at `a` should deliver
   // (a - 0.5)/0.5 of the oracle's gain. Comparing that to what it DID deliver says
   // whether a shortfall is the mechanism failing or the carrier being inaccurate.
-  const double predicted = (m_agree[4] - 0.5) / 0.5;
+  const double predicted = (dv_ag - 0.5) / 0.5;
   const double delivered = r_or > 1e-9 ? r_dv / r_or : 0.0;
   std::printf("\n  DOES THE INDEX BUY WHAT ITS ACCURACY PREDICTS?\n");
   std::printf("    agreement %.3f  ->  predicted %.3f of the oracle's benefit\n",
-              m_agree[4], predicted);
+              dv_ag, predicted);
   std::printf("    delivered %.3f\n", delivered);
   std::printf("    A shortfall here would mean the mechanism fails; a match means the\n"
               "    mechanism works and the CARRIER is simply not accurate enough.\n");
@@ -19164,20 +19415,27 @@ bool run_credgate_impl(const std::vector<uint8_t>& blob, uint64_t ticks, bool ve
                 "  oracle here is a within-experiment REFERENCE, not a bound, and the\n"
                 "  derived arms cannot be priced against a ceiling that does not exist.\n",
                 r_or, rse_or, rse_or > 0.0 ? r_or / rse_or : 0.0);
+  } else if (derived_works && !shuf_ran) {
+    std::printf("  THE DERIVED INDEX CLEARS THE RETENTION BAR, AND THE SPECIFICITY CONTROL\n"
+                "  DID NOT RUN. Retention goes %+.3f (%+.1f SE) under the creature's own\n"
+                "  index, but `shuf-*` is not in this run, so nothing here separates the\n"
+                "  index's CONTENT from the act of halving the write. NOT YET A FINDING.\n",
+                r_dv, rse_dv > 0.0 ? r_dv / rse_dv : 0.0);
   } else if (derived_works && shuf_clean) {
-    std::printf("  THE CREATURE CAN TARGET ITS OWN REWARD. The derived index shrinks the\n"
-                "  interference gap by %+.4f (%+.1f SE) where a coin flip does not (%+.1f SE),\n"
-                "  so it is the index CONTENT and not the act of masking.\n",
-                d_dv, d_dv / se_dv, se_sh > 0.0 ? d_sh / se_sh : 0.0);
+    std::printf("  THE CREATURE CAN TARGET ITS OWN REWARD. Retention goes %+.3f (%+.1f SE)\n"
+                "  under the derived index where a coin flip gives %+.3f (%+.1f SE), so it is\n"
+                "  the index CONTENT and not the act of masking.\n",
+                r_dv, rse_dv > 0.0 ? r_dv / rse_dv : 0.0, r_sh,
+                rse_sh > 0.0 ? r_sh / rse_sh : 0.0);
     std::printf("  CHECK err_taught ABOVE: the oracle bought its retention at ~30%% of the\n"
                 "  learning rate, so a gap that closes while teaching collapses is the\n"
                 "  regionband failure again.\n");
-  } else if (derived_works && !shuf_clean) {
-    std::printf("  IT IS THE MASKING, NOT THE INDEX. Derived shrinks the gap %+.1f SE but so\n"
+  } else if (derived_works && shuf_ran && !shuf_clean) {
+    std::printf("  IT IS THE MASKING, NOT THE INDEX. Derived lifts retention %+.1f SE but so\n"
                 "  does a COIN FLIP (%+.1f SE) -- so what helps is confining the write to half\n"
                 "  the group, whatever half that is, and no credit assignment is happening.\n"
                 "  REFUSED, and this is the control the run pre-registered for.\n",
-                d_dv / se_dv, d_sh / se_sh);
+                rse_dv > 0.0 ? r_dv / rse_dv : 0.0, rse_sh > 0.0 ? r_sh / rse_sh : 0.0);
   } else {
     std::printf("  THE ORACLE WORKS AND THE DERIVED INDEX FALLS SHORT. Retention goes\n"
                 "  %+.3f (%+.1f SE) under a perfect mask and %+.3f (%+.1f SE) under the\n"
