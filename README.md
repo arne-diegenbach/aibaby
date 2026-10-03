@@ -14068,6 +14068,66 @@ Fusi and colleagues on consolidation, whose protected-pathway framing is what
 `eta_floor_frac` implements and what the wipe still needs.
 
 
+## credgate's oracle headline does not appear on two other families (2026-10-03)
+
+The myelination lead sent me to test §3.5's `eta_floor_frac` against the wipe it is
+documented to prevent. The brake arms came back unreadable — and the run turned up
+something more consequential about the instrument itself.
+
+### The instrument first
+
+Same statistic, `oracle AB retention vs broadcast`, three genomes:
+
+| genome | result |
+|---|---|
+| family 318211 (the record) | **+1.295 ± 0.173 (+4.8 SE)** |
+| the context genome | +0.925 ± 0.553 (1.7 SE) |
+| `dna/default.toml`, seed 20260809 | **−0.149 ± 0.399 (−0.4 SE)** |
+
+**"The wipe is gone" was established on one wiring family, and it appears on neither of
+the other two.** That is the signature which retracted the context teaching tax — one
+family, sign reversed elsewhere — and this is a result the queue has been citing as a
+settled ceiling ("the oracle half is already answered, do not re-run it").
+
+**This is not yet a retraction, and the distinction matters.** I have shown it absent on
+two families; I have *not* re-run 318211 to confirm it still holds there. Until that
+lands the honest label is "family-specific or irreproducible, undetermined", and the
+reproduction run is in flight.
+
+Worth recording how nearly I got that wrong: swapping `seed = 318211` into
+`default.toml` gives `calibrate FAIL — 1 module off target`. The `expression` module's
+declared target had gone stale (7.22 against a measured 7.49), and
+`tools/recalibrate_targets.py` fixed it by reading the module name out of calibrate's
+own output. A family comparison is a genome edit like any other, which is exactly what
+the calibration invariant exists to catch.
+
+### The brake arms, and why they cannot be read
+
+The field is live (`tools/vacuity.sh`: 46 lines differ) and the patch reaches the kernel
+(three distinct creatures on one seed). The numbers still refuse to say anything:
+
+```
+GAINED    myel-hard (0.1, HARDEST brake)  +0.0571 +/- 0.0068
+          bcast-AB  (0.3, shipped)        +0.0272 +/- 0.0127
+          myel-off  (1.0, NO brake)       +0.0425 +/- 0.0121
+```
+
+**Non-monotone in the parameter** — the shipped setting is the worst of the three — with
+a ~2 SE spread, unpaired, on a run whose own reference arm is a −0.4 SE null. And the
+arms are not a clean manipulation of "protection": context switches go 1018/391 at the
+shipped floor to 516/109 at the hard brake, so moving the floor moves the creature's
+global dynamics rather than only the protected-pathway property it was meant to isolate.
+
+That is a design flaw in my arm, not a result. A clean version needs a manipulation that
+changes protection *without* changing global eta — the floor applied only to edges
+already myelinated at the end of lesson A, which is a kernel change rather than a genome
+field — and it needs a family where the retention instrument's own reference reproduces.
+
+Credit: Mido Assran and colleagues for the cluster-prior result that opened this line;
+Michale Fee and Adam Goldberg for the bias-from-outside architecture; Stefano Fusi,
+whose protected-pathway account is what `eta_floor_frac` implements.
+
+
 ## Layout
 
 ```

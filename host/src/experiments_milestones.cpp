@@ -6032,6 +6032,17 @@ struct RTConfig {
   // AGMP activity gate: slow accumulator tau in ms, and gate strength. 0 = off.
   double act_gate_tau_ms = 0.0;
   float act_gate_strength = 0.0f;
+  // DNA §3.5 myelination's per-edge learning-rate floor; -1 leaves the genome's 0.3.
+  // APPENDED AT THE END, and that is not cosmetic: RTConfig is initialised
+  // POSITIONALLY at call sites, so putting this mid-struct renumbered another
+  // aggregate's list and the compiler caught it as a narrowing conversion to int32_t.
+  // The field-shift trap the CGArm comments warn about, one struct over.
+  //
+  // This is the FORGETTING DEFENCE the mechanism was built to be -- "a fully
+  // myelinated edge learns at this fraction of eta: the pathway is consolidated and
+  // protected from being overwritten" -- never yet put in the same experiment as the
+  // wipe it is supposed to prevent.
+  float eta_floor = -1.0f;
 };
 
 // One arm, one creature, one life: teach, intervene, re-measure.
@@ -6064,6 +6075,12 @@ RTRow run_retain_arm(const std::vector<uint8_t>& blob, uint64_t ticks,
     std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, exploration) +
                     offsetof(aibaby::DnaExploration, meta_commit),
                 &mc, sizeof(mc));
+  }
+  if (cfg.eta_floor >= 0.0f) {
+    const float ef = cfg.eta_floor;
+    std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, consolidate) +
+                    offsetof(aibaby::DnaConsolidate, eta_floor_frac),
+                &ef, sizeof(ef));
   }
   {
     const uint32_t sl = cfg.context_slots, sr = cfg.context_source;
@@ -17946,9 +17963,30 @@ struct CGArm {
   // tau in ms (0 = off) and strength. Appended at the END.
   double act_tau_ms;
   float act_strength;
+  // §3.5's eta floor for this arm; -1 leaves the genome's 0.3. Appended at the END
+  // with a default, for the field-shift reason the comments above already give: every
+  // row here is positional, so a field inserted anywhere else silently renumbers all
+  // thirteen of them.
+  float eta_floor = -1.0f;
 };
 const CGArm kCGArms[] = {
     {"bcast-AB",   0u, false, 0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, false, 0.0, 0.0f},   // the shipped broadcast rule: the 0.22 wipe
+    // THE MYELIN BRAKE, TESTED ON THE THING IT WAS BUILT FOR (2026-10-03). §3.5's
+    // `eta_floor_frac` is documented as "§3.5's defence against catastrophic
+    // forgetting": a fully myelinated edge learns at that fraction of eta, so the
+    // pathway is consolidated and protected from being overwritten. The 0.22 wipe IS
+    // catastrophic forgetting, and the field appears in ZERO findings in this project
+    // -- never swept, on in every number ever quoted, and measured by the M4 panel
+    // braking mean per-edge learning to 0.654 x eta.
+    //
+    // Both arms are the BROADCAST rule, so they differ from `bcast-AB` and from each
+    // other in the brake ALONE, paired within creature. More protection means a LOWER
+    // floor, so `myel-hard` (0.1) is the arm the mechanism predicts should retain
+    // MORE; `myel-off` (1.0) removes the defence entirely and should retain LESS.
+    // If neither moves, §3.5's forgetting defence is refused on its own purpose.
+    // vacuity pre-flight: tools/vacuity.sh says LIVE on vocallearn, 46 lines differ.
+    {"myel-hard",  0u, false, 0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, false, 0.0, 0.0f, 0.1f},
+    {"myel-off",   0u, false, 0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, false, 0.0, 0.0f, 1.0f},
     {"bcast-keep", 0u, true,  0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, false, 0.0, 0.0f},
     {"oracle-AB",  1u, false, 0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, false, 0.0, 0.0f},   // the host masks by which lesson is live
     {"oracle-keep", 1u, true, 0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, false, 0.0, 0.0f},
@@ -18289,6 +18327,7 @@ bool run_credgate_impl(const std::vector<uint8_t>& blob, uint64_t ticks, bool ve
     // with a context module: run this with --dna ctx.toml from tools/ctxgenome.sh.
     cfg.context_slots = kCGArms[a].slots;
     cfg.context_source = 4u;
+    cfg.eta_floor = kCGArms[a].eta_floor;
     // GIVE THE TWO LESSONS DIFFERENT SOUNDS, or the index has nothing to separate.
     // `retain` says the SAME word throughout by default -- run_retain_arm's own
     // comment spells it out: "nothing in the creature's input distinguishes lesson A
