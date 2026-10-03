@@ -17985,8 +17985,8 @@ const CGArm kCGArms[] = {
     // MORE; `myel-off` (1.0) removes the defence entirely and should retain LESS.
     // If neither moves, §3.5's forgetting defence is refused on its own purpose.
     // vacuity pre-flight: tools/vacuity.sh says LIVE on vocallearn, 46 lines differ.
-    {"myel-hard",  0u, false, 0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, false, 0.0, 0.0f, 0.1f},
-    {"myel-off",   0u, false, 0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, false, 0.0, 0.0f, 1.0f},
+    {"myel-hard",  0u, false, 0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, true, 0.0, 0.0f, 0.1f},
+    {"myel-off",   0u, false, 0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, true, 0.0, 0.0f, 1.0f},
     {"bcast-keep", 0u, true,  0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, false, 0.0, 0.0f},
     {"oracle-AB",  1u, false, 0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, false, 0.0, 0.0f},   // the host masks by which lesson is live
     {"oracle-keep", 1u, true, 0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, false, 0.0, 0.0f},
@@ -18018,8 +18018,8 @@ const CGArm kCGArms[] = {
     // gate 7 simply makes a better learner, which is a different finding and not the
     // one this experiment is about. Without this the improvement cannot be
     // attributed at all.
-    {"bcast7-AB",   0u, false, 7u, 5.0f, 2u, -1, 0.0f, 0u, 0u, false, 0.0, 0.0f},
-    {"bcast7-keep", 0u, true,  7u, 5.0f, 2u, -1, 0.0f, 0u, 0u, false, 0.0, 0.0f},
+    {"bcast7-AB",   0u, false, 7u, 5.0f, 2u, -1, 0.0f, 0u, 0u, true, 0.0, 0.0f},
+    {"bcast7-keep", 0u, true,  7u, 5.0f, 2u, -1, 0.0f, 0u, 0u, true, 0.0, 0.0f},
     // THE BASELINE THAT WAS NEVER RUN. bcast7 -- gate 7's brain with BROADCAST
     // reward and no mask -- posts GAINED +0.0640 against broadcast's +0.0193 and an
     // interference gap of +0.0436 against +0.0933. With its index separation at
@@ -18048,8 +18048,8 @@ const CGArm kCGArms[] = {
     // slot IDENTITY matters, and the bias tables are not as symmetric as the kernel
     // reads. Neither near bcast7: vigilance does something beyond holding the index
     // still, and the next question is what.
-    {"pin0-AB",   0u, false, 0u, 0.0f, 2u, 0, 0.0f, 0u, 0u, false, 0.0, 0.0f},
-    {"pin0-keep", 0u, true,  0u, 0.0f, 2u, 0, 0.0f, 0u, 0u, false, 0.0, 0.0f},
+    {"pin0-AB",   0u, false, 0u, 0.0f, 2u, 0, 0.0f, 0u, 0u, true, 0.0, 0.0f},
+    {"pin0-keep", 0u, true,  0u, 0.0f, 2u, 0, 0.0f, 0u, 0u, true, 0.0, 0.0f},
     {"pin1-AB",   0u, false, 0u, 0.0f, 2u, 1, 0.0f, 0u, 0u, true, 0.0, 0.0f},
     {"pin1-keep", 0u, true,  0u, 0.0f, 2u, 1, 0.0f, 0u, 0u, true, 0.0, 0.0f},
     // THE DIRECT ATTACK ON WHAT IS LEFT. pin0 and pin1 came out IDENTICAL to each

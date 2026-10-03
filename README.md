@@ -14068,7 +14068,7 @@ Fusi and colleagues on consolidation, whose protected-pathway framing is what
 `eta_floor_frac` implements and what the wipe still needs.
 
 
-## credgate's oracle headline does not appear on two other families (2026-10-03)
+## I called a headline irreproducible while running at 28% of its budget (2026-10-03)
 
 The myelination lead sent me to test §3.5's `eta_floor_frac` against the wipe it is
 documented to prevent. The brake arms came back unreadable — and the run turned up
@@ -14084,15 +14084,25 @@ Same statistic, `oracle AB retention vs broadcast`, three genomes:
 | the context genome | +0.925 ± 0.553 (1.7 SE) |
 | `dna/default.toml`, seed 20260809 | **−0.149 ± 0.399 (−0.4 SE)** |
 
-**"The wipe is gone" was established on one wiring family, and it appears on neither of
-the other two.** That is the signature which retracted the context teaching tax — one
-family, sign reversed elsewhere — and this is a result the queue has been citing as a
-settled ceiling ("the oracle half is already answered, do not re-run it").
+At the time I read that as a family effect — the signature which retracted the context
+teaching tax. Then the run on 318211 itself came back at **−0.624 ± 0.557 (−1.1 SE)**,
+absent on its own family too, and the real explanation surfaced.
 
-**This is not yet a retraction, and the distinction matters.** I have shown it absent on
-two families; I have *not* re-run 318211 to confirm it still holds there. Until that
-lands the honest label is "family-specific or irreproducible, undetermined", and the
-reproduction run is in flight.
+**All three of my runs used `--ticks 3400000`, the registered default. The record's own
+log is named `results/credgate-12m.log` — 12M ticks, 3.5× more.** A second file,
+`credgate-12m-latch-RETRACTED.log`, carries the same marker, so "12m" is a deliberate
+note that this experiment's results were taken off-default.
+
+**This project has a documented power curve for precisely this**: `vocallearn` reads +1.0
+at 560k against +18.3 at 3.4M. A 3.5× budget gap is the first thing to suspect, and I
+checked it last — after writing up a near-retraction of an existing headline. The memory
+file's own "Log:" line had been telling me the answer from the start.
+
+It is still not proven either way: the 12m logs are curated summaries with no instrument
+line, so the filename is strong circumstantial evidence rather than proof. A reproduction
+at 12M on 318211 is what settles it, and it is in flight. **The method rule I should have
+followed: before calling a result irreproducible, reproduce the conditions, not just the
+experiment name.**
 
 Worth recording how nearly I got that wrong: swapping `seed = 318211` into
 `default.toml` gives `calibrate FAIL — 1 module off target`. The `expression` module's
