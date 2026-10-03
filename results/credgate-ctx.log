@@ -40,3 +40,389 @@
   [159/1152] seed 4 pin0-AB       taught 0.9540 after 0.9926 agree 0.00
   [156/1152] seed 4 bcast7-keep   taught 0.9479 after 0.9390 agree 0.00
   [160/1152] seed 4 pin0-keep     taught 0.9540 after 0.7496 agree 0.00
+  [184/1152] seed 5 oracle-keep   taught 1.0216 after 0.9659 agree 1.00
+  [183/1152] seed 5 oracle-AB     taught 1.0216 after 1.0248 agree 1.00
+  [191/1152] seed 5 bcast7-AB     taught 0.9212 after 0.9731 agree 0.00
+  [192/1152] seed 5 bcast7-keep   taught 0.9212 after 0.9604 agree 0.00
+  [195/1152] seed 5 pin0-AB       taught 0.9085 after 0.9610 agree 0.00
+  [196/1152] seed 5 pin0-keep     taught 0.9085 after 0.8427 agree 0.00
+  [219/1152] seed 6 oracle-AB     taught 1.0402 after 0.9819 agree 1.00
+  [220/1152] seed 6 oracle-keep   taught 1.0402 after 0.9430 agree 1.00
+  [218/1152] seed 6 bcast-keep    taught 0.9533 after 0.8641 agree 0.00
+  [217/1152] seed 6 bcast-AB      taught 0.9533 after 1.2078 agree 0.00
+  [227/1152] seed 6 bcast7-AB     taught 0.9250 after 0.9050 agree 0.00
+  [231/1152] seed 6 pin0-AB       taught 0.9572 after 1.0372 agree 0.00
+  [228/1152] seed 6 bcast7-keep   taught 0.9250 after 0.8078 agree 0.00
+  [232/1152] seed 6 pin0-keep     taught 0.9572 after 0.8428 agree 0.00
+  [255/1152] seed 7 oracle-AB     taught 1.0930 after 1.1023 agree 1.00
+  [256/1152] seed 7 oracle-keep   taught 1.0930 after 1.1114 agree 1.00
+  [253/1152] seed 7 bcast-AB      taught 1.0018 after 1.0604 agree 0.00
+  [254/1152] seed 7 bcast-keep    taught 1.0018 after 0.9627 agree 0.00
+  [263/1152] seed 7 bcast7-AB     taught 0.9952 after 0.9887 agree 0.00
+  [264/1152] seed 7 bcast7-keep   taught 0.9952 after 0.9109 agree 0.00
+  [267/1152] seed 7 pin0-AB       taught 0.9360 after 0.8886 agree 0.00
+  [268/1152] seed 7 pin0-keep     taught 0.9360 after 0.8103 agree 0.00
+  [292/1152] seed 8 oracle-keep   taught 1.0392 after 0.9720 agree 1.00
+  [290/1152] seed 8 bcast-keep    taught 0.9956 after 0.8617 agree 0.00
+  [289/1152] seed 8 bcast-AB      taught 0.9956 after 1.0308 agree 0.00
+  [291/1152] seed 8 oracle-AB     taught 1.0392 after 1.0341 agree 1.00
+  [299/1152] seed 8 bcast7-AB     taught 0.9715 after 0.9547 agree 0.00
+  [300/1152] seed 8 bcast7-keep   taught 0.9715 after 0.9578 agree 0.00
+  [304/1152] seed 8 pin0-keep     taught 0.9177 after 0.7673 agree 0.00
+  [303/1152] seed 8 pin0-AB       taught 0.9177 after 0.9588 agree 0.00
+  [326/1152] seed 9 bcast-keep    taught 0.9589 after 0.9227 agree 0.00
+  [328/1152] seed 9 oracle-keep   taught 1.0767 after 1.0497 agree 1.00
+  [327/1152] seed 9 oracle-AB     taught 1.0767 after 1.0704 agree 1.00
+  [325/1152] seed 9 bcast-AB      taught 0.9589 after 1.0045 agree 0.00
+  [336/1152] seed 9 bcast7-keep   taught 0.9684 after 0.9533 agree 0.00
+  [340/1152] seed 9 pin0-keep     taught 0.9672 after 0.7777 agree 0.00
+  [335/1152] seed 9 bcast7-AB     taught 0.9684 after 0.9442 agree 0.00
+  [339/1152] seed 9 pin0-AB       taught 0.9672 after 1.0430 agree 0.00
+  [362/1152] seed 10 bcast-keep    taught 0.9360 after 0.7872 agree 0.00
+  [361/1152] seed 10 bcast-AB      taught 0.9360 after 0.9656 agree 0.00
+  [363/1152] seed 10 oracle-AB     taught 1.0330 after 0.9818 agree 1.00
+  [364/1152] seed 10 oracle-keep   taught 1.0330 after 0.8999 agree 1.00
+  [371/1152] seed 10 bcast7-AB     taught 0.9825 after 0.9919 agree 0.00
+  [372/1152] seed 10 bcast7-keep   taught 0.9825 after 0.8744 agree 0.00
+  [375/1152] seed 10 pin0-AB       taught 0.8952 after 0.8659 agree 0.00
+  [399/1152] seed 11 oracle-AB     taught 1.0093 after 1.1054 agree 1.00
+  [400/1152] seed 11 oracle-keep   taught 1.0093 after 1.1155 agree 1.00
+  [376/1152] seed 10 pin0-keep     taught 0.8952 after 0.7517 agree 0.00
+  [397/1152] seed 11 bcast-AB      taught 0.9734 after 1.0607 agree 0.00
+  [398/1152] seed 11 bcast-keep    taught 0.9734 after 0.9500 agree 0.00
+  [407/1152] seed 11 bcast7-AB     taught 0.9494 after 0.9287 agree 0.00
+  [408/1152] seed 11 bcast7-keep   taught 0.9494 after 0.9269 agree 0.00
+  [411/1152] seed 11 pin0-AB       taught 0.9357 after 1.0050 agree 0.00
+  [433/1152] seed 12 bcast-AB      taught 0.9809 after 1.0420 agree 0.00
+  [412/1152] seed 11 pin0-keep     taught 0.9357 after 0.7924 agree 0.00
+  [434/1152] seed 12 bcast-keep    taught 0.9809 after 0.8712 agree 0.00
+  [435/1152] seed 12 oracle-AB     taught 1.0679 after 1.1363 agree 1.00
+  [436/1152] seed 12 oracle-keep   taught 1.0679 after 1.0781 agree 1.00
+  [443/1152] seed 12 bcast7-AB     taught 1.0163 after 1.0777 agree 0.00
+  [447/1152] seed 12 pin0-AB       taught 0.9704 after 1.0948 agree 0.00
+  [444/1152] seed 12 bcast7-keep   taught 1.0163 after 1.0240 agree 0.00
+  [471/1152] seed 13 oracle-AB     taught 1.0334 after 1.1262 agree 1.00
+  [470/1152] seed 13 bcast-keep    taught 1.0014 after 0.8890 agree 0.00
+  [472/1152] seed 13 oracle-keep   taught 1.0334 after 1.1459 agree 1.00
+  [469/1152] seed 13 bcast-AB      taught 1.0014 after 1.0678 agree 0.00
+  [480/1152] seed 13 bcast7-keep   taught 0.9841 after 1.0413 agree 0.00
+  [479/1152] seed 13 bcast7-AB     taught 0.9841 after 1.0872 agree 0.00
+  [448/1152] seed 12 pin0-keep     taught 0.9704 after 0.9433 agree 0.00
+  [483/1152] seed 13 pin0-AB       taught 0.9968 after 1.0772 agree 0.00
+  [484/1152] seed 13 pin0-keep     taught 0.9968 after 0.9651 agree 0.00
+  [507/1152] seed 14 oracle-AB     taught 1.0413 after 1.0415 agree 1.00
+  [506/1152] seed 14 bcast-keep    taught 0.9373 after 0.8500 agree 0.00
+  [508/1152] seed 14 oracle-keep   taught 1.0413 after 1.1124 agree 1.00
+  [505/1152] seed 14 bcast-AB      taught 0.9373 after 1.0126 agree 0.00
+  [516/1152] seed 14 bcast7-keep   taught 0.9784 after 0.9410 agree 0.00
+  [515/1152] seed 14 bcast7-AB     taught 0.9784 after 0.9751 agree 0.00
+  [519/1152] seed 14 pin0-AB       taught 1.0099 after 1.0582 agree 0.00
+  [544/1152] seed 15 oracle-keep   taught 1.0146 after 0.9405 agree 1.00
+  [543/1152] seed 15 oracle-AB     taught 1.0146 after 0.9796 agree 1.00
+  [520/1152] seed 14 pin0-keep     taught 1.0099 after 0.8640 agree 0.00
+  [542/1152] seed 15 bcast-keep    taught 1.1559 after 1.1555 agree 0.00
+  [541/1152] seed 15 bcast-AB      taught 1.1559 after 1.1436 agree 0.00
+  [551/1152] seed 15 bcast7-AB     taught 0.9436 after 0.8998 agree 0.00
+  [552/1152] seed 15 bcast7-keep   taught 0.9436 after 0.8580 agree 0.00
+  [555/1152] seed 15 pin0-AB       taught 0.8802 after 0.9348 agree 0.00
+  [556/1152] seed 15 pin0-keep     taught 0.8802 after 0.8500 agree 0.00
+  [577/1152] seed 16 bcast-AB      taught 0.9811 after 1.0494 agree 0.00
+  [578/1152] seed 16 bcast-keep    taught 0.9811 after 0.8490 agree 0.00
+  [580/1152] seed 16 oracle-keep   taught 1.0365 after 1.0028 agree 1.00
+  [587/1152] seed 16 bcast7-AB     taught 1.0085 after 1.0770 agree 0.00
+  [579/1152] seed 16 oracle-AB     taught 1.0365 after 1.0327 agree 1.00
+  [591/1152] seed 16 pin0-AB       taught 0.9537 after 1.0115 agree 0.00
+  [588/1152] seed 16 bcast7-keep   taught 1.0085 after 0.9203 agree 0.00
+  [613/1152] seed 17 bcast-AB      taught 1.0001 after 1.0283 agree 0.00
+  [615/1152] seed 17 oracle-AB     taught 1.0245 after 1.0563 agree 1.00
+  [616/1152] seed 17 oracle-keep   taught 1.0245 after 0.9785 agree 1.00
+  [592/1152] seed 16 pin0-keep     taught 0.9537 after 0.8710 agree 0.00
+  [614/1152] seed 17 bcast-keep    taught 1.0001 after 0.8868 agree 0.00
+  [624/1152] seed 17 bcast7-keep   taught 0.9548 after 0.8926 agree 0.00
+  [628/1152] seed 17 pin0-keep     taught 0.9781 after 0.8926 agree 0.00
+  [623/1152] seed 17 bcast7-AB     taught 0.9548 after 1.0084 agree 0.00
+  [627/1152] seed 17 pin0-AB       taught 0.9781 after 1.0724 agree 0.00
+  [649/1152] seed 18 bcast-AB      taught 0.9761 after 1.0060 agree 0.00
+  [651/1152] seed 18 oracle-AB     taught 1.0498 after 1.0771 agree 1.00
+  [650/1152] seed 18 bcast-keep    taught 0.9761 after 0.9213 agree 0.00
+  [652/1152] seed 18 oracle-keep   taught 1.0498 after 1.1079 agree 1.00
+  [659/1152] seed 18 bcast7-AB     taught 0.9760 after 0.9815 agree 0.00
+  [663/1152] seed 18 pin0-AB       taught 0.9591 after 0.9831 agree 0.00
+  [660/1152] seed 18 bcast7-keep   taught 0.9760 after 0.9909 agree 0.00
+  [664/1152] seed 18 pin0-keep     taught 0.9591 after 0.8969 agree 0.00
+  [685/1152] seed 19 bcast-AB      taught 0.9170 after 0.9522 agree 0.00
+  [686/1152] seed 19 bcast-keep    taught 0.9170 after 0.7682 agree 0.00
+  [687/1152] seed 19 oracle-AB     taught 1.0268 after 0.9992 agree 1.00
+  [688/1152] seed 19 oracle-keep   taught 1.0268 after 0.9332 agree 1.00
+  [699/1152] seed 19 pin0-AB       taught 0.9900 after 0.9909 agree 0.00
+  [696/1152] seed 19 bcast7-keep   taught 0.9615 after 0.9424 agree 0.00
+  [700/1152] seed 19 pin0-keep     taught 0.9900 after 0.8853 agree 0.00
+  [695/1152] seed 19 bcast7-AB     taught 0.9615 after 0.9702 agree 0.00
+  [723/1152] seed 20 oracle-AB     taught 1.0336 after 1.0914 agree 1.00
+  [721/1152] seed 20 bcast-AB      taught 0.9724 after 1.0700 agree 0.00
+  [724/1152] seed 20 oracle-keep   taught 1.0336 after 0.9899 agree 1.00
+  [722/1152] seed 20 bcast-keep    taught 0.9724 after 0.9431 agree 0.00
+  [731/1152] seed 20 bcast7-AB     taught 0.9577 after 0.9670 agree 0.00
+  [732/1152] seed 20 bcast7-keep   taught 0.9577 after 0.9377 agree 0.00
+  [736/1152] seed 20 pin0-keep     taught 0.9032 after 0.7435 agree 0.00
+  [735/1152] seed 20 pin0-AB       taught 0.9032 after 0.9428 agree 0.00
+  [757/1152] seed 21 bcast-AB      taught 1.2025 after 1.2770 agree 0.00
+  [759/1152] seed 21 oracle-AB     taught 1.0691 after 1.1195 agree 1.00
+  [758/1152] seed 21 bcast-keep    taught 1.2025 after 1.2837 agree 0.00
+  [760/1152] seed 21 oracle-keep   taught 1.0691 after 1.1465 agree 1.00
+  [767/1152] seed 21 bcast7-AB     taught 0.9423 after 0.9519 agree 0.00
+  [768/1152] seed 21 bcast7-keep   taught 0.9423 after 0.9390 agree 0.00
+  [771/1152] seed 21 pin0-AB       taught 0.9743 after 1.0172 agree 0.00
+  [795/1152] seed 22 oracle-AB     taught 1.0286 after 1.0066 agree 1.00
+  [793/1152] seed 22 bcast-AB      taught 0.9586 after 1.0024 agree 0.00
+  [796/1152] seed 22 oracle-keep   taught 1.0286 after 1.0099 agree 1.00
+  [772/1152] seed 21 pin0-keep     taught 0.9743 after 0.8950 agree 0.00
+  [794/1152] seed 22 bcast-keep    taught 0.9586 after 0.9717 agree 0.00
+  [803/1152] seed 22 bcast7-AB     taught 0.9933 after 0.9900 agree 0.00
+  [804/1152] seed 22 bcast7-keep   taught 0.9933 after 0.8897 agree 0.00
+  [831/1152] seed 23 oracle-AB     taught 1.0135 after 0.9909 agree 1.00
+  [808/1152] seed 22 pin0-keep     taught 0.9375 after 0.8790 agree 0.00
+  [807/1152] seed 22 pin0-AB       taught 0.9375 after 0.9701 agree 0.00
+  [829/1152] seed 23 bcast-AB      taught 1.2294 after 1.2943 agree 0.00
+  [832/1152] seed 23 oracle-keep   taught 1.0135 after 0.8974 agree 1.00
+  [830/1152] seed 23 bcast-keep    taught 1.2294 after 1.2907 agree 0.00
+  [843/1152] seed 23 pin0-AB       taught 0.9487 after 0.9434 agree 0.00
+  [840/1152] seed 23 bcast7-keep   taught 0.9350 after 0.9060 agree 0.00
+  [844/1152] seed 23 pin0-keep     taught 0.9487 after 0.9064 agree 0.00
+  [839/1152] seed 23 bcast7-AB     taught 0.9350 after 0.9987 agree 0.00
+  [866/1152] seed 24 bcast-keep    taught 0.9622 after 0.7788 agree 0.00
+  [867/1152] seed 24 oracle-AB     taught 1.0458 after 1.0080 agree 1.00
+  [865/1152] seed 24 bcast-AB      taught 0.9622 after 1.0403 agree 0.00
+  [868/1152] seed 24 oracle-keep   taught 1.0458 after 0.9771 agree 1.00
+  [876/1152] seed 24 bcast7-keep   taught 0.9819 after 0.9823 agree 0.00
+  [879/1152] seed 24 pin0-AB       taught 0.9664 after 0.9926 agree 0.00
+  [875/1152] seed 24 bcast7-AB     taught 0.9819 after 1.0331 agree 0.00
+  [902/1152] seed 25 bcast-keep    taught 0.9969 after 0.8287 agree 0.00
+  [880/1152] seed 24 pin0-keep     taught 0.9664 after 0.9022 agree 0.00
+  [901/1152] seed 25 bcast-AB      taught 0.9969 after 1.0317 agree 0.00
+  [903/1152] seed 25 oracle-AB     taught 1.1149 after 1.0957 agree 1.00
+  [904/1152] seed 25 oracle-keep   taught 1.1149 after 1.1173 agree 1.00
+  [912/1152] seed 25 bcast7-keep   taught 0.9948 after 0.9289 agree 0.00
+  [937/1152] seed 26 bcast-AB      taught 1.2095 after 1.2897 agree 0.00
+  [916/1152] seed 25 pin0-keep     taught 0.9638 after 0.8100 agree 0.00
+  [915/1152] seed 25 pin0-AB       taught 0.9638 after 0.9869 agree 0.00
+  [911/1152] seed 25 bcast7-AB     taught 0.9948 after 1.0005 agree 0.00
+  [938/1152] seed 26 bcast-keep    taught 1.2095 after 1.3054 agree 0.00
+  [939/1152] seed 26 oracle-AB     taught 1.0319 after 1.1077 agree 1.00
+  [940/1152] seed 26 oracle-keep   taught 1.0319 after 1.1321 agree 1.00
+  [952/1152] seed 26 pin0-keep     taught 0.9811 after 0.9466 agree 0.00
+  [948/1152] seed 26 bcast7-keep   taught 1.0211 after 0.9549 agree 0.00
+  [947/1152] seed 26 bcast7-AB     taught 1.0211 after 1.0433 agree 0.00
+  [973/1152] seed 27 bcast-AB      taught 1.1650 after 1.2671 agree 0.00
+  [951/1152] seed 26 pin0-AB       taught 0.9811 after 1.0331 agree 0.00
+  [974/1152] seed 27 bcast-keep    taught 1.1650 after 1.1846 agree 0.00
+  [975/1152] seed 27 oracle-AB     taught 1.1146 after 1.1049 agree 1.00
+  [976/1152] seed 27 oracle-keep   taught 1.1146 after 1.1260 agree 1.00
+  [983/1152] seed 27 bcast7-AB     taught 0.9000 after 0.9171 agree 0.00
+  [987/1152] seed 27 pin0-AB       taught 0.9996 after 1.0316 agree 0.00
+  [984/1152] seed 27 bcast7-keep   taught 0.9000 after 0.9235 agree 0.00
+  [988/1152] seed 27 pin0-keep     taught 0.9996 after 0.8778 agree 0.00
+  [1009/1152] seed 28 bcast-AB      taught 1.0710 after 1.0900 agree 0.00
+  [1010/1152] seed 28 bcast-keep    taught 1.0710 after 1.1438 agree 0.00
+  [1011/1152] seed 28 oracle-AB     taught 1.0382 after 1.0783 agree 1.00
+  [1012/1152] seed 28 oracle-keep   taught 1.0382 after 1.1111 agree 1.00
+  [1019/1152] seed 28 bcast7-AB     taught 0.9772 after 0.9040 agree 0.00
+  [1020/1152] seed 28 bcast7-keep   taught 0.9772 after 0.9098 agree 0.00
+  [1023/1152] seed 28 pin0-AB       taught 0.9548 after 1.0060 agree 0.00
+  [1046/1152] seed 29 bcast-keep    taught 0.8859 after 0.7344 agree 0.00
+  [1047/1152] seed 29 oracle-AB     taught 1.0703 after 1.0853 agree 1.00
+  [1024/1152] seed 28 pin0-keep     taught 0.9548 after 0.8847 agree 0.00
+  [1045/1152] seed 29 bcast-AB      taught 0.8859 after 0.9586 agree 0.00
+  [1048/1152] seed 29 oracle-keep   taught 1.0703 after 1.0634 agree 1.00
+  [1056/1152] seed 29 bcast7-keep   taught 0.8805 after 0.8645 agree 0.00
+  [1055/1152] seed 29 bcast7-AB     taught 0.8805 after 0.8762 agree 0.00
+  [1059/1152] seed 29 pin0-AB       taught 0.9342 after 0.9946 agree 0.00
+  [1060/1152] seed 29 pin0-keep     taught 0.9342 after 0.7847 agree 0.00
+  [1081/1152] seed 30 bcast-AB      taught 0.9820 after 1.1471 agree 0.00
+  [1084/1152] seed 30 oracle-keep   taught 1.0531 after 1.1409 agree 1.00
+  [1083/1152] seed 30 oracle-AB     taught 1.0531 after 1.1273 agree 1.00
+  [1082/1152] seed 30 bcast-keep    taught 0.9820 after 1.1829 agree 0.00
+  [1095/1152] seed 30 pin0-AB       taught 0.9466 after 1.0276 agree 0.00
+  [1092/1152] seed 30 bcast7-keep   taught 0.9399 after 0.9444 agree 0.00
+  [1091/1152] seed 30 bcast7-AB     taught 0.9399 after 1.0015 agree 0.00
+  [1119/1152] seed 31 oracle-AB     taught 1.0493 after 1.0244 agree 1.00
+  [1096/1152] seed 30 pin0-keep     taught 0.9466 after 0.8559 agree 0.00
+  [1117/1152] seed 31 bcast-AB      taught 0.9254 after 0.9994 agree 0.00
+  [1118/1152] seed 31 bcast-keep    taught 0.9254 after 0.8352 agree 0.00
+  [1120/1152] seed 31 oracle-keep   taught 1.0493 after 1.0152 agree 1.00
+  [1128/1152] seed 31 bcast7-keep   taught 0.9762 after 0.9163 agree 0.00
+  [1127/1152] seed 31 bcast7-AB     taught 0.9762 after 0.9679 agree 0.00
+  [1131/1152] seed 31 pin0-AB       taught 0.9491 after 0.9536 agree 0.00
+  [1132/1152] seed 31 pin0-keep     taught 0.9491 after 0.9290 agree 0.00
+experiment: credgate
+  instrument        credgate   trial seed 000000000135e16e   1214 trials
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  seed family       offset 904837 -> first creature 000000000142f64e (FRESH)
+  what the wipe IS  not a representational collision. `capacity` found two
+                    lessons interfering while driving DISJOINT groups, and
+                    `credit-oracle` gave the reason: the groups are disjoint,
+                    the REWARD is what they share. Node perturbation nudges
+                    bias_[i] for EVERY neuron in the module on one broadcast
+                    scalar, so teaching B random-walks A's setting.
+  the ceiling       a per-neuron reward mask gives retention 1.03 vs 0.84
+                    broadcast, at ~30% of the learning rate. But it is an
+                    ORACLE: the host knows which lesson is live.
+  the question      can the creature's OWN derived context drive that mask?
+                    `ema-index` derives a usable context off the ear rate EMA
+                    at 16/18; `ctxretain` gated on it and the index never
+                    separated (0.23/0.23). The halves have never been joined.
+  halves MEASURED   `silences-the-wrong-side`: a LOW target works by
+                    suppressing the UPPER half, a HIGH one the LOWER. A is
+                    f1 320 and B is 850, so A takes the UPPER and B the LOWER.
+
+  PRE-REGISTERED
+    AGREEMENT FIRST, before any retention number is read. `credit_agree` is
+      the fraction of trials where the mask landed on the half the LIVE lesson
+      wants. oracle must read 100% by construction -- if it does not, the
+      mechanism is miswired and nothing else is readable. shuf must sit at
+      ~50%. DERIVED IS THE WHOLE QUESTION: at ~50% the index carries nothing
+      about which lesson is live and a null retention result says nothing
+      about gating, only about this index.
+    PRIMARY         the AB-minus-keep gap per mode. oracle should shrink it
+                    (that is credit-oracle replicating); derived shrinking it
+                    too is the finding.
+    SPECIFICITY     `shuf` must NOT shrink it. If a coin flip works as well as
+                    the index, what helps is the masking itself -- halving the
+                    write -- and not credit assignment at all.
+    THE COST        the oracle bought 1.03 at ~30% of the learning rate, so
+                    err_taught is expected to DEGRADE under every mask. A gap
+                    that closes while err_taught collapses is the `regionband`
+                    failure again, and it is refused the same way.
+
+
+  arm           mode  gate  err TAUGHT (A)     err AFTER (A kept?) GAINED           EROSION          agree  slot0 t/g   SWITCHES teach/gap @first
+  bcast-AB      0     0     1.0050 +/- 0.0158     1.0812 +/- 0.0179     +0.0260 +/- 0.0127   +0.0761 +/- 0.0116   0.000  0.200/0.182      959/    320 @5
+  bcast-keep    0     0     1.0050 +/- 0.0158     0.9538 +/- 0.0295     +0.0260 +/- 0.0127   -0.0513 +/- 0.0189   0.000  0.200/0.188      959/    338 @5
+  oracle-AB     1     0     1.0442 +/- 0.0055     1.0564 +/- 0.0093     +0.0190 +/- 0.0050   +0.0121 +/- 0.0075   1.000  0.182/0.184      930/    386 @6
+  oracle-keep   1     0     1.0442 +/- 0.0055     1.0284 +/- 0.0154     +0.0190 +/- 0.0050   -0.0158 +/- 0.0127   1.000  0.182/0.183      930/    373 @6
+  bcast7-AB     0     7     0.9636 +/- 0.0056     0.9760 +/- 0.0094     +0.0528 +/- 0.0059   +0.0124 +/- 0.0067   0.000  0.998/0.992     7923/    954 @10
+  bcast7-keep   0     7     0.9636 +/- 0.0056     0.9286 +/- 0.0081     +0.0528 +/- 0.0059   -0.0350 +/- 0.0076   0.000  0.998/0.989     7923/    968 @10
+  pin0-AB       0     0     0.9517 +/- 0.0056     1.0027 +/- 0.0095     +0.0677 +/- 0.0055   +0.0511 +/- 0.0073   0.000  1.000/1.000        0/      0 @-1
+  pin0-keep     0     0     0.9517 +/- 0.0056     0.8566 +/- 0.0107     +0.0677 +/- 0.0055   -0.0950 +/- 0.0092   0.000  1.000/1.000        0/      0 @-1
+
+  RETENTION -- the fraction of the GAIN that survived, which is what
+  credit-oracle scored (0.84 broadcast -> 1.03 targeted). Unlike the raw
+  gap this is not confounded by the mask's learning-rate cost.
+    broadcast  AB -0.593 +/- 0.270    keep 2.789 +/- 0.419
+    oracle     AB 0.332 +/- 0.483    keep 1.919 +/- 0.656
+    derived    not in this focus set
+    latch      not in this focus set
+    oracle     AB retention vs broadcast: +0.925 +/- 0.553  (+1.7 SE)
+
+  SEPARATION -- does the index DISTINGUISH the two lessons, regardless of
+  which slot got which name? Raw agreement cannot answer this: the slots are
+  UNLABELLED, so a fixed slot->half mapping is a coin flip per seed and
+  averages to chance however well the index separates. Scored as
+  |p(slot0 | lesson A) - p(slot0 | lesson B)|: 0 is no information, 1 is
+  perfect separation. `ctxfour` drew the same line -- a perfect index holds
+  four DISTINCTIONS, not four MAPPINGS.
+    derived-AB    too few creatures
+    derived-keep  too few creatures
+    derived2-AB   too few creatures
+    derived2-keep too few creatures
+    derived3-AB   too few creatures
+    derived3-keep too few creatures
+    A separation near 0 refutes THIS INDEX as a carrier. A separation well
+    above 0 with chance AGREEMENT means the index works and only the
+    slot->half assignment is arbitrary -- which is a fixable wiring problem,
+    not a refutation.
+
+  AGREEMENT GUARD -- did the mask land where the live lesson wanted?
+    oracle  1.000   (must be 1.000 by construction)
+    derived 0.000   <- THE WHOLE QUESTION
+    latched 0.000   <- THE PREDICTION: reading the index while the
+                     creature HEARS should raise this well above 0.720
+
+  PRIMARY -- the AB-minus-keep gap, per mode
+    broadcast  AB 1.0812   keep 0.9538   gap +0.1274 +/- 0.0345  (+3.7 SE)
+    oracle     AB 1.0564   keep 1.0284   gap +0.0279 +/- 0.0180  (+1.6 SE)
+    derived    not in this focus set
+    latch      not in this focus set
+
+    oracle   shrinks the gap by +0.0994 +/- 0.0389  (+2.6 SE)
+
+  THE COST -- err_taught, which the oracle bought its 1.03 with
+    broadcast  AB 1.0050   keep 1.0050
+    oracle     AB 1.0442   keep 1.0442
+    derived    not in this focus set
+    latch      not in this focus set
+
+  DOES THE INDEX BUY WHAT ITS ACCURACY PREDICTS?
+    agreement 0.000  ->  predicted -1.000 of the oracle's benefit
+    delivered 0.641
+    A shortfall here would mean the mechanism fails; a match means the
+    mechanism works and the CARRIER is simply not accurate enough.
+
+  VACUITY -- not applicable: the uniform-flip arms are not in this
+  focus set, so there is no coin flip that ran and could be inert.
+  Their contrast against pin0 was settled at 12 creatures (commit
+  27944a3) and is not re-measured here.
+
+  WHERE EACH LESSON WROTE -- net rate change per half, Hz.
+  A is the teach phase (target 320, LOW); B is the gap (850, HIGH).
+  A LOW target is learned by suppressing the UPPER half, so the oracle
+  gives A the upper half and B the lower one.
+  arm          A lower   A upper     B lower   B upper  
+    bcast-AB        +0.697    -0.610      -4.552    +1.997  (32)
+    oracle-AB       +0.750    -1.708      -2.531    -1.523  (32)
+    (A upper-lower) - (B upper-lower):  bcast -7.857, oracle -3.466
+    the mask moves where the lessons write -- it is not inert
+
+  THE DROPOUT CONTRAST -- does a matched coin flip buy the gap?
+    context OFF (pin0)         gap +0.1461 +/- 0.0144  (+10.2 SE)   gained +0.0677
+    broadcast                  gap +0.1274 +/- 0.0345  (+3.7 SE)   gained +0.0260
+    VIGILANCE (bcast7)         gap +0.0474 +/- 0.0124  (+3.8 SE)   gained +0.0528
+    REFUSES INDEXING: a pinned-noise gap AT vigilance and away from
+    context-off. SUPPORTS INDEXING: a pinned-noise gap at context-off.
+    NEITHER: both differences under ~2 SE, which is this test failing
+    to resolve and NOT evidence for either side.
+
+  DOES IT REACH A MILESTONE? -- retention, the fraction of the taught
+  gain still gone after the conflicting lesson. This is `retain`'s own
+  statistic, whose conflicting-lesson value is 0.22. Ratio of MEANS with
+  a paired bootstrap (2000 resamples, 95% interval); a mean of per-
+  creature ratios is unusable here and reported -5.166 +/- 5.263.
+    context OFF (pin0)     retention +0.245   95% [+0.035, +0.444]
+    broadcast              retention -1.932   95% [-16.628, +4.816]
+    VIGILANCE (bcast7)     retention +0.765   95% [+0.508, +1.012]
+    oracle (masked)        UNDERPOWERED -- gained +0.0190, under retain's 0.02 bar,
+                           so its retention is NOT a measurement
+    1.0 keeps the whole lesson, 0.0 loses it entirely, and `retain`
+    measured 0.22 for a conflicting lesson on the shipped genome.
+
+    PRE-REGISTERED. MILESTONE MET only if VIGILANCE's interval lies
+    ENTIRELY ABOVE 0.5 -- more than half the taught lesson survives a
+    conflicting one -- AND its paired difference against context-off
+    excludes zero. Either one alone is NOT the milestone.
+    vigilance - context-off: +0.519   95% [+0.213, +0.833]
+    interval above 0.5: YES;  difference excludes zero: YES
+    --> MILESTONE MET
+
+  WHERE IN THE TRIAL THE SWITCHES FALL -- teach phase, 14 bins of
+  200 ticks. The caregiver sounds for t < 900, so bins 0-3 are the
+  word and 5-13 are silence; a FLAT profile puts 32.1% in the word
+  and the pinned-noise arms measure that null on this protocol.
+  arm          sound%     onset%    offs%     profile, per-bin share of switches
+  bcast-AB      46.8+/-2.0   3.2+/-1.0   8.4+/-1.3   4.8 4.5 8.917.919.012.011.5 7.1 4.0 2.2 1.3 1.1 3.2 2.4
+  bcast7-AB     17.2+/-0.3   3.4+/-0.1   1.4+/-0.1   6.1 5.2 3.1 2.1 2.2 8.110.310.810.4 9.3 8.4 8.2 7.8 8.0
+  A vigilance profile matching the pinned-noise profile means the
+  excursions are keyed to nothing in the trial and the account moves
+  elsewhere. A profile concentrated in the word, or at either
+  transition, names what the novelty test is actually firing on.
+
+  --- the reading ---
+  NO VALIDATED CEILING FOR THIS REGIME -- the oracle arm reads +0.925
+  +/- 0.553 (+1.7 SE). This is NOT a reproduction failure: credit-oracle's
+  0.84 -> 1.03 is for ORTHOGONAL lessons on DISJOINT groups, and `credit`
+  still reproduces it (targeted 1.06 at 5.6M). THIS experiment teaches a
+  CONFLICTING pair on the SAME F1 group (320 against 850) and masks by
+  splitting that one group in half, which credit-oracle never tested --
+  capacity's own split is 0.84 orthogonal against the 0.22 wipe. So the
+  oracle here is a within-experiment REFERENCE, not a bound, and the
+  derived arms cannot be priced against a ceiling that does not exist.

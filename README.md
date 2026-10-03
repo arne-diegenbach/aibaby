@@ -14013,6 +14013,61 @@ Mido Assran and colleagues, whose uniform-cluster-prior result supplies the one
 candidate that survived this round.
 
 
+## Porting credgate to a context genome: refused by its own guard (2026-10-03)
+
+`credgate` showed a perfect index removes the 0.22 wipe (retention −0.041 → 1.254, +4.8
+SE) but retracted its `derived` arm, because `default.toml` has `context_slots = 0` and
+the arm never consulted the creature's index at all. The note said it was "untestable
+until the context genome passes calibrate" — and a genome that passes calibrate has been
+gating every run this week. So I ran it on that genome.
+
+**The experiment refused itself.** Gate passed, hash unmoved, and then:
+
+```
+NO VALIDATED CEILING FOR THIS REGIME -- the oracle arm reads
++0.925 +/- 0.553 (+1.7 SE)
+```
+
+against the record's +1.295 ± 0.173 (+4.8 SE) — the reference arm does not reproduce
+here and the SE is three times larger, so no derived number could have been priced
+against it. The guard did its job.
+
+**And the `derived` arms never ran.** They carry `skip = true` in the arm table — *"FOCUS.
+true = do not run this arm at all"* — so the log reads `derived  not in this focus set`.
+They were disabled deliberately, with the reason stated in the table: the index as
+shipped separates a-vs-i at 0.035, so those arms "price a mask over noise".
+
+**I had the blocker wrong.** Supplying the genome was necessary and not sufficient. The
+arm is also switched off, for a reason that still holds: `retain` introduces lesson B
+late, so blocked teaching leaves an ear-derived index nothing to separate. The protocol
+is the blocker, not the genome — and the same index reaches 0.999 separation when words
+*alternate*.
+
+### The control this experiment has never had, and the code says so
+
+From the arm table's own comment:
+
+> Context slots. **Every arm here has always set 2**, so what this experiment calls the
+> "broadcast" baseline is a creature whose learned bias is split across two tables by an
+> index that flickers on nothing. 0 turns the machinery off, **and that comparison has
+> never been run.**
+
+On `default.toml` that was harmless — with no context module the kernel forces
+`ctx_slots_ = 0`, so the machinery was inert in every arm. **On a context genome it is
+live for the first time**, which is what this run did, and the oracle degraded.
+
+**That comparison is confounded and must not be read as a cost of the index.** An
+appended-module genome is a *different creature*, so the drop from +1.295 to +0.925
+mixes "live index" with "different wiring family". The two separate only with a
+`slots = 0` arm on the *same* genome — precisely the unrun comparison the comment names,
+and one arm to settle. Worth remembering that `context-teaching-tax` was retracted as
+one wiring family: the same trap, in the same place.
+
+Credit: Michale Fee and Adam Goldberg for the bias-from-outside architecture; Stefano
+Fusi and colleagues on consolidation, whose protected-pathway framing is what
+`eta_floor_frac` implements and what the wipe still needs.
+
+
 ## Layout
 
 ```
