@@ -18014,8 +18014,8 @@ const CGArm kCGArms[] = {
     // If neither moves, §3.5's forgetting defence is refused on its own purpose.
     // vacuity pre-flight: tools/vacuity.sh says LIVE on vocallearn, 46 lines differ.
     {"bcast-keep", 0u, true,  0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, false, 0.0, 0.0f},
-    {"oracle-AB",  1u, false, 0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, false, 0.0, 0.0f},   // the host masks by which lesson is live
-    {"oracle-keep", 1u, true, 0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, false, 0.0, 0.0f},
+    {"oracle-AB",  1u, false, 0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, true, 0.0, 0.0f},   // the host masks by which lesson is live
+    {"oracle-keep", 1u, true, 0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, true, 0.0, 0.0f},
     // THE DERIVED ARMS ON THE INDEX AS SHIPPED, which `ctxpc` measured separating
     // a-vs-i at 0.035. They price a mask over NOISE and are the control here.
     {"derived-AB", 2u, false, 0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, true, 0.0, 0.0f},
@@ -19445,6 +19445,15 @@ bool run_credgate_impl(const std::vector<uint8_t>& blob, uint64_t ticks, bool ve
     // reproduction failure; what remains true is that this regime has NO VALIDATED
     // CEILING, so the oracle arm is a within-experiment reference and not a bound.
     // Softening it to a pass would hide exactly that.
+    // ABSENT IS NOT ZERO. With the oracle pair out of the focus set this branch
+    // printed "the oracle arm reads +0.000 +/- 0.000 (+0.0 SE)" -- a number standing
+    // in for data that does not exist, which is the same defect as a label pointing
+    // at the wrong arm. Say so instead.
+    if (or_ab < 0) {
+      std::printf("  THE ORACLE ARM IS %s, so this run carries no\n"
+                  "  within-experiment reference at all. Nothing below prices anything.\n",
+                  or_ab == -1 ? "ABSENT FROM THE ARM TABLE" : "NOT IN THIS FOCUS SET");
+    } else
     std::printf("  NO VALIDATED CEILING FOR THIS REGIME -- the oracle arm reads %+.3f\n"
                 "  +/- %.3f (%+.1f SE). This is NOT a reproduction failure: credit-oracle's\n"
                 "  0.84 -> 1.03 is for ORTHOGONAL lessons on DISJOINT groups, and `credit`\n"

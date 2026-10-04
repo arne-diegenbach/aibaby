@@ -14456,6 +14456,94 @@ Cochran for the ratio estimator; Quenouille for the jackknife, named and extende
 variance estimation by Tukey. The wipe's framing remains Heald, Lengyel and Wolpert's
 COIN; the gating-plus-stabilisation comparison remains Masse's.
 
+### The coin flip separates the cost of masking from the benefit of credit assignment
+
+The specificity control ran for the first time. It was pre-registered to test whether
+the oracle's *benefit* came from the mask's content or from merely halving the write —
+and since the benefit turned out not to exist, it answers the inverted question
+instead: the oracle *hurts*, so does the harm come from halving the write, or from
+what the mask selects?
+
+Family 318211, 12M, four arms — `bcast-AB/keep` against `shuf-AB/keep`
+(`credit_mode == 3`, a random half each trial). The oracle pair was skipped because it
+had just been measured on this exact family, budget and genome.
+
+**That skip is safe, and it was verified rather than assumed.** The per-job seed is
+`base + offset + r * 7919`, independent of the arm, so creature *r* is the same
+creature in both runs. The broadcast arms came back **bit-identical** across the two
+runs — every mean, every SE, and all four floors of the retention sweep:
+
+```
+  bcast-AB    0  0  0.6533 +/- 0.0440  0.9047 +/- 0.0303  +0.3618 +/- 0.0334  +0.2514 +/- 0.0278
+  bcast-keep  0  0  0.6533 +/- 0.0440  0.4579 +/- 0.0664  +0.3618 +/- 0.0334  -0.1954 +/- 0.0413
+      broadcast  AB +0.320 +/- 0.052   n 29     (floor 0.00, identical in both logs)
+```
+
+So the cross-run contrast between the oracle and the coin flip is paired, not
+stitched. `shuf` agreement reads **0.501 / 0.495**, exactly the chance value its
+construction requires, which anchors the arm in the oracle's absence.
+
+#### The decomposition
+
+| arm | mask | gain | retention (ratio of sums, floor 0.00) |
+|---|---|---|---|
+| `bcast` | none | +0.3618 ± 0.0334 | **+0.320 ± 0.052** |
+| `oracle` | perfect content | +0.1964 ± 0.0149 | **+0.109 ± 0.057** |
+| `shuf` | random content | +0.1022 ± 0.0076 | **−0.366 ± 0.081** |
+
+- **Masking costs**: `shuf` − `bcast` = **−0.685 ± 0.090 (−7.6 SE)**, negative at every
+  evaluable floor (−7.6, −7.4, −6.3 SE; 3 floors evaluated, so decidable and failed).
+- **Content pays**: `oracle` − `shuf` = **+0.474**, and since both are paired against
+  the same bit-identical broadcast arm, quadrature (≤0.117) *over*-counts the shared
+  variance — so **≥ +4.1 SE** is a conservative floor, not an estimate.
+- **Net for the oracle**: −0.211 ± 0.074 (−2.8 SE), the retraction.
+
+So credit assignment is doing something real and measurable — a perfect mask beats a
+coin flip by roughly half a retention unit — but on this protocol the cost of
+confining the write to seven neurons of 126 is larger than the benefit of confining it
+to the *right* seven. **The two effects are separable and now priced separately.**
+That is a stronger statement than the retraction alone: the mechanism is not dead, it
+is outbid.
+
+`shuf`'s retention is *negative*, which means `err_after` exceeds `err_before`: a
+randomly masked creature ends up worse than it started. Its gain of +0.1022 is also
+the smallest of the three, and at gain floor 0.20 **no** `shuf` creature qualifies —
+it never improves that much. Both follow from the same mechanism: half its writes go
+to the half the lesson does not use.
+
+#### The control fires exactly where the project said it would
+
+The pre-registration reads: *"`shuf` must NOT shrink it. If a coin flip works as well
+as the index, what helps is the masking itself — halving the write — and not credit
+assignment at all."* On the **gap** statistic, the coin flip does exactly that:
+
+```
+    broadcast  AB 0.9047   keep 0.4579   gap +0.4468 +/- 0.0730  (+6.1 SE)
+    shuffled   AB 1.1075   keep 1.0108   gap +0.0967 +/- 0.0232  (+4.2 SE)
+    shuffled shrinks the gap by +0.3500 +/- 0.0766  (+4.6 SE)   <- must NOT
+```
+
+**A coin flip shrinks the interference gap at +4.6 SE.** By the pre-registration's own
+logic that refuses any gap-based reading of this experiment — and it is the
+`regionband` failure in its textbook form, a gap closing because `err_taught`
+collapsed (0.6533 → 0.9679), not because interference fell.
+
+The same control, read on retention, is not fooled: `shuf` comes in 7.6 SE *worse*. So
+the specificity test does not merely pass or fail — **it discriminates between the two
+statistics**, refusing the gap and validating retention. Until now that was an
+assertion in a code comment; it is now measured.
+
+#### A reporting fix of the same family
+
+With the oracle pair out of the focus set, the verdict branch printed *"the oracle arm
+reads +0.000 +/- 0.000 (+0.0 SE)"* — a number standing in for data that does not
+exist, which is the same defect as a label pointing at the wrong arm. It now says the
+arm is absent or out of focus and that the run carries no within-experiment reference
+at all.
+
+Cochran for the ratio estimator; Quenouille for the jackknife, named and extended to
+variance estimation by Tukey.
+
 ## Layout
 
 ```
