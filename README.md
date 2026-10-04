@@ -14361,6 +14361,101 @@ because a mislabelled number still prints with an SE and still reads as a result
 check that finds them is not a test — it is reading the table and the thing that
 claims to describe it, side by side, and asking which one the data actually came from.
 
+### RETRACTED: the oracle does not remove the wipe. It is worse on both axes
+
+The 12M reproduction on family 318211 finished — the record's **own** family at the
+record's **own** budget, `context_slots = 0` in both, hash `ad96f882becbee92`
+unmoved. With the arms resolved by name and retention computed as a paired,
+jackknifed ratio of sums, the headline reverses.
+
+```
+  RETENTION AS A RATIO OF SUMS -- one denominator per arm, jackknife SE
+    gain floor 0.00   broadcast +0.320 +/- 0.052   oracle +0.109 +/- 0.057   -0.211 +/- 0.074  (-2.8 SE)
+    gain floor 0.05   broadcast +0.324 +/- 0.052   oracle +0.129 +/- 0.057   -0.195 +/- 0.073  (-2.7 SE)
+    gain floor 0.10   broadcast +0.324 +/- 0.052   oracle +0.133 +/- 0.058   -0.191 +/- 0.074  (-2.6 SE)
+    gain floor 0.20   broadcast +0.321 +/- 0.053   oracle +0.060 +/- 0.048   -0.261 +/- 0.067  (-3.9 SE)
+
+    VERDICT GATES (paired ratio-of-sums, must hold at EVERY floor that
+    retains >=3 creatures in both arms; >=2 such floors needed to decide):
+      oracle     does NOT hold across the sweep    4 floor(s) evaluated
+```
+
+Four floors evaluated, so the gate was **decidable and failed** — not a test nothing
+could pass. The sign is negative at every floor: the per-neuron reward mask retains a
+*smaller* fraction of what it learns than the broadcast rule does. And it learns less
+to begin with — gain `+0.1964 ± 0.0149` against broadcast's `+0.3618 ± 0.0334`. **It
+is worse on both axes.**
+
+The record claims the opposite: `broadcast -0.041 ± 0.211, oracle +1.254 ± 0.173,
++1.295 (+4.8 SE), THE WIPE IS GONE`.
+
+#### The two estimators disagree in sign on the same creatures
+
+This is the part that settles it. Both numbers below come from the *same 128
+sessions*:
+
+| estimator | broadcast | oracle | oracle − broadcast |
+|---|---|---|---|
+| mean of per-creature ratios | −0.300 ± 0.632 | −0.118 ± 0.199 | **+0.182 ± 0.663 (+0.3 SE)** |
+| paired jackknifed ratio of sums | +0.320 ± 0.052 | +0.109 ± 0.057 | **−0.211 ± 0.074 (−2.8 SE)** |
+
+The record's statistic gives a null with a *positive* sign; the robust one gives a
+negative effect at 2.8 SE. Same creatures, opposite conclusions, and the SEs differ
+ninefold. A statistic that can do that is not measuring the quantity its name
+claims — which is what the code comment beside it already said, in those words, and
+what the headline went on being quoted from anyway.
+
+The ratio of sums checks out against the arm table by hand:
+`(1.0610 − 1.0395)/(1.0610 − 0.8646) = 0.109` for the oracle and
+`(1.0151 − 0.9047)/(1.0151 − 0.6533) = 0.305` for broadcast, against the printed
+`+0.109` and `+0.320`.
+
+#### Three attacks, and the result survives all three
+
+**Is it the mask's learning-rate cost?** This is the confound retention exists to
+divide out, and the pre-registration warns about it explicitly. It cannot explain the
+sign: the mask's cost would make the oracle's *gain* small, and the oracle's gain is
+the denominator. At gain floor 0.20 only creatures that moved their error by more
+than 0.20 are counted — 18 of 32 under the oracle — and those real learners still
+retain 6% against broadcast's 32%.
+
+**Is the baseline matched?** No, and this is worth recording because it applies to
+the record equally. `err_before` is not a pre-teaching baseline: it is the mean error
+over the **first third of trials**, measured with the mask already active
+(`if (trial < third) { sum_before += err; ++n_before; }`). So the denominator is
+mask-dependent by construction, which is why the arms differ at "baseline" (1.0610
+against 1.0151) when they should not. Reconstructing both arms against a common naive
+baseline `B ≈ 1.08` gives broadcast 0.411 and oracle 0.188 — **the ordering is
+unchanged**, and the bias in the as-measured numbers runs *against* broadcast, which
+still wins.
+
+**Is it the creature?** `dna/default.toml` grew from 2771 to 2954 lines between
+2026-09-18 and now, through what the commit messages call DNA v62 → v69. But the
+pinned hash is `ad96f882becbee92` in both runs: every mechanism added in that window
+ships OFF and bit-identical. That is evidence against drift explaining a sign
+reversal, though not proof — the hash is pinned on the shipped seed, not on 318211.
+
+#### What stands, and what this costs
+
+The wipe itself is untouched and large: `broadcast AB 0.9047 keep 0.4579, gap
++0.4468 ± 0.0730 (+6.1 SE)`. Teaching B does destroy lesson A. What is withdrawn is
+the *remedy* — that a perfect per-neuron credit mask removes it.
+
+That matters more than one row in a table, because the oracle was being used as a
+**ceiling**: `aibaby-open-leads` carried "THE ORACLE HALF IS ALREADY ANSWERED, do not
+re-run it", and the derived-index work was priced against it. There is no measured
+ceiling there now. The honest position is that gating has not been shown to help on
+this protocol, and the creature's own index was never the only thing in question.
+
+Two further holes in the record, both already noted above: its coin-flip specificity
+control was reading the `derived2` arms, and this run prints `SPECIFICITY UNTESTED`
+because the restored `shuf-*` arms were not in it. So neither run has executed the
+control that separates credit assignment from merely halving the write.
+
+Cochran for the ratio estimator; Quenouille for the jackknife, named and extended to
+variance estimation by Tukey. The wipe's framing remains Heald, Lengyel and Wolpert's
+COIN; the gating-plus-stabilisation comparison remains Masse's.
+
 ## Layout
 
 ```
