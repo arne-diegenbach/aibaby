@@ -14544,6 +14544,40 @@ at all.
 Cochran for the ratio estimator; Quenouille for the jackknife, named and extended to
 variance estimation by Tukey.
 
+### The mask axis is which end, not how much — and credgate already blocks both
+
+Analytic, no run. The decomposition above left masking's cost at −0.685 ± 0.090 and
+the obvious next question as "is there a mask size that wins?". Reading the two
+memories that measure the cost axis says no, and points somewhere better.
+
+**My first version of this lead was wrong.** I wrote that a flat cost puts the optimum
+at the smallest mask that still separates the lessons. That does not follow:
+`mask-cost-is-flat` measures the cost as flat **in the fraction blocked** — a quarter
+costs 57% of the lesson, a half 53% — so shrinking the mask buys nothing. There is no
+fraction knob to sweep in any case; the split is hardcoded to the midpoint,
+`cmid = cg_lo + (cg_hi - cg_lo) / 2`.
+
+**What costs is which end.** `leverage-at-one-end` measures freezing the lower half of
+F1 at 9% of the lesson and the upper half at 53%. (Its fitted leverage *law* is refuted
+out of sample; the two half-block measurements are the data that refuted it, and they
+stand.) Flat in fraction plus asymmetric in position means the cost is set by whether
+the blocked region contains the leverage, not by its size.
+
+**And credgate already blocks both ends, one per lesson.** The mask keeps the half the
+live lesson wants — `want = lesson.f1 < f1mid`, commented "low target -> UPPER half".
+Lesson A is f1 320, so A keeps the upper half and **blocks the lower (~9%)**. Lesson B
+is 850, so B keeps the lower and **blocks the upper (~53%)**. The two lessons pay very
+different masking costs, and the −0.685 aggregate may be dominated by whichever phase
+pays the expensive block.
+
+So the experiment worth running is not a fraction sweep but a which-end manipulation,
+and the prediction is testable: per-phase erosion should be asymmetric under the mask.
+What would refuse it: A and B eroding equally.
+
+**Caveat, stated because it limits the inference:** 9% and 53% come from `blockanchor`
+at 5.6M on `dna/default.toml`, a different protocol from credgate's conflicting pair on
+one group. They are indicative, not transferable.
+
 ## Layout
 
 ```

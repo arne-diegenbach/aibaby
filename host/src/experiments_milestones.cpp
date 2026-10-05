@@ -6043,6 +6043,10 @@ struct RTConfig {
   // protected from being overwritten" -- never yet put in the same experiment as the
   // wipe it is supposed to prevent.
   float eta_floor = -1.0f;
+  // -1 leaves the credit mask's own choice of half; 0/1 force LOWER/UPPER. At the
+  // end of the struct because this one is positionally initialised at call sites.
+  int credit_keep_half = -1;
+  bool credit_invert_half = false;
 };
 
 // One arm, one creature, one life: teach, intervene, re-measure.
@@ -6293,6 +6297,21 @@ RTRow run_retain_arm(const std::vector<uint8_t>& blob, uint64_t ticks,
         }
         upper = latched_ctx == 0u;
       }
+      // FORCED END, applied after every mode has chosen but BEFORE the mask is set.
+      // With the end forced, agreement reads ~0.500 by construction (right for one
+      // lesson of the two), which is the point: it matches content-correctness across
+      // the two settings and leaves only the blocked end differing.
+      //
+      // THIS WAS SEVEN LINES LOWER AND THE VACUITY PRE-FLIGHT CAUGHT IT (2026-10-05).
+      // Sitting below `set_reward_mask` it changed nothing about the creature and only
+      // rewrote the agreement counter -- so `half-up` and `half-lo` came back with
+      // taught/after/gain/erosion BYTE-IDENTICAL to `oracle` while reporting agreement
+      // 0.71 and 0.28. That is worse than an inert field: an inert one reads as "no
+      // effect", this one FALSIFIED the telemetry that the construction check reads.
+      // `upper` must be final before it is used, not merely before it is counted.
+      if (cfg.credit_keep_half >= 0) upper = (cfg.credit_keep_half == 1);
+      if (cfg.credit_invert_half) upper = !upper;
+
       if (upper) cnet.set_reward_mask(cvm.begin + cmid, cvm.begin + cg_hi);
       else cnet.set_reward_mask(cvm.begin + cg_lo, cvm.begin + cmid);
       // AGREEMENT TELEMETRY, so a null can be told from an index that never moved.
@@ -17996,8 +18015,41 @@ struct CGArm {
   // row here is positional, so a field inserted anywhere else silently renumbers all
   // thirteen of them.
   float eta_floor = -1.0f;
+  // WHICH END THE MASK KEEPS, overriding the lesson's own preference. -1 leaves the
+  // mode's choice alone. 1 = always keep the UPPER half (so always block the LOWER),
+  // 0 = always keep the LOWER (always block the UPPER).
+  //
+  // WHY THIS EXISTS. `mask-cost-is-flat` measures the cost as flat in the FRACTION
+  // blocked (a quarter 57%, a half 53%), so there is no mask size that wins and
+  // nothing to gain from a fraction knob. `leverage-at-one-end` measures freezing the
+  // LOWER half of F1 at 9% of the lesson and the UPPER half at 53% -- so what costs is
+  // WHICH END is blocked, not how much. The shipped mask keeps the half the live lesson
+  // wants, and lesson A (f1 320, a low target) therefore blocks the cheap lower half
+  // while B (850) blocks the expensive upper one: the two lessons pay very different
+  // masking costs inside one arm. Forcing the end holds content-correctness MATCHED at
+  // one lesson of two for either setting, so the pair isolates position from content.
+  // Appended at the END with a default, for the field-shift reason above.
+  int keep_half = -1;
+  // INVERT the mode's choice of half, giving the anti-oracle: wrong end in BOTH
+  // phases. Completes the 2x2 described above. Appended at the END with a default.
+  bool invert_half = false;
 };
 const CGArm kCGArms[] = {
+    // THE DEFAULT LIVE SET IS THREE PAIRS, AND IT IS DELIBERATE (2026-10-04):
+    // `bcast-*` (the baseline), `oracle-*` (the within-experiment reference AND the
+    // construction check -- its agreement must read 1.000 or nothing else is
+    // readable) and `shuf-*` (the pre-registered SPECIFICITY control, without which
+    // the report prints SPECIFICITY UNTESTED and no verdict can clear its own bar).
+    // Those are exactly the three modes `kCGModes` resolves, so the default run is
+    // interpretable on its own.
+    //
+    // RESTORING THIS COST A TICK. The oracle pair was set `skip = true` by hand to
+    // afford a 12M focus run on bcast-vs-shuf, and left that way -- so every default
+    // credgate run would have come back with "Nothing below is anchored to a verified
+    // mask", honestly reported and quietly useless. Hand-editing `skip` for one run
+    // is the recurring hazard in this table; `--focused` exists for precisely this and
+    // does not mutate the source. Prefer it, and if you do edit `skip`, restore it in
+    // the same commit.
     {"bcast-AB",   0u, false, 0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, false, 0.0, 0.0f},   // the shipped broadcast rule: the 0.22 wipe
     // THE MYELIN BRAKE, TESTED ON THE THING IT WAS BUILT FOR (2026-10-03). §3.5's
     // `eta_floor_frac` is documented as "§3.5's defence against catastrophic
@@ -18014,8 +18066,8 @@ const CGArm kCGArms[] = {
     // If neither moves, §3.5's forgetting defence is refused on its own purpose.
     // vacuity pre-flight: tools/vacuity.sh says LIVE on vocallearn, 46 lines differ.
     {"bcast-keep", 0u, true,  0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, false, 0.0, 0.0f},
-    {"oracle-AB",  1u, false, 0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, true, 0.0, 0.0f},   // the host masks by which lesson is live
-    {"oracle-keep", 1u, true, 0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, true, 0.0, 0.0f},
+    {"oracle-AB",  1u, false, 0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, false, 0.0, 0.0f},   // the host masks by which lesson is live
+    {"oracle-keep", 1u, true, 0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, false, 0.0, 0.0f},
     // THE DERIVED ARMS ON THE INDEX AS SHIPPED, which `ctxpc` measured separating
     // a-vs-i at 0.035. They price a mask over NOISE and are the control here.
     {"derived-AB", 2u, false, 0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, true, 0.0, 0.0f},
@@ -18200,6 +18252,37 @@ const CGArm kCGArms[] = {
     // verdict can clear its own bar, so a credgate verdict needs them in the run.
     {"shuf-AB",    3u, false, 0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, false, 0.0, 0.0f},
     {"shuf-keep",  3u, true,  0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, false, 0.0, 0.0f},
+    // A 2x2 IN (TEACH END, GAP END), and the first version of this was NOT a clean
+    // contrast (2026-10-05). I wrote that forcing the end holds content-correctness
+    // matched at ~0.500 for both settings. The pre-flight says otherwise: agreement
+    // came back 0.71 for `half-up` and 0.28 for `half-lo`, and 0.714 is exactly the
+    // TEACH phase's share of trials (1907 of 1907+764). A forced-end arm agrees on
+    // exactly the trials of the phase whose lesson wants that end, so the two settings
+    // differ in content as well as position -- and worse, they differ in WHICH PHASE
+    // they get right, while the GAP is the phase retention actually measures.
+    //
+    // So force the end and also invert, which completes the factorial:
+    //     oracle   (up, lo)  correct in both phases
+    //     anti     (lo, up)  wrong in both
+    //     half-up  (up, up)
+    //     half-lo  (lo, lo)
+    // All four cells of (teach end, gap end). That gives the main effect of the teach
+    // end, the main effect of the GAP end, and their interaction -- so position
+    // separates from content instead of riding on it. Content-correctness is the
+    // (up, lo) diagonal; the blocked end is the factor.
+    //
+    // PREDICTION: if masking's -0.685 cost is positional, the GAP-end main effect
+    // dominates, since blocking the UPPER half is measured elsewhere at ~53% of a
+    // lesson against ~9% for the lower. WHAT REFUSES IT: a null gap-end effect with
+    // everything loading on content, i.e. only the (up, lo) cell standing out.
+    // The 9%/53% figures are `blockanchor` at 5.6M on dna/default.toml, a different
+    // protocol -- they set the DIRECTION of the prediction, not its size.
+    {"half-up-AB",   1u, false, 0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, false, 0.0, 0.0f, -1.0f, 1},
+    {"half-up-keep", 1u, true,  0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, false, 0.0, 0.0f, -1.0f, 1},
+    {"half-lo-AB",   1u, false, 0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, false, 0.0, 0.0f, -1.0f, 0},
+    {"half-lo-keep", 1u, true,  0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, false, 0.0, 0.0f, -1.0f, 0},
+    {"anti-AB",      1u, false, 0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, false, 0.0, 0.0f, -1.0f, -1, true},
+    {"anti-keep",    1u, true,  0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, false, 0.0, 0.0f, -1.0f, -1, true},
 };
 constexpr uint32_t kCGArmCount = sizeof(kCGArms) / sizeof(kCGArms[0]);
 // CHANGED 2026-09-21 from 318211 to draw a FRESH set of creatures from the same
@@ -18298,6 +18381,10 @@ constexpr CGMode kCGModes[] = {
     {"oracle", "oracle-AB", "oracle-keep"},
     {"derived", "derived-AB", "derived-keep"},
     {"shuffled", "shuf-AB", "shuf-keep"},
+    // Appended, so `shuffled` keeps index 3 and the "must NOT" label it carries.
+    {"half-up", "half-up-AB", "half-up-keep"},
+    {"half-lo", "half-lo-AB", "half-lo-keep"},
+    {"anti", "anti-AB", "anti-keep"},
 };
 constexpr uint32_t kCGModeCount = sizeof(kCGModes) / sizeof(kCGModes[0]);
 inline int cg_arm_of(const char* name) {
@@ -18413,6 +18500,8 @@ bool run_credgate_impl(const std::vector<uint8_t>& blob, uint64_t ticks, bool ve
     cfg.context_slots = kCGArms[a].slots;
     cfg.context_source = 4u;
     cfg.eta_floor = kCGArms[a].eta_floor;
+    cfg.credit_keep_half = kCGArms[a].keep_half;
+    cfg.credit_invert_half = kCGArms[a].invert_half;
     // GIVE THE TWO LESSONS DIFFERENT SOUNDS, or the index has nothing to separate.
     // `retain` says the SAME word throughout by default -- run_retain_arm's own
     // comment spells it out: "nothing in the creature's input distinguishes lesson A
