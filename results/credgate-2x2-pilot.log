@@ -1,0 +1,627 @@
+  [40/1472] seed 0 shuf-keep     taught 1.0766 after 1.0873 agree 0.50
+  [3/1472] seed 0 oracle-AB     taught 1.0934 after 1.1168 agree 1.00
+  [41/1472] seed 0 half-up-AB    taught 1.0934 after 1.1074 agree 0.72
+  [44/1472] seed 0 half-lo-keep  taught 1.0727 after 1.0783 agree 0.00
+  [42/1472] seed 0 half-up-keep  taught 1.0934 after 1.1020 agree 1.00
+  [46/1472] seed 0 anti-keep     taught 1.0727 after 1.0783 agree 0.00
+  [45/1472] seed 0 anti-AB       taught 1.0727 after 1.0898 agree 0.00
+  [43/1472] seed 0 half-lo-AB    taught 1.0727 after 1.0870 agree 0.28
+  [39/1472] seed 0 shuf-AB       taught 1.0766 after 1.1006 agree 0.48
+  [4/1472] seed 0 oracle-keep   taught 1.0934 after 1.1020 agree 1.00
+  [47/1472] seed 1 bcast-AB      taught 0.9594 after 1.0262 agree 0.00
+  [2/1472] seed 0 bcast-keep    taught 0.9318 after 0.8696 agree 0.00
+  [1/1472] seed 0 bcast-AB      taught 0.9318 after 0.9898 agree 0.00
+  [48/1472] seed 1 bcast-keep    taught 0.9594 after 0.7704 agree 0.00
+  [49/1472] seed 1 oracle-AB     taught 1.0634 after 1.0558 agree 1.00
+  [85/1472] seed 1 shuf-AB       taught 1.0414 after 1.0798 agree 0.48
+  [89/1472] seed 1 half-lo-AB    taught 1.0521 after 1.0821 agree 0.28
+  [91/1472] seed 1 anti-AB       taught 1.0521 after 1.0853 agree 0.00
+  [86/1472] seed 1 shuf-keep     taught 1.0414 after 1.0419 agree 0.50
+  [87/1472] seed 1 half-up-AB    taught 1.0634 after 1.0785 agree 0.72
+  [96/1472] seed 2 oracle-keep   taught 1.0562 after 1.1204 agree 1.00
+  [50/1472] seed 1 oracle-keep   taught 1.0634 after 0.9921 agree 1.00
+  [92/1472] seed 1 anti-keep     taught 1.0521 after 1.0801 agree 0.00
+  [88/1472] seed 1 half-up-keep  taught 1.0634 after 0.9921 agree 1.00
+  [90/1472] seed 1 half-lo-keep  taught 1.0521 after 1.0801 agree 0.00
+  [95/1472] seed 2 oracle-AB     taught 1.0562 after 1.0839 agree 1.00
+  [94/1472] seed 2 bcast-keep    taught 1.2501 after 1.2575 agree 0.00
+  [93/1472] seed 2 bcast-AB      taught 1.2501 after 1.2614 agree 0.00
+  [132/1472] seed 2 shuf-keep     taught 1.0374 after 1.1186 agree 0.50
+  [131/1472] seed 2 shuf-AB       taught 1.0374 after 1.1016 agree 0.48
+  [133/1472] seed 2 half-up-AB    taught 1.0562 after 1.1065 agree 0.72
+  [135/1472] seed 2 half-lo-AB    taught 1.0519 after 1.0676 agree 0.28
+  [138/1472] seed 2 anti-keep     taught 1.0519 after 1.0832 agree 0.00
+  [136/1472] seed 2 half-lo-keep  taught 1.0519 after 1.0832 agree 0.00
+  [134/1472] seed 2 half-up-keep  taught 1.0562 after 1.1204 agree 1.00
+  [140/1472] seed 3 bcast-keep    taught 0.9484 after 0.8298 agree 0.00
+  [137/1472] seed 2 anti-AB       taught 1.0519 after 1.0694 agree 0.00
+  [141/1472] seed 3 oracle-AB     taught 1.0290 after 1.0429 agree 1.00
+  [139/1472] seed 3 bcast-AB      taught 0.9484 after 1.0055 agree 0.00
+  [177/1472] seed 3 shuf-AB       taught 1.0576 after 1.0736 agree 0.48
+  [142/1472] seed 3 oracle-keep   taught 1.0290 after 1.1450 agree 1.00
+  [178/1472] seed 3 shuf-keep     taught 1.0576 after 1.0645 agree 0.50
+  [183/1472] seed 3 anti-AB       taught 1.0637 after 1.0501 agree 0.00
+  [180/1472] seed 3 half-up-keep  taught 1.0290 after 1.1450 agree 1.00
+  [179/1472] seed 3 half-up-AB    taught 1.0290 after 1.0031 agree 0.72
+  [182/1472] seed 3 half-lo-keep  taught 1.0637 after 1.0634 agree 0.00
+  [181/1472] seed 3 half-lo-AB    taught 1.0637 after 1.0789 agree 0.28
+  [184/1472] seed 3 anti-keep     taught 1.0637 after 1.0634 agree 0.00
+  [187/1472] seed 4 oracle-AB     taught 1.0949 after 1.1108 agree 1.00
+  [186/1472] seed 4 bcast-keep    taught 0.9986 after 0.8844 agree 0.00
+  [224/1472] seed 4 shuf-keep     taught 1.0602 after 1.0584 agree 0.50
+  [223/1472] seed 4 shuf-AB       taught 1.0602 after 1.0642 agree 0.48
+  [185/1472] seed 4 bcast-AB      taught 0.9986 after 0.9923 agree 0.00
+  [225/1472] seed 4 half-up-AB    taught 1.0949 after 1.1032 agree 0.72
+  [188/1472] seed 4 oracle-keep   taught 1.0949 after 1.0948 agree 1.00
+  [226/1472] seed 4 half-up-keep  taught 1.0949 after 1.0948 agree 1.00
+  [229/1472] seed 4 anti-AB       taught 1.0504 after 1.0800 agree 0.00
+  [227/1472] seed 4 half-lo-AB    taught 1.0504 after 1.0960 agree 0.28
+  [228/1472] seed 4 half-lo-keep  taught 1.0504 after 1.0733 agree 0.00
+  [233/1472] seed 5 oracle-AB     taught 1.0539 after 1.0230 agree 1.00
+  [231/1472] seed 5 bcast-AB      taught 0.9782 after 1.0159 agree 0.00
+  [230/1472] seed 4 anti-keep     taught 1.0504 after 1.0733 agree 0.00
+  [234/1472] seed 5 oracle-keep   taught 1.0539 after 0.9187 agree 1.00
+  [232/1472] seed 5 bcast-keep    taught 0.9782 after 0.8970 agree 0.00
+  [270/1472] seed 5 shuf-keep     taught 1.0643 after 1.0952 agree 0.50
+  [269/1472] seed 5 shuf-AB       taught 1.0643 after 1.0913 agree 0.48
+  [271/1472] seed 5 half-up-AB    taught 1.0539 after 1.0511 agree 0.72
+  [272/1472] seed 5 half-up-keep  taught 1.0539 after 0.9187 agree 1.00
+  [274/1472] seed 5 half-lo-keep  taught 1.0642 after 1.1835 agree 0.00
+  [273/1472] seed 5 half-lo-AB    taught 1.0642 after 1.0971 agree 0.28
+  [276/1472] seed 5 anti-keep     taught 1.0642 after 1.1835 agree 0.00
+  [275/1472] seed 5 anti-AB       taught 1.0642 after 1.0934 agree 0.00
+  [279/1472] seed 6 oracle-AB     taught 1.0278 after 1.1034 agree 1.00
+  [277/1472] seed 6 bcast-AB      taught 1.1533 after 1.1862 agree 0.00
+  [280/1472] seed 6 oracle-keep   taught 1.0278 after 1.1365 agree 1.00
+  [315/1472] seed 6 shuf-AB       taught 1.0807 after 1.0846 agree 0.48
+  [278/1472] seed 6 bcast-keep    taught 1.1533 after 1.1448 agree 0.00
+  [317/1472] seed 6 half-up-AB    taught 1.0278 after 1.1508 agree 0.72
+  [318/1472] seed 6 half-up-keep  taught 1.0278 after 1.1365 agree 1.00
+  [316/1472] seed 6 shuf-keep     taught 1.0807 after 1.0426 agree 0.50
+  [319/1472] seed 6 half-lo-AB    taught 1.0664 after 1.0842 agree 0.28
+  [320/1472] seed 6 half-lo-keep  taught 1.0664 after 1.0791 agree 0.00
+  [321/1472] seed 6 anti-AB       taught 1.0664 after 1.0817 agree 0.00
+  [322/1472] seed 6 anti-keep     taught 1.0664 after 1.0791 agree 0.00
+  [323/1472] seed 7 bcast-AB      taught 1.2221 after 1.2098 agree 0.00
+  [324/1472] seed 7 bcast-keep    taught 1.2221 after 1.3132 agree 0.00
+  [364/1472] seed 7 half-up-keep  taught 1.1061 after 1.1056 agree 1.00
+  [361/1472] seed 7 shuf-AB       taught 1.0740 after 1.0917 agree 0.48
+  [326/1472] seed 7 oracle-keep   taught 1.1061 after 1.1056 agree 1.00
+  [363/1472] seed 7 half-up-AB    taught 1.1061 after 1.1153 agree 0.72
+  [362/1472] seed 7 shuf-keep     taught 1.0740 after 1.0471 agree 0.50
+  [325/1472] seed 7 oracle-AB     taught 1.1061 after 1.0853 agree 1.00
+  [365/1472] seed 7 half-lo-AB    taught 1.0850 after 1.1001 agree 0.28
+  [366/1472] seed 7 half-lo-keep  taught 1.0850 after 1.0948 agree 0.00
+  [367/1472] seed 7 anti-AB       taught 1.0850 after 1.0915 agree 0.00
+  [368/1472] seed 7 anti-keep     taught 1.0850 after 1.0948 agree 0.00
+  [369/1472] seed 8 bcast-AB      taught 1.0008 after 1.0034 agree 0.00
+  [370/1472] seed 8 bcast-keep    taught 1.0008 after 0.9167 agree 0.00
+  [371/1472] seed 8 oracle-AB     taught 1.0552 after 1.0644 agree 1.00
+  [410/1472] seed 8 half-up-keep  taught 1.0552 after 0.9924 agree 1.00
+  [413/1472] seed 8 anti-AB       taught 1.0677 after 1.0901 agree 0.00
+  [408/1472] seed 8 shuf-keep     taught 1.0617 after 1.0609 agree 0.50
+  [409/1472] seed 8 half-up-AB    taught 1.0552 after 1.0320 agree 0.72
+  [411/1472] seed 8 half-lo-AB    taught 1.0677 after 1.0849 agree 0.28
+  [372/1472] seed 8 oracle-keep   taught 1.0552 after 0.9924 agree 1.00
+  [414/1472] seed 8 anti-keep     taught 1.0677 after 1.0732 agree 0.00
+  [407/1472] seed 8 shuf-AB       taught 1.0617 after 1.0864 agree 0.48
+  [412/1472] seed 8 half-lo-keep  taught 1.0677 after 1.0732 agree 0.00
+  [415/1472] seed 9 bcast-AB      taught 0.9278 after 0.9648 agree 0.00
+  [416/1472] seed 9 bcast-keep    taught 0.9278 after 0.8315 agree 0.00
+  [417/1472] seed 9 oracle-AB     taught 1.0574 after 1.0543 agree 1.00
+  [418/1472] seed 9 oracle-keep   taught 1.0574 after 1.0554 agree 1.00
+  [453/1472] seed 9 shuf-AB       taught 1.0369 after 1.0791 agree 0.48
+  [456/1472] seed 9 half-up-keep  taught 1.0574 after 1.0554 agree 1.00
+  [459/1472] seed 9 anti-AB       taught 1.1088 after 1.1376 agree 0.00
+  [455/1472] seed 9 half-up-AB    taught 1.0574 after 1.0485 agree 0.72
+  [454/1472] seed 9 shuf-keep     taught 1.0369 after 1.0963 agree 0.50
+  [457/1472] seed 9 half-lo-AB    taught 1.1088 after 1.1431 agree 0.28
+  [460/1472] seed 9 anti-keep     taught 1.1088 after 1.0744 agree 0.00
+  [458/1472] seed 9 half-lo-keep  taught 1.1088 after 1.0744 agree 0.00
+  [463/1472] seed 10 oracle-AB     taught 0.9944 after 1.0963 agree 1.00
+  [462/1472] seed 10 bcast-keep    taught 0.9122 after 1.1889 agree 0.00
+  [461/1472] seed 10 bcast-AB      taught 0.9122 after 0.9707 agree 0.00
+  [499/1472] seed 10 shuf-AB       taught 1.0352 after 1.0192 agree 0.48
+  [464/1472] seed 10 oracle-keep   taught 0.9944 after 1.1014 agree 1.00
+  [500/1472] seed 10 shuf-keep     taught 1.0352 after 1.1612 agree 0.50
+  [502/1472] seed 10 half-up-keep  taught 0.9944 after 1.1014 agree 1.00
+  [503/1472] seed 10 half-lo-AB    taught 1.0462 after 1.0466 agree 0.28
+  [505/1472] seed 10 anti-AB       taught 1.0462 after 1.0432 agree 0.00
+  [501/1472] seed 10 half-up-AB    taught 0.9944 after 1.1150 agree 0.72
+  [506/1472] seed 10 anti-keep     taught 1.0462 after 1.0423 agree 0.00
+  [504/1472] seed 10 half-lo-keep  taught 1.0462 after 1.0423 agree 0.00
+  [507/1472] seed 11 bcast-AB      taught 1.1742 after 1.1839 agree 0.00
+  [509/1472] seed 11 oracle-AB     taught 1.1015 after 1.0866 agree 1.00
+  [545/1472] seed 11 shuf-AB       taught 1.0582 after 1.0794 agree 0.48
+  [546/1472] seed 11 shuf-keep     taught 1.0582 after 1.1346 agree 0.50
+  [510/1472] seed 11 oracle-keep   taught 1.1015 after 1.1171 agree 1.00
+  [508/1472] seed 11 bcast-keep    taught 1.1742 after 1.2547 agree 0.00
+  [551/1472] seed 11 anti-AB       taught 1.1517 after 1.1646 agree 0.00
+  [548/1472] seed 11 half-up-keep  taught 1.1015 after 1.1171 agree 1.00
+  [553/1472] seed 12 bcast-AB      taught 0.9957 after 1.0328 agree 0.00
+  [549/1472] seed 11 half-lo-AB    taught 1.1517 after 1.1929 agree 0.28
+  [552/1472] seed 11 anti-keep     taught 1.1517 after 1.1811 agree 0.00
+  [547/1472] seed 11 half-up-AB    taught 1.1015 after 1.1154 agree 0.72
+  [550/1472] seed 11 half-lo-keep  taught 1.1517 after 1.1811 agree 0.00
+  [554/1472] seed 12 bcast-keep    taught 0.9957 after 0.9504 agree 0.00
+  [591/1472] seed 12 shuf-AB       taught 1.0578 after 1.0821 agree 0.48
+  [556/1472] seed 12 oracle-keep   taught 0.9971 after 1.1178 agree 1.00
+  [555/1472] seed 12 oracle-AB     taught 0.9971 after 1.0729 agree 1.00
+  [593/1472] seed 12 half-up-AB    taught 0.9971 after 1.1172 agree 0.72
+  [592/1472] seed 12 shuf-keep     taught 1.0578 after 1.0401 agree 0.50
+  [594/1472] seed 12 half-up-keep  taught 0.9971 after 1.1178 agree 1.00
+  [595/1472] seed 12 half-lo-AB    taught 1.0621 after 1.1718 agree 0.28
+  [598/1472] seed 12 anti-keep     taught 1.0621 after 1.1991 agree 0.00
+  [597/1472] seed 12 anti-AB       taught 1.0621 after 1.1285 agree 0.00
+  [596/1472] seed 12 half-lo-keep  taught 1.0621 after 1.1991 agree 0.00
+  [599/1472] seed 13 bcast-AB      taught 1.1909 after 1.1945 agree 0.00
+  [601/1472] seed 13 oracle-AB     taught 1.0790 after 1.0958 agree 1.00
+  [602/1472] seed 13 oracle-keep   taught 1.0790 after 1.0588 agree 1.00
+  [637/1472] seed 13 shuf-AB       taught 1.0783 after 1.1058 agree 0.48
+  [600/1472] seed 13 bcast-keep    taught 1.1909 after 1.2758 agree 0.00
+  [639/1472] seed 13 half-up-AB    taught 1.0790 after 1.0891 agree 0.72
+  [638/1472] seed 13 shuf-keep     taught 1.0783 after 1.0900 agree 0.50
+  [640/1472] seed 13 half-up-keep  taught 1.0790 after 1.0588 agree 1.00
+  [641/1472] seed 13 half-lo-AB    taught 1.0608 after 1.1013 agree 0.28
+  [642/1472] seed 13 half-lo-keep  taught 1.0608 after 1.1001 agree 0.00
+  [644/1472] seed 13 anti-keep     taught 1.0608 after 1.1001 agree 0.00
+  [645/1472] seed 14 bcast-AB      taught 0.9633 after 1.0508 agree 0.00
+  [643/1472] seed 13 anti-AB       taught 1.0608 after 1.1065 agree 0.00
+  [647/1472] seed 14 oracle-AB     taught 1.0388 after 1.0186 agree 1.00
+  [648/1472] seed 14 oracle-keep   taught 1.0388 after 0.9171 agree 1.00
+  [683/1472] seed 14 shuf-AB       taught 1.0678 after 1.1100 agree 0.48
+  [684/1472] seed 14 shuf-keep     taught 1.0678 after 1.0728 agree 0.50
+  [646/1472] seed 14 bcast-keep    taught 0.9633 after 0.8677 agree 0.00
+  [685/1472] seed 14 half-up-AB    taught 1.0388 after 1.0243 agree 0.72
+  [690/1472] seed 14 anti-keep     taught 1.0683 after 1.0942 agree 0.00
+  [686/1472] seed 14 half-up-keep  taught 1.0388 after 0.9171 agree 1.00
+  [687/1472] seed 14 half-lo-AB    taught 1.0683 after 1.1076 agree 0.28
+  [689/1472] seed 14 anti-AB       taught 1.0683 after 1.1030 agree 0.00
+  [692/1472] seed 15 bcast-keep    taught 0.9432 after 1.2342 agree 0.00
+  [688/1472] seed 14 half-lo-keep  taught 1.0683 after 1.0942 agree 0.00
+  [693/1472] seed 15 oracle-AB     taught 1.0657 after 1.1200 agree 1.00
+  [694/1472] seed 15 oracle-keep   taught 1.0657 after 1.1351 agree 1.00
+  [732/1472] seed 15 half-up-keep  taught 1.0657 after 1.1351 agree 1.00
+  [691/1472] seed 15 bcast-AB      taught 0.9432 after 1.2187 agree 0.00
+  [733/1472] seed 15 half-lo-AB    taught 1.0826 after 1.1043 agree 0.28
+  [730/1472] seed 15 shuf-keep     taught 1.0507 after 1.0536 agree 0.50
+  [729/1472] seed 15 shuf-AB       taught 1.0507 after 1.0941 agree 0.48
+  [731/1472] seed 15 half-up-AB    taught 1.0657 after 1.1319 agree 0.72
+  [734/1472] seed 15 half-lo-keep  taught 1.0826 after 1.0918 agree 0.00
+  [735/1472] seed 15 anti-AB       taught 1.0826 after 1.0954 agree 0.00
+  [736/1472] seed 15 anti-keep     taught 1.0826 after 1.0918 agree 0.00
+  [738/1472] seed 16 bcast-keep    taught 0.9483 after 0.9399 agree 0.00
+  [737/1472] seed 16 bcast-AB      taught 0.9483 after 1.1714 agree 0.00
+  [740/1472] seed 16 oracle-keep   taught 1.0861 after 1.0918 agree 1.00
+  [739/1472] seed 16 oracle-AB     taught 1.0861 after 1.1294 agree 1.00
+  [775/1472] seed 16 shuf-AB       taught 1.0732 after 1.0867 agree 0.48
+  [777/1472] seed 16 half-up-AB    taught 1.0861 after 1.1332 agree 0.72
+  [782/1472] seed 16 anti-keep     taught 1.0702 after 1.0936 agree 0.00
+  [780/1472] seed 16 half-lo-keep  taught 1.0702 after 1.0936 agree 0.00
+  [779/1472] seed 16 half-lo-AB    taught 1.0702 after 1.1037 agree 0.28
+  [778/1472] seed 16 half-up-keep  taught 1.0861 after 1.0918 agree 1.00
+  [776/1472] seed 16 shuf-keep     taught 1.0732 after 1.0741 agree 0.50
+  [781/1472] seed 16 anti-AB       taught 1.0702 after 1.1030 agree 0.00
+  [784/1472] seed 17 bcast-keep    taught 0.9114 after 0.8190 agree 0.00
+  [785/1472] seed 17 oracle-AB     taught 1.0437 after 1.0616 agree 1.00
+  [783/1472] seed 17 bcast-AB      taught 0.9114 after 0.9598 agree 0.00
+  [786/1472] seed 17 oracle-keep   taught 1.0437 after 0.9830 agree 1.00
+  [821/1472] seed 17 shuf-AB       taught 1.0594 after 1.1186 agree 0.48
+  [822/1472] seed 17 shuf-keep     taught 1.0594 after 1.0557 agree 0.50
+  [823/1472] seed 17 half-up-AB    taught 1.0437 after 1.0425 agree 0.72
+  [827/1472] seed 17 anti-AB       taught 1.0546 after 1.0996 agree 0.00
+  [825/1472] seed 17 half-lo-AB    taught 1.0546 after 1.0984 agree 0.28
+  [826/1472] seed 17 half-lo-keep  taught 1.0546 after 1.0887 agree 0.00
+  [831/1472] seed 18 oracle-AB     taught 1.1024 after 1.0857 agree 1.00
+  [867/1472] seed 18 shuf-AB       taught 1.0966 after 1.0951 agree 0.48
+  [832/1472] seed 18 oracle-keep   taught 1.1024 after 1.1084 agree 1.00
+  [829/1472] seed 18 bcast-AB      taught 0.9414 after 0.9745 agree 0.00
+  [824/1472] seed 17 half-up-keep  taught 1.0437 after 0.9830 agree 1.00
+  [828/1472] seed 17 anti-keep     taught 1.0546 after 1.0887 agree 0.00
+  [830/1472] seed 18 bcast-keep    taught 0.9414 after 0.8773 agree 0.00
+  [868/1472] seed 18 shuf-keep     taught 1.0966 after 1.1233 agree 0.50
+  [870/1472] seed 18 half-up-keep  taught 1.1024 after 1.1084 agree 1.00
+  [869/1472] seed 18 half-up-AB    taught 1.1024 after 1.1071 agree 0.72
+  [872/1472] seed 18 half-lo-keep  taught 1.1045 after 1.1281 agree 0.00
+  [871/1472] seed 18 half-lo-AB    taught 1.1045 after 1.0745 agree 0.28
+  [873/1472] seed 18 anti-AB       taught 1.1045 after 1.1313 agree 0.00
+  [913/1472] seed 19 shuf-AB       taught 1.0693 after 1.1291 agree 0.48
+  [877/1472] seed 19 oracle-AB     taught 1.0671 after 1.0821 agree 1.00
+  [874/1472] seed 18 anti-keep     taught 1.1045 after 1.1281 agree 0.00
+  [875/1472] seed 19 bcast-AB      taught 0.9672 after 1.0830 agree 0.00
+  [878/1472] seed 19 oracle-keep   taught 1.0671 after 1.0602 agree 1.00
+  [914/1472] seed 19 shuf-keep     taught 1.0693 after 1.1675 agree 0.50
+  [876/1472] seed 19 bcast-keep    taught 0.9672 after 0.9312 agree 0.00
+  [917/1472] seed 19 half-lo-AB    taught 1.0654 after 1.1324 agree 0.28
+  [915/1472] seed 19 half-up-AB    taught 1.0671 after 1.0982 agree 0.72
+  [916/1472] seed 19 half-up-keep  taught 1.0671 after 1.0602 agree 1.00
+  [918/1472] seed 19 half-lo-keep  taught 1.0654 after 1.1312 agree 0.00
+  [920/1472] seed 19 anti-keep     taught 1.0654 after 1.1312 agree 0.00
+  [919/1472] seed 19 anti-AB       taught 1.0654 after 1.1022 agree 0.00
+  [921/1472] seed 20 bcast-AB      taught 0.9932 after 1.0416 agree 0.00
+  [923/1472] seed 20 oracle-AB     taught 1.0449 after 1.0810 agree 1.00
+  [924/1472] seed 20 oracle-keep   taught 1.0449 after 1.1123 agree 1.00
+  [961/1472] seed 20 half-up-AB    taught 1.0449 after 1.1120 agree 0.72
+  [922/1472] seed 20 bcast-keep    taught 0.9932 after 0.8765 agree 0.00
+  [966/1472] seed 20 anti-keep     taught 1.0650 after 1.1663 agree 0.00
+  [959/1472] seed 20 shuf-AB       taught 1.1311 after 1.1516 agree 0.48
+  [960/1472] seed 20 shuf-keep     taught 1.1311 after 1.1634 agree 0.50
+  [962/1472] seed 20 half-up-keep  taught 1.0449 after 1.1123 agree 1.00
+  [963/1472] seed 20 half-lo-AB    taught 1.0650 after 1.1027 agree 0.28
+  [965/1472] seed 20 anti-AB       taught 1.0650 after 1.1125 agree 0.00
+  [964/1472] seed 20 half-lo-keep  taught 1.0650 after 1.1663 agree 0.00
+  [967/1472] seed 21 bcast-AB      taught 0.9467 after 1.0115 agree 0.00
+  [968/1472] seed 21 bcast-keep    taught 0.9467 after 0.8773 agree 0.00
+  [969/1472] seed 21 oracle-AB     taught 1.0318 after 1.0607 agree 1.00
+  [1005/1472] seed 21 shuf-AB       taught 1.0513 after 1.0852 agree 0.48
+  [1009/1472] seed 21 half-lo-AB    taught 1.0766 after 1.1217 agree 0.28
+  [1006/1472] seed 21 shuf-keep     taught 1.0513 after 1.0130 agree 0.50
+  [970/1472] seed 21 oracle-keep   taught 1.0318 after 1.0240 agree 1.00
+  [1007/1472] seed 21 half-up-AB    taught 1.0318 after 1.0814 agree 0.72
+  [1010/1472] seed 21 half-lo-keep  taught 1.0766 after 1.0952 agree 0.00
+  [1011/1472] seed 21 anti-AB       taught 1.0766 after 1.1156 agree 0.00
+  [1008/1472] seed 21 half-up-keep  taught 1.0318 after 1.0240 agree 1.00
+  [1012/1472] seed 21 anti-keep     taught 1.0766 after 1.0952 agree 0.00
+  [1015/1472] seed 22 oracle-AB     taught 1.0602 after 1.0578 agree 1.00
+  [1014/1472] seed 22 bcast-keep    taught 0.9767 after 0.9346 agree 0.00
+  [1051/1472] seed 22 shuf-AB       taught 1.0634 after 1.0585 agree 0.48
+  [1013/1472] seed 22 bcast-AB      taught 0.9767 after 0.9908 agree 0.00
+  [1053/1472] seed 22 half-up-AB    taught 1.0602 after 1.0509 agree 0.72
+  [1016/1472] seed 22 oracle-keep   taught 1.0602 after 1.0555 agree 1.00
+  [1052/1472] seed 22 shuf-keep     taught 1.0634 after 1.0550 agree 0.50
+  [1054/1472] seed 22 half-up-keep  taught 1.0602 after 1.0555 agree 1.00
+  [1055/1472] seed 22 half-lo-AB    taught 1.1501 after 1.1518 agree 0.28
+  [1057/1472] seed 22 anti-AB       taught 1.1501 after 1.1895 agree 0.00
+  [1061/1472] seed 23 oracle-AB     taught 1.0868 after 1.1112 agree 1.00
+  [1058/1472] seed 22 anti-keep     taught 1.1501 after 1.2118 agree 0.00
+  [1056/1472] seed 22 half-lo-keep  taught 1.1501 after 1.2118 agree 0.00
+  [1060/1472] seed 23 bcast-keep    taught 0.9923 after 0.8885 agree 0.00
+  [1097/1472] seed 23 shuf-AB       taught 1.0900 after 1.1172 agree 0.48
+  [1059/1472] seed 23 bcast-AB      taught 0.9923 after 1.0683 agree 0.00
+  [1098/1472] seed 23 shuf-keep     taught 1.0900 after 1.0907 agree 0.50
+  [1062/1472] seed 23 oracle-keep   taught 1.0868 after 1.1593 agree 1.00
+  [1101/1472] seed 23 half-lo-AB    taught 1.0940 after 1.1197 agree 0.28
+  [1102/1472] seed 23 half-lo-keep  taught 1.0940 after 1.1505 agree 0.00
+  [1099/1472] seed 23 half-up-AB    taught 1.0868 after 1.1312 agree 0.72
+  [1100/1472] seed 23 half-up-keep  taught 1.0868 after 1.1593 agree 1.00
+  [1103/1472] seed 23 anti-AB       taught 1.0940 after 1.1150 agree 0.00
+  [1104/1472] seed 23 anti-keep     taught 1.0940 after 1.1505 agree 0.00
+  [1108/1472] seed 24 oracle-keep   taught 1.0368 after 1.1195 agree 1.00
+  [1143/1472] seed 24 shuf-AB       taught 1.0696 after 1.1389 agree 0.48
+  [1107/1472] seed 24 oracle-AB     taught 1.0368 after 1.0386 agree 1.00
+  [1148/1472] seed 24 half-lo-keep  taught 1.1278 after 1.1334 agree 0.00
+  [1144/1472] seed 24 shuf-keep     taught 1.0696 after 1.1607 agree 0.50
+  [1105/1472] seed 24 bcast-AB      taught 0.9652 after 1.0712 agree 0.00
+  [1145/1472] seed 24 half-up-AB    taught 1.0368 after 1.1396 agree 0.72
+  [1147/1472] seed 24 half-lo-AB    taught 1.1278 after 1.1541 agree 0.28
+  [1106/1472] seed 24 bcast-keep    taught 0.9652 after 0.9225 agree 0.00
+  [1146/1472] seed 24 half-up-keep  taught 1.0368 after 1.1195 agree 1.00
+  [1150/1472] seed 24 anti-keep     taught 1.1278 after 1.1334 agree 0.00
+  [1149/1472] seed 24 anti-AB       taught 1.1278 after 1.1537 agree 0.00
+  [1152/1472] seed 25 bcast-keep    taught 0.9566 after 0.8390 agree 0.00
+  [1151/1472] seed 25 bcast-AB      taught 0.9566 after 1.0201 agree 0.00
+  [1154/1472] seed 25 oracle-keep   taught 0.9927 after 1.1041 agree 1.00
+  [1193/1472] seed 25 half-lo-AB    taught 1.0586 after 1.1106 agree 0.28
+  [1153/1472] seed 25 oracle-AB     taught 0.9927 after 1.0956 agree 1.00
+  [1191/1472] seed 25 half-up-AB    taught 0.9927 after 1.1186 agree 0.72
+  [1192/1472] seed 25 half-up-keep  taught 0.9927 after 1.1041 agree 1.00
+  [1194/1472] seed 25 half-lo-keep  taught 1.0586 after 1.0776 agree 0.00
+  [1190/1472] seed 25 shuf-keep     taught 1.0739 after 1.1098 agree 0.50
+  [1189/1472] seed 25 shuf-AB       taught 1.0739 after 1.1021 agree 0.48
+  [1197/1472] seed 26 bcast-AB      taught 1.0110 after 1.1405 agree 0.00
+  [1195/1472] seed 25 anti-AB       taught 1.0586 after 1.0846 agree 0.00
+  [1196/1472] seed 25 anti-keep     taught 1.0586 after 1.0776 agree 0.00
+  [1198/1472] seed 26 bcast-keep    taught 1.0110 after 1.1630 agree 0.00
+  [1235/1472] seed 26 shuf-AB       taught 1.0623 after 1.0871 agree 0.48
+  [1237/1472] seed 26 half-up-AB    taught 1.0470 after 1.1321 agree 0.72
+  [1199/1472] seed 26 oracle-AB     taught 1.0470 after 1.1139 agree 1.00
+  [1240/1472] seed 26 half-lo-keep  taught 1.0636 after 1.1434 agree 0.00
+  [1200/1472] seed 26 oracle-keep   taught 1.0470 after 1.1458 agree 1.00
+  [1238/1472] seed 26 half-up-keep  taught 1.0470 after 1.1458 agree 1.00
+  [1241/1472] seed 26 anti-AB       taught 1.0636 after 1.0956 agree 0.00
+  [1239/1472] seed 26 half-lo-AB    taught 1.0636 after 1.0991 agree 0.28
+  [1236/1472] seed 26 shuf-keep     taught 1.0623 after 1.0640 agree 0.50
+  [1242/1472] seed 26 anti-keep     taught 1.0636 after 1.1434 agree 0.00
+  [1243/1472] seed 27 bcast-AB      taught 0.9702 after 1.0624 agree 0.00
+  [1281/1472] seed 27 shuf-AB       taught 1.0621 after 1.0834 agree 0.48
+  [1244/1472] seed 27 bcast-keep    taught 0.9702 after 0.7814 agree 0.00
+  [1285/1472] seed 27 half-lo-AB    taught 1.0770 after 1.0907 agree 0.28
+  [1245/1472] seed 27 oracle-AB     taught 1.0446 after 1.0875 agree 1.00
+  [1246/1472] seed 27 oracle-keep   taught 1.0446 after 1.1069 agree 1.00
+  [1284/1472] seed 27 half-up-keep  taught 1.0446 after 1.1069 agree 1.00
+  [1283/1472] seed 27 half-up-AB    taught 1.0446 after 1.1167 agree 0.72
+  [1286/1472] seed 27 half-lo-keep  taught 1.0770 after 1.0940 agree 0.00
+  [1282/1472] seed 27 shuf-keep     taught 1.0621 after 1.1480 agree 0.50
+  [1287/1472] seed 27 anti-AB       taught 1.0770 after 1.0943 agree 0.00
+  [1288/1472] seed 27 anti-keep     taught 1.0770 after 1.0940 agree 0.00
+  [1289/1472] seed 28 bcast-AB      taught 0.9074 after 1.0048 agree 0.00
+  [1290/1472] seed 28 bcast-keep    taught 0.9074 after 0.8419 agree 0.00
+  [1292/1472] seed 28 oracle-keep   taught 1.0342 after 1.1491 agree 1.00
+  [1291/1472] seed 28 oracle-AB     taught 1.0342 after 1.1286 agree 1.00
+  [1328/1472] seed 28 shuf-keep     taught 1.0710 after 1.1516 agree 0.50
+  [1329/1472] seed 28 half-up-AB    taught 1.0342 after 1.1424 agree 0.72
+  [1332/1472] seed 28 half-lo-keep  taught 1.1094 after 1.1318 agree 0.00
+  [1335/1472] seed 29 bcast-AB      taught 0.9866 after 1.0288 agree 0.00
+  [1331/1472] seed 28 half-lo-AB    taught 1.1094 after 1.1543 agree 0.28
+  [1333/1472] seed 28 anti-AB       taught 1.1094 after 1.1622 agree 0.00
+  [1327/1472] seed 28 shuf-AB       taught 1.0710 after 1.0958 agree 0.48
+  [1334/1472] seed 28 anti-keep     taught 1.1094 after 1.1318 agree 0.00
+  [1337/1472] seed 29 oracle-AB     taught 1.0520 after 1.1313 agree 1.00
+  [1330/1472] seed 28 half-up-keep  taught 1.0342 after 1.1491 agree 1.00
+  [1373/1472] seed 29 shuf-AB       taught 1.0536 after 1.1469 agree 0.48
+  [1336/1472] seed 29 bcast-keep    taught 0.9866 after 0.8126 agree 0.00
+  [1374/1472] seed 29 shuf-keep     taught 1.0536 after 1.1516 agree 0.50
+  [1375/1472] seed 29 half-up-AB    taught 1.0520 after 1.1381 agree 0.72
+  [1338/1472] seed 29 oracle-keep   taught 1.0520 after 1.1325 agree 1.00
+  [1376/1472] seed 29 half-up-keep  taught 1.0520 after 1.1325 agree 1.00
+  [1377/1472] seed 29 half-lo-AB    taught 1.0778 after 1.0877 agree 0.28
+  [1380/1472] seed 29 anti-keep     taught 1.0778 after 1.0780 agree 0.00
+  [1379/1472] seed 29 anti-AB       taught 1.0778 after 1.1170 agree 0.00
+  [1378/1472] seed 29 half-lo-keep  taught 1.0778 after 1.0780 agree 0.00
+  [1382/1472] seed 30 bcast-keep    taught 0.9697 after 1.0184 agree 0.00
+  [1381/1472] seed 30 bcast-AB      taught 0.9697 after 0.9937 agree 0.00
+  [1383/1472] seed 30 oracle-AB     taught 1.0030 after 1.0887 agree 1.00
+  [1419/1472] seed 30 shuf-AB       taught 1.0392 after 1.0462 agree 0.48
+  [1384/1472] seed 30 oracle-keep   taught 1.0030 after 1.1246 agree 1.00
+  [1420/1472] seed 30 shuf-keep     taught 1.0392 after 1.0300 agree 0.50
+  [1422/1472] seed 30 half-up-keep  taught 1.0030 after 1.1246 agree 1.00
+  [1421/1472] seed 30 half-up-AB    taught 1.0030 after 1.1145 agree 0.72
+  [1423/1472] seed 30 half-lo-AB    taught 1.0482 after 1.0780 agree 0.28
+  [1424/1472] seed 30 half-lo-keep  taught 1.0482 after 1.0607 agree 0.00
+  [1425/1472] seed 30 anti-AB       taught 1.0482 after 1.0653 agree 0.00
+  [1427/1472] seed 31 bcast-AB      taught 1.0145 after 1.0369 agree 0.00
+  [1429/1472] seed 31 oracle-AB     taught 1.0753 after 1.0963 agree 1.00
+  [1426/1472] seed 30 anti-keep     taught 1.0482 after 1.0607 agree 0.00
+  [1467/1472] seed 31 half-up-AB    taught 1.0753 after 1.0922 agree 0.72
+  [1466/1472] seed 31 shuf-keep     taught 1.0929 after 1.0914 agree 0.50
+  [1465/1472] seed 31 shuf-AB       taught 1.0929 after 1.1026 agree 0.48
+  [1430/1472] seed 31 oracle-keep   taught 1.0753 after 1.0012 agree 1.00
+  [1428/1472] seed 31 bcast-keep    taught 1.0145 after 0.9829 agree 0.00
+  [1470/1472] seed 31 half-lo-keep  taught 1.0637 after 1.0797 agree 0.00
+  [1471/1472] seed 31 anti-AB       taught 1.0637 after 1.0901 agree 0.00
+  [1468/1472] seed 31 half-up-keep  taught 1.0753 after 1.0012 agree 1.00
+  [1469/1472] seed 31 half-lo-AB    taught 1.0637 after 1.0985 agree 0.28
+  [1472/1472] seed 31 anti-keep     taught 1.0637 after 1.0797 agree 0.00
+experiment: credgate
+  instrument        credgate   trial seed 0000000000041da4   1214 trials
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  seed family       offset 904837 -> first creature 000000000012a988 (FRESH)
+  what the wipe IS  not a representational collision. `capacity` found two
+                    lessons interfering while driving DISJOINT groups, and
+                    `credit-oracle` gave the reason: the groups are disjoint,
+                    the REWARD is what they share. Node perturbation nudges
+                    bias_[i] for EVERY neuron in the module on one broadcast
+                    scalar, so teaching B random-walks A's setting.
+  the ceiling       a per-neuron reward mask gives retention 1.03 vs 0.84
+                    broadcast, at ~30% of the learning rate. But it is an
+                    ORACLE: the host knows which lesson is live.
+  the question      can the creature's OWN derived context drive that mask?
+                    `ema-index` derives a usable context off the ear rate EMA
+                    at 16/18; `ctxretain` gated on it and the index never
+                    separated (0.23/0.23). The halves have never been joined.
+  halves MEASURED   `silences-the-wrong-side`: a LOW target works by
+                    suppressing the UPPER half, a HIGH one the LOWER. A is
+                    f1 320 and B is 850, so A takes the UPPER and B the LOWER.
+
+  PRE-REGISTERED
+    AGREEMENT FIRST, before any retention number is read. `credit_agree` is
+      the fraction of trials where the mask landed on the half the LIVE lesson
+      wants. oracle must read 100% by construction -- if it does not, the
+      mechanism is miswired and nothing else is readable. shuf must sit at
+      ~50%. DERIVED IS THE WHOLE QUESTION: at ~50% the index carries nothing
+      about which lesson is live and a null retention result says nothing
+      about gating, only about this index.
+    PRIMARY         the AB-minus-keep gap per mode. oracle should shrink it
+                    (that is credit-oracle replicating); derived shrinking it
+                    too is the finding.
+    SPECIFICITY     `shuf` must NOT shrink it. If a coin flip works as well as
+                    the index, what helps is the masking itself -- halving the
+                    write -- and not credit assignment at all.
+    THE COST        the oracle bought 1.03 at ~30% of the learning rate, so
+                    err_taught is expected to DEGRADE under every mask. A gap
+                    that closes while err_taught collapses is the `regionband`
+                    failure again, and it is refused the same way.
+
+
+  arm           mode  gate  err TAUGHT (A)     err AFTER (A kept?) GAINED           EROSION          agree  slot0 t/g   SWITCHES teach/gap @first
+  bcast-AB      0     0     1.0003 +/- 0.0162     1.0614 +/- 0.0152     +0.0363 +/- 0.0140   +0.0612 +/- 0.0108   0.000  0.201/0.193      727/    256 @5
+  bcast-keep    0     0     1.0003 +/- 0.0162     0.9685 +/- 0.0290     +0.0363 +/- 0.0140   -0.0317 +/- 0.0203   0.000  0.201/0.198      727/    268 @5
+  oracle-AB     1     0     1.0538 +/- 0.0055     1.0838 +/- 0.0053     +0.0177 +/- 0.0054   +0.0300 +/- 0.0068   1.000  0.324/0.312     1011/    415 @5
+  oracle-keep   1     0     1.0538 +/- 0.0055     1.0809 +/- 0.0115     +0.0177 +/- 0.0054   +0.0271 +/- 0.0129   1.000  0.324/0.311     1011/    403 @5
+  shuf-AB       3     0     1.0656 +/- 0.0035     1.0934 +/- 0.0048     +0.0092 +/- 0.0038   +0.0278 +/- 0.0041   0.477  0.281/0.278      606/    312 @4
+  shuf-keep     3     0     1.0656 +/- 0.0035     1.0911 +/- 0.0079     +0.0092 +/- 0.0038   +0.0255 +/- 0.0078   0.504  0.281/0.278      606/    314 @4
+  half-up-AB    1     0     1.0538 +/- 0.0055     1.0981 +/- 0.0067     +0.0177 +/- 0.0054   +0.0443 +/- 0.0086   0.720  0.324/0.313     1011/    397 @5
+  half-up-keep  1     0     1.0538 +/- 0.0055     1.0809 +/- 0.0115     +0.0177 +/- 0.0054   +0.0271 +/- 0.0129   1.000  0.324/0.311     1011/    403 @5
+  half-lo-AB    1     0     1.0769 +/- 0.0048     1.1070 +/- 0.0056     -0.0007 +/- 0.0056   +0.0301 +/- 0.0041   0.280  0.256/0.253     1324/    466 @5
+  half-lo-keep  1     0     1.0769 +/- 0.0048     1.1080 +/- 0.0077     -0.0007 +/- 0.0056   +0.0311 +/- 0.0064   0.000  0.256/0.253     1324/    471 @5
+  anti-AB       1     0     1.0769 +/- 0.0048     1.1044 +/- 0.0057     -0.0007 +/- 0.0056   +0.0275 +/- 0.0028   0.000  0.256/0.255     1324/    458 @5
+  anti-keep     1     0     1.0769 +/- 0.0048     1.1080 +/- 0.0077     -0.0007 +/- 0.0056   +0.0311 +/- 0.0064   0.000  0.256/0.253     1324/    471 @5
+
+  RETENTION -- the fraction of the GAIN that survived, which is what
+  credit-oracle scored (0.84 broadcast -> 1.03 targeted). Unlike the raw
+  gap this is not confounded by the mask's learning-rate cost.
+    broadcast  AB -0.324 +/- 0.322    keep 1.858 +/- 0.600
+    oracle     AB -0.536 +/- 0.459    keep 3.497 +/- 3.115
+    derived    not in this focus set
+    shuffled   AB -0.890 +/- 0.331    keep -0.043 +/- 0.543
+    half-up    AB 0.719 +/- 1.223    keep 3.497 +/- 3.115
+    half-lo    AB -2.667 +/- 1.325    keep -3.693 +/- 2.449
+    anti       AB -2.253 +/- 1.169    keep -3.693 +/- 2.449
+    oracle     AB retention vs broadcast: -0.212 +/- 0.560  (-0.4 SE)
+    shuffled   AB retention vs broadcast: -0.566 +/- 0.461  (-1.2 SE)   <- must NOT
+    half-up    AB retention vs broadcast: +1.043 +/- 1.265  (+0.8 SE)
+    half-lo    AB retention vs broadcast: -2.343 +/- 1.363  (-1.7 SE)
+    anti       AB retention vs broadcast: -1.929 +/- 1.212  (-1.6 SE)
+      ^ MEAN OF PER-CREATURE RATIOS. Read the ratio-of-sums below before
+        quoting any of these: the denominator above is per creature and
+        floored at 1e-6, so one creature that barely learned moves it.
+
+  RETENTION AS A RATIO OF SUMS -- one denominator per arm, jackknife SE
+  over creatures, and the creatures PAIRED across arms. Swept over a floor
+  on the per-creature gain, because the creatures that make the mean of
+  ratios explode are exactly the ones that never learned the lesson.
+    gain floor 0.00
+      broadcast  AB -0.066 +/- 0.178   n 27
+      oracle     AB -0.177 +/- 0.225   n 23   vs broadcast -0.112 +/- 0.244  (-0.5 SE)
+      derived    not in this focus set
+      shuffled   AB -0.507 +/- 0.269   n 20   vs broadcast -0.442 +/- 0.332  (-1.3 SE)   <- must NOT
+      half-up    AB -0.633 +/- 0.269   n 23   vs broadcast -0.567 +/- 0.267  (-2.1 SE)
+      half-lo    AB -0.686 +/- 0.267   n 17   vs broadcast -0.620 +/- 0.272  (-2.3 SE)
+      anti       AB -0.498 +/- 0.219   n 17   vs broadcast -0.432 +/- 0.232  (-1.9 SE)
+    gain floor 0.05
+      broadcast  AB +0.050 +/- 0.190   n 18
+      oracle     AB +0.103 +/- 0.333   n 3   vs broadcast +0.054 +/- 0.392  (+0.1 SE)
+      derived    not in this focus set
+      shuffled   AB too few creatures above the floor (0)
+      half-up    AB -0.265 +/- 0.228   n 3   vs broadcast -0.314 +/- 0.298  (-1.1 SE)
+      half-lo    AB too few creatures above the floor (1)
+      anti       AB too few creatures above the floor (1)
+    gain floor 0.10
+      broadcast  AB +0.086 +/- 0.340   n 6
+      oracle     AB too few creatures above the floor (0)
+      derived    not in this focus set
+      shuffled   AB too few creatures above the floor (0)
+      half-up    AB too few creatures above the floor (0)
+      half-lo    AB too few creatures above the floor (0)
+      anti       AB too few creatures above the floor (0)
+    gain floor 0.20
+      broadcast  AB too few creatures above the floor (0)
+      oracle     AB too few creatures above the floor (0)
+      derived    not in this focus set
+      shuffled   AB too few creatures above the floor (0)
+      half-up    AB too few creatures above the floor (0)
+      half-lo    AB too few creatures above the floor (0)
+      anti       AB too few creatures above the floor (0)
+    A result that holds across the floor sweep is in the mechanism. One
+    that appears only at floor 0.00 is in the creatures that never learned.
+
+    VERDICT GATES (paired ratio-of-sums, must hold at EVERY floor that
+    retains >=3 creatures in both arms; >=2 such floors needed to decide):
+      oracle     does NOT hold across the sweep    2 floor(s) evaluated
+      derived    UNDECIDABLE on this run           0 floor(s) evaluated
+      shuffled   UNDECIDABLE on this run           1 floor(s) evaluated
+      half-up    does NOT hold across the sweep    2 floor(s) evaluated
+      half-lo    UNDECIDABLE on this run           1 floor(s) evaluated
+      anti       UNDECIDABLE on this run           1 floor(s) evaluated
+
+  SEPARATION -- does the index DISTINGUISH the two lessons, regardless of
+  which slot got which name? Raw agreement cannot answer this: the slots are
+  UNLABELLED, so a fixed slot->half mapping is a coin flip per seed and
+  averages to chance however well the index separates. Scored as
+  |p(slot0 | lesson A) - p(slot0 | lesson B)|: 0 is no information, 1 is
+  perfect separation. `ctxfour` drew the same line -- a perfect index holds
+  four DISTINCTIONS, not four MAPPINGS.
+    derived-AB    too few creatures
+    derived-keep  too few creatures
+    derived2-AB   too few creatures
+    derived2-keep too few creatures
+    derived3-AB   too few creatures
+    derived3-keep too few creatures
+    A separation near 0 refutes THIS INDEX as a carrier. A separation well
+    above 0 with chance AGREEMENT means the index works and only the
+    slot->half assignment is arbitrary -- which is a fixable wiring problem,
+    not a refutation.
+
+  AGREEMENT GUARD -- did the mask land where the live lesson wanted?
+    oracle  1.000   (must be 1.000 by construction)
+    derived   --   (not in this focus set)   <- THE WHOLE QUESTION
+    shuffled 0.477  <- SPECIFICITY: must sit near 0.500
+
+  PRIMARY -- the AB-minus-keep gap, per mode
+    broadcast  AB 1.0614   keep 0.9685   gap +0.0929 +/- 0.0327  (+2.8 SE)
+    oracle     AB 1.0838   keep 1.0809   gap +0.0029 +/- 0.0126  (+0.2 SE)
+    derived    not in this focus set
+    shuffled   AB 1.0934   keep 1.0911   gap +0.0023 +/- 0.0093  (+0.2 SE)
+    half-up    AB 1.0981   keep 1.0809   gap +0.0172 +/- 0.0133  (+1.3 SE)
+    half-lo    AB 1.1070   keep 1.1080   gap -0.0010 +/- 0.0095  (-0.1 SE)
+    anti       AB 1.1044   keep 1.1080   gap -0.0036 +/- 0.0095  (-0.4 SE)
+
+    oracle   shrinks the gap by +0.0900 +/- 0.0351  (+2.6 SE)
+    shuffled shrinks the gap by +0.0906 +/- 0.0340  (+2.7 SE)   <- must NOT
+    half-up  shrinks the gap by +0.0757 +/- 0.0353  (+2.1 SE)
+    half-lo  shrinks the gap by +0.0939 +/- 0.0341  (+2.8 SE)
+    anti     shrinks the gap by +0.0965 +/- 0.0341  (+2.8 SE)
+    THE GAP IS CONFOUNDED and must not be quoted as the headline: a reward
+    mask costs learning rate, so it moves BOTH arms. Retention above is the
+    statistic `credit-oracle` used. Kept here because a gap that closes
+    while err_taught collapses is the `regionband` failure.
+
+  THE COST -- err_taught, which the oracle bought its 1.03 with
+    broadcast  AB 1.0003   keep 1.0003
+    oracle     AB 1.0538   keep 1.0538
+    derived    not in this focus set
+    shuffled   AB 1.0656   keep 1.0656
+    half-up    AB 1.0538   keep 1.0538
+    half-lo    AB 1.0769   keep 1.0769
+    anti       AB 1.0769   keep 1.0769
+
+  SPECIFICITY UNTESTED: `shuf-AB`/`shuf-keep` are not in this focus set, so the control
+  that distinguishes credit assignment from merely halving the write did
+  not run. No verdict here can clear that bar.
+
+  DOES THE INDEX BUY WHAT ITS ACCURACY PREDICTS?
+    agreement 0.000  ->  predicted -1.000 of the oracle's benefit
+    delivered 0.000
+    A shortfall here would mean the mechanism fails; a match means the
+    mechanism works and the CARRIER is simply not accurate enough.
+
+  VACUITY -- not applicable: the uniform-flip arms are not in this
+  focus set, so there is no coin flip that ran and could be inert.
+  Their contrast against pin0 was settled at 12 creatures (commit
+  27944a3) and is not re-measured here.
+
+  WHERE EACH LESSON WROTE -- net rate change per half, Hz.
+  A is the teach phase (target 320, LOW); B is the gap (850, HIGH).
+  A LOW target is learned by suppressing the UPPER half, so the oracle
+  gives A the upper half and B the lower one.
+  arm          A lower   A upper     B lower   B upper  
+    bcast-AB        +1.125    -2.311      -4.925    +3.144  (32)
+    oracle-AB       +0.962    -1.774      -2.612    -1.426  (32)
+    (A upper-lower) - (B upper-lower):  bcast -11.506, oracle -3.922
+    the mask moves where the lessons write -- it is not inert
+
+  THE DROPOUT CONTRAST -- does a matched coin flip buy the gap?
+    broadcast                  gap +0.0929 +/- 0.0327  (+2.8 SE)   gained +0.0363
+    REFUSES INDEXING: a pinned-noise gap AT vigilance and away from
+    context-off. SUPPORTS INDEXING: a pinned-noise gap at context-off.
+    NEITHER: both differences under ~2 SE, which is this test failing
+    to resolve and NOT evidence for either side.
+
+  DOES IT REACH A MILESTONE? -- retention, the fraction of the taught
+  gain still gone after the conflicting lesson. This is `retain`'s own
+  statistic, whose conflicting-lesson value is 0.22. Ratio of MEANS with
+  a paired bootstrap (2000 resamples, 95% interval); a mean of per-
+  creature ratios is unusable here and reported -5.166 +/- 5.263.
+    broadcast              retention -0.685   95% [-4.414, +0.012]
+    oracle (masked)        UNDERPOWERED -- gained +0.0177, under retain's 0.02 bar,
+                           so its retention is NOT a measurement
+    1.0 keeps the whole lesson, 0.0 loses it entirely, and `retain`
+    measured 0.22 for a conflicting lesson on the shipped genome.
+
+    PRE-REGISTERED. MILESTONE MET only if VIGILANCE's interval lies
+    ENTIRELY ABOVE 0.5 -- more than half the taught lesson survives a
+    conflicting one -- AND its paired difference against context-off
+    excludes zero. Either one alone is NOT the milestone.
+
+  WHERE IN THE TRIAL THE SWITCHES FALL -- teach phase, 14 bins of
+  200 ticks. The caregiver sounds for t < 900, so bins 0-3 are the
+  word and 5-13 are silence; a FLAT profile puts 32.1% in the word
+  and the pinned-noise arms measure that null on this protocol.
+  arm          sound%     onset%    offs%     profile, per-bin share of switches
+  bcast-AB      44.9+/-2.4   3.6+/-1.1   8.0+/-1.4   5.6 3.110.316.217.810.712.7 7.1 3.8 1.9 1.4 1.8 3.6 4.1
+  A vigilance profile matching the pinned-noise profile means the
+  excursions are keyed to nothing in the trial and the account moves
+  elsewhere. A profile concentrated in the word, or at either
+  transition, names what the novelty test is actually firing on.
+
+  --- the reading ---
+  NO VALIDATED CEILING FOR THIS REGIME -- the oracle arm reads -0.212
+  +/- 0.560 (-0.4 SE). This is NOT a reproduction failure: credit-oracle's
+  0.84 -> 1.03 is for ORTHOGONAL lessons on DISJOINT groups, and `credit`
+  still reproduces it (targeted 1.06 at 5.6M). THIS experiment teaches a
+  CONFLICTING pair on the SAME F1 group (320 against 850) and masks by
+  splitting that one group in half, which credit-oracle never tested --
+  capacity's own split is 0.84 orthogonal against the 0.22 wipe. So the
+  oracle here is a within-experiment REFERENCE, not a bound, and the
+  derived arms cannot be priced against a ceiling that does not exist.

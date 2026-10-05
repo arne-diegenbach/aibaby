@@ -14578,6 +14578,80 @@ What would refuse it: A and B eroding equally.
 at 5.6M on `dna/default.toml`, a different protocol from credgate's conflicting pair on
 one group. They are indicative, not transferable.
 
+### Masking at all costs more than masking wrongly — and the 2×2 cannot separate position from content
+
+The pilot ran at the registered 3.4M default, 12 arms × 32 creatures, 384 sessions.
+Two results, one of them a correction of the design I committed one tick earlier.
+
+#### 3.4M is below the budget where this experiment exists
+
+Retention is undecidable here, and the gain-floor guard says so instead of inventing a
+verdict:
+
+```
+      oracle     does NOT hold across the sweep    2 floor(s) evaluated
+      shuffled   UNDECIDABLE on this run           1 floor(s) evaluated
+      half-lo    UNDECIDABLE on this run           1 floor(s) evaluated
+      anti       UNDECIDABLE on this run           1 floor(s) evaluated
+```
+
+At gain floor 0.05 the oracle arm retains 3 creatures of 32, `shuf` none, `half-lo` and
+`anti` one each. Broadcast's own retention reads −0.066 ± 0.178 where the same arm at
+12M reads +0.320 ± 0.052. The broadcast gain is **+0.0363 ± 0.0140 at 3.4M against
++0.3618 ± 0.0334 at 12M** — a tenfold difference in how much there is to retain. This
+is the project's documented power curve again (`vocallearn` +1.0 at 560k against +18.3
+at 3.4M), and it is a measured statement about where the experiment lives, not a
+failure of the run.
+
+The floor-skipping rule earns its keep here: counting an empty floor as a failure would
+have manufactured four confident refusals out of a run with no power.
+
+#### What the pilot does establish, on learning rather than retention
+
+`err_taught` is the end-of-teaching error, measured before the gap, so it isolates the
+teach-phase mask. Paired on the same creatures:
+
+| contrast | on `err_taught` (lower is better) | |
+|---|---|---|
+| masking **at all** — `oracle` vs `bcast` | +0.0536 ± 0.0154 | **+3.5 SE** |
+| wrong half **given** masked — teach lo vs up | +0.0231 ± 0.0060 | **+3.8 SE** |
+| gap end changed, teach end held | **+0.0000 ± 0.0000** | null, twice |
+
+So **confining the write costs more than confining it to the wrong place**: 0.054
+against 0.023, better than a factor of two. Both clear the project's 3 SE bar, and the
+wrong-half contrast replicates identically across two independent arm pairs
+(`half-lo` vs `oracle`, and `anti` vs `half-up`, both +0.0231 ± 0.0060).
+
+The third row is a null control that had to come back exactly zero and did. `err_taught`
+is measured before the gap phase begins, so the gap-phase mask cannot reach it — and
+arms sharing a teach end but differing in gap end return byte-identical values across
+all 32 creatures. That is the factorial confirming its own wiring.
+
+#### The design does not separate position from content, and I said it did
+
+The commit that built this claimed the 2×2 "gives the main effect of the teach end, the
+main effect of the gap end, and their interaction — so position separates from content
+instead of riding on it". **That is wrong.** The mask is a binary half-split and each
+lesson wants exactly one half, so within a phase "which end is kept" and "whether the
+content is correct" are the same variable. Lesson A is a low target wanting the upper
+half, so teach-end-upper is simultaneously the correct content *and* the cheap block,
+and teach-end-lower is simultaneously wrong content *and* the expensive block. They are
+perfectly collinear and no contrast in this design can tell them apart.
+
+What the 2×2 actually is, then, is a factorial in **teach-correctness × gap-correctness**.
+That is still worth having — it localises which phase's mask matters, and it gave the
+null control above — but it cannot test the leverage prediction (upper ~53% against
+lower ~9%) at all. That prediction needs a mask region aligned with **neither** lesson:
+keeping the middle half, for instance, blocks both extremes and sits at ~0.5 content for
+both lessons by construction, which is the first thing here that would vary position
+while holding content fixed. Not built.
+
+So the honest state of the cost decomposition: masking's −0.685 retention cost at 12M is
+**not yet attributed** to position or to content. The pilot says the larger share of the
+*learning* cost is masking per se rather than mis-aimed masking, which points away from
+the leverage story, but learning and retention are different axes and the retention
+question is still open at a budget nobody has paid for.
+
 ## Layout
 
 ```
