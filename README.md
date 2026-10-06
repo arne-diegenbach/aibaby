@@ -14652,6 +14652,70 @@ So the honest state of the cost decomposition: masking's −0.685 retention cost
 the leverage story, but learning and retention are different axes and the retention
 question is still open at a budget nobody has paid for.
 
+### Position costs as much as content — and it cannot answer the retention question
+
+The middle-mask run finished: `bcast` + `mid` at 12M, 128 sessions, gate passed
+(`verify PASS`, hash `ad96f882becbee92`). `mid` keeps the **central** half, so it is the
+only mask here aligned with neither lesson — exactly 7 neurons of 14, size-matched to
+the end masks, leaving each lesson half of its preferred half on every trial.
+
+`bcast` came back **bit-identical for the third consecutive 12M run**
+(0.6533 / 0.9047 / +0.3618 / +0.2514), so creatures pair across all three logs. The
+cross-log consistency check confirms it directly: `bcast` against `bcast` is
+**+0.0000 ± 0.0000** over 32 creatures.
+
+#### An additive decomposition of the masking cost, on learning
+
+`err_taught` is the end-of-teaching error, paired on the same creatures, n = 32:
+
+| step | contrast | effect | |
+|---|---|---|---|
+| masking at all | `bcast` → `oracle` (correct end) | +0.211 | |
+| **content** | `oracle` → `shuf` (end wrong) | **+0.103** | +11.5 SE for mid−shuf |
+| **position** | `shuf` → `mid` (both ends avoided) | **+0.102** | |
+| total | `mid` vs `bcast` | +0.4169 ± 0.0440 | +9.5 SE |
+
+The two increments are **+0.103 and +0.102** — content and position cost essentially the
+same amount, and each is about half the base cost of masking at all. The direct
+pre-registered contrast is `mid` vs `shuf`: **+0.1023 ± 0.0089, +11.5 SE**, at matched
+~0.5 content *and* matched mask fraction, so the only thing differing is the region.
+The ordering on learning is `bcast` < `oracle` < `shuf` < `mid`, monotone.
+
+This is the first thing in this line that supports the leverage account rather than
+pointing away from it: the extremes carry the leverage, so a mask that always excludes
+**both** extremes costs as much again as mis-aiming one.
+
+**The caveat I registered in advance still applies.** `mid` and `shuf` reach ~0.5
+content by different routes — `shuf` is fully correct on half the *trials*, `mid` is
+half-correct on *every* trial, the same mean with different variance. At 11.5 SE a pure
+variance-structure explanation is implausible, but it is not excluded.
+
+#### And the retention question is closed as unanswerable by this route
+
+`mid`'s gain is **+0.0125 ± 0.0023** against broadcast's +0.3618 — a factor of 29. At
+gain floor 0.05 and above, **zero** of 32 middle creatures qualify, so the gate refuses:
+
+```
+      middle     UNDECIDABLE on this run           1 floor(s) evaluated
+```
+
+The single evaluable floor is 0.00, where the ratio rests entirely on creatures with
+gain in (0, 0.05] — the regime the floor sweep exists to distrust. Retention is not
+measurable here.
+
+**This is a structural obstacle, not a power problem.** More creatures will not fix a
+gain of 0.0125: varying position far enough to matter destroys the learning whose
+retention you would be measuring. So masking's −0.685 retention cost at 12M remains
+**unattributed**, and the middle mask — the only design that varies position with
+content held — cannot attribute it.
+
+One route survives, and it is the one that changes the mask *without* touching
+learning. `half-up` differs from `oracle` only in the **gap** phase, so both share the
+teach phase and both learn as well as the oracle does (gain +0.1964, a usable
+denominator). That makes `bcast` + `oracle` + `half-up` at 12M the only remaining way
+to ask whether the mask's position matters for retention — 6 arms, 192 sessions, ~6.9h.
+Not run.
+
 ## Layout
 
 ```

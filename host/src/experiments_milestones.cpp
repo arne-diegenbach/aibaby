@@ -6047,6 +6047,7 @@ struct RTConfig {
   // end of the struct because this one is positionally initialised at call sites.
   int credit_keep_half = -1;
   bool credit_invert_half = false;
+  bool credit_keep_middle = false;
 };
 
 // One arm, one creature, one life: teach, intervene, re-measure.
@@ -6312,11 +6313,32 @@ RTRow run_retain_arm(const std::vector<uint8_t>& blob, uint64_t ticks,
       if (cfg.credit_keep_half >= 0) upper = (cfg.credit_keep_half == 1);
       if (cfg.credit_invert_half) upper = !upper;
 
-      if (upper) cnet.set_reward_mask(cvm.begin + cmid, cvm.begin + cg_hi);
-      else cnet.set_reward_mask(cvm.begin + cg_lo, cvm.begin + cmid);
+      if (cfg.credit_keep_middle) {
+        // The central half, blocking both ends. SIZE-MATCHED EXACTLY to a half mask,
+        // which `lo + G/4 .. hi - G/4` is NOT: the group here is 14 (vocal's 126
+        // neurons over kVocalGroups = 9), so quartile trimming leaves 8 where a half
+        // mask is 7. Matching the mask FRACTION is the whole point of this arm -- the
+        // region is supposed to be the only thing that moves -- so take exactly G/2
+        // neurons, centred, and let the remainder fall outside on the wider side.
+        const uint32_t gsz = cg_hi - cg_lo, half = gsz / 2;
+        const uint32_t mlo = cg_lo + (gsz - half) / 2;
+        cnet.set_reward_mask(cvm.begin + mlo, cvm.begin + mlo + half);
+      } else if (upper) {
+        cnet.set_reward_mask(cvm.begin + cmid, cvm.begin + cg_hi);
+      } else {
+        cnet.set_reward_mask(cvm.begin + cg_lo, cvm.begin + cmid);
+      }
       // AGREEMENT TELEMETRY, so a null can be told from an index that never moved.
-      ++row.credit_trials;
-      if (upper == want) ++row.credit_agree;
+      // NOT COUNTED FOR THE MIDDLE MASK. `upper` does not describe that mask, so
+      // `upper == want` would be a bit about a variable the arm does not use -- and
+      // reporting it would repeat this session's own bug of a telemetry counter that
+      // describes a mask other than the one that ran. The middle mask leaves each
+      // lesson exactly half of its preferred half on every trial, which is not a
+      // binary agreement at all; the report prints n/a and says why.
+      if (!cfg.credit_keep_middle) {
+        ++row.credit_trials;
+        if (upper == want) ++row.credit_agree;
+      }
       // SEPARATION, NOT LABELLING -- and the distinction is the whole measurement.
       // The context slots are UNLABELLED: which slot means "lesson A" is arbitrary
       // and seed-dependent, so `upper = (active_context() == 0)` is a coin flip PER
@@ -18033,6 +18055,29 @@ struct CGArm {
   // INVERT the mode's choice of half, giving the anti-oracle: wrong end in BOTH
   // phases. Completes the 2x2 described above. Appended at the END with a default.
   bool invert_half = false;
+  // KEEP THE CENTRAL HALF instead of an end half: blocks the bottom AND top quartiles.
+  // THIS IS THE ONLY ARM HERE THAT VARIES POSITION WITH CONTENT HELD. A half-split
+  // keyed to the lesson's direction makes "which end" and "is the content correct" the
+  // same variable, so no end-forced arm can separate them. The central half is aligned
+  // with NEITHER lesson: it leaves each lesson exactly half of its preferred half, by
+  // construction and on every trial.
+  //
+  // Same SIZE as the half masks: exactly G/2 neurons, centred. Quartile trimming
+  // (lo + G/4 .. hi - G/4) would NOT be matched -- the group is 14, so it leaves 8
+  // where a half mask is 7 -- and matching the mask FRACTION is the whole point here,
+  // since the region is meant to be the only thing that moves.
+  //
+  // THE COMPARATOR IS ALREADY MEASURED. `shuf` sits at content 0.477/0.504 at 12M with
+  // retention -0.366 +/- 0.081, so this arm needs only `bcast` beside it. The two reach
+  // ~0.5 content differently -- shuf is 100% correct on half the TRIALS, middle is 50%
+  // correct on every trial, same mean and different variance -- so it is the closest
+  // available matched-content pair and not a perfect one.
+  //
+  // PREDICTION: middle blocks the top quartile on EVERY trial where shuf blocks the
+  // upper half on ~50% of them, and `position-is-the-cost` puts the leverage at the TOP.
+  // If position is what costs, middle lands clearly below shuf. WHAT REFUSES THE
+  // LEVERAGE LINE: middle matching shuf despite always blocking the high-leverage end.
+  bool keep_middle = false;
 };
 const CGArm kCGArms[] = {
     // THE DEFAULT LIVE SET IS THREE PAIRS, AND IT IS DELIBERATE (2026-10-04):
@@ -18277,12 +18322,14 @@ const CGArm kCGArms[] = {
     // everything loading on content, i.e. only the (up, lo) cell standing out.
     // The 9%/53% figures are `blockanchor` at 5.6M on dna/default.toml, a different
     // protocol -- they set the DIRECTION of the prediction, not its size.
-    {"half-up-AB",   1u, false, 0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, false, 0.0, 0.0f, -1.0f, 1},
-    {"half-up-keep", 1u, true,  0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, false, 0.0, 0.0f, -1.0f, 1},
-    {"half-lo-AB",   1u, false, 0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, false, 0.0, 0.0f, -1.0f, 0},
-    {"half-lo-keep", 1u, true,  0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, false, 0.0, 0.0f, -1.0f, 0},
-    {"anti-AB",      1u, false, 0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, false, 0.0, 0.0f, -1.0f, -1, true},
-    {"anti-keep",    1u, true,  0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, false, 0.0, 0.0f, -1.0f, -1, true},
+    {"half-up-AB",   1u, false, 0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, true, 0.0, 0.0f, -1.0f, 1},
+    {"half-up-keep", 1u, true,  0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, true, 0.0, 0.0f, -1.0f, 1},
+    {"half-lo-AB",   1u, false, 0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, true, 0.0, 0.0f, -1.0f, 0},
+    {"half-lo-keep", 1u, true,  0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, true, 0.0, 0.0f, -1.0f, 0},
+    {"anti-AB",      1u, false, 0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, true, 0.0, 0.0f, -1.0f, -1, true},
+    {"anti-keep",    1u, true,  0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, true, 0.0, 0.0f, -1.0f, -1, true},
+    {"mid-AB",       1u, false, 0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, true, 0.0, 0.0f, -1.0f, -1, false, true},
+    {"mid-keep",     1u, true,  0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, true, 0.0, 0.0f, -1.0f, -1, false, true},
 };
 constexpr uint32_t kCGArmCount = sizeof(kCGArms) / sizeof(kCGArms[0]);
 // CHANGED 2026-09-21 from 318211 to draw a FRESH set of creatures from the same
@@ -18385,6 +18432,7 @@ constexpr CGMode kCGModes[] = {
     {"half-up", "half-up-AB", "half-up-keep"},
     {"half-lo", "half-lo-AB", "half-lo-keep"},
     {"anti", "anti-AB", "anti-keep"},
+    {"middle", "mid-AB", "mid-keep"},
 };
 constexpr uint32_t kCGModeCount = sizeof(kCGModes) / sizeof(kCGModes[0]);
 inline int cg_arm_of(const char* name) {
@@ -18502,6 +18550,7 @@ bool run_credgate_impl(const std::vector<uint8_t>& blob, uint64_t ticks, bool ve
     cfg.eta_floor = kCGArms[a].eta_floor;
     cfg.credit_keep_half = kCGArms[a].keep_half;
     cfg.credit_invert_half = kCGArms[a].invert_half;
+    cfg.credit_keep_middle = kCGArms[a].keep_middle;
     // GIVE THE TWO LESSONS DIFFERENT SOUNDS, or the index has nothing to separate.
     // `retain` says the SAME word throughout by default -- run_retain_arm's own
     // comment spells it out: "nothing in the creature's input distinguishes lesson A
@@ -18618,10 +18667,16 @@ bool run_credgate_impl(const std::vector<uint8_t>& blob, uint64_t ticks, bool ve
     const double m_swg = swg.size() >= 3 ? ctx_mean_se(swg, &e2) : 0.0;
     const double m_swf = swf.size() >= 3 ? ctx_mean_se(swf, &e3) : -1.0;
     m_swtch[a] = m_swt;
-    std::printf("  %-13s %-5u %-5u %.4f +/- %-10.4f %.4f +/- %-10.4f %+.4f +/- %-8.4f %+.4f +/- %-8.4f %.3f  %.3f/%.3f  %7.0f/%7.0f @%.0f\n",
+    // An arm with no agreement counter reads n/a, not 0.000 -- "the mask never landed
+    // where the lesson wanted" and "agreement is not defined for this mask" are
+    // different facts and must not share a number.
+    char ag_cell[8];
+    if (kCGArms[a].keep_middle) std::snprintf(ag_cell, sizeof(ag_cell), " n/a ");
+    else std::snprintf(ag_cell, sizeof(ag_cell), "%.3f", m_agree[a]);
+    std::printf("  %-13s %-5u %-5u %.4f +/- %-10.4f %.4f +/- %-10.4f %+.4f +/- %-8.4f %+.4f +/- %-8.4f %-5s  %.3f/%.3f  %7.0f/%7.0f @%.0f\n",
                 kCGArms[a].name, kCGArms[a].mode, kCGArms[a].gate,
                 m_taught[a], s_taught[a], m_after[a], s_after[a],
-                m_gain[a], sgn, m_ero[a], ser, m_agree[a], m_st, m_sg,
+                m_gain[a], sgn, m_ero[a], ser, ag_cell, m_st, m_sg,
                 m_swt, m_swg, m_swf);
   }
 
