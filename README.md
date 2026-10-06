@@ -14716,6 +14716,76 @@ denominator). That makes `bcast` + `oracle` + `half-up` at 12M the only remainin
 to ask whether the mask's position matters for retention — 6 arms, 192 sessions, ~6.9h.
 Not run.
 
+### The gap-phase mask's aim recovers half of what masking costs
+
+`oracle` against `half-up` at 12M, 128 sessions, gate passed (`verify PASS`, hash
+`ad96f882becbee92`). These two mask the **teach** phase identically and differ only in
+the **gap** end — the phase where the wipe happens and the one retention measures. So
+both learn lesson A equally well, which is the usable denominator the middle mask
+destroyed, and any difference is attributable to where the mask falls during the
+interfering lesson.
+
+Two null controls confirm the arms differ only where intended, paired over 32
+creatures: `err_before` **+0.0000 ± 0.0000** and `err_taught` **+0.0000 ± 0.0000**.
+And `oracle`'s retention reproduces the earlier independent 12M run exactly —
+**+0.1092 ± 0.0571** here against +0.109 ± 0.057 there.
+
+#### The result
+
+Paired, jackknifed ratio of sums, swept over the gain floor:
+
+| gain floor | `oracle` | `half-up` | difference | | n |
+|---|---|---|---|---|---|
+| 0.00 | +0.1092 | −0.0873 | −0.1965 ± 0.0510 | **−3.9 SE** | 32 |
+| 0.05 | +0.1291 | −0.0815 | −0.2107 ± 0.0509 | **−4.1 SE** | 29 |
+| 0.10 | +0.1327 | −0.0782 | −0.2109 ± 0.0508 | **−4.2 SE** | 27 |
+| 0.20 | +0.0598 | −0.0934 | −0.1532 ± 0.0478 | **−3.2 SE** | 18 |
+
+It holds at every floor, which is the criterion the verdict gate applies. The direction
+measured free at 3.4M survived and strengthened: `err_after` went from +0.0143 ± 0.0045
+(+3.2 SE) there to **+0.0386 ± 0.0101 (+3.8 SE)** here.
+
+**So the aim of the mask during the interfering lesson matters.** Masking the gap to the
+half lesson B does not want costs −0.197 of retention against masking it correctly.
+
+#### What it buys, against what masking costs
+
+With `bcast`'s +0.320 known from three bit-identical 12M runs:
+
+| arm | gap mask | retention |
+|---|---|---|
+| `bcast` | none | +0.320 |
+| `oracle` | correct | +0.109 |
+| `half-up` | wrong | −0.087 |
+
+A mask with the wrong gap aim sits −0.407 below no mask at all; aiming it correctly
+recovers **+0.197, about 48% of that**. The remaining −0.211 is the cost of masking
+that no amount of correct aiming removes.
+
+**This is the first positive result for credit assignment on the retention axis in this
+line.** The oracle headline stays retracted — `oracle` is still 0.211 *worse* than
+broadcast, so a perfect mask is not a remedy for the wipe — but the mechanism is not
+inert. Aiming the reward during the interfering lesson is worth half the cost of
+confining it, at better than 3 SE on every floor. What kills the oracle is not that
+credit assignment fails; it is that the price of the mask exceeds what good aim
+recovers.
+
+#### Two things this does not establish
+
+**Position versus content, still not separated.** Within the gap phase, "the mask is in
+the wrong place" and "the mask selects the wrong neurons" are the same statement for a
+binary half-split — `half-up`'s agreement is 0.720 against `oracle`'s 1.000 precisely
+because it is wrong on the gap trials. The question posed was whether the gap mask's
+*aim* matters, and that is answered; attributing it to position or to content is not,
+and the middle-mask run showed why that attribution is structurally hard here.
+
+**The interaction is not established at 12M.** At 3.4M the effect appeared only in the
+teach-correct cell and read −0.8 SE with the teach end flipped. Only the teach-correct
+cell was run at 12M, and the 3.4M null sits at a budget where retention is undecidable
+for every arm — so "the gap aim matters only when the lesson was actually learned" is a
+plausible reading of a null that cannot carry it. Testing it needs `half-lo` and `anti`
+at 12M, which is another 4.6h.
+
 ## Layout
 
 ```

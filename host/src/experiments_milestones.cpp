@@ -18571,8 +18571,15 @@ bool run_credgate_impl(const std::vector<uint8_t>& blob, uint64_t ticks, bool ve
     cell.row = run_retain_arm(variant, ticks, cfg, local_ruler, regime, &ok);
     cell.ok = ok;
     if (cell.ok)
-      parallel_note("  [%u/%u] seed %u %-13s taught %.4f after %.4f agree %.2f\n", i + 1,
-                    njobs, r, kCGArms[a].name, cell.row.err_taught, cell.row.err_after,
+      // err_before IS LOGGED because retention is (before-after)/(before-taught) and
+      // without `before` the per-creature ratio cannot be rebuilt from a log. Three
+      // analyses this week wanted a PAIRED retention contrast between two arms that
+      // are not `broadcast` -- which the report only ever computes against broadcast --
+      // and each time the log could supply `after` differences but not retention.
+      // Logging it makes any later paired contrast a log-reading job, not a code change.
+      parallel_note("  [%u/%u] seed %u %-13s before %.4f taught %.4f after %.4f agree %.2f\n",
+                    i + 1, njobs, r, kCGArms[a].name, cell.row.err_before,
+                    cell.row.err_taught, cell.row.err_after,
                     cell.row.credit_trials ? double(cell.row.credit_agree) /
                                                  double(cell.row.credit_trials) : 0.0);
     return cell;
