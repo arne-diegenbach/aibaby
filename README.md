@@ -14578,6 +14578,15 @@ What would refuse it: A and B eroding equally.
 at 5.6M on `dna/default.toml`, a different protocol from credgate's conflicting pair on
 one group. They are indicative, not transferable.
 
+**Whose result this is.** The decomposition is scored with **Cochran**'s ratio
+estimator and **Quenouille**'s jackknife as extended by **Tukey**; the leverage
+asymmetry it leans on is this project's own `blockanchor`. The mechanism being
+masked is node perturbation, which reaches this creature through **Fiete, Fee and
+Seung**'s account of birdsong learning by perturbing neural conductances, and the
+reason a per-neuron mask was expected to help at all is **Heald, Lengyel and
+Wolpert**'s COIN model — that interference is a failure of *contextual inference*,
+so supplying the context should remove it.
+
 ### Masking at all costs more than masking wrongly — and the 2×2 cannot separate position from content
 
 The pilot ran at the registered 3.4M default, 12 arms × 32 creatures, 384 sessions.
@@ -14785,6 +14794,30 @@ cell was run at 12M, and the 3.4M null sits at a budget where retention is undec
 for every arm — so "the gap aim matters only when the lesson was actually learned" is a
 plausible reading of a null that cannot carry it. Testing it needs `half-lo` and `anti`
 at 12M, which is another 4.6h.
+
+#### The literature predicted this, and names what is missing
+
+The shape of the result — gating helps, and is not enough on its own — is exactly
+**Masse, Grant and Freedman** (2018), *Alleviating catastrophic forgetting using
+context-dependent gating and synaptic stabilization*, PNAS 115(44). They report
+context gating **alone** at 61.4% and gating **plus** synaptic stabilization at
+95.4%. This creature has now measured the first half of that and reproduced its
+sign: masking is gating, aiming it correctly is worth +0.197, and it still loses to
+not masking at all because the gate by itself does not protect what was already
+learned.
+
+What Masse pairs it with is the part this creature has never been tested on.
+Stabilization there means an importance-weighted brake on changing weights that
+mattered to an earlier task — **Kirkpatrick et al.** (2017), *Overcoming
+catastrophic forgetting in neural networks*, PNAS 114(13), and **Zenke, Poole and
+Ganguli** (2017), *Continual learning through synaptic intelligence*, ICML. The
+creature already ships such a brake: §3.5's `eta_floor_frac`, the myelination
+floor, which has never been swept and has never been tested against the wipe.
+
+So the reading is not "credit assignment fails here". It is that this project has
+built and measured the **gating** half of a two-part mechanism whose published form
+needs both halves, and the residual −0.211 is the size of the half it has not
+tested.
 
 ## Layout
 
@@ -15177,6 +15210,24 @@ papers about the half it does not touch.
   is a **rate, not a store**: it stays inside the stable regime while the
   cumulative shift is unbounded. `bias_ctx_` here consolidates nowhere, which is
   why it has to hold everything and cannot.
+
+**Statistical method, for the estimators this project's credit-assignment results
+rest on.** These were used before they were listed, which is the wrong order; the
+body text had named them three times each with no entry here.
+
+- Cochran, W. G. (1977). *Sampling Techniques*, 3rd ed. Wiley. — the ratio
+  estimator, and the distinction between a **ratio of sums** and a **mean of
+  ratios** that decides every retention number in `credgate`. The two disagree in
+  *sign* on the same 128 sessions here, because the per-creature denominator
+  (how much that creature learned) can approach zero while the pooled one cannot.
+- Quenouille, M. H. (1949). *Problems in plane sampling.* Annals of Mathematical
+  Statistics 20(3), 355–375; and (1956), *Notes on bias in estimation.*
+  Biometrika 43(3–4), 353–360. — the jackknife, introduced for bias reduction.
+- Tukey, J. W. (1958). *Bias and confidence in not-quite-large samples* (abstract).
+  Annals of Mathematical Statistics 29(2), 614. — named the jackknife and extended
+  it to variance estimation, which is the use here. Chosen over the bootstrap
+  because leave-one-out is deterministic, and this project gates every run on a
+  pinned hash.
 
 **Everything else.**
 
