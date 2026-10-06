@@ -14819,6 +14819,123 @@ built and measured the **gating** half of a two-part mechanism whose published f
 needs both halves, and the residual −0.211 is the size of the half it has not
 tested.
 
+### A literature pass, and the leverage family turns out to be one derivative
+
+Searched against the project's open questions rather than its topic. Four results, one
+of which is worth more than the rest put together.
+
+#### The leverage family is the derivative of the readout, with no free parameter
+
+`read_group` in `core/src/senses.cpp` does this:
+
+```cpp
+const Scalar preferred = (Scalar(i - begin) + Scalar(0.5)) / n;
+weighted += w * preferred;  total += w;
+out.value = weighted / total;          // F1 = sum(r_i p_i) / sum(r_i)
+```
+
+F1 is a **rate-weighted centroid on a labelled line**, not a mean of rates. So
+
+> d(F1)/d(r_i) = (p_i − c) / Σ r_j
+
+**Output-potency is distance from the current centroid** — zero for a neuron sitting at
+it, maximal at the ends, and *state-dependent*, moving as `c` moves. That single
+derivative accounts for the whole leverage family (n = 14, F1 spanning 250–1000 Hz):
+
+| measured | predicted by \|p_i − c\| |
+|---|---|
+| lower half costs 9% of the lesson, upper half 53% (ratio 5.9) | A at 320 Hz → c = 0.093, ratio **3.79** |
+| mirror image for a high target | B at 850 Hz → c = 0.800, ratio **0.24**, reversed |
+| one neuron 30% at the top, 7% in the middle | top/middle **2.1–2.6** |
+| the central mask cuts learning 29× | the central half excludes the top quartile, which for a low target is the highest-leverage region |
+
+The directions and the reversal come out exactly. Magnitudes are the right order and
+under-predict, as expected: |p − c| is a proxy for "percent of the lesson" and ignores
+rate weighting, saturation, and the centroid moving during learning.
+
+**It explains a documented out-of-sample failure.** A leverage *law* was once fitted to
+the three single-neuron costs with one free parameter, reproduced them to 1.68
+percentage points, and then failed the two half-block costs out of sample. The
+derivative says why: the fitted law was a function of **position alone**, which looks
+right while `c` is roughly fixed — as it is across single-neuron measurements — and
+breaks when `c` moves a long way, as it does when a whole half is blocked. Leverage is
+not a property of a neuron. It is a property of a neuron *and the current state*.
+
+**This is the output-null decomposition, with an advantage.** Kaufman, Churchland, Ryu
+and Shenoy (2014), *Cortical activity in the null space: permitting preparation without
+movement*, Nature Neuroscience, showed that delay-period motor cortical activity is
+confined to the null space of the neural-to-movement map, which is how preparation
+avoids causing movement. The brain–machine-interface literature extends it: changes
+along output-null dimensions do not influence behaviour, and learning algorithms are
+distinguishable by what they do there. Here the map is **analytically known rather than
+fitted**, and state-dependent — a stronger position than that literature can take.
+
+And the project had already found the interference version of it without the name:
+*a lesson silent about A's axis is free, one that speaks to the same axis is
+destructive*, at +11.5 SE. That is "B confined to A's output-null subspace does not
+interfere" — the interference analogue of Kaufman's preparation result.
+
+**What it unblocks.** The credit-assignment line is stuck because position and content
+are collinear in a binary half-split keyed to lesson direction, and the one mask aligned
+with neither lesson destroys learning. The derivative supplies the partition the
+half-split cannot: **mask by |p_i − c| rather than by which side of the midpoint.** A
+high-leverage and a low-leverage mask of the same size, both straddling the centroid
+symmetrically, vary output-potency while holding position-relative-to-target fixed.
+
+**What would refuse it.** Measure per-neuron leverage at two different centroids and
+check that it tracks |p_i − c| rather than p_i. If leverage is a function of position
+alone, this account is wrong and the refuted fitted law was closer than this is. The
+existing data were taken at one operating point and cannot separate the two — which is
+exactly why the fitted law survived in sample. Derivation and arithmetic only; not run.
+
+#### A mechanism the project already refused is being published as working
+
+A 2026 paper reports astrocyte-gated multi-timescale plasticity mitigating catastrophic
+forgetting without replay buffers, outperforming state-of-the-art online rules on
+class-incremental benchmarks. This project built that activity gate in September and
+**refused it on a monotonic dose–response**: erosion fell at most 19% while the gain
+collapsed 81%, taking retention from 0.288 with no gate to 0.060 and then to −0.564.
+
+That is not a contradiction worth crowing about — a deep rate-coded classifier and a
+spiking creature taught vowel formants are different systems, and the benchmark is
+different. It is worth recording because of what it shares with today's results, below.
+
+#### Three mechanisms, one shape — and a prediction for the run now in flight
+
+| mechanism | effect on learning | effect on forgetting |
+|---|---|---|
+| astrocyte activity gate | gain −81% | erosion −19% |
+| per-neuron reward mask (oracle) | gain −46% | erosion −30% |
+| central mask | gain −97% (29×) | retention undefined |
+
+**Every plasticity restriction this project has tried cuts learning more than it cuts
+forgetting.** That is the stability–plasticity dilemma made quantitative in one system,
+and it is a cross-mechanism regularity rather than three separate results.
+
+It also predicts the myelination-brake run currently executing, which is the honest
+time to say so. The shipped brake restricts plasticity on consolidated edges
+(`eta_floor_frac = 0.3`). If the regularity holds, **removing it should buy more learning
+than it costs in retention**, so the no-brake arm should retain at least as well as the
+shipped one on the ratio — the opposite of the brake's stated purpose in §3.5 of the
+design. If instead the brake is doing protective work, the no-brake arm loses retention
+while gaining learning, which is the first exception to the pattern.
+
+#### Two smaller leads
+
+**Myelination has a temporal window this creature does not respect.** The
+oligodendrocyte literature puts activity-dependent myelination in the immediate
+post-training period — reduced oligodendrogenesis *in that window* impairs consolidation
+— and relates new myelin formation to the preservation of remote memory, with myelin
+density correlating with learning rate. The brake here runs continuously and awake. That
+is a concrete, cheap difference to test if the brake shows any effect at all.
+
+**Discrete context indexing may be the wrong shape.** Follow-up work around the COIN
+model notes that for tasks changing *continuously*, indexing by discrete context becomes
+inefficient and some combination of discrete and continuous representation is likely.
+This creature uses two discrete context slots. Its own measurements are consistent with
+the warning: the derived index never separates the two lessons (0.23 against 0.23) while
+the auditory feature it is built from carries the word at 97.8% held out.
+
 ## Layout
 
 ```
@@ -15210,6 +15327,41 @@ papers about the half it does not touch.
   is a **rate, not a store**: it stays inside the stable regime while the
   cumulative shift is unbounded. `bias_ctx_` here consolidates nowhere, which is
   why it has to hold everything and cannot.
+
+**Output-null and output-potent dimensions, which name the leverage family here.**
+
+- Kaufman, M. T., Churchland, M. M., Ryu, S. I. & Shenoy, K. V. (2014). *Cortical
+  activity in the null space: permitting preparation without movement.* Nature
+  Neuroscience 17(3), 440–448. <https://doi.org/10.1038/nn.3643> — delay-period
+  motor cortical modulation is confined to the null space of the linear map from
+  population activity to movement, which is how preparation avoids causing
+  movement. This project's formant readout is a rate-weighted centroid, so its
+  output-potent direction is analytically known and state-dependent: potency is
+  distance from the current centroid. That derivative accounts for the measured
+  leverage asymmetry, its reversal between a low and a high target, and the
+  central mask's collapse of learning, with no fitted parameter.
+- Related brain–machine-interface work, cited by title because the author list
+  could not be verified to this project's standard: *Identifying cortical learning
+  algorithms using brain machine interfaces* (Bernstein Conference 2024 /
+  CNS 2025 abstract) <https://world-wide.org/bernstein-24/identifying-cortical-learning-algorithms-41f28ba7>
+  and *Assistive sensory-motor perturbations influence learned neural
+  representations* (bioRxiv 2024) <https://doi.org/10.1101/2024.03.20.585972> —
+  the mapping from a ~100-dimensional population to a low-dimensional readout is
+  an underconstrained credit-assignment problem, and different learning rules are
+  distinguishable by the changes they produce in output-null dimensions.
+
+**Activity-dependent myelination, which is what §3.5's `eta_floor_frac` brake models.**
+
+- Oligodendroglia and learning: *Myelin: a gatekeeper of activity-dependent circuit
+  plasticity?* (Science) <https://doi.org/10.1126/science.aba6905>; *Disruption of
+  oligodendrogenesis impairs memory consolidation in adult mice* (Neuron 2020)
+  <https://doi.org/10.1016/j.neuron.2019.12.020>; *Oligodendroglia are emerging
+  players in several forms of learning and memory* (Communications Biology 2022)
+  <https://doi.org/10.1038/s42003-022-04116-y>. Cited by title and DOI where the
+  author list could not be verified. The relevant point for this project is
+  **timing**: the literature puts activity-dependent myelination in the immediate
+  post-training window, and relates new myelin to preservation of remote memory,
+  whereas the brake here runs continuously and awake.
 
 **Statistical method, for the estimators this project's credit-assignment results
 rest on.** These were used before they were listed, which is the wrong order; the
