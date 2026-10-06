@@ -5635,6 +5635,13 @@ enum RTArm { kRTQuiet = 0, kRTNoSleep, kRTRelearn, kRTNever, kRTArmCount };
 
 struct RTRow {
   double err_before = 0.0, err_taught = 0.0, err_after = 0.0;
+  // THE BRAKE MUST BIND, NOT MERELY BE LIVE. `eta_floor_frac` changes `vocallearn`
+  // output (vacuity says LIVE, 46 lines differ), but "live in another experiment" is
+  // not "braking an edge in this one". mean_plasticity() is eta_floor + (1-eta_floor)
+  // * (1 - myelination) averaged over every edge, so it reads exactly 1.0 when nothing
+  // is myelinated and the floor binds nothing. Recorded per creature so a brake arm
+  // that changed no learning rate is visible rather than inferred.
+  double mean_plast = -1.0;
   double retention = 0.0, dprime = 0.0, null = 0.0, settle = 0.0;
   // DENOMINATOR-FREE. `retention` divides by (err_before - err_taught), the gain
   // from teaching, and on the ctx genome that gain is small enough to blow the ratio
@@ -6654,6 +6661,7 @@ RTRow run_retain_arm(const std::vector<uint8_t>& blob, uint64_t ticks,
   RTRow& r = row;
   r.act_gate = double(s.brain.network().act_gate_mean());
   r.act_spread = double(s.brain.network().act_gate_spread());
+  r.mean_plast = double(s.brain.network().mean_plasticity());
   r.err_before = n_before ? sum_before / n_before : 0.0;
   r.err_taught = n_tt ? sum_taught / n_tt : 0.0;
   r.err_after = n_aa ? sum_after / n_aa : 0.0;
@@ -18111,8 +18119,8 @@ const CGArm kCGArms[] = {
     // If neither moves, §3.5's forgetting defence is refused on its own purpose.
     // vacuity pre-flight: tools/vacuity.sh says LIVE on vocallearn, 46 lines differ.
     {"bcast-keep", 0u, true,  0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, false, 0.0, 0.0f},
-    {"oracle-AB",  1u, false, 0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, false, 0.0, 0.0f},   // the host masks by which lesson is live
-    {"oracle-keep", 1u, true, 0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, false, 0.0, 0.0f},
+    {"oracle-AB",  1u, false, 0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, true, 0.0, 0.0f},   // the host masks by which lesson is live
+    {"oracle-keep", 1u, true, 0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, true, 0.0, 0.0f},
     // THE DERIVED ARMS ON THE INDEX AS SHIPPED, which `ctxpc` measured separating
     // a-vs-i at 0.035. They price a mask over NOISE and are the control here.
     {"derived-AB", 2u, false, 0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, true, 0.0, 0.0f},
@@ -18295,8 +18303,8 @@ const CGArm kCGArms[] = {
     // took over the label and the "must NOT" criterion was computed from `derived2`.
     // NOT skipped: with these absent the report prints SPECIFICITY UNTESTED and no
     // verdict can clear its own bar, so a credgate verdict needs them in the run.
-    {"shuf-AB",    3u, false, 0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, false, 0.0, 0.0f},
-    {"shuf-keep",  3u, true,  0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, false, 0.0, 0.0f},
+    {"shuf-AB",    3u, false, 0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, true, 0.0, 0.0f},
+    {"shuf-keep",  3u, true,  0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, true, 0.0, 0.0f},
     // A 2x2 IN (TEACH END, GAP END), and the first version of this was NOT a clean
     // contrast (2026-10-05). I wrote that forcing the end holds content-correctness
     // matched at ~0.500 for both settings. The pre-flight says otherwise: agreement
@@ -18330,6 +18338,26 @@ const CGArm kCGArms[] = {
     {"anti-keep",    1u, true,  0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, true, 0.0, 0.0f, -1.0f, -1, true},
     {"mid-AB",       1u, false, 0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, true, 0.0, 0.0f, -1.0f, -1, false, true},
     {"mid-keep",     1u, true,  0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, true, 0.0, 0.0f, -1.0f, -1, false, true},
+    // STABILIZATION, THE HALF MASSE PAIRS GATING WITH (2026-10-06). Masse, Grant &
+    // Freedman 2018 report context gating ALONE at 61.4% and gating PLUS synaptic
+    // stabilization at 95.4%. This experiment has measured the gating half -- aiming
+    // the mask is worth +0.197 of retention, and masking still loses to not masking by
+    // -0.211 -- so that residual is the size of the half never tested here.
+    //
+    // The creature already ships a stabilization brake: §3.5's `eta_floor_frac = 0.3`,
+    // the myelination floor, never swept and never tested against the wipe.
+    // `eta_floor = 1.0` removes it: every edge then learns at full rate.
+    //
+    // These are the BROADCAST row of a 2x2 (mask x brake). Eight arms at 12M is 9.2h
+    // and four is 4.6h, so the oracle row is a second run -- and if the brake does
+    // nothing WITHOUT a mask, the line closes without paying for the rest. The prior
+    // is unfavourable: bankprobe, slow-store and multitimescale-gate were all refused.
+    //
+    // The existing `myel-*` arms are not reused: they are AB-only, so there is no
+    // `keep` control to tell "protected from B" from "decayed less on its own", and
+    // they only ever ran at 3.4M, below the budget where retention exists.
+    {"nobrake-AB",   0u, false, 0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, false, 0.0, 0.0f, 1.0f},
+    {"nobrake-keep", 0u, true,  0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, false, 0.0, 0.0f, 1.0f},
 };
 constexpr uint32_t kCGArmCount = sizeof(kCGArms) / sizeof(kCGArms[0]);
 // CHANGED 2026-09-21 from 318211 to draw a FRESH set of creatures from the same
@@ -18433,6 +18461,7 @@ constexpr CGMode kCGModes[] = {
     {"half-lo", "half-lo-AB", "half-lo-keep"},
     {"anti", "anti-AB", "anti-keep"},
     {"middle", "mid-AB", "mid-keep"},
+    {"nobrake", "nobrake-AB", "nobrake-keep"},
 };
 constexpr uint32_t kCGModeCount = sizeof(kCGModes) / sizeof(kCGModes[0]);
 inline int cg_arm_of(const char* name) {
@@ -18577,9 +18606,9 @@ bool run_credgate_impl(const std::vector<uint8_t>& blob, uint64_t ticks, bool ve
       // are not `broadcast` -- which the report only ever computes against broadcast --
       // and each time the log could supply `after` differences but not retention.
       // Logging it makes any later paired contrast a log-reading job, not a code change.
-      parallel_note("  [%u/%u] seed %u %-13s before %.4f taught %.4f after %.4f agree %.2f\n",
+      parallel_note("  [%u/%u] seed %u %-13s before %.4f taught %.4f after %.4f plast %.4f agree %.2f\n",
                     i + 1, njobs, r, kCGArms[a].name, cell.row.err_before,
-                    cell.row.err_taught, cell.row.err_after,
+                    cell.row.err_taught, cell.row.err_after, cell.row.mean_plast,
                     cell.row.credit_trials ? double(cell.row.credit_agree) /
                                                  double(cell.row.credit_trials) : 0.0);
     return cell;

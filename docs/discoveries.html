@@ -1,0 +1,409 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Discoveries</title>
+<style>
+  @page { margin: 2.2cm 2.4cm; }
+  body { font-family: "Liberation Serif","Times New Roman",serif; font-size: 10.5pt; line-height: 1.42; color: #000; }
+  h1.title { font-size: 20pt; text-align: center; margin: 0 0 2pt 0; font-weight: normal; letter-spacing: 0.2pt; }
+  p.subtitle { text-align: center; font-size: 11.5pt; font-style: italic; margin: 0 0 16pt 0; }
+  p.author { text-align: center; font-size: 12pt; margin: 0 0 1pt 0; }
+  p.affil { text-align: center; font-size: 9.5pt; margin: 0 0 1pt 0; }
+  p.date  { text-align: center; font-size: 9.5pt; margin: 0 0 20pt 0; }
+  div.abstract { margin: 0 1.6cm 18pt 1.6cm; font-size: 9.8pt; text-align: justify; }
+  div.abstract p.lab { text-align: center; font-variant: small-caps; letter-spacing: 1pt; margin: 0 0 5pt 0; font-size: 9.5pt; }
+  h2 { font-size: 12pt; margin: 17pt 0 5pt 0; font-weight: bold; }
+  h3 { font-size: 10.5pt; margin: 11pt 0 3pt 0; font-weight: bold; }
+  p  { margin: 0 0 6pt 0; text-align: justify; }
+  code, .id { font-family: "Liberation Mono","Courier New",monospace; font-size: 9.2pt; }
+  table { border-collapse: collapse; margin: 7pt 0 9pt 0; font-size: 9.2pt; width: 100%; }
+  th { border-top: 0.9pt solid #000; border-bottom: 0.5pt solid #000; padding: 3pt 5pt; text-align: left; font-weight: bold; }
+  td { padding: 2.6pt 5pt; border-bottom: 0.3pt solid #bbb; vertical-align: top; }
+  tr.last td { border-bottom: 0.9pt solid #000; }
+  td.n { text-align: right; white-space: nowrap; }
+  p.cap { font-size: 8.8pt; margin: -4pt 0 10pt 0; }
+  div.rule { border-top: 0.5pt solid #000; margin: 14pt 0 10pt 0; }
+  p.note { font-size: 9pt; margin: 0 0 6pt 0; }
+  .sc { font-variant: small-caps; }
+</style></head><body>
+
+<h1 class="title">Discoveries</h1>
+<p class="subtitle">Original findings from a grown spiking creature, with no external antecedent</p>
+<p class="author">Arne Diegenbach</p>
+<p class="affil">The <span class="id">aibaby</span> project &mdash; a C++17 spiking neural creature grown from a DNA/genome file</p>
+<p class="date">6 October 2026</p>
+
+<div class="abstract">
+<p class="lab">Abstract</p>
+<p>This document collects the findings of the <span class="id">aibaby</span> project that
+are not held up by any published result. The project grows a spiking neural
+&ldquo;creature&rdquo; from a genome file and teaches it to produce vowel formants; much of its
+machinery is named after the literature it came from, and those mechanisms are
+deliberately excluded here. What remains is the set of things the system itself was the
+first to say: measured quantities with no external reference, structural obstacles that
+only appear in this architecture, and a group of inference failures that were found by
+being committed and then caught.</p>
+<p>The methodological findings are listed first and at length, because they are the most
+transferable part and the least specific to a creature made of spikes. Several of them
+are reports of a mistake that survived review &mdash; a test no outcome could pass, a
+refusal criterion computed from the wrong arm, a statistic diagnosed in a comment and
+then quoted for months. They are included on the view that a failure mode with a
+worked example is more useful than a rule without one.</p>
+<p>Every quantity below comes from a run gated on a pinned determinism hash,
+<span class="id">ad96f882becbee92</span>, under which every mechanism that ships off is
+bit-identical. Section 8 gives provenance.</p>
+</div>
+
+<h2>1. Scope, and what is excluded</h2>
+<p>A finding is included if the project discovered it, and excluded if a published result
+says it first or frames it. The line is drawn at the <em>claim</em>, not at the tools: the
+estimators used throughout are Cochran&rsquo;s ratio estimator and the Quenouille&ndash;Tukey
+jackknife, and the quantities they produce are still this project&rsquo;s, so they appear here
+while the methods do not.</p>
+<p>Excluded on that basis are: the account of interference as failed contextual inference
+(Heald, Lengyel and Wolpert&rsquo;s COIN model), the finding that context gating alone is
+insufficient without synaptic stabilisation (Masse, Grant and Freedman), importance-weighted
+protection of earlier weights (Kirkpatrick et al.; Zenke, Poole and Ganguli), node
+perturbation as a motor learning rule (Fiete, Fee and Seung), the stability&ndash;plasticity
+dilemma (Grossberg), and the uniform cluster prior implicit in MacQueen&rsquo;s
+<span class="id">1/wins</span> rule. Each is cited in the project&rsquo;s main reference list.
+Appendix A lists the project results that were excluded by this criterion, so the exclusion
+can be audited rather than taken on trust.</p>
+
+<h2>2. Measurement and inference</h2>
+<p>These came out of running the same experiment many times and being wrong in a way that
+printed a number. None has an external source; each has a worked example in the project
+history.</p>
+
+<h3>2.1 Chance has no fixed value when the readout is &ldquo;nearest&rdquo;</h3>
+<p>A <span class="id">k</span>-alternative naming score read against <span class="id">1/k</span>
+is not a chance comparison. When the decision rule is nearest-target in formant space,
+chance depends on the <em>geometry</em> of the targets: the same uninformative voice scores
+0.161 against targets on the vowel corners and 0.306 against a 2&times;2 arrangement. An
+informationless voice reads about 0.30 on a four-word task where
+<span class="id">1/k</span> would predict 0.25. One earlier ceiling claim was a null error
+of exactly this kind: a real effect scored against an arithmetic chance level while the
+matched control sat in the same table, unread.</p>
+
+<h3>2.2 A test that nearly all outcomes pass is not a test, and neither is one that none can pass</h3>
+<p>Two symmetric failures, both found after they had produced a published-looking verdict.
+A guard written as <span class="id">cd2 &gt; &minus;3&middot;13.1</span> &mdash; &ldquo;greater
+than &minus;39.3&rdquo; &mdash; passes on nearly any data, and was reported as &ldquo;F2 is
+spared&rdquo; when it meant &ldquo;F2 is unmeasured&rdquo;. In the other direction, an
+intervention&rsquo;s success branch required a shift of 0.090 where a complete closure of the
+gap could produce only 0.070; it printed a confident conclusion from an unreachable branch.
+The fix in both cases is to print the power of the test beside its result, so that a
+criterion nothing could have cleared is visible rather than silent.</p>
+
+<h3>2.3 The reference point is the hypothesis&rsquo;s own prediction, not zero</h3>
+<p>A hypothesis that names a value must be tested against that value. A drift account
+predicting a decay of &minus;0.034 was first tested for being distinguishable from
+<em>zero</em>, which it was not, and so survived; tested against its own prediction, the
+measurement sat 3.9 SE away and the account was excluded. The same error in another guise
+is scoring an effect against <span class="id">1/k</span> while the real control is in the
+table.</p>
+
+<h3>2.4 A null and a reversal are different results</h3>
+<p>An <span class="id">else</span> branch that catches both reports the wrong one. An
+intervention expected to close a gap was tested only for closure; when the gap
+<em>widened</em>, the outcome fell through to the null branch and was written up as &ldquo;no
+effect&rdquo;. The widening was 2.5 SE in the opposite direction to the prediction, which is
+a stronger result than the null it was reported as.</p>
+
+<h3>2.5 A constant copied instead of derived fails silently, and travels</h3>
+<p>Six instances in one 34,000-line file, in two families. <em>Indices:</em> a literal
+array size that was a copy of a named bound and overran into the next field; positional
+grid indices; positional arm indices that would have mislabelled whole rows; and pair
+indices <span class="id">(k&middot;2, k&middot;2+1)</span> that silently shifted when two
+table rows were inserted above them. <em>Labels:</em> a band value copied beside the table
+it came from, so an experiment reported its widest condition as a tenth of its real width
+after the table was rescaled; and a deleted control whose label and refusal criterion were
+inherited by unrelated rows.</p>
+<p>What makes this class survive review is specific and worth stating: <strong>every site
+carried a comment acknowledging the indexing was positional, and the comment was treated as
+the fix.</strong> One even warned about a <em>skipped</em> row reading zero &mdash; a
+different hazard from a <em>shifted</em> row, against which the guard written for the first
+does nothing. A mislabelled number still prints with a standard error and still reads as a
+result, so nothing in the output looks wrong. The question that finds these is: <em>is this
+label attached to the data, or merely next to it?</em></p>
+
+<h3>2.6 A passing determinism hash does not say the code is correct</h3>
+<p>The project gates every run on a pinned hash. A pass says the shipped configuration is
+unchanged and the run is reproducible; it says nothing about whether the experiment
+computes what its name claims. Four of the six errors in &sect;2.5 were introduced and
+committed under a passing hash.</p>
+
+<h3>2.7 Reproduce the conditions, not the experiment name</h3>
+<p>A headline was called irreproducible after three runs at the registered default tick
+count. The recorded result had been taken at 3.5&times; that budget, which was written in
+its own log&rsquo;s filename and in the note that cited it. A registered default is not
+evidence about what a recorded run used, and this system has a documented power curve
+across exactly that range &mdash; one experiment reads +1.0 at 560k ticks against +18.3 at
+3.4M.</p>
+
+<h3>2.8 Diagnosing a broken statistic does not retire it</h3>
+<p>A retention measure was computed as a mean of per-creature ratios whose denominator
+&mdash; how much that creature learned &mdash; was floored only at
+<span class="id">1e-6</span>. The code carried a comment beside it recording that the
+statistic had read &minus;5.587&nbsp;&plusmn;&nbsp;6.729 and
+27.222&nbsp;&plusmn;&nbsp;21.160 on another genome and calling it &ldquo;a broken statistic
+reporting nothing&rdquo;, and a denominator-free replacement was added alongside. The
+headline, the milestone gate and the pre-registered specificity criterion all went on
+reading the broken one.</p>
+<p>Measured on the same 128 sessions, the two estimators disagree in <em>sign</em>: a mean
+of ratios gives +0.182&nbsp;&plusmn;&nbsp;0.663 and a jackknifed ratio of sums gives
+&minus;0.211&nbsp;&plusmn;&nbsp;0.074, with standard errors differing ninefold. The
+transferable part is not the statistic but the order of operations: a comment records a
+fact, it does not change what the gates compute, and every consumer has to be moved by
+hand. Grep for the variable, not for the comment.</p>
+
+<h3>2.9 Unanimous signs on three seeds are not power</h3>
+<p>Repeatedly, effects that were unanimous and large on a handful of creatures did not
+survive more of them. A smoothing sweep read +0.24 at n&nbsp;=&nbsp;3 and +0.03 at
+n&nbsp;=&nbsp;6; a salience-reward effect was +2.6 SE at n&nbsp;=&nbsp;12 and null at
+n&nbsp;=&nbsp;16; a vigilance score of 0.737 fell to 0.594 at 96 creatures. The project
+adopted a 3 SE bar at n&nbsp;&le;&nbsp;18 as a direct consequence, and the bar must be
+fixed once and named, not chosen per test: one verdict printed &ldquo;not yet a
+finding&rdquo; for 2.9 SE against a 3 SE bar and then made a 2.7 SE contrast its headline
+because that test had been coded against 2.0.</p>
+
+<h2>3. Credit assignment and interference</h2>
+<p>Teaching a second, conflicting vowel target destroys the first. The surviving fraction
+is 0.22. This section is what the project established about why, and about what does not
+fix it.</p>
+
+<h3>3.1 The wipe has a mechanism, and it is not a representational collision</h3>
+<p>Two lessons interfere while driving disjoint neuron groups, so the groups are not what
+they share. What they share is the reward: a single broadcast scalar nudges the bias of
+every neuron in the module, so teaching B random-walks A&rsquo;s setting. Measured
+directly, B restores the very neurons A suppressed. Orthogonal targets are held
+simultaneously at 0.84 against the conflicting pair&rsquo;s 0.22, which locates the failure
+in the conflict rather than in capacity.</p>
+
+<h3>3.2 It is an axis collision, not a distance effect</h3>
+<p>A second lesson that is silent about the first lesson&rsquo;s axis is free; one that
+speaks to the same axis is destructive, confirmed at +11.5 SE. Distance between the two
+targets is not the variable.</p>
+
+<h3>3.3 A perfect per-neuron credit mask does not remove the wipe</h3>
+<p>An oracle mask &mdash; the host tells the creature which lesson is live, and the reward
+is confined to the half of the motor group that lesson uses &mdash; retains
+<em>less</em> than the broadcast rule it was meant to repair:
++0.109&nbsp;&plusmn;&nbsp;0.057 against +0.320&nbsp;&plusmn;&nbsp;0.052, a deficit of
+&minus;0.211&nbsp;&plusmn;&nbsp;0.074, negative at every gain floor. It also learns less,
+gaining +0.196&nbsp;&plusmn;&nbsp;0.015 against +0.362&nbsp;&plusmn;&nbsp;0.033. This
+retracts an earlier claim of the opposite sign, which had rested on the estimator described
+in &sect;2.8.</p>
+
+<h3>3.4 The mask&rsquo;s cost decomposes additively, and content and position cost the same</h3>
+<p>On end-of-teaching error, paired over 32 creatures:</p>
+<table>
+<tr><th>Step</th><th>Contrast</th><th class="n">Effect</th></tr>
+<tr><td>masking at all</td><td>no mask &rarr; mask aimed correctly</td><td class="n">+0.211</td></tr>
+<tr><td><strong>content</strong></td><td>correct aim &rarr; random aim</td><td class="n"><strong>+0.103</strong></td></tr>
+<tr><td><strong>position</strong></td><td>random half &rarr; central half</td><td class="n"><strong>+0.102</strong></td></tr>
+<tr class="last"><td>total</td><td>central mask vs no mask</td><td class="n">+0.417 &plusmn; 0.044 (9.5 SE)</td></tr>
+</table>
+<p class="cap">The two increments are equal to within 0.001, and each is about half the
+base cost of masking at all. The direct position contrast &mdash; a central mask against a
+randomly aimed one, at matched content and matched mask fraction &mdash; is
++0.102&nbsp;&plusmn;&nbsp;0.009, 11.5 SE.</p>
+<p>The ordering on learning is: no mask, then correct aim, then random aim, then central.
+That a mask excluding <em>both</em> extremes of the group costs as much again as
+mis-aiming one is consistent with the leverage geometry of &sect;4.</p>
+
+<h3>3.5 The aim of the mask during the interfering lesson recovers half of what masking costs</h3>
+<p>Two arms that mask the first lesson identically and differ only in which half they
+confine the reward to during the <em>second</em> lesson. Both therefore learn the first
+lesson equally well &mdash; verified by end-of-teaching error identical to
++0.0000&nbsp;&plusmn;&nbsp;0.0000 over 32 creatures &mdash; so the comparison is clean.</p>
+<table>
+<tr><th>Gain floor</th><th class="n">Aim correct</th><th class="n">Aim wrong</th><th class="n">Difference</th><th class="n">n</th></tr>
+<tr><td>0.00</td><td class="n">+0.1092</td><td class="n">&minus;0.0873</td><td class="n">&minus;0.1965 &plusmn; 0.0510 (3.9 SE)</td><td class="n">32</td></tr>
+<tr><td>0.05</td><td class="n">+0.1291</td><td class="n">&minus;0.0815</td><td class="n">&minus;0.2107 &plusmn; 0.0509 (4.1 SE)</td><td class="n">29</td></tr>
+<tr><td>0.10</td><td class="n">+0.1327</td><td class="n">&minus;0.0782</td><td class="n">&minus;0.2109 &plusmn; 0.0508 (4.2 SE)</td><td class="n">27</td></tr>
+<tr class="last"><td>0.20</td><td class="n">+0.0598</td><td class="n">&minus;0.0934</td><td class="n">&minus;0.1532 &plusmn; 0.0478 (3.2 SE)</td><td class="n">18</td></tr>
+</table>
+<p class="cap">Retention as a paired, jackknifed ratio of sums, swept over a floor on
+per-creature learning. The effect holds at every floor that retains enough creatures,
+which is the criterion the experiment&rsquo;s own verdict gate applies.</p>
+<p>Against a no-mask baseline of +0.320, a wrongly aimed mask sits &minus;0.407 below it
+and correct aim recovers +0.197 &mdash; about 48%. The residual &minus;0.211 is the part
+no amount of correct aim removes. So credit assignment here is not inert: what defeats the
+oracle is that the price of confining the reward exceeds what aiming it well buys back.</p>
+
+<h3>3.6 Position and content are not separable in a binary half-split</h3>
+<p>A structural result, and a negative one about the design rather than the creature. The
+mask is a contiguous half of the motor group and each lesson prefers exactly one half, so
+within a phase &ldquo;the mask is in the wrong place&rdquo; and &ldquo;the mask selects the
+wrong neurons&rdquo; are the same statement. No contrast built from end-aligned masks can
+separate them.</p>
+<p>The only mask aligned with neither lesson &mdash; the central half, which leaves each
+lesson half of its preferred neurons on every trial &mdash; does separate them, and cannot
+answer the retention question for a second structural reason: it cuts learning by a factor
+of 29 (gain +0.0125&nbsp;&plusmn;&nbsp;0.0023 against +0.362), so no creature clears even
+the lowest meaningful gain floor and retention has no denominator. <strong>Varying position
+far enough to matter destroys the learning whose retention one would be
+measuring.</strong> More creatures cannot fix this; it is not a power problem.</p>
+
+<h2>4. Leverage and the geometry of the motor pool</h2>
+
+<h3>4.1 The block cost is leverage, not fraction</h3>
+<p>Freezing a quarter of the formant group costs 57% of the lesson and freezing a half
+costs 53%. The cost is flat in the fraction blocked, so there is no mask size that wins and
+nothing to gain from tuning one.</p>
+
+<h3>4.2 Leverage sits at one end</h3>
+<p>Freezing the lower half of the F1 group costs 9% of the lesson; freezing the upper half
+costs 53%. At single-neuron resolution one neuron costs 30% at the top of the group and 7%
+in the middle, and one cell of fourteen costs 30% while four cost 57%. An attempt to fit a
+leverage law to the single-neuron costs reproduced them to 1.68 percentage points and then
+failed the two half-block costs out of sample, so the asymmetry is measured and the law
+that tried to explain it is refuted.</p>
+
+<h3>4.3 The lesson silences the wrong side</h3>
+<p>Measured rather than fitted: a low formant target is reached by <em>suppressing</em> the
+upper half of the group, and a high target by suppressing the lower half &mdash;
+mirror-image profiles, both suppression. An earlier account in which the lesson raised the
+half it needed is a decisive reversal.</p>
+
+<h3>4.4 The larynx reads nine scalars</h3>
+<p>The motor interface is nine scalar groups, and the object identity being taught sits at
+the null in all eighteen vocal measurements taken. Reordering the vocal population by its
+own response difference lifts discriminability, so the information is present in the slice
+and absent from the readout.</p>
+
+<h2>5. The voice and the body</h2>
+
+<h3>5.1 The voice drones</h3>
+<p>There is no syllabic rhythm in the produced voice. A +9.99 dB modulation peak that
+indicated otherwise was a fit on the knee of a low-pass filter, not a spectral feature of
+the signal. Relatedly, a 3 Hz ring in the voice is the product of two filters &mdash; a
+fast rate constant and a gate smoothing term &mdash; and may be no oscillator at all; it
+scales threefold with self-hearing, and a deaf creature still rings at +3.1 SE, so
+self-audition is a gain on it rather than its cause.</p>
+
+<h3>5.2 The frame is a body part</h3>
+<p>A single finding that explains five separate refusals at once: the apparent syllabic
+frame is a resonant jaw at about 4.5 Hz, a property of the articulator rather than a
+central clock. Three independent routes from a frame to content are closed by it, and a
+jaw-gate mechanism that appeared to pass both halves of its test turned out to have a
+mis-set anchor, with the creature&rsquo;s own silences outperforming the imposed gate.</p>
+
+<h3>5.3 A blind controller beats feedback</h3>
+<p>A controller with no access to the sensed formant outperforms one with it: reach is
+immune to loop delay and a 905 ms loop is not. The precision advantage claimed for
+feedback was cleared by a sensorless controller, and an uninformative feature leaves only
+the intercept, which is the blind controller in disguise. Altered auditory feedback moves
+production by +0.01.</p>
+
+<h3>5.4 Intrinsic plasticity is the backlash</h3>
+<p>Formant actuator hysteresis measures 107 Hz with intrinsic plasticity enabled and 2.0 Hz
+with it off: the plant moves under its own controller. The backlash is per-neuron &mdash;
+pooling the regulator takes hysteresis from 107 Hz to 7 Hz and gives back 30 Hz of reach.</p>
+
+<h3>5.5 The ear hears its own formant and does not use it</h3>
+<p>The self-produced first formant is present in the auditory representation
+(+0.124 and +0.114 on two seed families) and unused by the motor system. The ear&rsquo;s
+estimate is well described by a fixed attenuation plus noise, with the attenuation free and
+the noise 56 Hz input-referred; the signal is localised, one frequency bin of 32 carrying
+92% of the available benefit, which is destroyed by pooling. So the failure of closed-loop
+control here is a missing <em>mapping</em>, not a missing signal.</p>
+
+<h2>6. Representation and capacity</h2>
+
+<h3>6.1 Vocabulary does not collapse, and nine words do not cost naming</h3>
+<p>Advantage over chance <em>rises</em> with vocabulary size rather than falling. At nine
+words against two six-word arrangements, total naming excess is conserved
+(&minus;0.012&nbsp;&plusmn;&nbsp;0.019 and +0.020&nbsp;&plusmn;&nbsp;0.018, opposite-sign
+nulls at n&nbsp;=&nbsp;36). There is one real cost and it is not naming: delivered formant
+separation falls by 11.8&nbsp;&plusmn;&nbsp;3.5 Hz at matched trials per word, 3.3 SE. The
+shape of the word arrangement does not matter
+(&minus;0.032&nbsp;&plusmn;&nbsp;0.027), so there is no preferred axis per creature.</p>
+
+<h3>6.2 The ceiling is an exponent</h3>
+<p>Delivered formant change scales with the aligned component of the learned bias as a
+power law with exponent about 0.61. Moving delivery by a factor requires moving the bias by
+a larger factor, which closes the naming line quantitatively rather than by argument: a
+commitment brake moved the aligned bias 1.07&times; where 6.2&times; was needed.</p>
+
+<h3>6.3 The derived index gap has no surviving cause</h3>
+<p>The creature derives its own context from an auditory rate average, and the resulting
+index is reliably <em>worse</em> when the teaching target tracks the heard word than when
+it is fixed, on 18 of 18 creatures &mdash; a gap of
+&minus;0.056&nbsp;&plusmn;&nbsp;0.009, 6.0 SE. Three candidate causes were tested and all
+three are dead: gate corruption has the wrong sign; silencing self-audition does not close
+the gap but <em>widens</em> it by 0.037&nbsp;&plusmn;&nbsp;0.015, under a test with power to
+see a closure; and a drift account is excluded both by its own point prediction, 3.9 SE
+away, and by the learning arm decaying least. The gap is real and unexplained.</p>
+<p>Two side results survived that line. Deafening improves the index in the control arm
+only (+0.030&nbsp;&plusmn;&nbsp;0.004, 7.1 SE), and makes the tracking arm&rsquo;s partition
+more lopsided (+0.066&nbsp;&plusmn;&nbsp;0.018, 3.7 SE). Separately, the derived context
+carrier is refuted directly: the index never separates the two lessons
+(0.23 against 0.23), while the auditory feature it is built from carries the word at 97.8%
+on held-out trials where the reward lands. The feature is fine; the extraction is not.</p>
+
+<h3>6.4 Two percent of a percent of the ticks does the work</h3>
+<p>0.2% of ticks account for the learning, and no schedule reproduces it at
+3.3 SE over 32 creatures. The result carries no lesson about <em>which</em> ticks, which is
+stated here because it is the kind of finding that invites one.</p>
+
+<h2>7. Negative results that closed lines</h2>
+<p>Listed because the project&rsquo;s cost is dominated by them and because each removed a
+plausible mechanism from consideration.</p>
+<table>
+<tr><th>Mechanism</th><th>Outcome</th></tr>
+<tr><td>Oscillations as a rate-to-phase code</td><td>Built; spike-timing plasticity could not read it</td></tr>
+<tr><td>Hippocampal pattern separation</td><td>Does not separate</td></tr>
+<tr><td>Exuberant synaptogenesis</td><td>Costs 0.229; competition a further 0.051. Weight is not information</td></tr>
+<tr><td>Dendritic error microcircuit</td><td>Settles and cancels nothing</td></tr>
+<tr><td>Plateau-gated plasticity</td><td>Attenuates instead of selecting</td></tr>
+<tr><td>Two-stage bandpass</td><td>Never appears on three seeds</td></tr>
+<tr><td>Topographic tract</td><td>Oracle predicted 471 Hz; measured 1.00&times;</td></tr>
+<tr><td>Region-shaped reward targets</td><td>A satisfied lesson still does not protect the first</td></tr>
+<tr><td>Two-pool differential readout</td><td>Premise fails: only &rho;&nbsp;=&nbsp;0.101 of variance is shared</td></tr>
+<tr><td>Adaptation current as a clock</td><td>Peak frequency follows its time constant at exponent 0.10 where 1.0 is required</td></tr>
+<tr><td>Prototype freezing</td><td>Refused; it is the stability&ndash;plasticity dilemma</td></tr>
+<tr><td>Replay / interleaving as shipped</td><td>Switching it off costs 0.3 SE</td></tr>
+<tr><td>Reward that sees target distance</td><td>Worse, by 9.4 SE</td></tr>
+<tr class="last"><td>Protocol axes (duration, blocking)</td><td>28&times; longer is no help; blocked teaching is harmful</td></tr>
+</table>
+
+<h2>8. Provenance</h2>
+<p>Every number above comes from a run of the project&rsquo;s own experiment binary, gated
+before execution on <span class="id">--experiment verify</span> reporting
+<span class="sc">pass</span> with the pinned hash
+<span class="id">ad96f882becbee92</span> and a passing pinned-hash check. Runs that failed
+the gate are discarded rather than reported.</p>
+<p>Sample sizes are creatures, not trials: a creature is one genome with one seed, grown
+and taught from birth. Where a paired statistic is quoted, creatures are matched by seed
+across arms, which is licensed by the per-job seed being a function of the repetition index
+alone and independent of the arm &mdash; verified by a shared baseline arm reproducing
+bit-identically across three separate multi-hour runs, and by a direct cross-run check of
+that arm against itself returning
++0.0000&nbsp;&plusmn;&nbsp;0.0000 over 32 creatures.</p>
+<p>Retention figures are a ratio of sums with a leave-one-out jackknife standard error,
+swept over a floor on per-creature learning, and are reported only where the effect holds at
+every floor retaining at least three creatures in both arms. Section 2.8 explains why the
+more obvious estimator is not used.</p>
+<p class="note">Run logs, genome files and the experiment source are in the project
+repository. The findings here are recorded at greater length, with the reasoning that
+produced them and the criteria that would refuse them, in the project&rsquo;s
+<span class="id">README.md</span> and its memory store.</p>
+
+<div class="rule"></div>
+<h2>Appendix A. Excluded by the criterion</h2>
+<p>These project results are omitted from the body because a published result says or frames
+them first. They are listed so that the inclusion criterion of &sect;1 can be checked.</p>
+<table>
+<tr><th>Project result</th><th>External antecedent</th></tr>
+<tr><td>Interference as a failure of contextual inference; a per-neuron mask should therefore help</td><td>Heald, Lengyel &amp; Wolpert, COIN</td></tr>
+<tr><td>Gating helps and is insufficient alone; stabilisation is the missing half</td><td>Masse, Grant &amp; Freedman (2018)</td></tr>
+<tr><td>Importance-weighted protection of earlier weights as the remedy</td><td>Kirkpatrick et al. (2017); Zenke, Poole &amp; Ganguli (2017)</td></tr>
+<tr><td>Node perturbation as the motor learning rule</td><td>Fiete, Fee &amp; Seung</td></tr>
+<tr><td>Sequence generation needs competition, not spike timing alone</td><td>Fiete, Senn, Wang &amp; Hahnloser (2010)</td></tr>
+<tr><td>Prototype freezing as a dilemma rather than a bug</td><td>Grossberg</td></tr>
+<tr><td>A uniform cluster prior implicit in a competitive learning rule</td><td>MacQueen; Assran et al. (2023)</td></tr>
+<tr><td>Ratio-of-sums estimation and the jackknife</td><td>Cochran; Quenouille; Tukey</td></tr>
+<tr class="last"><td>Per-context reward prediction error having nothing to remove</td><td>Gadagkar et al. (2016)</td></tr>
+</table>
+
+</body></html>
