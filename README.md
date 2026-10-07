@@ -15092,6 +15092,50 @@ it is resolved the same way: each arm names its own control, the lookup refuses 
 name is absent from the table, and the percentage is taken against that control's own
 lesson rather than `b0`'s. The numbers in the table above are the recomputed ones.
 
+### A third target: the direction account holds, and the distance law dies
+
+The pre-registered test from the previous tick. `blockwhere` with the four
+default-target arms and four at 475 Hz — p = 0.300, so a lesson travelling 0.200 from
+the resting centroid, and below it, so the top should be the lever again. 36 creatures
+each, 5.6M, gate passed, anchor reproduced to four decimals (`top1` at
+−0.0503 ± 0.0086, −5.8 SE, no refusal).
+
+| target | p | travel | lever | cost of the lever |
+|---|---|---|---|---|
+| 320 Hz | 0.093 | 0.407 | top | 30.0% ± 5.1% |
+| **475 Hz** | **0.300** | **0.200** | **top** | **25.0% ± 5.9%** |
+| 850 Hz | 0.800 | 0.300 | bottom | 22.1% ± 4.4% |
+
+**The direction account holds, now on three targets.** At 475 Hz the top is the lever at
+−4.2 SE, while the middle (6%, −0.8 SE) and the bottom (5%, −0.7 SE) are both free. Three
+targets, three times the lever sits at the end the lesson must suppress, and three times
+the middle is free. That is the signed `(p_i − c)` account confirmed again.
+
+**The distance law is refused, and the 0.1% match was luck.** It predicted 14.8% for this
+target; the measurement is 25.0% ± 5.9%, 1.7 SE above. More decisively, three points are
+**non-monotone in travel**: 0.200 → 25.0%, 0.300 → 22.1%, 0.407 → 30.0%. A cost
+proportional to how far the centroid must move cannot produce that ordering at all.
+
+So the agreement to 0.1% between the first two points was a coincidence on two points, as
+flagged at the time. Worth stating plainly: the caveat was right, and the cheapest way to
+find out was to measure the third point rather than to argue about the first two.
+
+**What governs the magnitude is open, and this is where not to fit.** Restricted to the
+two low-side targets, where the lever is the same neuron, cost falls with travel but far
+too slowly for proportionality: 30.0% at 0.407 and 25.0% at 0.200 imply a large
+travel-independent component plus a weak distance term. That is two parameters on two
+points, and this project has already paid for exactly that mistake once — the earlier
+leverage *law* was fitted to three single-neuron costs with one free parameter, matched
+them to 1.68 percentage points, and then failed the two half-block costs out of sample.
+So the account stops here: **the end the lesson must suppress carries the lever, the
+middle never does, and the size of that lever is not a function of travel distance.**
+
+Housekeeping: the 850 Hz rows, temporarily retargeted to run this condition, are restored
+— the table now carries all three targets because all three are measured, and it is the
+record of what was run. A full twelve-arm run is about 6.5 hours, so focusing a condition
+still means retargeting rows; adding a `skip` field touches four sites and is worth doing
+before a fourth condition rather than this third one.
+
 ## Layout
 
 ```

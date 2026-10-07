@@ -9529,6 +9529,40 @@ const BWArm kBWArms[] = {
     // 850 Hz is the second word's F1, so this reuses a target the protocol already
     // teaches rather than inventing one. The four default-target arms re-measure the
     // 30/7/9 anchor in the same run, which is what makes the comparison safe.
+    // THIRD TARGET (2026-10-07), and the 850 Hz rows it temporarily replaces are
+    // already measured and published in results/blockwhere-reversal.log -- restored in
+    // the commit that writes this up. `blockwhere` has no skip field, so focusing a
+    // condition means retargeting rows; the NAME is changed with the target, because a
+    // row labelled `-hi` running 475 Hz is the label-not-attached-to-data error this
+    // file has been cleaning up all week.
+    //
+    // WHY 475 Hz. The reversal gave two points on a distance law I called one
+    // coincidence rather than a law: the centroid rests at 0.5, and a lesson travelling
+    // 0.407 (320 Hz) costs 30.0% of itself at the top while one travelling 0.300
+    // (850 Hz) costs 22.1% at the bottom. 475 Hz sits at p = 0.300, so it travels
+    // 0.200 -- and being BELOW the resting centroid it is a low-side target, so the TOP
+    // is the lever again.
+    //
+    // PRE-REGISTERED PREDICTION: top1-475 costs 30.01% * 0.200/0.4067 = 14.8% of the
+    // lesson, with mid1-475 and bot1-475 free. Three points through the origin is a
+    // test of the law; 15% is comfortably resolvable against SEs of ~5% of the lesson
+    // and is distinguishable from both 0% and 30%.
+    // WHAT REFUSES IT: a top cost near 30% (distance does not matter), near 0%
+    // (the lever needs more travel than this to engage), or the lever moving to the
+    // bottom (the sign of the direction of travel is not what selects the end).
+    {"b0-475",   0u, 0u, 475.0f, "b0-475"},
+    {"top1-475", 1u, 0u, 475.0f, "b0-475"},
+    {"mid1-475", 1u, 1u, 475.0f, "b0-475"},
+    {"bot1-475", 1u, 2u, 475.0f, "b0-475"},
+    // RESTORED as promised: the 850 Hz condition, measured in
+    // results/blockwhere-reversal.log. All three targets now sit in the table because
+    // all three are measured and the table is the record of what was run.
+    //
+    // COST OF A FULL RUN: 12 arms x 36 creatures at 5.6M is ~6.5h. Focusing a condition
+    // currently means retargeting rows, since `blockwhere` has no `skip` field; adding
+    // one touches four sites (the job lambda, the per-arm stats loop, the liveness
+    // block and the paired contrasts) and is worth doing before the fourth condition
+    // rather than the third.
     {"b0-hi",   0u, 0u, 850.0f, "b0-hi"},
     {"top1-hi", 1u, 0u, 850.0f, "b0-hi"},
     {"mid1-hi", 1u, 1u, 850.0f, "b0-hi"},
