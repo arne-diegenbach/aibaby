@@ -14882,11 +14882,36 @@ half-split cannot: **mask by |p_i − c| rather than by which side of the midpoi
 high-leverage and a low-leverage mask of the same size, both straddling the centroid
 symmetrically, vary output-potency while holding position-relative-to-target fixed.
 
-**What would refuse it.** Measure per-neuron leverage at two different centroids and
-check that it tracks |p_i − c| rather than p_i. If leverage is a function of position
-alone, this account is wrong and the refuted fitted law was closer than this is. The
-existing data were taken at one operating point and cannot separate the two — which is
-exactly why the fitted law survived in sample. Derivation and arithmetic only; not run.
+**Correction, same day, from data already on disk.** Two things above are wrong. First,
+the qualitative account is not new: `blockwhere`'s pre-registration already says
+&ldquo;`read_group` weights neuron i by (i − begin + 0.5)/n, so index IS position&rdquo;,
+that &ldquo;a weighted mean is least sensitive near its own centre&rdquo;, and that
+&ldquo;the end the lesson travels TOWARD should matter more&rdquo;. That is the centroid
+and its state-dependence, written before the run. What was new here is only the explicit
+derivative and the arithmetic — and the arithmetic was wrong.
+
+Second, **the absolute value is refuted by the run that already exists.** `blockwhere` at
+5.6M on 36 seeds measured one neuron blocked at three positions: top (p = 0.964) costs
+30% of the lesson at −5.8 SE, middle (0.464) costs 7% at −1.1 SE, bottom (0.036) costs 9%
+at −1.4 SE. Middle and bottom are both null and indistinguishable from each other. No
+single centroid makes a symmetric |p_i − c| produce that: at c = 0.093 it requires the
+middle to cost about six times the bottom, and at c ≈ 0.5 it requires the bottom to cost
+like the top. Neither happens.
+
+**The signed version fits all three.** A low target moves the centroid down, which is
+achieved by *suppressing* high-position neurons. So leverage belongs only to neurons on
+the side being suppressed: the top is far from the centroid on that side and is dear; the
+middle sits at the centroid and has no lever either way; the bottom is on the wrong side,
+because suppressing it would move the centroid *up*, so the lesson was never going to use
+it. Potency is therefore `(p_i − c)` taken with the sign of the required direction of
+travel, not its magnitude — which is what the pre-registration meant by the two ends not
+needing to match.
+
+**What is still open, and it is a sharp prediction.** Every block ever measured here used
+one lesson target. The signed account says a *high* target must move the centroid up by
+suppressing low-position neurons, so the costs should **swap**: the bottom becomes dear
+and the top becomes free. Not a graded change — a reversal of the 30% and the 9%. That is
+the test, it has never been run, and a symmetric account cannot produce it.
 
 #### A mechanism the project already refused is being published as working
 

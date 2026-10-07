@@ -9500,12 +9500,33 @@ bool run_blockfloor(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
 //   * 2-3 SE is a HYPOTHESIS at this n, not a finding, and prints as one.
 //   * the blocked INDEX RANGE is printed per arm, from the same arithmetic the
 //     session runs, because "which neuron" is the entire independent variable.
-struct BWArm { const char* name; uint32_t count; uint32_t pos; };
+// `f1` is the FIRST lesson's target, 0 keeping the default so the original four arms
+// stay bit-identical and reproduce their own anchor inside the run.
+struct BWArm { const char* name; uint32_t count; uint32_t pos; float f1; };
 const BWArm kBWArms[] = {
-    {"b0",    0u, 0u},
-    {"top1",  1u, 0u},
-    {"mid1",  1u, 1u},
-    {"bot1",  1u, 2u},
+    {"b0",    0u, 0u, 0.0f},
+    {"top1",  1u, 0u, 0.0f},
+    {"mid1",  1u, 1u, 0.0f},
+    {"bot1",  1u, 2u, 0.0f},
+    // THE REVERSAL TEST (2026-10-07). Every block ever measured here used ONE lesson
+    // target, and at that target the costs are top 30% (-5.8 SE), mid 7%, bot 9%, with
+    // mid and bot both null. A SYMMETRIC |p - c| account cannot produce that: at c near
+    // the target it needs mid ~6x bot, at c near mid-range it needs bot ~ top.
+    //
+    // The SIGNED account fits all three -- leverage belongs only to neurons on the side
+    // the lesson must SUPPRESS, so for a low target the top is the lever, the middle sits
+    // at the centroid, and the bottom is on the wrong side. That account makes a sharp
+    // prediction a symmetric one cannot: a HIGH target must move the centroid UP by
+    // suppressing LOW-position neurons, so the costs should SWAP. bot dear, top free.
+    // A reversal, not a gradient.
+    //
+    // 850 Hz is the second word's F1, so this reuses a target the protocol already
+    // teaches rather than inventing one. The four default-target arms re-measure the
+    // 30/7/9 anchor in the same run, which is what makes the comparison safe.
+    {"b0-hi",   0u, 0u, 850.0f},
+    {"top1-hi", 1u, 0u, 850.0f},
+    {"mid1-hi", 1u, 1u, 850.0f},
+    {"bot1-hi", 1u, 2u, 850.0f},
 };
 constexpr uint32_t kBWArmCount = sizeof(kBWArms) / sizeof(kBWArms[0]);
 
@@ -9577,6 +9598,7 @@ bool run_blockwhere(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
     cfg.relearn = true;
     cfg.mask_mode = kBWArms[a].count > 0u ? 4u : 0u;
     cfg.mask_count = kBWArms[a].count;
+    cfg.first_f1 = kBWArms[a].f1;
     cfg.mask_pos = kBWArms[a].pos;
     Timbre local_ruler;
     std::string local_error;
