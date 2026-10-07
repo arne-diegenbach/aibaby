@@ -9502,12 +9502,18 @@ bool run_blockfloor(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
 //     session runs, because "which neuron" is the entire independent variable.
 // `f1` is the FIRST lesson's target, 0 keeping the default so the original four arms
 // stay bit-identical and reproduce their own anchor inside the run.
-struct BWArm { const char* name; uint32_t count; uint32_t pos; float f1; };
+// `base` names this arm's OWN unblocked control. It used to be the literal "b0" at the
+// cost site, which was correct while every arm shared one lesson target and silently
+// wrong the moment a second target was added: the -hi arms were differenced against the
+// LOW-target control, charging them the whole difference between the two conditions.
+// top1-hi read 11% against b0 and 3% against b0-hi. Same bug class as the rest of this
+// file -- a reference hardcoded instead of resolved -- so it is resolved by name.
+struct BWArm { const char* name; uint32_t count; uint32_t pos; float f1; const char* base; };
 const BWArm kBWArms[] = {
-    {"b0",    0u, 0u, 0.0f},
-    {"top1",  1u, 0u, 0.0f},
-    {"mid1",  1u, 1u, 0.0f},
-    {"bot1",  1u, 2u, 0.0f},
+    {"b0",    0u, 0u, 0.0f, "b0"},
+    {"top1",  1u, 0u, 0.0f, "b0"},
+    {"mid1",  1u, 1u, 0.0f, "b0"},
+    {"bot1",  1u, 2u, 0.0f, "b0"},
     // THE REVERSAL TEST (2026-10-07). Every block ever measured here used ONE lesson
     // target, and at that target the costs are top 30% (-5.8 SE), mid 7%, bot 9%, with
     // mid and bot both null. A SYMMETRIC |p - c| account cannot produce that: at c near
@@ -9523,10 +9529,10 @@ const BWArm kBWArms[] = {
     // 850 Hz is the second word's F1, so this reuses a target the protocol already
     // teaches rather than inventing one. The four default-target arms re-measure the
     // 30/7/9 anchor in the same run, which is what makes the comparison safe.
-    {"b0-hi",   0u, 0u, 850.0f},
-    {"top1-hi", 1u, 0u, 850.0f},
-    {"mid1-hi", 1u, 1u, 850.0f},
-    {"bot1-hi", 1u, 2u, 850.0f},
+    {"b0-hi",   0u, 0u, 850.0f, "b0-hi"},
+    {"top1-hi", 1u, 0u, 850.0f, "b0-hi"},
+    {"mid1-hi", 1u, 1u, 850.0f, "b0-hi"},
+    {"bot1-hi", 1u, 2u, 850.0f, "b0-hi"},
 };
 constexpr uint32_t kBWArmCount = sizeof(kBWArms) / sizeof(kBWArms[0]);
 
@@ -9660,13 +9666,31 @@ bool run_blockwhere(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
     return d.size() >= 3 ? ctx_mean_se(d, se) : 0.0;
   };
 
-  std::printf("\n  THE COST OF BLOCKING ONE NEURON, paired on seed against `b0`\n");
+  std::printf("\n  THE COST OF BLOCKING ONE NEURON, paired on seed against each arm's\n"
+              "  OWN unblocked control (named per arm; a single `b0` would charge the\n"
+              "  second-target arms the gap between the two conditions)\n");
   double cost[kBWArmCount] = {}, se_c[kBWArmCount] = {};
-  for (uint32_t a = 1; a < kBWArmCount; ++a) {
-    cost[a] = paired(a, 0u, &se_c[a]);
-    std::printf("    %-5s %+.4f +/- %.4f  (%+.1f SE)   %.0f%% of the lesson\n", kBWArms[a].name,
-                cost[a], se_c[a], se_c[a] > 0.0 ? cost[a] / se_c[a] : 0.0,
-                mean_l[0] != 0.0 ? 100.0 * (-cost[a] / mean_l[0]) : 0.0);
+  auto bw_arm_of = [&](const char* nm) -> int {
+    for (uint32_t i = 0; i < kBWArmCount; ++i)
+      if (std::strcmp(kBWArms[i].name, nm) == 0) return int(i);
+    return -1;
+  };
+  for (uint32_t a = 0; a < kBWArmCount; ++a) {
+    const int b = bw_arm_of(kBWArms[a].base);
+    if (b < 0) {
+      std::printf("  REFUSED: arm `%s` names a baseline `%s` that is not in the table.\n",
+                  kBWArms[a].name, kBWArms[a].base);
+      return false;
+    }
+    if (uint32_t(b) == a) continue;   // the control itself
+    cost[a] = paired(a, uint32_t(b), &se_c[a]);
+    // Percent is of THAT baseline's own lesson, not of b0's, or the two conditions are
+    // not comparable even once the difference is paired correctly.
+    const double bl = mean_l[b];
+    std::printf("    %-9s %+.4f +/- %.4f  (%+.1f SE)   %.0f%% of the lesson   (vs `%s`)\n",
+                kBWArms[a].name, cost[a], se_c[a],
+                se_c[a] > 0.0 ? cost[a] / se_c[a] : 0.0,
+                bl != 0.0 ? 100.0 * (-cost[a] / bl) : 0.0, kBWArms[a].base);
   }
   const double p_top = mean_l[0] != 0.0 ? 100.0 * (-cost[1] / mean_l[0]) : 0.0;
   const double p_mid = mean_l[0] != 0.0 ? 100.0 * (-cost[2] / mean_l[0]) : 0.0;

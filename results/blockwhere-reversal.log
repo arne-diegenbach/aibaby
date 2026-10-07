@@ -1,0 +1,369 @@
+  [5/288] seed 0 b0-hi before 0.6264 taught 0.4874
+  [6/288] seed 0 top1-hi before 0.6764 taught 0.5700
+  [3/288] seed 0 mid1  before 0.9936 taught 0.8466
+  [10/288] seed 1 top1  before 0.9960 taught 0.8319
+  [7/288] seed 0 mid1-hi before 0.6511 taught 0.5136
+  [1/288] seed 0 b0    before 1.0170 taught 0.7762
+  [4/288] seed 0 bot1  before 0.9810 taught 0.8539
+  [2/288] seed 0 top1  before 1.0320 taught 0.9284
+  [9/288] seed 1 b0    before 1.0000 taught 0.7730
+  [11/288] seed 1 mid1  before 0.9949 taught 0.9040
+  [8/288] seed 0 bot1-hi before 0.6421 taught 0.5146
+  [12/288] seed 1 bot1  before 1.0079 taught 0.8788
+  [13/288] seed 1 b0-hi before 0.6538 taught 0.4770
+  [14/288] seed 1 top1-hi before 0.6531 taught 0.4561
+  [25/288] seed 3 b0    before 0.9701 taught 0.8461
+  [16/288] seed 1 bot1-hi before 0.6487 taught 0.5474
+  [18/288] seed 2 top1  before 1.0657 taught 0.9640
+  [28/288] seed 3 bot1  before 0.9916 taught 0.9172
+  [19/288] seed 2 mid1  before 1.0591 taught 0.8950
+  [20/288] seed 2 bot1  before 1.0442 taught 0.8304
+  [24/288] seed 2 bot1-hi before 0.6595 taught 0.4667
+  [15/288] seed 1 mid1-hi before 0.6512 taught 0.5074
+  [21/288] seed 2 b0-hi before 0.6507 taught 0.4591
+  [26/288] seed 3 top1  before 1.0059 taught 0.9335
+  [23/288] seed 2 mid1-hi before 0.6827 taught 0.5153
+  [17/288] seed 2 b0    before 1.0503 taught 0.8962
+  [22/288] seed 2 top1-hi before 0.6634 taught 0.4215
+  [27/288] seed 3 mid1  before 0.9644 taught 0.8386
+  [32/288] seed 3 bot1-hi before 0.6515 taught 0.5430
+  [35/288] seed 4 mid1  before 1.0167 taught 0.8036
+  [29/288] seed 3 b0-hi before 0.6640 taught 0.4867
+  [34/288] seed 4 top1  before 0.9797 taught 0.8580
+  [33/288] seed 4 b0    before 1.0041 taught 0.8275
+  [30/288] seed 3 top1-hi before 0.6629 taught 0.5262
+  [31/288] seed 3 mid1-hi before 0.6549 taught 0.5344
+  [36/288] seed 4 bot1  before 1.0053 taught 0.8375
+  [37/288] seed 4 b0-hi before 0.6909 taught 0.5521
+  [40/288] seed 4 bot1-hi before 0.6798 taught 0.5342
+  [39/288] seed 4 mid1-hi before 0.6947 taught 0.5850
+  [38/288] seed 4 top1-hi before 0.6597 taught 0.5903
+  [41/288] seed 5 b0    before 0.9864 taught 0.8155
+  [42/288] seed 5 top1  before 1.0130 taught 0.8664
+  [44/288] seed 5 bot1  before 1.0144 taught 0.9141
+  [46/288] seed 5 top1-hi before 0.6595 taught 0.5733
+  [50/288] seed 6 top1  before 1.0032 taught 0.8738
+  [45/288] seed 5 b0-hi before 0.6172 taught 0.4929
+  [51/288] seed 6 mid1  before 1.0120 taught 0.8879
+  [43/288] seed 5 mid1  before 1.0077 taught 0.9022
+  [49/288] seed 6 b0    before 1.0066 taught 0.7816
+  [47/288] seed 5 mid1-hi before 0.5937 taught 0.4471
+  [53/288] seed 6 b0-hi before 0.6406 taught 0.5437
+  [48/288] seed 5 bot1-hi before 0.6348 taught 0.4981
+  [52/288] seed 6 bot1  before 1.0217 taught 0.9092
+  [55/288] seed 6 mid1-hi before 0.6467 taught 0.5334
+  [56/288] seed 6 bot1-hi before 0.6530 taught 0.5279
+  [54/288] seed 6 top1-hi before 0.6503 taught 0.5232
+  [58/288] seed 7 top1  before 0.9724 taught 0.8999
+  [57/288] seed 7 b0    before 0.9721 taught 0.7805
+  [59/288] seed 7 mid1  before 0.9783 taught 0.8702
+  [61/288] seed 7 b0-hi before 0.6399 taught 0.4628
+  [65/288] seed 8 b0    before 1.0177 taught 0.9570
+  [62/288] seed 7 top1-hi before 0.6565 taught 0.4509
+  [64/288] seed 7 bot1-hi before 0.6192 taught 0.4937
+  [60/288] seed 7 bot1  before 0.9862 taught 0.8454
+  [63/288] seed 7 mid1-hi before 0.6670 taught 0.5518
+  [67/288] seed 8 mid1  before 1.0022 taught 0.8258
+  [66/288] seed 8 top1  before 1.0329 taught 0.8801
+  [68/288] seed 8 bot1  before 1.0264 taught 0.8973
+  [69/288] seed 8 b0-hi before 0.6435 taught 0.5302
+  [70/288] seed 8 top1-hi before 0.6485 taught 0.5500
+  [71/288] seed 8 mid1-hi before 0.6503 taught 0.5589
+  [72/288] seed 8 bot1-hi before 0.6505 taught 0.5341
+  [74/288] seed 9 top1  before 1.0022 taught 0.8802
+  [76/288] seed 9 bot1  before 1.0188 taught 0.8668
+  [73/288] seed 9 b0    before 0.9869 taught 0.7979
+  [75/288] seed 9 mid1  before 1.0099 taught 0.9024
+  [77/288] seed 9 b0-hi before 0.6315 taught 0.4805
+  [79/288] seed 9 mid1-hi before 0.6322 taught 0.5134
+  [78/288] seed 9 top1-hi before 0.6662 taught 0.4897
+  [81/288] seed 10 b0    before 1.0111 taught 0.8157
+  [82/288] seed 10 top1  before 1.0243 taught 0.9312
+  [80/288] seed 9 bot1-hi before 0.6704 taught 0.5507
+  [83/288] seed 10 mid1  before 0.9764 taught 0.7672
+  [84/288] seed 10 bot1  before 1.0213 taught 0.8794
+  [87/288] seed 10 mid1-hi before 0.5995 taught 0.5333
+  [86/288] seed 10 top1-hi before 0.6018 taught 0.5119
+  [88/288] seed 10 bot1-hi before 0.6119 taught 0.5363
+  [89/288] seed 11 b0    before 1.0184 taught 0.9124
+  [85/288] seed 10 b0-hi before 0.6396 taught 0.4980
+  [92/288] seed 11 bot1  before 1.0077 taught 0.9096
+  [90/288] seed 11 top1  before 1.0147 taught 0.8759
+  [93/288] seed 11 b0-hi before 0.7114 taught 0.5307
+  [95/288] seed 11 mid1-hi before 0.6906 taught 0.5084
+  [91/288] seed 11 mid1  before 0.9920 taught 0.8294
+  [97/288] seed 12 b0    before 1.0352 taught 0.9231
+  [94/288] seed 11 top1-hi before 0.6886 taught 0.5650
+  [96/288] seed 11 bot1-hi before 0.7060 taught 0.5839
+  [98/288] seed 12 top1  before 1.0196 taught 0.9758
+  [99/288] seed 12 mid1  before 1.0418 taught 0.9359
+  [102/288] seed 12 top1-hi before 0.6664 taught 0.5081
+  [100/288] seed 12 bot1  before 1.0477 taught 0.8759
+  [101/288] seed 12 b0-hi before 0.6595 taught 0.4972
+  [103/288] seed 12 mid1-hi before 0.6645 taught 0.4753
+  [105/288] seed 13 b0    before 0.9718 taught 0.8115
+  [104/288] seed 12 bot1-hi before 0.6967 taught 0.5373
+  [106/288] seed 13 top1  before 1.0026 taught 0.8807
+  [107/288] seed 13 mid1  before 1.0009 taught 0.8319
+  [110/288] seed 13 top1-hi before 0.6642 taught 0.6108
+  [109/288] seed 13 b0-hi before 0.6695 taught 0.5518
+  [108/288] seed 13 bot1  before 1.0195 taught 0.9809
+  [111/288] seed 13 mid1-hi before 0.6800 taught 0.5926
+  [112/288] seed 13 bot1-hi before 0.6816 taught 0.5899
+  [114/288] seed 14 top1  before 1.0233 taught 0.9010
+  [113/288] seed 14 b0    before 1.0045 taught 0.8057
+  [116/288] seed 14 bot1  before 1.0295 taught 0.8420
+  [115/288] seed 14 mid1  before 0.9834 taught 0.8488
+  [117/288] seed 14 b0-hi before 0.6434 taught 0.5760
+  [120/288] seed 14 bot1-hi before 0.6523 taught 0.5433
+  [119/288] seed 14 mid1-hi before 0.6733 taught 0.5135
+  [118/288] seed 14 top1-hi before 0.6624 taught 0.4599
+  [121/288] seed 15 b0    before 1.0542 taught 0.9412
+  [122/288] seed 15 top1  before 1.0386 taught 0.9883
+  [124/288] seed 15 bot1  before 1.0242 taught 0.7514
+  [123/288] seed 15 mid1  before 1.0203 taught 0.9535
+  [125/288] seed 15 b0-hi before 0.6869 taught 0.5469
+  [126/288] seed 15 top1-hi before 0.6740 taught 0.5398
+  [127/288] seed 15 mid1-hi before 0.6740 taught 0.5150
+  [129/288] seed 16 b0    before 1.0170 taught 0.9053
+  [130/288] seed 16 top1  before 0.9676 taught 0.8763
+  [128/288] seed 15 bot1-hi before 0.7015 taught 0.5980
+  [133/288] seed 16 b0-hi before 0.6636 taught 0.5173
+  [134/288] seed 16 top1-hi before 0.6958 taught 0.5394
+  [132/288] seed 16 bot1  before 1.0225 taught 0.9294
+  [131/288] seed 16 mid1  before 0.9888 taught 0.7830
+  [135/288] seed 16 mid1-hi before 0.6790 taught 0.5069
+  [137/288] seed 17 b0    before 1.0177 taught 0.8314
+  [136/288] seed 16 bot1-hi before 0.6834 taught 0.5925
+  [138/288] seed 17 top1  before 1.0448 taught 0.8905
+  [139/288] seed 17 mid1  before 1.0174 taught 0.7145
+  [141/288] seed 17 b0-hi before 0.6566 taught 0.4651
+  [140/288] seed 17 bot1  before 1.0320 taught 0.8001
+  [142/288] seed 17 top1-hi before 0.6376 taught 0.5297
+  [145/288] seed 18 b0    before 1.0157 taught 0.8729
+  [144/288] seed 17 bot1-hi before 0.6780 taught 0.6417
+  [143/288] seed 17 mid1-hi before 0.6425 taught 0.4865
+  [147/288] seed 18 mid1  before 1.0340 taught 0.8648
+  [146/288] seed 18 top1  before 1.0449 taught 0.8586
+  [148/288] seed 18 bot1  before 1.0437 taught 0.8641
+  [149/288] seed 18 b0-hi before 0.6790 taught 0.5763
+  [150/288] seed 18 top1-hi before 0.6625 taught 0.4582
+  [152/288] seed 18 bot1-hi before 0.6671 taught 0.5462
+  [151/288] seed 18 mid1-hi before 0.6721 taught 0.5474
+  [153/288] seed 19 b0    before 1.0197 taught 0.8616
+  [155/288] seed 19 mid1  before 1.0061 taught 0.7948
+  [156/288] seed 19 bot1  before 1.0064 taught 0.8267
+  [154/288] seed 19 top1  before 1.0218 taught 0.9051
+  [158/288] seed 19 top1-hi before 0.6540 taught 0.5285
+  [157/288] seed 19 b0-hi before 0.6449 taught 0.5155
+  [159/288] seed 19 mid1-hi before 0.6478 taught 0.4433
+  [162/288] seed 20 top1  before 1.0339 taught 0.9163
+  [160/288] seed 19 bot1-hi before 0.6955 taught 0.5583
+  [161/288] seed 20 b0    before 1.0197 taught 0.8308
+  [163/288] seed 20 mid1  before 1.0070 taught 0.7911
+  [164/288] seed 20 bot1  before 1.0245 taught 0.9098
+  [165/288] seed 20 b0-hi before 0.6754 taught 0.5176
+  [166/288] seed 20 top1-hi before 0.6653 taught 0.5036
+  [167/288] seed 20 mid1-hi before 0.6475 taught 0.5200
+  [168/288] seed 20 bot1-hi before 0.6755 taught 0.5374
+  [169/288] seed 21 b0    before 1.0163 taught 0.8192
+  [170/288] seed 21 top1  before 1.0168 taught 0.8466
+  [172/288] seed 21 bot1  before 1.0099 taught 0.8012
+  [173/288] seed 21 b0-hi before 0.6680 taught 0.5713
+  [171/288] seed 21 mid1  before 1.0028 taught 0.8773
+  [174/288] seed 21 top1-hi before 0.6466 taught 0.4612
+  [176/288] seed 21 bot1-hi before 0.6623 taught 0.5381
+  [175/288] seed 21 mid1-hi before 0.6549 taught 0.4761
+  [177/288] seed 22 b0    before 1.0338 taught 0.8416
+  [178/288] seed 22 top1  before 1.0037 taught 0.8843
+  [179/288] seed 22 mid1  before 1.0214 taught 0.8629
+  [180/288] seed 22 bot1  before 1.0255 taught 0.8704
+  [181/288] seed 22 b0-hi before 0.6628 taught 0.5010
+  [182/288] seed 22 top1-hi before 0.6555 taught 0.4834
+  [183/288] seed 22 mid1-hi before 0.6498 taught 0.4626
+  [185/288] seed 23 b0    before 0.9872 taught 0.7669
+  [186/288] seed 23 top1  before 1.0531 taught 0.9572
+  [184/288] seed 22 bot1-hi before 0.6781 taught 0.6048
+  [187/288] seed 23 mid1  before 0.9786 taught 0.7328
+  [190/288] seed 23 top1-hi before 0.6552 taught 0.5142
+  [189/288] seed 23 b0-hi before 0.6192 taught 0.3827
+  [188/288] seed 23 bot1  before 1.0210 taught 0.8501
+  [191/288] seed 23 mid1-hi before 0.6504 taught 0.5511
+  [192/288] seed 23 bot1-hi before 0.6748 taught 0.5016
+  [193/288] seed 24 b0    before 1.0241 taught 0.9097
+  [194/288] seed 24 top1  before 1.0370 taught 0.9100
+  [195/288] seed 24 mid1  before 1.0154 taught 0.8830
+  [197/288] seed 24 b0-hi before 0.6902 taught 0.4497
+  [196/288] seed 24 bot1  before 1.0217 taught 0.8401
+  [198/288] seed 24 top1-hi before 0.6848 taught 0.6166
+  [199/288] seed 24 mid1-hi before 0.7071 taught 0.5885
+  [201/288] seed 25 b0    before 1.0125 taught 0.8151
+  [200/288] seed 24 bot1-hi before 0.6819 taught 0.5118
+  [203/288] seed 25 mid1  before 0.9872 taught 0.7501
+  [202/288] seed 25 top1  before 1.0122 taught 0.9004
+  [204/288] seed 25 bot1  before 0.9934 taught 0.8441
+  [207/288] seed 25 mid1-hi before 0.6593 taught 0.4827
+  [205/288] seed 25 b0-hi before 0.6378 taught 0.4069
+  [206/288] seed 25 top1-hi before 0.6429 taught 0.5152
+  [208/288] seed 25 bot1-hi before 0.6652 taught 0.5010
+  [210/288] seed 26 top1  before 0.9931 taught 0.9098
+  [209/288] seed 26 b0    before 0.9869 taught 0.8514
+  [212/288] seed 26 bot1  before 1.0043 taught 0.8456
+  [211/288] seed 26 mid1  before 1.0084 taught 0.9046
+  [213/288] seed 26 b0-hi before 0.6380 taught 0.4850
+  [214/288] seed 26 top1-hi before 0.6838 taught 0.5601
+  [216/288] seed 26 bot1-hi before 0.6716 taught 0.5560
+  [218/288] seed 27 top1  before 1.0213 taught 0.8869
+  [217/288] seed 27 b0    before 1.0227 taught 0.8192
+  [220/288] seed 27 bot1  before 1.0468 taught 0.8656
+  [215/288] seed 26 mid1-hi before 0.6513 taught 0.4965
+  [219/288] seed 27 mid1  before 1.0088 taught 0.8814
+  [221/288] seed 27 b0-hi before 0.6675 taught 0.5536
+  [222/288] seed 27 top1-hi before 0.6762 taught 0.4960
+  [224/288] seed 27 bot1-hi before 0.6735 taught 0.5907
+  [226/288] seed 28 top1  before 0.9910 taught 0.9507
+  [223/288] seed 27 mid1-hi before 0.6526 taught 0.5052
+  [225/288] seed 28 b0    before 0.9721 taught 0.8090
+  [229/288] seed 28 b0-hi before 0.6528 taught 0.4610
+  [227/288] seed 28 mid1  before 0.9725 taught 0.7777
+  [230/288] seed 28 top1-hi before 0.6422 taught 0.4443
+  [231/288] seed 28 mid1-hi before 0.6718 taught 0.4310
+  [228/288] seed 28 bot1  before 0.9762 taught 0.7719
+  [232/288] seed 28 bot1-hi before 0.6904 taught 0.5316
+  [234/288] seed 29 top1  before 1.0497 taught 0.8459
+  [233/288] seed 29 b0    before 1.0223 taught 0.7803
+  [235/288] seed 29 mid1  before 1.0519 taught 0.9176
+  [236/288] seed 29 bot1  before 1.0631 taught 0.9322
+  [238/288] seed 29 top1-hi before 0.6463 taught 0.4521
+  [240/288] seed 29 bot1-hi before 0.6312 taught 0.4985
+  [237/288] seed 29 b0-hi before 0.6195 taught 0.4479
+  [239/288] seed 29 mid1-hi before 0.6600 taught 0.5493
+  [241/288] seed 30 b0    before 1.0442 taught 0.9392
+  [242/288] seed 30 top1  before 1.0683 taught 0.9102
+  [246/288] seed 30 top1-hi before 0.6088 taught 0.3493
+  [245/288] seed 30 b0-hi before 0.6346 taught 0.4758
+  [244/288] seed 30 bot1  before 1.0511 taught 0.8912
+  [243/288] seed 30 mid1  before 1.0360 taught 0.9167
+  [247/288] seed 30 mid1-hi before 0.6260 taught 0.4455
+  [248/288] seed 30 bot1-hi before 0.6521 taught 0.5441
+  [249/288] seed 31 b0    before 1.0092 taught 0.8431
+  [250/288] seed 31 top1  before 1.0154 taught 0.9439
+  [253/288] seed 31 b0-hi before 0.6705 taught 0.4954
+  [251/288] seed 31 mid1  before 0.9932 taught 0.8357
+  [254/288] seed 31 top1-hi before 0.6630 taught 0.4825
+  [252/288] seed 31 bot1  before 1.0209 taught 0.9026
+  [256/288] seed 31 bot1-hi before 0.7036 taught 0.6277
+  [255/288] seed 31 mid1-hi before 0.6788 taught 0.5031
+  [258/288] seed 32 top1  before 1.0346 taught 0.9083
+  [259/288] seed 32 mid1  before 1.0084 taught 0.8903
+  [257/288] seed 32 b0    before 1.0047 taught 0.8430
+  [260/288] seed 32 bot1  before 1.0030 taught 0.8108
+  [261/288] seed 32 b0-hi before 0.6773 taught 0.5092
+  [262/288] seed 32 top1-hi before 0.6940 taught 0.5294
+  [263/288] seed 32 mid1-hi before 0.6750 taught 0.4813
+  [264/288] seed 32 bot1-hi before 0.7065 taught 0.5900
+  [266/288] seed 33 top1  before 1.0207 taught 0.8040
+  [268/288] seed 33 bot1  before 1.0233 taught 0.8632
+  [265/288] seed 33 b0    before 0.9939 taught 0.7820
+  [267/288] seed 33 mid1  before 0.9983 taught 0.8563
+  [269/288] seed 33 b0-hi before 0.6405 taught 0.5051
+  [270/288] seed 33 top1-hi before 0.6612 taught 0.5325
+  [271/288] seed 33 mid1-hi before 0.6452 taught 0.4697
+  [275/288] seed 34 mid1  before 1.0172 taught 0.8520
+  [272/288] seed 33 bot1-hi before 0.6460 taught 0.5289
+  [273/288] seed 34 b0    before 1.0101 taught 0.8362
+  [277/288] seed 34 b0-hi before 0.6774 taught 0.5479
+  [276/288] seed 34 bot1  before 1.0297 taught 0.8901
+  [274/288] seed 34 top1  before 1.0098 taught 0.9354
+  [278/288] seed 34 top1-hi before 0.6291 taught 0.5171
+  [280/288] seed 34 bot1-hi before 0.6628 taught 0.5477
+  [279/288] seed 34 mid1-hi before 0.6591 taught 0.5405
+  [283/288] seed 35 mid1  before 0.9642 taught 0.8093
+  [287/288] seed 35 mid1-hi before 0.6573 taught 0.4894
+  [284/288] seed 35 bot1  before 0.9904 taught 0.8679
+  [285/288] seed 35 b0-hi before 0.6447 taught 0.4974
+  [281/288] seed 35 b0    before 0.9534 taught 0.8355
+  [282/288] seed 35 top1  before 0.9932 taught 0.9239
+  [286/288] seed 35 top1-hi before 0.6852 taught 0.5376
+  [288/288] seed 35 bot1-hi before 0.6757 taught 0.5760
+experiment: blockwhere
+  instrument        blockwhere   trial seed 0000000001352ce7   2000 trials
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  question          `blockfloor` found one neuron of 14 costs 30% of the
+                    lesson and four cost 57%. Is that about HOW MANY cells
+                    are blocked, or about WHICH ONES?
+  the two accounts  a faulty instrument, or LEVERAGE. `read_group` weights
+                    neuron i by (i - begin + 0.5)/n, so index IS position,
+                    and every block ever measured took the TOP of the group
+                    -- the best levers for moving a weighted mean.
+  the design        ONE neuron in every blocked arm, so the count is held
+                    fixed and only its POSITION differs. Any difference is
+                    leverage; no difference refutes it.
+  the prediction    a weighted mean is least sensitive near its own centre,
+                    so `mid1` should cost clearly less than `top1`. The two
+                    ends need not match: the end the lesson travels TOWARD
+                    should matter more.
+  why it matters    `mask-unaffordable` closed write separation on "confining
+                    a lesson is unaffordable". If the cost is leverage that
+                    reads "unaffordable AT THE TOP", and separation bought in
+                    the middle may be nearly free -- reopening a shut line.
+  the anchor        `top1` must reproduce ~30%. If it does not, this run
+                    disagrees with `blockfloor` and THAT is the finding.
+
+  THE BLOCK AS BUILT (group is neurons 28..41 of vocal's 126)
+    b0    nothing blocked
+    top1  blocks index 41  (position 0.964 in the group)
+    mid1  blocks index 34  (position 0.464 in the group)
+    bot1  blocks index 28  (position 0.036 in the group)
+    b0-hi nothing blocked
+    top1-hi blocks index 41  (position 0.964 in the group)
+    mid1-hi blocks index 34  (position 0.464 in the group)
+    bot1-hi blocks index 28  (position 0.036 in the group)
+
+
+  arm    err before   err taught   learned
+  b0     1.0080       0.8404       +0.1676 +/- 0.0073
+  top1   1.0183       0.9009       +0.1174 +/- 0.0071
+  mid1   1.0048       0.8483       +0.1565 +/- 0.0083
+  bot1   1.0182       0.8657       +0.1525 +/- 0.0076
+  b0-hi  0.6552       0.5015       +0.1537 +/- 0.0065
+  top1-hi 0.6596       0.5110       +0.1485 +/- 0.0081
+  mid1-hi 0.6582       0.5104       +0.1478 +/- 0.0063
+  bot1-hi 0.6676       0.5479       +0.1198 +/- 0.0053
+
+  ARM LIVENESS vs `b0` (seeds where the arm differs at all)
+    top1               36/36
+    mid1               36/36
+    bot1               36/36
+    b0-hi              36/36
+    top1-hi            36/36
+    mid1-hi            36/36
+    bot1-hi            36/36
+
+  THE COST OF BLOCKING ONE NEURON, paired on seed against `b0`
+    top1  -0.0503 +/- 0.0086  (-5.8 SE)   30% of the lesson
+    mid1  -0.0112 +/- 0.0105  (-1.1 SE)   7% of the lesson
+    bot1  -0.0151 +/- 0.0105  (-1.4 SE)   9% of the lesson
+    b0-hi -0.0139 +/- 0.0099  (-1.4 SE)   8% of the lesson
+    top1-hi -0.0191 +/- 0.0104  (-1.8 SE)   11% of the lesson
+    mid1-hi -0.0199 +/- 0.0104  (-1.9 SE)   12% of the lesson
+    bot1-hi -0.0479 +/- 0.0091  (-5.3 SE)   29% of the lesson
+
+  DOES POSITION MATTER? paired on seed (positive = cheaper than `top1`)
+    mid1 - top1  +0.0391 +/- 0.0108  (+3.6 SE)
+    bot1 - top1  +0.0351 +/- 0.0106  (+3.3 SE)
+
+  POSITION IS THE COST, NOT COUNT (3.6 SE). The same ONE neuron costs
+  30% of the lesson at the top of the group and 7% in the middle.
+  Nothing about the number blocked changed, so the instrument is exonerated
+  -- `set_reward_block` does what it says -- and the readout's GEOMETRY is
+  the finding: `read_group` weights neuron i by (i - begin + 0.5)/n, a
+  weighted mean is least sensitive near its own centre, and every block
+  this project ever measured took the most expensive cells available.
+
+  THAT REOPENS WRITE SEPARATION. `mask-unaffordable` closed it on "confining
+  a lesson is unaffordable", measured only at the top. Read here it says
+  unaffordable AT THE TOP, and a lesson confined to the middle of the group
+  costs a fraction of that. The 59% was a fact about where the mask was
+  put, not about whether a pooled readout can be partitioned.

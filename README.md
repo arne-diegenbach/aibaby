@@ -15034,6 +15034,64 @@ population. It is a stronger claim than the regularity it replaces, and it is fa
 — a brake applied to high-potency edges should cost like a mask, and a mask aimed at
 low-traffic high-potency neurons should cost like a brake.
 
+### The leverage reverses: one neuron of fourteen, and which one depends on the target
+
+The prediction registered yesterday, run overnight. `blockwhere` with eight arms — the
+original four at the default lesson target and four at 850 Hz — 36 creatures each,
+5.6M ticks, gate passed. Costs paired on seed against each arm's **own** unblocked
+control.
+
+| blocked neuron | position | LOW target (320 Hz) | HIGH target (850 Hz) |
+|---|---|---|---|
+| top | 0.964 | **30% of the lesson, −5.8 SE** | 3%, −0.5 SE |
+| middle | 0.464 | 7%, −1.1 SE | 4%, −0.7 SE |
+| bottom | 0.036 | 9%, −1.4 SE | **22% of the lesson, −5.0 SE** |
+
+**Exactly one neuron of fourteen is expensive, and which one depends on where the lesson
+is going.** Both dear arms clear 5 SE; all four cheap arms sit under 1.5 SE with
+comparable standard errors, so the cheapness is measured rather than merely unresolved.
+The middle is free in both conditions, which is the centroid having no lever in either
+direction.
+
+**The anchor reproduced to four decimals.** `top1` came back at −0.0503 ± 0.0086,
+−5.8 SE, identical to the published `blockwhere` log on the same genome. The four
+default-target arms were included for exactly this reason, and they make the run
+self-validating rather than requiring trust in a cross-run comparison.
+
+This is what the signed account predicts and what a symmetric one cannot produce at any
+centroid: potency is `(p_i − c)` taken with the sign of the required direction of
+travel. A low target is reached by *suppressing* high-position neurons, so the top is
+the lever and the bottom is on the wrong side; a high target reverses both roles.
+
+#### A second quantity falls out, and it is one coincidence rather than evidence
+
+The two costs are not equal — 30% against 22% — and the same account says why without a
+new parameter. The resting centroid is 0.5, the low target sits at 0.093 and the high at
+0.800, so the lesson must travel 0.407 in one case and 0.300 in the other. A lever costs
+more when there is further to go:
+
+```
+  distance the centroid must travel:  low 0.4067   high 0.3000   ratio 1.356
+  cost as a fraction of the lesson:   low 0.3001   high 0.2212   ratio 1.357
+```
+
+A match to 0.1%. It should be read as one coincidence on one pair of conditions, not as
+a confirmed law — the honest test is a third target, and nothing here has measured one.
+
+#### And a baseline bug I introduced, found in the output
+
+The experiment's cost line read *paired on seed against `b0`* — a single hardcoded
+control. That was correct while every arm shared one lesson target and silently wrong
+the moment a second was added, because the high-target arms were then charged the whole
+difference between the two conditions. `top1-hi` reads **11%** against `b0` and **3%**
+against `b0-hi`. The reversal survives either way, since the misattributed offset is
+common to all three high arms, but three of the eight printed numbers were wrong.
+
+Same bug class as the rest of this file — a reference hardcoded instead of resolved — so
+it is resolved the same way: each arm names its own control, the lookup refuses if that
+name is absent from the table, and the percentage is taken against that control's own
+lesson rather than `b0`'s. The numbers in the table above are the recomputed ones.
+
 ## Layout
 
 ```
