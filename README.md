@@ -14936,6 +14936,79 @@ This creature uses two discrete context slots. Its own measurements are consiste
 the warning: the derived index never separates the two lessons (0.23 against 0.23) while
 the auditory feature it is built from carries the word at 97.8% held out.
 
+### The myelin brake binds hard and costs nothing, which breaks my own regularity
+
+The shipped stabilisation brake — §3.5's `eta_floor_frac = 0.3` — against the same
+protocol with the brake removed (`1.0`, every edge at full rate). 12M, 128 sessions,
+gate passed.
+
+**The binding check passes decisively**, which matters because a live field is not a
+binding one:
+
+```
+  bcast-AB      mean per-edge learning rate 0.6708   (min 0.6449 max 0.6823, n=32)
+  nobrake-AB    mean per-edge learning rate 1.0000   (min 1.0000 max 1.0000, n=32)
+```
+
+The brake removes **a third of the per-edge learning rate**. It is not vacuous, and
+0.6708 reproduces an earlier independent measurement of 0.654.
+
+**And it changes nothing.** Retention, paired and jackknifed, flat across the floor
+sweep:
+
+| gain floor | shipped | no brake | difference | | n |
+|---|---|---|---|---|---|
+| 0.00 | +0.3194 | +0.2655 | −0.0539 ± 0.0867 | −0.6 SE | 27 |
+| 0.05 | +0.3240 | +0.2699 | −0.0541 ± 0.0888 | −0.6 SE | 26 |
+| 0.10 | +0.3313 | +0.2714 | −0.0599 ± 0.0904 | −0.7 SE | 25 |
+| 0.20 | +0.3129 | +0.2789 | −0.0339 ± 0.0932 | −0.4 SE | 23 |
+
+Learning is equally untouched: gain +0.3618 ± 0.0334 with the brake against
++0.3514 ± 0.0349 without it.
+
+So **this creature's shipped stabilisation mechanism does not protect against the wipe**,
+and Masse's second half is *absent* here rather than merely untuned. Adding it means
+building something, not adjusting `eta_floor_frac`. That closes the plan proposed one day
+earlier with a clean negative, and it is the fourth consolidation mechanism refused in
+this project.
+
+#### The prediction I registered was wrong in sign on both axes
+
+Before the run I predicted, from the regularity that every plasticity restriction tried
+here cuts learning more than forgetting, that removing the brake would **buy more
+learning than it costs retention**, so the no-brake arm should retain at least as well as
+the shipped one. Both point estimates went the other way — the no-brake arm gained
+slightly *less* (0.3514 against 0.3618) and retained slightly *less* (0.266 against
+0.319). Both differences are nulls, so the prediction is not refuted at significance, but
+it is not confirmed either, and on the only evidence available it points the wrong way.
+
+#### What the regularity should have been
+
+The honest repair is not to weaken the claim but to find its variable. Four mechanisms
+now:
+
+| mechanism | restricts plasticity by | learning cost |
+|---|---|---|
+| myelin brake | **traffic** — the busiest edges | **none** (33% of the rate removed) |
+| astrocyte activity gate | activity | gain −81% |
+| oracle reward mask | **position** in the motor group | gain −46% |
+| central reward mask | position, keeping the centre | gain −97% |
+
+The brake removes a third of the learning rate for free; the masks remove half the group
+and cost dearly. The difference is not *how much* is restricted but **what**. The brake
+selects by traffic, which is unrelated to a neuron's influence on the formant. The masks
+select by position, which — given the centroid readout — *is* influence, since potency is
+\|p_i − c\|.
+
+> **Restricting plasticity costs learning in proportion to the output-potency of what is
+> restricted, not in proportion to how much is restricted.**
+
+That covers all four rows, and it makes the central mask's 29× collapse the extreme case
+rather than an anomaly: it confines the write to the lowest-potency neurons in the
+population. It is a stronger claim than the regularity it replaces, and it is falsifiable
+— a brake applied to high-potency edges should cost like a mask, and a mask aimed at
+low-traffic high-potency neurons should cost like a brake.
+
 ## Layout
 
 ```

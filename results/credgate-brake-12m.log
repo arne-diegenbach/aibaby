@@ -26,3 +26,335 @@
   [301/1600] seed 6 bcast-AB      before 1.1352 taught 1.0240 after 1.0627 plast 0.6485 agree 0.00
   [350/1600] seed 6 nobrake-keep  before 0.9980 taught 0.5370 after 0.3512 plast 1.0000 agree 0.00
   [302/1600] seed 6 bcast-keep    before 1.1352 taught 1.0240 after 0.9561 plast 0.6400 agree 0.00
+  [401/1600] seed 8 bcast-AB      before 0.9920 taught 0.5846 after 0.6468 plast 0.6740 agree 0.00
+  [449/1600] seed 8 nobrake-AB    before 0.9909 taught 0.5923 after 0.9264 plast 1.0000 agree 0.00
+  [402/1600] seed 8 bcast-keep    before 0.9920 taught 0.5846 after 0.3081 plast 0.6780 agree 0.00
+  [352/1600] seed 7 bcast-keep    before 1.1582 taught 1.1898 after 0.9399 plast 0.6562 agree 0.00
+  [351/1600] seed 7 bcast-AB      before 1.1582 taught 1.1898 after 1.1596 plast 0.6449 agree 0.00
+  [450/1600] seed 8 nobrake-keep  before 0.9909 taught 0.5923 after 0.3348 plast 1.0000 agree 0.00
+  [451/1600] seed 9 bcast-AB      before 0.9525 taught 0.5909 after 0.8504 plast 0.6743 agree 0.00
+  [499/1600] seed 9 nobrake-AB    before 0.9807 taught 0.6613 after 0.9416 plast 1.0000 agree 0.00
+  [400/1600] seed 7 nobrake-keep  before 1.1290 taught 1.2242 after 1.1387 plast 1.0000 agree 0.00
+  [399/1600] seed 7 nobrake-AB    before 1.1290 taught 1.2242 after 1.1773 plast 1.0000 agree 0.00
+  [501/1600] seed 10 bcast-AB      before 0.9453 taught 0.4169 after 1.1017 plast 0.6727 agree 0.00
+  [452/1600] seed 9 bcast-keep    before 0.9525 taught 0.5909 after 0.2782 plast 0.6716 agree 0.00
+  [500/1600] seed 9 nobrake-keep  before 0.9807 taught 0.6613 after 0.3046 plast 1.0000 agree 0.00
+  [502/1600] seed 10 bcast-keep    before 0.9453 taught 0.4169 after 0.2706 plast 0.6765 agree 0.00
+  [549/1600] seed 10 nobrake-AB    before 0.9606 taught 0.5093 after 0.8522 plast 1.0000 agree 0.00
+  [550/1600] seed 10 nobrake-keep  before 0.9606 taught 0.5093 after 0.2144 plast 1.0000 agree 0.00
+  [699/1600] seed 13 nobrake-AB    before 0.9821 taught 0.4882 after 0.8986 plast 1.0000 agree 0.00
+  [601/1600] seed 12 bcast-AB      before 1.0035 taught 0.5815 after 0.7162 plast 0.6744 agree 0.00
+  [551/1600] seed 11 bcast-AB      before 1.1407 taught 1.2881 after 1.3163 plast 0.6487 agree 0.00
+  [651/1600] seed 13 bcast-AB      before 1.1511 taught 1.1484 after 1.2003 plast 0.6540 agree 0.00
+  [602/1600] seed 12 bcast-keep    before 1.0035 taught 0.5815 after 0.3167 plast 0.6707 agree 0.00
+  [599/1600] seed 11 nobrake-AB    before 1.1163 taught 1.2384 after 1.2560 plast 1.0000 agree 0.00
+  [700/1600] seed 13 nobrake-keep  before 0.9821 taught 0.4882 after 0.2186 plast 1.0000 agree 0.00
+  [552/1600] seed 11 bcast-keep    before 1.1407 taught 1.2881 after 1.3362 plast 0.6474 agree 0.00
+  [650/1600] seed 12 nobrake-keep  before 1.0777 taught 0.9691 after 0.7778 plast 1.0000 agree 0.00
+  [600/1600] seed 11 nobrake-keep  before 1.1163 taught 1.2384 after 1.3121 plast 1.0000 agree 0.00
+  [649/1600] seed 12 nobrake-AB    before 1.0777 taught 0.9691 after 1.0547 plast 1.0000 agree 0.00
+  [652/1600] seed 13 bcast-keep    before 1.1511 taught 1.1484 after 1.1566 plast 0.6467 agree 0.00
+  [701/1600] seed 14 bcast-AB      before 0.9759 taught 0.5240 after 0.8744 plast 0.6766 agree 0.00
+  [702/1600] seed 14 bcast-keep    before 0.9759 taught 0.5240 after 0.3029 plast 0.6754 agree 0.00
+  [749/1600] seed 14 nobrake-AB    before 0.9922 taught 0.3906 after 0.9982 plast 1.0000 agree 0.00
+  [751/1600] seed 15 bcast-AB      before 0.9979 taught 0.6533 after 0.9629 plast 0.6780 agree 0.00
+  [750/1600] seed 14 nobrake-keep  before 0.9922 taught 0.3906 after 0.2284 plast 1.0000 agree 0.00
+  [849/1600] seed 16 nobrake-AB    before 1.0075 taught 0.5520 after 0.7049 plast 1.0000 agree 0.00
+  [802/1600] seed 16 bcast-keep    before 0.9754 taught 0.6062 after 0.9550 plast 0.6718 agree 0.00
+  [799/1600] seed 15 nobrake-AB    before 1.0734 taught 0.9862 after 1.0654 plast 1.0000 agree 0.00
+  [800/1600] seed 15 nobrake-keep  before 1.0734 taught 0.9862 after 0.8688 plast 1.0000 agree 0.00
+  [801/1600] seed 16 bcast-AB      before 0.9754 taught 0.6062 after 1.1286 plast 0.6757 agree 0.00
+  [752/1600] seed 15 bcast-keep    before 0.9979 taught 0.6533 after 0.2404 plast 0.6777 agree 0.00
+  [851/1600] seed 17 bcast-AB      before 0.9416 taught 0.4519 after 0.5944 plast 0.6767 agree 0.00
+  [850/1600] seed 16 nobrake-keep  before 1.0075 taught 0.5520 after 0.2867 plast 1.0000 agree 0.00
+  [852/1600] seed 17 bcast-keep    before 0.9416 taught 0.4519 after 0.2517 plast 0.6700 agree 0.00
+  [899/1600] seed 17 nobrake-AB    before 0.9959 taught 0.5850 after 0.8956 plast 1.0000 agree 0.00
+  [900/1600] seed 17 nobrake-keep  before 0.9959 taught 0.5850 after 0.2846 plast 1.0000 agree 0.00
+  [902/1600] seed 18 bcast-keep    before 0.9678 taught 0.4892 after 0.1500 plast 0.6760 agree 0.00
+  [901/1600] seed 18 bcast-AB      before 0.9678 taught 0.4892 after 0.9222 plast 0.6753 agree 0.00
+  [999/1600] seed 19 nobrake-AB    before 1.0276 taught 0.6072 after 1.2597 plast 1.0000 agree 0.00
+  [949/1600] seed 18 nobrake-AB    before 0.9877 taught 0.5398 after 0.9221 plast 1.0000 agree 0.00
+  [951/1600] seed 19 bcast-AB      before 1.0017 taught 0.6610 after 0.8699 plast 0.6823 agree 0.00
+  [1000/1600] seed 19 nobrake-keep  before 1.0276 taught 0.6072 after 1.0277 plast 1.0000 agree 0.00
+  [950/1600] seed 18 nobrake-keep  before 0.9877 taught 0.5398 after 0.2754 plast 1.0000 agree 0.00
+  [952/1600] seed 19 bcast-keep    before 1.0017 taught 0.6610 after 0.3858 plast 0.6805 agree 0.00
+  [1001/1600] seed 20 bcast-AB      before 1.0027 taught 0.6528 after 0.8829 plast 0.6694 agree 0.00
+  [1049/1600] seed 20 nobrake-AB    before 0.9530 taught 0.6421 after 0.9438 plast 1.0000 agree 0.00
+  [1002/1600] seed 20 bcast-keep    before 1.0027 taught 0.6528 after 0.2924 plast 0.6712 agree 0.00
+  [1050/1600] seed 20 nobrake-keep  before 0.9530 taught 0.6421 after 0.2269 plast 1.0000 agree 0.00
+  [1051/1600] seed 21 bcast-AB      before 0.9973 taught 0.6178 after 0.8111 plast 0.6708 agree 0.00
+  [1101/1600] seed 22 bcast-AB      before 0.9974 taught 0.5889 after 0.8354 plast 0.6753 agree 0.00
+  [1102/1600] seed 22 bcast-keep    before 0.9974 taught 0.5889 after 0.2091 plast 0.6775 agree 0.00
+  [1099/1600] seed 21 nobrake-AB    before 0.9834 taught 0.5069 after 0.6955 plast 1.0000 agree 0.00
+  [1100/1600] seed 21 nobrake-keep  before 0.9834 taught 0.5069 after 0.1200 plast 1.0000 agree 0.00
+  [1052/1600] seed 21 bcast-keep    before 0.9973 taught 0.6178 after 0.1940 plast 0.6736 agree 0.00
+  [1152/1600] seed 23 bcast-keep    before 1.0238 taught 0.5838 after 0.2587 plast 0.6794 agree 0.00
+  [1199/1600] seed 23 nobrake-AB    before 1.0050 taught 0.4134 after 0.5638 plast 1.0000 agree 0.00
+  [1151/1600] seed 23 bcast-AB      before 1.0238 taught 0.5838 after 0.8486 plast 0.6801 agree 0.00
+  [1149/1600] seed 22 nobrake-AB    before 1.1191 taught 1.1578 after 1.1812 plast 1.0000 agree 0.00
+  [1150/1600] seed 22 nobrake-keep  before 1.1191 taught 1.1578 after 1.1213 plast 1.0000 agree 0.00
+  [1201/1600] seed 24 bcast-AB      before 1.0063 taught 0.5721 after 0.8803 plast 0.6778 agree 0.00
+  [1200/1600] seed 23 nobrake-keep  before 1.0050 taught 0.4134 after 0.2261 plast 1.0000 agree 0.00
+  [1202/1600] seed 24 bcast-keep    before 1.0063 taught 0.5721 after 0.9755 plast 0.6743 agree 0.00
+  [1249/1600] seed 24 nobrake-AB    before 1.0339 taught 0.7245 after 0.9865 plast 1.0000 agree 0.00
+  [1250/1600] seed 24 nobrake-keep  before 1.0339 taught 0.7245 after 0.2910 plast 1.0000 agree 0.00
+  [1251/1600] seed 25 bcast-AB      before 0.9680 taught 0.6261 after 0.9415 plast 0.6678 agree 0.00
+  [1299/1600] seed 25 nobrake-AB    before 0.9724 taught 0.5272 after 0.8327 plast 1.0000 agree 0.00
+  [1252/1600] seed 25 bcast-keep    before 0.9680 taught 0.6261 after 0.1752 plast 0.6698 agree 0.00
+  [1301/1600] seed 26 bcast-AB      before 1.0155 taught 0.4777 after 0.8410 plast 0.6764 agree 0.00
+  [1302/1600] seed 26 bcast-keep    before 1.0155 taught 0.4777 after 0.2502 plast 0.6800 agree 0.00
+  [1349/1600] seed 26 nobrake-AB    before 0.9740 taught 0.4600 after 0.5823 plast 1.0000 agree 0.00
+  [1350/1600] seed 26 nobrake-keep  before 0.9740 taught 0.4600 after 0.1818 plast 1.0000 agree 0.00
+  [1351/1600] seed 27 bcast-AB      before 0.9758 taught 0.4379 after 0.7804 plast 0.6785 agree 0.00
+  [1300/1600] seed 25 nobrake-keep  before 0.9724 taught 0.5272 after 0.3291 plast 1.0000 agree 0.00
+  [1352/1600] seed 27 bcast-keep    before 0.9758 taught 0.4379 after 0.1801 plast 0.6758 agree 0.00
+  [1399/1600] seed 27 nobrake-AB    before 0.9422 taught 0.4050 after 0.7180 plast 1.0000 agree 0.00
+  [1400/1600] seed 27 nobrake-keep  before 0.9422 taught 0.4050 after 0.1944 plast 1.0000 agree 0.00
+  [1401/1600] seed 28 bcast-AB      before 0.9681 taught 0.3458 after 0.7944 plast 0.6707 agree 0.00
+  [1402/1600] seed 28 bcast-keep    before 0.9681 taught 0.3458 after 0.0861 plast 0.6711 agree 0.00
+  [1452/1600] seed 29 bcast-keep    before 1.0094 taught 0.5791 after 0.3676 plast 0.6685 agree 0.00
+  [1449/1600] seed 28 nobrake-AB    before 1.1463 taught 1.2145 after 1.2601 plast 1.0000 agree 0.00
+  [1451/1600] seed 29 bcast-AB      before 1.0094 taught 0.5791 after 0.7678 plast 0.6762 agree 0.00
+  [1450/1600] seed 28 nobrake-keep  before 1.1463 taught 1.2145 after 1.2047 plast 1.0000 agree 0.00
+  [1499/1600] seed 29 nobrake-AB    before 0.9888 taught 0.5831 after 0.9248 plast 1.0000 agree 0.00
+  [1502/1600] seed 30 bcast-keep    before 1.0007 taught 0.6407 after 1.1395 plast 0.6697 agree 0.00
+  [1501/1600] seed 30 bcast-AB      before 1.0007 taught 0.6407 after 0.9530 plast 0.6727 agree 0.00
+  [1549/1600] seed 30 nobrake-AB    before 0.9744 taught 0.5238 after 0.7965 plast 1.0000 agree 0.00
+  [1500/1600] seed 29 nobrake-keep  before 0.9888 taught 0.5831 after 0.2073 plast 1.0000 agree 0.00
+  [1551/1600] seed 31 bcast-AB      before 1.0247 taught 0.5426 after 0.7149 plast 0.6755 agree 0.00
+  [1552/1600] seed 31 bcast-keep    before 1.0247 taught 0.5426 after 0.2609 plast 0.6768 agree 0.00
+  [1550/1600] seed 30 nobrake-keep  before 0.9744 taught 0.5238 after 0.1543 plast 1.0000 agree 0.00
+  [1600/1600] seed 31 nobrake-keep  before 1.0189 taught 0.5615 after 0.3037 plast 1.0000 agree 0.00
+  [1599/1600] seed 31 nobrake-AB    before 1.0189 taught 0.5615 after 0.9387 plast 1.0000 agree 0.00
+experiment: credgate
+  instrument        credgate   trial seed 0000000000041da4   4285 trials
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  seed family       offset 904837 -> first creature 000000000012a988 (FRESH)
+  what the wipe IS  not a representational collision. `capacity` found two
+                    lessons interfering while driving DISJOINT groups, and
+                    `credit-oracle` gave the reason: the groups are disjoint,
+                    the REWARD is what they share. Node perturbation nudges
+                    bias_[i] for EVERY neuron in the module on one broadcast
+                    scalar, so teaching B random-walks A's setting.
+  the ceiling       a per-neuron reward mask gives retention 1.03 vs 0.84
+                    broadcast, at ~30% of the learning rate. But it is an
+                    ORACLE: the host knows which lesson is live.
+  the question      can the creature's OWN derived context drive that mask?
+                    `ema-index` derives a usable context off the ear rate EMA
+                    at 16/18; `ctxretain` gated on it and the index never
+                    separated (0.23/0.23). The halves have never been joined.
+  halves MEASURED   `silences-the-wrong-side`: a LOW target works by
+                    suppressing the UPPER half, a HIGH one the LOWER. A is
+                    f1 320 and B is 850, so A takes the UPPER and B the LOWER.
+
+  PRE-REGISTERED
+    AGREEMENT FIRST, before any retention number is read. `credit_agree` is
+      the fraction of trials where the mask landed on the half the LIVE lesson
+      wants. oracle must read 100% by construction -- if it does not, the
+      mechanism is miswired and nothing else is readable. shuf must sit at
+      ~50%. DERIVED IS THE WHOLE QUESTION: at ~50% the index carries nothing
+      about which lesson is live and a null retention result says nothing
+      about gating, only about this index.
+    PRIMARY         the AB-minus-keep gap per mode. oracle should shrink it
+                    (that is credit-oracle replicating); derived shrinking it
+                    too is the finding.
+    SPECIFICITY     `shuf` must NOT shrink it. If a coin flip works as well as
+                    the index, what helps is the masking itself -- halving the
+                    write -- and not credit assignment at all.
+    THE COST        the oracle bought 1.03 at ~30% of the learning rate, so
+                    err_taught is expected to DEGRADE under every mask. A gap
+                    that closes while err_taught collapses is the `regionband`
+                    failure again, and it is refused the same way.
+
+
+  arm           mode  gate  err TAUGHT (A)     err AFTER (A kept?) GAINED           EROSION          agree  slot0 t/g   SWITCHES teach/gap @first
+  bcast-AB      0     0     0.6533 +/- 0.0440     0.9047 +/- 0.0303     +0.3618 +/- 0.0334   +0.2514 +/- 0.0278   0.000  0.195/0.204     1907/    764 @5
+  bcast-keep    0     0     0.6533 +/- 0.0440     0.4579 +/- 0.0664     +0.3618 +/- 0.0334   -0.1954 +/- 0.0413   0.000  0.195/0.204     1907/    778 @5
+  nobrake-AB    0     0     0.6612 +/- 0.0435     0.9287 +/- 0.0310     +0.3514 +/- 0.0349   +0.2675 +/- 0.0280   0.000  0.215/0.206     2205/   1124 @6
+  nobrake-keep  0     0     0.6612 +/- 0.0435     0.4569 +/- 0.0662     +0.3514 +/- 0.0349   -0.2043 +/- 0.0370   0.000  0.215/0.215     2205/    900 @6
+
+  RETENTION -- the fraction of the GAIN that survived, which is what
+  credit-oracle scored (0.84 broadcast -> 1.03 targeted). Unlike the raw
+  gap this is not confounded by the mask's learning-rate cost.
+    broadcast  AB -0.300 +/- 0.632    keep 1.393 +/- 0.168
+    oracle     not in this focus set
+    derived    not in this focus set
+    shuffled   not in this focus set
+    half-up    not in this focus set
+    half-lo    not in this focus set
+    anti       not in this focus set
+    middle     not in this focus set
+    nobrake    AB 0.243 +/- 0.049    keep 1.632 +/- 0.119
+    nobrake    AB retention vs broadcast: +0.543 +/- 0.634  (+0.9 SE)
+      ^ MEAN OF PER-CREATURE RATIOS. Read the ratio-of-sums below before
+        quoting any of these: the denominator above is per creature and
+        floored at 1e-6, so one creature that barely learned moves it.
+
+  RETENTION AS A RATIO OF SUMS -- one denominator per arm, jackknife SE
+  over creatures, and the creatures PAIRED across arms. Swept over a floor
+  on the per-creature gain, because the creatures that make the mean of
+  ratios explode are exactly the ones that never learned the lesson.
+    gain floor 0.00
+      broadcast  AB +0.320 +/- 0.052   n 29
+      oracle     not in this focus set
+      derived    not in this focus set
+      shuffled   not in this focus set
+      half-up    not in this focus set
+      half-lo    not in this focus set
+      anti       not in this focus set
+      middle     not in this focus set
+      nobrake    AB +0.263 +/- 0.056   n 28   vs broadcast -0.056 +/- 0.082  (-0.7 SE)
+    gain floor 0.05
+      broadcast  AB +0.324 +/- 0.052   n 28
+      oracle     not in this focus set
+      derived    not in this focus set
+      shuffled   not in this focus set
+      half-up    not in this focus set
+      half-lo    not in this focus set
+      anti       not in this focus set
+      middle     not in this focus set
+      nobrake    AB +0.263 +/- 0.056   n 28   vs broadcast -0.061 +/- 0.082  (-0.7 SE)
+    gain floor 0.10
+      broadcast  AB +0.324 +/- 0.052   n 28
+      oracle     not in this focus set
+      derived    not in this focus set
+      shuffled   not in this focus set
+      half-up    not in this focus set
+      half-lo    not in this focus set
+      anti       not in this focus set
+      middle     not in this focus set
+      nobrake    AB +0.265 +/- 0.057   n 27   vs broadcast -0.059 +/- 0.082  (-0.7 SE)
+    gain floor 0.20
+      broadcast  AB +0.321 +/- 0.053   n 27
+      oracle     not in this focus set
+      derived    not in this focus set
+      shuffled   not in this focus set
+      half-up    not in this focus set
+      half-lo    not in this focus set
+      anti       not in this focus set
+      middle     not in this focus set
+      nobrake    AB +0.265 +/- 0.057   n 26   vs broadcast -0.056 +/- 0.083  (-0.7 SE)
+    A result that holds across the floor sweep is in the mechanism. One
+    that appears only at floor 0.00 is in the creatures that never learned.
+
+    VERDICT GATES (paired ratio-of-sums, must hold at EVERY floor that
+    retains >=3 creatures in both arms; >=2 such floors needed to decide):
+      oracle     UNDECIDABLE on this run           0 floor(s) evaluated
+      derived    UNDECIDABLE on this run           0 floor(s) evaluated
+      shuffled   UNDECIDABLE on this run           0 floor(s) evaluated
+      half-up    UNDECIDABLE on this run           0 floor(s) evaluated
+      half-lo    UNDECIDABLE on this run           0 floor(s) evaluated
+      anti       UNDECIDABLE on this run           0 floor(s) evaluated
+      middle     UNDECIDABLE on this run           0 floor(s) evaluated
+      nobrake    does NOT hold across the sweep    4 floor(s) evaluated
+
+  SEPARATION -- does the index DISTINGUISH the two lessons, regardless of
+  which slot got which name? Raw agreement cannot answer this: the slots are
+  UNLABELLED, so a fixed slot->half mapping is a coin flip per seed and
+  averages to chance however well the index separates. Scored as
+  |p(slot0 | lesson A) - p(slot0 | lesson B)|: 0 is no information, 1 is
+  perfect separation. `ctxfour` drew the same line -- a perfect index holds
+  four DISTINCTIONS, not four MAPPINGS.
+    derived-AB    too few creatures
+    derived-keep  too few creatures
+    derived2-AB   too few creatures
+    derived2-keep too few creatures
+    derived3-AB   too few creatures
+    derived3-keep too few creatures
+    A separation near 0 refutes THIS INDEX as a carrier. A separation well
+    above 0 with chance AGREEMENT means the index works and only the
+    slot->half assignment is arbitrary -- which is a fixable wiring problem,
+    not a refutation.
+
+  AGREEMENT GUARD -- did the mask land where the live lesson wanted?
+    oracle    --   (not in this focus set)   (must be 1.000 by construction)
+    derived   --   (not in this focus set)   <- THE WHOLE QUESTION
+    shuffled   --   (not in this focus set)  <- SPECIFICITY: must sit near 0.500
+  NOTE: the oracle arm is not in this focus set, so the construction check did not run.
+  Nothing below is anchored to a verified mask.
+
+  PRIMARY -- the AB-minus-keep gap, per mode
+    broadcast  AB 0.9047   keep 0.4579   gap +0.4468 +/- 0.0730  (+6.1 SE)
+    oracle     not in this focus set
+    derived    not in this focus set
+    shuffled   not in this focus set
+    half-up    not in this focus set
+    half-lo    not in this focus set
+    anti       not in this focus set
+    middle     not in this focus set
+    nobrake    AB 0.9287   keep 0.4569   gap +0.4719 +/- 0.0731  (+6.5 SE)
+    nobrake  shrinks the gap by -0.0251 +/- 0.1033  (-0.2 SE)
+    THE GAP IS CONFOUNDED and must not be quoted as the headline: a reward
+    mask costs learning rate, so it moves BOTH arms. Retention above is the
+    statistic `credit-oracle` used. Kept here because a gap that closes
+    while err_taught collapses is the `regionband` failure.
+
+  THE COST -- err_taught, which the oracle bought its 1.03 with
+    broadcast  AB 0.6533   keep 0.6533
+    oracle     not in this focus set
+    derived    not in this focus set
+    shuffled   not in this focus set
+    half-up    not in this focus set
+    half-lo    not in this focus set
+    anti       not in this focus set
+    middle     not in this focus set
+    nobrake    AB 0.6612   keep 0.6612
+
+  SPECIFICITY UNTESTED: `shuf-AB`/`shuf-keep` are not in this focus set, so the control
+  that distinguishes credit assignment from merely halving the write did
+  not run. No verdict here can clear that bar.
+
+  DOES THE INDEX BUY WHAT ITS ACCURACY PREDICTS?
+    agreement 0.000  ->  predicted -1.000 of the oracle's benefit
+    delivered 0.000
+    A shortfall here would mean the mechanism fails; a match means the
+    mechanism works and the CARRIER is simply not accurate enough.
+
+  VACUITY -- not applicable: the uniform-flip arms are not in this
+  focus set, so there is no coin flip that ran and could be inert.
+  Their contrast against pin0 was settled at 12 creatures (commit
+  27944a3) and is not re-measured here.
+
+  WHERE EACH LESSON WROTE -- net rate change per half, Hz.
+  A is the teach phase (target 320, LOW); B is the gap (850, HIGH).
+  A LOW target is learned by suppressing the UPPER half, so the oracle
+  gives A the upper half and B the lower one.
+  arm          A lower   A upper     B lower   B upper  
+    bcast-AB        -1.139   -20.599      -3.938    +8.554  (32)
+
+  THE DROPOUT CONTRAST -- does a matched coin flip buy the gap?
+    broadcast                  gap +0.4468 +/- 0.0730  (+6.1 SE)   gained +0.3618
+    REFUSES INDEXING: a pinned-noise gap AT vigilance and away from
+    context-off. SUPPORTS INDEXING: a pinned-noise gap at context-off.
+    NEITHER: both differences under ~2 SE, which is this test failing
+    to resolve and NOT evidence for either side.
+
+  DOES IT REACH A MILESTONE? -- retention, the fraction of the taught
+  gain still gone after the conflicting lesson. This is `retain`'s own
+  statistic, whose conflicting-lesson value is 0.22. Ratio of MEANS with
+  a paired bootstrap (2000 resamples, 95% interval); a mean of per-
+  creature ratios is unusable here and reported -5.166 +/- 5.263.
+    broadcast              retention +0.305   95% [+0.192, +0.404]
+    1.0 keeps the whole lesson, 0.0 loses it entirely, and `retain`
+    measured 0.22 for a conflicting lesson on the shipped genome.
+
+    PRE-REGISTERED. MILESTONE MET only if VIGILANCE's interval lies
+    ENTIRELY ABOVE 0.5 -- more than half the taught lesson survives a
+    conflicting one -- AND its paired difference against context-off
+    excludes zero. Either one alone is NOT the milestone.
+
+  WHERE IN THE TRIAL THE SWITCHES FALL -- teach phase, 14 bins of
+  200 ticks. The caregiver sounds for t < 900, so bins 0-3 are the
+  word and 5-13 are silence; a FLAT profile puts 32.1% in the word
+  and the pinned-noise arms measure that null on this protocol.
+  arm          sound%     onset%    offs%     profile, per-bin share of switches
+  bcast-AB      45.0+/-2.4   3.7+/-1.1   8.0+/-1.4   6.2 4.7 9.315.217.510.011.4 6.8 4.4 2.6 1.9 2.0 3.8 4.1
+  A vigilance profile matching the pinned-noise profile means the
+  excursions are keyed to nothing in the trial and the account moves
+  elsewhere. A profile concentrated in the word, or at either
+  transition, names what the novelty test is actually firing on.
+
+  --- the reading ---
+  THE ORACLE ARM IS NOT IN THIS FOCUS SET, so this run carries no
+  within-experiment reference at all. Nothing below prices anything.
