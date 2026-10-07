@@ -14954,12 +14954,22 @@ post-training period — reduced oligodendrogenesis *in that window* impairs con
 density correlating with learning rate. The brake here runs continuously and awake. That
 is a concrete, cheap difference to test if the brake shows any effect at all.
 
-**Discrete context indexing may be the wrong shape.** Follow-up work around the COIN
-model notes that for tasks changing *continuously*, indexing by discrete context becomes
-inefficient and some combination of discrete and continuous representation is likely.
-This creature uses two discrete context slots. Its own measurements are consistent with
-the warning: the derived index never separates the two lessons (0.23 against 0.23) while
-the auditory feature it is built from carries the word at 97.8% held out.
+**Discrete context indexing may be the wrong shape.** **Heald, Lengyel & Wolpert**'s
+review of their own COIN model (*Contextual inference in learning and memory*, Trends in
+Cognitive Sciences 2023) treats the discrete-latent-cause formulation as the simple case
+and sets against it that &ldquo;contexts may vary on a continuum, rather than each being
+an island entire of itself, equidistant from all other contexts&rdquo;, with continuous
+representations assuming metric relations between contexts and generalising better for
+it; the companion **Heald, Wolpert & Lengyel** Annual Review (2023) gives the same
+extension as a manifold of contexts. This creature uses two discrete context slots.
+
+**Correction to how I first wrote this down.** I recorded the lead as the papers saying
+that discrete indexing *becomes inefficient* for continuously changing tasks and that a
+combination of the two representations is *likely*. Checked against both texts, neither
+says that: they offer the continuous form as an extension that buys generalisation when
+contingencies vary smoothly, and they do not argue the discrete form is inefficient or
+prescribe a hybrid. The lead survives in weaker form — a continuum is available and
+untried here — and the overstatement was mine, not theirs.
 
 ### The myelin brake binds hard and costs nothing, which breaks my own regularity
 
@@ -15308,6 +15318,21 @@ papers about the half it does not touch.
   between two experiences assigned to one context and to two. Naming is the
   conflicting case by construction: both lessons drive the same dimension to
   different values.
+- Heald, J. B., Lengyel, M. & Wolpert, D. M. (2023). *Contextual inference in
+  learning and memory.* Trends in Cognitive Sciences 27(1), 43–64.
+  <https://doi.org/10.1016/j.tics.2022.10.004>, free full text at
+  <https://pmc.ncbi.nlm.nih.gov/articles/PMC9789331/> — and Heald, J. B.,
+  Wolpert, D. M. & Lengyel, M. (2023), *The computational and neural bases of
+  context-dependent learning*, Annual Review of Neuroscience 46, 233–258,
+  <https://doi.org/10.1146/annurev-neuro-092322-100402>, free full text at
+  <https://pmc.ncbi.nlm.nih.gov/articles/PMC10348919>. The authors' own reviews of
+  the 2021 model, and the reason the discrete two-slot context here is a modelling
+  choice rather than the only shape available: Box 4 of the first sets against the
+  discrete-latent-cause form that "contexts may vary on a continuum, rather than
+  each being an island entire of itself, equidistant from all other contexts", and
+  continuous representations assume metric relations between contexts and
+  generalise better for it. Read to these passages 2026-10-08, which corrected a
+  stronger claim this file had attributed to them.
 
 - Kornfeld, J., Wang, Y., Januszewski, M., Rother, A., Schubert, P., Goldman, M.,
   Jain, V., Denk, W. & Fee, M. S. (2025). *An anatomical substrate of credit

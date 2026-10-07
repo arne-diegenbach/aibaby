@@ -23,13 +23,15 @@
   div.rule { border-top: 0.5pt solid #000; margin: 14pt 0 10pt 0; }
   p.note { font-size: 9pt; margin: 0 0 6pt 0; }
   .sc { font-variant: small-caps; }
+  p.eq { text-align: center; font-family: "Liberation Mono","Courier New",monospace;
+         font-size: 9.6pt; margin: 7pt 0 8pt 0; }
 </style></head><body>
 
 <h1 class="title">Discoveries</h1>
 <p class="subtitle">Original findings from a grown spiking creature, with no external antecedent</p>
 <p class="author">Arne Diegenbach</p>
 <p class="affil">The <span class="id">aibaby</span> project &mdash; a C++17 spiking neural creature grown from a DNA/genome file</p>
-<p class="date">6 October 2026</p>
+<p class="date">8 October 2026</p>
 
 <div class="abstract">
 <p class="lab">Abstract</p>
@@ -40,7 +42,12 @@ machinery is named after the literature it came from, and those mechanisms are
 deliberately excluded here. What remains is the set of things the system itself was the
 first to say: measured quantities with no external reference, structural obstacles that
 only appear in this architecture, and a group of inference failures that were found by
-being committed and then caught.</p>
+being committed and then caught. The longest single thread is &sect;4: because the readout is
+a rate-weighted centroid, the influence of one neuron on behaviour can be differentiated
+rather than estimated, and that derivative &mdash; taken with a sign, which is the part the
+data forced &mdash; accounts for a measured asymmetry, its reversal between targets, and why
+one restriction on plasticity costs half the lesson while another binds a third of all
+synapses and costs nothing.</p>
 <p>The methodological findings are listed first and at length, because they are the most
 transferable part and the least specific to a creature made of spikes. Several of them
 are reports of a mistake that survived review &mdash; a test no outcome could pass, a
@@ -63,8 +70,11 @@ while the methods do not.</p>
 insufficient without synaptic stabilisation (Masse, Grant and Freedman), importance-weighted
 protection of earlier weights (Kirkpatrick et al.; Zenke, Poole and Ganguli), node
 perturbation as a motor learning rule (Fiete, Fee and Seung), the stability&ndash;plasticity
-dilemma (Grossberg), and the uniform cluster prior implicit in MacQueen&rsquo;s
-<span class="id">1/wins</span> rule. Each is cited in the project&rsquo;s main reference list.
+dilemma (Grossberg), the uniform cluster prior implicit in MacQueen&rsquo;s
+<span class="id">1/wins</span> rule, the division of a population code into output-potent and
+output-null dimensions (Kaufman, Churchland, Ryu and Shenoy), and activity-dependent
+myelination as a consolidation mechanism (the oligodendroglia literature, cited by title and
+DOI in the main list where author lists could not be verified). Each is cited in the project&rsquo;s main reference list.
 Appendix A lists the project results that were excluded by this criterion, so the exclusion
 can be audited rather than taken on trust.</p>
 
@@ -116,7 +126,11 @@ indices <span class="id">(k&middot;2, k&middot;2+1)</span> that silently shifted
 table rows were inserted above them. <em>Labels:</em> a band value copied beside the table
 it came from, so an experiment reported its widest condition as a tenth of its real width
 after the table was rescaled; and a deleted control whose label and refusal criterion were
-inherited by unrelated rows.</p>
+inherited by unrelated rows; and a single hardcoded baseline arm, correct while every arm
+shared one lesson target and silently wrong the moment a second target was added, which
+charged the new arms the whole difference between the two conditions &mdash; one cost read
+11% against the old control and 3% against its own, and three of eight printed numbers were
+wrong.</p>
 <p>What makes this class survive review is specific and worth stating: <strong>every site
 carried a comment acknowledging the indexing was positional, and the comment was treated as
 the fix.</strong> One even warned about a <em>skipped</em> row reading zero &mdash; a
@@ -164,6 +178,37 @@ adopted a 3 SE bar at n&nbsp;&le;&nbsp;18 as a direct consequence, and the bar m
 fixed once and named, not chosen per test: one verdict printed &ldquo;not yet a
 finding&rdquo; for 2.9 SE against a 3 SE bar and then made a 2.7 SE contrast its headline
 because that test had been coded against 2.0.</p>
+
+<h3>2.10 Two points agreeing to a tenth of a percent is one coincidence</h3>
+<p>Two lesson targets gave lever costs of 30.01% and 22.12% of the lesson, and the distance
+each had to move the readout stood in a ratio of 1.356 against the costs&rsquo; 1.357 &mdash;
+a match to 0.1%, from no fitted parameter. It was recorded as a coincidence on two points
+rather than a law, and the third target refused it: the law predicted 14.8% and the
+measurement was 25.0%&nbsp;&plusmn;&nbsp;5.9%, and the three points are
+<em>non-monotone</em> in distance travelled (0.200&nbsp;&rarr;&nbsp;25.0%,
+0.300&nbsp;&rarr;&nbsp;22.1%, 0.407&nbsp;&rarr;&nbsp;30.0%), which no proportionality can
+produce at all.</p>
+<p>The transferable part is the arithmetic rather than the caution. Any smooth
+one-parameter family can be made to pass through two points, so a two-point agreement
+carries no information about the family; and the cheapest way to settle it was to measure a
+third point, which cost one overnight run, rather than to argue about the first two. The
+same project had already paid for the opposite choice once: a leverage law fitted to three
+costs with one free parameter matched them to 1.68 percentage points and then failed two
+further costs out of sample. Restricted to the points where the lever is the same neuron,
+the surviving pattern needs a large distance-independent term plus a weak distance term
+&mdash; two parameters on two points &mdash; so the account was stopped there instead.</p>
+
+<h3>2.11 A pre-registered prediction can be wrong in sign on both of its axes</h3>
+<p>Pre-registration fixes what a result will be compared against; it does not make the
+prediction right, and the failure mode worth recording is the one where a prediction fails
+in the direction nobody wrote a branch for. A cross-mechanism regularity &mdash; every
+plasticity restriction tried here cut learning more than it cut forgetting &mdash; was used
+to predict that removing a restriction would buy more learning than it cost in retention.
+The arm that removed it gained <em>less</em> and retained <em>less</em>. Both differences
+are nulls, so the regularity is not refuted at significance, but neither was it confirmed,
+and the registered text had no reading for &ldquo;worse on both axes&rdquo;. Registering the
+two directions a prediction could fail in is not enough when the mechanism can also simply
+fail to matter.</p>
 
 <h2>3. Credit assignment and interference</h2>
 <p>Teaching a second, conflicting vowel target destroys the first. The surviving fraction
@@ -246,26 +291,116 @@ measuring.</strong> More creatures cannot fix this; it is not a power problem.</
 
 <h2>4. Leverage and the geometry of the motor pool</h2>
 
-<h3>4.1 The block cost is leverage, not fraction</h3>
-<p>Freezing a quarter of the formant group costs 57% of the lesson and freezing a half
-costs 53%. The cost is flat in the fraction blocked, so there is no mask size that wins and
-nothing to gain from tuning one.</p>
-
-<h3>4.2 Leverage sits at one end</h3>
-<p>Freezing the lower half of the F1 group costs 9% of the lesson; freezing the upper half
-costs 53%. At single-neuron resolution one neuron costs 30% at the top of the group and 7%
-in the middle, and one cell of fourteen costs 30% while four cost 57%. An attempt to fit a
-leverage law to the single-neuron costs reproduced them to 1.68 percentage points and then
-failed the two half-block costs out of sample, so the asymmetry is measured and the law
-that tried to explain it is refuted.</p>
-
-<h3>4.3 The lesson silences the wrong side</h3>
+<h3>4.1 The lesson silences the wrong side</h3>
 <p>Measured rather than fitted: a low formant target is reached by <em>suppressing</em> the
 upper half of the group, and a high target by suppressing the lower half &mdash;
 mirror-image profiles, both suppression. An earlier account in which the lesson raised the
-half it needed is a decisive reversal.</p>
+half it needed is a decisive reversal, and the reversal is what the rest of this section is
+an account of.</p>
 
-<h3>4.4 The larynx reads nine scalars</h3>
+<h3>4.2 The readout is a centroid, so output potency is <em>signed</em> distance from it</h3>
+<p>The formant the host reads off a motor group is not a mean of rates. It is a
+rate-weighted centroid on a labelled line: neuron <em>i</em> carries a fixed position
+p<sub>i</sub>&nbsp;=&nbsp;(i&nbsp;&minus;&nbsp;begin&nbsp;+&nbsp;&frac12;)&nbsp;/&nbsp;n and
+the output is &Sigma;(r<sub>i</sub>p<sub>i</sub>)&nbsp;/&nbsp;&Sigma;r<sub>i</sub>.
+Differentiating gives the influence of one neuron on behaviour with no free parameter:</p>
+<p class="eq">&part;F / &part;r<sub>i</sub> = (p<sub>i</sub> &minus; c) / &Sigma;r<sub>j</sub>
+&nbsp;&nbsp;&nbsp;&nbsp;c = the output currently produced</p>
+<p>So potency is distance from the centroid the group is <em>currently</em> at &mdash; zero
+for a neuron sitting on it, largest at the ends, and state-dependent, moving as c moves.
+That immediately explains a documented out-of-sample failure: a leverage law fitted to three
+single-neuron costs with one free parameter reproduced them to 1.68 percentage points and
+then failed two half-block costs. The fit was a function of <em>position alone</em>, which is
+adequate while c barely moves &mdash; as it does not between single-neuron blocks &mdash; and
+wrong once a whole half of the group is blocked and c moves a long way. Influence is not a
+property of a neuron; it is a property of a neuron and the current state.</p>
+<p>The magnitude |p<sub>i</sub>&nbsp;&minus;&nbsp;c| is nevertheless refuted, by a run that
+was already on disk when the derivative was written down. One neuron blocked at three
+positions, 36 creatures: the top (p&nbsp;=&nbsp;0.964) costs 30% of the lesson at
+&minus;5.8&nbsp;SE, the middle (0.464) costs 7% at &minus;1.1&nbsp;SE, the bottom (0.036)
+costs 9% at &minus;1.4&nbsp;SE. Middle and bottom are both null and indistinguishable from
+each other, and no single centroid makes a symmetric magnitude produce that: at
+c&nbsp;=&nbsp;0.093 it requires the middle to cost about six times the bottom, and at
+c&nbsp;&asymp;&nbsp;0.5 it requires the bottom to cost like the top.</p>
+<p><strong>Potency is (p<sub>i</sub>&nbsp;&minus;&nbsp;c) taken with the sign of the required
+direction of travel.</strong> A lesson that must lower the centroid can only do so by
+suppressing high-position neurons, so the far end <em>on that side</em> carries the lever;
+the centroid itself has no lever in either direction; and the opposite end is on the wrong
+side, because suppressing it would move the output the wrong way, so the lesson was never
+going to use it.</p>
+<p class="note">The qualitative half of this was written before the run that measured it, in
+the pre-registration of that experiment: index is position, a weighted mean is least
+sensitive near its own centre, and the end the lesson travels toward should matter more.
+What is new is the derivative itself, the state-dependence, and the sign &mdash; and the
+first arithmetic written from it, the symmetric one, was wrong.</p>
+
+<h3>4.3 Exactly one neuron of fourteen is expensive, and which one depends on the target</h3>
+<p>The prediction the signed account makes and a symmetric one cannot: changing where the
+lesson is going must <em>swap</em> which end is dear, not grade it. Three lesson targets,
+36 creatures each, each arm paired on seed against its own unblocked control:</p>
+<table>
+<tr><th>Target</th><th class="n">p</th><th class="n">Travel</th><th>Lever</th><th class="n">Cost of the lever</th><th class="n">Middle</th><th class="n">Far end</th></tr>
+<tr><td>320 Hz</td><td class="n">0.093</td><td class="n">0.407</td><td><strong>top</strong></td><td class="n"><strong>30.0% &plusmn; 5.1%</strong></td><td class="n">7%</td><td class="n">9%</td></tr>
+<tr><td>475 Hz</td><td class="n">0.300</td><td class="n">0.200</td><td><strong>top</strong></td><td class="n"><strong>25.0% &plusmn; 5.9%</strong></td><td class="n">6%</td><td class="n">5%</td></tr>
+<tr class="last"><td>850 Hz</td><td class="n">0.800</td><td class="n">0.300</td><td><strong>bottom</strong></td><td class="n"><strong>22.1% &plusmn; 4.4%</strong></td><td class="n">4%</td><td class="n">3%</td></tr>
+</table>
+<p class="cap">Cost as a percentage of the lesson learned by the unblocked control at the
+same target. Both end columns are the single neuron at that end of the group of fourteen.</p>
+<p>Three targets; three times the lever is the single neuron at the end the lesson must
+<em>suppress</em>; three times the middle is free. Every dear arm clears 4&nbsp;SE and every
+cheap arm sits under 1.5&nbsp;SE at comparable standard errors, so the cheapness is measured
+rather than merely unresolved. The two low targets and the high one place the lever at
+opposite ends of the same group, which is the swap rather than a gradient.</p>
+<p class="note">Both later runs carried the original target&rsquo;s four arms unchanged, and
+its headline cost reproduced to four decimals
+(&minus;0.0503&nbsp;&plusmn;&nbsp;0.0086, &minus;5.8&nbsp;SE) in each. The runs are therefore
+self-validating rather than resting on a cross-run comparison.</p>
+
+<h3>4.4 The size of the lever is not a function of how far the lesson travels</h3>
+<p>A second quantity looked as though it fell out of the same account and does not. Across
+the first two targets, the distance the centroid had to travel and the cost of the lever
+stood in ratios of 1.356 and 1.357 &mdash; agreement to 0.1% with nothing fitted. The third
+target refused it outright, and the costs are non-monotone in travel, so a cost proportional
+to distance cannot produce the ordering at all. &sect;2.10 records the inference lesson. What
+survives is the direction result of &sect;4.3 and an explicit refusal to fit the magnitude:
+the end the lesson must suppress carries the lever, the middle never does, and what sets the
+size of that lever is open.</p>
+
+<h3>4.5 The block cost is flat in the fraction blocked &mdash; at one position</h3>
+<p>Freezing a quarter of the formant group costs 57% of the lesson and freezing a half costs
+53%, so within that family there is no mask size that wins and nothing to gain from tuning
+one. The qualification is this project&rsquo;s own and was found by re-reading the family
+after &sect;4.2: every block in it was taken from the <em>same end</em> of the group. Flatness
+in fraction is therefore measured at one position, and a quarter aimed at the lever and a
+quarter aimed away from it are not distinguished by anything in that result.</p>
+
+<h3>4.6 What a restriction costs tracks the potency of what it restricts, not how much it restricts</h3>
+<p>Stated as a regularity across every plasticity restriction the project has built, with the
+three columns measured in separate experiments:</p>
+<table>
+<tr><th>Restriction</th><th>Selects by</th><th class="n">Effect on learning</th><th class="n">Effect on forgetting</th></tr>
+<tr><td>Astrocytic activity gate</td><td>activity</td><td class="n">&minus;81%</td><td class="n">&minus;19%</td></tr>
+<tr><td>Per-neuron reward mask, aimed correctly</td><td>position</td><td class="n">&minus;46%</td><td class="n">&minus;30%</td></tr>
+<tr><td>Per-neuron reward mask, central</td><td>position</td><td class="n">&minus;97% (29&times;)</td><td class="n">undefined</td></tr>
+<tr class="last"><td>Consolidation brake on high-traffic edges</td><td>traffic</td><td class="n">null</td><td class="n">null</td></tr>
+</table>
+<p>The brake is the informative row. It binds hard &mdash; mean per-edge learning rate
+0.6708 against 1.0000 unbraked, reproducing an independent earlier measurement of 0.654
+&mdash; and it changes neither retention (&minus;0.6&nbsp;SE, flat across every gain floor)
+nor learning. A mechanism that restricts a third of all plasticity and costs nothing is not
+a weak version of a mask that restricts half and costs 46%: it selects a
+<em>different set</em>. Traffic is uncorrelated with position in the group, so a
+traffic-selected restriction spreads across the centroid and leaves the ends free, while a
+position-selected one of the same size can remove the lever entirely. Size is the wrong
+axis; potency in the sense of &sect;4.2 is the right one, and it is the same statement as
+&sect;4.5&rsquo;s qualification seen from the mechanism side.</p>
+<p>The first three rows are a quantitative form of the stability&ndash;plasticity dilemma
+in one system &mdash; every restriction cut learning more than it cut forgetting &mdash; and
+the fourth is not an exception to the ordering so much as a case where the dilemma never
+engaged. This project predicted the opposite for the brake before running it, which
+&sect;2.11 records.</p>
+
+<h3>4.7 The larynx reads nine scalars</h3>
 <p>The motor interface is nine scalar groups, and the object identity being taught sits at
 the null in all eighteen vocal measurements taken. Reordering the vocal population by its
 own response difference lifts discriminability, so the information is present in the slice
@@ -364,7 +499,9 @@ plausible mechanism from consideration.</p>
 <tr><td>Prototype freezing</td><td>Refused; it is the stability&ndash;plasticity dilemma</td></tr>
 <tr><td>Replay / interleaving as shipped</td><td>Switching it off costs 0.3 SE</td></tr>
 <tr><td>Reward that sees target distance</td><td>Worse, by 9.4 SE</td></tr>
-<tr class="last"><td>Protocol axes (duration, blocking)</td><td>28&times; longer is no help; blocked teaching is harmful</td></tr>
+<tr><td>Protocol axes (duration, blocking)</td><td>28&times; longer is no help; blocked teaching is harmful</td></tr>
+<tr><td>Astrocytic activity gate on plasticity</td><td>Cuts learning 81% and forgetting 19%, on a monotonic dose&ndash;response</td></tr>
+<tr class="last"><td>Consolidation brake on high-traffic edges</td><td>Binds hard (0.671 of the unbraked rate) and changes neither retention nor learning</td></tr>
 </table>
 
 <h2>8. Provenance</h2>
@@ -393,6 +530,12 @@ produced them and the criteria that would refuse them, in the project&rsquo;s
 <h2>Appendix A. Excluded by the criterion</h2>
 <p>These project results are omitted from the body because a published result says or frames
 them first. They are listed so that the inclusion criterion of &sect;1 can be checked.</p>
+<p class="note">One entry needs its line drawn explicitly. The idea that behaviour depends on
+some directions in a population code and not others is Kaufman and colleagues&rsquo;, and it
+is excluded. What &sect;4.2 claims is narrower and is included: in this system the map from
+population activity to behaviour is <em>analytically known rather than fitted</em>, so the
+potent direction can be differentiated instead of estimated, it is state-dependent, and its
+sign &mdash; not its magnitude &mdash; is what the measurements require.</p>
 <table>
 <tr><th>Project result</th><th>External antecedent</th></tr>
 <tr><td>Interference as a failure of contextual inference; a per-neuron mask should therefore help</td><td>Heald, Lengyel &amp; Wolpert, COIN</td></tr>
@@ -403,7 +546,11 @@ them first. They are listed so that the inclusion criterion of &sect;1 can be ch
 <tr><td>Prototype freezing as a dilemma rather than a bug</td><td>Grossberg</td></tr>
 <tr><td>A uniform cluster prior implicit in a competitive learning rule</td><td>MacQueen; Assran et al. (2023)</td></tr>
 <tr><td>Ratio-of-sums estimation and the jackknife</td><td>Cochran; Quenouille; Tukey</td></tr>
-<tr class="last"><td>Per-context reward prediction error having nothing to remove</td><td>Gadagkar et al. (2016)</td></tr>
+<tr><td>Per-context reward prediction error having nothing to remove</td><td>Gadagkar et al. (2016)</td></tr>
+<tr><td>Behaviour depending on output-potent and not output-null dimensions of a population code</td><td>Kaufman, Churchland, Ryu &amp; Shenoy (2014)</td></tr>
+<tr><td>Activity-dependent myelination as a consolidation mechanism, and its post-training window</td><td>The oligodendroglia literature, cited by title and DOI</td></tr>
+<tr><td>An astrocyte-gated multi-timescale rule as a remedy for catastrophic forgetting</td><td>Astrocyte-gated multi-timescale plasticity (2026)</td></tr>
+<tr class="last"><td>Contexts lying on a continuum rather than being discrete slots</td><td>Heald, Lengyel &amp; Wolpert (2023)</td></tr>
 </table>
 
 </body></html>
