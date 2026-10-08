@@ -15146,6 +15146,117 @@ record of what was run. A full twelve-arm run is about 6.5 hours, so focusing a 
 still means retargeting rows; adding a `skip` field touches four sites and is worth doing
 before a fourth condition rather than this third one.
 
+### The potency-aimed quarter: both axes are real, and neither registered branch survives
+
+The experiment the signed-leverage account unblocked. `credgate` at 12M on
+`credgate-318211.toml`, four arms &times; 32 creatures, gate passed 01:09 with hash
+`ad96f882becbee92` and the pinned-hash check. Two new arm pairs, mask **size matched** and
+differing only in which end they are flush against: `pot-q` keeps the quarter at the end the
+live lesson must suppress, `pot-q-opp` the quarter at the opposite end. The group is
+`slice_begin(126, 9, 2)`, 14 neurons, so a quarter is `uint32_t(14*0.25 + 0.5)` = **4** and
+the oracle's half is **7**.
+
+**The anchor reproduced to four decimals.** `bcast-AB` came back at taught 0.6533, after
+0.9047, gained +0.3618 &plusmn; 0.0334 — identical to the three previous 12M runs on this
+genome. Per-creature, `bcast-AB` against the brake run is **+0.0000 &plusmn; 0.0000** over
+32 seeds, which is the third independent confirmation that the per-job seed is
+arm-independent and that creatures may be paired across runs. `oracle-AB` is likewise
+bit-identical between `credgate-318211-12m.log` and `credgate-gapend-12m.log`
+(0.8646 / 1.0395 / +0.1964), so the cross-run reference used below is verified on two arms
+rather than assumed.
+
+#### The ladder, every arm at 12M on one genome
+
+| arm | reward reaches | aimed | gained |
+|---|---|---|---|
+| `bcast-AB` | 14/14 (no mask) | — | **+0.3618 ± 0.0334** |
+| `oracle-AB` | 7/14 | lever end | +0.1964 ± 0.0149 |
+| **`pot-q`** | **4/14** | **lever end** | **+0.1245 ± 0.0046** |
+| `shuf-AB` | 7/14 | coin flip per trial | +0.1022 ± 0.0076 |
+| **`pot-q-opp`** | **4/14** | **opposite end** | **+0.0289 ± 0.0054** |
+| `mid-AB` | 7/14 centred | neither end | +0.0125 ± 0.0023 |
+| `anti-AB` | 7/14 | opposite end | −0.0007 ± 0.0056 |
+
+Paired on seed with a jackknife standard error, on `gained` = `before` − `taught`:
+
+```
+  pot-q   -  pot-q-opp        +0.0956 +/- 0.0063   (+15.2 SE)   n=32
+  pot-q   -  oracle           -0.0719 +/- 0.0132    (-5.4 SE)   n=32   cross-run
+  pot-q   -  bcast            -0.2373 +/- 0.0313    (-7.6 SE)   n=32
+  oracle  -  bcast            -0.1654 +/- 0.0351    (-4.7 SE)   n=32   cross-run
+```
+
+**Aim, at matched mask size, is the largest effect this family has produced: +15.2 SE.** Two
+masks of four neurons each, one flush against the end the lesson must suppress and one
+against the far end, differ by +0.0956 of gain — 77% of what the aimed quarter learns at
+all. The potency account is confirmed again and the registered refusal condition, the two
+quarters coming back equal, did not fire.
+
+**And the aimed quarter costs more than the aimed half, at −5.4 SE.** This refuses the
+pre-registered potency branch as written: *"if the cost is POTENCY, `pot-q` keeps most of
+the learning on a mask HALF the size of the oracle's."* It keeps 63% of the oracle's
+learning on 57% of its neurons, and the shortfall is resolved at 5.4 SE rather than being a
+null. Potency does not make a mask cheap; it makes a mask *less dear than the same mask
+pointed the other way*.
+
+**So neither branch survives, and the reason is that they were posed as alternatives.** The
+registered text offered POTENCY or REACH. The measurement gives both, separately resolved
+and of comparable size: at fixed size, aim is worth +0.0956 &plusmn; 0.0063; at fixed aim,
+going from seven neurons to four costs −0.0719 &plusmn; 0.0132. A dichotomy cannot be
+confirmed by a conjunction — it can only be half-refused on each side, which is what
+happened. Same family as the brake's prediction failing in a direction the registration had
+no branch for: the useful discipline is to register the *quantities* and their directions,
+not a menu of accounts.
+
+#### What this does to the credit-assignment line, and it closes it by arithmetic
+
+The reason to run this was a sum, not a mechanism. Masking costs −0.211 &plusmn; 0.074 of
+retention and aiming the gap-phase mask correctly recovers +0.197, so credit assignment here
+is **outbid rather than inert** — and a cheaper mask was the only thing that could flip the
+sign. The ladder answers it: across every size measured at the best possible aim —
+4, 7 and 14 of 14 — **gain rises monotonically with how much of the group the reward can
+reach, and the cheapest mask is no mask at all.** Confinement is what costs; aiming reduces
+the cost and never reverses it. There is no mask in this family that credit assignment can
+afford, and the line closes on that rather than on anything about the creature.
+
+**A correction to something I published yesterday.** The discoveries document, built the day
+before this run, states of the myelin-brake result that *"size is the wrong axis; potency in
+the sense of §4.2 is the right one."* That is now half wrong by my own measurement: at fixed
+aim, extent costs −0.0719 at 5.4 SE. The honest statement is that **potency and extent are
+two separate axes and both are real** — the brake shows that a restriction with zero potency
+costs nothing however wide it is, and `pot-q` shows that extent still costs at fixed
+potency. Corrected in the document in the same commit as this section.
+
+#### One contrast I am not claiming, and why
+
+`pot-q-opp` gains +0.0289 &plusmn; 0.0054 where `anti-AB` — the *half* at the wrong end —
+gains −0.0007 &plusmn; 0.0056. The signed account predicts exactly that ordering: a wrongly
+aimed mask rewards neurons whose movement drives the output the wrong way, so restricting
+*fewer* of them does less damage, and shrinking a wrong mask should help as surely as
+shrinking a right one hurts. It would be the crossing interaction that the two-axis reading
+implies. **It is not a finding here.** `anti-AB` predates the per-creature `before` logging,
+so the two cannot be paired, they come from different runs, and both sit near zero where the
+unpaired difference is worth little. Settling it costs one 12M run with `anti` and
+`pot-q-opp` live together, and it is cheap because the instrumentation now exists.
+
+#### And it re-opens a closed result rather than contradicting it
+
+`mask-cost-is-flat` measured blocking a quarter of the group at 57% of the lesson and a half
+at 53%, and concluded there is no mask size that wins. These numbers do not contradict it:
+*blocking* a quarter freezes 4 neurons and lets 10 learn, while *masking* to a quarter lets
+4 learn and freezes 10, so the two families sweep the axis in opposite directions. What the
+mask family now shows is that its own cost is strongly monotone in extent, which makes the
+block family's flatness the anomaly — and every block in that family was taken from the same
+end, so flatness in fraction there was measured at one position. Re-measuring the block
+family at the opposite end is the lead that follows, and it is the same four arms at a second
+target.
+
+**Housekeeping.** The default live set — `bcast-*`, `oracle-*`, `shuf-*` — is restored in
+this commit as the arm table's pinned comment requires, the quarter arms are parked with
+`skip = true`, and the restored state is re-gated with a log that postdates the source it
+covers.
+
+
 ## Layout
 
 ```

@@ -31,7 +31,7 @@
 <p class="subtitle">Original findings from a grown spiking creature, with no external antecedent</p>
 <p class="author">Arne Diegenbach</p>
 <p class="affil">The <span class="id">aibaby</span> project &mdash; a C++17 spiking neural creature grown from a DNA/genome file</p>
-<p class="date">8 October 2026</p>
+<p class="date">8 October 2026 (revised)</p>
 
 <div class="abstract">
 <p class="lab">Abstract</p>
@@ -209,6 +209,16 @@ are nulls, so the regularity is not refuted at significance, but neither was it 
 and the registered text had no reading for &ldquo;worse on both axes&rdquo;. Registering the
 two directions a prediction could fail in is not enough when the mechanism can also simply
 fail to matter.</p>
+<p>A second shape of the same failure, from a registration that offered two accounts and
+asked which one the data would pick. One said a correctly aimed quarter-sized mask would keep
+most of the learning of a half-sized one; the other said both quarters would cost more than
+the half and that aiming would buy nothing. The measurement gave <em>both</em> effects,
+separately resolved and of comparable size: aim was worth +0.0956&nbsp;&plusmn;&nbsp;0.0063
+at matched size, and shrinking the mask at matched aim cost
+&minus;0.0719&nbsp;&plusmn;&nbsp;0.0132. <strong>A dichotomy cannot be confirmed by a
+conjunction</strong> &mdash; it can only be half-refused on each side, which is what the
+write-up had to say. The discipline that would have survived is to register the quantities
+and the direction each should move, not a menu of accounts to choose between.</p>
 
 <h2>3. Credit assignment and interference</h2>
 <p>Teaching a second, conflicting vowel target destroys the first. The surviving fraction
@@ -288,6 +298,35 @@ of 29 (gain +0.0125&nbsp;&plusmn;&nbsp;0.0023 against +0.362), so no creature cl
 the lowest meaningful gain floor and retention has no denominator. <strong>Varying position
 far enough to matter destroys the learning whose retention one would be
 measuring.</strong> More creatures cannot fix this; it is not a power problem.</p>
+
+<h3>3.7 No mask in this family is cheap enough, and that closes the line by arithmetic</h3>
+<p>The two numbers above are a sum: confining the reward costs
+&minus;0.211&nbsp;&plusmn;&nbsp;0.074 of retention and aiming it well recovers +0.197, so
+credit assignment here is outbid rather than inert. A cheaper mask was therefore the only
+thing that could change the sign, and &sect;4.2 said where to look &mdash; most of the
+oracle&rsquo;s half is low-potency ballast, so a small mask flush against the lever should
+keep the learning and pay less for it. Measured across every mask extent at the best
+available aim, on one genome, 32 creatures each:</p>
+<table>
+<tr><th>Reward reaches</th><th>Aimed at</th><th class="n">Learning gained</th></tr>
+<tr><td>14 of 14 (no mask)</td><td>&mdash;</td><td class="n"><strong>+0.3618 &plusmn; 0.0334</strong></td></tr>
+<tr><td>7 of 14</td><td>the lever end</td><td class="n">+0.1964 &plusmn; 0.0149</td></tr>
+<tr><td>4 of 14</td><td>the lever end</td><td class="n">+0.1245 &plusmn; 0.0046</td></tr>
+<tr><td>7 of 14</td><td>a coin flip each trial</td><td class="n">+0.1022 &plusmn; 0.0076</td></tr>
+<tr><td>4 of 14</td><td>the opposite end</td><td class="n">+0.0289 &plusmn; 0.0054</td></tr>
+<tr><td>7 of 14, centred</td><td>neither end</td><td class="n">+0.0125 &plusmn; 0.0023</td></tr>
+<tr class="last"><td>7 of 14</td><td>the opposite end</td><td class="n">&minus;0.0007 &plusmn; 0.0056</td></tr>
+</table>
+<p class="cap">Aim at matched extent is +0.0956&nbsp;&plusmn;&nbsp;0.0063 (15.2&nbsp;SE)
+paired on seed; extent at matched aim is &minus;0.0719&nbsp;&plusmn;&nbsp;0.0132
+(5.4&nbsp;SE).</p>
+<p><strong>Learning rises monotonically with how much of the group the reward can reach, and
+the cheapest mask is no mask.</strong> The best-aimed quarter keeps 63% of the half&rsquo;s
+learning on 57% of its neurons, so potency does not make a mask cheap &mdash; it makes a
+mask less dear than the same mask pointed the other way. Confinement is what costs; aim
+reduces that cost and never reverses it. So there is no mask in this family that credit
+assignment can afford, and the line closes on arithmetic rather than on anything about the
+creature.</p>
 
 <h2>4. Leverage and the geometry of the motor pool</h2>
 
@@ -373,10 +412,16 @@ one. The qualification is this project&rsquo;s own and was found by re-reading t
 after &sect;4.2: every block in it was taken from the <em>same end</em> of the group. Flatness
 in fraction is therefore measured at one position, and a quarter aimed at the lever and a
 quarter aimed away from it are not distinguished by anything in that result.</p>
+<p>It is worth saying what does <em>not</em> contradict this. The reward-mask family of
+&sect;3.7 is strongly monotone in extent, which looks like the opposite finding and is not:
+<em>blocking</em> a quarter freezes four neurons and lets ten learn, while <em>masking</em>
+to a quarter lets four learn and freezes ten, so the two families sweep the axis in opposite
+directions. What the comparison does leave is the block family&rsquo;s flatness as the
+anomaly of the two, measurable at a second target with the four arms that already exist.</p>
 
-<h3>4.6 What a restriction costs tracks the potency of what it restricts, not how much it restricts</h3>
-<p>Stated as a regularity across every plasticity restriction the project has built, with the
-three columns measured in separate experiments:</p>
+<h3>4.6 What a restriction costs has two axes: the potency of what it restricts, and how much</h3>
+<p>Stated across every plasticity restriction the project has built, with the columns
+measured in separate experiments:</p>
 <table>
 <tr><th>Restriction</th><th>Selects by</th><th class="n">Effect on learning</th><th class="n">Effect on forgetting</th></tr>
 <tr><td>Astrocytic activity gate</td><td>activity</td><td class="n">&minus;81%</td><td class="n">&minus;19%</td></tr>
@@ -391,9 +436,14 @@ nor learning. A mechanism that restricts a third of all plasticity and costs not
 a weak version of a mask that restricts half and costs 46%: it selects a
 <em>different set</em>. Traffic is uncorrelated with position in the group, so a
 traffic-selected restriction spreads across the centroid and leaves the ends free, while a
-position-selected one of the same size can remove the lever entirely. Size is the wrong
-axis; potency in the sense of &sect;4.2 is the right one, and it is the same statement as
-&sect;4.5&rsquo;s qualification seen from the mechanism side.</p>
+position-selected one of the same size can remove the lever entirely. <strong>Extent alone
+buys nothing: a restriction whose potency is zero is free however wide it is.</strong></p>
+<p class="note">Written here first as &ldquo;size is the wrong axis, potency is the right
+one&rdquo;, and that is half wrong. &sect;3.7 measured extent at matched aim and it costs
+&minus;0.0719&nbsp;&plusmn;&nbsp;0.0132, 5.4&nbsp;SE. The two axes are separate and both
+real: potency decides <em>whether</em> extent costs anything, and given nonzero potency,
+extent then costs monotonically. The brake and the mask are the two ends of that statement
+rather than one of them being the whole of it.</p>
 <p>The first three rows are a quantitative form of the stability&ndash;plasticity dilemma
 in one system &mdash; every restriction cut learning more than it cut forgetting &mdash; and
 the fourth is not an exception to the ordering so much as a case where the dilemma never

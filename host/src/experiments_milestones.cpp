@@ -6055,6 +6055,7 @@ struct RTConfig {
   int credit_keep_half = -1;
   bool credit_invert_half = false;
   bool credit_keep_middle = false;
+  float credit_keep_frac = 0.0f;
 };
 
 // One arm, one creature, one life: teach, intervene, re-measure.
@@ -6330,6 +6331,16 @@ RTRow run_retain_arm(const std::vector<uint8_t>& blob, uint64_t ticks,
         const uint32_t gsz = cg_hi - cg_lo, half = gsz / 2;
         const uint32_t mlo = cg_lo + (gsz - half) / 2;
         cnet.set_reward_mask(cvm.begin + mlo, cvm.begin + mlo + half);
+      } else if (cfg.credit_keep_frac > 0.0f) {
+        // A band of `keep_frac` of the group, flush against the end `upper` selects.
+        // At least one neuron, or the arm would mask everything and learn nothing for a
+        // reason that has nothing to do with potency.
+        const uint32_t gsz = cg_hi - cg_lo;
+        uint32_t k = uint32_t(float(gsz) * cfg.credit_keep_frac + 0.5f);
+        if (k < 1u) k = 1u;
+        if (k > gsz) k = gsz;
+        if (upper) cnet.set_reward_mask(cvm.begin + cg_hi - k, cvm.begin + cg_hi);
+        else cnet.set_reward_mask(cvm.begin + cg_lo, cvm.begin + cg_lo + k);
       } else if (upper) {
         cnet.set_reward_mask(cvm.begin + cmid, cvm.begin + cg_hi);
       } else {
@@ -18166,6 +18177,22 @@ struct CGArm {
   // If position is what costs, middle lands clearly below shuf. WHAT REFUSES THE
   // LEVERAGE LINE: middle matching shuf despite always blocking the high-leverage end.
   bool keep_middle = false;
+  // FRACTION of the F1 group the mask keeps; 0 means the shipped half, so every
+  // existing row stays bit-identical. The end is still chosen by `mode` (and flipped by
+  // `invert_half`), so 0.25 keeps the QUARTER at that end rather than the half.
+  //
+  // WHY A QUARTER EXISTS NOW. `blockwhere` established on three targets that the lever
+  // is the one neuron at the end the lesson must SUPPRESS, and that the middle is free.
+  // The oracle mask keeps a whole HALF, which is therefore mostly ballast: it carries
+  // the lever at its far end and low-potency neurons for the rest. If the mask's cost is
+  // about potency, a quarter aimed at the suppression end should keep most of the
+  // learning at half the mask size -- and if it is about how much of the group the
+  // reward can reach, the quarter should cost more, not less.
+  //
+  // That matters because `credgate` is stuck on exactly this arithmetic: masking costs
+  // -0.211 of retention and aiming the gap recovers +0.197, so the mechanism is outbid
+  // rather than dead. A cheaper mask is the only thing that flips the sum.
+  float keep_frac = 0.0f;
 };
 const CGArm kCGArms[] = {
     // THE DEFAULT LIVE SET IS THREE PAIRS, AND IT IS DELIBERATE (2026-10-04):
@@ -18199,8 +18226,8 @@ const CGArm kCGArms[] = {
     // If neither moves, §3.5's forgetting defence is refused on its own purpose.
     // vacuity pre-flight: tools/vacuity.sh says LIVE on vocallearn, 46 lines differ.
     {"bcast-keep", 0u, true,  0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, false, 0.0, 0.0f},
-    {"oracle-AB",  1u, false, 0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, true, 0.0, 0.0f},   // the host masks by which lesson is live
-    {"oracle-keep", 1u, true, 0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, true, 0.0, 0.0f},
+    {"oracle-AB",  1u, false, 0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, false, 0.0, 0.0f},   // the host masks by which lesson is live
+    {"oracle-keep", 1u, true, 0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, false, 0.0, 0.0f},
     // THE DERIVED ARMS ON THE INDEX AS SHIPPED, which `ctxpc` measured separating
     // a-vs-i at 0.035. They price a mask over NOISE and are the control here.
     {"derived-AB", 2u, false, 0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, true, 0.0, 0.0f},
@@ -18383,8 +18410,8 @@ const CGArm kCGArms[] = {
     // took over the label and the "must NOT" criterion was computed from `derived2`.
     // NOT skipped: with these absent the report prints SPECIFICITY UNTESTED and no
     // verdict can clear its own bar, so a credgate verdict needs them in the run.
-    {"shuf-AB",    3u, false, 0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, true, 0.0, 0.0f},
-    {"shuf-keep",  3u, true,  0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, true, 0.0, 0.0f},
+    {"shuf-AB",    3u, false, 0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, false, 0.0, 0.0f},
+    {"shuf-keep",  3u, true,  0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, false, 0.0, 0.0f},
     // A 2x2 IN (TEACH END, GAP END), and the first version of this was NOT a clean
     // contrast (2026-10-05). I wrote that forcing the end holds content-correctness
     // matched at ~0.500 for both settings. The pre-flight says otherwise: agreement
@@ -18436,8 +18463,30 @@ const CGArm kCGArms[] = {
     // The existing `myel-*` arms are not reused: they are AB-only, so there is no
     // `keep` control to tell "protected from B" from "decayed less on its own", and
     // they only ever ran at 3.4M, below the budget where retention exists.
-    {"nobrake-AB",   0u, false, 0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, false, 0.0, 0.0f, 1.0f},
-    {"nobrake-keep", 0u, true,  0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, false, 0.0, 0.0f, 1.0f},
+    {"nobrake-AB",   0u, false, 0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, true, 0.0, 0.0f, 1.0f},
+    {"nobrake-keep", 0u, true,  0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, true, 0.0, 0.0f, 1.0f},
+    // THE POTENCY-AIMED QUARTER (2026-10-08). Both arms run the oracle mode, so the end
+    // is chosen by the live lesson; `pot-q` keeps the quarter at that end and
+    // `pot-q-opp` inverts to keep the quarter at the opposite end. Four neurons of
+    // fourteen either way, so the mask SIZE is matched and only the end differs --
+    // which, per `blockwhere` on three targets, is what potency is.
+    //
+    // PREDICTIONS, and they discriminate two accounts that the half-mask could not:
+    //   * if the cost is POTENCY, `pot-q` keeps most of the learning on a mask HALF the
+    //     size of the oracle's, and `pot-q-opp` collapses like the central mask did.
+    //   * if the cost is REACH -- how much of the group the reward signal can touch --
+    //     both quarters cost MORE than the oracle half, and `pot-q` gains nothing from
+    //     being aimed.
+    // WHAT REFUSES THE POTENCY ACCOUNT: `pot-q` and `pot-q-opp` coming back equal.
+    //
+    // It also re-reads a closed result. `mask-cost-is-flat` measured blocking a quarter
+    // at 57% and a half at 53% and concluded size does not matter -- but every block in
+    // that family took the TOP, so "flat in fraction" was measured at one position. If
+    // the end is what counts, that flatness is a position artefact.
+    {"pot-q",      1u, false, 0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, true, 0.0, 0.0f, -1.0f, -1, false, false, 0.25f},
+    {"pot-q-keep", 1u, true,  0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, true, 0.0, 0.0f, -1.0f, -1, false, false, 0.25f},
+    {"pot-q-opp",      1u, false, 0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, true, 0.0, 0.0f, -1.0f, -1, true, false, 0.25f},
+    {"pot-q-opp-keep", 1u, true,  0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, true, 0.0, 0.0f, -1.0f, -1, true, false, 0.25f},
 };
 constexpr uint32_t kCGArmCount = sizeof(kCGArms) / sizeof(kCGArms[0]);
 // CHANGED 2026-09-21 from 318211 to draw a FRESH set of creatures from the same
@@ -18542,6 +18591,8 @@ constexpr CGMode kCGModes[] = {
     {"anti", "anti-AB", "anti-keep"},
     {"middle", "mid-AB", "mid-keep"},
     {"nobrake", "nobrake-AB", "nobrake-keep"},
+    {"pot-q", "pot-q", "pot-q-keep"},
+    {"pot-q-opp", "pot-q-opp", "pot-q-opp-keep"},
 };
 constexpr uint32_t kCGModeCount = sizeof(kCGModes) / sizeof(kCGModes[0]);
 inline int cg_arm_of(const char* name) {
@@ -18660,6 +18711,7 @@ bool run_credgate_impl(const std::vector<uint8_t>& blob, uint64_t ticks, bool ve
     cfg.credit_keep_half = kCGArms[a].keep_half;
     cfg.credit_invert_half = kCGArms[a].invert_half;
     cfg.credit_keep_middle = kCGArms[a].keep_middle;
+    cfg.credit_keep_frac = kCGArms[a].keep_frac;
     // GIVE THE TWO LESSONS DIFFERENT SOUNDS, or the index has nothing to separate.
     // `retain` says the SAME word throughout by default -- run_retain_arm's own
     // comment spells it out: "nothing in the creature's input distinguishes lesson A
