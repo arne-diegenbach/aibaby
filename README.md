@@ -15239,22 +15239,92 @@ so the two cannot be paired, they come from different runs, and both sit near ze
 unpaired difference is worth little. Settling it costs one 12M run with `anti` and
 `pot-q-opp` live together, and it is cheap because the instrumentation now exists.
 
-#### And it re-opens a closed result rather than contradicting it
+#### And it re-opens a closed result — which had already been answered on disk
 
 `mask-cost-is-flat` measured blocking a quarter of the group at 57% of the lesson and a half
 at 53%, and concluded there is no mask size that wins. These numbers do not contradict it:
 *blocking* a quarter freezes 4 neurons and lets 10 learn, while *masking* to a quarter lets
 4 learn and freezes 10, so the two families sweep the axis in opposite directions. What the
-mask family now shows is that its own cost is strongly monotone in extent, which makes the
-block family's flatness the anomaly — and every block in that family was taken from the same
-end, so flatness in fraction there was measured at one position. Re-measuring the block
-family at the opposite end is the lead that follows, and it is the same four arms at a second
-target.
+mask family shows is that its own cost is strongly monotone in extent, which makes the block
+family's flatness look like the anomaly — and every block in the quoted pair was taken from
+the same end, so flatness in fraction there was measured at one position.
+
+**I wrote that re-measuring the block family at the opposite end was "the lead that follows,
+and it is the same four arms at a second target." That was wrong, and the correction is in
+the next section.**
 
 **Housekeeping.** The default live set — `bcast-*`, `oracle-*`, `shuf-*` — is restored in
 this commit as the arm table's pinned comment requires, the quarter arms are parked with
 `skip = true`, and the restored state is re-gated with a log that postdates the source it
 covers.
+
+
+### The opposite end was measured three weeks ago, and it says the same thing
+
+I costed the block-family re-measurement at about five hours, went to add a `skip` field to
+`blockwhere` so the condition could be focused, and found the experiment already written:
+`blockanchor` blocks the *bottom* two, four and seven neurons against the same reference.
+It ran on 2026-09-15. Its summary sits in the memory note immediately adjacent to the one I
+was correcting, and I had edited that note's index line the same day — for a different
+number.
+
+So this is a reading result, not a run. Paired on seed from the per-creature lines of
+`blockfloor-56m-final.log` and `blockanchor-56m-final.log`, jackknife standard errors, 36
+creatures, one reference lesson of +0.1676 ± 0.0073:
+
+| frozen | at the lever end | | at the opposite end | |
+|---|---|---|---|---|
+| 1 of 14 | −0.0503 ± 0.0086 | 30.0% | — | — |
+| 2 of 14 | −0.0599 ± 0.0088 | 35.7% | −0.0144 ± 0.0099 | 8.6% |
+| 4 of 14 | −0.0957 ± 0.0091 | 57.1% | −0.0171 ± 0.0095 | 10.2% |
+| 7 of 14 | −0.0889 ± 0.0080 | 53.1% | −0.0153 ± 0.0102 | 9.1% |
+
+```
+  the reference reproduces across the two runs:  +0.0000 +/- 0.0000  exact, n=36
+
+  TOP ladder, each step against the previous
+    top2 - top1    -0.0096 +/- 0.0074   (-1.3 SE)
+    top4 - top2    -0.0359 +/- 0.0069   (-5.2 SE)
+    top4 - top1    -0.0455 +/- 0.0075   (-6.1 SE)
+    top7 - top4    +0.0068 +/- 0.0068   (+1.0 SE)   <- saturated
+  BOTTOM ladder, each step against the previous
+    bot4 - bot2    -0.0028 +/- 0.0092   (-0.3 SE)
+    bot7 - bot4    +0.0019 +/- 0.0087   (+0.2 SE)
+    bot7 - bot2    -0.0009 +/- 0.0086   (-0.1 SE)
+  the two ends at matched extent
+    bot4 - top4    +0.0786 +/- 0.0090   (+8.7 SE)
+    bot7 - top7    +0.0737 +/- 0.0086   (+8.6 SE)
+```
+
+**Position decides whether extent costs anything at all.** At the lever end, four neurons
+against one is −6.1 SE. At the opposite end, every step is under half a standard error, at
+standard errors small enough to have resolved a step the size of the one the other ladder
+shows — so the flatness there is measured, not unresolved. **That is the two-axis statement
+of the potency-quarter run, reached independently, in a different family, by the opposite
+manipulation, three weeks earlier.** Two families agreeing is worth considerably more than
+either on its own.
+
+**And the lever end saturates.** `top7 − top4` is +0.0068 ± 0.0068. Once the top four of
+fourteen are frozen there is nothing further to lose, which is exactly why the two numbers
+`mask-cost-is-flat` quoted — 57% at four and 53% at seven — are the same number. **Its
+conclusion was drawn from the two points above the saturation knee of one ladder.** The
+flatness is real and local; it is not a property of the fraction blocked. The 1 → 4 segment
+of that same ladder rises 30% → 57% at 6.1 SE, and the project had measured it.
+
+**The method lesson, and it is the third instance this week.** Twice before, the answer was
+already in this project's output: the symmetric-leverage account was refuted by a log on
+disk, and the distance law died by measuring a third point rather than arguing about the
+first two. This one is worse, because the obstacle was not that the result was hard to find
+— it was that the question had been written down as a *lead*, and a lead reads as something
+not yet done. The habit that catches it is mechanical rather than attentive: **before
+building an arm, search the logs for the condition it would create — the position, the
+count, the target — not for the name of the experiment that would create it.** Arms are
+cheap to name and expensive to run, and the name is the part that does not persist. Recorded
+as §2.12 of the discoveries document.
+
+No new run, and the queued lead is withdrawn rather than carried forward. `blockwhere`'s
+`skip` field was not built either; the reason to build it was this experiment, which does
+not need building.
 
 
 ## Layout
