@@ -15453,6 +15453,197 @@ restored state re-gated with a log that postdates its source — and verified by
 experiment, which executes exactly the six default arms.
 
 
+### The index score has an exact occupancy ceiling, and it splits the headline gap in two
+
+Taking the v53 index gap as the next lead, and starting where §2.12 says to start: with
+what is already on disk. Nothing was run for this section.
+
+#### The statistic has a ceiling that nobody had written down
+
+`ctx_match` is best-permutation agreement on the slot×word confusion matrix —
+`best_assign` in `experiments_milestones.cpp` enumerates all `k!` permutations and keeps
+the largest diagonal. That is the standard *clustering accuracy*, and its exact solution
+for larger `k` is the assignment problem of **Kuhn** (1955) and **Munkres** (1957), after
+**Kőnig** and **Egerváry** whose work Kuhn named the method for. The companion column
+`ctx_occupancy` is the busiest *column* sum — the share of word-episodes the busiest slot
+claimed.
+
+Those two numbers are not independent, and the constraint is tight. For any permutation
+σ, the diagonal is bounded term by term by the smaller of its row and column mass, so
+
+> ctx_match ≤ Σ_c min(w_c, q_σ(c)) ≤ max over matchings of the same
+
+and for two slots with balanced words (w = ½ each) and busiest share q ≥ ½ this collapses
+to
+
+> **ctx_match ≤ 1.5 − occupancy**
+
+**Checked on every creature in `ctxself-deaf36b.log`: 216 of 216 satisfy it, 0 violations.**
+It is not a vacuous bound — the oracle arm attains it exactly (occupancy 0.500, match
+1.000) and both `ema` arms sit within 0.004 of it. The words are exactly balanced, which
+the oracle's occupancy of 0.500 ± 0.000 confirms internally rather than by assumption.
+
+So the score decomposes: **a ceiling set by how lopsided the partition is, and a slack
+against that ceiling which is genuine confusion.**
+
+| arm | index | occupancy | ceiling | slack = confusion |
+|---|---|---|---|---|
+| `ear` (tracking) | 0.707 | 0.606 | 0.894 | **+0.187** |
+| `ear-rnd` (control) | 0.764 | 0.614 | 0.886 | +0.122 |
+| `ear-deaf` | 0.700 | 0.672 | 0.828 | +0.128 |
+| `ear-deaf-rnd` | 0.793 | 0.623 | 0.877 | +0.084 |
+| `ema` (tracking) | 0.786 | 0.710 | 0.790 | **+0.004** |
+| `ema-rnd` (control) | 0.842 | 0.655 | 0.845 | **+0.003** |
+
+#### The 18/18 result is two different phenomena wearing one number
+
+| pair | index gap | of which ceiling | of which confusion |
+|---|---|---|---|
+| `ear` vs `ear-rnd` | −0.056 | **+0.008** | **−0.064** |
+| `ear-deaf` vs `ear-deaf-rnd` | −0.093 | −0.049 | −0.044 |
+| `ema` vs `ema-rnd` | −0.056 | **−0.055** | **−0.001** |
+
+**`ema`'s gap is entirely occupancy and contains no classification difference at all.**
+Both its arms are pinned to their ceilings — slack 0.004 and 0.003 — so "the index is
+worse when the target tracks the word" is, for that source, the statement that the
+tracking arm's partition is more lopsided, and lopsidedness mechanically caps the score.
+**`ear`'s gap is the opposite case:** its two ceilings differ by +0.008, so essentially
+all of the −0.056 is confusion. The deaf pair is a mixture, about half of each.
+
+Three pairs reported as one effect on 18 of 18 creatures, and the mechanism is not the
+same in any two of them. Nothing here contradicts the gap's existence — it is still
+−0.056 at 6.0 SE — but *what it is a gap in* differs by arm, and no account can be right
+for all three at once.
+
+#### It redirects the fourth candidate rather than refuting it, and the prize is ten times bigger
+
+The fourth candidate for the gap is the uniform cluster prior: MacQueen's `1/wins`
+equalises win counts, which is a uniform prior, and **Assran, Balestriero, Duval, Bordes,
+Misra, Bojanowski, Vincent, Rabbat & Ballas** (ICLR 2023), *The Hidden Uniform Cluster
+Prior in Self-Supervised Learning*, show such a prior helps on balanced data and **hurts
+on imbalanced data** — which this creature's occupancy measurably is. The lead set a
+refusal-first bar: a matched prior must buy 0.056 read-only or it cannot explain the gap.
+
+The decomposition says that bar was unmeetable in principle, and for a reason that has
+nothing to do with how good a matched prior might be. **A prior is a property of the
+rule, and the rule is identical in both arms.** What it can move is the ceiling, and the
+two `ear` ceilings differ by 0.008. So no occupancy fix of any quality can account for
+more than 0.008 of a 0.056 gap. The candidate was filed against the wrong arm.
+
+Against `ema` it is a different proposition entirely. `ema` has **0.004** of confusion
+left and sits 0.210 below a perfect score purely on lopsidedness — and `ema` is the
+better source on both axes already (index 0.786 against `ear`'s 0.707, delivery 49.4 Hz
+against 30.9). **So the matched prior is worth up to +0.210 of index on the arm the
+project would actually ship, and ~0.008 on the arm the lead was priced against.** The
+read-only `partprobe` pricing is still the right first step; the bar it should be set
+against is `ema`'s 0.210, not `ear`'s 0.056.
+
+#### And it corrects a comparison of my own
+
+The drift write-up noted that "`ema` already beats `ear` on both index (0.786 vs 0.707)
+and delivery, while carrying the same gap". True as arithmetic and misleading as a
+comparison: those two numbers are measured against ceilings of 0.790 and 0.894. On
+confusion — the part a better extractor could fix — `ema` is at 0.004 and `ear` at 0.187,
+so they are not slightly different, they are at opposite ends. The two sources have
+**different failure modes**: `ema` classifies almost perfectly and is throttled by an
+unbalanced partition, `ear` has a balanced partition and genuinely confuses the words.
+Fixing lopsidedness helps only the first; fixing extraction helps only the second. The raw
+score merges them, which is the same shape of error as scoring a naming task against 1/k
+while the matched control sits in the table — **a reference point that exists but is not
+the one the claim is about**, now on its fourth distinct instance in this project.
+
+#### A structural consequence that retires the fifth candidate for free
+
+The gap is a *difference between two arms* that share the index rule, the feature it reads,
+and the distribution of that feature. Only the teaching target differs. **Any candidate
+that is a property of the rule is therefore a candidate for the level, not for the gap,
+and cannot produce a difference between two arms that run the same rule.** That is true of
+the uniform prior above and equally true of the fifth candidate — whether context should
+be discrete slots or a continuum, from **Heald, Lengyel & Wolpert** (2023). Both were
+filed as gap candidates; both are level candidates. Neither is wrong as a lead, and
+neither can be the answer to this question.
+
+What remains for the gap is whatever differs between the arms, and after the deaf
+intervention that list is short.
+
+
+### The word window is set by the creature's own larynx, and the deaf test never touched it
+
+What differs between the two arms, after the decomposition above and the three dead
+causes, is the teaching target — and one thing the target changes. In the tracking arm the
+creature learns a word-dependent voice: dF1 30.9 Hz against the control's 18.0. Its own
+voice therefore becomes word-correlated, and the own-voice account was the natural
+candidate. It was tested by intervention and refused: `self_gain = 0` does not close the
+gap, it widens it.
+
+**But `self_gain` is the acoustic path, and the index's episode boundary does not use the
+acoustic path.** From `core/src/network.cpp`:
+
+```cpp
+const ModuleState& gms = modules_[uint32_t(ctx_gate_module_)];   // the VOCAL module
+const bool slow_on = gms.mean_rate < ctx_gate_target_;
+const bool fast_on = slow_on;
+```
+
+`ctx_gate_module_` is resolved by searching the genome for `ModuleRole::kVocal`. So **the
+window in which the index accumulates the ear feature, and the moment at which it commits
+a prototype update, are decided by whether the creature's larynx is below its own
+setpoint.** The kernel's comment says exactly why, and the reasoning is sound: *"WHICH
+MODULE SAYS A WORD IS PLAYING, and the answer is not the ear"* — auditory activity marks
+sound rather than the caregiver, because between words the creature babbles and hears
+itself, whereas M1d's measured listening reflex takes voiced fraction 0.276 → 0.010 while
+it hears something. The ear supplies the feature; the larynx supplies the boundary.
+
+**That boundary is an internal read of motor rate, with no acoustics in it.** The deaf
+intervention is documented as cutting "the ACOUSTIC self-path and leaving every internal
+path" — and this is such a path. So the own-voice refutation, which I have been treating as
+closing the self-contamination family, closes only its acoustic half. The motor half was
+never tested and nobody had named it.
+
+**It has every property the gap requires**, which is why it is worth stating before it is
+run:
+
+- **It differs between the arms.** A word-dependent voice makes the larynx's rate
+  word-correlated, so the segmentation becomes word-correlated. A word-independent voice
+  makes it word-independent noise.
+- **It survives `self_gain = 0` untouched**, so it is consistent with the intervention
+  that killed the acoustic account — and consistent with the widening, since deafening
+  removes a noise source from the control arm while leaving this one in both.
+- **It predicts the right sign.** If episode onsets and lengths differ systematically
+  between the two words, the accumulated feature carries a motor-derived component that
+  correlates with the word without being the word, which is a contaminant the prototype
+  rule will happily partition on. Worse confusion in the tracking arm — and after the
+  decomposition above, `ear`'s gap is **confusion**, which is exactly the term this would
+  move.
+- **The kernel already flags the window as the weak point, with a number.** Its comment
+  records that `partprobe` scored the slow-gated window at **0.980** against 0.643 for the
+  mechanism as first built — and, separately, that *"`partprobe` never met this, because
+  the host handed it the word windows — an oracle the probe quietly kept, and the reason a
+  mechanism that priced at 1.000 could still have nowhere to start."* The 0.980 was
+  measured with the host's windows. The shipped mechanism uses the larynx. **That
+  difference is the untested term, and it is the one that differs between arms.**
+
+**THE TEST, pre-registered here.** Give the index the host's word window instead of the
+larynx gate — experiment-only, shipped off, hash unchanged — in *both* the tracking and the
+control arm, and read it as a difference of gaps exactly as the deaf test was read, because
+the finding is itself a gap. `anti`-style single-arm readings are what produced the pilot
+error corrected earlier today.
+
+- **If the window is the cause:** the `ear` confusion gap closes or shrinks substantially,
+  and `ear`'s slack falls toward `ear-rnd`'s 0.122.
+- **If it is not:** the gap survives with the feature identical, the rule identical, and
+  the segmentation handed over — at which point nothing inside the index differs between
+  the arms and the question becomes an instrument question rather than a mechanism one.
+- **What would make the test uninterpretable, stated first:** if the oracle window changes
+  the *ceiling* rather than the slack, the comparison is contaminated by the occupancy term
+  and must be read on slack, not on raw `ctx_match`. The decomposition above is what makes
+  that readable, and it is the reason to do it in this order.
+
+Not built. The machinery does not exist — there is no host-window path in the kernel — so
+this is a kernel change and gets priced before it is built, as the project's practice
+requires.
+
+
 ## Layout
 
 ```
@@ -15752,6 +15943,32 @@ papers about the half it does not touch.
   essentially nothing over "this pair is easier to hear". The theory is not in
   question; what it predicted here was not distinguishable from the trivial
   predictor, and three pairs in the right order had made it look as though it was.
+- Assran, M., Balestriero, R., Duval, Q., Bordes, F., Misra, I., Bojanowski, P.,
+  Vincent, P., Rabbat, M. & Ballas, N. (2023). *The Hidden Uniform Cluster Prior in
+  Self-Supervised Learning.* ICLR 2023. <https://arxiv.org/abs/2210.07277> — methods
+  that use mini-batch statistics carry an unstated prior toward **uniform clustering**,
+  which produces good features on class-balanced data and **hampers them on imbalanced
+  data**; their fix is a prior matched to the data rather than uniform. MacQueen's
+  `1/wins` above equalises win counts, so it *is* a uniform prior, and this creature's
+  slot occupancy is 0.61–0.79 where balanced is 0.50. Cited here because the occupancy
+  ceiling below moves what this predicts: a prior is a property of the rule, the rule is
+  the same in both arms of the gap, so it can only shift the **ceiling** — worth ~0.008
+  on the arm it was filed against and up to **+0.210** on `ema`, whose partition is
+  lopsided and whose confusion is already 0.004.
+- **The statistic the index is scored on, and the ceiling it carries.** Kuhn, H. W.
+  (1955). *The Hungarian method for the assignment problem.* Naval Research Logistics
+  Quarterly 2(1–2), 83–97. <https://doi.org/10.1002/nav.3800020109>; and Munkres, J.
+  (1957). *Algorithms for the assignment and transportation problems.* Journal of the
+  Society for Industrial and Applied Mathematics 5(1), 32–38.
+  <https://doi.org/10.1137/0105003> — `ctx_match` is best-permutation agreement on the
+  slot×word confusion matrix, which is the assignment problem; this kernel enumerates
+  `k!` permutations because `k` is two or four, and Kuhn and Munkres are what to use if it
+  ever is not. Kuhn named the method for **Kőnig** and **Egerváry**, whose results it
+  rests on, and that attribution is his own rather than something added here. What is this
+  project's, and is in the discoveries document rather than borrowed from them, is the
+  consequence: fixing the confusion matrix's margins caps the attainable agreement at
+  `1.5 − occupancy` for two balanced words, which splits a result the project had
+  reported as one effect into two unrelated ones.
 - Carpenter, G. A. & Grossberg, S. (1987). *A massively parallel architecture for a
   self-organizing neural pattern recognition machine.* Computer Vision, Graphics, and
   Image Processing 37(1), 54–115. <https://doi.org/10.1016/S0734-189X(87)80014-2>

@@ -31,7 +31,7 @@
 <p class="subtitle">Original findings from a grown spiking creature, with no external antecedent</p>
 <p class="author">Arne Diegenbach</p>
 <p class="affil">The <span class="id">aibaby</span> project &mdash; a C++17 spiking neural creature grown from a DNA/genome file</p>
-<p class="date">8 October 2026 (revised twice)</p>
+<p class="date">9 October 2026</p>
 
 <div class="abstract">
 <p class="lab">Abstract</p>
@@ -251,6 +251,36 @@ runs made under different conditions &mdash; &sect;2.7 records what that cost. B
 are one mistake: <strong>treating a name as an identifier for a condition.</strong> A name
 identifies an intention. The condition lives in the log beside it, and has to be read from
 there.</p>
+
+<h3>2.13 A score with a margin constraint has a ceiling, and comparing raw scores across it merges two effects</h3>
+<p>The clearest instance of &sect;2.1&rsquo;s error, and the one that changed a result. An
+unsupervised partition is scored by best-permutation agreement with the true labels &mdash;
+the diagonal of the label&times;cluster confusion matrix, maximised over assignments of
+clusters to labels. Reported alongside it is the share of items the busiest cluster claimed.
+<strong>The two are not independent.</strong> For any assignment the diagonal is bounded
+term by term by the smaller of its row and column mass, so with label frequencies
+w<sub>c</sub> and cluster shares q<sub>c</sub> the agreement cannot exceed
+&Sigma;<sub>c</sub>&nbsp;min(w<sub>c</sub>,&nbsp;q<sub>&sigma;(c)</sub>), and for two
+balanced labels with busiest share q this is exactly:</p>
+<p class="eq">agreement &le; 1.5 &minus; q</p>
+<p>Checked on 216 creatures: no violations. It is not a vacuous bound either &mdash; a
+supervised control attains it exactly, and two of six arms sit within 0.004 of it. So the
+score splits into <strong>a ceiling set by how lopsided the partition is, and a slack
+against that ceiling which is the only part that is classification error at all.</strong></p>
+<p>The project had reported a difference between two conditions, reproducing on 18 of 18
+creatures at 6.0&nbsp;SE, as one effect across three pairs of arms. Decomposed, it is not
+the same effect in any two of them: in one pair the two ceilings are within 0.008 and the
+whole difference is classification; in another the ceilings differ by 0.055 and the
+classification difference is 0.001. <strong>One of the three pairs contains no
+classification difference whatsoever</strong>, and its number had been read as though it
+did. Two arms were also being compared as better and worse at the same task when, measured
+against their own ceilings, their errors were 0.004 and 0.187 &mdash; opposite ends of the
+scale the raw scores put next to each other.</p>
+<p>The transferable rule is narrow and mechanical: <strong>when a statistic is a maximum
+subject to margins that vary between conditions, compare the slack, not the statistic.</strong>
+And the general shape is &sect;2.1, &sect;2.3 and &sect;2.7 again &mdash; a reference point
+that exists but is not the one the claim is about. This is its fourth distinct instance here,
+which is why it is recorded as a class rather than as four separate mistakes.</p>
 
 <h2>3. Credit assignment and interference</h2>
 <p>Teaching a second, conflicting vowel target destroys the first. The surviving fraction
@@ -596,7 +626,7 @@ power law with exponent about 0.61. Moving delivery by a factor requires moving 
 a larger factor, which closes the naming line quantitatively rather than by argument: a
 commitment brake moved the aligned bias 1.07&times; where 6.2&times; was needed.</p>
 
-<h3>6.3 The derived index gap has no surviving cause</h3>
+<h3>6.3 The derived index gap is two different results, and only one is unexplained</h3>
 <p>The creature derives its own context from an auditory rate average, and the resulting
 index is reliably <em>worse</em> when the teaching target tracks the heard word than when
 it is fixed, on 18 of 18 creatures &mdash; a gap of
@@ -604,7 +634,31 @@ it is fixed, on 18 of 18 creatures &mdash; a gap of
 three are dead: gate corruption has the wrong sign; silencing self-audition does not close
 the gap but <em>widens</em> it by 0.037&nbsp;&plusmn;&nbsp;0.015, under a test with power to
 see a closure; and a drift account is excluded both by its own point prediction, 3.9 SE
-away, and by the learning arm decaying least. The gap is real and unexplained.</p>
+away, and by the learning arm decaying least.</p>
+<p><strong>Decomposed against the occupancy ceiling of &sect;2.13, the 18-of-18 result is
+two unrelated effects.</strong> For the auditory-rate source the two conditions have
+ceilings within 0.008 of each other, so essentially the whole
+&minus;0.056 is classification error. For the running-average source the ceilings differ by
+0.055 while the classification difference is 0.001 &mdash; both of its arms are pinned to
+their ceilings, so its identically-sized gap is <em>entirely</em> a matter of one partition
+being more lopsided than the other, with no confusion difference in it at all. The gap is
+real in both; it is the same number for different reasons, and no single account can be
+correct for both.</p>
+<p>What remains unexplained is therefore narrower than the original statement: one
+classification gap, in one source, between two arms that share the clustering rule, the
+feature that rule reads, and the distribution of that feature. <strong>Any candidate that
+is a property of the rule is excluded structurally</strong> &mdash; it would shift both arms
+equally and cannot produce a difference between them &mdash; which retires two of the
+candidates on the list without measuring either.</p>
+<p>One candidate survives that filter and had been missed because of where it lives. The
+window in which the partition accumulates its feature, and the moment it commits an update,
+are decided by whether the creature&rsquo;s <em>own larynx</em> is below its setpoint
+&mdash; a deliberate choice, since vocal silence marks listening where auditory activity
+does not. In the condition that produces a word-dependent voice that boundary becomes
+word-correlated, which is a contaminant the partition can latch onto; and because it is an
+internal read of motor rate, silencing self-audition does not touch it. The intervention
+that refused the self-contamination account cut the acoustic path only. This is not yet
+measured, and it is recorded here as the one place the remaining gap can still be.</p>
 <p>Two side results survived that line. Deafening improves the index in the control arm
 only (+0.030&nbsp;&plusmn;&nbsp;0.004, 7.1 SE), and makes the tracking arm&rsquo;s partition
 more lopsided (+0.066&nbsp;&plusmn;&nbsp;0.018, 3.7 SE). Separately, the derived context
@@ -672,6 +726,14 @@ is excluded. What &sect;4.2 claims is narrower and is included: in this system t
 population activity to behaviour is <em>analytically known rather than fitted</em>, so the
 potent direction can be differentiated instead of estimated, it is state-dependent, and its
 sign &mdash; not its magnitude &mdash; is what the measurements require.</p>
+<p class="note">The same line, drawn once more for &sect;2.13. The scoring rule is Kuhn and
+Munkres&rsquo;s assignment problem and is excluded; that a uniform cluster prior hurts on
+imbalanced data is Assran and colleagues&rsquo; and is excluded. What is included is the
+consequence of fixing that score&rsquo;s margins &mdash; the ceiling, its exactness, and the
+fact that it splits a result this project had published as one effect into two with
+different mechanisms. The bound is elementary once stated; nobody here had stated it, and
+the cost of not stating it was a candidate priced against the wrong arm by a factor of
+twenty-five.</p>
 <table>
 <tr><th>Project result</th><th>External antecedent</th></tr>
 <tr><td>Interference as a failure of contextual inference; a per-neuron mask should therefore help</td><td>Heald, Lengyel &amp; Wolpert, COIN</td></tr>
@@ -686,7 +748,10 @@ sign &mdash; not its magnitude &mdash; is what the measurements require.</p>
 <tr><td>Behaviour depending on output-potent and not output-null dimensions of a population code</td><td>Kaufman, Churchland, Ryu &amp; Shenoy (2014)</td></tr>
 <tr><td>Activity-dependent myelination as a consolidation mechanism, and its post-training window</td><td>The oligodendroglia literature, cited by title and DOI</td></tr>
 <tr><td>An astrocyte-gated multi-timescale rule as a remedy for catastrophic forgetting</td><td>Astrocyte-gated multi-timescale plasticity (2026)</td></tr>
-<tr class="last"><td>Contexts lying on a continuum rather than being discrete slots</td><td>Heald, Lengyel &amp; Wolpert (2023)</td></tr>
+<tr><td>Contexts lying on a continuum rather than being discrete slots</td><td>Heald, Lengyel &amp; Wolpert (2023)</td></tr>
+<tr><td>Best-permutation agreement as the way to score an unsupervised partition, and its exact solution</td><td>Kuhn (1955); Munkres (1957), after K&#337;nig and Egerv&aacute;ry</td></tr>
+<tr><td>A uniform cluster prior helping on balanced data and hurting on imbalanced data</td><td>Assran et al. (2023)</td></tr>
+<tr class="last"><td>The online prototype update whose rate is 1/wins, and the win-balance penalty beside it</td><td>MacQueen (1967); DeSieno (1988)</td></tr>
 </table>
 
 </body></html>
