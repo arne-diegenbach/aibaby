@@ -15378,6 +15378,81 @@ habit: trusting a name to identify a condition. §2.12 was written about leads, 
 the archive version of it.
 
 
+### The crossing does not happen: extent is a second axis, gated by potency
+
+The pre-registered test from the previous tick, and the first time two independent families
+of this project have been asked to predict each other. `credgate` at 12M on
+`credgate-318211.toml`, four arms × 32 creatures, gate passed 15:21 with hash
+`ad96f882becbee92`, and a liveness check before the long run confirming exactly the four
+intended arms execute.
+
+**Four arms reproduced bit-identically against earlier runs, per creature, all exact:**
+
+```
+  bcast-AB   cross vs brake run     +0.0000 +/- 0.0000   exact   n=32
+  bcast-AB   cross vs potq run      +0.0000 +/- 0.0000   exact   n=32
+  oracle-AB  cross vs gapend run    +0.0000 +/- 0.0000   exact   n=32
+  pot-q-opp  cross vs potq run      +0.0000 +/- 0.0000   exact   n=32
+```
+
+`bcast-AB` is now on its fourth 12M run and `oracle-AB` its third. Arm-independent seeding
+is verified on five separate arms.
+
+#### The square is complete
+
+| | reward reaches 7/14 | reward reaches 4/14 |
+|---|---|---|
+| **lever end** | +0.1964 ± 0.0149 | +0.1245 ± 0.0046 |
+| **opposite end** | +0.0265 ± 0.0041 | +0.0289 ± 0.0054 |
+
+```
+  the lever end, 7 -> 4   top4 - top7   -0.0719 +/- 0.0132   (-5.4 SE)
+  the wrong end, 7 -> 4   bot4 - bot7   +0.0024 +/- 0.0066   (+0.4 SE)
+    on `taught` alone                   +0.0025 +/- 0.0088   (+0.3 SE)
+  both wrong-end arms against the top7 cell:  -0.1698 (-11.0 SE) and -0.1674 (-11.6 SE)
+```
+
+**The crossing is refused, and refused at power.** The pre-registered "one quantity" account
+said extent is signed potency summed over the retained set, so restricting *fewer*
+wrong-end neurons should do *less* damage. It does not: the half and the quarter at the
+wrong end are indistinguishable at +0.4 SE. The standard error on that contrast is 0.0066,
+so a step the size of the one the lever end shows — −0.0719 — would have read **−10.8 SE
+here**. This is a measured null, not an unresolved one.
+
+**So extent is a genuine second axis, and potency gates it.** The two-axis reading stands in
+the form §4.6 of the discoveries document gives it: potency decides *whether* extent costs
+anything, and given nonzero potency extent then costs until it saturates. At the wrong end
+there is no potency for extent to act on, and extent accordingly does nothing — not a
+reversal, nothing.
+
+**And the other family called it.** The freezing family's bottom ladder is flat at any size
+(−0.3, +0.2, −0.1 SE at 2, 4 and 7 neurons, `blockanchor` 2026-09-15), which was recorded
+yesterday as predicting flat here. It predicted correctly, through the opposite manipulation
+— freezing neurons rather than confining the reward to them — three weeks earlier. **Two
+families now agree on every point of this geometry.** That is worth more than either on its
+own, and it is the reason to stop here rather than look for a third.
+
+**The arms are not copies, which this project checks rather than assumes.** `anti-AB` and
+`pot-q-opp` differ on all 32 seeds — seed 1 reads taught 0.9693 against 1.0525, and the
+per-creature spread runs to 0.08 — so the coincidence of their means is a real null on a
+real contrast, not two labels on one treatment. Both report `agree 0.000`, correct for masks
+aimed away from the live lesson, and both differ sharply from the lever-end cell.
+
+#### It also settles this morning's correction in the direction the correction claimed
+
+`anti-AB` had one prior measurement, −0.0007 ± 0.0056, from a pilot whose own `bcast`
+gained +0.0363. I removed it from the published ladder as not comparable, and said the
+crossing it appeared to show was an artefact of comparing across tick counts. **At 12M
+`anti-AB` gains +0.0265.** Had the pilot row stayed in the table, the write-up would have
+carried a crossing of +0.0296 that does not exist; the real value is +0.0024, thirteen times
+smaller and in the noise. The cost of that correction was an hour and a rebuilt document,
+and it bought the difference between a finding and an artefact.
+
+**Housekeeping.** The default live set is restored, the wrong-end arms parked, and the
+restored state re-gated with a log that postdates its source — and verified by running the
+experiment, which executes exactly the six default arms.
+
+
 ## Layout
 
 ```

@@ -18441,6 +18441,56 @@ const CGArm kCGArms[] = {
     {"half-up-keep", 1u, true,  0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, true, 0.0, 0.0f, -1.0f, 1},
     {"half-lo-AB",   1u, false, 0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, true, 0.0, 0.0f, -1.0f, 0},
     {"half-lo-keep", 1u, true,  0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, true, 0.0, 0.0f, -1.0f, 0},
+    // ===================================================================================
+    // THE CROSSING (2026-10-08). LIVE SET: bcast-AB, oracle-AB, anti-AB, pot-q-opp.
+    //
+    // THE 2x2 THIS COMPLETES. `pot-q` established two axes on the reward mask: at matched
+    // extent, aim is worth +0.0956 +/- 0.0063 (15.2 SE); at matched aim, going from 7/14 to
+    // 4/14 costs -0.0719 +/- 0.0132 (-5.4 SE). Three cells of the extent x end square are
+    // measured at 12M -- top7 (oracle, +0.1964), top4 (pot-q, +0.1245), bot4 (pot-q-opp,
+    // +0.0289). THE FOURTH, bot7, HAS NO 12M MEASUREMENT: `anti-AB` ran once, in
+    // credgate-2x2-pilot.log, whose own bcast-AB gains +0.0363 against +0.3618 here. A
+    // number from that run cannot be put beside these; doing so was corrected in d1db453.
+    //
+    // WHY THE MISSING CELL IS THE INTERESTING ONE. Extent at the RIGHT end costs, because
+    // dropping neurons drops signed potency the lesson was using. At the WRONG end the
+    // retained neurons have potency of the opposite sign -- rewarding them drives the output
+    // AWAY from the target -- so extent there should act in the OPPOSITE direction:
+    // restricting FEWER wrong neurons should do LESS damage. If that holds, extent is not a
+    // second axis at all; it is signed potency summed over the retained set, and the two
+    // "axes" are one quantity. If bot4 and bot7 are equal and both ~0, they are genuinely two.
+    //
+    // THE OTHER FAMILY HAS ALREADY VOTED, WHICH IS WHAT MAKES THIS SHARP. The freezing
+    // family's bottom ladder is FLAT AT ANY SIZE: bot4-bot2 -0.3 SE, bot7-bot4 +0.2 SE,
+    // bot7-bot2 -0.1 SE, at SEs small enough to have resolved the top ladder's -6.1 SE step
+    // (blockanchor/blockfloor, 2026-09-15, see aibaby-leverage-at-one-end). So the freezing
+    // family PREDICTS FLAT for the wrong end, and a crossing here would be the two families
+    // disagreeing -- which is a finding either way, since they agreed on everything else.
+    //
+    // PRE-REGISTERED, on `gained` = before - taught, paired on seed, jackknife SE:
+    //   ONE QUANTITY (extent is signed): pot-q-opp - anti-AB is POSITIVE past 3 SE. The
+    //     quarter at the wrong end does less damage than the half at the wrong end.
+    //   TWO AXES (and the freezing family's prediction): pot-q-opp - anti-AB under ~2 SE,
+    //     both arms near zero against bcast's +0.3618, matching the flat bottom ladder.
+    //   WHAT REFUSES BOTH: pot-q-opp - anti-AB NEGATIVE past 3 SE -- extent costing in the
+    //     ordinary direction even where the retained neurons are the wrong ones. No account
+    //     on the table produces that, so it would reopen the whole two-axis reading.
+    //
+    // THE ANCHORS, and there are two independent ones because the comparison is new.
+    //   bcast-AB  must read taught 0.6533 / after 0.9047 / gained +0.3618 (3 prior 12M runs,
+    //             and +0.0000 +/- 0.0000 per-creature against credgate-brake-12m.log).
+    //   oracle-AB must read taught 0.8646 / after 1.0395 / gained +0.1964 (bit-identical in
+    //             credgate-318211-12m.log and credgate-gapend-12m.log), AND it is the top7
+    //             cell, so it is anchor and datum at once.
+    // If either fails, the comparison is not to a known baseline and nothing here is safe.
+    //
+    // COST: 4 arms x 32 = 128 sessions, ~4.6h at 12M. The -keep arms are parked because the
+    // question is LEARNING (err_taught); retention for these cells gets paid for only if the
+    // learning result warrants it. `pot-q` is parked and read cross-run instead -- its leg of
+    // the square is already measured twice and the seed is arm-independent, verified on four
+    // separate arms now. RESTORE the default live set (bcast + oracle + shuf) in the commit
+    // that writes this up.
+    // ===================================================================================
     {"anti-AB",      1u, false, 0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, true, 0.0, 0.0f, -1.0f, -1, true},
     {"anti-keep",    1u, true,  0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, true, 0.0, 0.0f, -1.0f, -1, true},
     {"mid-AB",       1u, false, 0u, 0.0f, 2u, -1, 0.0f, 0u, 0u, true, 0.0, 0.0f, -1.0f, -1, false, true},

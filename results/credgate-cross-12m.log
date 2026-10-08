@@ -1,0 +1,385 @@
+  [57/1728] seed 1 oracle-AB     before 1.0539 taught 0.8519 after 0.9521 plast 0.6759 agree 1.00
+  [53/1728] seed 0 pot-q-opp     before 1.0988 taught 1.1122 after 1.1269 plast 0.6770 agree 0.00
+  [153/1728] seed 2 anti-AB       before 1.0477 taught 1.0448 after 1.0683 plast 0.6761 agree 0.00
+  [3/1728] seed 0 oracle-AB     before 1.0830 taught 0.9562 after 0.9292 plast 0.6785 agree 1.00
+  [45/1728] seed 0 anti-AB       before 1.0705 taught 1.0343 after 1.0976 plast 0.6765 agree 0.00
+  [161/1728] seed 2 pot-q-opp     before 1.0833 taught 1.0504 after 1.1017 plast 0.6749 agree 0.00
+  [107/1728] seed 1 pot-q-opp     before 1.0764 taught 1.0525 after 1.0725 plast 0.6797 agree 0.00
+  [165/1728] seed 3 oracle-AB     before 1.0488 taught 0.8351 after 1.0459 plast 0.6719 agree 1.00
+  [99/1728] seed 1 anti-AB       before 1.0564 taught 0.9693 after 0.9194 plast 0.6792 agree 0.00
+  [111/1728] seed 2 oracle-AB     before 1.0432 taught 0.7883 after 0.9640 plast 0.6703 agree 1.00
+  [1/1728] seed 0 bcast-AB      before 0.9629 taught 0.5834 after 0.8510 plast 0.6736 agree 0.00
+  [55/1728] seed 1 bcast-AB      before 0.9755 taught 0.4112 after 0.7722 plast 0.6735 agree 0.00
+  [163/1728] seed 3 bcast-AB      before 0.9823 taught 0.4758 after 0.8463 plast 0.6742 agree 0.00
+  [109/1728] seed 2 bcast-AB      before 1.1901 taught 1.2780 after 1.2700 plast 0.6476 agree 0.00
+  [207/1728] seed 3 anti-AB       before 1.0626 taught 1.0186 after 0.9354 plast 0.6784 agree 0.00
+  [269/1728] seed 4 pot-q-opp     before 1.0642 taught 1.0419 after 1.0791 plast 0.6768 agree 0.00
+  [215/1728] seed 3 pot-q-opp     before 1.0635 taught 1.0519 after 1.0856 plast 0.6768 agree 0.00
+  [219/1728] seed 4 oracle-AB     before 1.0909 taught 1.0735 after 1.1179 plast 0.6759 agree 1.00
+  [261/1728] seed 4 anti-AB       before 1.0546 taught 0.9953 after 1.0463 plast 0.6765 agree 0.00
+  [315/1728] seed 5 anti-AB       before 1.0884 taught 1.0590 after 1.0948 plast 0.6774 agree 0.00
+  [323/1728] seed 5 pot-q-opp     before 1.0963 taught 1.0664 after 1.0946 plast 0.6804 agree 0.00
+  [273/1728] seed 5 oracle-AB     before 1.0640 taught 0.8219 after 1.0918 plast 0.6747 agree 1.00
+  [327/1728] seed 6 oracle-AB     before 1.0414 taught 0.8211 after 1.0744 plast 0.6757 agree 1.00
+  [271/1728] seed 5 bcast-AB      before 1.0281 taught 0.6455 after 0.9043 plast 0.6750 agree 0.00
+  [217/1728] seed 4 bcast-AB      before 1.0153 taught 0.6365 after 0.8491 plast 0.6736 agree 0.00
+  [369/1728] seed 6 anti-AB       before 1.0689 taught 1.0564 after 1.1317 plast 0.6753 agree 0.00
+  [377/1728] seed 6 pot-q-opp     before 1.0674 taught 1.0530 after 1.0535 plast 0.6764 agree 0.00
+  [325/1728] seed 6 bcast-AB      before 1.1352 taught 1.0240 after 1.0627 plast 0.6485 agree 0.00
+  [381/1728] seed 7 oracle-AB     before 1.1005 taught 0.9199 after 0.9715 plast 0.6781 agree 1.00
+  [431/1728] seed 7 pot-q-opp     before 1.0737 taught 1.0505 after 1.0438 plast 0.6777 agree 0.00
+  [435/1728] seed 8 oracle-AB     before 1.0598 taught 0.8728 after 0.9973 plast 0.6750 agree 1.00
+  [423/1728] seed 7 anti-AB       before 1.0822 taught 1.0558 after 1.1484 plast 0.6776 agree 0.00
+  [477/1728] seed 8 anti-AB       before 1.0685 taught 1.0580 after 1.0853 plast 0.6795 agree 0.00
+  [485/1728] seed 8 pot-q-opp     before 1.0607 taught 1.0528 after 1.0848 plast 0.6757 agree 0.00
+  [489/1728] seed 9 oracle-AB     before 1.0459 taught 1.0347 after 1.1085 plast 0.6735 agree 1.00
+  [531/1728] seed 9 anti-AB       before 1.0702 taught 1.0454 after 1.0713 plast 0.6763 agree 0.00
+  [539/1728] seed 9 pot-q-opp     before 1.0342 taught 1.0242 after 1.0505 plast 0.6758 agree 0.00
+  [379/1728] seed 7 bcast-AB      before 1.1582 taught 1.1898 after 1.1596 plast 0.6449 agree 0.00
+  [487/1728] seed 9 bcast-AB      before 0.9525 taught 0.5909 after 0.8504 plast 0.6743 agree 0.00
+  [433/1728] seed 8 bcast-AB      before 0.9920 taught 0.5846 after 0.6468 plast 0.6740 agree 0.00
+  [543/1728] seed 10 oracle-AB     before 1.0165 taught 0.7890 after 1.0525 plast 0.6752 agree 1.00
+  [541/1728] seed 10 bcast-AB      before 0.9453 taught 0.4169 after 1.1017 plast 0.6727 agree 0.00
+  [585/1728] seed 10 anti-AB       before 1.0445 taught 1.0455 after 1.1352 plast 0.6764 agree 0.00
+  [593/1728] seed 10 pot-q-opp     before 1.0965 taught 1.0461 after 1.0730 plast 0.6794 agree 0.00
+  [639/1728] seed 11 anti-AB       before 1.1267 taught 1.1380 after 1.1641 plast 0.6776 agree 0.00
+  [647/1728] seed 11 pot-q-opp     before 1.0711 taught 1.0640 after 1.0868 plast 0.6770 agree 0.00
+  [597/1728] seed 11 oracle-AB     before 1.0965 taught 1.0711 after 1.1250 plast 0.6779 agree 1.00
+  [651/1728] seed 12 oracle-AB     before 1.0159 taught 0.8648 after 1.0659 plast 0.6740 agree 1.00
+  [693/1728] seed 12 anti-AB       before 1.0574 taught 1.0542 after 1.1287 plast 0.6769 agree 0.00
+  [701/1728] seed 12 pot-q-opp     before 1.0558 taught 0.9991 after 1.0334 plast 0.6765 agree 0.00
+  [649/1728] seed 12 bcast-AB      before 1.0035 taught 0.5815 after 0.7162 plast 0.6744 agree 0.00
+  [595/1728] seed 11 bcast-AB      before 1.1407 taught 1.2881 after 1.3163 plast 0.6487 agree 0.00
+  [705/1728] seed 13 oracle-AB     before 1.0842 taught 0.7843 after 0.9621 plast 0.6816 agree 1.00
+  [755/1728] seed 13 pot-q-opp     before 1.0956 taught 1.0720 after 1.0593 plast 0.6796 agree 0.00
+  [747/1728] seed 13 anti-AB       before 1.0850 taught 1.0172 after 0.9755 plast 0.6797 agree 0.00
+  [703/1728] seed 13 bcast-AB      before 1.1511 taught 1.1484 after 1.2003 plast 0.6540 agree 0.00
+  [809/1728] seed 14 pot-q-opp     before 1.0774 taught 1.0536 after 1.0856 plast 0.6797 agree 0.00
+  [801/1728] seed 14 anti-AB       before 1.0834 taught 1.0612 after 1.0914 plast 0.6797 agree 0.00
+  [759/1728] seed 14 oracle-AB     before 1.0452 taught 0.8177 after 0.9526 plast 0.6747 agree 1.00
+  [757/1728] seed 14 bcast-AB      before 0.9759 taught 0.5240 after 0.8744 plast 0.6766 agree 0.00
+  [813/1728] seed 15 oracle-AB     before 1.0714 taught 0.7591 after 1.0673 plast 0.6753 agree 1.00
+  [855/1728] seed 15 anti-AB       before 1.0818 taught 1.0611 after 1.0990 plast 0.6761 agree 0.00
+  [863/1728] seed 15 pot-q-opp     before 1.0708 taught 0.9834 after 1.0778 plast 0.6756 agree 0.00
+  [811/1728] seed 15 bcast-AB      before 0.9979 taught 0.6533 after 0.9629 plast 0.6780 agree 0.00
+  [867/1728] seed 16 oracle-AB     before 1.0867 taught 0.9937 after 1.0691 plast 0.6795 agree 1.00
+  [909/1728] seed 16 anti-AB       before 1.0808 taught 1.0447 after 1.0936 plast 0.6794 agree 0.00
+  [917/1728] seed 16 pot-q-opp     before 1.1219 taught 1.1086 after 1.1546 plast 0.6794 agree 0.00
+  [865/1728] seed 16 bcast-AB      before 0.9754 taught 0.6062 after 1.1286 plast 0.6757 agree 0.00
+  [921/1728] seed 17 oracle-AB     before 1.0590 taught 0.7993 after 1.0694 plast 0.6750 agree 1.00
+  [919/1728] seed 17 bcast-AB      before 0.9416 taught 0.4519 after 0.5944 plast 0.6767 agree 0.00
+  [963/1728] seed 17 anti-AB       before 1.0664 taught 1.0552 after 1.1088 plast 0.6787 agree 0.00
+  [971/1728] seed 17 pot-q-opp     before 1.0668 taught 1.0351 after 1.0696 plast 0.6782 agree 0.00
+  [975/1728] seed 18 oracle-AB     before 1.0945 taught 1.0381 after 1.1147 plast 0.6795 agree 1.00
+  [1017/1728] seed 18 anti-AB       before 1.0943 taught 1.0699 after 1.1111 plast 0.6792 agree 0.00
+  [1029/1728] seed 19 oracle-AB     before 1.0759 taught 0.9473 after 0.9429 plast 0.6847 agree 1.00
+  [1025/1728] seed 18 pot-q-opp     before 1.1070 taught 1.1194 after 1.1534 plast 0.6800 agree 0.00
+  [973/1728] seed 18 bcast-AB      before 0.9678 taught 0.4892 after 0.9222 plast 0.6753 agree 0.00
+  [1071/1728] seed 19 anti-AB       before 1.0793 taught 1.0636 after 1.1084 plast 0.6838 agree 0.00
+  [1079/1728] seed 19 pot-q-opp     before 1.1083 taught 1.0989 after 1.1638 plast 0.6843 agree 0.00
+  [1027/1728] seed 19 bcast-AB      before 1.0017 taught 0.6610 after 0.8699 plast 0.6823 agree 0.00
+  [1083/1728] seed 20 oracle-AB     before 1.0618 taught 0.7558 after 1.0679 plast 0.6766 agree 1.00
+  [1125/1728] seed 20 anti-AB       before 1.0765 taught 1.0540 after 1.1331 plast 0.6752 agree 0.00
+  [1081/1728] seed 20 bcast-AB      before 1.0027 taught 0.6528 after 0.8829 plast 0.6694 agree 0.00
+  [1133/1728] seed 20 pot-q-opp     before 1.0706 taught 1.0646 after 1.1092 plast 0.6817 agree 0.00
+  [1137/1728] seed 21 oracle-AB     before 1.0573 taught 0.8654 after 1.0233 plast 0.6760 agree 1.00
+  [1179/1728] seed 21 anti-AB       before 1.0822 taught 1.0108 after 0.9867 plast 0.6774 agree 0.00
+  [1135/1728] seed 21 bcast-AB      before 0.9973 taught 0.6178 after 0.8111 plast 0.6708 agree 0.00
+  [1187/1728] seed 21 pot-q-opp     before 1.0753 taught 0.9900 after 1.0612 plast 0.6744 agree 0.00
+  [1233/1728] seed 22 anti-AB       before 1.1214 taught 1.1329 after 1.1727 plast 0.6768 agree 0.00
+  [1191/1728] seed 22 oracle-AB     before 1.0588 taught 0.7606 after 1.0658 plast 0.6740 agree 1.00
+  [1189/1728] seed 22 bcast-AB      before 0.9974 taught 0.5889 after 0.8354 plast 0.6753 agree 0.00
+  [1241/1728] seed 22 pot-q-opp     before 1.0596 taught 1.0118 after 1.0819 plast 0.6769 agree 0.00
+  [1245/1728] seed 23 oracle-AB     before 1.1005 taught 0.9269 after 0.9646 plast 0.6768 agree 1.00
+  [1287/1728] seed 23 anti-AB       before 1.0952 taught 1.0774 after 1.0636 plast 0.6770 agree 0.00
+  [1243/1728] seed 23 bcast-AB      before 1.0238 taught 0.5838 after 0.8486 plast 0.6801 agree 0.00
+  [1295/1728] seed 23 pot-q-opp     before 1.0869 taught 0.9551 after 1.0663 plast 0.6735 agree 0.00
+  [1297/1728] seed 24 bcast-AB      before 1.0063 taught 0.5721 after 0.8803 plast 0.6778 agree 0.00
+  [1299/1728] seed 24 oracle-AB     before 1.0560 taught 0.7785 after 1.0394 plast 0.6783 agree 1.00
+  [1341/1728] seed 24 anti-AB       before 1.1193 taught 1.0739 after 1.1322 plast 0.6830 agree 0.00
+  [1349/1728] seed 24 pot-q-opp     before 1.0743 taught 1.0594 after 1.0983 plast 0.6825 agree 0.00
+  [1395/1728] seed 25 anti-AB       before 1.0711 taught 1.0206 after 0.9977 plast 0.6721 agree 0.00
+  [1403/1728] seed 25 pot-q-opp     before 1.0575 taught 1.0080 after 1.0635 plast 0.6745 agree 0.00
+  [1353/1728] seed 25 oracle-AB     before 1.0080 taught 0.7493 after 1.0652 plast 0.6702 agree 1.00
+  [1351/1728] seed 25 bcast-AB      before 0.9680 taught 0.6261 after 0.9415 plast 0.6678 agree 0.00
+  [1407/1728] seed 26 oracle-AB     before 1.0516 taught 0.8686 after 1.0701 plast 0.6790 agree 1.00
+  [1449/1728] seed 26 anti-AB       before 1.0665 taught 1.0591 after 1.1228 plast 0.6793 agree 0.00
+  [1405/1728] seed 26 bcast-AB      before 1.0155 taught 0.4777 after 0.8410 plast 0.6764 agree 0.00
+  [1457/1728] seed 26 pot-q-opp     before 1.0614 taught 1.0662 after 1.0817 plast 0.6785 agree 0.00
+  [1461/1728] seed 27 oracle-AB     before 1.0504 taught 0.7962 after 1.0193 plast 0.6809 agree 1.00
+  [1511/1728] seed 27 pot-q-opp     before 1.0675 taught 1.0358 after 1.0683 plast 0.6806 agree 0.00
+  [1503/1728] seed 27 anti-AB       before 1.0791 taught 1.0314 after 1.0257 plast 0.6795 agree 0.00
+  [1459/1728] seed 27 bcast-AB      before 0.9758 taught 0.4379 after 0.7804 plast 0.6785 agree 0.00
+  [1557/1728] seed 28 anti-AB       before 1.1070 taught 1.0811 after 1.1391 plast 0.6726 agree 0.00
+  [1515/1728] seed 28 oracle-AB     before 1.0664 taught 0.8496 after 1.0611 plast 0.6711 agree 1.00
+  [1565/1728] seed 28 pot-q-opp     before 1.0929 taught 1.0669 after 1.0764 plast 0.6720 agree 0.00
+  [1611/1728] seed 29 anti-AB       before 1.0836 taught 1.0545 after 1.0734 plast 0.6771 agree 0.00
+  [1513/1728] seed 28 bcast-AB      before 0.9681 taught 0.3458 after 0.7944 plast 0.6707 agree 0.00
+  [1567/1728] seed 29 bcast-AB      before 1.0094 taught 0.5791 after 0.7678 plast 0.6762 agree 0.00
+  [1569/1728] seed 29 oracle-AB     before 1.0686 taught 0.8149 after 1.0812 plast 0.6698 agree 1.00
+  [1665/1728] seed 30 anti-AB       before 1.0426 taught 1.0247 after 0.9333 plast 0.6797 agree 0.00
+  [1623/1728] seed 30 oracle-AB     before 1.0230 taught 0.8615 after 1.0703 plast 0.6763 agree 1.00
+  [1619/1728] seed 29 pot-q-opp     before 1.0809 taught 1.0244 after 1.0734 plast 0.6750 agree 0.00
+  [1673/1728] seed 30 pot-q-opp     before 1.0449 taught 1.0163 after 1.0061 plast 0.6793 agree 0.00
+  [1621/1728] seed 30 bcast-AB      before 1.0007 taught 0.6407 after 0.9530 plast 0.6727 agree 0.00
+  [1675/1728] seed 31 bcast-AB      before 1.0247 taught 0.5426 after 0.7149 plast 0.6755 agree 0.00
+  [1719/1728] seed 31 anti-AB       before 1.0769 taught 1.0732 after 1.0802 plast 0.6804 agree 0.00
+  [1677/1728] seed 31 oracle-AB     before 1.0709 taught 0.8000 after 1.0618 plast 0.6755 agree 1.00
+  [1727/1728] seed 31 pot-q-opp     before 1.1248 taught 1.1264 after 1.1280 plast 0.6802 agree 0.00
+experiment: credgate
+  instrument        credgate   trial seed 0000000000041da4   4285 trials
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  seed family       offset 904837 -> first creature 000000000012a988 (FRESH)
+  what the wipe IS  not a representational collision. `capacity` found two
+                    lessons interfering while driving DISJOINT groups, and
+                    `credit-oracle` gave the reason: the groups are disjoint,
+                    the REWARD is what they share. Node perturbation nudges
+                    bias_[i] for EVERY neuron in the module on one broadcast
+                    scalar, so teaching B random-walks A's setting.
+  the ceiling       a per-neuron reward mask gives retention 1.03 vs 0.84
+                    broadcast, at ~30% of the learning rate. But it is an
+                    ORACLE: the host knows which lesson is live.
+  the question      can the creature's OWN derived context drive that mask?
+                    `ema-index` derives a usable context off the ear rate EMA
+                    at 16/18; `ctxretain` gated on it and the index never
+                    separated (0.23/0.23). The halves have never been joined.
+  halves MEASURED   `silences-the-wrong-side`: a LOW target works by
+                    suppressing the UPPER half, a HIGH one the LOWER. A is
+                    f1 320 and B is 850, so A takes the UPPER and B the LOWER.
+
+  PRE-REGISTERED
+    AGREEMENT FIRST, before any retention number is read. `credit_agree` is
+      the fraction of trials where the mask landed on the half the LIVE lesson
+      wants. oracle must read 100% by construction -- if it does not, the
+      mechanism is miswired and nothing else is readable. shuf must sit at
+      ~50%. DERIVED IS THE WHOLE QUESTION: at ~50% the index carries nothing
+      about which lesson is live and a null retention result says nothing
+      about gating, only about this index.
+    PRIMARY         the AB-minus-keep gap per mode. oracle should shrink it
+                    (that is credit-oracle replicating); derived shrinking it
+                    too is the finding.
+    SPECIFICITY     `shuf` must NOT shrink it. If a coin flip works as well as
+                    the index, what helps is the masking itself -- halving the
+                    write -- and not credit assignment at all.
+    THE COST        the oracle bought 1.03 at ~30% of the learning rate, so
+                    err_taught is expected to DEGRADE under every mask. A gap
+                    that closes while err_taught collapses is the `regionband`
+                    failure again, and it is refused the same way.
+
+
+  arm           mode  gate  err TAUGHT (A)     err AFTER (A kept?) GAINED           EROSION          agree  slot0 t/g   SWITCHES teach/gap @first
+  bcast-AB      0     0     0.6533 +/- 0.0440     0.9047 +/- 0.0303     +0.3618 +/- 0.0334   +0.2514 +/- 0.0278   0.000  0.195/0.204     1907/    764 @5
+  oracle-AB     1     0     0.8646 +/- 0.0168     1.0395 +/- 0.0100     +0.1964 +/- 0.0149   +0.1749 +/- 0.0178   1.000  0.313/0.300     2683/   1182 @5
+  anti-AB       1     0     1.0513 +/- 0.0058     1.0773 +/- 0.0120     +0.0265 +/- 0.0041   +0.0261 +/- 0.0083   0.000  0.256/0.301     3550/   1334 @5
+  pot-q-opp     1     0     1.0488 +/- 0.0070     1.0833 +/- 0.0061     +0.0289 +/- 0.0054   +0.0345 +/- 0.0049   0.000  0.280/0.263     3064/   1153 @5
+
+  RETENTION -- the fraction of the GAIN that survived, which is what
+  credit-oracle scored (0.84 broadcast -> 1.03 targeted). Unlike the raw
+  gap this is not confounded by the mask's learning-rate cost.
+    broadcast  not in this focus set
+    oracle     not in this focus set
+    derived    not in this focus set
+    shuffled   not in this focus set
+    half-up    not in this focus set
+    half-lo    not in this focus set
+    anti       not in this focus set
+    middle     not in this focus set
+    nobrake    not in this focus set
+    pot-q      not in this focus set
+    pot-q-opp  not in this focus set
+    oracle     AB retention vs broadcast: +0.182 +/- 0.663  (+0.3 SE)
+    anti       AB retention vs broadcast: -1.141 +/- 1.106  (-1.0 SE)
+    pot-q-opp  AB retention vs broadcast: -0.421 +/- 0.729  (-0.6 SE)
+      ^ MEAN OF PER-CREATURE RATIOS. Read the ratio-of-sums below before
+        quoting any of these: the denominator above is per creature and
+        floored at 1e-6, so one creature that barely learned moves it.
+
+  RETENTION AS A RATIO OF SUMS -- one denominator per arm, jackknife SE
+  over creatures, and the creatures PAIRED across arms. Swept over a floor
+  on the per-creature gain, because the creatures that make the mean of
+  ratios explode are exactly the ones that never learned the lesson.
+    gain floor 0.00
+      broadcast  AB +0.320 +/- 0.052   n 29
+      oracle     AB +0.109 +/- 0.057   n 32   vs broadcast -0.211 +/- 0.074  (-2.8 SE)
+      derived    not in this focus set
+      shuffled   not in this focus set
+      half-up    not in this focus set
+      half-lo    not in this focus set
+      anti       AB +0.223 +/- 0.358   n 29   vs broadcast -0.097 +/- 0.369  (-0.3 SE)
+      middle     not in this focus set
+      nobrake    not in this focus set
+      pot-q      not in this focus set
+      pot-q-opp  AB -0.084 +/- 0.135   n 28   vs broadcast -0.404 +/- 0.147  (-2.8 SE)
+    gain floor 0.05
+      broadcast  AB +0.324 +/- 0.052   n 28
+      oracle     AB +0.129 +/- 0.057   n 29   vs broadcast -0.195 +/- 0.073  (-2.7 SE)
+      derived    not in this focus set
+      shuffled   not in this focus set
+      half-up    not in this focus set
+      half-lo    not in this focus set
+      anti       AB +1.261 +/- 0.277   n 5   vs broadcast +0.937 +/- 0.285  (+3.3 SE)
+      middle     not in this focus set
+      nobrake    not in this focus set
+      pot-q      not in this focus set
+      pot-q-opp  AB +0.173 +/- 0.074   n 6   vs broadcast -0.151 +/- 0.094  (-1.6 SE)
+    gain floor 0.10
+      broadcast  AB +0.324 +/- 0.052   n 28
+      oracle     AB +0.133 +/- 0.058   n 27   vs broadcast -0.191 +/- 0.074  (-2.6 SE)
+      derived    not in this focus set
+      shuffled   not in this focus set
+      half-up    not in this focus set
+      half-lo    not in this focus set
+      anti       AB too few creatures above the floor (0)
+      middle     not in this focus set
+      nobrake    not in this focus set
+      pot-q      not in this focus set
+      pot-q-opp  AB too few creatures above the floor (1)
+    gain floor 0.20
+      broadcast  AB +0.321 +/- 0.053   n 27
+      oracle     AB +0.060 +/- 0.048   n 18   vs broadcast -0.261 +/- 0.067  (-3.9 SE)
+      derived    not in this focus set
+      shuffled   not in this focus set
+      half-up    not in this focus set
+      half-lo    not in this focus set
+      anti       AB too few creatures above the floor (0)
+      middle     not in this focus set
+      nobrake    not in this focus set
+      pot-q      not in this focus set
+      pot-q-opp  AB too few creatures above the floor (0)
+    A result that holds across the floor sweep is in the mechanism. One
+    that appears only at floor 0.00 is in the creatures that never learned.
+
+    VERDICT GATES (paired ratio-of-sums, must hold at EVERY floor that
+    retains >=3 creatures in both arms; >=2 such floors needed to decide):
+      oracle     does NOT hold across the sweep    4 floor(s) evaluated
+      derived    UNDECIDABLE on this run           0 floor(s) evaluated
+      shuffled   UNDECIDABLE on this run           0 floor(s) evaluated
+      half-up    UNDECIDABLE on this run           0 floor(s) evaluated
+      half-lo    UNDECIDABLE on this run           0 floor(s) evaluated
+      anti       does NOT hold across the sweep    2 floor(s) evaluated
+      middle     UNDECIDABLE on this run           0 floor(s) evaluated
+      nobrake    UNDECIDABLE on this run           0 floor(s) evaluated
+      pot-q      UNDECIDABLE on this run           0 floor(s) evaluated
+      pot-q-opp  does NOT hold across the sweep    2 floor(s) evaluated
+
+  SEPARATION -- does the index DISTINGUISH the two lessons, regardless of
+  which slot got which name? Raw agreement cannot answer this: the slots are
+  UNLABELLED, so a fixed slot->half mapping is a coin flip per seed and
+  averages to chance however well the index separates. Scored as
+  |p(slot0 | lesson A) - p(slot0 | lesson B)|: 0 is no information, 1 is
+  perfect separation. `ctxfour` drew the same line -- a perfect index holds
+  four DISTINCTIONS, not four MAPPINGS.
+    derived-AB    too few creatures
+    derived-keep  too few creatures
+    derived2-AB   too few creatures
+    derived2-keep too few creatures
+    derived3-AB   too few creatures
+    derived3-keep too few creatures
+    A separation near 0 refutes THIS INDEX as a carrier. A separation well
+    above 0 with chance AGREEMENT means the index works and only the
+    slot->half assignment is arbitrary -- which is a fixable wiring problem,
+    not a refutation.
+
+  AGREEMENT GUARD -- did the mask land where the live lesson wanted?
+    oracle  1.000   (must be 1.000 by construction)
+    derived   --   (not in this focus set)   <- THE WHOLE QUESTION
+    shuffled   --   (not in this focus set)  <- SPECIFICITY: must sit near 0.500
+
+  PRIMARY -- the AB-minus-keep gap, per mode
+    broadcast  not in this focus set
+    oracle     not in this focus set
+    derived    not in this focus set
+    shuffled   not in this focus set
+    half-up    not in this focus set
+    half-lo    not in this focus set
+    anti       not in this focus set
+    middle     not in this focus set
+    nobrake    not in this focus set
+    pot-q      not in this focus set
+    pot-q-opp  not in this focus set
+    THE GAP IS CONFOUNDED and must not be quoted as the headline: a reward
+    mask costs learning rate, so it moves BOTH arms. Retention above is the
+    statistic `credit-oracle` used. Kept here because a gap that closes
+    while err_taught collapses is the `regionband` failure.
+
+  THE COST -- err_taught, which the oracle bought its 1.03 with
+    broadcast  not in this focus set
+    oracle     not in this focus set
+    derived    not in this focus set
+    shuffled   not in this focus set
+    half-up    not in this focus set
+    half-lo    not in this focus set
+    anti       not in this focus set
+    middle     not in this focus set
+    nobrake    not in this focus set
+    pot-q      not in this focus set
+    pot-q-opp  not in this focus set
+
+  SPECIFICITY UNTESTED: `shuf-AB`/`shuf-keep` are not in this focus set, so the control
+  that distinguishes credit assignment from merely halving the write did
+  not run. No verdict here can clear that bar.
+
+  DOES THE INDEX BUY WHAT ITS ACCURACY PREDICTS?
+    agreement 0.000  ->  predicted -1.000 of the oracle's benefit
+    delivered 0.000
+    A shortfall here would mean the mechanism fails; a match means the
+    mechanism works and the CARRIER is simply not accurate enough.
+
+  VACUITY -- not applicable: the uniform-flip arms are not in this
+  focus set, so there is no coin flip that ran and could be inert.
+  Their contrast against pin0 was settled at 12 creatures (commit
+  27944a3) and is not re-measured here.
+
+  WHERE EACH LESSON WROTE -- net rate change per half, Hz.
+  A is the teach phase (target 320, LOW); B is the gap (850, HIGH).
+  A LOW target is learned by suppressing the UPPER half, so the oracle
+  gives A the upper half and B the lower one.
+  arm          A lower   A upper     B lower   B upper  
+    bcast-AB        -1.139   -20.599      -3.938    +8.554  (32)
+    oracle-AB       +0.725   -19.788      -8.715    -2.133  (32)
+    (A upper-lower) - (B upper-lower):  bcast -31.953, oracle -27.094
+    the mask moves where the lessons write -- it is not inert
+
+  THE DROPOUT CONTRAST -- does a matched coin flip buy the gap?
+    REFUSES INDEXING: a pinned-noise gap AT vigilance and away from
+    context-off. SUPPORTS INDEXING: a pinned-noise gap at context-off.
+    NEITHER: both differences under ~2 SE, which is this test failing
+    to resolve and NOT evidence for either side.
+
+  DOES IT REACH A MILESTONE? -- retention, the fraction of the taught
+  gain still gone after the conflicting lesson. This is `retain`'s own
+  statistic, whose conflicting-lesson value is 0.22. Ratio of MEANS with
+  a paired bootstrap (2000 resamples, 95% interval); a mean of per-
+  creature ratios is unusable here and reported -5.166 +/- 5.263.
+    broadcast              retention +0.305   95% [+0.192, +0.404]
+    oracle (masked)        retention +0.109   95% [+0.004, +0.226]
+    1.0 keeps the whole lesson, 0.0 loses it entirely, and `retain`
+    measured 0.22 for a conflicting lesson on the shipped genome.
+
+    PRE-REGISTERED. MILESTONE MET only if VIGILANCE's interval lies
+    ENTIRELY ABOVE 0.5 -- more than half the taught lesson survives a
+    conflicting one -- AND its paired difference against context-off
+    excludes zero. Either one alone is NOT the milestone.
+
+  WHERE IN THE TRIAL THE SWITCHES FALL -- teach phase, 14 bins of
+  200 ticks. The caregiver sounds for t < 900, so bins 0-3 are the
+  word and 5-13 are silence; a FLAT profile puts 32.1% in the word
+  and the pinned-noise arms measure that null on this protocol.
+  arm          sound%     onset%    offs%     profile, per-bin share of switches
+  bcast-AB      45.0+/-2.4   3.7+/-1.1   8.0+/-1.4   6.2 4.7 9.315.217.510.011.4 6.8 4.4 2.6 1.9 2.0 3.8 4.1
+  A vigilance profile matching the pinned-noise profile means the
+  excursions are keyed to nothing in the trial and the account moves
+  elsewhere. A profile concentrated in the word, or at either
+  transition, names what the novelty test is actually firing on.
+
+  --- the reading ---
+  NO VALIDATED CEILING FOR THIS REGIME -- the oracle arm reads +0.182
+  +/- 0.663 (+0.3 SE). This is NOT a reproduction failure: credit-oracle's
+  0.84 -> 1.03 is for ORTHOGONAL lessons on DISJOINT groups, and `credit`
+  still reproduces it (targeted 1.06 at 5.6M). THIS experiment teaches a
+  CONFLICTING pair on the SAME F1 group (320 against 850) and masks by
+  splitting that one group in half, which credit-oracle never tested --
+  capacity's own split is 0.84 orthogonal against the 0.22 wipe. So the
+  oracle here is a within-experiment REFERENCE, not a bound, and the
+  derived arms cannot be priced against a ceiling that does not exist.

@@ -31,7 +31,7 @@
 <p class="subtitle">Original findings from a grown spiking creature, with no external antecedent</p>
 <p class="author">Arne Diegenbach</p>
 <p class="affil">The <span class="id">aibaby</span> project &mdash; a C++17 spiking neural creature grown from a DNA/genome file</p>
-<p class="date">8 October 2026 (revised)</p>
+<p class="date">8 October 2026 (revised twice)</p>
 
 <div class="abstract">
 <p class="lab">Abstract</p>
@@ -351,6 +351,24 @@ available aim, on one genome, 32 creatures each:</p>
 <p class="cap">Aim at matched extent is +0.0956&nbsp;&plusmn;&nbsp;0.0063 (15.2&nbsp;SE)
 paired on seed; extent at matched aim is &minus;0.0719&nbsp;&plusmn;&nbsp;0.0132
 (5.4&nbsp;SE).</p>
+<p>Completing that as a square &mdash; extent against which end &mdash; gives the sharper
+form, with both wrong-end cells measured at the same budget:</p>
+<table>
+<tr><th>&nbsp;</th><th class="n">reward reaches 7 of 14</th><th class="n">reward reaches 4 of 14</th></tr>
+<tr><td>the lever end</td><td class="n">+0.1964 &plusmn; 0.0149</td><td class="n">+0.1245 &plusmn; 0.0046</td></tr>
+<tr class="last"><td>the opposite end</td><td class="n">+0.0265 &plusmn; 0.0041</td><td class="n">+0.0289 &plusmn; 0.0054</td></tr>
+</table>
+<p class="cap">Going from seven to four costs
+&minus;0.0719&nbsp;&plusmn;&nbsp;0.0132 (5.4&nbsp;SE) at the lever end and
++0.0024&nbsp;&plusmn;&nbsp;0.0066 (0.4&nbsp;SE) at the other. The second contrast&rsquo;s
+standard error is small enough that a step the size of the first would have read
+10.8&nbsp;SE.</p>
+<p><strong>Extent is a second axis and potency gates it.</strong> An account in which extent
+is simply signed potency summed over the retained neurons predicts that restricting
+<em>fewer</em> wrong-end neurons does <em>less</em> damage; the half and the quarter at the
+wrong end are instead indistinguishable, at power to have seen a tenth of that. Where there
+is no potency, extent does nothing &mdash; not a reversal, nothing. &sect;4.5 reaches the
+same square in the freezing family, and had predicted this cell before it was measured.</p>
 <p><strong>Learning rises monotonically with how much of the group the reward can reach, and
 the cheapest mask is no mask.</strong> The best-aimed quarter keeps 63% of the half&rsquo;s
 learning on 57% of its neurons, so potency does not make a mask cheap &mdash; it makes a
@@ -464,6 +482,15 @@ Freezing more of the end the lesson must suppress costs more every time until it
 freezing more of the end the lesson was never going to use costs nothing, however much of it
 goes. &sect;3.7 reaches the same two-axis statement from the reward-mask family by a
 different manipulation, and the two were measured three weeks apart.</p>
+<p>The agreement was then tested rather than admired. This ladder&rsquo;s flatness at the
+unused end was used to predict the one cell the reward-mask family had not measured &mdash;
+a half and a quarter confined to the unused end should cost the same &mdash; and the
+prediction was registered before the run. Measured: +0.0024&nbsp;&plusmn;&nbsp;0.0066,
+0.4&nbsp;SE, at power to have resolved a tenth of the step the lever end shows. <strong>One
+family of this project predicted another&rsquo;s unmeasured cell, through the opposite
+manipulation, and was right.</strong> Nothing else here has been confirmed that way, which
+is the reason the geometry is treated as settled rather than as a third experiment waiting
+to be run.</p>
 <p>The lever end also <em>saturates</em>, and that is the second column&rsquo;s own result:
 seven neurons against four is +0.0068&nbsp;&plusmn;&nbsp;0.0068, 1.0&nbsp;SE. Once the top
 four of fourteen are frozen there is nothing further to lose, which is why the costs at four
