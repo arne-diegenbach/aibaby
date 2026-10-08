@@ -15175,7 +15175,6 @@ rather than assumed.
 | `shuf-AB` | 7/14 | coin flip per trial | +0.1022 ± 0.0076 |
 | **`pot-q-opp`** | **4/14** | **opposite end** | **+0.0289 ± 0.0054** |
 | `mid-AB` | 7/14 centred | neither end | +0.0125 ± 0.0023 |
-| `anti-AB` | 7/14 | opposite end | −0.0007 ± 0.0056 |
 
 Paired on seed with a jackknife standard error, on `gained` = `before` − `taught`:
 
@@ -15227,17 +15226,23 @@ two separate axes and both are real** — the brake shows that a restriction wit
 costs nothing however wide it is, and `pot-q` shows that extent still costs at fixed
 potency. Corrected in the document in the same commit as this section.
 
-#### One contrast I am not claiming, and why
+#### One contrast I am not claiming, and the reason is worse than I first wrote
 
-`pot-q-opp` gains +0.0289 &plusmn; 0.0054 where `anti-AB` — the *half* at the wrong end —
-gains −0.0007 &plusmn; 0.0056. The signed account predicts exactly that ordering: a wrongly
-aimed mask rewards neurons whose movement drives the output the wrong way, so restricting
-*fewer* of them does less damage, and shrinking a wrong mask should help as surely as
-shrinking a right one hurts. It would be the crossing interaction that the two-axis reading
-implies. **It is not a finding here.** `anti-AB` predates the per-creature `before` logging,
-so the two cannot be paired, they come from different runs, and both sit near zero where the
-unpaired difference is worth little. Settling it costs one 12M run with `anti` and
-`pot-q-opp` live together, and it is cheap because the instrumentation now exists.
+The two-axis reading implies a crossing: a wrongly aimed mask rewards neurons whose movement
+drives the output the wrong way, so restricting *fewer* of them should do *less* damage, and
+shrinking a wrong mask should help as surely as shrinking a right one hurts. The quarter at
+the wrong end gains +0.0289 ± 0.0054, so the half at the wrong end is the point that would
+test it.
+
+**That point does not exist at this budget.** `anti-AB` has run exactly once, in
+`credgate-2x2-pilot.log`, and that is a pilot: its own `bcast-AB` gains **+0.0363** against
++0.3618 at 12M, a tenfold difference in the quantity being compared. Against its own
+baseline `anti` sits at about −2%, and `pot-q-opp` at 12M sits at about +8% — both
+indistinguishable from zero relative to the budget they were measured at, so there is no
+crossing visible once each is normalised. **The crossing I had in hand was an artefact of
+comparing across tick counts.** Settling it needs one 12M run with `anti` and `pot-q-opp`
+live together, which is now the top of the queue with a correct justification rather than a
+decorative one.
 
 #### And it re-opens a closed result — which had already been answered on disk
 
@@ -15325,6 +15330,52 @@ as §2.12 of the discoveries document.
 No new run, and the queued lead is withdrawn rather than carried forward. `blockwhere`'s
 `skip` field was not built either; the reason to build it was this experiment, which does
 not need building.
+
+
+### A pilot number in a table of full-budget numbers, found an hour after publishing it
+
+The ladder two sections above listed `anti-AB` — a reward mask confined to the half at the
+end the lesson must *not* use — at −0.0007 ± 0.0056, among six rows measured at 12M ticks.
+`anti-AB` has run once, in `credgate-2x2-pilot.log`, and that run's own `bcast-AB` gains
+**+0.0363** where every other row in the table sits against a `bcast-AB` gaining **+0.3618**.
+The row was a pilot measurement presented as a full-budget one.
+
+**How it got there, because the mechanism is the transferable part.** I collected the two
+arms that were not in the current run with
+
+```
+grep -hE '^  (anti|mid)[a-zA-Z-]* +[0-9]' results/credgate-*.log | sort -u
+```
+
+which pools every log in the directory by arm *name* and discards which log each line came
+from. `mid-AB` survived that because its run was at 12M and its anchor reproduces; `anti-AB`
+did not, and nothing in the pooled output said so. **A `grep -h` across runs is a join on
+the arm name, and the arm name does not carry the budget.** The fix is the same shape as the
+per-arm baseline fix from last week: never let a number travel without the thing that makes
+it comparable. In practice, read the anchor of the log a number comes from *before* the
+number — which is the rule this project already applies to its own runs and did not apply to
+its own archive.
+
+**What survives, and it is everything load-bearing.** The headline — gain rises
+monotonically with how much of the group the reward reaches, so the cheapest mask is no mask
+— rests on `bcast`, `oracle` and `pot-q` at 14, 7 and 4 of 14, all at 12M with verified
+anchors. The aim contrast at matched extent (+15.2 SE) is within one run. The extent
+contrast at matched aim (−5.4 SE) is cross-run against an `oracle` that reproduces
+bit-identically in two logs. `mid-AB` is 12M and its log's anchor reads 0.6533 / 0.9047 /
++0.3618. `shuf-AB` likewise. Only the `anti` row was wrong, and it was the one row the
+write-up had already flagged as not supporting a claim.
+
+**What it cost, and what it changes.** The paragraph flagging the crossing as "not a
+finding" gave the reason as unpaired data from different runs. The real reason is stronger:
+the comparison was across tick counts, which §2.7 of the discoveries document already names
+as its own failure mode — *reproduce the conditions, not the experiment name*. Once each arm
+is read against its own baseline there is no crossing to see. So the crossing question is
+fully open, and the run that settles it — `anti` and `pot-q-opp` live together at 12M — is
+the top of the queue with a correct justification instead of a decorative one.
+
+This is the second correction to the same commit in one day, and both came from the same
+habit: trusting a name to identify a condition. §2.12 was written about leads, and this is
+the archive version of it.
 
 
 ## Layout

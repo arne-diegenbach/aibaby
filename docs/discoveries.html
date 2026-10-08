@@ -152,6 +152,16 @@ its own log&rsquo;s filename and in the note that cited it. A registered default
 evidence about what a recorded run used, and this system has a documented power curve
 across exactly that range &mdash; one experiment reads +1.0 at 560k ticks against +18.3 at
 3.4M.</p>
+<p>The same error in its archive form, and it is the easier one to commit. A ladder of mask
+extents was assembled by collecting arms from every log in the results directory with a
+single <span class="id">grep -h</span> matching on the arm's <em>name</em>. One of the seven
+rows came from a pilot run whose own baseline arm gained +0.0363 where every other row&rsquo;s
+baseline gained +0.3618 &mdash; a tenfold difference in the quantity being compared &mdash;
+and nothing in the pooled output recorded which log each line came from. <strong>A search
+across runs is a join on the arm name, and the arm name does not carry the budget.</strong>
+The rule that catches it is to read the anchor of the log a number comes from before reading
+the number, which this project applies to its own runs as a matter of course and had not
+applied to its own archive.</p>
 
 <h3>2.8 Diagnosing a broken statistic does not retire it</h3>
 <p>A retention measure was computed as a mean of per-creature ratios whose denominator
@@ -235,6 +245,12 @@ as something not yet done. The habit that catches it is mechanical rather than a
 building an arm, search the existing logs for the condition it would create &mdash; the position,
 the count, the target &mdash; and not for the name of the experiment that would create it. Arms
 are cheap to name and expensive to run, and the name is the one part that does not persist.</p>
+<p>The same habit has a second form, which turned up within the hour of writing the first.
+Searching the archive <em>by arm name</em> finds every run of that arm and silently pools
+runs made under different conditions &mdash; &sect;2.7 records what that cost. Both failures
+are one mistake: <strong>treating a name as an identifier for a condition.</strong> A name
+identifies an intention. The condition lives in the log beside it, and has to be read from
+there.</p>
 
 <h2>3. Credit assignment and interference</h2>
 <p>Teaching a second, conflicting vowel target destroys the first. The surviving fraction
@@ -330,8 +346,7 @@ available aim, on one genome, 32 creatures each:</p>
 <tr><td>4 of 14</td><td>the lever end</td><td class="n">+0.1245 &plusmn; 0.0046</td></tr>
 <tr><td>7 of 14</td><td>a coin flip each trial</td><td class="n">+0.1022 &plusmn; 0.0076</td></tr>
 <tr><td>4 of 14</td><td>the opposite end</td><td class="n">+0.0289 &plusmn; 0.0054</td></tr>
-<tr><td>7 of 14, centred</td><td>neither end</td><td class="n">+0.0125 &plusmn; 0.0023</td></tr>
-<tr class="last"><td>7 of 14</td><td>the opposite end</td><td class="n">&minus;0.0007 &plusmn; 0.0056</td></tr>
+<tr class="last"><td>7 of 14, centred</td><td>neither end</td><td class="n">+0.0125 &plusmn; 0.0023</td></tr>
 </table>
 <p class="cap">Aim at matched extent is +0.0956&nbsp;&plusmn;&nbsp;0.0063 (15.2&nbsp;SE)
 paired on seed; extent at matched aim is &minus;0.0719&nbsp;&plusmn;&nbsp;0.0132
