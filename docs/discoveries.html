@@ -704,12 +704,31 @@ reference-point error of &sect;2.1 and &sect;2.3 one level up: not the wrong bas
 wrong regime. The transferable form is that a null is only as strong as the headroom the
 measurement had, and headroom is a quantity that can be computed in advance &mdash;
 &sect;2.13&rsquo;s ceiling is exactly such a computation.</p>
+<p><strong>And the boundary is worth the whole of the behaviour, not just the
+carrier.</strong> The quantity the context machinery exists for is how far the creature
+moves its first formant <em>per word</em>. With its own derived index and a clean boundary it
+delivers 76.8&nbsp;&plusmn;&nbsp;5.0&nbsp;Hz against a control arm&rsquo;s 23.4, a
+conditional effect of +53.4&nbsp;&plusmn;&nbsp;5.6&nbsp;Hz at 9.6&nbsp;SE where the
+creature&rsquo;s own boundary gives +12.0&nbsp;&plusmn;&nbsp;4.5. Measured against a creature
+that is simply <em>told</em> which word it heard, the difference is
+&minus;1.0&nbsp;&plusmn;&nbsp;6.0&nbsp;Hz &mdash; statistically identical, where the same
+comparison without the clean boundary is &minus;46.9&nbsp;&plusmn;&nbsp;5.0, 9.4&nbsp;SE
+below. <strong>So knowing which word it is buys nothing beyond knowing when a word is
+happening.</strong> The matched-marginal control sits below the no-index arm, so this is
+word-specific delivery rather than a general increase in vocal motion.</p>
+<p>That is a trade of oracles rather than the removal of one, and it is worth being exact
+about: an expensive oracle, the word&rsquo;s identity, has been replaced by a cheap one, its
+timing, at no measured cost. The cheap one is also the one the system has a real detector
+for &mdash; the creature goes nearly silent while it listens, voiced fraction 0.276 to 0.010,
+which is shipped and measured. What fails is not the signal but the gate on it: an
+instantaneous threshold on a noisy mean, with no hysteresis, which chatters and splits one
+word into several episodes of which some contain only silence.</p>
 <p class="note">Two things this does not say. The boundary was handed over by an
-<em>oracle</em> &mdash; the host&rsquo;s own knowledge of when it is speaking &mdash; so
-what is measured is the size of the prize for building a boundary detector, not a detector.
-And the remaining term is named but not fixed: nothing here shows that restoring the
-prototype&rsquo;s learning rate recovers the 0.060, only that 0.060 is what there is to
-recover.</p>
+<em>oracle</em>, so what is measured is the size of the prize for building a boundary
+detector rather than a detector. And the decay above is named but not fixed: nothing here
+shows that restoring the prototype&rsquo;s learning rate recovers the 0.060 &mdash; indeed
+the behaviour reaches the oracle&rsquo;s level while still decaying, which bounds how much
+that 0.060 can be costing.</p>
 <p>Two side results survived that line. Deafening improves the index in the control arm
 only (+0.030&nbsp;&plusmn;&nbsp;0.004, 7.1 SE), and makes the tracking arm&rsquo;s partition
 more lopsided (+0.066&nbsp;&plusmn;&nbsp;0.018, 3.7 SE). Separately, the derived context

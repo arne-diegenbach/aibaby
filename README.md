@@ -15911,6 +15911,80 @@ also binds and is already written down: a floor below about `eps` relative to th
 bit-identical to no floor at all, which has caught this project once.
 
 
+### The last oracle is the word boundary, and it is worth 53 Hz of voice
+
+The behavioural column of the same run, which I had not read when I wrote that the index
+line's payoff was unmeasured. It was in the table. `dF1` is how far the creature moves its
+first formant *per word* — the conditional delivery the whole context line exists for.
+
+| arm | index | dF1 (Hz) |
+|---|---|---|
+| `off` (no index) | 0.000 | 29.2 ± 5.1 |
+| `ear` (larynx gate) | 0.707 | 30.9 ± 3.7 |
+| `ema` | 0.786 | 49.4 ± 4.9 |
+| **`oracle`** — host says which word | 1.000 | **77.8 ± 4.1** |
+| **`ear-win`** — derived, oracle boundary | 0.892 | **84.7 ± 4.7** |
+| **`ear-win-sh`** — same, shuffled order | 0.892 | **76.8 ± 5.0** |
+
+Paired on seed, jackknife SE, 36 creatures:
+
+```
+  THE CONDITIONAL EFFECT, each arm against its OWN matched-marginal control
+    ear        - ear-rnd           +12.8 +/- 4.2 Hz   ( +3.0 SE)
+    ear-sh     - ear-sh-rnd        +12.0 +/- 4.5 Hz   ( +2.7 SE)
+    ear-win    - ear-win-rnd       +61.4 +/- 5.9 Hz   (+10.4 SE)
+    ear-win-sh - ear-win-sh-rnd    +53.4 +/- 5.6 Hz   ( +9.6 SE)
+
+  AGAINST THE PERFECT-INDEX ORACLE, which is simply told the answer
+    ear        - oracle            -46.9 +/- 5.0 Hz   ( -9.4 SE)
+    ear-win    - oracle             +6.9 +/- 5.7 Hz   ( +1.2 SE)
+    ear-win-sh - oracle             -1.0 +/- 6.0 Hz   ( -0.2 SE)
+```
+
+**A creature deriving its own context from its own ear, given nothing but a clean word
+boundary, delivers as much word-conditional formant as one that is handed the word.**
+−1.0 ± 6.0 Hz on the honest shuffled protocol: statistically identical. The 46.9 Hz deficit
+to the oracle, which has stood since v53 was built, closes completely. And the conditional
+effect quadruples, +12.0 to +53.4 Hz, at 9.6 SE.
+
+**So knowing *which* word it is buys nothing beyond knowing *when* a word is happening.**
+That is the whole residual value of the context oracle, and it is a far weaker thing to
+require. The project has not removed an oracle here; it has traded an expensive one for a
+cheap one — and measured that the trade costs nothing.
+
+**The control holds.** `ear-win-rnd` sits at 23.4 Hz, below `off`'s 29.2, so this is not a
+general increase in vocal motion that a conditional contrast would misread as naming. The
+effect is word-specific by construction and the matched-marginal arm shows it.
+
+One asymmetry worth recording rather than smoothing over: the index is **identical** under
+both word orders, 0.892 either way, while the behaviour is not — 84.7 alternating against
+76.8 shuffled, and the conditional effect 61.4 against 53.4. A predictable word sequence
+helps the *voice* by about 8 Hz without helping the *carrier* at all. Unexplained, and the
+shuffled number is the one quoted everywhere above because it is the one that cannot be
+flattered by the protocol.
+
+#### What this does to the queue, and it is a reordering rather than an addition
+
+The decay of §above is a carrier problem worth 0.060 of index. `ear-win` reaches oracle-level
+behaviour *while decaying*, so the behavioural cost of that decay is unmeasured and is
+bounded above by the 1.2 SE by which `ear-win` exceeds the oracle. **The boundary detector is
+now the highest-value build in this project**, with a prize measured at +53.4 Hz and
+9.6 SE rather than argued for.
+
+And the measurement says what kind of build it is. The larynx is not the wrong signal — the
+listening reflex is real and shipped, voiced fraction 0.276 → 0.010 while the creature hears
+something. What fails is that the gate is an **instantaneous threshold on a noisy mean**,
+`gms.mean_rate < ctx_gate_target_`, with no hysteresis, so it chatters and fragments one word
+into several episodes of which some hold only silence. The kernel's own comment already
+diagnosed that mechanism for the *fast* mean and fixed it by moving to the slow mean; the
+slow mean still chatters enough to fragment. **So the next build is a debounced gate — a
+minimum episode length, or two thresholds rather than one — and both of its constants are
+derivable from quantities already measured rather than guessed:** the word is 900 ticks, and
+the fragment distribution is in `ctx_events_`. That matters because this project has a
+standing rule that a new constant must be derived, and four guessed constants once cost it a
+run each.
+
+
 ## Layout
 
 ```
