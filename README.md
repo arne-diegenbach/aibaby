@@ -15985,6 +15985,127 @@ standing rule that a new constant must be derived, and four guessed constants on
 run each.
 
 
+### A literature pass against three open questions, and one of them redirects a build in flight
+
+Searched against what is actually blocked rather than against the project's topic. Four
+results; the first changes a build that was running while I read it.
+
+#### 1. The boundary signal is the ear's envelope DERIVATIVE, not the larynx's level
+
+**Nabé, Schwartz & Diard** (2021), *COSMO-Onset*, Frontiers in Systems Neuroscience 15,
+653975. Bottom-up syllabic onset detection runs on the **acoustic envelope**: a rapid
+*increase* of energy, which must **persist across consecutive time steps** and clear a
+threshold before an onset is accepted. Lexical knowledge then predicts when the next onset
+is due, fused with the bottom-up stream. Their balance: *"purely bottom-up onset detection
+is sufficient for word recognition in nominal conditions"*, with top-down prediction earning
+its place only in adverse ones.
+
+This lands on the experiment measuring episode fragmentation right now, and it changes it.
+
+- **This creature detects boundaries from the wrong signal.** Its gate is
+  `gms.mean_rate < ctx_gate_target_` — the *larynx*, on the reasoning that vocal silence
+  means listening, which is sound and measured. COSMO-Onset's detector is on the **ear**,
+  and on a **derivative** rather than a level.
+- **And the project's own refusal of the ear does not cover this.** The kernel records
+  trying an ear conjunction and finding it inert: *"the ear sits above its setpoint nearly
+  always, so the conjunction admits almost every episode."* That test was on the ear's
+  **level**. A rate of increase is a different quantity, and a null on the level says
+  nothing about it. This is the same shape as the drift account being refused in a regime
+  that could not exhibit it.
+- **It also supplies the constant I could not derive.** The episode-length instrument
+  refused a minimum-length debounce — the distribution is smooth, with 20% of episodes under
+  2 ticks and 21% over 512 and no gap between — and the merge rule it pointed to needs a gap
+  scale. *Persistence across consecutive steps above a threshold* is that rule in a
+  principled form, and its threshold is a property of the envelope's own rise time rather
+  than of the caregiver's word length, which is the oracle I was trying to avoid importing.
+
+So the next build is an **envelope-onset gate**: detect a sustained rise in the auditory
+module's rate, open the episode there, and close it when the rise reverses — with the larynx
+gate kept as the control arm, because it is the incumbent and it is not obviously worse
+until measured. **What would refuse it:** `ev/tri` failing to fall to ~1.0, or reaching 1.0
+without moving `dF1`, which is already the pre-registered bar.
+
+#### 2. Myelination happens in sleep, and this project's brake runs awake
+
+**Bellesi, Pfister-Genskow, Maret, Keles, Tononi & Cirelli** (2013), Journal of
+Neuroscience 33(36), 14288–14300. **Oligodendrocyte precursor proliferation roughly doubles
+in sleep and correlates with time spent in REM**, while differentiation is higher in wake.
+Phospholipid-synthesis and myelination genes are transcribed preferentially during sleep;
+apoptosis, stress-response and differentiation genes in wake. The mediator they report is
+glutamatergic transmission, higher in wake, inhibiting OPC proliferation through
+AMPA-mediated currents.
+
+**This project's myelin brake runs continuously and awake** — the condition in which the
+biology says the relevant transcription is suppressed. The brake's write-up had flagged a
+timing mismatch in general terms, that the literature puts activity-dependent myelination in
+the immediate post-training window; this dates it precisely to a state the creature already
+has, implemented, measured and sleep-gating other mechanisms.
+
+**The repair is cheap and the machinery exists.** DNA v38's competitive pruning is already
+sleep-gated, so the pattern is in the kernel: apply `eta_floor_frac` only while asleep, and
+let the awake creature learn unbraked.
+
+**And it has to be said that this is the repair of a refused mechanism, which deserves a
+high bar.** The brake binds hard — mean per-edge rate 0.6708 against 1.0000, reproducing an
+independent 0.654 — and changes **neither** retention (−0.6 SE, flat at every floor) nor
+learning. A null on both axes. This project has a documented pattern of mechanisms that fail
+and then get repaired, so the pre-registration must be sharp: **sleep-gating is only
+interesting if it moves RETENTION**, the one axis the brake exists to serve, and
+"it binds differently" is not a result. If a sleep-gated brake binds and still costs and buys
+nothing, the mechanism is refused twice and should be deleted rather than tuned a third time.
+The cheap pre-flight is to check the brake is not already inert during sleep, since the
+creature's plasticity during sleep may be dominated by downscaling.
+
+#### 3. A memory structure for intelligent speech — and the blocker is named, not guessed
+
+**McClelland, McNaughton & O'Reilly** (1995) is the frame: a hippocampus encoding each
+episode fast with a **pattern-separated** code, a neocortex extracting structure across
+episodes slowly with an **overlapping** one, resolving stability–plasticity by dividing it.
+**Klinzing, Niethard & Born** (2019) is the route — replay under coupled slow oscillations,
+spindles and ripples redistributes a representation toward cortex and what emerges is more
+schema-like than what went in. And a 2025 preprint adds the compositional step: increased
+**sparsity during replay** lets cortex extract shared structure from overlapping episodes,
+building a dictionary of reusable parts.
+
+That is exactly the shape a speech memory needs. **Two things stop it being the next build,
+and both are this project's own measurements rather than doubts.**
+
+- **Both halves of CLS are present here and measured as not working.** The hippocampus
+  module **does not separate** — a settled negative — and switching replay off costs
+  **0.3 SE**, which is inert. A consolidation story that runs on replay has no engine here
+  until one of those changes.
+- **There is nothing to compose yet.** The hardest structural result in this project is that
+  an utterance is a **held vowel**: no module holds a kick for 10 ms, autocorrelation
+  falling 0.92 → 0.03. A dictionary of gestures presupposes a sequence to put them in.
+
+So the honest statement of where intelligent speech stands, in terms the project has
+measured: **this creature composes in SPACE and not in TIME.** Four-word naming works in two
+dimensions, F1 and F2 steer independently with zero cross-talk and each covers about half its
+range, and nine words name as well as six. Every one of those is simultaneous structure. What
+does not exist is a second gesture *after* the first.
+
+**The structure to build, in the order the measurements allow:**
+
+1. **A held sequence of two gestures, before any dictionary.** This is the blocker and it is
+   unbuilt. **Bohland, Bullock & Guenther**'s GODIVA names the layer — a buffer over
+   multi-sound utterances with frequent sequences compiled into chunks — and **Segawa,
+   Tourville, Beal & Guenther** say the stored unit is a **gestural score** rather than an
+   acoustic target, which is the shape the dormant `dictionary_*` genome block was cut for.
+   The bar is the one already measured: hold a kick for 10 ms, against the 0.92 → 0.03 that
+   says it currently cannot.
+2. **Then the dictionary**: a small set of reusable targets with words as ordered sets of
+   entries, so the same gesture appears in several words. That is the thing replay-sparsity
+   would build if replay worked, and it can be handed over as an oracle first — a
+   host-supplied dictionary — to price it before building it, which is how the credit mask,
+   the bias route and the word window were all priced.
+3. **Only then consolidation.** Sleep moves a representation from fast store to slow store,
+   and there is no point moving one that does not exist.
+
+Worth being explicit that this is a plan rather than a finding. Nothing in this section was
+measured today; items 1 and 2 are proposals with pre-registered bars, and the only new facts
+are the four citations and what they rule in or out.
+
+
 ## Layout
 
 ```
@@ -16439,6 +16560,84 @@ papers about the half it does not touch.
   the mapping from a ~100-dimensional population to a low-dimensional readout is
   an underconstrained credit-assignment problem, and different learning rules are
   distinguishable by the changes they produce in output-null dimensions.
+
+**Word-boundary detection, which is the mechanism the context index is missing.**
+
+- Nabé, M., Schwartz, J.-L. & Diard, J. (2021). *COSMO-Onset: A neurally-inspired
+  computational model of spoken word recognition, combining top-down prediction and
+  bottom-up detection of syllabic onsets.* Frontiers in Systems Neuroscience 15, 653975.
+  <https://doi.org/10.3389/fnsys.2021.653975>, free full text at
+  <https://pmc.ncbi.nlm.nih.gov/articles/PMC8371689/> — read to the method 2026-10-09, and
+  **it names a signal this project has not used.** Bottom-up onset detection runs on the
+  **acoustic envelope**: a *rapid increase of energy* which must persist across consecutive
+  time steps and clear a threshold before an onset is accepted. Top-down lexical knowledge
+  then predicts the canonical instants at which the next syllabic onset is due, fused with
+  the bottom-up stream by an AND or an OR operator. Their own summary of the balance:
+  *"while purely bottom-up onset detection is sufficient for word recognition in nominal
+  conditions, top-down prediction of syllabic onset events allows overcoming challenging
+  adverse conditions."* Two things follow for this creature, both in the section below: the
+  boundary signal should be the ear envelope's **derivative** rather than the larynx's
+  level, and *persistence across consecutive steps* is exactly the debounce this project was
+  trying to derive a constant for.
+
+**Sleep as the time myelination happens, which is when this project's brake does not run.**
+
+- Bellesi, M., Pfister-Genskow, M., Maret, S., Keles, S., Tononi, G. & Cirelli, C. (2013).
+  *Effects of sleep and wake on oligodendrocytes and their precursors.* Journal of
+  Neuroscience 33(36), 14288–14300. <https://doi.org/10.1523/JNEUROSCI.5102-12.2013> —
+  **oligodendrocyte precursor proliferation roughly doubles in sleep and correlates with
+  time spent in REM, while differentiation is higher in wake.** Genes for phospholipid
+  synthesis and myelination are transcribed preferentially during sleep; apoptosis, cellular
+  stress and OPC differentiation genes are enriched in wake. The reported mediator is
+  glutamatergic transmission, higher in wake, which inhibits OPC proliferation through
+  AMPA-mediated currents. This project's myelin brake runs **continuously and awake**, which
+  is the condition the biology says suppresses the relevant transcription — a timing
+  mismatch the brake's own write-up had flagged in general terms and which this dates
+  precisely.
+
+**Complementary learning systems, and what a memory for intelligent speech would need.**
+
+- McClelland, J. L., McNaughton, B. L. & O'Reilly, R. C. (1995). *Why there are
+  complementary learning systems in the hippocampus and neocortex: insights from the
+  successes and failures of connectionist models of learning and memory.* Psychological
+  Review 102(3), 419–457. <https://doi.org/10.1037/0033-295X.102.3.419> — the framework:
+  a hippocampus using a **pattern-separated** code to encode each episode fast, and a
+  neocortex using an **overlapping, distributed** code to extract structure across many
+  episodes slowly. It resolves the stability–plasticity dilemma by *dividing* the problem,
+  which is the same dilemma Carpenter and Grossberg name above and which DNA v60 hit.
+  Listed here because this project has both halves and has measured both as not working:
+  its hippocampus **does not separate**, and switching its replay off costs 0.3 SE.
+- Klinzing, J. G., Niethard, N. & Born, J. (2019). *Mechanisms of systems memory
+  consolidation during sleep.* Nature Neuroscience 22(10), 1598–1610.
+  <https://doi.org/10.1038/s41593-019-0467-3> — repeated replay, with slow oscillations,
+  spindles and ripples in triple coupling, gradually redistributes a representation toward
+  neocortical networks, and what emerges is more abstract and schema-like than what went in.
+  The route by which episodes become structure, and the reason sleep is the place to look
+  for it rather than an afterthought.
+- **The compositional step, cited by title because it is a preprint.** *Semantic
+  representations in episodic memory enhance recall* (bioRxiv 2025)
+  <https://doi.org/10.1101/2025.10.03.680209> — increased **sparsity during replay** lets
+  the neocortex extract compositional structure from overlapping episodes, building a
+  dictionary of interconnected concepts. The most direct statement of the thing a
+  speech memory would have to do: turn many whole-word episodes into a small set of reusable
+  parts.
+
+**Chunking and sequence structure in speech production.**
+
+- Bohland, J. W., Bullock, D. & Guenther, F. H. (2010). *Neural representations and
+  mechanisms for the performance of simple speech sequences.* Journal of Cognitive
+  Neuroscience 22(7), 1504–1529. <https://doi.org/10.1162/jocn.2009.21306> — GODIVA, the
+  sequencing layer above the DIVA model this project already cites: a buffer for multi-sound
+  utterances, with a cortico-basal-ganglia loop that encodes frequently used sequences as
+  **chunks carrying their own optimised motor programs**. The architecture a dictionary of
+  gestures would plug into.
+- Segawa, J. A., Tourville, J. A., Beal, D. S. & Guenther, F. H. (2015). *The neural
+  correlates of speech motor sequence learning.* Journal of Cognitive Neuroscience 27(4),
+  819–831. <https://doi.org/10.1162/jocn_a_00737>; and on the planning/programming split,
+  frequent syllables supplying **pre-compiled gestural scores** while infrequent ones are
+  assembled online. Relevant because it says the unit of storage is the *gesture score*,
+  not the acoustic target — which is what this project's dormant `dictionary_*` block was
+  shaped for.
 
 **Activity-dependent myelination, which is what §3.5's `eta_floor_frac` brake models.**
 
