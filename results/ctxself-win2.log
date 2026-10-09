@@ -1,0 +1,1205 @@
+  [5/504] seed 0 ear-deaf  dF1 38.3  p(idx) 0.725
+  [6/504] seed 0 ear-deaf-rnd  dF1 26.2  p(idx) 0.799
+  [9/504] seed 0 ear-win  dF1 71.5  p(idx) 0.892
+  [2/504] seed 0 oracle  dF1 67.4  p(idx) 1.000
+  [4/504] seed 0 ear-rnd  dF1 18.5  p(idx) 0.722
+  [12/504] seed 0 ear-sh-rnd  dF1 23.6  p(idx) 0.781
+  [10/504] seed 0 ear-win-rnd  dF1 1.2  p(idx) 0.891
+  [14/504] seed 0 ear-win-sh-rnd  dF1 15.2  p(idx) 0.891
+  [3/504] seed 0 ear  dF1 1.3  p(idx) 0.711
+  [8/504] seed 0 ema-rnd  dF1 20.5  p(idx) 0.878
+  [7/504] seed 0 ema  dF1 10.1  p(idx) 0.504
+  [11/504] seed 0 ear-sh  dF1 40.9  p(idx) 0.642
+  [1/504] seed 0 off  dF1 0.1  p(idx) 0.000
+  [13/504] seed 0 ear-win-sh  dF1 120.3  p(idx) 0.894
+  [19/504] seed 1 ear-deaf  dF1 71.7  p(idx) 0.700
+  [16/504] seed 1 oracle  dF1 93.1  p(idx) 1.000
+  [17/504] seed 1 ear  dF1 37.4  p(idx) 0.747
+  [15/504] seed 1 off  dF1 94.2  p(idx) 0.000
+  [21/504] seed 1 ema  dF1 98.7  p(idx) 0.892
+  [23/504] seed 1 ear-win  dF1 115.9  p(idx) 0.893
+  [20/504] seed 1 ear-deaf-rnd  dF1 16.0  p(idx) 0.830
+  [22/504] seed 1 ema-rnd  dF1 1.0  p(idx) 0.887
+  [24/504] seed 1 ear-win-rnd  dF1 7.7  p(idx) 0.892
+  [18/504] seed 1 ear-rnd  dF1 0.8  p(idx) 0.773
+  [26/504] seed 1 ear-sh-rnd  dF1 8.3  p(idx) 0.764
+  [25/504] seed 1 ear-sh  dF1 61.7  p(idx) 0.611
+  [27/504] seed 1 ear-win-sh  dF1 99.2  p(idx) 0.892
+  [28/504] seed 1 ear-win-sh-rnd  dF1 14.1  p(idx) 0.892
+  [34/504] seed 2 ear-deaf-rnd  dF1 24.1  p(idx) 0.794
+  [30/504] seed 2 oracle  dF1 115.6  p(idx) 1.000
+  [35/504] seed 2 ema  dF1 108.0  p(idx) 0.891
+  [36/504] seed 2 ema-rnd  dF1 56.0  p(idx) 0.891
+  [32/504] seed 2 ear-rnd  dF1 6.7  p(idx) 0.788
+  [33/504] seed 2 ear-deaf  dF1 18.3  p(idx) 0.678
+  [38/504] seed 2 ear-win-rnd  dF1 31.7  p(idx) 0.892
+  [29/504] seed 2 off  dF1 29.4  p(idx) 0.000
+  [31/504] seed 2 ear  dF1 7.3  p(idx) 0.729
+  [39/504] seed 2 ear-sh  dF1 27.8  p(idx) 0.714
+  [37/504] seed 2 ear-win  dF1 57.7  p(idx) 0.891
+  [40/504] seed 2 ear-sh-rnd  dF1 19.6  p(idx) 0.789
+  [41/504] seed 2 ear-win-sh  dF1 101.5  p(idx) 0.890
+  [42/504] seed 2 ear-win-sh-rnd  dF1 27.8  p(idx) 0.890
+  [45/504] seed 3 ear  dF1 25.6  p(idx) 0.761
+  [44/504] seed 3 oracle  dF1 96.7  p(idx) 1.000
+  [48/504] seed 3 ear-deaf-rnd  dF1 11.3  p(idx) 0.799
+  [43/504] seed 3 off  dF1 84.0  p(idx) 0.000
+  [46/504] seed 3 ear-rnd  dF1 0.4  p(idx) 0.769
+  [47/504] seed 3 ear-deaf  dF1 27.3  p(idx) 0.762
+  [49/504] seed 3 ema  dF1 54.4  p(idx) 0.884
+  [52/504] seed 3 ear-win-rnd  dF1 29.9  p(idx) 0.892
+  [50/504] seed 3 ema-rnd  dF1 4.8  p(idx) 0.891
+  [51/504] seed 3 ear-win  dF1 91.3  p(idx) 0.892
+  [54/504] seed 3 ear-sh-rnd  dF1 20.7  p(idx) 0.722
+  [53/504] seed 3 ear-sh  dF1 21.5  p(idx) 0.737
+  [55/504] seed 3 ear-win-sh  dF1 105.0  p(idx) 0.890
+  [56/504] seed 3 ear-win-sh-rnd  dF1 21.1  p(idx) 0.892
+  [58/504] seed 4 oracle  dF1 69.1  p(idx) 1.000
+  [61/504] seed 4 ear-deaf  dF1 5.2  p(idx) 0.773
+  [57/504] seed 4 off  dF1 14.5  p(idx) 0.000
+  [59/504] seed 4 ear  dF1 24.5  p(idx) 0.680
+  [62/504] seed 4 ear-deaf-rnd  dF1 16.0  p(idx) 0.739
+  [64/504] seed 4 ema-rnd  dF1 1.8  p(idx) 0.881
+  [66/504] seed 4 ear-win-rnd  dF1 3.7  p(idx) 0.891
+  [60/504] seed 4 ear-rnd  dF1 25.8  p(idx) 0.727
+  [63/504] seed 4 ema  dF1 15.8  p(idx) 0.888
+  [65/504] seed 4 ear-win  dF1 81.6  p(idx) 0.892
+  [69/504] seed 4 ear-win-sh  dF1 79.7  p(idx) 0.893
+  [68/504] seed 4 ear-sh-rnd  dF1 19.8  p(idx) 0.726
+  [67/504] seed 4 ear-sh  dF1 21.4  p(idx) 0.661
+  [70/504] seed 4 ear-win-sh-rnd  dF1 17.3  p(idx) 0.892
+  [75/504] seed 5 ear-deaf  dF1 66.2  p(idx) 0.740
+  [73/504] seed 5 ear  dF1 62.0  p(idx) 0.667
+  [72/504] seed 5 oracle  dF1 104.3  p(idx) 1.000
+  [76/504] seed 5 ear-deaf-rnd  dF1 64.0  p(idx) 0.809
+  [71/504] seed 5 off  dF1 42.6  p(idx) 0.000
+  [74/504] seed 5 ear-rnd  dF1 5.8  p(idx) 0.780
+  [77/504] seed 5 ema  dF1 89.9  p(idx) 0.890
+  [78/504] seed 5 ema-rnd  dF1 34.3  p(idx) 0.891
+  [80/504] seed 5 ear-win-rnd  dF1 58.0  p(idx) 0.891
+  [79/504] seed 5 ear-win  dF1 107.6  p(idx) 0.892
+  [82/504] seed 5 ear-sh-rnd  dF1 3.0  p(idx) 0.746
+  [81/504] seed 5 ear-sh  dF1 57.5  p(idx) 0.700
+  [83/504] seed 5 ear-win-sh  dF1 40.3  p(idx) 0.892
+  [84/504] seed 5 ear-win-sh-rnd  dF1 18.0  p(idx) 0.891
+  [85/504] seed 6 off  dF1 6.1  p(idx) 0.000
+  [90/504] seed 6 ear-deaf-rnd  dF1 5.2  p(idx) 0.770
+  [89/504] seed 6 ear-deaf  dF1 4.9  p(idx) 0.573
+  [88/504] seed 6 ear-rnd  dF1 31.3  p(idx) 0.750
+  [86/504] seed 6 oracle  dF1 82.7  p(idx) 1.000
+  [87/504] seed 6 ear  dF1 17.1  p(idx) 0.574
+  [92/504] seed 6 ema-rnd  dF1 15.6  p(idx) 0.501
+  [91/504] seed 6 ema  dF1 81.5  p(idx) 0.501
+  [93/504] seed 6 ear-win  dF1 93.0  p(idx) 0.893
+  [94/504] seed 6 ear-win-rnd  dF1 2.2  p(idx) 0.892
+  [96/504] seed 6 ear-sh-rnd  dF1 27.6  p(idx) 0.757
+  [97/504] seed 6 ear-win-sh  dF1 69.7  p(idx) 0.891
+  [95/504] seed 6 ear-sh  dF1 13.5  p(idx) 0.731
+  [100/504] seed 7 oracle  dF1 72.0  p(idx) 1.000
+  [98/504] seed 6 ear-win-sh-rnd  dF1 5.3  p(idx) 0.890
+  [99/504] seed 7 off  dF1 46.0  p(idx) 0.000
+  [102/504] seed 7 ear-rnd  dF1 7.2  p(idx) 0.802
+  [104/504] seed 7 ear-deaf-rnd  dF1 7.0  p(idx) 0.799
+  [103/504] seed 7 ear-deaf  dF1 38.4  p(idx) 0.781
+  [101/504] seed 7 ear  dF1 35.2  p(idx) 0.677
+  [105/504] seed 7 ema  dF1 48.8  p(idx) 0.837
+  [106/504] seed 7 ema-rnd  dF1 4.8  p(idx) 0.893
+  [107/504] seed 7 ear-win  dF1 31.1  p(idx) 0.893
+  [108/504] seed 7 ear-win-rnd  dF1 27.2  p(idx) 0.893
+  [109/504] seed 7 ear-sh  dF1 30.8  p(idx) 0.634
+  [110/504] seed 7 ear-sh-rnd  dF1 29.9  p(idx) 0.794
+  [111/504] seed 7 ear-win-sh  dF1 37.4  p(idx) 0.894
+  [113/504] seed 8 off  dF1 29.2  p(idx) 0.000
+  [114/504] seed 8 oracle  dF1 105.7  p(idx) 1.000
+  [117/504] seed 8 ear-deaf  dF1 18.3  p(idx) 0.713
+  [115/504] seed 8 ear  dF1 12.6  p(idx) 0.683
+  [116/504] seed 8 ear-rnd  dF1 18.6  p(idx) 0.745
+  [112/504] seed 7 ear-win-sh-rnd  dF1 42.9  p(idx) 0.892
+  [118/504] seed 8 ear-deaf-rnd  dF1 17.1  p(idx) 0.747
+  [119/504] seed 8 ema  dF1 36.4  p(idx) 0.511
+  [120/504] seed 8 ema-rnd  dF1 63.2  p(idx) 0.860
+  [122/504] seed 8 ear-win-rnd  dF1 48.6  p(idx) 0.892
+  [121/504] seed 8 ear-win  dF1 111.6  p(idx) 0.893
+  [123/504] seed 8 ear-sh  dF1 68.1  p(idx) 0.598
+  [124/504] seed 8 ear-sh-rnd  dF1 6.4  p(idx) 0.747
+  [125/504] seed 8 ear-win-sh  dF1 119.9  p(idx) 0.891
+  [131/504] seed 9 ear-deaf  dF1 15.2  p(idx) 0.652
+  [132/504] seed 9 ear-deaf-rnd  dF1 6.7  p(idx) 0.776
+  [130/504] seed 9 ear-rnd  dF1 7.0  p(idx) 0.727
+  [127/504] seed 9 off  dF1 7.5  p(idx) 0.000
+  [126/504] seed 8 ear-win-sh-rnd  dF1 40.4  p(idx) 0.892
+  [129/504] seed 9 ear  dF1 21.8  p(idx) 0.744
+  [128/504] seed 9 oracle  dF1 67.8  p(idx) 1.000
+  [133/504] seed 9 ema  dF1 21.1  p(idx) 0.860
+  [134/504] seed 9 ema-rnd  dF1 3.1  p(idx) 0.884
+  [135/504] seed 9 ear-win  dF1 34.9  p(idx) 0.892
+  [136/504] seed 9 ear-win-rnd  dF1 39.2  p(idx) 0.891
+  [137/504] seed 9 ear-sh  dF1 34.3  p(idx) 0.549
+  [138/504] seed 9 ear-sh-rnd  dF1 5.1  p(idx) 0.748
+  [139/504] seed 9 ear-win-sh  dF1 47.6  p(idx) 0.892
+  [141/504] seed 10 off  dF1 4.3  p(idx) 0.000
+  [145/504] seed 10 ear-deaf  dF1 12.0  p(idx) 0.626
+  [146/504] seed 10 ear-deaf-rnd  dF1 10.1  p(idx) 0.810
+  [140/504] seed 9 ear-win-sh-rnd  dF1 18.6  p(idx) 0.892
+  [142/504] seed 10 oracle  dF1 36.8  p(idx) 1.000
+  [143/504] seed 10 ear  dF1 0.0  p(idx) 0.710
+  [144/504] seed 10 ear-rnd  dF1 23.0  p(idx) 0.768
+  [147/504] seed 10 ema  dF1 37.8  p(idx) 0.879
+  [148/504] seed 10 ema-rnd  dF1 20.0  p(idx) 0.514
+  [149/504] seed 10 ear-win  dF1 111.3  p(idx) 0.893
+  [150/504] seed 10 ear-win-rnd  dF1 15.6  p(idx) 0.892
+  [153/504] seed 10 ear-win-sh  dF1 77.8  p(idx) 0.891
+  [151/504] seed 10 ear-sh  dF1 0.3  p(idx) 0.733
+  [152/504] seed 10 ear-sh-rnd  dF1 37.6  p(idx) 0.747
+  [154/504] seed 10 ear-win-sh-rnd  dF1 61.9  p(idx) 0.892
+  [155/504] seed 11 off  dF1 19.4  p(idx) 0.000
+  [160/504] seed 11 ear-deaf-rnd  dF1 44.3  p(idx) 0.781
+  [158/504] seed 11 ear-rnd  dF1 5.2  p(idx) 0.700
+  [156/504] seed 11 oracle  dF1 71.4  p(idx) 1.000
+  [157/504] seed 11 ear  dF1 20.4  p(idx) 0.693
+  [159/504] seed 11 ear-deaf  dF1 22.4  p(idx) 0.757
+  [161/504] seed 11 ema  dF1 15.6  p(idx) 0.510
+  [162/504] seed 11 ema-rnd  dF1 10.7  p(idx) 0.512
+  [164/504] seed 11 ear-win-rnd  dF1 4.9  p(idx) 0.894
+  [163/504] seed 11 ear-win  dF1 128.5  p(idx) 0.892
+  [169/504] seed 12 off  dF1 9.1  p(idx) 0.000
+  [166/504] seed 11 ear-sh-rnd  dF1 1.6  p(idx) 0.709
+  [170/504] seed 12 oracle  dF1 80.6  p(idx) 1.000
+  [173/504] seed 12 ear-deaf  dF1 29.9  p(idx) 0.628
+  [165/504] seed 11 ear-sh  dF1 24.9  p(idx) 0.727
+  [168/504] seed 11 ear-win-sh-rnd  dF1 18.2  p(idx) 0.895
+  [174/504] seed 12 ear-deaf-rnd  dF1 2.5  p(idx) 0.799
+  [172/504] seed 12 ear-rnd  dF1 17.4  p(idx) 0.758
+  [167/504] seed 11 ear-win-sh  dF1 52.4  p(idx) 0.891
+  [171/504] seed 12 ear  dF1 15.9  p(idx) 0.701
+  [175/504] seed 12 ema  dF1 10.1  p(idx) 0.884
+  [176/504] seed 12 ema-rnd  dF1 15.8  p(idx) 0.881
+  [177/504] seed 12 ear-win  dF1 109.6  p(idx) 0.892
+  [178/504] seed 12 ear-win-rnd  dF1 52.2  p(idx) 0.892
+  [179/504] seed 12 ear-sh  dF1 2.3  p(idx) 0.684
+  [187/504] seed 13 ear-deaf  dF1 28.7  p(idx) 0.729
+  [181/504] seed 12 ear-win-sh  dF1 84.5  p(idx) 0.891
+  [180/504] seed 12 ear-sh-rnd  dF1 8.8  p(idx) 0.759
+  [183/504] seed 13 off  dF1 9.5  p(idx) 0.000
+  [186/504] seed 13 ear-rnd  dF1 15.8  p(idx) 0.790
+  [185/504] seed 13 ear  dF1 26.6  p(idx) 0.812
+  [184/504] seed 13 oracle  dF1 11.6  p(idx) 1.000
+  [182/504] seed 12 ear-win-sh-rnd  dF1 33.0  p(idx) 0.890
+  [188/504] seed 13 ear-deaf-rnd  dF1 26.0  p(idx) 0.808
+  [189/504] seed 13 ema  dF1 24.0  p(idx) 0.885
+  [190/504] seed 13 ema-rnd  dF1 5.2  p(idx) 0.891
+  [192/504] seed 13 ear-win-rnd  dF1 55.5  p(idx) 0.891
+  [191/504] seed 13 ear-win  dF1 18.4  p(idx) 0.891
+  [201/504] seed 14 ear-deaf  dF1 25.8  p(idx) 0.656
+  [202/504] seed 14 ear-deaf-rnd  dF1 5.1  p(idx) 0.795
+  [194/504] seed 13 ear-sh-rnd  dF1 9.7  p(idx) 0.760
+  [197/504] seed 14 off  dF1 37.5  p(idx) 0.000
+  [198/504] seed 14 oracle  dF1 102.0  p(idx) 1.000
+  [196/504] seed 13 ear-win-sh-rnd  dF1 30.8  p(idx) 0.892
+  [193/504] seed 13 ear-sh  dF1 28.7  p(idx) 0.643
+  [200/504] seed 14 ear-rnd  dF1 5.7  p(idx) 0.759
+  [199/504] seed 14 ear  dF1 32.5  p(idx) 0.741
+  [203/504] seed 14 ema  dF1 67.9  p(idx) 0.865
+  [195/504] seed 13 ear-win-sh  dF1 70.8  p(idx) 0.893
+  [204/504] seed 14 ema-rnd  dF1 5.4  p(idx) 0.891
+  [205/504] seed 14 ear-win  dF1 73.9  p(idx) 0.892
+  [206/504] seed 14 ear-win-rnd  dF1 24.6  p(idx) 0.893
+  [212/504] seed 15 oracle  dF1 87.1  p(idx) 1.000
+  [211/504] seed 15 off  dF1 3.3  p(idx) 0.000
+  [208/504] seed 14 ear-sh-rnd  dF1 5.2  p(idx) 0.727
+  [216/504] seed 15 ear-deaf-rnd  dF1 2.4  p(idx) 0.814
+  [215/504] seed 15 ear-deaf  dF1 20.6  p(idx) 0.813
+  [210/504] seed 14 ear-win-sh-rnd  dF1 54.5  p(idx) 0.892
+  [213/504] seed 15 ear  dF1 43.1  p(idx) 0.725
+  [207/504] seed 14 ear-sh  dF1 81.6  p(idx) 0.580
+  [218/504] seed 15 ema-rnd  dF1 72.4  p(idx) 0.882
+  [217/504] seed 15 ema  dF1 6.3  p(idx) 0.867
+  [209/504] seed 14 ear-win-sh  dF1 92.9  p(idx) 0.892
+  [214/504] seed 15 ear-rnd  dF1 14.6  p(idx) 0.777
+  [219/504] seed 15 ear-win  dF1 51.0  p(idx) 0.891
+  [220/504] seed 15 ear-win-rnd  dF1 8.6  p(idx) 0.891
+  [222/504] seed 15 ear-sh-rnd  dF1 32.3  p(idx) 0.767
+  [225/504] seed 16 off  dF1 66.5  p(idx) 0.000
+  [229/504] seed 16 ear-deaf  dF1 39.8  p(idx) 0.751
+  [221/504] seed 15 ear-sh  dF1 19.4  p(idx) 0.697
+  [224/504] seed 15 ear-win-sh-rnd  dF1 15.4  p(idx) 0.890
+  [226/504] seed 16 oracle  dF1 60.4  p(idx) 1.000
+  [228/504] seed 16 ear-rnd  dF1 49.0  p(idx) 0.802
+  [223/504] seed 15 ear-win-sh  dF1 5.0  p(idx) 0.892
+  [230/504] seed 16 ear-deaf-rnd  dF1 97.5  p(idx) 0.834
+  [227/504] seed 16 ear  dF1 45.8  p(idx) 0.734
+  [232/504] seed 16 ema-rnd  dF1 88.9  p(idx) 0.892
+  [231/504] seed 16 ema  dF1 109.6  p(idx) 0.887
+  [233/504] seed 16 ear-win  dF1 84.4  p(idx) 0.893
+  [234/504] seed 16 ear-win-rnd  dF1 5.7  p(idx) 0.891
+  [236/504] seed 16 ear-sh-rnd  dF1 60.5  p(idx) 0.792
+  [243/504] seed 17 ear-deaf  dF1 43.7  p(idx) 0.769
+  [239/504] seed 17 off  dF1 1.8  p(idx) 0.000
+  [235/504] seed 16 ear-sh  dF1 102.9  p(idx) 0.815
+  [244/504] seed 17 ear-deaf-rnd  dF1 11.1  p(idx) 0.784
+  [240/504] seed 17 oracle  dF1 98.9  p(idx) 1.000
+  [238/504] seed 16 ear-win-sh-rnd  dF1 46.8  p(idx) 0.893
+  [237/504] seed 16 ear-win-sh  dF1 108.4  p(idx) 0.891
+  [241/504] seed 17 ear  dF1 3.9  p(idx) 0.763
+  [242/504] seed 17 ear-rnd  dF1 34.5  p(idx) 0.773
+  [245/504] seed 17 ema  dF1 64.0  p(idx) 0.884
+  [246/504] seed 17 ema-rnd  dF1 35.7  p(idx) 0.892
+  [247/504] seed 17 ear-win  dF1 70.1  p(idx) 0.891
+  [248/504] seed 17 ear-win-rnd  dF1 12.2  p(idx) 0.892
+  [250/504] seed 17 ear-sh-rnd  dF1 22.6  p(idx) 0.806
+  [257/504] seed 18 ear-deaf  dF1 55.3  p(idx) 0.588
+  [256/504] seed 18 ear-rnd  dF1 30.8  p(idx) 0.797
+  [251/504] seed 17 ear-win-sh  dF1 77.7  p(idx) 0.890
+  [252/504] seed 17 ear-win-sh-rnd  dF1 1.9  p(idx) 0.891
+  [255/504] seed 18 ear  dF1 37.0  p(idx) 0.737
+  [249/504] seed 17 ear-sh  dF1 18.1  p(idx) 0.771
+  [258/504] seed 18 ear-deaf-rnd  dF1 14.7  p(idx) 0.762
+  [253/504] seed 18 off  dF1 71.2  p(idx) 0.000
+  [254/504] seed 18 oracle  dF1 78.0  p(idx) 1.000
+  [259/504] seed 18 ema  dF1 59.8  p(idx) 0.877
+  [260/504] seed 18 ema-rnd  dF1 13.7  p(idx) 0.886
+  [262/504] seed 18 ear-win-rnd  dF1 44.6  p(idx) 0.891
+  [261/504] seed 18 ear-win  dF1 133.2  p(idx) 0.892
+  [271/504] seed 19 ear-deaf  dF1 7.7  p(idx) 0.656
+  [267/504] seed 19 off  dF1 17.1  p(idx) 0.000
+  [269/504] seed 19 ear  dF1 27.4  p(idx) 0.764
+  [272/504] seed 19 ear-deaf-rnd  dF1 6.8  p(idx) 0.807
+  [268/504] seed 19 oracle  dF1 42.5  p(idx) 1.000
+  [264/504] seed 18 ear-sh-rnd  dF1 15.9  p(idx) 0.769
+  [265/504] seed 18 ear-win-sh  dF1 13.6  p(idx) 0.893
+  [263/504] seed 18 ear-sh  dF1 36.3  p(idx) 0.666
+  [273/504] seed 19 ema  dF1 11.6  p(idx) 0.890
+  [270/504] seed 19 ear-rnd  dF1 25.1  p(idx) 0.765
+  [274/504] seed 19 ema-rnd  dF1 15.0  p(idx) 0.886
+  [266/504] seed 18 ear-win-sh-rnd  dF1 28.8  p(idx) 0.891
+  [276/504] seed 19 ear-win-rnd  dF1 43.4  p(idx) 0.892
+  [275/504] seed 19 ear-win  dF1 61.4  p(idx) 0.891
+  [277/504] seed 19 ear-sh  dF1 12.0  p(idx) 0.723
+  [285/504] seed 20 ear-deaf  dF1 43.4  p(idx) 0.641
+  [279/504] seed 19 ear-win-sh  dF1 74.4  p(idx) 0.890
+  [278/504] seed 19 ear-sh-rnd  dF1 30.2  p(idx) 0.753
+  [281/504] seed 20 off  dF1 84.6  p(idx) 0.000
+  [282/504] seed 20 oracle  dF1 118.9  p(idx) 1.000
+  [280/504] seed 19 ear-win-sh-rnd  dF1 7.0  p(idx) 0.890
+  [286/504] seed 20 ear-deaf-rnd  dF1 10.1  p(idx) 0.808
+  [284/504] seed 20 ear-rnd  dF1 32.1  p(idx) 0.773
+  [283/504] seed 20 ear  dF1 42.4  p(idx) 0.592
+  [288/504] seed 20 ema-rnd  dF1 11.9  p(idx) 0.889
+  [287/504] seed 20 ema  dF1 76.6  p(idx) 0.888
+  [290/504] seed 20 ear-win-rnd  dF1 3.4  p(idx) 0.893
+  [289/504] seed 20 ear-win  dF1 79.9  p(idx) 0.892
+  [292/504] seed 20 ear-sh-rnd  dF1 31.5  p(idx) 0.770
+  [299/504] seed 21 ear-deaf  dF1 17.0  p(idx) 0.794
+  [300/504] seed 21 ear-deaf-rnd  dF1 21.5  p(idx) 0.825
+  [293/504] seed 20 ear-win-sh  dF1 81.5  p(idx) 0.892
+  [295/504] seed 21 off  dF1 9.0  p(idx) 0.000
+  [291/504] seed 20 ear-sh  dF1 20.5  p(idx) 0.622
+  [298/504] seed 21 ear-rnd  dF1 0.8  p(idx) 0.795
+  [297/504] seed 21 ear  dF1 34.6  p(idx) 0.738
+  [296/504] seed 21 oracle  dF1 57.0  p(idx) 1.000
+  [294/504] seed 20 ear-win-sh-rnd  dF1 0.8  p(idx) 0.892
+  [301/504] seed 21 ema  dF1 36.3  p(idx) 0.882
+  [302/504] seed 21 ema-rnd  dF1 36.0  p(idx) 0.891
+  [303/504] seed 21 ear-win  dF1 123.4  p(idx) 0.894
+  [304/504] seed 21 ear-win-rnd  dF1 17.3  p(idx) 0.892
+  [311/504] seed 22 ear  dF1 1.7  p(idx) 0.769
+  [314/504] seed 22 ear-deaf-rnd  dF1 3.5  p(idx) 0.789
+  [313/504] seed 22 ear-deaf  dF1 15.2  p(idx) 0.700
+  [309/504] seed 22 off  dF1 43.5  p(idx) 0.000
+  [310/504] seed 22 oracle  dF1 95.6  p(idx) 1.000
+  [306/504] seed 21 ear-sh-rnd  dF1 22.4  p(idx) 0.793
+  [308/504] seed 21 ear-win-sh-rnd  dF1 45.0  p(idx) 0.892
+  [307/504] seed 21 ear-win-sh  dF1 87.1  p(idx) 0.894
+  [305/504] seed 21 ear-sh  dF1 11.5  p(idx) 0.701
+  [312/504] seed 22 ear-rnd  dF1 5.0  p(idx) 0.764
+  [315/504] seed 22 ema  dF1 57.1  p(idx) 0.886
+  [316/504] seed 22 ema-rnd  dF1 6.4  p(idx) 0.889
+  [318/504] seed 22 ear-win-rnd  dF1 4.6  p(idx) 0.891
+  [317/504] seed 22 ear-win  dF1 68.6  p(idx) 0.893
+  [320/504] seed 22 ear-sh-rnd  dF1 18.8  p(idx) 0.765
+  [327/504] seed 23 ear-deaf  dF1 38.6  p(idx) 0.793
+  [324/504] seed 23 oracle  dF1 68.0  p(idx) 1.000
+  [319/504] seed 22 ear-sh  dF1 35.1  p(idx) 0.747
+  [322/504] seed 22 ear-win-sh-rnd  dF1 22.7  p(idx) 0.892
+  [326/504] seed 23 ear-rnd  dF1 13.9  p(idx) 0.757
+  [321/504] seed 22 ear-win-sh  dF1 109.0  p(idx) 0.891
+  [325/504] seed 23 ear  dF1 75.4  p(idx) 0.585
+  [323/504] seed 23 off  dF1 126.4  p(idx) 0.000
+  [328/504] seed 23 ear-deaf-rnd  dF1 17.5  p(idx) 0.766
+  [330/504] seed 23 ema-rnd  dF1 32.6  p(idx) 0.883
+  [329/504] seed 23 ema  dF1 42.6  p(idx) 0.876
+  [331/504] seed 23 ear-win  dF1 83.7  p(idx) 0.892
+  [332/504] seed 23 ear-win-rnd  dF1 43.2  p(idx) 0.891
+  [341/504] seed 24 ear-deaf  dF1 51.0  p(idx) 0.664
+  [342/504] seed 24 ear-deaf-rnd  dF1 1.8  p(idx) 0.796
+  [337/504] seed 24 off  dF1 23.6  p(idx) 0.000
+  [338/504] seed 24 oracle  dF1 97.8  p(idx) 1.000
+  [340/504] seed 24 ear-rnd  dF1 29.0  p(idx) 0.725
+  [335/504] seed 23 ear-win-sh  dF1 66.3  p(idx) 0.891
+  [333/504] seed 23 ear-sh  dF1 8.1  p(idx) 0.621
+  [334/504] seed 23 ear-sh-rnd  dF1 7.8  p(idx) 0.757
+  [336/504] seed 23 ear-win-sh-rnd  dF1 66.2  p(idx) 0.892
+  [339/504] seed 24 ear  dF1 91.9  p(idx) 0.590
+  [343/504] seed 24 ema  dF1 41.9  p(idx) 0.500
+  [344/504] seed 24 ema-rnd  dF1 32.2  p(idx) 0.882
+  [346/504] seed 24 ear-win-rnd  dF1 9.9  p(idx) 0.891
+  [345/504] seed 24 ear-win  dF1 127.2  p(idx) 0.892
+  [351/504] seed 25 off  dF1 27.4  p(idx) 0.000
+  [348/504] seed 24 ear-sh-rnd  dF1 16.3  p(idx) 0.753
+  [349/504] seed 24 ear-win-sh  dF1 87.1  p(idx) 0.890
+  [350/504] seed 24 ear-win-sh-rnd  dF1 25.7  p(idx) 0.890
+  [353/504] seed 25 ear  dF1 25.6  p(idx) 0.685
+  [355/504] seed 25 ear-deaf  dF1 17.4  p(idx) 0.818
+  [347/504] seed 24 ear-sh  dF1 39.5  p(idx) 0.658
+  [352/504] seed 25 oracle  dF1 64.9  p(idx) 1.000
+  [356/504] seed 25 ear-deaf-rnd  dF1 34.9  p(idx) 0.811
+  [354/504] seed 25 ear-rnd  dF1 27.7  p(idx) 0.783
+  [357/504] seed 25 ema  dF1 52.9  p(idx) 0.884
+  [358/504] seed 25 ema-rnd  dF1 7.0  p(idx) 0.891
+  [360/504] seed 25 ear-win-rnd  dF1 3.3  p(idx) 0.892
+  [359/504] seed 25 ear-win  dF1 108.0  p(idx) 0.893
+  [361/504] seed 25 ear-sh  dF1 9.4  p(idx) 0.753
+  [369/504] seed 26 ear-deaf  dF1 9.6  p(idx) 0.661
+  [366/504] seed 26 oracle  dF1 62.6  p(idx) 1.000
+  [362/504] seed 25 ear-sh-rnd  dF1 10.1  p(idx) 0.780
+  [365/504] seed 26 off  dF1 34.2  p(idx) 0.000
+  [364/504] seed 25 ear-win-sh-rnd  dF1 11.3  p(idx) 0.891
+  [370/504] seed 26 ear-deaf-rnd  dF1 15.2  p(idx) 0.798
+  [368/504] seed 26 ear-rnd  dF1 3.4  p(idx) 0.772
+  [363/504] seed 25 ear-win-sh  dF1 64.5  p(idx) 0.893
+  [371/504] seed 26 ema  dF1 81.2  p(idx) 0.881
+  [372/504] seed 26 ema-rnd  dF1 21.8  p(idx) 0.890
+  [367/504] seed 26 ear  dF1 49.5  p(idx) 0.669
+  [373/504] seed 26 ear-win  dF1 88.9  p(idx) 0.891
+  [374/504] seed 26 ear-win-rnd  dF1 40.2  p(idx) 0.892
+  [377/504] seed 26 ear-win-sh  dF1 65.7  p(idx) 0.893
+  [379/504] seed 27 off  dF1 14.6  p(idx) 0.000
+  [376/504] seed 26 ear-sh-rnd  dF1 24.0  p(idx) 0.730
+  [375/504] seed 26 ear-sh  dF1 19.2  p(idx) 0.668
+  [378/504] seed 26 ear-win-sh-rnd  dF1 4.6  p(idx) 0.891
+  [384/504] seed 27 ear-deaf-rnd  dF1 44.5  p(idx) 0.776
+  [380/504] seed 27 oracle  dF1 117.4  p(idx) 1.000
+  [383/504] seed 27 ear-deaf  dF1 50.8  p(idx) 0.611
+  [382/504] seed 27 ear-rnd  dF1 45.7  p(idx) 0.774
+  [381/504] seed 27 ear  dF1 21.9  p(idx) 0.713
+  [386/504] seed 27 ema-rnd  dF1 7.3  p(idx) 0.507
+  [387/504] seed 27 ear-win  dF1 90.0  p(idx) 0.891
+  [385/504] seed 27 ema  dF1 24.5  p(idx) 0.500
+  [388/504] seed 27 ear-win-rnd  dF1 19.6  p(idx) 0.892
+  [398/504] seed 28 ear-deaf-rnd  dF1 10.6  p(idx) 0.776
+  [393/504] seed 28 off  dF1 3.7  p(idx) 0.000
+  [390/504] seed 27 ear-sh-rnd  dF1 8.9  p(idx) 0.736
+  [397/504] seed 28 ear-deaf  dF1 18.9  p(idx) 0.710
+  [389/504] seed 27 ear-sh  dF1 5.1  p(idx) 0.697
+  [395/504] seed 28 ear  dF1 15.7  p(idx) 0.670
+  [391/504] seed 27 ear-win-sh  dF1 57.4  p(idx) 0.890
+  [392/504] seed 27 ear-win-sh-rnd  dF1 26.4  p(idx) 0.891
+  [394/504] seed 28 oracle  dF1 75.3  p(idx) 1.000
+  [396/504] seed 28 ear-rnd  dF1 18.9  p(idx) 0.773
+  [399/504] seed 28 ema  dF1 69.9  p(idx) 0.885
+  [400/504] seed 28 ema-rnd  dF1 16.4  p(idx) 0.871
+  [402/504] seed 28 ear-win-rnd  dF1 20.0  p(idx) 0.892
+  [401/504] seed 28 ear-win  dF1 76.6  p(idx) 0.892
+  [406/504] seed 28 ear-win-sh-rnd  dF1 29.1  p(idx) 0.891
+  [412/504] seed 29 ear-deaf-rnd  dF1 23.8  p(idx) 0.803
+  [411/504] seed 29 ear-deaf  dF1 43.1  p(idx) 0.671
+  [403/504] seed 28 ear-sh  dF1 5.4  p(idx) 0.668
+  [404/504] seed 28 ear-sh-rnd  dF1 26.7  p(idx) 0.743
+  [408/504] seed 29 oracle  dF1 83.7  p(idx) 1.000
+  [405/504] seed 28 ear-win-sh  dF1 13.1  p(idx) 0.892
+  [407/504] seed 29 off  dF1 21.6  p(idx) 0.000
+  [409/504] seed 29 ear  dF1 44.1  p(idx) 0.761
+  [410/504] seed 29 ear-rnd  dF1 19.1  p(idx) 0.780
+  [414/504] seed 29 ema-rnd  dF1 21.3  p(idx) 0.880
+  [413/504] seed 29 ema  dF1 24.2  p(idx) 0.866
+  [415/504] seed 29 ear-win  dF1 75.2  p(idx) 0.891
+  [416/504] seed 29 ear-win-rnd  dF1 26.8  p(idx) 0.892
+  [421/504] seed 30 off  dF1 14.4  p(idx) 0.000
+  [418/504] seed 29 ear-sh-rnd  dF1 28.8  p(idx) 0.774
+  [419/504] seed 29 ear-win-sh  dF1 108.8  p(idx) 0.890
+  [420/504] seed 29 ear-win-sh-rnd  dF1 27.9  p(idx) 0.892
+  [424/504] seed 30 ear-rnd  dF1 36.0  p(idx) 0.779
+  [423/504] seed 30 ear  dF1 10.8  p(idx) 0.777
+  [425/504] seed 30 ear-deaf  dF1 31.0  p(idx) 0.753
+  [426/504] seed 30 ear-deaf-rnd  dF1 10.0  p(idx) 0.811
+  [417/504] seed 29 ear-sh  dF1 79.7  p(idx) 0.631
+  [427/504] seed 30 ema  dF1 52.2  p(idx) 0.890
+  [422/504] seed 30 oracle  dF1 78.3  p(idx) 1.000
+  [429/504] seed 30 ear-win  dF1 113.6  p(idx) 0.891
+  [428/504] seed 30 ema-rnd  dF1 72.2  p(idx) 0.849
+  [430/504] seed 30 ear-win-rnd  dF1 3.2  p(idx) 0.892
+  [439/504] seed 31 ear-deaf  dF1 33.5  p(idx) 0.717
+  [435/504] seed 31 off  dF1 20.9  p(idx) 0.000
+  [432/504] seed 30 ear-sh-rnd  dF1 46.6  p(idx) 0.742
+  [436/504] seed 31 oracle  dF1 110.6  p(idx) 1.000
+  [431/504] seed 30 ear-sh  dF1 13.1  p(idx) 0.750
+  [434/504] seed 30 ear-win-sh-rnd  dF1 12.3  p(idx) 0.891
+  [433/504] seed 30 ear-win-sh  dF1 92.4  p(idx) 0.891
+  [440/504] seed 31 ear-deaf-rnd  dF1 12.7  p(idx) 0.778
+  [437/504] seed 31 ear  dF1 93.5  p(idx) 0.632
+  [438/504] seed 31 ear-rnd  dF1 27.0  p(idx) 0.713
+  [442/504] seed 31 ema-rnd  dF1 2.4  p(idx) 0.880
+  [443/504] seed 31 ear-win  dF1 50.4  p(idx) 0.891
+  [441/504] seed 31 ema  dF1 73.4  p(idx) 0.513
+  [444/504] seed 31 ear-win-rnd  dF1 24.9  p(idx) 0.892
+  [445/504] seed 31 ear-sh  dF1 40.3  p(idx) 0.632
+  [453/504] seed 32 ear-deaf  dF1 38.7  p(idx) 0.736
+  [450/504] seed 32 oracle  dF1 69.6  p(idx) 1.000
+  [448/504] seed 31 ear-win-sh-rnd  dF1 0.5  p(idx) 0.892
+  [449/504] seed 32 off  dF1 26.6  p(idx) 0.000
+  [454/504] seed 32 ear-deaf-rnd  dF1 2.7  p(idx) 0.774
+  [447/504] seed 31 ear-win-sh  dF1 98.6  p(idx) 0.891
+  [446/504] seed 31 ear-sh-rnd  dF1 10.3  p(idx) 0.713
+  [452/504] seed 32 ear-rnd  dF1 18.4  p(idx) 0.758
+  [451/504] seed 32 ear  dF1 30.3  p(idx) 0.682
+  [455/504] seed 32 ema  dF1 29.2  p(idx) 0.513
+  [456/504] seed 32 ema-rnd  dF1 27.6  p(idx) 0.890
+  [457/504] seed 32 ear-win  dF1 93.3  p(idx) 0.892
+  [458/504] seed 32 ear-win-rnd  dF1 32.6  p(idx) 0.891
+  [463/504] seed 33 off  dF1 0.5  p(idx) 0.000
+  [462/504] seed 32 ear-win-sh-rnd  dF1 31.8  p(idx) 0.894
+  [461/504] seed 32 ear-win-sh  dF1 128.2  p(idx) 0.892
+  [460/504] seed 32 ear-sh-rnd  dF1 9.3  p(idx) 0.709
+  [464/504] seed 33 oracle  dF1 46.6  p(idx) 1.000
+  [467/504] seed 33 ear-deaf  dF1 34.8  p(idx) 0.595
+  [459/504] seed 32 ear-sh  dF1 33.4  p(idx) 0.634
+  [465/504] seed 33 ear  dF1 26.7  p(idx) 0.710
+  [468/504] seed 33 ear-deaf-rnd  dF1 1.2  p(idx) 0.777
+  [466/504] seed 33 ear-rnd  dF1 6.9  p(idx) 0.776
+  [469/504] seed 33 ema  dF1 81.8  p(idx) 0.872
+  [470/504] seed 33 ema-rnd  dF1 2.6  p(idx) 0.870
+  [472/504] seed 33 ear-win-rnd  dF1 39.1  p(idx) 0.893
+  [471/504] seed 33 ear-win  dF1 71.9  p(idx) 0.891
+  [481/504] seed 34 ear-deaf  dF1 29.5  p(idx) 0.722
+  [477/504] seed 34 off  dF1 3.9  p(idx) 0.000
+  [480/504] seed 34 ear-rnd  dF1 8.3  p(idx) 0.751
+  [479/504] seed 34 ear  dF1 22.7  p(idx) 0.740
+  [474/504] seed 33 ear-sh-rnd  dF1 12.9  p(idx) 0.730
+  [482/504] seed 34 ear-deaf-rnd  dF1 6.9  p(idx) 0.798
+  [478/504] seed 34 oracle  dF1 53.6  p(idx) 1.000
+  [473/504] seed 33 ear-sh  dF1 18.6  p(idx) 0.711
+  [476/504] seed 33 ear-win-sh-rnd  dF1 5.2  p(idx) 0.891
+  [475/504] seed 33 ear-win-sh  dF1 78.1  p(idx) 0.892
+  [486/504] seed 34 ear-win-rnd  dF1 22.6  p(idx) 0.892
+  [483/504] seed 34 ema  dF1 35.4  p(idx) 0.516
+  [484/504] seed 34 ema-rnd  dF1 28.1  p(idx) 0.887
+  [485/504] seed 34 ear-win  dF1 99.7  p(idx) 0.891
+  [491/504] seed 35 off  dF1 3.6  p(idx) 0.000
+  [496/504] seed 35 ear-deaf-rnd  dF1 50.7  p(idx) 0.820
+  [495/504] seed 35 ear-deaf  dF1 24.4  p(idx) 0.553
+  [492/504] seed 35 oracle  dF1 56.9  p(idx) 1.000
+  [490/504] seed 34 ear-win-sh-rnd  dF1 0.4  p(idx) 0.894
+  [493/504] seed 35 ear  dF1 26.5  p(idx) 0.790
+  [488/504] seed 34 ear-sh-rnd  dF1 7.3  p(idx) 0.729
+  [489/504] seed 34 ear-win-sh  dF1 74.2  p(idx) 0.892
+  [487/504] seed 34 ear-sh  dF1 51.1  p(idx) 0.705
+  [494/504] seed 35 ear-rnd  dF1 13.3  p(idx) 0.743
+  [498/504] seed 35 ema-rnd  dF1 6.0  p(idx) 0.890
+  [500/504] seed 35 ear-win-rnd  dF1 14.2  p(idx) 0.892
+  [499/504] seed 35 ear-win  dF1 62.3  p(idx) 0.891
+  [497/504] seed 35 ema  dF1 27.4  p(idx) 0.857
+  [504/504] seed 35 ear-win-sh-rnd  dF1 13.7  p(idx) 0.893
+  [503/504] seed 35 ear-win-sh  dF1 74.7  p(idx) 0.892
+  [501/504] seed 35 ear-sh  dF1 18.5  p(idx) 0.721
+  [502/504] seed 35 ear-sh-rnd  dF1 9.6  p(idx) 0.756
+experiment: ctxself
+  instrument        ctxself   trial seed 00000000013579d6   1214 trials per arm
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  question          `areax` proved a context-indexed bias works, keyed on
+                    an index the HOST wrote from the word label. Can the
+                    creature derive that index for ITSELF? v52 read it
+                    off the larynx and was refused; source 4 reads the
+                    ear's own rate EMA, which is what replicated.
+  the bar           an index right with probability p writes the other
+                    table 1-p of the time, so the conditional part scales
+                    as (2p - 1). `ctxsrc` bounds p at 0.740 for ANY readout
+                    of the larynx in this window, which is 48% of what the
+                    oracle index bought. A FIXED partition can only do
+                    worse, so that is a ceiling and not a prediction.
+  arm               all four get the same host drive on the context
+                    module, so `self` and `oracle` differ in ONE field.
+
+  seed   arm       dF1 (Hz)  p(idx)   busiest  table div  ev/tri  change
+  0      off       0.1       0.000    0.000    0.0000     0.0     +1.4
+  0      oracle    67.4      1.000    0.500    0.0256     0.0     +16.8
+  0      ear       1.3       0.711    0.563    0.0240     2.7     -4.4
+  0      ear-rnd   18.5      0.722    0.573    0.0231     3.0     +0.3
+  0      ear-deaf  38.3      0.725    0.571    0.0243     2.1     +7.2
+  0      ear-deaf-rnd 26.2      0.799    0.539    0.0281     2.6     +0.2
+  0      ema       10.1      0.504    0.980    0.0199     1.4     -4.3
+  0      ema-rnd   20.5      0.878    0.616    0.0300     3.4     +0.8
+  0      ear-win   71.5      0.892    0.608    0.0302     1.0     +19.4
+  0      ear-win-rnd 1.2       0.891    0.609    0.0299     1.0     +1.3
+  0      ear-sh    40.9      0.642    0.564    0.0226     1.4     +2.1
+  0      ear-sh-rnd 23.6      0.781    0.601    0.0248     3.2     +0.8
+  0      ear-win-sh 120.3     0.894    0.606    0.0279     1.0     +14.3
+  0      ear-win-sh-rnd 15.2      0.891    0.609    0.0268     1.0     +1.7
+  1      off       94.2      0.000    0.000    0.0000     0.0     +2.4
+  1      oracle    93.1      1.000    0.500    0.0250     0.0     +19.6
+  1      ear       37.4      0.747    0.631    0.0262     2.8     +5.6
+  1      ear-rnd   0.8       0.773    0.604    0.0257     3.1     -1.2
+  1      ear-deaf  71.7      0.700    0.546    0.0250     2.5     +0.2
+  1      ear-deaf-rnd 16.0      0.830    0.501    0.0240     3.0     -1.1
+  1      ema       98.7      0.892    0.608    0.0281     2.7     +17.2
+  1      ema-rnd   1.0       0.887    0.613    0.0233     4.3     -0.2
+  1      ear-win   115.9     0.893    0.607    0.0313     1.0     +20.0
+  1      ear-win-rnd 7.7       0.892    0.608    0.0259     1.0     +0.4
+  1      ear-sh    61.7      0.611    0.550    0.0230     1.6     -4.6
+  1      ear-sh-rnd 8.3       0.764    0.529    0.0214     3.4     +1.6
+  1      ear-win-sh 99.2      0.892    0.608    0.0273     1.0     +11.8
+  1      ear-win-sh-rnd 14.1      0.892    0.608    0.0243     1.0     +0.3
+  2      off       29.4      0.000    0.000    0.0000     0.0     -2.0
+  2      oracle    115.6     1.000    0.500    0.0270     0.0     +14.6
+  2      ear       7.3       0.729    0.569    0.0274     2.9     -6.0
+  2      ear-rnd   6.7       0.788    0.538    0.0251     3.3     +0.3
+  2      ear-deaf  18.3      0.678    0.569    0.0258     2.2     -1.2
+  2      ear-deaf-rnd 24.1      0.794    0.616    0.0261     2.3     +0.0
+  2      ema       108.0     0.891    0.609    0.0301     3.5     +18.7
+  2      ema-rnd   56.0      0.891    0.609    0.0255     3.6     +1.2
+  2      ear-win   57.7      0.891    0.609    0.0300     1.0     +25.0
+  2      ear-win-rnd 31.7      0.892    0.608    0.0303     1.0     -0.1
+  2      ear-sh    27.8      0.714    0.605    0.0240     2.9     +7.1
+  2      ear-sh-rnd 19.6      0.789    0.502    0.0247     3.0     +1.0
+  2      ear-win-sh 101.5     0.890    0.610    0.0337     1.0     +15.5
+  2      ear-win-sh-rnd 27.8      0.890    0.610    0.0256     1.0     -1.6
+  3      off       84.0      0.000    0.000    0.0000     0.0     +9.0
+  3      oracle    96.7      1.000    0.500    0.0270     0.0     +18.2
+  3      ear       25.6      0.761    0.592    0.0250     3.2     +6.1
+  3      ear-rnd   0.4       0.769    0.643    0.0240     4.2     -1.0
+  3      ear-deaf  27.3      0.762    0.684    0.0247     2.4     -1.3
+  3      ear-deaf-rnd 11.3      0.799    0.647    0.0248     2.4     +0.3
+  3      ema       54.4      0.884    0.616    0.0265     2.3     +10.2
+  3      ema-rnd   4.8       0.891    0.609    0.0274     3.0     +1.0
+  3      ear-win   91.3      0.892    0.608    0.0290     1.0     +14.8
+  3      ear-win-rnd 29.9      0.892    0.608    0.0271     1.0     -0.1
+  3      ear-sh    21.5      0.737    0.663    0.0243     3.1     +5.5
+  3      ear-sh-rnd 20.7      0.722    0.685    0.0249     2.9     -0.2
+  3      ear-win-sh 105.0     0.890    0.610    0.0286     1.0     +15.8
+  3      ear-win-sh-rnd 21.1      0.892    0.608    0.0270     1.0     -2.0
+  4      off       14.5      0.000    0.000    0.0000     0.0     -1.3
+  4      oracle    69.1      1.000    0.500    0.0250     0.0     +13.1
+  4      ear       24.5      0.680    0.653    0.0284     2.4     +5.2
+  4      ear-rnd   25.8      0.727    0.649    0.0237     3.1     -0.8
+  4      ear-deaf  5.2       0.773    0.670    0.0247     2.6     +4.6
+  4      ear-deaf-rnd 16.0      0.739    0.677    0.0289     2.1     +1.7
+  4      ema       15.8      0.888    0.612    0.0257     2.8     +17.8
+  4      ema-rnd   1.8       0.881    0.619    0.0262     3.2     -0.2
+  4      ear-win   81.6      0.892    0.608    0.0253     1.0     +19.0
+  4      ear-win-rnd 3.7       0.891    0.609    0.0268     1.0     -0.3
+  4      ear-sh    21.4      0.661    0.678    0.0223     1.7     -1.9
+  4      ear-sh-rnd 19.8      0.726    0.629    0.0262     2.4     +2.0
+  4      ear-win-sh 79.7      0.893    0.607    0.0243     1.0     +14.9
+  4      ear-win-sh-rnd 17.3      0.892    0.608    0.0272     1.0     -1.9
+  5      off       42.6      0.000    0.000    0.0000     0.0     +4.5
+  5      oracle    104.3     1.000    0.500    0.0270     0.0     +18.9
+  5      ear       62.0      0.667    0.592    0.0247     2.4     -6.5
+  5      ear-rnd   5.8       0.780    0.637    0.0268     3.5     +0.6
+  5      ear-deaf  66.2      0.740    0.698    0.0234     2.4     +3.7
+  5      ear-deaf-rnd 64.0      0.809    0.664    0.0276     2.3     -0.5
+  5      ema       89.9      0.890    0.610    0.0297     2.9     +13.4
+  5      ema-rnd   34.3      0.891    0.609    0.0262     3.3     +1.5
+  5      ear-win   107.6     0.892    0.608    0.0284     1.0     +8.9
+  5      ear-win-rnd 58.0      0.891    0.609    0.0295     1.0     +0.5
+  5      ear-sh    57.5      0.700    0.655    0.0250     2.6     +2.9
+  5      ear-sh-rnd 3.0       0.746    0.680    0.0255     2.9     +0.2
+  5      ear-win-sh 40.3      0.892    0.608    0.0297     1.0     +3.2
+  5      ear-win-sh-rnd 18.0      0.891    0.609    0.0244     1.0     +0.1
+  6      off       6.1       0.000    0.000    0.0000     0.0     +2.6
+  6      oracle    82.7      1.000    0.500    0.0251     0.0     +14.5
+  6      ear       17.1      0.574    0.694    0.0194     1.2     -6.9
+  6      ear-rnd   31.3      0.750    0.709    0.0255     3.2     +0.5
+  6      ear-deaf  4.9       0.573    0.821    0.0240     1.2     -11.5
+  6      ear-deaf-rnd 5.2       0.770    0.693    0.0305     2.7     +0.5
+  6      ema       81.5      0.501    0.983    0.0183     1.3     +11.6
+  6      ema-rnd   15.6      0.501    0.976    0.0272     3.4     +0.2
+  6      ear-win   93.0      0.893    0.607    0.0303     1.0     +15.6
+  6      ear-win-rnd 2.2       0.892    0.608    0.0280     1.0     +1.2
+  6      ear-sh    13.5      0.731    0.623    0.0257     2.4     +7.3
+  6      ear-sh-rnd 27.6      0.757    0.679    0.0257     2.9     +1.3
+  6      ear-win-sh 69.7      0.891    0.609    0.0279     1.0     +19.3
+  6      ear-win-sh-rnd 5.3       0.890    0.610    0.0261     1.0     -0.3
+  7      off       46.0      0.000    0.000    0.0000     0.0     +2.0
+  7      oracle    72.0      1.000    0.500    0.0277     0.0     +13.2
+  7      ear       35.2      0.677    0.605    0.0238     2.1     -7.4
+  7      ear-rnd   7.2       0.802    0.511    0.0264     3.6     +0.6
+  7      ear-deaf  38.4      0.781    0.588    0.0252     2.4     -0.1
+  7      ear-deaf-rnd 7.0       0.799    0.608    0.0240     2.0     +0.2
+  7      ema       48.8      0.837    0.663    0.0245     2.4     +9.9
+  7      ema-rnd   4.8       0.893    0.607    0.0259     3.2     -0.7
+  7      ear-win   31.1      0.893    0.607    0.0282     1.0     +16.0
+  7      ear-win-rnd 27.2      0.893    0.607    0.0291     1.0     +0.8
+  7      ear-sh    30.8      0.634    0.646    0.0239     1.9     +3.7
+  7      ear-sh-rnd 29.9      0.794    0.534    0.0247     4.1     +0.6
+  7      ear-win-sh 37.4      0.894    0.606    0.0286     1.0     +8.6
+  7      ear-win-sh-rnd 42.9      0.892    0.608    0.0265     1.0     +1.6
+  8      off       29.2      0.000    0.000    0.0000     0.0     -3.1
+  8      oracle    105.7     1.000    0.500    0.0263     0.0     +9.8
+  8      ear       12.6      0.683    0.666    0.0222     2.9     +3.4
+  8      ear-rnd   18.6      0.745    0.678    0.0268     3.2     +1.8
+  8      ear-deaf  18.3      0.713    0.579    0.0270     2.5     +6.2
+  8      ear-deaf-rnd 17.1      0.747    0.537    0.0291     2.8     +2.0
+  8      ema       36.4      0.511    0.989    0.0271     2.6     +8.9
+  8      ema-rnd   63.2      0.860    0.630    0.0322     3.4     +1.2
+  8      ear-win   111.6     0.893    0.607    0.0300     1.0     +14.7
+  8      ear-win-rnd 48.6      0.892    0.608    0.0254     1.0     -0.2
+  8      ear-sh    68.1      0.598    0.681    0.0236     1.2     -2.4
+  8      ear-sh-rnd 6.4       0.747    0.658    0.0286     3.1     +0.9
+  8      ear-win-sh 119.9     0.891    0.609    0.0278     1.0     +13.6
+  8      ear-win-sh-rnd 40.4      0.892    0.608    0.0240     1.0     -1.4
+  9      off       7.5       0.000    0.000    0.0000     0.0     +3.1
+  9      oracle    67.8      1.000    0.500    0.0287     0.0     +12.6
+  9      ear       21.8      0.744    0.501    0.0236     4.1     +3.5
+  9      ear-rnd   7.0       0.727    0.564    0.0253     3.9     +1.3
+  9      ear-deaf  15.2      0.652    0.706    0.0235     2.1     -2.1
+  9      ear-deaf-rnd 6.7       0.776    0.606    0.0287     3.5     -0.3
+  9      ema       21.1      0.860    0.639    0.0262     2.7     +9.2
+  9      ema-rnd   3.1       0.884    0.616    0.0235     3.5     +0.7
+  9      ear-win   34.9      0.892    0.608    0.0301     1.0     +22.5
+  9      ear-win-rnd 39.2      0.891    0.609    0.0254     1.0     +0.8
+  9      ear-sh    34.3      0.549    0.733    0.0224     1.0     +4.5
+  9      ear-sh-rnd 5.1       0.748    0.515    0.0226     3.7     +0.6
+  9      ear-win-sh 47.6      0.892    0.608    0.0258     1.0     +23.9
+  9      ear-win-sh-rnd 18.6      0.892    0.608    0.0240     1.0     -0.6
+  10     off       4.3       0.000    0.000    0.0000     0.0     +0.5
+  10     oracle    36.8      1.000    0.500    0.0283     0.0     +9.6
+  10     ear       0.0       0.710    0.604    0.0263     2.7     +2.2
+  10     ear-rnd   23.0      0.768    0.589    0.0264     3.6     +0.5
+  10     ear-deaf  12.0      0.626    0.637    0.0266     2.5     -0.2
+  10     ear-deaf-rnd 10.1      0.810    0.652    0.0262     2.3     +0.4
+  10     ema       37.8      0.879    0.621    0.0286     2.8     +23.3
+  10     ema-rnd   20.0      0.514    0.986    0.0250     3.9     +0.4
+  10     ear-win   111.3     0.893    0.607    0.0270     1.0     +32.9
+  10     ear-win-rnd 15.6      0.892    0.608    0.0296     1.0     +0.7
+  10     ear-sh    0.3       0.733    0.603    0.0252     2.5     +1.1
+  10     ear-sh-rnd 37.6      0.747    0.620    0.0247     3.3     +0.9
+  10     ear-win-sh 77.8      0.891    0.609    0.0261     1.0     +26.2
+  10     ear-win-sh-rnd 61.9      0.892    0.608    0.0253     1.0     +2.1
+  11     off       19.4      0.000    0.000    0.0000     0.0     +1.9
+  11     oracle    71.4      1.000    0.500    0.0296     0.0     +12.7
+  11     ear       20.4      0.693    0.668    0.0237     2.6     +0.5
+  11     ear-rnd   5.2       0.700    0.714    0.0273     2.8     +0.1
+  11     ear-deaf  22.4      0.757    0.723    0.0273     2.7     -0.4
+  11     ear-deaf-rnd 44.3      0.781    0.694    0.0268     2.6     +0.5
+  11     ema       15.6      0.510    0.990    0.0244     2.4     +0.6
+  11     ema-rnd   10.7      0.512    0.988    0.0250     3.9     +0.1
+  11     ear-win   128.5     0.892    0.608    0.0306     1.0     +3.8
+  11     ear-win-rnd 4.9       0.894    0.606    0.0291     1.0     -0.6
+  11     ear-sh    24.9      0.727    0.653    0.0214     3.5     +2.3
+  11     ear-sh-rnd 1.6       0.709    0.697    0.0262     2.8     +1.1
+  11     ear-win-sh 52.4      0.891    0.609    0.0271     1.0     -3.3
+  11     ear-win-sh-rnd 18.2      0.895    0.605    0.0272     1.0     -0.3
+  12     off       9.1       0.000    0.000    0.0000     0.0     +1.4
+  12     oracle    80.6      1.000    0.500    0.0292     0.0     +18.3
+  12     ear       15.9      0.701    0.734    0.0237     3.2     +7.4
+  12     ear-rnd   17.4      0.758    0.722    0.0257     3.5     -0.5
+  12     ear-deaf  29.9      0.628    0.798    0.0255     2.0     +24.1
+  12     ear-deaf-rnd 2.5       0.799    0.685    0.0263     2.5     +0.5
+  12     ema       10.1      0.884    0.616    0.0253     2.3     +2.2
+  12     ema-rnd   15.8      0.881    0.619    0.0231     3.4     +0.1
+  12     ear-win   109.6     0.892    0.608    0.0263     1.0     +17.4
+  12     ear-win-rnd 52.2      0.892    0.608    0.0288     1.0     +0.9
+  12     ear-sh    2.3       0.684    0.753    0.0238     2.7     -1.3
+  12     ear-sh-rnd 8.8       0.759    0.708    0.0263     3.7     +1.4
+  12     ear-win-sh 84.5      0.891    0.609    0.0279     1.0     +21.6
+  12     ear-win-sh-rnd 33.0      0.890    0.610    0.0283     1.0     +1.1
+  13     off       9.5       0.000    0.000    0.0000     0.0     -0.7
+  13     oracle    11.6      1.000    0.500    0.0311     0.0     +13.6
+  13     ear       26.6      0.812    0.644    0.0260     4.1     +10.0
+  13     ear-rnd   15.8      0.790    0.698    0.0241     3.7     -0.4
+  13     ear-deaf  28.7      0.729    0.744    0.0260     2.0     +0.1
+  13     ear-deaf-rnd 26.0      0.808    0.674    0.0250     2.9     +0.4
+  13     ema       24.0      0.885    0.615    0.0283     2.7     +26.3
+  13     ema-rnd   5.2       0.891    0.609    0.0270     3.4     +0.4
+  13     ear-win   18.4      0.891    0.609    0.0314     1.0     +13.2
+  13     ear-win-rnd 55.5      0.891    0.609    0.0292     1.0     +0.3
+  13     ear-sh    28.7      0.643    0.646    0.0251     1.4     -0.8
+  13     ear-sh-rnd 9.7       0.760    0.658    0.0252     3.8     -0.1
+  13     ear-win-sh 70.8      0.893    0.607    0.0331     1.0     +15.7
+  13     ear-win-sh-rnd 30.8      0.892    0.608    0.0285     1.0     -0.4
+  14     off       37.5      0.000    0.000    0.0000     0.0     +5.0
+  14     oracle    102.0     1.000    0.500    0.0257     0.0     +29.3
+  14     ear       32.5      0.741    0.535    0.0215     4.3     +5.9
+  14     ear-rnd   5.7       0.759    0.581    0.0268     3.5     +0.3
+  14     ear-deaf  25.8      0.656    0.674    0.0249     2.2     +4.4
+  14     ear-deaf-rnd 5.1       0.795    0.620    0.0248     2.6     +0.6
+  14     ema       67.9      0.865    0.611    0.0260     3.0     +15.5
+  14     ema-rnd   5.4       0.891    0.609    0.0302     3.7     +0.5
+  14     ear-win   73.9      0.892    0.608    0.0310     1.0     +13.4
+  14     ear-win-rnd 24.6      0.893    0.607    0.0267     1.0     +0.7
+  14     ear-sh    81.6      0.580    0.536    0.0211     0.9     -20.0
+  14     ear-sh-rnd 5.2       0.727    0.559    0.0261     3.0     +0.9
+  14     ear-win-sh 92.9      0.892    0.608    0.0311     1.0     +15.9
+  14     ear-win-sh-rnd 54.5      0.892    0.608    0.0277     1.0     -1.2
+  15     off       3.3       0.000    0.000    0.0000     0.0     -0.3
+  15     oracle    87.1      1.000    0.500    0.0291     0.0     +18.4
+  15     ear       43.1      0.725    0.595    0.0255     3.2     +8.7
+  15     ear-rnd   14.6      0.777    0.626    0.0253     2.8     +1.0
+  15     ear-deaf  20.6      0.813    0.523    0.0254     2.8     +9.8
+  15     ear-deaf-rnd 2.4       0.814    0.508    0.0244     2.7     -0.4
+  15     ema       6.3       0.867    0.617    0.0230     2.7     +11.9
+  15     ema-rnd   72.4      0.882    0.618    0.0217     3.5     +0.5
+  15     ear-win   51.0      0.891    0.609    0.0325     1.0     +5.7
+  15     ear-win-rnd 8.6       0.891    0.609    0.0240     1.0     +2.3
+  15     ear-sh    19.4      0.697    0.565    0.0237     2.5     +1.1
+  15     ear-sh-rnd 32.3      0.767    0.552    0.0239     3.4     +1.6
+  15     ear-win-sh 5.0       0.892    0.608    0.0315     1.0     -4.6
+  15     ear-win-sh-rnd 15.4      0.890    0.610    0.0257     1.0     +0.8
+  16     off       66.5      0.000    0.000    0.0000     0.0     +2.2
+  16     oracle    60.4      1.000    0.500    0.0297     0.0     +14.5
+  16     ear       45.8      0.734    0.670    0.0234     2.8     -2.0
+  16     ear-rnd   49.0      0.802    0.590    0.0247     3.7     +1.3
+  16     ear-deaf  39.8      0.751    0.731    0.0270     2.3     -3.3
+  16     ear-deaf-rnd 97.5      0.834    0.665    0.0292     2.5     +2.0
+  16     ema       109.6     0.887    0.613    0.0251     2.4     +17.0
+  16     ema-rnd   88.9      0.892    0.608    0.0240     3.6     +0.6
+  16     ear-win   84.4      0.893    0.607    0.0286     1.0     +19.8
+  16     ear-win-rnd 5.7       0.891    0.609    0.0263     1.0     +0.6
+  16     ear-sh    102.9     0.815    0.588    0.0265     3.6     +9.6
+  16     ear-sh-rnd 60.5      0.792    0.619    0.0253     4.8     +0.6
+  16     ear-win-sh 108.4     0.891    0.609    0.0295     1.0     +19.5
+  16     ear-win-sh-rnd 46.8      0.893    0.607    0.0258     1.0     -0.3
+  17     off       1.8       0.000    0.000    0.0000     0.0     +1.0
+  17     oracle    98.9      1.000    0.500    0.0289     0.0     +13.6
+  17     ear       3.9       0.763    0.569    0.0226     3.4     +5.9
+  17     ear-rnd   34.5      0.773    0.592    0.0281     3.2     +0.8
+  17     ear-deaf  43.7      0.769    0.559    0.0304     2.4     +13.3
+  17     ear-deaf-rnd 11.1      0.784    0.558    0.0262     3.0     +0.1
+  17     ema       64.0      0.884    0.616    0.0268     2.6     +12.2
+  17     ema-rnd   35.7      0.892    0.608    0.0308     3.1     +0.5
+  17     ear-win   70.1      0.891    0.609    0.0321     1.0     +13.0
+  17     ear-win-rnd 12.2      0.892    0.608    0.0249     1.0     +0.1
+  17     ear-sh    18.1      0.771    0.612    0.0274     2.9     +2.9
+  17     ear-sh-rnd 22.6      0.806    0.589    0.0229     3.0     +0.3
+  17     ear-win-sh 77.7      0.890    0.610    0.0272     1.0     +0.2
+  17     ear-win-sh-rnd 1.9       0.891    0.609    0.0267     1.0     +1.5
+  18     off       71.2      0.000    0.000    0.0000     0.0     +7.9
+  18     oracle    78.0      1.000    0.500    0.0257     0.0     +16.1
+  18     ear       37.0      0.737    0.594    0.0238     3.7     +5.3
+  18     ear-rnd   30.8      0.797    0.603    0.0219     3.4     +0.5
+  18     ear-deaf  55.3      0.588    0.762    0.0237     1.3     -0.1
+  18     ear-deaf-rnd 14.7      0.762    0.623    0.0286     2.6     +0.2
+  18     ema       59.8      0.877    0.623    0.0286     2.6     +13.7
+  18     ema-rnd   13.7      0.886    0.605    0.0286     3.5     +0.2
+  18     ear-win   133.2     0.892    0.608    0.0287     1.0     +22.4
+  18     ear-win-rnd 44.6      0.891    0.609    0.0263     1.0     +0.0
+  18     ear-sh    36.3      0.666    0.530    0.0209     2.3     +6.4
+  18     ear-sh-rnd 15.9      0.769    0.545    0.0247     3.6     +0.3
+  18     ear-win-sh 13.6      0.893    0.607    0.0285     1.0     +6.7
+  18     ear-win-sh-rnd 28.8      0.891    0.609    0.0279     1.0     +0.1
+  19     off       17.1      0.000    0.000    0.0000     0.0     -1.5
+  19     oracle    42.5      1.000    0.500    0.0260     0.0     +5.5
+  19     ear       27.4      0.764    0.622    0.0274     4.1     +10.9
+  19     ear-rnd   25.1      0.765    0.625    0.0258     4.4     -0.6
+  19     ear-deaf  7.7       0.656    0.669    0.0284     2.6     -0.5
+  19     ear-deaf-rnd 6.8       0.807    0.659    0.0283     2.4     +0.6
+  19     ema       11.6      0.890    0.608    0.0266     3.0     +7.8
+  19     ema-rnd   15.0      0.886    0.613    0.0225     3.5     +0.4
+  19     ear-win   61.4      0.891    0.609    0.0289     1.0     +7.7
+  19     ear-win-rnd 43.4      0.892    0.608    0.0246     1.0     +0.9
+  19     ear-sh    12.0      0.723    0.666    0.0220     2.4     +2.5
+  19     ear-sh-rnd 30.2      0.753    0.609    0.0257     2.9     +0.4
+  19     ear-win-sh 74.4      0.890    0.610    0.0272     1.0     +6.8
+  19     ear-win-sh-rnd 7.0       0.890    0.610    0.0253     1.0     -0.5
+  20     off       84.6      0.000    0.000    0.0000     0.0     +9.6
+  20     oracle    118.9     1.000    0.500    0.0278     0.0     +13.7
+  20     ear       42.4      0.592    0.502    0.0249     2.8     -2.7
+  20     ear-rnd   32.1      0.773    0.587    0.0251     3.5     +1.0
+  20     ear-deaf  43.4      0.641    0.677    0.0241     1.9     +1.2
+  20     ear-deaf-rnd 10.1      0.808    0.602    0.0239     2.4     +0.6
+  20     ema       76.6      0.888    0.612    0.0294     2.1     +9.9
+  20     ema-rnd   11.9      0.889    0.611    0.0256     3.8     -0.6
+  20     ear-win   79.9      0.892    0.608    0.0273     1.0     +14.8
+  20     ear-win-rnd 3.4       0.893    0.607    0.0265     1.0     +0.2
+  20     ear-sh    20.5      0.622    0.518    0.0272     2.0     -0.1
+  20     ear-sh-rnd 31.5      0.770    0.522    0.0248     3.8     +1.3
+  20     ear-win-sh 81.5      0.892    0.608    0.0272     1.0     +9.7
+  20     ear-win-sh-rnd 0.8       0.892    0.608    0.0260     1.0     +0.6
+  21     off       9.0       0.000    0.000    0.0000     0.0     +10.1
+  21     oracle    57.0      1.000    0.500    0.0334     0.0     -5.1
+  21     ear       34.6      0.738    0.619    0.0252     3.0     +6.3
+  21     ear-rnd   0.8       0.795    0.593    0.0242     3.4     +0.1
+  21     ear-deaf  17.0      0.794    0.589    0.0273     2.5     +8.4
+  21     ear-deaf-rnd 21.5      0.825    0.556    0.0291     2.9     +0.8
+  21     ema       36.3      0.882    0.616    0.0329     2.8     +11.9
+  21     ema-rnd   36.0      0.891    0.607    0.0260     3.7     -0.6
+  21     ear-win   123.4     0.894    0.606    0.0289     1.0     +11.8
+  21     ear-win-rnd 17.3      0.892    0.608    0.0266     1.0     +0.4
+  21     ear-sh    11.5      0.701    0.504    0.0241     2.3     +3.0
+  21     ear-sh-rnd 22.4      0.793    0.604    0.0272     3.2     +0.8
+  21     ear-win-sh 87.1      0.894    0.606    0.0310     1.0     -0.2
+  21     ear-win-sh-rnd 45.0      0.892    0.608    0.0236     1.0     +0.6
+  22     off       43.5      0.000    0.000    0.0000     0.0     +3.8
+  22     oracle    95.6      1.000    0.500    0.0273     0.0     +19.2
+  22     ear       1.7       0.769    0.521    0.0248     2.9     +8.8
+  22     ear-rnd   5.0       0.764    0.587    0.0254     3.1     -0.3
+  22     ear-deaf  15.2      0.700    0.625    0.0278     1.8     +6.2
+  22     ear-deaf-rnd 3.5       0.789    0.668    0.0268     2.3     +0.1
+  22     ema       57.1      0.886    0.610    0.0277     2.3     +21.3
+  22     ema-rnd   6.4       0.889    0.609    0.0282     2.8     +0.4
+  22     ear-win   68.6      0.893    0.607    0.0292     1.0     +18.5
+  22     ear-win-rnd 4.6       0.891    0.609    0.0257     1.0     -0.2
+  22     ear-sh    35.1      0.747    0.570    0.0286     2.7     +4.9
+  22     ear-sh-rnd 18.8      0.765    0.595    0.0281     2.6     +0.5
+  22     ear-win-sh 109.0     0.891    0.609    0.0328     1.0     +24.1
+  22     ear-win-sh-rnd 22.7      0.892    0.608    0.0262     1.0     +0.1
+  23     off       126.4     0.000    0.000    0.0000     0.0     +3.1
+  23     oracle    68.0      1.000    0.500    0.0314     0.0     +16.9
+  23     ear       75.4      0.585    0.523    0.0242     1.9     +11.9
+  23     ear-rnd   13.9      0.757    0.594    0.0264     3.7     -0.5
+  23     ear-deaf  38.6      0.793    0.595    0.0270     3.6     +2.5
+  23     ear-deaf-rnd 17.5      0.766    0.585    0.0252     2.0     -0.1
+  23     ema       42.6      0.876    0.624    0.0256     1.9     +26.9
+  23     ema-rnd   32.6      0.883    0.617    0.0308     3.5     +0.7
+  23     ear-win   83.7      0.892    0.608    0.0305     1.0     +13.0
+  23     ear-win-rnd 43.2      0.891    0.609    0.0229     1.0     -0.1
+  23     ear-sh    8.1       0.621    0.643    0.0213     2.0     -10.8
+  23     ear-sh-rnd 7.8       0.757    0.629    0.0259     2.9     +0.4
+  23     ear-win-sh 66.3      0.891    0.609    0.0295     1.0     +11.9
+  23     ear-win-sh-rnd 66.2      0.892    0.608    0.0268     1.0     +0.3
+  24     off       23.6      0.000    0.000    0.0000     0.0     -2.4
+  24     oracle    97.8      1.000    0.500    0.0306     0.0     +13.6
+  24     ear       91.9      0.590    0.666    0.0235     1.6     +1.1
+  24     ear-rnd   29.0      0.725    0.504    0.0290     3.3     +1.4
+  24     ear-deaf  51.0      0.664    0.606    0.0254     2.8     -4.0
+  24     ear-deaf-rnd 1.8       0.796    0.530    0.0244     2.6     +0.3
+  24     ema       41.9      0.500    0.980    0.0226     2.0     -3.2
+  24     ema-rnd   32.2      0.882    0.615    0.0247     3.4     +0.6
+  24     ear-win   127.2     0.892    0.608    0.0275     1.0     +24.8
+  24     ear-win-rnd 9.9       0.891    0.609    0.0276     1.0     +0.5
+  24     ear-sh    39.5      0.658    0.533    0.0261     2.3     -4.0
+  24     ear-sh-rnd 16.3      0.753    0.596    0.0243     3.2     -1.1
+  24     ear-win-sh 87.1      0.890    0.610    0.0323     1.0     +27.8
+  24     ear-win-sh-rnd 25.7      0.890    0.610    0.0274     1.0     +0.5
+  25     off       27.4      0.000    0.000    0.0000     0.0     +6.3
+  25     oracle    64.9      1.000    0.500    0.0262     0.0     +16.3
+  25     ear       25.6      0.685    0.666    0.0243     3.2     +8.9
+  25     ear-rnd   27.7      0.783    0.543    0.0260     3.6     +0.9
+  25     ear-deaf  17.4      0.818    0.593    0.0247     3.2     +13.2
+  25     ear-deaf-rnd 34.9      0.811    0.594    0.0247     3.4     +1.6
+  25     ema       52.9      0.884    0.616    0.0258     3.0     +17.7
+  25     ema-rnd   7.0       0.891    0.609    0.0251     3.4     +1.1
+  25     ear-win   108.0     0.893    0.607    0.0300     1.0     +16.6
+  25     ear-win-rnd 3.3       0.892    0.608    0.0285     1.0     -0.2
+  25     ear-sh    9.4       0.753    0.539    0.0248     3.8     +9.1
+  25     ear-sh-rnd 10.1      0.780    0.545    0.0226     3.5     +1.2
+  25     ear-win-sh 64.5      0.893    0.607    0.0244     1.0     +12.5
+  25     ear-win-sh-rnd 11.3      0.891    0.609    0.0286     1.0     +1.1
+  26     off       34.2      0.000    0.000    0.0000     0.0     +16.9
+  26     oracle    62.6      1.000    0.500    0.0259     0.0     +18.5
+  26     ear       49.5      0.669    0.505    0.0223     2.1     +4.3
+  26     ear-rnd   3.4       0.772    0.588    0.0240     3.6     +1.5
+  26     ear-deaf  9.6       0.661    0.684    0.0242     2.1     -1.0
+  26     ear-deaf-rnd 15.2      0.798    0.586    0.0239     2.6     -0.1
+  26     ema       81.2      0.881    0.619    0.0232     1.5     +1.2
+  26     ema-rnd   21.8      0.890    0.608    0.0269     3.5     +1.2
+  26     ear-win   88.9      0.891    0.609    0.0270     1.0     +17.3
+  26     ear-win-rnd 40.2      0.892    0.608    0.0252     1.0     +0.9
+  26     ear-sh    19.2      0.668    0.587    0.0241     2.1     +3.0
+  26     ear-sh-rnd 24.0      0.730    0.582    0.0260     2.6     -1.0
+  26     ear-win-sh 65.7      0.893    0.607    0.0310     1.0     +9.3
+  26     ear-win-sh-rnd 4.6       0.891    0.609    0.0276     1.0     -0.1
+  27     off       14.6      0.000    0.000    0.0000     0.0     -1.5
+  27     oracle    117.4     1.000    0.500    0.0300     0.0     +12.4
+  27     ear       21.9      0.713    0.588    0.0280     2.8     +2.8
+  27     ear-rnd   45.7      0.774    0.570    0.0258     3.6     -0.3
+  27     ear-deaf  50.8      0.611    0.793    0.0247     1.9     -2.3
+  27     ear-deaf-rnd 44.5      0.776    0.595    0.0272     2.5     +0.9
+  27     ema       24.5      0.500    0.996    0.0236     3.1     -2.7
+  27     ema-rnd   7.3       0.507    0.989    0.0210     3.8     +0.1
+  27     ear-win   90.0      0.891    0.609    0.0302     1.0     +11.9
+  27     ear-win-rnd 19.6      0.892    0.608    0.0282     1.0     +0.2
+  27     ear-sh    5.1       0.697    0.613    0.0276     2.7     +8.2
+  27     ear-sh-rnd 8.9       0.736    0.523    0.0248     3.3     +0.0
+  27     ear-win-sh 57.4      0.890    0.610    0.0296     1.0     +0.3
+  27     ear-win-sh-rnd 26.4      0.891    0.609    0.0267     1.0     +0.9
+  28     off       3.7       0.000    0.000    0.0000     0.0     +11.9
+  28     oracle    75.3      1.000    0.500    0.0285     0.0     +24.5
+  28     ear       15.7      0.670    0.765    0.0272     2.7     -0.1
+  28     ear-rnd   18.9      0.773    0.679    0.0232     4.3     +0.7
+  28     ear-deaf  18.9      0.710    0.741    0.0243     2.2     -3.2
+  28     ear-deaf-rnd 10.6      0.776    0.702    0.0280     2.4     +0.4
+  28     ema       69.9      0.885    0.615    0.0265     2.1     +24.2
+  28     ema-rnd   16.4      0.871    0.629    0.0211     3.3     +1.2
+  28     ear-win   76.6      0.892    0.608    0.0282     1.0     +13.5
+  28     ear-win-rnd 20.0      0.892    0.608    0.0263     1.0     +0.0
+  28     ear-sh    5.4       0.668    0.749    0.0237     2.5     +1.5
+  28     ear-sh-rnd 26.7      0.743    0.685    0.0268     3.4     +0.0
+  28     ear-win-sh 13.1      0.892    0.608    0.0273     1.0     -0.3
+  28     ear-win-sh-rnd 29.1      0.891    0.609    0.0287     1.0     +0.5
+  29     off       21.6      0.000    0.000    0.0000     0.0     +2.5
+  29     oracle    83.7      1.000    0.500    0.0310     0.0     +11.0
+  29     ear       44.1      0.761    0.661    0.0263     3.2     +8.1
+  29     ear-rnd   19.1      0.780    0.627    0.0250     4.3     +0.2
+  29     ear-deaf  43.1      0.671    0.665    0.0261     1.7     +5.8
+  29     ear-deaf-rnd 23.8      0.803    0.666    0.0237     2.6     +1.3
+  29     ema       24.2      0.866    0.610    0.0289     3.2     +8.1
+  29     ema-rnd   21.3      0.880    0.620    0.0211     2.7     +0.5
+  29     ear-win   75.2      0.891    0.609    0.0303     1.0     +12.8
+  29     ear-win-rnd 26.8      0.892    0.608    0.0285     1.0     +0.8
+  29     ear-sh    79.7      0.631    0.541    0.0235     1.8     +7.3
+  29     ear-sh-rnd 28.8      0.774    0.517    0.0250     3.2     +1.8
+  29     ear-win-sh 108.8     0.890    0.610    0.0280     1.0     +22.1
+  29     ear-win-sh-rnd 27.9      0.892    0.608    0.0277     1.0     -0.4
+  30     off       14.4      0.000    0.000    0.0000     0.0     +8.6
+  30     oracle    78.3      1.000    0.500    0.0293     0.0     +9.0
+  30     ear       10.8      0.777    0.512    0.0251     3.2     +5.0
+  30     ear-rnd   36.0      0.779    0.604    0.0275     3.4     +0.8
+  30     ear-deaf  31.0      0.753    0.586    0.0240     2.9     +13.4
+  30     ear-deaf-rnd 10.0      0.811    0.556    0.0267     3.0     +0.3
+  30     ema       52.2      0.890    0.608    0.0282     2.8     +20.6
+  30     ema-rnd   72.2      0.849    0.649    0.0236     3.2     +1.0
+  30     ear-win   113.6     0.891    0.609    0.0273     1.0     +14.6
+  30     ear-win-rnd 3.2       0.892    0.608    0.0263     1.0     +0.6
+  30     ear-sh    13.1      0.750    0.573    0.0259     3.2     +7.0
+  30     ear-sh-rnd 46.6      0.742    0.532    0.0239     3.4     +0.7
+  30     ear-win-sh 92.4      0.891    0.609    0.0299     1.0     +15.8
+  30     ear-win-sh-rnd 12.3      0.891    0.609    0.0304     1.0     -0.9
+  31     off       20.9      0.000    0.000    0.0000     0.0     +5.5
+  31     oracle    110.6     1.000    0.500    0.0273     0.0     +2.0
+  31     ear       93.5      0.632    0.563    0.0234     1.8     +0.9
+  31     ear-rnd   27.0      0.713    0.730    0.0243     2.8     +1.1
+  31     ear-deaf  33.5      0.717    0.753    0.0240     2.6     +4.9
+  31     ear-deaf-rnd 12.7      0.778    0.717    0.0258     3.0     +0.5
+  31     ema       73.4      0.513    0.987    0.0207     2.0     +21.0
+  31     ema-rnd   2.4       0.880    0.599    0.0286     3.5     +0.6
+  31     ear-win   50.4      0.891    0.609    0.0306     1.0     +8.4
+  31     ear-win-rnd 24.9      0.892    0.608    0.0281     1.0     -0.7
+  31     ear-sh    40.3      0.632    0.700    0.0253     1.9     +1.7
+  31     ear-sh-rnd 10.3      0.713    0.678    0.0243     2.9     +2.2
+  31     ear-win-sh 98.6      0.891    0.609    0.0261     1.0     +5.7
+  31     ear-win-sh-rnd 0.5       0.892    0.608    0.0279     1.0     +2.4
+  32     off       26.6      0.000    0.000    0.0000     0.0     +6.0
+  32     oracle    69.6      1.000    0.500    0.0233     0.0     +19.1
+  32     ear       30.3      0.682    0.530    0.0230     1.8     -1.4
+  32     ear-rnd   18.4      0.758    0.641    0.0268     3.0     +1.1
+  32     ear-deaf  38.7      0.736    0.725    0.0284     2.6     +2.9
+  32     ear-deaf-rnd 2.7       0.774    0.689    0.0260     2.6     +1.1
+  32     ema       29.2      0.513    0.985    0.0211     1.9     -4.5
+  32     ema-rnd   27.6      0.890    0.608    0.0229     3.6     +1.0
+  32     ear-win   93.3      0.892    0.608    0.0247     1.0     +22.9
+  32     ear-win-rnd 32.6      0.891    0.609    0.0275     1.0     -0.3
+  32     ear-sh    33.4      0.634    0.705    0.0251     1.5     -9.7
+  32     ear-sh-rnd 9.3       0.709    0.672    0.0218     2.5     +0.1
+  32     ear-win-sh 128.2     0.892    0.608    0.0311     1.0     +15.3
+  32     ear-win-sh-rnd 31.8      0.894    0.606    0.0297     1.0     +0.6
+  33     off       0.5       0.000    0.000    0.0000     0.0     +3.2
+  33     oracle    46.6      1.000    0.500    0.0273     0.0     +7.7
+  33     ear       26.7      0.710    0.670    0.0235     3.1     +3.6
+  33     ear-rnd   6.9       0.776    0.642    0.0233     3.3     +0.5
+  33     ear-deaf  34.8      0.595    0.832    0.0222     1.4     -10.9
+  33     ear-deaf-rnd 1.2       0.777    0.690    0.0273     2.7     +2.1
+  33     ema       81.8      0.872    0.625    0.0275     2.1     +1.1
+  33     ema-rnd   2.6       0.870    0.626    0.0283     3.0     +0.7
+  33     ear-win   71.9      0.891    0.609    0.0290     1.0     +17.9
+  33     ear-win-rnd 39.1      0.893    0.607    0.0258     1.0     -0.4
+  33     ear-sh    18.6      0.711    0.647    0.0257     3.1     +5.7
+  33     ear-sh-rnd 12.9      0.730    0.725    0.0237     3.3     +0.4
+  33     ear-win-sh 78.1      0.892    0.608    0.0280     1.0     +15.9
+  33     ear-win-sh-rnd 5.2       0.891    0.609    0.0214     1.0     +0.5
+  34     off       3.9       0.000    0.000    0.0000     0.0     -4.1
+  34     oracle    53.6      1.000    0.500    0.0266     0.0     +20.8
+  34     ear       22.7      0.740    0.666    0.0262     4.0     +7.9
+  34     ear-rnd   8.3       0.751    0.661    0.0262     3.7     +0.9
+  34     ear-deaf  29.5      0.722    0.652    0.0239     1.7     +3.7
+  34     ear-deaf-rnd 6.9       0.798    0.672    0.0245     2.5     -0.6
+  34     ema       35.4      0.516    0.984    0.0220     2.3     +6.2
+  34     ema-rnd   28.1      0.887    0.613    0.0271     3.7     +1.2
+  34     ear-win   99.7      0.891    0.609    0.0302     1.0     +7.2
+  34     ear-win-rnd 22.6      0.892    0.608    0.0267     1.0     +0.8
+  34     ear-sh    51.1      0.705    0.621    0.0265     2.6     +2.0
+  34     ear-sh-rnd 7.3       0.729    0.657    0.0222     4.0     +1.6
+  34     ear-win-sh 74.2      0.892    0.608    0.0304     1.0     +8.0
+  34     ear-win-sh-rnd 0.4       0.894    0.606    0.0219     1.0     +0.4
+  35     off       3.6       0.000    0.000    0.0000     0.0     +5.1
+  35     oracle    56.9      1.000    0.500    0.0258     0.0     +16.1
+  35     ear       26.5      0.790    0.561    0.0253     3.5     +11.1
+  35     ear-rnd   13.3      0.743    0.514    0.0267     3.3     +0.4
+  35     ear-deaf  24.4      0.553    0.828    0.0240     1.4     +2.2
+  35     ear-deaf-rnd 50.7      0.820    0.585    0.0275     3.6     +1.9
+  35     ema       27.4      0.857    0.643    0.0253     3.1     +14.5
+  35     ema-rnd   6.0       0.890    0.610    0.0245     3.1     +1.0
+  35     ear-win   62.3      0.891    0.609    0.0277     1.0     +19.7
+  35     ear-win-rnd 14.2      0.892    0.608    0.0293     1.0     +1.5
+  35     ear-sh    18.5      0.721    0.558    0.0196     3.1     +8.0
+  35     ear-sh-rnd 9.6       0.756    0.512    0.0238     3.7     +0.6
+  35     ear-win-sh 74.7      0.892    0.608    0.0285     1.0     +21.1
+  35     ear-win-sh-rnd 13.7      0.893    0.607    0.0245     1.0     +1.5
+
+  arm       dF1 (Hz)         p(index)        busiest slice  table div     change
+  off       29.2 +/- 5.1     0.000 +/- 0.000 0.000 +/- 0.000 0.0000 +/- 0.0000 +3.3 +/- 0.8
+  oracle    77.8 +/- 4.1     1.000 +/- 0.000 0.500 +/- 0.000 0.0278 +/- 0.0004 +14.4 +/- 1.0
+  ear       30.9 +/- 3.7     0.707 +/- 0.010 0.606 +/- 0.011 0.0246 +/- 0.0003 +3.4 +/- 0.9
+  ear-rnd   18.0 +/- 2.1     0.763 +/- 0.004 0.614 +/- 0.010 0.0255 +/- 0.0003 +0.4 +/- 0.1
+  ear-deaf  30.2 +/- 2.7     0.700 +/- 0.012 0.672 +/- 0.014 0.0254 +/- 0.0003 +2.7 +/- 1.1
+  ear-deaf-rnd 18.9 +/- 3.3     0.793 +/- 0.004 0.623 +/- 0.010 0.0264 +/- 0.0003 +0.5 +/- 0.1
+  ema       49.4 +/- 4.9     0.786 +/- 0.027 0.710 +/- 0.027 0.0258 +/- 0.0005 +11.6 +/- 1.5
+  ema-rnd   22.8 +/- 3.8     0.842 +/- 0.020 0.655 +/- 0.020 0.0259 +/- 0.0005 +0.5 +/- 0.1
+  ear-win   84.7 +/- 4.7     0.892 +/- 0.000 0.608 +/- 0.000 0.0291 +/- 0.0003 +15.9 +/- 1.0
+  ear-win-rnd 23.4 +/- 2.9     0.892 +/- 0.000 0.608 +/- 0.000 0.0271 +/- 0.0003 +0.4 +/- 0.1
+  ear-sh    30.9 +/- 4.0     0.682 +/- 0.010 0.615 +/- 0.011 0.0242 +/- 0.0003 +1.8 +/- 1.0
+  ear-sh-rnd 18.9 +/- 2.2     0.754 +/- 0.004 0.604 +/- 0.011 0.0249 +/- 0.0003 +0.7 +/- 0.1
+  ear-win-sh 76.8 +/- 5.0     0.892 +/- 0.000 0.608 +/- 0.000 0.0288 +/- 0.0004 +12.4 +/- 1.4
+  ear-win-sh-rnd 23.4 +/- 2.9     0.892 +/- 0.000 0.608 +/- 0.000 0.0264 +/- 0.0003 +0.2 +/- 0.2
+
+  can a listener tell the words apart? (held-out one-of-two, F1+F2)
+    off        0.602 +/- 0.015   (shuffled 0.507, chance 0.500)
+    oracle     0.909 +/- 0.027   (shuffled 0.494, chance 0.500)
+    ear        0.652 +/- 0.018   (shuffled 0.505, chance 0.500)
+    ear-rnd    0.637 +/- 0.014   (shuffled 0.504, chance 0.500)
+    ear-deaf   0.606 +/- 0.021   (shuffled 0.504, chance 0.500)
+    ear-deaf-rnd 0.627 +/- 0.022   (shuffled 0.497, chance 0.500)
+    ema        0.726 +/- 0.026   (shuffled 0.496, chance 0.500)
+    ema-rnd    0.678 +/- 0.028   (shuffled 0.506, chance 0.500)
+    ear-win    0.885 +/- 0.014   (shuffled 0.496, chance 0.500)
+    ear-win-rnd 0.647 +/- 0.029   (shuffled 0.501, chance 0.500)
+    ear-sh     0.637 +/- 0.015   (shuffled 0.503, chance 0.500)
+    ear-sh-rnd 0.611 +/- 0.018   (shuffled 0.506, chance 0.500)
+    ear-win-sh 0.844 +/- 0.024   (shuffled 0.500, chance 0.500)
+    ear-win-sh-rnd 0.674 +/- 0.026   (shuffled 0.498, chance 0.500)
+    PAIRED  ema - off       +0.124 +/- 0.029, 4.3 SE, 28 of 36
+    PAIRED  ema - ema-rnd   +0.048 +/- 0.028, 1.7 SE, 21 of 36
+
+  is the utterance nearer the RIGHT word's target? (no fitting, chance 0.500)
+    off        0.531 +/- 0.007
+    oracle     0.560 +/- 0.008
+    ear        0.517 +/- 0.004
+    ear-rnd    0.500 +/- 0.001
+    ear-deaf   0.519 +/- 0.004
+    ear-deaf-rnd 0.501 +/- 0.001
+    ema        0.566 +/- 0.008
+    ema-rnd    0.501 +/- 0.001
+    ear-win    0.613 +/- 0.011
+    ear-win-rnd 0.500 +/- 0.001
+    ear-sh     0.522 +/- 0.004
+    ear-sh-rnd 0.499 +/- 0.001
+    ear-win-sh 0.588 +/- 0.009
+    ear-win-sh-rnd 0.501 +/- 0.001
+    PAIRED  ema - off       +0.035 +/- 0.009, 3.8 SE, 27 of 36
+    PAIRED  ema - ema-rnd   +0.065 +/- 0.008, 8.0 SE, 36 of 36
+
+  did it move the RIGHT WAY along the axis between the two words?
+  (centred on the creature's own mean, no labels fitted, chance 0.500)
+    off        0.542 +/- 0.015    (k-way form: 0.542)
+    oracle     0.856 +/- 0.015    (k-way form: 0.856)
+    ear        0.626 +/- 0.013    (k-way form: 0.626)
+    ear-rnd    0.514 +/- 0.018    (k-way form: 0.514)
+    ear-deaf   0.604 +/- 0.016    (k-way form: 0.604)
+    ear-deaf-rnd 0.495 +/- 0.022    (k-way form: 0.495)
+    ema        0.698 +/- 0.018    (k-way form: 0.698)
+    ema-rnd    0.527 +/- 0.030    (k-way form: 0.527)
+    ear-win    0.838 +/- 0.012    (k-way form: 0.838)
+    ear-win-rnd 0.522 +/- 0.025    (k-way form: 0.522)
+    ear-sh     0.609 +/- 0.013    (k-way form: 0.609)
+    ear-sh-rnd 0.530 +/- 0.019    (k-way form: 0.530)
+    ear-win-sh 0.805 +/- 0.018    (k-way form: 0.805)
+    ear-win-sh-rnd 0.511 +/- 0.027    (k-way form: 0.511)
+    the k-way form reduces to the axis test at k=2: worst disagreement 0.0000
+    PAIRED  ema - off       +0.156 +/- 0.017, 9.0 SE, 33 of 36
+    PAIRED  ema - ema-rnd   +0.171 +/- 0.035, 4.8 SE, 28 of 36
+
+  does the index hold up across a session? (early third -> last third)
+    ear           0.694 -> 0.710   PAIRED +0.016 +/- 0.013 (1.2 SE)
+    ear-rnd       0.758 -> 0.752   PAIRED -0.006 +/- 0.007 (0.9 SE)
+    ear-deaf      0.721 -> 0.685   PAIRED -0.036 +/- 0.014 (2.5 SE)
+    ear-deaf-rnd  0.814 -> 0.767   PAIRED -0.048 +/- 0.006 (8.4 SE)
+    ema           0.793 -> 0.767   PAIRED -0.026 +/- 0.005 (5.5 SE)
+    ema-rnd       0.855 -> 0.812   PAIRED -0.043 +/- 0.005 (9.3 SE)
+    ear-win       0.919 -> 0.858   PAIRED -0.060 +/- 0.001 (46.5 SE)
+    ear-win-rnd   0.919 -> 0.852   PAIRED -0.067 +/- 0.001 (116.1 SE)
+    ear-sh        0.675 -> 0.677   PAIRED +0.002 +/- 0.012 (0.2 SE)
+    ear-sh-rnd    0.745 -> 0.746   PAIRED +0.001 +/- 0.008 (0.1 SE)
+    ear-win-sh    0.919 -> 0.857   PAIRED -0.061 +/- 0.002 (36.2 SE)
+    ear-win-sh-rnd 0.919 -> 0.852   PAIRED -0.067 +/- 0.001 (121.6 SE)
+    AGAINST THE PREDICTION  drift says -0.034, measured +0.016: off by
+      0.050 = 3.9 SE  -> PREDICTION EXCLUDED
+    what is NOT excluded: the 3 SE interval is [-0.023, +0.054], so a
+      decay smaller than 0.023 remains possible
+    the gap   early -0.064  ->  late -0.042   (NARROWS, against drift)
+    DRIFT IS REFUSED ON BOTH OF ITS CLAIMS. It predicts -0.034 in the
+    learning arm and that the learning arm decays MOST. Measured:
+    +0.016 +/- 0.013, which is 3.9 SE off the prediction, and the
+    learning arm is the arm that decays LEAST -- the only one that
+    rises, with every control falling below it. The gap NARROWS, where
+    drift requires it to widen. With own voice refused by
+    intervention and gate corruption refused at the wrong sign
+    (+0.72), ALL THREE named causes of the -0.056 gap are dead. The
+    gap is real at 6.0 SE and UNEXPLAINED -- record it that way
+    rather than reaching for a fourth guess. A decay smaller than
+    0.023 is still not excluded, so what dies is drift AT THE SIZE IT
+    PREDICTED, not every conceivable drift.
+
+  OWN VOICE: does cutting the acoustic self-path close the gap?
+    GUARD deafness changed the creature?  0 of 36 pairs IDENTICAL   OK
+    gap HEARING  ear      - ear-rnd       -0.056 +/- 0.009 (6.0 SE, n=36)
+    gap DEAF     ear-deaf - ear-deaf-rnd  -0.093 +/- 0.012 (7.9 SE, n=36)
+    DIFFERENCE OF GAPS  deaf - hearing     -0.037 +/- 0.015 (2.4 SE)
+    deafening, TRACKING arm   ear-deaf     - ear      -0.007 +/- 0.015 (0.5 SE)
+    deafening, CONTROL arm    ear-deaf-rnd - ear-rnd  +0.030 +/- 0.004 (7.1 SE)
+    index levels  ear 0.707  ear-rnd 0.763  ear-deaf 0.700  ear-deaf-rnd 0.793
+    POWER  a full closure moves this by 0.056; 3 x SE = 0.045  -> CAN DETECT ONE
+    OWN VOICE IS REFUSED, AND THE GAP WIDENS WITHOUT IT. The test
+    had the power to see a closure (3 x SE = 0.045 against the
+    0.056 one would move) and the gap went the OTHER WAY instead:
+    -0.037 +/- 0.015 (2.4 SE). So the creature hearing itself is not
+    why its index degrades when the target tracks the word -- and
+    DRIFT survives as the remaining hypothesis (MacQueen's 1/wins
+    freezing prototypes under a voice that is still moving).
+    WHERE THE WIDENING COMES FROM: deafening moves the CONTROL arm
+    +0.030 +/- 0.004 and the TRACKING arm -0.007 +/- 0.015. Own voice is
+    NOISE in the control arm, where the voice is word-independent,
+    and roughly NEUTRAL in the tracking arm, where it is
+    word-correlated -- and under the default kWords table `heard` is
+    echo-ALIGNED (targets-fight-the-echo is regime-specific), so
+    there the own voice REINFORCES the caregiver's word and cutting
+    it removes signal along with the noise. At this n the widening
+    is under the 3 SE bar: suggestive, not established.
+
+  THE WORD WINDOW: is the index's own larynx gate the cause of the gap?
+    GUARD the oracle window changed the creature?  0 of 36 pairs IDENTICAL   OK
+    arm              index   occupancy  ceiling  SLACK (= confusion)
+    ear              0.707    0.606      0.894    +0.187
+    ear-rnd          0.763    0.614      0.886    +0.122
+    ear-win          0.892    0.608      0.892    +0.000
+    ear-win-rnd      0.892    0.608      0.892    -0.000
+    ear-sh           0.682    0.615      0.885    +0.203
+    ear-sh-rnd       0.754    0.604      0.896    +0.142
+    ear-win-sh       0.892    0.608      0.892    +0.000
+    ear-win-sh-rnd   0.892    0.608      0.892    +0.000
+    THE LOCK  ear-win (alternating) 0.892  vs  ear-win-sh (shuffled) 0.892
+              paired drop +0.000 +/- 0.000 (1.5 SE, n=36)   <- no lock: the window result survives shuffling
+    gap LARYNX, shuffled  ear-sh     - ear-sh-rnd      raw -0.072 +/- 0.010   confusion +0.061 +/- 0.011 (n=36)
+    gap ORACLE, shuffled  ear-win-sh - ear-win-sh-rnd  raw -0.000 +/- 0.000   confusion +0.000 +/- 0.000 (n=36)
+    DIFFERENCE OF GAPS, on confusion   oracle - larynx  -0.061 +/- 0.011 (5.5 SE)
+    ANCHOR  ear 0.707 (was 0.707)  ear-rnd 0.763 (was 0.763)  -> REPRODUCES
+    POWER  a full closure moves this by 0.061; 3 x SE = 0.033  -> CAN DETECT ONE
+    THE WINDOW CONTRIBUTES AND DOES NOT ACCOUNT FOR IT. The confusion
+    gap moves -0.061 +/- 0.011 (5.5 SE) and is still +0.000 +/- 0.000 with
+    the window handed over. Part segmentation, part something else.
+
+  paired differences (same creature, arms differ only in genome fields)
+    ear   - ear-rnd     +12.8 +/- 4.2 Hz, 3.0 SE, 23 of 36 positive
+    ear   - off         +1.6 +/- 5.0 Hz, 0.3 SE, 22 of 36 positive
+    ema   - ema-rnd     +26.6 +/- 5.7 Hz, 4.7 SE, 30 of 36 positive
+    ema   - off         +20.2 +/- 5.4 Hz, 3.7 SE, 30 of 36 positive
+
+  the reference here       oracle 77.8 Hz vs off 29.2 (+48.6, 5.3 SE)
+  the derived index        p = 0.786 +/- 0.027, busiest slice 0.710
+  ...and does it sharpen?  0.793 +/- 0.027 -> 0.767 +/- 0.026 over the session
+  predicted from ctxsrc    37.3 Hz  (p <= 0.740, keeps 48%)
+  predicted from THIS p    44.5 Hz  (keeps 57%)
+  measured                 49.4 Hz  (+20.2 vs off, 2.0 SE)
+  vs matched-marginal      22.8 Hz  (+26.6, 3.1 SE)
+  PAIRED vs matched-marg   +26.6 +/- 5.7 Hz, 4.7 SE  <-- THE GATE
+                           30 of 36 creatures positive
+  paired vs `off`          +20.2 +/- 5.4 Hz, 3.7 SE (diagnostic)
+  unpaired, for the record +26.6 (3.1 SE) vs control, +20.2 (2.0 SE) vs off
+
+  THE CREATURE INDEXES ITSELF -- the voice depends on the word with NO
+  oracle anywhere. +26.6 +/- 5.7 Hz of F1, PAIRED, against a control
+  carrying the same split table and the same derived index and differing
+  only in whether the target tracks the word; 30 of 36 creatures
+  positive, on an index read from the larynx at 0.786. That is 42% of
+  what the host-written index bought IN THIS SAME RUN, against 48%
+  predicted from `ctxsrc`'s upper bound and 57% from this run's own p.
+  The last oracle in the architecture is gone.

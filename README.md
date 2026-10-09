@@ -15644,6 +15644,151 @@ this is a kernel change and gets priced before it is built, as the project's pra
 requires.
 
 
+### The word window is the cause: a clean boundary takes classification error to exactly zero
+
+`ctxself` at 3.4M on `results/ctxvocab.toml`, 14 arms × 36 creatures, gate passed 00:21
+with hash `ad96f882becbee92`. **The anchor reproduces to three decimals — `ear` 0.707 and
+`ear-rnd` 0.763, the values the record carries — so the comparison is to a known
+baseline.**
+
+The kernel change is one line, experiment-only and shipped off: the index's episode gate
+
+```cpp
+const bool slow_on =
+    ctx_window_oracle_ ? ctx_window_on_ : (gms.mean_rate < ctx_gate_target_);
+```
+
+where `gms` is the vocal module. The host drives `set_ctx_window(sounding)` per tick from
+the caregiver's own flag, so the episode begins at word onset and the prototype commits at
+word offset. Nothing else changes: same feature, same rule, same latch. It hands over
+*when* an episode happens and never *which* slot wins — `ctx_conf` is sampled per tick
+during the reward window against the latched index, so a perfect score remains a claim
+about the feature.
+
+| arm | index | occupancy | ceiling | **slack = confusion** |
+|---|---|---|---|---|
+| `ear` | 0.707 | 0.606 | 0.894 | +0.187 |
+| `ear-rnd` | 0.763 | 0.614 | 0.886 | +0.122 |
+| **`ear-win`** | 0.892 | 0.608 | 0.892 | **+0.000** |
+| **`ear-win-rnd`** | 0.892 | 0.608 | 0.892 | **−0.000** |
+| `ear-sh` | 0.682 | 0.615 | 0.885 | +0.203 |
+| `ear-sh-rnd` | 0.754 | 0.604 | 0.896 | +0.142 |
+| **`ear-win-sh`** | 0.892 | 0.608 | 0.892 | **+0.000** |
+| **`ear-win-sh-rnd`** | 0.892 | 0.608 | 0.892 | **+0.000** |
+
+**Every window arm sits exactly on its own occupancy ceiling.** Index 0.892 against a
+ceiling of 0.892, on all four, under both word orders. Classification error is not reduced
+— it is **eliminated**. Given a clean word boundary the partition is perfect modulo
+lopsidedness, which exonerates both the feature and the clustering rule completely.
+
+That reading is only available because of the ceiling decomposition. Raw scores say the
+window buys 0.892 against 0.707 and stops short of 1.000, which invites "it helps and
+something else remains." Measured against the margins, nothing else remains in the
+confusion term at all; the residual 0.108 is entirely occupancy.
+
+```
+  gap LARYNX, shuffled  ear-sh     - ear-sh-rnd      raw -0.072 +/- 0.010   confusion +0.061 +/- 0.011
+  gap ORACLE, shuffled  ear-win-sh - ear-win-sh-rnd  raw -0.000 +/- 0.000   confusion +0.000 +/- 0.000
+  DIFFERENCE OF GAPS, on confusion    oracle - larynx   -0.061 +/- 0.011  (5.5 SE)
+  POWER  a full closure moves this by 0.061; 3 x SE = 0.033  -> CAN DETECT ONE
+```
+
+**The confusion gap closes completely, at 5.5 SE, under a test with the power to see it.**
+So the larynx gate is the cause of the `ear` pair's gap, which after the decomposition is
+the only one of the three that was a classification gap at all.
+
+**The mechanism was in the kernel's own comment, unconnected to the gap for a month.**
+*"A fragment holding only silence writes a prototype from silence and OVERWRITES the
+latch."* The larynx gate fires several ragged episodes per trial; some are fragments of
+silence, and they commit prototypes from silence. The oracle window commits exactly one
+episode per trial from the word itself. And it explains the asymmetry that made this a
+*gap*: in the tracking arm the creature's voice is word-dependent, so the fragmentation is
+word-correlated; in the control arm it is word-independent noise. `self_gain = 0` never
+touched any of this, because the boundary is an internal read of motor rate.
+
+#### I asserted the result was an artefact, and the control I built to check it says it is not
+
+At smoke length the window arms read `ctx_match` exactly 1.000 with occupancy exactly
+0.500, on all 36 creatures, both arms, zero variance. I killed the run and stated that this
+was the period-2 lock `ctx-conscience` documented on 2026-09-20: the oracle window commits
+one episode per trial, `label = trial % nw` alternates the words strictly, and DeSieno's
+conscience balances wins, so an index that merely alternates agrees perfectly while
+carrying nothing.
+
+The hypothesis was reasonable and it is **wrong.** Shuffling which word comes first within
+each pair demonstrably changed the protocol — `ear-sh` differs from `ear` on all 36
+creatures and reads 0.682 against 0.707, and the shuffled larynx gap is −0.072 against the
+alternating −0.056 — and the window arms are **identical under both orders**, paired drop
+1.5 SE, under this project's 3 SE bar. An alternating index would have fallen to chance
+when the words stopped alternating. It did not move at all.
+
+What the kill bought was the control: four shuffled arms that the first version could not
+have produced at any length, and which turn "it is not a lock" from an argument into a
+measurement. What it cost was about thirty-five minutes of compute and a claim I should not
+have made. **The error was stating a suspicion as a finding** — the smoke's own anchor
+guard had already refused that run, so nothing was going to be published from it either
+way.
+
+The alternating protocol also *understated* the gap, 0.056 against the shuffled 0.072 —
+which is precisely what `ctx-conscience` found for its own effect when it broke the same
+lock. Worth recording: the lock hypothesis was wrong here and the protocol fix was still
+worth having.
+
+#### And the verdict line in the log is wrong, because of a guard I wrote
+
+The log prints *"THE WINDOW CONTRIBUTES AND DOES NOT ACCOUNT FOR IT"* over the numbers
+above. That verdict is false and the numbers are right. The branch required
+
+```cpp
+const bool oracle_closed = so_se > 0.0 && std::fabs(so) < 2.0 * so_se;
+```
+
+and a **perfect** closure has residual exactly zero with standard error exactly zero, so
+`0 < 0` is false. The strongest possible outcome fails the test written to detect it, and
+execution falls through to the weaker branch.
+
+This is §2.2 of the discoveries document — a test no outcome could pass — committed again,
+and this time in a *success* branch rather than a failure branch, which is why the earlier
+instances did not suggest looking for it. Every previous case was a criterion nothing could
+clear or one nearly everything cleared; this is a criterion that only the *best* result
+fails. The fix states closure as a fraction of what was closed rather than as a distance
+from zero: `|so| <= max(2 * so_se, 0.20 * |sl|)`, under which an exact zero reads as a
+closure.
+
+The fix is verified arithmetically against the logged values rather than by re-running:
+with `sl = 0.061`, `so = 0`, `so_se = 0`, the shipped predicate gives `CONTRIBUTES` and the
+corrected one gives `CAUSE`. It has been gated and will execute on the next `ctxself` run.
+**Three and a half hours of compute to reprint one sentence is not a justified cost when
+the numbers it would reprint are already in the log** — stated plainly because this project
+has also recorded the opposite error, publishing hand-recomputed numbers from a fix that
+had never executed. Nothing here is hand-recomputed; the only hand correction is the
+verdict sentence.
+
+#### What is left of the index gap
+
+| term | status |
+|---|---|
+| the feature | exonerated — 97.8% held-out, and confusion goes to zero given a clean window |
+| the clustering rule | exonerated — same rule, zero confusion, under both word orders |
+| the episode boundary | **the cause of the `ear` confusion gap, closed at 5.5 SE** |
+| occupancy | **the whole residual**, 0.108 on this arm even with a perfect window |
+
+The remaining term is lopsidedness, and it is the one the fourth candidate was redirected
+to: a prior matched to the occupancy rather than MacQueen's uniform `1/wins`, following
+**Assran, Balestriero, Duval, Bordes, Misra, Bojanowski, Vincent, Rabbat & Ballas**
+(ICLR 2023). With the window handed over it is worth the full 0.108 here and 0.210 on
+`ema`, and it is now the only term left in either. Price it read-only with `partprobe`
+first, as that lead already specifies.
+
+**What this does not say.** The window is an **oracle** — the host's own knowledge of when
+it is speaking, handed to the creature. It prices a boundary detector; it is not one. The
+creature's larynx gate was a reasonable mechanism and remains the only thing it has, and
+what this measures is the size of the prize for building a better one. Also unchanged:
+`credgate` measured what a *perfect* index converts into on the behaviour, and it was
++4.8 SE of retention and no more — on an estimator since retracted. A carrier is not a
+behaviour.
+
+
 ## Layout
 
 ```

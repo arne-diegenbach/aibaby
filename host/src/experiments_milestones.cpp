@@ -3993,6 +3993,19 @@ struct CtxDrive {
   double bank_frac = 1.0;
   int32_t mask_lo = -1;
   int32_t mask_hi = -1;
+  // THE ORACLE WORD WINDOW. true replaces the index's larynx-driven episode gate
+  // with the caregiver's own sounding flag, via Network::set_ctx_window. Appended at
+  // the END with a default, so every existing caller is bit-identical -- the field
+  // order hazard this file has paid for twice.
+  bool win_oracle = false;
+  // BREAK THE PERIOD-2 LOCK. `label = trial % nw` alternates the words strictly, and
+  // DeSieno's conscience balances wins, so an index that merely ALTERNATES agrees with
+  // the words perfectly while carrying nothing -- `ctx-conscience` measured and named
+  // that confound on 2026-09-20, and the oracle word window RECREATES it by producing
+  // exactly one episode per trial. true randomises which word comes first within each
+  // PAIR, so the classes stay exactly balanced and an alternating index drops to chance.
+  // Appended at the END with a default: every existing caller is bit-identical.
+  bool shuffle_order = false;
 };
 
 // The bias oracle's configuration for one session. See Network::set_bias_oracle
@@ -4514,7 +4527,18 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
   uint64_t last_feedback = 0;
 
   for (uint32_t trial = 0; trial < n_trials; ++trial) {
-    const uint32_t label = trial % nw;
+    uint32_t label = trial % nw;
+    // THE SHUFFLE, identical in scheme to `ctxfeat`'s: a hash of the PAIR index decides
+    // which of the two words comes first in that pair. Deterministic from the trial
+    // index and the genome seed, never a live RNG draw, so the run stays reproducible.
+    if (ctx && ctx->shuffle_order && nw == 2u) {
+      uint64_t hsh = (s.dna.header().seed ^ 0x9E3779B97F4A7C15ull) +
+                     uint64_t(trial / 2u) * 0xBF58476D1CE4E5B9ull;
+      hsh ^= hsh >> 30; hsh *= 0xBF58476D1CE4E5B9ull;
+      hsh ^= hsh >> 27; hsh *= 0x94D049BB133111EBull; hsh ^= hsh >> 31;
+      const bool first0 = (hsh & 1ull) == 0ull;
+      label = (((trial % 2u) == 0u) == first0) ? 0u : 1u;
+    }
     // The word the creature HEARS is still alternating on every arm — the
     // positive control differs only in what it is scored and rewarded against,
     // so the two arms hear identical sessions.
@@ -4631,6 +4655,11 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
         }
       }
       const bool sounding = t < kVLWordTicks;
+      // THE ORACLE WORD WINDOW, handed over per tick. The index's boundary is
+      // normally the larynx; this makes it the caregiver's own sounding flag, so the
+      // episode begins at word onset and the prototype commits at word offset --
+      // exactly the window `partprobe` was quietly given when it scored 0.980.
+      if (ctx && ctx->win_oracle) s.brain.network().set_ctx_window(sounding);
       const Word& heard = kWords[label];
       caregiver.render(sounding ? heard.f0 : 0.0f, heard.f1, heard.f2,
                        sounding ? 0.5f : 0.0f, pcm.data(), spt);
@@ -26286,6 +26315,11 @@ struct CtxSelfArm {
   // DnaAudio::self_gain for this arm, or -1 to leave the genome's own value.
   // Shipped is 0.5; 0 is the DEAF creature of every pre-v6 measurement.
   float self_gain;
+  // THE ORACLE WORD WINDOW. Appended at the END with a default so the eight existing
+  // rows keep their five initialisers and stay bit-identical.
+  bool win_oracle = false;
+  // Randomise which word comes first within each pair. See CtxDrive::shuffle_order.
+  bool shuffle_order = false;
 };
 
 constexpr CtxSelfArm kCtxSelfArms[] = {
@@ -26336,6 +26370,86 @@ constexpr CtxSelfArm kCtxSelfArms[] = {
     // where an accumulator that resets carries whatever the last fragment held.
     {"ema",      2, 4, kVLTgtHeard,  -1.0f},
     {"ema-rnd",  2, 4, kVLTgtRandom, -1.0f},
+    // ===================================================================================
+    // THE ORACLE WORD WINDOW (2026-10-09). The one candidate for the -0.056 index gap
+    // that differs between the arms and SURVIVES the deaf intervention.
+    //
+    // WHAT THE GAP IS, AFTER THE DECOMPOSITION. `ctx_match` is best-permutation
+    // agreement and is bounded by its own margins: `ctx_match <= 1.5 - occupancy` for
+    // two balanced words, verified 216/216 with zero violations. Split that way, the
+    // 18/18 result is two unrelated effects -- `ema`'s gap is -0.055 CEILING and
+    // -0.001 confusion, while `ear`'s is +0.008 ceiling and **-0.064 CONFUSION**. So
+    // only the `ear` pair has a classification gap, and that is what these arms test.
+    //
+    // WHY THE WINDOW. The index's episode boundary is `gms.mean_rate <
+    // ctx_gate_target_` with `gms` the VOCAL module: the creature's own larynx decides
+    // when a word is playing. Deliberate and measured -- vocal silence marks listening
+    // where auditory activity marks only sound. But in the TRACKING arm the creature
+    // learns a word-dependent voice (dF1 30.9 vs 18.0), so the SEGMENTATION becomes
+    // word-correlated, and the accumulated feature picks up a motor-derived component
+    // that correlates with the word without being it. `self_gain = 0` cuts the ACOUSTIC
+    // self-path and leaves this internal one, which is why the own-voice refutation
+    // does not reach it. Nobody had named it; it was found by reading the kernel.
+    //
+    // PRE-REGISTERED, as a DIFFERENCE OF GAPS because the finding is itself a gap, and
+    // read on SLACK against the ceiling rather than raw `ctx_match`, because an oracle
+    // window may move occupancy too:
+    //   gap(larynx) = ear     - ear-rnd        (the anchor: -0.056, and in this run)
+    //   gap(oracle) = ear-win - ear-win-rnd
+    //   THE WINDOW IS THE CAUSE: gap(oracle) at zero, or its CONFUSION term closing
+    //     toward `ear-rnd`'s slack of 0.122, while gap(larynx) stays negative.
+    //   THE WINDOW IS NOT THE CAUSE: both gaps negative and equal in their confusion
+    //     term -- at which point the feature, the rule and the segmentation are all
+    //     identical between the arms and nothing inside the index differs, which makes
+    //     the gap an INSTRUMENT question rather than a mechanism one.
+    //   WHAT WOULD MAKE IT UNINTERPRETABLE: the oracle window moving the CEILING
+    //     instead of the slack. Then the raw gap is contaminated by occupancy and only
+    //     the slack decomposition is readable. Stated first because that is the trap
+    //     the ceiling finding exists to catch.
+    //
+    // THE ANCHORS, both in this run: `ear` must read index 0.707 and `ear-rnd` 0.763
+    // with occupancy 0.606 / 0.614. The per-job seed is `base + r * 7919`, independent
+    // of the arm, so adding these two rows leaves every existing arm bit-identical --
+    // verified on five arms across six runs elsewhere in this project.
+    // ===================================================================================
+    {"ear-win",     2, 2, kVLTgtHeard,  -1.0f, true},
+    {"ear-win-rnd", 2, 2, kVLTgtRandom, -1.0f, true},
+    // -----------------------------------------------------------------------------------
+    // CAUGHT AT SMOKE LENGTH, BEFORE THE RUN (2026-10-09). The two arms above read
+    // ctx_match EXACTLY 1.000 with occupancy EXACTLY 0.500 on all 36 creatures, both of
+    // them, with zero variance. That is not a measurement, it is a LOCK.
+    //
+    // The oracle window commits exactly ONE episode per trial. `label = trial % nw`
+    // alternates the words strictly. DeSieno's conscience penalises whichever slot has
+    // won more, so the index alternates too -- and two synchronised period-2 processes
+    // agree perfectly with no information passing between them. `ctx-conscience` named
+    // this confound on 2026-09-20 ("the first read was on the ALTERNATING protocol and
+    // read 0.814"), and the oracle window RECREATES it by making the episodes regular.
+    // The shipped larynx gate is ragged -- several episodes per trial, variable count --
+    // which is precisely why `ear` at 0.707 is NOT locked. So the confound is ASYMMETRIC
+    // and biased TOWARD the hypothesis under test, which is the worst kind to keep.
+    //
+    // THE FIX IS THE ONE THAT FILE ALREADY ESTABLISHED: shuffle which word comes first
+    // within each PAIR. Classes stay exactly balanced, the period-2 lock breaks, and an
+    // index that merely alternates falls to chance. These four arms are the real
+    // experiment; the two above are kept because they DOCUMENT the lock and because
+    // their 1.000 against the shuffled number is the cleanest statement of it.
+    //
+    // PRE-REGISTERED, on SLACK against the occupancy ceiling, difference of gaps:
+    //   gap(larynx, shuffled) = ear-sh     - ear-sh-rnd
+    //   gap(oracle, shuffled) = ear-win-sh - ear-win-sh-rnd
+    //   THE WINDOW IS THE CAUSE: the oracle gap's confusion term closes while the
+    //     larynx one stays negative, AND ear-win-sh stays well above chance -- without
+    //     that second clause a collapse of both arms would read as a closure.
+    //   THE LOCK WAS THE WHOLE 1.000: ear-win-sh falls to ~0.5 and the gap is unchanged.
+    //     Then the window buys nothing and the alternating result was entirely artefact.
+    //   AND THE DIAGNOSTIC THAT SETTLES IT WITHOUT ARGUMENT: ear-win's 1.000 against
+    //     ear-win-sh's value is the lock's size, measured in one run.
+    // -----------------------------------------------------------------------------------
+    {"ear-sh",         2, 2, kVLTgtHeard,  -1.0f, false, true},
+    {"ear-sh-rnd",     2, 2, kVLTgtRandom, -1.0f, false, true},
+    {"ear-win-sh",     2, 2, kVLTgtHeard,  -1.0f, true,  true},
+    {"ear-win-sh-rnd", 2, 2, kVLTgtRandom, -1.0f, true,  true},
 };
 constexpr uint32_t kCtxSelfArmCount = sizeof(kCtxSelfArms) / sizeof(kCtxSelfArms[0]);
 
@@ -26460,6 +26574,8 @@ bool run_ctxself(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
         drive.module = ctx_module;
         drive.slots = kVLWords;
         drive.gain = 0.10;
+        drive.win_oracle = kCtxSelfArms[a].win_oracle;
+        drive.shuffle_order = kCtxSelfArms[a].shuffle_order;
         Regime reg;
         reg.praise = kPraiseValue;
         reg.scold = kScoldValue;
@@ -27060,6 +27176,181 @@ bool run_ctxself(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
                     "    the remaining hypothesis is MacQueen drift: 1/wins freezes the\n"
                     "    prototypes under a voice that is still moving.\n",
                     dd, dd_se, dd_se > 0.0 ? std::fabs(dd) / dd_se : 0.0, kBar, gh);
+      }
+    }
+  }
+
+  // =====================================================================================
+  // THE ORACLE WORD WINDOW. Read as a DIFFERENCE OF GAPS, and on SLACK AGAINST THE
+  // OCCUPANCY CEILING rather than on raw `ctx_match`, because handing over the window
+  // can move occupancy too and the raw gap would then mix the two terms this is meant
+  // to separate. `ctx_match <= 1.5 - occupancy` for two balanced words; slack is the
+  // part that is classification error at all.
+  {
+    const uint32_t kEarW = arm_of("ear-win"), kERndW = arm_of("ear-win-rnd");
+    const uint32_t kEarS = arm_of("ear-sh"), kERndS = arm_of("ear-sh-rnd");
+    const uint32_t kEarWS = arm_of("ear-win-sh"), kERndWS = arm_of("ear-win-sh-rnd");
+    if (kEarW < kCtxSelfArmCount && kERndW < kCtxSelfArmCount &&
+        kEarS < kCtxSelfArmCount && kERndS < kCtxSelfArmCount &&
+        kEarWS < kCtxSelfArmCount && kERndWS < kCtxSelfArmCount) {
+      // Paired over seeds on an arbitrary per-creature quantity.
+      auto pair_on = [&](uint32_t A, uint32_t B,
+                         const std::vector<double>* va, const std::vector<double>* vb,
+                         double* se, uint32_t* n) {
+        std::vector<double> d;
+        for (size_t i = 0; i < reps[A].size(); ++i)
+          for (size_t j = 0; j < reps[B].size(); ++j)
+            if (reps[A][i] == reps[B][j]) { d.push_back(va[A][i] - vb[B][j]); break; }
+        *n = uint32_t(d.size());
+        return d.size() >= 3 ? ctx_mean_se(d, se) : 0.0;
+      };
+      // Per-creature slack = (1.5 - occupancy) - ctx_match, built here so the ceiling
+      // is derived per creature rather than from the arm means.
+      std::vector<double> slack[kCtxSelfArmCount];
+      for (uint32_t a = 0; a < kCtxSelfArmCount; ++a) {
+        slack[a].reserve(match[a].size());
+        for (size_t i = 0; i < match[a].size() && i < occ[a].size(); ++i)
+          slack[a].push_back((1.5 - occ[a][i]) - match[a][i]);
+      }
+      std::printf("\n  THE WORD WINDOW: is the index's own larynx gate the cause of the gap?\n");
+      // VACUITY FIRST. If set_ctx_window never took, the window arms are copies of
+      // ear/ear-rnd and every number below is a null nobody can distinguish from a
+      // real one -- the failure ArmLiveness exists for.
+      uint32_t pairs = 0, same = 0;
+      for (size_t i = 0; i < reps[kEar].size(); ++i)
+        for (size_t j = 0; j < reps[kEarW].size(); ++j)
+          if (reps[kEar][i] == reps[kEarW][j]) {
+            ++pairs;
+            if (match[kEar][i] == match[kEarW][j] && df1[kEar][i] == df1[kEarW][j]) ++same;
+            break;
+          }
+      std::printf("    GUARD the oracle window changed the creature?  %u of %u pairs IDENTICAL%s\n",
+                  same, pairs,
+                  pairs > 0 && same == pairs ? "   <- VACUOUS, set_ctx_window never took"
+                                             : "   OK");
+      if (pairs > 0 && same == pairs) {
+        std::printf("    VOID: the window arms are bit-identical to the larynx arms, so the\n"
+                    "    oracle did not run. Nothing below is a measurement.\n");
+      } else {
+        std::printf("    arm              index   occupancy  ceiling  SLACK (= confusion)\n");
+        const uint32_t show[8] = {kEar, kERnd, kEarW, kERndW,
+                                  kEarS, kERndS, kEarWS, kERndWS};
+        for (uint32_t k = 0; k < 8; ++k) {
+          const uint32_t a = show[k];
+          std::printf("    %-15s  %.3f    %.3f      %.3f    %+.3f\n", kCtxSelfArms[a].name,
+                      m_mt[a], m_oc[a], 1.5 - m_oc[a], (1.5 - m_oc[a]) - m_mt[a]);
+        }
+        double gl_se = 0.0, go_se = 0.0, sl_se = 0.0, so_se = 0.0;
+        uint32_t gl_n = 0, go_n = 0, sl_n = 0, so_n = 0;
+        // THE PRIMARY PAIRS ARE THE SHUFFLED ONES. The alternating pair is kept to
+        // SIZE the period-2 lock, not to test anything -- see the arm table.
+        const double gl = pair_on(kEarS, kERndS, match, match, &gl_se, &gl_n);
+        const double go = pair_on(kEarWS, kERndWS, match, match, &go_se, &go_n);
+        const double sl = pair_on(kEarS, kERndS, slack, slack, &sl_se, &sl_n);
+        const double so = pair_on(kEarWS, kERndWS, slack, slack, &so_se, &so_n);
+        // THE LOCK, measured. ear-win on the alternating protocol against ear-win-sh on
+        // the shuffled one: the drop IS the artefact, in the units of the statistic.
+        double lk_se = 0.0; uint32_t lk_n = 0;
+        const double lk = pair_on(kEarW, kEarWS, match, match, &lk_se, &lk_n);
+        std::printf("    THE LOCK  ear-win (alternating) %.3f  vs  ear-win-sh (shuffled) %.3f\n"
+                    "              paired drop %+.5f +/- %.5f (%.1f SE, n=%u)%s\n",
+                    m_mt[kEarW], m_mt[kEarWS], lk, lk_se,
+                    lk_se > 0.0 ? std::fabs(lk) / lk_se : 0.0, lk_n,
+                    lk_se > 0.0 && lk > 3.0 * lk_se
+                        ? "   <- the alternating 1.000 was substantially ARTEFACT"
+                        : "   <- no lock: the window result survives shuffling");
+        std::printf("    gap LARYNX, shuffled  ear-sh     - ear-sh-rnd      raw %+.3f +/- %.3f   confusion %+.3f +/- %.3f (n=%u)\n",
+                    gl, gl_se, sl, sl_se, gl_n);
+        std::printf("    gap ORACLE, shuffled  ear-win-sh - ear-win-sh-rnd  raw %+.3f +/- %.3f   confusion %+.3f +/- %.3f (n=%u)\n",
+                    go, go_se, so, so_se, go_n);
+        // The gap is in CONFUSION, so the difference of gaps is read there. Signs:
+        // the raw gap is negative (tracking arm scores worse) while its slack is
+        // POSITIVE (tracking arm has MORE confusion), so a closure makes the slack
+        // difference negative.
+        const double dd = so - sl;
+        const double dd_se = std::sqrt(sl_se * sl_se + so_se * so_se);
+        std::printf("    DIFFERENCE OF GAPS, on confusion   oracle - larynx  %+.3f +/- %.3f (%.1f SE)\n",
+                    dd, dd_se, dd_se > 0.0 ? std::fabs(dd) / dd_se : 0.0);
+        // ANCHOR. ear and ear-rnd are in this run precisely so the comparison is to a
+        // known baseline; the per-job seed is arm-independent, so adding the window
+        // arms must leave them untouched.
+        const bool anchored = std::fabs(m_mt[kEar] - 0.707) < 0.03 &&
+                              std::fabs(m_mt[kERnd] - 0.763) < 0.03;
+        std::printf("    ANCHOR  ear %.3f (was 0.707)  ear-rnd %.3f (was 0.763)  -> %s\n",
+                    m_mt[kEar], m_mt[kERnd], anchored ? "REPRODUCES" : "DOES NOT REPRODUCE");
+        const double kBar = 3.0;
+        const bool larynx_gap = sl_se > 0.0 && sl > 2.0 * sl_se;
+        // CLOSURE IS A FRACTION OF WHAT WAS CLOSED, NOT A DISTANCE FROM ZERO.
+        // Written first as `|so| < 2 * so_se`, which a PERFECT closure fails: when the
+        // residual is exactly zero its standard error is exactly zero too, so `0 < 0`
+        // is false and the strongest possible result takes the "contributes" branch.
+        // That is the test-no-outcome-can-pass error in its success branch, and it
+        // printed the wrong verdict over correct numbers on 2026-10-09. The residual is
+        // now called closed if it is inside its own 2 SE OR under a fifth of the gap it
+        // replaced, so an exact zero reads as a closure.
+        const bool oracle_closed =
+            std::fabs(so) <= std::fmax(2.0 * so_se, 0.20 * std::fabs(sl));
+        const bool moved = dd_se > 0.0 && dd < -kBar * dd_se;
+        // COULD THIS TEST HAVE PASSED? A full closure moves the difference of gaps by
+        // exactly |sl|. If kBar * dd_se exceeds that, the closure branch is
+        // unreachable and a negative verdict is guaranteed rather than measured --
+        // the error the deaf test printed once and this project has now caught three
+        // times.
+        const bool can_detect = dd_se > 0.0 && kBar * dd_se < std::fabs(sl);
+        std::printf("    POWER  a full closure moves this by %.3f; %.0f x SE = %.3f  -> %s\n",
+                    std::fabs(sl), kBar, kBar * dd_se,
+                    can_detect ? "CAN DETECT ONE" : "CANNOT DETECT ONE");
+        if (!anchored) {
+          std::printf("    REFUSED: the anchor does not reproduce, so this run disagrees with\n"
+                      "    the record on a condition it also ran. THAT is the finding, and\n"
+                      "    nothing about the window can be read against a baseline that moved.\n");
+        } else if (!larynx_gap) {
+          std::printf("    REFUSED: the larynx arms show no CONFUSION gap here (%+.3f +/- %.3f),\n"
+                      "    so there is nothing for the oracle window to close.\n", sl, sl_se);
+        } else if (!can_detect) {
+          std::printf("    REFUSED: this contrast cannot tell a full closure from none. It\n"
+                      "    needs about %.0f creatures.\n",
+                      double(kReps) * std::pow(kBar * dd_se / std::fabs(sl), 2.0));
+        } else if (moved && oracle_closed && m_mt[kEarWS] < 0.60) {
+          // THE CLAUSE WITHOUT WHICH A COLLAPSE READS AS A CLOSURE. If the oracle
+          // window simply destroys the index in BOTH arms, the gap closes trivially at
+          // chance and says nothing. Pre-registered in the arm table.
+          std::printf("    REFUSED, AND FOR THE REASON REGISTERED FIRST. The gap closes\n"
+                      "    (%+.3f +/- %.3f) but ear-win-sh sits at %.3f, near the 0.5 floor\n"
+                      "    this statistic has at two words. A window that destroys the index\n"
+                      "    in both arms closes the gap trivially; nothing is learned about\n"
+                      "    the larynx gate from two arms at chance.\n", dd, dd_se, m_mt[kEarWS]);
+        } else if (moved && oracle_closed) {
+          std::printf("    THE WORD WINDOW IS THE CAUSE. Handing the segmentation to the\n"
+                      "    caregiver moves the confusion gap %+.3f +/- %.3f (%.1f SE) and the\n"
+                      "    oracle gap is indistinguishable from zero (%+.3f +/- %.3f). The\n"
+                      "    index degrades when the target tracks the word because the\n"
+                      "    creature's own word-dependent VOICE sets the episode boundary --\n"
+                      "    an INTERNAL motor path, which is why self_gain = 0 did not touch\n"
+                      "    it. The feature was never the problem and neither was the rule.\n",
+                      dd, dd_se, std::fabs(dd) / dd_se, so, so_se);
+        } else if (moved) {
+          std::printf("    THE WINDOW CONTRIBUTES AND DOES NOT ACCOUNT FOR IT. The confusion\n"
+                      "    gap moves %+.3f +/- %.3f (%.1f SE) and is still %+.3f +/- %.3f with\n"
+                      "    the window handed over. Part segmentation, part something else.\n",
+                      dd, dd_se, std::fabs(dd) / dd_se, so, so_se);
+        } else if (dd_se > 0.0 && dd > 2.0 * dd_se) {
+          std::printf("    REFUSED, AND IT WIDENS. A perfect window makes the confusion gap\n"
+                      "    WORSE by %+.3f +/- %.3f (%.1f SE). A null and a reversal are\n"
+                      "    different results and this is the second; the larynx gate is not\n"
+                      "    merely innocent, the caregiver's window is actively worse for this\n"
+                      "    index, which no account on the table predicts.\n",
+                      dd, dd_se, std::fabs(dd) / dd_se);
+        } else {
+          std::printf("    THE WINDOW IS REFUSED. With the segmentation handed over the\n"
+                      "    confusion gap is still %+.3f +/- %.3f and the difference of gaps is\n"
+                      "    %+.3f +/- %.3f, under %.0f SE, at power to have seen a closure. So\n"
+                      "    the feature is identical between the arms, the rule is identical,\n"
+                      "    and now the segmentation is too -- and the gap survives all three.\n"
+                      "    Nothing INSIDE the index differs between these arms, which makes\n"
+                      "    what remains an INSTRUMENT question rather than a mechanism one.\n",
+                      so, so_se, dd, dd_se, kBar);
+        }
       }
     }
   }

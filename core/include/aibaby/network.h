@@ -115,6 +115,30 @@ class Network {
   }
   void clear_reward_mask() { reward_mask_ = false; }
 
+  // EXPERIMENT ONLY -- an ORACLE WORD WINDOW for the context index, and the one
+  // oracle `partprobe` kept without saying so.
+  //
+  // The index's episode boundary is the LARYNX: `slow_on` is "the vocal module is
+  // below its own setpoint", i.e. "I am listening", which is right for a creature
+  // that must find its own word windows and is measured -- M1d's listening reflex
+  // takes voiced fraction 0.276 -> 0.010 while it hears something. The ear supplies
+  // the feature and the larynx supplies the boundary.
+  //
+  // WHY THIS EXISTS. That boundary is an INTERNAL read of motor rate, so in an arm
+  // where the creature learns a word-dependent voice the segmentation itself becomes
+  // word-correlated -- and `self_gain = 0`, which refused the own-voice account, cuts
+  // only the ACOUSTIC self-path and leaves this one untouched. It is the one
+  // candidate for the v53 index gap that differs between the arms and survives that
+  // intervention. `partprobe` scored the slow-gated window at 0.980 against 0.643 for
+  // the mechanism as built -- with the HOST handing it the windows.
+  //
+  // So this hands the boundary over and nothing else: same feature, same rule, same
+  // latch. It is an upper bound on what perfect segmentation buys, never a behaviour,
+  // and it is called per tick by the experiment with the caregiver's own sounding
+  // flag. No genome field reaches it.
+  void set_ctx_window(bool on) { ctx_window_oracle_ = true; ctx_window_on_ = on; }
+  void clear_ctx_window() { ctx_window_oracle_ = false; }
+
   // THE COMPLEMENT OF set_reward_mask, and the distinction is not cosmetic.
   // set_reward_mask ALLOWS a range and blocks everything else in the whole
   // network -- every module, every group. That is right for "hand the creature
@@ -1191,6 +1215,11 @@ class Network {
   // 0.010 while a word plays, so "quiet" IS "listening".
   int32_t ctx_gate_module_ = -1;
   Scalar ctx_gate_target_ = kZero;
+  // EXPERIMENT ONLY -- the ORACLE WORD WINDOW. Both default false, nothing in the
+  // shipped path writes them, and they are not serialised, so the pinned hash does
+  // not move. See set_ctx_window.
+  bool ctx_window_oracle_ = false;
+  bool ctx_window_on_ = false;
   // The cap lives in config.h: dna.cpp validates against it and must not depend on
   // the kernel. Kept as a member alias so existing references still read naturally.
   static constexpr uint32_t kMaxContextSlots = aibaby::kMaxContextSlots;

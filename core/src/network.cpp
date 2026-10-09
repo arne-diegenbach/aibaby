@@ -1468,7 +1468,11 @@ void Network::step() {
       // **0.980** with everything else identical -- raw features, zero init, the
       // creature's own gate -- against 0.643 for this mechanism as first built,
       // and the accumulation gate is the only difference left between them.
-      const bool slow_on = gms.mean_rate < ctx_gate_target_;
+      // EXPERIMENT ONLY. The oracle word window replaces the larynx gate and
+      // nothing else -- same feature, same rule, same latch. Default false, so the
+      // shipped path is the comparison below and the pinned hash does not move.
+      const bool slow_on =
+          ctx_window_oracle_ ? ctx_window_on_ : (gms.mean_rate < ctx_gate_target_);
       const bool fast_on = slow_on;
       const Scalar inv = ctx_acc_n_ > kZero ? kOne / ctx_acc_n_ : kZero;
 

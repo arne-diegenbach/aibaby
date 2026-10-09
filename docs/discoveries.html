@@ -31,7 +31,7 @@
 <p class="subtitle">Original findings from a grown spiking creature, with no external antecedent</p>
 <p class="author">Arne Diegenbach</p>
 <p class="affil">The <span class="id">aibaby</span> project &mdash; a C++17 spiking neural creature grown from a DNA/genome file</p>
-<p class="date">9 October 2026</p>
+<p class="date">9 October 2026 (revised)</p>
 
 <div class="abstract">
 <p class="lab">Abstract</p>
@@ -102,6 +102,19 @@ intervention&rsquo;s success branch required a shift of 0.090 where a complete c
 gap could produce only 0.070; it printed a confident conclusion from an unreachable branch.
 The fix in both cases is to print the power of the test beside its result, so that a
 criterion nothing could have cleared is visible rather than silent.</p>
+<p><strong>A third shape, and the one that hid longest: a criterion only the best possible
+result fails.</strong> An intervention&rsquo;s success branch asked whether the residual
+effect was indistinguishable from zero, written as |residual|&nbsp;&lt;&nbsp;2&nbsp;&times;
+its standard error. The intervention then worked <em>perfectly</em> &mdash; the residual
+came back exactly zero, so its standard error was exactly zero too, and
+0&nbsp;&lt;&nbsp;0 is false. Execution fell through to the weaker branch and printed
+&ldquo;contributes but does not account for it&rdquo; over numbers showing a complete
+closure at 5.5&nbsp;SE. The two earlier instances were a criterion nothing could clear and
+one almost anything could, which is why neither suggested looking for this: here the test
+is passed by every outcome <em>except</em> the strongest. The general fix is to state a
+closure as a fraction of the quantity being closed rather than as a distance from zero,
+because the distance-from-zero form divides by a precision that a perfect result drives to
+nothing.</p>
 
 <h3>2.3 The reference point is the hypothesis&rsquo;s own prediction, not zero</h3>
 <p>A hypothesis that names a value must be tested against that value. A drift account
@@ -626,7 +639,7 @@ power law with exponent about 0.61. Moving delivery by a factor requires moving 
 a larger factor, which closes the naming line quantitatively rather than by argument: a
 commitment brake moved the aligned bias 1.07&times; where 6.2&times; was needed.</p>
 
-<h3>6.3 The derived index gap is two different results, and only one is unexplained</h3>
+<h3>6.3 The derived index gap: two different results, and the boundary was the cause of the one that mattered</h3>
 <p>The creature derives its own context from an auditory rate average, and the resulting
 index is reliably <em>worse</em> when the teaching target tracks the heard word than when
 it is fixed, on 18 of 18 creatures &mdash; a gap of
@@ -650,15 +663,33 @@ feature that rule reads, and the distribution of that feature. <strong>Any candi
 is a property of the rule is excluded structurally</strong> &mdash; it would shift both arms
 equally and cannot produce a difference between them &mdash; which retires two of the
 candidates on the list without measuring either.</p>
-<p>One candidate survives that filter and had been missed because of where it lives. The
-window in which the partition accumulates its feature, and the moment it commits an update,
-are decided by whether the creature&rsquo;s <em>own larynx</em> is below its setpoint
-&mdash; a deliberate choice, since vocal silence marks listening where auditory activity
-does not. In the condition that produces a word-dependent voice that boundary becomes
-word-correlated, which is a contaminant the partition can latch onto; and because it is an
-internal read of motor rate, silencing self-audition does not touch it. The intervention
-that refused the self-contamination account cut the acoustic path only. This is not yet
-measured, and it is recorded here as the one place the remaining gap can still be.</p>
+<p><strong>One candidate survives that filter, and measured by intervention it accounts
+for the whole of the remaining gap.</strong> The window in which the partition accumulates
+its feature, and the moment it commits an update, are decided by whether the
+creature&rsquo;s <em>own larynx</em> is below its setpoint &mdash; a deliberate choice,
+since vocal silence marks listening where auditory activity does not. Because that boundary
+is an internal read of motor rate, silencing self-audition never touched it: the
+intervention that refused the self-contamination account cut the acoustic path only.</p>
+<p>Handing the boundary to the host &mdash; the caregiver&rsquo;s own flag for when it is
+speaking, with the feature, the clustering rule and the latch all unchanged &mdash;
+<strong>takes classification error to exactly zero.</strong> All four arms built that way
+sit precisely on their own occupancy ceilings, under both an alternating and a shuffled
+word order, so the margin-constrained score of &sect;2.13 is attained rather than merely
+approached. The classification gap closes completely,
+&minus;0.061&nbsp;&plusmn;&nbsp;0.011 at 5.5&nbsp;SE, under a test whose power to see a
+closure was checked first. <strong>So the feature is exonerated and so is the clustering
+rule; the boundary was the whole of it.</strong></p>
+<p>The mechanism had been sitting in the kernel&rsquo;s own commentary for a month,
+unconnected to the gap: a fragment holding only silence writes a prototype from silence and
+overwrites the latch. The larynx gate fires several ragged episodes per trial and some are
+such fragments. That also explains why the effect was a <em>difference</em> rather than a
+level: in the condition that produces a word-dependent voice, the fragmentation is
+word-correlated, while in the control it is word-independent noise.</p>
+<p class="note">Two things this does not say. The boundary was handed over by an
+<em>oracle</em> &mdash; the host&rsquo;s own knowledge of when it is speaking &mdash; so
+what is measured is the size of the prize for building a boundary detector, not a detector.
+And what remains is not nothing: occupancy, which the ceiling shows to be the entire
+residual once confusion is gone, worth 0.108 on this source and 0.210 on the other.</p>
 <p>Two side results survived that line. Deafening improves the index in the control arm
 only (+0.030&nbsp;&plusmn;&nbsp;0.004, 7.1 SE), and makes the tracking arm&rsquo;s partition
 more lopsided (+0.066&nbsp;&plusmn;&nbsp;0.018, 3.7 SE). Separately, the derived context
