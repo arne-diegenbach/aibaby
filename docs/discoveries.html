@@ -31,7 +31,7 @@
 <p class="subtitle">Original findings from a grown spiking creature, with no external antecedent</p>
 <p class="author">Arne Diegenbach</p>
 <p class="affil">The <span class="id">aibaby</span> project &mdash; a C++17 spiking neural creature grown from a DNA/genome file</p>
-<p class="date">9 October 2026 (revised)</p>
+<p class="date">10 October 2026</p>
 
 <div class="abstract">
 <p class="lab">Abstract</p>
@@ -294,6 +294,32 @@ subject to margins that vary between conditions, compare the slack, not the stat
 And the general shape is &sect;2.1, &sect;2.3 and &sect;2.7 again &mdash; a reference point
 that exists but is not the one the claim is about. This is its fourth distinct instance here,
 which is why it is recorded as a class rather than as four separate mistakes.</p>
+
+<h3>2.14 An absence in the source is not an absence in the behaviour</h3>
+<p>Caught before it was published, and worth recording because the reasoning looked sound
+all the way to the conclusion. A mechanism was proposed that would only fire while the
+creature was asleep, so the first question was whether the relevant protocol sleeps at all
+&mdash; a fair question, since this project has already lost a result to a mechanism that
+could not fire in the window it was tested in. The protocol&rsquo;s source contains no
+mention of sleep, of waking, or of the replay that accompanies it. On that basis the lead
+could have been closed for nothing.</p>
+<p>It sleeps. Sleep here is driven by an internal fatigue variable crossing a threshold, so
+the host never calls for it and never needs to name it. <strong>The absence of the word meant
+&ldquo;this code does not command it&rdquo;, not &ldquo;it does not happen&rdquo;</strong>,
+and the two readings are indistinguishable from a search. What separates them is reading the
+mechanism that would produce the thing rather than searching for the name of it.</p>
+<p>The general form is the one error this document keeps finding in new costumes: a
+reference point that exists but is not the one the claim is about. Here the claim was about a
+behaviour and the evidence was about a vocabulary. The habit that catches it is to ask what
+would have to be true in the <em>kernel</em> for the answer to be no, and then look there
+&mdash; which in this case took one grep and produced the opposite answer.</p>
+<p class="note">The lead did die, but on arithmetic rather than on absence, and the
+arithmetic is the interesting part. The sleep bout is fixed by two genome constants and works
+out at about three minutes against a roughly twenty-minute cycle, so the mechanism being
+proposed would run about fifteen percent of the time &mdash; and the mechanism it was to be
+grafted onto already runs continuously and costs nothing on either axis it was built to
+serve. Running a null fifteen percent as often is not a repair. That is a better refusal than
+the one the search would have given, and it also said what to build instead.</p>
 
 <h2>3. Credit assignment and interference</h2>
 <p>Teaching a second, conflicting vowel target destroys the first. The surviving fraction
