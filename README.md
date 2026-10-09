@@ -15789,6 +15789,128 @@ what this measures is the size of the prize for building a better one. Also unch
 behaviour.
 
 
+### The residual is not lopsidedness, it is decay — and the fourth candidate fails on its premise
+
+Taking the occupancy term, which the window run left as the only one standing. Nothing was
+run for this section; it is the same log plus the kernel.
+
+#### The residual has no variance, which is the tell
+
+Per-creature occupancy under the oracle window, 36 creatures:
+
+| arm | mean | min / median / max | near balanced (<0.55) | monopoly (>0.80) |
+|---|---|---|---|---|
+| `oracle` | 0.500 | 0.500 / 0.500 / 0.500 | 36/36 | 0 |
+| `ear` (larynx) | 0.606 | 0.501 / 0.604 / 0.765 | 8/36 | 0 |
+| **`ear-win`** | **0.608** | **0.606 / 0.608 / 0.609** | 0/36 | 0 |
+| `ear-win-sh` | 0.608 | 0.606 / 0.608 / 0.610 | 0/36 | 0 |
+| `ema` | 0.710 | 0.608 / 0.617 / 0.996 | 0/36 | **9/36** |
+
+`ear` has a real distribution — 0.501 to 0.765, a quarter of the creatures near balanced.
+**`ear-win` spans 0.606 to 0.609 across thirty-six different genomes and seeds.** A quantity
+that identical is not an outcome of learning; and the first thing it rules out is any
+account in which individual creatures succeed or fail at balancing.
+
+#### It is a within-session decay, at 46 SE, and only the clean window can see it
+
+The early/late split was already being computed and printed:
+
+| arm | early third → last third | paired |
+|---|---|---|
+| `ear` | 0.694 → 0.710 | +0.016 ± 0.013 (1.2 SE) |
+| `ear-sh` | 0.675 → 0.677 | +0.002 ± 0.012 (0.2 SE) |
+| **`ear-win`** | **0.919 → 0.858** | **−0.060 ± 0.001 (46.5 SE)** |
+| **`ear-win-rnd`** | **0.919 → 0.852** | **−0.067 ± 0.001 (116.1 SE)** |
+| **`ear-win-sh`** | 0.919 → 0.857 | −0.061 ± 0.002 (36.2 SE) |
+| **`ear-win-sh-rnd`** | 0.919 → 0.852 | −0.067 ± 0.001 (121.6 SE) |
+
+**The index starts at 0.919 and decays to 0.858.** All four window arms, 36 to 122 SE —
+the tightest standard errors in the table, 0.001 to 0.002. The larynx arms do not decay at
+all. Since confusion is zero throughout, the implied occupancy runs 0.581 early to 0.642
+late: **the partition becomes progressively more lopsided as the session proceeds.**
+
+I predicted the opposite. My reading of the flat 0.608 was a startup transient — slot 1
+unclaimed at initialisation, everything falling to slot 0 until the conscience pries it
+open, which would make the residual an artefact of the first few hundred trials and
+self-correcting. It is the reverse: the index is **best** early and degrades. Recorded
+because the prediction was specific enough to be wrong in one direction, and it was.
+
+**And drift was refused where it could not show.** That account — MacQueen's `1/wins`
+reaching zero so a prototype freezes while the input keeps moving — was tested on the
+larynx arms, scored against its own point prediction of −0.034, and excluded at 3.9 SE. But
+the larynx arms sit at 0.69 with 0.19 of confusion: there is no headroom in which a decay
+could appear, and the published refusal note says as much in its own terms, that the arms
+which *do* decay show the measurement is capable of seeing one. Hand the boundary over and
+the index has somewhere to fall from, and it falls, at 46 SE. **The account was not wrong;
+it was measured in the one condition that could not exhibit it.** Same shape as this
+project's recurring reference-point error, one level up: not the wrong baseline, the wrong
+*regime*.
+
+#### The fourth candidate is refused on its premise, which corrects my own correction
+
+The uniform-cluster-prior lead rests on **Assran, Balestriero, Duval, Bordes, Misra,
+Bojanowski, Vincent, Rabbat & Ballas** (ICLR 2023): a uniform prior produces good features
+on class-**balanced** data and hampers them on class-**imbalanced** data. The lead's
+evidence for applicability was this creature's slot occupancy, 0.61–0.79 against 0.50 for
+balanced.
+
+**That conflates the index's output with the data's class distribution.** Assran and
+colleagues' claim is about the distribution of the thing being clustered. Here the thing
+being clustered is word episodes, and the words are *exactly* balanced — the oracle arm
+reads occupancy **0.500 ± 0.000 on all 36 creatures**, which is only possible if each word
+occurs equally often. **So a uniform prior is the correct prior for this data, and
+MacQueen's `1/wins` plus DeSieno's conscience are pushing toward the truth rather than away
+from it.** The failure is that they do not *reach* it. Matching the prior to the observed
+0.608 would match it to the index's own error and entrench it.
+
+Yesterday I redirected this lead from `ear` to `ema` on the strength of the ceiling
+decomposition, and kept its premise while changing only which arm to price it against. The
+premise is the part that fails. And the arm I redirected it to does not support it either:
+`ema`'s 0.210 of apparent headroom is **9 of 36 creatures at occupancy 0.98–1.00**, a total
+monopoly with one dead slot, against 27 sitting at 0.61. That is bimodal, which is the
+dead-unit failure `ctx-conscience` measured and named — *"a race, not a graded quality"* —
+and not a graded prior mismatch. Averaging the two modes produced a number that looked like
+headroom for a prior and is nothing of the kind.
+
+The citation stands and the mechanism they describe is real; what fails is this project's
+case that it applies here. That was my error in both of its versions.
+
+#### Where the floor is wired, and where the decay is
+
+If the residual is a frozen prototype, the mechanism for it already exists: DNA v60's
+learning-rate floor, `ctx_proto_lr_floor_`, derived from `ctx_proto_tau_ms`. There are
+**two** prototype update paths in the kernel, and the floor is in one of them.
+
+```cpp
+// path A -- the per-tick refresh (source 4, gate >= 1)
+Scalar lr = kOne / ctx_wins_[winner];
+if (ctx_proto_lr_floor_ > kZero && lr < ctx_proto_lr_floor_)
+  lr = ctx_proto_lr_floor_;
+
+// path B -- the episode commit (source 2, which every `ear` arm uses)
+const Scalar lr = kOne / ctx_wins_[winner];        // no floor
+```
+
+**The arms that decay at 46 to 122 SE are path-B arms, and path B cannot receive the floor
+whatever the genome asks for.** This is deliberately *not* being called an inert mechanism:
+v60 was tested in `ctxfeat` under gate 2, which is path A, so it ran where it was wired and
+its refusal is sound for that path. Two things nevertheless do not transfer. The refusal was
+measured on a different failure — a word arriving late in the session, where the finding was
+that every rate which moves the prototype destroys the pair that already worked, Grossberg's
+dilemma, *allocation rather than speed*. The decay measured here is the speed problem in its
+pure form: both words present from the first trial, the index good early, degrading as the
+rate decays toward zero. **A refusal of a mechanism on one failure mode, on one of two code
+paths, is not a refusal of it on the other.**
+
+So the lead that replaces the matched prior: apply the floor to the episode path and price
+it. It is a kernel change, so it gets priced read-only first — `partprobe` already scores
+rules on fixed features and can score a floored rule beside `1/wins` for nothing. **And the
+bar is now a real number rather than a guess: the floor has to recover the 0.060 the session
+loses, against a decay measured at 46 SE.** The float32 note in the kernel's own comment
+also binds and is already written down: a floor below about `eps` relative to the residual is
+bit-identical to no floor at all, which has caught this project once.
+
+
 ## Layout
 
 ```
