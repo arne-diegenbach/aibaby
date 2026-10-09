@@ -81,12 +81,31 @@ the lead should be closed rather than carried.
 
 ### 3. Two gestures in a row — the blocker, and unbuilt
 
-Everything above is about a *carrier*. Intelligent speech needs structure in time, and the
-project's own measurement is that there is none: autocorrelation of a produced kick falls
-0.92 → 0.03 within 10 ms. Until a creature can hold one gesture and then make another, a
-dictionary of gestures has nothing to sequence and consolidation has nothing to consolidate.
+Everything above is about a *carrier*. Intelligent speech needs structure in time — and the
+state of that is better than this file said on 2026-10-09, which was written from memory
+rather than from the record.
 
-**The bar is the existing measurement:** hold a kick for 10 ms. Bohland, Bullock & Guenther's
+**Structure in time already exists and is replicated.** DNA v56+v57's population half-centre
+produces a two-phase alternation that *reaches the formant*: produced F1 follows it at
+30–44 SE over a matched null with both single-population controls at or below the null, and
+one setting gains **+65.9 Hz of free-running excursion at +52 SE with no caregiver and no
+reward**. So the creature does make two gestures in a row, unprompted.
+
+**What is missing is narrower than "no sequence".** Two things. The alternation is *not a
+clock* — its period ignores the adaptation time constant it was built on — so the creature
+cannot be asked to alternate at a particular rate. And a *taught* utterance is still a held
+vowel: 1–8% of its movement is shared, and no module holds a kick for 10 ms. **The generator
+exists, the lesson exists, and they have never been connected.** That is a coupling problem
+rather than an existence problem, and this project has solved one of those before — the word
+window was exactly "the signal is there and the gate on it is wrong".
+
+**So the experiment is to yoke the half-centre to the lesson** — reward the alternation's two
+phases toward two *different* formant targets, and measure whether the taught pair separates
+by phase. Both halves are built and gated; nothing new has to be invented to try it.
+**The bar:** the two phases must land on different targets by more than the single-gesture
+control, and the honest risk is named in advance — if the period cannot be set, the creature
+will alternate at its own rate rather than the caregiver's, and a timing demand will go
+unmet even if the targets separate. Bohland, Bullock & Guenther's
 GODIVA names the layer above it, and Segawa and colleagues say the stored unit is a
 *gestural score* rather than an acoustic target — which is the shape the dormant
 `dictionary_*` genome block was cut for. **Price it with an oracle first**, as the credit
