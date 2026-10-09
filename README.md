@@ -16768,6 +16768,34 @@ body text had named them three times each with no entry here.
   because leave-one-out is deterministic, and this project gates every run on a
   pinned hash.
 
+**Two citations the body leaned on and the list had not carried, found by a mechanical
+audit of names cited in the text against names appearing here (2026-10-09).**
+
+- Sweeney, Y., Hellgren Kotaleski, J. & Hennig, M. H. (2015). *A diffusive homeostatic
+  signal maintains neural heterogeneity and responsiveness in cortical networks.* PLOS
+  Computational Biology 11(7), e1004389.
+  <https://doi.org/10.1371/journal.pcbi.1004389>, free full text at
+  <https://pmc.ncbi.nlm.nih.gov/articles/PMC4497656/> — the published form of what DNA
+  v57's `ip_pool` is a crude version of, and this project has referred to it by author in
+  the body and in a memory heading for weeks without an entry here. A gaseous messenger,
+  nitric oxide, carries a neuron's firing rate to its neighbours, so excitability is
+  regulated against a *population* mean rather than each neuron's own: an individual may
+  deviate from the target while its neighbours counteract the deviation and hold the
+  average. Their result is that such a network has **better representational capability
+  than canonical local homeostasis**, which is the claim `aimpool`'s per-neuron-backlash
+  measurement bears on — hysteresis 107 Hz to 7 Hz under pooling, with 30 Hz of reach given
+  back.
+- van der Pol, B. (1926). *On "relaxation-oscillations".* The London, Edinburgh and Dublin
+  Philosophical Magazine and Journal of Science, Series 7, 2(11), 978–992.
+  <https://doi.org/10.1080/14786442608564127> — the relaxation oscillator whose equation
+  the body quotes, `x'' − μ(1 − x²)x' + ω₀²x = F`: negative damping at small amplitude and
+  positive at large, which is the shape a free-running syllable rhythm would have needed.
+  Cited because this project read "limit cycle organisation" into its own measurements and
+  the honest reference point for that phrase is van der Pol's, where the amplitude is set by
+  the nonlinearity rather than by the drive. The project's own answer was that no such
+  oscillator runs here — the 3 Hz ring is a product of two filters, and the syllable band is
+  empty because no adaptation current existed to make one.
+
 **Everything else.**
 
 - **The vowel targets themselves — the most load-bearing citation here and it was

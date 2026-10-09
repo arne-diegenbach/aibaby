@@ -18,3 +18,9 @@ When adding a finding, give the number with its uncertainty and the n, say what 
 have refused it, and put the external antecedent in Appendix A if there is one. The full
 reasoning for every entry lives in the root `README.md`; this document is the summary,
 not the record.
+
+
+`ROADMAP.md` — where the project stands and what is prepared next, with the bars each
+planned run has to clear. It exists because the working lead queue lives in a memory store
+outside this repository, so the repo carried the whole record and none of the plan. Update it
+when a line closes or a lead is refused, not when a run merely finishes.
