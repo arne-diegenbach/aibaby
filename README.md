@@ -16106,6 +16106,104 @@ measured today; items 1 and 2 are proposals with pre-registered bars, and the on
 are the four citations and what they rule in or out.
 
 
+### The larynx gate is not repairable by timing, and a declined estimator is why I know
+
+Two read-only instrument passes on the context index's episode structure, gated both times
+with the hash unmoved at `ad96f882becbee92` — which is the test of the claim that counters
+nothing reads cannot change behaviour.
+
+#### Three measurements, and each one closes a candidate fix
+
+**Episode lengths are smooth, which refuses a minimum-length debounce.** Log2 buckets, share
+of episodes, 36 creatures at 400k ticks:
+
+| arm | mean | <2 | 2–3 | 4–7 | 8–15 | 16–31 | 32–63 | 64–127 | 128–255 | 256–511 | ≥512 |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| `ear` | 300 | 0.20 | 0.11 | 0.11 | 0.08 | 0.04 | 0.05 | 0.06 | 0.06 | 0.08 | 0.21 |
+| `ear-win` | 900 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | **1.00** |
+
+The oracle window is one 900-tick episode per trial, 100% in a single bucket — a direct
+confirmation rather than an inference. The larynx gate puts mass in **every** bucket: a fifth
+of its episodes are under two ticks and a fifth are over 512, with the rest spread
+continuously. **There is no threshold that keeps words and drops fragments**, which was the
+decision rule stated in the instrument before it ran. It is refused twice over, because
+keeping only episodes ≥512 ticks would leave about 39% of trials with no episode at all — no
+prototype update and a stale latch, a different failure rather than a fix.
+
+**The off-gaps are smooth too, which refuses the merge rule I had turned to instead.** For
+`ear`, 0.19 of gaps are under two ticks and 0.31 are ≥512, again with the mass spread
+between. `ear-win` has 100% of its gaps at ≥512 and a mean of exactly 1900 ticks, which is
+2800 minus 900 — the trial's silent tail, as it must be. So within-word chatter and
+between-word silence do not separate on the larynx gate, and no gap threshold reassembles
+the word either.
+
+**And the gate misses a third of the word, which refuses merging on a second ground.** The
+ON fraction, counted directly on both sides: **`ear` is 0.68 of the caregiver's word time.**
+The instrument's own pre-stated rule was that merging only fixes a gate which finds the word
+and shatters it, and that a gate well under 1 is *missing* the word, which merging cannot
+recover.
+
+#### The declined estimate was wrong by more than the thing it was estimating
+
+When the first pass came back I had a tempting headline: mean episode length 300 ticks times
+2.90 episodes per trial is 870 of 900, so the gate finds **97%** of the word and merely
+shatters it. I declined to publish it on the grounds that it is a **product of two means**,
+the estimator class §2.8 of the discoveries document already cost this project a retraction
+over, and added the direct counter instead.
+
+```
+  product of means   mean(length) x mean(count) = 870 / 900   ->  0.97
+  measured directly, both sides                               ->  0.68
+```
+
+**The estimate was not slightly optimistic; it was wrong by more than the deficit it was
+supposed to reveal.** The reason is the one Cochran gives: length and count are *negatively*
+correlated here — creatures with many episodes have short ones — so the product of the means
+overstates the mean of the products. Had the 97% been published, the next build would have
+been a merge rule resting on "the gate already finds the word", which is false.
+
+This is the first time in this project that the ratio-estimator discipline has been applied
+*before* a number was published rather than after. It cost one extra instrument pass and it
+changed the build.
+
+#### So the larynx gate is the wrong detector, not a good detector wired badly
+
+Length thresholds, gap thresholds and merging are all refused, and the gate recovers only
+0.68 of the word. **It is not a sound detector that fragments; it is a mediocre one that both
+misses and chatters**, and no timing logic placed on top of it recovers what it never saw.
+That is a stronger statement than the fragmentation story I started with, and it is the one
+the measurements support.
+
+Which independently selects the build the literature pass arrived at from the other
+direction: **detect onsets on the ear's envelope derivative with a persistence requirement**,
+after Nabé, Schwartz and Diard, rather than on the larynx's instantaneous level. The two
+routes agreeing is the reason to take it — one came from reading a paper against the open
+question, the other from three measurements closing every alternative.
+
+#### And the creature's own voice is corrupting its own boundary detector
+
+An incidental result with a mechanism. ON fraction, hearing against deaf:
+
+| arm | hearing | deaf (`self_gain = 0`) | |
+|---|---|---|---|
+| tracking | 0.68 | **0.83** | +0.15 |
+| control | 0.78 | **0.99** | +0.21 |
+
+**Cutting the acoustic self-path takes the control arm's coverage to 0.99 of the word.** The
+reason is the listening reflex itself: the gate means "the larynx is below setpoint, so I am
+listening", and the creature's own babble drives the larynx *above* setpoint. The reflex that
+defines when a word is playing is corrupted by the very voice it is supposed to fall silent
+for. Deafening removes the creature's own contribution and the gate then tracks the caregiver
+almost exactly.
+
+Stated carefully, because it does not transfer to the index: the deaf arms have **better**
+coverage and a **worse** index gap, −0.093 against −0.056. Coverage is not the index, and
+nothing here says improving coverage improves the partition — the oracle-window arms are the
+evidence that it does, and they have coverage 1.00 by construction. What this adds is that
+the deficit has two independent sources, the creature's own voice and the threshold's
+chatter, and that `self_gain` reaches only the first.
+
+
 ## Layout
 
 ```

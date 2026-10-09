@@ -4156,6 +4156,15 @@ inline CtxSplit ctx_split(const aibaby::Network& net, const aibaby::ModuleState&
 
 struct VLRun {
   bool ok = false;
+  // INSTRUMENT ONLY. Episode-length structure for the context index: a log2
+  // histogram over ticks and the mean. Appended at the TOP is safe here because
+  // VLRun is only ever brace-initialised empty and filled by field name.
+  uint32_t ep_hist[12] = {};
+  double ep_mean_ticks = 0.0;
+  uint64_t ep_count = 0;
+  uint32_t gap_hist[12] = {};
+  double gap_mean_ticks = 0.0;
+  double on_frac = 0.0;        // gate-open ticks as a fraction of the WORD time
   double err_early = 0.0, err_late = 0.0;
   double err_by_word[kVLMaxWords][2] = {};
   uint32_t scored = 0, skipped = 0, praises = 0, scolds = 0;
@@ -5040,6 +5049,22 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
         if (col > busiest) busiest = col;
       }
       out.ctx_occupancy = busiest / double(ctx_conf_n);
+    }
+    {
+      // INSTRUMENT ONLY: the episode-length structure behind `ev/tri`.
+      const uint32_t* eh = s.brain.network().ctx_episode_hist();
+      for (uint32_t b = 0; b < 12u; ++b) out.ep_hist[b] = eh[b];
+      out.ep_mean_ticks = s.brain.network().ctx_episode_mean_ticks();
+      out.ep_count = s.brain.network().ctx_episode_count();
+      const uint32_t* gh = s.brain.network().ctx_gap_hist();
+      for (uint32_t b = 0; b < 12u; ++b) out.gap_hist[b] = gh[b];
+      out.gap_mean_ticks = s.brain.network().ctx_gap_mean_ticks();
+      // ON ticks against the TOTAL WORD TIME in the session, counted directly on both
+      // sides rather than as a product of two means.
+      const double word_ticks = double(n_trials) * double(kVLWordTicks);
+      out.on_frac = word_ticks > 0.0
+                        ? double(s.brain.network().ctx_on_ticks()) / word_ticks
+                        : 0.0;
     }
   }
   {
@@ -26548,6 +26573,11 @@ bool run_ctxself(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
     uint32_t scored = 0, skipped = 0;
     double d1 = 0.0, chg = 0.0, present = 0.0, div = 0.0, shared = 0.0;
     double match = 0.0, occ = 0.0, evt = 0.0, mte = 0.0, mtl = 0.0;
+    // INSTRUMENT ONLY: episode-length structure.
+    uint32_t ep_hist[12] = {};
+    double ep_mean = 0.0;
+    uint32_t gap_hist[12] = {};
+    double gap_mean = 0.0, on_frac = 0.0;
     bool has_corr = false, has_axis = false, has_dir = false, has_name = false;
     double corr = 0.0, axis = 0.0, dir = 0.0, name = 0.0, nshuf = 0.0;
   };
@@ -26591,6 +26621,11 @@ bool run_ctxself(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
         cell.shared = run.ctx_shared_mag;
         cell.match = run.ctx_match;
         cell.occ = run.ctx_occupancy;
+        for (uint32_t b = 0; b < 12u; ++b) cell.ep_hist[b] = run.ep_hist[b];
+        cell.ep_mean = run.ep_mean_ticks;
+        for (uint32_t b = 0; b < 12u; ++b) cell.gap_hist[b] = run.gap_hist[b];
+        cell.gap_mean = run.gap_mean_ticks;
+        cell.on_frac = run.on_frac;
         cell.evt = run.ctx_events_per_trial;
         cell.mte = run.ctx_match_early;
         cell.mtl = run.ctx_match_late;
@@ -26776,6 +26811,83 @@ bool run_ctxself(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
     std::snprintf(e, sizeof e, "%.4f +/- %.4f", m_dv[a], s_dv[a]);
     std::snprintf(f, sizeof f, "%+.1f +/- %.1f", m_ch[a], s_ch[a]);
     std::printf("  %-9s %-16s %-15s %-14s %-13s %s\n", kCtxSelfArms[a].name, b, c, d, e, f);
+  }
+
+  // THE EPISODE-LENGTH STRUCTURE, which is what `ev/tri` does not say. One 900-tick
+  // word becomes about three episodes under the larynx gate; this says whether that is
+  // one long episode plus two slivers or three comparable chunks, and therefore whether
+  // a MINIMUM-LENGTH debounce can separate them -- and at what threshold. The threshold
+  // has to come from this distribution and not from the caregiver's word length, which
+  // the creature does not know and which would be an oracle smuggled in as a constant.
+  {
+    std::printf("\n  EPISODE LENGTHS, log2 buckets in ticks (share of episodes), mean\n");
+    std::printf("  %-15s %6s  %5s %5s %5s %5s %5s %5s %5s %5s %5s %5s\n", "arm", "mean",
+                "<2", "2-3", "4-7", "8-15", "16-31", "32-63", "64-127", "128-255",
+                "256-511", ">=512");
+    for (uint32_t a = 0; a < kCtxSelfArmCount; ++a) {
+      double tot = 0.0, agg[12] = {}, msum = 0.0;
+      uint32_t nm = 0;
+      for (uint32_t r = 0; r < kReps; ++r) {
+        const Cell& c = cells[r * kCtxSelfArmCount + a];
+        if (!c.ok) continue;
+        for (uint32_t bb = 0; bb < 12u; ++bb) { agg[bb] += double(c.ep_hist[bb]); tot += double(c.ep_hist[bb]); }
+        msum += c.ep_mean; ++nm;
+      }
+      if (tot <= 0.0) continue;
+      char line[256]; int off = 0;
+      off += std::snprintf(line + off, sizeof(line) - off, "  %-15s %6.0f ",
+                           kCtxSelfArms[a].name, nm ? msum / double(nm) : 0.0);
+      for (uint32_t bb = 0; bb < 10u; ++bb) {
+        double share = 0.0;
+        if (bb < 9u) share = agg[bb] / tot;
+        else { for (uint32_t k = 9; k < 12u; ++k) share += agg[k] / tot; }
+        off += std::snprintf(line + off, sizeof(line) - off, " %5.2f", share);
+      }
+      std::printf("%s\n", line);
+    }
+    std::printf("  A MINIMUM-LENGTH DEBOUNCE CAN WORK only if the word episodes and the\n"
+                "  fragments sit in SEPARATE buckets. If the mass is spread smoothly there\n"
+                "  is no threshold that keeps one and drops the other, and the fix has to\n"
+                "  be hysteresis in AMPLITUDE rather than a minimum duration.\n");
+    // THE OFF GAPS, which are what a MERGE rule needs, and the ON fraction counted
+    // directly. Episode length x episodes per trial is a PRODUCT OF TWO MEANS and
+    // cannot be quoted as the ON time -- this project has paid for that estimator class
+    // once already, so the quantity is measured on both sides instead.
+    std::printf("\n  OFF GAPS BETWEEN EPISODES, log2 buckets in ticks, and the gate's ON\n"
+                "  time as a fraction of the caregiver's word time (measured, not inferred)\n");
+    std::printf("  %-15s %6s %6s  %5s %5s %5s %5s %5s %5s %5s %5s %5s %5s\n", "arm",
+                "ON/word", "gap", "<2", "2-3", "4-7", "8-15", "16-31", "32-63", "64-127",
+                "128-255", "256-511", ">=512");
+    for (uint32_t a = 0; a < kCtxSelfArmCount; ++a) {
+      double tot = 0.0, agg[12] = {}, gsum = 0.0, osum = 0.0;
+      uint32_t nm = 0;
+      for (uint32_t r = 0; r < kReps; ++r) {
+        const Cell& c = cells[r * kCtxSelfArmCount + a];
+        if (!c.ok) continue;
+        for (uint32_t bb = 0; bb < 12u; ++bb) { agg[bb] += double(c.gap_hist[bb]); tot += double(c.gap_hist[bb]); }
+        gsum += c.gap_mean; osum += c.on_frac; ++nm;
+      }
+      if (nm == 0) continue;
+      char line[300]; int off = 0;
+      off += std::snprintf(line + off, sizeof(line) - off, "  %-15s %6.2f %6.0f ",
+                           kCtxSelfArms[a].name, osum / double(nm), gsum / double(nm));
+      for (uint32_t bb = 0; bb < 10u; ++bb) {
+        double share = 0.0;
+        if (tot > 0.0) {
+          if (bb < 9u) share = agg[bb] / tot;
+          else { for (uint32_t k = 9; k < 12u; ++k) share += agg[k] / tot; }
+        }
+        off += std::snprintf(line + off, sizeof(line) - off, " %5.2f", share);
+      }
+      std::printf("%s\n", line);
+    }
+    std::printf("  A MERGE RULE IS DERIVABLE only if the WITHIN-word gaps and the\n"
+                "  BETWEEN-word gaps separate. The between-word gap is bounded below by the\n"
+                "  trial's silent tail, so mass well above that is the real boundary and\n"
+                "  mass well below it is chatter to be merged across. If ON/word is near 1\n"
+                "  the gate already finds the word and only shatters it, which is the case a\n"
+                "  merge rule fixes; if it is well under 1 the gate is also MISSING the\n"
+                "  word and merging alone cannot recover it.\n");
   }
 
   // BY NAME, NOT BY POSITION. This read `kOff = 0, kOra = 1, kEar = 2, kERnd = 3,

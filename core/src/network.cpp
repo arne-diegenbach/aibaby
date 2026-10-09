@@ -1703,6 +1703,18 @@ void Network::step() {
         }
       }
       if (fast_on) {
+        // INSTRUMENT ONLY. An OFF run that has just ended is a gap between episodes;
+        // record it and start counting ON ticks. Nothing in the kernel reads either.
+        if (ctx_off_run_ > 0u) {
+          const double g = double(ctx_off_run_);
+          ctx_gap_sum_ += g;
+          ++ctx_gap_n_;
+          uint32_t b = 0;
+          for (double v = g; v >= 2.0 && b < 11u; v *= 0.5) ++b;
+          ctx_gap_hist_[b] += 1u;
+          ctx_off_run_ = 0u;
+        }
+        ++ctx_on_ticks_;
         for (uint32_t n = 0; n < sms.count; ++n) {
           ctx_acc_[n] += ctx_source_ == 4 ? rate_ema_[sms.begin + n]
                                           : rate_fast_[sms.begin + n];
@@ -1791,11 +1803,24 @@ void Network::step() {
         for (uint32_t n = 0; n < sms.count; ++n) {
           proto[n] += lr * (ctx_acc_[n] * inv - proto[n]);
         }
+        // INSTRUMENT ONLY, before the accumulator is cleared: how long this episode
+        // was. Pure bookkeeping -- nothing in the kernel reads it.
+        {
+          const double len = double(ctx_acc_n_);
+          ctx_ep_sum_ += len;
+          ++ctx_ep_n_;
+          uint32_t b = 0;
+          for (double v = len; v >= 2.0 && b < 11u; v *= 0.5) ++b;
+          ctx_ep_hist_[b] += 1u;
+        }
         for (uint32_t n = 0; n < sms.count; ++n) ctx_acc_[n] = kZero;
         ctx_acc_n_ = kZero;
         active_ctx_ = winner;
         ++ctx_events_;
       }
+      // INSTRUMENT ONLY: accumulate the OFF run while the gate is shut, but only once
+      // an episode has happened, so the pre-first-word silence is not counted as a gap.
+      if (!fast_on && ctx_ep_n_ > 0) ++ctx_off_run_;
       ctx_src_active_ = slow_on;
       // The latch is the point: once a word has been heard the creature is IN
       // that context until it hears another, so the cash-in reaches the latched

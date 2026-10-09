@@ -139,6 +139,20 @@ class Network {
   void set_ctx_window(bool on) { ctx_window_oracle_ = true; ctx_window_on_ = on; }
   void clear_ctx_window() { ctx_window_oracle_ = false; }
 
+  // INSTRUMENT ONLY. Episode lengths in ticks: a log2 histogram (bucket i is
+  // [2^i, 2^(i+1)) ticks) and the running mean. See the members for why.
+  const uint32_t* ctx_episode_hist() const { return ctx_ep_hist_; }
+  const uint32_t* ctx_gap_hist() const { return ctx_gap_hist_; }
+  uint64_t ctx_gap_count() const { return ctx_gap_n_; }
+  double ctx_gap_mean_ticks() const {
+    return ctx_gap_n_ > 0 ? ctx_gap_sum_ / double(ctx_gap_n_) : 0.0;
+  }
+  uint64_t ctx_on_ticks() const { return ctx_on_ticks_; }
+  uint64_t ctx_episode_count() const { return ctx_ep_n_; }
+  double ctx_episode_mean_ticks() const {
+    return ctx_ep_n_ > 0 ? ctx_ep_sum_ / double(ctx_ep_n_) : 0.0;
+  }
+
   // THE COMPLEMENT OF set_reward_mask, and the distinction is not cosmetic.
   // set_reward_mask ALLOWS a range and blocks everything else in the whole
   // network -- every module, every group. That is right for "hand the creature
@@ -1220,6 +1234,24 @@ class Network {
   // not move. See set_ctx_window.
   bool ctx_window_oracle_ = false;
   bool ctx_window_on_ = false;
+  // INSTRUMENT ONLY -- the length of each committed context episode, in ticks, as a
+  // log2 histogram plus a running mean. Nothing reads these in the kernel and no
+  // behaviour depends on them, so the pinned hash does not move; they exist because
+  // `ev/tri` says one 900-tick word becomes about three episodes and does not say
+  // whether that is one long episode plus two slivers or three comparable chunks.
+  // A debounce threshold can only be DERIVED from the answer.
+  uint32_t ctx_ep_hist_[12] = {};
+  uint64_t ctx_ep_n_ = 0;
+  double ctx_ep_sum_ = 0.0;
+  // And the OFF GAPS between episodes, same log2 buckets. A merge rule needs the gap
+  // scale, not the episode scale, and the episode histogram cannot supply it. Also the
+  // total ON ticks, counted DIRECTLY -- `mean episode x episodes per trial` is a
+  // product of two means and this project has already paid for that class of estimator.
+  uint32_t ctx_gap_hist_[12] = {};
+  uint64_t ctx_gap_n_ = 0;
+  double ctx_gap_sum_ = 0.0;
+  uint64_t ctx_off_run_ = 0;      // ticks since the gate last closed
+  uint64_t ctx_on_ticks_ = 0;     // total ticks the gate has been open
   // The cap lives in config.h: dna.cpp validates against it and must not depend on
   // the kernel. Kept as a member alias so existing references still read naturally.
   static constexpr uint32_t kMaxContextSlots = aibaby::kMaxContextSlots;
