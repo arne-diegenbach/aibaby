@@ -31,7 +31,7 @@
 <p class="subtitle">Original findings from a grown spiking creature, with no external antecedent</p>
 <p class="author">Arne Diegenbach</p>
 <p class="affil">The <span class="id">aibaby</span> project &mdash; a C++17 spiking neural creature grown from a DNA/genome file</p>
-<p class="date">10 October 2026</p>
+<p class="date">10 October 2026 (revised)</p>
 
 <div class="abstract">
 <p class="lab">Abstract</p>
@@ -320,6 +320,34 @@ proposed would run about fifteen percent of the time &mdash; and the mechanism i
 grafted onto already runs continuously and costs nothing on either axis it was built to
 serve. Running a null fifteen percent as often is not a repair. That is a better refusal than
 the one the search would have given, and it also said what to build instead.</p>
+
+<h3>2.15 A guard that the mechanism is live is not a guard that the measurement can resolve it</h3>
+<p>The sharpest version of &sect;2.2 yet, because the guards in question were written
+deliberately, in advance, and passed. An experiment asked whether a reward could be aimed at
+one phase of a self-generated two-phase movement. It carried two vacuity guards, both chosen
+before the run: one confirming the movement was happening, and one confirming the two phases
+were <em>balanced</em> rather than one having won outright. Both passed cleanly &mdash; the
+phase was reported on essentially every rewarded moment, and the split was 0.50.</p>
+<p>Neither guard asked whether the <strong>reward</strong> could tell the two phases apart,
+which was the entire question. Credit is delivered through an eligibility trace, and the
+trace&rsquo;s window is 2000&nbsp;ms against a phase lasting about 136&nbsp;ms &mdash;
+roughly fifteen phases per window, seven full cycles of the movement. Both halves sit inside
+every credit window, equally eligible, every time. So the two conditions being compared were
+<em>the same condition with the labels permuted</em>, and the null that came back measured
+the operating point rather than the thing the experiment was named after.</p>
+<p><strong>The distinction worth carrying: a vacuity guard normally asks whether the
+treatment happened. This failure needs a guard asking whether the instrument can see the
+treatment.</strong> Those are different questions and the first does not imply the second.
+The arithmetic that settles it was available before the run &mdash; three constants, all
+already measured &mdash; and cost nothing but the thought of comparing them.</p>
+<p class="note">Recorded with its chronology because that is the only part that makes it
+useful rather than embarrassing. The arithmetic was done and the prediction written down
+while the run was still executing: that the contrast would come back null, that a
+resolution guard would have voided it, and that a positive result would refute the whole
+argument. The guard was added before the log was opened, and run afterwards on the very
+configuration that produced the result it prints a refusal. A verdict that is wrong over
+correct numbers is recoverable; what makes it recoverable is having written the correction
+down before the numbers arrived.</p>
 
 <h2>3. Credit assignment and interference</h2>
 <p>Teaching a second, conflicting vowel target destroys the first. The surviving fraction

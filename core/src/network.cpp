@@ -533,6 +533,21 @@ bool Network::build(const Dna& dna, Arena& arena, Rng& rng) {
             break;
           }
         }
+        // The ENVELOPE-ONSET gate's source and its derived persistence. Experiment-only:
+        // nothing uses either unless set_ctx_gate_mode is called, so the shipped path is
+        // untouched. The persistence is the fast filter's own time constant in ticks.
+        for (uint32_t m = 0; m < module_count_; ++m) {
+          if (dna.module(m).role == uint32_t(ModuleRole::kAuditory)) {
+            ctx_env_module_ = int32_t(m);
+            break;
+          }
+        }
+        {
+          const Scalar tau = h.sim.rate_fast_tau_ms > 0.0f ? h.sim.rate_fast_tau_ms : 50.0f;
+          const Scalar n = dt_ms_ > kZero ? tau / dt_ms_ : kZero;
+          ctx_env_persist_ = n > kZero ? uint32_t(n) : 1u;
+          if (ctx_env_persist_ < 1u) ctx_env_persist_ = 1u;
+        }
         if (ctx_gate_module_ < 0 || ctx_gate_target_ <= kZero) ctx_slots_ = 0;
         // Without a setpoint there is no stimulus-independent reference to call
         // a word against, and the episode detector would be back to comparing
@@ -1471,8 +1486,30 @@ void Network::step() {
       // EXPERIMENT ONLY. The oracle word window replaces the larynx gate and
       // nothing else -- same feature, same rule, same latch. Default false, so the
       // shipped path is the comparison below and the pinned hash does not move.
-      const bool slow_on =
-          ctx_window_oracle_ ? ctx_window_on_ : (gms.mean_rate < ctx_gate_target_);
+      bool gate_on;
+      if (ctx_window_oracle_) {
+        gate_on = ctx_window_on_;
+      } else if (ctx_gate_mode_ == 1u && ctx_env_module_ >= 0) {
+        // THE ENVELOPE-ONSET GATE. `rising` is the fast envelope mean above the slow one,
+        // which is the sign of the derivative with no threshold to choose, and the latch
+        // flips only after the disagreement has persisted for the fast filter's own time
+        // constant -- hysteresis in TIME, which is what the smooth length and gap
+        // distributions said the fix had to be.
+        const ModuleState& ems = modules_[uint32_t(ctx_env_module_)];
+        const bool rising = ems.mean_rate_fast > ems.mean_rate;
+        if (rising != ctx_env_open_) {
+          if (++ctx_env_run_ >= ctx_env_persist_) {
+            ctx_env_open_ = rising;
+            ctx_env_run_ = 0u;
+          }
+        } else {
+          ctx_env_run_ = 0u;
+        }
+        gate_on = ctx_env_open_;
+      } else {
+        gate_on = gms.mean_rate < ctx_gate_target_;
+      }
+      const bool slow_on = gate_on;
       const bool fast_on = slow_on;
       const Scalar inv = ctx_acc_n_ > kZero ? kOne / ctx_acc_n_ : kZero;
 
@@ -2076,6 +2113,10 @@ void Network::step() {
       // derives from and amplifies itself.
       hc_lo_[m] = hc_gain_[m] * clampf(m_hi * inv, kZero, Scalar(2));
       hc_hi_[m] = hc_gain_[m] * clampf(m_lo * inv, kZero, Scalar(2));
+      // INSTRUMENT ONLY: the raw half-means, so the phase is readable even when both
+      // inhibition terms saturate at the clamp. Nothing in the kernel reads them.
+      hc_mlo_[m] = m_lo;
+      hc_mhi_[m] = m_hi;
     }
 
     Scalar ffi = kZero;

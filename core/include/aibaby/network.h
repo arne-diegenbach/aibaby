@@ -139,6 +139,48 @@ class Network {
   void set_ctx_window(bool on) { ctx_window_oracle_ = true; ctx_window_on_ = on; }
   void clear_ctx_window() { ctx_window_oracle_ = false; }
 
+  // WHICH HALF OF THE HALF-CENTRE GROUP IS WINNING, which is the phase of the
+  // free-running articulatory gesture. 1 = the UPPER half (a high-F1 posture),
+  // 0 = the LOWER half (a low-F1 posture), -1 = the mechanism is off in this module.
+  //
+  // Position IS the coded value in a readout group (`preferred_i = (i-begin+0.5)/n`),
+  // so the two halves of group 2 are a low-F1 and a high-F1 posture and their
+  // alternation sweeps the rate-weighted centroid -- F1 moving down and up, which is
+  // a gesture rather than a gate being throttled. This exposes which way it is
+  // currently pointing so a lesson can be aimed at one phase of it.
+  int halfcenter_phase(uint32_t m) const {
+    if (m >= module_count_ || hc_gain_[m] <= kZero) return -1;
+    return hc_mhi_[m] > hc_mlo_[m] ? 1 : 0;
+  }
+
+  // EXPERIMENT ONLY -- the ENVELOPE-ONSET word gate, after Nabe, Schwartz & Diard's
+  // COSMO-Onset (Front. Syst. Neurosci. 15, 653975): detect a word by a sustained RISE
+  // in the acoustic envelope rather than by a level anywhere.
+  //
+  // WHY NOT THE LARYNX, which is what mode 0 does. Three instrument passes refused every
+  // timing repair of it: episode lengths are smooth (a fifth under two ticks, a fifth
+  // over 512, no gap) so no minimum length separates words from fragments; the off-gaps
+  // are smooth too so no merge threshold reassembles them; and it recovers only 0.68 of
+  // the caregiver's word, so it is MISSING a third of what it should see and no logic
+  // placed on top can recover what it never saw.
+  //
+  // AND WHY THIS IS NOT THE EAR TEST THAT WAS ALREADY REFUSED. The kernel records trying
+  // a conjunction with the ear and finding it inert because "the ear sits above its own
+  // setpoint nearly always". That was a test on the ear's LEVEL. This is its DERIVATIVE,
+  // which is a different quantity, and a null on the level says nothing about it.
+  //
+  // NOTHING HERE IS A GUESSED CONSTANT, which this project requires of a new mechanism:
+  //   * the derivative is the crossing of two filters the kernel already maintains --
+  //     `mean_rate_fast` (tau 50 ms) against `mean_rate` (tau 1 s). Rising is simply
+  //     fast > slow, so the threshold is ZERO rather than tuned.
+  //   * the persistence is rate_fast_tau_ms / dt_ms, the fast filter's own time constant
+  //     in ticks, because chatter lives at exactly that scale.
+  //   * it works on this protocol for a reason that is also not tuned: the slow filter's
+  //     1 s time constant is LONGER than the 900 ms word, so the slow mean never catches
+  //     up within a word and fast stays above it throughout, while in the 1900 ms silent
+  //     tail fast falls below and the episode closes.
+  void set_ctx_gate_mode(uint32_t mode) { ctx_gate_mode_ = mode; }
+
   // INSTRUMENT ONLY. Episode lengths in ticks: a log2 histogram (bucket i is
   // [2^i, 2^(i+1)) ticks) and the running mean. See the members for why.
   const uint32_t* ctx_episode_hist() const { return ctx_ep_hist_; }
@@ -1117,6 +1159,12 @@ class Network {
   // recomputed once per module per tick. Zero everywhere is bit-identical.
   Scalar hc_gain_[kMaxModules] = {};
   Scalar hc_lo_[kMaxModules] = {};
+  // INSTRUMENT ONLY -- the two half-means the Matsuoka term is built from, kept raw
+  // so the PHASE can be read. hc_lo_/hc_hi_ hold gain-scaled, CLAMPED inhibition, so
+  // comparing those two is degenerate whenever both saturate. Nothing in the kernel
+  // reads these, so the pinned hash does not move.
+  Scalar hc_mlo_[kMaxModules] = {};
+  Scalar hc_mhi_[kMaxModules] = {};
   Scalar hc_hi_[kMaxModules] = {};
   uint32_t hc_group_[kMaxModules] = {};
   uint32_t hc_begin_[kMaxModules] = {};
@@ -1234,6 +1282,13 @@ class Network {
   // not move. See set_ctx_window.
   bool ctx_window_oracle_ = false;
   bool ctx_window_on_ = false;
+  // EXPERIMENT ONLY -- the ENVELOPE-ONSET gate. 0 is the shipped larynx gate and is
+  // bit-identical. See set_ctx_gate_mode.
+  uint32_t ctx_gate_mode_ = 0u;
+  int32_t ctx_env_module_ = -1;     // the AUDITORY module, resolved at setup
+  uint32_t ctx_env_persist_ = 0u;   // DERIVED: rate_fast_tau_ms / dt_ms
+  uint32_t ctx_env_run_ = 0u;       // consecutive ticks disagreeing with the latch
+  bool ctx_env_open_ = false;
   // INSTRUMENT ONLY -- the length of each committed context episode, in ticks, as a
   // log2 histogram plus a running mean. Nothing reads these in the kernel and no
   // behaviour depends on them, so the pinned hash does not move; they exist because

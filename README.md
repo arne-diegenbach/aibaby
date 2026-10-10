@@ -16204,6 +16204,176 @@ the deficit has two independent sources, the creature's own voice and the thresh
 chatter, and that `self_gain` reaches only the first.
 
 
+### The credit window is fifteen times longer than the gesture it would have to aim
+
+Written while `phaseteach` was still running, which is the only honest time to write it,
+because it predicts that run's result and the run is now a test of it rather than evidence
+for it.
+
+#### Three constants that were all already measured
+
+| quantity | value | source |
+|---|---|---|
+| eligibility trace, `tau_elig_ms` | **2000 ms** | genome, commented "the human-feedback latency window" |
+| one phase of the free-running gesture | **~136 ms** | `adapt_tau_ms` 333 → 3.67 Hz measured |
+| state persistence | **~10 ms** | autocorrelation of a produced kick, 0.92 → 0.03 |
+
+```
+  trace / phase  =  14.7x     the trace spans about seven FULL CYCLES of the gesture
+  trace / state  =   200x
+```
+
+**So the reward has no phase resolution at all.** A praise event credits everything active
+over the preceding two seconds, which is roughly fifteen phases. Both halves of the gesture
+sit inside every trace window, equally eligible, every time. The identity and swapped
+mappings are therefore *the same experiment* to the creature with the target labels
+permuted, and the permutation washes out because neither phase is distinguishable to the
+thing doing the crediting.
+
+**A null from that run is a VOID, not a refusal.** It would say nothing about whether a
+lesson can aim a gesture — only that this operating point cannot ask.
+
+#### My own guards did not catch it, in the shape I had written up hours earlier
+
+The experiment carries two vacuity guards. One checks the gesture is live — the half-centre
+reports a phase on essentially every reward tick. One checks it is *balanced* — phase 1
+holds 0.48 to 0.52 of reward ticks, an alternation rather than a settled winner. Both
+passed, and both are about the **gesture**.
+
+Neither checks that the **reward** can resolve it, which is the entire question. That is a
+criterion no outcome could fail in the informative direction — §2.2's family — and I built
+it hours after writing that section's third shape into the discoveries document. The
+guard now exists: the experiment computes `tau_elig / phase` and **refuses as VOID above
+2.0**, before any verdict, with the conservative phase estimate so the guard is as lenient
+as the arithmetic allows.
+
+#### And the synthesis is larger than the experiment
+
+This project spent weeks on **per-neuron credit assignment** — which neurons a reward
+should reach — and closed it: gain rises monotonically with how much of the motor group the
+reward can touch, so the cheapest mask is no mask, and nothing in that family is affordable.
+That was credit assignment in **space**.
+
+Teaching a two-phase gesture is the same problem in **time**. The reward must reach the
+neurons that were active *in one phase* and not the other, and the mechanism that would do
+it — the eligibility trace — is fifteen times too wide. Lined up with the state constant:
+
+> the creature's memory for **what it did** is ~10 ms; its memory for **what it was told** is
+> ~2000 ms; and the gesture it would have to be taught sits at ~136 ms, **between the two and
+> reachable by neither.**
+
+That is a candidate for the deepest structural reason this creature cannot be taught a
+sequence, and every number in it was already on disk. It also reframes `no-sequence`'s
+headline. "No module holds a kick for 10 ms" reads as a *state* problem — nothing persists.
+Put beside the trace it is better read as a **mismatch**: the two timescales the architecture
+does have are three orders of magnitude apart, and a syllable lives in the gap. The genome's
+own comment says as much about its ladder of time constants having "a hole from ~60 ms to
+~800 ms", which is exactly where a gesture is.
+
+**What this does and does not license.** It does not say the coupling is impossible; it says
+the shipped operating point cannot test it, which is a different and cheaper claim.
+Lengthening the phase is not enough on its own — `adapt_tau_ms` 667 gives a 278 ms phase and
+still leaves the trace seven times wider. Shortening `tau_elig` changes the lesson as well as
+the phase, because the praise delay is built against it, so a sweep that moves only one of
+them is confounded. **The honest version needs a credit pathway whose window is shorter than
+a phase while the caregiver's feedback latency stays where it is** — which is a mechanism,
+not a parameter, and the first thing to price is whether one already exists in the kernel
+that was built for something else.
+
+**And the prediction, registered before the log is read:** the contrast comes back null, the
+new guard would have voided it, and if it instead comes back *positive* then this whole
+argument is wrong and that is the more interesting outcome. An analytic refusal has been
+overturned by its own check in this project before.
+
+
+### phaseteach: the lesson cannot aim the gesture, and the run's own verdict is too strong
+
+The coupling experiment. `phaseteach` at 3.4M, 3 arms × 18 creatures, gate passed with the
+pinned hash unmoved, and the result is the one the credit arithmetic predicted hours before
+the log was read.
+
+| arm | n | F1 phase 0 | F1 phase 1 | separation (ph1 − ph0) | share | off |
+|---|---|---|---|---|---|---|
+| `held` | 0 | — | — | (one phase bin empty) | 0.00 | 0.00 |
+| `phase` (identity) | 18 | 615.2 | 634.3 | **+19.1 ± 0.1 Hz** | 0.50 | 0.00 |
+| `phase-sw` (swapped) | 18 | 616.0 | 635.3 | **+19.3 ± 0.2 Hz** | 0.50 | 0.00 |
+
+```
+  THE MAPPING CONTRAST, paired on seed    -0.2 +/- 0.2 Hz   (0.8 SE, n=18)
+```
+
+**The separation is the oscillator, not the lesson.** Both mappings give +19 Hz, and the
+identity mapping asks the high-F1 posture for the *low* target while the swapped one asks it
+for the *high* one — so a taught separation had to make the contrast negative and it is
+−0.2 ± 0.2. The reward has no purchase on the phase at all.
+
+**And the null is not thin.** Three times the contrast's standard error is 0.6 Hz, which is
+**3% of what the gesture produces by itself**. The reward moved 1% of it. The test could
+have resolved a twentieth of the oscillator's own effect.
+
+A corroborating detail that was not designed for: produced F1 sits at **615–635 Hz** in both
+phases, while the two targets are 320 and 780. The creature parks between them rather than
+near either, which is what a reward credited to both phases equally would produce — it is
+being taught the average of two targets it cannot tell apart in time.
+
+#### The run's printed verdict overstates what it can conclude, and the fix was written first
+
+The log says *"the lesson does not reach the phase"*. **That is too strong, and the correct
+verdict is VOID.** The reason is the credit arithmetic in the section above: `tau_elig` is
+2000 ms against a phase of ~136 ms, so both halves of the gesture sit inside every
+eligibility window and the two mappings are *the same experiment with the labels permuted*.
+A null measures the operating point, not the coupling.
+
+What makes this recordable rather than embarrassing is the order. The arithmetic was done
+and written up **while the run was still executing**, with the prediction registered in the
+memory store: *"the contrast comes back null, the new guard would have voided it, and if it
+instead comes back positive this whole argument is wrong."* The guard was added before the
+log was read. Run now on the very genome that produced the result, it prints:
+
+```
+  CREDIT RESOLUTION  tau_elig 2000 ms against a phase of ~666 ms  ->  3.0 phases per trace
+  phaseteach VOID -- THE REWARD CANNOT RESOLVE THE PHASE.
+```
+
+using the *conservative* phase estimate (2·tau_a, the long end of a relaxation oscillator's
+period) so the guard is as lenient as the arithmetic allows — and it still refuses. **Third
+time today a verdict branch has been wrong over correct numbers**, and the first time the
+correction was in hand before the numbers arrived.
+
+#### Two things this does establish, and one control that failed to produce data
+
+It is not a wasted run. **The gesture survives teaching** — `share` is 0.50 on every
+creature in both arms with `off` at 0.00, so reward pinning F1 does not extinguish the
+alternation and the two halves stay balanced. That was a real open question and it is
+answered. And **the phase is readable and the mapping is live**: the machinery does what it
+says, which the shipped-genome control confirms by voiding with `off` at 1.00.
+
+The control that failed is mine. `held` was meant to give the natural sweep's own value as a
+baseline, and it reports nothing, because I gated the phase accumulation behind the phase
+target modes — so the arm that does not use phase teaching cannot report phase bins. The
+experiment survives only because the identity-versus-swapped contrast cancels the oscillator
+without needing `held` at all. Worth recording as a design slip that a different result would
+have made expensive.
+
+#### Where this leaves the sequence question
+
+Not "a lesson cannot aim a gesture". **"This creature's credit pathway is fifteen times too
+wide to aim one, and no parameter in the genome fixes that."** Lengthening the phase is not
+enough — `adapt_tau_ms` 667 still leaves the trace seven times wider — and shortening
+`tau_elig` is confounded with the praise delay built against it. So the next move is a
+mechanism and not a sweep: a credit pathway whose window is shorter than a phase while the
+caregiver's feedback latency stays where it is. Three candidates already exist in the kernel,
+built for other purposes and already instrumented — DNA v37's burst plasticity, v39's
+per-neuron learning signal, and v25's apical compartment — and the honest first step is to
+price which of them, if any, carries a window that short.
+
+**Housekeeping:** the run script exits on a refusal verdict, because the experiment returns
+false and the script runs under `set -e`, so it never printed its own summary. The log was
+complete and the numbers were all there, but a refusal is a legitimate outcome and should not
+look like a crash. Fixed by not relying on the exit status for a verdict that is expected to
+be negative.
+
+
 ## Layout
 
 ```

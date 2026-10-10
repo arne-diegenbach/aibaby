@@ -354,6 +354,17 @@ const Spec kSpecs[] = {
      "  set_reward_block is the suspect, exactly as set_reward_mask once was.\n"
      "  Widths sit at midpoints so each arm blocks a known count, and the count\n"
      "  is printed rather than trusted. 36 seeds"},
+    {"phaseteach", 3400000, Expect::kOpen, Tier::kTeach,
+     "derived: vocallearn's teaching length, because it IS a teaching session.\n"
+     "  Can a taught utterance occupy two PHASES of the creature's own gesture?\n"
+     "  DNA v56+v57's half-centre already sweeps F1 freely at 30-44 SE with no\n"
+     "  reward; the 0.22 wipe is two lessons fighting over ONE value of F1. This\n"
+     "  picks the reward target PER TICK from which half of the F1 group is\n"
+     "  winning, so the lessons get different INSTANTS of a shared axis. Needs a\n"
+     "  genome with halfcenter_gain > 0 -- results/hc-phase.toml -- and refuses\n"
+     "  if the half-centre reports no phase or has settled on one winner. The\n"
+     "  evidence is the IDENTITY-minus-SWAPPED mapping contrast, because the\n"
+     "  oscillator contributes to both equally and cancels from the difference."},
     {"blockwhere", 5600000, Expect::kOpen, Tier::kLong,
      "blockfloor found ONE neuron of fourteen costs 30% of the lesson and four\n"
      "  cost 57%. Is that about HOW MANY cells are blocked or WHICH ONES? Every\n"
@@ -894,6 +905,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "chase") ok = run_chase(dna_blob, ticks, verbose);
   else if (name == "compartprobe") ok = run_compartprobe(dna_blob, ticks, verbose);
   else if (name == "blockfloor") ok = run_blockfloor(dna_blob, ticks, verbose);
+  else if (name == "phaseteach") ok = run_phaseteach(dna_blob, ticks, verbose);
   else if (name == "blockwhere") ok = run_blockwhere(dna_blob, ticks, verbose);
   else if (name == "blockanchor") ok = run_blockanchor(dna_blob, ticks, verbose);
   else if (name == "leverprobe") ok = run_leverprobe(dna_blob, ticks, verbose);

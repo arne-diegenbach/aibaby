@@ -3887,7 +3887,33 @@ enum VLArm { kVLTaught = 0, kVLYoked, kVLNone, kVLFixed, kVLArmCount };
 //                difference is whether the target correlates with the input.
 //                m3 has always been read as taught-minus-random and vocallearn
 //                never had the equivalent.
-enum VLTarget { kVLTgtHeard = 0, kVLTgtFixed, kVLTgtSwap, kVLTgtRandom };
+// kVLTgtPhase -- THE TARGET FOLLOWS THE CREATURE'S OWN ARTICULATORY PHASE.
+//
+// Every other value picks one target per TRIAL and holds it, which is why a taught
+// utterance is a held vowel: one trial, one target, one posture. This one picks the
+// target per TICK from `Network::halfcenter_phase` -- the low-F1 half of the F1 group
+// winning selects word 0, the high-F1 half selects word 1.
+//
+// WHY THIS IS THE EXPERIMENT. The 0.22 wipe is an AXIS COLLISION: two lessons fight
+// over one value of F1, and a lesson silent about A's axis is free while one speaking
+// to it is destructive (+11.5 SE). DNA v56+v57 already makes F1 a TRAJECTORY rather
+// than a value -- a free-running two-phase gesture that reaches the formant, +65.9 Hz
+// of swing at +52 SE with no caregiver and no reward, replicated on two seed families.
+// So the two conflicting lessons may stop conflicting if they are given different
+// PHASES of that gesture: the axis is shared, the instants are not.
+//
+// The generator and the lesson were both built, gated and measured, and had never been
+// connected. This is the connection.
+// kVLTgtPhaseSwap is the control WITHOUT WHICH kVLTgtPhase CANNOT BE READ. The
+// free-running gesture already sweeps F1 by 135 Hz, so produced F1 differs between the
+// two phases whatever the reward does -- phase 1 is the high-F1 posture by construction.
+// An aligned mapping (phase 1 -> the higher target) therefore cannot be distinguished
+// from the oscillator doing what it already does. The swapped mapping asks the creature
+// for the OPPOSITE of its natural sweep, which no oscillator can supply, so the
+// separation following the MAPPING rather than the posture is the whole evidence.
+enum VLTarget {
+  kVLTgtHeard = 0, kVLTgtFixed, kVLTgtSwap, kVLTgtRandom, kVLTgtPhase, kVLTgtPhaseSwap
+};
 
 // WHAT is being scored, as opposed to which word it is scored against. Every
 // conditional test this project has ever run targets FORMANTS, read through a
@@ -3998,6 +4024,9 @@ struct CtxDrive {
   // the END with a default, so every existing caller is bit-identical -- the field
   // order hazard this file has paid for twice.
   bool win_oracle = false;
+  // THE ENVELOPE-ONSET GATE. 1 selects it, 0 keeps the shipped larynx gate and is
+  // bit-identical. See Network::set_ctx_gate_mode.
+  uint32_t gate_mode = 0u;
   // BREAK THE PERIOD-2 LOCK. `label = trial % nw` alternates the words strictly, and
   // DeSieno's conscience balances wins, so an index that merely ALTERNATES agrees with
   // the words perfectly while carrying nothing -- `ctx-conscience` measured and named
@@ -4165,6 +4194,15 @@ struct VLRun {
   uint32_t gap_hist[12] = {};
   double gap_mean_ticks = 0.0;
   double on_frac = 0.0;        // gate-open ticks as a fraction of the WORD time
+  // PHASE TEACHING. `ph_f1` is produced F1 averaged separately over the ticks each
+  // phase was winning, which is the measurement; `ph_share` is the fraction of reward
+  // ticks the high-F1 phase held, and `ph_off` the fraction on which the half-centre
+  // reported no phase at all -- the liveness evidence, because an arm whose oscillator
+  // never ran would otherwise read as a clean null.
+  double ph_f1[kVLMaxWords] = {};
+  uint64_t ph_n[kVLMaxWords] = {};
+  double ph_share = 0.0;
+  double ph_off = 0.0;
   double err_early = 0.0, err_late = 0.0;
   double err_by_word[kVLMaxWords][2] = {};
   uint32_t scored = 0, skipped = 0, praises = 0, scolds = 0;
@@ -4428,6 +4466,9 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
     if (ip_vm >= 0) ip_t0 = mean_threshold(net, uint32_t(ip_vm), nullptr, 0.0f);
     if (ip_rm >= 0) ip_r0 = mean_threshold(net, uint32_t(ip_rm), nullptr, 0.0f);
   }
+  // THE WORD GATE, selected once per session before any tick. 0 is the shipped larynx
+  // gate and the call is skipped entirely, so every existing arm stays bit-identical.
+  if (ctx && ctx->gate_mode != 0u) s.brain.network().set_ctx_gate_mode(ctx->gate_mode);
   if (ctx && ctx->module >= 0) {
     const int32_t vm = s.dna.module_with_role(aibaby::ModuleRole::kVocal);
     if (vm >= 0) {
@@ -4484,6 +4525,13 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
   // DNA v52. Confusion between the word the caregiver said and the slice the
   // creature's own index picked, over the reward window only.
   uint64_t ctx_conf[kVLMaxWords][kVLMaxWords] = {};
+  // PHASE TEACHING state. `vmod_hc` is the module the half-centre runs in, which is the
+  // vocal one; the counters are the liveness evidence and the measurement.
+  const int32_t vmod_hc = s.dna.module_with_role(aibaby::ModuleRole::kVocal);
+  uint64_t ph_ticks[kVLMaxWords] = {};
+  uint64_t ph_off_ticks = 0;
+  double ph_f1_sum[kVLMaxWords] = {};
+  uint64_t ph_f1_n[kVLMaxWords] = {};
   uint64_t ctx_conf_n = 0;
   // The same, split by third. Index 0 is the first third and 1 the last; the
   // middle third is counted in the session total only.
@@ -4615,6 +4663,8 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
       ramp_tbl[0] = {200.0f, float(ramp->rest_f1 * std::exp(-half)), float(ramp->rest_f2)};
       ramp_tbl[1] = {200.0f, float(ramp->rest_f1 * std::exp(half)), float(ramp->rest_f2)};
     }
+    // PHASE MODE picks per tick inside the loop, so the per-trial pick is only the
+    // fallback used when the half-centre is off -- which the liveness guard refuses on.
     const Word& w = (chase && chase_lo > 1.0 && chase_hi > 1.0) ? chase_tbl[target_word]
                     : ramp && ramp->ramp_trials > 0              ? ramp_tbl[target_word]
                     : tgt_table                                  ? tgt_table[target_word]
@@ -4727,6 +4777,39 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
       // Rate mode follows G2 exactly: reward is delivered ON an event, so it
       // always follows something the creature did. That is the property the
       // amplitude version lacked and the reason it measured nothing.
+      // THE PHASE, read per tick. `halfcenter_phase` returns 1 when the high-F1 half
+      // of the group is winning, 0 when the low-F1 half is, and -1 when the mechanism
+      // is off -- in which case this falls back to the trial's own target so the arm
+      // is inert rather than wrong, and the liveness guard below refuses it.
+      const Word* ph_word = &w;
+      uint32_t ph_bucket = bucket;
+      if (tgt == kVLTgtPhase || tgt == kVLTgtPhaseSwap) {
+        const int phase = vmod_hc >= 0
+                              ? s.brain.network().halfcenter_phase(uint32_t(vmod_hc))
+                              : -1;
+        if (phase >= 0) {
+          const uint32_t raw = uint32_t(phase) % nw;
+          const uint32_t pw = tgt == kVLTgtPhaseSwap ? (nw - 1u - raw) : raw;
+          ph_word = tgt_table ? &tgt_table[pw] : &kWords[pw];
+          ph_bucket = pw;
+          ++ph_ticks[raw];   // indexed by PHASE, not by the word it was mapped to
+          // THE MEASUREMENT. Produced F1 accumulated SEPARATELY BY PHASE, inside the
+          // reward window and only while voiced. If the two phases carry two targets
+          // these two means separate; if the utterance is still a held vowel they do
+          // not, whatever the error against either target says.
+          if (voiced && t >= kVLRewardFrom && t < kVLRewardTo) {
+            // Indexed by PHASE. The question is what F1 the creature produces in each
+            // phase of its own gesture, so binning by the mapped word would hide
+            // exactly the thing the swapped arm exists to expose.
+            ph_f1_sum[raw] += double(v.f1);
+            ++ph_f1_n[raw];
+          }
+        } else {
+          ++ph_off_ticks;
+        }
+      }
+      const uint32_t bk =
+          (tgt == kVLTgtPhase || tgt == kVLTgtPhaseSwap) ? ph_bucket : bucket;
       const bool scorable = score == kVLScoreAmp ? true : voiced;
       if ((arm == kVLTaught || arm == kVLFixed) && scorable &&
           t >= kVLRewardFrom && t < kVLRewardTo &&
@@ -4739,7 +4822,11 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
                              // is the condition, and with a constant target this
                              // is G2's own contingency unchanged.
                              ? (want_loud ? 0.0 : 1.0)
-                             : formant_error(double(v.f1), double(v.f2), w);
+                             : formant_error(double(v.f1), double(v.f2),
+                                             (tgt == kVLTgtPhase ||
+                                              tgt == kVLTgtPhaseSwap)
+                                                 ? *ph_word
+                                                 : w);
         if (score == kVLScoreRate) {
           // No baseline here, and that is not an omission. The baseline exists
           // so that praise means "closer than you usually get to THIS target",
@@ -4754,7 +4841,7 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
           out.feedback.push_back(Praise{now + regime.delay, value});
         } else if (e >= 0.0) {
           last_feedback = now;
-          if (baseline[bucket] >= 0.0) {
+          if (baseline[bk] >= 0.0) {
             // The shipped criterion is a SIGN: one bit per trial. With
             // `grade_scale` above zero the SAME comparison is delivered with its
             // magnitude, so the arms differ in information per trial and not in
@@ -4764,7 +4851,7 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
             // more -- which keeps the two arms on one scale instead of turning
             // this into a learning-rate sweep with extra steps.
             float value;
-            if (regime.grade_scale > 0.0f && dev[bucket] > 0.0 && gnorm[bucket] > 0.0) {
+            if (regime.grade_scale > 0.0f && dev[bk] > 0.0 && gnorm[bk] > 0.0) {
               // MATCHED ON MAGNITUDE BY CONSTRUCTION, and the first version of
               // this was not. Dividing by the mean absolute deviation was
               // supposed to give E|value| = |praise|; measured, it gave 0.257
@@ -4778,10 +4865,10 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
               // than true under an assumption about one -- and the realised mean
               // is still printed, because a normaliser that is wrong in some new
               // way should be caught by the same guard.
-              const double rel = (baseline[bucket] - e) / dev[bucket];
+              const double rel = (baseline[bk] - e) / dev[bk];
               const double lim = double(regime.grade_scale);
               const double c = rel > lim ? lim : (rel < -lim ? -lim : rel);
-              const double unit = c / gnorm[bucket];
+              const double unit = c / gnorm[bk];
               value = float(unit >= 0.0 ? unit * double(regime.praise)
                                         : -unit * double(regime.scold));
             } else if (regime.reward_mode == 1u && regime.abs_bar > 0.0f) {
@@ -4820,7 +4907,7 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
               // reward times a zero-mean perturbation is zero drift.
               value = e < double(regime.abs_bar) ? regime.praise : regime.scold;
             } else {
-              value = e < baseline[bucket] ? regime.praise : regime.scold;
+              value = e < baseline[bk] ? regime.praise : regime.scold;
             }
             out.reward_mag += std::fabs(double(value));
             out.reward_sum += double(value);
@@ -4834,34 +4921,34 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
           // timescale. It is what the graded arm divides by, and it is tracked
           // on EVERY arm so the binary arm pays the identical arithmetic and the
           // two remain bit-comparable in everything but the reward value.
-          const double d = e - baseline[bucket];
-          dev[bucket] = dev[bucket] <= 0.0
+          const double d = e - baseline[bk];
+          dev[bk] = dev[bk] <= 0.0
                             ? std::fabs(d)
-                            : dev[bucket] + kVLBaselineAlpha *
-                                                (std::fabs(d) - dev[bucket]);
+                            : dev[bk] + kVLBaselineAlpha *
+                                                (std::fabs(d) - dev[bk]);
           // The normaliser for the graded arm: an EMA of the clamped value's own
           // absolute size, on the baseline's timescale. Tracked on EVERY arm so
           // the binary arm runs the identical arithmetic and the two stay
           // comparable in everything but the reward value they deliver.
-          if (dev[bucket] > 0.0) {
-            const double rel = -d / dev[bucket];
+          if (dev[bk] > 0.0) {
+            const double rel = -d / dev[bk];
             const double lim = regime.grade_scale > 0.0f ? double(regime.grade_scale) : 1.0;
             const double c = rel > lim ? lim : (rel < -lim ? -lim : rel);
             const double mag = c < 0.0 ? -c : c;
-            gnorm[bucket] = gnorm[bucket] <= 0.0
+            gnorm[bk] = gnorm[bk] <= 0.0
                                 ? mag
-                                : gnorm[bucket] + kVLBaselineAlpha * (mag - gnorm[bucket]);
+                                : gnorm[bk] + kVLBaselineAlpha * (mag - gnorm[bk]);
           }
-          if (baseline[bucket] < 0.0) {
-            baseline[bucket] = e;
+          if (baseline[bk] < 0.0) {
+            baseline[bk] = e;
           } else {
             const double alpha =
                 regime.baseline_mode == 1u ? kVLBaselineAlpha * 0.1 : kVLBaselineAlpha;
-            const double moved = baseline[bucket] + alpha * (e - baseline[bucket]);
+            const double moved = baseline[bk] + alpha * (e - baseline[bk]);
             // Mode 2 is a ratchet: the bar takes the step only when it TIGHTENS.
-            baseline[bucket] =
-                (regime.baseline_mode == 2u && moved > baseline[bucket]) ? baseline[bucket]
-                                                                        : moved;
+            baseline[bk] =
+                (regime.baseline_mode == 2u && moved > baseline[bk]) ? baseline[bk]
+                                                                     : moved;
           }
         }
       }
@@ -5062,6 +5149,16 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
       // ON ticks against the TOTAL WORD TIME in the session, counted directly on both
       // sides rather than as a product of two means.
       const double word_ticks = double(n_trials) * double(kVLWordTicks);
+      {
+        uint64_t tot = ph_off_ticks;
+        for (uint32_t k = 0; k < kVLMaxWords; ++k) tot += ph_ticks[k];
+        for (uint32_t k = 0; k < kVLMaxWords; ++k) {
+          out.ph_n[k] = ph_f1_n[k];
+          out.ph_f1[k] = ph_f1_n[k] ? ph_f1_sum[k] / double(ph_f1_n[k]) : 0.0;
+        }
+        out.ph_share = tot ? double(ph_ticks[1]) / double(tot) : 0.0;
+        out.ph_off = tot ? double(ph_off_ticks) / double(tot) : 0.0;
+      }
       out.on_frac = word_ticks > 0.0
                         ? double(s.brain.network().ctx_on_ticks()) / word_ticks
                         : 0.0;
@@ -9634,6 +9731,249 @@ const BWArm kBWArms[] = {
     {"bot1-hi", 1u, 2u, 850.0f, "b0-hi"},
 };
 constexpr uint32_t kBWArmCount = sizeof(kBWArms) / sizeof(kBWArms[0]);
+
+// `phaseteach` -- CAN A TAUGHT UTTERANCE OCCUPY TWO PHASES OF THE CREATURE'S OWN GESTURE?
+//
+// WHY THIS IS THE EXPERIMENT. The 0.22 wipe is an AXIS COLLISION, not a memory failure:
+// two lessons fight over one value of F1, and `axis-not-distance` measured that a lesson
+// SILENT about A's axis is free while one speaking to it is destructive, at +11.5 SE. So
+// the problem is that F1 is one number and two lessons want it.
+//
+// DNA v56+v57 already makes F1 a TRAJECTORY. A population half-centre in the F1 readout
+// group -- mutual inhibition plus a fatigue that releases the winner -- gives a
+// free-running two-phase gesture that REACHES THE FORMANT: produced F1 follows the
+// alternation at 30-44 SE over a matched null, both single-population controls at or
+// below it, and 135.6 Hz of free-running swing against a control's 67.9, with no
+// caregiver and no reward, replicated on two seed families.
+//
+// The generator and the lesson were both built, gated and measured, and had never been
+// connected to each other. This connects them: the reward target is chosen PER TICK from
+// which half of the F1 group is currently winning, so the two lessons are offered
+// different INSTANTS of one shared axis instead of competing for one value of it.
+//
+// THE CONTROL WITHOUT WHICH NONE OF IT CAN BE READ. The gesture sweeps F1 by itself, so
+// produced F1 differs between the two phases whatever the reward does -- phase 1 IS the
+// high-F1 posture, by construction, since position is the coded value in a readout group.
+// An aligned mapping therefore cannot be told apart from the oscillator doing what it
+// already does. So both mappings run:
+//
+//   kWords[0] has F1 780 Hz and kWords[1] has F1 320 Hz, and phase 1 is the HIGH posture.
+//   `phase`    (identity)  phase 1 -> word 1, F1 320  -- AGAINST the natural sweep.
+//   `phase-sw` (swapped)   phase 1 -> word 0, F1 780  -- WITH the natural sweep.
+//
+// The quantity is `produced F1 in phase 1 minus produced F1 in phase 0`, and the evidence
+// is the DIFFERENCE BETWEEN THE TWO MAPPINGS, which the oscillator contributes to equally
+// and therefore cancels from. `held` is the same genome taught the ordinary way and is the
+// natural sweep's own value.
+//
+// PRE-REGISTERED:
+//   WORKS:   separation follows the MAPPING -- `phase` more negative than `phase-sw` by
+//            more than 3 SE on the paired difference. The creature is then producing two
+//            different F1 values within one utterance, on demand, which is the first
+//            structure in time this project would have that is TAUGHT rather than free.
+//   REFUSED: the two mappings come back equal. The separation is then the oscillator and
+//            the reward has no purchase on the phase, whatever the error against either
+//            target says.
+//   VACUOUS: `ph_off` not near 0 -- the half-centre reported no phase, so the arm fell
+//            back to per-trial targets and tested nothing. Checked and refused on first.
+//   AND A SECOND VACUITY TRAP, stated because it is the one this project keeps hitting:
+//            if `ph_share` is near 0 or 1 the "alternation" is a settled winner and the
+//            two phase bins are not comparable -- one of them is nearly empty.
+bool run_phaseteach(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  aibaby::Dna dna;
+  if (dna.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) {
+    std::printf("  setup failed: the genome does not load\n");
+    return false;
+  }
+  struct PTArm { const char* name; int tgt; };
+  static const PTArm kPT[] = {
+      {"held",     int(kVLTgtHeard)},
+      {"phase",    int(kVLTgtPhase)},
+      {"phase-sw", int(kVLTgtPhaseSwap)},
+  };
+  constexpr uint32_t kN = 3, kReps = 18;
+  std::printf("  phaseteach -- can a taught utterance occupy two phases of the\n"
+              "  creature's own free-running F1 gesture?\n");
+  std::printf("  the quantity  produced F1 in phase 1 minus produced F1 in phase 0\n");
+  std::printf("  the evidence  the DIFFERENCE between the two mappings, because the\n"
+              "                oscillator contributes to both equally and cancels\n");
+  std::printf("  refused if    the two mappings come back equal, or ph_off is not ~0,\n"
+              "                or ph_share is near 0 or 1 (a settled winner, not an\n"
+              "                alternation, and one phase bin nearly empty)\n\n");
+  struct Cell { bool ok = false; double sep = 0, f0 = 0, f1 = 0, share = 0, off = 0, taught = 0; };
+  const std::vector<Cell> cells = parallel_reps<Cell>(kReps * kN, [&](uint32_t i) {
+    const uint32_t r = i / kN, a = i % kN;
+    Cell c;
+    std::vector<uint8_t> variant = blob;
+    const uint64_t seed = dna.header().seed + r * 7919ull;
+    std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+    Regime reg;
+    reg.praise = kPraiseValue;
+    reg.scold = kScoldValue;
+    const VLRun run = run_vocallearn_session(variant, ticks, kVLTaught, nullptr, reg,
+                                             kPT[a].tgt);
+    if (!run.ok) return c;
+    if (run.ph_n[0] < 50 || run.ph_n[1] < 50) {
+      // Not an error: `held` legitimately has no phase bins when the half-centre is
+      // off, and an arm with one empty bin has no separation to report.
+      c.ok = true; c.off = run.ph_off; c.share = run.ph_share; c.taught = run.err_late;
+      return c;
+    }
+    c.ok = true;
+    c.f0 = run.ph_f1[0];
+    c.f1 = run.ph_f1[1];
+    c.sep = run.ph_f1[1] - run.ph_f1[0];
+    c.share = run.ph_share;
+    c.off = run.ph_off;
+    c.taught = run.err_late;
+    parallel_note("  [%u/%u] seed %u %-9s sep %+7.1f Hz  share %.2f  off %.2f\n",
+                  i + 1, kReps * kN, r, kPT[a].name, c.sep, c.share, c.off);
+    return c;
+  });
+  std::vector<double> sep[kN];
+  double m_share[kN] = {}, m_off[kN] = {}, m_f0[kN] = {}, m_f1[kN] = {};
+  uint32_t n_ok[kN] = {};
+  for (uint32_t i = 0; i < kReps * kN; ++i) {
+    const uint32_t a = i % kN;
+    const Cell& c = cells[i];
+    if (!c.ok) continue;
+    m_share[a] += c.share; m_off[a] += c.off; ++n_ok[a];
+    if (c.f1 != 0.0 || c.f0 != 0.0) {
+      sep[a].push_back(c.sep); m_f0[a] += c.f0; m_f1[a] += c.f1;
+    }
+  }
+  std::printf("\n  %-9s %5s  %9s %9s  %-22s %6s %6s\n", "arm", "n",
+              "F1 ph0", "F1 ph1", "separation (ph1-ph0)", "share", "off");
+  double m_sep[kN] = {}, s_sep[kN] = {};
+  for (uint32_t a = 0; a < kN; ++a) {
+    if (!n_ok[a]) { std::printf("  %-9s   (no creature completed)\n", kPT[a].name); continue; }
+    const double sh = m_share[a] / n_ok[a], of = m_off[a] / n_ok[a];
+    if (sep[a].size() < 3) {
+      std::printf("  %-9s %5zu  %9s %9s  %-22s %6.2f %6.2f\n", kPT[a].name, sep[a].size(),
+                  "-", "-", "(one phase bin empty)", sh, of);
+      continue;
+    }
+    m_sep[a] = ctx_mean_se(sep[a], &s_sep[a]);
+    char b[40];
+    std::snprintf(b, sizeof b, "%+.1f +/- %.1f Hz", m_sep[a], s_sep[a]);
+    std::printf("  %-9s %5zu  %9.1f %9.1f  %-22s %6.2f %6.2f\n", kPT[a].name, sep[a].size(),
+                m_f0[a] / double(sep[a].size()), m_f1[a] / double(sep[a].size()), b, sh, of);
+  }
+  // THE GUARD I DID NOT WRITE FIRST, AND IT IS THE ONE THAT DECIDES EVERYTHING.
+  //
+  // The two guards below check the GESTURE is live and balanced. Neither checks that
+  // the REWARD CAN RESOLVE IT, and that is the question. Credit here is an eligibility
+  // trace with `tau_elig_ms`, and a praise event credits everything active over that
+  // window. If the window spans several phases then both halves of the gesture are
+  // equally eligible every time, the identity and swapped mappings become the same
+  // experiment with the labels permuted, and a null means NOTHING ABOUT THE COUPLING.
+  //
+  // Shipped: tau_elig 2000 ms against a 136 ms phase at adapt_tau 333 -- about fifteen
+  // phases per trace, seven full cycles. So the shipped operating point CANNOT test
+  // this, and the honest verdict is VOID rather than a refusal. Checked and refused
+  // here rather than discovered afterwards, which is what section 2.2's third shape --
+  // a criterion only the best outcome fails -- cost this project earlier the same day.
+  {
+    const double tau_elig = double(dna.header().stdp.tau_elig_ms);
+    const double tau_a = double(dna.header().vocal.adapt_tau_ms);
+    // A relaxation oscillator's period runs ~2-4 tau_a; take the conservative end, so
+    // the phase estimate is the LARGEST it plausibly is and the guard the most lenient.
+    const double phase_ms = tau_a > 0.0 ? 2.0 * tau_a : 0.0;
+    const double ratio = phase_ms > 0.0 ? tau_elig / phase_ms : 0.0;
+    std::printf("  CREDIT RESOLUTION  tau_elig %.0f ms against a phase of ~%.0f ms"
+                "  ->  %.1f phases per trace\n", tau_elig, phase_ms, ratio);
+    if (ratio > 2.0) {
+      std::printf("\n  phaseteach VOID -- THE REWARD CANNOT RESOLVE THE PHASE. The\n"
+                  "  eligibility trace spans %.1f phases, so both halves of the gesture\n"
+                  "  are equally eligible on every praise event and the two mappings are\n"
+                  "  the same experiment with the labels permuted. A null here would say\n"
+                  "  nothing about whether a lesson can aim a gesture.\n"
+                  "\n  THIS IS NOT A POWER PROBLEM and more creatures cannot fix it. It\n"
+                  "  needs a credit window SHORTER THAN A PHASE, which means temporal\n"
+                  "  credit assignment -- the spatial credit problem on the time axis,\n"
+                  "  and the project's state persistence (~10 ms) is 200x shorter than\n"
+                  "  its credit window. The gesture sits between the two, reachable by\n"
+                  "  neither.\n", ratio);
+      return false;
+    }
+  }
+  // THE VACUITY GUARDS, before any verdict.
+  const uint32_t P = 1, S = 2;
+  if (sep[P].size() < 3 || sep[S].size() < 3) {
+    std::printf("\n  phaseteach VOID -- a phase arm has fewer than three creatures with\n"
+                "  both phase bins filled. Either the half-centre never ran on this genome\n"
+                "  or it settled on one winner. Nothing here is a measurement.\n");
+    return false;
+  }
+  const double off_p = m_off[P] / n_ok[P], sh_p = m_share[P] / n_ok[P];
+  if (off_p > 0.05) {
+    std::printf("\n  phaseteach VOID -- the half-centre reported NO PHASE on %.0f%% of\n"
+                "  reward ticks, so the arm fell back to per-trial targets and tested\n"
+                "  nothing. Run it on a genome with halfcenter_gain > 0.\n", 100.0 * off_p);
+    return false;
+  }
+  if (sh_p < 0.15 || sh_p > 0.85) {
+    std::printf("\n  phaseteach VOID -- phase 1 held %.0f%% of reward ticks, so this is a\n"
+                "  SETTLED WINNER and not an alternation. The two bins are not comparable.\n"
+                "  The oscillating regime is a bounded window in `halfcenter_drive`;\n"
+                "  this genome is outside it.\n", 100.0 * sh_p);
+    return false;
+  }
+  // THE CONTRAST. Paired on seed, because every arm runs the same creatures.
+  std::vector<double> d;
+  for (uint32_t r = 0; r < kReps; ++r) {
+    const Cell& cp = cells[r * kN + P];
+    const Cell& cs = cells[r * kN + S];
+    if (cp.ok && cs.ok && (cp.f0 != 0.0 || cp.f1 != 0.0) && (cs.f0 != 0.0 || cs.f1 != 0.0))
+      d.push_back(cp.sep - cs.sep);
+  }
+  if (d.size() < 3) {
+    std::printf("\n  phaseteach INCONCLUSIVE -- %zu paired creatures.\n", d.size());
+    return false;
+  }
+  double se = 0.0;
+  const double dd = ctx_mean_se(d, &se);
+  std::printf("\n  THE MAPPING CONTRAST, paired on seed (identity minus swapped)\n"
+              "    phase - phase-sw   %+.1f +/- %.1f Hz  (%.1f SE, n=%zu)\n",
+              dd, se, se > 0.0 ? std::fabs(dd) / se : 0.0, d.size());
+  std::printf("  the identity mapping asks the HIGH-F1 posture for the LOW target and the\n"
+              "  swapped one asks it for the HIGH target, so a taught separation makes\n"
+              "  this NEGATIVE. The oscillator contributes equally to both and cancels.\n");
+  const double kBar = 3.0;
+  if (se <= 0.0) {
+    std::printf("\n  phaseteach VOID -- zero variance on the contrast.\n");
+    return false;
+  }
+  if (dd < -kBar * se) {
+    std::printf("\n  THE LESSON REACHES THE PHASE. Separation follows the MAPPING, not the\n"
+                "  posture: %+.1f +/- %.1f Hz at %.1f SE past a %.0f SE bar. The creature\n"
+                "  produces two different F1 values within one utterance ON DEMAND, which\n"
+                "  is the first structure in time here that is TAUGHT rather than free --\n"
+                "  and it is the route out of the axis collision, because two lessons that\n"
+                "  occupy different INSTANTS of one axis are not competing for one value.\n"
+                "  WHAT IS STILL NOT SHOWN: that the two targets are both RETAINED. This\n"
+                "  measures production within a session, not memory across lessons.\n",
+                dd, se, std::fabs(dd) / se, kBar);
+    return true;
+  }
+  if (dd > kBar * se) {
+    std::printf("\n  REFUSED, AND IN REVERSE. The separation follows the mapping BACKWARDS\n"
+                "  (%+.1f +/- %.1f Hz, %.1f SE). A null and a reversal are different\n"
+                "  results and this is the second; no account on the table predicts the\n"
+                "  creature producing the OPPOSITE of what each phase was rewarded for.\n",
+                dd, se, dd / se);
+    return false;
+  }
+  std::printf("\n  THE LESSON DOES NOT REACH THE PHASE. The two mappings are\n"
+              "  indistinguishable (%+.1f +/- %.1f Hz, under %.0f SE) at power to see a\n"
+              "  separation of %.1f Hz, so the phase difference in the table is the\n"
+              "  OSCILLATOR and the reward has no purchase on it. The gesture runs and\n"
+              "  the lesson cannot aim it, which locates the gap at the COUPLING rather\n"
+              "  than at either part -- both of which are separately measured to work.\n",
+              dd, se, kBar, kBar * se);
+  return false;
+}
 
 bool run_blockwhere(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
   (void)verbose;
@@ -26345,6 +26685,8 @@ struct CtxSelfArm {
   bool win_oracle = false;
   // Randomise which word comes first within each pair. See CtxDrive::shuffle_order.
   bool shuffle_order = false;
+  // 1 = the ENVELOPE-ONSET word gate instead of the shipped larynx gate.
+  uint32_t gate_mode = 0u;
 };
 
 constexpr CtxSelfArm kCtxSelfArms[] = {
@@ -26475,6 +26817,51 @@ constexpr CtxSelfArm kCtxSelfArms[] = {
     {"ear-sh-rnd",     2, 2, kVLTgtRandom, -1.0f, false, true},
     {"ear-win-sh",     2, 2, kVLTgtHeard,  -1.0f, true,  true},
     {"ear-win-sh-rnd", 2, 2, kVLTgtRandom, -1.0f, true,  true},
+    // ===================================================================================
+    // THE ENVELOPE-ONSET GATE (2026-10-09). The first candidate for the word boundary
+    // that is not an oracle, and the prize is measured: a clean boundary takes the
+    // derived index's conditional delivery from +12.0 to +53.4 Hz (9.6 SE) and MATCHES a
+    // perfect host-supplied index (-1.0 +/- 6.0 Hz). So the boundary is the last oracle
+    // in this line and these two arms are the attempt to retire it.
+    //
+    // WHY NOT A REPAIRED LARYNX GATE. Three instrument passes refused every timing fix:
+    // episode lengths are smooth (0.20 under two ticks, 0.21 over 512, no gap between) so
+    // no minimum length separates words from fragments, and keeping only the long ones
+    // leaves ~39% of trials with no episode at all; the OFF GAPS are smooth too so no
+    // merge threshold reassembles them; and ON/word is **0.68**, so the gate is MISSING a
+    // third of the word and no logic on top can recover what it never saw. It is not a
+    // good detector wired badly, it is the wrong detector.
+    //
+    // THE SIGNAL, after Nabe, Schwartz & Diard's COSMO-Onset: a sustained RISE in the
+    // acoustic envelope. And this is NOT the ear test already refused -- that one was on
+    // the ear's LEVEL ("the ear sits above its own setpoint nearly always"), and a null on
+    // a level says nothing about a derivative.
+    //
+    // NO GUESSED CONSTANT, which this project requires: rising is `mean_rate_fast >
+    // mean_rate`, two filters the kernel already keeps, so the threshold is ZERO; the
+    // persistence is rate_fast_tau_ms / dt_ms = 50 ticks, the fast filter's own constant,
+    // because chatter lives at that scale; and it brackets the word because the slow
+    // filter's 1 s constant is LONGER than the 900 ms word, so the slow mean never catches
+    // up inside a word while in the 1900 ms tail the fast mean falls below it.
+    //
+    // PRE-REGISTERED, on the SHUFFLED protocol, against `ear-sh`/`ear-sh-rnd` as the
+    // incumbent and `ear-win-sh`/`ear-win-sh-rnd` as the in-run upper bound:
+    //   MECHANISM FIRST, and it is checkable independently of the outcome:
+    //     ev/tri must fall from ~2.3 toward 1.0 and ON/word must rise from 0.63 toward 1.0.
+    //     If neither moves the gate did not change what it was built to change and nothing
+    //     below is about onsets.
+    //   THE RESULT: the conditional dF1 effect must rise from `ear-sh`'s +12.0 Hz toward
+    //     `ear-win-sh`'s +53.4 Hz. Partial credit is meaningful here and the fraction
+    //     recovered is the number to report.
+    //   WHAT REFUSES IT: ev/tri reaching ~1.0 and ON/word ~1.0 with dF1 UNMOVED -- which
+    //     would mean segmentation was never the mechanism and the oracle window bought its
+    //     53 Hz by something else it also changed.
+    //   WHAT WOULD MAKE IT UNINTERPRETABLE: ev/tri falling BELOW ~1.0, i.e. the gate
+    //     merging across trials and committing one prototype per several words. Stated
+    //     first because a gate that never closes also reads as "no fragmentation".
+    // ===================================================================================
+    {"ear-env-sh",     2, 2, kVLTgtHeard,  -1.0f, false, true, 1u},
+    {"ear-env-sh-rnd", 2, 2, kVLTgtRandom, -1.0f, false, true, 1u},
 };
 constexpr uint32_t kCtxSelfArmCount = sizeof(kCtxSelfArms) / sizeof(kCtxSelfArms[0]);
 
@@ -26606,6 +26993,7 @@ bool run_ctxself(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
         drive.gain = 0.10;
         drive.win_oracle = kCtxSelfArms[a].win_oracle;
         drive.shuffle_order = kCtxSelfArms[a].shuffle_order;
+        drive.gate_mode = kCtxSelfArms[a].gate_mode;
         Regime reg;
         reg.praise = kPraiseValue;
         reg.scold = kScoldValue;

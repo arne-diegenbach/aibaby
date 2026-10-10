@@ -1,0 +1,64 @@
+  [6/54] seed 1 phase-sw  sep   +17.9 Hz  share 0.50  off 0.00
+  [8/54] seed 2 phase     sep   +17.7 Hz  share 0.53  off 0.00
+  [14/54] seed 4 phase     sep   +18.9 Hz  share 0.51  off 0.00
+  [2/54] seed 0 phase     sep   +19.2 Hz  share 0.52  off 0.00
+  [5/54] seed 1 phase     sep   +18.9 Hz  share 0.50  off 0.00
+  [9/54] seed 2 phase-sw  sep   +20.0 Hz  share 0.52  off 0.00
+  [12/54] seed 3 phase-sw  sep   +17.4 Hz  share 0.47  off 0.00
+  [11/54] seed 3 phase     sep   +18.9 Hz  share 0.48  off 0.00
+  [3/54] seed 0 phase-sw  sep   +19.4 Hz  share 0.50  off 0.00
+  [15/54] seed 4 phase-sw  sep   +19.7 Hz  share 0.50  off 0.00
+  [21/54] seed 6 phase-sw  sep   +21.0 Hz  share 0.49  off 0.00
+  [17/54] seed 5 phase     sep   +18.8 Hz  share 0.48  off 0.00
+  [18/54] seed 5 phase-sw  sep   +17.9 Hz  share 0.51  off 0.00
+  [20/54] seed 6 phase     sep   +19.8 Hz  share 0.51  off 0.00
+  [24/54] seed 7 phase-sw  sep   +18.6 Hz  share 0.51  off 0.00
+  [23/54] seed 7 phase     sep   +19.9 Hz  share 0.49  off 0.00
+  [26/54] seed 8 phase     sep   +19.1 Hz  share 0.50  off 0.00
+  [27/54] seed 8 phase-sw  sep   +19.6 Hz  share 0.49  off 0.00
+  [29/54] seed 9 phase     sep   +19.2 Hz  share 0.49  off 0.00
+  [39/54] seed 12 phase-sw  sep   +19.5 Hz  share 0.51  off 0.00
+  [32/54] seed 10 phase     sep   +19.0 Hz  share 0.51  off 0.00
+  [33/54] seed 10 phase-sw  sep   +18.4 Hz  share 0.52  off 0.00
+  [30/54] seed 9 phase-sw  sep   +18.7 Hz  share 0.47  off 0.00
+  [38/54] seed 12 phase     sep   +19.6 Hz  share 0.49  off 0.00
+  [35/54] seed 11 phase     sep   +19.4 Hz  share 0.50  off 0.00
+  [36/54] seed 11 phase-sw  sep   +20.5 Hz  share 0.49  off 0.00
+  [41/54] seed 13 phase     sep   +19.2 Hz  share 0.49  off 0.00
+  [42/54] seed 13 phase-sw  sep   +19.4 Hz  share 0.51  off 0.00
+  [44/54] seed 14 phase     sep   +19.0 Hz  share 0.48  off 0.00
+  [45/54] seed 14 phase-sw  sep   +19.4 Hz  share 0.50  off 0.00
+  [48/54] seed 15 phase-sw  sep   +20.2 Hz  share 0.49  off 0.00
+  [50/54] seed 16 phase     sep   +18.9 Hz  share 0.49  off 0.00
+  [47/54] seed 15 phase     sep   +20.0 Hz  share 0.49  off 0.00
+  [51/54] seed 16 phase-sw  sep   +19.9 Hz  share 0.49  off 0.00
+  [54/54] seed 17 phase-sw  sep   +20.1 Hz  share 0.49  off 0.00
+  [53/54] seed 17 phase     sep   +18.3 Hz  share 0.48  off 0.00
+experiment: phaseteach
+  phaseteach -- can a taught utterance occupy two phases of the
+  creature's own free-running F1 gesture?
+  the quantity  produced F1 in phase 1 minus produced F1 in phase 0
+  the evidence  the DIFFERENCE between the two mappings, because the
+                oscillator contributes to both equally and cancels
+  refused if    the two mappings come back equal, or ph_off is not ~0,
+                or ph_share is near 0 or 1 (a settled winner, not an
+                alternation, and one phase bin nearly empty)
+
+
+  arm           n     F1 ph0    F1 ph1  separation (ph1-ph0)    share    off
+  held          0          -         -  (one phase bin empty)    0.00   0.00
+  phase        18      615.2     634.3  +19.1 +/- 0.1 Hz         0.50   0.00
+  phase-sw     18      616.0     635.3  +19.3 +/- 0.2 Hz         0.50   0.00
+
+  THE MAPPING CONTRAST, paired on seed (identity minus swapped)
+    phase - phase-sw   -0.2 +/- 0.2 Hz  (0.8 SE, n=18)
+  the identity mapping asks the HIGH-F1 posture for the LOW target and the
+  swapped one asks it for the HIGH target, so a taught separation makes
+  this NEGATIVE. The oscillator contributes equally to both and cancels.
+
+  THE LESSON DOES NOT REACH THE PHASE. The two mappings are
+  indistinguishable (-0.2 +/- 0.2 Hz, under 3 SE) at power to see a
+  separation of 0.7 Hz, so the phase difference in the table is the
+  OSCILLATOR and the reward has no purchase on it. The gesture runs and
+  the lesson cannot aim it, which locates the gap at the COUPLING rather
+  than at either part -- both of which are separately measured to work.
