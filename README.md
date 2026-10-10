@@ -16374,6 +16374,72 @@ look like a crash. Fixed by not relying on the exit status for a verdict that is
 be negative.
 
 
+### No eligibility trace can do this, and the reason is the reward delay rather than the window
+
+Pricing the three candidate credit mechanisms, as the previous section said to. It took a
+code read and no run, and it refuses the route I had proposed in that very section.
+
+**The candidate that looked right already exists as a genome field.** DNA v39's
+`elig_tau_scale` is a *per-module* multiple of the global `tau_elig_ms`, applied per synapse
+target through `elig_decay_mod_`. So the vocal module's credit window can be narrowed
+without touching any other module's, which is exactly the shape the problem seemed to need:
+`elig_tau_scale` 0.05 gives a 100 ms window against a 136 ms phase.
+
+**And it cannot work, for a reason in the other direction.** The praise does not arrive when
+the event happens. `kRewardDelayTicks` is **500 ms** — the modelled latency of a caregiver
+reacting — and the trace decays the whole time it is in flight.
+
+```
+  to RESOLVE a 136 ms phase the window must be   <  136 ms
+  to RECEIVE a praise 500 ms later it wants      >> 500 ms
+  136 < 500.  The two requirements are mutually exclusive.
+```
+
+| window | resolves a phase? | credit left when praise lands |
+|---|---|---|
+| 2000 ms (shipped) | no | 78% |
+| 500 ms | no | 37% |
+| 136 ms (widest that resolves) | borderline | **2.5%** |
+| 100 ms | yes | 0.7% |
+
+**At the widest window that still resolves a phase, the reward arrives with 2.5% of its
+credit intact.** At the shipped window it arrives with 78% intact and no phase resolution at
+all. There is no setting in between that buys both, and the reason is structural rather than
+numerical: **an exponential eligibility trace is a low-pass filter, and the task needs a
+delay.** "What was active 500 ms ago, for 136 ms" is not a quantity a low-pass can represent
+at any time constant — it is a band, and a trace only has a corner.
+
+So this refuses the proposal from the previous section in its own terms. I had written that
+what was needed was "a credit pathway whose window is shorter than a phase while the
+caregiver's feedback latency stays where it is." **Those two clauses are incompatible**, and
+the arithmetic to see it was three lines. The candidate list was right and the framing of what
+it had to achieve was wrong.
+
+#### Which leaves exactly two routes, and the cheap one can refuse the expensive one
+
+**1. Bring the feedback delay below a phase, as an oracle.** `regime.delay` is a host-side
+field and `elig_tau_scale` is a genome field; both already exist. Delay 50 ms with a ~100 ms
+vocal window makes the constraints compatible — 50 < 100 < 136 — at the cost of a caregiver
+who reacts in 50 ms, which no human does. That is the same kind of oracle as the word window:
+it prices what a *fast teacher* would buy without claiming one exists. **Two field edits, one
+run, and if even a fast teacher cannot aim the gesture then the coupling is refused and route
+2 is not worth building.**
+
+**2. Give credit a structure a trace does not have** — a delay line, or synaptic tagging that
+records *which phase* a synapse was eligible in rather than merely how recently. That is a
+mechanism and a real build, and it is the thing the biology actually does, so it is not a
+silly option. It is simply not the thing to try first when a two-field change can refuse it.
+
+**What this says about the architecture, and it is the more durable point.** The creature has
+a 500 ms feedback latency and a 2000 ms credit window, and both are deliberate: they model a
+human caregiver pressing a button and a synapse staying eligible long enough to catch it.
+That pair is well matched for teaching a *posture*, which is what every milestone here has
+been. **It is structurally unable to teach anything faster than the caregiver's own reaction
+time** — and a syllable is faster than a caregiver. The ladder of time constants the genome
+already notes as having "a hole from ~60 ms to ~800 ms" has the reward system sitting on the
+far side of that hole, and the gesture inside it.
+
+
 ## Layout
 
 ```
