@@ -1,0 +1,35 @@
+experiment: phaseteach
+  phaseteach -- can a taught utterance occupy two phases of the
+  creature's own free-running F1 gesture?
+  the quantity  produced F1 in phase 1 minus produced F1 in phase 0
+  the evidence  the DIFFERENCE between the two mappings, because the
+                oscillator contributes to both equally and cancels
+  refused if    the two mappings come back equal, or ph_off is not ~0,
+                or ph_share is near 0 or 1 (a settled winner, not an
+                alternation, and one phase bin nearly empty)
+
+
+  arm           n     F1 ph0    F1 ph1  separation (ph1-ph0)    share    off  err drop (early-late)
+  fixed         0          -         -  (one phase bin empty)    0.00   0.00  +0.2197 +/- 0.0120  
+  phase         0          -         -  (one phase bin empty)    0.00   1.00  +0.0006 +/- 0.0025  
+  phase-sw      0          -         -  (one phase bin empty)    0.00   1.00  +0.0006 +/- 0.0025  
+  fast          0          -         -  (one phase bin empty)    0.00   1.00  +0.0003 +/- 0.0025  
+  fast-sw       0          -         -  (one phase bin empty)    0.00   1.00  +0.0003 +/- 0.0025  
+  DID THE LESSON LAND     error early minus late on `fixed`, whose target does NOT
+                          flip within a trial:  +0.2197 +/- 0.0120  (18.4 SE, n=18)
+  CREDIT RESOLUTION  vocal tau_elig 2000 ms (global 2000 x scale 1.000) against a phase of ~334 ms  ->  6.0 phases per trace
+  CREDIT DELIVERY    of the credit standing at the event, the share left when the praise lands:
+                      500 ms teacher   77.9%          50 ms teacher   97.5%
+
+  phaseteach VOID -- THE REWARD CANNOT RESOLVE THE PHASE. The
+  eligibility trace spans 6.0 phases, so both halves of the gesture
+  are equally eligible on every praise event and the two mappings are
+  the same experiment with the labels permuted. A null here would say
+  nothing about whether a lesson can aim a gesture.
+
+  THIS IS NOT A POWER PROBLEM and more creatures cannot fix it. It
+  needs a credit window SHORTER THAN A PHASE, which means temporal
+  credit assignment -- the spatial credit problem on the time axis,
+  and the project's state persistence (~10 ms) is 200x shorter than
+  its credit window. The gesture sits between the two, reachable by
+  neither.

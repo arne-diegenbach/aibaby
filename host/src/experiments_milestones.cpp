@@ -9810,16 +9810,35 @@ bool run_phaseteach(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
   // So the slow arms here are NOT a repeat of the refused run. They carry the same
   // narrow window, hence the same resolution, and differ from the fast arms in the
   // DELAY ALONE -- which makes them the delivery-starved control the first run lacked.
-  // `held` is dropped: phase accumulation is gated behind the phase target modes, so
-  // it reported nothing at all, which is the flaw recorded in the write-up.
+  // `held` IS KEPT, and the first write-up had its purpose wrong. It fills no phase
+  // bins -- phase accumulation is gated behind the phase target modes -- and that was
+  // recorded as a flaw. Its job is not phase data. Its job is the one control the first
+  // two runs lacked: a lesson whose target does NOT change within a trial, so that
+  // error early-minus-late is a clean measure of whether teaching works on this genome
+  // at all. On a phase arm that same quantity is blunt by construction, because the
+  // error is scored on a trial-mean vowel against a target that flips mid-trial and no
+  // single vowel can satisfy both -- so a guard reading the drop on a PHASE arm would
+  // void a working experiment.
+  //
+  // AND IT HAS TO BE `kVLTgtFixed`, NOT `kVLTgtHeard`, which is what the arm was first
+  // built as. `vocallearn`'s headline result is that reward cuts error +24% toward a
+  // FIXED target and -0.1% toward a HEARD one: the heard-target arm is the project's
+  // known NEGATIVE. A control that is already known not to work cannot establish that
+  // teaching works, and it would have voided every run of this experiment for a reason
+  // that has nothing to do with the question.
   struct PTArm { const char* name; int tgt; uint64_t delay; };
   static const PTArm kPT[] = {
+      // At the FAST delay, matching the arm the verdict rests on. A control at the
+      // shipped 500 ms would be delivery-starved on this genome (0.7% of credit) and
+      // would fail for the window's reason rather than the genome's, which is the
+      // whole distinction the run exists to make.
+      {"fixed",    int(kVLTgtFixed),     kPTFastDelayTicks},
       {"phase",    int(kVLTgtPhase),     kRewardDelayTicks},
       {"phase-sw", int(kVLTgtPhaseSwap), kRewardDelayTicks},
       {"fast",     int(kVLTgtPhase),     kPTFastDelayTicks},
       {"fast-sw",  int(kVLTgtPhaseSwap), kPTFastDelayTicks},
   };
-  constexpr uint32_t kN = 4, kReps = 18;
+  constexpr uint32_t kN = 5, kReps = 18;
   std::printf("  phaseteach -- can a taught utterance occupy two phases of the\n"
               "  creature's own free-running F1 gesture?\n");
   std::printf("  the quantity  produced F1 in phase 1 minus produced F1 in phase 0\n");
@@ -9828,7 +9847,8 @@ bool run_phaseteach(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
   std::printf("  refused if    the two mappings come back equal, or ph_off is not ~0,\n"
               "                or ph_share is near 0 or 1 (a settled winner, not an\n"
               "                alternation, and one phase bin nearly empty)\n\n");
-  struct Cell { bool ok = false; double sep = 0, f0 = 0, f1 = 0, share = 0, off = 0, taught = 0; };
+  struct Cell { bool ok = false; double sep = 0, f0 = 0, f1 = 0, share = 0, off = 0,
+                       taught = 0, e0 = 0; };
   const std::vector<Cell> cells = parallel_reps<Cell>(kReps * kN, [&](uint32_t i) {
     const uint32_t r = i / kN, a = i % kN;
     Cell c;
@@ -9846,6 +9866,7 @@ bool run_phaseteach(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
       // Not an error: `held` legitimately has no phase bins when the half-centre is
       // off, and an arm with one empty bin has no separation to report.
       c.ok = true; c.off = run.ph_off; c.share = run.ph_share; c.taught = run.err_late;
+      c.e0 = run.err_early;
       return c;
     }
     c.ok = true;
@@ -9855,11 +9876,18 @@ bool run_phaseteach(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
     c.share = run.ph_share;
     c.off = run.ph_off;
     c.taught = run.err_late;
+    c.e0 = run.err_early;
     parallel_note("  [%u/%u] seed %u %-9s sep %+7.1f Hz  share %.2f  off %.2f\n",
                   i + 1, kReps * kN, r, kPT[a].name, c.sep, c.share, c.off);
     return c;
   });
   std::vector<double> sep[kN];
+  // THE CONTROL THE FIRST TWO RUNS DID NOT HAVE. err_early minus err_late, per
+  // creature, is whether the LESSON LANDED. Both halves were already in VLRun and
+  // neither was printed, so two runs reported where a lesson went without ever showing
+  // that one arrived. Produced F1 identical to within 1 Hz across a 20x change in the
+  // credit window is what made that visible, and it should have been a guard.
+  std::vector<double> drop[kN];
   double m_share[kN] = {}, m_off[kN] = {}, m_f0[kN] = {}, m_f1[kN] = {};
   uint32_t n_ok[kN] = {};
   for (uint32_t i = 0; i < kReps * kN; ++i) {
@@ -9867,26 +9895,71 @@ bool run_phaseteach(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
     const Cell& c = cells[i];
     if (!c.ok) continue;
     m_share[a] += c.share; m_off[a] += c.off; ++n_ok[a];
+    if (c.e0 != 0.0 || c.taught != 0.0) drop[a].push_back(c.e0 - c.taught);
     if (c.f1 != 0.0 || c.f0 != 0.0) {
       sep[a].push_back(c.sep); m_f0[a] += c.f0; m_f1[a] += c.f1;
     }
   }
-  std::printf("\n  %-9s %5s  %9s %9s  %-22s %6s %6s\n", "arm", "n",
-              "F1 ph0", "F1 ph1", "separation (ph1-ph0)", "share", "off");
+  std::printf("\n  %-9s %5s  %9s %9s  %-22s %6s %6s  %-20s\n", "arm", "n",
+              "F1 ph0", "F1 ph1", "separation (ph1-ph0)", "share", "off",
+              "err drop (early-late)");
   double m_sep[kN] = {}, s_sep[kN] = {};
+  double m_drop[kN] = {}, s_drop[kN] = {};
+  static char dbuf[kN][32];
+  const auto dropcol = [&](uint32_t a) -> const char* {
+    if (drop[a].size() < 3) { std::snprintf(dbuf[a], 32, "(n<3)"); return dbuf[a]; }
+    m_drop[a] = ctx_mean_se(drop[a], &s_drop[a]);
+    std::snprintf(dbuf[a], 32, "%+.4f +/- %.4f", m_drop[a], s_drop[a]);
+    return dbuf[a];
+  };
   for (uint32_t a = 0; a < kN; ++a) {
     if (!n_ok[a]) { std::printf("  %-9s   (no creature completed)\n", kPT[a].name); continue; }
     const double sh = m_share[a] / n_ok[a], of = m_off[a] / n_ok[a];
     if (sep[a].size() < 3) {
-      std::printf("  %-9s %5zu  %9s %9s  %-22s %6.2f %6.2f\n", kPT[a].name, sep[a].size(),
-                  "-", "-", "(one phase bin empty)", sh, of);
+      std::printf("  %-9s %5zu  %9s %9s  %-22s %6.2f %6.2f  %-20s\n", kPT[a].name,
+                  sep[a].size(), "-", "-", "(one phase bin empty)", sh, of, dropcol(a));
       continue;
     }
     m_sep[a] = ctx_mean_se(sep[a], &s_sep[a]);
     char b[40];
     std::snprintf(b, sizeof b, "%+.1f +/- %.1f Hz", m_sep[a], s_sep[a]);
-    std::printf("  %-9s %5zu  %9.1f %9.1f  %-22s %6.2f %6.2f\n", kPT[a].name, sep[a].size(),
-                m_f0[a] / double(sep[a].size()), m_f1[a] / double(sep[a].size()), b, sh, of);
+    std::printf("  %-9s %5zu  %9.1f %9.1f  %-22s %6.2f %6.2f  %-20s\n", kPT[a].name,
+                sep[a].size(), m_f0[a] / double(sep[a].size()),
+                m_f1[a] / double(sep[a].size()), b, sh, of, dropcol(a));
+  }
+  const uint32_t H = 0, P = 1, S = 2, FP = 3, FS = 4;
+  // THE GUARD THAT SHOULD HAVE BEEN FIRST: DID THE LESSON LAND AT ALL?
+  //
+  // The guards above establish that the GESTURE is live, that the credit window can
+  // RESOLVE a phase and that the credit can ARRIVE. None of them establishes that
+  // teaching does anything on this genome, and a null about WHERE a lesson landed is
+  // meaningless if no lesson landed. Two runs of this experiment reported a verdict
+  // without it, and what exposed the gap was not a guard but the arm table: produced F1
+  // came back 615-635 Hz on every arm of both runs, identical to within 1 Hz across a
+  // 20x change in the credit window and a 10x change in the reward delay. A quantity
+  // that ignores both of its own causes is not measuring them.
+  //
+  // The bar is the weakest defensible one and is fixed in advance: the error must FALL
+  // from the first half of the session to the last, past 3 SE, on the arm the verdict
+  // rests on. Not a magnitude -- any magnitude would be fitted -- just a sign at power.
+  if (drop[H].size() >= 3) {
+    double sd = 0.0;
+    const double md = ctx_mean_se(drop[H], &sd);
+    std::printf("  DID THE LESSON LAND     error early minus late on `%s`, whose target"
+                " does NOT\n                          flip within a trial:"
+                "  %+.4f +/- %.4f  (%.1f SE, n=%zu)\n", kPT[H].name, md, sd,
+                sd > 0.0 ? std::fabs(md) / sd : 0.0, drop[H].size());
+    if (!(md > 3.0 * sd && sd > 0.0)) {
+      std::printf("\n  phaseteach VOID -- THE LESSON DID NOT LAND. Error does not fall\n"
+                  "  over the session on the FIXED-TARGET arm, so reward has no\n"
+                  "  measurable purchase on this creature's vowel AT ALL and a null about\n"
+                  "  whether it can aim a PHASE says nothing. Establish that teaching\n"
+                  "  works on this genome first -- the half-centre operating point was\n"
+                  "  chosen for the gesture's F1 swing and never checked against the\n"
+                  "  lesson, and `elig_tau_scale` 0.05 cuts accumulated eligibility ~20x\n"
+                  "  as a side effect of narrowing the window.\n");
+      return false;
+    }
   }
   // THE GUARD I DID NOT WRITE FIRST, AND IT IS THE ONE THAT DECIDES EVERYTHING.
   //
@@ -9960,7 +10033,6 @@ bool run_phaseteach(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
   }
   // THE VACUITY GUARDS, before any verdict. Run on the FAST pair, because that is the
   // pair the verdict rests on; the slow pair is a control and may legitimately be dead.
-  const uint32_t P = 0, S = 1, FP = 2, FS = 3;
   if (sep[FP].size() < 3 || sep[FS].size() < 3) {
     std::printf("\n  phaseteach VOID -- a fast arm has fewer than three creatures with\n"
                 "  both phase bins filled. Either the half-centre never ran on this genome\n"

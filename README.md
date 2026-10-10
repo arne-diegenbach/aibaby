@@ -16493,6 +16493,89 @@ a synapse marked now, consolidated by a signal arriving later — is the right s
 a second eligibility trace with a different time constant is not, and the three
 candidates above are why.
 
+### The fast-teacher oracle refuses the build, and the control it needed found something bigger
+
+The eligibility trace was closed by arithmetic — resolution and delivery are opposed at the
+shipped 500 ms reward latency — and the delay was the one axis that closed the argument
+without ever having been varied. `results/hc-phase-fast.toml` narrows the vocal module's
+credit window to 100 ms (`elig_tau_scale` 0.05, one changed line) and `phaseteach` gained
+arms at a 50 ms reward delay beside the shipped 500 ms, same window on both, so they differ
+in the delay alone. **50 < 100 < 136 satisfies resolution and delivery together**, which no
+configuration at the shipped latency can.
+
+The contrast is null on both: identity minus swapped mapping, paired on seed, n=18.
+
+```
+  teacher   contrast              SE    n   credit delivered
+   500 ms    +0.1 +/- 0.3 Hz     0.4   18   0.7%  -- starved, the control
+    50 ms    -0.1 +/- 0.3 Hz     0.3   18   60.7% -- the oracle arm
+```
+
+**And when that came back I did not have the right to call it a refusal.** The arm table
+reported produced F1 at 615–635 Hz with a +19.3 Hz phase separation — *identical to the
+earlier run of the same experiment, to within 1 Hz*, after the credit window had been cut
+twentyfold and the delay tenfold. A quantity that ignores both of its own causes is not
+measuring them, and the null was equally consistent with no lesson landing at all. Four
+guards had passed: the gesture is live, the phases are balanced, the window can resolve a
+phase, the credit can arrive. Each asks whether a *part* of the apparatus works. None asks
+whether the *intervention* had an outcome. `err_early` and `err_late` were both in `VLRun`
+and neither had ever been printed — two runs reported where a lesson landed without showing
+that one arrived. That is PDF §2.16.
+
+Two ways to get the control wrong, both caught while building it. It cannot be read on a
+phase arm: error there is scored on a trial-mean vowel against a target that flips mid-trial,
+so no vowel can satisfy it and the guard would void a working experiment. And it cannot be
+`kVLTgtHeard`, which is this project's **known negative** — `vocallearn` cuts error +24%
+toward a fixed target and −0.1% toward a heard one. A control already measured not to work
+establishes nothing, and it would have voided every run for a reason unrelated to the
+question. It has to be `kVLTgtFixed`, at the fast delay so it shares the oracle arm's credit
+configuration rather than failing starved.
+
+#### Teaching does not survive the gesture
+
+Built correctly, the control passed — and carried a second result nobody was looking for.
+Three genomes, 18 creatures each, reward delay and credit window held fixed across them:
+
+```
+  genome                               half-centre   error drop, first third - last third
+  dna/default.toml                     off           +0.2197 +/- 0.0120   (18.4 SE)
+  results/hc-phase.toml                on            +0.0465 +/- 0.0073   ( 6.3 SE)
+  results/hc-phase-fast.toml (20x)     on            +0.0721 +/- 0.0091   ( 8.0 SE)
+```
+
+**Turning the gesture on costs 0.1732 ± 0.0140 of the lesson, 12.3 SE** — about four fifths.
+It still lands at 6.3 SE, so this is attenuation, not a block. The direction was reported
+from the other side and called a success: *the gesture survives teaching*, phases splitting
+rewarded time 0.50/0.50, the oscillator never silent — the pre-flight that could have ended
+the line. **The mirror image was never measured.** The operating point was chosen for the
+gesture's F1 swing and never once checked against the lesson, and the two mechanisms this
+project most wants to compose are in tension at the only operating point where both run.
+
+Attribution is to the operating point, not to mutual inhibition: four fields differ between
+the first two rows and two are spike-frequency adaptation, which could cost a lesson on its
+own. An adaptation-only arm and an inhibition-only arm separate them — two genomes, one run.
+
+#### The sharper refusal needs no mapping contrast
+
+It is in the same table. **The phase-targeted lesson produces an error drop
+indistinguishable from zero on every genome, at every window and at both delays** — eight
+cells, none above 2 SE, not one positive — while a fixed-target lesson in the same sessions
+on the same creatures reaches 6.3 to 18.4 SE. Same reward machinery, same session length,
+same populations; the only difference is what the target is.
+
+So reward can move this creature's vowel and cannot move it *differently at different
+moments of one utterance*. That locates the gap at **where the reward lands, not when it
+arrives** — which is what the oracle was built to distinguish, and it did. The delay-line
+and synaptic-tagging build is refused: both would deliver credit to a place that has no
+phase-specific target to receive it. Which agrees with the three-candidate price above from
+the other direction — a fast gate cannot carry a target either.
+
+One lead, below the bar and recorded as such: narrowing the window twentyfold *improves* the
+fixed-target lesson under the oscillator, **+0.0256 ± 0.0117, 2.2 SE**, while delivering
+strictly less total credit (61% surviving the delay against 98%). A trace spanning several
+phases credits all of them indiscriminately, so a shorter one should write more coherently
+while writing less. A prediction at 2.2 SE, not a result.
+
 ## Layout
 
 ```
