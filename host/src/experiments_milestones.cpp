@@ -9779,6 +9779,16 @@ constexpr uint32_t kBWArmCount = sizeof(kBWArms) / sizeof(kBWArms[0]);
 //   AND A SECOND VACUITY TRAP, stated because it is the one this project keeps hitting:
 //            if `ph_share` is near 0 or 1 the "alternation" is a settled winner and the
 //            two phase bins are not comparable -- one of them is nearly empty.
+// The fast teacher's reaction time, DERIVED rather than picked. Two inequalities bound
+// it. It must be shorter than one gesture phase, or the praise lands in the phase after
+// the one it is about: phase ~= tau_a/2 = 167 ms at the half-centre operating point, and
+// the measured 3.67 Hz puts it at 136 ms. And it must be short against the credit window
+// it has to survive, or nothing arrives: at `elig_tau_scale` 0.05 the vocal window is
+// 100 ms, so a delay of 50 ms delivers exp(-0.5) = 61% of the credit. 50 < 100 < 136
+// satisfies both with a factor of two on each side. No human caregiver reacts in 50 ms;
+// that is exactly why this arm is an oracle and is named for what it assumes.
+constexpr uint64_t kPTFastDelayTicks = 50;
+
 bool run_phaseteach(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
   (void)verbose;
   aibaby::Dna dna;
@@ -9786,13 +9796,30 @@ bool run_phaseteach(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
     std::printf("  setup failed: the genome does not load\n");
     return false;
   }
-  struct PTArm { const char* name; int tgt; };
+  // THE FAST-TEACHER ORACLE, and it is labelled one.
+  //
+  // DNA v39's `elig_tau_scale` narrows the vocal module's credit window, which fixes
+  // RESOLUTION and nothing else. It cannot fix DELIVERY: the praise arrives
+  // `regime.delay` ticks after the event and the trace decays the whole way, so a
+  // window short enough to tell the two phases apart has almost nothing left when the
+  // reward lands. The two requirements are opposed at the shipped 500 ms latency, and
+  // the only configuration that satisfies both is a caregiver who reacts faster than a
+  // human does. That is the same kind of oracle as the word window: it prices what a
+  // fast teacher would buy without claiming one exists.
+  //
+  // So the slow arms here are NOT a repeat of the refused run. They carry the same
+  // narrow window, hence the same resolution, and differ from the fast arms in the
+  // DELAY ALONE -- which makes them the delivery-starved control the first run lacked.
+  // `held` is dropped: phase accumulation is gated behind the phase target modes, so
+  // it reported nothing at all, which is the flaw recorded in the write-up.
+  struct PTArm { const char* name; int tgt; uint64_t delay; };
   static const PTArm kPT[] = {
-      {"held",     int(kVLTgtHeard)},
-      {"phase",    int(kVLTgtPhase)},
-      {"phase-sw", int(kVLTgtPhaseSwap)},
+      {"phase",    int(kVLTgtPhase),     kRewardDelayTicks},
+      {"phase-sw", int(kVLTgtPhaseSwap), kRewardDelayTicks},
+      {"fast",     int(kVLTgtPhase),     kPTFastDelayTicks},
+      {"fast-sw",  int(kVLTgtPhaseSwap), kPTFastDelayTicks},
   };
-  constexpr uint32_t kN = 3, kReps = 18;
+  constexpr uint32_t kN = 4, kReps = 18;
   std::printf("  phaseteach -- can a taught utterance occupy two phases of the\n"
               "  creature's own free-running F1 gesture?\n");
   std::printf("  the quantity  produced F1 in phase 1 minus produced F1 in phase 0\n");
@@ -9811,6 +9838,7 @@ bool run_phaseteach(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
     Regime reg;
     reg.praise = kPraiseValue;
     reg.scold = kScoldValue;
+    reg.delay = kPT[a].delay;
     const VLRun run = run_vocallearn_session(variant, ticks, kVLTaught, nullptr, reg,
                                              kPT[a].tgt);
     if (!run.ok) return c;
@@ -9874,15 +9902,47 @@ bool run_phaseteach(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
   // this, and the honest verdict is VOID rather than a refusal. Checked and refused
   // here rather than discovered afterwards, which is what section 2.2's third shape --
   // a criterion only the best outcome fails -- cost this project earlier the same day.
+  //
+  // UPGRADED after the first run: the guard below now reads the VOCAL MODULE'S window
+  // rather than the global one, because `elig_tau_scale` (DNA v39) scales it per module
+  // and a guard that reads `stdp.tau_elig_ms` would not see the narrowing that makes
+  // this run possible. And it checks DELIVERY as well as RESOLUTION, because the first
+  // version of this guard asked only whether the window was narrow enough to tell the
+  // phases apart -- and a window that narrow has decayed to nothing by the time a
+  // 500 ms praise arrives. Both halves have to pass or the arm measures nothing.
   {
-    const double tau_elig = double(dna.header().stdp.tau_elig_ms);
+    const int32_t vm0 = dna.module_with_role(aibaby::ModuleRole::kVocal);
+    if (vm0 < 0) { std::printf("  this genome has no vocal module\n"); return false; }
+    const double scale = double(dna.module(uint32_t(vm0)).elig_tau_scale);
+    const double tau_elig = double(dna.header().stdp.tau_elig_ms) * scale;
     const double tau_a = double(dna.header().vocal.adapt_tau_ms);
     // A relaxation oscillator's period runs ~2-4 tau_a; take the conservative end, so
     // the phase estimate is the LARGEST it plausibly is and the guard the most lenient.
     const double phase_ms = tau_a > 0.0 ? 2.0 * tau_a : 0.0;
     const double ratio = phase_ms > 0.0 ? tau_elig / phase_ms : 0.0;
-    std::printf("  CREDIT RESOLUTION  tau_elig %.0f ms against a phase of ~%.0f ms"
-                "  ->  %.1f phases per trace\n", tau_elig, phase_ms, ratio);
+    const double keep_slow = tau_elig > 0.0
+        ? std::exp(-double(kRewardDelayTicks) / tau_elig) : 0.0;
+    const double keep_fast = tau_elig > 0.0
+        ? std::exp(-double(kPTFastDelayTicks) / tau_elig) : 0.0;
+    std::printf("  CREDIT RESOLUTION  vocal tau_elig %.0f ms (global %.0f x scale %.3f)"
+                " against a phase of ~%.0f ms  ->  %.1f phases per trace\n",
+                tau_elig, double(dna.header().stdp.tau_elig_ms), scale, phase_ms, ratio);
+    std::printf("  CREDIT DELIVERY    of the credit standing at the event, the share left"
+                " when the praise lands:\n"
+                "                     %4llu ms teacher  %5.1f%%        "
+                "%4llu ms teacher  %5.1f%%\n",
+                (unsigned long long)kRewardDelayTicks, 100.0 * keep_slow,
+                (unsigned long long)kPTFastDelayTicks, 100.0 * keep_fast);
+    if (keep_fast < 0.25) {
+      std::printf("\n  phaseteach VOID -- THE CREDIT CANNOT ARRIVE. Even the %llu ms\n"
+                  "  teacher delivers only %.1f%% of the credit standing at the event, so\n"
+                  "  the fast arms are not a test of the coupling either. Raise\n"
+                  "  `elig_tau_scale` on the vocal module until this clears 25%% while\n"
+                  "  keeping the window under one phase -- and if no value does both, the\n"
+                  "  trace is the wrong mechanism and a delay line is the only route.\n",
+                  (unsigned long long)kPTFastDelayTicks, 100.0 * keep_fast);
+      return false;
+    }
     if (ratio > 2.0) {
       std::printf("\n  phaseteach VOID -- THE REWARD CANNOT RESOLVE THE PHASE. The\n"
                   "  eligibility trace spans %.1f phases, so both halves of the gesture\n"
@@ -9898,15 +9958,16 @@ bool run_phaseteach(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
       return false;
     }
   }
-  // THE VACUITY GUARDS, before any verdict.
-  const uint32_t P = 1, S = 2;
-  if (sep[P].size() < 3 || sep[S].size() < 3) {
-    std::printf("\n  phaseteach VOID -- a phase arm has fewer than three creatures with\n"
+  // THE VACUITY GUARDS, before any verdict. Run on the FAST pair, because that is the
+  // pair the verdict rests on; the slow pair is a control and may legitimately be dead.
+  const uint32_t P = 0, S = 1, FP = 2, FS = 3;
+  if (sep[FP].size() < 3 || sep[FS].size() < 3) {
+    std::printf("\n  phaseteach VOID -- a fast arm has fewer than three creatures with\n"
                 "  both phase bins filled. Either the half-centre never ran on this genome\n"
                 "  or it settled on one winner. Nothing here is a measurement.\n");
     return false;
   }
-  const double off_p = m_off[P] / n_ok[P], sh_p = m_share[P] / n_ok[P];
+  const double off_p = m_off[FP] / n_ok[FP], sh_p = m_share[FP] / n_ok[FP];
   if (off_p > 0.05) {
     std::printf("\n  phaseteach VOID -- the half-centre reported NO PHASE on %.0f%% of\n"
                 "  reward ticks, so the arm fell back to per-trial targets and tested\n"
@@ -9920,41 +9981,65 @@ bool run_phaseteach(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
                 "  this genome is outside it.\n", 100.0 * sh_p);
     return false;
   }
-  // THE CONTRAST. Paired on seed, because every arm runs the same creatures.
-  std::vector<double> d;
-  for (uint32_t r = 0; r < kReps; ++r) {
-    const Cell& cp = cells[r * kN + P];
-    const Cell& cs = cells[r * kN + S];
-    if (cp.ok && cs.ok && (cp.f0 != 0.0 || cp.f1 != 0.0) && (cs.f0 != 0.0 || cs.f1 != 0.0))
-      d.push_back(cp.sep - cs.sep);
-  }
-  if (d.size() < 3) {
-    std::printf("\n  phaseteach INCONCLUSIVE -- %zu paired creatures.\n", d.size());
+  // THE CONTRAST, paired on seed, because every arm runs the same creatures. One per
+  // teacher speed: the identity mapping asks the HIGH-F1 posture for the LOW target and
+  // the swapped one asks it for the HIGH target, so a taught separation makes this
+  // NEGATIVE. The oscillator contributes equally to both and cancels.
+  const auto contrast = [&](uint32_t ai, uint32_t bi, double* out_se, size_t* out_n) {
+    std::vector<double> d;
+    for (uint32_t r = 0; r < kReps; ++r) {
+      const Cell& ca = cells[r * kN + ai];
+      const Cell& cb = cells[r * kN + bi];
+      if (ca.ok && cb.ok && (ca.f0 != 0.0 || ca.f1 != 0.0) && (cb.f0 != 0.0 || cb.f1 != 0.0))
+        d.push_back(ca.sep - cb.sep);
+    }
+    *out_n = d.size();
+    if (d.size() < 3) { *out_se = 0.0; return 0.0; }
+    return ctx_mean_se(d, out_se);
+  };
+  double se = 0.0, se_slow = 0.0;
+  size_t n_f = 0, n_s = 0;
+  const double dd = contrast(FP, FS, &se, &n_f);
+  const double ds = contrast(P, S, &se_slow, &n_s);
+  if (n_f < 3) {
+    std::printf("\n  phaseteach INCONCLUSIVE -- %zu paired creatures on the fast pair.\n", n_f);
     return false;
   }
-  double se = 0.0;
-  const double dd = ctx_mean_se(d, &se);
-  std::printf("\n  THE MAPPING CONTRAST, paired on seed (identity minus swapped)\n"
-              "    phase - phase-sw   %+.1f +/- %.1f Hz  (%.1f SE, n=%zu)\n",
-              dd, se, se > 0.0 ? std::fabs(dd) / se : 0.0, d.size());
-  std::printf("  the identity mapping asks the HIGH-F1 posture for the LOW target and the\n"
-              "  swapped one asks it for the HIGH target, so a taught separation makes\n"
-              "  this NEGATIVE. The oscillator contributes equally to both and cancels.\n");
+  std::printf("\n  THE MAPPING CONTRAST, paired on seed (identity minus swapped)\n");
+  std::printf("    teacher   contrast                 SE    n   credit delivered\n");
+  std::printf("    %4llu ms   %+6.1f +/- %5.1f Hz   %5.1f  %3zu   starved (the control)\n",
+              (unsigned long long)kRewardDelayTicks, ds, se_slow,
+              se_slow > 0.0 ? std::fabs(ds) / se_slow : 0.0, n_s);
+  std::printf("    %4llu ms   %+6.1f +/- %5.1f Hz   %5.1f  %3zu   the ORACLE arm\n",
+              (unsigned long long)kPTFastDelayTicks, dd, se,
+              se > 0.0 ? std::fabs(dd) / se : 0.0, n_f);
+  std::printf("  the two arms carry the SAME narrow credit window and so the same ability\n"
+              "  to tell the phases apart. They differ in the DELAY alone, which is the\n"
+              "  only axis the first run could not vary.\n");
   const double kBar = 3.0;
   if (se <= 0.0) {
-    std::printf("\n  phaseteach VOID -- zero variance on the contrast.\n");
+    std::printf("\n  phaseteach VOID -- zero variance on the fast contrast.\n");
     return false;
   }
   if (dd < -kBar * se) {
-    std::printf("\n  THE LESSON REACHES THE PHASE. Separation follows the MAPPING, not the\n"
-                "  posture: %+.1f +/- %.1f Hz at %.1f SE past a %.0f SE bar. The creature\n"
-                "  produces two different F1 values within one utterance ON DEMAND, which\n"
-                "  is the first structure in time here that is TAUGHT rather than free --\n"
-                "  and it is the route out of the axis collision, because two lessons that\n"
-                "  occupy different INSTANTS of one axis are not competing for one value.\n"
-                "  WHAT IS STILL NOT SHOWN: that the two targets are both RETAINED. This\n"
+    std::printf("\n  A FAST TEACHER REACHES THE PHASE. Separation follows the MAPPING, not\n"
+                "  the posture: %+.1f +/- %.1f Hz at %.1f SE past a %.0f SE bar. The\n"
+                "  creature produces two different F1 values within one utterance ON\n"
+                "  DEMAND, which is the first structure in time here that is TAUGHT\n"
+                "  rather than free -- and it is the route out of the axis collision,\n"
+                "  because two lessons that occupy different INSTANTS of one axis are not\n"
+                "  competing for one value.\n"
+                "\n  WHAT THIS IS NOT. The teacher reacts in %llu ms and no human does, so\n"
+                "  this is an UPPER BOUND on what credit structure could buy, not a\n"
+                "  behaviour the creature has. What it licenses is the build it was run to\n"
+                "  price: a delay line or a synaptic tag that holds credit for the %llu ms\n"
+                "  a real caregiver takes, which is now worth doing because the coupling\n"
+                "  underneath it is shown to exist.\n"
+                "\n  AND STILL NOT SHOWN: that the two targets are both RETAINED. This\n"
                 "  measures production within a session, not memory across lessons.\n",
-                dd, se, std::fabs(dd) / se, kBar);
+                dd, se, std::fabs(dd) / se, kBar,
+                (unsigned long long)kPTFastDelayTicks,
+                (unsigned long long)kRewardDelayTicks);
     return true;
   }
   if (dd > kBar * se) {
@@ -9965,12 +10050,18 @@ bool run_phaseteach(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
                 dd, se, dd / se);
     return false;
   }
-  std::printf("\n  THE LESSON DOES NOT REACH THE PHASE. The two mappings are\n"
+  std::printf("\n  NOT EVEN A FAST TEACHER REACHES THE PHASE. The two mappings are\n"
               "  indistinguishable (%+.1f +/- %.1f Hz, under %.0f SE) at power to see a\n"
-              "  separation of %.1f Hz, so the phase difference in the table is the\n"
-              "  OSCILLATOR and the reward has no purchase on it. The gesture runs and\n"
-              "  the lesson cannot aim it, which locates the gap at the COUPLING rather\n"
-              "  than at either part -- both of which are separately measured to work.\n",
+              "  separation of %.1f Hz, with a credit window inside one phase and a\n"
+              "  teacher fast enough to deliver it. The phase difference in the table is\n"
+              "  the OSCILLATOR and reward has no purchase on it.\n"
+              "\n  THIS IS THE RESULT THE RUN WAS BUILT TO GET. The delay was the last\n"
+              "  free parameter: resolution and delivery are both satisfied here and the\n"
+              "  lesson still cannot aim the gesture. So the gap is not the credit\n"
+              "  PATHWAY, and building a delay line or a synaptic tag would buy nothing --\n"
+              "  the cheap oracle refuses the expensive build, which is what it was for.\n"
+              "  What is left is that reward reaches the vocal module as a quantity with\n"
+              "  no phase-specific target to write INTO; see the axis-collision line.\n",
               dd, se, kBar, kBar * se);
   return false;
 }

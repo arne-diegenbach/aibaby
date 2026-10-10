@@ -16440,6 +16440,59 @@ already notes as having "a hole from ~60 ms to ~800 ms" has the reward system si
 far side of that hole, and the gesture inside it.
 
 
+### The three fast candidates are all gates, and a gate cannot carry a target
+
+The eligibility trace was closed by arithmetic: a window short enough to resolve a
+gesture phase has decayed to nothing by the time a 500 ms praise arrives. The lead
+queue named three mechanisms already in the kernel, built for other things, each fast
+by construction, and asked for **one number each — its effective credit window in ms,
+against the ~136 ms phase.** That is a code read, not a run, and it is now done. All
+three clear the window test. All three fail for the same reason, which is not speed.
+
+First, the clock is not the limit. `plasticity_interval_ticks = 10` cashes eligibility
+in at 100 Hz, so the update grid cuts a 136 ms phase into about thirteen steps. Nothing
+below is bounded by how often weights move.
+
+**DNA v37, burst plasticity.** `burst_rate_[i]` is an EMA at `rate_fast_alpha_`, which is
+`dt_ms / rate_fast_tau_ms` = 1/50, so the burst signal's own timescale is **50 ms** — a
+third of a phase. Better still, it is reward-independent: the update at
+`network.cpp:2869` carries no `r_syn` term and is written every plasticity interval, so
+**there is no delay for it to survive.** Window 50 ms, delay 0; on the two axes that
+closed the trace, it passes both.
+
+And it cannot be taught. The signal is `burst_rate_[post] - burst_base_[post]` — the
+postsynaptic neuron's burst rate minus *its own* running baseline. The genome's comment
+says it plainly: a target bursting above what it ordinarily does potentiates its
+afferents. "Target" there is the postsynaptic cell, not a teaching target. There is no
+place to say *which* F1 this phase should produce. The rule amplifies whatever the
+oscillator is already doing, in whichever direction it already goes.
+
+**DNA v25, the apical compartment.** `apical_tau_ms` 30 and `apical_plateau_ms` 50, so
+30–50 ms, also well inside a phase. But it is not a credit pathway at all: a plateau
+multiplies the soma's synaptic drive by `(1 + apical_gain)`. It reaches plasticity only
+through `burst_refrac_scale` (`network.cpp:2359`), which shortens the refractory period
+during a plateau and therefore *makes bursts* — it feeds v37's factor. Same shape, one
+step upstream.
+
+**DNA v40, the dendritic error microcircuit.** Already refuted on its own terms:
+`errprobe` gives residual 0.126 at the soma against 0.145 for the learning tuft and
+`obj|resid` 0.940 either way, so it settles and cancels nothing.
+
+**The structural reading, which is what the three-way price bought.** Every one of them
+is a *fast gate on a slow trace*. The postsynaptic factor resolves 50 ms; the
+presynaptic factor it multiplies is still the 2000 ms eligibility trace. A gate scales
+what is already happening and that is all a gate can do — it has no argument for the
+value the phase is supposed to reach. What the task needs is not a faster gate but a
+**delayed target**: something that carries *what was asked at t−500* forward to the
+weights, which is a question of structure rather than of speed.
+
+So route 2 is now specified more narrowly than when it was queued. "A delay line or
+synaptic tagging" was right about the mechanism class and vague about the job. The job
+is to hold the *target*, not the *eligibility*. Tagging in the sense of Frey & Morris —
+a synapse marked now, consolidated by a signal arriving later — is the right shape;
+a second eligibility trace with a different time constant is not, and the three
+candidates above are why.
+
 ## Layout
 
 ```
@@ -16714,6 +16767,14 @@ papers about the half it does not touch.
   2018. <https://arxiv.org/pdf/1810.11393> — DNA v40. Errors originate at apical
   dendrites as a mismatch between predictive input from lateral interneurons and
   actual top-down feedback, continuously and without separate phases.
+- Frey, U. & Morris, R. G. M. (1997). *Synaptic tagging and long-term
+  potentiation.* Nature 385, 533–536. <https://doi.org/10.1038/385533a0> — a
+  synapse marked by weak stimulation and consolidated by plasticity-related
+  proteins arriving later. Cited here for the shape rather than the mechanism:
+  the tag holds the *identity* of what is to be changed across a delay, which is
+  what this project's eligibility trace cannot do, since a trace holds a
+  magnitude that decays. Named as the right class for the build the fast-teacher
+  oracle was run to price.
 
 **Competitive learning, which is how DNA v53 derives a context without labels.**
 
