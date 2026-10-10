@@ -1,6 +1,6 @@
 # Where this project stands, and what is prepared next
 
-Written 2026-10-09. The *record* is the root `README.md`, which is chronological and long;
+Written 2026-10-09, revised 2026-10-10. The *record* is the root `README.md`, which is chronological and long;
 the *curated findings* are `docs/discoveries.pdf`. This file is the short forward-looking
 one, and it exists because the working lead queue has always lived in a memory store
 **outside the repository** — so a reader of the repo could see everything that had been
@@ -13,9 +13,14 @@ pinned hash `ad96f882becbee92`. Sample sizes are creatures, not trials.
 
 The creature hears, babbles, hears itself, is taught a vowel by praise alone, repeats a
 word, and answers. It **names**: four words in two formant dimensions, and nine words name
-as well as six. What it cannot do is say two things in a row — an utterance is a held vowel,
-and no module holds a kick for 10 ms. **It composes in space and not in time**, and that is
-the single blocker between where it is and speech.
+as well as six. It does say two things in a row,
+unprompted: a population half-centre gives it a free-running two-phase vocal gesture that
+reaches the formant. What it cannot do is be *taught* two — a phase-targeted lesson produces
+no learning at any credit window or reward delay, while a fixed-target lesson on the same
+creatures reaches 18 SE, and turning the gesture on costs four fifths of even that.
+**It composes in space and not in time, and the generator and the lesson are in tension at
+the only operating point where both are known to run.** That is the single blocker between
+where it is and speech.
 
 ## What is settled, and therefore not to re-open
 
@@ -99,19 +104,56 @@ exists, the lesson exists, and they have never been connected.** That is a coupl
 rather than an existence problem, and this project has solved one of those before — the word
 window was exactly "the signal is there and the gate on it is wrong".
 
-**So the experiment is to yoke the half-centre to the lesson** — reward the alternation's two
-phases toward two *different* formant targets, and measure whether the taught pair separates
-by phase. Both halves are built and gated; nothing new has to be invented to try it.
-**The bar:** the two phases must land on different targets by more than the single-gesture
-control, and the honest risk is named in advance — if the period cannot be set, the creature
-will alternate at its own rate rather than the caregiver's, and a timing demand will go
-unmet even if the targets separate. Bohland, Bullock & Guenther's
-GODIVA names the layer above it, and Segawa and colleagues say the stored unit is a
-*gestural score* rather than an acoustic target — which is the shape the dormant
-`dictionary_*` genome block was cut for. **Price it with an oracle first**, as the credit
-mask, the bias route and the word window were all priced: hand the creature a
-host-supplied two-gesture score and measure what it converts into before building anything
-that has to produce one.
+**It was yoked, and refused — and the refusal is defensible, which took three runs.**
+`phaseteach` rewards the alternation's two phases toward two *different* formant targets and
+reads the difference between the identity and swapped mappings, so the oscillator cancels.
+The contrast is null in every configuration tried: at the shipped credit window (void, the
+window spans three phases), at a window narrowed twentyfold to fit inside one phase, and at
+a **50 ms reward delay** — a caregiver faster than any human, run as an oracle because
+resolution and delivery are otherwise opposed and 50 < 100 < 136 is the only way to satisfy
+both. −0.1 ± 0.3 Hz at power to see 0.8 Hz, n=18.
+
+**The sharper statement needs no contrast at all.** A phase-targeted lesson produces an
+error drop indistinguishable from zero on every genome, window and delay — eight cells, none
+past 2 SE, not one positive — while a **fixed**-target lesson in the same sessions on the
+same creatures reaches 6.3 to 18.4 SE. Same reward machinery, same populations; the only
+difference is what the target is. So reward can move this creature's vowel and cannot move it
+*differently at different moments of one utterance*. **The gap is where the reward lands, not
+when it arrives** — which refuses the delay-line and synaptic-tagging build, since both
+deliver credit to a place with no phase-specific target to receive it.
+
+**And the control that licensed all of that found the larger result.** Turning the gesture on
+costs **four fifths of the lesson**: error drop +0.2197 ± 0.0120 with the half-centre off
+against +0.0465 ± 0.0073 with it on, a difference of 0.1732 ± 0.0140 at 12.3 SE. The lesson
+still lands at 6.3 SE, so this is attenuation and not a block. The direction had been
+reported from the other side and called a success — *the gesture survives teaching*, phases
+splitting rewarded time 0.50/0.50, the oscillator never silent. **The mirror image was never
+measured.** The operating point was chosen for the gesture's F1 swing and never once checked
+against the lesson.
+
+**So the next run is the composition question, not another mechanism.** The oscillating
+regime is a bounded window in drive × gain (Shpiro & Rinzel) and the point inside it was
+picked for swing alone. Sweep `halfcenter_gain` across the window, three or four points, and
+measure *both* on every point — `sep` and `share` for the gesture, error-early-minus-late on
+a fixed target for the lesson. The account to test is that mutual inhibition makes the
+alternation a strong attractor that reward-driven weight changes cannot perturb, so weaker
+inhibition should trade F1 swing for lesson purchase. **The bar, fixed in advance:** some
+point must give an error drop over half of 0.2197 while keeping `sep` > 10 Hz and `share`
+within 0.15–0.85. If none does, the gesture and the lesson do not compose at any operating
+point — a real negative about this architecture rather than one more refused mechanism.
+
+Two things are owed alongside it. The 4/5 cost names the *configuration*, not the mechanism:
+four genome fields differ and two are spike-frequency adaptation, so an adaptation-only and
+an inhibition-only genome are needed to attribute it. And one 2.2 SE lead is worth powering
+up — narrowing the credit window twentyfold *improves* the fixed-target lesson under the
+oscillator (+0.0256 ± 0.0117) while delivering strictly less total credit, which is what a
+trace that stops crediting several phases at once should do.
+
+Bohland, Bullock & Guenther's GODIVA names the layer above all of this, and Segawa and
+colleagues say the stored unit is a *gestural score* rather than an acoustic target — which
+is the shape the dormant `dictionary_*` genome block was cut for. Both stay on the shelf
+until the composition question has an answer, because a score is a sequence of targets and
+this creature cannot yet be taught two.
 
 ### 4. Carrier residuals, demoted and worth stating
 
