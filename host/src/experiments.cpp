@@ -365,6 +365,17 @@ const Spec kSpecs[] = {
      "  if the half-centre reports no phase or has settled on one winner. The\n"
      "  evidence is the IDENTITY-minus-SWAPPED mapping contrast, because the\n"
      "  oscillator contributes to both equally and cancels from the difference."},
+    {"axisphase", 3400000, Expect::kOpen, Tier::kTeach,
+     "derived: vocallearn's teaching length, because the quantity is its own.\n"
+     "  Every refused phase-teaching run asked for two values of ONE formant,\n"
+     "  read through ONE rate-weighted centroid -- which conflates two things no\n"
+     "  run has separated: a lesson cannot address an INSTANT, or two lessons\n"
+     "  cannot share one CENTROID. capacity measured orthogonal lessons coexisting\n"
+     "  where same-axis ones collide (0.84 kept vs 0.22) and F1/F2 come from two\n"
+     "  SEPARATE population-coded groups, so this asks phase 0 about F2 only and\n"
+     "  phase 1 about F1 only -- the two halves of /i/, a target already proved\n"
+     "  reachable -- against a same-axis baseline reproduced in-run. Run on\n"
+     "  results/hc-phase-fast.toml."},
     {"phasemask", 3400000, Expect::kOpen, Tier::kTeach,
      "derived: the same teaching length as vocallearn, because the quantity is\n"
      "  vocallearn's. The lesson cannot aim a gesture and neither the credit\n"
@@ -936,6 +947,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "phaseteach") ok = run_phaseteach(dna_blob, ticks, verbose);
   else if (name == "hcsweep") ok = run_hcsweep(dna_blob, ticks, verbose);
   else if (name == "phasemask") ok = run_phasemask(dna_blob, ticks, verbose);
+  else if (name == "axisphase") ok = run_axisphase(dna_blob, ticks, verbose);
   else if (name == "blockwhere") ok = run_blockwhere(dna_blob, ticks, verbose);
   else if (name == "blockanchor") ok = run_blockanchor(dna_blob, ticks, verbose);
   else if (name == "leverprobe") ok = run_leverprobe(dna_blob, ticks, verbose);

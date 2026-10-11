@@ -4200,6 +4200,10 @@ struct VLRun {
   // reported no phase at all -- the liveness evidence, because an arm whose oscillator
   // never ran would otherwise read as a clean null.
   double ph_f1[kVLMaxWords] = {};
+  // `axisphase`: produced F2 per phase as well, because an ORTHOGONAL pair of lessons
+  // moves one formant in one phase and the other formant in the other, and a measurement
+  // that only watches F1 would see half of it.
+  double ph_f2[kVLMaxWords] = {};
   uint64_t ph_n[kVLMaxWords] = {};
   double ph_share = 0.0;
   double ph_off = 0.0;
@@ -4425,7 +4429,14 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
                              // currently-winning half of the F1 group. Appended at the
                              // END, which is the convention this signature already
                              // follows, so nullptr keeps every caller bit-identical.
-                             const PhaseMask* pmask = nullptr) {
+                             const PhaseMask* pmask = nullptr,
+                             // `axisphase`: which formant each target is scored on --
+                             // 0 both, 1 F1 only, 2 F2 only, indexed like `tgt_table`.
+                             // Two lessons are only ORTHOGONAL if each is scored on the
+                             // axis it was taught on, which `orthovocab` established and
+                             // `formant_error_axis` already implements. nullptr keeps
+                             // every caller bit-identical.
+                             const uint32_t* tgt_axis = nullptr) {
   // -1 is vocallearn's own rule, and passing nothing reproduces it exactly: the
   // positive control aims at one fixed target and every other arm at the word
   // that was heard.
@@ -4576,6 +4587,7 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
   uint64_t ph_ticks[kVLMaxWords] = {};
   uint64_t ph_off_ticks = 0;
   double ph_f1_sum[kVLMaxWords] = {};
+  double ph_f2_sum[kVLMaxWords] = {};
   uint64_t ph_f1_n[kVLMaxWords] = {};
   uint64_t ctx_conf_n = 0;
   // The same, split by third. Index 0 is the first third and 1 the last; the
@@ -4869,6 +4881,7 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
             // phase of its own gesture, so binning by the mapped word would hide
             // exactly the thing the swapped arm exists to expose.
             ph_f1_sum[raw] += double(v.f1);
+            ph_f2_sum[raw] += double(v.f2);
             ++ph_f1_n[raw];
           }
         } else {
@@ -4889,11 +4902,19 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
                              // is the condition, and with a constant target this
                              // is G2's own contingency unchanged.
                              ? (want_loud ? 0.0 : 1.0)
-                             : formant_error(double(v.f1), double(v.f2),
-                                             (tgt == kVLTgtPhase ||
-                                              tgt == kVLTgtPhaseSwap)
-                                                 ? *ph_word
-                                                 : w);
+                             : formant_error_axis(
+                                   double(v.f1), double(v.f2),
+                                   (tgt == kVLTgtPhase ||
+                                    tgt == kVLTgtPhaseSwap)
+                                       ? *ph_word
+                                       : w,
+                                   // Axis 0 is bit-identical to formant_error, so
+                                   // an absent table changes nothing for any
+                                   // caller. Indexed by `bk`, which is the PHASE's
+                                   // bucket in the phase modes and the trial's
+                                   // otherwise -- the same index the baseline uses,
+                                   // so target, axis and baseline cannot disagree.
+                                   tgt_axis ? tgt_axis[bk] : 0u);
         if (score == kVLScoreRate) {
           // No baseline here, and that is not an omission. The baseline exists
           // so that praise means "closer than you usually get to THIS target",
@@ -5222,6 +5243,7 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
         for (uint32_t k = 0; k < kVLMaxWords; ++k) {
           out.ph_n[k] = ph_f1_n[k];
           out.ph_f1[k] = ph_f1_n[k] ? ph_f1_sum[k] / double(ph_f1_n[k]) : 0.0;
+          out.ph_f2[k] = ph_f1_n[k] ? ph_f2_sum[k] / double(ph_f1_n[k]) : 0.0;
         }
         out.ph_share = tot ? double(ph_ticks[1]) / double(tot) : 0.0;
         out.ph_off = tot ? double(ph_off_ticks) / double(tot) : 0.0;
@@ -10764,6 +10786,262 @@ bool run_phasemask(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
               "  at two instants may require two readouts, which is a change to what the\n"
               "  larynx IS rather than to how it is taught.\n",
               d_align, se_align, kBar, kBar * se_align);
+  return false;
+}
+
+// CAN TWO INSTANTS HOLD TWO LESSONS IF THE LESSONS ARE ORTHOGONAL?
+//
+// WHY THIS IS THE FIRST NON-CREDIT QUESTION IN A LONG WHILE. The credit family is closed
+// by oracle: handed a fast teacher, a window that resolves a phase, a praise that arrives
+// inside one, and credit confined to the very population that is winning, the two mappings
+// remain the same experiment with the labels permuted. The gesture is cleared -- teaching
+// leaves its amplitude intact. So the suspect is the READOUT, and there is a measured
+// positive result sitting right beside it that has never been connected to this question.
+//
+// `capacity` found that two lessons on ORTHOGONAL axes coexist where two on the same axis
+// collide: 0.84 retained against `retain`'s 0.22, on a known-reachable target split into
+// halves. And F1 and F2 are carried by two SEPARATE population-coded groups at the larynx,
+// so two degrees of freedom exist structurally rather than by hope.
+//
+// EVERY REFUSED PHASE-TEACHING RUN ASKED FOR TWO VALUES OF ONE FORMANT. Both phases were
+// read through one rate-weighted centroid over one group. That conflates two things no run
+// has separated:
+//     (a) a lesson cannot address an INSTANT, or
+//     (b) two lessons cannot share ONE CENTROID -- the axis collision, already measured.
+// If (b) is the binding one, splitting the two phases across two AXES should work, because
+// then the two lessons write into two different groups. If it still fails, (a) is the
+// binding constraint and it is independent of the collision, which is a cleaner statement
+// than anything in the line so far.
+//
+// THE PAIR IS NOT INVENTED. The split target is `kWords[1]` -- /i/, 320/2500 -- taken apart
+// into its two halves exactly as `capacity` did: one phase scored on F1 alone against 320,
+// the other on F2 alone against 2500. A target this project has already proved reachable.
+bool run_axisphase(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  aibaby::Dna dna;
+  if (dna.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) {
+    std::printf("  setup failed: the genome does not load\n");
+    return false;
+  }
+  // THE TARGET TABLES. Index 0 is the target for PHASE 0 and index 1 for phase 1, and the
+  // swapped arms exchange them, which is what the contrast cancels the oscillator with.
+  //
+  // SIGN CONVENTION, held identical to `phaseteach` on purpose so the baseline arm
+  // reproduces a known number. The identity mapping asks the HIGH-F1 phase (phase 1) for
+  // the LOW F1, so a taught separation makes every contrast below NEGATIVE.
+  static const Word kSame[2] = {kWords[0], kWords[1]};  // 780 then 320: one axis, two values
+  static const uint32_t kSameAx[2] = {1u, 1u};          // both scored on F1
+  // Orthogonal: phase 0 is asked only about F2, phase 1 only about F1. Each half of /i/.
+  static const Word kSplit[2] = {kWords[1], kWords[1]};
+  static const uint32_t kSplitAx[2] = {2u, 1u};         // F2 for phase 0, F1 for phase 1
+  struct AXArm {
+    const char* name;
+    int tgt;
+    const Word* table;
+    const uint32_t* axis;
+  };
+  static const AXArm kAX[] = {
+      {"fixed",    int(kVLTgtFixed),     nullptr, nullptr},
+      {"same",     int(kVLTgtPhase),     kSame,   kSameAx},
+      {"same-sw",  int(kVLTgtPhaseSwap), kSame,   kSameAx},
+      {"split",    int(kVLTgtPhase),     kSplit,  kSplitAx},
+      {"split-sw", int(kVLTgtPhaseSwap), kSplit,  kSplitAx},
+  };
+  constexpr uint32_t kN = 5, kReps = 18;
+  instrument("axisphase", dna.header().seed ^ 0xA715u, ticks / kVLTrialTicks,
+             "trials per arm");
+  std::printf("  axisphase -- two instants of one gesture, two lessons. Every refused run\n"
+              "  asked for two values of ONE formant, read through ONE centroid. Does it\n"
+              "  work when the two lessons are ORTHOGONAL instead?\n");
+  std::printf("  why ask      `capacity` measured two orthogonal lessons coexisting where\n"
+              "               same-axis ones collide (0.84 kept vs 0.22), and F1 and F2\n"
+              "               come from two SEPARATE population-coded groups.\n");
+  std::printf("  the design   `same` asks both phases about F1 (the refused baseline,\n"
+              "               reproduced in-run). `split` asks phase 0 about F2 only and\n"
+              "               phase 1 about F1 only -- the two halves of /i/, a target\n"
+              "               already proved reachable.\n");
+  std::printf("  the quantity IDENTITY minus SWAPPED, on BOTH formants, paired on seed.\n"
+              "               A taught separation is NEGATIVE, the same convention\n"
+              "               `phaseteach` uses, so the baseline arm is comparable.\n");
+  std::printf("  the bar      pre-registered: `split` must clear 3 SE on the axis each\n"
+              "               phase was taught, where `same` sits under 1 SE. Splitting\n"
+              "               what no run has split -- a lesson cannot address an INSTANT,\n"
+              "               versus two lessons cannot share ONE CENTROID.\n");
+  std::printf("  refused if   `split` is null too. Then the instant is the binding\n"
+              "               constraint, independently of the axis collision.\n\n");
+  struct Cell {
+    bool ok = false;
+    double d1 = 0, d2 = 0, share = 0, off = 0, drop = 0;
+    bool phased = false;
+  };
+  const std::vector<Cell> cells = parallel_reps<Cell>(kReps * kN, [&](uint32_t i) {
+    const uint32_t r = i / kN, a = i % kN;
+    Cell c;
+    std::vector<uint8_t> variant = blob;
+    const uint64_t seed = dna.header().seed + r * 7919ull;
+    std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+    Regime reg;
+    reg.praise = kPraiseValue;
+    reg.scold = kScoldValue;
+    reg.delay = kPTFastDelayTicks;
+    const VLRun run = run_vocallearn_session(
+        variant, ticks, kVLTaught, nullptr, reg, kAX[a].tgt, nullptr, kVLScoreFormant,
+        nullptr, 2u, kAX[a].table, nullptr, nullptr, nullptr, kAX[a].axis);
+    if (!run.ok) return c;
+    c.ok = true;
+    c.drop = run.err_early - run.err_late;
+    c.share = run.ph_share;
+    c.off = run.ph_off;
+    if (run.ph_n[0] >= 50 && run.ph_n[1] >= 50) {
+      c.phased = true;
+      c.d1 = run.ph_f1[1] - run.ph_f1[0];
+      c.d2 = run.ph_f2[1] - run.ph_f2[0];
+    }
+    parallel_note("  [%u/%u] seed %u %-9s  dF1 %+7.1f  dF2 %+7.1f  drop %+.4f\n",
+                  i + 1, kReps * kN, r, kAX[a].name, c.d1, c.d2, c.drop);
+    return c;
+  });
+  std::printf("\n  %-9s %5s  %-18s %-18s %6s %6s %-20s\n", "arm", "n", "F1 ph1-ph0",
+              "F2 ph1-ph0", "share", "off", "lesson drop");
+  for (uint32_t a = 0; a < kN; ++a) {
+    std::vector<double> v1, v2, dd;
+    double msh = 0.0, mof = 0.0;
+    uint32_t n = 0;
+    for (uint32_t r = 0; r < kReps; ++r) {
+      const Cell& c = cells[r * kN + a];
+      if (!c.ok) continue;
+      dd.push_back(c.drop);
+      if (c.phased) { v1.push_back(c.d1); v2.push_back(c.d2); }
+      msh += c.share; mof += c.off; ++n;
+    }
+    if (!n) { std::printf("  %-9s   (no creature completed)\n", kAX[a].name); continue; }
+    double s1 = 0.0, s2 = 0.0, sd = 0.0;
+    const double m1 = v1.size() >= 3 ? ctx_mean_se(v1, &s1) : 0.0;
+    const double m2 = v2.size() >= 3 ? ctx_mean_se(v2, &s2) : 0.0;
+    const double md = dd.size() >= 3 ? ctx_mean_se(dd, &sd) : 0.0;
+    char b1[32], b2[32], b3[32];
+    if (v1.size() >= 3) {
+      std::snprintf(b1, sizeof b1, "%+.1f +/- %.1f", m1, s1);
+      std::snprintf(b2, sizeof b2, "%+.1f +/- %.1f", m2, s2);
+    } else {
+      std::snprintf(b1, sizeof b1, "%s", "(no phase bins)");
+      std::snprintf(b2, sizeof b2, "%s", "-");
+    }
+    std::snprintf(b3, sizeof b3, "%+.4f +/- %.4f", md, sd);
+    std::printf("  %-9s %5u  %-18s %-18s %6.2f %6.2f %-20s\n", kAX[a].name, n, b1, b2,
+                msh / n, mof / n, b3);
+  }
+  const uint32_t FIX = 0, SM = 1, SMS = 2, SP = 3, SPS = 4;
+  // RUNG FOUR FIRST: a verdict about where a lesson landed is meaningless if none landed.
+  // Read on the fixed-target arm, whose target does not flip inside a trial.
+  {
+    std::vector<double> d;
+    for (uint32_t r = 0; r < kReps; ++r)
+      if (cells[r * kN + FIX].ok) d.push_back(cells[r * kN + FIX].drop);
+    double sd = 0.0;
+    const double md = d.size() >= 3 ? ctx_mean_se(d, &sd) : 0.0;
+    std::printf("\n  DID THE LESSON LAND   error early minus late on `fixed`:"
+                "  %+.4f +/- %.4f  (%.1f SE, n=%zu)\n", md, sd,
+                sd > 0.0 ? std::fabs(md) / sd : 0.0, d.size());
+    if (!(d.size() >= 3 && sd > 0.0 && md > 3.0 * sd)) {
+      std::printf("\n  axisphase VOID -- THE LESSON DID NOT LAND, so a null about WHERE it\n"
+                  "  writes says nothing.\n");
+      return false;
+    }
+  }
+  // LIVENESS on the arm the verdict rests on.
+  {
+    double msh = 0.0, mof = 0.0;
+    uint32_t n = 0;
+    for (uint32_t r = 0; r < kReps; ++r) {
+      const Cell& c = cells[r * kN + SP];
+      if (c.ok) { msh += c.share; mof += c.off; ++n; }
+    }
+    if (n) {
+      msh /= n; mof /= n;
+      if (mof > 0.05 || msh < 0.15 || msh > 0.85) {
+        std::printf("\n  axisphase VOID -- `split` reports no phase on %.0f%% of reward\n"
+                    "  ticks, or a share of %.2f that is a settled winner rather than an\n"
+                    "  alternation.\n", 100.0 * mof, msh);
+        return false;
+      }
+    }
+  }
+  const auto contrast = [&](uint32_t ai, uint32_t bi, bool f2, double* se, size_t* n) {
+    std::vector<double> d;
+    for (uint32_t r = 0; r < kReps; ++r) {
+      const Cell& ca = cells[r * kN + ai];
+      const Cell& cb = cells[r * kN + bi];
+      if (ca.ok && cb.ok && ca.phased && cb.phased)
+        d.push_back(f2 ? (ca.d2 - cb.d2) : (ca.d1 - cb.d1));
+    }
+    *n = d.size();
+    if (d.size() < 3) { *se = 0.0; return 0.0; }
+    return ctx_mean_se(d, se);
+  };
+  double se_s1 = 0, se_s2 = 0, se_p1 = 0, se_p2 = 0;
+  size_t n_s = 0, n_p = 0, dummy = 0;
+  const double sm1 = contrast(SM, SMS, false, &se_s1, &n_s);
+  const double sm2 = contrast(SM, SMS, true, &se_s2, &dummy);
+  const double sp1 = contrast(SP, SPS, false, &se_p1, &n_p);
+  const double sp2 = contrast(SP, SPS, true, &se_p2, &dummy);
+  std::printf("\n  THE MAPPING CONTRAST, identity minus swapped, paired on seed\n");
+  std::printf("    %-10s %-24s %-24s %4s\n", "lessons", "on F1", "on F2", "n");
+  std::printf("    %-10s %+6.1f +/- %5.1f (%4.1f SE)  %+6.1f +/- %5.1f (%4.1f SE)  %4zu\n",
+              "same axis", sm1, se_s1, se_s1 > 0 ? std::fabs(sm1) / se_s1 : 0.0,
+              sm2, se_s2, se_s2 > 0 ? std::fabs(sm2) / se_s2 : 0.0, n_s);
+  std::printf("    %-10s %+6.1f +/- %5.1f (%4.1f SE)  %+6.1f +/- %5.1f (%4.1f SE)  %4zu\n",
+              "split", sp1, se_p1, se_p1 > 0 ? std::fabs(sp1) / se_p1 : 0.0,
+              sp2, se_p2, se_p2 > 0 ? std::fabs(sp2) / se_p2 : 0.0, n_p);
+  std::printf("  a taught separation is NEGATIVE. In `split` phase 1 is taught F1 and\n"
+              "  phase 0 is taught F2, so BOTH columns are predicted negative and the\n"
+              "  relevant one for each phase is the axis that phase was taught on.\n");
+  if (n_p < 3 || n_s < 3) {
+    std::printf("\n  axisphase INCONCLUSIVE -- %zu and %zu paired creatures.\n", n_s, n_p);
+    return false;
+  }
+  const double kBar = 3.0;
+  const bool p1 = se_p1 > 0.0 && sp1 < -kBar * se_p1;
+  const bool p2 = se_p2 > 0.0 && sp2 < -kBar * se_p2;
+  const bool rev1 = se_p1 > 0.0 && sp1 > kBar * se_p1;
+  const bool rev2 = se_p2 > 0.0 && sp2 > kBar * se_p2;
+  if (p1 || p2) {
+    std::printf("\n  ORTHOGONAL LESSONS REACH TWO INSTANTS. `split` separates on %s past\n"
+                "  a %.0f SE bar where `same` does not, so the binding constraint was\n"
+                "  never the INSTANT -- it was two lessons sharing ONE CENTROID. That is\n"
+                "  the axis collision, already measured across time, now shown to bind\n"
+                "  within a single utterance as well. Two targets at two moments are\n"
+                "  teachable when they live on two readouts.\n"
+                "\n  WHAT THIS DOES NOT SHOW: retention. Production inside a session is\n"
+                "  not memory, and the collision line's whole subject is what survives a\n"
+                "  second lesson. That is the next run, not this one.\n",
+                (p1 && p2) ? "BOTH formants" : (p1 ? "F1" : "F2"), kBar);
+    return true;
+  }
+  if (rev1 || rev2) {
+    std::printf("\n  REFUSED, AND REVERSED ON %s. `split` separates in the direction\n"
+                "  OPPOSITE to what each phase was taught, past %.0f SE. A null and a\n"
+                "  reversal are different results and this is the second; it is reported\n"
+                "  and not explained, and nothing is built on it.\n",
+                (rev1 && rev2) ? "BOTH formants" : (rev1 ? "F1" : "F2"), kBar);
+    return false;
+  }
+  std::printf("\n  THE INSTANT IS THE BINDING CONSTRAINT. Orthogonal lessons do not reach\n"
+              "  two instants either: `split` is null on both formants at power to see\n"
+              "  %.1f and %.1f Hz, with the same creatures, the same reward machinery and\n"
+              "  the same session length that give a fixed-target lesson its effect.\n"
+              "\n  SO IT IS NOT THE AXIS COLLISION. Two lessons on orthogonal axes coexist\n"
+              "  ACROSS TIME -- 0.84 retained against 0.22 -- and do not coexist at two\n"
+              "  MOMENTS of one utterance. Those are now separated, which no previous run\n"
+              "  could do, and the thing that fails is addressing an INSTANT: the reward\n"
+              "  reaches the right population and still cannot be made to mean \"now\".\n"
+              "\n  WHAT IS LEFT IS NOT A CREDIT QUESTION AND NOT A READOUT QUESTION. Every\n"
+              "  signal the creature is taught with is defined over a WINDOW -- the error\n"
+              "  is a trial mean, the baseline is an EMA, the eligibility is a decay. A\n"
+              "  mechanism that selects an instant has to be driven by something that\n"
+              "  CHANGES at that instant, and the only such thing here is the gesture\n"
+              "  itself, which the creature generates and the caregiver cannot see.\n",
+              kBar * se_p1, kBar * se_p2);
   return false;
 }
 

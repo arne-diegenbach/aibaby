@@ -1,0 +1,149 @@
+  [11/90] seed 2 fixed      dF1    +0.0  dF2    +0.0  drop +0.1154
+  [13/90] seed 2 same-sw    dF1   +18.9  dF2    +4.7  drop +0.0002
+  [10/90] seed 1 split-sw   dF1   +19.1  dF2    +3.9  drop +0.0516
+  [8/90] seed 1 same-sw    dF1   +19.3  dF2    -1.4  drop +0.0006
+  [12/90] seed 2 same       dF1   +19.3  dF2    +6.3  drop -0.0011
+  [14/90] seed 2 split      dF1   +17.6  dF2   +11.9  drop +0.0593
+  [3/90] seed 0 same-sw    dF1   +19.5  dF2    -3.6  drop -0.0013
+  [5/90] seed 0 split-sw   dF1   +19.2  dF2    -7.0  drop +0.0695
+  [4/90] seed 0 split      dF1   +21.1  dF2    +0.2  drop +0.0387
+  [9/90] seed 1 split      dF1   +16.3  dF2    +4.3  drop +0.0445
+  [2/90] seed 0 same       dF1   +20.9  dF2    +5.2  drop -0.0080
+  [7/90] seed 1 same       dF1   +18.9  dF2    -2.7  drop +0.0005
+  [6/90] seed 1 fixed      dF1    +0.0  dF2    +0.0  drop +0.0891
+  [1/90] seed 0 fixed      dF1    +0.0  dF2    +0.0  drop +0.0355
+  [16/90] seed 3 fixed      dF1    +0.0  dF2    +0.0  drop +0.0650
+  [17/90] seed 3 same       dF1   +17.8  dF2    -0.9  drop -0.0074
+  [19/90] seed 3 split      dF1   +18.8  dF2    +7.7  drop +0.1284
+  [18/90] seed 3 same-sw    dF1   +19.5  dF2    +1.4  drop -0.0009
+  [22/90] seed 4 same       dF1   +19.4  dF2    +0.1  drop -0.0050
+  [25/90] seed 4 split-sw   dF1   +17.4  dF2    +2.7  drop +0.0674
+  [21/90] seed 4 fixed      dF1    +0.0  dF2    +0.0  drop +0.1238
+  [23/90] seed 4 same-sw    dF1   +17.8  dF2    -1.7  drop -0.0049
+  [24/90] seed 4 split      dF1   +17.4  dF2    +5.5  drop +0.0575
+  [15/90] seed 2 split-sw   dF1   +18.7  dF2    +1.9  drop +0.0809
+  [27/90] seed 5 same       dF1   +21.4  dF2    +5.1  drop +0.0100
+  [28/90] seed 5 same-sw    dF1   +20.4  dF2    +7.3  drop +0.0087
+  [20/90] seed 3 split-sw   dF1   +18.1  dF2    +5.2  drop +0.0851
+  [26/90] seed 5 fixed      dF1    +0.0  dF2    +0.0  drop +0.0360
+  [29/90] seed 5 split      dF1   +16.7  dF2    +1.8  drop +0.0524
+  [32/90] seed 6 same       dF1   +19.8  dF2    +2.0  drop -0.0013
+  [33/90] seed 6 same-sw    dF1   +20.3  dF2    -0.6  drop +0.0059
+  [38/90] seed 7 same-sw    dF1   +20.2  dF2    -1.0  drop +0.0114
+  [31/90] seed 6 fixed      dF1    +0.0  dF2    +0.0  drop +0.0509
+  [36/90] seed 7 fixed      dF1    +0.0  dF2    +0.0  drop +0.0577
+  [30/90] seed 5 split-sw   dF1   +19.1  dF2    -1.2  drop +0.0294
+  [42/90] seed 8 same       dF1   +18.3  dF2    +6.4  drop -0.0053
+  [39/90] seed 7 split      dF1   +19.1  dF2    +4.4  drop +0.0593
+  [41/90] seed 8 fixed      dF1    +0.0  dF2    +0.0  drop +0.0334
+  [35/90] seed 6 split-sw   dF1   +17.9  dF2    +1.5  drop +0.0607
+  [40/90] seed 7 split-sw   dF1   +19.5  dF2    +8.2  drop +0.0202
+  [34/90] seed 6 split      dF1   +20.3  dF2   -15.4  drop +0.1353
+  [37/90] seed 7 same       dF1   +21.0  dF2    +9.0  drop +0.0025
+  [45/90] seed 8 split-sw   dF1   +19.9  dF2    -2.1  drop +0.0598
+  [43/90] seed 8 same-sw    dF1   +19.1  dF2    +3.4  drop -0.0092
+  [47/90] seed 9 same       dF1   +19.6  dF2    +2.7  drop -0.0019
+  [44/90] seed 8 split      dF1   +19.6  dF2    -1.8  drop +0.0325
+  [52/90] seed 10 same       dF1   +17.5  dF2    -4.5  drop +0.0085
+  [51/90] seed 10 fixed      dF1    +0.0  dF2    +0.0  drop +0.1036
+  [50/90] seed 9 split-sw   dF1   +17.8  dF2    +4.2  drop +0.0629
+  [49/90] seed 9 split      dF1   +19.8  dF2    +0.2  drop +0.0352
+  [53/90] seed 10 same-sw    dF1   +17.4  dF2    -7.8  drop +0.0094
+  [46/90] seed 9 fixed      dF1    +0.0  dF2    +0.0  drop +0.0903
+  [56/90] seed 11 fixed      dF1    +0.0  dF2    +0.0  drop +0.0199
+  [48/90] seed 9 same-sw    dF1   +16.9  dF2    -2.8  drop +0.0062
+  [54/90] seed 10 split      dF1   +15.6  dF2    -0.5  drop +0.0188
+  [55/90] seed 10 split-sw   dF1   +17.2  dF2    -3.1  drop +0.0380
+  [58/90] seed 11 same-sw    dF1   +20.1  dF2    -2.6  drop -0.0069
+  [61/90] seed 12 fixed      dF1    +0.0  dF2    +0.0  drop +0.0447
+  [59/90] seed 11 split      dF1   +17.7  dF2    -1.3  drop +0.0659
+  [57/90] seed 11 same       dF1   +19.7  dF2    +3.7  drop -0.0075
+  [60/90] seed 11 split-sw   dF1   +18.8  dF2    -4.2  drop +0.0545
+  [63/90] seed 12 same-sw    dF1   +18.2  dF2    -5.6  drop -0.0018
+  [68/90] seed 13 same-sw    dF1   +19.8  dF2    -3.5  drop -0.0065
+  [66/90] seed 13 fixed      dF1    +0.0  dF2    +0.0  drop +0.0333
+  [65/90] seed 12 split-sw   dF1   +18.8  dF2    -7.4  drop +0.0914
+  [69/90] seed 13 split      dF1   +17.8  dF2    +0.7  drop +0.0606
+  [64/90] seed 12 split      dF1   +18.9  dF2   -10.0  drop +0.0774
+  [62/90] seed 12 same       dF1   +20.5  dF2    -3.5  drop -0.0056
+  [70/90] seed 13 split-sw   dF1   +21.1  dF2    -5.7  drop +0.0866
+  [67/90] seed 13 same       dF1   +20.3  dF2    -5.5  drop -0.0029
+  [72/90] seed 14 same       dF1   +19.2  dF2    -4.4  drop +0.0020
+  [73/90] seed 14 same-sw    dF1   +19.3  dF2    -5.0  drop +0.0016
+  [74/90] seed 14 split      dF1   +15.6  dF2    +2.7  drop +0.0789
+  [75/90] seed 14 split-sw   dF1   +17.3  dF2    -0.9  drop +0.0819
+  [81/90] seed 16 fixed      dF1    +0.0  dF2    +0.0  drop +0.1588
+  [71/90] seed 14 fixed      dF1    +0.0  dF2    +0.0  drop +0.0513
+  [78/90] seed 15 same-sw    dF1   +19.5  dF2    -0.0  drop -0.0087
+  [76/90] seed 15 fixed      dF1    +0.0  dF2    +0.0  drop +0.1026
+  [80/90] seed 15 split-sw   dF1   +20.7  dF2   +12.7  drop +0.1033
+  [77/90] seed 15 same       dF1   +19.3  dF2    +2.5  drop -0.0086
+  [79/90] seed 15 split      dF1   +18.3  dF2   -12.8  drop +0.0612
+  [83/90] seed 16 same-sw    dF1   +18.2  dF2    -2.3  drop +0.0026
+  [84/90] seed 16 split      dF1   +18.0  dF2   -10.2  drop +0.0752
+  [82/90] seed 16 same       dF1   +21.6  dF2    -2.6  drop +0.0078
+  [85/90] seed 16 split-sw   dF1   +18.7  dF2   -21.1  drop +0.1399
+  [90/90] seed 17 split-sw   dF1   +19.9  dF2    +2.2  drop +0.0222
+  [88/90] seed 17 same-sw    dF1   +20.0  dF2    -3.0  drop -0.0041
+  [86/90] seed 17 fixed      dF1    +0.0  dF2    +0.0  drop +0.0869
+  [87/90] seed 17 same       dF1   +19.6  dF2    -2.9  drop -0.0071
+  [89/90] seed 17 split      dF1   +20.2  dF2    -4.3  drop +0.0245
+experiment: axisphase
+  instrument        axisphase   trial seed 00000000013580dc   1214 trials per arm
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  axisphase -- two instants of one gesture, two lessons. Every refused run
+  asked for two values of ONE formant, read through ONE centroid. Does it
+  work when the two lessons are ORTHOGONAL instead?
+  why ask      `capacity` measured two orthogonal lessons coexisting where
+               same-axis ones collide (0.84 kept vs 0.22), and F1 and F2
+               come from two SEPARATE population-coded groups.
+  the design   `same` asks both phases about F1 (the refused baseline,
+               reproduced in-run). `split` asks phase 0 about F2 only and
+               phase 1 about F1 only -- the two halves of /i/, a target
+               already proved reachable.
+  the quantity IDENTITY minus SWAPPED, on BOTH formants, paired on seed.
+               A taught separation is NEGATIVE, the same convention
+               `phaseteach` uses, so the baseline arm is comparable.
+  the bar      pre-registered: `split` must clear 3 SE on the axis each
+               phase was taught, where `same` sits under 1 SE. Splitting
+               what no run has split -- a lesson cannot address an INSTANT,
+               versus two lessons cannot share ONE CENTROID.
+  refused if   `split` is null too. Then the instant is the binding
+               constraint, independently of the axis collision.
+
+
+  arm           n  F1 ph1-ph0         F2 ph1-ph0          share    off lesson drop         
+  fixed        18  (no phase bins)    -                    0.00   0.00 +0.0721 +/- 0.0091  
+  same         18  +19.7 +/- 0.3      +0.9 +/- 1.1         0.50   0.00 -0.0017 +/- 0.0014  
+  same-sw      18  +19.1 +/- 0.2      -1.3 +/- 0.9         0.50   0.00 +0.0001 +/- 0.0015  
+  split        18  +18.3 +/- 0.4      -0.9 +/- 1.7         0.49   0.00 +0.0614 +/- 0.0073  
+  split-sw     18  +18.8 +/- 0.3      -0.6 +/- 1.7         0.50   0.00 +0.0670 +/- 0.0071  
+
+  DID THE LESSON LAND   error early minus late on `fixed`:  +0.0721 +/- 0.0091  (8.0 SE, n=18)
+
+  THE MAPPING CONTRAST, identity minus swapped, paired on seed
+    lessons    on F1                    on F2                       n
+    same axis    +0.5 +/-   0.3 ( 1.7 SE)    +2.2 +/-   0.8 ( 2.6 SE)    18
+    split        -0.6 +/-   0.4 ( 1.4 SE)    -0.4 +/-   2.1 ( 0.2 SE)    18
+  a taught separation is NEGATIVE. In `split` phase 1 is taught F1 and
+  phase 0 is taught F2, so BOTH columns are predicted negative and the
+  relevant one for each phase is the axis that phase was taught on.
+
+  THE INSTANT IS THE BINDING CONSTRAINT. Orthogonal lessons do not reach
+  two instants either: `split` is null on both formants at power to see
+  1.2 and 6.4 Hz, with the same creatures, the same reward machinery and
+  the same session length that give a fixed-target lesson its effect.
+
+  SO IT IS NOT THE AXIS COLLISION. Two lessons on orthogonal axes coexist
+  ACROSS TIME -- 0.84 retained against 0.22 -- and do not coexist at two
+  MOMENTS of one utterance. Those are now separated, which no previous run
+  could do, and the thing that fails is addressing an INSTANT: the reward
+  reaches the right population and still cannot be made to mean "now".
+
+  WHAT IS LEFT IS NOT A CREDIT QUESTION AND NOT A READOUT QUESTION. Every
+  signal the creature is taught with is defined over a WINDOW -- the error
+  is a trial mean, the baseline is an EMA, the eligibility is a decay. A
+  mechanism that selects an instant has to be driven by something that
+  CHANGES at that instant, and the only such thing here is the gesture
+  itself, which the creature generates and the caregiver cannot see.

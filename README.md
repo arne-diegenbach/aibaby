@@ -16766,6 +16766,81 @@ result refutes a directional hypothesis as firmly as a null does, and a reversal
 omits the refutation buries the finding under the anomaly. Fixed in the source; the same
 family as the one-sided test caught one run earlier.
 
+### The axis-split route is closed by construction, and the phase-specific degree of freedom belongs to the oscillator
+
+Every refused phase-teaching run asked for two values of **one** formant. `capacity` had
+measured two lessons on **orthogonal** axes coexisting where same-axis ones collide — 0.84
+retained against 0.22 — and F1 and F2 come from two separate population-coded groups. So
+`axisphase` asked phase 0 about F2 only and phase 1 about F1 only, the two halves of /i/,
+against a same-axis baseline reproduced in the same run.
+
+```
+  arm         n   F1 ph1-ph0      F2 ph1-ph0     share  off   lesson drop
+  fixed      18   (no phase bins)  -              0.00  0.00  +0.0721 +/- 0.0091
+  same       18   +19.7 +/- 0.3   +0.9 +/- 1.1    0.50  0.00  -0.0017 +/- 0.0014
+  same-sw    18   +19.1 +/- 0.2   -1.3 +/- 0.9    0.50  0.00  +0.0001 +/- 0.0015
+  split      18   +18.3 +/- 0.4   -0.9 +/- 1.7    0.49  0.00  +0.0614 +/- 0.0073
+  split-sw   18   +18.8 +/- 0.3   -0.6 +/- 1.7    0.50  0.00  +0.0670 +/- 0.0071
+
+  lessons     contrast on F1          contrast on F2
+  same axis   +0.5 +/- 0.3 (1.7 SE)   +2.2 +/- 0.8 (2.6 SE)
+  split       -0.6 +/- 0.4 (1.4 SE)   -0.4 +/- 2.1 (0.2 SE)
+```
+
+#### The design is flawed, and the flaw is structural rather than mine to patch
+
+`split` admits a **phase-independent solution**. F1 → 320 always and F2 → 2500 always
+satisfies both phases at once, so nothing in the arm ever required the creature to do
+something different at two instants. Its null contrast therefore cannot answer the question
+it was built for, and I am not going to pretend otherwise.
+
+And the flaw does not have a fixed version. **Orthogonality and instant-specificity are
+mutually exclusive in this reward scheme.** If the two lessons do not conflict, both can be
+satisfied simultaneously and no phase-specific output is needed. If they do conflict, they
+conflict on one axis — which is the `same` arm. **So the axis-split route is closed by
+construction, not by measurement**, and the lead that proposed it is retired by argument.
+That took one run to see and should have taken none.
+
+#### What the run actually found, which is better than what it was built for
+
+**`split` lands at 8 SE where `same` lands at zero.** +0.0614 and +0.0670 against −0.0017
+and +0.0001, with both pairs on single-axis errors so the comparison is like for like, and
+`split` effectively matching the fixed-target control's +0.0721. A phase lesson with a
+common-mode solution is learned as well as an ordinary lesson. One without is not learned
+**at all** — not partially, not slowly. Zero.
+
+The reason is in the previous run's numbers. The only way to reduce error on a *conflicting*
+phase lesson is to change the **difference** between the two phases' outputs, and `hcsweep`
+measured that difference to be set by the inhibition gain (3.2 → 19.5 Hz across the sweep)
+and **invariant to teaching** — free minus taught agreed to within a few per cent on every
+gain, with the residuals changing sign. **The phase-specific degree of freedom is owned by
+the oscillator and is not plastic.** That is a mechanism for the entire refusal line, and it
+rests on two independent runs rather than on an argument.
+
+So the creature learns everything a phase lesson asks that can be satisfied without
+phase-specific output, and nothing that requires it. Not because reward cannot reach the
+right place or arrive at the right time — both were handed over as oracles — but because the
+quantity the lesson would have to move is produced by a mechanism reward does not write to.
+
+#### A retraction I nearly published, and the check that stopped it
+
+With the |log| formant metric and two targets straddling the creature's output, the **summed**
+error is exactly constant — 0.8910 for the 780/320 pair, at every F1 between them, verified
+to four decimals — and the two per-phase gradients are ±1/f, equal and opposite. I took that
+to mean the same-axis design had **3% of a single lesson's drive**, that `phaseteach` and
+`phasemask` had been judged against bars 32× too tight, and that the closure in the section
+above should be retracted.
+
+**Wrong, and the error was in which quantity I applied it to.** That cancellation is on the
+**mean** F1. The experiment measures the **difference**, and there the two gradients *add*:
+−1/f₁ − 1/f₀, which is **2.0× a single-target lesson**, not a thirty-second of one. The
+same-axis design has full differential drive and the earlier closure stands untouched.
+
+The check that caught it was one question — *which quantity does this experiment actually
+measure?* — asked before writing rather than after. Worth recording because a false
+retraction is more expensive than a false finding: it would have thrown away a valid closure
+and sent the next several runs back over ground already covered.
+
 ## Layout
 
 ```
