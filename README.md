@@ -16920,6 +16920,79 @@ makes a null ambiguous in two opposite directions — a channel that cannot carr
 or a distinction too small to learn. That ambiguity is cheap to remove in advance and
 expensive to remove afterwards.
 
+### The chain: culture starts and does not accumulate — and the reason may be mundane
+
+`tutor` showed one creature teaching another at 5.3 SE, with the distinction narrowing from
++96.1 to +25.6 Hz. One generation cannot tell a **decay** that reaches zero from a
+**convention** settling at some narrow width, and those mean opposite things. Four steps
+separate them. Each generation is a different individual — its own seed, its own wiring and
+noise — taught from the previous generation's own production.
+
+```
+  generation   faithful chain dF1    flipped chain dF1    lesson drop (faithful)
+  0             +96.1 +/-  5.1 Hz    (shared)              +0.1480 +/- 0.0053
+  1             +25.6 +/-  7.6 Hz     -27.7 +/-  6.5 Hz    +0.0531 +/- 0.0119
+  2             +10.5 +/-  5.4 Hz     +13.6 +/-  5.3 Hz    +0.0518 +/- 0.0110
+  3              -0.3 +/-  3.7 Hz      -2.3 +/-  4.4 Hz    +0.0745 +/- 0.0105
+  4              +0.5 +/-  3.1 Hz      -2.1 +/-  3.3 Hz    +0.0445 +/- 0.0104
+
+  WHAT EACH STEP KEEPS   ratio of sums, jackknife SE over 18 chains
+    generation 1 / 0   +0.266 +/- 0.084
+    generation 2 / 1   +0.409 +/- 0.157
+    generation 3 / 2   (denominator not resolved)
+    generation 4 / 3   (denominator not resolved)
+```
+
+**It decays.** Generations 3 and 4 are both within 3 SE of zero. The convention does not
+survive the chain: each pupil hands on less than it received until nothing is left. **Culture
+starts here and does not accumulate.** The last generation's lesson landed at 4.3 SE, so the
+final zero is a creature that learned something and had nothing to learn, not a creature that
+failed to learn.
+
+**The first two generations reproduce the previous run to the digit** — +96.1 ± 5.1,
++25.6 ± 7.6 and −27.7 ± 6.5, all identical, on the same seeds. That is what licenses reading
+generations 2 to 4 at all: the chain is not a different experiment that happens to share a
+name with `tutor`.
+
+#### What is not claimed
+
+**No rate.** Two step ratios are resolved, 0.266 ± 0.084 and 0.409 ± 0.157, and they are not
+distinguishable from each other (0.8 SE). So there is no claim that the loss per step is
+constant, and none that it changes. Two resolved points do not carry a curve, and the deeper
+ratios are suppressed rather than printed because their denominators are not resolved — a
+quotient by something indistinguishable from zero invites a reader to take a sign from noise.
+
+**The alternation test came in below its bar.** The pre-registered statistic — the mean of
+(predicted sign × dF1) over generations 1 to 4 — is **+10.4 ± 3.9 Hz, 2.7 SE**, short of 3.
+The per-generation signs are right for generations 1, 2 and 3 and wrong for 4, and generation
+4 is where the faithful chain is already at +0.5 ± 3.1 — a generation with nothing left to
+invert. So the combined statistic is diluted by its own later terms, which is a property of
+the statistic I chose rather than a finding. Inversion itself is not in doubt: the flipped
+arm at generation 1 is −27.7 ± 6.5, **4.3 SE from zero** and a reproduction of `tutor`'s 5.3
+SE result. What the 2.7 SE says is that a single number averaged over four generations was
+the wrong summary for a series that dies halfway.
+
+#### The decay does not establish a lossy channel, and that is the next run
+
+This is the part that matters for what to do next. `tutor` left open whether anything is lost
+**beyond the width of what a tutor says** — the two contrasts that would have settled it came
+in at 2.6 and 2.8 SE, both below bar. A tutor hands on a narrower distinction than it was
+asked for, so each pupil is set an easier-to-miss task than its own tutor was, and **a
+width-limited channel with no information loss at all produces a decaying series too.**
+
+So "it decays" and "the channel leaks" are not the same claim, and only the first is
+measured. Distinguishing them is cheap and is the same code: widen each generation's tape to
+a fixed spread around its tutor's own vowel centre and run the chain again. If the series
+then holds, the loss was width and the channel is clean; if it still decays, something is
+lost in transmission itself.
+
+**On the comparison with human iterated learning.** Kirby, Cornish & Smith found artificial
+languages becoming *more* structured down a chain of human learners, which is the opposite
+direction to this. The comparison is loose and is offered as such: their quantity is
+structure and learnability, mine is the magnitude of one formant distinction, and a magnitude
+that shrinks is not the same object as a grammar that regularises. What the two share is only
+the method.
+
 ## Layout
 
 ```

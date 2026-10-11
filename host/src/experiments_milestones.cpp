@@ -11343,6 +11343,297 @@ bool run_tutor(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
   return false;
 }
 
+// DOES THE CONVENTION SURVIVE A CHAIN, OR DECAY TO NOTHING?
+//
+// `tutor` established transmission between two individuals at 5.3 SE, and found the
+// distinction narrowing from +96.1 Hz to +25.6 across one generation. ONE generation cannot
+// tell a DECAY that reaches zero from a CONVENTION settling at some narrow width, and those
+// are completely different claims about whether culture can hold anything here. Kirby,
+// Cornish & Smith (2008) found human iterated learning makes languages MORE structured down
+// a chain -- the opposite direction -- so the comparison needs a chain to be worth making.
+//
+// THE SERIES IS THE MEASUREMENT AND NO RATE IS FITTED. Five generations are printed with
+// their own SEs, plus the ratio of sums at each step with a jackknife SE -- one denominator
+// per step rather than a mean of per-creature ratios, which this project has measured to be
+// ten times looser and has a standing rule against.
+//
+// THE CONTROL IS A POSITIVE PREDICTION, NOT A NULL. `flip` exchanges the two labels at
+// EVERY transmission step. If transmission is real the mapping inverts each time, so the
+// sign must ALTERNATE down the chain: -, +, -, + for generations 1 to 4. That is far harder
+// to produce by accident than a null, and it tests the same thing `tutor`'s swap arm did
+// while also testing that the chain is carrying information rather than drifting.
+bool run_tutorchain(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  aibaby::Dna dna;
+  if (dna.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) {
+    std::printf("  setup failed: the genome does not load\n");
+    return false;
+  }
+  constexpr uint32_t kReps = 18, kDepth = 5;   // generation 0 plus four pupils
+  constexpr uint64_t kGenOffset = 104729ull;   // a prime well clear of the rep stride
+  instrument("tutorchain", dna.header().seed ^ 0x7C4Eu, ticks / kVLTrialTicks,
+             "trials per generation");
+  std::printf("  tutorchain -- `tutor` showed one creature teaching another at 5.3 SE and\n"
+              "  the distinction narrowing +96.1 -> +25.6 Hz. Does it reach zero, or settle?\n");
+  std::printf("  the question  a DECAY and a CONVENTION look identical after one step and\n"
+              "                mean opposite things. Four steps separate them.\n");
+  std::printf("  the quantity  dF1 per generation with its own SE, and the ratio of SUMS at\n"
+              "                each step with a jackknife SE -- one denominator per step,\n"
+              "                never a mean of per-creature ratios.\n");
+  std::printf("  the control   `flip` exchanges the labels at EVERY step, so if transmission\n"
+              "                is real the sign must ALTERNATE: -, +, -, + for generations\n"
+              "                1 to 4. A POSITIVE prediction, much harder to hit by accident\n"
+              "                than a null, and it also shows the chain carries information\n"
+              "                rather than drifting.\n");
+  std::printf("  the bars      fixed before the run. DECAY if generation 4 is within 3 SE of\n"
+              "                zero. CONVENTION if generation 4 clears 3 SE and generations\n"
+              "                2-4 agree within 3 SE of their own mean. Anything else is\n"
+              "                STILL FALLING and is reported as that, with no rate fitted.\n");
+  std::printf("  %u chains, %u generations deep, two chains per creature.\n\n", kReps, kDepth);
+  struct Cell {
+    bool ok = false;
+    double df[kDepth] = {};      // faithful chain, dF1 per generation
+    double fl[kDepth] = {};      // flipped chain
+    double drop[kDepth] = {};    // faithful chain, did each lesson land
+    uint32_t deepest = 0;        // how far the chain got before a generation failed
+  };
+  const auto centroids = [](const VLRun& r, double* lo, double* hi) {
+    double ws[2] = {0.0, 0.0};
+    uint32_t wn[2] = {0u, 0u};
+    for (size_t q = 0; q < r.utt_f1.size(); ++q) {
+      const int wd = r.utt_word[q];
+      if (wd < 0 || wd > 1 || r.utt_f1[q] <= 1.0) continue;
+      ws[wd] += std::log(r.utt_f1[q]);
+      ++wn[wd];
+    }
+    if (wn[0] < 4u || wn[1] < 4u) return false;
+    *hi = std::exp(ws[0] / wn[0]);   // the word the host taught with the HIGH F1
+    *lo = std::exp(ws[1] / wn[1]);
+    return true;
+  };
+  const size_t slots_off = offsetof(aibaby::DnaHeader, exploration) +
+                           offsetof(aibaby::DnaExploration, context_slots);
+  const size_t src_off = offsetof(aibaby::DnaHeader, exploration) +
+                         offsetof(aibaby::DnaExploration, context_source);
+  const std::vector<Cell> cells = parallel_reps<Cell>(kReps, [&](uint32_t r) {
+    Cell c;
+    const uint32_t ctx_slots = 2u, ctx_src = 4u;
+    Regime reg;
+    reg.praise = kPraiseValue;
+    reg.scold = kScoldValue;
+    const uint64_t s0 = dna.header().seed + r * 7919ull;
+    // Every generation is a DIFFERENT individual: its own seed, so its own wiring and its
+    // own noise. A chain of distinct creatures rather than one creature re-taught.
+    const auto genome_for = [&](uint32_t gen) {
+      std::vector<uint8_t> v = blob;
+      const uint64_t sg = s0 + uint64_t(gen) * kGenOffset;
+      std::memcpy(v.data() + offsetof(aibaby::DnaHeader, seed), &sg, sizeof(sg));
+      std::memcpy(v.data() + slots_off, &ctx_slots, sizeof(ctx_slots));
+      std::memcpy(v.data() + src_off, &ctx_src, sizeof(ctx_src));
+      return v;
+    };
+    // GENERATION 0: the shipped lesson, host voice and host targets.
+    const VLRun g0 = run_vocallearn_session(genome_for(0), ticks, kVLTaught, nullptr, reg);
+    if (!g0.ok) return c;
+    double hi = 0.0, lo = 0.0;
+    if (!centroids(g0, &lo, &hi)) return c;
+    c.df[0] = hi - lo;
+    c.fl[0] = c.df[0];           // both chains share generation 0
+    c.drop[0] = g0.err_early - g0.err_late;
+    c.deepest = 1;
+    // THE CHAIN. Each generation's tape is the PREVIOUS generation's own production, and
+    // both channels are pointed at it -- heard and rewarded, as in `tutor`.
+    double f_hi = hi, f_lo = lo;      // faithful chain's running tape
+    double x_hi = hi, x_lo = lo;      // flipped chain's running tape
+    for (uint32_t gen = 1; gen < kDepth; ++gen) {
+      std::vector<uint8_t> v = genome_for(gen);
+      Word tape[2];
+      tape[0] = kWords[0]; tape[0].f1 = float(f_hi);
+      tape[1] = kWords[1]; tape[1].f1 = float(f_lo);
+      // The flip exchanges WHICH VOWEL GOES WITH WHICH WORD at every step, so a real
+      // chain inverts its convention each generation and the sign alternates.
+      Word flipped[2];
+      flipped[0] = kWords[0]; flipped[0].f1 = float(x_lo);
+      flipped[1] = kWords[1]; flipped[1].f1 = float(x_hi);
+      const VLRun gf = run_vocallearn_session(v, ticks, kVLTaught, nullptr, reg, -1,
+                                              nullptr, kVLScoreFormant, nullptr, kVLWords,
+                                              tape, nullptr, nullptr, nullptr, nullptr,
+                                              tape);
+      const VLRun gx = run_vocallearn_session(v, ticks, kVLTaught, nullptr, reg, -1,
+                                              nullptr, kVLScoreFormant, nullptr, kVLWords,
+                                              flipped, nullptr, nullptr, nullptr, nullptr,
+                                              flipped);
+      if (!gf.ok || !gx.ok) break;
+      double a = 0, b = 0, a2 = 0, b2 = 0;
+      if (!centroids(gf, &a, &b) || !centroids(gx, &a2, &b2)) break;
+      c.df[gen] = b - a;
+      c.fl[gen] = b2 - a2;
+      c.drop[gen] = gf.err_early - gf.err_late;
+      // The next generation hears what THIS one actually said.
+      f_hi = b; f_lo = a;
+      x_hi = b2; x_lo = a2;
+      c.deepest = gen + 1;
+    }
+    c.ok = c.deepest == kDepth;
+    if (c.ok)
+      parallel_note("  [%u/%u] chain %u  dF1 %+6.1f %+6.1f %+6.1f %+6.1f %+6.1f   flip"
+                    " %+6.1f %+6.1f %+6.1f %+6.1f\n", r + 1, kReps, r, c.df[0], c.df[1],
+                    c.df[2], c.df[3], c.df[4], c.fl[1], c.fl[2], c.fl[3], c.fl[4]);
+    return c;
+  });
+  std::vector<const Cell*> ok;
+  for (const Cell& c : cells) if (c.ok) ok.push_back(&c);
+  if (ok.size() < 3) {
+    std::printf("\n  tutorchain VOID -- %zu of %u chains completed all %u generations.\n",
+                ok.size(), kReps, kDepth);
+    return false;
+  }
+  const uint32_t n = uint32_t(ok.size());
+  std::printf("\n  %-12s %-24s %-24s %-22s\n", "generation", "faithful chain dF1",
+              "flipped chain dF1", "lesson drop (faithful)");
+  double m_df[kDepth] = {}, s_df[kDepth] = {}, m_fl[kDepth] = {}, s_fl[kDepth] = {};
+  for (uint32_t g = 0; g < kDepth; ++g) {
+    std::vector<double> a, b, d;
+    for (const Cell* c : ok) { a.push_back(c->df[g]); b.push_back(c->fl[g]); d.push_back(c->drop[g]); }
+    m_df[g] = ctx_mean_se(a, &s_df[g]);
+    m_fl[g] = ctx_mean_se(b, &s_fl[g]);
+    double sd = 0.0;
+    const double md = ctx_mean_se(d, &sd);
+    char b1[40], b2[40], b3[40];
+    std::snprintf(b1, sizeof b1, "%+6.1f +/- %5.1f Hz", m_df[g], s_df[g]);
+    if (g == 0) std::snprintf(b2, sizeof b2, "%s", "(shared with faithful)");
+    else std::snprintf(b2, sizeof b2, "%+6.1f +/- %5.1f Hz", m_fl[g], s_fl[g]);
+    std::snprintf(b3, sizeof b3, "%+.4f +/- %.4f", md, sd);
+    std::printf("  %-12u %-24s %-24s %-22s\n", g, b1, b2, b3);
+  }
+  // GUARD: WAS THERE ANYTHING TO TRANSMIT? `tutor`'s first version handed on a 0.3 Hz
+  // distinction and would have printed a tidy null, and a chain inherits that failure
+  // mode with four extra chances to look like a decay. If generation 0 has no
+  // distinction then every later generation is measuring noise propagating, and "it
+  // decays" would be the most confidently wrong sentence available. Checked BEFORE the
+  // series is interpreted, not after.
+  if (std::fabs(m_df[0]) < 3.0 * s_df[0]) {
+    std::printf("\n  tutorchain VOID -- GENERATION 0 HAS NO DISTINCTION TO TRANSMIT\n"
+                "  (%+.1f +/- %.1f Hz, under 3 SE). Every later generation is then noise\n"
+                "  propagating, and a series that ends near zero would say nothing about\n"
+                "  transmission because nothing was ever sent. This is the failure mode\n"
+                "  `tutor`'s first version had, with four more chances to look like a\n"
+                "  decay.\n", m_df[0], s_df[0]);
+    return false;
+  }
+  // RATIO OF SUMS PER STEP, with a jackknife SE. One denominator per step. A mean of
+  // per-creature ratios is forbidden here and was measured to be ~10x looser.
+  const auto step_ratio = [&](uint32_t g, int skip) {
+    double num = 0.0, den = 0.0;
+    for (uint32_t i = 0; i < n; ++i) {
+      if (int(i) == skip) continue;
+      num += ok[i]->df[g];
+      den += ok[i]->df[g - 1];
+    }
+    return std::fabs(den) > 1e-9 ? num / den : 0.0;
+  };
+  std::printf("\n  WHAT EACH STEP KEEPS   ratio of sums, jackknife SE over %u chains\n", n);
+  for (uint32_t g = 1; g < kDepth; ++g) {
+    const double full = step_ratio(g, -1);
+    std::vector<double> loo;
+    for (uint32_t i = 0; i < n; ++i) loo.push_back(step_ratio(g, int(i)));
+    double mean = 0.0;
+    for (double v : loo) mean += v;
+    mean /= double(loo.size());
+    double acc = 0.0;
+    for (double v : loo) acc += (v - mean) * (v - mean);
+    const double se = std::sqrt(acc * (double(loo.size()) - 1.0) / double(loo.size()));
+    // A RATIO WHOSE DENOMINATOR IS NOT RESOLVED IS NOT A NUMBER. When the generation
+    // below is itself within 3 SE of zero the quotient is arbitrary -- the smoke run
+    // printed +4.367 +/- 48.071 for exactly that reason -- and printing it invites a
+    // reader to take a sign or a magnitude from noise. Suppressed rather than shown.
+    if (std::fabs(m_df[g - 1]) < 3.0 * s_df[g - 1]) {
+      std::printf("    generation %u / %u   (denominator not resolved: generation %u is"
+                  " %+.1f +/- %.1f Hz)\n", g, g - 1, g - 1, m_df[g - 1], s_df[g - 1]);
+    } else {
+      std::printf("    generation %u / %u   %+.3f +/- %.3f\n", g, g - 1, full, se);
+    }
+  }
+  // THE SIGN-ALTERNATION TEST on the flipped chain. The prediction is fixed in advance:
+  // the label swap inverts the convention at every step, so generation g carries sign
+  // (-1)^g relative to generation 0. Scored as the mean of (predicted sign x dF1) over
+  // generations 1..4, per chain, so it has an SE across chains.
+  std::vector<double> align;
+  for (const Cell* c : ok) {
+    double acc = 0.0;
+    for (uint32_t g = 1; g < kDepth; ++g) acc += ((g % 2u) ? -1.0 : 1.0) * c->fl[g];
+    align.push_back(acc / double(kDepth - 1));
+  }
+  double s_al = 0.0;
+  const double m_al = ctx_mean_se(align, &s_al);
+  std::printf("\n  THE ALTERNATION TEST   predicted signs for generations 1-4 are -, +, -, +\n"
+              "    mean of (predicted sign x dF1)   %+.1f +/- %.1f Hz  (%.1f SE)\n",
+              m_al, s_al, s_al > 0.0 ? std::fabs(m_al) / s_al : 0.0);
+  std::printf("  positive means the flipped chain inverts its convention at every step,\n"
+              "  which only happens if each generation is reading its tutor's mapping.\n");
+  // RUNG FOUR, at the DEEPEST generation -- the one the verdict rests on.
+  {
+    std::vector<double> d;
+    for (const Cell* c : ok) d.push_back(c->drop[kDepth - 1]);
+    double sd = 0.0;
+    const double md = ctx_mean_se(d, &sd);
+    std::printf("\n  DID THE LAST LESSON LAND   generation %u:  %+.4f +/- %.4f  (%.1f SE)\n",
+                kDepth - 1, md, sd, sd > 0.0 ? std::fabs(md) / sd : 0.0);
+    if (!(sd > 0.0 && md > 3.0 * sd)) {
+      std::printf("\n  tutorchain VOID -- the last generation's lesson did not land, so its\n"
+                  "  dF1 is not a measurement of what was transmitted to it. The chain\n"
+                  "  cannot be read past the last generation that learned anything.\n");
+      return false;
+    }
+  }
+  const double kBar = 3.0;
+  const uint32_t L = kDepth - 1;
+  const bool decayed = std::fabs(m_df[L]) < kBar * s_df[L];
+  // "Settled" means generations 2..4 agree with their own mean inside 3 SE EACH -- not a
+  // fitted asymptote, which would be exactly the kind of curve this project does not fit.
+  double lvl = 0.0;
+  for (uint32_t g = 2; g < kDepth; ++g) lvl += m_df[g];
+  lvl /= double(kDepth - 2);
+  bool settled = !decayed;
+  for (uint32_t g = 2; g < kDepth; ++g)
+    if (std::fabs(m_df[g] - lvl) > kBar * s_df[g]) settled = false;
+  if (decayed) {
+    std::printf("\n  IT DECAYS. Generation %u is within %.0f SE of zero (%+.1f +/- %.1f Hz),\n"
+                "  so the convention does not survive the chain: each pupil hands on less\n"
+                "  than it received until nothing is left. Culture STARTS here and does not\n"
+                "  ACCUMULATE -- the opposite of what human iterated learning does, where\n"
+                "  structure increases down the chain.\n"
+                "\n  WHAT THIS DOES AND DOES NOT LICENSE. It does not say the channel is\n"
+                "  lossy: `tutor` left open whether anything is lost beyond the WIDTH of\n"
+                "  what a tutor says, at 2.6 and 2.8 SE, and a decaying series is exactly\n"
+                "  what a width-limited channel produces as well. Distinguishing them needs\n"
+                "  a generation taught from a WIDENED tape, which is the `loud` arm run\n"
+                "  down a chain rather than once.\n", L, kBar, m_df[L], s_df[L]);
+    return false;
+  }
+  if (settled) {
+    std::printf("\n  IT SETTLES. Generation %u holds %+.1f +/- %.1f Hz, past a %.0f SE bar,\n"
+                "  and generations 2 to %u agree with their own mean inside %.0f SE each --\n"
+                "  a level of about %+.1f Hz. So the convention is not decaying to nothing:\n"
+                "  it NARROWS ONCE from what the host demanded and then HOLDS between\n"
+                "  creatures with no host involved at all.\n"
+                "\n  THAT IS A SELF-SUSTAINING CONVENTION, and it is the first thing in this\n"
+                "  project that does not need the caregiver. No rate is fitted and none\n"
+                "  should be: the series is reported and the level is the mean of the last\n"
+                "  three generations, not an asymptote.\n",
+                L, m_df[L], s_df[L], kBar, L, kBar, lvl);
+    return true;
+  }
+  std::printf("\n  STILL FALLING AT GENERATION %u. It is above zero (%+.1f +/- %.1f Hz) but\n"
+              "  generations 2 to %u do not agree on a level, so this chain is neither a\n"
+              "  completed decay nor a settled convention -- it is a series still in\n"
+              "  motion, and %u generations are not enough to say which it becomes.\n"
+              "  Reported as that. NO RATE IS FITTED and none should be inferred from four\n"
+              "  points, which is the standing rule here and the reason this branch exists\n"
+              "  rather than a curve.\n", L, m_df[L], s_df[L], L, kDepth);
+  return false;
+}
+
 bool run_blockwhere(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
   (void)verbose;
   aibaby::Dna dna0;

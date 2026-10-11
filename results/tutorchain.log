@@ -1,0 +1,73 @@
+  [16/18] chain 15  dF1 +115.4  +31.7   -6.4  -18.0   -0.4   flip  -45.6  +29.8   +0.0   +4.4
+  [7/18] chain 6  dF1 +127.9  -20.2  -16.0  -25.8   -7.0   flip  -66.6  +52.9  -41.2  +24.4
+  [13/18] chain 12  dF1  +64.4  +27.3  +18.3  +20.1   +3.1   flip  -23.8  -20.9  +16.9  -25.2
+  [18/18] chain 17  dF1  +86.2  +52.6   +1.7   +5.3   +5.8   flip  -49.6   -1.8   +9.4   -7.3
+  [10/18] chain 9  dF1  +83.9  +63.9  +11.1   -7.1  -23.6   flip  -21.3   +4.4   -6.2   -2.7
+  [4/18] chain 3  dF1 +123.9   -3.5  +15.3  +22.6   +8.1   flip  -30.6  +28.6   -3.5   +1.2
+  [17/18] chain 16  dF1  +83.0  +42.2  +37.4   -0.7   -9.0   flip  -40.1  +27.1   -6.9   -6.9
+  [3/18] chain 2  dF1  +97.7  -11.7   -5.8   -3.9   +5.5   flip   +1.8   +7.1   +1.6  -16.1
+  [14/18] chain 13  dF1  +50.2  +19.8  +14.7  -18.7  -16.2   flip   +7.9   -0.5   +0.5   -6.9
+  [1/18] chain 0  dF1  +79.1  +29.3  +24.8  +21.4   +4.2   flip   -9.0   +5.3  +10.5   -8.1
+  [2/18] chain 1  dF1  +83.5  +59.9   +6.7  -23.0   -2.2   flip  -38.0  +10.9   +3.6   +0.5
+  [12/18] chain 11  dF1  +86.0  +86.7  +73.2  +21.6  +24.0   flip  -13.2  +20.0  -31.7   +1.8
+  [8/18] chain 7  dF1 +102.0   -9.7   -7.8   -6.3  +14.9   flip  -45.9  +40.3  -41.2  +32.9
+  [6/18] chain 5  dF1 +128.8  +69.3  +41.4   +1.0  +24.1   flip  -67.5  +60.9   +2.1   -0.8
+  [11/18] chain 10  dF1  +94.4   -5.7  -14.2   -2.8  -11.4   flip   -8.1   -2.8  +19.0  -14.4
+  [5/18] chain 4  dF1  +98.7  -14.0   -6.7   -3.3  -14.0   flip  -21.6   +2.0   -4.6   -7.6
+  [9/18] chain 8  dF1 +107.9  +29.0   +9.8  +14.9   +7.3   flip  +35.9   -9.0  +10.3   +8.9
+  [15/18] chain 14  dF1 +117.4  +13.5   -9.3   -2.5   -3.9   flip  -62.8   -9.6  +20.5  -16.5
+experiment: tutorchain
+  instrument        tutorchain   trial seed 0000000001355b87   1214 trials per generation
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  tutorchain -- `tutor` showed one creature teaching another at 5.3 SE and
+  the distinction narrowing +96.1 -> +25.6 Hz. Does it reach zero, or settle?
+  the question  a DECAY and a CONVENTION look identical after one step and
+                mean opposite things. Four steps separate them.
+  the quantity  dF1 per generation with its own SE, and the ratio of SUMS at
+                each step with a jackknife SE -- one denominator per step,
+                never a mean of per-creature ratios.
+  the control   `flip` exchanges the labels at EVERY step, so if transmission
+                is real the sign must ALTERNATE: -, +, -, + for generations
+                1 to 4. A POSITIVE prediction, much harder to hit by accident
+                than a null, and it also shows the chain carries information
+                rather than drifting.
+  the bars      fixed before the run. DECAY if generation 4 is within 3 SE of
+                zero. CONVENTION if generation 4 clears 3 SE and generations
+                2-4 agree within 3 SE of their own mean. Anything else is
+                STILL FALLING and is reported as that, with no rate fitted.
+  18 chains, 5 generations deep, two chains per creature.
+
+
+  generation   faithful chain dF1       flipped chain dF1        lesson drop (faithful)
+  0             +96.1 +/-   5.1 Hz      (shared with faithful)   +0.1480 +/- 0.0053    
+  1             +25.6 +/-   7.6 Hz       -27.7 +/-   6.5 Hz      +0.0531 +/- 0.0119    
+  2             +10.5 +/-   5.4 Hz       +13.6 +/-   5.3 Hz      +0.0518 +/- 0.0110    
+  3              -0.3 +/-   3.7 Hz        -2.3 +/-   4.4 Hz      +0.0745 +/- 0.0105    
+  4              +0.5 +/-   3.1 Hz        -2.1 +/-   3.3 Hz      +0.0445 +/- 0.0104    
+
+  WHAT EACH STEP KEEPS   ratio of sums, jackknife SE over 18 chains
+    generation 1 / 0   +0.266 +/- 0.084
+    generation 2 / 1   +0.409 +/- 0.157
+    generation 3 / 2   (denominator not resolved: generation 2 is +10.5 +/- 5.4 Hz)
+    generation 4 / 3   (denominator not resolved: generation 3 is -0.3 +/- 3.7 Hz)
+
+  THE ALTERNATION TEST   predicted signs for generations 1-4 are -, +, -, +
+    mean of (predicted sign x dF1)   +10.4 +/- 3.9 Hz  (2.7 SE)
+  positive means the flipped chain inverts its convention at every step,
+  which only happens if each generation is reading its tutor's mapping.
+
+  DID THE LAST LESSON LAND   generation 4:  +0.0445 +/- 0.0104  (4.3 SE)
+
+  IT DECAYS. Generation 4 is within 3 SE of zero (+0.5 +/- 3.1 Hz),
+  so the convention does not survive the chain: each pupil hands on less
+  than it received until nothing is left. Culture STARTS here and does not
+  ACCUMULATE -- the opposite of what human iterated learning does, where
+  structure increases down the chain.
+
+  WHAT THIS DOES AND DOES NOT LICENSE. It does not say the channel is
+  lossy: `tutor` left open whether anything is lost beyond the WIDTH of
+  what a tutor says, at 2.6 and 2.8 SE, and a decaying series is exactly
+  what a width-limited channel produces as well. Distinguishing them needs
+  a generation taught from a WIDENED tape, which is the `loud` arm run
+  down a chain rather than once.
