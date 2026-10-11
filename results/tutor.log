@@ -1,0 +1,80 @@
+  [13/18] seed 12  tutor dF1   +64.4 (vowels 662/598)  pupil   +27.3  swapped   -23.8
+  [11/18] seed 10  tutor dF1   +94.4 (vowels 678/584)  pupil    -5.7  swapped    -8.1
+  [4/18] seed 3  tutor dF1  +123.9 (vowels 709/585)  pupil    -3.5  swapped   -30.6
+  [9/18] seed 8  tutor dF1  +107.9 (vowels 691/583)  pupil   +29.0  swapped   +35.9
+  [8/18] seed 7  tutor dF1  +102.0 (vowels 671/569)  pupil    -9.7  swapped   -45.9
+  [6/18] seed 5  tutor dF1  +128.8 (vowels 706/578)  pupil   +69.3  swapped   -67.5
+  [2/18] seed 1  tutor dF1   +83.5 (vowels 694/610)  pupil   +59.9  swapped   -38.0
+  [17/18] seed 16  tutor dF1   +83.0 (vowels 638/556)  pupil   +42.2  swapped   -40.1
+  [15/18] seed 14  tutor dF1  +117.4 (vowels 661/543)  pupil   +13.5  swapped   -62.8
+  [7/18] seed 6  tutor dF1  +127.9 (vowels 687/559)  pupil   -20.2  swapped   -66.6
+  [12/18] seed 11  tutor dF1   +86.0 (vowels 663/577)  pupil   +86.7  swapped   -13.2
+  [10/18] seed 9  tutor dF1   +83.9 (vowels 665/581)  pupil   +63.9  swapped   -21.3
+  [18/18] seed 17  tutor dF1   +86.2 (vowels 672/586)  pupil   +52.6  swapped   -49.6
+  [14/18] seed 13  tutor dF1   +50.2 (vowels 629/579)  pupil   +19.8  swapped    +7.9
+  [1/18] seed 0  tutor dF1   +79.1 (vowels 652/573)  pupil   +29.3  swapped    -9.0
+  [16/18] seed 15  tutor dF1  +115.4 (vowels 663/547)  pupil   +31.7  swapped   -45.6
+  [3/18] seed 2  tutor dF1   +97.7 (vowels 650/552)  pupil   -11.7  swapped    +1.8
+  [5/18] seed 4  tutor dF1   +98.7 (vowels 661/562)  pupil   -14.0  swapped   -21.6
+experiment: tutor
+  instrument        tutor   trial seed 0000000001355bb9   1214 trials per creature
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  tutor -- can one creature teach another? Generation 0 is taught by the
+  host, its produced vowels are measured, and generation 1 -- a DIFFERENT
+  creature -- both HEARS those vowels and is REWARDED toward them.
+  why voice    not genes: n_max re-rolls the wiring and appending re-rolls
+               the noise, so a bred genome voids every anchor this project
+               has. And transmission by voice composes two measured parts --
+               repeats a heard word at 0.890, and hears its own voice.
+  the quantity dF1: the difference between the formants a creature produces
+               for the two words. The same number every naming result here
+               is stated in.
+  the control  `swap` gives generation 1 the SAME two tutor vowels with the
+               word labels exchanged -- identical acoustics and spread,
+               only the mapping destroyed. Beating it is the whole claim.
+  refused if   tutored and swapped come back equal. Then the voice carries
+               sound and not information, and culture does not start here.
+  note         the tape carries FORMANTS only; f0 stays the host's, because
+               the creature's own f0 is not recorded. A limit of the tape.
+  both have    context_slots 2 and context_source 4 -- the DNA v53 derived
+               index every dF1 here is measured under. The tutor needs it to
+               HAVE a distinction and the pupil to be able to HOLD one, and
+               source 4 derives the pupil's categories from what it HEARS,
+               which makes the transmission real rather than nominal.
+
+
+  WHAT THE TUTOR HANDS ON   its two produced vowels, geometric mean over
+  its own scored trials:  670 +/- 5 Hz  and  573 +/- 4 Hz
+  the host asked it for 780 and 320, a 460 Hz demand.
+
+  generation                 dF1 (word0 - word1)             n
+  0, taught by the host       +96.1 +/-   5.1 Hz           18
+  1, tutored                  +25.6 +/-   7.6 Hz           18
+  1, tutor vowels SWAPPED     -27.7 +/-   6.5 Hz           18
+  1, tutor centre, LOUD       +61.0 +/-  11.3 Hz           18
+  `loud` keeps the tutor's own vowel centre and widens the pair to the
+  host's spread -- the tutor's voice with the contrast turned up. It is
+  what separates a transmission failure from a distinction too small to
+  learn, and those have opposite implications.
+
+  DID EACH LESSON LAND   error early minus late
+    generation 0  +0.1480 +/- 0.0053  (28.2 SE)
+    generation 1  +0.0531 +/- 0.0119  (4.5 SE)
+
+  TRANSMISSION   tutored minus swapped:  +53.2 +/- 10.3 Hz  (5.2 SE)
+  the two arms differ ONLY in which tutor vowel goes with which word, so
+  this is the information in the tutor's voice and not its sound.
+
+  ONE CREATURE TAUGHT ANOTHER. The pupil's distinction follows the
+  tutor's MAPPING and not merely its sound: +53.2 +/- 10.3 Hz over an
+  arm with identical acoustics and the labels exchanged, 5.2 SE.
+  Culture starts here -- a thing one creature learned reached a second
+  through the air, with no genome passed and nothing bred.
+
+  AND IT NARROWS. The tutor was asked for 460 Hz and produced +96.1; it
+  handed on +25.6, which is 27% of what it got. Whether that ratio is
+  stable across generations is what iterated learning is about and this
+  run cannot say -- it measures ONE generation. A second generation is
+  the same code with the tape taken from the pupil, and it is the next
+  run rather than this one.

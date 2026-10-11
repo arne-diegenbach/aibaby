@@ -365,6 +365,18 @@ const Spec kSpecs[] = {
      "  if the half-centre reports no phase or has settled on one winner. The\n"
      "  evidence is the IDENTITY-minus-SWAPPED mapping contrast, because the\n"
      "  oscillator contributes to both equally and cancels from the difference."},
+    {"tutor", 3400000, Expect::kOpen, Tier::kTeach,
+     "derived: vocallearn's teaching length, run TWICE per creature -- a tutor\n"
+     "  and a pupil. Can one creature teach another? Generation 0 gets the\n"
+     "  shipped lesson, its produced vowels are measured, and generation 1 -- a\n"
+     "  DIFFERENT seed, so its own wiring and noise -- both HEARS those vowels\n"
+     "  and is REWARDED toward them. Not a heard-target lesson, which is a\n"
+     "  measured null here (+24% fixed vs -0.1% heard); the tutor supplies both\n"
+     "  channels. The quantity is dF1, the formant difference the creature\n"
+     "  produces for the two words. The control is `swap`: the same two tutor\n"
+     "  vowels with the labels exchanged, so acoustics and spread are identical\n"
+     "  and only the mapping is destroyed. No genome is passed and nothing is\n"
+     "  bred -- n_max re-rolls the wiring, so a bred genome voids every anchor."},
     {"axisphase", 3400000, Expect::kOpen, Tier::kTeach,
      "derived: vocallearn's teaching length, because the quantity is its own.\n"
      "  Every refused phase-teaching run asked for two values of ONE formant,\n"
@@ -948,6 +960,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "hcsweep") ok = run_hcsweep(dna_blob, ticks, verbose);
   else if (name == "phasemask") ok = run_phasemask(dna_blob, ticks, verbose);
   else if (name == "axisphase") ok = run_axisphase(dna_blob, ticks, verbose);
+  else if (name == "tutor") ok = run_tutor(dna_blob, ticks, verbose);
   else if (name == "blockwhere") ok = run_blockwhere(dna_blob, ticks, verbose);
   else if (name == "blockanchor") ok = run_blockanchor(dna_blob, ticks, verbose);
   else if (name == "leverprobe") ok = run_leverprobe(dna_blob, ticks, verbose);

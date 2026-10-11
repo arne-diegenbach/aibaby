@@ -4436,7 +4436,13 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
                              // axis it was taught on, which `orthovocab` established and
                              // `formant_error_axis` already implements. nullptr keeps
                              // every caller bit-identical.
-                             const uint32_t* tgt_axis = nullptr) {
+                             const uint32_t* tgt_axis = nullptr,
+                             // `tutor`: what the CAREGIVER SAYS, when it is not the host's
+                             // synthetic vowel table. `tgt_table` already replaces what the
+                             // creature is rewarded TOWARD; this replaces what it HEARS, so
+                             // the two channels can be pointed at the same tutor. nullptr
+                             // keeps every caller bit-identical.
+                             const Word* heard_table = nullptr) {
   // -1 is vocallearn's own rule, and passing nothing reproduces it exactly: the
   // positive control aims at one fixed target and every other arm at the word
   // that was heard.
@@ -4776,7 +4782,10 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
       // episode begins at word onset and the prototype commits at word offset --
       // exactly the window `partprobe` was quietly given when it scored 0.980.
       if (ctx && ctx->win_oracle) s.brain.network().set_ctx_window(sounding);
-      const Word& heard = kWords[label];
+      // The tutor's FORMANTS, if a tape was handed in; its f0 stays the host's, because
+      // pitch is not the taught dimension and the creature's own f0 is not recorded. A
+      // limitation of the tape rather than a choice about what matters.
+      const Word& heard = heard_table ? heard_table[label] : kWords[label];
       caregiver.render(sounding ? heard.f0 : 0.0f, heard.f1, heard.f2,
                        sounding ? 0.5f : 0.0f, pcm.data(), spt);
       ear.tick(s.brain, pcm.data(), spt);
@@ -11042,6 +11051,295 @@ bool run_axisphase(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
               "  CHANGES at that instant, and the only such thing here is the gesture\n"
               "  itself, which the creature generates and the caregiver cannot see.\n",
               kBar * se_p1, kBar * se_p2);
+  return false;
+}
+
+// CAN ONE CREATURE TEACH ANOTHER? -- cultural transmission, one generation.
+//
+// WHY THIS AND NOT MATING. Pheromone-mediated mate choice in humans is largely a
+// replication failure -- no human pheromone has ever been isolated -- and genome
+// recombination is actively hostile to this project: `n_max` re-rolls the wiring and
+// appending re-rolls the noise, so every paired anchor would be void, and a genome found by
+// selection is the opposite of the one durable asset here, which is that every working part
+// has a measurement behind it. Transmission by VOICE needs none of that. It is also the
+// only remaining lead that composes two things already measured to work, which is the shape
+// every win in this project has had: the creature repeats a heard word at 0.890, and its
+// ear hears its own voice.
+//
+// THE DESIGN, and the honest reason it is shaped this way. Teaching toward a HEARD target
+// is a measured null in this project -- reward cuts error +24% toward a FIXED target and
+// -0.1% toward a heard one -- so a tutoring experiment built on "imitate what you hear"
+// would fail for a reason already known and would say nothing about transmission. What
+// does work is a fixed per-word target. So the tutor supplies BOTH channels: generation 1
+// HEARS generation 0's measured vowels and is REWARDED toward them. Both are pointed at
+// the same tutor, which is what being taught by someone means.
+//
+// WHAT IS MEASURED IS THE DISTINCTION, NOT THE ACOUSTICS. `dF1` is the difference between
+// the formants a creature produces for the two words -- the quantity every naming result
+// here is stated in. Generation 0 is given the host's 780/320 pair; what it actually
+// produces is far narrower, and that narrowing is the thing iterated learning is about.
+//
+// THE CONTROL IS THE MAPPING, NOT THE SOUND. `swap` hands generation 1 the same two tutor
+// vowels with the word labels EXCHANGED. Identical acoustics, identical target spread,
+// identical everything except which vowel goes with which word -- so it holds the tutor's
+// sound fixed and removes only the information. A tutored arm that does not beat it has
+// transmitted nothing.
+bool run_tutor(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  aibaby::Dna dna;
+  if (dna.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) {
+    std::printf("  setup failed: the genome does not load\n");
+    return false;
+  }
+  constexpr uint32_t kReps = 18;
+  // Generation 1 is a DIFFERENT CREATURE, not a reset of its tutor: a distinct seed, so the
+  // wiring and the noise are its own. Transmission between individuals rather than within
+  // one. The offset is a prime well clear of the rep stride so no pair can collide.
+  constexpr uint64_t kGen1Offset = 104729ull;
+  instrument("tutor", dna.header().seed ^ 0x7C70u, ticks / kVLTrialTicks,
+             "trials per creature");
+  std::printf("  tutor -- can one creature teach another? Generation 0 is taught by the\n"
+              "  host, its produced vowels are measured, and generation 1 -- a DIFFERENT\n"
+              "  creature -- both HEARS those vowels and is REWARDED toward them.\n");
+  std::printf("  why voice    not genes: n_max re-rolls the wiring and appending re-rolls\n"
+              "               the noise, so a bred genome voids every anchor this project\n"
+              "               has. And transmission by voice composes two measured parts --\n"
+              "               repeats a heard word at 0.890, and hears its own voice.\n");
+  std::printf("  the quantity dF1: the difference between the formants a creature produces\n"
+              "               for the two words. The same number every naming result here\n"
+              "               is stated in.\n");
+  std::printf("  the control  `swap` gives generation 1 the SAME two tutor vowels with the\n"
+              "               word labels exchanged -- identical acoustics and spread,\n"
+              "               only the mapping destroyed. Beating it is the whole claim.\n");
+  std::printf("  refused if   tutored and swapped come back equal. Then the voice carries\n"
+              "               sound and not information, and culture does not start here.\n");
+  std::printf("  note         the tape carries FORMANTS only; f0 stays the host's, because\n"
+              "               the creature's own f0 is not recorded. A limit of the tape.\n");
+  std::printf("  both have    context_slots 2 and context_source 4 -- the DNA v53 derived\n"
+              "               index every dF1 here is measured under. The tutor needs it to\n"
+              "               HAVE a distinction and the pupil to be able to HOLD one, and\n"
+              "               source 4 derives the pupil's categories from what it HEARS,\n"
+              "               which makes the transmission real rather than nominal.\n\n");
+  struct Cell {
+    bool ok = false;
+    double g0 = 0, g1 = 0, g1s = 0, g1l = 0;  // tutor, pupil, swapped pupil, LOUD pupil
+    double t_lo = 0, t_hi = 0;           // the tutor's two vowels, as handed on
+    double drop0 = 0, drop1 = 0;
+    uint32_t n0 = 0, n1 = 0;
+  };
+  // Per-word geometric mean of produced F1, mirroring the aggregation `chase` already uses
+  // on the same vectors -- log space, because the error metric this project teaches with is
+  // |log(f/target)| and an arithmetic mean would not be the centre of that.
+  const auto centroids = [](const VLRun& r, double* lo, double* hi, uint32_t* n) {
+    double ws[2] = {0.0, 0.0}, f2s[2] = {0.0, 0.0};
+    uint32_t wn[2] = {0u, 0u};
+    for (size_t q = 0; q < r.utt_f1.size(); ++q) {
+      const int wd = r.utt_word[q];
+      if (wd < 0 || wd > 1 || r.utt_f1[q] <= 1.0 || r.utt_f2[q] <= 1.0) continue;
+      ws[wd] += std::log(r.utt_f1[q]);
+      f2s[wd] += std::log(r.utt_f2[q]);
+      ++wn[wd];
+    }
+    *n = wn[0] < wn[1] ? wn[0] : wn[1];
+    if (wn[0] < 4u || wn[1] < 4u) return false;
+    // Index 0 is the word the host taught with the HIGH F1, so lo/hi name the WORDS and
+    // not the sizes -- a tutor whose distinction collapsed or inverted still reports here,
+    // which is the point.
+    *hi = std::exp(ws[0] / wn[0]);
+    *lo = std::exp(ws[1] / wn[1]);
+    (void)f2s;
+    return true;
+  };
+  // THE CONFIGURATION BOTH GENERATIONS NEED, AND THE FIRST VERSION OF THIS RUN DID NOT
+  // HAVE IT. A creature with the shipped exploration settings produces ONE vowel: the
+  // smoke handed on 621 and 620 Hz, a 0.3 Hz distinction, because the default taught arm
+  // is the HEARD-TARGET mode that this project measured at -0.1%. A tutor with nothing to
+  // say cannot teach, and the run would have been void by construction.
+  //
+  // `context_slots` = 2 and `context_source` = 4 are what make the larynx's bias
+  // WORD-CONDITIONAL -- the DNA v53 derived index, the configuration every dF1 in this
+  // project is measured under. Both generations get it: the tutor so it has a distinction
+  // to hand on, and the pupil so it can structurally hold one. Giving it to only the tutor
+  // would test whether a creature can learn something it has no way to represent.
+  //
+  // And it makes the transmission real rather than nominal, because source 4 derives the
+  // pupil's own categories from WHAT IT HEARS -- which here is the tutor.
+  const size_t slots_off = offsetof(aibaby::DnaHeader, exploration) +
+                           offsetof(aibaby::DnaExploration, context_slots);
+  const size_t src_off = offsetof(aibaby::DnaHeader, exploration) +
+                         offsetof(aibaby::DnaExploration, context_source);
+  const std::vector<Cell> cells = parallel_reps<Cell>(kReps, [&](uint32_t r) {
+    Cell c;
+    const uint32_t ctx_slots = 2u, ctx_src = 4u;
+    std::vector<uint8_t> v0 = blob;
+    const uint64_t s0 = dna.header().seed + r * 7919ull;
+    std::memcpy(v0.data() + offsetof(aibaby::DnaHeader, seed), &s0, sizeof(s0));
+    std::memcpy(v0.data() + slots_off, &ctx_slots, sizeof(ctx_slots));
+    std::memcpy(v0.data() + src_off, &ctx_src, sizeof(ctx_src));
+    Regime reg;
+    reg.praise = kPraiseValue;
+    reg.scold = kScoldValue;
+    // GENERATION 0: the shipped lesson, host voice and host targets.
+    const VLRun gen0 = run_vocallearn_session(v0, ticks, kVLTaught, nullptr, reg);
+    if (!gen0.ok) return c;
+    double t_hi = 0.0, t_lo = 0.0;
+    uint32_t n0 = 0;
+    if (!centroids(gen0, &t_lo, &t_hi, &n0)) return c;
+    c.t_hi = t_hi; c.t_lo = t_lo; c.n0 = n0;
+    c.g0 = t_hi - t_lo;
+    c.drop0 = gen0.err_early - gen0.err_late;
+    // THE TAPE. What generation 0 actually said for each word, which is what a pupil in
+    // the room would have to work with. f0 and the F2 of the host's own words are kept so
+    // the tape differs from the host in exactly the dimension that was taught.
+    Word tape[2];
+    tape[0] = kWords[0]; tape[0].f1 = float(t_hi);
+    tape[1] = kWords[1]; tape[1].f1 = float(t_lo);
+    Word swapped[2];
+    swapped[0] = kWords[0]; swapped[0].f1 = float(t_lo);
+    swapped[1] = kWords[1]; swapped[1].f1 = float(t_hi);
+    // THE CONTROL THAT MAKES A NULL INTERPRETABLE, added before the run rather than after.
+    // A tutor hands on a far narrower distinction than the host demanded, so a pupil that
+    // fails might be failing at TRANSMISSION or merely at a distinction too small to
+    // learn -- and those have opposite implications. `loud` keeps the tutor's own vowel
+    // CENTRE and widens the pair to the host's log-spread: the tutor's voice with the
+    // contrast turned up. Geometric centre and geometric spread, because the metric the
+    // creature is taught with is |log(f/target)|.
+    const double centre = std::sqrt(t_hi * t_lo);
+    const double half = std::sqrt(double(kWords[0].f1) / double(kWords[1].f1));
+    Word loud[2];
+    loud[0] = kWords[0]; loud[0].f1 = float(centre * half);
+    loud[1] = kWords[1]; loud[1].f1 = float(centre / half);
+    std::vector<uint8_t> v1 = blob;
+    const uint64_t s1 = s0 + kGen1Offset;
+    std::memcpy(v1.data() + offsetof(aibaby::DnaHeader, seed), &s1, sizeof(s1));
+    std::memcpy(v1.data() + slots_off, &ctx_slots, sizeof(ctx_slots));
+    std::memcpy(v1.data() + src_off, &ctx_src, sizeof(ctx_src));
+    // GENERATION 1, tutored: hears the tape and is rewarded toward it. Both channels.
+    const VLRun g1 = run_vocallearn_session(v1, ticks, kVLTaught, nullptr, reg, -1, nullptr,
+                                            kVLScoreFormant, nullptr, kVLWords, tape,
+                                            nullptr, nullptr, nullptr, nullptr, tape);
+    const VLRun g1s = run_vocallearn_session(v1, ticks, kVLTaught, nullptr, reg, -1, nullptr,
+                                             kVLScoreFormant, nullptr, kVLWords, swapped,
+                                             nullptr, nullptr, nullptr, nullptr, swapped);
+    const VLRun g1l = run_vocallearn_session(v1, ticks, kVLTaught, nullptr, reg, -1,
+                                             nullptr, kVLScoreFormant, nullptr, kVLWords,
+                                             loud, nullptr, nullptr, nullptr, nullptr,
+                                             loud);
+    if (!g1.ok || !g1s.ok || !g1l.ok) return c;
+    double a = 0, b = 0, a2 = 0, b2 = 0, a3 = 0, b3 = 0;
+    uint32_t na = 0, nb = 0, nc2 = 0;
+    if (!centroids(g1, &a, &b, &na) || !centroids(g1s, &a2, &b2, &nb) ||
+        !centroids(g1l, &a3, &b3, &nc2))
+      return c;
+    c.ok = true;
+    c.g1 = b - a;        // hi minus lo, for the words as the HOST labels them
+    c.g1s = b2 - a2;
+    c.g1l = b3 - a3;
+    c.n1 = na < nb ? na : nb;
+    c.drop1 = g1.err_early - g1.err_late;
+    parallel_note("  [%u/%u] seed %u  tutor dF1 %+7.1f (vowels %.0f/%.0f)  pupil %+7.1f"
+                  "  swapped %+7.1f\n", r + 1, kReps, r, c.g0, c.t_hi, c.t_lo, c.g1, c.g1s);
+    return c;
+  });
+  std::vector<double> g0, g1, g1s, g1l, d_ts, dr0, dr1, hi, lo;
+  for (const Cell& c : cells) {
+    if (!c.ok) continue;
+    g0.push_back(c.g0); g1.push_back(c.g1); g1s.push_back(c.g1s); g1l.push_back(c.g1l);
+    d_ts.push_back(c.g1 - c.g1s);
+    dr0.push_back(c.drop0); dr1.push_back(c.drop1);
+    hi.push_back(c.t_hi); lo.push_back(c.t_lo);
+  }
+  if (g0.size() < 3) {
+    std::printf("\n  tutor VOID -- %zu creatures completed both generations.\n", g0.size());
+    return false;
+  }
+  double s_g0 = 0, s_g1 = 0, s_g1s = 0, s_d = 0, s_r0 = 0, s_r1 = 0, s_hi = 0, s_lo = 0;
+  const double m_g0 = ctx_mean_se(g0, &s_g0);
+  const double m_g1 = ctx_mean_se(g1, &s_g1);
+  const double m_g1s = ctx_mean_se(g1s, &s_g1s);
+  const double m_d = ctx_mean_se(d_ts, &s_d);
+  const double m_r0 = ctx_mean_se(dr0, &s_r0);
+  const double m_r1 = ctx_mean_se(dr1, &s_r1);
+  const double m_hi = ctx_mean_se(hi, &s_hi);
+  const double m_lo = ctx_mean_se(lo, &s_lo);
+  std::printf("\n  WHAT THE TUTOR HANDS ON   its two produced vowels, geometric mean over\n"
+              "  its own scored trials:  %.0f +/- %.0f Hz  and  %.0f +/- %.0f Hz\n",
+              m_hi, s_hi, m_lo, s_lo);
+  std::printf("  the host asked it for 780 and 320, a 460 Hz demand.\n");
+  std::printf("\n  %-26s %-26s %6s\n", "generation", "dF1 (word0 - word1)", "n");
+  std::printf("  %-26s %+6.1f +/- %5.1f Hz        %5zu\n", "0, taught by the host", m_g0,
+              s_g0, g0.size());
+  std::printf("  %-26s %+6.1f +/- %5.1f Hz        %5zu\n", "1, tutored", m_g1, s_g1,
+              g1.size());
+  std::printf("  %-26s %+6.1f +/- %5.1f Hz        %5zu\n", "1, tutor vowels SWAPPED",
+              m_g1s, s_g1s, g1s.size());
+  double s_g1l = 0;
+  const double m_g1l = ctx_mean_se(g1l, &s_g1l);
+  std::printf("  %-26s %+6.1f +/- %5.1f Hz        %5zu\n",
+              "1, tutor centre, LOUD", m_g1l, s_g1l, g1l.size());
+  std::printf("  `loud` keeps the tutor's own vowel centre and widens the pair to the\n"
+              "  host's spread -- the tutor's voice with the contrast turned up. It is\n"
+              "  what separates a transmission failure from a distinction too small to\n"
+              "  learn, and those have opposite implications.\n");
+  std::printf("\n  DID EACH LESSON LAND   error early minus late\n"
+              "    generation 0  %+.4f +/- %.4f  (%.1f SE)\n"
+              "    generation 1  %+.4f +/- %.4f  (%.1f SE)\n",
+              m_r0, s_r0, s_r0 > 0 ? std::fabs(m_r0) / s_r0 : 0.0,
+              m_r1, s_r1, s_r1 > 0 ? std::fabs(m_r1) / s_r1 : 0.0);
+  if (!(s_r1 > 0.0 && m_r1 > 3.0 * s_r1)) {
+    std::printf("\n  tutor VOID -- THE PUPIL'S LESSON DID NOT LAND. Reward has no\n"
+                "  measurable purchase on generation 1 at all, so a null about WHAT it\n"
+                "  learned says nothing. The fourth rung, before any verdict.\n");
+    return false;
+  }
+  std::printf("\n  TRANSMISSION   tutored minus swapped:  %+.1f +/- %.1f Hz  (%.1f SE)\n",
+              m_d, s_d, s_d > 0 ? std::fabs(m_d) / s_d : 0.0);
+  std::printf("  the two arms differ ONLY in which tutor vowel goes with which word, so\n"
+              "  this is the information in the tutor's voice and not its sound.\n");
+  const double kBar = 3.0;
+  if (s_d <= 0.0) {
+    std::printf("\n  tutor VOID -- zero variance on the transmission contrast.\n");
+    return false;
+  }
+  if (m_d > kBar * s_d) {
+    const double keep = std::fabs(m_g0) > 1e-9 ? m_g1 / m_g0 : 0.0;
+    std::printf("\n  ONE CREATURE TAUGHT ANOTHER. The pupil's distinction follows the\n"
+                "  tutor's MAPPING and not merely its sound: %+.1f +/- %.1f Hz over an\n"
+                "  arm with identical acoustics and the labels exchanged, %.1f SE.\n"
+                "  Culture starts here -- a thing one creature learned reached a second\n"
+                "  through the air, with no genome passed and nothing bred.\n"
+                "\n  AND IT NARROWS. The tutor was asked for 460 Hz and produced %+.1f; it\n"
+                "  handed on %+.1f, which is %.0f%% of what it got. Whether that ratio is\n"
+                "  stable across generations is what iterated learning is about and this\n"
+                "  run cannot say -- it measures ONE generation. A second generation is\n"
+                "  the same code with the tape taken from the pupil, and it is the next\n"
+                "  run rather than this one.\n",
+                m_d, s_d, m_d / s_d, m_g0, m_g1, 100.0 * keep);
+    return true;
+  }
+  if (m_d < -kBar * s_d) {
+    std::printf("\n  REVERSED, AND NOTHING PREDICTS IT. The pupil's distinction follows the\n"
+                "  SWAPPED mapping more than the true one (%+.1f +/- %.1f Hz, %.1f SE). A\n"
+                "  null and a reversal are different results and this is the second; the\n"
+                "  hypothesis is refused on sign, and the sign is reported and not\n"
+                "  explained.\n", m_d, s_d, m_d / s_d);
+    return false;
+  }
+  std::printf("\n  THE VOICE CARRIES SOUND AND NOT INFORMATION. Tutored and swapped are\n"
+              "  indistinguishable (%+.1f +/- %.1f Hz, under %.0f SE, at power to see\n"
+              "  %.1f Hz), with the pupil's own lesson demonstrably landing. So generation\n"
+              "  1 learns to vocalise and does not learn WHICH vowel goes with WHICH word\n"
+              "  from its tutor.\n"
+              "\n  WHAT THAT MEANS, and it is narrower than it sounds. The tutor handed on\n"
+              "  %.0f and %.0f Hz -- a %.0f Hz distinction where the host demanded 460. A\n"
+              "  pupil cannot be expected to pick up a contrast its tutor barely makes,\n"
+              "  so this is as much a statement about the TUTOR as about transmission.\n"
+              "  The question that decides it is not a better pupil but a LOUDER tutor,\n"
+              "  and the `loud` row above IS that tutor: the same voice with the contrast\n"
+              "  turned up to the host's. A loud arm that separates says the channel works\n"
+              "  and this tutor was too quiet; a loud arm that does not says the air is\n"
+              "  the wrong channel, whatever is sent through it.\n",
+              m_d, s_d, kBar, kBar * s_d, m_hi, m_lo, m_g0);
   return false;
 }
 

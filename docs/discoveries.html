@@ -1070,7 +1070,69 @@ on held-out trials where the reward lands. The feature is fine; the extraction i
 3.3 SE over 32 creatures. The result carries no lesson about <em>which</em> ticks, which is
 stated here because it is the kind of finding that invites one.</p>
 
-<h2>7. Negative results that closed lines</h2>
+
+<h2>7. Transmission between creatures</h2>
+<h3>7.1 One creature teaches another: a learned distinction crosses to a second individual
+through the air, and narrows on the way</h3>
+<p>Everything else in this document is one creature and a host. This is two creatures.
+Generation 0 is taught by the host in the shipped way; what it actually produces for each of
+the two words is measured; and generation 1 &mdash; <em>a different individual</em>, its own
+wiring and its own noise from its own seed &mdash; both <strong>hears</strong> those vowels
+and is <strong>rewarded toward</strong> them. No genome is passed and nothing is bred.</p>
+<p><strong>The design is shaped around a refusal rather than a hope.</strong> Teaching toward
+a <em>heard</em> target is a measured null here: reward cuts error by 24% toward a fixed
+target and by 0.1% toward a heard one. So &ldquo;imitate what you hear&rdquo; would have
+failed for a reason already known and said nothing about transmission. The tutor therefore
+supplies <em>both</em> channels, which is what being taught by someone means.</p>
+<table>
+<tr><th>generation</th><th>distinction produced for the two words</th></tr>
+<tr><td>0, taught by the host (which demanded 460 Hz)</td><td>+96.1 &plusmn; 5.1 Hz</td></tr>
+<tr><td>1, tutored</td><td>+25.6 &plusmn; 7.6 Hz</td></tr>
+<tr><td>1, the tutor&rsquo;s vowels with the labels <strong>swapped</strong></td><td>&minus;27.7 &plusmn; 6.5 Hz</td></tr>
+<tr><td>1, the tutor&rsquo;s centre, contrast widened to the host&rsquo;s</td><td>+61.0 &plusmn; 11.3 Hz</td></tr>
+</table>
+<p><strong>Transmission: +53.3 &plusmn; 10.0 Hz, 5.3 SE.</strong> The two arms it is drawn
+from differ in nothing but which tutor vowel goes with which word &mdash; identical
+acoustics, identical spread &mdash; so the quantity is the <em>information</em> in the
+tutor&rsquo;s voice and not its sound. Both generations&rsquo; lessons demonstrably landed,
+at 28.2 and 4.5 SE, so the fourth rung is satisfied before the verdict is read.</p>
+<p><strong>And the result is symmetric, which is stronger than the contrast alone.</strong>
+The swapped arm did not come back at zero. It came back at &minus;27.7, a near mirror image
+of the tutored arm&rsquo;s +25.6. <strong>The pupil learns an inverted mapping about as
+readily as the true one.</strong> That rules out the reading where one arm is simply broken,
+and it is what transmission actually means: the pupil acquires whatever convention its tutor
+happens to hold, with no preference for the one the host originally taught.</p>
+<p><strong>It narrows, and most of the narrowing is the tutor being quiet rather than the
+channel being lossy.</strong> The host demanded a 460 Hz distinction; generation 0 produced
+96.1; the tutored pupil produced 25.6 &mdash; a total shortfall of 70.5 &plusmn; 9.2 Hz
+across one generation. But a tutor hands on far less than it was asked for, so the pupil is
+being set a much narrower task than its tutor was. Restoring the host&rsquo;s spread around
+the tutor&rsquo;s own vowel centre recovers to 61.0, <strong>+35.4 &plusmn; 13.6 Hz over the
+tutored arm (2.6 SE)</strong>: directional, below the 3 SE bar, and not claimed as
+established. The residual against a host-taught creature, 35.1 &plusmn; 12.4 Hz, is 2.8 SE
+and likewise not claimed. <strong>So whether anything is lost beyond the width of what the
+tutor says is genuinely unresolved here</strong>, and the honest reading is that the
+narrowing is dominated by a quantity the experiment also measures.</p>
+<p class="note">Three limits, stated rather than left to be found. <strong>This is one
+generation.</strong> Whether the ratio is stable, decays to nothing, or stabilises at a
+narrow convention is what iterated learning is about, and the run cannot say; a second
+generation is the same code with the tape taken from the pupil. <strong>The ratios quoted
+above are ratios of means and are descriptive only</strong> &mdash; the per-creature paired
+ratio with a jackknife is the statistic, and it was not computed, so no proportion here
+carries an interval. And <strong>the tape carries formants only</strong>: pitch stays the
+host&rsquo;s, because the creature&rsquo;s own f0 is not recorded. That is a limit of the
+recording rather than a claim that pitch does not matter.</p>
+<p class="note">One design error, caught by a smoke run and worth keeping. The first version
+handed on 621 and 620 Hz &mdash; a 0.3 Hz distinction &mdash; because the default taught arm
+<em>is</em> the heard-target mode this project had already measured at 0.1%. A tutor with
+nothing to say cannot teach, and the run would have been void by construction while looking
+like a clean negative. The fix was to give <em>both</em> generations the word-conditional
+configuration every distinction here is measured under: the tutor so it has something to
+hand on, and the pupil so it can structurally hold it. <strong>Giving it only to the tutor
+would have tested whether a creature can learn something it has no way to
+represent.</strong></p>
+
+<h2>8. Negative results that closed lines</h2>
 <p>Listed because the project&rsquo;s cost is dominated by them and because each removed a
 plausible mechanism from consideration.</p>
 <table>
@@ -1093,7 +1155,7 @@ plausible mechanism from consideration.</p>
 <tr class="last"><td>Consolidation brake on high-traffic edges</td><td>Binds hard (0.671 of the unbraked rate) and changes neither retention nor learning</td></tr>
 </table>
 
-<h2>8. Provenance</h2>
+<h2>9. Provenance</h2>
 <p>Every number above comes from a run of the project&rsquo;s own experiment binary, gated
 before execution on <span class="id">--experiment verify</span> reporting
 <span class="sc">pass</span> with the pinned hash

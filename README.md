@@ -16841,6 +16841,85 @@ measure?* — asked before writing rather than after. Worth recording because a 
 retraction is more expensive than a false finding: it would have thrown away a valid closure
 and sent the next several runs back over ground already covered.
 
+### One creature teaches another: a learned distinction crosses to a second individual through the air
+
+Everything before this is one creature and a host. This is two. Generation 0 is taught by the
+host in the shipped way; what it actually produces for each of the two words is measured; and
+generation 1 — **a different individual**, its own wiring and noise from its own seed — both
+**hears** those vowels and is **rewarded toward** them. No genome is passed and nothing is
+bred.
+
+Teaching toward a *heard* target is a measured null here — reward cuts error **+24% toward a
+fixed target and −0.1% toward a heard one** — so "imitate what you hear" would have failed
+for a reason already known. The tutor therefore supplies **both channels**, which is what
+being taught by someone means.
+
+```
+  generation                              distinction produced
+  0, taught by the host (demanded 460)     +96.1 +/-  5.1 Hz
+  1, tutored                               +25.6 +/-  7.6 Hz
+  1, tutor vowels SWAPPED                  -27.7 +/-  6.5 Hz
+  1, tutor centre, contrast widened        +61.0 +/- 11.3 Hz
+
+  TRANSMISSION   tutored minus swapped     +53.3 +/- 10.0 Hz   (5.3 SE)
+  lessons landed  generation 0 at 28.2 SE, generation 1 at 4.5 SE
+```
+
+**Transmission is established at 5.3 SE.** The two arms it is drawn from differ in nothing
+but which tutor vowel goes with which word — identical acoustics, identical spread — so the
+quantity is the *information* in the tutor's voice and not its sound. A thing one creature
+learned reached a second through the air.
+
+**And it is symmetric, which is stronger than the contrast alone.** The swapped arm did not
+come back at zero; it came back at **−27.7**, a near mirror image of the tutored arm's
+**+25.6**. The pupil learns an inverted mapping about as readily as the true one. That rules
+out the reading where one arm is simply broken, and it is what transmission means: the pupil
+acquires whatever convention its tutor happens to hold, with no preference for the one the
+host originally taught.
+
+#### It narrows — and mostly because the tutor is quiet, not because the channel leaks
+
+The host demanded 460 Hz; generation 0 produced 96.1; the tutored pupil produced 25.6. Total
+shortfall across one generation: **70.5 ± 9.2 Hz**. But a tutor hands on far less than it was
+asked for, so the pupil is set a much narrower task than its tutor was — and the project
+already knows target width matters, having measured that an *unreachable* target beats a
+reachable one.
+
+Restoring the host's spread around the tutor's own vowel centre recovers to 61.0:
+**+35.4 ± 13.6 Hz over the tutored arm, 2.6 SE** — directional, **below the 3 SE bar, and
+not claimed**. The residual against a host-taught creature is **35.1 ± 12.4 Hz, 2.8 SE**,
+likewise not claimed. So **whether anything is lost beyond the width of what the tutor says
+is genuinely unresolved**, and the narrowing is dominated by a quantity the experiment also
+measures.
+
+#### Three limits, stated rather than left to be found
+
+**This is one generation.** Whether the ratio is stable, decays to nothing, or settles at a
+narrow convention is what iterated learning is about, and this run cannot say. A second
+generation is the same code with the tape taken from the pupil.
+
+**The percentages are ratios of means and are descriptive only.** The per-creature paired
+ratio with a jackknife is the statistic; it was not computed, so no proportion here carries
+an interval.
+
+**The tape carries formants only** — pitch stays the host's, because the creature's own f0 is
+not recorded. A limit of the recording, not a claim that pitch does not matter.
+
+#### The design error a smoke run caught
+
+The first version handed on **621 and 620 Hz** — a 0.3 Hz distinction — because the default
+taught arm *is* the heard-target mode already measured at −0.1%. A tutor with nothing to say
+cannot teach, and the run would have been **void by construction while looking like a clean
+negative**. The fix was to give *both* generations the word-conditional configuration every
+distinction here is measured under (`context_slots` 2, `context_source` 4): the tutor so it
+has something to hand on, the pupil so it can structurally hold it. **Giving it only to the
+tutor would have tested whether a creature can learn something it has no way to represent.**
+
+And the `loud` control went in **before** the run rather than after, because a narrow tutor
+makes a null ambiguous in two opposite directions — a channel that cannot carry information,
+or a distinction too small to learn. That ambiguity is cheap to remove in advance and
+expensive to remove afterwards.
+
 ## Layout
 
 ```
@@ -16884,6 +16963,20 @@ author list is worse than an incomplete one.
   DNA v12's divisive normalisation off does spread the weight distribution, but
   per-neuron it is differential growth rather than the conserved-total
   competition Fiete's mechanism needs.
+**Cultural transmission between individuals, which is what `tutor` measures.**
+
+- Kirby, S., Cornish, H. & Smith, K. (2008). *Cumulative cultural evolution in the
+  laboratory: an experimental approach to the origins of structure in human language.*
+  PNAS 105(31), 10681–10686. <https://doi.org/10.1073/pnas.0707835105> — the iterated
+  learning paradigm this borrows its shape from: an artificial language passed down a
+  chain of learners, each trained only on the output of the one before. Cited for the
+  method and for the framing that cultural transmission can produce "the appearance of
+  design without a designer". What is **not** borrowed is the conclusion: their languages
+  become *more* structured and more transmissible down the chain, whereas the single
+  generation measured here *narrows*. One generation cannot distinguish a decay from a
+  convention settling, so no claim is made in either direction, and the comparison is
+  offered as the obvious next measurement rather than as agreement.
+
 - Mackevicius, E. L., Gu, S., Denisenko, N. I. & Fee, M. S. (2023).
   *Self-organization of songbird neural sequences during social isolation.*
   eLife 12, e77262. <https://elifesciences.org/articles/77262> — sequences form
