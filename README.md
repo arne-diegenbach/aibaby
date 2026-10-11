@@ -16576,6 +16576,95 @@ strictly less total credit (61% surviving the delay against 98%). A trace spanni
 phases credits all of them indiscriminately, so a shorter one should write more coherently
 while writing less. A prediction at 2.2 SE, not a result.
 
+### The gesture and the lesson trade against each other monotonically, and the gesture is never loud
+
+`phaseteach` found that turning the half-centre on costs four fifths of the fixed-target
+lesson, and the operating point that cost it had been chosen for the gesture's F1 swing
+with the lesson never once checked. The obvious question is whether anywhere in the
+oscillating regime both work. `hcsweep` sweeps `halfcenter_gain` and reads **both** numbers
+at every point — the lesson from a fixed-target arm, the gesture from a phase arm — 18
+creatures per arm, reward delay and credit window held fixed.
+
+```
+  gain   lesson drop (early-late)   gesture sep (ph1-ph0)   share   voiced
+  0.15    +0.2062 +/- 0.0079         +3.2 +/- 0.1 Hz        0.49     0.67
+  0.30    +0.1835 +/- 0.0062         +3.6 +/- 0.1 Hz        0.50     0.67
+  0.45    +0.1243 +/- 0.0095         +8.0 +/- 0.1 Hz        0.49     0.67
+  0.60    +0.0465 +/- 0.0073        +19.5 +/- 0.3 Hz        0.50     0.67
+```
+
+**The comparison validates itself.** Gain 0.60 is in the sweep on purpose, and it returns
+`+0.0465 ± 0.0073` — the earlier measurement to the last digit. A row far from it would have
+meant the cross-run comparison was broken rather than the composition failing.
+
+**Monotonic on both axes, in opposite directions, with every point tight.** The lesson's
+steps are −0.0227 ± 0.0100, −0.0592 ± 0.0113 and −0.0778 ± 0.0120 — 2.3, 5.2 and 6.5 SE,
+accelerating — while the gesture's separation rises 3.2 → 3.6 → 8.0 → 19.5 Hz. The
+alternation is live and balanced at every gain (`share` 0.49–0.50, `off` 0.00) and the voice
+is never silenced (`voiced` 0.67 throughout), so no point in the sweep is a bound on the
+window rather than a measurement.
+
+**The account under test is confirmed, as a gradient.** The proposal was that mutual
+inhibition makes the alternation an attractor that reward-driven weight changes cannot
+perturb. If so, inhibition strength should be the knob, and it is: four points, monotone,
+accelerating.
+
+**And yesterday's four-fifths cost is not intrinsic to having a gesture.** At gain 0.15 the
+lesson is `+0.2062 ± 0.0079` against the half-centre-off reference of `+0.2197 ± 0.0120` —
+a difference of **0.0135 ± 0.0144, 0.9 SE, statistically identical**. A creature with a live,
+balanced half-centre can be taught exactly as well as one without. The cost is a function of
+how hard the inhibition is driven, not of the mechanism being present.
+
+#### The part that reframes the earlier result
+
+Read the separation against what the gesture does when nobody is teaching it. The
+free-running alternation reaches the ends of the F1 range, 438 and 813 Hz, and one setting
+was measured at 135.6 Hz of free-running swing at +52 SE.
+
+```
+  gain   taught sep   as a share of a 375 Hz full alternation
+  0.15     3.2 Hz                  0.9%
+  0.30     3.6 Hz                  1.0%
+  0.45     8.0 Hz                  2.1%
+  0.60    19.5 Hz                  5.2%
+```
+
+**In a taught session the gesture never exceeds a twentieth of its free-running amplitude,
+at any gain in the sweep.** That was reported as a success from the other side — *the gesture
+survives teaching*, `share` 0.50, `off` 0.00 — and `share` and `off` are statements about the
+alternation's **existence**, not its **size**. Existence survives; amplitude does not, and
+amplitude is the part that would carry a syllable. The suppression runs both ways, which is
+what a competition account predicts and what neither measurement had been arranged to see.
+
+The ratio needs one cheap measurement before it is a finding rather than a flag: `sep` is a
+mean difference over reward ticks and the 135.6 Hz swing is an excursion, so they are not the
+same estimator. Two numbers that disagree by an order of magnitude across different
+estimators are a reason to measure, not a result.
+
+#### What the verdict rests on, stated plainly
+
+The run prints a refusal, and the refusal is knife-edge on bars I chose. `sep > 10 Hz` and
+`lesson > 0.1099` (half the off-reference) happen to cross at **the same gain, about 0.5** —
+so a reader who wanted either bar slightly looser would get the opposite verdict. **The
+robust result is the curve, not the binary.** Where the lesson is whole the gesture is 0.9%
+of an alternation; where the gesture is largest the lesson keeps a fifth; and nothing in
+between escapes the trade.
+
+What would overturn it: a gain outside the swept range still inside the oscillating window,
+or the same sweep in `halfcenter_drive`, which is the axis the window was actually mapped in
+and where the regime is known to be bounded with a winner-take-all gap in the middle.
+
+#### One attribution that cannot be had, and why that is an answer
+
+Separating adaptation from inhibition in the four-fifths cost looked like a cheap owed run —
+a `halfcenter_gain = 0` arm. It is already refused by data on disk: at drive 1.40, **fatigue
+alone silences the voice (duty 0.00) and inhibition alone runs away (121.98 Hz)**, confirmed
+on 12 seeds. The two ingredients mutually stabilise, which is Matsuoka's own prediction. So
+there is no configuration with adaptation and no inhibition that has a voice to teach, and
+the attribution cannot be had by ablation **at all**. The cost necessarily names the
+configuration rather than either mechanism. That is a structural fact, not a missing run, and
+checking the candidate arm against the record cost one grep.
+
 ## Layout
 
 ```

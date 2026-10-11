@@ -365,6 +365,18 @@ const Spec kSpecs[] = {
      "  if the half-centre reports no phase or has settled on one winner. The\n"
      "  evidence is the IDENTITY-minus-SWAPPED mapping contrast, because the\n"
      "  oscillator contributes to both equally and cancels from the difference."},
+    {"hcsweep", 3400000, Expect::kOpen, Tier::kTeach,
+     "derived: the same teaching length as vocallearn and phaseteach, because the\n"
+     "  quantity IS vocallearn's -- error early minus late. Is there an operating\n"
+     "  point where the GESTURE and the LESSON both work? phaseteach found that\n"
+     "  turning the half-centre on costs 0.1732 +/- 0.0140 of the fixed-target\n"
+     "  lesson, 12.3 SE, and the point that cost it was tuned for F1 swing alone.\n"
+     "  Sweeps halfcenter_gain and reads BOTH per gain: the lesson from a fixed-\n"
+     "  target arm and the gesture from a phase arm. A gain-0 arm is deliberately\n"
+     "  absent -- fatigue alone silences the voice and inhibition alone runs away,\n"
+     "  so the two cannot be separated by ablation at all. Bar fixed in advance:\n"
+     "  some gain must clear half the half-centre-off reference while keeping the\n"
+     "  alternation live and balanced. Run on results/hc-phase.toml."},
     {"blockwhere", 5600000, Expect::kOpen, Tier::kLong,
      "blockfloor found ONE neuron of fourteen costs 30% of the lesson and four\n"
      "  cost 57%. Is that about HOW MANY cells are blocked or WHICH ONES? Every\n"
@@ -906,6 +918,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "compartprobe") ok = run_compartprobe(dna_blob, ticks, verbose);
   else if (name == "blockfloor") ok = run_blockfloor(dna_blob, ticks, verbose);
   else if (name == "phaseteach") ok = run_phaseteach(dna_blob, ticks, verbose);
+  else if (name == "hcsweep") ok = run_hcsweep(dna_blob, ticks, verbose);
   else if (name == "blockwhere") ok = run_blockwhere(dna_blob, ticks, verbose);
   else if (name == "blockanchor") ok = run_blockanchor(dna_blob, ticks, verbose);
   else if (name == "leverprobe") ok = run_leverprobe(dna_blob, ticks, verbose);

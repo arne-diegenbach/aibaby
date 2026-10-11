@@ -10138,6 +10138,207 @@ bool run_phaseteach(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
   return false;
 }
 
+// DOES THE GESTURE COMPOSE WITH THE LESSON AT ANY OPERATING POINT?
+//
+// `phaseteach` refused the phase-targeted lesson on every credit window and both reward
+// delays, and its positive control found the larger result: turning the half-centre on
+// costs 0.1732 +/- 0.0140 of the fixed-target lesson, 12.3 SE, about four fifths of it.
+// The operating point that cost it was chosen for the gesture's F1 swing and never once
+// checked against the lesson.
+//
+// The account under test: mutual inhibition makes the alternation a strong attractor, so
+// reward-driven weight changes cannot perturb it. If that is right, weaker inhibition
+// should TRADE F1 swing for lesson purchase, and somewhere in between both might work.
+//
+// WHY A SWEEP IS LICENSED HERE. The standing rule is derive, never guess. Nothing
+// predicts where in the oscillating window a lesson survives -- the window itself is
+// bounded and mapped in `halfcenter_drive`, not in gain, and the gain axis has only ever
+// been run at one value. Derivation has no solution and the space is ONE scalar, which is
+// the narrow exception recorded with the rule.
+//
+// WHAT IS *NOT* IN THIS SWEEP, AND WHY. A `halfcenter_gain = 0` arm would separate
+// adaptation from inhibition and attribute the 4/5 cost. It is already known void:
+// at drive 1.40 fatigue alone silences the voice (duty 0.00) and inhibition alone runs
+// away (121.98 Hz) -- the two ingredients MUTUALLY STABILISE, which is Matsuoka's
+// prediction and was confirmed here on 12 seeds. So the attribution cannot be had by
+// ablation at all: there is no configuration with adaptation and no inhibition that has a
+// voice to teach. The 4/5 cost necessarily names the CONFIGURATION rather than either
+// mechanism, and that is a structural fact rather than a missing run.
+bool run_hcsweep(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  aibaby::Dna dna;
+  if (dna.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) {
+    std::printf("  setup failed: the genome does not load\n");
+    return false;
+  }
+  // The reference the bar is set against: the fixed-target lesson with the half-centre
+  // OFF, measured on `dna/default.toml`, 18 creatures, this same quantity and the same
+  // 50 ms reward delay. Quoted, not re-run -- per-job seeds are arm-independent here and
+  // cross-run pairing is verified, and gain 0.60 below reproduces its own earlier point
+  // as the check that the comparison holds.
+  constexpr double kOffDrop = 0.2197;
+  constexpr double kPrevAtPoint = 0.0465;  // the same quantity at gain 0.60
+  struct HCArm { float gain; int tgt; const char* tag; };
+  static const HCArm kHC[] = {
+      {0.15f, int(kVLTgtFixed), "fixed"}, {0.15f, int(kVLTgtPhase), "phase"},
+      {0.30f, int(kVLTgtFixed), "fixed"}, {0.30f, int(kVLTgtPhase), "phase"},
+      {0.45f, int(kVLTgtFixed), "fixed"}, {0.45f, int(kVLTgtPhase), "phase"},
+      {0.60f, int(kVLTgtFixed), "fixed"}, {0.60f, int(kVLTgtPhase), "phase"},
+  };
+  constexpr uint32_t kN = 8, kReps = 18;
+  instrument("hcsweep", dna.header().seed ^ 0x4C5Eu, ticks / kVLTrialTicks, "trials per arm");
+  std::printf("  hcsweep -- is there an operating point where the GESTURE and the\n"
+              "  LESSON both work? The gesture is free and replicated; the lesson is\n"
+              "  free and measured; at the one point where the gesture was tuned, the\n"
+              "  lesson keeps only a fifth of its strength.\n");
+  std::printf("  the quantity  per gain, TWO numbers: error early-minus-late on a FIXED\n"
+              "                target (the lesson), and the phase separation with its\n"
+              "                share (the gesture). Both have to be read or the trade is\n"
+              "                invisible.\n");
+  std::printf("  the bar       fixed in advance: some gain must give a lesson drop over\n"
+              "                HALF of the half-centre-off reference %.4f -- that is\n"
+              "                %.4f -- while keeping sep > 10 Hz and share in 0.15-0.85.\n",
+              kOffDrop, 0.5 * kOffDrop);
+  std::printf("  refused if    no gain clears both at once. That is not another refused\n"
+              "                mechanism: it says the two do not COMPOSE at any operating\n"
+              "                point, which is a statement about the architecture.\n");
+  std::printf("  liveness      `voiced` is the voiced frame fraction. A gain outside the\n"
+              "                oscillating window silences the voice, and a silent\n"
+              "                creature has no lesson to lose -- so a null there is a\n"
+              "                BOUND on the window, not a failure of teaching.\n\n");
+  struct Cell {
+    bool ok = false;
+    double drop = 0, sep = 0, share = 0, off = 0, voiced = 0;
+    uint32_t scored = 0;
+  };
+  const std::vector<Cell> cells = parallel_reps<Cell>(kReps * kN, [&](uint32_t i) {
+    const uint32_t r = i / kN, a = i % kN;
+    Cell c;
+    std::vector<uint8_t> variant = blob;
+    const uint64_t seed = dna.header().seed + r * 7919ull;
+    std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+    const float g = kHC[a].gain;
+    std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, vocal) +
+                    offsetof(aibaby::DnaVocal, halfcenter_gain),
+                &g, sizeof(g));
+    Regime reg;
+    reg.praise = kPraiseValue;
+    reg.scold = kScoldValue;
+    // The same 50 ms delay the reference was measured at, so the comparison is on the
+    // gain and nothing else.
+    reg.delay = kPTFastDelayTicks;
+    const VLRun run = run_vocallearn_session(variant, ticks, kVLTaught, nullptr, reg,
+                                             kHC[a].tgt);
+    if (!run.ok) return c;
+    c.ok = true;
+    c.drop = run.err_early - run.err_late;
+    c.share = run.ph_share;
+    c.off = run.ph_off;
+    c.voiced = run.voiced_frac;
+    c.scored = run.scored;
+    if (run.ph_n[0] >= 50 && run.ph_n[1] >= 50) c.sep = run.ph_f1[1] - run.ph_f1[0];
+    parallel_note("  [%u/%u] seed %u gain %.2f %-5s  drop %+.4f  sep %+6.1f  voiced %.2f\n",
+                  i + 1, kReps * kN, r, double(kHC[a].gain), kHC[a].tag, c.drop, c.sep,
+                  c.voiced);
+    return c;
+  });
+  std::printf("\n  %-6s %-6s %5s  %-22s %-18s %6s %6s %6s\n", "gain", "arm", "n",
+              "lesson drop (early-late)", "sep (ph1-ph0)", "share", "off", "voiced");
+  // Only the best lesson and the gain it came from. An earlier draft also tracked that
+  // gain's sep and share here, which read sep_at[a + 1] before the phase arm had been
+  // processed and would have carried a stale zero into the verdict -- the kind of number
+  // that looks meaningful and is not. The trade is printed per gain below instead, where
+  // both halves are known.
+  double best_drop = -1e9, best_gain = -1.0;
+  double drop_at[kN] = {}, sep_at[kN] = {}, share_at[kN] = {};
+  bool live[kN] = {};
+  for (uint32_t a = 0; a < kN; ++a) {
+    std::vector<double> d, sp;
+    double mv = 0.0, msh = 0.0, mof = 0.0;
+    uint32_t n = 0;
+    for (uint32_t r = 0; r < kReps; ++r) {
+      const Cell& c = cells[r * kN + a];
+      if (!c.ok) continue;
+      d.push_back(c.drop);
+      if (c.sep != 0.0) sp.push_back(c.sep);
+      mv += c.voiced; msh += c.share; mof += c.off; ++n;
+    }
+    if (!n) { std::printf("  %-6.2f %-6s   (no creature completed)\n",
+                          double(kHC[a].gain), kHC[a].tag); continue; }
+    double sd = 0.0, ss = 0.0;
+    const double md = d.size() >= 3 ? ctx_mean_se(d, &sd) : 0.0;
+    const double ms = sp.size() >= 3 ? ctx_mean_se(sp, &ss) : 0.0;
+    char b1[40], b2[40];
+    std::snprintf(b1, sizeof b1, "%+.4f +/- %.4f", md, sd);
+    if (sp.size() >= 3) std::snprintf(b2, sizeof b2, "%+.1f +/- %.1f Hz", ms, ss);
+    else std::snprintf(b2, sizeof b2, "%s", "(no phase bins)");
+    std::printf("  %-6.2f %-6s %5u  %-22s %-18s %6.2f %6.2f %6.2f\n", double(kHC[a].gain),
+                kHC[a].tag, n, b1, b2, msh / n, mof / n, mv / n);
+    drop_at[a] = md; sep_at[a] = ms; share_at[a] = msh / n;
+    live[a] = (mv / n) > 0.01;
+    // The lesson is read on the FIXED arm and the gesture on the PHASE arm at the same
+    // gain, which is why they are swept as a pair.
+    if (kHC[a].tgt == int(kVLTgtFixed) && md > best_drop) {
+      best_drop = md; best_gain = double(kHC[a].gain);
+    }
+  }
+  std::printf("\n  the half-centre-off reference for this quantity is %+.4f, and the\n"
+              "  previous measurement at gain 0.60 was %+.4f. A gain-0.60 row far from\n"
+              "  that second number means the comparison itself is broken.\n",
+              kOffDrop, kPrevAtPoint);
+  // VACUITY: a sweep in which every point is silent measures the window, not the trade.
+  bool any_live = false;
+  for (uint32_t a = 0; a < kN; ++a) if (live[a]) any_live = true;
+  if (!any_live) {
+    std::printf("\n  hcsweep VOID -- every gain silenced the voice, so nothing here is a\n"
+                "  measurement of teaching. This bounds the oscillating window and says\n"
+                "  nothing about composition.\n");
+    return false;
+  }
+  const double bar = 0.5 * kOffDrop;
+  // Pair each gain's lesson with its own gesture, and report the trade explicitly so a
+  // reader can see the shape rather than only the verdict.
+  std::printf("\n  THE TRADE, gain by gain (lesson from the fixed arm, gesture from the\n"
+              "  phase arm at the same gain)\n");
+  bool cleared = false;
+  double clear_gain = 0.0;
+  for (uint32_t a = 0; a + 1 < kN; a += 2) {
+    const bool gesture_ok = sep_at[a + 1] > 10.0 && share_at[a + 1] >= 0.15 &&
+                            share_at[a + 1] <= 0.85;
+    const bool lesson_ok = drop_at[a] > bar;
+    std::printf("    gain %.2f   lesson %+.4f %-3s   gesture sep %+6.1f share %.2f %-3s"
+                "   %s\n", double(kHC[a].gain), drop_at[a], lesson_ok ? "OK" : "no",
+                sep_at[a + 1], share_at[a + 1], gesture_ok ? "OK" : "no",
+                (lesson_ok && gesture_ok) ? "<-- BOTH" : "");
+    if (lesson_ok && gesture_ok) { cleared = true; clear_gain = double(kHC[a].gain); }
+  }
+  if (cleared) {
+    std::printf("\n  THEY COMPOSE. At gain %.2f the lesson keeps %+.4f -- over half the\n"
+                "  half-centre-off reference -- while the gesture still alternates with a\n"
+                "  balanced share. The operating point was the problem, not the pair, and\n"
+                "  the tuning that cost four fifths of the lesson was tuning for F1 swing\n"
+                "  alone.\n"
+                "\n  WHAT THIS DOES NOT YET SHOW: that a lesson can be aimed at ONE PHASE.\n"
+                "  This is the fixed-target lesson surviving alongside the gesture, which\n"
+                "  is the precondition for phase teaching and not phase teaching itself.\n"
+                "  Re-run `phaseteach` at this gain before claiming anything about aim.\n",
+                clear_gain, best_drop);
+    return true;
+  }
+  std::printf("\n  THEY DO NOT COMPOSE AT ANY GAIN IN THE WINDOW. The best lesson over the\n"
+              "  sweep is %+.4f at gain %.2f against a bar of %.4f, and where the lesson\n"
+              "  is strongest the gesture is weakest. This is not one more refused\n"
+              "  mechanism: both parts work separately and measurably, and the claim is\n"
+              "  that THIS ARCHITECTURE cannot run them at once -- a scalar reward writing\n"
+              "  into a rate-weighted centroid that a mutual-inhibition attractor is\n"
+              "  already holding at one of its two ends.\n"
+              "\n  WHAT WOULD OVERTURN IT: a gain outside the swept range that is still\n"
+              "  inside the oscillating window, or the same sweep in `halfcenter_drive`,\n"
+              "  which is the axis the window was actually mapped in.\n",
+              best_drop, best_gain, bar);
+  return false;
+}
+
 bool run_blockwhere(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
   (void)verbose;
   aibaby::Dna dna0;
