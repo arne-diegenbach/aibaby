@@ -16993,6 +16993,82 @@ structure and learnability, mine is the magnitude of one formant distinction, an
 that shrinks is not the same object as a grammar that regularises. What the two share is only
 the method.
 
+### It was width, not a leak — and the widened chain is a ratchet that locks in arbitrary conventions
+
+`tutorchain` found the convention decaying to nothing, which does not establish that the
+channel loses information: a tutor says less than it was asked, so each pupil inherits a
+smaller task, and a width-limited channel losing nothing produces a decaying series too.
+`tutorwide` separates them. `wide` carries the tutor's own vowel centre **and its own
+ordering** and re-spreads the pair to the host's log distance — the mapping propagates, the
+width is held fixed. `wide-flip` exchanges the inherited ordering at every step, because a
+re-imposed width hands every pupil a wide target whatever its tutor said.
+
+```
+  generation   plain chain        WIDE (signed)      WIDE |dF1|        wide-flip
+  0            +96.1 +/-  5.1     +96.1 +/-  5.1     96.1 +/-  5.1     (shared)
+  1            +25.6 +/-  7.6     +61.0 +/- 11.3     63.8 +/- 10.4     -54.9 +/-  9.7
+  2            +10.5 +/-  5.4     +31.8 +/- 20.8     88.3 +/-  5.6     +55.1 +/- 11.7
+  3             -0.3 +/-  3.7     +44.2 +/- 18.1     83.4 +/-  5.9     -56.7 +/- 14.5
+  4             +0.5 +/-  3.1     +35.5 +/- 19.7     85.6 +/-  5.5     +61.9 +/- 16.3
+```
+
+**It was width.** Holding the width fixed, the distinction does not decay at all: generation
+4 carries **85.6 ± 5.5 Hz** against generation 0's 96.1 ± 5.1, a difference of **10.5 ± 7.5,
+1.4 SE — no detectable loss across four generations** — where the plain chain lost
+95.6 ± 6.0 (16.0 SE) over the same span. And `wide-flip` alternates on **4 of 4** resolved
+generations at 55–62 Hz, so the mapping really is inherited and not manufactured by the
+target. Culture here does not decay because the air loses information. It decays because each
+tutor produces a narrower distinction than it was taught, and the next pupil can only aim at
+what it hears. **That moves the problem from transmission to production**, which is where
+this project's measured ceilings already are.
+
+#### And the mechanism is a ratchet, which was not predicted
+
+**5 of the 18 chains ended up holding the *inverted* convention** — word 0 low, word 1 high,
+the opposite of what the host taught — and held it at full strength. **18 of 18 never changed
+sign after generation 1.**
+
+The inverted chains are exactly the ones whose first pupil nearly failed:
+
+```
+  |dF1| at generation 1    kept the host's ordering   86.4 +/- 7.5 Hz  (n=13)
+                           inherited the inversion     5.1 +/- 1.8 Hz  (n=5)
+                           difference  81.3 +/- 7.8 Hz  (10.5 SE)
+```
+
+A near-zero ordering is **arbitrary** — which vowel came out marginally higher is noise. The
+widened tape then takes that sign, re-spreads it to full width, and hands it on; the next
+generation produces it confidently, and it never reverses. The mean |dF1| series shows the
+amplification directly: 63.8 at generation 1, where the near-failures are still near zero,
+rising to 88.3 by generation 2 once they have been widened. **The mechanism does not merely
+preserve a convention, it restores the magnitude of whatever convention it finds, including
+one that was noise when it started.**
+
+That is a recognisable thing rather than a malfunction: an arbitrary convention arising from
+a near-tie and then being held stably down a lineage. It is also the sharpest reason to
+distrust a single chain — a quarter of them ended up with a different language.
+
+#### The verdict the run printed was wrong, and the error is the same shape as the last one
+
+The run printed **"IT LEAKS"**. It used the **signed** mean, which was 35.5 ± 19.7 at
+generation 4 and fails a 3 SE bar. But a chain holding the inverted convention contributes a
+large *negative* number that cancels against the faithful chains, so the signed mean reads
+confident inversion as decay. **The signed mean across units is not a measure of magnitude
+when the sign can differ between units**, and the mean absolute value separates "the
+distinction shrank" from "some chains hold the opposite convention" — two completely
+different findings that the registered statistic merged.
+
+This is the **second run in a row** where a pre-registered statistic was the wrong *shape*
+for its data: `tutorchain`'s alternation test averaged over generations that had nothing left
+to invert. Pre-registration protects against fitting a test to results. It does nothing about
+choosing a test that cannot express the result. Both are now standing rules.
+
+**No re-run was needed.** The data is complete and the correction is arithmetic on it: the
+corrected branch condition was evaluated against the run's own numbers (85.6 > 16.5, plain
+dead, 4 of 4 alternating) and lands on *width, not leak*. The source is fixed and re-gated
+so the next run prints the right verdict, and 2h of compute was not spent re-deriving numbers
+that were already correct — only the sentence over them was wrong.
+
 ## Layout
 
 ```

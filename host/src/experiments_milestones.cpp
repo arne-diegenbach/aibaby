@@ -11634,6 +11634,330 @@ bool run_tutorchain(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
   return false;
 }
 
+// WAS THE CHAIN'S DECAY A LOSSY CHANNEL, OR JUST TUTORS BEING QUIET?
+//
+// `tutorchain` found the convention decaying to nothing over five generations: 96.1 -> 25.6
+// -> 10.5 -> -0.3 -> +0.5 Hz. That does NOT establish that the channel loses information. A
+// tutor hands on a narrower distinction than it was asked for, so each pupil is set a
+// harder-to-hit task than its own tutor was -- and a WIDTH-LIMITED channel losing nothing at
+// all produces a decaying series too. "It decays" and "the channel leaks" are different
+// claims and only the first was measured; the two contrasts that would have separated them
+// came in at 2.6 and 2.8 SE.
+//
+// THE SEPARATION. `wide` propagates only the MAPPING and holds the WIDTH fixed: each
+// generation's tape keeps its tutor's own vowel centre and is re-spread to the host's log
+// distance. If the series then holds, the loss was width, the channel is clean, and culture
+// here is limited by what a creature can SAY rather than by what the air can carry.
+//
+// AND THE CONFOUND THAT DESIGN CREATES, WHICH IS WHY THERE IS A THIRD CHAIN. Re-imposing a
+// fixed spread every generation means the TARGET always carries a wide distinction, so a
+// pupil could produce one with ZERO information from its tutor -- the width alone would do
+// it. The only thing actually inherited is WHICH VOWEL IS HIGH. So `wide-flip` exchanges the
+// labels at every step of the widened chain: if the widened series carries its tutor's
+// mapping the sign must ALTERNATE, and if the width is doing all the work both widened
+// chains come back with the same sign and a similar magnitude.
+//
+// AND THE STATISTIC IS SHAPED FOR A SERIES THAT MAY DIE. `tutorchain`'s alternation test
+// averaged over all four generations and came in at 2.7 SE because its last two terms had
+// nothing left to invert -- a pre-registered statistic of the wrong shape. Here the
+// alternation is scored PER GENERATION and also over the generations whose faithful
+// counterpart is still resolved, both declared before the run.
+bool run_tutorwide(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  aibaby::Dna dna;
+  if (dna.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) {
+    std::printf("  setup failed: the genome does not load\n");
+    return false;
+  }
+  constexpr uint32_t kReps = 18, kDepth = 5;
+  constexpr uint64_t kGenOffset = 104729ull;
+  instrument("tutorwide", dna.header().seed ^ 0x7C9Du, ticks / kVLTrialTicks,
+             "trials per generation");
+  std::printf("  tutorwide -- `tutorchain` showed the convention decaying to nothing over\n"
+              "  five generations. Was that the CHANNEL losing information, or just that a\n"
+              "  tutor says less than it was asked and each pupil inherits a smaller task?\n");
+  std::printf("  the three chains\n"
+              "    plain       each generation's tape is its tutor's production, as before\n"
+              "    wide        the tutor's own vowel CENTRE and its own ORDER, re-spread\n"
+              "                to the host's log distance -- the MAPPING propagates and the\n"
+              "                WIDTH is held fixed. The ORDER is the whole point: without\n"
+              "                it the tape re-imposes a mapping instead of inheriting one.\n"
+              "    wide-flip   the same, with the two labels exchanged at EVERY step\n");
+  std::printf("  why the third the widened target always carries a wide distinction, so a\n"
+              "                pupil could produce one with NO information from its tutor.\n"
+              "                The only inherited thing is WHICH VOWEL IS HIGH, and the\n"
+              "                flip is what tests that it was inherited at all.\n");
+  std::printf("  the bars      fixed in advance. WIDTH if `wide` clears 3 SE at generation 4\n"
+              "                where `plain` does not, AND `wide-flip` alternates sign --\n"
+              "                then the channel is clean and the limit is what a creature\n"
+              "                can SAY. LEAK if `wide` decays too. CONFOUNDED if `wide`\n"
+              "                holds but `wide-flip` does NOT alternate, because then the\n"
+              "                width is producing the distinction and nothing is inherited.\n");
+  std::printf("  %u chains, %u generations, three chains per creature.\n\n", kReps, kDepth);
+  struct Cell {
+    bool ok = false;
+    double pl[kDepth] = {}, wd[kDepth] = {}, wf[kDepth] = {};
+    double drop[kDepth] = {};
+  };
+  const auto centroids = [](const VLRun& r, double* lo, double* hi) {
+    double ws[2] = {0.0, 0.0};
+    uint32_t wn[2] = {0u, 0u};
+    for (size_t q = 0; q < r.utt_f1.size(); ++q) {
+      const int wd2 = r.utt_word[q];
+      if (wd2 < 0 || wd2 > 1 || r.utt_f1[q] <= 1.0) continue;
+      ws[wd2] += std::log(r.utt_f1[q]);
+      ++wn[wd2];
+    }
+    if (wn[0] < 4u || wn[1] < 4u) return false;
+    *hi = std::exp(ws[0] / wn[0]);
+    *lo = std::exp(ws[1] / wn[1]);
+    return true;
+  };
+  // The host's own log half-distance, which is what `wide` re-imposes. Derived from the
+  // shipped vowel table rather than chosen.
+  const double kHalf = std::sqrt(double(kWords[0].f1) / double(kWords[1].f1));
+  const size_t slots_off = offsetof(aibaby::DnaHeader, exploration) +
+                           offsetof(aibaby::DnaExploration, context_slots);
+  const size_t src_off = offsetof(aibaby::DnaHeader, exploration) +
+                         offsetof(aibaby::DnaExploration, context_source);
+  const std::vector<Cell> cells = parallel_reps<Cell>(kReps, [&](uint32_t r) {
+    Cell c;
+    const uint32_t ctx_slots = 2u, ctx_src = 4u;
+    Regime reg;
+    reg.praise = kPraiseValue;
+    reg.scold = kScoldValue;
+    const uint64_t s0 = dna.header().seed + r * 7919ull;
+    const auto genome_for = [&](uint32_t gen) {
+      std::vector<uint8_t> v = blob;
+      const uint64_t sg = s0 + uint64_t(gen) * kGenOffset;
+      std::memcpy(v.data() + offsetof(aibaby::DnaHeader, seed), &sg, sizeof(sg));
+      std::memcpy(v.data() + slots_off, &ctx_slots, sizeof(ctx_slots));
+      std::memcpy(v.data() + src_off, &ctx_src, sizeof(ctx_src));
+      return v;
+    };
+    const VLRun g0 = run_vocallearn_session(genome_for(0), ticks, kVLTaught, nullptr, reg);
+    if (!g0.ok) return c;
+    double hi = 0.0, lo = 0.0;
+    if (!centroids(g0, &lo, &hi)) return c;
+    c.pl[0] = c.wd[0] = c.wf[0] = hi - lo;
+    c.drop[0] = g0.err_early - g0.err_late;
+    double p_hi = hi, p_lo = lo, w_hi = hi, w_lo = lo, x_hi = hi, x_lo = lo;
+    for (uint32_t gen = 1; gen < kDepth; ++gen) {
+      std::vector<uint8_t> v = genome_for(gen);
+      Word plain[2];
+      plain[0] = kWords[0]; plain[0].f1 = float(p_hi);
+      plain[1] = kWords[1]; plain[1].f1 = float(p_lo);
+      // WIDENED: the tutor's own geometric centre, re-spread to the host's log distance.
+      //
+      // THE ORDER MUST BE INHERITED AND THE FIRST VERSION OF THIS DROPPED IT. Re-spreading
+      // from the centre alone discards WHICH WAY ROUND the tutor's pair was, so the widened
+      // tape would have put the high vowel on the same word every generation no matter what
+      // its tutor said -- the mapping RE-IMPOSED rather than passed on, which is exactly
+      // the confound the third chain exists to detect, baked in instead of tested. The
+      // smoke run showed it: the flipped widened chain went +7.1, -10.8, -15.9, -16.3,
+      // holding one sign instead of alternating, because the sign was being set fresh at
+      // every step. Caught by reading the arm's own output rather than its verdict.
+      //
+      // So the SIGN of the tutor's pair is carried and only its SIZE is replaced.
+      const double wc = std::sqrt(w_hi * w_lo);
+      const double w_dir = (w_hi >= w_lo) ? 1.0 : -1.0;
+      Word wide[2];
+      wide[0] = kWords[0];
+      wide[1] = kWords[1];
+      wide[0].f1 = float(w_dir > 0.0 ? wc * kHalf : wc / kHalf);
+      wide[1].f1 = float(w_dir > 0.0 ? wc / kHalf : wc * kHalf);
+      // ...and the same with the inherited order EXCHANGED at every step, which is the only
+      // way to tell an inherited mapping from a re-imposed width.
+      const double xc = std::sqrt(x_hi * x_lo);
+      const double x_dir = (x_hi >= x_lo) ? -1.0 : 1.0;   // inherit, then flip
+      Word wflip[2];
+      wflip[0] = kWords[0];
+      wflip[1] = kWords[1];
+      wflip[0].f1 = float(x_dir > 0.0 ? xc * kHalf : xc / kHalf);
+      wflip[1].f1 = float(x_dir > 0.0 ? xc / kHalf : xc * kHalf);
+      const VLRun gp = run_vocallearn_session(v, ticks, kVLTaught, nullptr, reg, -1, nullptr,
+                                             kVLScoreFormant, nullptr, kVLWords, plain,
+                                             nullptr, nullptr, nullptr, nullptr, plain);
+      const VLRun gw = run_vocallearn_session(v, ticks, kVLTaught, nullptr, reg, -1, nullptr,
+                                             kVLScoreFormant, nullptr, kVLWords, wide,
+                                             nullptr, nullptr, nullptr, nullptr, wide);
+      const VLRun gx = run_vocallearn_session(v, ticks, kVLTaught, nullptr, reg, -1, nullptr,
+                                             kVLScoreFormant, nullptr, kVLWords, wflip,
+                                             nullptr, nullptr, nullptr, nullptr, wflip);
+      if (!gp.ok || !gw.ok || !gx.ok) return c;
+      double a = 0, b = 0, a2 = 0, b2 = 0, a3 = 0, b3 = 0;
+      if (!centroids(gp, &a, &b) || !centroids(gw, &a2, &b2) || !centroids(gx, &a3, &b3))
+        return c;
+      c.pl[gen] = b - a;
+      c.wd[gen] = b2 - a2;
+      c.wf[gen] = b3 - a3;
+      c.drop[gen] = gw.err_early - gw.err_late;
+      p_hi = b; p_lo = a;
+      w_hi = b2; w_lo = a2;
+      x_hi = b3; x_lo = a3;
+    }
+    c.ok = true;
+    parallel_note("  [%u/%u] chain %u  plain %+6.1f %+6.1f %+6.1f %+6.1f  wide %+6.1f"
+                  " %+6.1f %+6.1f %+6.1f\n", r + 1, kReps, r, c.pl[1], c.pl[2], c.pl[3],
+                  c.pl[4], c.wd[1], c.wd[2], c.wd[3], c.wd[4]);
+    return c;
+  });
+  std::vector<const Cell*> ok;
+  for (const Cell& c : cells) if (c.ok) ok.push_back(&c);
+  if (ok.size() < 3) {
+    std::printf("\n  tutorwide VOID -- %zu of %u chains completed.\n", ok.size(), kReps);
+    return false;
+  }
+  const uint32_t n = uint32_t(ok.size());
+  double m_pl[kDepth] = {}, s_pl[kDepth] = {}, m_wd[kDepth] = {}, s_wd[kDepth] = {};
+  double m_wf[kDepth] = {}, s_wf[kDepth] = {}, m_dr[kDepth] = {}, s_dr[kDepth] = {};
+  // THE SIGNED MEAN IS NOT A MEASURE OF MAGNITUDE WHEN THE SIGN CAN FLIP BETWEEN CHAINS,
+  // and the first version of this verdict used it and got the answer backwards. A chain
+  // that inherits the INVERTED convention and holds it confidently contributes a large
+  // NEGATIVE number, which cancels against the faithful chains and reads as decay. The
+  // mean ABSOLUTE value separates "the distinction got smaller" from "some chains hold
+  // the opposite convention", and those are completely different findings.
+  double m_ab[kDepth] = {}, s_ab[kDepth] = {};
+  std::printf("\n  %-11s %-20s %-20s %-20s %-18s\n", "generation", "plain chain",
+              "WIDE chain (signed)", "WIDE |dF1|", "wide-flip");
+  for (uint32_t g = 0; g < kDepth; ++g) {
+    std::vector<double> a, b, d, e;
+    for (const Cell* c : ok) {
+      a.push_back(c->pl[g]); b.push_back(c->wd[g]);
+      d.push_back(c->wf[g]); e.push_back(c->drop[g]);
+    }
+    m_pl[g] = ctx_mean_se(a, &s_pl[g]);
+    m_wd[g] = ctx_mean_se(b, &s_wd[g]);
+    m_wf[g] = ctx_mean_se(d, &s_wf[g]);
+    m_dr[g] = ctx_mean_se(e, &s_dr[g]);
+    std::vector<double> ab;
+    for (const Cell* c : ok) ab.push_back(std::fabs(c->wd[g]));
+    m_ab[g] = ctx_mean_se(ab, &s_ab[g]);
+    char b1[32], b2[32], b3[32], b4[32];
+    std::snprintf(b1, sizeof b1, "%+6.1f +/- %5.1f", m_pl[g], s_pl[g]);
+    std::snprintf(b2, sizeof b2, "%+6.1f +/- %5.1f", m_wd[g], s_wd[g]);
+    std::snprintf(b4, sizeof b4, "%6.1f +/- %5.1f", m_ab[g], s_ab[g]);
+    if (g == 0) std::snprintf(b3, sizeof b3, "%s", "(shared)");
+    else std::snprintf(b3, sizeof b3, "%+6.1f +/- %5.1f", m_wf[g], s_wf[g]);
+    std::printf("  %-11u %-20s %-20s %-20s %-18s\n", g, b1, b2, b4, b3);
+  }
+  if (std::fabs(m_pl[0]) < 3.0 * s_pl[0]) {
+    std::printf("\n  tutorwide VOID -- generation 0 has no distinction to transmit\n"
+                "  (%+.1f +/- %.1f Hz). Every later generation is noise propagating.\n",
+                m_pl[0], s_pl[0]);
+    return false;
+  }
+  const uint32_t L = kDepth - 1;
+  std::printf("\n  DID THE LAST LESSON LAND   generation %u, wide chain:"
+              "  %+.4f +/- %.4f  (%.1f SE)\n", L, m_dr[L], s_dr[L],
+              s_dr[L] > 0.0 ? std::fabs(m_dr[L]) / s_dr[L] : 0.0);
+  if (!(s_dr[L] > 0.0 && m_dr[L] > 3.0 * s_dr[L])) {
+    std::printf("\n  tutorwide VOID -- the last generation's lesson did not land.\n");
+    return false;
+  }
+  // THE ALTERNATION, PER GENERATION -- shaped for a series that may die, which is the
+  // correction to `tutorchain`'s single diluted mean.
+  std::printf("\n  ALTERNATION ON THE WIDE-FLIP CHAIN, per generation (predicted -,+,-,+)\n");
+  uint32_t alt_ok = 0, alt_tested = 0;
+  for (uint32_t g = 1; g < kDepth; ++g) {
+    const double want = (g % 2u) ? -1.0 : 1.0;
+    const bool resolved = std::fabs(m_wf[g]) > 3.0 * s_wf[g];
+    const bool right = resolved && (m_wf[g] * want > 0.0);
+    if (resolved) { ++alt_tested; if (right) ++alt_ok; }
+    std::printf("    generation %u   %+6.1f +/- %5.1f Hz   predicted %s   %s\n", g,
+                m_wf[g], s_wf[g], want < 0 ? "-" : "+",
+                !resolved ? "(not resolved)" : (right ? "MATCHES" : "WRONG SIGN"));
+  }
+  // WHICH CONVENTION EACH CHAIN ENDED UP WITH, and whether it ever changed its mind.
+  // This is the measurement the signed mean was hiding.
+  uint32_t n_pos = 0, n_neg = 0, n_stable = 0;
+  std::vector<double> inv_g1, kept_g1;
+  for (const Cell* c : ok) {
+    const bool end_pos = c->wd[L] > 0.0;
+    if (end_pos) ++n_pos; else ++n_neg;
+    bool all_pos = true, all_neg = true;
+    for (uint32_t g = 1; g < kDepth; ++g) {
+      if (c->wd[g] <= 0.0) all_pos = false;
+      if (c->wd[g] >= 0.0) all_neg = false;
+    }
+    if (all_pos || all_neg) ++n_stable;
+    (end_pos ? kept_g1 : inv_g1).push_back(std::fabs(c->wd[1]));
+  }
+  std::printf("\n  WHICH CONVENTION EACH CHAIN ENDED WITH\n"
+              "    %u of %u kept the host's ordering, %u inherited the INVERTED one\n"
+              "    %u of %u never changed sign after generation 1\n",
+              n_pos, n, n_neg, n_stable, n);
+  if (inv_g1.size() >= 3 && kept_g1.size() >= 3) {
+    double si = 0.0, sk = 0.0;
+    const double mi = ctx_mean_se(inv_g1, &si), mk = ctx_mean_se(kept_g1, &sk);
+    const double dd = mk - mi, sdd = std::sqrt(si * si + sk * sk);
+    std::printf("    |dF1| at generation 1:  kept %.1f +/- %.1f  vs inverted %.1f +/- %.1f"
+                "  (difference %.1f SE)\n", mk, sk, mi, si,
+                sdd > 0.0 ? std::fabs(dd) / sdd : 0.0);
+    std::printf("    so the inverted chains are the ones whose FIRST pupil nearly failed:\n"
+                "    a near-zero ordering is arbitrary, and a widened tape then AMPLIFIES\n"
+                "    whatever sign it inherits and locks it in. A ratchet, not a leak.\n");
+  }
+  const double kBar = 3.0;
+  // The verdict is on the MAGNITUDE, which is what "does the convention survive" asks.
+  const bool wide_holds = m_ab[L] > kBar * s_ab[L];
+  const bool plain_dead = std::fabs(m_pl[L]) < kBar * s_pl[L];
+  const bool alternates = alt_tested >= 2 && alt_ok == alt_tested;
+  std::printf("\n  %-22s %s\n", "wide holds at gen 4", wide_holds ? "YES" : "no");
+  std::printf("  %-22s %s\n", "plain dead at gen 4", plain_dead ? "YES" : "no");
+  std::printf("  %-22s %s (%u of %u resolved generations)\n", "wide-flip alternates",
+              alternates ? "YES" : "no", alt_ok, alt_tested);
+  if (wide_holds && !alternates) {
+    std::printf("\n  CONFOUNDED, AND THE RUN SAYS SO RATHER THAN CLAIMING A RESULT. The\n"
+                "  widened chain holds a distinction (%+.1f +/- %.1f Hz at generation %u)\n"
+                "  but the flipped widened chain does NOT track its tutor's mapping. So\n"
+                "  the width is producing the distinction and nothing is being inherited:\n"
+                "  re-imposing the host's spread every generation hands each pupil a wide\n"
+                "  target whatever its tutor said. This is the confound the third chain\n"
+                "  was built to catch, and it caught it. The widened design cannot answer\n"
+                "  the width-versus-leak question, and a different one is needed -- a\n"
+                "  spread that is widened but still DERIVED from the tutor, so that a\n"
+                "  tutor who says nothing hands on nothing.\n",
+                m_wd[L], s_wd[L], L);
+    return false;
+  }
+  if (wide_holds && plain_dead) {
+    std::printf("\n  IT WAS WIDTH, NOT A LEAK. Holding the width fixed and propagating only\n"
+                "  the MAPPING keeps the convention alive to generation %u (|dF1| %.1f +/-\n"
+                "  %.1f Hz) where the plain chain is dead (%+.1f +/- %.1f Hz), and the\n"
+                "  flipped widened chain alternates on %u of %u resolved generations -- so\n"
+                "  the mapping really is being inherited and not manufactured by the\n"
+                "  target.\n"
+                "\n  SO THE CHANNEL IS CLEAN AND THE LIMIT IS WHAT A CREATURE CAN SAY.\n"
+                "  Culture does not decay here because the air loses information; it\n"
+                "  decays because each tutor produces a narrower distinction than it was\n"
+                "  taught, and the next pupil can only aim at what it hears. That moves\n"
+                "  the problem from transmission to PRODUCTION, which is where this\n"
+                "  project's measured ceilings already are.\n",
+                L, m_ab[L], s_ab[L], m_pl[L], s_pl[L], alt_ok, alt_tested);
+    return true;
+  }
+  if (!wide_holds) {
+    std::printf("\n  IT LEAKS. Even with the width held fixed and only the mapping passed\n"
+                "  on, the widened chain is within %.0f SE of zero at generation %u\n"
+                "  (%+.1f +/- %.1f Hz). So the decay is not explained by tutors being\n"
+                "  quiet: something is lost in transmission itself, and handing each pupil\n"
+                "  a full-width target does not rescue it. Read on the MAGNITUDE, so a\n"
+                "  chain holding the inverted convention counts as surviving.\n"
+                "\n  THAT IS THE STRONGER NEGATIVE OF THE TWO, and it closes the obvious\n"
+                "  repair. What it does NOT identify is WHAT is lost -- the mapping is one\n"
+                "  bit per generation and a chain that cannot carry one bit is a different\n"
+                "  and sharper problem than a chain that narrows.\n",
+                kBar, L, m_ab[L], s_ab[L]);
+    return false;
+  }
+  std::printf("\n  INCONCLUSIVE. The plain chain is not dead at generation %u (%+.1f +/-\n"
+              "  %.1f Hz), so the comparison the run rests on is not available: a widened\n"
+              "  chain that holds says nothing if the plain one holds too. Reported as\n"
+              "  that rather than read as a width result.\n", L, m_pl[L], s_pl[L]);
+  return false;
+}
+
 bool run_blockwhere(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
   (void)verbose;
   aibaby::Dna dna0;

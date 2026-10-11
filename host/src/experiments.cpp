@@ -365,6 +365,19 @@ const Spec kSpecs[] = {
      "  if the half-centre reports no phase or has settled on one winner. The\n"
      "  evidence is the IDENTITY-minus-SWAPPED mapping contrast, because the\n"
      "  oscillator contributes to both equally and cancels from the difference."},
+    {"tutorwide", 3400000, Expect::kOpen, Tier::kTeach,
+     "derived: vocallearn's teaching length, run THIRTEEN times per chain --\n"
+     "  five generations, three chains sharing generation 0. tutorchain found the\n"
+     "  convention decaying to nothing, which does NOT establish that the channel\n"
+     "  loses information: a tutor says less than it was asked, so each pupil\n"
+     "  inherits a smaller task, and a WIDTH-LIMITED channel losing nothing\n"
+     "  produces a decaying series too. `wide` keeps the tutor's own vowel centre\n"
+     "  and re-spreads it to the host's log distance, so the MAPPING propagates\n"
+     "  and the WIDTH is held fixed. `wide-flip` exchanges the labels at every\n"
+     "  step, because a re-imposed width hands every pupil a wide target whatever\n"
+     "  its tutor said -- so without it a holding series could carry no inherited\n"
+     "  information at all. Alternation is scored PER GENERATION, correcting\n"
+     "  tutorchain's single mean that was diluted by its own dead terms."},
     {"tutorchain", 3400000, Expect::kOpen, Tier::kTeach,
      "derived: vocallearn's teaching length, run NINE times per chain -- five\n"
      "  generations, two chains sharing generation 0. tutor showed one creature\n"
@@ -974,6 +987,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "axisphase") ok = run_axisphase(dna_blob, ticks, verbose);
   else if (name == "tutor") ok = run_tutor(dna_blob, ticks, verbose);
   else if (name == "tutorchain") ok = run_tutorchain(dna_blob, ticks, verbose);
+  else if (name == "tutorwide") ok = run_tutorwide(dna_blob, ticks, verbose);
   else if (name == "blockwhere") ok = run_blockwhere(dna_blob, ticks, verbose);
   else if (name == "blockanchor") ok = run_blockanchor(dna_blob, ticks, verbose);
   else if (name == "leverprobe") ok = run_leverprobe(dna_blob, ticks, verbose);
