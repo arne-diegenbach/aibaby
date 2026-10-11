@@ -16576,7 +16576,7 @@ strictly less total credit (61% surviving the delay against 98%). A trace spanni
 phases credits all of them indiscriminately, so a shorter one should write more coherently
 while writing less. A prediction at 2.2 SE, not a result.
 
-### The gesture and the lesson trade against each other monotonically, and the gesture is never loud
+### The gesture and the lesson trade against each other monotonically, and the gesture is unchanged by teaching
 
 `phaseteach` found that turning the half-centre on costs four fifths of the fixed-target
 lesson, and the operating point that cost it had been chosen for the gesture's F1 swing
@@ -16615,31 +16615,50 @@ a difference of **0.0135 ± 0.0144, 0.9 SE, statistically identical**. A creatur
 balanced half-centre can be taught exactly as well as one without. The cost is a function of
 how hard the inhibition is driven, not of the mechanism being present.
 
-#### The part that reframes the earlier result
+#### The amplitude question, raised here and refuted by a follow-up
 
-Read the separation against what the gesture does when nobody is teaching it. The
-free-running alternation reaches the ends of the F1 range, 438 and 813 Hz, and one setting
-was measured at 135.6 Hz of free-running swing at +52 SE.
+The taught separations are 0.9–5.2% of the 375 Hz span the alternation covers when it runs
+free, and an earlier free-running measurement of the same gesture gave 135.6 Hz of swing at
++52 SE. That invited a reading, and I published it: that the gesture *survives teaching in
+existence but not in amplitude* — that `share` 0.50 and `off` 0.00, which is all "the
+gesture survives teaching" ever rested on, were blind to the gesture being flattened.
+
+**That reading was wrong, and how it was wrong is the point.** The two numbers were never
+the same quantity. A free-running *excursion* and a mean formant difference over a *reward
+window* are different estimators, and comparing them is the error — not a finding about the
+creature. I flagged it as needing a measurement rather than asserting it, and then measured
+it.
+
+The matched control is a third arm per gain: same genome, same seeds, same phase target
+mode, same accumulation, **caregiver muted** — praise and scold both zero, the feedback path
+still running on the same clock and carrying nothing. Exact rather than approximate, because
+`ph_f1_sum` fills on a time window while voiced and not on reward events, so the muted arm
+is measured by bit-for-bit the estimator the taught arms use. Free minus taught, paired on
+the same creature:
 
 ```
-  gain   taught sep   as a share of a 375 Hz full alternation
-  0.15     3.2 Hz                  0.9%
-  0.30     3.6 Hz                  1.0%
-  0.45     8.0 Hz                  2.1%
-  0.60    19.5 Hz                  5.2%
+  gain   taught     free     free - taught        share of amplitude
+  0.15    3.2 Hz   2.9 Hz    -0.3 +/- 0.1 (4.1 SE)      9.4%
+  0.30    3.6 Hz   3.5 Hz    -0.1 +/- 0.1 (1.6 SE)      2.8%
+  0.45    8.0 Hz   7.9 Hz    -0.0 +/- 0.1 (0.2 SE)      0.0%
+  0.60   19.5 Hz  20.1 Hz    +0.6 +/- 0.3 (2.1 SE)      3.1%
 ```
 
-**In a taught session the gesture never exceeds a twentieth of its free-running amplitude,
-at any gain in the sweep.** That was reported as a success from the other side — *the gesture
-survives teaching*, `share` 0.50, `off` 0.00 — and `share` and `off` are statements about the
-alternation's **existence**, not its **size**. Existence survives; amplitude does not, and
-amplitude is the part that would carry a syllable. The suppression runs both ways, which is
-what a competition account predicts and what neither measurement had been arranged to see.
+**Teaching does not flatten the gesture at any gain.** The residuals are 0–9% of the
+amplitude they sit on and they *change sign* across the sweep, the two largest pointing in
+opposite directions — the shape of tiny systematic differences measured at high precision,
+not of a mechanism. So the earlier report was right and my criticism of it was the error:
+the alternation survives teaching in amplitude as well as in existence, and **the
+composition problem is entirely on the lesson's side of the pair.** Cleaner than what it
+replaces, and bought with one extra arm.
 
-The ratio needs one cheap measurement before it is a finding rather than a flag: `sep` is a
-mean difference over reward ticks and the 135.6 Hz swing is an excursion, so they are not the
-same estimator. Two numbers that disagree by an order of magnitude across different
-estimators are a reason to measure, not a result.
+**And my own test was written one-sided, which is a second lesson.** It asked only whether
+teaching *suppressed* the gesture, so the gain-0.15 cell — significant at **4.1 SE in the
+opposite direction** — printed underneath a headline saying no effect was found. Technically
+true, materially misleading, and the same family as a criterion only the best outcome can
+fail. A directional success test hides a significant result in the other direction and
+should be two-sided unless the reverse outcome is genuinely uninterpretable. Fixed in the
+source.
 
 #### What the verdict rests on, stated plainly
 

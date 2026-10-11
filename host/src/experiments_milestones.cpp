@@ -10178,14 +10178,39 @@ bool run_hcsweep(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
   // as the check that the comparison holds.
   constexpr double kOffDrop = 0.2197;
   constexpr double kPrevAtPoint = 0.0465;  // the same quantity at gain 0.60
-  struct HCArm { float gain; int tgt; const char* tag; };
+  // THE THIRD ARM PER GAIN, AND IT IS A MEASUREMENT RATHER THAN A MECHANISM.
+  //
+  // The first run of this sweep found the taught separation at 0.9-5.2% of the
+  // free-running alternation's 375 Hz span and could not call that a finding, because the
+  // free-running number was an EXCURSION and the taught one is a mean difference over the
+  // reward window. Two quantities an order of magnitude apart on different estimators are
+  // a reason to measure, not a result.
+  //
+  // `free` is the matched control that settles it: same genome, same seeds, same phase
+  // target mode, same accumulation -- and the caregiver MUTED, praise and scold both zero.
+  // That works because `ph_f1_sum` accumulates on a TIME WINDOW while voiced and not on
+  // reward events, so the estimator is bit-for-bit the one the taught arms use. The
+  // comparison is then free-minus-taught on the SAME creature, paired on seed.
+  //
+  // Pre-registered, before the run: if teaching suppresses the gesture's amplitude the
+  // difference is POSITIVE past 3 SE. If the earlier gap was the estimator, the two come
+  // back equal and the 135.6 Hz figure simply does not mean what `sep` means.
+  struct HCArm { float gain; int tgt; const char* tag; bool mute; };
   static const HCArm kHC[] = {
-      {0.15f, int(kVLTgtFixed), "fixed"}, {0.15f, int(kVLTgtPhase), "phase"},
-      {0.30f, int(kVLTgtFixed), "fixed"}, {0.30f, int(kVLTgtPhase), "phase"},
-      {0.45f, int(kVLTgtFixed), "fixed"}, {0.45f, int(kVLTgtPhase), "phase"},
-      {0.60f, int(kVLTgtFixed), "fixed"}, {0.60f, int(kVLTgtPhase), "phase"},
+      {0.15f, int(kVLTgtFixed), "fixed", false},
+      {0.15f, int(kVLTgtPhase), "phase", false},
+      {0.15f, int(kVLTgtPhase), "free",  true},
+      {0.30f, int(kVLTgtFixed), "fixed", false},
+      {0.30f, int(kVLTgtPhase), "phase", false},
+      {0.30f, int(kVLTgtPhase), "free",  true},
+      {0.45f, int(kVLTgtFixed), "fixed", false},
+      {0.45f, int(kVLTgtPhase), "phase", false},
+      {0.45f, int(kVLTgtPhase), "free",  true},
+      {0.60f, int(kVLTgtFixed), "fixed", false},
+      {0.60f, int(kVLTgtPhase), "phase", false},
+      {0.60f, int(kVLTgtPhase), "free",  true},
   };
-  constexpr uint32_t kN = 8, kReps = 18;
+  constexpr uint32_t kN = 12, kGains = 4, kPer = 3, kReps = 18;
   instrument("hcsweep", dna.header().seed ^ 0x4C5Eu, ticks / kVLTrialTicks, "trials per arm");
   std::printf("  hcsweep -- is there an operating point where the GESTURE and the\n"
               "  LESSON both work? The gesture is free and replicated; the lesson is\n"
@@ -10222,8 +10247,12 @@ bool run_hcsweep(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
                     offsetof(aibaby::DnaVocal, halfcenter_gain),
                 &g, sizeof(g));
     Regime reg;
-    reg.praise = kPraiseValue;
-    reg.scold = kScoldValue;
+    // A muted caregiver, not a disabled one: the feedback path still runs on the same
+    // clock and still pushes an event, carrying zero. So the arm differs from its taught
+    // twin in the VALUE of the reward and in nothing else -- not in which code runs, not
+    // in how often, not in what is measured.
+    reg.praise = kHC[a].mute ? 0.0f : kPraiseValue;
+    reg.scold = kHC[a].mute ? 0.0f : kScoldValue;
     // The same 50 ms delay the reference was measured at, so the comparison is on the
     // gain and nothing else.
     reg.delay = kPTFastDelayTicks;
@@ -10250,7 +10279,7 @@ bool run_hcsweep(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
   // that looks meaningful and is not. The trade is printed per gain below instead, where
   // both halves are known.
   double best_drop = -1e9, best_gain = -1.0;
-  double drop_at[kN] = {}, sep_at[kN] = {}, share_at[kN] = {};
+  double drop_at[kN] = {}, sep_at[kN] = {}, share_at[kN] = {}, free_at[kN] = {};
   bool live[kN] = {};
   for (uint32_t a = 0; a < kN; ++a) {
     std::vector<double> d, sp;
@@ -10281,6 +10310,7 @@ bool run_hcsweep(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
     if (kHC[a].tgt == int(kVLTgtFixed) && md > best_drop) {
       best_drop = md; best_gain = double(kHC[a].gain);
     }
+    if (kHC[a].mute) free_at[a] = ms;
   }
   std::printf("\n  the half-centre-off reference for this quantity is %+.4f, and the\n"
               "  previous measurement at gain 0.60 was %+.4f. A gain-0.60 row far from\n"
@@ -10302,7 +10332,7 @@ bool run_hcsweep(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
               "  phase arm at the same gain)\n");
   bool cleared = false;
   double clear_gain = 0.0;
-  for (uint32_t a = 0; a + 1 < kN; a += 2) {
+  for (uint32_t a = 0; a + kPer <= kN; a += kPer) {
     const bool gesture_ok = sep_at[a + 1] > 10.0 && share_at[a + 1] >= 0.15 &&
                             share_at[a + 1] <= 0.85;
     const bool lesson_ok = drop_at[a] > bar;
@@ -10311,6 +10341,72 @@ bool run_hcsweep(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
                 sep_at[a + 1], share_at[a + 1], gesture_ok ? "OK" : "no",
                 (lesson_ok && gesture_ok) ? "<-- BOTH" : "");
     if (lesson_ok && gesture_ok) { cleared = true; clear_gain = double(kHC[a].gain); }
+  }
+  // DOES TEACHING SUPPRESS THE GESTURE'S AMPLITUDE? Paired on seed, free minus taught,
+  // on the same estimator by construction. This is the question the first run of the
+  // sweep raised and could not answer.
+  std::printf("\n  AMPLITUDE: FREE-RUNNING MINUS TAUGHT, paired on seed, same estimator\n");
+  std::printf("    %-6s %12s %12s  %-22s\n", "gain", "taught sep", "free sep",
+              "free - taught");
+  uint32_t n_sup = 0, n_enh = 0, n_either = 0, n_tested = 0;
+  for (uint32_t a = 0; a + kPer <= kN; a += kPer) {
+    std::vector<double> d;
+    for (uint32_t r = 0; r < kReps; ++r) {
+      const Cell& ct = cells[r * kN + a + 1];
+      const Cell& cf = cells[r * kN + a + 2];
+      if (ct.ok && cf.ok && ct.sep != 0.0 && cf.sep != 0.0) d.push_back(cf.sep - ct.sep);
+    }
+    if (d.size() < 3) {
+      std::printf("    %-6.2f %12s %12s  (n<3 paired)\n", double(kHC[a].gain), "-", "-");
+      continue;
+    }
+    double sd = 0.0;
+    const double md = ctx_mean_se(d, &sd);
+    char b[48];
+    std::snprintf(b, sizeof b, "%+.1f +/- %.1f Hz (%.1f SE)", md, sd,
+                  sd > 0.0 ? std::fabs(md) / sd : 0.0);
+    std::printf("    %-6.2f %12.1f %12.1f  %-22s\n", double(kHC[a].gain),
+                sep_at[a + 1], free_at[a + 2], b);
+    ++n_tested;
+    // TWO-SIDED, and the first version was not. It asked only whether teaching
+    // SUPPRESSED the gesture, so the gain-0.15 cell -- significant at 4.1 SE in the
+    // OPPOSITE direction -- printed underneath a headline saying no effect was found.
+    // Technically true and materially misleading, and the same family as a criterion
+    // only the best outcome can fail. A directional success test hides a significant
+    // result in the other direction.
+    if (sd > 0.0 && md > 3.0 * sd) ++n_sup;
+    if (sd > 0.0 && md < -3.0 * sd) ++n_enh;
+    if (sd > 0.0 && std::fabs(md) > 3.0 * sd) ++n_either;
+  }
+  if (n_tested == 0) {
+    std::printf("\n  the amplitude comparison has no paired creatures and says nothing.\n");
+  } else if (n_sup == n_tested) {
+    std::printf("\n  TEACHING SUPPRESSES THE GESTURE, on %u of %u gains past 3 SE. So the\n"
+                "  suppression is MUTUAL: the gesture costs the lesson (the trade above)\n"
+                "  and the lesson costs the gesture's AMPLITUDE. `share` and `off` could\n"
+                "  not see this -- they are statements about the alternation EXISTING, and\n"
+                "  amplitude is the part that would carry a syllable.\n", n_sup, n_tested);
+  } else if (n_sup == 0 && n_either == 0) {
+    std::printf("\n  TEACHING DOES NOT CHANGE THE GESTURE on any gain, in either direction.\n"
+                "  The taught and free-running amplitudes agree on this estimator, so the\n"
+                "  order-of-magnitude gap to the published 135.6 Hz swing was the ESTIMATOR\n"
+                "  and not the behaviour -- an excursion is not a mean difference over a\n"
+                "  window. Nothing is wrong with the gesture under teaching, and the\n"
+                "  composition problem is entirely the lesson's side.\n");
+  } else if (n_sup == 0) {
+    std::printf("\n  NOT SUPPRESSION -- but %u of %u gains differ past 3 SE, and %u of those\n"
+                "  go the OTHER WAY, with teaching raising the amplitude. Read the signs in\n"
+                "  the table before calling this a null: a residual that is a few per cent\n"
+                "  of its own amplitude and CHANGES SIGN across the sweep is the shape of a\n"
+                "  tiny systematic difference measured at high precision, not of a\n"
+                "  mechanism, and the composition problem is still the lesson's side. A\n"
+                "  residual that holds one sign and grows with gain would be a mechanism\n"
+                "  and is not what this is.\n", n_either, n_tested, n_enh);
+  } else {
+    std::printf("\n  MIXED: suppression past 3 SE on %u of %u gains. A result that holds on\n"
+                "  some gains and not others is a gain-dependent effect or a power\n"
+                "  problem, and this run cannot tell which. Not to be reported as either.\n",
+                n_sup, n_tested);
   }
   if (cleared) {
     std::printf("\n  THEY COMPOSE. At gain %.2f the lesson keeps %+.4f -- over half the\n"
