@@ -4377,6 +4377,34 @@ inline double formant_error_axis(double f1, double f2, const Word& w, uint32_t a
   return formant_error(f1, f2, w);
 }
 
+// `phasemask`: credit confined to the half of the F1 group that is currently WINNING.
+//
+// WHY THIS IS THE NEXT THING AND NOT A NEW MECHANISM. Reward moves this creature's vowel
+// (fixed target, up to 18.4 SE) and cannot move it differently at different moments of one
+// utterance (8 cells, none past 2 SE, none positive), and the gesture is NOT the obstacle:
+// teaching leaves its amplitude intact to within a few per cent. What is left is that a
+// scalar reward writing into a rate-weighted centroid has no way to address an INSTANT --
+// both phases read the same population through the same readout. This hands the lesson a
+// phase-specific PLACE to write, which is exactly what the refusals say is missing.
+//
+// IT USES set_reward_block AND NOT set_reward_mask, AND THAT IS NOT A DETAIL. The mask
+// ALLOWS its range and freezes every other group and module, which already cost this
+// project a 2.4h run whose cost curve came out flat at ~0.20 because it measured a global
+// freeze rather than a range cap. `set_reward_block` confines inside the group and leaves
+// the other eight alone, which is what "write here and not there" means.
+//
+// NEITHER IS SERIALISED. Both are host-side experiment oracles with no genome field, so
+// the pinned hash cannot move.
+struct PhaseMask {
+  // 1 = aligned to the creature's own phase. 2 = the SIZE- AND DUTY-MATCHED CONTROL:
+  // the same block, the same half of the time, switching on a fixed clock that is not
+  // locked to the gesture. The second is what makes the first interpretable, because
+  // `credgate` measured that blocking half the F1 group costs the lesson a great deal on
+  // its own -- so the question is never "does the mask cost" but "does ALIGNMENT buy".
+  uint32_t mode = 0;
+  uint32_t period = 0;  // mode 2: ticks per half. Derived from the measured phase.
+};
+
 VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, VLArm arm,
                              const std::vector<Praise>* yoked, const Regime& regime,
                              int target = -1, const CtxDrive* ctx = nullptr,
@@ -4392,7 +4420,12 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
                              const TargetRamp* ramp = nullptr,
                              // `chase`: a target that tracks the creature's own
                              // output distribution. nullptr is bit-identical.
-                             const TargetChase* chase = nullptr) {
+                             const TargetChase* chase = nullptr,
+                             // `phasemask`: confine reward-driven credit to the
+                             // currently-winning half of the F1 group. Appended at the
+                             // END, which is the convention this signature already
+                             // follows, so nullptr keeps every caller bit-identical.
+                             const PhaseMask* pmask = nullptr) {
   // -1 is vocallearn's own rule, and passing nothing reproduces it exactly: the
   // positive control aims at one fixed target and every other arm at the word
   // that was heard.
@@ -4528,6 +4561,18 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
   // PHASE TEACHING state. `vmod_hc` is the module the half-centre runs in, which is the
   // vocal one; the counters are the liveness evidence and the measurement.
   const int32_t vmod_hc = s.dna.module_with_role(aibaby::ModuleRole::kVocal);
+  // The two halves of the F1 group: the two ends its centroid can be pulled toward, and
+  // the two populations the half-centre alternates between. Global neuron indices,
+  // because set_reward_block takes them.
+  uint32_t pm_lo = 0u, pm_mid = 0u, pm_hi = 0u;
+  if (vmod_hc >= 0) {
+    const aibaby::ModuleState& vmh = s.brain.network().module(uint32_t(vmod_hc));
+    const uint32_t gl = aibaby::slice_begin(vmh.count, aibaby::kVocalGroups, 2);
+    const uint32_t gh = aibaby::slice_begin(vmh.count, aibaby::kVocalGroups, 3);
+    pm_lo = vmh.begin + gl;
+    pm_hi = vmh.begin + gh;
+    pm_mid = vmh.begin + gl + (gh - gl) / 2u;
+  }
   uint64_t ph_ticks[kVLMaxWords] = {};
   uint64_t ph_off_ticks = 0;
   double ph_f1_sum[kVLMaxWords] = {};
@@ -4735,6 +4780,28 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
         const uint32_t hi2 = cm.begin + cm.count * (slice + 1) / slots;
         for (uint32_t n = lo2; n < hi2; ++n) {
           s.brain.network().inject(n, aibaby::Scalar(ctx->gain));
+        }
+      }
+      // THE PHASE-GATED CREDIT BLOCK, set immediately before the step that consumes it.
+      // The plasticity update runs inside step(), so the block in force at the update is
+      // the one set here -- and with a narrow credit window the eligibility being spent
+      // was laid down in the same phase, which is why this is run on the 100 ms genome.
+      if (pmask && pmask->mode != 0u && vmod_hc >= 0 && pm_hi > pm_lo) {
+        int win = -1;
+        if (pmask->mode == 1u) {
+          win = s.brain.network().halfcenter_phase(uint32_t(vmod_hc));
+        } else if (pmask->period > 0u) {
+          // The matched control: the same block, the same half of the time, switching on
+          // a clock that is NOT the creature's. It drifts out of alignment, which is
+          // exactly the property being tested for.
+          win = int((now / uint64_t(pmask->period)) & 1ull);
+        }
+        if (win < 0) {
+          s.brain.network().clear_reward_block();
+        } else if (win == 1) {
+          s.brain.network().set_reward_block(pm_lo, pm_mid);   // block the LOW half
+        } else {
+          s.brain.network().set_reward_block(pm_mid, pm_hi);   // block the HIGH half
         }
       }
       s.brain.step();
@@ -10432,6 +10499,271 @@ bool run_hcsweep(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
               "  inside the oscillating window, or the same sweep in `halfcenter_drive`,\n"
               "  which is the axis the window was actually mapped in.\n",
               best_drop, best_gain, bar);
+  return false;
+}
+
+// DOES THE LESSON NEED A PHASE-SPECIFIC PLACE TO WRITE?
+//
+// THE STATE THIS ANSWERS. Reward moves this creature's vowel toward a fixed target at up
+// to 18.4 SE and cannot move it differently at different moments of one utterance -- eight
+// cells across three genomes, two credit windows and two reward delays, none past 2 SE and
+// not one positive. The credit PATHWAY is cleared: resolution and delivery were satisfied
+// together by a fast-teacher oracle and the contrast stayed null. The GESTURE is cleared:
+// teaching leaves its amplitude intact to within a few per cent of the free-running value
+// on the same estimator. So what is left is the readout. F1 is a rate-weighted centroid
+// over one group, both phases are read through it, and a scalar reward has no way to say
+// "this end, now".
+//
+// `pmask` confines reward-driven credit to the half of the F1 group that is winning. If
+// phase separation appears, the missing thing was a PLACE and the line reopens. If it does
+// not, the credit family is closed by oracle rather than by argument.
+//
+// THE CONTROL IS THE WHOLE DESIGN. `credgate` measured that confining credit inside the
+// F1 group costs the lesson a great deal by itself, so "the masked arm is worse" would say
+// nothing. `amask` blocks the same half, the same fraction of the time, switching on a
+// fixed clock that is not the creature's gesture -- size, duty and switching rate matched,
+// alignment broken. The quantity is what ALIGNMENT buys over that.
+bool run_phasemask(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  aibaby::Dna dna;
+  if (dna.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) {
+    std::printf("  setup failed: the genome does not load\n");
+    return false;
+  }
+  // The matched control's half-period, DERIVED and not picked: the free-running
+  // alternation was measured at 3.67 Hz on this operating point, so a phase is
+  // 1000/(2*3.67) = 136 ms = 136 ticks at dt 1.0. The control therefore switches as often
+  // as the gesture does and simply does not stay in step with it.
+  constexpr uint32_t kHalfPeriod = 136u;
+  struct PMArm { const char* name; int tgt; uint32_t mode; };
+  static const PMArm kPM[] = {
+      {"fixed",    int(kVLTgtFixed),     0u},  // did the lesson land at all
+      {"phase",    int(kVLTgtPhase),     0u},  // the known null, no mask
+      {"pmask",    int(kVLTgtPhase),     1u},  // phase-aligned block
+      {"pmask-sw", int(kVLTgtPhaseSwap), 1u},
+      {"amask",    int(kVLTgtPhase),     2u},  // size/duty matched, alignment broken
+      {"amask-sw", int(kVLTgtPhaseSwap), 2u},
+  };
+  constexpr uint32_t kN = 6, kReps = 18;
+  instrument("phasemask", dna.header().seed ^ 0x9A5Eu, ticks / kVLTrialTicks,
+             "trials per arm");
+  std::printf("  phasemask -- the lesson cannot aim a gesture, and neither the credit\n"
+              "  pathway nor the gesture is the reason. Does it need a phase-specific\n"
+              "  PLACE to write?\n");
+  std::printf("  the quantity  the IDENTITY-minus-SWAPPED mapping contrast, which cancels\n"
+              "                the oscillator because it contributes equally to both.\n");
+  std::printf("  the evidence  that contrast under a PHASE-ALIGNED credit block, against\n"
+              "                the same contrast under a SIZE- AND DUTY-MATCHED block\n"
+              "                that switches on a clock of its own. Masking costs the\n"
+              "                lesson on its own, so only the DIFFERENCE is informative.\n");
+  std::printf("  refused if    aligned and matched come back equal. Then a phase-specific\n"
+              "                place to write buys nothing and the credit family closes\n"
+              "                by oracle rather than by argument.\n");
+  std::printf("  the control   `fixed` must show the lesson landing, or nothing here is a\n"
+              "                measurement -- the fourth rung, and two earlier runs of a\n"
+              "                neighbouring experiment printed verdicts without it.\n\n");
+  struct Cell {
+    bool ok = false;
+    double sep = 0, share = 0, off = 0, drop = 0, voiced = 0;
+  };
+  const std::vector<Cell> cells = parallel_reps<Cell>(kReps * kN, [&](uint32_t i) {
+    const uint32_t r = i / kN, a = i % kN;
+    Cell c;
+    std::vector<uint8_t> variant = blob;
+    const uint64_t seed = dna.header().seed + r * 7919ull;
+    std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+    Regime reg;
+    reg.praise = kPraiseValue;
+    reg.scold = kScoldValue;
+    reg.delay = kPTFastDelayTicks;
+    PhaseMask pm;
+    pm.mode = kPM[a].mode;
+    pm.period = kHalfPeriod;
+    const VLRun run = run_vocallearn_session(variant, ticks, kVLTaught, nullptr, reg,
+                                             kPM[a].tgt, nullptr, kVLScoreFormant,
+                                             nullptr, kVLWords, nullptr, nullptr, nullptr,
+                                             kPM[a].mode ? &pm : nullptr);
+    if (!run.ok) return c;
+    c.ok = true;
+    c.drop = run.err_early - run.err_late;
+    c.share = run.ph_share;
+    c.off = run.ph_off;
+    c.voiced = run.voiced_frac;
+    if (run.ph_n[0] >= 50 && run.ph_n[1] >= 50) c.sep = run.ph_f1[1] - run.ph_f1[0];
+    parallel_note("  [%u/%u] seed %u %-9s  sep %+7.1f  drop %+.4f  voiced %.2f\n",
+                  i + 1, kReps * kN, r, kPM[a].name, c.sep, c.drop, c.voiced);
+    return c;
+  });
+  std::printf("\n  %-9s %5s  %-20s %-22s %6s %6s %6s\n", "arm", "n", "sep (ph1-ph0)",
+              "lesson drop", "share", "off", "voiced");
+  double sep_at[kN] = {}, drop_at[kN] = {};
+  for (uint32_t a = 0; a < kN; ++a) {
+    std::vector<double> sp, d;
+    double mv = 0.0, msh = 0.0, mof = 0.0;
+    uint32_t n = 0;
+    for (uint32_t r = 0; r < kReps; ++r) {
+      const Cell& c = cells[r * kN + a];
+      if (!c.ok) continue;
+      if (c.sep != 0.0) sp.push_back(c.sep);
+      d.push_back(c.drop);
+      mv += c.voiced; msh += c.share; mof += c.off; ++n;
+    }
+    if (!n) { std::printf("  %-9s   (no creature completed)\n", kPM[a].name); continue; }
+    double ss = 0.0, sd = 0.0;
+    const double ms = sp.size() >= 3 ? ctx_mean_se(sp, &ss) : 0.0;
+    const double md = d.size() >= 3 ? ctx_mean_se(d, &sd) : 0.0;
+    char b1[40], b2[40];
+    if (sp.size() >= 3) std::snprintf(b1, sizeof b1, "%+.1f +/- %.1f Hz", ms, ss);
+    else std::snprintf(b1, sizeof b1, "%s", "(no phase bins)");
+    std::snprintf(b2, sizeof b2, "%+.4f +/- %.4f", md, sd);
+    std::printf("  %-9s %5u  %-20s %-22s %6.2f %6.2f %6.2f\n", kPM[a].name, n, b1, b2,
+                msh / n, mof / n, mv / n);
+    sep_at[a] = ms; drop_at[a] = md;
+  }
+  const uint32_t FIX = 0, PH = 1, PM = 2, PMS = 3, AM = 4, AMS = 5;
+  // RUNG FOUR, FIRST, because a verdict about where a lesson landed is meaningless if no
+  // lesson landed. Read on the fixed-target arm, whose target does not flip inside a
+  // trial -- on a phase arm the error is scored on a trial-mean vowel against a target
+  // that changes mid-trial, so the drop there is blunt by construction.
+  {
+    std::vector<double> d;
+    for (uint32_t r = 0; r < kReps; ++r) {
+      const Cell& c = cells[r * kN + FIX];
+      if (c.ok) d.push_back(c.drop);
+    }
+    double sd = 0.0;
+    const double md = d.size() >= 3 ? ctx_mean_se(d, &sd) : 0.0;
+    std::printf("\n  DID THE LESSON LAND   error early minus late on `fixed`:"
+                "  %+.4f +/- %.4f  (%.1f SE, n=%zu)\n", md, sd,
+                sd > 0.0 ? std::fabs(md) / sd : 0.0, d.size());
+    if (!(d.size() >= 3 && sd > 0.0 && md > 3.0 * sd)) {
+      std::printf("\n  phasemask VOID -- THE LESSON DID NOT LAND. Reward has no measurable\n"
+                  "  purchase on this creature's vowel at all, so a null about WHERE it\n"
+                  "  writes says nothing.\n");
+      return false;
+    }
+  }
+  // LIVENESS, on the arm the verdict rests on.
+  double msh = 0.0, mof = 0.0;
+  uint32_t nn = 0;
+  for (uint32_t r = 0; r < kReps; ++r) {
+    const Cell& c = cells[r * kN + PM];
+    if (c.ok) { msh += c.share; mof += c.off; ++nn; }
+  }
+  if (nn) {
+    msh /= nn; mof /= nn;
+    if (mof > 0.05 || msh < 0.15 || msh > 0.85) {
+      std::printf("\n  phasemask VOID -- the half-centre on `pmask` reports no phase on\n"
+                  "  %.0f%% of reward ticks, or a share of %.2f that is a settled winner\n"
+                  "  rather than an alternation. Run on a genome inside the oscillating\n"
+                  "  window.\n", 100.0 * mof, msh);
+      return false;
+    }
+  }
+  const auto contrast = [&](uint32_t ai, uint32_t bi, double* out_se, size_t* out_n) {
+    std::vector<double> d;
+    for (uint32_t r = 0; r < kReps; ++r) {
+      const Cell& ca = cells[r * kN + ai];
+      const Cell& cb = cells[r * kN + bi];
+      if (ca.ok && cb.ok && ca.sep != 0.0 && cb.sep != 0.0) d.push_back(ca.sep - cb.sep);
+    }
+    *out_n = d.size();
+    if (d.size() < 3) { *out_se = 0.0; return 0.0; }
+    return ctx_mean_se(d, out_se);
+  };
+  double se_p = 0.0, se_a = 0.0;
+  size_t n_p = 0, n_a = 0;
+  const double dp = contrast(PM, PMS, &se_p, &n_p);
+  const double da = contrast(AM, AMS, &se_a, &n_a);
+  std::printf("\n  THE MAPPING CONTRAST, paired on seed (identity minus swapped)\n");
+  std::printf("    %-18s %-26s %6s %4s\n", "credit block", "contrast", "SE", "n");
+  std::printf("    %-18s %+6.1f +/- %5.1f Hz        %6.1f %4zu\n", "phase-aligned", dp,
+              se_p, se_p > 0.0 ? std::fabs(dp) / se_p : 0.0, n_p);
+  std::printf("    %-18s %+6.1f +/- %5.1f Hz        %6.1f %4zu\n", "matched, unaligned",
+              da, se_a, se_a > 0.0 ? std::fabs(da) / se_a : 0.0, n_a);
+  std::printf("  a taught separation makes these NEGATIVE: the identity mapping asks the\n"
+              "  high-F1 posture for the LOW target and the swapped one asks it for the\n"
+              "  HIGH target.\n");
+  if (n_p < 3 || n_a < 3) {
+    std::printf("\n  phasemask INCONCLUSIVE -- %zu and %zu paired creatures.\n", n_p, n_a);
+    return false;
+  }
+  // WHAT ALIGNMENT BUYS. The two contrasts are independent arm pairs on the same
+  // creatures, so the difference carries the sum of their variances.
+  const double d_align = dp - da;
+  const double se_align = std::sqrt(se_p * se_p + se_a * se_a);
+  std::printf("\n  WHAT ALIGNMENT BUYS   aligned minus matched:  %+.1f +/- %.1f Hz"
+              "  (%.1f SE)\n", d_align, se_align,
+              se_align > 0.0 ? std::fabs(d_align) / se_align : 0.0);
+  std::printf("  the masking COST is held fixed across the two, so this is the part that\n"
+              "  is about the gesture rather than about confining credit at all.\n");
+  const double kBar = 3.0;
+  if (se_align <= 0.0) {
+    std::printf("\n  phasemask VOID -- zero variance on the alignment difference.\n");
+    return false;
+  }
+  if (d_align < -kBar * se_align) {
+    std::printf("\n  THE LESSON NEEDED A PLACE TO WRITE. Aligning the credit block to the\n"
+                "  creature's own phase buys %+.1f +/- %.1f Hz of mapping-specific\n"
+                "  separation over a block matched in size, duty and switching rate --\n"
+                "  %.1f SE. So the obstacle was never the credit pathway's timing and\n"
+                "  never the gesture: it was that a scalar reward writing into one\n"
+                "  rate-weighted centroid cannot address an INSTANT, and giving it a\n"
+                "  phase-specific population to write into is enough.\n"
+                "\n  WHAT THIS IS NOT. The block is an ORACLE -- the host reads the\n"
+                "  creature's phase and gates credit on it, which nothing in the genome\n"
+                "  does. It prices what a phase-specific credit route would buy. The\n"
+                "  build it licenses is a mechanism that produces that gating from inside,\n"
+                "  and the honest next question is what could.\n",
+                d_align, se_align, std::fabs(d_align) / se_align);
+    return true;
+  }
+  if (d_align > kBar * se_align) {
+    // A REVERSAL BRANCH THAT ONLY REPORTS THE REVERSAL LOSES THE MORE IMPORTANT HALF.
+    // The hypothesis was that alignment buys separation in the TAUGHT direction, which is
+    // negative. A positive result refutes that as firmly as a null does, and the closure
+    // does not depend on explaining the sign. The first version of this branch printed
+    // the curiosity and left the conclusion unstated.
+    std::printf("\n  A PLACE TO WRITE IS NOT WHAT WAS MISSING -- and the residual is\n"
+                "  REVERSED. Alignment does not buy separation in the taught direction at\n"
+                "  any size: the aligned contrast is POSITIVE where a taught separation is\n"
+                "  negative, so the hypothesis is refused on sign and not merely unproven\n"
+                "  on power.\n"
+                "\n  THAT CLOSES THE CREDIT FAMILY BY ORACLE RATHER THAN BY ARGUMENT, which\n"
+                "  is the strongest closure available here: no cheaper mechanism beats a\n"
+                "  perfect one. The lesson lands, the gesture is live and balanced, the\n"
+                "  window resolves a phase, the praise arrives inside one, and credit is\n"
+                "  confined to the very population that is winning. Every part the earlier\n"
+                "  refusals pointed at has now been handed over as an oracle.\n"
+                "\n  AND SEPARATELY, A REVERSAL WITH NO ACCOUNT ON THE TABLE. Aligning the\n"
+                "  block makes the contrast %+.1f +/- %.1f Hz MORE positive than the\n"
+                "  matched control (%.1f SE), which is %.1f%% of the separation it sits on.\n"
+                "  Nominal credit volume is matched -- both modes credit exactly one half\n"
+                "  per update -- and EFFECTIVE credit is not, because eligibility sits in\n"
+                "  the active half and alignment is precisely what puts credit there. That\n"
+                "  is not a confound to remove: alignment IS credit landing where\n"
+                "  eligibility is. Why it should favour the IDENTITY mapping has no\n"
+                "  mechanism on the table. Reported, not explained, and not built on.\n",
+                d_align, se_align, d_align / se_align,
+                sep_at[PM] > 0.0 ? 100.0 * d_align / sep_at[PM] : 0.0);
+    return false;
+  }
+  std::printf("\n  A PLACE TO WRITE IS NOT WHAT WAS MISSING. Aligning the credit block to\n"
+              "  the creature's own phase buys %+.1f +/- %.1f Hz over a block matched in\n"
+              "  size, duty and switching rate -- under %.0f SE, at power to see %.1f Hz.\n"
+              "  The lesson lands (`fixed` above), the gesture is live and balanced, the\n"
+              "  credit window resolves a phase and the praise arrives inside one, and\n"
+              "  credit is confined to the very population that is winning. Every part\n"
+              "  the refusals pointed at has now been handed to the creature as an oracle\n"
+              "  and the two mappings are still the same experiment with the labels\n"
+              "  permuted.\n"
+              "\n  THAT CLOSES THE CREDIT FAMILY BY ORACLE RATHER THAN BY ARGUMENT, which\n"
+              "  is the strongest form of closure available here: no cheaper mechanism can\n"
+              "  beat a perfect one. What remains untouched is the READOUT ITSELF -- one\n"
+              "  centroid over one group, read the same way at every instant. Two targets\n"
+              "  at two instants may require two readouts, which is a change to what the\n"
+              "  larynx IS rather than to how it is taught.\n",
+              d_align, se_align, kBar, kBar * se_align);
   return false;
 }
 

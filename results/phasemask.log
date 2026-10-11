@@ -1,0 +1,155 @@
+  [11/108] seed 1 amask      sep   +19.8  drop +0.0034  voiced 0.66
+  [3/108] seed 0 pmask      sep   +21.6  drop -0.0025  voiced 0.68
+  [9/108] seed 1 pmask      sep   +20.0  drop -0.0028  voiced 0.65
+  [12/108] seed 1 amask-sw   sep   +20.4  drop +0.0033  voiced 0.65
+  [6/108] seed 0 amask-sw   sep   +20.2  drop -0.0001  voiced 0.68
+  [7/108] seed 1 fixed      sep    +0.0  drop +0.0891  voiced 0.66
+  [14/108] seed 2 phase      sep   +19.5  drop +0.0014  voiced 0.70
+  [8/108] seed 1 phase      sep   +19.9  drop -0.0012  voiced 0.66
+  [13/108] seed 2 fixed      sep    +0.0  drop +0.1154  voiced 0.68
+  [10/108] seed 1 pmask-sw   sep   +19.8  drop +0.0019  voiced 0.67
+  [1/108] seed 0 fixed      sep    +0.0  drop +0.0355  voiced 0.68
+  [5/108] seed 0 amask      sep   +19.5  drop -0.0018  voiced 0.67
+  [2/108] seed 0 phase      sep   +19.1  drop -0.0002  voiced 0.67
+  [4/108] seed 0 pmask-sw   sep   +19.4  drop -0.0044  voiced 0.68
+  [15/108] seed 2 pmask      sep   +20.7  drop +0.0054  voiced 0.69
+  [16/108] seed 2 pmask-sw   sep   +18.1  drop -0.0037  voiced 0.68
+  [17/108] seed 2 amask      sep   +19.5  drop -0.0059  voiced 0.69
+  [20/108] seed 3 phase      sep   +17.0  drop -0.0145  voiced 0.66
+  [21/108] seed 3 pmask      sep   +16.9  drop -0.0023  voiced 0.66
+  [23/108] seed 3 amask      sep   +19.7  drop -0.0040  voiced 0.66
+  [18/108] seed 2 amask-sw   sep   +20.1  drop -0.0009  voiced 0.70
+  [22/108] seed 3 pmask-sw   sep   +17.3  drop -0.0058  voiced 0.65
+  [19/108] seed 3 fixed      sep    +0.0  drop +0.0650  voiced 0.65
+  [25/108] seed 4 fixed      sep    +0.0  drop +0.1238  voiced 0.68
+  [26/108] seed 4 phase      sep   +18.9  drop -0.0039  voiced 0.67
+  [27/108] seed 4 pmask      sep   +20.2  drop +0.0001  voiced 0.69
+  [24/108] seed 3 amask-sw   sep   +20.7  drop -0.0027  voiced 0.68
+  [28/108] seed 4 pmask-sw   sep   +18.3  drop -0.0026  voiced 0.67
+  [29/108] seed 4 amask      sep   +20.0  drop +0.0042  voiced 0.68
+  [30/108] seed 4 amask-sw   sep   +19.3  drop -0.0014  voiced 0.68
+  [34/108] seed 5 pmask-sw   sep   +18.9  drop +0.0093  voiced 0.66
+  [31/108] seed 5 fixed      sep    +0.0  drop +0.0360  voiced 0.67
+  [39/108] seed 6 pmask      sep   +20.7  drop +0.0037  voiced 0.66
+  [33/108] seed 5 pmask      sep   +19.7  drop +0.0125  voiced 0.67
+  [32/108] seed 5 phase      sep   +19.6  drop +0.0077  voiced 0.68
+  [35/108] seed 5 amask      sep   +21.6  drop +0.0030  voiced 0.67
+  [36/108] seed 5 amask-sw   sep   +20.4  drop +0.0046  voiced 0.67
+  [40/108] seed 6 pmask-sw   sep   +19.9  drop +0.0071  voiced 0.65
+  [38/108] seed 6 phase      sep   +20.0  drop +0.0023  voiced 0.64
+  [41/108] seed 6 amask      sep   +21.1  drop +0.0046  voiced 0.66
+  [37/108] seed 6 fixed      sep    +0.0  drop +0.0509  voiced 0.61
+  [42/108] seed 6 amask-sw   sep   +21.7  drop -0.0002  voiced 0.65
+  [43/108] seed 7 fixed      sep    +0.0  drop +0.0577  voiced 0.68
+  [44/108] seed 7 phase      sep   +20.3  drop +0.0081  voiced 0.68
+  [45/108] seed 7 pmask      sep   +21.3  drop +0.0052  voiced 0.67
+  [47/108] seed 7 amask      sep   +21.1  drop +0.0058  voiced 0.68
+  [50/108] seed 8 phase      sep   +19.9  drop -0.0044  voiced 0.69
+  [46/108] seed 7 pmask-sw   sep   +19.4  drop +0.0092  voiced 0.68
+  [48/108] seed 7 amask-sw   sep   +21.1  drop +0.0115  voiced 0.68
+  [49/108] seed 8 fixed      sep    +0.0  drop +0.0334  voiced 0.68
+  [52/108] seed 8 pmask-sw   sep   +21.0  drop -0.0044  voiced 0.69
+  [53/108] seed 8 amask      sep   +20.5  drop -0.0061  voiced 0.69
+  [51/108] seed 8 pmask      sep   +20.3  drop -0.0050  voiced 0.69
+  [55/108] seed 9 fixed      sep    +0.0  drop +0.0903  voiced 0.63
+  [56/108] seed 9 phase      sep   +18.3  drop -0.0005  voiced 0.64
+  [54/108] seed 8 amask-sw   sep   +19.3  drop -0.0054  voiced 0.69
+  [57/108] seed 9 pmask      sep   +19.9  drop +0.0027  voiced 0.63
+  [58/108] seed 9 pmask-sw   sep   +18.7  drop -0.0007  voiced 0.64
+  [61/108] seed 10 fixed      sep    +0.0  drop +0.1036  voiced 0.66
+  [64/108] seed 10 pmask-sw   sep   +18.1  drop +0.0061  voiced 0.68
+  [62/108] seed 10 phase      sep   +16.7  drop +0.0066  voiced 0.69
+  [59/108] seed 9 amask      sep   +19.5  drop -0.0032  voiced 0.65
+  [63/108] seed 10 pmask      sep   +19.9  drop +0.0061  voiced 0.68
+  [67/108] seed 11 fixed      sep    +0.0  drop +0.0199  voiced 0.65
+  [66/108] seed 10 amask-sw   sep   +19.8  drop +0.0022  voiced 0.65
+  [69/108] seed 11 pmask      sep   +19.1  drop -0.0053  voiced 0.67
+  [60/108] seed 9 amask-sw   sep   +19.9  drop -0.0019  voiced 0.64
+  [65/108] seed 10 amask      sep   +19.7  drop +0.0055  voiced 0.68
+  [68/108] seed 11 phase      sep   +20.1  drop -0.0087  voiced 0.68
+  [70/108] seed 11 pmask-sw   sep   +19.1  drop -0.0072  voiced 0.68
+  [71/108] seed 11 amask      sep   +18.4  drop -0.0088  voiced 0.67
+  [72/108] seed 11 amask-sw   sep   +20.6  drop -0.0104  voiced 0.68
+  [76/108] seed 12 pmask-sw   sep   +19.8  drop -0.0046  voiced 0.66
+  [75/108] seed 12 pmask      sep   +21.1  drop -0.0040  voiced 0.66
+  [73/108] seed 12 fixed      sep    +0.0  drop +0.0447  voiced 0.65
+  [82/108] seed 13 pmask-sw   sep   +19.3  drop -0.0054  voiced 0.69
+  [74/108] seed 12 phase      sep   +20.9  drop +0.0016  voiced 0.65
+  [77/108] seed 12 amask      sep   +21.3  drop -0.0091  voiced 0.66
+  [80/108] seed 13 phase      sep   +20.0  drop -0.0116  voiced 0.70
+  [81/108] seed 13 pmask      sep   +18.7  drop -0.0015  voiced 0.70
+  [78/108] seed 12 amask-sw   sep   +20.8  drop -0.0021  voiced 0.65
+  [79/108] seed 13 fixed      sep    +0.0  drop +0.0333  voiced 0.68
+  [83/108] seed 13 amask      sep   +20.8  drop -0.0069  voiced 0.70
+  [84/108] seed 13 amask-sw   sep   +20.7  drop -0.0049  voiced 0.70
+  [86/108] seed 14 phase      sep   +17.8  drop +0.0072  voiced 0.64
+  [85/108] seed 14 fixed      sep    +0.0  drop +0.0513  voiced 0.65
+  [87/108] seed 14 pmask      sep   +20.6  drop +0.0071  voiced 0.67
+  [88/108] seed 14 pmask-sw   sep   +19.7  drop +0.0030  voiced 0.66
+  [90/108] seed 14 amask-sw   sep   +19.3  drop +0.0022  voiced 0.65
+  [89/108] seed 14 amask      sep   +19.9  drop +0.0046  voiced 0.67
+  [91/108] seed 15 fixed      sep    +0.0  drop +0.1026  voiced 0.66
+  [92/108] seed 15 phase      sep   +20.2  drop -0.0041  voiced 0.68
+  [94/108] seed 15 pmask-sw   sep   +19.6  drop -0.0153  voiced 0.67
+  [93/108] seed 15 pmask      sep   +20.6  drop -0.0093  voiced 0.68
+  [95/108] seed 15 amask      sep   +21.5  drop -0.0068  voiced 0.67
+  [96/108] seed 15 amask-sw   sep   +20.9  drop -0.0098  voiced 0.69
+  [99/108] seed 16 pmask      sep   +20.3  drop -0.0056  voiced 0.68
+  [97/108] seed 16 fixed      sep    +0.0  drop +0.1588  voiced 0.66
+  [98/108] seed 16 phase      sep   +18.9  drop +0.0024  voiced 0.67
+  [103/108] seed 17 fixed      sep    +0.0  drop +0.0869  voiced 0.71
+  [100/108] seed 16 pmask-sw   sep   +19.7  drop +0.0049  voiced 0.67
+  [101/108] seed 16 amask      sep   +19.3  drop -0.0099  voiced 0.67
+  [106/108] seed 17 pmask-sw   sep   +20.6  drop -0.0019  voiced 0.70
+  [108/108] seed 17 amask-sw   sep   +20.7  drop -0.0065  voiced 0.71
+  [105/108] seed 17 pmask      sep   +21.9  drop -0.0018  voiced 0.71
+  [102/108] seed 16 amask-sw   sep   +19.4  drop +0.0042  voiced 0.67
+  [104/108] seed 17 phase      sep   +19.9  drop -0.0075  voiced 0.71
+  [107/108] seed 17 amask      sep   +21.5  drop -0.0073  voiced 0.71
+experiment: phasemask
+  instrument        phasemask   trial seed 000000000135bd97   1214 trials per arm
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  phasemask -- the lesson cannot aim a gesture, and neither the credit
+  pathway nor the gesture is the reason. Does it need a phase-specific
+  PLACE to write?
+  the quantity  the IDENTITY-minus-SWAPPED mapping contrast, which cancels
+                the oscillator because it contributes equally to both.
+  the evidence  that contrast under a PHASE-ALIGNED credit block, against
+                the same contrast under a SIZE- AND DUTY-MATCHED block
+                that switches on a clock of its own. Masking costs the
+                lesson on its own, so only the DIFFERENCE is informative.
+  refused if    aligned and matched come back equal. Then a phase-specific
+                place to write buys nothing and the credit family closes
+                by oracle rather than by argument.
+  the control   `fixed` must show the lesson landing, or nothing here is a
+                measurement -- the fourth rung, and two earlier runs of a
+                neighbouring experiment printed verdicts without it.
+
+
+  arm           n  sep (ph1-ph0)        lesson drop             share    off voiced
+  fixed        18  (no phase bins)      +0.0721 +/- 0.0091       0.00   0.00   0.66
+  phase        18  +19.3 +/- 0.3 Hz     -0.0011 +/- 0.0016       0.50   0.00   0.67
+  pmask        18  +20.2 +/- 0.3 Hz     +0.0001 +/- 0.0013       0.49   0.00   0.67
+  pmask-sw     18  +19.3 +/- 0.2 Hz     -0.0008 +/- 0.0015       0.50   0.00   0.67
+  amask        18  +20.3 +/- 0.2 Hz     -0.0021 +/- 0.0014       0.50   0.00   0.67
+  amask-sw     18  +20.3 +/- 0.2 Hz     -0.0010 +/- 0.0013       0.50   0.00   0.67
+
+  DID THE LESSON LAND   error early minus late on `fixed`:  +0.0721 +/- 0.0091  (8.0 SE, n=18)
+
+  THE MAPPING CONTRAST, paired on seed (identity minus swapped)
+    credit block       contrast                       SE    n
+    phase-aligned        +0.9 +/-   0.2 Hz           4.3   18
+    matched, unaligned   -0.0 +/-   0.2 Hz           0.2   18
+  a taught separation makes these NEGATIVE: the identity mapping asks the
+  high-F1 posture for the LOW target and the swapped one asks it for the
+  HIGH target.
+
+  WHAT ALIGNMENT BUYS   aligned minus matched:  +1.0 +/- 0.3 Hz  (3.3 SE)
+  the masking COST is held fixed across the two, so this is the part that
+  is about the gesture rather than about confining credit at all.
+
+  REVERSED, AND NOTHING PREDICTS IT. Aligning the block to the phase
+  makes the mapping contrast +1.0 +/- 0.3 Hz MORE positive than the
+  unaligned control (3.3 SE). A null and a reversal are different
+  results and this is the second; it is reported and not explained.

@@ -2195,6 +2195,7 @@ bool run_blockfloor(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_blockwhere(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_phaseteach(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_hcsweep(const std::vector<uint8_t>&, uint64_t, bool);
+bool run_phasemask(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_blockanchor(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_leverprobe(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_blockflip(const std::vector<uint8_t>&, uint64_t, bool);

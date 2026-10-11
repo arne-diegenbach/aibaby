@@ -365,6 +365,22 @@ const Spec kSpecs[] = {
      "  if the half-centre reports no phase or has settled on one winner. The\n"
      "  evidence is the IDENTITY-minus-SWAPPED mapping contrast, because the\n"
      "  oscillator contributes to both equally and cancels from the difference."},
+    {"phasemask", 3400000, Expect::kOpen, Tier::kTeach,
+     "derived: the same teaching length as vocallearn, because the quantity is\n"
+     "  vocallearn's. The lesson cannot aim a gesture and neither the credit\n"
+     "  pathway nor the gesture is the reason -- a fast-teacher oracle satisfied\n"
+     "  resolution and delivery together and the contrast stayed null, and\n"
+     "  teaching leaves the gesture's amplitude intact. What is left is the\n"
+     "  readout: F1 is one rate-weighted centroid and both phases are read\n"
+     "  through it. This confines reward-driven credit to the half of the F1\n"
+     "  group currently WINNING, via set_reward_block -- NOT set_reward_mask,\n"
+     "  which allows a range and freezes every other group and module. The\n"
+     "  control is the design: the same block, same duty, same switching rate, on\n"
+     "  a clock that is not the gesture, because confining credit costs the\n"
+     "  lesson on its own and only ALIGNMENT is informative. Both oracles are\n"
+     "  host-side with no genome field, so the pinned hash does not move. Run on\n"
+     "  results/hc-phase-fast.toml, whose 100 ms window puts the eligibility\n"
+     "  being spent in the same phase as the block that gates it."},
     {"hcsweep", 3400000, Expect::kOpen, Tier::kTeach,
      "derived: the same teaching length as vocallearn and phaseteach, because the\n"
      "  quantity IS vocallearn's -- error early minus late. Is there an operating\n"
@@ -919,6 +935,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "blockfloor") ok = run_blockfloor(dna_blob, ticks, verbose);
   else if (name == "phaseteach") ok = run_phaseteach(dna_blob, ticks, verbose);
   else if (name == "hcsweep") ok = run_hcsweep(dna_blob, ticks, verbose);
+  else if (name == "phasemask") ok = run_phasemask(dna_blob, ticks, verbose);
   else if (name == "blockwhere") ok = run_blockwhere(dna_blob, ticks, verbose);
   else if (name == "blockanchor") ok = run_blockanchor(dna_blob, ticks, verbose);
   else if (name == "leverprobe") ok = run_leverprobe(dna_blob, ticks, verbose);

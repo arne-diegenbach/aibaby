@@ -16684,6 +16684,88 @@ the attribution cannot be had by ablation **at all**. The cost necessarily names
 configuration rather than either mechanism. That is a structural fact, not a missing run, and
 checking the candidate arm against the record cost one grep.
 
+### Credit closes by oracle: a phase-specific place to write buys nothing, and the residual is reversed
+
+Three things had been cleared in turn. The **credit pathway**: a fast-teacher oracle
+satisfied resolution and delivery together — 50 ms delay, 100 ms window, 136 ms phase — and
+the mapping contrast stayed null. The **gesture**: teaching leaves its amplitude intact to
+within a few per cent of free-running on the same estimator. The **operating point**: a gain
+sweep found a point where the lesson is statistically identical to having no gesture at all.
+What was left was the readout. F1 is one rate-weighted centroid over one group, both phases
+are read through it, and a scalar reward has no way to say *this end, now*.
+
+`phasemask` hands the lesson exactly that. Reward-driven credit is confined to the half of
+the F1 group that is **currently winning** — the host reads `halfcenter_phase` each tick and
+blocks the loser. Run on the 100 ms genome, so the eligibility being spent was laid down in
+the same phase as the block that gates it.
+
+```
+  arm         n   sep (ph1-ph0)     lesson drop          share   off
+  fixed      18   (no phase bins)   +0.0721 +/- 0.0091    0.00   0.00
+  phase      18   +19.3 +/- 0.3 Hz  -0.0011 +/- 0.0016    0.50   0.00
+  pmask      18   +20.2 +/- 0.3 Hz  +0.0001 +/- 0.0013    0.49   0.00
+  pmask-sw   18   +19.3 +/- 0.2 Hz  -0.0008 +/- 0.0015    0.50   0.00
+  amask      18   +20.3 +/- 0.2 Hz  -0.0021 +/- 0.0014    0.50   0.00
+  amask-sw   18   +20.3 +/- 0.2 Hz  -0.0010 +/- 0.0013    0.50   0.00
+
+  credit block         contrast             SE    n
+  phase-aligned         +0.9 +/- 0.2 Hz    4.3   18
+  matched, unaligned    -0.0 +/- 0.2 Hz    0.2   18
+
+  WHAT ALIGNMENT BUYS   aligned minus matched:  +1.0 +/- 0.3 Hz  (3.3 SE)
+```
+
+**The positive control passed at 8.0 SE** and the vacuity control behaved: on a genome with
+no half-centre, every phase arm reports `off` 1.00 and no phase bins.
+
+**A taught separation is NEGATIVE here** — the identity mapping asks the high-F1 posture for
+the low target. The aligned contrast is **positive**. So the hypothesis is refused *on sign*,
+not merely unproven on power, and the closure does not depend on explaining the sign.
+
+#### Why this is the strongest form of closure available
+
+Every part the earlier refusals pointed at has now been handed to the creature as an oracle:
+the lesson lands, the gesture is live and balanced, the credit window resolves a phase, the
+praise arrives inside one, and credit reaches only the population that is winning. The two
+mappings remain the same experiment with the labels permuted. **No cheaper mechanism beats a
+perfect one**, so there is nothing left in the credit family worth building — the delay line
+and the synaptic tag included, and they were already refused from the other side because a
+fast gate cannot carry a target.
+
+What this does **not** touch is the readout itself: one centroid over one group, read the
+same way at every instant. Two targets at two instants may simply require two readouts,
+which is a change to what the larynx *is* rather than to how it is taught. That is the first
+thing in a long while that is not a credit-assignment question.
+
+#### The control is the design, and the matching is exact
+
+`credgate` had already measured that confining credit inside the F1 group costs the lesson a
+great deal by itself, so "the masked arm is worse" would have said nothing. `amask` blocks
+the same half, the same fraction of the time, switching every **136 ticks** — derived, not
+picked: the alternation runs at 3.67 Hz, so a phase is 1000/(2·3.67) = 136 ms. Same size,
+same duty, same switching rate, alignment broken, and it returns a clean null at 0.2 SE.
+
+Nominal credit volume is matched exactly: at every plasticity update both modes block one
+half and credit the other. **Effective** credit is not matched, because eligibility sits in
+the active half and alignment is precisely what puts credit there — the aligned arm delivers
+roughly twice as much usable credit. That is not a confound to remove: *alignment is credit
+landing where eligibility is*, and the two cannot be separated because they are one
+quantity. It is disclosed rather than corrected.
+
+#### A reversal, reported and not explained
+
+The +1.0 ± 0.3 Hz is 5.2% of the separation it sits on, tight, and with a clean matched
+control beside it. Crediting the current winner is positive feedback on the alternation,
+which fits the separations rising 19.3 → 20.2 under both aligned arms. **Why it should favour
+the identity mapping specifically has no mechanism on the table.** The standing rule is that
+a reversal is reported and nothing is built on it, and that is what happens here.
+
+**And my verdict branch was wrong in a way worth recording.** It printed the reversal and
+never stated that the hypothesis had failed — the curiosity above the conclusion. A positive
+result refutes a directional hypothesis as firmly as a null does, and a reversal branch that
+omits the refutation buries the finding under the anomaly. Fixed in the source; the same
+family as the one-sided test caught one run earlier.
+
 ## Layout
 
 ```
