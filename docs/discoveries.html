@@ -1054,7 +1054,8 @@ instantaneous threshold on a noisy mean, with no hysteresis, which chatters and 
 word into several episodes of which some contain only silence.</p>
 <p class="note">Two things this does not say. The boundary was handed over by an
 <em>oracle</em>, so what is measured is the size of the prize for building a boundary
-detector rather than a detector. And the decay above is named but not fixed: nothing here
+detector rather than a detector &mdash; and &sect;6.5 reports what happened when four
+detectors were built to collect it. And the decay above is named but not fixed: nothing here
 shows that restoring the prototype&rsquo;s learning rate recovers the 0.060 &mdash; indeed
 the behaviour reaches the oracle&rsquo;s level while still decaying, which bounds how much
 that 0.060 can be costing.</p>
@@ -1069,6 +1070,72 @@ on held-out trials where the reward lands. The feature is fine; the extraction i
 <p>0.2% of ticks account for the learning, and no schedule reproduces it at
 3.3 SE over 32 creatures. The result carries no lesson about <em>which</em> ticks, which is
 stated here because it is the kind of finding that invites one.</p>
+
+<h3>6.5 The prize in 6.3 was for a detector, and no detector collects it</h3>
+<p>&sect;6.3 priced the word boundary by handing it over as an oracle, and said in terms
+that what it measured was <em>the size of the prize for building a boundary detector rather
+than a detector</em>. Four detector shapes have now been built and measured side by side at
+full budget &mdash; 14 arms, 36 creatures, 3.4M ticks &mdash; and the prize is not
+collectable by any of them.</p>
+<table>
+<tr><th>arm</th><th>dF1 (Hz)</th><th>paired vs its control</th><th>index</th><th>occupancy</th><th>slack to ceiling</th></tr>
+<tr><td>handed the word (oracle)</td><td>80.7 &plusmn; 5.0</td><td>&mdash;</td><td>1.000</td><td>0.500</td><td>0.000</td></tr>
+<tr><td>handed the boundary</td><td>74.6 &plusmn; 5.5</td><td>+49.2 &plusmn; 6.0 (8.3 SE)</td><td>0.892</td><td>0.608</td><td>0.000</td></tr>
+<tr><td><strong>no detector at all (EMA)</strong></td><td><strong>63.5 &plusmn; 4.4</strong></td><td>+38.6 &plusmn; 5.1 (7.6 SE)</td><td>0.854</td><td>0.641</td><td>0.006</td></tr>
+<tr><td>envelope-derivative gate</td><td>57.0 &plusmn; 6.2</td><td>+24.1 &plusmn; 7.9 (3.1 SE)</td><td>0.810</td><td>0.636</td><td>0.054</td></tr>
+<tr><td>split gate</td><td>39.9 &plusmn; 3.7</td><td>+15.5 &plusmn; 4.3 (3.6 SE)</td><td>0.777</td><td>0.604</td><td>0.119</td></tr>
+<tr><td>conjunction gate</td><td>39.6 &plusmn; 3.7</td><td>+16.4 &plusmn; 4.7 (3.5 SE)</td><td>0.760</td><td>0.612</td><td>0.128</td></tr>
+<tr><td>larynx gate</td><td>27.5 &plusmn; 3.4</td><td>+7.1 &plusmn; 4.7 (1.5 SE)</td><td>0.694</td><td>0.642</td><td>0.164</td></tr>
+<tr><td>no index</td><td>25.1 &plusmn; 3.5</td><td>&mdash;</td><td>0.000</td><td>0.000</td><td>&mdash;</td></tr>
+</table>
+<p><strong>The envelope gate works and is not worth having.</strong> It is the detector the
+project had argued itself into: the larynx gate chatters, so a gate keyed on the rising edge
+of the heard envelope should be cleaner, and it is &mdash; it beats the larynx gate by
++29.5&nbsp;&plusmn;&nbsp;7.1&nbsp;Hz, 4.2&nbsp;SE. But against the arm that uses no boundary
+detector at all, reading the context index straight off a decaying average of the ear's own
+rate, it is &minus;6.4&nbsp;&plusmn;&nbsp;7.7 &mdash; indistinguishable, on the wrong side,
+and ahead on only 15 of 36 creatures. The conjunction gate (heard onset <em>and</em> a quiet
+larynx) and the split gate (ear for the boundary, larynx for per-tick trust) both beat the
+larynx gate by 3.1&nbsp;SE paired (+12.1&nbsp;&plusmn;&nbsp;3.9 and
++12.4&nbsp;&plusmn;&nbsp;4.0&nbsp;Hz, 26 of 36 each), so both clear this project's bar
+against the shipped gate and neither is mechanically broken &mdash; and both land roughly
+24&nbsp;Hz below the detector-free arm. <strong>Nothing in the family beats the member with
+no detector in it.</strong> Every arm runs on the same creatures, the per-job seed being
+independent of the arm, so each gap is available paired as well; that is where the sign
+counts come from.</p>
+<p><strong>Two results from the same run are not closures, and one of them replicates
+&sect;6.3 on a second wiring family.</strong> That the word's <em>identity</em> buys nothing
+beyond its <em>timing</em> holds again here: handing over the word rather than the boundary
+is worth +6.1&nbsp;&plusmn;&nbsp;6.1&nbsp;Hz, 1.0&nbsp;SE, on 18 of 36 creatures &mdash; a
+sign count exactly at chance, measured on creatures the original claim never touched. And
+real headroom remains: the full oracle beats the detector-free arm by
++17.2&nbsp;&plusmn;&nbsp;5.1&nbsp;Hz (3.3&nbsp;SE, 25 of 36), above the bar. <strong>What is
+refused is building a detector to close that gap, not the gap itself.</strong> The three
+figures are mutually consistent &mdash; 17.2 is 6.1 plus 11.1 &mdash; with the split between
+them poorly resolved.</p>
+<p>The last column says why, and it is the more durable half of the result. For two balanced
+words the index match cannot exceed <code>1.5 &minus; occupancy</code>, where occupancy is
+the share of trials falling in the busier half of the table; <em>slack</em> is the accuracy
+an arm still has available. The detector-free arm's slack is <strong>0.006</strong> and the
+handed-boundary arm's is <strong>0.000</strong>. <strong>The leading arms are already as
+accurate as their own partitions permit, and every arm in the table lands where its ceiling
+puts it.</strong> The arms that lose are exactly the arms sitting below their ceilings. So
+the open problem is not <em>when does a word happen</em> but <em>where to put the threshold
+so the trials divide evenly</em> &mdash; a different question, and one no gate in this family
+was built to answer.</p>
+<p class="note">Three things this does not say. Splitting the trials evenly is shown to be
+<em>necessary</em> for a derived index to beat the detector-free arm, not sufficient: for an
+arm at its ceiling <code>index &equiv; 1.5 &minus; occupancy</code> identically, so accuracy
+and balance are the same number and this run cannot separate them. The boundary prize itself
+is genome-dependent &mdash; handed-boundary minus detector-free is
++11.1&nbsp;&plusmn;&nbsp;7.1&nbsp;Hz here and +27.4&nbsp;&plusmn;&nbsp;7.0 on the earlier
+family, and the two runs share no creatures, so &sect;6.3's figure and this one are two
+samples of a range rather than a disagreement. And the two gate shapes built for this run
+were very nearly refused on a short smoke that mis-measured them: their gate-events-per-trial
+read 0.55 and 0.59 against a design of 1.0 on a 17&times;-short run and 1.76 and 1.86 at full
+budget, because a rate-thresholded gate's behaviour depends on a rate distribution that is
+still settling in the first few percent of a creature's life. Only a handed window was
+budget-invariant.</p>
 
 
 <h2>7. Transmission between creatures</h2>

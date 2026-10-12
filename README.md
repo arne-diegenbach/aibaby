@@ -17069,6 +17069,102 @@ dead, 4 of 4 alternating) and lands on *width, not leak*. The source is fixed an
 so the next run prints the right verdict, and 2h of compute was not spent re-deriving numbers
 that were already correct — only the sentence over them was wrong.
 
+### The word boundary was never what was missing
+
+`ctxself` at full budget, 14 arms × 36 creatures, 3.4M ticks, on `results/ctxself-base.toml`.
+It was launched to settle a gate I had refused on a mechanism smoke **without ever reading its
+output** — `grep -rln "ear-env" results/` returned nothing, so the envelope gate's full-budget
+dF1 did not exist anywhere. My own standing rule is to read the arm's numbers rather than the
+verdict over them; here I had read neither, only the mechanism.
+
+| arm | dF1 (Hz) | paired vs its `-rnd` twin | index | occupancy | slack to ceiling |
+|---|---|---|---|---|---|
+| `oracle` | 80.7 ± 5.0 | — | 1.000 | 0.500 | 0.000 |
+| `ear-win-sh` | 74.6 ± 5.5 | +49.2 ± 6.0 (8.3 SE) | 0.892 | 0.608 | 0.000 |
+| `ema` | 63.5 ± 4.4 | +38.6 ± 5.1 (7.6 SE) | 0.854 | 0.641 | 0.006 |
+| `ear-env-sh` | 57.0 ± 6.2 | +24.1 ± 7.9 (3.1 SE) | 0.810 | 0.636 | 0.054 |
+| `ear-spl-sh` | 39.9 ± 3.7 | +15.5 ± 4.3 (3.6 SE) | 0.777 | 0.604 | 0.119 |
+| `ear-cnj-sh` | 39.6 ± 3.7 | +16.4 ± 4.7 (3.5 SE) | 0.760 | 0.612 | 0.128 |
+| `ear-sh` | 27.5 ± 3.4 | +7.1 ± 4.7 (1.5 SE) | 0.694 | 0.642 | 0.164 |
+| `off` | 25.1 ± 3.5 | — | 0.000 | 0.000 | — |
+
+**The envelope gate works and is not worth having.** Its lesson lands — paired contrast
++24.1 ± 7.9 (3.1 SE), and +29.5 ± 6.3 (4.7 SE paired) over the plain `ear` gate it was built
+to beat. But against `ema`, which uses **no boundary detector at all**, it is −6.4 ± 7.7
+(−0.8 SE) and **wins on 15 of 36 creatures** — below half. The refusal was right; the
+evidence I refused it on was not the evidence that decides it.
+
+The two gate shapes added for this run land the same way. `ear-cnj-sh` (the conjunction:
+ear onset AND a quiet larynx) and `ear-spl-sh` (the split gate: ear for the boundary, larynx
+for per-tick trust) both beat plain `ear` by **3.1 SE paired** (+12.1 ± 3.9 and +12.4 ± 4.0,
+26 of 36 each) — so both clear the project's bar against the shipped gate and neither is the
+mechanical failure the smoke implied — and both land ~24 Hz below `ema`. **Nothing in the
+derived-index family beats the arm with no detector in it.** That closes the detector
+approach: a word-boundary detector is not the missing piece.
+
+Because the arms share creatures — the per-job seed is `base + rep*7919` and
+arm-independent — every cross-arm gap here can be paired, which is what the sign counts
+above are from and what tightens `cnj − ear` from 2.4 to 3.1 SE.
+
+#### Two things the same run says that are not closures
+
+**§6.3's central claim replicates on a second wiring family.** Handing over the word's
+*identity* buys nothing beyond handing over its *timing*: `oracle − ear-win-sh` is
+**+6.1 ± 6.1 Hz, 1.0 SE, 18 of 36** — the sign count is exactly chance. That was measured
+once before on a different genome and is now measured again here, independently.
+
+**And real headroom remains.** `oracle − ema` is **+17.2 ± 5.1 (3.3 SE), 25 of 36** — above
+the 3 SE bar. So the detector-free arm is not at the oracle's level; what is refused is
+*building a detector to close that gap*, not the existence of the gap. The three numbers are
+mutually consistent (17.2 ≈ 6.1 + 11.1), with the split between them poorly resolved.
+
+#### What the ceiling column says, and what it does not
+
+For two balanced words the index match obeys `idx ≤ 1.5 − occupancy`, so `slack` is the
+accuracy an arm is still leaving unused. `ema` has slack **0.006** and `ear-win-sh` has
+**0.000**: the leading arms are already as accurate as their own partitions permit. The
+arms that lose (`ear-sh` 0.164, `cnj` 0.128, `spl` 0.119) lose by sitting below their
+ceilings, and every arm in the table lands where its ceiling puts it.
+
+So **raising the ceiling — splitting the trials more evenly than 0.641 — is a necessary
+condition for any derived index to beat `ema`.** It is tempting to go further and say the
+remaining oracle gap *is* occupancy rather than accuracy, and that does not follow: for an
+arm at its ceiling `idx ≡ 1.5 − occ` identically, so accuracy and balance are the **same
+number** and this run cannot separate them. Necessary, not sufficient, and untested.
+
+#### The prize was re-priced again, and this time the reason is that the creatures differ
+
+I had just re-priced the boundary oracle at +35.3 ± 6.8 Hz from `results/ctxself-win2.log`.
+In this run the same comparison, like arm for like arm, is `ear-win-sh − ema` =
+**+11.1 ± 7.1 (1.6 SE)**; in win2 it was +27.4 ± 7.0 (3.9 SE). Before reading either, the
+two runs were checked creature by creature on the eight arms they share: **0 of 288 matched
+pairs agree**, including `off` and `oracle`, which no change in this session can touch. The
+two genomes are different creatures — appending a context module re-rolls the noise — so
+**no absolute dF1 is comparable across these two logs**, and the apparent halving is two
+independent measurements on two wiring families, not a failure to replicate. Same sign in
+both, 2.5× apart in size. The honest price is "positive, order 10–30 Hz, genome-dependent",
+and the single-run +35.3 was the top of a range quoted as a point.
+
+#### A short smoke mis-measures a threshold gate by 2×
+
+The 200k-tick smoke that refused the conjunction gate reported `ev/tri` 0.55 against a design
+of 1.0. At 3.4M ticks it is **1.76**. The split gate went 0.59 → 1.86, `ema` 1.11 → 2.51,
+`ear-sh` 1.19 → 2.61 — everything driven by a rate threshold roughly doubled, while
+`ear-win-sh`, whose window is handed to it, stayed at exactly 1.00. A threshold gate's firing
+rate is a function of a rate distribution that is still settling in the first 6% of the
+creature's life, so **a mechanism statistic measured on a 17×-short smoke is not a measurement
+of the mechanism.** Two of this run's three refusals were originally made on exactly that
+number.
+
+#### The run lost its own summary and did not need to be repeated
+
+After 11.5h every creature had run, and the summary refused: `ctxself INCONCLUSIVE -- arm
+'ear' produced 0 usable creatures`. The guard walked all 20 arms, and `ear` was deliberately
+held out of the focused set, so it was empty by construction. The per-creature rows were all
+present, so the aggregation was done over the log instead and no compute was repeated. The
+guard now skips arms it was told to skip; an arm that was asked for and came back empty still
+refuses.
+
 ## Layout
 
 ```

@@ -1489,7 +1489,7 @@ void Network::step() {
       bool gate_on;
       if (ctx_window_oracle_) {
         gate_on = ctx_window_on_;
-      } else if (ctx_gate_mode_ == 1u && ctx_env_module_ >= 0) {
+      } else if (ctx_gate_mode_ >= 1u && ctx_gate_mode_ <= 3u && ctx_env_module_ >= 0) {
         // THE ENVELOPE-ONSET GATE. `rising` is the fast envelope mean above the slow one,
         // which is the sign of the derivative with no threshold to choose, and the latch
         // flips only after the disagreement has persisted for the fast filter's own time
@@ -1497,9 +1497,59 @@ void Network::step() {
         // distributions said the fix had to be.
         const ModuleState& ems = modules_[uint32_t(ctx_env_module_)];
         const bool rising = ems.mean_rate_fast > ems.mean_rate;
+        // MODE 2 IS THE CONJUNCTION -- a sound is STARTING and the creature is not the one
+        // making it. Each half is already built and each half alone is refused, for
+        // opposite reasons. The envelope gate fires outside the word because the envelope
+        // rises for ANY sound including the creature's own voice at self_gain 0.5
+        // (measured: ON/word 1.21, ev/tri 2.31). The larynx gate's one virtue is being
+        // SILENT WHILE LISTENING (voiced 0.276 -> 0.010), and its one failure is that an
+        // instantaneous threshold on a noisy mean chatters and fragments a word into
+        // episodes that commit prototypes from silence. The conjunction takes the onset
+        // from the ear and the "it is not me" from the larynx, which is what each lacked.
+        //
+        // THE LARYNX GATES THE OPENING ONLY, AND THE FIRST VERSION GATED EVERY TICK.
+        // A continuous `env_open && quiet` requires the larynx to stay below setpoint for
+        // the WHOLE episode, which is a much stricter thing than "someone else started
+        // talking" -- and it measured ev/tri 0.3-0.6 against a design of 1.0, i.e. most
+        // trials got NO episode and the gate merged across trials. That outcome was
+        // pre-registered as UNINTERPRETABLE, and it is the right call: an onset is an
+        // EVENT, so the quiet condition belongs on the transition and not on the state.
+        // Here the latch OPENS on rising-and-quiet and CLOSES on falling alone.
+        //
+        // NOT THE CONJUNCTION ALREADY REFUSED BELOW. That one required the ear ABOVE ITS
+        // SETPOINT -- a LEVEL -- and was inert at +0.004 because the ear sits above
+        // setpoint nearly always, so it admitted almost every episode. `rising` is a
+        // DERIVATIVE: true about half the time by construction, so the conjunction is not
+        // a no-op by the same argument that killed the level version.
+        // THE LARYNX VETOES AT THE DECISION POINT, and two earlier shapes were too strict.
+        // Requiring `rising && quiet` to hold for the persistence window -- whether as a
+        // per-tick gate or as the latch's open condition -- needs fifty CONSECUTIVE ticks
+        // of two noisy predicates agreeing, which measured ev/tri 0.3 against a design of
+        // 1.0 and a mode-1 baseline of 2.3. The counter resets on any single
+        // disagreement, so a conjunction is far rarer than either half rather than
+        // somewhat rarer.
+        //
+        // So the persistence runs on `rising` ALONE, exactly as mode 1, and the larynx is
+        // consulted only at the instant the latch would flip open: an onset the ear found,
+        // rejected if the creature is the one making it. No new constant -- the veto reads
+        // the same `ctx_gate_target_` the shipped gate already uses -- and mode 2 can now
+        // only ever have FEWER events than mode 1, never more, which makes ev/tri bounded
+        // above by 2.3 by construction.
+        //
+        // MEASURED AND REFUSED, 36 creatures at 3.4M (results/ctxself-env2.log). Mode 2 is
+        // NOT mechanically broken -- it beats the shipped larynx gate by +12.1 +/- 5.1 Hz
+        // (2.4 SE) and runs at ev/tri 1.76, not the 0.55 its short smoke claimed. It is
+        // refused because it lands at 39.6 +/- 3.7 Hz against 63.5 +/- 4.4 for the arm
+        // with NO gate at all (context_source 4 read straight off `rate_ema_`). Its index
+        // sits 0.128 BELOW the ceiling its own occupancy allows, where that arm sits
+        // 0.006 below. THE WHOLE GATE FAMILY IS BEATEN BY NOT GATING: do not build a
+        // fourth shape of this conjunction.
+        const bool quiet = gms.mean_rate < ctx_gate_target_;
         if (rising != ctx_env_open_) {
           if (++ctx_env_run_ >= ctx_env_persist_) {
-            ctx_env_open_ = rising;
+            // Opening is vetoed while the creature is voicing; closing never is, because
+            // "it went quiet" is not evidence about who was speaking.
+            if (!rising || ctx_gate_mode_ != 2u || quiet) ctx_env_open_ = rising;
             ctx_env_run_ = 0u;
           }
         } else {
@@ -1510,7 +1560,43 @@ void Network::step() {
         gate_on = gms.mean_rate < ctx_gate_target_;
       }
       const bool slow_on = gate_on;
-      const bool fast_on = slow_on;
+      // MODE 3: THE EAR SUPPLIES THE BOUNDARY, THE LARYNX SUPPLIES PER-TICK TRUST.
+      //
+      // This is where three failed shapes of the conjunction point, and it is a different
+      // decomposition rather than a fourth attempt at the same one. `slow_on` decides WHEN
+      // an episode runs; `fast_on` decides WHICH TICKS go into the prototype. They have
+      // been the same value, so every mechanism that wanted "trust this tick less" had to
+      // express it by ENDING the episode -- which is exactly the documented failure: "a
+      // fragment holding only silence writes a prototype from silence and OVERWRITES the
+      // latch."
+      //
+      // Splitting them dissolves the timing problem that refused the conjunction. The
+      // ear's onset and the larynx's quiet are NOT simultaneous -- the listening reflex is
+      // a RESPONSE to the sound, so it lags it -- which is why requiring both at one
+      // instant rejected 77% of onsets and drove ev/tri to 0.55 against a design of 1.0.
+      // Per-tick trust needs no coincidence at all: the episode spans the word because the
+      // ear says so, and the ticks where the creature is talking over it simply do not
+      // accumulate.
+      //
+      // Mode 3 therefore has mode 1's event rate by construction (same boundary) and mode
+      // 0's selectivity about content, which is the pair of properties no single gate has
+      // had. Ships OFF; modes 0, 1 and 2 are untouched and the pinned hash does not move.
+      //
+      // MEASURED, AND THE "BY CONSTRUCTION" CLAIM ABOVE IS WRONG. 36 creatures at 3.4M
+      // (results/ctxself-env2.log): mode 3 runs at ev/tri 1.86 against mode 1's 2.61, so
+      // it does NOT inherit mode 1's event rate. The reason is the commit site below --
+      // `if (ctx_src_active_ && !slow_on && ctx_acc_n_ > kZero)` -- which commits on the
+      // episode's CLOSE, so an episode containing no quiet ticks accumulates nothing and
+      // commits nothing. Splitting the two gates does not decouple them as cleanly as the
+      // comment assumed.
+      //
+      // The outcome is the same as mode 2's and for the same reason. Mode 3 beats the
+      // shipped larynx gate by +12.4 +/- 5.1 Hz (2.4 SE) at 39.9 +/- 3.7, and loses to the
+      // UNGATED source-4 arm's 63.5 +/- 4.4. Its index is 0.119 below its own occupancy
+      // ceiling where the ungated arm is 0.006 below. Kept because it is built, gated and
+      // free; the line is closed, so do not extend it.
+      const bool fast_on =
+          ctx_gate_mode_ == 3u ? (slow_on && gms.mean_rate < ctx_gate_target_) : slow_on;
       const Scalar inv = ctx_acc_n_ > kZero ? kOne / ctx_acc_n_ : kZero;
 
       // A CONJUNCTION WITH THE EAR WAS TRIED HERE AND IS INERT. Requiring the

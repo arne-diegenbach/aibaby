@@ -1,6 +1,6 @@
 # Where this project stands, and what is prepared next
 
-Written 2026-10-09, revised 2026-10-10. The *record* is the root `README.md`, which is chronological and long;
+Written 2026-10-09, revised 2026-10-12. The *record* is the root `README.md`, which is chronological and long;
 the *curated findings* are `docs/discoveries.pdf`. This file is the short forward-looking
 one, and it exists because the working lead queue has always lived in a memory store
 **outside the repository** — so a reader of the repo could see everything that had been
@@ -22,40 +22,85 @@ creatures reaches 18 SE, and turning the gesture on costs four fifths of even th
 the only operating point where both are known to run.** That is the single blocker between
 where it is and speech.
 
+**And it can teach another creature what it knows.** A pupil hearing only its tutor's
+recorded vowels, with no host target, acquires the tutor's word-to-vowel convention at
+5.3 SE — faithfully enough that a lineage holding the width fixed shows no detectable loss
+over four generations, and stubbornly enough to lock in an inverted convention that began as
+a near-tie. So the ceiling on what a lineage can say is the ceiling on what *one* creature
+can produce, which makes production width the highest-leverage quantity in the project
+rather than the line of diminishing returns it looked like.
+
 ## What is settled, and therefore not to re-open
 
 | line | state |
 |---|---|
 | Credit assignment via reward masks | **Closed by arithmetic.** Gain rises monotonically with how much of the motor group the reward reaches, so the cheapest mask is no mask. Nothing in the family is affordable against its retention price. |
 | The geometry of the motor pool | **Settled in two independent families.** The readout is a rate-weighted centroid, so potency is *signed* distance from it; potency decides *whether* extent costs anything, and given nonzero potency extent costs until it saturates. |
-| The derived context index | **Explained.** Its deficit was the word boundary. Given a clean one, classification error goes to exactly zero and the creature's own index matches a host-supplied perfect index on behaviour (−1.0 ± 6.0 Hz). |
+| The derived context index | **Explained, and the repair is closed.** Its deficit was the word boundary: given a clean one, classification error goes to exactly zero and the creature's own index matches a host-supplied perfect index on behaviour (−1.0 ± 6.0 Hz). But four detectors built to supply that boundary are all beaten by the arm with no detector at all, and the leading arms sit at their occupancy ceilings — so **build no further boundary detector**. The gap itself is real and unclaimed (oracle − detector-free = +17.2 ± 5.1, 3.3 SE); what is left is table balance (§2). |
 | The aim/feedback line | **Refused by its own control** — a blind controller beats feedback at this creature's loop delay. |
 | Protocol variations | **Closed.** Longer, blocked, region-shaped, distance-aware and staircased rewards were each measured and none helps. |
+| The transmission channel | **Faithful once width is held** — no detectable loss over four generations (1.4 SE), and a ratchet that locks in whichever convention it finds. Further chain runs measure the tutor, not the channel, so the quantity to move is production width (§1). |
 
 ## What is open, in the order the measurements allow
 
-### 1. A word-boundary detector that is not an oracle — IN FLIGHT
+### 1. How wide a distinction one creature can produce — and a lineage now inherits it
 
-The prize is measured rather than argued: a clean boundary takes word-conditional formant
-delivery from **+12.0 to +53.4 Hz** (9.6 SE) and closes the entire deficit to a perfect
-index. So the last oracle in the context line is the word's *timing*, which is far cheaper
-to require than its *identity*.
+**One creature teaches another through the air.** A pupil hearing only a tutor's recorded
+vowels, with no host target, acquires the tutor's word-to-vowel mapping at
+**+53.3 ± 10.0 Hz (5.3 SE)**, and symmetrically: swapping which tutor vowel goes with which
+word gives −27.7 against the faithful arm's +25.6, so the pupil takes whatever convention
+its tutor holds rather than recovering the host's.
 
-Three instrument passes refused every timing repair of the shipped larynx gate: episode
-lengths are smooth (a fifth of episodes under two ticks, a fifth over 512, no gap between),
-the off-gaps are smooth too, and it recovers only **0.68** of the caregiver's word — so it
-misses a third of what it should see and no logic placed on top can recover that.
+**The chain's apparent decay was width, not a leak.** Passed down five generations the
+distinction decays to nothing — but hold the *width* fixed and pass on only the mapping, and
+|dF1| at generation 4 is **85.6 ± 5.5** against generation 0's 96.1 ± 5.1: **1.4 SE, no
+detectable loss over four generations**, where the plain chain lost 16.0 SE worth. Culture
+does not decay here because the air loses information. It decays because each tutor produces
+a narrower distinction than it was taught.
 
-**Running now:** an envelope-onset gate after Nabé, Schwartz & Diard's COSMO-Onset — a
-sustained *rise* in the auditory envelope rather than a level anywhere. No constant is
-guessed: the derivative is the crossing of two filters the kernel already keeps, so the
-threshold is zero; the persistence is the fast filter's own time constant in ticks.
-**Bars, pre-registered:** episodes per trial must fall from ~2.3 toward 1.0 *and* coverage
-rise from 0.68 toward 1.0 — a mechanism check independent of the outcome — and then the
-conditional effect must move toward +53.4 Hz. Refused if segmentation reaches the oracle's
-and delivery does not move.
+**And it is a ratchet.** 5 of 18 chains ended holding the *inverted* convention at full
+strength, 18 of 18 never changed sign after generation 1, and the inverted ones are exactly
+those whose first pupil nearly failed (|dF1| 5.1 vs 86.4 Hz, 10.5 SE). A near-tie is noise;
+the next generation restores it to full width and locks it in. An arbitrary convention, held
+stably down a lineage — and the sharpest reason to distrust any single chain.
 
-### 2. Myelination gated to sleep — prepared, not built
+**So the lead is production width, and it has a new argument behind it.** The host demands a
+460 Hz distinction and a taught creature delivers 96.1. Every Hz added to one creature's
+dF1 is inherited by its whole lineage without loss, which turns what looked like diminishing
+returns into the highest-leverage quantity in the project. Transmission itself should not be
+iterated on further.
+
+**Read first, because the obvious routes are closed:** dF1 ~ aligned^0.61, so moving dF1
+×1.68 needs ×2.9 the aligned bias; the transfer curve and the context-scale sweep put
+asymptotes at 234 and ~118 Hz independently; and nothing downstream of the bias binds.
+**Do not re-run a bias sweep.** The nearest unexplored thing is the creature's own f0 — the
+tutoring tape carries formants only, and pitch is still the host's.
+
+### 2. Table balance for the derived context index
+
+The replacement for the closed boundary line, and there is **+17.2 ± 5.1 Hz (3.3 SE, 25 of
+36) still unclaimed** between the detector-free arm and the full oracle — so the gap is
+real, and only the detector route to it is refused. For two balanced words the index match cannot
+exceed `1.5 − occupancy`, and the detector-free arm's slack against that ceiling is **0.006**
+while the handed-boundary arm's is **0.000**: the leading arms are already as accurate as
+their own partitions permit, and every arm in that run lands where its ceiling puts it. So
+the open question is **where to put the threshold so the trials divide evenly**, not when a
+word happens — a threshold-placement problem, and one no gate in the family was built for.
+
+Dividing them evenly is *necessary* for a derived index to beat the detector-free arm. It is
+**not shown to be sufficient**: at the ceiling, index and occupancy are the same number, so
+that run cannot separate accuracy from balance. Any build here needs an arm that moves
+occupancy while holding the feature fixed, or it will not be able to tell which it changed.
+
+Two cautions carried forward from the run that closed §1's framing. The boundary prize is
+**genome-dependent** — +11.1 ± 7.1 Hz on one family and +27.4 ± 7.0 on another, with no
+shared creatures — so the +53.4 Hz figure quoted in the settled table is one sample of a
+range. And the gate shapes built for that run were nearly refused on a short smoke that
+mis-measured their gate rate by ~2×, because a rate-thresholded gate depends on a rate
+distribution still settling early in a creature's life. **Only a handed window is
+budget-invariant**, so do not refuse a thresholded mechanism on a smoke's event rate.
+
+### 3. Myelination gated to sleep — prepared, not built
 
 Bellesi and colleagues measured oligodendrocyte precursor proliferation roughly **doubling
 in sleep** and correlating with REM, with myelination genes transcribed preferentially then
@@ -84,7 +129,7 @@ only in *when* it fires, inside a ~15% duty cycle of about ten bouts. **Price it
 those two results before building anything**, and if it cannot be distinguished from them,
 the lead should be closed rather than carried.
 
-### 3. Two gestures in a row — the blocker, and unbuilt
+### 4. Two gestures in a row — the blocker, and unbuilt
 
 Everything above is about a *carrier*. Intelligent speech needs structure in time — and the
 state of that is better than this file said on 2026-10-09, which was written from memory
@@ -155,7 +200,7 @@ is the shape the dormant `dictionary_*` genome block was cut for. Both stay on t
 until the composition question has an answer, because a score is a sequence of targets and
 this creature cannot yet be taught two.
 
-### 4. Carrier residuals, demoted and worth stating
+### 5. Carrier residuals, demoted and worth stating
 
 - **The prototype learning-rate floor on the episode path.** With a clean boundary the index
   decays within a session, 0.919 → 0.858 at 46.5 SE — MacQueen's `1/wins` reaching zero
@@ -179,6 +224,14 @@ down so the next person does not pay again.
 - **Do not price the matched cluster prior.** It was argued from the index's own *output*
   occupancy, where the result it rests on is about the *data's* class distribution — and the
   words here are exactly balanced, so a uniform prior is the correct one.
+- **Do not refuse a rate-thresholded mechanism on a smoke's event rate.** A gate keyed on a
+  rate threshold ran at 0.55 events per trial on a 17×-short smoke and 1.76 at full budget,
+  because the rate distribution is still settling early in a creature's life. Two mechanisms
+  were nearly discarded on that number. Only a handed window is budget-invariant.
+- **Do not quote a gap between two logs before checking the creatures match.** Appending a
+  module re-rolls the noise, so two genomes are two different populations; `off` and `oracle`
+  are the cheap test, since no mechanism edit can move them. A prize quoted across families
+  as a point estimate was a range (+11.1 ± 7.1 against +27.4 ± 7.0).
 
 ## How to not waste a run
 

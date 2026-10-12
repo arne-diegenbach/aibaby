@@ -28845,8 +28845,151 @@ constexpr CtxSelfArm kCtxSelfArms[] = {
     // ===================================================================================
     {"ear-env-sh",     2, 2, kVLTgtHeard,  -1.0f, false, true, 1u},
     {"ear-env-sh-rnd", 2, 2, kVLTgtRandom, -1.0f, false, true, 1u},
+    // ===================================================================================
+    // THE CONJUNCTION GATE (gate_mode 2): a sound is STARTING and it is not the creature.
+    //
+    // Both halves are built and both halves alone are REFUSED, for opposite reasons. The
+    // envelope gate fires outside the word, because the envelope rises for any sound
+    // including the creature's own voice at self_gain 0.5 -- measured ON/word 1.21 against
+    // a design of 1.0. The larynx gate is silent while listening, which is its one virtue,
+    // and chatters on a noisy mean, which is its one failure: ON/word 0.68 and several
+    // ragged episodes per trial, some holding only silence, which commit prototypes from
+    // silence and overwrite the latch. The conjunction takes the ONSET from the ear and
+    // the "it is not me" from the larynx.
+    //
+    // NOT THE CONJUNCTION REFUTED IN network.cpp's own comment. That one required the ear
+    // ABOVE ITS SETPOINT -- a LEVEL -- and was inert at +0.004 because the ear sits above
+    // setpoint nearly always. `rising` is a DERIVATIVE and is true about half the time by
+    // construction, so the argument that killed the level version does not apply.
+    //
+    // THE PRIZE, RE-PRICED AGAINST THE RIGHT BASELINE BEFORE BUILDING THIS. It has been
+    // quoted as +53.4 Hz, which is the gap from `ear`. But `ear` is NOT the best thing
+    // that works without an oracle -- `ema` (source 4, no episode at all) delivers
+    // 49.4 +/- 4.9 Hz against `ear`'s 30.9 +/- 3.7, beating it by 18.5 +/- 6.1 (3.0 SE).
+    // Against `ema` the oracle window's 84.7 +/- 4.7 is worth +35.3 +/- 6.8 Hz (5.2 SE).
+    // Still large, still well resolved, and ~35 rather than ~53. Quoting the larger figure
+    // would have been the fifth instance of comparing to a reference point that exists but
+    // is not the alternative the claim is about.
+    //
+    // AND THAT RE-PRICING WAS STILL A POINT QUOTE OF A RANGE. The figures above are from
+    // `results/ctxself-win2.log`; the same comparison in `results/ctxself-env2.log` is
+    // `ear-win-sh - ema` = +11.1 +/- 7.1 (1.6 SE) against win2's +27.4 +/- 7.0 (3.9 SE).
+    // The two logs share NO creatures -- 0 of 288 matched pairs agree on the eight arms
+    // they have in common, including `off` and `oracle`, which no edit here can touch --
+    // because appending a context module re-rolls the noise. So these are two wiring
+    // families, not a contradiction, and the honest price is "positive, order 10-30 Hz,
+    // genome-dependent". Check `off` and `oracle` before quoting any gap across two logs.
+    //
+    // MECHANISM FIRST, checkable independently of the outcome: ev/tri must fall from the
+    // envelope gate's ~2.3 toward 1.0 AND ON/word must land near 1.0 from below. The
+    // envelope arm failed by OVERSHOOTING (1.21), so this time the failure to watch for is
+    // ON/word still above 1.0 -- the larynx half not actually excluding the own-voice
+    // episodes.
+    // REFUSED IF: ev/tri ~1.0 and ON/word ~1.0 with dF1 unmoved, which would mean
+    // segmentation was never the mechanism and the oracle window bought its gain elsewhere.
+    // ===================================================================================
+    {"ear-cnj-sh",     2, 2, kVLTgtHeard,  -1.0f, false, true, 2u},
+    {"ear-cnj-sh-rnd", 2, 2, kVLTgtRandom, -1.0f, false, true, 2u},
+    // ===================================================================================
+    // THE SPLIT GATE (gate_mode 3): the EAR supplies the boundary, the LARYNX supplies
+    // per-tick trust. Kept alongside `ear-cnj` rather than replacing it, because the
+    // conjunction's refusal is a result and the two differ in one specific way.
+    //
+    // WHY, and it is the conjunction's own failure that argues for it. Three shapes of
+    // "envelope rising AND larynx quiet" were tried and all drove ev/tri to 0.3-0.55
+    // against a design of 1.0 and a mode-1 baseline of 2.43 -- the per-tick AND, the
+    // latch-open AND, and the veto-at-the-flip. The common cause is that the two
+    // predicates are NOT SIMULTANEOUS: the listening reflex is a RESPONSE to the sound, so
+    // the larynx goes quiet AFTER the onset the ear detects, and requiring both at one
+    // instant rejected 77% of onsets including the caregiver's.
+    //
+    // Per-tick trust needs no coincidence. The episode spans the word because the ear says
+    // so, and the ticks where the creature is talking over it simply do not accumulate --
+    // which attacks the documented mechanism directly ("a fragment holding only silence
+    // writes a prototype from silence and OVERWRITES the latch") without needing the
+    // boundary and the silence to line up in time.
+    //
+    // MECHANISM FIRST: ev/tri should sit at mode 1's ~2.4 (same boundary, by construction)
+    // while ON/word falls from the envelope arm's 1.21 toward 1.0 (own-voice ticks no
+    // longer counted). REFUSED IF both land as predicted and dF1 is unmoved -- that would
+    // mean prototype contamination was never what the oracle window fixed.
+    //
+    // THAT "BY CONSTRUCTION" WAS WRONG: measured ev/tri 1.86 against mode 1's 2.61. The
+    // commit site keys on the episode's CLOSE, so an episode with no quiet ticks
+    // accumulates nothing and commits nothing -- the two gates are not as decoupled as the
+    // split assumed. See the OUTCOME block at the end of this table.
+    // ===================================================================================
+    {"ear-spl-sh",     2, 2, kVLTgtHeard,  -1.0f, false, true, 3u},
+    {"ear-spl-sh-rnd", 2, 2, kVLTgtRandom, -1.0f, false, true, 3u},
+    // ===================================================================================
+    // OUTCOME OF THE WHOLE GATE FAMILY, 14 arms x 36 creatures at 3.4M ticks, gate passed:
+    // `results/ctxself-env2.log`. BUILD NO FURTHER BOUNDARY DETECTOR.
+    //
+    //   arm            dF1 (Hz)     paired vs -rnd   index   occ    slack to 1.5-occ
+    //   oracle         80.7 +/- 5.0       --         1.000   0.500   0.000
+    //   ear-win-sh     74.6 +/- 5.5   +49.2 (8.3 SE) 0.892   0.608   0.000
+    //   ema            63.5 +/- 4.4   +38.6 (7.6 SE) 0.854   0.641   0.006
+    //   ear-env-sh     57.0 +/- 6.2   +24.1 (3.1 SE) 0.810   0.636   0.054
+    //   ear-spl-sh     39.9 +/- 3.7   +15.5 (3.6 SE) 0.777   0.604   0.119
+    //   ear-cnj-sh     39.6 +/- 3.7   +16.4 (3.5 SE) 0.760   0.612   0.128
+    //   ear-sh         27.5 +/- 3.4    +7.1 (1.5 SE) 0.694   0.642   0.164
+    //   off            25.1 +/- 3.5       --         0.000   0.000    --
+    //
+    // THE ENVELOPE GATE WORKS AND IS NOT WORTH HAVING. It had never been measured at full
+    // budget -- it was refused on its mechanism smoke alone and the run that would have
+    // settled it was killed on a confound later retracted. It beats the larynx gate by
+    // +29.5 +/- 7.1 (4.2 SE), and loses to `ema` by -6.4 +/- 7.7 (-0.8 SE). `ema` uses NO
+    // boundary detector: it reads the index off `rate_ema_` every tick.
+    //
+    // The two gates added above are not mechanically broken -- each beats the larynx gate
+    // by 2.4 SE -- and both land ~24 Hz under `ema`. Nothing in the family beats not
+    // gating.
+    //
+    // WHAT THE SLACK COLUMN SAYS. For two balanced words `index <= 1.5 - occupancy`, so
+    // slack is unused accuracy. `ema` is at 0.006 and `ear-win-sh` at 0.000: the leading
+    // arms are as accurate as their own partitions permit, and every arm lands where its
+    // ceiling puts it. So splitting the trials more evenly than 0.641 is NECESSARY for a
+    // derived index to beat `ema` -- a threshold-placement problem, not a detector problem.
+    // It is NOT shown to be sufficient: at the ceiling `index == 1.5 - occ` identically, so
+    // accuracy and balance are the same number and this run cannot separate them. An arm
+    // built here must move occupancy while holding the feature fixed or it cannot tell
+    // which it changed.
+    //
+    // METHOD, EARNED HERE: ev/tri from a 17x-short smoke ran ~2x LOW for every arm driven
+    // by a rate threshold (cnj 0.55 -> 1.76, spl 0.59 -> 1.86, ema 1.11 -> 2.51, ear 1.19
+    // -> 2.61) while `ear-win-sh`, whose window is handed to it, stayed at exactly 1.00.
+    // The rate distribution is still settling in the first 6% of a creature's life. Two of
+    // the three refusals here were originally made on that number, so do NOT refuse a
+    // rate-thresholded mechanism on a smoke's ev/tri.
+    // ===================================================================================
 };
 constexpr uint32_t kCtxSelfArmCount = sizeof(kCtxSelfArms) / sizeof(kCtxSelfArms[0]);
+
+// A FOCUSED RUN, because the full table is 20 arms x 36 creatures and ~7h. Same pattern
+// `credgate` uses: a named list of the arms this question needs, everything else skipped,
+// flipped back by setting kCtxSelfFocused to false. The set is chosen so that both halves
+// of the conjunction, the oracle ceiling, the ungated baseline and the REAL alternative
+// (`ema`) are all present IN THE SAME RUN -- `credgate`'s first focused run left the
+// oracle arm out and was refused for it.
+constexpr bool kCtxSelfFocused = false;
+inline bool cs_focused_arm(const char* n) {
+  // `off` and `oracle` stay in every focused set because they are the two references every
+  // number here is quoted against. They were once load-bearing for a different reason: the
+  // summary guard refused on ANY arm with no creatures, so a held-out arm voided the run --
+  // which is how the first focused smoke printed INCONCLUSIVE, and how the full-budget
+  // envelope run lost its summary to a held-out `ear` after 11.5h. The guard now skips
+  // arms it was told to skip, so that failure mode is closed.
+  return std::strcmp(n, "off") == 0 || std::strcmp(n, "oracle") == 0 ||
+         std::strcmp(n, "ear-sh") == 0 || std::strcmp(n, "ear-sh-rnd") == 0 ||
+         std::strcmp(n, "ear-win-sh") == 0 || std::strcmp(n, "ear-win-sh-rnd") == 0 ||
+         std::strcmp(n, "ear-env-sh") == 0 || std::strcmp(n, "ear-env-sh-rnd") == 0 ||
+         std::strcmp(n, "ear-cnj-sh") == 0 || std::strcmp(n, "ear-cnj-sh-rnd") == 0 ||
+         std::strcmp(n, "ear-spl-sh") == 0 || std::strcmp(n, "ear-spl-sh-rnd") == 0 ||
+         std::strcmp(n, "ema") == 0 || std::strcmp(n, "ema-rnd") == 0;
+}
+inline bool cs_skip(uint32_t a) {
+  return kCtxSelfFocused && !cs_focused_arm(kCtxSelfArms[a].name);
+}
 
 // `ctxsrc`'s upper bound on how well ANY readout of the larynx names the word
 // in the reward window, on 9 creatures.
@@ -28956,6 +29099,11 @@ bool run_ctxself(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
         const uint32_t r = i / kCtxSelfArmCount;
         const uint32_t a = i % kCtxSelfArmCount;
         Cell cell;
+        // Out of focus: return the empty cell, which every reader below already treats as
+        // "this arm has no creatures". `credgate` learned the hard way that returning
+        // early WITHOUT a shared skip predicate makes an unrun arm look live-but-empty and
+        // trips the first guard that requires three creatures.
+        if (cs_skip(a)) return cell;
         std::vector<uint8_t> variant = blob;
         const uint64_t seed = dna.header().seed + r * 7919ull;
         std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
@@ -29149,6 +29297,10 @@ bool run_ctxself(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
   double m_dr[kCtxSelfArmCount], s_dr[kCtxSelfArmCount];
   uint32_t valid = 0;
   for (uint32_t a = 0; a < kCtxSelfArmCount; ++a) {
+    // An arm held out of a focused set has no creatures BY CONSTRUCTION, and refusing on it
+    // throws away the arms that did run -- which cost a full-budget run once. Only an arm
+    // that was asked for and came back empty is evidence of a problem.
+    if (cs_skip(a)) continue;
     if (df1[a].size() < 2) {
       std::printf("\n  ctxself INCONCLUSIVE -- arm `%s` produced %zu usable creatures.\n",
                   kCtxSelfArms[a].name, df1[a].size());
