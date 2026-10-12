@@ -17217,6 +17217,66 @@ The phase conclusions in the same two runs reproduced unchanged: the shipped win
 the resolution guard (the trace spans 3.0 phases), and the fast window satisfies resolution
 and delivery together and still cannot aim the gesture.
 
+### The ceiling is causal, and the knob that moves it is too small to see
+
+The boundary-detector refusal left one thing behind: `ema`'s index sits at
+`1.5 − occupancy` to within 0.006, so the only route up is a more even split of episodes
+between slots. That needed a lever that moves occupancy while leaving the feature alone.
+
+**I started building one and the kernel refuted the design.** The plan was a genome field
+scaling DeSieno's conscience, whose strength is hardcoded to `dscale` with an implicit gain
+of 1. Before running it I checked which of the two conscience sites governs `ema`, and the
+per-tick one is gated on `ctx_proto_gate ∈ {2,3,6,7}` — **`ema` ships at gate 0, where the
+conscience does not run at all.** A gain on an inactive term does nothing, so the field was
+reverted. The kernel had already recorded the same fork: *"Gate 3 removes the origin instead
+of strengthening the penalty."* Strengthening it was the considered-and-not-taken branch.
+
+That reframed the question into one needing **no new mechanism**: `ema`'s occupancy of 0.641
+is produced with no balancing device running, and gate 2 switches the conscience on in the
+per-tick path. So the run is the existing gate read through a lens — occupancy as the binding
+ceiling — that did not exist when the gate was built. Four arms × 36 creatures, and because
+`results/ctxself-env2.log` already holds gate 0 for the same arms on the same creatures with
+the genomes one scalar apart, gate 0 did not need re-running and the comparison is paired.
+
+**`off` and `oracle` are bit-identical on all 36 creatures.** Neither reads the derived
+prototypes, so this is the strongest available check that the two runs describe the same
+creatures and that only the index path changed.
+
+| | index | occupancy | ceiling `1.5 − occ` | slack | dF1 |
+|---|---|---|---|---|---|
+| gate 0 (shipped) | 0.854 | 0.641 | 0.859 | 0.005 | 63.5 ± 4.4 |
+| gate 2 (conscience) | 0.887 | 0.605 | 0.895 | 0.008 | 66.6 ± 4.1 |
+
+**The ceiling relation is now causal rather than correlational.** Occupancy fell as
+pre-registered, the ceiling rose with it, and the index tracked the ceiling up and stayed
+pinned to it — paired **+0.0338 ± 0.0148 (2.3 SE)**, with slack unchanged at ~0.006. The
+relation was inferred from a cross-arm pattern; it has now been confirmed by intervening on
+one side and watching the other follow.
+
+**The voice did not follow, and the arithmetic says it could not have.** Paired dF1 is
+**+3.1 ± 4.9 (0.6 SE), 21 of 36**, and the registered contrast grew by
+**+5.7 ± 6.1 (0.9 SE)**. But the `ema`-to-`oracle` gap implies 118 Hz per unit of index, so
++0.0338 of index predicts **+4.0 Hz** — and the measurement is +3.1 ± 4.9. **The result is
+exactly what the model predicts and is 8× below the noise floor by construction.**
+
+So this is not a refusal of the balance route. Gate 2 travels **26% of the occupancy
+distance** to the oracle's 0.500 and delivers **18% of the 17.2 Hz gap** — a step sized to
+be invisible at this n. Quoting +3.1 Hz as a gain would be reading noise; quoting it as a
+null would be worse, because the index moved exactly as predicted and the dF1 step was never
+large enough to resolve.
+
+**And it vindicates the field I reverted, in a configuration I had not tested.** Gate 2
+applies the conscience at gain 1, and the gain is precisely what would push occupancy past
+0.605. The field was inert at gate 0 and the revert was right on the evidence then
+available; this run locates where it bites. The prediction is quantitative: drive occupancy
+to 0.500 and the ceiling reaches 1.000, worth **+17.2 Hz** — which *is* resolvable at 36
+creatures, unlike +4.
+
+One secondary result, unregistered and worth stating as such: the conscience made the
+mechanism more *reliable* without moving its mean. The registered contrast went from
++38.6 ± 5.1 (7.6 SE, 32 of 36) to **+44.2 ± 4.1 (10.7 SE, 36 of 36)** — unanimous, with
+`ema-rnd` drifting down 2.6 Hz while `ema` rose 3.1.
+
 ## Layout
 
 ```

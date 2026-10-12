@@ -1,0 +1,1102 @@
+  [47/720] seed 2 ema  dF1 65.5  p(idx) 0.888
+  [42/720] seed 2 oracle  dF1 82.4  p(idx) 1.000
+  [61/720] seed 3 off  dF1 5.5  p(idx) 0.000
+  [8/720] seed 0 ema-rnd  dF1 2.2  p(idx) 0.500
+  [7/720] seed 0 ema  dF1 51.0  p(idx) 0.879
+  [1/720] seed 0 off  dF1 10.3  p(idx) 0.000
+  [2/720] seed 0 oracle  dF1 69.6  p(idx) 1.000
+  [28/720] seed 1 ema-rnd  dF1 24.3  p(idx) 0.891
+  [22/720] seed 1 oracle  dF1 94.0  p(idx) 1.000
+  [62/720] seed 3 oracle  dF1 104.9  p(idx) 1.000
+  [41/720] seed 2 off  dF1 31.6  p(idx) 0.000
+  [27/720] seed 1 ema  dF1 55.1  p(idx) 0.890
+  [21/720] seed 1 off  dF1 50.3  p(idx) 0.000
+  [48/720] seed 2 ema-rnd  dF1 6.6  p(idx) 0.891
+  [68/720] seed 3 ema-rnd  dF1 40.6  p(idx) 0.890
+  [87/720] seed 4 ema  dF1 51.3  p(idx) 0.884
+  [81/720] seed 4 off  dF1 27.1  p(idx) 0.000
+  [108/720] seed 5 ema-rnd  dF1 11.5  p(idx) 0.891
+  [82/720] seed 4 oracle  dF1 39.5  p(idx) 1.000
+  [121/720] seed 6 off  dF1 75.7  p(idx) 0.000
+  [102/720] seed 5 oracle  dF1 119.6  p(idx) 1.000
+  [67/720] seed 3 ema  dF1 78.5  p(idx) 0.890
+  [101/720] seed 5 off  dF1 40.3  p(idx) 0.000
+  [122/720] seed 6 oracle  dF1 90.7  p(idx) 1.000
+  [107/720] seed 5 ema  dF1 111.2  p(idx) 0.888
+  [88/720] seed 4 ema-rnd  dF1 12.0  p(idx) 0.889
+  [127/720] seed 6 ema  dF1 54.5  p(idx) 0.887
+  [128/720] seed 6 ema-rnd  dF1 16.8  p(idx) 0.891
+  [141/720] seed 7 off  dF1 29.2  p(idx) 0.000
+  [142/720] seed 7 oracle  dF1 73.7  p(idx) 1.000
+  [168/720] seed 8 ema-rnd  dF1 37.2  p(idx) 0.890
+  [161/720] seed 8 off  dF1 10.8  p(idx) 0.000
+  [162/720] seed 8 oracle  dF1 126.5  p(idx) 1.000
+  [182/720] seed 9 oracle  dF1 24.6  p(idx) 1.000
+  [147/720] seed 7 ema  dF1 20.2  p(idx) 0.886
+  [181/720] seed 9 off  dF1 9.1  p(idx) 0.000
+  [148/720] seed 7 ema-rnd  dF1 3.3  p(idx) 0.890
+  [167/720] seed 8 ema  dF1 85.3  p(idx) 0.891
+  [187/720] seed 9 ema  dF1 44.9  p(idx) 0.888
+  [188/720] seed 9 ema-rnd  dF1 25.8  p(idx) 0.891
+  [202/720] seed 10 oracle  dF1 34.2  p(idx) 1.000
+  [201/720] seed 10 off  dF1 6.6  p(idx) 0.000
+  [208/720] seed 10 ema-rnd  dF1 14.6  p(idx) 0.890
+  [228/720] seed 11 ema-rnd  dF1 3.2  p(idx) 0.891
+  [207/720] seed 10 ema  dF1 33.0  p(idx) 0.889
+  [221/720] seed 11 off  dF1 29.5  p(idx) 0.000
+  [242/720] seed 12 oracle  dF1 45.1  p(idx) 1.000
+  [248/720] seed 12 ema-rnd  dF1 59.6  p(idx) 0.891
+  [227/720] seed 11 ema  dF1 89.6  p(idx) 0.890
+  [222/720] seed 11 oracle  dF1 52.8  p(idx) 1.000
+  [241/720] seed 12 off  dF1 30.1  p(idx) 0.000
+  [247/720] seed 12 ema  dF1 107.8  p(idx) 0.890
+  [261/720] seed 13 off  dF1 8.1  p(idx) 0.000
+  [262/720] seed 13 oracle  dF1 98.2  p(idx) 1.000
+  [268/720] seed 13 ema-rnd  dF1 0.4  p(idx) 0.890
+  [267/720] seed 13 ema  dF1 29.4  p(idx) 0.888
+  [282/720] seed 14 oracle  dF1 63.1  p(idx) 1.000
+  [281/720] seed 14 off  dF1 51.3  p(idx) 0.000
+  [288/720] seed 14 ema-rnd  dF1 36.8  p(idx) 0.890
+  [308/720] seed 15 ema-rnd  dF1 11.3  p(idx) 0.891
+  [307/720] seed 15 ema  dF1 42.1  p(idx) 0.888
+  [301/720] seed 15 off  dF1 24.6  p(idx) 0.000
+  [287/720] seed 14 ema  dF1 41.8  p(idx) 0.890
+  [302/720] seed 15 oracle  dF1 38.3  p(idx) 1.000
+  [321/720] seed 16 off  dF1 67.5  p(idx) 0.000
+  [322/720] seed 16 oracle  dF1 30.5  p(idx) 1.000
+  [327/720] seed 16 ema  dF1 105.5  p(idx) 0.886
+  [328/720] seed 16 ema-rnd  dF1 33.7  p(idx) 0.890
+  [341/720] seed 17 off  dF1 8.3  p(idx) 0.000
+  [342/720] seed 17 oracle  dF1 84.0  p(idx) 1.000
+  [348/720] seed 17 ema-rnd  dF1 44.9  p(idx) 0.889
+  [361/720] seed 18 off  dF1 41.4  p(idx) 0.000
+  [347/720] seed 17 ema  dF1 61.8  p(idx) 0.890
+  [382/720] seed 19 oracle  dF1 48.8  p(idx) 1.000
+  [368/720] seed 18 ema-rnd  dF1 33.2  p(idx) 0.886
+  [381/720] seed 19 off  dF1 24.8  p(idx) 0.000
+  [367/720] seed 18 ema  dF1 69.3  p(idx) 0.890
+  [362/720] seed 18 oracle  dF1 112.6  p(idx) 1.000
+  [387/720] seed 19 ema  dF1 41.0  p(idx) 0.889
+  [388/720] seed 19 ema-rnd  dF1 30.6  p(idx) 0.890
+  [401/720] seed 20 off  dF1 20.7  p(idx) 0.000
+  [402/720] seed 20 oracle  dF1 141.1  p(idx) 1.000
+  [408/720] seed 20 ema-rnd  dF1 10.4  p(idx) 0.890
+  [407/720] seed 20 ema  dF1 101.7  p(idx) 0.884
+  [428/720] seed 21 ema-rnd  dF1 59.0  p(idx) 0.890
+  [422/720] seed 21 oracle  dF1 103.2  p(idx) 1.000
+  [448/720] seed 22 ema-rnd  dF1 16.0  p(idx) 0.889
+  [421/720] seed 21 off  dF1 35.2  p(idx) 0.000
+  [447/720] seed 22 ema  dF1 48.1  p(idx) 0.889
+  [442/720] seed 22 oracle  dF1 74.8  p(idx) 1.000
+  [427/720] seed 21 ema  dF1 93.5  p(idx) 0.890
+  [441/720] seed 22 off  dF1 4.5  p(idx) 0.000
+  [462/720] seed 23 oracle  dF1 95.9  p(idx) 1.000
+  [467/720] seed 23 ema  dF1 71.6  p(idx) 0.891
+  [461/720] seed 23 off  dF1 8.7  p(idx) 0.000
+  [468/720] seed 23 ema-rnd  dF1 13.4  p(idx) 0.891
+  [481/720] seed 24 off  dF1 3.8  p(idx) 0.000
+  [482/720] seed 24 oracle  dF1 113.1  p(idx) 1.000
+  [488/720] seed 24 ema-rnd  dF1 21.1  p(idx) 0.889
+  [521/720] seed 26 off  dF1 14.2  p(idx) 0.000
+  [487/720] seed 24 ema  dF1 64.0  p(idx) 0.881
+  [508/720] seed 25 ema-rnd  dF1 30.6  p(idx) 0.890
+  [501/720] seed 25 off  dF1 4.6  p(idx) 0.000
+  [507/720] seed 25 ema  dF1 82.7  p(idx) 0.890
+  [502/720] seed 25 oracle  dF1 76.1  p(idx) 1.000
+  [522/720] seed 26 oracle  dF1 102.9  p(idx) 1.000
+  [528/720] seed 26 ema-rnd  dF1 1.3  p(idx) 0.890
+  [527/720] seed 26 ema  dF1 64.5  p(idx) 0.884
+  [541/720] seed 27 off  dF1 71.8  p(idx) 0.000
+  [542/720] seed 27 oracle  dF1 110.8  p(idx) 1.000
+  [547/720] seed 27 ema  dF1 69.1  p(idx) 0.883
+  [548/720] seed 27 ema-rnd  dF1 13.7  p(idx) 0.890
+  [561/720] seed 28 off  dF1 10.6  p(idx) 0.000
+  [581/720] seed 29 off  dF1 8.4  p(idx) 0.000
+  [568/720] seed 28 ema-rnd  dF1 33.0  p(idx) 0.890
+  [588/720] seed 29 ema-rnd  dF1 7.1  p(idx) 0.890
+  [562/720] seed 28 oracle  dF1 62.1  p(idx) 1.000
+  [601/720] seed 30 off  dF1 6.2  p(idx) 0.000
+  [582/720] seed 29 oracle  dF1 74.7  p(idx) 1.000
+  [567/720] seed 28 ema  dF1 48.4  p(idx) 0.890
+  [587/720] seed 29 ema  dF1 68.4  p(idx) 0.890
+  [608/720] seed 30 ema-rnd  dF1 18.7  p(idx) 0.889
+  [602/720] seed 30 oracle  dF1 44.9  p(idx) 1.000
+  [607/720] seed 30 ema  dF1 26.1  p(idx) 0.887
+  [622/720] seed 31 oracle  dF1 119.4  p(idx) 1.000
+  [621/720] seed 31 off  dF1 27.8  p(idx) 0.000
+  [627/720] seed 31 ema  dF1 90.4  p(idx) 0.879
+  [628/720] seed 31 ema-rnd  dF1 0.7  p(idx) 0.888
+  [641/720] seed 32 off  dF1 64.1  p(idx) 0.000
+  [642/720] seed 32 oracle  dF1 91.5  p(idx) 1.000
+  [661/720] seed 33 off  dF1 10.5  p(idx) 0.000
+  [647/720] seed 32 ema  dF1 109.8  p(idx) 0.890
+  [648/720] seed 32 ema-rnd  dF1 33.5  p(idx) 0.890
+  [667/720] seed 33 ema  dF1 81.5  p(idx) 0.886
+  [668/720] seed 33 ema-rnd  dF1 56.9  p(idx) 0.889
+  [662/720] seed 33 oracle  dF1 87.8  p(idx) 1.000
+  [681/720] seed 34 off  dF1 9.3  p(idx) 0.000
+  [682/720] seed 34 oracle  dF1 83.4  p(idx) 1.000
+  [687/720] seed 34 ema  dF1 81.1  p(idx) 0.885
+  [688/720] seed 34 ema-rnd  dF1 21.0  p(idx) 0.890
+  [701/720] seed 35 off  dF1 21.1  p(idx) 0.000
+  [708/720] seed 35 ema-rnd  dF1 18.6  p(idx) 0.891
+  [702/720] seed 35 oracle  dF1 88.6  p(idx) 1.000
+  [707/720] seed 35 ema  dF1 56.7  p(idx) 0.890
+experiment: ctxself
+  instrument        ctxself   trial seed 00000000013579d6   1214 trials per arm
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  question          `areax` proved a context-indexed bias works, keyed on
+                    an index the HOST wrote from the word label. Can the
+                    creature derive that index for ITSELF? v52 read it
+                    off the larynx and was refused; source 4 reads the
+                    ear's own rate EMA, which is what replicated.
+  the bar           an index right with probability p writes the other
+                    table 1-p of the time, so the conditional part scales
+                    as (2p - 1). `ctxsrc` bounds p at 0.740 for ANY readout
+                    of the larynx in this window, which is 48% of what the
+                    oracle index bought. A FIXED partition can only do
+                    worse, so that is a ceiling and not a prediction.
+  arm               all four get the same host drive on the context
+                    module, so `self` and `oracle` differ in ONE field.
+
+  seed   arm       dF1 (Hz)  p(idx)   busiest  table div  ev/tri  change
+  0      off       10.3      0.000    0.000    0.0000     0.0     +5.4
+  0      oracle    69.6      1.000    0.500    0.0271     0.0     +12.8
+  0      ear       (inconclusive: 0 scored, 0 skipped)
+  0      ear-rnd   (inconclusive: 0 scored, 0 skipped)
+  0      ear-deaf  (inconclusive: 0 scored, 0 skipped)
+  0      ear-deaf-rnd (inconclusive: 0 scored, 0 skipped)
+  0      ema       51.0      0.879    0.600    0.0271     3.3     +11.5
+  0      ema-rnd   2.2       0.500    0.537    0.0246     4.0     +0.7
+  0      ear-win   (inconclusive: 0 scored, 0 skipped)
+  0      ear-win-rnd (inconclusive: 0 scored, 0 skipped)
+  0      ear-sh    (inconclusive: 0 scored, 0 skipped)
+  0      ear-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  0      ear-win-sh (inconclusive: 0 scored, 0 skipped)
+  0      ear-win-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  0      ear-env-sh (inconclusive: 0 scored, 0 skipped)
+  0      ear-env-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  0      ear-cnj-sh (inconclusive: 0 scored, 0 skipped)
+  0      ear-cnj-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  0      ear-spl-sh (inconclusive: 0 scored, 0 skipped)
+  0      ear-spl-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  1      off       50.3      0.000    0.000    0.0000     0.0     +8.3
+  1      oracle    94.0      1.000    0.500    0.0305     0.0     +11.1
+  1      ear       (inconclusive: 0 scored, 0 skipped)
+  1      ear-rnd   (inconclusive: 0 scored, 0 skipped)
+  1      ear-deaf  (inconclusive: 0 scored, 0 skipped)
+  1      ear-deaf-rnd (inconclusive: 0 scored, 0 skipped)
+  1      ema       55.1      0.890    0.606    0.0309     3.5     +8.2
+  1      ema-rnd   24.3      0.891    0.608    0.0288     3.8     +0.5
+  1      ear-win   (inconclusive: 0 scored, 0 skipped)
+  1      ear-win-rnd (inconclusive: 0 scored, 0 skipped)
+  1      ear-sh    (inconclusive: 0 scored, 0 skipped)
+  1      ear-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  1      ear-win-sh (inconclusive: 0 scored, 0 skipped)
+  1      ear-win-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  1      ear-env-sh (inconclusive: 0 scored, 0 skipped)
+  1      ear-env-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  1      ear-cnj-sh (inconclusive: 0 scored, 0 skipped)
+  1      ear-cnj-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  1      ear-spl-sh (inconclusive: 0 scored, 0 skipped)
+  1      ear-spl-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  2      off       31.6      0.000    0.000    0.0000     0.0     -6.9
+  2      oracle    82.4      1.000    0.500    0.0293     0.0     +19.5
+  2      ear       (inconclusive: 0 scored, 0 skipped)
+  2      ear-rnd   (inconclusive: 0 scored, 0 skipped)
+  2      ear-deaf  (inconclusive: 0 scored, 0 skipped)
+  2      ear-deaf-rnd (inconclusive: 0 scored, 0 skipped)
+  2      ema       65.5      0.888    0.607    0.0286     3.4     +18.6
+  2      ema-rnd   6.6       0.891    0.607    0.0254     3.7     +0.6
+  2      ear-win   (inconclusive: 0 scored, 0 skipped)
+  2      ear-win-rnd (inconclusive: 0 scored, 0 skipped)
+  2      ear-sh    (inconclusive: 0 scored, 0 skipped)
+  2      ear-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  2      ear-win-sh (inconclusive: 0 scored, 0 skipped)
+  2      ear-win-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  2      ear-env-sh (inconclusive: 0 scored, 0 skipped)
+  2      ear-env-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  2      ear-cnj-sh (inconclusive: 0 scored, 0 skipped)
+  2      ear-cnj-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  2      ear-spl-sh (inconclusive: 0 scored, 0 skipped)
+  2      ear-spl-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  3      off       5.5       0.000    0.000    0.0000     0.0     -1.2
+  3      oracle    104.9     1.000    0.500    0.0236     0.0     +14.5
+  3      ear       (inconclusive: 0 scored, 0 skipped)
+  3      ear-rnd   (inconclusive: 0 scored, 0 skipped)
+  3      ear-deaf  (inconclusive: 0 scored, 0 skipped)
+  3      ear-deaf-rnd (inconclusive: 0 scored, 0 skipped)
+  3      ema       78.5      0.890    0.607    0.0287     3.2     +11.9
+  3      ema-rnd   40.6      0.890    0.606    0.0283     3.8     +0.4
+  3      ear-win   (inconclusive: 0 scored, 0 skipped)
+  3      ear-win-rnd (inconclusive: 0 scored, 0 skipped)
+  3      ear-sh    (inconclusive: 0 scored, 0 skipped)
+  3      ear-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  3      ear-win-sh (inconclusive: 0 scored, 0 skipped)
+  3      ear-win-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  3      ear-env-sh (inconclusive: 0 scored, 0 skipped)
+  3      ear-env-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  3      ear-cnj-sh (inconclusive: 0 scored, 0 skipped)
+  3      ear-cnj-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  3      ear-spl-sh (inconclusive: 0 scored, 0 skipped)
+  3      ear-spl-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  4      off       27.1      0.000    0.000    0.0000     0.0     +6.1
+  4      oracle    39.5      1.000    0.500    0.0291     0.0     +15.0
+  4      ear       (inconclusive: 0 scored, 0 skipped)
+  4      ear-rnd   (inconclusive: 0 scored, 0 skipped)
+  4      ear-deaf  (inconclusive: 0 scored, 0 skipped)
+  4      ear-deaf-rnd (inconclusive: 0 scored, 0 skipped)
+  4      ema       51.3      0.884    0.603    0.0259     3.2     +10.6
+  4      ema-rnd   12.0      0.889    0.609    0.0256     4.2     +0.2
+  4      ear-win   (inconclusive: 0 scored, 0 skipped)
+  4      ear-win-rnd (inconclusive: 0 scored, 0 skipped)
+  4      ear-sh    (inconclusive: 0 scored, 0 skipped)
+  4      ear-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  4      ear-win-sh (inconclusive: 0 scored, 0 skipped)
+  4      ear-win-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  4      ear-env-sh (inconclusive: 0 scored, 0 skipped)
+  4      ear-env-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  4      ear-cnj-sh (inconclusive: 0 scored, 0 skipped)
+  4      ear-cnj-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  4      ear-spl-sh (inconclusive: 0 scored, 0 skipped)
+  4      ear-spl-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  5      off       40.3      0.000    0.000    0.0000     0.0     +2.9
+  5      oracle    119.6     1.000    0.500    0.0291     0.0     +16.2
+  5      ear       (inconclusive: 0 scored, 0 skipped)
+  5      ear-rnd   (inconclusive: 0 scored, 0 skipped)
+  5      ear-deaf  (inconclusive: 0 scored, 0 skipped)
+  5      ear-deaf-rnd (inconclusive: 0 scored, 0 skipped)
+  5      ema       111.2     0.888    0.607    0.0304     2.0     +10.0
+  5      ema-rnd   11.5      0.891    0.607    0.0265     4.1     +1.2
+  5      ear-win   (inconclusive: 0 scored, 0 skipped)
+  5      ear-win-rnd (inconclusive: 0 scored, 0 skipped)
+  5      ear-sh    (inconclusive: 0 scored, 0 skipped)
+  5      ear-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  5      ear-win-sh (inconclusive: 0 scored, 0 skipped)
+  5      ear-win-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  5      ear-env-sh (inconclusive: 0 scored, 0 skipped)
+  5      ear-env-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  5      ear-cnj-sh (inconclusive: 0 scored, 0 skipped)
+  5      ear-cnj-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  5      ear-spl-sh (inconclusive: 0 scored, 0 skipped)
+  5      ear-spl-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  6      off       75.7      0.000    0.000    0.0000     0.0     +7.8
+  6      oracle    90.7      1.000    0.500    0.0273     0.0     +15.0
+  6      ear       (inconclusive: 0 scored, 0 skipped)
+  6      ear-rnd   (inconclusive: 0 scored, 0 skipped)
+  6      ear-deaf  (inconclusive: 0 scored, 0 skipped)
+  6      ear-deaf-rnd (inconclusive: 0 scored, 0 skipped)
+  6      ema       54.5      0.887    0.604    0.0270     1.8     +10.4
+  6      ema-rnd   16.8      0.891    0.605    0.0240     3.6     +0.8
+  6      ear-win   (inconclusive: 0 scored, 0 skipped)
+  6      ear-win-rnd (inconclusive: 0 scored, 0 skipped)
+  6      ear-sh    (inconclusive: 0 scored, 0 skipped)
+  6      ear-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  6      ear-win-sh (inconclusive: 0 scored, 0 skipped)
+  6      ear-win-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  6      ear-env-sh (inconclusive: 0 scored, 0 skipped)
+  6      ear-env-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  6      ear-cnj-sh (inconclusive: 0 scored, 0 skipped)
+  6      ear-cnj-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  6      ear-spl-sh (inconclusive: 0 scored, 0 skipped)
+  6      ear-spl-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  7      off       29.2      0.000    0.000    0.0000     0.0     +7.7
+  7      oracle    73.7      1.000    0.500    0.0314     0.0     +14.2
+  7      ear       (inconclusive: 0 scored, 0 skipped)
+  7      ear-rnd   (inconclusive: 0 scored, 0 skipped)
+  7      ear-deaf  (inconclusive: 0 scored, 0 skipped)
+  7      ear-deaf-rnd (inconclusive: 0 scored, 0 skipped)
+  7      ema       20.2      0.886    0.604    0.0323     2.5     +4.3
+  7      ema-rnd   3.3       0.890    0.608    0.0257     3.2     +0.4
+  7      ear-win   (inconclusive: 0 scored, 0 skipped)
+  7      ear-win-rnd (inconclusive: 0 scored, 0 skipped)
+  7      ear-sh    (inconclusive: 0 scored, 0 skipped)
+  7      ear-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  7      ear-win-sh (inconclusive: 0 scored, 0 skipped)
+  7      ear-win-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  7      ear-env-sh (inconclusive: 0 scored, 0 skipped)
+  7      ear-env-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  7      ear-cnj-sh (inconclusive: 0 scored, 0 skipped)
+  7      ear-cnj-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  7      ear-spl-sh (inconclusive: 0 scored, 0 skipped)
+  7      ear-spl-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  8      off       10.8      0.000    0.000    0.0000     0.0     +3.4
+  8      oracle    126.5     1.000    0.500    0.0298     0.0     +18.4
+  8      ear       (inconclusive: 0 scored, 0 skipped)
+  8      ear-rnd   (inconclusive: 0 scored, 0 skipped)
+  8      ear-deaf  (inconclusive: 0 scored, 0 skipped)
+  8      ear-deaf-rnd (inconclusive: 0 scored, 0 skipped)
+  8      ema       85.3      0.891    0.606    0.0283     3.3     +8.0
+  8      ema-rnd   37.2      0.890    0.607    0.0329     3.9     +1.3
+  8      ear-win   (inconclusive: 0 scored, 0 skipped)
+  8      ear-win-rnd (inconclusive: 0 scored, 0 skipped)
+  8      ear-sh    (inconclusive: 0 scored, 0 skipped)
+  8      ear-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  8      ear-win-sh (inconclusive: 0 scored, 0 skipped)
+  8      ear-win-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  8      ear-env-sh (inconclusive: 0 scored, 0 skipped)
+  8      ear-env-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  8      ear-cnj-sh (inconclusive: 0 scored, 0 skipped)
+  8      ear-cnj-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  8      ear-spl-sh (inconclusive: 0 scored, 0 skipped)
+  8      ear-spl-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  9      off       9.1       0.000    0.000    0.0000     0.0     -0.9
+  9      oracle    24.6      1.000    0.500    0.0290     0.0     +12.2
+  9      ear       (inconclusive: 0 scored, 0 skipped)
+  9      ear-rnd   (inconclusive: 0 scored, 0 skipped)
+  9      ear-deaf  (inconclusive: 0 scored, 0 skipped)
+  9      ear-deaf-rnd (inconclusive: 0 scored, 0 skipped)
+  9      ema       44.9      0.888    0.604    0.0284     2.3     +25.6
+  9      ema-rnd   25.8      0.891    0.607    0.0292     3.7     -0.0
+  9      ear-win   (inconclusive: 0 scored, 0 skipped)
+  9      ear-win-rnd (inconclusive: 0 scored, 0 skipped)
+  9      ear-sh    (inconclusive: 0 scored, 0 skipped)
+  9      ear-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  9      ear-win-sh (inconclusive: 0 scored, 0 skipped)
+  9      ear-win-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  9      ear-env-sh (inconclusive: 0 scored, 0 skipped)
+  9      ear-env-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  9      ear-cnj-sh (inconclusive: 0 scored, 0 skipped)
+  9      ear-cnj-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  9      ear-spl-sh (inconclusive: 0 scored, 0 skipped)
+  9      ear-spl-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  10     off       6.6       0.000    0.000    0.0000     0.0     -3.0
+  10     oracle    34.2      1.000    0.500    0.0275     0.0     +18.5
+  10     ear       (inconclusive: 0 scored, 0 skipped)
+  10     ear-rnd   (inconclusive: 0 scored, 0 skipped)
+  10     ear-deaf  (inconclusive: 0 scored, 0 skipped)
+  10     ear-deaf-rnd (inconclusive: 0 scored, 0 skipped)
+  10     ema       33.0      0.889    0.608    0.0293     3.7     +11.2
+  10     ema-rnd   14.6      0.890    0.607    0.0283     3.2     +0.2
+  10     ear-win   (inconclusive: 0 scored, 0 skipped)
+  10     ear-win-rnd (inconclusive: 0 scored, 0 skipped)
+  10     ear-sh    (inconclusive: 0 scored, 0 skipped)
+  10     ear-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  10     ear-win-sh (inconclusive: 0 scored, 0 skipped)
+  10     ear-win-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  10     ear-env-sh (inconclusive: 0 scored, 0 skipped)
+  10     ear-env-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  10     ear-cnj-sh (inconclusive: 0 scored, 0 skipped)
+  10     ear-cnj-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  10     ear-spl-sh (inconclusive: 0 scored, 0 skipped)
+  10     ear-spl-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  11     off       29.5      0.000    0.000    0.0000     0.0     -7.9
+  11     oracle    52.8      1.000    0.500    0.0296     0.0     +5.0
+  11     ear       (inconclusive: 0 scored, 0 skipped)
+  11     ear-rnd   (inconclusive: 0 scored, 0 skipped)
+  11     ear-deaf  (inconclusive: 0 scored, 0 skipped)
+  11     ear-deaf-rnd (inconclusive: 0 scored, 0 skipped)
+  11     ema       89.6      0.890    0.606    0.0291     2.7     +8.1
+  11     ema-rnd   3.2       0.891    0.608    0.0248     3.7     -0.2
+  11     ear-win   (inconclusive: 0 scored, 0 skipped)
+  11     ear-win-rnd (inconclusive: 0 scored, 0 skipped)
+  11     ear-sh    (inconclusive: 0 scored, 0 skipped)
+  11     ear-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  11     ear-win-sh (inconclusive: 0 scored, 0 skipped)
+  11     ear-win-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  11     ear-env-sh (inconclusive: 0 scored, 0 skipped)
+  11     ear-env-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  11     ear-cnj-sh (inconclusive: 0 scored, 0 skipped)
+  11     ear-cnj-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  11     ear-spl-sh (inconclusive: 0 scored, 0 skipped)
+  11     ear-spl-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  12     off       30.1      0.000    0.000    0.0000     0.0     +5.2
+  12     oracle    45.1      1.000    0.500    0.0299     0.0     +22.7
+  12     ear       (inconclusive: 0 scored, 0 skipped)
+  12     ear-rnd   (inconclusive: 0 scored, 0 skipped)
+  12     ear-deaf  (inconclusive: 0 scored, 0 skipped)
+  12     ear-deaf-rnd (inconclusive: 0 scored, 0 skipped)
+  12     ema       107.8     0.890    0.606    0.0275     2.4     +19.3
+  12     ema-rnd   59.6      0.891    0.607    0.0265     4.2     +0.7
+  12     ear-win   (inconclusive: 0 scored, 0 skipped)
+  12     ear-win-rnd (inconclusive: 0 scored, 0 skipped)
+  12     ear-sh    (inconclusive: 0 scored, 0 skipped)
+  12     ear-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  12     ear-win-sh (inconclusive: 0 scored, 0 skipped)
+  12     ear-win-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  12     ear-env-sh (inconclusive: 0 scored, 0 skipped)
+  12     ear-env-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  12     ear-cnj-sh (inconclusive: 0 scored, 0 skipped)
+  12     ear-cnj-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  12     ear-spl-sh (inconclusive: 0 scored, 0 skipped)
+  12     ear-spl-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  13     off       8.1       0.000    0.000    0.0000     0.0     +5.6
+  13     oracle    98.2      1.000    0.500    0.0252     0.0     +14.3
+  13     ear       (inconclusive: 0 scored, 0 skipped)
+  13     ear-rnd   (inconclusive: 0 scored, 0 skipped)
+  13     ear-deaf  (inconclusive: 0 scored, 0 skipped)
+  13     ear-deaf-rnd (inconclusive: 0 scored, 0 skipped)
+  13     ema       29.4      0.888    0.606    0.0337     3.2     +7.8
+  13     ema-rnd   0.4       0.890    0.608    0.0254     3.5     +0.5
+  13     ear-win   (inconclusive: 0 scored, 0 skipped)
+  13     ear-win-rnd (inconclusive: 0 scored, 0 skipped)
+  13     ear-sh    (inconclusive: 0 scored, 0 skipped)
+  13     ear-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  13     ear-win-sh (inconclusive: 0 scored, 0 skipped)
+  13     ear-win-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  13     ear-env-sh (inconclusive: 0 scored, 0 skipped)
+  13     ear-env-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  13     ear-cnj-sh (inconclusive: 0 scored, 0 skipped)
+  13     ear-cnj-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  13     ear-spl-sh (inconclusive: 0 scored, 0 skipped)
+  13     ear-spl-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  14     off       51.3      0.000    0.000    0.0000     0.0     -4.2
+  14     oracle    63.1      1.000    0.500    0.0309     0.0     +20.9
+  14     ear       (inconclusive: 0 scored, 0 skipped)
+  14     ear-rnd   (inconclusive: 0 scored, 0 skipped)
+  14     ear-deaf  (inconclusive: 0 scored, 0 skipped)
+  14     ear-deaf-rnd (inconclusive: 0 scored, 0 skipped)
+  14     ema       41.8      0.890    0.607    0.0261     1.8     -11.9
+  14     ema-rnd   36.8      0.890    0.606    0.0264     3.8     +0.5
+  14     ear-win   (inconclusive: 0 scored, 0 skipped)
+  14     ear-win-rnd (inconclusive: 0 scored, 0 skipped)
+  14     ear-sh    (inconclusive: 0 scored, 0 skipped)
+  14     ear-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  14     ear-win-sh (inconclusive: 0 scored, 0 skipped)
+  14     ear-win-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  14     ear-env-sh (inconclusive: 0 scored, 0 skipped)
+  14     ear-env-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  14     ear-cnj-sh (inconclusive: 0 scored, 0 skipped)
+  14     ear-cnj-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  14     ear-spl-sh (inconclusive: 0 scored, 0 skipped)
+  14     ear-spl-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  15     off       24.6      0.000    0.000    0.0000     0.0     -1.0
+  15     oracle    38.3      1.000    0.500    0.0311     0.0     +14.4
+  15     ear       (inconclusive: 0 scored, 0 skipped)
+  15     ear-rnd   (inconclusive: 0 scored, 0 skipped)
+  15     ear-deaf  (inconclusive: 0 scored, 0 skipped)
+  15     ear-deaf-rnd (inconclusive: 0 scored, 0 skipped)
+  15     ema       42.1      0.888    0.604    0.0293     3.2     +13.2
+  15     ema-rnd   11.3      0.891    0.608    0.0273     4.1     +0.9
+  15     ear-win   (inconclusive: 0 scored, 0 skipped)
+  15     ear-win-rnd (inconclusive: 0 scored, 0 skipped)
+  15     ear-sh    (inconclusive: 0 scored, 0 skipped)
+  15     ear-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  15     ear-win-sh (inconclusive: 0 scored, 0 skipped)
+  15     ear-win-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  15     ear-env-sh (inconclusive: 0 scored, 0 skipped)
+  15     ear-env-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  15     ear-cnj-sh (inconclusive: 0 scored, 0 skipped)
+  15     ear-cnj-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  15     ear-spl-sh (inconclusive: 0 scored, 0 skipped)
+  15     ear-spl-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  16     off       67.5      0.000    0.000    0.0000     0.0     -2.7
+  16     oracle    30.5      1.000    0.500    0.0292     0.0     +14.8
+  16     ear       (inconclusive: 0 scored, 0 skipped)
+  16     ear-rnd   (inconclusive: 0 scored, 0 skipped)
+  16     ear-deaf  (inconclusive: 0 scored, 0 skipped)
+  16     ear-deaf-rnd (inconclusive: 0 scored, 0 skipped)
+  16     ema       105.5     0.886    0.602    0.0257     3.0     +19.0
+  16     ema-rnd   33.7      0.890    0.608    0.0306     3.6     -0.4
+  16     ear-win   (inconclusive: 0 scored, 0 skipped)
+  16     ear-win-rnd (inconclusive: 0 scored, 0 skipped)
+  16     ear-sh    (inconclusive: 0 scored, 0 skipped)
+  16     ear-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  16     ear-win-sh (inconclusive: 0 scored, 0 skipped)
+  16     ear-win-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  16     ear-env-sh (inconclusive: 0 scored, 0 skipped)
+  16     ear-env-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  16     ear-cnj-sh (inconclusive: 0 scored, 0 skipped)
+  16     ear-cnj-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  16     ear-spl-sh (inconclusive: 0 scored, 0 skipped)
+  16     ear-spl-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  17     off       8.3       0.000    0.000    0.0000     0.0     -1.0
+  17     oracle    84.0      1.000    0.500    0.0297     0.0     -0.5
+  17     ear       (inconclusive: 0 scored, 0 skipped)
+  17     ear-rnd   (inconclusive: 0 scored, 0 skipped)
+  17     ear-deaf  (inconclusive: 0 scored, 0 skipped)
+  17     ear-deaf-rnd (inconclusive: 0 scored, 0 skipped)
+  17     ema       61.8      0.890    0.606    0.0273     2.9     +10.6
+  17     ema-rnd   44.9      0.889    0.608    0.0271     3.9     +0.1
+  17     ear-win   (inconclusive: 0 scored, 0 skipped)
+  17     ear-win-rnd (inconclusive: 0 scored, 0 skipped)
+  17     ear-sh    (inconclusive: 0 scored, 0 skipped)
+  17     ear-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  17     ear-win-sh (inconclusive: 0 scored, 0 skipped)
+  17     ear-win-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  17     ear-env-sh (inconclusive: 0 scored, 0 skipped)
+  17     ear-env-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  17     ear-cnj-sh (inconclusive: 0 scored, 0 skipped)
+  17     ear-cnj-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  17     ear-spl-sh (inconclusive: 0 scored, 0 skipped)
+  17     ear-spl-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  18     off       41.4      0.000    0.000    0.0000     0.0     -9.0
+  18     oracle    112.6     1.000    0.500    0.0292     0.0     +22.3
+  18     ear       (inconclusive: 0 scored, 0 skipped)
+  18     ear-rnd   (inconclusive: 0 scored, 0 skipped)
+  18     ear-deaf  (inconclusive: 0 scored, 0 skipped)
+  18     ear-deaf-rnd (inconclusive: 0 scored, 0 skipped)
+  18     ema       69.3      0.890    0.608    0.0292     2.1     +0.2
+  18     ema-rnd   33.2      0.886    0.605    0.0306     3.5     -0.0
+  18     ear-win   (inconclusive: 0 scored, 0 skipped)
+  18     ear-win-rnd (inconclusive: 0 scored, 0 skipped)
+  18     ear-sh    (inconclusive: 0 scored, 0 skipped)
+  18     ear-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  18     ear-win-sh (inconclusive: 0 scored, 0 skipped)
+  18     ear-win-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  18     ear-env-sh (inconclusive: 0 scored, 0 skipped)
+  18     ear-env-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  18     ear-cnj-sh (inconclusive: 0 scored, 0 skipped)
+  18     ear-cnj-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  18     ear-spl-sh (inconclusive: 0 scored, 0 skipped)
+  18     ear-spl-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  19     off       24.8      0.000    0.000    0.0000     0.0     -2.9
+  19     oracle    48.8      1.000    0.500    0.0263     0.0     +11.3
+  19     ear       (inconclusive: 0 scored, 0 skipped)
+  19     ear-rnd   (inconclusive: 0 scored, 0 skipped)
+  19     ear-deaf  (inconclusive: 0 scored, 0 skipped)
+  19     ear-deaf-rnd (inconclusive: 0 scored, 0 skipped)
+  19     ema       41.0      0.889    0.604    0.0292     3.0     +2.2
+  19     ema-rnd   30.6      0.890    0.608    0.0259     4.0     +0.9
+  19     ear-win   (inconclusive: 0 scored, 0 skipped)
+  19     ear-win-rnd (inconclusive: 0 scored, 0 skipped)
+  19     ear-sh    (inconclusive: 0 scored, 0 skipped)
+  19     ear-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  19     ear-win-sh (inconclusive: 0 scored, 0 skipped)
+  19     ear-win-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  19     ear-env-sh (inconclusive: 0 scored, 0 skipped)
+  19     ear-env-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  19     ear-cnj-sh (inconclusive: 0 scored, 0 skipped)
+  19     ear-cnj-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  19     ear-spl-sh (inconclusive: 0 scored, 0 skipped)
+  19     ear-spl-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  20     off       20.7      0.000    0.000    0.0000     0.0     +0.5
+  20     oracle    141.1     1.000    0.500    0.0291     0.0     +22.4
+  20     ear       (inconclusive: 0 scored, 0 skipped)
+  20     ear-rnd   (inconclusive: 0 scored, 0 skipped)
+  20     ear-deaf  (inconclusive: 0 scored, 0 skipped)
+  20     ear-deaf-rnd (inconclusive: 0 scored, 0 skipped)
+  20     ema       101.7     0.884    0.603    0.0297     2.5     +19.6
+  20     ema-rnd   10.4      0.890    0.608    0.0269     3.9     +0.6
+  20     ear-win   (inconclusive: 0 scored, 0 skipped)
+  20     ear-win-rnd (inconclusive: 0 scored, 0 skipped)
+  20     ear-sh    (inconclusive: 0 scored, 0 skipped)
+  20     ear-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  20     ear-win-sh (inconclusive: 0 scored, 0 skipped)
+  20     ear-win-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  20     ear-env-sh (inconclusive: 0 scored, 0 skipped)
+  20     ear-env-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  20     ear-cnj-sh (inconclusive: 0 scored, 0 skipped)
+  20     ear-cnj-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  20     ear-spl-sh (inconclusive: 0 scored, 0 skipped)
+  20     ear-spl-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  21     off       35.2      0.000    0.000    0.0000     0.0     -7.7
+  21     oracle    103.2     1.000    0.500    0.0287     0.0     +17.1
+  21     ear       (inconclusive: 0 scored, 0 skipped)
+  21     ear-rnd   (inconclusive: 0 scored, 0 skipped)
+  21     ear-deaf  (inconclusive: 0 scored, 0 skipped)
+  21     ear-deaf-rnd (inconclusive: 0 scored, 0 skipped)
+  21     ema       93.5      0.890    0.608    0.0274     2.3     +5.5
+  21     ema-rnd   59.0      0.890    0.608    0.0310     3.3     +1.3
+  21     ear-win   (inconclusive: 0 scored, 0 skipped)
+  21     ear-win-rnd (inconclusive: 0 scored, 0 skipped)
+  21     ear-sh    (inconclusive: 0 scored, 0 skipped)
+  21     ear-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  21     ear-win-sh (inconclusive: 0 scored, 0 skipped)
+  21     ear-win-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  21     ear-env-sh (inconclusive: 0 scored, 0 skipped)
+  21     ear-env-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  21     ear-cnj-sh (inconclusive: 0 scored, 0 skipped)
+  21     ear-cnj-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  21     ear-spl-sh (inconclusive: 0 scored, 0 skipped)
+  21     ear-spl-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  22     off       4.5       0.000    0.000    0.0000     0.0     +11.4
+  22     oracle    74.8      1.000    0.500    0.0262     0.0     +13.4
+  22     ear       (inconclusive: 0 scored, 0 skipped)
+  22     ear-rnd   (inconclusive: 0 scored, 0 skipped)
+  22     ear-deaf  (inconclusive: 0 scored, 0 skipped)
+  22     ear-deaf-rnd (inconclusive: 0 scored, 0 skipped)
+  22     ema       48.1      0.889    0.607    0.0299     2.4     +7.1
+  22     ema-rnd   16.0      0.889    0.608    0.0248     3.7     -0.3
+  22     ear-win   (inconclusive: 0 scored, 0 skipped)
+  22     ear-win-rnd (inconclusive: 0 scored, 0 skipped)
+  22     ear-sh    (inconclusive: 0 scored, 0 skipped)
+  22     ear-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  22     ear-win-sh (inconclusive: 0 scored, 0 skipped)
+  22     ear-win-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  22     ear-env-sh (inconclusive: 0 scored, 0 skipped)
+  22     ear-env-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  22     ear-cnj-sh (inconclusive: 0 scored, 0 skipped)
+  22     ear-cnj-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  22     ear-spl-sh (inconclusive: 0 scored, 0 skipped)
+  22     ear-spl-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  23     off       8.7       0.000    0.000    0.0000     0.0     -7.2
+  23     oracle    95.9      1.000    0.500    0.0272     0.0     +17.9
+  23     ear       (inconclusive: 0 scored, 0 skipped)
+  23     ear-rnd   (inconclusive: 0 scored, 0 skipped)
+  23     ear-deaf  (inconclusive: 0 scored, 0 skipped)
+  23     ear-deaf-rnd (inconclusive: 0 scored, 0 skipped)
+  23     ema       71.6      0.891    0.607    0.0287     3.5     +6.9
+  23     ema-rnd   13.4      0.891    0.607    0.0296     3.3     +0.9
+  23     ear-win   (inconclusive: 0 scored, 0 skipped)
+  23     ear-win-rnd (inconclusive: 0 scored, 0 skipped)
+  23     ear-sh    (inconclusive: 0 scored, 0 skipped)
+  23     ear-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  23     ear-win-sh (inconclusive: 0 scored, 0 skipped)
+  23     ear-win-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  23     ear-env-sh (inconclusive: 0 scored, 0 skipped)
+  23     ear-env-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  23     ear-cnj-sh (inconclusive: 0 scored, 0 skipped)
+  23     ear-cnj-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  23     ear-spl-sh (inconclusive: 0 scored, 0 skipped)
+  23     ear-spl-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  24     off       3.8       0.000    0.000    0.0000     0.0     +3.3
+  24     oracle    113.1     1.000    0.500    0.0264     0.0     +16.4
+  24     ear       (inconclusive: 0 scored, 0 skipped)
+  24     ear-rnd   (inconclusive: 0 scored, 0 skipped)
+  24     ear-deaf  (inconclusive: 0 scored, 0 skipped)
+  24     ear-deaf-rnd (inconclusive: 0 scored, 0 skipped)
+  24     ema       64.0      0.881    0.599    0.0275     3.3     +9.8
+  24     ema-rnd   21.1      0.889    0.606    0.0261     3.6     +0.8
+  24     ear-win   (inconclusive: 0 scored, 0 skipped)
+  24     ear-win-rnd (inconclusive: 0 scored, 0 skipped)
+  24     ear-sh    (inconclusive: 0 scored, 0 skipped)
+  24     ear-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  24     ear-win-sh (inconclusive: 0 scored, 0 skipped)
+  24     ear-win-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  24     ear-env-sh (inconclusive: 0 scored, 0 skipped)
+  24     ear-env-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  24     ear-cnj-sh (inconclusive: 0 scored, 0 skipped)
+  24     ear-cnj-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  24     ear-spl-sh (inconclusive: 0 scored, 0 skipped)
+  24     ear-spl-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  25     off       4.6       0.000    0.000    0.0000     0.0     -0.6
+  25     oracle    76.1      1.000    0.500    0.0311     0.0     +8.9
+  25     ear       (inconclusive: 0 scored, 0 skipped)
+  25     ear-rnd   (inconclusive: 0 scored, 0 skipped)
+  25     ear-deaf  (inconclusive: 0 scored, 0 skipped)
+  25     ear-deaf-rnd (inconclusive: 0 scored, 0 skipped)
+  25     ema       82.7      0.890    0.608    0.0293     3.6     +18.3
+  25     ema-rnd   30.6      0.890    0.608    0.0271     3.2     +1.5
+  25     ear-win   (inconclusive: 0 scored, 0 skipped)
+  25     ear-win-rnd (inconclusive: 0 scored, 0 skipped)
+  25     ear-sh    (inconclusive: 0 scored, 0 skipped)
+  25     ear-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  25     ear-win-sh (inconclusive: 0 scored, 0 skipped)
+  25     ear-win-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  25     ear-env-sh (inconclusive: 0 scored, 0 skipped)
+  25     ear-env-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  25     ear-cnj-sh (inconclusive: 0 scored, 0 skipped)
+  25     ear-cnj-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  25     ear-spl-sh (inconclusive: 0 scored, 0 skipped)
+  25     ear-spl-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  26     off       14.2      0.000    0.000    0.0000     0.0     +1.8
+  26     oracle    102.9     1.000    0.500    0.0288     0.0     +22.2
+  26     ear       (inconclusive: 0 scored, 0 skipped)
+  26     ear-rnd   (inconclusive: 0 scored, 0 skipped)
+  26     ear-deaf  (inconclusive: 0 scored, 0 skipped)
+  26     ear-deaf-rnd (inconclusive: 0 scored, 0 skipped)
+  26     ema       64.5      0.884    0.602    0.0295     2.1     +2.8
+  26     ema-rnd   1.3       0.890    0.608    0.0271     3.4     +1.5
+  26     ear-win   (inconclusive: 0 scored, 0 skipped)
+  26     ear-win-rnd (inconclusive: 0 scored, 0 skipped)
+  26     ear-sh    (inconclusive: 0 scored, 0 skipped)
+  26     ear-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  26     ear-win-sh (inconclusive: 0 scored, 0 skipped)
+  26     ear-win-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  26     ear-env-sh (inconclusive: 0 scored, 0 skipped)
+  26     ear-env-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  26     ear-cnj-sh (inconclusive: 0 scored, 0 skipped)
+  26     ear-cnj-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  26     ear-spl-sh (inconclusive: 0 scored, 0 skipped)
+  26     ear-spl-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  27     off       71.8      0.000    0.000    0.0000     0.0     -0.4
+  27     oracle    110.8     1.000    0.500    0.0305     0.0     +12.0
+  27     ear       (inconclusive: 0 scored, 0 skipped)
+  27     ear-rnd   (inconclusive: 0 scored, 0 skipped)
+  27     ear-deaf  (inconclusive: 0 scored, 0 skipped)
+  27     ear-deaf-rnd (inconclusive: 0 scored, 0 skipped)
+  27     ema       69.1      0.883    0.604    0.0279     3.4     +8.2
+  27     ema-rnd   13.7      0.890    0.607    0.0260     3.2     +0.2
+  27     ear-win   (inconclusive: 0 scored, 0 skipped)
+  27     ear-win-rnd (inconclusive: 0 scored, 0 skipped)
+  27     ear-sh    (inconclusive: 0 scored, 0 skipped)
+  27     ear-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  27     ear-win-sh (inconclusive: 0 scored, 0 skipped)
+  27     ear-win-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  27     ear-env-sh (inconclusive: 0 scored, 0 skipped)
+  27     ear-env-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  27     ear-cnj-sh (inconclusive: 0 scored, 0 skipped)
+  27     ear-cnj-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  27     ear-spl-sh (inconclusive: 0 scored, 0 skipped)
+  27     ear-spl-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  28     off       10.6      0.000    0.000    0.0000     0.0     +7.6
+  28     oracle    62.1      1.000    0.500    0.0292     0.0     +25.8
+  28     ear       (inconclusive: 0 scored, 0 skipped)
+  28     ear-rnd   (inconclusive: 0 scored, 0 skipped)
+  28     ear-deaf  (inconclusive: 0 scored, 0 skipped)
+  28     ear-deaf-rnd (inconclusive: 0 scored, 0 skipped)
+  28     ema       48.4      0.890    0.608    0.0274     3.9     +11.8
+  28     ema-rnd   33.0      0.890    0.609    0.0254     4.0     -0.6
+  28     ear-win   (inconclusive: 0 scored, 0 skipped)
+  28     ear-win-rnd (inconclusive: 0 scored, 0 skipped)
+  28     ear-sh    (inconclusive: 0 scored, 0 skipped)
+  28     ear-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  28     ear-win-sh (inconclusive: 0 scored, 0 skipped)
+  28     ear-win-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  28     ear-env-sh (inconclusive: 0 scored, 0 skipped)
+  28     ear-env-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  28     ear-cnj-sh (inconclusive: 0 scored, 0 skipped)
+  28     ear-cnj-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  28     ear-spl-sh (inconclusive: 0 scored, 0 skipped)
+  28     ear-spl-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  29     off       8.4       0.000    0.000    0.0000     0.0     +6.8
+  29     oracle    74.7      1.000    0.500    0.0311     0.0     +20.8
+  29     ear       (inconclusive: 0 scored, 0 skipped)
+  29     ear-rnd   (inconclusive: 0 scored, 0 skipped)
+  29     ear-deaf  (inconclusive: 0 scored, 0 skipped)
+  29     ear-deaf-rnd (inconclusive: 0 scored, 0 skipped)
+  29     ema       68.4      0.890    0.609    0.0315     3.2     +9.1
+  29     ema-rnd   7.1       0.890    0.608    0.0277     3.1     +0.1
+  29     ear-win   (inconclusive: 0 scored, 0 skipped)
+  29     ear-win-rnd (inconclusive: 0 scored, 0 skipped)
+  29     ear-sh    (inconclusive: 0 scored, 0 skipped)
+  29     ear-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  29     ear-win-sh (inconclusive: 0 scored, 0 skipped)
+  29     ear-win-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  29     ear-env-sh (inconclusive: 0 scored, 0 skipped)
+  29     ear-env-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  29     ear-cnj-sh (inconclusive: 0 scored, 0 skipped)
+  29     ear-cnj-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  29     ear-spl-sh (inconclusive: 0 scored, 0 skipped)
+  29     ear-spl-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  30     off       6.2       0.000    0.000    0.0000     0.0     -1.1
+  30     oracle    44.9      1.000    0.500    0.0264     0.0     +19.6
+  30     ear       (inconclusive: 0 scored, 0 skipped)
+  30     ear-rnd   (inconclusive: 0 scored, 0 skipped)
+  30     ear-deaf  (inconclusive: 0 scored, 0 skipped)
+  30     ear-deaf-rnd (inconclusive: 0 scored, 0 skipped)
+  30     ema       26.1      0.887    0.603    0.0274     3.6     +16.1
+  30     ema-rnd   18.7      0.889    0.607    0.0286     3.8     +0.3
+  30     ear-win   (inconclusive: 0 scored, 0 skipped)
+  30     ear-win-rnd (inconclusive: 0 scored, 0 skipped)
+  30     ear-sh    (inconclusive: 0 scored, 0 skipped)
+  30     ear-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  30     ear-win-sh (inconclusive: 0 scored, 0 skipped)
+  30     ear-win-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  30     ear-env-sh (inconclusive: 0 scored, 0 skipped)
+  30     ear-env-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  30     ear-cnj-sh (inconclusive: 0 scored, 0 skipped)
+  30     ear-cnj-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  30     ear-spl-sh (inconclusive: 0 scored, 0 skipped)
+  30     ear-spl-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  31     off       27.8      0.000    0.000    0.0000     0.0     +1.0
+  31     oracle    119.4     1.000    0.500    0.0254     0.0     +17.2
+  31     ear       (inconclusive: 0 scored, 0 skipped)
+  31     ear-rnd   (inconclusive: 0 scored, 0 skipped)
+  31     ear-deaf  (inconclusive: 0 scored, 0 skipped)
+  31     ear-deaf-rnd (inconclusive: 0 scored, 0 skipped)
+  31     ema       90.4      0.879    0.600    0.0251     1.9     +6.6
+  31     ema-rnd   0.7       0.888    0.610    0.0283     3.2     +0.5
+  31     ear-win   (inconclusive: 0 scored, 0 skipped)
+  31     ear-win-rnd (inconclusive: 0 scored, 0 skipped)
+  31     ear-sh    (inconclusive: 0 scored, 0 skipped)
+  31     ear-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  31     ear-win-sh (inconclusive: 0 scored, 0 skipped)
+  31     ear-win-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  31     ear-env-sh (inconclusive: 0 scored, 0 skipped)
+  31     ear-env-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  31     ear-cnj-sh (inconclusive: 0 scored, 0 skipped)
+  31     ear-cnj-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  31     ear-spl-sh (inconclusive: 0 scored, 0 skipped)
+  31     ear-spl-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  32     off       64.1      0.000    0.000    0.0000     0.0     +16.2
+  32     oracle    91.5      1.000    0.500    0.0263     0.0     +13.0
+  32     ear       (inconclusive: 0 scored, 0 skipped)
+  32     ear-rnd   (inconclusive: 0 scored, 0 skipped)
+  32     ear-deaf  (inconclusive: 0 scored, 0 skipped)
+  32     ear-deaf-rnd (inconclusive: 0 scored, 0 skipped)
+  32     ema       109.8     0.890    0.608    0.0265     1.8     +15.8
+  32     ema-rnd   33.5      0.890    0.607    0.0264     3.9     +0.7
+  32     ear-win   (inconclusive: 0 scored, 0 skipped)
+  32     ear-win-rnd (inconclusive: 0 scored, 0 skipped)
+  32     ear-sh    (inconclusive: 0 scored, 0 skipped)
+  32     ear-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  32     ear-win-sh (inconclusive: 0 scored, 0 skipped)
+  32     ear-win-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  32     ear-env-sh (inconclusive: 0 scored, 0 skipped)
+  32     ear-env-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  32     ear-cnj-sh (inconclusive: 0 scored, 0 skipped)
+  32     ear-cnj-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  32     ear-spl-sh (inconclusive: 0 scored, 0 skipped)
+  32     ear-spl-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  33     off       10.5      0.000    0.000    0.0000     0.0     -2.9
+  33     oracle    87.8      1.000    0.500    0.0301     0.0     +21.3
+  33     ear       (inconclusive: 0 scored, 0 skipped)
+  33     ear-rnd   (inconclusive: 0 scored, 0 skipped)
+  33     ear-deaf  (inconclusive: 0 scored, 0 skipped)
+  33     ear-deaf-rnd (inconclusive: 0 scored, 0 skipped)
+  33     ema       81.5      0.886    0.604    0.0282     3.2     +16.0
+  33     ema-rnd   56.9      0.889    0.608    0.0249     3.6     +0.8
+  33     ear-win   (inconclusive: 0 scored, 0 skipped)
+  33     ear-win-rnd (inconclusive: 0 scored, 0 skipped)
+  33     ear-sh    (inconclusive: 0 scored, 0 skipped)
+  33     ear-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  33     ear-win-sh (inconclusive: 0 scored, 0 skipped)
+  33     ear-win-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  33     ear-env-sh (inconclusive: 0 scored, 0 skipped)
+  33     ear-env-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  33     ear-cnj-sh (inconclusive: 0 scored, 0 skipped)
+  33     ear-cnj-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  33     ear-spl-sh (inconclusive: 0 scored, 0 skipped)
+  33     ear-spl-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  34     off       9.3       0.000    0.000    0.0000     0.0     +4.6
+  34     oracle    83.4      1.000    0.500    0.0289     0.0     +23.8
+  34     ear       (inconclusive: 0 scored, 0 skipped)
+  34     ear-rnd   (inconclusive: 0 scored, 0 skipped)
+  34     ear-deaf  (inconclusive: 0 scored, 0 skipped)
+  34     ear-deaf-rnd (inconclusive: 0 scored, 0 skipped)
+  34     ema       81.1      0.885    0.601    0.0311     3.1     +13.7
+  34     ema-rnd   21.0      0.890    0.606    0.0259     3.9     -0.2
+  34     ear-win   (inconclusive: 0 scored, 0 skipped)
+  34     ear-win-rnd (inconclusive: 0 scored, 0 skipped)
+  34     ear-sh    (inconclusive: 0 scored, 0 skipped)
+  34     ear-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  34     ear-win-sh (inconclusive: 0 scored, 0 skipped)
+  34     ear-win-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  34     ear-env-sh (inconclusive: 0 scored, 0 skipped)
+  34     ear-env-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  34     ear-cnj-sh (inconclusive: 0 scored, 0 skipped)
+  34     ear-cnj-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  34     ear-spl-sh (inconclusive: 0 scored, 0 skipped)
+  34     ear-spl-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  35     off       21.1      0.000    0.000    0.0000     0.0     +1.7
+  35     oracle    88.6      1.000    0.500    0.0264     0.0     +19.4
+  35     ear       (inconclusive: 0 scored, 0 skipped)
+  35     ear-rnd   (inconclusive: 0 scored, 0 skipped)
+  35     ear-deaf  (inconclusive: 0 scored, 0 skipped)
+  35     ear-deaf-rnd (inconclusive: 0 scored, 0 skipped)
+  35     ema       56.7      0.890    0.609    0.0267     3.2     +17.3
+  35     ema-rnd   18.6      0.891    0.607    0.0281     2.8     +1.0
+  35     ear-win   (inconclusive: 0 scored, 0 skipped)
+  35     ear-win-rnd (inconclusive: 0 scored, 0 skipped)
+  35     ear-sh    (inconclusive: 0 scored, 0 skipped)
+  35     ear-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  35     ear-win-sh (inconclusive: 0 scored, 0 skipped)
+  35     ear-win-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  35     ear-env-sh (inconclusive: 0 scored, 0 skipped)
+  35     ear-env-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  35     ear-cnj-sh (inconclusive: 0 scored, 0 skipped)
+  35     ear-cnj-sh-rnd (inconclusive: 0 scored, 0 skipped)
+  35     ear-spl-sh (inconclusive: 0 scored, 0 skipped)
+  35     ear-spl-sh-rnd (inconclusive: 0 scored, 0 skipped)
+
+  arm       dF1 (Hz)         p(index)        busiest slice  table div     change
+  off       25.1 +/- 3.5     0.000 +/- 0.000 0.000 +/- 0.000 0.0000 +/- 0.0000 +1.3 +/- 1.0
+  oracle    80.6 +/- 5.0     1.000 +/- 0.000 0.500 +/- 0.000 0.0285 +/- 0.0003 +16.2 +/- 0.9
+  ear       0.0 +/- 0.0      0.000 +/- 0.000 0.000 +/- 0.000 0.0000 +/- 0.0000 +0.0 +/- 0.0
+  ear-rnd   0.0 +/- 0.0      0.000 +/- 0.000 0.000 +/- 0.000 0.0000 +/- 0.0000 +0.0 +/- 0.0
+  ear-deaf  0.0 +/- 0.0      0.000 +/- 0.000 0.000 +/- 0.000 0.0000 +/- 0.0000 +0.0 +/- 0.0
+  ear-deaf-rnd 0.0 +/- 0.0      0.000 +/- 0.000 0.000 +/- 0.000 0.0000 +/- 0.0000 +0.0 +/- 0.0
+  ema       66.6 +/- 4.1     0.887 +/- 0.001 0.605 +/- 0.000 0.0286 +/- 0.0003 +10.7 +/- 1.1
+  ema-rnd   22.3 +/- 2.8     0.879 +/- 0.011 0.605 +/- 0.002 0.0272 +/- 0.0003 +0.5 +/- 0.1
+  ear-win   0.0 +/- 0.0      0.000 +/- 0.000 0.000 +/- 0.000 0.0000 +/- 0.0000 +0.0 +/- 0.0
+  ear-win-rnd 0.0 +/- 0.0      0.000 +/- 0.000 0.000 +/- 0.000 0.0000 +/- 0.0000 +0.0 +/- 0.0
+  ear-sh    0.0 +/- 0.0      0.000 +/- 0.000 0.000 +/- 0.000 0.0000 +/- 0.0000 +0.0 +/- 0.0
+  ear-sh-rnd 0.0 +/- 0.0      0.000 +/- 0.000 0.000 +/- 0.000 0.0000 +/- 0.0000 +0.0 +/- 0.0
+  ear-win-sh 0.0 +/- 0.0      0.000 +/- 0.000 0.000 +/- 0.000 0.0000 +/- 0.0000 +0.0 +/- 0.0
+  ear-win-sh-rnd 0.0 +/- 0.0      0.000 +/- 0.000 0.000 +/- 0.000 0.0000 +/- 0.0000 +0.0 +/- 0.0
+  ear-env-sh 0.0 +/- 0.0      0.000 +/- 0.000 0.000 +/- 0.000 0.0000 +/- 0.0000 +0.0 +/- 0.0
+  ear-env-sh-rnd 0.0 +/- 0.0      0.000 +/- 0.000 0.000 +/- 0.000 0.0000 +/- 0.0000 +0.0 +/- 0.0
+  ear-cnj-sh 0.0 +/- 0.0      0.000 +/- 0.000 0.000 +/- 0.000 0.0000 +/- 0.0000 +0.0 +/- 0.0
+  ear-cnj-sh-rnd 0.0 +/- 0.0      0.000 +/- 0.000 0.000 +/- 0.000 0.0000 +/- 0.0000 +0.0 +/- 0.0
+  ear-spl-sh 0.0 +/- 0.0      0.000 +/- 0.000 0.000 +/- 0.000 0.0000 +/- 0.0000 +0.0 +/- 0.0
+  ear-spl-sh-rnd 0.0 +/- 0.0      0.000 +/- 0.000 0.000 +/- 0.000 0.0000 +/- 0.0000 +0.0 +/- 0.0
+
+  EPISODE LENGTHS, log2 buckets in ticks (share of episodes), mean
+  arm               mean     <2   2-3   4-7  8-15 16-31 32-63 64-127 128-255 256-511 >=512
+  ema                455   0.22  0.14  0.13  0.10  0.05  0.05  0.05  0.05  0.04  0.17
+  ema-rnd            386   0.23  0.14  0.12  0.08  0.05  0.05  0.05  0.04  0.04  0.19
+  A MINIMUM-LENGTH DEBOUNCE CAN WORK only if the word episodes and the
+  fragments sit in SEPARATE buckets. If the mass is spread smoothly there
+  is no threshold that keeps one and drops the other, and the fix has to
+  be hysteresis in AMPLITUDE rather than a minimum duration.
+
+  OFF GAPS BETWEEN EPISODES, log2 buckets in ticks, and the gate's ON
+  time as a fraction of the caregiver's word time (measured, not inferred)
+  arm             ON/word    gap     <2   2-3   4-7  8-15 16-31 32-63 64-127 128-255 256-511 >=512
+  off               0.00      0   0.00  0.00  0.00  0.00  0.00  0.00  0.00  0.00  0.00  0.00
+  oracle            0.00      0   0.00  0.00  0.00  0.00  0.00  0.00  0.00  0.00  0.00  0.00
+  ema               1.41    566   0.22  0.13  0.13  0.12  0.05  0.05  0.05  0.05  0.03  0.18
+  ema-rnd           1.55    387   0.23  0.13  0.12  0.10  0.05  0.05  0.05  0.05  0.03  0.18
+  A MERGE RULE IS DERIVABLE only if the WITHIN-word gaps and the
+  BETWEEN-word gaps separate. The between-word gap is bounded below by the
+  trial's silent tail, so mass well above that is the real boundary and
+  mass well below it is chatter to be merged across. If ON/word is near 1
+  the gate already finds the word and only shatters it, which is the case a
+  merge rule fixes; if it is well under 1 the gate is also MISSING the
+  word and merging alone cannot recover it.
+
+  can a listener tell the words apart? (held-out one-of-two, F1+F2)
+    off        0.570 +/- 0.015   (shuffled 0.496, chance 0.500)
+    oracle     0.887 +/- 0.026   (shuffled 0.499, chance 0.500)
+    ear        0.000 +/- 0.000   (shuffled 0.000, chance 0.500)
+    ear-rnd    0.000 +/- 0.000   (shuffled 0.000, chance 0.500)
+    ear-deaf   0.000 +/- 0.000   (shuffled 0.000, chance 0.500)
+    ear-deaf-rnd 0.000 +/- 0.000   (shuffled 0.000, chance 0.500)
+    ema        0.810 +/- 0.018   (shuffled 0.501, chance 0.500)
+    ema-rnd    0.607 +/- 0.028   (shuffled 0.497, chance 0.500)
+    ear-win    0.000 +/- 0.000   (shuffled 0.000, chance 0.500)
+    ear-win-rnd 0.000 +/- 0.000   (shuffled 0.000, chance 0.500)
+    ear-sh     0.000 +/- 0.000   (shuffled 0.000, chance 0.500)
+    ear-sh-rnd 0.000 +/- 0.000   (shuffled 0.000, chance 0.500)
+    ear-win-sh 0.000 +/- 0.000   (shuffled 0.000, chance 0.500)
+    ear-win-sh-rnd 0.000 +/- 0.000   (shuffled 0.000, chance 0.500)
+    ear-env-sh 0.000 +/- 0.000   (shuffled 0.000, chance 0.500)
+    ear-env-sh-rnd 0.000 +/- 0.000   (shuffled 0.000, chance 0.500)
+    ear-cnj-sh 0.000 +/- 0.000   (shuffled 0.000, chance 0.500)
+    ear-cnj-sh-rnd 0.000 +/- 0.000   (shuffled 0.000, chance 0.500)
+    ear-spl-sh 0.000 +/- 0.000   (shuffled 0.000, chance 0.500)
+    ear-spl-sh-rnd 0.000 +/- 0.000   (shuffled 0.000, chance 0.500)
+    PAIRED  ema - off       +0.239 +/- 0.024, 9.9 SE, 34 of 36
+    PAIRED  ema - ema-rnd   +0.203 +/- 0.033, 6.2 SE, 31 of 36
+
+  is the utterance nearer the RIGHT word's target? (no fitting, chance 0.500)
+    off        0.520 +/- 0.005
+    oracle     0.569 +/- 0.010
+    ear        0.000 +/- 0.000
+    ear-rnd    0.000 +/- 0.000
+    ear-deaf   0.000 +/- 0.000
+    ear-deaf-rnd 0.000 +/- 0.000
+    ema        0.570 +/- 0.008
+    ema-rnd    0.500 +/- 0.001
+    ear-win    0.000 +/- 0.000
+    ear-win-rnd 0.000 +/- 0.000
+    ear-sh     0.000 +/- 0.000
+    ear-sh-rnd 0.000 +/- 0.000
+    ear-win-sh 0.000 +/- 0.000
+    ear-win-sh-rnd 0.000 +/- 0.000
+    ear-env-sh 0.000 +/- 0.000
+    ear-env-sh-rnd 0.000 +/- 0.000
+    ear-cnj-sh 0.000 +/- 0.000
+    ear-cnj-sh-rnd 0.000 +/- 0.000
+    ear-spl-sh 0.000 +/- 0.000
+    ear-spl-sh-rnd 0.000 +/- 0.000
+    PAIRED  ema - off       +0.050 +/- 0.008, 6.2 SE, 30 of 36
+    PAIRED  ema - ema-rnd   +0.069 +/- 0.008, 8.8 SE, 36 of 36
+
+  did it move the RIGHT WAY along the axis between the two words?
+  (centred on the creature's own mean, no labels fitted, chance 0.500)
+    off        0.546 +/- 0.014    (k-way form: 0.546)
+    oracle     0.845 +/- 0.013    (k-way form: 0.845)
+    ear        0.000 +/- 0.000    (k-way form: 0.000)
+    ear-rnd    0.000 +/- 0.000    (k-way form: 0.000)
+    ear-deaf   0.000 +/- 0.000    (k-way form: 0.000)
+    ear-deaf-rnd 0.000 +/- 0.000    (k-way form: 0.000)
+    ema        0.775 +/- 0.015    (k-way form: 0.775)
+    ema-rnd    0.483 +/- 0.025    (k-way form: 0.483)
+    ear-win    0.000 +/- 0.000    (k-way form: 0.000)
+    ear-win-rnd 0.000 +/- 0.000    (k-way form: 0.000)
+    ear-sh     0.000 +/- 0.000    (k-way form: 0.000)
+    ear-sh-rnd 0.000 +/- 0.000    (k-way form: 0.000)
+    ear-win-sh 0.000 +/- 0.000    (k-way form: 0.000)
+    ear-win-sh-rnd 0.000 +/- 0.000    (k-way form: 0.000)
+    ear-env-sh 0.000 +/- 0.000    (k-way form: 0.000)
+    ear-env-sh-rnd 0.000 +/- 0.000    (k-way form: 0.000)
+    ear-cnj-sh 0.000 +/- 0.000    (k-way form: 0.000)
+    ear-cnj-sh-rnd 0.000 +/- 0.000    (k-way form: 0.000)
+    ear-spl-sh 0.000 +/- 0.000    (k-way form: 0.000)
+    ear-spl-sh-rnd 0.000 +/- 0.000    (k-way form: 0.000)
+    the k-way form reduces to the axis test at k=2: worst disagreement 0.0000
+    PAIRED  ema - off       +0.229 +/- 0.019, 12.0 SE, 34 of 36
+    PAIRED  ema - ema-rnd   +0.292 +/- 0.027, 11.0 SE, 34 of 36
+
+  does the index hold up across a session? (early third -> last third)
+    ear           0.000 -> 0.000   PAIRED +0.000 +/- 0.000 (0.0 SE)
+    ear-rnd       0.000 -> 0.000   PAIRED +0.000 +/- 0.000 (0.0 SE)
+    ear-deaf      0.000 -> 0.000   PAIRED +0.000 +/- 0.000 (0.0 SE)
+    ear-deaf-rnd  0.000 -> 0.000   PAIRED +0.000 +/- 0.000 (0.0 SE)
+    ema           0.913 -> 0.853   PAIRED -0.060 +/- 0.002 (32.9 SE)
+    ema-rnd       0.902 -> 0.844   PAIRED -0.058 +/- 0.002 (31.8 SE)
+    ear-win       0.000 -> 0.000   PAIRED +0.000 +/- 0.000 (0.0 SE)
+    ear-win-rnd   0.000 -> 0.000   PAIRED +0.000 +/- 0.000 (0.0 SE)
+    ear-sh        0.000 -> 0.000   PAIRED +0.000 +/- 0.000 (0.0 SE)
+    ear-sh-rnd    0.000 -> 0.000   PAIRED +0.000 +/- 0.000 (0.0 SE)
+    ear-win-sh    0.000 -> 0.000   PAIRED +0.000 +/- 0.000 (0.0 SE)
+    ear-win-sh-rnd 0.000 -> 0.000   PAIRED +0.000 +/- 0.000 (0.0 SE)
+    ear-env-sh    0.000 -> 0.000   PAIRED +0.000 +/- 0.000 (0.0 SE)
+    ear-env-sh-rnd 0.000 -> 0.000   PAIRED +0.000 +/- 0.000 (0.0 SE)
+    ear-cnj-sh    0.000 -> 0.000   PAIRED +0.000 +/- 0.000 (0.0 SE)
+    ear-cnj-sh-rnd 0.000 -> 0.000   PAIRED +0.000 +/- 0.000 (0.0 SE)
+    ear-spl-sh    0.000 -> 0.000   PAIRED +0.000 +/- 0.000 (0.0 SE)
+    ear-spl-sh-rnd 0.000 -> 0.000   PAIRED +0.000 +/- 0.000 (0.0 SE)
+    AGAINST THE PREDICTION  drift says -0.034, measured +0.000: off by
+      0.034 = 0.0 SE  -> not excluded
+    what is NOT excluded: the 3 SE interval is [+0.000, +0.000], so a
+      decay smaller than 0.000 remains possible
+    the gap   early +0.000  ->  late +0.000   (NARROWS, against drift)
+    DRIFT IS REFUSED ON BOTH OF ITS CLAIMS. It predicts -0.034 in the
+    learning arm and that the learning arm decays MOST. Measured:
+    +0.000 +/- 0.000, which is 0.0 SE off the prediction, and the
+    learning arm is the arm that decays LEAST -- the only one that
+    rises, with every control falling below it. The gap NARROWS, where
+    drift requires it to widen. With own voice refused by
+    intervention and gate corruption refused at the wrong sign
+    (+0.72), ALL THREE named causes of the -0.056 gap are dead. The
+    gap is real at 6.0 SE and UNEXPLAINED -- record it that way
+    rather than reaching for a fourth guess. A decay smaller than
+    0.000 is still not excluded, so what dies is drift AT THE SIZE IT
+    PREDICTED, not every conceivable drift.
+
+  OWN VOICE: does cutting the acoustic self-path close the gap?
+    GUARD deafness changed the creature?  0 of 0 pairs IDENTICAL   OK
+    gap HEARING  ear      - ear-rnd       +0.000 +/- 0.000 (0.0 SE, n=0)
+    gap DEAF     ear-deaf - ear-deaf-rnd  +0.000 +/- 0.000 (0.0 SE, n=0)
+    DIFFERENCE OF GAPS  deaf - hearing     +0.000 +/- 0.000 (0.0 SE)
+    deafening, TRACKING arm   ear-deaf     - ear      +0.000 +/- 0.000 (0.0 SE)
+    deafening, CONTROL arm    ear-deaf-rnd - ear-rnd  +0.000 +/- 0.000 (0.0 SE)
+    index levels  ear 0.000  ear-rnd 0.000  ear-deaf 0.000  ear-deaf-rnd 0.000
+    POWER  a full closure moves this by 0.000; 3 x SE = 0.000  -> CANNOT DETECT ONE
+    REFUSED: the HEARING gap does not reproduce here (+0.000 +/- 0.000).
+    areax-v53 measured -0.086 +/- 0.018 on two builds; without it there
+    is nothing for the intervention to close.
+
+  THE WORD WINDOW: is the index's own larynx gate the cause of the gap?
+    GUARD the oracle window changed the creature?  0 of 0 pairs IDENTICAL   OK
+    arm              index   occupancy  ceiling  SLACK (= confusion)
+    ear              0.000    0.000      1.500    +1.500
+    ear-rnd          0.000    0.000      1.500    +1.500
+    ear-win          0.000    0.000      1.500    +1.500
+    ear-win-rnd      0.000    0.000      1.500    +1.500
+    ear-sh           0.000    0.000      1.500    +1.500
+    ear-sh-rnd       0.000    0.000      1.500    +1.500
+    ear-win-sh       0.000    0.000      1.500    +1.500
+    ear-win-sh-rnd   0.000    0.000      1.500    +1.500
+    THE LOCK  ear-win (alternating) 0.000  vs  ear-win-sh (shuffled) 0.000
+              paired drop +0.00000 +/- 0.00000 (0.0 SE, n=0)   <- no lock: the window result survives shuffling
+    gap LARYNX, shuffled  ear-sh     - ear-sh-rnd      raw +0.000 +/- 0.000   confusion +0.000 +/- 0.000 (n=0)
+    gap ORACLE, shuffled  ear-win-sh - ear-win-sh-rnd  raw +0.000 +/- 0.000   confusion +0.000 +/- 0.000 (n=0)
+    DIFFERENCE OF GAPS, on confusion   oracle - larynx  +0.000 +/- 0.000 (0.0 SE)
+    ANCHOR  ear 0.000 (was 0.707)  ear-rnd 0.000 (was 0.763)  -> DOES NOT REPRODUCE
+    POWER  a full closure moves this by 0.000; 3 x SE = 0.000  -> CANNOT DETECT ONE
+    REFUSED: the anchor does not reproduce, so this run disagrees with
+    the record on a condition it also ran. THAT is the finding, and
+    nothing about the window can be read against a baseline that moved.
+
+  paired differences (same creature, arms differ only in genome fields)
+    ear   - ear-rnd     +0.0 +/- 0.0 Hz, 0.0 SE, 0 of 0 positive
+    ear   - off         +0.0 +/- 0.0 Hz, 0.0 SE, 0 of 0 positive
+    ema   - ema-rnd     +44.2 +/- 4.1 Hz, 10.7 SE, 36 of 36 positive
+    ema   - off         +41.5 +/- 4.6 Hz, 9.0 SE, 32 of 36 positive
+
+  the reference here       oracle 80.6 Hz vs off 25.1 (+55.5, 6.6 SE)
+  the derived index        p = 0.887 +/- 0.001, busiest slice 0.605
+  ...and does it sharpen?  0.913 +/- 0.001 -> 0.853 +/- 0.002 over the session
+  predicted from ctxsrc    38.7 Hz  (p <= 0.740, keeps 48%)
+  predicted from THIS p    62.5 Hz  (keeps 77%)
+  measured                 66.6 Hz  (+41.5 vs off, 5.5 SE)
+  vs matched-marginal      22.3 Hz  (+44.2, 6.4 SE)
+  PAIRED vs matched-marg   +44.2 +/- 4.1 Hz, 10.7 SE  <-- THE GATE
+                           36 of 36 creatures positive
+  paired vs `off`          +41.5 +/- 4.6 Hz, 9.0 SE (diagnostic)
+  unpaired, for the record +44.2 (6.4 SE) vs control, +41.5 (5.5 SE) vs off
+
+  THE CREATURE INDEXES ITSELF -- the voice depends on the word with NO
+  oracle anywhere. +44.2 +/- 4.1 Hz of F1, PAIRED, against a control
+  carrying the same split table and the same derived index and differing
+  only in whether the target tracks the word; 36 of 36 creatures
+  positive, on an index read from the larynx at 0.887. That is 75% of
+  what the host-written index bought IN THIS SAME RUN, against 48%
+  predicted from `ctxsrc`'s upper bound and 77% from this run's own p.
+  The last oracle in the architecture is gone.

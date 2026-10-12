@@ -28982,24 +28982,35 @@ constexpr uint32_t kCtxSelfArmCount = sizeof(kCtxSelfArms) / sizeof(kCtxSelfArms
 
 // A FOCUSED RUN, because the full table is 20 arms x 36 creatures and ~7h. Same pattern
 // `credgate` uses: a named list of the arms this question needs, everything else skipped,
-// flipped back by setting kCtxSelfFocused to false. The set is chosen so that both halves
-// of the conjunction, the oracle ceiling, the ungated baseline and the REAL alternative
-// (`ema`) are all present IN THE SAME RUN -- `credgate`'s first focused run left the
-// oracle arm out and was refused for it.
+// flipped back by setting kCtxSelfFocused to false. `off` and `oracle` stay in every
+// focused set, because they are the two references every number here is quoted against and
+// because a run without them cannot be compared to any other.
+//
+// THE GUARD NO LONGER PUNISHES A HELD-OUT ARM. It once refused on ANY arm with no
+// creatures, so holding one out voided the run -- which is how the first focused smoke
+// printed INCONCLUSIVE and how the full-budget envelope run lost its summary to a
+// held-out `ear` after 11.5h. It now skips arms it was told to skip; an arm that was
+// asked for and came back empty still refuses.
+//
+// FOCUSED ON the occupancy question that the gate family's refusal left behind.
+// `ema` delivers 63.5 +/- 4.4 Hz with its index at its own ceiling (slack 0.006), and the
+// ceiling is `1.5 - occupancy` with occupancy 0.641 -- so the only way up is a more even
+// split. Reading network.cpp showed the balancing mechanism ALREADY EXISTS and is simply
+// not running for this arm: source 4 skips the episode and skipped the conscience with it,
+// so at the shipped `ctx_proto_gate = 0` its winner selection is plain nearest prototype.
+// Gates 2 and 3 switch the conscience on in the per-tick path. So this needs no new
+// mechanism and no new genome field -- only the existing gate, read through a lens
+// (occupancy as the binding ceiling) that was not available when those gates were built.
+//
+// Four arms, because `results/ctxself-env2.log` already holds gate 0 for exactly these
+// arms on exactly these creatures at 36 reps, and the genomes differ in ONE scalar, so the
+// gate-0 and gate-2 runs are PAIRED by creature and gate 0 does not need re-running.
+// THE RUN IS DONE AND THIS IS BACK OFF. It exercised the guard fix for real: the 16
+// held-out arms printed as zero rows and the run reached its summary at exit 0, where the
+// same shape of configuration had cost 11.5h the run before.
 constexpr bool kCtxSelfFocused = false;
 inline bool cs_focused_arm(const char* n) {
-  // `off` and `oracle` stay in every focused set because they are the two references every
-  // number here is quoted against. They were once load-bearing for a different reason: the
-  // summary guard refused on ANY arm with no creatures, so a held-out arm voided the run --
-  // which is how the first focused smoke printed INCONCLUSIVE, and how the full-budget
-  // envelope run lost its summary to a held-out `ear` after 11.5h. The guard now skips
-  // arms it was told to skip, so that failure mode is closed.
   return std::strcmp(n, "off") == 0 || std::strcmp(n, "oracle") == 0 ||
-         std::strcmp(n, "ear-sh") == 0 || std::strcmp(n, "ear-sh-rnd") == 0 ||
-         std::strcmp(n, "ear-win-sh") == 0 || std::strcmp(n, "ear-win-sh-rnd") == 0 ||
-         std::strcmp(n, "ear-env-sh") == 0 || std::strcmp(n, "ear-env-sh-rnd") == 0 ||
-         std::strcmp(n, "ear-cnj-sh") == 0 || std::strcmp(n, "ear-cnj-sh-rnd") == 0 ||
-         std::strcmp(n, "ear-spl-sh") == 0 || std::strcmp(n, "ear-spl-sh-rnd") == 0 ||
          std::strcmp(n, "ema") == 0 || std::strcmp(n, "ema-rnd") == 0;
 }
 inline bool cs_skip(uint32_t a) {
