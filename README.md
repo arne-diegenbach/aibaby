@@ -16574,7 +16574,9 @@ One lead, below the bar and recorded as such: narrowing the window twentyfold *i
 fixed-target lesson under the oscillator, **+0.0256 ± 0.0117, 2.2 SE**, while delivering
 strictly less total credit (61% surviving the delay against 98%). A trace spanning several
 phases credits all of them indiscriminately, so a shorter one should write more coherently
-while writing less. A prediction at 2.2 SE, not a result.
+while writing less. A prediction at 2.2 SE, not a result. **It was run at double the
+creatures and it is refused — see below, where it also turns out to be the sharpest
+methodological result of the day.**
 
 ### The gesture and the lesson trade against each other monotonically, and the gesture is unchanged by teaching
 
@@ -17164,6 +17166,56 @@ held out of the focused set, so it was empty by construction. The per-creature r
 present, so the aggregation was done over the log instead and no compute was repeated. The
 guard now skips arms it was told to skip; an arm that was asked for and came back empty still
 refuses.
+
+### Pairing a result on its own discovery sample lifts it exactly onto the bar
+
+The credit-window lead was the cheapest thing left in the queue: narrowing the eligibility
+window twentyfold appeared to *improve* the fixed-target lesson under the oscillator by
+**+0.0256 ± 0.0117 (2.2 SE)** while delivering strictly less credit. It matters because the
+fixed-target lesson under the oscillator *is* production width, and production width is the
+limit a lineage inherits.
+
+Picking it up exposed a defect in how it had been measured, and it is the same defect that
+cost three statistics earlier in this project. **The two genomes differ in exactly one
+scalar** — the vocal module's `elig_tau_scale`, 1.0 against 0.05 — which does not re-roll
+the wiring, so seed *r* names the same creature in both runs and the comparison is **paired
+by construction**. It had been quoted unpaired across two logs only because the per-creature
+error drop was never printed: the fixed-target arm takes the no-phase-bins path, which
+printed nothing at all, so the fourth-rung quantity existed only as a mean. That is now
+printed, and `kReps` went 18 → 36 — derived from needing SE ≤ 0.0085 to clear 3 SE, which is
+(0.0117/0.0085)² = 1.9× the creatures.
+
+| sample | paired difference | | sign count |
+|---|---|---|---|
+| all 36 | **+0.0154 ± 0.0080** | 1.9 SE | 26 of 36 |
+| the original 18 (r 0–17) | **+0.0256 ± 0.0084** | **3.0 SE** | 15 of 18 |
+| the fresh 18 (r 18–35) | **+0.0052 ± 0.0135** | 0.4 SE | 11 of 18 |
+
+**Pairing reproduced the original point estimate to four decimals and lifted it to exactly
+3.0 SE — onto the bar — on the creatures that had produced it. On eighteen creatures the
+comparison had never seen, the effect is a fifth the size and indistinguishable from zero.**
+Had I paired the existing data without also adding creatures, which was the cheaper and more
+obvious move, I would have published a 3.0 SE result that is noise. The 3 SE bar does not
+protect a claim evaluated on the sample that generated it; pairing is a sharper instrument,
+and a sharper instrument pointed at the discovery sample finds the discovery again.
+
+**And pairing was not what settled it — doubling the creatures was.** Pairing moved the SE
+only 0.0086 → 0.0080, because the across-creature correlation between the two windows is
+**r = +0.133**. A paired design buys precision in proportion to how much the units
+correlate, and these barely do: the drop is dominated by within-creature noise rather than
+by which creature it is. So the expectation stated when this run was launched — that pairing
+should tighten it beyond the power gain — was wrong, and measurably so. The same shape of
+fact refused the two-pool readout, where only ρ = 0.101 of the relevant variance was shared.
+
+**Verdict: refused at 1.9 SE on 36 creatures.** Stated precisely, this is a failure to
+replicate rather than a demonstration of absence — the fresh half's interval reaches +0.032,
+so it cannot exclude the original effect, only fail to find it. The effect size itself fell
+40% as n doubled, which is the signature this project has recorded before (the salience
+reward shrank from n=12 to n=16 and was refused the same way).
+
+The phase conclusions in the same two runs reproduced unchanged: the shipped window VOIDs on
+the resolution guard (the trace spans 3.0 phases), and the fast window satisfies resolution
+and delivery together and still cannot aim the gesture.
 
 ## Layout
 

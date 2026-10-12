@@ -9936,7 +9936,11 @@ bool run_phaseteach(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
       {"fast",     int(kVLTgtPhase),     kPTFastDelayTicks},
       {"fast-sw",  int(kVLTgtPhaseSwap), kPTFastDelayTicks},
   };
-  constexpr uint32_t kN = 5, kReps = 18;
+  // kReps 18 -> 36. The credit-window lead this run exists to settle sat at 2.2 SE on 18
+  // creatures (+0.0256 +/- 0.0117 unpaired across two genomes), and reaching 3 SE needs
+  // the SE at 0.0085 or below, which is (0.0117/0.0085)^2 = 1.9x the creatures. Pairing
+  // should tighten it further, and the per-creature rows above now make that possible.
+  constexpr uint32_t kN = 5, kReps = 36;
   std::printf("  phaseteach -- can a taught utterance occupy two phases of the\n"
               "  creature's own free-running F1 gesture?\n");
   std::printf("  the quantity  produced F1 in phase 1 minus produced F1 in phase 0\n");
@@ -9965,6 +9969,15 @@ bool run_phaseteach(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
       // off, and an arm with one empty bin has no separation to report.
       c.ok = true; c.off = run.ph_off; c.share = run.ph_share; c.taught = run.err_late;
       c.e0 = run.err_early;
+      // PRINT THE PER-CREATURE DROP, because the mean alone cannot be PAIRED. The
+      // fixed-target arm lands here (no phase bins), and it is the arm the fourth rung
+      // and the credit-window comparison both read. Two runs reported its drop only as a
+      // mean +/- SE, so the 20x-window result had to be quoted as an UNPAIRED difference
+      // across two logs (+0.0256 +/- 0.0117, 2.2 SE) even though the genomes differ in one
+      // scalar and therefore describe THE SAME creatures. Per-creature rows make the
+      // paired form -- the licensed and much tighter one -- computable from the log.
+      parallel_note("  [%u/%u] seed %u %-9s err_early %.4f  err_late %.4f  drop %+.4f\n",
+                    i + 1, kReps * kN, r, kPT[a].name, c.e0, c.taught, c.e0 - c.taught);
       return c;
     }
     c.ok = true;
@@ -9975,8 +9988,10 @@ bool run_phaseteach(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
     c.off = run.ph_off;
     c.taught = run.err_late;
     c.e0 = run.err_early;
-    parallel_note("  [%u/%u] seed %u %-9s sep %+7.1f Hz  share %.2f  off %.2f\n",
-                  i + 1, kReps * kN, r, kPT[a].name, c.sep, c.share, c.off);
+    parallel_note("  [%u/%u] seed %u %-9s sep %+7.1f Hz  share %.2f  off %.2f  "
+                  "drop %+.4f\n",
+                  i + 1, kReps * kN, r, kPT[a].name, c.sep, c.share, c.off,
+                  c.e0 - c.taught);
     return c;
   });
   std::vector<double> sep[kN];

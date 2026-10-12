@@ -187,12 +187,19 @@ point must give an error drop over half of 0.2197 while keeping `sep` > 10 Hz an
 within 0.15–0.85. If none does, the gesture and the lesson do not compose at any operating
 point — a real negative about this architecture rather than one more refused mechanism.
 
-Two things are owed alongside it. The 4/5 cost names the *configuration*, not the mechanism:
+One thing is owed alongside it. The 4/5 cost names the *configuration*, not the mechanism:
 four genome fields differ and two are spike-frequency adaptation, so an adaptation-only and
-an inhibition-only genome are needed to attribute it. And one 2.2 SE lead is worth powering
-up — narrowing the credit window twentyfold *improves* the fixed-target lesson under the
-oscillator (+0.0256 ± 0.0117) while delivering strictly less total credit, which is what a
-trace that stops crediting several phases at once should do.
+an inhibition-only genome are needed to attribute it.
+
+The 2.2 SE credit-window lead that stood here has been **powered up and refused**. Narrowing
+the window twentyfold gives +0.0154 ± 0.0080 (1.9 SE) on 36 creatures, and
+**+0.0052 ± 0.0135 (0.4 SE) on the 18 the original read had never seen**, against
++0.0256 ± 0.0084 (3.0 SE) on the 18 that produced it. A failure to replicate rather than a
+proof of absence — the fresh interval reaches +0.032. **The method result outlives the lead
+and is in §2.17 of the findings document: pairing a claim on its own discovery sample lifts
+it exactly onto the bar, and pairing pays only in proportion to how much the units correlate
+(r = +0.133 here moved the SE 0.0086 → 0.0080, so it was the extra creatures that decided
+it, not the sharper statistic).**
 
 Bohland, Bullock & Guenther's GODIVA names the layer above all of this, and Segawa and
 colleagues say the stored unit is a *gestural score* rather than an acoustic target — which
@@ -232,6 +239,11 @@ down so the next person does not pay again.
   module re-rolls the noise, so two genomes are two different populations; `off` and `oracle`
   are the cheap test, since no mechanism edit can move them. A prize quoted across families
   as a point estimate was a range (+11.1 ± 7.1 against +27.4 ± 7.0).
+- **Do not settle an old lead by re-analysing it more sharply.** Spend the compute on units
+  the claim has not seen first. A paired re-read of the discovery sample reproduced a 2.2 SE
+  lead's point estimate to four decimals and landed it on exactly 3.0 SE, where 18 fresh
+  creatures gave 0.4 SE. Report the discovery half and the fresh half separately, because
+  the pooled number contains the half that generated the claim.
 
 ## How to not waste a run
 
