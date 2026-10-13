@@ -36,7 +36,7 @@ rather than the line of diminishing returns it looked like.
 |---|---|
 | Credit assignment via reward masks | **Closed by arithmetic.** Gain rises monotonically with how much of the motor group the reward reaches, so the cheapest mask is no mask. Nothing in the family is affordable against its retention price. |
 | The geometry of the motor pool | **Settled in two independent families.** The readout is a rate-weighted centroid, so potency is *signed* distance from it; potency decides *whether* extent costs anything, and given nonzero potency extent costs until it saturates. |
-| The derived context index | **Explained, and the repair is closed.** Its deficit was the word boundary: given a clean one, classification error goes to exactly zero and the creature's own index matches a host-supplied perfect index on behaviour (−1.0 ± 6.0 Hz). But four detectors built to supply that boundary are all beaten by the arm with no detector at all, and the leading arms sit at their occupancy ceilings — so **build no further boundary detector**. The gap itself is real and unclaimed (oracle − detector-free = +17.2 ± 5.1, 3.3 SE); what is left is table balance (§2). |
+| The derived context index | **Explained, and the repair is closed.** Its deficit was the word boundary: given a clean one, classification error goes to exactly zero and the creature's own index matches a host-supplied perfect index on behaviour (−1.0 ± 6.0 Hz). But four detectors built to supply that boundary are all beaten by the arm with no detector at all, and the leading arms sit at their occupancy ceilings — so **build no further boundary detector**. The gap itself is real (oracle − detector-free = +17.2 ± 5.1, 3.3 SE) but **not reachable by balancing the table either**: forcing occupancy to 0.502 takes the ceiling to 0.998 and the index saturates at 0.89, so the feature is the limit (§2). Both routes to that gap are now closed. |
 | The aim/feedback line | **Refused by its own control** — a blind controller beats feedback at this creature's loop delay. |
 | Protocol variations | **Closed.** Longer, blocked, region-shaped, distance-aware and staircased rewards were each measured and none helps. |
 | The transmission channel | **Faithful once width is held** — no detectable loss over four generations (1.4 SE), and a ratchet that locks in whichever convention it finds. Further chain runs measure the tutor, not the channel, so the quantity to move is production width (§1). |
@@ -76,21 +76,32 @@ asymptotes at 234 and ~118 Hz independently; and nothing downstream of the bias 
 **Do not re-run a bias sweep.** The nearest unexplored thing is the creature's own f0 — the
 tutoring tape carries formants only, and pitch is still the host's.
 
-### 2. Table balance for the derived context index
+### 2. Table balance for the derived context index — CLOSED, the feature saturates at 0.89
 
-The replacement for the closed boundary line, and there is **+17.2 ± 5.1 Hz (3.3 SE, 25 of
-36) still unclaimed** between the detector-free arm and the full oracle — so the gap is
-real, and only the detector route to it is refused. For two balanced words the index match cannot
-exceed `1.5 − occupancy`, and the detector-free arm's slack against that ceiling is **0.006**
-while the handed-boundary arm's is **0.000**: the leading arms are already as accurate as
-their own partitions permit, and every arm in that run lands where its ceiling puts it. So
-the open question is **where to put the threshold so the trials divide evenly**, not when a
-word happens — a threshold-placement problem, and one no gate in the family was built for.
+This replaced the closed boundary line and has now closed too, in one night. The question
+was whether the derived index's pinning to `1.5 − occupancy` meant *balance* was binding or
+*accuracy* was, which no comparison at the ceiling could answer because there the two are
+identically equal. **DNA v70 answered it by overshooting.** A gain on DeSieno's conscience
+drives occupancy from 0.641 to 0.502 — a perfectly even split — taking the ceiling to 0.998,
+and the index **saturates at about 0.89** while slack opens from 0.005 to 0.478.
 
-Dividing them evenly is *necessary* for a derived index to beat the detector-free arm. It is
-**not shown to be sufficient**: at the ceiling, index and occupancy are the same number, so
-that run cannot separate accuracy from balance. Any build here needs an arm that moves
-occupancy while holding the feature fixed, or it will not be able to tell which it changed.
+**So the partition's balance was binding only while occupancy exceeded ~0.52, and past that
+the limit is the feature.** The ~9 Hz still separating the detector-free arm from the oracle
+is therefore **not reachable by balancing the table**, which closes the route rather than
+leaving it open as an invitation.
+
+Two results worth carrying. **A balanced partition is not an informative one:** at the
+highest gain the table is balanced to 0.502 and the index reads 0.520 against a chance level
+of 0.500 — slots assigned by turn-taking rather than by the word — with dF1 *below* the
+no-index arm, −30.4 ± 5.6 (5.4 SE). And the best setting's behavioural gain is **sub-bar
+and recorded as such**: pooled over 72 creatures (half of them never seen by the hypothesis)
+the registered contrast is +12.7 ± 4.7, **2.7 SE** against a bar of 3, 45 of 72 positive. No
+creatures were added to close the 0.3 SE gap, because that is optional stopping.
+
+The mechanism, by contrast, replicated to three decimals: two families starting at occupancy
+0.641 and 0.653 both land on 0.522/0.523 with the index at 0.890/0.892, and the treated arm
+delivers 71.8 and 71.9 Hz against an oracle at 80.6 and 80.8. **The noisy quantity is the
+untreated baseline, not the treatment.**
 
 Two cautions carried forward from the run that closed §1's framing. The boundary prize is
 **genome-dependent** — +11.1 ± 7.1 Hz on one family and +27.4 ± 7.0 on another, with no

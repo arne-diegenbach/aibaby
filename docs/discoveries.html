@@ -1177,6 +1177,56 @@ budget, because a rate-thresholded gate's behaviour depends on a rate distributi
 still settling in the first few percent of a creature's life. Only a handed window was
 budget-invariant.</p>
 
+<h3>6.6 Saturation identifies what a matched comparison cannot</h3>
+<p>&sect;6.5 left a question it could not answer. The leading arms sat at the ceiling
+<code>index &le; 1.5 &minus; occupancy</code>, and at that ceiling the two quantities are
+<em>identically equal</em>, so no comparison among those arms can say whether the index is
+limited by its accuracy or by how evenly its partition divides the episodes. What was needed
+was a lever that moves occupancy while leaving the feature untouched.</p>
+<p>DeSieno's conscience is one: it adds <code>(slots &times; win_fraction &minus; 1) &times;
+dscale</code> to each slot's distance, penalising a slot that wins more than its share, with
+<code>dscale</code> the running mean winner distance so the penalty is in the units of the
+distance it joins. That term had an implicit gain of 1. Scaling it leaves the feature, the
+prototypes and the learning rule alone and changes only the pressure toward an even split.</p>
+<table>
+<tr><th>gain</th><th>index</th><th>occupancy</th><th>ceiling</th><th>slack</th><th>dF1</th></tr>
+<tr><td>shipped (no conscience here)</td><td>0.854</td><td>0.641</td><td>0.859</td><td>0.005</td><td>63.5</td></tr>
+<tr><td>1</td><td>0.887</td><td>0.605</td><td>0.895</td><td>0.008</td><td>66.6</td></tr>
+<tr><td>2</td><td>0.890</td><td>0.522</td><td>0.978</td><td><strong>0.088</strong></td><td>71.8</td></tr>
+<tr><td>4</td><td>0.874</td><td>0.515</td><td>0.985</td><td><strong>0.111</strong></td><td>67.0</td></tr>
+<tr><td>8</td><td><strong>0.520</strong></td><td>0.502</td><td>0.998</td><td><strong>0.478</strong></td><td>22.1</td></tr>
+</table>
+<p><strong>Pushing the ceiling past the plausible range separates the two by making the
+index fail to follow.</strong> Occupancy goes from 0.641 to 0.502 &mdash; a perfectly even
+split &mdash; and the ceiling with it to 0.998, while the index saturates at about 0.89 and
+the slack opens from 0.005 to 0.478. <strong>The partition's balance was binding only while
+occupancy exceeded roughly 0.52; past that the limit is the feature.</strong> No measurement
+taken while the index sat on its ceiling could have established this, and the method is
+general: when a quantity is pinned to a bound, drive the bound beyond the range of interest
+and see whether the quantity tracks it.</p>
+<p><strong>A perfectly balanced partition is not an informative one.</strong> At the highest
+gain the table is balanced to 0.502 and the index reads 0.520 against a chance level of
+0.500 &mdash; the conscience has overwhelmed the data and is assigning slots by turn-taking
+rather than by the word. Delivered dF1 falls to 22.1, <em>below</em> the arm with no index at
+all, and paired against the shipped creature that is
+&minus;30.4&nbsp;&plusmn;&nbsp;5.6 (5.4&nbsp;SE). This was pre-registered as one of three
+admissible outcomes before the sweep ran.</p>
+<p>The behavioural question was then re-asked on creatures the claim had not seen, by
+offsetting the genome seed so that a fresh run's creatures are the next block of the same
+family. The mechanism replicated to three decimals: two halves starting from different
+places (occupancy 0.641 and 0.653) land on the same one (0.522 and 0.523), and the treated
+arm delivers 71.8 and 71.9&nbsp;Hz in the two families against an oracle at 80.6 and 80.8.
+<strong>The noisy quantity is the untreated baseline, not the treatment.</strong></p>
+<p class="note">The behavioural gain does <em>not</em> clear this project's bar and is
+recorded as such: the registered contrast pools to
++12.7&nbsp;&plusmn;&nbsp;4.7&nbsp;Hz (2.7&nbsp;SE) over 72 creatures, 45 of them positive,
+where the threshold is 3. Roughly eighteen more creatures would close the gap arithmetically
+and none were run, because adding samples until a number crosses a threshold is optional
+stopping. One worry from the first half did not survive, in the favourable direction: there
+the gain split evenly between the arm improving and its control degrading, which would have
+made half of it an artefact, while on the fresh creatures the control moved
++0.3&nbsp;Hz and pooled it is indistinguishable from zero.</p>
+
 
 <h2>7. Transmission between creatures</h2>
 <h3>7.1 One creature teaches another: a learned distinction crosses to a second individual
