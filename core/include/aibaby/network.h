@@ -1219,6 +1219,10 @@ class Network {
   uint32_t ctx_seeded_ = 0;       // 1 once the prototypes have been seeded from data
   Scalar ctx_proto_lr_floor_ = kZero;  // DNA v60: dt_ms / ctx_proto_tau_ms, 0 = off
   Scalar ctx_vigilance_ = kZero;  // DNA v61: multiple of the mean winner distance
+  // DNA v70: gain on the conscience penalty; a genome 0 becomes 1. Named `_gain` and not
+  // `ctx_conscience_` because a LOCAL bool `ctx_conscience` already decides WHETHER the
+  // conscience runs, and a how-strong one underscore from a whether is a trap.
+  Scalar ctx_conscience_gain_ = kOne;
   uint32_t ctx_committed_ = 0;    // slots actually allocated so far, 0 = none yet
   int32_t ctx_pin_ = -1;          // experiment-only forced context slot, -1 = off
   Scalar ctx_noise_p_ = kZero;    // experiment-only excursion probability per tick

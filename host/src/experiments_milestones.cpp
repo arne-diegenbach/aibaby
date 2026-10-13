@@ -29005,9 +29005,10 @@ constexpr uint32_t kCtxSelfArmCount = sizeof(kCtxSelfArms) / sizeof(kCtxSelfArms
 // Four arms, because `results/ctxself-env2.log` already holds gate 0 for exactly these
 // arms on exactly these creatures at 36 reps, and the genomes differ in ONE scalar, so the
 // gate-0 and gate-2 runs are PAIRED by creature and gate 0 does not need re-running.
-// THE RUN IS DONE AND THIS IS BACK OFF. It exercised the guard fix for real: the 16
-// held-out arms printed as zero rows and the run reached its summary at exit 0, where the
-// same shape of configuration had cost 11.5h the run before.
+// OFF AGAIN: the DNA v70 conscience-gain sweep and its fresh-creature replication are done.
+// Seven focused runs in all went through this path (gate 2, gains 2/4/8, and gate-0 and
+// gain-2 on reps 36-71), each four arms, each paired by creature with the one before it
+// because every genome is a single scalar from its predecessor.
 constexpr bool kCtxSelfFocused = false;
 inline bool cs_focused_arm(const char* n) {
   return std::strcmp(n, "off") == 0 || std::strcmp(n, "oracle") == 0 ||

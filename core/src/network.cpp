@@ -446,6 +446,12 @@ bool Network::build(const Dna& dna, Arena& arena, Rng& rng) {
   ctx_slots_ = h.exploration.context_slots > 1 ? h.exploration.context_slots : 0;
   ctx_proto_gate_ = h.exploration.ctx_proto_gate;
   ctx_vigilance_ = Scalar(h.exploration.ctx_vigilance);
+  // DNA v70. A genome 0 selects the SHIPPED strength rather than disabling the conscience,
+  // because the shipped creature runs it at gain 1 wherever it runs at all and the usual
+  // "0 is off" reading would make every existing genome a different creature.
+  ctx_conscience_gain_ = h.exploration.ctx_conscience_gain > 0.0f
+                             ? Scalar(h.exploration.ctx_conscience_gain)
+                             : kOne;
   ctx_committed_ = 0;
   ctx_proto_lr_floor_ = h.exploration.ctx_proto_tau_ms > 0u
                             ? dt_ms_ / Scalar(h.exploration.ctx_proto_tau_ms)
@@ -1715,7 +1721,10 @@ void Network::step() {
           }
           const Scalar raw = d;
           if (ctx_conscience && total_wins > kZero) {
-            d += (Scalar(ctx_live) * (ctx_wins_[c] / total_wins) - kOne) * cdscale;
+            // DNA v70 scales the penalty. Gain 1 is the shipped strength and multiplying
+            // by exactly 1.0 is exact in IEEE 754, so the default stays bit-identical.
+            d += (Scalar(ctx_live) * (ctx_wins_[c] / total_wins) - kOne) * cdscale *
+                 ctx_conscience_gain_;
           }
           if (c == 0 || d < best_d) { best_d = d; best_raw = raw; winner = c; }
         }
@@ -1893,7 +1902,12 @@ void Network::step() {
           }
           Scalar score = d;
           if (total_wins > kZero && dscale > kZero) {
-            score += (Scalar(ctx_slots_) * (ctx_wins_[c] / total_wins) - kOne) * dscale;
+            // DNA v70, the same gain as the per-tick site above. BOTH sites scale, because
+            // they are one mechanism with two call sites -- the per-tick index read and the
+            // episode commit -- and scaling only one would let them disagree about how
+            // hard a slot is penalised for over-winning.
+            score += (Scalar(ctx_slots_) * (ctx_wins_[c] / total_wins) - kOne) * dscale *
+                     ctx_conscience_gain_;
           }
           if (c == 0 || score < best_score) { best_score = score; best_dist = d; winner = c; }
         }

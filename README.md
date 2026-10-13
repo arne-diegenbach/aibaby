@@ -17277,6 +17277,94 @@ mechanism more *reliable* without moving its mean. The registered contrast went 
 +38.6 ± 5.1 (7.6 SE, 32 of 36) to **+44.2 ± 4.1 (10.7 SE, 36 of 36)** — unanimous, with
 `ema-rnd` drifting down 2.6 Hz while `ema` rose 3.1.
 
+### The ceiling was never the limit — the feature is, and it saturates at 0.89
+
+DNA v70 restores the reverted field: a gain on DeSieno's conscience, applied at both call
+sites (the per-tick index read and the episode commit, which are one mechanism and would
+otherwise disagree about how hard a slot is penalised). It ships bit-identical — a genome
+`0` selects the shipped gain of 1, and multiplying by exactly 1.0 is exact in IEEE 754.
+Five settings, every genome one scalar apart, all paired by creature. **`off` and `oracle`
+are bit-identical across all five runs**, which is the strongest available proof that only
+the index path moved.
+
+| setting | index | occupancy | ceiling | **slack** | dF1 | gap to oracle |
+|---|---|---|---|---|---|---|
+| gate 0 (shipped) | 0.854 | 0.641 | 0.859 | 0.005 | 63.5 | 17.2 |
+| gain 1 | 0.887 | 0.605 | 0.895 | 0.008 | 66.6 | 14.0 |
+| gain 2 | 0.890 | 0.522 | 0.978 | **0.088** | 71.8 | 8.8 |
+| gain 4 | 0.874 | 0.515 | 0.985 | **0.111** | 67.0 | 13.6 |
+| gain 8 | **0.520** | 0.502 | 0.998 | **0.478** | 22.1 | 58.5 |
+
+**The slack column answers the question the previous run could not.** While the index sat
+at its ceiling, accuracy and balance were the same number and no comparison could separate
+them — I said so explicitly and said an arm would be needed that moves occupancy while
+holding the feature fixed. This is that arm, and it separates them by overshooting: the gain
+drives occupancy from 0.641 to 0.502, taking the ceiling to 0.998, and **the index refuses
+to follow past ~0.89**. Slack opens from 0.005 to 0.478. **The partition's balance was
+binding only while occupancy exceeded ~0.52; beyond that the limit is the feature, and it
+saturates at 0.89.**
+
+**Over-balancing destroys the index outright, which was pre-registered as a live outcome.**
+At gain 8 the table is perfectly balanced (occupancy 0.502) and the index reads **0.520
+against a chance level of 0.500** — the conscience has overwhelmed the data and is assigning
+slots by turn-taking rather than by the word. dF1 falls to 22.1, *below* the no-index arm's
+25.1, and the registered contrast collapses to +8.1 ± 3.6. Paired against the shipped
+creature that is **−30.4 ± 5.6 (−5.4 SE)**: a decisive negative, and the sharpest available
+demonstration that a balanced partition is not per se an informative one.
+
+| registered contrast (`ema` − `ema-rnd`), paired | | positive |
+|---|---|---|
+| gate 0 | +38.6 ± 5.1 (7.6 SE) | 32 of 36 |
+| gain 1 | +44.2 ± 4.1 (10.7 SE) | 36 of 36 |
+| **gain 2** | **+53.4 ± 4.8 (11.1 SE)** | 34 of 36 |
+| gain 4 | +40.1 ± 5.3 (7.6 SE) | 34 of 36 |
+| gain 8 | +8.1 ± 3.6 (2.2 SE) | 21 of 36 |
+
+The middle of the curve is not resolved: gain 2 against gain 4 is +13.2 ± 7.8, 1.7 SE, so
+**this sweep does not locate the behavioural optimum**. What it locates decisively is the
+feature's saturation and the destruction at high gain.
+
+#### Tested on creatures the claim had not seen, because of the night's other result
+
+Gain 2's contrast gain of +14.8 ± 5.8 (2.5 SE) was found on the same 36 creatures that
+produced the occupancy hypothesis — the exact hazard the credit-window result had just
+demonstrated. So the question was re-asked on fresh ones: offsetting the genome seed by
+36 × 7919 makes reps 0–35 of a new run literally reps 36–71 of the same family, unseen, with
+no code change.
+
+| half | Δ contrast | | from `ema` | from control | positive |
+|---|---|---|---|---|---|
+| discovery (reps 0–35) | +14.8 ± 5.8 | 2.5 SE | +8.3 | +6.5 | 24 of 36 |
+| **fresh (reps 36–71)** | **+10.5 ± 7.4** | 1.4 SE | +10.2 | +0.3 | 21 of 36 |
+| **pooled, 72 creatures** | **+12.7 ± 4.7** | **2.7 SE** | +9.2 | −3.4 | 45 of 72 |
+
+**The mechanism replicated decisively and the behaviour did not clear the bar.** Both halves
+start from different places (occupancy 0.641 and 0.653, index 0.854 and 0.834) and land on
+*the same* values — occupancy 0.522 and 0.523, index 0.890 and 0.892. The gain sets where
+the partition settles, and 0.89 is the feature's own ceiling in two independent families.
+The treated endpoint is tighter still: `ema` at gain 2 reads **71.8 and 71.9 Hz** across the
+two families, with the oracle at 80.6 and 80.8. The noisy quantity is the untreated
+baseline, not the treatment.
+
+But the registered contrast pools to **+12.7 ± 4.7, 2.7 SE** — below this project's 3 SE
+bar, with 45 of 72 creatures positive. The pre-registered criterion for the fresh half was
+the same sign at a comparable size, and that is met; the bar for calling it a result is not.
+**I am not running more creatures to close a 0.3 SE gap**, because adding samples until a
+number crosses a threshold is optional stopping, and the rule against fitting a verdict to
+data covers that too. It stands as replicated, sub-bar, and honest about which.
+
+**One worry from the discovery half did not survive, in the good direction.** There, the
+contrast gain split evenly between `ema` rising and the control falling, which would have
+made it partly an artefact of the control degrading. On the fresh creatures the control
+moved **+0.3 Hz** — flat — and pooled it is −3.4 ± 3.0 (1.1 SE), consistent with zero. So
+the effect is in the voice, not in the baseline sagging, and the discovery half's 50/50
+split was itself noise.
+
+**So the state is three findings of different strengths**, and they are not merged: the
+feature's 0.89 ceiling (decisive, replicated in two families), the collapse at gain 8
+(decisive, −5.4 SE), and the voice at gain 2 (replicated in direction, pooled 2.7 SE,
+below the bar).
+
 ## Layout
 
 ```

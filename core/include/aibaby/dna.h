@@ -1469,6 +1469,52 @@ struct DnaExploration {
   // the useful range is bounded above by the ratio of between-word to within-word
   // distance, which the ear's measured d' of about 3.5 puts in the low tens.
   float ctx_vigilance;
+
+  // DNA v70: THE GAIN ON THE CONSCIENCE. 0 means the shipped strength (gain 1) and is
+  // bit-identical.
+  //
+  // WHY, AND IT IS A MEASURED PREDICTION RATHER THAN AN IDEA. For two balanced words the
+  // derived index obeys `match <= 1.5 - occupancy`, where occupancy is the share of
+  // episodes the busier slot takes. Four word-boundary detectors were built and all are
+  // beaten by reading the index off the ear's rate EMA with no detector at all, and that
+  // arm sits at its ceiling to within 0.006 -- it is short of CEILING, not of accuracy.
+  //
+  // `ctx_proto_gate = 2` then tested the ceiling by intervening on it, switching DeSieno's
+  // conscience on in the per-tick path that source 4 uses (source 4 skips the episode and
+  // skipped the conscience with it, so the shipped gate 0 selects a plain nearest
+  // prototype). Occupancy fell 0.641 -> 0.605, the ceiling rose 0.859 -> 0.895, and the
+  // index followed it up and stayed pinned: +0.0338 +/- 0.0148, 2.3 SE, slack unchanged.
+  // THE CEILING RELATION IS CAUSAL. What did not move is the voice: +3.1 +/- 4.9 Hz,
+  // 0.6 SE -- and the ema-to-oracle gap implies 118 Hz per unit of index, so +0.0338
+  // predicts +4.0 Hz. The measurement equals the prediction and the step is 8x below the
+  // noise floor. Gate 2 covers only 26% of the distance to the oracle's occupancy of 0.500.
+  //
+  // THIS FIELD IS WHAT COVERS THE REST. DeSieno's conscience adds
+  // `(slots * win_fraction - 1) * dscale` to each slot's distance, where `dscale` is the
+  // running mean winner distance, so the penalty is zero at perfect balance, positive for a
+  // slot winning too often, and in the units of the distance it joins. That term had an
+  // implicit gain of exactly 1 and no way to say otherwise. Raising it presses occupancy
+  // further toward 0.500, where the ceiling reaches 1.000 and the predicted prize is the
+  // full +17.2 Hz -- which IS resolvable at 36 creatures, unlike +4.
+  //
+  // IT WAS WRITTEN, REVERTED, AND RESTORED, and the reason is worth keeping. The first
+  // version was reverted before running because the per-tick conscience is gated on
+  // `ctx_proto_gate` in {2,3,6,7} while the arm it was for ships at 0, so the gain was
+  // INERT exactly where it was needed. It is restored now that gate 2 is known to put the
+  // conscience in the path. A knob is only a knob where the thing it scales is running.
+  //
+  // TWO-SIDED ON PURPOSE. Forcing a balanced split against the data's own shape can cost
+  // match rather than buy it, and `ctxfeat` has already seen this conscience produce a
+  // total monopoly (p(slot0) 1.000) on one word pair -- so occupancy RISING is a live
+  // outcome too. The sweep traces the trade-off; neither direction may be quoted as the
+  // expected one.
+  //
+  // 0 MEANS 1, DELIBERATELY. The shipped creature runs the conscience at gain 1 wherever it
+  // runs at all, so the usual "0 is off" reading would invert the default and make every
+  // existing genome a different creature. Gain exactly 0 -- no conscience -- is neither
+  // reachable nor wanted: it is DeSieno's dead unit, which `partprobe` measured killing 78%
+  // of random initialisations and which the conscience took to 0 of 16.
+  float ctx_conscience_gain;
 };
 
 // Divisive normalisation (§3.1, DNA v12). The per-module strength lives on
