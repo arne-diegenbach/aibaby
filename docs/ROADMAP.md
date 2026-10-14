@@ -19,8 +19,12 @@ reaches the formant. What it cannot do is be *taught* two — a phase-targeted l
 no learning at any credit window or reward delay, while a fixed-target lesson on the same
 creatures reaches 18 SE, and turning the gesture on costs four fifths of even that.
 **It composes in space and not in time, and the generator and the lesson are in tension at
-the only operating point where both are known to run.** That is the single blocker between
-where it is and speech.
+every operating point in the window, not merely at the one they were measured at.** Three
+sweeps across both axes and the crossing between them put the two requirements on disjoint
+stretches with a resolved gap — 3.7 SE at the closest approach. That is the single blocker
+between where it is and speech, and it is now a measured property of this architecture
+rather than a tuning problem: a scalar reward writing into a rate-weighted centroid cannot
+move what a mutual-inhibition attractor is already holding at one of its two ends.
 
 **And it can teach another creature what it knows.** A pupil hearing only its tutor's
 recorded vowels, with no host target, acquires the tutor's word-to-vowel convention at
@@ -140,7 +144,7 @@ only in *when* it fires, inside a ~15% duty cycle of about ten bouts. **Price it
 those two results before building anything**, and if it cannot be distinguished from them,
 the lead should be closed rather than carried.
 
-### 4. Two gestures in a row — the blocker, and unbuilt
+### 4. Two gestures in a row — the blocker, and they DO NOT COMPOSE
 
 Everything above is about a *carrier*. Intelligent speech needs structure in time — and the
 state of that is better than this file said on 2026-10-09, which was written from memory
@@ -187,16 +191,36 @@ splitting rewarded time 0.50/0.50, the oscillator never silent. **The mirror ima
 measured.** The operating point was chosen for the gesture's F1 swing and never once checked
 against the lesson.
 
-**So the next run is the composition question, not another mechanism.** The oscillating
-regime is a bounded window in drive × gain (Shpiro & Rinzel) and the point inside it was
-picked for swing alone. Sweep `halfcenter_gain` across the window, three or four points, and
-measure *both* on every point — `sep` and `share` for the gesture, error-early-minus-late on
-a fixed target for the lesson. The account to test is that mutual inhibition makes the
-alternation a strong attractor that reward-driven weight changes cannot perturb, so weaker
-inhibition should trade F1 swing for lesson purchase. **The bar, fixed in advance:** some
-point must give an error drop over half of 0.2197 while keeping `sep` > 10 Hz and `share`
-within 0.15–0.85. If none does, the gesture and the lesson do not compose at any operating
-point — a real negative about this architecture rather than one more refused mechanism.
+**THE COMPOSITION QUESTION WAS THE NEXT RUN, AND IT IS NOW ANSWERED — THEY DO NOT COMPOSE.**
+Three generations of `hcsweep`, twelve cells, against a bar fixed before the first of them:
+some point must give an error drop over half of 0.2197 (that is 0.1099) while keeping
+`sep` > 10 Hz and `share` within 0.15–0.85.
+
+| axis swept | range | result |
+|---|---|---|
+| `halfcenter_gain` at drive 1.40 | 0.15–0.60 | lesson 0.2062 → 0.0465 as sep 3.2 → 19.5; none clears both |
+| `halfcenter_drive` at gain 0.45 | 0.90–1.40 | lesson 0.0210 → 0.1243 as sep 32.1 → 8.0; none clears both |
+| the crossing, gain at drive 1.40 | 0.45–0.54 | **at sep 10.0 the lesson is 0.0796, 3.7 SE under its bar** |
+
+**The two requirements are satisfied on disjoint stretches with a resolved gap between
+them**, so it is not a knife-edge finer resolution could find. The control cell reproduced
+to four decimals in all three runs. Along the way the oscillating window was mapped for the
+first time — alternation present only between drive ≈0.9 and ≈1.6, with the shipped
+operating point near its *upper* edge — and `sep` turned out to be **non-monotone in gain**
+(8.0 at 0.45, 6.7 at 0.48, 10.0 at 0.51), which is why every interpolation across the
+unsampled interval was wrong, the optimistic one by 39%.
+
+So this is the real negative the bar was written to detect: **a scalar reward writing into
+a rate-weighted centroid cannot move what a mutual-inhibition attractor is already holding
+at one of its two ends.** The creature makes two gestures in a row unprompted and can be
+taught a vowel; it cannot do both at once in this architecture.
+
+**What is left is the corners.** Every sweep moved one axis with the other fixed, so low
+drive crossed with high gain has never been run — and with `sep` non-monotone in gain, a
+one-axis sweep is a poor guide to a two-axis surface. That is a real remaining cell rather
+than a formality, and it is the only way out: the three bounding sweeps make a corner
+surprise the sole remaining escape. Anything beyond it is a change of readout, not of
+operating point.
 
 One thing is owed alongside it. The 4/5 cost names the *configuration*, not the mechanism:
 four genome fields differ and two are spike-frequency adaptation, so an adaptation-only and

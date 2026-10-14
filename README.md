@@ -17439,6 +17439,56 @@ have turned a pass into a mirage. At 1.05 the smoke gave sep 10.1 ± 3.1 against
 creatures alternating, some not. At full budget the low-drive SEs are tight (±0.7 at 0.90),
 so the 32.1 Hz gesture is clean and the wide smoke spread was a short-run artifact.
 
+### The crossing, measured: the two bars are satisfied on disjoint stretches
+
+Generation three of `hcsweep` samples the one cell the first two straddled — the gain
+interval between 0.45 and 0.60 at the shipped drive 1.40, where `sep` crosses the 10 Hz
+gesture bar while the lesson is still near its best. It was pre-registered as needing to
+clear **both** bars *with margin*, because the cell was chosen for sitting near a crossing
+and it is the ninth look at one bar.
+
+| gain | lesson (bar 0.1099) | | sep (bar >10) | |
+|---|---|---|---|---|
+| 0.45 (control) | +0.1243 ± 0.0095 | ✓ | +8.0 ± 0.1 | ✗ |
+| 0.48 | +0.1160 ± 0.0082 | ✓ | +6.7 ± 0.2 | ✗ |
+| **0.51** | **+0.0796 ± 0.0081** | ✗ | **+10.0 ± 0.1** | ✓ |
+| 0.54 | +0.0763 ± 0.0079 | ✗ | +13.6 ± 0.2 | ✓ |
+
+**It fails, and not narrowly.** Where the gesture first reaches the bar, the lesson is
+**3.7 SE below** its own. Where the lesson clears, the gesture is at 8.0 and falling. The
+two requirements are met on **disjoint stretches with a resolved gap between them**, so
+this is not a knife-edge that finer resolution could find. The control reproduced to four
+decimals for the third consecutive run.
+
+**And every interpolation was wrong, the optimistic one worst.** Linear in gain predicted
+0.1108 at the crossing — a pass by 0.8%. The actual value is **0.0796**, which that
+estimate missed by 39%. The power-law fits predicted 0.0865–0.098 and the drive axis
+0.0945; all three were closer, and all three still overshot. The lesson here is not that
+one scheme beat another but that **interpolating a parameter sweep across an unsampled
+interval predicted a pass where the measurement found a 3.7 SE failure**, which is why the
+standing rule refuses three- and four-point curve fits.
+
+**`sep` is not even monotone in gain**, which is what made the interpolations hopeless:
+8.0 at gain 0.45, **6.7 at 0.48**, 10.0 at 0.51, 13.6 at 0.54 — a real dip, confirmed at
+full budget on both the taught and free-running arms. Both interpolations had assumed a
+monotone rise from 8.0 to 19.5 across that interval and neither could see it.
+
+#### So the composition question is closed, over three generations and twelve cells
+
+The gain axis (0.15–0.60 at drive 1.40), the drive axis (0.90–1.40 at gain 0.45, which also
+mapped the oscillating window at 0.9–1.6 for the first time), and now the crossing interval.
+**Nothing clears both bars anywhere, and the gap at the crossing is resolved rather than
+marginal.** The creature makes two gestures in a row unprompted, and reward moves its vowel
+toward a fixed target — and the two cannot run at once in this architecture: a scalar reward
+writing into a rate-weighted centroid that a mutual-inhibition attractor already holds at
+one of its two ends.
+
+What is still untested is the **corners**: every sweep moved one axis with the other fixed,
+so low drive crossed with high gain has never been run. Given that `sep` is non-monotone in
+gain, a one-axis sweep is a poor guide to a two-axis surface, so the corners are a real
+remaining cell rather than a formality — but the three bounding sweeps make a corner
+surprise the only way out.
+
 ## Layout
 
 ```

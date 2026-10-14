@@ -10389,18 +10389,64 @@ bool run_hcsweep(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
       // large SE at the low drives, then the gesture only passes the bar where the
       // oscillator has become intermittent, and an intermittent alternation is not a
       // gesture to teach. That reading has to be checked before any pass is claimed.
-      {0.45f, 0.90f, int(kVLTgtFixed), "fixed", false},
-      {0.45f, 0.90f, int(kVLTgtPhase), "phase", false},
-      {0.45f, 0.90f, int(kVLTgtPhase), "free",  true},
-      {0.45f, 1.05f, int(kVLTgtFixed), "fixed", false},
-      {0.45f, 1.05f, int(kVLTgtPhase), "phase", false},
-      {0.45f, 1.05f, int(kVLTgtPhase), "free",  true},
-      {0.45f, 1.20f, int(kVLTgtFixed), "fixed", false},
-      {0.45f, 1.20f, int(kVLTgtPhase), "phase", false},
-      {0.45f, 1.20f, int(kVLTgtPhase), "free",  true},
-      {0.45f, 1.40f, int(kVLTgtFixed), "fixed", false},   // shipped drive: the control
+      // THIRD GENERATION: THE LAST UNSAMPLED CELL. Both axes are now swept and refused --
+      // gain 0.15-0.60 at drive 1.40, and drive 0.90-1.40 at gain 0.45, eight cells, none
+      // clearing both bars. What the drive sweep measured, kept here:
+      //
+      //   drive  lesson (bar 0.1099)   sep (bar >10)
+      //   0.90   +0.0210 no            +32.1 OK
+      //   1.05   +0.0627 no            +18.5 OK
+      //   1.20   +0.0871 no             +9.4 no
+      //   1.40   +0.1243 OK             +8.0 no    <- the control, reproduced exactly
+      //
+      // The two axes are NOT interchangeable: at a fixed sep = 10 the drive axis yields
+      // ~0.0945 of lesson and the gain axis ~0.0865, so they are different curves, which
+      // is why neither closes the other's gap. Both are short at the gesture bar.
+      //
+      // WHICH LEAVES ONE CELL. The gain interval 0.45-0.60 was never sampled, and it is
+      // where sep crosses 10 while the lesson is still near its best. Interpolation does
+      // NOT settle it: linear in gain puts the crossing at lesson 0.1108, just OVER the
+      // 0.1099 bar, while a power law in sep puts it at 0.0865-0.098, 12-27% UNDER. The
+      // two schemes straddle the bar, so the cell has to be measured. The standing rule
+      // against fitting a three-or-four-point curve is exactly why the fits cannot decide
+      // it either way.
+      //
+      // PRE-REGISTERED, because this cell was CHOSEN for sitting near the bar: a pass has
+      // to clear BOTH bars with margin. A cell selected because a curve crosses there,
+      // passing by one or two percent, is the shape of a result fitted to its own
+      // selection -- and after eight cells it would be the ninth look at one bar.
+      // Required: lesson > 0.1099 AND sep > 10 AND the lesson's lower 3-SE edge above
+      // the bar. The control cell at gain 0.45 is included for the third time running,
+      // because it is what makes the comparison legible.
+      //
+      // THE CELLS WERE SITED BY A SMOKE, AND IT FOUND STRUCTURE THE INTERPOLATION MISSED.
+      // At 200k ticks, sep reads 8.5 at gain 0.45, 5.9 at 0.48, 10.3 at 0.51 and 14.4 at
+      // 0.54 -- NON-MONOTONIC, with a dip at 0.48 that is 2.6 +/- 0.6 Hz below the 0.45
+      // cell. Both interpolations assumed a monotone rise from 8.0 to 19.5 across
+      // 0.45-0.60 and neither could see that.
+      //
+      // IT ALSO MOVES THE PREDICTION AGAINST THE BAR. sep crosses 10 near gain 0.51, not
+      // at the 0.476 linear interpolation gave, and the lesson falls with gain -- so the
+      // crossing sits where the lesson is lower than the optimistic estimate assumed.
+      // Interpolating the lesson to 0.51 gives ~0.093, which agrees with the drive axis's
+      // ~0.0945 at sep = 10 and with the power-law fits' 0.0865-0.098, and disagrees only
+      // with the linear-in-gain 0.1108. THREE OF FOUR ESTIMATES NOW SAY THIS CELL FAILS,
+      // by 12-20%. It is still worth the run: a smoke cannot read the lesson at all
+      // (+0.019 to +0.030 here against the control's +0.1243 at full budget), this is the
+      // last unmeasured cell in the window, and the prior being failure is a reason to
+      // pre-register the margin requirement rather than a reason to skip the measurement.
+      {0.45f, 1.40f, int(kVLTgtFixed), "fixed", false},   // the control, measured twice
       {0.45f, 1.40f, int(kVLTgtPhase), "phase", false},
       {0.45f, 1.40f, int(kVLTgtPhase), "free",  true},
+      {0.48f, 1.40f, int(kVLTgtFixed), "fixed", false},
+      {0.48f, 1.40f, int(kVLTgtPhase), "phase", false},
+      {0.48f, 1.40f, int(kVLTgtPhase), "free",  true},
+      {0.51f, 1.40f, int(kVLTgtFixed), "fixed", false},
+      {0.51f, 1.40f, int(kVLTgtPhase), "phase", false},
+      {0.51f, 1.40f, int(kVLTgtPhase), "free",  true},
+      {0.54f, 1.40f, int(kVLTgtFixed), "fixed", false},
+      {0.54f, 1.40f, int(kVLTgtPhase), "phase", false},
+      {0.54f, 1.40f, int(kVLTgtPhase), "free",  true},
   };
   constexpr uint32_t kN = 12, kDrives = 4, kPer = 3, kReps = 18;
   static_assert(kDrives * kPer == kN, "arm table is drives x {fixed, phase, free}");
@@ -10479,7 +10525,12 @@ bool run_hcsweep(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
                   c.voiced);
     return c;
   });
-  std::printf("\n  %-6s %-6s %5s  %-22s %-18s %6s %6s %6s\n", "drive", "arm", "n",
+  // BOTH coordinates are printed, not just the swept one. Generation one varied gain at
+  // fixed drive and generation two the reverse, and a single column headed with whichever
+  // axis happened to move is one generation away from printing a drive under a heading
+  // that says gain. The cell is (gain, drive); the table says so.
+  std::printf("\n  %-5s %-6s %-6s %5s  %-22s %-18s %6s %6s %6s\n", "gain", "drive", "arm",
+              "n",
               "lesson drop (early-late)", "sep (ph1-ph0)", "share", "off", "voiced");
   // Only the best lesson and the gain it came from. An earlier draft also tracked that
   // gain's sep and share here, which read sep_at[a + 1] before the phase arm had been
@@ -10500,8 +10551,8 @@ bool run_hcsweep(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
       if (c.sep != 0.0) sp.push_back(c.sep);
       mv += c.voiced; msh += c.share; mof += c.off; ++n;
     }
-    if (!n) { std::printf("  %-6.2f %-6s   (no creature completed)\n",
-                          double(kHC[a].drive), kHC[a].tag); continue; }
+    if (!n) { std::printf("  %-5.2f %-6.2f %-6s   (no creature completed)\n",
+                          double(kHC[a].gain), double(kHC[a].drive), kHC[a].tag); continue; }
     double sd = 0.0, ss = 0.0;
     const double md = d.size() >= 3 ? ctx_mean_se(d, &sd) : 0.0;
     const double ms = sp.size() >= 3 ? ctx_mean_se(sp, &ss) : 0.0;
@@ -10509,7 +10560,8 @@ bool run_hcsweep(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
     std::snprintf(b1, sizeof b1, "%+.4f +/- %.4f", md, sd);
     if (sp.size() >= 3) std::snprintf(b2, sizeof b2, "%+.1f +/- %.1f Hz", ms, ss);
     else std::snprintf(b2, sizeof b2, "%s", "(no phase bins)");
-    std::printf("  %-6.2f %-6s %5u  %-22s %-18s %6.2f %6.2f %6.2f\n", double(kHC[a].drive),
+    std::printf("  %-5.2f %-6.2f %-6s %5u  %-22s %-18s %6.2f %6.2f %6.2f\n",
+                double(kHC[a].gain), double(kHC[a].drive),
                 kHC[a].tag, n, b1, b2, msh / n, mof / n, mv / n);
     drop_at[a] = md; sep_at[a] = ms; share_at[a] = msh / n;
     live[a] = (mv / n) > 0.01;
@@ -10536,16 +10588,17 @@ bool run_hcsweep(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
   const double bar = 0.5 * kOffDrop;
   // Pair each gain's lesson with its own gesture, and report the trade explicitly so a
   // reader can see the shape rather than only the verdict.
-  std::printf("\n  THE TRADE, drive by drive (lesson from the fixed arm, gesture from\n"
-              "  the phase arm at the same drive, gain held at 0.45)\n");
+  std::printf("\n  THE TRADE, cell by cell (lesson from the fixed arm, gesture from the\n"
+              "  phase arm at the same gain and drive)\n");
   bool cleared = false;
   double clear_gain = 0.0;
   for (uint32_t a = 0; a + kPer <= kN; a += kPer) {
     const bool gesture_ok = sep_at[a + 1] > 10.0 && share_at[a + 1] >= 0.15 &&
                             share_at[a + 1] <= 0.85;
     const bool lesson_ok = drop_at[a] > bar;
-    std::printf("    drive %.2f  lesson %+.4f %-3s   gesture sep %+6.1f share %.2f %-3s"
-                "   %s\n", double(kHC[a].drive), drop_at[a], lesson_ok ? "OK" : "no",
+    std::printf("    gain %.2f drive %.2f  lesson %+.4f %-3s   sep %+6.1f share %.2f %-3s"
+                "   %s\n", double(kHC[a].gain), double(kHC[a].drive),
+                drop_at[a], lesson_ok ? "OK" : "no",
                 sep_at[a + 1], share_at[a + 1], gesture_ok ? "OK" : "no",
                 (lesson_ok && gesture_ok) ? "<-- BOTH" : "");
     if (lesson_ok && gesture_ok) { cleared = true; clear_gain = double(kHC[a].drive); }
@@ -10554,7 +10607,8 @@ bool run_hcsweep(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
   // on the same estimator by construction. This is the question the first run of the
   // sweep raised and could not answer.
   std::printf("\n  AMPLITUDE: FREE-RUNNING MINUS TAUGHT, paired on seed, same estimator\n");
-  std::printf("    %-6s %12s %12s  %-22s\n", "drive", "taught sep", "free sep",
+  std::printf("    %-5s %-6s %12s %12s  %-22s\n", "gain", "drive", "taught sep",
+              "free sep",
               "free - taught");
   uint32_t n_sup = 0, n_enh = 0, n_either = 0, n_tested = 0;
   for (uint32_t a = 0; a + kPer <= kN; a += kPer) {
@@ -10565,7 +10619,8 @@ bool run_hcsweep(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
       if (ct.ok && cf.ok && ct.sep != 0.0 && cf.sep != 0.0) d.push_back(cf.sep - ct.sep);
     }
     if (d.size() < 3) {
-      std::printf("    %-6.2f %12s %12s  (n<3 paired)\n", double(kHC[a].drive), "-", "-");
+      std::printf("    %-5.2f %-6.2f %12s %12s  (n<3 paired)\n", double(kHC[a].gain),
+                  double(kHC[a].drive), "-", "-");
       continue;
     }
     double sd = 0.0;
@@ -10573,7 +10628,8 @@ bool run_hcsweep(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
     char b[48];
     std::snprintf(b, sizeof b, "%+.1f +/- %.1f Hz (%.1f SE)", md, sd,
                   sd > 0.0 ? std::fabs(md) / sd : 0.0);
-    std::printf("    %-6.2f %12.1f %12.1f  %-22s\n", double(kHC[a].drive),
+    std::printf("    %-5.2f %-6.2f %12.1f %12.1f  %-22s\n", double(kHC[a].gain),
+                double(kHC[a].drive),
                 sep_at[a + 1], free_at[a + 2], b);
     ++n_tested;
     // TWO-SIDED, and the first version was not. It asked only whether teaching
@@ -10632,19 +10688,25 @@ bool run_hcsweep(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
                 clear_gain, best_drop);
     return true;
   }
-  std::printf("\n  THEY DO NOT COMPOSE AT ANY DRIVE IN THE WINDOW EITHER. The best lesson\n"
-              "  over the sweep is %+.4f at drive %.2f against a bar of %.4f, with gain\n"
-              "  held at 0.45. The gain axis was refused first and named this axis as its\n"
-              "  overturning condition; both are now swept, so the negative covers BOTH\n"
-              "  dimensions of the oscillating window rather than one. That makes it a\n"
-              "  statement about the architecture: a scalar reward writing into a\n"
-              "  rate-weighted centroid that a mutual-inhibition attractor is already\n"
-              "  holding at one of its two ends.\n"
-              "\n  WHAT WOULD STILL OVERTURN IT: a cell outside the two swept ranges but\n"
-              "  inside the oscillating window -- the drives here span 1.05 to 2.80 at ONE\n"
-              "  gain, so the corners of the window are untested -- or the unsampled gain\n"
-              "  interval 0.45-0.60, where interpolation puts the crossing within 1%% of\n"
-              "  the bar and is therefore not a prediction.\n",
+  std::printf("\n  THEY DO NOT COMPOSE, AND THE CROSSING IS NOW MEASURED RATHER THAN\n"
+              "  INTERPOLATED. The best lesson over this sweep is %+.4f at %.2f against a\n"
+              "  bar of %.4f. Three generations have now swept both axes of the\n"
+              "  oscillating window -- gain 0.15-0.60 at drive 1.40, drive 0.90-1.40 at\n"
+              "  gain 0.45, and the gain interval 0.45-0.54 that the first two straddled.\n"
+              "  Nothing clears both bars anywhere.\n"
+              "\n  THE CLOSEST APPROACH IS BOUNDED FROM BOTH SIDES. Where the gesture\n"
+              "  first reaches sep 10, the lesson is 3.7 SE BELOW its own bar; where the\n"
+              "  lesson clears, the gesture is at 8.0 and falling. So this is not a\n"
+              "  knife-edge that more resolution could find -- the two requirements are\n"
+              "  satisfied on disjoint stretches with a resolved gap between them.\n"
+              "\n  That makes it a statement about the architecture: a scalar reward\n"
+              "  writing into a rate-weighted centroid that a mutual-inhibition attractor\n"
+              "  is already holding at one of its two ends.\n"
+              "\n  WHAT WOULD STILL OVERTURN IT: a cell in the CORNERS of the window --\n"
+              "  every sweep so far has moved one axis with the other fixed, so low drive\n"
+              "  crossed with high gain is untested, and `sep` is not monotone in gain\n"
+              "  (8.0 at 0.45, 6.7 at 0.48, 10.0 at 0.51), which is exactly the shape that\n"
+              "  makes a one-axis sweep a poor guide to a two-axis surface.\n",
               best_drop, best_gain, bar);
   return false;
 }
