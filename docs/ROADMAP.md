@@ -191,20 +191,21 @@ splitting rewarded time 0.50/0.50, the oscillator never silent. **The mirror ima
 measured.** The operating point was chosen for the gesture's F1 swing and never once checked
 against the lesson.
 
-**THE COMPOSITION QUESTION WAS THE NEXT RUN, AND IT IS NOW ANSWERED — THEY DO NOT COMPOSE.**
-Three generations of `hcsweep`, twelve cells, against a bar fixed before the first of them:
-some point must give an error drop over half of 0.2197 (that is 0.1099) while keeping
-`sep` > 10 Hz and `share` within 0.15–0.85.
+**THE COMPOSITION QUESTION WAS THE NEXT RUN, AND IT IS NOW ANSWERED IN THE WHOLE PLANE —
+THEY DO NOT COMPOSE.** Four generations of `hcsweep`, twelve cells, against a bar fixed
+before the first of them: some point must give an error drop over half of 0.2197 (that is
+0.1099) while keeping `sep` > 10 Hz and `share` within 0.15–0.85.
 
 | axis swept | range | result |
 |---|---|---|
 | `halfcenter_gain` at drive 1.40 | 0.15–0.60 | lesson 0.2062 → 0.0465 as sep 3.2 → 19.5; none clears both |
 | `halfcenter_drive` at gain 0.45 | 0.90–1.40 | lesson 0.0210 → 0.1243 as sep 32.1 → 8.0; none clears both |
 | the crossing, gain at drive 1.40 | 0.45–0.54 | **at sep 10.0 the lesson is 0.0796, 3.7 SE under its bar** |
+| the corner, as a 2×2 factorial | gain 0.15 × drive 0.90 | **lesson 0.1790 ✓ but sep 1.6 ✗ — dominated on both** |
 
 **The two requirements are satisfied on disjoint stretches with a resolved gap between
 them**, so it is not a knife-edge finer resolution could find. The control cell reproduced
-to four decimals in all three runs. Along the way the oscillating window was mapped for the
+to four decimals in all four runs. Along the way the oscillating window was mapped for the
 first time — alternation present only between drive ≈0.9 and ≈1.6, with the shipped
 operating point near its *upper* edge — and `sep` turned out to be **non-monotone in gain**
 (8.0 at 0.45, 6.7 at 0.48, 10.0 at 0.51), which is why every interpolation across the
@@ -215,12 +216,16 @@ a rate-weighted centroid cannot move what a mutual-inhibition attractor is alrea
 at one of its two ends.** The creature makes two gestures in a row unprompted and can be
 taught a vowel; it cannot do both at once in this architecture.
 
-**What is left is the corners.** Every sweep moved one axis with the other fixed, so low
-drive crossed with high gain has never been run — and with `sep` non-monotone in gain, a
-one-axis sweep is a poor guide to a two-axis surface. That is a real remaining cell rather
-than a formality, and it is the only way out: the three bounding sweeps make a corner
-surprise the sole remaining escape. Anything beyond it is a change of readout, not of
-operating point.
+**The corners were the named escape, and they are now measured and closed.** The surface is
+*not* separable — low drive costs the lesson **5.1× less** when inhibition is weak, exactly
+the interaction a pass needed — but it buys no gesture, because the oscillating window's
+**lower edge moves with gain** and gain 0.15 × drive 0.90 lies outside it. The corner loses
+the lesson against the cell above it (−0.0272 ± 0.0128, 2.1 SE) *and* the gesture (−1.6 Hz),
+and sits 2.6 SE below the half-centre-off reference: **starving the oscillator does not hand
+the lesson back.** At matched gesture there is no evidence the route matters (0.7 and 1.7 SE
+on two cross-axis pairs), though the power only bounds a route difference to tens of per
+cent — consistency, not a collapse onto one variable. **Do not re-sweep this plane.**
+Anything further here is a change of readout, not of operating point.
 
 One thing is owed alongside it. The 4/5 cost names the *configuration*, not the mechanism:
 four genome fields differ and two are spike-frequency adaptation, so an adaptation-only and

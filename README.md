@@ -17483,11 +17483,54 @@ toward a fixed target — and the two cannot run at once in this architecture: a
 writing into a rate-weighted centroid that a mutual-inhibition attractor already holds at
 one of its two ends.
 
-What is still untested is the **corners**: every sweep moved one axis with the other fixed,
-so low drive crossed with high gain has never been run. Given that `sep` is non-monotone in
-gain, a one-axis sweep is a poor guide to a two-axis surface, so the corners are a real
-remaining cell rather than a formality — but the three bounding sweeps make a corner
-surprise the only way out.
+#### The corner is measured too, and the plane turns out to be one-dimensional
+
+Every sweep above moved one axis with the other fixed, so **gain 0.15 × drive 0.90** — low
+drive crossed with weak inhibition — had never been run, and with `sep` non-monotone in gain
+a one-axis sweep is a poor guide to a two-axis surface. A 2×2 factorial closed it: three
+cells with published values as controls, one new cell. **All three controls reproduced
+exactly** (0.2062/3.2, 0.1243/8.0, 0.0210/32.1), so the corner is readable.
+
+**The surface is not separable, and the prediction failed in both coordinates.** Separability
+predicted lesson 0.0348 with the gesture clearing at sep 12.8. Measured: lesson **+0.1790 ±
+0.0101**, sep **+1.6 ± 0.3**. The half of the prediction that would have mattered is true —
+low drive costs the lesson **5.1× less** when inhibition is weak — and it buys nothing,
+because the oscillating window's **lower edge moves with gain** and that cell lies outside
+it. That was the vacuity risk named before the run, and it is what happened.
+
+**The corner is strictly dominated**, which is a stronger statement than failing a bar.
+Against the cell directly above it, it loses the lesson (−0.0272 ± 0.0128, 2.1 SE) *and* the
+gesture (−1.6 Hz); against the half-centre-off reference it is 2.6 SE down. Starving the
+oscillator does not hand the lesson back, so the window's edge is not a cheap seat.
+
+**Does the route matter at matched gesture? No evidence that it does — and that is as far as
+the data goes.** Two pairs of cells reach nearly the same gesture by *different knobs*, and
+the lesson agrees both times:
+
+| same gesture, different knob | lesson | agreement |
+|---|---|---|
+| sep 9.4 via **drive** vs sep 10.0 via **gain** | 0.0871 ± 0.0072 vs 0.0796 ± 0.0081 | 0.7 SE |
+| sep 18.5 via **drive** vs sep 19.5 via **gain** | 0.0627 ± 0.0064 vs 0.0465 ± 0.0073 | 1.7 SE |
+
+**This is consistency, not a collapse, and the distinction is the whole point.** At this
+power 3 SE spans **39% and 53%** of the lesson at those gestures, so a route difference of
+tens of per cent would be invisible. And the pair residuals are *steeper per Hz* (0.0125 and
+0.0162) than any same-axis neighbour slope (0.0009–0.0051), so they are real route residuals
+that are merely unresolved rather than the small `sep` mismatch inside each pair. The claim
+to report is **"no evidence the route matters at matched gesture"**, never "the trade
+collapses onto `sep`".
+
+What this *does* settle is the opposite claim. Generation 2 recorded that the axes are **not**
+one curve, on interpolated sep = 10 values (0.0945 by drive against 0.0865 by gain) and on
+power-law exponents 45% apart — and generation 3 then showed interpolation across an
+unsampled interval to be unreliable. Measured at matched gesture, that difference does not
+appear. **Both "the axes differ" and "the axes are identical" are unsupported**; the trade is
+one curve to within tens of per cent, which is all twelve cells can say.
+
+**And the answer needs no interpolation**, which is what the previous generation got wrong: a
+cell sits *on* the gesture bar (gain 0.51, sep 10.0) with lesson **0.0796 ± 0.0081 — 3.7 SE
+under the lesson bar, 28% short** — and it is the best lesson of all five cells that clear
+sep 10. Twelve cells, both axes, both corners. **Do not re-sweep this plane.**
 
 ## Layout
 

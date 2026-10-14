@@ -1,0 +1,310 @@
+  [3/216] seed 0 gain 0.15 free   drop -0.0006  sep   +0.2  voiced 0.69
+  [11/216] seed 0 gain 0.45 phase  drop -0.0040  sep   +8.0  voiced 0.69
+  [8/216] seed 0 gain 0.45 phase  drop -0.0050  sep  +36.5  voiced 0.66
+  [9/216] seed 0 gain 0.45 free   drop +0.0001  sep  +33.0  voiced 0.66
+  [2/216] seed 0 gain 0.15 phase  drop -0.0001  sep   +0.6  voiced 0.70
+  [5/216] seed 0 gain 0.15 phase  drop -0.0020  sep   +2.7  voiced 0.69
+  [14/216] seed 1 gain 0.15 phase  drop +0.0047  sep   +0.9  voiced 0.66
+  [4/216] seed 0 gain 0.15 fixed  drop +0.1719  sep   +0.0  voiced 0.67
+  [7/216] seed 0 gain 0.45 fixed  drop +0.0226  sep   +0.0  voiced 0.67
+  [1/216] seed 0 gain 0.15 fixed  drop +0.1434  sep   +0.0  voiced 0.69
+  [6/216] seed 0 gain 0.15 free   drop +0.0004  sep   +2.8  voiced 0.70
+  [12/216] seed 0 gain 0.45 free   drop -0.0094  sep   +7.8  voiced 0.69
+  [13/216] seed 1 gain 0.15 fixed  drop +0.1965  sep   +0.0  voiced 0.64
+  [10/216] seed 0 gain 0.45 fixed  drop +0.1234  sep   +0.0  voiced 0.68
+  [18/216] seed 1 gain 0.15 free   drop -0.0035  sep   +2.9  voiced 0.67
+  [16/216] seed 1 gain 0.15 fixed  drop +0.1598  sep   +0.0  voiced 0.65
+  [17/216] seed 1 gain 0.15 phase  drop -0.0018  sep   +3.2  voiced 0.67
+  [15/216] seed 1 gain 0.15 free   drop -0.0048  sep   -0.1  voiced 0.67
+  [24/216] seed 1 gain 0.45 free   drop -0.0037  sep   +8.2  voiced 0.67
+  [19/216] seed 1 gain 0.45 fixed  drop +0.0134  sep   +0.0  voiced 0.65
+  [20/216] seed 1 gain 0.45 phase  drop -0.0014  sep  +31.5  voiced 0.65
+  [23/216] seed 1 gain 0.45 phase  drop +0.0022  sep   +8.1  voiced 0.67
+  [22/216] seed 1 gain 0.45 fixed  drop +0.1057  sep   +0.0  voiced 0.67
+  [21/216] seed 1 gain 0.45 free   drop -0.0038  sep  +34.3  voiced 0.64
+  [27/216] seed 2 gain 0.15 free   drop -0.0002  sep   -0.0  voiced 0.70
+  [25/216] seed 2 gain 0.15 fixed  drop +0.2005  sep   +0.0  voiced 0.68
+  [28/216] seed 2 gain 0.15 fixed  drop +0.1562  sep   +0.0  voiced 0.67
+  [26/216] seed 2 gain 0.15 phase  drop +0.0004  sep   -0.2  voiced 0.69
+  [29/216] seed 2 gain 0.15 phase  drop -0.0009  sep   +3.0  voiced 0.71
+  [31/216] seed 2 gain 0.45 fixed  drop +0.0440  sep   +0.0  voiced 0.69
+  [30/216] seed 2 gain 0.15 free   drop +0.0016  sep   +2.9  voiced 0.71
+  [33/216] seed 2 gain 0.45 free   drop +0.0031  sep  +30.8  voiced 0.70
+  [34/216] seed 2 gain 0.45 fixed  drop +0.0900  sep   +0.0  voiced 0.70
+  [32/216] seed 2 gain 0.45 phase  drop +0.0062  sep  +32.1  voiced 0.68
+  [38/216] seed 3 gain 0.15 phase  drop -0.0077  sep   +1.7  voiced 0.68
+  [36/216] seed 2 gain 0.45 free   drop -0.0029  sep   +7.3  voiced 0.71
+  [40/216] seed 3 gain 0.15 fixed  drop +0.2444  sep   +0.0  voiced 0.67
+  [37/216] seed 3 gain 0.15 fixed  drop +0.2375  sep   +0.0  voiced 0.66
+  [35/216] seed 2 gain 0.45 phase  drop -0.0013  sep   +8.2  voiced 0.70
+  [42/216] seed 3 gain 0.15 free   drop -0.0053  sep   +3.0  voiced 0.68
+  [39/216] seed 3 gain 0.15 free   drop -0.0057  sep   +0.9  voiced 0.68
+  [41/216] seed 3 gain 0.15 phase  drop -0.0101  sep   +3.2  voiced 0.67
+  [44/216] seed 3 gain 0.45 phase  drop -0.0091  sep  +32.0  voiced 0.63
+  [47/216] seed 3 gain 0.45 phase  drop -0.0023  sep   +7.4  voiced 0.66
+  [46/216] seed 3 gain 0.45 fixed  drop +0.0612  sep   +0.0  voiced 0.66
+  [43/216] seed 3 gain 0.45 fixed  drop +0.0052  sep   +0.0  voiced 0.64
+  [45/216] seed 3 gain 0.45 free   drop -0.0084  sep  +33.3  voiced 0.65
+  [48/216] seed 3 gain 0.45 free   drop -0.0029  sep   +7.2  voiced 0.67
+  [49/216] seed 4 gain 0.15 fixed  drop +0.1083  sep   +0.0  voiced 0.68
+  [52/216] seed 4 gain 0.15 fixed  drop +0.2121  sep   +0.0  voiced 0.67
+  [50/216] seed 4 gain 0.15 phase  drop -0.0047  sep   +1.8  voiced 0.70
+  [51/216] seed 4 gain 0.15 free   drop -0.0047  sep   +3.0  voiced 0.69
+  [53/216] seed 4 gain 0.15 phase  drop -0.0002  sep   +2.9  voiced 0.70
+  [55/216] seed 4 gain 0.45 fixed  drop +0.0207  sep   +0.0  voiced 0.67
+  [54/216] seed 4 gain 0.15 free   drop -0.0052  sep   +2.8  voiced 0.70
+  [56/216] seed 4 gain 0.45 phase  drop -0.0097  sep  +33.1  voiced 0.67
+  [57/216] seed 4 gain 0.45 free   drop -0.0060  sep  +33.2  voiced 0.68
+  [59/216] seed 4 gain 0.45 phase  drop -0.0045  sep   +7.8  voiced 0.69
+  [65/216] seed 5 gain 0.15 phase  drop +0.0119  sep   +3.4  voiced 0.70
+  [64/216] seed 5 gain 0.15 fixed  drop +0.2767  sep   +0.0  voiced 0.67
+  [61/216] seed 5 gain 0.15 fixed  drop +0.1827  sep   +0.0  voiced 0.69
+  [60/216] seed 4 gain 0.45 free   drop -0.0003  sep   +7.2  voiced 0.69
+  [63/216] seed 5 gain 0.15 free   drop +0.0060  sep   +0.0  voiced 0.69
+  [62/216] seed 5 gain 0.15 phase  drop +0.0118  sep   +1.0  voiced 0.69
+  [66/216] seed 5 gain 0.15 free   drop +0.0158  sep   +3.0  voiced 0.69
+  [58/216] seed 4 gain 0.45 fixed  drop +0.0872  sep   +0.0  voiced 0.68
+  [67/216] seed 5 gain 0.45 fixed  drop +0.0254  sep   +0.0  voiced 0.66
+  [69/216] seed 5 gain 0.45 free   drop +0.0094  sep  +31.2  voiced 0.66
+  [68/216] seed 5 gain 0.45 phase  drop +0.0072  sep  +29.3  voiced 0.67
+  [70/216] seed 5 gain 0.45 fixed  drop +0.1546  sep   +0.0  voiced 0.68
+  [71/216] seed 5 gain 0.45 phase  drop +0.0078  sep   +8.2  voiced 0.69
+  [72/216] seed 5 gain 0.45 free   drop +0.0039  sep   +8.2  voiced 0.69
+  [74/216] seed 6 gain 0.15 phase  drop -0.0030  sep   +0.4  voiced 0.66
+  [77/216] seed 6 gain 0.15 phase  drop -0.0021  sep   +3.1  voiced 0.66
+  [83/216] seed 6 gain 0.45 phase  drop +0.0036  sep   +8.1  voiced 0.66
+  [75/216] seed 6 gain 0.15 free   drop +0.0042  sep   +0.2  voiced 0.67
+  [76/216] seed 6 gain 0.15 fixed  drop +0.2141  sep   +0.0  voiced 0.65
+  [73/216] seed 6 gain 0.15 fixed  drop +0.2242  sep   +0.0  voiced 0.64
+  [84/216] seed 6 gain 0.45 free   drop +0.0013  sep   +8.5  voiced 0.66
+  [78/216] seed 6 gain 0.15 free   drop +0.0026  sep   +2.8  voiced 0.67
+  [82/216] seed 6 gain 0.45 fixed  drop +0.1559  sep   +0.0  voiced 0.66
+  [79/216] seed 6 gain 0.45 fixed  drop +0.0218  sep   +0.0  voiced 0.63
+  [81/216] seed 6 gain 0.45 free   drop +0.0023  sep  +39.8  voiced 0.64
+  [80/216] seed 6 gain 0.45 phase  drop -0.0061  sep  +37.0  voiced 0.63
+  [85/216] seed 7 gain 0.15 fixed  drop +0.1764  sep   +0.0  voiced 0.68
+  [88/216] seed 7 gain 0.15 fixed  drop +0.1775  sep   +0.0  voiced 0.68
+  [86/216] seed 7 gain 0.15 phase  drop +0.0095  sep   -0.4  voiced 0.69
+  [87/216] seed 7 gain 0.15 free   drop +0.0046  sep   +0.1  voiced 0.69
+  [92/216] seed 7 gain 0.45 phase  drop +0.0090  sep  +29.1  voiced 0.66
+  [96/216] seed 7 gain 0.45 free   drop +0.0073  sep   +8.0  voiced 0.69
+  [95/216] seed 7 gain 0.45 phase  drop +0.0097  sep   +7.6  voiced 0.69
+  [94/216] seed 7 gain 0.45 fixed  drop +0.0756  sep   +0.0  voiced 0.67
+  [89/216] seed 7 gain 0.15 phase  drop +0.0035  sep   +3.2  voiced 0.69
+  [90/216] seed 7 gain 0.15 free   drop +0.0053  sep   +2.8  voiced 0.69
+  [91/216] seed 7 gain 0.45 fixed  drop +0.0047  sep   +0.0  voiced 0.66
+  [93/216] seed 7 gain 0.45 free   drop +0.0064  sep  +33.6  voiced 0.67
+  [97/216] seed 8 gain 0.15 fixed  drop +0.2212  sep   +0.0  voiced 0.70
+  [98/216] seed 8 gain 0.15 phase  drop -0.0059  sep   +2.1  voiced 0.69
+  [99/216] seed 8 gain 0.15 free   drop -0.0060  sep   +0.0  voiced 0.69
+  [100/216] seed 8 gain 0.15 fixed  drop +0.1706  sep   +0.0  voiced 0.71
+  [109/216] seed 9 gain 0.15 fixed  drop +0.2219  sep   +0.0  voiced 0.65
+  [103/216] seed 8 gain 0.45 fixed  drop +0.0478  sep   +0.0  voiced 0.67
+  [102/216] seed 8 gain 0.15 free   drop -0.0095  sep   +2.8  voiced 0.70
+  [105/216] seed 8 gain 0.45 free   drop -0.0012  sep  +34.6  voiced 0.68
+  [104/216] seed 8 gain 0.45 phase  drop -0.0011  sep  +31.2  voiced 0.68
+  [101/216] seed 8 gain 0.15 phase  drop -0.0061  sep   +3.4  voiced 0.71
+  [112/216] seed 9 gain 0.15 fixed  drop +0.2249  sep   +0.0  voiced 0.64
+  [108/216] seed 8 gain 0.45 free   drop -0.0085  sep   +8.4  voiced 0.70
+  [110/216] seed 9 gain 0.15 phase  drop -0.0036  sep   +3.3  voiced 0.67
+  [107/216] seed 8 gain 0.45 phase  drop -0.0079  sep   +8.0  voiced 0.69
+  [111/216] seed 9 gain 0.15 free   drop +0.0019  sep   +0.4  voiced 0.65
+  [106/216] seed 8 gain 0.45 fixed  drop +0.1445  sep   +0.0  voiced 0.69
+  [114/216] seed 9 gain 0.15 free   drop -0.0008  sep   +3.2  voiced 0.66
+  [113/216] seed 9 gain 0.15 phase  drop +0.0065  sep   +3.1  voiced 0.65
+  [115/216] seed 9 gain 0.45 fixed  drop +0.0304  sep   +0.0  voiced 0.62
+  [116/216] seed 9 gain 0.45 phase  drop +0.0076  sep  +30.1  voiced 0.62
+  [119/216] seed 9 gain 0.45 phase  drop -0.0018  sep   +8.3  voiced 0.65
+  [117/216] seed 9 gain 0.45 free   drop +0.0048  sep  +31.7  voiced 0.63
+  [118/216] seed 9 gain 0.45 fixed  drop +0.1016  sep   +0.0  voiced 0.65
+  [120/216] seed 9 gain 0.45 free   drop +0.0006  sep   +8.1  voiced 0.65
+  [122/216] seed 10 gain 0.15 phase  drop +0.0108  sep   +0.4  voiced 0.68
+  [121/216] seed 10 gain 0.15 fixed  drop +0.2075  sep   +0.0  voiced 0.67
+  [123/216] seed 10 gain 0.15 free   drop +0.0082  sep   +1.0  voiced 0.68
+  [124/216] seed 10 gain 0.15 fixed  drop +0.2025  sep   +0.0  voiced 0.66
+  [125/216] seed 10 gain 0.15 phase  drop +0.0075  sep   +3.0  voiced 0.68
+  [126/216] seed 10 gain 0.15 free   drop +0.0106  sep   +2.8  voiced 0.69
+  [127/216] seed 10 gain 0.45 fixed  drop +0.0268  sep   +0.0  voiced 0.64
+  [129/216] seed 10 gain 0.45 free   drop +0.0059  sep  +33.6  voiced 0.67
+  [128/216] seed 10 gain 0.45 phase  drop +0.0117  sep  +33.2  voiced 0.66
+  [130/216] seed 10 gain 0.45 fixed  drop +0.1881  sep   +0.0  voiced 0.67
+  [131/216] seed 10 gain 0.45 phase  drop +0.0023  sep   +8.0  voiced 0.68
+  [133/216] seed 11 gain 0.15 fixed  drop +0.2132  sep   +0.0  voiced 0.67
+  [134/216] seed 11 gain 0.15 phase  drop -0.0094  sep   +0.9  voiced 0.68
+  [138/216] seed 11 gain 0.15 free   drop -0.0090  sep   +2.6  voiced 0.69
+  [136/216] seed 11 gain 0.15 fixed  drop +0.2176  sep   +0.0  voiced 0.69
+  [132/216] seed 10 gain 0.45 free   drop +0.0057  sep   +7.0  voiced 0.68
+  [137/216] seed 11 gain 0.15 phase  drop -0.0065  sep   +3.1  voiced 0.70
+  [139/216] seed 11 gain 0.45 fixed  drop +0.0197  sep   +0.0  voiced 0.65
+  [135/216] seed 11 gain 0.15 free   drop -0.0047  sep   -0.2  voiced 0.69
+  [140/216] seed 11 gain 0.45 phase  drop -0.0101  sep  +32.4  voiced 0.67
+  [141/216] seed 11 gain 0.45 free   drop -0.0031  sep  +33.2  voiced 0.66
+  [142/216] seed 11 gain 0.45 fixed  drop +0.1852  sep   +0.0  voiced 0.67
+  [143/216] seed 11 gain 0.45 phase  drop -0.0045  sep   +7.2  voiced 0.68
+  [147/216] seed 12 gain 0.15 free   drop -0.0019  sep   +0.1  voiced 0.68
+  [149/216] seed 12 gain 0.15 phase  drop -0.0005  sep   +3.0  voiced 0.67
+  [146/216] seed 12 gain 0.15 phase  drop -0.0087  sep   +5.1  voiced 0.67
+  [151/216] seed 12 gain 0.45 fixed  drop -0.0081  sep   +0.0  voiced 0.64
+  [148/216] seed 12 gain 0.15 fixed  drop +0.1953  sep   +0.0  voiced 0.66
+  [144/216] seed 11 gain 0.45 free   drop -0.0072  sep   +7.6  voiced 0.69
+  [145/216] seed 12 gain 0.15 fixed  drop +0.1410  sep   +0.0  voiced 0.65
+  [152/216] seed 12 gain 0.45 phase  drop -0.0037  sep  +33.0  voiced 0.63
+  [150/216] seed 12 gain 0.15 free   drop -0.0067  sep   +3.0  voiced 0.67
+  [153/216] seed 12 gain 0.45 free   drop -0.0001  sep  +35.2  voiced 0.64
+  [154/216] seed 12 gain 0.45 fixed  drop +0.0800  sep   +0.0  voiced 0.66
+  [155/216] seed 12 gain 0.45 phase  drop -0.0083  sep   +8.1  voiced 0.66
+  [156/216] seed 12 gain 0.45 free   drop -0.0004  sep   +8.4  voiced 0.67
+  [157/216] seed 13 gain 0.15 fixed  drop +0.1320  sep   +0.0  voiced 0.70
+  [159/216] seed 13 gain 0.15 free   drop -0.0017  sep   +2.0  voiced 0.70
+  [158/216] seed 13 gain 0.15 phase  drop -0.0084  sep   +1.2  voiced 0.70
+  [166/216] seed 13 gain 0.45 fixed  drop +0.0855  sep   +0.0  voiced 0.70
+  [163/216] seed 13 gain 0.45 fixed  drop +0.0230  sep   +0.0  voiced 0.68
+  [160/216] seed 13 gain 0.15 fixed  drop +0.2175  sep   +0.0  voiced 0.66
+  [162/216] seed 13 gain 0.15 free   drop -0.0014  sep   +2.9  voiced 0.71
+  [167/216] seed 13 gain 0.45 phase  drop -0.0102  sep   +8.1  voiced 0.71
+  [164/216] seed 13 gain 0.45 phase  drop -0.0078  sep  +33.4  voiced 0.68
+  [165/216] seed 13 gain 0.45 free   drop +0.0026  sep  +35.3  voiced 0.69
+  [161/216] seed 13 gain 0.15 phase  drop -0.0069  sep   +3.2  voiced 0.71
+  [168/216] seed 13 gain 0.45 free   drop -0.0022  sep   +8.3  voiced 0.70
+  [169/216] seed 14 gain 0.15 fixed  drop +0.1327  sep   +0.0  voiced 0.64
+  [170/216] seed 14 gain 0.15 phase  drop +0.0057  sep   +2.9  voiced 0.68
+  [171/216] seed 14 gain 0.15 free   drop +0.0062  sep   +0.0  voiced 0.67
+  [172/216] seed 14 gain 0.15 fixed  drop +0.1834  sep   +0.0  voiced 0.67
+  [173/216] seed 14 gain 0.15 phase  drop +0.0085  sep   +2.9  voiced 0.67
+  [174/216] seed 14 gain 0.15 free   drop +0.0050  sep   +2.9  voiced 0.68
+  [179/216] seed 14 gain 0.45 phase  drop +0.0045  sep   +7.0  voiced 0.67
+  [177/216] seed 14 gain 0.45 free   drop +0.0048  sep  +36.3  voiced 0.64
+  [176/216] seed 14 gain 0.45 phase  drop +0.0066  sep  +35.9  voiced 0.64
+  [175/216] seed 14 gain 0.45 fixed  drop +0.0098  sep   +0.0  voiced 0.64
+  [180/216] seed 14 gain 0.45 free   drop +0.0040  sep   +7.9  voiced 0.66
+  [178/216] seed 14 gain 0.45 fixed  drop +0.1241  sep   +0.0  voiced 0.67
+  [181/216] seed 15 gain 0.15 fixed  drop +0.1256  sep   +0.0  voiced 0.66
+  [183/216] seed 15 gain 0.15 free   drop -0.0022  sep   +0.1  voiced 0.69
+  [182/216] seed 15 gain 0.15 phase  drop -0.0070  sep   +2.3  voiced 0.68
+  [185/216] seed 15 gain 0.15 phase  drop -0.0065  sep   +3.1  voiced 0.70
+  [184/216] seed 15 gain 0.15 fixed  drop +0.1993  sep   +0.0  voiced 0.64
+  [186/216] seed 15 gain 0.15 free   drop -0.0026  sep   +3.0  voiced 0.69
+  [187/216] seed 15 gain 0.45 fixed  drop +0.0356  sep   +0.0  voiced 0.66
+  [189/216] seed 15 gain 0.45 free   drop -0.0044  sep  +30.2  voiced 0.67
+  [191/216] seed 15 gain 0.45 phase  drop -0.0016  sep   +8.1  voiced 0.68
+  [188/216] seed 15 gain 0.45 phase  drop +0.0013  sep  +32.1  voiced 0.67
+  [192/216] seed 15 gain 0.45 free   drop -0.0045  sep   +8.4  voiced 0.69
+  [196/216] seed 16 gain 0.15 fixed  drop +0.2555  sep   +0.0  voiced 0.67
+  [190/216] seed 15 gain 0.45 fixed  drop +0.1460  sep   +0.0  voiced 0.68
+  [197/216] seed 16 gain 0.15 phase  drop +0.0003  sep   +4.4  voiced 0.68
+  [193/216] seed 16 gain 0.15 fixed  drop +0.2259  sep   +0.0  voiced 0.65
+  [195/216] seed 16 gain 0.15 free   drop -0.0075  sep   +0.5  voiced 0.67
+  [194/216] seed 16 gain 0.15 phase  drop +0.0060  sep   +2.7  voiced 0.68
+  [198/216] seed 16 gain 0.15 free   drop +0.0016  sep   +3.2  voiced 0.69
+  [199/216] seed 16 gain 0.45 fixed  drop +0.0194  sep   +0.0  voiced 0.66
+  [201/216] seed 16 gain 0.45 free   drop -0.0031  sep  +26.1  voiced 0.67
+  [204/216] seed 16 gain 0.45 free   drop -0.0016  sep   +8.0  voiced 0.68
+  [200/216] seed 16 gain 0.45 phase  drop +0.0089  sep  +24.4  voiced 0.66
+  [205/216] seed 17 gain 0.15 fixed  drop +0.1310  sep   +0.0  voiced 0.70
+  [203/216] seed 16 gain 0.45 phase  drop +0.0071  sep   +8.9  voiced 0.68
+  [202/216] seed 16 gain 0.45 fixed  drop +0.1853  sep   +0.0  voiced 0.66
+  [206/216] seed 17 gain 0.15 phase  drop -0.0067  sep   +2.4  voiced 0.71
+  [209/216] seed 17 gain 0.15 phase  drop -0.0013  sep   +3.0  voiced 0.72
+  [208/216] seed 17 gain 0.15 fixed  drop +0.2328  sep   +0.0  voiced 0.71
+  [211/216] seed 17 gain 0.45 fixed  drop +0.0168  sep   +0.0  voiced 0.70
+  [207/216] seed 17 gain 0.15 free   drop -0.0065  sep   -0.0  voiced 0.71
+  [210/216] seed 17 gain 0.15 free   drop -0.0065  sep   +2.8  voiced 0.72
+  [212/216] seed 17 gain 0.45 phase  drop +0.0004  sep  +31.1  voiced 0.69
+  [213/216] seed 17 gain 0.45 free   drop -0.0080  sep  +33.0  voiced 0.70
+  [214/216] seed 17 gain 0.45 fixed  drop +0.1433  sep   +0.0  voiced 0.72
+  [215/216] seed 17 gain 0.45 phase  drop -0.0053  sep   +8.0  voiced 0.72
+  [216/216] seed 17 gain 0.45 free   drop -0.0056  sep   +8.4  voiced 0.72
+experiment: hcsweep
+  instrument        hcsweep   trial seed 0000000001356b97   1214 trials per arm
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  hcsweep -- is there an operating point where the GESTURE and the
+  LESSON both work? The gesture is free and replicated; the lesson is
+  free and measured; at the one point where the gesture was tuned, the
+  lesson keeps only a fifth of its strength.
+  the axis      `halfcenter_drive` (Matsuoka's S), gain HELD at 0.45. The
+                gain axis was swept first and refused; it named this axis
+                as its own overturning condition, because the oscillating
+                window is bounded and mapped in drive, not in gain.
+  the quantity  per drive, TWO numbers: error early-minus-late on a FIXED
+                target (the lesson), and the phase separation with its
+                share (the gesture). Both have to be read or the trade is
+                invisible.
+  the bar       UNCHANGED from the gain sweep: some drive must give a
+                lesson drop over HALF of the half-centre-off reference
+                0.2197 -- that is 0.1099 -- while keeping sep > 10 Hz and
+                share in 0.15-0.85. At gain 0.45 the lesson ALREADY
+                clears it (+0.1243); only sep falls short, at 8.0.
+  refused if    no drive clears both at once, or the drive axis simply
+                reproduces the gain axis's monotone trade. That would make
+                the negative complete in BOTH dimensions of the window and
+                say the trade belongs to the architecture, not the axis.
+  liveness      `voiced` is the voiced frame fraction. A drive outside the
+                oscillating window silences the voice, and a silent
+                creature has no lesson to lose -- so a null there is a
+                BOUND on the window, not a failure of teaching.
+
+
+  gain  drive  arm        n  lesson drop (early-late) sep (ph1-ph0)       share    off voiced
+  0.15  0.90   fixed     18  +0.1790 +/- 0.0101     (no phase bins)      0.00   0.00   0.67
+  0.15  0.90   phase     18  -0.0009 +/- 0.0017     +1.6 +/- 0.3 Hz      0.49   0.00   0.68
+  0.15  0.90   free      18  -0.0008 +/- 0.0012     +0.5 +/- 0.2 Hz      0.50   0.00   0.68
+  0.15  1.40   fixed     18  +0.2062 +/- 0.0079     (no phase bins)      0.00   0.00   0.67
+  0.15  1.40   phase     18  -0.0004 +/- 0.0014     +3.2 +/- 0.1 Hz      0.49   0.00   0.69
+  0.15  1.40   free      18  -0.0004 +/- 0.0016     +2.9 +/- 0.0 Hz      0.49   0.00   0.69
+  0.45  0.90   fixed     18  +0.0210 +/- 0.0032     (no phase bins)      0.00   0.00   0.66
+  0.45  0.90   phase     18  +0.0003 +/- 0.0017     +32.1 +/- 0.7 Hz     0.50   0.00   0.66
+  0.45  0.90   free      18  +0.0001 +/- 0.0012     +33.2 +/- 0.7 Hz     0.50   0.00   0.66
+  0.45  1.40   fixed     18  +0.1243 +/- 0.0095     (no phase bins)      0.00   0.00   0.67
+  0.45  1.40   phase     18  -0.0008 +/- 0.0014     +8.0 +/- 0.1 Hz      0.49   0.00   0.68
+  0.45  1.40   free      18  -0.0015 +/- 0.0011     +7.9 +/- 0.1 Hz      0.50   0.00   0.68
+
+  the half-centre-off reference for this quantity is +0.2197, and the
+  previous measurement at gain 0.45 / drive 1.40 was +0.1243. A control row
+  far from that second number means the comparison is broken.
+
+  THE TRADE, cell by cell (lesson from the fixed arm, gesture from the
+  phase arm at the same gain and drive)
+    gain 0.15 drive 0.90  lesson +0.1790 OK    sep   +1.6 share 0.49 no    
+    gain 0.15 drive 1.40  lesson +0.2062 OK    sep   +3.2 share 0.49 no    
+    gain 0.45 drive 0.90  lesson +0.0210 no    sep  +32.1 share 0.50 OK    
+    gain 0.45 drive 1.40  lesson +0.1243 OK    sep   +8.0 share 0.49 no    
+
+  AMPLITUDE: FREE-RUNNING MINUS TAUGHT, paired on seed, same estimator
+    gain  drive    taught sep     free sep  free - taught         
+    0.15  0.90            1.6          0.5  -1.1 +/- 0.4 Hz (3.0 SE)
+    0.15  1.40            3.2          2.9  -0.3 +/- 0.1 Hz (4.1 SE)
+    0.45  0.90           32.1         33.2  +1.2 +/- 0.5 Hz (2.6 SE)
+    0.45  1.40            8.0          7.9  -0.0 +/- 0.1 Hz (0.2 SE)
+
+  NOT SUPPRESSION -- but 2 of 4 gains differ past 3 SE, and 2 of those
+  go the OTHER WAY, with teaching raising the amplitude. Read the signs in
+  the table before calling this a null: a residual that is a few per cent
+  of its own amplitude and CHANGES SIGN across the sweep is the shape of a
+  tiny systematic difference measured at high precision, not of a
+  mechanism, and the composition problem is still the lesson's side. A
+  residual that holds one sign and grows with gain would be a mechanism
+  and is not what this is.
+
+  THEY DO NOT COMPOSE, AND THE CROSSING IS NOW MEASURED RATHER THAN
+  INTERPOLATED. The best lesson over this sweep is +0.2062 at 1.40 against a
+  bar of 0.1099. Three generations have now swept both axes of the
+  oscillating window -- gain 0.15-0.60 at drive 1.40, drive 0.90-1.40 at
+  gain 0.45, and the gain interval 0.45-0.54 that the first two straddled.
+  Nothing clears both bars anywhere.
+
+  THE CLOSEST APPROACH IS BOUNDED FROM BOTH SIDES. Where the gesture
+  first reaches sep 10, the lesson is 3.7 SE BELOW its own bar; where the
+  lesson clears, the gesture is at 8.0 and falling. So this is not a
+  knife-edge that more resolution could find -- the two requirements are
+  satisfied on disjoint stretches with a resolved gap between them.
+
+  That makes it a statement about the architecture: a scalar reward
+  writing into a rate-weighted centroid that a mutual-inhibition attractor
+  is already holding at one of its two ends.
+
+  WHAT WOULD STILL OVERTURN IT: a cell in the CORNERS of the window --
+  every sweep so far has moved one axis with the other fixed, so low drive
+  crossed with high gain is untested, and `sep` is not monotone in gain
+  (8.0 at 0.45, 6.7 at 0.48, 10.0 at 0.51), which is exactly the shape that
+  makes a one-axis sweep a poor guide to a two-axis surface.

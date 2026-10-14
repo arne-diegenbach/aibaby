@@ -10389,65 +10389,98 @@ bool run_hcsweep(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
       // large SE at the low drives, then the gesture only passes the bar where the
       // oscillator has become intermittent, and an intermittent alternation is not a
       // gesture to teach. That reading has to be checked before any pass is claimed.
-      // THIRD GENERATION: THE LAST UNSAMPLED CELL. Both axes are now swept and refused --
-      // gain 0.15-0.60 at drive 1.40, and drive 0.90-1.40 at gain 0.45, eight cells, none
-      // clearing both bars. What the drive sweep measured, kept here:
+      // FOURTH GENERATION: THE CORNERS, AS A COMPLETE 2x2 FACTORIAL.
       //
-      //   drive  lesson (bar 0.1099)   sep (bar >10)
-      //   0.90   +0.0210 no            +32.1 OK
-      //   1.05   +0.0627 no            +18.5 OK
-      //   1.20   +0.0871 no             +9.4 no
-      //   1.40   +0.1243 OK             +8.0 no    <- the control, reproduced exactly
+      // Three generations swept one axis with the other fixed and refused: gain 0.15-0.60
+      // at drive 1.40, drive 0.90-1.40 at gain 0.45, and the crossing between them, where
+      // at sep 10.0 the lesson came back 3.7 SE under its bar. Every one of those moved a
+      // single axis, so the question they cannot answer is whether the surface FACTORISES.
+      // `sep` is not even monotone in gain (8.0 at 0.45, 6.7 at 0.48, 10.0 at 0.51), which
+      // is exactly the shape that makes one-axis sweeps a poor guide to a 2-D surface.
       //
-      // The two axes are NOT interchangeable: at a fixed sep = 10 the drive axis yields
-      // ~0.0945 of lesson and the gain axis ~0.0865, so they are different curves, which
-      // is why neither closes the other's gap. Both are short at the gesture bar.
+      // AND THE TEST IS ALMOST FREE, because three of the four corners are already
+      // measured. Only gain 0.15 x drive 0.90 has never been run:
       //
-      // WHICH LEAVES ONE CELL. The gain interval 0.45-0.60 was never sampled, and it is
-      // where sep crosses 10 while the lesson is still near its best. Interpolation does
-      // NOT settle it: linear in gain puts the crossing at lesson 0.1108, just OVER the
-      // 0.1099 bar, while a power law in sep puts it at 0.0865-0.098, 12-27% UNDER. The
-      // two schemes straddle the bar, so the cell has to be measured. The standing rule
-      // against fitting a three-or-four-point curve is exactly why the fits cannot decide
-      // it either way.
+      //            drive 1.40            drive 0.90
+      //   gain 0.15  lesson 0.2062 sep  3.2   ???  <- the one missing cell
+      //   gain 0.45  lesson 0.1243 sep  8.0   lesson 0.0210 sep 32.1
       //
-      // PRE-REGISTERED, because this cell was CHOSEN for sitting near the bar: a pass has
-      // to clear BOTH bars with margin. A cell selected because a curve crosses there,
-      // passing by one or two percent, is the shape of a result fitted to its own
-      // selection -- and after eight cells it would be the ninth look at one bar.
-      // Required: lesson > 0.1099 AND sep > 10 AND the lesson's lower 3-SE edge above
-      // the bar. The control cell at gain 0.45 is included for the third time running,
-      // because it is what makes the comparison legible.
+      // WHY THIS CORNER AND NOT ANOTHER. Low drive multiplies sep by 4.01 at gain 0.45
+      // (8.0 -> 32.1), and gain 0.15 carries the STRONGEST lesson of all ten cells
+      // measured (0.2062) with the smallest gesture (3.2). If that 4x carries across, the
+      // corner lands at sep ~12.8 -- over the bar -- while starting from the best lesson
+      // in the sweep. No other corner combines a high lesson with a large sep multiplier.
       //
-      // THE CELLS WERE SITED BY A SMOKE, AND IT FOUND STRUCTURE THE INTERPOLATION MISSED.
-      // At 200k ticks, sep reads 8.5 at gain 0.45, 5.9 at 0.48, 10.3 at 0.51 and 14.4 at
-      // 0.54 -- NON-MONOTONIC, with a dip at 0.48 that is 2.6 +/- 0.6 Hz below the 0.45
-      // cell. Both interpolations assumed a monotone rise from 8.0 to 19.5 across
-      // 0.45-0.60 and neither could see that.
+      // PRE-REGISTERED, AND THE PREDICTION IS A FAILURE. If the surface is separable the
+      // lesson is multiplied by 0.17 whatever gain it starts from, so the corner gives
+      // lesson ~0.0348 against the 0.1099 bar: gesture OK, lesson refused by 3x. THE RUN
+      // IS A TEST OF SEPARABILITY, not a hopeful re-roll -- it passes only if the lesson's
+      // cost of low drive is SMALLER when inhibition is weak, which is a real possibility
+      // (a weaker attractor should be cheaper to write through) and which nothing measured
+      // so far can speak to either way.
       //
-      // IT ALSO MOVES THE PREDICTION AGAINST THE BAR. sep crosses 10 near gain 0.51, not
-      // at the 0.476 linear interpolation gave, and the lesson falls with gain -- so the
-      // crossing sits where the lesson is lower than the optimistic estimate assumed.
-      // Interpolating the lesson to 0.51 gives ~0.093, which agrees with the drive axis's
-      // ~0.0945 at sep = 10 and with the power-law fits' 0.0865-0.098, and disagrees only
-      // with the linear-in-gain 0.1108. THREE OF FOUR ESTIMATES NOW SAY THIS CELL FAILS,
-      // by 12-20%. It is still worth the run: a smoke cannot read the lesson at all
-      // (+0.019 to +0.030 here against the control's +0.1243 at full budget), this is the
-      // last unmeasured cell in the window, and the prior being failure is a reason to
-      // pre-register the margin requirement rather than a reason to skip the measurement.
-      {0.45f, 1.40f, int(kVLTgtFixed), "fixed", false},   // the control, measured twice
+      // THE OTHER THREE CELLS ARE RE-RUN AS CONTROLS, and that is the point of the
+      // factorial: each has a published value (0.2062/3.2, 0.1243/8.0, 0.0210/32.1), so
+      // the run validates itself three ways before the new cell is read. A corner result
+      // sitting next to three reproduced controls is readable; the same number alone is
+      // not.
+      //
+      // VACUITY RISK, named in advance: the oscillating window was mapped at gain 0.45 and
+      // may MOVE with gain. At gain 0.15 inhibition is weak, so drive 0.90 could fall
+      // outside the window entirely and print "(no phase bins)". That is a liveness answer
+      // rather than a composition answer, and the smoke checks it first -- `sep` and
+      // `voiced` read fine at 200k while the lesson does not.
+      {0.15f, 0.90f, int(kVLTgtFixed), "fixed", false},   // THE CORNER, never measured
+      {0.15f, 0.90f, int(kVLTgtPhase), "phase", false},
+      {0.15f, 0.90f, int(kVLTgtPhase), "free",  true},
+      {0.15f, 1.40f, int(kVLTgtFixed), "fixed", false},   // control: 0.2062 / 3.2
+      {0.15f, 1.40f, int(kVLTgtPhase), "phase", false},
+      {0.15f, 1.40f, int(kVLTgtPhase), "free",  true},
+      {0.45f, 0.90f, int(kVLTgtFixed), "fixed", false},   // control: 0.0210 / 32.1
+      {0.45f, 0.90f, int(kVLTgtPhase), "phase", false},
+      {0.45f, 0.90f, int(kVLTgtPhase), "free",  true},
+      {0.45f, 1.40f, int(kVLTgtFixed), "fixed", false},   // control: 0.1243 / 8.0
       {0.45f, 1.40f, int(kVLTgtPhase), "phase", false},
       {0.45f, 1.40f, int(kVLTgtPhase), "free",  true},
-      {0.48f, 1.40f, int(kVLTgtFixed), "fixed", false},
-      {0.48f, 1.40f, int(kVLTgtPhase), "phase", false},
-      {0.48f, 1.40f, int(kVLTgtPhase), "free",  true},
-      {0.51f, 1.40f, int(kVLTgtFixed), "fixed", false},
-      {0.51f, 1.40f, int(kVLTgtPhase), "phase", false},
-      {0.51f, 1.40f, int(kVLTgtPhase), "free",  true},
-      {0.54f, 1.40f, int(kVLTgtFixed), "fixed", false},
-      {0.54f, 1.40f, int(kVLTgtPhase), "phase", false},
-      {0.54f, 1.40f, int(kVLTgtPhase), "free",  true},
   };
+  // GENERATION 4 OUTCOME, and it closes the plane rather than adding a fourth refusal.
+  //
+  // All three controls reproduced EXACTLY (0.2062/3.2, 0.1243/8.0, 0.0210/32.1), so the
+  // corner is readable. The corner came back lesson +0.1790 +/- 0.0101, sep +1.6 +/- 0.3.
+  //
+  // THE SURFACE IS NOT SEPARABLE, and the pre-registered prediction was wrong in both
+  // coordinates: predicted 0.0348 / 12.8, measured 0.1790 / 1.6. The half of the
+  // prediction that mattered came true -- low drive DOES cost the lesson less when
+  // inhibition is weak, 5.1x less -- and it buys nothing, because the oscillating window's
+  // lower edge MOVES WITH GAIN and that cell lies outside it. The named vacuity risk is
+  // what actually happened.
+  //
+  // AND THE CORNER IS STRICTLY DOMINATED, which is stronger than failing a bar. Against
+  // the cell straight above it the corner loses the lesson (-0.0272 +/- 0.0128, 2.1 SE)
+  // AND the gesture (-1.6 Hz), and it sits 2.6 SE under the half-centre-off reference:
+  // starving the oscillator does not hand the lesson back. There is no cheap seat at the
+  // window's edge.
+  //
+  // NO EVIDENCE THE ROUTE MATTERS AT MATCHED GESTURE -- and that is the whole claim, not
+  // a collapse. Two pairs reach nearly the same gesture by different knobs and the lesson
+  // agrees both times: sep 9.4 by drive against 10.0 by gain is 0.0871 vs 0.0796 (0.7 SE),
+  // and sep 18.5 by drive against 19.5 by gain is 0.0627 vs 0.0465 (1.7 SE). But 3 SE here
+  // spans 39% and 53% of the lesson at those gestures, so a route difference of tens of
+  // per cent would be invisible; and the pair residuals are STEEPER per Hz (0.0125, 0.0162)
+  // than any same-axis neighbour slope (0.0009-0.0051), so they are real route residuals
+  // that are merely unresolved rather than the sep mismatch inside each pair.
+  //
+  // WHAT THIS DOES SETTLE IS THE OPPOSITE CLAIM. Generation 2 recorded that the axes are
+  // NOT one curve, on interpolated sep = 10 values and exponents 45% apart -- and
+  // generation 3 then showed interpolation across an unsampled interval to be unreliable.
+  // Measured at matched gesture that difference does not appear. Both "the axes differ"
+  // and "the axes are identical" are unsupported; one curve to within tens of per cent is
+  // all twelve cells can say, and it is enough, because no cell clears both bars.
+  //
+  // SO THE COMPOSITION QUESTION IS ANSWERED WITHOUT INTERPOLATION, which is what the
+  // previous generation got wrong. A cell sits ON the gesture bar (gain 0.51, sep 10.0)
+  // with lesson 0.0796 +/- 0.0081: 3.7 SE under the lesson bar, 28% short, and the BEST
+  // lesson among all five cells that clear sep 10. Do not re-sweep this plane.
   constexpr uint32_t kN = 12, kDrives = 4, kPer = 3, kReps = 18;
   static_assert(kDrives * kPer == kN, "arm table is drives x {fixed, phase, free}");
   instrument("hcsweep", dna.header().seed ^ 0x4C5Eu, ticks / kVLTrialTicks, "trials per arm");
@@ -10455,10 +10488,12 @@ bool run_hcsweep(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
               "  LESSON both work? The gesture is free and replicated; the lesson is\n"
               "  free and measured; at the one point where the gesture was tuned, the\n"
               "  lesson keeps only a fifth of its strength.\n");
-  std::printf("  the axis      `halfcenter_drive` (Matsuoka's S), gain HELD at 0.45. The\n"
-              "                gain axis was swept first and refused; it named this axis\n"
-              "                as its own overturning condition, because the oscillating\n"
-              "                window is bounded and mapped in drive, not in gain.\n");
+  std::printf("  the axes      BOTH, as a 2x2 factorial in `halfcenter_gain` x\n"
+              "                `halfcenter_drive`. Each axis was swept alone and refused,\n"
+              "                and neither single-axis sweep can say whether the surface\n"
+              "                FACTORISES. Three of the four cells have published values\n"
+              "                and run here as controls; only gain 0.15 x drive 0.90 is\n"
+              "                new, which is the last untested corner of the window.\n");
   std::printf("  the quantity  per drive, TWO numbers: error early-minus-late on a FIXED\n"
               "                target (the lesson), and the phase separation with its\n"
               "                share (the gesture). Both have to be read or the trade is\n"
@@ -10702,11 +10737,22 @@ bool run_hcsweep(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
               "\n  That makes it a statement about the architecture: a scalar reward\n"
               "  writing into a rate-weighted centroid that a mutual-inhibition attractor\n"
               "  is already holding at one of its two ends.\n"
-              "\n  WHAT WOULD STILL OVERTURN IT: a cell in the CORNERS of the window --\n"
-              "  every sweep so far has moved one axis with the other fixed, so low drive\n"
-              "  crossed with high gain is untested, and `sep` is not monotone in gain\n"
-              "  (8.0 at 0.45, 6.7 at 0.48, 10.0 at 0.51), which is exactly the shape that\n"
-              "  makes a one-axis sweep a poor guide to a two-axis surface.\n",
+              "\n  AND AT MATCHED GESTURE THERE IS NO EVIDENCE THE ROUTE MATTERS, which is\n"
+              "  as far as the data goes. sep 9.4 by drive vs 10.0 by gain gives 0.0871\n"
+              "  against 0.0796 (0.7 SE); sep 18.5 by drive vs 19.5 by gain gives 0.0627\n"
+              "  against 0.0465 (1.7 SE). Consistency, NOT a collapse: 3 SE spans 39%% and\n"
+              "  53%% of the lesson there, and the pair residuals are steeper per Hz than\n"
+              "  any same-axis neighbour slope. It does refute the earlier claim that the\n"
+              "  axes are not one curve, which rested on interpolated values.\n"
+              "\n  THE CORNER IS MEASURED AND IS STRICTLY DOMINATED. gain 0.15 x drive 0.90\n"
+              "  was the last untested cell and the only one the separable prediction got\n"
+              "  badly wrong: predicted lesson 0.0348 / sep 12.8, measured 0.1790 / 1.6.\n"
+              "  Low drive does cost the lesson less when inhibition is weak -- 5.1x less\n"
+              "  -- but it buys NO gesture, because the window's lower edge moves with\n"
+              "  gain and that cell is outside it. It loses the lesson against the cell\n"
+              "  above it (-0.0272 +/- 0.0128, 2.1 SE) AND the gesture (-1.6 Hz), and sits\n"
+              "  2.6 SE under the half-centre-off reference: switching the oscillation off\n"
+              "  by starving it does not give the lesson back.\n",
               best_drop, best_gain, bar);
   return false;
 }
@@ -29168,11 +29214,59 @@ constexpr uint32_t kCtxSelfArmCount = sizeof(kCtxSelfArms) / sizeof(kCtxSelfArms
 // Four arms, because `results/ctxself-env2.log` already holds gate 0 for exactly these
 // arms on exactly these creatures at 36 reps, and the genomes differ in ONE scalar, so the
 // gate-0 and gate-2 runs are PAIRED by creature and gate 0 does not need re-running.
-// OFF AGAIN: the DNA v70 conscience-gain sweep and its fresh-creature replication are done.
-// Seven focused runs in all went through this path (gate 2, gains 2/4/8, and gate-0 and
-// gain-2 on reps 36-71), each four arms, each paired by creature with the one before it
-// because every genome is a single scalar from its predecessor.
-constexpr bool kCtxSelfFocused = false;
+// Seven focused runs went through this path for the DNA v70 conscience-gain sweep (gate 2,
+// gains 2/4/8, and gate-0 and gain-2 on reps 36-71), each four arms, each paired by creature
+// with the one before it because every genome is a single scalar from its predecessor.
+//
+// ON AGAIN, 2026-10-15, FOR THE SETTLE RUN -- AND THE DESIGN IS FIXED HERE BEFORE IT RUNS.
+//
+// THE STANDING READ: gain 2 pools to +12.66 +/- 4.67 Hz (2.7 SE, 45/72 positive) against a
+// 3 SE bar, replicated in direction on 36 creatures the claim had never seen, with the
+// mechanism landing on identical occupancy and index in both families. The reason it is
+// unclaimed is that adding creatures until a number crosses a threshold is optional
+// stopping, and the reason it is worth settling is that the unclaimed `oracle - ema` gap is
+// +17.2 +/- 5.1 Hz, so this would claim about three quarters of what is left.
+//
+// THE STATISTIC: per creature, (`ema` - `ema-rnd`) under the treated genome minus the same
+// under the shipped genome -- a difference of differences, paired by creature, so the
+// creature's own noise cancels twice. `scratchpad/v70_pool.py` computes it and was checked
+// against the record BEFORE this run was launched: it returns +14.81 +/- 5.85 on block 1
+// and +12.66 +/- 4.67 pooled on blocks 1-2, both exact to the published decimals.
+//
+// THE SAMPLE, FIXED NOW AND NOT REVISABLE: two further blocks of 36, reps 72-107 (genome
+// seed 20830977) and reps 108-143 (seed 21116061), where seed = 20260809 + r * 7919 makes
+// them the next creatures of the same family. Pooled with the existing 72 that is n = 144
+// EXACTLY, whatever the result.
+//
+// THE BAR: 3.0 SE on the pooled 144. The project's standing bar, fixed long before this
+// mechanism existed.
+//
+// THE POWER, STATED IN ADVANCE BECAUSE IT IS A LIMIT AND NOT A FOOTNOTE: the per-creature
+// SD of the paired contrast is 39.9 Hz, so the SE at 144 is 3.33 Hz and the smallest effect
+// this run can certify at 3 SE is +10.0 Hz. The current 95% interval is [+3.5, +21.9], so
+// THE RUN IS BLIND TO ITS LOWER HALF. A refusal here means "under about 10 Hz", never
+// "zero", and must be written that way.
+//
+// THE STOPPING RULE, which is the whole point of pre-registering rather than just running:
+// A FAILURE AT 144 ENDS THIS LINE. It does not license n = 216. If the pooled read lands
+// between 2.5 and 3.0 SE that is a FAILURE, and the urge to add one more block of 36 is
+// exactly what this clause exists to forbid.
+//
+// ALSO REFUSES IT: a per-block contrast that changes sign, or `off`/`oracle` disagreeing
+// between a paired pair of logs, which would mean the two runs are not the same creatures.
+//
+// ONE KNOWN HETEROGENEITY, RECORDED BEFORE THE RUN RATHER THAN DISCOVERED AFTER IT. Block
+// 1's shipped baseline is `ctxself-env2.log`, a twenty-arm run, while blocks 2-4 use
+// dedicated four-arm runs of `ctxself-base*.toml`. The creatures match exactly (`off` and
+// `oracle` agree to the printed precision, and the mechanism cannot reach those arms), and
+// pooling this way is what the standing +12.66 did, so this run stays comparable to the
+// record. But it is not the same provenance, and `ctxself-base.toml` -- the shipped genome
+// at block 1's seed -- exists with no log, so a dedicated block-1 baseline COULD be run.
+// It deliberately is NOT run here: swapping block 1's baseline would move the pooled number
+// by an amount chosen after seeing it, which is the flexibility this pre-registration is
+// meant to remove. If the baseline itself is ever worth auditing, that is a separate
+// question asked after this one resolves, never folded into it.
+constexpr bool kCtxSelfFocused = true;
 inline bool cs_focused_arm(const char* n) {
   return std::strcmp(n, "off") == 0 || std::strcmp(n, "oracle") == 0 ||
          std::strcmp(n, "ema") == 0 || std::strcmp(n, "ema-rnd") == 0;
