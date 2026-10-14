@@ -17365,6 +17365,80 @@ feature's 0.89 ceiling (decisive, replicated in two families), the collapse at g
 (decisive, −5.4 SE), and the voice at gain 2 (replicated in direction, pooled 2.7 SE,
 below the bar).
 
+### The gesture and the lesson do not compose on either axis of the window
+
+`hcsweep` generation two, moving to `halfcenter_drive` — the axis its own generation one
+named as the overturning condition for "they do not compose at any gain", because the
+oscillating window is bounded and mapped in drive and not in gain. Gain held at 0.45, the
+gain closest to clearing both bars: there the lesson already passes (+0.1243 against the
+0.1099 bar) and only the gesture falls short (sep 8.0 against 10). Bar unchanged.
+
+| drive | lesson | | sep | | share |
+|---|---|---|---|---|---|
+| 0.90 | +0.0210 ± 0.0032 | ✗ | **+32.1 ± 0.7** | ✓ | 0.50 |
+| 1.05 | +0.0627 ± 0.0064 | ✗ | +18.5 ± 0.4 | ✓ | 0.50 |
+| 1.20 | +0.0871 ± 0.0072 | ✗ | +9.4 ± 0.2 | ✗ | 0.50 |
+| 1.40 (shipped, control) | **+0.1243 ± 0.0095** | ✓ | +8.0 ± 0.1 | ✗ | 0.49 |
+
+**The control reproduced exactly** — +0.1243 and +8.0, the same four decimals the gain sweep
+gave for that cell. That is the check that made yesterday's v58 audit possible, and it is
+why the new rows can be read at all.
+
+**The drive axis trades too, and harder.** Lowering drive buys a far bigger gesture than
+gain ever did — **32.1 Hz of phase separation against the gain axis's best of 19.5** — and
+the lesson falls monotonically as it does, 0.1243 → 0.0210. No cell clears both bars. **So
+the negative now covers both dimensions of the oscillating window**, which is a statement
+about the architecture rather than one more refused parameter: a scalar reward writing into
+a rate-weighted centroid that a mutual-inhibition attractor is already holding at one of
+its two ends.
+
+**The window itself is mapped, which is a first.** Every previous run left this axis at
+1.40. Alternation is absent at 0.50 and 0.75 (fusion side) and absent again at 2.10 and
+2.80 (winner-take-all side), present from 0.90 to 1.40 — so the oscillating regime is a
+**narrow window roughly 0.9–1.6 wide, with the shipped operating point sitting near its
+upper edge.** Bounded on both sides is what Shpiro, Curtu, Rinzel & Rubin require.
+
+**And the two axes are not interchangeable.** At a fixed gesture amplitude of sep = 10 the
+drive axis yields about 0.0945 of lesson and the gain axis about 0.0865 — different curves,
+which is why neither closes the other's gap, and why pooling the eight cells into one trade
+law leaves ±30% residuals with exponents 45% apart (−0.79 against −1.15). They are not one
+curve, and the standing rule against fitting three- and four-point curves is why those fits
+settle nothing on their own.
+
+#### A correction to what this file said yesterday about the unsampled gain interval
+
+The gain interval 0.45–0.60 was never sampled, and I reported that interpolation put the
+crossing "within 1% of the bar." **That figure was an artifact of interpolating linearly in
+the parameter.** Linear in gain gives a lesson of 0.1108 at sep = 10, just over the 0.1099
+bar; a power law in `sep` gives 0.0865–0.098, which is 12–27% under it. The two schemes
+straddle the bar, so the interval is genuinely undetermined and the 1% should not have been
+quoted as if it were informative.
+
+#### Two pre-flight results worth keeping
+
+**The vacuity guard gave a false DEAD, and the hole is now closed.** `tools/vacuity.sh`
+reported `halfcenter_drive` inert. It had defaulted to a binary 17 days old, which knew the
+field perfectly well — the field predates it by a week — but had never heard of `hcsweep`,
+added later; both settings printed the same "unknown experiment" message, the outputs
+matched byte-for-byte, and the script called the field dead. It already refused a binary
+that cannot read the *field*; it did not check the *experiment*. It does now, and against
+the current binary the field is **live, 42 lines differing**.
+
+**A smoke sites the gesture and cannot site the lesson.** The first drive points were put
+*above* 1.40, reasoning that more tonic input means a harder fight and a deeper alternation.
+A 200k-tick smoke refuted the direction in six minutes: sep **rises as drive falls**, and
+2.10/2.80 are outside the window entirely. The same smoke was useless for the lesson —
+every drive returned +0.027 against the +0.1243 the control gives at full budget — because
+`sep`, `share` and `voiced` are properties of the free-running oscillator and equilibrate
+in thousands of ticks, while error-early-minus-late needs the session to develop. **A smoke
+can choose where to look and must not be quoted on what is found there.**
+
+One pre-registered caveat did *not* materialise, which is worth recording because it would
+have turned a pass into a mirage. At 1.05 the smoke gave sep 10.1 ± 3.1 against 1.40's
+± 0.3, and a spread ten times wider is what a population near a boundary looks like — some
+creatures alternating, some not. At full budget the low-drive SEs are tight (±0.7 at 0.90),
+so the 32.1 Hz gesture is clean and the wide smoke spread was a short-run artifact.
+
 ## Layout
 
 ```

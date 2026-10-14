@@ -40,6 +40,21 @@ if ! strings "$BIN" | grep -qx -- "${FIELD}"; then
   echo "  field does. Rebuild it, or point AIBABY_BIN at the build you just made."
   exit 2
 fi
+# AND THE SAME CHECK FOR THE EXPERIMENT, which the field check does not cover and
+# which cost a false DEAD on 2026-10-14. The default binary was 17 days old and knew
+# `halfcenter_drive` perfectly well -- the field predates it by a week -- but had never
+# heard of `hcsweep`, added later. So both settings printed the SAME "unknown
+# experiment" message, the outputs were byte-identical, and the script reported DEAD on
+# a field that is not inert at all. A guard that answers confidently off the wrong
+# binary is worse than no guard, and checking only one of the two names it depends on
+# leaves exactly that hole.
+if ! strings "$BIN" | grep -qx -- "${EXP}"; then
+  echo "REFUSED: ${BIN} contains no reference to the experiment '${EXP}'."
+  echo "  It would fail the same way for both settings, the outputs would match, and"
+  echo "  the script would report DEAD for a reason that has nothing to do with the"
+  echo "  field. Rebuild, or point AIBABY_BIN at the build you just made."
+  exit 2
+fi
 echo "  binary: ${BIN}"
 
 n=$(grep -c "^${FIELD} *=" "$G")
