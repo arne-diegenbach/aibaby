@@ -1217,15 +1217,62 @@ family. The mechanism replicated to three decimals: two halves starting from dif
 places (occupancy 0.641 and 0.653) land on the same one (0.522 and 0.523), and the treated
 arm delivers 71.8 and 71.9&nbsp;Hz in the two families against an oracle at 80.6 and 80.8.
 <strong>The noisy quantity is the untreated baseline, not the treatment.</strong></p>
-<p class="note">The behavioural gain does <em>not</em> clear this project's bar and is
-recorded as such: the registered contrast pools to
+<p class="note">The behavioural gain did <em>not</em> at first clear this project's bar and
+was recorded as such: the registered contrast pooled to
 +12.7&nbsp;&plusmn;&nbsp;4.7&nbsp;Hz (2.7&nbsp;SE) over 72 creatures, 45 of them positive,
-where the threshold is 3. Roughly eighteen more creatures would close the gap arithmetically
-and none were run, because adding samples until a number crosses a threshold is optional
-stopping. One worry from the first half did not survive, in the favourable direction: there
-the gain split evenly between the arm improving and its control degrading, which would have
-made half of it an artefact, while on the fresh creatures the control moved
-+0.3&nbsp;Hz and pooled it is indistinguishable from zero.</p>
+where the threshold is 3. Roughly eighteen more creatures would have closed the gap
+arithmetically and none were run, because adding samples until a number crosses a threshold
+is optional stopping.</p>
+
+<h3>6.8 The same effect, settled at a sample size chosen in advance</h3>
+<p>An effect at 2.7&nbsp;SE cannot be claimed and need not be abandoned. The alternative to
+adding creatures until it crosses is to fix the sample size from a power calculation and
+write the stopping rule down first. Before the run, the following were committed in source:
+two further blocks of 36 creatures (the genome seed walks the same family forward in blocks
+of 36), <strong>n&nbsp;=&nbsp;144 exactly</strong>, the 3.0&nbsp;SE bar, and a rule stating
+that a failure <em>ends the line</em> with 2.5&ndash;3.0&nbsp;SE counting as a failure. The
+power limit was stated too: with a per-creature SD near 40&nbsp;Hz the smallest effect
+certifiable at 144 is about +10&nbsp;Hz, so a refusal would have meant &ldquo;under about ten
+hertz&rdquo; and never &ldquo;zero&rdquo;.</p>
+<table>
+<tr><th>block</th><th>creatures</th><th>contrast</th></tr>
+<tr><td>1, discovery</td><td>0&ndash;35</td><td>+14.81 &plusmn; 5.85</td></tr>
+<tr><td>2, fresh</td><td>36&ndash;71</td><td>+10.51 &plusmn; 7.36</td></tr>
+<tr><td>3, new</td><td>72&ndash;107</td><td><strong>+15.02 &plusmn; 6.71</strong></td></tr>
+<tr><td>4, new</td><td>108&ndash;143</td><td><strong>+20.53 &plusmn; 8.50</strong></td></tr>
+<tr class="last"><td><strong>pooled</strong></td><td><strong>144</strong></td><td><strong>+15.22 &plusmn; 3.56 &mdash; 4.3&nbsp;SE, 94/144</strong></td></tr>
+</table>
+<p><strong>It clears.</strong> All four blocks are positive, so the pre-registered
+sign-change refusal never fired, and the two blocks the claim had never seen are the
+<em>strongest</em> of the four &mdash; the opposite of the shape a discovery-sample artefact
+makes. The sign test agrees without any distributional assumption: 94 of 144,
+<strong>z&nbsp;=&nbsp;+3.67</strong>. The per-creature SD came in at 42.7&nbsp;Hz against the
+39.9 predicted beforehand, so the calculation that chose the sample size was sound rather
+than lucky.</p>
+<p><strong>And 85% of it is in the voice.</strong> The statistic is a difference of
+differences, so a sagging control inflates it &mdash; which is what the first half looked
+like. Over the full sample it decomposes into the treated arm rising
+<strong>+13.00&nbsp;&plusmn;&nbsp;3.10 (4.2&nbsp;SE, 91/144)</strong> and the
+matched-marginal control falling only &minus;2.21&nbsp;&plusmn;&nbsp;2.16 (1.0&nbsp;SE,
+indistinguishable from zero). The voice arm clears the bar on its own.</p>
+<p><strong>What it collects is the gap &sect;6.5 left unclaimed.</strong> The distance from
+the derived index to the host-written oracle index goes from
++19.16&nbsp;&plusmn;&nbsp;3.18 (6.0&nbsp;SE) to
+<strong>+6.15&nbsp;&plusmn;&nbsp;2.78 (2.2&nbsp;SE)</strong>: the treatment closes
++13.00&nbsp;&plusmn;&nbsp;3.10, about two thirds of it, and what remains is no longer clearly
+resolvable. Four boundary detectors were refused against that gap and balancing the table was
+refused against it; this collects most of it by sharpening the partition instead. The
+specificity control is exact &mdash; the oracle arm is <strong>bit-identical across the two
+genomes on all 144 creatures</strong>, a jackknife standard error of precisely zero on an arm
+the mechanism cannot reach.</p>
+<p class="note">The rule that made the result credible is the one that was never invoked:
+that a 2.9&nbsp;SE outcome would have ended the line. A pre-registration only constrains if
+it would have refused something, and this one would have. One audit is owed and is now safe
+to run precisely because the claim no longer rests on it &mdash; block&nbsp;1's baseline came
+from a twenty-arm log rather than a dedicated run, and blocks&nbsp;2&ndash;4 alone pool to
++15.35&nbsp;&plusmn;&nbsp;4.34 (3.5&nbsp;SE) and clear without it. Swapping that baseline was
+deliberately not folded into the settle, because changing a comparison after seeing the
+number is the flexibility the exercise exists to remove.</p>
 
 
 <h3>6.7 Consistency at low power is not a collapse, and it refuted the opposite claim too</h3>

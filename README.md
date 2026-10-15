@@ -17532,6 +17532,52 @@ cell sits *on* the gesture bar (gain 0.51, sep 10.0) with lesson **0.0796 ± 0.0
 under the lesson bar, 28% short** — and it is the best lesson of all five cells that clear
 sep 10. Twelve cells, both axes, both corners. **Do not re-sweep this plane.**
 
+### The conscience gain settles, and claims two thirds of the last unclaimed gap (2026-10-15)
+
+The derived word index beats every boundary detector ever built here and still trailed the
+host-written oracle index by **+19.2 ± 3.2 Hz**. Four detector shapes were refused against
+it, and table balance was refused by overshooting. What remained was DNA v70's gain on
+DeSieno's conscience, standing at +12.66 ± 4.67 (2.7 SE) over 72 creatures — **below the 3 SE
+bar, and left there**, because adding creatures until a number crosses a threshold is
+optional stopping.
+
+So it was settled at a **pre-committed n**, fixed in the source before the run: two further
+blocks of 36 creatures (reps 72–143, genome seed + r × 7919), n = 144 exactly, the 3.0 SE
+bar, and a stopping rule stating that a failure *ends the line* and that 2.5–3.0 SE counts as
+a failure. The power limit was stated in advance too — blind below +10.0 Hz, so a refusal
+would have meant "under about 10 Hz" and never "zero".
+
+| block | creatures | contrast |
+|---|---|---|
+| 1, discovery | 0–35 | +14.81 ± 5.85 |
+| 2, fresh | 36–71 | +10.51 ± 7.36 |
+| **3, new** | 72–107 | **+15.02 ± 6.71** |
+| **4, new** | 108–143 | **+20.53 ± 8.50** |
+| **pooled** | **144** | **+15.22 ± 3.56 — 4.3 SE, 94/144** |
+
+**It clears.** All four blocks are positive, so the sign-change refusal never fired, and the
+two blocks the claim had never seen are the *strongest* of the four — the opposite of the
+shape a discovery-sample artefact makes. The sign test agrees without any distributional
+assumption at all: 94 of 144, **z = +3.67**. Per-creature SD came in at 42.7 Hz against the
+39.9 predicted from n = 72, so the calculation that chose the sample size was sound rather
+than lucky.
+
+**And 85% of it is in the voice.** The registered contrast is a difference of differences, so
+a sagging control would inflate it — which is exactly what the discovery half looked like.
+Over the full sample it decomposes into `ema` rising **+13.00 ± 3.10 (4.2 SE, 91/144)** and
+the matched-marginal control falling only −2.21 ± 2.16 (1.0 SE, indistinguishable from zero).
+**The voice arm clears the bar on its own.**
+
+**What it buys:** the oracle gap goes from +19.16 ± 3.18 (6.0 SE) to **+6.15 ± 2.78 (2.2 SE)**
+— the treatment closes **+13.00 ± 3.10 of it, 68%**, and what is left is no longer clearly
+resolvable. The specificity control is as clean as it gets: the oracle arm is
+**bit-identical across the two genomes on all 144 creatures**, so the conscience acted on the
+derived index and on nothing else.
+
+Because transmission is faithful once width is held, every hertz added to one creature's
+conditional voice is inherited by its whole lineage without loss — which is what makes a
+13 Hz gain in production worth a 7-hour run.
+
 ## Layout
 
 ```

@@ -40,7 +40,7 @@ rather than the line of diminishing returns it looked like.
 |---|---|
 | Credit assignment via reward masks | **Closed by arithmetic.** Gain rises monotonically with how much of the motor group the reward reaches, so the cheapest mask is no mask. Nothing in the family is affordable against its retention price. |
 | The geometry of the motor pool | **Settled in two independent families.** The readout is a rate-weighted centroid, so potency is *signed* distance from it; potency decides *whether* extent costs anything, and given nonzero potency extent costs until it saturates. |
-| The derived context index | **Explained, and the repair is closed.** Its deficit was the word boundary: given a clean one, classification error goes to exactly zero and the creature's own index matches a host-supplied perfect index on behaviour (−1.0 ± 6.0 Hz). But four detectors built to supply that boundary are all beaten by the arm with no detector at all, and the leading arms sit at their occupancy ceilings — so **build no further boundary detector**. The gap itself is real (oracle − detector-free = +17.2 ± 5.1, 3.3 SE) but **not reachable by balancing the table either**: forcing occupancy to 0.502 takes the ceiling to 0.998 and the index saturates at 0.89, so the feature is the limit (§2). Both routes to that gap are now closed. |
+| The derived context index | **Explained, and the repair is closed.** Its deficit was the word boundary: given a clean one, classification error goes to exactly zero and the creature's own index matches a host-supplied perfect index on behaviour (−1.0 ± 6.0 Hz). But four detectors built to supply that boundary are all beaten by the arm with no detector at all, and the leading arms sit at their occupancy ceilings — so **build no further boundary detector**. The gap itself was real (oracle − detector-free = +17.2 ± 5.1, 3.3 SE) and is **now mostly claimed** — not by a detector and not by balancing the table, both of which are closed, but by DNA v70's conscience gain, settled at a pre-committed n = 144: +15.22 ± 3.56 (4.3 SE) with 85% of it in the voice, taking the gap from +19.16 ± 3.18 to +6.15 ± 2.78 (§2). |
 | The aim/feedback line | **Refused by its own control** — a blind controller beats feedback at this creature's loop delay. |
 | Protocol variations | **Closed.** Longer, blocked, region-shaped, distance-aware and staircased rewards were each measured and none helps. |
 | The transmission channel | **Faithful once width is held** — no detectable loss over four generations (1.4 SE), and a ratchet that locks in whichever convention it finds. Further chain runs measure the tutor, not the channel, so the quantity to move is production width (§1). |
@@ -97,10 +97,46 @@ leaving it open as an invitation.
 Two results worth carrying. **A balanced partition is not an informative one:** at the
 highest gain the table is balanced to 0.502 and the index reads 0.520 against a chance level
 of 0.500 — slots assigned by turn-taking rather than by the word — with dF1 *below* the
-no-index arm, −30.4 ± 5.6 (5.4 SE). And the best setting's behavioural gain is **sub-bar
-and recorded as such**: pooled over 72 creatures (half of them never seen by the hypothesis)
-the registered contrast is +12.7 ± 4.7, **2.7 SE** against a bar of 3, 45 of 72 positive. No
-creatures were added to close the 0.3 SE gap, because that is optional stopping.
+no-index arm, −30.4 ± 5.6 (5.4 SE). And the best setting's behavioural gain was at first
+**sub-bar and recorded as such**: pooled over 72 creatures (half of them never seen by the
+hypothesis) the registered contrast was +12.7 ± 4.7, **2.7 SE** against a bar of 3, 45 of 72
+positive. No creatures were added to close the 0.3 SE gap, because that is optional stopping.
+
+**It was then settled at a pre-committed n, and it clears (2026-10-15).** The design was
+fixed in the source before the run: two further blocks of 36 creatures, **n = 144 exactly**,
+the 3.0 SE bar, the power limit stated up front (blind below +10.0 Hz, so a refusal would
+mean "under about 10 Hz" and never "zero"), and a stopping rule declaring that a failure
+*ends the line* with 2.5–3.0 SE counting as a failure.
+
+| block | creatures | contrast |
+|---|---|---|
+| 1, discovery | 0–35 | +14.81 ± 5.85 |
+| 2, fresh | 36–71 | +10.51 ± 7.36 |
+| **3, new** | 72–107 | **+15.02 ± 6.71** |
+| **4, new** | 108–143 | **+20.53 ± 8.50** |
+| **pooled** | **144** | **+15.22 ± 3.56 — 4.3 SE, 94/144** |
+
+All four blocks positive, so the sign-change refusal never fired; the two blocks the claim
+had never seen are the **strongest** of the four; and the sign test agrees with no
+distributional assumption at all (94 of 144, **z = +3.67**). Per-creature SD came in at
+42.7 Hz against the 39.9 predicted beforehand, so the calculation that chose the sample size
+was sound rather than lucky.
+
+**85% of it is in the voice**, which the discovery half could not establish: `ema` rises
+**+13.00 ± 3.10 (4.2 SE, 91/144)** while the matched-marginal control falls only
+−2.21 ± 2.16 (1.0 SE, indistinguishable from zero). The voice arm clears the bar on its own.
+
+**And it collects the gap §1 left unclaimed.** `oracle − ema` goes from +19.16 ± 3.18
+(6.0 SE) to **+6.15 ± 2.78 (2.2 SE)** — the treatment closes **+13.00 ± 3.10, 68% of it** —
+and what remains is no longer clearly resolvable. The specificity control is exact: the
+oracle arm is **bit-identical across the two genomes on all 144 creatures**, so the
+conscience acted on the derived index and nothing else. **The conscience gain ships.**
+
+One audit is owed and is now safe to run, because the claim no longer rests on it: block 1's
+shipped baseline is a twenty-arm log rather than a dedicated four-arm run. Blocks 2–4 alone,
+all on dedicated baselines, pool to +15.35 ± 4.34 (3.5 SE, 70/108) and clear without it. The
+swap was deliberately *not* folded into the settle, because changing a baseline after seeing
+the number is the flexibility pre-registration exists to remove.
 
 The mechanism, by contrast, replicated to three decimals: two families starting at occupancy
 0.641 and 0.653 both land on 0.522/0.523 with the index at 0.890/0.892, and the treated arm

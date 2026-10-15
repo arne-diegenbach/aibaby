@@ -29255,6 +29255,45 @@ constexpr uint32_t kCtxSelfArmCount = sizeof(kCtxSelfArms) / sizeof(kCtxSelfArms
 // ALSO REFUSES IT: a per-block contrast that changes sign, or `off`/`oracle` disagreeing
 // between a paired pair of logs, which would mean the two runs are not the same creatures.
 //
+// ============================ OUTCOME: IT CLEARS ============================
+// Run 2026-10-15, blocks 3 and 4 at reps 72-143 (ctxself-{base,g2cw2}-b{3,4}.log).
+//
+//   registered contrast  +15.22 +/- 3.56 Hz   4.3 SE   94/144 positive   CLEARS the 3.0 bar
+//
+//   block 1 discovery  +14.81 +/- 5.85     block 3 NEW  +15.02 +/- 6.71
+//   block 2 fresh      +10.51 +/- 7.36     block 4 NEW  +20.53 +/- 8.50
+//
+// All four blocks positive, so the sign-change refusal did not fire, and every pair matched
+// on `off` and `oracle`. The two blocks that had never been seen are the STRONGEST of the
+// four, which is the opposite of the shape a discovery-sample artefact makes.
+//
+// IT IS IN THE VOICE, 85% OF IT. The contrast decomposes into `ema` rising
+// +13.00 +/- 3.10 (4.2 SE, 91/144) and the matched-marginal control `ema-rnd` falling only
+// -2.21 +/- 2.16 (1.0 SE, indistinguishable from zero). The discovery half's worry -- that
+// half the gain was its control sagging -- does not survive the full sample. The voice arm
+// CLEARS THE BAR ON ITS OWN.
+//
+// AND THE SIGN TEST AGREES WITHOUT ANY DISTRIBUTIONAL ASSUMPTION: 94/144, z = +3.67.
+// Per-creature SD 42.7 Hz against the 39.9 predicted from n=72 before the run, so the power
+// calculation that chose n was sound rather than lucky.
+//
+// WHAT IT BUYS, WHICH IS THE POINT: the unclaimed `oracle - ema` gap goes from
+// +19.16 +/- 3.18 (6.0 SE) to +6.15 +/- 2.78 (2.2 SE). The treatment closes
+// +13.00 +/- 3.10 of it -- 68% -- and what remains is no longer clearly resolvable.
+// The oracle arm is BIT-IDENTICAL across the two genomes on all 144 creatures, which is the
+// specificity control: the conscience acted on the DERIVED index and on nothing else.
+//
+// THE STOPPING RULE WAS NOT NEEDED and is left standing for whoever reads this next: had it
+// landed between 2.5 and 3.0 SE that would have been a FAILURE, and no further block was
+// licensed. It cleared on the pre-committed n, which is why it counts.
+//
+// STILL OWED, and deliberately not folded into this: block 1's shipped baseline is the
+// twenty-arm `ctxself-env2.log` rather than a dedicated four-arm run, and
+// `ctxself-base.toml` exists with no log. That audit is now SAFE to run, because the claim
+// no longer depends on it: blocks 2-4 alone, all on dedicated four-arm baselines, pool to
+// +15.35 +/- 4.34 (3.5 SE, 70/108) and clear the bar without block 1 at all.
+// ===========================================================================
+//
 // ONE KNOWN HETEROGENEITY, RECORDED BEFORE THE RUN RATHER THAN DISCOVERED AFTER IT. Block
 // 1's shipped baseline is `ctxself-env2.log`, a twenty-arm run, while blocks 2-4 use
 // dedicated four-arm runs of `ctxself-base*.toml`. The creatures match exactly (`off` and
@@ -29266,7 +29305,7 @@ constexpr uint32_t kCtxSelfArmCount = sizeof(kCtxSelfArms) / sizeof(kCtxSelfArms
 // by an amount chosen after seeing it, which is the flexibility this pre-registration is
 // meant to remove. If the baseline itself is ever worth auditing, that is a separate
 // question asked after this one resolves, never folded into it.
-constexpr bool kCtxSelfFocused = true;
+constexpr bool kCtxSelfFocused = false;  // OFF again: the settle above is done.
 inline bool cs_focused_arm(const char* n) {
   return std::strcmp(n, "off") == 0 || std::strcmp(n, "oracle") == 0 ||
          std::strcmp(n, "ema") == 0 || std::strcmp(n, "ema-rnd") == 0;
