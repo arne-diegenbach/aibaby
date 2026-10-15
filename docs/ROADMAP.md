@@ -252,6 +252,37 @@ a rate-weighted centroid cannot move what a mutual-inhibition attractor is alrea
 at one of its two ends.** The creature makes two gestures in a row unprompted and can be
 taught a vowel; it cannot do both at once in this architecture.
 
+**And the phase route is closed too, with the block finally named (2026-10-15).** The
+refusal above was about *where reward lands*: it reaches the vocal module as a quantity with
+no phase-specific target to write into. So the lesson was handed a **perfect** phase index —
+the context pinned per tick to the creature's own half-centre phase, a separate bias table
+per phase, a credit window inside one phase, a faster-than-human teacher. Result:
+**+0.19 ± 0.35 Hz, 0.5 SE** against a 3 SE bar, with every precondition satisfied (presence
+1.000 on treated arms and 0.000 on all five controls, the fixed-target lesson landing at
+12.0 SE, 60.7% of credit surviving the delay).
+
+**The tables did diverge, which is what makes it a finding.** A null looks identical whether
+reward wrote phase-specifically and the formant ignored it or the write never happened, and
+those license opposite conclusions. Table divergence reads **0.0216 on both treated arms at
+70–100 SE, against exactly 0.0000 on the shared-bias arms.** Reward wrote per phase, in
+opposite directions for the two mappings, and F1 did not follow.
+
+**Naming prices that at ~40 Hz** — the same table on the same larynx carries 0.0288 → 80.1 Hz
+with a word index — so this is a **~40× shortfall**. The validating control is the
+matched-marginal arm, which diverges just as much (0.0268) and delivers nothing over no table
+at all, proving divergence must be *aligned* with the distinction; here it is aligned by
+construction. And the obvious objection fails: the 50 ms delay misdirects 37% of each write,
+worth 3.8× even if all of it subtracts.
+
+**So the block is expression, not credit assignment.** Mutual inhibition holds F1 at one of
+its two ends, and a bias written into the *correct* per-phase table still cannot shift it.
+A delay line, a synaptic tag, four word-boundary detectors and now a perfect phase index have
+all been refused on the same quantity. **This also kills a build before it started:** the
+songbird sparse-time-basis lead (a synfire chain supplying a sequential index, turning
+temporal credit into a contextual bandit) exists to *derive* this index, and an oracle version
+buys under 1 Hz. **What remains is the readout**, not the index — something other than a
+rate-weighted centroid an attractor already pins.
+
 **The corners were the named escape, and they are now measured and closed.** The surface is
 *not* separable — low drive costs the lesson **5.1× less** when inhibition is weak, exactly
 the interaction a pass needed — but it buys no gesture, because the oscillating window's

@@ -1,0 +1,298 @@
+experiment: phaseteach
+  phaseteach -- can a taught utterance occupy two phases of the
+  creature's own free-running F1 gesture?
+  the quantity  produced F1 in phase 1 minus produced F1 in phase 0
+  the evidence  the DIFFERENCE between the two mappings, because the
+                oscillator contributes to both equally and cancels
+  refused if    the two mappings come back equal, or ph_off is not ~0,
+                or ph_share is near 0 or 1 (a settled winner, not an
+                alternation, and one phase bin nearly empty)
+
+  [11/252] seed 1 fast      sep   +20.1 Hz  share 0.51  off 0.00  drop -0.0031  present 0.00
+  [10/252] seed 1 phase-sw  sep   +17.8 Hz  share 0.49  off 0.00  drop -0.0006  present 0.00
+  [2/252] seed 0 phase     sep   +18.0 Hz  share 0.48  off 0.00  drop -0.0051  present 0.00
+  [13/252] seed 1 ctx       sep   +19.0 Hz  share 0.51  off 0.00  drop +0.0016  present 1.00
+  [4/252] seed 0 fast      sep   +19.2 Hz  share 0.48  off 0.00  drop -0.0005  present 0.00
+  [5/252] seed 0 fast-sw   sep   +17.3 Hz  share 0.50  off 0.00  drop +0.0027  present 0.00
+  [8/252] seed 1 fixed     err_early 0.5153  err_late 0.4897  drop +0.0256
+  [1/252] seed 0 fixed     err_early 0.5234  err_late 0.4442  drop +0.0792
+  [3/252] seed 0 phase-sw  sep   +19.4 Hz  share 0.50  off 0.00  drop -0.0057  present 0.00
+  [12/252] seed 1 fast-sw   sep   +19.5 Hz  share 0.51  off 0.00  drop -0.0055  present 0.00
+  [6/252] seed 0 ctx       sep   +19.7 Hz  share 0.52  off 0.00  drop -0.0060  present 1.00
+  [9/252] seed 1 phase     sep   +18.8 Hz  share 0.50  off 0.00  drop -0.0071  present 0.00
+  [7/252] seed 0 ctx-sw    sep   +19.9 Hz  share 0.50  off 0.00  drop -0.0053  present 1.00
+  [14/252] seed 1 ctx-sw    sep   +20.9 Hz  share 0.50  off 0.00  drop -0.0015  present 1.00
+  [18/252] seed 2 fast      sep   +19.3 Hz  share 0.52  off 0.00  drop +0.0078  present 0.00
+  [15/252] seed 2 fixed     err_early 0.5470  err_late 0.5139  drop +0.0331
+  [19/252] seed 2 fast-sw   sep   +17.6 Hz  share 0.52  off 0.00  drop +0.0056  present 0.00
+  [22/252] seed 3 fixed     err_early 0.5246  err_late 0.4534  drop +0.0712
+  [20/252] seed 2 ctx       sep   +20.5 Hz  share 0.49  off 0.00  drop +0.0086  present 1.00
+  [23/252] seed 3 phase     sep   +19.3 Hz  share 0.52  off 0.00  drop +0.0077  present 0.00
+  [25/252] seed 3 fast      sep   +19.0 Hz  share 0.49  off 0.00  drop +0.0090  present 0.00
+  [21/252] seed 2 ctx-sw    sep   +19.6 Hz  share 0.50  off 0.00  drop +0.0126  present 1.00
+  [24/252] seed 3 phase-sw  sep   +20.1 Hz  share 0.50  off 0.00  drop +0.0091  present 0.00
+  [27/252] seed 3 ctx       sep   +20.3 Hz  share 0.48  off 0.00  drop +0.0122  present 1.00
+  [17/252] seed 2 phase-sw  sep   +17.7 Hz  share 0.53  off 0.00  drop +0.0047  present 0.00
+  [26/252] seed 3 fast-sw   sep   +20.5 Hz  share 0.51  off 0.00  drop +0.0082  present 0.00
+  [16/252] seed 2 phase     sep   +19.9 Hz  share 0.52  off 0.00  drop +0.0050  present 0.00
+  [28/252] seed 3 ctx-sw    sep   +19.1 Hz  share 0.51  off 0.00  drop +0.0109  present 1.00
+  [29/252] seed 4 fixed     err_early 0.5191  err_late 0.4940  drop +0.0251
+  [30/252] seed 4 phase     sep   +19.9 Hz  share 0.50  off 0.00  drop -0.0065  present 0.00
+  [33/252] seed 4 fast-sw   sep   +18.6 Hz  share 0.49  off 0.00  drop -0.0060  present 0.00
+  [37/252] seed 5 phase     sep   +19.5 Hz  share 0.49  off 0.00  drop +0.0002  present 0.00
+  [31/252] seed 4 phase-sw  sep   +19.0 Hz  share 0.50  off 0.00  drop -0.0069  present 0.00
+  [40/252] seed 5 fast-sw   sep   +18.1 Hz  share 0.51  off 0.00  drop +0.0038  present 0.00
+  [35/252] seed 4 ctx-sw    sep   +20.6 Hz  share 0.50  off 0.00  drop -0.0106  present 1.00
+  [34/252] seed 4 ctx       sep   +21.6 Hz  share 0.49  off 0.00  drop -0.0106  present 1.00
+  [36/252] seed 5 fixed     err_early 0.5460  err_late 0.5040  drop +0.0420
+  [32/252] seed 4 fast      sep   +21.6 Hz  share 0.50  off 0.00  drop -0.0039  present 0.00
+  [38/252] seed 5 phase-sw  sep   +19.7 Hz  share 0.51  off 0.00  drop -0.0010  present 0.00
+  [41/252] seed 5 ctx       sep   +19.6 Hz  share 0.49  off 0.00  drop -0.0027  present 1.00
+  [39/252] seed 5 fast      sep   +18.7 Hz  share 0.49  off 0.00  drop +0.0032  present 0.00
+  [42/252] seed 5 ctx-sw    sep   +17.1 Hz  share 0.50  off 0.00  drop -0.0007  present 1.00
+  [44/252] seed 6 phase     sep   +19.0 Hz  share 0.51  off 0.00  drop +0.0017  present 0.00
+  [43/252] seed 6 fixed     err_early 0.5590  err_late 0.4467  drop +0.1123
+  [46/252] seed 6 fast      sep   +19.6 Hz  share 0.51  off 0.00  drop -0.0017  present 0.00
+  [45/252] seed 6 phase-sw  sep   +19.2 Hz  share 0.49  off 0.00  drop +0.0038  present 0.00
+  [47/252] seed 6 fast-sw   sep   +20.1 Hz  share 0.51  off 0.00  drop +0.0036  present 0.00
+  [49/252] seed 6 ctx-sw    sep   +20.0 Hz  share 0.50  off 0.00  drop +0.0028  present 1.00
+  [52/252] seed 7 phase-sw  sep   +18.2 Hz  share 0.51  off 0.00  drop +0.0030  present 0.00
+  [48/252] seed 6 ctx       sep   +21.3 Hz  share 0.51  off 0.00  drop +0.0080  present 1.00
+  [51/252] seed 7 phase     sep   +16.7 Hz  share 0.52  off 0.00  drop -0.0012  present 0.00
+  [54/252] seed 7 fast-sw   sep   +18.4 Hz  share 0.52  off 0.00  drop +0.0038  present 0.00
+  [50/252] seed 7 fixed     err_early 0.5658  err_late 0.5112  drop +0.0545
+  [55/252] seed 7 ctx       sep   +19.8 Hz  share 0.52  off 0.00  drop -0.0043  present 1.00
+  [53/252] seed 7 fast      sep   +16.8 Hz  share 0.53  off 0.00  drop +0.0054  present 0.00
+  [56/252] seed 7 ctx-sw    sep   +18.6 Hz  share 0.52  off 0.00  drop +0.0075  present 1.00
+  [57/252] seed 8 fixed     err_early 0.5226  err_late 0.5034  drop +0.0191
+  [67/252] seed 9 fast      sep   +19.1 Hz  share 0.51  off 0.00  drop +0.0088  present 0.00
+  [61/252] seed 8 fast-sw   sep   +19.5 Hz  share 0.50  off 0.00  drop -0.0033  present 0.00
+  [59/252] seed 8 phase-sw  sep   +18.4 Hz  share 0.48  off 0.00  drop -0.0043  present 0.00
+  [60/252] seed 8 fast      sep   +19.7 Hz  share 0.48  off 0.00  drop +0.0027  present 0.00
+  [66/252] seed 9 phase-sw  sep   +19.4 Hz  share 0.49  off 0.00  drop +0.0043  present 0.00
+  [64/252] seed 9 fixed     err_early 0.5164  err_late 0.4535  drop +0.0629
+  [58/252] seed 8 phase     sep   +19.2 Hz  share 0.49  off 0.00  drop -0.0025  present 0.00
+  [62/252] seed 8 ctx       sep   +19.2 Hz  share 0.48  off 0.00  drop -0.0013  present 1.00
+  [63/252] seed 8 ctx-sw    sep   +19.7 Hz  share 0.50  off 0.00  drop -0.0022  present 1.00
+  [69/252] seed 9 ctx       sep   +17.7 Hz  share 0.51  off 0.00  drop +0.0052  present 1.00
+  [65/252] seed 9 phase     sep   +20.7 Hz  share 0.48  off 0.00  drop +0.0029  present 0.00
+  [68/252] seed 9 fast-sw   sep   +19.9 Hz  share 0.50  off 0.00  drop +0.0054  present 0.00
+  [70/252] seed 9 ctx-sw    sep   +20.1 Hz  share 0.50  off 0.00  drop +0.0014  present 1.00
+  [71/252] seed 10 fixed     err_early 0.5503  err_late 0.5287  drop +0.0216
+  [77/252] seed 10 ctx-sw    sep   +18.9 Hz  share 0.49  off 0.00  drop -0.0035  present 1.00
+  [74/252] seed 10 fast      sep   +17.2 Hz  share 0.47  off 0.00  drop -0.0043  present 0.00
+  [73/252] seed 10 phase-sw  sep   +18.2 Hz  share 0.47  off 0.00  drop -0.0006  present 0.00
+  [72/252] seed 10 phase     sep   +18.0 Hz  share 0.48  off 0.00  drop +0.0004  present 0.00
+  [76/252] seed 10 ctx       sep   +18.8 Hz  share 0.48  off 0.00  drop -0.0076  present 1.00
+  [79/252] seed 11 phase     sep   +20.2 Hz  share 0.49  off 0.00  drop -0.0028  present 0.00
+  [78/252] seed 11 fixed     err_early 0.5046  err_late 0.4654  drop +0.0392
+  [75/252] seed 10 fast-sw   sep   +17.5 Hz  share 0.48  off 0.00  drop -0.0019  present 0.00
+  [80/252] seed 11 phase-sw  sep   +20.2 Hz  share 0.50  off 0.00  drop -0.0013  present 0.00
+  [81/252] seed 11 fast      sep   +18.9 Hz  share 0.49  off 0.00  drop -0.0046  present 0.00
+  [82/252] seed 11 fast-sw   sep   +20.8 Hz  share 0.49  off 0.00  drop -0.0058  present 0.00
+  [83/252] seed 11 ctx       sep   +21.2 Hz  share 0.50  off 0.00  drop -0.0075  present 1.00
+  [84/252] seed 11 ctx-sw    sep   +19.3 Hz  share 0.51  off 0.00  drop -0.0058  present 1.00
+  [85/252] seed 12 fixed     err_early 0.5601  err_late 0.4792  drop +0.0809
+  [89/252] seed 12 fast-sw   sep   +19.5 Hz  share 0.51  off 0.00  drop +0.0011  present 0.00
+  [87/252] seed 12 phase-sw  sep   +20.0 Hz  share 0.52  off 0.00  drop +0.0078  present 0.00
+  [92/252] seed 13 fixed     err_early 0.4896  err_late 0.4116  drop +0.0780
+  [90/252] seed 12 ctx       sep   +19.8 Hz  share 0.50  off 0.00  drop +0.0159  present 1.00
+  [88/252] seed 12 fast      sep   +19.7 Hz  share 0.52  off 0.00  drop +0.0105  present 0.00
+  [93/252] seed 13 phase     sep   +19.5 Hz  share 0.51  off 0.00  drop -0.0161  present 0.00
+  [86/252] seed 12 phase     sep   +18.4 Hz  share 0.52  off 0.00  drop +0.0119  present 0.00
+  [94/252] seed 13 phase-sw  sep   +18.6 Hz  share 0.52  off 0.00  drop -0.0098  present 0.00
+  [91/252] seed 12 ctx-sw    sep   +21.6 Hz  share 0.49  off 0.00  drop +0.0072  present 1.00
+  [96/252] seed 13 fast-sw   sep   +18.5 Hz  share 0.51  off 0.00  drop -0.0063  present 0.00
+  [97/252] seed 13 ctx       sep   +18.9 Hz  share 0.51  off 0.00  drop -0.0291  present 1.00
+  [95/252] seed 13 fast      sep   +19.6 Hz  share 0.51  off 0.00  drop -0.0151  present 0.00
+  [98/252] seed 13 ctx-sw    sep   +20.0 Hz  share 0.51  off 0.00  drop -0.0155  present 1.00
+  [100/252] seed 14 phase     sep   +19.7 Hz  share 0.51  off 0.00  drop +0.0005  present 0.00
+  [99/252] seed 14 fixed     err_early 0.5191  err_late 0.4673  drop +0.0518
+  [101/252] seed 14 phase-sw  sep   +19.0 Hz  share 0.51  off 0.00  drop +0.0024  present 0.00
+  [102/252] seed 14 fast      sep   +19.4 Hz  share 0.49  off 0.00  drop -0.0006  present 0.00
+  [108/252] seed 15 phase-sw  sep   +18.8 Hz  share 0.50  off 0.00  drop -0.0063  present 0.00
+  [106/252] seed 15 fixed     err_early 0.5409  err_late 0.4376  drop +0.1033
+  [103/252] seed 14 fast-sw   sep   +20.3 Hz  share 0.50  off 0.00  drop +0.0018  present 0.00
+  [104/252] seed 14 ctx       sep   +21.3 Hz  share 0.49  off 0.00  drop +0.0066  present 1.00
+  [105/252] seed 14 ctx-sw    sep   +21.3 Hz  share 0.51  off 0.00  drop +0.0021  present 1.00
+  [107/252] seed 15 phase     sep   +20.0 Hz  share 0.51  off 0.00  drop -0.0008  present 0.00
+  [109/252] seed 15 fast      sep   +21.0 Hz  share 0.50  off 0.00  drop -0.0033  present 0.00
+  [110/252] seed 15 fast-sw   sep   +21.9 Hz  share 0.50  off 0.00  drop -0.0104  present 0.00
+  [111/252] seed 15 ctx       sep   +20.9 Hz  share 0.49  off 0.00  drop -0.0056  present 1.00
+  [112/252] seed 15 ctx-sw    sep   +19.2 Hz  share 0.48  off 0.00  drop -0.0069  present 1.00
+  [113/252] seed 16 fixed     err_early 0.5183  err_late 0.4499  drop +0.0683
+  [115/252] seed 16 phase-sw  sep   +16.9 Hz  share 0.48  off 0.00  drop +0.0127  present 0.00
+  [114/252] seed 16 phase     sep   +17.9 Hz  share 0.52  off 0.00  drop +0.0142  present 0.00
+  [116/252] seed 16 fast      sep   +18.3 Hz  share 0.48  off 0.00  drop +0.0159  present 0.00
+  [121/252] seed 17 phase     sep   +19.3 Hz  share 0.49  off 0.00  drop +0.0019  present 0.00
+  [117/252] seed 16 fast-sw   sep   +17.9 Hz  share 0.48  off 0.00  drop +0.0162  present 0.00
+  [118/252] seed 16 ctx       sep   +19.6 Hz  share 0.49  off 0.00  drop +0.0213  present 1.00
+  [119/252] seed 16 ctx-sw    sep   +20.0 Hz  share 0.49  off 0.00  drop +0.0157  present 1.00
+  [120/252] seed 17 fixed     err_early 0.5242  err_late 0.4054  drop +0.1188
+  [122/252] seed 17 phase-sw  sep   +19.5 Hz  share 0.51  off 0.00  drop +0.0011  present 0.00
+  [123/252] seed 17 fast      sep   +18.3 Hz  share 0.49  off 0.00  drop +0.0002  present 0.00
+  [124/252] seed 17 fast-sw   sep   +19.5 Hz  share 0.49  off 0.00  drop +0.0037  present 0.00
+  [125/252] seed 17 ctx       sep   +19.6 Hz  share 0.50  off 0.00  drop +0.0022  present 1.00
+  [126/252] seed 17 ctx-sw    sep   +20.2 Hz  share 0.50  off 0.00  drop +0.0009  present 1.00
+  [128/252] seed 18 phase     sep   +18.6 Hz  share 0.49  off 0.00  drop +0.0047  present 0.00
+  [127/252] seed 18 fixed     err_early 0.5439  err_late 0.4249  drop +0.1190
+  [129/252] seed 18 phase-sw  sep   +17.6 Hz  share 0.47  off 0.00  drop -0.0029  present 0.00
+  [132/252] seed 18 ctx       sep   +20.0 Hz  share 0.48  off 0.00  drop +0.0013  present 1.00
+  [131/252] seed 18 fast-sw   sep   +16.5 Hz  share 0.47  off 0.00  drop +0.0025  present 0.00
+  [136/252] seed 19 phase-sw  sep   +20.4 Hz  share 0.52  off 0.00  drop -0.0044  present 0.00
+  [130/252] seed 18 fast      sep   +17.5 Hz  share 0.48  off 0.00  drop -0.0015  present 0.00
+  [134/252] seed 19 fixed     err_early 0.5294  err_late 0.4625  drop +0.0669
+  [133/252] seed 18 ctx-sw    sep   +15.1 Hz  share 0.47  off 0.00  drop -0.0036  present 1.00
+  [135/252] seed 19 phase     sep   +19.6 Hz  share 0.52  off 0.00  drop +0.0031  present 0.00
+  [137/252] seed 19 fast      sep   +19.7 Hz  share 0.52  off 0.00  drop -0.0006  present 0.00
+  [138/252] seed 19 fast-sw   sep   +20.4 Hz  share 0.51  off 0.00  drop -0.0041  present 0.00
+  [139/252] seed 19 ctx       sep   +21.3 Hz  share 0.51  off 0.00  drop -0.0042  present 1.00
+  [140/252] seed 19 ctx-sw    sep   +21.1 Hz  share 0.50  off 0.00  drop -0.0044  present 1.00
+  [141/252] seed 20 fixed     err_early 0.5401  err_late 0.4875  drop +0.0526
+  [142/252] seed 20 phase     sep   +18.5 Hz  share 0.48  off 0.00  drop -0.0015  present 0.00
+  [144/252] seed 20 fast      sep   +18.5 Hz  share 0.50  off 0.00  drop -0.0008  present 0.00
+  [145/252] seed 20 fast-sw   sep   +18.1 Hz  share 0.49  off 0.00  drop -0.0088  present 0.00
+  [146/252] seed 20 ctx       sep   +19.5 Hz  share 0.49  off 0.00  drop -0.0057  present 1.00
+  [143/252] seed 20 phase-sw  sep   +20.3 Hz  share 0.48  off 0.00  drop -0.0028  present 0.00
+  [148/252] seed 21 fixed     err_early 0.5673  err_late 0.5147  drop +0.0525
+  [150/252] seed 21 phase-sw  sep   +19.5 Hz  share 0.52  off 0.00  drop -0.0100  present 0.00
+  [147/252] seed 20 ctx-sw    sep   +21.3 Hz  share 0.50  off 0.00  drop -0.0077  present 1.00
+  [151/252] seed 21 fast      sep   +20.1 Hz  share 0.51  off 0.00  drop -0.0125  present 0.00
+  [152/252] seed 21 fast-sw   sep   +19.2 Hz  share 0.51  off 0.00  drop -0.0079  present 0.00
+  [149/252] seed 21 phase     sep   +18.6 Hz  share 0.52  off 0.00  drop -0.0010  present 0.00
+  [153/252] seed 21 ctx       sep   +20.5 Hz  share 0.52  off 0.00  drop -0.0225  present 1.00
+  [154/252] seed 21 ctx-sw    sep   +19.4 Hz  share 0.51  off 0.00  drop -0.0177  present 1.00
+  [155/252] seed 22 fixed     err_early 0.5393  err_late 0.4563  drop +0.0830
+  [157/252] seed 22 phase-sw  sep   +19.5 Hz  share 0.49  off 0.00  drop +0.0026  present 0.00
+  [156/252] seed 22 phase     sep   +19.7 Hz  share 0.49  off 0.00  drop +0.0004  present 0.00
+  [158/252] seed 22 fast      sep   +18.9 Hz  share 0.52  off 0.00  drop +0.0006  present 0.00
+  [159/252] seed 22 fast-sw   sep   +18.9 Hz  share 0.51  off 0.00  drop +0.0054  present 0.00
+  [162/252] seed 23 fixed     err_early 0.5174  err_late 0.4391  drop +0.0783
+  [161/252] seed 22 ctx-sw    sep   +21.7 Hz  share 0.50  off 0.00  drop +0.0049  present 1.00
+  [160/252] seed 22 ctx       sep   +19.7 Hz  share 0.51  off 0.00  drop +0.0094  present 1.00
+  [163/252] seed 23 phase     sep   +18.1 Hz  share 0.51  off 0.00  drop -0.0111  present 0.00
+  [164/252] seed 23 phase-sw  sep   +21.0 Hz  share 0.51  off 0.00  drop -0.0131  present 0.00
+  [166/252] seed 23 fast-sw   sep   +19.2 Hz  share 0.50  off 0.00  drop -0.0186  present 0.00
+  [165/252] seed 23 fast      sep   +19.6 Hz  share 0.48  off 0.00  drop -0.0119  present 0.00
+  [167/252] seed 23 ctx       sep   +19.7 Hz  share 0.49  off 0.00  drop -0.0166  present 1.00
+  [168/252] seed 23 ctx-sw    sep   +18.2 Hz  share 0.52  off 0.00  drop -0.0235  present 1.00
+  [169/252] seed 24 fixed     err_early 0.5181  err_late 0.3674  drop +0.1507
+  [170/252] seed 24 phase     sep   +18.2 Hz  share 0.51  off 0.00  drop +0.0021  present 0.00
+  [171/252] seed 24 phase-sw  sep   +18.4 Hz  share 0.51  off 0.00  drop -0.0021  present 0.00
+  [172/252] seed 24 fast      sep   +18.4 Hz  share 0.51  off 0.00  drop +0.0043  present 0.00
+  [174/252] seed 24 ctx       sep   +18.4 Hz  share 0.52  off 0.00  drop -0.0008  present 1.00
+  [177/252] seed 25 phase     sep   +19.5 Hz  share 0.50  off 0.00  drop -0.0013  present 0.00
+  [173/252] seed 24 fast-sw   sep   +17.5 Hz  share 0.52  off 0.00  drop -0.0051  present 0.00
+  [176/252] seed 25 fixed     err_early 0.5113  err_late 0.4485  drop +0.0628
+  [175/252] seed 24 ctx-sw    sep   +16.5 Hz  share 0.50  off 0.00  drop -0.0048  present 1.00
+  [178/252] seed 25 phase-sw  sep   +20.6 Hz  share 0.50  off 0.00  drop -0.0006  present 0.00
+  [180/252] seed 25 fast-sw   sep   +19.3 Hz  share 0.50  off 0.00  drop -0.0003  present 0.00
+  [179/252] seed 25 fast      sep   +18.1 Hz  share 0.49  off 0.00  drop +0.0000  present 0.00
+  [181/252] seed 25 ctx       sep   +20.6 Hz  share 0.49  off 0.00  drop +0.0010  present 1.00
+  [182/252] seed 25 ctx-sw    sep   +19.5 Hz  share 0.50  off 0.00  drop +0.0058  present 1.00
+  [183/252] seed 26 fixed     err_early 0.5206  err_late 0.4166  drop +0.1040
+  [184/252] seed 26 phase     sep   +18.0 Hz  share 0.51  off 0.00  drop -0.0019  present 0.00
+  [186/252] seed 26 fast      sep   +19.8 Hz  share 0.49  off 0.00  drop -0.0018  present 0.00
+  [185/252] seed 26 phase-sw  sep   +20.3 Hz  share 0.50  off 0.00  drop -0.0059  present 0.00
+  [187/252] seed 26 fast-sw   sep   +18.6 Hz  share 0.48  off 0.00  drop -0.0124  present 0.00
+  [188/252] seed 26 ctx       sep   +20.2 Hz  share 0.50  off 0.00  drop +0.0000  present 1.00
+  [189/252] seed 26 ctx-sw    sep   +18.7 Hz  share 0.48  off 0.00  drop -0.0042  present 1.00
+  [191/252] seed 27 phase     sep   +17.6 Hz  share 0.49  off 0.00  drop -0.0049  present 0.00
+  [192/252] seed 27 phase-sw  sep   +18.3 Hz  share 0.49  off 0.00  drop -0.0009  present 0.00
+  [190/252] seed 27 fixed     err_early 0.5291  err_late 0.4612  drop +0.0679
+  [194/252] seed 27 fast-sw   sep   +18.7 Hz  share 0.49  off 0.00  drop +0.0012  present 0.00
+  [193/252] seed 27 fast      sep   +19.0 Hz  share 0.49  off 0.00  drop +0.0038  present 0.00
+  [195/252] seed 27 ctx       sep   +22.6 Hz  share 0.50  off 0.00  drop -0.0059  present 1.00
+  [196/252] seed 27 ctx-sw    sep   +18.6 Hz  share 0.49  off 0.00  drop -0.0004  present 1.00
+  [197/252] seed 28 fixed     err_early 0.5401  err_late 0.4898  drop +0.0503
+  [199/252] seed 28 phase-sw  sep   +20.0 Hz  share 0.50  off 0.00  drop +0.0036  present 0.00
+  [198/252] seed 28 phase     sep   +19.5 Hz  share 0.51  off 0.00  drop +0.0117  present 0.00
+  [200/252] seed 28 fast      sep   +16.6 Hz  share 0.53  off 0.00  drop +0.0060  present 0.00
+  [201/252] seed 28 fast-sw   sep   +19.7 Hz  share 0.50  off 0.00  drop +0.0022  present 0.00
+  [202/252] seed 28 ctx       sep   +19.8 Hz  share 0.50  off 0.00  drop +0.0147  present 1.00
+  [203/252] seed 28 ctx-sw    sep   +20.9 Hz  share 0.49  off 0.00  drop +0.0116  present 1.00
+  [205/252] seed 29 phase     sep   +19.9 Hz  share 0.50  off 0.00  drop -0.0037  present 0.00
+  [206/252] seed 29 phase-sw  sep   +19.1 Hz  share 0.49  off 0.00  drop +0.0000  present 0.00
+  [204/252] seed 29 fixed     err_early 0.5135  err_late 0.4817  drop +0.0318
+  [208/252] seed 29 fast-sw   sep   +19.1 Hz  share 0.49  off 0.00  drop +0.0035  present 0.00
+  [207/252] seed 29 fast      sep   +19.3 Hz  share 0.48  off 0.00  drop +0.0033  present 0.00
+  [209/252] seed 29 ctx       sep   +19.7 Hz  share 0.48  off 0.00  drop -0.0071  present 1.00
+  [210/252] seed 29 ctx-sw    sep   +20.2 Hz  share 0.49  off 0.00  drop -0.0010  present 1.00
+  [212/252] seed 30 phase     sep   +19.8 Hz  share 0.51  off 0.00  drop +0.0118  present 0.00
+  [211/252] seed 30 fixed     err_early 0.5322  err_late 0.4747  drop +0.0574
+  [214/252] seed 30 fast      sep   +18.2 Hz  share 0.48  off 0.00  drop +0.0143  present 0.00
+  [213/252] seed 30 phase-sw  sep   +20.7 Hz  share 0.49  off 0.00  drop +0.0134  present 0.00
+  [218/252] seed 31 fixed     err_early 0.5590  err_late 0.5061  drop +0.0529
+  [215/252] seed 30 fast-sw   sep   +20.1 Hz  share 0.49  off 0.00  drop +0.0128  present 0.00
+  [216/252] seed 30 ctx       sep   +20.1 Hz  share 0.50  off 0.00  drop +0.0187  present 1.00
+  [217/252] seed 30 ctx-sw    sep   +18.5 Hz  share 0.49  off 0.00  drop +0.0132  present 1.00
+  [219/252] seed 31 phase     sep   +18.3 Hz  share 0.48  off 0.00  drop -0.0004  present 0.00
+  [220/252] seed 31 phase-sw  sep   +18.4 Hz  share 0.49  off 0.00  drop +0.0024  present 0.00
+  [221/252] seed 31 fast      sep   +18.8 Hz  share 0.48  off 0.00  drop +0.0093  present 0.00
+  [222/252] seed 31 fast-sw   sep   +17.6 Hz  share 0.49  off 0.00  drop +0.0006  present 0.00
+  [223/252] seed 31 ctx       sep   +18.9 Hz  share 0.48  off 0.00  drop +0.0156  present 1.00
+  [224/252] seed 31 ctx-sw    sep   +18.9 Hz  share 0.49  off 0.00  drop +0.0139  present 1.00
+  [226/252] seed 32 phase     sep   +19.3 Hz  share 0.49  off 0.00  drop -0.0018  present 0.00
+  [225/252] seed 32 fixed     err_early 0.5434  err_late 0.4631  drop +0.0803
+  [227/252] seed 32 phase-sw  sep   +19.5 Hz  share 0.48  off 0.00  drop -0.0068  present 0.00
+  [228/252] seed 32 fast      sep   +19.1 Hz  share 0.48  off 0.00  drop -0.0107  present 0.00
+  [229/252] seed 32 fast-sw   sep   +17.7 Hz  share 0.48  off 0.00  drop -0.0060  present 0.00
+  [230/252] seed 32 ctx       sep   +19.9 Hz  share 0.48  off 0.00  drop -0.0188  present 1.00
+  [232/252] seed 33 fixed     err_early 0.5289  err_late 0.3656  drop +0.1633
+  [233/252] seed 33 phase     sep   +18.8 Hz  share 0.52  off 0.00  drop -0.0004  present 0.00
+  [235/252] seed 33 fast      sep   +19.6 Hz  share 0.52  off 0.00  drop +0.0030  present 0.00
+  [231/252] seed 32 ctx-sw    sep   +19.9 Hz  share 0.50  off 0.00  drop -0.0192  present 1.00
+  [234/252] seed 33 phase-sw  sep   +18.4 Hz  share 0.51  off 0.00  drop +0.0071  present 0.00
+  [236/252] seed 33 fast-sw   sep   +18.1 Hz  share 0.49  off 0.00  drop +0.0053  present 0.00
+  [237/252] seed 33 ctx       sep   +20.4 Hz  share 0.50  off 0.00  drop +0.0052  present 1.00
+  [238/252] seed 33 ctx-sw    sep   +21.1 Hz  share 0.50  off 0.00  drop +0.0032  present 1.00
+  [239/252] seed 34 fixed     err_early 0.5112  err_late 0.4594  drop +0.0519
+  [240/252] seed 34 phase     sep   +17.9 Hz  share 0.48  off 0.00  drop -0.0033  present 0.00
+  [242/252] seed 34 fast      sep   +19.7 Hz  share 0.50  off 0.00  drop -0.0072  present 0.00
+  [241/252] seed 34 phase-sw  sep   +18.7 Hz  share 0.48  off 0.00  drop +0.0014  present 0.00
+  [243/252] seed 34 fast-sw   sep   +17.5 Hz  share 0.48  off 0.00  drop +0.0010  present 0.00
+  [244/252] seed 34 ctx       sep   +20.4 Hz  share 0.49  off 0.00  drop -0.0061  present 1.00
+  [247/252] seed 35 phase     sep   +18.9 Hz  share 0.51  off 0.00  drop +0.0059  present 0.00
+  [246/252] seed 35 fixed     err_early 0.5502  err_late 0.5034  drop +0.0468
+  [248/252] seed 35 phase-sw  sep   +19.6 Hz  share 0.50  off 0.00  drop +0.0074  present 0.00
+  [249/252] seed 35 fast      sep   +19.9 Hz  share 0.52  off 0.00  drop +0.0114  present 0.00
+  [245/252] seed 34 ctx-sw    sep   +21.1 Hz  share 0.49  off 0.00  drop -0.0023  present 1.00
+  [250/252] seed 35 fast-sw   sep   +18.1 Hz  share 0.50  off 0.00  drop +0.0041  present 0.00
+  [251/252] seed 35 ctx       sep   +19.5 Hz  share 0.50  off 0.00  drop +0.0144  present 1.00
+  [252/252] seed 35 ctx-sw    sep   +19.8 Hz  share 0.49  off 0.00  drop +0.0144  present 1.00
+
+  arm           n     F1 ph0    F1 ph1  separation (ph1-ph0)    share    off  err drop (early-late)
+  fixed         0          -         -  (one phase bin empty)    0.00   0.00  +0.0683 +/- 0.0057  
+  phase        36      616.6     635.5  +19.0 +/- 0.1 Hz         0.50   0.00  +0.0004 +/- 0.0010  
+  phase-sw     36      615.5     634.7  +19.2 +/- 0.2 Hz         0.50   0.00  +0.0000 +/- 0.0010  
+  fast         36      615.5     634.6  +19.1 +/- 0.2 Hz         0.50   0.00  +0.0010 +/- 0.0012  
+  fast-sw      36      615.5     634.4  +18.9 +/- 0.2 Hz         0.50   0.00  -0.0002 +/- 0.0012  
+  ctx          36      615.0     635.0  +20.0 +/- 0.2 Hz         0.50   0.00  -0.0000 +/- 0.0019  
+  ctx-sw       36      615.6     635.3  +19.6 +/- 0.2 Hz         0.50   0.00  -0.0004 +/- 0.0016  
+  DID THE LESSON LAND     error early minus late on `fixed`, whose target does NOT
+                          flip within a trial:  +0.0683 +/- 0.0057  (12.0 SE, n=36)
+  CREDIT RESOLUTION  vocal tau_elig 100 ms (global 2000 x scale 0.050) against a phase of ~666 ms  ->  0.2 phases per trace
+  CREDIT DELIVERY    of the credit standing at the event, the share left when the praise lands:
+                      500 ms teacher    0.7%          50 ms teacher   60.7%
+
+  THE MAPPING CONTRAST, paired on seed (identity minus swapped)
+    teacher   contrast                 SE    n   credit delivered
+     500 ms     -0.2 +/-   0.2 Hz     1.1   36   starved (the control)
+      50 ms     +0.2 +/-   0.2 Hz     0.9   36   the ORACLE arm
+  the two arms carry the SAME narrow credit window and so the same ability
+  to tell the phases apart. They differ in the DELAY alone, which is the
+  only axis the first run could not vary.
+
+  NOT EVEN A FAST TEACHER REACHES THE PHASE. The two mappings are
+  indistinguishable (+0.2 +/- 0.2 Hz, under 3 SE) at power to see a
+  separation of 0.7 Hz, with a credit window inside one phase and a
+  teacher fast enough to deliver it. The phase difference in the table is
+  the OSCILLATOR and reward has no purchase on it.
+
+  THIS IS THE RESULT THE RUN WAS BUILT TO GET. The delay was the last
+  free parameter: resolution and delivery are both satisfied here and the
+  lesson still cannot aim the gesture. So the gap is not the credit
+  PATHWAY, and building a delay line or a synaptic tag would buy nothing --
+  the cheap oracle refuses the expensive build, which is what it was for.
+  What is left is that reward reaches the vocal module as a quantity with
+  no phase-specific target to write INTO; see the axis-collision line.

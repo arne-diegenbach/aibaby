@@ -17578,6 +17578,83 @@ Because transmission is faithful once width is held, every hertz added to one cr
 conditional voice is inherited by its whole lineage without loss — which is what makes a
 13 Hz gain in production worth a 7-hour run.
 
+### A perfect phase index buys nothing: the block is expression, not credit (2026-10-15)
+
+`phaseteach` refused the phase-targeted lesson on eight cells, and its own verdict named the
+cause: reward reaches the vocal module as a quantity with **no phase-specific target to write
+into**. That is a claim about a missing place to write, not about delivery or resolution —
+which is why the delay line and the synaptic tag were refused on it. The conditional bias is
+exactly a target per context, and it works whenever the index is good. So the obvious test is
+to hand the lesson a *perfect* phase index and see whether a phase lesson lands at all.
+
+The context can be pinned per tick to the creature's own half-centre phase, so the bias table
+follows the gesture. One new cell completes a 2×2:
+
+| | shipped window | narrow window |
+|---|---|---|
+| shared bias | null, measured | null, measured |
+| **phase table** | ambiguous by construction | **this run** |
+
+The narrow window is required rather than optional: the cash-in writes to whichever phase is
+active at that instant, and at the shipped `tau_elig` of 2000 ms against a ~136 ms phase the
+trace spans about fifteen phases, so a phase-specific *place* would receive phase-*mixed*
+content and a null would be unreadable. At `elig_tau_scale 0.05` the trace is ~100 ms and
+fits inside one phase.
+
+**Every precondition was satisfied.** Context presence 1.000 on the treated arms and 0.000 on
+all five controls; the `fixed` lesson landing at **+0.0683 ± 0.0057 (12.0 SE)**, so teaching
+works on this genome; 60.7% of credit surviving the fast delay; the gesture alive at sep
+19–20 Hz on 80–130 SE. And:
+
+```
+(ctx − ctx-sw) − (fast − fast-sw)   +0.19 ± 0.35 Hz   0.5 SE   below the 3 SE bar
+```
+
+3 SE here is 1.05 Hz against a 19 Hz gesture, so this means **"under about 1 Hz"**, never
+"zero".
+
+**The tables did diverge, which is what makes this a finding rather than a null.** A null
+looks identical whether reward wrote phase-specifically and the formant ignored it, or the
+write never happened at all — and those license opposite conclusions. `ctx_table_div` reads
+**0.02159 on both treated arms, at 70.9 and 100.1 SE, against exactly 0.00000 on the
+shared-bias arms.** Reward wrote per phase, in opposite directions for the two mappings, and
+produced F1 did not follow.
+
+**Naming prices what that should have bought**, using the same table on the same larynx:
+
+| arm | table divergence | delivered dF1 | |
+|---|---|---|---|
+| `oracle` | 0.0288 | 80.1 Hz | host-written word index |
+| `ema` | 0.0280 | 74.4 Hz | the creature's own derived index |
+| `ema-rnd` | 0.0268 | 23.5 Hz | diverges, index **uninformative** |
+| `off` | 0.0000 | 22.5 Hz | no table at all |
+
+That is roughly 1900–2000 Hz of F1 per unit of divergence over the no-table baseline, so
+0.0216 should buy **~40 Hz**. It bought under 1.1 — a **~40× shortfall**. The `ema-rnd` row is
+what makes the argument valid: it diverges as much as `ema` and delivers nothing over `off`,
+because its index does not track the word. Divergence alone is insufficient; it must be
+*aligned* with the distinction being made. Here the index is perfectly aligned **by
+construction**, so the run sits in the aligned regime and still gets nothing.
+
+**The obvious objection, checked and refused.** The 50 ms delay pushes 50/136 = 37% of each
+write into the next phase's table. Even assuming all of it *subtracts* from the contrast, that
+is a 3.8× attenuation. It cannot account for 40×.
+
+**So the block is expression, not credit assignment — and that unifies with the composition
+closure.** Four generations of `hcsweep` found no (gain, drive) operating point where the
+gesture and the lesson compose; this says why. Mutual inhibition holds F1 at one of its two
+ends, and a bias written into the *correct* per-phase table still cannot shift it. A delay
+line, a synaptic tag, four word-boundary detectors and now a perfect phase index have all
+been refused on the same quantity.
+
+**And it kills a build before it was started.** The sparse-time-basis lead from the songbird
+literature — a synfire chain supplying a sequential time index, which is how Fee's account
+turns temporal credit into a contextual bandit where each moment is learned separately — had
+been the strongest open lead. Its job would be to *derive* this index. An oracle version of
+it buys under 1 Hz, so deriving it buys at most that. One run, a build avoided. What remains
+is the **readout**: something other than a rate-weighted centroid that an attractor already
+pins.
+
 ## Layout
 
 ```

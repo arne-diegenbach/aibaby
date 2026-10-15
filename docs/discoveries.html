@@ -1317,6 +1317,70 @@ contradicts an older record, test its power before believing it &mdash; the tidi
 not automatically the right one.</p>
 
 
+<h3>6.9 Supplying a perfect version of the missing mechanism, and pricing what it should
+have bought</h3>
+<p>An experiment here refused a phase-targeted lesson on eight configurations and its verdict
+named a cause: reward reaches the vocal module as a quantity with <em>no phase-specific target
+to write into</em>. That is a claim about a missing place to write rather than about timing,
+and it is the reason a delay line and a synaptic tag were both refused without being built.
+The creature already has a mechanism that provides a target per context &mdash; a bias table
+indexed by a context signal, which works whenever the index is informative. So the cheap test
+is to supply a <em>perfect</em> index and ask whether the lesson lands at all.</p>
+<p>The context was pinned, every tick, to the creature's own oscillator phase, giving reward a
+separate bias table per phase. The credit window was narrowed twentyfold so the eligibility
+trace (~100&nbsp;ms) fits inside one phase (~136&nbsp;ms); without that a phase-specific
+<em>place</em> to write would receive phase-<em>mixed</em> content and a null would be
+unreadable. Every precondition was then satisfied: context presence 1.000 on the treated arms
+and 0.000 on all five controls, a fixed-target lesson landing at 12.0&nbsp;SE on the same
+genome, 60.7% of credit surviving the delay, and the gesture alive at 19&ndash;20&nbsp;Hz.</p>
+<p>The taught phase separation came back
+<strong>+0.19&nbsp;&plusmn;&nbsp;0.35&nbsp;Hz (0.5&nbsp;SE)</strong> against a 3&nbsp;SE bar.
+Three standard errors is 1.05&nbsp;Hz against a 19&nbsp;Hz gesture, so the refusal means
+&ldquo;under about one hertz&rdquo;, never &ldquo;zero&rdquo;.</p>
+<p><strong>The result is not that null. It is a diagnostic that was nearly left out.</strong>
+A null of this shape is ambiguous in a way that matters: either reward wrote phase-specifically
+and the formant ignored it, or the write never happened and the mechanism never engaged. Those
+license opposite conclusions, and nothing in the headline number separates them. The quantity
+that does &mdash; the mean absolute difference between the two context tables &mdash; already
+existed in the shared return structure and this experiment simply did not carry it.</p>
+<table>
+<tr><th>arm</th><th>table divergence</th><th>delivered formant difference</th><th></th></tr>
+<tr><td>word index, host-written</td><td>0.0288</td><td>80.1&nbsp;Hz</td><td>the oracle</td></tr>
+<tr><td>word index, derived</td><td>0.0280</td><td>74.4&nbsp;Hz</td><td>the creature's own</td></tr>
+<tr><td>matched-marginal control</td><td><strong>0.0268</strong></td><td><strong>23.5&nbsp;Hz</strong></td><td>diverges; index uninformative</td></tr>
+<tr><td>no context table</td><td>0.0000</td><td>22.5&nbsp;Hz</td><td>baseline</td></tr>
+<tr class="last"><td><strong>phase index, per tick</strong></td><td><strong>0.0216</strong></td><td><strong>&lt; 1.1&nbsp;Hz</strong></td><td>70&ndash;100&nbsp;SE of divergence</td></tr>
+</table>
+<p>The treated arms diverged by 0.0216 at 70 and 100&nbsp;SE against <em>exactly</em> zero on
+the shared-bias arms, in opposite directions for the two mappings. <strong>Reward did write per
+phase, and the formant did not follow.</strong> The upper rows then price what that should have
+bought: roughly 1900&ndash;2000&nbsp;Hz of formant difference per unit of divergence over the
+no-table baseline, so 0.0216 should be worth about <strong>40&nbsp;Hz</strong>. A
+<strong>forty-fold shortfall</strong>, in a run that could resolve 1.05.</p>
+<p>The third row is what makes that argument valid rather than rhetorical. It diverges as much
+as the working arm and delivers nothing over having no table at all, because its index does not
+track the word. <strong>Divergence alone is insufficient; it has to be aligned with the
+distinction being drawn.</strong> In the phase run the index is aligned by construction, so the
+comparison is between two aligned cases. And the obvious objection fails on arithmetic: the
+reward delay misdirects 50/136 = 37% of each write into the neighbouring phase's table, worth a
+3.8&times; attenuation even if all of it subtracts.</p>
+<p><strong>So the obstacle is expression, not credit assignment</strong>, and that unifies with
+a separate closure reached the same week: twelve cells across a two-parameter plane found no
+operating point where the oscillator and the lesson coexist (&sect;8). This says why. Mutual
+inhibition holds the formant at one of its two ends, and a bias written into the
+<em>correct</em> per-phase table still cannot shift it.</p>
+<p class="note">The wider value was avoiding a build. The songbird literature's account of
+temporal credit &mdash; a sparse sequential representation of time, so that each moment becomes
+a separate context and reward can be assigned per moment &mdash; had been the most promising
+unbuilt direction here, and the machinery for it (a propagating chain) already existed switched
+off. Its job would have been to <em>derive</em> this index. An oracle version of the same index
+buys under one hertz, so a derived one buys at most that. The method generalises: when a
+verdict names a missing mechanism, supply a perfect version of it before building a real one,
+instrument the perfect version so its null is interpretable, and price the outcome against a
+working use of the same mechanism elsewhere in the system. That is what turned &ldquo;no
+effect&rdquo; into &ldquo;forty times short, and the block is downstream&rdquo;.</p>
+
+
 <h2>7. Transmission between creatures</h2>
 <h3>7.1 One creature teaches another: a learned distinction crosses to a second individual
 through the air, and narrows on the way</h3>

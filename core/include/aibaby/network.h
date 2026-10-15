@@ -295,7 +295,19 @@ class Network {
   // so if identity matters anyway, something else is not symmetric and this says so
   // before another mechanism is built on a guess.
   void pin_context(uint32_t slot) { ctx_pin_ = int32_t(slot); }
-  void clear_context_pin() { ctx_pin_ = -1; }
+  // AN ORACLE INDEX IS PRESENT BY DEFINITION, and `pin_context` alone is not, which cost a
+  // smoke to discover. Both the context bias READ and its WRITE are gated on
+  // `ctx_present_`, and the pin overrides only `active_ctx_` -- so pinning a slot while no
+  // context SOURCE is running leaves presence false, the write falls through to the shared
+  // `bias_`, and the arm silently becomes a copy of the unpinned one. `phaseteach`'s phase
+  // arms have no context drive at all and read presence 0.000 on exactly that path.
+  //
+  // This is a SEPARATE entry point rather than a change to `pin_context`, because the
+  // existing pin users (`ctxgain`) run with a real context source whose presence is already
+  // true, and quietly altering what their arms mean to fix a different experiment is how a
+  // published number stops matching its own log.
+  void pin_context_oracle(uint32_t slot) { ctx_pin_ = int32_t(slot); ctx_pin_present_ = true; }
+  void clear_context_pin() { ctx_pin_ = -1; ctx_pin_present_ = false; }
 
   // EXPERIMENT ONLY -- MATCHED RANDOM EXCURSIONS, the control the sparse-switch
   // result needs. No genome field, off by default, pinned hash unmoved.
@@ -1225,6 +1237,7 @@ class Network {
   Scalar ctx_conscience_gain_ = kOne;
   uint32_t ctx_committed_ = 0;    // slots actually allocated so far, 0 = none yet
   int32_t ctx_pin_ = -1;          // experiment-only forced context slot, -1 = off
+  bool ctx_pin_present_ = false;  // with the pin, also force `ctx_present_` true
   Scalar ctx_noise_p_ = kZero;    // experiment-only excursion probability per tick
   uint32_t ctx_noise_dwell_ = 0;  // ...and how many ticks each excursion lasts
   uint32_t ctx_noise_left_ = 0;   // ticks remaining in the current excursion

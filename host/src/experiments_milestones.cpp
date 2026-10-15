@@ -4442,7 +4442,15 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
                              // creature is rewarded TOWARD; this replaces what it HEARS, so
                              // the two channels can be pointed at the same tutor. nullptr
                              // keeps every caller bit-identical.
-                             const Word* heard_table = nullptr) {
+                             const Word* heard_table = nullptr,
+                             // `phasectx`: hand the conditional bias an ORACLE PHASE INDEX
+                             // by pinning the context to the creature's own half-centre
+                             // phase, per tick. The phase target modes already read that
+                             // phase to pick a target; this makes the bias TABLE follow it
+                             // too, so reward has a phase-specific place to write instead
+                             // of a shared one. Appended at the END by this signature's own
+                             // convention, and false keeps every caller bit-identical.
+                             bool pin_phase = false) {
   // -1 is vocallearn's own rule, and passing nothing reproduces it exactly: the
   // positive control aims at one fixed target and every other arm at the word
   // that was heard.
@@ -4876,6 +4884,34 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
                               ? s.brain.network().halfcenter_phase(uint32_t(vmod_hc))
                               : -1;
         if (phase >= 0) {
+          // THE ORACLE PHASE INDEX, applied on the same tick the phase is read. The pin
+          // overrides every context source, so the conditional bias reads AND writes the
+          // table belonging to the phase the creature is in right now. Off unless the
+          // caller asks, so no shipped configuration and no other arm changes.
+          //
+          // WHY: `phaseteach` refused the phase lesson on eight cells, and its verdict was
+          // that reward reaches the vocal module as a quantity with NO PHASE-SPECIFIC
+          // TARGET TO WRITE INTO -- not a delivery or resolution problem, which is why the
+          // delay line and the synaptic tag were refused on it. The conditional bias IS a
+          // target per context and it works when the index is good (areax v51/v53, four
+          // words). This hands the lesson a PERFECT phase index and asks whether a phase
+          // lesson lands at all. A refusal closes the line a third time and kills the
+          // chain build before it starts; a pass names the missing variable.
+          //
+          // THE TRAP, found by reading network.cpp before building rather than after. The
+          // pin overrides `active_ctx_` but NOT `ctx_present_`, and the context write at
+          // network.cpp ~2875 is gated on presence -- so pinning alone falls through to
+          // the shared `bias_[i]`, which is exactly the behaviour that already fails. The
+          // genome must carry `context_slots >= 2`, and `ctx_present_frac` must be checked
+          // NONZERO on a smoke BEFORE any budget is spent. That check is the pre-flight.
+          //
+          // AND THE PIN IS NOT SUFFICIENT ON ITS OWN, which the run has to be designed
+          // around: the cash-in writes to whichever phase is active at that instant, while
+          // the eligibility trace is tau_elig 2000 ms against a ~136 ms phase -- about
+          // fifteen phases per trace. So a phase-specific PLACE to write still receives
+          // phase-MIXED content unless the credit window is narrowed with it. The narrowed
+          // window already exists and was run; what has never been run is the two together.
+          if (pin_phase) s.brain.network().pin_context_oracle(uint32_t(phase));
           const uint32_t raw = uint32_t(phase) % nw;
           const uint32_t pw = tgt == kVLTgtPhaseSwap ? (nw - 1u - raw) : raw;
           ph_word = tgt_table ? &tgt_table[pw] : &kWords[pw];
@@ -9924,23 +9960,151 @@ bool run_phaseteach(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
   // known NEGATIVE. A control that is already known not to work cannot establish that
   // teaching works, and it would have voided every run of this experiment for a reason
   // that has nothing to do with the question.
-  struct PTArm { const char* name; int tgt; uint64_t delay; };
+  // GENERATION 4: THE ORACLE PHASE INDEX, and it is the last cell of a 2x2.
+  //
+  // Everything above refused the phase lesson while reward wrote into a SHARED bias. The
+  // experiment's own verdict names that as the cause -- reward arrives as a quantity with
+  // no phase-specific target to write INTO -- and the conditional bias is exactly a target
+  // per context, working whenever the index is good (areax v51/v53, four words). So the
+  // missing cell hands the lesson a PERFECT phase index by pinning the context to the
+  // creature's own half-centre phase per tick, and asks whether a phase lesson lands when
+  // it finally has somewhere to go.
+  //
+  //                      shared table          phase table (pin)
+  //   shipped window     null, measured        ambiguous by construction
+  //   narrow window      null, measured        <- THE NEW CELL
+  //
+  // The narrow window is REQUIRED and the diagonal is why. The cash-in writes to whichever
+  // phase is active at that instant; at the shipped tau_elig 2000 ms against a ~136 ms
+  // phase the trace spans about fifteen phases, so a phase-specific PLACE to write would
+  // receive phase-MIXED content and a null would not be readable. This genome narrows the
+  // vocal window 20x (elig_tau_scale 0.05 -> tau_elig ~100 ms), which fits inside one
+  // phase. Run on `results/hc-phase-ctx.toml`, which is `hc-phase-fast.toml` with
+  // `context_slots` 0 -> 2 and nothing else.
+  //
+  // THE PRE-FLIGHT THAT DECIDES WHETHER THE RUN MEANS ANYTHING: the per-tick pin overrides
+  // `active_ctx_` but NOT `ctx_present_`, and the context write is gated on presence. If
+  // `ctx_present_frac` reads zero the pin is inert, the write fell through to the shared
+  // bias, and the `ctx` arms are a re-run of `fast` wearing a different name. CHECK IT
+  // NONZERO ON A SMOKE BEFORE SPENDING A BUDGET.
+  //
+  // IT FAILED TWICE BEFORE IT PASSED, which is the whole value of running it. Setting
+  // `context_slots = 2` on a gesture genome read `present 0.000` on every arm, because
+  // `ctx_slots_` is zeroed at hatch unless the genome HAS a module whose role is "context"
+  // (network.cpp:523) and the gesture genomes have six modules and no context one. Then
+  // `pin_context` alone still read 0.000, because the pin names a slot without asserting
+  // presence -- fixed by `pin_context_oracle`, a separate entry point so `ctxgain`'s
+  // existing pinned arms keep meaning exactly what they meant. On `results/phasectx.toml`
+  // it now reads present 1.000 on `ctx`/`ctx-sw` and 0.000 on all five controls: live
+  // exactly where asked and nowhere else.
+  //
+  // ===================== PRE-REGISTERED, BEFORE THE RUN =====================
+  // THE GENOME: `results/phasectx.toml` = ctxself-base.toml (which is default plus the 7th
+  // "context" module) plus the four scalars that make the gesture, the vocal credit window
+  // narrowed 20x, and context_slots 2. Six fields, listed in the build script. Adding a
+  // module re-rolls the wiring, so this is NOT hc-phase's creature and no absolute number
+  // here may be quoted against one from there. Every arm shares THIS genome, so the
+  // within-run contrasts below are unaffected -- which is the reason the design is a
+  // difference of differences rather than a cross-genome comparison.
+  //
+  // THE STATISTIC: `sep` is produced F1 in phase 1 minus phase 0. The identity and swapped
+  // mappings cancel the oscillator's own phase difference, so the taught effect is
+  //        (sep_ctx - sep_ctx-sw)  -  (sep_fast - sep_fast-sw)
+  // paired by creature. The second bracket is the SAME quantity with the shared bias, on
+  // the same creatures in the same run, and is the project's measured null. So this asks
+  // one question only: does giving reward a phase-specific PLACE to write make a phase
+  // lesson land, with target, delay, window and genome all held.
+  //
+  // THE BAR: 3 SE on that difference of differences, the project's standing bar.
+  //
+  // VOID UNLESS the `fixed` arm's lesson lands (err_early - err_late clearly positive) --
+  // the fourth rung. A genome on which teaching does not work at all cannot answer this,
+  // and `fixed` is at the fast delay precisely so a failure there is the genome's and not
+  // the delivery's. NOTE that a smoke CANNOT check this: the lesson does not equilibrate
+  // at 200k (+0.027 there against +0.1243 at full budget), and this smoke read -0.0036.
+  //
+  // ALSO VOID IF `ctx_present_frac` is not ~1.0 on the ctx arms and ~0.0 on the others, or
+  // if either phase bin is near-empty, which would mean the gesture died rather than the
+  // lesson failing.
+  //
+  // WHAT A REFUSAL MEANS, written down now so it cannot be softened later: reward cannot
+  // aim at a phase even when handed a PERFECT phase index, a separate table per phase, a
+  // credit window that fits inside one phase, and a caregiver faster than any human. That
+  // closes the phase-teaching line for the third time and kills the sparse-time-basis
+  // build before it starts -- the chain would be supplying an index this run proves is not
+  // the missing piece. A PASS names the missing variable and makes the chain worth building.
+  //
+  // ================== OUTCOME: REFUSED, AND IT NAMES THE BLOCK ==================
+  // results/phaseteach-ctx2.log, 7 arms x 36 creatures. Every void check passed: presence
+  // 1.000 on the ctx arms and 0.000 on all five controls, the `fixed` lesson landing at
+  // +0.0683 +/- 0.0057 (12.0 SE), 60.7% of credit surviving the fast delay.
+  //
+  //   (ctx - ctx-sw) - (fast - fast-sw)   +0.19 +/- 0.35 Hz   0.5 SE   below the 3 SE bar
+  //
+  // Power: 3 SE is 1.05 Hz against a 19 Hz gesture, so this means "under about 1 Hz" and
+  // never "zero". A first run without the diagnostic gave the SAME numbers to the decimal,
+  // which is the check that adding the measurement did not perturb what it measures.
+  //
+  // THE TABLES DIVERGED, which is the whole reason the diagnostic was added: ctx_table_div
+  // reads 0.02159 on both ctx arms at 70.9 and 100.1 SE, against EXACTLY 0.00000 on the
+  // shared-bias arms. So reward DID write per phase, in opposite directions for the two
+  // mappings, and the formant did not follow. The two readings of a null are therefore
+  // settled: this is not "the write never happened".
+  //
+  // AND NAMING PRICES WHAT THAT SHOULD HAVE BOUGHT. The same table on the same larynx,
+  // indexed by WORD, carries divergence 0.0288 -> dF1 80.1 Hz (`oracle`) and 0.0280 ->
+  // 74.4 (`ema`), about 1900-2000 Hz per unit over the no-table baseline. At that price
+  // 0.0216 should buy ~40 Hz. It bought under 1.1. A ~40x SHORTFALL.
+  //
+  // THE CONTROL THAT MAKES THAT ARGUMENT VALID is `ema-rnd`: it diverges just as much
+  // (0.0268) and delivers nothing over `off` (23.5 vs 22.5), because its index does not
+  // track the word. Divergence alone is not sufficient -- it must be ALIGNED with the
+  // distinction. Here the index is perfectly aligned BY CONSTRUCTION, so the run sits in
+  // the aligned regime and still gets nothing.
+  //
+  // THE OBVIOUS OBJECTION, CHECKED AND REFUSED: the 50 ms delay pushes 50/136 = 37% of each
+  // write into the next phase's table. Even assuming all of it SUBTRACTS from the contrast,
+  // that is a 3.8x attenuation. It cannot account for 40x.
+  //
+  // SO THE BLOCK IS EXPRESSION, NOT CREDIT ASSIGNMENT, and this unifies with the
+  // composition closure. Four generations of `hcsweep` found no (gain, drive) operating
+  // point where gesture and lesson compose; this says why -- mutual inhibition holds F1 at
+  // one of its two ends, and a bias written into the correct per-phase table still cannot
+  // shift it. The delay line, the synaptic tag, a word-boundary detector and now a perfect
+  // phase index have all been refused on the same quantity.
+  //
+  // THE SPARSE-TIME-BASIS LEAD IS DEAD, as pre-registered. A synfire chain's job would be
+  // to DERIVE this index; an oracle version of it bought under 1 Hz, so deriving it buys
+  // at most that. Do not build the chain for this purpose, and do not re-open phase
+  // teaching by improving the index. What is left is the READOUT: something other than a
+  // rate-weighted centroid an attractor already pins.
+  // ==============================================================================
+  struct PTArm { const char* name; int tgt; uint64_t delay; bool pin; };
   static const PTArm kPT[] = {
       // At the FAST delay, matching the arm the verdict rests on. A control at the
       // shipped 500 ms would be delivery-starved on this genome (0.7% of credit) and
       // would fail for the window's reason rather than the genome's, which is the
       // whole distinction the run exists to make.
-      {"fixed",    int(kVLTgtFixed),     kPTFastDelayTicks},
-      {"phase",    int(kVLTgtPhase),     kRewardDelayTicks},
-      {"phase-sw", int(kVLTgtPhaseSwap), kRewardDelayTicks},
-      {"fast",     int(kVLTgtPhase),     kPTFastDelayTicks},
-      {"fast-sw",  int(kVLTgtPhaseSwap), kPTFastDelayTicks},
+      {"fixed",    int(kVLTgtFixed),     kPTFastDelayTicks, false},
+      {"phase",    int(kVLTgtPhase),     kRewardDelayTicks, false},
+      {"phase-sw", int(kVLTgtPhaseSwap), kRewardDelayTicks, false},
+      {"fast",     int(kVLTgtPhase),     kPTFastDelayTicks, false},
+      {"fast-sw",  int(kVLTgtPhaseSwap), kPTFastDelayTicks, false},
+      // THE NEW CELL and its swap. Same target, same fast delay, same narrow window as
+      // `fast`/`fast-sw` -- the ONLY difference is that the bias table follows the phase.
+      // So `ctx - ctx-sw` against `fast - fast-sw` is the effect of giving reward a
+      // phase-specific place to write, with everything else held.
+      {"ctx",      int(kVLTgtPhase),     kPTFastDelayTicks, true},
+      {"ctx-sw",   int(kVLTgtPhaseSwap), kPTFastDelayTicks, true},
   };
   // kReps 18 -> 36. The credit-window lead this run exists to settle sat at 2.2 SE on 18
   // creatures (+0.0256 +/- 0.0117 unpaired across two genomes), and reaching 3 SE needs
   // the SE at 0.0085 or below, which is (0.0117/0.0085)^2 = 1.9x the creatures. Pairing
   // should tighten it further, and the per-creature rows above now make that possible.
-  constexpr uint32_t kN = 5, kReps = 36;
+  constexpr uint32_t kN = 7, kReps = 36;
+  // Tied to the table rather than restated. `kN = 5` against a six-arm table would run
+  // five arms and print the sixth's name on the fifth's numbers, silently.
+  static_assert(kN == sizeof(kPT) / sizeof(kPT[0]), "kN must match the arm table");
   std::printf("  phaseteach -- can a taught utterance occupy two phases of the\n"
               "  creature's own free-running F1 gesture?\n");
   std::printf("  the quantity  produced F1 in phase 1 minus produced F1 in phase 0\n");
@@ -9949,8 +10113,18 @@ bool run_phaseteach(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
   std::printf("  refused if    the two mappings come back equal, or ph_off is not ~0,\n"
               "                or ph_share is near 0 or 1 (a settled winner, not an\n"
               "                alternation, and one phase bin nearly empty)\n\n");
+  // `pr` is the context PRESENCE fraction, and it is here because without it the `ctx`
+  // arms cannot be distinguished from a re-run of `fast`. The per-tick phase pin overrides
+  // the context INDEX but not presence, and the context write is gated on presence -- so
+  // if this reads zero the write fell through to the shared bias and the arm is vacuous.
+  // `dv` is ctx_table_div, mean |bias[i][0] - bias[i][1]| over the larynx, and it is what
+  // tells the two readings of a null apart. If the phase tables DIVERGED and F1 did not
+  // follow, the index was never the missing piece and the obstacle is the attractor's grip
+  // on the centroid. If they never diverged, the write was not phase-specific despite the
+  // pin and the run licenses nothing. A null looks identical either way, so without this
+  // the experiment cannot do the job it was built for.
   struct Cell { bool ok = false; double sep = 0, f0 = 0, f1 = 0, share = 0, off = 0,
-                       taught = 0, e0 = 0; };
+                       taught = 0, e0 = 0, pr = 0, dv = 0; };
   const std::vector<Cell> cells = parallel_reps<Cell>(kReps * kN, [&](uint32_t i) {
     const uint32_t r = i / kN, a = i % kN;
     Cell c;
@@ -9961,14 +10135,22 @@ bool run_phaseteach(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
     reg.praise = kPraiseValue;
     reg.scold = kScoldValue;
     reg.delay = kPT[a].delay;
+    // The defaulted arguments are spelled out only to reach `pin_phase`, which this
+    // signature's convention puts last. Every value here is the default, so the five
+    // pre-existing arms are bit-identical to what they were before the parameter existed.
     const VLRun run = run_vocallearn_session(variant, ticks, kVLTaught, nullptr, reg,
-                                             kPT[a].tgt);
+                                             kPT[a].tgt, /*ctx=*/nullptr, kVLScoreFormant,
+                                             /*bias=*/nullptr, kVLWords,
+                                             /*tgt_table=*/nullptr, /*ramp=*/nullptr,
+                                             /*chase=*/nullptr, /*pmask=*/nullptr,
+                                             /*tgt_axis=*/nullptr, /*heard_table=*/nullptr,
+                                             kPT[a].pin);
     if (!run.ok) return c;
     if (run.ph_n[0] < 50 || run.ph_n[1] < 50) {
       // Not an error: `held` legitimately has no phase bins when the half-centre is
       // off, and an arm with one empty bin has no separation to report.
       c.ok = true; c.off = run.ph_off; c.share = run.ph_share; c.taught = run.err_late;
-      c.e0 = run.err_early;
+      c.e0 = run.err_early; c.pr = run.ctx_present_frac; c.dv = run.ctx_table_div;
       // PRINT THE PER-CREATURE DROP, because the mean alone cannot be PAIRED. The
       // fixed-target arm lands here (no phase bins), and it is the arm the fourth rung
       // and the credit-window comparison both read. Two runs reported its drop only as a
@@ -9988,10 +10170,12 @@ bool run_phaseteach(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
     c.off = run.ph_off;
     c.taught = run.err_late;
     c.e0 = run.err_early;
+    c.pr = run.ctx_present_frac;
+    c.dv = run.ctx_table_div;
     parallel_note("  [%u/%u] seed %u %-9s sep %+7.1f Hz  share %.2f  off %.2f  "
-                  "drop %+.4f\n",
+                  "drop %+.4f  present %.2f  tabdiv %.5f\n",
                   i + 1, kReps * kN, r, kPT[a].name, c.sep, c.share, c.off,
-                  c.e0 - c.taught);
+                  c.e0 - c.taught, c.pr, c.dv);
     return c;
   });
   std::vector<double> sep[kN];

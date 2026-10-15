@@ -1972,8 +1972,15 @@ void Network::step() {
   // EXPERIMENT-ONLY PIN, applied after every source has had its say so it overrides
   // all of them. Off by default (-1) and the shipped creature never sets it, which
   // is why the pinned hash does not move.
-  if (ctx_pin_ >= 0 && ctx_slots_ > 0)
+  if (ctx_pin_ >= 0 && ctx_slots_ > 0) {
     active_ctx_ = uint32_t(ctx_pin_) < ctx_slots_ ? uint32_t(ctx_pin_) : 0u;
+    // An ORACLE index is present by definition. Without this the pin names a slot that
+    // neither the bias read nor the bias write will look at, because both are gated on
+    // `ctx_present_` -- so the arm runs on the shared bias and silently equals its own
+    // control. Set only through `pin_context_oracle`, so `pin_context`'s existing callers
+    // are untouched and the shipped creature, which pins nothing, is bit-identical.
+    if (ctx_pin_present_) ctx_present_ = true;
+  }
   // EXPERIMENT-ONLY MATCHED EXCURSIONS, applied last so it overrides the pin too.
   // Deterministic from the tick counter (splitmix64), so no RNG stream moves and the
   // arm reproduces exactly. Off by default; the pinned hash does not move.
