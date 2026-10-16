@@ -1,0 +1,65 @@
+experiment: tutorgrid
+  instrument        tutorgrid   trial seed 0000000001355b68   2428 trials per generation
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  tutorgrid -- does a FOUR-SIGNAL conditional code cross the air? ctxgrid
+  names four on both axes with a HOST index; tutorwide transmits TWO with
+  the pupil's own derived index. Nobody has run the two together.
+  the code      kGridWords, the 2x2 ctxgrid established -- two F1 levels x
+                two F2 levels, every target inside the MEASURED learned
+                reach. Two BITS on two axes, not four levels on one:
+                ctxfour read four levels on ONE axis at chance.
+  the arms      g0-oracle (ctx_src 0) and g0-self (ctx_src 4) separate the
+                two unknowns, so a failure says WHICH failed; then `wide`
+                and `flip` carry the mapping with the width held.
+  the bars      g0-self clears 3 SE on BOTH bits (prerequisite); `wide`
+                clears 3 SE on both at generation 2 (primary); `flip`
+                ALTERNATES SIGN between generations (inheritance, and
+                without it a positive primary is VOID -- the tape
+                re-imposes a width whether or not anything is inherited).
+  18 lineages, 3 generations, 6 sessions per lineage.
+
+  [13/18] lineage 12  oracle +104.1/+168.7  self  +28.3/  -8.0  wide  +19.0/ -25.6 ->   -3.1/-139.0  flip  -11.5/ +13.2 ->   +0.2/-140.7
+  [6/18] lineage 5  oracle  +73.1/+190.0  self  +52.2/  +2.9  wide  +21.6/ -17.5 ->  +16.1/ -92.1  flip  -49.8/  +2.9 ->  +58.5/  +9.5
+  [14/18] lineage 13  oracle  +94.9/+188.8  self  +32.1/ +59.8  wide  +11.0/ +20.6 ->  +39.4/  +0.5  flip  -30.6/  -0.5 ->  +12.6/  -2.9
+  [2/18] lineage 1  oracle  +78.1/+184.7  self  +51.5/ -21.9  wide   +4.5/ -98.4 ->  +17.6/ -74.8  flip   -6.1/  +2.5 ->  +33.8/ -49.9
+  [7/18] lineage 6  oracle +104.8/+189.4  self  +61.0/  -2.1  wide  +47.5/  -7.1 ->  +39.5/ -15.7  flip  -24.4/ +16.9 ->  +15.8/ -10.7
+  [12/18] lineage 11  oracle  +91.0/+191.3  self  +29.7/ -21.3  wide  +25.8/-135.0 ->  +16.6/  -1.7  flip  -21.3/+113.9 ->   -2.6/-128.0
+  [1/18] lineage 0  oracle  +88.0/+109.6  self  +21.5/+138.7  wide  -50.2/ +27.2 ->   -6.0/  +6.4  flip  -36.1/ -38.5 ->  +27.8/  +3.6
+  [4/18] lineage 3  oracle  +99.3/ +73.8  self  +32.4/ +11.7  wide  +58.3/ +44.6 ->  +33.7/ +81.0  flip  -48.5/ -20.9 ->   +9.2/+149.2
+  [11/18] lineage 10  oracle  +73.5/+151.7  self  +35.6/ +13.0  wide  +33.8/  -5.0 ->  +51.5/  +9.0  flip   +0.2/ -85.9 ->   -4.3/ -29.4
+  [16/18] lineage 15  oracle  +81.4/+149.7  self  +76.2/  +7.6  wide  +41.3/ +14.5 ->   +7.3/+151.1  flip  -33.5/ +36.9 ->   +6.9/-103.5
+  [18/18] lineage 17  oracle  +83.4/+139.0  self  +56.6/ +26.6  wide   -4.5/+120.8 ->  -24.9/ +17.7  flip   -8.8/ -98.2 ->  +52.7/ +88.1
+  [3/18] lineage 2  oracle  +74.4/+211.6  self  +54.4/ -20.8  wide  +22.9/ -18.0 ->   -4.6/  +5.7  flip  -22.0/  +5.0 ->  +41.8/ +13.6
+  [17/18] lineage 16  oracle  +83.5/+159.2  self  +32.3/  -4.5  wide  +57.5/ +10.9 ->  -11.5/  -0.2  flip  -34.6/ +11.3 ->  +26.2/  -0.2
+  [9/18] lineage 8  oracle  +87.5/ +53.3  self   +9.1/ +31.2  wide  +14.0/+100.7 ->  +12.2/ -15.8  flip  -21.1/ -10.0 ->  +41.3/ -14.7
+  [10/18] lineage 9  oracle  +64.1/+119.2  self  +60.6/ +17.6  wide  +45.1/ +23.7 ->   +6.5/ +40.8  flip  -55.8/  -8.1 ->  +15.8/  -7.9
+  [8/18] lineage 7  oracle  +32.6/+169.2  self  +64.8/  +3.6  wide  +24.7/  -3.7 ->  +14.4/ -95.3  flip  -29.7/  +6.8 ->   +4.0/-122.3
+  [5/18] lineage 4  oracle  +70.7/+127.1  self  +38.5/  +0.2  wide  +33.4/  -4.7 ->  +24.8/-147.7  flip  -25.0/  -3.7 ->  +48.6/  -1.7
+  [15/18] lineage 14  oracle  +73.8/+102.5  self  +20.9/ -13.4  wide  +43.2/  -0.4 ->  +18.7/  +3.2  flip  -34.9/ -12.4 ->  +24.1/  +1.4
+
+  GENERATION 0 -- THE PREREQUISITE, and the two unknowns are separate
+    arm        bit F1 (Hz)          bit F2 (Hz)
+    oracle     +81.0 +/-   4.0      +148.8 +/-  10.4
+    self       +42.1 +/-   4.3       +12.3 +/-   8.9   <- must clear 3 SE
+
+  THE CHAINS, per generation, both bits
+    gen    wide bit F1        wide bit F2        flip bit F1        flip bit F2
+    0     +42.1 +/-  4.3     +12.3 +/-  8.9     +42.1 +/-  4.3     +12.3 +/-  8.9
+    1     +24.9 +/-  6.0      +2.6 +/- 13.8     -27.4 +/-  3.6      -3.8 +/- 10.5
+    2     +13.8 +/-  4.6     -14.8 +/- 17.4     +22.9 +/-  4.6     -19.3 +/- 17.1
+
+  INHERITANCE -- the flip chain must ALTERNATE, lineage by lineage
+    bit F1 alternates in 17 of 18 lineages
+    bit F2 alternates in 11 of 18 lineages
+    A re-imposed code holds one sign; an inherited one flips with the tape.
+
+  THE PREREQUISITE FAILS, AND IT NAMES WHICH UNKNOWN. A derived index
+  across FOUR contexts does not produce a two-bit code: self reads
+  +42.1/+12.3 Hz against 4.3/8.9 of error.
+
+  AND THE ORACLE ARM CLEARS (+81.0/+148.8 Hz), so the production is fine
+  and the LIMIT IS THE DERIVED INDEX AT FOUR CONTEXTS. That names its own
+  lever: DNA v70's conscience gain sharpens exactly this partition and
+  just closed 68% of the oracle gap at TWO contexts. Re-run with it on
+  before concluding anything about four.

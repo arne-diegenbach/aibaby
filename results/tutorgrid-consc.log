@@ -1,0 +1,66 @@
+experiment: tutorgrid
+  instrument        tutorgrid   trial seed 0000000001355b68   2428 trials per generation
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  tutorgrid -- does a FOUR-SIGNAL conditional code cross the air? ctxgrid
+  names four on both axes with a HOST index; tutorwide transmits TWO with
+  the pupil's own derived index. Nobody has run the two together.
+  the code      kGridWords, the 2x2 ctxgrid established -- two F1 levels x
+                two F2 levels, every target inside the MEASURED learned
+                reach. Two BITS on two axes, not four levels on one:
+                ctxfour read four levels on ONE axis at chance.
+  the arms      g0-oracle (ctx_src 0) and g0-self (ctx_src 4) separate the
+                two unknowns, so a failure says WHICH failed; then `wide`
+                and `flip` carry the mapping with the width held.
+  the bars      g0-self clears 3 SE on BOTH bits (prerequisite); `wide`
+                clears 3 SE on both at generation 2 (primary); `flip`
+                ALTERNATES SIGN between generations (inheritance, and
+                without it a positive primary is VOID -- the tape
+                re-imposes a width whether or not anything is inherited).
+  18 lineages, 3 generations, 6 sessions per lineage.
+
+  [2/18] lineage 1  oracle  +78.1/+184.7  self  +23.2/ +97.8  wide  +48.4/  +4.7 ->  +26.5/+150.3  flip  -33.3/ -36.6 ->  +36.4/ +58.1
+  [6/18] lineage 5  oracle  +73.1/+190.0  self  +30.2/+201.7  wide  +31.1/+131.9 ->  +48.1/ +67.4  flip  -48.0/ -46.0 ->  +38.2/ +22.2
+  [17/18] lineage 16  oracle  +83.5/+159.2  self  +30.1/+111.6  wide  +24.7/+162.8 ->  +31.8/+198.2  flip   -5.4/-128.6 ->  +28.9/+172.8
+  [13/18] lineage 12  oracle +104.1/+168.7  self  +33.9/+139.7  wide  +11.4/+239.5 ->   +6.6/+187.2  flip  -11.2/-134.4 ->  +47.6/ +88.0
+  [7/18] lineage 6  oracle +104.8/+189.4  self  +37.7/  -4.0  wide  +51.2/  -9.0 ->  +16.5/-171.5  flip  -41.1/ +29.5 ->  +40.2/ -46.9
+  [14/18] lineage 13  oracle  +94.9/+188.8  self  +52.1/ +54.1  wide  +43.4/ +62.3 ->  +14.7/ +69.5  flip  -22.6/ -88.4 ->  +19.0/+116.3
+  [11/18] lineage 10  oracle  +73.5/+151.7  self  +34.1/ +62.8  wide   +9.9/ +90.2 ->  +13.6/+148.9  flip  -19.6/-153.4 ->  +26.1/+167.9
+  [1/18] lineage 0  oracle  +88.0/+109.6  self  +16.2/+151.8  wide  +15.3/ +29.5 ->  +38.9/ +80.9  flip  -19.0/-168.4 ->  +27.6/ +18.2
+  [4/18] lineage 3  oracle  +99.3/ +73.8  self  +47.2/ +67.2  wide  +35.1/+183.6 ->  +44.1/ +52.8  flip  -46.3/  +3.0 ->  +39.5/-142.0
+  [5/18] lineage 4  oracle  +70.7/+127.1  self  +66.5/+108.4  wide  +59.5/ +84.7 ->  +20.1/+113.2  flip  -43.3/ -56.8 ->  +10.8/+144.1
+  [9/18] lineage 8  oracle  +87.5/ +53.3  self  +36.1/  -4.6  wide  +23.6/-127.9 ->  +51.3/  +9.5  flip   -3.3/ +65.6 ->  +44.8/ -61.1
+  [3/18] lineage 2  oracle  +74.4/+211.6  self  +58.3/ +16.6  wide  +30.0/ -15.1 ->  +21.0/-190.8  flip  -15.8/  +2.8 ->   +6.3/-136.4
+  [18/18] lineage 17  oracle  +83.4/+139.0  self  +27.3/+106.0  wide   +8.8/+134.3 ->  +12.5/+104.5  flip  -33.4/  +0.6 ->   +9.4/-207.3
+  [12/18] lineage 11  oracle  +91.0/+191.3  self  +32.9/ +95.6  wide  +16.1/+167.2 ->   +9.4/+106.7  flip  -24.6/-161.1 ->  +18.8/+114.3
+  [15/18] lineage 14  oracle  +73.8/+102.5  self  +36.9/ +80.7  wide  +18.3/+153.5 ->  +15.4/+186.1  flip  -15.6/-182.0 ->  +11.9/+157.0
+  [10/18] lineage 9  oracle  +64.1/+119.2  self  +42.4/ +49.2  wide  +68.6/ +77.6 ->  +39.8/+102.8  flip  -12.5/-106.7 ->   +2.9/+131.4
+  [8/18] lineage 7  oracle  +32.6/+169.2  self  +48.8/+148.7  wide  +49.2/ +38.3 ->  +47.1/ +71.5  flip  -18.2/-121.1 ->  +10.8/+123.0
+  [16/18] lineage 15  oracle  +81.4/+149.7  self  +23.9/+171.8  wide  +25.3/+132.1 ->   -1.8/ +67.7  flip   -6.5/-151.0 ->   +7.5/+171.8
+
+  GENERATION 0 -- THE PREREQUISITE, and the two unknowns are separate
+    arm        bit F1 (Hz)          bit F2 (Hz)
+    oracle     +81.0 +/-   4.0      +148.8 +/-  10.4
+    self       +37.6 +/-   3.0       +91.9 +/-  13.7   <- must clear 3 SE
+
+  THE CHAINS, per generation, both bits
+    gen    wide bit F1        wide bit F2        flip bit F1        flip bit F2
+    0     +37.6 +/-  3.0     +91.9 +/- 13.7     +37.6 +/-  3.0     +91.9 +/- 13.7
+    1     +31.7 +/-  4.2     +85.6 +/- 21.0     -23.3 +/-  3.4     -79.6 +/- 18.1
+    2     +25.3 +/-  3.8     +75.3 +/- 25.0     +23.7 +/-  3.5     +49.5 +/- 28.4
+
+  INHERITANCE -- the flip chain must ALTERNATE, lineage by lineage
+    bit F1 alternates in 18 of 18 lineages
+    bit F2 alternates in 18 of 18 lineages
+    A re-imposed code holds one sign; an inherited one flips with the tape.
+
+  A FOUR-SIGNAL CODE CROSSES THE AIR. Both bits clear 3 SE at generation
+  2 (+25.3 +/- 3.8 and +75.3 +/- 25.0 Hz) on a derived index, and the
+  flipped chain ALTERNATES in 18 and 18 of 18 lineages -- so the mapping
+  is inherited rather than re-imposed by the tape.
+
+  WHAT THIS IS: a small creature learns a four-signal conditional code,
+  derives the condition from its own ear, and passes the code to a
+  different individual through the air -- twice, without the convention
+  decaying. That is the project's stated goal, demonstrated end to end
+  rather than assembled from separate runs.

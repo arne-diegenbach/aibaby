@@ -12,19 +12,28 @@ pinned hash `ad96f882becbee92`. Sample sizes are creatures, not trials.
 ## The one-paragraph state
 
 The creature hears, babbles, hears itself, is taught a vowel by praise alone, repeats a
-word, and answers. It **names**: four words in two formant dimensions, and nine words name
-as well as six. It does say two things in a row,
-unprompted: a population half-centre gives it a free-running two-phase vocal gesture that
-reaches the formant. What it cannot do is be *taught* two — a phase-targeted lesson produces
-no learning at any credit window or reward delay, while a fixed-target lesson on the same
-creatures reaches 18 SE, and turning the gesture on costs four fifths of even that.
-**It composes in space and not in time, and the generator and the lesson are in tension at
-every operating point in the window, not merely at the one they were measured at.** Three
-sweeps across both axes and the crossing between them put the two requirements on disjoint
-stretches with a resolved gap — 3.7 SE at the closest approach. That is the single blocker
-between where it is and speech, and it is now a measured property of this architecture
-rather than a tuning problem: a scalar reward writing into a rate-weighted centroid cannot
-move what a mutual-inhibition attractor is already holding at one of its two ends.
+word, and answers. It **names**: four words in two formant dimensions, on a context index it
+derives from its own ear, and nine words name as well as six. It says two things in a row
+unprompted — a population half-centre gives it a free-running two-phase vocal gesture that
+reaches the formant at 30–44 SE with no reward at all. **And it teaches another creature what
+it knows**, faithfully enough that a lineage loses nothing over four generations.
+
+What it cannot do is be *taught* two things in a row. A phase-targeted lesson produces no
+learning at any credit window or reward delay, nor with a delay line, a synaptic tag, a
+faster-than-human teacher, or a **perfect phase index** — that last at 0.5 SE with the
+per-phase bias tables provably diverging at 70–100 SE, which locates the obstacle in
+*expression* rather than in credit assignment. **It composes in space and not in time**, and
+the reason is now a measured property of the architecture rather than a tuning problem: a
+scalar reward writing into a rate-weighted centroid cannot move what a mutual-inhibition
+attractor is already holding at one of its two ends. Four sweeps across both axes, the
+crossing between them and the corners put the two requirements on disjoint stretches with a
+resolved gap — 3.7 SE at the closest approach.
+
+**That bounds how general the creature can be; it does not bound what it is for.** Everything
+refused above is an attempt to exceed a specification the creature already meets, and the
+specification is written out in the next section. Read that way the project is not stuck
+against a blocker — it has finished characterising its creature, and the characterisation is
+a working design.
 
 **And it can teach another creature what it knows.** A pupil hearing only its tutor's
 recorded vowels, with no host target, acquires the tutor's word-to-vowel convention at
@@ -33,6 +42,86 @@ over four generations, and stubbornly enough to lock in an inverted convention t
 a near-tie. So the ceiling on what a lineage can say is the ceiling on what *one* creature
 can produce, which makes production width the highest-leverage quantity in the project
 rather than the line of diminishing returns it looked like.
+
+## The specification, which is what the refusals add up to
+
+Added 2026-10-16, and it is a reframe rather than a new result. **Every refusal in this
+project bounds *generality*; none of them bounds *function*.** Read together they stop being
+a list of things that failed and become a design document for the creature this project set
+out to build — a small one, trainable for one specific purpose, on low power. Each clause
+below is a measured result with its own entry in `README.md`:
+
+| the creature's native code | the measurement that fixes it |
+|---|---|
+| **≤4 signals, laid out on *both* formant axes** — not four levels on one | four levels on one axis read at chance even with a perfect index (0.279); the 2×2 grid reads 5.6 SE on F1 and 4.0 SE on F2 at n=36 |
+| **each signal a held vowel, with no structure inside it** | a phase-targeted lesson is null on a delay line, a synaptic tag, a narrowed credit window, a faster-than-human teacher, and a *perfect* phase index — the last at 0.5 SE with the bias tables provably diverging |
+| **the condition derived by the creature itself** | its own index matches a host-supplied perfect one on behaviour (−1.0 ± 6.0 Hz), and DNA v70 added +15.22 ± 3.56 more |
+| **taught toward fixed targets, not imitated from heard ones** | +24% error reduction toward a fixed target against −0.1% toward a heard one |
+| **~96 Hz per distinction, with the ask kept inside reach** | naming hits **0.958** when targets sit inside the learned reach; outside it, dF1 ~ aligned^0.61 makes every further hertz unaffordable |
+| **rhythm available, at a price paid in lesson strength** | the gesture is free-running at 30–44 SE with no reward; at 3.2 Hz of depth the lesson keeps 94% of its no-gesture value, at 10 Hz it keeps 36% |
+| **and the whole code inherited faithfully** | no detectable loss over four generations (1.4 SE), with arbitrary conventions locking in |
+
+**Two framings in this file were too strong and are corrected here.** "They do not compose"
+is about *time*, not about coexistence: a gesture and a taught identity do run together, and
+the trade is on the gesture's *depth*. What cannot be done is make the two halves of a
+gesture say different things, because that degree of freedom belongs to the oscillator and is
+not plastic. And "turning the gesture on costs four fifths of the lesson" is the cost at the
+operating point chosen for the gesture's swing, not a general one — at low inhibition the
+gesture is nearly free.
+
+**What the specification implies about the work.** The remaining open items are no longer
+"find the mechanism that lifts the ceiling"; the ceilings are measured and the escape routes
+are priced and closed. They are: *use the creature inside its specification*, and find out
+where the specification itself binds. The first question of that kind is §0.
+
+### 0. Does the specification hold end to end? — MET, over two generations
+
+Each half is established and the composition has never been run. `ctxgrid` names four
+signals on both axes with a **host** index; `tutorwide` transmits **two** between distinct
+individuals with each pupil deriving its **own** index, at no loss over four generations.
+`tutorgrid` runs the two together: a four-signal two-bit code, 18 lineages, three
+generations, with generation 0 run twice — on a host index and a derived one — so a failure
+says *which* unknown failed instead of leaving the run uninterpretable.
+
+The bars are pre-registered in the source: generation 0 on the derived index clears 3 SE on
+**both** bits (prerequisite); the widened chain clears 3 SE on both at generation 2
+(primary); and the flipped chain **alternates sign** between generations (inheritance —
+without which a positive primary is void, because the tape re-imposes the host's width on
+both axes whether or not anything was inherited). The F2 bit's power limit is named in
+advance: 18 lineages is `tutorwide`'s n, not the n at which ctxgrid's F2 side established,
+so an F2 bit landing between 2 and 3 SE is **underpowered, not null**, and the follow-up is
+a pre-committed larger n.
+
+**It holds.** The first run refused and named its own lever: on a host index both bits are
+strong (F1 +81.0 at 20.5 SE, F2 +148.8 at 14.4 SE), on the derived index the F1 bit forms
+(+42.1, 9.9 SE) and the F2 bit is **8% of the oracle's** (+12.3 ± 8.9, 1.4 SE) — so
+production was fine and the limit was the derived index at four contexts. Not underpowered
+but absent: at n=144 it would read 3.9 SE while still being 8% of the magnitude, and a bar
+cleared only by adding creatures is not a bit forming.
+
+The second run switched on the one measured lever for that partition — DeSieno's conscience
+at DNA v70's settled gain, two genome fields, nothing rebuilt. The oracle arm came back
+**bit-identical** (max |diff| 0.0000), which is what licenses the paired comparison:
+
+```
+PRIMARY     bit F2, paired consc − base   +79.68 ± 15.43  (5.2 SE)   MET
+SECONDARY   bit F1, paired consc − base    −4.44 ±  5.16  (0.9 SE)   did NOT fall
+generation 2    F1 +25.31 ± 3.81 (6.6 SE)      F2 +75.27 ± 25.03 (3.0 SE)
+INHERITANCE flip alternates 18 of 18 lineages on BOTH bits, z = +4.24 each
+```
+
+So: *a small low-power creature learns a four-signal conditional code, derives the condition
+from its own ear, and passes it to the next individual intact* — demonstrated end to end
+rather than assembled from separate runs.
+
+**Three limits, stated because the bars were close.** The F2 bit at generation 2 is *exactly*
+on the 3 SE bar. The decay improved from 4.3 SE to 2.6 SE and is no longer established, but
+the improvement itself is 1.9 SE and is *also* not established. And this is **two**
+generations where `tutorwide` ran five.
+
+**The next run is depth, and it is cheap:** raise the chain from 3 generations to 5 on the
+conscience genome and ask whether the four-signal code holds where the two-signal one did.
+The experiment, the genome and the analysis all exist; nothing needs building.
 
 ## What is settled, and therefore not to re-open
 

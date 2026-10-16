@@ -17655,6 +17655,64 @@ it buys under 1 Hz, so deriving it buys at most that. One run, a build avoided. 
 is the **readout**: something other than a rate-weighted centroid that an attractor already
 pins.
 
+### A four-signal code crosses the air, on an index the creature derives itself (2026-10-16)
+
+Two things in this project each worked and had never been run together. `ctxgrid` names four
+signals on **both** articulator axes — a 2×2 of two F1 levels by two F2 levels, every target
+inside the measured learned reach — at F1 5.6 SE and F2 4.0 SE on n=36, using a *host*
+index. `tutorwide` transmits **two** signals between distinct individuals, with each pupil
+deriving the condition from its **own** ear, faithfully enough that a lineage loses nothing
+over four generations and arbitrary conventions lock in. `tutorgrid` runs them together: a
+four-signal two-bit code down a lineage, 18 lineages × 3 generations × 6 sessions.
+
+Three design choices did the work. **Generation 0 runs twice**, on a host index and a derived
+one, so a failure says *which* unknown failed instead of leaving the run uninterpretable.
+**The flip arm is not optional** — the tape re-imposes the host's width on both axes, so a
+widened chain carries a wide code whether or not anything was inherited, and only an
+*alternating* sign distinguishes the two. **Which is why it needs three generations**: with
+one step there is no alternation to observe. `tutorwide`'s first version dropped exactly this
+and its flip chain held one sign.
+
+**The first run failed its bar, and named the lever.**
+
+| arm | bit F1 | bit F2 |
+|---|---|---|
+| oracle index | +81.0 ± 4.0 (20.5 SE) | +148.8 ± 10.4 (14.4 SE) |
+| **derived index** | +42.1 ± 4.3 (9.9 SE) | **+12.3 ± 8.9 (1.4 SE)** — 8% of the oracle's |
+
+So production was fine and the limit was the derived index at four contexts. The F1 bit *did*
+cross (+24.9 at generation 1, +13.8 at generation 2) and was genuinely inherited — the flip
+chain alternated in **17 of 18 lineages, z = +3.77** — but it decayed, gen 2 − gen 0 =
+−28.3 ± 6.6 (4.3 SE), where a two-signal code loses nothing over four generations. And the F2
+bit was not *underpowered* but **absent**: at n=144 it would read 3.9 SE while still being 8%
+of the oracle's magnitude, and a bar cleared only by adding creatures is not a bit forming.
+
+**The second run turned on the one measured lever for exactly that partition** — DeSieno's
+conscience at DNA v70's settled gain, two genome fields, nothing rebuilt. The two runs share
+creatures and **the oracle arm proves it**: gate 2 touches only source 4's per-tick path, so
+source 0 came back bit-identical, max |diff| **0.0000** on both bits.
+
+```
+PRIMARY     bit F2, paired consc − base   +79.68 ± 15.43  (5.2 SE)   MET
+SECONDARY   bit F1, paired consc − base    −4.44 ±  5.16  (0.9 SE)   did NOT fall
+generation 2    F1 +25.31 ± 3.81 (6.6 SE)      F2 +75.27 ± 25.03 (3.0 SE)
+INHERITANCE flip alternates 18 of 18 lineages on BOTH bits, z = +4.24 each
+```
+
+**A four-signal conditional code crosses the air**, on an index the creature derives from its
+own ear, inherited rather than re-imposed, holding over two generations. That is this
+project's stated goal — a small creature trainable for one specific purpose — demonstrated
+end to end rather than assembled from separate runs.
+
+**Three limits, because the bars were close.** The F2 bit at generation 2 sits *exactly* on
+the 3 SE bar (+75.27 ± 25.03) and must not be quoted as though it were comfortably past it.
+The decay improved from 4.3 SE to 2.6 SE and is no longer established — but the improvement
+itself is +15.96 ± 8.32 (1.9 SE) and is *also* not established, so the prediction that
+sharpening the partition would stop the decay is suggestive rather than shown. And this is
+**two** generations where `tutorwide` ran five; depth is the obvious next run. Strictly, the
+conscience is not free either: the F1 bit's 4.4 Hz drop is unresolvable at this n rather than
+absent.
+
 ## Layout
 
 ```

@@ -30945,6 +30945,423 @@ inline double vg_predict(const double* mean, const double* lvl, uint32_t n, doub
   return acc / double(n);
 }
 
+
+// --- tutorgrid: does a FOUR-SIGNAL conditional code cross the air? -----------------
+//
+// THE STATE THIS ANSWERS, and it is a composition of parts that each WORK rather than
+// another attempt on something refused.
+//
+//   `ctxgrid`   four-word naming on BOTH articulator axes, at n=36: paired excess over
+//               its own no-index arm +0.137 +/- 0.023 (6.0 SE), F1 +0.126 (5.6 SE) and
+//               F2 +0.082 (4.0 SE). The 2x2 layout is what rescued it -- `ctxfour` read
+//               four words along ONE axis at chance with a PERFECT index. So the code
+//               here is TWO BITS on two axes, not four levels on one.
+//   `tutorwide` a TWO-signal convention crosses between distinct individuals and holds:
+//               |dF1| 85.6 +/- 5.5 at generation 4 against 96.1 +/- 5.1 at generation 0,
+//               1.4 SE, NO detectable loss -- with each pupil deriving its own index
+//               (ctx_slots 2, ctx_src 4) and 5 of 18 lineages locking the INVERTED
+//               convention at full strength.
+//   `aimaxes`   F2 swings 961 Hz with 0.00 cross-talk into F1, so the two bits are
+//               physically independent in production rather than two names for one.
+//
+// NOBODY HAS RUN THE TWO TOGETHER. `ctxgrid` names four with an ORACLE index and never
+// transmits; `tutorwide` transmits two with a DERIVED index. The claim this run would
+// support is the project's own goal stated plainly: a small creature learns a four-signal
+// conditional code, uses it on the world, and passes it to the next individual intact.
+//
+// ================== PRE-REGISTERED, BEFORE THE RUN ==================
+// THE TWO UNKNOWNS ARE SEPARATED RATHER THAN STACKED, which is why generation 0 is run
+// twice. `ctxgrid`'s four-word result used a host-written index; a DERIVED index across
+// four contexts has never been measured. Running both at generation 0 means a failure
+// says WHICH thing failed instead of leaving the run uninterpretable.
+//
+//   g0-oracle   generation 0, ctx_src 0 -- is a two-bit code learnable here AT ALL?
+//   g0-self     generation 0, ctx_src 4 -- the PREREQUISITE: four contexts on the
+//               creature's own derived index. Also the tape every later generation reads.
+//   wide        generations 1-2, derived index, taught toward its tutor's own production
+//               with each axis re-spread to the host's log half-distance and the tutor's
+//               ORDER carried. The MAPPING propagates; the WIDTH is held.
+//   flip        the same with BOTH bits exchanged at EVERY step.
+//
+// WHY THE FLIP ARM IS NOT OPTIONAL, and why this run needs THREE generations. The tape
+// re-imposes the host's width on both axes, so a widened chain always carries a wide code
+// whether or not anything was inherited -- a positive result could be manufactured
+// entirely by the tape. The only thing that distinguishes them is that an exchanged
+// mapping must ALTERNATE: generation 1 opposite to its tutor, generation 2 opposite
+// again. With a single generation step there is no alternation to observe. `tutorwide`'s
+// first version dropped the inherited order and its flip chain went +7.1, -10.8, -15.9,
+// -16.3 -- holding one sign instead of alternating, because the sign was being set fresh
+// every step. That is the failure mode this arm exists to catch, and it has happened.
+//
+// THE STATISTIC. Per generation, two numbers. `kGridWords` puts words {0,1} at low F1 and
+// {2,3} at high F1; {0,2} at low F2 and {1,3} at high F2, so each bit is a two-group
+// contrast on its own axis, read on the geometric mean of the PRODUCED formant:
+//     bit F1 = sqrt(f1[2] f1[3]) - sqrt(f1[0] f1[1])
+//     bit F2 = sqrt(f2[1] f2[3]) - sqrt(f2[0] f2[2])
+// Every word needs its own minimum utterance count or a bit is read off one utterance.
+//
+// THE BARS, fixed here:
+//   PREREQUISITE  `g0-self` must clear 3 SE on BOTH bits. If it does not while
+//                 `g0-oracle` does, the limit is the DERIVED INDEX at four contexts and
+//                 the run names its own lever -- DNA v70's conscience gain, which just
+//                 closed 68% of the oracle gap at two contexts. If NEITHER clears, four
+//                 signals are beyond this creature's production and that is the finding.
+//   PRIMARY       `wide` clears 3 SE on BOTH bits at generation 2.
+//   INHERITANCE   `flip` must ALTERNATE SIGN between generations 1 and 2 on both bits,
+//                 on a clear majority of chains. If it holds one sign the width is
+//                 re-imposing the code, nothing is inherited, and the primary result is
+//                 VOID rather than positive.
+//
+// WHAT A PARTIAL RESULT MEANS, written now so it is not softened later. The two bits are
+// measured separately and may differ: F2's naming side is the weaker of the two in
+// `ctxgrid` (4.0 SE against 5.6). If the F1 bit transmits and the F2 bit does not, the
+// honest claim is a ONE-bit code crossing at four contexts' worth of index -- still a
+// result, because it would separate the index's capacity from production's, and it must
+// be reported that way rather than as "the code transmits".
+//
+// AND THE POWER LIMIT ON THE F2 BIT IS NAMED IN ADVANCE, because 18 lineages is the n
+// `tutorwide` used and NOT the n at which ctxgrid's F2 side established: that side read
+// 2.3 SE at n=18 and 4.0 SE at n=36. The quantity here is different -- produced Hz rather
+// than a nearest-target probability -- so its SE cannot be predicted from ctxgrid's. The
+// rule is therefore: an F2 bit landing BETWEEN 2 AND 3 SE IS NOT A NULL, it is
+// UNDERPOWERED, and the follow-up is a pre-committed larger n chosen from the SE this run
+// measures, exactly as DNA v70 was settled. Reporting an underpowered F2 bit as "the
+// second bit does not transmit" is the error this clause exists to forbid.
+// =====================================================================
+//
+// ============ OUTCOME: TWO RUNS, AND THE SECOND ONE MEETS IT ============
+// RUN 1, `results/tutorgrid.log`, the conscience OFF. The prerequisite FAILED and the
+// double generation-0 arm did its job -- it named which unknown failed.
+//
+//   arm      bit F1                 bit F2
+//   oracle   +81.0 +/- 4.0 (20.5)   +148.8 +/- 10.4 (14.4)
+//   self     +42.1 +/- 4.3 ( 9.9)    +12.3 +/-  8.9 ( 1.4)   <- 8% of the oracle's
+//
+// So production was fine and the limit was the DERIVED INDEX at four contexts. The F1 bit
+// did cross (gen 1 +24.9, gen 2 +13.8) and was genuinely inherited -- the flip chain
+// alternated in 17 of 18 lineages, z = +3.77 -- but it DECAYED, gen2-gen0 = -28.3 +/- 6.6
+// (4.3 SE), where a TWO-signal code loses nothing over four generations. And the F2 bit was
+// not underpowered but ABSENT: at n=144 it would read 3.9 SE while still being 8% of the
+// oracle's magnitude, and a bar cleared only by adding creatures is not a bit forming.
+//
+// RUN 2, `results/tutorgrid-consc.log`, with DeSieno's conscience ON (ctx_proto_gate 2,
+// ctx_conscience_gain 2 -- DNA v70's settled setting, two genome fields, nothing rebuilt).
+// The two runs share creatures, and the ORACLE ARM PROVES IT: gate 2 touches only source
+// 4's per-tick path, so source 0 came back bit-identical, max |diff| 0.0000 on both bits.
+//
+//   PRIMARY     bit F2, paired consc - base   +79.68 +/- 15.43  (5.2 SE)   MET
+//   SECONDARY   bit F1, paired consc - base    -4.44 +/-  5.16  (0.9 SE)   did NOT fall
+//   generation 2, both bits       F1 +25.31 +/- 3.81 (6.6 SE), F2 +75.27 +/- 25.03 (3.0 SE)
+//   INHERITANCE flip alternates 18 of 18 on BOTH bits, z = +4.24 each
+//
+// A FOUR-SIGNAL CONDITIONAL CODE CROSSES THE AIR, on an index the creature derives from
+// its own ear, inherited rather than re-imposed, holding over two generations.
+//
+// THREE HONEST LIMITS, because the bars were close:
+//   1. The F2 bit at generation 2 is EXACTLY on the 3 SE bar (+75.27 +/- 25.03). It is not
+//      comfortably past it and must not be quoted as though it were.
+//   2. The decay improved from 4.3 SE to 2.6 SE, so it is no longer established -- but the
+//      improvement ITSELF is +15.96 +/- 8.32 (1.9 SE) and is NOT established either. The
+//      prediction that sharpening the partition would stop the decay is suggestive, not
+//      shown.
+//   3. TWO generations, not four. `tutorwide` ran five. "Holds over two generations" is
+//      the claim; depth is the obvious next run and it is cheap.
+//
+// AND THE CONSCIENCE IS NOT FREE, strictly: the F1 bit's 4.4 Hz drop is unresolvable at
+// this n rather than absent. Do not report the gain as costless.
+// ========================================================================
+bool run_tutorgrid(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  aibaby::Dna dna;
+  if (dna.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) {
+    std::printf("  setup failed: the genome does not load\n");
+    return false;
+  }
+  constexpr uint32_t kReps = 18, kDepth = 3;
+  constexpr uint64_t kGenOffset = 104729ull;   // tutorwide's, so lineages line up
+  instrument("tutorgrid", dna.header().seed ^ 0x7CA1u, ticks / kVLTrialTicks,
+             "trials per generation");
+  std::printf("  tutorgrid -- does a FOUR-SIGNAL conditional code cross the air? ctxgrid\n"
+              "  names four on both axes with a HOST index; tutorwide transmits TWO with\n"
+              "  the pupil's own derived index. Nobody has run the two together.\n");
+  std::printf("  the code      kGridWords, the 2x2 ctxgrid established -- two F1 levels x\n"
+              "                two F2 levels, every target inside the MEASURED learned\n"
+              "                reach. Two BITS on two axes, not four levels on one:\n"
+              "                ctxfour read four levels on ONE axis at chance.\n");
+  std::printf("  the arms      g0-oracle (ctx_src 0) and g0-self (ctx_src 4) separate the\n"
+              "                two unknowns, so a failure says WHICH failed; then `wide`\n"
+              "                and `flip` carry the mapping with the width held.\n");
+  std::printf("  the bars      g0-self clears 3 SE on BOTH bits (prerequisite); `wide`\n"
+              "                clears 3 SE on both at generation 2 (primary); `flip`\n"
+              "                ALTERNATES SIGN between generations (inheritance, and\n"
+              "                without it a positive primary is VOID -- the tape\n"
+              "                re-imposes a width whether or not anything is inherited).\n");
+  std::printf("  %u lineages, %u generations, 6 sessions per lineage.\n\n", kReps, kDepth);
+
+  // REFUSED WITHOUT A CONTEXT MODULE, and the asymmetry is the reason. At hatch the
+  // index binds to the AUDITORY module when `context_source >= 2` and to the CONTEXT
+  // module when it is 0 or 1 (network.cpp ~515), and `ctx_slots_` is zeroed if that module
+  // is absent. So on a genome with no context module the DERIVED arms run fine while the
+  // ORACLE arm is silently inert -- a half-vacuous run whose generation-0 comparison, the
+  // whole point of running generation 0 twice, would be meaningless. `dna/default.toml` has
+  // no context module; `results/ctxgrid.toml` does, and is the genome this expects.
+  const int32_t ctx_module = dna.module_with_role(aibaby::ModuleRole::kContext);
+  if (ctx_module < 0) {
+    std::printf("  REFUSED: this genome has no module with role \"context\", so the\n"
+                "  oracle arm's index would never be written while the derived arms ran\n"
+                "  normally -- and generation 0's two arms exist precisely to be compared.\n"
+                "  Run on a genome that has one, e.g. results/ctxgrid.toml.\n");
+    return false;
+  }
+
+  // The host's own log half-distance on each axis, derived from the grid rather than
+  // chosen: it is what `wide` re-imposes while the tutor's ORDER is carried.
+  const double kF1Half = std::sqrt(double(kGridWords[2].f1) / double(kGridWords[0].f1));
+  const double kF2Half = std::sqrt(double(kGridWords[1].f2) / double(kGridWords[0].f2));
+
+  struct Cell {
+    bool ok = false;
+    double o1 = 0, o2 = 0;                 // g0-oracle, bit F1 and bit F2
+    double s1 = 0, s2 = 0;                 // g0-self
+    double w1[kDepth] = {}, w2[kDepth] = {};   // wide, per generation
+    double x1[kDepth] = {}, x2[kDepth] = {};   // flip, per generation
+  };
+
+  // Per word, the geometric mean of the produced formants. Four words, so each needs its
+  // own minimum count -- otherwise a bit can be read off a single utterance.
+  const auto grid_centroids = [](const VLRun& r, double* f1, double* f2) {
+    double s1[4] = {0,0,0,0}, s2[4] = {0,0,0,0};
+    uint32_t n1[4] = {0,0,0,0}, n2[4] = {0,0,0,0};
+    for (size_t q = 0; q < r.utt_f1.size() && q < r.utt_f2.size(); ++q) {
+      const int w = r.utt_word[q];
+      if (w < 0 || w > 3) continue;
+      if (r.utt_f1[q] > 1.0) { s1[w] += std::log(r.utt_f1[q]); ++n1[w]; }
+      if (r.utt_f2[q] > 1.0) { s2[w] += std::log(r.utt_f2[q]); ++n2[w]; }
+    }
+    for (uint32_t w = 0; w < 4; ++w) {
+      if (n1[w] < 4u || n2[w] < 4u) return false;
+      f1[w] = std::exp(s1[w] / double(n1[w]));
+      f2[w] = std::exp(s2[w] / double(n2[w]));
+    }
+    return true;
+  };
+  const auto bitf1 = [](const double* f1) {
+    return std::sqrt(f1[2] * f1[3]) - std::sqrt(f1[0] * f1[1]);
+  };
+  const auto bitf2 = [](const double* f2) {
+    return std::sqrt(f2[1] * f2[3]) - std::sqrt(f2[0] * f2[2]);
+  };
+
+  const size_t slots_off = offsetof(aibaby::DnaHeader, exploration) +
+                           offsetof(aibaby::DnaExploration, context_slots);
+  const size_t src_off = offsetof(aibaby::DnaHeader, exploration) +
+                         offsetof(aibaby::DnaExploration, context_source);
+
+  const std::vector<Cell> cells = parallel_reps<Cell>(kReps, [&](uint32_t r) {
+    Cell c;
+    Regime reg;
+    reg.praise = kPraiseValue;
+    reg.scold = kScoldValue;
+    const uint64_t s0 = dna.header().seed + r * 7919ull;
+    const auto genome_for = [&](uint32_t gen, uint32_t src) {
+      std::vector<uint8_t> v = blob;
+      const uint64_t sg = s0 + uint64_t(gen) * kGenOffset;
+      const uint32_t slots = 4u;
+      std::memcpy(v.data() + offsetof(aibaby::DnaHeader, seed), &sg, sizeof(sg));
+      std::memcpy(v.data() + slots_off, &slots, sizeof(slots));
+      std::memcpy(v.data() + src_off, &src, sizeof(src));
+      return v;
+    };
+    // Generation 0 twice, so a failure names which unknown failed.
+    // THE ORACLE ARM NEEDS THE HOST TO INJECT, which is what ctxgrid does and what
+    // tutorwide never needed: the context module is silent unless written into, so
+    // `ctx_src 0` with no drive names a slot nobody fills. Gain 0.10 and slots 4 are
+    // ctxgrid's own values, not new constants.
+    CtxDrive odrive;
+    odrive.module = ctx_module;
+    odrive.slots = 4u;
+    odrive.gain = 0.10;
+    const VLRun go = run_vocallearn_session(genome_for(0, 0u), ticks, kVLTaught, nullptr,
+                                            reg, -1, &odrive, kVLScoreFormant, nullptr,
+                                            4u, kGridWords, nullptr, nullptr, nullptr,
+                                            nullptr, kGridWords);
+    const VLRun gs = run_vocallearn_session(genome_for(0, 4u), ticks, kVLTaught, nullptr,
+                                            reg, -1, nullptr, kVLScoreFormant, nullptr,
+                                            4u, kGridWords, nullptr, nullptr, nullptr,
+                                            nullptr, kGridWords);
+    if (!go.ok || !gs.ok) return c;
+    double of1[4], of2[4], sf1[4], sf2[4];
+    if (!grid_centroids(go, of1, of2) || !grid_centroids(gs, sf1, sf2)) return c;
+    c.o1 = bitf1(of1); c.o2 = bitf2(of2);
+    c.s1 = bitf1(sf1); c.s2 = bitf2(sf2);
+    c.w1[0] = c.x1[0] = c.s1;
+    c.w2[0] = c.x2[0] = c.s2;
+
+    // The two chains walk forward from generation 0's SELF-indexed production.
+    double wf1[4], wf2[4], xf1[4], xf2[4];
+    for (uint32_t k = 0; k < 4; ++k) {
+      wf1[k] = xf1[k] = sf1[k];
+      wf2[k] = xf2[k] = sf2[k];
+    }
+    for (uint32_t gen = 1; gen < kDepth; ++gen) {
+      const std::vector<uint8_t> v = genome_for(gen, 4u);
+      // THE TAPE. The tutor's own geometric centre on each axis, the host's log
+      // half-distance re-imposed, and the tutor's own ORDER carried. `flip` negates both
+      // inherited signs at every step, so an inherited mapping ALTERNATES and a
+      // re-imposed one does not.
+      const auto build = [&](const double* f1, const double* f2, double flip, Word* out) {
+        double l1 = 0.0, l2 = 0.0;
+        for (uint32_t k = 0; k < 4; ++k) { l1 += std::log(f1[k]); l2 += std::log(f2[k]); }
+        const double c1 = std::exp(l1 / 4.0), c2 = std::exp(l2 / 4.0);
+        const double d1 = bitf1(f1) >= 0.0 ? 1.0 : -1.0;
+        const double d2 = bitf2(f2) >= 0.0 ? 1.0 : -1.0;
+        for (uint32_t w = 0; w < 4; ++w) {
+          // the host's own layout: words 2,3 are high F1 and words 1,3 are high F2
+          const double u1 = (w >= 2u ? 1.0 : -1.0) * d1 * flip;
+          const double u2 = ((w & 1u) ? 1.0 : -1.0) * d2 * flip;
+          out[w] = kGridWords[w];
+          out[w].f1 = float(c1 * std::pow(kF1Half, u1));
+          out[w].f2 = float(c2 * std::pow(kF2Half, u2));
+        }
+      };
+      Word wtape[4], xtape[4];
+      build(wf1, wf2, 1.0, wtape);
+      build(xf1, xf2, -1.0, xtape);
+      const VLRun gw = run_vocallearn_session(v, ticks, kVLTaught, nullptr, reg, -1,
+                                              nullptr, kVLScoreFormant, nullptr, 4u, wtape,
+                                              nullptr, nullptr, nullptr, nullptr, wtape);
+      const VLRun gx = run_vocallearn_session(v, ticks, kVLTaught, nullptr, reg, -1,
+                                              nullptr, kVLScoreFormant, nullptr, 4u, xtape,
+                                              nullptr, nullptr, nullptr, nullptr, xtape);
+      if (!gw.ok || !gx.ok) return c;
+      if (!grid_centroids(gw, wf1, wf2) || !grid_centroids(gx, xf1, xf2)) return c;
+      c.w1[gen] = bitf1(wf1); c.w2[gen] = bitf2(wf2);
+      c.x1[gen] = bitf1(xf1); c.x2[gen] = bitf2(xf2);
+    }
+    c.ok = true;
+    parallel_note("  [%u/%u] lineage %u  oracle %+6.1f/%+6.1f  self %+6.1f/%+6.1f  "
+                  "wide %+6.1f/%+6.1f -> %+6.1f/%+6.1f  flip %+6.1f/%+6.1f -> %+6.1f/%+6.1f\n",
+                  r + 1, kReps, r, c.o1, c.o2, c.s1, c.s2,
+                  c.w1[1], c.w2[1], c.w1[2], c.w2[2],
+                  c.x1[1], c.x2[1], c.x1[2], c.x2[2]);
+    return c;
+  });
+
+  std::vector<const Cell*> ok;
+  for (const Cell& c : cells) if (c.ok) ok.push_back(&c);
+  if (ok.size() < 6) {
+    std::printf("\n  setup failed: only %zu of %u lineages produced four usable word\n"
+                "  centroids. With four words a missing one is a missing BIT, so this is\n"
+                "  refused rather than averaged over.\n", ok.size(), kReps);
+    return false;
+  }
+  const size_t n = ok.size();
+  const auto col = [&](double (*pick)(const Cell&), double* se) {
+    std::vector<double> v;
+    v.reserve(n);
+    for (const Cell* c : ok) v.push_back(pick(*c));
+    return ctx_mean_se(v, se);
+  };
+  double se_o1, se_o2, se_s1, se_s2;
+  const double m_o1 = col([](const Cell& c) { return c.o1; }, &se_o1);
+  const double m_o2 = col([](const Cell& c) { return c.o2; }, &se_o2);
+  const double m_s1 = col([](const Cell& c) { return c.s1; }, &se_s1);
+  const double m_s2 = col([](const Cell& c) { return c.s2; }, &se_s2);
+
+  std::printf("\n  GENERATION 0 -- THE PREREQUISITE, and the two unknowns are separate\n");
+  std::printf("    arm        bit F1 (Hz)          bit F2 (Hz)\n");
+  std::printf("    oracle   %+7.1f +/- %5.1f     %+7.1f +/- %5.1f\n",
+              m_o1, se_o1, m_o2, se_o2);
+  std::printf("    self     %+7.1f +/- %5.1f     %+7.1f +/- %5.1f   <- must clear 3 SE\n",
+              m_s1, se_s1, m_s2, se_s2);
+
+  double se_w1[kDepth], se_w2[kDepth], se_x1[kDepth], se_x2[kDepth];
+  double m_w1[kDepth], m_w2[kDepth], m_x1[kDepth], m_x2[kDepth];
+  for (uint32_t g = 0; g < kDepth; ++g) {
+    std::vector<double> a, b, d, e;
+    for (const Cell* c : ok) {
+      a.push_back(c->w1[g]); b.push_back(c->w2[g]);
+      d.push_back(c->x1[g]); e.push_back(c->x2[g]);
+    }
+    m_w1[g] = ctx_mean_se(a, &se_w1[g]); m_w2[g] = ctx_mean_se(b, &se_w2[g]);
+    m_x1[g] = ctx_mean_se(d, &se_x1[g]); m_x2[g] = ctx_mean_se(e, &se_x2[g]);
+  }
+  std::printf("\n  THE CHAINS, per generation, both bits\n");
+  std::printf("    gen    wide bit F1        wide bit F2        flip bit F1        flip bit F2\n");
+  for (uint32_t g = 0; g < kDepth; ++g) {
+    std::printf("    %u    %+6.1f +/- %4.1f    %+6.1f +/- %4.1f    %+6.1f +/- %4.1f    %+6.1f +/- %4.1f\n",
+                g, m_w1[g], se_w1[g], m_w2[g], se_w2[g],
+                m_x1[g], se_x1[g], m_x2[g], se_x2[g]);
+  }
+
+  // INHERITANCE: the flip chain must ALTERNATE between generations 1 and 2, per lineage.
+  uint32_t alt1 = 0, alt2 = 0;
+  for (const Cell* c : ok) {
+    if ((c->x1[1] > 0.0) != (c->x1[2] > 0.0)) ++alt1;
+    if ((c->x2[1] > 0.0) != (c->x2[2] > 0.0)) ++alt2;
+  }
+  std::printf("\n  INHERITANCE -- the flip chain must ALTERNATE, lineage by lineage\n"
+              "    bit F1 alternates in %u of %zu lineages\n"
+              "    bit F2 alternates in %u of %zu lineages\n"
+              "    A re-imposed code holds one sign; an inherited one flips with the tape.\n",
+              alt1, n, alt2, n);
+
+  const uint32_t L = kDepth - 1u;
+  const bool pre = m_s1 > 3.0 * se_s1 && m_s2 > 3.0 * se_s2;
+  const bool prim = m_w1[L] > 3.0 * se_w1[L] && m_w2[L] > 3.0 * se_w2[L];
+  const bool inherit = alt1 * 2u > n && alt2 * 2u > n;
+
+  if (!pre) {
+    const bool orc = m_o1 > 3.0 * se_o1 && m_o2 > 3.0 * se_o2;
+    std::printf("\n  THE PREREQUISITE FAILS, AND IT NAMES WHICH UNKNOWN. A derived index\n"
+                "  across FOUR contexts does not produce a two-bit code: self reads\n"
+                "  %+.1f/%+.1f Hz against %.1f/%.1f of error.\n",
+                m_s1, m_s2, se_s1, se_s2);
+    if (orc)
+      std::printf("\n  AND THE ORACLE ARM CLEARS (%+.1f/%+.1f Hz), so the production is fine\n"
+                  "  and the LIMIT IS THE DERIVED INDEX AT FOUR CONTEXTS. That names its own\n"
+                  "  lever: DNA v70's conscience gain sharpens exactly this partition and\n"
+                  "  just closed 68%% of the oracle gap at TWO contexts. Re-run with it on\n"
+                  "  before concluding anything about four.\n", m_o1, m_o2);
+    else
+      std::printf("\n  AND THE ORACLE ARM DOES NOT CLEAR EITHER (%+.1f/%+.1f Hz), so this is\n"
+                  "  NOT about the index: four signals are beyond what this creature can\n"
+                  "  produce, and ctxgrid's naming result does not survive being asked for\n"
+                  "  four separable PRODUCTIONS rather than four nearest-target choices.\n",
+                  m_o1, m_o2);
+    return false;
+  }
+  if (prim && inherit) {
+    std::printf("\n  A FOUR-SIGNAL CODE CROSSES THE AIR. Both bits clear 3 SE at generation\n"
+                "  %u (%+.1f +/- %.1f and %+.1f +/- %.1f Hz) on a derived index, and the\n"
+                "  flipped chain ALTERNATES in %u and %u of %zu lineages -- so the mapping\n"
+                "  is inherited rather than re-imposed by the tape.\n",
+                L, m_w1[L], se_w1[L], m_w2[L], se_w2[L], alt1, alt2, n);
+    std::printf("\n  WHAT THIS IS: a small creature learns a four-signal conditional code,\n"
+                "  derives the condition from its own ear, and passes the code to a\n"
+                "  different individual through the air -- twice, without the convention\n"
+                "  decaying. That is the project's stated goal, demonstrated end to end\n"
+                "  rather than assembled from separate runs.\n");
+    return true;
+  }
+  if (prim && !inherit) {
+    std::printf("\n  VOID, NOT POSITIVE, and the flip arm is why it can be told. Both bits\n"
+                "  clear at generation %u, but the flipped chain does NOT alternate (%u and\n"
+                "  %u of %zu). The tape re-imposes the host's width on both axes, so a\n"
+                "  widened chain carries a wide code whether or not anything was inherited.\n"
+                "  Nothing here is transmission. tutorwide's first version failed exactly\n"
+                "  this way and the arm exists because of it.\n", L, alt1, alt2, n);
+    return false;
+  }
+  std::printf("\n  THE CODE DOES NOT CROSS AT FOUR SIGNALS. Generation 0 produces it on its\n"
+              "  own index (%+.1f/%+.1f Hz) and generation %u does not (%+.1f +/- %.1f and\n"
+              "  %+.1f +/- %.1f). Transmission at TWO signals is established at no loss over\n"
+              "  four generations, so this is a VOCABULARY limit in the channel rather than\n"
+              "  a channel that leaks: what a pupil can recover from a tutor's four-way\n"
+              "  production is less than what it can recover from a two-way one.\n",
+              m_s1, m_s2, L, m_w1[L], se_w1[L], m_w2[L], se_w2[L]);
+  return false;
+}
 bool run_ctxvocab(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
   (void)verbose;
   aibaby::Dna dna;
