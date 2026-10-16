@@ -31070,6 +31070,38 @@ inline double vg_predict(const double* mean, const double* lvl, uint32_t n, doub
 // AND THE CONSCIENCE IS NOT FREE, strictly: the F1 bit's 4.4 Hz drop is unresolvable at
 // this n rather than absent. Do not report the gain as costless.
 // ========================================================================
+//
+// ========== RUN 3, THE DEPTH RUN -- PRE-REGISTERED 2026-10-16 ==========
+// THE ONE QUESTION: does the four-signal code HOLD down a lineage, or only cross once?
+// Run 2 got it across -- both bits clear at generation 2, flip alternating 18 of 18 -- and
+// could say only that gen2-gen0 was -12.34 +/- 4.72, which is 2.6 SE: NO established decay
+// and NO established hold. Five generations is what `tutorwide` ran, and its TWO-signal
+// code read 85.6 +/- 5.5 at generation 4 against 96.1 +/- 5.1 at generation 0, 1.4 SE. So
+// this puts four signals on exactly that footing. kDepth 3 -> 5; kReps STAYS 18, because
+// the comparison is to tutorwide and not to a better-powered run.
+//
+// THE STATISTIC, printed by the experiment rather than left to a script: generation 4 minus
+// generation 0, PAIRED per lineage, on each bit.
+//
+// THE TWO OUTCOMES, and BOTH are results, which is why no prediction is recorded here:
+//   UNDER 3 SE   a four-signal code holds down a lineage as a two-signal one does, and the
+//                milestone is complete rather than two generations deep. It must still be
+//                reported as a BOUND -- a loss under 3 SE is a failure to resolve one, not
+//                proof of none, and the run prints the smallest loss it could have seen.
+//   PAST 3 SE    the code crosses but does NOT hold: vocabulary costs generational
+//                fidelity, where two signals cost none. That is a quantitative statement
+//                about cultural capacity in this creature and is worth as much as a pass.
+//
+// AND THE ALTERNATION TEST GETS STRICTER FOR FREE. With three generations there was one
+// consecutive pair to check; with five there are three, and a lineage now counts only if it
+// alternates across ALL of them. 18 of 18 under that rule is a much harder thing than 18 of
+// 18 under one flip, and it is the exact failure mode tutorwide's first version had.
+//
+// WHAT IS NOT RE-ASKED: the conscience comparison. Run 2 settled that at 5.2 SE paired
+// against a bit-identical oracle arm. This run uses the conscience genome throughout and
+// does not re-run the base, because re-opening a settled comparison to look at it again is
+// what the discovery-sample rule forbids.
+// =======================================================================
 bool run_tutorgrid(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
   (void)verbose;
   aibaby::Dna dna;
@@ -31077,7 +31109,15 @@ bool run_tutorgrid(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
     std::printf("  setup failed: the genome does not load\n");
     return false;
   }
-  constexpr uint32_t kReps = 18, kDepth = 3;
+  // DEPTH 3 -> 5, 2026-10-16, and the reason is a like-for-like comparison. `tutorwide`
+  // ran five generations and read its TWO-signal code at generation 4 as 85.6 +/- 5.5
+  // against generation 0's 96.1 +/- 5.1 -- 1.4 SE, NO detectable loss. The three-generation
+  // version of THIS run got the four-signal code across (both bits clear at generation 2,
+  // flip alternating 18 of 18) but could only say gen2-gen0 = -12.34 +/- 4.72, which is
+  // 2.6 SE: no established decay and no established hold either. Five generations puts the
+  // four-signal code on exactly tutorwide's footing, and kReps stays 18 for the same
+  // reason -- the comparison is to that run, not to a better-powered one.
+  constexpr uint32_t kReps = 18, kDepth = 5;
   constexpr uint64_t kGenOffset = 104729ull;   // tutorwide's, so lineages line up
   instrument("tutorgrid", dna.header().seed ^ 0x7CA1u, ticks / kVLTrialTicks,
              "trials per generation");
@@ -31096,7 +31136,11 @@ bool run_tutorgrid(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
               "                ALTERNATES SIGN between generations (inheritance, and\n"
               "                without it a positive primary is VOID -- the tape\n"
               "                re-imposes a width whether or not anything is inherited).\n");
-  std::printf("  %u lineages, %u generations, 6 sessions per lineage.\n\n", kReps, kDepth);
+  // DERIVED, not written out: generation 0 runs twice and every later generation runs two
+  // chains, so it is 2 + (kDepth-1)*2. The literal "6" was right at kDepth 3 and became a
+  // lie at 5 -- the same drift the per-lineage row below was just fixed for.
+  std::printf("  %u lineages, %u generations, %u sessions per lineage.\n\n",
+              kReps, kDepth, 2u + (kDepth - 1u) * 2u);
 
   // REFUSED WITHOUT A CONTEXT MODULE, and the asymmetry is the reason. At hatch the
   // index binds to the AUDITORY module when `context_source >= 2` and to the CONTEXT
@@ -31239,11 +31283,14 @@ bool run_tutorgrid(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
       c.x1[gen] = bitf1(xf1); c.x2[gen] = bitf2(xf2);
     }
     c.ok = true;
+    // Generation 1 and the LAST generation, indexed by kDepth rather than hardcoded -- a
+    // row that still printed generation 2 after the depth changed would quietly report a
+    // different quantity under the same heading.
     parallel_note("  [%u/%u] lineage %u  oracle %+6.1f/%+6.1f  self %+6.1f/%+6.1f  "
                   "wide %+6.1f/%+6.1f -> %+6.1f/%+6.1f  flip %+6.1f/%+6.1f -> %+6.1f/%+6.1f\n",
                   r + 1, kReps, r, c.o1, c.o2, c.s1, c.s2,
-                  c.w1[1], c.w2[1], c.w1[2], c.w2[2],
-                  c.x1[1], c.x2[1], c.x1[2], c.x2[2]);
+                  c.w1[1], c.w2[1], c.w1[kDepth - 1], c.w2[kDepth - 1],
+                  c.x1[1], c.x2[1], c.x1[kDepth - 1], c.x2[kDepth - 1]);
     return c;
   });
 
@@ -31294,11 +31341,48 @@ bool run_tutorgrid(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
                 m_x1[g], se_x1[g], m_x2[g], se_x2[g]);
   }
 
-  // INHERITANCE: the flip chain must ALTERNATE between generations 1 and 2, per lineage.
+  // DOES IT HOLD DOWN THE LINEAGE? The pre-registered quantity for the depth run, PAIRED
+  // per lineage -- generation L minus generation 0 on each bit. tutorwide's two-signal code
+  // read 1.4 SE on this at generation 4, which is what "no detectable loss" meant there.
+  // Printed by the experiment because it is the primary statistic, not a side analysis.
+  {
+    std::vector<double> d1, d2;
+    for (const Cell* c : ok) {
+      d1.push_back(c->w1[kDepth - 1] - c->s1);
+      d2.push_back(c->w2[kDepth - 1] - c->s2);
+    }
+    double sd1 = 0.0, sd2 = 0.0;
+    const double md1 = ctx_mean_se(d1, &sd1), md2 = ctx_mean_se(d2, &sd2);
+    std::printf("\n  DOES THE CODE HOLD DOWN THE LINEAGE? generation %u minus generation 0,\n"
+                "  paired per lineage. tutorwide's TWO-signal code read 1.4 SE here.\n"
+                "    bit F1  %+7.2f +/- %5.2f  (%.1f SE)  %s\n"
+                "    bit F2  %+7.2f +/- %5.2f  (%.1f SE)  %s\n",
+                kDepth - 1u,
+                md1, sd1, sd1 > 0.0 ? std::fabs(md1) / sd1 : 0.0,
+                (sd1 > 0.0 && std::fabs(md1) / sd1 < 3.0) ? "no detectable loss"
+                                                          : "a RESOLVED loss",
+                md2, sd2, sd2 > 0.0 ? std::fabs(md2) / sd2 : 0.0,
+                (sd2 > 0.0 && std::fabs(md2) / sd2 < 3.0) ? "no detectable loss"
+                                                          : "a RESOLVED loss");
+    std::printf("  A loss under 3 SE is NOT proof the code holds -- it is a failure to\n"
+                "  resolve one, and at n=%zu the smallest loss this could resolve is about\n"
+                "  %.0f and %.0f Hz on the two bits. Read it as a BOUND on the decay.\n",
+                ok.size(), 3.0 * sd1, 3.0 * sd2);
+  }
+
+  // INHERITANCE: the flip chain must ALTERNATE at every step, per lineage. With kDepth 5
+  // there are three consecutive pairs to check rather than one, so a lineage counts only if
+  // it alternates ACROSS ALL OF THEM -- a far stronger test than the single flip the
+  // three-generation version could make, and the one tutorwide's own failure mode needs.
   uint32_t alt1 = 0, alt2 = 0;
   for (const Cell* c : ok) {
-    if ((c->x1[1] > 0.0) != (c->x1[2] > 0.0)) ++alt1;
-    if ((c->x2[1] > 0.0) != (c->x2[2] > 0.0)) ++alt2;
+    bool a1ok = true, a2ok = true;
+    for (uint32_t g = 1; g + 1 < kDepth; ++g) {
+      if ((c->x1[g] > 0.0) == (c->x1[g + 1] > 0.0)) a1ok = false;
+      if ((c->x2[g] > 0.0) == (c->x2[g + 1] > 0.0)) a2ok = false;
+    }
+    if (a1ok) ++alt1;
+    if (a2ok) ++alt2;
   }
   std::printf("\n  INHERITANCE -- the flip chain must ALTERNATE, lineage by lineage\n"
               "    bit F1 alternates in %u of %zu lineages\n"

@@ -17925,6 +17925,14 @@ papers about the half it does not touch.
   exploratory variability) is on dendritic SHAFTS.** Shaft depolarisation spreads
   into nearby spine heads and relieves the magnesium block, so variability GATES
   which context-carrying synapses are eligible rather than being added to them.
+  **PRICED DOWN 2026-10-15, and the note belongs here rather than only in the body.**
+  This is a mechanism for *which synapses are eligible* — credit assignment. The
+  oracle-phase-index run handed the lesson a perfect index, a bias table per phase, a
+  trace inside one phase and a faster-than-human teacher, and got +0.19 ± 0.35 Hz
+  (0.5 SE) **with the per-phase tables diverging at 70–100 SE** — so the obstacle is
+  EXPRESSION, not credit assignment. A better eligibility-gating mechanism is
+  therefore unlikely to move the phase lesson. Still a live lead for the naming line,
+  where credit assignment is not known to be solved; dead for the phase line.
   The paper prices the alternative: targeting spines with both is about **4 times
   less efficient**. In this creature context and perturbation share ONE parameter
   — `bias_[i][c]` is both the context's memory and the thing node perturbation
@@ -18668,6 +18676,102 @@ audit of names cited in the text against names appearing here (2026-10-09).**
     rhythm given a substrate that supports it — which is a reason to keep asking
     why five neural routes here did not, rather than treating the body as the only
     possible answer.
+
+**Added 2026-10-15/16, from two literature passes — each entry carries the verdict, so
+nothing here needs testing again.**
+
+- Mackevicius, E. L. & Fee, M. S. (2018). *Building a state space for song learning.*
+  Current Opinion in Neurobiology 49, 59–68.
+  <https://doi.org/10.1016/j.conb.2017.12.001> — frames song learning as a **contextual
+  bandit**: actions affect reward but not future states, so each moment can be learned
+  separately, with reward assigned *by time*, and the state space is a sequence of sparse
+  HVC bursts modelled as synaptic chains — **explicitly not an oscillator or attractor**.
+  That is the mirror image of this creature, whose gesture *is* an attractor.
+  **VERDICT: REFUTED HERE, and before anything was built.** The account's missing
+  ingredient is a sequential time index, so `phaseteach`'s `ctx` arms supplied a *perfect*
+  one — the context pinned per tick to the creature's own half-centre phase, a bias table
+  per phase, a trace inside one phase, a faster-than-human teacher. It bought
+  **+0.19 ± 0.35 Hz (0.5 SE)** while the per-phase tables provably diverged at 70–100 SE.
+  A chain's job would be to *derive* that index; an oracle version of it buys under 1 Hz,
+  so a derived one buys at most that. **Do not build a synfire chain as a time basis for
+  phase teaching, and do not re-open phase teaching by improving the index.**
+- Chen, R., Puzerey, P. A. & Goldberg, J. H. (2024). *Weight transfer in the
+  reinforcement learning model of songbird vocal learning.* bioRxiv 2024.12.30.628217.
+  <https://doi.org/10.1101/2024.12.30.628217> — learning happens first in HVC→Area X and
+  is then consolidated into HVC→RA by a Hebbian mechanism, a two-stage route worth knowing
+  beside `arcuate-is-a-transcoder`. **NOT BUILT, and lower priority than it looks:** the
+  phase result above says the obstacle here is *expression* rather than where credit is
+  stored, so a better consolidation route is unlikely to move the quantity that is stuck.
+- Kubota, M. & Taniguchi, I. (2012). *The gain modulation by N-methyl-D-aspartate in the
+  projection neurons of robust nucleus of the arcopallium in adult zebra finches.*
+  Neuroscience Research / PMC3363989. <https://pmc.ncbi.nlm.nih.gov/articles/PMC3363989/>
+  — NMDA substantially increases the **slope of the firing-rate/current relation** in a
+  vocal premotor nucleus: a neuron-level gain knob on exactly the compressive transfer this
+  project's production ceiling is made of. **VERDICT: ALREADY PRICED, DO NOT RE-OPEN.** It
+  is the same lever as DNA v58's `ip_bias_gain`, measured at aligned +21% → dF1 ×1.123
+  against the ×1.68 the ceiling needs. `ceiling-is-an-exponent`'s arithmetic stands and
+  this does not move it.
+- Kirby, S., Griffiths, T. & Smith, K. (2014). *Iterated learning and the evolution of
+  language.* Current Opinion in Neurobiology 28, 108–114.
+  <https://doi.org/10.1016/j.conb.2014.07.014> — the review behind the Kirby, Cornish &
+  Smith entry above. The mechanism it identifies is the one that matters here: a
+  transmission **bottleneck** creates pressure toward codes that are *generalisable from
+  sparse input*, and codes that cannot be generalised decay down a chain.
+  **VERDICT: THE MECHANISM IS ARCHITECTURALLY ABSENT HERE, which is a finding about this
+  creature rather than about the paper.** Both context parameterisations index by
+  `active_ctx_` — `bias_ctx_[i * ctx_slots_ + active_ctx_]` and
+  `gain_ctx_[active_ctx_ * kVocalGroups + g]` — so **every context owns independent
+  parameters and nothing is shared between them.** DNA v54's mode 1 reduces parameters
+  *within* a context (18 against 252) and still stores one set *per* context. A pupil that
+  learns context 0 perfectly has learned nothing about context 2 even when the two share a
+  feature, so a bottleneck exerts no pressure toward structure and sparse sampling of a
+  tutor costs in full. This is the most likely cause of `tutorgrid`'s generational decay.
+  Note that the README already recorded the Kirby comparison and already limited it
+  correctly — *"what the two share is only the method"* — and this adds a mechanism, not a
+  change to that caveat.
+- Ostojic, S. et al. / *Hierarchical control of reaching movements via compositional gain
+  modulation.* OpenReview. <https://openreview.net/forum?id=X3be6c7LYG> — compositional
+  generalisation in the motor system via a **Canonical Polyadic decomposition**, using gain
+  modulation to capture modularity in space, time and action **with fewer parameters** than
+  established models. **THE LEAD THIS POINTS AT, NOT BUILT:** a *factored* context gain —
+  parameters per **feature** instead of per **context**, so `gain(ctx, group)` becomes
+  `a[bit1][group] + b[bit2][group]`. For the 2×2 code that is 18 parameters where the
+  present scheme uses 36, and the saving grows with vocabulary. Two predictions follow:
+  less generational decay, because each feature is estimated from twice the data at four
+  contexts and four times at eight; and vocabulary past four **only by adding axes or
+  coarse levels, never finer ones** — concretely 2 F1 levels × 3 F2 levels = six signals,
+  within F1's 118 Hz and F2's ~300 Hz measured reach, where six words along one axis
+  failed. **AND THE HONEST LIMIT, which must be stated with any proposal:** `ctxgain`
+  already measured 18 parameters matching 252 on delivered dF1, so parameter count is
+  **not** the binding constraint on accuracy. A factored code must be proposed for
+  generalisation and vocabulary, never for precision — the existing result refuses that.
+  Gate it with a cheap oracle first: hand the creature a factored *target* and see whether
+  sharing is exploitable at all.
+- Riveland, R. & Pouget, A. (2024). *Natural language instructions induce compositional
+  generalization in networks of neurons.* Nature Neuroscience 27, 988–999.
+  <https://doi.org/10.1038/s41593-024-01607-5> — generalisation is carried by a
+  representational geometry capturing task **subcomponents**, shared between instruction
+  embeddings and sensorimotor activity. Supports the factored-gain lead above: composition
+  rides on shared structure, which is the thing this architecture lacks.
+- *Learning options for compositional motor control with adapter banks.* arXiv:2609.17042.
+  <https://arxiv.org/abs/2609.17042v1> — low-rank adapters placing tasks in separate
+  subspaces of a shared frozen core, reported to improve generalisation error over a
+  task-conditioned multitask baseline by up to an order of magnitude. **PREPRINT, NOT PEER
+  REVIEWED — treat the magnitude as unverified.** Cited for the shape, which is the same
+  shared-core-plus-per-task-modulation idea as the factored gain.
+- Raviv, L., Meyer, A. & Lev-Ari, S. (2019). *Larger communities create more systematic
+  languages.* Proceedings of the Royal Society B 286(1907), 20191262.
+  <https://doi.org/10.1098/rspb.2019.1262> — structure can emerge **without** generational
+  transmission, from population size alone. Recorded as the caution against reading
+  `tutorgrid`'s chain as the only route to structure, and as a reason not to attribute any
+  future structure result to transmission without a peer-interaction control.
+
+**One correction to how this bibliography was used.** Kornfeld et al. (2025) above is the
+same paper a literature pass on 2026-10-15 reported as a new find, and the entry here was
+already fuller than what that pass extracted — it has the spine/shaft asymmetry and the
+gating mechanism, which the pass did not. **The grep-first rule applies to literature as
+well as to experiments: search this section before reporting a paper as new.** The phase
+result also prices that lead down, which is recorded on it now rather than left implicit.
 
 ### A note on where this project's record actually lives
 
