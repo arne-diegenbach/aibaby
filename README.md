@@ -17757,6 +17757,13 @@ of the oracle's bit (46% against 62%). A bit with less headroom relative to its 
 the one that should erode first, and that is consistent with both numbers — but this run
 cannot separate "less reach" from "worse index" because the two coincide here.
 
+**One explanation of the decay is now refused.** The obvious account was parameter sharing:
+every context owns independent parameters, so a pupil cannot generalise from a tutor's sparse
+output. `ctxfactor` measured whether there is any shared structure to generalise *over* and
+found none — the learned table splits its power equally among the two features and their
+interaction, which is exactly what four independent rows do. **So the decay is not a
+sharing problem, and the factored-gain fix is not available.** See the section below.
+
 **Two things deliberately not claimed.** The F2 bit's "no detectable loss" is a **bound, not
 a hold**: at n=18 the smallest loss resolvable on that bit is about 84 Hz, so it could have
 lost half its size undetected. The run prints that bound next to the number for exactly this
@@ -17771,6 +17778,61 @@ inherited. The message collapsed a split outcome into a clean failure. The prose
 rewritten and **the pass/fail logic is untouched** — the bars stand as pre-registered and
 this is still "primary not met". Fixing a message that contradicts its own data is not the
 same thing as moving a bar after seeing it.
+
+### The creature does not discover the factorial structure of a factorial task (2026-10-17)
+
+A literature pass found that both context parameterisations index by `active_ctx_` —
+`bias_ctx_[i * ctx_slots_ + active_ctx_]` and `gain_ctx_[active_ctx_ * kVocalGroups + g]` —
+so **every context owns independent parameters and nothing is shared between them.** A
+creature that learns context 0 perfectly has learned nothing about context 2 even when the
+two share a feature. Kirby, Griffiths & Smith's iterated-learning account turns on learners
+generalising from sparse input, and this architecture cannot, which looked like the
+explanation for `tutorgrid`'s generational decay. The mechanism that would fix it is
+parameters per *feature* instead of per *context*.
+
+**But factoring is only free if what the creature learns is already additive, and that is
+measurable on a trained creature with no new mechanism.** So it was measured first — the
+same discipline that killed the sparse-time-basis lead for one run instead of a build.
+
+For a 2×2 the decomposition is **exact and orthogonal**, no fitting: per larynx neuron a
+mean plus three orthogonal contrasts — the F1 feature, the F2 feature, and their
+interaction, which is the part a factored table cannot hold. **And the null is derived, not
+chosen:** four rows carry one mean and three orthogonal contrasts, so independent rows split
+the context-dependent power equally and chance for the interaction share is exactly 1/3.
+
+| arm | interaction share | F1 share | F2 share | context-dependent |
+|---|---|---|---|---|
+| oracle index | **0.325 ± 0.006** | 0.335 | 0.340 | 0.78 ± 0.01 |
+| derived index | 0.331 ± 0.007 | 0.345 | 0.324 | 0.74 ± 0.01 |
+| derived + conscience | 0.333 ± 0.010 | 0.321 | 0.346 | 0.74 ± 0.01 |
+
+**The three contrasts hold equal power.** 0.335 / 0.340 / 0.325 is exactly the equipartition
+the null predicts for four independent rows, and the primary sits 1.4 SE below chance with
+an SE of 0.006 — a *well-resolved equality* with chance, not an underpowered null. A larger
+sample would pin it closer to 1/3, not drag it away.
+
+**The void check passes the other way, which is what makes the result readable.** The
+context-dependent part is 0.78 of the total power, so the table distinguishes its four
+contexts strongly. There is plenty of context-dependent content; it simply carries no
+feature structure.
+
+**The sharp finding is worth more than the refusal.** The host *teaches* a factorial code —
+the 2×2 grid is a product by construction — and the creature stores it **non-factorially, as
+four independent associations.** With an independent bias row per context and
+node-perturbation learning there is no pressure toward a shared representation, so none
+appears even when the task has one.
+
+**The conscience changes nothing here** (0.331 → 0.333), and that is consistent rather than
+disappointing: DNA v70 sharpens *which* context wins, not *what* is stored per context. It
+is a partition result, not a representation one, and this says so from a second direction.
+
+**What is refuted and what is not.** Refuted: the lead's *rationale*. A factored table
+cannot compress structure that is not there, so "fewer parameters for the same code" is not
+available — and **`tutorgrid`'s decay is not a parameter-sharing problem**, which corrects
+the hypothesis recorded with that run. Not refuted: that a factored learner could *impose*
+additivity and still solve the task, since the grid really is a product. But that is a much
+weaker proposition than the one the lead was built on — a constraint rather than a
+compression — and the cheap evidence now points against it.
 
 ## Layout
 

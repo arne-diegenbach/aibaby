@@ -1381,6 +1381,68 @@ working use of the same mechanism elsewhere in the system. That is what turned &
 effect&rdquo; into &ldquo;forty times short, and the block is downstream&rdquo;.</p>
 
 
+<h3>6.10 A factorial task, stored non-factorially</h3>
+<p>The creature names four signals laid out as a 2&times;2 &mdash; two first-formant levels by
+two second-formant levels &mdash; and that layout is what made four signals work at all,
+since four levels along a single axis read at chance even with a perfect index. So the code
+it learns is, by construction, <em>two independent bits</em>. The question here is whether
+the creature represents it that way.</p>
+<p>The reason to ask was a mechanism. Every context in this architecture owns its own
+parameters: the stored table is indexed by the active context and nothing is shared between
+contexts, so a creature that learns one context perfectly has learned nothing about another
+even when the two share a feature. The iterated-learning literature makes that matter, because
+its account of why culturally transmitted codes survive turns on learners
+<em>generalising from sparse input</em> &mdash; and a learner with no shared parameters
+cannot. That looked like the explanation for why a four-signal code decays down a lineage
+where a two-signal one does not, and it named a fix: parameters per <em>feature</em> rather
+than per <em>context</em>, which would also be cheaper.</p>
+<p><strong>But parameters per feature can only be cheaper if what is learned is already
+additive, and that is measurable on a trained creature with no new mechanism at all.</strong>
+For a 2&times;2 the decomposition is exact and orthogonal, with no fitting and no free
+parameters: each neuron's four stored values are a mean plus three orthogonal contrasts
+&mdash; one per feature, and their interaction, which is the part a factored representation
+cannot hold. The three contrasts partition the context-dependent power exactly.</p>
+<p><strong>That exactness is what makes the null derived rather than chosen.</strong> Four
+values carry one mean and three orthogonal contrasts, so if the four were independent the
+power would split equally among them and the interaction's share would be one third. Chance
+is therefore 0.333 by construction, not by assumption.</p>
+<table>
+<tr><th>index</th><th>interaction share</th><th>feature 1</th><th>feature 2</th><th>context-dependent</th></tr>
+<tr><td>host-written</td><td><strong>0.325 &plusmn; 0.006</strong></td><td>0.335</td><td>0.340</td><td>0.78</td></tr>
+<tr><td>derived</td><td>0.331 &plusmn; 0.007</td><td>0.345</td><td>0.324</td><td>0.74</td></tr>
+<tr class="last"><td>derived, sharpened partition</td><td>0.333 &plusmn; 0.010</td><td>0.321</td><td>0.346</td><td>0.74</td></tr>
+</table>
+<p><strong>The three contrasts hold equal power.</strong> 0.335, 0.340 and 0.325 is the
+equipartition expected of four independent values, and the measured share sits 1.4 standard
+errors below chance with a standard error of 0.006. <strong>This is a well-resolved equality
+with chance, not a failure to resolve a difference</strong> &mdash; a larger sample would pin
+it closer to one third rather than pull it away, which is the opposite of what an
+underpowered null does.</p>
+<p>The check that could have voided it passes in the useful direction: roughly three quarters
+of the stored power is context-dependent, so the table distinguishes its four contexts
+strongly. There is no shortage of content. The content simply has no feature structure.</p>
+<p><strong>So a factorial task is stored non-factorially, as four independent
+associations.</strong> The targets are a product by construction and the representation is
+not. With one independent parameter set per context and a learning rule that correlates
+reward with per-neuron perturbations, nothing pushes toward a shared representation, and
+none appears even when the task supplies one for free.</p>
+<p>A sharpening mechanism that improves <em>which</em> context wins changes this not at all
+(0.331 to 0.333), which is consistent rather than disappointing: it is a result about
+partitioning the input, not about what each partition stores. Two independent measurements
+now say so.</p>
+<p class="note">The careful part is what this refuses. It refuses the <em>rationale</em>:
+a factored representation cannot compress structure that is absent, so "the same code for
+half the parameters" is not on offer, and the generational decay is not a parameter-sharing
+problem &mdash; which corrects a hypothesis recorded alongside that decay the same day. It
+does <em>not</em> refuse the possibility that a factored learner could <em>impose</em>
+additivity and still solve the task, since the targets really are a product. But that is a
+constraint rather than a compression, far weaker than the claim the lead was built on, and
+the cheap evidence points against it. The method generalises: a pre-flight that costs one run
+can kill a build whose rationale looks solid in two separate literatures, and it works best
+when the quantity is chosen so that the null falls out of the algebra instead of being
+assumed.</p>
+
+
 <h2>7. Transmission between creatures</h2>
 <h3>7.1 One creature teaches another: a learned distinction crosses to a second individual
 through the air, and narrows on the way</h3>

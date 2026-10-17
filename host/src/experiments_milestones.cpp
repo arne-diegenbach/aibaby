@@ -31586,6 +31586,46 @@ bool run_tutorgrid(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
 //
 // NOT A NEW MECHANISM AND NOT A SWEEP: one trained creature per arm, read afterwards. The
 // cheapest thing in the queue that can kill or confirm a build.
+//
+// =============== OUTCOME: REFUSED, AND SHARPLY ===============
+// `results/ctxfactor.log`, 2026-10-17, 18 creatures per arm.
+//
+//   arm        interaction share    F1 share   F2 share   context-dependent
+//   oracle     0.325 +/- 0.006      0.335      0.340      0.78 +/- 0.01
+//   self       0.331 +/- 0.007      0.345      0.324      0.74 +/- 0.01
+//   self-c     0.333 +/- 0.010      0.321      0.346      0.74 +/- 0.01
+//
+// THE THREE CONTRASTS HOLD EQUAL POWER -- 0.335 / 0.340 / 0.325 -- which is EXACTLY the
+// equipartition the derived null predicts for four INDEPENDENT rows. The primary is
+// 0.325 +/- 0.006 against a chance of 0.3333: 1.4 SE below it with an SE of 0.006, so this
+// is a WELL-RESOLVED EQUALITY WITH CHANCE and not an underpowered null. A bigger n would
+// pin it closer to 1/3, not drag it away.
+//
+// AND THE VOID CHECK PASSES THE OTHER WAY, which is what makes the result readable: the
+// context-dependent part is 0.78 of the total power, so the table distinguishes its four
+// contexts strongly. There is plenty of context-dependent content -- it simply carries NO
+// FEATURE STRUCTURE.
+//
+// THE SHARP FINDING, which is worth more than the refusal: the host TEACHES a factorial
+// code -- kGridWords is a 2x2 product -- and the creature stores it NON-FACTORIALLY, as
+// four independent associations. IT DOES NOT DISCOVER THE FACTORIAL STRUCTURE OF A
+// FACTORIAL TASK. With an independent bias row per context and node-perturbation learning
+// there is no pressure toward a shared representation, so none appears, even when the task
+// has one by construction.
+//
+// THE CONSCIENCE CHANGES NOTHING HERE (0.331 -> 0.333), and that is consistent rather than
+// disappointing: DNA v70 sharpens WHICH context wins, not WHAT is stored per context. It is
+// a partition result, not a representation one, and this says so from a second direction.
+//
+// WHAT IS REFUTED AND WHAT IS NOT, stated carefully because the pre-registration promised
+// the distinction. REFUTED: the lead's RATIONALE. A factored table cannot COMPRESS
+// structure that is already there, because none is -- so "fewer parameters for the same
+// code" is not available and `tutorgrid`'s decay is NOT a parameter-sharing problem. NOT
+// REFUTED: that a factored learner could IMPOSE additivity and still solve the task, since
+// kGridWords really is a product. But that is a much weaker proposition than the one the
+// lead was built on -- a constraint rather than a compression -- and the cheap evidence now
+// points against it. Do not build it on this basis.
+// =============================================================
 bool run_ctxfactor(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
   (void)verbose;
   aibaby::Dna dna;
