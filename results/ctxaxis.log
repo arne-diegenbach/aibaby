@@ -32,6 +32,7 @@ experiment: ctxaxis
   raw       18   0.852 +/- 0.011    0.739 +/- 0.015    +0.113 +/- 0.025 (4.5 SE)
   z         18   0.879 +/- 0.014    0.786 +/- 0.010    +0.093 +/- 0.012 (7.7 SE)
   sph       18   0.916 +/- 0.008    0.900 +/- 0.010    +0.016 +/- 0.005 (3.0 SE)
+  sph-0     18   0.846 +/- 0.011    0.813 +/- 0.009    +0.033 +/- 0.017 (1.9 SE)
 
   VOID CHECK, shuffled labels on `ear`: 0.512 +/- 0.008 (F1), 0.501 +/- 0.009 (F2)
                 against a constructed chance of 0.500.
@@ -73,17 +74,19 @@ experiment: ctxaxis
     dimension on the training half itself, so handing it a pre-z-scored
     feature must reproduce `ear` exactly, and it does.
 
-  THE DECISION STATISTIC, paired per creature -- sph minus kern, which is
-  the kernel's rule with the overall MAGNITUDE removed and nothing else:
-    bit F1   +0.089 +/- 0.016  (5.5 SE)   RESOLVED
-    bit F2   +0.120 +/- 0.023  (5.3 SE)   RESOLVED
+  THE DECISION STATISTIC, paired per creature. `sph-0` minus `kern` is ONE
+  variable -- the kernel's own zero-init rule with the overall MAGNITUDE
+  removed and nothing else -- and is what licenses the build. `sph` minus
+  `kern` is printed too and is NOT the licensing number: it bundles the
+  normalisation with a DATA-SEEDED init the kernel does not do.
+    bit F1   sph-0 - kern +0.019 +/- 0.013 (1.4 SE)   under 3 SE
+            reference:  sph - kern +0.089 +/- 0.016 (5.5 SE, BUNDLED),  sph - raw +0.064 +/- 0.015 (4.3 SE)
+    bit F2   sph-0 - kern +0.033 +/- 0.023 (1.4 SE)   under 3 SE
+            reference:  sph - kern +0.120 +/- 0.023 (5.3 SE, BUNDLED),  sph - raw +0.161 +/- 0.016 (9.9 SE)
 
-  SO THE ACTIONABLE RESULT IS NOT THE PRIMARY, IT IS THIS. The shipped
-  index clusters a raw, ALL-POSITIVE rate vector, whose largest-variance
-  direction is overall drive and carries no word. Projecting it onto the
-  unit sphere before the distance is computed lifts BOTH bits, and the
-  bit the lineage loses is one of them. That is one change inside the
-  source-4 block, behind a genome field, and it is what to build next.
+  THE MAGNITUDE LEAD IS NOT LICENSED at this n: one of the two bits does
+  not clear 3 SE paired, and a transform that helps one bit while leaving
+  the other unresolved is not the clean win the column means suggest.
 
   WHAT THIS CANNOT SHOW: that a transform which helps OFFLINE helps the
   creature. These rules run on a RECORDED feature with the word order fixed;

@@ -17938,21 +17938,39 @@ reader-based "asymmetries" read 0.115 and 0.305. **The resolution question is NO
 and must not be cited as settled** — 118 Hz being harder than 300 Hz remains plausible and
 unmeasured. Settling it needs a *ceiling*, not another decoder.
 
-**THE ACTIONABLE RESULT IS THE SECONDARY, and it is clean.** Paired per creature, `sph`
-minus `kern` — the kernel's rule with the overall magnitude removed and nothing else:
+**THE SECONDARY IS THE MAGNITUDE, AND IT IS CONDITIONAL — the first version of this
+section got that wrong and said "build it".** `sph` minus `kern` reads +0.089 (5.5 SE) and
++0.120 (5.3 SE), which looks like a clean licence and is **the wrong contrast**: `kern` runs
+the kernel's ZERO init while `sph` is **data-seeded**, so that difference bundles the
+normalisation with an init the kernel does not do. One variable at a time is this project's
+own rule and the headline broke it. The `sph-0` column was added to fix it — the kernel's own
+zero-init rule on the normalised feature, which is the proposed build exactly:
 
-| bit | paired gain | |
-|---|---|---|
-| F1 | **+0.089 ± 0.016** | 5.5 SE, resolved |
-| F2 | **+0.120 ± 0.023** | 5.3 SE, resolved |
+| contrast | bit F1 | bit F2 | |
+|---|---|---|---|
+| `sph-0 − kern` **normalisation alone, kernel's init** | +0.019 ± 0.013 | +0.033 ± 0.023 | 1.4 SE both — **NOT LICENSED** |
+| `sph − raw` normalisation at distinct seeds | **+0.064 ± 0.015** | **+0.161 ± 0.016** | 4.3 SE, 9.9 SE |
+| `raw − kern` init alone, raw feature | +0.025 | −0.042 | |
 
-The shipped index clusters a raw, **all-positive** rate vector, whose largest-variance
-direction is overall drive and carries no word identity — so Euclidean k-means spends its
-first split on it. Projecting onto the unit sphere before the distance lifts **both** bits.
+So the shipped index does cluster a raw **all-positive** rate vector whose largest-variance
+direction is overall drive and carries no word identity, and removing that direction is worth
+a lot — **but only if the prototypes start at distinct points.** With the kernel's zero init
+the gain collapses to 1.4 SE, and the reason is geometric: on unit-norm features every
+all-zero prototype sits at distance exactly 1 from every sample, so the first split is decided
+entirely by the conscience rather than by the data. `ctx_proto_gate 3` does not rescue it
+either — it seeds *every* slot from the *same* first sample, so the prototypes are identical
+rather than distinct, still a tie and merely not at the origin.
+
+**WHAT IS THEREFORE LICENSED, and it is not the one-line change.** Normalisation needs a
+DISTINCT-SEEDING step, and the only existing mechanism that produces distinct data-driven
+seeds is gate 6's ART vigilance, which commits a free slot when an input is far from every
+committed prototype. That gate's own milestone was NOT met (0.737 → 0.594 at 96 creatures) —
+and this result supplies a candidate reason, because its novelty test is a distance on the
+same magnitude-dominated raw feature. **Normalisation plus vigilance is the pair to price
+next, offline and one variable at a time, before any kernel edit.**
+
 Note also that the kernel's loss against the best reader was always mostly on **F2** (0.184)
-rather than F1 (0.023), the opposite of the asymmetry the primary was built to find. The
-paired statistic is the one that licenses the build, because the column means share creatures
-and a difference of two means is not the SE of the difference.
+rather than F1 (0.023), the opposite of the asymmetry the primary was built to find.
 
 **What it cannot show:** that a transform helping *offline* helps the creature. These rules
 run on a recorded feature with the word order fixed, where the kernel's prototypes move while

@@ -32116,10 +32116,22 @@ bool run_ctxaxis(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
   // So the supervised reader now runs on the SAME three feature spaces as the partition.
   // The question "is the ear asymmetric" only has an answer once it is asked of a readout
   // that is not itself the bottleneck, and `ear-sph` is the one to read it on.
-  constexpr uint32_t kCols = 7;
-  static const char* kColName[kCols] = {"ear",  "ear-z", "ear-sph", "kern",
-                                        "raw",  "z",     "sph"};
-  constexpr uint32_t kColKern = 3, kColRaw = 4, kColZ = 5, kColSph = 6;
+  // EIGHT COLUMNS, AND THE EIGHTH EXISTS BECAUSE THE FIRST VERSION'S HEADLINE WAS THE
+  // WRONG CONTRAST. `kern` runs the kernel's ZERO init; `raw`, `z` and `sph` are all
+  // DATA-SEEDED, because a seeded init has to be averaged over draws to mean anything.
+  // So `sph` minus `kern` bundled TWO changes -- the normalisation AND an init the kernel
+  // does not do -- and this project's own rule is one variable at a time. `sph-0` is the
+  // proposed build exactly: the kernel's rule, zero init, on the normalised feature.
+  //
+  // AND IT IS ALSO THE DEGENERACY CHECK. On unit-norm features every all-zero prototype
+  // sits at distance 1 from every point, so the first split is decided entirely by the
+  // conscience rather than by the data. If that costs the normalisation its gain, the
+  // build needs a seeding step too and this column is where that shows up -- offline,
+  // before anything is written into the kernel.
+  constexpr uint32_t kCols = 8;
+  static const char* kColName[kCols] = {"ear", "ear-z", "ear-sph", "kern",
+                                        "raw", "z",     "sph",     "sph-0"};
+  constexpr uint32_t kColKern = 3, kColRaw = 4, kColZ = 5, kColSph = 6, kColSph0 = 7;
   instrument("ctxaxis", dna.header().seed ^ 0x7CC5u, ticks / kVLTrialTicks,
              "trials per creature");
   std::printf("  ctxaxis -- the oracle chain proved the DERIVED INDEX caused the F1 bit's\n"
@@ -32235,6 +32247,12 @@ bool run_ctxaxis(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
           ctxaxis_partition(p.feat_ema, tr, kSlots, sg ^ 0xA11u, true);
       for (uint32_t q = 0; q < 2u; ++q)
         c.acc[kColKern][q] = ctxaxis_bit_acc(part, b[q], tr, kSlots);
+      // THE PROPOSED BUILD, one variable from `kern`: the same zero-init rule on the
+      // NORMALISED feature. Deterministic, so one pass is the answer.
+      const std::vector<int> ps0 =
+          ctxaxis_partition(fs, tr, kSlots, sg ^ 0xA11u, true);
+      for (uint32_t q = 0; q < 2u; ++q)
+        c.acc[kColSph0][q] = ctxaxis_bit_acc(ps0, b[q], tr, kSlots);
     }
     for (uint32_t d = 0; d < kDraws; ++d) {
       const uint64_t s = sg ^ (0xB22u + d);
@@ -32247,7 +32265,9 @@ bool run_ctxaxis(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
         c.acc[kColSph][q] += ctxaxis_bit_acc(ps, b[q], tr, kSlots);
       }
     }
-    for (uint32_t col = kColRaw; col < kCols; ++col)
+    // Only the DATA-SEEDED columns are averaged over draws. `sph-0` is deterministic like
+    // `kern` and must not be divided -- hence `<= kColSph` rather than `< kCols`.
+    for (uint32_t col = kColRaw; col <= kColSph; ++col)
       for (uint32_t q = 0; q < 2u; ++q) c.acc[col][q] /= double(kDraws);
     c.rows = n;
     c.ok = true;
@@ -32445,22 +32465,34 @@ bool run_ctxaxis(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
   // creatures and a difference of two means with their own SEs is not the SE of the
   // difference. This is the number that licenses a kernel change or does not: what
   // removing the feature's overall MAGNITUDE buys the kernel's own rule, on each bit.
-  std::printf("\n  THE DECISION STATISTIC, paired per creature -- sph minus kern, which is\n"
-              "  the kernel's rule with the overall MAGNITUDE removed and nothing else:\n");
+  std::printf("\n  THE DECISION STATISTIC, paired per creature. `sph-0` minus `kern` is ONE\n"
+              "  variable -- the kernel's own zero-init rule with the overall MAGNITUDE\n"
+              "  removed and nothing else -- and is what licenses the build. `sph` minus\n"
+              "  `kern` is printed too and is NOT the licensing number: it bundles the\n"
+              "  normalisation with a DATA-SEEDED init the kernel does not do.\n");
   bool licensed = true;
   for (uint32_t q = 0; q < 2u; ++q) {
-    std::vector<double> d;
+    std::vector<double> d0, db, dn;
     for (const Cell& c : cells) {
       if (!c.ok) continue;
-      d.push_back(c.acc[kColSph][q] - c.acc[kColKern][q]);
+      d0.push_back(c.acc[kColSph0][q] - c.acc[kColKern][q]);   // THE ONE-VARIABLE contrast
+      db.push_back(c.acc[kColSph][q] - c.acc[kColKern][q]);    // bundled, for reference
+      dn.push_back(c.acc[kColSph][q] - c.acc[kColRaw][q]);     // normalisation at seeded init
     }
-    if (d.size() < 3) { licensed = false; continue; }
-    double se = 0.0;
-    const double m = ctx_mean_se(d, &se);
-    const double nse = se > 0.0 ? m / se : 0.0;
-    std::printf("    bit %s   %+.3f +/- %.3f  (%.1f SE)%s\n", q == 0 ? "F1" : "F2", m, se,
-                nse, nse >= 3.0 ? "   RESOLVED" : "   under 3 SE");
-    if (!(nse >= 3.0)) licensed = false;
+    if (d0.size() < 3) { licensed = false; continue; }
+    double s0 = 0.0, sb = 0.0, sn = 0.0;
+    const double m0 = ctx_mean_se(d0, &s0);
+    const double mb = ctx_mean_se(db, &sb);
+    const double mn = ctx_mean_se(dn, &sn);
+    const double n0 = s0 > 0.0 ? m0 / s0 : 0.0;
+    std::printf("    bit %s   sph-0 - kern %+.3f +/- %.3f (%.1f SE)%s\n",
+                q == 0 ? "F1" : "F2", m0, s0, n0,
+                n0 >= 3.0 ? "   RESOLVED" : "   under 3 SE");
+    std::printf("            reference:  sph - kern %+.3f +/- %.3f (%.1f SE, BUNDLED),"
+                "  sph - raw %+.3f +/- %.3f (%.1f SE)\n",
+                mb, sb, sb > 0.0 ? std::fabs(mb) / sb : 0.0,
+                mn, sn, sn > 0.0 ? std::fabs(mn) / sn : 0.0);
+    if (!(n0 >= 3.0)) licensed = false;
   }
   if (licensed) {
     std::printf("\n  SO THE ACTIONABLE RESULT IS NOT THE PRIMARY, IT IS THIS. The shipped\n"
