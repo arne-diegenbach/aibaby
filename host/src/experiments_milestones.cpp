@@ -27581,8 +27581,11 @@ struct CtxSrc {
   bool ok = false;
 };
 
+// `words` lets a caller probe a word set other than the default pair -- `ctxaxis` needs
+// the 2x2 grid, because the question there is about the two AXES and not about two words.
+// Defaulted, so every existing caller is unchanged and their numbers cannot drift.
 CtxSrc run_ctxsrc_session(const std::vector<uint8_t>& blob, uint64_t ticks,
-                          uint32_t n_words = 2) {
+                          uint32_t n_words = 2, const Word* words = nullptr) {
   CtxSrc out;
   std::string error;
   Session s;
@@ -27646,6 +27649,11 @@ CtxSrc run_ctxsrc_session(const std::vector<uint8_t>& blob, uint64_t ticks,
     double gbin[kCsBinCount][aibaby::kVocalGroups] = {};
     uint32_t gbn[kCsBinCount] = {};
     std::vector<double> bg(wa, 0.0);   // the creature-gated auditory vector
+    // The ear's rate EMA at the reward midpoint, HELD for this trial and appended only
+    // if the trial survives the `slept` check -- see the note at the sampling site.
+    // Full width from the start, so a trial that somehow never reached the sample still
+    // appends a row and the alignment with `y` holds by construction.
+    std::vector<double> ema_row(wa, 0.0);
     uint32_t bgn = 0;                  // ticks the creature spent listening
     uint32_t eps = 0;                  // gate episodes in this trial
     uint32_t ep_ticks = 0, ep_word = 0;      // the CURRENT episode
@@ -27655,7 +27663,7 @@ CtxSrc run_ctxsrc_session(const std::vector<uint8_t>& blob, uint64_t ticks,
     bool slept = false;
     for (uint64_t t = 0; t < kVLTrialTicks; ++t) {
       const bool sounding = t < kVLWordTicks;
-      const Word& w = kWords[word];
+      const Word& w = words ? words[word] : kWords[word];
       voice.render(sounding ? w.f0 : 0.0f, w.f1, w.f2, sounding ? 0.5f : 0.0f,
                    pcm.data(), spt);
       ear.tick(s.brain, pcm.data(), spt);
@@ -27677,11 +27685,18 @@ CtxSrc run_ctxsrc_session(const std::vector<uint8_t>& blob, uint64_t ticks,
       }
       // The boundary-free sample: one row per trial, taken at the midpoint of
       // the reward window, which is where v53's index has to be correct.
+      // HELD, NOT PUSHED, and that was a real misalignment bug. Every other feature
+      // space is appended AFTER the `slept` check below, which discards the trial; this
+      // one was appended here, inside the tick loop, so a slept trial contributed a
+      // feature row and no label. `feat_ema` then ran AHEAD of `labels` by the number of
+      // slept trials -- row i paired with the wrong word, and the last rows indexing
+      // `labels` past its end, which is undefined behaviour rather than a wrong number.
+      // `ctxaxis` found it by comparing the two sizes: 428 rows against 416 labels.
+      // Latent in shorter runs that never sleep, which is why partprobe never saw it.
       if (t == kVLWordTicks + 400) {
         const aibaby::Network& net = s.brain.network();
-        std::vector<double> row(wa, 0.0);
-        for (uint32_t n = 0; n < wa; ++n) row[n] = double(net.rate(ms_a.begin + n));
-        xae.push_back(row);
+        ema_row.assign(wa, 0.0);
+        for (uint32_t n = 0; n < wa; ++n) ema_row[n] = double(net.rate(ms_a.begin + n));
       }
       // The creature's OWN window, gated exactly as DNA v53 gates it, and
       // running over the whole trial rather than only inside the host's bins --
@@ -27715,6 +27730,7 @@ CtxSrc run_ctxsrc_session(const std::vector<uint8_t>& blob, uint64_t ticks,
       }
     }
     if (slept) continue;
+    xae.push_back(ema_row);
     {
       // Normalised to a per-tick mean: the gated window's length varies from
       // trial to trial, and an unnormalised count would let the classifier read
@@ -31884,6 +31900,585 @@ bool run_ctxfactor(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
               "  one has a different gradient and could get stuck where this one did not.\n"
               "  The build is licensed, not finished -- and `ctxgain` already says to expect\n"
               "  generalisation and vocabulary from it, never precision.\n");
+  return true;
+}
+// A K-WAY online competitive pass that returns the ASSIGNMENTS rather than an accuracy.
+// `online_competitive_accuracy` in experiments_common.h is this project's established
+// version of the same rule and is hardcoded to TWO prototypes; widening it would move
+// `partprobe`'s banked numbers, so this is a separate local copy at K.
+//
+// EVERYTHING THE KERNEL DOES AND NOTHING IT DOES NOT, copied term for term from
+// network.cpp's source-4 block so no constant is guessed: squared Euclidean distance on
+// the feature, DeSieno's penalty `(K * wins_c/total - 1) * cdscale` where `cdscale` is the
+// running mean ACHIEVED distance -- so a unit at its fair share of 1/K is penalised
+// exactly nothing -- the adjusted winning distance accumulated into that scale, and
+// MacQueen's `lr = 1/wins` prototype update.
+//
+// THE PROTOTYPES KEEP LEARNING ON EVERY ROW, including the scored ones, AND THAT IS NOT
+// LEAKAGE: competitive learning never sees a label, so adapting on unlabelled held-out
+// rows is exactly the creature's own situation. What is fitted on the training half is
+// only the slot-to-bit map, in `ctxaxis_bit_acc` below. Freezing instead would have made
+// the probe pessimistic for a reason that has nothing to do with the question --
+// `ctxself` measured frozen prototypes decaying across a session, 0.697 -> 0.663.
+std::vector<int> ctxaxis_partition(const std::vector<std::vector<double>>& z,
+                                   size_t train_count, uint32_t k, uint64_t seed,
+                                   bool zero_init) {
+  std::vector<int> out(z.size(), 0);
+  if (z.empty() || k < 2u || train_count <= size_t(k) * 2u || train_count >= z.size())
+    return out;
+  const size_t dims = z[0].size();
+  if (dims == 0) return out;
+  aibaby::Rng rng;
+  rng.seed(seed);
+  std::vector<std::vector<double>> w(k, std::vector<double>(dims, 0.0));
+  std::vector<double> wins(k, 0.0);
+  std::vector<int> seed_of(z.size(), -1);
+  if (!zero_init) {
+    // K DISTINCT training rows, drawn at random. Seeding from the FIRST rows is a coin
+    // flip by construction -- partprobe's own note, and it read 2 of 9 creatures at 1.000
+    // with the rest at chance before it was fixed -- so the caller averages over draws.
+    for (uint32_t c = 0; c < k; ++c) {
+      size_t pick = size_t(rng.next() % train_count);
+      for (uint32_t guard = 0; guard < 64u && seed_of[pick] >= 0; ++guard)
+        pick = size_t(rng.next() % train_count);
+      seed_of[pick] = int(c);
+      w[c] = z[pick];
+      wins[c] = 1.0;
+    }
+  }
+  double dsum = 0.0, dn = 0.0;
+  for (size_t i = 0; i < z.size(); ++i) {
+    if (seed_of[i] >= 0) { out[i] = seed_of[i]; continue; }
+    double total = 0.0;
+    for (uint32_t c = 0; c < k; ++c) total += wins[c];
+    const double cdscale = dn > 0.0 ? dsum / dn : 0.0;
+    double best_d = 0.0;
+    uint32_t win = 0;
+    for (uint32_t c = 0; c < k; ++c) {
+      double d = 0.0;
+      for (size_t q = 0; q < dims; ++q) {
+        const double e = z[i][q] - w[c][q];
+        d += e * e;
+      }
+      if (total > 0.0 && dn > 0.0)
+        d += (double(k) * (wins[c] / total) - 1.0) * cdscale;
+      if (c == 0 || d < best_d) { best_d = d; win = c; }
+    }
+    out[i] = int(win);
+    dsum += best_d;
+    dn += 1.0;
+    wins[win] += 1.0;
+    const double lr = 1.0 / wins[win];
+    for (size_t q = 0; q < dims; ++q) w[win][q] += lr * (z[i][q] - w[win][q]);
+  }
+  return out;
+}
+
+// The held-out accuracy of a partition on ONE bit.
+//
+// THE SLOT-TO-BIT MAP IS FITTED ON THE TRAINING HALF ONLY, and that is what makes chance
+// exactly 0.5: no maximum over assignments is ever taken on the rows being scored. The
+// alternative is the trap this project has already paid for -- a best-of-k! agreement read
+// on its own data is not a statistic with a 1/k null, and `direction_null` measured that
+// same shape reading 0.30 on an empty voice.
+double ctxaxis_bit_acc(const std::vector<int>& part, const std::vector<int>& bit,
+                       size_t train_count, uint32_t k) {
+  if (part.size() != bit.size() || train_count == 0 || train_count >= part.size())
+    return 0.0;
+  std::vector<double> c0(k, 0.0), c1(k, 0.0);
+  for (size_t i = 0; i < train_count; ++i) {
+    const int s = part[i];
+    if (s < 0 || uint32_t(s) >= k) continue;
+    if (bit[i]) c1[size_t(s)] += 1.0; else c0[size_t(s)] += 1.0;
+  }
+  // A slot that won nothing in training has no evidence and predicts 0. On a balanced bit
+  // that is a coin flip, which is the honest answer for an empty slot rather than a
+  // silently favourable one.
+  std::vector<int> map(k, 0);
+  for (uint32_t s = 0; s < k; ++s) map[s] = c1[s] > c0[s] ? 1 : 0;
+  size_t correct = 0, total = 0;
+  for (size_t i = train_count; i < part.size(); ++i) {
+    const int s = part[i];
+    if (s < 0 || uint32_t(s) >= k) continue;
+    if (map[size_t(s)] == bit[i]) ++correct;
+    ++total;
+  }
+  return total ? double(correct) / double(total) : 0.0;
+}
+
+// ============ ctxaxis: WHY THE F1 BIT AND NOT THE F2 BIT? ============
+//
+// WHAT THE ORACLE RUN LEFT. `tutorgrid`'s oracle chain settled that the DERIVED INDEX
+// caused the F1 bit's generational decay: handing the pupils a host-written index turned a
+// -21.58 +/- 5.57 loss into a +41.03 +/- 4.36 gain, +62.61 +/- 5.91 paired (10.6 SE). The
+// lineage then climbed to 97% of what a perfect-index creature manages in a SINGLE
+// session and stopped there, 0.4 SE apart. So a chain's level is set by how well ONE pupil
+// can USE its index, and the question is now a single-session one.
+//
+// THAT IS WHAT MAKES THIS CHEAP, and it is a consequence of the committed result rather
+// than a convenience: no generations, no teaching, no chain. Just the index.
+//
+// AND IT LEFT ONE ASYMMETRY UNEXPLAINED. The derived index recovers ~62% of the oracle's
+// F2 bit and ~46% of its F1 bit, and down a lineage F1 decays where F2 does not. Two
+// causes are available and the depth run could not separate them because they COINCIDE on
+// that axis:
+//   THE EAR         571 vs 689 Hz is 118 Hz apart where 1517 vs 1817 is 300. If the ear's
+//                   own code does not separate the F1 pair as well, no clustering rule can
+//                   recover what is not there and the limit is RESOLUTION.
+//   THE CLUSTERING  the index is Euclidean nearest-prototype on `rate_ema_`, an
+//                   all-positive rate vector, and k-means splits along the direction of
+//                   largest VARIANCE -- which need not be the direction of the word.
+//                   `ctxfeat` read exactly that failure at gate 0: separation 0.002
+//                   against a feature ceiling of 0.978. Then the limit is the RULE.
+//
+// ================== PRE-REGISTERED, BEFORE THE RUN ==================
+// THE FEATURE IS THE KERNEL'S OWN, not a proxy. `run_ctxsrc_session` hands back
+// `feat_ema`, the ear's `rate_ema_` at reward time -- the exact vector DNA v53 source 4
+// clusters. `partprobe` scored it at 1.000 on two words under the rule this kernel runs,
+// so the harness is established and only the WORD SET changes: `kGridWords`, the 2x2 grid,
+// because the question is about the two AXES and not about two words.
+//
+// THE SCORING, and it is the reason chance is exactly 0.5 rather than something derived.
+// Each word carries two bits -- F1 = (word >= 2), F2 = (word & 1) -- and every column is
+// scored on ONE bit at a time against a HELD-OUT half, with any slot-to-bit map fitted on
+// the training half only. Both bits are balanced by construction and read with the same
+// classifier on the same creature, so their DIFFERENCE has a null of exactly ZERO and the
+// finite-sample bias cancels in it.
+//
+// THE COLUMNS, one variable at a time:
+//   ear    a supervised held-out readout of the bit from the feature: what is in the ear
+//          at all, regardless of how it is partitioned.
+//
+//          AND IT IS NOT AN UNCONDITIONAL CEILING, which the first smoke of this run
+//          showed by having the partition BEAT it (0.812 against 0.738 at 71 trials). The
+//          reason is sample efficiency, not a contradiction: the supervised column fits
+//          1024 dimensions x 2 centroids on the training half, where a partition fits
+//          FOUR numbers -- one bit per slot -- on top of a clustering that used no labels
+//          at all. So at small n the 4-parameter reader wins, and `ear` is a ceiling only
+//          once it has the rows to estimate 2048 parameters. `partprobe` reads this same
+//          1024-dim feature at 1.000 on two words with 107 trials per word, which is
+//          exactly why this run's budget is set to that per-word count.
+//
+//          WHAT THE PRIMARY USES IS THE WITHIN-COLUMN DIFFERENCE, and that is immune to
+//          all of it: both bits are read by the SAME classifier, on the SAME rows, on the
+//          SAME creature, so whatever the absolute level, F1-minus-F2 still has a null of
+//          exactly zero. Only the ear-against-kernel LEVEL comparison needs the caveat.
+//   kern   the kernel's rule exactly -- K-way, prototypes at the ORIGIN, the conscience.
+//          What the creature actually gets. Deterministic, so one pass is the answer.
+//   raw    the same rule seeded from K distinct data rows.  kern -> raw isolates INIT.
+//   z      the same, per-dimension z-scored on the training half.  raw -> z isolates
+//          per-channel SCALE.
+//   sph    the same, L2-normalised per row.  raw -> sph isolates overall MAGNITUDE, which
+//          is the component an all-positive rate vector has most of and a word identity
+//          has least of.
+//
+// THE PRIMARY: the paired per-creature asymmetry, bit F1 minus bit F2, measured twice --
+// once on `ear` and once on `kern`. Null exactly 0. The two together decide it:
+//   ear SYMMETRIC, kern ASYMMETRIC  both bits are in the ear and the clustering drops F1.
+//                                   The limit is the RULE, and the transform columns say
+//                                   which component to remove. ACTIONABLE.
+//   ear ASYMMETRIC                  the ear does not separate 118 Hz as well as 300 Hz. No
+//                                   clustering rule recovers what is not there; the limit
+//                                   is RESOLUTION, which closes this line and sends it to
+//                                   the ear -- a different build with a different cost.
+//   both SYMMETRIC                  the index is not where the asymmetry lives. That sits
+//                                   against the oracle run's attribution and must be
+//                                   reported as a TENSION rather than smoothed over.
+// All three are results. No prediction is recorded.
+//
+// VOID IF the shuffled control on `ear` is not near 0.5 -- then the split leaks and no
+// column means anything -- or if BOTH ear bits sit at chance, which would say the feature
+// carries no word at all and contradicts `ctxfeat`'s 0.978 rather than answering this.
+//
+// READ-ONLY: no learning, no genome field, no mechanism, nothing shipped. One run is what
+// the sparse-time-basis and factored-gain pre-flights each cost before they killed a
+// build, and this is the same shape of bet.
+// =====================================================================
+bool run_ctxaxis(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  aibaby::Dna dna;
+  if (dna.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) {
+    std::printf("  setup failed: the genome does not load\n");
+    return false;
+  }
+  constexpr uint32_t kReps = 18;    // tutorgrid's n, so the two runs are comparable
+  constexpr uint32_t kSlots = 4;    // four words, four slots, exactly as tutorgrid runs it
+  constexpr uint32_t kDraws = 8;    // the data-seeded columns are a DISTRIBUTION, not a draw
+  // SEVEN COLUMNS, NOT FIVE, AND THE TWO EXTRA ONES REMOVE A CONFOUND THE FIRST RUN
+  // EXPOSED IN ITS OWN PRE-REGISTRATION. That run read the ear asymmetric at 5.4 SE and
+  // fired the RESOLUTION branch -- and then `sph` read the F1 bit at 0.916 against the
+  // `ear` column's own 0.850. A partition cannot extract a separation the feature does not
+  // hold, so the supervised column was not measuring the feature's content; it was
+  // measuring what ONE readout could get out of it, and a z-scored linear nearest-centroid
+  // compresses a HARD problem more than an EASY one. That manufactures an asymmetry
+  // between an easy bit and a hard one with no help from the ear at all.
+  //
+  // So the supervised reader now runs on the SAME three feature spaces as the partition.
+  // The question "is the ear asymmetric" only has an answer once it is asked of a readout
+  // that is not itself the bottleneck, and `ear-sph` is the one to read it on.
+  constexpr uint32_t kCols = 7;
+  static const char* kColName[kCols] = {"ear",  "ear-z", "ear-sph", "kern",
+                                        "raw",  "z",     "sph"};
+  constexpr uint32_t kColKern = 3, kColRaw = 4, kColZ = 5, kColSph = 6;
+  instrument("ctxaxis", dna.header().seed ^ 0x7CC5u, ticks / kVLTrialTicks,
+             "trials per creature");
+  std::printf("  ctxaxis -- the oracle chain proved the DERIVED INDEX caused the F1 bit's\n"
+              "  decay and that a perfect index REVERSES it. This asks the next question\n"
+              "  down: is F1 worse than F2 because the EAR does not separate 118 Hz, or\n"
+              "  because the CLUSTERING RULE throws the separation away?\n");
+  std::printf("  the feature   `feat_ema`, the ear's rate EMA at reward time -- the exact\n"
+              "                vector DNA v53 source 4 clusters, on kGridWords' 2x2 grid.\n");
+  std::printf("  the scoring   one BIT at a time, held out, with any slot-to-bit map fitted\n"
+              "                on the training half only. So chance is exactly 0.50 and the\n"
+              "                F1-minus-F2 difference has a null of exactly ZERO.\n");
+  std::printf("  the columns   ear (a supervised READ of the feature, not an absolute\n"
+              "                ceiling -- it fits 2048 parameters where a partition fits 4),\n"
+              "                kern (the kernel's own rule, from the origin), raw (seeded\n"
+              "                from data: isolates INIT), z (per-channel SCALE), sph\n"
+              "                (overall MAGNITUDE).\n");
+  std::printf("  the primary   bit F1 minus bit F2, paired per creature, on `ear` and on\n"
+              "                `kern`. An asymmetric ear means RESOLUTION; a symmetric ear\n"
+              "                with an asymmetric kernel means the RULE, and is actionable.\n");
+  std::printf("  read-only     no learning, no genome field, nothing shipped.\n");
+  std::printf("  %u creatures, %u slots, %u inits per seeded column.\n\n",
+              kReps, kSlots, kDraws);
+
+  struct Cell {
+    bool ok = false;
+    double acc[kCols][2] = {};   // [column][bit], bit 0 = F1, bit 1 = F2
+    double shuf[2] = {};         // the void check, on `ear`
+    size_t rows = 0;
+    // WHY a cell failed, because "0 usable creatures" is not a diagnosis. The first
+    // 1.2M-tick run of this experiment printed exactly that and the guards had to be
+    // bisected by hand; a cell that refuses itself should say which guard did it.
+    // 0 = ok, 1 = session not ok, 2 = no split, 3 = too few rows,
+    // 4 = labels and feature rows disagree, 5 = a label outside 0..3.
+    int fail = 0;
+    size_t n_rows = 0, n_labels = 0, n_split = 0;
+  };
+
+  const std::vector<Cell> cells = parallel_reps<Cell>(kReps, [&](uint32_t r) {
+    Cell c;
+    std::vector<uint8_t> v = blob;
+    const uint64_t sg = dna.header().seed + r * 7919ull;
+    std::memcpy(v.data() + offsetof(aibaby::DnaHeader, seed), &sg, sizeof(sg));
+    const CtxSrc p = run_ctxsrc_session(v, ticks, 4u, kGridWords);
+    c.n_rows = p.feat_ema.size();
+    c.n_labels = p.labels.size();
+    c.n_split = p.train_split;
+    if (!p.ok) { c.fail = 1; return c; }
+    if (p.train_split == 0) { c.fail = 2; return c; }
+    const size_t n = p.feat_ema.size();
+    if (n < 64 || p.train_split >= n) { c.fail = 3; return c; }
+    if (p.labels.size() != n) { c.fail = 4; return c; }
+    const size_t tr = p.train_split;
+
+    // The two bits of the grid: kGridWords puts words {2,3} at high F1 and {1,3} at high F2.
+    std::vector<int> b[2];
+    b[0].reserve(n);
+    b[1].reserve(n);
+    for (int lab : p.labels) {
+      if (lab < 0 || lab > 3) { c.fail = 5; return c; }
+      b[0].push_back(lab >= 2 ? 1 : 0);
+      b[1].push_back(lab & 1);
+    }
+    // One shuffle per creature per bit, as the void check.
+    aibaby::Rng rng;
+    rng.seed(sg ^ 0x7CC5u);
+    std::vector<int> sh[2] = {b[0], b[1]};
+    for (uint32_t q = 0; q < 2u; ++q)
+      for (size_t i = sh[q].size(); i > 1; --i)
+        std::swap(sh[q][i - 1], sh[q][size_t(rng.next() % i)]);
+
+    // The two transforms, each a one-line change to the SAME recorded vector so the
+    // comparison is one variable at a time. The z-score's statistics come from the
+    // TRAINING half only; the L2 norm is per row and needs none.
+    std::vector<std::vector<double>> fz = p.feat_ema, fs = p.feat_ema;
+    const size_t dims = p.feat_ema[0].size();
+    {
+      std::vector<double> m(dims, 0.0), sd(dims, 0.0);
+      for (size_t i = 0; i < tr; ++i)
+        for (size_t d = 0; d < dims; ++d) m[d] += p.feat_ema[i][d];
+      for (size_t d = 0; d < dims; ++d) m[d] /= double(tr);
+      for (size_t i = 0; i < tr; ++i)
+        for (size_t d = 0; d < dims; ++d) {
+          const double dev = p.feat_ema[i][d] - m[d];
+          sd[d] += dev * dev;
+        }
+      for (size_t d = 0; d < dims; ++d) {
+        sd[d] = std::sqrt(sd[d] / double(tr));
+        if (sd[d] < 1e-9) sd[d] = 1e-9;
+      }
+      for (size_t i = 0; i < n; ++i)
+        for (size_t d = 0; d < dims; ++d) fz[i][d] = (p.feat_ema[i][d] - m[d]) / sd[d];
+    }
+    for (size_t i = 0; i < n; ++i) {
+      double nrm = 0.0;
+      for (size_t d = 0; d < dims; ++d) nrm += fs[i][d] * fs[i][d];
+      nrm = std::sqrt(nrm);
+      if (nrm < 1e-12) continue;
+      for (size_t d = 0; d < dims; ++d) fs[i][d] /= nrm;
+    }
+
+    // The supervised reader on all three feature spaces, so it is never the bottleneck
+    // the asymmetry is attributed to.
+    for (uint32_t q = 0; q < 2u; ++q) {
+      c.acc[0][q] = holdout_accuracy(p.feat_ema, b[q], tr);
+      c.acc[1][q] = holdout_accuracy(fz, b[q], tr);
+      c.acc[2][q] = holdout_accuracy(fs, b[q], tr);
+      c.shuf[q] = holdout_accuracy(p.feat_ema, sh[q], tr);
+    }
+    // The kernel's own rule: prototypes at the ORIGIN. Deterministic given the data, so
+    // one pass is the answer rather than a sample from one.
+    {
+      const std::vector<int> part =
+          ctxaxis_partition(p.feat_ema, tr, kSlots, sg ^ 0xA11u, true);
+      for (uint32_t q = 0; q < 2u; ++q)
+        c.acc[kColKern][q] = ctxaxis_bit_acc(part, b[q], tr, kSlots);
+    }
+    for (uint32_t d = 0; d < kDraws; ++d) {
+      const uint64_t s = sg ^ (0xB22u + d);
+      const std::vector<int> pr = ctxaxis_partition(p.feat_ema, tr, kSlots, s, false);
+      const std::vector<int> pz = ctxaxis_partition(fz, tr, kSlots, s, false);
+      const std::vector<int> ps = ctxaxis_partition(fs, tr, kSlots, s, false);
+      for (uint32_t q = 0; q < 2u; ++q) {
+        c.acc[kColRaw][q] += ctxaxis_bit_acc(pr, b[q], tr, kSlots);
+        c.acc[kColZ][q] += ctxaxis_bit_acc(pz, b[q], tr, kSlots);
+        c.acc[kColSph][q] += ctxaxis_bit_acc(ps, b[q], tr, kSlots);
+      }
+    }
+    for (uint32_t col = kColRaw; col < kCols; ++col)
+      for (uint32_t q = 0; q < 2u; ++q) c.acc[col][q] /= double(kDraws);
+    c.rows = n;
+    c.ok = true;
+    return c;
+  });
+
+  // USABLE ROWS PER CREATURE, against the trials the tick budget buys. The two differ by
+  // the trials the creature SLEPT through, and that difference is what hid the
+  // feat_ema/labels misalignment this experiment found: at 428 trials 12 were slept, and
+  // every feature space but one had already dropped them. Printed so the next run that
+  // pairs two recorded vectors can see the gap rather than discover it.
+  {
+    double rs = 0.0;
+    size_t rn = 0;
+    for (const Cell& c : cells) {
+      if (!c.ok) continue;
+      rs += double(c.rows);
+      ++rn;
+    }
+    if (rn)
+      std::printf("  usable rows per creature %.1f of %llu trials the budget buys"
+                  " (the rest were slept through).\n\n",
+                  rs / double(rn), (unsigned long long)(ticks / kVLTrialTicks));
+  }
+  std::printf("  column   n     bit F1           bit F2           F1 - F2 paired\n");
+  double mdiff[kCols], sdiff[kCols], mbit[kCols][2];
+  size_t n_ok = 0;
+  for (uint32_t col = 0; col < kCols; ++col) {
+    std::vector<double> f1, f2, df;
+    for (const Cell& c : cells) {
+      if (!c.ok) continue;
+      f1.push_back(c.acc[col][0]);
+      f2.push_back(c.acc[col][1]);
+      df.push_back(c.acc[col][0] - c.acc[col][1]);
+    }
+    if (col == 0) n_ok = f1.size();
+    if (f1.size() < 3) {
+      std::printf("  %-8s %3zu   too few usable creatures\n", kColName[col], f1.size());
+      mdiff[col] = sdiff[col] = 0.0;
+      mbit[col][0] = mbit[col][1] = 0.0;
+      continue;
+    }
+    double s1 = 0, s2 = 0;
+    mbit[col][0] = ctx_mean_se(f1, &s1);
+    mbit[col][1] = ctx_mean_se(f2, &s2);
+    mdiff[col] = ctx_mean_se(df, &sdiff[col]);
+    std::printf("  %-8s %3zu   %.3f +/- %.3f    %.3f +/- %.3f    %+.3f +/- %.3f (%.1f SE)\n",
+                kColName[col], f1.size(), mbit[col][0], s1, mbit[col][1], s2,
+                mdiff[col], sdiff[col],
+                sdiff[col] > 0.0 ? std::fabs(mdiff[col]) / sdiff[col] : 0.0);
+  }
+
+  if (n_ok < 3) {
+    static const char* kWhy[6] = {"ok", "the session returned not-ok",
+                                  "no training split", "too few feature rows",
+                                  "labels and feature rows disagree",
+                                  "a label outside 0..3"};
+    uint32_t why[6] = {};
+    for (const Cell& c : cells) ++why[c.fail < 6 ? c.fail : 0];
+    std::printf("\n  setup failed: %zu usable creatures. WHICH GUARD refused them:\n", n_ok);
+    for (uint32_t q = 1; q < 6u; ++q)
+      if (why[q]) std::printf("    %2u x  %s\n", why[q], kWhy[q]);
+    if (!cells.empty())
+      std::printf("    first cell: %zu feature rows, %zu labels, split %zu\n",
+                  cells[0].n_rows, cells[0].n_labels, cells[0].n_split);
+    return false;
+  }
+  // THE VOID CHECKS, printed before any verdict so a leaking run cannot be read as a
+  // result. Chance is exactly 0.50 by the held-out construction, so the shuffled column is
+  // a check on the PLUMBING and not a calibration of the null.
+  {
+    std::vector<double> s1, s2;
+    for (const Cell& c : cells) {
+      if (!c.ok) continue;
+      s1.push_back(c.shuf[0]);
+      s2.push_back(c.shuf[1]);
+    }
+    double e1 = 0, e2 = 0;
+    const double m1 = ctx_mean_se(s1, &e1), m2 = ctx_mean_se(s2, &e2);
+    std::printf("\n  VOID CHECK, shuffled labels on `ear`: %.3f +/- %.3f (F1), %.3f +/- %.3f"
+                " (F2)\n                against a constructed chance of 0.500.\n",
+                m1, e1, m2, e2);
+    if (std::fabs(m1 - 0.5) > 0.05 || std::fabs(m2 - 0.5) > 0.05) {
+      std::printf("\n  VOID: a shuffled label is being read above chance, so the held-out\n"
+                  "  split leaks and no column in this table means anything.\n");
+      return false;
+    }
+    if (mbit[0][0] < 0.6 && mbit[0][1] < 0.6) {
+      std::printf("\n  VOID: both ear bits sit at chance, so this feature carries no word at\n"
+                  "  all. That contradicts ctxfeat's 0.978 rather than answering the\n"
+                  "  question, and the setup is the suspect, not the creature.\n");
+      return false;
+    }
+  }
+
+  const double ear_se = sdiff[0] > 0.0 ? std::fabs(mdiff[0]) / sdiff[0] : 0.0;
+  const double krn_se =
+      sdiff[kColKern] > 0.0 ? std::fabs(mdiff[kColKern]) / sdiff[kColKern] : 0.0;
+  const double esph_se = sdiff[2] > 0.0 ? std::fabs(mdiff[2]) / sdiff[2] : 0.0;
+  std::printf("\n  THE PRIMARY, as registered. ear F1-F2 %+.3f +/- %.3f (%.1f SE);"
+              "  kern F1-F2 %+.3f +/- %.3f (%.1f SE)\n",
+              mdiff[0], sdiff[0], ear_se, mdiff[kColKern], sdiff[kColKern], krn_se);
+
+  if (ear_se >= 3.0 && mdiff[0] < 0.0) {
+    std::printf("\n  THE REGISTERED RESOLUTION BRANCH FIRES: the supervised reader gets the\n"
+                "  F1 bit out of the ear worse than the F2 bit, %.3f against %.3f, %.1f SE\n"
+                "  on a quantity whose null is exactly zero.\n",
+                mbit[0][0], mbit[0][1], ear_se);
+    // AND THE DISAMBIGUATION THE FIRST RUN LACKED. A partition cannot extract what the
+    // feature does not hold, so a partition BEATING the supervised column convicts the
+    // reader rather than the ear. That is what happened: 0.916 against 0.850 on bit F1.
+    std::printf("\n  AND IT CANNOT BE READ AS A RESOLUTION LIMIT. THE PRE-REGISTRATION WAS\n"
+                "  MIS-SPECIFIED, and the table refutes it from inside.\n");
+    // THE ARITHMETIC THAT KILLS THE PRIMARY, and it is arithmetic rather than a judgement.
+    // Every column here is a DECODER scored held-out, so every column is a LOWER BOUND on
+    // what the feature holds about its bit. A bound cannot be subtracted from a bound: two
+    // readers that are differently lossy on an easy bit and a hard one produce a gap with
+    // no help from the feature at all. The run demonstrates exactly that twice over --
+    // `ear-sph` reads bit F1 at %.3f where `ear` reads %.3f, the SAME feature content
+    // through a worse reader, and the "asymmetry" GREW.
+    std::printf("\n  WHY: every column is a DECODER scored held-out, so every column is a\n"
+                "  LOWER BOUND on what the feature holds, and two bounds cannot be\n"
+                "  subtracted. The table shows that directly -- `ear-sph` reads bit F1 at\n"
+                "  %.3f where `ear` reads %.3f on the SAME feature, so that reader lost\n"
+                "  %.3f of content and the apparent asymmetry GREW to %.1f SE. An asymmetry\n"
+                "  that moves with the reader is a fact about readers.\n",
+                mbit[2][0], mbit[0][0], mbit[0][0] - mbit[2][0], esph_se);
+    {
+      // THE BOUNDS, which is all this run can honestly say about the feature: the best
+      // held-out decoder of each bit, whichever column it came from.
+      double best[2] = {0.0, 0.0};
+      uint32_t who[2] = {0u, 0u};
+      for (uint32_t q = 0; q < 2u; ++q)
+        for (uint32_t col = 0; col < kCols; ++col)
+          if (mbit[col][q] > best[q]) { best[q] = mbit[col][q]; who[q] = col; }
+      std::printf("\n  WHAT IT CAN SAY: the feature holds bit F1 at AT LEAST %.3f (%s) and\n"
+                  "  bit F2 at AT LEAST %.3f (%s). Those bounds differ by %.3f, where the\n"
+                  "  reader-based \"asymmetries\" above read 0.115 and 0.305. The resolution\n"
+                  "  question is therefore NOT SETTLED by this run, and must not be cited as\n"
+                  "  settled -- 118 Hz being harder than 300 Hz remains plausible and\n"
+                  "  unmeasured. Settling it needs a CEILING, not another decoder.\n",
+                  best[0], kColName[who[0]], best[1], kColName[who[1]],
+                  best[1] - best[0]);
+    }
+  } else if (krn_se >= 3.0 && mdiff[kColKern] < 0.0) {
+    std::printf("\n  THE LIMIT IS THE RULE, AND IT IS ACTIONABLE. The ear carries both bits\n"
+                "  comparably (%.3f and %.3f, %.1f SE apart) while the kernel's own\n"
+                "  partition drops the F1 bit (%.3f against %.3f). The separation is in the\n"
+                "  feature and the clustering throws it away.\n",
+                mbit[0][0], mbit[0][1], ear_se, mbit[kColKern][0], mbit[kColKern][1]);
+  } else if (ear_se < 3.0 && krn_se < 3.0) {
+    std::printf("\n  NEITHER IS ASYMMETRIC, AND THAT IS A TENSION TO REPORT RATHER THAN\n"
+                "  SMOOTH OVER. The ear reads %+.3f (%.1f SE) and the kernel %+.3f (%.1f SE)\n"
+                "  on a quantity whose null is exactly zero, so the index is not where the\n"
+                "  F1/F2 asymmetry lives -- and the oracle chain attributed the decay to the\n"
+                "  index. Either the asymmetry is in PRODUCTION, or this single-session\n"
+                "  probe misses something a lineage exposes. Do not read it as a pass.\n",
+                mdiff[0], ear_se, mdiff[kColKern], krn_se);
+  } else {
+    std::printf("\n  THE ASYMMETRY RUNS THE OTHER WAY: F1 is the BETTER bit here, which is\n"
+                "  not what the depth run's production numbers said. Report the sign.\n");
+  }
+
+  // WHAT THE PARTITION LOSES AGAINST THE BEST READER OF THE SAME FEATURE, per bit. This is
+  // the quantity a clustering fix would recover, and the first run buried it: that table
+  // showed the kernel giving up 0.184 on the F2 bit and 0.023 on F1, which is the opposite
+  // of the asymmetry the primary was built to find.
+  std::printf("\n  WHAT THE PARTITION LOSES against the best supervised read of the same\n"
+              "  feature (%s), per bit:\n", esph_se < 3.0 ? "ear-sph" : "ear");
+  {
+    const uint32_t ref = esph_se < 3.0 ? 2u : 0u;
+    for (uint32_t q = 0; q < 2u; ++q)
+      std::printf("    bit %s   reader %.3f, kernel %.3f, best partition %.3f  (gap %+.3f)\n",
+                  q == 0 ? "F1" : "F2", mbit[ref][q], mbit[kColKern][q], mbit[kColSph][q],
+                  mbit[kColSph][q] - mbit[ref][q]);
+  }
+
+  // WHICH COMPONENT. Printed unconditionally so a null on the primary cannot be rescued by
+  // reading down here -- and read as a LEAD, never as this run's result.
+  std::printf("\n  AND WHICH COMPONENT, one variable at a time (bit F1 then bit F2):\n");
+  for (uint32_t q = 0; q < 2u; ++q) {
+    std::printf("    bit %s  kern %.3f -> raw %.3f (INIT)  -> z %.3f (per-channel SCALE)"
+                "  -> sph %.3f (overall MAGNITUDE)\n",
+                q == 0 ? "F1" : "F2", mbit[kColKern][q], mbit[kColRaw][q], mbit[kColZ][q],
+                mbit[kColSph][q]);
+  }
+  std::printf("    the supervised reads of the same feature: raw %.3f/%.3f, z %.3f/%.3f,\n"
+              "    L2 %.3f/%.3f (F1/F2). `ear-z` is a NO-OP by construction and is a wiring\n"
+              "    check rather than a column -- `holdout_accuracy` standardises every\n"
+              "    dimension on the training half itself, so handing it a pre-z-scored\n"
+              "    feature must reproduce `ear` exactly, and it does.\n",
+              mbit[0][0], mbit[0][1], mbit[1][0], mbit[1][1], mbit[2][0], mbit[2][1]);
+
+  // THE DECISION STATISTIC, PAIRED PER CREATURE, because the column means above share
+  // creatures and a difference of two means with their own SEs is not the SE of the
+  // difference. This is the number that licenses a kernel change or does not: what
+  // removing the feature's overall MAGNITUDE buys the kernel's own rule, on each bit.
+  std::printf("\n  THE DECISION STATISTIC, paired per creature -- sph minus kern, which is\n"
+              "  the kernel's rule with the overall MAGNITUDE removed and nothing else:\n");
+  bool licensed = true;
+  for (uint32_t q = 0; q < 2u; ++q) {
+    std::vector<double> d;
+    for (const Cell& c : cells) {
+      if (!c.ok) continue;
+      d.push_back(c.acc[kColSph][q] - c.acc[kColKern][q]);
+    }
+    if (d.size() < 3) { licensed = false; continue; }
+    double se = 0.0;
+    const double m = ctx_mean_se(d, &se);
+    const double nse = se > 0.0 ? m / se : 0.0;
+    std::printf("    bit %s   %+.3f +/- %.3f  (%.1f SE)%s\n", q == 0 ? "F1" : "F2", m, se,
+                nse, nse >= 3.0 ? "   RESOLVED" : "   under 3 SE");
+    if (!(nse >= 3.0)) licensed = false;
+  }
+  if (licensed) {
+    std::printf("\n  SO THE ACTIONABLE RESULT IS NOT THE PRIMARY, IT IS THIS. The shipped\n"
+                "  index clusters a raw, ALL-POSITIVE rate vector, whose largest-variance\n"
+                "  direction is overall drive and carries no word. Projecting it onto the\n"
+                "  unit sphere before the distance is computed lifts BOTH bits, and the\n"
+                "  bit the lineage loses is one of them. That is one change inside the\n"
+                "  source-4 block, behind a genome field, and it is what to build next.\n");
+  } else {
+    std::printf("\n  THE MAGNITUDE LEAD IS NOT LICENSED at this n: one of the two bits does\n"
+                "  not clear 3 SE paired, and a transform that helps one bit while leaving\n"
+                "  the other unresolved is not the clean win the column means suggest.\n");
+  }
+  std::printf("\n  WHAT THIS CANNOT SHOW: that a transform which helps OFFLINE helps the\n"
+              "  creature. These rules run on a RECORDED feature with the word order fixed;\n"
+              "  the kernel's prototypes move while the voice they are being used to steer\n"
+              "  also moves. A column that lifts the F1 bit here licenses a build, not a\n"
+              "  result -- exactly as partprobe's own bar was written.\n");
   return true;
 }
 bool run_ctxvocab(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {

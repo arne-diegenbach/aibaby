@@ -1,0 +1,92 @@
+experiment: ctxaxis
+  instrument        ctxaxis   trial seed 0000000001355b0c   428 trials per creature
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  ctxaxis -- the oracle chain proved the DERIVED INDEX caused the F1 bit's
+  decay and that a perfect index REVERSES it. This asks the next question
+  down: is F1 worse than F2 because the EAR does not separate 118 Hz, or
+  because the CLUSTERING RULE throws the separation away?
+  the feature   `feat_ema`, the ear's rate EMA at reward time -- the exact
+                vector DNA v53 source 4 clusters, on kGridWords' 2x2 grid.
+  the scoring   one BIT at a time, held out, with any slot-to-bit map fitted
+                on the training half only. So chance is exactly 0.50 and the
+                F1-minus-F2 difference has a null of exactly ZERO.
+  the columns   ear (a supervised READ of the feature, not an absolute
+                ceiling -- it fits 2048 parameters where a partition fits 4),
+                kern (the kernel's own rule, from the origin), raw (seeded
+                from data: isolates INIT), z (per-channel SCALE), sph
+                (overall MAGNITUDE).
+  the primary   bit F1 minus bit F2, paired per creature, on `ear` and on
+                `kern`. An asymmetric ear means RESOLUTION; a symmetric ear
+                with an asymmetric kernel means the RULE, and is actionable.
+  read-only     no learning, no genome field, nothing shipped.
+  18 creatures, 4 slots, 8 inits per seeded column.
+
+  usable rows per creature 417.3 of 428 trials the budget buys (the rest were slept through).
+
+  column   n     bit F1           bit F2           F1 - F2 paired
+  ear       18   0.850 +/- 0.020    0.965 +/- 0.006    -0.115 +/- 0.021 (5.4 SE)
+  ear-z     18   0.850 +/- 0.020    0.965 +/- 0.006    -0.115 +/- 0.021 (5.4 SE)
+  ear-sph   18   0.646 +/- 0.027    0.951 +/- 0.014    -0.305 +/- 0.032 (9.4 SE)
+  kern      18   0.827 +/- 0.011    0.781 +/- 0.023    +0.046 +/- 0.031 (1.5 SE)
+  raw       18   0.852 +/- 0.011    0.739 +/- 0.015    +0.113 +/- 0.025 (4.5 SE)
+  z         18   0.879 +/- 0.014    0.786 +/- 0.010    +0.093 +/- 0.012 (7.7 SE)
+  sph       18   0.916 +/- 0.008    0.900 +/- 0.010    +0.016 +/- 0.005 (3.0 SE)
+
+  VOID CHECK, shuffled labels on `ear`: 0.512 +/- 0.008 (F1), 0.501 +/- 0.009 (F2)
+                against a constructed chance of 0.500.
+
+  THE PRIMARY, as registered. ear F1-F2 -0.115 +/- 0.021 (5.4 SE);  kern F1-F2 +0.046 +/- 0.031 (1.5 SE)
+
+  THE REGISTERED RESOLUTION BRANCH FIRES: the supervised reader gets the
+  F1 bit out of the ear worse than the F2 bit, 0.850 against 0.965, 5.4 SE
+  on a quantity whose null is exactly zero.
+
+  AND IT CANNOT BE READ AS A RESOLUTION LIMIT. THE PRE-REGISTRATION WAS
+  MIS-SPECIFIED, and the table refutes it from inside.
+
+  WHY: every column is a DECODER scored held-out, so every column is a
+  LOWER BOUND on what the feature holds, and two bounds cannot be
+  subtracted. The table shows that directly -- `ear-sph` reads bit F1 at
+  0.646 where `ear` reads 0.850 on the SAME feature, so that reader lost
+  0.204 of content and the apparent asymmetry GREW to 9.4 SE. An asymmetry
+  that moves with the reader is a fact about readers.
+
+  WHAT IT CAN SAY: the feature holds bit F1 at AT LEAST 0.916 (sph) and
+  bit F2 at AT LEAST 0.965 (ear). Those bounds differ by 0.049, where the
+  reader-based "asymmetries" above read 0.115 and 0.305. The resolution
+  question is therefore NOT SETTLED by this run, and must not be cited as
+  settled -- 118 Hz being harder than 300 Hz remains plausible and
+  unmeasured. Settling it needs a CEILING, not another decoder.
+
+  WHAT THE PARTITION LOSES against the best supervised read of the same
+  feature (ear), per bit:
+    bit F1   reader 0.850, kernel 0.827, best partition 0.916  (gap +0.066)
+    bit F2   reader 0.965, kernel 0.781, best partition 0.900  (gap -0.064)
+
+  AND WHICH COMPONENT, one variable at a time (bit F1 then bit F2):
+    bit F1  kern 0.827 -> raw 0.852 (INIT)  -> z 0.879 (per-channel SCALE)  -> sph 0.916 (overall MAGNITUDE)
+    bit F2  kern 0.781 -> raw 0.739 (INIT)  -> z 0.786 (per-channel SCALE)  -> sph 0.900 (overall MAGNITUDE)
+    the supervised reads of the same feature: raw 0.850/0.965, z 0.850/0.965,
+    L2 0.646/0.951 (F1/F2). `ear-z` is a NO-OP by construction and is a wiring
+    check rather than a column -- `holdout_accuracy` standardises every
+    dimension on the training half itself, so handing it a pre-z-scored
+    feature must reproduce `ear` exactly, and it does.
+
+  THE DECISION STATISTIC, paired per creature -- sph minus kern, which is
+  the kernel's rule with the overall MAGNITUDE removed and nothing else:
+    bit F1   +0.089 +/- 0.016  (5.5 SE)   RESOLVED
+    bit F2   +0.120 +/- 0.023  (5.3 SE)   RESOLVED
+
+  SO THE ACTIONABLE RESULT IS NOT THE PRIMARY, IT IS THIS. The shipped
+  index clusters a raw, ALL-POSITIVE rate vector, whose largest-variance
+  direction is overall drive and carries no word. Projecting it onto the
+  unit sphere before the distance is computed lifts BOTH bits, and the
+  bit the lineage loses is one of them. That is one change inside the
+  source-4 block, behind a genome field, and it is what to build next.
+
+  WHAT THIS CANNOT SHOW: that a transform which helps OFFLINE helps the
+  creature. These rules run on a RECORDED feature with the word order fixed;
+  the kernel's prototypes move while the voice they are being used to steer
+  also moves. A column that lifts the F1 bit here licenses a build, not a
+  result -- exactly as partprobe's own bar was written.

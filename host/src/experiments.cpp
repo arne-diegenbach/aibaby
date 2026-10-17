@@ -365,6 +365,20 @@ const Spec kSpecs[] = {
      "  if the half-centre reports no phase or has settled on one winner. The\n"
      "  evidence is the IDENTITY-minus-SWAPPED mapping contrast, because the\n"
      "  oscillator contributes to both equally and cancels from the difference."},
+    {"ctxaxis", 1200000, Expect::kOpen, Tier::kLong,
+     "derived: partprobe's own per-word trial count, at four words. That probe\n"
+     "  reads the same feature space on TWO words at 600000 ticks, which is 107\n"
+     "  trials per word; four words at the same per-word count is 1200000. Asks\n"
+     "  the question the oracle chain left: F1's bit is worse than F2's, and the\n"
+     "  two candidate causes COINCIDE on that axis -- 118 Hz of separation where\n"
+     "  F2 has 300, and a derived index recovering 46% of the oracle's bit where\n"
+     "  F2 recovers 62%. This separates them, read-only, by scoring each BIT\n"
+     "  separately against a held-out half: a supervised CEILING on the ear's own\n"
+     "  feature, then the kernel's clustering rule, then the same rule with the\n"
+     "  init, the per-channel scale and the overall magnitude each removed in\n"
+     "  turn. An asymmetric ear means the limit is RESOLUTION and sends this to a\n"
+     "  different build; a symmetric ear with an asymmetric partition means the\n"
+     "  limit is the RULE, and the transform columns name the component."},
     {"ctxfactor", 6800000, Expect::kOpen, Tier::kTeach,
      "derived: ctxgrid's budget, because it trains on ctxgrid's four words and\n"
      "  needs four words' worth of trials. Prices a FACTORED context gain before\n"
@@ -1015,6 +1029,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "tutorwide") ok = run_tutorwide(dna_blob, ticks, verbose);
   else if (name == "tutorgrid") ok = run_tutorgrid(dna_blob, ticks, verbose);
   else if (name == "ctxfactor") ok = run_ctxfactor(dna_blob, ticks, verbose);
+  else if (name == "ctxaxis") ok = run_ctxaxis(dna_blob, ticks, verbose);
   else if (name == "blockwhere") ok = run_blockwhere(dna_blob, ticks, verbose);
   else if (name == "blockanchor") ok = run_blockanchor(dna_blob, ticks, verbose);
   else if (name == "leverprobe") ok = run_leverprobe(dna_blob, ticks, verbose);

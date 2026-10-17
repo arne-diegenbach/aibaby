@@ -17891,6 +17891,83 @@ get misreported.
 **What it makes actionable:** improve F1's derived index. The conscience moved F2's recovery
 from 8% to 62% of the oracle's bit and nothing has yet tried F1's.
 
+### `ctxaxis` — the primary was mis-specified, and the secondary is the result
+
+`results/ctxaxis.log`, 2026-10-18. 18 creatures, 1.2M ticks (428 trials, 107 per word —
+`partprobe`'s own per-word count on this same feature space), read-only: no learning, no
+genome field, nothing shipped.
+
+**The question.** The oracle chain proved the derived index caused the F1 bit's decay and
+that handing over a perfect index reverses it. It could not say *why F1 and not F2*, because
+two candidate causes coincide on that axis: F1's pair is 118 Hz apart where F2's is 300, and
+the derived index recovers less of the oracle's F1 bit. This probe reads the kernel's own
+clustering feature — `feat_ema`, the ear's `rate_ema_` at reward time, the exact vector DNA
+v53 source 4 clusters — on `kGridWords`' 2×2 grid, scoring one **bit** at a time against a
+held-out half with any slot-to-bit map fitted on the training half only, so chance is exactly
+0.50 and no best-of-*k*! maximum is ever taken on the scored rows.
+
+| column | bit F1 | bit F2 | F1 − F2 paired |
+|---|---|---|---|
+| `ear` supervised, raw | 0.850 ± 0.020 | 0.965 ± 0.006 | −0.115 ± 0.021 (5.4 SE) |
+| `ear-z` (a no-op check) | 0.850 ± 0.020 | 0.965 ± 0.006 | −0.115 ± 0.021 (5.4 SE) |
+| `ear-sph` supervised, L2 | 0.646 ± 0.027 | 0.951 ± 0.014 | −0.305 ± 0.032 (9.4 SE) |
+| `kern` the kernel's own rule | 0.827 ± 0.011 | 0.781 ± 0.023 | +0.046 ± 0.031 (1.5 SE) |
+| `raw` seeded init | 0.852 ± 0.011 | 0.739 ± 0.015 | +0.113 ± 0.025 (4.5 SE) |
+| `z` per-channel scale removed | 0.879 ± 0.014 | 0.786 ± 0.010 | +0.093 ± 0.012 (7.7 SE) |
+| `sph` overall magnitude removed | **0.916 ± 0.008** | **0.900 ± 0.010** | +0.016 ± 0.005 (3.0 SE) |
+
+Shuffled control on `ear`: 0.512 ± 0.008 and 0.501 ± 0.009 against a constructed 0.500.
+
+> **THE PRE-REGISTERED PRIMARY IS DEAD, BY ARITHMETIC RATHER THAN BY JUDGEMENT. Every
+> column is a decoder scored held-out, so every column is a LOWER BOUND on what the feature
+> holds — and two bounds cannot be subtracted.**
+
+The table refutes its own primary from inside: `ear-sph` reads bit F1 at 0.646 where `ear`
+reads 0.850 **on the same feature**, so that reader lost 0.204 of content and the apparent
+asymmetry *grew* from 5.4 to 9.4 SE. An asymmetry that moves with the reader is a fact about
+readers. Two separate mis-specifications produced this, both recorded rather than smoothed
+over: the verdict branches were written mutually exclusive for conditions that are not (the
+ear can be asymmetric *and* the rule lossy, which is what the data show), and the
+disambiguation test assumed a worse reader would preserve an asymmetry it in fact
+manufactured. Same shape as the `oracle-regime-mismatch` lesson — **pre-registration does
+not rescue a statistic of the wrong shape.**
+
+**What the run can honestly say about the ear:** the feature holds bit F1 at **at least
+0.916** and bit F2 at **at least 0.965**. Those best bounds differ by 0.049, where the
+reader-based "asymmetries" read 0.115 and 0.305. **The resolution question is NOT settled
+and must not be cited as settled** — 118 Hz being harder than 300 Hz remains plausible and
+unmeasured. Settling it needs a *ceiling*, not another decoder.
+
+**THE ACTIONABLE RESULT IS THE SECONDARY, and it is clean.** Paired per creature, `sph`
+minus `kern` — the kernel's rule with the overall magnitude removed and nothing else:
+
+| bit | paired gain | |
+|---|---|---|
+| F1 | **+0.089 ± 0.016** | 5.5 SE, resolved |
+| F2 | **+0.120 ± 0.023** | 5.3 SE, resolved |
+
+The shipped index clusters a raw, **all-positive** rate vector, whose largest-variance
+direction is overall drive and carries no word identity — so Euclidean k-means spends its
+first split on it. Projecting onto the unit sphere before the distance lifts **both** bits.
+Note also that the kernel's loss against the best reader was always mostly on **F2** (0.184)
+rather than F1 (0.023), the opposite of the asymmetry the primary was built to find. The
+paired statistic is the one that licenses the build, because the column means share creatures
+and a difference of two means is not the SE of the difference.
+
+**What it cannot show:** that a transform helping *offline* helps the creature. These rules
+run on a recorded feature with the word order fixed, where the kernel's prototypes move while
+the voice they steer also moves. This licenses a build, not a result — `partprobe`'s own bar.
+
+**A real pre-existing bug this probe found, now fixed.** `if (slept) continue;` discards a
+slept trial, and every feature space in `run_ctxsrc_session` is appended *after* that check —
+except the ear's EMA, which was appended inside the tick loop *before* it. So `feat_ema` ran
+ahead of `labels` by the number of slept trials: row *i* paired with the wrong word, and the
+tail rows indexing `labels` past its end, which is undefined behaviour rather than merely a
+wrong number. It surfaced as 428 feature rows against 416 labels. **Latent in every run until
+something compared the two lengths**, and `partprobe`'s banked 1.000 is unaffected: a 600k
+session uses 214 of 214 trials, so it never slept. The fix holds alignment by construction,
+and the experiment now prints usable rows against the trials the budget buys.
+
 ## Layout
 
 ```
