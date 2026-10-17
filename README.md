@@ -17834,6 +17834,63 @@ additivity and still solve the task, since the grid really is a product. But tha
 weaker proposition than the one the lead was built on — a constraint rather than a
 compression — and the cheap evidence now points against it.
 
+### The derived index caused the decay, and handing it over reverses it (2026-10-17)
+
+The depth run left one sharp ambiguity. The F1 bit decayed (−21.58 ± 5.56, 3.9 SE) and the
+F2 bit did not, but **F2 is better on both candidate counts** — a reach of ~300 Hz against
+F1's 118, and a derived index recovering 62% of the oracle's bit against F1's 46%. The two
+causes coincide on that axis, so that run could not say which mattered.
+
+The cheap oracle separates them: hand the pupils a perfect index and see whether the problem
+goes away. **Only the pupils' index source changed.** The chain still starts from generation
+0 producing on its *own* derived index, so the tape and the baseline are identical and
+`gen 4 − gen 0` is measured against the same generation 0 — changing the starting production
+*and* the index together would confound width with index, which is the thing the run existed
+to avoid. Generation 0 came back **bit-identical on all four of its numbers** (max |diff|
+0.0000 on both arms and both bits), which is what licenses pairing the runs per lineage.
+
+```
+THE PRIMARY, cross-run and paired:  F1 decay, oracle chain − derived chain
+                                    +62.61 ± 5.91   (10.6 SE)
+
+gen 4 − gen 0, paired:  derived chain, bit F1   −21.58 ± 5.57  (−3.9 SE)  a resolved LOSS
+                        ORACLE  chain, bit F1   +41.03 ± 4.36  (+9.4 SE)  a resolved GAIN
+                        both chains,   bit F2   under 3 SE either way
+```
+
+**So the decay is not removed, it is reversed.** A perfect index turns a 3.9 SE loss into a
+9.4 SE gain. Reach is ruled out: F1's 118 Hz is unchanged between the two runs and only the
+index moved.
+
+**And where it lands is the elegant part.** The oracle chain reaches **+78.69 at generation 4
+against the oracle arm's own generation-0 value of +81.01** — 97% of it, with a paired
+difference of −2.32 ± 5.91 (0.4 SE), indistinguishable. The lineage climbs to what a
+perfect-index creature manages in a *single session* and stops there. **The chain's level is
+set by how well a pupil can use its index, not by cumulative transmission loss.**
+
+**Which corrects the framing recorded with the depth run.** "Four signals leak where two did
+not" was wrong as a claim about the *channel*. The channel is fine. A four-way **derived**
+index is worse than a two-way one, and down a lineage that limitation compounds into what
+looks like decay.
+
+**Three limits, and the first matters most.** The growth is **not culture accumulating**: the
+`wide` tape re-imposes the host's log half-distance at every step, so what is inherited is
+the *order* and not the width, and the climb to 81 Hz is pupils realising the width the
+*host* asks for once their index is good enough to use it. With a host-supplied index this is
+not cultural transmission in the same sense — the pupil is *told* its condition — so the
+result says **fix the index**, never "the code transmits"; that caveat was pre-registered.
+And F2 is unreadable in both runs, with a bound of ~109 Hz at this n.
+
+**A labelling bug the run exposed, now fixed.** The printed line tested `|change| / SE` and
+then hardcoded the word "loss", so it reported **+41.03 Hz as "a RESOLVED loss"**. A
+threshold on a magnitude says nothing about direction, and here the sign *is* the result. The
+cross-run analysis was also given its own script rather than reusing the conscience
+comparison's, whose labels read "consc − base" — reusing a mislabelled script is how numbers
+get misreported.
+
+**What it makes actionable:** improve F1's derived index. The conscience moved F2's recovery
+from 8% to 62% of the oracle's bit and nothing has yet tried F1's.
+
 ## Layout
 
 ```

@@ -31181,6 +31181,91 @@ bool run_tutorgrid(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
   // 2.6 SE: no established decay and no established hold either. Five generations puts the
   // four-signal code on exactly tutorwide's footing, and kReps stays 18 for the same
   // reason -- the comparison is to that run, not to a better-powered one.
+  //
+  // WHICH INDEX THE PUPILS USE. 4 is the derived index and is what ships; 0 hands them a
+  // HOST-WRITTEN one and is the oracle variant.
+  //
+  // ========== RUN 4, PRE-REGISTERED 2026-10-17: WHY F1 AND NOT F2? ==========
+  // The depth run left exactly one sharp question. The F1 bit decays (-21.58 +/- 5.56,
+  // 3.9 SE) and the F2 bit does not (+0.97 +/- 27.91), and F2 is better on BOTH candidate
+  // counts -- a reach of ~300 Hz against F1's 118, and a derived index recovering 62% of
+  // the oracle's bit against F1's 46%. The two causes COINCIDE on that axis, so that run
+  // cannot say which matters.
+  //
+  // THE CHEAP ORACLE SEPARATES THEM, which is the discipline that killed the
+  // sparse-time-basis lead and the factored-gain lead for one run each: hand over the
+  // suspect and see whether the problem goes away. Here the suspect is the DERIVED INDEX.
+  //
+  // WHAT CHANGES AND WHAT DOES NOT. Only the pupils' index source. The chain still starts
+  // from `g0-self` -- generation 0 producing on its OWN derived index -- so the tape and
+  // the baseline are identical to the derived run and gen4-minus-gen0 is measured against
+  // the same generation 0. Changing the starting production AND the pupils' index at once
+  // would confound width with index, which is the thing this run exists to avoid.
+  //
+  // THE PAIRING IS LICENSED THE SAME WAY THE CONSCIENCE COMPARISON WAS: the two runs share
+  // seeds, so they share creatures, and generation 0's ORACLE arm is untouched by this flag
+  // and must come back BIT-IDENTICAL (+81.0 / +148.8). A control row away from those means
+  // the comparison is broken rather than the mechanism working.
+  //
+  // THE PRIMARY: the paired cross-run difference in the F1 decay, oracle chain minus
+  // derived chain, per lineage.
+  //   DECAY REMOVED      the F1 gen4-gen0 loss falls under 3 SE and the cross-run
+  //                      difference clears it. Then the DERIVED INDEX caused the decay, and
+  //                      that is actionable -- the conscience moved F2's recovery from 8%
+  //                      to 62% and nothing has tried to move F1's.
+  //   DECAY PERSISTS     the loss stays past 3 SE at a similar size. Then the index is
+  //                      innocent and the cause is REACH: a bit too small relative to its
+  //                      own noise to survive re-production. That makes the decay a
+  //                      PRODUCTION limit and lands it on this project's oldest measured
+  //                      ceiling rather than on anything about transmission.
+  // Both are results. No prediction is recorded.
+  //
+  // AND THE CAVEAT THAT MUST TRAVEL WITH A PASS: with a host-supplied index the chain is no
+  // longer cultural in the same sense -- the pupil is TOLD its condition instead of
+  // deriving it. That is what makes this an oracle, and it means a pass says "fix the
+  // index", never "the code transmits".
+  //
+  // ======== OUTCOME: THE DERIVED INDEX CAUSED THE DECAY, AND IT REVERSES ========
+  // `results/tutorgrid-oracle.log`, 2026-10-17. Generation 0 came back BIT-IDENTICAL to the
+  // derived run on all four of its numbers (max |diff| 0.0000 on both arms and both bits),
+  // which is what the design required and what licenses the pairing.
+  //
+  //   THE PRIMARY, cross-run and paired per lineage:
+  //     F1 decay, oracle chain minus derived chain   +62.61 +/- 5.91   (10.6 SE)
+  //
+  //   the decay in each run, gen 4 minus gen 0, paired:
+  //     derived chain, bit F1   -21.58 +/- 5.57  (-3.9 SE)   a resolved LOSS
+  //     ORACLE  chain, bit F1   +41.03 +/- 4.36  (+9.4 SE)   a resolved GAIN
+  //     both chains,   bit F2   under 3 SE either way, on bounds too wide to read
+  //
+  // SO THE DECAY IS NOT REMOVED, IT IS REVERSED. Handing the pupils a perfect index turns a
+  // 3.9 SE loss into a 9.4 SE gain, and the pre-registered reading applies: THE DERIVED
+  // INDEX CAUSED THE DECAY. Reach is not the cause -- F1's 118 Hz is unchanged between the
+  // two runs and only the index moved.
+  //
+  // AND WHERE IT LANDS IS THE ELEGANT PART. The oracle chain reaches +78.69 at generation 4
+  // against the oracle ARM's own generation-0 value of +81.01 -- 97% of it, and the paired
+  // difference is -2.32 +/- 5.91 (0.4 SE), indistinguishable. The lineage climbs to what a
+  // perfect-index creature manages in a SINGLE session and stops there. The chain's level is
+  // set by how well a pupil can USE its index, not by cumulative transmission loss.
+  //
+  // WHICH CORRECTS THE EARLIER FRAMING. "Four signals leak where two did not" was wrong as a
+  // statement about the channel. The channel is fine; a four-way DERIVED index is worse than
+  // a two-way one, and down a lineage that limitation compounds into what looks like decay.
+  //
+  // THREE LIMITS, and the first is the one that matters most. (1) THE GROWTH IS NOT CULTURE
+  // ACCUMULATING. The `wide` tape re-imposes the host's log half-distance at every step, so
+  // what is inherited is the ORDER and not the width; the climb to 81 Hz is pupils realising
+  // the width the HOST asks for, once their index is good enough to use it. (2) With a
+  // host-supplied index this is not cultural transmission in the same sense -- the pupil is
+  // told its condition. The result says FIX THE INDEX, never "the code transmits".
+  // (3) F2 is unreadable in both runs: its bound is ~109 Hz at this n.
+  //
+  // AND A LABELLING BUG THIS RUN EXPOSED, fixed above: the printed line called any change
+  // past 3 SE "a RESOLVED loss", so it reported +41.03 Hz as a loss. A threshold on |x| says
+  // nothing about direction, and the sign here IS the result.
+  // ==============================================================================
+  constexpr uint32_t kTGChainSrc = 0u;
   constexpr uint32_t kReps = 18, kDepth = 5;
   constexpr uint64_t kGenOffset = 104729ull;   // tutorwide's, so lineages line up
   instrument("tutorgrid", dna.header().seed ^ 0x7CA1u, ticks / kVLTrialTicks,
@@ -31312,7 +31397,10 @@ bool run_tutorgrid(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
       wf2[k] = xf2[k] = sf2[k];
     }
     for (uint32_t gen = 1; gen < kDepth; ++gen) {
-      const std::vector<uint8_t> v = genome_for(gen, 4u);
+      const std::vector<uint8_t> v = genome_for(gen, kTGChainSrc);
+      // The oracle index needs the host to inject, exactly as generation 0's oracle
+      // arm does; the derived index does not and must stay nullptr.
+      const CtxDrive* const pdrive = kTGChainSrc == 0u ? &odrive : nullptr;
       // THE TAPE. The tutor's own geometric centre on each axis, the host's log
       // half-distance re-imposed, and the tutor's own ORDER carried. `flip` negates both
       // inherited signs at every step, so an inherited mapping ALTERNATES and a
@@ -31336,10 +31424,10 @@ bool run_tutorgrid(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
       build(wf1, wf2, 1.0, wtape);
       build(xf1, xf2, -1.0, xtape);
       const VLRun gw = run_vocallearn_session(v, ticks, kVLTaught, nullptr, reg, -1,
-                                              nullptr, kVLScoreFormant, nullptr, 4u, wtape,
+                                              pdrive, kVLScoreFormant, nullptr, 4u, wtape,
                                               nullptr, nullptr, nullptr, nullptr, wtape);
       const VLRun gx = run_vocallearn_session(v, ticks, kVLTaught, nullptr, reg, -1,
-                                              nullptr, kVLScoreFormant, nullptr, 4u, xtape,
+                                              pdrive, kVLScoreFormant, nullptr, 4u, xtape,
                                               nullptr, nullptr, nullptr, nullptr, xtape);
       if (!gw.ok || !gx.ok) return c;
       if (!grid_centroids(gw, wf1, wf2) || !grid_centroids(gx, xf1, xf2)) return c;
@@ -31423,14 +31511,20 @@ bool run_tutorgrid(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
                 "    bit F2  %+7.2f +/- %5.2f  (%.1f SE)  %s\n",
                 kDepth - 1u,
                 md1, sd1, sd1 > 0.0 ? std::fabs(md1) / sd1 : 0.0,
-                (sd1 > 0.0 && std::fabs(md1) / sd1 < 3.0) ? "no detectable loss"
-                                                          : "a RESOLVED loss",
+                (sd1 > 0.0 && std::fabs(md1) / sd1 < 3.0)
+                    ? "no detectable change"
+                    : (md1 > 0.0 ? "a RESOLVED GAIN" : "a RESOLVED loss"),
                 md2, sd2, sd2 > 0.0 ? std::fabs(md2) / sd2 : 0.0,
-                (sd2 > 0.0 && std::fabs(md2) / sd2 < 3.0) ? "no detectable loss"
-                                                          : "a RESOLVED loss");
-    std::printf("  A loss under 3 SE is NOT proof the code holds -- it is a failure to\n"
-                "  resolve one, and at n=%zu the smallest loss this could resolve is about\n"
-                "  %.0f and %.0f Hz on the two bits. Read it as a BOUND on the decay.\n",
+                (sd2 > 0.0 && std::fabs(md2) / sd2 < 3.0)
+                    ? "no detectable change"
+                    : (md2 > 0.0 ? "a RESOLVED GAIN" : "a RESOLVED loss"));
+    std::printf("  A change under 3 SE is NOT proof the code holds -- it is a failure to\n"
+                "  resolve one, and at n=%zu the smallest change this could resolve is about\n"
+                "  %.0f and %.0f Hz on the two bits. Read it as a BOUND.\n"
+                "  AND THE SIGN IS PART OF THE RESULT: the first version of this line called\n"
+                "  any resolved change a LOSS, which mislabelled a +41 Hz GAIN when the\n"
+                "  pupils were handed an oracle index. A threshold on |x| says nothing about\n"
+                "  direction.\n",
                 ok.size(), 3.0 * sd1, 3.0 * sd2);
   }
 

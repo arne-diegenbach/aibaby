@@ -74,7 +74,7 @@ gesture is nearly free.
 are priced and closed. They are: *use the creature inside its specification*, and find out
 where the specification itself binds. The first question of that kind is §0.
 
-### 0. Does the specification hold end to end? — MET at two generations, SPLIT at five
+### 0. Does the specification hold end to end? — MET, and the limit is the INDEX
 
 Each half is established and the composition has never been run. `ctxgrid` names four
 signals on both axes with a **host** index; `tutorwide` transmits **two** between distinct
@@ -139,11 +139,42 @@ Two things are *not* claimed. F2's "no detectable loss" is a **bound, not a hold
 the smallest resolvable loss on that bit is ~84 Hz. And the F1 decay's shape is not
 established — linear and geometric fits are indistinguishable on five points.
 
-**What it points at, and what is running:** the decay is what an architecture with no
-parameter sharing across contexts predicts. `ctxfactor` prices whether a factored table
-could fix it — measured on a trained creature, no new mechanism, with a derived null (chance
-for the interaction share is exactly 1/3, because four rows carry one mean and three
-orthogonal contrasts).
+**Two follow-ups settled it, and the answer is the index.**
+
+`ctxfactor` refused the first explanation. The decay looked like a parameter-sharing problem,
+since every context owns independent parameters. It measured whether there is shared
+structure to generalise *over* and found none: the three orthogonal contrasts hold equal
+power (interaction 0.325 ± 0.006 against a derived chance of 1/3). **The creature stores a
+factorial task non-factorially**, so there is nothing to share and the factored fix is
+unavailable (§6.10 of the discoveries).
+
+**Then the oracle chain found the cause.** Handing the pupils a host-written index — and
+changing nothing else, with generation 0 returning bit-identical on all four of its numbers —
+turns the decay around:
+
+```
+THE PRIMARY, cross-run paired:  F1 decay, oracle − derived   +62.61 ± 5.91  (10.6 SE)
+  derived chain, bit F1   −21.58 ± 5.57  (−3.9 SE)  a resolved LOSS
+  ORACLE  chain, bit F1   +41.03 ± 4.36  (+9.4 SE)  a resolved GAIN
+```
+
+Reach is ruled out: F1's 118 Hz is unchanged and only the index moved. And the oracle chain
+lands at **+78.69 against the oracle arm's own generation-0 value of +81.01** — 97%, paired
+difference 0.4 SE. **The lineage climbs to what a perfect-index creature manages in a single
+session and stops there: the chain's level is set by how well a pupil can use its index, not
+by cumulative transmission loss.**
+
+That corrects this section's earlier framing. "Four signals leak where two did not" was wrong
+about the *channel*; a four-way **derived** index is worse than a two-way one, and down a
+lineage that compounds into apparent decay.
+
+**The growth is not culture accumulating**, which is the limit to carry: the `wide` tape
+re-imposes the host's spacing every step, so what is inherited is the *order* and not the
+width. And a host-supplied index is not cultural transmission in the same sense — the pupil
+is told its condition — so the result says **fix the index**, never "the code transmits".
+
+**The next run is named by the result:** improve F1's derived index. The conscience moved
+F2's recovery from 8% to 62% of the oracle's bit; nothing has tried F1's.
 
 ## What is settled, and therefore not to re-open
 

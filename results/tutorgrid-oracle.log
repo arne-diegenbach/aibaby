@@ -1,0 +1,86 @@
+experiment: tutorgrid
+  instrument        tutorgrid   trial seed 0000000001355b68   2428 trials per generation
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  tutorgrid -- does a FOUR-SIGNAL conditional code cross the air? ctxgrid
+  names four on both axes with a HOST index; tutorwide transmits TWO with
+  the pupil's own derived index. Nobody has run the two together.
+  the code      kGridWords, the 2x2 ctxgrid established -- two F1 levels x
+                two F2 levels, every target inside the MEASURED learned
+                reach. Two BITS on two axes, not four levels on one:
+                ctxfour read four levels on ONE axis at chance.
+  the arms      g0-oracle (ctx_src 0) and g0-self (ctx_src 4) separate the
+                two unknowns, so a failure says WHICH failed; then `wide`
+                and `flip` carry the mapping with the width held.
+  the bars      g0-self clears 3 SE on BOTH bits (prerequisite); `wide`
+                clears 3 SE on both at generation 2 (primary); `flip`
+                ALTERNATES SIGN between generations (inheritance, and
+                without it a positive primary is VOID -- the tape
+                re-imposes a width whether or not anything is inherited).
+  18 lineages, 5 generations, 10 sessions per lineage.
+
+  [9/18] lineage 8  oracle  +87.5/ +53.3  self  +36.1/  -4.6  wide  +95.4/ -92.3 ->  +86.3/-196.4  flip  -98.5/+186.1 ->  +91.6/-109.2
+  [13/18] lineage 12  oracle +104.1/+168.7  self  +33.9/+139.7  wide  +94.3/+233.3 ->  +79.4/+174.2  flip  -83.3/-101.5 ->  +94.7/+111.2
+  [7/18] lineage 6  oracle +104.8/+189.4  self  +37.7/  -4.0  wide  +79.4/-220.4 -> +112.0/-211.6  flip  -79.9/+108.5 ->  +88.8/-158.6
+  [16/18] lineage 15  oracle  +81.4/+149.7  self  +23.9/+171.8  wide  +67.4/+143.0 ->  +66.2/+197.2  flip  -16.3/-120.8 ->  +47.3/+160.6
+  [4/18] lineage 3  oracle  +99.3/ +73.8  self  +47.2/ +67.2  wide  +87.4/+126.3 ->  +89.4/+156.3  flip  -67.6/-109.1 ->  +67.8/+246.9
+  [17/18] lineage 16  oracle  +83.5/+159.2  self  +30.1/+111.6  wide  +92.6/+150.3 ->  +85.0/+174.7  flip   +5.4/-152.6 ->  -74.9/+180.4
+  [8/18] lineage 7  oracle  +32.6/+169.2  self  +48.8/+148.7  wide  +79.0/+218.3 ->  +83.7/+189.9  flip  -62.7/-151.0 -> +100.7/+110.2
+  [14/18] lineage 13  oracle  +94.9/+188.8  self  +52.1/ +54.1  wide  +91.3/+183.1 ->  +76.8/+144.4  flip  -61.2/-112.8 -> +129.9/ +98.5
+  [12/18] lineage 11  oracle  +91.0/+191.3  self  +32.9/ +95.6  wide  +78.5/+206.9 ->  +41.6/+210.8  flip -105.2/-193.6 ->  +61.6/+209.5
+  [5/18] lineage 4  oracle  +70.7/+127.1  self  +66.5/+108.4  wide +104.8/+149.4 ->  +98.2/+124.3  flip  -62.0/ -83.6 -> +107.8/+135.9
+  [2/18] lineage 1  oracle  +78.1/+184.7  self  +23.2/ +97.8  wide  +53.6/+159.6 ->  +37.9/ +90.8  flip  -45.2/ -66.0 ->  +81.2/+180.9
+  [18/18] lineage 17  oracle  +83.4/+139.0  self  +27.3/+106.0  wide  +42.3/ -12.2 ->  +77.5/-135.7  flip  -80.7/-112.4 ->  +90.4/+130.0
+  [11/18] lineage 10  oracle  +73.5/+151.7  self  +34.1/ +62.8  wide  +64.8/+113.0 ->  +56.8/+144.6  flip  -79.3/-117.6 ->  +85.3/+211.6
+  [15/18] lineage 14  oracle  +73.8/+102.5  self  +36.9/ +80.7  wide +126.1/+239.0 -> +101.8/+229.6  flip  -42.6/ -73.6 ->  +19.2/ +36.3
+  [1/18] lineage 0  oracle  +88.0/+109.6  self  +16.2/+151.8  wide  +59.9/+152.7 ->  +87.6/ +89.1  flip  -33.4/-170.3 ->  +53.7/+144.2
+  [6/18] lineage 5  oracle  +73.1/+190.0  self  +30.2/+201.7  wide  +28.3/ -40.6 ->  +61.0/-162.0  flip -101.7/ -50.6 ->  +85.6/+205.2
+  [3/18] lineage 2  oracle  +74.4/+211.6  self  +58.3/ +16.6  wide  +80.0/+164.1 ->  +84.8/+222.9  flip  -68.8/-150.8 ->  +49.7/+207.8
+  [10/18] lineage 9  oracle  +64.1/+119.2  self  +42.4/ +49.2  wide  +54.1/+120.6 ->  +90.4/+188.6  flip  -53.1/-231.0 ->  +66.1/ +91.1
+
+  GENERATION 0 -- THE PREREQUISITE, and the two unknowns are separate
+    arm        bit F1 (Hz)          bit F2 (Hz)
+    oracle     +81.0 +/-   4.0      +148.8 +/-  10.4
+    self       +37.6 +/-   3.0       +91.9 +/-  13.7   <- must clear 3 SE
+
+  THE CHAINS, per generation, both bits
+    gen    wide bit F1        wide bit F2        flip bit F1        flip bit F2
+    0     +37.6 +/-  3.0     +91.9 +/- 13.7     +37.6 +/-  3.0     +91.9 +/- 13.7
+    1     +76.6 +/-  5.6    +110.8 +/- 29.0     -63.1 +/-  6.9     -94.6 +/- 23.5
+    2     +70.7 +/-  6.2     +72.5 +/- 28.1     +70.9 +/-  9.0     +98.2 +/- 27.9
+    3     +70.8 +/-  5.7     +98.3 +/- 31.4     -61.5 +/- 11.3     -91.4 +/- 26.0
+    4     +78.7 +/-  4.6     +90.7 +/- 36.0     +69.2 +/- 10.4    +121.8 +/- 25.3
+
+  DOES THE CODE HOLD DOWN THE LINEAGE? generation 4 minus generation 0,
+  paired per lineage. tutorwide's TWO-signal code read 1.4 SE here.
+    bit F1   +41.03 +/-  4.36  (9.4 SE)  a RESOLVED loss
+    bit F2    -1.29 +/- 36.27  (0.0 SE)  no detectable loss
+  A loss under 3 SE is NOT proof the code holds -- it is a failure to
+  resolve one, and at n=18 the smallest loss this could resolve is about
+  13 and 109 Hz on the two bits. Read it as a BOUND on the decay.
+
+  INHERITANCE -- the flip chain must ALTERNATE, lineage by lineage
+    bit F1 alternates in 18 of 18 lineages
+    bit F2 alternates in 18 of 18 lineages
+    A re-imposed code holds one sign; an inherited one flips with the tape.
+
+  IT CROSSES AND IS INHERITED, AND ONE BIT DECAYS -- a SPLIT result, which is
+  neither of the two outcomes this run pre-registered. Generation 0 produces
+  the code on its own derived index (+37.6/+91.9 Hz); at generation 4 bit F1
+  reads +78.7 +/- 4.6 (clears 3 SE) and bit F2 reads +90.7 +/- 36.0 (under 3 SE).
+
+  READ THE PER-GENERATION TABLE ABOVE, NOT THIS LINE ALONE: the two bits do
+  different things. The paired generation-4-minus-0 test is the quantity to
+  quote, and a bit whose loss sits under 3 SE is BOUNDED, not held -- the
+  smallest loss this n could resolve is printed with it.
+
+  WHAT IS NOT IN DOUBT is that what crosses is INHERITED rather than
+  re-imposed by the tape: the flipped chain alternates across EVERY
+  consecutive pair, which is a far stronger test than the single flip three
+  generations allowed. So a decaying bit is a CHANNEL-CAPACITY statement and
+  not an artefact of the tape.
+
+  AND THE COMPARISON THAT GIVES IT MEANING: a TWO-signal code loses nothing
+  over four generations (1.4 SE). If a bit here loses resolvably, then four
+  signals leak where two did not, and the leak is a VOCABULARY cost in the
+  channel rather than a channel that was always lossy.
