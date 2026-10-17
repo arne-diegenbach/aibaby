@@ -4130,6 +4130,60 @@ inline SlotTilt ctx_slot_tilt(const aibaby::Network& net, const aibaby::ModuleSt
 // `perturb_max` is passed rather than read from the net because the clamp is a
 // genome field and the question this exists to answer is whether the table is
 // against it. Pass 0 to skip the pinned share.
+// IS THE LEARNED FOUR-CONTEXT TABLE ADDITIVE IN ITS TWO FEATURES?
+//
+// THE QUESTION THIS PRICES, before any mechanism is built. Both context
+// parameterisations index by `active_ctx_`, so every context owns INDEPENDENT
+// parameters and nothing is shared between them -- a creature that learns context 0
+// perfectly has learned nothing about context 2 even when the two share a feature.
+// Kirby, Griffiths & Smith's iterated-learning account turns on learners generalising
+// from sparse input, and this architecture cannot, which is the likeliest cause of
+// `tutorgrid`'s generational decay. The mechanism that would fix it is a FACTORED gain,
+// parameters per FEATURE rather than per CONTEXT.
+//
+// BUT FACTORING IS ONLY FREE IF THE LEARNED TABLE IS ALREADY ADDITIVE. If what the
+// creature stores for the four grid words decomposes into "high F1" plus "high F2"
+// components, a factored parameterisation captures nearly all of it with half the
+// parameters. If the four rows carry an irreducible INTERACTION, factoring would throw
+// the signal away, and the lead is weak. That is measurable from a trained creature with
+// no new mechanism at all, which is why it comes first.
+//
+// FOR A 2x2 THE DECOMPOSITION IS EXACT AND ORTHOGONAL -- no fitting, no approximation.
+// `kGridWords` puts words {2,3} at high F1 and {1,3} at high F2, so per neuron:
+//     m = (B0+B1+B2+B3)/4     the grand mean
+//     p = (B2+B3-B0-B1)/4     the F1-feature main effect
+//     q = (B1+B3-B0-B2)/4     the F2-feature main effect
+//     r = (B0+B3-B1-B2)/4     the INTERACTION, which is what factoring would discard
+// and B_c = m +- p +- q +- r reconstructs every row exactly, with
+// sum_c (B_c - m)^2 = 4*(p^2 + q^2 + r^2). So the shares are a true variance split.
+struct CtxFactor {
+  double main_f1 = 0.0;   // sum of p^2 over the larynx
+  double main_f2 = 0.0;   // sum of q^2
+  double inter = 0.0;     // sum of r^2 -- the part a factored table cannot hold
+  double mean_sq = 0.0;   // sum of m^2, the context-INDEPENDENT part
+  uint32_t n = 0;
+};
+
+inline CtxFactor ctx_factor(const aibaby::Network& net, const aibaby::ModuleState& vms) {
+  CtxFactor o;
+  if (vms.count == 0 || net.context_slots() < 4) return o;
+  for (uint32_t i = vms.begin; i < vms.begin + vms.count; ++i) {
+    double b[4];
+    for (uint32_t c = 0; c < 4; ++c)
+      b[c] = double(net.context_bias(i, c)) + double(net.banked_bias(i, c));
+    const double m = (b[0] + b[1] + b[2] + b[3]) * 0.25;
+    const double p = (b[2] + b[3] - b[0] - b[1]) * 0.25;
+    const double q = (b[1] + b[3] - b[0] - b[2]) * 0.25;
+    const double r = (b[0] + b[3] - b[1] - b[2]) * 0.25;
+    o.mean_sq += m * m;
+    o.main_f1 += p * p;
+    o.main_f2 += q * q;
+    o.inter += r * r;
+    ++o.n;
+  }
+  return o;
+}
+
 inline CtxSplit ctx_split(const aibaby::Network& net, const aibaby::ModuleState& vms,
                           double perturb_max) {
   CtxSplit o;
@@ -4249,6 +4303,9 @@ struct VLRun {
   // outside, and `areax` refuses rather than reporting either as the other.
   double ctx_present_frac = 0.0;
   double ctx_table_div = 0.0;   // mean |bias[i][0] - bias[i][1]| over the larynx
+  // The 2x2 additivity split, zero unless the genome runs four context slots. See
+  // `ctx_factor`: it prices a FACTORED parameterisation before one is built.
+  double fac_f1 = 0.0, fac_f2 = 0.0, fac_inter = 0.0, fac_mean = 0.0;
   // THE SAME TABLE DIFFERENCE, SPLIT BY WHETHER IT CAN REACH F1 AT ALL.
   //
   // `read_group` pools a slice into a rate-weighted CENTROID of position:
@@ -5343,6 +5400,13 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
       const CtxSplit sp = ctx_split(net, net.module(uint32_t(vmod)),
                                     double(s.dna.header().exploration.perturb_max));
       out.ctx_table_div = sp.div;
+      // Four slots only; `ctx_factor` returns zeros otherwise, so every two-context
+      // caller is unchanged.
+      const CtxFactor fc = ctx_factor(net, net.module(uint32_t(vmod)));
+      out.fac_f1 = fc.main_f1;
+      out.fac_f2 = fc.main_f2;
+      out.fac_inter = fc.inter;
+      out.fac_mean = fc.mean_sq;
       out.ctx_shared_mag = sp.mag;
       out.ctx_align = sp.align;
       out.ctx_common = sp.common;
@@ -31437,14 +31501,256 @@ bool run_tutorgrid(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
                 "  this way and the arm exists because of it.\n", L, alt1, alt2, n);
     return false;
   }
-  std::printf("\n  THE CODE DOES NOT CROSS AT FOUR SIGNALS. Generation 0 produces it on its\n"
-              "  own index (%+.1f/%+.1f Hz) and generation %u does not (%+.1f +/- %.1f and\n"
-              "  %+.1f +/- %.1f). Transmission at TWO signals is established at no loss over\n"
-              "  four generations, so this is a VOCABULARY limit in the channel rather than\n"
-              "  a channel that leaks: what a pupil can recover from a tutor's four-way\n"
-              "  production is less than what it can recover from a two-way one.\n",
-              m_s1, m_s2, L, m_w1[L], se_w1[L], m_w2[L], se_w2[L]);
+  // THE BARS ARE UNCHANGED -- this branch still means "the primary was not met", and
+  // nothing about pass/fail moved after seeing the data. What is rewritten is the PROSE,
+  // because the depth run's first version printed "THE CODE DOES NOT CROSS AT FOUR
+  // SIGNALS" and that is wrong twice over on the numbers it printed directly above it:
+  // the code DID cross (generation 1 at 7.5 SE, generation 2 at 6.6 SE) and it IS
+  // inherited (18 of 18 and 16 of 18 lineages alternating across every consecutive pair).
+  // A message that contradicts its own table is the `verdict-fitted-to-data` failure in
+  // its other direction, and it cost nothing to catch because the table was printed.
+  const bool b1 = m_w1[L] > 3.0 * se_w1[L];
+  const bool b2 = m_w2[L] > 3.0 * se_w2[L];
+  std::printf("\n  IT CROSSES AND IS INHERITED, AND ONE BIT DECAYS -- a SPLIT result, which is\n"
+              "  neither of the two outcomes this run pre-registered. Generation 0 produces\n"
+              "  the code on its own derived index (%+.1f/%+.1f Hz); at generation %u bit F1\n"
+              "  reads %+.1f +/- %.1f (%s) and bit F2 reads %+.1f +/- %.1f (%s).\n",
+              m_s1, m_s2, L, m_w1[L], se_w1[L], b1 ? "clears 3 SE" : "under 3 SE",
+              m_w2[L], se_w2[L], b2 ? "clears 3 SE" : "under 3 SE");
+  std::printf("\n  READ THE PER-GENERATION TABLE ABOVE, NOT THIS LINE ALONE: the two bits do\n"
+              "  different things. The paired generation-%u-minus-0 test is the quantity to\n"
+              "  quote, and a bit whose loss sits under 3 SE is BOUNDED, not held -- the\n"
+              "  smallest loss this n could resolve is printed with it.\n", L);
+  std::printf("\n  WHAT IS NOT IN DOUBT is that what crosses is INHERITED rather than\n"
+              "  re-imposed by the tape: the flipped chain alternates across EVERY\n"
+              "  consecutive pair, which is a far stronger test than the single flip three\n"
+              "  generations allowed. So a decaying bit is a CHANNEL-CAPACITY statement and\n"
+              "  not an artefact of the tape.\n");
+  std::printf("\n  AND THE COMPARISON THAT GIVES IT MEANING: a TWO-signal code loses nothing\n"
+              "  over four generations (1.4 SE). If a bit here loses resolvably, then four\n"
+              "  signals leak where two did not, and the leak is a VOCABULARY cost in the\n"
+              "  channel rather than a channel that was always lossy.\n");
   return false;
+}
+
+// --- ctxfactor: is the learned four-context table ADDITIVE in its two features? -----
+//
+// THE LEAD THIS PRICES, AND WHY IT IS PRICED BEFORE IT IS BUILT. Both context
+// parameterisations index by `active_ctx_` -- `bias_ctx_[i * ctx_slots_ + active_ctx_]` and
+// `gain_ctx_[active_ctx_ * kVocalGroups + g]` -- so every context owns INDEPENDENT
+// parameters and nothing is shared. A creature that learns context 0 perfectly has learned
+// nothing about context 2 even when the two share a feature. DNA v54's mode 1 reduces
+// parameters WITHIN a context (18 against 252) and still stores one set PER context.
+//
+// Kirby, Griffiths & Smith's iterated-learning account turns on learners generalising from
+// sparse input, and this architecture cannot, which is the likeliest cause of `tutorgrid`'s
+// generational decay. The mechanism that would fix it is a FACTORED gain: parameters per
+// FEATURE instead of per CONTEXT, 18 against 36 at four contexts with the saving growing.
+//
+// BUT FACTORING IS ONLY FREE IF WHAT THE CREATURE LEARNS IS ALREADY ADDITIVE, and that is
+// measurable on a trained creature with NO new mechanism. This run measures it. It is the
+// same discipline that killed the sparse-time-basis lead for one run instead of a build:
+// supply or measure the perfect version first.
+//
+// THE STATISTIC. For a 2x2 the decomposition is EXACT and ORTHOGONAL -- no fitting. Per
+// larynx neuron, with `kGridWords` putting words {2,3} at high F1 and {1,3} at high F2:
+//     m = (B0+B1+B2+B3)/4   p = (B2+B3-B0-B1)/4   q = (B1+B3-B0-B2)/4   r = (B0+B3-B1-B2)/4
+// B_c = m +- p +- q +- r reconstructs every row exactly and
+// sum_c (B_c - m)^2 = 4*(p^2+q^2+r^2), so the three shares are a true variance split. The
+// reported quantity is the INTERACTION SHARE, r^2 / (p^2+q^2+r^2) summed over the larynx:
+// the fraction of the context-dependent table that a factored parameterisation CANNOT hold.
+//
+// THE NULL IS DERIVED, NOT CHOSEN, which is what makes the bar meaningful. Four rows carry
+// one mean and THREE orthogonal contrasts. If the rows were independent random vectors the
+// context-dependent power would split equally among the three, so
+//     E[interaction share] = 1/3
+// is chance. Additivity means sitting significantly BELOW 1/3.
+//
+// THE BARS, fixed here:
+//   PRIMARY   the interaction share is below 1/3 by 3 SE on the ORACLE arm -- the cleanest
+//             table the creature can produce, so if it is not additive there it is not
+//             additive anywhere and the factored lead is DEAD.
+//   THE SIZE  is what decides whether the lead is worth building, separately from the bar.
+//             A share near 0.10 means a factored table keeps ~90% of the signal with half
+//             the parameters; a share near 1/3 means factoring discards as much as it keeps.
+//             Recorded as a magnitude, not as a pass.
+//   SECONDARY the DERIVED arms, with and without the conscience. `tutorgrid` found the
+//             derived F2 bit at 8% of the oracle's without the conscience and 62% with it,
+//             so if additivity tracks that, the conscience is improving the partition's
+//             STRUCTURE and not merely its balance -- which would be a second, independent
+//             reason to believe the v70 result.
+//
+// VOID IF the context-independent part `fac_mean` dominates, because then the table barely
+// distinguishes contexts at all and the split among contrasts is noise about nothing. The
+// run prints that share so the reader can refuse it rather than discovering it later.
+//
+// NOT A NEW MECHANISM AND NOT A SWEEP: one trained creature per arm, read afterwards. The
+// cheapest thing in the queue that can kill or confirm a build.
+bool run_ctxfactor(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  aibaby::Dna dna;
+  if (dna.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) {
+    std::printf("  setup failed: the genome does not load\n");
+    return false;
+  }
+  const int32_t ctx_module = dna.module_with_role(aibaby::ModuleRole::kContext);
+  if (ctx_module < 0) {
+    std::printf("  REFUSED: this genome has no module with role \"context\", so the oracle\n"
+                "  arm's index would never be written -- and the oracle arm carries the\n"
+                "  primary bar. Run on a genome that has one, e.g. results/ctxgrid.toml.\n");
+    return false;
+  }
+  constexpr uint32_t kReps = 18;
+  struct FArm { const char* name; uint32_t src; uint32_t gate; float cgain; };
+  static const FArm kFA[] = {
+      // The oracle index carries the PRIMARY bar: the cleanest four-context table this
+      // creature can make. If it is not additive here it is not additive anywhere.
+      {"oracle",  0u, 0u, 0.0f},
+      {"self",    4u, 0u, 0.0f},
+      // The conscience, at the gain settled at a pre-committed n=144 for two contexts.
+      {"self-c",  4u, 2u, 2.0f},
+  };
+  constexpr uint32_t kN = sizeof(kFA) / sizeof(kFA[0]);
+  instrument("ctxfactor", dna.header().seed ^ 0x7CB3u, ticks / kVLTrialTicks,
+             "trials per arm");
+  std::printf("  ctxfactor -- is the learned FOUR-CONTEXT table additive in its two\n"
+              "  features? Every context currently owns independent parameters, so the\n"
+              "  creature cannot generalise across them. A FACTORED table would fix that,\n"
+              "  and is only free if what is learned is already additive. This measures it\n"
+              "  on a trained creature, with no new mechanism.\n");
+  std::printf("  the split     EXACT for a 2x2: per neuron, a mean plus three ORTHOGONAL\n"
+              "                contrasts -- the F1 feature, the F2 feature, and their\n"
+              "                INTERACTION, which is the part a factored table cannot hold.\n");
+  std::printf("  the null      DERIVED: four rows carry one mean and three orthogonal\n"
+              "                contrasts, so independent rows split the context-dependent\n"
+              "                power equally and chance is 1/3. Additivity is BELOW that.\n");
+  std::printf("  the bar       the interaction share sits below 1/3 by 3 SE on the ORACLE\n"
+              "                arm. The SIZE is reported separately, because 0.10 and 0.30\n"
+              "                are both passes and only one is worth building.\n");
+  std::printf("  void if       the context-INDEPENDENT part dominates: then the table\n"
+              "                hardly distinguishes contexts and the split is noise.\n\n");
+
+  struct Cell {
+    bool ok = false;
+    double share = 0.0;     // interaction / (f1 + f2 + interaction)
+    double f1 = 0.0, f2 = 0.0, inter = 0.0, mean = 0.0;
+    double dep_frac = 0.0;  // context-dependent power as a share of all power
+  };
+  const size_t slots_off = offsetof(aibaby::DnaHeader, exploration) +
+                           offsetof(aibaby::DnaExploration, context_slots);
+  const size_t src_off = offsetof(aibaby::DnaHeader, exploration) +
+                         offsetof(aibaby::DnaExploration, context_source);
+  const size_t gate_off = offsetof(aibaby::DnaHeader, exploration) +
+                          offsetof(aibaby::DnaExploration, ctx_proto_gate);
+  const size_t cg_off = offsetof(aibaby::DnaHeader, exploration) +
+                        offsetof(aibaby::DnaExploration, ctx_conscience_gain);
+
+  const std::vector<Cell> cells = parallel_reps<Cell>(kReps * kN, [&](uint32_t job) {
+    const uint32_t r = job / kN, a = job % kN;
+    Cell c;
+    std::vector<uint8_t> v = blob;
+    const uint64_t sg = dna.header().seed + r * 7919ull;
+    const uint32_t slots = 4u;
+    std::memcpy(v.data() + offsetof(aibaby::DnaHeader, seed), &sg, sizeof(sg));
+    std::memcpy(v.data() + slots_off, &slots, sizeof(slots));
+    std::memcpy(v.data() + src_off, &kFA[a].src, sizeof(uint32_t));
+    std::memcpy(v.data() + gate_off, &kFA[a].gate, sizeof(uint32_t));
+    std::memcpy(v.data() + cg_off, &kFA[a].cgain, sizeof(float));
+    Regime reg;
+    reg.praise = kPraiseValue;
+    reg.scold = kScoldValue;
+    // The oracle arm needs the host to inject, which the derived arms do not: the context
+    // module is silent unless written into, so `src 0` with no drive names a slot nobody
+    // fills. ctxgrid's own module/slots/gain, not new constants.
+    CtxDrive drive;
+    drive.module = ctx_module;
+    drive.slots = 4u;
+    drive.gain = 0.10;
+    const VLRun run = run_vocallearn_session(v, ticks, kVLTaught, nullptr, reg, -1,
+                                             kFA[a].src == 0u ? &drive : nullptr,
+                                             kVLScoreFormant, nullptr, 4u, kGridWords,
+                                             nullptr, nullptr, nullptr, nullptr,
+                                             kGridWords);
+    if (!run.ok) return c;
+    const double dep = run.fac_f1 + run.fac_f2 + run.fac_inter;
+    if (!(dep > 0.0)) return c;
+    c.ok = true;
+    c.f1 = run.fac_f1; c.f2 = run.fac_f2; c.inter = run.fac_inter; c.mean = run.fac_mean;
+    c.share = run.fac_inter / dep;
+    c.dep_frac = dep / (dep + run.fac_mean);
+    parallel_note("  [%u/%u] seed %u %-7s  F1 %.4f  F2 %.4f  inter %.4f  share %.3f  "
+                  "dep %.2f\n",
+                  job + 1, kReps * kN, r, kFA[a].name, c.f1, c.f2, c.inter, c.share,
+                  c.dep_frac);
+    return c;
+  });
+
+  std::printf("\n  arm        n   interaction share   F1 share   F2 share   context-dep\n");
+  double m_share[kN], se_share[kN];
+  size_t n_arm[kN];
+  for (uint32_t a = 0; a < kN; ++a) {
+    std::vector<double> sh, f1s, f2s, dp;
+    for (uint32_t r = 0; r < kReps; ++r) {
+      const Cell& c = cells[r * kN + a];
+      if (!c.ok) continue;
+      const double dep = c.f1 + c.f2 + c.inter;
+      sh.push_back(c.share);
+      f1s.push_back(c.f1 / dep);
+      f2s.push_back(c.f2 / dep);
+      dp.push_back(c.dep_frac);
+    }
+    n_arm[a] = sh.size();
+    if (sh.size() < 3) {
+      std::printf("  %-9s %3zu   too few usable creatures\n", kFA[a].name, sh.size());
+      m_share[a] = 0.0; se_share[a] = 0.0;
+      continue;
+    }
+    double s1 = 0, s2 = 0, s3 = 0, s4 = 0;
+    m_share[a] = ctx_mean_se(sh, &se_share[a]);
+    const double mf1 = ctx_mean_se(f1s, &s1), mf2 = ctx_mean_se(f2s, &s2);
+    const double mdp = ctx_mean_se(dp, &s3);
+    (void)s4;
+    std::printf("  %-9s %3zu   %.3f +/- %.3f       %.3f      %.3f      %.2f +/- %.2f\n",
+                kFA[a].name, sh.size(), m_share[a], se_share[a], mf1, mf2, mdp, s3);
+  }
+  std::printf("\n  chance for the interaction share is 1/3 = 0.333, because four rows carry\n"
+              "  one mean and THREE orthogonal contrasts. Below it means ADDITIVE.\n");
+
+  if (n_arm[0] < 3) {
+    std::printf("\n  setup failed: the oracle arm has %zu usable creatures and it carries\n"
+                "  the primary bar.\n", n_arm[0]);
+    return false;
+  }
+  const double dev = (1.0 / 3.0) - m_share[0];
+  const double se = se_share[0];
+  const double nse = se > 0.0 ? dev / se : 0.0;
+  std::printf("\n  THE PRIMARY, on the oracle arm: %.3f below chance, %.1f SE\n", dev, nse);
+  if (nse < 3.0) {
+    std::printf("\n  THE FACTORED LEAD IS REFUSED. The cleanest four-context table this\n"
+                "  creature can make is NOT additive in its two features: the interaction\n"
+                "  share is %.3f against a chance of 0.333, only %.1f SE below it. A\n"
+                "  factored parameterisation would discard about as much as it keeps, so\n"
+                "  parameters per FEATURE cannot replace parameters per CONTEXT here.\n"
+                "  Do not build it, and do not read tutorgrid's decay as a sharing problem.\n",
+                m_share[0], nse);
+    return false;
+  }
+  std::printf("\n  THE TABLE IS ADDITIVE, and the SIZE is the thing to read. The interaction\n"
+              "  share is %.3f, so a factored table holds about %.0f%% of what the creature\n"
+              "  learns with HALF the parameters at four contexts, and a third at eight.\n",
+              m_share[0], 100.0 * (1.0 - m_share[0]));
+  if (n_arm[1] >= 3 && n_arm[2] >= 3)
+    std::printf("\n  AND THE DERIVED ARMS: %.3f without the conscience, %.3f with it. If the\n"
+                "  conscience lowers the interaction share it is improving the partition's\n"
+                "  STRUCTURE and not merely its balance -- an independent reason to believe\n"
+                "  the v70 result, which was measured on behaviour alone.\n",
+                m_share[1], m_share[2]);
+  std::printf("\n  WHAT THIS DOES NOT SHOW: that a factored table LEARNS as well as it\n"
+              "  STORES. This reads a table the full parameterisation produced; a factored\n"
+              "  one has a different gradient and could get stuck where this one did not.\n"
+              "  The build is licensed, not finished -- and `ctxgain` already says to expect\n"
+              "  generalisation and vocabulary from it, never precision.\n");
+  return true;
 }
 bool run_ctxvocab(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
   (void)verbose;

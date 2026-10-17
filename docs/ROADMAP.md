@@ -74,7 +74,7 @@ gesture is nearly free.
 are priced and closed. They are: *use the creature inside its specification*, and find out
 where the specification itself binds. The first question of that kind is §0.
 
-### 0. Does the specification hold end to end? — MET, over two generations
+### 0. Does the specification hold end to end? — MET at two generations, SPLIT at five
 
 Each half is established and the composition has never been run. `ctxgrid` names four
 signals on both axes with a **host** index; `tutorwide` transmits **two** between distinct
@@ -119,9 +119,31 @@ on the 3 SE bar. The decay improved from 4.3 SE to 2.6 SE and is no longer estab
 the improvement itself is 1.9 SE and is *also* not established. And this is **two**
 generations where `tutorwide` ran five.
 
-**The next run is depth, and it is cheap:** raise the chain from 3 generations to 5 on the
-conscience genome and ask whether the four-signal code holds where the two-signal one did.
-The experiment, the genome and the analysis all exist; nothing needs building.
+**Depth 5 was run, and it splits (2026-10-17).** Raising the chain to five generations put
+four signals on `tutorwide`'s exact footing. Paired generation 4 minus generation 0:
+**bit F1 −21.58 ± 5.56 (3.9 SE), a resolved loss of 57%; bit F2 +0.97 ± 27.91 (0.0 SE), no
+detectable loss.** One bit decays and the other ends where it started.
+
+What crosses is unambiguously **inherited** rather than re-imposed: the flipped chain
+alternates across *every* consecutive pair — three at this depth against the single flip
+depth 3 allowed — at 18 of 18 and 16 of 18 lineages. So a decaying bit is a channel-capacity
+statement, not an artefact of the tape.
+
+Against a two-signal code losing nothing over four generations, **four signals leak where
+two did not, on one axis only.** As a hypothesis and not a conclusion: F1 has the smaller
+measured reach (118 Hz against ~300) and the derived index recovers less of the oracle there
+(46% against 62%), so the bit with less headroom relative to its noise erodes first — but
+this run cannot separate "less reach" from "worse index" because they coincide on that axis.
+
+Two things are *not* claimed. F2's "no detectable loss" is a **bound, not a hold**: at n=18
+the smallest resolvable loss on that bit is ~84 Hz. And the F1 decay's shape is not
+established — linear and geometric fits are indistinguishable on five points.
+
+**What it points at, and what is running:** the decay is what an architecture with no
+parameter sharing across contexts predicts. `ctxfactor` prices whether a factored table
+could fix it — measured on a trained creature, no new mechanism, with a derived null (chance
+for the interaction share is exactly 1/3, because four rows carry one mean and three
+orthogonal contrasts).
 
 ## What is settled, and therefore not to re-open
 

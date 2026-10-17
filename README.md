@@ -17713,6 +17713,65 @@ sharpening the partition would stop the decay is suggestive rather than shown. A
 conscience is not free either: the F1 bit's 4.4 Hz drop is unresolvable at this n rather than
 absent.
 
+### Five generations: one bit of the code holds, the other decays (2026-10-17)
+
+The three-generation run got the four-signal code across but could only say that
+gen 2 − gen 0 was −12.34 ± 4.72 — **2.6 SE, which establishes neither a decay nor a hold.**
+`tutorwide` ran five generations and read its *two*-signal code at generation 4 as 1.4 SE
+from generation 0, and that is what "no detectable loss" meant there. So `kDepth` went 3 → 5
+to put four signals on exactly that footing, with `kReps` staying at 18 because the
+comparison is to that run and not to a better-powered one. No prediction was recorded: both
+outcomes were results.
+
+| generation | bit F1 | bit F2 |
+|---|---|---|
+| 0 | +37.6 ± 3.0 | +91.9 ± 13.7 |
+| 1 | +31.7 ± 4.2 | +85.6 ± 21.0 |
+| 2 | +25.3 ± 3.8 | +75.3 ± 25.0 |
+| 3 | +15.4 ± 6.6 | +77.9 ± 22.4 |
+| 4 | +16.1 ± 5.5 | +92.9 ± 28.1 |
+
+```
+gen 4 − gen 0, paired per lineage:  F1  −21.58 ± 5.56  (3.9 SE)  a RESOLVED loss
+                                    F2   +0.97 ± 27.91 (0.0 SE)  no detectable loss
+inheritance, EVERY consecutive pair: F1 18 of 18 lineages, F2 16 of 18
+```
+
+**It is a split result, and neither of the two pre-registered outcomes.** The F1 bit loses
+57% of itself across four generations, resolvably. The F2 bit ends where it started.
+
+**What is not in doubt is that what crosses is inherited rather than re-imposed by the
+tape.** The flipped chain alternates across *every* consecutive pair — three of them at this
+depth rather than the single flip three generations allowed — at 18 of 18 and 16 of 18
+lineages. That is the failure mode `tutorwide`'s first version had, tested far more strictly
+here, so a decaying bit is a statement about channel capacity and not an artefact of how the
+tape is built.
+
+**The comparison that gives it meaning:** a two-signal code loses nothing over four
+generations (1.4 SE). One bit of a four-signal code loses 3.9 SE. **So four signals leak
+where two did not — but only on one axis.**
+
+**Why that axis, as a hypothesis rather than a conclusion.** F1 is the axis with the smaller
+measured reach (118 Hz against F2's ~300) and the one where the derived index recovers less
+of the oracle's bit (46% against 62%). A bit with less headroom relative to its own noise is
+the one that should erode first, and that is consistent with both numbers — but this run
+cannot separate "less reach" from "worse index" because the two coincide here.
+
+**Two things deliberately not claimed.** The F2 bit's "no detectable loss" is a **bound, not
+a hold**: at n=18 the smallest loss resolvable on that bit is about 84 Hz, so it could have
+lost half its size undetected. The run prints that bound next to the number for exactly this
+reason. And the F1 decay's *shape* is not established — linear at −5.4 Hz per generation and
+geometric at ×0.81 per generation fit five points about equally well (SSE 38.5 against 22.9),
+which is not a basis for a functional form.
+
+**A defective verdict, caught by its own table.** The run first printed *"THE CODE DOES NOT
+CROSS AT FOUR SIGNALS"*, which is wrong twice over against the numbers printed directly
+above it: the code *did* cross (generation 1 at 7.5 SE, generation 2 at 6.6 SE) and it *is*
+inherited. The message collapsed a split outcome into a clean failure. The prose is
+rewritten and **the pass/fail logic is untouched** — the bars stand as pre-registered and
+this is still "primary not met". Fixing a message that contradicts its own data is not the
+same thing as moving a bar after seeing it.
+
 ## Layout
 
 ```

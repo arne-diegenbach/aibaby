@@ -2201,6 +2201,7 @@ bool run_tutor(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_tutorchain(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_tutorwide(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_tutorgrid(const std::vector<uint8_t>&, uint64_t, bool);
+bool run_ctxfactor(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_blockanchor(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_leverprobe(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_blockflip(const std::vector<uint8_t>&, uint64_t, bool);

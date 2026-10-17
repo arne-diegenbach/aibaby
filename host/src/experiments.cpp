@@ -365,6 +365,18 @@ const Spec kSpecs[] = {
      "  if the half-centre reports no phase or has settled on one winner. The\n"
      "  evidence is the IDENTITY-minus-SWAPPED mapping contrast, because the\n"
      "  oscillator contributes to both equally and cancels from the difference."},
+    {"ctxfactor", 6800000, Expect::kOpen, Tier::kTeach,
+     "derived: ctxgrid's budget, because it trains on ctxgrid's four words and\n"
+     "  needs four words' worth of trials. Prices a FACTORED context gain before\n"
+     "  one is built. Every context currently owns independent parameters --\n"
+     "  bias_ctx_ and gain_ctx_ both index by active_ctx_ -- so the creature\n"
+     "  cannot generalise across contexts, which is the likeliest cause of\n"
+     "  tutorgrid's generational decay. Parameters per FEATURE would fix it and\n"
+     "  are only free if the learned table is already ADDITIVE. For a 2x2 that\n"
+     "  decomposition is exact and orthogonal, and the null is DERIVED: four rows\n"
+     "  carry one mean and three orthogonal contrasts, so chance for the\n"
+     "  interaction share is 1/3. One trained creature per arm, read afterwards --\n"
+     "  no new mechanism, and the cheapest thing that can kill or confirm a build."},
     {"tutorgrid", 6800000, Expect::kOpen, Tier::kTeach,
      "derived: ctxgrid's own budget. Four words need four words' worth of\n"
      "  trials and ctxgrid read 2428 of them, which is 6.8M ticks -- half that\n"
@@ -1002,6 +1014,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "tutorchain") ok = run_tutorchain(dna_blob, ticks, verbose);
   else if (name == "tutorwide") ok = run_tutorwide(dna_blob, ticks, verbose);
   else if (name == "tutorgrid") ok = run_tutorgrid(dna_blob, ticks, verbose);
+  else if (name == "ctxfactor") ok = run_ctxfactor(dna_blob, ticks, verbose);
   else if (name == "blockwhere") ok = run_blockwhere(dna_blob, ticks, verbose);
   else if (name == "blockanchor") ok = run_blockanchor(dna_blob, ticks, verbose);
   else if (name == "leverprobe") ok = run_leverprobe(dna_blob, ticks, verbose);
