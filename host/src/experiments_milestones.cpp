@@ -31920,10 +31920,19 @@ bool run_ctxfactor(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
 // only the slot-to-bit map, in `ctxaxis_bit_acc` below. Freezing instead would have made
 // the probe pessimistic for a reason that has nothing to do with the question --
 // `ctxself` measured frozen prototypes decaying across a session, 0.697 -> 0.663.
+// `vigilance` > 0 adds gate 6/7's ART test: slots start UNCOMMITTED, only committed ones
+// compete, and an input further than `vigilance * cdscale` from every committed prototype
+// COMMITS a free slot seeded from itself. That is the kernel's only source of DISTINCT
+// data-driven seeds, which `sph-0` showed the normalisation needs. `committed_out` returns
+// how many slots ever committed, and it is the vacuity check: the shipped threshold of 5.0
+// commits only ONE slot on the raw feature, which makes the index constant and the arm
+// inert -- the experiment must be able to see that rather than report its accuracy.
 std::vector<int> ctxaxis_partition(const std::vector<std::vector<double>>& z,
                                    size_t train_count, uint32_t k, uint64_t seed,
-                                   bool zero_init) {
+                                   bool zero_init, double vigilance = 0.0,
+                                   uint32_t* committed_out = nullptr) {
   std::vector<int> out(z.size(), 0);
+  if (committed_out) *committed_out = zero_init ? k : k;
   if (z.empty() || k < 2u || train_count <= size_t(k) * 2u || train_count >= z.size())
     return out;
   const size_t dims = z[0].size();
@@ -31933,6 +31942,9 @@ std::vector<int> ctxaxis_partition(const std::vector<std::vector<double>>& z,
   std::vector<std::vector<double>> w(k, std::vector<double>(dims, 0.0));
   std::vector<double> wins(k, 0.0);
   std::vector<int> seed_of(z.size(), -1);
+  // Under vigilance nothing is committed yet; without it every slot competes from the
+  // start, which is what gates 0-4 do.
+  uint32_t committed = vigilance > 0.0 ? 0u : k;
   if (!zero_init) {
     // K DISTINCT training rows, drawn at random. Seeding from the FIRST rows is a coin
     // flip by construction -- partprobe's own note, and it read 2 of 9 creatures at 1.000
@@ -31949,28 +31961,73 @@ std::vector<int> ctxaxis_partition(const std::vector<std::vector<double>>& z,
   double dsum = 0.0, dn = 0.0;
   for (size_t i = 0; i < z.size(); ++i) {
     if (seed_of[i] >= 0) { out[i] = seed_of[i]; continue; }
+    // COMMIT THE FIRST SLOT from the first non-degenerate row, as the kernel does: at tick
+    // 0 `rate_ema_` is the ZERO vector and committing slot 0 to the origin is the very
+    // failure being avoided.
+    if (vigilance > 0.0 && committed == 0u) {
+      double fnorm = 0.0;
+      for (size_t q = 0; q < dims; ++q) fnorm += z[i][q] * z[i][q];
+      if (fnorm > 0.0) {
+        w[0] = z[i];
+        committed = 1u;
+        out[i] = 0;
+        wins[0] += 1.0;
+        continue;
+      }
+      out[i] = 0;
+      continue;
+    }
+    const uint32_t live = vigilance > 0.0 ? committed : k;
     double total = 0.0;
-    for (uint32_t c = 0; c < k; ++c) total += wins[c];
+    for (uint32_t c = 0; c < live; ++c) total += wins[c];
     const double cdscale = dn > 0.0 ? dsum / dn : 0.0;
-    double best_d = 0.0;
+    double best_d = 0.0, best_raw = 0.0;
     uint32_t win = 0;
-    for (uint32_t c = 0; c < k; ++c) {
+    for (uint32_t c = 0; c < live; ++c) {
       double d = 0.0;
       for (size_t q = 0; q < dims; ++q) {
         const double e = z[i][q] - w[c][q];
         d += e * e;
       }
+      const double raw = d;
       if (total > 0.0 && dn > 0.0)
-        d += (double(k) * (wins[c] / total) - 1.0) * cdscale;
-      if (c == 0 || d < best_d) { best_d = d; win = c; }
+        d += (double(live) * (wins[c] / total) - 1.0) * cdscale;
+      if (c == 0 || d < best_d) { best_d = d; best_raw = raw; win = c; }
+    }
+    // THE VIGILANCE TEST, on the RAW distance and not the conscience-adjusted one: the
+    // penalty exists to balance wins between live units and has no business deciding
+    // whether a category is novel. The kernel's own comment, and its own ordering.
+    //
+    // THE WARMUP GUARD IS DELIBERATELY NOT PORTED, and that is a judgement to state rather
+    // than hide. The kernel waits `1/rate_alpha_` samples before trusting the distance
+    // scale, because it reads `rate_ema_` from tick 0 while it is still climbing out of
+    // zero. Here every row is sampled at the SAME point in a trial, after the EMA has had
+    // kVLWordTicks+400 ticks to settle, so the transient that guard exists for is not in
+    // the recorded feature. What remains is that the scale rests on few samples early on,
+    // so the test requires at least `k` of them -- derived from the structure (novelty
+    // cannot be judged against a scale estimated from fewer samples than there are
+    // categories) rather than chosen.
+    bool new_slot = false;
+    if (vigilance > 0.0 && committed > 0u && committed < k && dn >= double(k) &&
+        best_raw > vigilance * cdscale) {
+      w[committed] = z[i];
+      win = committed;
+      ++committed;
+      new_slot = true;
     }
     out[i] = int(win);
-    dsum += best_d;
-    dn += 1.0;
+    // A commit step has distance 0 by construction and must not drag the scale toward the
+    // thing it is supposed to detect -- the kernel skips it too. And under vigilance the
+    // scale accumulates the RAW distance, which is what the kernel does for that gate.
+    if (!new_slot) {
+      dsum += vigilance > 0.0 ? best_raw : best_d;
+      dn += 1.0;
+    }
     wins[win] += 1.0;
     const double lr = 1.0 / wins[win];
     for (size_t q = 0; q < dims; ++q) w[win][q] += lr * (z[i][q] - w[win][q]);
   }
+  if (committed_out) *committed_out = committed;
   return out;
 }
 
@@ -32132,6 +32189,15 @@ bool run_ctxaxis(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
   static const char* kColName[kCols] = {"ear", "ear-z", "ear-sph", "kern",
                                         "raw", "z",     "sph",     "sph-0"};
   constexpr uint32_t kColKern = 3, kColRaw = 4, kColZ = 5, kColSph = 6, kColSph0 = 7;
+  // THE VIGILANCE THRESHOLDS. 5.0 is the SHIPPED value (gate 7), and the record already
+  // says it commits only ONE slot on the raw feature -- so the sweep must bracket it from
+  // below rather than report it alone, and `slots` is printed beside every cell because an
+  // arm that commits one slot has a constant index and no result. The range is geometric
+  // around the shipped value; nothing here is a new shipped constant, the sweep IS the
+  // measurement, and the normalised feature has a different distance scale so its
+  // threshold has to be re-derived rather than ported.
+  constexpr uint32_t kVigN = 4;
+  static const double kVigT[kVigN] = {0.5, 1.0, 2.0, 5.0};
   instrument("ctxaxis", dna.header().seed ^ 0x7CC5u, ticks / kVLTrialTicks,
              "trials per creature");
   std::printf("  ctxaxis -- the oracle chain proved the DERIVED INDEX caused the F1 bit's\n"
@@ -32159,6 +32225,10 @@ bool run_ctxaxis(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
     bool ok = false;
     double acc[kCols][2] = {};   // [column][bit], bit 0 = F1, bit 1 = F2
     double shuf[2] = {};         // the void check, on `ear`
+    // THE VIGILANCE SWEEP: [feature][threshold][bit], feature 0 = raw, 1 = normalised,
+    // plus how many slots ever committed, which is the vacuity check.
+    double vig[2][kVigN][2] = {};
+    double vigc[2][kVigN] = {};
     size_t rows = 0;
     // WHY a cell failed, because "0 usable creatures" is not a diagnosis. The first
     // 1.2M-tick run of this experiment printed exactly that and the guards had to be
@@ -32253,6 +32323,20 @@ bool run_ctxaxis(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
           ctxaxis_partition(fs, tr, kSlots, sg ^ 0xA11u, true);
       for (uint32_t q = 0; q < 2u; ++q)
         c.acc[kColSph0][q] = ctxaxis_bit_acc(ps0, b[q], tr, kSlots);
+    }
+    // THE VIGILANCE SWEEP. Each cell changes ONE thing from its own reference: raw+vig
+    // against `kern`, normalised+vig against `sph-0`, and raw-vs-normalised at MATCHED
+    // threshold. Deterministic (zero init), so one pass per cell.
+    for (uint32_t f = 0; f < 2u; ++f) {
+      const std::vector<std::vector<double>>& feat = f == 0u ? p.feat_ema : fs;
+      for (uint32_t t = 0; t < kVigN; ++t) {
+        uint32_t comm = 0;
+        const std::vector<int> pv =
+            ctxaxis_partition(feat, tr, kSlots, sg ^ 0xA11u, true, kVigT[t], &comm);
+        c.vigc[f][t] = double(comm);
+        for (uint32_t q = 0; q < 2u; ++q)
+          c.vig[f][t][q] = ctxaxis_bit_acc(pv, b[q], tr, kSlots);
+      }
     }
     for (uint32_t d = 0; d < kDraws; ++d) {
       const uint64_t s = sg ^ (0xB22u + d);
@@ -32505,6 +32589,80 @@ bool run_ctxaxis(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
     std::printf("\n  THE MAGNITUDE LEAD IS NOT LICENSED at this n: one of the two bits does\n"
                 "  not clear 3 SE paired, and a transform that helps one bit while leaving\n"
                 "  the other unresolved is not the clean win the column means suggest.\n");
+  }
+  // THE VIGILANCE SWEEP, which is the pair `sph-0` named: normalisation needs DISTINCT
+  // seeds and vigilance is the kernel's only source of them. `slots` is the vacuity check
+  // and comes first for that reason -- a threshold that commits one slot has a CONSTANT
+  // index, so its accuracy is the slot-to-bit map's prior and not a partition at all.
+  std::printf("\n  THE VIGILANCE SWEEP -- the kernel's only source of DISTINCT data-driven\n"
+              "  seeds, which is what `sph-0` showed the normalisation needs. Each cell is\n"
+              "  zero-init plus the ART test; `slots` is how many ever committed of %u and\n"
+              "  is the VACUITY CHECK: one slot means a CONSTANT index and no partition.\n",
+              kSlots);
+  std::printf("\n  thresh   RAW feature                      NORMALISED feature\n");
+  std::printf("           slots  bit F1   bit F2            slots  bit F1   bit F2\n");
+  double vm[2][kVigN][2] = {};
+  double vmc[2][kVigN] = {};
+  for (uint32_t t = 0; t < kVigN; ++t) {
+    for (uint32_t f = 0; f < 2u; ++f) {
+      std::vector<double> cc;
+      for (uint32_t q = 0; q < 2u; ++q) {
+        std::vector<double> a;
+        for (const Cell& c : cells) {
+          if (!c.ok) continue;
+          a.push_back(c.vig[f][t][q]);
+          if (q == 0) cc.push_back(c.vigc[f][t]);
+        }
+        double se = 0.0;
+        vm[f][t][q] = a.size() >= 3 ? ctx_mean_se(a, &se) : 0.0;
+      }
+      double se = 0.0;
+      vmc[f][t] = cc.size() >= 3 ? ctx_mean_se(cc, &se) : 0.0;
+    }
+    std::printf("   %-5.2f   %.2f   %.3f    %.3f             %.2f   %.3f    %.3f\n",
+                kVigT[t], vmc[0][t], vm[0][t][0], vm[0][t][1],
+                vmc[1][t], vm[1][t][0], vm[1][t][1]);
+  }
+  std::printf("\n  references: kern %.3f/%.3f (raw, no vigilance), sph-0 %.3f/%.3f\n"
+              "  (normalised, no vigilance), and the best bound in the table is %.3f/%.3f.\n",
+              mbit[kColKern][0], mbit[kColKern][1], mbit[kColSph0][0], mbit[kColSph0][1],
+              mbit[kColSph][0], mbit[kColSph][1]);
+  // THE ONE-VARIABLE CONTRAST, paired, at each threshold: does vigilance help the
+  // NORMALISED feature over normalisation alone? That is the combined build's licence.
+  std::printf("\n  normalised+vigilance MINUS sph-0, paired per creature (the build's own\n"
+              "  licence -- one variable, the ART test, at a fixed threshold):\n");
+  bool vig_licensed = false;
+  for (uint32_t t = 0; t < kVigN; ++t) {
+    double m[2] = {0, 0}, s[2] = {0, 0};
+    for (uint32_t q = 0; q < 2u; ++q) {
+      std::vector<double> d;
+      for (const Cell& c : cells) {
+        if (!c.ok) continue;
+        d.push_back(c.vig[1][t][q] - c.acc[kColSph0][q]);
+      }
+      if (d.size() >= 3) m[q] = ctx_mean_se(d, &s[q]);
+    }
+    const double n1 = s[0] > 0.0 ? m[0] / s[0] : 0.0;
+    const double n2 = s[1] > 0.0 ? m[1] / s[1] : 0.0;
+    const bool inert = vmc[1][t] < 1.5;
+    std::printf("    thresh %-4.2f  F1 %+.3f +/- %.3f (%.1f SE)   F2 %+.3f +/- %.3f (%.1f SE)"
+                "  %s\n", kVigT[t], m[0], s[0], n1, m[1], s[1], n2,
+                inert ? "INERT: one slot" : (n1 >= 3.0 && n2 >= 3.0 ? "BOTH RESOLVED" : ""));
+    if (!inert && n1 >= 3.0 && n2 >= 3.0) vig_licensed = true;
+  }
+  if (vig_licensed) {
+    std::printf("\n  THE PAIR IS LICENSED: there is a threshold at which the ART test commits\n"
+                "  more than one slot AND lifts both bits over normalisation alone. The\n"
+                "  combined build is normalisation PLUS vigilance, and the threshold has to\n"
+                "  be carried from here because the shipped 5.0 was calibrated on the RAW\n"
+                "  feature's distance scale, which normalisation changes.\n");
+  } else {
+    std::printf("\n  THE PAIR IS NOT LICENSED. Either every threshold is inert (one slot, a\n"
+                "  constant index) or the ART test does not lift both bits over\n"
+                "  normalisation alone. Then the distinct seeds `sph` benefited from are\n"
+                "  NOT ones the creature can produce by this route, and the magnitude line\n"
+                "  closes here rather than becoming a build -- `sph` used RANDOM distinct\n"
+                "  seeds, which is a rule the creature has no equivalent of.\n");
   }
   std::printf("\n  WHAT THIS CANNOT SHOW: that a transform which helps OFFLINE helps the\n"
               "  creature. These rules run on a RECORDED feature with the word order fixed;\n"

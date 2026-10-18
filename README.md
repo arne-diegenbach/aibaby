@@ -17961,13 +17961,35 @@ entirely by the conscience rather than by the data. `ctx_proto_gate 3` does not 
 either — it seeds *every* slot from the *same* first sample, so the prototypes are identical
 rather than distinct, still a tie and merely not at the origin.
 
-**WHAT IS THEREFORE LICENSED, and it is not the one-line change.** Normalisation needs a
-DISTINCT-SEEDING step, and the only existing mechanism that produces distinct data-driven
-seeds is gate 6's ART vigilance, which commits a free slot when an input is far from every
-committed prototype. That gate's own milestone was NOT met (0.737 → 0.594 at 96 creatures) —
-and this result supplies a candidate reason, because its novelty test is a distance on the
-same magnitude-dominated raw feature. **Normalisation plus vigilance is the pair to price
-next, offline and one variable at a time, before any kernel edit.**
+**AND THE PAIR WAS PRICED AND REFUSED, so the magnitude line closes as a build.**
+Normalisation needs a DISTINCT-SEEDING step, and the only mechanism the creature has that
+produces distinct data-driven seeds is gate 6/7's ART vigilance — it commits a free slot
+when an input sits further than `vigilance × cdscale` from every committed prototype. The
+sweep ran it on both features at four thresholds, with **slots committed** printed beside
+every cell as the vacuity check:
+
+| thresh | raw: slots / F1 / F2 | normalised: slots / F1 / F2 |
+|---|---|---|
+| 0.50 | 4.00 · 0.846 · 0.674 | 4.00 · 0.880 · 0.835 |
+| 1.00 | 4.00 · 0.884 · 0.584 | 4.00 · 0.860 · 0.841 |
+| 2.00 | 1.11 · 0.475 · 0.475 | 3.94 · 0.808 · 0.807 |
+| 5.00 **(shipped)** | **1.00** · 0.475 · 0.475 | **1.00** · 0.475 · 0.475 |
+
+Against `sph-0` (normalised, no vigilance, 0.846/0.813), paired per creature, the best cell
+is **+0.034 ± 0.021 (1.6 SE)** on F1 and **+0.022 ± 0.020 (1.1 SE)** on F2 — **not
+licensed**, and on the raw feature vigilance trades F1 for F2 badly (0.884/0.584 against
+`kern`'s 0.827/0.781). No threshold on either feature wins on both bits. So the distinct
+seeds `sph` benefited from were **random** ones, which is a rule the creature has no
+equivalent of, and the mechanism it does have does not reproduce them.
+
+**TWO THINGS THE SWEEP SETTLES ABOUT VIGILANCE ITSELF.** At the shipped threshold of 5.0
+exactly **one slot ever commits**, on either feature — the index is CONSTANT, and against
+`sph-0` that reads −0.371 and −0.338 at 35 SE. The source already noted the one-slot
+behaviour; what is new is the quantification and what follows from it: **the vigilance
+milestone (0.737 → 0.594 at 96 creatures) was measuring a mechanism that never committed a
+second category.** And the second thing closes the rescue: at thresholds where it *does*
+commit four, it still does not deliver. **Vigilance is not merely mis-calibrated, and
+re-calibrating it is not a lead.**
 
 Note also that the kernel's loss against the best reader was always mostly on **F2** (0.184)
 rather than F1 (0.023), the opposite of the asymmetry the primary was built to find.
