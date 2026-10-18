@@ -365,6 +365,20 @@ const Spec kSpecs[] = {
      "  if the half-centre reports no phase or has settled on one winner. The\n"
      "  evidence is the IDENTITY-minus-SWAPPED mapping contrast, because the\n"
      "  oscillator contributes to both equally and cancels from the difference."},
+    {"cost", 120000, Expect::kOpen, Tier::kLong,
+     "derived: the default minimum, because this measures a RATE and not an\n"
+     "  effect -- 120000 ticks is 120 s simulated, which is dozens of trials and\n"
+     "  far more than a per-second count needs to settle. The stated goal is a\n"
+     "  small creature on LOW POWER and nothing has ever measured the second\n"
+     "  half: footprint reports bytes and says this project has no memory budget.\n"
+     "  Counts synapse-visits in two kinds -- DELIVERY, event-driven, a spike\n"
+     "  walking its fan-out; and BOOKKEEPING, dense, the plasticity loop walking\n"
+     "  every synapse every tick whether or not anything spiked. The headline is\n"
+     "  their ratio, which needs no energy constant or hardware model because it\n"
+     "  is two counts in the same unit from one run. Synapse-visits are NOT\n"
+     "  joules and this must not be quoted as watts. No bar and no pass/fail:\n"
+     "  there is no budget to measure against, and inventing one would be the\n"
+     "  fitted-verdict mistake."},
     {"ctxaxis", 1200000, Expect::kOpen, Tier::kLong,
      "derived: partprobe's own per-word trial count, at four words. That probe\n"
      "  reads the same feature space on TWO words at 600000 ticks, which is 107\n"
@@ -1030,6 +1044,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "tutorgrid") ok = run_tutorgrid(dna_blob, ticks, verbose);
   else if (name == "ctxfactor") ok = run_ctxfactor(dna_blob, ticks, verbose);
   else if (name == "ctxaxis") ok = run_ctxaxis(dna_blob, ticks, verbose);
+  else if (name == "cost") ok = run_cost(dna_blob, ticks, verbose);
   else if (name == "blockwhere") ok = run_blockwhere(dna_blob, ticks, verbose);
   else if (name == "blockanchor") ok = run_blockanchor(dna_blob, ticks, verbose);
   else if (name == "leverprobe") ok = run_leverprobe(dna_blob, ticks, verbose);

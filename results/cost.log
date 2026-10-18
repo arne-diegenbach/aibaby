@@ -1,0 +1,54 @@
+experiment: cost
+  instrument        cost   trial seed 0000000001355b10   120000 ticks
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  cost -- the creature's COMPUTE, in synapse-visits. The stated goal is a
+  small creature on LOW POWER; footprint measures bytes and says this
+  project has no memory budget, and nothing has ever measured operations.
+  three terms   NEURON UPDATES, dense in neurons every tick (net:2259);
+                DELIVERY, EVENT-DRIVEN, a spike across its fan-out
+                (net:2532); PLASTICITY, dense in synapses per REWARD
+                CASH-IN and NOT per tick (apply_reward_impl).
+  the headline  the TOTAL and which term dominates. Every number is a count
+                from one run, so no energy constant or hardware model.
+  not claimed   synapse-visits are not JOULES. Some neuromorphic designs
+                update per-synapse state in parallel and would not pay the
+                dense term as a CPU does. Operations and sparsity only.
+
+  STATIC    1166 neurons, 37275 synapses, mean fan-out 32.0
+  REGIME    120000 ticks = 120.0 s simulated at dt 1.00 ms; asleep for 0.0%
+  ACTIVITY  4.81 Hz mean firing, 0.0048 of neurons spiking per tick
+  REWARD    258 cash-ins = 2.15/s at the established 150-tick cadence
+
+  OPERATIONS per SIMULATED SECOND, by what each term scales with:
+    NEURON UPDATES     1.166e+06   dense in NEURONS, every tick       82.6%
+    DELIVERY           1.661e+05   EVENT-DRIVEN, spikes x fan-out     11.8%
+    PLASTICITY         8.014e+04   dense in SYNAPSES, per cash-in      5.7%
+    TOTAL              1.412e+06   operations per simulated second
+
+  THE HEADLINE: 1.41e+06 operations per simulated second, dominated by NEURON INTEGRATION.
+
+  AND THE SHAPE OF IT MATTERS MORE THAN THE SIZE. `step()` contains NO
+  dense-in-synapses loop -- every loop in it was listed to check -- so the
+  synaptic cost is EVENT-DRIVEN and the dense-in-synapses sweep is paid only
+  when reward arrives, 2.15 times a second here. What is dense every tick is
+  the NEURON integration, and that is bounded by 1166 neurons rather than by
+  37275 synapses -- a factor of 32. For the stated low-power goal that is
+  the favourable arrangement, and it is the one the creature has.
+
+  WALL CLOCK on this machine: 7.9 s for 120.0 s simulated (15.17x real
+  time), 46.7 ns per counted operation.
+
+  per module: spikes and their share of delivery
+  module          live   rate Hz spike share
+  central          408      6.73     0.490
+  auditory         192      4.11     0.141
+  vision           256      2.49     0.114
+  somato            64      4.16     0.047
+  vocal            126      5.41     0.122
+  expression        64      7.56     0.086
+  context           64      0.00     0.000
+
+  NO BAR AND NO PASS/FAIL: there is no budget to measure against, and
+  inventing one here would be the fitted-verdict mistake. This establishes
+  the number so a later change has something to move.

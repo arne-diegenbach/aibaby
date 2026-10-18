@@ -2,6 +2,7 @@
 //
 // Shared scaffolding is in experiments_common.h.
 
+#include <chrono>
 #include <cstring>
 #include <numeric>
 #include "experiments_common.h"
@@ -32061,6 +32062,216 @@ double ctxaxis_bit_acc(const std::vector<int>& part, const std::vector<int>& bit
     ++total;
   }
   return total ? double(correct) / double(total) : 0.0;
+}
+
+// ============ cost: THE GOAL'S SECOND HALF HAS NEVER BEEN MEASURED ============
+//
+// THE STATED GOAL is "a small creature trainable for one specific purpose, running on LOW
+// POWER". The first half has been demonstrated piece by piece. The second half has never
+// been measured at all: `footprint` reports the arena in bytes and says in terms that
+// "this project has no memory budget", and no run anywhere reports an operation count, a
+// spike rate or anything convertible to a cost. So the project cannot currently say
+// whether it meets its own goal, in either direction.
+//
+// WHAT IS MEASURED, and the units are chosen so that nothing has to be guessed. THREE
+// terms, each counted rather than assumed, and each labelled by what it scales with --
+// which is the thing a low-power claim turns on:
+//
+//   NEURON UPDATES   dense in NEURONS, every tick. network.cpp:2259, inside the
+//                    per-module loop: every live neuron integrates on every tick.
+//   DELIVERY         EVENT-DRIVEN. network.cpp:2532 walks only the spikes, each one
+//                    across its own fan-out. Scales with ACTIVITY, which is the whole
+//                    premise of spiking efficiency.
+//   PLASTICITY       dense in SYNAPSES, per REWARD CASH-IN -- not per tick.
+//                    `apply_reward_impl` sweeps every synapse for the eligibility decay,
+//                    the traffic decay and the eligibility-mean EMA.
+//
+// A CORRECTION THIS EXPERIMENT MADE TO ITSELF, kept because it is the whole reason the
+// three terms are separated and labelled by their enclosing function. The first version
+// asserted that the plasticity sweep ran EVERY TICK and reported bookkeeping outweighing
+// delivery by 226x. It does not: the sweep lives in `apply_reward_impl`, and that first
+// run never called `apply_reward` at all, so the loop it was pricing executed ZERO times.
+// The 226x was not an overstatement, it was a count of something that did not happen.
+// `step()` contains NO dense-in-synapses loop -- verified by listing every loop in it --
+// so the creature is genuinely event-driven in its synapses, which is the opposite of what
+// the first version concluded. Reward is now applied at `kFeedbackPeriodTicks`, the cadence
+// the established probes use, and cash-ins are COUNTED.
+//
+// THE HEADLINE IS THE TOTAL AND WHICH TERM DOMINATES. No energy constant, no hardware
+// model and no citation: every number is a count from one run, in its own stated unit.
+//
+// WHAT THIS DELIBERATELY DOES NOT CLAIM. Synapse-visits are not joules. Some neuromorphic
+// designs update per-synapse state in parallel and would not pay the dense term the way a
+// CPU does, so this is a statement about OPERATIONS and SPARSITY, not about watts, and it
+// must not be quoted as one. Wall-clock per tick is printed beside the counts as
+// corroboration that the dense term is really where the time goes on this machine.
+//
+// NO BARS AND NO PASS/FAIL. There is no budget to measure against -- inventing one here
+// would be the fitted-verdict mistake. This establishes the number so that a later change
+// has something to move, and so the project can state its own cost honestly.
+bool run_cost(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  aibaby::Dna dna;
+  if (dna.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) {
+    std::printf("  setup failed: the genome does not load\n");
+    return false;
+  }
+  Session s;
+  std::string error;
+  if (!s.init(blob, error)) {
+    std::printf("  setup failed: %s\n", error.c_str());
+    return false;
+  }
+  const aibaby::DnaAudio& acfg = s.dna.header().audio;
+  Ear ear;
+  if (!ear.configure(acfg, error)) {
+    std::printf("  setup failed: %s\n", error.c_str());
+    return false;
+  }
+  instrument("cost", dna.header().seed ^ 0x7CD9u, ticks, "ticks");
+  std::printf("  cost -- the creature's COMPUTE, in synapse-visits. The stated goal is a\n"
+              "  small creature on LOW POWER; footprint measures bytes and says this\n"
+              "  project has no memory budget, and nothing has ever measured operations.\n");
+  std::printf("  three terms   NEURON UPDATES, dense in neurons every tick (net:2259);\n"
+              "                DELIVERY, EVENT-DRIVEN, a spike across its fan-out\n"
+              "                (net:2532); PLASTICITY, dense in synapses per REWARD\n"
+              "                CASH-IN and NOT per tick (apply_reward_impl).\n");
+  std::printf("  the headline  the TOTAL and which term dominates. Every number is a count\n"
+              "                from one run, so no energy constant or hardware model.\n");
+  std::printf("  not claimed   synapse-visits are not JOULES. Some neuromorphic designs\n"
+              "                update per-synapse state in parallel and would not pay the\n"
+              "                dense term as a CPU does. Operations and sparsity only.\n\n");
+
+  const aibaby::Network& net = s.brain.network();
+  // The fan-out of every neuron, built once from the tract tables -- the same enumeration
+  // `footprint` uses, so the synapse population is the one that run already reports.
+  const uint32_t mods = dna.module_count();
+  std::vector<uint32_t> fanout(32768, 0u);
+  uint64_t synapses = 0;
+  for (uint32_t a = 0; a < mods; ++a) {
+    for (uint32_t b = 0; b < mods; ++b) {
+      const uint32_t n = net.tract_synapses(a, b, nullptr, 0);
+      if (n == 0) continue;
+      std::vector<uint32_t> syn(n);
+      net.tract_synapses(a, b, syn.data(), n);
+      synapses += n;
+      for (uint32_t k = 0; k < n; ++k) {
+        const uint32_t src = net.synapse_source(syn[k]);
+        if (src < fanout.size()) fanout[src] += 1u;
+      }
+    }
+  }
+  uint64_t neurons = 0;
+  for (uint32_t m = 0; m < mods; ++m) neurons += net.module(m).count;
+  if (synapses == 0 || neurons == 0) {
+    std::printf("  setup failed: %llu neurons and %llu synapses.\n",
+                (unsigned long long)neurons, (unsigned long long)synapses);
+    return false;
+  }
+
+  // A DRIVEN regime, not an idle one: a word playing is what the creature is for, and an
+  // idle creature would understate delivery while paying the same bookkeeping.
+  const double dt = double(s.dna.header().sim.dt_ms);
+  const uint32_t spt = uint32_t(double(acfg.sample_rate) * dt / 1000.0 + 0.5);
+  VowelSource voice(acfg.sample_rate);
+  std::vector<float> pcm(spt);
+  uint64_t spikes = 0, delivery = 0, slept_ticks = 0, cashins = 0;
+  std::vector<uint64_t> mod_spikes(mods, 0ull);
+  const auto t0 = std::chrono::steady_clock::now();
+  for (uint64_t t = 0; t < ticks; ++t) {
+    const Word& w = kGridWords[(t / kVLTrialTicks) % 4u];
+    const bool sounding = (t % kVLTrialTicks) < kVLWordTicks;
+    voice.render(sounding ? w.f0 : 0.0f, w.f1, w.f2, sounding ? 0.5f : 0.0f, pcm.data(),
+                 spt);
+    ear.tick(s.brain, pcm.data(), spt);
+    s.brain.step();
+    if (s.brain.asleep()) ++slept_ticks;
+    // REWARD AT THE ESTABLISHED CADENCE, so the plasticity term is a real count and not an
+    // assumption -- `kFeedbackPeriodTicks` is what the probes in this project use, and the
+    // first version of this experiment priced that sweep without ever triggering it.
+    if (sounding && t % kFeedbackPeriodTicks == 0) {
+      s.brain.praise(kPraiseValue);
+      ++cashins;
+    }
+    const uint32_t ns = net.spike_count();
+    const uint32_t* sp = net.spikes();
+    spikes += ns;
+    for (uint32_t k = 0; k < ns; ++k) {
+      const uint32_t i = sp[k];
+      if (i < fanout.size()) delivery += fanout[i];
+      for (uint32_t m = 0; m < mods; ++m) {
+        const aibaby::ModuleState& ms = net.module(m);
+        if (i >= ms.begin && i < ms.begin + ms.count) { ++mod_spikes[m]; break; }
+      }
+    }
+  }
+  const double wall = std::chrono::duration<double>(std::chrono::steady_clock::now() - t0)
+                          .count();
+  // One visit per synapse per CASH-IN, which is what `apply_reward_impl` does, times the
+  // cash-ins that actually happened. The per-synapse count is exact by construction; the
+  // cash-in count is measured.
+  const double plasticity = double(synapses) * double(cashins);
+  const double neuron_updates = double(neurons) * double(ticks);
+  const double sim_seconds = double(ticks) * dt / 1000.0;
+
+  std::printf("  STATIC    %llu neurons, %llu synapses, mean fan-out %.1f\n",
+              (unsigned long long)neurons, (unsigned long long)synapses,
+              double(synapses) / double(neurons));
+  std::printf("  REGIME    %llu ticks = %.1f s simulated at dt %.2f ms; asleep for %.1f%%\n",
+              (unsigned long long)ticks, sim_seconds, dt,
+              100.0 * double(slept_ticks) / double(ticks));
+  std::printf("  ACTIVITY  %.2f Hz mean firing, %.4f of neurons spiking per tick\n",
+              double(spikes) / (double(neurons) * sim_seconds),
+              double(spikes) / (double(neurons) * double(ticks)));
+
+  std::printf("  REWARD    %llu cash-ins = %.2f/s at the established %llu-tick cadence\n",
+              (unsigned long long)cashins, double(cashins) / sim_seconds,
+              (unsigned long long)kFeedbackPeriodTicks);
+
+  const double total = neuron_updates + double(delivery) + plasticity;
+  std::printf("\n  OPERATIONS per SIMULATED SECOND, by what each term scales with:\n");
+  std::printf("    NEURON UPDATES  %12.3e   dense in NEURONS, every tick      %5.1f%%\n",
+              neuron_updates / sim_seconds, 100.0 * neuron_updates / total);
+  std::printf("    DELIVERY        %12.3e   EVENT-DRIVEN, spikes x fan-out    %5.1f%%\n",
+              double(delivery) / sim_seconds, 100.0 * double(delivery) / total);
+  std::printf("    PLASTICITY      %12.3e   dense in SYNAPSES, per cash-in    %5.1f%%\n",
+              plasticity / sim_seconds, 100.0 * plasticity / total);
+  std::printf("    TOTAL           %12.3e   operations per simulated second\n",
+              total / sim_seconds);
+
+  const char* dom = neuron_updates >= double(delivery) && neuron_updates >= plasticity
+                        ? "NEURON INTEGRATION"
+                        : (double(delivery) >= plasticity ? "SPIKE DELIVERY"
+                                                          : "PLASTICITY BOOKKEEPING");
+  std::printf("\n  THE HEADLINE: %.2e operations per simulated second, dominated by %s.\n",
+              total / sim_seconds, dom);
+  std::printf("\n  AND THE SHAPE OF IT MATTERS MORE THAN THE SIZE. `step()` contains NO\n"
+              "  dense-in-synapses loop -- every loop in it was listed to check -- so the\n"
+              "  synaptic cost is EVENT-DRIVEN and the dense-in-synapses sweep is paid only\n"
+              "  when reward arrives, %.2f times a second here. What is dense every tick is\n"
+              "  the NEURON integration, and that is bounded by %llu neurons rather than by\n"
+              "  %llu synapses -- a factor of %.0f. For the stated low-power goal that is\n"
+              "  the favourable arrangement, and it is the one the creature has.\n",
+              double(cashins) / sim_seconds, (unsigned long long)neurons,
+              (unsigned long long)synapses, double(synapses) / double(neurons));
+  std::printf("\n  WALL CLOCK on this machine: %.1f s for %.1f s simulated (%.2fx real\n"
+              "  time), %.1f ns per counted operation.\n",
+              wall, sim_seconds, sim_seconds / (wall > 0.0 ? wall : 1.0),
+              wall * 1e9 / (total > 0.0 ? total : 1.0));
+
+  std::printf("\n  per module: spikes and their share of delivery\n");
+  std::printf("  %-12s %7s %9s %9s\n", "module", "live", "rate Hz", "spike share");
+  for (uint32_t m = 0; m < mods; ++m) {
+    const aibaby::ModuleState& ms = net.module(m);
+    if (ms.count == 0) continue;
+    std::printf("  %-12s %7u %9.2f %9.3f\n", dna.module(m).name, ms.count,
+                double(mod_spikes[m]) / (double(ms.count) * sim_seconds),
+                spikes ? double(mod_spikes[m]) / double(spikes) : 0.0);
+  }
+  std::printf("\n  NO BAR AND NO PASS/FAIL: there is no budget to measure against, and\n"
+              "  inventing one here would be the fitted-verdict mistake. This establishes\n"
+              "  the number so a later change has something to move.\n");
+  return true;
 }
 
 // ============ ctxaxis: WHY THE F1 BIT AND NOT THE F2 BIT? ============

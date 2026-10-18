@@ -18008,6 +18008,63 @@ something compared the two lengths**, and `partprobe`'s banked 1.000 is unaffect
 session uses 214 of 214 trials, so it never slept. The fix holds alignment by construction,
 and the experiment now prints usable rows against the trials the budget buys.
 
+### `cost` — the goal's second half, measured for the first time
+
+`results/cost.log`, 2026-10-18, on `results/ctxgrid.toml`. 120,000 ticks = 120 s simulated.
+
+The stated goal is **"a small creature trainable for one specific purpose, running on low
+power."** The first half has been demonstrated piece by piece. The second half had never
+been measured at all — `footprint` reports the arena in bytes and says in terms that "this
+project has no memory budget", and no run anywhere reported an operation count or a spike
+rate. So the project could not say whether it met its own goal, in either direction.
+
+**Three terms, each counted rather than assumed, and each labelled by what it scales with**
+— which is what a low-power claim actually turns on:
+
+| term | per simulated second | scales with | share |
+|---|---|---|---|
+| neuron updates | 1.166e6 | **neurons, every tick** (`network.cpp:2259`) | 82.6% |
+| delivery | 1.661e5 | **event-driven**, spikes × fan-out (`network.cpp:2532`) | 11.8% |
+| plasticity | 8.014e4 | synapses, **per reward cash-in** (`apply_reward_impl`) | 5.7% |
+| **total** | **1.412e6** | operations per simulated second | |
+
+Static: 1166 neurons, 37,275 synapses, mean fan-out 32.0. Activity: 4.81 Hz mean firing,
+0.0048 of neurons spiking per tick. 258 cash-ins (2.15/s) at the established
+`kFeedbackPeriodTicks` cadence. Wall clock 7.9 s for 120 s simulated — **15.2× real time**
+on one core, 46.7 ns per counted operation.
+
+> **THE SHAPE MATTERS MORE THAN THE SIZE. `step()` contains NO dense-in-synapses loop** —
+> every loop in it was listed to check. The synaptic cost is event-driven, and the
+> dense-in-synapses sweep is paid only when reward arrives. What is dense every tick is the
+> NEURON integration, bounded by **1166 neurons rather than 37,275 synapses, a factor of
+> 32.** For the stated low-power goal that is the favourable arrangement, and it is the one
+> the creature already has.
+
+**A CORRECTION THIS EXPERIMENT MADE TO ITSELF**, kept because it is why the three terms are
+now separated and labelled by their enclosing function. The first version asserted the
+plasticity sweep ran *every tick* and reported bookkeeping outweighing delivery by **226×**.
+It does not: that sweep lives in `apply_reward_impl`, and the first run never called
+`apply_reward` at all — so the loop it was pricing executed **zero times**. The 226× was not
+an overstatement, it was a count of something that did not happen. The lesson is specific:
+**a cost claim must name the enclosing function of every loop it prices**, because "per
+tick" and "per cash-in" differ here by three orders of magnitude.
+
+**No bar and no pass/fail.** There is no budget to measure against, and inventing one here
+would be the fitted-verdict mistake. This establishes the number so a later change has
+something to move. And **synapse-visits are not joules** — some neuromorphic designs update
+per-synapse state in parallel and would not pay the dense term as a CPU does. This is a
+statement about operations and sparsity, never about watts.
+
+**What it makes actionable, for the "one specific purpose" half.** The per-module table
+shows `context` at **0.00 Hz** — 64 neurons that never spike, consistent with the context
+module being silent unless the host writes into it, and the shipped derived index reads the
+AUDITORY module instead. Together with `vision` (256 neurons, 22% of the creature) on a
+purely auditory→vocal task, and `somato` and `expression` at 64 each, roughly **448 of 1166
+neurons may be unused for the naming task**. Trimming them is a real run with a precedent
+(`central->vocal is a non-participant` — delete and recalibrate, the cost is latency), and
+the `n_max` rule applies: deleting modules **re-rolls the wiring and makes a different
+creature**, so naming would have to be re-established rather than assumed to carry over.
+
 ## Layout
 
 ```
