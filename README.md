@@ -18065,6 +18065,69 @@ neurons may be unused for the naming task**. Trimming them is a real run with a 
 the `n_max` rule applies: deleting modules **re-rolls the wiring and makes a different
 creature**, so naming would have to be re-established rather than assumed to carry over.
 
+### The trim — a third smaller, 36% cheaper, and it names four words just as well
+
+`results/ctxgrid-trim.toml`, `results/ctxgrid-trim.log`, `results/ctxgrid-full.log`,
+`results/cost-trim.log`. 2026-10-19.
+
+`cost` showed `context` firing at 0.00 Hz and `vision` holding 256 neurons on a purely
+auditory→vocal task. This makes "one specific purpose" literal: drop the modalities the
+task does not use, recalibrate, and **re-establish naming rather than assume it carries
+over** — the `n_max` rule says deleting modules re-rolls the wiring and makes a *different
+creature*, so the banked number cannot simply be cited.
+
+**Dropped:** modules `vision` (256), `somato` (64), `expression` (64); projections
+vision→central, somato→central, central→expression, central→vision, vision→vocal. Eight
+chunks, removed by an auditable script rather than hand line-ranges — the blocks are not
+contiguous and two of them abut, so a mis-counted boundary yields a genome that still
+parses while describing a different creature. `central` was deliberately **kept**: removing
+it too would bundle two changes.
+
+| | neurons | synapses | ops / simulated second | real time | `nearest` | F1 | F2 |
+|---|---|---|---|---|---|---|---|
+| full | 1166 | 37,275 | 1.412e6 | 15.2× | +0.137 ± 0.023 (6.0 SE) | +0.126 (5.6) | +0.082 (4.0) |
+| **trimmed** | **782** | **21,213** | **9.054e5** | **21.7×** | **+0.157 ± 0.029 (5.5 SE)** | +0.122 (5.2) | +0.127 (5.3) |
+
+**−33% neurons, −43% synapses, −36% operations, 1.43× faster — and naming is intact**, at
+n=36 with no creature skipped on either genome. The difference in `nearest` is **+0.020 ±
+0.037, 0.5 SE: unresolved**, which is the correct claim. These are two different creatures,
+so the comparison is unpaired and a null here means *indistinguishable*, not *identical*.
+
+**The instrument check that makes the comparison sound:** the full genome was re-run rather
+than cited, and it reproduced its banked result to three decimals (+0.137 ± 0.023, 6.0 SE,
+F1 +0.126, F2 +0.082). The trimmed creature is also deterministic in its own right — `G1
+PASS`, hash `6c82eff106f2927f`.
+
+**Suggestive and explicitly NOT claimed:** the F2 side reads +0.127 (5.3 SE) trimmed against
++0.082 (4.0 SE) full — a +0.045 ± 0.032 difference, 1.4 SE unpaired. F2 has always been the
+weaker naming axis here; on the trimmed creature it is level with F1. At 1.4 SE that is a
+thing to watch, not a result.
+
+#### The pre-flight found a method memory to be wrong
+
+The calibration invariant was followed rather than worked around: **footprint PASS** (0
+dropped synapses, rule 5), **calibrate PASS** (0 modules off target, **0 seeds wiring
+badly**, rule 6), **babble PASS** (duty cycle 0.27 in the 0.10–0.85 band, rule 3 — quieter
+than the full creature's 0.50 because `vocal` lost its vision afferent, but comfortably
+inside, and no utterances were lost).
+
+Rule 2 fired exactly as written: `central` went stale, 6.81 → 5.66 Hz, having lost two
+afferent projections. But setting the target to 5.66 made it re-measure at **5.19**, which
+rule 1 says cannot happen — *"free-running rates depend only on the wiring, so one
+measurement pass suffices; no iteration is needed."*
+
+> **RULE 1 IS FALSE FOR EXACTLY ONE MODULE.** `central` is the only module with divisive
+> normalisation on (`norm_gain = 1.0`, `[normalisation] enabled = 1`), and
+> `network.cpp:679` sets `norm_target_[m] = target_rate_hz`. Normalisation runs **even with
+> `ip_rate = 0`**, so the target feeds back into the rate it is supposed to describe.
+> **Recalibrating that module is a FIXED POINT, not a measurement.**
+
+Iterated to convergence: 6.81 → 5.66 → 5.19 → 5.01 → 4.89 → **4.85**, contracting with
+slope ≈ 0.41, stopping at |measured − target| < 0.05 Hz. The analytic fixed point predicted
+from the first two points alone is 4.86 against the measured 4.85 — an independent check
+that the mechanism is the one named rather than a coincidence. Every other module still
+satisfies rule 1 in one pass.
+
 ## Layout
 
 ```
