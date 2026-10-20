@@ -18101,7 +18101,53 @@ PASS`, hash `6c82eff106f2927f`.
 **Suggestive and explicitly NOT claimed:** the F2 side reads +0.127 (5.3 SE) trimmed against
 +0.082 (4.0 SE) full — a +0.045 ± 0.032 difference, 1.4 SE unpaired. F2 has always been the
 weaker naming axis here; on the trimmed creature it is level with F1. At 1.4 SE that is a
-thing to watch, not a result.
+thing to watch, not a result. **It was watched, on fresh creatures, and it is refused — see
+below.**
+
+#### Confirmed on fresh creatures, and the F2 hint is refused
+
+`results/ctxgrid-fresh.toml`, `results/ctxgrid-trim-fresh.toml` and their logs. Both
+genomes re-run on seeds 36–71 via the established shift (genome seed + 36×7919), the same
+method the DNA v70 settle used, and **both recalibrated at that seed family first** (see the
+note below — the targets turn out to be seed-family specific).
+
+**The two claims need different treatments, and that split is the point.** The primary was
+the pre-registered question the trim existed to answer, so the two independent samples pool
+by inverse variance. The F2 hint was read *off* the discovery sample after the fact, so
+pooling it would re-introduce the selection that makes it suspect, and it is tested on the
+**fresh sample alone.**
+
+| | trim | full | trim − full |
+|---|---|---|---|
+| **PRIMARY**, pooled n=72 | +0.1306 ± 0.0180 | +0.1316 ± 0.0180 | **−0.0010 ± 0.0255 (0.04 SE)** |
+| F1, pooled n=72 | +0.1123 ± 0.0175 | +0.1297 ± 0.0183 | −0.0174 ± 0.0253 (0.69 SE) |
+| F2, pooled n=72 | +0.0982 ± 0.0144 | +0.0752 ± 0.0166 | +0.0230 ± 0.0220 (1.05 SE) |
+| **F2 hint**, fresh only | +0.082 ± 0.018 | +0.064 ± 0.027 | **+0.0180 ± 0.0324 (0.55 SE)** |
+
+> **NAMING SURVIVES THE TRIM, CONFIRMED AT n=72 WITH A POINT ESTIMATE OF −0.0010.** And
+> **THE F2 HINT IS REFUSED**: 1.41 SE on its own discovery sample, **0.55 SE on fresh
+> creatures**, with the overall `nearest` advantage reversing sign (+0.020 → −0.009). That
+> is the `pairing-on-discovery-sample` hazard reproducing almost exactly — v70 went 2.5 SE
+> → 1.4 SE on the same manoeuvre. Labelling it "suggestive and not claimed" is what made
+> the refusal cheap instead of embarrassing.
+
+**And the null is a BOUND, which is the only honest way to read it.** At n=72 the 2 SE bound
+on any naming loss is 0.052 against the full creature's own effect of 0.132 — so the trim
+costs **at most ~39% of the effect**, with a point estimate of −0.001. "Naming intact" means
+*no loss larger than that*, never *exactly equal*. A third of the creature for a bound of
+39% is the trade actually on offer, and it is worth stating that way rather than as "free".
+
+**A property of this project's calibration that the seed shift exposed, pre-existing and
+worth knowing:** the genome targets are **seed-family specific at the 0.4–0.55 Hz level.**
+At seeds 36–71 the full genome read `expression` stale at +0.40 and the trimmed one read
+`auditory` stale at +0.55. The asymmetry is what mattered rather than the size —
+`expression` is a pure sink (only `central → expression` exists and nothing reads from it)
+so its drift cannot reach the voice, while `auditory` feeds central and vocal, carries the
+word, *and* is what the derived index reads. An uncorrected run would have had the harmful
+stale module on the trim arm only, which is exactly the shape that manufactures a
+difference. Both were recalibrated to `calibrate PASS`, 0 modules off target, before the
+comparison. **Every experiment here runs 36 seeds off one genome calibrated at the default
+seed, and carries whatever target drift that family happens to have.**
 
 #### The pre-flight found a method memory to be wrong
 
