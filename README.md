@@ -19234,6 +19234,72 @@ gating mechanism, which the pass did not. **The grep-first rule applies to liter
 well as to experiments: search this section before reporting a paper as new.** The phase
 result also prices that lead down, which is recorded on it now rather than left implicit.
 
+### Checked 2026-10-21, absent from this list, and recorded so nothing is re-tested
+
+A literature pass aimed at the two gaps the `cost` and `ctxaxis` runs left: a watts model,
+and the auditory FEATURE that now caps the derived index. **The grep-first rule did its job
+on the fourth item before it was written up.** Each entry carries why it is not being built.
+
+- **Energy per synaptic operation, and why `cost` was right to refuse a watts claim.**
+  *Energy-Efficient Neuromorphic Computing for Edge AI.* <https://arxiv.org/html/2602.02439v1>
+  — **assumes** E_SOP ≈ 1–5 pJ and cites Loihi 2 at 250–500 mW during active inference. The
+  only directly *measured* per-synapse chip figures found are older and span orders of
+  magnitude: Neurogrid 941 pJ and TrueNorth 26 pJ, quoted in
+  <https://arxiv.org/pdf/1804.01906>. **VERDICT: it completes `cost` in the one direction
+  that matters and it is a DE-PRIORITISATION.** At this creature's measured 9.054e5
+  operations per simulated second, even the most pessimistic measured figure (941 pJ) gives
+  ~0.85 mW of dynamic cost, and the 1–5 pJ assumption gives ~1–5 µW — against a chip's
+  250–500 mW *active floor*, which does not scale down with utilisation. Across the whole
+  span of per-op figures the dynamic cost sits **between 293× and 276,000× below that
+  floor** — 0.91 µW at 1 pJ, 4.53 µW at 5 pJ, 23.5 µW at TrueNorth's measured 26 pJ, 852 µW
+  at Neurogrid's measured 941 pJ. So the conclusion is robust even at the most pessimistic
+  *measured* figure, and **further trimming buys nothing on power**: low power here is a
+  platform-selection question, not an algorithm one. (An earlier draft of this entry said
+  "four to five orders of magnitude", which is true of the assumed range and overstates the
+  pessimistic end; the table above is the arithmetic.) Still no watts claim in `cost`
+  itself — the 1–5 pJ figure is an assumption, not a measurement.
+- **An unsupervised auditory feature with temporal structure.** Higgins, I., Stringer, S. &
+  Schnupp, J. (2017). *Unsupervised learning of temporal features for word categorization in
+  a spiking neural network model of the auditory brain.* PLoS ONE.
+  <https://journals.plos.org/plosone/article?id=10.1371%2Fjournal.pone.0180174> — STDP
+  learns word-level features carrying speaker-independent identity. Aimed squarely at the
+  limit DNA v70 named ("the feature is the limit, not the balance"). **VERDICT: record, do
+  not build — the headroom is ~0.09.** `ctxfeat` already measures this creature's feature
+  carrying the word at **0.978** while the index extracts **0.890**, and `ctxaxis`'s best
+  held-out decoder reaches 0.916 on the F1 bit. A better feature can only pay inside that
+  gap, and it would cost a temporal-feature-learning build in the auditory module.
+- **Goal babbling and intrinsic motivation.** Moulin-Frier, C. & Oudeyer, P-Y., *Goal-directed
+  exploration for learning vowels and syllables*
+  <https://www.springerprofessional.de/en/goal-directed-exploration-for-learning-vowels-and-syllables-a-co/18805730>
+  and *Self-organization of early vocal development in infants and machines: the role of
+  intrinsic motivation*
+  <https://researchportal.ip-paris.fr/en/publications/self-organization-of-early-vocal-development-in-infants-and-machi/>
+  — explore a low-dimensional GOAL space rather than motor space. **VERDICT: priced out by
+  the protocol closure, and partly already done.** This creature's targets *are* a
+  low-dimensional goal space (formant pairs), and the protocol/reward-shape family is closed
+  from four directions: an unreachable target beats a reachable one, a bar must track the
+  creature, region targets are refuted, and reward that *sees* target distance is worse.
+- **Self-organising maps as an index rule.** Kohonen's SOM, which surfaced via
+  <https://www.researchgate.net/publication/329039965_A_Spiking_Neural_Network_Framework_for_Robust_Sound_Classification>
+  — adds a topographic neighbourhood update to the competitive rule DNA v53 already runs
+  (MacQueen + DeSieno). **VERDICT: priced out twice.** DNA v43's topographic tract was
+  measured at ×1.00 against an oracle that predicted 471 Hz, and `object-is-in-the-slice`'s
+  own refutation shows a *fixed geometric* map cannot supply an ordering that has to be
+  learned per creature.
+- **Zeroth-order optimisation, 2026.** *Position: Zeroth-Order Optimization in Deep Learning
+  Is Underexplored, Not Underpowered.* <https://arxiv.org/html/2605.15622> — structured and
+  sparse perturbations reduce estimator variance, with variance scaling in the number of
+  selected parameters, traded against query complexity. Adjacent to this creature's own rule.
+  **VERDICT: the quantity it moves is already refuted here.** `sparse-switch` measured 0.2%
+  of ticks doing the work and **refutes the variance-floor account** outright; `ctxgain`
+  showed the parameterisation does not matter (18 params match 252); and `variance-not-credit`
+  showed node perturbation already assigns credit. A lower-variance estimator targets a
+  bottleneck this creature has been measured not to have.
+- **Already present, and grep caught it.** The reward-modulated babbling work
+  (<https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4726623/>) is Warlaumont, who appears 19
+  times in this file. Reported as a candidate by the search and withdrawn before write-up —
+  the rule above working as intended rather than being recited.
+
 ### A note on where this project's record actually lives
 
 Two stores, and they are not the same store:

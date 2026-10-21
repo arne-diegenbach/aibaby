@@ -17728,6 +17728,19 @@ SalRow run_salience_arm(const std::vector<uint8_t>& blob, uint64_t ticks, const 
   SalRow row;
   Session s;
   std::string error;
+  // RESTORED 2026-10-21, and it had been missing for 25 days. `b99c933` (DNA v64, the jaw)
+  // refactored `run_salrew_arm` below to inject `jaw_hz` into a local copy of the blob, and
+  // in replacing that function's `s.init(blob, ...)` with `s.init(local, ...)` it deleted
+  // THIS function's init as collateral -- a different function, same two-line context.
+  //
+  // Without it `s.dna` is unloaded, `Dna::header()` returns `*header_` on a null pointer,
+  // and reading `.audio` -- at offset 0x114 in DnaHeader -- segfaults on the next line. So
+  // `salience` crashed unconditionally, on EVERY genome, and `verify-long` could never
+  // reach its own verdict. It went unseen because `salience` is Tier::kLong and the gate
+  // this project actually runs is the FAST tier, which skips it. Found by pointing
+  // `verify-long` at a trimmed genome and reading the kernel log when the run vanished:
+  // three worker threads, one instruction, `segfault at 114 error 4`.
+  if (!s.init(blob, error)) return row;
   const aibaby::DnaAudio& acfg = s.dna.header().audio;
   Ear ear;
   if (!ear.configure(acfg, error)) return row;
