@@ -18174,6 +18174,70 @@ from the first two points alone is 4.86 against the measured 4.85 — an indepen
 that the mechanism is the one named rather than a coincidence. Every other module still
 satisfies rule 1 in one pass.
 
+### The long tier, completed on the trimmed creature — and what "38 discrepancies" actually means
+
+`results/verify-long-trim2.log`, 2026-10-21 → 23. **27.9 h**, slowest `blockwhere` at 211.7
+min. The **first completed `verify-long` since the `salience` crash of 2026-09-26** — that
+bug made this tier unable to reach its own verdict for 27 days, so there is no recent
+baseline to compare against.
+
+Headline: `determinism PASS`, `pinned hash FAIL`, **45 as expected, 38 not**, `verify FAIL`.
+Taken at face value that reads like a catastrophe plus 25 simultaneous breakthroughs. It is
+neither, and both halves need naming before any of it is quoted.
+
+#### The ~25 "a milestone this project has never met just did" lines are an artefact
+
+`Expect::kOpen` means *"an unmet milestone … the day it flips is the news the project is
+waiting for"*. So **any `kOpen` experiment that returns `true` is announced as a
+breakthrough** — including `cost`, whose own output says *"NO BAR AND NO PASS/FAIL"*. It
+cannot meet a milestone it does not have.
+
+**Two of those false flags were a registration error of mine**, made in this same week:
+`cost` and `ctxaxis` are read-only diagnostics that return `true` whenever they produce a
+number, and registering them `kOpen` made the gate misreport them. Corrected — both are now
+`Expect::kPass`, and `duty` is `Expect::kGuard` because `dna/default.toml` has no context
+module and that experiment legitimately refuses there, which is exactly `v1probe`'s pattern.
+**The lesson is narrow and reusable: `kOpen` is for a milestone with a bar, `kPass` for a
+diagnostic expected to produce a number, `kGuard` for one that refuses on the shipped
+genome.** Confusing the first two turns an instrument into a press release.
+
+#### The 14 expected-PASS failures resolve to ONE substantive finding
+
+| cause | experiments |
+|---|---|
+| the **vision line, removed by design** | `vision`, `m2`, `dwprobe`, `m3probe`, `projprobe`, `gazeprobe`, `errprobe`, `burstprobe`, `g3probe` |
+| **genome-pinned by construction** — `mechverify` keeps "one pinned hash per mechanism that ships OFF, each on a genome where that mechanism alone is switched on", so every variant misses its pin on a different creature | `mechverify`, and the top-level `pinned hash` |
+| a **meta-check correctly firing**: *"at least one documented number no longer describes…"* is true, because this is a different creature | `restate` |
+| the invariance / conditional-mapping line | `invprobe`, `pairprobe` |
+| **the one real consequence of the trim** | **`imitate` (M1b)** |
+
+> **M1b FAILS ON ITS VALIDITY CONTROL, NOT ON CAPABILITY.** The creature's voice still
+> carries the heard word at **86%** against a 75% bar, **5 of 5 creatures**, audible d′ 2.16.
+> What refuses is the control: *"EAR NOT QUIET — the auditory module still reads the word at
+> 0.736 in the scored window, so this is transmission, not repetition."*
+
+**And it traces to the trim mechanistically.** Auditory's target is *"lowered by top-down
+feedback: an inhibited sensory module free-runs slower, which is what predictive suppression
+looks like."* The trim removed `vision→central` and `somato→central`, so central's target was
+re-measured **6.81 → 4.89 Hz**. A quieter central suppresses the ear less, the ear is no
+longer quiet in M1b's 200–600 ms post-word window, and the control correctly declines to call
+the result repetition. The calibration data agrees: trimmed auditory free-runs at 3.10 Hz
+against the full creature's 2.70.
+
+**So the honest statement of the trim's cost is now three clauses**, and only the third is
+new: it removes the vision line by construction; it invalidates every genome-pinned reference
+and the documented numbers, which is bookkeeping rather than capability; and **it costs the
+*measurability* of M1b while leaving the behaviour itself intact.** The trimmed genome cannot
+be used to *demonstrate* repetition even though the creature repeats.
+
+**What is NOT worth doing about it:** re-tuning `central→auditory` suppression to get the
+control back to green. That is tuning a genome to satisfy a measurement rather than improving
+a creature, and the behavioural bar is already met. Recorded as a known limit of that genome
+instead.
+
+**And `sleep` passed** — it is absent from the discrepancy list, which was the one experiment
+on this tier that mattered for shipped behaviour rather than for the vision line.
+
 ## Layout
 
 ```

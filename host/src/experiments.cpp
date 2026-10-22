@@ -365,7 +365,24 @@ const Spec kSpecs[] = {
      "  if the half-centre reports no phase or has settled on one winner. The\n"
      "  evidence is the IDENTITY-minus-SWAPPED mapping contrast, because the\n"
      "  oscillator contributes to both equally and cancels from the difference."},
-    {"cost", 120000, Expect::kOpen, Tier::kLong,
+    {"duty", 1200000, Expect::kGuard, Tier::kLong,
+     "derived: ctxaxis's budget, because it reuses ctxaxis's statistic and must\n"
+     "  be comparable with it -- 1200000 ticks is 428 trials, 107 per word, which\n"
+     "  is partprobe's own per-word count on this feature space. Asks the only\n"
+     "  power question `cost` left open: that run put 9.054e5 ops/s at 293x to\n"
+     "  276,000x BELOW a chip's 250-500 mW ACTIVE FLOOR, so operations are not the\n"
+     "  bill and being AWAKE is -- and the creature currently runs awake 100% of\n"
+     "  the time. Freezes it between words (no ear, no step, so no state decays\n"
+     "  and no internal time passes) while still rendering the world every tick,\n"
+     "  and reads the index's per-bit held-out accuracy. The risk is DERIVED from\n"
+     "  the kernel's own time constant: the index EMA has a 1000-tick tau, so\n"
+     "  awake the post-reward silence decays it to 33% and frozen to 100%, which\n"
+     "  should carry the previous word into the next one. A pass makes gating free\n"
+     "  and the deployment win arithmetic; a loss names a cheap local fix, decay\n"
+     "  on WAKE by elapsed time. GUARD, in v1probe's sense: dna/default.toml has no\n"
+     "  context module, so this REFUSES there and failing is the right answer --\n"
+     "  point it at results/ctxgrid.toml or a trimmed descendant to get a number."},
+    {"cost", 120000, Expect::kPass, Tier::kLong,
      "derived: the default minimum, because this measures a RATE and not an\n"
      "  effect -- 120000 ticks is 120 s simulated, which is dozens of trials and\n"
      "  far more than a per-second count needs to settle. The stated goal is a\n"
@@ -379,7 +396,7 @@ const Spec kSpecs[] = {
      "  joules and this must not be quoted as watts. No bar and no pass/fail:\n"
      "  there is no budget to measure against, and inventing one would be the\n"
      "  fitted-verdict mistake."},
-    {"ctxaxis", 1200000, Expect::kOpen, Tier::kLong,
+    {"ctxaxis", 1200000, Expect::kPass, Tier::kLong,
      "derived: partprobe's own per-word trial count, at four words. That probe\n"
      "  reads the same feature space on TWO words at 600000 ticks, which is 107\n"
      "  trials per word; four words at the same per-word count is 1200000. Asks\n"
@@ -1045,6 +1062,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "ctxfactor") ok = run_ctxfactor(dna_blob, ticks, verbose);
   else if (name == "ctxaxis") ok = run_ctxaxis(dna_blob, ticks, verbose);
   else if (name == "cost") ok = run_cost(dna_blob, ticks, verbose);
+  else if (name == "duty") ok = run_duty(dna_blob, ticks, verbose);
   else if (name == "blockwhere") ok = run_blockwhere(dna_blob, ticks, verbose);
   else if (name == "blockanchor") ok = run_blockanchor(dna_blob, ticks, verbose);
   else if (name == "leverprobe") ok = run_leverprobe(dna_blob, ticks, verbose);

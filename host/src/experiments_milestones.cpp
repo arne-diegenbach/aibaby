@@ -32077,6 +32077,329 @@ double ctxaxis_bit_acc(const std::vector<int>& part, const std::vector<int>& bit
   return total ? double(correct) / double(total) : 0.0;
 }
 
+// ============ duty: CAN THE CREATURE BE POWER-GATED BETWEEN WORDS? ============
+//
+// WHY THIS IS THE POWER LEVER AND OP COUNT IS NOT. `cost` measured 9.054e5 operations per
+// simulated second. Against the 250-500 mW ACTIVE FLOOR of a neuromorphic chip -- which
+// does not scale down with utilisation -- that dynamic cost sits between 293x and 276,000x
+// below the floor, across every per-operation energy figure in the literature (see
+// References). So shaving operations buys nothing measurable, and the entire power bill is
+// **being awake**. `cost` also reports `asleep for 0.0%`: this creature runs awake all the
+// time. A creature for ONE specific purpose should be off between words.
+//
+// AND THE OBVIOUS 200x IS ALREADY REFUSED, which is why this is about duty and not about
+// event-driven simulation. 82.6% of the cost is the dense per-neuron per-tick update, and
+// that loop draws an INDEPENDENT NOISE SAMPLE PER NEURON PER TICK (network.cpp ~2327,
+// applied ~2395). Motor noise IS the exploration drive node perturbation runs on, so a
+// neuron cannot be skipped just because nothing spiked into it. The dense term is
+// load-bearing rather than waste.
+//
+// ================== PRE-REGISTERED, BEFORE THE RUN ==================
+// WHAT POWER-GATING MEANS HERE, modelled faithfully: the creature is FROZEN -- neither
+// `ear.tick` nor `brain.step` is called -- so no state decays and no internal time passes.
+// That is what a powered-down creature does. The VowelSource is still rendered every tick
+// so the acoustic world advances IDENTICALLY across arms; only the creature stops.
+//
+// THE PREDICTION, AND IT IS DERIVED FROM THE KERNEL'S OWN TIME CONSTANT RATHER THAN
+// GUESSED. DNA v53's index is `rate_ema_`, whose `rate_alpha_` is dt_ms/1000 -- a 1000-tick
+// time constant -- and its whole design rests on persistence: at reward time it still
+// carries a word that ended 400 ticks earlier. A trial is 2800 ticks with the word in the
+// first 900, so AWAKE the 1100 ticks of post-reward silence decay the EMA to exp(-1.1) =
+// 33% of what the word left. FROZEN it decays to 100%. **So a gated creature should carry
+// the PREVIOUS word into the next one, and the index should degrade.** The gap length sets
+// how much: a longer frozen gap carries more.
+//
+// THE ARMS, one variable -- what happens during the inter-word interval:
+//   awake       step every tick of the 2800-tick trial. The control, and current behaviour.
+//   gated       step ticks 0..1700 (through the reward window), FREEZE 1700..2800.
+//   gated-long  the same awake window, plus an extra 2800 FROZEN ticks between trials.
+//
+// AND `gated-long` IS NOT A SECOND TREATMENT, which the first smoke made obvious and the
+// arm table does not say on its own. If the freeze is exact then the creature cannot tell
+// how long it was off: no state decays and no internal time passes, so an 1100-tick gap and
+// a 3900-tick gap hand it the IDENTICAL sequence of awake ticks. The two arms must therefore
+// return bit-identical numbers, and in the smoke they did (0.815/0.687 both). So this arm is
+// a CONSISTENCY CHECK that the freeze is really a freeze -- any difference between it and
+// `gated` would mean time is leaking through the gate somewhere -- and only its `duty`
+// column differs, because that has a larger wall-clock denominator.
+//
+// THAT HAS A STRONGER CONSEQUENCE THAN THE DESIGN ASKED FOR. Freezing is SCALE-FREE in the
+// gap length, so if gating costs nothing at one sparsity it costs nothing at ANY sparsity,
+// and the deployment win is bounded by how often words arrive rather than by anything in
+// the creature. A creature hearing a word a minute would run at ~2.8% duty on the same
+// evidence as one hearing a word every three seconds.
+//
+// THE STATISTIC is `ctxaxis`'s, reused rather than reinvented: the index's per-BIT held-out
+// accuracy with the slot-to-bit map fitted on the TRAINING half only, so chance is exactly
+// 0.50 and no best-of-k! maximum is taken on the scored rows. Paired per creature across
+// arms, as every arm comparison in this project is.
+//
+// BOTH OUTCOMES ARE USEFUL, which is why no pass/fail is pre-committed:
+//   THE INDEX HOLDS     power-gating is free, and the deployment win follows by arithmetic
+//                       -- a creature hearing a word every 10 s runs at ~17% duty, a ~6x
+//                       energy win, an order of magnitude more than the trim bought.
+//   THE INDEX DEGRADES  duty-cycling is blocked, AND the mechanism names its own fix: decay
+//                       `rate_ema_` on WAKE in proportion to the elapsed real time. That is
+//                       the lazy-decay idea which was wrong for the plasticity sweep (it
+//                       runs per cash-in, not per tick) and would be right here.
+//
+// VOID IF the index is at chance in the `awake` control, which would mean this setup never
+// built an index and the gated arms are being compared against nothing.
+// =====================================================================
+bool run_duty(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  aibaby::Dna dna;
+  if (dna.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) {
+    std::printf("  setup failed: the genome does not load\n");
+    return false;
+  }
+  constexpr uint32_t kReps = 18;
+  constexpr uint32_t kSlots = 4;
+  // The awake window runs to 1700: the word is ticks 0..900 and the reward window 900..1700,
+  // so this is the shortest window that contains everything the creature must be awake for.
+  // Derived from the trial geometry, not chosen.
+  constexpr uint64_t kAwakeEnd = 1700;
+  // The index is sampled where `ctxaxis` samples it, so the two runs are comparable.
+  constexpr uint64_t kSampleTick = kVLWordTicks + 400;
+  struct DArm { const char* name; uint64_t awake_end; uint64_t extra_frozen; };
+  static const DArm kDA[] = {
+      {"awake",      kVLTrialTicks, 0},
+      {"gated",      kAwakeEnd,     0},
+      {"gated-long", kAwakeEnd,     kVLTrialTicks},
+  };
+  constexpr uint32_t kN = sizeof(kDA) / sizeof(kDA[0]);
+  instrument("duty", dna.header().seed ^ 0x7CE1u, ticks / kVLTrialTicks, "trials per arm");
+  std::printf("  duty -- can the creature be POWER-GATED between words? `cost` puts its\n"
+              "  9.054e5 ops/s at 293x-276,000x BELOW a chip's 250-500 mW active floor, so\n"
+              "  operations are not the power bill -- being AWAKE is, and it currently runs\n"
+              "  awake 100%% of the time.\n");
+  std::printf("  gating       FROZEN: neither ear nor step is called, so no state decays and\n"
+              "               no internal time passes. The world is still rendered every\n"
+              "               tick, so the acoustics are identical across arms.\n");
+  std::printf("  the risk     DERIVED, not guessed: the index is an EMA with a 1000-tick\n"
+              "               time constant. Awake, 1100 ticks of post-reward silence decay\n"
+              "               it to exp(-1.1) = 33%%; FROZEN it decays to 100%%. So a gated\n"
+              "               creature should carry the PREVIOUS word into the next one.\n");
+  std::printf("  the stat     ctxaxis's: per-BIT held-out accuracy, slot-to-bit map fitted\n"
+              "               on the training half only, so chance is exactly 0.50.\n");
+  std::printf("  %u creatures, %u arms, %u slots.\n\n", kReps, kN, kSlots);
+
+  const int32_t ctx_module = dna.module_with_role(aibaby::ModuleRole::kContext);
+  if (ctx_module < 0) {
+    std::printf("  REFUSED: no module with role \"context\", so `ctx_slots_` is zeroed at\n"
+                "  hatch and the index would be inert. Run on a genome that has one.\n");
+    return false;
+  }
+
+  struct Cell {
+    bool ok = false;
+    double acc[2] = {};      // per-bit held-out accuracy, F1 then F2
+    double stepped = 0.0;    // the fraction of wall ticks the creature actually ran
+    double present = 0.0;    // share of sampled trials with a context present at all
+    size_t rows = 0;
+  };
+  const size_t slots_off = offsetof(aibaby::DnaHeader, exploration) +
+                           offsetof(aibaby::DnaExploration, context_slots);
+  const size_t src_off = offsetof(aibaby::DnaHeader, exploration) +
+                         offsetof(aibaby::DnaExploration, context_source);
+  const size_t gate_off = offsetof(aibaby::DnaHeader, exploration) +
+                          offsetof(aibaby::DnaExploration, ctx_proto_gate);
+  const size_t cg_off = offsetof(aibaby::DnaHeader, exploration) +
+                        offsetof(aibaby::DnaExploration, ctx_conscience_gain);
+
+  const std::vector<Cell> cells = parallel_reps<Cell>(kReps * kN, [&](uint32_t job) {
+    const uint32_t r = job / kN, a = job % kN;
+    Cell c;
+    std::vector<uint8_t> v = blob;
+    const uint64_t sg = dna.header().seed + r * 7919ull;
+    const uint32_t slots = kSlots, src = 4u, gate = 2u;
+    const float cgain = 2.0f;
+    std::memcpy(v.data() + offsetof(aibaby::DnaHeader, seed), &sg, sizeof(sg));
+    std::memcpy(v.data() + slots_off, &slots, sizeof(slots));
+    std::memcpy(v.data() + src_off, &src, sizeof(src));
+    std::memcpy(v.data() + gate_off, &gate, sizeof(gate));
+    std::memcpy(v.data() + cg_off, &cgain, sizeof(cgain));
+
+    Session s;
+    std::string error;
+    if (!s.init(v, error)) return c;
+    const aibaby::DnaAudio& acfg = s.dna.header().audio;
+    Ear ear;
+    if (!ear.configure(acfg, error)) return c;
+    const double dt = double(s.dna.header().sim.dt_ms);
+    const uint32_t spt = uint32_t(double(acfg.sample_rate) * dt / 1000.0 + 0.5);
+    VowelSource voice(acfg.sample_rate);
+    std::vector<float> pcm(spt);
+
+    // Balanced but SHUFFLED, never alternating: strict alternation makes the label equal to
+    // trial parity, and anything in the creature with a period of two trials would carry
+    // the label without a word being heard. `run_ctxsrc_session`'s note, and it applies with
+    // more force here because the whole question is about carry-over BETWEEN trials.
+    const uint64_t n_trials = ticks / kVLTrialTicks;
+    if (n_trials < 64) return c;
+    std::vector<int> order(size_t(n_trials), 0);
+    aibaby::Rng rng;
+    rng.seed(sg ^ 0x7CE1u);
+    for (size_t i = 0; i < order.size(); ++i) order[i] = int(i % 4u);
+    for (size_t i = order.size(); i > 1; --i)
+      std::swap(order[i - 1], order[size_t(rng.next() % i)]);
+
+    std::vector<int> word_of, slot_of;
+    uint64_t stepped = 0, wall = 0, present_n = 0;
+    for (uint64_t k = 0; k < n_trials; ++k) {
+      const int w = order[size_t(k)];
+      const Word& word = kGridWords[w];
+      const uint64_t span = kVLTrialTicks + kDA[a].extra_frozen;
+      int sampled = -1;
+      bool sampled_present = false;
+      for (uint64_t t = 0; t < span; ++t) {
+        const bool sounding = t < kVLWordTicks;
+        // The world advances every tick in every arm, so the acoustics cannot differ.
+        voice.render(sounding ? word.f0 : 0.0f, word.f1, word.f2, sounding ? 0.5f : 0.0f,
+                     pcm.data(), spt);
+        ++wall;
+        if (t >= kDA[a].awake_end) continue;   // FROZEN: no ear, no step, no time
+        ear.tick(s.brain, pcm.data(), spt);
+        s.brain.step();
+        ++stepped;
+        if (t == kSampleTick) {
+          sampled = int(s.brain.network().active_context());
+          sampled_present = s.brain.network().context_present();
+        }
+      }
+      if (sampled >= 0) {
+        word_of.push_back(w);
+        slot_of.push_back(sampled);
+        if (sampled_present) ++present_n;
+      }
+    }
+    if (word_of.size() < 64) return c;
+    const size_t tr = word_of.size() / 2;
+    std::vector<int> bit[2];
+    for (int lab : word_of) {
+      bit[0].push_back(lab >= 2 ? 1 : 0);
+      bit[1].push_back(lab & 1);
+    }
+    for (uint32_t q = 0; q < 2u; ++q)
+      c.acc[q] = ctxaxis_bit_acc(slot_of, bit[q], tr, kSlots);
+    c.stepped = wall ? double(stepped) / double(wall) : 0.0;
+    c.present = word_of.empty() ? 0.0 : double(present_n) / double(word_of.size());
+    c.rows = word_of.size();
+    c.ok = true;
+    return c;
+  });
+
+  std::printf("  arm          n   duty     present   bit F1           bit F2\n");
+  double mb[kN][2], sb[kN][2], mduty[kN];
+  size_t nok[kN];
+  for (uint32_t a = 0; a < kN; ++a) {
+    std::vector<double> f1, f2, du, pr;
+    for (uint32_t r = 0; r < kReps; ++r) {
+      const Cell& c = cells[r * kN + a];
+      if (!c.ok) continue;
+      f1.push_back(c.acc[0]);
+      f2.push_back(c.acc[1]);
+      du.push_back(c.stepped);
+      pr.push_back(c.present);
+    }
+    nok[a] = f1.size();
+    if (f1.size() < 3) {
+      std::printf("  %-12s %3zu  too few usable creatures\n", kDA[a].name, f1.size());
+      mb[a][0] = mb[a][1] = sb[a][0] = sb[a][1] = mduty[a] = 0.0;
+      continue;
+    }
+    double e1 = 0, e2 = 0, e3 = 0, e4 = 0;
+    mb[a][0] = ctx_mean_se(f1, &e1);
+    mb[a][1] = ctx_mean_se(f2, &e2);
+    mduty[a] = ctx_mean_se(du, &e3);
+    const double mp = ctx_mean_se(pr, &e4);
+    sb[a][0] = e1;
+    sb[a][1] = e2;
+    std::printf("  %-12s %3zu  %.3f    %.3f     %.3f +/- %.3f    %.3f +/- %.3f\n",
+                kDA[a].name, f1.size(), mduty[a], mp, mb[a][0], e1, mb[a][1], e2);
+  }
+
+  if (nok[0] < 3) {
+    std::printf("\n  setup failed: the `awake` control has %zu usable creatures and it is\n"
+                "  what every gated arm is measured against.\n", nok[0]);
+    return false;
+  }
+  if (mb[0][0] < 0.6 && mb[0][1] < 0.6) {
+    std::printf("\n  VOID: the `awake` control's index is at chance on both bits, so this\n"
+                "  setup never built an index and the gated arms are compared against\n"
+                "  nothing. Fix the control before reading anything below.\n");
+    return false;
+  }
+
+  std::printf("\n  THE PRIMARY, paired per creature against `awake`:\n");
+  bool gated_ok = true;
+  for (uint32_t a = 1; a < kN; ++a) {
+    if (nok[a] < 3) { gated_ok = false; continue; }
+    for (uint32_t q = 0; q < 2u; ++q) {
+      std::vector<double> d;
+      for (uint32_t r = 0; r < kReps; ++r) {
+        const Cell& g = cells[r * kN + a];
+        const Cell& w = cells[r * kN + 0];
+        if (!g.ok || !w.ok) continue;
+        d.push_back(g.acc[q] - w.acc[q]);
+      }
+      if (d.size() < 3) { gated_ok = false; continue; }
+      double se = 0.0;
+      const double m = ctx_mean_se(d, &se);
+      const double nse = se > 0.0 ? m / se : 0.0;
+      std::printf("    %-12s bit %s  %+.3f +/- %.3f (%.1f SE)%s\n", kDA[a].name,
+                  q == 0 ? "F1" : "F2", m, se, nse,
+                  nse <= -3.0 ? "   RESOLVED LOSS" : (nse >= 3.0 ? "   RESOLVED GAIN" : ""));
+      if (nse <= -3.0) gated_ok = false;
+    }
+  }
+
+  // THE FREEZE CHECK, printed before the verdict because the verdict leans on it: `gated`
+  // and `gated-long` must agree to the last decimal, or time is leaking through the gate.
+  {
+    const double d1 = std::fabs(mb[2][0] - mb[1][0]), d2 = std::fabs(mb[2][1] - mb[1][1]);
+    const bool exact = nok[1] >= 3 && nok[2] >= 3 && d1 < 1e-9 && d2 < 1e-9;
+    std::printf("\n  FREEZE CHECK: `gated-long` minus `gated` = %.3g / %.3g on the two bits."
+                "  %s\n", d1, d2,
+                exact ? "EXACT, as it must be:"
+                      : "NOT EXACT, which is a DEFECT:");
+    std::printf("    a frozen creature cannot tell how long it was off, so the two arms see\n"
+                "    the IDENTICAL awake ticks and only the duty denominator differs.%s\n",
+                exact ? " The gate holds."
+                      : " A difference means internal time is leaking through the gate, and"
+                        " every number above is then suspect.");
+    if (!exact) return false;
+  }
+
+  if (gated_ok) {
+    std::printf("\n  POWER-GATING IS FREE, and the derived prediction is REFUSED: freezing\n"
+                "  between words does NOT degrade the index, so the EMA's failure to decay\n"
+                "  across the gap does not smear it. **And because the freeze is EXACT the\n"
+                "  result is SCALE-FREE in the gap**: a creature that pays nothing at a duty\n"
+                "  of %.3f pays nothing at ANY sparsity, because the awake ticks are\n"
+                "  identical either way. So the deployment win is set by how often words\n"
+                "  arrive and not by anything in the creature -- a word every 10 s is ~17%%\n"
+                "  duty, a word a minute ~2.8%%. That is a larger factor than the whole trim\n"
+                "  bought, from a mechanism the creature already has.\n",
+                mduty[kN - 1]);
+  } else {
+    std::printf("\n  DUTY-CYCLING IS BLOCKED, AND THE MECHANISM NAMES ITS OWN FIX. The index\n"
+                "  degrades when the creature is frozen between words, which is what the\n"
+                "  1000-tick EMA predicts: awake, the post-reward silence decays it to 33%%;\n"
+                "  frozen, to 100%%, so the previous word is still in the feature when the\n"
+                "  next one arrives. THE FIX IS CHEAP AND LOCAL: decay `rate_ema_` on WAKE\n"
+                "  in proportion to elapsed real time, which is one multiply per neuron per\n"
+                "  wake rather than per tick. Note this is the lazy-decay idea that was\n"
+                "  WRONG for the plasticity sweep -- that one runs per cash-in, not per\n"
+                "  tick -- and is right here, on a quantity that really is per-tick.\n");
+  }
+  std::printf("\n  WHAT THIS DOES NOT SHOW: that NAMING survives gating. This measures the\n"
+              "  INDEX, which is the mechanism the freeze threatens and the cheap half of\n"
+              "  the question. A naming run is ctxgrid-scale (4-5 h) and is only worth\n"
+              "  spending once the index is known to survive.\n");
+  return true;
+}
+
 // ============ cost: THE GOAL'S SECOND HALF HAS NEVER BEEN MEASURED ============
 //
 // THE STATED GOAL is "a small creature trainable for one specific purpose, running on LOW
