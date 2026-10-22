@@ -19300,6 +19300,57 @@ on the fourth item before it was written up.** Each entry carries why it is not 
   times in this file. Reported as a candidate by the search and withdrawn before write-up —
   the rule above working as intended rather than being recited.
 
+### Checked 2026-10-23: does the creature need MORE NEURONS?
+
+A second pass, prompted by the reasonable intuition that a creature with 782 neurons is
+small against a fruit fly's ~140,000. Both papers below are genuinely absent from the list
+above (the one "Senk" grep hit was a false positive with no context match). **Both are
+refused, and by this project's own measurements rather than by taste.**
+
+**First, what the creature already does, because it answers half the question.** `[growth]
+ships `enabled = true`. `Brain::try_grow()` is **plateau-driven**: it fires when the critic's
+error stops improving over a 20 s window, inserts `insert_k = 8` neurons, and is held back by
+a refractory gap, an `error_floor` of 0.004 and a `patience` budget that stops it once the
+additions stop paying. `growable()` confines it to the association role, deliberately — a
+transducer's code is its wiring. `central` therefore sits at 400 live against `n_max 4096`:
+**not capped, just rarely triggered, because it only grows when stuck.**
+
+**And neuron COUNT is measured to be the wrong lever, twice over.** `g3probe`'s larynx
+enlargement went monotonically the wrong way — echo 0.745 → 0.697 → 0.628 for 126 → 270 →
+450 neurons, *"the population vector is not group-size limited"*. More decisively,
+`stageprobe` decomposed the `dF1 ~ aligned^0.61` ceiling by stage and found the compressive
+one at the learned operating point is **bias→rate at 0.34**, against the pooling stage's
+0.66. More neurons improves *pooling* — the stage that is **not** the bottleneck. That is
+precisely the error `poolbeta` already made, "one stage too late", which is why it bought
+convergence speed and left the ceiling alone.
+
+- **Neurogenesis by contribution, and it is the closest match to the intuition.** *NG-SNN: A
+  neurogenesis-inspired dynamic adaptive framework for efficient spike classification.*
+  Neural Networks (2026).
+  <https://www.sciencedirect.com/science/article/abs/pii/S0893608026001188> — cited by title
+  and URL because the authors could not be verified to author level from the search result,
+  per this section's own rule. Adds neurons on demand by a **contribution criterion** and
+  replaces iterative training with a single-shot adaptive weight computation. **VERDICT:
+  refused by `stageprobe`.** Choosing *which* neuron to add is still adding to the pool, and
+  the pool is the 0.66 stage rather than the 0.34 one. Its second idea needs a target this
+  creature does not have — the rule here is reward-driven node perturbation with no label.
+- **Structural plasticity that deliberately does NOT grow neurons.** Knight, Senk & Nowotny
+  (2026). *A flexible framework for structural plasticity in GPU-accelerated sparse spiking
+  neural networks.* Neuromorphic Computing and Engineering.
+  <https://iopscience.iop.org/article/10.1088/2634-4386/ae4535> — initials unverified and
+  therefore not guessed at. Rewires synapses only, explicitly declining neuron-level growth
+  "as in most brain regions beyond development"; reports structural-plasticity overhead
+  **below 1%** and sparse models an order of magnitude faster to train than dense ones.
+  **VERDICT: the synaptic-rewiring family is already refuted here** — `pruning v38` and the
+  exuberance line, whose conclusion was that *weight is not information*. The keeper is the
+  sub-1% overhead figure, which is a useful external datum for anyone pricing rewiring.
+
+**What the pass leaves pointing somewhere.** `stageprobe` named **bias→rate** as the target
+on 2026-09-12 and **nothing has attacked it since** — three memory files mention the stage
+and none is an experiment against it. That is a change to the neuron's transfer
+characteristic rather than to how many neurons there are, so it is a kernel change that
+would move the pinned hash, and it should be gated with an oracle before anything is built.
+
 ### A note on where this project's record actually lives
 
 Two stores, and they are not the same store:
