@@ -34008,6 +34008,35 @@ bool run_ctxvocab(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
   return true;
 }
 
+// ====== FOUR-WORD CONDITIONAL NAMING UNDER POWER-GATING, 2026-10-23 ======
+// THE CLAIM THIS COMPLETES. `cost` put this creature at 9.054e5 operations per simulated
+// second, 293x-276,000x BELOW a neuromorphic chip's 250-500 mW ACTIVE FLOOR, so operations
+// were never the power bill and being AWAKE always was. `duty` then showed a freeze between
+// words leaves the INDEX intact (bit F1 -0.0143 +/- 0.0172 at n=36 pooled) and even improves
+// bit F2 (+0.1104 +/- 0.0250, replicated, monotone dose-response), and that the freeze is
+// EXACT so the result is SCALE-FREE in the gap. `dutyname` showed the LESSON survives too,
+// with no cost established (2 SE interval +0.04% to +11.01% on two words and a fixed target).
+//
+// WHAT IS LEFT IS THE ACTUAL JOB: four-word CONDITIONAL naming. That is this experiment, and
+// gating it is one constant.
+//
+// THE PATTERN IS `tutorgrid`'s OWN, deliberately: that run flipped `kTGChainSrc` between two
+// runs and compared them across runs, rather than carrying two arms. 0 means NO GATING and
+// is `run_vocallearn_session`'s default, so at 0 this experiment is bit-identical to every
+// number already banked for it -- which `verify` confirmed when the parameter was added.
+//
+// AND THE PAIRING IS STRONGER HERE THAN IN THE TRIM COMPARISON, which is the reason to do it
+// this way. Gating changes no wiring: the same genome and the same seed give the SAME CREATURE
+// in both runs, differing only in whether it is frozen after tick 1700. So creature r in the
+// gated run and creature r in the ungated run are MATCHED UNITS and the comparison is properly
+// PAIRED -- unlike the trim, where deleting modules re-rolled the wiring and forced an
+// unpaired test. The ungated side already exists as `results/ctxgrid-trim.log`, so only the
+// gated run needs spending.
+//
+// 1700 is the shortest window that leaves the word (ticks 0-900) and the reward window
+// (900-1700) untouched. Derived from the trial geometry, not chosen.
+constexpr uint64_t kCGDutyAwakeEnd = 1700;
+
 bool run_ctxgrid(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
   (void)verbose;
   aibaby::Dna dna;
@@ -34015,6 +34044,10 @@ bool run_ctxgrid(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
     std::printf("  setup failed: the genome does not load\n");
     return false;
   }
+  std::printf("  POWER-GATED: frozen from tick %llu of each %llu-tick trial (duty %.3f).\n"
+              "  0 would be ungated and bit-identical to this experiment's banked numbers.\n",
+              (unsigned long long)kCGDutyAwakeEnd, (unsigned long long)kVLTrialTicks,
+              kCGDutyAwakeEnd ? double(kCGDutyAwakeEnd) / double(kVLTrialTicks) : 1.0);
   const int32_t ctx_module = dna.module_with_role(aibaby::ModuleRole::kContext);
   if (ctx_module < 0) {
     std::printf("  this genome has no kContext module. Build one with NO output\n"
@@ -34107,10 +34140,14 @@ bool run_ctxgrid(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
         reg.praise = kPraiseValue;
         reg.scold = kScoldValue;
         // The ONLY difference from ctxfour: the target table.
+        // Every defaulted parameter spelled out so `kCGDutyAwakeEnd`, which is the LAST
+        // one, can be reached. Each value here is what this call already got implicitly.
         const VLRun run = run_vocallearn_session(variant, ticks, kVLTaught, nullptr, reg,
                                                  kCtxFourArms[a].target, &drive,
                                                  kVLScoreFormant, nullptr, kCFWords,
-                                                 kGridWords);
+                                                 kGridWords, nullptr, nullptr, nullptr,
+                                                 nullptr, nullptr, false,
+                                                 kCGDutyAwakeEnd);
         cell.scored = run.scored;
         cell.skipped = run.skipped;
         if (!run.ok) return cell;

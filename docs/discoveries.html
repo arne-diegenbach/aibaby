@@ -428,6 +428,28 @@ find it. The effect size fell 40% as the sample doubled, which is the same signa
 retired an earlier reward manipulation in this project when it shrank between n&nbsp;=&nbsp;12
 and n&nbsp;=&nbsp;16.</p>
 
+<h3>2.18 A decoder&rsquo;s accuracy is a lower bound, so the gap between two decoders measures the decoders</h3>
+<p>A run was built to decide whether a two-bit condition code was limited by what the ear
+carries or by how the index is computed, and its pre-registered primary had to be retired.
+The design compared, for each bit, how well a supervised readout recovered it against how well
+the clustering rule did &mdash; and read a 5.4-standard-error asymmetry between the two bits.</p>
+<p><strong>The statistic cannot bear that reading.</strong> Every column in such a table is a
+decoder scored on held-out data, so every column is a <em>lower bound</em> on what the signal
+holds about its label, never an estimate of it. Two bounds cannot be subtracted: each decoder
+is lossy, and how lossy depends on the problem, so a reader that compresses a hard quantity
+more than an easy one manufactures an asymmetry from a symmetric signal.</p>
+<p><strong>The table refuted its own primary from inside, which is what makes this
+demonstrable rather than arguable.</strong> Applying the same supervised reader to a
+normalised version of the identical feature dropped one bit from 0.850 to 0.646 &mdash;
+0.204 of content lost to the reader alone &mdash; and the apparent asymmetry <em>grew</em>
+to 9.4 standard errors. An asymmetry that moves with the reader is a fact about readers.</p>
+<p>What such a run can report is bounds: here the feature holds the two bits at at least
+0.916 and at least 0.965, and those best bounds differ by 0.049 where the reader-based gaps
+read 0.115 and 0.305. <strong>To compare content across two quantities one needs a ceiling,
+not another decoder</strong> &mdash; an oracle, or an exact decomposition with no free
+parameters. The within-column comparison that holds one quantity fixed and varies the
+<em>rule</em> remains sound, and that is where the same run's usable result came from.</p>
+
 <h2>3. Credit assignment and interference</h2>
 <p>Teaching a second, conflicting vowel target destroys the first. The surviving fraction
 is 0.22. This section is what the project established about why, and about what does not
@@ -1224,7 +1246,7 @@ where the threshold is 3. Roughly eighteen more creatures would have closed the 
 arithmetically and none were run, because adding samples until a number crosses a threshold
 is optional stopping.</p>
 
-<h3>6.8 The same effect, settled at a sample size chosen in advance</h3>
+<h3>6.7 The same effect, settled at a sample size chosen in advance</h3>
 <p>An effect at 2.7&nbsp;SE cannot be claimed and need not be abandoned. The alternative to
 adding creatures until it crosses is to fix the sample size from a power calculation and
 write the stopping rule down first. Before the run, the following were committed in source:
@@ -1275,12 +1297,12 @@ deliberately not folded into the settle, because changing a comparison after see
 number is the flexibility the exercise exists to remove.</p>
 
 
-<h3>6.7 Consistency at low power is not a collapse, and it refuted the opposite claim too</h3>
+<h3>6.8 Consistency at low power is not a collapse, and it refuted the opposite claim too</h3>
 <p>The creature's two-phase gesture and its taught vowel do not compose, and that was
 established over four generations and twelve cells of a two-parameter plane &mdash; the
 inhibition strength, the tonic drive, the interval where the first two sweeps crossed, and
 finally the untested corner where weak inhibition meets low drive. The last of those is in
-&sect;8's table. What is recorded here is a reasoning error made while writing it up, caught
+&sect;9's table. What is recorded here is a reasoning error made while writing it up, caught
 before it reached the record.</p>
 <p>Two pairs of cells reach nearly the same gesture amplitude by <em>different</em> knobs,
 and in both pairs the lesson agrees:</p>
@@ -1366,7 +1388,7 @@ reward delay misdirects 50/136 = 37% of each write into the neighbouring phase's
 3.8&times; attenuation even if all of it subtracts.</p>
 <p><strong>So the obstacle is expression, not credit assignment</strong>, and that unifies with
 a separate closure reached the same week: twelve cells across a two-parameter plane found no
-operating point where the oscillator and the lesson coexist (&sect;8). This says why. Mutual
+operating point where the oscillator and the lesson coexist (&sect;9). This says why. Mutual
 inhibition holds the formant at one of its two ends, and a bias written into the
 <em>correct</em> per-phase table still cannot shift it.</p>
 <p class="note">The wider value was avoiding a build. The songbird literature's account of
@@ -1442,6 +1464,47 @@ can kill a build whose rationale looks solid in two separate literatures, and it
 when the quantity is chosen so that the null falls out of the algebra instead of being
 assumed.</p>
 
+
+<h3>6.11 A third of the creature is not needed for the task it was built for</h3>
+<p>The creature carries seven modules, and the conditional-naming task it does best is
+purely acoustic: a word is heard, and a word is produced. A measurement of its running cost
+made the mismatch concrete &mdash; the vision module holds 256 of 1166 neurons, and the
+context module fires at <strong>0.00&nbsp;Hz</strong> in the shipped regime, because the
+derived index reads the auditory module instead and the context module is silent unless a
+host writes into it. Three modules and five projections looked like they could go.</p>
+<p><strong>What makes this a result rather than a tidy-up is that the deletion cannot be
+assumed harmless.</strong> Removing a module re-rolls every random draw after it, so the
+trimmed genome is a <em>different creature</em>, not a subset of the old one: its wiring
+differs everywhere, and the naming number already banked for the full genome does not
+transfer. Naming has to be re-established, and the full genome has to be re-run beside it
+under identical conditions rather than cited.</p>
+<p>It also has to be recalibrated. Each module's target rate must equal its free-running
+rate or every later measurement includes homeostasis fighting the genome, and the association
+module had lost two of its afferent projections &mdash; it went stale by 1.15&nbsp;Hz. The
+re-measurement is reported in &sect;2 because it turned out not to be a measurement at all.</p>
+<table>
+<tr><th>creature</th><th>neurons</th><th>synapses</th><th>four-word naming, pooled n=72</th></tr>
+<tr><td>full</td><td>1166</td><td>37,275</td><td>+0.1316 &plusmn; 0.0180</td></tr>
+<tr class="last"><td><strong>trimmed</strong></td><td><strong>782</strong></td><td><strong>21,213</strong></td><td><strong>+0.1306 &plusmn; 0.0180</strong></td></tr>
+</table>
+<p><strong>A third fewer neurons, 43% fewer synapses, and the difference in naming is
+&minus;0.0010 &plusmn; 0.0255 &mdash; 0.04 standard errors.</strong> Both genomes were run on
+two independent families of 36 creatures each, and the full genome reproduced its own banked
+figure to three decimal places, which is what licenses the comparison. The trimmed creature
+is deterministic in its own right.</p>
+<p><strong>The null is stated as a bound, because a null without one says nothing.</strong>
+At two standard errors the trim costs at most 0.052 of naming excess against the full
+creature's own 0.132 &mdash; so <em>no loss larger than about 39% of the effect</em>, with a
+point estimate of &minus;0.001. That is the trade on offer: it is not "free", and it should
+not be quoted that way.</p>
+<p><strong>What would have refused it:</strong> a resolved loss in the paired excess, or a
+creature count that fell because the quieter trimmed voice produced too few utterances to
+score. Neither happened &mdash; no creature was dropped on either genome.</p>
+<p>One claim did not survive. On the first family the trimmed creature's second formant
+looked <em>better</em> (+0.045 &plusmn; 0.032), which was recorded as suggestive and
+explicitly not claimed. Re-asked on a fresh family it read +0.018 &plusmn; 0.032, and the
+overall advantage reversed sign. The effect was an artefact of the sample that produced the
+hypothesis, and labelling it as such in advance is the only reason its refusal cost nothing.</p>
 
 <h2>7. Transmission between creatures</h2>
 <h3>7.1 One creature teaches another: a learned distinction crosses to a second individual
@@ -1625,7 +1688,7 @@ complete and the correction is arithmetic on them, so the corrected condition wa
 against the run&rsquo;s own numbers and the source fixed for next time, rather than spending
 two hours re-deriving numbers that were already right under a sentence that was not.</p>
 
-<h3>7.3 A four-signal code crosses the air, on a condition the creature derives itself</h3>
+<h3>7.4 A four-signal code crosses the air, on a condition the creature derives itself</h3>
 <p>Two results here each stood and had never been put together. One: the creature names
 <em>four</em> signals, laid out as a 2&times;2 of two first-formant levels by two
 second-formant levels with every target inside its measured learned reach, at 5.6 and
@@ -1690,7 +1753,164 @@ an oracle for the thing under suspicion cost one extra session per lineage and t
 failed&rdquo; into &ldquo;the index is the limit, and here is its lever&rdquo;.</p>
 
 
-<h2>8. Negative results that closed lines</h2>
+<h2>8. Cost, and switching the creature off between words</h2>
+<p>The project set out to build a small creature trainable for one specific purpose and
+running on low power. The first half had been demonstrated piece by piece. <strong>The second
+half had never been measured at all</strong> &mdash; the existing footprint report counts
+bytes and says in terms that the project has no memory budget, and no run anywhere reported
+an operation count or a spike rate. So the project could not state whether it met its own
+goal, in either direction.</p>
+<p><strong>Read the four results below together, because the third and the fourth point
+opposite ways.</strong> The cost is measured and is dominated by neuron count rather than
+synapse count; the condition index survives being frozen between words and the freeze is
+exact, so that result is scale-free in the gap; a single-target lesson survives too. <em>But
+four-word conditional naming does not</em>, at 3.3 standard errors and 81% of the effect. So
+this section establishes that gating is free for perception and for simple teaching and
+<strong>costly for conditionality</strong> &mdash; not that the creature can be run at a few
+percent duty while doing its job.</p>
+
+<h3>8.1 The cost is bounded by the neuron count, not the synapse count</h3>
+<p>The currency is a <em>synapse-visit</em> or a <em>neuron update</em>: one of each counted
+once, so nothing has to be assumed about hardware. Three terms, each labelled by what it
+scales with, and each located by reading the enclosing function rather than by grepping for
+a loop.</p>
+<table>
+<tr><th>term</th><th>per simulated second</th><th>scales with</th><th>share</th></tr>
+<tr><td>neuron updates</td><td>1.166&times;10<sup>6</sup></td><td>neurons, every tick</td><td>82.6%</td></tr>
+<tr><td>spike delivery</td><td>1.661&times;10<sup>5</sup></td><td><em>event-driven</em>: spikes &times; fan-out</td><td>11.8%</td></tr>
+<tr><td>plasticity sweep</td><td>8.014&times;10<sup>4</sup></td><td>synapses, <em>per reward cash-in</em></td><td>5.7%</td></tr>
+<tr class="last"><td><strong>total</strong></td><td><strong>1.412&times;10<sup>6</sup></strong></td><td></td><td></td></tr>
+</table>
+<p><strong>The shape matters more than the total, and it is the favourable shape.</strong> The
+per-tick update loop contains no pass over synapses at all &mdash; every loop in it was
+enumerated to check &mdash; so the synaptic cost is event-driven and the one dense-in-synapses
+sweep is paid only when reward arrives, about twice a second. What is dense every tick is
+<em>neuron</em> integration, bounded by 1166 neurons rather than by 37,275 synapses: a factor
+of 32. On one core the creature runs 15 times faster than real time.</p>
+<p><strong>A correction this measurement made to itself, and it inverted the conclusion.</strong>
+The first version asserted that the plasticity sweep ran every tick and reported bookkeeping
+outweighing delivery by 226&times;. It does not: that sweep lives in the reward-application
+path, and the first run never applied reward at all, so the loop being priced executed
+<em>zero times</em>. The figure was not an overstatement but a count of something that did not
+happen. <strong>A cost claim must name the enclosing function of every loop it prices</strong>
+&mdash; "per tick" and "per cash-in" differ here by three orders of magnitude, and five of the
+six dense synapse loops in this kernel live in setup, sleep, pruning or instrumentation.</p>
+<p>This is deliberately a statement about operations and sparsity and <strong>not about
+watts</strong>. The published per-operation energy figures span more than an order of
+magnitude and the recent ones are assumptions rather than chip measurements; they are listed
+in Appendix&nbsp;A. What they do establish is a direction: against a chip's active power
+floor, which does not fall with utilisation, this creature's dynamic cost sits between 293 and
+276,000 times below it across every figure available. <strong>So operations were never the
+bill. Being awake is.</strong></p>
+
+<h3>8.2 The condition index survives a freeze between words, and the result is scale-free</h3>
+<p>If being awake is the bill, the lever is duty cycle, and a creature for one purpose should
+be off between words. Gating is modelled as a <em>freeze</em>: neither the ear nor the update
+step is called, so no state decays and no internal time passes, which is what a powered-down
+creature does. The world is still rendered every tick, so the acoustics are identical across
+conditions and only the creature stops.</p>
+<p><strong>The risk was derived from the kernel's own time constant rather than guessed.</strong>
+The condition index is an exponential moving average with a 1000-tick time constant, and its
+whole design rests on persistence. Awake, the 1100 ticks of post-reward silence decay it to
+e<sup>&minus;1.1</sup> &asymp; 33% of what the word left; frozen, it decays to 100%. So a gated
+creature should carry the <em>previous</em> word into the next one and smear the index.</p>
+<table>
+<tr><th>condition</th><th>duty</th><th>first-formant bit</th><th>second-formant bit</th></tr>
+<tr><td>awake</td><td>1.000</td><td>&mdash;</td><td>&mdash;</td></tr>
+<tr><td>frozen after reward</td><td>0.607</td><td>&minus;0.0143 &plusmn; 0.0172</td><td><strong>+0.1104 &plusmn; 0.0250</strong></td></tr>
+<tr class="last"><td>frozen, with a longer gap</td><td>0.304</td><td colspan="2"><em>identical to the row above, exactly</em></td></tr>
+</table>
+<p><strong>The prediction was refused: the first bit is untouched and the second is better</strong>
+&mdash; the latter replicated on an independent family of creatures (+0.154, then +0.091, both
+past three standard errors) before it was claimed. At two standard errors the first bit loses
+at most 5% of itself.</p>
+<p><strong>The exactness of the freeze is what converts this into a general claim.</strong> The
+long-gap condition returns numbers identical to the short-gap one, to every decimal, on both
+bits and in both families. That is forced rather than lucky: a frozen creature cannot tell how
+long it was off, so an 1100-tick gap and a 3900-tick gap hand it the same sequence of waking
+ticks, and only the denominator differs. Any difference would have meant time leaking through
+the gate. <strong>So a creature that pays nothing at 30% duty pays nothing at any sparsity</strong>
+&mdash; the saving is set by how often words arrive and not by anything in the creature: about
+17% duty at a word every ten seconds, about 3% at a word a minute.</p>
+<p><strong>And the gain has a mechanism that survived its own test.</strong> The account offered
+was that silence is not neutral for an online clustering rule &mdash; processing it drags the
+stored prototypes toward a silence feature, and freezing protects them. That predicts a
+<em>monotone</em> dose-response in how much silence is processed, and an intermediate condition
+delivered one: 0.718 awake, 0.813 at 80% duty, 0.872 at 61%. It landed between rather than
+jumping to the gated value, which is what would have refuted the account. The intermediate
+step is 2.4 standard errors on its own, so what is established is the ordering; and the first
+formant is not monotone, though every effect on it is small on a bit already near ceiling.</p>
+
+<h3>8.3 A fixed-target lesson survives gating too, and the cost of the gain is a selection effect</h3>
+<p>An index is not a job. That the creature still knows which context it is in says nothing
+about whether reward can still <em>teach</em> it while gated, which needs the teaching loop.
+On two words and a fixed target, with the error reduction pooled as a ratio of sums and a
+jackknife over creatures:</p>
+<table>
+<tr><th>condition</th><th>error, early</th><th>error, late</th><th>reduction</th><th>trials skipped</th></tr>
+<tr><td>awake</td><td>0.4792</td><td>0.2859</td><td>40.35%</td><td>13.3%</td></tr>
+<tr class="last"><td>frozen after reward</td><td>0.4412</td><td>0.2388</td><td>45.87%</td><td>9.0%</td></tr>
+</table>
+<p>The difference is +5.53% &plusmn; 2.74%, a two-standard-error interval of +0.04% to
++11.01%. <strong>The whole interval is positive, so no cost is established</strong> &mdash;
+which is what the power argument needs. The point estimate is a gain, but at two standard
+errors it does not clear this project's three-sigma bar and is not claimed.</p>
+<p><strong>A confound travels with that number and is the reason not to pursue the
+gain.</strong> The two conditions do not score the same trials: the gated creature skips 9.0%
+against the awake creature's 13.3%, and a trial is skipped when the creature said nothing. So
+gating also makes it <em>vocalise more often</em>, and the pooled reduction does not control
+for which trials enter it. The absence of a cost survives that objection; the size of the gain
+does not.</p>
+<p><strong>What would have refused the whole line:</strong> a resolved loss in either the index
+or the lesson, or a long-gap condition that differed from the short-gap one, which would have
+meant the freeze was not a freeze. And a wrong prediction worth recording: lengthening the runs
+was expected to shrink the lesson's error bar and it grew instead, because the jackknife is
+over <em>creatures</em> and the creature count had not changed. To tighten such an interval one
+adds units, not length.</p>
+
+<h3>8.4 But the conditional task does not survive it, which localises the cost to conditionality</h3>
+<p>An index is not a job and a single fixed target is not the job either. The task this
+creature is actually for is <em>four-word conditional naming</em>: four signals laid out as a
+2&times;2, each to be produced when its own condition holds. Gating that is one constant, and
+the ungated run of the same genome already existed.</p>
+<p><strong>The pairing is stronger here than in &sect;6.11 and that is what makes the test
+clean.</strong> Gating changes no wiring, so the same genome and the same seed give the
+<em>same creature</em> in both runs, differing only in whether it freezes after the reward
+window. Creature <em>r</em> gated and creature <em>r</em> ungated are matched units, so the
+comparison is properly paired &mdash; where the trim comparison could not be, because deleting
+modules re-rolled every later random draw.</p>
+<table>
+<tr><th>condition</th><th>paired excess on the four-way score, n=36</th></tr>
+<tr><td>awake</td><td>+0.1570 &plusmn; 0.0287 (5.5&nbsp;SE)</td></tr>
+<tr><td>frozen after reward</td><td>+0.0302 &plusmn; 0.0236 (1.3&nbsp;SE)</td></tr>
+<tr class="last"><td><strong>paired difference</strong></td><td><strong>&minus;0.1268 &plusmn; 0.0385 (3.3&nbsp;SE)</strong></td></tr>
+</table>
+<p><strong>Conditional naming does not survive power-gating: a resolved loss of 81% of the
+effect</strong>, two-standard-error interval &minus;0.204 to &minus;0.050, with 25 of 36
+creatures lower when gated (sign test <em>z</em>&nbsp;=&nbsp;+2.33).</p>
+<p><strong>The retraction matters more than the result.</strong> &sect;8.2 and &sect;8.3 read,
+on their own, as licensing a creature that runs at a few percent duty. <em>That is false for
+the task the creature is for.</em> What the three runs together establish is narrower and
+sharper: gating is free for <strong>perception</strong>, free for a <strong>single-target
+lesson</strong>, and costly for <strong>conditionality</strong>. The cost is not in learning
+generally and not in hearing; it is specific to maintaining a map from condition to action.</p>
+<p>That reading was written down as this run&rsquo;s alternative outcome <em>before</em> it was
+made, which is the only reason it can be offered as a localisation rather than as a story
+fitted to a disappointment.</p>
+<p><strong>A mechanism that fits all three results, with its own test attached.</strong>
+&sect;8.2 established that freezing stops the index average from decaying, so a gated creature
+carries the <em>previous</em> condition into the next trial. For a clustering that is harmless,
+since the partition stays self-consistent even when shifted; for a single target there is no
+condition to misattribute to. But with four condition-dependent targets, carry-over means
+reward sometimes writes into the <em>wrong condition&rsquo;s row</em> &mdash; fatal for a
+conditional map and invisible in both cheaper tests. It predicts that the loss grows with the
+number of conditions and vanishes when the index is supplied by the host. Neither has been
+measured.</p>
+<p><strong>What this does not license:</strong> abandoning duty cycling. Nothing here tests a
+creature gated <em>after</em> training rather than during it, which is the deployment case that
+matters most and is a different experiment.</p>
+
+<h2>9. Negative results that closed lines</h2>
 <p>Listed because the project&rsquo;s cost is dominated by them and because each removed a
 plausible mechanism from consideration.</p>
 <table>
@@ -1711,10 +1931,12 @@ plausible mechanism from consideration.</p>
 <tr><td>Protocol axes (duration, blocking)</td><td>28&times; longer is no help; blocked teaching is harmful</td></tr>
 <tr><td>Astrocytic activity gate on plasticity</td><td>Cuts learning 81% and forgetting 19%, on a monotonic dose&ndash;response</td></tr>
 <tr><td>Consolidation brake on high-traffic edges</td><td>Binds hard (0.671 of the unbraked rate) and changes neither retention nor learning</td></tr>
+<tr><td>Removing overall drive from the index feature</td><td>Pays +0.064/+0.161 only with <em>random distinct</em> prototype seeds, which the creature cannot produce; 1.4&nbsp;SE at its own initialisation</td></tr>
+<tr><td>Adaptive-resonance vigilance as the seeding rule</td><td>Recovers at most 1.6&nbsp;SE of that, and at the shipped threshold commits exactly <em>one</em> slot &mdash; so the milestone built on it was measuring a constant index</td></tr>
 <tr class="last"><td>An operating point where gesture and lesson compose</td><td>Twelve cells over the whole (gain,&nbsp;drive) plane, both axes and both corners. At the gesture bar the lesson is 3.7&nbsp;SE short; the corner is strictly dominated</td></tr>
 </table>
 
-<h2>9. Provenance</h2>
+<h2>10. Provenance</h2>
 <p>Every number above comes from a run of the project&rsquo;s own experiment binary, gated
 before execution on <span class="id">--experiment verify</span> reporting
 <span class="sc">pass</span> with the pinned hash
@@ -1740,6 +1962,20 @@ produced them and the criteria that would refuse them, in the project&rsquo;s
 <h2>Appendix A. Excluded by the criterion</h2>
 <p>These project results are omitted from the body because a published result says or frames
 them first. They are listed so that the inclusion criterion of &sect;1 can be checked.</p>
+<p class="note">The line for &sect;8, drawn explicitly because that section is new.
+<em>Duty cycling</em> &mdash; powering a device down between events and waking it on a
+trigger &mdash; is ordinary engineering practice and is excluded; so is the observation that
+event-driven spiking hardware is cheap when activity is sparse. The per-operation energy
+figures quoted as context are other people&rsquo;s and are excluded: a 2026 framework paper
+<em>assumes</em> 1&ndash;5&nbsp;pJ per synaptic operation and cites 250&ndash;500&nbsp;mW of
+active power for a current research chip, while the only directly measured per-synapse chip
+figures available are older and span from 26&nbsp;pJ to 941&nbsp;pJ. What &sect;8 claims is
+narrower and is included: that <em>this</em> creature costs 1.412&times;10<sup>6</sup>
+operations per simulated second with no dense-in-synapses term in its per-tick path; that
+freezing it between words leaves its condition index intact and its second bit better, with a
+monotone dose-response in silence processed; that the freeze is exact and the result therefore
+scale-free in the gap; and that the lesson survives with no cost established. None of those
+is a statement about hardware, and &sect;8 makes no claim in watts.</p>
 <p class="note">One entry needs its line drawn explicitly. The idea that behaviour depends on
 some directions in a population code and not others is Kaufman and colleagues&rsquo;, and it
 is excluded. What &sect;4.2 claims is narrower and is included: in this system the map from

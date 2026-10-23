@@ -18368,8 +18368,59 @@ add creatures, not length — obvious in hindsight and the same family of error 
 wall-clock figure across a changed configuration.
 
 **What this still does not show:** four-word CONDITIONAL naming under gating. This is two
-words and a fixed target — the cheap half. `ctxgrid` with a gated arm is the full claim and
-costs 4–5 h; it is now licensed, since no cost is established here.
+words and a fixed target — the cheap half. That run was then made, and it changes the
+conclusion.
+
+### Gated four-word naming — the power win is NOT available for the conditional task
+
+`results/ctxgrid-trim-gated.log`, 2026-10-23, 2 h 45 m. One flip constant in `ctxgrid`, in
+`tutorgrid`'s established pattern, compared across runs against the ungated run of the same
+genome from two days earlier.
+
+**The pairing here is stronger than the trim's, which is why this is a clean test.** Gating
+changes no wiring: the same genome and the same seed give **the same creature** in both runs,
+differing only in whether it freezes after tick 1700. So creature *r* gated and creature *r*
+ungated are matched units and the comparison is properly **paired** — unlike the trim, where
+deleting modules re-rolled every later draw and forced an unpaired test.
+
+| | paired excess on `nearest`, n=36 |
+|---|---|
+| ungated | **+0.1570 ± 0.0287** (5.5 SE) |
+| gated (duty 0.607) | **+0.0302 ± 0.0236** (1.3 SE) |
+| **paired cross-run difference** | **−0.1268 ± 0.0385 (3.3 SE)** |
+
+> **FOUR-WORD CONDITIONAL NAMING DOES NOT SURVIVE POWER-GATING.** A resolved loss of
+> **81% of the effect** at the point estimate, 2 SE interval −0.204 to −0.050, with 25 of 36
+> creatures lower when gated (sign test z = +2.33).
+
+**This refutes the broader claim this line was heading toward, and the retraction matters more
+than the result.** Two runs earlier the summary here was that "a one-purpose creature can run
+at a few percent duty". That is now **false for the task the creature is actually for.** What
+survives is narrower and precise:
+
+| what was gated | outcome |
+|---|---|
+| the condition INDEX | free, and the second bit improves (`duty`) |
+| a two-word FIXED-target lesson | no cost established (`dutyname`) |
+| **four-word CONDITIONAL naming** | **−81% of the effect, 3.3 SE** |
+
+**So the cost is localised to CONDITIONALITY**, not to perception and not to learning in
+general — which is exactly the reading pre-registered for this outcome before the run, rather
+than one fitted to it afterwards.
+
+**A mechanism that fits all three results, offered as a hypothesis with its own test.** `duty`
+established that freezing stops the index EMA from decaying, so a gated creature carries the
+*previous* word into the next trial. For a clustering that is harmless — the partition stays
+self-consistent even if shifted — and for a single fixed target there is no context to
+misattribute to. But for four context-dependent targets, carry-over means reward sometimes
+writes into the **wrong context's row**, which is fatal for a conditional map and invisible in
+both cheaper tests. **It predicts two things:** the loss should grow with the number of
+contexts, and it should vanish if the index is handed over by the host. Both are measurable;
+neither has been done.
+
+**What this does not license:** abandoning duty-cycling. Gating remains free for perception,
+and nothing here tests a creature gated *after* training rather than during it — which is the
+deployment case that matters most and is a different run.
 
 ## Layout
 
