@@ -18451,16 +18451,49 @@ from the code, and I should not have committed it as "checkable in the source".
 > plasticity, homeostasis, divisive normalisation, prototype learning, the noise draw that
 > *is* the exploration drive.
 
-**So the gated and ungated creatures are not matched on experience, and the comparison in this
-section cannot separate "gating hurts" from "39% less life hurts".** That applies to
-`ctx_match`'s 10.3 SE fall and to the indexed arm's 2.1 SE fall alike. It does not obviously
-explain the control arm *rising*, which remains the odd one out.
+**So the trial-matched comparison cannot separate "gating hurts" from "39% less life hurts".**
+The fix was a design change rather than another mechanism: match **awake ticks** instead of
+trials, which needs 1.65x the trials — 3999 x 1700 = 6.80M lived, against the ungated arm's
+2428 x 2800 = 6.80M. **That run was made, and neither design is clean alone:** matching ticks
+un-matches reward events, so the tick-matched gated arm also gets 1.65x the cash-ins. The two
+together **bracket** the answer, which is why both were worth having.
 
-**The fix is a design change, not another mechanism.** To attribute anything to gating per se,
-the arms must be matched on **awake ticks rather than on trials** — the gated arm needs
-**1.65× the trials** to live the same 6.80M ticks. Until that run exists, this section
-establishes that *a creature gated during training ends up worse at conditional naming*, which
-is still a deployable fact, but **not** that gating itself is what cost it.
+#### The tick-matched run: the index effect is real, the naming collapse is the control catching up
+
+`results/ctxgrid-trim-gated-tickmatched.log`, 11.2M host ticks, 1 h 17 m.
+
+| arm | column | ungated | gated, trial-matched | gated, **tick-matched** | tick-matched − ungated |
+|---|---|---|---|---|---|
+| `oracle` | `ctx_match` | 0.7498 | 0.5971 | **0.6057** | **−0.1441 ± 0.0140 (10.3 SE)** |
+| `oracle` | `nearest` | 0.4707 | 0.4170 | 0.4111 | −0.0596 ± 0.0282 (2.1 SE) |
+| `off` | `nearest` | 0.3137 | 0.3868 | **0.4145** | **+0.1008 ± 0.0229 (4.4 SE)** |
+| | **excess** | **+0.1570** | +0.0302 | **−0.0034** | **−0.1604 ± 0.0405 (4.0 SE)** |
+
+> **THE INDEX DEGRADATION SURVIVES EXPERIENCE MATCHING, and that is the first clean
+> attribution in this line.** `ctx_match` reads 0.5971 at 61% of a life and 0.6057 at 100% —
+> essentially unchanged. So the 10.3 SE fall is caused by **gating itself**, not by the
+> experience confound, and not by reward-event count either, since the tick-matched arm has
+> 1.65x more of those and is no better.
+
+**But the excess collapsing to zero is still mostly the control catching up, not indexed
+naming failing.** The indexed arm's own fall stays at 2.1 SE and unresolved across both
+designs. The control rises with a **dose-response in trial count** — 0.3137 at 2428 trials,
+0.3868 at 2428 gated, **0.4145 at 3999** — which is what learning the *unconditional centroid*
+looks like: more trials, a better-placed average voice, and a higher nearest-target score with
+no conditioning at all. At 0.4145 it has essentially caught the indexed arm's 0.4111, so the
+difference between them is zero by convergence rather than by collapse.
+
+**What is therefore established, and it is narrower than either earlier draft of this section
+claimed:**
+
+- **Gating degrades index consistency by 0.144, 10.3 SE, robust to matched experience and to
+  matched-or-greater reward.** Clean, attributable, and the mechanism is **unknown** — the
+  carry-over account was withdrawn above because it does not follow from the code, and nothing
+  has replaced it.
+- **Indexed naming itself is not resolved as worse** in either design (2.1 SE both times).
+- **The excess is not a safe summary here**, because its control is a moving target that
+  improves with trials. A four-way nearest-target score with a converging unconditional
+  baseline cannot carry a conditionality claim on its own.
 
 **The honest standing of the three numbers, which do not all point the same way:**
 
