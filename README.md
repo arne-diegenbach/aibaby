@@ -18414,13 +18414,56 @@ index that is re-supplied every trial and cannot carry anything over. Consistent
 the oracle arm barely moved. The hypothesis is unsupported and should not be carried forward
 as though the run had licensed it.
 
-**What the rise in the control probably is, flagged as open rather than explained.** The
-unindexed arm reads 0.3137 ungated, which is close to this project's own measured empty-voice
-level of ~0.30 for a four-word nearest-target score — the reason that statistic always carries
-a control. Gated it reads 0.3868, well above that. So gating appears to change the *output
-distribution* in a way that improves raw target-matching without any conditioning: a narrower
-or better-centred voice would do it. That is measurable from the spread columns already in
-both logs and has not been done.
+#### The spread columns refute that account, and name a stronger one
+
+The output-distribution account above was testable from columns already in both logs, so it
+was tested. **It is refuted**, and the test found a larger effect that had been sitting
+unexamined.
+
+| arm | column | ungated | gated | paired change |
+|---|---|---|---|---|
+| `off` | F1 spread | 34.74 | 35.47 | +0.74 ± 3.34 (0.2 SE) |
+| `off` | F2 spread | 89.89 | 76.32 | −13.57 ± 8.73 (1.6 SE) |
+| `off` | `dir−null` | 0.0492 | 0.1246 | **+0.0753 ± 0.0205 (3.7 SE)** |
+| `oracle` | F1 spread | 46.74 | 44.76 | −1.98 ± 3.45 (0.6 SE) |
+| `oracle` | **`ctx_match`** | **0.7498** | **0.5971** | **−0.1527 ± 0.0148 (10.3 SE)** |
+
+**The voice did not narrow.** F1 spread does not move in either arm (0.2 and 0.6 SE) and F2
+spread is unresolved, so "a narrower or better-centred voice" does not explain the control's
+rise. That account is dead.
+
+> **BUT THE INDEX ITSELF DEGRADES, AT 10.3 SE — the largest single effect in the comparison,
+> and it was in the log all along.** `ctx_match` is how *consistently* the active slot tracks
+> the word, and it falls from 0.750 to 0.597 in the arm whose index is **host-written**.
+
+**And the mechanism is specific, checkable in the source, and resurrects an account I deleted
+an hour ago in a corrected form.** The `CtxDrive` injects **per tick**
+(`experiments_milestones.cpp:4890`), which sits *after* the power gate at `:4884` — so during
+frozen ticks the host does not inject, and the context module's activity **persists across the
+gap**. On resume the module still holds the *previous* trial's context while the host begins
+driving the new one, so the index reports the wrong condition until those rates transition —
+and `ctx_match` is accumulated *during the word*, exactly when the stale context is still
+decaying.
+
+**So carry-over was the right idea pointed at the wrong state.** I was right that the ear's
+EMA cannot explain a host-written index, and wrong to conclude carry-over was refuted: it is
+**the context module's own activity** that carries over, and the evidence is a 10.3 SE drop in
+index consistency rather than a hypothesis.
+
+**The honest standing of the three numbers, which do not all point the same way:**
+
+- `ctx_match` **−0.153, 10.3 SE** — the index genuinely degrades under gating. Resolved.
+- indexed `nearest` **−0.054, 2.1 SE** — falls, directionally consistent with a degraded
+  index, but **not resolved on its own.**
+- unindexed `nearest` **+0.073, 3.3 SE** — rises, resolved, and **still unexplained.** The
+  spread account is refuted and nothing has replaced it. `dir−null` rising at 3.7 SE in an arm
+  whose `ctx_match` is *exactly* 0.000 is the sharpest form of the puzzle.
+
+**What it makes cheap.** If the context module's carry-over is the cause, the fix is local and
+the test is one run: give the awake window a **pre-roll** before word onset so the context
+settles before scoring begins, or decay the context module's activity on wake by elapsed time.
+Either should restore `ctx_match`, and whether it also restores naming is then the question
+worth asking.
 
 **The honest state of the gated line is therefore:** the index survives gating (`duty`); a
 fixed-target lesson survives (`dutyname`); **what an index buys shrinks**, by a mechanism that
