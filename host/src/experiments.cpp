@@ -365,6 +365,19 @@ const Spec kSpecs[] = {
      "  if the half-centre reports no phase or has settled on one winner. The\n"
      "  evidence is the IDENTITY-minus-SWAPPED mapping contrast, because the\n"
      "  oscillator contributes to both equally and cancels from the difference."},
+    {"dutyname", 3400000, Expect::kPass, Tier::kTeach,
+     "derived: vocallearn's own budget, because it runs vocallearn sessions and\n"
+     "  must be comparable with them. Asks what `duty` could not: that run showed\n"
+     "  the INDEX survives a freeze between words and bit F2 even improves, but\n"
+     "  the index is not the job -- it says nothing about whether reward can still\n"
+     "  TEACH under gating. Two arms, one variable: ungated, against a freeze from\n"
+     "  tick 1700, the shortest window leaving the word (0-900) and the reward\n"
+     "  window (900-1700) untouched. The statistic is a RATIO OF SUMS with a\n"
+     "  jackknife rather than a mean of per-creature percentages, which this\n"
+     "  project measured as ~10x tighter. Tier::kTeach, so `verify` is unchanged.\n"
+     "  VOID if the ungated arm shows no lesson: a gated arm cannot preserve what\n"
+     "  was not there, and vocallearn's single-creature +24 Hz does not license\n"
+     "  assuming one on an n=18 panel."},
     {"duty", 1200000, Expect::kGuard, Tier::kLong,
      "derived: ctxaxis's budget, because it reuses ctxaxis's statistic and must\n"
      "  be comparable with it -- 1200000 ticks is 428 trials, 107 per word, which\n"
@@ -1063,6 +1076,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "ctxaxis") ok = run_ctxaxis(dna_blob, ticks, verbose);
   else if (name == "cost") ok = run_cost(dna_blob, ticks, verbose);
   else if (name == "duty") ok = run_duty(dna_blob, ticks, verbose);
+  else if (name == "dutyname") ok = run_dutyname(dna_blob, ticks, verbose);
   else if (name == "blockwhere") ok = run_blockwhere(dna_blob, ticks, verbose);
   else if (name == "blockanchor") ok = run_blockanchor(dna_blob, ticks, verbose);
   else if (name == "leverprobe") ok = run_leverprobe(dna_blob, ticks, verbose);

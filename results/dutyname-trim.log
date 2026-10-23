@@ -1,0 +1,38 @@
+experiment: dutyname
+  instrument        dutyname   trial seed 0000000001355b3a   1214 trials per arm
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  dutyname -- does the LESSON survive power-gating? `duty` showed the INDEX
+  survives a freeze between words and bit F2 even improves, but the index is
+  not the job: it says nothing about whether reward can still TEACH.
+  the arms      awake (ungated) vs gated at tick 1700 -- the word is 0-900 and
+                the reward window 900-1700, so this is the shortest window
+                that leaves reward and scoring untouched.
+  the stat      RATIO OF SUMS with a jackknife, not a mean of ratios, which
+                this project already measured as ~10x tighter. Pooled error
+                reduction 100*(1 - sum(late)/sum(early)), paired per creature.
+  void if       the `awake` arm shows no lesson -- a gated arm cannot preserve
+                what was not there, and vocallearn's single-creature +24 Hz
+                does not license assuming it on this n=18 panel.
+  18 creatures, 2 arms, the FIXED target (the arm with the measured effect).
+
+  arm        n    err early   err late    pooled reduction   scored/skipped
+  awake       18     0.4792      0.2859      40.35%          18940/2912
+  gated       18     0.4412      0.2388      45.87%          19881/1971
+
+  THE PRIMARY, gated minus awake, pooled reduction, jackknifed over 18
+  creatures: +5.53% +/- 2.74% (2.0 SE)
+
+  THE LESSON SURVIVES GATING, and the 2 SE interval is +0.04% to +11.01%
+  against the awake arm's own reduction of 40.35%.
+    THE WHOLE INTERVAL IS POSITIVE, so there is no cost at all here and
+    the point estimate is a GAIN of +5.53% -- but it reads 2.0 SE and
+    does NOT clear this project's 3 SE bar, so it is not a claim. What is
+    established is the absence of a cost, which is what the power
+    argument needs.
+    Either way the four-word ctxgrid version becomes worth its 4-5 h only
+    if no cost is established here.
+
+  WHAT THIS DOES NOT SHOW: four-word CONDITIONAL naming under gating. This is
+  two words and a fixed target -- the cheap half. `ctxgrid` with a gated arm is
+  the full claim and costs 4-5 h.

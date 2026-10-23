@@ -18299,16 +18299,77 @@ than the entire trim bought, from a mechanism the creature already has.**
 
 The gain survived a fresh seed family (+0.154 → +0.091, both past 3 SE), which is the test
 the trim's own F2 hint failed two days earlier (1.41 SE → 0.55 SE). So the **effect** is
-real at n=36. The **account** is a hypothesis and is labelled as one: silence may not be
-neutral for an online clustering rule — processing 1100 ticks of it per trial could drag the
-prototypes toward a silence feature, and freezing would protect them. That predicts a
-monotone dose-response in how much silence is processed, which is one extra arm and one more
-5-minute run, and it has not been done.
+real at n=36. The **account** offered for it was that silence is not neutral for an online
+clustering rule — processing 1100 ticks of it per trial drags the prototypes toward a silence
+feature, and freezing protects them.
 
-**What this does not show:** that NAMING survives gating. This measures the INDEX, which is
-the mechanism the freeze threatened and the cheap half of the question. A naming run is
-`ctxgrid`-scale (4–5 h) and is now worth spending, since the index not only survives but
-improves.
+**That account made a falsifiable prediction and it held.** `results/duty-dose.log` adds a
+`gated-half` arm at the midpoint of the awake window (derived, not chosen), appended last so
+the freeze check still compares the right arms:
+
+| arm | duty | bit F2 | paired vs `awake` |
+|---|---|---|---|
+| `awake` | 1.000 | 0.718 ± 0.034 | — |
+| `gated-half` | 0.804 | **0.813 ± 0.022** | +0.095 ± 0.040 (2.4 SE) |
+| `gated` | 0.607 | 0.872 ± 0.023 | +0.154 ± 0.045 (3.4 SE) |
+
+**0.718 → 0.813 → 0.872 is monotone in how much silence the creature processes**, and the
+paired gains order the same way (+0.095 then +0.154). The intermediate arm landed between, as
+predicted, rather than jumping to the gated value — which is what would have refuted the
+account by showing the *amount* of silence to be irrelevant.
+
+**Two limits on that, stated rather than buried.** The intermediate arm is 2.4 SE, so it is
+not independently resolved at this project's 3 SE bar; what the run establishes is the
+ORDERING, which is what the prediction was about. And **F1 is not monotone** — 0.952 → 0.909
+→ 0.937, with `gated-half` reading −0.044 ± 0.026 (1.7 SE) against `awake`. Every F1 effect
+here is under 3 SE on a bit already near ceiling (0.91–0.95), so F1 is uninformative about
+the mechanism rather than evidence against it; a clean test of the account needs the bit with
+headroom, which is F2.
+
+#### `dutyname` — and the LESSON survives too, with no cost established
+
+`results/dutyname-trim.log`. The index is not the job: `duty` says the creature still knows
+*which* context it is in, not that reward can still **teach** it while gated. That needed the
+teaching loop, so `run_vocallearn_session` now carries a `duty_awake_end` parameter —
+defaulted to 0, so every existing caller is bit-identical, with the gate placed after the
+caregiver renders and before anything touches the creature.
+
+18 creatures, two words, the FIXED target (the arm with the measured effect; the heard-target
+arm reads −0.1 and would be uninformative). Freeze from tick 1700, the shortest window that
+leaves the word (0–900) and the reward window (900–1700) untouched. The statistic is a
+**ratio of sums with a jackknife**, not a mean of per-creature percentages, which this project
+measured as ~10× tighter.
+
+| arm | err early | err late | pooled reduction | skipped |
+|---|---|---|---|---|
+| `awake` | 0.4792 | 0.2859 | 40.35% | 13.3% |
+| `gated` | 0.4412 | 0.2388 | 45.87% | 9.0% |
+
+**Gated minus awake: +5.53% ± 2.74%, 2.0 SE**, with a 2 SE interval of **+0.04% to +11.01%**.
+
+> **THE WHOLE INTERVAL IS POSITIVE, SO NO COST IS ESTABLISHED — and that is what the power
+> argument needs.** The point estimate is a *gain*, but at 2.0 SE it does not clear the 3 SE
+> bar and is **not a claim.**
+
+**A CONFOUND THAT MUST TRAVEL WITH THAT NUMBER, and it is the reason not to push the gain any
+further.** The two arms do not score the same trials: the gated creature **skips 9.0% against
+the awake creature's 13.3%**, a 4.3-point difference, and scores 5.0% more trials. A trial is
+skipped when the creature said nothing, so gating is also making it **vocalise more often** —
+a real behavioural difference, and the pooled reduction does not control for which trials
+enter it. Part of the +5.53% could be selection rather than better learning. The *absence of
+a cost* survives that objection, because a positive interval cannot be manufactured into a
+positive by scoring more trials in only one direction; the *size of the gain* does not.
+
+**AND A PREDICTION OF MINE THAT WAS WRONG, recorded because the error is instructive.** From
+the 400k-tick smoke (+5.61% ± 1.94%) I expected the SE to shrink ~2.9× at the full 3.4M
+budget. It grew, to ±2.74%. The reason: **the jackknife is over CREATURES, and n stayed 18.**
+Adding ticks per creature does not reduce between-creature variance. To tighten this SE you
+add creatures, not length — obvious in hindsight and the same family of error as quoting a
+wall-clock figure across a changed configuration.
+
+**What this still does not show:** four-word CONDITIONAL naming under gating. This is two
+words and a fixed target — the cheap half. `ctxgrid` with a gated arm is the full claim and
+costs 4–5 h; it is now licensed, since no cost is established here.
 
 ## Layout
 

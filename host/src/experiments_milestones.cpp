@@ -4508,7 +4508,26 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
                              // too, so reward has a phase-specific place to write instead
                              // of a shared one. Appended at the END by this signature's own
                              // convention, and false keeps every caller bit-identical.
-                             bool pin_phase = false) {
+                             bool pin_phase = false,
+                             // `dutyname`: POWER-GATE the creature inside each trial. Ticks
+                             // at or past this one are FROZEN -- neither `ear.tick` nor
+                             // `brain.step` is called, so no state decays and no internal
+                             // time passes, which is what a powered-down creature does. The
+                             // caregiver is still rendered every tick, so the acoustic world
+                             // advances IDENTICALLY to an ungated run and only the creature
+                             // stops.
+                             //
+                             // `duty` established on the INDEX that this is free (bit F1
+                             // -0.0143 +/- 0.0172 at n=36 pooled) and that freezing through
+                             // silence even HELPS bit F2 (+0.1104 +/- 0.0250, 4.4 SE,
+                             // replicated, with a monotone dose-response). What it could not
+                             // measure is whether NAMING survives, because that needs this
+                             // teaching loop. Hence the parameter.
+                             //
+                             // 0 means NO GATING and is the default, so every existing
+                             // caller is bit-identical. Appended at the END by this
+                             // signature's own convention.
+                             uint64_t duty_awake_end = 0) {
   // -1 is vocallearn's own rule, and passing nothing reproduces it exactly: the
   // positive control aims at one fixed target and every other arm at the word
   // that was heard.
@@ -4854,6 +4873,15 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
       const Word& heard = heard_table ? heard_table[label] : kWords[label];
       caregiver.render(sounding ? heard.f0 : 0.0f, heard.f1, heard.f2,
                        sounding ? 0.5f : 0.0f, pcm.data(), spt);
+      // THE POWER GATE, and it sits HERE on purpose: after the caregiver has rendered, so
+      // the acoustic world advances identically to an ungated run, and before anything
+      // touches the creature, so a frozen tick costs it nothing at all -- no ear, no step,
+      // no measurement, no internal time. Every per-tick accumulation below is skipped too,
+      // which is correct rather than incidental: a creature that is off does not produce and
+      // must not be scored. The reward window is ticks 900-1700, so any `duty_awake_end` at
+      // or above 1700 leaves reward and scoring untouched; a smaller one would starve the
+      // lesson, which a caller may want to measure but must choose deliberately.
+      if (duty_awake_end != 0 && t >= duty_awake_end) continue;
       ear.tick(s.brain, pcm.data(), spt);
       // The oracle condition, held for the whole trial. A caregiver naming a
       // thing does not take it away while the baby answers, and the condition
@@ -32077,6 +32105,228 @@ double ctxaxis_bit_acc(const std::vector<int>& part, const std::vector<int>& bit
   return total ? double(correct) / double(total) : 0.0;
 }
 
+// ============ dutyname: DOES THE LESSON SURVIVE POWER-GATING? ============
+//
+// WHAT `duty` ESTABLISHED AND WHAT IT COULD NOT. On the INDEX, freezing the creature between
+// words is free on bit F1 (-0.0143 +/- 0.0172 at n=36 pooled over two seed families) and
+// IMPROVES bit F2 (+0.1104 +/- 0.0250, 4.4 SE, replicated, with a monotone dose-response in
+// how much silence is processed). The freeze is EXACT -- `gated-long` minus `gated` is 0/0 --
+// so the result is SCALE-FREE in the gap and the deployment win is set by how often words
+// arrive: ~17% duty at a word every 10 s, ~2.8% at a word a minute.
+//
+// **But the index is not the job.** `duty` measures whether the creature still knows WHICH
+// context it is in; it says nothing about whether reward can still TEACH it under gating.
+// That needs the teaching loop, which is why `run_vocallearn_session` now carries a
+// `duty_awake_end` parameter. This is the cheap half of that question: two words and the
+// FIXED target, which is the arm with the measured effect (+24 Hz; the heard-target arm reads
+// -0.1 and would be uninformative about anything).
+//
+// ================== PRE-REGISTERED, BEFORE THE RUN ==================
+// THE ARMS, one variable:
+//   awake   `duty_awake_end = 0`, the ungated session. Current behaviour.
+//   gated   `duty_awake_end = 1700`. The word is ticks 0-900 and the reward window 900-1700,
+//           so this is the shortest window that leaves reward and scoring untouched -- a
+//           smaller one would starve the lesson rather than test gating.
+//
+// THE STATISTIC IS A RATIO OF SUMS WITH A JACKKNIFE, NOT A MEAN OF RATIOS, because this
+// project has a memory for exactly this: a mean of per-creature percentages is not a
+// statistic and the ratio-of-sums form came out ~10x tighter. `vocallearn`'s own headline is
+// the error reduction `100 * (1 - err_late/err_early)`; pooled that is
+// `100 * (1 - sum(err_late)/sum(err_early))`, and the paired arm difference is jackknifed by
+// deleting one creature at a time and recomputing BOTH arms.
+//
+// VOID IF the `awake` arm shows no lesson. A gated arm cannot be shown to preserve something
+// that was not there, and `vocallearn` is a single-creature experiment, so its +24 Hz does
+// not license an assumption about this n=18 panel.
+//
+// BOTH OUTCOMES ARE USEFUL and no pass/fail is pre-committed:
+//   THE LESSON SURVIVES   the power claim is complete on the cheap half -- a one-purpose
+//                         creature can be taught while running at a fraction of the duty,
+//                         and the four-word `ctxgrid` version becomes worth its 4-5 h.
+//   THE LESSON DEGRADES   gating is free for the INDEX and costly for LEARNING, which is a
+//                         sharper statement than either half alone and would say the win is
+//                         available only after training rather than during it. That is still
+//                         a deployable claim, just a different one.
+// =====================================================================
+bool run_dutyname(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  aibaby::Dna dna;
+  if (dna.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) {
+    std::printf("  setup failed: the genome does not load\n");
+    return false;
+  }
+  constexpr uint32_t kReps = 18;
+  constexpr uint64_t kAwakeEnd = 1700;
+  struct DNArm { const char* name; uint64_t awake_end; };
+  static const DNArm kDN[] = {{"awake", 0}, {"gated", kAwakeEnd}};
+  constexpr uint32_t kN = sizeof(kDN) / sizeof(kDN[0]);
+  instrument("dutyname", dna.header().seed ^ 0x7CF3u, ticks / kVLTrialTicks,
+             "trials per arm");
+  std::printf("  dutyname -- does the LESSON survive power-gating? `duty` showed the INDEX\n"
+              "  survives a freeze between words and bit F2 even improves, but the index is\n"
+              "  not the job: it says nothing about whether reward can still TEACH.\n");
+  std::printf("  the arms      awake (ungated) vs gated at tick %llu -- the word is 0-900 and\n"
+              "                the reward window 900-1700, so this is the shortest window\n"
+              "                that leaves reward and scoring untouched.\n",
+              (unsigned long long)kAwakeEnd);
+  std::printf("  the stat      RATIO OF SUMS with a jackknife, not a mean of ratios, which\n"
+              "                this project already measured as ~10x tighter. Pooled error\n"
+              "                reduction 100*(1 - sum(late)/sum(early)), paired per creature.\n");
+  std::printf("  void if       the `awake` arm shows no lesson -- a gated arm cannot preserve\n"
+              "                what was not there, and vocallearn's single-creature +24 Hz\n"
+              "                does not license assuming it on this n=%u panel.\n", kReps);
+  std::printf("  %u creatures, %u arms, the FIXED target (the arm with the measured effect).\n\n",
+              kReps, kN);
+
+  struct Cell {
+    bool ok = false;
+    double e0 = 0.0, e1 = 0.0;   // err_early, err_late
+    uint32_t scored = 0, skipped = 0;
+  };
+  const std::vector<Cell> cells = parallel_reps<Cell>(kReps * kN, [&](uint32_t job) {
+    const uint32_t r = job / kN, a = job % kN;
+    Cell c;
+    std::vector<uint8_t> v = blob;
+    const uint64_t sg = dna.header().seed + r * 7919ull;
+    std::memcpy(v.data() + offsetof(aibaby::DnaHeader, seed), &sg, sizeof(sg));
+    Regime reg;
+    reg.praise = kPraiseValue;
+    reg.scold = kScoldValue;
+    // Every defaulted parameter spelled out, because `duty_awake_end` is the LAST one and
+    // there is no other way to reach it. Each nullptr/default here is the value every other
+    // caller already gets.
+    const VLRun run = run_vocallearn_session(
+        v, ticks, kVLFixed, nullptr, reg, -1, nullptr, kVLScoreFormant, nullptr, kVLWords,
+        nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, false, kDN[a].awake_end);
+    if (!run.ok || run.err_early <= 0.0) return c;
+    c.e0 = run.err_early;
+    c.e1 = run.err_late;
+    c.scored = run.scored;
+    c.skipped = run.skipped;
+    c.ok = true;
+    return c;
+  });
+
+  // Pooled reduction per arm: a RATIO OF SUMS. `keep` lets the jackknife drop one creature.
+  const auto reduction = [&](uint32_t a, int32_t drop) {
+    double s0 = 0.0, s1 = 0.0;
+    for (uint32_t r = 0; r < kReps; ++r) {
+      if (int32_t(r) == drop) continue;
+      const Cell& c = cells[r * kN + a];
+      if (!c.ok) continue;
+      s0 += c.e0;
+      s1 += c.e1;
+    }
+    return s0 > 0.0 ? 100.0 * (1.0 - s1 / s0) : 0.0;
+  };
+
+  std::printf("  arm        n    err early   err late    pooled reduction   scored/skipped\n");
+  size_t nok[kN];
+  double red[kN];
+  for (uint32_t a = 0; a < kN; ++a) {
+    double s0 = 0.0, s1 = 0.0;
+    uint64_t sc = 0, sk = 0;
+    size_t n = 0;
+    for (uint32_t r = 0; r < kReps; ++r) {
+      const Cell& c = cells[r * kN + a];
+      if (!c.ok) continue;
+      s0 += c.e0;
+      s1 += c.e1;
+      sc += c.scored;
+      sk += c.skipped;
+      ++n;
+    }
+    nok[a] = n;
+    red[a] = reduction(a, -1);
+    if (n < 3) {
+      std::printf("  %-10s %3zu  too few usable creatures\n", kDN[a].name, n);
+      continue;
+    }
+    std::printf("  %-10s %3zu  %9.4f   %9.4f   %8.2f%%          %llu/%llu\n", kDN[a].name, n,
+                s0 / double(n), s1 / double(n), red[a], (unsigned long long)sc,
+                (unsigned long long)sk);
+  }
+
+  if (nok[0] < 3 || nok[1] < 3) {
+    std::printf("\n  setup failed: an arm has too few usable creatures.\n");
+    return false;
+  }
+  if (red[0] < 5.0) {
+    std::printf("\n  VOID: the `awake` arm reduces its error by only %.2f%%, so there is no\n"
+                "  lesson here for gating to preserve or destroy. Fix the control first --\n"
+                "  vocallearn's single-creature +24 Hz does not license assuming one.\n",
+                red[0]);
+    return false;
+  }
+
+  // THE PAIRED DIFFERENCE, jackknifed over creatures: delete one, recompute BOTH arms.
+  const double d_full = red[1] - red[0];
+  double jsum = 0.0, jsq = 0.0;
+  uint32_t jn = 0;
+  for (uint32_t r = 0; r < kReps; ++r) {
+    if (!cells[r * kN + 0].ok || !cells[r * kN + 1].ok) continue;
+    const double d = reduction(1, int32_t(r)) - reduction(0, int32_t(r));
+    jsum += d;
+    jsq += d * d;
+    ++jn;
+  }
+  double se = 0.0;
+  if (jn >= 3) {
+    const double mean = jsum / double(jn);
+    const double var = (jsq / double(jn)) - mean * mean;
+    se = std::sqrt((var > 0.0 ? var : 0.0) * double(jn - 1));
+  }
+  const double nse = se > 0.0 ? d_full / se : 0.0;
+  std::printf("\n  THE PRIMARY, gated minus awake, pooled reduction, jackknifed over %u\n"
+              "  creatures: %+.2f%% +/- %.2f%% (%.1f SE)\n", jn, d_full, se, std::fabs(nse));
+
+  if (nse <= -3.0) {
+    std::printf("\n  THE LESSON DOES NOT SURVIVE GATING, and that is a sharper statement than\n"
+                "  either half alone: freezing between words is free for the INDEX and costly\n"
+                "  for LEARNING. The deployment win is then available AFTER training rather\n"
+                "  than during it -- still deployable, just a different claim, and it means a\n"
+                "  gated creature must be taught awake first.\n");
+  } else if (nse >= 3.0) {
+    std::printf("\n  THE LESSON IMPROVES UNDER GATING, which would match `duty`'s own F2\n"
+                "  result and its dose-response: if processing silence drags the index's\n"
+                "  prototypes, it may drag the lesson too. Treat as a DISCOVERY-SAMPLE\n"
+                "  finding until it is re-asked on a fresh seed family -- the trim's F2 hint\n"
+                "  read 1.41 SE on its own sample and 0.55 SE on fresh creatures.\n");
+  } else {
+    // THE BOUND MUST BE READ OFF THE INTERVAL, NOT OFF |d|, and the first version of this
+    // branch got it wrong in a way this project has already paid for once: it computed
+    // `|d| + 2se` and called it "the lesson loses at most", which on a POSITIVE difference
+    // describes a bound on the GAIN while calling it a loss. Same bug as the tutorgrid line
+    // that reported +41.03 Hz as "a RESOLVED loss". A threshold on a magnitude says nothing
+    // about direction, so the two ends of the interval are computed and named separately.
+    const double lo = d_full - 2.0 * se, hi = d_full + 2.0 * se;
+    std::printf("\n  THE LESSON SURVIVES GATING, and the 2 SE interval is %+.2f%% to %+.2f%%\n"
+                "  against the awake arm's own reduction of %.2f%%.\n", lo, hi, red[0]);
+    if (lo > 0.0) {
+      std::printf("    THE WHOLE INTERVAL IS POSITIVE, so there is no cost at all here and\n"
+                  "    the point estimate is a GAIN of %+.2f%% -- but it reads %.1f SE and\n"
+                  "    does NOT clear this project's 3 SE bar, so it is not a claim. What is\n"
+                  "    established is the absence of a cost, which is what the power\n"
+                  "    argument needs.\n", d_full, std::fabs(nse));
+    } else if (hi < 0.0) {
+      std::printf("    The whole interval is NEGATIVE, so gating does cost the lesson, by\n"
+                  "    between %.2f%% and %.2f%% of reduction -- under the 3 SE bar for a\n"
+                  "    claim, but the sign is not in doubt.\n", -hi, -lo);
+    } else {
+      std::printf("    The interval STRADDLES zero: any loss is bounded at %.2f%% of\n"
+                  "    reduction, which is %.0f%% of the awake effect. That is the honest\n"
+                  "    statement -- indistinguishable, never identical.\n",
+                  -lo, red[0] > 0.0 ? 100.0 * (-lo) / red[0] : 0.0);
+    }
+    std::printf("    Either way the four-word ctxgrid version becomes worth its 4-5 h only\n"
+                "    if no cost is established here.\n");
+  }
+  std::printf("\n  WHAT THIS DOES NOT SHOW: four-word CONDITIONAL naming under gating. This is\n"
+              "  two words and a fixed target -- the cheap half. `ctxgrid` with a gated arm is\n"
+              "  the full claim and costs 4-5 h.\n");
+  return true;
+}
+
 // ============ duty: CAN THE CREATURE BE POWER-GATED BETWEEN WORDS? ============
 //
 // WHY THIS IS THE POWER LEVER AND OP COUNT IS NOT. `cost` measured 9.054e5 operations per
@@ -32166,6 +32416,19 @@ bool run_duty(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
       {"awake",      kVLTrialTicks, 0},
       {"gated",      kAwakeEnd,     0},
       {"gated-long", kAwakeEnd,     kVLTrialTicks},
+      // THE DOSE ARM, appended LAST so the three indices above keep their meaning and the
+      // freeze check still compares arms 2 and 1.
+      //
+      // The first run found gating IMPROVING bit F2 (+0.1104 +/- 0.0250, 4.4 SE pooled over
+      // two seed families), which is the opposite of the derived prediction. The account
+      // offered for it is that silence is NOT neutral for an online clustering rule:
+      // processing 1100 ticks of it per trial drags the prototypes toward a silence feature,
+      // and freezing protects them. **That account predicts a MONOTONE dose-response in how
+      // much silence is processed, and this arm is the test.** The midpoint between
+      // `kAwakeEnd` and the full trial, derived rather than chosen: if the account holds, F2
+      // should land between `awake` and `gated`; if F2 jumps straight to the gated value, the
+      // amount of silence does not matter and the account is wrong.
+      {"gated-half", (kAwakeEnd + kVLTrialTicks) / 2, 0},
   };
   constexpr uint32_t kN = sizeof(kDA) / sizeof(kDA[0]);
   instrument("duty", dna.header().seed ^ 0x7CE1u, ticks / kVLTrialTicks, "trials per arm");
