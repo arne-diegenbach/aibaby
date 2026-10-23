@@ -18389,9 +18389,43 @@ deleting modules re-rolled every later draw and forced an unpaired test.
 | gated (duty 0.607) | **+0.0302 ± 0.0236** (1.3 SE) |
 | **paired cross-run difference** | **−0.1268 ± 0.0385 (3.3 SE)** |
 
-> **FOUR-WORD CONDITIONAL NAMING DOES NOT SURVIVE POWER-GATING.** A resolved loss of
-> **81% of the effect** at the point estimate, 2 SE interval −0.204 to −0.050, with 25 of 36
-> creatures lower when gated (sign test z = +2.33).
+> **WHAT THE INDEX BUYS COLLAPSES UNDER GATING: a resolved fall of 81% of the effect**, 2 SE
+> interval −0.204 to −0.050, 25 of 36 creatures lower (sign test z = +2.33).
+
+#### But decomposing it refutes the reading this run was first written up with
+
+The excess is `oracle` minus `off`, and a fall in it has two completely different possible
+causes. Splitting the two arms — paired, same 36 creatures — says which:
+
+| arm | ungated | gated | paired change |
+|---|---|---|---|
+| `oracle` (host-written index) | 0.4707 | 0.4170 | −0.0537 ± 0.0260 (**2.1 SE — not resolved**) |
+| `off` (no index) | 0.3137 | 0.3868 | **+0.0731 ± 0.0223 (3.3 SE — resolved)** |
+
+> **THE COLLAPSE IS DRIVEN BY THE CONTROL RISING, NOT BY INDEXED NAMING FALLING.** The
+> indexed arm's own fall is 2.1 SE and does not clear the bar. **So "conditional naming does
+> not survive power-gating" was too strong, and this page said it first.** What is established
+> is narrower: **gating shrinks what an index buys, mostly by lifting the no-index baseline.**
+
+**And it refutes the mechanism offered alongside it.** The carry-over account — that freezing
+leaves the previous condition in the feature, so reward writes into the wrong row — cannot
+apply to the arm that matters here, because `ctxgrid`'s `oracle` arm takes a **host-written**
+index that is re-supplied every trial and cannot carry anything over. Consistent with that,
+the oracle arm barely moved. The hypothesis is unsupported and should not be carried forward
+as though the run had licensed it.
+
+**What the rise in the control probably is, flagged as open rather than explained.** The
+unindexed arm reads 0.3137 ungated, which is close to this project's own measured empty-voice
+level of ~0.30 for a four-word nearest-target score — the reason that statistic always carries
+a control. Gated it reads 0.3868, well above that. So gating appears to change the *output
+distribution* in a way that improves raw target-matching without any conditioning: a narrower
+or better-centred voice would do it. That is measurable from the spread columns already in
+both logs and has not been done.
+
+**The honest state of the gated line is therefore:** the index survives gating (`duty`); a
+fixed-target lesson survives (`dutyname`); **what an index buys shrinks**, by a mechanism that
+is at least partly a baseline shift rather than a loss of conditionality; and the clean claim
+"the creature works at low duty while doing its job" remains unsupported in either direction.
 
 **This refutes the broader claim this line was heading toward, and the retraction matters more
 than the result.** Two runs earlier the summary here was that "a one-purpose creature can run
@@ -18402,21 +18436,15 @@ survives is narrower and precise:
 |---|---|
 | the condition INDEX | free, and the second bit improves (`duty`) |
 | a two-word FIXED-target lesson | no cost established (`dutyname`) |
-| **four-word CONDITIONAL naming** | **−81% of the effect, 3.3 SE** |
+| **what a four-word index BUYS** | **−81% of the effect, 3.3 SE** |
+| of which: indexed naming itself | −0.0537 ± 0.0260 — **2.1 SE, not resolved** |
+| of which: the no-index baseline | **+0.0731 ± 0.0223 — 3.3 SE, resolved** |
 
-**So the cost is localised to CONDITIONALITY**, not to perception and not to learning in
-general — which is exactly the reading pre-registered for this outcome before the run, rather
-than one fitted to it afterwards.
-
-**A mechanism that fits all three results, offered as a hypothesis with its own test.** `duty`
-established that freezing stops the index EMA from decaying, so a gated creature carries the
-*previous* word into the next trial. For a clustering that is harmless — the partition stays
-self-consistent even if shifted — and for a single fixed target there is no context to
-misattribute to. But for four context-dependent targets, carry-over means reward sometimes
-writes into the **wrong context's row**, which is fatal for a conditional map and invisible in
-both cheaper tests. **It predicts two things:** the loss should grow with the number of
-contexts, and it should vanish if the index is handed over by the host. Both are measurable;
-neither has been done.
+**The pre-registered alternative for this run was that a loss would localise the cost to
+conditionality. The decomposition does not support that reading**, and saying so is the point
+of having written the alternative down: the indexed arm's own fall is unresolved, and the
+resolved movement is in the control. Pre-registering a reading does not make it the right one
+when the data arrive — it only makes the mismatch visible.
 
 **What this does not license:** abandoning duty-cycling. Gating remains free for perception,
 and nothing here tests a creature gated *after* training rather than during it — which is the
