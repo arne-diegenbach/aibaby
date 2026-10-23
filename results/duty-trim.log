@@ -1,0 +1,48 @@
+experiment: duty
+  instrument        duty   trial seed 0000000001355b28   428 trials per arm
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  duty -- can the creature be POWER-GATED between words? `cost` puts its
+  9.054e5 ops/s at 293x-276,000x BELOW a chip's 250-500 mW active floor, so
+  operations are not the power bill -- being AWAKE is, and it currently runs
+  awake 100% of the time.
+  gating       FROZEN: neither ear nor step is called, so no state decays and
+               no internal time passes. The world is still rendered every
+               tick, so the acoustics are identical across arms.
+  the risk     DERIVED, not guessed: the index is an EMA with a 1000-tick
+               time constant. Awake, 1100 ticks of post-reward silence decay
+               it to exp(-1.1) = 33%; FROZEN it decays to 100%. So a gated
+               creature should carry the PREVIOUS word into the next one.
+  the stat     ctxaxis's: per-BIT held-out accuracy, slot-to-bit map fitted
+               on the training half only, so chance is exactly 0.50.
+  18 creatures, 3 arms, 4 slots.
+
+  arm          n   duty     present   bit F1           bit F2
+  awake         18  1.000    1.000     0.952 +/- 0.017    0.718 +/- 0.034
+  gated         18  0.607    1.000     0.937 +/- 0.017    0.872 +/- 0.023
+  gated-long    18  0.304    1.000     0.937 +/- 0.017    0.872 +/- 0.023
+
+  THE PRIMARY, paired per creature against `awake`:
+    gated        bit F1  -0.015 +/- 0.019 (-0.8 SE)
+    gated        bit F2  +0.154 +/- 0.045 (3.4 SE)   RESOLVED GAIN
+    gated-long   bit F1  -0.015 +/- 0.019 (-0.8 SE)
+    gated-long   bit F2  +0.154 +/- 0.045 (3.4 SE)   RESOLVED GAIN
+
+  FREEZE CHECK: `gated-long` minus `gated` = 0 / 0 on the two bits.  EXACT, as it must be:
+    a frozen creature cannot tell how long it was off, so the two arms see
+    the IDENTICAL awake ticks and only the duty denominator differs. The gate holds.
+
+  POWER-GATING IS FREE, and the derived prediction is REFUSED: freezing
+  between words does NOT degrade the index, so the EMA's failure to decay
+  across the gap does not smear it. **And because the freeze is EXACT the
+  result is SCALE-FREE in the gap**: a creature that pays nothing at a duty
+  of 0.304 pays nothing at ANY sparsity, because the awake ticks are
+  identical either way. So the deployment win is set by how often words
+  arrive and not by anything in the creature -- a word every 10 s is ~17%
+  duty, a word a minute ~2.8%. That is a larger factor than the whole trim
+  bought, from a mechanism the creature already has.
+
+  WHAT THIS DOES NOT SHOW: that NAMING survives gating. This measures the
+  INDEX, which is the mechanism the freeze threatens and the cheap half of
+  the question. A naming run is ctxgrid-scale (4-5 h) and is only worth
+  spending once the index is known to survive.

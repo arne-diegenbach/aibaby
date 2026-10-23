@@ -18238,6 +18238,78 @@ instead.
 **And `sleep` passed** — it is absent from the discrepancy list, which was the one experiment
 on this tier that mattered for shipped behaviour rather than for the vision line.
 
+### `duty` — power-gating is free, and freezing through silence HELPS the index
+
+`results/duty-trim.log` and `results/duty-trim-fresh.log`, 2026-10-23. 18 creatures per arm
+per sample, 1.2M ticks (428 trials, 107 per word). Replicated on a second, independent seed
+family before anything here was claimed.
+
+**Why this is the power question and op count is not.** `cost` measured 9.054e5 operations
+per simulated second, which sits between 293× and 276,000× below a chip's 250–500 mW *active
+floor* depending on the per-operation figure — and that floor does not scale down with
+utilisation. So shaving operations buys nothing and **being awake is the entire bill**;
+`cost` also reports the creature `asleep for 0.0%`. The obvious 200× from event-driven
+simulation is separately refused: 82.6% of the cost is the dense per-neuron per-tick update,
+which draws an **independent noise sample per neuron per tick**, and motor noise *is* the
+exploration drive node perturbation runs on. That term is load-bearing, not waste.
+
+**Gating is modelled as a freeze** — neither `ear.tick` nor `brain.step` is called, so no
+state decays and no internal time passes, which is what a powered-down creature does. The
+`VowelSource` is still rendered every tick, so the acoustic world advances identically across
+arms and only the creature stops.
+
+| arm | duty | bit F1 (discovery / fresh) | bit F2 (discovery / fresh) |
+|---|---|---|---|
+| `awake` | 1.000 | 0.952 ± 0.017 / 0.913 ± 0.031 | 0.718 ± 0.034 / 0.755 ± 0.027 |
+| `gated` | 0.607 | 0.937 ± 0.017 / 0.902 ± 0.021 | 0.872 ± 0.023 / 0.846 ± 0.033 |
+| `gated-long` | 0.304 | identical to `gated` | identical to `gated` |
+
+**Paired per creature against `awake`, pooled across both samples (n=36):**
+
+| bit | pooled | discovery | fresh | |
+|---|---|---|---|---|
+| F1 | **−0.0143 ± 0.0172** | −0.015 | −0.011 | 0.8 SE — **no cost** |
+| F2 | **+0.1104 ± 0.0250** | +0.154 | +0.091 | **4.4 SE — a resolved GAIN, replicated** |
+
+> **POWER-GATING IS FREE, AND THE DERIVED PREDICTION WAS REFUSED.** The prediction was
+> derived from the kernel's own time constant rather than guessed: the index EMA has a
+> 1000-tick tau, so awake the 1100 ticks of post-reward silence decay it to exp(−1.1) ≈ 33%
+> and frozen to 100% — a gated creature should carry the previous word into the next and
+> smear the index. It does not. **F1 is untouched and F2 is BETTER.**
+
+**The F1 null stated as a bound, which is the only honest way:** the 2 SE bound on any loss
+is 0.049 against the awake arm's own ≈0.93, so gating costs **at most ~5% of that bit**, with
+a point estimate of −0.014.
+
+#### The freeze check is exact, and that is what makes the result scale-free
+
+`gated-long` minus `gated` came back **0 / 0 on both bits in both samples.** That is correct
+by construction and the arm exists to prove it: a frozen creature cannot tell how long it was
+off, so an 1100-tick gap and a 3900-tick gap hand it the identical sequence of awake ticks,
+and only the duty denominator differs. Any difference would have meant internal time leaking
+through the gate, and the experiment refuses on it.
+
+**So the result is SCALE-FREE in the gap length.** A creature that pays nothing at 30% duty
+pays nothing at *any* sparsity, because the awake ticks are identical either way. The
+deployment win is therefore set by how often words arrive and not by anything in the
+creature: a word every 10 s is ~17% duty, a word a minute ~2.8%. **That is a larger factor
+than the entire trim bought, from a mechanism the creature already has.**
+
+#### The F2 gain is replicated; its explanation is not
+
+The gain survived a fresh seed family (+0.154 → +0.091, both past 3 SE), which is the test
+the trim's own F2 hint failed two days earlier (1.41 SE → 0.55 SE). So the **effect** is
+real at n=36. The **account** is a hypothesis and is labelled as one: silence may not be
+neutral for an online clustering rule — processing 1100 ticks of it per trial could drag the
+prototypes toward a silence feature, and freezing would protect them. That predicts a
+monotone dose-response in how much silence is processed, which is one extra arm and one more
+5-minute run, and it has not been done.
+
+**What this does not show:** that NAMING survives gating. This measures the INDEX, which is
+the mechanism the freeze threatened and the cheap half of the question. A naming run is
+`ctxgrid`-scale (4–5 h) and is now worth spending, since the index not only survives but
+improves.
+
 ## Layout
 
 ```
