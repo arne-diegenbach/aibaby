@@ -18538,6 +18538,106 @@ when the data arrive — it only makes the mismatch visible.
 and nothing here tests a creature gated *after* training rather than during it — which is the
 deployment case that matters most and is a different run.
 
+### Chasing the 10.3 SE index effect: four hypotheses refuted, and an instrument defect found
+
+The gated `ctxgrid` run left one clean, attributable, unexplained effect — `ctx_match` falling
+0.144 at 10.3 SE, robust to matched experience and matched reward. This records what it is
+*not*, because four cheap checks each refuted a mechanism I had proposed, and one of them
+found something that matters more than the effect.
+
+**THE INSTRUMENT DEFECT, and it changes how every `ctxgrid` number should be read.**
+`run_ctxgrid` writes only `context_slots`; it **never writes `context_source`**. The genome
+has `context_source = 4`, and source ≥ 2 binds the index to the **auditory** module — so the
+`CtxDrive` injection into the *context* module is **ignored by the index entirely**.
+
+> **`ctxgrid`'s "oracle" arm is not an oracle on this genome.** Its `ctx_match` of 0.7498 is
+> the **derived** index's consistency. The real contrast is "has a context table" versus
+> "does not", with both arms receiving the same host injection — which is a meaningful
+> comparison, and arguably a more relevant one than an oracle, but it is **mislabelled**, and
+> two earlier commits were framed on the assumption that the arm was host-driven.
+
+**And the injection is not inert for behaviour even though it is inert for indexing**, because
+the context module projects to the larynx. So it is a host-supplied bias on the voice present
+in both arms, which is a separate thing from a condition the index can read.
+
+**THE TIME COURSE: gating does not degrade the index anywhere in the word, absent learning.**
+`duty` gained a per-tick curve and a host-driven pair of arms. Bit F1 then F2, 18 creatures:
+
+| arm | t=100 | t=300 | t=500 | t=880 | t=1300 |
+|---|---|---|---|---|---|
+| awake (derived) | 0.539 / 0.480 | 0.726 / 0.703 | 0.799 / 0.784 | 0.770 / 0.764 | 0.829 / 0.784 |
+| gated (derived) | 0.499 / 0.520 | 0.717 / 0.717 | 0.811 / 0.798 | **0.864** / 0.772 | 0.840 / 0.783 |
+| awake, host-driven | 1.000 | 1.000 | 1.000 | 1.000 | 1.000 |
+| gated, host-driven | 1.000 | 1.000 | 1.000 | 1.000 | 1.000 |
+
+Gated is equal or better from t=300 onward, and the host-driven path is saturated in both
+arms at every point. **So the effect is not an onset transient, not specific to the
+host-driven path, and not an artefact of sampling at one tick** — three of the four
+hypotheses, refuted in one run. The derived index starting at chance at t=100 and rising by
+t=500 is DNA v53's design showing up directly: the ear's average needs time to accumulate the
+word.
+
+**What `duty` lacks is learning**, and v53's own note names why that could matter: *"a derived
+index sits inside a loop — the bias table steers the voice, and the voice is what the index is
+read from."* `duty` has no reward and no plasticity, so there is no loop; `ctxgrid` has both.
+
+**The bridge test was VOID, and the vacuity check is what caught it.** `dutyname` was given
+`ctx_match` to report, on the theory that it teaches and therefore closes the loop. It came
+back **0.000 in both arms**: the genome carries `context_slots = 0` and `dutyname` never set
+it, so there was no index to measure. **That also narrows a committed claim** — `dutyname`'s
+result that a lesson survives gating was measured on a creature with **no conditional
+machinery at all**, which is consistent with it being clean, and is a smaller statement than
+"the lesson survives" on its own suggests.
+
+**The remaining hypothesis cannot be tested cheaply, and that is where this stops.** An index
+inside a learning loop needs a *conditional* task — a fixed target gives the index nothing to
+condition on — so the test is `ctxgrid` itself with `ctx_match` early/late instrumentation, on
+both arms: 5–7 h. Worth doing, not worth starting without deciding to.
+
+**The honest state of the effect:** real, 10.3 SE, robust to experience and reward, not
+located in the index's time course or in the host-driven path, and plausibly a second-order
+consequence of gating changing what is learned rather than a direct cost of the freeze.
+
+### An audit for the defect class, since one instance was found by accident
+
+`ctxgrid` sets `context_slots` per arm, injects a `CtxDrive`, and **inherits
+`context_source`** from the genome. That makes the meaning of its arms depend on a field it
+does not control. `tools/audit_inherited.py` sweeps every experiment for that exact shape.
+
+**Five have it:** `run_ctxgrid`, `run_ctxfour`, `run_ctxvocab`, `run_areax`, `run_rpeprobe`.
+All five set the resolution, inject a host condition, and let the genome choose the signal.
+Twenty-two other experiments control both fields, so this is a minority pattern rather than a
+convention.
+
+**Whether it bites depends on the genome, and the exposure is bounded:** of the 50 genomes in
+the repository, **44 carry `context_source = 0`** — where the injected drive *is* what the
+index reads, so the arm is a genuine oracle and there is no defect — and **6 carry
+`context_source = 4`**, namely `results/ctxgrid.toml` and its descendants, where the index
+reads the auditory module instead and the injection is invisible to it.
+
+> **`ctxgrid`'s banked four-word naming result was measured on `results/ctxgrid.toml`, which
+> carries source 4.** So its "oracle" arm was running the **derived** index.
+
+**That cuts both ways and both should be said.** The naming claim is *stronger* than labelled:
+the creature reaches four-word conditional naming on an index **it derives itself**, not one
+handed to it. But **any ceiling reading is unsupported** — nothing in that experiment measures
+what a perfect index would buy, and statements of the form "even with a perfect index…"
+sourced from it need re-checking. The same caution applies to `ctxfour`'s four-levels-on-one-
+axis result, which is quoted elsewhere as having used a perfect index; which genome it ran on
+determines whether that is true.
+
+**Why this is documented rather than fixed.** Setting `context_source` explicitly in those
+five would change what their arms *mean*, and three of them carry banked results. That is a
+new measurement, not a repair, and it should be made deliberately. The cheap non-behavioural
+mitigation is for each to **print the source it inherited**, so an arm's meaning is visible in
+its own log; that is a separate change and is not in this one.
+
+**The general rule, which is the durable part:** an experiment that varies one field of a
+coupled pair and inherits the other is interpreting arms it does not fully control. For the
+index the pair is (`context_slots`, `context_source`) — slots choose the resolution, source
+chooses **which population the index is read from** — and inheriting the second means the
+same experiment measures different things on different genomes, silently.
+
 ## Layout
 
 ```

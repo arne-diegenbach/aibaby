@@ -32181,6 +32181,15 @@ bool run_dutyname(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
   struct Cell {
     bool ok = false;
     double e0 = 0.0, e1 = 0.0;   // err_early, err_late
+    // THE INDEX, inside a LEARNING loop -- which is what `duty` could not supply. That run
+    // found gating harmless to the index at every point in the word, on both sources, with no
+    // reward and no plasticity. `ctxgrid` found it degraded by 0.144 at 10.3 SE WITH both. The
+    // difference between those two setups is learning, and v53's own note says why it could
+    // matter: "a derived index sits inside a loop -- the bias table steers the voice, and the
+    // voice is what the index is read from". Early and late thirds are reported as well,
+    // because an index that STARTS bad and one that DEGRADES as the loop closes are different
+    // findings and a session mean cannot tell them apart.
+    double cm = 0.0, cm_early = 0.0, cm_late = 0.0;
     uint32_t scored = 0, skipped = 0;
   };
   const std::vector<Cell> cells = parallel_reps<Cell>(kReps * kN, [&](uint32_t job) {
@@ -32201,6 +32210,9 @@ bool run_dutyname(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
     if (!run.ok || run.err_early <= 0.0) return c;
     c.e0 = run.err_early;
     c.e1 = run.err_late;
+    c.cm = run.ctx_match;
+    c.cm_early = run.ctx_match_early;
+    c.cm_late = run.ctx_match_late;
     c.scored = run.scored;
     c.skipped = run.skipped;
     c.ok = true;
@@ -32220,7 +32232,7 @@ bool run_dutyname(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
     return s0 > 0.0 ? 100.0 * (1.0 - s1 / s0) : 0.0;
   };
 
-  std::printf("  arm        n    err early   err late    pooled reduction   scored/skipped\n");
+  std::printf("  arm        n    err early   err late    reduction   ctx_match (all/early/late)\n");
   size_t nok[kN];
   double red[kN];
   for (uint32_t a = 0; a < kN; ++a) {
@@ -32242,9 +32254,20 @@ bool run_dutyname(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
       std::printf("  %-10s %3zu  too few usable creatures\n", kDN[a].name, n);
       continue;
     }
-    std::printf("  %-10s %3zu  %9.4f   %9.4f   %8.2f%%          %llu/%llu\n", kDN[a].name, n,
-                s0 / double(n), s1 / double(n), red[a], (unsigned long long)sc,
-                (unsigned long long)sk);
+    std::vector<double> cma, cme, cml;
+    for (uint32_t r = 0; r < kReps; ++r) {
+      const Cell& c = cells[r * kN + a];
+      if (!c.ok) continue;
+      cma.push_back(c.cm);
+      cme.push_back(c.cm_early);
+      cml.push_back(c.cm_late);
+    }
+    double z1 = 0, z2 = 0, z3 = 0;
+    const double ma = ctx_mean_se(cma, &z1), me = ctx_mean_se(cme, &z2),
+                 ml = ctx_mean_se(cml, &z3);
+    (void)sc; (void)sk;
+    std::printf("  %-10s %3zu  %9.4f   %9.4f   %7.2f%%   %.3f+/-%.3f  %.3f  %.3f\n",
+                kDN[a].name, n, s0 / double(n), s1 / double(n), red[a], ma, z1, me, ml);
   }
 
   if (nok[0] < 3 || nok[1] < 3) {
@@ -32411,7 +32434,56 @@ bool run_duty(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
   constexpr uint64_t kAwakeEnd = 1700;
   // The index is sampled where `ctxaxis` samples it, so the two runs are comparable.
   constexpr uint64_t kSampleTick = kVLWordTicks + 400;
-  struct DArm { const char* name; uint64_t awake_end; uint64_t extra_frozen; };
+  // AND AN EARLY SAMPLE, which is what the source-0 arms exposed the need for. Those arms
+  // read 1.000 on both bits whether gated or not, while `ctxgrid`'s `ctx_match` on the SAME
+  // host-driven path reads 0.7498 and falls to 0.6057 under gating. The two measures differ
+  // in WHEN they look: `kSampleTick` is 400 ticks AFTER the word ends, long past any onset
+  // transient, whereas `ctx_match` accumulates across the whole word and therefore includes
+  // the transition at word onset.
+  //
+  // So the hypothesis is that gating costs the index EARLY IN THE WORD and nothing later, and
+  // this is the sample that can see it. 100 ticks in is one ninth of the word and the first
+  // point at which an injected slice could plausibly have won an argmax; tick 0 would measure
+  // the state before any injection had any effect at all.
+  // A TIME COURSE, not one early point, because the single early sample refuted the onset
+  // account and replaced it with a sharper question. At t=100 the DERIVED index is at chance
+  // in both arms (0.498 awake, 0.477 gated) -- the ear's EMA has not accumulated the word
+  // yet, which is v53's design. At t=1300, 400 ticks after the word ends, it is informative
+  // and gating does not hurt it. But `ctxgrid`'s `ctx_match` averages across the WHOLE WORD
+  // and falls 0.144 under gating.
+  //
+  // So the question is no longer "early or late" but WHERE IN THE WORD the two arms diverge,
+  // and that needs the curve. The word runs 0..900; these points sample it at ninths and then
+  // once after it, so the rise of the index and any gating effect on that rise are both
+  // visible. Nothing here is a free parameter: the span is the word and the last point is the
+  // one `ctxaxis` already uses.
+  constexpr uint32_t kNT = 6;
+  static const uint64_t kTicks[kNT] = {100, 300, 500, 700, 880, kVLWordTicks + 400};
+  // `src` and `ref`, appended so the four arms above keep their three initialisers and their
+  // indices -- the freeze check compares arms 2 and 1 by position.
+  //
+  // WHY SOURCE 0 IS NOW AN ARM. The two gating results disagree, and the disagreement
+  // localises the one clean unexplained effect in this line. `duty` measured the DERIVED
+  // index -- source 4, the ear's own rate EMA, which is what SHIPS -- and found a freeze
+  // free on bit F1 and better on bit F2. `ctxgrid`'s oracle arm instead uses the HOST-DRIVEN
+  // index -- source 0, an argmax over context-module slices that the host injects into every
+  // tick -- and there `ctx_match` fell 0.144 at 10.3 SE, robust to matching experience and
+  // to matching reward.
+  //
+  // So the degradation may belong to the host-driven path rather than to gating as such. That
+  // matters because source 0 is INSTRUMENTATION: it exists so an experiment can hand the
+  // creature a perfect condition. If gating only breaks that, the shipped configuration is
+  // unaffected and the power result stands for the creature that actually exists.
+  //
+  // `ref` is the arm each one is measured against, because a source-0 arm must be compared
+  // with an awake source-0 arm and not with the derived control.
+  struct DArm {
+    const char* name;
+    uint64_t awake_end;
+    uint64_t extra_frozen;
+    uint32_t src = 4u;    // DnaExploration::context_source
+    uint32_t ref = 0u;    // index of this arm's own control
+  };
   static const DArm kDA[] = {
       {"awake",      kVLTrialTicks, 0},
       {"gated",      kAwakeEnd,     0},
@@ -32429,6 +32501,11 @@ bool run_duty(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
       // should land between `awake` and `gated`; if F2 jumps straight to the gated value, the
       // amount of silence does not matter and the account is wrong.
       {"gated-half", (kAwakeEnd + kVLTrialTicks) / 2, 0},
+      // THE HOST-DRIVEN PAIR. Source 0 reads an argmax over context-module slices, so it is
+      // inert unless something injects; these two arms therefore carry a CtxDrive, exactly as
+      // ctxgrid's oracle arm does and with ctxgrid's own gain. Their control is each other.
+      {"awake-s0",   kVLTrialTicks, 0, 0u, 4u},
+      {"gated-s0",   kAwakeEnd,     0, 0u, 4u},
   };
   constexpr uint32_t kN = sizeof(kDA) / sizeof(kDA[0]);
   instrument("duty", dna.header().seed ^ 0x7CE1u, ticks / kVLTrialTicks, "trials per arm");
@@ -32456,7 +32533,8 @@ bool run_duty(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
 
   struct Cell {
     bool ok = false;
-    double acc[2] = {};      // per-bit held-out accuracy, F1 then F2
+    double acc[2] = {};      // per-bit held-out accuracy at kSampleTick, F1 then F2
+    double curve[kNT][2] = {};   // per-bit accuracy at each sample tick
     double stepped = 0.0;    // the fraction of wall ticks the creature actually ran
     double present = 0.0;    // share of sampled trials with a context present at all
     size_t rows = 0;
@@ -32475,7 +32553,7 @@ bool run_duty(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
     Cell c;
     std::vector<uint8_t> v = blob;
     const uint64_t sg = dna.header().seed + r * 7919ull;
-    const uint32_t slots = kSlots, src = 4u, gate = 2u;
+    const uint32_t slots = kSlots, src = kDA[a].src, gate = 2u;
     const float cgain = 2.0f;
     std::memcpy(v.data() + offsetof(aibaby::DnaHeader, seed), &sg, sizeof(sg));
     std::memcpy(v.data() + slots_off, &slots, sizeof(slots));
@@ -32507,13 +32585,15 @@ bool run_duty(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
     for (size_t i = order.size(); i > 1; --i)
       std::swap(order[i - 1], order[size_t(rng.next() % i)]);
 
-    std::vector<int> word_of, slot_of;
+    std::vector<int> word_of;
+    std::vector<int> curve_of[kNT];
     uint64_t stepped = 0, wall = 0, present_n = 0;
     for (uint64_t k = 0; k < n_trials; ++k) {
       const int w = order[size_t(k)];
       const Word& word = kGridWords[w];
       const uint64_t span = kVLTrialTicks + kDA[a].extra_frozen;
-      int sampled = -1;
+      int sampled[kNT];
+      for (uint32_t k2 = 0; k2 < kNT; ++k2) sampled[k2] = -1;
       bool sampled_present = false;
       for (uint64_t t = 0; t < span; ++t) {
         const bool sounding = t < kVLWordTicks;
@@ -32523,16 +32603,34 @@ bool run_duty(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
         ++wall;
         if (t >= kDA[a].awake_end) continue;   // FROZEN: no ear, no step, no time
         ear.tick(s.brain, pcm.data(), spt);
+        // THE HOST-DRIVEN CONDITION, for the source-0 arms only. Source 0 is an argmax over
+        // context-module slices and is inert unless something injects, so without this the
+        // arm would measure a slot nobody fills. Mirrors ctxgrid's own injection and its own
+        // gain of 0.10, held for the whole trial rather than only while the word sounds --
+        // ctxgrid's comment for that is that the condition has to still be present when
+        // reward lands. Inside the gate, so a frozen tick injects nothing either.
+        if (kDA[a].src == 0u) {
+          const aibaby::ModuleState& cm =
+              s.brain.network().module(uint32_t(ctx_module));
+          const uint32_t slice = uint32_t(w) % kSlots;
+          const uint32_t lo = cm.begin + cm.count * slice / kSlots;
+          const uint32_t hi = cm.begin + cm.count * (slice + 1) / kSlots;
+          for (uint32_t n = lo; n < hi; ++n)
+            s.brain.network().inject(n, aibaby::Scalar(0.10));
+        }
         s.brain.step();
         ++stepped;
-        if (t == kSampleTick) {
-          sampled = int(s.brain.network().active_context());
-          sampled_present = s.brain.network().context_present();
+        for (uint32_t k2 = 0; k2 < kNT; ++k2) {
+          if (t != kTicks[k2]) continue;
+          sampled[k2] = int(s.brain.network().active_context());
+          if (kTicks[k2] == kSampleTick) sampled_present = s.brain.network().context_present();
         }
       }
-      if (sampled >= 0) {
+      bool all = true;
+      for (uint32_t k2 = 0; k2 < kNT; ++k2) if (sampled[k2] < 0) all = false;
+      if (all) {
         word_of.push_back(w);
-        slot_of.push_back(sampled);
+        for (uint32_t k2 = 0; k2 < kNT; ++k2) curve_of[k2].push_back(sampled[k2]);
         if (sampled_present) ++present_n;
       }
     }
@@ -32543,8 +32641,10 @@ bool run_duty(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
       bit[0].push_back(lab >= 2 ? 1 : 0);
       bit[1].push_back(lab & 1);
     }
-    for (uint32_t q = 0; q < 2u; ++q)
-      c.acc[q] = ctxaxis_bit_acc(slot_of, bit[q], tr, kSlots);
+    for (uint32_t k2 = 0; k2 < kNT; ++k2)
+      for (uint32_t q = 0; q < 2u; ++q)
+        c.curve[k2][q] = ctxaxis_bit_acc(curve_of[k2], bit[q], tr, kSlots);
+    for (uint32_t q = 0; q < 2u; ++q) c.acc[q] = c.curve[kNT - 1][q];
     c.stepped = wall ? double(stepped) / double(wall) : 0.0;
     c.present = word_of.empty() ? 0.0 : double(present_n) / double(word_of.size());
     c.rows = word_of.size();
@@ -32552,7 +32652,14 @@ bool run_duty(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
     return c;
   });
 
-  std::printf("  arm          n   duty     present   bit F1           bit F2\n");
+  std::printf("  THE INDEX'S TIME COURSE. bit F1 then bit F2 at each tick; the word runs\n"
+              "  0..%llu and the last column is %llu ticks after it ends.\n\n",
+              (unsigned long long)kVLWordTicks,
+              (unsigned long long)(kSampleTick - kVLWordTicks));
+  std::printf("  arm          n   duty ");
+  for (uint32_t k2 = 0; k2 < kNT; ++k2)
+    std::printf("   t=%-4llu   ", (unsigned long long)kTicks[k2]);
+  std::printf("\n");
   double mb[kN][2], sb[kN][2], mduty[kN];
   size_t nok[kN];
   for (uint32_t a = 0; a < kN; ++a) {
@@ -32578,8 +32685,22 @@ bool run_duty(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
     const double mp = ctx_mean_se(pr, &e4);
     sb[a][0] = e1;
     sb[a][1] = e2;
-    std::printf("  %-12s %3zu  %.3f    %.3f     %.3f +/- %.3f    %.3f +/- %.3f\n",
-                kDA[a].name, f1.size(), mduty[a], mp, mb[a][0], e1, mb[a][1], e2);
+    (void)mp;
+    std::printf("  %-12s %3zu  %.3f", kDA[a].name, f1.size(), mduty[a]);
+    for (uint32_t k2 = 0; k2 < kNT; ++k2) {
+      std::vector<double> z1, z2;
+      for (uint32_t r = 0; r < kReps; ++r) {
+        const Cell& c = cells[r * kN + a];
+        if (!c.ok) continue;
+        z1.push_back(c.curve[k2][0]);
+        z2.push_back(c.curve[k2][1]);
+      }
+      double s1 = 0, s2 = 0;
+      const double v1 = z1.size() >= 3 ? ctx_mean_se(z1, &s1) : 0.0;
+      const double v2 = z2.size() >= 3 ? ctx_mean_se(z2, &s2) : 0.0;
+      std::printf("  %.3f %.3f", v1, v2);
+    }
+    std::printf("\n");
   }
 
   if (nok[0] < 3) {
@@ -32594,15 +32715,16 @@ bool run_duty(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
     return false;
   }
 
-  std::printf("\n  THE PRIMARY, paired per creature against `awake`:\n");
+  std::printf("\n  THE PRIMARY, paired per creature, each arm against ITS OWN control:\n");
   bool gated_ok = true;
   for (uint32_t a = 1; a < kN; ++a) {
+    if (a == kDA[a].ref) continue;          // a control compared with itself says nothing
     if (nok[a] < 3) { gated_ok = false; continue; }
     for (uint32_t q = 0; q < 2u; ++q) {
       std::vector<double> d;
       for (uint32_t r = 0; r < kReps; ++r) {
         const Cell& g = cells[r * kN + a];
-        const Cell& w = cells[r * kN + 0];
+        const Cell& w = cells[r * kN + kDA[a].ref];
         if (!g.ok || !w.ok) continue;
         d.push_back(g.acc[q] - w.acc[q]);
       }
@@ -34107,13 +34229,27 @@ bool run_ctxgrid(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
   for (uint32_t q = 0; q < kCFWords; ++q)
     tg.push_back({double(kGridWords[q].f1), double(kGridWords[q].f2)});
 
-  std::printf("  %-6s %-8s %-11s %-11s %-9s %-10s %-10s %s\n", "seed", "arm",
-              "F1 spread", "F2 spread", "ctx_match", "direction", "dir-null", "nearest");
+  std::printf("  %-6s %-8s %-11s %-11s %-9s %-10s %-10s %s  %-6s %-6s\n", "seed", "arm",
+              "F1 spread", "F2 spread", "ctx_match", "direction", "dir-null", "nearest",
+              "m_early", "m_late");
 
   struct Cell {
     bool ok = false;
     uint32_t scored = 0, skipped = 0;
     double sp1 = 0.0, sp2 = 0.0, match = 0.0, dir = 0.0, dnull = 0.0, near = 0.0;
+    // THE INDEX OVER THE SESSION, in thirds, and this is the quantity the gated comparison
+    // now turns on. `ctx_match` fell 0.144 at 10.3 SE under power-gating, robust to matching
+    // experience and to matching reward, and four cheaper hypotheses for it were refuted --
+    // it is not an onset transient, not specific to the host-driven path, and not an artefact
+    // of sampling one tick (`duty`'s time course shows gated equal or better from t=300 on,
+    // with no learning in the loop).
+    //
+    // What `duty` cannot supply is LEARNING, and v53's own note says why that matters: a
+    // derived index sits inside a loop, because the bias table steers the voice and the voice
+    // is what the index is read from. So the question is whether the gated index STARTS worse
+    // or DEGRADES as that loop closes, and a session mean cannot tell those apart. The
+    // session already computes both thirds; nothing here was printing them.
+    double m_early = 0.0, m_late = 0.0;
     // PER-AXIS accuracy, and it is what decides whether this is 2-D naming at all.
     // `nearest` on a 2x2 grid factorises: if the F1 side is right with probability p1
     // and the F2 side with p2, independently, nearest ~ p1*p2. The measured 0.444 fits
@@ -34208,6 +34344,8 @@ bool run_ctxgrid(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
           cell.p2 = n ? double(h2) / double(n) : 0.0;
         }
         cell.match = run.ctx_match;
+        cell.m_early = run.ctx_match_early;
+        cell.m_late = run.ctx_match_late;
         cell.ok = true;
         parallel_note("  [%u/%u] seed %u %s  F1 %.1f  F2 %.1f  near %.3f\n",
                       i + 1, kReps * kCtxFourArmCount, r, kCtxFourArms[a].name,
@@ -34228,9 +34366,9 @@ bool run_ctxgrid(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
                   kCtxFourArms[a].name, c.scored, c.skipped);
       continue;
     }
-    std::printf("  %-6u %-8s %-11.1f %-11.1f %-9.3f %-10.3f %-10.3f %.3f\n", r,
+    std::printf("  %-6u %-8s %-11.1f %-11.1f %-9.3f %-10.3f %-10.3f %.3f  %.3f %.3f\n", r,
                 kCtxFourArms[a].name, c.sp1, c.sp2, c.match, c.dir,
-                c.dir - c.dnull, c.near);
+                c.dir - c.dnull, c.near, c.m_early, c.m_late);
     sp1[a].push_back(c.sp1); sp2[a].push_back(c.sp2);
     ax1[a].push_back(c.p1); ax2[a].push_back(c.p2);
     dir[a].push_back(c.dir); dnul[a].push_back(c.dnull);
