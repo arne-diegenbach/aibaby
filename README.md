@@ -18436,19 +18436,31 @@ rise. That account is dead.
 > and it was in the log all along.** `ctx_match` is how *consistently* the active slot tracks
 > the word, and it falls from 0.750 to 0.597 in the arm whose index is **host-written**.
 
-**And the mechanism is specific, checkable in the source, and resurrects an account I deleted
-an hour ago in a corrected form.** The `CtxDrive` injects **per tick**
-(`experiments_milestones.cpp:4890`), which sits *after* the power gate at `:4884` — so during
-frozen ticks the host does not inject, and the context module's activity **persists across the
-gap**. On resume the module still holds the *previous* trial's context while the host begins
-driving the new one, so the index reports the wrong condition until those rates transition —
-and `ctx_match` is accumulated *during the word*, exactly when the stale context is still
-decaying.
+**The carry-over mechanism offered for this does not survive checking, and a simpler confound
+explains it.** The account was that the context module's activity persists across the frozen
+gap, so the index reports the previous condition at each trial's onset. Reading the source
+properly: the `CtxDrive` injects **every tick**, not only while the word sounds — the comment
+says the condition is "held for the whole trial" — and the gate merely skips that injection
+while frozen. So **both** arms begin each trial with the previous slice elevated, and both get
+injection from tick 0, so the settling dynamics are *identical*. The account does not follow
+from the code, and I should not have committed it as "checkable in the source".
 
-**So carry-over was the right idea pointed at the wrong state.** I was right that the ear's
-EMA cannot explain a host-written index, and wrong to conclude carry-over was refuted: it is
-**the context module's own activity** that carries over, and the evidence is a 10.3 SE drop in
-index consistency rather than a hypothesis.
+> **WHAT ACTUALLY DIFFERS IS EXPERIENCE, AND IT CONFOUNDS THE WHOLE COMPARISON.** A gated
+> creature lives **1700 of every 2800 ticks — 61%**. Over 2428 trials that is **4.13M
+> simulated ticks against 6.80M.** Every per-tick process gets 61% as many updates: intrinsic
+> plasticity, homeostasis, divisive normalisation, prototype learning, the noise draw that
+> *is* the exploration drive.
+
+**So the gated and ungated creatures are not matched on experience, and the comparison in this
+section cannot separate "gating hurts" from "39% less life hurts".** That applies to
+`ctx_match`'s 10.3 SE fall and to the indexed arm's 2.1 SE fall alike. It does not obviously
+explain the control arm *rising*, which remains the odd one out.
+
+**The fix is a design change, not another mechanism.** To attribute anything to gating per se,
+the arms must be matched on **awake ticks rather than on trials** — the gated arm needs
+**1.65× the trials** to live the same 6.80M ticks. Until that run exists, this section
+establishes that *a creature gated during training ends up worse at conditional naming*, which
+is still a deployable fact, but **not** that gating itself is what cost it.
 
 **The honest standing of the three numbers, which do not all point the same way:**
 
