@@ -18,6 +18,24 @@ unprompted — a population half-centre gives it a free-running two-phase vocal 
 reaches the formant at 30–44 SE with no reward at all. **And it teaches another creature what
 it knows**, faithfully enough that a lineage loses nothing over four generations.
 
+**And it is now small and cheap, measured rather than asserted.** A third of the modules were
+deleted — vision, somato, expression — leaving **782 neurons and 21,213 synapses**, and naming
+survived at n=72 pooled with the difference at **−0.0010 ± 0.0255**, stated as a bound (no loss
+larger than ~39% of the effect at 2 SE, not "free"). Its compute is **1.412×10⁶ operations per
+simulated second**, 83% of that per-neuron integration, and the shape matters more than the
+total: the per-tick path contains **no pass over synapses at all**, so the dense term is bounded
+by neurons rather than by synapses. Against a chip's active power floor that cost sits between
+293× and 276,000× below it, so **operations were never the power bill — being awake is.**
+
+Power-gating is then free for **perception** (the derived index survives a freeze between words
+and its second bit improves, replicated, with a monotone dose-response in silence processed) and
+free for a **fixed-target lesson** measured on a creature with no conditional machinery. For
+the **conditional** task it is not settled: what an index buys falls by 81%, but decomposition
+shows that is mostly the no-index control *converging* with more trials, while the indexed arm's
+own fall stays unresolved at 2.1 SE. What *is* clean there is a **fixed 0.153 deficit in index
+consistency** (10.3 SE), level not trajectory, with six accounts eliminated and the mechanism
+still unknown.
+
 What it cannot do is be *taught* two things in a row. A phase-targeted lesson produces no
 learning at any credit window or reward delay, nor with a delay line, a synaptic tag, a
 faster-than-human teacher, or a **perfect phase index** — that last at 0.5 SE with the
@@ -186,6 +204,32 @@ F2's recovery from 8% to 62% of the oracle's bit; nothing has tried F1's.
 | The aim/feedback line | **Refused by its own control** — a blind controller beats feedback at this creature's loop delay. |
 | Protocol variations | **Closed.** Longer, blocked, region-shaped, distance-aware and staircased rewards were each measured and none helps. |
 | The transmission channel | **Faithful once width is held** — no detectable loss over four generations (1.4 SE), and a ratchet that locks in whichever convention it finds. Further chain runs measure the tutor, not the channel, so the quantity to move is production width (§1). |
+
+### Closed 2026-10-17 to 2026-10-24, and each for a measured reason
+
+- **The magnitude in the index feature.** Removing overall drive from the clustering feature
+  pays +0.064/+0.161 **only with random distinct prototype seeds**, which this creature cannot
+  produce; at its own zero initialisation it is 1.4 SE, and ART vigilance — the only mechanism
+  here that makes distinct data-driven seeds — recovers at most 1.6 SE of it. **Do not build.**
+- **ART vigilance, explained as well as closed.** At the shipped threshold **exactly one slot
+  ever commits**, so the milestone built on it (0.737 → 0.594 at 96 creatures) was measuring a
+  *constant index*. At thresholds where four do commit it still does not deliver. **Do not
+  re-calibrate the threshold** — that sweep has been done.
+- **The conscience-gain optimum.** Already a four-point sweep with the shipped value at the
+  peak on both delivered Hz and the registered contrast, collapsing to chance at gain 8. "Not
+  located" meant bracketed in [1,4] with the peak at 2, not unexplored.
+- **The operating point for the `bias→rate` stage.** `stageprobe` names that stage as the
+  compressive one (0.34 where pooling is 0.66) and shows it reaching 1.40 at higher drive, which
+  invites a tonic pedestal. **Multiplying the stages out refutes the whole family:** the product
+  end to end is 0.227, 0.260, 0.226 across the first three rungs — moving the operating point
+  improves `bias→rate` 4.1× and costs `rate→centroid` 4.1×. Best available is **+15%**, not 4×.
+  What remains is changing the transfer's *shape* without moving along it, which is a neuron
+  model change and needs its own oracle.
+- **Further trimming, on power grounds.** Measured to buy nothing: the creature's dynamic cost
+  is already orders of magnitude below any platform's active floor, so size is not the lever.
+- **Prototype drift as the account for a four-word index.** The v53 line predicted the index
+  *decays* across a session in a learning arm, and v53b's did (0.697 → 0.663). On the four-word
+  conditional task **both arms rise** (+0.045 and +0.061, 3.4 and 4.6 SE). Do not cite drift here.
 
 ## What is open, in the order the measurements allow
 
@@ -480,6 +524,33 @@ down so the next person does not pay again.
 - **Do not price the matched cluster prior.** It was argued from the index's own *output*
   occupancy, where the result it rests on is about the *data's* class distribution — and the
   words here are exactly balanced, so a uniform prior is the correct one.
+- **Do not subtract one bound from another.** A decoder's held-out accuracy is a *lower bound*
+  on what a signal carries, never an estimate of it, so the gap between two decoders measures
+  the decoders. One run's pre-registered primary read 5.4 SE and had to be retired: applying
+  the same reader to a normalised copy of the identical feature moved one bit by 0.204 and the
+  "asymmetry" *grew*. To compare content across two quantities you need a ceiling.
+- **Do not match on trials when the intervention changes how much the creature runs.** A gated
+  creature lives 61% of the ticks, so trial-matched arms differ in experience as well as in
+  gating. Match what the per-tick processes consume — and note that matching ticks un-matches
+  reward, so the two designs bracket rather than settle.
+- **Do not interpret the direction of a difference-between-arms before decomposing it.** A
+  gated collapse of 81% turned out to be the *control* converging, not the treatment failing,
+  and the columns that showed it were in the same log throughout.
+- **Do not quote an effect size from an `--allow-short` run.** Those print under a banner
+  because their numbers are not measurements. A two-seed smoke showed an index decaying; at
+  n=36 and full budget the sign reversed at 4.6 SE. Smokes are for vacuity — does the mechanism
+  engage, do the arms differ, is the control live — and never for magnitude or direction.
+- **Do not trust an arm's label over its `ctx_match`.** A genuine host-written index reads
+  1.000; `ctxgrid`'s "oracle" arm reads 0.7498 because the experiment sets `context_slots` and
+  inherits `context_source`, so on a source-4 genome the drive it injects is invisible to the
+  index. Five experiments share that shape and `tools/audit_inherited.py` lists them.
+- **Do not price a loop without naming its enclosing function.** A cost claim reported
+  bookkeeping beating delivery by 226× by assuming a sweep ran per tick; it runs per reward
+  cash-in, and the run that priced it never applied reward, so the loop executed zero times.
+- **Do not chain build, gate and launch in one command.** A skipped rebuild sent a three-hour
+  run at a stale binary while a waiter that only asked "is anything running" declared the
+  machine free. Verify the binary is newer than the source, verify the *invocation* reports the
+  configuration you intended, and make the launch conditional on `verify PASS`.
 - **Do not refuse a rate-thresholded mechanism on a smoke's event rate.** A gate keyed on a
   rate threshold ran at 0.55 events per trial on a 17×-short smoke and 1.76 at full budget,
   because the rate distribution is still settling early in a creature's life. Two mechanisms
@@ -493,6 +564,27 @@ down so the next person does not pay again.
   lead's point estimate to four decimals and landed it on exactly 3.0 SE, where 18 fresh
   creatures gave 0.4 SE. Report the discovery half and the fresh half separately, because
   the pooled number contains the half that generated the claim.
+
+### What is actually next, as of 2026-10-24
+
+1. **The demonstration, and most of it already exists.** The project's stated goal is a small
+   creature trainable for one specific purpose, and the capabilities for that are each
+   established separately: it repeats, it is taught, it answers, it names four words
+   conditionally, it transmits a two-bit code with 18/18 inheritance. **`tutorgrid` already is
+   the assembly for two of those** — one creature learns a four-word conditional code and
+   passes it to another. The missing piece is the **echo** on the *same* creature, which is a
+   read-only property `imitate` currently measures on a freshly hatched one. The composition
+   question is not vacuous: this project finds composition fails in time (two gestures) and
+   holds in space (orthogonal targets keep 0.84 against 0.22), and the 2×2 grid *is* the
+   orthogonal case. Cost: lifting `imitate`'s windowed classifier into a trained creature.
+2. **The baseline debt.** `verify-long` has never completed on `dna/default.toml` since the
+   `salience` crash was fixed, so that tier's expectations are uncalibrated — a trimmed-genome
+   run read 38 discrepancies with nothing to compare against. 22 h, unattended.
+3. **Disclose the inherited index source in the four remaining experiments** that write
+   `context_slots` and not `context_source` (`ctxfour`, `ctxvocab`, `areax`, `rpeprobe`);
+   `ctxgrid` now does. `ctxfour`'s is already confirmed honest by its own logged `ctx_match`
+   of 1.000.
+4. **The `env2` baseline audit**, still owed and still cheap.
 
 ## How to not waste a run
 

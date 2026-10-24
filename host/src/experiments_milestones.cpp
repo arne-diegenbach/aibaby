@@ -34185,6 +34185,31 @@ bool run_ctxgrid(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
                 double(kCGDutyAwakeEnd) / double(kVLTrialTicks),
                 100.0 * double(kCGDutyAwakeEnd) / double(kVLTrialTicks));
   }
+  // WHAT THIS EXPERIMENT'S "ORACLE" ARM ACTUALLY IS, printed because it is not what the arm
+  // is named and nothing was saying so. This experiment writes `context_slots` per arm and
+  // NEVER writes `context_source`, so the source comes from the genome -- and the source
+  // decides which population the index is read from: 0 or 1 is the CONTEXT module, which is
+  // where the CtxDrive below injects, while >= 2 is the AUDITORY module, which the drive
+  // never touches. On a source-4 genome the injection is invisible to the index and the
+  // "oracle" arm is running the creature's own DERIVED index instead.
+  //
+  // `ctxfour` shows what an honest oracle looks like -- its own log reads "ctx_match 1.000 at
+  // k=4 (1.000 expected)" -- while this experiment on results/ctxgrid.toml reads 0.7498. That
+  // is not noise, it is a different mechanism, and `ctx_match` is the check.
+  {
+    const uint32_t csrc = dna.header().exploration.context_source;
+    std::printf("  INDEX SOURCE %u, inherited from the genome and NOT set by this experiment.\n"
+                "  %s\n"
+                "  An \"oracle\" arm is only an oracle when the drive and the index use the\n"
+                "  SAME module: ctx_match reads 1.000 for a genuine host-written index and\n"
+                "  well below it for a derived one.\n",
+                csrc,
+                csrc >= 2u
+                    ? "The index reads the AUDITORY module, so the CtxDrive injected into the\n"
+                      "  context module is IGNORED by it -- this arm is DERIVED, not an oracle."
+                    : "The index reads the CONTEXT module, which is where the CtxDrive\n"
+                      "  injects -- this arm is a genuine host-written oracle.");
+  }
   const int32_t ctx_module = dna.module_with_role(aibaby::ModuleRole::kContext);
   if (ctx_module < 0) {
     std::printf("  this genome has no kContext module. Build one with NO output\n"
