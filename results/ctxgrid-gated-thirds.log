@@ -1,0 +1,192 @@
+experiment: ctxgrid
+  POWER-GATED: frozen from tick 1700 of each 2800-tick trial (duty 0.607).
+  0 would be ungated and bit-identical to this experiment's banked numbers.
+  instrument        ctxgrid   trial seed 000000000135e1d4   2428 trials
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  the question      ctxfour got `nearest` at CHANCE on four words with a
+                    PERFECT index. Was that a vocabulary ceiling, or a
+                    vocabulary laid along ONE axis?
+  the change        the same experiment with the words moved: a 2x2 of
+                    two F1 levels x two F2 levels, all inside the
+                    MEASURED reach, instead of kWords' vowel corners
+                    where /i/ and /u/ sit 30 Hz apart on F1.
+  the gate, folded in   F2 spread is the one number still projected.
+                    This run measures it. Near-zero F2 spread with a
+                    healthy F1 spread voids the naming claim and IS the
+                    finding: reward reaching group 2 and not group 3.
+
+  GUARD  every target inside the measured reach (F1 630+/-59, F2 1667+/-150)?  OK
+
+  seed   arm      F1 spread   F2 spread   ctx_match direction  dir-null   nearest  m_early m_late
+  [1/72] seed 0 off  F1 26.2  F2 27.2  near 0.320
+  [4/72] seed 1 oracle  F1 49.2  F2 104.2  near 0.487
+  [9/72] seed 4 off  F1 29.5  F2 138.2  near 0.423
+  [13/72] seed 6 off  F1 48.5  F2 68.2  near 0.340
+  [2/72] seed 0 oracle  F1 29.5  F2 85.5  near 0.179
+  [5/72] seed 2 off  F1 22.2  F2 57.4  near 0.344
+  [10/72] seed 4 oracle  F1 32.5  F2 137.3  near 0.388
+  [12/72] seed 5 oracle  F1 18.9  F2 134.6  near 0.313
+  [6/72] seed 2 oracle  F1 50.1  F2 90.0  near 0.361
+  [11/72] seed 5 off  F1 15.0  F2 23.0  near 0.307
+  [8/72] seed 3 oracle  F1 48.2  F2 58.3  near 0.362
+  [14/72] seed 6 oracle  F1 73.2  F2 15.7  near 0.388
+  [7/72] seed 3 off  F1 26.8  F2 64.3  near 0.411
+  [15/72] seed 7 off  F1 23.9  F2 41.6  near 0.325
+  [3/72] seed 1 off  F1 19.1  F2 91.4  near 0.395
+  [17/72] seed 8 off  F1 45.7  F2 80.9  near 0.376
+  [16/72] seed 7 oracle  F1 39.8  F2 126.7  near 0.413
+  [20/72] seed 9 oracle  F1 42.8  F2 97.0  near 0.542
+  [23/72] seed 11 off  F1 17.9  F2 52.1  near 0.253
+  [21/72] seed 10 off  F1 51.1  F2 22.0  near 0.504
+  [19/72] seed 9 off  F1 35.3  F2 71.9  near 0.503
+  [18/72] seed 8 oracle  F1 35.0  F2 52.9  near 0.492
+  [30/72] seed 14 oracle  F1 57.4  F2 79.9  near 0.444
+  [22/72] seed 10 oracle  F1 76.9  F2 95.6  near 0.426
+  [26/72] seed 12 oracle  F1 32.7  F2 121.8  near 0.340
+  [31/72] seed 15 off  F1 21.7  F2 62.5  near 0.288
+  [27/72] seed 13 off  F1 45.1  F2 160.2  near 0.527
+  [29/72] seed 14 off  F1 44.8  F2 55.2  near 0.462
+  [25/72] seed 12 off  F1 31.5  F2 60.8  near 0.523
+  [35/72] seed 17 off  F1 39.0  F2 46.8  near 0.424
+  [34/72] seed 16 oracle  F1 37.1  F2 93.5  near 0.521
+  [24/72] seed 11 oracle  F1 34.7  F2 99.1  near 0.615
+  [32/72] seed 15 oracle  F1 37.9  F2 32.0  near 0.249
+  [28/72] seed 13 oracle  F1 49.2  F2 55.4  near 0.451
+  [33/72] seed 16 off  F1 45.6  F2 32.2  near 0.318
+  [48/72] seed 23 oracle  F1 79.7  F2 122.4  near 0.470
+  [43/72] seed 21 off  F1 17.9  F2 87.4  near 0.306
+  [46/72] seed 22 oracle  F1 36.0  F2 92.8  near 0.535
+  [40/72] seed 19 oracle  F1 36.9  F2 58.7  near 0.484
+  [38/72] seed 18 oracle  F1 50.4  F2 105.0  near 0.288
+  [44/72] seed 21 oracle  F1 36.6  F2 103.6  near 0.299
+  [45/72] seed 22 off  F1 35.9  F2 89.6  near 0.393
+  [37/72] seed 18 off  F1 32.1  F2 79.8  near 0.431
+  [39/72] seed 19 off  F1 20.1  F2 31.3  near 0.279
+  [41/72] seed 20 off  F1 33.1  F2 122.3  near 0.431
+  [36/72] seed 17 oracle  F1 61.2  F2 114.6  near 0.314
+  [42/72] seed 20 oracle  F1 47.6  F2 36.0  near 0.481
+  [49/72] seed 24 off  F1 30.6  F2 55.4  near 0.410
+  [47/72] seed 23 off  F1 38.3  F2 168.1  near 0.398
+  [50/72] seed 24 oracle  F1 61.4  F2 56.7  near 0.209
+  [55/72] seed 27 off  F1 38.5  F2 96.6  near 0.340
+  [52/72] seed 25 oracle  F1 30.4  F2 47.8  near 0.331
+  [56/72] seed 27 oracle  F1 58.9  F2 271.4  near 0.640
+  [58/72] seed 28 oracle  F1 37.9  F2 33.9  near 0.275
+  [53/72] seed 26 off  F1 45.8  F2 98.8  near 0.577
+  [54/72] seed 26 oracle  F1 48.8  F2 82.5  near 0.506
+  [57/72] seed 28 off  F1 79.3  F2 28.2  near 0.339
+  [59/72] seed 29 off  F1 65.4  F2 140.2  near 0.460
+  [51/72] seed 25 off  F1 36.4  F2 51.1  near 0.443
+  [62/72] seed 30 oracle  F1 42.2  F2 40.6  near 0.535
+  [63/72] seed 31 off  F1 12.9  F2 83.1  near 0.272
+  [60/72] seed 29 oracle  F1 31.1  F2 143.4  near 0.457
+  [64/72] seed 31 oracle  F1 48.9  F2 81.1  near 0.526
+  [61/72] seed 30 off  F1 43.5  F2 51.6  near 0.508
+  [65/72] seed 32 off  F1 49.7  F2 96.8  near 0.417
+  [69/72] seed 34 off  F1 28.4  F2 102.1  near 0.218
+  [68/72] seed 33 oracle  F1 48.2  F2 114.3  near 0.634
+  [67/72] seed 33 off  F1 29.4  F2 92.4  near 0.277
+  [66/72] seed 32 oracle  F1 20.5  F2 95.2  near 0.398
+  [71/72] seed 35 off  F1 50.8  F2 116.7  near 0.383
+  [70/72] seed 34 oracle  F1 38.8  F2 76.3  near 0.323
+  [72/72] seed 35 oracle  F1 50.9  F2 113.4  near 0.337
+  0      off      26.2        27.2        0.000     0.304      0.069      0.320  0.000 0.000
+  0      oracle   29.5        85.5        0.577     0.220      -0.014     0.179  0.571 0.607
+  1      off      19.1        91.4        0.000     0.409      0.142      0.395  0.000 0.000
+  1      oracle   49.2        104.2       0.612     0.483      0.184      0.487  0.589 0.646
+  2      off      22.2        57.4        0.000     0.327      0.080      0.344  0.000 0.000
+  2      oracle   50.1        90.0        0.773     0.386      0.118      0.361  0.811 0.782
+  3      off      26.8        64.3        0.000     0.383      0.122      0.411  0.000 0.000
+  3      oracle   48.2        58.3        0.448     0.318      0.063      0.362  0.460 0.460
+  4      off      29.5        138.2       0.000     0.481      0.156      0.423  0.000 0.000
+  4      oracle   32.5        137.3       0.634     0.375      0.132      0.388  0.629 0.656
+  5      off      15.0        23.0        0.000     0.314      0.058      0.307  0.000 0.000
+  5      oracle   18.9        134.6       0.627     0.280      0.020      0.313  0.608 0.676
+  6      off      48.5        68.2        0.000     0.359      0.108      0.340  0.000 0.000
+  6      oracle   73.2        15.7        0.461     0.383      0.123      0.388  0.428 0.512
+  7      off      23.9        41.6        0.000     0.330      0.070      0.325  0.000 0.000
+  7      oracle   39.8        126.7       0.620     0.405      0.147      0.413  0.610 0.669
+  8      off      45.7        80.9        0.000     0.397      0.150      0.376  0.000 0.000
+  8      oracle   35.0        52.9        0.625     0.450      0.196      0.492  0.642 0.645
+  9      off      35.3        71.9        0.000     0.529      0.244      0.503  0.000 0.000
+  9      oracle   42.8        97.0        0.606     0.556      0.292      0.542  0.572 0.667
+  10     off      51.1        22.0        0.000     0.509      0.235      0.504  0.000 0.000
+  10     oracle   76.9        95.6        0.608     0.509      0.264      0.426  0.607 0.620
+  11     off      17.9        52.1        0.000     0.290      0.022      0.253  0.000 0.000
+  11     oracle   34.7        99.1        0.469     0.615      0.286      0.615  0.510 0.464
+  12     off      31.5        60.8        0.000     0.514      0.198      0.523  0.000 0.000
+  12     oracle   32.7        121.8       0.712     0.331      0.056      0.340  0.603 0.848
+  13     off      45.1        160.2       0.000     0.537      0.265      0.527  0.000 0.000
+  13     oracle   49.2        55.4        0.554     0.490      0.214      0.451  0.508 0.605
+  14     off      44.8        55.2        0.000     0.482      0.191      0.462  0.000 0.000
+  14     oracle   57.4        79.9        0.460     0.430      0.159      0.444  0.483 0.464
+  15     off      21.7        62.5        0.000     0.296      0.048      0.288  0.000 0.000
+  15     oracle   37.9        32.0        0.605     0.239      -0.005     0.249  0.596 0.643
+  16     off      45.6        32.2        0.000     0.295      0.046      0.318  0.000 0.000
+  16     oracle   37.1        93.5        0.552     0.558      0.279      0.521  0.477 0.641
+  17     off      39.0        46.8        0.000     0.422      0.169      0.424  0.000 0.000
+  17     oracle   61.2        114.6       0.543     0.401      0.089      0.314  0.539 0.606
+  18     off      32.1        79.8        0.000     0.434      0.135      0.431  0.000 0.000
+  18     oracle   50.4        105.0       0.635     0.410      0.119      0.288  0.632 0.657
+  19     off      20.1        31.3        0.000     0.257      0.007      0.279  0.000 0.000
+  19     oracle   36.9        58.7        0.638     0.489      0.215      0.484  0.618 0.680
+  20     off      33.1        122.3       0.000     0.432      0.189      0.431  0.000 0.000
+  20     oracle   47.6        36.0        0.444     0.466      0.195      0.481  0.446 0.454
+  21     off      17.9        87.4        0.000     0.304      0.044      0.306  0.000 0.000
+  21     oracle   36.6        103.6       0.627     0.290      0.040      0.299  0.646 0.673
+  22     off      35.9        89.6        0.000     0.331      0.080      0.393  0.000 0.000
+  22     oracle   36.0        92.8        0.650     0.531      0.274      0.535  0.667 0.671
+  23     off      38.3        168.1       0.000     0.309      0.074      0.398  0.000 0.000
+  23     oracle   79.7        122.4       0.622     0.455      0.210      0.470  0.595 0.675
+  24     off      30.6        55.4        0.000     0.398      0.133      0.410  0.000 0.000
+  24     oracle   61.4        56.7        0.510     0.344      0.114      0.209  0.434 0.576
+  25     off      36.4        51.1        0.000     0.441      0.172      0.443  0.000 0.000
+  25     oracle   30.4        47.8        0.742     0.329      0.076      0.331  0.652 0.849
+  26     off      45.8        98.8        0.000     0.629      0.324      0.577  0.000 0.000
+  26     oracle   48.8        82.5        0.641     0.516      0.246      0.506  0.647 0.661
+  27     off      38.5        96.6        0.000     0.341      0.093      0.340  0.000 0.000
+  27     oracle   58.9        271.4       0.679     0.669      0.423      0.640  0.760 0.650
+  28     off      79.3        28.2        0.000     0.410      0.136      0.339  0.000 0.000
+  28     oracle   37.9        33.9        0.532     0.355      0.079      0.275  0.531 0.624
+  29     off      65.4        140.2       0.000     0.424      0.144      0.460  0.000 0.000
+  29     oracle   31.1        143.4       0.746     0.400      0.113      0.457  0.736 0.803
+  30     off      43.5        51.6        0.000     0.573      0.220      0.508  0.000 0.000
+  30     oracle   42.2        40.6        0.759     0.517      0.244      0.535  0.723 0.851
+  31     off      12.9        83.1        0.000     0.176      -0.065     0.272  0.000 0.000
+  31     oracle   48.9        81.1        0.586     0.534      0.256      0.526  0.497 0.659
+  32     off      49.7        96.8        0.000     0.472      0.229      0.417  0.000 0.000
+  32     oracle   20.5        95.2        0.520     0.382      0.103      0.398  0.477 0.591
+  33     off      29.4        92.4        0.000     0.278      0.028      0.277  0.000 0.000
+  33     oracle   48.2        114.3       0.568     0.626      0.345      0.634  0.645 0.552
+  34     off      28.4        102.1       0.000     0.222      -0.036     0.218  0.000 0.000
+  34     oracle   38.8        76.3        0.443     0.337      0.086      0.323  0.430 0.506
+  35     off      50.8        116.7       0.000     0.538      0.204      0.383  0.000 0.000
+  35     oracle   50.9        113.4       0.669     0.388      0.123      0.337  0.568 0.797
+
+  arm       F1 spread      F2 spread      dir - null       nearest
+  off         35.5 +/- 2.4     76.3 +/- 6.3    +0.125 +/- 0.015   0.387 +/- 0.015
+  oracle      44.8 +/- 2.4     90.8 +/- 7.5    +0.163 +/- 0.017   0.417 +/- 0.019
+
+  PER-AXIS  which side of each midline, against the target's side
+    off      F1 side 0.608 +/- 0.016   F2 side 0.597 +/- 0.015   product 0.363
+    oracle   F1 side 0.641 +/- 0.023   F2 side 0.620 +/- 0.017   product 0.397
+
+  THE GATE  learned reach per axis, in the oracle arm
+    F1 spread 44.8 Hz of a 118 Hz learned reach   (38%)
+    F2 spread 90.8 Hz of a 300 Hz projected reach (30%)
+    -> reward DOES write group 3: the second axis is usable
+
+  PRIMARY  `nearest` in the oracle arm against chance 0.250, ctxfour read 0.279
+    oracle 0.417, off 0.387 (NOT 0.250 -- see direction-null)
+    paired excess  nearest  +0.030 +/- 0.024  (1.3 SE, n=36)
+    paired excess  F1 side  +0.033 +/- 0.027  (1.2 SE)
+    paired excess  F2 side  +0.023 +/- 0.021  (1.1 SE)
+    ctxfour's same contrast, from its recorded table: 0.279 - 0.161 = +0.118
+    factorisation check: off p1*p2 = 0.363 against its nearest 0.387; oracle 0.397 against 0.417
+
+  THE CEILING IS REAL. Four words laid out 2x2 INSIDE the measured
+  reach, on two axes shown to be independent, still name at 0.417
+  (1.3 SE above chance). ctxfour's conclusion stands on its own terms:
+  the creature holds four DISTINCTIONS and not four MAPPINGS, and the
+  axis was never the problem.

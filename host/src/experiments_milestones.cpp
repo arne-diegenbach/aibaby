@@ -34157,7 +34157,7 @@ bool run_ctxvocab(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
 //
 // 1700 is the shortest window that leaves the word (ticks 0-900) and the reward window
 // (900-1700) untouched. Derived from the trial geometry, not chosen.
-constexpr uint64_t kCGDutyAwakeEnd = 1700;
+constexpr uint64_t kCGDutyAwakeEnd = 0;
 
 bool run_ctxgrid(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
   (void)verbose;
@@ -34166,10 +34166,25 @@ bool run_ctxgrid(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
     std::printf("  setup failed: the genome does not load\n");
     return false;
   }
-  std::printf("  POWER-GATED: frozen from tick %llu of each %llu-tick trial (duty %.3f).\n"
-              "  0 would be ungated and bit-identical to this experiment's banked numbers.\n",
-              (unsigned long long)kCGDutyAwakeEnd, (unsigned long long)kVLTrialTicks,
-              kCGDutyAwakeEnd ? double(kCGDutyAwakeEnd) / double(kVLTrialTicks) : 1.0);
+  // THIS LINE IS THE GUARD AGAINST RUNNING THE WRONG CONFIGURATION, so it has to be
+  // unambiguous in both states. Its first version printed "frozen from tick 0" for the
+  // ungated case, which reads as ALWAYS frozen when it means NOT GATED -- and it is the one
+  // case where being clear matters most, because 0 is the value that reproduces this
+  // experiment's banked numbers. It earned its keep within the hour: a chained
+  // build-and-launch silently skipped the rebuild, and this print was what revealed that a
+  // run labelled "ungated" was reporting tick 1700.
+  if (kCGDutyAwakeEnd == 0) {
+    std::printf("  NOT power-gated: awake for all %llu ticks of every trial (duty 1.000).\n"
+                "  This is the configuration that reproduces this experiment's banked\n"
+                "  numbers; a non-zero kCGDutyAwakeEnd freezes the creature after that tick.\n",
+                (unsigned long long)kVLTrialTicks);
+  } else {
+    std::printf("  POWER-GATED: frozen from tick %llu of each %llu-tick trial (duty %.3f),\n"
+                "  so the creature lives %.1f%% of the ticks an ungated one does.\n",
+                (unsigned long long)kCGDutyAwakeEnd, (unsigned long long)kVLTrialTicks,
+                double(kCGDutyAwakeEnd) / double(kVLTrialTicks),
+                100.0 * double(kCGDutyAwakeEnd) / double(kVLTrialTicks));
+  }
   const int32_t ctx_module = dna.module_with_role(aibaby::ModuleRole::kContext);
   if (ctx_module < 0) {
     std::printf("  this genome has no kContext module. Build one with NO output\n"

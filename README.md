@@ -18638,6 +18638,47 @@ index the pair is (`context_slots`, `context_source`) — slots choose the resol
 chooses **which population the index is read from** — and inheriting the second means the
 same experiment measures different things on different genomes, silently.
 
+### The gated index deficit is a LEVEL, not a trajectory — and the drift account is refuted
+
+`results/ctxgrid-gated-thirds.log` and `results/ctxgrid-ungated-thirds.log`, 2026-10-24.
+Both arms re-run at 6.8M ticks with `ctx_match`'s early and late thirds printed per creature —
+quantities the session has always computed and never reported. Paired on 36 creatures, which
+is legitimate because gating changes no wiring.
+
+| oracle arm | all | early third | late third | slope (late − early) |
+|---|---|---|---|---|
+| ungated | 0.7498 | 0.7224 | 0.7674 | **+0.0450 ± 0.0133 (3.4 SE)** |
+| gated | 0.5971 | 0.5819 | 0.6428 | **+0.0609 ± 0.0132 (4.6 SE)** |
+| **gated − ungated** | | | | |
+| **level** | | | | **−0.1527 ± 0.0148 (10.3 SE)** |
+| **slope** | | | | **+0.0159 ± 0.0187 (0.9 SE)** |
+
+> **GATING COSTS THE INDEX A FIXED 0.153 AND THE TWO TRAJECTORIES ARE PARALLEL.** The
+> cheapest available explanation — that gating costs *convergence speed*, so a longer run
+> recovers it — is **refuted**: the slopes are indistinguishable at 0.9 SE. This reading was
+> one of three written down before the run, and it is the one that fired.
+
+**And the drift account is refuted for both arms, which was not expected.** The v53 line's
+leading hypothesis was that `1/wins` freezes the prototypes while the taught arm's own voice
+moves under them, predicting the index *decays* across a session — and v53b's did, 0.697 →
+0.663. Here **both arms rise**, at 3.4 and 4.6 SE. So on a four-word conditional task the
+index is still improving at session end regardless of gating, and prototype freezing does not
+describe it. Both arms would benefit from longer runs, equally; neither is in decay.
+
+**What this does and does not settle.** It converts an unexplained 10.3 SE effect into a
+*characterised* one: a constant level offset, present from the first third, not a difference
+in how fast the index converges. The mechanism is still unknown — but the shape now rules out
+convergence rate, prototype drift, onset transients, the host-driven path, sampling time, and
+experience (the tick-matched run). That is six accounts eliminated for one effect.
+
+**One caution on the extrapolation.** Parallel slopes across this session's thirds do not
+prove the arms never converge; they show no catch-up over the span measured. "A longer run
+does not recover it" is supported for runs of this length and is an inference beyond them.
+
+**And the excess reproduced exactly:** −0.1268 ± 0.0385 (3.3 SE), matching the earlier
+independent pair of runs to four decimal places, which is the instrument's own consistency
+check.
+
 ## Layout
 
 ```
