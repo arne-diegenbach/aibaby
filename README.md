@@ -18679,6 +18679,87 @@ does not recover it" is supported for runs of this length and is an inference be
 independent pair of runs to four decimal places, which is the instrument's own consistency
 check.
 
+## The long-tier baseline: no regressions, and 21 labels that cannot fail (2026-10-26)
+
+The first `verify-long` to complete on `dna/default.toml` since the `salience` segfault was
+fixed — the bug that made the tier unreachable for 25 days. It was launched to give the
+trimmed creature's 38 discrepancies something to compare against. **37.3 hours, 84
+experiments, slowest `blockwhere` at 409.6 min.**
+
+```
+determinism       PASS
+pinned hash       PASS
+experiments       63 as expected, 21 not
+verify FAIL
+```
+
+**First, the part that matters most and is easy to miss: there are no regressions.** Every
+one of the 21 discrepancies is of exactly one kind —
+
+```
+21 expected FAIL (open milestone), got PASS
+```
+
+— and **zero** `Expect::kPass` experiments failed, **zero** `kGuard` expectations flipped.
+Nothing in the creature broke in the 25 days the tier could not run. `verify FAIL` here is
+the bookkeeping failing, not the creature.
+
+**Second, these are not 21 breakthroughs, and the reason is structural.** `verify` decides
+PASS from the single bool `run_experiment` returns (`host/src/experiments.cpp:1282`), and
+`Expect::kOpen` prints *"a milestone this project has never met just did"* on a `true`. But
+**16 of the 21 functions end in an unconditional `return true;`** at the top level of the
+body. Read in full, `aimaxes`, `sensefit`, `axispower` and `stageprobe` return `false` only
+for infrastructure or vacuity reasons — a DNA that will not load, a missing vocal module,
+too few usable creatures, a `live.report()` refusal. `stageprobe` is the clearest case,
+because both its `false` paths are **self-checks on its own instrument**:
+
+```cpp
+if (e_f1 < 0.9 || e_f1 > 1.1) { /* "THE INSTRUMENT IS WRONG" */ return false; }
+if (!learn_found)             { /* "INCONCLUSIVE -- no rung brackets" */ return false; }
+...
+return true;
+```
+
+Its `true` fires whenever the measurement is **readable**, whichever stage turns out to be
+the compressive one. That is an *instrument*, not a *test*, and `Expect::kOpen` on an
+instrument is unfalsifiable: the milestone line fires the moment the experiment runs at all.
+This is the `4th rung` error in a new place — *present, live and resolvable is not the
+treatment did anything* — except here it is the harness making the mistake rather than an
+experiment.
+
+**Not all 21 are vacuous, and the distinction is the actionable part.** `salience` returns
+`room`, a real criterion, and reads headroom p90/p50 = **1.40 against 1.25 required** — a
+genuine PASS, and its first execution ever inside a long tier. `blockwhere` returns `true`
+only under `mid_cheaper`, a 3 SE comparison on position, so its PASS reproduces the recorded
+`POSITION IS THE COST` finding. `partprobe` and `orthovocab` likewise end in `return false;`
+at top level and were reported PASS, so they too passed through a guarded criterion.
+
+Spot-reading three in full confirms the rest of the diagnosis: **the readings match what this
+project already recorded, weeks ago.** `aimaxes` prints F2 swinging 961.1 Hz with 0% leak
+into F1; `stageprobe` prints `bias -> rate` at 0.34 against 0.66; `salience` prints the
+headroom reading that `salrew` later built on and failed. These are not new results. **The
+`kOpen` labels went stale as the project discovered things and never moved the `Expect`
+class — and because the tier could not complete, the drift accumulated unseen for 25 days.**
+Exposing exactly that is what the run was for.
+
+**What this licenses, and what it does not.** It does **not** license flipping 21 labels to
+`kPass`: this project has retracted criteria for being the wrong shape three times
+(`verdict-fitted-to-data`, `oracle-regime-mismatch`, `baseprobe-gate`), and 14 of the 21 have
+not been read line by line. The defensible change is narrower and in two parts. **A third
+`Expect` class is missing** — an instrument that prints a reading has no pass/fail content,
+and conflating it with an unmet milestone is what produced this output. And **the criterion
+cases should be promoted individually, on a reading of each**, which is cheap and needs no
+run.
+
+**One estimate scored, because it went wrong the same way twice.** The remaining time was
+predicted at 3.7 h and the run took 1.1 h. `ctxretain` was priced at 3.1 h of that and took
+**0.0 s** — it declines on this genome (*"this genome has no kContext module"*). That is the
+same defect as the morning's ratio bug, which admitted five declining experiments into a
+pooled denominator, and the memory written for it said *"the genomes differ in what they RUN,
+not only in how fast they run it"*. The fix was applied to the ratio and not to the forward
+prediction. **Fourteen experiments took 0.0 s in this run**, so the decline family is three
+times the size the first pass found.
+
 ## Layout
 
 ```
