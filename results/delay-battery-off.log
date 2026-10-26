@@ -1,0 +1,667 @@
+===== g2 --ticks 120000 =====
+experiment: g2
+  session           120.0 s of simulated life x 9 creatures
+  seed rewarded rate x        rewarded share shift   F1 motor shift
+  0    praised  1.60 vs  1.23   +0.220 vs +0.098     +0.0104 vs +0.0035  praise
+  1    praised  1.32 vs  0.26   -0.067 vs -0.427     -0.0076 vs -0.0363  praise
+  2    praised  2.12 vs  0.31   +0.223 vs -0.373     +0.0183 vs -0.0296  praise
+  3    praised  2.43 vs  1.76   +0.323 vs +0.087     +0.0328 vs +0.0065  praise
+  4    praised  1.71 vs  1.29   +0.500 vs +0.318     +0.0560 vs +0.0246  praise
+  5    praised  1.23 vs  0.17   +0.177 vs -0.443     +0.0192 vs -0.0425  praise
+  6    praised  3.04 vs  0.26   +0.448 vs -0.391     +0.0411 vs -0.0202  praise
+  7    praised  1.52 vs  1.19   +0.212 vs +0.127     +0.0113 vs +0.0008  praise
+  8    praised  1.60 vs  0.09   +0.284 vs -0.449     +0.0233 vs -0.0527  praise
+
+  mean advantage over the yoked control
+    rewarded rate     +1.113 x
+    rewarded share    +0.4190
+    F1 motor group    +0.03896
+    praise won        9 of 9 creatures
+
+  G2 PASS — across 9 creatures the frequency of rewarded
+  vocalisations rose within the session (mean x1.84), and praise beat its own yoked control
+  in 9 of them.
+[exit 0]
+===== m2 --ticks 120000 =====
+experiment: m2
+  session           120.0 s of simulated life x 5 creatures
+  chance            0.500 — trials are balanced present/absent
+  seed B1 held-out B1 pattern  B1 shuffled B3 (path)   B1 spikes/tick present vs absent
+  0    1.000       0.700       0.333       1.000       2.972 vs 2.634
+  1    1.000       0.900       0.433       1.000       2.937 vs 2.581
+  2    1.000       0.900       0.467       1.000       2.920 vs 2.616
+  3    1.000       0.800       0.533       1.000       2.927 vs 2.570
+  4    0.967       0.567       0.533       1.000       2.998 vs 2.636
+
+  mean held-out accuracy
+    B1 association       0.993   <- the milestone
+    B1, rate divided out 0.773
+    B1, labels shuffled  0.460   (the control: must sit at chance)
+    B3 vision            1.000   (the input module; plumbing, not the claim)
+    at or above 0.75     5 of 5 creatures
+
+  M2 PASS — a held-out classifier reads object-present from B1 at 99%
+  (chance 50%, shuffled control 46%). With each trial's overall firing
+  rate divided out it still reads 77%, so most of what B1 carries about
+  the object is how hard it is working and some of it is where.
+[exit 0]
+===== eligprobe --ticks 600000 =====
+experiment: eligprobe
+  session           600.0 s x 5 creatures, object + its word, shuffled
+  instrument        eligprobe   trial seed 00000000013b36b2   200 trials per creature
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  the question      is the eligibility trace on vision->vocal
+                    DIFFERENT for the two objects? If it is not, no
+                    reward schedule can make the voice conditional.
+
+  seed  cen->voc  shuffled  arc full  arc match mean|e|   corr(A,B)   vis cred vis n
+  0     0.710     0.460     0.890     0.830     7.81e-03  +0.931      0.870    930
+  1     0.680     0.450     0.820     0.760     7.27e-03  +0.929      0.780    998
+  2     0.570     0.460     0.980     0.950     7.50e-03  +0.928      0.850    943
+  3     0.560     0.530     0.590     0.630     7.74e-03  +0.934      0.680    966
+  4     0.560     0.520     0.730     0.650     7.78e-03  +0.935      0.570    1027
+
+  tract sizes       central->vocal 1532 synapses, arcuate 4632
+  mean |e|          central->vocal 7.620e-03, arcuate 4.080e-03
+  live fraction     see per-seed column; a trace at 0 is no trace
+
+  which object, read off the eligibility trace:
+    vision->vocal         0.750   (shuffled 0.488)   1027 synapses, mean |e| 8.024e-03, corr(A,B) +0.942
+      ^ THE TRACT THAT CARRIES THE OBJECT. The rows below are the
+        original diagnosis and were measured on a non-participant
+        (central->vocal) and on the tract carrying the WORD.
+    vision->vocal, CREDIT  0.750   <- what reward actually
+                                    multiplies. E[dw] ~ Cov(R,e) +
+                                    E[R]E[e]; the baseline cancels the
+                                    second term, so THIS is the row
+                                    that decides whether reward can
+                                    make the voice conditional.
+
+    --- the same tract, as a RATE deviation instead of a trace ---
+    seed  rate x    r(A,B)    vis dev   vis raw
+    0     0.620     +0.279    0.570     0.900
+    1     0.520     +0.231    0.520     0.790
+    2     0.440     +0.361    0.510     0.820
+    3     0.440     +0.303    0.450     0.670
+    4     0.620     +0.312    0.580     0.830
+    (fast-slow)_pre x (fast-slow)_post  0.528   (shuffled 0.492)
+      corr(A,B) +0.297   <- read against the trace's +0.942 above.
+      A scalar reward multiplying a mostly-shared pattern acts on
+      what is shared; a rule whose pattern is less shared does not
+      have that problem. This is the number that prices the build.
+    vision deviation alone   0.526   (raw rate, uncentred: 0.802)
+    vocal  deviation alone   0.558
+      ^ which END carries it. If the raw rate matches the centred
+        one, per-neuron centring is buying nothing and `covar`'s
+        refutation stands as written.
+    central->vocal        0.616   (shuffled 0.484)
+    arcuate, full         0.802
+    arcuate, size-matched 0.764   <- the control that matters
+    what reward multiplies 0.616   (the DNA v16 credit: equals the
+                                 row above when the baseline is off)
+
+  the postsynaptic common mode (e_ij ~ r_i * r_j * K):
+    variance explained by the per-target factor alone  0.100
+    which object, after dividing that factor out       0.508
+
+  how much of the trace is the same either way:
+    corr(mean e | A, mean e | B)  central->vocal   +0.931
+    corr(mean e | A, mean e | B)  arcuate, matched +0.809
+
+  inside one creature: which central cells feed the conditional part?
+    central neurons with |d'| > 0.5   18.8%  (mean |d'| 0.312)
+    trace from the top-decile cells   0.544
+    trace from the bottom decile      0.580   (same synapse count)
+
+    A correlation near 1 means the trace is the same whichever object
+    the creature is looking at, and R-STDP can then only scale the tract.
+    The size-matched arcuate is the honest comparison: it has the same
+    number of features, so a difference between the two rows is about
+    the signal and not about the width of the classifier.
+[exit 0]
+===== restate --ticks 600000 =====
+experiment: restate
+  Re-derives the numbers this project makes decisions on, against
+  what it has written down. A red row does not mean the creature is
+  broken -- it means a document is describing a creature that no
+  longer exists, and anything built on that row is built on sand.
+
+  --- m3probe, 200000 ticks x 3 creatures ---
+  each trial 2000 ms, first 500 discarded; no learning, no reward
+  instrument        m3probe   trial seed 000000000135367a   100 trials per sweep
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  '32 space' and '8x4 space+t' are 32 features each — the same budget
+  spent on where the spikes were, or on where and when. 'shuffled'
+  controls the space+t column.
+
+  a cube or a ball, in silence — 100 trials
+    module       per-neuron  interleaved rate EMA    32 space    8x4 space+t rate only   shuffled    centroid    spikes/trial
+    central      0.680       0.720       0.700       0.600       0.500       0.500       0.580       0.360       4310.7
+    auditory     0.420       0.540       0.420       0.460       0.540       0.500       0.500       0.520       904.7
+    vision       1.000       0.920       1.000       0.840       0.800       0.500       0.640       0.600       1919.1
+    somato       0.460       0.460       0.440       0.480       0.640       0.580       0.500       0.500       407.7
+    vocal        0.580       0.660       0.520       0.520       0.560       0.500       0.520       0.540       1035.5
+    expression   0.600       0.480       0.580       0.540       0.520       0.480       0.500       0.500       705.5
+    voice        0.460         <- the nine motor groups, loudness and voicing
+      centroids  0.540       <- the 9 group CENTROIDS alone: what the articulators get
+      activities 0.500       <- the 9 group RATES alone: what they do NOT get
+
+    per-knob d' on the larynx's own readings — 'reaches' is what
+    this number becomes in the air, '-' is computed and discarded
+    reading      reaches        d'        null (32 perm)
+    centroid 0   f0                -0.200 -0.087
+    centroid 1   -                 -0.181 +0.070   (discarded)
+    centroid 2   f1                -0.199 +0.091
+    centroid 3   f2                -0.161 +0.120
+    centroid 4   f3                -0.061 +0.096
+    centroid 5   bw1               -0.185 -0.077
+    centroid 6   bw2               -0.191 -0.031
+    centroid 7   bw3               -0.081 -0.140
+    centroid 8   -                 -0.088 +0.133   (discarded)
+    activity 0   -                 -0.170 +0.069   (discarded)
+    activity 1   voicing gate      -0.200 +0.061
+    activity 2   -                 -0.200 +0.087   (discarded)
+    activity 3   -                 +0.324 +0.084   (discarded)
+    activity 4   -                 -0.173 +0.074   (discarded)
+    activity 5   -                 -0.172 -0.143   (discarded)
+    activity 6   -                 +0.046 +0.158   (discarded)
+    activity 7   -                 -0.158 -0.045   (discarded)
+    activity 8   loudness          -0.199 -0.124
+    mean d'^2    (the 9 heard)     -0.030  vs -0.010 discarded
+    If the object's d'^2 sits in the discarded rows and the word's
+    sits in the heard ones, the larynx is the loss.
+
+    oracle reordering within each slice — 50 held-out trials
+    ordering       mean d'^2   per-group d'
+    as wired            +0.026 -0.28 -0.15 -0.10 +0.28 +0.25 -0.28 -0.08 +0.58 -0.24 
+    oracle              +0.464 -0.28 +0.28 +0.82 +0.60 +0.51 +0.41 +0.90 +1.11 +0.83 
+    oracle-shuf         +0.056 +0.27 +0.43 +0.50 -0.26 -0.25 -0.18 -0.25 +0.54 -0.27 
+    oracle >> as-wired with oracle-shuf flat = the object is IN the
+    slice and index order hides it. All three flat = it is not there.
+
+  one of two words, to an empty field — 100 trials
+    module       per-neuron  interleaved rate EMA    32 space    8x4 space+t rate only   shuffled    centroid    spikes/trial
+    central      0.700       0.700       0.680       0.660       0.660       0.460       0.640       0.520       3859.3
+    auditory     1.000       1.000       1.000       1.000       1.000       0.500       0.460       0.540       929.8
+    vision       0.560       0.560       0.540       0.500       0.460       0.600       0.500       0.540       751.0
+    somato       0.440       0.420       0.560       0.440       0.540       0.480       0.500       0.560       424.7
+    vocal        0.680       0.820       0.700       0.600       0.540       0.560       0.440       0.500       1010.3
+    expression   0.540       0.500       0.580       0.500       0.520       0.460       0.540       0.560       673.4
+    voice        0.940         <- the nine motor groups, loudness and voicing
+      centroids  0.920       <- the 9 group CENTROIDS alone: what the articulators get
+      activities 0.420       <- the 9 group RATES alone: what they do NOT get
+
+    per-knob d' on the larynx's own readings — 'reaches' is what
+    this number becomes in the air, '-' is computed and discarded
+    reading      reaches        d'        null (32 perm)
+    centroid 0   f0                +0.752 -0.117
+    centroid 1   -                 +1.234 -0.073   (discarded)
+    centroid 2   f1                +0.837 +0.086
+    centroid 3   f2                +0.203 -0.050
+    centroid 4   f3                +0.898 -0.105
+    centroid 5   bw1               +1.434 -0.091
+    centroid 6   bw2               +0.290 -0.083
+    centroid 7   bw3               +0.867 -0.098
+    centroid 8   -                 +2.288 -0.046   (discarded)
+    activity 0   -                 -0.170 -0.112   (discarded)
+    activity 1   voicing gate      -0.176 -0.082
+    activity 2   -                 -0.192 +0.127   (discarded)
+    activity 3   -                 -0.200 -0.097   (discarded)
+    activity 4   -                 -0.116 +0.099   (discarded)
+    activity 5   -                 -0.193 -0.091   (discarded)
+    activity 6   -                 -0.190 +0.137   (discarded)
+    activity 7   -                 -0.085 -0.057   (discarded)
+    activity 8   loudness          +0.197 -0.085
+    mean d'^2    (the 9 heard)     +0.557  vs +0.729 discarded
+    If the object's d'^2 sits in the discarded rows and the word's
+    sits in the heard ones, the larynx is the loss.
+
+    oracle reordering within each slice — 50 held-out trials
+    ordering       mean d'^2   per-group d'
+    as wired            +0.137 +0.20 +0.52 +0.56 +0.17 -0.26 +0.52 +0.19 -0.20 +0.63 
+    oracle              +0.648 +0.61 +0.91 +1.07 +0.68 +0.51 +1.44 +0.25 +0.39 +0.69 
+    oracle-shuf         +0.200 -0.28 -0.20 +0.50 +0.47 +1.05 +0.60 -0.10 -0.28 +0.30 
+    oracle >> as-wired with oracle-shuf flat = the object is IN the
+    slice and index order hides it. All three flat = it is not there.
+
+  m3probe is a microscope, not a criterion — both delivery controls
+  are lit (1.000, 1.000), so the rows above are about the creature.
+  each trial 2000 ms, first 500 discarded; no learning, no reward
+  instrument        m3probe   trial seed 000000000135570b   100 trials per sweep
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  '32 space' and '8x4 space+t' are 32 features each — the same budget
+  spent on where the spikes were, or on where and when. 'shuffled'
+  controls the space+t column.
+
+  a cube or a ball, in silence — 100 trials
+    module       per-neuron  interleaved rate EMA    32 space    8x4 space+t rate only   shuffled    centroid    spikes/trial
+    central      0.780       0.860       0.700       0.700       0.600       0.500       0.440       0.540       4278.5
+    auditory     0.540       0.500       0.480       0.520       0.440       0.480       0.400       0.460       872.7
+    vision       0.960       0.980       0.960       0.720       0.640       0.500       0.480       0.680       1966.9
+    somato       0.520       0.520       0.540       0.440       0.460       0.440       0.400       0.460       406.7
+    vocal        0.680       0.600       0.680       0.580       0.560       0.540       0.540       0.480       894.4
+    expression   0.540       0.520       0.500       0.500       0.600       0.460       0.580       0.520       680.2
+    voice        0.480         <- the nine motor groups, loudness and voicing
+      centroids  0.460       <- the 9 group CENTROIDS alone: what the articulators get
+      activities 0.640       <- the 9 group RATES alone: what they do NOT get
+
+    per-knob d' on the larynx's own readings — 'reaches' is what
+    this number becomes in the air, '-' is computed and discarded
+    reading      reaches        d'        null (32 perm)
+    centroid 0   f0                -0.181 +0.206
+    centroid 1   -                 -0.102 -0.069   (discarded)
+    centroid 2   f1                -0.200 +0.124
+    centroid 3   f2                +0.288 -0.090
+    centroid 4   f3                -0.108 +0.066
+    centroid 5   bw1               -0.170 -0.046
+    centroid 6   bw2               -0.200 +0.069
+    centroid 7   bw3               -0.187 +0.031
+    centroid 8   -                 -0.198 +0.114   (discarded)
+    activity 0   -                 +0.292 -0.103   (discarded)
+    activity 1   voicing gate      -0.184 -0.134
+    activity 2   -                 -0.090 -0.015   (discarded)
+    activity 3   -                 +0.029 +0.093   (discarded)
+    activity 4   -                 -0.037 +0.090   (discarded)
+    activity 5   -                 +0.240 -0.140   (discarded)
+    activity 6   -                 +0.329 +0.130   (discarded)
+    activity 7   -                 +0.182 -0.077   (discarded)
+    activity 8   loudness          -0.186 +0.112
+    mean d'^2    (the 9 heard)     -0.019  vs +0.025 discarded
+    If the object's d'^2 sits in the discarded rows and the word's
+    sits in the heard ones, the larynx is the loss.
+
+    oracle reordering within each slice — 50 held-out trials
+    ordering       mean d'^2   per-group d'
+    as wired            -0.002 +0.28 -0.25 -0.20 +0.52 -0.24 -0.23 -0.25 -0.24 -0.20 
+    oracle              +0.094 +0.27 +0.44 -0.27 -0.14 -0.28 +0.58 -0.20 +0.69 -0.16 
+    oracle-shuf         -0.028 -0.28 +0.32 +0.15 -0.25 +0.18 -0.22 -0.25 -0.28 -0.28 
+    oracle >> as-wired with oracle-shuf flat = the object is IN the
+    slice and index order hides it. All three flat = it is not there.
+
+  one of two words, to an empty field — 100 trials
+    module       per-neuron  interleaved rate EMA    32 space    8x4 space+t rate only   shuffled    centroid    spikes/trial
+    central      0.760       0.860       0.640       0.760       0.560       0.520       0.400       0.600       3815.9
+    auditory     1.000       1.000       1.000       1.000       1.000       0.500       0.400       0.500       960.7
+    vision       0.580       0.600       0.480       0.540       0.440       0.420       0.440       0.620       759.4
+    somato       0.620       0.600       0.620       0.560       0.400       0.540       0.540       0.460       417.1
+    vocal        0.720       0.780       0.600       0.540       0.540       0.560       0.580       0.540       1041.9
+    expression   0.500       0.540       0.500       0.600       0.580       0.520       0.440       0.600       659.6
+    voice        0.900         <- the nine motor groups, loudness and voicing
+      centroids  0.920       <- the 9 group CENTROIDS alone: what the articulators get
+      activities 0.660       <- the 9 group RATES alone: what they do NOT get
+
+    per-knob d' on the larynx's own readings — 'reaches' is what
+    this number becomes in the air, '-' is computed and discarded
+    reading      reaches        d'        null (32 perm)
+    centroid 0   f0                +0.274 +0.036
+    centroid 1   -                 +0.817 +0.132   (discarded)
+    centroid 2   f1                +1.273 +0.042
+    centroid 3   f2                +0.868 +0.105
+    centroid 4   f3                +0.951 +0.049
+    centroid 5   bw1               -0.056 -0.025
+    centroid 6   bw2               +1.289 +0.125
+    centroid 7   bw3               +0.311 +0.087
+    centroid 8   -                 +2.283 -0.081   (discarded)
+    activity 0   -                 +0.782 +0.113   (discarded)
+    activity 1   voicing gate      +0.152 +0.101
+    activity 2   -                 -0.200 -0.065   (discarded)
+    activity 3   -                 -0.140 +0.061   (discarded)
+    activity 4   -                 +0.261 -0.135   (discarded)
+    activity 5   -                 +0.130 -0.118   (discarded)
+    activity 6   -                 -0.024 -0.030   (discarded)
+    activity 7   -                 +0.391 -0.068   (discarded)
+    activity 8   loudness          -0.047 +0.106
+    mean d'^2    (the 9 heard)     +0.570  vs +0.741 discarded
+    If the object's d'^2 sits in the discarded rows and the word's
+    sits in the heard ones, the larynx is the loss.
+
+    oracle reordering within each slice — 50 held-out trials
+    ordering       mean d'^2   per-group d'
+    as wired            +0.069 -0.22 +0.17 +0.31 +0.32 +0.19 +0.41 -0.28 -0.07 +0.57 
+    oracle              +0.484 +0.11 +0.53 +1.11 +0.71 +0.33 +0.28 +0.77 +0.85 +0.90 
+    oracle-shuf         -0.022 -0.28 -0.19 +0.30 -0.21 +0.25 -0.11 -0.22 -0.26 -0.26 
+    oracle >> as-wired with oracle-shuf flat = the object is IN the
+    slice and index order hides it. All three flat = it is not there.
+
+  m3probe is a microscope, not a criterion — both delivery controls
+  are lit (0.960, 1.000), so the rows above are about the creature.
+  each trial 2000 ms, first 500 discarded; no learning, no reward
+  instrument        m3probe   trial seed 0000000001357414   100 trials per sweep
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  '32 space' and '8x4 space+t' are 32 features each — the same budget
+  spent on where the spikes were, or on where and when. 'shuffled'
+  controls the space+t column.
+
+  a cube or a ball, in silence — 100 trials
+    module       per-neuron  interleaved rate EMA    32 space    8x4 space+t rate only   shuffled    centroid    spikes/trial
+    central      0.580       0.760       0.620       0.600       0.600       0.500       0.460       0.520       4297.1
+    auditory     0.580       0.420       0.540       0.460       0.420       0.500       0.560       0.500       906.3
+    vision       0.900       0.960       0.860       0.740       0.800       0.540       0.420       0.480       1894.5
+    somato       0.420       0.500       0.380       0.620       0.480       0.600       0.440       0.480       413.3
+    vocal        0.680       0.800       0.640       0.520       0.600       0.480       0.600       0.460       981.2
+    expression   0.520       0.480       0.500       0.500       0.600       0.500       0.620       0.560       666.0
+    voice        0.500         <- the nine motor groups, loudness and voicing
+      centroids  0.500       <- the 9 group CENTROIDS alone: what the articulators get
+      activities 0.500       <- the 9 group RATES alone: what they do NOT get
+
+    per-knob d' on the larynx's own readings — 'reaches' is what
+    this number becomes in the air, '-' is computed and discarded
+    reading      reaches        d'        null (32 perm)
+    centroid 0   f0                -0.102 +0.092
+    centroid 1   -                 -0.178 +0.094   (discarded)
+    centroid 2   f1                -0.199 -0.025
+    centroid 3   f2                -0.134 -0.112
+    centroid 4   f3                +0.226 -0.073
+    centroid 5   bw1               -0.123 +0.126
+    centroid 6   bw2               +0.103 +0.092
+    centroid 7   bw3               -0.177 -0.077
+    centroid 8   -                 +0.302 -0.076   (discarded)
+    activity 0   -                 -0.130 +0.114   (discarded)
+    activity 1   voicing gate      -0.198 +0.090
+    activity 2   -                 -0.100 +0.122   (discarded)
+    activity 3   -                 -0.187 -0.160   (discarded)
+    activity 4   -                 -0.198 +0.144   (discarded)
+    activity 5   -                 -0.174 +0.091   (discarded)
+    activity 6   -                 -0.167 +0.111   (discarded)
+    activity 7   -                 -0.144 +0.170   (discarded)
+    activity 8   loudness          -0.183 +0.085
+    mean d'^2    (the 9 heard)     -0.014  vs -0.013 discarded
+    If the object's d'^2 sits in the discarded rows and the word's
+    sits in the heard ones, the larynx is the loss.
+
+    oracle reordering within each slice — 50 held-out trials
+    ordering       mean d'^2   per-group d'
+    as wired            +0.060 -0.28 -0.21 -0.28 +0.33 +0.84 -0.26 -0.08 -0.26 +0.27 
+    oracle              +0.494 +0.49 +0.94 +0.38 +0.81 +1.26 +0.18 +0.13 +0.92 +0.19 
+    oracle-shuf         -0.028 +0.11 -0.26 +0.07 -0.21 -0.25 +0.13 -0.15 -0.28 -0.07 
+    oracle >> as-wired with oracle-shuf flat = the object is IN the
+    slice and index order hides it. All three flat = it is not there.
+
+  one of two words, to an empty field — 100 trials
+    module       per-neuron  interleaved rate EMA    32 space    8x4 space+t rate only   shuffled    centroid    spikes/trial
+    central      0.860       0.940       0.720       0.560       0.520       0.460       0.520       0.560       3871.6
+    auditory     1.000       1.000       1.000       1.000       1.000       0.520       0.560       0.640       946.0
+    vision       0.500       0.580       0.420       0.520       0.440       0.560       0.540       0.440       743.5
+    somato       0.520       0.420       0.380       0.360       0.560       0.580       0.560       0.620       424.1
+    vocal        0.740       0.840       0.680       0.640       0.640       0.640       0.460       0.580       1040.3
+    expression   0.540       0.520       0.540       0.600       0.500       0.420       0.600       0.600       660.3
+    voice        0.820         <- the nine motor groups, loudness and voicing
+      centroids  0.780       <- the 9 group CENTROIDS alone: what the articulators get
+      activities 0.540       <- the 9 group RATES alone: what they do NOT get
+
+    per-knob d' on the larynx's own readings — 'reaches' is what
+    this number becomes in the air, '-' is computed and discarded
+    reading      reaches        d'        null (32 perm)
+    centroid 0   f0                +0.441 +0.062
+    centroid 1   -                 +0.857 -0.013   (discarded)
+    centroid 2   f1                -0.077 +0.101
+    centroid 3   f2                +0.235 -0.051
+    centroid 4   f3                +0.359 +0.114
+    centroid 5   bw1               +0.483 +0.140
+    centroid 6   bw2               +0.489 -0.066
+    centroid 7   bw3               +1.124 -0.099
+    centroid 8   -                 +0.781 +0.086   (discarded)
+    activity 0   -                 +0.475 -0.037   (discarded)
+    activity 1   voicing gate      +0.431 -0.106
+    activity 2   -                 -0.108 -0.048   (discarded)
+    activity 3   -                 +0.602 +0.093   (discarded)
+    activity 4   -                 +0.956 -0.067   (discarded)
+    activity 5   -                 +0.250 +0.124   (discarded)
+    activity 6   -                 +0.304 +0.097   (discarded)
+    activity 7   -                 +0.234 +0.063   (discarded)
+    activity 8   loudness          +0.966 -0.127
+    mean d'^2    (the 9 heard)     +0.358  vs +0.338 discarded
+    If the object's d'^2 sits in the discarded rows and the word's
+    sits in the heard ones, the larynx is the loss.
+
+    oracle reordering within each slice — 50 held-out trials
+    ordering       mean d'^2   per-group d'
+    as wired            +0.162 +0.07 +0.13 +0.45 +0.46 +0.32 +0.11 +1.02 -0.28 -0.23 
+    oracle              +0.648 -0.26 +1.67 +0.64 +0.68 +0.71 +0.80 +0.72 +0.19 +0.74 
+    oracle-shuf         +0.243 +0.58 +0.65 -0.28 +0.84 +0.69 +0.44 -0.18 -0.27 +0.49 
+    oracle >> as-wired with oracle-shuf flat = the object is IN the
+    slice and index order hides it. All three flat = it is not there.
+
+  m3probe is a microscope, not a criterion — both delivery controls
+  are lit (0.900, 1.000), so the rows above are about the creature.
+
+  --- eligprobe, 600000 ticks x 3 creatures ---
+    vision->vocal conditionality   0.833   <- the tract that carries the object
+    central->vocal conditionality  0.653   (arcuate control 0.847, 3 creatures)
+
+  quantity                               expected  measured  drift    verdict
+  object at vocal, per neuron            0.667     0.647     -0.020   ok
+  object at central, per neuron          0.693     0.680     -0.013   ok
+  object at vision, per neuron           0.960     0.953     -0.007   ok
+  word at vocal, per neuron              0.787     0.713     -0.074   ok
+  word at auditory, per neuron           1.000     1.000     +0.000   ok
+  vision->vocal trace conditionality     0.797     0.833     +0.036   ok
+  central->vocal trace conditionality    0.627     0.653     +0.026   ok
+  arcuate trace, size-matched            0.867     0.847     -0.020   ok
+
+  where each expectation is written down
+    object at vocal, per neuron            README 'three caps': 0.660 over three seed FAMILIES -- NOT the old 0.500
+    object at central, per neuron          README G3 cascade: the condition upstream of the larynx
+    object at vision, per neuron           the positive control: if this falls, nothing else here is readable
+    word at vocal, per neuron              the echo route -- what makes the creature able to repeat but not name
+    word at auditory, per neuron           the auditory positive control
+    vision->vocal trace conditionality     the tract that carries the object; central->vocal is a non-participant
+    central->vocal trace conditionality    eligprobe: 0.742 at 5 creatures, NOT the long-recorded 0.654
+    arcuate trace, size-matched            eligprobe's positive control -- a tract known to carry a condition
+
+  restate PASS — every pinned number still describes this creature.
+[exit 0]
+===== turntake --ticks 560000 =====
+experiment: turntake
+  instrument        turntake   trial seed 00000000013550db   200 trials
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  the question      M1b showed the voice CARRIES the word 200-600 ms
+                    after it ends. This asks whether the creature
+                    SPEAKS MORE then — content and rate are different
+                    measurements and only the first was ever made.
+
+  voiced fraction, 3 creatures
+    window               word       silence    word - silence
+    while the word       0.009      0.390      -0.380
+    0-200 ms after       0.451      0.364      +0.087
+    200-600 ms after     0.797      0.371      +0.426
+    600-1400 ms after    0.629      0.375      +0.254
+    1400-2300 (quiet)    0.423      0.368      +0.056
+
+    ear separation: on the 194 of 200 trials where auditory
+    activity at 200-600 ms is back within 20% of the same trial's
+    quiet window, the burst is +0.452
+
+    answering burst   +0.373   (200-600 ms above this arm's own quiet tail)
+    the same in silence +0.004   <- the trial clock, which must be subtracted
+    corrected          +0.370
+
+    M1d SIGNATURE PRESENT — the creature speaks MORE after the
+    caregiver stops than it does unprompted. Turn-taking is a
+    rate claim and this is the rate.
+    (the reflex's silence during the word is NOT scored: it is true
+     by construction and would pass this milestone on its own.)
+[exit 0]
+===== vocab --ticks 1200000 =====
+experiment: vocab
+  instrument        vocab   trial seed 0000000001350bc2   428 trials each
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  eight words, all 28 pairs, scored off one simulation in the
+  200-600 ms window AFTER the word stops — so what is measured is what
+  the voice still carries once the sound is gone.
+
+  the ten HARDEST pairs, worst first:
+    word A     word B     voice    ARTIC    EAR      dF1 Hz   dF2 Hz   dist mel
+    /e/ bed    /ae/ bat   0.588    0.528    0.575    140      150      138
+    /a/ ball   /ae/ bat   0.793    0.600    0.560    90       520      284
+    /o/ boat   /ae/ bat   0.864    0.609    0.651    240      850      537
+    /e/ bed    /I/ bit    0.636    0.621    0.521    150      100      150
+    /u/ boot   /o/ boat   0.701    0.646    0.590    100      50       109
+    /i/ cube   /I/ bit    0.864    0.676    0.583    80       550      229
+    /a/ ball   /e/ bed    0.848    0.692    0.581    230      670      393
+    /ae/ bat   /^/ but    0.881    0.710    0.560    70       500      270
+    /a/ ball   /I/ bit    0.805    0.716    0.560    380      770      511
+    /ae/ bat   /I/ bit    0.812    0.721    0.549    290      250      286
+
+  what the creature ITSELF said after each word (mel of the echo):
+    /a/ ball   heard  780/1180 Hz  ->  said  629/1670 Hz
+    /i/ cube   heard  320/2500 Hz  ->  said  628/1648 Hz
+    /u/ boot   heard  350/ 900 Hz  ->  said  627/1641 Hz
+    /e/ bed    heard  550/1850 Hz  ->  said  636/1649 Hz
+    /o/ boat   heard  450/ 850 Hz  ->  said  632/1652 Hz
+    /ae/ bat   heard  690/1700 Hz  ->  said  631/1647 Hz
+    /^/ but    heard  620/1200 Hz  ->  said  631/1679 Hz
+    /I/ bit    heard  400/1950 Hz  ->  said  634/1646 Hz
+
+  does distance predict discrimination? Spearman rank correlation
+  over all 28 pairs, between the gap and the voice score:
+    Hz  distance between the two WORDS      rho +0.476
+    mel distance between the two WORDS      rho +0.602
+    mel distance between the two ECHOES     rho +0.267  <- what is scored
+  MEL WINS — the creature's vowel confusions follow its own ear's
+  axis, not the formant grid. The vocabulary limit is the cochlea's
+  resolution, so a larger one needs a better EAR and not a better
+  larynx.
+
+  3 creatures, 28 pairs, scored on the ARTICULATORS: mean 0.730,
+  13 of 28 at or above 0.75. Unguarded it would read 0.844.
+
+  126-dimension shuffled control: 0.134 (must sit at 0.125 — a
+    nearest-centroid estimator can gain from width alone)
+
+  one of eight on VOCAL'S OWN SPIKES:  0.241 (chance 0.125)
+    against 0.334 through the nine motor groups. Same estimator,
+    same trials, same split; the only change is which vector a
+    trial is. The module does NOT hold what the knobs miss, so the
+    ceiling is upstream of the larynx, not in its
+    parameterisation.
+
+  one of eight on the ARTICULATORS: 0.331 (chance 0.125)
+    <- THE CLAIM. Drops loudness and voicing, which the row below
+    does not, and M1d made the answering burst louder by
+    construction — so an unguarded vocabulary score is exactly
+    where a spurious gain would land.
+  one of eight, nearest centroid on held-out trials: 0.334 (chance 0.125)
+
+  A pairwise table saying every pair is separable does NOT say a word
+  can be picked out of eight — that needs every boundary to hold at once.
+  The gap between the two numbers above is the interesting part.
+
+  THE VOCABULARY IS FULL BELOW EIGHT — 15 of 28 pairs are under 0.75
+  (worst 0.588 against a chance of 0.5), and one of eight reads 0.334
+  against a chance of 0.125. Four words hold apart on every pair; eight
+  do not, and the hardest rows above say where it runs out.
+[exit 1]
+===== g4 --ticks 1500000 =====
+experiment: g4
+  session           1500.0 s of simulated life
+  budget cap        9216 neurons (born with 1102)
+
+  as raised
+    windows         75 (3 improving, 71 plateau)
+    neurons         1102 -> 1150 (cap 9216)
+    growth          6 events, 48 neurons
+    saturation      rate 8.06 Hz peak vs 20.00 bar, weight 0.146 peak vs 0.300 bar
+    weight spread   3.8% of incoming edges at half the ceiling, 0.4% at 3/4, 0.1% at 9/10
+    crowding curve  20s:0.4%  280s:0.0%  540s:0.0%  800s:0.0%  1060s:0.0%  1320s:0.0%  
+    error curve     20s:0.0266  280s:0.0059  540s:0.0056  800s:0.0058  1060s:0.0056  1320s:0.0049  
+    sleep           reached, 7 passes, pruned 26 synapses / 0 neurons
+    replay          8 episodes held, 56 re-experienced
+    myelination     mean per-edge learning rate 0.653 x eta
+    growth ledger   w3[improving]->w4[plateau]  w6[plateau]->w7[plateau]  w9[plateau]->w10[plateau]  w12[plateau]->w13[plateau]  w15[plateau]->w16[plateau]  w18[plateau]->w19[plateau]  
+
+  forced (saturation guard lowered — the non-vacuity control)
+    windows         75
+    neurons         1102 -> 1150 (cap 9216)
+    growth          6 events, 48 neurons
+    sleep           reached, pruned 29 synapses / 0 neurons
+
+  determinism through growth and pruning
+    31 checkpoints, final hash c6f2ecfd569757cb — identical
+
+  G4 PASS
+    count flat while error improved   yes
+    grew only on a detected plateau   yes
+    never exceeded the budget cap     yes
+    growth path demonstrably works    yes (48 neurons when forced)
+    sleep consolidation ran           yes (7 passes)
+    structural change is reproducible yes
+[exit 0]
+===== imitate --ticks 560000 =====
+experiment: imitate
+  session           560.0 s x 5 creatures, two words to an EMPTY
+                    FIELD, trial order shuffled
+  instrument        imitate   trial seed 00000000013533de   200 trials each
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  the question      the word STOPS. Does the voice still carry which
+                    one it was? A voice that differs while the sound is
+                    still playing is the arcuate transmitting; repeating
+                    is what survives the sound stopping.
+
+  window                 voice       articulators shuffled    audible d'  EAR still knows
+  WHILE the word plays   0.830       0.768       0.507       1.31        1.000
+  0-200 ms after         0.884       0.806       0.490       1.42        0.976
+  200-600 ms after       0.860       0.796       0.499       1.46        0.622   <- SCORED
+  600-1400 ms after      0.742       0.680       0.498       1.16        0.534
+  1400-2300 (ambient)    0.578       0.528       0.506       0.44        0.486   <- ambient babble
+
+  the answer against ambient babble, same trials:
+    articulators   burst 0.796  vs ambient 0.528   +0.268
+    voice          burst 0.860  vs ambient 0.578   +0.282
+    THE ANSWER IS INFORMATIVE — the burst carries the word better
+    than the babble the same creature produces unprompted.
+
+    'voice' is the nine motor groups plus loudness and voicing.
+    'articulators' drops loudness and voicing entirely, so it cannot
+    pass on "one word makes it louder" -- it is a claim about two
+    SOUNDS rather than two amounts of sound.
+    'audible d'' is the bias-corrected cepstral ruler: 1.0 is roughly
+    76% correct for a listener.
+    'EAR still knows' is the auditory module on the same trials in the
+    same window. It is the control that makes this a claim about
+    repeating rather than about hearing: in the scored window the
+    stimulus is gone from the ear and still present in the voice.
+
+  M1b PASS — 200-600 ms after the word stops, with the auditory module
+  down to 0.622, a held-out classifier still reads which word the
+  creature heard off its own voice at 86% (chance 50%, bar 75%,
+  the same bar G3 is scored against). 5 of 5 creatures at or above
+  it. Audible d' 1.46 against the 1.0 a listener needs.
+  Read it beside G3, same creature and same bar: it repeats at 86%
+  and names at 53%. The object reaches the larynx and does not reach
+  the voice.
+
+  --- four words, all six pairs, same window -------------------
+    word A      word B      voice     EAR       
+    /a/ ball    /i/ cube    0.867     0.613     
+    /a/ ball    /u/ boot    0.893     0.660     
+    /a/ ball    /e/ bed     0.787     0.573     
+    /i/ cube    /u/ boot    0.907     0.627     <- F1 within 30 Hz: an F2-only discrimination
+    /i/ cube    /e/ bed     0.887     0.673     
+    /u/ boot    /e/ bed     0.933     0.633     
+
+    3 creatures. Every pair is scored on the SAME trials as the
+    others, so differences between rows are about the two vowels and
+    not about the run. The weakest pair is 0.787.
+
+  --- through a microphone ------------------------------------
+    condition      voice     shuffled  EAR       audible d'
+    clean          0.893     0.504     0.640     1.30
+    SNR 20 dB      0.877     0.501     0.693     1.77
+    SNR 10 dB      0.860     0.495     0.650     1.52
+    SNR 0 dB       0.810     0.499     0.600     1.45
+    +-6 dB level   0.860     0.507     0.643     1.48
+    10 dB & +-6 dB 0.840     0.500     0.610     1.50
+
+    Noise is referenced to the word's own amplitude, not to the
+    buffer's, so it keeps playing through the silent tail this
+    experiment scores — which is the honest version: a real room is
+    not quiet just because the talker stopped.
+[exit 0]

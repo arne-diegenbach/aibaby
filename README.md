@@ -18828,6 +18828,88 @@ was generalised to seven experiments that could. **Smoke the most expensive invo
 not the cheapest.** `tools/delay_battery.sh` now carries each experiment's minimum from
 `kSpecs` in its own table.
 
+### The delay null, and the one-line arithmetic that explains it (2026-10-26)
+
+The operating-point null said nothing about learning, so the cheap learning and timing
+experiments were run on both arms at their declared minimums — `g2`, `m2`, `eligprobe`,
+`restate`, `turntake`, `vocab`, `g4`, `imitate`. **No verdict flipped**: the same
+experiment failed in both arms and the same four printed PASS.
+
+`g2` is the only one that prints per creature, which is what makes a paired test
+possible — the genome seed is identical in both arms, so creature *r* is the same wiring
+on both sides. **Pre-registered before the run**: the primary is the F1 motor column,
+paired, jackknifed, 3 SE, at **n = 36** across four non-overlapping families of nine
+(offset 9x7919, so the creature blocks cannot collide). The earlier n = 9 pass was the
+discovery sample and is not pooled in.
+
+```
+                moving (shipped)    frozen              frozen - moving     2 SE bound
+PRIMARY  motor  +0.0338 +/- 0.0042  +0.0319 +/- 0.0042  -0.0019 +/- 0.0041  30% of the effect
+         rate   +0.9958 +/- 0.1319  +0.9189 +/- 0.1171  -0.0769 +/- 0.1192  32%
+         share  +0.3529 +/- 0.0464  +0.3192 +/- 0.0448  -0.0337 +/- 0.0474  36%
+
+praise won      30/36 both arms; 4 discordant pairs each way, McNemar chi2 0.12
+```
+
+**Null on the primary at 0.5 SE**, and the bound halved from 60% of the praise effect at
+n = 9 to **30%** at n = 36, exactly the 2x the fourfold n should buy. The honest
+statement is therefore *the delay term changes what praise buys by at most 30% of it*,
+not *by nothing*.
+
+**And every sign flipped between n = 9 and n = 36.** All three columns read positive at
+n = 9 and negative at n = 36, and the `praise won` count that looked like 7-of-9 against
+9-of-9 came back **30/36 in both arms** with four discordant pairs each way. That is the
+third small-n sign reversal recorded this month; the n = 9 read carried nothing.
+
+**WHY it is null, and this needs no run at all.** §3.5 computes
+
+```
+m_frac = traffic / (traffic + traffic_half)
+delay  = int(birth * (1 - (1 - delay_floor_frac) * m_frac) + 0.5)
+```
+
+The genome states where traffic lands — *"traffic settles near (presynaptic rate in Hz)
+x (tau in seconds)"* — so with `traffic_tau_ms = 10000` against `traffic_half = 50`, an
+axon must carry **5 Hz to be half myelinated**, and `calibrate` measures the modules
+free-running at 2.5–7.2 Hz. Every module therefore sits at `m_frac` **0.34 to 0.59**,
+nowhere near saturation, and at `delay_floor_frac = 0.5` the delay keeps 70–83% of its
+birth value:
+
+```
+module       Hz   m_frac   birth -> moved (ticks)
+expression  7.24   0.592   3->2  4->3  5->4  6->4  7->5
+central     6.60   0.569   3->2  4->3  5->4  6->4  7->5
+auditory    2.52   0.335   3->2  4->3  5->4  6->5  7->6
+```
+
+**A typical delay moves by exactly one tick — one millisecond.** That is the whole
+mechanism, and it is why freezing it changes nothing measurable: one millisecond against
+an eligibility trace of `tau_elig_ms = 2000` and vowels held for hundreds of
+milliseconds. `tools/delay_movement.py` derives this from the genome and the measured
+rates with no run.
+
+**What this does and does not refute.** It refutes the **shipped** rule being worth
+anything: unsigned, traffic-driven, and moving one tick. It does **not** refute the
+literature, which learns **signed** delays over **15–31 steps** — an order of magnitude
+more range than this genome's six integers with a one-tick swing. So the finding is
+about the genome, not about delays: **the axis is real and the range is too small to
+use.**
+
+**The named next step, and it is deliberately not started here.** Widen the range —
+multiply the projection `delay_ms` values so the axis spans the literature's scale
+(x4 puts 3–7 ms at 12–28 ticks, still inside `max_delay_ticks = 32`) — and only then ask
+whether a delay rule buys anything. That changes conduction latency everywhere, so it is
+a **different creature**, not a consolidation-parameter flip: it needs the calibration
+invariant checked, a vacuity pre-flight of its own, and an oracle gate before any
+learned rule is built on top. It is the first experiment this project has had that is
+pointed at by a measurement rather than by a hypothesis.
+
+**One lead recorded and not chased.** `imitate` moved up in all three noise conditions
+in the frozen arm (0.793 -> 0.810, 0.857 -> 0.860, 0.813 -> 0.840). Three of three in
+one direction is also exactly what a scan of eight experiments with several columns each
+produces by accident, and there is no error bar on it. Chasing it after the primary came
+back null would be fitting the hypothesis to the scan.
+
 ## Layout
 
 ```
