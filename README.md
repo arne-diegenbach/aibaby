@@ -18910,6 +18910,77 @@ one direction is also exactly what a scan of eight experiments with several colu
 produces by accident, and there is no error bar on it. Chasing it after the primary came
 back null would be fitting the hypothesis to the scan.
 
+### The delay axis closes: 4x the range, the identical null (2026-10-26)
+
+The previous entry explained the delay null by the range — six integers and one tick of
+travel against a literature that learns over 15–31 steps — and named widening as the
+next step. It was widened, and **the explanation was wrong.**
+
+`tools/widen_delays.py` multiplies the 22 projection delay fields by 4, taking the axis
+from **6 distinct integers (2–7 ticks) to 17 (5–28)** and the travel myelination
+produces from **one tick to 3–8**. The rule is untouched: `m_frac` depends on firing rate
+and `traffic_half`, not on the delay, so quadrupling the birth delay quadruples the
+lever arm with the same driver. `chain_delay_ms` is deliberately left alone — it sets the
+synfire step, so scaling it would change that mechanism's function rather than its
+resolution. The scaler **refuses** rather than scales if a delay would pass
+`max_delay_ticks - 1`, because a clamped delay is a silent change of meaning; the
+maximum landed at 24 + 4 jitter = 28, inside 31.
+
+**Both gates passed, which was the real risk.** `calibrate PASS`, 0 modules off target,
+every deviation the same size as the shipped genome's own (central −0.25 against −0.21)
+— so no retune and no fixed-point iteration on the normalised module. And the widened
+creature still learns: `G2 PASS`, F1 motor +0.03758 against the shipped +0.0338, so the
+comparison is neither floored nor ceilinged.
+
+**THE PRIMARY, pre-registered and unchanged between the two runs:**
+
+```
+            effect     frozen - moving        bound    praise won
+NARROW      +0.0338    -0.0019 +/- 0.0041     30%      30/36 vs 30/36   (0.5 SE)
+WIDE        +0.0297    -0.0019 +/- 0.0045     36%      26/36 vs 27/36   (0.4 SE)
+```
+
+**The point estimate is identical to four decimal places.** Quadrupling the travel
+changed the delay term's effect by nothing measurable. The mechanism's effect does not
+scale with its lever arm, which **refutes the range account directly** — and refutes it
+on the one quantity that was pre-registered before either run, so there is no question
+of the statistic being chosen after the fact.
+
+**The secondary, and it is NOT resolved.** Does widening *itself* change learning? All
+six comparisons came back negative — widening hurts — the largest at 1.9 SE:
+
+```
+delays ON   rate -0.2094 +/- 0.1103 (1.9)  share -0.0579 (1.3)  motor -0.0041 (1.0)
+delays OFF  rate -0.2522 +/- 0.1467 (1.7)  share -0.0606 (1.1)  motor -0.0040 (0.8)
+```
+
+Six of six in one direction looks like something, and **it is worth nothing**: a sign
+test gives p = 0.031 only if the six are independent, and they are three correlated
+columns of the same run measured twice, so the honest count is two arms and p = 0.50.
+The quasi-independent corroboration is thinner than it looks too — `praise won` falling
+from 30/36 in both narrow arms to 26/36 and 27/36, and family 3 flipping from PASS in
+both narrow arms to **FAIL in both wide arms**, which at least places the family-3
+failure on the widening and not on the delay term. Resolving this properly needs **90 to
+506 creatures** depending on the column. It is not chased, because the only decision it
+informs is "do not widen", which the null already settles.
+
+**THE SYNTHESIS, and it converges with three other lines.** Across both ranges the
+creature is insensitive to delay *changes* of 1–8 ticks, and at most mildly sensitive to
+the absolute delay *level*. That is the signature of learning which is **rate-coded, not
+timing-coded** — and this project reached the same place from three other directions:
+the synfire line found chains propagate **synchrony** while an utterance is a **held
+vowel**; the burst-plasticity line found **a code STDP could not use**; and
+`aibaby-time-basis-lead` refused a sparse time basis before building it, because an
+oracle phase index bought under 1 Hz. A learned delay rule is a **fine-timing**
+mechanism, and fine timing is the thing this creature has now been shown four separate
+times not to use.
+
+**So the axis closes, and it closes better than a null.** Not *"we lacked range"* — the
+range was quadrupled and the number did not move. The honest statement is: **delays are
+not a lever in this creature, and the reason is that its learning does not read time.**
+That also retires the case for building the signed, reward-driven delay rule, which was
+gated behind this result precisely so it would not be built on an untested premise.
+
 ## Layout
 
 ```
