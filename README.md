@@ -19066,6 +19066,79 @@ bump and a new parser reader, and **the shipped creature is bit-identical**. Sig
 the draw entirely rather than drawing and multiplying by one, because consuming an rng
 value would move the pinned hash without changing a single parameter.
 
+### Random heterogeneity costs 61% of the lesson, and the spread is what does it (2026-10-26)
+
+The first **resolved** effect of the DNA v71 line, and it goes against the prediction
+recorded in the source before the run. Threshold spread was predicted to help — it is a
+gain property, and this creature's learning is rate-coded — and it hurts, on all three
+columns at once.
+
+Three cells, `g2` at n = 36 each, four non-overlapping families of nine:
+
+```
+A  dna/default.toml            median m,  sigma 0      calibrate PASS
+B  het-thr-retuned.toml        median m', sigma 0.30   calibrate PASS
+C  het-thr-median.toml         median m', sigma 0      calibrate FAIL (5)
+```
+
+**THE PRE-REGISTERED PRIMARY (F1 motor, paired, jackknifed, 3 SE):**
+
+```
+B - A   spread + median, both cells calibration-clean
+  rate   +0.9958 -> +0.2422   -0.7536 +/- 0.1630  (4.6 SE)  RESOLVED   -76%
+  share  +0.3529 -> +0.1034   -0.2495 +/- 0.0606  (4.1 SE)  RESOLVED   -71%
+  motor  +0.0338 -> +0.0131   -0.0207 +/- 0.0059  (3.5 SE)  RESOLVED   -61%
+  praise won   A 30/36  ->  B 19/36
+```
+
+And `g2`'s own verdict, which is independent of the paired statistic: cell A passes **4
+of 4** families, cell B **fails 2**.
+
+**THE DECOMPOSITION CLEARS THE MEDIAN, which is what the third cell was for.** A
+log-normal spread raises free-running rates, so matching the operating point *requires*
+raising the median — the median change is a consequence of the spread, not an independent
+knob, and no two-cell design can separate them:
+
+```
+C - A   median alone      rate 1.9 SE   share 1.1 SE   motor 1.2 SE   ALL NULL
+B - C   spread alone      rate 4.9 SE   share 3.1 SE   motor 2.4 SE
+```
+
+The median raise does essentially nothing and the **spread** carries the effect. Both
+decompositions agree, so the conclusion rests on neither cell alone.
+
+**A MECHANISM THAT FITS TWO THINGS ALREADY ON RECORD — and it is a hypothesis, not a
+measurement.** The creature reads its motor output as a **population vector**:
+`read_group` weights neuron *i* by `(i - begin + 0.5)/n`, which assumes the units are
+comparable. Heterogeneous thresholds make each unit's contribution idiosyncratic, so the
+same bias change moves each neuron's rate differently and node perturbation's credit gets
+noisier for the same reward. That converges with the Turrigiano entry in the References,
+where per-neuron homeostasis is named as the **opponent** of the differentiation a
+population-vector readout needs. Read together: the creature's flatness may be a property
+of its **readout** rather than a limitation of its neurons — which would make
+heterogeneity unavailable here for a structural reason rather than a tuning one.
+
+**WHAT THIS REFUTES AND WHAT IT LEAVES STANDING.** It refutes **free heterogeneity**: a
+random spread imposed at birth makes learning worse, decisively. It does **not** refute
+Perez-Nieves et al. (2021), who *learn* time constants jointly with weights and whose
+headline claim is robustness to mistuned hyperparameters. What was built here is the
+**null version** of their intervention — random, uncorrelated with anything the creature
+is doing. **Random heterogeneity hurts; learned heterogeneity is untested**, and testing
+it needs a plasticity rule rather than a genome field.
+
+**THREE LIMITS, STATED RATHER THAN BURIED.** The bounds are wide: the loss is between
+about 26% and 96% at 2 SE, resolved but not sharp. Cell C lost one of its 36 creatures to
+g2's own refusal — `(inconclusive: 7 baseline / 35 test vocalisations)`, too quiet to
+score, a direct consequence of raised thresholds *without* the spread to offset them — so
+the surviving 35 are the ones that vocalised, which biases C upward and is why it was only
+ever a bound. And this is **one sigma at one stage**: `leak_tau_sigma` has a vacuity hash
+but no outcome measurement.
+
+**THE DOSE-RESPONSE IS THE OPEN QUESTION.** *Heterogeneity is bad* and *too much
+heterogeneity is bad* are different findings, and only the second leaves anything to build
+on. Each sigma needs its own retune, since the median compensates the spread's rate
+effect and one genome cannot serve two sigmas.
+
 ## Layout
 
 ```
