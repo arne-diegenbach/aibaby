@@ -38,6 +38,32 @@ inline Scalar decay_per(Scalar step_ms, Scalar tau_ms) {
   return Scalar(expf(-float(step_ms) / float(tau_ms)));
 }
 
+// DNA v71. The per-neuron factor on an intrinsic constant, drawn from a stream
+// seeded by (genome seed, neuron index, which field) and nothing else. Log-normal,
+// so the MEDIAN stays at the genome value — the field keeps meaning "the typical
+// neuron" however wide the spread is set — and a positive constant can never be
+// drawn negative. Build time only, like decay_per above.
+//
+// WHY A PRIVATE STREAM, and this is why the first implementation was thrown away.
+// Drawing from the build-time `rng` consumes values from it and shifts every later
+// draw: positions, E/I assignment, every wiring decision. An arm with sigma > 0
+// was then not "the same creature with a spread" but a DIFFERENT CREATURE.
+// Measured before the fix: at sigma 0.02 — a ±2% spread — `vocal`'s free-running
+// rate moved 4.12 → 4.88 Hz, about 1.1 of the seed-to-seed sd. That was the
+// wiring, not the heterogeneity. It is `n_max re-rolls the wiring` rebuilt from
+// scratch, and it would have made every arm of this experiment uninterpretable.
+//
+// Seeding per NEURON rather than carrying one stream also makes each draw a pure
+// function of the neuron's identity, so growth order cannot change what a grown
+// neuron receives, and sigma 0 returns the genome value having touched nothing.
+inline Scalar het_scaled(uint64_t seed, uint32_t i, Scalar base, Scalar sigma,
+                         Scalar lo, Scalar hi, uint32_t field) {
+  if (sigma <= kZero) return base;
+  Rng r;
+  r.seed(seed ^ (uint64_t(field) << 60) ^ (uint64_t(i) * 0x9E3779B97F4A7C15ULL));
+  return clampf(base * Scalar(expf(float(sigma) * float(r.normal()))), lo, hi);
+}
+
 // Cortical magnification (DnaProjection::rf_magnification). Maps a uniform
 // coordinate in [0,1] onto the retina, pulled toward the centre: k = 1 is the
 // identity, larger k spends more of the cortex on the fovea. Signed about the
@@ -589,10 +615,18 @@ bool Network::build(const Dna& dna, Arena& arena, Rng& rng) {
       module_of_[i] = uint8_t(m);
       v_rest_[i] = Scalar(dm.v_rest);
       v_[i] = Scalar(dm.v_rest);
-      threshold_[i] = Scalar(dm.threshold);
+      // DNA v71. Per-neuron spread on the two intrinsic constants, drawn from a
+      // stream of this neuron's OWN, never from `rng`.
+      threshold_[i] = het_scaled(dna.header().seed, i, Scalar(dm.threshold),
+                                 Scalar(dm.threshold_sigma),
+                                 Scalar(dna.header().homeo.threshold_min),
+                                 Scalar(dna.header().homeo.threshold_max), 0u);
       target_rate_[i] = Scalar(dm.target_rate_hz);
       noise_amp_[i] = Scalar(dm.noise_amp);
-      leak_alpha_[i] = clampf(dt_ms_ / Scalar(dm.leak_tau_ms), kZero, kOne);
+      const Scalar leak_tau = het_scaled(dna.header().seed, i, Scalar(dm.leak_tau_ms),
+                                         Scalar(dm.leak_tau_sigma),
+                                         Scalar(1e-3), Scalar(1e6), 1u);
+      leak_alpha_[i] = clampf(dt_ms_ / leak_tau, kZero, kOne);
       refrac_ticks_[i] = uint16_t(Scalar(dm.refractory_ms) / dt_ms_ + Scalar(0.5));
       pos_x_[i] = rng.uniform() * Scalar(dm.extent[0]);
       pos_y_[i] = rng.uniform() * Scalar(dm.extent[1]);
@@ -3424,11 +3458,24 @@ void Network::init_neuron(uint32_t i, uint32_t m, Scalar x, Scalar y, Scalar z) 
   // Born at the module's genome threshold rather than at its neighbours'
   // current one. Intrinsic plasticity will move it within seconds, and
   // inheriting an adapted threshold would import the saturation this neuron
-  // was grown to relieve.
-  threshold_[i] = Scalar(dm.threshold);
+  // was grown to relieve. v71 keeps that: the spread below is around the GENOME
+  // value, not around what the neighbours have drifted to.
+  //
+  // DNA v71. A grown neuron draws its own spread, or growth would leave the one
+  // population in the creature that is still homogeneous — and association is
+  // exactly where `stageprobe` put the bottleneck. Same private, per-neuron stream
+  // as at birth, so this consumes nothing from `rng_` and a grown neuron gets the
+  // same constants whenever in the creature's life it happens to be grown.
+  threshold_[i] = het_scaled(dna_.header().seed, i, Scalar(dm.threshold),
+                             Scalar(dm.threshold_sigma),
+                             Scalar(dna_.header().homeo.threshold_min),
+                             Scalar(dna_.header().homeo.threshold_max), 0u);
   target_rate_[i] = Scalar(dm.target_rate_hz);
   noise_amp_[i] = Scalar(dm.noise_amp);
-  leak_alpha_[i] = clampf(dt_ms_ / Scalar(dm.leak_tau_ms), kZero, kOne);
+  const Scalar grown_leak_tau = het_scaled(dna_.header().seed, i, Scalar(dm.leak_tau_ms),
+                                           Scalar(dm.leak_tau_sigma),
+                                           Scalar(1e-3), Scalar(1e6), 1u);
+  leak_alpha_[i] = clampf(dt_ms_ / grown_leak_tau, kZero, kOne);
   refrac_ticks_[i] = uint16_t(Scalar(dm.refractory_ms) / dt_ms_ + Scalar(0.5));
   pos_x_[i] = clampf(x, kZero, Scalar(dm.extent[0]));
   pos_y_[i] = clampf(y, kZero, Scalar(dm.extent[1]));

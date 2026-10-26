@@ -414,7 +414,12 @@ constexpr uint32_t kDnaMagic = 0x44424941;  // "AIBD"
 //     a COMPETITIVE partition of the auditory code, formed while the word plays
 //     and LATCHED across the silence. See DnaExploration::context_source and
 //     `ctxself`'s `ear` arms. Ships OFF; `context_source = 0` is bit-identical.
-constexpr uint32_t kDnaVersion = 53;
+// v54: DNA v71 appends `threshold_sigma` and `leak_tau_sigma` to DnaModule. The
+// blob is `sizeof(DnaModule) * module_count`, so the layout change is what the
+// bump is for — a v53 snapshot read as v54 would misalign every module after the
+// first. Both fields default to 0, which is bit-identical to v53 behaviour, so
+// the bump invalidates saved snapshots and nothing else.
+constexpr uint32_t kDnaVersion = 54;
 
 // What a module is wired to the world through. The host looks modules up by
 // role, never by name or index, so renaming a module in the genome cannot
@@ -2680,6 +2685,35 @@ struct DnaModule {
   // about: the trace's timescale tracks the history-dependence of the neuron
   // whose firing the credit is for.
   float elig_tau_scale;
+
+  // DNA v71. Per-neuron HETEROGENEITY in this module's two intrinsic constants.
+  // Both are the standard deviation in LOG space, so the draw is
+  // `value * exp(sigma * normal())`: the genome field stays the median, the
+  // spread is multiplicative, and a positive quantity cannot be drawn negative.
+  // Perez-Nieves et al. (2021) report the distributions a learning rule
+  // converges on as log-normal or gamma, which is the shape being imitated here
+  // rather than guessed.
+  //
+  // 0.0 is OFF and is BIT-IDENTICAL to v70: the draw is skipped entirely rather
+  // than drawn and multiplied by zero, because consuming an rng value would
+  // shift every later draw in the stream — positions, E/I assignment, wiring —
+  // and move the pinned hash without changing a single parameter.
+  //
+  // WHY THIS MODULE AND NOT THE WIRING. `stageprobe` decomposed the naming
+  // ceiling by stage and found the compressive one at the learned operating
+  // point is `bias -> rate` at 0.34, against 0.66 for pooling: the limit is the
+  // NEURON's drive-to-rate transfer, not how many of them there are. These two
+  // fields are the smallest change that acts on that stage.
+  //
+  // A PREDICTION, recorded before the first run: `threshold_sigma` should buy
+  // something and `leak_tau_sigma` should not. Threshold spread is a GAIN
+  // property, which is what this creature's rate-coded learning reads;
+  // Perez-Nieves's gains are largest on tasks with rich TEMPORAL structure, and
+  // the delay axis established four ways over that this creature does not read
+  // fine timing. If the tau half helps anyway, the rate-coding synthesis is
+  // wrong and that is worth more than the parameter.
+  float threshold_sigma;
+  float leak_tau_sigma;
 };
 
 // max_out_degree is what makes growth allocation-free: every neuron owns a

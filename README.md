@@ -18981,6 +18981,91 @@ not a lever in this creature, and the reason is that its learning does not read 
 That also retires the case for building the signed, reward-driven delay rule, which was
 gated behind this result precisely so it would not be built on an untested premise.
 
+## DNA v71: per-neuron heterogeneity, and the creature can barely carry it (2026-10-26)
+
+`stageprobe` named the naming ceiling's compressive stage on 2026-09-12 — `bias -> rate`
+at 0.34, the **neuron's** drive-to-rate transfer, against 0.66 for pooling — and nothing
+had attacked it since. Today's delay closure sharpened the case rather than weakening it:
+this creature's learning is **rate-coded**, and `bias -> rate` is the rate transfer.
+
+**What the creature was.** Completely homogeneous within every module, on both quantities
+the heterogeneity literature varies: `threshold_[i] = dm.threshold` at
+`core/src/network.cpp:592` and `leak_alpha_[i]` from `dm.leak_tau_ms` at `:595`, identical
+for every neuron, with **no spread field anywhere in `DnaModule`**. Worse than absent:
+thresholds *do* drift apart through life via intrinsic plasticity at `:3120`, but the
+error is measured against a **module-wide** `target_rate_hz`, so IP drives every neuron
+toward the same rate — the creature actively regulates heterogeneity away, which is
+already on record here as the named opponent of differentiation. Membrane time constants
+are never heterogeneous at all.
+
+**DNA v71** appends `threshold_sigma` and `leak_tau_sigma` to `DnaModule`, both
+log-space sigmas, so the draw is `value * exp(sigma * normal())`: the genome field stays
+the **median**, the spread is multiplicative, and a positive constant cannot be drawn
+negative. Log-normal because that is the shape Perez-Nieves et al. (2021) report a
+learning rule *converging on*, rather than a guess. `kDnaVersion` 53 -> 54, since the blob
+is `sizeof(DnaModule) * module_count` and a v53 snapshot read as v54 would misalign every
+module after the first. `number_or()` is new in the TOML reader: every other reader treats
+a missing key as an error, which is right, but a field added after ~400 genome files exist
+cannot be required, and a field whose off value is bit-identical loses nothing by
+defaulting to off. Grown neurons draw too, or growth would leave the one homogeneous
+population in the creature — in **association**, exactly where `stageprobe` put the
+bottleneck.
+
+**THE FIRST IMPLEMENTATION WAS THROWN AWAY, AND THE SWEEP IS WHY.** The draws came from
+the build-time `rng` — the same stream that assigns positions, E/I identity and every
+wiring decision — so consuming values for them shifted everything downstream. An arm with
+`sigma > 0` was not the same creature with a spread; it was a **different creature**:
+
+```
+SHARED STREAM (wrong)   sigma  0.00  0.02  0.05  0.10  0.15  0.20  0.30
+  somato                       4.45  3.89  3.74  3.53  3.38  3.32  3.42
+  vocal                        4.12  4.88  5.20  6.04  6.86  7.55 10.15
+  verdict                      PASS  FAIL  FAIL  FAIL  FAIL  FAIL  FAIL
+
+PRIVATE STREAM (right)  sigma  0.00  0.02  0.05  0.10        0.20  0.30
+  somato                       4.45  4.46  4.54  4.56        4.68  5.13
+  central                      6.60  6.63  6.75  7.08        8.29 10.17
+  expression                   7.24  7.31  7.74  8.35       10.25 13.02
+```
+
+At sigma 0.02 — a ±2% spread — `vocal` had moved 4.12 -> 4.88 Hz, about **1.1 of the
+seed-to-seed sd measured earlier the same day**. That was wiring variance. And `somato`
+fell monotonically while others rose, which is noise rather than a mechanism. **It is
+`n_max re-rolls the wiring` rebuilt from scratch in new code.** Each neuron's draw now
+comes from a stream seeded by `(genome seed, neuron index, which field)` and nothing else,
+which also makes the draw a pure function of the neuron's identity, so growth order cannot
+change what a grown neuron gets. After the fix every module is **monotone in sigma**,
+which is the signature the broken version lacked.
+
+**AND THE RESULT BEFORE ANY OUTCOME RUN: the creature can barely carry a spread.**
+`calibrate` FAILS at **sigma 0.04** — a ±4% spread. The cause is not the mean: log-normal
+holds the median fixed and raises the mean only `exp(s^2/2)` = 4.6% at sigma 0.3. It is
+that **the drive-to-rate transfer is convex** — neurons whose thresholds fell fire far
+more than those whose rose fire less, with recurrent excitation amplifying the asymmetry.
+**That convex transfer is `bias -> rate`, the stage `stageprobe` named.** The ceiling and
+this fragility may be two faces of one nonlinearity; that is a connection to test, not a
+result.
+
+**So the operating point has to be matched, and `tools/het_retune.py` does it** — raising
+each module's median threshold until free-running rates return to target while the spread
+stays intact. Converged in **2 iterations** (worst error 5.80 -> 2.69 -> 0.24 Hz), with
+thresholds up 4-19%: central 0.645 -> 0.750, expression 1.000 -> 1.187. `vocal` is excluded
+because it is off target *by design*. Moving `threshold` does not touch the divisive-norm
+setpoint (`norm_target_[m] = target_rate_hz`), so unlike a `target_rate_hz` edit this is
+not the fixed point the calibration invariant warns about.
+
+**THE GATE, and it is the point of the whole design:**
+
+```
+determinism  PASS        pinned hash  PASS        verify PASS
+experiments  23 as expected, 0 not
+```
+
+A kernel change that adds a field pair, two per-neuron draws, a struct append, a format
+bump and a new parser reader, and **the shipped creature is bit-identical**. Sigma 0 skips
+the draw entirely rather than drawing and multiplying by one, because consuming an rng
+value would move the pinned hash without changing a single parameter.
+
 ## Layout
 
 ```

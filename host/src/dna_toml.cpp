@@ -147,6 +147,17 @@ class Reader {
     return it->second.number;
   }
 
+  // A key that may be absent, returning `fallback` when it is. Every other
+  // reader treats a missing key as an error, which is the right default — a
+  // genome that forgets a field should not silently get a zero. But a field
+  // added after ~400 genome files already exist cannot be required without
+  // rewriting all of them, and a field whose OFF value is bit-identical to the
+  // previous version loses nothing by defaulting to off.
+  double number_or(const char* key, double fallback) {
+    auto it = table_.kv.find(key);
+    return it == table_.kv.end() ? fallback : it->second.number;
+  }
+
   std::string text(const char* key) {
     auto it = table_.kv.find(key);
     if (it == table_.kv.end() || it->second.kind != Value::Kind::kString) {
@@ -573,6 +584,9 @@ bool compile_dna_toml(const std::string& path, std::vector<uint8_t>& out,
     m.threshold = float(r.number("threshold"));
     m.v_rest = float(r.number("v_rest"));
     m.leak_tau_ms = float(r.number("leak_tau_ms"));
+    // DNA v71. Optional, and 0 is off and bit-identical to v70 — see DnaModule.
+    m.threshold_sigma = float(r.number_or("threshold_sigma", 0.0));
+    m.leak_tau_sigma = float(r.number_or("leak_tau_sigma", 0.0));
     m.refractory_ms = float(r.number("refractory_ms"));
     m.target_rate_hz = float(r.number("target_rate_hz"));
     m.inhib_fraction = float(r.number("inhib_fraction"));

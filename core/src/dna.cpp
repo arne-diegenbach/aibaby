@@ -329,6 +329,12 @@ DnaStatus Dna::load(const void* blob, size_t size) {
     if (m.conn_radius <= 0.0f) return DnaStatus::kBadModule;
     if (m.threshold <= m.v_rest) return DnaStatus::kBadModule;
     if (m.inhib_fraction < 0.0f || m.inhib_fraction > 1.0f) return DnaStatus::kBadModule;
+    // DNA v71. Log-space sigmas: negative is meaningless, and the upper bound is
+    // not taste — at sigma 1.0 the 99th percentile neuron is 10x the median, which
+    // is a different module rather than a spread of one. Refused rather than
+    // clamped, so a genome cannot ask for it and silently get something else.
+    if (m.threshold_sigma < 0.0f || m.threshold_sigma > 1.0f) return DnaStatus::kBadModule;
+    if (m.leak_tau_sigma < 0.0f || m.leak_tau_sigma > 1.0f) return DnaStatus::kBadModule;
     if (m.explore_scale < 0.0f) return DnaStatus::kBadModule;
     if (m.ip_wake_scale < 0.0f || m.ip_sleep_scale < 0.0f) return DnaStatus::kBadModule;
     if (m.syn_wake_scale < 0.0f || m.syn_sleep_scale < 0.0f) return DnaStatus::kBadModule;
