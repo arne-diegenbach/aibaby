@@ -19856,6 +19856,105 @@ and none is an experiment against it. That is a change to the neuron's transfer
 characteristic rather than to how many neurons there are, so it is a kernel change that
 would move the pinned hash, and it should be gated with an oracle before anything is built.
 
+### Checked 2026-10-26: the DELAY axis, and the half of §3.5 that was never measured
+
+A pass prompted by two standing priors — that a small creature survives only if power
+comes down, and the intuition that it may need more neurons. The delay literature
+answers both at once, by pointing at a degree of freedom this creature **already has and
+has never once measured**.
+
+**What the creature already has, read out of the kernel.** Delays are **per synapse**,
+not per projection: `syn_delay_` and `syn_delay0_` (the birth delay) are
+`uint16_t` arrays over the whole pool (`core/src/network.cpp:428`), delivery indexes by
+them every spike (`:2551`), and there is a two-ring inbox `delay_slots_` deep. And
+§3.5's `myelinate()` **already moves them** (`:3240`), on the homeostasis cadence, awake
+and asleep, ungated by `consolidation.enabled`:
+
+```cpp
+Scalar ticks = Scalar(syn_delay0_[syn]) * (kOne - span * m_frac) + Scalar(0.5);
+```
+
+**`delay_floor_frac` appears nowhere in this file, and nowhere in the memory store.**
+Every myelination result this project has — the brake that "binds hard and costs
+nothing", the sleep-timing mismatch, `eta_floor_frac` against the wipe — is about the
+**learning-rate** half of `myelinate()`. The **delay** half ships at
+`delay_floor_frac = 0.5`, runs continuously, and has never been an arm in any
+experiment. It is the only shipped mechanism in this creature with no measurement
+against it at all.
+
+**Three properties of the shipped rule, which are what the literature contradicts.**
+It is **unsigned** — `m_frac` is in [0,1) so the delay only ever shortens from birth.
+It is **unsupervised** — driven by `syn_traffic_`, the presynaptic rate, never by
+whether the shorter delay helped. And it is **quantisation-bound**: at `dt_ms = 1.0`
+the genome's 11 delay-carrying projections give birth delays of 3–7 ticks and
+myelinated floors of 2–4, so **the entire delay axis the shipped creature can occupy is
+the six integers 2–7**, against `max_delay_ticks = 32` already provisioned in the ring.
+The arithmetic needs no run and is in `tools/delay_axis.py`, which reproduces it from
+`dna/default.toml` and the two kernel rules alone.
+
+- **Three-factor delay learning, and it is this creature's own rule family.** Vassallo,
+  L. & Taherinejad, N. (2026). *Three factor delay learning rules for spiking neural
+  networks.* Frontiers in Neuroscience 20.
+  <https://doi.org/10.3389/fnins.2026.1814505> — learns synaptic **and** axonal delays
+  jointly with weights, **online and local**, on an e-prop eligibility trace with a
+  Gaussian surrogate derivative and a top-down error. Delays are clamped to [0, 25]
+  timesteps, so the update is signed in both directions. **The load-bearing number for
+  this project: delays buy up to 18% accuracy over a weights-only baseline, and at
+  SIMILAR PARAMETER COUNTS joint weight-and-delay learning gives up to 14% more than
+  weights alone.** Against Hammouamri et al. (2024) they report 6.6× smaller models and
+  50% lower inference latency for a 2.5% accuracy cost. **VERDICT: the single best
+  "smarter, not bigger" claim found for this creature, and the storage it needs is
+  already allocated.** The honest caveat is that its driver is a cross-entropy error at
+  a readout, where this creature has reward-modulated node perturbation and no label —
+  so the rule does not port, only the degree of freedom does. Its non-causal Gaussian
+  kernel also needs buffering of about half its width, which is not free.
+- **Axonal delays beat synaptic ones on buffer, which is the power argument.** Bouhadjar,
+  Y. & Neftci, E. (2026). *Sparse Axonal and Dendritic Delays Enable Competitive SNNs
+  for Keyword Classification.* arXiv:2602.09746 — **per-neuron** delays rather than
+  per-synapse reach 95.58% on Google Speech Commands and 80.97% on Spiking Speech
+  Commands, hold up at **80% delay sparsity** (94.86% GSC with only 20% of delays
+  active), and need **~48k bits of buffer against ~24M bits for synaptic delays** —
+  about 500×. Roughly half the parameters of the DCLS synaptic-delay model (0.61M vs
+  1.2M), on standard LIF with fewer state variables than the adaptive-neuron variants.
+  **VERDICT: directly relevant and it cuts against the current implementation.** This
+  creature pays the per-synapse buffer cost already; the paper says the per-neuron
+  version is competitive at a fraction of it. Note the task is keyword classification —
+  the closest published analogue to what this creature is for.
+- **Activity-conditioned delay, which is what §3.5 is a crude version of.** Bai, D.,
+  Peng, H., Zeng, Y., Zhang, Z. & Qu, H. (2026). *Congestion-Aware Dynamic Axonal Delay
+  for Spiking Neural Networks.* arXiv:2605.01291 — splits the delay into a channel-wise
+  **static base** plus a **global activity-conditioned shift**, learned by differentiable
+  interpolation and discretised at inference. 93.75% SHD, 80.69% SSC, 95.58% GSC-35, at
+  ~50% fewer parameters than comparable delay methods. **VERDICT: this is the nearest
+  published relative of `myelinate()`'s delay term**, which is also a static birth delay
+  plus an activity-driven shift. The differences are the two that matter: theirs is
+  learned and signed, §3.5's is hand-set and shortens only. Whether their shift can
+  lengthen a delay is not stated in the abstract and was not verified.
+- **Heterogeneity in the neuron's own constants, which is the `stageprobe` target.**
+  Perez-Nieves, N., Leung, V. C. H., Dragotti, P. L. & Goodman, D. F. M. (2021).
+  *Neural heterogeneity promotes robust learning.* Nature Communications 12, 5791.
+  <https://doi.org/10.1038/s41467-021-26022-3> — per-neuron membrane and synaptic time
+  constants, either heterogeneous-and-fixed or learned alongside weights. The gain is
+  largest on **tasks with rich temporal structure**, learning is more robust when
+  hyperparameters are mistuned, and the learned constants settle into a log-normal or
+  gamma distribution matching experiment. See also the 2024 PNAS follow-up on spike
+  **threshold** heterogeneity, <https://doi.org/10.1073/pnas.2311885121>. **VERDICT:
+  this is the family `stageprobe` pointed at and nothing has attacked** — a change to
+  the neuron's transfer characteristic rather than to how many neurons there are. It is
+  a kernel change and would move the pinned hash, so it needs an oracle gate first. The
+  robustness-to-mistuning claim is the relevant one here, not the accuracy claim, given
+  how much of this project's history is operating-point traps.
+
+**What this pass leaves pointing somewhere, in cost order.** The cheapest experiment in
+the project's whole open list is now **`delay_floor_frac = 1.0` against `0.5`**, which
+the genome documents as its own off switch (`move_delays` goes false at 1.0). It is a
+pure genome change, moves no kernel line, moves no pinned hash, and answers whether the
+delay term does anything at all — the `brake never ran` question, asked of the half of
+§3.5 that was never asked it. A null there retires an axis; a non-null is the first
+measurement this mechanism has ever had. Only if it reads non-null is there a case for
+the expensive version, which is a signed, reward-driven delay — and that is a kernel
+change, so it is gated behind the cheap one deliberately.
+
 ### A note on where this project's record actually lives
 
 Two stores, and they are not the same store:
