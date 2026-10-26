@@ -1520,6 +1520,47 @@ struct DnaExploration {
   // reachable nor wanted: it is DeSieno's dead unit, which `partprobe` measured killing 78%
   // of random initialisations and which the conscience took to 0 of 16.
   float ctx_conscience_gain;
+
+  // --- DNA v72: node perturbation on the LEAK, not the drive ----------------
+  //
+  // WHERE THIS COMES FROM. `stageprobe` decomposed the naming ceiling by stage and
+  // named `bias -> rate` at 0.34 as the compressive one — the neuron's own
+  // drive-to-rate TRANSFER. Everything this creature learns moves the transfer's
+  // horizontal OFFSET: `bias_` is zero at birth and reward-modulated node
+  // perturbation is the only thing that moves it, so learned per-neuron
+  // heterogeneity in the offset is already shipped and `g2`'s +0.0338 is its
+  // measurement. v71 then showed that imposing a RANDOM offset spread on top costs
+  // 20% of the lesson per 0.1 of sigma, monotone, with no optimum — because a
+  // random spread is noise in the exact parameter the rule is trying to set.
+  //
+  // What has never been learned is the transfer's SHAPE. `leak_tau_ms` sets how fast
+  // the membrane forgets its input, which is the gain of drive to rate rather than
+  // its offset, and it is identical for every neuron in a module for the creature's
+  // whole life — nothing moves it, not even homeostasis, which only ever moves
+  // thresholds.
+  //
+  // THE RULE IS THE ONE ALREADY HERE, APPLIED TO A DIFFERENT PARAMETER. The leak is
+  // jittered once per plasticity interval rather than per tick: it is a slow
+  // structural constant, and a 1 kHz jitter would be averaged away by the membrane
+  // it modifies, leaving nothing for reward to credit. One interval therefore runs
+  // at one perturbed leak, and the centred reward says whether that leak was better
+  // — episodic node perturbation, with the same `per_module` reward and the same
+  // cash-in clock as `bias_`.
+  //
+  // `leak_perturb` 0 DISABLES THE WHOLE MECHANISM and is bit-identical to v71: no
+  // jitter is drawn, so nothing is consumed from any stream and `leak_alpha_` keeps
+  // the value the module gave it.
+  //
+  // TWO CHECKS THIS PROJECT'S OWN RECORD DEMANDS OF IT. `ipctx` measured intrinsic
+  // plasticity on the larynx SATURATING under drive — 25-83% of neurons pinned at
+  // `threshold_max` — so the fraction of neurons pinned at `leak_learn_max` is a
+  // first-class output here, not an afterthought. And perturbation on synapses is
+  // already refused, so perturbing a new parameter class is not automatically a new
+  // idea: the vacuity check has to show this channel moves something the bias
+  // channel does not, rather than merely moving.
+  float leak_perturb;           // jitter sigma in LOG space; 0 disables
+  float leak_learn_rate;        // step on the learned log-offset per unit reward
+  float leak_learn_max;         // |log-offset| ceiling, so one lucky interval cannot run away
 };
 
 // Divisive normalisation (§3.1, DNA v12). The per-module strength lives on

@@ -659,6 +659,16 @@ class Network {
   // which has to read the shared bias and the per-context tables against each
   // other to say whether the split did anything.
   Scalar bias(uint32_t neuron) const { return bias_[neuron]; }
+  // DNA v72. The learned leak offset, and how often the channel is against its own
+  // ceiling. `ipctx` measured IP on the larynx pinning 25-83% of neurons at
+  // `threshold_max`, so an experiment on this mechanism has to be able to read the
+  // saturation before it reads the effect — a mechanism at its ceiling is not a
+  // mechanism that worked.
+  Scalar leak_log(uint32_t neuron) const { return leak_log_[neuron]; }
+  Scalar leak_alpha(uint32_t neuron) const { return leak_alpha_[neuron]; }
+  double leak_pinned_fraction() const {
+    return leak_counted_ ? double(leak_pinned_) / double(leak_counted_) : 0.0;
+  }
 
   // DNA v25. Is this neuron's apical tuft in a plateau right now? Exposed
   // because the question the compartment was built to answer is measurable
@@ -891,6 +901,13 @@ class Network {
   // both travel with a snapshot.
   Scalar* perturb_ = nullptr;
   Scalar* bias_ = nullptr;
+  // DNA v72. Node perturbation on the LEAK. `leak_alpha0_` is the birth value the
+  // other two are applied to, kept because the learned offset is recomputed from
+  // it every interval rather than nudged — so reverting costs nothing and a long
+  // life cannot accumulate float drift in the parameter itself.
+  Scalar* leak_alpha0_ = nullptr;  // dt / tau as the genome (and v71 spread) set it
+  Scalar* leak_log_ = nullptr;     // learned log-offset, ZERO at birth like bias_
+  Scalar* leak_jit_ = nullptr;     // this interval's jitter, redrawn at each cash-in
   Scalar* trace_pre_ = nullptr;   // presynaptic STDP trace
   Scalar* trace_post_ = nullptr;  // postsynaptic STDP trace
   Scalar* w_in_target_ = nullptr; // scaling setpoint; sleep downscaling lowers it
@@ -1339,6 +1356,17 @@ class Network {
   Scalar perturb_decay_ = kZero;
   Scalar perturb_rate_ = kZero;
   Scalar perturb_max_ = kZero;
+  // DNA v72. All three zero (leak_perturb_ especially) means no jitter is drawn and
+  // `leak_alpha_` keeps its birth value, which is bit-identical to v71.
+  Scalar leak_perturb_ = kZero;
+  Scalar leak_learn_rate_ = kZero;
+  Scalar leak_learn_max_ = kZero;
+  // Saturation, which `ipctx` makes a first-class output rather than an
+  // afterthought: it measured IP on the larynx pinning 25-83% of neurons at
+  // `threshold_max`, so a mechanism that pushes an intrinsic constant has to report
+  // how often it is against its own ceiling before any effect is believed.
+  uint32_t leak_pinned_ = 0;
+  uint32_t leak_counted_ = 0;
   // Per-module gate on node perturbation, from DnaModule::explore_scale. LMAN
   // projects to the motor pathway, so only the larynx learns this way.
   Scalar perturb_scale_[kMaxModules] = {};

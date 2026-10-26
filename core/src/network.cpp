@@ -114,12 +114,17 @@ size_t Network::required_bytes(const Dna& dna) {
   }
 
   // Mirrors the allocation block in build(), in the same order.
-  const size_t per_neuron = 20 * sizeof(Scalar)     // v, v_rest, threshold, target_rate,
+  // 23 since DNA v72: leak_alpha0, leak_log, leak_jit. This count MIRRORS the
+  // allocation block in build() and nothing checks that it does — getting it wrong
+  // costs the arena, and `brain init failed (2)` is the whole diagnostic, which is
+  // exactly how the first v72 build failed.
+  const size_t per_neuron = 23 * sizeof(Scalar)     // v, v_rest, threshold, target_rate,
                                                     // leak, noise, rate, rate_fast, x, y,
                                                     // z, perturb, bias, trace_pre,
                                                     // trace_post, w_in_target, w_in_struct,
                                                     // ffi_w (DNA v24), v_apical (v25),
-                                                    // adapt (DNA v56)
+                                                    // adapt (DNA v56),
+                                                    // leak_alpha0, leak_log, leak_jit (v72)
                             + 4 * sizeof(uint32_t)  // refrac_until, last_spike, syn_base,
                                                     // plateau_until (DNA v25)
                             + 4 * sizeof(uint16_t)  // syn_count, syn_cap, in_count, refrac
@@ -425,6 +430,9 @@ bool Network::build(const Dna& dna, Arena& arena, Rng& rng) {
   pos_y_ = arena.alloc_zeroed<Scalar>(capacity_);
   pos_z_ = arena.alloc_zeroed<Scalar>(capacity_);
   perturb_ = arena.alloc_zeroed<Scalar>(capacity_);
+  leak_alpha0_ = arena.alloc_zeroed<Scalar>(capacity_);
+  leak_log_ = arena.alloc_zeroed<Scalar>(capacity_);
+  leak_jit_ = arena.alloc_zeroed<Scalar>(capacity_);
   bias_ = arena.alloc_zeroed<Scalar>(capacity_);
   trace_pre_ = arena.alloc_zeroed<Scalar>(capacity_);
   trace_post_ = arena.alloc_zeroed<Scalar>(capacity_);
@@ -627,6 +635,7 @@ bool Network::build(const Dna& dna, Arena& arena, Rng& rng) {
                                          Scalar(dm.leak_tau_sigma),
                                          Scalar(1e-3), Scalar(1e6), 1u);
       leak_alpha_[i] = clampf(dt_ms_ / leak_tau, kZero, kOne);
+      leak_alpha0_[i] = leak_alpha_[i];  // DNA v72's reference point
       refrac_ticks_[i] = uint16_t(Scalar(dm.refractory_ms) / dt_ms_ + Scalar(0.5));
       pos_x_[i] = rng.uniform() * Scalar(dm.extent[0]);
       pos_y_[i] = rng.uniform() * Scalar(dm.extent[1]);
@@ -682,6 +691,11 @@ bool Network::build(const Dna& dna, Arena& arena, Rng& rng) {
     perturb_decay_ = decay_per(dt_ms_, Scalar(ex.perturb_tau_ms));
     perturb_rate_ = ex.enabled ? Scalar(ex.perturb_rate) : kZero;
     perturb_max_ = Scalar(ex.perturb_max);
+    // DNA v72. Gated on `enabled` like the rate above, so switching exploration off
+    // switches off both channels rather than leaving one running.
+    leak_perturb_ = ex.enabled ? Scalar(ex.leak_perturb) : kZero;
+    leak_learn_rate_ = ex.enabled ? Scalar(ex.leak_learn_rate) : kZero;
+    leak_learn_max_ = Scalar(ex.leak_learn_max);
     // DNA v41. tau of 0 leaves meta_alpha_ at zero, which takes the pre-v41
     // branch in apply_reward_impl and is bit-identical.
     // A plain 1/N EMA over reward events. See DnaExploration::meta_window for
@@ -2918,6 +2932,32 @@ void Network::apply_reward_impl(const Scalar* per_module, bool any) {
         } else {
           bias_[i] = clampf(bias_[i] + u * gate_meta, -perturb_max_, perturb_max_);
         }
+        // DNA v72. The same rule on the LEAK: credit the jitter this interval ran
+        // at, then draw the next one. Episodic rather than per-tick because the leak
+        // is a slow structural constant — a 1 kHz jitter would be averaged away by
+        // the very membrane it modifies, leaving nothing for reward to credit — so
+        // one interval runs at one perturbed leak and the centred reward says
+        // whether it was better.
+        //
+        // The update deliberately does NOT read `gate_meta`. The commitment brake
+        // and the metaplastic SNR gate are both calibrated against `perturb_max_`
+        // and `bias_`, and reusing them here would price a different parameter on
+        // another's scale — the `mean of ratios` error one level up. If the leak
+        // channel needs a brake, that is its own measurement.
+        if (leak_perturb_ > kZero && rng_) {
+          if (leak_learn_rate_ > kZero) {
+            leak_log_[i] = clampf(leak_log_[i] + leak_learn_rate_ * per_module[m] * leak_jit_[i],
+                                  -leak_learn_max_, leak_learn_max_);
+          }
+          leak_jit_[i] = leak_perturb_ * rng_->normal();
+          // Recomputed from the BIRTH value every interval rather than nudged, so
+          // the leak is a pure function of what has been learned plus this
+          // interval's jitter, and a long life accumulates no float drift.
+          leak_alpha_[i] = clampf(leak_alpha0_[i] * Scalar(expf(float(leak_log_[i] + leak_jit_[i]))),
+                                  kZero, kOne);
+          ++leak_counted_;
+          if (absf(leak_log_[i]) >= leak_learn_max_ * Scalar(0.999)) ++leak_pinned_;
+        }
         // DNA v41's third gate. Runs on every cash-in, rewarded or not, because
         // it is a relaxation and not a response to evidence.
         // Runs on the parameter the cash-in actually wrote. Until 2026-09-09 this
@@ -3476,6 +3516,12 @@ void Network::init_neuron(uint32_t i, uint32_t m, Scalar x, Scalar y, Scalar z) 
                                            Scalar(dm.leak_tau_sigma),
                                            Scalar(1e-3), Scalar(1e6), 1u);
   leak_alpha_[i] = clampf(dt_ms_ / grown_leak_tau, kZero, kOne);
+  // DNA v72. A grown neuron starts at its genome leak with nothing learned, for the
+  // same reason it starts at the genome threshold: inheriting a neighbour's adapted
+  // value would import the saturation it was grown to relieve.
+  leak_alpha0_[i] = leak_alpha_[i];
+  leak_log_[i] = kZero;
+  leak_jit_[i] = kZero;
   refrac_ticks_[i] = uint16_t(Scalar(dm.refractory_ms) / dt_ms_ + Scalar(0.5));
   pos_x_[i] = clampf(x, kZero, Scalar(dm.extent[0]));
   pos_y_[i] = clampf(y, kZero, Scalar(dm.extent[1]));

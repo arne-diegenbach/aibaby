@@ -519,6 +519,11 @@ bool compile_dna_toml(const std::string& path, std::vector<uint8_t>& out,
     header.exploration.ctx_proto_tau_ms = uint32_t(r.number("ctx_proto_tau_ms"));
     header.exploration.ctx_vigilance = float(r.number("ctx_vigilance"));
     header.exploration.ctx_conscience_gain = float(r.number("ctx_conscience_gain"));
+    // DNA v72. Optional, and leak_perturb 0 disables the mechanism and is
+    // bit-identical to v71 — see DnaExploration.
+    header.exploration.leak_perturb = float(r.number_or("leak_perturb", 0.0));
+    header.exploration.leak_learn_rate = float(r.number_or("leak_learn_rate", 0.0));
+    header.exploration.leak_learn_max = float(r.number_or("leak_learn_max", 0.5));
     header.exploration.context_source = uint32_t(r.number("context_source"));
     header.exploration.ctx_param = uint32_t(r.number("ctx_param"));
     header.exploration.meta_window = float(r.number("meta_window"));

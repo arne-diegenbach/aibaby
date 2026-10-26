@@ -284,6 +284,18 @@ DnaStatus Dna::load(const void* blob, size_t size) {
     if (h->exploration.perturb_rate > 0.0f && h->exploration.perturb_max <= 0.0f) {
       return DnaStatus::kBadPlasticity;
     }
+    // DNA v72. Same shape of refusal for the leak channel. The upper bound on the
+    // jitter is derived rather than chosen: at sigma 0.5 the interval-to-interval
+    // leak varies by a factor of e, which is a different neuron each interval and
+    // not an exploration of one. And a learning rate with no ceiling is the
+    // runaway `perturb_max` exists to prevent, one parameter over.
+    if (h->exploration.leak_perturb < 0.0f || h->exploration.leak_perturb > 0.5f) {
+      return DnaStatus::kBadPlasticity;
+    }
+    if (h->exploration.leak_learn_rate < 0.0f) return DnaStatus::kBadPlasticity;
+    if (h->exploration.leak_learn_rate > 0.0f && h->exploration.leak_learn_max <= 0.0f) {
+      return DnaStatus::kBadPlasticity;
+    }
     // DNA v52. An unknown source would fall through to "no context at all",
     // which reads from outside as a mechanism that did nothing rather than as a
     // genome the kernel does not understand.

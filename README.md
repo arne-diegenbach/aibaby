@@ -19219,6 +19219,98 @@ a first-class output, not an afterthought. And `perturbation-on-synapses` is alr
 refused, so perturbing a different parameter class is not automatically a new idea: the
 vacuity check has to show the tau channel moves something the bias channel does not.
 
+## DNA v72: node perturbation on the LEAK, and a control with no confound (2026-10-26)
+
+The remaining untested cell. `stageprobe` named `bias -> rate` at 0.34 as the compressive
+stage — the neuron's drive-to-rate **transfer** — and everything this creature learns
+moves that transfer's horizontal **offset**: `bias_` is zero at birth and reward-modulated
+node perturbation is the only thing that touches it. So learned offset heterogeneity is
+already shipped, and v71 showed that a **random** offset spread on top costs 20% of the
+lesson per 0.1 of sigma, monotone, no optimum. What has never been learned is the
+transfer's **shape**, and `leak_tau_ms` is the shape: it sets how fast the membrane
+forgets its input, it is identical for every neuron in a module for the creature's whole
+life, and nothing moves it — not even homeostasis, which only ever moves thresholds.
+
+**THE RULE IS THE ONE ALREADY HERE, ON A DIFFERENT PARAMETER.** Three fields on
+`DnaExploration` — `leak_perturb` (jitter sigma in log space), `leak_learn_rate`,
+`leak_learn_max` — and the update sits beside the `bias_` update it copies, in the same
+cash-in loop, on the same centred `per_module` reward:
+
+```cpp
+leak_log_[i] = clampf(leak_log_[i] + leak_learn_rate_ * per_module[m] * leak_jit_[i],
+                      -leak_learn_max_, leak_learn_max_);
+leak_jit_[i] = leak_perturb_ * rng_->normal();
+leak_alpha_[i] = clampf(leak_alpha0_[i] * expf(leak_log_[i] + leak_jit_[i]), 0, 1);
+```
+
+**Episodic rather than per-tick, and that is a design decision not a shortcut.** The leak
+is a slow structural constant: a 1 kHz jitter would be averaged away by the very membrane
+it modifies, leaving nothing for reward to credit. One interval therefore runs at one
+perturbed leak and the centred reward says whether that leak was better. The leak is
+recomputed from the **birth** value every interval rather than nudged, so it is a pure
+function of what has been learned plus this interval's jitter and a long life accumulates
+no float drift.
+
+**The update deliberately does not read `gate_meta`.** The commitment brake and the
+metaplastic SNR gate are both calibrated against `perturb_max_` and `bias_`; reusing them
+would price a different parameter on another's scale. If the leak channel needs a brake,
+that is its own measurement.
+
+**THE GATE, AND THE VACUITY CHECK WITH ITS OWN CONTROL:**
+
+```
+leak_perturb 0.00                      ad96f882becbee92   <- THE PINNED HASH
+leak_perturb 0.05, learn_rate 0.5      907f119d46672fdf
+leak_perturb 0.15, learn_rate 0.5      368b2bb76ee04561
+leak_perturb 0.15, learn_rate 0.0      c30ba47ad97a2c90   <- jitter WITHOUT learning
+```
+
+The last line is the one that matters. Jitter-without-learning hashing **differently from
+jitter-with-learning** is what proves the learning term is not inert — a mechanism that
+only shuffled the leak would have produced the same creature either way. `perturbation on
+synapses` is already refused in this project, so perturbing a new parameter class is not
+automatically a new idea, and this is the check that distinguishes the two.
+
+**AND THE DESIGN HAS NO MEDIAN CONFOUND, unlike v71.** The leak channel disturbs the
+operating point (`calibrate` FAIL on 2 modules: somato 4.45 -> 3.98, expression
+7.24 -> 7.57), so it needs the same retune. But `calibrate` measures free-running rates
+with **no reward**, so the learning term never fires there — and the jitter-only and
+learned arms come back with **identical calibration rates to two decimals**. One retune
+therefore serves both, which makes the jitter-only arm an **exactly operating-point-matched
+control** for the learned arm, differing in one bit: whether reward credits the jitter.
+v71 could not have that, because there the spread itself caused the rate change and
+matching the operating point required moving the median.
+
+```
+control       leak_perturb 0                      no retune needed
+jitter-only   leak_perturb 0.15, rate 0           retuned
+learned       leak_perturb 0.15, rate R           SAME retune, exactly matched
+```
+
+`learned - jitter-only` isolates the learning; `jitter-only - control` prices the noise;
+`learned - control` says whether the whole mechanism is worth having. The first is as
+clean a one-variable comparison as this project has had.
+
+**SATURATION IS A FIRST-CLASS OUTPUT, not an afterthought.** `ipctx` measured intrinsic
+plasticity on the larynx pinning **25-83%** of neurons at `threshold_max` under drive, so
+`Network::leak_pinned_fraction()` reports how often the channel is against its own ceiling
+and an experiment has to read it before it reads any effect. A mechanism at its ceiling is
+not a mechanism that worked.
+
+**ONE BUILD ERROR, recorded because the diagnostic is useless.** `required_bytes()` carries
+a hand-written per-neuron count that mirrors the allocation block in `build()`, and
+**nothing checks that it does**. Adding three arrays without bumping 20 to 23 gave
+`brain init failed (2)` and no other information. The count now names the three new fields
+beside the old ones.
+
+**WHAT IS NOT DONE.** `leak_learn_rate` is not yet derived — matching the bias channel's
+step by analogy gives ~0.001, but `perturb_rate` multiplies an accumulated noise trace
+whose scale is not 1, so the analogy is not sound enough to use. The honest derivation is
+the saturation criterion `ipctx` implies — the largest rate at which the pinned fraction
+stays low — and that needs a host instrument that reads
+`leak_pinned_fraction()` and the spread of `leak_log_`, which does not exist yet. The
+mechanism is built, gated and vacuity-checked; the measurement is specified and unbuilt.
+
 ## Layout
 
 ```
