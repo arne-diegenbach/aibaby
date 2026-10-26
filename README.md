@@ -18760,6 +18760,74 @@ not only in how fast they run it"*. The fix was applied to the ratio and not to 
 prediction. **Fourteen experiments took 0.0 s in this run**, so the decline family is three
 times the size the first pass found.
 
+## The delay term is causally live, and it does not move the operating point (2026-10-26)
+
+§3.5's `myelinate()` shortens a busy axon's conduction delay toward
+`delay_floor_frac` of its birth value. The field ships at **0.5** — a fully myelinated
+axon is twice as fast — and it had **never been measured**: every myelination result
+this project has is about the *learning-rate* half of the same function. The experiment
+is the genome's own off switch, `delay_floor_frac = 1.0`, at which `move_delays` goes
+false and delays stay where they were born.
+
+**The vacuity check, and it carried a free gate.** `results/delay-on.toml` is a
+byte-identical copy of the shipped genome; `results/delay-off.toml` differs by exactly
+one line, confirmed by `diff`.
+
+```
+delay-on   (0.5, shipped)  determinism hash  ad96f882becbee92   <- the PINNED hash
+delay-off  (1.0, off)      determinism hash  7002403939d67e89
+```
+
+The on arm reproducing the pinned hash verifies the binary **and** the genome-copy path
+in one line, which is a stronger gate than the usual `verify PASS` and needed no run of
+its own. And the off arm hashing differently settles the first question: **the delay
+term is causally live.** It is not the `brake never ran` class, which was the real risk —
+`delay_floor_frac` had the same shape as `eta_floor_frac` under context, a field that
+turned out to be inert.
+
+**But a changed hash is not a changed creature.** One spike landing a tick later
+cascades into a completely different hash, so the next question is magnitude, and the
+first attempt at it was unreadable. A single-seed `calibrate` comparison showed `vocal`
++0.17 Hz and `expression` −0.18 Hz, which is nothing without a noise floor. Paired
+across six seeds — the same wiring in both arms, so wiring variance cancels:
+
+```
+module       paired diff off-on       seed sd    read
+central      -0.008 +/- 0.010 (0.8)    0.130    null
+auditory     -0.007 +/- 0.018 (0.4)    0.088    null
+vision       +0.013 +/- 0.019 (0.7)    0.101    null
+somato       +0.002 +/- 0.005 (0.3)    0.205    null
+vocal        +0.098 +/- 0.035 (2.8)    0.682    null
+expression   +0.092 +/- 0.056 (1.6)    0.434    null
+```
+
+**All six modules null at the 3 SE bar**, and the largest — `vocal` at 2.8 SE — is
+**seven times smaller than the seed spread**. Even had it cleared the bar, disabling the
+delay term would move the creature less than picking a different creature does.
+`tools/delay_calibrate.sh` and the statistic are reproducible from the shipped genome.
+
+**And `expression` reversed sign between n=1 and n=6**, −0.18 to +0.092. That is the
+same error this project made with a two-seed smoke earlier in the month, where 0.768 →
+0.623 became +0.061 at 4.6 SE on n=36. The only reason it did not reach a commit this
+time is that the noise floor was measured before anything was written down.
+
+**What this settles and what it does not.** It rules out the delay term changing the
+**resting** operating point. It does not touch **learning**, because `calibrate`
+measures free-running rates with `ip_rate` and `scaling_rate` at 0 — nothing is being
+taught — while the delay-learning literature's claim is about task performance. A
+mechanism can leave resting rates untouched and still change what gets learned; this
+project's own occupancy result is the mirror case, causal on the observable and eight
+times under the noise floor on the outcome.
+
+**One invocation error, caught in two minutes rather than thirty-nine.** The first
+battery omitted `--ticks` and six of eight experiments REFUSED at the default 120000.
+The rule it broke is already written down — *verifying the binary is not verifying the
+invocation* — and the specific way it broke is worth adding to it: the smoke was run on
+`m2`, which has a low declared minimum and therefore **could not fail**, and the result
+was generalised to seven experiments that could. **Smoke the most expensive invocation,
+not the cheapest.** `tools/delay_battery.sh` now carries each experiment's minimum from
+`kSpecs` in its own table.
+
 ## Layout
 
 ```
