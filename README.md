@@ -19139,6 +19139,86 @@ heterogeneity is bad* are different findings, and only the second leaves anythin
 on. Each sigma needs its own retune, since the median compensates the spread's rate
 effect and one genome cannot serve two sigmas.
 
+### The cost is monotone, and learned heterogeneity turns out to be already shipped (2026-10-26)
+
+**THE DOSE-RESPONSE.** Four cells of n = 36, each with its own retune — a single retuned
+genome cannot serve two sigmas, because the median is what compensates the spread's effect
+on free-running rate.
+
+```
+sigma   motor effect   % of A    diff from A                praise won   g2 families
+0.00     +0.0338        100%     (control)                   30/36        4 PASS
+0.05     +0.0312         92%     -0.0025 +/- 0.0038 (0.7)    29/36        4 PASS
+0.15     +0.0262         78%     -0.0075 +/- 0.0048 (1.6)    28/36        1 FAIL
+0.30     +0.0131         39%     -0.0207 +/- 0.0059 (3.5)    19/36        2 FAIL
+```
+
+All three columns monotone, nine of nine cells — `rate` 100/82/65/24%, `share`
+100/83/67/29%, `motor` 100/92/78/39% — plus two measures that come from nowhere near the
+paired statistic: `praise won` falls 30 → 29 → 28 → 19 and `g2`'s own family failures rise
+0 → 0 → 1 → 2.
+
+**TESTED AS A TREND, WHICH IS WHAT WAS PRE-REGISTERED.** Cell by cell only sigma 0.30
+resolves, so the claim was never any single cell. Every creature is measured at **all four
+sigmas on identical wiring**, so the right statistic is a per-creature slope of the praise
+effect against sigma, jackknifed over creatures:
+
+```
+rate    -2.4251 +/- 0.5089  (4.8 SE)  RESOLVED   32 of 36 creatures negative
+share   -0.7988 +/- 0.1937  (4.1 SE)  RESOLVED   27 of 36 creatures negative
+motor   -0.0689 +/- 0.0183  (3.8 SE)  RESOLVED   25 of 36 creatures negative
+```
+
+A majority of *individual* creatures carry the negative slope, so it is not a pooled
+number dragged by outliers. The cost is **20% of the praise effect per 0.1 of sigma**. The
+linear zero-crossing at sigma 0.49 is an extrapolation and not a bound — there are no
+points past 0.30.
+
+**AND THEN THE REFRAME, WHICH COST A GREP RATHER THAN A RUN.** The obvious follow-up was
+*learned* heterogeneity, since Perez-Nieves learn their constants rather than drawing them.
+Reading the kernel first says it is **already shipped**:
+
+```
+network.cpp:428   bias_ = arena.alloc_zeroed<Scalar>(capacity_)   // ZERO at birth
+network.cpp:2430  drive = ... + bias_[i] + ctx_bias + osc + ...   // additive, per neuron
+network.cpp:2919  bias_[i] = clampf(bias_[i] + u * gate_meta, -perturb_max_, perturb_max_)
+```
+
+Every neuron starts **identical** and learns its own additive offset from
+reward-modulated node perturbation. That is learned per-neuron heterogeneity, it is the
+creature's **primary** learning mechanism, and `g2`'s +0.0338 is its measurement. The
+header already records the consequence: *"the learned bias equilibrates on node
+perturbation's variance floor."* A threshold shift and an additive bias both translate the
+f-I curve horizontally — not identical, since threshold acts on the spike condition and
+bias on the integration, but the same KIND of parameter for a rate code. **So
+`threshold_sigma` randomises precisely the quantity `bias_` learns.**
+
+|  | random | learned |
+|---|---|---|
+| **offset** (threshold / bias) | **-20% per 0.1 sigma, monotone** | **ALREADY SHIPPED as `bias_`** |
+| **shape** (gain / leak_tau) | vacuity hash only | **genuinely untested** |
+
+**SO HETEROGENEITY IS NOT BAD — UNEARNED HETEROGENEITY IS.** A random spread is noise
+injected into the exact parameter the learning rule is trying to set, which is why the
+dose-response has no optimum: there is no beneficial amount of noise in the thing you are
+learning, and linear degradation is what such noise looks like. That subsumes the
+population-vector account offered earlier the same day, and it is the better of the two.
+
+**THE REMAINING CELL, scoped and deliberately not built here.** Learned heterogeneity in
+the **shape** — per-neuron `leak_tau` under the same node-perturbation rule — which is
+also where the measurement points, since `stageprobe` named `bias -> rate`, the TRANSFER
+rather than the offset. The offset is learned already and the transfer is still 0.34.
+`perturb_` exists per neuron, the cash-in loop at :2770 already runs per module, and the
+reward is already centred, but it needs a second perturbation channel and a second
+accumulator, and unlike v71 it moves the pinned hash unless gated to zero by default.
+
+Two warnings from this project's own record apply directly. `ipctx` measured intrinsic
+plasticity on the larynx **saturating** — 25-83% of neurons pinned at `threshold_max`
+under drive — so any intrinsic parameter under reward pressure needs a saturation check as
+a first-class output, not an afterthought. And `perturbation-on-synapses` is already
+refused, so perturbing a different parameter class is not automatically a new idea: the
+vacuity check has to show the tau channel moves something the bias channel does not.
+
 ## Layout
 
 ```
