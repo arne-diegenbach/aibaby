@@ -20,6 +20,30 @@ enum class Expect {
            // purpose and would be switched on deliberately, whereas this is
            // simply the state of the world and the day it flips is the news
            // the project is waiting for.
+  // An INSTRUMENT: it prints a reading and its bool carries no verdict. Its
+  // function's only top-level return is an unconditional `return true;`, reached
+  // whenever the run completes without an infrastructure failure.
+  //
+  // WHY THIS CLASS EXISTS. Three states were being asked to do four jobs, and
+  // instruments were filed under kOpen. The 2026-10-26 long-tier baseline then
+  // printed "a milestone this project has never met just did -- READ THIS ONE"
+  // TWENTY-ONE TIMES, with zero regressions: every one of the 21 discrepancies was
+  // `expected FAIL (open milestone), got PASS`, and 15 of them were instruments
+  // whose PASS could not have been anything else. kOpen on an instrument is
+  // unfalsifiable, and it is the loudest line in the gate -- which trains the
+  // reader to ignore it, the same way 25 days of a passing gate hid `salience`
+  // segfaulting inside kLong.
+  //
+  // A classifier over all 80 kOpen specs (`tools/classify_open.py`, structural and
+  // written without reference to that run) split them 30 instrument / 50 with a
+  // real criterion, and of the 21 observed PASSes exactly 15 fell in the
+  // instrument set and 6 in the criterion set. The two methods agree.
+  //
+  // THE RULE FOR NEW EXPERIMENTS: if the function cannot return false for a
+  // MEASURED reason, it is kRead. If it can, it is kPass or kOpen depending on
+  // whether the criterion is met today. `leakprobe` was written as kPass with a
+  // real criterion rather than becoming the 22nd case.
+  kRead,
 };
 
 enum class Tier {
@@ -169,48 +193,48 @@ const Spec kSpecs[] = {
      "  8x. Local recurrence cannot carry activity forward at all"},
     {"curriculum", 1200000, Expect::kOpen, Tier::kLong,
      "derived: m3's protocol at a length where teaching works"},
-    {"ctxvocab", 6800000, Expect::kOpen, Tier::kTeach,
+    {"ctxvocab", 6800000, Expect::kRead, Tier::kTeach,
      "  how many words fit on the 2-D grid? ctxgrid names four at +0.137 and\n"
      "  aimaxes predicts ~6.7 from 2.6 levels per axis. Six and nine words at\n"
      "  the SAME spacing, each scored on its OWN no-index arm -- a capacity\n"
      "  test, not a resolution one"},
-    {"ctxgrid", 6800000, Expect::kOpen, Tier::kTeach,
+    {"ctxgrid", 6800000, Expect::kRead, Tier::kTeach,
      "  ctxfour's four words laid out 2x2 on BOTH formants and inside the\n"
      "  MEASURED reach, instead of vowel corners where /i/ and /u/ sit 30 Hz\n"
      "  apart on the only axis it steered. Was the ceiling the vocabulary or\n"
      "  its LAYOUT? Measures the learned F2 reach as its own gate"},
-    {"aimaxes", 66666, Expect::kOpen, Tier::kLong,
+    {"aimaxes", 66666, Expect::kRead, Tier::kLong,
      "  is there a SECOND steerable formant axis, and are the two INDEPENDENT?\n"
      "  The aim line biased one group; senses.cpp maps group 2 to F1 and 3 to F2.\n"
      "  A 2x2 of bias-group x formant-read, because the OFF-DIAGONALS decide\n"
      "  whether four-word naming has a 2x2 vocabulary available at all"},
-    {"aimslice", 600000, Expect::kOpen, Tier::kLong,
+    {"aimslice", 600000, Expect::kRead, Tier::kLong,
      "  closes the loop on the REAL auditory slice rather than a noise model of\n"
      "  it, before a DNA change rests on the sigma projection. Four readouts --\n"
      "  the measured F1 band, all 32 bins, the population mean, and a WRONG band\n"
      "  with no F1 in it, which is the information control"},
-    {"sensefit", 300000, Expect::kOpen, Tier::kLong,
+    {"sensefit", 300000, Expect::kRead, Tier::kLong,
      "  what the creature's OWN error signal looks like: a CONTINUOUS own-F1\n"
      "  decoder off the auditory rate code, reporting the per-tick residual\n"
      "  sigma and its correlation time -- the two numbers aimsense needs and\n"
      "  selfcode never measured. Carries selfcode's FIXED-F1 control"},
-    {"aimsense", 600000, Expect::kOpen, Tier::kLong,
+    {"aimsense", 600000, Expect::kRead, Tier::kLong,
      "  aimfloor's bound used a PERFECT error signal. selfcode measured the\n"
      "  ear's own-F1 decode at 0.623 held-out. Corrupt the sensor on a ladder,\n"
      "  MEASURE the achieved accuracy with selfcode's own statistic, and cross\n"
      "  it with noise CORRELATION -- white error averages out, a decode's does\n"
      "  not. Moves the bound from the plant to the sensor"},
-    {"aimfloor", 600000, Expect::kOpen, Tier::kLong,
+    {"aimfloor", 600000, Expect::kRead, Tier::kLong,
      "  is the 13 Hz precision floor the PLANT or the STATISTIC? aimhold and\n"
      "  aimpool refused feedback on a within-target sd that reads ~13 in every\n"
      "  arm with a sustained bias and ~21 in every arm without, at a gain that\n"
      "  was DERIVED. A 64x gain ladder, scrambled control paired on seed"},
-    {"aimhold", 600000, Expect::kOpen, Tier::kLong,
+    {"aimhold", 600000, Expect::kRead, Tier::kLong,
      "  can a PERFECT controller HOLD F1 at a target? The pre-flight for the\n"
      "  feedback experiment, minutes instead of an hour. 2x2 of feedback x IP,\n"
      "  because aimgain's backlash predicts an INTERACTION. Each closed arm has\n"
      "  a scrambled control separating information from drive. 6 creatures"},
-    {"aimgain", 600000, Expect::kOpen, Tier::kLong,
+    {"aimgain", 600000, Expect::kRead, Tier::kLong,
      "  WHERE the F1 actuator is linear and whether it is SYMMETRIC. stageprobe\n"
      "  put 61% of the usable swing in its first rung and never tested negative\n"
      "  k, so a feedback controller would be designed by extrapolating into an\n"
@@ -240,13 +264,13 @@ const Spec kSpecs[] = {
      "  creature can derive it from what it heard AT THE MOMENT REWARD LANDS.\n"
      "  No learning. Bar is 0.75, derived from how a wrong index writes the\n"
      "  other context's table"},
-    {"rpeprobe", 3400000, Expect::kOpen, Tier::kTeach,
+    {"rpeprobe", 3400000, Expect::kRead, Tier::kTeach,
      "derived: areax's own session, whose reward stream it decomposes. Prices\n"
      "  Gadagkar's per-context performance prediction error BEFORE building it:\n"
      "  node perturbation already subtracts a running baseline, and the only\n"
      "  difference is that this creature's is global. Read-only. Refuses the\n"
      "  mechanism if the contexts are already balanced"},
-    {"partprobe", 600000, Expect::kOpen, Tier::kLong,
+    {"partprobe", 600000, Expect::kPass, Tier::kLong,
      "derived: ctxsrc's session, whose trials and reward bins it reuses so that\n"
      "  only the partition RULE differs. Prices a LEARNED partition of the motor\n"
      "  state before it is built: supervised vs k-means vs v52's fixed cut, on\n"
@@ -257,7 +281,7 @@ const Spec kSpecs[] = {
      "  asymptote? Runs off/ema/ema-rnd at three budgets (1x, 2x, 4x) and gates\n"
      "  on whether dF1 above its matched-marginal control grows. Decides between\n"
      "  the two remaining leads: a longer run, or Kornfeld's compartments"},
-    {"boundprobe", 13600000, Expect::kOpen, Tier::kTeach,
+    {"boundprobe", 13600000, Expect::kRead, Tier::kTeach,
      "derived: ctxscale's session at ONE budget, because it reads the growth\n"
      "  curve INSIDE a session at 16 checkpoints instead of across three runs.\n"
      "  bias_ctx_ has NO leak, so a constant drift would grow the aligned\n"
@@ -265,7 +289,7 @@ const Spec kSpecs[] = {
      "  fingerprints -- drift decaying, pure diffusion, the perturb_max clamp\n"
      "  binding on a heavy tail -- and refuses if none of them fires. Not to be\n"
      "  confused with driftprobe, which asks about interference BETWEEN lessons"},
-    {"baseprobe", 27200000, Expect::kOpen, Tier::kTeach,
+    {"baseprobe", 27200000, Expect::kRead, Tier::kTeach,
      "derived: boundprobe's session and checkpoints, because it asks what\n"
      "  boundprobe's phase 2 means. Aligned and outside growing at the same\n"
      "  exponent with gain frozen is node perturbation on its variance floor.\n"
@@ -273,20 +297,20 @@ const Spec kSpecs[] = {
      "  the magnitude too, divided by the creature's own mean deviation so the\n"
      "  arms match on |reward| and this is not a learning-rate sweep. Refuses if\n"
      "  no graded arm escapes phase 2, which would make 137 Hz the rule's floor"},
-    {"bankprobe", 3400000, Expect::kOpen, Tier::kTeach,
+    {"bankprobe", 3400000, Expect::kRead, Tier::kTeach,
      "Andalman & Fee's daily consolidation of the AFP bias, checked against the\n"
      "  algebra that refuses it: the larynx reads live + bank, and consolidation\n"
      "  leaves that sum exactly unchanged. The arms must be INDISTINGUISHABLE;\n"
      "  a divergence past 1 SE means a premise is wrong, which is the result\n"
      "  worth having. Short on purpose"},
-    {"ctxgain", 13600000, Expect::kOpen, Tier::kTeach,
+    {"ctxgain", 13600000, Expect::kRead, Tier::kTeach,
      "THE EIGHTH ROUTE, and the only one that does not try to make the bias\n"
      "  bigger. DNA v54 mode 1: one gain per articulator group per context, 18\n"
      "  parameters instead of 252, on the ramp the centroid readout responds to.\n"
      "  Same rule, same reward; the update is the group MEAN so drift is unchanged\n"
      "  and diffusion falls by sqrt(14). Predicts dF1 119 -> 186 Hz. Gates on dF1\n"
      "  paired by seed, NOT on aligned -- mode 1 forces alignment by construction"},
-    {"interleave", 5600000, Expect::kOpen, Tier::kLong,
+    {"interleave", 5600000, Expect::kRead, Tier::kLong,
      "derived: retain's protocol and length, run as eight arms. A conflicting\n"
      "  lesson wipes a taught sound to 0.22; does replaying the OLD lesson during\n"
      "  sleep rescue it? Decomposes the two things that must both hold -- the\n"
@@ -310,7 +334,7 @@ const Spec kSpecs[] = {
      "  separation, not the nearest-target fraction, which straddles rest and is\n"
      "  therefore a sign test invariant to the demand. Matched marginal at every\n"
      "  rung, contexts ON throughout. 36 seeds"},
-    {"absbar", 3400000, Expect::kOpen, Tier::kLong,
+    {"absbar", 3400000, Expect::kRead, Tier::kLong,
      "travelsweep found the shipped bar BIT-IDENTICALLY blind to target\n"
      "  distance past ~0.6 log units: it is an EMA of the creature's own error,\n"
      "  so a further target only adds a constant, which cancels. Can any bar\n"
@@ -435,7 +459,7 @@ const Spec kSpecs[] = {
      "  turn. An asymmetric ear means the limit is RESOLUTION and sends this to a\n"
      "  different build; a symmetric ear with an asymmetric partition means the\n"
      "  limit is the RULE, and the transform columns name the component."},
-    {"ctxfactor", 6800000, Expect::kOpen, Tier::kTeach,
+    {"ctxfactor", 6800000, Expect::kRead, Tier::kTeach,
      "derived: ctxgrid's budget, because it trains on ctxgrid's four words and\n"
      "  needs four words' worth of trials. Prices a FACTORED context gain before\n"
      "  one is built. Every context currently owns independent parameters --\n"
@@ -536,7 +560,7 @@ const Spec kSpecs[] = {
      "  so the two cannot be separated by ablation at all. Bar fixed in advance:\n"
      "  some gain must clear half the half-centre-off reference while keeping the\n"
      "  alternation live and balanced. Run on results/hc-phase.toml."},
-    {"blockwhere", 5600000, Expect::kOpen, Tier::kLong,
+    {"blockwhere", 5600000, Expect::kPass, Tier::kLong,
      "blockfloor found ONE neuron of fourteen costs 30% of the lesson and four\n"
      "  cost 57%. Is that about HOW MANY cells are blocked or WHICH ONES? Every\n"
      "  block ever measured here took the TOP of the group, and read_group\n"
@@ -553,7 +577,7 @@ const Spec kSpecs[] = {
      "  separation affordable -- it says the leverage sits at one end and only\n"
      "  one lesson can have it, which points at making the readout uniform\n"
      "  rather than at finding a cheaper place for a mask. 36 seeds"},
-    {"leverprobe", 5600000, Expect::kOpen, Tier::kLong,
+    {"leverprobe", 5600000, Expect::kRead, Tier::kLong,
      "CHECKS ONE OF MY OWN CLAIMS. The leverage law that explained blockanchor's\n"
      "  53-vs-9 was FITTED to three one-neuron costs and fails the two half-block\n"
      "  costs from the same run -- it predicts a ratio of 3.48 where 5.89 was\n"
@@ -562,7 +586,7 @@ const Spec kSpecs[] = {
      "  the thing that should actually predict a block's cost: how much each\n"
      "  neuron's rate MOVES while the lesson is learned. Read-only. stageprobe\n"
      "  predicts a FLAT profile, which refuses the rate account too. 12 seeds"},
-    {"blockflip", 5600000, Expect::kOpen, Tier::kLong,
+    {"blockflip", 5600000, Expect::kRead, Tier::kLong,
      "DOES THE ASYMMETRY FOLLOW THE TARGET? leverprobe found the lesson is\n"
      "  learned by SILENCING the upper half of F1 -- but the shipped target sits\n"
      "  BELOW rest, and dragging a centroid down means suppressing high-position\n"
@@ -570,7 +594,7 @@ const Spec kSpecs[] = {
      "  DIRECTION predicts the asymmetry reverses; STRUCTURE predicts the upper\n"
      "  half stays expensive. Opposite signs, both cannot survive. F2 is held\n"
      "  constant so only F1 direction differs. 30 seeds"},
-    {"gapwrite", 5600000, Expect::kOpen, Tier::kLong,
+    {"gapwrite", 5600000, Expect::kRead, Tier::kLong,
      "DOES LESSON B UNDO LESSON A, OR WRITE BESIDE IT? blockflip showed the\n"
      "  creature silences whichever half is on the wrong side of the target, which\n"
      "  suggests opposite-side lessons write to different halves. retain refutes\n"
@@ -579,7 +603,7 @@ const Spec kSpecs[] = {
      "  suppress the lower further or RESTORE the upper, which is undoing A. The\n"
      "  A-idle arm leaves the gap unrewarded so passive relaxation cannot be read\n"
      "  as B's doing. 12 seeds"},
-    {"axiscollide", 5600000, Expect::kOpen, Tier::kLong,
+    {"axiscollide", 5600000, Expect::kRead, Tier::kLong,
      "IS IT THE ANGLE OR THE DISTANCE? gapwrite showed B undoes A by restoring\n"
      "  the neurons A silenced, so retention should turn on how much B's target\n"
      "  requires A's AXIS to move, not on how far apart the targets are. That\n"
@@ -587,14 +611,14 @@ const Spec kSpecs[] = {
      "  and f2-full are the SAME L1 distance in opposite axes -- the cleanest\n"
      "  contrast. Retention is read on the F1 axis so an F2-only lesson is not\n"
      "  scored as destroying A. 20 seeds"},
-    {"axisfree", 5600000, Expect::kOpen, Tier::kLong,
+    {"axisfree", 5600000, Expect::kRead, Tier::kLong,
      "IS A LESSON SILENT ABOUT A'S AXIS FREE? axiscollide could not say, because\n"
      "  its orthogonal arms set the second target's F1 to A's OWN F1 target and so\n"
      "  REAFFIRMED A's axis instead of saying nothing about it. This uses\n"
      "  second_axis so the gap rewards ONE formant: f2-axis is silent about F1,\n"
      "  f1-axis is the pure demand on it. keep and f1-full are carried over as\n"
      "  anchors. 20 seeds"},
-    {"axispower", 5600000, Expect::kOpen, Tier::kLong,
+    {"axispower", 5600000, Expect::kRead, Tier::kLong,
      "THE ORTHOGONAL CLAIM AT ADEQUATE POWER. axisfree replicated the LEVEL\\n"
      "  (f2-axis ~1.0 in two families) but not the CONTRAST (+5.7 SE then +2.0).\\n"
      "  The F1 arms are the noisy ones: per-seed SD ~1.63, so n=20 gives SE 0.365\\n"
@@ -628,7 +652,7 @@ const Spec kSpecs[] = {
      "  pulses 4 s then goes SILENT and measures the f-component during the silence\n"
      "  -- the M1b logic that separates an echo from a pass-through. Every f tiles\n"
      "  the block in whole cycles so concatenated holds keep phase. 12 seeds"},
-    {"voiceprobe", 600000, Expect::kOpen, Tier::kLong,
+    {"voiceprobe", 600000, Expect::kRead, Tier::kLong,
      "WHAT IS THE TIME STRUCTURE OF THE VOICING GATE? The creature's own silences\n"
      "  schedule an F1 anchor ~35%% better than a 4.5 Hz jaw, and that schedule\n"
      "  SATURATES -- so what caps it is when it falls silent, never measured. Duty is\n"
@@ -656,7 +680,7 @@ const Spec kSpecs[] = {
      "  envelope -- salience can rise by getting louder or noisier and neither is a\n"
      "  syllable. Control is YOKED praise: the taught arm's reward times replayed,\n"
      "  identical rate and timing, only the contingency differs. 12 seeds x 3 arms"},
-    {"salience", 600000, Expect::kOpen, Tier::kLong,
+    {"salience", 600000, Expect::kPass, Tier::kLong,
      "THE GATE ON WARLAUMONT'S REWARD, before any reward is built. Warlaumont &\n"
      "  Finnegan (2016) get canonical babbling from R-STDP with NO target and no\n"
      "  CPG, rewarding summed spectrotemporal TRANSIENTS against a staircase on\n"
@@ -723,14 +747,14 @@ const Spec kSpecs[] = {
      "  0.84) but that is an oracle. This drives the mask from the creature's OWN\n"
      "  ear-EMA context index, with a coin-flip arm to separate the index CONTENT\n"
      "  from the mere act of masking. 12 seeds"},
-    {"ctxpc", 600000, Expect::kOpen, Tier::kLong,
+    {"ctxpc", 600000, Expect::kPass, Tier::kLong,
      "DOES THE VARIANCE GEOMETRY DECIDE WHICH WORDS THE INDEX CAN TELL APART? The\n"
      "  conscience takes a-vs-i to 0.999 separation, a-vs-u to ~0.5 and i-vs-u to\n"
      "  0.000, while the FEATURE separates all three at 0.92-0.98 held-out. k-means\n"
      "  splits along the direction of largest VARIANCE, so a distinction lying off\n"
      "  that direction is invisible to any prototype rule. Runs all 28 word pairs at\n"
      "  gate 2 and correlates pcratio with separation, across pairs and within them"},
-    {"ctxfeat", 600000, Expect::kOpen, Tier::kLong,
+    {"ctxfeat", 600000, Expect::kPass, Tier::kLong,
      "IS THE EAR FEATURE SEPARABLE, OR IS THE CLASSIFIER THE PROBLEM? credgate found\n"
      "  the ear-EMA index separating two lessons at 0.012 even with acoustically\n"
      "  distinct words. Two things can fail and they need OPPOSITE fixes. This scores\n"
@@ -738,14 +762,14 @@ const Spec kSpecs[] = {
      "  reward lands -- the best any prototype rule could do, so it upper-bounds the\n"
      "  classifier. At chance the FEATURE is wrong; above it the prototype learning\n"
      "  is. 6 seeds, 3 vowel pairs"},
-    {"movability", 5600000, Expect::kOpen, Tier::kLong,
+    {"movability", 5600000, Expect::kRead, Tier::kLong,
      "orthovocab left a LEAD: on identical demands the F2 lesson travelled\n"
      "  0.169 and the F1 lesson 0.030 -- but F1's was FIGHTING another lesson on\n"
      "  its own axis. ONE lesson, no conflict, each axis with its own untaught\n"
      "  control. Scored as the FRACTION of the demanded move achieved, since the\n"
      "  axes sit at different distances in log space. Matters because the 137 Hz\n"
      "  naming ceiling is an F1 ceiling. 36 seeds"},
-    {"orthovocab", 5600000, Expect::kOpen, Tier::kLong,
+    {"orthovocab", 5600000, Expect::kPass, Tier::kLong,
      "the conflict is a pure overwrite that cannot be defended (blocking\n"
      "  plasticity costs 59% of the lesson) or retrieved (store and behaviour\n"
      "  decay together). So does it need AVOIDING rather than defending?\n"
@@ -754,7 +778,7 @@ const Spec kSpecs[] = {
      "  only the second lesson's AXIS differs -- collide moves F1, ortho moves\n"
      "  F2, same log-distance. Per-axis scoring, since the joint metric pins\n"
      "  both formants and cannot express orthogonality. 36 seeds"},
-    {"maskretain", 5600000, Expect::kOpen, Tier::kLong,
+    {"maskretain", 5600000, Expect::kRead, Tier::kLong,
      "the conflict is a PURE OVERWRITE -- store 0.25 and behaviour 0.30 decay\n"
      "  together at -1.0 SE -- so there is no hidden memory and the damage is in\n"
      "  the WRITE. Protection is already refused (meta_commit null, bankprobe\n"
@@ -770,7 +794,7 @@ const Spec kSpecs[] = {
      "  different cues, crossed with DNA v51's context table to file them under.\n"
      "  Only `cue+ctx` should work; the interaction is the claim, not the cell.\n"
      "  36 seeds from the start"},
-    {"baseref", 13600000, Expect::kOpen, Tier::kTeach,
+    {"baseref", 13600000, Expect::kRead, Tier::kTeach,
      "the reward's REFERENCE, which is the one axis boundprobe's finding implies\n"
      "  and nobody has run. Nine closed routes attacked the BIAS; baseprobe\n"
      "  attacked the reward's RESOLUTION. Praise is `e < baseline` where the bar\n"
@@ -779,21 +803,21 @@ const Spec kSpecs[] = {
      "  10x slower one, and a RATCHET that only tightens. Refuses if any praise\n"
      "  share leaves 0.15-0.85 -- a bar always or never beaten is a constant\n"
      "  reward, which is the same death by a different route"},
-    {"poolbeta", 3400000, Expect::kOpen, Tier::kTeach,
+    {"poolbeta", 3400000, Expect::kRead, Tier::kTeach,
      "the COMPRESSION, which is the last thing standing. read_group is a\n"
      "  centroid and dF1 ~ aligned^0.61; that curve limits delivery AND kills\n"
      "  the drift through its derivative. DNA v56 sharpens the pooling to\n"
      "  sum(r^beta*p)/sum(r^beta). Every beta gets its OWN matched-marginal\n"
      "  control, because decompression and NOISE both widen a spread and only\n"
      "  the EXCESS separates steering from scatter. Screens beta 1/2/3"},
-    {"stageprobe", 600000, Expect::kOpen, Tier::kLong,
+    {"stageprobe", 600000, Expect::kRead, Tier::kLong,
      "WHICH STAGE makes dF1 ~ aligned^0.61. Twelve routes have failed against\n"
      "  that exponent without anyone knowing where it comes from. Read-only:\n"
      "  injects a known ramp at six amplitudes and fits the local slope of\n"
      "  bias->rate, rate->centroid and centroid->F1 separately. centroid->F1 is\n"
      "  a lerp and MUST measure 1.00, which is the self-check; and the three\n"
      "  must multiply to the end-to-end curve or a stage is missing"},
-    {"ippool", 13600000, Expect::kOpen, Tier::kTeach,
+    {"ippool", 13600000, Expect::kRead, Tier::kTeach,
      "does relieving the MEASURED bottleneck buy dF1? stageprobe put the\n"
      "  compression in intrinsic plasticity (bias->rate 0.34 on, 0.91 off); DNA\n"
      "  v57 pools the rate error per articulator group, keeping regulation and\n"
@@ -1276,7 +1300,7 @@ bool run_verify(const std::vector<uint8_t>& dna_blob, bool long_tier, bool teach
     std::printf("  hash              %016llx  as recorded\n", (unsigned long long)hash);
   }
 
-  uint32_t passed = 0, failed = 0, open = 0;
+  uint32_t passed = 0, failed = 0, open = 0, read_ok = 0;
   double total_secs = 0.0, slowest_secs = 0.0;
   const char* slowest = "";
   std::string bad;
@@ -1298,6 +1322,26 @@ bool run_verify(const std::vector<uint8_t>& dna_blob, bool long_tier, bool teach
     total_secs += secs;
     if (secs > slowest_secs) { slowest_secs = secs; slowest = s.name; }
     std::printf("  [%s took %.1f s]\n", s.name, secs);
+    // An instrument's bool is not a verdict, so it is counted as read rather than
+    // compared against an expectation it does not have. It still fails loudly if it
+    // returns false, because for these functions false means the apparatus broke --
+    // a DNA that would not load, a missing module, too few usable creatures, or the
+    // experiment's own self-check saying its instrument is wrong. That is exactly
+    // the signal `salience` could not send for 25 days.
+    if (s.expect == Expect::kRead) {
+      if (got) {
+        ++passed;
+        ++read_ok;
+      } else {
+        ++failed;
+        bad += std::string("    ") + s.name +
+               "  instrument did not complete — apparatus, not content:\n"
+               "               it returns false only on a load failure, a missing\n"
+               "               module, too few usable creatures, or its own\n"
+               "               self-check. Read its output, not this line.\n";
+      }
+      continue;
+    }
     const bool want = s.expect == Expect::kPass;
     if (got == want) {
       ++passed;
@@ -1323,6 +1367,11 @@ bool run_verify(const std::vector<uint8_t>& dna_blob, bool long_tier, bool teach
   if (open) {
     std::printf("  open milestones   %u still failing, which is what \"as expected\"\n"
                 "                    means for them\n", open);
+  }
+  if (read_ok) {
+    std::printf("  instruments       %u read, and an instrument's bool is NOT a verdict:\n"
+                "                    it prints a measurement and cannot fail on content\n",
+                read_ok);
   }
   if (!bad.empty()) std::printf("%s", bad.c_str());
   const bool ok = det && hash_ok && failed == 0;

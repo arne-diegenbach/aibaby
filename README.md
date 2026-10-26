@@ -19394,6 +19394,80 @@ already the creature's exploration drive, so changing it per neuron changes two 
 once — which makes it a harder experiment, not a better one, and it needs the same
 operating-point discipline before anything is read off it.
 
+## The gate repair: four states for four jobs (2026-10-26)
+
+The long-tier baseline printed *"a milestone this project has never met just did — READ
+THIS ONE"* **twenty-one times**, with zero regressions. Every one of its 21 discrepancies
+was `expected FAIL (open milestone), got PASS`, and the cause was structural: `verify`
+decides PASS from the single bool `run_experiment` returns, and an experiment that prints
+a **reading** has no pass/fail content to compare. `Expect::kOpen` on such an experiment is
+unfalsifiable, and it is the loudest line in the gate — which trains the reader to ignore
+it, exactly the way 25 days of a passing gate hid `salience` segfaulting inside `kLong`.
+
+**THE CLASSIFICATION IS STRUCTURAL, so it covers all 80 `kOpen` specs and not only the 21
+the baseline happened to execute.** `tools/classify_open.py` reads each `run_<name>`'s
+**top-level** returns — indentation exactly 2, the function's own control flow:
+
+```
+{return true;}                  -> INSTRUMENT: cannot fail on content
+contains a `return <expr>;`     -> CRITERION:  hands back something measured
+top-level false + guarded true  -> CRITERION:  false by default, true when earned
+```
+
+A first version of the classifier scanned **every** return in each body and called 79 of
+80 "has a criterion", because it was picking up early-outs from nested lambdas and helper
+closures. The returns that decide a verdict are the ones at the function's own level, and
+that one correction is the difference between a useless classifier and a decisive one.
+
+```
+30  INSTRUMENT   only top-level return is an unconditional `return true;`
+50  CRITERION    20 return a measured expression; 30 default false with a guarded true
+```
+
+**AND IT CROSS-VALIDATES AGAINST THE RUN.** The classifier is structural and was written
+without reference to the baseline. Of the 21 experiments observed reading PASS, it
+independently placed **exactly 15 in the instrument set and 6 in the criterion set**. Two
+unrelated methods agreeing on the same partition is better evidence than either alone.
+
+**THE REPAIR.** A fourth `Expect` state, `kRead`, for an experiment whose bool is not a
+verdict:
+
+```
+80 kOpen  ->  44 kOpen + 30 kRead + 6 kPass
+```
+
+The **6 promotions** — `salience`, `ctxpc`, `ctxfeat`, `partprobe`, `blockwhere`,
+`orthovocab` — carry real criteria *and* were observed passing, so `kOpen` was wrong for a
+second, independent reason: the milestone is met. The **44 that stay `kOpen`** are
+correctly shaped and were left alone, including the 32 in `kTeach` that have never run —
+promoting an unverified milestone would be the bulk flip this repair exists to undo.
+
+**AN INSTRUMENT STILL FAILS LOUDLY WHEN IT RETURNS FALSE**, and that is deliberate. For
+these functions false means the **apparatus** broke: a DNA that would not load, a missing
+module, too few usable creatures, or the experiment's own self-check firing
+(`stageprobe`'s *"THE INSTRUMENT IS WRONG"*). That is precisely the signal `salience` could
+not send, so the class reports it rather than silencing it. The summary now distinguishes
+the two:
+
+```
+open milestones   N still failing, which is what "as expected" means for them
+instruments       N read, and an instrument's bool is NOT a verdict:
+                  it prints a measurement and cannot fail on content
+```
+
+**THE RULE FOR NEW EXPERIMENTS**, recorded in the enum beside the state: if the function
+cannot return false for a MEASURED reason, it is `kRead`. `leakprobe` was written earlier
+the same day as `kPass` with a real criterion rather than becoming the 22nd case.
+
+**WHAT THE GATE DOES AND DOES NOT CERTIFY HERE.** `verify PASS`, determinism PASS, pinned
+hash PASS, 24 as expected, 0 not. But **there are zero `kRead` specs in the fast tier** —
+all 19 are `kLong` and 11 are `kTeach` — so this run confirms the enum change broke
+nothing and does **not** exercise the new counting branch. That branch is fourteen lines
+and has been read; its input was checked separately by running an instrument standalone
+(`stageprobe --ticks 600000`, exit 0, which is the `got == true` the branch counts as
+read). **It will first be exercised in anger by the next `verify-long`**, and saying so is
+cheaper than discovering it later — which is the whole lesson of the 21 labels.
+
 ## Layout
 
 ```
