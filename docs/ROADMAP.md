@@ -577,9 +577,25 @@ down so the next person does not pay again.
    question is not vacuous: this project finds composition fails in time (two gestures) and
    holds in space (orthogonal targets keep 0.84 against 0.22), and the 2×2 grid *is* the
    orthogonal case. Cost: lifting `imitate`'s windowed classifier into a trained creature.
-2. **The baseline debt.** `verify-long` has never completed on `dna/default.toml` since the
-   `salience` crash was fixed, so that tier's expectations are uncalibrated — a trimmed-genome
-   run read 38 discrepancies with nothing to compare against. 22 h, unattended.
+2. **CLOSED 2026-10-26 — the baseline debt, and it found a defect.** `verify-long`
+   completed on `dna/default.toml` in 37.3 h: **no regressions** (zero `kPass` failures,
+   zero `kGuard` flips), but **21 discrepancies, every one `expected FAIL (open
+   milestone), got PASS`**. 16 of the 21 functions end in an unconditional `return true;`,
+   so `Expect::kOpen` on an instrument is unfalsifiable — the milestone line fires the
+   moment the experiment runs. **The replacement item is the gate repair**: add the
+   missing third `Expect` class for instruments, and promote the genuine criterion cases
+   (`salience`, `blockwhere`, `partprobe`, `orthovocab`) one at a time on a reading of
+   each. No runs, and the gate is unreadable until it is done.
+2b. **CLOSED 2026-10-26 — the delay axis.** Found by reading the kernel, measured, and
+   closed in an afternoon. §3.5 moves per-synapse delays and `delay_floor_frac` had never
+   been measured. It is causally live (the off arm hashes differently) and behaviourally
+   null: the pre-registered `g2` primary read **−0.0019 ± 0.0041** at n=36, and at **4×
+   the range** — axis 2–7 ticks widened to 5–28, travel 1 tick to 3–8 — the **identical
+   −0.0019 ± 0.0045**. The effect does not scale with its lever arm, which refutes the
+   range account on the one statistic fixed before either run. **Do not build the signed
+   delay rule.** The creature is insensitive to delay *changes* and at most mildly
+   sensitive to the absolute *level*: rate-coded learning, not timing-coded — the fourth
+   line to land there after synfire, burst plasticity and the sparse time basis.
 3. **Disclose the inherited index source in the four remaining experiments** that write
    `context_slots` and not `context_source` (`ctxfour`, `ctxvocab`, `areax`, `rpeprobe`);
    `ctxgrid` now does. `ctxfour`'s is already confirmed honest by its own logged `ctx_match`
