@@ -1,0 +1,96 @@
+===== family 0 seed 20260809 =====
+experiment: g2
+  session           120.0 s of simulated life x 9 creatures
+  seed rewarded rate x        rewarded share shift   F1 motor shift
+  0    praised  1.47 vs  1.75   +0.171 vs +0.287     +0.0197 vs +0.0341  yoked
+  1    praised  1.21 vs  1.11   -0.066 vs -0.118     +0.0095 vs +0.0101  praise
+  2    praised  0.88 vs  0.78   -0.070 vs -0.214     -0.0032 vs -0.0103  praise
+  3    praised  1.95 vs  1.57   +0.274 vs +0.032     +0.0334 vs +0.0115  praise
+  4    praised  1.36 vs  0.74   +0.453 vs -0.127     +0.0443 vs -0.0063  praise
+  5    praised  1.58 vs  0.39   +0.398 vs -0.274     +0.0361 vs -0.0254  praise
+  6    praised  2.27 vs  1.50   +0.423 vs +0.173     +0.0466 vs +0.0193  praise
+  7    praised  1.86 vs  1.46   +0.291 vs +0.198     +0.0205 vs +0.0170  praise
+  8    praised  1.37 vs  1.33   +0.256 vs +0.155     +0.0100 vs +0.0119  praise
+
+  mean advantage over the yoked control
+    rewarded rate     +0.369 x
+    rewarded share    +0.2240
+    F1 motor group    +0.01723
+    praise won        8 of 9 creatures
+
+  G2 PASS — across 9 creatures the frequency of rewarded
+  vocalisations rose within the session (mean x1.55), and praise beat its own yoked control
+  in 8 of them.
+[exit 0]
+===== family 1 seed 20332080 =====
+experiment: g2
+  session           120.0 s of simulated life x 9 creatures
+  seed rewarded rate x        rewarded share shift   F1 motor shift
+  0    praised  2.06 vs  1.31   +0.357 vs -0.048     +0.0322 vs -0.0010  praise
+  1    praised  1.51 vs  0.00   +0.436 vs -0.506     +0.0553 vs -0.0553  praise
+  2    praised  2.86 vs  0.55   +0.456 vs -0.223     +0.0433 vs -0.0216  praise
+  3    praised  1.89 vs  1.19   +0.336 vs +0.071     +0.0306 vs +0.0044  praise
+  4    praised  1.60 vs  1.44   +0.125 vs +0.100     +0.0106 vs +0.0065  praise
+  5    praised  1.97 vs  0.06   +0.456 vs -0.467     +0.0435 vs -0.0487  praise
+  6    praised  1.49 vs  0.66   +0.500 vs -0.117     +0.0585 vs -0.0110  praise
+  7    praised  3.33 vs  3.44   +0.269 vs +0.256     +0.0287 vs +0.0318  yoked
+  8    praised  1.89 vs  0.14   +0.207 vs -0.444     +0.0193 vs -0.0340  praise
+
+  mean advantage over the yoked control
+    rewarded rate     +1.090 x
+    rewarded share    +0.5022
+    F1 motor group    +0.05010
+    praise won        8 of 9 creatures
+
+  G2 PASS — across 9 creatures the frequency of rewarded
+  vocalisations rose within the session (mean x2.07), and praise beat its own yoked control
+  in 8 of them.
+[exit 0]
+===== family 2 seed 20403351 =====
+experiment: g2
+  session           120.0 s of simulated life x 9 creatures
+  seed rewarded rate x        rewarded share shift   F1 motor shift
+  0    praised  4.54 vs  3.00   +0.422 vs +0.209     +0.0388 vs +0.0104  praise
+  1    praised  0.96 vs  0.17   -0.152 vs -0.439     +0.0027 vs -0.0492  praise
+  2    praised  1.93 vs  1.70   +0.500 vs +0.436     +0.0686 vs +0.0383  praise
+  3    praised  3.18 vs  2.76   +0.356 vs +0.166     +0.0377 vs +0.0174  praise
+  4    praised  2.48 vs  1.28   +0.500 vs +0.104     +0.0435 vs +0.0177  praise
+  5    praised  2.07 vs  0.07   +0.400 vs -0.480     +0.0304 vs -0.0424  praise
+  6    praised  2.18 vs  0.36   +0.410 vs -0.287     +0.0324 vs -0.0155  praise
+  7    praised  0.55 vs  0.86   -0.272 vs -0.139     -0.0114 vs -0.0046  yoked
+  8    praised  1.26 vs  1.40   +0.255 vs +0.305     +0.0170 vs +0.0164  yoked
+
+  mean advantage over the yoked control
+    rewarded rate     +0.838 x
+    rewarded share    +0.2829
+    F1 motor group    +0.03014
+    praise won        7 of 9 creatures
+
+  G2 PASS — across 9 creatures the frequency of rewarded
+  vocalisations rose within the session (mean x2.13), and praise beat its own yoked control
+  in 7 of them.
+[exit 0]
+===== family 3 seed 20474622 =====
+experiment: g2
+  session           120.0 s of simulated life x 9 creatures
+  seed rewarded rate x        rewarded share shift   F1 motor shift
+  0    praised  2.18 vs  1.59   +0.394 vs +0.188     +0.0400 vs +0.0098  praise
+  1    praised  1.46 vs  0.93   +0.462 vs +0.078     +0.0462 vs +0.0021  praise
+  2    praised  1.33 vs  0.00   +0.183 vs -0.509     +0.0107 vs -0.0895  praise
+  3    praised  1.67 vs  1.38   +0.255 vs +0.173     +0.0204 vs +0.0144  praise
+  4    praised  2.20 vs  1.43   +0.493 vs +0.340     +0.0730 vs +0.0359  praise
+  5    praised  2.00 vs  1.83   +0.370 vs +0.359     +0.0372 vs +0.0371  praise
+  6    praised  0.95 vs  0.14   -0.083 vs -0.462     -0.0008 vs -0.0391  praise
+  7    praised  1.51 vs  0.35   +0.355 vs -0.315     +0.0265 vs -0.0154  praise
+  8    praised  1.93 vs  0.59   +0.491 vs -0.225     +0.0565 vs -0.0084  praise
+
+  mean advantage over the yoked control
+    rewarded rate     +0.780 x
+    rewarded share    +0.3656
+    F1 motor group    +0.04032
+    praise won        9 of 9 creatures
+
+  G2 PASS — across 9 creatures the frequency of rewarded
+  vocalisations rose within the session (mean x1.69), and praise beat its own yoked control
+  in 9 of them.
+[exit 0]

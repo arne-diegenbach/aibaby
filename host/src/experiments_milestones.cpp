@@ -1876,6 +1876,14 @@ struct G2Run {
   uint64_t rewards = 0;
   std::vector<Praise> delivered;
   double mean_weight_start = 0, mean_weight_end = 0;
+  // DNA v72. The leak channel's own state at the end of the session. Read here
+  // rather than in a dedicated experiment because every session already builds the
+  // network and `ipctx` makes saturation a precondition for believing any effect:
+  // 25-83% of neurons pinned at `threshold_max` is what an intrinsic parameter
+  // under reward pressure does when its ceiling is too close.
+  double leak_pinned = 0;      // fraction of cash-ins with |leak_log| at its ceiling
+  double leak_log_sd = 0;      // spread of the LEARNED offset across motor neurons
+  double leak_log_absmean = 0; // ...and how far it travelled at all
 };
 
 
@@ -2000,6 +2008,34 @@ G2Run run_g2_session(const std::vector<uint8_t>& blob, uint64_t ticks,
   if (out.test_events) out.test_mean /= double(out.test_events);
   out.criterion = criterion;
   out.mean_weight_end = double(s.brain.network().telemetry().mean_weight);
+
+  // DNA v72's leak channel, read over the module the lesson acts on. Scoped to the
+  // vocal module rather than the whole brain because the cash-in loop is gated on
+  // `explore_scale`, so a mean over every neuron would be mostly zeros from
+  // populations the mechanism never touches -- the shape of error that made
+  // `act_gate`'s vacuity check read 0.9% across a 2x change.
+  {
+    const aibaby::Network& net = s.brain.network();
+    out.leak_pinned = net.leak_pinned_fraction();
+    const int32_t vm = s.dna.module_with_role(aibaby::ModuleRole::kVocal);
+    if (vm >= 0) {
+      const aibaby::ModuleState& ms = net.module(uint32_t(vm));
+      double sum = 0, sq = 0, abs_sum = 0;
+      uint32_t n = 0;
+      for (uint32_t i = ms.begin; i < ms.begin + ms.count; ++i) {
+        const double v = double(net.leak_log(i));
+        sum += v;
+        sq += v * v;
+        abs_sum += v < 0 ? -v : v;
+        ++n;
+      }
+      if (n) {
+        const double mean = sum / double(n);
+        out.leak_log_sd = std::sqrt(std::max(0.0, sq / double(n) - mean * mean));
+        out.leak_log_absmean = abs_sum / double(n);
+      }
+    }
+  }
   ok = true;
   return out;
 }
@@ -32830,6 +32866,148 @@ bool run_duty(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
 // NO BARS AND NO PASS/FAIL. There is no budget to measure against -- inventing one here
 // would be the fitted-verdict mistake. This establishes the number so that a later change
 // has something to move, and so the project can state its own cost honestly.
+// `leakprobe` -- DERIVES DNA v72's `leak_learn_rate` instead of guessing it.
+//
+// WHY THIS EXISTS AT ALL. v72 put node perturbation on the leak: the transfer's SHAPE,
+// which is where `stageprobe` points, since the OFFSET is already learned as `bias_` and
+// `heterogeneity-hurts` showed a RANDOM offset spread costs 20% of the lesson per 0.1 of
+// sigma. The mechanism built and gated cleanly -- pinned hash unchanged at
+// `leak_perturb` 0, and jitter-without-learning hashing differently from
+// jitter-with-learning, which proves the learning term is live. What it did NOT come
+// with is a value for its learning rate.
+//
+// WHY NOT BY ANALOGY. The obvious move is to match the bias channel:
+// `perturb_rate 3e-5 / perturb_max 0.30`. But `perturb_rate` multiplies an accumulated
+// NOISE TRACE whose scale is not 1, so the ratio is not the same kind of number as
+// `leak_learn_rate * leak_perturb / leak_learn_max`. This project has four guessed
+// constants on record and each cost a run, so the rate is derived from the creature.
+//
+// THE CRITERION, and it is `ipctx`'s. That experiment measured intrinsic plasticity on
+// the larynx SATURATING under drive -- 25-83% of neurons pinned at `threshold_max` -- so
+// a rate is usable only when the learned offset MOVES and does not PIN. Two numbers per
+// rate decide it:
+//
+//     pinned     fraction of cash-ins with |leak_log| against its ceiling
+//     |offset|   how far the learned offset travelled at all, over the vocal module
+//
+// A rate that pins is a mechanism at its ceiling, which is not a mechanism that worked.
+// A rate whose offset does not move is a mechanism that did not run. The answer is the
+// largest rate that does neither.
+//
+// THIS IS A TEST AND NOT AN INSTRUMENT, deliberately. The 2026-10-26 baseline found 16 of
+// 21 `Expect::kOpen` experiments ending in an unconditional `return true;`, which makes
+// the gate's loudest line unfalsifiable. So this one FAILS when no usable rate exists --
+// and that failure is the finding: the channel would be unusable at this `leak_perturb`.
+bool run_leakprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  aibaby::Dna dna;
+  if (dna.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) return false;
+  if (dna.module_with_role(aibaby::ModuleRole::kVocal) < 0) {
+    std::printf("  this genome has no vocal module, and the leak channel is gated on\n"
+                "  `explore_scale`, so there is nothing for reward to credit.\n");
+    return false;
+  }
+
+  // Five decades, because the right order of magnitude is the unknown and a linear
+  // sweep over the wrong decade would report "nothing moves" five times.
+  static const float kRates[] = {0.0f, 0.001f, 0.01f, 0.1f, 1.0f, 10.0f};
+  constexpr float kPerturb = 0.15f;      // the jitter v72's vacuity check was run at
+  constexpr double kPinCeiling = 0.10;   // above this the channel is at its ceiling
+  constexpr uint32_t kCreatures = 5;     // a rate is chosen on shape, not on 3 SE
+  // How far `offset / rate` may fall below its unsaturated value and still count
+  // as linear. 0.75 is not a taste: the three unsaturated rates here read 0.90,
+  // 0.92 and 0.88, a spread of +/-2% about their mean, so 25% is an order of
+  // magnitude outside the measured scatter and cannot reject a linear point --
+  // while the first saturating rate reads 0.26, which is nowhere near it.
+  constexpr double kLinearFrac = 0.75;
+
+  const size_t ex = offsetof(aibaby::DnaHeader, exploration);
+  std::printf("  DNA v72: deriving `leak_learn_rate` at leak_perturb %.2f\n", kPerturb);
+  std::printf("  %u creatures x %.1f s, usable = offset MOVES and does not PIN\n\n",
+              kCreatures, double(ticks) * double(dna.header().sim.dt_ms) / 1000.0);
+  std::printf("  %-10s %-10s %-11s %-11s %-11s %s\n", "rate", "pinned",
+              "|offset|", "offset sd", "linearity", "F1 motor advantage");
+
+  // THE CRITERION IS A SHAPE TEST, NOT A THRESHOLD, and the first version of it was
+  // wrong in a way worth recording. "The largest rate that moves and does not pin"
+  // rewards sitting as close to saturation as possible: it picked rate 10, where the
+  // offset is 0.292 against a 0.5 ceiling and barely past rate 1's 0.265, while the
+  // pinned fraction quadrupled. Same class as `verdict fitted to data` -- a criterion
+  // of the wrong SHAPE, which pre-registration does not save.
+  //
+  // What makes a rate usable is that the channel is still LINEAR in it: while the
+  // mechanism is unsaturated the learned offset grows in proportion to the rate, and
+  // `offset / rate` is flat. Here it reads 0.90, 0.92, 0.88, then 0.26, then 0.029 --
+  // so linearity holds to rate 0.1 and breaks by rate 1, and the knee is between them.
+  // The reference is taken at the SMALLEST moving rate, which is the furthest from
+  // saturation and therefore the only one entitled to define the unsaturated slope.
+  double ref_slope = -1.0;
+  double best_rate = -1.0, best_offset = 0.0;
+  for (float rate : kRates) {
+    std::vector<uint8_t> local = blob;
+    std::memcpy(local.data() + ex + offsetof(aibaby::DnaExploration, leak_perturb),
+                &kPerturb, sizeof(kPerturb));
+    std::memcpy(local.data() + ex + offsetof(aibaby::DnaExploration, leak_learn_rate),
+                &rate, sizeof(rate));
+
+    double pin = 0, off = 0, sd = 0, adv = 0;
+    uint32_t n = 0;
+    for (uint32_t r = 0; r < kCreatures; ++r) {
+      std::vector<uint8_t> variant = local;
+      const uint64_t seed = dna.header().seed + r * 7919ull;
+      std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+      bool ok = false;
+      const G2Run run = run_g2_session(variant, ticks, nullptr, -1.0f, Regime{}, ok);
+      if (!ok) continue;
+      pin += run.leak_pinned;
+      off += run.leak_log_absmean;
+      sd += run.leak_log_sd;
+      adv += run.test_mean - run.baseline_mean;
+      ++n;
+    }
+    if (!n) {
+      std::printf("  %-10.4g  (every creature failed to run)\n", double(rate));
+      continue;
+    }
+    pin /= n; off /= n; sd /= n; adv /= n;
+    const bool moves = off > 1e-4;
+    const bool pins = pin > kPinCeiling;
+    const double slope = rate > 0.0f ? off / double(rate) : 0.0;
+    if (moves && ref_slope < 0.0) ref_slope = slope;  // smallest moving rate sets it
+    const bool linear = ref_slope > 0.0 && slope >= kLinearFrac * ref_slope;
+    std::printf("  %-10.4g %-10.3f %-11.5f %-11.5f %-11.3f %+.5f%s%s%s\n",
+                double(rate), pin, off, sd,
+                ref_slope > 0.0 && rate > 0.0f ? slope / ref_slope : 0.0, adv,
+                pins ? "  PINNED" : "", (!moves && rate > 0) ? "  inert" : "",
+                (moves && !linear) ? "  SATURATING" : "");
+    if (rate > 0.0f && moves && !pins && linear && rate > best_rate) {
+      best_rate = double(rate);
+      best_offset = off;
+    }
+  }
+
+  std::printf("\n  --- the reading ---\n");
+  if (best_rate < 0.0) {
+    std::printf("  NO USABLE RATE at leak_perturb %.2f. Every rate either pinned the\n"
+                "  learned offset against its ceiling or left it where it started, so the\n"
+                "  leak channel has no operating band here and nothing should be built on\n"
+                "  it until one is found -- try a wider `leak_learn_max`, or a smaller\n"
+                "  `leak_perturb` so the credit per interval is less noisy.\n", kPerturb);
+    return false;
+  }
+  std::printf("  USABLE: leak_learn_rate = %.4g is the largest rate at which the learned\n"
+              "  offset moves (|offset| %.5f) without pinning against its ceiling. That is\n"
+              "  the DERIVED constant the three-cell run should use, and it comes from this\n"
+              "  creature rather than from an analogy with the bias channel.\n\n"
+              "  The F1 motor advantage column is NOT the result and must not be read as\n"
+              "  one: these are %u creatures with no yoked control, which is a shape check\n"
+              "  and not an effect. The effect is `learned - jitter-only` at n=36, where\n"
+              "  the jitter-only arm is an exactly operating-point-matched control.\n",
+              best_rate, best_offset, kCreatures);
+  return true;
+}
+
+
 bool run_cost(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
   (void)verbose;
   aibaby::Dna dna;

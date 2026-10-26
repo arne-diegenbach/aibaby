@@ -19311,6 +19311,89 @@ stays low — and that needs a host instrument that reads
 `leak_pinned_fraction()` and the spread of `leak_log_`, which does not exist yet. The
 mechanism is built, gated and vacuity-checked; the measurement is specified and unbuilt.
 
+### Learning the leak buys nothing, and the leak is not even a cost (2026-10-26)
+
+DNA v72's measurement, with a constant derived rather than guessed and a control that is
+exactly operating-point-matched.
+
+**THE DERIVED RATE.** `leakprobe` swept `leak_learn_rate` over five decades and read, per
+rate, how far the learned offset travelled and how often it pinned:
+
+```
+rate     pinned   |offset|   linearity
+0.001    0.000    0.00090    1.000
+0.01     0.000    0.00917    1.024
+0.1      0.000    0.08781    0.981     <- largest linear, no pinning
+1        0.018    0.26493    0.296     SATURATING
+10       0.075    0.29196    0.033     SATURATING
+```
+
+`leak_learn_rate = 0.1`. **The bias-channel analogy would have given ~0.001, a hundred
+times smaller** — which is why the analogy was refused rather than used. The 0.75
+linearity tolerance is derived too: the three unsaturated rates agree to ±2%, so 25% is an
+order of magnitude outside the measured scatter, while the first saturating rate reads
+0.296 and is nowhere near it.
+
+**AND THE FIRST VERSION OF THAT CRITERION WAS WRONG.** It read "the largest rate that
+moves and does not pin", which picked rate **10** — `|offset|` 0.292 against a 0.5 ceiling,
+barely past rate 1's 0.265, with the pinned fraction quadrupled. A threshold on pinning
+rewards sitting as close to saturation as possible. Replaced with a shape test on
+`offset / rate`, which is flat while the channel is unsaturated. Same class as
+`verdict fitted to data`: a criterion of the wrong SHAPE, which pre-registration does not
+save. Caught before it reached the three-cell run, which is the only reason it was cheap.
+
+**THE THREE CELLS, n = 36 each.** `calibrate` runs with no reward, so the learning term
+never fires in it and the jitter and learned arms return **identical** calibration rates
+(7.05 2.41 2.46 4.62 4.31 7.04, both). One retune serves both, and the two differ in
+exactly one bit: whether reward credits the jitter.
+
+```
+PRIMARY    learned - jitter   (exactly matched)
+  rate    +0.7686 -> +0.7436   -0.0250 +/- 0.1118  (0.2 SE)  null   bound 32%
+  share   +0.3438 -> +0.3152   -0.0286 +/- 0.0475  (0.6 SE)  null   bound 36%
+  motor   +0.0344 -> +0.0324   -0.0020 +/- 0.0043  (0.5 SE)  null   bound 31%
+  praise won   jitter 32/36, learned 31/36
+
+secondary  jitter - control    motor +0.0007 +/- 0.0070 (0.1 SE)  null
+secondary  learned - control   motor -0.0014 +/- 0.0068 (0.2 SE)  null
+```
+
+All twelve comparisons null, every `g2` family PASS in all three cells, and no creature
+lost to g2's own refusal. **Learning the leak buys nothing, at a bound of 31% of the
+praise effect.**
+
+**THE ASYMMETRY IS THE FINDING.** Randomising the **threshold** cost 61% of the lesson
+(v71, 3.5 SE, monotone in sigma). Randomising the **leak** costs
+**+0.0007 ± 0.0070 — nothing at all.** Two intrinsic constants of the same neuron,
+opposite sensitivity, measured the same way at the same n on the same creatures.
+
+One caveat that has to be stated, because it bounds the jitter half: `leak_jit_` is
+redrawn every cash-in, so a neuron's **time-averaged** leak is unchanged, and "the jitter
+costs nothing" could be no more than "a zero-mean, rapidly redrawn perturbation averages
+out". The **learned** arm is not open to that reading — it carries a *persistent* offset,
+`|leak_log|` 0.088 in log space, about a 9% shift held for the session — and it changes
+nothing either, at 0.2 SE against control. That is the load-bearing version.
+
+**WHAT v71 AND v72 CLOSE TOGETHER.** `stageprobe` named `bias -> rate` at 0.34 as the
+compressive stage and said *the target is the NEURON, not the pooling*. This kernel gives
+a neuron two intrinsic constants that could move that transfer, and **both are now
+measured**: the offset is already learned (`bias_`, zero at birth, moved only by reward)
+and randomising it on top hurts monotonically; the leak does nothing learned or random. So
+the 0.34 stage is **not reachable through either of the neuron's intrinsic constants**, and
+the four mechanisms built across v71 and v72 — random threshold spread, random leak
+jitter, learned leak, and the dose-response over all of it — agree on that.
+
+**WHAT THE LEAD STILL HAS, scoped and not claimed.** Two parameters set this neuron's f-I
+curve and have never been varied per neuron or learned: `refractory_ms`
+(`network.cpp:639`), which sets the **maximum** rate and so is a hard ceiling on gain, and
+`noise_amp` (`:633`), which stochastically linearises the threshold nonlinearity and is the
+textbook way to change an f-I curve's effective **slope**. Both are per-module scalars
+identical for every neuron for the creature's whole life, exactly as `threshold` and
+`leak_tau_ms` were before v71. `noise_amp` is the more interesting of the two because it is
+already the creature's exploration drive, so changing it per neuron changes two things at
+once — which makes it a harder experiment, not a better one, and it needs the same
+operating-point discipline before anything is read off it.
+
 ## Layout
 
 ```

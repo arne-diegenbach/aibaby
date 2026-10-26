@@ -395,6 +395,18 @@ const Spec kSpecs[] = {
      "  on WAKE by elapsed time. GUARD, in v1probe's sense: dna/default.toml has no\n"
      "  context module, so this REFUSES there and failing is the right answer --\n"
      "  point it at results/ctxgrid.toml or a trimmed descendant to get a number."},
+    {"leakprobe", 120000, Expect::kPass, Tier::kFast,
+     "DNA v72. DERIVES `leak_learn_rate` instead of guessing it, which is what\n"
+     "  four guessed constants in this project have each cost a run for. Sweeps the\n"
+     "  rate over five decades at fixed `leak_perturb`, and for each reads the two\n"
+     "  numbers that decide whether a rate is usable: the fraction of cash-ins with\n"
+     "  |leak_log| against its ceiling, and how far the learned offset travelled at\n"
+     "  all. A rate is usable when the offset MOVES and does not PIN.\n"
+     "  Criterion: such a rate exists. It is a real pass/fail and not an\n"
+     "  instrument's `kOpen` -- if every rate either saturates or does nothing, the\n"
+     "  channel is unusable at this `leak_perturb` and this FAILS, which is the\n"
+     "  answer. `ipctx` is why saturation is the gate: it measured IP on the larynx\n"
+     "  pinning 25-83% of neurons at `threshold_max` under drive"},
     {"cost", 120000, Expect::kPass, Tier::kLong,
      "derived: the default minimum, because this measures a RATE and not an\n"
      "  effect -- 120000 ticks is 120 s simulated, which is dozens of trials and\n"
@@ -1075,6 +1087,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "ctxfactor") ok = run_ctxfactor(dna_blob, ticks, verbose);
   else if (name == "ctxaxis") ok = run_ctxaxis(dna_blob, ticks, verbose);
   else if (name == "cost") ok = run_cost(dna_blob, ticks, verbose);
+  else if (name == "leakprobe") ok = run_leakprobe(dna_blob, ticks, verbose);
   else if (name == "duty") ok = run_duty(dna_blob, ticks, verbose);
   else if (name == "dutyname") ok = run_dutyname(dna_blob, ticks, verbose);
   else if (name == "blockwhere") ok = run_blockwhere(dna_blob, ticks, verbose);

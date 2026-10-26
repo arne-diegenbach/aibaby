@@ -2204,6 +2204,7 @@ bool run_tutorgrid(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_ctxfactor(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_ctxaxis(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_cost(const std::vector<uint8_t>&, uint64_t, bool);
+bool run_leakprobe(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_duty(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_dutyname(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_blockanchor(const std::vector<uint8_t>&, uint64_t, bool);
