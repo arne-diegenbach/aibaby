@@ -42113,6 +42113,27 @@ bool run_echoname(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
     bool ok = false;
     uint32_t scored = 0, skipped = 0, pairs = 0;
     double echo = 0.0, echo_ear = 0.0, echo_shuf = 0.0;
+    // THE ARTICULATOR ECHO, ADDED 2026-10-27 TO AUDIT THIS EXPERIMENT'S OWN RESULT.
+    // `echo` above is `m3_vocal_features`: eleven numbers, and FEATURE 10 IS THE VOICED
+    // FRACTION. The rewarded arms drove their own voiced fraction to 0.082 and 0.123
+    // from `none`'s 0.765 -- and `holdout_accuracy` z-scores every dimension with the sd
+    // floored at 1e-9, so an EXACTLY constant feature contributes nothing and is
+    // harmless while a NEARLY constant one is divided by its tiny sd and can dominate
+    // the distance deciding every held-out trial. That is the regime those arms sat in,
+    // which makes +0.0673 partly attributable to one feature rather than to the echo.
+    //
+    // `artic` is `m3_timbre_features` off the same trials: the seven articulator groups
+    // with voicing AND loudness dropped entirely. It cannot carry a feature-10 effect of
+    // any kind, so it is the control that SETTLES the question rather than arguing about
+    // it. `quietecho` made an artefact less likely -- its two columns never diverged
+    // under a voiced-fraction manipulation -- but could not settle it, because its
+    // creatures reached that operating point by a different route.
+    //
+    // THIS IS A PURE ADDITIONAL READOUT off rows `ImitateRun` already keeps. It touches
+    // no creature, no seed and no existing statistic, so every column published in
+    // `results/echoname-yoke-full.log` must come back BIT-IDENTICAL, and that identity
+    // is the control on this change.
+    double artic = 0.0;
     double dir = 0.0, dnull = 0.0, sp1 = 0.0, sp2 = 0.0, match = 0.0;
     size_t trials = 0;
     uint32_t eskip = 0;
@@ -42229,6 +42250,9 @@ bool run_echoname(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
         };
 
         cell.echo = pair_mean(echo.scored_voice, echo.scored_labels, &cell.pairs);
+        // The same six pairs, the same trials, the same reader -- on a feature set that
+        // cannot contain the voiced fraction. See the note on `Cell::artic`.
+        cell.artic = pair_mean(echo.scored_artic, echo.scored_labels, nullptr);
         if (!echo.scored_heard.empty()) {
           cell.echo_ear = pair_mean(echo.scored_heard, echo.scored_labels, nullptr);
         }
@@ -42284,10 +42308,10 @@ bool run_echoname(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
     return se;
   };
 
-  std::printf("  %-6s %-8s %-7s %-8s %-9s %-7s %-10s %-8s %-10s %-9s %s\n", "seed", "arm",
-              "echo", "its EAR", "shuffled", "trials", "aud WHILE", "voiced",
-              "direction", "its null", "F1 spread");
-  std::vector<double> echo[kENArms], ear[kENArms], shuf[kENArms];
+  std::printf("  %-6s %-8s %-7s %-7s %-8s %-9s %-7s %-10s %-8s %-10s %-9s %s\n", "seed",
+              "arm", "echo", "artic", "its EAR", "shuffled", "trials", "aud WHILE",
+              "voiced", "direction", "its null", "F1 spread");
+  std::vector<double> echo[kENArms], art[kENArms], ear[kENArms], shuf[kENArms];
   std::vector<double> aud[kENArms], vf[kENArms];
   std::vector<double> dir[kENArms], dnul[kENArms];
   // Scored echo trials per arm, out of the 200 the budget allows. Collected because the
@@ -42302,10 +42326,11 @@ bool run_echoname(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
                     kENArmName[a], c.scored, c.skipped);
         continue;
       }
-      std::printf("  %-6u %-8s %-7.3f %-8.3f %-9.3f %-7zu %-10.1f %-8.3f %-10.3f %-9.3f %.1f\n",
-                  r, kENArmName[a], c.echo, c.echo_ear, c.echo_shuf, c.trials, c.aud0,
-                  c.vfrac, c.dir, c.dnull, c.sp1);
+      std::printf("  %-6u %-8s %-7.3f %-7.3f %-8.3f %-9.3f %-7zu %-10.1f %-8.3f %-10.3f %-9.3f %.1f\n",
+                  r, kENArmName[a], c.echo, c.artic, c.echo_ear, c.echo_shuf, c.trials,
+                  c.aud0, c.vfrac, c.dir, c.dnull, c.sp1);
       echo[a].push_back(c.echo);
+      art[a].push_back(c.artic);
       ear[a].push_back(c.echo_ear);
       shuf[a].push_back(c.echo_shuf);
       aud[a].push_back(c.aud0);
@@ -42352,12 +42377,79 @@ bool run_echoname(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
   const double m_none = mean_of(echo[1]), m_taught = mean_of(echo[2]);
   const double ear_none = mean_of(ear[1]), ear_taught = mean_of(ear[2]);
   const double sh_none = mean_of(shuf[1]), sh_taught = mean_of(shuf[2]);
-  std::printf("\n  arm      n    echo       its EAR    shuffled   aud WHILE  voiced   scored/200  direction\n");
+  std::printf("\n  arm      n    echo         artic        its EAR    shuffled   aud WHILE  voiced   scored/200  direction\n");
   for (uint32_t a = 0; a < kENArms; ++a) {
-    std::printf("  %-8s %-4zu %.3f+-%.3f  %-10.3f %-10.3f %-10.1f %-8.3f %-11.1f %.3f+-%.3f\n",
+    std::printf("  %-8s %-4zu %.3f+-%.3f %.3f+-%.3f %-10.3f %-10.3f %-10.1f %-8.3f %-11.1f %.3f+-%.3f\n",
                 kENArmName[a], echo[a].size(), mean_of(echo[a]), sem_of(echo[a]),
-                mean_of(ear[a]), mean_of(shuf[a]), mean_of(aud[a]), mean_of(vf[a]),
-                mean_of(tr[a]), mean_of(dir[a]), sem_of(dir[a]));
+                mean_of(art[a]), sem_of(art[a]), mean_of(ear[a]), mean_of(shuf[a]),
+                mean_of(aud[a]), mean_of(vf[a]), mean_of(tr[a]), mean_of(dir[a]),
+                sem_of(dir[a]));
+  }
+
+  // ---- THE FEATURE-10 AUDIT, on this experiment's own headline numbers ----
+  //
+  // Every paired contrast this experiment reports, re-read on a feature set that cannot
+  // contain the voiced fraction. The question is not whether the articulator column is
+  // as LARGE -- it is a different, smaller feature set and need not be -- but whether
+  // the contrast SURVIVES it at all. A contrast that vanishes here was feature 10.
+  {
+    std::printf("\n  THE FEATURE-10 AUDIT -- every paired contrast, re-read with voicing and\n"
+                "  loudness DROPPED from the features (`m3_timbre_features`, 7 groups).\n"
+                "  `echo` cannot distinguish a real effect from one feature being driven\n"
+                "  toward zero variance and amplified by the sd floor; `artic` can.\n"
+                "    contrast            d echo             d ARTIC\n");
+    struct Pair { const char* label; uint32_t hi, lo; };
+    const Pair pairs[3] = {{"taught - none ", 2, 1},
+                           {"yoked  - none ", 4, 1},
+                           {"taught - yoked", 2, 4}};
+    for (const Pair& p : pairs) {
+      std::vector<double> de, da;
+      for (uint32_t r = 0; r < kENReps; ++r) {
+        const Cell& ch = cells[r * kENArms + p.hi];
+        const Cell& cl = cells[r * kENArms + p.lo];
+        if (!ch.ok || !cl.ok) continue;
+        de.push_back(ch.echo - cl.echo);
+        da.push_back(ch.artic - cl.artic);
+      }
+      if (de.empty()) continue;
+      const double me = mean_of(de), se1 = sem_of(de);
+      const double ma = mean_of(da), sa1 = sem_of(da);
+      std::printf("    %s  %+.4f +- %.4f  %+.4f +- %.4f  (%.1f SE vs %.1f SE)\n", p.label,
+                  me, se1, ma, sa1, se1 > 0.0 ? std::fabs(me) / se1 : 0.0,
+                  sa1 > 0.0 ? std::fabs(ma) / sa1 : 0.0);
+    }
+    // The one that decides it: the yoke's excess is this experiment's claim that reward
+    // and not the lesson raises the echo.
+    std::vector<double> dy;
+    for (uint32_t r = 0; r < kENReps; ++r) {
+      const Cell& cy = cells[r * kENArms + 4];
+      const Cell& cn = cells[r * kENArms + 1];
+      if (cy.ok && cn.ok) dy.push_back(cy.artic - cn.artic);
+    }
+    if (!dy.empty()) {
+      const double m = mean_of(dy), s = sem_of(dy);
+      const double se_n = s > 0.0 ? std::fabs(m) / s : 0.0;
+      if (se_n >= 3.0 && m > 0.0) {
+        std::printf("\n  THE CLAIM SURVIVES THE AUDIT. `yoked - none` is %+.4f +- %.4f\n"
+                    "  (%.1f SE) on features that contain no voicing and no loudness, so\n"
+                    "  reward raises the echo in the ARTICULATORS and the published\n"
+                    "  +0.0673 is not a feature-10 artefact.\n", m, s, se_n);
+      } else if (m <= 0.0 || se_n < 1.0) {
+        std::printf("\n  THE CLAIM DOES NOT SURVIVE. `yoked - none` is %+.4f +- %.4f\n"
+                    "  (%.1f SE) once voicing and loudness are dropped. The published\n"
+                    "  +0.0673 was carried by feature 10 -- the voiced fraction the\n"
+                    "  rewarded arms drove toward zero variance themselves -- and the\n"
+                    "  claim that reward raises the ECHO must be withdrawn and restated\n"
+                    "  as reward QUIETING the creature. RETRACT, do not reinterpret.\n",
+                    m, s, se_n);
+      } else {
+        std::printf("\n  THE AUDIT IS INCONCLUSIVE. `yoked - none` is %+.4f +- %.4f\n"
+                    "  (%.1f SE) on the articulator features: the same sign but under the\n"
+                    "  3 SE bar. The published +0.0673 is then PARTLY feature 10 by an\n"
+                    "  amount this n cannot resolve, and it should be quoted with this\n"
+                    "  column beside it rather than alone.\n", m, s, se_n);
+      }
+    }
   }
 
   // THE SAMPLE IS NOT THE SAME SIZE ON EVERY ARM, and the first full-budget run did not
