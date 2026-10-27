@@ -623,7 +623,34 @@ down so the next person does not pay again.
    `imitate_on_session` does every frame — but there is now **no deficit for it to explain**,
    so it is not a lead.
 
-   **The n is re-committed at 36**, in the source with its reasoning, before the full run:
+   **THE FULL-BUDGET RUN LANDED AND MET BOTH LEGS** (`results/echoname-full.log`, n=36,
+   2 h 14 m): echo on the taught arm **0.955** against the 0.75 bar, naming **+0.1790 ±
+   0.0197 (9.1 SE)** over its own per-creature null, on the same 36 creatures. Paired
+   `taught − none` on the echo is **+0.0823 ± 0.0101 (8.1 SE)** — teaching four-word
+   naming does not cost the echo, it raises it — and living a session at all costs
+   −0.0156 ± 0.0070.
+
+   **Two things the verdict did not account for, and the second is why this is not yet
+   called composition.** The arms are not the same sample size: `taught` scored a mean of
+   159 of 200 echo trials against a full 200 on the two unrewarded arms, because an asleep
+   echo trial is skipped rather than scored and reward drives the creature into sleep
+   during the echo phase. Now printed as a `DIFFERENTIAL SAMPLING` line; absent at 400,000
+   ticks, so it is a consequence of a *long* lesson. And **the excess may be the naming
+   response** — the scored window is 200–600 ms after the word stops, exactly when a
+   taught creature answers, so read off the vocal module the two may be one mechanism
+   measured twice. The echo exists at 0.867–0.888 with no lesson, so naming does not
+   create it; it is the +0.0823 excess that is unseparated.
+
+   **The discriminator is built, with its reading rule fixed in the source before its
+   run:** a `yoked` arm taking reward in the same proportions on the same schedule, half a
+   trial out of phase. `yoked ~ none` means the excess is naming; `yoked ~ taught` means it
+   is reward acting on the voice and the two capabilities are separate. It cannot un-meet a
+   met primary. Smoked at 400,000 ticks — 36/36 reps usable, the yoke earning nothing of
+   its own and learning nothing (naming −0.0135 against its null, where `taught` reads
+   +0.0426). Arms 0–3 must return bit-identical, since the per-rep seed depends on the rep
+   alone.
+
+   **The n was re-committed at 36**, in the source with its reasoning, before the full run:
    `ctxgrid`'s own n, the run that established four-word naming, which is the precedent the
    naming leg is held to. The old 12 was provisional — a pre-registration voided before it
    read a primary is not binding — and 36 borrows its power from a precedent rather than

@@ -42059,8 +42059,23 @@ bool run_echoname(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
   // session adds that `imitate` does not is the CtxDrive injected into the context
   // module every tick. `nodrive` is that session with the drive removed and nothing
   // else changed, so it says whether the shift is the drive or the session.
-  constexpr uint32_t kENArms = 4;
-  static const char* kENArmName[kENArms] = {"fresh", "none", "taught", "nodrive"};
+  // ARM 4 WAS ADDED AFTER THE FIRST FULL-BUDGET RUN MET BOTH ITS BARS, because that
+  // run left the central interpretation open rather than closed. The scored window is
+  // 200-600 ms after the word stops, which is exactly when a creature taught
+  // word -> vowel naming answers; so "which word did it just hear, read off its vocal
+  // module" may be the NAMING RESPONSE rather than a second capability. `yoked` carries
+  // reward in the same proportions on the same schedule, half a trial out of phase so
+  // it cannot land on this creature's own echoes -- reward's effect on the voice and on
+  // sleep WITHOUT a word -> vowel mapping. If `yoked` sits with `none`, the taught arm's
+  // excess is naming; if it sits with `taught`, the excess is reward and the echo is
+  // independent of what was learned.
+  //
+  // `r = i / kENArms` and the seed depends on `r` alone, so widening the arm count does
+  // not move any existing arm's creature: arms 0-3 must come back bit-identical against
+  // `results/echoname-full.log`, and that is the licence for comparing across the runs.
+  constexpr uint32_t kENArms = 5;
+  static const char* kENArmName[kENArms] = {"fresh", "none", "taught", "nodrive",
+                                            "yoked"};
   const size_t slots_off = offsetof(aibaby::DnaHeader, exploration) +
                            offsetof(aibaby::DnaExploration, context_slots);
 
@@ -42142,6 +42157,27 @@ bool run_echoname(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
         if (a == 0) {
           // No teaching session: the stock path, on a fresh creature.
           echo = run_imitate_session(variant, kENEchoTicks, kCFWords);
+        } else if (a == 4) {
+          // The yoke replays what THIS creature's own taught arm earned, so a teaching
+          // session has to run first and is thrown away -- this arm costs two sessions.
+          // No echo buffer on that one: it must not touch the brain the yoke then uses.
+          const VLRun t = run_vocallearn_session(
+              variant, ticks, kVLTaught, nullptr, reg, kVLTgtHeard, &drive,
+              kVLScoreFormant, nullptr, kCFWords, kGridWords, nullptr, nullptr, nullptr,
+              nullptr, nullptr, false, 0, nullptr, 0);
+          if (!t.ok) return cell;
+          std::vector<Praise> yoke = t.feedback;
+          for (Praise& p : yoke) p.tick += kVLTrialTicks / 2;
+          run = run_vocallearn_session(
+              variant, ticks, kVLYoked, &yoke, reg, kVLTgtHeard, &drive,
+              kVLScoreFormant, nullptr, kCFWords, kGridWords, nullptr, nullptr, nullptr,
+              nullptr, nullptr, false, 0, &echo, kENEchoTicks);
+          // A yoke that earned anything of its own is not a yoke, and the whole point of
+          // the arm is that the reward it receives is uncorrelated with what it did.
+          if (run.praises + run.scolds != 0) return cell;
+          cell.scored = run.scored;
+          cell.skipped = run.skipped;
+          cell.match = run.ctx_match;
         } else {
           run = run_vocallearn_session(
               variant, ticks, a == 2 ? kVLTaught : kVLNone, nullptr, reg,
@@ -42254,6 +42290,9 @@ bool run_echoname(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
   std::vector<double> echo[kENArms], ear[kENArms], shuf[kENArms];
   std::vector<double> aud[kENArms], vf[kENArms];
   std::vector<double> dir[kENArms], dnul[kENArms];
+  // Scored echo trials per arm, out of the 200 the budget allows. Collected because the
+  // first full-budget run read its primary on the arm with the fewest of them.
+  std::vector<double> tr[kENArms];
   std::vector<double> paired, lived;
   for (uint32_t r = 0; r < kENReps; ++r) {
     for (uint32_t a = 0; a < kENArms; ++a) {
@@ -42271,6 +42310,7 @@ bool run_echoname(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
       shuf[a].push_back(c.echo_shuf);
       aud[a].push_back(c.aud0);
       vf[a].push_back(c.vfrac);
+      tr[a].push_back(double(c.trials));
       dir[a].push_back(c.dir);
       dnul[a].push_back(c.dnull);
     }
@@ -42281,9 +42321,12 @@ bool run_echoname(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
     if (cf.ok && cn.ok) lived.push_back(cn.echo - cf.echo);
   }
 
-  if (echo[0].empty() || echo[1].empty() || echo[2].empty() || echo[3].empty()) {
-    std::printf("\n  INCONCLUSIVE -- an arm produced no usable session.\n");
-    return false;
+  for (uint32_t a = 0; a < kENArms; ++a) {
+    if (echo[a].empty()) {
+      std::printf("\n  INCONCLUSIVE -- the `%s` arm produced no usable session.\n",
+                  kENArmName[a]);
+      return false;
+    }
   }
 
   // THE STANDING ARMS GUARD. Two arms agreeing on every summary number are not two
@@ -42291,8 +42334,8 @@ bool run_echoname(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
   // it catches the two failures this build could have: reward not arriving in the
   // taught arm, and the echo hook reading the same brain twice.
   {
-    const char* names[kENArms] = {kENArmName[0], kENArmName[1], kENArmName[2],
-                                  kENArmName[3]};
+    const char* names[kENArms] = {};
+    for (uint32_t a = 0; a < kENArms; ++a) names[a] = kENArmName[a];
     std::vector<std::vector<double>> stats;
     for (uint32_t a = 0; a < kENArms; ++a) {
       stats.push_back({mean_of(echo[a]), mean_of(ear[a]), mean_of(dir[a]),
@@ -42309,12 +42352,36 @@ bool run_echoname(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
   const double m_none = mean_of(echo[1]), m_taught = mean_of(echo[2]);
   const double ear_none = mean_of(ear[1]), ear_taught = mean_of(ear[2]);
   const double sh_none = mean_of(shuf[1]), sh_taught = mean_of(shuf[2]);
-  std::printf("\n  arm      n    echo       its EAR    shuffled   aud WHILE  voiced   direction\n");
+  std::printf("\n  arm      n    echo       its EAR    shuffled   aud WHILE  voiced   scored/200  direction\n");
   for (uint32_t a = 0; a < kENArms; ++a) {
-    std::printf("  %-8s %-4zu %.3f+-%.3f  %-10.3f %-10.3f %-10.1f %-8.3f %.3f+-%.3f\n",
+    std::printf("  %-8s %-4zu %.3f+-%.3f  %-10.3f %-10.3f %-10.1f %-8.3f %-11.1f %.3f+-%.3f\n",
                 kENArmName[a], echo[a].size(), mean_of(echo[a]), sem_of(echo[a]),
                 mean_of(ear[a]), mean_of(shuf[a]), mean_of(aud[a]), mean_of(vf[a]),
-                mean_of(dir[a]), sem_of(dir[a]));
+                mean_of(tr[a]), mean_of(dir[a]), sem_of(dir[a]));
+  }
+
+  // THE SAMPLE IS NOT THE SAME SIZE ON EVERY ARM, and the first full-budget run did not
+  // say so. An echo trial in which the creature fell asleep is SKIPPED, not scored, so a
+  // reward that changes how much the creature sleeps changes how many trials each arm is
+  // read on -- and it did: 200 on the two unrewarded arms against a mean of 159 on the
+  // taught one. Chance is still 0.500 per pair and the 12-row floor still applies, so
+  // the accuracies remain comparable, but the arms are not equally POWERED and an arm
+  // that loses trials is also an arm whose creature was doing something different.
+  // Printed rather than guarded, because a differential skip is a result about reward
+  // and sleep, not a fault to refuse on.
+  {
+    double lo = 1e9, hi = -1e9;
+    for (uint32_t a = 0; a < kENArms; ++a) {
+      lo = std::min(lo, mean_of(tr[a]));
+      hi = std::max(hi, mean_of(tr[a]));
+    }
+    if (hi > 0.0 && lo / hi < 0.9) {
+      std::printf("\n  DIFFERENTIAL SAMPLING -- %.0f scored trials on the thinnest arm\n"
+                  "  against %.0f on the fullest (%.0f%%). Asleep echo trials are skipped\n"
+                  "  rather than scored, so the arms differ in POWER and in what the\n"
+                  "  creature was doing, even though chance stays 0.500 per pair.\n",
+                  lo, hi, 100.0 * lo / hi);
+    }
   }
 
   // ---- the VOID conditions, every one before a result is read ----
@@ -42376,6 +42443,41 @@ bool run_echoname(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
               "                     costs the echo; it does not show it costs nothing.\n",
               2.0 * dse, m_taught > 0.5 ? 200.0 * dse / (m_taught - 0.5) : 0.0);
 
+  // ---- THE DISCRIMINATOR, declared before its first run and NOT a leg of the primary.
+  // The primary was met as pre-registered on 2026-10-27 and this arm cannot un-meet it;
+  // what it decides is what the taught arm's EXCESS over `none` is made of. The reading
+  // rule, fixed here in advance:
+  //
+  //   yoked ~ none    the excess is the NAMING RESPONSE. The scored window is 200-600 ms
+  //                   after the word stops, which is when a taught creature answers, so
+  //                   on that arm the echo and the naming are one mechanism read twice.
+  //                   The base echo is still a separate capability -- `fresh` has it with
+  //                   no lesson at all -- but "they compose" would be too strong.
+  //   yoked ~ taught  the excess is REWARD acting on the voice, independent of what was
+  //                   learned, and the two capabilities are genuinely separate.
+  //
+  // Reported with its own power, because a yoked arm landing between the two is
+  // underpowered rather than intermediate.
+  {
+    std::vector<double> ty;
+    for (uint32_t r = 0; r < kENReps; ++r) {
+      const Cell& ct2 = cells[r * kENArms + 2];
+      const Cell& cy = cells[r * kENArms + 4];
+      if (ct2.ok && cy.ok) ty.push_back(ct2.echo - cy.echo);
+    }
+    const double m_yoked = mean_of(echo[4]);
+    const double dy = mean_of(ty), dyse = sem_of(ty);
+    std::printf("\n  THE DISCRIMINATOR -- is the taught arm's excess the naming response?\n");
+    std::printf("    yoked echo                   %.3f+-%.3f   (none %.3f, taught %.3f)\n",
+                m_yoked, sem_of(echo[4]), m_none, m_taught);
+    std::printf("    paired taught - yoked        %+.4f +- %.4f (%.1f SE, n=%zu)\n", dy,
+                dyse, dyse > 0.0 ? std::fabs(dy) / dyse : 0.0, ty.size());
+    std::printf("    yoked naming over its null   %+.4f    (taught %+.4f)\n",
+                mean_of(dir[4]) - mean_of(dnul[4]), mean_of(dir[2]) - mean_of(dnul[2]));
+    std::printf("    its scored trials            %.0f of 200 (taught %.0f, none %.0f)\n",
+                mean_of(tr[4]), mean_of(tr[2]), mean_of(tr[1]));
+  }
+
   // ---- the PRIMARY ----
   std::vector<double> excess;
   for (size_t k = 0; k < dir[2].size() && k < dnul[2].size(); ++k) {
@@ -42400,7 +42502,14 @@ bool run_echoname(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
                 "  derives from its own ear (+%.4f over its own null, %.1f SE), and\n"
                 "  still echoing which of those four words it just heard at %.3f from\n"
                 "  the voice alone, against a %.2f bar and with the ear down to %.3f.\n"
-                "  The two capabilities COMPOSE in one creature.\n",
+                "  So teaching four-word naming does NOT cost the echo.\n"
+                "\n"
+                "  WHAT THIS DOES NOT SETTLE, and the first run of it overstated:\n"
+                "  the scored window is when a taught creature ANSWERS, so the taught\n"
+                "  arm's excess over `none` may be the naming response rather than a\n"
+                "  second capability. Read THE DISCRIMINATOR above before calling this\n"
+                "  composition: the base echo is independent of the lesson (`fresh` has\n"
+                "  it untaught), the EXCESS is what is in question.\n",
                 ex, ex_se, m_taught, kENBar, ear_taught);
     return true;
   }

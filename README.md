@@ -19657,6 +19657,70 @@ held to, so the power is borrowed from that precedent rather than chosen after s
 creature when a result is large, clean, corroborated by several diagnostics, and reverses a
 milestone. That is the shape of a setup bug, not the shape of biology.
 
+## One creature does both, and what that does not yet settle (2026-10-27)
+
+The full-budget run, `results/echoname-full.log`, at the n re-committed before it was
+launched. Both pre-registered legs are met.
+
+```
+arm      n    echo          its EAR  aud WHILE  voiced  scored/200  direction
+fresh    36   0.888+-0.005  0.639    351.7      0.773   200         --
+none     36   0.873+-0.007  0.682    276.3      0.765   190         0.248
+taught   36   0.955+-0.007  0.574    274.2      0.082   159         0.436
+nodrive  36   0.867+-0.007  0.675    277.4      0.815   200         0.251
+
+PRIMARY  (a) echo on taught   0.955 against the 0.75 bar        MET
+         (b) naming over null +0.1790 +- 0.0197  (9.1 SE)       MET
+SECONDARY paired taught - none echo   +0.0823 +- 0.0101  (8.1 SE)
+WHAT LIVING A SESSION COSTS, paired none - fresh   -0.0156 +- 0.0070 (2.2 SE)
+```
+
+The same individual, in one session, is taught to name four words conditionally on an index
+it derives from its own ear, and still says which of those four words it just heard. **And
+teaching the naming does not cost the echo — it raises it.** The echo is a property of the
+untaught creature too: `fresh` reads 0.888 with no session at all, and the two arms that
+lived a session without a lesson read 0.867 and 0.873.
+
+**Two things the run's own verdict did not account for, and the second is why this file does
+not yet call it composition.**
+
+The arms are **not the same sample size**, and the primary was read on the thinnest. `taught`
+scored a mean of 159 of 200 echo trials against a full 200 on the two unrewarded arms. An
+asleep echo trial is skipped rather than scored, so reward drives the creature into sleep
+during the echo phase that follows it. Chance stays 0.500 per pair and the twelve-row floor
+still applies, so the accuracies remain comparable — but the arms differ in power, and an arm
+that loses trials is an arm whose creature was doing something different. It is now printed
+as a `DIFFERENTIAL SAMPLING` line rather than guarded, because it is a result about reward
+and sleep and not a fault to refuse on, and it does not appear at 400,000 ticks: it is a
+consequence of a *long* lesson.
+
+**And the excess may be the naming response.** The scored window is 200–600 ms after the word
+stops, which is exactly when a creature taught word→vowel answers. Read off the vocal module,
+"which word did it just hear" is then one mechanism measured twice rather than two
+capabilities — and `taught` is the only arm high on both, with the two moving together across
+all four. The partial defence is real, since the echo exists at 0.867–0.888 with no lesson at
+all, so naming does not *create* it. It is the **+0.0823 excess** that is unseparated.
+Corroborating the worry, `voiced` collapsed to 0.082 on `taught` against 0.765–0.815
+elsewhere: the creature barely phonates while its echo reads highest, which is consistent
+because the classifier reads vocal-module spikes per neuron — `m3probe` measured 0.980 per
+neuron at vocal against 0.380 on the centroid — but it means the voice carrying the echo
+there is a module state that is almost never audible.
+
+**The discriminator is built and its reading rule is fixed in the source before its run.** A
+`yoked` arm takes reward in the same proportions on the same schedule, half a trial out of
+phase so it cannot land on this creature's own echoes: reward's effect on the voice and on
+sleep, with no word→vowel mapping. If `yoked` sits with `none` the excess is naming and "they
+compose" is too strong; if it sits with `taught` the excess is reward acting on the voice and
+the two capabilities are genuinely separate. It cannot un-meet a primary that was met as
+pre-registered — it decides what the excess is made of. Smoked at 400,000 ticks, all 36 reps
+usable, the yoke earning nothing of its own and learning nothing: naming −0.0135 against its
+null where `taught` reads +0.0426.
+
+Arms 0–3 must return **bit-identical** in the five-arm run, because the per-rep seed depends
+on the rep alone and widening the arm count moves no existing arm's creature. That is the
+licence for comparing across the two runs, and it is the check that validated `tutorgrid`'s
+oracle arm.
+
 ## Layout
 
 ```
