@@ -19519,6 +19519,76 @@ in the light of their source needs them to stay comparable with the runs that pr
 **Gate:** `determinism PASS`, `pinned hash PASS` (unchanged at `ad96f882becbee92`, which is
 what disclosure-only has to mean), **24 as expected, 0 not**, `verify PASS`, 16.0 min.
 
+## The demonstration is built, and its pre-flight refuses it (2026-10-27)
+
+The project's stated goal is a small creature trainable for one specific purpose, and the
+capabilities for it are each established — on *different* creatures. `imitate` reads M1b off
+a freshly hatched one: 200–600 ms after a word stops, a held-out classifier still says which
+word it was, from the voice alone. `ctxgrid` teaches four-word conditional naming to another.
+**No individual has ever been asked for both**, and `echoname` is the experiment that asks.
+
+**The lift the roadmap named is done and verified.** `imitate`'s windowed classifier was
+split off its own `Session` constructor into `imitate_on_session`, so the windows can be read
+from a creature somebody else taught, and `run_vocallearn_session` carries an optional echo
+buffer that runs them on the live creature after the lesson — no snapshot between the two
+halves of the answer. The split is **bit-identical**: re-running `imitate` on
+`results/delay-off.toml` reproduces `results/delay-battery-off.log` on all five windows and
+all five columns.
+
+```
+200-600 ms after         0.860       0.796       0.499       1.46        0.622   <- SCORED
+```
+
+**And the experiment voids on its own pre-registered condition.** Four arms: `fresh` (no
+session at all), `none` (a session, no reward), `taught` (the four-word lesson), `nodrive` (a
+session with the CtxDrive removed). The positive control — the echo on a creature that has
+lived no session — is live. **Every arm that lived a vocallearn session reads the echo *and
+its ear* at chance.** So the long run was never launched, which is what a vacuity pre-flight
+is for.
+
+Per this file's own standing prohibition those readings are **not effect sizes** — an
+`--allow-short` run may establish whether the arms differ and never a magnitude or a
+direction. What it establishes is this: the three session arms do not differ from each
+other, while all three differ from `fresh`. **Reward is not the cause and neither is the
+context drive**, because a session with neither still has no echo.
+
+**Two diagnostics came out of the hunt and the experiment now prints them**, because the
+first smoke could not tell two very different faults apart — a word that never reaches the
+auditory module, and one that arrives and is not encoded. Auditory drive *while the word
+plays* roughly halves, and the voiced fraction falls by about two thirds. **A quiet creature
+has no voice to read an echo off.** That makes this an operating-point problem rather than a
+composition one, and this project has been caught by that trap before.
+
+**Three wrong guesses on the way, each killed by its own measurement**, which is the part
+worth keeping. Sleep was the first: asleep trials are *skipped*, so it would have cut the
+sample rather than the accuracy — and the skip count came back **0 of 200**, which is also
+why `ImitateRun` now returns one. Accumulated age was the second: the shortest legal
+teaching phase, 25 trials, costs the echo exactly as much as a long one. My own scorer was
+the third and should have been controlled for first — hence the `fresh` arm, which runs the
+same reader on the same genome and the same seeds with no session before it, and agrees with
+stock `imitate`. An arm is cheaper than an argument.
+
+A fourth thing I got wrong was cheap only because the guard caught it: a 20,000-tick probe
+returned "no usable session" for every creature, and the reason was
+`if (n_trials < 24) return out;` at the top of the teaching loop — the session refuses
+before the echo hook can run, so that probe measured nothing at all.
+
+**THE NEXT RUN IS NAMED BY A VERIFIED ASYMMETRY, not by a guess.** `imitate_on_session`
+calls `retina.present` and `s.brain.see` every frame; `run_vocallearn_session` **never drives
+vision at all**, and `results/ctxgrid.toml` has a vision module. The two sessions therefore
+differ in total network drive, which is a candidate for the vocalisation collapse. The cheap
+discriminator goes first: read the echo off a creature that has lived an *imitate* session
+rather than a lesson. If it survives that and not a lesson, the cause is session **content**
+and not age, and only then is it worth making vision optional in the teaching loop.
+
+**One caution falls out regardless of the cause, and it lands on a milestone this file
+records as met.** M1b is measured on a newly hatched creature inside `imitate`'s own session.
+Nothing had ever asked whether a creature that has lived a teaching session still repeats,
+and on this evidence it does not. `echoname` ships as `Expect::kOpen` — it can return false
+for a measured reason, so it is a test and not an instrument, and FAIL is the honest current
+answer. Its n of 12 is provisional: a pre-registration voided before it ever read a primary
+is not binding, and the n must be re-committed when the run is actually launched.
+
 ## Layout
 
 ```

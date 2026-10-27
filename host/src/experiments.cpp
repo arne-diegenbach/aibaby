@@ -203,6 +203,17 @@ const Spec kSpecs[] = {
      "  MEASURED reach, instead of vowel corners where /i/ and /u/ sit 30 Hz\n"
      "  apart on the only axis it steered. Was the ceiling the vocabulary or\n"
      "  its LAYOUT? Measures the learned F2 reach as its own gate"},
+    // kOpen, not kPass: this asserts a composition no individual has been asked for,
+    // so FAIL is the honest current answer until a log says otherwise. It CAN return
+    // false for a measured reason -- its primary is a bar on the echo and a 3 SE bar
+    // on naming -- so it is not an instrument and kRead would be wrong. Promote on a
+    // reading of the log, one at a time, which is the gate repair's own rule.
+    {"echoname", 6800000, Expect::kOpen, Tier::kTeach,
+     "  ONE creature, both capabilities. imitate reads M1b off a FRESHLY HATCHED\n"
+     "  creature and ctxgrid teaches four-word naming to a DIFFERENT one; no\n"
+     "  individual has ever been asked for both. Reads imitate's echo windows off\n"
+     "  the LIVE session after the lesson, against M1b's own 0.75 bar, with naming\n"
+     "  above its per-creature null as the 4th-rung guard"},
     {"aimaxes", 66666, Expect::kRead, Tier::kLong,
      "  is there a SECOND steerable formant axis, and are the two INDEPENDENT?\n"
      "  The aim line biased one group; senses.cpp maps group 2 to F1 and 3 to F2.\n"
@@ -1153,6 +1164,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "aimslice") ok = run_aimslice(dna_blob, ticks, verbose);
   else if (name == "aimaxes") ok = run_aimaxes(dna_blob, ticks, verbose);
   else if (name == "ctxgrid") ok = run_ctxgrid(dna_blob, ticks, verbose);
+  else if (name == "echoname") ok = run_echoname(dna_blob, ticks, verbose);
   else if (name == "ctxvocab") ok = run_ctxvocab(dna_blob, ticks, verbose);
   else if (name == "vocabcurve") ok = run_vocabcurve(dna_blob, ticks, verbose);
   else if (name == "ctxprobe") ok = run_ctxprobe(dna_blob, ticks, verbose);

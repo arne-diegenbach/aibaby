@@ -3143,6 +3143,12 @@ struct ImitateRun {
   // Voiced FRACTION per window: the answering burst. M1b scores what the voice
   // carries; this is whether it speaks at all.
   double voiced_frac[kImitateWindows] = {};
+  // HOW MANY TRIALS THE SLEEP FILTER THREW AWAY. Local-only until `echoname` ran the
+  // windows on a creature that had already lived a teaching session and read the echo
+  // at chance: with the trials silently reduced, every pair still scores and every
+  // accuracy walks to 0.5, which looks exactly like a creature that lost the echo. A
+  // skip count is the difference between "it cannot do it" and "it was asleep".
+  uint32_t skipped = 0;
   // PER-TRIAL, so a caller can filter. The EAR column exists because an
   // after-window in which the auditory module still classifies is not memory
   // but a stimulus that has not finished arriving — and a creature that goes
@@ -3175,16 +3181,24 @@ struct ImitateRun {
 
 // `words` is how many of kWords to cycle through. `snr_db` and `level_db`
 // describe a microphone rather than a creature — see the note on the sweep.
-ImitateRun run_imitate_session(const std::vector<uint8_t>& blob, uint64_t ticks,
-                               uint32_t words = 2, double snr_db = 1e9,
-                               double level_db = 0.0, bool silent = false) {
+//
+// THE ECHO MEASUREMENT, ON A SESSION THE CALLER OWNS. Split out of
+// `run_imitate_session` (below, now a wrapper that builds a fresh creature and
+// delegates) so the same windows can be read off a creature that has already
+// been TAUGHT. `imitate` measures a read-only property of a newly hatched
+// creature; the composition question needs it measured after a lesson, on the
+// same individual, and a reloaded snapshot would put a serialisation question
+// between the two halves of the answer.
+//
+// Nothing here is reordered, and every local RNG is still seeded from the
+// genome (`seed ^ 0x1417` for trial order, `^ 0x31CB` for the microphone), so a
+// fresh-creature call draws the same trials in the same order as before and the
+// six existing call sites are bit-identical. What differs in a taught arm is
+// the BRAIN handed in, which is the entire point.
+ImitateRun imitate_on_session(Session& s, uint64_t ticks, uint32_t words,
+                              double snr_db, double level_db, bool silent) {
   ImitateRun out;
   std::string error;
-  Session s;
-  if (!s.init(blob, error)) {
-    std::printf("  setup failed: %s\n", error.c_str());
-    return out;
-  }
   const aibaby::DnaAudio& acfg = s.dna.header().audio;
   const aibaby::DnaVision& vcfg = s.dna.header().vision;
   Ear ear;
@@ -3396,6 +3410,7 @@ ImitateRun run_imitate_session(const std::vector<uint8_t>& blob, uint64_t ticks,
 
   if (labels.size() < 12) return out;
   out.trials = labels.size();
+  out.skipped = skipped;
 
   // The per-window table is a two-class readout, so it is only meaningful — and
   // only SAFE — for a two-word session. A four-word run is collected purely for
@@ -3449,6 +3464,22 @@ ImitateRun run_imitate_session(const std::vector<uint8_t>& blob, uint64_t ticks,
   out.scored_artic = windows[2].timbre;
   out.ok = true;
   return out;
+}
+
+
+// The original entry point, kept with its exact signature and defaults: build a
+// fresh creature and read the echo off it. Every caller of `imitate`, `vocab`
+// and the microphone sweep goes through here and is unaffected by the split.
+ImitateRun run_imitate_session(const std::vector<uint8_t>& blob, uint64_t ticks,
+                               uint32_t words = 2, double snr_db = 1e9,
+                               double level_db = 0.0, bool silent = false) {
+  std::string error;
+  Session s;
+  if (!s.init(blob, error)) {
+    std::printf("  setup failed: %s\n", error.c_str());
+    return ImitateRun{};
+  }
+  return imitate_on_session(s, ticks, words, snr_db, level_db, silent);
 }
 
 
@@ -4563,7 +4594,24 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
                              // 0 means NO GATING and is the default, so every existing
                              // caller is bit-identical. Appended at the END by this
                              // signature's own convention.
-                             uint64_t duty_awake_end = 0) {
+                             uint64_t duty_awake_end = 0,
+                             // `echoname`: after the lesson, read `imitate`'s echo
+                             // windows off THIS creature rather than a freshly hatched
+                             // one. The whole demonstration turns on the word "same":
+                             // the project has `imitate` on an untaught creature and
+                             // four-word conditional naming on a taught one, and has
+                             // never had both off one individual. Running the windows
+                             // here, on the live `Session`, is the only version with no
+                             // snapshot fidelity question between the two halves.
+                             //
+                             // It runs AFTER the teaching loop and touches nothing it
+                             // read, so the lesson's own numbers are unaffected: the
+                             // echo arm and a no-echo arm return identical VLRun
+                             // fields, which is the control that says so.
+                             //
+                             // nullptr/0 keeps every existing caller bit-identical.
+                             ImitateRun* echo = nullptr,
+                             uint64_t echo_ticks = 0) {
   // -1 is vocallearn's own rule, and passing nothing reproduces it exactly: the
   // positive control aims at one fixed target and every other arm at the word
   // that was heard.
@@ -5521,6 +5569,12 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
   }
   (void)voiced_sum;
   out.ok = out.scored >= 18 && err_n[0] > 0 && err_n[1] > 0;
+  // THE ECHO, OFF THIS CREATURE, AFTER ITS LESSON. Last thing in the function and
+  // after `out.ok` is already decided, so a creature whose lesson did not score is
+  // still reported as such and the echo cannot launder a failed session.
+  if (echo && echo_ticks > 0) {
+    *echo = imitate_on_session(s, echo_ticks, nw, 1e9, 0.0, true);
+  }
   return out;
 }
 
@@ -41864,6 +41918,477 @@ bool run_coderprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
               "  it against these two numbers -- not against `vocab`'s 0.210, which is\n"
               "  the voice.\n", aud, mel);
   (void)verbose;
+  return false;
+}
+
+
+// ============ echoname: DOES ONE CREATURE DO BOTH? ============
+//
+// THE DEMONSTRATION THIS PROJECT HAS NEVER RUN, and the reason it is worth a run is
+// one word: SAME. The capabilities exist and are each established on their own
+// creature. `imitate` reads M1b off a freshly hatched one -- 200-600 ms after a word
+// stops, a held-out classifier still says which word it was, from the voice alone, at
+// 0.860 against a 0.75 bar with the ear down to 0.622. `ctxgrid` teaches a DIFFERENT
+// creature to name four words on both formant axes. **No individual has ever been
+// asked for both.**
+//
+// AND IT IS NOT TWO MEASUREMENTS IN ONE LOG. Both read out of the same nine motor
+// scalars and the same rate-weighted centroid, and this project has already measured
+// that quantity refusing to hold two things: `hcdrive` found a scalar reward cannot
+// move what an attractor pins, and the capacity line found two targets PURE OVERWRITE
+// unless they are orthogonal. A lesson that drives F1/F2 to a commanded value per
+// context is a mechanism for making the voice reflect the COMMAND rather than the
+// stimulus, so it could take the echo away.
+//
+// It could also hand it over. The lesson installs exactly a heard-word -> vowel
+// mapping, which is the thing the echo classifier reads, so the two may be the same
+// mechanism pointed at the same place. **No prediction is recorded.** Three outcomes,
+// all results:
+//   taught >= none   the lesson and the echo are one mechanism; composition is free
+//   taught <  none   the command overwrites the stimulus; composition in SPACE has a
+//                    price, and the follow-up is a YOKED arm to say whether it is the
+//                    reward or the lesson's content
+//   either, >= 0.75  the composition claim itself: one creature, both capabilities
+//
+// ================== PRE-REGISTERED, BEFORE THE RUN ==================
+// TWO ARMS, identical in every input and differing in ONE BIT -- whether reward
+// arrives. Both get `context_slots = 4` and the same `CtxDrive`, both hear the same
+// `kWords` in the same order, both live the same number of ticks:
+//
+//   none     kVLNone,   no reward        the echo baseline on a matched creature
+//   taught   kVLTaught, kGridWords       the four-word conditional lesson
+//
+// A yoked arm is deliberately NOT run yet. It answers "reward or the lesson?", which
+// is only a question if a loss appears -- and if the primary is null it adds a third
+// of the compute for nothing. Stated here so that running it later is a follow-up and
+// not a fishing trip.
+//
+// THE ECHO STATISTIC: mean held-out accuracy over ALL SIX PAIRS of the four words, in
+// `imitate`'s own pre-registered window (index 2, 200-600 ms after the word stops --
+// fixed a priori there, not chosen per creature, which `imitate` records as the fix
+// for selecting on the outcome). Pairwise rather than four-way ON PURPOSE: chance is
+// then exactly 0.5 per pair and the number is directly comparable with M1b's 0.75
+// bar, where a four-way accuracy against 0.25 would need a new bar invented for it.
+// The rows are the ones `ImitateRun` already keeps "so the caller can score any PAIR
+// of words off one simulation", and `vocab` scores them the same way.
+//
+// THE BAR IS DERIVED, NOT CHOSEN: 0.75 is the held-out bar M1b and G3 are both scored
+// against, so this number sits in the same column as theirs.
+//
+// THE PRIMARY, on the TAUGHT arm and on the SAME creatures:
+//   (a) the echo clears 0.75, and
+//   (b) naming lands -- `direction` above its own `direction_null`, 3 SE across
+//       creatures. (b) is the 4th-rung guard: without it "the echo survived" is just
+//       "nothing happened to it", and chance here is NOT 1/k -- a k-word direction
+//       score reads ~0.30 on an empty voice, which is why the per-creature null is
+//       the comparison and 0.25 is not.
+//
+// THE SECONDARY, paired per creature: taught - none echo, reported with its SE as a
+// BOUND on what the lesson costs the echo. Not a 3 SE bar, because the interesting
+// outcome here is a null and a null needs a bound and a power statement, never a
+// cleared bar.
+//
+// VOID IF:
+//   - the `none` arm's echo does not clear 0.75. Then the instrument cannot see on
+//     this genome and every taught number is a fact about the instrument. This is
+//     `positive_control`'s exact job and it is checked before anything is read.
+//   - the scored window's EAR accuracy is not below the `none` arm's voice accuracy.
+//     An after-window in which the auditory module still classifies is not memory,
+//     it is a stimulus that has not finished arriving.
+//   - the pairwise SHUFFLED control is outside [0.40, 0.60], which would mean the
+//     readout is finding structure in the procedure.
+//
+// READ-ONLY: no genome field, no mechanism, nothing shipped. The only code change it
+// needed was splitting `imitate`'s windows off its Session constructor so they can be
+// read from a creature someone else taught -- verified bit-identical on all five
+// windows and all five columns against `results/delay-battery-off.log`.
+// =====================================================================
+bool run_echoname(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  aibaby::Dna dna;
+  if (dna.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) {
+    std::printf("  setup failed: the genome does not load\n");
+    return false;
+  }
+  const int32_t ctx_module = dna.module_with_role(aibaby::ModuleRole::kContext);
+  if (ctx_module < 0) {
+    std::printf("  this genome has no kContext module, so there is no index to name\n"
+                "  four words on. Build one with NO output weight:\n\n"
+                "    python3 tools/genome_add_context.py dna/default.toml ctx.toml \\\n"
+                "        vocal out_w=0\n"
+                "    ./build/aibaby --dna ctx.toml --experiment echoname\n");
+    return false;
+  }
+  // `imitate`'s own budget, so the echo half is sampled exactly as M1b sampled it:
+  // 200 trials of 2800 ticks, which at four words is 50 per word and 100 per pair.
+  constexpr uint64_t kENEchoTicks = 560000;
+  constexpr size_t kENScored = 2;        // 200-600 ms after the word stops
+  constexpr double kENBar = 0.75;        // M1b's and G3's held-out bar
+  constexpr uint32_t kENReps = 12;
+  // THREE ARMS, AND THE FIRST ONE IS WHY. `fresh` runs the echo on a creature that has
+  // lived no session at all, through THIS experiment's own reader, on the same genome
+  // and the same seeds. Without it the comparison is against `imitate`'s published
+  // number, which is a different reader on a different genome -- and the first smoke
+  // read the echo at chance, where that cross-run comparison could not say whether the
+  // cause was the stepped session or this scorer. An arm is cheaper than an argument.
+  //
+  //   fresh    no session         the echo as a read-only property, this reader
+  //   none     a session, no reward    what LIVING one costs
+  //   taught   a session with the lesson   what the LESSON costs
+  //
+  // fresh -> none isolates experience, none -> taught isolates reward.
+  // A FOURTH ARM, APPENDED so indices 0-2 keep their meaning. The three above found
+  // the echo at chance after ANY session, reward or not, with auditory drive while the
+  // word plays HALVED (352.6 -> 174) and the voice gone quiet (0.772 -> 0.29). That is
+  // an operating-point shift, not a composition failure, and the one input a vocallearn
+  // session adds that `imitate` does not is the CtxDrive injected into the context
+  // module every tick. `nodrive` is that session with the drive removed and nothing
+  // else changed, so it says whether the shift is the drive or the session.
+  constexpr uint32_t kENArms = 4;
+  static const char* kENArmName[kENArms] = {"fresh", "none", "taught", "nodrive"};
+  const size_t slots_off = offsetof(aibaby::DnaHeader, exploration) +
+                           offsetof(aibaby::DnaExploration, context_slots);
+
+  instrument("echoname", dna.header().seed ^ 0xEC40u, ticks / kVLTrialTicks,
+             "teaching trials per arm");
+  disclose_index_source(dna, "echoname");
+  std::printf("  the question      ONE creature. Does it both NAME four words\n"
+              "                    conditionally and ECHO which word it just heard?\n"
+              "                    Each half is established on a DIFFERENT creature;\n"
+              "                    no individual has been asked for both.\n");
+  std::printf("  the design        two arms differing in one bit -- whether reward\n"
+              "                    arrives. Same index, same CtxDrive, same words in\n"
+              "                    the same order, same number of ticks. The echo is\n"
+              "                    read off the LIVE session after the lesson, so the\n"
+              "                    two halves are the same individual with no snapshot\n"
+              "                    between them.\n");
+  std::printf("  the echo          mean held-out accuracy over all SIX pairs of the\n"
+              "                    four words, in imitate's own window (%zu, 200-600 ms\n"
+              "                    after the word stops, fixed a priori). Pairwise so\n"
+              "                    chance is 0.500 and the bar is M1b's own %.2f.\n",
+              kENScored, kENBar);
+  std::printf("  the primary       on the taught arm: echo >= %.2f AND naming above its\n"
+              "                    own per-creature null at 3 SE. The second is the\n"
+              "                    4th-rung guard -- a surviving echo on a creature\n"
+              "                    that learned nothing is not composition.\n", kENBar);
+  std::printf("  the secondary     paired taught - none, as a BOUND with its power.\n"
+              "                    A null is an interesting outcome here, so it is\n"
+              "                    reported as a bound and never as a cleared bar.\n");
+  std::printf("  no prediction     the lesson could take the echo (a command\n"
+              "                    overwriting the stimulus) or hand it over (the same\n"
+              "                    heard-word -> vowel mapping the echo reads). Both\n"
+              "                    are results and neither is predicted here.\n\n");
+
+  struct Cell {
+    bool ok = false;
+    uint32_t scored = 0, skipped = 0, pairs = 0;
+    double echo = 0.0, echo_ear = 0.0, echo_shuf = 0.0;
+    double dir = 0.0, dnull = 0.0, sp1 = 0.0, sp2 = 0.0, match = 0.0;
+    size_t trials = 0;
+    uint32_t eskip = 0;
+    // IS THE WORD ARRIVING, AND IS THE CREATURE DRONING OVER IT? The first smoke read
+    // the echo AND its ear at chance on a stepped session while a fresh creature read
+    // 0.896 / 0.626, which separates into two very different faults: a word that never
+    // reaches the auditory module, or one that reaches it and is not encoded. `aud0` is
+    // auditory activity WHILE the word plays -- arrival. `vfrac` is the voiced fraction
+    // in the scored window -- whether the creature's own voice is masking the caregiver,
+    // which it can, because larynx->ear is negative feedback here.
+    double aud0 = 0.0, vfrac = 0.0;
+  };
+
+  std::vector<std::pair<double, double>> tg;
+  for (uint32_t q = 0; q < kCFWords; ++q) {
+    tg.push_back({double(kGridWords[q].f1), double(kGridWords[q].f2)});
+  }
+
+  const std::vector<Cell> cells =
+      parallel_reps<Cell>(kENReps * kENArms, [&](uint32_t i) {
+        const uint32_t r = i / kENArms;
+        const uint32_t a = i % kENArms;
+        Cell cell;
+        std::vector<uint8_t> variant = blob;
+        const uint64_t seed = dna.header().seed + r * 7919ull;
+        std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed,
+                    sizeof(seed));
+        const uint32_t sl = kCFWords;
+        std::memcpy(variant.data() + slots_off, &sl, sizeof(sl));
+        CtxDrive drive;
+        drive.module = ctx_module;
+        drive.slots = kCFWords;
+        drive.gain = 0.10;
+        Regime reg;
+        reg.praise = kPraiseValue;
+        reg.scold = kScoldValue;
+        // Every defaulted parameter spelled out so the two appended at the END --
+        // the echo buffer and its budget -- can be reached. Each value before them
+        // is what ctxgrid's taught arm already passes.
+        ImitateRun echo;
+        VLRun run;
+        if (a == 0) {
+          // No teaching session: the stock path, on a fresh creature.
+          echo = run_imitate_session(variant, kENEchoTicks, kCFWords);
+        } else {
+          run = run_vocallearn_session(
+              variant, ticks, a == 2 ? kVLTaught : kVLNone, nullptr, reg,
+              kVLTgtHeard, a == 3 ? nullptr : &drive, kVLScoreFormant, nullptr, kCFWords,
+              kGridWords, nullptr, nullptr, nullptr, nullptr, nullptr, false,
+              0, &echo, kENEchoTicks);
+          cell.scored = run.scored;
+          cell.skipped = run.skipped;
+          cell.match = run.ctx_match;
+        }
+        if (!echo.ok) return cell;
+        cell.trials = echo.scored_labels.size();
+        cell.eskip = echo.skipped;
+        cell.vfrac = echo.voiced_frac[kENScored];
+        if (!echo.trial_aud[0].empty()) {
+          double sa = 0.0;
+          for (double x : echo.trial_aud[0]) sa += x;
+          cell.aud0 = sa / double(echo.trial_aud[0].size());
+        }
+
+        // Mean held-out accuracy over the six pairs, on whichever rows are handed in.
+        // `vocab`'s floor of 12 rows per pair, for the same reason: a pair the trial
+        // shuffle left nearly empty is not a measurement.
+        const auto pair_mean = [](const std::vector<std::vector<double>>& rows,
+                                  const std::vector<int>& labels, uint32_t* pairs) {
+          double sum = 0.0;
+          uint32_t np = 0;
+          for (uint32_t x = 0; x < kCFWords; ++x) {
+            for (uint32_t y = x + 1; y < kCFWords; ++y) {
+              std::vector<std::vector<double>> xv;
+              std::vector<int> yv;
+              for (size_t t = 0; t < labels.size() && t < rows.size(); ++t) {
+                const int L = labels[t];
+                if (L != int(x) && L != int(y)) continue;
+                xv.push_back(rows[t]);
+                yv.push_back(L == int(y) ? 1 : 0);
+              }
+              if (yv.size() < 12) continue;
+              std::vector<std::vector<double>> iv;
+              std::vector<int> jv;
+              size_t tv = 0;
+              interleave_pairs(xv, yv, iv, jv, tv);
+              sum += holdout_accuracy(iv, jv, tv);
+              ++np;
+            }
+          }
+          if (pairs) *pairs = np;
+          return np ? sum / double(np) : 0.0;
+        };
+
+        cell.echo = pair_mean(echo.scored_voice, echo.scored_labels, &cell.pairs);
+        if (!echo.scored_heard.empty()) {
+          cell.echo_ear = pair_mean(echo.scored_heard, echo.scored_labels, nullptr);
+        }
+        // The procedure control: the same rows and the same reader against labels whose
+        // correspondence to the trials has been broken. A separate stream from anything
+        // the session used, so it cannot shadow a draw the creature depended on.
+        {
+          std::vector<int> shuf = echo.scored_labels;
+          aibaby::Rng sr;
+          sr.seed(seed ^ 0xECA0u);
+          for (size_t k = shuf.size(); k > 1; --k) {
+            std::swap(shuf[k - 1], shuf[sr.next() % k]);
+          }
+          cell.echo_shuf = pair_mean(echo.scored_voice, shuf, nullptr);
+        }
+
+        // The naming half, read exactly as ctxgrid reads it.
+        if (run.ok) {
+          cell.dir = direction_accuracy(run.utt_f1, run.utt_f2, run.utt_word, tg);
+          cell.dnull = direction_null(run.utt_f1, run.utt_f2, run.utt_word, tg);
+          double s1 = 0.0, s2 = 0.0;
+          uint32_t np = 0;
+          for (uint32_t x = 0; x < kCFWords; ++x) {
+            for (uint32_t y = x + 1; y < kCFWords; ++y) {
+              double m1[2] = {0.0, 0.0}, m2[2] = {0.0, 0.0};
+              uint32_t n1[2] = {0u, 0u};
+              for (size_t u = 0; u < run.utt_word.size(); ++u) {
+                const int wd = run.utt_word[u];
+                if (wd == int(x)) { m1[0] += run.utt_f1[u]; m2[0] += run.utt_f2[u]; ++n1[0]; }
+                else if (wd == int(y)) { m1[1] += run.utt_f1[u]; m2[1] += run.utt_f2[u]; ++n1[1]; }
+              }
+              if (!n1[0] || !n1[1]) continue;
+              s1 += std::fabs(m1[0] / n1[0] - m1[1] / n1[1]);
+              s2 += std::fabs(m2[0] / n1[0] - m2[1] / n1[1]);
+              ++np;
+            }
+          }
+          cell.sp1 = np ? s1 / np : 0.0;
+          cell.sp2 = np ? s2 / np : 0.0;
+        }
+        cell.ok = true;
+        return cell;
+      });
+
+  // The project's own mean/SE, wrapped so the columns below read as formulas.
+  const auto mean_of = [](const std::vector<double>& v) {
+    double se = 0.0;
+    return ctx_mean_se(v, &se);
+  };
+  const auto sem_of = [](const std::vector<double>& v) {
+    double se = 0.0;
+    ctx_mean_se(v, &se);
+    return se;
+  };
+
+  std::printf("  %-6s %-8s %-7s %-8s %-9s %-7s %-10s %-8s %-10s %-9s %s\n", "seed", "arm",
+              "echo", "its EAR", "shuffled", "trials", "aud WHILE", "voiced",
+              "direction", "its null", "F1 spread");
+  std::vector<double> echo[kENArms], ear[kENArms], shuf[kENArms];
+  std::vector<double> aud[kENArms], vf[kENArms];
+  std::vector<double> dir[kENArms], dnul[kENArms];
+  std::vector<double> paired, lived;
+  for (uint32_t r = 0; r < kENReps; ++r) {
+    for (uint32_t a = 0; a < kENArms; ++a) {
+      const Cell& c = cells[r * kENArms + a];
+      if (!c.ok) {
+        std::printf("  %-6u %-8s  no usable session (scored %u, skipped %u)\n", r,
+                    kENArmName[a], c.scored, c.skipped);
+        continue;
+      }
+      std::printf("  %-6u %-8s %-7.3f %-8.3f %-9.3f %-7zu %-10.1f %-8.3f %-10.3f %-9.3f %.1f\n",
+                  r, kENArmName[a], c.echo, c.echo_ear, c.echo_shuf, c.trials, c.aud0,
+                  c.vfrac, c.dir, c.dnull, c.sp1);
+      echo[a].push_back(c.echo);
+      ear[a].push_back(c.echo_ear);
+      shuf[a].push_back(c.echo_shuf);
+      aud[a].push_back(c.aud0);
+      vf[a].push_back(c.vfrac);
+      dir[a].push_back(c.dir);
+      dnul[a].push_back(c.dnull);
+    }
+    const Cell& cf = cells[r * kENArms + 0];
+    const Cell& cn = cells[r * kENArms + 1];
+    const Cell& ct = cells[r * kENArms + 2];
+    if (cn.ok && ct.ok) paired.push_back(ct.echo - cn.echo);
+    if (cf.ok && cn.ok) lived.push_back(cn.echo - cf.echo);
+  }
+
+  if (echo[0].empty() || echo[1].empty() || echo[2].empty() || echo[3].empty()) {
+    std::printf("\n  INCONCLUSIVE -- an arm produced no usable session.\n");
+    return false;
+  }
+
+  // THE STANDING ARMS GUARD. Two arms agreeing on every summary number are not two
+  // arms, and this project has let three vacuous arms through on exactly that. Here
+  // it catches the two failures this build could have: reward not arriving in the
+  // taught arm, and the echo hook reading the same brain twice.
+  {
+    const char* names[kENArms] = {kENArmName[0], kENArmName[1], kENArmName[2],
+                                  kENArmName[3]};
+    std::vector<std::vector<double>> stats;
+    for (uint32_t a = 0; a < kENArms; ++a) {
+      stats.push_back({mean_of(echo[a]), mean_of(ear[a]), mean_of(dir[a]),
+                       mean_of(dnul[a])});
+    }
+    if (!arms_are_distinct(stats, names)) {
+      std::printf("\n  VOID -- the two arms are the same creature on every summary number,\n"
+                  "  so reward changed nothing and no contrast here carries information.\n");
+      return false;
+    }
+  }
+
+  const double m_fresh = mean_of(echo[0]);
+  const double m_none = mean_of(echo[1]), m_taught = mean_of(echo[2]);
+  const double ear_none = mean_of(ear[1]), ear_taught = mean_of(ear[2]);
+  const double sh_none = mean_of(shuf[1]), sh_taught = mean_of(shuf[2]);
+  std::printf("\n  arm      n    echo       its EAR    shuffled   aud WHILE  voiced   direction\n");
+  for (uint32_t a = 0; a < kENArms; ++a) {
+    std::printf("  %-8s %-4zu %.3f+-%.3f  %-10.3f %-10.3f %-10.1f %-8.3f %.3f+-%.3f\n",
+                kENArmName[a], echo[a].size(), mean_of(echo[a]), sem_of(echo[a]),
+                mean_of(ear[a]), mean_of(shuf[a]), mean_of(aud[a]), mean_of(vf[a]),
+                mean_of(dir[a]), sem_of(dir[a]));
+  }
+
+  // ---- the VOID conditions, every one before a result is read ----
+  if (!positive_control("echoname", "the `fresh` arm's echo", m_fresh, kENBar,
+                        "The echo is a read-only property of an UNTAUGHT creature and "
+                        "this genome does not show it, so nothing can be said about "
+                        "what a lesson does to it. Check the genome against "
+                        "`imitate`'s own, which reads 0.860 in this window.")) {
+    return false;
+  }
+  if (ear_none >= m_none) {
+    // TWO VERY DIFFERENT FAULTS SHARE THIS INEQUALITY and the first version of this
+    // message asserted the wrong one. If the voice is well above chance and the ear is
+    // above IT, the stimulus has not finished arriving. If BOTH sit at chance the
+    // comparison is vacuous -- there is nothing to be above -- and the fault is that
+    // the creature has no echo at this operating point at all.
+    if (m_none < 0.55) {
+      std::printf("\n  VOID -- the voice reads %.3f and the ear %.3f in the scored window:\n"
+                  "  BOTH AT CHANCE. This is not the stimulus overstaying, it is a creature\n"
+                  "  with no echo to read. Compare the `fresh` arm, which is the same genome\n"
+                  "  and the same seeds with no session before it.\n", m_none, ear_none);
+    } else {
+      std::printf("\n  VOID -- in the scored window the EAR reads %.3f against the voice's\n"
+                  "  %.3f. An after-window where the auditory module still classifies is\n"
+                  "  not memory, it is a stimulus that has not finished arriving, and the\n"
+                  "  echo cannot be distinguished from hearing. Nothing below is readable.\n",
+                  ear_none, m_none);
+    }
+    return false;
+  }
+  if (sh_none < 0.40 || sh_none > 0.60 || sh_taught < 0.40 || sh_taught > 0.60) {
+    std::printf("\n  VOID -- the shuffled control reads %.3f / %.3f, outside [0.40, 0.60].\n"
+                "  The reader is finding structure in the procedure rather than in the\n"
+                "  voice, so neither arm's accuracy means anything.\n", sh_none, sh_taught);
+    return false;
+  }
+
+  // ---- the SECONDARY: the bound, with its power ----
+  const double d = mean_of(paired), dse = sem_of(paired);
+  std::printf("\n  SECONDARY, paired taught - none echo   %+.4f +- %.4f  (%.1f SE, n=%zu)\n",
+              d, dse, dse > 0.0 ? std::fabs(d) / dse : 0.0, paired.size());
+  std::printf("  the power          at this n the smallest resolvable change is %.4f\n"
+              "                     (2 SE), which is %.0f%% of the taught arm's margin\n"
+              "                     over chance. A null here BOUNDS what the lesson\n"
+              "                     costs the echo; it does not show it costs nothing.\n",
+              2.0 * dse, m_taught > 0.5 ? 200.0 * dse / (m_taught - 0.5) : 0.0);
+
+  // ---- the PRIMARY ----
+  std::vector<double> excess;
+  for (size_t k = 0; k < dir[2].size() && k < dnul[2].size(); ++k) {
+    excess.push_back(dir[2][k] - dnul[2][k]);
+  }
+  const double ex = mean_of(excess), exse = sem_of(excess);
+  const double ex_se = exse > 0.0 ? ex / exse : 0.0;
+  const bool echo_ok = m_taught >= kENBar;
+  const bool name_ok = ex_se >= 3.0;
+  std::printf("\n  WHAT LIVING A SESSION COSTS, paired none - fresh   %+.4f +- %.4f (%.1f SE)\n",
+              mean_of(lived), sem_of(lived),
+              sem_of(lived) > 0.0 ? std::fabs(mean_of(lived)) / sem_of(lived) : 0.0);
+  std::printf("\n  PRIMARY, both on the SAME %zu creatures\n", echo[2].size());
+  std::printf("    (a) echo on the taught arm   %.3f  against the %.2f bar      %s\n",
+              m_taught, kENBar, echo_ok ? "MET" : "NOT MET");
+  std::printf("    (b) naming above its null    %+.4f +- %.4f (%.1f SE)   %s\n", ex, exse,
+              ex_se, name_ok ? "MET" : "NOT MET");
+
+  if (echo_ok && name_ok) {
+    std::printf("\n  MET -- ONE CREATURE DOES BOTH. The same individual, in the same\n"
+                "  session: taught to name four words conditionally on an index it\n"
+                "  derives from its own ear (+%.4f over its own null, %.1f SE), and\n"
+                "  still echoing which of those four words it just heard at %.3f from\n"
+                "  the voice alone, against a %.2f bar and with the ear down to %.3f.\n"
+                "  The two capabilities COMPOSE in one creature.\n",
+                ex, ex_se, m_taught, kENBar, ear_taught);
+    return true;
+  }
+  if (!name_ok) {
+    std::printf("\n  NOT MET, and the 4th rung is why: naming reads %+.4f over its own\n"
+                "  null at %.1f SE, under the 3 SE bar. The echo number above is then\n"
+                "  not evidence of composition -- a surviving echo on a creature that\n"
+                "  learned nothing is just the untaught property, measured twice.\n",
+                ex, ex_se);
+    return false;
+  }
+  std::printf("\n  NOT MET -- naming landed (%+.4f, %.1f SE) and the echo did NOT survive\n"
+              "  it: %.3f against the %.2f bar, from %.3f untaught. That is the\n"
+              "  overwrite outcome, and it is a RESULT: a commanded target displaces the\n"
+              "  stimulus in the same readout. The follow-up named in advance is a YOKED\n"
+              "  arm, to say whether it is the reward or the lesson's content.\n",
+              ex, ex_se, m_taught, kENBar, m_none);
   return false;
 }
 

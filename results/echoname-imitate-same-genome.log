@@ -1,0 +1,73 @@
+experiment: imitate
+  session           560.0 s x 5 creatures, two words to an EMPTY
+                    FIELD, trial order shuffled
+  instrument        imitate   trial seed 00000000013533de   200 trials each
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  the question      the word STOPS. Does the voice still carry which
+                    one it was? A voice that differs while the sound is
+                    still playing is the arcuate transmitting; repeating
+                    is what survives the sound stopping.
+
+  window                 voice       articulators shuffled    audible d'  EAR still knows
+  WHILE the word plays   0.892       0.848       0.486       2.61        1.000
+  0-200 ms after         0.902       0.856       0.496       2.42        0.970
+  200-600 ms after       0.878       0.848       0.500       2.34        0.672   <- SCORED
+  600-1400 ms after      0.784       0.738       0.508       1.72        0.580
+  1400-2300 (ambient)    0.616       0.578       0.501       0.85        0.536   <- ambient babble
+
+  the answer against ambient babble, same trials:
+    articulators   burst 0.848  vs ambient 0.578   +0.270
+    voice          burst 0.878  vs ambient 0.616   +0.262
+    THE ANSWER IS INFORMATIVE — the burst carries the word better
+    than the babble the same creature produces unprompted.
+
+    'voice' is the nine motor groups plus loudness and voicing.
+    'articulators' drops loudness and voicing entirely, so it cannot
+    pass on "one word makes it louder" -- it is a claim about two
+    SOUNDS rather than two amounts of sound.
+    'audible d'' is the bias-corrected cepstral ruler: 1.0 is roughly
+    76% correct for a listener.
+    'EAR still knows' is the auditory module on the same trials in the
+    same window. It is the control that makes this a claim about
+    repeating rather than about hearing: in the scored window the
+    stimulus is gone from the ear and still present in the voice.
+
+  EAR NOT QUIET — the auditory module still reads the word at 0.672
+  in the scored window, so this is transmission, not repetition.
+
+  M1b FAIL — 200-600 ms after the word stops, with the auditory module
+  down to 0.672, a held-out classifier still reads which word the
+  creature heard off its own voice at 88% (chance 50%, bar 75%,
+  the same bar G3 is scored against). 5 of 5 creatures at or above
+  it. Audible d' 2.34 against the 1.0 a listener needs.
+  Read it beside G3, same creature and same bar: it repeats at 88%
+  and names at 53%. The object reaches the larynx and does not reach
+  the voice.
+
+  --- four words, all six pairs, same window -------------------
+    word A      word B      voice     EAR       
+    /a/ ball    /i/ cube    0.873     0.573     
+    /a/ ball    /u/ boot    0.920     0.647     
+    /a/ ball    /e/ bed     0.753     0.547     
+    /i/ cube    /u/ boot    0.827     0.513     <- F1 within 30 Hz: an F2-only discrimination
+    /i/ cube    /e/ bed     0.893     0.620     
+    /u/ boot    /e/ bed     0.933     0.640     
+
+    3 creatures. Every pair is scored on the SAME trials as the
+    others, so differences between rows are about the two vowels and
+    not about the run. The weakest pair is 0.753.
+
+  --- through a microphone ------------------------------------
+    condition      voice     shuffled  EAR       audible d'
+    clean          0.887     0.500     0.653     2.10
+    SNR 20 dB      0.863     0.490     0.653     2.02
+    SNR 10 dB      0.893     0.488     0.653     2.19
+    SNR 0 dB       0.910     0.492     0.620     1.84
+    +-6 dB level   0.863     0.504     0.613     1.89
+    10 dB & +-6 dB 0.840     0.505     0.623     1.58
+
+    Noise is referenced to the word's own amplitude, not to the
+    buffer's, so it keeps playing through the silent tail this
+    experiment scores — which is the honest version: a real room is
+    not quiet just because the talker stopped.
