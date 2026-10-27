@@ -19468,6 +19468,57 @@ and has been read; its input was checked separately by running an instrument sta
 read). **It will first be exercised in anger by the next `verify-long`**, and saying so is
 cheaper than discovering it later — which is the whole lesson of the 21 labels.
 
+## The arm label that was only true on some genomes (2026-10-27)
+
+Roadmap item 3, which had been sitting there as housekeeping since the day `ctxgrid`'s
+"oracle" arm was caught reading `ctx_match` 0.7498 where a genuine oracle reads 1.000.
+`ctxgrid` was given a disclosure line then; the other four experiments of its shape —
+`rpeprobe`, `areax`, `ctxvocab`, `ctxfour` — were left for later. They now have one, and
+the debt is machine-checked rather than written down.
+
+**Why it is not cosmetic.** `context_slots` and `context_source` are a coupled pair and
+these experiments set only the first. Slots choose the index's RESOLUTION; the source
+chooses which population it is READ FROM — 0 or 1 is the context module, which is where
+these experiments inject their `CtxDrive`, and >= 2 is the auditory module, which the drive
+never touches. So the same code is an oracle on one genome and a derived-index run on
+another, **under the same arm name**. That is not hypothetical: `results/` holds **64
+genomes at `context_source = 0` against 6 at 4**. The standing prohibition this bought —
+*do not trust an arm's label over its `ctx_match`* — cannot be enforced against a log that
+does not say which it was.
+
+**And the roadmap's own note about it was half right.** It recorded `ctxfour` as "already
+confirmed honest by its own logged `ctx_match` of 1.000". That is a property of **that run**,
+not of the experiment: the identical `ctxfour` code smoked on `results/ctxgrid.toml` prints
+*this arm is DERIVED, not an oracle*. The 1.000 says the published log happened to be on a
+source-0 genome, which is exactly the thing the reader could not previously tell.
+
+All five now print the source and what it means, from one shared helper
+(`disclose_index_source`, `experiments_common.h`) that `ctxgrid`'s inline copy was folded
+into. Both branches were smoked on real genomes rather than reasoned about — source 4 on
+`results/ctxgrid.toml` gives the DERIVED wording, source 0 on `results/ctxself-g2cw8.toml`
+gives the oracle one.
+
+**The part worth keeping is the check, not the print.** `tools/audit_inherited.py` grew a
+`discloses` column and a non-zero exit, so a sixth experiment of this shape is caught by a
+script instead of by a reader who happens to remember. And its red branch was **exercised,
+not assumed**: the tool takes a path argument, and run against a copy of the source with one
+call stripped it names the right function and fails.
+
+```
+  run_ctxfour                SILENT
+FAIL: 1 of them do not print it.                    exit 1
+```
+
+That is the correction still owed to the `Expect::kRead` branch added the day before, which
+remains unexercised because no `kRead` spec is in the fast tier. A check whose failing path
+has never run is not known to work — and this one took about a minute to prove.
+
+**Nothing moved, deliberately.** Disclosure only: no behaviour, no genome field, no number.
+All four of these experiments have published results, and a reader reinterpreting those logs
+in the light of their source needs them to stay comparable with the runs that produced them.
+**Gate:** `determinism PASS`, `pinned hash PASS` (unchanged at `ad96f882becbee92`, which is
+what disclosure-only has to mean), **24 as expected, 0 not**, `verify PASS`, 16.0 min.
+
 ## Layout
 
 ```

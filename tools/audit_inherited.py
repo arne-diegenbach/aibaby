@@ -17,7 +17,11 @@ slots without source means "I chose the resolution and let the genome choose the
 import re
 import sys
 
-SRC = "/home/arne/development/aibaby/host/src/experiments_milestones.cpp"
+# Overridable so the FAILING path can be exercised on a stripped copy. A check whose
+# red branch has never run is not known to work -- the same reason the Expect::kRead
+# branch was flagged as unexercised rather than assumed good.
+SRC = sys.argv[1] if len(sys.argv) > 1 else \
+    "/home/arne/development/aibaby/host/src/experiments_milestones.cpp"
 text = open(SRC).read()
 lines = text.split("\n")
 
@@ -35,8 +39,10 @@ FIELDS = ["context_slots", "context_source", "ctx_proto_gate", "ctx_conscience_g
 
 print("Functions that WRITE context_slots. 'source' column = do they also write")
 print("context_source, or inherit it from the genome?\n")
-print("  %-26s %-8s %-8s %s" % ("function", "slots", "source", "verdict"))
+print("  %-26s %-8s %-8s %-10s %s"
+      % ("function", "slots", "source", "discloses", "verdict"))
 flagged = []
+silent = []
 for name, a, b in spans:
     body = "\n".join(lines[a:b])
     wrote = {f: ("offsetof(aibaby::DnaExploration, %s)" % f) in body for f in FIELDS}
@@ -46,18 +52,39 @@ for name, a, b in spans:
     # A CtxDrive present and no source written is the exact ctxgrid shape: the host injects
     # into the context module while the index may be reading somewhere else entirely.
     drives = "CtxDrive" in body
+    # Inheriting the source is not itself the defect — running on a genome whose source
+    # makes the arm names wrong, and the LOG not saying so, is. So the fix these functions
+    # carry is a printed disclosure, and that is what this column checks.
+    tells = "disclose_index_source(" in body
     if src:
         verdict = "controls both"
     elif drives:
-        verdict = "*** INHERITS SOURCE **and injects a CtxDrive** ***"
+        verdict = "inherits source + injects a CtxDrive"
         flagged.append(name)
+        if not tells:
+            verdict = "*** INHERITS SOURCE, SILENTLY **and injects a CtxDrive** ***"
+            silent.append(name)
     else:
         verdict = "inherits source (no drive)"
         flagged.append(name)
-    print("  %-26s %-8s %-8s %s" % (name, "yes", "yes" if src else "NO", verdict))
+        if not tells:
+            verdict = "*** inherits source, SILENTLY (no drive) ***"
+            silent.append(name)
+    print("  %-26s %-8s %-8s %-10s %s"
+          % (name, "yes", "yes" if src else "NO",
+             "-" if src else ("yes" if tells else "NO"), verdict))
 
 print("\n%d function(s) set the resolution and inherit the signal." % len(flagged))
 if flagged:
-    print("Each needs checking against the genome it is run on:")
+    print("Each is genome-dependent, so each must print its source:")
     for f in flagged:
-        print("  - %s" % f)
+        print("  - %-24s %s" % (f, "discloses" if f not in silent else "SILENT"))
+
+if silent:
+    print("\nFAIL: %d of them do not print it. An arm label that is only correct on some"
+          % len(silent))
+    print("genomes needs the log to say which genome it ran on -- add")
+    print("`disclose_index_source(dna, \"<name>\")` after the instrument() line.")
+    sys.exit(1)
+
+print("\nPASS: every genome-dependent arm label is disclosed in the log.")

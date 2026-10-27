@@ -2109,6 +2109,43 @@ inline void instrument(const char* probe, uint64_t trial_seed, uint64_t count,
 }
 
 
+// Which module the context index is read from, printed by every experiment that
+// sets the index's RESOLUTION and inherits its SIGNAL.
+//
+// `tools/audit_inherited.py` lists five functions that write `context_slots` and
+// never write `context_source`. They also inject a CtxDrive, and the inherited
+// source decides whether that drive is visible to the index at all: source 0 or 1
+// reads the CONTEXT module, which is where the drive lands, while >= 2 reads the
+// AUDITORY module, which the drive never touches. So the same experiment code is
+// an oracle on one genome and a derived-index run on another, under one arm name.
+//
+// It has already been wrong once in this project's record. `ctxgrid`'s "oracle"
+// arm reads ctx_match 0.7498 on results/ctxgrid.toml where `ctxfour`'s genuine one
+// reads 1.000 — the arm was running the creature's own derived index while being
+// named and cited as a ceiling. The standing prohibition that came out of it is
+// "do not trust an arm's label over its ctx_match", and a prohibition no log can
+// be checked against is not enforceable: the log has to say the source.
+//
+// DISCLOSURE ONLY. It changes no behaviour and no number, which is the point — the
+// experiments it was added to have published results, and a reader reinterpreting
+// those logs needs them to stay comparable with the runs that produced them.
+inline void disclose_index_source(const aibaby::Dna& dna, const char* probe) {
+  const uint32_t csrc = dna.header().exploration.context_source;
+  std::printf("  INDEX SOURCE %u, inherited from the genome and NOT set by %s.\n"
+              "  %s\n"
+              "  An \"oracle\" arm is only an oracle when the drive and the index use the\n"
+              "  SAME module: ctx_match reads 1.000 for a genuine host-written index and\n"
+              "  well below it for a derived one.\n",
+              csrc, probe,
+              csrc >= 2u
+                  ? "The index reads the AUDITORY module, so a CtxDrive injected into the\n"
+                    "  context module is IGNORED by it -- such an arm is DERIVED, not an\n"
+                    "  oracle."
+                  : "The index reads the CONTEXT module, which is where a CtxDrive\n"
+                    "  injects -- a host-written arm here is a genuine oracle.");
+}
+
+
 // The row that is known to carry the signal, checked before anything is read
 // off the rows that are not.
 //

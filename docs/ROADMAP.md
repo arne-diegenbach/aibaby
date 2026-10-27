@@ -596,11 +596,23 @@ down so the next person does not pay again.
    delay rule.** The creature is insensitive to delay *changes* and at most mildly
    sensitive to the absolute *level*: rate-coded learning, not timing-coded — the fourth
    line to land there after synfire, burst plasticity and the sparse time basis.
-3. **Disclose the inherited index source in the four remaining experiments** that write
-   `context_slots` and not `context_source` (`ctxfour`, `ctxvocab`, `areax`, `rpeprobe`);
-   `ctxgrid` now does. `ctxfour`'s is already confirmed honest by its own logged `ctx_match`
-   of 1.000.
-4. **The `env2` baseline audit**, still owed and still cheap.
+3. **CLOSED 2026-10-27 — the inherited index source is disclosed, and now checked.**
+   All five experiments that write `context_slots` and inherit `context_source`
+   (`ctxfour`, `ctxvocab`, `areax`, `rpeprobe`, `ctxgrid`) print their source and what it
+   means, from one shared helper; `ctxgrid`'s inline copy was folded into it. Both branches
+   were smoked on real genomes, and `results/` holds 64 genomes at source 0 against 6 at
+   source 4, so the ambiguity was live rather than theoretical. **`ctxfour`'s honesty is a
+   property of the RUN, not of the experiment** — its `ctx_match` of 1.000 says that
+   particular log was on a source-0 genome, and the same code on `results/ctxgrid.toml`
+   would be derived. Disclosure only: no behaviour, no number, so the published logs stay
+   comparable. `tools/audit_inherited.py` grew a `discloses` column and a non-zero exit, and
+   its failing branch was exercised on a stripped copy rather than assumed.
+4. **The `env2` baseline audit**, still owed. Cheap to *decide*, not free to *run*:
+   block 1 of the n=144 conscience settle took its baseline from the twenty-arm
+   `ctxself-env2.log` instead of a dedicated four-arm run, so the audit is 36 creatures on
+   a dedicated baseline. §2 already records that blocks 2–4 clear without it
+   (+15.35 ± 4.34, 3.5 SE), so this cannot overturn the claim — it can only tighten or
+   annotate it, and that is why it keeps losing to everything else on this list.
 
 ## How to not waste a run
 

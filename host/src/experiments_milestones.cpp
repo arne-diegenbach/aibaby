@@ -28120,6 +28120,7 @@ bool run_rpeprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
   const size_t slots_off = offsetof(aibaby::DnaHeader, exploration) +
                            offsetof(aibaby::DnaExploration, context_slots);
   instrument("rpeprobe", dna.header().seed, ticks / kVLTrialTicks, "trials per arm");
+  disclose_index_source(dna, "rpeprobe");
   std::printf("  question          node perturbation is already driven by a prediction\n"
               "                    error -- reward.total minus a running baseline. That\n"
               "                    baseline is ONE GLOBAL EMA where Gadagkar's is per\n"
@@ -28907,6 +28908,7 @@ bool run_areax(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
   const size_t slots_off = offsetof(aibaby::DnaHeader, exploration) +
                            offsetof(aibaby::DnaExploration, context_slots);
   instrument("areax", dna.header().seed, ticks / kVLTrialTicks, "trials per arm");
+  disclose_index_source(dna, "areax");
   std::printf("  question          DNA v51 splits node perturbation's excitability table\n"
               "                    one-per-context. Can the estimator that met G2 at\n"
               "                    twelve sigma find a CONDITIONAL optimum now that one\n"
@@ -33794,6 +33796,7 @@ bool run_ctxvocab(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
                            offsetof(aibaby::DnaExploration, context_slots);
 
   instrument("ctxvocab", dna.header().seed ^ 0xC0CAu, ticks / kVLTrialTicks, "trials");
+  disclose_index_source(dna, "ctxvocab");
   std::printf("  the question      ctxgrid names FOUR words on two axes at +0.137.\n"
               "                    aimaxes put ~2.6 levels on each axis, predicting a\n"
               "                    capacity near 2.6 x 2.6 = 6.7 -- a PRODUCT. Does the\n"
@@ -34364,30 +34367,10 @@ bool run_ctxgrid(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
                 100.0 * double(kCGDutyAwakeEnd) / double(kVLTrialTicks));
   }
   // WHAT THIS EXPERIMENT'S "ORACLE" ARM ACTUALLY IS, printed because it is not what the arm
-  // is named and nothing was saying so. This experiment writes `context_slots` per arm and
-  // NEVER writes `context_source`, so the source comes from the genome -- and the source
-  // decides which population the index is read from: 0 or 1 is the CONTEXT module, which is
-  // where the CtxDrive below injects, while >= 2 is the AUDITORY module, which the drive
-  // never touches. On a source-4 genome the injection is invisible to the index and the
-  // "oracle" arm is running the creature's own DERIVED index instead.
-  //
-  // `ctxfour` shows what an honest oracle looks like -- its own log reads "ctx_match 1.000 at
-  // k=4 (1.000 expected)" -- while this experiment on results/ctxgrid.toml reads 0.7498. That
-  // is not noise, it is a different mechanism, and `ctx_match` is the check.
-  {
-    const uint32_t csrc = dna.header().exploration.context_source;
-    std::printf("  INDEX SOURCE %u, inherited from the genome and NOT set by this experiment.\n"
-                "  %s\n"
-                "  An \"oracle\" arm is only an oracle when the drive and the index use the\n"
-                "  SAME module: ctx_match reads 1.000 for a genuine host-written index and\n"
-                "  well below it for a derived one.\n",
-                csrc,
-                csrc >= 2u
-                    ? "The index reads the AUDITORY module, so the CtxDrive injected into the\n"
-                      "  context module is IGNORED by it -- this arm is DERIVED, not an oracle."
-                    : "The index reads the CONTEXT module, which is where the CtxDrive\n"
-                      "  injects -- this arm is a genuine host-written oracle.");
-  }
+  // is named and nothing was saying so. This experiment's 0.7498 is the case that bought the
+  // rule, and it now shares the disclosure with the other four experiments of its shape --
+  // see `disclose_index_source` in experiments_common.h for why it exists.
+  disclose_index_source(dna, "this experiment");
   const int32_t ctx_module = dna.module_with_role(aibaby::ModuleRole::kContext);
   if (ctx_module < 0) {
     std::printf("  this genome has no kContext module. Build one with NO output\n"
@@ -34751,6 +34734,7 @@ bool run_ctxfour(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
                            offsetof(aibaby::DnaExploration, context_slots);
   instrument("ctxfour", dna.header().seed ^ 0x4F0Bu, ticks / kVLTrialTicks,
              "trials per arm");
+  disclose_index_source(dna, "ctxfour");
   std::printf("  question          `partprobe` cleared the INDEX at four words (0.895\n"
               "                    against chance 0.250). Can the BIAS hold four\n"
               "                    mappings on one reward channel?\n");
