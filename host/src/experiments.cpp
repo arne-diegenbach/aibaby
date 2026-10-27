@@ -214,6 +214,22 @@ const Spec kSpecs[] = {
      "  individual has ever been asked for both. Reads imitate's echo windows off\n"
      "  the LIVE session after the lesson, against M1b's own 0.75 bar, with naming\n"
      "  above its per-creature null as the 4th-rung guard"},
+    // kPass with a real criterion, which is the enum's own rule for a new experiment
+    // rather than becoming the 22nd unfalsifiable kOpen. The bool carries the two
+    // ARITHMETIC controls -- that a rising `voicing_threshold` lowers the voiced
+    // fraction, and that a deaf creature's articulator echo is bit-identical under it
+    // -- both of which can fail for a measured reason and neither of which is the
+    // scientific question. That question (does quieting raise the echo?) is printed
+    // with its slope, its power and its bound, so there is no bar to fit a verdict to.
+    // 560000 is `imitate`'s own budget and `imitate`'s own minimum: 200 trials of 2800,
+    // which at four words is 50 per word and 100 per pair.
+    {"quietecho", 560000, Expect::kPass, Tier::kLong,
+     "  `echoname` found REWARD raises the echo while teaching nothing, on arms\n"
+     "  whose creatures went QUIET -- a line through four points that nothing\n"
+     "  tested. Quiets a FRESH creature with two knobs that are not reward,\n"
+     "  `voicing_threshold` and `self_gain`, and asks whether the echo follows.\n"
+     "  Reports an ARTICULATOR echo alongside imitate's own, because imitate's\n"
+     "  feature 10 IS the voiced fraction that one of the knobs writes"},
     {"aimaxes", 66666, Expect::kRead, Tier::kLong,
      "  is there a SECOND steerable formant axis, and are the two INDEPENDENT?\n"
      "  The aim line biased one group; senses.cpp maps group 2 to F1 and 3 to F2.\n"
@@ -1165,6 +1181,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "aimaxes") ok = run_aimaxes(dna_blob, ticks, verbose);
   else if (name == "ctxgrid") ok = run_ctxgrid(dna_blob, ticks, verbose);
   else if (name == "echoname") ok = run_echoname(dna_blob, ticks, verbose);
+  else if (name == "quietecho") ok = run_quietecho(dna_blob, ticks, verbose);
   else if (name == "ctxvocab") ok = run_ctxvocab(dna_blob, ticks, verbose);
   else if (name == "vocabcurve") ok = run_vocabcurve(dna_blob, ticks, verbose);
   else if (name == "ctxprobe") ok = run_ctxprobe(dna_blob, ticks, verbose);

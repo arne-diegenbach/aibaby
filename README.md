@@ -22807,3 +22807,134 @@ context — came out exact on all three draws and never needed a replication to 
 trusted. Every claim that was a *magnitude* moved: one halved, one reversed on the
 second draw, and one vanished on the third. Three draws produced three different
 pictures of the same mechanism, and only the parts that were structural stayed put.
+
+## The quieting was not the mechanism, and `loud` is why we can believe it (2026-10-27)
+
+`echoname` closed with reward raising the echo on arms whose creatures had gone quiet,
+and an account offered for it: larynx→ear is negative feedback, so the creature's own
+voice masks the readout and suppressing it helps. **That account was a line through four
+points.** Nothing had intervened on the voice. `quietecho` intervenes.
+
+Ten arms, every one a freshly hatched creature running `imitate`'s own windows. No
+lesson, no reward, no `CtxDrive` anywhere in the experiment. Two knobs, chosen because
+they cut the proposed chain at different places by unrelated code paths:
+`voicing_threshold` (a seven-rung ladder) is read at `senses.cpp:666` as a bare
+comparison against group 1's activity, so it silences the larynx while leaving the vocal
+module's spikes untouched; `self_gain` leaves the larynx alone and changes what the
+cochlea does with it. Agreement between two unrelated cuts is worth much more than
+either alone — the inverse of the morning's lesson, where a different code path
+*invalidated* a control.
+
+### The trap that changed which column is primary
+
+`m3_vocal_features` is eleven numbers, and **feature 10 is the voiced fraction** — so
+`voicing_threshold` writes directly into one of the echo classifier's own inputs. Worse
+than it first looks: `holdout_accuracy` z-scores every dimension and floors the sd at
+`1e-9`, so an *exactly* constant feature contributes nothing and is harmless, while a
+*nearly* constant one is divided by its tiny sd and can dominate the distance deciding
+every held-out trial. That amplification regime is precisely where `echoname`'s rewarded
+arms sat, at voiced 0.082 and 0.123.
+
+So the primary here is the **articulator** echo — `scored_artic`, which is
+`m3_timbre_features`: the seven articulator groups with voicing and loudness dropped
+entirely. Both columns are reported, and their disagreement would itself have been a
+result. `ImitateRun` has kept `scored_artic` for exactly this purpose.
+
+### The answer, n=36, `results/quietecho-ctxgrid.log`
+
+```
+arm       n    echo         artic        its EAR  aud WHILE  voiced  scored
+shipped   36   0.888+-0.005 0.823+-0.008 0.639    351.7      0.773   200
+thr .55   36   0.888+-0.005 0.828+-0.006 0.641    356.7      0.652   200
+thr .70   36   0.886+-0.004 0.819+-0.007 0.654    364.9      0.476   200
+thr .85   36   0.885+-0.006 0.813+-0.007 0.633    376.0      0.308   200
+thr .95   36   0.888+-0.004 0.810+-0.007 0.637    385.9      0.168   200
+thr 1.05  36   0.888+-0.005 0.835+-0.007 0.495    398.5      0.000   200
+thr 1.15  36   0.888+-0.005 0.835+-0.007 0.495    398.5      0.000   200
+deaf      36   0.888+-0.005 0.835+-0.007 0.495    398.5      0.944   200
+deaf+.95  36   0.888+-0.005 0.835+-0.007 0.495    398.5      0.349   200
+loud      36   0.797+-0.008 0.766+-0.008 0.632    291.0      0.476   200
+
+THE SLOPE, shipped -> thr 1.15, ratio of sums, jackknife SE over 36 creatures
+  echo  per unit voiced   +0.0001 +- 0.0077
+  ARTIC per unit voiced   -0.0152 +- 0.0087
+  reward's own slope      -0.1048       (committed in the source before the run)
+```
+
+**The voiced fraction runs 0.773 → 0.000 and the echo does not move.** The range is
+matched: the rewarded arms sat at 0.082 and 0.123 from 0.765, and this ladder brackets
+them. On the same column reward's +0.0673 was measured, the slope is +0.0001 ± 0.0077,
+so at 2 SE quieting can account for at most **15%** of what reward bought, with a point
+estimate of zero.
+
+### Three contrasts, and the first two are structural
+
+**SAME BRAIN, OPPOSITE VOICE.** `deaf` phonates 94% of the time; `thr 1.15` phonates 0%.
+Their articulator echo is `+0.0000 ± 0.0000` — not approximately, identically, because
+they are the same brain: a creature whose voice never reaches its own ear. Voiced differs
+by 0.944 at 508 SE. **The audible voice, across its entire range, moves the echo by
+exactly zero.** This was predicted from the code before the run (`params_.voicing` has no
+consumer inside the brain; its only readers are the synthesiser and the self-audition
+mix) and shipped as CONTROL B, compared as doubles against 1e-12.
+
+**THE VOICED-MATCHED PAIR.** `thr .70` and `loud` arrive at the same voiced fraction by
+different routes — paired difference `+0.0002 ± 0.0028`, matched to the fourth decimal
+per creature. Their echo differs by **−0.0896 ± 0.0080 (11.2 SE)**. Matched on the
+proposed cause to 0.1 SE and 11 SE apart on the effect.
+
+**SELF-AUDITION REMOVED.** `shipped → deaf` moves the echo `+0.0001 ± 0.0060`. Cutting
+the masking path outright buys nothing.
+
+So the masking account is **refused**, not merely unsupported. And the one arm that
+does move, moves the wrong way: *doubling* self-audition costs 0.09. Self-audition is a
+nuisance input whose shipped 0.5 already sits below where it starts to cost anything —
+there is no headroom there to buy.
+
+### Why the flat ladder is credible, and the one thing `loud` cannot settle
+
+A flat result invites the objection that the instrument cannot see. It can: the same
+instrument, same n, same reader resolves `loud`'s 0.09 at 11.2 SE. **`loud` is the
+sensitivity positive control**, and it is the reason the ladder's flatness is a
+measurement rather than a shrug.
+
+What `loud` cannot do is carry a mechanism. Its arrival fell with its gain (`aud WHILE`
+291 against 352), so masking and arrival are confounded in that arm and nothing here
+separates them. The *unconfounded* legs are the ladder and `deaf` — and note the ladder
+was handed an advantage it failed to use: arrival **rose** 13% as the voice went silent
+(351.7 → 398.5), because a creature that stops phonating stops masking the caregiver.
+Better arrival, and still no echo.
+
+### It replicates on a second genome
+
+`quietecho` is registered `kPass`, which obliges it to pass on `dna/default.toml` too, so
+that run exists as a gate obligation — and it reproduces the whole pattern on a genome
+with no context module: echo 0.865 → 0.867 across voiced 0.775 → 0.000, articulator echo
+identical on all four same-brain arms, the voiced-matched pair −0.0977 ± 0.0083 (11.7 SE),
+`loud` again the only mover. `results/quietecho-default.log`.
+
+The `shipped` arm is `echoname`'s `fresh` arm by construction — same genome, same seed
+formula, same `context_slots` override, same budget — and its 36 rows reproduce
+`results/echoname-full.log` exactly at the three decimals that column prints. That
+certifies this instrument against an already-published log rather than against a control
+invented for the run.
+
+### What this does and does not close
+
+**Closed:** the echo does not depend on how audible the voice is, nor on whether the
+creature hears itself. The mechanism offered for `echoname`'s reward effect is wrong, and
+that correction is to this project's own write-up from earlier the same day.
+
+**Not closed, and the distinction is sharp rather than hedged:** neither knob makes the
+vocal **module** quieter. CONTROL B *proves* `voicing_threshold` leaves the brain's
+trajectory untouched, and `self_gain` acts on the ear. So "a quieter module reads better"
+survives untested. Reaching it means moving vocal's `target_rate_hz`, which voids the
+calibration invariant and needs a recalibration pass — a separate and more careful job
+than this one.
+
+**And one number is now owed.** `echoname` does not compute an articulator column, so
+whether its +0.0673 survives dropping voicing and loudness from the features is still
+open. This run makes that less likely to be the explanation — the standard and
+articulator columns moved together throughout, never diverging in the way a feature-10
+artefact requires — but it does not settle it, because `echoname`'s creatures reached
+that operating point by a different route. The check is one 5-hour re-run of `echoname`
+with `scored_artic` added to its cell.

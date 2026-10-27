@@ -669,6 +669,48 @@ down so the next person does not pay again.
    quieting knob that is not reward — the voicing gate, or scaling the larynx drive
    directly — would say whether the echo can be bought without a lesson at all.
 
+   **THE LEAD RAN THE SAME DAY AND REFUSED THE ACCOUNT** (`quietecho`,
+   `results/quietecho-ctxgrid.log`, n=36, 10 arms, ~30 min). Ten freshly hatched
+   creatures-worth of arms, no lesson and no reward: a seven-rung `voicing_threshold`
+   ladder, which silences the larynx while leaving the module's spikes untouched, plus
+   `self_gain` 0.0 and 2.0, which leave the larynx alone and change the ear. Two unrelated
+   code paths cutting the proposed chain in different places.
+
+   ```
+   voiced fraction 0.773 -> 0.000, and the echo does not move
+   slope, echo  per unit voiced   +0.0001 +- 0.0077   (reward's own: -0.1048, committed)
+   slope, ARTIC per unit voiced   -0.0152 +- 0.0087
+
+   SAME BRAIN, OPPOSITE VOICE   deaf (94% voiced) vs thr 1.15 (0%): artic +0.0000 +- 0.0000
+   THE VOICED-MATCHED PAIR      thr .70 vs loud, voiced matched +0.0002 +- 0.0028 (0.1 SE),
+                                echo -0.0896 +- 0.0080 (11.2 SE)
+   SELF-AUDITION REMOVED        shipped -> deaf, echo +0.0001 +- 0.0060
+   ```
+
+   **The masking account is refused, not merely unsupported.** The range is matched (the
+   ladder brackets the rewarded arms' 0.082–0.123), so on the column reward's +0.0673 was
+   measured, quieting accounts for **at most 15% at 2 SE** with a point estimate of zero.
+   The ladder was even handed an advantage it failed to use — arrival *rose* 13% as the
+   voice went silent, because a creature that stops phonating stops masking the caregiver.
+
+   **A flat result that is a measurement, because `loud` is the sensitivity control.** The
+   same instrument, same n, same reader resolves `loud`'s −0.09 at 11.2 SE. What `loud`
+   cannot carry is a mechanism: its arrival fell with its gain, so masking and arrival are
+   confounded there.
+
+   **A trap worth remembering:** `m3_vocal_features`' feature 10 **is** the voiced fraction,
+   and `holdout_accuracy` z-scores every dimension with the sd floored at 1e-9 — so an
+   exactly constant feature is harmless while a *nearly* constant one is amplified and can
+   dominate. The primary was therefore the **articulator** column (`scored_artic`, voicing
+   and loudness dropped). Replicated on `dna/default.toml` as the `kPass` gate obligation.
+
+   **What is NOT closed, sharply:** neither knob makes the vocal **module** quieter —
+   CONTROL B proves `voicing_threshold` leaves the brain's trajectory untouched. "A quieter
+   module reads better" survives untested, and reaching it means moving vocal's
+   `target_rate_hz`, which voids the calibration invariant and needs a recalibration pass.
+   **And one number is owed:** `echoname` computes no articulator column, so whether its
+   +0.0673 survives dropping voicing and loudness is open. One 5-hour re-run settles it.
+
    **The n was re-committed at 36**, in the source with its reasoning, before the full run:
    `ctxgrid`'s own n, the run that established four-word naming, which is the precedent the
    naming leg is held to. The old 12 was provisional — a pre-registration voided before it

@@ -42530,4 +42530,621 @@ bool run_echoname(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
   return false;
 }
 
+
+// ============ quietecho: CAN THE ECHO BE BOUGHT WITHOUT A LESSON? ============
+//
+// `echoname`'s yoked arm learned NOTHING and recovered 82% of the taught arm's echo
+// excess (+0.0673 +/- 0.0107, 6.3 SE, against taught's +0.0823). So what raises the
+// echo is REWARD and not the lesson -- and the arms that gained it are the arms whose
+// creatures went QUIET: voiced fraction 0.765 on `none` against 0.082 on `taught` and
+// 0.123 on `yoked`, with sleep and ear suppression moving the same way.
+//
+// THE ACCOUNT THAT RUN OFFERED IS A LINE THROUGH FOUR POINTS AND NOTHING TESTED IT.
+// The story was mechanical and plausible: larynx->ear is negative feedback
+// (`self_gain` 0.5), so the creature's own voice masks the readout and suppressing it
+// helps. Four arms, one correlation, no intervention. This experiment intervenes --
+// it quiets a FRESH creature with knobs that are not reward, on no lesson at all, and
+// asks whether the echo follows.
+//
+// ================== PRE-REGISTERED, BEFORE THE RUN ==================
+//
+// TEN ARMS, every one a freshly hatched creature running `imitate`'s own windows.
+// No teaching session, no reward, no CtxDrive anywhere in this experiment.
+//
+//   shipped      no override                 -- the baseline, and see BIT-IDENTITY
+//   thr 0.55 \                                  below
+//   thr 0.70  |                              -- silences the AUDIBLE voice. Seven
+//   thr 0.85  >  voicing_threshold ladder       rungs, because the pre-registered
+//   thr 0.95  |                                 matching requirement needs the
+//   thr 1.05  |                                 ladder to REACH the rewarded arms'
+//   thr 1.15 /                                  voiced fraction -- see the note on
+//                                               the enum for what was read to
+//                                               choose the last two
+//   deaf         self_gain 0.0               -- cuts self-audition, voice intact
+//   deaf+thr95   self_gain 0.0, thr 0.95     -- the interaction; see CONTROL B
+//   loud         self_gain 2.0               -- the other direction
+//
+// WHY TWO KNOBS AND NOT ONE. They cut the proposed chain
+//   reward -> module quieter -> voice quieter -> less self-audition -> less masking
+// at DIFFERENT places by DIFFERENT code paths. `voicing_threshold` is read at
+// senses.cpp:666 as a bare comparison against group 1's activity, so it silences the
+// larynx while leaving the vocal module's spikes untouched. `self_gain` leaves the
+// larynx alone and removes what the cochlea does with it. Agreement between two
+// unrelated cuts is worth far more than either alone -- which is the inverse of
+// `control-on-a-different-code-path`: there a different path invalidated a control,
+// here it is exactly what gives the pair its force.
+//
+// *** THE FEATURE TRAP, AND IT CHANGES WHICH COLUMN IS PRIMARY ***
+// `m3_vocal_features` (experiments_common.h:1947) is eleven numbers: the nine vocal
+// group activities, the amplitude mean, and -- feature 10 -- THE VOICED FRACTION
+// ITSELF. So `voicing_threshold` writes directly into one of the echo classifier's own
+// inputs, and at thr 0.95 that feature is dead on every trial. A dead feature can move
+// an accuracy for no reason involving the creature.
+//
+// So the PRIMARY here is the ARTICULATOR-only echo -- `scored_artic`, which is
+// `m3_timbre_features`: the seven articulator groups with voicing and loudness dropped
+// entirely, kept on `ImitateRun` for precisely this reason. Both columns are reported,
+// and the comparison between them is itself a result:
+//   both rise                 quieting genuinely raises the echo
+//   standard rises, artic flat the rise is feature 10 going constant -- an ARTEFACT
+//   both flat                 quieting is not causal, and `echoname`'s correlation is
+//                             a confound
+//
+// AND THAT THIRD COLUMN AUDITS A PUBLISHED RESULT. `echoname`'s rewarded arms drove
+// their own voiced fraction to 0.08-0.12, so feature 10 went near-constant THERE TOO,
+// by the creature's own doing. If this run shows a low voiced fraction inflating the
+// standard echo while the articulator echo stays flat, then `echoname`'s +0.0673 is
+// partly that artefact and needs re-reading. `echoname` does not record an articulator
+// column, so this is the cheapest way to ask.
+//
+// THE READS, in the order they are taken:
+//
+// CONTROL A, ARITHMETIC, and the only thing this function's bool carries. The voiced
+//   fraction must FALL monotonically across shipped -> 0.55 -> 0.70 -> 0.85 -> 0.95.
+//   Monotone BY CONSTRUCTION -- a higher threshold cannot admit more frames whatever
+//   the activity distribution is -- so it tests that the override landed and reads the
+//   gate, without resting on any empirical claim. `voiceprobe` recommends exactly this
+//   knob for exactly this reason. A violation means the manipulation did not take and
+//   the run is void.
+//
+// CONTROL B, STRUCTURAL, and it is a prediction about the code tested at runtime.
+//   `params_.voicing` has NO consumer inside the brain: its only readers are the
+//   synthesiser and the self-audition mix (experiments_common.h:310, f0 = 0 when
+//   unvoiced). So on a creature with `self_gain` 0 the threshold cannot change the
+//   brain's trajectory at all, and `deaf+thr95` must give an articulator echo
+//   BIT-IDENTICAL to `deaf`. If it does not, the voice reaches the brain by a route
+//   this account has not found, and the whole masking story is being read through the
+//   wrong channel. Its standard echo may and should differ -- that is feature 10.
+//
+// POSITIVE CONTROL: the shipped arm's echo clears M1b's own 0.75, else the reader
+//   cannot see on this genome and every null below is a fact about the instrument.
+//
+// PROCEDURE CONTROL: the pairwise shuffled score stays inside [0.40, 0.60] on every
+//   arm.
+//
+// BIT-IDENTITY, on a genome with a kContext module and at --ticks 560000: the shipped
+//   arm is the same call, the same seed formula and the same `context_slots` override
+//   as `echoname`'s `fresh` arm, so its per-seed echo column must reproduce
+//   `results/echoname-full.log` exactly. That certifies this whole instrument against
+//   an already-published log rather than against a control invented for the run. It is
+//   PRINTED as a genome-dependent label, because on a genome without a context module
+//   there is nothing to reproduce -- `disclose-the-genome-dependent-label`'s rule.
+//
+// THE PRIMARY READ, printed and never a verdict: paired per-creature
+//   echo(rung) - echo(shipped) at every rung, on BOTH columns, with SEs. Plus the slope
+//   of echo on voiced fraction as a RATIO OF SUMS with a jackknife SE over creatures --
+//   one denominator, not a mean of per-creature ratios.
+//
+// THE NUMBER COMMITTED IN ADVANCE: reward bought +0.0673 while moving voiced fraction
+//   0.765 -> 0.123, a slope of -0.1048 echo per unit voiced fraction. If quieting is
+//   the whole story, this ladder should read that slope and its lowest rung should
+//   reach about 0.940. A slope whose 2 SE interval excludes -0.1048, with the ladder
+//   having actually reached the rewarded arms' voiced fraction, refuses the quieting
+//   account. A null is reported as a BOUND with its power and never as a cleared bar.
+//
+// THE CONFOUND, NAMED BEFORE THE RUN. Both knobs also change what the CAREGIVER sounds
+//   like at the cochlea: a creature that stops phonating stops masking the caregiver,
+//   and `self_gain` mixes its own voice into the same input. So an echo rise could be
+//   better ARRIVAL rather than less masking of the readout. `aud WHILE` separates them,
+//   and the rewarded arms supply the discriminating datum: they raised the echo while
+//   arrival FELL (274 and 271 against `fresh`'s 352). If this ladder raises the echo
+//   with arrival RISING, that is a different mechanism from reward's and must not be
+//   reported as the same one.
+//
+// READ-ONLY: no genome field, no mechanism, nothing shipped. Two existing fields are
+// overridden in a local copy of the blob, which is how `voiceprobe` already sweeps
+// both of them.
+// =====================================================================
+bool run_quietecho(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  aibaby::Dna dna;
+  if (dna.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) {
+    std::printf("  setup failed: the genome does not load\n");
+    return false;
+  }
+  constexpr size_t kQEScored = 2;        // 200-600 ms after the word stops
+  constexpr double kQEBar = 0.75;        // M1b's and G3's held-out bar
+  // 36 is `echoname`'s own n, so the paired differences here are read at the same
+  // power as the +0.0673 they are being compared against. Not chosen after seeing a
+  // number: this experiment has produced none.
+  constexpr uint32_t kQEReps = 36;
+  // The slope reward bought, computed from `results/echoname-yoke-full.log` and written
+  // down before this ran: +0.0673 echo over a voiced drop of 0.765 -> 0.123.
+  constexpr double kQERewardSlope = -0.1048;
+  constexpr double kQERewardEcho = 0.940;   // the yoked arm's echo
+
+  // THE LADDER WAS EXTENDED AFTER THE SMOKE AND BEFORE THE FULL RUN, off the
+  // MANIPULATION CHECK and not off an outcome. The pre-registration above makes the
+  // comparison matched only if the ladder reaches the rewarded arms' voiced fraction
+  // of 0.08-0.12; the 140000-tick smoke read 0.735 / 0.631 / 0.486 / 0.368 / 0.235 at
+  // 0.42 / 0.55 / 0.70 / 0.85 / 0.95, i.e. about -0.13 per +0.1 of threshold at the
+  // top, so 0.95 stops well short. 1.05 and 1.15 extrapolate onto 0.10 and 0.00.
+  // `voicing_threshold` is compared against a group activity normalised by
+  // `rate_norm_hz`, which can exceed 1.0, so these are inside the field's range.
+  //
+  // What was read to choose them is the VOICED column -- the arithmetic control that
+  // says the override landed -- and nothing else. No statistic, no primary column and
+  // no committed number moved. Satisfying a matching requirement the pre-registration
+  // already states is not the same act as choosing an endpoint because of what it read.
+  enum QEArm { kQEShipped = 0, kQEThr55, kQEThr70, kQEThr85, kQEThr95, kQEThr105,
+               kQEThr115, kQEDeaf, kQEDeafThr, kQELoud, kQEArmCount };
+  static const char* kQEName[kQEArmCount] = {"shipped", "thr .55", "thr .70",
+                                             "thr .85", "thr .95", "thr 1.05",
+                                             "thr 1.15", "deaf", "deaf+.95", "loud"};
+  // 0 means "leave the genome's own 0.42", matching `voiceprobe`'s convention.
+  const auto qe_thr = [](uint32_t a) -> float {
+    switch (a) {
+      case kQEThr55: return 0.55f;
+      case kQEThr70: return 0.70f;
+      case kQEThr85: return 0.85f;
+      case kQEThr95: case kQEDeafThr: return 0.95f;
+      case kQEThr105: return 1.05f;
+      case kQEThr115: return 1.15f;
+      default: return 0.0f;
+    }
+  };
+  const auto qe_sg = [](uint32_t a) -> float {
+    switch (a) {
+      case kQEDeaf: case kQEDeafThr: return 0.0f;
+      case kQELoud: return 2.0f;
+      default: return 0.5f;
+    }
+  };
+  // The rungs of the arithmetic control, in the order it checks them. The LAST one is
+  // also the slope's endpoint, so extending the ladder extends the slope with it
+  // instead of leaving it pinned to a rung that no longer reaches.
+  static const uint32_t kQELadder[] = {kQEShipped, kQEThr55,  kQEThr70,  kQEThr85,
+                                       kQEThr95,   kQEThr105, kQEThr115};
+  constexpr uint32_t kQERungs = uint32_t(sizeof(kQELadder) / sizeof(kQELadder[0]));
+  const uint32_t kQEQuietest = kQELadder[kQERungs - 1];
+
+  const int32_t ctx_module = dna.module_with_role(aibaby::ModuleRole::kContext);
+  const bool identity_armed = ctx_module >= 0 && ticks == 560000;
+  const size_t slots_off = offsetof(aibaby::DnaHeader, exploration) +
+                           offsetof(aibaby::DnaExploration, context_slots);
+  const size_t thr_off = offsetof(aibaby::DnaHeader, vocal) +
+                         offsetof(aibaby::DnaVocal, voicing_threshold);
+  const size_t sg_off = offsetof(aibaby::DnaHeader, audio) +
+                        offsetof(aibaby::DnaAudio, self_gain);
+
+  instrument("quietecho", dna.header().seed ^ 0x1417u, ticks / 2800, "trials per arm");
+  std::printf("  the question      `echoname` found reward raises the echo without\n"
+              "                    teaching anything, on arms whose creatures went\n"
+              "                    QUIET. Is the quieting CAUSAL? Can the echo be\n"
+              "                    bought with no lesson and no reward at all?\n");
+  std::printf("  the design        %u freshly hatched creatures x %u arms. Two knobs\n"
+              "                    that are not reward: `voicing_threshold` silences\n"
+              "                    the larynx leaving the module untouched, `self_gain`\n"
+              "                    leaves the larynx alone and cuts self-audition.\n",
+              kQEReps, uint32_t(kQEArmCount));
+  std::printf("  TWO echo columns  `echo` is imitate's own eleven features, whose\n"
+              "                    feature 10 IS the voiced fraction -- which one knob\n"
+              "                    here writes directly. `artic` drops voicing and\n"
+              "                    loudness, so it is the PRIMARY. Their disagreement\n"
+              "                    is itself the artefact audit.\n");
+  std::printf("  committed here    reward's slope was %+.4f echo per unit voiced\n"
+              "                    fraction (+0.0673 over 0.765 -> 0.123) reaching\n"
+              "                    %.3f. This ladder is read against those.\n",
+              kQERewardSlope, kQERewardEcho);
+  std::printf("  the bool          carries the ARITHMETIC controls only -- that voiced\n"
+              "                    fraction falls with the threshold, and that a deaf\n"
+              "                    creature's articulator echo is unmoved by it. The\n"
+              "                    scientific question is printed, never a verdict.\n");
+  if (identity_armed) {
+    std::printf("  BIT-IDENTITY      ARMED: this genome has a kContext module and the\n"
+                "                    budget is imitate's own 560000, so the `shipped`\n"
+                "                    arm must reproduce `echoname`'s `fresh` column.\n\n");
+  } else if (ctx_module < 0) {
+    std::printf("  BIT-IDENTITY      UNAVAILABLE on this genome: no kContext module, so\n"
+                "                    `echoname` cannot have run on it and there is no\n"
+                "                    published column to reproduce. Everything else\n"
+                "                    below is unaffected.\n\n");
+  } else {
+    std::printf("  BIT-IDENTITY      UNAVAILABLE at --ticks %llu: the published column\n"
+                "                    was taken at imitate's own 560000.\n\n",
+                (unsigned long long)ticks);
+  }
+
+  struct Cell {
+    bool ok = false;
+    double echo = 0.0, artic = 0.0, ear = 0.0, shuf = 0.0;
+    double aud0 = 0.0, vfrac = 0.0;
+    size_t trials = 0;
+    uint32_t pairs = 0, eskip = 0;
+  };
+
+  const std::vector<Cell> cells =
+      parallel_reps<Cell>(kQEReps * uint32_t(kQEArmCount), [&](uint32_t i) {
+        const uint32_t r = i / uint32_t(kQEArmCount);
+        const uint32_t a = i % uint32_t(kQEArmCount);
+        Cell cell;
+        std::vector<uint8_t> variant = blob;
+        // `echoname`'s own seed formula and its own `context_slots` override, so the
+        // shipped arm is the same creature its `fresh` arm was.
+        const uint64_t seed = dna.header().seed + r * 7919ull;
+        std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed,
+                    sizeof(seed));
+        if (ctx_module >= 0) {
+          const uint32_t sl = kCFWords;
+          std::memcpy(variant.data() + slots_off, &sl, sizeof(sl));
+        }
+        const float th = qe_thr(a);
+        if (th > 0.0f) std::memcpy(variant.data() + thr_off, &th, sizeof(th));
+        const float sg = qe_sg(a);
+        std::memcpy(variant.data() + sg_off, &sg, sizeof(sg));
+
+        const ImitateRun echo = run_imitate_session(variant, ticks, kCFWords);
+        if (!echo.ok) return cell;
+        cell.trials = echo.scored_labels.size();
+        cell.eskip = echo.skipped;
+        cell.vfrac = echo.voiced_frac[kQEScored];
+        if (!echo.trial_aud[0].empty()) {
+          double sa = 0.0;
+          for (double x : echo.trial_aud[0]) sa += x;
+          cell.aud0 = sa / double(echo.trial_aud[0].size());
+        }
+
+        // `echoname`'s statistic, unchanged: mean held-out accuracy over all six pairs
+        // of the four words, with `vocab`'s floor of 12 rows per pair. Chance is
+        // exactly 0.500 per pair, which is what makes the number comparable with the
+        // 0.75 bar and with `echoname`'s own columns.
+        const auto pair_mean = [](const std::vector<std::vector<double>>& rows,
+                                  const std::vector<int>& labels, uint32_t* pairs) {
+          double sum = 0.0;
+          uint32_t np = 0;
+          for (uint32_t x = 0; x < kCFWords; ++x) {
+            for (uint32_t y = x + 1; y < kCFWords; ++y) {
+              std::vector<std::vector<double>> xv;
+              std::vector<int> yv;
+              for (size_t t = 0; t < labels.size() && t < rows.size(); ++t) {
+                const int L = labels[t];
+                if (L != int(x) && L != int(y)) continue;
+                xv.push_back(rows[t]);
+                yv.push_back(L == int(y) ? 1 : 0);
+              }
+              if (yv.size() < 12) continue;
+              std::vector<std::vector<double>> iv;
+              std::vector<int> jv;
+              size_t tv = 0;
+              interleave_pairs(xv, yv, iv, jv, tv);
+              sum += holdout_accuracy(iv, jv, tv);
+              ++np;
+            }
+          }
+          if (pairs) *pairs = np;
+          return np ? sum / double(np) : 0.0;
+        };
+
+        cell.echo = pair_mean(echo.scored_voice, echo.scored_labels, &cell.pairs);
+        cell.artic = pair_mean(echo.scored_artic, echo.scored_labels, nullptr);
+        if (!echo.scored_heard.empty()) {
+          cell.ear = pair_mean(echo.scored_heard, echo.scored_labels, nullptr);
+        }
+        {
+          std::vector<int> shuf = echo.scored_labels;
+          aibaby::Rng sr;
+          sr.seed(seed ^ 0x9E00u);
+          for (size_t k = shuf.size(); k > 1; --k) {
+            std::swap(shuf[k - 1], shuf[sr.next() % k]);
+          }
+          cell.shuf = pair_mean(echo.scored_voice, shuf, nullptr);
+        }
+        cell.ok = true;
+        return cell;
+      });
+
+  const auto mean_of = [](const std::vector<double>& v) {
+    double se = 0.0;
+    return ctx_mean_se(v, &se);
+  };
+  const auto sem_of = [](const std::vector<double>& v) {
+    double se = 0.0;
+    ctx_mean_se(v, &se);
+    return se;
+  };
+
+  std::vector<double> echo[kQEArmCount], artic[kQEArmCount], ear[kQEArmCount];
+  std::vector<double> shuf[kQEArmCount], aud[kQEArmCount], vf[kQEArmCount];
+  std::vector<double> tr[kQEArmCount];
+  std::printf("  %-6s %-9s %-7s %-7s %-8s %-9s %-7s %-10s %s\n", "seed", "arm", "echo",
+              "artic", "its EAR", "shuffled", "trials", "aud WHILE", "voiced");
+  for (uint32_t r = 0; r < kQEReps; ++r) {
+    for (uint32_t a = 0; a < uint32_t(kQEArmCount); ++a) {
+      const Cell& c = cells[r * uint32_t(kQEArmCount) + a];
+      if (!c.ok) {
+        std::printf("  %-6u %-9s  no usable run\n", r, kQEName[a]);
+        continue;
+      }
+      std::printf("  %-6u %-9s %-7.3f %-7.3f %-8.3f %-9.3f %-7zu %-10.1f %.3f\n", r,
+                  kQEName[a], c.echo, c.artic, c.ear, c.shuf, c.trials, c.aud0,
+                  c.vfrac);
+      echo[a].push_back(c.echo);
+      artic[a].push_back(c.artic);
+      ear[a].push_back(c.ear);
+      shuf[a].push_back(c.shuf);
+      aud[a].push_back(c.aud0);
+      vf[a].push_back(c.vfrac);
+      tr[a].push_back(double(c.trials));
+    }
+  }
+  for (uint32_t a = 0; a < uint32_t(kQEArmCount); ++a) {
+    if (echo[a].empty()) {
+      std::printf("\n  INCONCLUSIVE -- the `%s` arm produced no usable run.\n",
+                  kQEName[a]);
+      return false;
+    }
+  }
+
+  std::printf("\n  arm       n    echo         artic        its EAR  shuffled  aud WHILE  voiced  scored\n");
+  for (uint32_t a = 0; a < uint32_t(kQEArmCount); ++a) {
+    std::printf("  %-9s %-4zu %.3f+-%.3f %.3f+-%.3f %-8.3f %-9.3f %-10.1f %-7.3f %.0f\n",
+                kQEName[a], echo[a].size(), mean_of(echo[a]), sem_of(echo[a]),
+                mean_of(artic[a]), sem_of(artic[a]), mean_of(ear[a]),
+                mean_of(shuf[a]), mean_of(aud[a]), mean_of(vf[a]), mean_of(tr[a]));
+  }
+
+  // ---- the controls, every one before a result is read ----
+
+  // THE STANDING ARMS GUARD, on the four arms that MUST differ. `deaf` and `deaf+.95`
+  // are deliberately excluded: control B predicts their articulator columns are
+  // identical, so the generic guard would read a confirmed prediction as a fault.
+  {
+    const uint32_t must_differ[4] = {kQEShipped, kQEQuietest, kQEDeaf, kQELoud};
+    const char* names[4] = {kQEName[kQEShipped], kQEName[kQEQuietest],
+                            kQEName[kQEDeaf], kQEName[kQELoud]};
+    std::vector<std::vector<double>> stats;
+    for (uint32_t k = 0; k < 4; ++k) {
+      const uint32_t a = must_differ[k];
+      stats.push_back({mean_of(echo[a]), mean_of(artic[a]), mean_of(vf[a]),
+                       mean_of(aud[a])});
+    }
+    if (!arms_are_distinct(stats, names)) {
+      std::printf("\n  VOID -- two arms that differ by a genome field agree on every\n"
+                  "  summary number, so the override did not reach the creature.\n");
+      return false;
+    }
+  }
+
+  if (!positive_control("quietecho", "the `shipped` arm's echo", mean_of(echo[0]),
+                        kQEBar,
+                        "The echo is a read-only property of an untaught creature and "
+                        "this genome does not show it, so nothing can be said about "
+                        "what quieting does to it. Check the genome against "
+                        "`imitate`'s own, which reads 0.860 in this window.")) {
+    return false;
+  }
+  for (uint32_t a = 0; a < uint32_t(kQEArmCount); ++a) {
+    const double s = mean_of(shuf[a]);
+    if (s < 0.40 || s > 0.60) {
+      std::printf("\n  VOID -- the shuffled control on `%s` reads %.3f, outside\n"
+                  "  [0.40, 0.60]. The reader is finding structure in the procedure,\n"
+                  "  so no accuracy in this table is about the creature.\n",
+                  kQEName[a], s);
+      return false;
+    }
+  }
+
+  // CONTROL A, ARITHMETIC. A higher threshold cannot admit more voiced frames, so this
+  // cannot fail for a reason involving the creature -- only because the override did
+  // not land where it was aimed.
+  std::printf("\n  CONTROL A, ARITHMETIC -- voiced fraction must FALL as the threshold RISES\n");
+  bool ladder_ok = true;
+  for (uint32_t k = 0; k < kQERungs; ++k) {
+    const uint32_t a = kQELadder[k];
+    const double v = mean_of(vf[a]);
+    const double prev = k ? mean_of(vf[kQELadder[k - 1]]) : 1e9;
+    const bool down = k == 0 || v <= prev + 1e-9;
+    if (!down) ladder_ok = false;
+    std::printf("    %-9s voiced %.4f   echo %.3f   artic %.3f%s\n", kQEName[a], v,
+                mean_of(echo[a]), mean_of(artic[a]), down ? "" : "   <- ROSE");
+  }
+  if (!ladder_ok) {
+    std::printf("\n  VOID -- the voiced fraction ROSE somewhere on the ladder. That is\n"
+                "  arithmetically impossible if the override reached\n"
+                "  `voicing_threshold`, so the field being written is not the field\n"
+                "  senses.cpp:666 reads. Check the offsetof path before reading\n"
+                "  anything above.\n");
+    return false;
+  }
+
+  // CONTROL B, STRUCTURAL. `params_.voicing` has no consumer inside the brain, so on a
+  // deaf creature the threshold cannot change its trajectory and the articulator echo
+  // must come back to the bit.
+  const double d_art = mean_of(artic[kQEDeaf]) - mean_of(artic[kQEDeafThr]);
+  const double d_std = mean_of(echo[kQEDeaf]) - mean_of(echo[kQEDeafThr]);
+  std::printf("\n  CONTROL B, STRUCTURAL -- a deaf creature's ARTICULATOR echo must be\n"
+              "  unmoved by the threshold, because the only readers of `params_.voicing`\n"
+              "  are the synthesiser and the self-audition mix.\n"
+              "    deaf      artic %.6f   echo %.3f   voiced %.4f\n"
+              "    deaf+.95  artic %.6f   echo %.3f   voiced %.4f\n"
+              "    difference artic %+.6f (must be 0)   echo %+.4f (feature 10, may move)\n",
+              mean_of(artic[kQEDeaf]), mean_of(echo[kQEDeaf]), mean_of(vf[kQEDeaf]),
+              mean_of(artic[kQEDeafThr]), mean_of(echo[kQEDeafThr]),
+              mean_of(vf[kQEDeafThr]), d_art, d_std);
+  if (std::fabs(d_art) > 1e-12) {
+    std::printf("\n  VOID -- it MOVED. The creature's own voicing reaches its brain by a\n"
+                "  route other than `self_gain`, so every reading below attributes to\n"
+                "  masking something that has a second path. Find that path first.\n");
+    return false;
+  }
+
+  if (identity_armed) {
+    std::printf("\n  REPRODUCTION, ARMED -- the `shipped` rows above are `echoname`'s\n"
+                "  `fresh` arm on the same genome, the same seeds and the same budget,\n"
+                "  so they are the same creature BY CONSTRUCTION. What a diff can check\n"
+                "  is agreement at the three decimals this column prints, which is a\n"
+                "  reproduction and not a bit-level claim -- CONTROL B above is the\n"
+                "  bit-level one, compared as doubles against 1e-12.\n"
+                "  Diff them rather than trusting this line:\n"
+                "    grep ' fresh ' results/echoname-full.log | awk '{print $1, $3}'\n"
+                "    grep ' shipped ' <this log>   | awk '{print $1, $3}'\n");
+  }
+
+  // ---- the reading. Printed, never a verdict. ----
+  std::printf("\n  PAIRED, per creature, against `shipped` -- n=%zu\n", echo[0].size());
+  std::printf("    arm       d echo            d ARTIC (primary)  d voiced   d aud WHILE\n");
+  for (uint32_t a = 1; a < uint32_t(kQEArmCount); ++a) {
+    std::vector<double> de, da;
+    for (uint32_t r = 0; r < kQEReps; ++r) {
+      const Cell& c0 = cells[r * uint32_t(kQEArmCount) + kQEShipped];
+      const Cell& ca = cells[r * uint32_t(kQEArmCount) + a];
+      if (!c0.ok || !ca.ok) continue;
+      de.push_back(ca.echo - c0.echo);
+      da.push_back(ca.artic - c0.artic);
+    }
+    std::printf("    %-9s %+.4f +- %.4f  %+.4f +- %.4f   %+.4f   %+.1f\n", kQEName[a],
+                mean_of(de), sem_of(de), mean_of(da), sem_of(da),
+                mean_of(vf[a]) - mean_of(vf[0]), mean_of(aud[a]) - mean_of(aud[0]));
+  }
+
+  // THE SLOPE, as a ratio of sums with a jackknife SE over creatures. One denominator
+  // for the whole ladder, not one per creature: a mean of per-creature ratios is not a
+  // statistic when the denominators differ, and here they do.
+  const auto slope = [&](uint32_t hi_arm, bool use_artic, int drop) {
+    double num = 0.0, den = 0.0;
+    for (uint32_t r = 0; r < kQEReps; ++r) {
+      if (int(r) == drop) continue;
+      const Cell& c0 = cells[r * uint32_t(kQEArmCount) + kQEShipped];
+      const Cell& ca = cells[r * uint32_t(kQEArmCount) + hi_arm];
+      if (!c0.ok || !ca.ok) continue;
+      num += (use_artic ? ca.artic - c0.artic : ca.echo - c0.echo);
+      den += ca.vfrac - c0.vfrac;
+    }
+    return std::fabs(den) > 1e-9 ? num / den : 0.0;
+  };
+  const auto jackknife = [&](auto&& f, double* se) {
+    const double full = f(-1);
+    std::vector<double> loo;
+    for (uint32_t r = 0; r < kQEReps; ++r) loo.push_back(f(int(r)));
+    const double nn = double(loo.size());
+    if (nn < 3.0) { *se = 0.0; return full; }
+    double mean = 0.0;
+    for (double v : loo) mean += v;
+    mean /= nn;
+    double acc = 0.0;
+    for (double v : loo) acc += (v - mean) * (v - mean);
+    *se = std::sqrt(acc * (nn - 1.0) / nn);
+    return full;
+  };
+  double se_e = 0.0, se_a = 0.0;
+  const double sl_e = jackknife([&](int d) { return slope(kQEQuietest, false, d); }, &se_e);
+  const double sl_a = jackknife([&](int d) { return slope(kQEQuietest, true, d); }, &se_a);
+  std::printf("\n  THE SLOPE, shipped -> %s, ratio of sums, jackknife SE over %u creatures\n"
+              "    echo  per unit voiced   %+.4f +- %.4f\n"
+              "    ARTIC per unit voiced   %+.4f +- %.4f   <- the primary\n"
+              "    reward's own slope      %+.4f           (committed before this ran)\n",
+              kQEName[kQEQuietest], kQEReps, sl_e, se_e, sl_a, se_a, kQERewardSlope);
+
+  // IS THE COMPARISON EVEN MATCHED? A ladder that never reaches the rewarded arms'
+  // voiced fraction bounds the effect only over the range it covered, and saying so is
+  // the difference between a bound and a bound pretending to be a refutation.
+  const double v_lo = mean_of(vf[kQEQuietest]);
+  const double v_hi = mean_of(vf[kQEShipped]);
+  std::printf("\n  THE RANGE COVERED   voiced %.3f -> %.3f. The rewarded arms sat at\n"
+              "                      0.082 and 0.123 from 0.765, so this ladder %s\n",
+              v_hi, v_lo,
+              v_lo <= 0.14 ? "DOES reach them: the comparison is matched."
+                           : "does NOT reach them, and every bound\n"
+                             "                      below holds only over the range it covered.");
+
+  // THE ARTEFACT AUDIT, which is the one reading here that also bears on a published
+  // number. If the standard echo moves and the articulator echo does not, feature 10
+  // is doing the work -- and `echoname`'s rewarded arms drove feature 10 to the same
+  // place by themselves.
+  {
+    std::vector<double> de, da;
+    for (uint32_t r = 0; r < kQEReps; ++r) {
+      const Cell& c0 = cells[r * uint32_t(kQEArmCount) + kQEShipped];
+      const Cell& ca = cells[r * uint32_t(kQEArmCount) + kQEQuietest];
+      if (!c0.ok || !ca.ok) continue;
+      de.push_back(ca.echo - c0.echo);
+      da.push_back(ca.artic - c0.artic);
+    }
+    const double me = mean_of(de), se1 = sem_of(de);
+    const double ma = mean_of(da), sa1 = sem_of(da);
+    std::printf("\n  THE ARTEFACT AUDIT -- the quietest rung against shipped, both columns\n"
+                "    standard echo  %+.4f +- %.4f  (%.1f SE)\n"
+                "    ARTICULATOR    %+.4f +- %.4f  (%.1f SE)\n",
+                me, se1, se1 > 0.0 ? std::fabs(me) / se1 : 0.0, ma, sa1,
+                sa1 > 0.0 ? std::fabs(ma) / sa1 : 0.0);
+    const bool std_moves = se1 > 0.0 && std::fabs(me) / se1 >= 3.0;
+    const bool art_moves = sa1 > 0.0 && std::fabs(ma) / sa1 >= 3.0;
+    if (std_moves && !art_moves) {
+      std::printf("  THE STANDARD COLUMN MOVES AND THE ARTICULATOR ONE DOES NOT. Feature 10\n"
+                  "  is doing the work, and the mechanism is AMPLIFICATION rather than a\n"
+                  "  dead feature: `holdout_accuracy` z-scores every dimension and floors\n"
+                  "  the sd at 1e-9, so an EXACTLY constant feature contributes nothing and\n"
+                  "  is harmless, while a NEARLY constant one is divided by its tiny sd and\n"
+                  "  can dominate the distance that decides every held-out trial.\n"
+                  "  THAT BEARS ON `echoname`: its rewarded arms drove\n"
+                  "  their OWN voiced fraction to 0.08-0.12, so the same artefact is\n"
+                  "  available there, and its +0.0673 needs re-reading on an articulator\n"
+                  "  column it does not currently compute.\n");
+    } else if (std_moves && art_moves) {
+      std::printf("  BOTH COLUMNS MOVE, so this is not a feature-10 artefact: the echo\n"
+                  "  changes in features that know nothing about voicing or loudness.\n");
+    } else if (!std_moves && !art_moves) {
+      std::printf("  NEITHER COLUMN MOVES. Silencing the voice outright does not touch the\n"
+                  "  echo, which is a BOUND on the quieting account and not a\n"
+                  "  confirmation of anything -- see the slope and its power above.\n");
+    }
+  }
+
+  // THE ARRIVAL CONFOUND, read against the datum that separates it.
+  {
+    const double a_ship = mean_of(aud[kQEShipped]);
+    const double a_q = mean_of(aud[kQEQuietest]);
+    std::printf("\n  THE ARRIVAL CONFOUND   aud WHILE %.1f shipped -> %.1f at the quietest rung\n"
+                "  (ratio %.2f). The rewarded arms raised the echo while arrival FELL,\n"
+                "  274 and 271 against `fresh`'s 352. Arrival %s here, so this ladder\n"
+                "  %s reward's route.\n",
+                a_ship, a_q, a_ship > 0.0 ? a_q / a_ship : 0.0,
+                a_q > a_ship * 1.05 ? "RISES" : (a_q < a_ship * 0.95 ? "FALLS" : "is FLAT"),
+                a_q > a_ship * 1.05
+                    ? "may be buying the echo by a DIFFERENT route from"
+                    : "is not confounded with");
+  }
+
+  {
+    double lo = 1e9, hi = -1e9;
+    for (uint32_t a = 0; a < uint32_t(kQEArmCount); ++a) {
+      lo = std::min(lo, mean_of(tr[a]));
+      hi = std::max(hi, mean_of(tr[a]));
+    }
+    if (hi > 0.0 && lo / hi < 0.9) {
+      std::printf("\n  DIFFERENTIAL SAMPLING -- %.0f scored trials on the thinnest arm\n"
+                  "  against %.0f on the fullest (%.0f%%). Asleep trials are skipped, so\n"
+                  "  the arms are not equally powered.\n",
+                  lo, hi, 100.0 * lo / hi);
+    }
+  }
+
+  std::printf("\n  CONTROLS PASS -- the voiced ladder is monotone, a deaf creature's\n"
+              "  articulator echo is bit-identical under the threshold, the shipped arm\n"
+              "  clears %.2f and every shuffled control is at chance. The readings above\n"
+              "  are measurements; this bool says only that the instrument worked.\n",
+              kQEBar);
+  return true;
+}
+
 }  // namespace aibaby_host
