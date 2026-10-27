@@ -19721,6 +19721,49 @@ on the rep alone and widening the arm count moves no existing arm's creature. Th
 licence for comparing across the two runs, and it is the check that validated `tutorgrid`'s
 oracle arm.
 
+### The yoke settles it: they are two capabilities, and what raises the echo is reward
+
+`results/echoname-yoke-full.log`, n=36, 5 h 00 m, no short-run banner. **All four original
+arms returned bit-identical**, so the two runs read together.
+
+```
+arm      n    echo          its EAR  aud WHILE  voiced  scored/200  direction
+fresh    36   0.888+-0.005  0.639    351.7      0.773   200         --
+none     36   0.873+-0.007  0.682    276.3      0.765   190         0.248
+taught   36   0.955+-0.007  0.574    274.2      0.082   159         0.436
+nodrive  36   0.867+-0.007  0.675    277.4      0.815   200         0.251
+yoked    36   0.940+-0.007  0.602    270.6      0.123   162         0.247
+
+paired yoked  - none    +0.0673 +- 0.0107  (6.3 SE)   RESOLVED -- the yoke recovers 82%
+paired taught - yoked   +0.0151 +- 0.0082  (1.8 SE)   unresolved, 2 SE bound = 20%
+yoked naming over its own null   -0.0027   (taught +0.1790)
+```
+
+**The yoke learned nothing and got almost all of the benefit.** By the rule fixed in the
+source before the run, that is `yoked ~ taught`: the taught arm's echo excess is **reward
+acting on the voice**, independent of what was learned. So the echo is *not* the naming
+response, and the two capabilities are genuinely separate — which is the composition claim,
+now earned rather than assumed. The remainder is a **bound, not a hold**: at 2 SE the smallest
+resolvable `taught − yoked` is 0.0165, so at most about a fifth of the excess could be
+naming's own contribution and at least four fifths is reward.
+
+**And the yoke reproduces the whole syndrome, not just the echo** — the voicing collapse
+(0.123 against the taught arm's 0.082 and `none`'s 0.765), the sleep (162 scored trials
+against 159 and 190), the ear suppression (0.602 against 0.574 and 0.682) — every one of them
+with zero learning. **Reward, not the lesson, is what moves this creature's operating point.**
+
+The striking part is the direction. **A quieter, sleepier creature reads its own vocal code
+better:** the two arms whose creatures barely phonate are the two with the highest echo. The
+audible voice is not what carries it, since the classifier reads vocal-module spikes per
+neuron — `m3probe` measured 0.980 there against 0.380 on the centroid — and this fits
+larynx→ear being negative feedback. The creature's own voice was masking the readout, and
+suppressing it helps.
+
+That leaves an open lead this file states as a lead and not a result: reward raises the echo
+by quieting the voice, and nothing has asked how far that goes. A quieting knob that is *not*
+reward — the voicing gate, or scaling the larynx drive directly — would say whether the echo
+can be bought without a lesson at all.
+
 ## Layout
 
 ```

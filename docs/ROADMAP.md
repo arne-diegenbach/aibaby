@@ -641,14 +641,33 @@ down so the next person does not pay again.
    measured twice. The echo exists at 0.867–0.888 with no lesson, so naming does not
    create it; it is the +0.0823 excess that is unseparated.
 
-   **The discriminator is built, with its reading rule fixed in the source before its
-   run:** a `yoked` arm taking reward in the same proportions on the same schedule, half a
-   trial out of phase. `yoked ~ none` means the excess is naming; `yoked ~ taught` means it
-   is reward acting on the voice and the two capabilities are separate. It cannot un-meet a
-   met primary. Smoked at 400,000 ticks — 36/36 reps usable, the yoke earning nothing of
-   its own and learning nothing (naming −0.0135 against its null, where `taught` reads
-   +0.0426). Arms 0–3 must return bit-identical, since the per-rep seed depends on the rep
-   alone.
+   **THE DISCRIMINATOR RAN AND SETTLED IT** (`results/echoname-yoke-full.log`, n=36,
+   5 h 00 m, all four original arms **bit-identical**). A `yoked` arm takes reward in the
+   same proportions on the same schedule, half a trial out of phase, with no word→vowel
+   mapping; the reading rule was fixed in the source before the run.
+
+   ```
+   yoked echo 0.940+-0.007        (none 0.873, taught 0.955)
+   paired yoked  - none    +0.0673 +- 0.0107  (6.3 SE)   RESOLVED -- recovers 82%
+   paired taught - yoked   +0.0151 +- 0.0082  (1.8 SE)   unresolved, 2 SE bound = 20%
+   yoked naming over its own null   -0.0027   (taught +0.1790)
+   ```
+
+   **The yoke learned nothing and got almost all of the benefit**, so the excess is reward
+   acting on the voice rather than the naming response: the echo and the naming are
+   genuinely **two capabilities**, and the composition claim is earned. The remainder is a
+   bound and not a hold — at most a fifth of the excess could be naming's own contribution.
+
+   **And the yoke reproduces the whole syndrome** with zero learning: the voicing collapse
+   (0.123 against 0.082 and `none`'s 0.765), the sleep (162 scored trials against 159 and
+   190), the ear suppression (0.602 against 0.574 and 0.682). **Reward, not the lesson,
+   moves this creature's operating point** — and the direction is the striking part: a
+   quieter, sleepier creature reads its own vocal code *better*, which fits larynx→ear
+   being negative feedback and the classifier reading vocal-module spikes per neuron.
+
+   **The lead this opens**, stated as a lead: nothing has asked how far the quieting goes. A
+   quieting knob that is not reward — the voicing gate, or scaling the larynx drive
+   directly — would say whether the echo can be bought without a lesson at all.
 
    **The n was re-committed at 36**, in the source with its reasoning, before the full run:
    `ctxgrid`'s own n, the run that established four-word naming, which is the precedent the
