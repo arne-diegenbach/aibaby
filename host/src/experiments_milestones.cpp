@@ -5572,8 +5572,15 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
   // THE ECHO, OFF THIS CREATURE, AFTER ITS LESSON. Last thing in the function and
   // after `out.ok` is already decided, so a creature whose lesson did not score is
   // still reported as such and the echo cannot launder a failed session.
+  // The last argument is `silent`, and it has exactly ONE meaning inside
+  // `imitate_on_session`: the caregiver never speaks. It is imitate's own
+  // NEGATIVE CONTROL, not a verbosity flag -- there is no printing in that
+  // function to suppress. Passing `true` here (which this hook did on its first
+  // build) scores the windows on a creature that was never spoken to, which
+  // reads chance on the voice AND on the ear and halves auditory drive, i.e. it
+  // looks exactly like a lost echo. It must be `false`.
   if (echo && echo_ticks > 0) {
-    *echo = imitate_on_session(s, echo_ticks, nw, 1e9, 0.0, true);
+    *echo = imitate_on_session(s, echo_ticks, nw, 1e9, 0.0, /*silent=*/false);
   }
   return out;
 }
@@ -42024,7 +42031,15 @@ bool run_echoname(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
   constexpr uint64_t kENEchoTicks = 560000;
   constexpr size_t kENScored = 2;        // 200-600 ms after the word stops
   constexpr double kENBar = 0.75;        // M1b's and G3's held-out bar
-  constexpr uint32_t kENReps = 12;
+  // RE-COMMITTED 2026-10-27, before the first full-budget run and after the
+  // pre-flight that voided. 12 was this experiment's provisional n while it was
+  // still being debugged, and a pre-registration voided before it ever read a
+  // primary is not binding. 36 is `ctxgrid`'s own n -- the run that established
+  // four-word naming, which is exactly the leg this experiment's 4th-rung guard
+  // has to clear -- so the power for leg (b) is borrowed from the precedent it
+  // is being held to rather than chosen after seeing a number. The echo leg
+  // needs none of it: it reads 0.896 against a 0.75 bar on a single creature.
+  constexpr uint32_t kENReps = 36;
   // THREE ARMS, AND THE FIRST ONE IS WHY. `fresh` runs the echo on a creature that has
   // lived no session at all, through THIS experiment's own reader, on the same genome
   // and the same seeds. Without it the comparison is against `imitate`'s published
@@ -42317,10 +42332,24 @@ bool run_echoname(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
     // comparison is vacuous -- there is nothing to be above -- and the fault is that
     // the creature has no echo at this operating point at all.
     if (m_none < 0.55) {
+      // AND THE HARNESS IS THE FIRST SUSPECT, NOT THE CREATURE. The first build of
+      // this experiment printed exactly this and read it as a property of a creature
+      // that had lived a session; the actual cause was the echo hook passing
+      // `silent = true` into `imitate_on_session`, which is imitate's own NEGATIVE
+      // CONTROL -- the caregiver never spoke. A word that is never played reads chance
+      // on the voice and on the ear and cuts auditory drive, which is indistinguishable
+      // from a lost echo on those three columns alone. `aud WHILE` is what separates
+      // them, so it is printed here with its ratio rather than left in the table.
       std::printf("\n  VOID -- the voice reads %.3f and the ear %.3f in the scored window:\n"
-                  "  BOTH AT CHANCE. This is not the stimulus overstaying, it is a creature\n"
-                  "  with no echo to read. Compare the `fresh` arm, which is the same genome\n"
-                  "  and the same seeds with no session before it.\n", m_none, ear_none);
+                  "  BOTH AT CHANCE, so there is nothing for either to be above.\n"
+                  "  auditory drive WHILE the word plays: %.1f on this arm against %.1f on\n"
+                  "  `fresh` (ratio %.2f). A ratio well below 1 means THE WORD DID NOT REACH\n"
+                  "  THE EAR -- suspect the stimulus path before the creature, and check\n"
+                  "  that the echo hook is not being handed imitate's silent arm. Near 1\n"
+                  "  it is the creature: the same genome and seeds show the echo on `fresh`,\n"
+                  "  so a session has cost it.\n",
+                  m_none, ear_none, mean_of(aud[1]), mean_of(aud[0]),
+                  mean_of(aud[0]) > 0.0 ? mean_of(aud[1]) / mean_of(aud[0]) : 0.0);
     } else {
       std::printf("\n  VOID -- in the scored window the EAR reads %.3f against the voice's\n"
                   "  %.3f. An after-window where the auditory module still classifies is\n"

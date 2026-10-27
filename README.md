@@ -19519,7 +19519,13 @@ in the light of their source needs them to stay comparable with the runs that pr
 **Gate:** `determinism PASS`, `pinned hash PASS` (unchanged at `ad96f882becbee92`, which is
 what disclosure-only has to mean), **24 as expected, 0 not**, `verify PASS`, 16.0 min.
 
-## The demonstration is built, and its pre-flight refuses it (2026-10-27)
+## The demonstration is built, and its pre-flight refused it for a reason that was mine (2026-10-27)
+
+**Read the correction below before the account that follows it.** The first pre-flight
+reported that the echo does not survive a teaching session, and that report was a bug in the
+experiment's own harness, not a property of the creature. The account is left standing
+because the error is the useful part of it; the conclusion it reached is withdrawn.
+
 
 The project's stated goal is a small creature trainable for one specific purpose, and the
 capabilities for it are each established — on *different* creatures. `imitate` reads M1b off
@@ -19588,6 +19594,68 @@ and on this evidence it does not. `echoname` ships as `Expect::kOpen` — it can
 for a measured reason, so it is a test and not an instrument, and FAIL is the honest current
 answer. Its n of 12 is provisional: a pre-registration voided before it ever read a primary
 is not binding, and the n must be re-committed when the run is actually launched.
+
+### The correction: a control on a different code path is not a control (2026-10-27)
+
+**Everything above about the echo dying is withdrawn, and so is the caution it put on M1b.**
+The echo hook called
+
+```cpp
+*echo = imitate_on_session(s, echo_ticks, nw, 1e9, 0.0, true);
+```
+
+and `silent` has exactly one meaning inside that function — `sounding = !silent && t < kWordTicks`
+— **the caregiver never speaks.** It is `imitate`'s own negative-control arm, not a verbosity
+flag; there is nothing in that function to print. So every arm that lived a session was scored
+on a creature that was never spoken to. The `fresh` arm reached the same reader through
+`run_imitate_session`, the convenience wrapper, whose default is `silent = false`, and played
+words.
+
+**All four "diagnostics" are what a word that never plays produces.** Chance on the voice,
+chance on the ear, auditory drive halved while the word "plays", and a quieter voice with no
+stimulus to drive it. Agreement among diagnostics is not independent confirmation when one
+upstream fault feeds all of them.
+
+One argument changed, same binary otherwise, same `--allow-short` banner and therefore still
+**vacuity readings and not effect sizes**:
+
+```
+arm      n    echo          its EAR  shuffled  aud WHILE  voiced
+fresh    12   0.896+-0.007  0.626    0.508     352.6      0.772   <- bit-identical to the broken run
+none     12   0.876+-0.007  0.690    0.513     281.1      0.700
+taught   12   0.920+-0.005  0.713    0.507     279.4      0.655
+nodrive  12   0.895+-0.011  0.685    0.492     280.9      0.799
+```
+
+`fresh` returning bit-identical is what licenses reading the rest: the fix touched exactly the
+three session arms and nothing else. **The echo survives a teaching session**, and the
+vacuity conditions all clear — positive control live, four arms distinct, the shuffled control
+inside [0.40, 0.60], the ear below the voice in the scored window on every arm. The primary's
+one open leg is the 4th-rung guard, naming above its own per-creature null at 3 SE, which
+reads 1.3 SE here because 142 teaching trials cannot form four-word naming. That is a budget
+artefact against a 6,800,000-tick minimum, not a content failure, which is the state in which
+a pre-flight says *launch*.
+
+**The method rule, which is the part that generalises.** A positive control is only a control
+if it reaches the measurement by **the same code path as the treatment arms**. Built through a
+wrapper with default arguments while the treatment arms call the underlying function directly,
+it differs from them in every argument the wrapper defaults — and those differences are
+invisible at the call site, because they are not written there. It then certifies the *reader*
+and says nothing about the *protocol*, while looking exactly like a healthy control. The
+`fresh` arm was added for the right reason and did the job it was added for; it could not do
+the job it appeared to do.
+
+Two smaller repairs followed from the same error. The void message had asserted which of two
+faults sharing one inequality had fired — it said "this is not the stimulus overstaying, it is
+a creature with no echo to read", explicitly ruling out the cause — so it now prints the
+number that separates them, the `aud WHILE` ratio against `fresh`, and names the harness as
+the first suspect. And the n was re-committed in the source before the real run at **36**,
+`ctxgrid`'s own n: the run that established four-word naming is the precedent the naming leg is
+held to, so the power is borrowed from that precedent rather than chosen after seeing a number.
+
+**The standing lesson is cheaper than the run that taught it:** suspect the harness before the
+creature when a result is large, clean, corroborated by several diagnostics, and reverses a
+milestone. That is the shape of a setup bug, not the shape of biology.
 
 ## Layout
 

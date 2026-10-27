@@ -578,43 +578,57 @@ down so the next person does not pay again.
    holds in space (orthogonal targets keep 0.84 against 0.22), and the 2×2 grid *is* the
    orthogonal case. Cost: lifting `imitate`'s windowed classifier into a trained creature.
 
-   **BUILT 2026-10-27 as `echoname`, AND ITS VACUITY PRE-FLIGHT REFUSES IT — the obstacle
-   is not composition.** The lift is done and verified: `imitate_on_session` reads the
+   **BUILT 2026-10-27 as `echoname`. Its first pre-flight refused it; that refusal was a
+   bug in the harness and is withdrawn, and the corrected pre-flight CLEARS.** The lift is
+   done and verified: `imitate_on_session` reads the
    windows off a `Session` the caller owns, bit-identical on all five windows and all five
    columns against `results/delay-battery-off.log`, with `run_vocallearn_session` carrying
    an optional echo buffer so the echo comes off the live creature after its lesson. Four
    arms — `fresh` (no session), `none` (a session, no reward), `taught` (the lesson),
    `nodrive` (a session with no CtxDrive).
 
-   **The pre-flight's positive control is live on `fresh` alone.** Every arm that lived a
-   vocallearn session reads the echo AND its ear at chance, so the run voids on its own
-   pre-registered condition and **the full-budget run was not launched**. Per the standing
-   prohibition these are vacuity readings and not effect sizes: what a smoke may establish
-   is whether the arms differ, and here the three session arms do not differ from each
-   other while all three differ from `fresh`. So **reward is not the cause and neither is
-   the context drive** — a vocallearn session with neither still has no echo.
+   **The first pre-flight read the echo at chance on all three session arms, and the cause
+   was the hook passing `silent = true` into `imitate_on_session`** — a flag with exactly
+   one meaning in that function, *the caregiver never speaks*. It is `imitate`'s own
+   negative control. Every arm that lived a session was scored on a creature that was never
+   spoken to, while `fresh` reached the same reader through the defaulted wrapper and
+   played words. **A positive control that reaches the measurement by a different code path
+   from the treatment arms is not a control** — it certifies the reader and says nothing
+   about the protocol. The two "corroborating diagnostics" (auditory drive halved, voiced
+   fraction down two thirds) are both what a word that never plays produces, so they were
+   one fault counted three times rather than independent confirmation.
 
-   Two diagnostics came with it, now printed by the experiment: auditory drive while the
-   word plays roughly halves, and the voiced fraction falls by about two thirds. **A quiet
-   creature has no voice to read an echo off**, which makes this an operating-point
-   problem, and this project has been caught by that trap before.
+   **Corrected, the echo survives a teaching session** — still vacuity readings and not
+   effect sizes, since the log keeps its `--allow-short` banner:
 
-   **THE NEXT RUN IS NAMED, AND IT IS A VERIFIED ASYMMETRY RATHER THAN A GUESS.**
-   `imitate_on_session` calls `retina.present` and `s.brain.see` every frame;
-   `run_vocallearn_session` **never drives vision at all**, and `results/ctxgrid.toml` has
-   a vision module. So the two sessions differ in total network drive, which is a candidate
-   for the vocalisation collapse. The cheap discriminator first: run the echo on a creature
-   that has already lived an *imitate* session rather than a vocallearn one. If the echo
-   survives that and not a lesson, the cause is session CONTENT and not age — and only then
-   is it worth making vision optional in the teaching loop.
+   ```
+   arm      n    echo          its EAR  shuffled  aud WHILE  voiced
+   fresh    12   0.896+-0.007  0.626    0.508     352.6      0.772   <- bit-identical across the fix
+   none     12   0.876+-0.007  0.690    0.513     281.1      0.700
+   taught   12   0.920+-0.005  0.713    0.507     279.4      0.655
+   nodrive  12   0.895+-0.011  0.685    0.492     280.9      0.799
+   ```
 
-   **One caution falls out of this regardless of the cause, and it is about a milestone the
-   project records as met.** M1b is measured on a freshly hatched creature inside
-   `imitate`'s own session. Nothing had ever asked whether a creature that has lived a
-   teaching session still repeats, and on this evidence it does not. The n of 12 written
-   into `echoname` is provisional and must be re-committed when the run is actually
-   launched: a pre-registration that was voided before it ever read a primary is not
-   binding.
+   `fresh` returning bit-identical is what licenses reading the rest. Every vacuity
+   condition clears — positive control live, four arms distinct, shuffled control inside
+   [0.40, 0.60], the ear below the voice in the scored window on every arm. **The primary's
+   one open leg is the 4th-rung guard**, naming above its own per-creature null at 3 SE,
+   which reads 1.3 SE because 142 teaching trials cannot form four-word naming against a
+   6,800,000-tick minimum. A budget artefact, not a content failure — the state in which a
+   pre-flight says *launch*.
+
+   **Withdrawn with the refusal:** the caution this put on M1b. Nothing here ever showed
+   that a creature which has lived a teaching session stops repeating. And the vision lead
+   it named is real in the code — `run_vocallearn_session` never drives vision while
+   `imitate_on_session` does every frame — but there is now **no deficit for it to explain**,
+   so it is not a lead.
+
+   **The n is re-committed at 36**, in the source with its reasoning, before the full run:
+   `ctxgrid`'s own n, the run that established four-word naming, which is the precedent the
+   naming leg is held to. The old 12 was provisional — a pre-registration voided before it
+   read a primary is not binding — and 36 borrows its power from a precedent rather than
+   choosing it after seeing a number. Cost: ~20x the 7.8 min short run on 14 cores, so a
+   **~2.5–3 h estimate**, and this project has missed a runtime prediction by 2.3x before.
 2. **CLOSED 2026-10-26 — the baseline debt, and it found a defect.** `verify-long`
    completed on `dna/default.toml` in 37.3 h: **no regressions** (zero `kPass` failures,
    zero `kGuard` flips), but **21 discrepancies, every one `expected FAIL (open
