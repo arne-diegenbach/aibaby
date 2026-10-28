@@ -23393,3 +23393,67 @@ and the yoke's 22-of-36 landing *below* chance is that hurt, not noise.
 *amplification* claim is marginal and rests mostly on the arm-level comparison of `|dev|`
 and the sign counts, which are not marginal. And this is the same 36 creatures throughout —
 a decomposition of an established effect, not an independent replication of one.
+
+## Deriving the constant before touching the knob, and finding out it is not an annealer (2026-10-28)
+
+The improvement lever today's decomposition pointed at: reward buys an 11× rise in
+between-word separation and a 3.3× rise in within-word noise, and the noise is pure cost.
+`exploration.sensitivity` is the reward-driven knob aimed at exactly that — `explore_scale`
+is 1.0 on `vocal` and 0.0 on every other module — and it ships at **0.0**, never swept.
+
+The genome records someone reaching for `sensitivity = 500` and five of nine creatures
+going too quiet to score. That is a guessed constant, and this project has a rule about
+those. So: derive it first.
+
+### The measurement cost nothing
+
+`Brain::exploration()` is already public and `run_babble` already prints exploration
+min/mean/max. Since `e = clamp(1 − s·doing_well, 0.35, 1.60)`, running `babble` at a known
+`s` backs the constant straight out: `|doing_well| = (1 − e_min)/s`. No code change,
+`Tier::kFast`, seconds per run.
+
+```
+sens    e_min   e_mean  e_max   vocal  duty   implied |doing_well|
+1.0     0.999   1.000   1.000   1766   0.49   0.0010
+10.0    0.986   1.000   1.003   1799   0.49   0.0014
+100.0   0.736   0.997   1.057   1333   0.38   0.0026
+600.0   0.350   0.992   1.269    791   0.24   0.0011  (clipped at the floor)
+```
+
+**The constant:** `|doing_well|` peaks at 0.001–0.003, so reaching the 0.35 floor needs
+`s ≈ 250`, and **s = 600 already clips** — `e_min` is exactly 0.350. That is why 500
+overshot. The usable window is **s ∈ [10, 100]**: at 100, exploration dips to 0.736 with
+vocalisations down 25% and duty 0.38, still well inside babble's 0.10–0.85 band. The
+silence failure mode is real and dose-dependent, so any experiment here carries a
+vocalisation-count guard.
+
+### And it is not an annealer, which corrects the proposal
+
+I pitched this as "explore to build separation, anneal to consolidate". **It does not do
+that.** `e_mean` is 0.997–1.000 at *every* sensitivity — a 0.3% sustained reduction at
+s=100 — so the knob makes transient dips, not a sustained reduction. And `e_max` goes
+**above** 1.0 (1.269 at s=600), so it raises exploration when things go worse than expected
+as readily as it lowers it when they go better.
+
+So it is a **phasic, bidirectional variability controller** on a 4 s / 60 s clock — "hold
+the course while it is working, vary when it is not" — not a slow consolidation. A true
+anneal would need a different mechanism, such as a slow decay of `noise_amp`.
+
+That is arguably a better hypothesis than the one it replaces: phasic control plausibly
+helps the **alignment**, which is the lesson's half of the dissociation, rather than the
+separation. But it must not be sold as shedding the 3.3× within-word noise, because
+`e_mean` says it will not.
+
+### A sweep that measured the same creature six times
+
+The first attempt substituted with `sed` anchored on `^sensitivity = 0.0$`. The genome line
+carries a trailing comment, so **nothing was substituted and all six runs were the shipped
+creature.** It was caught only because the vocalisation count came back bit-identical —
+1787 in every arm.
+
+That is the `syllf1` bug class again: an arm that silently inherits the shipped value. Two
+rules out of it. Edit a genome field with `sed -E "s/^field = [0-9.]+/field = NEW/"` and
+**print the line back from each variant** rather than trusting the substitution. And look at
+a raw count column before reading any outcome — an identical count across arms is the
+cheapest vacuity alarm available, and a hand-rolled sweep has no `arms_are_distinct` to
+catch it.
