@@ -23181,3 +23181,40 @@ both the vocal operating point and the repeatability account. What reward does i
 magnitude in a creature that learned nothing. The open question is no longer *what* but
 *how*: the candidate is the auditory→vocal transcoding gain, and `arcuate is a transcoder`
 is where to start.
+
+### Correction to the framing above: `sep` is gain-invariant, so this is not a gain result
+
+The section above calls this "a **gain** story, not a noise-reduction story" and says the
+between-word structure "simply grows faster". That reading is imprecise in a way that
+changes what to try next, so it is corrected here rather than quietly edited.
+
+**`sep = between / within` is invariant to any uniform rescaling of the code.** A gain `g`
+applied to every vocal neuron on every trial multiplies *both* variances by `g²` and leaves
+`sep` exactly where it was. So a gain change cannot move the headline statistic at all, and
+the 3.32× rise is by construction the part a gain does **not** explain.
+
+Running it as arithmetic on the `none → yoked` means:
+
+```
+within  ratio   3.70x   =>  the uniform gain that would explain it, g = 1.92
+between ratio  11.21x
+a gain of 1.92 predicts between -> 0.06160
+observed between                  0.18681
+UNEXPLAINED BY GAIN: 3.03x   (and that is exactly the sep ratio)
+```
+
+So the honest decomposition is **two effects, not one**. A gain of about 1.92 accounts for
+the whole of the within-word noise increase and buys nothing in separability. On top of
+that, the four words are differentiated **3.0× beyond what the gain explains** — and that
+residual is the entire result.
+
+It is stranger than a gain story, too: `drive` — the mean — is **pinned at 0.50 by
+homeostasis** while the variance around it grew 3.7×. So this is not a gain on the mean
+either. Reward expands and restructures the code at a fixed operating point.
+
+**The lead this opens is therefore the opposite of what was first recorded.** "Look for a
+gain knob, not a selectivity one" is backwards: a uniform gain is already excluded by the
+statistic. What needs explaining is the **word-specific** component — why the vocal
+module's response to four *heard* words pulled apart threefold, in a creature whose
+word→vowel mapping did not improve at all. That is a selectivity question on the
+auditory→vocal path, and `arcuate is a transcoder` is still where to start.
