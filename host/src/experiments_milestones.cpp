@@ -43436,4 +43436,419 @@ bool run_quietecho(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
   return true;
 }
 
+// ---------------------------------------------------------------------------
+// `exsweep` -- DOES PHASIC VARIABILITY CONTROL HELP THE ASSIGNMENT?
+//
+// WHERE THIS COMES FROM. `echoname`'s decomposition split what reward does into two
+// independent halves: it buys the ENTIRE between-word separation (+29.3 +- 2.8 Hz of F1,
+// 10.6 SE) and ZERO direction, while the lesson buys the ENTIRE direction (+0.1899 +-
+// 0.0283, 6.7 SE) and no extra separation. The map is already there -- a yoke that learned
+// nothing is decodable at 0.918 -- and teaching only ROTATES it onto the targets.
+//
+// `exploration.sensitivity` is the one reward-driven knob aimed at the vocal module and
+// nothing else (`explore_scale` is 1.0 on vocal, 0.0 on all six other modules). It ships
+// at 0.0. The pre-flight derived its constant with no code change, off `babble`'s existing
+// exploration print: |reward_fast - reward_slow| peaks at 0.001-0.003, so s ~ 250 drives
+// `e` to its 0.35 floor and s = 600 already clips there -- which is why the 500 recorded in
+// the genome comment overshot and left five of nine creatures too quiet to score. The
+// usable window is s in [10, 100].
+//
+// WHAT THE PRE-FLIGHT ALSO SHOWED, AND IT CHANGED THE HYPOTHESIS. `e_mean` is 0.997-1.000
+// at EVERY sensitivity, and `e_max` rises ABOVE 1.0. So this knob is not an annealer: it
+// makes transient, BIDIRECTIONAL excursions on a 4 s / 60 s clock -- "hold the course while
+// it is working, vary when it is not". It therefore cannot be sold as shedding the 3.3x
+// within-word noise that reward adds, and the prediction below says so explicitly.
+//
+// THE PREDICTION, COMMITTED HERE BEFORE THE RUN:
+//   (a) `direction` over each creature's own null MOVES with s. Sign not predicted --
+//       phasic control could help the rotation or fight it, and both are results.
+//   (b) `within`'s MEAN DOES NOT move, because `e_mean` barely leaves 1.0. If `within`
+//       falls materially, the pre-flight's reading of this knob was wrong and this comment
+//       should say so rather than being quietly reinterpreted.
+//
+// THE MANIPULATION CHECK IS THE UTTERANCE COUNT, not an exploration column:
+// `run_vocallearn_session` does not report exploration, and adding it would touch a helper
+// a dozen experiments share. `babble` already established the behavioural signature -- a
+// 25% drop in vocalisations at s = 100 -- so a monotone fall in scored utterances across
+// the ladder is the arithmetic proof the knob engaged. It doubles as the silence guard the
+// genome's own note demands. **An identical count across arms means the genome edit did not
+// land**, which is exactly how the pre-flight's first sweep measured one creature six times.
+namespace {
+
+// The separability decomposition, pooled over the articulator dimensions. `echoname` holds
+// an inline copy of this arithmetic that is deliberately NOT replaced by a call here: its
+// published columns are verified character-identical run to run by
+// `tools/echoname_identity.sh`, and unifying the two is a follow-up that has to be gated by
+// that check rather than bundled into a new experiment.
+struct ArticSpread {
+  bool ok = false;
+  double mu = 0.0, within = 0.0, between = 0.0, sep = 0.0;
+};
+
+ArticSpread artic_spread(const std::vector<std::vector<double>>& rows,
+                         const std::vector<int>& labels, uint32_t words) {
+  ArticSpread out;
+  if (rows.size() != labels.size() || words == 0) return out;
+  std::vector<std::vector<double>> wmu(words);
+  std::vector<uint32_t> wn(words, 0);
+  std::vector<double> grand;
+  uint32_t n_used = 0;
+  for (size_t t = 0; t < labels.size(); ++t) {
+    const int L = labels[t];
+    if (L < 0 || L >= int(words) || rows[t].empty()) continue;
+    if (grand.empty()) grand.assign(rows[t].size(), 0.0);
+    if (rows[t].size() != grand.size()) continue;
+    if (wmu[L].empty()) wmu[L].assign(rows[t].size(), 0.0);
+    for (size_t d = 0; d < rows[t].size(); ++d) {
+      wmu[L][d] += rows[t][d];
+      grand[d] += rows[t][d];
+    }
+    ++wn[L];
+    ++n_used;
+  }
+  for (uint32_t k = 0; k < words; ++k) {
+    if (wn[k] < 2) return out;  // a within-word variance needs two repeats
+  }
+  if (n_used <= words || grand.empty()) return out;
+  const size_t D = grand.size();
+  for (double& v : grand) v /= double(n_used);
+  for (uint32_t k = 0; k < words; ++k) {
+    for (double& v : wmu[k]) v /= double(wn[k]);
+  }
+  double within = 0.0, between = 0.0, mu = 0.0;
+  for (size_t t = 0; t < labels.size(); ++t) {
+    const int L = labels[t];
+    if (L < 0 || L >= int(words) || rows[t].size() != D) continue;
+    for (size_t d = 0; d < D; ++d) {
+      const double e = rows[t][d] - wmu[L][d];
+      within += e * e;
+    }
+  }
+  for (uint32_t k = 0; k < words; ++k) {
+    for (size_t d = 0; d < D; ++d) {
+      const double e = wmu[k][d] - grand[d];
+      between += double(wn[k]) * e * e;
+    }
+  }
+  for (size_t d = 0; d < D; ++d) mu += grand[d];
+  within /= double((n_used - words) * D);
+  between /= double((words - 1) * D);
+  if (!(within > 0.0)) return out;
+  out.ok = true;
+  out.mu = mu / double(D);
+  out.within = within;
+  out.between = between;
+  out.sep = between / within;
+  return out;
+}
+
+}  // namespace
+
+bool run_exsweep(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  aibaby::Dna dna;
+  if (dna.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) {
+    std::printf("  setup failed: the genome does not load\n");
+    return false;
+  }
+  const int32_t ctx_module = dna.module_with_role(aibaby::ModuleRole::kContext);
+  if (ctx_module < 0) {
+    std::printf("  this genome has no kContext module, so there is nothing to name.\n"
+                "  Use results/ctxgrid.toml, or build one with NO output weight:\n\n"
+                "    python3 tools/genome_add_context.py dna/default.toml ctx.toml \\\n"
+                "        vocal out_w=0\n");
+    return false;
+  }
+  if (dna.header().exploration.enabled == 0u) {
+    std::printf("  VOID -- this genome has exploration.enabled = 0, so `explore_` is\n"
+                "  pinned at 1.0 and `sensitivity` cannot move anything. Every arm would\n"
+                "  be the same creature, so no session is run.\n");
+    return true;
+  }
+
+  constexpr uint32_t kXSArms = 4;
+  static const float kXSSens[kXSArms] = {0.0f, 10.0f, 30.0f, 100.0f};
+  static const char* kXSName[kXSArms] = {"s 0", "s 10", "s 30", "s 100"};
+  constexpr uint32_t kXSReps = 36;        // echoname's own n, so the arms are comparable
+  constexpr size_t kXSScored = 2;         // imitate's window, 200-600 ms after the word
+  constexpr uint64_t kXSEchoTicks = 560000;  // imitate's own echo budget, as echoname uses
+  // `mean_of` / `sem_of` are local lambdas in every experiment in this file rather than
+  // shared helpers; matched here so the summary arithmetic is the same jackknife.
+  const auto mean_of = [](const std::vector<double>& v) {
+    double se = 0.0;
+    return ctx_mean_se(v, &se);
+  };
+  const auto sem_of = [](const std::vector<double>& v) {
+    double se = 0.0;
+    ctx_mean_se(v, &se);
+    return se;
+  };
+  const size_t slots_off = offsetof(aibaby::DnaHeader, exploration) +
+                           offsetof(aibaby::DnaExploration, context_slots);
+  const size_t sens_off = offsetof(aibaby::DnaHeader, exploration) +
+                          offsetof(aibaby::DnaExploration, sensitivity);
+
+  instrument("exsweep", dna.header().seed ^ 0xE5A0u, ticks / kVLTrialTicks,
+             "a ladder on exploration.sensitivity, every arm TAUGHT");
+  std::printf("  the question      reward buys the separation and the lesson buys the\n"
+              "                    assignment. Does phasic variability control help the\n"
+              "                    assignment? `sensitivity` is the only reward-driven\n"
+              "                    knob aimed at vocal and nothing else, and it ships OFF.\n");
+  std::printf("  the ladder        sensitivity %.0f / %.0f / %.0f / %.0f. The pre-flight\n"
+              "                    derived the scale off `babble`: |reward_fast -\n"
+              "                    reward_slow| peaks at 0.001-0.003, so s ~ 250 hits the\n"
+              "                    %.2f floor and 600 clips. Usable window is [10, 100].\n",
+              double(kXSSens[0]), double(kXSSens[1]), double(kXSSens[2]),
+              double(kXSSens[3]), double(dna.header().exploration.floor));
+  std::printf("  the primary       paired `direction - its own null`, s 100 against s 0,\n"
+              "                    plus the dose-response across all four rungs.\n");
+  std::printf("  PRE-REGISTERED    (a) direction MOVES with s; sign NOT predicted, since\n"
+              "                        phasic control could help the rotation or fight it.\n"
+              "                    (b) `within`'s MEAN DOES NOT move, because the\n"
+              "                        pre-flight read e_mean at 0.997-1.000 for every s.\n"
+              "                        A material fall refutes that reading of the knob.\n");
+  std::printf("  the manipulation  scored utterances must FALL monotonically with s --\n"
+              "                    `babble` lost 25%% of its vocalisations at s = 100. An\n"
+              "                    IDENTICAL count across arms means the genome edit did\n"
+              "                    not land, which is how the pre-flight's first sweep\n"
+              "                    measured one creature six times.\n\n");
+
+  struct Cell {
+    bool ok = false;
+    double dir = 0.0, dnull = 0.0, sp1 = 0.0, match = 0.0;
+    double artic = 0.0, vfrac = 0.0;
+    double mu = 0.0, within = 0.0, between = 0.0, sep = 0.0;
+    size_t utts = 0, trials = 0;
+    uint32_t praises = 0, scolds = 0;
+  };
+
+  std::vector<std::pair<double, double>> tg;
+  for (uint32_t q = 0; q < kCFWords; ++q) {
+    tg.push_back({double(kGridWords[q].f1), double(kGridWords[q].f2)});
+  }
+
+  const std::vector<Cell> cells =
+      parallel_reps<Cell>(kXSReps * kXSArms, [&](uint32_t i) {
+        const uint32_t r = i / kXSArms;
+        const uint32_t a = i % kXSArms;
+        Cell cell;
+        std::vector<uint8_t> variant = blob;
+        // The per-rep seed depends on `r` alone, so widening the ladder later leaves
+        // every existing arm bit-identical.
+        const uint64_t seed = dna.header().seed + r * 7919ull;
+        std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed,
+                    sizeof(seed));
+        const uint32_t sl = kCFWords;
+        std::memcpy(variant.data() + slots_off, &sl, sizeof(sl));
+        // The one field this experiment moves. Written per arm rather than inherited --
+        // an arm that silently keeps the shipped value is the `syllf1` bug class.
+        const float sens = kXSSens[a];
+        std::memcpy(variant.data() + sens_off, &sens, sizeof(sens));
+
+        CtxDrive drive;
+        drive.module = ctx_module;
+        drive.slots = kCFWords;
+        drive.gain = 0.10;
+        Regime reg;
+        reg.praise = kPraiseValue;
+        reg.scold = kScoldValue;
+
+        ImitateRun echo;
+        const VLRun run = run_vocallearn_session(
+            variant, ticks, kVLTaught, nullptr, reg, kVLTgtHeard, &drive,
+            kVLScoreFormant, nullptr, kCFWords, kGridWords, nullptr, nullptr, nullptr,
+            nullptr, nullptr, false, 0, &echo, kXSEchoTicks);
+        if (!run.ok || !echo.ok) return cell;
+        cell.match = run.ctx_match;
+        cell.praises = run.praises;
+        cell.scolds = run.scolds;
+        cell.utts = run.utt_word.size();
+        cell.trials = echo.scored_labels.size();
+        cell.vfrac = echo.voiced_frac[kXSScored];
+        cell.dir = direction_accuracy(run.utt_f1, run.utt_f2, run.utt_word, tg);
+        cell.dnull = direction_null(run.utt_f1, run.utt_f2, run.utt_word, tg);
+
+        double s1 = 0.0;
+        uint32_t np = 0;
+        for (uint32_t x = 0; x < kCFWords; ++x) {
+          for (uint32_t y = x + 1; y < kCFWords; ++y) {
+            double m1[2] = {0.0, 0.0};
+            uint32_t n1[2] = {0u, 0u};
+            for (size_t u = 0; u < run.utt_word.size(); ++u) {
+              const int wd = run.utt_word[u];
+              if (wd == int(x)) { m1[0] += run.utt_f1[u]; ++n1[0]; }
+              else if (wd == int(y)) { m1[1] += run.utt_f1[u]; ++n1[1]; }
+            }
+            if (!n1[0] || !n1[1]) continue;
+            s1 += std::fabs(m1[0] / n1[0] - m1[1] / n1[1]);
+            ++np;
+          }
+        }
+        cell.sp1 = np ? s1 / np : 0.0;
+
+        const auto pair_mean = [](const std::vector<std::vector<double>>& rows,
+                                  const std::vector<int>& labels) {
+          double sum = 0.0;
+          uint32_t pairs = 0;
+          for (uint32_t x = 0; x < kCFWords; ++x) {
+            for (uint32_t y = x + 1; y < kCFWords; ++y) {
+              std::vector<std::vector<double>> xv;
+              std::vector<int> yv;
+              for (size_t t = 0; t < labels.size() && t < rows.size(); ++t) {
+                const int L = labels[t];
+                if (L != int(x) && L != int(y)) continue;
+                xv.push_back(rows[t]);
+                yv.push_back(L == int(y) ? 1 : 0);
+              }
+              if (yv.size() < 12) continue;
+              std::vector<std::vector<double>> iv;
+              std::vector<int> jv;
+              size_t tv = 0;
+              interleave_pairs(xv, yv, iv, jv, tv);
+              sum += holdout_accuracy(iv, jv, tv);
+              ++pairs;
+            }
+          }
+          return pairs ? sum / double(pairs) : 0.0;
+        };
+        cell.artic = pair_mean(echo.scored_artic, echo.scored_labels);
+
+        const ArticSpread sp = artic_spread(echo.scored_artic, echo.scored_labels,
+                                            kCFWords);
+        if (sp.ok) {
+          cell.mu = sp.mu;
+          cell.within = sp.within;
+          cell.between = sp.between;
+          cell.sep = sp.sep;
+        }
+        cell.ok = true;
+        return cell;
+      });
+
+  std::printf("  seed   arm      dir     its null  utts   praises  artic   voiced"
+              "  drive    within    between   sep\n");
+  std::vector<double> dv[kXSArms], nv[kXSArms], uv[kXSArms], av[kXSArms];
+  std::vector<double> wv[kXSArms], bv[kXSArms], sv[kXSArms], mv[kXSArms], pv[kXSArms];
+  std::vector<double> f1v[kXSArms], vfv[kXSArms];
+  for (uint32_t r = 0; r < kXSReps; ++r) {
+    for (uint32_t a = 0; a < kXSArms; ++a) {
+      const Cell& c = cells[r * kXSArms + a];
+      if (!c.ok) {
+        std::printf("  %-6u %-8s  no usable session\n", r, kXSName[a]);
+        continue;
+      }
+      std::printf("  %-6u %-8s %-7.3f %-9.3f %-6zu %-8u %-7.3f %-7.3f %-8.4f %-9.5f"
+                  " %-9.5f %.2f\n",
+                  r, kXSName[a], c.dir, c.dnull, c.utts, c.praises, c.artic, c.vfrac,
+                  c.mu, c.within, c.between, c.sep);
+      dv[a].push_back(c.dir);
+      nv[a].push_back(c.dnull);
+      uv[a].push_back(double(c.utts));
+      av[a].push_back(c.artic);
+      pv[a].push_back(double(c.praises));
+      f1v[a].push_back(c.sp1);
+      vfv[a].push_back(c.vfrac);
+      if (c.sep > 0.0) {
+        mv[a].push_back(c.mu);
+        wv[a].push_back(c.within);
+        bv[a].push_back(c.between);
+        sv[a].push_back(c.sep);
+      }
+    }
+  }
+  // `exsweep` is Expect::kRead, so every verdict below is PRINTED and none of them is
+  // encoded in the bool. The reason is specific rather than stylistic: `dna/default.toml`
+  // has no kContext module, so on the one genome `verify` actually runs this experiment
+  // the scientific criterion is UNREACHABLE. A kPass there would certify nothing while
+  // risking a vacuous pass, which is the `baseprobe` failure.
+  bool readable = true;
+  for (uint32_t a = 0; a < kXSArms; ++a) {
+    if (dv[a].empty()) {
+      std::printf("\n  INCONCLUSIVE -- the `%s` arm produced no usable session, so no\n"
+                  "  contrast against it is readable.\n", kXSName[a]);
+      readable = false;
+    }
+  }
+  if (!readable) return true;
+
+  std::printf("\n  arm      n    dir           its null  utts    praises  artic"
+              "       F1 spread  voiced  within    sep\n");
+  for (uint32_t a = 0; a < kXSArms; ++a) {
+    std::printf("  %-8s %-4zu %.3f+-%.3f %-9.3f %-7.1f %-8.1f %.3f+-%.3f %-10.1f"
+                " %-7.3f %-9.5f %.2f\n",
+                kXSName[a], dv[a].size(), mean_of(dv[a]), sem_of(dv[a]), mean_of(nv[a]),
+                mean_of(uv[a]), mean_of(pv[a]), mean_of(av[a]), sem_of(av[a]),
+                mean_of(f1v[a]), mean_of(vfv[a]),
+                wv[a].empty() ? 0.0 : mean_of(wv[a]),
+                sv[a].empty() ? 0.0 : mean_of(sv[a]));
+  }
+
+  // ---- THE MANIPULATION CHECK, before any outcome is read ----
+  //
+  // This is arithmetic, not a finding: a ladder whose arms produce the same creature
+  // cannot answer anything, and that is exactly what the pre-flight's first sweep did.
+  {
+    bool any_differ = false;
+    for (uint32_t a = 1; a < kXSArms; ++a) {
+      if (std::fabs(mean_of(uv[a]) - mean_of(uv[0])) > 1e-9 ||
+          std::fabs(mean_of(vfv[a]) - mean_of(vfv[0])) > 1e-9) {
+        any_differ = true;
+      }
+    }
+    std::printf("\n  THE MANIPULATION CHECK -- scored utterances across the ladder:");
+    for (uint32_t a = 0; a < kXSArms; ++a) std::printf(" %.1f", mean_of(uv[a]));
+    std::printf("\n");
+    if (!any_differ) {
+      std::printf("  VOID -- every arm produced an IDENTICAL utterance count and voiced\n"
+                  "  fraction, so the `sensitivity` write did not reach the creature and\n"
+                  "  all four arms are the shipped genome. Nothing below would be\n"
+                  "  readable, so the prediction is NOT reported.\n");
+      return true;
+    }
+    bool monotone = true;
+    for (uint32_t a = 1; a < kXSArms; ++a) {
+      if (mean_of(uv[a]) > mean_of(uv[a - 1]) + 1e-9) monotone = false;
+    }
+    std::printf("  the arms DO differ, so the knob engaged. Monotone fall: %s\n",
+                monotone ? "yes, as `babble` predicted"
+                         : "NO -- the behavioural signature does not match `babble`'s");
+  }
+
+  // ---- THE TWO PRE-REGISTERED READINGS ----
+  {
+    std::printf("\n  THE PREDICTION, read in the order it was committed\n");
+    std::printf("    contrast        d (dir - null)      d log within      d log sep\n");
+    for (uint32_t a = 1; a < kXSArms; ++a) {
+      std::vector<double> dd, dw, ds;
+      for (uint32_t r = 0; r < kXSReps; ++r) {
+        const Cell& ch = cells[r * kXSArms + a];
+        const Cell& cl = cells[r * kXSArms + 0];
+        if (!ch.ok || !cl.ok) continue;
+        dd.push_back((ch.dir - ch.dnull) - (cl.dir - cl.dnull));
+        if (ch.within > 0.0 && cl.within > 0.0 && ch.sep > 0.0 && cl.sep > 0.0) {
+          dw.push_back(std::log(ch.within / cl.within));
+          ds.push_back(std::log(ch.sep / cl.sep));
+        }
+      }
+      if (dd.empty()) continue;
+      const double md = mean_of(dd), sd1 = sem_of(dd);
+      const double mw = dw.empty() ? 0.0 : mean_of(dw);
+      const double sw = dw.empty() ? 0.0 : sem_of(dw);
+      const double ms = ds.empty() ? 0.0 : mean_of(ds);
+      const double ss = ds.empty() ? 0.0 : sem_of(ds);
+      std::printf("    %-8s - s 0  %+.4f+-%.4f (%.1f)  %+.3f+-%.3f (%.1f)"
+                  "  %+.3f+-%.3f (%.1f)\n",
+                  kXSName[a], md, sd1, sd1 > 0.0 ? std::fabs(md) / sd1 : 0.0, mw, sw,
+                  sw > 0.0 ? std::fabs(mw) / sw : 0.0, ms, ss,
+                  ss > 0.0 ? std::fabs(ms) / ss : 0.0);
+    }
+    std::printf("\n    (a) direction: a move at 2 SE or better on ANY rung answers the\n"
+                "        question the experiment was built for, in whichever direction.\n"
+                "    (b) `within`: the pre-flight predicted NO material move. A resolved\n"
+                "        fall means the knob does more than phasic excursions and the\n"
+                "        pre-flight's reading of `e_mean` was wrong.\n");
+  }
+  return true;
+}
+
 }  // namespace aibaby_host

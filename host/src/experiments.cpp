@@ -223,6 +223,20 @@ const Spec kSpecs[] = {
     // with its slope, its power and its bound, so there is no bar to fit a verdict to.
     // 560000 is `imitate`'s own budget and `imitate`'s own minimum: 200 trials of 2800,
     // which at four words is 50 per word and 100 per pair.
+    {"exsweep", 6800000, Expect::kRead, Tier::kTeach,
+     "  reward buys the between-word SEPARATION and the lesson buys the\n"
+     "  ASSIGNMENT -- a double dissociation at 10.6 and 6.7 SE. So does phasic\n"
+     "  variability control help the assignment? `exploration.sensitivity` is\n"
+     "  the only reward-driven knob aimed at `vocal` and nothing else\n"
+     "  (`explore_scale` 1.0 there, 0.0 on all six others) and it ships at 0.0.\n"
+     "  A four-rung ladder 0/10/30/100, every arm TAUGHT. The window was derived\n"
+     "  off `babble`'s existing exploration print rather than guessed:\n"
+     "  |reward_fast - reward_slow| peaks at 0.001-0.003, so s~250 hits the 0.35\n"
+     "  floor and 600 clips, which is why the 500 in the genome comment left\n"
+     "  five of nine creatures too quiet to score. kRead because\n"
+     "  `dna/default.toml` has no kContext module, so on the genome the gate\n"
+     "  runs this on, the criterion is unreachable -- every verdict is PRINTED",
+     },
     {"quietecho", 560000, Expect::kPass, Tier::kLong,
      "  `echoname` found REWARD raises the echo while teaching nothing, on arms\n"
      "  whose creatures went QUIET -- a line through four points that nothing\n"
@@ -1182,6 +1196,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "ctxgrid") ok = run_ctxgrid(dna_blob, ticks, verbose);
   else if (name == "echoname") ok = run_echoname(dna_blob, ticks, verbose);
   else if (name == "quietecho") ok = run_quietecho(dna_blob, ticks, verbose);
+  else if (name == "exsweep") ok = run_exsweep(dna_blob, ticks, verbose);
   else if (name == "ctxvocab") ok = run_ctxvocab(dna_blob, ticks, verbose);
   else if (name == "vocabcurve") ok = run_vocabcurve(dna_blob, ticks, verbose);
   else if (name == "ctxprobe") ok = run_ctxprobe(dna_blob, ticks, verbose);
