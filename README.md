@@ -23218,3 +23218,51 @@ statistic. What needs explaining is the **word-specific** component — why the 
 module's response to four *heard* words pulled apart threefold, in a creature whose
 word→vowel mapping did not improve at all. That is a selectivity question on the
 auditory→vocal path, and `arcuate is a transcoder` is still where to start.
+
+### What the expansion travels with: nothing (2026-10-28, free)
+
+Before building anything on the selectivity lead, the fourteen per-creature columns were
+asked which *changes* move together across the 36 creatures. Paired `yoked − none`, so
+every change is reward's doing and none is the lesson's (`tools/echoname_co_change.py`).
+
+```
+correlation with d log BETWEEN          with d log SEP
+  artic      +0.739   9.3 SE             artic      +0.886  23.7 SE
+  sep        +0.796  12.5 SE             between    +0.796  12.5 SE
+  aud WHILE  -0.289   1.8 SE             within     -0.667   6.9 SE
+  trials     +0.106   0.6 SE             its EAR    +0.436   3.1 SE
+  its EAR    +0.103   0.6 SE             voiced     +0.328   2.1 SE
+  F1 spread  +0.082   0.5 SE             trials     +0.255   1.6 SE
+  within     -0.079   0.5 SE             F1 spread  +0.124   0.7 SE
+  drive      -0.054   0.3 SE             aud WHILE  -0.119   0.7 SE
+  voiced     -0.017   0.1 SE             drive      +0.057   0.3 SE
+```
+
+**The instrument checks out first.** `artic ↔ sep` is +0.886 at 23.7 SE *per creature*, not
+just per arm — the decomposition explains the accuracy at the level of the individual. That
+is validation rather than discovery, since `sep` is what the classifier reads, but it is
+the right thing to confirm before reading anything else.
+
+**`between` and `within` are uncorrelated across creatures: r = −0.079 (0.5 SE).** The
+noise increase and the word-differentiation vary *independently* from creature to creature.
+That corroborates the correction above on entirely separate evidence — they are two
+effects, not two faces of one.
+
+**And the differentiation travels with nothing else measured.** Against `d log between`,
+every other column is null: the ear's degradation (+0.103), the voicing collapse (−0.017),
+the sleep (+0.106), the drive (−0.054), F1 spread (+0.082). At n=36 two SE excludes
+|r| > 0.35, so these are real bounds rather than shrugs. Reward's word-differentiation
+arrives **unaccompanied** — it does not come bundled with any of the other things reward
+does to this creature.
+
+The `d log sep` column looks busier, but that is `within` showing through: `sep` is
+`between/within`, `within` correlates −0.667 with it, and the ear and voicing correlations
+there (+0.436, +0.328) attach to the *noise* term, not the differentiation. There is a
+"general disruption" axis — creatures whose ear degraded more also got noisier and
+phonated less — and the differentiation is simply not on it.
+
+**The sharpest of the nulls is F1 spread.** The vocal code's word-differentiation rose
+threefold and F1 spread did not follow (+0.082, 0.5 SE), so **the expanded code is not
+reaching the formant.** That is the project's recurring shape — a representation that
+exists and does not express — and it puts this result in the same family as
+`A PERFECT PHASE INDEX BUYS NOTHING` and `delivery was never the limit`.
