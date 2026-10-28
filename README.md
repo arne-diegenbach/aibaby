@@ -23331,3 +23331,65 @@ The open question is now sharp and small. Reward supplies a differentiated vocal
 2.5× the F1 separation to express it with. The lesson supplies the assignment. **Nothing
 yet says why the assignment needs a lesson at all when the separation is already there** —
 and that is a much better question than the one I was chasing this morning.
+
+## Why the assignment needs a lesson: the map is already there, and it points nowhere in particular (2026-10-28)
+
+The question left open an hour ago — reward already supplies a differentiated code and 2.5×
+the F1 separation to express it with, so why does the assignment need teaching? — turns out
+to be answerable from the archived columns, with no run at all.
+
+**Two facts in hand already settle most of it.** The yoked arm reads **0.918** held-out on
+the articulator echo, so a classifier *can* recover which word it heard from that creature's
+vocal code: the word→vocal-state map is **consistent and decodable**. Yet its `direction`
+sits at its own null. A map that is readable but unaligned is a map that exists and points
+nowhere in particular.
+
+### The test that distinguishes "arbitrary but committed" from "absent"
+
+If each rewarded creature commits to its *own* arbitrary map, then a creature that separated
+its vowels further should land further from chance **in either direction** — so
+`|direction − null|` should rise with F1 spread while the *signed* deviation should not. If
+reward produced no map at all, neither moves and the spread of deviations should not exceed
+the unrewarded arm's (`tools/echoname_arbitrary_map.py`).
+
+```
+arm        signed dev        SD      |dev|     SD    above/below its null
+none      -0.0011+-0.0154  0.0924   0.0728  0.0556       18 / 18
+nodrive   +0.0013+-0.0136  0.0818   0.0686  0.0430       19 / 17
+yoked     -0.0027+-0.0224  0.1344   0.1046  0.0826       14 / 22
+taught    +0.1789+-0.0197  0.1181   0.1836  0.1104       33 /  3
+
+                    r(|dev|, F1 spread)      r(signed, F1 spread)
+none                      -0.044  (0.3 SE)        +0.160  (0.9 SE)
+yoked                     +0.314  (2.0 SE)        +0.018  (0.1 SE)
+taught                    +0.338  (2.2 SE)        +0.270  (1.7 SE)
+```
+
+**The yoke's signature is exactly that of an arbitrary but committed map.** Its absolute
+deviation from chance is **44% larger** than the unrewarded arm's and its spread **45%
+wider**, it grows with how far the creature separated its vowels (+0.314, 2.0 SE), and the
+*sign* of that deviation is random — +0.018 (0.1 SE) signed, and 14 above against 22 below,
+which a binomial puts at p = 0.24. Reward commits the creature to a mapping and does not
+care which one.
+
+**The lesson's signature is the same magnitude pointed somewhere.** `taught` lands above its
+own null in **33 of 36 creatures** — binomial p ≈ 1.1 × 10⁻⁷ one-sided — with the signed
+deviation now rising with separation too (+0.270 against the yoke's +0.018).
+
+### The answer
+
+**The information is already there and the lesson does not supply it.** Reward hands the
+creature a stable, decodable, well-separated word→vowel map whose assignment is arbitrary.
+Teaching neither creates the map nor widens it — the magnitude dissociation showed
+`taught − yoked` at −4.4 ± 4.4 Hz — it **rotates it onto the targets**. That is why the
+assignment needs a lesson: nothing in reward carries which vowel belongs to which word, and
+nothing in reward needs to, because reward is not told the words either.
+
+It also explains the one thing that looked like a cost. More separation amplifies whatever
+map a creature happens to hold, which helps when it is aligned and hurts when it is not —
+and the yoke's 22-of-36 landing *below* chance is that hurt, not noise.
+
+**Honest limits.** Both correlations are 2.0 and 2.2 SE, exactly at the bar, so the
+*amplification* claim is marginal and rests mostly on the arm-level comparison of `|dev|`
+and the sign counts, which are not marginal. And this is the same 36 creatures throughout —
+a decomposition of an established effect, not an independent replication of one.
