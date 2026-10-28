@@ -23457,3 +23457,62 @@ rules out of it. Edit a genome field with `sed -E "s/^field = [0-9.]+/field = NE
 a raw count column before reading any outcome — an identical count across arms is the
 cheapest vacuity alarm available, and a hand-rolled sweep has no `arms_are_distinct` to
 catch it.
+
+## `exsweep`: turning the knob on improves naming at a small dose and wrecks it at a large one (2026-10-29)
+
+`results/exsweep-full.log`, `--ticks 6800000`, n=36, four arms, no short-run banner.
+`exploration.sensitivity` ships at 0.0; this is the first time it has been moved.
+
+```
+arm      n    dir           its null  utts    praises  artic        F1 spread  voiced  within    sep
+s 0      36   0.436+-0.020 0.258     1474.9  3449.6   0.934+-0.008 44.4       0.082   0.00407   65.64
+s 10     36   0.496+-0.017 0.256     1542.8  3581.9   0.960+-0.005 44.8       0.106   0.00324   77.73
+s 30     36   0.461+-0.018 0.257     1532.2  3569.4   0.927+-0.008 44.0       0.249   0.00344   51.11
+s 100    36   0.345+-0.014 0.252     979.9   2189.0   0.877+-0.007 28.7       0.150   0.00424   27.90
+
+contrast        d (dir - null)        d log within        d log sep
+s 10  - s 0   +0.0612+-0.0242 (2.5)  -0.180+-0.095 (1.9)  +0.216+-0.127 (1.7)
+s 30  - s 0   +0.0253+-0.0272 (0.9)  -0.143+-0.093 (1.5)  -0.210+-0.122 (1.7)
+s 100 - s 0   -0.0863+-0.0244 (3.5)  +0.077+-0.084 (0.9)  -0.820+-0.104 (7.9)
+```
+
+**Both pre-registered predictions came out as written.** (a) Direction moves with `s` —
+decisively at s=100, `−0.0863 ± 0.0244` (3.5 SE). (b) `within`'s mean does not move: no rung
+resolves at 2 SE, so the pre-flight's reading of the knob as phasic rather than annealing
+survives its own test. The sign was deliberately not predicted, and it turns out to be
+**both signs** — an inverted U.
+
+**The dose-response, in above-null terms:** +0.178 at s=0, **+0.240 at s=10**, +0.204 at
+s=30, +0.093 at s=100. A small dose is worth **1.35×** the shipped creature's naming; a
+large dose costs more than half of it and takes 34% of the utterances with it, which is the
+silence failure mode the pre-flight warned about arriving exactly where predicted.
+
+### Two problems, and they bound what can be claimed
+
+**The manipulation check's shape failed.** I pre-registered that scored utterances must fall
+monotonically with `s`, on babble's 25%-drop signature. They went **up** at s=10 and s=30
+(1542.8, 1532.2 against 1474.9) and only fell at s=100. The arms do differ, so the VOID
+condition did not trip and the knob plainly engaged — but **babble's behavioural signature
+does not transfer to the teaching regime**, which is unsurprising in hindsight (`doing_well`
+is reward-driven and teaching supplies far more reward) and is exactly why the check was
+pre-registered rather than assumed.
+
+**I cannot say how far the knob actually moved.** The design traded the exploration column
+away to avoid touching a session helper a dozen experiments share, so the manipulation is
+established by *difference*, not by magnitude. With babble's scale implying only a ~1.4%
+dip in `e` at s=10, a 1.35× naming gain is a large effect from a small perturbation — which
+is either interesting or a sign that `e` swings much harder under teaching than babble
+predicted. **Adding `explore_` min/mean to `VLRun` is now worth the shared-helper risk**,
+and it needs its own gate.
+
+### What is and is not established
+
+**Established:** phasic variability control affects the assignment. That is the question the
+experiment was built for, and s=100's 3.5 SE answers it — in the harmful direction.
+
+**Not established: the improvement.** `s 10 − s 0` is `+0.0612 ± 0.0242`, **2.5 SE on its own
+discovery sample with three contrasts tested**. This project has a rule written in blood
+about exactly that shape: a contrast reading 3.0 SE on its own 18 creatures read 0.4 SE on 18
+fresh ones. The pre-registered bar was "2 SE on any rung answers the question", and it does —
+but promoting the best of three arms to "a 1.35× improvement" is a different and weaker
+claim. **It needs fresh seeds before it goes in the genome**, and that run is the next thing.
