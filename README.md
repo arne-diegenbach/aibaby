@@ -23056,3 +23056,30 @@ feature, and not selection on which trials got scored. Reward is still the cause
 yoke's own evidence, and the mechanism is still unidentified. The untested leg is the
 vocal **module**'s own activity — `target_rate_hz`, which voids the calibration invariant
 and needs a recalibration pass to reach.
+
+### A fourth explanation, closed the same morning and also for free
+
+Reward makes the **ear worse** while making the vocal readout better — `its EAR` runs
+0.682 (`none`) → 0.602 (`yoked`) → 0.574 (`taught`). That is the wrong direction for
+self-audition masking, which predicts a quieter creature hears better, so it invites a
+trade: perhaps the echo gain *is* the ear's loss. The per-creature pairing was already in
+the log (`tools/echoname_ear_trade.py`).
+
+```
+contrast                d artic              d EAR     corr   r/SE
+yoked - none    +0.1152+-0.0137    -0.0798+-0.0158   +0.401    2.7
+taught - none   +0.1312+-0.0133    -0.1080+-0.0163   +0.583    5.1
+
+within-arm corr(artic, its EAR)   fresh +0.231  none +0.337  taught +0.375
+                                  nodrive +0.314  yoked +0.237
+```
+
+**A trade predicts a negative correlation and the measurement is +0.40 and +0.58.** The
+creatures whose ear fell *least* are the ones whose echo rose *most*. This also refuses the
+latent-variable version: if a per-creature "responsiveness to reward" both raised the echo
+and cost the ear, the paired changes would correlate negatively. They do not, and within
+every arm a creature with a better ear has a better vocal readout. So the ear suppression
+is a **concomitant** of reward, not the route to the echo gain.
+
+Four explanations are now closed — the audible voice, the classifier's voicing feature,
+selection on scored trials, and the ear trade. Three of the four cost no run at all.
