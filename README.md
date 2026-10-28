@@ -23083,3 +23083,101 @@ is a **concomitant** of reward, not the route to the echo gain.
 
 Four explanations are now closed — the audible voice, the classifier's voicing feature,
 selection on scored trials, and the ear trade. Three of the four cost no run at all.
+
+## Reward expands the vocal code, and the words move apart faster than the noise (2026-10-28)
+
+Four explanations for the echo gain were closed one at a time, each costing an experiment
+or an analysis, and the next guess in the queue — vocal's own firing rate — would have been
+another. So `echoname` was instrumented to **measure** instead of guess, and the answer
+came back in one run: `results/echoname-sep-full.log`, `--ticks 6800000`, no short-run
+banner, the same 36 creatures.
+
+### The idea: a held-out accuracy is a ratio, so take it apart
+
+An accuracy rises when the four words move **apart** in the vocal code, and it rises when
+the repeats of one word move **closer together**. Those are different mechanisms — reward
+making the code more separable against reward making it more repeatable — and no column
+published so far could tell them apart. The rows were already in hand, and nothing here is
+a proxy: **the classifier's own input *is* the vocal module's group activity.**
+
+Pooled over the seven articulator groups, per creature: grand-mean `drive`, within-word
+variance, between-word centroid variance, and their ratio `sep`. The paired statistic is a
+**log ratio**, because variances are multiplicative — which also makes the attribution
+exact rather than a judgement. Since `sep = between / within`, `d log sep` is *precisely*
+`d log between − d log within`. Whatever share one term is missing, the other has.
+
+### The answer
+
+```
+arm      n    drive     within      between     sep
+fresh    36   0.5004    0.00159     0.02863     18.20
+none     36   0.5004    0.00109     0.01666     15.25
+taught   36   0.5018    0.00407     0.23330     65.64
+nodrive  36   0.5003    0.00098     0.01694     17.42
+yoked    36   0.4887    0.00403     0.18681     53.55
+
+contrast          d log within   d log between   d log sep        sep ratio
+taught - none    +1.235+-0.075   +2.649+-0.100   +1.414+-0.120    4.11x  (11.8 SE)
+yoked  - none    +1.202+-0.078   +2.402+-0.096   +1.199+-0.128    3.32x  ( 9.4 SE)
+taught - yoked   +0.033+-0.062   +0.248+-0.086   +0.215+-0.098    1.24x  ( 2.2 SE)
+```
+
+**Reward expands the vocal code, and the expansion is uneven in the useful direction.** In
+the yoked arm — a creature that learned nothing, naming −0.0027 — the four words move apart
+by **11× in variance** while each word's repeats get **3.3× noisier**. The separation wins
+two to one in log terms, and separability rises **3.32× at 9.4 SE**.
+
+So this is a **gain** story, not a noise-reduction story. Everything about the code grows;
+the between-word structure simply grows faster than the within-word scatter. `sep` orders
+the five arms exactly as the articulator accuracy does (15.25 → 53.55 → 65.64 against 0.803
+→ 0.918 → 0.934), so the decomposition explains the accuracy rather than sitting beside it.
+
+**And it refuses the repeatability account outright, in reverse.** "Reward makes the vocal
+code more stereotyped, so the readout improves" predicts `d log within < 0`. It is
+**+1.202 ± 0.078** — the code got *noisier*. That account was already dead for a different
+reason (reward→exploration ships with `sensitivity = 0.0`, so the term is multiplied by
+zero); it is now dead twice, once by wiring and once by measurement.
+
+### The pre-registered prediction held, and it refuses the experiment that was queued next
+
+Written into the source **before** this run, off the smoke's `drive` column and the genome:
+`drive` would sit at ~0.50 on every arm, because vocal's `target_rate_hz` 5.0 over
+`rate_norm_hz` 10.0 is exactly where homeostasis holds this module.
+
+```
+fresh   0.5004 +- 0.0009   +0.09% off 0.50
+none    0.5004 +- 0.0005   +0.08%
+taught  0.5018 +- 0.0042   +0.35%
+nodrive 0.5003 +- 0.0005   +0.06%
+yoked   0.4887 +- 0.0064   -2.26%      d log drive -0.0266 +- 0.0136 (2.0 SE)
+```
+
+Four arms sit within 0.35% of 0.50. The yoked arm is 2.26% low at exactly 2.0 SE — call
+that borderline, not resolved. **So homeostasis pins the operating point and reward cannot
+move it.** Which means `vocalrate`, the experiment designed and pre-flighted earlier the
+same day to ask whether vocal's rate carries the echo, **would have been testing a
+difference that reward does not produce.** It is refused before being built, by a
+measurement that cost the same five hours the experiment would have.
+
+### Two things worth keeping beyond this result
+
+**Separability resolves what accuracy cannot.** `taught − yoked` is 1.7–1.8 SE on both
+accuracy columns and unresolved; on `d log sep` it is **+0.215 ± 0.098, 2.2 SE**. Accuracy
+is compressed at 0.93 and separability is not — the same ceiling effect that made the
+articulator contrast look 1.7× too large, pointing the other way for once. Still only
+2.2 SE, so marginal rather than established.
+
+**The identity check is now the standing discipline for this file.** Four added columns,
+appended at the end of the per-seed row so no published field moved. All **12 columns ×
+180 rows** came back character-identical against `results/echoname-audit-full.log`, and the
+feature-10 audit reprinted `+0.1153 ± 0.0136 (8.4 SE)` unchanged.
+
+### Where the echo line stands
+
+Reward raises the echo; the lesson does not. Five explanations are closed — the audible
+voice, the classifier's voicing feature, selection on scored trials, the ear trade, and now
+both the vocal operating point and the repeatability account. What reward does is
+**raise the gain of the vocal code**, differentiating the four heard words by an order of
+magnitude in a creature that learned nothing. The open question is no longer *what* but
+*how*: the candidate is the auditory→vocal transcoding gain, and `arcuate is a transcoder`
+is where to start.
