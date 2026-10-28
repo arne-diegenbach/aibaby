@@ -22938,3 +22938,121 @@ articulator columns moved together throughout, never diverging in the way a feat
 artefact requires — but it does not settle it, because `echoname`'s creatures reached
 that operating point by a different route. The check is one 5-hour re-run of `echoname`
 with `scored_artic` added to its cell.
+
+## Two ways the number could have been the measurement, and neither was (2026-10-28)
+
+`echoname`'s headline is that a yoked creature which **learned nothing** recovered 82% of
+the echo excess, so what raises the echo is reward and not the lesson. That number,
+`yoked − none` `+0.0673 ± 0.0107`, was measured on a classifier whose input the treatment
+itself had moved, on trials the treatment itself had thinned. Both are ways a measurement
+can manufacture its own result, and both are now closed on the same 36 creatures.
+
+`results/echoname-audit-full.log`, one 5-hour re-run, `--ticks 6800000`, no short-run
+banner.
+
+### The control on the change came first
+
+The re-run adds one column and is supposed to do nothing else. If that is true then every
+number the published log printed must come back character-identical — same creatures, same
+seeds, same trials, same reader. `tools/echoname_identity.sh` checks all **180 rows × 11
+published columns** of the per-seed table and the five summary rows:
+
+```
+per-seed rows   old 180   new 180
+per-seed table  IDENTICAL on all 180 rows x 11 published columns
+fresh/none/taught/nodrive/yoked      same   (all seven published summary columns)
+```
+
+The check can fail: run against the 100k-tick smoke it reports 360 differing lines, and
+`fresh` — the one arm that does no teaching — is the only thing that matches. So a pass
+here means the added column reads the same creatures the published claim was made on.
+
+### Artefact one: the classifier's tenth feature is the voiced fraction
+
+`m3_vocal_features` is eleven numbers and **feature 10 is the voiced fraction**, which the
+rewarded arms drove to 0.082 and 0.123 by their own doing. `holdout_accuracy` z-scores
+every dimension with the sd floored at `1e-9`, so a near-constant feature is divided by its
+tiny sd and can dominate every held-out decision. `echoname` computed no articulator
+column, so this was open.
+
+```
+contrast            d echo             d ARTIC
+taught - none   +0.0823 +- 0.0101  +0.1313 +- 0.0133  (8.1 SE vs 9.9 SE)
+yoked  - none   +0.0672 +- 0.0107  +0.1153 +- 0.0136  (6.3 SE vs 8.4 SE)
+taught - yoked  +0.0151 +- 0.0082  +0.0160 +- 0.0093  (1.8 SE vs 1.7 SE)
+```
+
+**The claim survives.** `yoked − none` is `+0.1153 ± 0.0136` (8.4 SE) on seven features
+containing no voicing and no loudness, so reward raises the echo in the articulators and
+the published number is not a feature-10 artefact. `taught − yoked` stays unresolved on
+both columns, so the 20% bound on naming's own share is unchanged.
+
+**And the first reading of that table was wrong.** The articulator contrast looks 1.6–1.7×
+larger, which invites "the effect is really nearly twice as big." It is not: `echo` reads
+0.955 on the taught arm, with almost no room left. Dropping the two features costs the low
+arms ~0.065 and the high arms ~0.021, the signature of ceiling compression. On a
+ceiling-insensitive log-odds scale (`tools/echoname_ceiling_check.py`, 16 of 360 values
+clamped by the offset) the growth is only **1.18× and 1.09×** — the two columns agree to
+within 10–20%, and the raw gap is mostly the ceiling. The audit's verdict is that the
+claim holds, not that it was understated.
+
+### Artefact two: reward thinned the trials it was measured on
+
+Fatigue accumulates with global spiking (`core/src/brain.cpp:567`), sleep is its only
+discharge, and an asleep echo trial is **skipped, not scored**. The rewarded arms scored
+159 and 162 of 200 against 190 and 200 elsewhere. An asleep trial's window is quiescent,
+so its row is uninformative — and dropping uninformative rows *raises* held-out accuracy.
+That has the right sign to manufacture the whole excess, and across the five arms scored
+trials are rank-correlated with the echo 5/5, **exactly as well as the voiced fraction was
+before `quietecho` refused it.**
+
+The per-seed table already carried both columns per creature, so this cost no run at all.
+`tools/echoname_sleep_selection.py`, on the clean articulator column:
+
+```
+within-arm corr(artic, trials)   taught +0.430 (3.0 SE, WRONG SIGN)
+                                 yoked  -0.001 (0.0 SE)   none -0.045 (0.3 SE)
+
+paired yoked - none, by how little both arms slept
+  all creatures   36   +0.1152 +- 0.0137   8.4 SE   mean trials gap -27.9
+  both >= 160/200 22   +0.1228 +- 0.0132   9.3 SE                   -17.4
+  both >= 180/200  6   +0.1213 +- 0.0360   3.4 SE                    -8.3
+
+the artefact's own regression: paired artic diff ~ a + b * paired trials diff
+  b required to carry it   -0.004135
+  b measured               +0.000570 +- 0.000863      5.5 SE the WRONG WAY
+  intercept (zero gap)     +0.1311 +- 0.0277          LARGER than the raw +0.1152
+```
+
+**Selection is refused, and refused quantitatively.** It predicts a negative slope, and
+the measurement sits 5.5 SE the other side of the slope it would need. Restricting to the
+creatures that barely slept does not shrink the excess; the six creatures with only an
+8.3-trial gap carry `+0.1213 ± 0.0360` — the full effect, resolved at 3.4 SE, where the
+same cell on the contaminated `echo` column was unresolved at 1.8. The excess extrapolated
+to a *zero* sleep gap is larger than the raw one.
+
+What this does **not** do is say anything causal about sleep. `trials` is an outcome, not
+an assignment; the cuts are post-hoc subsets of the discovery sample, and the four nested
+rows are not four independent tests. What it does is refuse a specific artefact that made
+a specific quantitative prediction.
+
+### Two limitations worth stating rather than letting pass
+
+The `shuffled` control is computed on the eleven vocal features only
+(`experiments_milestones.cpp:1603`), **never on the seven articulator ones**. The reader,
+labels and splits are identical and shuffling destroys the label–feature relationship
+whichever features are used, so a subset cannot leak where the superset reads 0.496–0.503
+— but it was not measured, and the transfer is an argument rather than a number.
+
+And the first pass of the selection analysis cut the subset on the treatment arm alone,
+which is exactly the error that cost 12.7 h once before. Redone with the subset defined on
+**both** members, the answer held — but that was luck, not method.
+
+### Where this leaves the echo
+
+Reward raises it; the lesson does not. Three candidate explanations are now closed: it is
+not the audible voice (`quietecho`, matched range, ≤15%), not the classifier's voicing
+feature, and not selection on which trials got scored. Reward is still the cause, by the
+yoke's own evidence, and the mechanism is still unidentified. The untested leg is the
+vocal **module**'s own activity — `target_rate_hz`, which voids the calibration invariant
+and needs a recalibration pass to reach.

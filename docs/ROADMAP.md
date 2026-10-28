@@ -704,6 +704,34 @@ down so the next person does not pay again.
    dominate. The primary was therefore the **articulator** column (`scored_artic`, voicing
    and loudness dropped). Replicated on `dna/default.toml` as the `kPass` gate obligation.
 
+   **BOTH ARTEFACTS IN `echoname`'s OWN NUMBER ARE NOW CLOSED** (2026-10-28,
+   `results/echoname-audit-full.log`, one 5-hour re-run). The trap above was turned on the
+   headline itself, and a second one found beside it.
+
+   ```
+   FEATURE 10          yoked - none, echo +0.0672 +- 0.0107 -> ARTIC +0.1153 +- 0.0136 (8.4 SE)
+                       taught - yoked unresolved on BOTH, so the 20% bound is unchanged
+   TRIAL SELECTION     reward thinned scored trials 200 -> 159; an asleep trial is SKIPPED,
+                       and dropping uninformative rows RAISES held-out accuracy
+                       slope it would need -0.004135 / trial
+                       slope measured      +0.000570 +- 0.000863   5.5 SE THE WRONG WAY
+                       both arms >= 180/200, n=6: +0.1213 +- 0.0360 (3.4 SE), FULL effect
+   IDENTITY            180 rows x 11 published columns came back character-identical
+   ```
+
+   Three explanations for the echo excess are now closed — not the audible voice, not the
+   classifier's voicing feature, not selection on which trials were scored. **Reward is
+   still the cause and the mechanism is still unidentified.** The untested leg is the vocal
+   **module**'s own activity (`target_rate_hz`), which voids the calibration invariant.
+
+   **One correction and one gap, both recorded rather than left implicit.** The articulator
+   contrast looks 1.6–1.7× larger raw; on log-odds it is 1.09–1.18×, because `echo` sits at
+   0.955 with no room — the claim survived its audit, it was not understated. And the
+   `shuffled` control is computed on the eleven vocal features only
+   (`experiments_milestones.cpp:1603`), never on the seven articulator ones; the transfer is
+   sound but is an argument, not a measurement. Add
+   `holdout_accuracy(probe_timbre, shuffled, train)` next time that file is touched.
+
    **What is NOT closed, sharply:** neither knob makes the vocal **module** quieter —
    CONTROL B proves `voicing_threshold` leaves the brain's trajectory untouched. "A quieter
    module reads better" survives untested, and reaching it means moving vocal's
