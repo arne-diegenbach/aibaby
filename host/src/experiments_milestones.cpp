@@ -42134,6 +42134,31 @@ bool run_echoname(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
     // `results/echoname-yoke-full.log` must come back BIT-IDENTICAL, and that identity
     // is the control on this change.
     double artic = 0.0;
+    // WHAT REWARD ACTUALLY DID TO THE CODE, ADDED 2026-10-28.
+    //
+    // Four explanations for the echo gain are closed -- the audible voice
+    // (`quietecho`), the voiced feature, selection on which trials were scored, and the
+    // ear trade. Every one of those was a GUESS tested one at a time, and the next guess
+    // in the queue (vocal's own firing rate) would have been another. This measures
+    // instead.
+    //
+    // A held-out accuracy can only rise two ways: the words moved APART in the code, or
+    // the repeats of a word moved CLOSER TOGETHER. Those are different mechanisms --
+    // "reward makes the vocal code more separable" against "reward makes it more
+    // repeatable" -- and the published columns cannot tell them apart, because an
+    // accuracy is their ratio. The rows to decompose are already in hand: the
+    // classifier's own input IS the vocal module's group activity, so nothing here is a
+    // proxy for the thing of interest.
+    //
+    // Pooled across the seven articulator dimensions, over the scored trials:
+    //   `amu`       grand mean activity -- did reward change the vocal drive at all?
+    //   `awithin`   pooled within-word variance  (repeatability; LOWER is better)
+    //   `abetween`  between-word centroid variance (separability; HIGHER is better)
+    //   `asep`      abetween / awithin, the F-like ratio accuracy actually tracks
+    //
+    // PURE ADDITIONAL READOUT off rows already kept, exactly like `artic` before it, so
+    // every previously published column must again come back character-identical.
+    double amu = 0.0, awithin = 0.0, abetween = 0.0, asep = 0.0;
     double dir = 0.0, dnull = 0.0, sp1 = 0.0, sp2 = 0.0, match = 0.0;
     size_t trials = 0;
     uint32_t eskip = 0;
@@ -42253,6 +42278,65 @@ bool run_echoname(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
         // The same six pairs, the same trials, the same reader -- on a feature set that
         // cannot contain the voiced fraction. See the note on `Cell::artic`.
         cell.artic = pair_mean(echo.scored_artic, echo.scored_labels, nullptr);
+        // The separability decomposition described on `Cell::amu`. One pass for the
+        // per-word means, a second for the two variances, both pooled over dimensions so
+        // the answer is one number per creature rather than seven.
+        if (echo.scored_artic.size() == echo.scored_labels.size()) {
+          std::vector<std::vector<double>> wmu(kCFWords);
+          std::vector<uint32_t> wn(kCFWords, 0);
+          std::vector<double> grand;
+          uint32_t n_used = 0;
+          for (size_t t = 0; t < echo.scored_labels.size(); ++t) {
+            const int L = echo.scored_labels[t];
+            const std::vector<double>& row = echo.scored_artic[t];
+            if (L < 0 || L >= int(kCFWords) || row.empty()) continue;
+            if (grand.empty()) grand.assign(row.size(), 0.0);
+            if (row.size() != grand.size()) continue;
+            if (wmu[L].empty()) wmu[L].assign(row.size(), 0.0);
+            for (size_t d = 0; d < row.size(); ++d) {
+              wmu[L][d] += row[d];
+              grand[d] += row[d];
+            }
+            ++wn[L];
+            ++n_used;
+          }
+          // Every word needs two repeats or a within-word variance is undefined, and a
+          // creature that cannot supply that reports nothing rather than a zero.
+          uint32_t words_ok = 0;
+          for (uint32_t k = 0; k < kCFWords; ++k) {
+            if (wn[k] >= 2) ++words_ok;
+          }
+          if (words_ok == kCFWords && n_used > kCFWords && !grand.empty()) {
+            const size_t D = grand.size();
+            for (double& v : grand) v /= double(n_used);
+            for (uint32_t k = 0; k < kCFWords; ++k) {
+              for (double& v : wmu[k]) v /= double(wn[k]);
+            }
+            double within = 0.0, between = 0.0, mu = 0.0;
+            for (size_t t = 0; t < echo.scored_labels.size(); ++t) {
+              const int L = echo.scored_labels[t];
+              const std::vector<double>& row = echo.scored_artic[t];
+              if (L < 0 || L >= int(kCFWords) || row.size() != D) continue;
+              for (size_t d = 0; d < D; ++d) {
+                const double e = row[d] - wmu[L][d];
+                within += e * e;
+              }
+            }
+            for (uint32_t k = 0; k < kCFWords; ++k) {
+              for (size_t d = 0; d < D; ++d) {
+                const double e = wmu[k][d] - grand[d];
+                between += double(wn[k]) * e * e;
+              }
+            }
+            for (size_t d = 0; d < D; ++d) mu += grand[d];
+            within /= double((n_used - kCFWords) * D);
+            between /= double((kCFWords - 1) * D);
+            cell.amu = mu / double(D);
+            cell.awithin = within;
+            cell.abetween = between;
+            cell.asep = within > 0.0 ? between / within : 0.0;
+          }
+        }
         if (!echo.scored_heard.empty()) {
           cell.echo_ear = pair_mean(echo.scored_heard, echo.scored_labels, nullptr);
         }
@@ -42308,15 +42392,19 @@ bool run_echoname(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
     return se;
   };
 
-  std::printf("  %-6s %-8s %-7s %-7s %-8s %-9s %-7s %-10s %-8s %-10s %-9s %s\n", "seed",
-              "arm", "echo", "artic", "its EAR", "shuffled", "trials", "aud WHILE",
-              "voiced", "direction", "its null", "F1 spread");
+  std::printf("  %-6s %-8s %-7s %-7s %-8s %-9s %-7s %-10s %-8s %-10s %-9s %-8s %-8s %-9s %-9s %s\n",
+              "seed", "arm", "echo", "artic", "its EAR", "shuffled", "trials",
+              "aud WHILE", "voiced", "direction", "its null", "F1 spread", "drive",
+              "within", "between", "sep");
   std::vector<double> echo[kENArms], art[kENArms], ear[kENArms], shuf[kENArms];
   std::vector<double> aud[kENArms], vf[kENArms];
   std::vector<double> dir[kENArms], dnul[kENArms];
   // Scored echo trials per arm, out of the 200 the budget allows. Collected because the
   // first full-budget run read its primary on the arm with the fewest of them.
   std::vector<double> tr[kENArms];
+  // The separability decomposition (see `Cell::amu`): overall vocal drive, and the two
+  // variances whose RATIO is what a held-out accuracy actually reports.
+  std::vector<double> amu[kENArms], awi[kENArms], abe[kENArms], asp[kENArms];
   std::vector<double> paired, lived;
   for (uint32_t r = 0; r < kENReps; ++r) {
     for (uint32_t a = 0; a < kENArms; ++a) {
@@ -42326,11 +42414,21 @@ bool run_echoname(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
                     kENArmName[a], c.scored, c.skipped);
         continue;
       }
-      std::printf("  %-6u %-8s %-7.3f %-7.3f %-8.3f %-9.3f %-7zu %-10.1f %-8.3f %-10.3f %-9.3f %.1f\n",
+      // The four decomposition numbers are APPENDED, so every column published before
+      // today keeps its field position and the identity check against
+      // `results/echoname-audit-full.log` still reads them where it expects them.
+      std::printf("  %-6u %-8s %-7.3f %-7.3f %-8.3f %-9.3f %-7zu %-10.1f %-8.3f %-10.3f %-9.3f %-8.1f %-8.4f %-9.5f %-9.5f %.2f\n",
                   r, kENArmName[a], c.echo, c.artic, c.echo_ear, c.echo_shuf, c.trials,
-                  c.aud0, c.vfrac, c.dir, c.dnull, c.sp1);
+                  c.aud0, c.vfrac, c.dir, c.dnull, c.sp1, c.amu, c.awithin, c.abetween,
+                  c.asep);
       echo[a].push_back(c.echo);
       art[a].push_back(c.artic);
+      if (c.asep > 0.0) {
+        amu[a].push_back(c.amu);
+        awi[a].push_back(c.awithin);
+        abe[a].push_back(c.abetween);
+        asp[a].push_back(c.asep);
+      }
       ear[a].push_back(c.echo_ear);
       shuf[a].push_back(c.echo_shuf);
       aud[a].push_back(c.aud0);
@@ -42384,6 +42482,105 @@ bool run_echoname(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
                 mean_of(art[a]), sem_of(art[a]), mean_of(ear[a]), mean_of(shuf[a]),
                 mean_of(aud[a]), mean_of(vf[a]), mean_of(tr[a]), mean_of(dir[a]),
                 sem_of(dir[a]));
+  }
+
+  // ---- WHAT REWARD DID TO THE CODE: THE SEPARABILITY DECOMPOSITION ----
+  //
+  // A held-out accuracy is a RATIO. It rises when the words move apart in the vocal code
+  // and it rises when the repeats of a word move closer together, and those are
+  // different mechanisms that the published columns cannot tell apart. Here they are
+  // separated, on the same rows the accuracy was computed from.
+  //
+  // Variances are multiplicative, so the paired statistic is a LOG ratio per creature,
+  // which also makes the attribution exact rather than a judgement: since
+  // `sep = between / within`, log sep = log between - log within, so the change in log
+  // separability is EXACTLY the change in log between minus the change in log within.
+  // Whatever share one term is missing, the other has.
+  {
+    std::printf("\n  WHAT REWARD DID TO THE CODE -- the accuracy above is a ratio, and\n"
+                "  these are its two parts, pooled over the seven articulator groups.\n"
+                "  `within` is how far repeats of ONE word scatter (lower reads better)\n"
+                "  and `between` is how far the four words sit apart (higher reads\n"
+                "  better). Nothing here is a proxy: the classifier's own input IS the\n"
+                "  vocal module's group activity.\n");
+    std::printf("    arm      n    drive     within      between     sep\n");
+    for (uint32_t a = 0; a < kENArms; ++a) {
+      if (asp[a].empty()) {
+        std::printf("    %-8s --   no creature supplied two repeats of all four words\n",
+                    kENArmName[a]);
+        continue;
+      }
+      std::printf("    %-8s %-4zu %-9.4f %-11.5f %-11.5f %.2f\n", kENArmName[a],
+                  asp[a].size(), mean_of(amu[a]), mean_of(awi[a]), mean_of(abe[a]),
+                  mean_of(asp[a]));
+    }
+    std::printf("\n    contrast          d log drive   d log within  d log between"
+                "  d log sep   attribution\n");
+    struct Pair { const char* label; uint32_t hi, lo; };
+    const Pair pairs[3] = {{"taught - none ", 2, 1},
+                           {"yoked  - none ", 4, 1},
+                           {"taught - yoked", 2, 4}};
+    for (const Pair& p : pairs) {
+      std::vector<double> dm, dw, db;
+      for (uint32_t r = 0; r < kENReps; ++r) {
+        const Cell& ch = cells[r * kENArms + p.hi];
+        const Cell& cl = cells[r * kENArms + p.lo];
+        if (!ch.ok || !cl.ok) continue;
+        if (ch.asep <= 0.0 || cl.asep <= 0.0) continue;
+        if (ch.amu <= 0.0 || cl.amu <= 0.0) continue;
+        dm.push_back(std::log(ch.amu / cl.amu));
+        dw.push_back(std::log(ch.awithin / cl.awithin));
+        db.push_back(std::log(ch.abetween / cl.abetween));
+      }
+      if (dm.empty()) {
+        std::printf("    %s  no creature pair usable\n", p.label);
+        continue;
+      }
+      const double mm = mean_of(dm), mw = mean_of(dw), mb = mean_of(db);
+      const double sm = sem_of(dm), sw = sem_of(dw), sb = sem_of(db);
+      const double msep = mb - mw;
+      // The share of the separability change each term carries. Reported only when the
+      // two terms push the SAME way on sep; when they oppose, a percentage of a
+      // difference of opposite signs is a misleading number and the sign is printed
+      // instead.
+      char attrib[64];
+      if (std::fabs(msep) < 1e-9) {
+        std::snprintf(attrib, sizeof(attrib), "sep did not move");
+      } else if (mb * msep > 0.0 && -mw * msep > 0.0) {
+        std::snprintf(attrib, sizeof(attrib), "%.0f%% apart, %.0f%% tighter",
+                      100.0 * mb / msep, 100.0 * -mw / msep);
+      } else {
+        std::snprintf(attrib, sizeof(attrib), "%s carries it, the other opposes",
+                      std::fabs(mb) > std::fabs(mw) ? "between" : "within");
+      }
+      std::printf("    %s  %+.3f+-%.3f %+.3f+-%.3f %+.3f+-%.3f %+.3f      %s\n", p.label,
+                  mm, sm, mw, sw, mb, sb, msep, attrib);
+    }
+    std::printf("\n    Read the SIGNS first. A creature whose code got more repeatable\n"
+                "    shows d log within NEGATIVE; one whose words moved apart shows\n"
+                "    d log between POSITIVE. `drive` is the overall vocal activity and\n"
+                "    is the column that says whether reward changed the operating point\n"
+                "    at all -- the question `vocalrate` was going to be built to ask.\n");
+    // PRE-REGISTERED 2026-10-28, OFF THE SMOKE'S `drive` COLUMN AND THE GENOME, BEFORE
+    // THE FULL-BUDGET RUN. The 100k smoke read drive 0.5000-0.5008 on all five arms.
+    // That is not a coincidence and not a short-run artefact: vocal's `target_rate_hz`
+    // is 5.0 and `rate_norm_hz` is 10.0, so a group activity of 5/10 = 0.50 is exactly
+    // where homeostasis HOLDS this module. The prediction is therefore that `drive`
+    // stays ~0.50 on every arm at FULL budget too.
+    //
+    // If it does, two things follow and both are results rather than nulls. Reward does
+    // not move the vocal operating point, because homeostasis will not let it -- so
+    // `vocalrate`, the experiment queued to ask whether vocal's rate carries the echo,
+    // would have been testing a difference reward does not produce. And whatever reward
+    // does must live in the STRUCTURE of the code, which is what `within` and `between`
+    // measure, rather than in its level.
+    //
+    // If `drive` DOES move at full budget, this comment is wrong and the homeostatic
+    // account with it; say so plainly and build `vocalrate` after all.
+    std::printf("    PRE-REGISTERED: `drive` is predicted to sit at ~0.50 on every arm,\n"
+                "    because vocal's target_rate_hz 5.0 over rate_norm_hz 10.0 is where\n"
+                "    homeostasis holds it. If that holds, reward cannot move the vocal\n"
+                "    operating point and whatever it does is STRUCTURAL, not a level.\n");
   }
 
   // ---- THE FEATURE-10 AUDIT, on this experiment's own headline numbers ----
