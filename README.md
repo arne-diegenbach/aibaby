@@ -23266,3 +23266,68 @@ threefold and F1 spread did not follow (+0.082, 0.5 SE), so **the expanded code 
 reaching the formant.** That is the project's recurring shape — a representation that
 exists and does not express — and it puts this result in the same family as
 `A PERFECT PHASE INDEX BUYS NOTHING` and `delivery was never the limit`.
+
+## Retraction: the code does reach F1. Reward buys the magnitude, the lesson buys the direction (2026-10-28)
+
+The section above says "the expanded code is not reaching the formant" and files the result
+with the project's expression-gap findings. **That is wrong and is retracted.** The code
+reaches F1 completely. What does not arrive is the *assignment*, and the dissociation is
+the cleanest thing this run produced.
+
+### What went wrong in the reasoning
+
+I rested the claim on a per-creature **correlation** null — `d log between` against
+`d F1 spread`, r = +0.082 (0.5 SE) — and never looked at the per-arm **contrast** on that
+same column. The contrast is enormous. Two noisy measures of related quantities, taken in
+different epochs (`sp1` is read off session utterances, `between` off the echo window), can
+correlate at zero across creatures while both move hugely on average. **A null correlation
+between noisy measures is not a mechanistic absence**, and the per-arm number was one line
+away the whole time.
+
+### What is actually true
+
+`sp1` is the mean over the six word pairs of `|mean F1(x) − mean F1(y)|` in Hz — the F1
+analogue of `between`. `direction` is whether the right word gets the right vowel, read
+against each creature's own null (`tools/echoname_f1_spread.py`).
+
+```
+arm       F1 spread Hz      direction      its null
+none        19.6 +- 1.4    0.248+-0.015      0.250
+yoked       48.9 +- 3.1    0.247+-0.023      0.249
+taught      44.4 +- 2.7    0.436+-0.020      0.258
+
+contrast            d F1 spread Hz   SE u   ratio     d direction      SE u
+taught - none         +24.9 +- 3.1    8.2   2.27x   +0.1879+-0.0198    9.5
+yoked  - none         +29.3 +- 2.8   10.6   2.50x   -0.0019+-0.0205    0.1
+taught - yoked         -4.4 +- 4.4    1.0   0.91x   +0.1899+-0.0283    6.7
+```
+
+**A double dissociation, on the same 36 creatures, both halves resolved.**
+
+- **Reward alone buys the entire magnitude and none of the direction.** The yoke — which
+  learned nothing — gains **+29.3 Hz, a 2.50× rise at 10.6 SE**, while its direction sits
+  at 0.247 against its own null of 0.249: **0.1 SE, dead flat.**
+- **The lesson buys the entire direction and no extra magnitude.** `taught − yoked` is
+  **+0.1899 ± 0.0283 (6.7 SE)** in direction and **−4.4 ± 4.4 Hz (1.0 SE)** in spread.
+
+So reward makes the creature produce measurably *different* vowels for different words —
+two and a half times further apart — with the pairing arbitrary. Teaching does not make the
+vowels further apart; it decides **which** word gets **which** one.
+
+That also explains why `taught − yoked` was so hard to resolve on the echo (1.7–1.8 SE) and
+on separability (2.2 SE): those columns read *distinguishability*, which reward has already
+maximised. The lesson's contribution is invisible to them by construction and shows up at
+6.7 SE the moment you ask the question it actually answers.
+
+### Where this leaves the line
+
+This is not an expression gap, so it does not belong with `A PERFECT PHASE INDEX BUYS
+NOTHING`. It belongs with the magnitude/direction split already on record — `orthoname`
+("conditionality solved, travel not"), `ctxaxis` (the magnitude line), and
+`Chance is not 1/k`, whose warning is exactly what kept the yoke's 0.247 honest: it is at
+chance because its own per-creature null is 0.249, not because 0.247 looks low.
+
+The open question is now sharp and small. Reward supplies a differentiated vocal code and
+2.5× the F1 separation to express it with. The lesson supplies the assignment. **Nothing
+yet says why the assignment needs a lesson at all when the separation is already there** —
+and that is a much better question than the one I was chasing this morning.
