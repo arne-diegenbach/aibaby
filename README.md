@@ -23604,3 +23604,41 @@ indices happened to land right. A structured diff is more seductive than a noisy
 this is the third multi-token field to break a script today. Count the fields in one row of
 each log before comparing them, and when a diff comes back structured, suspect the parser
 before the finding.
+
+### Separation does not predict alignment, even within the taught arm (2026-10-29)
+
+With 72 taught creatures in hand (the `s 0` arms of both `exsweep` samples), the question
+was whether the lesson's rotation is trial-limited — if more teaching buys more alignment,
+a longer lesson is an improvement lever. The answer is mostly that this test cannot say,
+and one line of it is worth keeping anyway (`tools/rotation_limit.py`).
+
+```
+correlation of ABOVE-NULL DIRECTION with, n=72 (2 SE excludes |r| > 0.24):
+  utterances   r +0.162   1.4 SE
+  praises      r +0.309   2.8 SE
+  between      r +0.113   0.9 SE
+  sep          r +0.134   1.1 SE
+
+fewest-utterance third (1309 utts)  direction +0.1793 +- 0.0226
+most-utterance third   (1694 utts)  direction +0.2293 +- 0.0229
+difference                          +0.0500 +- 0.0322   (1.6 SE)
+```
+
+**The one correlation that resolves is confounded backwards and cannot be used.** Praise is
+*earned by producing near the target*, so a creature whose map is already better aligned
+collects more of it. `r = +0.309` is at least as readable as "alignment causes praise" —
+the likelier direction, given how the regime works — as the reverse. It is not evidence
+that more teaching helps, and treating it that way would be the same mistake as reading a
+per-creature correlation as a mechanism, which cost a retraction yesterday.
+
+**What is worth keeping is the null on `between`.** How separated a creature's vocal code is
+does **not** predict how well the lesson aligns it: `r = +0.113`, 0.9 SE, with 2 SE
+excluding |r| > 0.24. That is a third independent line on the dissociation — reward's
+separation and the lesson's assignment were shown to be separable *between arms* (the double
+dissociation) and *across creatures within an arm* (`between` vs `within`, r = −0.079), and
+now separation does not predict alignment *within the taught arm either*.
+
+**The question therefore stays open and needs an intervention, not a correlation:** a budget
+ladder above 6.8M ticks, asking whether direction keeps rising. `vocallearn`'s own positive
+control is strongly budget-dependent below that (−1.2 at 560k, +4.0 at 1.6M, +18.3 at 3.4M),
+so saturation above it is a real question and not a settled one.
