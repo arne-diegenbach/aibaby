@@ -593,6 +593,37 @@ Not costed. `norm_gain`, `ffi_gain` and `lateral_gain` are all 0.0 on vocal, so 
 exists in the kernel but would need a slow integrator driving it rather than instantaneous
 control.
 
+**Read in full (2026-10-30), the paper confirms the structure and qualifies the prize.** It
+states the blocker itself, unprompted: *"A nonzero minimal weight value is important because
+multiplicative homeostatic plasticity cannot potentiate synaptic strength if it reaches
+zero."* So the hybrid-with-a-floor is the published design requirement rather than a patch
+invented to rescue the idea. Two qualifications, though, and the second is serious:
+
+- **It is not about intrinsic plasticity at all.** `grep -i excitability` over the full text
+  returns nothing; the paper factorises *synaptic* weight, while this project's homeostat is
+  intrinsic and writes a threshold. The structural lesson transfers; the IP antecedent is
+  Triesch, not Toyoizumi.
+- **Its precondition may fail here.** The requirement is two-part: *"Hebbian plasticity must
+  arrive on its own at a stable steady state, and this stability must not be disturbed by
+  slow, ongoing homeostatic plasticity."* Part (a) is an assumption about the learning rule,
+  and `ipoff` is evidence against it — removing the homeostat does not make learning drift,
+  it collapses it at −7.42 SE.
+
+**And v57 is nearer prior art than the section above admits.** `ip_pool = 9` regulates each
+group's mean and frees the other thirteen directions — already "regulate the common level,
+leave the pattern alone", the same division of labour a group-wide gain implements — and it
+*halved* `aligned`. The only honest distinction left is mechanical: v57 subtracted a common
+offset, which does not preserve a centroid through a nonlinear rate transfer, whereas a gain
+preserves it exactly. That is real but narrow, and it is the whole case. Cutting the same
+way, v74 found 39% rate drift costing 1.50 SE where `ipoff`'s 23% collapsed learning — so
+what learning needs is per-neuron *pattern* regulation, not rate-level regulation, and a
+cell-wide gain supplies none of the former.
+
+**So the pre-flight comes before the build, and it is cheap:** does the additive threshold
+homeostat stabilise the rate only, or the learned pattern too? If the pattern, this is
+`ipoff` with a rate clamp and it is refuted before a line is written. That is answerable from
+existing logs or a read-only probe.
+
 ## Standing prohibitions
 
 These are places where fitting has already cost this project a result, and they are written
