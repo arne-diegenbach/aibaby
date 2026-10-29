@@ -548,6 +548,51 @@ this creature cannot yet be taught two.
   orders while the behaviour is not. A predictable word sequence helps the voice and not the
   carrier, and nothing accounts for it.
 
+### 6. A MULTIPLICATIVE homeostat — the strongest remaining lead, not built (2026-10-29)
+
+Found by asking which literature this project had *not* cited: **Triesch** and **Toyoizumi**
+were both absent while Zenke, Turrigiano, Masse, Kornfeld and Fiete were all present.
+Toyoizumi, Kaneko, Stryker & Miller (2014) argue that slow homeostatic feedback cannot
+stabilise fast Hebbian feedback **when both act on the same variable**, and their remedy is
+to factorise: a synapse-specific Hebbian factor times a cell-wide homeostatic one, each with
+its own stable inactive state.
+
+That maps onto two facts in this code, and the mapping is algebra rather than analogy:
+
+- **The readout is exactly scale-invariant.** `read_group` returns
+  `sum(w_i·p_i)/sum(w_i)` with `w_i` the rate, so scaling every rate by a common factor
+  cancels. The same function's `activity` output — the mean rate, which gates voicing — is
+  *not* scale-invariant.
+- **The homeostat is additive on the threshold**
+  (`threshold_[i] = clampf(threshold_[i] + ip_rate*err, …)`), and a per-neuron offset changes
+  *relative* rates, so it moves the centroid.
+
+**So a homeostat regulating rate by a common multiplicative gain would be algebraically
+invisible to the formant readout while still controlling the voicing gate.** That is why it
+is not v57/v58/v74 again: all three kept the additive homeostat and relieved it on a subspace
+(13 directions of 14, a magnitude, then 1 direction), trading regulation for expression. A
+multiplicative homeostat keeps regulation at full strength and is unseen anyway, which
+dissolves the "no setting between the horns" trade instead of bargaining inside it. The prize
+would be recovering `bias→rate` from 0.34 toward the 0.91 measured with IP off, without the
+−7.42 SE collapse that turning IP off causes.
+
+**The blocker, which the code states itself.** The threshold path exists partly to lower the
+bar and "keep a module alive when reward learning quietly weakens all of its inputs" — and a
+gain cannot revive a silent neuron, since any gain times zero is zero. So the honest design is
+a hybrid: multiplicative for regulation, with the threshold term retained as a floor near
+silence. The floor is where it can go wrong, and that makes it a two-part mechanism rather
+than a one-line change.
+
+**Before building it, settle which quantity the exponent takes.** `dF1 ~ aligned^0.61` needs
+`aligned` ×2.34 for the ×1.68 the ceiling asks. Transfer 0.34 → 0.91 is a larger change than
+any knob found so far, but it is a change to the *transfer*, not to `aligned` — and the
+synthesis already found that nothing downstream binds. Work that arithmetic out first;
+v58's generation was lost to a gate that asked for a quantity the mechanism could not move.
+
+Not costed. `norm_gain`, `ffi_gain` and `lateral_gain` are all 0.0 on vocal, so a gain pathway
+exists in the kernel but would need a slow integrator driving it rather than instantaneous
+control.
+
 ## Standing prohibitions
 
 These are places where fitting has already cost this project a result, and they are written

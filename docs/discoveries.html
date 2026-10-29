@@ -1506,6 +1506,52 @@ explicitly not claimed. Re-asked on a fresh family it read +0.018 &plusmn; 0.032
 overall advantage reversed sign. The effect was an artefact of the sample that produced the
 hypothesis, and labelling it as such in advance is the only reason its refusal cost nothing.</p>
 
+<h3>6.12 Reward supplies the separation and the lesson supplies the assignment</h3>
+<p>A double dissociation on the same 36 creatures, with each half null on the other&rsquo;s
+axis. Reward alone buys the entire produced separation and none of the mapping: a yoked arm,
+receiving reward in the same proportions on the same schedule but half a trial out of phase
+so that it cannot land on anything the creature did, gains
++29.3&nbsp;&plusmn;&nbsp;2.8&nbsp;Hz of between-word first-formant separation
+(2.50&times;, 10.6&nbsp;SE) while its direction reads 0.247 against its own null of 0.249
+&mdash; 0.1&nbsp;SE. The lesson buys the entire mapping and no further separation: taught
+minus yoked is +0.1899&nbsp;&plusmn;&nbsp;0.0283 in direction (6.7&nbsp;SE) and
+&minus;4.4&nbsp;&plusmn;&nbsp;4.4&nbsp;Hz in separation (1.0&nbsp;SE). So reward makes the
+creature produce measurably different vowels for different words, with the pairing
+arbitrary, and teaching decides which word gets which vowel.</p>
+<p>The result explains an earlier unresolvable contrast rather than merely adding to it.
+Taught minus yoked would not resolve on any accuracy column (1.7&ndash;1.8&nbsp;SE, and
+2.2&nbsp;SE on separability) because those columns read distinguishability, which reward has
+already maximised; the lesson&rsquo;s contribution is invisible to them by construction and
+reads 6.7&nbsp;SE the moment the question is asked on direction instead. The per-creature
+null is what keeps the yoke&rsquo;s 0.247 honest: it is chance because that creature&rsquo;s
+own null is 0.249, not because 0.247 looks low.</p>
+<p><strong>A claim retracted on the way:</strong> the opposite conclusion &mdash; that the
+expanded code was not reaching the formant &mdash; was first asserted from a per-creature
+correlation null (+0.082, 0.5&nbsp;SE) while the per-arm contrast on the same column read
+10.6&nbsp;SE. The two measures are read off different windows, so two noisy measures of
+related quantities can correlate at zero while both move hugely. A null correlation between
+noisy measures is not a mechanistic absence.</p>
+
+<h3>6.13 One creature does both</h3>
+<p>Each half of the project&rsquo;s vocal behaviour was established on a different
+individual: repetition on a freshly hatched creature and four-word conditional naming on a
+trained one, with no individual ever asked for both. Read off the live session after the
+lesson, on the same creature, the echo of which word was just heard reaches 0.955 against
+the 0.75 bar carried over from the repetition milestone, while naming lands at
++0.1790&nbsp;&plusmn; its own per-creature null. The two capabilities compose in one
+individual.</p>
+<p><strong>What it cost to get right:</strong> the first pre-flight read the echo at chance
+on every arm that had lived a session, and the cause was the measurement passing its own
+negative control flag &mdash; the caregiver never speaks &mdash; into the reader. Every arm
+that lived a session was scored on a creature that was never spoken to, while the positive
+control reached the same reader by a different code path and did play words. A positive
+control that reaches the measurement by a different code path from the treatment arms
+certifies the reader and says nothing about the protocol. Two corroborating diagnostics
+offered alongside it, halved auditory drive and a voiced fraction down by two thirds, are
+both what a word that never plays produces: one fault counted three times rather than three
+pieces of evidence.</p>
+
+
 <h2>7. Transmission between creatures</h2>
 <h3>7.1 One creature teaches another: a learned distinction crosses to a second individual
 through the air, and narrows on the way</h3>
@@ -1952,7 +1998,12 @@ plausible mechanism from consideration.</p>
 <tr><td>Consolidation brake on high-traffic edges</td><td>Binds hard (0.671 of the unbraked rate) and changes neither retention nor learning</td></tr>
 <tr><td>Removing overall drive from the index feature</td><td>Pays +0.064/+0.161 only with <em>random distinct</em> prototype seeds, which the creature cannot produce; 1.4&nbsp;SE at its own initialisation</td></tr>
 <tr><td>Adaptive-resonance vigilance as the seeding rule</td><td>Recovers at most 1.6&nbsp;SE of that, and at the shipped threshold commits exactly <em>one</em> slot &mdash; so the milestone built on it was measuring a constant index</td></tr>
-<tr class="last"><td>An operating point where gesture and lesson compose</td><td>Twelve cells over the whole (gain,&nbsp;drive) plane, both axes and both corners. At the gesture bar the lesson is 3.7&nbsp;SE short; the corner is strictly dominated</td></tr>
+<tr><td>An operating point where gesture and lesson compose</td><td>Twelve cells over the whole (gain,&nbsp;drive) plane, both axes and both corners. At the gesture bar the lesson is 3.7&nbsp;SE short; the corner is strictly dominated</td></tr>
+<tr><td>Per-neuron spread of the firing threshold</td><td>Costs 61% of the lesson, monotone in sigma, 3.5&nbsp;SE. The threshold is already learned as the bias, so an imposed spread is noise in the quantity the rule is setting</td></tr>
+<tr><td>Per-neuron spread of the membrane leak</td><td>Nothing either way, learned or imposed; bound 31%</td></tr>
+<tr><td>Per-neuron spread of the refractory period</td><td>Structurally inert: the creature runs 46&ndash;81&times; below the ceiling the constant sets, so it governs about 1.5% of each neuron&rsquo;s input. &minus;1.6% per 0.1&nbsp;sigma against the threshold&rsquo;s &minus;20%, and a spread holds the operating point to sigma 0.60 where the threshold broke it at 0.04</td></tr>
+<tr><td>Pooling the rate regulator across an articulator group</td><td>Improves the transfer (0.34&nbsp;&rarr;&nbsp;0.51) and halves the learned bias, and the two offset: &minus;0.90&nbsp;SE. Every neuron receives the slice mean, so the common threshold is pushed back 3&times; harder and the gradient is noisier to estimate in</td></tr>
+<tr class="last"><td>Exempting the readout&rsquo;s own coordinate from the regulator</td><td>One direction of fourteen rather than thirteen. The mechanism prediction was confirmed and the outcome did not follow: threshold push 1.02&times; against pooling&rsquo;s 3.3&times;, and the learned bias 0.957&times; with its own control falling too. The regulator&rsquo;s coordinate system is not what binds</td></tr>
 </table>
 
 <h2>10. Provenance</h2>
@@ -2026,6 +2077,8 @@ twenty-five.</p>
 <tr><td>Contexts lying on a continuum rather than being discrete slots</td><td>Heald, Lengyel &amp; Wolpert (2023)</td></tr>
 <tr><td>Best-permutation agreement as the way to score an unsupervised partition, and its exact solution</td><td>Kuhn (1955); Munkres (1957), after K&#337;nig and Egerv&aacute;ry</td></tr>
 <tr><td>A uniform cluster prior helping on balanced data and hurting on imbalanced data</td><td>Assran et al. (2023)</td></tr>
+<tr><td>Fast associative plasticity and slow homeostatic feedback being unable to stabilise each other, and factorising the two onto separate variables as the remedy</td><td>Toyoizumi, Kaneko, Stryker &amp; Miller (2014); Zenke &amp; Gerstner</td></tr>
+<tr><td>Intrinsic plasticity as adaptation of a neuron&rsquo;s own output distribution, derived by information maximisation</td><td>Triesch (2005); Savin, Joshi &amp; Triesch (2010)</td></tr>
 <tr class="last"><td>The online prototype update whose rate is 1/wins, and the win-balance penalty beside it</td><td>MacQueen (1967); DeSieno (1988)</td></tr>
 </table>
 
