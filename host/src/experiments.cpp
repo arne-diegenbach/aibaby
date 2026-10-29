@@ -223,6 +223,26 @@ const Spec kSpecs[] = {
     // with its slope, its power and its bound, so there is no bar to fit a verdict to.
     // 560000 is `imitate`'s own budget and `imitate`'s own minimum: 200 trials of 2800,
     // which at four words is 50 per word and 100 per pair.
+    // kRead and kTeach for exactly `exsweep`'s reasons: it is an INSTRUMENT, not a
+    // milestone, so it cannot fail for a measured reason and every verdict is printed;
+    // and it needs a kContext module, which `dna/default.toml` has not got, so the fast
+    // gate must not run it. `--ticks` is the ladder's SCALE: the spec minimum of 6800000
+    // produces ctxscale's own points (3.4M/6.8M/13.6M/27.2M) and makes rung 1
+    // echoname's published taught arm, which is what carries the free control.
+    {"dirbudget", 6800000, Expect::kRead, Tier::kTeach,
+     "  the magnitude/direction split says REWARD buys the F1 separation and the\n"
+     "  LESSON buys the assignment (10.6 and 6.7 SE on 36 creatures). The\n"
+     "  magnitude's budget curve is CLOSED -- ctxscale saturates at ~118 Hz, with\n"
+     "  the creature at 94% of asymptote -- but NO run has put the DIRECTION on a\n"
+     "  ladder, and the two are separable by construction. Four taught rungs at\n"
+     "  ticks/2, ticks, 2x, 4x, 36 creatures each, paired because every rung runs\n"
+     "  the same seeds. FOUR points because ctxscale's first read was on three and\n"
+     "  printed COMPUTE-LIMITED: the fourth reversed it (ratios 1.98, 1.38, 1.23),\n"
+     "  so three rungs on this curve lies with confidence. Primary is `direction`\n"
+     "  minus each creature's OWN null -- chance is not 1/k -- and the saturation\n"
+     "  is read off the per-doubling ratio of that excess. At the spec minimum,\n"
+     "  rung 1 IS echoname's published taught arm and must reproduce it seed for\n"
+     "  seed; at any other --ticks the log says it has no such control"},
     {"exsweep", 6800000, Expect::kRead, Tier::kTeach,
      "  reward buys the between-word SEPARATION and the lesson buys the\n"
      "  ASSIGNMENT -- a double dissociation at 10.6 and 6.7 SE. So does phasic\n"
@@ -1201,6 +1221,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "aimaxes") ok = run_aimaxes(dna_blob, ticks, verbose);
   else if (name == "ctxgrid") ok = run_ctxgrid(dna_blob, ticks, verbose);
   else if (name == "echoname") ok = run_echoname(dna_blob, ticks, verbose);
+  else if (name == "dirbudget") ok = run_dirbudget(dna_blob, ticks, verbose);
   else if (name == "quietecho") ok = run_quietecho(dna_blob, ticks, verbose);
   else if (name == "exsweep") ok = run_exsweep(dna_blob, ticks, verbose);
   else if (name == "ctxvocab") ok = run_ctxvocab(dna_blob, ticks, verbose);

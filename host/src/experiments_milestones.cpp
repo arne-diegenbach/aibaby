@@ -43076,6 +43076,403 @@ bool run_echoname(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
 }
 
 
+// ============ dirbudget: DOES THE LESSON'S ROTATION SATURATE WITH BUDGET? ============
+//
+// THE QUESTION THIS EXISTS FOR, and it is the open half of a dissociation rather than a
+// new idea. `echoname`'s separability columns gave a double dissociation on 36 creatures:
+// REWARD buys the entire F1 magnitude and NONE of the direction (a yoke that learned
+// nothing gained +29.3 +/- 2.8 Hz of between-word separation, 10.6 SE, with direction
+// 0.247 against its own null of 0.249), and THE LESSON buys the entire direction and no
+// extra magnitude (taught - yoked: +0.1899 +/- 0.0283 in direction, 6.7 SE; -4.4 +/- 4.4
+// Hz in spread, 1.0 SE). Reward supplies the separation, the lesson decides which word
+// gets which vowel.
+//
+// The magnitude half's budget question is CLOSED and the answer is on file: `ctxscale`
+// ran exactly this ladder in September -- 3.4M, 6.8M, 13.6M and 27.2M -- and the learned
+// bias saturates at ~118 Hz with the creature already at 94% of the asymptote. Doubling
+// again buys 6 Hz, 10x buys nothing, and the conclusion on record is that architecture
+// rather than compute is what binds.
+//
+// NOTHING HAS PUT THE DIRECTION ON A BUDGET LADDER. That is the whole content of the
+// split: magnitude and assignment are separable, so the magnitude's saturation says
+// nothing about the rotation's. That is the entire motivation, and it is enough.
+//
+// A MISREADING THIS COMMENT ORIGINALLY CARRIED, kept because it is the kind that
+// survives review. I first justified this run by saying `echoname` delivers only ~140
+// actual teaching trials at 6.8M, reading its per-seed `trials` column (133-172). That
+// column is `echo.scored_labels.size()` -- the ECHO sample out of 200 nominal trials at
+// kENEchoTicks = 560000 -- and has nothing to do with the teaching budget. The session
+// runs 2428 teaching trials at 6.8M, which `echoname`'s own header prints. The project's
+// "142 teaching trials" note belongs to the `--allow-short` PRE-FLIGHT, where the budget
+// really was short, and at full budget that experiment's naming leg landed. So there is
+// no trial-starvation artefact to fix here; the question stands on the split alone.
+//
+// FOUR POINTS, AND THIS IS THE ENTIRE REASON FOR THE SHAPE. `ctxscale`'s first read was
+// on THREE points and printed COMPUTE-LIMITED, and the fourth point reversed it: the
+// per-doubling ratios came out 1.98, 1.38, 1.23, i.e. the exponent halves every doubling.
+// A three-point ladder on this curve lies confidently. So three rungs is not a cheaper
+// version of this experiment, it is a wrong one.
+bool run_dirbudget(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  aibaby::Dna dna;
+  if (dna.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) {
+    std::printf("  setup failed: the genome does not load\n");
+    return false;
+  }
+  const int32_t ctx_module = dna.module_with_role(aibaby::ModuleRole::kContext);
+  if (ctx_module < 0) {
+    std::printf("  this genome has no kContext module, so there is no index to name\n"
+                "  four words on. Build one with NO output weight:\n\n"
+                "    python3 tools/genome_add_context.py dna/default.toml ctx.toml \\\n"
+                "        vocal out_w=0\n"
+                "    ./build/aibaby --dna ctx.toml --experiment dirbudget\n");
+    return false;
+  }
+
+  // `echoname`'s constants, named here rather than re-derived, because the 6.8M rung has
+  // to be ARGUMENT-FOR-ARGUMENT that experiment's taught arm. See the control below.
+  constexpr uint64_t kDBEchoTicks = 560000;
+  constexpr uint32_t kDBReps = 36;   // `ctxgrid`'s n and `echoname`'s n, so the 6.8M rung
+                                     // is comparable to the published column seed for seed
+  constexpr uint32_t kDBArms = 4;
+  // THE LADDER IS RELATIVE TO `--ticks`, AND THAT IS DELIBERATE RATHER THAN LAZY.
+  // The rungs are ticks/2, ticks, 2x and 4x, so the spec minimum of 6800000 produces
+  // exactly `ctxscale`'s points -- 3.4M, 6.8M, 13.6M, 27.2M -- and rung 1 is
+  // `echoname`'s own spec budget, the one the published direction column was measured
+  // at. That is the rung carrying the control.
+  //
+  // A FIXED TABLE WOULD HAVE BEEN UNSMOKEABLE, which is the trap worth naming. An
+  // experiment that ignores `--ticks` cannot be exercised cheaply, so the only way to
+  // reach its print paths is to pay for the real run -- and a missing `--ticks` has
+  // already burned a 39-minute gate in this project once, because the BINARY is not the
+  // INVOCATION. Relative rungs mean `--ticks 20000 --allow-short` walks every branch in
+  // seconds at one eight-hundredth of the cost.
+  //
+  // The cost of the choice is that a DIFFERENT `--ticks` is a DIFFERENT ladder, so the
+  // rungs are printed as absolute tick counts in every table below and the control rung
+  // is named by its number rather than assumed.
+  uint64_t kDBTicks[kDBArms];
+  char armbuf[kDBArms][12];
+  const char* kDBArmName[kDBArms];
+  for (uint32_t a = 0; a < kDBArms; ++a) {
+    kDBTicks[a] = (ticks / 2ull) << a;
+    std::snprintf(armbuf[a], sizeof(armbuf[a]), "%.3gM",
+                  double(kDBTicks[a]) / 1.0e6);
+    kDBArmName[a] = armbuf[a];
+  }
+  if (kDBTicks[0] == 0ull) {
+    std::printf("  setup failed: --ticks %llu gives a bottom rung of 0 ticks.\n",
+                (unsigned long long)ticks);
+    return false;
+  }
+  const size_t slots_off = offsetof(aibaby::DnaHeader, exploration) +
+                           offsetof(aibaby::DnaExploration, context_slots);
+
+  // Whether rung 1 is the budget the published column was measured at. Every claim about
+  // the free control is gated on this, because at a smoke budget the claim is simply
+  // FALSE and a log that printed it anyway would be asserting a control it does not have.
+  const bool control_rung = kDBTicks[1] == 6800000ull;
+
+  instrument("dirbudget", dna.header().seed ^ 0xDB40u, kDBTicks[1] / kVLTrialTicks,
+             "teaching trials at rung 1");
+  disclose_index_source(dna, "dirbudget");
+  std::printf("  the question      REWARD buys the F1 magnitude and the LESSON buys the\n"
+              "                    direction (echoname, 36 creatures: yoked +29.3 Hz of\n"
+              "                    spread with direction AT ITS OWN NULL; taught - yoked\n"
+              "                    +0.1899 in direction, 6.7 SE, and 1.0 SE in spread).\n"
+              "                    The magnitude's budget curve is CLOSED -- ctxscale\n"
+              "                    saturates at ~118 Hz, 94%% of asymptote. Does the\n"
+              "                    ROTATION saturate too, or is it still compute-bound?\n");
+  std::printf("  the design        FOUR budgets, one arm each, all TAUGHT. Every argument\n"
+              "                    to the session is echoname's taught arm including the\n"
+              "                    echo buffer, so the arms differ in TICKS AND NOTHING\n"
+              "                    ELSE. Rungs: %s / %s / %s / %s.\n",
+              kDBArmName[0], kDBArmName[1], kDBArmName[2], kDBArmName[3]);
+  std::printf("  why four          ctxscale's first read was on THREE points and printed\n"
+              "                    COMPUTE-LIMITED; the fourth REVERSED it. Per-doubling\n"
+              "                    ratios 1.98, 1.38, 1.23 -- the exponent halves every\n"
+              "                    doubling, so a three-point ladder on this curve lies\n"
+              "                    with confidence. Three rungs is not a cheaper version\n"
+              "                    of this run, it is a wrong one.\n");
+  std::printf("  the primary       `direction` MINUS each creature's OWN null, meaned over\n"
+              "                    %u, at each rung -- and the per-doubling RATIO of that\n"
+              "                    excess. Ratios falling to ~1.0 = saturating; ratios\n"
+              "                    holding near 2.0 = compute-limited. The per-creature\n"
+              "                    null is mandatory, not decorative: k-word naming reads\n"
+              "                    0.30 on an EMPTY voice, so chance is not 1/k.\n", kDBReps);
+  if (control_rung) {
+    std::printf("  the free control  rung 1 is 6800000 ticks, so it must reproduce the\n"
+                "                    taught `direction` and `its null` columns of\n"
+                "                    results/echoname-sep-full.log BIT-IDENTICALLY on all\n"
+                "                    %u seeds -- same seed rule (header.seed + r*7919),\n"
+                "                    same arguments. If it does not, this instrument\n"
+                "                    measures something else and the ladder is VOID\n"
+                "                    rather than merely suspect.\n", kDBReps);
+  } else {
+    std::printf("  NO FREE CONTROL   rung 1 is %llu ticks, not 6800000, so NO rung here is\n"
+                "                    echoname's published taught arm and the bit-identity\n"
+                "                    check below does not apply. This invocation can show\n"
+                "                    the instrument RUNS; it cannot show it measures the\n"
+                "                    same quantity as the published column.\n",
+                (unsigned long long)kDBTicks[1]);
+  }
+  std::printf("  what refuses it   the excess flat across 8x of budget. Then the rotation\n"
+              "                    is architecture-bound exactly as the magnitude is, and\n"
+              "                    budget is closed for BOTH halves of the split. What\n"
+              "                    would establish it: a ratio sequence that has not\n"
+              "                    fallen to ~1.0 by the %s rung.\n", kDBArmName[kDBArms - 1]);
+  std::printf("  stated up front   n = %u per rung, and this reads a DIFFERENCE of two\n"
+              "                    noisy quantities. A 2-3 SE rung-to-rung step is a\n"
+              "                    HYPOTHESIS in this project; three have been retracted.\n"
+              "                    The SATURATION SHAPE is what this run is for, and that\n"
+              "                    is read off four points at once, not off one step.\n",
+              kDBReps);
+
+  std::vector<std::pair<double, double>> tg;
+  for (uint32_t q = 0; q < kCFWords; ++q) {
+    tg.push_back({double(kGridWords[q].f1), double(kGridWords[q].f2)});
+  }
+
+  struct Cell {
+    bool ok = false;
+    uint32_t scored = 0, skipped = 0, trials = 0;
+    double dir = 0.0, dnull = 0.0, sp1 = 0.0, sp2 = 0.0, match = 0.0;
+  };
+
+  // `r = i / kDBArms` and the seed depends on `r` ALONE -- `echoname`'s rule, copied so
+  // the rungs share creatures with each other and with the published run. Each creature
+  // therefore appears once per budget, which is what makes the ladder PAIRED.
+  const std::vector<Cell> cells = parallel_reps<Cell>(
+      kDBReps * kDBArms, [&](uint32_t i) {
+        const uint32_t r = i / kDBArms;
+        const uint32_t a = i % kDBArms;
+        Cell cell;
+        std::vector<uint8_t> variant = blob;
+        const uint64_t seed = dna.header().seed + r * 7919ull;
+        std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed,
+                    sizeof(seed));
+        const uint32_t sl = kCFWords;
+        std::memcpy(variant.data() + slots_off, &sl, sizeof(sl));
+        CtxDrive drive;
+        drive.module = ctx_module;
+        drive.slots = kCFWords;
+        drive.gain = 0.10;
+        Regime reg;
+        reg.praise = kPraiseValue;
+        reg.scold = kScoldValue;
+        // Every argument spelled out exactly as `echoname`'s taught branch spells it,
+        // including the trailing echo buffer. The echo is not read here -- `direction`
+        // comes off `run.utt_*` -- but it is passed anyway, because dropping it would
+        // make the 6.8M rung a DIFFERENT call from the published one and forfeit the
+        // control. 560000 ticks per cell is 4% of this run and buys a certified reader.
+        ImitateRun echo;
+        const VLRun run = run_vocallearn_session(
+            variant, kDBTicks[a], kVLTaught, nullptr, reg, kVLTgtHeard, &drive,
+            kVLScoreFormant, nullptr, kCFWords, kGridWords, nullptr, nullptr, nullptr,
+            nullptr, nullptr, false, 0, &echo, kDBEchoTicks);
+        if (!run.ok) return cell;
+        cell.scored = run.scored;
+        cell.skipped = run.skipped;
+        cell.match = run.ctx_match;
+        cell.trials = uint32_t(run.utt_word.size());
+        cell.dir = direction_accuracy(run.utt_f1, run.utt_f2, run.utt_word, tg);
+        cell.dnull = direction_null(run.utt_f1, run.utt_f2, run.utt_word, tg);
+        // `sp1`/`sp2` exactly as echoname computes them: the mean over the six word
+        // pairs of |mean F(x) - mean F(y)|. Carried because the dissociation's OTHER
+        // half predicts these are already saturated, and a ladder that moved the
+        // magnitude while leaving the direction flat would mean the budget reached the
+        // creature and the rotation still did not move -- a much stronger null.
+        {
+          double s1 = 0.0, s2 = 0.0;
+          uint32_t np = 0;
+          for (uint32_t x = 0; x < kCFWords; ++x) {
+            for (uint32_t y = x + 1; y < kCFWords; ++y) {
+              double m1[2] = {0.0, 0.0}, m2[2] = {0.0, 0.0};
+              uint32_t n1[2] = {0u, 0u};
+              for (size_t u = 0; u < run.utt_word.size(); ++u) {
+                const int wd = run.utt_word[u];
+                if (wd == int(x)) { m1[0] += run.utt_f1[u]; m2[0] += run.utt_f2[u]; ++n1[0]; }
+                else if (wd == int(y)) { m1[1] += run.utt_f1[u]; m2[1] += run.utt_f2[u]; ++n1[1]; }
+              }
+              if (!n1[0] || !n1[1]) continue;
+              s1 += std::fabs(m1[0] / n1[0] - m1[1] / n1[1]);
+              s2 += std::fabs(m2[0] / n1[0] - m2[1] / n1[1]);
+              ++np;
+            }
+          }
+          cell.sp1 = np ? s1 / np : 0.0;
+          cell.sp2 = np ? s2 / np : 0.0;
+        }
+        cell.ok = true;
+        return cell;
+      });
+
+  // A LADDER WITH HOLES IS NOT A LADDER, but ABORTING on a hole is the wrong remedy and
+  // the first version of this function had it. The rungs are only comparable because
+  // every one of them ran the SAME creatures, so a creature that failed any rung has to
+  // leave ALL of them -- and that is a reason to drop the creature, not to discard six
+  // and a half hours of the other thirty-five. So: print every row, read the ladder on
+  // the creatures that completed all four rungs, say exactly which were dropped, and let
+  // the RETURN VALUE carry the warning. The numbers stay in the log either way; the bool
+  // only says whether to trust them.
+  //
+  // At the full-budget shape every rung has at least 1214 nominal trials against this
+  // session's own minimums of 24 trials and 18 scored, so a failure there is a genuine
+  // fault rather than a short-session artefact, and the instrument reports it as one.
+  std::vector<uint8_t> complete(kDBReps, 1u);
+  for (uint32_t r = 0; r < kDBReps; ++r) {
+    for (uint32_t a = 0; a < kDBArms; ++a) {
+      if (!cells[r * kDBArms + a].ok) complete[r] = 0u;
+    }
+  }
+  uint32_t n_complete = 0;
+  for (uint32_t r = 0; r < kDBReps; ++r) n_complete += complete[r];
+
+  std::printf("\n  seed   arm        trials  direction  its null   excess   F1 spread"
+              "  F2 spread  ctx\n");
+  std::vector<std::vector<double>> ex(kDBArms), dr(kDBArms), nl(kDBArms), s1(kDBArms);
+  for (uint32_t r = 0; r < kDBReps; ++r) {
+    for (uint32_t a = 0; a < kDBArms; ++a) {
+      const Cell& c = cells[r * kDBArms + a];
+      if (!c.ok) {
+        std::printf("  %-6u %-10s      -          -         -        -          -"
+                    "          -      -   <- did not complete\n", r, kDBArmName[a]);
+        continue;
+      }
+      std::printf("  %-6u %-10s %6u  %9.3f  %8.3f  %+7.3f  %9.1f  %9.1f  %.3f%s\n", r,
+                  kDBArmName[a], c.trials, c.dir, c.dnull, c.dir - c.dnull, c.sp1,
+                  c.sp2, c.match, complete[r] ? "" : "   <- dropped, incomplete ladder");
+      if (!complete[r]) continue;
+      ex[a].push_back(c.dir - c.dnull);
+      dr[a].push_back(c.dir);
+      nl[a].push_back(c.dnull);
+      s1[a].push_back(c.sp1);
+    }
+  }
+
+  if (n_complete < kDBReps) {
+    std::printf("\n  %u OF %u CREATURES DROPPED: they failed at least one rung, and a\n"
+                "  creature missing a rung cannot stay in a paired ladder. Everything\n"
+                "  below is read on the remaining %u.\n",
+                kDBReps - n_complete, kDBReps, n_complete);
+  }
+  if (n_complete < 2u) {
+    std::printf("\n  NOT A LADDER. %u creature(s) completed all four rungs, so there is\n"
+                "  no curve to read. At a short budget this is expected: the session\n"
+                "  needs 24 trials and 18 scored, and the bottom rung gets ticks/2.\n",
+                n_complete);
+    return false;
+  }
+
+  const auto mean_of = [](const std::vector<double>& v) {
+    double se = 0.0;
+    return ctx_mean_se(v, &se);
+  };
+  const auto sem_of = [](const std::vector<double>& v) {
+    double se = 0.0;
+    ctx_mean_se(v, &se);
+    return se;
+  };
+
+  std::printf("\n  rung      ticks     trials   direction      its null    excess over null"
+              "   F1 spread Hz\n");
+  double m_ex[kDBArms] = {};
+  for (uint32_t a = 0; a < kDBArms; ++a) {
+    double tr = 0.0;
+    for (uint32_t r = 0; r < kDBReps; ++r) {
+      if (complete[r]) tr += double(cells[r * kDBArms + a].trials);
+    }
+    tr /= double(n_complete);
+    m_ex[a] = mean_of(ex[a]);
+    std::printf("  %-8s %9llu  %7.0f  %6.3f+-%.3f  %6.3f+-%.3f  %+8.4f +- %.4f"
+                "  %7.1f+-%.1f\n",
+                kDBArmName[a], (unsigned long long)kDBTicks[a], tr,
+                mean_of(dr[a]), sem_of(dr[a]), mean_of(nl[a]), sem_of(nl[a]), m_ex[a],
+                sem_of(ex[a]), mean_of(s1[a]), sem_of(s1[a]));
+  }
+
+  // THE SATURATION READ, and it is the ratios rather than any single step. Each ratio is
+  // paired on the creature, because every rung ran the same 36.
+  std::printf("\n  PER-DOUBLING RATIO of the excess over null (ctxscale read 1.98, 1.38,"
+              "\n  1.23 on the MAGNITUDE -- an exponent halving every doubling)\n");
+  double last_ratio = 0.0;
+  for (uint32_t a = 1; a < kDBArms; ++a) {
+    const double ratio = std::fabs(m_ex[a - 1]) > 1e-9 ? m_ex[a] / m_ex[a - 1] : 0.0;
+    last_ratio = ratio;
+    // Indexed over the SURVIVING creatures, in the order every arm accumulated them, so
+    // the step stays paired on the creature after a drop rather than silently pairing
+    // creature k of one rung against creature k+1 of the next.
+    std::vector<double> d;
+    for (size_t k = 0; k < ex[a].size() && k < ex[a - 1].size(); ++k) {
+      d.push_back(ex[a][k] - ex[a - 1][k]);
+    }
+    const double md = mean_of(d), sd = sem_of(d);
+    std::printf("    %-7s -> %-7s  x%.2f   paired step %+.4f +- %.4f (%.1f SE)%s\n",
+                kDBArmName[a - 1], kDBArmName[a], ratio, md, sd,
+                sd > 0.0 ? std::fabs(md) / sd : 0.0,
+                (sd > 0.0 && std::fabs(md) > 2.0 * sd) ? "  <- resolved" : "");
+  }
+
+  // The control that licenses every number above. Printed whatever it says, and it is a
+  // READ of a published log rather than a claim: the 36 taught rows of
+  // results/echoname-sep-full.log, `direction` and `its null`.
+  if (control_rung) {
+    std::printf("\n  THE FREE CONTROL. Rung 1 (%s) is echoname's taught arm by\n"
+                "  construction -- same creature, same arguments, same budget. Check it\n"
+                "  against the published column:\n"
+                "    python3 tools/dirbudget_control.py \\\n"
+                "        results/echoname-sep-full.log <this log> %s\n"
+                "  A single seed differing means the two are not the same call and the\n"
+                "  ladder is void, not merely suspect.\n",
+                kDBArmName[1], kDBArmName[1]);
+  } else {
+    std::printf("\n  NO FREE CONTROL ON THIS INVOCATION. Rung 1 is %llu ticks rather than\n"
+                "  6800000, so nothing here is echoname's published arm and the numbers\n"
+                "  above are an instrument check, not a ladder.\n",
+                (unsigned long long)kDBTicks[1]);
+  }
+
+  // THE VERDICT, and the shape it is allowed to take was fixed before the run. Note what
+  // is NOT here: a success branch on a single rung-to-rung step. The question is the
+  // CURVE, and ctxscale is the standing demonstration that reading fewer points than
+  // four on this curve produces a confident wrong answer.
+  const double total = m_ex[kDBArms - 1], first = m_ex[0];
+  const double growth = std::fabs(first) > 1e-9 ? total / first : 0.0;
+  std::printf("\n  ACROSS 8x OF BUDGET the excess over null goes %+.4f -> %+.4f (x%.2f),\n"
+              "  with the last doubling worth x%.2f.\n", first, total, growth,
+              last_ratio);
+  if (last_ratio > 1.5) {
+    std::printf("\n  THE ROTATION HAS NOT SATURATED. The last doubling is still worth\n"
+                "  x%.2f, where ctxscale's magnitude was down to x1.23 by its fourth\n"
+                "  point. The lesson's assignment is COMPUTE-BOUND where the magnitude\n"
+                "  is architecture-bound, and the two halves of the dissociation do not\n"
+                "  share a limit. The next question is where it does turn over, and the\n"
+                "  ladder extends by doubling rather than by re-running this.\n",
+                last_ratio);
+    return n_complete == kDBReps;
+  }
+  if (last_ratio > 1.15) {
+    std::printf("\n  TURNING OVER, NOT YET FLAT, at x%.2f on the last doubling -- which is\n"
+                "  ctxscale's own fourth-point value (x1.23) to within noise. Read this\n"
+                "  as the SAME shape as the magnitude, reached at a different budget, and\n"
+                "  NOT as a compute-limited rotation. A fifth point at %.3gM ticks is what\n"
+                "  would separate those, and it costs what this whole run cost.\n",
+                last_ratio, double(kDBTicks[kDBArms - 1] * 2ull) / 1.0e6);
+    return n_complete == kDBReps;
+  }
+  std::printf("\n  THE ROTATION SATURATES TOO. The last doubling is worth x%.2f, so\n"
+              "  budget is closed for BOTH halves of the dissociation: reward's\n"
+              "  magnitude saturates at ~118 Hz (ctxscale) and the lesson's direction\n"
+              "  saturates here. That makes the %.3f excess at the top rung an\n"
+              "  ARCHITECTURAL ceiling on assignment rather than a budget one -- the\n"
+              "  creature is given 8x the trials and does not finish the rotation.\n",
+              last_ratio, total);
+  // The verdict is PRINTED above whatever this returns. For a kRead instrument the bool
+  // means "the apparatus held", and a dropped creature at full budget means it did not.
+  return n_complete == kDBReps;
+}
+
+
 // ============ quietecho: CAN THE ECHO BE BOUGHT WITHOUT A LESSON? ============
 //
 // `echoname`'s yoked arm learned NOTHING and recovered 82% of the taught arm's echo
