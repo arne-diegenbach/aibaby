@@ -1,0 +1,91 @@
+### DNA v73 pre-flight: uniform refractory_ms sweep, all six modules, calibrate ###
+#### refractory_ms = 1.0 ####
+  central           6.69 Hz      6.81 Hz   -0.12  ok
+  auditory          2.49 Hz      2.55 Hz   -0.06  ok
+  vision            2.49 Hz      2.54 Hz   -0.05  ok
+  somato            4.49 Hz      4.56 Hz   -0.07  ok
+  vocal             4.26 Hz      5.00 Hz   -0.74  by design — holds the duty cycle down
+  expression        7.29 Hz      7.22 Hz   +0.07  ok
+  calibrate PASS — 0 modules off target, 0 seeds wiring badly. Amplitude floor thin (structural).
+#### refractory_ms = 3.0 ####
+  central           6.60 Hz      6.81 Hz   -0.21  ok
+  auditory          2.52 Hz      2.55 Hz   -0.03  ok
+  vision            2.53 Hz      2.54 Hz   -0.01  ok
+  somato            4.45 Hz      4.56 Hz   -0.11  ok
+  vocal             4.12 Hz      5.00 Hz   -0.88  by design — holds the duty cycle down
+  expression        7.24 Hz      7.22 Hz   +0.02  ok
+  calibrate PASS — 0 modules off target, 0 seeds wiring badly. Amplitude floor thin (structural).
+#### refractory_ms = 6.0 ####
+  central           6.53 Hz      6.81 Hz   -0.28  STALE — reset the genome to the left column
+  auditory          2.52 Hz      2.55 Hz   -0.03  ok
+  vision            2.58 Hz      2.54 Hz   +0.04  ok
+  somato            4.39 Hz      4.56 Hz   -0.17  ok
+  vocal             4.02 Hz      5.00 Hz   -0.98  by design — holds the duty cycle down
+  expression        7.11 Hz      7.22 Hz   -0.11  ok
+  calibrate FAIL — 1 module off target, 0 seeds wiring badly. Amplitude floor thin (structural).
+#### refractory_ms = 12.0 ####
+  central           6.30 Hz      6.81 Hz   -0.51  STALE — reset the genome to the left column
+  auditory          2.51 Hz      2.55 Hz   -0.04  ok
+  vision            2.53 Hz      2.54 Hz   -0.01  ok
+  somato            4.25 Hz      4.56 Hz   -0.31  STALE — reset the genome to the left column
+  vocal             3.87 Hz      5.00 Hz   -1.13  by design — holds the duty cycle down
+  expression        6.63 Hz      7.22 Hz   -0.59  STALE — reset the genome to the left column
+  calibrate FAIL — 3 modules off target, 0 seeds wiring badly. Amplitude floor thin (structural).
+#### refractory_ms = 24.0 ####
+  central           6.11 Hz      6.81 Hz   -0.70  STALE — reset the genome to the left column
+  auditory          2.53 Hz      2.55 Hz   -0.02  ok
+  vision            2.55 Hz      2.54 Hz   +0.01  ok
+  somato            4.00 Hz      4.56 Hz   -0.56  STALE — reset the genome to the left column
+  vocal             3.47 Hz      5.00 Hz   -1.53  by design — holds the duty cycle down
+  expression        5.97 Hz      7.22 Hz   -1.25  STALE — reset the genome to the left column
+  calibrate FAIL — 3 modules off target, 0 seeds wiring badly. Amplitude floor thin (structural).
+
+### DNA v73 dose: refractory_sigma sweep, thresholds untouched, calibrate ###
+#### refractory_sigma = 0.0 ####
+  central           6.60 Hz      6.81 Hz   -0.21  ok
+  auditory          2.52 Hz      2.55 Hz   -0.03  ok
+  vision            2.53 Hz      2.54 Hz   -0.01  ok
+  somato            4.45 Hz      4.56 Hz   -0.11  ok
+  vocal             4.12 Hz      5.00 Hz   -0.88  by design — holds the duty cycle down
+  expression        7.24 Hz      7.22 Hz   +0.02  ok
+  calibrate PASS — 0 modules off target, 0 seeds wiring badly. Amplitude floor thin (structural).
+#### refractory_sigma = 0.05 ####
+  central           6.59 Hz      6.81 Hz   -0.22  ok
+  auditory          2.51 Hz      2.55 Hz   -0.04  ok
+  vision            2.52 Hz      2.54 Hz   -0.02  ok
+  somato            4.45 Hz      4.56 Hz   -0.11  ok
+  vocal             4.16 Hz      5.00 Hz   -0.84  by design — holds the duty cycle down
+  expression        7.23 Hz      7.22 Hz   +0.01  ok
+  calibrate PASS — 0 modules off target, 0 seeds wiring badly. Amplitude floor thin (structural).
+#### refractory_sigma = 0.15 ####
+  central           6.61 Hz      6.81 Hz   -0.20  ok
+  auditory          2.53 Hz      2.55 Hz   -0.02  ok
+  vision            2.55 Hz      2.54 Hz   +0.01  ok
+  somato            4.46 Hz      4.56 Hz   -0.10  ok
+  vocal             4.32 Hz      5.00 Hz   -0.68  by design — holds the duty cycle down
+  expression        7.15 Hz      7.22 Hz   -0.07  ok
+  calibrate PASS — 0 modules off target, 0 seeds wiring badly. Amplitude floor thin (structural).
+#### refractory_sigma = 0.30 ####
+  central           6.65 Hz      6.81 Hz   -0.16  ok
+  auditory          2.51 Hz      2.55 Hz   -0.04  ok
+  vision            2.56 Hz      2.54 Hz   +0.02  ok
+  somato            4.46 Hz      4.56 Hz   -0.10  ok
+  vocal             4.21 Hz      5.00 Hz   -0.79  by design — holds the duty cycle down
+  expression        7.36 Hz      7.22 Hz   +0.14  ok
+  calibrate PASS — 0 modules off target, 0 seeds wiring badly. Amplitude floor thin (structural).
+#### refractory_sigma = 0.60 ####
+  central           6.58 Hz      6.81 Hz   -0.23  ok
+  auditory          2.52 Hz      2.55 Hz   -0.03  ok
+  vision            2.58 Hz      2.54 Hz   +0.04  ok
+  somato            4.41 Hz      4.56 Hz   -0.15  ok
+  vocal             4.05 Hz      5.00 Hz   -0.95  by design — holds the duty cycle down
+  expression        7.16 Hz      7.22 Hz   -0.06  ok
+  calibrate PASS — 0 modules off target, 0 seeds wiring badly. Amplitude floor thin (structural).
+#### refractory_sigma = 1.00 ####
+  central           6.53 Hz      6.81 Hz   -0.28  STALE — reset the genome to the left column
+  auditory          2.51 Hz      2.55 Hz   -0.04  ok
+  vision            2.56 Hz      2.54 Hz   +0.02  ok
+  somato            4.35 Hz      4.56 Hz   -0.21  ok
+  vocal             4.23 Hz      5.00 Hz   -0.77  by design — holds the duty cycle down
+  expression        7.22 Hz      7.22 Hz   -0.00  ok
+  calibrate FAIL — 1 module off target, 0 seeds wiring badly. Amplitude floor thin (structural).

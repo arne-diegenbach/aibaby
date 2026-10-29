@@ -419,7 +419,11 @@ constexpr uint32_t kDnaMagic = 0x44424941;  // "AIBD"
 // bump is for — a v53 snapshot read as v54 would misalign every module after the
 // first. Both fields default to 0, which is bit-identical to v53 behaviour, so
 // the bump invalidates saved snapshots and nothing else.
-constexpr uint32_t kDnaVersion = 54;
+// v55: DNA v73 appends `refractory_sigma` to DnaModule, for the same layout
+// reason. 0 is off and skips the draw rather than drawing and multiplying by
+// zero, so the pinned hash does not move — `refrac_ticks_` is a birth constant
+// recomputed from the genome and is not part of `state_hash` either way.
+constexpr uint32_t kDnaVersion = 55;
 
 // What a module is wired to the world through. The host looks modules up by
 // role, never by name or index, so renaming a module in the genome cannot
@@ -2755,6 +2759,50 @@ struct DnaModule {
   // wrong and that is worth more than the parameter.
   float threshold_sigma;
   float leak_tau_sigma;
+  // DNA v73. The third and last intrinsic constant, for the same reason as the
+  // first two: `stageprobe` put the ceiling in the NEURON's drive-to-rate
+  // transfer, v71 measured the OFFSET (threshold spread costs 61% of the
+  // lesson, monotone, no optimum) and v72 measured the leak (nothing, learned
+  // or random). `refractory_ms` is what is left — a per-module scalar
+  // identical for every neuron for life, moved by nothing, not even
+  // homeostasis.
+  //
+  // WHAT IT ACTUALLY CONTROLS, which is not what its name suggests. A
+  // refractory tick is not a blocked spike: `network.cpp` clamps the membrane
+  // to rest while `tick_ < refrac_until_`, and the inbox slot was already
+  // drained above that branch, so input arriving in the window is DISCARDED.
+  // The quantity this constant sets is therefore the share of its input a
+  // neuron throws away, which is `rate * refractory_ms` — and at the vocal
+  // module's 5 Hz setpoint, three milliseconds is 1.5% of the time.
+  //
+  // THE DOSE IS NOT THE SIGMA, and that was measured before this field was
+  // written. Two pre-flights, neither of which needed a build:
+  //
+  //   (1) QUANTISATION (`tools/refrac_quantisation.py`). The genome is 3.0 ms
+  //       at dt 1.0, so `refrac_ticks_` is the integer 3 and a spread has to
+  //       survive rounding. sigma 0.05 leaves 99.9% of neurons on 3 ticks —
+  //       VACUOUS, so v71's 0.05 rung cannot be reused here. sigma 0.30 moves
+  //       58% of them onto a six-point lattice at CV 0.320, against a
+  //       continuous log-normal's 0.307: matched as a relative spread in the
+  //       constant.
+  //   (2) LEVERAGE (`calibrate` across refractory_ms 1/3/6/12/24). Monotone in
+  //       all four self-driven modules, and weak: an 8x change in the constant
+  //       moves vocal 4.12 -> 3.47 Hz, so d log rate / d log refractory is
+  //       -0.083. Matched as a spread in the constant is therefore NOT matched
+  //       as a spread in rate, which is the quantity v71's 61% was delivered
+  //       in.
+  //
+  // A PREDICTION, recorded before the first run. `calibrate` FAILS at
+  // threshold_sigma 0.04 — it is a sensitive, already-calibrated detector of a
+  // spread that has moved the operating point. The duty-cycle account above
+  // says this field cannot move it comparably, so `calibrate` should still
+  // PASS at refractory_sigma 0.30 and plausibly at 1.00. If it does, then
+  // equal sigma is not equal dose by a factor of at least 7.5 and a lesson
+  // cost measured here is NOT like-for-like against the threshold's 61% — the
+  // honest output is the dose ratio, not a null. If instead it breaks early,
+  // the blackout account is wrong and the leverage lives somewhere other than
+  // the discarded-input fraction, which is worth more than the parameter.
+  float refractory_sigma;
 };
 
 // max_out_degree is what makes growth allocation-free: every neuron owns a

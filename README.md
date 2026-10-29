@@ -23669,3 +23669,179 @@ That remains worth doing, and `ctxscale` sets its design: **four points minimum*
 three gave the wrong answer with confidence. At 36 reps over 3.4M/6.8M/13.6M/27.2M that is
 ~1.8G ticks before echo buffers, six to seven hours for one sample — past the point where
 it should be started without saying so first.
+
+## DNA v73: the refractory period has no dose to give (2026-10-29)
+
+`stageprobe` put the naming ceiling in the neuron's own drive-to-rate transfer rather than
+in the pooling, and the two generations that followed went looking for it in the neuron's
+intrinsic constants. v71 randomised the **threshold**: it cost **61%** of the lesson,
+monotone in sigma, no optimum. v72 learned and randomised the **leak**: nothing, either
+way. `refractory_ms` was the last one — a per-module scalar identical for every neuron for
+life, moved by nothing, not even homeostasis.
+
+It is now measured, and the answer is not simply a null. **It is that this constant cannot
+deliver a dose worth measuring**, and that was established before the outcome run rather
+than inferred from it.
+
+### Two pre-flights, neither of which needed a build
+
+**A spread here has to survive rounding.** The genome is `refractory_ms = 3.0` at
+`dt_ms = 1.0`, so `refrac_ticks_` is the integer 3. `tools/refrac_quantisation.py`
+integrates the normal over each rounding bin and says exactly what a sigma produces:
+
+| sigma | still on 3 ticks | mean | CV | lattice |
+|---|---|---|---|---|
+| 0.05 | **99.9%** | 3.001 | 0.011 | 3:100% |
+| 0.15 | 73.6% | 3.043 | 0.172 | 2:11% 3:74% 4:15% |
+| 0.30 | 42.5% | 3.138 | **0.320** | 1:1% 2:26% 3:42% 4:22% 5:7% 6:2% |
+| 0.60 | 22.1% | 3.587 | 0.655 | 1:12% 2:26% 3:22% 4:15% … 11:1% |
+| 1.00 | 13.6% | 4.391 | 0.950 | 1:24% 2:18% 3:13% … 17:1% |
+
+**v71's ladder cannot be reused: its 0.05 rung is vacuous here**, changing roughly one
+neuron of 782. That rung would have cost a cell and measured nothing. At 0.30 the CV is
+0.320 against a continuous log-normal's 0.307 — so sigma 0.30 *is* a matched relative
+spread in the constant.
+
+**But the constant barely matters, because of the margin.** A refractory tick is not a
+blocked spike: the membrane is clamped to rest and the inbox slot was already drained, so
+input arriving in the window is **discarded**. What the constant sets is the share of its
+input a neuron throws away, `rate × refractory_ms`. Three milliseconds caps a neuron at
+**333 Hz**, and this creature runs at 2.5–7.2 Hz:
+
+| module | rate | below the ceiling | ticks blacked out |
+|---|---|---|---|
+| expression | 7.24 Hz | 46× | 2.17% |
+| central | 6.60 Hz | 51× | 1.98% |
+| somato | 4.45 Hz | 75× | 1.33% |
+| vocal | 4.12 Hz | **81×** | 1.24% |
+| vision / auditory | 2.5 Hz | 132× | 0.76% |
+
+The uniform sweep confirms it: fitted over a ladder from 1 to 24 ms, the elasticity
+`d log rate / d log refractory` is **−0.029 to −0.060**, monotone in all four self-driven
+modules. (Between 3 ms and 24 ms alone it reads −0.083 — the curve is not a power law, and
+quoting one endpoint-to-endpoint exponent is the error `stageprobe` already paid for.)
+
+### The dose, on the instrument that already priced the threshold
+
+`calibrate` FAILS at `threshold_sigma = 0.04`, which makes it a pre-calibrated detector of a
+spread that has moved the operating point. Thresholds verified byte-identical across all
+five variants (`tools/refrac_sigma_genome.py` injects the field and nothing else):
+
+| refractory_sigma | central | somato | expression | calibrate |
+|---|---|---|---|---|
+| 0.00 (shipped) | 6.60 | 4.45 | 7.24 | PASS |
+| 0.05 | 6.59 | 4.45 | 7.23 | PASS |
+| 0.15 | 6.61 | 4.46 | 7.15 | PASS |
+| 0.30 | 6.65 | 4.46 | 7.36 | PASS |
+| 0.60 | 6.58 | 4.41 | 7.16 | PASS |
+| 1.00 | 6.53 | 4.35 | 7.22 | FAIL (central, by 0.03) |
+
+**The threshold breaks the operating point at 0.04; the refractory period holds it to 0.60
+and breaks it only at 1.00** — a factor of **15** where it holds, **25** at the breaking
+point.
+
+**And the instrument is not blind to this constant.** A *uniform* doubling to
+`refractory_ms = 6.0` **does** fail `calibrate`. So the detector responds to the refractory
+period at twice the shipped value, and the spread surviving to sigma 0.60 is a genuinely
+small perturbation rather than an insensitive test.
+
+### The outcome, pre-registered in `tools/v73_g2_cells.sh` before the first cell ran
+
+Four cells of n=36, the same four seed families v71 and v72 used. Primary: the per-creature
+**slope** of the F1 motor column against sigma across the three calibration-clean cells — a
+trend and not a single contrast, because every creature is measured at every sigma on
+identical wiring, and because promoting the best of three contrasts afterwards is exactly
+how `exsweep` manufactured an improvement that withdrew.
+
+```
+PRIMARY   slope of F1 motor against refractory_sigma over {0, 0.30, 0.60}
+  motor   -0.0053 +/- 0.0060 (0.9 SE)   negative in 18 of 36   <- exactly chance
+  rate    -0.1556 +/- 0.1769 (0.9 SE)   negative in 16 of 36
+  share   -0.0700 +/- 0.0605 (1.2 SE)   negative in 19 of 36
+
+  as a share of the lesson   -1.6% per 0.1 of sigma
+  v71's threshold spread     -20%  per 0.1 of sigma, same statistic and unit
+
+secondary (motor, paired, jackknifed)
+  s030 - control   -0.0032 +/- 0.0039 (0.8 SE)   -9%    praise won 30 -> 27 of 36
+  s060 - control   -0.0032 +/- 0.0036 (0.9 SE)   -9%    praise won 30 -> 30 of 36
+  s100 - control   -0.0070 +/- 0.0045 (1.6 SE)  -21%    praise won 30 -> 28 of 36  BOUND
+```
+
+**Both pre-registered predictions came out as written:** the slope is indistinguishable
+from zero, and s030's cost is under 20% of the control's effect.
+
+**The exclusion, which is stronger than the null.** At 2 SE the slope bounds the cost at
+**5.1% per 0.1 sigma**, so the threshold's measured **−20% per 0.1 sigma is four times
+outside this bound**. This is not "we failed to detect something"; the threshold's own
+dose-response is excluded for the refractory period at matched sigma. What the data cannot
+exclude is a cost up to **31%** at sigma 0.60 — the same bound v72 reported for the leak.
+
+**No dose-response.** s030 and s060 give the *identical* point estimate (−9%) across a
+doubling of sigma and a CV of 0.320 → 0.655. v71's cost grew monotonically in all three
+columns across nine of nine cells; this does not grow at all. s100 is the largest at −21%
+but reads 1.6 SE and is off calibration, so the pre-registration treats it as a bound and
+not a cell. That is the one thing left genuinely open here.
+
+### The control reproduces, three generations running
+
+`+0.0338 ± 0.0042`, praise won **30/36** — identical to v71's cell A and v72's control, in a
+fresh session on new code. The shipped creature has not drifted, and the new field ships off
+cleanly.
+
+That mattered methodologically too: `tools/v73_g2_stats.py` was validated against
+**thirteen published v71/v72 numbers** before it produced a new one, including v71's
+`-0.0207 ± 0.0059` contrast and its `-0.0689 ± 0.0183` trend at −20.4% per 0.1 sigma, and
+v72's `+0.0007 ± 0.0070`. That validation is what caught a regex keyed on group 7 where the
+winner is group 8 — every numeric column parsed correctly and only the win count was wrong,
+reading an impossible `0/36`.
+
+### What the weak leverage buys: a cleaner design than v71's
+
+v71 needed three cells because a log-normal threshold spread *raises* free-running rates, so
+holding the operating point required raising the median too, and no two-cell design could
+separate spread from median. Here the spread does not move the operating point at all, so
+control and test carry **byte-identical thresholds** and differ in exactly one bit: whether
+the refractory period is spread across neurons. v71 could not have that; v72 got it only
+through a different accident (`calibrate` runs with no reward).
+
+### Gate, and the field ships off bit-identically
+
+`verify PASS`, determinism PASS, pinned hash **`ad96f882becbee92` unchanged**, 24 as
+expected / 0 not (`results/verify-refracsig.log`). `het_scaled` skips the draw at sigma 0
+rather than drawing and multiplying by zero, so no rng value is consumed and nothing
+downstream shifts. `kDnaVersion` 54 → 55 for the `DnaModule` layout change; the field is
+optional in TOML, so every genome on file still parses. No new per-neuron array, so the
+hand-written `required_bytes` count that cost v72 a `brain init failed (2)` needed no bump.
+
+At sigma > 0 all five variants give **distinct** state hashes, so the manipulation is wired.
+Those two checks answer different questions, and this run separated them: **sigma 0.05 moves
+the state hash while changing about one neuron.** A hash that moves proves the mechanism is
+connected, not that the dose is meaningful.
+
+### What this closes, and what it does not say
+
+**The neuron's intrinsic constants are exhausted.** `stageprobe` said the target is the
+NEURON rather than the pooling; the three constants that set its f-I curve are now all
+measured, and each fails for a *different* reason:
+
+| constant | verdict | reason |
+|---|---|---|
+| threshold (offset) | −61%, 3.5 SE | already learned as `bias_`; a random spread is noise in the quantity the learning rule is setting |
+| leak (shape) | null, bound 31% | does nothing, learned or random |
+| refractory (ceiling) | null, −1.6%/0.1σ, bound 31% | **structurally inert: the creature runs 46–81× below the ceiling it sets** |
+
+What demonstrably *does* move the 0.34 stage is the one thing that is not an intrinsic
+constant: **intrinsic plasticity**. `stageprobe` measured `bias→rate` at 0.34 with IP on and
+0.91 with IP off, and also that turning IP off destroys vocal learning (−7.42 SE) while
+relieving half of it buys nothing (−0.90 SE). So the target is **the neuron's regulator, not
+its constants** — and `stageprobe`'s untried mechanism, a homeostat on the *group's* mean
+rate rather than per-neuron (holding the common mode while leaving the tilt a centroid
+readout reads), goes from one candidate among several to **the remaining one**.
+
+- It does **not** say unearned heterogeneity is harmless. v71's −61% at 3.5 SE stands; this
+  says the refractory period cannot deliver a comparable perturbation.
+- It does **not** say `refractory_ms` is inert in general — only at *this* operating point. A
+  creature firing at 100 Hz would be a different measurement.
+- `noise_amp` remains unvaried per neuron, and remains **the harder one, not the better
+  one**: it is already the exploration drive, so spreading it moves two things at once.

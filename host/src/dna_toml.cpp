@@ -592,6 +592,8 @@ bool compile_dna_toml(const std::string& path, std::vector<uint8_t>& out,
     // DNA v71. Optional, and 0 is off and bit-identical to v70 — see DnaModule.
     m.threshold_sigma = float(r.number_or("threshold_sigma", 0.0));
     m.leak_tau_sigma = float(r.number_or("leak_tau_sigma", 0.0));
+    // DNA v73. Optional for the same reason, so every genome on file still parses.
+    m.refractory_sigma = float(r.number_or("refractory_sigma", 0.0));
     m.refractory_ms = float(r.number("refractory_ms"));
     m.target_rate_hz = float(r.number("target_rate_hz"));
     m.inhib_fraction = float(r.number("inhib_fraction"));

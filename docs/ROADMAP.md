@@ -225,6 +225,22 @@ F2's recovery from 8% to 62% of the oracle's bit; nothing has tried F1's.
   improves `bias→rate` 4.1× and costs `rate→centroid` 4.1×. Best available is **+15%**, not 4×.
   What remains is changing the transfer's *shape* without moving along it, which is a neuron
   model change and needs its own oracle.
+- **And the shape change is now closed too, through all three intrinsic constants
+  (2026-10-29).** v71 randomised the **threshold** and it cost **61%** of the lesson, monotone
+  in sigma. v72 learned and randomised the **leak**: nothing either way, bound 31%. v73 did the
+  **refractory period** and it is *structurally inert* — the creature runs **46–81× below the
+  333 Hz ceiling** 3 ms sets, so the constant governs ~1.5% of each neuron's input, and a
+  spread holds the operating point to sigma 0.60 where the threshold broke it at **0.04**. The
+  pre-registered trend reads **−0.0053 ± 0.0060 (0.9 SE), 18/36 negative — exactly chance**,
+  i.e. **−1.6% per 0.1 sigma against the threshold's −20%**, with the threshold's own
+  dose-response **four times outside the 2 SE bound**. Each constant fails for a different
+  reason, and the one thing that *does* move the 0.34 stage is not a constant at all:
+  **intrinsic plasticity** (0.34 with IP on, 0.91 off; off destroys learning at −7.42 SE,
+  half-relieved buys nothing). **So the target is the neuron's regulator, not its constants**,
+  and `stageprobe`'s untried **group-mean homeostat** — holding the common mode while leaving
+  the tilt a centroid readout reads — is now the remaining candidate rather than one of
+  several. `noise_amp` is still unvaried per neuron and still the harder one, not the better
+  one: it is already the exploration drive.
 - **Further trimming, on power grounds.** Measured to buy nothing: the creature's dynamic cost
   is already orders of magnitude below any platform's active floor, so size is not the lever.
 - **Prototype drift as the account for a four-word index.** The v53 line predicted the index

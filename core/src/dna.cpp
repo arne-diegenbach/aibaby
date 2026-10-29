@@ -347,6 +347,7 @@ DnaStatus Dna::load(const void* blob, size_t size) {
     // clamped, so a genome cannot ask for it and silently get something else.
     if (m.threshold_sigma < 0.0f || m.threshold_sigma > 1.0f) return DnaStatus::kBadModule;
     if (m.leak_tau_sigma < 0.0f || m.leak_tau_sigma > 1.0f) return DnaStatus::kBadModule;
+    if (m.refractory_sigma < 0.0f || m.refractory_sigma > 1.0f) return DnaStatus::kBadModule;
     if (m.explore_scale < 0.0f) return DnaStatus::kBadModule;
     if (m.ip_wake_scale < 0.0f || m.ip_sleep_scale < 0.0f) return DnaStatus::kBadModule;
     if (m.syn_wake_scale < 0.0f || m.syn_sleep_scale < 0.0f) return DnaStatus::kBadModule;

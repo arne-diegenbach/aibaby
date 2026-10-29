@@ -636,7 +636,15 @@ bool Network::build(const Dna& dna, Arena& arena, Rng& rng) {
                                          Scalar(1e-3), Scalar(1e6), 1u);
       leak_alpha_[i] = clampf(dt_ms_ / leak_tau, kZero, kOne);
       leak_alpha0_[i] = leak_alpha_[i];  // DNA v72's reference point
-      refrac_ticks_[i] = uint16_t(Scalar(dm.refractory_ms) / dt_ms_ + Scalar(0.5));
+      // DNA v73. Field index 2, distinct from the threshold's 0 and the leak's
+      // 1: sharing an index would make a neuron's three spreads perfectly
+      // correlated. Clamped at one tick of floor, matching the burst path's own
+      // `if (refrac == 0) refrac = 1` — a zero-tick neuron has no refractory
+      // period at all, which is a different mechanism, not a short one.
+      refrac_ticks_[i] = uint16_t(het_scaled(dna.header().seed, i,
+                                             Scalar(dm.refractory_ms),
+                                             Scalar(dm.refractory_sigma), dt_ms_,
+                                             Scalar(1e4), 2u) / dt_ms_ + Scalar(0.5));
       pos_x_[i] = rng.uniform() * Scalar(dm.extent[0]);
       pos_y_[i] = rng.uniform() * Scalar(dm.extent[1]);
       pos_z_[i] = rng.uniform() * Scalar(dm.extent[2]);
@@ -3522,7 +3530,14 @@ void Network::init_neuron(uint32_t i, uint32_t m, Scalar x, Scalar y, Scalar z) 
   leak_alpha0_[i] = leak_alpha_[i];
   leak_log_[i] = kZero;
   leak_jit_[i] = kZero;
-  refrac_ticks_[i] = uint16_t(Scalar(dm.refractory_ms) / dt_ms_ + Scalar(0.5));
+  // DNA v73. A grown neuron draws its own refractory period from its own index,
+  // for the same reason it draws its own threshold: the spread is a property of
+  // the neuron, so capacity added in M4 has to be heterogeneous too or growth
+  // would quietly dilute the manipulation.
+  refrac_ticks_[i] = uint16_t(het_scaled(dna_.header().seed, i,
+                                         Scalar(dm.refractory_ms),
+                                         Scalar(dm.refractory_sigma), dt_ms_,
+                                         Scalar(1e4), 2u) / dt_ms_ + Scalar(0.5));
   pos_x_[i] = clampf(x, kZero, Scalar(dm.extent[0]));
   pos_y_[i] = clampf(y, kZero, Scalar(dm.extent[1]));
   pos_z_[i] = clampf(z, kZero, Scalar(dm.extent[2]));
