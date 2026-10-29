@@ -860,11 +860,17 @@ const Spec kSpecs[] = {
      "  must multiply to the end-to-end curve or a stage is missing"},
     {"ippool", 13600000, Expect::kRead, Tier::kTeach,
      "does relieving the MEASURED bottleneck buy dF1? stageprobe put the\n"
-     "  compression in intrinsic plasticity (bias->rate 0.34 on, 0.91 off); DNA\n"
-     "  v57 pools the rate error per articulator group, keeping regulation and\n"
-     "  recovering the transfer to 0.51. Gates on the EXCESS over each arm's own\n"
-     "  matched-marginal control, paired by seed -- and refuses if the larynx rate\n"
-     "  drifts, because a win bought by losing regulation is v50's refuted trade"},
+     "  compression in intrinsic plasticity (bias->rate 0.34 on, 0.91 off). The\n"
+     "  arms are re-cut each generation and the earlier ones are on file: v57\n"
+     "  pooled per articulator group (13 of 14 directions exempt, transfer 0.51,\n"
+     "  `aligned` HALVED), v58 exempted the learned bias AMOUNT. NOW RUNNING DNA\n"
+     "  v74, which exempts ONE DIRECTION -- the group's zero-mean ramp, i.e. the\n"
+     "  readout's own coordinate. Gates on the EXCESS over each arm's own\n"
+     "  matched-marginal control, paired by seed, and refuses three ways: the\n"
+     "  larynx rate drifting (v50's refuted trade), `aligned` halving as v57's\n"
+     "  did, or the threshold push returning to v57's 3x, which would mean the\n"
+     "  projection is pooling in disguise. The bar on `aligned` is v58's x1.21\n"
+     "  and not x1.00, because ^0.61 already closes x1.21 without a run"},
     {"ctxfour", 3400000, Expect::kOpen, Tier::kTeach,
      "derived: ctxself's session at FOUR words. partprobe cleared the index at\n"
      "  four (0.895 vs chance 0.250); this asks whether the BIAS holds four\n"

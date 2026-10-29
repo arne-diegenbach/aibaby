@@ -602,6 +602,8 @@ bool compile_dna_toml(const std::string& path, std::vector<uint8_t>& out,
     m.noise_amp = float(r.number("noise_amp"));
     m.ip_bias_gain = float(r.number("ip_bias_gain"));
     m.ip_pool = uint32_t(r.number("ip_pool"));
+    // DNA v74. Optional for the same reason, so every genome on file still parses.
+    m.ip_ramp_exempt = float(r.number_or("ip_ramp_exempt", 0.0));
     m.ip_wake_scale = float(r.number("ip_wake_scale"));
     m.ip_sleep_scale = float(r.number("ip_sleep_scale"));
     m.syn_wake_scale = float(r.number("syn_wake_scale"));

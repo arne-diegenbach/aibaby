@@ -3138,6 +3138,25 @@ void Network::homeostasis(bool asleep) {
     // result depend on neuron order, which is the kind of thing that reads as a
     // mechanism doing something when it is only iterating.
     ip_bias_gain_ = Scalar(dna_.module(m).ip_bias_gain);
+    // The v58 set-point exemption, in one place now that THREE paths need it:
+    // the pooled error below, v74's ramp projection after it, and the per-neuron
+    // path in the loop. All three have to agree about what an error IS, or a
+    // comparison between two of the modes measures the disagreement instead of
+    // the mechanism — which is what v57's own comment says about keeping two
+    // copies in step, at the point where there were only two.
+    const auto ip_target = [&](uint32_t idx) {
+      Scalar t = target_rate_[idx];
+      if (ip_bias_gain_ != kZero) {
+        const Scalar delivered =
+            (ctx_slots_ > 0 && ctx_present_ && bias_ctx_)
+                ? bias_ctx_[size_t(idx) * ctx_slots_ + active_ctx_] +
+                      (bias_bank_ ? bias_bank_[size_t(idx) * ctx_slots_ + active_ctx_]
+                                  : kZero)
+                : bias_[idx];
+        t += ip_bias_gain_ * delivered;
+      }
+      return t;
+    };
     const uint32_t ip_slices = dna_.module(m).ip_pool;
     const bool ip_pooled = ip_slices > 0u;
     // One mean error per slice. `kMaxIpSlices` is a fixed cap so this needs no
@@ -3150,24 +3169,47 @@ void Network::homeostasis(bool asleep) {
         const uint32_t i2 = ms.begin + k2;
         if (dead_[i2]) continue;
         const uint32_t sl = ip_slices > 1u ? (k2 * ip_slices) / ms.count : 0u;
-        // The same v58 exemption as the per-neuron path below, or the two modes
-        // would disagree about what an error is and a comparison between them
-        // would measure that disagreement instead of the pooling.
-        Scalar t2 = target_rate_[i2];
-        if (ip_bias_gain_ != kZero) {
-          const Scalar delivered =
-              (ctx_slots_ > 0 && ctx_present_ && bias_ctx_)
-                  ? bias_ctx_[size_t(i2) * ctx_slots_ + active_ctx_] +
-                        (bias_bank_ ? bias_bank_[size_t(i2) * ctx_slots_ + active_ctx_]
-                                    : kZero)
-                  : bias_[i2];
-          t2 += ip_bias_gain_ * delivered;
-        }
-        slice_err[sl] += rate_ema_[i2] - t2;
+        slice_err[sl] += rate_ema_[i2] - ip_target(i2);
         ++live[sl];
       }
       for (uint32_t sl = 0; sl < ip_slices && sl < kMaxIpSlices; ++sl) {
         if (live[sl]) slice_err[sl] /= Scalar(live[sl]);
+      }
+    }
+    // DNA v74. The error's component along each articulator group's zero-mean
+    // ramp -- the readout's own coordinate -- so the loop below can subtract it
+    // and leave that ONE direction of fourteen unregulated while the group's
+    // mean and its other twelve stay regulated exactly as they ship. Computed
+    // before the loop for v57's reason above: a projection accumulated inside
+    // the loop would depend on neuron order.
+    //
+    // `ctx_group_` is populated only for the vocal module and only when the
+    // header asked for context slots, so the pointer check is the whole of the
+    // module test; dna.cpp refuses a genome that sets the field anywhere it
+    // cannot act, rather than letting it run inert here.
+    const Scalar ramp_exempt = Scalar(dna_.module(m).ip_ramp_exempt);
+    const bool ramp_on =
+        ramp_exempt > kZero && ip_scale > kZero && ctx_ramp_ && ctx_group_;
+    Scalar ramp_proj[kVocalGroups] = {};
+    if (ramp_on) {
+      // The normaliser is summed over the neurons actually contributing rather
+      // than read from `inv_ramp_ss_`, which mode 1's estimator uses. The
+      // estimator only needs the projection up to a constant -- its learning
+      // rate absorbs one -- but removing a component EXACTLY requires the same
+      // set in numerator and denominator, and a dead neuron would otherwise
+      // leave a residual tilt behind the exemption.
+      Scalar ramp_ss[kVocalGroups] = {};
+      for (uint32_t k2 = 0; k2 < ms.count; ++k2) {
+        const uint32_t i2 = ms.begin + k2;
+        if (dead_[i2]) continue;
+        const uint32_t g = ctx_group_[i2];
+        if (g >= kVocalGroups) continue;
+        const Scalar r = ctx_ramp_[i2];
+        ramp_proj[g] += r * (rate_ema_[i2] - ip_target(i2));
+        ramp_ss[g] += r * r;
+      }
+      for (uint32_t g = 0; g < kVocalGroups; ++g) {
+        ramp_proj[g] = ramp_ss[g] > kZero ? ramp_proj[g] / ramp_ss[g] : kZero;
       }
     }
     for (uint32_t k = 0; k < ms.count; ++k) {
@@ -3188,17 +3230,16 @@ void Network::homeostasis(bool asleep) {
         // Only the learned offset is exempt. Input-driven rate is still regulated,
         // and `ipoff` measured what happens without that: dF1 103.9 -> 17.7 and a
         // structureless table.
-        Scalar target = target_rate_[i];
-        if (ip_bias_gain_ != kZero) {
-          const Scalar delivered =
-              (ctx_slots_ > 0 && ctx_present_ && bias_ctx_)
-                  ? bias_ctx_[size_t(i) * ctx_slots_ + active_ctx_] +
-                        (bias_bank_ ? bias_bank_[size_t(i) * ctx_slots_ + active_ctx_]
-                                    : kZero)
-                  : bias_[i];
-          target += ip_bias_gain_ * delivered;
+        Scalar err = ip_pooled ? slice_err[sl] : (rate_ema_[i] - ip_target(i));
+        // DNA v74. Remove the ramp component, so the direction the centroid
+        // reads is not regulated and every other direction still is. v58 exempts
+        // a MAGNITUDE and this exempts a DIRECTION, so the two compose: the
+        // target above already carries the learned offset, and what is taken out
+        // here is whatever tilt the remaining error still has.
+        if (ramp_on) {
+          const uint32_t g = ctx_group_[i];
+          if (g < kVocalGroups) err -= ramp_exempt * ctx_ramp_[i] * ramp_proj[g];
         }
-        const Scalar err = ip_pooled ? slice_err[sl] : (rate_ema_[i] - target);
         threshold_[i] = clampf(threshold_[i] + ip_rate * err, t_min, t_max);
       }
       // Inhibitory synaptic plasticity (DNA v50, Vogels et al. 2011). Rate

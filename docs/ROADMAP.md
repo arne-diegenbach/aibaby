@@ -239,8 +239,28 @@ F2's recovery from 8% to 62% of the oracle's bit; nothing has tried F1's.
   half-relieved buys nothing). **So the target is the neuron's regulator, not its constants**,
   and `stageprobe`'s untried **group-mean homeostat** — holding the common mode while leaving
   the tilt a centroid readout reads — is now the remaining candidate rather than one of
-  several. `noise_amp` is still unvaried per neuron and still the harder one, not the better
+  several. ~~**Struck 2026-10-29:** it was never untried. That is **DNA v57 `ip_pool`**, run at
+  articulator-group granularity and refused (−0.90 SE, learned bias halved, threshold pushed 3×
+  harder). See the v74 entry below for what was actually left and how it closed.~~
+  `noise_amp` is still unvaried per neuron and still the harder one, not the better
   one: it is already the exploration drive.
+- **And the regulator's coordinate system, the narrower lead that replaced it (2026-10-29).**
+  The estimator and the readout already share a basis: `read_group` is a rate-weighted centroid
+  over neuron index, `ctx_gain_mode = 1` writes along the group's zero-mean **ramp**, and
+  `ctxgain` showed **18 ramp parameters match 252 per-neuron ones**. The regulator is the only
+  part of the loop in a basis of its own, so **DNA v74 `ip_ramp_exempt`** exempts that one
+  direction of fourteen — against v57's thirteen and v58's zero (a magnitude, not a direction).
+  At full dose (`ramp cov` 100%, liveness 18/18, no dose warning) the pre-registered primary
+  reads **aligned ×0.957 ± 0.146** — **−1.7 SE from v58's ×1.21** and not clear of ×1.000 —
+  with the control ratio falling too (×0.860) and excess dF1 at **−27.0 ± 18.0 Hz, signs 5/18**.
+  **The mechanism prediction was confirmed and bought nothing:** threshold push **×1.02**
+  against v57 pooling's **×3.3**, so a projection is demonstrably not pooling in disguise, and
+  `aligned` still did not move. The stopping rule's third branch fires — point estimate under
+  the bar, so the pre-committed n=72 does **not** run. One result to keep out of it: the arm ran
+  its larynx at **7.79 Hz**, *above* the 6.84 Hz at which `ipoff` collapsed learning at −7.42
+  SE, yet lost only 1.50 SE — **group rate drift does not predict learning collapse**, so the
+  refusal condition was using a poor proxy for what `ipoff` actually removed (per-neuron
+  regulation along the other thirteen directions).
 - **Further trimming, on power grounds.** Measured to buy nothing: the creature's dynamic cost
   is already orders of magnitude below any platform's active floor, so size is not the lever.
 - **Prototype drift as the account for a four-word index.** The v53 line predicted the index
@@ -802,8 +822,11 @@ down so the next person does not pay again.
 
 Collected because each line cost one.
 
-1. **Grep the logs for the condition, not the name of the experiment.** Three times the
-   answer was already on disk. A question written down as a *lead* reads as not-yet-done.
+1. **Grep the logs for the condition, not the name of the experiment.** **Four times now** the
+   answer was already on disk. A question written down as a *lead* reads as not-yet-done — and
+   the fourth time (2026-10-29) the lead was a sentence *this project had written seven weeks
+   earlier*, carried forward as current without re-reading the later sections of the same file.
+   A lead you wrote yourself is not evidence that it is open. One `grep results/` each time.
 2. **Read the anchor of the log a number comes from before reading the number.** A search
    across runs is a join on the arm name, and the arm name does not carry the tick budget.
 3. **Check the mechanism changed before measuring whether it helped**, at smoke length, and

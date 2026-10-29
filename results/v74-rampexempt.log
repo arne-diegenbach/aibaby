@@ -1,0 +1,159 @@
+  [6/72] seed 1 r0-rnd    dF1 36.2  aligned 0.01160
+  [14/72] seed 3 r0-rnd    dF1 2.6  aligned 0.00582
+  [10/72] seed 2 r0-rnd    dF1 68.3  aligned 0.01777
+  [2/72] seed 0 r0-rnd    dF1 32.8  aligned 0.02051
+  [9/72] seed 2 r0        dF1 172.8  aligned 0.04143
+  [8/72] seed 1 r1-rnd    dF1 15.0  aligned 0.00817
+  [12/72] seed 2 r1-rnd    dF1 35.4  aligned 0.00213
+  [13/72] seed 3 r0        dF1 101.9  aligned 0.03134
+  [5/72] seed 1 r0        dF1 133.7  aligned 0.03073
+  [1/72] seed 0 r0        dF1 8.3  aligned 0.01753
+  [4/72] seed 0 r1-rnd    dF1 13.8  aligned 0.00929
+  [11/72] seed 2 r1        dF1 95.4  aligned 0.06267
+  [3/72] seed 0 r1        dF1 160.9  aligned 0.05822
+  [7/72] seed 1 r1        dF1 102.7  aligned 0.04308
+  [16/72] seed 3 r1-rnd    dF1 28.3  aligned 0.01787
+  [22/72] seed 5 r0-rnd    dF1 53.3  aligned 0.02013
+  [18/72] seed 4 r0-rnd    dF1 7.5  aligned 0.01433
+  [17/72] seed 4 r0        dF1 118.3  aligned 0.04902
+  [21/72] seed 5 r0        dF1 145.5  aligned 0.04146
+  [20/72] seed 4 r1-rnd    dF1 25.4  aligned 0.00784
+  [24/72] seed 5 r1-rnd    dF1 20.0  aligned 0.00938
+  [25/72] seed 6 r0        dF1 42.8  aligned 0.01268
+  [15/72] seed 3 r1        dF1 132.0  aligned 0.06690
+  [26/72] seed 6 r0-rnd    dF1 11.9  aligned 0.01386
+  [19/72] seed 4 r1        dF1 8.3  aligned 0.01683
+  [23/72] seed 5 r1        dF1 58.1  aligned 0.02089
+  [28/72] seed 6 r1-rnd    dF1 51.3  aligned 0.01942
+  [30/72] seed 7 r0-rnd    dF1 26.5  aligned 0.00732
+  [29/72] seed 7 r0        dF1 106.9  aligned 0.05736
+  [27/72] seed 6 r1        dF1 9.6  aligned 0.01633
+  [32/72] seed 7 r1-rnd    dF1 11.3  aligned 0.01024
+  [33/72] seed 8 r0        dF1 54.5  aligned 0.01523
+  [34/72] seed 8 r0-rnd    dF1 98.7  aligned 0.04192
+  [31/72] seed 7 r1        dF1 64.2  aligned 0.04038
+  [38/72] seed 9 r0-rnd    dF1 26.8  aligned 0.01856
+  [36/72] seed 8 r1-rnd    dF1 30.1  aligned 0.02411
+  [37/72] seed 9 r0        dF1 81.3  aligned 0.02975
+  [35/72] seed 8 r1        dF1 32.6  aligned 0.01264
+  [40/72] seed 9 r1-rnd    dF1 2.6  aligned 0.01407
+  [39/72] seed 9 r1        dF1 22.5  aligned 0.00003
+  [41/72] seed 10 r0        dF1 123.8  aligned 0.04593
+  [45/72] seed 11 r0        dF1 18.6  aligned 0.01630
+  [42/72] seed 10 r0-rnd    dF1 16.7  aligned 0.00681
+  [46/72] seed 11 r0-rnd    dF1 14.9  aligned 0.03341
+  [44/72] seed 10 r1-rnd    dF1 22.0  aligned 0.00141
+  [49/72] seed 12 r0        dF1 117.5  aligned 0.04934
+  [43/72] seed 10 r1        dF1 12.9  aligned 0.02666
+  [48/72] seed 11 r1-rnd    dF1 13.9  aligned 0.01341
+  [50/72] seed 12 r0-rnd    dF1 11.3  aligned 0.00649
+  [53/72] seed 13 r0        dF1 72.2  aligned 0.04532
+  [54/72] seed 13 r0-rnd    dF1 20.9  aligned 0.00397
+  [52/72] seed 12 r1-rnd    dF1 47.1  aligned 0.00633
+  [51/72] seed 12 r1        dF1 77.9  aligned 0.04054
+  [55/72] seed 13 r1        dF1 57.7  aligned 0.06045
+  [47/72] seed 11 r1        dF1 113.0  aligned 0.00851
+  [56/72] seed 13 r1-rnd    dF1 71.3  aligned 0.04317
+  [57/72] seed 14 r0        dF1 103.8  aligned 0.02698
+  [58/72] seed 14 r0-rnd    dF1 1.1  aligned 0.01197
+  [62/72] seed 15 r0-rnd    dF1 79.8  aligned 0.03700
+  [60/72] seed 14 r1-rnd    dF1 22.1  aligned 0.03096
+  [61/72] seed 15 r0        dF1 90.7  aligned 0.04566
+  [64/72] seed 15 r1-rnd    dF1 13.9  aligned 0.00189
+  [65/72] seed 16 r0        dF1 134.3  aligned 0.01265
+  [66/72] seed 16 r0-rnd    dF1 23.0  aligned 0.03228
+  [59/72] seed 14 r1        dF1 86.5  aligned 0.04162
+  [68/72] seed 16 r1-rnd    dF1 6.0  aligned 0.00999
+  [63/72] seed 15 r1        dF1 56.2  aligned 0.01551
+  [69/72] seed 17 r0        dF1 142.8  aligned 0.06094
+  [70/72] seed 17 r0-rnd    dF1 24.3  aligned 0.01823
+  [67/72] seed 16 r1        dF1 68.9  aligned 0.02293
+  [72/72] seed 17 r1-rnd    dF1 73.6  aligned 0.04732
+  [71/72] seed 17 r1        dF1 71.3  aligned 0.04859
+experiment: ippool
+  instrument        ippool   trial seed 0000000001353e69   4857 trials
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  question          stageprobe put the compression in intrinsic plasticity
+                    (bias->rate 0.34 on, 0.91 off). v57 exempted 13 of a
+                    group's 14 directions and halved the learned bias; v58
+                    exempted a magnitude. DNA v74 exempts ONE DIRECTION --
+                    the group's zero-mean ramp, the readout's own coordinate.
+  the gate          EXCESS over each arm's OWN matched-marginal control,
+                    r1 vs r0, PAIRED on seed, at 2 SE -- AND the larynx rate
+                    still regulated, or it is v50's refuted trade.
+  the bar is v58    not zero. dF1 ~ aligned^0.61 already closes v58's
+                    aligned x1.21 by arithmetic (+12.3% against the x1.68
+                    the ceiling needs), so `aligned` must beat x1.21 or this
+                    is the same closure again. The POWER block prints it.
+  and a 3rd refusal the threshold drift. v57 pushed it back 3x harder
+                    (+0.344 vs the shipped +0.105) because every neuron got
+                    a slice MEAN; a projection subtracts a component instead,
+                    so drift near shipped is the check that this is not
+                    pooling in disguise.
+  stated up front   n = 18, and a 2-3 SE result at that size is a HYPOTHESIS
+                    in this project; three have been retracted. And a null
+                    here does not rule out a convergence-SPEED effect.
+  the stopping rule if the ratio clears v58's x1.21 at 2 SE, this run
+                    settles it. If the POINT estimate exceeds 1.21 but the
+                    SE does not resolve it, the follow-up is a PRE-COMMITTED
+                    n = 72 on fresh seed families (seed + 36*7919 and
+                    beyond) -- NOT seeds added to this sample until it
+                    clears. If the point estimate is under 1.21, the
+                    coordinate-system route is closed and the readout is
+                    what is left.
+
+
+  ARM LIVENESS vs `r0` (seeds where the arm differs at all)
+    r0-rnd             18/18
+    r1                 18/18
+    r1-rnd             18/18
+
+  arm       dF1 (Hz)         aligned     gain      larynx rate   thr drift   ramp cov
+  r0          98.3 +/- 10.6    0.03498     2.43      5.58          +1.415      100%
+  r0-rnd      30.9 +/- 6.4     0.01789     1.08      4.91          +0.719      100%
+  r1          68.4 +/- 10.0    0.03349     2.24      7.79          +1.441      100%
+  r1-rnd      27.9 +/- 4.9     0.01539     0.89      4.81          +0.779      100%
+
+  PRIMARY (pre-registered): `aligned` as a RATIO OF SUMS, r1 / r0,
+  jackknife SE over 18 creatures
+    aligned ratio   x0.957 +/- 0.146   (-0.3 SE from 1.000, -1.7 SE from v58's 1.210)
+    control ratio   x0.860 +/- 0.231   (r1-rnd / r0-rnd -- a matched rise here means the ESTIMATE moved, not the learning)
+    does not clear x1.000 at 2 SE -- no mechanism effect to price
+
+  EXCESS DIFFERENCE vs `r0` (the shipped rule), paired on seed
+  r1           -27.0 +/- 18.0  (-1.50 SE)   signs 5/18
+  r05 (dose ladder, not this run) not in this run
+  shipped larynx rate  5.58 Hz  (ipoff ran at 6.84 and collapsed learning: -7.42 SE)
+  THRESHOLD PUSH  shipped +1.415   r1 +1.441   x1.02   (v57 pooling was x3.3: +0.344 vs +0.105, on file)
+  r1         rate 7.79 Hz (drift 39%)
+
+  POWER, against the transfer curve dF1 ~ aligned^0.61
+    aligned x0.957  ->  predicted dF1 -2.6 Hz
+    seeds needed to resolve that at 2 SE: 0   (this run: 18)
+    the bar: v58 reached aligned x1.210 and ^0.61 closed it.  this run x0.957 +/- 0.146  ->  does NOT clear v58 at 2 SE
+    for the ceiling (dF1 x1.68) `aligned` needs x2.34; this run is 0% of the way in log terms
+
+  THE RAMP EXEMPTION DOES NOT CLEAR THE dF1 BAR AT THIS n.
+  Read the `aligned` and `thr drift` columns before calling it a
+  null -- at n = 18 the dF1 bar is ~17 Hz and the exponent says what
+  this mechanism could possibly have delivered into it.
+
+  What r1 did: aligned x0.957, gain 2.43 -> 2.24, larynx 7.79 Hz
+  against the shipped 5.58, threshold push +1.441 against +1.415.
+  Against the two earlier reliefs -- v57 pooling HALVED the learned
+  bias and pushed the threshold 3x harder; `ipoff` collapsed learning
+  outright at -7.42 SE (both on file, not this run).
+
+  AND `aligned` does NOT clear v58's x1.21 at 2 SE, so this is not
+  an established win over the earlier reliefs. Whether it is the
+  same closure again or merely underpowered is what the SE on the
+  ratio says -- read it, do not read the point estimate.
+
+  And ^0.61 turns this run's aligned into -2.6 Hz, a bar needing 0
+  seeds against the 18 it ran. The ceiling is one exponent and not a
+  tally of dead ends: dF1 x1.68 wants aligned x2.34, and every knob
+  this project has found moves it x1.1-x1.2. If the ramp exemption is
+  in that band too, then the regulator's COORDINATE SYSTEM was not the
+  thing holding the ceiling down, and what is left is the readout
+  itself -- a rate-weighted centroid, by design.

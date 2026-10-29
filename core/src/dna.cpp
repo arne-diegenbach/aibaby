@@ -348,6 +348,25 @@ DnaStatus Dna::load(const void* blob, size_t size) {
     if (m.threshold_sigma < 0.0f || m.threshold_sigma > 1.0f) return DnaStatus::kBadModule;
     if (m.leak_tau_sigma < 0.0f || m.leak_tau_sigma > 1.0f) return DnaStatus::kBadModule;
     if (m.refractory_sigma < 0.0f || m.refractory_sigma > 1.0f) return DnaStatus::kBadModule;
+    // DNA v74. A fraction of the ramp component to remove, so outside [0,1] it is
+    // either adding the component back or over-removing it into the opposite
+    // tilt, and neither is the mechanism. Refused together with ip_pool: a
+    // pooled error is one number per group with no within-group structure left
+    // for a projection to remove, so a genome asking for both is asking for two
+    // competing answers to one question and is a mistake rather than a sweep.
+    if (m.ip_ramp_exempt < 0.0f || m.ip_ramp_exempt > 1.0f) return DnaStatus::kBadModule;
+    if (m.ip_ramp_exempt > 0.0f && m.ip_pool > 0u) return DnaStatus::kBadModule;
+    // And the two ways it could be set and do NOTHING, both refused rather than
+    // left to run inert. The ramp and group tables are built only for the VOCAL
+    // module and only when the header asks for context slots, so on any other
+    // module, or with no slots, this field would be a manipulation that never
+    // happened — the exact shape `stageprobe` correction 3 and the vacuity
+    // pre-flight exist to catch. A genome that asks for it where it cannot act
+    // is a mistake, and a refusal says so at build time instead of at write-up.
+    if (m.ip_ramp_exempt > 0.0f) {
+      if (m.role != uint32_t(ModuleRole::kVocal)) return DnaStatus::kBadModule;
+      if (h->exploration.context_slots <= 1u) return DnaStatus::kBadModule;
+    }
     if (m.explore_scale < 0.0f) return DnaStatus::kBadModule;
     if (m.ip_wake_scale < 0.0f || m.ip_sleep_scale < 0.0f) return DnaStatus::kBadModule;
     if (m.syn_wake_scale < 0.0f || m.syn_sleep_scale < 0.0f) return DnaStatus::kBadModule;

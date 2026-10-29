@@ -23839,9 +23839,186 @@ its constants** — and `stageprobe`'s untried mechanism, a homeostat on the *gr
 rate rather than per-neuron (holding the common mode while leaving the tilt a centroid
 readout reads), goes from one candidate among several to **the remaining one**.
 
+> **Struck 2026-10-29.** That last clause was wrong when it was written. The group-mean
+> homeostat is **DNA v57 `ip_pool`**, and it had already been run at exactly articulator-group
+> granularity and **refused** (−0.90 SE; this same file records it twice, at the `aimpool`
+> section and again in the `ippool` reach measurement). What was actually left is narrower, and
+> the section below both derives it and measures it.
+
 - It does **not** say unearned heterogeneity is harmless. v71's −61% at 3.5 SE stands; this
   says the refractory period cannot deliver a comparable perturbation.
 - It does **not** say `refractory_ms` is inert in general — only at *this* operating point. A
   creature firing at 100 Hz would be a different measurement.
 - `noise_amp` remains unvaried per neuron, and remains **the harder one, not the better
   one**: it is already the exploration drive, so spreading it moves two things at once.
+
+## DNA v74: the regulator's coordinate system is not what holds the ceiling down (2026-10-29)
+
+### The lead this started from did not exist, and the correction was one `grep` away
+
+The v73 section above closed the neuron's three intrinsic constants and handed forward a
+single named candidate: a homeostat on the *group's* mean rate rather than per-neuron,
+described there as `stageprobe`'s "untried mechanism" and "the remaining one."
+
+It was not untried. It is **DNA v57, the field `ip_pool`**, and it had been run as `ippool`
+at exactly the granularity the sentence describes — 126 vocal neurons, 9 articulator groups,
+slice map `(k*9)/126`, and the run's own header says it "pools the rate error per articulator
+group." It was refused: reach **−0.90 SE** under teaching, the learned bias **halved**
+(aligned 0.0458 → 0.0237), and the threshold pushed back **3× harder** than shipped (+0.344
+against +0.105). This file already recorded all of it, in two separate places.
+
+The sentence was written on 2026-09-12 and carried forward as current without re-reading the
+later sections of the same memory file. `README.md` has an `aimpool` section that exists
+specifically to break this habit, because it had already happened twice. **This is the third
+time**, and each time the correction was one `grep results/` away.
+
+I also checked the one variant that was genuinely unrun, `ip_pool = 1` (whole-module
+pooling), and it is **strictly dominated** rather than promising: it frees *between*-group
+differences, which a centroid taken over neuron index *inside* a group cannot read. It would
+surrender regulation to buy a degree of freedom the readout does not have.
+
+### What was actually left, derived rather than guessed
+
+The estimator and the readout already speak the same language. `read_group` is a rate-weighted
+centroid over neuron index, `sum(r_i * p_i) / sum(r_i)`; `ctx_gain_mode = 1` writes its bias
+along the group's zero-mean **ramp**, and `dna.h` says why in its own comment — a ramp "is not
+a hint about the answer, it is the readout's own coordinate." `ctxgain` then measured that
+**18 ramp parameters match 252 per-neuron ones**.
+
+The regulator is the only part of the loop that does not speak in those coordinates. It holds
+each neuron's rate individually, which means it opposes the one direction the centroid
+actually reads, in a basis of its own. So: exempt that single direction and nothing else.
+
+| | exempts | of 14 directions |
+|---|---|---|
+| v57 `ip_pool` | the whole slice mean | **13** — refused, −0.90 SE |
+| v58 `ip_bias_gain` | the learned bias *amount* | **0** — a magnitude, not a direction (aligned ×1.21) |
+| **v74 `ip_ramp_exempt`** | the group's zero-mean ramp | **1** |
+
+The rule is a projection, not a substitution:
+
+```
+err_i  ->  err_i - exempt * r_i * (sum_j r_j err_j) / (sum_j r_j^2)
+```
+
+summed per articulator group over live neurons, with the normaliser taken from the neurons
+actually contributing rather than from `inv_ramp_ss_`. At `exempt = 1` the ramp component is
+removed exactly (`Σ r_i err'_i = (1-exempt) · Σ r_i err_i`) and every other direction is
+regulated exactly as shipped.
+
+**Why this was predicted not to be v57 with extra steps**, using the mechanism v57's own
+write-up named: pooling replaced each neuron's error with a slice *mean*, in which per-neuron
+errors of opposite sign largely cancel, so the homeostat pushed the threshold 3× harder and
+the gradient became noisier to estimate — which is how `aligned` halved. Subtracting one
+component leaves the uniform direction as regulated as shipped. That is falsifiable, and the
+run prints it as a column.
+
+### The build, and it ships off bit-identically
+
+`kDnaVersion` 55 → 56 for the `DnaModule` layout change; the field is optional in TOML, so
+every genome on file still parses. `ip_ramp_exempt = 0` takes the shipped branch, and the gate
+agrees: `verify PASS`, determinism PASS, pinned hash **`ad96f882becbee92` unchanged**, 24 as
+expected / 0 not (`results/verify-rampexempt.log`).
+
+Three ways to set it and have it do nothing are **refused at validation time** rather than
+left to run inert: on a non-vocal module, with `context_slots <= 1`, or combined with
+`ip_pool`. The v58 target exemption was hoisted into a lambda because three paths now need it;
+the unchanged pinned hash is the proof that the hoist is arithmetically identical.
+
+### The dose, checked before the outcome was read
+
+This is the part that separates a refused hypothesis from an inert knob, which is the lesson
+v72 and v73 both paid for:
+
+- **`ramp cov` 100% on every arm.** The ramp tables are built at birth and growth appends past
+  them, so a neuron added mid-session would sit outside the exemption. None did. No dose
+  warning fired.
+- **Arm liveness 18/18** on `r0-rnd`, `r1` and `r1-rnd` — every seed's trajectory differs from
+  the shipped arm's.
+- The dose column deliberately does **not** call `Network::ctx_ramp()`, which recomputes the
+  group from the module's *current* count instead of reading the stored tables, and would
+  therefore report full coverage for exactly the grown module it was meant to catch.
+
+### The outcome, against a bar written into the log before the first cell ran
+
+4 arms × 18 seeds × 13.6M ticks (`results/v74-rampexempt.log`).
+
+```
+arm       dF1 (Hz)         aligned     gain     larynx rate   thr drift   ramp cov
+r0          98.3 +/- 10.6    0.03498    2.43       5.58         +1.415      100%
+r0-rnd      30.9 +/- 6.4     0.01789    1.08       4.91         +0.719      100%
+r1          68.4 +/- 10.0    0.03349    2.24       7.79         +1.441      100%
+r1-rnd      27.9 +/- 4.9     0.01539    0.89       4.81         +0.779      100%
+```
+
+The pre-registered primary is `aligned` as a **ratio of sums**, `r1 / r0`, jackknifed over the
+18 creatures — a ratio of sums because a mean of ratios cost this project a 10×-too-wide
+interval once already.
+
+| | | |
+|---|---|---|
+| **primary** | `aligned` ratio **×0.957 ± 0.146** | −0.3 SE from 1.000, **−1.7 SE from v58's 1.210** |
+| control | ×0.860 ± 0.231 | `r1-rnd / r0-rnd`; the estimate did not rise either |
+| excess dF1 vs shipped, paired | **−27.0 ± 18.0 Hz (−1.50 SE)** | signs 5/18 — 13 of 18 creatures moved the *wrong* way |
+
+**The prediction came true and bought nothing.** Threshold push is **×1.02** (shipped +1.415,
+r1 +1.441) against v57 pooling's **×3.3**. The mechanism argument was right: a projection is
+not pooling in disguise, the uniform direction stayed as regulated as shipped, and the
+estimator was never pushed into v57's noisier regime. And `aligned` still did not move. That
+is the cleanest form a refusal takes here — the stated mechanism did exactly what it was
+designed to do, and the outcome did not follow.
+
+### The dissociation worth keeping out of this
+
+The exempted arm ran its larynx at **7.79 Hz against the shipped 5.58** — 39% drift, under the
+50% refusal line but *above* the **6.84 Hz** at which `ipoff` collapsed vocal learning
+outright at −7.42 SE. Here learning fell −1.50 SE and did not resolve.
+
+So **group rate drift does not predict learning collapse.** What `ipoff` removed was
+per-neuron regulation along the *other thirteen* directions, and that, not the common-mode
+rate, is what vocal learning needs. The refusal condition had been treating rate drift as a
+proxy for it; on this evidence it is a poor one. (`ipoff` is on file from an earlier generation
+of this harness, so this is a cross-run comparison and not a paired contrast — the arms were
+re-armed for v74, as they are every generation.)
+
+### Disclosure: the two pre-registrations of the drift bar did not agree
+
+The pre-flight written before the build named the third refusal as **"the larynx rate drifting
+past v57's 19%"**. The harness's guard is **`drift > 0.5`** — a 50% line inherited from the
+`ippool`/`ipoff` generation, where it marks "this is `ipoff` with extra steps," and I did not
+tighten it to the number the pre-flight had named. The measured **39% sits between the two**.
+
+So under the bar I wrote down first, this arm trips the regulation refusal; under the bar the
+code actually applied, it does not. **It changes nothing here**, because the primary refused
+the mechanism independently and a tripped regulation guard would only refuse it harder. But if
+`aligned` had come back above ×1.21, the looser line would have been carrying the verdict — and
+a threshold that is only consequential when the result is positive is the `verdict-fitted-to-data`
+failure waiting to happen. Recorded rather than quietly reconciled; the 19% line is the one to
+code next time, since 50% was calibrated for an arm that is *supposed* to lose regulation.
+
+### What this closes
+
+The stopping rule was printed into the log above the numbers, and the point estimate landed in
+its third branch — **under ×1.21, indeed under ×1.00.** So the pre-committed n=72 on fresh
+seed families does **not** fire; that follow-up was reserved for a point estimate above the bar
+that the SE could not resolve. This is not an underpowered null at full dose with a confirmed
+mechanism and a control that fell too.
+
+**The regulator's coordinate system was not the thing holding the ceiling down.** `stageprobe`
+pointed at the neuron rather than the pooling, and the neuron has now been taken apart three
+ways — its three intrinsic constants (v71/v72/v73), its regulator pooled across a group (v57),
+and its regulator's basis (v74). The ceiling has not moved for any of them, and the arithmetic
+says why it would not have: `dF1 ~ aligned^0.61` needs **aligned ×2.34** for the ×1.68 the
+ceiling asks, and every knob this project has found moves it ×1.1–×1.2. v74 moved it ×0.957.
+
+- It does **not** say the exemption is harmful. −1.50 SE on 18 is not a result in this project;
+  three 2–3 SE findings have been retracted.
+- It does **not** rule out a convergence-**speed** effect, which this instrument does not
+  measure.
+- `noise_amp` remains the last unvaried per-neuron constant, and remains **the harder one, not
+  the better one**: it is already the exploration drive, so spreading it moves two things at
+  once.
+
+What is left standing is the thing all of these were trying to work around: **the readout
+itself** — a rate-weighted centroid, by design. Not a constant, not a regulator, and not a
+basis, but the measurement the whole loop is built on.

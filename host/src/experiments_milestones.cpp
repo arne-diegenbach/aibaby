@@ -4352,6 +4352,15 @@ struct VLRun {
   double ip_rate_hz = 0.0;       // vocal's mean rate over the session
   double ip_target_hz = 0.0;     // what IP is pulling that rate toward
   double ip_pinned = 0.0;        // share of vocal at the threshold_max clamp
+  // DNA v74. The share of vocal's neurons that are INSIDE the ramp tables, which
+  // is the dose this generation delivers. `ctx_ramp_` and `ctx_group_` are built
+  // once at birth and growth does not extend them, so a grown neuron is excluded
+  // from the ramp exemption -- and from `ctx_gain_mode = 1`'s estimator, which is
+  // the same exclusion and is why the two still share one coordinate system. A
+  // ramp exemption measured on a module that has grown is diluted by exactly
+  // this fraction, and `liveness-is-not-dose` says to print the dose rather than
+  // infer it from the manipulation being wired.
+  double ramp_covered = 0.0;
   // DNA v50. The same question asked of the OTHER bounded budget: the share of
   // vocal's inhibitory afferents sitting at their own weight ceiling. Zero on
   // every genome that does not switch ISP on, because nothing else in this
@@ -5539,6 +5548,22 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
       out.ip_rate_hz = double(net.module(uint32_t(ip_vm)).mean_rate);
       out.ip_target_hz = double(s.dna.module(uint32_t(ip_vm)).target_rate_hz);
       out.isp_pinned = double(net.isp_saturation(uint32_t(ip_vm)));
+      // DNA v74's dose column, measured as BIRTH COUNT over END COUNT, which is
+      // exactly the covered fraction: the ramp tables are filled for the
+      // module's birth span and growth appends past it, so every neuron added
+      // during the session sits outside them.
+      //
+      // NOT measured with `Network::ctx_ramp()`, which looks like the right
+      // accessor and is not: it RECOMPUTES the group from the module's current
+      // count instead of reading the stored tables, so it answers "what would
+      // this neuron's ramp be if the map were rebuilt now" and would report full
+      // coverage for a module that has grown. The two agree only when nothing
+      // grew, which is the case this column exists to detect.
+      {
+        const double born = double(s.dna.module(uint32_t(ip_vm)).neurons);
+        const double now = double(net.module(uint32_t(ip_vm)).count);
+        out.ramp_covered = now > 0.0 ? (born < now ? born / now : 1.0) : 0.0;
+      }
     }
     if (ip_rm >= 0) {
       out.ip_ref_drift = mean_threshold(net, uint32_t(ip_rm), nullptr, 0.0f) - ip_r0;
@@ -37107,38 +37132,58 @@ struct IPArm {
 struct IPArm2 {
   const char* name;
   uint32_t pool;
-  float wake;   // ip_wake_scale on the larynx; 0 turns the homeostat off
-  float bgain;  // DNA v58: Hz of IP set point per unit of delivered learned bias
+  float wake;    // ip_wake_scale on the larynx; 0 turns the homeostat off
+  float bgain;   // DNA v58: Hz of IP set point per unit of delivered learned bias
+  float exempt;  // DNA v74: fraction of the error's RAMP component removed
   VLTarget target;
 };
 const IPArm2 kIPArms[] = {
-    // THIRD GENERATION, 2026-09-12. The trade is established: IP is the compression
-    // (bias->rate 0.34 on, 0.91 off), relieving HALF buys nothing because the same
-    // intervention halves the learned bias, and relieving ALL collapses learning
-    // (dF1 103.9 -> 17.7, -7.42 SE, gain to 1.00). So the larynx must regulate to
-    // learn at all, and regulating is what compresses what it learns.
+    // FOURTH GENERATION, 2026-10-29, DNA v74. The arms are re-cut each generation
+    // and the earlier ones are on file: v57's pooling in `ippool-136m.log`, v58's
+    // set-point exemption in `v58-136m-final.log`.
     //
-    // Thirteen routes tried to trade ALONG that. DNA v58 tries to DISSOLVE it: the
-    // IP set point moves with the learned bias, so a neuron reward has deliberately
-    // pushed up is no longer read as firing too fast. Input-driven rate stays fully
-    // regulated -- only the deliberate offset is exempt.
+    // WHAT THE FIRST THREE SETTLED. IP is the compression (bias->rate 0.34 on,
+    // 0.91 off); relieving ALL of it collapses learning (dF1 103.9 -> 17.7,
+    // -7.42 SE); and the two partial reliefs each exempted the wrong thing:
     //
-    // THE GAIN IS SWEPT, not chosen. `delivered_bias` is a drive and the target is
-    // a rate in Hz, so the conversion is the thing being measured, and four guessed
-    // constants have cost this project a run each.
+    //   v57 ip_pool = 9     one pooled error per articulator group, i.e. 13 of a
+    //                       group's 14 directions exempt. Transfer 0.34 -> 0.51
+    //                       and the voice did not follow: -15.6 +/- 17.5
+    //                       (-0.90 SE), `aligned` HALVED 0.0458 -> 0.0237.
+    //   v58 ip_bias_gain    the learned bias AMOUNT, in whatever direction it
+    //                       happens to lie -- a magnitude, not a direction.
+    //                       aligned +21%, which ^0.61 turns into +12.3%.
     //
-    // WHAT WOULD REFUSE IT is the failure `ipoff` already demonstrated: exempting
-    // the bias must not become exempting the neuron. The pair has to move together
-    // -- delivered dF1 up AND the larynx rate still near target -- or this is
-    // `ipoff` with extra steps, and its 17.7 Hz is what that looks like.
+    // THIS GENERATION EXEMPTS ONE DIRECTION OF FOURTEEN: the group's zero-mean
+    // ramp, which is the readout's own coordinate -- the larynx reads each
+    // articulator group as a rate-weighted centroid over neuron index. `ctxgain`
+    // already measured that the ESTIMATOR loses nothing in that coordinate (18
+    // ramp parameters match 252 per-neuron ones); the regulator is the one part
+    // of this creature that still does not speak in it.
     //
-    // name        pool wake  bgain  target
-    {"g0",         0u, 1.0f,   0.0f, kVLTgtHeard},     // shipped, bit-identical
-    {"g0-rnd",     0u, 1.0f,   0.0f, kVLTgtRandom},
-    {"g10",        0u, 1.0f,  10.0f, kVLTgtHeard},
-    {"g10-rnd",    0u, 1.0f,  10.0f, kVLTgtRandom},
-    {"g40",        0u, 1.0f,  40.0f, kVLTgtHeard},
-    {"g40-rnd",    0u, 1.0f,  40.0f, kVLTgtRandom},
+    // FOUR ARMS AND NOT SIX, deliberately. A dose ladder is the follow-up, not
+    // this run: `trim`'s process catch is that the licensing contrast must change
+    // exactly ONE thing from what ships, and six arms at this budget crosses the
+    // ~6 h mark that wants asking first.
+    //
+    // THE BAR IS v58 AND NOT ZERO, recorded before the run. dF1 ~ aligned^0.61
+    // already closes v58's +21% by arithmetic, so `aligned` has to beat x1.21 or
+    // this is the same closure again rather than a result. The POWER block below
+    // prints that comparison whatever the verdict says.
+    //
+    // WHAT WOULD REFUSE IT, three ways, each on a column this harness already
+    // prints: the threshold drift coming back at v57's +0.344 against the shipped
+    // +0.105 (then a projection is pooling in disguise -- it should stay near
+    // shipped, because it subtracts a component instead of replacing each error
+    // with a slice mean); `aligned` halving the way v57's did; or the larynx rate
+    // running away, which is v50's refused trade and means exempting a direction
+    // has become exempting the neuron.
+    //
+    // name        pool wake  bgain exempt  target
+    {"r0",         0u, 1.0f,   0.0f,  0.0f, kVLTgtHeard},   // shipped, bit-identical
+    {"r0-rnd",     0u, 1.0f,   0.0f,  0.0f, kVLTgtRandom},
+    {"r1",         0u, 1.0f,   0.0f,  1.0f, kVLTgtHeard},
+    {"r1-rnd",     0u, 1.0f,   0.0f,  1.0f, kVLTgtRandom},
 };
 constexpr uint32_t kIPArmCount = sizeof(kIPArms) / sizeof(kIPArms[0]);
 
@@ -37164,19 +37209,43 @@ bool run_ippool(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) 
                          offsetof(aibaby::DnaExploration, context_source);
   instrument("ippool", dna.header().seed ^ 0x19A0u, ticks / kVLTrialTicks, "trials");
   std::printf("  question          stageprobe put the compression in intrinsic plasticity\n"
-              "                    (bias->rate 0.34 on, 0.91 off). DNA v57 pools the rate\n"
-              "                    error per articulator group: regulation holds and the\n"
-              "                    transfer recovers to 0.51. Does that buy delivered dF1?\n");
+              "                    (bias->rate 0.34 on, 0.91 off). v57 exempted 13 of a\n"
+              "                    group's 14 directions and halved the learned bias; v58\n"
+              "                    exempted a magnitude. DNA v74 exempts ONE DIRECTION --\n"
+              "                    the group's zero-mean ramp, the readout's own coordinate.\n");
   std::printf("  the gate          EXCESS over each arm's OWN matched-marginal control,\n"
-              "                    ip9 vs ip0, PAIRED on seed, at 2 SE -- and the ip9 mean\n"
-              "                    rate must stay regulated, or it is v50's refuted trade.\n");
+              "                    r1 vs r0, PAIRED on seed, at 2 SE -- AND the larynx rate\n"
+              "                    still regulated, or it is v50's refuted trade.\n");
+  std::printf("  the bar is v58    not zero. dF1 ~ aligned^0.61 already closes v58's\n"
+              "                    aligned x1.21 by arithmetic (+12.3%% against the x1.68\n"
+              "                    the ceiling needs), so `aligned` must beat x1.21 or this\n"
+              "                    is the same closure again. The POWER block prints it.\n");
+  std::printf("  and a 3rd refusal the threshold drift. v57 pushed it back 3x harder\n"
+              "                    (+0.344 vs the shipped +0.105) because every neuron got\n"
+              "                    a slice MEAN; a projection subtracts a component instead,\n"
+              "                    so drift near shipped is the check that this is not\n"
+              "                    pooling in disguise.\n");
   std::printf("  stated up front   n = 18, and a 2-3 SE result at that size is a HYPOTHESIS\n"
               "                    in this project; three have been retracted. And a null\n"
-              "                    here does not rule out a convergence-SPEED effect.\n\n");
+              "                    here does not rule out a convergence-SPEED effect.\n");
+  // THE STOPPING RULE, written before the run and printed into its own log,
+  // because `conscience-gain-v70` is the one result on this line that settled
+  // cleanly and what made it settle was a pre-committed n with the rule fixed
+  // first. Optional stopping is the specific failure it avoided: the discovery
+  // half there was 0.3 SE short and adding creatures until it cleared would have
+  // manufactured the result.
+  std::printf("  the stopping rule if the ratio clears v58's x1.21 at 2 SE, this run\n"
+              "                    settles it. If the POINT estimate exceeds 1.21 but the\n"
+              "                    SE does not resolve it, the follow-up is a PRE-COMMITTED\n"
+              "                    n = 72 on fresh seed families (seed + 36*7919 and\n"
+              "                    beyond) -- NOT seeds added to this sample until it\n"
+              "                    clears. If the point estimate is under 1.21, the\n"
+              "                    coordinate-system route is closed and the readout is\n"
+              "                    what is left.\n\n");
 
   struct Cell {
     bool ok = false;
-    double d1 = 0.0, align = 0.0, gain = 0.0, rate = 0.0, thr = 0.0;
+    double d1 = 0.0, align = 0.0, gain = 0.0, rate = 0.0, thr = 0.0, cov = 0.0;
   };
   const uint32_t njobs = kReps * kIPArmCount;
   const std::vector<Cell> cells = parallel_reps<Cell>(njobs, [&](uint32_t i) {
@@ -37203,6 +37272,14 @@ bool run_ippool(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) 
                     sizeof(aibaby::DnaModule) * size_t(vmod) +
                     offsetof(aibaby::DnaModule, ip_bias_gain),
                 &bgain, sizeof(bgain));
+    // DNA v74. Written on the LARYNX, the only module where `ctx_group_` is
+    // populated -- dna.cpp refuses it anywhere else rather than letting it run
+    // inert, so this cannot quietly be a manipulation that never happened.
+    const float exempt = kIPArms[a].exempt;
+    std::memcpy(variant.data() + sizeof(aibaby::DnaHeader) +
+                    sizeof(aibaby::DnaModule) * size_t(vmod) +
+                    offsetof(aibaby::DnaModule, ip_ramp_exempt),
+                &exempt, sizeof(exempt));
     CtxDrive drive;
     drive.module = ctx_module;
     drive.slots = kVLWords;
@@ -37218,6 +37295,7 @@ bool run_ippool(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) 
     cell.gain = run.ctx_align_gain;
     cell.rate = run.ip_rate_hz;       // the LARYNX's mean rate, not the context module's
     cell.thr = run.ip_thresh_drift;
+    cell.cov = run.ramp_covered;
     cell.ok = true;
     parallel_note("  [%u/%u] seed %u %-8s  dF1 %.1f  aligned %.5f\n", i + 1, njobs, r,
                   kIPArms[a].name, cell.d1, cell.align);
@@ -37232,18 +37310,24 @@ bool run_ippool(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) 
         if (c.ok) live.observe(kIPArms[a].name, r, c.d1);
       }
     }
-    if (!live.report("g0")) return false;
+    if (!live.report("r0")) return false;
   }
 
-  std::printf("\n  %-9s %-16s %-11s %-9s %s\n", "arm", "dF1 (Hz)", "aligned", "gain",
-              "larynx rate");
+  // DNA v74 prints `thr drift` as a column of its own, because this generation's
+  // third refusal condition reads off it: v57's +0.344 against the shipped +0.105
+  // is how a relieved homeostat betrays that it is pushing the whole group
+  // coherently, and a projection is supposed NOT to do that.
+  std::printf("\n  %-9s %-16s %-11s %-9s %-13s %-11s %s\n", "arm", "dF1 (Hz)", "aligned",
+              "gain", "larynx rate", "thr drift", "ramp cov");
   double m_rate[kIPArmCount], m_d1[kIPArmCount], m_align[kIPArmCount], m_gain[kIPArmCount];
+  double m_thr[kIPArmCount], m_cov[kIPArmCount];
   for (uint32_t a = 0; a < kIPArmCount; ++a) {
-    std::vector<double> d1, al, gn, rt;
+    std::vector<double> d1, al, gn, rt, th, cv;
     for (uint32_t r = 0; r < kReps; ++r) {
       const Cell& c = cells[r * kIPArmCount + a];
       if (!c.ok) continue;
       d1.push_back(c.d1); al.push_back(c.align); gn.push_back(c.gain); rt.push_back(c.rate);
+      th.push_back(c.thr); cv.push_back(c.cov);
     }
     if (d1.size() < 3) {
       std::printf("\n  ippool INCONCLUSIVE -- arm `%s` produced %zu creatures.\n",
@@ -37256,8 +37340,11 @@ bool run_ippool(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) 
     m_d1[a] = md;
     m_align[a] = ctx_mean_se(al, &s2);
     m_gain[a] = ctx_mean_se(gn, &s2);
-    std::printf("  %-9s %6.1f +/- %-7.1f %-11.5f %-9.2f %.2f\n", kIPArms[a].name, md, se,
-                m_align[a], m_gain[a], m_rate[a]);
+    m_thr[a] = ctx_mean_se(th, &s2);
+    m_cov[a] = ctx_mean_se(cv, &s2);
+    std::printf("  %-9s %6.1f +/- %-7.1f %-11.5f %-9.2f %-13.2f %+-11.3f %.0f%%\n",
+                kIPArms[a].name, md, se, m_align[a], m_gain[a], m_rate[a], m_thr[a],
+                100.0 * m_cov[a]);
   }
 
   const auto idx = [](const char* w) {
@@ -37269,10 +37356,26 @@ bool run_ippool(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) 
   // Excess per seed, then the PAIRED difference of excesses -- these arms share
   // creatures, so an independent-samples SE would be the wrong one, as it was on
   // poolbeta's screen where it moved a verdict across the bar.
-  const int a0 = idx("g0"), a0r = idx("g0-rnd");
+  const int a0 = idx("r0"), a0r = idx("r0-rnd");
   if (a0 < 0 || a0r < 0) {
-    std::printf("\n  ippool cannot summarise: the g0 baseline is missing.\n");
+    std::printf("\n  ippool cannot summarise: the r0 baseline is missing.\n");
     return false;
+  }
+  // DNA v74's dose check, read BEFORE any verdict below. A larynx that grew
+  // during the session carries the exemption on its birth neurons only, so low
+  // coverage means the manipulation was DILUTED and a null is partly about that
+  // rather than about the mechanism -- `liveness-is-not-dose` applied before the
+  // fact instead of after it.
+  {
+    const int a1c = idx("r1");
+    if (a1c >= 0 && m_cov[a1c] < 0.95) {
+      std::printf("\n  DOSE WARNING: only %.0f%% of the larynx is inside the ramp tables\n"
+                  "  on `r1`. Growth appends past the birth span and the tables are not\n"
+                  "  extended, so the exemption reached that fraction of the module and\n"
+                  "  the rest kept full per-neuron regulation. Read every number below\n"
+                  "  as a diluted dose.\n",
+                  100.0 * m_cov[a1c]);
+    }
   }
   // Excess per seed, then the PAIRED difference of excesses, for each candidate
   // against the shipped arm. These arms share creatures, so an
@@ -37295,10 +37398,108 @@ bool run_ippool(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) 
     return ctx_mean_se(dd, se_out);
   };
 
-  std::printf("\n  EXCESS DIFFERENCE vs `g0` (the shipped rule), paired on seed\n");
+  // ---- DNA v74's PRE-REGISTERED PRIMARY, and it is not the dF1 row below ----
+  //
+  // The dF1 bar at n = 18 is ~17 Hz and `ceiling-is-an-exponent` says this
+  // mechanism cannot put that much there however well it works: dF1 ~
+  // aligned^0.61 means even aligned x2 is only dF1 x1.52. v58's generation
+  // learned that the hard way -- its gate "asked the wrong quantity" and said so
+  // only after the run. So the primary here is the quantity the mechanism acts
+  // on, `aligned`, and the bar is v58's x1.210 rather than x1.000.
+  //
+  // RATIO OF SUMS with a jackknife SE, one denominator per arm, because
+  // `mean-of-ratios` cost this project a 10x-too-wide interval once already: a
+  // per-creature ratio is a ratio of two small noisy numbers and its mean is
+  // dominated by the creatures with the smallest denominators.
+  // Hoisted, because the POWER block and the verdict both have to quote THIS
+  // statistic and not re-derive their own. The first version of this experiment
+  // tested the point estimate in one place and the SE in another, and printed two
+  // different answers to the same question in one run -- the smoke caught it.
+  double align_ratio = 0.0, align_ratio_se = 0.0;
+  {
+    const int a1 = idx("r1");
+    if (a1 >= 0) {
+      auto ratio = [&](int drop) {
+        double num = 0.0, den = 0.0;
+        for (uint32_t r = 0; r < kReps; ++r) {
+          if (int(r) == drop) continue;
+          const Cell& ct = cells[r * kIPArmCount + uint32_t(a1)];
+          const Cell& cb = cells[r * kIPArmCount + uint32_t(a0)];
+          if (!ct.ok || !cb.ok) continue;
+          num += ct.align;
+          den += cb.align;
+        }
+        return den > 0.0 ? num / den : 0.0;
+      };
+      auto jackknife = [&](auto&& f, double* se) {
+        const double full = f(-1);
+        std::vector<double> loo;
+        for (uint32_t r = 0; r < kReps; ++r) loo.push_back(f(int(r)));
+        const double nn = double(loo.size());
+        if (nn < 3.0) { *se = 0.0; return full; }
+        double mean = 0.0;
+        for (double v : loo) mean += v;
+        mean /= nn;
+        double acc = 0.0;
+        for (double v : loo) acc += (v - mean) * (v - mean);
+        *se = std::sqrt(acc * (nn - 1.0) / nn);
+        return full;
+      };
+      double rse = 0.0;
+      const double rr = jackknife(ratio, &rse);
+      align_ratio = rr;
+      align_ratio_se = rse;
+      // The SAME ratio on the matched-marginal arms, which is the specificity
+      // check. `aligned` in a random-target arm has no coherent mapping to
+      // learn, so if the control ratio moves as much as the taught one the
+      // mechanism is lifting the ESTIMATE and not the LEARNING -- the shape
+      // `conscience-gain-v70` used to put 85% of its effect in the voice.
+      const int a1r = idx("r1-rnd"), a0rr = idx("r0-rnd");
+      double cse = 0.0, cr = 0.0;
+      if (a1r >= 0 && a0rr >= 0) {
+        auto cratio = [&](int drop) {
+          double num = 0.0, den = 0.0;
+          for (uint32_t r = 0; r < kReps; ++r) {
+            if (int(r) == drop) continue;
+            const Cell& ct = cells[r * kIPArmCount + uint32_t(a1r)];
+            const Cell& cb = cells[r * kIPArmCount + uint32_t(a0rr)];
+            if (!ct.ok || !cb.ok) continue;
+            num += ct.align;
+            den += cb.align;
+          }
+          return den > 0.0 ? num / den : 0.0;
+        };
+        cr = jackknife(cratio, &cse);
+      }
+      std::printf("\n  PRIMARY (pre-registered): `aligned` as a RATIO OF SUMS, r1 / r0,\n"
+                  "  jackknife SE over %u creatures\n", kReps);
+      std::printf("    aligned ratio   x%.3f +/- %.3f   (%+.1f SE from 1.000,"
+                  " %+.1f SE from v58's 1.210)\n",
+                  rr, rse, rse > 0.0 ? (rr - 1.0) / rse : 0.0,
+                  rse > 0.0 ? (rr - 1.21) / rse : 0.0);
+      std::printf("    control ratio   x%.3f +/- %.3f   (r1-rnd / r0-rnd --"
+                  " a matched rise here means the ESTIMATE moved, not the learning)\n",
+                  cr, cse);
+      // Both bars stated, because clearing 1.000 and clearing v58 are different
+      // claims and only the second one is news.
+      std::printf("    %s\n",
+                  (rse > 0.0 && rr - 1.21 > 2.0 * rse)
+                      ? "CLEARS v58 at 2 SE -- the coordinate system IS the lever"
+                      : (rse > 0.0 && rr - 1.0 > 2.0 * rse)
+                            ? "moves `aligned` but does NOT clear v58 at 2 SE -- the same"
+                              " band every knob here lands in"
+                            : "does not clear x1.000 at 2 SE -- no mechanism effect to"
+                              " price");
+    }
+  }
+
+  std::printf("\n  EXCESS DIFFERENCE vs `r0` (the shipped rule), paired on seed\n");
   double m = 0.0, se = 0.0;
+  // One candidate this generation, and the slot count is still 2 so the loops and
+  // the power block below keep their shape; the empty slot prints "not in this
+  // run" rather than a row of zeroes that would read as a measured null.
   struct { const char* t; const char* c; double m, se; uint32_t pos, tot; } cand[2] = {
-      {"g10", "g10-rnd", 0, 0, 0, 0}, {"g40", "g40-rnd", 0, 0, 0, 0}};
+      {"r1", "r1-rnd", 0, 0, 0, 0}, {"r05 (dose ladder, not this run)", "", 0, 0, 0, 0}};
   for (auto& q : cand) {
     q.m = excess_diff(q.t, q.c, &q.se, &q.pos, &q.tot);
     // An arm that is not in this build must say so rather than print a row of
@@ -37328,12 +37529,26 @@ bool run_ippool(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) 
   // delivered formant. Refusing it on regulation would refuse the measurement.
   // The v57 arm still reports its drift, because there a runaway rate WOULD mean
   // it had quietly become the ipoff arm.
+  // DNA v74's third refusal condition, printed whatever the verdict says. v57's
+  // pooled arm pushed the threshold back 3x harder than shipped (+0.344 against
+  // +0.105) because every neuron in a slice received the slice MEAN, so the
+  // group's common threshold moved coherently where per-neuron errors of
+  // opposite sign largely cancel -- and that is the mechanism `ippool` named for
+  // its halved `aligned`. A projection subtracts a component instead, so if this
+  // drift lands near v57's the rule is pooling in disguise and the arm has
+  // refuted itself before dF1 is read.
   {
-    const int a9b = idx("ip9");
-    if (a9b >= 0 && m_rate[a0] > 0.0) {
-      std::printf("  v57 drift    %.0f%% of the shipped rate (a runaway here would mean"
-                  " it had become `ipoff`)\n",
-                  100.0 * std::fabs(m_rate[a9b] - m_rate[a0]) / m_rate[a0]);
+    const int a1 = idx("r1");
+    if (a1 >= 0) {
+      const double ratio = std::fabs(m_thr[a0]) > 1e-9 ? m_thr[a1] / m_thr[a0] : 0.0;
+      std::printf("  THRESHOLD PUSH  shipped %+.3f   r1 %+.3f   x%.2f"
+                  "   (v57 pooling was x3.3: +0.344 vs +0.105, on file)\n",
+                  m_thr[a0], m_thr[a1], ratio);
+      if (ratio > 2.0) {
+        std::printf("    <- POOLING IN DISGUISE. The projection is moving the group's\n"
+                    "       common threshold the way a slice mean does, which is the\n"
+                    "       mechanism v57's halved `aligned` was attributed to.\n");
+      }
     }
   }
   // The gate is the BEST candidate gain, and it has to clear BOTH bars: more
@@ -37368,53 +37583,94 @@ bool run_ippool(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) 
   // could not clear even while working perfectly is not evidence about the mechanism.
   double ra = 0.0, pred = 0.0, need = 0.0;
   {
-    const int a40 = idx("g40");
-    if (a40 >= 0 && m_align[a0] > 0.0 && m_align[a40] > 0.0) {
-      ra = m_align[a40] / m_align[a0];
+    const int a1 = idx("r1");
+    if (a1 >= 0 && m_align[a0] > 0.0 && m_align[a1] > 0.0) {
+      // The PRE-REGISTERED ratio of sums, not a second ratio of means computed
+      // here. They differ whenever a cell failed, and a run that prints two
+      // slightly different values for its own primary invites the reader to
+      // pick one.
+      ra = align_ratio > 0.0 ? align_ratio : m_align[a1] / m_align[a0];
       pred = m_d1[a0] * (std::pow(ra, 0.61) - 1.0);
-      need = pred > 0.0 ? kReps * std::pow(cand[1].se / (pred / 2.0), 2.0) : 0.0;
+      need = pred > 0.0 ? kReps * std::pow(cand[0].se / (pred / 2.0), 2.0) : 0.0;
       std::printf("\n  POWER, against the transfer curve dF1 ~ aligned^0.61\n"
                   "    aligned x%.3f  ->  predicted dF1 %+.1f Hz\n"
                   "    seeds needed to resolve that at 2 SE: %.0f   (this run: %u)\n",
                   ra, pred, need, kReps);
+      // THE PRE-REGISTERED BAR, and it is v58's x1.21 rather than x1.00. The
+      // exponent closes x1.21 without a run, so an `aligned` gain that merely
+      // matches it is this line closing for the third time and not a result.
+      //
+      // Tested AT 2 SE on the jackknifed ratio above, not on the point estimate.
+      // A point-estimate comparison here printed "CLEARS v58" in the same run
+      // where the primary block printed "does not clear x1.000", which is one
+      // run giving two answers -- the `verdict-fitted-to-data` failure with the
+      // arithmetic the other way round.
+      const bool clears_v58 =
+          align_ratio_se > 0.0 && align_ratio - 1.21 > 2.0 * align_ratio_se;
+      std::printf("    the bar: v58 reached aligned x1.210 and ^0.61 closed it."
+                  "  this run x%.3f +/- %.3f  ->  %s\n",
+                  align_ratio, align_ratio_se,
+                  clears_v58 ? "CLEARS v58 at 2 SE, the mechanism is doing something new"
+                             : "does NOT clear v58 at 2 SE");
+      // And what it would take, stated in the same breath, because the ceiling is
+      // one exponent and not a tally of dead ends.
+      std::printf("    for the ceiling (dF1 x1.68) `aligned` needs x2.34;"
+                  " this run is %.0f%% of the way in log terms\n",
+                  ra > 1.0 ? 100.0 * std::log(ra) / std::log(2.34) : 0.0);
     }
   }
   if (best < 0) {
-    const int a40v = idx("g40");
-    std::printf("\n  THE TRADE DISSOLVES MECHANICALLY AND IT BUYS NOTHING AT THE VOICE.\n"
-                "  This is NOT the null the gate was written to detect, and it is a\n"
-                "  better result than either branch that was pre-registered.\n"
+    const int a1v = idx("r1");
+    // The SAME test as the POWER block's, on the same hoisted statistic.
+    const bool beat_v58 =
+        align_ratio_se > 0.0 && align_ratio - 1.21 > 2.0 * align_ratio_se;
+    std::printf("\n  THE RAMP EXEMPTION DOES NOT CLEAR THE dF1 BAR AT THIS n.\n"
+                "  Read the `aligned` and `thr drift` columns before calling it a\n"
+                "  null -- at n = 18 the dF1 bar is ~17 Hz and the exponent says what\n"
+                "  this mechanism could possibly have delivered into it.\n"
                 "\n"
-                "  What g40 did, and no earlier route managed: aligned x%.3f, gain\n"
-                "  %.2f -> %.2f, and the larynx still regulated (%.2f Hz vs the shipped\n"
-                "  %.2f). Compare the two other ways of relieving the homeostat -- v57\n"
-                "  pooling HALVED the learned bias, and `ipoff` collapsed learning\n"
-                "  outright, dF1 103.9 -> 17.7 at -7.42 SE (both on file, not this run).\n"
-                "  So the opposition between regulation and learning IS separable:\n"
-                "  exempting the learned bias from the error term is how.\n"
+                "  What r1 did: aligned x%.3f, gain %.2f -> %.2f, larynx %.2f Hz\n"
+                "  against the shipped %.2f, threshold push %+.3f against %+.3f.\n"
+                "  Against the two earlier reliefs -- v57 pooling HALVED the learned\n"
+                "  bias and pushed the threshold 3x harder; `ipoff` collapsed learning\n"
+                "  outright at -7.42 SE (both on file, not this run).\n"
                 "\n"
-                "  And the voice does not care, because ^0.61 turns that into %+.1f Hz --\n"
-                "  a bar this run would need %.0f seeds to clear, against the %u it ran.\n"
+                "  %s\n"
                 "\n"
-                "  THAT is the ceiling, now stated as arithmetic rather than as a tally\n"
-                "  of dead ends: to move dF1 x1.68 you need aligned x2.34; x2.0 needs\n"
-                "  x3.12. Every knob this project has found moves aligned x1.1-x1.2.\n"
-                "  The 137 Hz ceiling is not fourteen failed routes, it is one exponent,\n"
-                "  and no amount of bias buys past an exponent below 1. A route that\n"
-                "  changes the READOUT -- not the bias driving it -- is the only kind\n"
-                "  that can, and the readout is a rate-weighted centroid by design.\n",
-                ra, a40v >= 0 ? m_gain[a0] : 0.0, a40v >= 0 ? m_gain[a40v] : 0.0,
-                a40v >= 0 ? m_rate[a40v] : 0.0, m_rate[a0], pred, need, kReps);
+                "  And ^0.61 turns this run's aligned into %+.1f Hz, a bar needing %.0f\n"
+                "  seeds against the %u it ran. The ceiling is one exponent and not a\n"
+                "  tally of dead ends: dF1 x1.68 wants aligned x2.34, and every knob\n"
+                "  this project has found moves it x1.1-x1.2. If the ramp exemption is\n"
+                "  in that band too, then the regulator's COORDINATE SYSTEM was not the\n"
+                "  thing holding the ceiling down, and what is left is the readout\n"
+                "  itself -- a rate-weighted centroid, by design.\n",
+                ra, m_gain[a0], a1v >= 0 ? m_gain[a1v] : 0.0,
+                a1v >= 0 ? m_rate[a1v] : 0.0, m_rate[a0],
+                a1v >= 0 ? m_thr[a1v] : 0.0, m_thr[a0],
+                beat_v58
+                    ? "BUT `aligned` CLEARS v58's x1.21 AT 2 SE, so the mechanism IS\n"
+                      "  doing something the earlier two did not, and the dF1 null here is\n"
+                      "  the exponent rather than the mechanism. That is a power statement\n"
+                      "  and the seeds needed are printed above."
+                    : "AND `aligned` does NOT clear v58's x1.21 at 2 SE, so this is not\n"
+                      "  an established win over the earlier reliefs. Whether it is the\n"
+                      "  same closure again or merely underpowered is what the SE on the\n"
+                      "  ratio says -- read it, do not read the point estimate.",
+                pred, need, kReps);
     return false;
   }
-  std::printf("\n  THE TRADE DISSOLVES AND IT REACHES THE VOICE. `%s` delivers %+.1f Hz\n"
-              "  over the shipped rule at %.1f SE with the larynx still regulated.\n"
+  std::printf("\n  THE RAMP EXEMPTION REACHES THE VOICE. `%s` delivers %+.1f Hz over the\n"
+              "  shipped rule at %.1f SE with the larynx still regulated, and the\n"
+              "  threshold push at %+.3f against the shipped %+.3f (v57's was 3x).\n"
               "  NOTE the n: %u seeds. Under 3 SE this is a hypothesis until 36, and this\n"
               "  project retracted three findings from that band in one day. Note also\n"
-              "  that this EXCEEDS what the transfer curve predicts from the aligned\n"
-              "  change, which means either the exponent moved or something else did --\n"
-              "  check that before celebrating.\n",
-              cand[best].t, cand[best].m, cand[best].m / cand[best].se, kReps);
+              "  that %+.1f Hz against the %+.1f the transfer curve predicts from the\n"
+              "  aligned change means either the exponent moved or something else did --\n"
+              "  check which before celebrating, because `ippool`'s own generation had a\n"
+              "  gate that asked the wrong quantity and said so only afterwards.\n",
+              cand[best].t, cand[best].m, cand[best].m / cand[best].se,
+              m_thr[idx(cand[best].t) >= 0 ? uint32_t(idx(cand[best].t)) : 0u], m_thr[a0],
+              kReps, cand[best].m, pred);
   return true;
 }
 

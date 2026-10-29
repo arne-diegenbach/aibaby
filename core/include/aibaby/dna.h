@@ -423,7 +423,9 @@ constexpr uint32_t kDnaMagic = 0x44424941;  // "AIBD"
 // reason. 0 is off and skips the draw rather than drawing and multiplying by
 // zero, so the pinned hash does not move — `refrac_ticks_` is a birth constant
 // recomputed from the genome and is not part of `state_hash` either way.
-constexpr uint32_t kDnaVersion = 55;
+// v56: DNA v74 appends `ip_ramp_exempt` to DnaModule, same layout reason. 0 is
+// off and takes the shipped branch, so the pinned hash does not move.
+constexpr uint32_t kDnaVersion = 56;
 
 // What a module is wired to the world through. The host looks modules up by
 // role, never by name or index, so renaming a module in the genome cannot
@@ -2803,6 +2805,90 @@ struct DnaModule {
   // the blackout account is wrong and the leverage lives somewhere other than
   // the discarded-input fraction, which is worth more than the parameter.
   float refractory_sigma;
+  // --- DNA v74: exempt the READOUT'S OWN COORDINATE from regulation ----------
+  // `stageprobe` put the ceiling's compression in intrinsic plasticity:
+  // `bias -> rate` runs 0.34 with the larynx's homeostat on and 0.91 with it
+  // off. Three generations have now tried to keep the tilt the readout reads
+  // while keeping the regulation the creature needs, and each exempted the
+  // wrong thing:
+  //
+  //   v57 ip_pool = 9     one pooled error per articulator group. Exempts 13 of
+  //                       the 14 directions in a group — everything but its
+  //                       mean. Transfer 0.34 -> 0.51 and `ippool` measured the
+  //                       delivered formant NOT following: -15.6 +/- 17.5
+  //                       (-0.90 SE), with `aligned` HALVED 0.0458 -> 0.0237.
+  //   v58 ip_bias_gain    exempts the learned bias AMOUNT, in whatever
+  //                       direction it happens to lie — a magnitude and not a
+  //                       direction. aligned +21%, and dF1 ~ aligned^0.61 turns
+  //                       that into +12.3% against the x1.68 the ceiling needs.
+  //   v74 (this)          exempts ONE direction of fourteen: the group's
+  //                       zero-mean ramp.
+  //
+  // WHY THE RAMP IS THE RIGHT DIRECTION, and this is not a new claim. The
+  // larynx reads each articulator group as a rate-weighted centroid over neuron
+  // index, so the group's zero-mean ramp is not a hint about the answer — it is
+  // the readout's own coordinate, which is stated in `ctx_gain_mode`'s comment
+  // above and is the basis of mode 1. `ctxgain` then measured that the
+  // ESTIMATOR loses nothing by working in it: 18 ramp parameters match 252
+  // per-neuron ones. The regulator is the one part of this creature that still
+  // does not speak in the readout's coordinates, and this field is that and
+  // nothing else — the same `ctx_ramp_` and `inv_ramp_ss_` mode 1 already
+  // builds, applied to the IP error instead of the reward gradient.
+  //
+  // THE RULE. Per articulator group, with r_i the stored zero-mean ramp:
+  //
+  //     err_i  ->  err_i - ip_ramp_exempt * r_i * (sum_j r_j err_j) / sum_j r_j^2
+  //
+  // At 1.0 the ramp component of the error is removed exactly and the other
+  // thirteen directions, the group's mean among them, are regulated exactly as
+  // they ship. It is a float and not a flag because this project has had four
+  // guessed constants cost a run each: a partial exemption is a dose, and a
+  // dose can be laddered.
+  //
+  // WHY IT IS NOT v57 WITH EXTRA STEPS, by the mechanism v57's own write-up
+  // named. `ippool` explained its estimator cost precisely: pooling pushes the
+  // threshold back 3x harder (+0.344 against +0.105), because every neuron in a
+  // slice receives the slice's MEAN error where per-neuron errors of opposite
+  // sign largely cancel, and a harder-pushed slice is noisier to estimate a
+  // gradient in. This subtracts a component rather than replacing each error
+  // with a mean, so the uniform direction stays exactly as regulated as it
+  // ships and the common push does not grow. That is a prediction, not a hope:
+  // if the threshold push comes back at v57's +0.344, this is pooling in
+  // disguise and the arm refutes itself before dF1 is read.
+  //
+  // AND POOLING'S OTHER HALF ALREADY PAID, which is the reason to expect the
+  // plant half to work. `aimpool` ran ip_pool = 9 on the actuator and cut
+  // hysteresis 107.1 -> 7.0 Hz, 97% of the way to the homeostat-off plant. So
+  // relieving per-neuron regulation along the read direction demonstrably fixes
+  // the plant; the estimator was the only thing that stopped v57.
+  //
+  // A PREDICTION, recorded before the first run, and the bar is v58 and not
+  // zero. `aligned` must beat v58's +21%, because dF1 ~ aligned^0.61 already
+  // closes +21% by arithmetic (x1.123 against the x1.68 the ceiling needs). A
+  // positive that lands near x1.2 is this line closing again, not a result.
+  //
+  // WHAT WOULD REFUSE IT, three ways, each measured on a column already on file
+  // from `ippool`: the transfer not moving past v57's 0.51 (then the
+  // compression is not acting along the ramp and the geometry claim is wrong);
+  // `aligned` halving the way v57's did (then the cost is not about how broadly
+  // regulation is relieved); or the larynx rate drifting past v57's 19% (then
+  // it is v50's refused trade and exempting a direction has become exempting
+  // the neuron).
+  //
+  // THE EXEMPTION IS EXACT ONLY AT CENTROID 0.5, which is worth stating because
+  // it is the one approximation here. The centroid's true sensitivity to neuron
+  // i is proportional to (p_i - value), so the direction it responds to is the
+  // ramp only when the group reads at its centre. `pool_beta`'s comment records
+  // that the F1 centroid never leaves the middle fifth of its range over 12000
+  // motor frames (histogram 0 0 0 0 4298 7702 0 0 0 0), so the ramp is a close
+  // approximation throughout — and it is the SAME approximation mode 1's
+  // estimator already makes, which is what keeps the two in one coordinate
+  // system rather than two.
+  //
+  // 0 is the shipped rule and bit-identical. Refused together with ip_pool in
+  // dna.cpp: they are competing answers to one question, and a pooled error has
+  // no within-group structure left for a projection to remove.
+  float ip_ramp_exempt;
 };
 
 // max_out_degree is what makes growth allocation-free: every neuron owns a
