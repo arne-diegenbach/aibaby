@@ -23516,3 +23516,64 @@ about exactly that shape: a contrast reading 3.0 SE on its own 18 creatures read
 fresh ones. The pre-registered bar was "2 SE on any rung answers the question", and it does —
 but promoting the best of three arms to "a 1.35× improvement" is a different and weaker
 claim. **It needs fresh seeds before it goes in the genome**, and that run is the next thing.
+
+## The improvement is withdrawn. The harm replicated at 5.3 SE (2026-10-29)
+
+`results/exsweep-fresh.log`, the same experiment on 36 creatures it was never fitted to
+(seed 20260809 → 20261029, verified that nothing but the seed differed). Full budget, no
+short-run banner. The reading rule was written and all three of its verdict branches
+exercised **before** this run finished (`tools/exsweep_replicate.py`).
+
+```
+                 discovery            fresh seeds
+s 0      +0.1789+-0.0197      +0.2189+-0.0167
+s 10     +0.2402+-0.0170      +0.2326+-0.0150
+s 30     +0.2043+-0.0176      +0.2253+-0.0151
+s 100    +0.0928+-0.0133      +0.0985+-0.0157
+
+s10  - s0  on FRESH seeds   +0.0137 +- 0.0240   (0.6 SE)   discovery: +0.0612 (2.5 SE)
+s100 - s0  on FRESH seeds   -0.1205 +- 0.0229   (5.3 SE)   discovery: -0.0863 (3.5 SE)
+```
+
+**The 1.35× naming improvement does not exist.** On creatures it was not found on,
+`s10 − s0` is `+0.0137 ± 0.0240` — **0.6 SE**. By the pre-registered rule that is a
+withdrawal, and it is reported here as prominently as the claim was.
+
+**And the inflation mechanism is visible arm by arm.** The two samples' `s 10` arms agree
+to **0.0076**; their `s 0` arms differ by **0.0400**. The discovery contrast was almost
+entirely a *low control arm*, not a high treatment arm — the discovery `s 0` creatures
+happened to name worse than average, and the best of three contrasts was read off that.
+This is the clearest look this project has had at what
+`PAIRING ON THE DISCOVERY SAMPLE HITS THE BAR` actually does.
+
+**The pooled number is the trap, and it is worth printing.** Over all 72 creatures,
+`s10 − s0` reads `+0.0375 ± 0.0171` — **2.2 SE**, which looks reportable. It is not: pooling
+a discovery sample with its own replication cannot test the thing the replication exists to
+test. A synthetic adversary run before the data arrived had already demonstrated exactly
+this, producing 3.0 SE by pooling an inflated discovery estimate with a true null.
+
+### What did replicate, and it is the useful half
+
+**The harm, stronger than before.** `s100 − s0` is `−0.1205 ± 0.0229` (5.3 SE) against
+`−0.0863` (3.5 SE), with a 35% loss of utterances again. And the inverted U replicates as
+specified — s=100 harmful at ≥2 SE and s=10 still the best rung.
+
+**So the conclusion for the creature is: leave this knob at 0.0.** A small dose buys
+nothing measurable and a large dose costs half the naming. The shipped default was right,
+and a plausible improvement lever is now closed rather than left as a maybe. That is a
+cheaper outcome than it looks — it cost two runs and no genome change.
+
+### One of my predictions partly failed, and in an interesting way
+
+Prediction (b) was that `within`'s mean would not move, because the pre-flight read
+`e_mean` at 0.997–1.000. On fresh seeds **s=30's `within` falls at 2.8 SE**
+(`−0.266 ± 0.095`), where discovery gave 1.5 SE. Pooled across both samples that rung is
+`−0.203 ± 0.066`, **3.1 SE** — reported as secondary, since it was not the pre-registered
+contrast.
+
+By the wording committed in the source, a resolved fall means the knob does more than
+phasic excursions and the pre-flight's reading was incomplete. So: **a moderate dose does
+reduce within-word noise, and it still buys no direction.** That is a real dissociation
+between the noise and the assignment, and it is consistent with everything else here —
+reward's separation is what carries naming, and tidying the noise does not substitute for
+getting the map pointed the right way.

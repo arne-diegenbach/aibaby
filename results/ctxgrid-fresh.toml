@@ -18,7 +18,7 @@
 # field is required — there are no defaults, because two genomes that read
 # differently must never produce the same brain (requirement G1).
 
-seed = 20545893
+seed = 20261029
 
 [sim]
 dt_ms = 1.0                 # 1 kHz simulation
@@ -2222,7 +2222,7 @@ refractory_ms = 3.0
 #
 # 7.47 -> 7.22 with the inhibitory auditory->vocal tract, which quiets the
 # larynx and so quiets everything the larynx drives.
-target_rate_hz = 7.62
+target_rate_hz = 7.22
 inhib_fraction = 0.15
 inhib_gain = 2.5
 weight_init = 0.12
