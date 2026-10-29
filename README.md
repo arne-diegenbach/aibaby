@@ -23577,3 +23577,30 @@ reduce within-word noise, and it still buys no direction.** That is a real disso
 between the noise and the assignment, and it is consistent with everything else here —
 reward's separation is what carries naming, and tidying the noise does not substitute for
 getting the map pointed the right way.
+
+### Two free checks the pair of runs made possible (2026-10-29)
+
+**`exsweep`'s `s 0` arm reproduces `echoname`'s `taught` arm exactly.** Same genome, same
+per-rep seed (`header seed + r*7919`, which depends on `r` alone and not on the arm index),
+same `context_slots`, same regime, same drive, same budget, same 560k echo buffer — so every
+shared column must come back identical, and it does: **36 creatures × 7 columns, no
+mismatches** (`tools/exsweep_vs_echoname.py`). Two independently written experiments
+agreeing creature by creature validates both harnesses in a way neither can validate itself.
+
+**And the naming milestone replicates on creatures no result has ever been read from.** The
+fresh-seed `s 0` arm is a taught arm on 36 new creatures: above-null direction
+**+0.2189 ± 0.0167, 13.1 SE**, against `echoname`'s own +0.1789 ± 0.0197 (9.1 SE). Stronger
+on fresh seeds than on its discovery sample — which is the right contrast to draw against
+the `s10` improvement that vanished. **A real effect replicates; a marginal one selected
+from three arms does not.** Both came out of the same two runs.
+
+**A parsing bug worth recording, because it nearly invented a finding.** The first run of
+that comparison reported **180 mismatches** — `artic`, `F1 spread`, `within`, `between` and
+`sep` all differing on 36 of 36 creatures while `direction`, `its_null` and `voiced` matched
+perfectly. That looked like a real, *structured* discrepancy: the naming half identical and
+the echo half different. It was the arm label. `s 0` is **two** whitespace tokens, so every
+field after it shifted by one, and the three columns that agreed did so only because their
+indices happened to land right. A structured diff is more seductive than a noisy one, and
+this is the third multi-token field to break a script today. Count the fields in one row of
+each log before comparing them, and when a diff comes back structured, suspect the parser
+before the finding.
