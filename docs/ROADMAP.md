@@ -624,6 +624,41 @@ homeostat stabilise the rate only, or the learned pattern too? If the pattern, t
 `ipoff` with a rate clamp and it is refuted before a line is written. That is answerable from
 existing logs or a read-only probe.
 
+**The pre-flight is now answered, from three logs already on disk, and it closes the lead.**
+Each `aligned` read against its own shipped arm, so the ratios hold even though the absolutes
+do not compare across generations:
+
+| mechanism | pattern directions freed of 14 | `aligned` ratio | rate drift |
+|---|---|---|---|
+| v74 `ip_ramp_exempt = 1` | 1 | **0.957** | +39% |
+| v57 `ip_pool = 9` | 13 | **0.518** | +19% |
+| `ipoff` | 14 | **0.346** | +48% |
+
+`aligned` degrades monotonically in the number of pattern directions freed and **does not
+track rate drift at all** — v74 has the second-largest drift and the best `aligned`, v57 the
+smallest drift and the middle one. So the additive homeostat stabilises the *pattern*, not the
+rate, which is what the `ipoff` collapse was about all along.
+
+**And the scale-invariance argument does not rescue it, because it concerns the wrong
+quantity.** Invariance protects the *readout* from the homeostat; `aligned` is the learned
+bias pattern, and it degrades because the gradient estimator needs per-neuron regulation. A
+centroid that cannot see the gain is no help to an estimator that never read the centroid.
+
+**The closure is arithmetic.** A group-wide multiplicative homeostat regulates the group's
+scale — one direction — and frees the other thirteen, which is v57's count exactly. So it
+should land at v57's halving unless the multiplicative form avoids v57's damage mechanism,
+the 3× threshold push. But v74 tested avoiding that push in isolation: it avoided it (1.02×
+against 3.3×) and bought nothing. The multiplicative homeostat is the conjunction of two
+things that have each now failed alone — free thirteen directions and `aligned` halves; avoid
+the threshold push and nothing happens. **Do not build it without first naming why the
+conjunction should beat its parts.**
+
+Three points, two of which share a generation: strong enough to stop a build, not strong
+enough to publish as a closure. What would re-open it is a mechanism that regulates rate while
+leaving per-neuron pattern regulation intact, or evidence that the estimator's need for
+per-neuron regulation is itself an artefact of the additive form — a read-only question, and
+the cheap version is a `stageprobe` arm rather than a seven-hour paired run.
+
 ## Standing prohibitions
 
 These are places where fitting has already cost this project a result, and they are written
