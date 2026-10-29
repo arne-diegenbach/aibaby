@@ -23642,3 +23642,30 @@ now separation does not predict alignment *within the taught arm either*.
 ladder above 6.8M ticks, asking whether direction keeps rising. `vocallearn`'s own positive
 control is strongly budget-dependent below that (−1.2 at 560k, +4.0 at 1.6M, +18.3 at 3.4M),
 so saturation above it is a real question and not a settled one.
+
+### The budget ladder was already run — for the magnitude, not the direction (2026-10-29)
+
+Before scoping a budget ladder above 6.8M ticks, the archive answered most of it.
+`ctxscale` ran exactly that ladder in September — 3.4M, 6.8M, 13.6M and a fourth point at
+27.2M — and found the learned bias **saturating at ~118 Hz** (saturating fit χ² = 0.08
+against a power law's 0.72, T = 3300 trials). **The creature is at 94% of that asymptote:
+doubling trials again buys 6 Hz and 10× buys nothing.** The conclusion on record is that
+the architecture rather than compute is the binding constraint.
+
+It also carries the warning this would have walked into. **The first read, on three points,
+printed COMPUTE-LIMITED and was wrong** — the fourth point at 27.2M reversed it, with
+per-doubling ratios of 1.98, 1.38, 1.23. The exponent halves every doubling, so a
+three-point ladder on this curve lies in a specific and confident direction. Grepping the
+archive cost two minutes and saved what would have been an eight-hour run reaching the same
+answer.
+
+**But it does not close the question today's dissociation actually raises.** `ctxscale`
+measured dF1 — the *magnitude* of the learned bias. Direction is the *assignment*, and the
+whole content of the magnitude/direction split is that those are separable. So what is
+established is that **the reward-supplied half saturates**; whether the lesson's rotation
+saturates with budget is untouched, because no run has put `direction` on a budget ladder.
+
+That remains worth doing, and `ctxscale` sets its design: **four points minimum**, because
+three gave the wrong answer with confidence. At 36 reps over 3.4M/6.8M/13.6M/27.2M that is
+~1.8G ticks before echo buffers, six to seven hours for one sample — past the point where
+it should be started without saying so first.
