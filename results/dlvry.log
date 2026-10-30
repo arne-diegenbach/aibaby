@@ -44,3 +44,53 @@ experiment: dlvry
   stated up front   n = 12, and the per-tenth fraction is a RATIO of two
                     counts, so it is pooled as a ratio of sums and
                     jackknifed, never meaned per creature.
+
+  LIVENESS. 12 of 12 creatures completed the session.
+
+  CUMULATIVE DELIVERED TRIALS, per creature, at each rung's trial count.
+  Compare against `dirbudget`'s per-seed `trials` column, same seed:
+  seed       3.4M     6.8M    13.6M    27.2M   nominal was
+  0           820     1435     2072     3239   1214/2428/4857/9714
+  1           891     1511     2035     3235   1214/2428/4857/9714
+  2           863     1179     1682     2590   1214/2428/4857/9714
+  3           792     1331     1913     3211   1214/2428/4857/9714
+  4           960     1583     2491     4105   1214/2428/4857/9714
+  5           763     1143     1648     2541   1214/2428/4857/9714
+  6           816     1408     2008     2938   1214/2428/4857/9714
+  7           941     1454     2538     4154   1214/2428/4857/9714
+  8           762     1275     2142     3385   1214/2428/4857/9714
+  9           847     1472     2099     3211   1214/2428/4857/9714
+  10          834     1435     2299     3492   1214/2428/4857/9714
+  11          900     1571     2421     3862   1214/2428/4857/9714
+
+  DELIVERY TENTH BY TENTH, pooled over 12 creatures
+  tenth   nominal   delivered   silent   degenerate   delivered frac
+  1         11664        8352     3312            0          0.716
+  2         11652        6294     5358            0          0.540
+  3         11664        4266     7398            0          0.366
+  4         11652        3711     7941            0          0.318
+  5         11652        2725     8927            0          0.234
+  6         11664        2723     8941            0          0.233
+  7         11652        2876     8776            0          0.247
+  8         11664        2980     8684            0          0.255
+  9         11652        2999     8653            0          0.257
+  10        11652        3037     8615            0          0.261
+
+  THE PRIMARY, last tenth minus first, pooled and jackknifed over 12:
+    -0.4554 +- 0.0230 (19.8 SE)   first 0.716, last 0.261
+    per creature: 12 of 12 DOWN, 0 up
+    silence     0.284 -> 0.739 of trials
+    degenerate  0.000 -> 0.000 of trials
+
+  THE CREATURE QUIETS AS IT TRAINS. Delivery falls 0.716 -> 0.261 across
+  the session, -0.4554 +- 0.0230 (19.8 SE), 12 of 12 creatures down. So a
+  longer session has a lower MEAN delivered fraction by running further
+  down one decaying curve, which is reading (a): `dirbudget`'s rungs are
+  nested prefixes of this trajectory and its decline has a candidate
+  about PRODUCTION rather than assignment capacity. That candidate is the
+  same suspect as the drone, the voicing gate and the resonant jaw.
+    WHAT THIS DOES NOT ESTABLISH: that the rotation's decline IS the
+    delivery decline. Delivery falling and direction falling on the same
+    axis is a shared correlate, and the ladder's own `d trials` predictor
+    (r = +0.721) is consistent with either. Separating them needs a rung
+    matched on DELIVERED trials rather than on ticks.

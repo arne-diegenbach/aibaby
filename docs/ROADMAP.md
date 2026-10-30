@@ -698,6 +698,47 @@ rather than a law: per-creature peaks are 4 at 3.4M, 12 at 6.8M, 12 at 13.6M and
 27.2M. The shipped 6.8M sits below the population peak, but the 6.8 → 13.6 step is 1.2 SE, so
 this run does not license moving it.
 
+### 8. CLOSED 2026-10-30 — the creature falls silent as it trains; the rotation's decline is still unexplained
+
+`dlvry`, one arm x 12 of `dirbudget`'s own creatures at 27.2M, ~1 h, plus a free re-analysis of
+the ladder log that cost nothing (`tools/dirbudget_decline.py`).
+
+**The ladder's x-axis was ticks, read as experience.** Its `trials` column is
+`utt_word.size()` — scored, voiced, labelled — against a nominal `ticks / kVLTrialTicks`, and
+the delivered fraction falls 71.4% → 60.7% → 46.7% → 35.8%. **8x of ticks buys 4.02x of
+trials.**
+
+**The creature quiets, decisively and early.** Delivery per tenth of one session: 0.716, 0.540,
+0.366, 0.318, 0.234, 0.233, 0.247, 0.255, 0.257, 0.261. Last minus first **−0.4554 ± 0.0230,
+19.8 SE, 12 of 12 creatures down**, silence 28.4% → 73.9%. **Every non-delivered trial is
+silent** — 116568 = 39963 delivered + 76605 silent + 0 degenerate, residual zero. At the
+**shipped 6.8M budget 42% of trials are already silent**: a standing tax on every experiment
+built on this session, not a property of this ladder.
+
+**And it refuses the hypothesis it was built to support.** The top step covers tenths 6–10,
+where delivery is 0.251 and trending **+0.027 — rising**. Delivery bottoms out before that step
+begins, and the step bought **1218 delivered trials, the largest absolute increment in the
+ladder**, against 713 for the step below it which *gained* direction. So the decline is not a
+delivery failure. Together with the *positive* spread/direction correlation (grew minus shrank
++0.0523 ± 0.0174, 3.0 SE), which refuses the magnitude-eats-direction trade-off, **both
+candidates are now refused from opposite directions and the decline is more sharply unexplained
+than before.**
+
+**The method worth copying.** Nothing that moves the creature depends on `n_trials` here, so the
+ladder's rungs are **nested prefixes of one trajectory**; with `utt_trial` recorded, one long run
+reproduced all four published columns as **integer equality on 48/48 creature-rungs**. A 3.4M
+pre-run certified the genome for 10 minutes against a 70-minute risk, and the genome was
+identified by arithmetic — the ladder's instrument seed `0x135fc89 ^ 0xDB40` = 20260809 — rather
+than by guessing which `ctx*.toml` was current. The root `ctx.toml` is stale (pre-v66).
+
+**Two instrument defects, both recorded.** `dl_degen` reads 0.000 because under
+`kVLScoreFormant` it is *unreachable*, not because the fault is absent, and the log now says
+which — an unfalsifiable counter printed like a measured one is the `Expect::kRead` lesson in a
+new place. And `tools/dlvry_predict.py` v1 keyed rows by a bare leading integer, so the delivery
+table's `tenth` 1..10 overwrote seeds 1..10 and it reported 10 of 12 creatures mismatched while
+the log plainly showed them agreeing; it now matches a row by shape and aborts on a duplicate
+key. **Had it failed the other way it would have agreed silently.**
+
 ## Standing prohibitions
 
 These are places where fitting has already cost this project a result, and they are written

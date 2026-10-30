@@ -24137,7 +24137,15 @@ Stated at the confidence the project's own rules allow:
 - The shipped 6.8M sits below the population peak, but the 6.8M → 13.6M step is 1.2 SE, so
   this run does not license moving it.
 
-### The decline is a delivery failure, not a learning failure — and the ladder's x-axis was ticks (2026-10-30)
+### ~~The decline is a delivery failure, not a learning failure~~ — and the ladder's x-axis was ticks (2026-10-30)
+
+> **The first half of that heading is struck, the same day, by the run it motivated.**
+> Delivery really does decay inside a session — 0.716 → 0.261 across the tenths, 19.8 SE,
+> 12 of 12 creatures — but it **bottoms out by the halfway mark**, and across the top step's
+> own window it is flat and in fact *rising* (+0.027, 0.251 pooled). That step bought **1218
+> delivered trials, the largest absolute increment anywhere in the ladder**, and the rotation
+> declined anyway. The analysis below stands; the claim in its title does not. See the next
+> section.
 
 The ladder was read the same day it finished, so the obvious next question — *why* does extra
 training degrade the assignment? — got asked before anyone looked at what the per-seed table
@@ -24191,3 +24199,83 @@ printed**, so the gap between 9714 and 3482 cannot be split into trials skipped 
 *within* a session — the creature quieting as training proceeds — or is merely uniformly lower
 in a longer one, which would be ordinary session overhead and would make this a relabelling
 exercise. Those are different findings and the next instrument has to separate them.
+
+## The creature falls silent as it trains, and that is still not why the rotation declines (2026-10-30)
+
+`dlvry` was built to settle one question with two readings: `dirbudget`'s delivered fraction
+falls 71.4% → 35.8% across its ladder, and the session-total counters could not say whether
+that is **the creature quieting as it trains** — one decaying curve averaged over ever longer
+windows — or **a longer session being uniformly worse**, which would be overhead and would mean
+the ladder needed nothing but its x-axis relabelled. One arm, 12 of the ladder's own creatures,
+delivery counted tenth by tenth at the full 27.2M budget.
+
+**The instrument predicted four published columns before it was read, and it hit all of them.**
+Nothing that moves the creature depends on `n_trials` in this session — it sets the loop bound,
+the early/late thirds and the checkpoint cadence, and the only side effect among those is the
+checkpoint's `consolidate_context_bias`, inert unless a `CtxDrive` asks for banking, which this
+session does not. So the first N trials of a long session *are* a complete N-trial session. With
+the trial index of each kept utterance recorded, this run's cumulative delivered count at 1214 /
+2428 / 4857 / 9714 trials must reproduce `dirbudget`'s four per-seed columns exactly. It does, on
+**all 48 creature-rungs, as integer equality**. The ladder's rungs are nested prefixes of one
+trajectory — not four independent trainings — so the curve measured here is literally the curve
+that produced every shorter rung's fraction.
+
+**The creature quiets, decisively and early.**
+
+| tenth | nominal | delivered | silent | delivered fraction |
+|---|---|---|---|---|
+| 1 | 11664 | 8352 | 3312 | **0.716** |
+| 2 | 11652 | 6294 | 5358 | 0.540 |
+| 3 | 11664 | 4266 | 7398 | 0.366 |
+| 4 | 11652 | 3711 | 7941 | 0.318 |
+| 5 | 11652 | 2725 | 8927 | 0.234 |
+| 6 | 11664 | 2723 | 8941 | 0.233 |
+| 7 | 11652 | 2876 | 8776 | 0.247 |
+| 8 | 11664 | 2980 | 8684 | 0.255 |
+| 9 | 11652 | 2999 | 8653 | 0.257 |
+| 10 | 11652 | 3037 | 8615 | **0.261** |
+
+Last tenth minus first is **−0.4554 ± 0.0230, 19.8 SE, and 12 of 12 creatures fall.** Silence
+goes from 28.4% of trials to 73.9%. **Every single non-delivered trial is silent**: nominal
+116568 = delivered 39963 + silent 76605 + degenerate 0, residual zero. The creature does not
+produce formants too degenerate to read — it produces nothing at all.
+
+**The degenerate counter is structurally inert here and the log says so rather than reporting an
+informative zero.** Under `kVLScoreFormant` a trial is only scored when `n_voiced > 0`, and a
+voiced window's mean formants are not at or below 1 Hz, so that branch cannot fire. It is kept
+because the rate and amplitude score modes can reach it. A counter that reads 0.000 because it
+is unreachable is a different thing from one that reads 0.000 because the fault is absent, and
+the two must not be printed identically.
+
+**And here is where it refuses the hypothesis it was built to support.** The decline in the
+rotation is a step between two particular rungs, so what governs it is not the session mean but
+the **marginal** delivery in that window:
+
+| step | extra nominal | extra delivered | marginal rate |
+|---|---|---|---|
+| 0 → 3.4M | 1214 | 849.1 | 0.699 |
+| 3.4M → 6.8M | 1214 | 550.7 | 0.454 |
+| 6.8M → 13.6M | 2429 | 712.6 | 0.293 |
+| 13.6M → 27.2M | 4857 | **1217.9** | 0.251 |
+
+The top step covers tenths 6 through 10, where the delivered fraction is **0.251 pooled, and
+trending +0.027 — rising, not falling.** Delivery has already bottomed out before that step
+begins. And the step bought **1218 delivered trials, the largest absolute increment of any rung
+in the ladder**, against 713 for the step below it, which *gained* direction. **So the rotation's
+decline is not a delivery failure.** The step where it happens is the best-fed step in the
+ladder, and the creature is answering slightly *more* often by the end than at the floor.
+
+**What this leaves.** Two candidate explanations for the −0.0244 ± 0.0092 top step are now
+refused from opposite directions: the magnitude-eats-direction trade-off by a *positive*
+correlation between losing spread and losing direction (3.0 SE), and delivery starvation by a
+flat-to-rising marginal rate across exactly the window in question. The decline is more sharply
+unexplained than it was this morning, which is worth more than the confirmation would have been.
+
+**What is newly established, and it is not small.** The creature falls silent on an increasing
+fraction of trials as it trains, from 28% to 74% within a single session, at 19.8 SE with every
+creature agreeing. This was invisible for as long as the session reported only totals. It gives
+the ladder's x-axis its mechanism — 8× of ticks buys 4.02× of trials because the marginal rate
+falls 0.699 → 0.251 — and at the **shipped 6.8M budget 42% of trials are already silent**, which
+is a standing tax on every experiment built on this session, not a property of this ladder. It
+belongs with the drone, the voicing gate and the resonant jaw rather than with anything about
+naming.
