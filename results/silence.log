@@ -1,0 +1,48 @@
+experiment: silence
+  instrument        silence   trial seed 000000000135b62e   4857 delivery, feedback balance and larynx threshold per tenth
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  INDEX SOURCE 4, inherited from the genome and NOT set by silence.
+  The index reads the AUDITORY module, so a CtxDrive injected into the
+  context module is IGNORED by it -- such an arm is DERIVED, not an
+  oracle.
+  An "oracle" arm is only an oracle when the drive and the index use the
+  SAME module: ctx_match reads 1.000 for a genuine host-written index and
+  well below it for a derived one.
+  the finding       `dlvry`: delivery falls 0.716 -> 0.261 inside one
+                    session, -0.4554 +- 0.0230 (19.8 SE), 12 of 12 down,
+                    and EVERY missed trial is silent (0 degenerate,
+                    residual 0). The creature stops answering.
+  already refused   the reward is not the cause. praise/scold are
+                    symmetric (+0.5/-0.5) and `boundprobe` shows the
+                    praise share CONSTANT at 0.548 -> 0.536 at this
+                    budget, so voicing stays net-positive while delivery
+                    collapses. Carried here (`praise` column) so the
+                    claim rests on THIS session, not another protocol.
+  the hypothesis    IP is `threshold += ip_rate * (rate_ema - target)`, so
+                    a larynx firing above target gets pushed up until the
+                    voicing gate stops opening. That predicts an early,
+                    steep, monotone decay that FLOORS where the threshold
+                    stops moving -- which is the measured shape.
+  the design        2 arms x 12 paired creatures, 13600000 ticks = 4857 trials.
+                    `ipoff` sets homeo.ip_rate = 0 and changes nothing
+                    else; same seeds, same wiring, same everything.
+  the primary       last tenth minus first in the DELIVERED fraction, per
+                    arm, and the arm difference. Pooled as a ratio of sums
+                    and jackknifed over creatures, never meaned per
+                    creature.
+  THE DOSE CHECK    the `thr` column. `ipoff` must show a FLAT larynx
+                    threshold and `ip` a rising one. If both move the knob
+                    did not take and NO verdict below is available,
+                    whatever the delivery columns say. A wired mechanism
+                    is not a meaningful dose.
+  stated up front   `ipoff` is known to COST learning (-7.42 SE), so the
+                    arms differ in more than silence and this is not a
+                    clean one-variable ablation. The question survives it:
+                    does the decay SURVIVE with the homeostat off?
+  the free control  the `ip` arm at this budget is `dirbudget`'s own call,
+                    so its per-seed delivered total must reproduce that
+                    ladder's column for the matching rung EXACTLY:
+
+                      python3 tools/dlvry_predict.py \
+                          results/dirbudget.log <this log>

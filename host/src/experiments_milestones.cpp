@@ -4352,6 +4352,13 @@ struct VLRun {
   uint32_t dl_degen[kDec] = {};    // skipped: voiced, but the formants were degenerate
   uint32_t dl_scored[kDec] = {};   // scored
   uint32_t dl_kept[kDec] = {};     // ...and kept as a labelled utterance
+  uint32_t dl_praise[kDec] = {};   // feedback events delivered, by sign
+  uint32_t dl_scold[kDec] = {};
+  // The larynx's mean threshold sampled on the FIRST trial of each tenth, because the
+  // homeostat is the leading suspect for the quieting and IP is literally
+  // `threshold += ip_rate * (rate_ema - target)`. Sampled rather than accumulated: it
+  // is a state, not a rate, and 10 reads of it cost nothing and draw no RNG.
+  double dl_thr[kDec] = {};
   double voiced_frac = 0.0;
   // What the oracle actually did, because a silent context module and a
   // saturated one both look like "the tract is connected" from outside.
@@ -4853,6 +4860,16 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
   uint64_t last_feedback = 0;
 
   for (uint32_t trial = 0; trial < n_trials; ++trial) {
+    // Which tenth of the session this trial falls in. Computed HERE rather than at the
+    // scoring block because the feedback counters below are incremented inside the tick
+    // loop, which runs first. There is no trial-level `continue` between this line and
+    // the scoring block, so `dl_nominal` still counts every trial attempted.
+    uint32_t dec = n_trials ? uint32_t(uint64_t(trial) * VLRun::kDec / n_trials) : 0u;
+    if (dec >= VLRun::kDec) dec = VLRun::kDec - 1;
+    ++out.dl_nominal[dec];
+    if (out.dl_nominal[dec] == 1u && ip_vm >= 0) {
+      out.dl_thr[dec] = mean_threshold(s.brain.network(), uint32_t(ip_vm), nullptr, 0.0f);
+    }
     uint32_t label = trial % nw;
     // THE SHUFFLE, identical in scheme to `ctxfeat`'s: a hash of the PAIR index decides
     // which of the two words comes first in that pair. Deterministic from the trial
@@ -5176,7 +5193,8 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
           // first version of this did exactly that.
           last_feedback = now;
           const float value = want_loud ? regime.praise : regime.scold;
-          if (value > 0.0f) { ++out.praises; ++w_praise; } else { ++out.scolds; ++w_scold; }
+          if (value > 0.0f) { ++out.praises; ++w_praise; ++out.dl_praise[dec]; }
+          else { ++out.scolds; ++w_scold; ++out.dl_scold[dec]; }
           pending.push_back(Praise{now + regime.delay, value});
           out.feedback.push_back(Praise{now + regime.delay, value});
         } else if (e >= 0.0) {
@@ -5253,7 +5271,8 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
             out.reward_sum += double(value);
             out.reward_sq += double(value) * double(value);
             ++out.reward_n;
-            if (value > 0.0f) { ++out.praises; ++w_praise; } else { ++out.scolds; ++w_scold; }
+            if (value > 0.0f) { ++out.praises; ++w_praise; ++out.dl_praise[dec]; }
+            else { ++out.scolds; ++w_scold; ++out.dl_scold[dec]; }
             pending.push_back(Praise{now + regime.delay, value});
             out.feedback.push_back(Praise{now + regime.delay, value});
           }
@@ -5385,12 +5404,13 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
     // A trial in which the creature said nothing has no accuracy to score and
     // must not be counted as a bad one: silence is not a wrong answer, and
     // scoring it as maximum error would make "say less" the winning strategy.
-    // Which tenth of the session this trial falls in. See `dl_*` on VLRun: the
-    // counters below split the budget into delivered trials and the two ways a
-    // trial can fail to deliver one, tenth by tenth.
-    uint32_t dec = n_trials ? uint32_t(uint64_t(trial) * VLRun::kDec / n_trials) : 0u;
-    if (dec >= VLRun::kDec) dec = VLRun::kDec - 1;
-    ++out.dl_nominal[dec];
+    //
+    // THE SYMMETRIC RISK THAT REASONING MISSED, measured 2026-10-30 by `dlvry`:
+    // skipping a silent trial also means no SCOLD is delivered for it, so silence
+    // is not merely unpunished, it is the one response that cannot be punished.
+    // Silence rises 28.4% -> 73.9% within a single session (19.8 SE, 12 of 12
+    // creatures). Whether that incentive is the cause is a separate question --
+    // see `silence` -- but the asymmetry is real and it lives here.
     double err;
     if (score == kVLScoreRate) {
       // Silence is the correct answer to a low target, so no trial is skipped
@@ -43537,6 +43557,367 @@ bool run_dirbudget(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
   // means "the apparatus held", and a dropped creature at full budget means it did not.
   return n_complete == kDBReps;
 }
+// ============ silence: IS THE HOMEOSTAT WHAT SHUTS THE CREATURE UP? ============
+//
+// WHAT `dlvry` ESTABLISHED, and it is the whole reason this exists. Delivery inside one
+// session falls 0.716 -> 0.261 across the tenths, -0.4554 +/- 0.0230 (19.8 SE), 12 of 12
+// creatures down, and EVERY non-delivered trial is silent: 116568 nominal = 39963
+// delivered + 76605 silent + 0 degenerate, residual zero. The creature stops answering.
+// At the shipped 6.8M budget 42% of trials are already silent, so this is a tax on every
+// experiment built on this session rather than a quirk of one ladder.
+//
+// THE FIRST SUSPECT WAS THE REWARD ITSELF, AND IT IS ALREADY REFUSED. Under
+// kVLScoreFormant `scorable = voiced`, so a silent trial earns neither praise nor scold:
+// silence is the one response that cannot be punished, which looks like an incentive to
+// produce it. It is not, for two reasons that cost nothing to establish. Praise and scold
+// are symmetric (+0.5 / -0.5), so a 50/50 split makes voicing worth exactly as much as
+// silence; and `boundprobe`'s 16 checkpoints at this very budget show the praise share
+// CONSTANT at 0.548 -> 0.536, i.e. voicing stays net-POSITIVE the whole way while
+// delivery collapses. A creature being rewarded for answering is not being trained into
+// silence. `dl_praise`/`dl_scold` are carried here anyway so that claim is made on THIS
+// session rather than by analogy with another protocol.
+//
+// SO THE SUSPECT IS THE HOMEOSTAT, and it is named by its own definition rather than by
+// elimination. Intrinsic plasticity is `threshold += ip_rate * (rate_ema - target)`: a
+// creature whose larynx fires above target gets its thresholds pushed UP, and a threshold
+// high enough stops the voicing gate from opening at all. That predicts exactly what was
+// measured -- an early, steep, monotone decay that FLOORS -- because the homeostat
+// converges. It also predicts the floor sits where the threshold stops moving.
+//
+// THE DESIGN. Two arms, 12 of `dirbudget`'s own creatures, paired: the shipped genome,
+// and the same genome with `homeo.ip_rate = 0`. Delivery, the feedback balance and the
+// larynx's MEAN THRESHOLD counted tenth by tenth in both.
+//
+// THE THRESHOLD COLUMN IS THE DOSE CHECK, not decoration. A moving hash proves a
+// mechanism is wired, not that its dose is meaningful -- this project has paid for that
+// lesson. Here the dose is visible directly: the `ipoff` arm must show a FLAT threshold
+// and the `ip` arm a rising one. If both move, the knob did not take and no verdict below
+// is available whatever the delivery columns say.
+//
+// WHAT IT CANNOT DO, STATED UP FRONT. `ipoff` is known to cost learning (-7.42 SE where
+// the shipped arm gains), so the arms differ in more than their silence and this is NOT a
+// clean ablation of one variable. That is survivable because the question is narrow: does
+// the delivery decay SURVIVE with the homeostat off? A creature that learns less but
+// stays audible answers it, and so does one that goes just as quiet.
+//
+// THE OUTCOME SPACE, ENUMERATED. The decay can VANISH with IP off (the homeostat is the
+// cause, and a knob exists), SURVIVE UNCHANGED (IP is exonerated and the next suspects are
+// the voicing gate and the resonant jaw), SHRINK PARTLY (IP contributes and something else
+// does too, which is the most likely shape and the hardest to read), or WORSEN (IP was
+// holding the voice OPEN, which would invert the mechanism). All four are branched on.
+bool run_silence(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  aibaby::Dna dna;
+  if (dna.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) {
+    std::printf("  setup failed: the genome does not load\n");
+    return false;
+  }
+  const int32_t ctx_module = dna.module_with_role(aibaby::ModuleRole::kContext);
+  if (ctx_module < 0) {
+    std::printf("  this genome has no kContext module, so this is not the session\n"
+                "  `dlvry` measured and there is no delivery curve to explain. Build one\n"
+                "  with NO output weight:\n\n"
+                "    python3 tools/genome_add_context.py dna/default.toml ctx.toml \\\n"
+                "        vocal out_w=0\n"
+                "    ./build/aibaby --dna ctx.toml --experiment silence\n");
+    return false;
+  }
+
+  constexpr uint64_t kQEchoTicks = 560000;
+  constexpr uint32_t kQReps = 12;
+  constexpr uint32_t kQArms = 2;
+  const char* kQArmName[kQArms] = {"ip", "ipoff"};
+  const uint32_t n_trials = uint32_t(ticks / kVLTrialTicks);
+  if (n_trials < 24) {
+    std::printf("  setup failed: --ticks %llu gives %u trials, below the session's own\n"
+                "  minimum of 24.\n", (unsigned long long)ticks, n_trials);
+    return false;
+  }
+  const size_t slots_off = offsetof(aibaby::DnaHeader, exploration) +
+                           offsetof(aibaby::DnaExploration, context_slots);
+  const size_t ip_off =
+      offsetof(aibaby::DnaHeader, homeo) + offsetof(aibaby::DnaHomeo, ip_rate);
+
+  instrument("silence", dna.header().seed ^ 0x91E7u, n_trials,
+             "delivery, feedback balance and larynx threshold per tenth");
+  disclose_index_source(dna, "silence");
+  std::printf("  the finding       `dlvry`: delivery falls 0.716 -> 0.261 inside one\n"
+              "                    session, -0.4554 +- 0.0230 (19.8 SE), 12 of 12 down,\n"
+              "                    and EVERY missed trial is silent (0 degenerate,\n"
+              "                    residual 0). The creature stops answering.\n");
+  std::printf("  already refused   the reward is not the cause. praise/scold are\n"
+              "                    symmetric (+0.5/-0.5) and `boundprobe` shows the\n"
+              "                    praise share CONSTANT at 0.548 -> 0.536 at this\n"
+              "                    budget, so voicing stays net-positive while delivery\n"
+              "                    collapses. Carried here (`praise` column) so the\n"
+              "                    claim rests on THIS session, not another protocol.\n");
+  std::printf("  the hypothesis    IP is `threshold += ip_rate * (rate_ema - target)`, so\n"
+              "                    a larynx firing above target gets pushed up until the\n"
+              "                    voicing gate stops opening. That predicts an early,\n"
+              "                    steep, monotone decay that FLOORS where the threshold\n"
+              "                    stops moving -- which is the measured shape.\n");
+  std::printf("  the design        2 arms x %u paired creatures, %llu ticks = %u trials.\n"
+              "                    `ipoff` sets homeo.ip_rate = 0 and changes nothing\n"
+              "                    else; same seeds, same wiring, same everything.\n",
+              kQReps, (unsigned long long)ticks, n_trials);
+  std::printf("  the primary       last tenth minus first in the DELIVERED fraction, per\n"
+              "                    arm, and the arm difference. Pooled as a ratio of sums\n"
+              "                    and jackknifed over creatures, never meaned per\n"
+              "                    creature.\n");
+  std::printf("  THE DOSE CHECK    the `thr` column. `ipoff` must show a FLAT larynx\n"
+              "                    threshold and `ip` a rising one. If both move the knob\n"
+              "                    did not take and NO verdict below is available,\n"
+              "                    whatever the delivery columns say. A wired mechanism\n"
+              "                    is not a meaningful dose.\n");
+  std::printf("  stated up front   `ipoff` is known to COST learning (-7.42 SE), so the\n"
+              "                    arms differ in more than silence and this is not a\n"
+              "                    clean one-variable ablation. The question survives it:\n"
+              "                    does the decay SURVIVE with the homeostat off?\n");
+  std::printf("  the free control  the `ip` arm at this budget is `dirbudget`'s own call,\n"
+              "                    so its per-seed delivered total must reproduce that\n"
+              "                    ladder's column for the matching rung EXACTLY:\n\n"
+              "                      python3 tools/dlvry_predict.py \\\n"
+              "                          results/dirbudget.log <this log>\n");
+
+  struct Cell {
+    bool ok = false;
+    uint32_t nominal[VLRun::kDec] = {};
+    uint32_t silent[VLRun::kDec] = {};
+    uint32_t kept[VLRun::kDec] = {};
+    uint32_t praise[VLRun::kDec] = {};
+    uint32_t scold[VLRun::kDec] = {};
+    double thr[VLRun::kDec] = {};
+    uint32_t total = 0;
+  };
+
+  const std::vector<Cell> cells = parallel_reps<Cell>(
+      kQReps * kQArms, [&](uint32_t i) {
+        const uint32_t r = i / kQArms;
+        const uint32_t a = i % kQArms;
+        Cell cell;
+        std::vector<uint8_t> variant = blob;
+        const uint64_t seed = dna.header().seed + r * 7919ull;
+        std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed,
+                    sizeof(seed));
+        const uint32_t sl = kCFWords;
+        std::memcpy(variant.data() + slots_off, &sl, sizeof(sl));
+        if (a == 1) {
+          const float zero = 0.0f;
+          std::memcpy(variant.data() + ip_off, &zero, sizeof(zero));
+        }
+        CtxDrive drive;
+        drive.module = ctx_module;
+        drive.slots = kCFWords;
+        drive.gain = 0.10;
+        Regime reg;
+        reg.praise = kPraiseValue;
+        reg.scold = kScoldValue;
+        ImitateRun echo;
+        const VLRun run = run_vocallearn_session(
+            variant, ticks, kVLTaught, nullptr, reg, kVLTgtHeard, &drive,
+            kVLScoreFormant, nullptr, kCFWords, kGridWords, nullptr, nullptr, nullptr,
+            nullptr, nullptr, false, 0, &echo, kQEchoTicks);
+        if (!run.ok) return cell;
+        for (uint32_t d = 0; d < VLRun::kDec; ++d) {
+          cell.nominal[d] = run.dl_nominal[d];
+          cell.silent[d] = run.dl_silent[d];
+          cell.kept[d] = run.dl_kept[d];
+          cell.praise[d] = run.dl_praise[d];
+          cell.scold[d] = run.dl_scold[d];
+          cell.thr[d] = run.dl_thr[d];
+        }
+        cell.total = uint32_t(run.utt_trial.size());
+        cell.ok = true;
+        return cell;
+      });
+
+  // A creature missing either arm cannot stay in a paired read, so it leaves both.
+  std::vector<uint32_t> live;
+  for (uint32_t r = 0; r < kQReps; ++r) {
+    bool all = true;
+    for (uint32_t a = 0; a < kQArms; ++a) {
+      if (!cells[r * kQArms + a].ok) all = false;
+    }
+    if (all) live.push_back(r);
+  }
+  std::printf("\n  LIVENESS. %zu of %u creatures completed BOTH arms.\n", live.size(),
+              kQReps);
+  if (live.size() < 3) {
+    std::printf("\n  NOT A MEASUREMENT. Fewer than 3 creatures completed both arms, which\n"
+                "  is below the jackknife's own floor, so nothing below is read.\n");
+    return false;
+  }
+
+  // The free control, in the shape `tools/dlvry_predict.py` already parses.
+  std::printf("\n  THE `ip` ARM'S PER-SEED DELIVERED TOTAL, for the control above:\n");
+  {
+    char nm[16];
+    std::snprintf(nm, sizeof(nm), "%.3gM", double(ticks) / 1.0e6);
+    std::printf("  seed  %9s   nominal was\n", nm);
+    for (uint32_t r : live) {
+      std::printf("  %-6u %9u   %u\n", r, cells[r * kQArms].total, n_trials);
+    }
+  }
+
+  std::printf("\n  DELIVERY, FEEDBACK AND THRESHOLD TENTH BY TENTH, pooled over %zu\n",
+              live.size());
+  for (uint32_t a = 0; a < kQArms; ++a) {
+    std::printf("\n  arm %s\n", kQArmName[a]);
+    std::printf("  tenth   nominal   delivered   silent   frac    praise   thr\n");
+    for (uint32_t d = 0; d < VLRun::kDec; ++d) {
+      uint64_t nom = 0, kep = 0, sil = 0, pr = 0, sc = 0;
+      double th = 0.0;
+      for (uint32_t r : live) {
+        const Cell& c = cells[r * kQArms + a];
+        nom += c.nominal[d];
+        kep += c.kept[d];
+        sil += c.silent[d];
+        pr += c.praise[d];
+        sc += c.scold[d];
+        th += c.thr[d];
+      }
+      std::printf("  %-7u %7llu   %9llu   %6llu   %.3f   %.3f   %+.4f\n", d + 1,
+                  (unsigned long long)nom, (unsigned long long)kep,
+                  (unsigned long long)sil, nom ? double(kep) / double(nom) : 0.0,
+                  (pr + sc) ? double(pr) / double(pr + sc) : 0.0,
+                  th / double(live.size()));
+    }
+  }
+
+  // Per-arm last-minus-first on the pooled fraction, jackknifed over creatures.
+  auto step_of = [&](uint32_t a, const std::vector<uint32_t>& who) {
+    uint64_t n0 = 0, k0 = 0, n9 = 0, k9 = 0;
+    for (uint32_t r : who) {
+      const Cell& c = cells[r * kQArms + a];
+      n0 += c.nominal[0];
+      k0 += c.kept[0];
+      n9 += c.nominal[VLRun::kDec - 1];
+      k9 += c.kept[VLRun::kDec - 1];
+    }
+    return (n9 ? double(k9) / double(n9) : 0.0) - (n0 ? double(k0) / double(n0) : 0.0);
+  };
+  auto jk = [&](auto&& f) {
+    std::vector<double> loo;
+    for (size_t i = 0; i < live.size(); ++i) {
+      std::vector<uint32_t> drop;
+      for (size_t j = 0; j < live.size(); ++j) {
+        if (j != i) drop.push_back(live[j]);
+      }
+      loo.push_back(f(drop));
+    }
+    const double nn = double(loo.size());
+    if (nn < 3.0) return 0.0;
+    double m = 0.0;
+    for (double v : loo) m += v;
+    m /= nn;
+    double acc = 0.0;
+    for (double v : loo) acc += (v - m) * (v - m);
+    return std::sqrt(acc * (nn - 1.0) / nn);
+  };
+
+  double step[kQArms], step_se[kQArms];
+  for (uint32_t a = 0; a < kQArms; ++a) {
+    step[a] = step_of(a, live);
+    step_se[a] = jk([&](const std::vector<uint32_t>& w) { return step_of(a, w); });
+  }
+  const double diff = step[1] - step[0];
+  const double diff_se =
+      jk([&](const std::vector<uint32_t>& w) { return step_of(1, w) - step_of(0, w); });
+
+  std::printf("\n  THE PRIMARY, last tenth minus first in the delivered fraction:\n");
+  for (uint32_t a = 0; a < kQArms; ++a) {
+    std::printf("    %-6s %+.4f +- %.4f (%.1f SE)\n", kQArmName[a], step[a], step_se[a],
+                step_se[a] > 0.0 ? std::fabs(step[a] / step_se[a]) : 0.0);
+  }
+  std::printf("    ipoff MINUS ip   %+.4f +- %.4f (%.1f SE)\n", diff, diff_se,
+              diff_se > 0.0 ? std::fabs(diff / diff_se) : 0.0);
+
+  // THE DOSE CHECK, read before any verdict.
+  double thr_move[kQArms];
+  for (uint32_t a = 0; a < kQArms; ++a) {
+    double t0 = 0.0, t9 = 0.0;
+    for (uint32_t r : live) {
+      t0 += cells[r * kQArms + a].thr[0];
+      t9 += cells[r * kQArms + a].thr[VLRun::kDec - 1];
+    }
+    thr_move[a] = (t9 - t0) / double(live.size());
+  }
+  std::printf("\n  THE DOSE CHECK. larynx mean threshold, last tenth minus first:\n"
+              "    ip     %+.5f\n    ipoff  %+.5f\n", thr_move[0], thr_move[1]);
+  const bool dose_ok = std::fabs(thr_move[1]) < 0.2 * std::fabs(thr_move[0]) &&
+                       std::fabs(thr_move[0]) > 1e-6;
+  if (!dose_ok) {
+    std::printf("\n  THE KNOB DID NOT TAKE, so there is NO verdict here. `ipoff`'s\n"
+                "  threshold moved %+.5f against the shipped arm's %+.5f, which is not\n"
+                "  the <20%% a disabled homeostat has to show. Either ip_rate was not\n"
+                "  written where the header keeps it, or something other than IP moves\n"
+                "  this threshold. The delivery columns above are REAL but they do not\n"
+                "  bear on the hypothesis, because the manipulation is unproven.\n",
+                thr_move[1], thr_move[0]);
+    return false;
+  }
+  std::printf("    the knob took: `ipoff` holds its threshold at %.0f%% of the shipped\n"
+              "    arm's movement, so the arms really do differ in the homeostat.\n",
+              100.0 * std::fabs(thr_move[1]) /
+                  (std::fabs(thr_move[0]) > 0.0 ? std::fabs(thr_move[0]) : 1.0));
+
+  // All four outcomes -- plus the degenerate fifth, which the first version of this
+  // function did not have and which a smoke found: if NEITHER arm decays there is no
+  // effect to attribute, and the "partly the homeostat" branch below would have printed
+  // a ratio of two zeros as though it meant something. `dirbudget` printed SATURATES
+  // over a resolved reversal for exactly this reason -- the outcome space stopped one
+  // short of what happened -- so the no-effect case gets its own branch rather than
+  // falling through to the nearest one.
+  const double keep = step[0] != 0.0 ? step[1] / step[0] : 0.0;
+  if (std::fabs(step[0]) < 0.02 && std::fabs(step[1]) < 0.02) {
+    std::printf("\n  THERE IS NO DECAY IN EITHER ARM to attribute. The shipped arm moves\n"
+                "  %+.4f and `ipoff` %+.4f across the session, both inside the +-0.02 that\n"
+                "  counts as flat here, against the -0.4554 this experiment exists to\n"
+                "  explain. So this invocation has not reproduced the phenomenon and says\n"
+                "  NOTHING about the homeostat either way. The usual cause is a budget too\n"
+                "  small for the decay to start: it is most of the way down by trial ~2900\n"
+                "  and this run had %u trials.\n",
+                step[0], step[1], n_trials);
+    return false;
+  }
+  if (diff_se > 0.0 && diff / diff_se > 3.0) {
+    std::printf("\n  IP WAS HOLDING THE VOICE OPEN. With the homeostat off the decay is\n"
+                "  SMALLER by %+.4f +- %.4f (%.1f SE) -- and `ipoff` keeps only %.0f%% of\n"
+                "  the shipped decay. The homeostat is implicated in the quieting, and\n"
+                "  unlike the five earlier suspects it comes with a knob: `homeo.ip_rate`.\n"
+                "    WHAT THIS DOES NOT LICENSE: turning it down. `ipoff` costs learning\n"
+                "    (-7.42 SE), so the trade has to be priced before anything ships.\n",
+                diff, diff_se, diff / diff_se, 100.0 * keep);
+  } else if (diff_se > 0.0 && diff / diff_se < -3.0) {
+    std::printf("\n  THE HOMEOSTAT WAS KEEPING THE CREATURE AUDIBLE. With IP off the decay\n"
+                "  is WORSE by %+.4f +- %.4f (%.1f SE), inverting the hypothesis: the\n"
+                "  threshold push is not what silences the voice, and removing it silences\n"
+                "  it faster. Read this as a refusal of the mechanism AND of its sign.\n",
+                diff, diff_se, diff / diff_se);
+  } else if (std::fabs(step[1]) > 0.5 * std::fabs(step[0])) {
+    std::printf("\n  THE DECAY SURVIVES THE HOMEOSTAT. `ipoff` still falls %+.4f against\n"
+                "  the shipped arm's %+.4f -- %.0f%% of it -- and the difference reads\n"
+                "  only %.1f SE. IP IS EXONERATED as the cause of the quieting. The\n"
+                "  threshold column shows the knob took, so this is a refusal and not a\n"
+                "  failed manipulation. Next suspects, in order: the voicing gate, and the\n"
+                "  resonant jaw -- both already named by the frame findings, neither with\n"
+                "  a knob this clean.\n",
+                step[1], step[0], 100.0 * keep, diff_se > 0.0 ? std::fabs(diff / diff_se) : 0.0);
+  } else {
+    std::printf("\n  PARTLY THE HOMEOSTAT, AND THIS IS THE HARDEST SHAPE TO READ. `ipoff`\n"
+                "  keeps %.0f%% of the shipped decay (%+.4f against %+.4f) and the\n"
+                "  difference is %+.4f +- %.4f, only %.1f SE -- under this project's 3 SE\n"
+                "  bar. So IP contributes and something else does too, and n = %zu cannot\n"
+                "  split them. What would: the same two arms at the n this difference\n"
+                "  needs, which is (3/%.1f)^2 = %.0fx the creatures.\n",
+                100.0 * keep, step[1], step[0], diff, diff_se,
+                diff_se > 0.0 ? std::fabs(diff / diff_se) : 0.0, live.size(),
+                diff_se > 0.0 ? std::fabs(diff / diff_se) : 1.0,
+                diff_se > 0.0 ? std::pow(3.0 / std::fabs(diff / diff_se), 2.0) : 0.0);
+  }
+  return live.size() == kQReps;
+}
+
 // ============ dlvry: WHERE DOES THE BUDGET GO? ============
 //
 // THE QUESTION, AND IT IS A DEFECT IN `dirbudget` RATHER THAN A NEW IDEA. The ladder

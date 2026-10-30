@@ -261,6 +261,25 @@ const Spec kSpecs[] = {
      "  is a prediction rather than a fit. Decay, flat, rising and non-monotone\n"
      "  are all branched on -- dirbudget printed SATURATES over a resolved\n"
      "  reversal because its outcome space stopped one short of what happened"},
+    {"silence", 13600000, Expect::kRead, Tier::kTeach,
+     "  dlvry established that the creature stops answering: delivery inside one\n"
+     "  session falls 0.716 -> 0.261 across the tenths, -0.4554 +- 0.0230 (19.8\n"
+     "  SE), 12 of 12 creatures down, and EVERY missed trial is silent -- 0\n"
+     "  degenerate, residual 0. At the shipped 6.8M budget 42% of trials are\n"
+     "  already silent, so it taxes every experiment on this session. The reward\n"
+     "  is already refused as the cause: praise/scold are symmetric and\n"
+     "  boundprobe shows the praise share constant at 0.548 -> 0.536 while\n"
+     "  delivery collapses, so voicing stays net-positive. The suspect is the\n"
+     "  homeostat, named by its own definition -- IP is threshold += ip_rate *\n"
+     "  (rate_ema - target), which pushes a busy larynx up until the voicing\n"
+     "  gate stops opening, predicting exactly the early steep decay that FLOORS\n"
+     "  that was measured. Two arms x 12 paired creatures: the shipped genome,\n"
+     "  and homeo.ip_rate = 0 and nothing else. The thr column is the DOSE CHECK\n"
+     "  rather than decoration -- ipoff must hold its larynx threshold flat and\n"
+     "  the shipped arm must move, or no verdict is available whatever delivery\n"
+     "  did. Stated up front: ipoff costs learning (-7.42 SE) so the arms differ\n"
+     "  in more than silence, which the narrow question survives. Vanish,\n"
+     "  survive, shrink-partly and worsen are all branched on"},
     {"exsweep", 6800000, Expect::kRead, Tier::kTeach,
      "  reward buys the between-word SEPARATION and the lesson buys the\n"
      "  ASSIGNMENT -- a double dissociation at 10.6 and 6.7 SE. So does phasic\n"
@@ -1241,6 +1260,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "echoname") ok = run_echoname(dna_blob, ticks, verbose);
   else if (name == "dirbudget") ok = run_dirbudget(dna_blob, ticks, verbose);
   else if (name == "dlvry") ok = run_dlvry(dna_blob, ticks, verbose);
+  else if (name == "silence") ok = run_silence(dna_blob, ticks, verbose);
   else if (name == "quietecho") ok = run_quietecho(dna_blob, ticks, verbose);
   else if (name == "exsweep") ok = run_exsweep(dna_blob, ticks, verbose);
   else if (name == "ctxvocab") ok = run_ctxvocab(dna_blob, ticks, verbose);
