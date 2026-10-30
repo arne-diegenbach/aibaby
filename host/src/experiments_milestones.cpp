@@ -43460,6 +43460,30 @@ bool run_dirbudget(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
                 last_ratio, double(kDBTicks[kDBArms - 1] * 2ull) / 1.0e6);
     return n_complete == kDBReps;
   }
+  // THE BRANCH THIS FUNCTION DID NOT HAVE, added 2026-10-30 after the first full run
+  // printed the wrong LABEL for a right number. The three branches above all assume the
+  // excess is still growing or has gone flat -- ratio >= 1. The run came back at x0.87
+  // with the third doubling resolved NEGATIVE (-0.0244 +/- 0.0092, 2.6 SE, 25 of 36
+  // creatures down), i.e. non-monotone, and the flat branch below claimed "SATURATES".
+  //
+  // A null and a reversal are different results; the project's own discoveries document
+  // says so in section 2.4, and this harness could not tell them apart. Pre-registering
+  // a refusal condition ("the excess flat across 8x") does not help when the outcome
+  // space was never enumerated past flat -- the same failure shape as a statistic of the
+  // wrong form, not of the wrong threshold.
+  if (last_ratio < 0.95) {
+    std::printf("\n  THE ROTATION PEAKS AND THEN DECLINES, which is NOT saturation. The last\n"
+                "  doubling is worth x%.2f -- below 1.0, so the excess over null is SMALLER\n"
+                "  at the top rung than one doubling below it. More budget past the peak\n"
+                "  does not stop paying, it goes backwards.\n"
+                "  Read the sign count and the paired SE before calling it harm: a 2-3 SE\n"
+                "  step is a HYPOTHESIS here and three have been retracted. And check the\n"
+                "  `its null` column -- if the null ROSE with budget, part of the decline\n"
+                "  is the null inflating as the voice separates rather than the mapping\n"
+                "  degrading, which is exactly what a per-creature null is there to show.\n",
+                last_ratio);
+    return n_complete == kDBReps;
+  }
   std::printf("\n  THE ROTATION SATURATES TOO. The last doubling is worth x%.2f, so\n"
               "  budget is closed for BOTH halves of the dissociation: reward's\n"
               "  magnitude saturates at ~118 Hz (ctxscale) and the lesson's direction\n"

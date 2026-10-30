@@ -659,6 +659,45 @@ leaving per-neuron pattern regulation intact, or evidence that the estimator's n
 per-neuron regulation is itself an artefact of the additive form — a read-only question, and
 the cheap version is a `stageprobe` arm rather than a seven-hour paired run.
 
+### 7. CLOSED 2026-10-30 — the lesson's rotation peaks and declines
+
+`dirbudget`, four taught rungs x 36 paired creatures, ~7.1 h. The open half of the
+magnitude/direction split: the magnitude's budget curve was closed by `ctxscale` (~118 Hz, 94%
+of asymptote) and nothing had laddered the direction.
+
+| doubling | ratio | paired step | SE | signs |
+|---|---|---|---|---|
+| 3.4M → 6.8M | ×1.41 | **+0.0524 ± 0.0106** | **5.0** | 30/36 up |
+| 6.8M → 13.6M | ×1.07 | +0.0121 ± 0.0099 | 1.2 | 20/36 — chance |
+| 13.6M → 27.2M | ×0.87 | **−0.0244 ± 0.0092** | **2.6** | **25/36 down** |
+
+**The free control passed bit-identically on all 36 seeds** — rung 1 is `echoname`'s taught arm
+argument-for-argument, compared as printed strings rather than to a tolerance, with zero
+creatures dropped. **Budget is not the limit on the rotation:** it buys the first doubling
+decisively, then stops, and past 13.6M it is probably harmful.
+
+**The two halves of the split differ in shape, not only in mechanism.** The magnitude's ratios
+are 1.98, 1.38, 1.23 — monotone and asymptotic. The direction's are 1.41, 1.07, 0.87 —
+non-monotone. Reward's half approaches a ceiling; the lesson's half overshoots and comes back.
+
+**The null rises monotonically with budget** (0.251 → 0.275), so of the top-rung decline about
+two thirds is the mapping degrading and one third is the null inflating as the voice separates.
+Read against a fixed 1/k the reversal would have been invisible.
+
+**A defect in the harness, recorded because it is the useful part.** The run's own verdict reads
+"THE ROTATION SATURATES TOO", which is wrong for a ratio of 0.87 resolved negative at 2.6 SE.
+Three verdict branches were written — growing, turning over, flat — all assuming ratio ≥ 1, and
+the refusal was registered as "flat across 8×". The outcome space was never enumerated past
+flat, so a reversal fell through to the flat branch. A null and a reversal are different
+results; pre-registering a threshold does not help when the shape was not enumerated. Fixed
+with an explicit declining branch; the numbers stand and only the printed sentence was wrong.
+
+**Cite at the stated confidence.** The 5.0 SE first doubling is solid. **The 2.6 SE decline is
+a hypothesis**, as the log said before the numbers existed, and it is a population tendency
+rather than a law: per-creature peaks are 4 at 3.4M, 12 at 6.8M, 12 at 13.6M and 8 still at
+27.2M. The shipped 6.8M sits below the population peak, but the 6.8 → 13.6 step is 1.2 SE, so
+this run does not license moving it.
+
 ## Standing prohibitions
 
 These are places where fitting has already cost this project a result, and they are written

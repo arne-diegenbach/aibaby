@@ -24022,3 +24022,117 @@ ceiling asks, and every knob this project has found moves it ×1.1–×1.2. v74 
 What is left standing is the thing all of these were trying to work around: **the readout
 itself** — a rate-weighted centroid, by design. Not a constant, not a regulator, and not a
 basis, but the measurement the whole loop is built on.
+
+## The lesson's rotation peaks and then declines, which is not saturation (2026-10-30)
+
+### The question, and why the magnitude's answer did not settle it
+
+The magnitude/direction split found that **reward buys the entire produced separation and
+none of the mapping, and the lesson buys the entire mapping and no further separation** —
+10.6 and 6.7 SE on 36 creatures, each half null on the other's axis. The magnitude's budget
+curve was already closed: `ctxscale` ran 3.4M/6.8M/13.6M/27.2M in September and the learned
+bias saturates at ~118 Hz with the creature at 94% of asymptote, so architecture rather than
+compute binds it.
+
+Nothing had put the **direction** on a ladder, and the whole content of the split is that the
+two are separable. So `dirbudget`: four taught rungs at the same budgets, 36 creatures each,
+paired because every rung runs the same seeds.
+
+**Four points rather than three, and that is the entire reason for the shape.** `ctxscale`'s
+first read was on three points and printed COMPUTE-LIMITED; its fourth point reversed it, with
+per-doubling ratios 1.98, 1.38, 1.23. The exponent halves every doubling, so a three-point
+ladder on this curve lies with confidence.
+
+### The control, which is the strongest certification this project can give an instrument
+
+At the spec minimum, rung 1 is argument-for-argument `echoname`'s taught arm: same seed rule
+(`header.seed + r*7919`), same session call, same echo buffer, same 6800000 ticks. So it must
+reproduce the published column exactly.
+
+```
+seeds compared   36  (published 36, this run 36)
+columns          direction, its null -- compared as PRINTED, not to a tolerance
+BIT-IDENTICAL on all 36 seeds.
+```
+
+Zero creatures dropped, `ramp cov` not applicable here, and the comparison is on printed
+strings rather than to a tolerance, because a similarity check is not what licenses a new
+instrument. A brand-new harness reproducing a published column seed for seed, through a
+different code path, is worth more than any amount of reading the source.
+
+### The ladder
+
+```
+rung      ticks     trials   direction      its null    excess over null   F1 spread Hz
+3.4M       3400000      867   0.378+-0.018   0.251+-0.001   +0.1266 +- 0.0175     38.4+-3.0
+6.8M       6800000     1475   0.436+-0.020   0.258+-0.002   +0.1790 +- 0.0197     44.4+-2.7
+13.6M     13600000     2269   0.458+-0.024   0.267+-0.003   +0.1911 +- 0.0224     46.5+-2.7
+27.2M     27200000     3482   0.442+-0.028   0.275+-0.007   +0.1667 +- 0.0240     45.6+-2.9
+```
+
+| doubling | ratio | paired step | SE | signs |
+|---|---|---|---|---|
+| 3.4M → 6.8M | ×1.41 | **+0.0524 ± 0.0106** | **5.0** | 30/36 up |
+| 6.8M → 13.6M | ×1.07 | +0.0121 ± 0.0099 | 1.2 | 20/36 up — chance |
+| 13.6M → 27.2M | ×0.87 | **−0.0244 ± 0.0092** | **2.6** | **25/36 down** |
+
+**The first doubling pays and pays large. The second buys nothing. The third goes
+backwards.** Across 8× of budget the excess goes +0.1266 → +0.1667, ×1.32 in total, with the
+whole of it bought in the first step.
+
+### The harness printed the wrong label for the right number, and that is my defect
+
+The run's own verdict line reads **"THE ROTATION SATURATES TOO"**. It is wrong, and the
+numbers above are why: a ratio of 0.87 with the step resolved negative at 2.6 SE and 25 of 36
+creatures down is **not** saturation, it is a reversal.
+
+The cause is a gap in my own pre-registration rather than a fitted verdict. I wrote three
+verdict branches — still growing, turning over, flat — all of which assume ratio ≥ 1, and
+registered the refusal condition as *"the excess flat across 8× of budget."* The outcome space
+was never enumerated past flat, so when the curve turned down the flat branch caught it and
+called it saturation. **A null and a reversal are different results**, which this project's own
+discoveries document states as §2.4; the harness could not tell them apart. Pre-registering a
+threshold does not help when the *shape* was not enumerated — the same failure family as a
+statistic of the wrong form.
+
+Fixed for future runs with an explicit declining branch that prints the sign count, the paired
+SE and a pointer to the null column. **The numbers in `results/dirbudget.log` are unchanged
+and stand**; only the sentence the binary printed over them was wrong, and the log was produced
+by the binary at `b3f726d`, before the fix.
+
+### Why part of the decline is the null, and why that column was mandatory
+
+`its null` **rises monotonically with budget**: 0.251 → 0.258 → 0.267 → 0.275. That is not
+noise, and it is exactly what the per-creature null exists to expose. Chance is not 1/k here —
+an uninformative voice reads about 0.30 on a four-word task — and the null depends on the
+geometry of what the voice produces. As budget buys separation (F1 spread 38.4 → 46.5 Hz,
+reward's half of the split), any permutation of the labels scores better, so the null inflates.
+
+Decomposing the top-rung decline: `direction` falls 0.458 → 0.442 (−0.016) while the null
+rises 0.267 → 0.275 (+0.008). So **roughly two thirds of the decline is the mapping actually
+degrading and one third is the null inflating.** Read against a fixed 1/k chance level this
+run would have shown a flat top end and the reversal would have been invisible.
+
+### What it answers, and at what confidence
+
+**Budget is not the limit on the lesson's rotation.** It buys the first doubling decisively and
+then stops, and past 13.6M it is — at 2.6 SE — probably harmful.
+
+**And the two halves of the dissociation have different budget *shapes*, not merely different
+mechanisms.** `ctxscale`'s magnitude curve is monotone and asymptotic, ratios 1.98, 1.38, 1.23,
+always above 1. The direction curve is non-monotone: 1.41, 1.07, 0.87. Reward's half approaches
+a ceiling; the lesson's half overshoots and comes back. That is a sharper statement than
+either "both saturate" or "the rotation is compute-bound", and neither was among the outcomes
+this run pre-registered.
+
+Stated at the confidence the project's own rules allow:
+
+- The **5.0 SE first doubling** is solid, and 30/36 agree.
+- The **2.6 SE decline is a HYPOTHESIS, not a finding.** The log said so before the numbers
+  existed: "a 2-3 SE rung-to-rung step is a HYPOTHESIS in this project; three have been
+  retracted." It is pre-registered as such, and it is not promoted now because it came out
+  interesting.
+- **It is a population tendency, not a law.** Per-creature peaks: 4 at 3.4M, 12 at 6.8M, 12 at
+  13.6M, **8 still at 27.2M**. Nearly a quarter of creatures do best on the largest budget.
+- The shipped 6.8M sits below the population peak, but the 6.8M → 13.6M step is 1.2 SE, so
+  this run does not license moving it.
