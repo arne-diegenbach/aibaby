@@ -279,7 +279,20 @@ const Spec kSpecs[] = {
      "  the shipped arm must move, or no verdict is available whatever delivery\n"
      "  did. Stated up front: ipoff costs learning (-7.42 SE) so the arms differ\n"
      "  in more than silence, which the narrow question survives. Vanish,\n"
-     "  survive, shrink-partly and worsen are all branched on"},
+     "  survive, shrink-partly and worsen are all branched on.\n"
+     "  MEASURED 2026-10-30, and it VANISHED: the shipped arm decays -0.5919\n"
+     "  +- 0.0176 (33.7 SE) against ipoff's -0.1688 +- 0.0158 (10.7 SE), a\n"
+     "  difference of +0.4231 +- 0.0267 (15.8 SE), so ipoff keeps only 29% of\n"
+     "  the decay -- 84% of the SUSTAINED slide is IP and only 50% of the\n"
+     "  first-tenth step, so a -0.11 early transient survives removing it. The\n"
+     "  dose check read +2.164 against exactly +1.0000 at all ten tenths. The\n"
+     "  pre-registered reason for the FLOOR was wrong while its shape held: the\n"
+     "  threshold is still climbing +0.138 in the last tenth with delivery\n"
+     "  already flat at 0.234 -> 0.233, so the floor is where the threshold\n"
+     "  stops MATTERING. The knob stays refused -- ipoff-136m at this same\n"
+     "  budget reads dF1 103.9 -> 17.7 Hz (-7.42 SE), so the arm that answers\n"
+     "  2.7x more trials learns 6x less and delivery is not the bottleneck on\n"
+     "  learning"},
     {"exsweep", 6800000, Expect::kRead, Tier::kTeach,
      "  reward buys the between-word SEPARATION and the lesson buys the\n"
      "  ASSIGNMENT -- a double dissociation at 10.6 and 6.7 SE. So does phasic\n"

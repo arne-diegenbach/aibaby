@@ -813,6 +813,58 @@ delivery already floored at 0.234 → 0.233. Next candidate, with a characterise
 `ipoff` destroys learning, so it needs a partial dose, and the regulator is marked closed for
 other questions. **Flag before spending the run.**
 
+### 11. OPEN 2026-10-30 — `verify-teach` cannot pass on `dna/default.toml`, and the suite cannot say why
+
+Found while discharging an owed item: the `Expect::kRead` failure branch in `run_verify` had never
+been exercised, only read.
+
+**It is exercised now, and it is correct.** `silence` was temporarily moved to `Tier::kFast` at
+100000 ticks, the fast suite run, and the branch produced exactly what it promises
+(`results/kread-fail-branch.log`): `experiments 24 as expected, 1 not`, the instrument named with
+"instrument did not complete — apparatus, not content", and `verify FAIL` while `determinism` and
+`pinned hash` both still read PASS. The spec was reverted immediately afterwards and the gate
+re-run on the reverted source. **The log in `results/` is a deliberate FAIL and not a real gate
+failure** — it exists because a branch that has only been read is not known to work.
+
+**But smoking it first turned up the real finding, which is not about today's additions.**
+`silence` on `dna/default.toml` refuses for a reason nobody was testing for: that genome has no
+`kContext` module. Checked across the tier, **seven teach-tier instruments refuse immediately on
+the suite's own genome** — `boundprobe`, `ctxgrid`, `ctxvocab`, `dirbudget`, `dlvry`, `silence`,
+`ctxgain`, all exit 1 before any simulation. `run_verify` counts a false `kRead` as `failed` and
+`ok = det && hash_ok && failed == 0`, so **`verify-teach` cannot pass on `dna/default.toml`.**
+There is no verify-teach log anywhere in `results/` (the `phaseteach-*` logs are a different
+experiment), which fits: the teach tier has apparently never been run green. `return false` on a
+missing context module is the established pattern across ~20 sites and `boundprobe` has been a
+`kTeach` spec far longer than `dlvry` or `silence`, so this is latent, not new.
+
+**The message is honest; the accounting is what breaks.** The branch already names "a missing
+module" as one of the reasons and says to read the instrument's output rather than that line. What
+it cannot do is distinguish *this genome is not my subject* from *the apparatus broke* — which is
+this project's own `Expect::kRead` lesson arriving one level up, in the harness that counts the
+instruments rather than in an instrument.
+
+**And the project already prescribes the answer, which makes this a mis-registration rather than
+a gap.** The rule is written down: *produces a number → `kPass`; refuses because a mechanism is
+off or a module is absent → `kGuard`; has a real bar it does not yet clear → `kOpen`.* `duty` is
+registered `kGuard` for exactly this reason — "`dna/default.toml` has no context module and that
+experiment legitimately refuses there" — and `v1probe` is the same pattern for the absent visual
+cortex. **So the seven are mis-registered: they refuse on the shipped genome for an absent
+module, which is `kGuard`'s definition, and they are declared `kRead`.** Under `kGuard` the
+refusal counts as the expected answer and the teach tier can reach a verdict.
+
+**But `kGuard` is only correct for `dna/default.toml`, and that is the whole difficulty.** These
+experiments exist to be run on a context genome, where they do produce measurements — and a
+`kGuard` spec that starts passing is reported as *"the mechanism it watches is no longer off"*.
+So a flat `kGuard` trades a tier that cannot pass for a false alarm on every context-genome run,
+which is precisely the genome-dependent label this project already has a rule about: **a label
+correct on only SOME genomes must be PRINTED.** The expectation here is a function of the genome,
+and no single `Expect` value encodes that.
+
+**So the fix is better specified than "a design call", but it is still not a cleanup**: register
+the seven as `kGuard` *and* have the suite state which genome the expectation is relative to, so
+the label is disclosed rather than silently wrong half the time. Until then, `verify PASS`
+certifying the FAST tier only is load-bearing and should not be read as conservative caution.
+
 ## Standing prohibitions
 
 These are places where fitting has already cost this project a result, and they are written
