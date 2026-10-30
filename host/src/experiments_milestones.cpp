@@ -43642,7 +43642,14 @@ bool run_silence(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
   }
 
   constexpr uint64_t kQEchoTicks = 560000;
-  constexpr uint32_t kQReps = 12;
+  // 36, raised from the 12 this experiment first ran at, to match `dirbudget`'s creature
+  // set exactly -- the per-seed threshold table below is only useful joined against that
+  // ladder's per-seed `direction`, and a join on 12 of 36 has an SE near 0.28. Raising it
+  // is SAFE for the published n=12 read because the seed is `header().seed + r * 7919`
+  // and does not depend on kQReps, so creatures 0-11 are bit-identical and their
+  // delivered totals must still reproduce the existing log. The ARMS must not change for
+  // the same reason inverted: appending or dropping an arm re-rolls the noise draw.
+  constexpr uint32_t kQReps = 36;
   constexpr uint32_t kQArms = 2;
   const char* kQArmName[kQArms] = {"ip", "ipoff"};
   const uint32_t n_trials = uint32_t(ticks / kVLTrialTicks);
@@ -43695,6 +43702,49 @@ bool run_silence(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
               "                    so its per-seed delivered total must reproduce that\n"
               "                    ladder's column for the matching rung EXACTLY:\n\n"
               "                      python3 tools/dlvry_predict.py \\\n"
+              "                          results/dirbudget.log <this log>\n");
+
+  // THE SECOND QUESTION, added after the first was answered. The delivery result closed
+  // its own hypothesis and left exactly one candidate for `dirbudget`'s declining
+  // rotation standing: the larynx threshold is still climbing +0.138 in the final tenth
+  // while delivery has floored at 0.234 -> 0.233, and the decline's cause has to be
+  // something that keeps moving after delivery stops. Testing that needed no new
+  // mechanism and no dose -- `cell.thr[d]` is ALREADY per creature per tenth here and was
+  // merely pooled at print time, so the only change is a second table and the reps above.
+  std::printf("\n  THE SECOND QUESTION, on the same run and costing nothing extra:\n");
+  std::printf("  the candidate     `dirbudget`'s rotation peaks and declines, and all\n"
+              "                    three explanations are refused (magnitude trade,\n"
+              "                    delivery starvation, experience). The threshold is the\n"
+              "                    only quantity known to keep moving after delivery\n"
+              "                    floors, so it is the last candidate with a mechanism.\n");
+  std::printf("  the test          per-creature threshold climb (last tenth minus first,\n"
+              "                    `ip` arm) joined on seed against `dirbudget`'s own\n"
+              "                    per-seed `direction` at 13.6M and 27.2M. The climb is\n"
+              "                    measured over the RISE and asked to predict the LATER\n"
+              "                    decline, which is out of sample in time.\n");
+  std::printf("  the prediction    SIGNED and written before the run: if the threshold is\n"
+              "                    the clock, a creature whose threshold climbs faster is\n"
+              "                    further past the peak by 27.2M, so\n"
+              "                    r(climb, direction(27.2M) - direction(13.6M)) is\n"
+              "                    NEGATIVE.\n");
+  std::printf("  what refuses it   r >= 0 at 2 SE, or |r| under ~0.28, which is what this\n"
+              "                    join can resolve at n = 36. Either way the threshold\n"
+              "                    stops being the candidate and the decline has none\n"
+              "                    left with a named mechanism.\n");
+  std::printf("  THE PRE-FLIGHT    r(climb, delivered trials) is read FIRST and reported\n"
+              "                    either way. `dirbudget`'s own free control measured\n"
+              "                    r(trials, direction) = +0.583 (4.7 SE), so delivery is\n"
+              "                    a KNOWN confound pointing the opposite way: if the\n"
+              "                    climb tracks delivery between creatures, the primary is\n"
+              "                    contaminated and is reported as such, not read. Within\n"
+              "                    a creature the two move oppositely; BETWEEN creatures\n"
+              "                    it is unmeasured, which is why it is a pre-flight and\n"
+              "                    not an assumption.\n");
+  std::printf("  stated up front   this is a BETWEEN-creature correlation, the same shape\n"
+              "                    as the experience test it follows, so a quality\n"
+              "                    confound (a brain that both regulates harder and\n"
+              "                    rotates less) is not excluded by it.\n");
+  std::printf("                      python3 tools/silence_thr_join.py \\\n"
               "                          results/dirbudget.log <this log>\n");
 
   struct Cell {
@@ -43775,6 +43825,22 @@ bool run_silence(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
     for (uint32_t r : live) {
       std::printf("  %-6u %9u   %u\n", r, cells[r * kQArms].total, n_trials);
     }
+  }
+
+  // THE PER-SEED THRESHOLD CLIMB, for the second question. A SEPARATE table rather than
+  // two more columns on the one above, because `tools/dlvry_predict.py` identifies that
+  // table's rows by its last field being a bare trial count -- a signed float on the end
+  // would make every row fail its shape test and void the free control instead of
+  // extending it. The per-creature numbers were always here in `cell.thr[]`; only the
+  // pooling at print time hid them.
+  std::printf("\n  THE PER-SEED THRESHOLD CLIMB, last tenth minus first, both arms:\n");
+  std::printf("  seed   ip climb   ipoff climb   ip delivered\n");
+  for (uint32_t r : live) {
+    const Cell& ci = cells[r * kQArms];
+    const Cell& co = cells[r * kQArms + 1];
+    std::printf("  %-6u %+9.5f   %+11.5f   %12u\n", r,
+                ci.thr[VLRun::kDec - 1] - ci.thr[0],
+                co.thr[VLRun::kDec - 1] - co.thr[0], ci.total);
   }
 
   std::printf("\n  DELIVERY, FEEDBACK AND THRESHOLD TENTH BY TENTH, pooled over %zu\n",
