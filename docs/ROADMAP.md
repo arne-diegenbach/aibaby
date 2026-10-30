@@ -781,11 +781,49 @@ pairs differing. Section 8 was bitten by a `tenth` column posing as a seed; this
 collision from the other side, in a tool written *after* documenting it. **Anchor on the table's
 header, never on the shape of a row.**
 
+### 10. CLOSED 2026-10-30 — the decline tracks ticks, not answered trials; and a third of it is the null
+
+Free from the ladder log, no run: `tools/dirbudget_experience.py`. Possible only because section 9
+established that delivery varies **1.54x between creatures at one budget** (1648-2538 delivered at
+13.6M), which makes ticks and experience separable axes in data already on disk.
+
+**The pre-flight withdrew the primary before it was read.** Within a rung, more delivered trials
+buys a LOWER null — **−0.435 ± 0.148 (2.9 SE)** at 6.8M, −0.305 ± 0.143 (2.1 SE) at 13.6M — so
+`excess` rises with delivery for reasons that are not learning. The pre-registered primary
+(d(excess) vs d(trials), paired) reads +0.564 / +0.551 / +0.721, all resolved, all the sign the
+artefact predicts. **Recorded, not quoted.**
+
+**What survives is the column the artefact pushes the other way.** `direction` alone correlates
+with delivered trials **+0.447 ± 0.139 (3.2 SE)** at 13.6M and **+0.583 ± 0.123 (4.7 SE)** at
+27.2M. The experience account predicts the OPPOSITE sign there — the creature that answered most
+should be furthest past the peak and show least direction. It shows most. **So the decline does
+not go with answered trials: the third candidate is refused.** Caveat stated, not buried: this is
+between-creature, so a quality confound could mask a true negative, and it would have to beat a
+4.7 SE positive to do it. Settling it needs delivery moved WITHIN a creature without moving its
+learning, which `ipoff` cannot do.
+
+**A correction to section 7's reading.** Across rungs the null RISES +0.0239, opposite to the
+within-rung effect. The top step's −0.0243 is direction **−0.0158** plus null **+0.0085**: about
+**a third of the published decline is the creature's own chance level rising**, not its direction
+falling. Subtracting the null stays correct; the two parts were simply never separated.
+
+**Where it points.** The cause must keep moving after delivery stops changing. Section 9 found
+exactly one such thing: the larynx threshold still climbing **+0.138 in the final tenth** with
+delivery already floored at 0.234 → 0.233. Next candidate, with a characterised knob — but
+`ipoff` destroys learning, so it needs a partial dose, and the regulator is marked closed for
+other questions. **Flag before spending the run.**
+
 ## Standing prohibitions
 
 These are places where fitting has already cost this project a result, and they are written
 down so the next person does not pay again.
 
+- **Do not compare `excess` between creatures that delivered different amounts.** It is
+  `direction − its null`, and the null is an estimate that tracks how much was said: within a
+  rung, more delivered trials buys a null lower by −0.435 ± 0.148 (2.9 SE). Any between-creature
+  statistic built on `excess` inherits that, and the contamination points the same way as the
+  obvious hypothesis — more experience, more apparent learning. Use `direction` with the null
+  reported beside it, or match on delivery.
 - **Do not fit the magnitude of the lever.** The direction is established on three targets;
   a distance law was fitted to two points, matched them to 0.1%, and died on the third.
 - **Do not fit the extent curve.** Three points, a one-parameter family, and the exponent is

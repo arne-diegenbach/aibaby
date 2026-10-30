@@ -24343,3 +24343,48 @@ creature's silence, which looked like the obvious limiting factor the moment it 
 a bottleneck at all. It is a symptom of the regulator doing exactly its job — and the regulator is
 also what the learning depends on. **This explains the quieting and must not be read as explaining
 the rotation's decline**, which stays refused from both sides and unexplained.
+
+## The decline tracks ticks, not answered trials (2026-10-30)
+
+Free, from `dirbudget`'s own log — `tools/dirbudget_experience.py`, no run. Today's delivery
+finding is what makes it possible: delivery varies **1.54× between creatures at the same budget**
+(1648 to 2538 delivered trials at 13.6M), so "ticks" and "experience" are different axes and the
+ladder log already holds the variation needed to separate them.
+
+**The pre-flight fired, and the primary is withdrawn before it is read.** `excess` is
+`direction − its null`, and the null is an estimate. Within a rung, more delivered trials buys a
+*lower* null — **−0.435 ± 0.148 (2.9 SE)** at 6.8M and −0.305 ± 0.143 (2.1 SE) at 13.6M — so
+excess rises with delivery for a reason that is not learning. The pre-registered primary
+(Δexcess against Δtrials, paired per creature) duly reads **+0.564, +0.551, +0.721** across the
+three steps, all resolved, all the same sign the artefact predicts. **It is recorded and not
+quoted.** The sign flip the experience account requires is absent, but this statistic could not
+have shown it either way.
+
+**What survives is the column the artefact pushes the other way.** `direction` alone correlates
+with delivered trials at **+0.447 ± 0.139 (3.2 SE)** at 13.6M and **+0.583 ± 0.123 (4.7 SE)** at
+27.2M. The experience-driven account of the decline predicts the opposite sign at exactly these
+rungs: if the creature walks one rise-then-fall curve parameterised by answered trials, the
+creature that answered *most* by a given budget is furthest past the peak and should show the
+*least* direction. It shows the most. **So the decline does not go with answered trials, and the
+third candidate explanation is refused along with the first two.**
+
+**The caveat, stated rather than buried.** This is a between-creature correlation, so a quality
+confound — a brain that both answers more and rotates more — could mask a true negative. The
+masking would have to be larger than a 4.7 SE positive to do it. Settling it needs delivery moved
+*within* a creature without moving its learning, and `ipoff` is not that instrument: it changes
+both.
+
+**And a correction to how the ladder's decline should be read.** Across rungs the null does not
+fall, it **rises +0.0239**, opposite to the within-rung effect. Decomposing the top step's
+−0.0243: direction falls **−0.0158** and the null rises **+0.0085**. So roughly **a third of the
+published decline is the creature's own chance level rising, not its direction falling.**
+Subtracting the null is still correct — a creature with more spread really does hit chance more
+easily — but "the rotation declines" is two thirds a loss of direction and one third an easier
+bar, and the earlier write-up did not distinguish them.
+
+**Where this points.** The decline tracks elapsed ticks rather than answered trials, so the cause
+has to be something that keeps moving after delivery has stopped changing. `silence` found exactly
+one such thing: the larynx threshold is still climbing **+0.138 in the final tenth**, after
+delivery has floored at 0.234 → 0.233. That is the next candidate, it has a characterised knob,
+and it is not free — `ipoff` destroys learning, so it needs a partial dose, and the regulator is
+marked closed for other questions. **Worth flagging before spending the run rather than after.**

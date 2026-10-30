@@ -1,0 +1,24 @@
+creatures with all 4 rungs   36
+rungs                         3.4M, 6.8M, 13.6M, 27.2M
+
+THE ARTEFACT CHECK FIRST. does the null fall as delivered trials rise?
+  rung      n   r(trials, its null)        r(trials, direction)
+  3.4M      36   -0.251 +- 0.263 ( 1.0 SE)      +0.160 +- 0.217 ( 0.7 SE)
+  6.8M      36   -0.435 +- 0.148 ( 2.9 SE) <--  +0.199 +- 0.191 ( 1.0 SE)
+  13.6M     36   -0.305 +- 0.143 ( 2.1 SE) <--  +0.447 +- 0.139 ( 3.2 SE)
+  27.2M     36   +0.034 +- 0.148 ( 0.2 SE)      +0.583 +- 0.123 ( 4.7 SE)
+
+  THE ARTEFACT IS LIVE on at least one rung: the null itself moves with
+  delivered trials, so `excess` is not a clean readout of learning against
+  delivery and the primary below is UNINTERPRETABLE as stated. Reported for
+  the record only; do not quote it.
+
+THE PRIMARY. within each step, paired per creature: d(excess) vs d(trials)
+  step                       n   r                      mean d(trials)
+  3.4M -> 6.8M              36   +0.564 +- 0.135 ( 4.2 SE)     +608.2
+  6.8M -> 13.6M             36   +0.551 +- 0.115 ( 4.8 SE)     +794.4
+  13.6M -> 27.2M            36   +0.721 +- 0.087 ( 8.2 SE)    +1213.0
+
+MIXED: 3 of 3 steps resolve and the first/top signs are +0.564 / +0.721, so
+the clean sign flip is NOT present. Neither reading is supported as stated;
+the resolved steps are listed above and need explaining one at a time.
