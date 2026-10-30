@@ -46,3 +46,66 @@ experiment: silence
 
                       python3 tools/dlvry_predict.py \
                           results/dirbudget.log <this log>
+
+  LIVENESS. 12 of 12 creatures completed BOTH arms.
+
+  THE `ip` ARM'S PER-SEED DELIVERED TOTAL, for the control above:
+  seed      13.6M   nominal was
+  0           2072   4857
+  1           2035   4857
+  2           1682   4857
+  3           1913   4857
+  4           2491   4857
+  5           1648   4857
+  6           2008   4857
+  7           2538   4857
+  8           2142   4857
+  9           2099   4857
+  10          2299   4857
+  11          2421   4857
+
+  DELIVERY, FEEDBACK AND THRESHOLD TENTH BY TENTH, pooled over 12
+
+  arm ip
+  tenth   nominal   delivered   silent   frac    praise   thr
+  1          5832        4813     1019   0.825   0.558   +1.0000
+  2          5832        3539     2293   0.607   0.559   +1.4117
+  3          5832        3560     2272   0.610   0.547   +1.7574
+  4          5820        2734     3086   0.470   0.530   +2.0743
+  5          5832        2154     3678   0.369   0.531   +2.3520
+  6          5832        2112     3720   0.362   0.533   +2.5068
+  7          5820        2008     3812   0.345   0.508   +2.5917
+  8          5832        1703     4129   0.292   0.532   +2.8067
+  9          5832        1367     4465   0.234   0.560   +3.0255
+  10         5820        1358     4462   0.233   0.550   +3.1635
+
+  arm ipoff
+  tenth   nominal   delivered   silent   frac    praise   thr
+  1          5832        4607     1225   0.790   0.531   +1.0000
+  2          5832        3973     1859   0.681   0.528   +1.0000
+  3          5832        4009     1823   0.687   0.550   +1.0000
+  4          5820        3896     1924   0.669   0.522   +1.0000
+  5          5832        3730     2102   0.640   0.522   +1.0000
+  6          5832        3815     2017   0.654   0.523   +1.0000
+  7          5820        3758     2062   0.646   0.533   +1.0000
+  8          5832        3636     2196   0.623   0.541   +1.0000
+  9          5832        3705     2127   0.635   0.536   +1.0000
+  10         5820        3615     2205   0.621   0.511   +1.0000
+
+  THE PRIMARY, last tenth minus first in the delivered fraction:
+    ip     -0.5919 +- 0.0176 (33.7 SE)
+    ipoff  -0.1688 +- 0.0158 (10.7 SE)
+    ipoff MINUS ip   +0.4231 +- 0.0267 (15.8 SE)
+
+  THE DOSE CHECK. larynx mean threshold, last tenth minus first:
+    ip     +2.16354
+    ipoff  +0.00000
+    the knob took: `ipoff` holds its threshold at 0% of the shipped
+    arm's movement, so the arms really do differ in the homeostat.
+
+  IP WAS HOLDING THE VOICE OPEN. With the homeostat off the decay is
+  SMALLER by +0.4231 +- 0.0267 (15.8 SE) -- and `ipoff` keeps only 29% of
+  the shipped decay. The homeostat is implicated in the quieting, and
+  unlike the five earlier suspects it comes with a knob: `homeo.ip_rate`.
+    WHAT THIS DOES NOT LICENSE: turning it down. `ipoff` costs learning
+    (-7.42 SE), so the trade has to be priced before anything ships.

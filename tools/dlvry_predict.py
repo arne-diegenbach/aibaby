@@ -54,7 +54,13 @@ def read_prefix(path):
         # its SHAPE: the trailing "nominal was" field, which no other table carries.
         if arms is None or len(f) != len(arms) + 2 or not f[0].isdigit():
             continue
-        if "/" not in f[-1]:
+        # The nominal field is the rung's trial count, or a slash-list of one count per
+        # rung when the table has several. Requiring exactly one part per arm is what
+        # excludes `dlvry`'s delivery table, whose rows carry the same field count as
+        # its four-rung prefix rows; a single-rung log like `silence` prints a bare
+        # count there, which an earlier `"/" in f[-1]` test rejected along with it.
+        nominal = f[-1].split("/")
+        if len(nominal) != len(arms) or not all(n.isdigit() for n in nominal):
             continue
         vals = f[1:1 + len(arms)]
         if not all(v.isdigit() for v in vals):
@@ -66,8 +72,17 @@ def read_prefix(path):
     return out, arms
 
 
+def probe_name(path):
+    """The log's own `experiment:` name, so a `silence` log is not labelled `dlvry`."""
+    for line in open(path):
+        f = line.split()
+        if len(f) > 1 and f[0] == "experiment:":
+            return f[1][:8]
+    return "probe"
+
+
 if len(sys.argv) != 3:
-    print("usage: dlvry_predict.py <dirbudget log> <dlvry log>")
+    print("usage: dlvry_predict.py <dirbudget log> <probe log>")
     sys.exit(2)
 
 lad = read_ladder(sys.argv[1])
@@ -85,7 +100,8 @@ if not shared:
     print("VOID: the two logs share no creature")
     sys.exit(2)
 
-print("creatures compared   %d  (ladder %d, dlvry %d)" % (len(shared), len(lad), len(pre)))
+probe = probe_name(sys.argv[2])
+print("creatures compared   %d  (ladder %d, %s %d)" % (len(shared), len(lad), probe, len(pre)))
 print("rungs                %s" % ", ".join(arms))
 print("compared as INTEGER COUNTS -- these are predictions of an identity, not a fit\n")
 
@@ -100,7 +116,7 @@ for a in arms:
     tag = "IDENTICAL" if not bad else "DIFFERS on %d" % len(bad)
     print("  %-8s n=%2d   %s" % (a, len(pairs), tag))
     for s, x, y in bad[:6]:
-        print("           seed %-4d ladder %6d   dlvry %6d   delta %+d" % (s, x, y, y - x))
+        print("           seed %-4d ladder %6d   %-6s %6d   delta %+d" % (s, x, probe, y, y - x))
     if len(bad) > 6:
         print("           ... and %d more" % (len(bad) - 6))
 

@@ -24279,3 +24279,67 @@ falls 0.699 → 0.251 — and at the **shipped 6.8M budget 42% of trials are alr
 is a standing tax on every experiment built on this session, not a property of this ladder. It
 belongs with the drone, the voicing gate and the resonant jaw rather than with anything about
 naming.
+
+## The homeostat is what shuts the creature up (2026-10-30)
+
+`silence`, two arms × 12 paired creatures at 13.6M ticks = 4857 trials, ~75 min. One arm is the
+shipped genome. The other sets `homeo.ip_rate = 0` and changes nothing else: same seeds, same
+wiring, same budget. Intrinsic plasticity is `threshold += ip_rate * (rate_ema − target)`, so a
+larynx firing above its target gets pushed up until the voicing gate stops opening — the one
+suspect for the quieting that predicted the measured *shape* rather than merely being compatible
+with it, and the only one that comes with a knob.
+
+| tenth | `ip` delivered frac | `ip` mean threshold | `ipoff` delivered frac | `ipoff` threshold |
+|---|---|---|---|---|
+| 1 | **0.825** | +1.0000 | **0.790** | +1.0000 |
+| 2 | 0.607 | +1.4117 | 0.681 | +1.0000 |
+| 3 | 0.610 | +1.7574 | 0.687 | +1.0000 |
+| 4 | 0.470 | +2.0743 | 0.669 | +1.0000 |
+| 5 | 0.369 | +2.3520 | 0.640 | +1.0000 |
+| 6 | 0.362 | +2.5068 | 0.654 | +1.0000 |
+| 7 | 0.345 | +2.5917 | 0.646 | +1.0000 |
+| 8 | 0.292 | +2.8067 | 0.623 | +1.0000 |
+| 9 | 0.234 | +3.0255 | 0.635 | +1.0000 |
+| 10 | **0.233** | +3.1635 | **0.621** | +1.0000 |
+
+Last tenth minus first, paired and jackknifed per creature: `ip` **−0.5919 ± 0.0176 (33.7 SE)**,
+`ipoff` **−0.1688 ± 0.0158 (10.7 SE)**, and the difference **+0.4231 ± 0.0267, 15.8 SE**. With the
+homeostat off the creature keeps only **29% of the shipped decay**. The dose check is as clean as
+it gets: the shipped larynx threshold climbs **+2.164** across the session and `ipoff` holds
+**exactly +1.0000 at all ten tenths**, so the arms differ in the homeostat and not in a hope.
+
+**The decay separates into two different things.** Of the shipped arm's −0.5919, the first-tenth
+step is −0.2184 and the sustained slide from tenth 2 onward is −0.3735. Subtracting the `ipoff`
+arm: IP owns **84% of the sustained slide** but only **50% of the first step**. So the long
+monotone quieting is the homeostat, while a smaller early transient of about −0.11 survives
+removing it and is a separate, unexplained thing.
+
+**The pre-registered reason for the floor is wrong, and the shape prediction is right.** The
+hypothesis said delivery would floor *where the threshold stops moving*. The threshold is still
+climbing **+0.138 in the final tenth** — its per-tenth increments run +0.412, +0.346, +0.317,
++0.278, +0.155, +0.085, +0.215, +0.219, +0.138 — while delivery has already flattened at
+0.234 → 0.233. The floor is where the threshold stops *mattering*, not where it stops moving.
+The decay's shape was predicted correctly for a reason that turns out not to be the one.
+
+**Two free controls, both integer identities rather than fits.** The `ip` arm's per-seed delivered
+totals reproduce `dirbudget`'s published 13.6M column on **12 of 12 creatures exactly**
+(`tools/dlvry_predict.py`), so the genome, the seeds and the invocation are the ladder's. And
+`silence`'s ten tenths of 4857 trials sum **in pairs** to `dlvry`'s first five tenths of 9714 —
+11664/8352, 11652/6294, 11664/4266, 11652/3711, 11652/2725, **ten integers, all exact**
+(`tools/silence_nest.py`). So this run's −0.5919 and `dlvry`'s −0.4554 are not two measurements:
+they are one curve read at two resolutions, differing only because a tenth of 4857 trials starts
+higher on a falling curve than a tenth of 9714 does.
+
+**The knob is refused, and it was already paid for.** `ipoff` is not a candidate fix:
+`results/ipoff-136m.log`, at this same 13.6M budget, reads dF1 **103.9 → 17.7 Hz, −7.42 SE, signs
+1 of 18** with the larynx rate going 4.62 → 6.84 Hz. That rate column has sat in the log since
+September as the *cost* of turning IP off, without anyone reading it as "the creature answers more
+often". Put beside today's delivery curve it says something sharper than either log alone: **the
+arm that answers ~2.7× more trials learns ~6× less.** Delivery is not the bottleneck on learning.
+
+**Which corroborates `dlvry`'s refusal from the opposite direction.** `dlvry` showed the rotation
+declining in the ladder's *best-fed* step; `ipoff` shows the best-fed *arm* learning least. So the
+creature's silence, which looked like the obvious limiting factor the moment it was found, is not
+a bottleneck at all. It is a symptom of the regulator doing exactly its job — and the regulator is
+also what the learning depends on. **This explains the quieting and must not be read as explaining
+the rotation's decline**, which stays refused from both sides and unexplained.

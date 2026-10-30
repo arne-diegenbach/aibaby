@@ -739,6 +739,48 @@ table's `tenth` 1..10 overwrote seeds 1..10 and it reported 10 of 12 creatures m
 the log plainly showed them agreeing; it now matches a row by shape and aborts on a duplicate
 key. **Had it failed the other way it would have agreed silently.**
 
+### 9. CLOSED 2026-10-30 — the homeostat is what shuts the creature up, and the silence is not the bottleneck
+
+`silence`, two arms x 12 paired creatures at 13.6M ticks = 4857 trials, ~75 min. `ipoff` sets
+`homeo.ip_rate = 0` and changes nothing else.
+
+**IP owns the quieting.** Delivered fraction, last tenth minus first: shipped **−0.5919 ± 0.0176
+(33.7 SE)**, `ipoff` **−0.1688 ± 0.0158 (10.7 SE)**, difference **+0.4231 ± 0.0267, 15.8 SE**.
+With the homeostat off the creature keeps only **29%** of the shipped decay. Dose check exact:
+the shipped larynx threshold climbs **+2.164** across the session while `ipoff` holds **exactly
++1.0000 at all ten tenths**.
+
+**The decay is two things, not one.** Of the shipped −0.5919, the first-tenth step is −0.2184 and
+the sustained slide is −0.3735. IP owns **84% of the sustained slide** and only **50% of the first
+step**, so a −0.11 early transient survives removing it and is still unexplained.
+
+**The shape prediction held; its stated reason did not.** The hypothesis said delivery would floor
+*where the threshold stops moving*. The threshold is still climbing **+0.138 in the last tenth**
+while delivery has flattened at 0.234 → 0.233. The floor is where the threshold stops *mattering*.
+Pre-registering a shape and pre-registering its cause are different commitments, and only the
+first one was met.
+
+**The knob is refused, and the price was already on file.** `results/ipoff-136m.log` at this same
+budget: dF1 **103.9 → 17.7 Hz, −7.42 SE, signs 1/18**, larynx rate 4.62 → 6.84 Hz. **The arm that
+answers ~2.7x more trials learns ~6x less.** That rate column had sat in the log since September
+as a cost, without being read as "the creature answers more often".
+
+**So delivery is not the bottleneck on learning, now from both directions.** `dlvry` found the
+rotation declining in the ladder's best-fed *step*; `ipoff` finds the best-fed *arm* learning
+least. The silence is a symptom of the regulator doing its job, and the regulator is what the
+learning rides on. **This closes why the creature quiets. It does not touch the rotation's
+decline**, which stays refused from both sides.
+
+**Two free integer controls, and one instrument defect.** The `ip` arm reproduced `dirbudget`'s
+published 13.6M column on 12/12 creatures exactly, and `silence`'s ten tenths sum in pairs to
+`dlvry`'s first five — ten integers, all exact — so the two runs are one trajectory read at two
+resolutions and their −0.5919 / −0.4554 are not independent measurements. The defect is the
+**mirror image of section 8's**: `tools/silence_nest.py` v1 recognised a table row by "leading
+integer counting 1,2,3.. in order" and so harvested `dlvry`'s **seed** column, reporting 5 of 5
+pairs differing. Section 8 was bitten by a `tenth` column posing as a seed; this was the same
+collision from the other side, in a tool written *after* documenting it. **Anchor on the table's
+header, never on the shape of a row.**
+
 ## Standing prohibitions
 
 These are places where fitting has already cost this project a result, and they are written
