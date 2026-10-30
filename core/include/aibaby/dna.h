@@ -183,7 +183,9 @@ constexpr uint32_t kDnaMagic = 0x44424941;  // "AIBD"
 // 36: dynamic synapses — a tract's synapses deplete with use and recover on
 //     their own time constant, after the model Barbara Webb's group used to
 //     make a cricket robot recognise a calling song (Webb & Scutt 2000; Reeve &
-//     Webb 2002). See the References section of the README.
+//     Webb 2003). See the References section of the README. The year was 2002
+//     here until a citation audit found it: that is the EPSRC/BBSRC workshop
+//     version, and the README lists the journal paper.
 //
 //     The reason to want it is that this brain has nothing on this timescale.
 //     Every plasticity mechanism it owns — R-STDP, the eligibility trace,
