@@ -24136,3 +24136,58 @@ Stated at the confidence the project's own rules allow:
   13.6M, **8 still at 27.2M**. Nearly a quarter of creatures do best on the largest budget.
 - The shipped 6.8M sits below the population peak, but the 6.8M → 13.6M step is 1.2 SE, so
   this run does not license moving it.
+
+### The decline is a delivery failure, not a learning failure — and the ladder's x-axis was ticks (2026-10-30)
+
+The ladder was read the same day it finished, so the obvious next question — *why* does extra
+training degrade the assignment? — got asked before anyone looked at what the per-seed table
+already contained. It contains the answer, and the answer corrects the section above.
+
+`tools/dirbudget_decline.py` reads `results/dirbudget.log` and needs no run of its own. Two
+candidate mechanisms for the −0.0244 ± 0.0092 top step make **opposite** predictions about one
+sign, so one correlation separates them:
+
+- **the magnitude eating the direction** — reward's half keeps growing and crowds the
+  assignment out, which would make `corr(Δexcess, ΔF1 spread)` **negative**;
+- **the voice degrading** — both halves ride on the same failing production, which would make
+  it **positive**.
+
+It reads **+0.292**, and the non-parametric split is sharper than the correlation: the 13
+creatures whose F1 spread **grew** over the top step gained direction, +0.0091 ± 0.0139, and
+the 23 whose spread **shrank** lost it, −0.0432 ± 0.0105. Grew minus shrank is **+0.0523 ±
+0.0174 (3.0 SE)**. **The trade-off reading is refuted.** The decline is carried entirely by
+creatures whose voice was getting worse, which is not a story about assignment capacity at all.
+
+**And then the confound, which is mine.** The `trials` column is
+`run.utt_word.size()` — scored trials that were voiced and labelled, which is also the sample
+the `direction` statistic is estimated on. Nominal trials are `ticks / kVLTrialTicks` with
+`kVLTrialTicks = 2800`. The delivered fraction is not constant:
+
+| rung | nominal | delivered | delivered fraction | ticks per delivered trial |
+|---|---|---|---|---|
+| 3.4M | 1214 | 867 | **71.4%** | 3949 |
+| 6.8M | 2429 | 1475 | 60.7% | 4668 |
+| 13.6M | 4857 | 2269 | 46.7% | 6158 |
+| 27.2M | 9714 | 3482 | **35.8%** | 8025 |
+
+**Eight times the ticks buys 4.02× the trials.** The delivered fraction falls monotonically and
+halves across the ladder; ticks per delivered trial doubles. So the section above is wrong where
+it says "across 8× of budget" and means experience: it is 8× of *ticks* and 4× of *trials*, and
+the rungs are not equally efficient at converting one into the other. `Δtrials` is also the
+**strongest** per-creature predictor of the top step at **r = +0.721** — stronger than spread
+(+0.292), the index (+0.473) or the null (+0.234).
+
+**This weakens the "architectural ceiling on assignment" conclusion rather than overturning it.**
+A plateau measured against a budget that stops arriving is not yet evidence of a ceiling on what
+the creature can learn. It is still true that the excess over null fell while the trial count
+rose — all 36 creatures gained trials — so this is not a simple matter of the top rung being
+starved. But the decline now has a candidate that is about **production**, not capacity, and it
+is the same suspect as five earlier refusals: a voice that quiets.
+
+What the log cannot settle is *where* the missing trials go. `run_vocallearn_session` counts
+`scored` and `skipped` separately and `dirbudget` captures both into its cell, but **neither is
+printed**, so the gap between 9714 and 3482 cannot be split into trials skipped for silence
+(`n_voiced == 0`) and trials scored but unlabelled. Nor can the log say whether delivery decays
+*within* a session — the creature quieting as training proceeds — or is merely uniformly lower
+in a longer one, which would be ordinary session overhead and would make this a relabelling
+exercise. Those are different findings and the next instrument has to separate them.

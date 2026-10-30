@@ -1,0 +1,44 @@
+creatures with all 4 rungs   36
+rungs                        3.4M, 6.8M, 13.6M, 27.2M
+
+DOES THE BUDGET BUY TRIALS? ticks per scored trial, per rung
+  3.4M    trials     867 +- 12      ticks/trial   3949 +- 55     x1.00 trials vs rung 1
+  6.8M    trials    1475 +- 27      ticks/trial   4668 +- 90     x1.70 trials vs rung 1
+  13.6M   trials    2269 +- 65      ticks/trial   6158 +- 168    x2.62 trials vs rung 1
+  27.2M   trials    3482 +- 100     ticks/trial   8025 +- 218    x4.02 trials vs rung 1
+
+THE TOP STEP (13.6M -> 27.2M), paired over 36 creatures
+  d excess       -0.0243 +- 0.0093   ( 2.6 SE)   down on 25/36
+  d direction    -0.0159 +- 0.0111   ( 1.4 SE)   down on 21/36
+  d its_null     +0.0085 +- 0.0043   ( 2.0 SE)   down on 12/36
+  d F1_spread    -0.9472 +- 0.8900   ( 1.1 SE)   down on 23/36
+  d ctx          -0.0024 +- 0.0019   ( 1.2 SE)   down on 17/36
+  d trials     +1213.0000 +- 46.6214  (26.0 SE)   down on 0/36
+
+WHAT PREDICTS A CREATURE'S DIRECTION LOSS? Pearson r vs d excess (n=36, SE~0.17)
+  r(d excess, d F1_spread ) +0.292
+  r(d excess, d ctx       ) +0.473
+  r(d excess, d its_null  ) +0.234
+  r(d excess, d trials    ) +0.721
+  r(d excess, d F2_spread ) +0.281
+
+SPLIT BY WHETHER THE VOICE GREW OR SHRANK over the top step
+  spread grew    n=13   d excess +0.0091 +- 0.0139   d spread  +4.57 Hz
+  spread shrank  n=23   d excess -0.0432 +- 0.0105   d spread  -4.07 Hz
+
+  3.4M    creatures under 20 Hz of F1 spread: 4/36 [6, 17, 26, 28]
+
+  13.6M   creatures under 20 Hz of F1 spread: 2/36 [31, 34]
+
+  27.2M   creatures under 20 Hz of F1 spread: 3/36 [11, 31, 34]
+
+  grew MINUS shrank   +0.0523 +- 0.0174 (3.0 SE)
+  A POSITIVE sign means spread and direction move TOGETHER, which REFUTES a
+  magnitude-eats-direction trade-off: the losers are the creatures whose
+  voice SHRANK, not the ones whose voice grew.
+
+DELIVERED FRACTION OF NOMINAL TRIALS (kVLTrialTicks = 2800)
+  3.4M    nominal   1214   delivered    867    71.4%
+  6.8M    nominal   2429   delivered   1475    60.7%
+  13.6M   nominal   4857   delivered   2269    46.7%
+  27.2M   nominal   9714   delivered   3482    35.8%
