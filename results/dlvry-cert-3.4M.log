@@ -1,0 +1,116 @@
+experiment: dlvry
+  SHORT RUN — 3400000 ticks against a minimum of 27200000.   dirbudget reported its rungs in TICKS and read them as experience. Its
+  delivered fraction -- scored, voiced, labelled trials over the nominal
+  ticks/kVLTrialTicks -- falls 71.4% -> 35.8% across the ladder, so 8x of
+  ticks bought 4.02x of trials. The trial loop is fixed-rate, so that is
+  the creature not answering: silent windows, or formants too degenerate
+  to score. Two readings the session totals cannot separate -- the
+  creature QUIETS as it trains (a decaying curve averaged over a longer
+  window, which makes the rotation decline a PRODUCTION story), or a long
+  session is uniformly worse (overhead, and the ladder just needs its
+  x-axis relabelled). One arm, 12 of dirbudget own creatures, delivery
+  counted tenth by tenth; the within-session shape is the measurement.
+  Nothing that moves the creature depends on n_trials here, so the first
+  N trials ARE a complete N-trial session: the cumulative delivered count
+  at each rung must reproduce dirbudget columns bit-identically, which
+  is a prediction rather than a fit. Decay, flat, rising and non-monotone
+  are all branched on -- dirbudget printed SATURATES over a resolved
+  reversal because its outcome space stopped one short of what happened
+  Everything below is printed for debugging and is NOT a
+  measurement; this run cannot pass whatever it reads.
+
+  instrument        dlvry   trial seed 000000000135f6de   1214 delivered trials per tenth of one session
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  INDEX SOURCE 4, inherited from the genome and NOT set by dlvry.
+  The index reads the AUDITORY module, so a CtxDrive injected into the
+  context module is IGNORED by it -- such an arm is DERIVED, not an
+  oracle.
+  An "oracle" arm is only an oracle when the drive and the index use the
+  SAME module: ctx_match reads 1.000 for a genuine host-written index and
+  well below it for a derived one.
+  the question      `dirbudget` read its rungs in TICKS and treated them as
+                    experience. The delivered fraction falls 71.4% -> 35.8%
+                    across that ladder, so 8x of ticks bought 4.02x of
+                    trials. The trial loop is fixed-rate, so the deficit is
+                    the creature not answering: silence, or formants too
+                    degenerate to score.
+  the design        ONE arm, 12 creatures, 3400000 ticks = 1214 nominal trials,
+                    counted tenth by tenth. No comparison condition is
+                    needed: the within-session SHAPE is the measurement.
+  the primary       delivered fraction in the LAST tenth minus the FIRST,
+                    paired over 12 creatures. DECAY means the creature
+                    quiets as it trains and `dirbudget`'s decline is about
+                    production, not capacity. FLAT means session overhead
+                    and the ladder only needs its x-axis relabelled.
+  the prediction    nothing that moves the creature depends on `n_trials`
+                    here, so the first N trials of this session ARE a
+                    complete N-trial session. The cumulative delivered
+                    count at 151 / 303 / 607 / 1214 trials must reproduce
+                    `dirbudget`'s 0.425M / 0.85M / 1.7M / 3.4M columns BIT-IDENTICALLY
+                    per creature:
+
+                      python3 tools/dlvry_predict.py \
+                          results/dirbudget.log <this log>
+
+                    If that fails the rungs are not nested prefixes of one
+                    trajectory and this curve says nothing about the
+                    shorter budgets.
+  what refuses it   a flat per-tenth fraction. Then delivery does not decay
+                    with training and reading (a) is dead. RISING and
+                    NON-MONOTONE are branched on too -- `dirbudget` printed
+                    SATURATES over a resolved reversal because its outcome
+                    space stopped one short of what happened.
+  stated up front   n = 12, and the per-tenth fraction is a RATIO of two
+                    counts, so it is pooled as a ratio of sums and
+                    jackknifed, never meaned per creature.
+
+  LIVENESS. 12 of 12 creatures completed the session.
+
+  CUMULATIVE DELIVERED TRIALS, per creature, at each rung's trial count.
+  Compare against `dirbudget`'s per-seed `trials` column, same seed:
+  seed     0.425M    0.85M     1.7M     3.4M   nominal was
+  0           150      298      493      820   151/303/607/1214
+  1           148      285      487      891   151/303/607/1214
+  2           151      301      531      863   151/303/607/1214
+  3           146      285      492      792   151/303/607/1214
+  4           151      303      538      960   151/303/607/1214
+  5           151      296      489      763   151/303/607/1214
+  6           151      302      533      816   151/303/607/1214
+  7           151      303      541      941   151/303/607/1214
+  8           146      294      498      762   151/303/607/1214
+  9           151      302      489      847   151/303/607/1214
+  10          143      274      483      834   151/303/607/1214
+  11          151      296      508      900   151/303/607/1214
+
+  DELIVERY TENTH BY TENTH, pooled over 12 creatures
+  tenth   nominal   delivered   silent   degenerate   delivered frac
+  1          1464        1455        9            0          0.994
+  2          1452        1397       55            0          0.962
+  3          1464        1129      335            0          0.771
+  4          1452         832      620            0          0.573
+  5          1452        1269      183            0          0.874
+  6          1464         565      899            0          0.386
+  7          1452        1194      258            0          0.822
+  8          1464         511      953            0          0.349
+  9          1452        1141      311            0          0.786
+  10         1452         696      756            0          0.479
+
+  THE PRIMARY, last tenth minus first, pooled and jackknifed over 12:
+    -0.5145 +- 0.0251 (20.5 SE)   first 0.994, last 0.479
+    per creature: 12 of 12 DOWN, 0 up
+    silence     0.006 -> 0.521 of trials
+    degenerate  0.000 -> 0.000 of trials
+
+  THE CREATURE QUIETS AS IT TRAINS. Delivery falls 0.994 -> 0.479 across
+  the session, -0.5145 +- 0.0251 (20.5 SE), 12 of 12 creatures down. So a
+  longer session has a lower MEAN delivered fraction by running further
+  down one decaying curve, which is reading (a): `dirbudget`'s rungs are
+  nested prefixes of this trajectory and its decline has a candidate
+  about PRODUCTION rather than assignment capacity. That candidate is the
+  same suspect as the drone, the voicing gate and the resonant jaw.
+    WHAT THIS DOES NOT ESTABLISH: that the rotation's decline IS the
+    delivery decline. Delivery falling and direction falling on the same
+    axis is a shared correlate, and the ladder's own `d trials` predictor
+    (r = +0.721) is consistent with either. Separating them needs a rung
+    matched on DELIVERED trials rather than on ticks.

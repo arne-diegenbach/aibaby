@@ -4332,6 +4332,26 @@ struct VLRun {
   double err_early = 0.0, err_late = 0.0;
   double err_by_word[kVLMaxWords][2] = {};
   uint32_t scored = 0, skipped = 0, praises = 0, scolds = 0;
+  // WHERE THE BUDGET GOES, split by tenth of the session. `dirbudget` found that
+  // 8x of ticks buys only 4.02x of delivered trials -- the delivered fraction falls
+  // 71.4% -> 35.8% across the ladder -- and the session-total `scored`/`skipped`
+  // pair cannot say whether that is the creature QUIETING AS IT TRAINS or simply a
+  // longer session being uniformly worse. Those are different findings: the first
+  // is a new phenomenon and explains the rotation's decline, the second is overhead
+  // and makes the decline a relabelling exercise. A tenth-by-tenth count separates
+  // them in one arm, with no comparison condition needed.
+  //
+  // The trial loop is FIXED-RATE -- `n_trials = ticks / kVLTrialTicks` and every
+  // trial is the same length -- so these tenths are equal in ticks AND in trials
+  // attempted, and `dl_nominal` is flat by construction. It is carried anyway: a
+  // tenth that is not flat means the loop was not entered the way this comment
+  // claims, which is worth knowing before reading the rest of the row.
+  static constexpr uint32_t kDec = 10;
+  uint32_t dl_nominal[kDec] = {};  // trials attempted
+  uint32_t dl_silent[kDec] = {};   // skipped: no voiced frame in the window at all
+  uint32_t dl_degen[kDec] = {};    // skipped: voiced, but the formants were degenerate
+  uint32_t dl_scored[kDec] = {};   // scored
+  uint32_t dl_kept[kDec] = {};     // ...and kept as a labelled utterance
   double voiced_frac = 0.0;
   // What the oracle actually did, because a silent context module and a
   // saturated one both look like "the tract is connected" from outside.
@@ -4475,6 +4495,14 @@ struct VLRun {
   // of the voice.
   std::vector<double> utt_f1, utt_f2;
   std::vector<int> utt_word;
+  // The trial each kept utterance came from. Nothing that moves the creature depends
+  // on `n_trials` in this session -- it sets the loop bound, the early/late thirds and
+  // the checkpoint cadence, and the only one of those with a side effect is the
+  // checkpoint's `consolidate_context_bias`, which is inert unless a CtxDrive asks for
+  // banking. So the first N trials of a long session are the SAME trials as a complete
+  // N-trial session, and with the trial index kept, one long run yields the delivered
+  // count at every shorter budget EXACTLY rather than by interpolation.
+  std::vector<uint32_t> utt_trial;
   // ...and the share taken by the busiest slice. A constant index scores 0.5
   // on `ctx_match` with balanced words, but it scores 1.0 here, and the two
   // failures deserve different verdicts.
@@ -5357,24 +5385,36 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
     // A trial in which the creature said nothing has no accuracy to score and
     // must not be counted as a bad one: silence is not a wrong answer, and
     // scoring it as maximum error would make "say less" the winning strategy.
+    // Which tenth of the session this trial falls in. See `dl_*` on VLRun: the
+    // counters below split the budget into delivered trials and the two ways a
+    // trial can fail to deliver one, tenth by tenth.
+    uint32_t dec = n_trials ? uint32_t(uint64_t(trial) * VLRun::kDec / n_trials) : 0u;
+    if (dec >= VLRun::kDec) dec = VLRun::kDec - 1;
+    ++out.dl_nominal[dec];
     double err;
     if (score == kVLScoreRate) {
       // Silence is the correct answer to a low target, so no trial is skipped
       // for it -- only one in which the window itself was empty.
-      if (n_frames == 0) { ++out.skipped; continue; }
+      // Counted as silence like the formant branch's own empty window: under any
+      // score mode this is a trial in which nothing came out to measure.
+      if (n_frames == 0) { ++out.skipped; ++out.dl_silent[dec]; continue; }
       err = std::fabs(double(n_events) / double(n_frames) - rate_target);
     } else if (score == kVLScoreAmp) {
       // No silence skip: a trial the creature spent quiet is a trial in which
       // it produced an amplitude of zero, and against a quiet target that is
       // the right answer rather than a missing measurement.
-      if (n_amp == 0) { ++out.skipped; continue; }
+      if (n_amp == 0) { ++out.skipped; ++out.dl_silent[dec]; continue; }
       err = std::fabs(amp_sum / double(n_amp) - amp_target);
     } else {
-      if (n_voiced == 0) { ++out.skipped; continue; }
+      if (n_voiced == 0) { ++out.skipped; ++out.dl_silent[dec]; continue; }
       err = formant_error(f1_sum / n_voiced, f2_sum / n_voiced, w);
     }
-    if (err < 0.0) { ++out.skipped; continue; }
+    // `formant_error` returns -1 for a formant at or below 1 Hz, so this is the
+    // creature having voiced and still produced nothing a formant can be read off.
+    // A different failure from silence, and worth keeping apart from it.
+    if (err < 0.0) { ++out.skipped; ++out.dl_degen[dec]; continue; }
     ++out.scored;
+    ++out.dl_scored[dec];
     // One row per scored trial: what the creature actually said, and which word
     // it was being taught. See the note on `utt_f1` -- this is the naming
     // measurement, and it is not the same question as dF1.
@@ -5382,6 +5422,8 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
       out.utt_f1.push_back(f1_sum / double(n_voiced));
       out.utt_f2.push_back(f2_sum / double(n_voiced));
       out.utt_word.push_back(int(label));
+      out.utt_trial.push_back(trial);
+      ++out.dl_kept[dec];
     }
 
     const int bin = trial < third ? 0 : (trial >= n_trials - third ? 1 : -1);
@@ -43494,6 +43536,363 @@ bool run_dirbudget(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
   // The verdict is PRINTED above whatever this returns. For a kRead instrument the bool
   // means "the apparatus held", and a dropped creature at full budget means it did not.
   return n_complete == kDBReps;
+}
+// ============ dlvry: WHERE DOES THE BUDGET GO? ============
+//
+// THE QUESTION, AND IT IS A DEFECT IN `dirbudget` RATHER THAN A NEW IDEA. The ladder
+// reported its rungs in TICKS and read them as experience. They are not the same thing.
+// Its per-seed `trials` column is `run.utt_word.size()` -- scored trials that were voiced
+// and labelled -- against a nominal `ticks / kVLTrialTicks`, and the delivered fraction
+// is not constant across the ladder:
+//
+//     3.4M    nominal 1214   delivered  867   71.4%
+//     6.8M    nominal 2429   delivered 1475   60.7%
+//     13.6M   nominal 4857   delivered 2269   46.7%
+//     27.2M   nominal 9714   delivered 3482   35.8%
+//
+// Eight times the ticks buys 4.02x the trials. The trial loop is FIXED-RATE -- every
+// trial is `kVLTrialTicks` long -- so this is not the creature running slower. Under
+// `kVLScoreFormant` the only ways a trial fails to deliver are `n_voiced == 0` (nothing
+// voiced in the window) and `formant_error` returning -1 (voiced, formants degenerate).
+// The budget is arriving and the creature is not answering.
+//
+// TWO READINGS, AND THE SESSION-TOTAL COUNTERS CANNOT SEPARATE THEM.
+//
+//   (a) THE CREATURE QUIETS AS IT TRAINS. Delivery decays with trial index, so a longer
+//       session has a lower MEAN simply by running further down the same curve. Then
+//       `dirbudget`'s decline has a candidate that is about production rather than
+//       capacity, it is the same suspect as five earlier refusals (the drone, the voicing
+//       gate, the resonant jaw), and "an architectural ceiling on assignment" is not what
+//       the ladder measured.
+//   (b) A LONGER SESSION IS UNIFORMLY WORSE. Delivery is flat in trial index and merely
+//       lower at a bigger budget. That is session overhead, the ladder needs its x-axis
+//       relabelled, and nothing about the rotation changes.
+//
+// These are different findings with opposite consequences, so this experiment counts
+// delivery TENTH BY TENTH within one session. One arm, no comparison condition: the
+// within-session shape is the whole measurement.
+//
+// AND IT PREDICTS THREE PUBLISHED NUMBERS, which is what makes it more than a curve.
+// Nothing that moves the creature depends on `n_trials` here -- it sets the loop bound,
+// the early/late thirds and the checkpoint cadence, and the only side effect among those
+// is the checkpoint's `consolidate_context_bias`, inert unless a CtxDrive asks for
+// banking, which `dirbudget` does not. So the first 1214 trials of a 27.2M session ARE a
+// complete 3.4M session, trial for trial. With `utt_trial` kept, this run's cumulative
+// delivered count at trials 1214 / 2428 / 4857 must reproduce `dirbudget`'s 3.4M / 6.8M /
+// 13.6M columns BIT-IDENTICALLY on every shared creature, and its count at 9714 must
+// reproduce the 27.2M column. Three predictions and one identity, checked by
+// `tools/dlvry_predict.py`. If they fail, reading (a) above is not available: the rungs
+// would not be nested prefixes of one trajectory and the curve measured here would say
+// nothing about the shorter budgets.
+//
+// THE OUTCOME SPACE, ENUMERATED -- which is the lesson `dirbudget` taught the hard way by
+// printing "SATURATES" over a resolved reversal. Delivery across the session can DECAY
+// (reading a), hold FLAT (reading b), RISE (a warm-up cost, front-loaded, and then the
+// ladder's falling fraction is NOT explained by this curve and something else is
+// budget-dependent), or be NON-MONOTONE (rise then decay, which is a fifth thing and
+// would mean a transient). All four are branched on below. A refusal condition is no
+// protection when the outcome space stops one short of what happens.
+bool run_dlvry(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  aibaby::Dna dna;
+  if (dna.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) {
+    std::printf("  setup failed: the genome does not load\n");
+    return false;
+  }
+  const int32_t ctx_module = dna.module_with_role(aibaby::ModuleRole::kContext);
+  if (ctx_module < 0) {
+    std::printf("  this genome has no kContext module, so this is not the session\n"
+                "  `dirbudget` ran and there is no delivery curve to compare. Build one\n"
+                "  with NO output weight:\n\n"
+                "    python3 tools/genome_add_context.py dna/default.toml ctx.toml \\\n"
+                "        vocal out_w=0\n"
+                "    ./build/aibaby --dna ctx.toml --experiment dlvry\n");
+    return false;
+  }
+
+  // `dirbudget`'s constants, named rather than re-derived, because this has to be the
+  // SAME session on the SAME creatures or the prediction check below is not available.
+  constexpr uint64_t kDLEchoTicks = 560000;
+  constexpr uint32_t kDLReps = 12;   // a subset of `dirbudget`'s 36, seeds r = 0..11, so
+                                     // every creature here has a published counterpart
+  const uint32_t n_trials = uint32_t(ticks / kVLTrialTicks);
+  // The ladder's rungs expressed in TRIALS, for the prefix predictions. Derived from the
+  // same arithmetic the session uses, not written down, so a different `--ticks` moves
+  // them together with everything else.
+  constexpr uint32_t kDLRungs = 4;
+  uint32_t rung_trials[kDLRungs];
+  char rungbuf[kDLRungs][12];
+  for (uint32_t q = 0; q < kDLRungs; ++q) {
+    const uint64_t rt = (ticks / 8ull) << q;
+    rung_trials[q] = uint32_t(rt / kVLTrialTicks);
+    std::snprintf(rungbuf[q], sizeof(rungbuf[q]), "%.3gM", double(rt) / 1.0e6);
+  }
+
+  instrument("dlvry", dna.header().seed ^ 0xD117u, n_trials,
+             "delivered trials per tenth of one session");
+  disclose_index_source(dna, "dlvry");
+  std::printf("  the question      `dirbudget` read its rungs in TICKS and treated them as\n"
+              "                    experience. The delivered fraction falls 71.4%% -> 35.8%%\n"
+              "                    across that ladder, so 8x of ticks bought 4.02x of\n"
+              "                    trials. The trial loop is fixed-rate, so the deficit is\n"
+              "                    the creature not answering: silence, or formants too\n"
+              "                    degenerate to score.\n");
+  std::printf("  the design        ONE arm, %u creatures, %llu ticks = %u nominal trials,\n"
+              "                    counted tenth by tenth. No comparison condition is\n"
+              "                    needed: the within-session SHAPE is the measurement.\n",
+              kDLReps, (unsigned long long)ticks, n_trials);
+  std::printf("  the primary       delivered fraction in the LAST tenth minus the FIRST,\n"
+              "                    paired over %u creatures. DECAY means the creature\n"
+              "                    quiets as it trains and `dirbudget`'s decline is about\n"
+              "                    production, not capacity. FLAT means session overhead\n"
+              "                    and the ladder only needs its x-axis relabelled.\n",
+              kDLReps);
+  std::printf("  the prediction    nothing that moves the creature depends on `n_trials`\n"
+              "                    here, so the first N trials of this session ARE a\n"
+              "                    complete N-trial session. The cumulative delivered\n"
+              "                    count at %u / %u / %u / %u trials must reproduce\n"
+              "                    `dirbudget`'s %s / %s / %s / %s columns BIT-IDENTICALLY\n"
+              "                    per creature:\n\n"
+              "                      python3 tools/dlvry_predict.py \\\n"
+              "                          results/dirbudget.log <this log>\n\n"
+              "                    If that fails the rungs are not nested prefixes of one\n"
+              "                    trajectory and this curve says nothing about the\n"
+              "                    shorter budgets.\n",
+              rung_trials[0], rung_trials[1], rung_trials[2], rung_trials[3],
+              rungbuf[0], rungbuf[1], rungbuf[2], rungbuf[3]);
+  std::printf("  what refuses it   a flat per-tenth fraction. Then delivery does not decay\n"
+              "                    with training and reading (a) is dead. RISING and\n"
+              "                    NON-MONOTONE are branched on too -- `dirbudget` printed\n"
+              "                    SATURATES over a resolved reversal because its outcome\n"
+              "                    space stopped one short of what happened.\n");
+  std::printf("  stated up front   n = %u, and the per-tenth fraction is a RATIO of two\n"
+              "                    counts, so it is pooled as a ratio of sums and\n"
+              "                    jackknifed, never meaned per creature.\n", kDLReps);
+
+  const size_t slots_off = offsetof(aibaby::DnaHeader, exploration) +
+                           offsetof(aibaby::DnaExploration, context_slots);
+
+  struct Cell {
+    bool ok = false;
+    uint32_t nominal[VLRun::kDec] = {};
+    uint32_t silent[VLRun::kDec] = {};
+    uint32_t degen[VLRun::kDec] = {};
+    uint32_t kept[VLRun::kDec] = {};
+    uint32_t prefix[kDLRungs] = {};   // cumulative delivered at each rung's trial count
+    uint32_t total = 0;
+  };
+
+  const std::vector<Cell> cells = parallel_reps<Cell>(kDLReps, [&](uint32_t r) {
+    Cell cell;
+    std::vector<uint8_t> variant = blob;
+    const uint64_t seed = dna.header().seed + r * 7919ull;
+    std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+    const uint32_t sl = kCFWords;
+    std::memcpy(variant.data() + slots_off, &sl, sizeof(sl));
+    CtxDrive drive;
+    drive.module = ctx_module;
+    drive.slots = kCFWords;
+    drive.gain = 0.10;
+    Regime reg;
+    reg.praise = kPraiseValue;
+    reg.scold = kScoldValue;
+    // Argument for argument `dirbudget`'s cell, echo buffer included. The echo is not
+    // read here either, but dropping it would make this a DIFFERENT call from the one
+    // that produced the published columns and forfeit the prediction check.
+    ImitateRun echo;
+    const VLRun run = run_vocallearn_session(
+        variant, ticks, kVLTaught, nullptr, reg, kVLTgtHeard, &drive,
+        kVLScoreFormant, nullptr, kCFWords, kGridWords, nullptr, nullptr, nullptr,
+        nullptr, nullptr, false, 0, &echo, kDLEchoTicks);
+    if (!run.ok) return cell;
+    for (uint32_t d = 0; d < VLRun::kDec; ++d) {
+      cell.nominal[d] = run.dl_nominal[d];
+      cell.silent[d] = run.dl_silent[d];
+      cell.degen[d] = run.dl_degen[d];
+      cell.kept[d] = run.dl_kept[d];
+    }
+    cell.total = uint32_t(run.utt_trial.size());
+    for (uint32_t q = 0; q < kDLRungs; ++q) {
+      uint32_t c = 0;
+      for (size_t u = 0; u < run.utt_trial.size(); ++u) {
+        if (run.utt_trial[u] < rung_trials[q]) ++c;
+      }
+      cell.prefix[q] = c;
+    }
+    cell.ok = true;
+    return cell;
+  });
+
+  std::vector<uint32_t> live;
+  for (uint32_t r = 0; r < kDLReps; ++r) {
+    if (cells[r].ok) live.push_back(r);
+  }
+  std::printf("\n  LIVENESS. %zu of %u creatures completed the session.\n", live.size(),
+              kDLReps);
+  if (live.size() < 2) {
+    std::printf("\n  NOT A MEASUREMENT. Fewer than 2 creatures completed, so there is no\n"
+                "  curve and nothing below is read.\n");
+    return false;
+  }
+
+  // THE PER-CREATURE PREFIXES, which is the prediction and goes first: if these do not
+  // reproduce the published columns, the curve underneath them is not about the ladder.
+  std::printf("\n  CUMULATIVE DELIVERED TRIALS, per creature, at each rung's trial count.\n"
+              "  Compare against `dirbudget`'s per-seed `trials` column, same seed:\n");
+  std::printf("  seed  ");
+  for (uint32_t q = 0; q < kDLRungs; ++q) std::printf("%9s", rungbuf[q]);
+  std::printf("   nominal was");
+  std::printf("\n");
+  for (uint32_t r : live) {
+    std::printf("  %-6u", r);
+    for (uint32_t q = 0; q < kDLRungs; ++q) std::printf("%9u", cells[r].prefix[q]);
+    std::printf("   %u/%u/%u/%u\n", rung_trials[0], rung_trials[1], rung_trials[2],
+                rung_trials[3]);
+  }
+
+  // THE CURVE. Pooled as a ratio of sums, which is this project's rule for a mean of
+  // ratios, with a jackknife over creatures for the interval.
+  std::printf("\n  DELIVERY TENTH BY TENTH, pooled over %zu creatures\n", live.size());
+  std::printf("  tenth   nominal   delivered   silent   degenerate   delivered frac\n");
+  std::vector<double> frac(VLRun::kDec, 0.0);
+  for (uint32_t d = 0; d < VLRun::kDec; ++d) {
+    uint64_t nom = 0, kep = 0, sil = 0, deg = 0;
+    for (uint32_t r : live) {
+      nom += cells[r].nominal[d];
+      kep += cells[r].kept[d];
+      sil += cells[r].silent[d];
+      deg += cells[r].degen[d];
+    }
+    frac[d] = nom ? double(kep) / double(nom) : 0.0;
+    std::printf("  %-7u %7llu   %9llu   %6llu   %10llu   %12.3f\n", d + 1,
+                (unsigned long long)nom, (unsigned long long)kep,
+                (unsigned long long)sil, (unsigned long long)deg, frac[d]);
+  }
+
+  // THE PRIMARY: last tenth minus first, jackknifed over creatures on the POOLED ratio.
+  auto pooled_step = [&](const std::vector<uint32_t>& who) {
+    uint64_t n0 = 0, k0 = 0, n9 = 0, k9 = 0;
+    for (uint32_t r : who) {
+      n0 += cells[r].nominal[0];
+      k0 += cells[r].kept[0];
+      n9 += cells[r].nominal[VLRun::kDec - 1];
+      k9 += cells[r].kept[VLRun::kDec - 1];
+    }
+    const double f0 = n0 ? double(k0) / double(n0) : 0.0;
+    const double f9 = n9 ? double(k9) / double(n9) : 0.0;
+    return f9 - f0;
+  };
+  const double step = pooled_step(live);
+  // The two-pass jackknife this file already uses elsewhere, including its n >= 3 floor:
+  // the sum-of-squares shortcut is algebraically the same and numerically worse, and a
+  // second instrument spelling the same statistic a second way is how a discrepancy
+  // between two of this project's logs becomes hard to interpret.
+  std::vector<double> loo;
+  for (size_t i = 0; i < live.size(); ++i) {
+    std::vector<uint32_t> drop;
+    for (size_t j = 0; j < live.size(); ++j) {
+      if (j != i) drop.push_back(live[j]);
+    }
+    loo.push_back(pooled_step(drop));
+  }
+  const double nn = double(loo.size());
+  double jk_se = 0.0;
+  if (nn >= 3.0) {
+    double m = 0.0;
+    for (double v : loo) m += v;
+    m /= nn;
+    double acc = 0.0;
+    for (double v : loo) acc += (v - m) * (v - m);
+    jk_se = std::sqrt(acc * (nn - 1.0) / nn);
+  }
+  std::printf("\n  THE PRIMARY, last tenth minus first, pooled and jackknifed over %zu:\n"
+              "    %+.4f +- %.4f (%.1f SE)   first %.3f, last %.3f\n",
+              live.size(), step, jk_se, jk_se > 0.0 ? std::fabs(step / jk_se) : 0.0,
+              frac[0], frac[VLRun::kDec - 1]);
+
+  // How many creatures agree, because a pooled ratio can be carried by one.
+  uint32_t down = 0, upc = 0;
+  for (uint32_t r : live) {
+    const double f0 = cells[r].nominal[0]
+                          ? double(cells[r].kept[0]) / double(cells[r].nominal[0])
+                          : 0.0;
+    const double f9 =
+        cells[r].nominal[VLRun::kDec - 1]
+            ? double(cells[r].kept[VLRun::kDec - 1]) / double(cells[r].nominal[VLRun::kDec - 1])
+            : 0.0;
+    if (f9 < f0) ++down;
+    else if (f9 > f0) ++upc;
+  }
+  std::printf("    per creature: %u of %zu DOWN, %u up\n", down, live.size(), upc);
+
+  // WHICH failure grows, since silence and degeneracy are different faults.
+  {
+    uint64_t s0 = 0, g0 = 0, s9 = 0, g9 = 0, n0 = 0, n9 = 0;
+    for (uint32_t r : live) {
+      s0 += cells[r].silent[0];
+      g0 += cells[r].degen[0];
+      n0 += cells[r].nominal[0];
+      s9 += cells[r].silent[VLRun::kDec - 1];
+      g9 += cells[r].degen[VLRun::kDec - 1];
+      n9 += cells[r].nominal[VLRun::kDec - 1];
+    }
+    std::printf("    silence     %.3f -> %.3f of trials\n",
+                n0 ? double(s0) / double(n0) : 0.0, n9 ? double(s9) / double(n9) : 0.0);
+    std::printf("    degenerate  %.3f -> %.3f of trials\n",
+                n0 ? double(g0) / double(n0) : 0.0, n9 ? double(g9) / double(n9) : 0.0);
+  }
+
+  // THE OUTCOME SPACE, all four branches. The threshold is 3 SE, this project's bar.
+  const double sig = jk_se > 0.0 ? std::fabs(step / jk_se) : 0.0;
+  double peak = frac[0];
+  uint32_t peak_at = 0;
+  for (uint32_t d = 0; d < VLRun::kDec; ++d) {
+    if (frac[d] > peak) { peak = frac[d]; peak_at = d; }
+  }
+  const bool humped = peak_at > 0 && peak_at + 1 < VLRun::kDec &&
+                      peak > frac[0] + 0.02 && peak > frac[VLRun::kDec - 1] + 0.02;
+  if (sig < 3.0 && !humped) {
+    std::printf("\n  DELIVERY IS FLAT ACROSS THE SESSION, %.1f SE on the last-minus-first\n"
+                "  step. The creature does not quiet as it trains, so `dirbudget`'s\n"
+                "  falling delivered fraction is NOT a within-session decay being\n"
+                "  averaged over a longer window. Reading (a) is dead and reading (b)\n"
+                "  stands: the ladder needs its x-axis relabelled from ticks to trials\n"
+                "  and nothing about the rotation changes. NOTE this leaves the 71.4%% ->\n"
+                "  35.8%% fall UNEXPLAINED, which is then its own open question rather\n"
+                "  than a settled one.\n", sig);
+  } else if (humped) {
+    std::printf("\n  DELIVERY IS NON-MONOTONE: it peaks in tenth %u at %.3f, above both the\n"
+                "  first tenth (%.3f) and the last (%.3f). That is a TRANSIENT and it is\n"
+                "  neither reading. Whatever lifts delivery early does not hold, and the\n"
+                "  last-minus-first step (%+.4f, %.1f SE) understates the fall from the\n"
+                "  peak. Read the per-tenth column, not the step.\n",
+                peak_at + 1, peak, frac[0], frac[VLRun::kDec - 1], step, sig);
+  } else if (step < 0.0) {
+    std::printf("\n  THE CREATURE QUIETS AS IT TRAINS. Delivery falls %.3f -> %.3f across\n"
+                "  the session, %+.4f +- %.4f (%.1f SE), %u of %zu creatures down. So a\n"
+                "  longer session has a lower MEAN delivered fraction by running further\n"
+                "  down one decaying curve, which is reading (a): `dirbudget`'s rungs are\n"
+                "  nested prefixes of this trajectory and its decline has a candidate\n"
+                "  about PRODUCTION rather than assignment capacity. That candidate is the\n"
+                "  same suspect as the drone, the voicing gate and the resonant jaw.\n"
+                "    WHAT THIS DOES NOT ESTABLISH: that the rotation's decline IS the\n"
+                "    delivery decline. Delivery falling and direction falling on the same\n"
+                "    axis is a shared correlate, and the ladder's own `d trials` predictor\n"
+                "    (r = +0.721) is consistent with either. Separating them needs a rung\n"
+                "    matched on DELIVERED trials rather than on ticks.\n",
+                frac[0], frac[VLRun::kDec - 1], step, jk_se, sig, down, live.size());
+  } else {
+    std::printf("\n  DELIVERY RISES WITH TRAINING, %+.4f +- %.4f (%.1f SE), %.3f -> %.3f.\n"
+                "  The creature answers MORE often as it trains, so the low total at a big\n"
+                "  budget is a front-loaded warm-up cost and NOT a decay. This refuses\n"
+                "  reading (a) in the strongest way available -- the curve points the\n"
+                "  other way -- and it also means the ladder's 71.4%% -> 35.8%% fall is\n"
+                "  NOT explained by this curve, because averaging a rising function over a\n"
+                "  longer window raises the mean. Something else is budget-dependent and\n"
+                "  this run has not found it.\n",
+                step, jk_se, sig, frac[0], frac[VLRun::kDec - 1]);
+  }
+  return live.size() == kDLReps;
 }
 
 

@@ -2283,6 +2283,7 @@ bool run_aimaxes(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_ctxgrid(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_echoname(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_dirbudget(const std::vector<uint8_t>&, uint64_t, bool);
+bool run_dlvry(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_quietecho(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_exsweep(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_ctxvocab(const std::vector<uint8_t>&, uint64_t, bool);

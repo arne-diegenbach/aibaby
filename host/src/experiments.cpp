@@ -243,6 +243,24 @@ const Spec kSpecs[] = {
      "  is read off the per-doubling ratio of that excess. At the spec minimum,\n"
      "  rung 1 IS echoname's published taught arm and must reproduce it seed for\n"
      "  seed; at any other --ticks the log says it has no such control"},
+    {"dlvry", 27200000, Expect::kRead, Tier::kTeach,
+     "  dirbudget reported its rungs in TICKS and read them as experience. Its\n"
+     "  delivered fraction -- scored, voiced, labelled trials over the nominal\n"
+     "  ticks/kVLTrialTicks -- falls 71.4% -> 35.8% across the ladder, so 8x of\n"
+     "  ticks bought 4.02x of trials. The trial loop is fixed-rate, so that is\n"
+     "  the creature not answering: silent windows, or formants too degenerate\n"
+     "  to score. Two readings the session totals cannot separate -- the\n"
+     "  creature QUIETS as it trains (a decaying curve averaged over a longer\n"
+     "  window, which makes the rotation decline a PRODUCTION story), or a long\n"
+     "  session is uniformly worse (overhead, and the ladder just needs its\n"
+     "  x-axis relabelled). One arm, 12 of dirbudget own creatures, delivery\n"
+     "  counted tenth by tenth; the within-session shape is the measurement.\n"
+     "  Nothing that moves the creature depends on n_trials here, so the first\n"
+     "  N trials ARE a complete N-trial session: the cumulative delivered count\n"
+     "  at each rung must reproduce dirbudget columns bit-identically, which\n"
+     "  is a prediction rather than a fit. Decay, flat, rising and non-monotone\n"
+     "  are all branched on -- dirbudget printed SATURATES over a resolved\n"
+     "  reversal because its outcome space stopped one short of what happened"},
     {"exsweep", 6800000, Expect::kRead, Tier::kTeach,
      "  reward buys the between-word SEPARATION and the lesson buys the\n"
      "  ASSIGNMENT -- a double dissociation at 10.6 and 6.7 SE. So does phasic\n"
@@ -1222,6 +1240,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "ctxgrid") ok = run_ctxgrid(dna_blob, ticks, verbose);
   else if (name == "echoname") ok = run_echoname(dna_blob, ticks, verbose);
   else if (name == "dirbudget") ok = run_dirbudget(dna_blob, ticks, verbose);
+  else if (name == "dlvry") ok = run_dlvry(dna_blob, ticks, verbose);
   else if (name == "quietecho") ok = run_quietecho(dna_blob, ticks, verbose);
   else if (name == "exsweep") ok = run_exsweep(dna_blob, ticks, verbose);
   else if (name == "ctxvocab") ok = run_ctxvocab(dna_blob, ticks, verbose);

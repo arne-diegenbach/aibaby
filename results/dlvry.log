@@ -1,0 +1,46 @@
+experiment: dlvry
+  instrument        dlvry   trial seed 000000000135f6de   9714 delivered trials per tenth of one session
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  INDEX SOURCE 4, inherited from the genome and NOT set by dlvry.
+  The index reads the AUDITORY module, so a CtxDrive injected into the
+  context module is IGNORED by it -- such an arm is DERIVED, not an
+  oracle.
+  An "oracle" arm is only an oracle when the drive and the index use the
+  SAME module: ctx_match reads 1.000 for a genuine host-written index and
+  well below it for a derived one.
+  the question      `dirbudget` read its rungs in TICKS and treated them as
+                    experience. The delivered fraction falls 71.4% -> 35.8%
+                    across that ladder, so 8x of ticks bought 4.02x of
+                    trials. The trial loop is fixed-rate, so the deficit is
+                    the creature not answering: silence, or formants too
+                    degenerate to score.
+  the design        ONE arm, 12 creatures, 27200000 ticks = 9714 nominal trials,
+                    counted tenth by tenth. No comparison condition is
+                    needed: the within-session SHAPE is the measurement.
+  the primary       delivered fraction in the LAST tenth minus the FIRST,
+                    paired over 12 creatures. DECAY means the creature
+                    quiets as it trains and `dirbudget`'s decline is about
+                    production, not capacity. FLAT means session overhead
+                    and the ladder only needs its x-axis relabelled.
+  the prediction    nothing that moves the creature depends on `n_trials`
+                    here, so the first N trials of this session ARE a
+                    complete N-trial session. The cumulative delivered
+                    count at 1214 / 2428 / 4857 / 9714 trials must reproduce
+                    `dirbudget`'s 3.4M / 6.8M / 13.6M / 27.2M columns BIT-IDENTICALLY
+                    per creature:
+
+                      python3 tools/dlvry_predict.py \
+                          results/dirbudget.log <this log>
+
+                    If that fails the rungs are not nested prefixes of one
+                    trajectory and this curve says nothing about the
+                    shorter budgets.
+  what refuses it   a flat per-tenth fraction. Then delivery does not decay
+                    with training and reading (a) is dead. RISING and
+                    NON-MONOTONE are branched on too -- `dirbudget` printed
+                    SATURATES over a resolved reversal because its outcome
+                    space stopped one short of what happened.
+  stated up front   n = 12, and the per-tenth fraction is a RATIO of two
+                    counts, so it is pooled as a ratio of sums and
+                    jackknifed, never meaned per creature.
