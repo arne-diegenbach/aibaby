@@ -29784,6 +29784,24 @@ constexpr uint32_t kCtxSelfArmCount = sizeof(kCtxSelfArms) / sizeof(kCtxSelfArms
 // `ctxself-base.toml` exists with no log. That audit is now SAFE to run, because the claim
 // no longer depends on it: blocks 2-4 alone, all on dedicated four-arm baselines, pool to
 // +15.35 +/- 4.34 (3.5 SE, 70/108) and clear the bar without block 1 at all.
+//
+// CLOSED 2026-10-30 WITHOUT THE RUN, because the run can no longer answer it. Counting the
+// arms each log actually emitted: `ctxself-env2` ran FOURTEEN (the ten `ear-*-sh` boundary
+// arms plus off/oracle/ema/ema-rnd), `ctxself-base-b3`/`-b4`/`-fr` ran FOUR, and
+// `kCtxSelfArms` today holds EIGHT (off, oracle, ear, ear-rnd, ear-deaf, ear-deaf-rnd, ema,
+// ema-rnd). So a fresh block-1 baseline run now would be an EIGHT-arm run, matching neither
+// provenance, and the "dedicated four-arm baseline" this note asks for cannot be reproduced
+// without first restoring a historical arm table -- an edit made solely to match a past
+// run's RNG stream, on a question the result does not rest on. The audit existed only to
+// validate block 1, blocks 2-4 clear the bar without it, so it is closed here rather than
+// left standing as an owed run that would answer the wrong thing.
+//
+// WHAT THE ARM COUNT ACTUALLY THREATENS, recorded because the reasoning above is easy to
+// get backwards. `off` and `oracle` being bit-identical ACROSS GENOMES at one arm count
+// (the v70 specificity control) does NOT establish that they are identical across DIFFERENT
+// arm counts: appending arms re-rolls the noise draw. Those are two different invariances
+// and only the first is on file. Anyone reviving this should test the second one directly
+// and not infer it from the first.
 // ===========================================================================
 //
 // ONE KNOWN HETEROGENEITY, RECORDED BEFORE THE RUN RATHER THAN DISCOVERED AFTER IT. Block
