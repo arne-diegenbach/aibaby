@@ -24633,3 +24633,70 @@ both regulates harder and rotates less reads identically to one where the regula
 decline. Settling it needs the threshold moved **within** a creature without moving its
 learning, and `ipoff` cannot do that because it destroys learning at −7.42 SE. That is a design
 problem, not a budget problem, and it is the honest end of this line until someone has one.
+
+## Readout sensitivity is a speed knob by arithmetic, and the ceiling prize is priced at nothing (2026-10-31)
+
+Free, from two logs already on disk and no run. It came out of deriving what the centroid
+readout can reach, which the `seen` instrument was built on, and it ended up **pricing the
+readout line as a ceiling route before that instrument reported.**
+
+**THE DERIVATION.** `read_group` returns `Σ rᵢ^β pᵢ / Σ rᵢ^β` with `pᵢ` uniformly spaced
+([senses.cpp:34-61](core/src/senses.cpp#L34-L61)). Write `rᵢ = r̄(1+εᵢ)`; homeostasis holds
+`Σεᵢ ≈ 0`, and `(1+εᵢ)^β ≈ 1+βεᵢ`, so
+
+    value − ½  ≈  β · (1/n) Σ εᵢ (pᵢ − ½)
+
+The sum is exactly `aligned`, the project's own projection onto the centred ramp. So **β
+multiplies `aligned`'s effect linearly**, and composing with the measured `dF1 ~ aligned^0.61`
+gives `dF1 ~ (β·aligned)^0.61`.
+
+**IT PREDICTS THE β=2 RESULT AT 3.4M TO 2%, ON DATA IT WAS NOT FITTED TO.** `poolbeta` measured
+β=2 raising dF1 63.5 → 83.2 while `aligned` **fell** 0.01991 → 0.01492:
+
+| budget | % of the 234 Hz asymptote | effective ratio `2·al₂/al₁` | predicted dF1 ratio | observed | miss |
+|---|---|---|---|---|---|
+| 3.4M | 27% | 1.499 | 1.280 | **1.310** | **−2%** |
+| 13.6M | 47% | 1.584 | 1.324 | **1.078** | **+23%** |
+
+The naive version that ignores `aligned` falling predicts `2^0.61 = 1.526`, i.e. 96.9 Hz against
+an observed 83.2 — a 17% overshoot. So the falling `aligned` is doing real work in the fit.
+
+**AND THE FAILURE AT 13.6M IS NOT MORE COMPENSATION — IT IS SATURATION.** Fitting `aligned ~
+β^−c` gives **c = 0.416** at 3.4M and **c = 0.336** at 13.6M: the learning rule gives back
+*less* bias at the larger budget, not more. So the composition does not fail because the loop
+fights harder. It fails because `dF1 ~ aligned^0.61` is a relation that flattens as the
+asymptote is approached, and at 47% of 234 Hz the arms are close enough for it to bind.
+
+**WHY THE COMPENSATION HAPPENS AT ALL, in the project's own words.** `poolbeta` already supplies
+the mechanism: the drift is `−Cov(e, perturbᵢ)`, which factors through `dF1/d(drive)`. A more
+sensitive readout cancels the same error with less bias, so **less bias is what it learns.** The
+intervention partly eats itself. That is Chase, Schwartz & Kass (2009) — added to the References
+earlier today for a different reason — measured here in September without the citation: an
+open-loop readout gain need not survive closed loop, because the subject adapts to whatever
+decoder it is given. **This creature learns against its own readout, so every readout
+intervention is a closed-loop one.**
+
+**SO THE CEILING PRIZE FOR A READOUT CHANGE IS ~NOTHING, and this is the arithmetic that says
+so.** Readout sensitivity buys dF1 exactly as derived while far from the asymptote and almost
+nothing approaching it — β=2 is worth +19.7 Hz at 3.4M and +8.5 Hz at 13.6M, and the ceiling is
+measured at the far end of that trend, not the near one. **`poolbeta`'s "speed, not ceiling"
+conclusion now has a mechanism and a number rather than only a replication.**
+
+**AND IT REFUTED MY OWN EXTRAPOLATION TEN MINUTES AFTER I COMPUTED IT.** From the single 3.4M
+point I derived that a readout sensitivity of **k ≈ 4.3** would reach the ceiling — a far more
+reachable target than the bias route's `aligned` ×2.34 against a best-ever ×1.2. It is wrong: it
+assumes the composition holds at the budget where the ceiling is measured, and the 13.6M row
+shows it does not. **This is the "interpolated crossing quoted as a prediction" error this
+project already has on record**, and the only reason it did not get published as a target is
+that the second budget was on disk and took one grep. Two independent signs it was never safe:
+β=3 was worse than β=2 on *every* column, so the sensitivity axis is not even monotone, and a
+hard argmax should be untrainable by `centroid-is-steerability`.
+
+**WHAT THIS DOES NOT CLOSE.** The `seen` measurement now running is still worth having, but it
+answers an **information** question — how much of what the lesson writes the centroid discards —
+and not a ceiling one. A large residual would say the readout is lossy, and the arithmetic above
+says recovering it would still buy speed rather than asymptote. **Stated as a limit rather than
+a closure:** two budgets and one β value, `dF1 ~ aligned^0.61` is itself a fitted law, and a
+single point agreeing to 2% is one coincidence by this project's own rule. What is established
+is the *direction and rough size* of the failure, which is enough to stop a build and not enough
+to publish as a law.

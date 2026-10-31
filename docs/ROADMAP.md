@@ -970,6 +970,10 @@ the shared half, which a two-full-arm version would spend 979M on.
 
 ### 14. PREPARED, NOT BUILT — `f1decode`: is 13.7% the creature's, or the centroid's?
 
+**READ §15 FIRST: the CEILING prize on this line is now priced at ~nothing by arithmetic, so
+`f1decode` is an INFORMATION question only.** It can say how much the centroid discards; it
+cannot promise that recovering it raises the asymptote, and §15 is the reason.
+
 The build `ctxscale`'s new `seen` column decides whether to make. **Run it only if `seen` comes
 back near its derived null of 1/√14 = 0.267**; if `seen` ≈ 1.0 the lesson writes along the
 centroid's own coordinate, the blind directions are empty, and this is not worth building.
@@ -1002,6 +1006,45 @@ assumptions.
 
 **Cost:** the dump rides on an existing teach-tier session, so one 13.6M run at n=18 is
 ~250M ticks (**~1 h**); the decoding itself is offline and free.
+
+### 15. CLOSED 2026-10-31, FREE — readout sensitivity is a SPEED knob by arithmetic
+
+No run. Two logs on disk and the readout's own algebra, and it prices §14's ceiling prize before
+§14's decider has reported.
+
+`read_group` is `Σ rᵢ^β pᵢ / Σ rᵢ^β` with uniform `pᵢ`. With `rᵢ = r̄(1+εᵢ)` and homeostasis
+holding `Σεᵢ ≈ 0`, the excursion is `β · (1/n) Σ εᵢ (pᵢ − ½)` — and that sum **is** `aligned`.
+So β multiplies `aligned`'s effect linearly, and with `dF1 ~ aligned^0.61` the composition is
+`dF1 ~ (β·aligned)^0.61`.
+
+| budget | % of 234 Hz asymptote | predicted dF1 ratio | observed | miss |
+|---|---|---|---|---|
+| 3.4M | 27% | 1.280 | 1.310 | **−2%** |
+| 13.6M | 47% | 1.324 | 1.078 | **+23%** |
+
+**Accurate far from saturation, overpredicting near it — and NOT because the loop fights
+harder:** fitting `aligned ~ β^−c` gives c = 0.416 at 3.4M and **0.336** at 13.6M, so the
+compensation is *weaker* at the larger budget. The composition fails because the 0.61 relation
+flattens toward the asymptote.
+
+**So a readout change buys speed, not ceiling**, which is what `poolbeta` concluded descriptively
+and now has arithmetic for. The compensation's cause is in `poolbeta`'s own words — the drift
+`−Cov(e, perturbᵢ)` factors through `dF1/d(drive)`, so a more sensitive readout needs less bias
+to cancel the same error and less bias is what it learns. **That is Chase, Schwartz & Kass (2009)
+measured here in September without the citation:** an open-loop decoder gain need not survive
+closed loop because the subject adapts to its decoder, and this creature always does.
+
+**AND IT KILLED AN EXTRAPOLATION OF MINE WITHIN MINUTES.** From the 3.4M point alone I derived
+that sensitivity **k ≈ 4.3** would reach the ceiling — far more reachable than `aligned` ×2.34
+against a best-ever ×1.2, and wrong, because it assumes the composition holds at the budget where
+the ceiling is measured. The 13.6M row refutes it. **The "interpolated crossing quoted as a
+prediction" prohibition below covers exactly this**, and it was one grep from being published as
+a target. Two further signs it was never safe: β=3 was worse than β=2 on every column, so the
+axis is not monotone, and a hard argmax should be untrainable (`centroid-is-steerability`).
+
+**LIMITS, because this is enough to stop a build and not enough to be a law:** two budgets, one
+β value, `dF1 ~ aligned^0.61` is itself fitted, and one point agreeing to 2% is one coincidence
+by this project's own rule. What is established is the direction and rough size of the failure.
 
 ## Standing prohibitions
 
