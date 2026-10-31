@@ -25025,3 +25025,70 @@ What is bought is a direction. The naming ceiling is **not** an expression bottl
 creature's write is already aimed at the coordinate its readout can see, and what it spills
 elsewhere is interference. If we want the creature to reach further with a name, the write has to
 get **bigger or better aimed** — a better reader has nothing left to find.
+
+## The fix was right and it made the creature worse (2026-10-31)
+
+The creature's two-syllable gesture comes from a half-centre: two populations of larynx neurons
+that inhibit each other, so when one is loud the other is quiet, and the voice alternates between
+two vowel postures with nobody driving it. The textbook version (Baruzzi and colleagues, 2020)
+needs one condition — the populations must inhibit *each other* and not *themselves*. Reading our
+kernel against that condition showed we had violated it in a place nobody looks: not in the
+wiring, but in the **denominator**. Each half's inhibition was divided by the pair's own average
+rate, and dividing by something that includes your own rate is a way of coupling to yourself. At
+balance the self-coupling was exactly as strong as the mutual coupling.
+
+The fix needed no new constant: divide by the module's target rate instead, which is a fixed
+number, and the self-coupling becomes exactly zero. It gated clean — the determinism hash did not
+move, and the two arms that run with the mechanism switched off re-printed *bit for bit*, which is
+stronger evidence of a surgical change than the hash is.
+
+It worked. The alternation got deeper at **every** arm, by margins of 0.10 to 0.21 against
+standard errors of 0.001. A pathological arm that used to run away to 122 Hz was tamed to 18. By
+every neural measure the competition is cleaner, and the theory's condition is both satisfiable
+here and an improvement.
+
+And the creature got quieter.
+
+    arm      produced F1 swing          vs a creature with the mechanism OFF
+             before      after          before      after
+    tau083   45.9        45.3           -23.1       -23.7
+    tau167   75.6        40.3            +6.6       -28.7
+    tau250  105.6        34.2           +36.6       -34.8
+    tau333  134.9        42.7         **+65.9**   **-26.3**
+
+The bottom row is the milestone. "The gesture carries +65.9 Hz of formant excursion over a
+creature with its mechanisms off" is the result this whole line exists to have produced — and
+under the fix the same arm produces **26.3 Hz less** than that control. The effect moved 92 Hz,
+against standard errors under 1.3.
+
+### Why, and the part that changes how we aim
+
+The vocal tract is a low-pass filter with an 800 ms pole. It passes `1/sqrt(1+(2πfτ)²)` of a
+neural swing, and its corner sits at 0.2 Hz — while every oscillator we have ever run lives
+between 1 and 3.5 Hz, an order of magnitude above it, where transmission falls roughly as `1/f`.
+The fix doubled the mutual coupling as a side effect of removing the self-coupling, which doubled
+the alternation rate from 1.46 to 2.83 Hz, and the pole duly passed half as much. The filter
+reproduces both runs exactly, so the direction isn't in doubt.
+
+**So the period was never a cosmetic failure. It is the amplitude lever.** Anything that speeds
+this oscillator up pays for it in formant reach at roughly the filter's rate. That is the real
+reason the clock matters: the fatigue constant is supposed to buy slowness, slowness buys reach,
+and the clock's failure is what stops it being that knob.
+
+The sharper lesson is that it inverts what we should be optimising. Look again at the table: the
+arm that carries the milestone, `tau333`, has the **shallowest** competition of the four
+(−0.297), while `tau083` has the deepest (−0.754) and speaks least. Across the measured range,
+competition depth and formant reach run in **opposite directions**. "Make the half-centre better"
+is not one objective, and any mechanism we score on the neural measure alone will keep selecting
+the arm that speaks less. Our own pre-registration for this run made exactly that mistake: its
+primary was the clock slope, its refusals were about the alternation, and the produced swing —
+the thing the milestone is stated in — appeared nowhere in it.
+
+One smaller correction fell out of the same audit. The clock slope we have been quoting as the
+baseline, +0.548, is from one seed family; the replication on the family this run used gives
++0.320. Same code, same budget, same arms. That statistic moves as much on seeds as on anything
+we have done to it, so it cannot carry a verdict by itself.
+
+The fix stays switched off while the matched run decides whether it ships at all: the same change
+at half the gain, where the mutual coupling matches the old kernel exactly and the removed
+self-coupling is the only thing left varying. This time the primary is the swing.

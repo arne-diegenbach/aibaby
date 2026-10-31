@@ -1895,3 +1895,117 @@ directions. A decoder reading rates directly could also use the common-mode leve
 eight groups, which the centroid's ratio discards by construction. That is a different
 instrument, not a continuation of this one. The open leads that survive are `noise_amp` and the
 nine-axes multiplication — not the readout.
+
+## §24 — DNA v75 IS CORRECT AND MUST NOT SHIP. The period is the amplitude lever (2026-10-31)
+
+Built, gated (**all four verify keys PASS, hash `ad96f882becbee92` unchanged**), and run at
+`halfcenter`'s own 1.2M minimum, 8 arms × 12 reps, 16 min. The normaliser disclosure confirms it
+ran **dosed**, not fallen back: `v75: inhibition / target_rate_hz = 5.00 Hz`.
+
+### FIRST, A CORRECTION TO THE BASELINE THIS WAS GOING TO BE SCORED AGAINST
+
+§18, §22 and the memory all quote **+0.548, R² 0.448, 1 of 4 in band** as *the* clock slope.
+That is seed family **604553**. v75 runs on family **288559**, and the archived replication on
+*that* family gives **+0.320, R² 0.214** (four-point; endpoint +0.489). Same code, same budget,
+same arms — the slope moves **+0.320 → +0.548** on seeds alone.
+
+**So the clock statistic is not well determined at 12 reps, and its between-family spread is
+as large as any treatment effect measured against it.** Comparing v75 to +0.548 would have
+been comparing across seed families. The matched baseline is +0.320.
+
+The same audit found the printed exponent is the **endpoint** fit, while the project's standard
+is the four-point slope — and the archived log says so itself ("the printed +0.750 is an
+ENDPOINT fit and must not be quoted") while printing only the endpoint fit. **Both are printed
+now, labelled, with R² on the four-point one.**
+
+### THE SPECIFICITY CONTROL IS EXACT, WHICH IS WORTH MORE THAN THE HASH
+
+The two arms with `halfcenter_gain = 0.00` re-print **bit for bit** across the kernel change:
+
+    arm        v57 (fam 288559)              v75
+    fat140     +0.092, rate 1.51, swing 71.5   +0.092, rate 1.51, swing 71.5
+    ctrl140    +0.371, rate 4.94, swing 69.0   +0.371, rate 4.94, swing 69.0
+
+The verify hash only tests the shipped genome. This tests the **experiment's own path** and
+shows the edit is confined to arms with the gain on, to every printed decimal.
+
+### REFUSAL 2 DID NOT FIRE — THE ALTERNATION SURVIVES AND DEEPENS
+
+The informative refusal was that removing the within-population coupling would **lose** the
+competition, which would have said Baruzzi's forbidden term was buying the 30–44 SE. It is not
+lost. Every arm with the gain on gets **deeper**, against SEs of 0.001–0.004:
+
+    arm        v57      v75      arm        v57                    v75
+    tau083   -0.754   -0.872     drive200 -0.650                 -0.759
+    tau167   -0.555   -0.671     inhib140 +0.075 (rate 121.75)   -0.162 (rate 17.79)
+    tau250   -0.395   -0.580
+    tau333   -0.297   -0.507
+
+So **Baruzzi's condition is satisfiable here and it improves the competition**, exactly as
+derived. `inhib140`'s runaway is also tamed 7× (121.75 → 17.79 Hz, still VOID) — predicted,
+since v57 divides by the pair's own mean, which blows up as that mean falls, and v75 divides by
+a constant.
+
+### REFUSAL 1 FIRED — AND THE RUN FOUND A THIRD THING THE PRE-REGISTRATION DID NOT NAME
+
+The clock is not fixed: four-point slope **+0.320 → +0.099** (R² 0.214 → 0.153). Given the
+between-family spread above, the honest reading is **v75 did not fix the clock**, not that it
+made it worse.
+
+**But the produced F1 swing collapses, and that is the milestone's own statistic.** Against the
+control's 69.0 ± 1.2 Hz:
+
+    arm       v57 swing     v75 swing    excess v57   excess v75    alternation
+    tau083   45.9 +/- 0.4  45.3 +/- 1.2    -23.1        -23.7      2.88 -> 3.25 Hz
+    tau167   75.6 +/- 0.6  40.3 +/- 0.1     +6.6        -28.7      1.25 -> 2.25 Hz
+    tau250  105.6 +/- 0.3  34.2 +/- 0.0    +36.6        -34.8      2.62 -> 2.65 Hz
+    tau333  134.9 +/- 0.4  42.7 +/- 0.2   **+65.9**    **-26.3**   1.46 -> 2.83 Hz
+
+**The milestone reverses sign.** `halfcenter`'s replicated result is "tau333 carries +65.9 Hz
+of excursion over a creature with the mechanisms off." Under v75 tau333 produces **26.3 Hz
+less** than that control. The effect moves 92.2 Hz against SEs under 1.3.
+
+**The mechanism is the plant, and it is quantitative.** v75 roughly doubles the between-coupling
+at equal nominal gain, which roughly doubles the alternation frequency; the vocal tract is a
+low-pass with an 800 ms pole, `|H| = 1/sqrt(1+(2πfτ)²)`, which reads 0.135 at 1.46 Hz and 0.070
+at 2.83 Hz. The pole model reproduces both runs' `|H|` exactly, so the **direction** is
+explained; it accounts for about half the loss on a log scale (predicted ×0.52, observed ×0.32),
+so something else — plausibly the half-difference amplitude — carries the rest.
+
+### THE REFRAMING, WHICH IS THE ACTUAL RESULT
+
+**Frequency and formant reach are coupled through the pole, so the period is the AMPLITUDE
+lever and not a cosmetic failure.** Anything that speeds this oscillator costs swing at roughly
+the pole's rate. That is why the clock matters: `tau_a` is supposed to buy slowness, slowness
+buys swing, and the clock's failure is what stops it.
+
+**And it inverts the optimisation target.** The arm that produces the gesture is the *worst*
+oscillator — tau333 has the **shallowest** anti-phase (−0.297) and the **largest** swing
+(134.9 Hz), while tau083 has the deepest (−0.754) and the smallest (45.9 Hz). Across the four
+v57 arms, anti-phase depth and produced swing run in **opposite** directions. So "deepen the
+competition" is not the objective, and a mechanism scored on anti-phase alone will keep
+choosing the arm that speaks less. §22's pre-registration made exactly that mistake: its
+primary was the slope and its refusals were about the alternation, with the swing nowhere in it.
+
+**STATUS: v75 REFUSED AT `halfcenter_gain = 0.60`.** It is correct by derivation, better on the
+neural measure, and worse on the creature. It stays behind the shipped gain of 0.0.
+
+### WHAT IS RUNNING
+
+The matched-coupling stage, which the derivation required from the start and which this result
+makes mandatory: four appended arms at **hc 0.30**, where v75's between-coupling equals v57's
+and the removed within-term is the only variable. Appending is safe — a cell's seed is
+`seed + kHCSeedOffset + r*7919`, a function of the replicate only — so **the eight base arms
+must re-print to every decimal**, which makes the run carry its own determinism check. Two
+index constants had to be introduced first (`kHCCtrlArm`, `kHCBaseArms`): the control was being
+found as `kHCArmCount - 1`, so appending would have silently made `mat333` the baseline for the
+VOID bound and re-decided VOID for every arm.
+
+**PRE-REGISTERED.** Primary is the **produced swing at `mat333` against the control's 69.0 Hz**,
+because that is the statistic the milestone is stated in — not the anti-phase, and not the
+slope. Halving the coupling should roughly halve the frequency and the pole then passes about
+twice as much, so the prediction is a swing back in v57's range and an excess above zero at
+≥3 SE. **The refusal that matters:** the swing stays below the control even at matched
+coupling, which would say the forbidden within-term was buying the slow period the pole needs —
+Baruzzi's condition and this creature's formant reach in direct conflict, and v75 dead at any
+gain.
