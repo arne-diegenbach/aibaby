@@ -21227,6 +21227,77 @@ other side.
   13.7% range is measured, so what is needed is which term binds it — the homeostat, or the
   `t_min`/`t_max` clamp on the threshold.
 
+### Checked 2026-10-31 (second pass): aimed at SEQUENCES, and one paper names the wiring bug
+
+The biggest missing capability is a sequence — `no sequence` found an utterance is a **held
+vowel**, and `hcdrive` closed composition in the whole (gain, drive) plane. This pass was aimed
+there because this README already says the mechanism was **never built**: "only fatigue was
+added… the lateral kernel on this larynx is local-minus-field-mean, a bump kernel, not
+reciprocal inhibition between two populations." Every entry is new to this list (grep-first run
+on each).
+
+- **THE ONE THAT DIAGNOSES THE BUG, and it is a condition rather than an analogy.** Baruzzi, V.,
+  Lodi, M., Storace, M. & Shilnikov, A. (2020). *Generalized half-center oscillators with
+  short-term synaptic plasticity.* Physical Review E 102(3), 032406.
+  <https://doi.org/10.1103/PhysRevE.102.032406> — the classic half-centre is recovered when
+  **within-population coupling is zero and between-population coupling is nonzero.** This
+  larynx's kernel is local-minus-field-mean: the local term is **nonzero within-population
+  coupling**, and there is no distinct between-population term at all. So the half-centre
+  condition is violated *by construction*, which is why `halfcenter` produced a gesture (30–44
+  SE) and `hcsweep`'s syllable band stayed empty. **`hcsweep` refuted "adaptation alone
+  suffices", which is exactly what the theory predicts should fail** — so the plane `hcdrive`
+  closed was the plane of a mechanism that was never wired. The paper also adds reciprocal
+  excitation plus short-term plasticity to control **phase lag**, which is a rate knob if the
+  oscillator ever runs.
+- **How to wire it, in populations rather than two neurons.** Athota, A., Caccam, B., Kochis, R.,
+  Ray, A., Cauwenberghs, G. & Broccard, F. D. (2021). *Neuromorphic instantiation of spiking
+  half-centered oscillator models for central pattern generation.* EMBC 2021, 6703–6706.
+  <https://doi.org/10.1109/EMBC46164.2021.9629606> — the motif as "two neurons, **or populations
+  of identical neurons**, connected by reciprocal inhibition", in a spiking implementation. That
+  is the build, and it is a wiring change inside one module rather than a new learning rule.
+- **AND THE BODY ALREADY HAS THE RIGHT TIMESCALE, which makes this cheaper than it looks.**
+  `frame-is-a-body-part` measured a resonant jaw at **~4.5 Hz** — inside the syllable band — and
+  the oscillator literature puts adaptation timescales from tens of milliseconds to seconds, so
+  a half-centre built here would not need a new time constant invented for it. The missing piece
+  is the coupling topology, not the period.
+- **The syllable-rate precedent, two populations and a frequency range.** Hyafil, A., Fontolan,
+  L., Kabdebon, C., Gutkin, B. & Giraud, A.-L. (2015). *Speech encoding by coupled cortical
+  theta and gamma oscillations.* eLife 4, e06213. <https://doi.org/10.7554/eLife.06213>; and the
+  current review, Dogonasheva, O., Giraud, A.-L., Zakharov, D. & Gutkin, B. (2026).
+  *Neuro-oscillatory models of cortical speech processing.* Neural Networks 195, 108194.
+  <https://doi.org/10.1016/j.neunet.2025.108194> — theta (3–7 Hz) segments syllables and gamma
+  encodes phonemes, as two interacting populations. **Carry the review's own caution, because it
+  is this project's favourite failure mode:** adaptive-frequency oscillators often have "no
+  learning or inference mechanism for period adaptation beyond a hard-coded relation to stimulus
+  rate" — i.e. an **oracle in disguise**. Any oscillator built here has to derive its period, or
+  be reported as oracle-fed.
+- **"A CHAIN AS A CREDIT CLOCK" IS NO LONGER UNTRIED IN THE LITERATURE, only here.** Maes, A.,
+  Barahona, M. & Clopath, C. (2020). *Learning spatiotemporal signals using a recurrent spiking
+  network that discretizes time.* PLOS Computational Biology 16(1), e1007606.
+  <https://doi.org/10.1371/journal.pcbi.1007606> — a recurrent spiking network produces **chained
+  cluster activity as a temporal backbone** and a downstream readout learns against that timing
+  signal. That is precisely the idea `no sequence` left flagged as untried. It matters here
+  because `chain TRAVELS` already showed this creature's chains **propagate**; what was missing
+  was something to *use* the timing, and this is what uses it.
+- **And the learning rule that literature says is required, which agrees with this project's own
+  refusals.** Cone, I. & Shouval, H. Z. (2021). *Learning precise spatiotemporal sequences via
+  biophysically realistic learning rules in a modular, spiking network.* eLife 10, e63751.
+  <https://doi.org/10.7554/eLife.63751> — learns the **order and the duration** of sequence
+  elements using eligibility traces for both LTP and LTD, and argues pair-based STDP and
+  rate-based Hebbian rules **fail** at temporal credit assignment. This project reached the same
+  place from the other side: `oscillations v26` found "a code STDP could not use", the delay axis
+  is closed, and learning here is **rate-coded**. So the agreement is a reason to take the trace
+  prescription seriously rather than a new idea.
+
+**What the pass leaves, and it is a wiring change rather than a mechanism.** The half-centre has
+never been built as a half-centre. Baruzzi et al. give the condition it fails, Athota et al. give
+the population form, the jaw already supplies the timescale, and `hcsweep`'s refutation is of a
+claim theory predicts should fail. **That is the strongest case for a build on this line since
+the line opened** — and the thing to be careful about is `hcdrive`'s prohibition, which closed a
+*plane of operating points*, not this topology: **do not re-sweep gain and drive; change the
+coupling.** The honest bar is `hcsweep`'s own, the lesson surviving the gesture, and the honest
+risk is that reciprocal inhibition costs the lesson the way the bump kernel's gesture did.
+
 ### A note on where this project's record actually lives
 
 Two stores, and they are not the same store:

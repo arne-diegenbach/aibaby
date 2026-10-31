@@ -1441,3 +1441,74 @@ comparison of mean `residual` against mean `aligned`, which answers the real que
 **THE RULE THIS EARNS:** when a new statistic is a RATIO, write down which estimator it is and
 Monte Carlo its null before the run, not after. The closed form answers a question about
 expectations; the printed number is a function of the sample.
+
+### 18. PREPARED, NOT BUILT — `hcpair`: the half-centre was never wired as a half-centre
+
+**The strongest case for a build on the gesture line since it opened, and it is a WIRING change
+inside one module rather than a new learning rule.** It aims at the biggest missing capability:
+a sequence. `no sequence` found an utterance is a **held vowel**; `hcsweep`'s syllable band is
+empty.
+
+**THE DIAGNOSIS IS A PUBLISHED CONDITION, not an analogy.** Baruzzi, Lodi, Storace & Shilnikov
+(2020, Phys Rev E 102:032406): the classic half-centre is recovered when **within-population
+coupling is zero and between-population coupling is nonzero.** This larynx's lateral kernel is
+**local-minus-field-mean** — the local term is nonzero within-population coupling, and there is
+no distinct between-population term. **The half-centre condition is violated by construction.**
+
+**SO WHAT `hcsweep` REFUTED IS WHAT THEORY SAYS SHOULD FAIL.** This README already recorded it:
+"only fatigue was added… a bump kernel, not reciprocal inhibition between two populations."
+Matsuoka (1985) is that mutual inhibition *alone* settles on a winner and adaptation is what
+makes it release — **you need both.** `halfcenter` has the adaptation and the gesture (30–44 SE);
+it has never had the topology.
+
+**THE BUILD.** Athota et al. (2021, EMBC 6703–6706) give the motif in the needed form: "two
+neurons, **or populations of identical neurons**, connected by reciprocal inhibition", spiking.
+Split the F1 group's 14 neurons into two sub-populations with reciprocal inhibition between them
+and the local term removed, keeping the adaptation already present.
+
+**AND THE TIMESCALE IS ALREADY IN THE BODY.** `frame-is-a-body-part` measured a resonant jaw at
+**~4.5 Hz**, inside the syllable band, and adaptation timescales in this literature run from tens
+of ms to seconds. **The missing piece is the coupling topology, not the period** — so no new
+constant has to be guessed, which is where four runs have been lost before.
+
+**WHAT IT MUST NOT BE CONFUSED WITH.** `hcdrive` closed the **(gain, drive) plane of operating
+points** and its prohibition stands: **do not re-sweep gain or drive.** This changes the
+*coupling*, which that sweep never varied. Stating it because re-opening a closed plane under a
+new name is exactly the failure this ROADMAP exists to prevent.
+
+**THE BAR is `hcsweep`'s own** — the lesson surviving the gesture — because that is the trade
+every gesture mechanism here has paid. **What would refuse it:** reciprocal inhibition buying a
+syllable band while costing the lesson more than the bump kernel did, which is the monotone trade
+`hcsweep` measured and has no reason to escape. **A second refusal, cheaper:** no syllable-band
+power at any coupling strength, which would say the topology was never the limit.
+
+**AND THE ORACLE TO AVOID, from the reviewers of this literature themselves.** Dogonasheva,
+Giraud, Zakharov & Gutkin (2026, Neural Networks 195:108194) note that adaptive-frequency
+oscillators in speech models often have "no learning or inference mechanism for period adaptation
+beyond a hard-coded relation to stimulus rate." **That is an oracle in disguise**, of exactly the
+kind `tutorgrid` and `ctxaxis` had to strip. Any period here must be derived or disclosed as
+host-fed.
+
+### 19. PREPARED, NOT BUILT — the chain as a CREDIT CLOCK, which the literature has now done
+
+`no sequence` left "a chain as a CREDIT CLOCK" flagged as untried. It is untried **here**, not in
+the literature. Maes, Barahona & Clopath (2020, PLOS Comput Biol 16:e1007606) build a recurrent
+spiking network whose **chained cluster activity is a temporal backbone**, with a downstream
+readout learning against that timing signal.
+
+**WHY IT FITS THIS CREATURE SPECIFICALLY.** `chain TRAVELS` already showed the chains here
+**propagate** — what was missing was something that *uses* the timing, and this is it. And
+`credit-resolution` measured the credit window at **15× the gesture**, so a clock is aimed at a
+quantity already known to be mis-scaled.
+
+**THE RULE THE LITERATURE SAYS IS REQUIRED, AND IT AGREES WITH THIS PROJECT'S REFUSALS.** Cone &
+Shouval (2021, eLife 10:e63751) learn the **order and duration** of sequence elements with
+eligibility traces for both LTP and LTD, and argue pair-based STDP and rate-based Hebbian rules
+**fail** at temporal credit assignment. This project reached the same place from the other side:
+`oscillations v26` found "a code STDP could not use", the delay axis is closed, learning here is
+rate-coded. **Agreement from opposite directions is a reason to take the prescription seriously,
+not a new idea** — and it means the eligibility machinery, not the chain, is the expensive half.
+
+**Order these two: §18 first.** It is a wiring change with a published condition it currently
+violates; §19 needs a new plasticity path and its prize is credit resolution, which
+`phasemask` and `credgate` have already closed from two directions.
