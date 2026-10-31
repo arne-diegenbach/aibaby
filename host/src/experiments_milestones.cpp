@@ -20804,6 +20804,32 @@ bool run_halfcenter(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
               "                    pinned hash ad96f882becbee92)\n",
               double(dna0.header().vocal.adapt_jump),
               double(dna0.header().vocal.halfcenter_gain));
+  // DNA v75. WHICH NORMALISER THIS GENOME RUNS, PRINTED RATHER THAN ASSUMED. The half-centre
+  // inhibition is divided by the vocal module's `target_rate_hz`, which depends on neither
+  // half and so makes within-population coupling exactly zero -- Baruzzi's condition. A
+  // genome whose vocal module has NO setpoint silently falls back to v57's pair-mean
+  // normaliser, which is the OLD topology, within-population coupling and all. A null
+  // measured under the fallback refutes nothing about v75, so the label has to be genome
+  // dependent and visible: this project has already paid for a label that was correct on
+  // only some genomes and printed unconditionally.
+  {
+    const int32_t vmi = dna0.module_with_role(aibaby::ModuleRole::kVocal);
+    const double tgt = vmi >= 0 ? double(dna0.module(uint32_t(vmi)).target_rate_hz) : 0.0;
+    if (tgt > 1e-4) {
+      std::printf("  normaliser        v75: inhibition / target_rate_hz = %.2f Hz, which depends\n"
+                  "                    on NEITHER half, so within-population coupling is 0 and\n"
+                  "                    Baruzzi's condition holds. Between-coupling is g/T, TWICE\n"
+                  "                    what v57 gave at the same nominal gain -- so g' = g/2\n"
+                  "                    matches v57's coupling and g = 0.60 here is double it.\n",
+                  tgt);
+    } else {
+      std::printf("  normaliser        v57 FALLBACK -- this genome's vocal module has no\n"
+                  "                    target_rate_hz, so the inhibition is divided by the PAIR's\n"
+                  "                    own mean and within-population coupling EQUALS\n"
+                  "                    between-population coupling. This run tests the OLD\n"
+                  "                    topology. A null here refutes nothing about v75.\n");
+    }
+  }
   std::printf("  what adaptclock   a fatigue current at the DERIVED constant produced no\n"
               "  actually showed   clock: peak frequency followed tau_a with exponent +0.104\n"
               "                    where a relaxation oscillator requires 1.000, and the peak\n"
