@@ -2009,3 +2009,101 @@ twice as much, so the prediction is a swing back in v57's range and an excess ab
 coupling, which would say the forbidden within-term was buying the slow period the pole needs —
 Baruzzi's condition and this creature's formant reach in direct conflict, and v75 dead at any
 gain.
+
+## §25 — THE FORBIDDEN TERM WAS BUYING THE PERIOD. v75 is dead at any gain (2026-11-01)
+
+The matched stage, gated on all four keys, 12 arms × 12 reps, 26 min. **Determinism first:** all
+eight base arms re-print to every decimal — anti-phase and produced swing both — so appending
+four arms re-rolled nothing and the comparison is attributable to the arms alone.
+
+### THE PREDICTION WAS WRONG, AND WRONG IN THE DIRECTION THAT SETTLES IT
+
+§24 pre-registered: halving the gain matches v57's between-coupling, so the frequency should
+roughly halve and the pole should pass about twice as much, putting the swing back in v57's
+range. At hc 0.30, with between-coupling matched to v57 exactly and the removed within-term the
+only remaining difference:
+
+    arm      anti     alternation  period    swing   vs ctrl 69.0
+    mat083  -0.550     2.88 Hz     347.8      9.8    -59.3 +/- 1.2
+    mat167  -0.518     2.27 Hz     440.4      9.9    -59.1 +/- 1.2
+    mat250  -0.487     5.52 Hz     181.1     14.4    -54.6 +/- 1.2
+    mat333  -0.463     4.58 Hz     218.2     19.3    -49.7 +/- 1.2   (-42.1 SE)
+
+**The frequency went UP, not down**, and the swing fell *further* — below even the hc 0.60 arms.
+`mat333` runs at **4.58 Hz** where v75 at double the coupling ran 2.83 and v57 ran 1.46, and it
+produces **19.3 Hz** of swing where v57 produced 134.9. The refusal branch fired at **−42.1 SE**.
+
+**So the loss was never the doubled between-coupling. It was the removed within-term**, and
+halving the gain took away the last of what was holding the period open.
+
+### THE DISSOCIATION, AT MATCHED BETWEEN-COUPLING
+
+    within-term   competition      period        produced swing
+    ON  (v57)     -0.297 shallow   1.46 Hz slow  134.9 Hz   (+65.9 vs ctrl)
+    OFF (v75)     -0.463 deeper    4.58 Hz fast   19.3 Hz   (-49.7 vs ctrl)
+
+Same between-coupling, same tau_a, same drive, same seeds, same budget. **The forbidden
+self-coupling buys the slow period, and the slow period is what the 800 ms pole needs.** The
+mechanism is the one the derivation identified and mislabelled as a defect: the `+g·D/S` on the
+busy half is positive feedback inside a half, which sustains that half's dominance and lengthens
+each half-period. Remove it and each half flips sooner.
+
+**`halfcenter`'s kernel is not violating Baruzzi by oversight. The violation is load-bearing** —
+and specifically load-bearing for the *plant*, not for the competition, which is measurably
+better without it. **v75 must not ship at any gain.**
+
+### THE SECOND LOSS IS CONSISTENT ACROSS BOTH STAGES, AND POINTS AT THE ASSUMPTION
+
+The pole explains the direction and about half the magnitude in log terms in both stages —
+predicted ×0.52 against observed ×0.32 at hc 0.60, predicted ×0.32 against observed ×0.14 at
+hc 0.30. The residual factor is **1.76 and 1.71**, near enough identical.
+
+That consistency points at the print's own assumption. The 375 Hz figure is a **full** alternation
+between the two postures (438 and 813 Hz). At 4.58 Hz each half holds for 109 ms, which is short
+against the postures' own settling, so the halves never reach their extremes and the true neural
+swing is below 375 Hz. **The pole understates the loss because it assumes a full excursion** —
+so speeding the oscillator costs twice: once in transmission, once in excursion. Hypothesis, not
+a claim; what supports it is the near-identical residual across two independent stages.
+
+### AND tau_a DOES NOT SET THE PERIOD IN EITHER KERNEL
+
+    kernel                four-point slope   R^2
+    v57 (fam 288559)          +0.320        0.214
+    v75, hc 0.60              +0.099        0.152
+    v75, hc 0.30 matched      -0.457        0.452
+
+The matched arms give the **best-determined fit in the run and it is NEGATIVE** — the period
+*shortens* as the fatigue constant lengthens. The series is non-monotone (2.88, 2.27, 5.52,
+4.58), so do not read −0.457 as a law. The licensed statement is that `tau_a` does not set the
+period under either normaliser, and under v75 at matched coupling the relationship, if anything,
+runs backwards.
+
+### PREPARED, NOT BUILT — `hcwithin` (v76): the within-term is the period knob
+
+This run turned the within-coupling from a bug into **the only measured handle on the period**,
+and the period is the amplitude lever (§24). So the derived move is not to remove it but to
+**increase it past v57's level**.
+
+**THE PARAMETERISATION, AND BOTH ENDS ARE ALREADY MEASURED.** Write each half's inhibition on
+v75's constant normaliser with an explicit self-term:
+
+    hc_lo = g*(m_hi/T) - w*g*(m_lo/T)      between = +g/T,  within = -w*g/T
+
+v57 at gain `g` gives between `+g/(2T)` and within `−g/(2T)`, so **`g'' = g/2` with `w = 1`
+reproduces v57 exactly** and `w = 0` is the `mat*` arms above. The sweep `w = 0, 1.0, 1.5, 2.0`
+at hc 0.30 therefore has **two anchors already in hand**: `w = 0` must re-print the `mat*` row
+and `w = 1` must re-print v57's archived tau333 (1.46 Hz, 134.9 ± 0.4 Hz swing, anti −0.297).
+A re-parameterisation that fails either anchor is wrong, and says so before any extrapolation is
+read.
+
+**PRE-REGISTERED.** Primary is **produced swing at tau333 against the control's 69.0 Hz**, not
+the anti-phase and not the slope. Prediction: period lengthens monotonically in `w`, swing rises
+with it through the pole, anti-phase shallows — the §24 dissociation continued past its measured
+end. **Refusal:** swing peaks at or below `w = 1`, which would say v57 already sits at the
+optimum and the period cannot be bought this way.
+
+**COST AND THE ONE RISK.** One new genome field. Appended to `DnaModule` so no existing offset
+shifts, and `halfcenter_gain` ships at 0.0 so the branch is dead at the shipped genome and the
+pinned hash should hold — but a genome-layout change is exactly what
+`aibaby-shared-constants-audit` and `aibaby-nmax-rerolls-the-wiring` exist for, so the four
+verify keys gate it before anything else, and KEY2 failing is the finding rather than a nuisance.

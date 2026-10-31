@@ -25092,3 +25092,55 @@ we have done to it, so it cannot carry a verdict by itself.
 The fix stays switched off while the matched run decides whether it ships at all: the same change
 at half the gain, where the mutual coupling matches the old kernel exactly and the removed
 self-coupling is the only thing left varying. This time the primary is the swing.
+
+## The rule we were breaking was holding the gesture together (2026-11-01)
+
+The previous section left the fix switched off and one run outstanding. The fix had removed a
+self-coupling the textbook forbids, improved every neural measure, and made the creature produce
+a third of the formant movement it used to. Our explanation was that the fix had doubled the
+*mutual* coupling as a side effect, which doubled the alternation rate, and the vocal tract's
+low-pass filter had duly thrown away the difference. That explanation came with a prediction:
+halve the gain, and the rate should halve, and the voice should come back.
+
+It did not. At matched mutual coupling the oscillator ran **faster still** — 4.58 Hz, against
+2.83 with the gain doubled and 1.46 in the original kernel — and the formant swing fell further,
+to 19.3 Hz against the original 134.9. The milestone's +65.9 Hz became −49.7 Hz, at 42 standard
+errors. The run's own pre-registered refusal fired.
+
+So the loss was never the mutual coupling. It was the self-coupling we removed, and halving the
+gain simply took away the last of what had been holding the period open.
+
+    self-coupling   competition        period      produced swing
+    ON  (original)  -0.297 shallow     1.46 Hz     134.9 Hz   (+65.9 vs control)
+    OFF (the fix)   -0.463 deeper      4.58 Hz      19.3 Hz   (-49.7 vs control)
+
+Same mutual coupling, same fatigue constant, same drive, same seeds. **The forbidden term was
+buying the slow period**, and the slow period is the only reason the gesture reaches the formant
+at all. The mechanism is the one the derivation had identified and labelled a defect: positive
+feedback inside each half sustains that half's turn, so each turn lasts longer. Take it away and
+the halves flip sooner.
+
+The kernel was not violating the textbook condition by oversight. The violation is load-bearing
+— and specifically load-bearing for the *body*, not for the competition, which is measurably
+cleaner without it. The fix is dead at any gain.
+
+### Two things worth keeping from a refuted change
+
+The filter explains the direction of the loss in both runs, and about half its size; the leftover
+factor is 1.76 in one and 1.71 in the other, near enough the same number twice. That points at an
+assumption rather than at noise. We price the neural swing as a *full* journey between the two
+vowel postures, 375 Hz — but at 4.58 Hz each half holds for only 109 ms, too short to arrive
+anywhere. So a fast oscillator loses twice: the filter passes less of the swing, and there is
+less swing to pass.
+
+And the fatigue constant does not set the period under either kernel. With the self-coupling
+removed and the gain matched, the best-determined fit in the whole run comes out **negative** —
+longer fatigue constants giving *shorter* periods, which is backwards. The series is too ragged
+to read as a law, but it closes the idea that this knob is the clock.
+
+What it buys forward is the first measured handle on the period we have ever had. The
+self-coupling controls it, and the period controls how much of the gesture reaches the air. The
+obvious move is no longer to remove that term but to turn it *up*, past where the original kernel
+sits — and because the original kernel is one setting of that same knob, a sweep across it has two
+points whose answers we already know. If the sweep cannot reproduce them, the sweep is wrong and
+will say so before we read anything into it.
