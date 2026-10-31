@@ -1120,8 +1120,13 @@ down so the next person does not pay again.
   *more* into those same directions (3.8 SE more at the top rung). The null answers *is the
   write shaped?*; only a control with the label destroyed answers *is the shape about the
   label?*. Those are different questions and the first one was being quoted for the second.
-  Build the index-free arm **before** pricing any lead off a magnitude. Here it cost nothing:
-  it was already in the arrays, unprinted, for four weeks.
+  **And the trap is worse than a forgotten control.** `ctxscale`'s own headline gate is
+  `excess = dF1(ema) − dF1(ema-rnd)` — the index-free arm was wired to that statistic from the
+  start. The *same run* therefore carried one correctly-controlled quantity and two
+  uncontrolled ones (`aligned`, `residual`), and the uncontrolled pair got read as evidence.
+  The control's existence is exactly what made the omission invisible: the run looked
+  controlled, because it was, just not on the columns being quoted. **Check the control is
+  wired to the statistic you are about to quote, not merely present in the experiment.**
 - **Do not compare `excess` between creatures that delivered different amounts.** It is
   `direction − its null`, and the null is an estimate that tracks how much was said: within a
   rung, more delivered trials buys a null lower by −0.435 ± 0.148 (2.9 SE). Any between-creature
@@ -1818,7 +1823,14 @@ only: the blind share sits at 0.61–0.67 and does not move measurably over 4×.
 
 The control was `ema-rnd` — the same write rule, the same trials, the same creatures, with the
 word index randomised. It has no word to key on, so it is the floor a magnitude must clear to be
-*about* the word at all. It was being computed and discarded all along; §21 printed it.
+*about* the word at all.
+
+**And it was not a missing control — it was a control wired to the wrong statistic.** This
+experiment's headline gate has always been `excess = dF1(ema) − dF1(ema-rnd)`
+(`experiments_milestones.cpp:38039`), so the index-free arm was attached to *that* number from
+the first run and never to the decomposition columns. The same run carried one properly
+controlled quantity and two uncontrolled ones, and the uncontrolled pair is what was read as
+evidence. The control's presence is what hid the gap. §21 printed the missing comparison.
 
     rung      component  ema       rnd (floor)  word-specific (paired, jackknifed)
     3.40M     aligned    0.01507   0.00487      +0.01021 +/- 0.00513   ( 2.0 SE)

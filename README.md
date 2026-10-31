@@ -24965,10 +24965,16 @@ empty: a quantity called `seen`, the share of the lesson's write that lands alon
 out at 0.63 against a null of 0.28, so the lesson writes a great deal of structure where the
 readout cannot see it. The natural reading was that a better reader would find a word in there.
 
-It does not. The control was sitting in the same arrays the whole time, uncomputed into a print:
-an arm that runs **the same write rule, on the same trials, in the same creatures, with the word
-index randomised**. It has no word to key on, so whatever magnitude it produces is the floor that
-a real magnitude has to clear in order to be *about* the word at all.
+It does not. The control for it was already in the experiment: an arm that runs **the same write
+rule, on the same trials, in the same creatures, with the word index randomised**. It has no word
+to key on, so whatever magnitude it produces is the floor that a real magnitude has to clear in
+order to be *about* the word at all.
+
+And that is the uncomfortable part. This experiment's headline gate has *always* been
+`excess = dF1(taught) − dF1(randomised)` — the control was wired to that number from the first
+run. The same run carried one properly controlled quantity and two that were not, and the two
+that were not are the ones we read as evidence. The control's presence is exactly what hid the
+gap: anyone checking whether the experiment had a randomised arm got *yes* and stopped.
 
     rung      component  taught    randomised   word-specific (paired per creature)
     3.40M     ramp       0.01507   0.00487      +0.01021 +/- 0.00513   ( 2.0 SE)
