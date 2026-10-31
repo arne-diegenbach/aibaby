@@ -24771,3 +24771,63 @@ a closure:** two budgets and one β value, `dF1 ~ aligned^0.61` is itself a fitt
 single point agreeing to 2% is one coincidence by this project's own rule. What is established
 is the *direction and rough size* of the failure, which is enough to stop a build and not enough
 to publish as a law.
+
+## The lesson concentrates onto the readout's own coordinate as it learns (2026-10-31)
+
+`ctxscale` at its registered 13.6M, nine creatures, four arms, 2 h 20 m. It carried the new
+within-group decomposition: of the F1 group's fourteen directions, `aligned` is the ramp (the
+only one a rate-weighted centroid can express), `common` is the uniform direction (which a ratio
+is exactly blind to), and **`residual` is the other twelve**, which nothing had ever measured.
+
+**WHICH NUMBERS IN THAT LOG ARE VALID, STATED FIRST.** The `seen` column it printed is a **mean
+of per-creature ratios** against a **wrong null** — both errors were found reviewing the code
+while this run was still going, and are recorded in ROADMAP §17. `aligned` and `residual` are
+per-creature means of linear quantities and are **valid**. So the table below is the run's
+honest output:
+
+| budget | `aligned` (ramp) | `residual` (the twelve blind directions) | aligned/residual |
+|---|---|---|---|
+| 3.40M | 0.01507 ± 0.00406 | 0.02679 ± 0.00127 | 0.563 |
+| 6.80M | 0.02229 ± 0.00427 | 0.03467 ± 0.00264 | 0.643 |
+| 13.60M | 0.03298 ± 0.00523 | 0.04407 ± 0.00320 | **0.748** |
+
+**THE VERDICT SURVIVES THE ESTIMATOR BUG, which is the only reason it is quotable.** The printed
+`seen` reads 0.564 ± 0.049 at the top budget. Against the Monte-Carlo null for the estimator
+actually used (0.2254) that is **6.9 SE**; against the closed form for the right estimator
+(0.2774) it is **5.8 SE**; against the wrong printed null, 6.1 SE. **All three resolve in the
+same direction**, so the bias — which is low, the direction that reads a real effect as a null —
+could not have manufactured this. Had the effect been near the null, the run would have had to
+be repeated.
+
+**TWO FINDINGS, AND THE SECOND IS THE ONE THAT MATTERS.**
+
+**First: the lesson is ramp-enriched, but the blind directions are not empty.** `residual`
+exceeds `aligned` at every budget. So the centroid genuinely does discard real learned structure
+— which is what Keemink & van Rossum (2025) predict for a population vector over few neurons,
+and the first direct measurement of it here.
+
+**Second, and it reframes the whole readout line: `seen` RISES steadily with budget** — 0.416 →
+0.491 → 0.564, increments of **+0.075 and +0.073 per doubling**, linear in log-budget and not
+saturating. **The lesson progressively concentrates onto the readout's own coordinate as it
+learns.** That is precisely what a closed loop adapting to its decoder does, which is Chase,
+Schwartz & Kass (2009) again, and it says the residual is **transient inefficiency rather than a
+permanent reservoir.**
+
+**SO `f1decode` GETS WEAKER, NOT STRONGER, ON ITS OWN DECIDER.** The reasoning was: if the
+residual is large, a better decoder has something to claim. The residual *is* large — and it is
+**shrinking relative to the ramp with every doubling.** A decoder would be claiming a quantity
+the creature is already in the process of giving up. Together with the §15 arithmetic — readout
+sensitivity buys speed, not ceiling — the readout line now has two independent reasons pointing
+the same way, one algebraic and one measured.
+
+**THE FORK THAT WOULD SETTLE IT IS ONE MORE DOUBLING, and it is cheap.** Extrapolating
++0.074/doubling puts `seen` at ~0.64 at 27.2M and ~0.71 at 54.4M. **If it keeps rising, the
+residual is transient and the readout line closes for good. If it saturates, the residual is a
+real permanent reservoir and `f1decode` is worth building after all.** That is a pre-registrable
+single-arm extension of an experiment that already exists, and it decides a build either way.
+
+**And `ctxscale`'s own original question came back INCONCLUSIVE again**, correctly: the excess
+grew +38.0 → +60.8 Hz over a 4× span, ratio **1.60**, inside the **1.3–1.7 band declared before
+the run** as the region where nine creatures over 4× cannot separate √t growth from an asymptote.
+The 272M run read 1.70 and said the same thing. Its own note — "to reach 236 Hz, 54× these
+trials at this exponent" — is the more useful number, and it is not an encouraging one.

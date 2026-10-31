@@ -970,8 +970,13 @@ the shared half, which a two-full-arm version would spend 979M on.
 
 ### 14. PREPARED, NOT BUILT — `f1decode`: is 13.7% the creature's, or the centroid's?
 
-**READ §15 FIRST: the CEILING prize on this line is now priced at ~nothing by arithmetic, so
-`f1decode` is an INFORMATION question only.** It can say how much the centroid discards; it
+**READ §15 AND §20 FIRST. §20 RAN THE DECIDER AND `f1decode` CAME OUT WEAKER, NOT STRONGER.**
+The residual IS large (it exceeds `aligned` at every budget) but `seen` RISES +0.074 per
+doubling, so the lesson is concentrating onto the readout's own coordinate as it learns and the
+residual is transient rather than a reservoir. A decoder would claim a quantity the creature is
+already giving up. With §15's arithmetic that is two independent reasons — one algebraic, one
+measured — not to build this yet. **The fork that would settle it is one more doubling** (see
+§20), not a decode. It can say how much the centroid discards; it
 cannot promise that recovering it raises the asymptote, and §15 is the reason.
 
 The build `ctxscale`'s new `seen` column decides whether to make. **Run it only if `seen` comes
@@ -1512,3 +1517,40 @@ not a new idea** — and it means the eligibility machinery, not the chain, is t
 **Order these two: §18 first.** It is a wiring change with a published condition it currently
 violates; §19 needs a new plasticity path and its prize is credit resolution, which
 `phasemask` and `credgate` have already closed from two directions.
+
+### 20. RAN 2026-10-31 — the lesson concentrates onto the readout's own coordinate
+
+`ctxscale` at 13.6M, nine creatures, four arms, 2 h 20 m, carrying the new within-group
+decomposition. **Validity first:** the printed `seen` is a mean of ratios against a wrong null
+(§17); `aligned` and `residual` are means of linear per-creature quantities and are valid.
+
+| budget | `aligned` | `residual` (12 blind directions) | aligned/residual |
+|---|---|---|---|
+| 3.40M | 0.01507 ± 0.00406 | 0.02679 ± 0.00127 | 0.563 |
+| 6.80M | 0.02229 ± 0.00427 | 0.03467 ± 0.00264 | 0.643 |
+| 13.60M | 0.03298 ± 0.00523 | 0.04407 ± 0.00320 | **0.748** |
+
+**THE VERDICT SURVIVES THE ESTIMATOR BUG, which is why it is quotable at all.** `seen` = 0.564 ±
+0.049 sits **6.9 SE** above the Monte-Carlo null for the estimator used (0.2254), **5.8 SE** above
+the closed form for the right one (0.2774), and 6.1 SE above the wrong printed null. All three
+resolve the same way, so a bias that points LOW could not have produced it. Near the null the run
+would have had to be repeated.
+
+**FINDING 1: the blind directions are NOT empty** — `residual` exceeds `aligned` at every budget.
+The centroid discards real learned structure, as Keemink & van Rossum (2025) predict for a
+population vector over few neurons. First direct measurement here.
+
+**FINDING 2, which reframes the line: `seen` RISES with budget** — 0.416 → 0.491 → 0.564,
+**+0.075 and +0.073 per doubling**, linear in log-budget, not saturating. The lesson
+progressively concentrates onto the one direction the readout can express. That is a closed loop
+adapting to its decoder (Chase, Schwartz & Kass 2009), and it makes the residual **transient
+inefficiency, not a reservoir**.
+
+**THE PRE-REGISTRABLE FORK, and it decides a build either way.** Extrapolating +0.074/doubling
+gives `seen` ≈ 0.64 at 27.2M and ≈ 0.71 at 54.4M. **Rising → the residual is transient and the
+readout line closes for good. Saturating → the residual is permanent and `f1decode` is worth
+building.** A single-arm extension of an existing experiment; no new mechanism.
+
+**And ctxscale's ORIGINAL question is INCONCLUSIVE again, correctly:** excess +38.0 → +60.8 Hz
+over 4×, ratio **1.60**, inside the **1.3–1.7 band declared before the run**. The 272M run read
+1.70 and said the same. Its own "54× these trials to reach 236 Hz" is the more useful number.

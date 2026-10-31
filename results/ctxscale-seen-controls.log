@@ -1,0 +1,70 @@
+=== RUN starting 2026-10-31T02:00:34+01:00
+=== RUN exit=1 at 2026-10-31T04:20:30+01:00
+
+=== WHAT THE CENTROID CANNOT SEE (the new measurement)
+  WHAT THE CENTROID CANNOT SEE. F1 group n = 14, so the derived null for
+  `seen` is 1/sqrt(n) = 0.267 -- the value if the lesson writes no
+  preferential ramp structure. 1.0 means it writes purely along the ramp
+  and the readout is losing nothing.
+  budget    aligned (F1)     residual (blind) seen = al/sqrt(al^2+res^2)
+  3.40M     0.01507 +/- 0.00406 0.02679 +/- 0.00127 0.416 +/- 0.090
+  6.80M     0.02229 +/- 0.00427 0.03467 +/- 0.00264 0.491 +/- 0.062
+  13.60M    0.03298 +/- 0.00523 0.04407 +/- 0.00320 0.564 +/- 0.049
+
+  THE LESSON IS RAMP-ENRICHED BUT THE BLIND DIRECTIONS ARE NOT EMPTY:
+  `seen` = 0.564, 6.1 SE above the 0.267 null, so structure IS being
+  written where the centroid cannot express it. The share a decoder could
+  in principle claim is 1 - 0.564 = 0.436 of the within-group pattern.
+  That PRICES the readout lead; it does not establish the information is
+  about the word rather than noise, which needs a decode.
+  NOT MEASURED HERE, and both bound every branch above. (1) Whether the
+  residual carries the WORD: it is a MAGNITUDE, and an unstructured write
+  produces one too. (2) `seen` accounts only for the group's CENTRED
+  directions. A decoder reading rates directly could also use the
+  common-mode level and the other eight groups, which the centroid's
+  ratio discards by construction -- so a high `seen` bounds what a better
+  decoder gains WITHIN this group, not overall.
+  excess grew       +38.0 -> +60.8 Hz over a 4x span, ratio 1.60
+  implied exponent  0.34  (0.5 is sqrt(t), 1.0 linear, 0.0 saturated)
+  to reach 236 Hz   54x these trials at this exponent
+
+  INCONCLUSIVE -- ratio 1.60 falls in the band declared before the run
+  (1.3 to 1.7), which is exactly where a 4x span and nine creatures cannot
+  separate sqrt(t) growth from an asymptote. Widening the span costs less
+  than choosing a side of this.
+
+=== the decomposition it sits beside, for the gain comparison
+  budget    aligned (F1)     common-mode      outside group    gain (1.0 = no structure)
+  3.40M     0.01507 +/- 0.00406 0.00510 +/- 0.00118 0.03188 +/- 0.00169 1.65 +/- 0.42
+  6.80M     0.02229 +/- 0.00427 0.00590 +/- 0.00118 0.04306 +/- 0.00230 1.85 +/- 0.31
+  13.60M    0.03298 +/- 0.00523 0.00956 +/- 0.00234 0.05329 +/- 0.00216 2.26 +/- 0.31
+
+  budget    aligned (F1)     residual (blind) seen = al/sqrt(al^2+res^2)
+  3.40M     0.01507 +/- 0.00406 0.02679 +/- 0.00127 0.416 +/- 0.090
+  6.80M     0.02229 +/- 0.00427 0.03467 +/- 0.00264 0.491 +/- 0.062
+  13.60M    0.03298 +/- 0.00523 0.04407 +/- 0.00320 0.564 +/- 0.049
+
+
+=== ctxscale's OWN verdict on its original question
+  `seen` = 0.564, 6.1 SE above the 0.267 null, so structure IS being
+  written where the centroid cannot express it. The share a decoder could
+  in principle claim is 1 - 0.564 = 0.436 of the within-group pattern.
+  That PRICES the readout lead; it does not establish the information is
+  about the word rather than noise, which needs a decode.
+  NOT MEASURED HERE, and both bound every branch above. (1) Whether the
+  residual carries the WORD: it is a MAGNITUDE, and an unstructured write
+  produces one too. (2) `seen` accounts only for the group's CENTRED
+  directions. A decoder reading rates directly could also use the
+  common-mode level and the other eight groups, which the centroid's
+  ratio discards by construction -- so a high `seen` bounds what a better
+  decoder gains WITHIN this group, not overall.
+  excess grew       +38.0 -> +60.8 Hz over a 4x span, ratio 1.60
+  implied exponent  0.34  (0.5 is sqrt(t), 1.0 linear, 0.0 saturated)
+  to reach 236 Hz   54x these trials at this exponent
+
+  INCONCLUSIVE -- ratio 1.60 falls in the band declared before the run
+  (1.3 to 1.7), which is exactly where a 4x span and nine creatures cannot
+  separate sqrt(t) growth from an asymptote. Widening the span costs less
+  than choosing a side of this.
+
+[exited with code 0]
