@@ -1046,6 +1046,47 @@ axis is not monotone, and a hard argmax should be untrainable (`centroid-is-stee
 β value, `dF1 ~ aligned^0.61` is itself fitted, and one point agreeing to 2% is one coincidence
 by this project's own rule. What is established is the direction and rough size of the failure.
 
+### 16. PREPARED, NOT BUILT — `aimaxes2`: seven of the nine axes have never been measured
+
+**The largest cheap prize on record, and it needs no new learning mechanism.** This is pure
+code space.
+
+`senses.cpp:382-384` maps the larynx's nine groups to **F0 (group 0), F1 (2), F2 (3), F3 (4)
+and three bandwidths (5–7)**. `aimaxes` measured the steerability and cross-talk of **groups 2
+and 3 only** — "a second steerable formant axis exists and nothing has used it" was about the
+second of nine, and the remaining seven have never had either quantity measured.
+
+**WHY THIS IS NOT REFUSED BY `aimaxes`'S OWN CONCLUSION, which is the first thing to check.**
+That memory ends "F2's extra range is offset by proportionally more scatter, so it is
+independence and not resolution — ~2–3 levels per axis = 4–9 words in 2-D." True, and it refuses
+*stretching one axis*: more Hz on F2 buys no more levels on F2. **But levels MULTIPLY across
+independent axes.** 2–3 levels on two axes is 4–9 words; on four axes it is **16–81**, with the
+same per-axis resolution and no change to the learning rule. The quantity to grow is the number
+of axes, not the range of any one — and `ctxvocab` already supports that direction: nine words
+(3×3) name as well as six (3×2 or 2×3), with the whole cost paid in F1 *reach* and naming excess
+**conserved at 0.6 SE**.
+
+**THE RUN, and it reuses an existing read-only protocol.** `aimaxes` was 6 creatures × 2 groups
+× 5 rungs, fresh creature per rung, read-only. Extend it to all nine groups: per group, the
+own-axis swing, the cross-talk into every other axis, and the scatter. ~4.5× `aimaxes`'s cost and
+still cheap because nothing learns.
+
+**THE GATING QUESTION IS THE EAR, NOT THE LARYNX, and it is a second read-only measurement.**
+Naming needs the distinction to be *heard* and *scored*, not merely produced. `vocab` shows the
+ear handles F2 — /i/ vs /u/ differ almost purely in F2 and score **0.900** — but whether it
+resolves F3, F0 or bandwidth is unmeasured. `kVLScoreFormant` also scores F1/F2, so the scorer
+and reward need extending before any naming claim. **So `aimaxes2` is stage one of two, and a
+steerable axis the ear cannot resolve is worth nothing for naming.**
+
+**WHAT WOULD REFUSE IT:** cross-talk. The prize is a product of *independent* axes, so an axis
+that moves F1 or F2 while moving itself adds no words — it reallocates. `aimaxes` set the bar by
+measuring 0.01 ratio between groups 2 and 3, so there is a precedent for what independence looks
+like here.
+
+**ONE CAVEAT THAT MATTERS FOR ONE USE AND NOT THE OTHER:** the transmission tape carries
+**formants only** and f0 stays the host's, so an F0-based distinction will not survive
+creature-to-creature teaching. Irrelevant to a device taught by a human; fatal to a lineage.
+
 ## Standing prohibitions
 
 These are places where fitting has already cost this project a result, and they are written
