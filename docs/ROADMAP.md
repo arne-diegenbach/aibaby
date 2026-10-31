@@ -865,6 +865,144 @@ the seven as `kGuard` *and* have the suite state which genome the expectation is
 the label is disclosed rather than silently wrong half the time. Until then, `verify PASS`
 certifying the FAST tier only is load-bearing and should not be read as conservative caution.
 
+### 12. CLOSED 2026-10-31 — the threshold is not the clock either, and ALL FOUR candidates are out
+
+`silence` at **36 creatures** instead of 12, joining its per-creature larynx-threshold climb
+against `dirbudget`'s per-seed `direction`. It needed **no partial `ip_rate` dose**: `cell.thr[d]`
+was already per creature per tenth and merely pooled at print time, so the flagged run was not
+the run required.
+
+**The published primary replicated at triple n:** `ipoff − ip` **+0.3924 ± 0.0167 (23.5 SE)**
+against +0.4231 ± 0.0267, `ipoff` keeping **31%** vs 29%. Dose exact: +1.984 against 0.00000,
+**0 of 36** creatures moving it. Creatures 0–11 came back **identical** — the seed ignores the
+rep count — so the published numbers are still the same creatures'.
+
+**The primary: −0.136 ± 0.190 (0.7 SE)**, predicted sign, unresolved against the ~0.28 this join
+can resolve.
+
+**AND THE PRE-REGISTRATION HAD THE CONFOUND BACKWARDS, which outlives the null.** It asserted
+delivery "points the OPPOSITE way to the prediction" — an assumption about `r(climb, delivered)`
+made before measuring it. Measured: **−0.713 ± 0.087 (8.2 SE)**. So the chain
+climb → delivery → direction is **negative** and runs *with* the hypothesis; the two links
+multiply to **−0.416** and the observed −0.136 is **smaller than the confound alone predicts**.
+Had the primary resolved negative, the registered text would have called it "surviving the
+confound a fortiori" over an effect the confound produces unaided.
+**DERIVE A CONFOUND'S SIGN FROM ITS MEASURED LINKS; never assert it in the registration.**
+
+**Post hoc, labelled so:** with delivery held fixed the partial **flips positive**, +0.247 ±
+0.198 (1.2 SE). A lead for a different design, not an answer.
+
+**So all four candidates have NO SUPPORT** — magnitude trade, delivery starvation, experience (at
+the wrong sign), threshold. "No support", not "refuted": ±0.19 at n=36 bounds the effect rather
+than showing absence. **And every test on this line has been BETWEEN creatures with the same
+quality confound.** What it needs is section 13.
+
+### 13. PREPARED, NOT BUILT — `thrfork`: move the threshold WITHIN one creature
+
+The design that answers section 12, and the reason section 12 is a stopping point rather than a
+closure. A brain that both regulates harder and rotates less reads identically to one where the
+regulator causes the decline; only a within-creature intervention separates them.
+
+**THE DESIGN, and the machinery already exists.** `snapshot`'s own experiment is the precedent
+(`experiments_milestones.cpp:2931`): run a creature to a leg, `save_snapshot`, then restore into
+**two** sessions and diverge them. Here:
+
+- run to **13.6M**, which is where `direction` peaks;
+- snapshot once;
+- restore twice — arm `free` continues to 27.2M as shipped, arm `frozen` continues with the
+  **larynx's intrinsic homeostat off** while every other module keeps its own.
+
+**THE KNOB IS NOT `ip_rate`, AND GETTING THAT WRONG WOULD HAVE VOIDED THE DESIGN.**
+`ip_rate` lives at `dna_.header().homeo` (`network.cpp:3103`) — it is **global**, so zeroing it
+freezes every module and the arm becomes a full late `ipoff` rather than a larynx-only
+intervention. The per-module knob is `ip_scale = asleep ? dm.ip_sleep_scale : dm.ip_wake_scale`
+(`network.cpp:3111`), multiplying `ip_rate` per module (`:3121`). So the arm sets **vocal's
+`ip_wake_scale` and `ip_sleep_scale` to 0**, which ships at 1.0/1.0. That also leaves
+`scaling_rate` alive, so synaptic scaling keeps running and only the threshold path stops —
+which is exactly the narrow intervention wanted, and `:3120` shows the module is skipped
+entirely only if the syn and isp terms are zero too.
+
+Both arms share a **bit-identical** first half by construction, so this is paired within the
+creature and not across creatures. **Primary:** `direction(27.2M) − direction(13.6M)` in `frozen`
+minus the same in `free`. **Prediction:** if the climbing threshold causes the decline, `frozen`
+declines LESS, so the difference is **positive**. **What refuses it:** no difference at 2 SE, or
+`frozen` declining more.
+
+**THE PRE-FLIGHT THAT MUST PASS FIRST, AND IT IS A CODE QUESTION, NOT A SCIENCE ONE.**
+`load_snapshot` "rebuilds `brain` from the snapshot's own genome", so a modified genome cannot be
+passed to it. The genome is embedded **in place** in a buffer the caller owns and
+`snapshot_genome()` returns a pointer into it, so the route is to **patch vocal's
+`ip_wake_scale`/`ip_sleep_scale` inside the embedded blob** before restoring. That may trip
+`kBadDna`, `kLayoutMismatch` or `kStateMismatch`. Both are floats on a `DnaModule` and not
+structural — unlike `n_max`, which re-rolls wiring — so layout should hold, but **this is a
+pre-flight and not an assumption.** The probe must do two things, because loading is not the
+same as taking effect: (1) read the `SnapshotStatus`, and (2) run both restores a short leg and
+show the larynx threshold climbing in `free` and **flat** in `frozen`. A patch that loads and
+does nothing would otherwise look like a pass — the same shape as the `kGuard` lesson in §11 and
+the liveness-is-not-dose rule. If it refuses, the fallback is a runtime per-module scale hook,
+which is a kernel change and needs its own gate.
+
+**THE CONFOUND THIS DESIGN STILL CARRIES, stated before the run.** Freezing the larynx threshold
+is a *partial, late* `ipoff`, and `ipoff` destroys learning at −7.42 SE. It is far narrower —
+one module, second half only, after learning has peaked — but narrower is not clean. **So
+`aligned` is a mandatory co-primary:** if `frozen` declines less *and* `aligned` holds, the
+threshold was the clock. If `aligned` collapses, the arms differ in learning and the result is
+the same confound in a new place. Also mandatory: a dose check that `frozen`'s threshold really
+stayed put and `free`'s really climbed.
+
+**THE NEAREST PRECEDENT IS A WARNING, AND IT IS ABOUT A DIFFERENT MODULE.** The genome records
+(`results/ctxgrid.toml:866-873`, from `g3probe`) that relaxing **central's** intrinsic plasticity
+sparsens it — population sparseness 0.91 → 0.85 → 0.79 as `ip_wake_scale` goes 0.25 → 0.05 → 0 —
+and **separability collapses to chance at zero, "because nothing is left holding the neurons in
+their dynamic range."** That is the same thing `network.cpp:3219` says the threshold path is for,
+so it is the failure mode to expect.
+
+**BUT IT IS CONTRADICTED FOR VOCAL BY A MEASUREMENT ALREADY ON FILE, which is why this design is
+worth running.** `ipoff` at 13.6M did not make the larynx fall out of range: rate went
+**4.62 → 6.84 Hz** and the arm **delivered 2.7× MORE** trials than the shipped one
+(`results/ipoff-136m.log`, and §9). With the homeostat off the voice gets *louder and more
+answerable*, not silent — it learns 6× less, but it stays alive. So the central result is a
+reason to **read the dose check and `aligned` before the primary**, not a reason to expect an
+uninterpretable arm.
+
+**Cost:** 18 × (13.6M + 2 × 13.6M) = **734M ticks, ~2.5–2.7 h** — the snapshot saves re-running
+the shared half, which a two-full-arm version would spend 979M on.
+
+### 14. PREPARED, NOT BUILT — `f1decode`: is 13.7% the creature's, or the centroid's?
+
+The build `ctxscale`'s new `seen` column decides whether to make. **Run it only if `seen` comes
+back near its derived null of 1/√14 = 0.267**; if `seen` ≈ 1.0 the lesson writes along the
+centroid's own coordinate, the blind directions are empty, and this is not worth building.
+
+**THE QUESTION.** Keemink & van Rossum (2025) find the population-vector estimate is most biased
+exactly when few neurons are active — this creature's fourteen — and that ML/Bayesian decoders
+carry substantially less. Three results written up as facts about the creature are candidates for
+being facts about the **estimator**: the centroid using **13.7%** of its range, output potency
+being **signed distance** from it, and the readout **pinning at one end** under the half-centre.
+
+**WHAT IT IS NOT.** Not read-only. I proposed it as a read-only re-decode of archived logs and
+that was wrong: **no log carries trial-level per-neuron rates**, only the early/late means at
+`experiments_milestones.cpp:6282`. It needs an instrumented run that dumps, per scored trial, the
+F1 group's 14 rates with the produced F1 and the live word.
+
+**THE DESIGN THAT ISOLATES THE ESTIMATOR.** Decode F1 from the same dumped trials two ways — the
+shipped centroid, and a maximum-likelihood or Bayesian decoder — and compare on **identical
+data**. That is what makes it a test of the readout and not of the creature. **Primary:** the
+decoders' F1 separation between words, paired per creature. **What refuses it:** the ML decoder
+recovering the same separation, which means the centroid was never the constraint.
+
+**AND THE PUBLISHED CAUTION THAT DECIDES WHETHER A GAIN MATTERS.** Chase, Schwartz & Kass (2009)
+report that an OLE's open-loop advantage **need not survive closed loop, because the subject
+adapts to whatever decoder it is given.** This creature *learns against its own readout*, so an
+offline decoding gain is **not** a prediction that changing the readout would help — it bounds
+the information present, nothing more. Any build that follows has to re-learn under the new
+readout before claiming anything. **Do not reach for the OLE specifically:** Xu et al. (2019)
+found OLE and vector reconstruction *worse* than most decoders and most sensitive to violated
+assumptions.
+
+**Cost:** the dump rides on an existing teach-tier session, so one 13.6M run at n=18 is
+~250M ticks (**~1 h**); the decoding itself is offline and free.
+
 ## Standing prohibitions
 
 These are places where fitting has already cost this project a result, and they are written
@@ -923,6 +1061,28 @@ down so the next person does not pay again.
   lead's point estimate to four decimals and landed it on exactly 3.0 SE, where 18 fresh
   creatures gave 0.4 SE. Report the discovery half and the fresh half separately, because
   the pooled number contains the half that generated the claim.
+
+### Prepared and runnable, as of 2026-10-31 — read this before the 2026-10-24 list below
+
+The list below is still right about the demonstration. These are the three things that are
+**specified, costed and gated**, in the order their dependencies allow:
+
+| # | run | gated on | cost | what refuses it |
+|---|---|---|---|---|
+| — | `ctxscale` with `seen` | **running now** | ~3.0 h | — (it is the decider for `f1decode`) |
+| 13 | `thrpatch` pre-flight | nothing; build + gate | **minutes** | `load_snapshot` refusing a patched genome, or the patch loading without taking effect |
+| 13 | `thrfork` | `thrpatch` passing | ~2.6 h | no `frozen`−`free` difference at 2 SE, or `aligned` collapsing |
+| 14 | `f1decode` | `seen` ≈ 0.267, **not** ≈ 1.0 | ~1 h + offline | the ML decoder recovering the centroid's own separation |
+
+**`thrpatch` is the cheapest and should go first** whatever else happens: it costs minutes, it
+gates a 2.6 h run, and it answers a code question (can a snapshot be restored with a patched
+per-module genome, and does the patch take effect) rather than a science one. The two
+prohibitions it protects against are already on record — a mechanism that is wired is not a
+mechanism that is dosed, and a check only the thing being tested performs is not evidence.
+
+**`f1decode` may not need building at all**, which is the point of putting `seen` on the
+currently running `ctxscale`: if the lesson writes along the centroid's own coordinate, the
+twelve blind directions are empty and the within-group half of that lead closes for free.
 
 ### What is actually next, as of 2026-10-24
 
