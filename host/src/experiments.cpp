@@ -391,7 +391,15 @@ const Spec kSpecs[] = {
      "is the learned bias still GROWING with trials or has it found its\n"
      "  asymptote? Runs off/ema/ema-rnd at three budgets (1x, 2x, 4x) and gates\n"
      "  on whether dF1 above its matched-marginal control grows. Decides between\n"
-     "  the two remaining leads: a longer run, or Kornfeld's compartments"},
+     "  the two remaining leads: a longer run, or Kornfeld's compartments.\n"
+     "  ALSO CARRIES, since 2026-10-31 and costing nothing extra: what the\n"
+     "  centroid readout CANNOT see. `aligned` and `common-mode` name two of the\n"
+     "  F1 group's n directions; the other n-2 are centred, inside the group, and\n"
+     "  were never measured. `residual` is their norm and `seen` is aligned's\n"
+     "  share of the two, against a DERIVED null of 1/sqrt(n) = 0.267 -- not 0\n"
+     "  and not 0.5. Prices what Keemink & van Rossum (2025) predicts a\n"
+     "  population-vector readout over few neurons leaves behind. It is a\n"
+     "  MAGNITUDE and does not show the residual carries the word"},
     {"boundprobe", 13600000, Expect::kRead, Tier::kTeach,
      "derived: ctxscale's session at ONE budget, because it reads the growth\n"
      "  curve INSIDE a session at 16 checkpoints instead of across three runs.\n"

@@ -4137,6 +4137,31 @@ struct CtxSplit {
   double mag = 0.0;      // mean table magnitude, the scale to read div against
   double pinned = 0.0;   // share of table entries AT the perturb_max clamp
   uint32_t gn = 0;
+  // THE 12 DIRECTIONS NOTHING HERE WAS MEASURING, added 2026-10-31.
+  //
+  // The three components above do not span the F1 group. Inside a group of `gn` the bias
+  // difference vector has `gn` dimensions, and this decomposition named exactly two of
+  // them: `common` (the uniform direction, which the ratio readout is EXACTLY blind to)
+  // and `align` (the ramp, the only direction that moves the centroid to first order).
+  // The remaining `gn - 2` -- twelve, at the shipped group size of 14 -- are centred,
+  // live INSIDE the group, and were never computed. `outside` does not cover them: it is
+  // the RMS over the other eight vocal groups.
+  //
+  // They matter because they are the centroid's blind spot BY CONSTRUCTION, and Keemink &
+  // van Rossum (2025) is the published reason to expect a population-vector readout over
+  // few neurons to be leaving structure there. Measuring them prices what a Bayesian or
+  // ML decoder could claim -- and if they are empty, the readout line closes by arithmetic
+  // rather than by a 4-7 h run.
+  //
+  // THE NULL IS DERIVED, NOT GUESSED. `align` is normalised as
+  // |dot| / sqrt(unorm) / sqrt(gn), so for a STRUCTURELESS within-group vector of
+  // per-neuron RMS sigma it reads ~sigma / sqrt(gn) while `in_rms` reads sigma. So
+  // `align / in_rms` sits at 1 / sqrt(gn) = 0.267 at gn = 14 when the lesson writes no
+  // preferential ramp structure, and approaches 1.0 when it writes purely along the ramp.
+  // That is the number to read, and `residual` is its complement in the same units.
+  double in_rms = 0.0;    // per-neuron RMS of the WHOLE within-group difference vector
+  double residual = 0.0;  // the gn-2 centred non-ramp directions, same units as `align`
+  double seen = 0.0;      // align / sqrt(align^2 + residual^2): the share the ratio sees
 };
 
 // ONE SLOT'S OWN STORED TILT, as opposed to `ctx_split`'s DIFFERENCE between two
@@ -4280,7 +4305,7 @@ inline CtxSplit ctx_split(const aibaby::Network& net, const aibaby::ModuleState&
   const uint32_t g_end = vms.begin + aibaby::slice_begin(vms.count, aibaby::kVocalGroups, 3);
   const uint32_t gn = g_end > g_beg ? g_end - g_beg : 0;
   if (gn < 2) return o;
-  double dot = 0.0, unorm = 0.0, mean_in = 0.0, out_ss = 0.0;
+  double dot = 0.0, unorm = 0.0, mean_in = 0.0, out_ss = 0.0, in_ss = 0.0;
   for (uint32_t n = g_beg; n < g_end; ++n) {
     const double d = (double(net.context_bias(n, 0)) + double(net.banked_bias(n, 0))) -
                      (double(net.context_bias(n, 1)) + double(net.banked_bias(n, 1)));
@@ -4288,6 +4313,7 @@ inline CtxSplit ctx_split(const aibaby::Network& net, const aibaby::ModuleState&
     dot += d * u;
     unorm += u * u;
     mean_in += d;
+    in_ss += d * d;  // the whole within-group vector, for `residual` below
   }
   mean_in /= double(gn);
   for (uint32_t n = vms.begin; n < vms.begin + vms.count; ++n) {
@@ -4302,6 +4328,22 @@ inline CtxSplit ctx_split(const aibaby::Network& net, const aibaby::ModuleState&
   o.outside = outn ? std::sqrt(out_ss / double(outn)) : 0.0;
   o.gain = o.outside > 0.0 ? o.align * std::sqrt(double(gn)) / o.outside : 0.0;
   o.gn = gn;
+  // The within-group split. `align`, `common` and `residual` are orthogonal components of
+  // the same vector expressed in the same per-neuron-RMS units, so they satisfy
+  // align^2 + common^2 + residual^2 = in_rms^2 by construction -- which is what makes the
+  // subtraction legitimate here and is worth stating, because this project has a standing
+  // rule that two BOUNDS cannot be subtracted. These are not bounds; they are projections
+  // onto orthogonal subspaces of one measured vector, and the identity is exact.
+  o.in_rms = std::sqrt(in_ss / double(gn));
+  const double resid_sq =
+      o.in_rms * o.in_rms - o.align * o.align - o.common * o.common;
+  // Clamped at zero: the identity is exact in real arithmetic, so a negative here is
+  // floating-point slack of order 1e-18 and not a result. If it is ever LARGE and
+  // negative, the three components are not the orthogonal decomposition this comment
+  // claims, and that is a bug rather than a finding -- so it is printed, not hidden.
+  o.residual = resid_sq > 0.0 ? std::sqrt(resid_sq) : 0.0;
+  const double vis = std::sqrt(o.align * o.align + o.residual * o.residual);
+  o.seen = vis > 0.0 ? o.align / vis : 0.0;
   return o;
 }
 
@@ -4432,6 +4474,12 @@ struct VLRun {
   // aligned, as a multiple of what a STRUCTURELESS table of the same size gives.
   // 1.0 is the null; this is the number the shape question actually turns on.
   double ctx_align_gain = 0.0;
+  // The within-F1-group split: see `CtxSplit`. `ctx_residual` is the gn-2 centred
+  // directions the centroid readout cannot see, and `ctx_seen` is align's share of the
+  // two together. Derived null for `ctx_seen` is 1/sqrt(gn) = 0.267 at gn = 14.
+  double ctx_in_rms = 0.0;
+  double ctx_residual = 0.0;
+  double ctx_seen = 0.0;
   uint32_t ctx_f1_group_n = 0;
   double ctx_pinned = 0.0;  // share of table entries AT the perturb_max clamp
   // Realised mean |reward|. The graded and binary arms are supposed to match on
@@ -5598,6 +5646,9 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
       out.ctx_align_gain = sp.gain;
       out.ctx_f1_group_n = sp.gn;
       out.ctx_pinned = sp.pinned;
+      out.ctx_in_rms = sp.in_rms;
+      out.ctx_residual = sp.residual;
+      out.ctx_seen = sp.seen;
     }
   }
   {
@@ -37790,6 +37841,8 @@ bool run_ctxscale(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
     uint32_t scored = 0, skipped = 0;
     double d1 = 0.0, div = 0.0, match = 0.0, chg = 0.0;
     double align = 0.0, common = 0.0, outside = 0.0, gain = 0.0;
+    // The centroid's blind spot inside the F1 group: see `CtxSplit`.
+    double residual = 0.0, seen = 0.0;
     uint32_t gn = 0;
   };
   const uint32_t njobs = kReps * kCtxScaleArmCount * kCtxScaleBudgets;
@@ -37830,6 +37883,8 @@ bool run_ctxscale(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
     cell.outside = run.ctx_outside;
     cell.gain = run.ctx_align_gain;
     cell.gn = run.ctx_f1_group_n;
+    cell.residual = run.ctx_residual;
+    cell.seen = run.ctx_seen;
     cell.ok = true;
     parallel_note("  [%u/%u] seed %u %s %.2fM  dF1 %.1f\n", i + 1, njobs, r,
                   kCtxScaleArms[a].name, double(ticks >> b) / 1e6, cell.d1);
@@ -37842,6 +37897,8 @@ bool run_ctxscale(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
   std::vector<double> cm[kCtxScaleArmCount][kCtxScaleBudgets];
   std::vector<double> os[kCtxScaleArmCount][kCtxScaleBudgets];
   std::vector<double> gnv[kCtxScaleArmCount][kCtxScaleBudgets];
+  std::vector<double> rs[kCtxScaleArmCount][kCtxScaleBudgets];   // residual
+  std::vector<double> sn[kCtxScaleArmCount][kCtxScaleBudgets];   // seen
   std::printf("  %-6s %-9s %-9s %-9s %-10s %s\n", "seed", "arm", "budget", "dF1 (Hz)",
               "table div", "change");
   for (uint32_t i = 0; i < njobs; ++i) {
@@ -37861,6 +37918,8 @@ bool run_ctxscale(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
     d1[a][b].push_back(c.d1);
     dv[a][b].push_back(c.div);
     al[a][b].push_back(c.align);
+    rs[a][b].push_back(c.residual);
+    sn[a][b].push_back(c.seen);
     cm[a][b].push_back(c.common);
     os[a][b].push_back(c.outside);
     gnv[a][b].push_back(c.gain);
@@ -37874,6 +37933,8 @@ bool run_ctxscale(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
   double m_cm[kCtxScaleArmCount][kCtxScaleBudgets], s_cm[kCtxScaleArmCount][kCtxScaleBudgets];
   double m_os[kCtxScaleArmCount][kCtxScaleBudgets], s_os[kCtxScaleArmCount][kCtxScaleBudgets];
   double m_gn[kCtxScaleArmCount][kCtxScaleBudgets], s_gn[kCtxScaleArmCount][kCtxScaleBudgets];
+  double m_rs[kCtxScaleArmCount][kCtxScaleBudgets], s_rs[kCtxScaleArmCount][kCtxScaleBudgets];
+  double m_sn[kCtxScaleArmCount][kCtxScaleBudgets], s_sn[kCtxScaleArmCount][kCtxScaleBudgets];
   for (uint32_t a = 0; a < kCtxScaleArmCount; ++a) {
     for (uint32_t b = 0; b < kCtxScaleBudgets; ++b) {
       if (d1[a][b].size() < 3) {
@@ -37887,6 +37948,8 @@ bool run_ctxscale(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
       m_cm[a][b] = ctx_mean_se(cm[a][b], &s_cm[a][b]);
       m_os[a][b] = ctx_mean_se(os[a][b], &s_os[a][b]);
       m_gn[a][b] = ctx_mean_se(gnv[a][b], &s_gn[a][b]);
+      m_rs[a][b] = ctx_mean_se(rs[a][b], &s_rs[a][b]);
+      m_sn[a][b] = ctx_mean_se(sn[a][b], &s_sn[a][b]);
     }
   }
 
@@ -37951,6 +38014,76 @@ bool run_ctxscale(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
     char w[32];
     std::snprintf(w, sizeof w, "%.2f +/- %.2f", m_gn[kEma][b], s_gn[kEma][b]);
     std::printf("  %-9s %-16s %-16s %-16s %s\n", bud, x, y, z, w);
+  }
+
+  // WHAT THE CENTROID CANNOT SEE, added 2026-10-31. The three columns above do not span
+  // the F1 group: they name the ramp (`aligned`, the only direction that moves the
+  // centroid) and the uniform direction (`common-mode`, which a ratio is exactly blind
+  // to), and `outside group` is the other eight vocal groups. That leaves gn - 2 centred
+  // directions INSIDE the group -- twelve at the shipped size -- which nothing here was
+  // measuring and which the readout cannot express whatever is written into them.
+  //
+  // THE NULL IS DERIVED, AND IT HAS TO BE, because `seen` is a ratio of a projection onto
+  // ONE direction to a norm over gn - 1. Writing nothing preferentially along the ramp
+  // gives `seen` = 1 / sqrt(gn), NOT 0.5 and not 0 -- the same mistake as scoring a
+  // k-alternative readout against 1/k. At gn = 14 that is 0.267.
+  {
+    uint32_t gsz = 0;
+    for (const Cell& c : cells) {
+      if (c.ok && c.gn > 0) { gsz = c.gn; break; }
+    }
+    const double null_seen = gsz > 0 ? 1.0 / std::sqrt(double(gsz)) : 0.0;
+    std::printf("\n  WHAT THE CENTROID CANNOT SEE. F1 group n = %u, so the derived null for\n"
+                "  `seen` is 1/sqrt(n) = %.3f -- the value if the lesson writes no\n"
+                "  preferential ramp structure. 1.0 means it writes purely along the ramp\n"
+                "  and the readout is losing nothing.\n", gsz, null_seen);
+    std::printf("  %-9s %-16s %-16s %s\n", "budget", "aligned (F1)",
+                "residual (blind)", "seen = al/sqrt(al^2+res^2)");
+    for (int b = int(kCtxScaleBudgets) - 1; b >= 0; --b) {
+      char bud[24], x[32], y[32], z[40];
+      std::snprintf(bud, sizeof bud, "%.2fM", double(ticks >> b) / 1e6);
+      std::snprintf(x, sizeof x, "%.5f +/- %.5f", m_al[kEma][b], s_al[kEma][b]);
+      std::snprintf(y, sizeof y, "%.5f +/- %.5f", m_rs[kEma][b], s_rs[kEma][b]);
+      std::snprintf(z, sizeof z, "%.3f +/- %.3f", m_sn[kEma][b], s_sn[kEma][b]);
+      std::printf("  %-9s %-16s %-16s %s\n", bud, x, y, z);
+    }
+    const int top = 0;  // the largest budget, which is where to read it
+    const double se = s_sn[kEma][top] > 0.0 ? s_sn[kEma][top] : 1e-9;
+    const double away = (m_sn[kEma][top] - null_seen) / se;
+    if (m_sn[kEma][top] > 0.9) {
+      std::printf("\n  THE READOUT IS NOT LOSING MUCH INSIDE THE GROUP: `seen` = %.3f at the\n"
+                  "  top budget, %.1f SE above the %.3f null. The lesson writes almost\n"
+                  "  purely along the centroid's own coordinate, so the n-2 centred\n"
+                  "  directions it cannot express are nearly empty. That closes the\n"
+                  "  WITHIN-GROUP half of the readout lead by arithmetic rather than by a\n"
+                  "  paired run -- see the two limits printed below before reading it as\n"
+                  "  closing the lead itself.\n",
+                  m_sn[kEma][top], away, null_seen);
+    } else if (away > 2.0) {
+      std::printf("\n  THE LESSON IS RAMP-ENRICHED BUT THE BLIND DIRECTIONS ARE NOT EMPTY:\n"
+                  "  `seen` = %.3f, %.1f SE above the %.3f null, so structure IS being\n"
+                  "  written where the centroid cannot express it. The share a decoder could\n"
+                  "  in principle claim is 1 - %.3f = %.3f of the within-group pattern.\n"
+                  "  That PRICES the readout lead; it does not establish the information is\n"
+                  "  about the word rather than noise, which needs a decode.\n",
+                  m_sn[kEma][top], away, null_seen, m_sn[kEma][top],
+                  1.0 - m_sn[kEma][top]);
+    } else {
+      std::printf("\n  AT THE DERIVED NULL: `seen` = %.3f against a null of %.3f, %.1f SE.\n"
+                  "  The lesson writes NO preferential ramp structure -- it spreads over the\n"
+                  "  group's directions as an unstructured vector would, and the centroid\n"
+                  "  picks up the one component it can see. Then the readout is throwing\n"
+                  "  away most of what is written, and `gain` above being ~3.5 against\n"
+                  "  `outside` is about the group being favoured, not the ramp within it.\n",
+                  m_sn[kEma][top], null_seen, away);
+    }
+    std::printf("  NOT MEASURED HERE, and both bound every branch above. (1) Whether the\n"
+                "  residual carries the WORD: it is a MAGNITUDE, and an unstructured write\n"
+                "  produces one too. (2) `seen` accounts only for the group's CENTRED\n"
+                "  directions. A decoder reading rates directly could also use the\n"
+                "  common-mode level and the other eight groups, which the centroid's\n"
+                "  ratio discards by construction -- so a high `seen` bounds what a better\n"
+                "  decoder gains WITHIN this group, not overall.\n");
   }
 
   const double lo = excess[kCtxScaleBudgets - 1];
