@@ -38082,6 +38082,13 @@ bool run_ctxscale(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
   // averaged over creatures is biased low by 19% (Monte Carlo, see `CtxSplit`).
   std::vector<double> a2[kCtxScaleArmCount][kCtxScaleBudgets];   // align^2
   std::vector<double> sn[kCtxScaleArmCount][kCtxScaleBudgets];   // residual^2
+  // WHICH CREATURE EACH ENTRY CAME FROM. Needed because the push below is SKIPPED for a
+  // creature that came back `!ok`, so position `i` in one arm's vector is not necessarily
+  // the same creature as position `i` in another's. Every contrast between arms or between
+  // budgets added from here on pairs on this id, never on position -- the first
+  // inconclusive cell would otherwise pair creature 5's control with creature 6's
+  // treatment and nothing would say so.
+  std::vector<uint32_t> idv[kCtxScaleArmCount][kCtxScaleBudgets];
   std::printf("  %-6s %-9s %-9s %-9s %-10s %s\n", "seed", "arm", "budget", "dF1 (Hz)",
               "table div", "change");
   for (uint32_t i = 0; i < njobs; ++i) {
@@ -38102,6 +38109,7 @@ bool run_ctxscale(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
     dv[a][b].push_back(c.div);
     al[a][b].push_back(c.align);
     rs[a][b].push_back(c.residual);
+    idv[a][b].push_back(r);
     a2[a][b].push_back(c.align * c.align);
     sn[a][b].push_back(c.residual * c.residual);
     cm[a][b].push_back(c.common);
@@ -38300,13 +38308,174 @@ bool run_ctxscale(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
                   "  GROUP being favoured, not the ramp within it.\n",
                   seen[top], null_closed, away);
     }
-    std::printf("  NOT MEASURED HERE, and both bound every branch above. (1) Whether the\n"
-                "  residual carries the WORD: it is a MAGNITUDE, and an unstructured write\n"
-                "  produces one too. (2) `seen` accounts only for the group's CENTRED\n"
-                "  directions. A decoder reading rates directly could also use the\n"
-                "  common-mode level and the other eight groups, which the centroid's\n"
-                "  ratio discards by construction -- so a high `seen` bounds what a better\n"
-                "  decoder gains WITHIN this group, not overall.\n");
+    std::printf("  ONE LIMIT STILL BOUNDS EVERY BRANCH ABOVE: `seen` accounts only for the\n"
+                "  group's CENTRED directions. A decoder reading rates directly could also\n"
+                "  use the common-mode level and the other eight groups, which the\n"
+                "  centroid's ratio discards by construction -- so `seen` bounds what a\n"
+                "  better decoder gains WITHIN this group, not overall. The other limit --\n"
+                "  that an unstructured write produces a magnitude too -- used to be listed\n"
+                "  here as unmeasured and is measured in the next block.\n");
+  }
+
+  // THE FLOOR EVERY MAGNITUDE ABOVE WAS MISSING, added 2026-10-31 -- and it was computed
+  // all along. Every column printed so far reads `kEma` only, while the same quantities
+  // exist for `ema-rnd`, whose context index is RANDOMISED: same rule, same reward, same
+  // trials, same wiring, and the one thing it does not have is a word to key on. So
+  // `ema - ema-rnd` is the WORD-SPECIFIC part of each component, and a bare magnitude is
+  // not. The block above states that caveat in its own last paragraph and then does not
+  // subtract the control sitting in the same arrays.
+  //
+  // IT ALSO MEASURES `seen`'s NULL RATHER THAN DERIVING IT. 1/sqrt(gn-1) assumes the
+  // unstructured write is ISOTROPIC over the group's centred directions. `ema-rnd` is this
+  // creature's own unstructured write, carrying whatever anisotropy its wiring, its
+  // homeostat and its perturb clamp impose. If the two agree the derivation is vindicated
+  // empirically; if they do not, every "SE above null" above is read against the wrong
+  // yardstick and this column is the right one.
+  //
+  // AND IT CARRIES THE FORK'S OWN STATISTIC, which the rung table cannot supply. Whether
+  // `seen` RISES with budget is a SLOPE, and the per-rung SEs above are BETWEEN-creature
+  // while the rungs share creatures -- so a difference of rungs read against them is a
+  // paired quantity priced with an unpaired SE, which is why a +0.011 step sat inside a
+  // +/-0.079 bar and decided nothing. The contrast below deletes a creature from ALL
+  // budgets at once.
+  {
+    uint32_t gsz = 0;
+    for (const Cell& c : cells) {
+      if (c.ok && c.gn > 0) { gsz = c.gn; break; }
+    }
+    const double null_closed = gsz > 1 ? 1.0 / std::sqrt(double(gsz - 1)) : 0.0;
+
+    // PAIRED ON CREATURE ID, NEVER ON POSITION -- see the note on `idv`. A creature missing
+    // from either side is dropped from the contrast rather than silently aligned against a
+    // neighbour.
+    auto paired = [](const std::vector<double>& A, const std::vector<uint32_t>& ia,
+                     const std::vector<double>& B, const std::vector<uint32_t>& ib,
+                     double* se, uint32_t* n) {
+      std::vector<double> d;
+      for (size_t i = 0; i < ia.size(); ++i) {
+        for (size_t j = 0; j < ib.size(); ++j) {
+          if (ia[i] == ib[j]) { d.push_back(A[i] - B[j]); break; }
+        }
+      }
+      *n = uint32_t(d.size());
+      return ctx_mean_se(d, se);
+    };
+
+    std::printf("\n  THE WORD-SPECIFIC PART, against this run's own randomised-index arm.\n"
+                "  `ema-rnd` writes with the same rule and the same trials and has no word\n"
+                "  to key on, so it is the floor a magnitude has to clear to be ABOUT the\n"
+                "  word at all. Differences are paired on creature id and jackknifed.\n");
+    std::printf("  %-9s %-10s %-10s %-10s %s\n", "budget", "component", "ema",
+                "rnd (floor)", "word-specific (paired)");
+    for (int b = int(kCtxScaleBudgets) - 1; b >= 0; --b) {
+      char bud[24];
+      std::snprintf(bud, sizeof bud, "%.2fM", double(ticks >> b) / 1e6);
+      struct Row { const char* name; const std::vector<double>* e; const std::vector<double>* r; };
+      const Row rows[] = {{"aligned", &al[kEma][b], &al[kRnd][b]},
+                          {"residual", &rs[kEma][b], &rs[kRnd][b]}};
+      for (const Row& row : rows) {
+        double se = 0.0;
+        uint32_t np = 0;
+        const double d = paired(*row.e, idv[kEma][b], *row.r, idv[kRnd][b], &se, &np);
+        char x[40];
+        if (np < 3) {
+          std::snprintf(x, sizeof x, "(only %u paired)", np);
+        } else {
+          std::snprintf(x, sizeof x, "%+.5f +/- %.5f  (%.1f SE)", d, se,
+                        se > 0.0 ? d / se : 0.0);
+        }
+        // Separate SE slots on purpose: two `ctx_mean_se(..., &se)` calls in one argument
+        // list are unsequenced writes to the same object, which is UB even though only the
+        // return values are printed.
+        double se_e = 0.0, se_r = 0.0;
+        const double m_e = ctx_mean_se(*row.e, &se_e);
+        const double m_r = ctx_mean_se(*row.r, &se_r);
+        std::printf("  %-9s %-10s %-10.5f %-10.5f %s\n", bud, row.name, m_e, m_r, x);
+      }
+    }
+
+    // `seen` pooled over the creatures a given arm/budget scored, with one id droppable --
+    // the same ratio-of-sums shape the block above uses, so the two are comparable.
+    auto seen_of = [&](uint32_t a, uint32_t b, int drop_id) {
+      double sa = 0.0, sr = 0.0;
+      for (size_t i = 0; i < idv[a][b].size(); ++i) {
+        if (int(idv[a][b][i]) == drop_id) continue;
+        sa += a2[a][b][i];
+        sr += sn[a][b][i];
+      }
+      const double den = sa + sr;
+      return den > 0.0 ? std::sqrt(sa) / std::sqrt(den) : 0.0;
+    };
+
+    std::printf("\n  %-9s %-14s %-18s %s\n", "budget", "seen (ema)",
+                "seen (rnd) MEASURED", "derived 1/sqrt(n-1)");
+    for (int b = int(kCtxScaleBudgets) - 1; b >= 0; --b) {
+      char bud[24];
+      std::snprintf(bud, sizeof bud, "%.2fM", double(ticks >> b) / 1e6);
+      std::printf("  %-9s %-14.4f %-18.4f %.4f\n", bud, seen_of(kEma, b, -1),
+                  seen_of(kRnd, b, -1), null_closed);
+    }
+
+    // THE FORK: the top-minus-bottom contrast in `seen`, jackknifed by deleting a creature
+    // from EVERY budget at once. Only creatures `kEma` scored at all budgets take part,
+    // because a creature present at one rung and absent at another would make the
+    // difference a between-creature quantity again -- the exact confound this is for.
+    std::vector<uint32_t> keep;
+    for (uint32_t id : idv[kEma][0]) {
+      bool all = true;
+      for (uint32_t b = 1; b < kCtxScaleBudgets; ++b) {
+        bool here = false;
+        for (uint32_t v : idv[kEma][b]) {
+          if (v == id) { here = true; break; }
+        }
+        if (!here) { all = false; break; }
+      }
+      if (all) keep.push_back(id);
+    }
+    const uint32_t blo = kCtxScaleBudgets - 1;
+    auto trend = [&](int drop_id) { return seen_of(kEma, 0, drop_id) - seen_of(kEma, blo, drop_id); };
+    const double rise = trend(-1);
+    double rise_se = 0.0;
+    if (keep.size() >= 3) {
+      std::vector<double> loo;
+      for (uint32_t id : keep) loo.push_back(trend(int(id)));
+      const double nn = double(loo.size());
+      double m = 0.0;
+      for (double v : loo) m += v;
+      m /= nn;
+      double acc = 0.0;
+      for (double v : loo) acc += (v - m) * (v - m);
+      rise_se = std::sqrt(acc * (nn - 1.0) / nn);
+    }
+    const double span = double(uint32_t(1) << blo);
+    const double doublings = std::log(span) / std::log(2.0);
+    std::printf("\n  THE FORK, PAIRED. `seen` over the %.0fx span, %zu creatures scored at\n"
+                "  every rung: %+.4f +/- %.4f total, %+.4f per doubling.\n",
+                span, keep.size(), rise, rise_se, rise / (doublings > 0.0 ? doublings : 1.0));
+    if (keep.size() < 3) {
+      std::printf("  NO VERDICT -- fewer than three creatures scored at every rung, so the\n"
+                  "  contrast cannot be paired and an unpaired one is what this block\n"
+                  "  exists to avoid.\n");
+    } else if (rise_se <= 0.0) {
+      std::printf("  NO VERDICT -- the jackknife returned a zero SE, which means the\n"
+                  "  creatures agreed exactly and that is a bug, not a result.\n");
+    } else if (rise > 2.0 * rise_se) {
+      std::printf("  RISING, %.1f SE. The lesson CONCENTRATES onto the readout's own\n"
+                  "  coordinate as it learns, so the blind directions are a transient\n"
+                  "  inefficiency the creature works out of on its own and a decoder would\n"
+                  "  claim a quantity it is already giving up.\n", rise / rise_se);
+    } else if (rise < -2.0 * rise_se) {
+      std::printf("  FALLING, %.1f SE. The lesson spreads AWAY from the readout's\n"
+                  "  coordinate with training, so the blind share GROWS and a decoder's\n"
+                  "  prize grows with it.\n", rise / rise_se);
+    } else {
+      std::printf("  FLAT within %.1f SE -- |%+.4f| does not clear 2x%.4f. The split is a\n"
+                  "  CONSTANT of the architecture over this span, not a trajectory: the\n"
+                  "  blind share is neither emptying nor filling. Then it is PERMANENT at\n"
+                  "  any budget reachable here, and the reason to hold off a decoder is\n"
+                  "  whatever the word-specific table above says, not transience.\n",
+                  rise_se > 0.0 ? std::fabs(rise) / rise_se : 0.0, rise, rise_se);
+    }
   }
 
   const double lo = excess[kCtxScaleBudgets - 1];

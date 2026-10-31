@@ -1,0 +1,277 @@
+experiment: ctxscale
+  instrument        ctxscale   trial seed 0000000001357b68   9714 trials at the LONGEST budget
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  question          is the learned bias still GROWING with trials, or has
+                    it found its asymptote? That decides whether 236 Hz is
+                    a matter of compute or of architecture.
+  the gate          excess = dF1(ema) - dF1(ema-rnd), pooled per budget.
+                    ratio 4x/1x  > 1.7 compute-limited (sqrt(t) gives 2.0)
+                                 < 1.3 saturated
+                                 else  inconclusive, and it says so.
+
+  [9/108] seed 0 mask-F1F2 6.80M  dF1 107.0
+  [12/108] seed 0 ema-rnd 6.80M  dF1 0.6
+  [6/108] seed 0 ema 6.80M  dF1 7.5
+  [3/108] seed 0 off 6.80M  dF1 1.0
+  [15/108] seed 1 off 6.80M  dF1 81.7
+  [8/108] seed 0 mask-F1F2 13.60M  dF1 124.2
+  [14/108] seed 1 off 13.60M  dF1 50.0
+  [18/108] seed 1 ema 6.80M  dF1 133.9
+  [5/108] seed 0 ema 13.60M  dF1 8.3
+  [11/108] seed 0 ema-rnd 13.60M  dF1 32.8
+  [2/108] seed 0 off 13.60M  dF1 8.0
+  [21/108] seed 1 mask-F1F2 6.80M  dF1 91.8
+  [17/108] seed 1 ema 13.60M  dF1 133.7
+  [24/108] seed 1 ema-rnd 6.80M  dF1 39.1
+  [7/108] seed 0 mask-F1F2 27.20M  dF1 133.7
+  [20/108] seed 1 mask-F1F2 13.60M  dF1 110.4
+  [23/108] seed 1 ema-rnd 13.60M  dF1 36.2
+  [27/108] seed 2 off 6.80M  dF1 27.7
+  [30/108] seed 2 ema 6.80M  dF1 147.5
+  [1/108] seed 0 off 27.20M  dF1 7.4
+  [19/108] seed 1 mask-F1F2 27.20M  dF1 127.5
+  [26/108] seed 2 off 13.60M  dF1 17.1
+  [33/108] seed 2 mask-F1F2 6.80M  dF1 115.0
+  [10/108] seed 0 ema-rnd 27.20M  dF1 61.2
+  [13/108] seed 1 off 27.20M  dF1 40.7
+  [29/108] seed 2 ema 13.60M  dF1 172.8
+  [4/108] seed 0 ema 27.20M  dF1 0.4
+  [16/108] seed 1 ema 27.20M  dF1 133.0
+  [32/108] seed 2 mask-F1F2 13.60M  dF1 129.9
+  [36/108] seed 2 ema-rnd 6.80M  dF1 51.2
+  [39/108] seed 3 off 6.80M  dF1 91.7
+  [22/108] seed 1 ema-rnd 27.20M  dF1 31.5
+  [42/108] seed 3 ema 6.80M  dF1 82.7
+  [35/108] seed 2 ema-rnd 13.60M  dF1 68.3
+  [38/108] seed 3 off 13.60M  dF1 45.3
+  [45/108] seed 3 mask-F1F2 6.80M  dF1 115.4
+  [41/108] seed 3 ema 13.60M  dF1 101.9
+  [44/108] seed 3 mask-F1F2 13.60M  dF1 135.1
+  [31/108] seed 2 mask-F1F2 27.20M  dF1 134.9
+  [28/108] seed 2 ema 27.20M  dF1 164.7
+  [48/108] seed 3 ema-rnd 6.80M  dF1 6.3
+  [25/108] seed 2 off 27.20M  dF1 13.7
+  [51/108] seed 4 off 6.80M  dF1 3.2
+  [47/108] seed 3 ema-rnd 13.60M  dF1 2.6
+  [54/108] seed 4 ema 6.80M  dF1 73.6
+  [34/108] seed 2 ema-rnd 27.20M  dF1 48.0
+  [57/108] seed 4 mask-F1F2 6.80M  dF1 58.7
+  [43/108] seed 3 mask-F1F2 27.20M  dF1 153.5
+  [50/108] seed 4 off 13.60M  dF1 8.4
+  [40/108] seed 3 ema 27.20M  dF1 109.5
+  [53/108] seed 4 ema 13.60M  dF1 118.3
+  [56/108] seed 4 mask-F1F2 13.60M  dF1 84.1
+  [60/108] seed 4 ema-rnd 6.80M  dF1 3.2
+  [37/108] seed 3 off 27.20M  dF1 38.3
+  [63/108] seed 5 off 6.80M  dF1 52.4
+  [59/108] seed 4 ema-rnd 13.60M  dF1 7.5
+  [46/108] seed 3 ema-rnd 27.20M  dF1 1.1
+  [66/108] seed 5 ema 6.80M  dF1 121.0
+  [62/108] seed 5 off 13.60M  dF1 73.7
+  [69/108] seed 5 mask-F1F2 6.80M  dF1 105.3
+  [55/108] seed 4 mask-F1F2 27.20M  dF1 112.4
+  [68/108] seed 5 mask-F1F2 13.60M  dF1 122.1
+  [72/108] seed 5 ema-rnd 6.80M  dF1 39.5
+  [65/108] seed 5 ema 13.60M  dF1 145.5
+  [75/108] seed 6 off 6.80M  dF1 6.8
+  [52/108] seed 4 ema 27.20M  dF1 125.9
+  [71/108] seed 5 ema-rnd 13.60M  dF1 53.3
+  [49/108] seed 4 off 27.20M  dF1 8.5
+  [58/108] seed 4 ema-rnd 27.20M  dF1 32.1
+  [78/108] seed 6 ema 6.80M  dF1 75.9
+  [61/108] seed 5 off 27.20M  dF1 54.7
+  [67/108] seed 5 mask-F1F2 27.20M  dF1 131.3
+  [81/108] seed 6 mask-F1F2 6.80M  dF1 103.4
+  [74/108] seed 6 off 13.60M  dF1 7.7
+  [64/108] seed 5 ema 27.20M  dF1 154.6
+  [77/108] seed 6 ema 13.60M  dF1 42.8
+  [84/108] seed 6 ema-rnd 6.80M  dF1 12.1
+  [80/108] seed 6 mask-F1F2 13.60M  dF1 124.8
+  [87/108] seed 7 off 6.80M  dF1 53.0
+  [70/108] seed 5 ema-rnd 27.20M  dF1 77.9
+  [90/108] seed 7 ema 6.80M  dF1 73.6
+  [83/108] seed 6 ema-rnd 13.60M  dF1 11.9
+  [93/108] seed 7 mask-F1F2 6.80M  dF1 44.1
+  [86/108] seed 7 off 13.60M  dF1 60.0
+  [96/108] seed 7 ema-rnd 6.80M  dF1 18.0
+  [89/108] seed 7 ema 13.60M  dF1 106.9
+  [79/108] seed 6 mask-F1F2 27.20M  dF1 143.3
+  [92/108] seed 7 mask-F1F2 13.60M  dF1 94.7
+  [76/108] seed 6 ema 27.20M  dF1 21.3
+  [73/108] seed 6 off 27.20M  dF1 7.8
+  [95/108] seed 7 ema-rnd 13.60M  dF1 26.5
+  [99/108] seed 8 off 6.80M  dF1 65.7
+  [102/108] seed 8 ema 6.80M  dF1 53.6
+  [91/108] seed 7 mask-F1F2 27.20M  dF1 119.8
+  [82/108] seed 6 ema-rnd 27.20M  dF1 12.9
+  [98/108] seed 8 off 13.60M  dF1 46.6
+  [105/108] seed 8 mask-F1F2 6.80M  dF1 113.4
+  [85/108] seed 7 off 27.20M  dF1 51.4
+  [101/108] seed 8 ema 13.60M  dF1 54.5
+  [104/108] seed 8 mask-F1F2 13.60M  dF1 125.2
+  [88/108] seed 7 ema 27.20M  dF1 135.7
+  [108/108] seed 8 ema-rnd 6.80M  dF1 90.2
+  [94/108] seed 7 ema-rnd 27.20M  dF1 14.2
+  [107/108] seed 8 ema-rnd 13.60M  dF1 98.7
+  [103/108] seed 8 mask-F1F2 27.20M  dF1 152.5
+  [97/108] seed 8 off 27.20M  dF1 36.6
+  [100/108] seed 8 ema 27.20M  dF1 53.0
+  [106/108] seed 8 ema-rnd 27.20M  dF1 88.0
+  seed   arm       budget    dF1 (Hz)  table div  change
+  0      off       27.20M    7.4       0.0000     +1.6
+  0      off       13.60M    8.0       0.0000     +4.6
+  0      off       6.80M     1.0       0.0000     +2.2
+  0      ema       27.20M    0.4       0.0526     -3.3
+  0      ema       13.60M    8.3       0.0369     -5.0
+  0      ema       6.80M     7.5       0.0264     -7.4
+  0      mask-F1F2 27.20M    133.7     0.0199     +10.5
+  0      mask-F1F2 13.60M    124.2     0.0174     +12.1
+  0      mask-F1F2 6.80M     107.0     0.0132     +9.2
+  0      ema-rnd   27.20M    61.2      0.0726     +0.6
+  0      ema-rnd   13.60M    32.8      0.0520     +0.3
+  0      ema-rnd   6.80M     0.6       0.0395     +0.6
+  1      off       27.20M    40.7      0.0000     -3.3
+  1      off       13.60M    50.0      0.0000     -10.4
+  1      off       6.80M     81.7      0.0000     -3.2
+  1      ema       27.20M    133.0     0.0456     -19.3
+  1      ema       13.60M    133.7     0.0396     -7.6
+  1      ema       6.80M     133.9     0.0358     +14.0
+  1      mask-F1F2 27.20M    127.5     0.0202     +7.4
+  1      mask-F1F2 13.60M    110.4     0.0157     +14.8
+  1      mask-F1F2 6.80M     91.8      0.0121     +18.3
+  1      ema-rnd   27.20M    31.5      0.0704     +0.2
+  1      ema-rnd   13.60M    36.2      0.0540     +0.2
+  1      ema-rnd   6.80M     39.1      0.0375     -0.3
+  2      off       27.20M    13.7      0.0000     -1.8
+  2      off       13.60M    17.1      0.0000     +1.6
+  2      off       6.80M     27.7      0.0000     -1.8
+  2      ema       27.20M    164.7     0.0504     -12.0
+  2      ema       13.60M    172.8     0.0443     +17.7
+  2      ema       6.80M     147.5     0.0348     +29.7
+  2      mask-F1F2 27.20M    134.9     0.0223     +11.3
+  2      mask-F1F2 13.60M    129.9     0.0174     +13.1
+  2      mask-F1F2 6.80M     115.0     0.0122     +10.6
+  2      ema-rnd   27.20M    48.0      0.0837     +0.2
+  2      ema-rnd   13.60M    68.3      0.0491     -0.5
+  2      ema-rnd   6.80M     51.2      0.0341     +0.1
+  3      off       27.20M    38.3      0.0000     -6.6
+  3      off       13.60M    45.3      0.0000     -13.0
+  3      off       6.80M     91.7      0.0000     -2.5
+  3      ema       27.20M    109.5     0.0481     +1.1
+  3      ema       13.60M    101.9     0.0418     +11.8
+  3      ema       6.80M     82.7      0.0369     +20.2
+  3      mask-F1F2 27.20M    153.5     0.0208     +18.6
+  3      mask-F1F2 13.60M    135.1     0.0163     +19.6
+  3      mask-F1F2 6.80M     115.4     0.0118     +16.4
+  3      ema-rnd   27.20M    1.1       0.0710     -0.1
+  3      ema-rnd   13.60M    2.6       0.0551     -0.6
+  3      ema-rnd   6.80M     6.3       0.0442     +0.4
+  4      off       27.20M    8.5       0.0000     +3.2
+  4      off       13.60M    8.4       0.0000     +3.8
+  4      off       6.80M     3.2       0.0000     +8.8
+  4      ema       27.20M    125.9     0.0577     -5.1
+  4      ema       13.60M    118.3     0.0499     +18.5
+  4      ema       6.80M     73.6      0.0395     +24.6
+  4      mask-F1F2 27.20M    112.4     0.0226     +16.9
+  4      mask-F1F2 13.60M    84.1      0.0144     +13.6
+  4      mask-F1F2 6.80M     58.7      0.0104     +1.5
+  4      ema-rnd   27.20M    32.1      0.0763     +0.6
+  4      ema-rnd   13.60M    7.5       0.0532     -0.2
+  4      ema-rnd   6.80M     3.2       0.0361     -0.3
+  5      off       27.20M    54.7      0.0000     -1.2
+  5      off       13.60M    73.7      0.0000     +8.9
+  5      off       6.80M     52.4      0.0000     +4.8
+  5      ema       27.20M    154.6     0.0567     +9.6
+  5      ema       13.60M    145.5     0.0503     +18.3
+  5      ema       6.80M     121.0     0.0429     +18.7
+  5      mask-F1F2 27.20M    131.3     0.0218     +10.9
+  5      mask-F1F2 13.60M    122.1     0.0147     +10.5
+  5      mask-F1F2 6.80M     105.3     0.0114     +9.1
+  5      ema-rnd   27.20M    77.9      0.0670     +0.8
+  5      ema-rnd   13.60M    53.3      0.0473     -0.0
+  5      ema-rnd   6.80M     39.5      0.0358     +0.5
+  6      off       27.20M    7.8       0.0000     -0.8
+  6      off       13.60M    7.7       0.0000     -1.4
+  6      off       6.80M     6.8       0.0000     -3.5
+  6      ema       27.20M    21.3      0.0447     -12.0
+  6      ema       13.60M    42.8      0.0358     -17.6
+  6      ema       6.80M     75.9      0.0255     -17.1
+  6      mask-F1F2 27.20M    143.3     0.0219     +24.2
+  6      mask-F1F2 13.60M    124.8     0.0149     +15.6
+  6      mask-F1F2 6.80M     103.4     0.0112     +4.2
+  6      ema-rnd   27.20M    12.9      0.0753     +0.1
+  6      ema-rnd   13.60M    11.9      0.0499     -0.5
+  6      ema-rnd   6.80M     12.1      0.0354     -0.6
+  7      off       27.20M    51.4      0.0000     -3.7
+  7      off       13.60M    60.0      0.0000     +10.0
+  7      off       6.80M     53.0      0.0000     +6.2
+  7      ema       27.20M    135.7     0.0627     +12.0
+  7      ema       13.60M    106.9     0.0474     +16.9
+  7      ema       6.80M     73.6      0.0353     +14.5
+  7      mask-F1F2 27.20M    119.8     0.0203     +18.8
+  7      mask-F1F2 13.60M    94.7      0.0173     +15.8
+  7      mask-F1F2 6.80M     44.1      0.0109     +8.5
+  7      ema-rnd   27.20M    14.2      0.0730     -0.1
+  7      ema-rnd   13.60M    26.5      0.0521     -0.4
+  7      ema-rnd   6.80M     18.0      0.0349     +0.1
+  8      off       27.20M    36.6      0.0000     -5.7
+  8      off       13.60M    46.6      0.0000     -2.9
+  8      off       6.80M     65.7      0.0000     +12.3
+  8      ema       27.20M    53.0      0.0521     -0.6
+  8      ema       13.60M    54.5      0.0409     -0.4
+  8      ema       6.80M     53.6      0.0333     +6.5
+  8      mask-F1F2 27.20M    152.5     0.0208     +16.2
+  8      mask-F1F2 13.60M    125.2     0.0163     +15.4
+  8      mask-F1F2 6.80M     113.4     0.0106     +12.9
+  8      ema-rnd   27.20M    88.0      0.0786     +0.0
+  8      ema-rnd   13.60M    98.7      0.0570     -0.2
+  8      ema-rnd   6.80M     90.2      0.0406     +0.7
+
+  budget    trials    off              ema              ema-rnd          excess (ema - rnd)
+  6.80M     2428      42.6 +/- 11.5    85.5 +/- 14.4    28.9 +/- 9.8     +56.5 +/- 24.2
+  13.60M    4857      35.2 +/- 8.4     98.3 +/- 17.7    37.5 +/- 10.4    +60.8 +/- 28.2
+  27.20M    9714      28.8 +/- 6.5     99.8 +/- 19.9    40.8 +/- 10.1    +59.0 +/- 30.0
+
+  table divergence  0.0345 -> 0.0430 -> 0.0523 (1x, 2x, 4x)
+
+  budget    aligned (F1)     common-mode      outside group    gain (1.0 = no structure)
+  6.80M     0.02229 +/- 0.00427 0.00590 +/- 0.00118 0.04306 +/- 0.00230 1.85 +/- 0.31
+  13.60M    0.03298 +/- 0.00523 0.00956 +/- 0.00234 0.05329 +/- 0.00216 2.26 +/- 0.31
+  27.20M    0.04170 +/- 0.00883 0.01166 +/- 0.00284 0.06421 +/- 0.00197 2.35 +/- 0.44
+
+  WHAT THE CENTROID CANNOT SEE. F1 group n = 14, so `seen`'s null is
+  1/sqrt(n-1) = 0.2774 -- the value if the lesson writes no preferential ramp
+  structure. The pooled estimator runs ~0.003 under that at this n (Monte
+  Carlo 0.2703 vs 0.2774 at n = 9). 1.0 means it writes purely along the
+  ramp and the readout loses nothing inside the group.
+  budget    aligned (F1)     residual (blind) seen (pooled, jackknifed)
+  6.80M     0.02229 +/- 0.00427 0.03467 +/- 0.00264 0.5814 +/- 0.0495
+  13.60M    0.03298 +/- 0.00523 0.04407 +/- 0.00320 0.6263 +/- 0.0460
+  27.20M    0.04170 +/- 0.00883 0.05835 +/- 0.00260 0.6370 +/- 0.0791
+
+  THE LESSON IS RAMP-ENRICHED BUT THE BLIND DIRECTIONS ARE NOT EMPTY:
+  `seen` = 0.6370, 4.5 SE above the 0.2774 null, so structure IS being
+  written where the centroid cannot express it. The share a decoder could
+  in principle claim is 1 - 0.6370 = 0.3630 of the within-group pattern.
+  That PRICES the readout lead; it does not establish the information is
+  about the word rather than noise, which needs a decode.
+  NOT MEASURED HERE, and both bound every branch above. (1) Whether the
+  residual carries the WORD: it is a MAGNITUDE, and an unstructured write
+  produces one too. (2) `seen` accounts only for the group's CENTRED
+  directions. A decoder reading rates directly could also use the
+  common-mode level and the other eight groups, which the centroid's
+  ratio discards by construction -- so a high `seen` bounds what a better
+  decoder gains WITHIN this group, not overall.
+  excess grew       +56.5 -> +59.0 Hz over a 4x span, ratio 1.04
+  implied exponent  0.03  (0.5 is sqrt(t), 1.0 linear, 0.0 saturated)
+
+  SATURATED -- the excess grew only 1.04 over a 4x span, so the bias has
+  found its asymptote at ~59.0 Hz against the 236 Hz the route can carry.
+  More trials buy nothing.
+
+  Read this with the alignment table above before concluding anything.
+  If `gain` is holding up, the shape of what reward writes is fine and
+  the readout is fine -- `ctxbias` reaches 236 Hz through it -- and what
+  saturates is the MAGNITUDE the learning rule can hold. That is a
+  different target from credit assignment or compartments.

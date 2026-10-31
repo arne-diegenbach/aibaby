@@ -24772,7 +24772,15 @@ single point agreeing to 2% is one coincidence by this project's own rule. What 
 is the *direction and rough size* of the failure, which is enough to stop a build and not enough
 to publish as a law.
 
-## The lesson concentrates onto the readout's own coordinate as it learns (2026-10-31)
+## ~~The lesson concentrates onto the readout's own coordinate as it learns~~ (2026-10-31)
+
+> **WITHDRAWN THE SAME DAY, by the doubling this section pre-registered.** The rise this
+> heading claims was **65% the decaying bias of the estimator** the section itself flags as
+> broken. Corrected, there is no resolvable trend and the split is a constant of the
+> architecture. Everything below is the run as it was read; the correction is in
+> "The concentration was the estimator's bias decaying" at the end of this file. The two
+> findings that survive are that the blind directions are not empty, and that `seen` sits far
+> above its null at **every** budget.
 
 `ctxscale` at its registered 13.6M, nine creatures, four arms, 2 h 20 m. It carried the new
 within-group decomposition: of the F1 group's fourteen directions, `aligned` is the ramp (the
@@ -24831,3 +24839,118 @@ grew +38.0 → +60.8 Hz over a 4× span, ratio **1.60**, inside the **1.3–1.7 
 the run** as the region where nine creatures over 4× cannot separate √t growth from an asymptote.
 The 272M run read 1.70 and said the same thing. Its own note — "to reach 236 Hz, 54× these
 trials at this exponent" — is the more useful number, and it is not an encouraging one.
+
+## The concentration was the estimator's bias decaying (2026-10-31)
+
+`ctxscale` at 27.2M, nine creatures, four arms, **4 h 59 m** — the doubling the section above
+pre-registered as the fork that would decide whether to build a better F1 decoder. It resolves
+against that section, and it does so on a number that section had already flagged as broken.
+
+**THE FREE CONTROL, AND IT PASSES EXACTLY.** This run shares two rungs with the 13.6M run, and
+at both of them it prints identical `aligned` and `residual` — to all five decimals *and both
+standard errors* — even though the two runs' **total** budgets differ by 2×. So a rung depends
+only on its own budget, the new 27.2M rung sits on the same trajectory, and at 6.80M and 13.60M
+the *only* thing that differs between the two logs is the estimator that was replaced in between.
+
+**WHICH MAKES THE OLD RUNG RECOVERABLE WITHOUT RE-RUNNING IT.** The house jackknife of a plain
+mean reduces to the textbook standard error, so the sample spread can be read back out of a
+printed SE (`sd = se·√n`), and from that the sum of squares (`Σx²/n = mean² + sd²·(n−1)/n`).
+Pooled `seen` is `√(Σa²/(Σa²+Σr²))`, so it is recoverable from the mean and SE that were already
+in the archived log. The inversion was **checked against the three rungs whose corrected `seen`
+was printed before it was used on the fourth, which never had one**: worst error 0.00013, inside
+a four-decimal print's own rounding.
+
+| budget | `seen` corrected | as the 13.6M run printed it | the estimator's bias | step |
+|---|---|---|---|---|
+| 3.40M | **0.5740** | 0.4160 | +0.1580 | — |
+| 6.80M | **0.5815** | 0.4910 | +0.0905 | +0.0075 |
+| 13.60M | **0.6263** | 0.5640 | +0.0623 | +0.0448 |
+| 27.20M | **0.6371** | — | — | +0.0107 |
+
+**The bias is not a constant offset — it shrinks as `seen` rises**, drifting −0.0478 per doubling.
+That is **65% of the +0.074 per doubling** the previous section reported as a finding. Corrected,
+the rise is **+0.021 per doubling over an 8× span**, with steps +0.0075 / +0.0448 / +0.0107: the
+one large step sits between two near-zero ones, against rung SEs of 0.046–0.079. There is no
+resolvable trend, and the pre-registered extrapolation's apparent hit (predicted ≈0.64, observed
+0.6371) is a coincidence between two different estimators — the corrected slope predicts 0.6712.
+
+**THE DEFECT IS MINE AND IT WAS A HALF-FIX.** I found the mean-of-ratios bug while that run was
+still going, corrected the *level* at 13.6M, confirmed the verdict survived it at 5.8 SE, and
+published. I never re-derived the **slope** — which was the entire statistic the fork rested on.
+**A correction that fixes a level and leaves a trend computed in the discarded units is not a
+correction.** The rule this earns: when an estimator is replaced, re-derive every statistic that
+came out of it, not only the one that motivated the replacement.
+
+**WHAT SURVIVES, AND IT IS NOT NOTHING.** `seen` = 0.574–0.637 at **every** budget, 4.5 SE and up
+over the 0.2774 null. The lesson is ramp-enriched, robustly, everywhere it was measured. And
+`residual` exceeds `aligned` at every budget, so the centroid really does discard learned
+structure — Keemink & van Rossum's (2025) prediction for a population vector read over few
+neurons, measured here directly.
+
+**WHAT REPLACES THE WITHDRAWN CLAIM.** The blind share of the group's centred variance,
+`1 − seen²`, runs 0.671 → 0.662 → 0.608 → 0.594 — drifting **−0.0255 per doubling**, which at
+that rate needs **twelve more doublings, 3250× the budget, to halve**. On anything this project
+can run, about **60% of the within-group pattern is permanently invisible to the readout**. So
+"transient inefficiency, not a reservoir" is withdrawn along with the concentration.
+
+**THE MECHANISM IS THE RUN'S SHARPEST NUMBER.** Per-doubling growth exponents, where 0.5 is √t:
+
+| step | `aligned` | `residual` |
+|---|---|---|
+| 3.40M → 6.80M | 0.565 | 0.372 |
+| 6.80M → 13.60M | 0.565 | 0.346 |
+| 13.60M → 27.20M | **0.338** | 0.405 |
+
+`aligned` holds a steady √t for two doublings and then decelerates; the blind directions keep
+filling at the same rate throughout. **It is the expressible component that stalls.** That is the
+same shape as the rest of the run: the excess ratio is 1.04 over 4× (exponent 0.03, saturated),
+`gain` goes 1.85 → 2.26 → 2.35, while `table divergence` keeps climbing 0.0345 → 0.0430 → 0.0523.
+The writing continues; what reaches the output stops.
+
+**ONE CAVEAT ON THE TOP RUNG, because it bears on that +0.0107.** `aligned`'s between-creature SE
+nearly doubles at 27.2M (0.00523 → 0.00883, relative spread 0.48 → 0.64). A pooled ratio of sums
+weights that variance in, so part of the last step is creatures **diverging** in how much ramp
+they write, not the mean concentrating. At the longest budget the creatures stop agreeing.
+
+### The control for the whole line was sitting unprinted in the same arrays
+
+Of the two reasons the previous section gave for not building a better decoder, one is now
+withdrawn (transience) and one stands untouched (readout sensitivity buys speed, not ceiling —
+measured separately). What decides it is the limit the log has printed as unmeasured all along:
+**`residual` is a magnitude, and an unstructured write produces one too.**
+
+That control is `ema-rnd`, an arm `ctxscale` has always run: same learning rule, same reward, same
+trial count, same wiring, and a **randomised** context index, so it has no word to key on. Its
+`aligned`, `residual` and `seen` were computed at every budget and thrown away, because every
+decomposition column the instrument printed read the `ema` arm only while the arrays behind them
+were indexed by arm *and* budget. Added as prints, with no change to the run:
+
+- **`ema − ema-rnd` per component, paired on creature id and jackknifed.** The word-specific part
+  of the ramp and of the blind directions — which is the quantity a decoder would be claiming.
+  Pairing is on the creature's **id**, never its position in the vector, because a creature that
+  comes back inconclusive is skipped from one arm's vector and not another's, and a positional
+  contrast would then pair one creature's control against another's treatment silently.
+- **`seen`'s null measured instead of derived.** 1/√(n−1) assumes the unstructured write is
+  isotropic across the group's centred directions; `ema-rnd` is this creature's own unstructured
+  write, carrying whatever anisotropy its wiring, homeostat and perturbation clamp impose.
+  Agreement vindicates the derivation empirically; disagreement means every "SE above null" in
+  both of these sections is measured against the wrong yardstick.
+- **the fork's own statistic, paired.** Top-minus-bottom `seen`, jackknifed by deleting a creature
+  from *every* rung at once. The rungs share creatures, so both sections priced a **paired**
+  difference with a **between-creature** SE — which is why a +0.0107 step sat inside a ±0.079 bar
+  and settled nothing either way.
+
+A short smoke of the new prints does one thing worth reporting even though it ran below the
+minimum trial count, because it is a check on the **instrument** and not an effect: on creatures
+that have learned essentially nothing, the same pooled estimator reads `seen` ≈ 0.21–0.36 — at its
+own null. It does not manufacture 0.6 out of noise.
+
+**The next run is `ctxscale --ticks 6800000`, about 1.25 h**, giving rungs 1.70M / 3.40M / 6.80M.
+Downward rather than another doubling up, because the fork's statistic is a **slope** and cheap
+rungs buy more slope leverage per hour than one more expensive one — and 6.80M re-prints a value
+now known exactly (0.5815), so the run carries its own determinism check. **Pre-registered before
+it starts:** the recovery predicts corrected `seen`(3.40M) = **0.5740** where the broken estimator
+read 0.416. If it prints ≈0.574, the inversion is confirmed end to end and the series is flat at
+the bottom. If it prints ≈0.49–0.52, the inversion is wrong and the original rise survives. Of the
+three rungs, **1.70M is the only new level** — 3.40M and 6.80M are the discovery sample — while the
+measured null and the paired slope are new at all three.
