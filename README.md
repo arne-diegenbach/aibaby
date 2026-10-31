@@ -24575,3 +24575,61 @@ one such thing: the larynx threshold is still climbing **+0.138 in the final ten
 delivery has floored at 0.234 → 0.233. That is the next candidate, it has a characterised knob,
 and it is not free — `ipoff` destroys learning, so it needs a partial dose, and the regulator is
 marked closed for other questions. **Worth flagging before spending the run rather than after.**
+
+## The threshold is not the clock either, and the confound I registered pointed the wrong way (2026-10-31)
+
+`silence` re-run at **36 creatures** instead of 12, to make its per-creature larynx-threshold
+climb joinable against `dirbudget`'s per-seed `direction` at 13.6M and 27.2M. The whole change
+was one constant and one table: `cell.thr[d]` was **already** per creature per tenth and merely
+pooled at print time, so the measurement needed no new mechanism, no dose, and no genome edit —
+which is why this did not have to be the partial `ip_rate` run the previous section flagged.
+
+**The published primary replicated at triple the sample.** `ipoff − ip` reads **+0.3924 ±
+0.0167 (23.5 SE)** against n=12's +0.4231 ± 0.0267, and `ipoff` keeps **31%** of the shipped
+decay where it kept 29%. The dose is again exact: the shipped threshold climbs **+1.984** and
+`ipoff` holds **0.00000**, with **0 of 36** creatures moving it at all.
+
+**Three controls, all integer identities rather than fits.** Creatures 0–11 come back
+**identical** — the seed is `header().seed + r * 7919` and does not depend on the rep count, so
+raising it appended 24 creatures and redrew none, and the published n=12 numbers remain the same
+creatures' numbers. All **36** per-seed delivered totals reproduce the ladder's 13.6M column
+exactly. And the join's own hard control agrees on 36 of 36.
+
+### The second question: unresolved, and the pre-registration got the confound backwards
+
+The hypothesis was that the still-climbing threshold is the clock behind the rotation's decline,
+tested as `r(climb, Δdirection 13.6M→27.2M)` with a **pre-registered negative** prediction. It
+reads **−0.136 ± 0.190 (0.7 SE)**: the predicted sign, nowhere near resolved. The levels agree
+and also do not resolve — −0.317 (1.9 SE) at 13.6M and −0.324 (1.7 SE) at 27.2M.
+
+**The pre-flight fired hard, and it exposed an error in my own registration.** I had written
+that delivered trials are a confound *pointing the opposite way to the prediction*, which was an
+assumption about `r(climb, delivered)` made before measuring it. Measured, it is **−0.713 ±
+0.087 (8.2 SE)**: creatures whose threshold climbs more deliver **less**. So the chain runs
+climb ↑ → delivery ↓ → direction ↓ and the confound runs **with** the hypothesis, not against
+it. The two measured links multiply to **−0.416**, and the observed primary is −0.136 — *smaller
+in magnitude than the confound alone predicts.* Had the primary come back negative and resolved,
+my registered reasoning would have called it "surviving the confound a fortiori" when the
+confound could have produced it unaided. The branch text in `tools/silence_thr_join.py` now
+derives the confound's sign from the measured pre-flight instead of asserting it.
+
+**Post hoc, and labelled so because the registration did not name it:** with delivery held
+fixed, the partial correlation **changes sign** — `r(climb, Δdirection | delivered)` = **+0.247
+± 0.198 (1.2 SE)**, and at the top rung **+0.107 ± 0.230 (0.5 SE)**. Unresolved, so it is a lead
+for a different design rather than an answer. But it points the same way as the arithmetic: once
+the delivery route is removed there is no negative left to explain, and possibly a small
+positive.
+
+**So the threshold gets no support as the clock, and that was the last candidate with a named
+mechanism.** The decline's four explanations now stand as: magnitude-eats-direction refused,
+delivery starvation refused, experience refused at the wrong sign (+0.583, 4.7 SE), and the
+threshold **unsupported with its raw correlation fully attributable to delivery**. Stated as
+"no support" and not "refuted" on purpose: ±0.19 at n=36 cannot resolve the ~0.28 this join
+would need, so this is a bound on the effect's size, not a demonstration of its absence.
+
+**What it would take, and why it is not another run of this shape.** Every test on this line has
+now been **between creatures**, and the quality confound is the same each time — a brain that
+both regulates harder and rotates less reads identically to one where the regulator causes the
+decline. Settling it needs the threshold moved **within** a creature without moving its
+learning, and `ipoff` cannot do that because it destroys learning at −7.42 SE. That is a design
+problem, not a budget problem, and it is the honest end of this line until someone has one.

@@ -174,11 +174,29 @@ if moved:
 print("\nTHE PRE-FLIGHT. does the climb track how much the creature said?")
 rp, sp = show("r(ip climb, ip delivered)", ip, dlv)
 hot = abs(rp) > 2.0 * sp
+# THE CONFOUND'S SIGN IS DERIVED FROM THIS RUN, NOT ASSUMED. The pre-registration in the
+# experiment header asserted that delivery "points the OPPOSITE way to the prediction",
+# which was an assumption about r(climb, delivered) made before it was measured -- and the
+# measurement came back NEGATIVE (-0.713, 8.2 SE), so the chain climb -> delivery ->
+# direction is negative and runs WITH the hypothesis rather than against it. The first
+# version of this branch printed "a negative primary survives a fortiori" on that wrong
+# assumption, which would have endorsed a negative primary the confound could have
+# manufactured on its own. The sign is now computed from the two measured links.
+R_DLV_DIR = 0.583      # r(trials, direction) at 27.2M, dirbudget's own free control
+chain = rp * R_DLV_DIR
 if hot:
-    print("  LIVE at 2 SE. Delivered trials are a known +0.583 confound on `direction`,")
-    print("  so the primary below is CONTAMINATED. Read the sign carefully: a NEGATIVE")
-    print("  primary is fighting the confound and survives it a fortiori; a POSITIVE one")
-    print("  could be the confound alone and is not readable.")
+    print("  LIVE at 2 SE, so the primary below is CONTAMINATED.")
+    print("  The chain is climb -> delivered (%+.3f, measured here) -> direction (%+.3f,"
+          % (rp, R_DLV_DIR))
+    print("  dirbudget's control), so the confound alone predicts r(climb, direction) ~")
+    print("  %+.3f. That is %s the prediction's own sign, so a negative primary is"
+          % (chain, "THE SAME AS" if chain < 0 else "OPPOSITE TO"))
+    if chain < 0:
+        print("  NOT evidence for the threshold: the confound could produce it unaided, and")
+        print("  what has to be read instead is whether the primary EXCEEDS %+.3f."
+              % chain)
+    else:
+        print("  fighting the confound and survives it a fortiori.")
 else:
     print("  Clean at 2 SE: the threshold climb does not track delivery between")
     print("  creatures, so the known delivery confound does not enter the primary.")
@@ -192,6 +210,35 @@ show("  the null, for contamination", ip, d_nul)
 print("\nFOR CONTEXT, the levels rather than the step:")
 for rung in (LO, HI):
     show("r(climb, direction at %s)" % rung, ip, [lad[s][rung]["direction"] for s in shared])
+
+
+def partial(xs, ys, zs):
+    """r(x,y | z), with a delete-one jackknife SE computed on the partial itself."""
+    def p(a, b, c):
+        rab, rac, rbc = pearson(a, b), pearson(a, c), pearson(b, c)
+        den = ((1.0 - rac * rac) * (1.0 - rbc * rbc)) ** 0.5
+        return (rab - rac * rbc) / den if den > 0 else 0.0
+    r = p(xs, ys, zs)
+    n = len(xs)
+    if n < 5:
+        return r, float("inf")
+    reps = [p(xs[:i] + xs[i + 1:], ys[:i] + ys[i + 1:], zs[:i] + zs[i + 1:])
+            for i in range(n)]
+    m = sum(reps) / n
+    return r, (sum((v - m) ** 2 for v in reps) * (n - 1) / n) ** 0.5
+
+
+# POST HOC, AND LABELLED SO. The pre-registration named the pre-flight and said to report
+# the primary as contaminated if it fired. It did NOT name a partial correlation, so this is
+# an exploratory follow-up and not a registered statistic: it cannot rescue the primary, and
+# a result here is a lead for a new design rather than an answer to the question asked.
+# Delivery is held fixed because it is the measured route between climb and direction.
+print("\nPOST HOC, NOT PRE-REGISTERED. the same primary with DELIVERY held fixed:")
+for lbl, ys in (("d direction %s->%s" % (LO, HI), d_dir),
+                ("direction at " + HI, [lad[s][HI]["direction"] for s in shared])):
+    rp2, sp2 = partial(ip, ys, dlv)
+    print("  %-34s %+.3f +- %.3f (%s SE)  partial" % ("r(climb, " + lbl + " | dlv)",
+                                                      rp2, sp2, ses(rp2, sp2)))
 
 resolved = abs(r) > 2.0 * se
 print()

@@ -1,0 +1,210 @@
+experiment: silence
+  instrument        silence   trial seed 000000000135b62e   4857 delivery, feedback balance and larynx threshold per tenth
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  INDEX SOURCE 4, inherited from the genome and NOT set by silence.
+  The index reads the AUDITORY module, so a CtxDrive injected into the
+  context module is IGNORED by it -- such an arm is DERIVED, not an
+  oracle.
+  An "oracle" arm is only an oracle when the drive and the index use the
+  SAME module: ctx_match reads 1.000 for a genuine host-written index and
+  well below it for a derived one.
+  the finding       `dlvry`: delivery falls 0.716 -> 0.261 inside one
+                    session, -0.4554 +- 0.0230 (19.8 SE), 12 of 12 down,
+                    and EVERY missed trial is silent (0 degenerate,
+                    residual 0). The creature stops answering.
+  already refused   the reward is not the cause. praise/scold are
+                    symmetric (+0.5/-0.5) and `boundprobe` shows the
+                    praise share CONSTANT at 0.548 -> 0.536 at this
+                    budget, so voicing stays net-positive while delivery
+                    collapses. Carried here (`praise` column) so the
+                    claim rests on THIS session, not another protocol.
+  the hypothesis    IP is `threshold += ip_rate * (rate_ema - target)`, so
+                    a larynx firing above target gets pushed up until the
+                    voicing gate stops opening. That predicts an early,
+                    steep, monotone decay that FLOORS where the threshold
+                    stops moving -- which is the measured shape.
+  the design        2 arms x 36 paired creatures, 13600000 ticks = 4857 trials.
+                    `ipoff` sets homeo.ip_rate = 0 and changes nothing
+                    else; same seeds, same wiring, same everything.
+  the primary       last tenth minus first in the DELIVERED fraction, per
+                    arm, and the arm difference. Pooled as a ratio of sums
+                    and jackknifed over creatures, never meaned per
+                    creature.
+  THE DOSE CHECK    the `thr` column. `ipoff` must show a FLAT larynx
+                    threshold and `ip` a rising one. If both move the knob
+                    did not take and NO verdict below is available,
+                    whatever the delivery columns say. A wired mechanism
+                    is not a meaningful dose.
+  stated up front   `ipoff` is known to COST learning (-7.42 SE), so the
+                    arms differ in more than silence and this is not a
+                    clean one-variable ablation. The question survives it:
+                    does the decay SURVIVE with the homeostat off?
+  the free control  the `ip` arm at this budget is `dirbudget`'s own call,
+                    so its per-seed delivered total must reproduce that
+                    ladder's column for the matching rung EXACTLY:
+
+                      python3 tools/dlvry_predict.py \
+                          results/dirbudget.log <this log>
+
+  THE SECOND QUESTION, on the same run and costing nothing extra:
+  the candidate     `dirbudget`'s rotation peaks and declines, and all
+                    three explanations are refused (magnitude trade,
+                    delivery starvation, experience). The threshold is the
+                    only quantity known to keep moving after delivery
+                    floors, so it is the last candidate with a mechanism.
+  the test          per-creature threshold climb (last tenth minus first,
+                    `ip` arm) joined on seed against `dirbudget`'s own
+                    per-seed `direction` at 13.6M and 27.2M. The climb is
+                    measured over the RISE and asked to predict the LATER
+                    decline, which is out of sample in time.
+  the prediction    SIGNED and written before the run: if the threshold is
+                    the clock, a creature whose threshold climbs faster is
+                    further past the peak by 27.2M, so
+                    r(climb, direction(27.2M) - direction(13.6M)) is
+                    NEGATIVE.
+  what refuses it   r >= 0 at 2 SE, or |r| under ~0.28, which is what this
+                    join can resolve at n = 36. Either way the threshold
+                    stops being the candidate and the decline has none
+                    left with a named mechanism.
+  THE PRE-FLIGHT    r(climb, delivered trials) is read FIRST and reported
+                    either way. `dirbudget`'s own free control measured
+                    r(trials, direction) = +0.583 (4.7 SE), so delivery is
+                    a KNOWN confound pointing the opposite way: if the
+                    climb tracks delivery between creatures, the primary is
+                    contaminated and is reported as such, not read. Within
+                    a creature the two move oppositely; BETWEEN creatures
+                    it is unmeasured, which is why it is a pre-flight and
+                    not an assumption.
+  stated up front   this is a BETWEEN-creature correlation, the same shape
+                    as the experience test it follows, so a quality
+                    confound (a brain that both regulates harder and
+                    rotates less) is not excluded by it.
+                      python3 tools/silence_thr_join.py \
+                          results/dirbudget.log <this log>
+
+  LIVENESS. 36 of 36 creatures completed BOTH arms.
+
+  THE `ip` ARM'S PER-SEED DELIVERED TOTAL, for the control above:
+  seed      13.6M   nominal was
+  0           2072   4857
+  1           2035   4857
+  2           1682   4857
+  3           1913   4857
+  4           2491   4857
+  5           1648   4857
+  6           2008   4857
+  7           2538   4857
+  8           2142   4857
+  9           2099   4857
+  10          2299   4857
+  11          2421   4857
+  12          2899   4857
+  13          2143   4857
+  14          2428   4857
+  15          2932   4857
+  16          3381   4857
+  17          2039   4857
+  18          2292   4857
+  19          1899   4857
+  20          2160   4857
+  21          1878   4857
+  22          2836   4857
+  23          2567   4857
+  24          2662   4857
+  25          2484   4857
+  26          2037   4857
+  27          2098   4857
+  28          2168   4857
+  29          2515   4857
+  30          2034   4857
+  31          2297   4857
+  32          1646   4857
+  33          2819   4857
+  34          1936   4857
+  35          2199   4857
+
+  THE PER-SEED THRESHOLD CLIMB, last tenth minus first, both arms:
+  seed   ip climb   ipoff climb   ip delivered
+  0       +2.03638      +0.00000           2072
+  1       +2.29976      +0.00000           2035
+  2       +2.45877      +0.00000           1682
+  3       +2.37036      +0.00000           1913
+  4       +2.00492      +0.00000           2491
+  5       +2.16840      +0.00000           1648
+  6       +2.19164      +0.00000           2008
+  7       +2.32416      +0.00000           2538
+  8       +1.73809      +0.00000           2142
+  9       +2.32157      +0.00000           2099
+  10      +1.87617      +0.00000           2299
+  11      +2.17225      +0.00000           2421
+  12      +0.93999      +0.00000           2899
+  13      +2.16604      +0.00000           2143
+  14      +2.03012      +0.00000           2428
+  15      +2.05517      +0.00000           2932
+  16      +1.23573      +0.00000           3381
+  17      +1.99190      +0.00000           2039
+  18      +2.17579      +0.00000           2292
+  19      +2.23221      +0.00000           1899
+  20      +2.18382      +0.00000           2160
+  21      +2.59981      +0.00000           1878
+  22      +1.57444      +0.00000           2836
+  23      +1.59931      +0.00000           2567
+  24      +1.28227      +0.00000           2662
+  25      +2.09339      +0.00000           2484
+  26      +2.17204      +0.00000           2037
+  27      +2.32683      +0.00000           2098
+  28      +2.22666      +0.00000           2168
+  29      +1.48597      +0.00000           2515
+  30      +1.73536      +0.00000           2034
+  31      +1.42728      +0.00000           2297
+  32      +2.35015      +0.00000           1646
+  33      +1.43056      +0.00000           2819
+  34      +2.03624      +0.00000           1936
+  35      +2.10409      +0.00000           2199
+
+  DELIVERY, FEEDBACK AND THRESHOLD TENTH BY TENTH, pooled over 36
+
+  arm ip
+  tenth   nominal   delivered   silent   frac    praise   thr
+  1         17496       14493     3003   0.828   0.555   +1.0000
+  2         17496       10941     6555   0.625   0.546   +1.4508
+  3         17496       11417     6079   0.653   0.549   +1.7512
+  4         17460        8812     8648   0.505   0.540   +1.9799
+  5         17496        7447    10049   0.426   0.534   +2.2679
+  6         17496        6894    10602   0.394   0.549   +2.4367
+  7         17460        6809    10651   0.390   0.532   +2.5575
+  8         17496        5610    11886   0.321   0.547   +2.7543
+  9         17496        4799    12697   0.274   0.551   +2.9134
+  10        17460        4475    12985   0.256   0.544   +2.9838
+
+  arm ipoff
+  tenth   nominal   delivered   silent   frac    praise   thr
+  1         17496       14066     3430   0.804   0.522   +1.0000
+  2         17496       11923     5573   0.681   0.539   +1.0000
+  3         17496       12018     5478   0.687   0.539   +1.0000
+  4         17460       11599     5861   0.664   0.529   +1.0000
+  5         17496       11543     5953   0.660   0.529   +1.0000
+  6         17496       11347     6149   0.649   0.533   +1.0000
+  7         17460       11161     6299   0.639   0.536   +1.0000
+  8         17496       11089     6407   0.634   0.531   +1.0000
+  9         17496       11265     6231   0.644   0.531   +1.0000
+  10        17460       10900     6560   0.624   0.509   +1.0000
+
+  THE PRIMARY, last tenth minus first in the delivered fraction:
+    ip     -0.5721 +- 0.0138 (41.4 SE)
+    ipoff  -0.1797 +- 0.0092 (19.5 SE)
+    ipoff MINUS ip   +0.3924 +- 0.0167 (23.5 SE)
+
+  THE DOSE CHECK. larynx mean threshold, last tenth minus first:
+    ip     +1.98382
+    ipoff  +0.00000
+    the knob took: `ipoff` holds its threshold at 0% of the shipped
+    arm's movement, so the arms really do differ in the homeostat.
+
+  IP WAS HOLDING THE VOICE OPEN. With the homeostat off the decay is
+  SMALLER by +0.3924 +- 0.0167 (23.5 SE) -- and `ipoff` keeps only 31% of
+  the shipped decay. The homeostat is implicated in the quieting, and
+  unlike the five earlier suspects it comes with a knob: `homeo.ip_rate`.
+    WHAT THIS DOES NOT LICENSE: turning it down. `ipoff` costs learning
+    (-7.42 SE), so the trade has to be priced before anything ships.
