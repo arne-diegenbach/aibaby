@@ -24954,3 +24954,68 @@ read 0.416. If it prints ≈0.574, the inversion is confirmed end to end and the
 the bottom. If it prints ≈0.49–0.52, the inversion is wrong and the original rise survives. Of the
 three rungs, **1.70M is the only new level** — 3.40M and 6.80M are the discovery sample — while the
 measured null and the paired slope are new at all three.
+
+## The blind directions hold no word (2026-10-31)
+
+The creature's readout reads one number off a group of fourteen neurons — a weighted centroid.
+That throws something away: of all the ways the group's fourteen rates can differ from each
+other, the centroid can only express one, the ramp its weights happen to follow. For four weeks
+the open question on this line was what sits in the other thirteen. Measurements said it was not
+empty: a quantity called `seen`, the share of the lesson's write that lands along the ramp, came
+out at 0.63 against a null of 0.28, so the lesson writes a great deal of structure where the
+readout cannot see it. The natural reading was that a better reader would find a word in there.
+
+It does not. The control was sitting in the same arrays the whole time, uncomputed into a print:
+an arm that runs **the same write rule, on the same trials, in the same creatures, with the word
+index randomised**. It has no word to key on, so whatever magnitude it produces is the floor that
+a real magnitude has to clear in order to be *about* the word at all.
+
+    rung      component  taught    randomised   word-specific (paired per creature)
+    3.40M     ramp       0.01507   0.00487      +0.01021 +/- 0.00513   ( 2.0 SE)
+    6.80M     ramp       0.02229   0.01146      +0.01083 +/- 0.00643   ( 1.7 SE)
+    13.60M    ramp       0.03298   0.01703      +0.01595 +/- 0.00761   ( 2.1 SE)
+    3.40M     blind      0.02679   0.02813      -0.00134 +/- 0.00217   (-0.6 SE)
+    6.80M     blind      0.03467   0.04146      -0.00679 +/- 0.00472   (-1.4 SE)
+    13.60M    blind      0.04407   0.06050      -0.01643 +/- 0.00436   (-3.8 SE)
+
+The blind directions are **never above the floor**, and at the largest budget they are 3.8 SE
+*below* it, by a gap that widens at every rung. Randomise the word and the creature writes *more*
+into the directions its readout cannot see. So keying the write to the word moves magnitude **out
+of** the blind subspace and **into** the ramp — which is what a working lesson should do, and the
+exact opposite of a hidden reservoir.
+
+Both facts turn out to be true at once, and they were never in tension: the off-ramp write **is**
+anisotropic — `seen` beats its null at every rung, and beats a *measured* null, not just a
+derived one — and it is **word-free**. Anisotropy is a property of the write rule and the wiring.
+It is not word identity. Reading `seen` > null as evidence of a code was the error, and it was
+mine; the number says only that the write has a shape, not that the shape means anything.
+
+The same control prices the part that *is* readable, and the price is humbling: only **48%** of
+the ramp-aligned magnitude is word-specific, at about 2 SE. Half of what looked like the lesson
+landing is what an index-free write produces anyway.
+
+### What it closes, and what it costs us
+
+The decoder is closed, and not for the reason we expected. Not because the prize is small —
+separate arithmetic had already priced that at nearly nothing. Not because the structure is
+transient: the same run settles that too. Paired across the nine creatures scored at every rung,
+`seen` moves +0.052 ± 0.100 over a fourfold span — **flat**, so the split between the readable
+and the blind is a constant of this architecture, not a stage it is passing through. The decoder
+is closed because what the blind directions hold **is not about the word**.
+
+That spends a published claim of ours, too. The ceiling had been explained by *the expressible
+component stalls* — the ramp's growth exponent holding 0.565 and then falling to 0.338 while the
+blind part kept climbing. That fall happens at exactly one rung of one run, where the spread
+between creatures nearly doubles; and the quantity it was measured on is half floor, with the
+floor growing at least as fast. The claim is not refuted. It is **unsupported**, which for our
+purposes costs the same.
+
+Also spent: an extrapolation. We had priced the blind share as slowly draining, "3250× the budget
+to halve it." That came out of a drift which this run shows is indistinguishable from zero —
+precision computed on noise. What survives is a plain measurement: the blind share is 0.61–0.67
+and does not move.
+
+What is bought is a direction. The naming ceiling is **not** an expression bottleneck. The
+creature's write is already aimed at the coordinate its readout can see, and what it spills
+elsewhere is interference. If we want the creature to reach further with a name, the write has to
+get **bigger or better aimed** — a better reader has nothing left to find.

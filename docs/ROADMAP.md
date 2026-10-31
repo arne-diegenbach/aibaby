@@ -968,20 +968,37 @@ uninterpretable arm.
 **Cost:** 18 × (13.6M + 2 × 13.6M) = **734M ticks, ~2.5–2.7 h** — the snapshot saves re-running
 the shared half, which a two-full-arm version would spend 979M on.
 
-### 14. PREPARED, NOT BUILT — `f1decode`: is 13.7% the creature's, or the centroid's?
+### 14. ~~PREPARED, NOT BUILT — `f1decode`: is 13.7% the creature's, or the centroid's?~~
 
-**READ §15 AND §20 FIRST. §20 RAN THE DECIDER AND `f1decode` CAME OUT WEAKER, NOT STRONGER.**
+> **CLOSED 2026-10-31 BY MEASUREMENT — DO NOT BUILD. READ §23.** The question was whether the
+> blind directions hold word-specific structure the centroid cannot reach. They do not. Against
+> an index-randomised arm running the same rule on the same trials, the blind component is
+> **never above the floor** and is **3.8 SE below it** at the largest budget, by a gap that
+> widens at every rung — randomising the word makes the creature write *more* into the blind
+> subspace. `seen` exceeding its null says only that the off-ramp write is **anisotropic**,
+> which is a property of the write rule and the wiring, not word identity.
+>
+> Two of the reasons this section gave are themselves withdrawn, and are struck below rather
+> than deleted so the error stays visible: `seen` does **not** rise (+0.0521 ± 0.0997 over 4×,
+> flat), and the residual is **not** transient (same measurement). The decoder is closed because
+> there is no word in there — not because the structure is draining away.
+
+~~**READ §15 AND §20 FIRST. §20 RAN THE DECIDER AND `f1decode` CAME OUT WEAKER, NOT STRONGER.**
 The residual IS large (it exceeds `aligned` at every budget) but `seen` RISES +0.074 per
 doubling, so the lesson is concentrating onto the readout's own coordinate as it learns and the
-residual is transient rather than a reservoir. A decoder would claim a quantity the creature is
+residual is transient rather than a reservoir.~~ A decoder would claim a quantity the creature is
 already giving up. With §15's arithmetic that is two independent reasons — one algebraic, one
-measured — not to build this yet. **The fork that would settle it is one more doubling** (see
-§20), not a decode. It can say how much the centroid discards; it
+measured — not to build this yet. ~~**The fork that would settle it is one more doubling** (see
+§20), not a decode.~~ It can say how much the centroid discards; it
 cannot promise that recovering it raises the asymptote, and §15 is the reason.
 
-The build `ctxscale`'s new `seen` column decides whether to make. **Run it only if `seen` comes
+~~The build `ctxscale`'s new `seen` column decides whether to make. **Run it only if `seen` comes
 back near its derived null of 1/√13 = **0.277**; if `seen` ≈ 1.0 the lesson writes along the
-centroid's own coordinate, the blind directions are empty, and this is not worth building.
+centroid's own coordinate, the blind directions are empty, and this is not worth building.~~
+**That gate was answered and it was the wrong gate.** `seen` came back at 0.57–0.63, between the
+null and 1.0 — the case the gate read as "worth building". It took a second control, not a
+bigger `seen`, to show the blind directions are word-free. **A magnitude above its isotropic
+null is not evidence of content; the control for content is an index-free arm.**
 
 **THE QUESTION.** Keemink & van Rossum (2025) find the population-vector estimate is most biased
 exactly when few neurons are active — this creature's fourteen — and that ML/Bayesian decoders
@@ -1097,6 +1114,14 @@ creature-to-creature teaching. Irrelevant to a device taught by a human; fatal t
 These are places where fitting has already cost this project a result, and they are written
 down so the next person does not pay again.
 
+- **Do not read a magnitude above its isotropic null as evidence of content.** `seen` sat at
+  0.63 against a null of 0.28 and was written up as the lesson writing structure the readout
+  cannot see — which it is. But an index-**randomised** arm, same rule and same trials, wrote
+  *more* into those same directions (3.8 SE more at the top rung). The null answers *is the
+  write shaped?*; only a control with the label destroyed answers *is the shape about the
+  label?*. Those are different questions and the first one was being quoted for the second.
+  Build the index-free arm **before** pricing any lead off a magnitude. Here it cost nothing:
+  it was already in the arrays, unprinted, for four weeks.
 - **Do not compare `excess` between creatures that delivered different amounts.** It is
   `direction − its null`, and the null is an estimate that tracks how much was said: within a
   rung, more delivered trials buys a null lower by −0.435 ± 0.148 (2.9 SE). Any between-creature
@@ -1753,3 +1778,108 @@ refusal is worth the run.
 overwriting a running executable fails rather than silently working. Build, gate on the four
 verify keys (the hash must be *unchanged*, which is the whole point of the branch guard), then
 smoke `halfcenter` before spending the full run.
+
+## §23 — THE BLIND DIRECTIONS HOLD NO WORD. The readout line closes on the information question (2026-10-31)
+
+`ctxscale --ticks 13600000`, 9 creatures, 4 arms, rungs 3.40M / 6.80M / 13.60M, 2 h 19 m.
+Exit 1, which is the declared-band `return false` on the **growth-ratio** question alone
+(ratio 1.60 inside the pre-registered 1.3–1.7 dead zone). The run reached its own final verdict
+and every one of the three questions this run was built to ask resolved.
+
+### The recovery algebra is confirmed end to end, and §20 stays withdrawn
+
+**PRE-REGISTERED in §21, before the run:** corrected `seen`(3.40M) = **0.5740**, against the
+broken estimator's 0.416.
+
+    rung      predicted   printed     role
+    3.40M     0.5740      0.5742      the pre-registered test        (error 0.0002)
+    6.80M     0.5815      0.5814      determinism, recovered value
+    13.60M    0.6263      0.6263      determinism, recovered value
+
+So the inversion of the archived log was right to four decimals, the two shared rungs re-printed
+across runs whose total budget differs 2×, and §20's withdrawal is final: the corrected series
+is **0.5742 → 0.5814 → 0.6263**, not the rise that was published. `residual`'s exponents also
+re-print at 0.372 / 0.346 and `aligned`'s at 0.565 / 0.565, so the whole decomposition is
+reproduced, not just the ratio.
+
+### The fork resolves FLAT, so the split is architecture, not a trajectory
+
+Paired on creature id over the 9 creatures scored at every rung: `seen` moves **+0.0521 ±
+0.0997** over the 4× span, **+0.0260 per doubling**. Flat within 0.5 SE. Neither §20's rise nor
+a decay. As a variance share, the blind part is **0.670 → 0.662 → 0.608**, a change of
+**−0.063 ± 0.120** — equally unresolved.
+
+**This retires the extrapolation as well as the claim.** §21 priced the blind share as draining
+at −0.0255 per doubling, "3250× the budget to halve it." That number came out of a drift that
+is **not distinguishable from zero**, so it was precision on noise. The licensed statement is
+only: the blind share sits at 0.61–0.67 and does not move measurably over 4×.
+
+### THE RESULT: the blind directions carry no word, and the ramp carries only half a word
+
+The control was `ema-rnd` — the same write rule, the same trials, the same creatures, with the
+word index randomised. It has no word to key on, so it is the floor a magnitude must clear to be
+*about* the word at all. It was being computed and discarded all along; §21 printed it.
+
+    rung      component  ema       rnd (floor)  word-specific (paired, jackknifed)
+    3.40M     aligned    0.01507   0.00487      +0.01021 +/- 0.00513   ( 2.0 SE)
+    6.80M     aligned    0.02229   0.01146      +0.01083 +/- 0.00643   ( 1.7 SE)
+    13.60M    aligned    0.03298   0.01703      +0.01595 +/- 0.00761   ( 2.1 SE)
+    3.40M     residual   0.02679   0.02813      -0.00134 +/- 0.00217   (-0.6 SE)
+    6.80M     residual   0.03467   0.04146      -0.00679 +/- 0.00472   (-1.4 SE)
+    13.60M    residual   0.04407   0.06050      -0.01643 +/- 0.00436   (-3.8 SE)
+
+**The residual is never above the floor, and at the top rung it is 3.8 SE below it.** The gap
+widens monotonically. Randomising the word makes the creature write *more* into the directions
+the centroid cannot see — so keying the write to the word moves magnitude **out of** the blind
+subspace and **into** the ramp. That is the opposite of a reservoir.
+
+**`seen` > null was never evidence of a hidden code.** Both facts hold together: the off-ramp
+write is anisotropic (`seen` = 0.6263 against a **measured** null of 0.3077, ≥5 SE once the
+null's own spread is carried, and above it at all three rungs), and it is word-free (at or below
+the index-free floor at all three rungs). Anisotropy is a property of the write rule and the
+wiring. It is not word identity. The derived null `1/sqrt(n-1)` = 0.2774 is confirmed by the
+measured one, which ran 0.254 / 0.338 / 0.308.
+
+**And the ramp itself is about half floor.** The word-specific part of `aligned` is
+0.01595/0.03298 = **48%** at the top rung, at only ~2 SE per rung. Every `aligned` number
+published in this line is therefore a floor-contaminated quantity.
+
+### What that costs the published mechanism story
+
+§21 explained the ceiling by *the expressible component stalls*: `aligned`'s exponent holding
+0.565 for two doublings then falling to 0.338, while `residual` held 0.372 / 0.346 / 0.405.
+Two caveats now attach, and both land on the same single data point:
+
+* the fall to **0.338 occurs only at 27.2M**, the top rung of the *other* run, where `aligned`'s
+  between-creature relative spread already nearly doubles (0.48 → 0.64);
+* `aligned` is ~50% index-free floor, and the floor's own exponent is **1.23 then 0.57** — it
+  grows at least as fast. The word-specific part's exponent is **0.085 then 0.559**, which at
+  this n is unresolvable.
+
+So *the expressible component stalls* rests on one rung of one run, measured on a half-floor
+quantity. It is not retracted — it is **unsupported**, and the honest reading of this run is
+that both components grow with no separable exponent.
+
+### CONSEQUENCE: the readout line is closed, both ways
+
+`aibaby-readout-is-a-speed-knob` already priced the readout's **ceiling** prize at ~nothing by
+algebra, leaving it an information question: is there word-specific structure the centroid
+cannot reach? **Measured: no.** A decoder reading the blind directions inside the F1 group would
+be reading something that falls *below* what an index-free write produces.
+
+**DO NOT BUILD the within-group decoder.** Not because the gain is small, and not because the
+structure is transient — the fork says it is permanent — but because the structure is **not
+about the word**.
+
+This matters beyond the readout. It says the naming ceiling (`dF1 ~ aligned^0.61`) is **not**
+hiding behind an expression bottleneck. The write is already ramp-enriched; what it puts
+elsewhere is interference. More F1 reach has to come from a **bigger or better-aimed write**,
+not from a better reader.
+
+### WHAT IS LEFT ON THIS LINE
+
+One limit still bounds every branch: `seen` accounts only for the group's **centred**
+directions. A decoder reading rates directly could also use the common-mode level and the other
+eight groups, which the centroid's ratio discards by construction. That is a different
+instrument, not a continuation of this one. The open leads that survive are `noise_amp` and the
+nine-axes multiplication — not the readout.
