@@ -158,6 +158,15 @@ const Spec kSpecs[] = {
      "no requirement; G3 is the open milestone, so FAIL is the current answer"},
     {"g2", kDefaultMinimum, Expect::kPass, Tier::kLong, "no requirement"},
     {"snapshot", kDefaultMinimum, Expect::kPass, Tier::kLong, "no requirement"},
+    {"thrpatch", kDefaultMinimum, Expect::kRead, Tier::kLong,
+     "PRE-FLIGHT for `thrfork`, and a CODE question not a science one: can a\n"
+     "  snapshot be resumed with a PATCHED per-module genome, and does the patch\n"
+     "  TAKE EFFECT? load_snapshot rebuilds from the snapshot's OWN genome, so\n"
+     "  the route is editing the blob embedded in a copy of the bytes. The knob\n"
+     "  is vocal's ip_wake_scale/ip_sleep_scale, NOT the global ip_rate. Checks\n"
+     "  TWO things, because loading is not taking effect: the resume status, and\n"
+     "  that the larynx threshold then CLIMBS in the shipped arm and stays FLAT\n"
+     "  in the patched one. Minutes; it gates 2.6 h"},
     {"retain", 5600000, Expect::kPass, Tier::kTeach,
      "derived: 60% of it is the teaching phase, which needs teachsound's 3.4M to\n"
      "  produce something worth retaining; the rest is a full fatigue cycle so the\n"
@@ -1311,6 +1320,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "g4") ok = run_g4(dna_blob, ticks, verbose);
   else if (name == "g2") ok = run_g2(dna_blob, ticks, verbose, Regime{});
   else if (name == "snapshot") ok = run_snapshot(dna_blob, ticks, verbose);
+  else if (name == "thrpatch") ok = run_thrpatch(dna_blob, ticks, verbose);
   else if (name == "footprint") ok = run_footprint(dna_blob, ticks, verbose);
   else if (name == "g2probe") {
     // Diagnostic ceiling: dense, immediate, full-strength feedback.

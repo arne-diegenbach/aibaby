@@ -3483,6 +3483,175 @@ ImitateRun run_imitate_session(const std::vector<uint8_t>& blob, uint64_t ticks,
 }
 
 
+// `thrpatch` -- the PRE-FLIGHT that gates `thrfork` (ROADMAP 13), and it is a code question
+// rather than a science one.
+//
+// `thrfork` wants one creature run to a leg, snapshotted, then continued TWICE: once as
+// shipped and once with the larynx's intrinsic homeostat off, so the two halves share a
+// bit-identical past and the comparison is WITHIN the creature. Every test on the rotation's
+// decline so far has been between creatures with the same quality confound (ROADMAP 12).
+//
+// THE OBSTACLE. `load_snapshot` "rebuilds `brain` from the snapshot's own genome", so a
+// modified genome cannot be handed to it. But the genome is embedded IN PLACE in a buffer the
+// caller owns, and `Session::resume` says "`snap` must outlive the session: the genome the
+// brain runs on is the one embedded in those bytes." So patching a COPY of the snapshot should
+// give a creature with the same state and a different genome. It may instead trip kBadDna,
+// kLayoutMismatch or kStateMismatch.
+//
+// THE KNOB IS PER-MODULE AND IT IS NOT `ip_rate`. `ip_rate` is `dna_.header().homeo` -- global
+// -- so zeroing it would freeze every module. The per-module term is
+// `ip_scale = asleep ? dm.ip_sleep_scale : dm.ip_wake_scale` (`network.cpp:3111`), multiplying
+// ip_rate at `:3121`. Both ship at 1.0 on vocal, and zeroing them leaves `scaling_rate` alive,
+// so only the threshold path stops.
+//
+// AND IT CHECKS TWO THINGS, because loading is not taking effect. A patch that resumes cleanly
+// and changes nothing would read as a pass -- the same shape as the liveness-is-not-dose rule.
+// So the threshold is measured over a second leg and must CLIMB in the shipped arm and stay
+// FLAT in the patched one.
+bool run_thrpatch(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  std::string error;
+  Session a;
+  if (!a.init(blob, error)) {
+    std::printf("  setup failed: %s\n", error.c_str());
+    return false;
+  }
+  const int32_t vm = a.dna.module_with_role(aibaby::ModuleRole::kVocal);
+  if (vm < 0) {
+    std::printf("  setup failed: this genome has no vocal module, so there is no larynx\n"
+                "  homeostat to freeze and nothing for `thrfork` to do.\n");
+    return false;
+  }
+  const uint64_t leg = ticks / 2 > 0 ? ticks / 2 : 1;
+
+  instrument("thrpatch", a.dna.header().seed ^ 0x7BC1u, leg, "ticks per leg");
+  std::printf("  the question      can a snapshot be resumed with a PATCHED per-module\n"
+              "                    genome, and does the patch TAKE EFFECT? It gates\n"
+              "                    `thrfork`, which is 2.6 h; this is minutes.\n");
+  std::printf("  the knob          vocal's ip_wake_scale and ip_sleep_scale -> 0. NOT\n"
+              "                    `ip_rate`, which is global and would freeze every\n"
+              "                    module. `scaling_rate` is left alive, so only the\n"
+              "                    threshold path stops.\n");
+  std::printf("  what refuses it   load_snapshot returning anything but kOk, OR the\n"
+              "                    patched arm's larynx threshold moving anyway. Loading\n"
+              "                    is not taking effect, and a patch that resumes cleanly\n"
+              "                    and does nothing would otherwise read as a pass.\n");
+  std::printf("  Expect::kRead     this cannot fail for a measured reason about the\n"
+              "                    creature -- it is an apparatus check.\n");
+
+  snapshot_script(a, 0, leg, nullptr);
+
+  std::vector<uint8_t> snap(aibaby::snapshot_bytes(a.brain, blob.size()));
+  size_t written = 0;
+  const aibaby::SnapshotStatus ss = aibaby::save_snapshot(
+      a.brain, blob.data(), blob.size(), snap.data(), snap.size(), &written);
+  if (ss != aibaby::SnapshotStatus::kOk) {
+    std::printf("\n  save failed: %s -- nothing below can be read.\n",
+                aibaby::snapshot_status_string(ss));
+    return false;
+  }
+  const uint64_t hash_at_save = a.brain.network().state_hash();
+
+  // The shipped continuation, for the comparison and as a control that the snapshot itself
+  // is faithful before anything is patched.
+  Session fre;
+  if (!fre.resume(snap, error)) {
+    std::printf("\n  the UNPATCHED resume failed: %s\n", error.c_str());
+    return false;
+  }
+  const bool state_ok = fre.brain.network().state_hash() == hash_at_save;
+
+  // The patched continuation. The genome is located inside a COPY of the snapshot bytes and
+  // edited there, using the same offset arithmetic every per-module blob edit here uses.
+  std::vector<uint8_t> snap_patched = snap;
+  const void* gblob = nullptr;
+  size_t gsize = 0;
+  const aibaby::SnapshotStatus gs = aibaby::snapshot_genome(
+      snap_patched.data(), snap_patched.size(), &gblob, &gsize);
+  if (gs != aibaby::SnapshotStatus::kOk) {
+    std::printf("\n  snapshot_genome failed: %s\n", aibaby::snapshot_status_string(gs));
+    return false;
+  }
+  const size_t goff = size_t(static_cast<const uint8_t*>(gblob) - snap_patched.data());
+  const size_t moff = goff + sizeof(aibaby::DnaHeader) +
+                      sizeof(aibaby::DnaModule) * size_t(vm);
+  const float zero = 0.0f;
+  std::memcpy(snap_patched.data() + moff + offsetof(aibaby::DnaModule, ip_wake_scale),
+              &zero, sizeof(zero));
+  std::memcpy(snap_patched.data() + moff + offsetof(aibaby::DnaModule, ip_sleep_scale),
+              &zero, sizeof(zero));
+  std::printf("\n  THE PATCH. vocal is module %d; its genome sits at byte %zu of the\n"
+              "  snapshot's embedded blob (%zu bytes).\n", vm, moff - goff, gsize);
+
+  Session frz;
+  const bool patched_ok = frz.resume(snap_patched, error);
+  if (!patched_ok) {
+    std::printf("\n  THE PATCHED RESUME WAS REFUSED: %s\n", error.c_str());
+    std::printf("  So `thrfork` cannot be built on a patched snapshot, and its fallback\n"
+                "  applies: a runtime per-module scale hook, which is a kernel change and\n"
+                "  needs its own gate. That is the answer this probe exists to get, and it\n"
+                "  is a USEFUL refusal rather than a failure.\n");
+    return false;
+  }
+
+  // Did it take effect? The larynx's mean threshold over a second leg.
+  auto mean_thr = [](Session& s, int32_t m) {
+    const aibaby::ModuleState& ms = s.brain.network().module(uint32_t(m));
+    if (ms.count == 0) return 0.0;
+    double acc = 0.0;
+    for (uint32_t n = ms.begin; n < ms.begin + ms.count; ++n) {
+      acc += double(s.brain.network().threshold(n));
+    }
+    return acc / double(ms.count);
+  };
+  const double f_before = mean_thr(fre, vm);
+  const double z_before = mean_thr(frz, vm);
+  snapshot_script(fre, leg, leg, nullptr);
+  snapshot_script(frz, leg, leg, nullptr);
+  const double f_move = mean_thr(fre, vm) - f_before;
+  const double z_move = mean_thr(frz, vm) - z_before;
+
+  std::printf("\n  THE CONTROLS, read before the dose.\n");
+  std::printf("    state hash reproduced on the unpatched resume   %s\n",
+              state_ok ? "YES" : "NO -- the snapshot is not faithful");
+  std::printf("    patched snapshot resumed                        YES\n");
+  std::printf("    larynx mean threshold at the fork, both arms    %+.5f / %+.5f\n",
+              f_before, z_before);
+
+  std::printf("\n  THE DOSE. larynx mean threshold moved over the second leg:\n"
+              "    shipped (free)   %+.5f\n    patched (frozen) %+.5f\n", f_move, z_move);
+
+  if (!state_ok) {
+    std::printf("\n  NO VERDICT: the unpatched resume did not reproduce the saved hash, so\n"
+                "  the snapshot path itself is in question and the patch result says\n"
+                "  nothing. Fix that before reading the dose.\n");
+    return false;
+  }
+  const bool took = std::fabs(z_move) < 0.2 * std::fabs(f_move) &&
+                    std::fabs(f_move) > 1e-9;
+  if (took) {
+    std::printf("\n  THE PATCH LOADS AND TAKES EFFECT, so `thrfork` is buildable as designed:\n"
+                "  the frozen arm holds its threshold at %.0f%% of the shipped arm's movement\n"
+                "  while sharing a bit-identical past. Build it.\n",
+                100.0 * std::fabs(z_move) /
+                    (std::fabs(f_move) > 0.0 ? std::fabs(f_move) : 1.0));
+    return true;
+  }
+  if (std::fabs(f_move) <= 1e-9) {
+    std::printf("\n  NO VERDICT: the SHIPPED arm's threshold did not move either, so this leg\n"
+                "  is too short for the homeostat to do anything and the patch is untested.\n"
+                "  Raise --ticks; a leg has to be long enough for the threshold to climb.\n");
+    return false;
+  }
+  std::printf("\n  THE PATCH LOADED AND DID NOT TAKE EFFECT -- the frozen arm's threshold\n"
+              "  still moved %+.5f against the shipped %+.5f. So the embedded genome is not\n"
+              "  what the resumed brain reads for this field, and `thrfork` needs the runtime\n"
+              "  hook instead. This is the branch worth having: a clean resume alone would\n"
+              "  have looked like a pass.\n", z_move, f_move);
+  return false;
+}
+
+
 // The milestone proper. Five creatures, and the scored window is fixed **a
 // priori** at 200-600 ms after the word stops rather than chosen per creature.
 // The first version picked each creature's best window subject to the ear being

@@ -2194,6 +2194,7 @@ bool run_g2(const std::vector<uint8_t>&, uint64_t, bool, const Regime&);
 bool run_g4(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_calibrate(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_snapshot(const std::vector<uint8_t>&, uint64_t, bool);
+bool run_thrpatch(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_footprint(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_shapeprobe(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_ctxprobe(const std::vector<uint8_t>&, uint64_t, bool);

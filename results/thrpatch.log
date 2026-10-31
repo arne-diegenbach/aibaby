@@ -1,0 +1,33 @@
+experiment: thrpatch
+  instrument        thrpatch   trial seed 0000000001355c08   2000000 ticks per leg
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  the question      can a snapshot be resumed with a PATCHED per-module
+                    genome, and does the patch TAKE EFFECT? It gates
+                    `thrfork`, which is 2.6 h; this is minutes.
+  the knob          vocal's ip_wake_scale and ip_sleep_scale -> 0. NOT
+                    `ip_rate`, which is global and would freeze every
+                    module. `scaling_rate` is left alive, so only the
+                    threshold path stops.
+  what refuses it   load_snapshot returning anything but kOk, OR the
+                    patched arm's larynx threshold moving anyway. Loading
+                    is not taking effect, and a patch that resumes cleanly
+                    and does nothing would otherwise read as a pass.
+  Expect::kRead     this cannot fail for a measured reason about the
+                    creature -- it is an apparatus check.
+
+  THE PATCH. vocal is module 4; its genome sits at byte 1816 of the
+  snapshot's embedded blob (4060 bytes).
+
+  THE CONTROLS, read before the dose.
+    state hash reproduced on the unpatched resume   YES
+    patched snapshot resumed                        YES
+    larynx mean threshold at the fork, both arms    +2.49907 / +2.49907
+
+  THE DOSE. larynx mean threshold moved over the second leg:
+    shipped (free)   -0.01992
+    patched (frozen) +0.00000
+
+  THE PATCH LOADS AND TAKES EFFECT, so `thrfork` is buildable as designed:
+  the frozen arm holds its threshold at 0% of the shipped arm's movement
+  while sharing a bit-identical past. Build it.
