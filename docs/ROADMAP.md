@@ -975,7 +975,7 @@ the shared half, which a two-full-arm version would spend 979M on.
 cannot promise that recovering it raises the asymptote, and §15 is the reason.
 
 The build `ctxscale`'s new `seen` column decides whether to make. **Run it only if `seen` comes
-back near its derived null of 1/√14 = 0.267**; if `seen` ≈ 1.0 the lesson writes along the
+back near its derived null of 1/√13 = **0.277**; if `seen` ≈ 1.0 the lesson writes along the
 centroid's own coordinate, the blind directions are empty, and this is not worth building.
 
 **THE QUESTION.** Keemink & van Rossum (2025) find the population-vector estimate is most biased
@@ -1156,7 +1156,7 @@ The list below is still right about the demonstration. These are the three thing
 | — | `ctxscale` with `seen` | **running now** | ~3.0 h | — (it is the decider for `f1decode`) |
 | 13 | `thrpatch` pre-flight | nothing; build + gate | **minutes** | `load_snapshot` refusing a patched genome, or the patch loading without taking effect |
 | 13 | `thrfork` | `thrpatch` passing | ~2.6 h | no `frozen`−`free` difference at 2 SE, or `aligned` collapsing |
-| 14 | `f1decode` | `seen` ≈ 0.267, **not** ≈ 1.0 | ~1 h + offline | the ML decoder recovering the centroid's own separation |
+| 14 | `f1decode` | `seen` ≈ 0.277, **not** ≈ 1.0 | ~1 h + offline | the ML decoder recovering the centroid's own separation |
 
 **`thrpatch` is the cheapest and should go first** whatever else happens: it costs minutes, it
 gates a 2.6 h run, and it answers a code question (can a snapshot be restored with a patched
@@ -1405,3 +1405,39 @@ Collected because each line cost one.
 6. **Derive every new constant** from something already measured, and say from what.
 7. **Restore the default arm set in the commit that writes up a focused run**, and verify
    the restore by running the experiment rather than by reading the diff.
+
+### 17. CORRECTION 2026-10-31 — `seen`'s null was wrong twice, and the estimator was the wrong one
+
+Found by reviewing the code written the same day, while the run using it was still going. **The
+run's data is unaffected** — `align` and `residual` are per-creature primitives and valid; what
+was wrong is the statistic built from them and the null it was read against.
+
+**THE ESTIMATOR.** `seen` was computed per creature and then averaged — a **mean of ratios**,
+which this project has a standing rule against. Monte Carlo on an unstructured write, 40k draws
+at n = 9: the mean of ratios reads **0.2254** where the pooled **ratio of sums** reads
+**0.2703**. Biased low by **19%**, and low is the direction that reads a real effect as the
+null. Now pooled from `align²` and `residual²` and jackknifed, which is the house estimator and
+makes the SE comparable with every other column in that table.
+
+**THE NULL, WRONG TWICE.** First answer `1/√gn = 0.2673`. But `seen` excludes the uniform
+direction with `common`, so it lives in the **gn−1 centred** directions and the closed form is
+**1/√(gn−1) = 0.2774**. Then neither closed form described the mean of ratios at all, which is
+why the Monte Carlo was needed rather than a third derivation.
+
+**AND THE SMOKE'S "CONFIRMATION" WAS A COINCIDENCE OF TWO ERRORS.** The commit for the gate
+claimed the null was "derived analytically and confirmed on a creature with no structure",
+reading 0.269 against 0.267 at 0.0 SE. Against the correct pooled null the same reading is
+**~0.7 SE above** it, and against the mean-of-ratios null it is further still. **A measurement
+agreeing with a wrong prediction is not a confirmation of anything**, and the agreement is
+exactly why neither error was caught: two mistakes cancelled to four decimal places.
+
+**WHAT THIS CHANGES FOR THE RUNNING `ctxscale`.** Its `aligned` and `residual` columns stand.
+Its printed `seen` column and verdict are computed the old way and must not be quoted; the
+corrected build has to be gated and the numbers re-derived from the squares. Since the log
+prints only the *means* of `align` and `residual`, not their squares, the pooled ratio cannot be
+recovered exactly from the published table — so the honest reading of that run is the direct
+comparison of mean `residual` against mean `aligned`, which answers the real question anyway.
+
+**THE RULE THIS EARNS:** when a new statistic is a RATIO, write down which estimator it is and
+Monte Carlo its null before the run, not after. The closed form answers a question about
+expectations; the printed number is a function of the sample.

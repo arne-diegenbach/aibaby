@@ -396,7 +396,8 @@ const Spec kSpecs[] = {
      "  centroid readout CANNOT see. `aligned` and `common-mode` name two of the\n"
      "  F1 group's n directions; the other n-2 are centred, inside the group, and\n"
      "  were never measured. `residual` is their norm and `seen` is aligned's\n"
-     "  share of the two, against a DERIVED null of 1/sqrt(n) = 0.267 -- not 0\n"
+     "  share of the two, pooled as a RATIO OF SUMS and jackknifed. Its null is\n"
+     "  1/sqrt(n-1) = 0.277 -- the CENTRED subspace has n-1 dimensions -- not 0\n"
      "  and not 0.5. Prices what Keemink & van Rossum (2025) predicts a\n"
      "  population-vector readout over few neurons leaves behind. It is a\n"
      "  MAGNITUDE and does not show the residual carries the word"},
