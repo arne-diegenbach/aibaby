@@ -1447,7 +1447,15 @@ comparison of mean `residual` against mean `aligned`, which answers the real que
 Monte Carlo its null before the run, not after. The closed form answers a question about
 expectations; the printed number is a function of the sample.
 
-### 18. PREPARED, NOT BUILT — `hcpair`: the half-centre was never wired as a half-centre
+### 18. ~~PREPARED, NOT BUILT — `hcpair`: the half-centre was never wired as a half-centre~~
+
+> **ITS DIAGNOSIS IS WRONG — see §22, which locates the real defect and fixes it.** This
+> section blames the v32 bump kernel's local term for the within-population coupling. That
+> kernel ships at `lateral_gain = 0.0` on every module including vocal, so it contributes
+> nothing and is innocent. The within-population coupling comes from the half-centre's own
+> **normaliser**. The section is also wrong that the wiring does not exist: `halfcenter_gain`
+> has been in the genome since DNA v57, and `halfcenter` alternates and reaches the formant
+> at 30–44 SE. What fails is the **period**, and §22 says why.
 
 **The strongest case for a build on the gesture line since it opened, and it is a WIRING change
 inside one module rather than a new learning rule.** It aims at the biggest missing capability:
@@ -1554,3 +1562,194 @@ building.** A single-arm extension of an existing experiment; no new mechanism.
 **And ctxscale's ORIGINAL question is INCONCLUSIVE again, correctly:** excess +38.0 → +60.8 Hz
 over 4×, ratio **1.60**, inside the **1.3–1.7 band declared before the run**. The 272M run read
 1.70 and said the same. Its own "54× these trials to reach 236 Hz" is the more useful number.
+
+### 21. RAN 2026-10-31 — the fork resolves AGAINST §20, and §20's slope was 65% estimator bias
+
+`ctxscale` at 27.2M, nine creatures, four arms, **4 h 59 m** (1714M ticks, 344M ticks/h).
+Rungs 6.80M / 13.60M / 27.20M, all computed with the corrected pooled estimator of §17.
+
+**THE FREE CONTROL FIRST, AND IT PASSES EXACTLY.** The two rungs this run shares with §20's run
+print identical `aligned` and `residual` to all five decimals *and both SEs* — 0.02229 ± 0.00427 /
+0.03467 ± 0.00264 at 6.80M, 0.03298 ± 0.00523 / 0.04407 ± 0.00320 at 13.60M — across two runs
+whose **total** budget differs 2×. So a rung depends only on its own budget, the new rung is on the
+same trajectory, and at those two rungs the *only* difference between the runs is the estimator.
+
+**THAT ISOLATION MAKES THE OLD RUNG RECOVERABLE WITH NO RE-RUN.** The house jackknife of a plain
+mean reduces to the textbook SEM, so `sd = se·√n` and `Σx²/n = mean² + sd²(n−1)/n`. Since
+`seen` pooled is `√(Σa²/(Σa²+Σr²))`, it is recoverable from the mean and SE already printed.
+Checked against the three rungs whose corrected `seen` *was* printed before being used on the
+fourth: worst error **0.00013**, inside a 4-dp print's own rounding.
+
+| budget | `seen` corrected | `seen` as §20 printed it | the estimator's bias | step |
+|---|---|---|---|---|
+| 3.40M | **0.5740** | 0.4160 | +0.1580 | — |
+| 6.80M | **0.5815** | 0.4910 | +0.0905 | +0.0075 |
+| 13.60M | **0.6263** | 0.5640 | +0.0623 | +0.0448 |
+| 27.20M | **0.6371** | — | — | +0.0107 |
+
+**§20'S HEADLINE IS WITHDRAWN.** "+0.074 per doubling, linear in log-budget, not saturating" was
+mostly the **mean-of-ratios bias decaying** as `seen` rose: the bias itself drifts −0.0478 per
+doubling, **65% of the slope that was reported**. Corrected, the rise is **+0.021 per doubling over
+an 8× span** with steps +0.0075 / +0.0448 / +0.0107 — non-monotone, the one large step between two
+near-zero ones, against rung SEs of 0.046–0.079. **There is no resolvable trend.**
+
+**THE ERROR WAS MINE AND IT WAS HALF-FIXED.** §17 found the estimator bug and corrected the
+*level* at 13.6M, where the verdict survived at 5.8 SE. It never re-derived the **slope** — and the
+slope was the entire statistic the fork rested on. A correction that fixes a level and leaves a
+trend computed in the old units is not a correction. **Rule: when an estimator is replaced, every
+statistic derived from it is re-derived, not only the one that motivated the fix.**
+
+**WHAT SURVIVES UNTOUCHED.** `seen` = 0.574–0.637 at *every* budget, 4.5 SE and up over the 0.2774
+null. The lesson **is** ramp-enriched, robustly, at every budget measured. And `residual` exceeds
+`aligned` everywhere, so the centroid does discard real learned structure (§20's Finding 1).
+
+**WHAT REPLACES IT: the split is a CONSTANT of the architecture, not a trajectory.** The blind
+share of centred within-group variance, `1 − seen²`, runs 0.671 → 0.662 → 0.608 → 0.594: drifting
+**−0.0255 per doubling**, which at that rate needs **12 more doublings (3250×) to halve it**. On
+any budget this project can run, roughly **60% of the within-group pattern is permanently invisible
+to the centroid.** So "transient inefficiency, not a reservoir" is withdrawn too.
+
+**THE MECHANISM, and it is the sharpest number in the run.** Per-doubling growth exponents
+(0.5 = √t): `aligned` **0.565 → 0.565 → 0.338**, `residual` **0.372 → 0.346 → 0.405**. The
+*aligned* component is the one that decelerates; the blind directions keep filling at a steady √t.
+Consistent with the rest of the run saturating — `excess` ratio 1.04 over 4× (exponent 0.03),
+`gain` 1.85 → 2.26 → 2.35 — while `table divergence` (0.0345 → 0.0430 → 0.0523) keeps rising.
+**The writing continues; what reaches the output stops.**
+
+**A CAVEAT ON THE TOP RUNG, because it bears on the +0.0107.** `aligned`'s between-creature SE
+nearly doubles at 27.2M (0.00523 → 0.00883; relative sd 0.48 → 0.64). A pooled ratio of sums
+weights that variance in, so the last step is partly creatures **diverging** in how much ramp they
+write rather than the mean concentrating. At the longest budget the creatures stop agreeing.
+
+**WHAT THIS DOES TO `f1decode`.** Of the two reasons §20 gave for holding off, one is withdrawn
+(transience) and one stands untouched (§15's algebra: readout sensitivity buys **speed**, not
+ceiling). The deciding question is the one the log has printed as unmeasured all along: **the
+residual is a MAGNITUDE, and an unstructured write produces one too.**
+
+**AND THAT CONTROL WAS IN THE ARRAYS THE WHOLE TIME.** Every decomposition column ctxscale prints
+reads the `ema` arm only, while `m_al`, `m_rs`, `a2` and `sn` are all indexed `[arm][budget]` —
+so `ema-rnd`, which writes with the same rule, reward and trial count but a **randomised** context
+index, has had its own `aligned`, `residual` and `seen` computed and discarded at every budget.
+Added 2026-10-31, as prints only, no change to the run:
+
+- **`ema − ema-rnd` per component, paired on creature id and jackknifed** — the word-specific part
+  of the ramp and of the blind directions, which is what a decoder would be claiming.
+- **`seen`'s null MEASURED rather than derived.** 1/√(gn−1) assumes the unstructured write is
+  isotropic across the group's centred directions; `ema-rnd` is the creature's own unstructured
+  write, carrying whatever anisotropy its wiring, homeostat and perturb clamp impose. Agreement
+  vindicates the derivation; disagreement means every "SE above null" in §20 and §21 is against
+  the wrong yardstick.
+- **the fork's statistic PAIRED** — top-minus-bottom `seen`, jackknifed by deleting a creature from
+  *every* rung at once. The rungs share creatures, so §20 and §21 both priced a paired difference
+  with a between-creature SE, which is why a +0.0107 step sat inside a ±0.079 bar and decided
+  nothing.
+
+**NEXT RUN: `ctxscale --ticks 6800000`, ~1.25 h** (9 × 4 × (1.7+3.4+6.8)M = 428M ticks). Rungs
+1.70M / 3.40M / 6.80M. Chosen over another doubling upward because the fork's statistic is a
+**slope**, and rungs at the cheap end buy more slope leverage per hour than one more rung at the
+expensive end — and 6.80M re-prints a value now known exactly (0.5815), so it carries its own
+determinism check. Combined with the algebraic recovery above this gives a **five-rung corrected
+series spanning 16×**, with the measured null and the paired slope.
+
+**PRE-REGISTERED, BEFORE THAT RUN.** The recovery predicts corrected `seen`(3.40M) = **0.5740**,
+and 3.40M is the rung the broken estimator put at 0.416. If the run prints ≈0.574 the recovery
+algebra is confirmed end to end and the series is **flat at the bottom** (0.574 → 0.582 over 2×).
+If it prints ≈0.49–0.52 the recovery is wrong and §20's rise survives. **Note which rungs are the
+discovery sample:** 3.40M and 6.80M are, so the genuinely new level is **1.70M**, and the paired
+slope and the measured null are new at all three.
+
+### 22. DNA v75, WRITTEN NOT YET BUILT — the half-centre's normaliser *was* the within-population coupling
+
+**Derived by hand from the kernel and one published condition. No run was spent finding it, and
+`hcdrive` had already closed the whole (gain, drive) plane — which is the wrong search space for a
+defect in a *derivative*.** §18 is withdrawn: it blamed the v32 bump kernel, which ships at
+`lateral_gain = 0.0` on every module including vocal and therefore contributes nothing.
+
+**WHAT IS ALREADY TRUE, so the target is narrow.** `halfcenter` (v56+v57) **does** alternate and
+**does** reach the formant — produced F1 follows the alternation at **30–44 SE** over a matched
+null, replicated on two seed families, with a +65.9 Hz free-running excursion and no caregiver.
+The single failure is timekeeping: period against `tau_a` gave a four-point slope of **+0.548,
+R² 0.448**, one of four arms inside the 2–4·tau band, series non-monotone, against a required
+**1.0**. The memory's own summary: *"The depth is controlled by the fatigue constant; the frequency
+is not."*
+
+**THE DEFECT, AND IT IS EXACT.** Baruzzi, Lodi, Storace & Shilnikov (2020, Phys Rev E 102:032406):
+the classic half-centre is recovered when **within**-population coupling is zero and
+**between**-population coupling is nonzero. v57 inhibits each half by the other half's rate —
+correct Matsuoka form — but divides by the **pair's own mean**. With `D = m_hi − m_lo` and
+`S = m_lo + m_hi`:
+
+```
+hc_lo = g·(1 + D/S)        hc_hi = g·(1 − D/S)
+∂hc_lo/∂m_lo = −2g·m_hi/S²        ∂hc_lo/∂m_hi = +2g·m_lo/S²
+```
+
+At balance those are **equal in magnitude**. The division makes each half's inhibition depend on
+its own rate, so within-population coupling is as strong as between-population coupling and
+Baruzzi's condition is violated — by the **normaliser**, not by any kernel.
+
+**AND IT UNDOES THE SELF-LIMITING ARGUMENT THE KERNEL MAKES THREE TIMES.** "Suppress a half and
+its mean falls, so the inhibition it exerts falls too" is true of the **absolute** term and false
+once it is divided by the pair's own mean, because that converts *inhibited by the other half's
+rate* into *inhibited by the other half's **share***. The `−g·D/S` on the quiet half and `+g·D/S`
+on the busy one is **winner amplification**: the differential structure v57a and v57b were each
+rewritten to remove, surviving inside the normaliser. The comment at `network.cpp` "the sign is
+opposite across the two halves, so the loop is competitive rather than self-amplifying" describes
+this same term and draws the opposite conclusion.
+
+**WHY THAT PRODUCES EXACTLY THE OBSERVED FAILURE — stated as a mechanism, not a derivation.** A
+positive self-feedback on each half, equal in magnitude to the mutual inhibition, deepens the
+winner's well. The alternation then happens when fatigue climbs out of a well whose depth is set
+by **g**, so the escape time is dominated by the depth rather than by the fatigue timescale. That
+is "the depth is controlled by the fatigue constant; the frequency is not", and a non-monotone
+series at slope 0.548 is what a depth-dominated escape looks like. Removing the self-excitation
+returns the system to release-from-inhibition, where period ≈ 2–4·tau_a. **The derivative algebra
+above is exact; this paragraph is an argument and is what the run tests.**
+
+**THE FIX INTRODUCES NO CONSTANT**, which matters because four guessed constants have cost a run
+each here. Divide by the module's own homeostatic setpoint `target_rate_hz`, which depends on
+neither half:
+
+```
+∂hc_lo/∂m_lo = 0   exactly        ∂hc_lo/∂m_hi = g/T
+```
+
+Still dimensionless and still scale-free, so the v32 hertz-minus-hertz runaway cannot return. The
+kernel **already takes this exact ratio** for divisive normalisation (`ms.mean_rate_fast /
+norm_target_[m]`), so there is no unit question and no precedent to invent. The vocal module's
+setpoint is **5.0 Hz**, non-zero, so the new normaliser is live rather than falling back — checked
+before writing the change, not after.
+
+**IT CANNOT MOVE THE PINNED HASH.** The whole block is behind `if (hc_gain_[m] > kZero &&
+ms.count >= 2)` and `halfcenter_gain` ships at **0.0**, so the shipped creature is bit-identical
+by construction. A genome with no vocal setpoint falls back to the v57 normaliser, and that
+fallback is **disclosed** by a new `halfcenter_normaliser()` accessor rather than inferred — a null
+measured under the fallback refutes nothing about v75, and a caller that cannot tell them apart
+would report it as if it did.
+
+**THE ARM DESIGN, AND THIS IS THE PART THAT MAKES IT A ONE-VARIABLE CONTRAST.** At the fixed point
+v57's between-coupling is `g/(2T)` and v75's is `g′/T`, so **`g′ = g/2` matches the
+between-population coupling exactly** and leaves the within term (`−g/(2T)` → **0**) as the only
+thing that differs. Running v75 at the same gain instead would change both at once and confound
+the two. It also answers the standing prohibition directly: **this is not re-opening `hcdrive`'s
+closed (gain, drive) plane**, because at equal nominal gain the coupling is a *different quantity*
+— twice the between-term and no within-term — and that plane never varied coupling at all.
+
+**THE TEST ALREADY EXISTS AND ITS BAR IS ALREADY PUBLISHED**, which removes any chance of fitting
+a verdict to the data: `halfcenter` pre-registers the frequency exponent at "Required ~1.0", plus
+an anti-phase signature (≤ −0.20 and ≥ 3 SE below each single), a duty/rate kill switch, a
+per-half replication and an argmax null. All of it was written before this fix was conceived.
+
+**PRE-REGISTERED FOR THE v75 RUN.** Primary: the four-point slope of log(period) on log(tau_a)
+moves from **+0.548 toward 1.0**, with more than one of four arms inside the 2–4·tau band and a
+**monotone** series — the endpoint fit (+0.750) must not be quoted, per `halfcenter`'s own note.
+**Refusal 1:** the slope stays ≤ 0.6, which says the normaliser was never what set the period.
+**Refusal 2, and it is the informative one:** the alternation itself (currently 30–44 SE) is
+**lost**, which would say the within-population self-excitation was load-bearing for the
+competition and that the 30–44 SE gesture was bought by the very term Baruzzi forbids. Either
+refusal is worth the run.
+
+**STATUS: source written, NOT COMPILED.** `build/aibaby` is held by the `ctxscale` run, and
+overwriting a running executable fails rather than silently working. Build, gate on the four
+verify keys (the hash must be *unchanged*, which is the whole point of the branch guard), then
+smoke `halfcenter` before spending the full run.

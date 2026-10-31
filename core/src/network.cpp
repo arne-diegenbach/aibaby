@@ -669,6 +669,7 @@ bool Network::build(const Dna& dna, Arena& arena, Rng& rng) {
     hc_gain_[m] = kZero;
     hc_lo_[m] = kZero;
     hc_hi_[m] = kZero;
+    hc_norm_[m] = kZero;
   }
   if (dna_.header().vocal.halfcenter_gain > kZero) {
     const Scalar g = Scalar(dna_.header().vocal.halfcenter_gain);
@@ -677,6 +678,9 @@ bool Network::build(const Dna& dna, Arena& arena, Rng& rng) {
         hc_gain_[m] = g;
         hc_group_[m] = dna_.header().vocal.halfcenter_group;
         hc_drive_[m] = Scalar(dna_.header().vocal.halfcenter_drive);
+        // DNA v75: the half-independent normaliser. The module's own homeostatic setpoint,
+        // not either half's measured rate -- see the derivation at the computation site.
+        hc_norm_[m] = Scalar(dna_.module(m).target_rate_hz);
       }
     }
   }
@@ -2235,8 +2239,47 @@ void Network::step() {
       for (uint32_t k = mid; k < gn; ++k) sum_hi += rate_fast_[hc_begin_[m] + k];
       const Scalar m_lo = sum_lo / Scalar(mid);
       const Scalar m_hi = sum_hi / Scalar(gn - mid);
+      // DNA v75. THE NORMALISER WAS THE WITHIN-POPULATION COUPLING, and that is the
+      // condition the half-centre has been failing. Derived, not swept -- no run was spent
+      // finding it, and `hcdrive` had already closed the whole (gain, drive) plane, which
+      // is the wrong search space for a defect in a DERIVATIVE.
+      //
+      // Baruzzi, Lodi, Storace & Shilnikov (2020, Phys Rev E 102:032406): the classic
+      // half-centre is recovered when WITHIN-population coupling is zero and
+      // BETWEEN-population coupling is nonzero. v57 divided each half's inhibition by the
+      // PAIR's own mean, (m_lo + m_hi)/2, so with D = m_hi - m_lo and S = m_lo + m_hi:
+      //
+      //     hc_lo = g*(1 + D/S)        hc_hi = g*(1 - D/S)
+      //
+      // d(hc_lo)/d(m_lo) = -2g*m_hi/S^2 and d(hc_lo)/d(m_hi) = +2g*m_lo/S^2. At balance
+      // those are EQUAL IN MAGNITUDE: the within-population coupling is as strong as the
+      // between-population coupling, and Baruzzi's condition is violated -- not by the v32
+      // bump kernel, which ships at `lateral_gain = 0` and is innocent, but by this
+      // division.
+      //
+      // AND IT UNDOES THE SELF-LIMITING ARGUMENT THIS FILE MAKES THREE TIMES. "Suppress a
+      // half and its mean falls, so the inhibition it exerts falls too" is true of the
+      // ABSOLUTE term and false once it is divided by the pair's own mean, because that
+      // converts "inhibited by the other half's RATE" into "inhibited by the other half's
+      // SHARE". The -g*D/S on the quiet half and +g*D/S on the busy one is winner
+      // amplification: the differential structure v57a and v57b were each rewritten to
+      // remove, surviving in the normaliser. The comment above about the sign being
+      // opposite across halves describes the same term and draws the opposite conclusion.
+      //
+      // THE FIX INTRODUCES NO CONSTANT. Divide by the module's homeostatic setpoint, which
+      // depends on neither half, so d(hc_lo)/d(m_lo) = 0 exactly and d(hc_lo)/d(m_hi) =
+      // g/T. Still dimensionless and still scale-free, so the v32 hertz-minus-hertz
+      // runaway cannot return, and `norm_gain_`'s divisive normalisation already takes this
+      // very ratio at `ms.mean_rate_fast / norm_target_[m]`. At steady state the homeostat
+      // holds mean ~ T, so the OPERATING POINT barely moves and what changes is the
+      // derivative structure -- which is the whole content of Baruzzi's condition.
       const Scalar mean = (m_lo + m_hi) * Scalar(0.5);
-      const Scalar scale = mean > Scalar(1e-4) ? mean : Scalar(1e-4);
+      // Falls back to the v57 normaliser rather than dividing by zero, and the fallback is
+      // reported by `halfcenter_normaliser()` rather than inferred, because a genome with
+      // no setpoint on its vocal module would otherwise run the OLD topology silently and
+      // a null would be read as refuting the new one.
+      const Scalar hcn = hc_norm_[m];
+      const Scalar scale = hcn > Scalar(1e-4) ? hcn : (mean > Scalar(1e-4) ? mean : Scalar(1e-4));
       const Scalar inv = kOne / scale;
       // ZERO-MEAN BY CONSTRUCTION, and v1 of this was not, which voided a whole run.
       //

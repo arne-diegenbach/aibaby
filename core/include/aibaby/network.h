@@ -153,6 +153,17 @@ class Network {
     return hc_mhi_[m] > hc_mlo_[m] ? 1 : 0;
   }
 
+  // DNA v75. WHICH NORMALISER THIS GENOME ACTUALLY RUNS, so an experiment can PRINT it
+  // instead of assuming it. Returns the module's setpoint when the v75 half-independent
+  // normaliser is in force, and 0 when the module has no `target_rate_hz` and the v57
+  // pair-mean fallback is running instead -- which is the OLD topology, within-population
+  // coupling and all. A null measured under the fallback refutes nothing about v75, and a
+  // caller that cannot tell the two apart would report it as if it did.
+  Scalar halfcenter_normaliser(uint32_t m) const {
+    if (m >= module_count_ || hc_gain_[m] <= kZero) return kZero;
+    return hc_norm_[m];
+  }
+
   // EXPERIMENT ONLY -- the ENVELOPE-ONSET word gate, after Nabe, Schwartz & Diard's
   // COSMO-Onset (Front. Syst. Neurosci. 15, 653975): detect a word by a sustained RISE
   // in the acoustic envelope rather than by a level anywhere.
@@ -1199,6 +1210,14 @@ class Network {
   uint32_t hc_begin_[kMaxModules] = {};
   uint32_t hc_end_[kMaxModules] = {};
   Scalar hc_drive_[kMaxModules] = {};
+  // DNA v75. THE NORMALISER THE INHIBITION IS DIVIDED BY, and it has to be a quantity
+  // INDEPENDENT OF BOTH HALVES. Cached from the module's `target_rate_hz` at build, which
+  // is the same ratio `norm_gain_`'s divisive normalisation already takes
+  // (`ms.mean_rate_fast / norm_target_[m]`), so the term stays dimensionless and no new
+  // genome constant is introduced. See the derivation at the computation site: dividing by
+  // the PAIR's own mean, as v57 did, made each half's inhibition depend on its own rate and
+  // reintroduced winner-amplification. Zero falls back and says so.
+  Scalar hc_norm_[kMaxModules] = {};
   // DnaExploration::drive_compensation, cached from the genome at build.
   Scalar drive_comp_ = kZero;
   // DNA v51. The context-indexed bias table: `ctx_slots_` scalars per neuron,
