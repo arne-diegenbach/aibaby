@@ -2954,6 +2954,33 @@ published coefficient would have been valid — but the hazard was live in that 
 The lesson is the §29 one again, in a new place: *an assumption stated in a comment is not enforced
 by the comment.*
 
+### 4. THE v78 ARMS WERE HIJACKING THE v77 VERDICT BLOCK
+
+Caught by pre-testing determinism check 6 against a smoke log rather than waiting for the run — the
+one habit §31 bought, where a check flagged and the script was wrong.
+
+Every v78 arm carries `rft = 50.0` and `drive = 1.40`. Those are the two fields the **v77** block's
+arm-resolution loop matched on, so at its anchor setting all thirty new arms passed both tests and
+the last one to match each tau won the assignment. The block printed its anchor as
+`lk50t083…lk50ctrl` with a fitted intercept of **142.5 ms where v77 published 179.8**, and
+`A predicts 178.0 (off by −35.5)`. A published refusal, silently re-decided by arms appended below
+it, in a block nothing in this run was supposed to touch.
+
+The fix pins the two per-module lags at their shipped values in that loop too. **It is the same
+failure `hc_ctrl_for` was written to fix, one level up:** a selector that names only the fields it
+knows about silently absorbs every field added later. The rule this earns:
+
+> **An arm selector must be stated positively over the whole dose vector** — every axis pinned,
+> including the ones a block does not care about — rather than as whatever subset happened to
+> distinguish the arms on the day it was written.
+
+v78's own selector takes a `hold` parameter for exactly this reason and the older block still needed
+the clause added by hand, which is the measure of how easy the omission is. The rest of the file was
+audited: the clock-law and exponent blocks select by **hardcoded index** (`a < 4`, `a = 12; a < 14`)
+and are immune to appending, and `hc_ctrl_for` already pins the full vector. Both field-matching
+selectors now pin all eight dose fields, and determinism check 6 exists to prove the v77 block
+re-prints unchanged at full length.
+
 ### TWO FREE CHECKS THIS DESIGN BUYS
 
 1. **The anchor is shared.** Both axes pass through the same four arms at the shipped 20.0/3.0, so

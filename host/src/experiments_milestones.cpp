@@ -21787,6 +21787,24 @@ bool run_halfcenter(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
       for (uint32_t a = 0; a < kHCArmCount; ++a) {
         if (!hc_same(kHCArms[a].rft, kRftSet[s])) continue;
         if (!hc_same(kHCArms[a].drive, 1.40f)) continue;
+        // DNA v78. HOLD THE TWO PER-MODULE LAGS AT THEIR SHIPPED VALUES, and this clause is
+        // a BUG FIX, not a tidy-up. Every v78 arm carries rft 50.0 and drive 1.40 -- the
+        // two fields this loop matched on -- so at the anchor setting all thirty of them
+        // passed both tests and the LAST one to match each tau won the `idx[j] = a`
+        // assignment. A 60k smoke printed this block's anchor as `lk50t083..lk50ctrl` with
+        // a fitted intercept of 142.5 where v77 published 179.8, and "A predicts 178.0 (off
+        // by -35.5)". A published refusal, silently re-decided by arms appended below it.
+        //
+        // IT IS THE SAME FAILURE `hc_ctrl_for` WAS WRITTEN TO FIX, one level up: a selector
+        // that names only the fields it knows about silently absorbs every field added
+        // later. The lesson is that an arm selector must be stated POSITIVELY over the
+        // whole dose vector -- every axis pinned, including the ones a block does not care
+        // about -- rather than as the subset that happened to distinguish the arms on the
+        // day it was written. v78's own selector takes a `hold` parameter for exactly this
+        // reason and still needed this clause added here, which is the measure of how easy
+        // the omission is.
+        if (!hc_same(kHCArms[a].leak, 20.0f)) continue;
+        if (!hc_same(kHCArms[a].refr, 3.0f)) continue;
         if (kHCArms[a].jump <= 0.0f && kHCArms[a].hc <= 0.0f) { ctl = a; continue; }
         if (kHCArms[a].jump <= 0.0f || kHCArms[a].hc <= 0.0f) continue;
         if (!hc_same(kHCArms[a].kw, 1.00f)) continue;
