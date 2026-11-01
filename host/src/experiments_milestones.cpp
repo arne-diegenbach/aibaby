@@ -20831,6 +20831,103 @@ const HCArm kHCArms[] = {
     {"lk50t250",  1.00f, 250.0f, 0.60f, 1.40f, 1.00f,  50.0f, 50.0f,  3.0f},
     {"lk50t333",  1.00f, 333.0f, 0.60f, 1.40f, 1.00f,  50.0f, 50.0f,  3.0f},
     {"lk50ctrl",  0.00f, 167.0f, 0.00f, 1.40f, 1.00f,  50.0f, 50.0f,  3.0f},
+    // DNA v79: THE TONIC DRIVE, and v78 is what promotes it. Three axes are now closed as
+    // the 180 ms offset's source and all three were LAGS -- the shared rate filter (v77)
+    // and the two per-module constants (v78). What v78 found on the way is the
+    // discriminator: `leak_tau_ms`, which is a lag AND an inverse gain, ROTATED the law
+    // (slope 3.476 -> 3.891 across 20-65 ms) while `refractory_ms`, which is pure dead
+    // time, moved the intercept 0.5 ms of 180. So the dynamics live on the GAIN-LIKE axes,
+    // and `halfcenter_drive` is the pure gain axis: Matsuoka's tonic S, with no time
+    // constant in it at all.
+    //
+    // AND THE TEXTBOOK PUTS THE OFFSET HERE. Shpiro/Curtu/Rinzel/Rubin make a relaxation
+    // oscillator's period the sum of two ESCAPE TIMES -- how long a released half takes to
+    // climb back to threshold -- and the escape time is set by the tonic input, not by the
+    // adaptation constant. An escape time is exactly the shape of a term that ADDS to
+    // 3.560 * tau_a without scaling it, which is what the three closed lags were asked for
+    // and could not supply.
+    //
+    // THE WINDOW IS THE CONSTRAINT AND IT IS NARROW. `hcdrive` mapped this axis two DNA
+    // versions ago: alternation is ABSENT at 0.50 and 0.75 (share 0.44 and 0.61, no phase
+    // bins) and absent again at 2.10 and 2.80, present at 1.05 and 1.40. The oscillating
+    // window is roughly 0.9 to 1.6 and the shipped 1.40 sits near its UPPER edge, so the
+    // most this axis can be swept is about 1.5x where the refractory period gave 11.7x.
+    // The four settings below span the window instead of straddling its boundaries, which
+    // is the decision `hcdrive` made and for the same reason.
+    //
+    // THE WINDOW WAS RE-MAPPED BY THE SMOKE AND IT IS NARROWER THAN `hcdrive` SAID. A 60k
+    // pre-flight ran the four taus at 1.05, 1.20 and 1.60 and 1.05 IS NOT IN THE WINDOW AT
+    // ALL on this instrument: anti-phase +0.000 on three of four arms, signal sd 0.6-0.7x
+    // the control's own noise floor, 483-940 "turns" of 61-99 ms in a 54k record. That is
+    // not the intermittency the old map predicted, it is NO HALF-CENTRE -- and `hcdrive`
+    // read 1.05 as alternating because it was looking at an FFT argmax two DNA versions
+    // ago, before the crossing estimator existed. The lower edge is between 1.05 and 1.20.
+    // 1.05 is therefore NOT re-run; it is recorded here as the boundary and costs nothing
+    // further, exactly as `hcdrive` recorded 0.50 / 0.75 / 2.10 / 2.80.
+    //
+    // SO THE FIVE SETTINGS ARE 1.20 - 1.60, ALL VERIFIED ALIVE, and five rather than four
+    // because the smoke also showed what three settings cost: a three-point coefficient fit
+    // has 1 dof, where the 5% critical t is 12.706, and NOTHING is resolvable against that.
+    // Five settings give 3 dof and t = 3.182. The top of the range is where tau083 gets
+    // marginal -- it came back VOID at 1.60 on 13.6 Hz -- so the four interior settings are
+    // spaced to keep the shortest tau alive at as many as possible, since it is the arm
+    // that pins an intercept.
+    //
+    // NO NEW PATCH SURFACE. `halfcenter_drive` has been patched per arm since v57d, so
+    // these twenty arms add no genome write that `drive200` does not already exercise.
+    // 2.00 is deliberately NOT one of the settings: `drive200` has no control of its own
+    // and falls back to `kHCCtrlArm` by design, so adding a drive-2.00 control would
+    // silently re-decide a published arm's VOID flag through `hc_ctrl_for`.
+    //
+    // AND THE CONTROLS ARE BASELINES, NOT DOSIMETERS. `halfcenter_drive` is read ONLY
+    // inside `if (halfcenter_gain > kZero)` (network.cpp:674), so on an arm with the gain
+    // at zero the drive field is never read at all. All four controls in the smoke came
+    // back BIT-IDENTICAL -- duty 0.47, rate 4.41 Hz, floor sd 3.3240, period 190.0 ms --
+    // which is correct for a baseline and useless as a check that the dose landed. They are
+    // kept because an arm still has to be gated against its own both-mechanisms-off
+    // baseline; the dose's liveness is measured on the MECHANISM arms instead.
+    {"dr120t083", 1.00f,  83.0f, 0.60f, 1.20f, 1.00f,  50.0f, 20.0f,  3.0f},
+    {"dr120t167", 1.00f, 167.0f, 0.60f, 1.20f, 1.00f,  50.0f, 20.0f,  3.0f},
+    {"dr120t250", 1.00f, 250.0f, 0.60f, 1.20f, 1.00f,  50.0f, 20.0f,  3.0f},
+    {"dr120t333", 1.00f, 333.0f, 0.60f, 1.20f, 1.00f,  50.0f, 20.0f,  3.0f},
+    {"dr120ctrl", 0.00f, 167.0f, 0.00f, 1.20f, 1.00f,  50.0f, 20.0f,  3.0f},
+    {"dr130t083", 1.00f,  83.0f, 0.60f, 1.30f, 1.00f,  50.0f, 20.0f,  3.0f},
+    {"dr130t167", 1.00f, 167.0f, 0.60f, 1.30f, 1.00f,  50.0f, 20.0f,  3.0f},
+    {"dr130t250", 1.00f, 250.0f, 0.60f, 1.30f, 1.00f,  50.0f, 20.0f,  3.0f},
+    {"dr130t333", 1.00f, 333.0f, 0.60f, 1.30f, 1.00f,  50.0f, 20.0f,  3.0f},
+    {"dr130ctrl", 0.00f, 167.0f, 0.00f, 1.30f, 1.00f,  50.0f, 20.0f,  3.0f},
+    {"dr150t083", 1.00f,  83.0f, 0.60f, 1.50f, 1.00f,  50.0f, 20.0f,  3.0f},
+    {"dr150t167", 1.00f, 167.0f, 0.60f, 1.50f, 1.00f,  50.0f, 20.0f,  3.0f},
+    {"dr150t250", 1.00f, 250.0f, 0.60f, 1.50f, 1.00f,  50.0f, 20.0f,  3.0f},
+    {"dr150t333", 1.00f, 333.0f, 0.60f, 1.50f, 1.00f,  50.0f, 20.0f,  3.0f},
+    {"dr150ctrl", 0.00f, 167.0f, 0.00f, 1.50f, 1.00f,  50.0f, 20.0f,  3.0f},
+    {"dr160t083", 1.00f,  83.0f, 0.60f, 1.60f, 1.00f,  50.0f, 20.0f,  3.0f},
+    {"dr160t167", 1.00f, 167.0f, 0.60f, 1.60f, 1.00f,  50.0f, 20.0f,  3.0f},
+    {"dr160t250", 1.00f, 250.0f, 0.60f, 1.60f, 1.00f,  50.0f, 20.0f,  3.0f},
+    {"dr160t333", 1.00f, 333.0f, 0.60f, 1.60f, 1.00f,  50.0f, 20.0f,  3.0f},
+    {"dr160ctrl", 0.00f, 167.0f, 0.00f, 1.60f, 1.00f,  50.0f, 20.0f,  3.0f},
+    // TWO MORE TAUS AT EVERY SETTING, AND A SIMULATION IS WHY. The decider is a nested
+    // comparison -- does ONE shared effective lag fit all five settings as well as five
+    // free ones -- and its power depends on how many periods go into the residual. Run as
+    // a Monte Carlo against this axis's own measured gains and v78's own residual scatter
+    // (8.94 ms, backed out of the anchor's slope SE), four taus give 72% power to detect
+    // model E's lag drift and six give 95%; a seventh adds nothing measurable. 72% is a
+    // coin-flip dressed as an experiment, so the ten arms are bought.
+    //
+    // 125 AND 290 ARE SAFELY INTERIOR. tau042 came back VOID at 18.3 Hz and tau500 sits
+    // outside the window at the other end, so the usable band is ~83-333 and these two sit
+    // inside it with room on both sides. They also cannot disturb the v77 or v78 blocks:
+    // those match tau_ms against their own {83,167,250,333} and simply never see a 125.
+    {"dr140t125", 1.00f, 125.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f,  3.0f},
+    {"dr140t290", 1.00f, 290.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f,  3.0f},
+    {"dr120t125", 1.00f, 125.0f, 0.60f, 1.20f, 1.00f,  50.0f, 20.0f,  3.0f},
+    {"dr120t290", 1.00f, 290.0f, 0.60f, 1.20f, 1.00f,  50.0f, 20.0f,  3.0f},
+    {"dr130t125", 1.00f, 125.0f, 0.60f, 1.30f, 1.00f,  50.0f, 20.0f,  3.0f},
+    {"dr130t290", 1.00f, 290.0f, 0.60f, 1.30f, 1.00f,  50.0f, 20.0f,  3.0f},
+    {"dr150t125", 1.00f, 125.0f, 0.60f, 1.50f, 1.00f,  50.0f, 20.0f,  3.0f},
+    {"dr150t290", 1.00f, 290.0f, 0.60f, 1.50f, 1.00f,  50.0f, 20.0f,  3.0f},
+    {"dr160t125", 1.00f, 125.0f, 0.60f, 1.60f, 1.00f,  50.0f, 20.0f,  3.0f},
+    {"dr160t290", 1.00f, 290.0f, 0.60f, 1.60f, 1.00f,  50.0f, 20.0f,  3.0f},
 };
 constexpr uint32_t kHCArmCount = sizeof(kHCArms) / sizeof(kHCArms[0]);
 // THE CONTROL IS NO LONGER THE LAST ARM, and two places used to find it that way --
@@ -22119,6 +22216,78 @@ bool run_halfcenter(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
   // there. The arm-table comment carries the derivation; the verdict branches below carry
   // the consequence, which is that the membrane axis cannot claim a mechanism on a
   // non-zero reading and says so itself rather than leaving it to prose.
+  // ORDINARY LEAST SQUARES, FACTORED OUT, because the v78 block fits twice per setting --
+  // once on the setting's own live arms and once on the design shared with every other
+  // setting -- and a third hand-inlined copy of the same arithmetic is how the two come to
+  // disagree. DNA v79 HOISTED IT one scope further out for exactly that reason: a fourth
+  // copy inside the drive block would be the same hazard one block later, and the two
+  // blocks' anchor fits are a cross-check only while they are the same arithmetic. Moving
+  // it is a provable no-op -- identical body, identical call sites, and the v78 numbers are
+  // re-printed byte for byte by this run's determinism check.
+  auto ols = [](const double* x, const double* y, uint32_t n, double& sl, double& ic,
+                double& sle, double& ice, double& r2) {
+    double mx = 0.0, my = 0.0;
+    for (uint32_t i = 0; i < n; ++i) { mx += x[i]; my += y[i]; }
+    mx /= double(n); my /= double(n);
+    double sxy = 0.0, sxx = 0.0, syy = 0.0;
+    for (uint32_t i = 0; i < n; ++i) {
+      const double dx = x[i] - mx, dy = y[i] - my;
+      sxy += dx * dy; sxx += dx * dx; syy += dy * dy;
+    }
+    sl = sxx > 0.0 ? sxy / sxx : 0.0;
+    ic = my - sl * mx;
+    double rss = 0.0;
+    for (uint32_t i = 0; i < n; ++i) {
+      const double e = y[i] - (sl * x[i] + ic);
+      rss += e * e;
+    }
+    const double sd = n > 2 ? std::sqrt(rss / double(n - 2)) : 0.0;
+    sle = sxx > 0.0 ? sd / std::sqrt(sxx) : 0.0;
+    ice = sxx > 0.0 ? sd * std::sqrt(1.0 / double(n) + mx * mx / sxx) : 0.0;
+    r2 = (sxx > 0.0 && syy > 0.0) ? (sxy * sxy) / (sxx * syy) : 0.0;
+  };
+  // THE 5% TWO-TAILED CRITICAL t, BY THE FIT'S OWN DEGREES OF FREEDOM. DNA v79, and it is
+  // a fix v78 recorded against itself rather than a new idea: v78's branches used a flat
+  // 3-SE z-rule on four-point fits, which carry 2 dof, where the critical t is 4.303 -- so
+  // its "resolvably non-zero" refractory coefficient at 3.4 SE was p ~ 0.08 and the label
+  // overstated it. The v78 BLOCK IS LEFT EXACTLY AS IT PRINTED so its published verdict
+  // stays reproducible; the scaling applies from v79 forward. Indexed by n, the number of
+  // fitted points, with dof = n - 2.
+  // Indexed by the DEGREES OF FREEDOM directly rather than by a point count, because v79
+  // uses it on two statistics with different dof: an OLS fit on n points has n - 2, and a
+  // jackknife over n observations has n - 1. A single `crit_t(n)` helper would silently
+  // apply the fit's mapping to the jackknife and understate the threshold by one step.
+  auto crit_t_dof = [](uint32_t dof) {
+    if (dof == 0) return 0.0;        // no residual dof: nothing is resolvable
+    if (dof == 1) return 12.706;
+    if (dof == 2) return 4.303;
+    if (dof == 3) return 3.182;
+    if (dof == 4) return 2.776;
+    if (dof == 5) return 2.571;
+    return 2.447;                    // 6 dof; this experiment cannot exceed it
+  };
+  // THE 5% CRITICAL F, for DNA v79's nested model comparison. Every (numerator,
+  // denominator) pair this experiment can reach is tabulated rather than approximated,
+  // because the whole point of a pre-registered threshold is that it is a number committed
+  // in advance and not a function evaluated at run time. The reachable grid is nfit in
+  // 3..5 fitted drive settings and ncom in 3..6 common taus, giving dn = nfit - 1 and
+  // dd = nfit * (ncom - 2). A pair off the grid returns a deliberately unreachable value,
+  // so an unanticipated shape REFUSES rather than passing on a guessed threshold.
+  auto crit_f = [](uint32_t dn, uint32_t dd) {
+    if (dn == 4 && dd == 20) return 2.866;
+    if (dn == 4 && dd == 15) return 3.056;
+    if (dn == 4 && dd == 10) return 3.478;
+    if (dn == 4 && dd == 5) return 5.192;
+    if (dn == 3 && dd == 16) return 3.239;
+    if (dn == 3 && dd == 12) return 3.490;
+    if (dn == 3 && dd == 8) return 4.066;
+    if (dn == 3 && dd == 4) return 6.591;
+    if (dn == 2 && dd == 12) return 3.885;
+    if (dn == 2 && dd == 9) return 4.256;
+    if (dn == 2 && dd == 6) return 5.143;
+    if (dn == 2 && dd == 3) return 9.552;
+    return 1e9;
+  };
   if (kHCArmCount >= 59) {
     const double kTau78[4] = {83.0, 167.0, 250.0, 333.0};
     const double record78 = double(ticks - ticks / 10);
@@ -22144,33 +22313,6 @@ bool run_halfcenter(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
     // gain_scales: the swept field also scales how far a given drive reaches threshold,
     // which is true of the membrane and false of the refractory period. It selects the
     // extra disclosure column and it hardens the verdict on a non-zero reading.
-    // ORDINARY LEAST SQUARES, FACTORED OUT, because this block now fits twice per setting
-    // -- once on the setting's own live arms and once on the design shared with every other
-    // setting -- and a third hand-inlined copy of the same arithmetic is how the two come
-    // to disagree.
-    auto ols = [](const double* x, const double* y, uint32_t n, double& sl, double& ic,
-                  double& sle, double& ice, double& r2) {
-      double mx = 0.0, my = 0.0;
-      for (uint32_t i = 0; i < n; ++i) { mx += x[i]; my += y[i]; }
-      mx /= double(n); my /= double(n);
-      double sxy = 0.0, sxx = 0.0, syy = 0.0;
-      for (uint32_t i = 0; i < n; ++i) {
-        const double dx = x[i] - mx, dy = y[i] - my;
-        sxy += dx * dy; sxx += dx * dx; syy += dy * dy;
-      }
-      sl = sxx > 0.0 ? sxy / sxx : 0.0;
-      ic = my - sl * mx;
-      double rss = 0.0;
-      for (uint32_t i = 0; i < n; ++i) {
-        const double e = y[i] - (sl * x[i] + ic);
-        rss += e * e;
-      }
-      const double sd = n > 2 ? std::sqrt(rss / double(n - 2)) : 0.0;
-      sle = sxx > 0.0 ? sd / std::sqrt(sxx) : 0.0;
-      ice = sxx > 0.0 ? sd * std::sqrt(1.0 / double(n) + mx * mx / sxx) : 0.0;
-      r2 = (sxx > 0.0 && syy > 0.0) ? (sxy * sxy) / (sxx * syy) : 0.0;
-    };
-
     auto offset_axis = [&](uint32_t slot, const char* field, float HCArm::*sweep,
                            const float* set, float HCArm::*hold, float hold_at,
                            bool gain_scales) {
@@ -22567,6 +22709,605 @@ bool run_halfcenter(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
       std::printf("    NO BUDGET -- %u of 2 axes produced a usable coefficient, so there is\n"
                   "    nothing to subtract from the intercept and the 180 ms stands\n"
                   "    entirely unaccounted for.\n", used);
+    }
+  }
+
+  // DNA v79. THE DRIVE AXIS -- is the 180 ms the ESCAPE TIME?
+  //
+  // THREE LAGS ARE CLOSED AND THE PATTERN IN THE REFUSALS IS THE LEAD. v77 moved the
+  // shared rate filter and the intercept went the WRONG WAY by 5.7 SE; v78 moved both
+  // per-module constants and bought 0.5 ms of 179.8. But v78's membrane axis did something
+  // neither null did -- it ROTATED the law, slope 3.476 -> 3.891 across leak 20-65 ms. The
+  // membrane is a lag AND an inverse gain, the refractory period is pure dead time, and
+  // only the gain-like one touched the dynamics. `halfcenter_drive` is the PURE gain axis:
+  // Matsuoka's tonic S, with no time constant in it at all.
+  //
+  // THE SMOKE REFUSED THE STATISTIC I CAME WITH, AND THAT IS WHY THE DECIDER IS A RATIO.
+  // The design that was pre-registered first asked for dIntercept/dDrive against zero, on
+  // the reasoning that an escape time ADDS to 3.560 * tau_a without scaling it. A 60k
+  // pre-flight showed the premise is false on this axis: the drive does not shift the law,
+  // it ROTATES it, and hugely. Slope on tau_a came back 7.460 at drive 1.20, 3.951 at the
+  // anchor and 2.912 at 1.60 -- a factor of 2.6 -- and the raw periods say the same thing
+  // without any fit, tau167 running 1542 ms at drive 1.20 against 759 at 1.40.
+  //
+  // So the four "intercepts" are the tau_a = 0 extrapolations of lines with entirely
+  // different slopes, and differencing them measures the rotation, not an offset. The
+  // smoke's own coefficient was -656 ms per unit, which is arithmetically real and
+  // mechanistically empty. A STATISTIC THAT CANNOT BE INTERPRETED IS NOT RESCUED BY AN
+  // ERROR BAR.
+  //
+  // THE ONE FORM IN WHICH A ROTATING AXIS CAN STILL CARRY A FIXED OFFSET is the cascaded
+  // one -- v77's model A, which that run could only test on a single field:
+  //
+  //     period = A(S) * (tau_a + k)       so   intercept B = A * k
+  //
+  // Here the gain A moves with the drive BY CONSTRUCTION and the question is whether the
+  // EFFECTIVE LAG k = B / A is a constant of the loop. k is in milliseconds, so it is
+  // directly comparable to the 179.8 / 3.560 = 50.5 ms the offset has always required, and
+  // to the three fields already closed against that number.
+  //
+  //   model K  THE OFFSET IS A FIXED EFFECTIVE LAG.  k is the same at every drive; the
+  //            gain scales it and the lag itself is a property of the loop. The 50.5 ms
+  //            becomes a real quantity with three candidates already eliminated.
+  //   model E  THE OFFSET IS AN ESCAPE TIME.         k FALLS as the drive rises, because a
+  //            harder-driven half climbs back to threshold sooner. Then the 180 ms is not
+  //            a constant of the loop at all but a function of the operating point, and
+  //            "the one missing time constant" was the wrong question.
+  //
+  // I HAVE SEEN A HINT OF THE ANSWER AND SAY SO. The smoke's k values fall -- 39.5 / 24.7 /
+  // 11.0 ms across 1.20 / 1.40 / 1.60 -- which is model E's direction. Two things keep that
+  // from contaminating this test: those are three-point fits at 60k carrying the known
+  // anchor artefact (tau083 misses the consistency gate at short record, and the anchor
+  // intercept reads 97.7 where the full run gives 179.8 -- the SAME 97.7 the v78 smoke
+  // produced), and the decider below is a CONTRAST WITH A THRESHOLD FIXED BEFORE THE RUN.
+  // What the smoke changed is which quantity is interpretable, not where the line sits.
+  //
+  // THE DECIDER: is k constant? The contrast is k at the highest fitted drive minus k at
+  // the lowest, over a jackknife SE -- the house estimator for a ratio, and the one this
+  // project already uses where a mean of ratios went wrong. k is declared CONSTANT only on
+  // a BOUND: the 95% upper end of |dk| must be under 20% of the mean k. An unresolved
+  // contrast with a tight error bar is a result; an unresolved contrast with a loose one is
+  // not, and the code tells them apart.
+  //
+  // 20% IS THE SAME LINE AS BEFORE and it is fixed here before the run. A field that cannot
+  // be pinned to a fifth of its own size across its entire usable range has not been shown
+  // constant; the two closed lags moved 0.3% of the offset and the third moved it the wrong
+  // way, so a fifth is not a near-miss threshold.
+  //
+  // THIS AXIS IS ASYMMETRIC AND THE WEAK DIRECTION IS THE POSITIVE ONE. Drive IS the
+  // operating point -- there is no version of this test in which the tonic moves and the
+  // firing rate does not -- so a moving k cannot distinguish "the drive sets the escape
+  // time" from "the drive sets the rate and the rate sets the escape time". A CONSTANT k
+  // is the strong, clean outcome; a MOVING k localises and needs a follow-up that moves
+  // one without the other. Stated before the data, as v78's operating-point drift was.
+  //
+  // AND THE DOSE'S LIVENESS IS MEASURED ON THE ARMS, NOT ON THE CONTROLS -- which is the
+  // second thing the smoke caught, and it was a bug in this block's own guard. The first
+  // version required the CONTROLS' duty to move, reasoning that IP defends the rate so the
+  // rate cannot detect a dose. But `halfcenter_drive` is read ONLY inside
+  // `if (halfcenter_gain > kZero)` (network.cpp:674), so a control -- which is defined by
+  // having that gain at zero -- never reads the field at all. All four controls came back
+  // BIT-IDENTICAL and the guard dutifully announced that the homeostat had eaten a dose
+  // that was never administered. A MATCHED CONTROL IS THE WRONG DOSIMETER WHEN THE DOSE
+  // ACTS ONLY THROUGH THE MECHANISM THE CONTROL SWITCHES OFF. The liveness check below
+  // reads the mechanism arms' own firing rate at matched tau_a instead.
+  if (kHCArmCount >= 89) {
+    const uint32_t kNDrv = 5;
+    const uint32_t kNTau = 6;
+    const double kTau79[kNTau] = {83.0, 125.0, 167.0, 250.0, 290.0, 333.0};
+    const float kDrvSet[kNDrv] = {1.20f, 1.30f, 1.40f, 1.50f, 1.60f};
+    // THE ANCHOR IS NOT set[0] ON THIS AXIS, unlike every axis before it. The shipped 1.40
+    // sits near the window's UPPER edge, so a monotone sweep puts it third. v78 could
+    // assume `set[0]` was the shipped value because its two fields ship at their minima;
+    // assuming it here would silently anchor every contrast on drive 1.05.
+    const uint32_t kAnchor79 = 2;
+    const double record79 = double(ticks - ticks / 10);
+    double fit_a[kNDrv] = {}, fit_ae[kNDrv] = {}, fit_b[kNDrv] = {}, fit_be[kNDrv] = {};
+    double fit_r2[kNDrv] = {}, fit_k[kNDrv] = {}, fit_ke[kNDrv] = {};
+    uint32_t fit_n[kNDrv] = {}, ctl_of[kNDrv] = {};
+    bool fit_ok[kNDrv] = {};
+    double per[kNDrv][kNTau] = {};
+    bool plive[kNDrv][kNTau] = {};
+    // THE ARM INDICES ARE KEPT, which they were not in the first version, because the
+    // dose's liveness has to be read off the MECHANISM arms. See the block comment: a
+    // control never reads `halfcenter_drive` at all, so it cannot say whether the dose
+    // landed.
+    uint32_t aidx[kNDrv][kNTau] = {};
+    std::printf("\n  v79 -- THE DRIVE AXIS. The same four taus at five settings of\n"
+                "  `halfcenter_drive`, the PURE GAIN axis. Setting [%u] = %.2f is the\n"
+                "  SHIPPED value and its four arms are the archived anchor block.\n",
+                kAnchor79, double(kDrvSet[kAnchor79]));
+    std::printf("    model K  THE OFFSET IS A FIXED EFFECTIVE LAG   k = B/A is the same at\n"
+                "                                                   every drive\n");
+    std::printf("    model E  THE OFFSET IS AN ESCAPE TIME          k FALLS as drive rises\n");
+    std::printf("    The window is NARROWER than `hcdrive` mapped -- a 60k pre-flight found\n"
+                "    NO half-centre at drive 1.05 (anti +0.000, signal under the noise\n"
+                "    floor), so the lower edge is between 1.05 and 1.20 and these five\n"
+                "    settings span only %.2fx where the refractory axis spanned 11.7x.\n"
+                "    A narrow axis BY NATURE, and the power cost is disclosed with the\n"
+                "    result rather than discovered after it.\n",
+                double(kDrvSet[kNDrv - 1]) / double(kDrvSet[0]));
+    for (uint32_t s = 0; s < kNDrv; ++s) {
+      uint32_t idx[kNTau] = {};
+      bool have[kNTau] = {};
+      uint32_t ctl = kHCCtrlArm;
+      for (uint32_t a = 0; a < kHCArmCount; ++a) {
+        // THE WHOLE DOSE VECTOR, PINNED POSITIVELY. This is the rule the v78 build had to
+        // earn the hard way: its fifteen appended arms all carried rft 50 and drive 1.40,
+        // which were the only two fields the v77 block matched on, so they were swept into
+        // a PUBLISHED verdict and re-decided it -- intercept 142.5 where v77 printed 179.8.
+        // Every axis is named here including the five this block does not care about, so an
+        // arm appended below cannot join by default.
+        if (!hc_same(kHCArms[a].drive, kDrvSet[s])) continue;
+        if (!hc_same(kHCArms[a].rft, 50.0f)) continue;
+        if (!hc_same(kHCArms[a].leak, 20.0f)) continue;
+        if (!hc_same(kHCArms[a].refr, 3.0f)) continue;
+        if (kHCArms[a].jump <= 0.0f && kHCArms[a].hc <= 0.0f) { ctl = a; continue; }
+        if (kHCArms[a].jump <= 0.0f || kHCArms[a].hc <= 0.0f) continue;
+        if (!hc_same(kHCArms[a].kw, 1.00f)) continue;
+        if (!hc_same(kHCArms[a].hc, 0.60f)) continue;
+        for (uint32_t j = 0; j < kNTau; ++j)
+          if (hc_same(kHCArms[a].tau_ms, float(kTau79[j]))) {
+            idx[j] = a; have[j] = true; aidx[s][j] = a;
+          }
+      }
+      ctl_of[s] = ctl;
+      std::printf("\n    drive = %.2f   (x%.2f the shipped tonic)%s\n",
+                  double(kDrvSet[s]), double(kDrvSet[s]) / double(kDrvSet[kAnchor79]),
+                  s == kAnchor79 ? "   <- ANCHOR" : "");
+      std::printf("      CONTROL %-11s duty %.2f  rate %5.2f Hz   FLOOR: sd %.4f, "
+                  "%4.0f turns, period %7.1f ms%s\n",
+                  kHCArms[ctl].name, m_du[ctl], m_rt[ctl], m_ds[ctl], m_cn[ctl], m_cp[ctl],
+                  void_arm[ctl] ? "   <- VOID" : "");
+      double x[kNTau] = {}, y[kNTau] = {};
+      uint32_t n = 0;
+      for (uint32_t j = 0; j < kNTau; ++j) {
+        if (!have[j]) { std::printf("      tau %3.0f  ARM MISSING\n", kTau79[j]); continue; }
+        const uint32_t a = idx[j];
+        const double prod = m_cn[a] * m_cp[a];
+        const double pe = record79 > 0.0 ? 100.0 * (prod - record79) / record79 : 0.0;
+        // THE SAME THREE GATES, UNCHANGED AND UNRELAXED FOR A THIRD RUN. The +/-2%
+        // consistency band is the one that matters most on this axis: an oscillator near
+        // its boundary alternates INTERMITTENTLY, which gives a bimodal interval
+        // distribution and drags the median to the short mode while the count rises, so
+        // the product falls short of the record. That is exactly what this band catches,
+        // and it is the reason 1.05 is expected to be the setting at risk.
+        const bool consistent = std::fabs(pe) <= 2.0;
+        const double snr = m_ds[ctl] > 0.0 ? m_ds[a] / m_ds[ctl] : 0.0;
+        const bool floor_ok = m_cp[ctl] > 0.0 ? m_cp[a] >= 2.0 * m_cp[ctl] : true;
+        const bool live = m_cp[a] > 0.0 && !void_arm[a] && consistent && floor_ok;
+        std::printf("      tau %3.0f  %-11s period %7.1f +/- %5.1f ms  (%5.0f turns, "
+                    "x median %+.1f%% of record, sd %4.1fx floor)%s%s%s%s\n",
+                    kTau79[j], kHCArms[a].name, m_cp[a], s_cp[a], m_cn[a], pe, snr,
+                    void_arm[a] ? "  VOID" : "", !consistent ? "  INCONSISTENT" : "",
+                    !floor_ok ? "  UNDER 2x FLOOR" : "", live ? "" : "  <- DROPPED");
+        per[s][j] = m_cp[a];
+        plive[s][j] = live;
+        if (live) { x[n] = kTau79[j]; y[n] = m_cp[a]; ++n; }
+      }
+      fit_n[s] = n;
+      if (n < 3) {
+        std::printf("      ONLY %u LIVE ARMS -- this setting is not fitted and bears on\n"
+                    "      nothing. It refuses ITSELF, not the law.\n", n);
+        continue;
+      }
+      double sl = 0.0, ic = 0.0, sle = 0.0, ice = 0.0, r2 = 0.0;
+      ols(x, y, n, sl, ic, sle, ice, r2);
+      std::printf("      FIT (own)  slope %.3f +/- %.3f  intercept %7.1f +/- %5.1f ms"
+                  "  R^2 %.5f  (%u live)\n", sl, sle, ic, ice, r2, n);
+      fit_ok[s] = true;
+    }
+    // THE BALANCED DESIGN, for the reason v78's 60k smoke found and not as inherited
+    // boilerplate: dropping the shortest tau moved a fitted intercept by ~80 ms there,
+    // which is larger than anything being looked for here. Intercepts are comparable only
+    // on a COMMON set of taus.
+    bool common[kNTau] = {true, true, true, true, true, true};
+    uint32_t ncom = 0, nfit = 0;
+    for (uint32_t s = 0; s < kNDrv; ++s) if (fit_ok[s]) ++nfit;
+    for (uint32_t j = 0; j < kNTau; ++j) {
+      for (uint32_t s = 0; s < kNDrv; ++s)
+        if (fit_ok[s] && !plive[s][j]) common[j] = false;
+      if (common[j]) ++ncom;
+    }
+    std::printf("\n      THE BALANCED DESIGN: taus live at ALL %u fitted settings =", nfit);
+    for (uint32_t j = 0; j < kNTau; ++j) if (common[j]) std::printf(" %.0f", kTau79[j]);
+    if (ncom == 0) std::printf(" none");
+    std::printf("  (%u of %u)\n", ncom, kNTau);
+    const bool balanced = ncom >= 3;
+    if (!balanced) {
+      std::printf("      FEWER THAN THREE TAUS ARE COMMON, so no two settings' fits are\n"
+                  "      comparable at matched leverage and this axis CANNOT produce an\n"
+                  "      effective lag. It refuses itself rather than printing an unbalanced\n"
+                  "      number that would be a design artefact.\n");
+      for (uint32_t s = 0; s < kNDrv; ++s) fit_ok[s] = false;
+      nfit = 0;
+    } else {
+      // THE EFFECTIVE LAG, AND ITS ERROR BAR BY JACKKNIFE. k = B / A is a ratio of two
+      // quantities from the SAME fit, so they are correlated and a naive propagation of
+      // their separate error bars is wrong -- the covariance of an OLS slope and intercept
+      // is -mean(x) * s^2 / Sxx, which is never zero here. Rather than carry that algebra
+      // (and a fourth copy of it), k is jackknifed over the common taus: drop each in turn,
+      // refit, and take the leave-one-out spread. That is the estimator this project
+      // already reaches for on a ratio, after a mean of ratios went wrong once.
+      for (uint32_t s = 0; s < kNDrv; ++s) {
+        if (!fit_ok[s]) continue;
+        double bx[kNTau] = {}, by[kNTau] = {};
+        uint32_t bn = 0;
+        for (uint32_t j = 0; j < kNTau; ++j)
+          if (common[j]) { bx[bn] = kTau79[j]; by[bn] = per[s][j]; ++bn; }
+        ols(bx, by, bn, fit_a[s], fit_b[s], fit_ae[s], fit_be[s], fit_r2[s]);
+        fit_k[s] = fit_a[s] != 0.0 ? fit_b[s] / fit_a[s] : 0.0;
+        double jk[kNTau] = {}, jm = 0.0;
+        uint32_t nj = 0;
+        for (uint32_t d = 0; d < bn; ++d) {
+          double lx[kNTau] = {}, ly[kNTau] = {};
+          uint32_t ln = 0;
+          for (uint32_t i = 0; i < bn; ++i)
+            if (i != d) { lx[ln] = bx[i]; ly[ln] = by[i]; ++ln; }
+          double la = 0.0, lb = 0.0, lae = 0.0, lbe = 0.0, lr2 = 0.0;
+          ols(lx, ly, ln, la, lb, lae, lbe, lr2);
+          if (la != 0.0) { jk[nj] = lb / la; jm += jk[nj]; ++nj; }
+        }
+        if (nj > 1) {
+          jm /= double(nj);
+          double jv = 0.0;
+          for (uint32_t d = 0; d < nj; ++d) jv += (jk[d] - jm) * (jk[d] - jm);
+          fit_ke[s] = std::sqrt(jv * double(nj - 1) / double(nj));
+        }
+        std::printf("        drive %.2f  BALANCED  slope %.3f +/- %.3f  intercept %7.1f"
+                    " +/- %5.1f ms  R^2 %.5f%s\n", double(kDrvSet[s]), fit_a[s], fit_ae[s],
+                    fit_b[s], fit_be[s], fit_r2[s],
+                    fit_n[s] == ncom ? "   (= its own fit)" : "   <- REFITTED");
+        std::printf("                     EFFECTIVE LAG  k = B/A = %7.2f +/- %5.2f ms"
+                    "   (jackknifed over %u taus)\n", fit_k[s], fit_ke[s], nj);
+      }
+    }
+    // THE ANCHOR IS THE SAME FOUR ARMS THE v78 BLOCK FITS, so its OWN fit above must be
+    // identical to the refractory axis's setting-[0] own fit, printed earlier in this same
+    // log. That is a free cross-check on the arm resolution and it is checked by eye in the
+    // write-up rather than asserted here, because the two blocks' BALANCED fits can
+    // legitimately differ when one axis loses a tau at some other setting.
+    //
+    // THE DOSE'S OWN LIVENESS, READ ON THE MECHANISM ARMS. The first version of this guard
+    // read the CONTROLS' duty and was wrong for a reason the smoke made unmissable:
+    // `halfcenter_drive` is touched only inside `if (halfcenter_gain > kZero)`
+    // (network.cpp:674), and a control is defined by having that gain at zero. All four
+    // controls came back bit-identical -- duty 0.47, rate 4.41 Hz, floor 190.0 ms -- and
+    // the guard announced that the homeostat had absorbed a dose that was never
+    // administered. A control is the right BASELINE and the wrong DOSIMETER whenever the
+    // dose acts only through the mechanism the control switches off.
+    //
+    // On the arms the rate is the right quantity despite being homeostatically defended:
+    // the drive enters the half-centre's own input, so a landed dose shows up as a changed
+    // alternation rate whether or not IP pulls the mean back. Measured at matched tau_a --
+    // the first common tau -- so the comparison is not confounded by which arms survived.
+    uint32_t tref = kNTau;
+    for (uint32_t j = 0; j < kNTau && tref == kNTau; ++j) if (common[j]) tref = j;
+    double alo = 1e9, ahi = -1e9, clo = 1e9, chi = -1e9;
+    uint32_t nlive_s = 0;
+    for (uint32_t s = 0; s < kNDrv; ++s) {
+      const double cr = m_rt[ctl_of[s]];
+      if (cr < clo) clo = cr;
+      if (cr > chi) chi = cr;
+      if (!fit_ok[s] || tref == kNTau) continue;
+      const double r = m_rt[aidx[s][tref]];
+      if (r < alo) alo = r;
+      if (r > ahi) ahi = r;
+      ++nlive_s;
+    }
+    const double dose_move = (nlive_s >= 2 && alo > 0.0) ? (ahi - alo) / alo : 0.0;
+    const bool dose_live = dose_move >= 0.10;
+    std::printf("\n      THE CONTROLS' OPERATING POINT  rate %.2f-%.2f Hz (%.2fx) -- these\n"
+                "      are BASELINES, not dosimeters: a control never reads the drive field\n"
+                "      at all, so identical controls are correct and say nothing about the\n"
+                "      dose.\n", clo, chi, clo > 0.0 ? chi / clo : 0.0);
+    if (tref == kNTau || nlive_s < 2) {
+      std::printf("      THE DOSE CANNOT BE CHECKED -- %u fitted settings share a common\n"
+                  "      tau, so there is no matched pair of mechanism arms to compare.\n",
+                  nlive_s);
+    } else {
+      std::printf("      THE DOSE %s: at tau %.0f the mechanism arms run %.2f-%.2f Hz,\n"
+                  "      a %+.0f%% range across a %.0f%% change in tonic drive.%s\n",
+                  dose_live ? "LANDED" : "WAS ABSORBED", kTau79[tref], alo, ahi,
+                  100.0 * dose_move,
+                  100.0 * (double(kDrvSet[kNDrv - 1]) / double(kDrvSet[0]) - 1.0),
+                  dose_live ? "  On this axis a moving\n      operating point IS the dose"
+                              " and not a confound -- the drive is the\n      operating"
+                              " point."
+                            : "  Under 10%, so the dose did not reach the\n"
+                              "      oscillator and any null below is VACUOUS.");
+    }
+    // THE ROTATION, WHICH ON THIS AXIS IS THE EXPECTED SHAPE AND NOT A REFUSAL. The smoke
+    // already showed it: slope 7.460 at drive 1.20 against 2.912 at 1.60. It is printed
+    // because it is the reason the intercept alone is not the statistic -- the gain A is
+    // what the drive moves, and k = B/A is what survives that.
+    bool slope_held = true;
+    if (fit_ok[kAnchor79]) {
+      for (uint32_t s = 0; s < kNDrv; ++s) {
+        if (s == kAnchor79 || !fit_ok[s]) continue;
+        const double se = std::sqrt(fit_ae[s] * fit_ae[s] +
+                                    fit_ae[kAnchor79] * fit_ae[kAnchor79]);
+        const double t = se > 0.0 ? (fit_a[s] - fit_a[kAnchor79]) / se : 0.0;
+        std::printf("      slope at drive %.2f  %.3f +/- %.3f vs anchor %.3f +/- %.3f"
+                    "  (%+.1f SE)%s\n", double(kDrvSet[s]), fit_a[s], fit_ae[s],
+                    fit_a[kAnchor79], fit_ae[kAnchor79], t,
+                    std::fabs(t) >= 3.0 ? "   <- ROTATED" : "");
+        if (std::fabs(t) >= 3.0) slope_held = false;
+      }
+      // AND THIS LINE CHECKS MY OWN REDESIGN. The decider was changed from the intercept to
+      // the ratio k = B/A because a 60k smoke showed the drive ROTATING the law by a factor
+      // of 2.6. If the rotation does not survive the full record, that premise was wrong --
+      // B would be interpretable after all and demoting it cost this run its most direct
+      // statistic. That is a refutation of my own reasoning, so it is printed rather than
+      // left for a reader to infer from a table.
+      std::printf("      THE LAW %s: %s\n",
+                  slope_held ? "DID NOT ROTATE" : "ROTATED",
+                  slope_held
+                      ? "every slope sits within 3 SE of the anchor's, so the\n"
+                        "      60k smoke's factor-of-2.6 rotation did NOT survive the full"
+                        " record.\n      The premise for demoting the raw intercept was"
+                        " WRONG -- read the\n      disclosure line below as a statistic and"
+                        " not only as an artefact."
+                      : "the gain A is what the drive moves, which is the premise\n"
+                        "      for making k = B/A the decider rather than B. Confirmed at"
+                        " full\n      record, not only in the smoke.");
+    }
+    // THE PER-SETTING CONTRASTS ON k, outside every gate -- v77's lesson. One fitted
+    // setting besides the anchor is enough to run them, and on the filter axis they were
+    // the only statistic the run had. These are on the EFFECTIVE LAG, since that is the
+    // quantity the two models disagree about: K says every one of these is zero, E says
+    // each has the sign of minus the drive change.
+    if (fit_ok[kAnchor79]) {
+      for (uint32_t s = 0; s < kNDrv; ++s) {
+        if (s == kAnchor79 || !fit_ok[s]) continue;
+        const double dk = fit_k[s] - fit_k[kAnchor79];
+        const double dse = std::sqrt(fit_ke[s] * fit_ke[s] +
+                                     fit_ke[kAnchor79] * fit_ke[kAnchor79]);
+        const double dd = double(kDrvSet[s]) - double(kDrvSet[kAnchor79]);
+        // Model E predicts only a SIGN, so the contrast is scored on direction: a setting
+        // BELOW the anchor must raise the lag and one above must lower it.
+        const bool e_dir = (dd < 0.0 && dk > 0.0) || (dd > 0.0 && dk < 0.0);
+        std::printf("      CONTRAST drive %.2f vs %.2f -- k changed %+.2f +/- %.2f ms"
+                    "  (%.1f SE);  K said 0, E wanted %s, got %s%s\n",
+                    double(kDrvSet[s]), double(kDrvSet[kAnchor79]), dk, dse,
+                    dse > 0.0 ? std::fabs(dk / dse) : 0.0,
+                    dd < 0.0 ? "a RISE" : "a FALL", dk > 0.0 ? "a rise" : "a fall",
+                    e_dir ? "   <- E's direction" : "   <- AGAINST E");
+      }
+    }
+    // THE DECIDER: IS THE EFFECTIVE LAG A CONSTANT OF THE LOOP?
+    //
+    // The table first, so the shape is readable before any statistic is drawn from it. A
+    // and B are the gain and the offset of that setting's own balanced law; k = B/A is the
+    // lag the two models disagree about.
+    std::printf("\n      THE EFFECTIVE LAG ACROSS THE DRIVE, on %u of %u settings and %u\n"
+                "      of %u taus\n", nfit, kNDrv, ncom, kNTau);
+    for (uint32_t s = 0; s < kNDrv; ++s)
+      std::printf("        drive %.2f  %s  A %6.3f   B %7.1f ms   k = B/A %7.2f +/- %5.2f"
+                  " ms%s\n", double(kDrvSet[s]), fit_ok[s] ? "fitted " : "REFUSED",
+                  fit_a[s], fit_b[s], fit_k[s], fit_ke[s],
+                  s == kAnchor79 ? "   <- ANCHOR" : "");
+    // THE INTERCEPT'S OWN COEFFICIENT, KEPT AS A DISCLOSURE AND NOT AS THE VERDICT. This
+    // is the statistic the first design was built on, and it is printed so a reader can see
+    // why it was demoted rather than having to take the word of a comment: it is large,
+    // it has a small error bar, and it is measuring the rotation of A rather than any
+    // offset. The smoke read -656 ms per unit on it.
+    {
+      double bx[kNDrv] = {}, by[kNDrv] = {};
+      uint32_t bn = 0;
+      for (uint32_t s = 0; s < kNDrv; ++s)
+        if (fit_ok[s]) { bx[bn] = double(kDrvSet[s]); by[bn] = fit_b[s]; ++bn; }
+      if (bn >= 3) {
+        double c = 0.0, d = 0.0, ce = 0.0, de = 0.0, r2 = 0.0;
+        ols(bx, by, bn, c, d, ce, de, r2);
+        std::printf("      DISCLOSURE, NOT THE VERDICT: the raw intercept moves %+.1f +/-"
+                    " %.1f ms\n      per unit of drive (R^2 %.5f). That is the GAIN rotating"
+                    " -- B = A*k, and A\n      moves by construction on this axis -- which is"
+                    " why k and not B is the\n      decider. Differencing B across settings"
+                    " compares the tau_a = 0\n      extrapolations of lines with different"
+                    " slopes.\n", c, ce, r2);
+      }
+    }
+    // THE END-TO-END CONTRAST ON k, kept as the READABLE statistic. k at the highest fitted
+    // drive against k at the lowest, on jackknife error bars that each carry ncom - 1
+    // degrees of freedom -- NOT the ncom - 2 an OLS fit on the same points would have, which
+    // is v78's dof lesson applied one layer down.
+    //
+    // IT IS NOT THE DECIDER, AND PRE-FLIGHT ARITHMETIC IS WHY. Propagating v78's own
+    // numbers through k = B/A (including the slope-intercept covariance, which here ADDS
+    // 3.8 of the 13.7 variance rather than cancelling) gives ke = 3.71 ms at the anchor, so
+    // a two-setting contrast carries 5.24 ms. Model E's predicted drift across this window
+    // is 14.6 ms -- only 2.8 SE, under the 3.182 a 3-dof jackknife needs -- and the bound
+    // would need |dk| + 16.7 < 10 ms, which is unsatisfiable. SO THIS CONTRAST CANNOT
+    // DISTINGUISH THE TWO MODELS EITHER WAY. It is printed because it is the quantity a
+    // reader can hold, and the decider below is the test that has the power.
+    uint32_t slo = kNDrv, shi = kNDrv;
+    for (uint32_t s = 0; s < kNDrv; ++s) {
+      if (!fit_ok[s]) continue;
+      if (slo == kNDrv) slo = s;
+      shi = s;
+    }
+    if (nfit < 3 || slo == shi) {
+      std::printf("\n      FEWER THAN THREE SETTINGS FITTED -- no contrast and no bound.\n"
+                  "      This axis does not decide, and the per-setting contrasts above are\n"
+                  "      what it licenses. A contrast is one point.\n");
+    } else {
+      const double dk = fit_k[shi] - fit_k[slo];
+      const double dkse = std::sqrt(fit_ke[shi] * fit_ke[shi] + fit_ke[slo] * fit_ke[slo]);
+      const double tcrit = crit_t_dof(ncom >= 2 ? ncom - 1 : 0);
+      const double t = dkse > 0.0 ? dk / dkse : 0.0;
+      const bool resolved = dkse > 0.0 && std::fabs(t) >= tcrit;
+      double kbar = 0.0;
+      uint32_t nk = 0;
+      for (uint32_t s = 0; s < kNDrv; ++s) if (fit_ok[s]) { kbar += fit_k[s]; ++nk; }
+      if (nk > 0) kbar /= double(nk);
+      const double dk_hi = std::fabs(dk) + tcrit * dkse;
+      const double frac_hi = kbar > 0.0 ? dk_hi / kbar : 0.0;
+      std::printf("\n      THE CONTRAST  k(drive %.2f) - k(drive %.2f) = %+.2f +/- %.2f ms"
+                  "  (%.1f SE;\n      jackknife on %u taus = %u dof, so the 5%% critical t is"
+                  " %.3f -> %s)\n", double(kDrvSet[shi]), double(kDrvSet[slo]), dk, dkse,
+                  std::fabs(t), ncom, ncom >= 2 ? ncom - 1 : 0, tcrit,
+                  resolved ? "RESOLVED" : "not resolved");
+      std::printf("      READABLE, NOT DECIDING: mean k = %.2f ms and the 95%% upper end of\n"
+                  "      |dk| is %.2f ms = %.0f%% of it. Pre-flight says this statistic has"
+                  " no\n      power either way on this axis (model E's drift is 2.8 SE here),"
+                  " which\n      is why the nested test below is the decider.\n",
+                  kbar, dk_hi, 100.0 * frac_hi);
+      std::printf("      FOR SCALE     the offset has always required 179.8 / 3.560 ="
+                  " 50.5 ms of\n                    effective lag, and this run measures"
+                  " %.2f ms at the shipped\n                    drive\n", fit_k[kAnchor79]);
+
+      // THE DECIDER: A NESTED MODEL COMPARISON OVER EVERY PERIOD AT ONCE.
+      //
+      // Collapsing each setting to one ratio throws away the information that makes this
+      // answerable -- it turns `nfit * ncom` measured periods into `nfit` numbers. The
+      // comparison below keeps all of them and asks the question directly:
+      //
+      //   FREE   nfit gains and nfit lags   (2 * nfit parameters)
+      //   SHARED nfit gains and ONE lag     (nfit + 1 parameters)
+      //
+      // Model K is the SHARED fit; model E requires the free lags to fit resolvably better.
+      // SHARED is linear in the gains given k -- A_s = sum(p*(t+k)) / sum((t+k)^2) -- so it
+      // is profiled by scanning k and solving the gains in closed form at each step.
+      //
+      // ITS POWER WAS SIMULATED BEFORE THE RUN, against this axis's own measured gains and
+      // v78's own residual scatter: 95% to detect model E at six taus, against 72% at four,
+      // with a false-positive rate at the nominal 5%. The two extra taus per setting were
+      // bought for that 23 points, and the threshold is a tabulated critical F committed in
+      // advance rather than a function evaluated here.
+      double rss_free = 0.0;
+      for (uint32_t s = 0; s < kNDrv; ++s) {
+        if (!fit_ok[s]) continue;
+        for (uint32_t j = 0; j < kNTau; ++j) {
+          if (!common[j]) continue;
+          const double e = per[s][j] - (fit_a[s] * kTau79[j] + fit_b[s]);
+          rss_free += e * e;
+        }
+      }
+      auto rss_shared = [&](double kk) {
+        double r = 0.0;
+        for (uint32_t s = 0; s < kNDrv; ++s) {
+          if (!fit_ok[s]) continue;
+          double num = 0.0, den = 0.0;
+          for (uint32_t j = 0; j < kNTau; ++j) {
+            if (!common[j]) continue;
+            const double xx = kTau79[j] + kk;
+            num += per[s][j] * xx;
+            den += xx * xx;
+          }
+          const double aa = den > 0.0 ? num / den : 0.0;
+          for (uint32_t j = 0; j < kNTau; ++j) {
+            if (!common[j]) continue;
+            const double e = per[s][j] - aa * (kTau79[j] + kk);
+            r += e * e;
+          }
+        }
+        return r;
+      };
+      // THE SCAN IS BOUNDED BELOW AT -min(tau), and not for numerical comfort: at
+      // k = -tau_j the term A*(tau_j + k) is zero and below it the sign flips, so the model
+      // would fit a NEGATIVE gain to the shortest tau and still reduce the residual. That
+      // is not a smaller lag, it is a different and meaningless model. A negative k down to
+      // that edge is legitimate -- it just means the law extrapolates to zero period at a
+      // positive tau_a, which the smoke saw at one setting.
+      double tmin = 1e30;
+      for (uint32_t j = 0; j < kNTau; ++j) if (common[j] && kTau79[j] < tmin) tmin = kTau79[j];
+      const double k_floor = -tmin + 1.0;
+      double k_hat = k_floor, rss_k = 1e30;
+      for (int32_t step = 0; step <= 2400; ++step) {
+        const double kk = k_floor + 0.25 * double(step);
+        const double r = rss_shared(kk);
+        if (r < rss_k) { rss_k = r; k_hat = kk; }
+      }
+      const uint32_t npts = nfit * ncom;
+      const uint32_t dnum = nfit - 1;
+      const uint32_t dden = npts - 2 * nfit;
+      const double fcrit = crit_f(dnum, dden);
+      const double fstat = (dden > 0 && rss_free > 0.0 && dnum > 0)
+                               ? ((rss_k - rss_free) / double(dnum)) /
+                                     (rss_free / double(dden))
+                               : 0.0;
+      // THE PROFILE INTERVAL ON THE SHARED LAG, which is what makes a constant k usable
+      // rather than merely unrefuted: it is the range of k whose residual stays inside one
+      // critical t-squared of the minimum, scanned outward from the optimum.
+      const double tc1 = crit_t_dof(dden);
+      const double rlim = rss_k * (1.0 + tc1 * tc1 / double(dden > 0 ? dden : 1));
+      double klo = k_hat, khi = k_hat;
+      for (int32_t step = 0; step <= 1600; ++step) {
+        const double kk = k_hat - 0.25 * double(step);
+        if (kk < k_floor || rss_shared(kk) > rlim) break;
+        klo = kk;
+      }
+      for (int32_t step = 0; step <= 1600; ++step) {
+        const double kk = k_hat + 0.25 * double(step);
+        if (rss_shared(kk) > rlim) break;
+        khi = kk;
+      }
+      std::printf("\n      THE NESTED TEST, on all %u periods at once (%u settings x %u"
+                  " common taus)\n"
+                  "        FREE    %u gains + %u lags   RSS %10.1f\n"
+                  "        SHARED  %u gains + 1 lag     RSS %10.1f   k = %.2f ms"
+                  "  [%.2f, %.2f]\n"
+                  "        F(%u,%u) = %.3f  against a critical %.3f committed in advance"
+                  "  -> %s\n",
+                  npts, nfit, ncom, nfit, nfit, rss_free, nfit, rss_k, k_hat, klo, khi,
+                  dnum, dden, fstat, fcrit,
+                  fstat >= fcrit ? "the free lags fit BETTER"
+                                 : "one shared lag is ENOUGH");
+      // THE VERDICT CASCADE, pre-registered in ROADMAP §34 before this run.
+      if (!dose_live) {
+        std::printf("      NO VERDICT -- THE DOSE DID NOT REACH THE OSCILLATOR. The\n"
+                    "      mechanism arms' rate moved %+.0f%% across the full sweep, under\n"
+                    "      the 10%% threshold, so there is no dose here and neither a\n"
+                    "      constant k nor a moving one can be read. VACUOUS.\n",
+                    100.0 * dose_move);
+      } else if (fcrit > 1e8) {
+        std::printf("      NO VERDICT -- NO COMMITTED THRESHOLD FOR THIS SHAPE. The design\n"
+                    "      came out at F(%u,%u), which is not on the pre-registered grid of\n"
+                    "      critical values, so there is no threshold this run is entitled to\n"
+                    "      use. Picking one now would be choosing a bar after seeing the\n"
+                    "      statistic. F = %.3f is printed and decides nothing.\n",
+                    dnum, dden, fstat);
+      } else if (fstat < fcrit) {
+        std::printf("      THE OFFSET IS A FIXED EFFECTIVE LAG -- model K. One shared lag of\n"
+                    "      %.2f ms [%.2f, %.2f] fits all %u periods as well as %u free ones:\n"
+                    "      F(%u,%u) = %.3f against a critical %.3f committed before the run.\n"
+                    "      So across a %.0f%% change in tonic drive that the arms confirm\n"
+                    "      landed -- and which rotates the gain by a factor of %.2f -- the\n"
+                    "      LAG does not move. The law is `period = A(S) * (tau_a + k)` with\n"
+                    "      A set by the drive and k a constant of the loop.\n"
+                    "      THAT MAKES THE EFFECTIVE LAG A REAL QUANTITY TO HUNT rather than\n"
+                    "      an artefact of one operating point, and three of its candidates\n"
+                    "      are already eliminated: the rate filter (v77) and both per-module\n"
+                    "      constants (v78). The simulation says this test had 95%% power to\n"
+                    "      see model E's drift, so this is a null with teeth.\n",
+                    k_hat, klo, khi, npts, nfit, dnum, dden, fstat, fcrit,
+                    100.0 * (double(kDrvSet[kNDrv - 1]) / double(kDrvSet[0]) - 1.0),
+                    (fit_a[slo] > 0.0 && fit_a[shi] > 0.0)
+                        ? fit_a[slo] / fit_a[shi] : 0.0);
+      } else if (dk < 0.0) {
+        std::printf("      THE OFFSET IS AN ESCAPE TIME -- model E. Five free lags fit\n"
+                    "      resolvably better than one shared %.2f ms: F(%u,%u) = %.3f against\n"
+                    "      a critical %.3f. And the lag FALLS with the drive (%+.2f ms from\n"
+                    "      %.2f to %.2f), the direction a harder-driven half climbing back to\n"
+                    "      threshold sooner requires. So the 180 ms is NOT a constant of the\n"
+                    "      loop -- it is a function of the operating point, and \"the one\n"
+                    "      missing time constant\" was the wrong question for four runs.\n"
+                    "      THIS LOCALISES AND DOES NOT EXPLAIN: the drive IS the operating\n"
+                    "      point, so it cannot be separated from the rate it sets without a\n"
+                    "      follow-up that moves one without the other.\n",
+                    k_hat, dnum, dden, fstat, fcrit, dk, double(kDrvSet[slo]),
+                    double(kDrvSet[shi]));
+      } else {
+        std::printf("      THE LAG MOVES, AGAINST E's DIRECTION. Five free lags beat one\n"
+                    "      shared %.2f ms -- F(%u,%u) = %.3f against a critical %.3f -- so it\n"
+                    "      is not a constant of the loop. But it RISES %+.2f ms from drive\n"
+                    "      %.2f to %.2f, and a harder-driven half cannot take LONGER to\n"
+                    "      reach threshold, so it is not an escape time either. BOTH MODELS\n"
+                    "      ARE REFUSED and the shape is unaccounted for.\n",
+                    k_hat, dnum, dden, fstat, fcrit, dk, double(kDrvSet[slo]),
+                    double(kDrvSet[shi]));
+      }
     }
   }
 

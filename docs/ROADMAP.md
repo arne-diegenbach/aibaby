@@ -3139,3 +3139,414 @@ and a control has none. So the estimator is probably innocent, which demotes thi
 to a **cheap confirmation**: sweep the 0.25 coefficient with no genome change, prediction that the
 intercept does *not* move. Worth one arm block to retire an instrument question that has shadowed
 four runs, and not worth a run of its own.
+
+## §34 — THE DRIVE AXIS, PRE-REGISTERED AS A BOUND (2026-11-01)
+
+Three axes are closed as the clock law's 180 ms offset and all three were **lags**: the shared rate
+filter (§31), and both per-module time constants (§33). This run moves the **gain**.
+
+`period = 3.560·tau_a + 179.8 ms`, R² 0.99963, intercept 16 SE from zero. The coefficient is
+understood; the offset has no account.
+
+### Why drive, and why *now*
+
+v78 did not only produce two refusals. On the way it produced a **discriminator**, and that
+discriminator is what selects this axis:
+
+> A gain change scales the whole relaxation cycle and so moves the **coefficient** on `tau_a`; a lag
+> *adds* and so moves the **intercept** alone.
+
+The two v78 axes dissociated exactly along that line. `leak_tau_ms` is a lag *and* an inverse gain,
+and it **rotated** the law — slope 3.476 → 3.891 across 20–65 ms, monotone, visible in the raw
+periods before any fit (`tau_a` 83 *fell* 468.3 → 395.8 while `tau_a` 333 *rose* 1361.2 → 1476.7).
+`refractory_ms` is pure dead time, and it moved the intercept 0.5 ms of 179.8 while leaving the
+slope alone to within 0.3 SE.
+
+So the dynamics of this oscillator live on the **gain-like** axes, and `halfcenter_drive` is the pure
+gain axis — Matsuoka's tonic *S*, with no time constant in it at all.
+
+And the textbook puts the offset here. Shpiro/Curtu/Rinzel/Rubin make a relaxation oscillator's
+period the sum of two **escape times** — how long a released half takes to climb back to threshold —
+and the escape time is set by the tonic input, not by the adaptation constant. **An escape time is
+exactly the shape of a term that adds to `3.560·tau_a` without scaling it**, which is what the three
+closed lags were asked to supply and could not.
+
+### This axis is not shaped like the three before it
+
+| | the three closed axes | `halfcenter_drive` |
+|---|---|---|
+| units | milliseconds | dimensionless |
+| a lag predicts | coefficient = 3.560 ms/ms | *no such number exists* |
+| zero of the field | a real reference (no lag) | a **dead module** (0.54 Hz at drive 0.50) |
+| sweepable range | 4× (rft), 11.7× (refr), 3.25× (leak) | **1.52×**, and that is the whole window |
+| moves the operating point | a confound to disclose | **it *is* the dose** |
+
+Each row changes the test, and three of them change it in ways that make copying §32 wrong.
+
+### The models, and why v78's pair does not transfer
+
+There is no "a lag requires 3.560" to compare a coefficient against, so the two-model separation
+that both §30 and §32 turned on is unavailable. What the textbook supplies instead is a **sign**:
+
+- **model E — the intercept is the escape time.** More drive reaches threshold faster, so the escape
+  time *shrinks*: `dIntercept/dDrive < 0`, resolvably.
+- **model F — the offset is fixed.** `dIntercept/dDrive = 0`; the 180 ms comes from somewhere the
+  drive does not reach.
+
+### The deciding statistic is a SPAN, not a coefficient
+
+§32 could write `coefficient × shipped value` because refractory 0 means no dead time — a real
+reference point. **Drive 0 is not "the offset without drive", it is a dead module.** `hcdrive`
+measured 0.54 Hz at drive 0.50, nine times below baseline, and alternation is already gone at 0.75.
+So `c × 1.40` would be an extrapolation across a boundary the oscillator cannot cross, and it is not
+the statistic.
+
+The honest quantity is **how much of the 180 ms the drive moves across the window the oscillator
+actually occupies**: `|c| × (highest fitted drive − lowest fitted drive)`.
+
+**And the verdict is run on that span's 95% upper end, not on its point estimate.** This is the
+design's one real idea. A span whose upper end is small closes the axis *whether or not the
+coefficient is resolved* — an unresolved coefficient with a tight error bar is a **bound**, and a
+bound is a result. An unresolved coefficient with a loose error bar correctly closes nothing. The
+two cases are told apart by the code and not by prose.
+
+### The threshold: 20%, fixed now
+
+**A field that cannot move 20% of the offset across its entire usable range is not the principal
+source of it.** The two closed lags moved 0.3% of it and the third moved it the wrong way, so 20% is
+not a near-miss line — it is the floor for a claim worth making. Fixed before the run, and the
+`0.20` is a literal in the verdict branch.
+
+### Is this powered? — derived, not assumed, and my first guess was wrong
+
+I first estimated the residual scatter of the per-setting intercepts at ~8 ms, from the size of the
+*intercept error bars* (11.0 / 8.2 / 6.3 / 4.3 ms on the refractory axis). **That gives a dead run:**
+it puts the bound's upper end at ≥ 45 ms even at `c = 0`, above the 20% line, so the BOUNDED branch
+could never fire and every outcome reads "underpowered".
+
+That estimate was the wrong quantity. What the bound depends on is how well the four intercepts lie
+**on a line**, not how well each is individually pinned — and v78 measured that directly. Backing it
+out of the achieved coefficient:
+
+```
+refractory settings {3,12,22,35}:  Sxx = 566,   sqrt = 23.79
+v78 achieved  ce = 0.054  =>  residual sd = 0.054 x 23.79 = 1.29 ms
+drive settings {1.05,1.20,1.40,1.60}:  Sxx = 0.1719,  sqrt = 0.4146
+projected     ce = 1.29 / 0.4146 = 3.1 ms per unit drive
+span SE = 3.1 x 0.55 = 1.7 ms        span_hi = 0.55|c| + 7.3 ms   (t = 4.303, 2 dof)
+```
+
+The four intercepts lie on a line to ~1.3 ms because they share taus and each period is measured on
+12 reps of a 1.2M-tick record. So:
+
+- **the BOUNDED branch fires while |c| < 52 ms per unit**, and
+- **model E predicts ≈ −128 ms per unit** if the offset is entirely escape time scaling as 1/*S*
+  (`−179.8 / 1.40`).
+
+A **2.5× margin between the prediction and the detection floor**, in a design whose sweepable range
+is only 1.52×. Both verdicts are reachable. *The caveat this derivation carries:* it assumes the
+intercept-versus-drive relation is near-linear over the window. Curvature inflates the residual on 2
+dof and would show up as a loose bound — which the UNDERPOWERED branch will say, rather than my
+having to notice it afterwards.
+
+### The vacuity guard: the dose has to land, and the rate cannot tell me
+
+**This is the one way a null here would be worthless rather than informative.** IP defends the
+firing rate. v77's four controls all read 4.94 Hz while the duty drifted 0.53 → 0.62 underneath
+them — *a regulated quantity cannot detect an operating-point shift.* If the homeostat absorbs a
+tonic change there is no dose, and a null measured on no dose is vacuous.
+
+So: **the duty — the quantity nothing defends — must move ≥10% across the settings before this block
+reads its own result.** A branch in the code, not a sentence here. 10% is the threshold the
+operating-point print already calls a move; it is not a new number chosen for this test.
+
+### The asymmetry, stated before the data
+
+**A null closes this axis cleanly. A positive result only localises.** Drive *is* the operating
+point — there is no version of this test in which the tonic moves and the firing rate does not — so a
+large effect cannot distinguish *"the drive sets the escape time"* from *"the drive sets the rate and
+the rate sets the escape time."* Separating those needs a follow-up that moves one without the other,
+and this run cannot be quoted as having done it.
+
+### The verdict branches, as the code's branches
+
+In order, with the first that applies deciding:
+
+1. **< 3 settings fitted, or < 3 taus common** → the axis refuses *itself*. §32's balanced-design
+   flaw, kept: intercepts are comparable only on a common set of taus, and dropping the shortest tau
+   moved a fitted intercept ~80 ms at 60k.
+2. **duty moved < 10%** → **NO VERDICT, the dose was absorbed.** The repair is a dose the regulator
+   cannot absorb, not a wider window.
+3. **span's 95% upper end < 20% of the anchor intercept** → **DRIVE IS NOT THE PRINCIPAL SOURCE, as
+   a bound.** Fires whether or not the coefficient is resolved, and says which.
+4. **resolved and negative** → **the escape time is real** — model E on sign *and* size. Reports the
+   zero-crossing and that this localises rather than explains.
+5. **resolved and positive** → **it reaches the intercept the wrong way.** Model E refused on *sign*,
+   which is a different finding from model F.
+6. **otherwise** → **UNDERPOWERED, not null**, naming the narrow range as the likeliest cause. The
+   repair is more reps or a longer record — not a wider gate, and not a setting outside the window.
+
+**The slope moving is not in that list, and that is deliberate.** In §32 a moving `tau_a` slope
+refused the additive-lag form, which was right because the field was a lag candidate. Drive is the
+**gain** candidate and v78's own finding is that gain-like axes rotate the law, so a rotation here is
+*expected*. It is disclosed with a consequence — if the slope rotates, the intercept is the
+extrapolation of a line whose shape itself depends on drive, so intercept and slope stop being
+independently interpretable and the verdict says so — but it does not zero the budget.
+
+### The dof-scaled t, applied from here forward
+
+§33 recorded a mis-specification against itself: a flat 3-SE rule on a **four-point** fit has 2 dof,
+where the two-tailed 5% critical t is **4.303**, so v78's refractory coefficient at 3.4 SE was
+p ≈ 0.08 and the "resolvably non-zero" label overstated it. This block uses `crit_t(n)` — 12.706 at
+3 points, 4.303 at 4 — and prints the dof and the critical value beside every call.
+
+**The v78 block is left exactly as it printed.** Retro-fitting the threshold would change a published
+verdict after the fact, which is the same sin as widening one; the scaling applies from v79 forward
+and the determinism check proves v78's numbers are untouched.
+
+### The hijack audit, written out
+
+This is the failure the v78 build earned the hard way: its appended arms carried `rft 50` and
+`drive 1.40`, the only two fields the **v77** block matched on, so they were swept into a *published*
+verdict and silently re-decided it — intercept 142.5 where v77 printed 179.8. Every consumer of
+`kHCArms`, checked against 15 appended arms at drive 1.05 / 1.20 / 1.60:
+
+| consumer | how it selects | safe? |
+|---|---|---|
+| v77 offset block | pins `drive == 1.40` | ✔ excluded |
+| v78 `offset_axis` | pins `drive == 1.40` | ✔ excluded |
+| clock-law block | hardcoded indices 0–3, 12–13 | ✔ immune |
+| v76 competition block | hardcoded `kHCBaseArms`, `kV57 = 3` | ✔ immune |
+| UPPER EDGE print | hardcoded index 6 | ✔ immune |
+| `hc_ctrl_for` | matches drive/rft/leak/refr | ✔ each new arm finds its own control |
+| `kHCCtrlArm`, `kHCBaseArms` | constants | ✔ unchanged |
+| **the new v79 block** | **pins all eight dose fields** | ✔ by construction |
+
+**And one trap found by doing the audit rather than after it: `drive200` has no control of its own
+and falls back to `kHCCtrlArm` by design.** Adding a drive-2.00 control would have re-decided a
+published arm's VOID flag through `hc_ctrl_for`. 2.00 is therefore *not* one of the four settings,
+and the reason is written at the arm table.
+
+### Two further notes on the build
+
+**The anchor is not `set[0]` on this axis.** The shipped 1.40 sits near the window's *upper* edge, so
+a monotone sweep puts it third. v78 could assume `set[0]` was the shipped value because both its
+fields ship at their minima; assuming it here would have anchored every contrast on drive 1.05.
+
+**The OLS lambda is hoisted one scope out**, so the v78 and v79 blocks share one definition. A fourth
+hand-inlined copy is how two fits come to disagree, and the two blocks' anchor fits are a free
+cross-check only while they are the same arithmetic. Identical body, identical call sites, and the
+determinism check re-prints v78 byte for byte.
+
+### What this run cannot claim
+
+- **That the offset is explained**, on any outcome. Even model E at full strength localises the
+  offset to a quantity that drive and the firing rate both move.
+- **Anything about drive outside ~0.9–1.6.** The oscillator does not exist there; `hcdrive` measured
+  alternation absent at 0.50, 0.75, 2.10 and 2.80.
+- **A mechanism from a rotation.** If the slope moves, this axis has shown the gain reaches the
+  dynamics — which v78 already showed on the membrane — and not that it reaches the *offset*.
+- **A null if the duty does not move.** That is branch 2, and it is a refusal of the test.
+
+### Where it leaves the remaining candidates
+
+If drive is bounded out, the live list is short and one entry has a scale that matches untuned: the
+resonant **jaw** at ~4.5 Hz = **222 ms** ([[the frame is a body part]]), the only candidate whose
+natural period is the right order without fitting. Plus the cheap instrument confirmation from §33
+(sweep the Schmitt band's 0.25 coefficient; prediction: the intercept does not move).
+
+### What the pre-flight changed — three refutations before any data
+
+**Everything above this heading is the record of the design I started with. The statistic,
+the threshold and the settings below supersede it.** I am keeping the original rather than
+editing it because what a pre-flight *refuted* is part of the audit trail: two of the three
+refutations came from arithmetic I should have done first, and the third came from a 60k
+smoke doing exactly what a smoke is for.
+
+#### 1. Drive 1.05 is not in the window at all
+
+The smoke ran the four taus at 1.05, 1.20 and 1.60. At 1.05: anti-phase **+0.000** on three
+of four arms, signal sd **0.6–0.7× the control's own noise floor**, and 483–940 "turns" of
+61–99 ms inside a 54k record. That is not the intermittency §34 predicted — it is **no
+half-centre**. `hcdrive` read 1.05 as alternating because it was looking at an FFT argmax
+two DNA versions ago, before the crossing estimator existed.
+
+So the window's lower edge is between 1.05 and 1.20, and the usable span is **1.20–1.60,
+a factor of 1.33** — narrower even than the 1.52 §34 budgeted for. 1.05 is not re-run; it
+is recorded here as the boundary, the way `hcdrive` recorded 0.50 / 0.75 / 2.10 / 2.80.
+
+#### 2. My vacuity guard was reading a field that cannot act
+
+§34 required the **controls'** duty to move, on the reasoning that IP defends the rate so
+the rate cannot detect a dose. The smoke returned all four controls **bit-identical** —
+duty 0.47, rate 4.41 Hz, floor sd 3.3240, period 190.0 ms — and the guard dutifully
+announced that the homeostat had absorbed the dose.
+
+It had not. `halfcenter_drive` is read **only inside `if (halfcenter_gain > kZero)`**
+([network.cpp:674](core/src/network.cpp#L674)), and a control is *defined* by having that
+gain at zero. The controls never read the field. My guard could not fire for the reason it
+was written for — the same shape as the mis-specified oracle guard in §29.
+
+> **A matched control is the wrong dosimeter whenever the dose acts only through the
+> mechanism the control switches off.** The control is dose-blind by construction. It is
+> still the right *baseline* — an arm must be gated against its own both-mechanisms-off
+> rate — but liveness has to be read on the mechanism arms.
+
+Rewritten to read the mechanism arms' rate at matched `tau_a`. On the re-smoke it fires
+correctly: **the dose LANDED, 5.13 → 7.65 Hz at tau 167, +49%.**
+
+#### 3. The drive rotates the law, so the intercept is not an interpretable statistic
+
+This is the one that mattered. §34's whole deciding statistic was `dIntercept/dDrive`, on
+the premise that an escape time *adds* to `3.560·tau_a` without scaling it. **The premise is
+false on this axis.** The smoke:
+
+| drive | slope on `tau_a` | intercept |
+|---|---|---|
+| 1.20 | 7.460 | 294.5 |
+| 1.30 | 5.286 | 77.9 |
+| 1.40 (anchor) | 3.951 | 97.7 |
+| 1.60 | 2.912 | 31.9 |
+
+A factor of **2.6 in the gain**, and the raw periods say it without any fit — tau 167 runs
+1542 ms at drive 1.20 against 759 at 1.40. So those four "intercepts" are the `tau_a = 0`
+extrapolations of lines with entirely different slopes, and differencing them measures the
+rotation. The smoke's coefficient came out **−656 ms per unit**: arithmetically real,
+mechanistically empty. *A statistic that cannot be interpreted is not rescued by an error
+bar.*
+
+**The one form in which a rotating axis can still carry a fixed offset** is the cascaded one
+— v77's model A, which that run could only test on a single field:
+
+```
+period = A(S) · (tau_a + k)        so    intercept B = A · k
+```
+
+The gain `A` moves with the drive by construction. The question is whether the **effective
+lag k = B/A** is a constant of the loop. And `k` is in milliseconds, so it is directly
+comparable to the **50.5 ms** (`179.8 / 3.560`) the offset has required since §28, and to
+the three fields already eliminated against that number.
+
+- **model K — the offset is a fixed effective lag.** `k` is the same at every drive; the
+  gain scales it. The 50.5 ms becomes a real quantity with three candidates already gone.
+- **model E — the offset is an escape time.** `k` *falls* as drive rises, because a
+  harder-driven half climbs back to threshold sooner. Then the 180 ms is not a constant of
+  the loop at all but a function of the operating point — and "the one missing time
+  constant" was the wrong question for four runs.
+
+**I have seen a hint of the answer and say so.** The smoke's `k` values fall — 39.5 / 14.7 /
+24.7 / −23.4 / 11.0 ms across 1.20–1.60 — which is broadly model E's direction, though not
+monotonically. Three things keep that from contaminating the test: those are **three-tau**
+fits at 60k carrying the known anchor artefact (the anchor reads intercept 97.7 where the
+full run gives 179.8 — the *same* 97.7 the v78 smoke produced), the 1.50 fit has R² 0.99167
+against 0.9999 elsewhere so it is not even internally consistent, and the decider is a test
+with a threshold fixed before the run. **What the smoke changed is which quantity is
+interpretable, not where the line sits.**
+
+#### And then the replacement statistic failed its own power check
+
+The obvious decider — contrast `k` at the top of the window against `k` at the bottom — does
+not work either, and this time arithmetic caught it rather than a smoke. Propagating v78's
+own anchor numbers through `k = B/A`, **including the slope–intercept covariance**:
+
+```
+taus {83,167,250,333}:  mx = 208.25,  Sxx = 34695
+from A's SE 0.048:  residual s = 8.94 ms   (reproduces B's printed SE of 11.0 exactly)
+Cov(A,B) = -mx·s²/Sxx = -0.4798
+Var(k) = Var(B)/A² + B²·Var(A)/A⁴ - 2(B/A³)·Cov(A,B) = 9.46 + 0.46 + 3.82 = 13.75
+=> ke = 3.71 ms at the anchor,  contrast SE = 5.24 ms
+```
+
+The covariance term **adds** 3.82 of the 13.75 rather than cancelling. So:
+
+- model E's predicted drift across this window is `50.5·(1.40/1.20 − 1.40/1.60)` =
+  **14.6 ms → only 2.8 SE**, under the 3.182 a 3-dof jackknife requires. **Not separable.**
+- and the bound would need `|dk| + 16.7 < 10 ms`, which is **unsatisfiable**.
+
+The contrast is kept and printed because it is the quantity a reader can hold in their head.
+It is explicitly labelled as *not* the decider, with this reason beside it.
+
+### The design as built
+
+**The decider is a nested model comparison over every period at once.** Collapsing each
+setting to a single ratio throws away precisely the information that makes this answerable —
+it turns `nfit × ncom` measured periods into `nfit` numbers.
+
+```
+FREE    nfit gains + nfit lags   (2·nfit parameters)
+SHARED  nfit gains + ONE lag     (nfit + 1 parameters)      <- model K
+F = ((RSS_shared - RSS_free)/(nfit-1)) / (RSS_free/(nfit·ncom - 2·nfit))
+```
+
+SHARED is linear in the gains given `k` (`A_s = Σp(t+k) / Σ(t+k)²`), so it is profiled by
+scanning `k` and solving the gains in closed form — **bounded below at `−min(tau)`**, where
+`A·(tau+k)` changes sign and the fit would start assigning a negative gain to the shortest
+tau and still reduce the residual. That is a different and meaningless model, not a smaller
+lag.
+
+**Power, simulated before the run** against this axis's own measured gains and v78's own
+8.94 ms residual scatter:
+
+| taus per setting | residual dof | critical F | power vs model E | false-positive vs K |
+|---|---|---|---|---|
+| 4 | 10 | 3.478 | **72%** | 4% |
+| **6** | **20** | **2.866** | **95%** | 5% |
+| 7 | 25 | 2.759 | 95% | 4% |
+
+**72% is a coin-flip dressed as an experiment**, so two taus were bought at every setting —
+`tau 125` and `tau 290`, both safely interior to the usable band (`tau042` came back VOID at
+18.3 Hz, `tau500` is outside at the other end). A seventh adds nothing measurable. **89 arms,
+12 reps, 1.2M ticks.**
+
+The critical F is a **tabulated** value for every `(nfit, ncom)` the design can reach —
+`nfit` 3–5, `ncom` 3–6, giving `dn = nfit−1` and `dd = nfit·(ncom−2)`, twelve cases. A pair
+off the grid returns an unreachable `1e9`, so **an unanticipated shape refuses rather than
+passing on a threshold guessed at run time.** That is a branch in the code.
+
+The **profile interval** on the shared `k` is the range whose residual stays inside one
+critical `t²` of the minimum. It is what makes a constant `k` *usable* rather than merely
+unrefuted.
+
+### The verdict branches, as built
+
+First match deciding:
+
+1. **< 3 settings fitted, or < 3 taus common** → the axis refuses itself (§32's
+   balanced-design rule: intercepts are comparable only on a common tau set).
+2. **the mechanism arms' rate moved < 10%** → **NO VERDICT, the dose did not reach the
+   oscillator.** Vacuous.
+3. **`(dn, dd)` off the committed grid** → **NO VERDICT, no threshold this run is entitled
+   to use.** F is printed and decides nothing.
+4. **F < critical** → **model K: the offset is a fixed effective lag.** One shared `k` fits
+   all periods as well as `nfit` free ones, across a 33% drive change that rotates the gain
+   and that the arms confirm landed. A null with 95% power behind it.
+5. **F ≥ critical and `k` falls with drive** → **model E: the offset is an escape time.**
+   The 180 ms is not a constant of the loop. Localises; does not explain.
+6. **F ≥ critical and `k` rises with drive** → **both models refused.** A harder-driven half
+   cannot take *longer* to reach threshold.
+
+**The rotation is not in that list and that is deliberate** — on a gain axis it is the
+expected shape, and it is the premise for using `k`. But the code now prints a line that
+**checks my own redesign**: if every slope sits within 3 SE of the anchor's, the rotation did
+not survive the full record, the premise for demoting the raw intercept was *wrong*, and the
+disclosure line should be read as a statistic after all. That refutation of my own reasoning
+is printed rather than left for a reader to infer.
+
+### Still carried over from §34 above
+
+The **asymmetry** (a constant `k` is strong; a moving `k` only localises, because drive *is*
+the operating point), the **hijack audit** (now against 30 appended arms at drive 1.20 /
+1.30 / 1.50 / 1.60 plus two new taus at 1.40 — every consumer still pins or hardcodes, and
+`drive200`'s fallback to `kHCCtrlArm` is still why 2.00 is not a setting), the **dof-scaled
+t** applied from v79 forward with the v78 block left exactly as printed, the **anchor not
+being `set[0]`**, and the **hoisted OLS lambda** with determinism check 7 to prove it a
+no-op.
+
+### One thing the smoke raised that this run will answer incidentally
+
+**The law may not be exactly linear in `tau_a`.** The anchor's full-length residual of
+8.94 ms sits well above its per-period SEs of 1.9–3.7 ms, and the smoke's three-point fits
+show local slopes disagreeing within a setting (at drive 1.50: 4.82 between tau 167 and 250,
+3.50 between 250 and 333). Four taus cannot see curvature; **six can.** If it is there it
+inflates `RSS_free`, which makes the F-test *conservative* rather than wrong — but it would
+qualify the "clock law" framing this line has used since §28, and it is worth watching for.
