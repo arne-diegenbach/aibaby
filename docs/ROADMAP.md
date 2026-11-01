@@ -2432,6 +2432,22 @@ so the Schmitt trigger is measuring turns, not noise, and its own refusal condit
 The argmax series is non-monotone with one arm's twelve seeds in a single bin. **There is no
 longer a contest between these two instruments.**
 
+**AND THE NEW INSTRUMENT VALIDATES ITSELF, from numbers already printed.** `dt_ms = 1.0`, so a
+tick is a millisecond and `settle = ticks/10` leaves a **1,080,000 ms** record. Multiply each
+arm's turn count by its median interval:
+
+    tau083   2312 x  468.3 = 1,082,710 ms   (+0.25%)
+    tau167   1377 x  784.2 = 1,079,843      (-0.01%)
+    tau250   1008 x 1070.8 = 1,079,366      (-0.06%)
+    tau333    791 x 1361.2 = 1,076,709      (-0.30%)
+
+All four recover the record length to **within 0.3%**, and that is not a tautology. A trigger
+firing on noise would produce a **bimodal** interval distribution — many spurious short intervals
+plus the real long ones — which pulls the MEDIAN down to the short mode while the count rises, so
+`count × median` would fall far short of the record. A trigger missing flips would overshoot it.
+Matching to 0.3% says the distribution is unimodal and tight: **every counted crossing is a
+turn.** This is the check to run on any future crossing measurement before quoting it.
+
 ### BY THE PRE-REGISTERED BAR THIS IS STILL NO VERDICT, AND THAT STANDS
 
 The bar was **slope ≥ 0.80 at R² ≥ 0.90** for "the clock was refused on a broken instrument."
@@ -2484,3 +2500,97 @@ Note what the 10% band is not: the measurement SEs are ~2 ms (0.2%), so a 3-SE t
 the law hold to better than 1% at 1.5× beyond the fitted range. 10% is the band a physical law
 with one fitted latency deserves; it is stated here before the numbers exist, and it will not be
 widened afterwards.
+
+## §29 — ONE ARM HELD AT 1.4%, THE OTHER LEFT THE REGIME, AND MY VERDICT CODE CONTRADICTED MY OWN PRE-REGISTRATION (2026-11-01)
+
+Gated on all four keys, hash unchanged, **all twelve original arm rows re-printed identically**
+after appending two — so the seed really is a function of the replicate only, for the third time.
+
+### THE RESULT
+
+    in-sample fit (unchanged, deterministic)   period = 3.560 * tau_a + 179.8 ms   R^2 0.99963
+
+    OUT OF SAMPLE  tau 500   predicted 1959.8   measured 1986.7 +/- 3.1   +1.4%   543 turns
+    OUT OF SAMPLE  tau  42   predicted  329.3   measured   60.0 +/- 0.0  -81.8% 17011 turns  VOID
+
+**`tau500` held, and it is a real test**: 1.5× beyond the fitted range, duty 0.57, rate 2.52 Hz
+(inside the kill switch), and the instrument's own consistency check passes at −0.11% — 543 turns
+× 1986.7 ms recovers the 1,080,000 ms record almost exactly.
+
+**`tau042` did not test the law; it left the oscillating regime.** Rate 18.30 Hz against the
+control's 4.94 is **3.7×**, past the pre-registered 2.5× kill switch, and a short `tau_a` means
+fatigue decays before it can brake anything. Its "60.0 ± 0.0 ms period" is the module's own firing
+rhythm — 18.30 Hz is a 54.6 ms cycle — not a half-centre turn. The instrument's consistency check
+catches the same thing independently: 17011 × 60.0 is **5.5% short** of the record, the signature
+of a trigger firing on a bimodal interval distribution, where the four valid arms sit inside 0.3%.
+An SE of exactly 0.00 across twelve seeds is the same pinned-estimator tell the argmax gave.
+
+### THE PRINTED VERDICT WAS WRONG, AND IT WAS WRONG AGAINST A RULE I HAD ALREADY COMMITTED
+
+The binary printed **"THE LAW DOES NOT PREDICT."** §28, committed as `0085f0f` *before* the run,
+says: *"A VOID arm, or a collapsed turn count, refuses **that arm** rather than the law."* The
+code set `held = false` on a VOID arm and so reported a refusal of the law from an arm that never
+tested it. The pre-registration and the code disagreed, and the code won by default.
+
+Fixed: `testable` is now separated from `passed`, gated on **both** the duty/rate kill switch and
+the instrument's `turns × median` consistency check, and the verdict states how many arms were
+testable at all. With that correction the licensed reading of these numbers is **1 of 2 arms
+testable, 1 of 1 held** — which is *suggestive, not settled*, and the text now says exactly that.
+
+> This is the fourth time in this session that a printed verdict and a written rule came apart.
+> The pattern is always the same: the rule is stated in prose and the gate is written in code,
+> and nothing checks them against each other. **Write the refusal clauses as the code's branch
+> structure, not as a paragraph the code approximates.**
+
+The log is not re-run for a text change; the corrected verdict is derivable from the numbers above
+and will be re-printed by the next substantive run on this instrument.
+
+### AND MY PRE-REGISTERED BAND WAS TOO LOOSE TO DISCRIMINATE — WHICH THE DATA SURVIVE ANYWAY
+
+A 10% absolute band cannot separate the two competing laws at `tau500`, and I should have seen
+that before setting it. The pure proportionality fitted on the same four arms is
+`period = 4.2793 * tau_a`, which predicts **2139.6 ms** — an error of −7.1%, also inside 10%.
+**Both laws would have passed my band.**
+
+What does separate them is the comparison, stated here post hoc and derived from the pre-registered
+numbers rather than from any refitting:
+
+| | in-sample max residual | tau500 prediction | error |
+|---|---|---|---|
+| linear + offset | **9.9 ms** | 1959.8 | **+1.4%** |
+| pure proportionality | 113.1 ms | 2139.6 | −7.1% |
+
+The two predictions differ by 179.9 ms against a measurement SE of 3.1 ms — **58 SEs** — and the
+linear law is 11× better in sample and 5× better out of sample. So the discrimination is strong
+even though the band was not; but the credit goes to the measurement's precision, not to the test
+I designed.
+
+### WHERE THE CLOCK QUESTION NOW STANDS
+
+* The **argmax is refuted as an instrument** (non-monotone, one arm's twelve seeds in a single
+  bin, R² 0.213), and "NOT A CLOCK" rests on it across four runs. That much is settled.
+* The **crossing estimator** is monotone, determined to 0.2%, self-consistent to 0.3%, and gives
+  +0.764 at R² 0.999 — which no oscillator with a finite rise time can push to 1.0.
+* The **linear law with a ~180 ms offset** fits in sample at R² 0.9996 and survives its one
+  testable out-of-sample point at +1.4%, beating the proportional form by 58 SEs there.
+* **It is not established.** One arm is one arm, and the low-`tau_a` end of the axis is closed by
+  the kill switch, so the obvious second point cannot be bought.
+
+### THE NEXT TEST IS THE OFFSET, AND IT IS A MECHANISTIC PREDICTION RATHER THAN MORE CURVE
+
+The claim that carries risk: the 180 ms is **not** `tau_a`'s — it is the time for a released half
+to rise and a fatigued winner to fall, set by the rate filter and the membrane. `rate_fast_tau_ms`
+is already a genome field at 50.0, and 179.8/50 = 3.6. So:
+
+    period = a * tau_a + b * rate_fast_tau_ms,   predicted a invariant, b ~ 3.6
+
+**Doubling `rate_fast_tau_ms` to 100 should move the offset to ~360 ms and leave the `tau_a`
+coefficient at ~3.56.** That is a prediction no curve fitted in `tau_a` can make, and an invariant
+coefficient is much harder to produce by accident than one more point on a line.
+
+**THE CONFOUND, AND IT IS WHY THIS IS NOT LAUNCHED HERE.** `rate_fast_tau_ms` is a **shared
+constant**: divisive normalisation, intrinsic plasticity and the envelope-onset detector all read
+the same filter. Changing it changes far more than the half-centre's rise time, which is exactly
+the class `aibaby-shared-constants-audit` and `aibaby-nmax-rerolls-the-wiring` exist to gate. The
+run needs its own specificity argument first — at minimum a `hc_gain = 0` arm at each filter
+setting, to show what the filter change does on its own before any of it is credited to the offset.

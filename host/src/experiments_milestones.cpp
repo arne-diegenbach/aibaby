@@ -21386,30 +21386,61 @@ bool run_halfcenter(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
         std::printf("      tau %3.0f  measured %7.1f  fitted %7.1f  residual %+6.1f ms\n",
                     double(kHCArms[a].tau_ms), m_cp[a], sl * double(kHCArms[a].tau_ms) + ic,
                     m_cp[a] - (sl * double(kHCArms[a].tau_ms) + ic));
-      bool held = true;
+      // TESTABLE IS NOT THE SAME AS PASSING, and the first version of this block conflated
+      // them -- it set `held = false` for a VOID arm, which prints "THE LAW DOES NOT
+      // PREDICT" for an arm that never tested the law. The pre-registration says the
+      // opposite in as many words: "a VOID arm, or a collapsed turn count, refuses THAT
+      // ARM rather than the law." `tau042` came back VOID at 18.30 Hz against a 4.94
+      // baseline -- 3.7x, past the kill switch -- and its 60.0 ms "period" is the module's
+      // own firing rhythm at 18.3 Hz, not a half-centre turn.
+      //
+      // THE SECOND GATE IS THE INSTRUMENT'S OWN CONSISTENCY CHECK. turns x median must
+      // recover the record length: a trigger firing on noise gives a BIMODAL interval
+      // distribution, which drags the median to the short mode while the count rises, so
+      // the product falls short. The four fitted arms land within 0.3%; `tau042` is 5.5%
+      // short, which is the same failure the VOID flag caught, seen from the instrument
+      // rather than from the duty/rate bound.
+      const double record = double(ticks - ticks / 10);
+      uint32_t tested = 0, passed = 0;
       for (uint32_t a = 12; a < 14; ++a) {
         const double pred = sl * double(kHCArms[a].tau_ms) + ic;
         const double err = pred > 0.0 ? 100.0 * (m_cp[a] - pred) / pred : 0.0;
-        const bool ok = m_cp[a] > 0.0 && std::fabs(err) <= 10.0 && !void_arm[a];
-        if (!ok) held = false;
+        const double prod = m_cn[a] * m_cp[a];
+        const double pe = record > 0.0 ? 100.0 * (prod - record) / record : 0.0;
+        const bool consistent = std::fabs(pe) <= 2.0;
+        const bool testable = m_cp[a] > 0.0 && !void_arm[a] && consistent;
+        const bool ok = testable && std::fabs(err) <= 10.0;
+        if (testable) { ++tested; if (ok) ++passed; }
         std::printf("    OUT OF SAMPLE  tau %3.0f  predicted %7.1f  measured %7.1f +/- %.1f"
-                    "  %+5.1f%%  (%4.0f turns)%s  %s\n",
-                    double(kHCArms[a].tau_ms), pred, m_cp[a], s_cp[a], err, m_cn[a],
-                    void_arm[a] ? " VOID" : "", ok ? "HELD" : "MISSED");
+                    "  %+5.1f%%  (%5.0f turns, x median %+.1f%% of record)%s  %s\n",
+                    double(kHCArms[a].tau_ms), pred, m_cp[a], s_cp[a], err, m_cn[a], pe,
+                    void_arm[a] ? " VOID" : "", !testable ? "NOT TESTABLE"
+                                                          : (ok ? "HELD" : "MISSED"));
+      }
+      const bool held = tested > 0 && passed == tested;
+      if (tested < 2) {
+        std::printf("    %u of 2 out-of-sample arms were testable at all -- the other left\n"
+                    "    the oscillating regime, so it refuses ITSELF and not the law. This\n"
+                    "    is a HALF-DONE test whichever way the testable arm fell.\n", tested);
       }
       if (held) {
-        std::printf("    THE PERIOD IS A CLOCK WITH AN OFFSET. Both out-of-sample arms land\n"
-                    "    inside 10%% of a law fitted before they were run, so the period does\n"
-                    "    track tau_a -- at %.2f ms per ms with a fixed %.0f ms latency that is\n"
-                    "    NOT tau_a's. The log-log exponent of ~1.0 this line has demanded for\n"
-                    "    four runs cannot be reached by any oscillator with a finite rise\n"
-                    "    time, so that test was the wrong SHAPE, not a failed mechanism.\n",
-                    sl, ic);
+        std::printf("    THE PERIOD IS A CLOCK WITH AN OFFSET. Every TESTABLE out-of-sample\n"
+                    "    arm (%u of 2) lands inside 10%% of a law fitted before it was run, so\n"
+                    "    the period does track tau_a -- at %.2f ms per ms with a fixed %.0f ms\n"
+                    "    latency that is NOT tau_a's. The log-log exponent of ~1.0 this line\n"
+                    "    has demanded for four runs cannot be reached by any oscillator with a\n"
+                    "    finite rise time, so that test was the wrong SHAPE rather than a\n"
+                    "    failed mechanism. On one arm this is SUGGESTIVE, not settled.\n",
+                    tested, sl, ic);
+      } else if (tested == 0) {
+        std::printf("    NO VERDICT -- neither out-of-sample arm was testable, so nothing here\n"
+                    "    bears on the law. Pick taus that stay inside the duty/rate window.\n");
       } else {
         std::printf("    THE LAW DOES NOT PREDICT. Fitted on four points it looked exact at\n"
-                    "    R^2 %.5f, and it misses out of sample -- so it was curve-fitting and\n"
-                    "    the clock stays refused. The crossing estimator is still the better\n"
-                    "    instrument; what it measures is not a linear function of tau_a.\n", r2);
+                    "    R^2 %.5f, and %u of %u testable arms miss out of sample -- so it was\n"
+                    "    curve-fitting and the clock stays refused. The crossing estimator is\n"
+                    "    still the better instrument; what it measures is not linear in tau_a.\n",
+                    r2, tested - passed, tested);
       }
     }
   }
