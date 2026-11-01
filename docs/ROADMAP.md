@@ -2409,3 +2409,78 @@ arm refuses the new instrument instead of the hypothesis.
 refused on it and the exit code has to stay comparable. What changes is that the text may no
 longer assert "the period ignores tau_a" while the better instrument disagrees — a gate that
 fails has to say which statistic failed it.
+
+## §28 — THE CLOCK WAS REFUSED ON A TEST OF THE WRONG SHAPE (2026-11-01)
+
+Gated on all four keys again, hash unchanged, and **all twelve arm rows re-printed identically**,
+so the crossing estimator is read-only like the two columns before it.
+
+### THE TWO INSTRUMENTS, SIDE BY SIDE
+
+| tau_a | argmax period | **crossing period** | turns counted |
+|---|---|---|---|
+| 83 ms | 347.8 (2.88 ± 0.51 Hz) | **468.3 ± 1.7** | 2312 |
+| 167 ms | 800.0 (1.25 ± 0.00 Hz) | **784.2 ± 1.5** | 1377 |
+| 250 ms | 381.0 (2.62 ± 0.27 Hz) | **1070.8 ± 1.9** | 1008 |
+| 333 ms | 685.7 (1.46 ± 0.48 Hz) | **1361.2 ± 2.3** | 791 |
+
+    four-point slope   ARGMAX     +0.319   R^2 0.213
+    four-point slope   CROSSINGS  +0.764   R^2 0.999
+
+The crossing series is **monotone**, determined to **0.2%**, and counts 791–2312 turns per arm —
+so the Schmitt trigger is measuring turns, not noise, and its own refusal condition did not fire.
+The argmax series is non-monotone with one arm's twelve seeds in a single bin. **There is no
+longer a contest between these two instruments.**
+
+### BY THE PRE-REGISTERED BAR THIS IS STILL NO VERDICT, AND THAT STANDS
+
+The bar was **slope ≥ 0.80 at R² ≥ 0.90** for "the clock was refused on a broken instrument."
+It came in at **0.764**. That is below the bar I set before seeing it, so the printed verdict is
+*the two instruments disagree without either winning* and **the clock is not established by this
+run.** The threshold does not move after the fact.
+
+But two independent routes now agree on the same number. §27's inversion of the plant's
+square-wave response on the swing column gave **0.80 at R² 0.997**; counting zero crossings, with
+no model and no spectrum, gives **0.764 at R² 0.999**. Those share no machinery. The argmax's
++0.319 is the outlier.
+
+### AND THE REASON IT IS 0.76 AND NOT 1.0 IS THE SHAPE OF THE TEST
+
+The four crossing periods are **linear in tau_a with a positive intercept**:
+
+    period = 3.560 * tau_a + 179.8 ms      R^2 0.99962
+    residuals  -7.0 / +9.9 / +1.1 / -4.0 ms   on periods of 468 to 1361 ms
+
+A pure proportionality — the form this line's clock test has always assumed — fits the same four
+points far worse, with residuals up to **113 ms**. **Any fixed additive latency makes the log-log
+slope sub-unit no matter how good the clock is**, and 0.764 is exactly what a line with a 180 ms
+offset looks like on log axes. So "period ∝ tau_a, exponent must be ~1.000" is a test the
+mechanism **cannot pass**, and four runs of "NOT A CLOCK" have been reporting the intercept.
+
+`aibaby-verdict-fitted-to-data` already carries this rule in general form: **a pre-registration
+cannot save a statistic of the wrong shape.** It was written about someone else's statistic.
+
+The offset is not a free parameter dressed as physics. It is the time for a released half to rise
+and a fatigued winner to fall — set by the 50 ms rate filter and the membrane, not by `tau_a`. A
+relaxation oscillator sitting on top of a finite rise time has exactly this form.
+
+### THE FIT IS WORTH NOTHING UNTIL IT PREDICTS — SO IT IS BEING TESTED OUT OF SAMPLE
+
+It was fitted **after** seeing those four points. Two arms are therefore appended, `tau042` and
+`tau500`, and the law is refitted at run time on arms 0–3 only — whose numbers are deterministic
+and published above — then asked to predict two periods it has never seen:
+
+    tau  42 ms  ->  predicted  329.3 ms
+    tau 500 ms  ->  predicted 1959.8 ms
+
+**PRE-REGISTERED, BEFORE THE RUN.** Both arms within **10%** of prediction → the linear law holds
+out of sample, the period tracks `tau_a` at 3.56 ms per ms with a measured ~180 ms latency, and
+the clock question is settled affirmatively on the better instrument. **Either arm outside 10%** →
+the fit was curve-fitting on four points and the clock stays refused. A VOID arm, or a collapsed
+turn count, refuses **that arm** rather than the law — `tau500` in particular may leave the
+oscillating window, which the duty/rate kill switch gates independently.
+
+Note what the 10% band is not: the measurement SEs are ~2 ms (0.2%), so a 3-SE test would demand
+the law hold to better than 1% at 1.5× beyond the fitted range. 10% is the band a physical law
+with one fitted latency deserves; it is stated here before the numbers exist, and it will not be
+widened afterwards.

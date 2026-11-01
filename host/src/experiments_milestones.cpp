@@ -20573,6 +20573,20 @@ const HCArm kHCArms[] = {
     {"wi150",   1.00f, 333.0f, 0.60f, 1.40f, 1.50f},
     {"wi200",   1.00f, 333.0f, 0.60f, 1.40f, 2.00f},
     {"wi300",   1.00f, 333.0f, 0.60f, 1.40f, 3.00f},
+    // DNA v76, OUT-OF-SAMPLE ARMS FOR THE LINEAR CLOCK LAW. Appended last, so the twelve
+    // arms above re-print unchanged (the seed is a function of the REPLICATE only) and
+    // the fit is made on data that already exists before these two are measured.
+    //
+    // WHAT THEY TEST. Counting the turns directly instead of taking an FFT argmax gives
+    // crossing periods of 468.3 / 784.2 / 1070.8 / 1361.2 ms over tau 83/167/250/333 at
+    // SEs of 1.5-2.3 ms, and those four points are LINEAR in tau_a -- T = 3.56*tau + 180
+    // ms, R^2 0.9996, residuals under 10 ms. A pure proportionality (the form the clock
+    // test has always assumed) fits far worse, with residuals to 113 ms. But that law was
+    // fitted AFTER seeing the four points, so it is worth nothing until it predicts
+    // something it has not seen. These two arms are that prediction: tau 42 ms should give
+    // 330 ms and tau 500 ms should give 1960 ms.
+    {"tau042",  1.00f,  42.0f, 0.60f, 1.40f, 1.00f},
+    {"tau500",  1.00f, 500.0f, 0.60f, 1.40f, 1.00f},
 };
 constexpr uint32_t kHCArmCount = sizeof(kHCArms) / sizeof(kHCArms[0]);
 // THE CONTROL IS NO LONGER THE LAST ARM, and two places used to find it that way --
@@ -21328,6 +21342,76 @@ bool run_halfcenter(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
     std::printf("    Whatever the anti-phase is, it is not a relaxation oscillator's clock,\n"
                 "    and the 2.5-3.5 Hz band it sits in is where the damped resonance\n"
                 "    already lives.\n");
+  }
+  // DNA v76. THE LINEAR LAW, TESTED OUT OF SAMPLE -- and the fit is made on the four arms
+  // above, whose numbers are deterministic and already published, so nothing here is
+  // chosen after seeing the two arms it predicts.
+  //
+  // WHY THE SHAPE IS THE POINT. "Period PROPORTIONAL to tau_a, so the log-log exponent
+  // must be ~1.0" has been this line's clock test for four runs. The crossing periods are
+  // linear in tau_a with a POSITIVE INTERCEPT -- 3.56*tau + 180 ms, R^2 0.9996 -- and any
+  // fixed additive latency makes the log-log slope sub-unit no matter how perfect the
+  // clock is. 0.764 is what a line with a 180 ms offset looks like on log axes. So the
+  // test could not pass, and this project already has the rule: a pre-registration cannot
+  // save a statistic of the wrong SHAPE.
+  //
+  // The offset is not a free parameter dressed up as physics: it is the time for a
+  // released half to rise and a fatigued winner to fall, set by the 50 ms rate filter and
+  // the membrane rather than by tau_a. A relaxation oscillator built on top of a finite
+  // rise time has exactly this form.
+  //
+  // PRE-REGISTERED: both out-of-sample arms within 10% of prediction -> the linear law
+  // holds and the period DOES track tau_a with a measured additive latency. Either arm
+  // outside -> the fit was curve-fitting on four points and the clock stays refused.
+  // A VOID arm or a collapsed turn count refuses the ARM, not the law.
+  if (kHCArmCount >= 14) {
+    double sx = 0.0, sy = 0.0; uint32_t nf = 0;
+    for (uint32_t a = 0; a < 4; ++a) {
+      if (m_cp[a] <= 0.0) continue;
+      sx += double(kHCArms[a].tau_ms); sy += m_cp[a]; ++nf;
+    }
+    if (nf == 4) {
+      const double mx = sx / 4.0, my = sy / 4.0;
+      double sxy = 0.0, sxx = 0.0, syy = 0.0;
+      for (uint32_t a = 0; a < 4; ++a) {
+        const double dx = double(kHCArms[a].tau_ms) - mx, dy = m_cp[a] - my;
+        sxy += dx * dy; sxx += dx * dx; syy += dy * dy;
+      }
+      const double sl = sxx > 0.0 ? sxy / sxx : 0.0;
+      const double ic = my - sl * mx;
+      const double r2 = (sxx > 0.0 && syy > 0.0) ? (sxy * sxy) / (sxx * syy) : 0.0;
+      std::printf("\n  THE LINEAR CLOCK LAW, FITTED ON tau 83-333 AND TESTED ON TWO NEW ARMS\n");
+      std::printf("    in-sample fit  period = %.3f * tau_a %+.1f ms,  R^2 %.5f\n", sl, ic, r2);
+      for (uint32_t a = 0; a < 4; ++a)
+        std::printf("      tau %3.0f  measured %7.1f  fitted %7.1f  residual %+6.1f ms\n",
+                    double(kHCArms[a].tau_ms), m_cp[a], sl * double(kHCArms[a].tau_ms) + ic,
+                    m_cp[a] - (sl * double(kHCArms[a].tau_ms) + ic));
+      bool held = true;
+      for (uint32_t a = 12; a < 14; ++a) {
+        const double pred = sl * double(kHCArms[a].tau_ms) + ic;
+        const double err = pred > 0.0 ? 100.0 * (m_cp[a] - pred) / pred : 0.0;
+        const bool ok = m_cp[a] > 0.0 && std::fabs(err) <= 10.0 && !void_arm[a];
+        if (!ok) held = false;
+        std::printf("    OUT OF SAMPLE  tau %3.0f  predicted %7.1f  measured %7.1f +/- %.1f"
+                    "  %+5.1f%%  (%4.0f turns)%s  %s\n",
+                    double(kHCArms[a].tau_ms), pred, m_cp[a], s_cp[a], err, m_cn[a],
+                    void_arm[a] ? " VOID" : "", ok ? "HELD" : "MISSED");
+      }
+      if (held) {
+        std::printf("    THE PERIOD IS A CLOCK WITH AN OFFSET. Both out-of-sample arms land\n"
+                    "    inside 10%% of a law fitted before they were run, so the period does\n"
+                    "    track tau_a -- at %.2f ms per ms with a fixed %.0f ms latency that is\n"
+                    "    NOT tau_a's. The log-log exponent of ~1.0 this line has demanded for\n"
+                    "    four runs cannot be reached by any oscillator with a finite rise\n"
+                    "    time, so that test was the wrong SHAPE, not a failed mechanism.\n",
+                    sl, ic);
+      } else {
+        std::printf("    THE LAW DOES NOT PREDICT. Fitted on four points it looked exact at\n"
+                    "    R^2 %.5f, and it misses out of sample -- so it was curve-fitting and\n"
+                    "    the clock stays refused. The crossing estimator is still the better\n"
+                    "    instrument; what it measures is not a linear function of tau_a.\n", r2);
+      }
+    }
   }
   std::printf("\n  UPPER EDGE -- drive 2.00 probes above the window (Shpiro predicts\n"
               "  simultaneous high activity there, not oscillation)\n");
