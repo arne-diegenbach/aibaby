@@ -2588,9 +2588,111 @@ is already a genome field at 50.0, and 179.8/50 = 3.6. So:
 coefficient at ~3.56.** That is a prediction no curve fitted in `tau_a` can make, and an invariant
 coefficient is much harder to produce by accident than one more point on a line.
 
+*Sharpened in §30 before the run: the kernel reads `rate_fast_[...]` directly, so the filter is a
+lag INSIDE the loop and the model collapses to `period = A·(tau_a + rate_fast_tau_ms)` — one
+coefficient for both axes, which forces the intercept to 178.0 instead of fitting `b`.*
+
 **THE CONFOUND, AND IT IS WHY THIS IS NOT LAUNCHED HERE.** `rate_fast_tau_ms` is a **shared
 constant**: divisive normalisation, intrinsic plasticity and the envelope-onset detector all read
 the same filter. Changing it changes far more than the half-centre's rise time, which is exactly
 the class `aibaby-shared-constants-audit` and `aibaby-nmax-rerolls-the-wiring` exist to gate. The
 run needs its own specificity argument first — at minimum a `hc_gain = 0` arm at each filter
 setting, to show what the filter change does on its own before any of it is credited to the offset.
+
+## §30 — THE OFFSET TEST, PRE-REGISTERED BEFORE THE RUN (2026-11-01)
+
+§29 named the offset test and deliberately did not launch it, because `rate_fast_tau_ms` is a
+shared constant and the run needed a specificity argument first. This section is that argument,
+the sharpened prediction, and the decision rule — all written and committed **before** the 29-arm
+run finished, so the verdict cannot be fitted to the numbers.
+
+### THE PREDICTION IS SHARPER THAN §29 THOUGHT, AND IT HAS NO FREE PARAMETER
+
+§29 wrote the model as `period = a·tau_a + b·rate_fast_tau_ms` with `a` invariant and `b ≈ 3.6`,
+noting only that 179.8/50 = 3.6. Reading the kernel closes the gap. The half-centre's two
+half-means are sums of `rate_fast_[...]` — [network.cpp:2240-2241](../core/src/network.cpp#L2240) —
+so the filter is **not an instrument beside the oscillator, it is inside the loop**. Two cascaded
+lags, `tau_a` and the filter, and if the period is set by their sum then
+
+    period = A * (tau_a + rate_fast_tau_ms)
+
+with **one coefficient for both axes**. That forces the intercept rather than fitting it:
+`A · 50 = 3.560 · 50 = 178.0 ms` against the **179.8 ± 11.0** measured. The agreement is the
+reason to run this; it is also exactly the kind of coincidence that has to be tested by moving the
+quantity, not admired at one point.
+
+### THE CONTRAST, NOT A TOLERANCE ON ONE MODEL
+
+§28's band was 10% and **both candidate laws would have passed it** — the lesson is in
+`aibaby-verdict-fitted-to-data`. So this is registered as a comparison:
+
+| | model A — cascaded lags | model B — offset is elsewhere |
+|---|---|---|
+| form | `intercept = 3.560 · rft` | `intercept = 179.8` at every setting |
+| rft 25 | 89.0 | 179.8 |
+| rft 50 | 178.0 | 179.8 |
+| rft 75 | 267.0 | 179.8 |
+| rft 100 | 356.0 | 179.8 |
+
+Every setting separates the two by ≥ 87 ms against an intercept SE of ~11 ms, so unlike §28 this
+contrast can actually choose. **The deciding statistic** is the coefficient `c` of the intercept
+**on** `rate_fast_tau_ms`, fitted across the four settings:
+
+* `|c − a|` within 3 SE **and** residual offset within 3 SE of zero → **model A**: one law over
+  both axes, and the 180 ms that four runs reported as a failed clock is the rate filter.
+* `|c|` within 3 SE of zero → **model B**: moving the only other lag in the loop by 4× does not
+  move the intercept. `rate_fast_tau_ms` is **closed** as its source.
+* `c` resolvably non-zero but ≠ `a` → the filter contributes, the equal-weight form is refused,
+  **no mechanism verdict**.
+
+`c` and `a` are measured on **different axes** and have no reason to agree unless the lags
+genuinely add. **Slope invariance is a necessary condition, not a bonus:** a sum of lags cannot
+change the coefficient on `tau_a`, so a moving slope refuses the additive form however the
+intercepts fall.
+
+### THE SPECIFICITY ARGUMENT §29 ASKED FOR
+
+Each setting carries its own `hc_gain = 0` control, and it does two jobs. It discloses what the
+shared filter does with no competition present, and it is the baseline that setting's kill switch
+gates against — via a new `hc_ctrl_for()` that resolves an arm's control by matching drive **and**
+filter instead of a hardcoded index. Gating a 100 ms-filter arm on the 50 ms control's firing rate
+would re-decide VOID for a reason unconnected to the mechanism, which is `aibaby-match-at-the-
+operating-point` restated. Every pre-v77 arm still resolves to arm 7, so the archived rows re-print
+unchanged — and five separate determinism checks assert exactly that.
+
+### WHAT THE SMOKE CHANGED BEFORE ANYTHING RAN AT LENGTH
+
+A 40k-tick smoke was run first, and it falsified two things I had already written down.
+
+**The controls report a filter-scaled period.** Across rft 25/50/100/200 the no-mechanism controls
+give 139 / 189 / 288 / 493 ms — `90 + 2.0·rft` to within a millisecond. My comment had argued the
+period was "safe by construction" because a one-pole low-pass shifts phase without moving
+crossings. True, and beside the point: a control has **no periodic signal at all**, so the trigger
+rides noise, whose autocorrelation time is the filter's. The estimator was always going to report
+that. **The inference I had attached to it was invalid** — "the controls track the filter, therefore
+nothing above them is a mechanism" would condemn the instrument for behaving correctly on an empty
+input. It is a per-arm **floor** (period ≥ 2× the matched control's), and the global veto is gone.
+
+**An sd-ratio gate I derived refused all sixteen arms.** It required `sd_arm ≥ 4·sd_control`,
+derived as "the band, 0.25·sd_arm, must sit at one noise sigma". The derivation assumes `sd_arm` is
+the oscillation alone, but it is oscillation and noise **in quadrature**, so a 4× sd ratio demands
+a 15:1 power ratio. Measured ratios are 2.5–4.6×, and the gate rejected the four anchor arms whose
+fit has already predicted a fifth to +1.4% out of sample. **A gate that refuses a measurement which
+has made a successful out-of-sample prediction is testing the wrong thing.** The ratio is now
+printed as a column and gates nothing.
+
+**rft 200 was dropped from the axis.** Wherever the filter is slower than the fatigue the
+oscillation is gone — at rft 200 both `tau083` and `tau167` collapse to a fast rhythm (90 ms over
+397 turns) that passes the turns × median consistency check, because a *uniformly* fast noise
+rhythm recovers the record just as well as a slow real one. Arms above `rft ≈ tau_a/1.5` are not a
+harder test of the law, they are no test of it. The axis is 25–100, which is 4× and keeps the whole
+tau set alive at three of four settings.
+
+### WHAT CANNOT BE CLAIMED FROM THIS RUN WHATEVER IT SAYS
+
+The four taus are the same at every setting, so the intercepts are compared at matched leverage —
+but the **tau_a axis itself is unchanged**, so this run cannot revisit whether the period tracks
+`tau_a`. It asks one thing: whether the intercept is the other lag. A setting with fewer than three
+live arms refuses **itself** and not the law, written as the code's branch structure rather than as
+prose beside it — §29's rule, earned when this file printed "THE LAW DOES NOT PREDICT" for an arm
+that never tested the law.

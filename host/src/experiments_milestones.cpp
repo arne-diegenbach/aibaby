@@ -20521,6 +20521,10 @@ struct HCArm {
   float hc;
   float drive;   // DNA v57d: Matsuoka's tonic S, the regime axis
   float kw;      // DNA v76: the weight on the differential term. 1.00 IS v57.
+  // DNA v77: `sim.rate_fast_tau_ms`, the SECOND lag in this loop. The kernel reads
+  // `rate_fast_[...]` for both half-means (network.cpp:2240), so this filter is not an
+  // instrument sitting beside the oscillator -- it is inside it. The genome ships 50.0.
+  float rft;
 };
 const HCArm kHCArms[] = {
     // THE CLOCK TEST, at the drive where anti-phase appeared (1.40). The previous run
@@ -20533,19 +20537,19 @@ const HCArm kHCArms[] = {
     // the period does not move with tau_a this is that resonance being re-measured,
     // which is exactly what killed adaptclock. Period is PROPORTIONAL to tau_a for a
     // relaxation oscillator (Shpiro/Curtu/Rinzel/Rubin), so the exponent must be ~1.
-    {"tau083",  1.00f,  83.0f, 0.60f, 1.40f, 1.00f},
-    {"tau167",  1.00f, 167.0f, 0.60f, 1.40f, 1.00f},   // replicates the -0.555 arm
-    {"tau250",  1.00f, 250.0f, 0.60f, 1.40f, 1.00f},
-    {"tau333",  1.00f, 333.0f, 0.60f, 1.40f, 1.00f},
+    {"tau083",  1.00f,  83.0f, 0.60f, 1.40f, 1.00f, 50.0f},
+    {"tau167",  1.00f, 167.0f, 0.60f, 1.40f, 1.00f, 50.0f},   // replicates the -0.555 arm
+    {"tau250",  1.00f, 250.0f, 0.60f, 1.40f, 1.00f, 50.0f},
+    {"tau333",  1.00f, 333.0f, 0.60f, 1.40f, 1.00f, 50.0f},
     // BOTH SINGLES AT THE WINNING DRIVE. The interaction was previously shown against
     // a control at drive 0.85, which is the wrong drive to compare against.
-    {"inhib140", 0.00f, 167.0f, 0.60f, 1.40f, 1.00f},  // inhibition only: must SETTLE
-    {"fat140",  1.00f, 167.0f, 0.00f, 1.40f, 1.00f},   // fatigue only: must do nothing
+    {"inhib140", 0.00f, 167.0f, 0.60f, 1.40f, 1.00f, 50.0f},  // inhibition only: must SETTLE
+    {"fat140",  1.00f, 167.0f, 0.00f, 1.40f, 1.00f, 50.0f},   // fatigue only: must do nothing
     // UPPER EDGE. The last sweep found the effect only at its TOP arm, so the window
     // was bracketed on one side only and its upper boundary is unmeasured. Shpiro
     // predicts simultaneous high activity above the window.
-    {"drive200", 1.00f, 167.0f, 0.60f, 2.00f, 1.00f},
-    {"ctrl140",  0.00f, 167.0f, 0.00f, 1.40f, 1.00f},  // matched-drive control, both OFF
+    {"drive200", 1.00f, 167.0f, 0.60f, 2.00f, 1.00f, 50.0f},
+    {"ctrl140",  0.00f, 167.0f, 0.00f, 1.40f, 1.00f, 50.0f},  // matched-drive control, both OFF
     // DNA v76, THE COMPETITION-STRENGTH SWEEP. All four sit on `tau333` -- same jump,
     // same tau_a, same gain, same drive -- and move ONE number: the weight `k` on the
     // differential term, hc_lo = g*(1 + k*D/S). The tonic stays g at every k, which is
@@ -20569,10 +20573,10 @@ const HCArm kHCArms[] = {
     // against the v57 ARCHIVE, since k = 1 restores that kernel bit for bit. That makes
     // this run carry its own determinism check on the hc branch itself, which the hc=0
     // arms cannot do. Inserting them would renumber `drive200` and the clock arms.
-    {"wi000",   1.00f, 333.0f, 0.60f, 1.40f, 0.00f},
-    {"wi150",   1.00f, 333.0f, 0.60f, 1.40f, 1.50f},
-    {"wi200",   1.00f, 333.0f, 0.60f, 1.40f, 2.00f},
-    {"wi300",   1.00f, 333.0f, 0.60f, 1.40f, 3.00f},
+    {"wi000",   1.00f, 333.0f, 0.60f, 1.40f, 0.00f, 50.0f},
+    {"wi150",   1.00f, 333.0f, 0.60f, 1.40f, 1.50f, 50.0f},
+    {"wi200",   1.00f, 333.0f, 0.60f, 1.40f, 2.00f, 50.0f},
+    {"wi300",   1.00f, 333.0f, 0.60f, 1.40f, 3.00f, 50.0f},
     // DNA v76, OUT-OF-SAMPLE ARMS FOR THE LINEAR CLOCK LAW. Appended last, so the twelve
     // arms above re-print unchanged (the seed is a function of the REPLICATE only) and
     // the fit is made on data that already exists before these two are measured.
@@ -20585,8 +20589,114 @@ const HCArm kHCArms[] = {
     // fitted AFTER seeing the four points, so it is worth nothing until it predicts
     // something it has not seen. These two arms are that prediction: tau 42 ms should give
     // 330 ms and tau 500 ms should give 1960 ms.
-    {"tau042",  1.00f,  42.0f, 0.60f, 1.40f, 1.00f},
-    {"tau500",  1.00f, 500.0f, 0.60f, 1.40f, 1.00f},
+    {"tau042",  1.00f,  42.0f, 0.60f, 1.40f, 1.00f, 50.0f},
+    {"tau500",  1.00f, 500.0f, 0.60f, 1.40f, 1.00f, 50.0f},
+    // DNA v77, THE OFFSET TEST -- the four taus repeated at three more filter settings.
+    //
+    // WHAT IS BEING ASKED. The crossing period is linear in tau_a with an INTERCEPT:
+    // 3.560 * tau_a + 179.8 ms, R^2 0.9996, and the 180 ms is 16 SE from zero so it is
+    // not a fitting artefact. It also survived an out-of-sample arm at tau 500 (+1.4%).
+    // That intercept has no explanation yet, and "a finite rise time" is a phrase, not a
+    // measurement. This run asks whether the rise time is the OTHER lag in the loop.
+    //
+    // WHY THE PREDICTION HAS NO FREE PARAMETER. The kernel's two half-means are sums of
+    // `rate_fast_[...]` (network.cpp:2240-2241), the output of a one-pole filter whose
+    // constant is `sim.rate_fast_tau_ms` = 50. So the loop contains TWO cascaded lags,
+    // tau_a and that filter, and if the period is set by their sum the law must read
+    //
+    //     period = A * (tau_a + rate_fast_tau_ms)
+    //
+    // with ONE coefficient for both. Then the fitted intercept is forced: A * 50 =
+    // 3.560 * 50 = 178.0 ms against the 179.8 +/- 11.0 measured. That agreement is the
+    // reason to run this, and it is also exactly the kind of coincidence that has to be
+    // tested by MOVING the quantity rather than admired at one point.
+    //
+    // THE CONTRAST, pre-registered as the comparison between two models and not as a
+    // tolerance on one (this project's rule, earned at §28's too-loose 10% band where
+    // BOTH candidate laws would have passed):
+    //
+    //     model A, CASCADED LAGS:        intercept = 3.560 * rate_fast_tau_ms
+    //     model B, THE OFFSET IS ELSEWHERE: intercept = 179.8 ms at every setting
+    //
+    //     rft  25 -> A says  89.0, B says 179.8   (gap  90.8 ms, ~8 SE)
+    //     rft  75 -> A says 267.0, B says 179.8   (gap  87.2 ms, ~8 SE)
+    //     rft 100 -> A says 356.0, B says 179.8   (gap 176.2 ms, ~16 SE)
+    //
+    // WHY THE AXIS STOPS AT 100 AND NOT HIGHER, where the separation would be larger. A
+    // 40k-tick smoke ran 25/50/100/200 and the oscillation is GONE wherever the filter is
+    // slower than the fatigue: at rft 100 the tau 83 arm reports 90 ms over 397 turns, and
+    // at rft 200 both tau 83 and tau 167 collapse the same way. The loop cannot resolve an
+    // adaptation faster than the filter that measures it, so arms above rft ~ tau_a/1.5
+    // are not a harder test of the law -- they are no test of it, and five arms spent at
+    // 200 would have bought a setting that refuses itself. The span 25-100 is 4x and keeps
+    // the whole tau set alive at three of the four settings.
+    //
+    // Every setting separates the two models by more than the intercept's own SE, so
+    // unlike §28's band this contrast can actually choose. The decisive statistic is the
+    // coefficient of the intercept ON rate_fast_tau_ms fitted across the four settings:
+    // model A requires it to EQUAL the coefficient on tau_a, two numbers measured on
+    // different axes that have no reason to agree unless the lags really do add.
+    //
+    // SLOPE INVARIANCE IS A NECESSARY CONDITION, not a bonus. A sum of lags cannot change
+    // the coefficient on tau_a, so if the slope moves across settings the additive form
+    // is wrong whatever the intercepts do, and the run must say so instead of reading the
+    // intercepts as a confirmation.
+    //
+    // AND THE CONFOUND, which is why each setting carries its own control arm.
+    // `rate_fast_tau_ms` is a SHARED constant: divisive normalisation and the group's own
+    // mean read the same filter, so changing it changes more than the half-centre's rise
+    // time. The `hc_gain = 0` arm at each setting shows what the filter does with no
+    // competition present at all -- and it is also what the kill switch gates that
+    // setting's arms against, since gating a 200 ms-filter arm on the 50 ms control's
+    // firing rate would re-decide VOID for a reason that has nothing to do with VOID.
+    // This is §27's lesson in its own words: a dose derived at one operating point is not
+    // matched at the rate the creature actually runs.
+    //
+    // THE INSTRUMENT IS ALSO THE FILTER, AND THE FIRST VERSION OF THIS COMMENT GOT IT
+    // WRONG. It argued that a one-pole low-pass shifts a periodic signal in phase but
+    // cannot change the spacing of its upward crossings, so the period was "safe by
+    // construction", and offered the control arms as a free check. The check was run and
+    // IT FAILED: across rft 25/50/100/200 the no-mechanism controls report periods of
+    // 139 / 189 / 288 / 493 ms, which is 90 + 2.0 * rft to within a millisecond. The
+    // phase argument is true and beside the point -- a control has no periodic signal at
+    // all, so the Schmitt trigger has nothing but noise to ride, and the band is 0.25 of
+    // whatever sd it is given. On a control that sd IS the noise, and a one-pole filter's
+    // noise has an autocorrelation time proportional to its constant. The estimator was
+    // always going to report that.
+    //
+    // SO THE CONTROLS ARE A FLOOR, NOT A VETO, and the inference drawn from them has to
+    // change with them. "The controls track the filter, therefore nothing above them is a
+    // mechanism" does not follow: it would condemn the instrument for behaving correctly
+    // on an input with no period in it. What DOES follow is a per-arm requirement that the
+    // arm's period clear its own setting's floor, which is where the collapse the smoke
+    // found at rft 100 lives -- a 90 ms "period" over 397 turns against a 288 ms floor. It
+    // passed the turns-x-median consistency check, because a UNIFORMLY fast noise rhythm
+    // recovers the record just as well as a real oscillation does, and it fails the floor
+    // by a factor of three on the wrong side.
+    //
+    // AN SD-RATIO GATE WAS TRIED FIRST AND REFUSED EVERYTHING, including the four anchor
+    // arms whose fit has already predicted a fifth to +1.4%. The derivation is at the gate
+    // site; the short version is that it assumed sd was the oscillation alone when it is
+    // oscillation plus noise in quadrature. The ratio is printed and gates nothing.
+    //
+    // Four taus at each setting, the SAME four, so every fit has an identical design
+    // matrix and the intercepts are compared at matched leverage. Appended last, so the
+    // fourteen arms above re-print bit for bit.
+    {"rf25t083",  1.00f,  83.0f, 0.60f, 1.40f, 1.00f,  25.0f},
+    {"rf25t167",  1.00f, 167.0f, 0.60f, 1.40f, 1.00f,  25.0f},
+    {"rf25t250",  1.00f, 250.0f, 0.60f, 1.40f, 1.00f,  25.0f},
+    {"rf25t333",  1.00f, 333.0f, 0.60f, 1.40f, 1.00f,  25.0f},
+    {"rf25ctrl",  0.00f, 167.0f, 0.00f, 1.40f, 1.00f,  25.0f},
+    {"rf100t083", 1.00f,  83.0f, 0.60f, 1.40f, 1.00f, 100.0f},
+    {"rf100t167", 1.00f, 167.0f, 0.60f, 1.40f, 1.00f, 100.0f},
+    {"rf100t250", 1.00f, 250.0f, 0.60f, 1.40f, 1.00f, 100.0f},
+    {"rf100t333", 1.00f, 333.0f, 0.60f, 1.40f, 1.00f, 100.0f},
+    {"rf100ctrl", 0.00f, 167.0f, 0.00f, 1.40f, 1.00f, 100.0f},
+    {"rf75t083",  1.00f,  83.0f, 0.60f, 1.40f, 1.00f,  75.0f},
+    {"rf75t167",  1.00f, 167.0f, 0.60f, 1.40f, 1.00f,  75.0f},
+    {"rf75t250",  1.00f, 250.0f, 0.60f, 1.40f, 1.00f,  75.0f},
+    {"rf75t333",  1.00f, 333.0f, 0.60f, 1.40f, 1.00f,  75.0f},
+    {"rf75ctrl",  0.00f, 167.0f, 0.00f, 1.40f, 1.00f,  75.0f},
 };
 constexpr uint32_t kHCArmCount = sizeof(kHCArms) / sizeof(kHCArms[0]);
 // THE CONTROL IS NO LONGER THE LAST ARM, and two places used to find it that way --
@@ -20598,6 +20708,25 @@ constexpr uint32_t kHCCtrlArm = 7;
 // get their own block rather than competing for `bestarm`, so the headline reading
 // stays comparable across runs instead of being re-decided by an arm added later.
 constexpr uint32_t kHCBaseArms = 8;
+// DNA v77. THE CONTROL AN ARM IS GATED AGAINST, resolved by matching rather than by a
+// hand-maintained index -- which is the failure mode `kHCCtrlArm` itself was introduced to
+// fix, now that there are four controls instead of one. An arm's baseline is the arm with
+// BOTH mechanisms off at its own drive AND its own filter setting; the v77 arms move
+// `rate_fast_tau_ms`, which shifts every firing rate in the module, so gating them on the
+// 50 ms control's rate would re-decide VOID for a reason unconnected to the mechanism.
+// Falls back to `kHCCtrlArm` when no matched control exists, which is what `drive200`
+// (drive 2.00, no control of its own) has always used -- so every pre-v77 arm resolves to
+// arm 7 exactly as before and the archived rows re-print unchanged.
+inline bool hc_same(float x, float y) { return std::fabs(double(x) - double(y)) < 1e-6; }
+uint32_t hc_ctrl_for(uint32_t a) {
+  for (uint32_t c = 0; c < kHCArmCount; ++c) {
+    if (kHCArms[c].jump > 0.0f || kHCArms[c].hc > 0.0f) continue;
+    if (!hc_same(kHCArms[c].drive, kHCArms[a].drive)) continue;
+    if (!hc_same(kHCArms[c].rft, kHCArms[a].rft)) continue;
+    return c;
+  }
+  return kHCCtrlArm;
+}
 // FRESH SEED FAMILY for the replication. 604553 produced the original result; nothing
 // has been measured on these seeds. The thing being replicated is specific and was
 // named in advance: produced-F1 LAGGED COHERENCE well above the matched control null,
@@ -20662,6 +20791,15 @@ struct HCRow {
   // +-0.51 Hz, while the produced swing over the same arms is monotone to +-0.4 Hz.
   double cross_period_ms = 0.0;
   double cross_n = 0.0;
+  // DNA v77. THE AMPLITUDE OF THE SIGNAL THE ESTIMATOR READS -- the sd of the centred
+  // half-difference, which is also what sets the Schmitt band. Kept because the band is
+  // 0.25 * sd and therefore SCALES WITH THE SIGNAL: on an arm with no oscillator the band
+  // is a quarter of the NOISE and the trigger fires on noise, which is exactly what the
+  // v77 control arms turned out to do. Comparing this against the matched control's value
+  // is what separates "the estimator measured an oscillation" from "the estimator measured
+  // the filter's own autocorrelation time", and it costs nothing: `sd` was already
+  // computed one line above and thrown away.
+  double diff_sd = 0.0;
 };
 
 // Returns the correlation, and sets `*degenerate` when one series is CONSTANT so a
@@ -20818,6 +20956,7 @@ HCRow run_halfcenter_arm(const std::vector<uint8_t>& blob, uint64_t ticks, const
     for (double q : diff) v2 += (q - mu) * (q - mu);
     const double sd = diff.empty() ? 0.0 : std::sqrt(v2 / double(diff.size()));
     const double band = 0.25 * sd;
+    row.diff_sd = sd;   // DNA v77: the band's own scale, kept for the matched-control SNR
     std::vector<double> ivals;
     if (sd > 1e-9 && diff.size() == tms.size() && diff.size() > 4) {
       int state = 0;           // +1 above the upper rail, -1 below the lower
@@ -21024,6 +21163,12 @@ bool run_halfcenter(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
   // read as a null on the sweep rather than as a broken arm -- which is why the per-arm
   // value is printed in the summary table beside the result and not assumed from here.
   const size_t o_hw = offsetof(aibaby::DnaHeader, vocal) + offsetof(aibaby::DnaVocal, halfcenter_within);
+  // DNA v77. The rate filter's own time constant, in `sim` rather than `vocal` -- it is a
+  // SHARED constant and this is the whole reason each setting carries its own control.
+  // Patched per arm like every other dose; the shipped 50.0 means an arm whose patch
+  // failed to land would read as the anchor rather than as a broken arm, so the per-arm
+  // value is printed beside every result in the v77 block and never assumed from here.
+  const size_t o_rf = offsetof(aibaby::DnaHeader, sim) + offsetof(aibaby::DnaSim, rate_fast_tau_ms);
   const std::vector<Cell> cells = parallel_reps<Cell>(njobs, [&](uint32_t i) {
     Cell c;
     const uint32_t r = i / kHCArmCount, a = i % kHCArmCount;
@@ -21036,6 +21181,7 @@ bool run_halfcenter(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
     std::memcpy(variant.data() + o_hg, &hc_group, sizeof(uint32_t));
     std::memcpy(variant.data() + o_hd, &kHCArms[a].drive, sizeof(float));
     std::memcpy(variant.data() + o_hw, &kHCArms[a].kw, sizeof(float));
+    std::memcpy(variant.data() + o_rf, &kHCArms[a].rft, sizeof(float));
     c.row = run_halfcenter_arm(variant, ticks, kHCArms[a]);
     c.ok = c.row.ok;
     if (c.ok)
@@ -21061,12 +21207,13 @@ bool run_halfcenter(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
   double m_cp[kHCArmCount] = {};   // DNA v76: the SPECTRUM-FREE period, Schmitt crossings
   double s_cp[kHCArmCount] = {};
   double m_cn[kHCArmCount] = {};   // ...and how many turns it counted
+  double m_ds[kHCArmCount] = {};   // DNA v77: the sd of the signal the estimator reads
   bool void_arm[kHCArmCount] = {};
   std::printf("\n  %-11s %-5s %-5s %-5s %-5s %-16s %-13s %-12s %-6s %s\n", "arm", "jump", "tau",
               "hc", "k", "ANTI-PHASE corr", "peak f/SNR", "half-diff", "duty", "rate");
   for (uint32_t a = 0; a < kHCArmCount; ++a) {
     std::vector<double> an, pk, pf, du, rt, hs, aa, ab, hf;
-    std::vector<double> fsd, fpp, fco, cp, cn;
+    std::vector<double> fsd, fpp, fco, cp, cn, ds;
     for (uint32_t r = 0; r < kReps; ++r) {
       const Cell& c = cells[r * kHCArmCount + a];
       if (!c.ok) continue;
@@ -21075,6 +21222,10 @@ bool run_halfcenter(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
       // period of exactly the arms where the mechanism failed.
       if (c.row.cross_n > 0.0) { cp.push_back(c.row.cross_period_ms); }
       cn.push_back(c.row.cross_n);
+      // EVERY rep, unlike the period -- this is the signal's amplitude, which exists
+      // whether or not the trigger found a turn, and it is what says whether the turns
+      // it did find were the oscillation or the noise floor.
+      ds.push_back(c.row.diff_sd);
       an.push_back(c.row.anti); pk.push_back(c.row.peak_snr); pf.push_back(c.row.peak_f);
       du.push_back(c.row.duty); rt.push_back(c.row.rate_hz); hs.push_back(c.row.half_snr);
       aa.push_back(c.row.anti_a); ab.push_back(c.row.anti_b);
@@ -21096,6 +21247,7 @@ bool run_halfcenter(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
     { double e = 0.0; m_hf[a] = ctx_mean_se(hf, &e); s_hf[a] = e; }
     { double e = 0.0; m_cp[a] = ctx_mean_se(cp, &e); s_cp[a] = e; }
     { double e = 0.0; m_cn[a] = ctx_mean_se(cn, &e); }
+    { double e = 0.0; m_ds[a] = ctx_mean_se(ds, &e); }
     const double m_aa = ctx_mean_se(aa, &s1), m_ab = ctx_mean_se(ab, &s2);
     (void)sp;
     // RELATIVE to the control arm, not an absolute constant. A fixed 20 Hz bound let
@@ -21105,7 +21257,10 @@ bool run_halfcenter(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
     // k-sweep arms are appended after it), not arm 0 -- arm 0 now runs both mechanisms
     // with a collapsed rate, and normalising by it would hide exactly the artefact that
     // voided the previous run.
-    const double base_rt = m_rt[kHCCtrlArm] > 0.0 ? m_rt[kHCCtrlArm] : 5.0;
+    // DNA v77: PER-SETTING, via `hc_ctrl_for`. Every pre-v77 arm still resolves to
+    // `kHCCtrlArm`, so this is a no-op on the archived rows.
+    const uint32_t base_c = hc_ctrl_for(a);
+    const double base_rt = m_rt[base_c] > 0.0 ? m_rt[base_c] : 5.0;
     // BOUNDED ON BOTH SIDES. The upward bound caught v57b's runaway; the DOWNWARD one
     // is what let `rel100-250` through at 0.54 Hz -- 9x BELOW baseline -- and it was
     // the only arm to show anti-phase. A near-silenced population is the
@@ -21179,7 +21334,8 @@ bool run_halfcenter(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
   }
 
   // MAPPING: does an oscillating WINDOW exist anywhere on the drive axis?
-  const uint32_t kCtrl = kHCCtrlArm;
+  // DNA v77: the control for this block is resolved per arm by `hc_ctrl_for` below, since
+  // there are now four of them. `kHCCtrlArm` remains the documented fallback.
   std::printf("\n  THE REGIME PROFILE -- anti-phase and rate across the drive axis\n");
   std::printf("    fusion below the window, winner-take-all in its middle, simultaneous\n"
               "    activity above (Shpiro/Curtu/Rinzel/Rubin)\n");
@@ -21194,8 +21350,10 @@ bool run_halfcenter(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
       wa += c.row.anti; ha += 0.5 * (c.row.anti_a + c.row.anti_b); ++nn;
     }
     if (nn > 0) { wa /= double(nn); ha /= double(nn); }
-    const double dd = m_an[a] - m_an[kCtrl];
-    const double se = std::sqrt(s_an[a] * s_an[a] + s_an[kCtrl] * s_an[kCtrl]);
+    // DNA v77: against the arm's OWN control, not always arm 7. A no-op before v77.
+    const uint32_t cc = hc_ctrl_for(a);
+    const double dd = m_an[a] - m_an[cc];
+    const double se = std::sqrt(s_an[a] * s_an[a] + s_an[cc] * s_an[cc]);
     const double t = se > 0.0 ? dd / se : 0.0;
     const bool drift = wa < ha - 0.02;
     const char* tag = void_arm[a] ? "VOID"
@@ -21203,7 +21361,7 @@ bool run_halfcenter(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
                     : (drift ? "DRIFT not alternation" : ""));
     std::printf("    drive %-5.2f anti %+.3f (%+.1f SE vs ctrl)  rate %5.2f  %u/%u deg  %s\n",
                 double(kHCArms[a].drive), m_an[a], t, m_rt[a], ndeg, nn, tag);
-    if (a == kCtrl) continue;
+    if (a == cc) continue;
     if (!void_arm[a] && ndeg <= kReps / 2 && !drift && m_an[a] <= -0.20 && t <= -3.0) {
       // BASE ARMS ONLY decide the headline. The appended v76 k-sweep arms are reported
       // in their own block below, so a later-added arm cannot re-decide the reading
@@ -21444,6 +21602,268 @@ bool run_halfcenter(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
       }
     }
   }
+  // DNA v77. THE OFFSET TEST -- is the 180 ms the rate filter's own lag?
+  //
+  // The law `period = 3.560 * tau_a + 179.8 ms` is the strongest thing this line has, and
+  // its intercept is the part with no account. This block moves the only other lag in the
+  // loop and asks the intercept to follow. See the v77 comment on the arm table for the
+  // derivation; the two models and their separation at each setting were committed to the
+  // repository before the run, and the DECIDING statistic is the coefficient of the
+  // intercept on `rate_fast_tau_ms` measured against the coefficient on tau_a -- two
+  // numbers from different axes that agree only if the lags genuinely add.
+  if (kHCArmCount >= 29) {
+    const double kTauSet[4] = {83.0, 167.0, 250.0, 333.0};
+    const float kRftSet[4] = {50.0f, 25.0f, 75.0f, 100.0f};
+    const double record = double(ticks - ticks / 10);
+    double fit_a[4] = {}, fit_ae[4] = {}, fit_b[4] = {}, fit_be[4] = {}, fit_r2[4] = {};
+    uint32_t fit_n[4] = {}, ctl_of[4] = {};
+    bool fit_ok[4] = {};
+    std::printf("\n  v77 -- THE OFFSET TEST. THE SAME FOUR TAUS AT FOUR FILTER SETTINGS\n");
+    std::printf("    model A  CASCADED LAGS       period = A * (tau_a + rate_fast_tau_ms),\n"
+                "                                 so intercept = slope * rft, one coefficient\n");
+    std::printf("    model B  OFFSET IS ELSEWHERE intercept = 179.8 ms at every setting\n");
+    for (uint32_t s = 0; s < 4; ++s) {
+      uint32_t idx[4] = {0, 0, 0, 0};
+      bool have[4] = {false, false, false, false};
+      uint32_t ctl = kHCCtrlArm;
+      for (uint32_t a = 0; a < kHCArmCount; ++a) {
+        if (!hc_same(kHCArms[a].rft, kRftSet[s])) continue;
+        if (!hc_same(kHCArms[a].drive, 1.40f)) continue;
+        if (kHCArms[a].jump <= 0.0f && kHCArms[a].hc <= 0.0f) { ctl = a; continue; }
+        if (kHCArms[a].jump <= 0.0f || kHCArms[a].hc <= 0.0f) continue;
+        if (!hc_same(kHCArms[a].kw, 1.00f)) continue;
+        for (uint32_t j = 0; j < 4; ++j)
+          if (hc_same(kHCArms[a].tau_ms, float(kTauSet[j]))) { idx[j] = a; have[j] = true; }
+      }
+      ctl_of[s] = ctl;
+      std::printf("\n    rate_fast_tau_ms = %3.0f ms\n", double(kRftSet[s]));
+      // THE CONTROL FIRST, because it is what licenses reading anything below it. It
+      // carries no oscillator, so its duty and rate say whether the filter moved the
+      // operating point on its own, and its sd and reported period are the FLOOR every
+      // arm at this setting has to clear. The smoke showed that floor is real and that it
+      // tracks the filter, which is why both gates below are stated against this line
+      // rather than against a constant.
+      std::printf("      CONTROL %-11s duty %.2f  rate %5.2f Hz   FLOOR: sd %.4f, "
+                  "%4.0f turns, period %7.1f ms%s\n",
+                  kHCArms[ctl].name, m_du[ctl], m_rt[ctl], m_ds[ctl], m_cn[ctl], m_cp[ctl],
+                  void_arm[ctl] ? "   <- VOID" : "");
+      double x[4] = {}, y[4] = {};
+      uint32_t n = 0;
+      for (uint32_t j = 0; j < 4; ++j) {
+        if (!have[j]) { std::printf("      tau %3.0f  ARM MISSING\n", kTauSet[j]); continue; }
+        const uint32_t a = idx[j];
+        const double prod = m_cn[a] * m_cp[a];
+        const double pe = record > 0.0 ? 100.0 * (prod - record) / record : 0.0;
+        // THREE GATES, AND THE SD RATIO IS NOT ONE OF THEM. The first two are the ones the
+        // out-of-sample arms got: the kill switch for leaving the regime, and turns x
+        // median recovering the record. The smoke showed those two are not enough -- a
+        // collapsed arm reporting 90 ms over 397 turns passes both, because a uniformly
+        // fast noise rhythm recovers the record exactly as well as a slow real one does.
+        //
+        // THE THIRD IS THE FLOOR: the period must be at least 2x the MATCHED control's
+        // reported period. It is directional and that is why it works. The control's
+        // period is the shortest timescale this trigger resolves out of noise at this
+        // filter setting, so an arm reporting something FASTER than its own floor cannot
+        // be reporting a slower relaxation oscillation -- and that is precisely how the
+        // collapses fail, by a factor of three on the wrong side (90 ms against a 288 ms
+        // floor). The 2x is a margin rather than a derivation and is written as one; the
+        // collapses clear it by 3x, and in the archived 1.2M-tick run the four anchor arms
+        // sit at 2.5 / 4.2 / 5.7 / 7.2x their floor, so nothing real is near the boundary.
+        //
+        // AN SD-RATIO GATE WAS WRITTEN HERE FIRST AND IT WAS WRONG. It required
+        // sd_arm >= 4 * sd_control, derived as "the band, 0.25 * sd_arm, must sit at one
+        // noise sigma". The derivation assumes sd_arm is the oscillation alone, but it is
+        // oscillation and noise in QUADRATURE, so a 4x sd ratio demands a 15:1 power
+        // ratio. Measured ratios are 2.5-4.6x, and the gate refused every arm at every
+        // setting -- including the four whose fit has already predicted a fifth arm to
+        // +1.4% out of sample. A gate that rejects a measurement which has made a
+        // successful out-of-sample prediction is testing the wrong thing, so the ratio is
+        // PRINTED as a column and gates nothing.
+        const bool consistent = std::fabs(pe) <= 2.0;
+        const double snr = m_ds[ctl] > 0.0 ? m_ds[a] / m_ds[ctl] : 0.0;
+        const bool floor_ok = m_cp[ctl] > 0.0 ? m_cp[a] >= 2.0 * m_cp[ctl] : true;
+        const bool live = m_cp[a] > 0.0 && !void_arm[a] && consistent && floor_ok;
+        std::printf("      tau %3.0f  %-11s period %7.1f +/- %5.1f ms  (%5.0f turns, "
+                    "x median %+.1f%% of record, sd %4.1fx floor)%s%s%s%s\n",
+                    kTauSet[j], kHCArms[a].name, m_cp[a], s_cp[a], m_cn[a], pe, snr,
+                    void_arm[a] ? "  VOID" : "", !consistent ? "  INCONSISTENT" : "",
+                    !floor_ok ? "  UNDER 2x FLOOR" : "", live ? "" : "  <- DROPPED");
+        if (live) { x[n] = kTauSet[j]; y[n] = m_cp[a]; ++n; }
+      }
+      fit_n[s] = n;
+      // A SETTING WITH TOO FEW LIVE ARMS REFUSES ITSELF, NOT THE LAW. Written as the
+      // branch and not as prose beside it -- §29's rule, earned when this file printed
+      // "THE LAW DOES NOT PREDICT" for an arm that never tested the law.
+      if (n < 3) {
+        std::printf("      ONLY %u LIVE ARMS -- this setting is not fitted and bears on\n"
+                    "      nothing. It refuses ITSELF, not the law.\n", n);
+        continue;
+      }
+      double mx = 0.0, my = 0.0;
+      for (uint32_t i = 0; i < n; ++i) { mx += x[i]; my += y[i]; }
+      mx /= double(n); my /= double(n);
+      double sxy = 0.0, sxx = 0.0, syy = 0.0;
+      for (uint32_t i = 0; i < n; ++i) {
+        const double dx = x[i] - mx, dy = y[i] - my;
+        sxy += dx * dy; sxx += dx * dx; syy += dy * dy;
+      }
+      const double sl = sxx > 0.0 ? sxy / sxx : 0.0;
+      const double ic = my - sl * mx;
+      double rss = 0.0;
+      for (uint32_t i = 0; i < n; ++i) {
+        const double e = y[i] - (sl * x[i] + ic);
+        rss += e * e;
+      }
+      const double sd = n > 2 ? std::sqrt(rss / double(n - 2)) : 0.0;
+      fit_a[s] = sl;
+      fit_b[s] = ic;
+      fit_ae[s] = sxx > 0.0 ? sd / std::sqrt(sxx) : 0.0;
+      fit_be[s] = sxx > 0.0 ? sd * std::sqrt(1.0 / double(n) + mx * mx / sxx) : 0.0;
+      fit_r2[s] = (sxx > 0.0 && syy > 0.0) ? (sxy * sxy) / (sxx * syy) : 0.0;
+      fit_ok[s] = true;
+      const double pa = 3.560 * double(kRftSet[s]), pb = 179.8;
+      std::printf("      FIT  slope %.3f +/- %.3f  intercept %7.1f +/- %5.1f ms  R^2 %.5f"
+                  "  (%u live)\n", sl, fit_ae[s], ic, fit_be[s], fit_r2[s], n);
+      std::printf("           A predicts %7.1f (off by %+7.1f)   B predicts %7.1f "
+                  "(off by %+7.1f)\n", pa, ic - pa, pb, ic - pb);
+    }
+    // THE DECIDING FIT: the intercept against the filter constant. Model A requires its
+    // coefficient to EQUAL the coefficient on tau_a and its own intercept to be zero --
+    // one law over two axes with a single free number.
+    {
+      double x[4] = {}, y[4] = {};
+      uint32_t n = 0;
+      for (uint32_t s = 0; s < 4; ++s)
+        if (fit_ok[s]) { x[n] = double(kRftSet[s]); y[n] = fit_b[s]; ++n; }
+      std::printf("\n    THE DECIDING FIT -- the intercept against rate_fast_tau_ms (%u "
+                  "settings)\n", n);
+      // THE POINTS IT IS FITTED ON, with how many arms each intercept rests on. A setting
+      // fitted on three live arms is a weaker point than one fitted on four, and the
+      // deciding coefficient is only as good as the intercepts underneath it.
+      for (uint32_t s = 0; s < 4; ++s)
+        std::printf("      rft %3.0f  %s  intercept %7.1f +/- %5.1f ms  on %u live arms\n",
+                    double(kRftSet[s]), fit_ok[s] ? "fitted" : "REFUSED",
+                    fit_b[s], fit_be[s], fit_n[s]);
+      if (n < 3) {
+        std::printf("      FEWER THAN THREE SETTINGS FITTED -- no coefficient and no error\n"
+                    "      bar, so this run does not decide between A and B. Report the\n"
+                    "      per-setting intercepts and nothing more.\n");
+      } else {
+        double mx = 0.0, my = 0.0;
+        for (uint32_t i = 0; i < n; ++i) { mx += x[i]; my += y[i]; }
+        mx /= double(n); my /= double(n);
+        double sxy = 0.0, sxx = 0.0, syy = 0.0;
+        for (uint32_t i = 0; i < n; ++i) {
+          const double dx = x[i] - mx, dy = y[i] - my;
+          sxy += dx * dy; sxx += dx * dx; syy += dy * dy;
+        }
+        const double c = sxx > 0.0 ? sxy / sxx : 0.0;
+        const double d = my - c * mx;
+        double rss = 0.0;
+        for (uint32_t i = 0; i < n; ++i) {
+          const double e = y[i] - (c * x[i] + d);
+          rss += e * e;
+        }
+        const double sd = n > 2 ? std::sqrt(rss / double(n - 2)) : 0.0;
+        const double ce = sxx > 0.0 ? sd / std::sqrt(sxx) : 0.0;
+        const double de = sxx > 0.0 ? sd * std::sqrt(1.0 / double(n) + mx * mx / sxx) : 0.0;
+        const double r2 = (sxx > 0.0 && syy > 0.0) ? (sxy * sxy) / (sxx * syy) : 0.0;
+        std::printf("      intercept = %+.3f * rft %+.1f ms,  R^2 %.5f\n", c, d, r2);
+        std::printf("      coefficient on rate_fast_tau_ms  %+.3f +/- %.3f\n", c, ce);
+        std::printf("      coefficient on tau_a (anchor)    %+.3f +/- %.3f\n",
+                    fit_a[0], fit_ae[0]);
+        const double dse = std::sqrt(ce * ce + fit_ae[0] * fit_ae[0]);
+        const double tc = dse > 0.0 ? (c - fit_a[0]) / dse : 0.0;
+        const double t0 = ce > 0.0 ? c / ce : 0.0;
+        const double td = de > 0.0 ? d / de : 0.0;
+        std::printf("      difference %+.3f +/- %.3f (%.1f SE);  c vs zero %.1f SE;"
+                    "  residual offset %+.1f +/- %.1f ms (%.1f SE)\n",
+                    c - fit_a[0], dse, tc, t0, d, de, td);
+        // SLOPE INVARIANCE IS NECESSARY. A sum of lags cannot change the coefficient on
+        // tau_a, so a moving slope refutes the additive form whatever the intercepts do.
+        bool slope_held = true;
+        for (uint32_t s = 1; s < 4; ++s) {
+          if (!fit_ok[s]) continue;
+          const double se = std::sqrt(fit_ae[s] * fit_ae[s] + fit_ae[0] * fit_ae[0]);
+          const double t = se > 0.0 ? (fit_a[s] - fit_a[0]) / se : 0.0;
+          std::printf("      slope at rft %3.0f  %.3f vs anchor %.3f  (%+.1f SE)%s\n",
+                      double(kRftSet[s]), fit_a[s], fit_a[0], t,
+                      std::fabs(t) >= 3.0 ? "   <- MOVED" : "");
+          if (std::fabs(t) >= 3.0) slope_held = false;
+        }
+        // ALSO FREE, AND IT GATES EVERYTHING: did the filter move the operating point by
+        // itself? If the controls' own firing rates drift across settings then the arms
+        // above them were not compared at a matched operating point, which is the §27
+        // failure this project paid four weeks for.
+        double ctl_lo = 1e9, ctl_hi = -1e9;
+        for (uint32_t s = 0; s < 4; ++s) {
+          const double r = m_rt[ctl_of[s]];
+          if (r < ctl_lo) ctl_lo = r;
+          if (r > ctl_hi) ctl_hi = r;
+        }
+        const double ctl_spread = ctl_lo > 0.0 ? ctl_hi / ctl_lo : 0.0;
+        std::printf("      CONTROL RATES across the four settings span %.2f-%.2f Hz "
+                    "(%.2fx)%s\n", ctl_lo, ctl_hi, ctl_spread,
+                    ctl_spread > 1.25 ? "   <- THE OPERATING POINT MOVED" : "");
+        // THE FLOOR, REPORTED AND NOT VETOED ON. The controls' reported periods track the
+        // filter -- measured at 90 + 2.0 * rft in the smoke -- because a trigger given a
+        // signal with no period in it rides the noise, whose autocorrelation time is the
+        // filter's. That is the instrument behaving correctly on an empty input, so it
+        // cannot be read as the instrument failing on a full one. The first version of
+        // this block did read it that way and would have printed NO VERDICT over a working
+        // measurement; the floor is handled per arm by the SNR and 2x gates above, and
+        // what belongs here is the DISCLOSURE, so the floor's own slope is printed beside
+        // the slope being claimed and a reader can see they are different numbers.
+        {
+          double fx = 0.0, fy = 0.0;
+          for (uint32_t s = 0; s < 4; ++s) { fx += double(kRftSet[s]); fy += m_cp[ctl_of[s]]; }
+          fx /= 4.0; fy /= 4.0;
+          double fxy = 0.0, fxx = 0.0;
+          for (uint32_t s = 0; s < 4; ++s) {
+            const double dx = double(kRftSet[s]) - fx;
+            fxy += dx * (m_cp[ctl_of[s]] - fy); fxx += dx * dx;
+          }
+          const double fs = fxx > 0.0 ? fxy / fxx : 0.0;
+          std::printf("      THE NOISE FLOOR ITSELF rises %+.3f ms per ms of filter across\n"
+                      "      the four controls (%.1f / %.1f / %.1f / %.1f ms) -- the trigger's\n"
+                      "      behaviour on a signal with no period in it, and NOT the claim\n"
+                      "      above. The two slopes must be read as separate numbers.\n",
+                      fs, m_cp[ctl_of[0]], m_cp[ctl_of[1]], m_cp[ctl_of[2]], m_cp[ctl_of[3]]);
+        }
+        if (!slope_held) {
+          std::printf("      REFUSED AS A SUM OF LAGS. The coefficient on tau_a is not\n"
+                      "      invariant across filter settings, so the period is not a\n"
+                      "      function of (tau_a + rft) however the intercepts fell. The\n"
+                      "      filter interacts with tau_a rather than adding to it, and\n"
+                      "      that is a different mechanism than the one pre-registered.\n");
+        } else if (std::fabs(t0) < 3.0) {
+          std::printf("      THE FILTER IS NOT THE OFFSET -- model B. The coefficient is\n"
+                      "      %+.3f +/- %.3f, inside 3 SE of zero, so moving the only other\n"
+                      "      lag in the loop by 8x does not move the intercept. The 180 ms\n"
+                      "      comes from somewhere else: the membrane, the threshold, or the\n"
+                      "      vocal frame. `rate_fast_tau_ms` is CLOSED as its source.\n",
+                      c, ce);
+        } else if (std::fabs(tc) < 3.0 && std::fabs(td) < 3.0) {
+          std::printf("      THE TWO LAGS ADD -- model A, with no free parameter. The\n"
+                      "      intercept moves at %+.3f +/- %.3f ms per ms of filter against\n"
+                      "      %+.3f +/- %.3f per ms of tau_a -- the same number, measured on\n"
+                      "      two different axes -- and the residual offset is %+.1f +/- %.1f\n"
+                      "      ms, consistent with zero. So the period is ONE law over BOTH\n"
+                      "      lags, period = %.3f * (tau_a + rate_fast_tau_ms), and the 180 ms\n"
+                      "      that four runs reported as a failed clock is the rate filter.\n",
+                      c, ce, fit_a[0], fit_ae[0], d, de, 0.5 * (c + fit_a[0]));
+        } else {
+          std::printf("      THE FILTER CONTRIBUTES BUT THE LAGS DO NOT SIMPLY ADD. The\n"
+                      "      coefficient is %+.3f +/- %.3f, resolvably non-zero (%.1f SE) but\n"
+                      "      %.1f SE from the %+.3f on tau_a%s. The intercept IS partly this\n"
+                      "      filter; the equal-weight form is refused. No mechanism verdict.\n",
+                      c, ce, t0, tc, fit_a[0],
+                      std::fabs(td) >= 3.0 ? " with a residual offset left over" : "");
+        }
+      }
+    }
+  }
+
   std::printf("\n  UPPER EDGE -- drive 2.00 probes above the window (Shpiro predicts\n"
               "  simultaneous high activity there, not oscillation)\n");
   std::printf("    drive 2.00  anti %+.3f  rate %5.2f  peak %.2f Hz\n",
