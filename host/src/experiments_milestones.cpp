@@ -20525,6 +20525,13 @@ struct HCArm {
   // `rate_fast_[...]` for both half-means (network.cpp:2240), so this filter is not an
   // instrument sitting beside the oscillator -- it is inside it. The genome ships 50.0.
   float rft;
+  // DNA v78: the two PER-MODULE intrinsic constants, patched on the vocal module alone.
+  // `rate_fast_tau_ms` was refused as the offset's source and these are the remaining
+  // lags a released half has to climb through before it can fire. Unlike the filter they
+  // are not shared constants, so changing them cannot reach the auditory module or the
+  // normaliser. The genome ships 20.0 and 3.0 on vocal.
+  float leak;    // DnaModule::leak_tau_ms -- the membrane. A lag AND an inverse gain.
+  float refr;    // DnaModule::refractory_ms -- pure dead time, no gain term at all.
 };
 const HCArm kHCArms[] = {
     // THE CLOCK TEST, at the drive where anti-phase appeared (1.40). The previous run
@@ -20537,19 +20544,19 @@ const HCArm kHCArms[] = {
     // the period does not move with tau_a this is that resonance being re-measured,
     // which is exactly what killed adaptclock. Period is PROPORTIONAL to tau_a for a
     // relaxation oscillator (Shpiro/Curtu/Rinzel/Rubin), so the exponent must be ~1.
-    {"tau083",  1.00f,  83.0f, 0.60f, 1.40f, 1.00f, 50.0f},
-    {"tau167",  1.00f, 167.0f, 0.60f, 1.40f, 1.00f, 50.0f},   // replicates the -0.555 arm
-    {"tau250",  1.00f, 250.0f, 0.60f, 1.40f, 1.00f, 50.0f},
-    {"tau333",  1.00f, 333.0f, 0.60f, 1.40f, 1.00f, 50.0f},
+    {"tau083",  1.00f,  83.0f, 0.60f, 1.40f, 1.00f, 50.0f, 20.0f,  3.0f},
+    {"tau167",  1.00f, 167.0f, 0.60f, 1.40f, 1.00f, 50.0f, 20.0f,  3.0f},   // replicates the -0.555 arm
+    {"tau250",  1.00f, 250.0f, 0.60f, 1.40f, 1.00f, 50.0f, 20.0f,  3.0f},
+    {"tau333",  1.00f, 333.0f, 0.60f, 1.40f, 1.00f, 50.0f, 20.0f,  3.0f},
     // BOTH SINGLES AT THE WINNING DRIVE. The interaction was previously shown against
     // a control at drive 0.85, which is the wrong drive to compare against.
-    {"inhib140", 0.00f, 167.0f, 0.60f, 1.40f, 1.00f, 50.0f},  // inhibition only: must SETTLE
-    {"fat140",  1.00f, 167.0f, 0.00f, 1.40f, 1.00f, 50.0f},   // fatigue only: must do nothing
+    {"inhib140", 0.00f, 167.0f, 0.60f, 1.40f, 1.00f, 50.0f, 20.0f,  3.0f},  // inhibition only: must SETTLE
+    {"fat140",  1.00f, 167.0f, 0.00f, 1.40f, 1.00f, 50.0f, 20.0f,  3.0f},   // fatigue only: must do nothing
     // UPPER EDGE. The last sweep found the effect only at its TOP arm, so the window
     // was bracketed on one side only and its upper boundary is unmeasured. Shpiro
     // predicts simultaneous high activity above the window.
-    {"drive200", 1.00f, 167.0f, 0.60f, 2.00f, 1.00f, 50.0f},
-    {"ctrl140",  0.00f, 167.0f, 0.00f, 1.40f, 1.00f, 50.0f},  // matched-drive control, both OFF
+    {"drive200", 1.00f, 167.0f, 0.60f, 2.00f, 1.00f, 50.0f, 20.0f,  3.0f},
+    {"ctrl140",  0.00f, 167.0f, 0.00f, 1.40f, 1.00f, 50.0f, 20.0f,  3.0f},  // matched-drive control, both OFF
     // DNA v76, THE COMPETITION-STRENGTH SWEEP. All four sit on `tau333` -- same jump,
     // same tau_a, same gain, same drive -- and move ONE number: the weight `k` on the
     // differential term, hc_lo = g*(1 + k*D/S). The tonic stays g at every k, which is
@@ -20573,10 +20580,10 @@ const HCArm kHCArms[] = {
     // against the v57 ARCHIVE, since k = 1 restores that kernel bit for bit. That makes
     // this run carry its own determinism check on the hc branch itself, which the hc=0
     // arms cannot do. Inserting them would renumber `drive200` and the clock arms.
-    {"wi000",   1.00f, 333.0f, 0.60f, 1.40f, 0.00f, 50.0f},
-    {"wi150",   1.00f, 333.0f, 0.60f, 1.40f, 1.50f, 50.0f},
-    {"wi200",   1.00f, 333.0f, 0.60f, 1.40f, 2.00f, 50.0f},
-    {"wi300",   1.00f, 333.0f, 0.60f, 1.40f, 3.00f, 50.0f},
+    {"wi000",   1.00f, 333.0f, 0.60f, 1.40f, 0.00f, 50.0f, 20.0f,  3.0f},
+    {"wi150",   1.00f, 333.0f, 0.60f, 1.40f, 1.50f, 50.0f, 20.0f,  3.0f},
+    {"wi200",   1.00f, 333.0f, 0.60f, 1.40f, 2.00f, 50.0f, 20.0f,  3.0f},
+    {"wi300",   1.00f, 333.0f, 0.60f, 1.40f, 3.00f, 50.0f, 20.0f,  3.0f},
     // DNA v76, OUT-OF-SAMPLE ARMS FOR THE LINEAR CLOCK LAW. Appended last, so the twelve
     // arms above re-print unchanged (the seed is a function of the REPLICATE only) and
     // the fit is made on data that already exists before these two are measured.
@@ -20589,8 +20596,8 @@ const HCArm kHCArms[] = {
     // fitted AFTER seeing the four points, so it is worth nothing until it predicts
     // something it has not seen. These two arms are that prediction: tau 42 ms should give
     // 330 ms and tau 500 ms should give 1960 ms.
-    {"tau042",  1.00f,  42.0f, 0.60f, 1.40f, 1.00f, 50.0f},
-    {"tau500",  1.00f, 500.0f, 0.60f, 1.40f, 1.00f, 50.0f},
+    {"tau042",  1.00f,  42.0f, 0.60f, 1.40f, 1.00f, 50.0f, 20.0f,  3.0f},
+    {"tau500",  1.00f, 500.0f, 0.60f, 1.40f, 1.00f, 50.0f, 20.0f,  3.0f},
     // DNA v77, THE OFFSET TEST -- the four taus repeated at three more filter settings.
     //
     // WHAT IS BEING ASKED. The crossing period is linear in tau_a with an INTERCEPT:
@@ -20682,21 +20689,148 @@ const HCArm kHCArms[] = {
     // Four taus at each setting, the SAME four, so every fit has an identical design
     // matrix and the intercepts are compared at matched leverage. Appended last, so the
     // fourteen arms above re-print bit for bit.
-    {"rf25t083",  1.00f,  83.0f, 0.60f, 1.40f, 1.00f,  25.0f},
-    {"rf25t167",  1.00f, 167.0f, 0.60f, 1.40f, 1.00f,  25.0f},
-    {"rf25t250",  1.00f, 250.0f, 0.60f, 1.40f, 1.00f,  25.0f},
-    {"rf25t333",  1.00f, 333.0f, 0.60f, 1.40f, 1.00f,  25.0f},
-    {"rf25ctrl",  0.00f, 167.0f, 0.00f, 1.40f, 1.00f,  25.0f},
-    {"rf100t083", 1.00f,  83.0f, 0.60f, 1.40f, 1.00f, 100.0f},
-    {"rf100t167", 1.00f, 167.0f, 0.60f, 1.40f, 1.00f, 100.0f},
-    {"rf100t250", 1.00f, 250.0f, 0.60f, 1.40f, 1.00f, 100.0f},
-    {"rf100t333", 1.00f, 333.0f, 0.60f, 1.40f, 1.00f, 100.0f},
-    {"rf100ctrl", 0.00f, 167.0f, 0.00f, 1.40f, 1.00f, 100.0f},
-    {"rf75t083",  1.00f,  83.0f, 0.60f, 1.40f, 1.00f,  75.0f},
-    {"rf75t167",  1.00f, 167.0f, 0.60f, 1.40f, 1.00f,  75.0f},
-    {"rf75t250",  1.00f, 250.0f, 0.60f, 1.40f, 1.00f,  75.0f},
-    {"rf75t333",  1.00f, 333.0f, 0.60f, 1.40f, 1.00f,  75.0f},
-    {"rf75ctrl",  0.00f, 167.0f, 0.00f, 1.40f, 1.00f,  75.0f},
+    {"rf25t083",  1.00f,  83.0f, 0.60f, 1.40f, 1.00f,  25.0f, 20.0f,  3.0f},
+    {"rf25t167",  1.00f, 167.0f, 0.60f, 1.40f, 1.00f,  25.0f, 20.0f,  3.0f},
+    {"rf25t250",  1.00f, 250.0f, 0.60f, 1.40f, 1.00f,  25.0f, 20.0f,  3.0f},
+    {"rf25t333",  1.00f, 333.0f, 0.60f, 1.40f, 1.00f,  25.0f, 20.0f,  3.0f},
+    {"rf25ctrl",  0.00f, 167.0f, 0.00f, 1.40f, 1.00f,  25.0f, 20.0f,  3.0f},
+    {"rf100t083", 1.00f,  83.0f, 0.60f, 1.40f, 1.00f, 100.0f, 20.0f,  3.0f},
+    {"rf100t167", 1.00f, 167.0f, 0.60f, 1.40f, 1.00f, 100.0f, 20.0f,  3.0f},
+    {"rf100t250", 1.00f, 250.0f, 0.60f, 1.40f, 1.00f, 100.0f, 20.0f,  3.0f},
+    {"rf100t333", 1.00f, 333.0f, 0.60f, 1.40f, 1.00f, 100.0f, 20.0f,  3.0f},
+    {"rf100ctrl", 0.00f, 167.0f, 0.00f, 1.40f, 1.00f, 100.0f, 20.0f,  3.0f},
+    {"rf75t083",  1.00f,  83.0f, 0.60f, 1.40f, 1.00f,  75.0f, 20.0f,  3.0f},
+    {"rf75t167",  1.00f, 167.0f, 0.60f, 1.40f, 1.00f,  75.0f, 20.0f,  3.0f},
+    {"rf75t250",  1.00f, 250.0f, 0.60f, 1.40f, 1.00f,  75.0f, 20.0f,  3.0f},
+    {"rf75t333",  1.00f, 333.0f, 0.60f, 1.40f, 1.00f,  75.0f, 20.0f,  3.0f},
+    {"rf75ctrl",  0.00f, 167.0f, 0.00f, 1.40f, 1.00f,  75.0f, 20.0f,  3.0f},
+    // DNA v78, THE OFFSET TEST AGAIN -- and this time as a COEFFICIENT, which is the
+    // lesson v77 paid for and the only reason to spend another run here.
+    //
+    // WHAT v77 SETTLED AND WHAT IT LEFT. The law is `period = 3.560 * tau_a + 179.8 ms`
+    // and the 180 ms had an account that needed no free parameter: `rate_fast_tau_ms` is
+    // a lag inside the loop, two cascaded lags give period = A * (tau_a + rft), and that
+    // FORCES the intercept to 3.560 * 50 = 178.0 against 179.8 +/- 11.0 measured. Halving
+    // the filter required the intercept to fall to 89.0. It ROSE, to 227.6 +/- 21.3: a
+    // change of +47.8 +/- 24.0 where -89.0 was required, 5.7 SE and the OPPOSITE SIGN.
+    // Slope invariance held (3.372 +/- 0.093 vs 3.560 +/- 0.048), so the coefficient on
+    // tau_a is fine and it is the intercept specifically that refuses to follow. The
+    // agreement at 178.0 was a coincidence, and admiring a coincidence at one point is
+    // precisely what cost that run its deciding statistic.
+    //
+    // SO THIS RUN DOES NOT PREDICT A NUMBER. It MEASURES dIntercept/dField on two fields
+    // and reports the coefficients with error bars. 179.8 / 3.560 = 50.5 ms of effective
+    // lag has to come from somewhere; the membrane is 20 and the refractory 3, so the two
+    // together cannot be all of it even if both land at the full coefficient. A test
+    // built to confirm "the membrane IS the 180 ms" would therefore be built to fail.
+    // What is worth measuring is how much of the 50.5 ms each field actually buys.
+    //
+    // TWO FIELDS, AND THEY ARE NOT EQUALLY CLEAN. Both are PER-MODULE
+    // (`DnaModule::leak_tau_ms`, `DnaModule::refractory_ms`), patched on the vocal module
+    // alone, so neither can reach the auditory module or the divisive normaliser the way
+    // the shared `rate_fast_tau_ms` did. That removes v77's specificity burden. What it
+    // does not remove is this:
+    //
+    //   `refractory_ms` IS A PURE LAG. refrac_ticks_ is dead time -- the neuron cannot
+    //   fire, and nothing else about it changes. There is no gain term, no steady-state
+    //   shift, no change to how much drive reaches threshold. If the offset is dead time
+    //   in this loop its coefficient must be 3.560; if this field is not in the loop its
+    //   coefficient must be 0. That is a clean two-way measurement and it is why this
+    //   axis, not the membrane, is the one that can refuse something.
+    //
+    //   `leak_tau_ms` IS A LAG AND AN INVERSE GAIN, and that is a confound stated here
+    //   rather than discovered in the log. The membrane update is
+    //   `v += leak_alpha * (v_rest - v) + drive` with leak_alpha = dt / leak_tau
+    //   (network.cpp:2566, 637), so a steady drive d holds v at v_rest + d / leak_alpha:
+    //   the EFFECTIVE drive in units of threshold scales as leak_tau / dt. Halving the
+    //   membrane halves how far any drive -- including the half-centre's own inhibition --
+    //   pushes the neuron, and the threshold does not scale with it. Homeostasis then
+    //   moves the threshold back. So a NON-ZERO coefficient on this axis is ambiguous
+    //   between the lag and the gain; a ZERO coefficient on it is not, because neither
+    //   effect happened. The verdict branch says so in those terms, and the per-setting
+    //   gain ratio is printed beside the result.
+    //
+    // THE RANGES, AND WHY THEY STOP WHERE THEY DO. v77 found that the half-centre dies
+    // wherever a loop lag approaches tau_a -- at rft 100 the tau 83 arm collapsed to a
+    // 100 ms noise rhythm over 10239 turns. Both fields here stay well under the fastest
+    // fatigue constant (83 ms): refractory 3 -> 35 and membrane 8 -> 50. The refractory
+    // also caps the firing rate at 1000 / refr Hz, which at 35 ms is 28.6 Hz against the
+    // 10.8 Hz the fastest arm runs at, so no arm is pressed against that ceiling either.
+    //
+    //     refractory_ms   3 (the anchor, shared with every arm above) / 12 / 22 / 35
+    //     leak_tau_ms    20 (the anchor, shared with every arm above) / 35 / 50 / 65
+    //
+    // THE MEMBRANE AXIS POINTS UPWARD ONLY, AND THE SMOKE IS WHY. It was written as
+    // 8 / 35 / 50, straddling the shipped 20, and a 60k smoke killed the whole 8 ms
+    // setting -- duty 0.00 on all four mechanism arms AND on its control, which read 1.34
+    // Hz against 4.1-5.0 everywhere else. The arithmetic above says why and says it is not
+    // a surprise: the effective drive scales with leak_tau, so 8 ms is 0.4x the shipped
+    // drive and the module cannot reach threshold at all. The cliff is BELOW the shipped
+    // value and the direction is not symmetric -- at 35 and 50 the controls run duty
+    // 0.55/0.54 and rate 5.04/5.02 against the anchor's 0.47 and 4.41, which is a MATCHED
+    // operating point, so the gain confound is largely absorbed by homeostasis going up
+    // and not going down. The failure modes also differ in kind: too low voids an entire
+    // setting including its control, too high can at worst cost the single fastest arm and
+    // leave three live, which is still a fit. 65 is the gamble this design can afford.
+    //
+    // Four points per axis, and the anchor setting is the EXISTING tau083..tau333 block,
+    // so the two axes cross at one jointly-measured corner and neither spends arms
+    // re-measuring it. With intercept SEs of 11-21 ms, Sxx is 566 on the refractory axis
+    // and 1125 on the membrane, giving coefficient SEs of ~0.76 and ~0.54 -- so 3.560 and
+    // 0 are separated by 4.7 and 6.6 SE. That separation is the design, derived before the
+    // run and re-derived after the smoke moved the membrane range.
+    //
+    // THE REFRACTORY AXIS MOVES THE OPERATING POINT AND THE SMOKE MEASURED THAT TOO, so it
+    // is stated here rather than discovered in the log. Its controls run duty
+    // 0.47/0.43/0.41/0.36 and rate 4.41/4.14/3.93/3.71 across 3/12/22/35: a monotone 23%
+    // fall in duty and 16% in rate, and homeostasis does NOT hold the rate against a
+    // refractory period the way it holds it against the filter. That matters because the
+    // v76 normaliser divides by the PAIR'S OWN MEAN, so a lower module rate raises the
+    // between-coupling -- 4.41/3.71 = 1.19x, which is a competition-strength change of the
+    // size v76's k sweep probed and could not resolve.
+    //
+    // AND SLOPE INVARIANCE IS WHAT SEPARATES THAT CONFOUND FROM A LAG, which is the second
+    // job it does here. A competition-strength change scales the whole relaxation cycle, so
+    // it moves the coefficient ON tau_a; a lag ADDS, so it moves the intercept and leaves
+    // the slope alone. The two are therefore distinguishable in this run's own output
+    // rather than by argument, and the slope table is printed before any verdict.
+    //
+    // WHAT CANNOT BE CLAIMED EITHER WAY. Neither field can account for 179.8 ms on its
+    // own, so "the offset is explained" is not an available outcome. The budget line
+    // below prints what the two measured coefficients DO account for against the 179.8,
+    // and whatever is left over is left over.
+    //
+    // Appended last, so the twenty-nine arms above re-print bit for bit.
+    {"rr12t083",  1.00f,  83.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f, 12.0f},
+    {"rr12t167",  1.00f, 167.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f, 12.0f},
+    {"rr12t250",  1.00f, 250.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f, 12.0f},
+    {"rr12t333",  1.00f, 333.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f, 12.0f},
+    {"rr12ctrl",  0.00f, 167.0f, 0.00f, 1.40f, 1.00f,  50.0f, 20.0f, 12.0f},
+    {"rr22t083",  1.00f,  83.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f, 22.0f},
+    {"rr22t167",  1.00f, 167.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f, 22.0f},
+    {"rr22t250",  1.00f, 250.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f, 22.0f},
+    {"rr22t333",  1.00f, 333.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f, 22.0f},
+    {"rr22ctrl",  0.00f, 167.0f, 0.00f, 1.40f, 1.00f,  50.0f, 20.0f, 22.0f},
+    {"rr35t083",  1.00f,  83.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f, 35.0f},
+    {"rr35t167",  1.00f, 167.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f, 35.0f},
+    {"rr35t250",  1.00f, 250.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f, 35.0f},
+    {"rr35t333",  1.00f, 333.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f, 35.0f},
+    {"rr35ctrl",  0.00f, 167.0f, 0.00f, 1.40f, 1.00f,  50.0f, 20.0f, 35.0f},
+    {"lk65t083",  1.00f,  83.0f, 0.60f, 1.40f, 1.00f,  50.0f, 65.0f,  3.0f},
+    {"lk65t167",  1.00f, 167.0f, 0.60f, 1.40f, 1.00f,  50.0f, 65.0f,  3.0f},
+    {"lk65t250",  1.00f, 250.0f, 0.60f, 1.40f, 1.00f,  50.0f, 65.0f,  3.0f},
+    {"lk65t333",  1.00f, 333.0f, 0.60f, 1.40f, 1.00f,  50.0f, 65.0f,  3.0f},
+    {"lk65ctrl",  0.00f, 167.0f, 0.00f, 1.40f, 1.00f,  50.0f, 65.0f,  3.0f},
+    {"lk35t083",  1.00f,  83.0f, 0.60f, 1.40f, 1.00f,  50.0f, 35.0f,  3.0f},
+    {"lk35t167",  1.00f, 167.0f, 0.60f, 1.40f, 1.00f,  50.0f, 35.0f,  3.0f},
+    {"lk35t250",  1.00f, 250.0f, 0.60f, 1.40f, 1.00f,  50.0f, 35.0f,  3.0f},
+    {"lk35t333",  1.00f, 333.0f, 0.60f, 1.40f, 1.00f,  50.0f, 35.0f,  3.0f},
+    {"lk35ctrl",  0.00f, 167.0f, 0.00f, 1.40f, 1.00f,  50.0f, 35.0f,  3.0f},
+    {"lk50t083",  1.00f,  83.0f, 0.60f, 1.40f, 1.00f,  50.0f, 50.0f,  3.0f},
+    {"lk50t167",  1.00f, 167.0f, 0.60f, 1.40f, 1.00f,  50.0f, 50.0f,  3.0f},
+    {"lk50t250",  1.00f, 250.0f, 0.60f, 1.40f, 1.00f,  50.0f, 50.0f,  3.0f},
+    {"lk50t333",  1.00f, 333.0f, 0.60f, 1.40f, 1.00f,  50.0f, 50.0f,  3.0f},
+    {"lk50ctrl",  0.00f, 167.0f, 0.00f, 1.40f, 1.00f,  50.0f, 50.0f,  3.0f},
 };
 constexpr uint32_t kHCArmCount = sizeof(kHCArms) / sizeof(kHCArms[0]);
 // THE CONTROL IS NO LONGER THE LAST ARM, and two places used to find it that way --
@@ -20723,6 +20857,13 @@ uint32_t hc_ctrl_for(uint32_t a) {
     if (kHCArms[c].jump > 0.0f || kHCArms[c].hc > 0.0f) continue;
     if (!hc_same(kHCArms[c].drive, kHCArms[a].drive)) continue;
     if (!hc_same(kHCArms[c].rft, kHCArms[a].rft)) continue;
+    // DNA v78. The two per-module constants join the key for the same reason the filter
+    // did: `refractory_ms` caps the firing rate and `leak_tau_ms` scales how far any
+    // drive reaches threshold, so an arm at refractory 35 gated on the refractory 3
+    // control's rate would be VOIDed for a reason unconnected to the half-centre. Every
+    // pre-v78 arm carries the shipped 20.0 / 3.0 and so still resolves exactly as before.
+    if (!hc_same(kHCArms[c].leak, kHCArms[a].leak)) continue;
+    if (!hc_same(kHCArms[c].refr, kHCArms[a].refr)) continue;
     return c;
   }
   return kHCCtrlArm;
@@ -21169,6 +21310,21 @@ bool run_halfcenter(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
   // failed to land would read as the anchor rather than as a broken arm, so the per-arm
   // value is printed beside every result in the v77 block and never assumed from here.
   const size_t o_rf = offsetof(aibaby::DnaHeader, sim) + offsetof(aibaby::DnaSim, rate_fast_tau_ms);
+  // DNA v78. The two per-module lags, patched into the VOCAL MODULE's own record rather
+  // than the header -- `sizeof(DnaHeader) + sizeof(DnaModule) * m`, the layout `chain` and
+  // `ipctx` already patch through. Both sigma fields default to 0 and are absent from the
+  // genome, so `het_scaled` returns the base value having touched no RNG (network.cpp:59):
+  // these patches re-roll nothing, exactly as the header ones do not. `leak_perturb` is
+  // likewise absent and defaults to 0, so v72's leak_log path is inert and leak_alpha_
+  // stays at dt / leak_tau for the whole run instead of drifting away from the dose.
+  const int32_t vm78 = dna0.module_with_role(aibaby::ModuleRole::kVocal);
+  if (vm78 < 0) {
+    std::printf("  halfcenter: no vocal module -- the v78 doses have nowhere to land.\n");
+    return false;
+  }
+  const size_t o_mod = sizeof(aibaby::DnaHeader) + sizeof(aibaby::DnaModule) * size_t(vm78);
+  const size_t o_lk = o_mod + offsetof(aibaby::DnaModule, leak_tau_ms);
+  const size_t o_rr = o_mod + offsetof(aibaby::DnaModule, refractory_ms);
   const std::vector<Cell> cells = parallel_reps<Cell>(njobs, [&](uint32_t i) {
     Cell c;
     const uint32_t r = i / kHCArmCount, a = i % kHCArmCount;
@@ -21182,6 +21338,8 @@ bool run_halfcenter(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
     std::memcpy(variant.data() + o_hd, &kHCArms[a].drive, sizeof(float));
     std::memcpy(variant.data() + o_hw, &kHCArms[a].kw, sizeof(float));
     std::memcpy(variant.data() + o_rf, &kHCArms[a].rft, sizeof(float));
+    std::memcpy(variant.data() + o_lk, &kHCArms[a].leak, sizeof(float));
+    std::memcpy(variant.data() + o_rr, &kHCArms[a].refr, sizeof(float));
     c.row = run_halfcenter_arm(variant, ticks, kHCArms[a]);
     c.ok = c.row.ok;
     if (c.ok)
@@ -21923,6 +22081,474 @@ bool run_halfcenter(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
                       std::fabs(td) >= 3.0 ? " with a residual offset left over" : "");
         }
       }
+    }
+  }
+
+  // DNA v78. THE OFFSET TEST AS A COEFFICIENT, on the two per-module lags.
+  //
+  // v77 asked a coincidence to survive being moved and it did not: the intercept was
+  // required to fall 89 ms and it rose 48, 5.7 SE the wrong way. The structural lesson is
+  // not about that field. It is that a test shaped to confirm one predicted number can
+  // only ever answer yes or no about that number, while a test shaped to measure
+  // dIntercept/dField returns something usable whatever the answer is. This block is the
+  // second shape, run on both remaining lags, and it reports coefficients with error bars
+  // rather than a verdict on a prediction.
+  //
+  // THE AXES ARE DELIBERATELY UNEQUAL and the asymmetry is the design. `refractory_ms` is
+  // dead time and nothing else, so its coefficient is interpretable on its own: 3.560
+  // means the offset is dead time in this loop, 0 means this field is not in it. The
+  // membrane is a lag AND an inverse gain, so only a ZERO coefficient is unambiguous
+  // there. The arm-table comment carries the derivation; the verdict branches below carry
+  // the consequence, which is that the membrane axis cannot claim a mechanism on a
+  // non-zero reading and says so itself rather than leaving it to prose.
+  if (kHCArmCount >= 59) {
+    const double kTau78[4] = {83.0, 167.0, 250.0, 333.0};
+    const double record78 = double(ticks - ticks / 10);
+    // THE BUDGET'S TWO TERMS, carried out of the lambda. Neither field can be the whole
+    // 179.8 ms -- 50.5 ms of effective lag is needed and these ship at 20 and 3 -- so the
+    // only honest summary statistic is how much of it they DO account for, and that is a
+    // number this run measures rather than one it predicts.
+    double acc_c[2] = {}, acc_ce[2] = {}, acc_ship[2] = {};
+    bool acc_ok[2] = {};
+    const char* acc_name[2] = {"refractory_ms", "leak_tau_ms"};
+    // WHY AN AXIS IS OR IS NOT IN THE BUDGET, carried out with the number. A line that just
+    // omits an axis reads as a zero, and three of the five verdicts are not zeros: a
+    // refused additive form, an underpowered non-separation and a NEGATIVE coefficient are
+    // each a gap of a different kind. The last one matters most -- a negative
+    // dIntercept/dField cannot be a lag, so summing it into a lag budget would let it
+    // CANCEL a real contribution from the other axis and shrink the remainder by
+    // arithmetic rather than by mechanism.
+    const char* acc_why[2] = {"not evaluated", "not evaluated"};
+    const char* acc_note[2] = {"", ""};
+    double anchor_a = 0.0, anchor_ae = 0.0, anchor_b = 0.0, anchor_be = 0.0;
+    bool anchor_ok = false;
+
+    // gain_scales: the swept field also scales how far a given drive reaches threshold,
+    // which is true of the membrane and false of the refractory period. It selects the
+    // extra disclosure column and it hardens the verdict on a non-zero reading.
+    // ORDINARY LEAST SQUARES, FACTORED OUT, because this block now fits twice per setting
+    // -- once on the setting's own live arms and once on the design shared with every other
+    // setting -- and a third hand-inlined copy of the same arithmetic is how the two come
+    // to disagree.
+    auto ols = [](const double* x, const double* y, uint32_t n, double& sl, double& ic,
+                  double& sle, double& ice, double& r2) {
+      double mx = 0.0, my = 0.0;
+      for (uint32_t i = 0; i < n; ++i) { mx += x[i]; my += y[i]; }
+      mx /= double(n); my /= double(n);
+      double sxy = 0.0, sxx = 0.0, syy = 0.0;
+      for (uint32_t i = 0; i < n; ++i) {
+        const double dx = x[i] - mx, dy = y[i] - my;
+        sxy += dx * dy; sxx += dx * dx; syy += dy * dy;
+      }
+      sl = sxx > 0.0 ? sxy / sxx : 0.0;
+      ic = my - sl * mx;
+      double rss = 0.0;
+      for (uint32_t i = 0; i < n; ++i) {
+        const double e = y[i] - (sl * x[i] + ic);
+        rss += e * e;
+      }
+      const double sd = n > 2 ? std::sqrt(rss / double(n - 2)) : 0.0;
+      sle = sxx > 0.0 ? sd / std::sqrt(sxx) : 0.0;
+      ice = sxx > 0.0 ? sd * std::sqrt(1.0 / double(n) + mx * mx / sxx) : 0.0;
+      r2 = (sxx > 0.0 && syy > 0.0) ? (sxy * sxy) / (sxx * syy) : 0.0;
+    };
+
+    auto offset_axis = [&](uint32_t slot, const char* field, float HCArm::*sweep,
+                           const float* set, float HCArm::*hold, float hold_at,
+                           bool gain_scales) {
+      double fit_a[4] = {}, fit_ae[4] = {}, fit_b[4] = {}, fit_be[4] = {}, fit_r2[4] = {};
+      uint32_t fit_n[4] = {}, ctl_of[4] = {};
+      bool fit_ok[4] = {};
+      // THE PERIODS AND THEIR LIVENESS, KEPT PER CELL, so the coefficient can be fitted on
+      // a BALANCED design. The 60k smoke is why this exists and it is the one change that
+      // run forced. At 60k, `tau083` fails the +/-2% consistency gate at the ANCHOR setting
+      // and passes it at refractory 12, 22 and 35, so the anchor fit had three taus and the
+      // others four -- and the periods at the three SHARED taus are identical to within a
+      // millisecond (759.2/1082.1/1415.0 against 758.3/1085.0/1415.4) while the fitted
+      // intercept read 97.7 against 12.3-18.0. That 80 ms is the DESIGN MATRIX and nothing
+      // else: dropping the shortest tau removes the leverage that pins the intercept.
+      //
+      // So comparing intercepts across settings is only valid on a COMMON set of taus, and
+      // v77's comment claiming "the SAME four taus, so every fit has an identical design
+      // matrix" was an assumption the code never enforced. v77 escaped it by luck -- both
+      // of its fitted settings happened to keep all four arms. The coefficient below is
+      // fitted on the intersection, the per-setting law is still printed on each setting's
+      // own live arms, and the two are labelled differently so they cannot be confused.
+      double per[4][4] = {};
+      bool plive[4][4] = {};
+      std::printf("\n  v78 -- THE %s AXIS. The same four taus at four settings of\n"
+                  "  the vocal module's own %s; setting [0] = %.0f is the SHIPPED\n"
+                  "  value and its four arms are the archived anchor block, not re-run.\n",
+                  field, field, double(set[0]));
+      std::printf("    model L  THIS FIELD IS A LAG IN THE LOOP   dIntercept/dField = the\n"
+                  "                                              coefficient on tau_a\n");
+      std::printf("    model N  THIS FIELD IS NOT THE OFFSET      dIntercept/dField = 0\n");
+      for (uint32_t s = 0; s < 4; ++s) {
+        uint32_t idx[4] = {0, 0, 0, 0};
+        bool have[4] = {false, false, false, false};
+        uint32_t ctl = kHCCtrlArm;
+        for (uint32_t a = 0; a < kHCArmCount; ++a) {
+          // EVERY OTHER DOSE HELD AT ITS SHIPPED VALUE, and the `hold` clause is not
+          // decoration. Both v78 axes pass through the same anchor arms, so without it the
+          // membrane arms -- which all carry refractory 3 -- would be swept up by the
+          // refractory axis at its own setting [0] and silently overwrite the anchor.
+          if (!hc_same(kHCArms[a].*sweep, set[s])) continue;
+          if (!hc_same(kHCArms[a].*hold, hold_at)) continue;
+          if (!hc_same(kHCArms[a].rft, 50.0f)) continue;
+          if (!hc_same(kHCArms[a].drive, 1.40f)) continue;
+          if (kHCArms[a].jump <= 0.0f && kHCArms[a].hc <= 0.0f) { ctl = a; continue; }
+          if (kHCArms[a].jump <= 0.0f || kHCArms[a].hc <= 0.0f) continue;
+          if (!hc_same(kHCArms[a].kw, 1.00f)) continue;
+          for (uint32_t j = 0; j < 4; ++j)
+            if (hc_same(kHCArms[a].tau_ms, float(kTau78[j]))) { idx[j] = a; have[j] = true; }
+        }
+        ctl_of[s] = ctl;
+        std::printf("\n    %s = %3.0f ms", field, double(set[s]));
+        if (gain_scales)
+          std::printf("   (effective drive x%.2f vs the anchor, threshold unchanged)",
+                      double(set[s]) / double(set[0]));
+        else
+          std::printf("   (rate ceiling %.0f Hz; the fastest arm runs ~10.8)",
+                      1000.0 / double(set[s]));
+        std::printf("\n");
+        std::printf("      CONTROL %-11s duty %.2f  rate %5.2f Hz   FLOOR: sd %.4f, "
+                    "%4.0f turns, period %7.1f ms%s\n",
+                    kHCArms[ctl].name, m_du[ctl], m_rt[ctl], m_ds[ctl], m_cn[ctl], m_cp[ctl],
+                    void_arm[ctl] ? "   <- VOID" : "");
+        double x[4] = {}, y[4] = {};
+        uint32_t n = 0;
+        for (uint32_t j = 0; j < 4; ++j) {
+          if (!have[j]) { std::printf("      tau %3.0f  ARM MISSING\n", kTau78[j]); continue; }
+          const uint32_t a = idx[j];
+          const double prod = m_cn[a] * m_cp[a];
+          const double pe = record78 > 0.0 ? 100.0 * (prod - record78) / record78 : 0.0;
+          // THE SAME THREE GATES AS v77, UNCHANGED AND UNRELAXED. The +/-2% consistency
+          // band is the one that cost v77 its deciding coefficient: two settings each lost
+          // an arm at +2.8% and +2.3%, and widening the band to 3% would have handed the
+          // statistic straight back. It was not widened then and it is not widened here.
+          // The licensed repair for a blocked statistic is more record or more reps, which
+          // is why this axis has a fourth setting as insurance instead of a looser gate.
+          const bool consistent = std::fabs(pe) <= 2.0;
+          const double snr = m_ds[ctl] > 0.0 ? m_ds[a] / m_ds[ctl] : 0.0;
+          const bool floor_ok = m_cp[ctl] > 0.0 ? m_cp[a] >= 2.0 * m_cp[ctl] : true;
+          const bool live = m_cp[a] > 0.0 && !void_arm[a] && consistent && floor_ok;
+          std::printf("      tau %3.0f  %-11s period %7.1f +/- %5.1f ms  (%5.0f turns, "
+                      "x median %+.1f%% of record, sd %4.1fx floor)%s%s%s%s\n",
+                      kTau78[j], kHCArms[a].name, m_cp[a], s_cp[a], m_cn[a], pe, snr,
+                      void_arm[a] ? "  VOID" : "", !consistent ? "  INCONSISTENT" : "",
+                      !floor_ok ? "  UNDER 2x FLOOR" : "", live ? "" : "  <- DROPPED");
+          per[s][j] = m_cp[a];
+          plive[s][j] = live;
+          if (live) { x[n] = kTau78[j]; y[n] = m_cp[a]; ++n; }
+        }
+        fit_n[s] = n;
+        if (n < 3) {
+          std::printf("      ONLY %u LIVE ARMS -- this setting is not fitted and bears on\n"
+                      "      nothing. It refuses ITSELF, not the law.\n", n);
+          continue;
+        }
+        double sl = 0.0, ic = 0.0, sle = 0.0, ice = 0.0, r2 = 0.0;
+        ols(x, y, n, sl, ic, sle, ice, r2);
+        // THE SETTING'S OWN LAW, on its own live arms. Labelled OWN because it is NOT what
+        // the coefficient is fitted on whenever the live sets differ -- see the balanced
+        // refit below.
+        std::printf("      FIT (own)  slope %.3f +/- %.3f  intercept %7.1f +/- %5.1f ms"
+                    "  R^2 %.5f  (%u live)\n", sl, sle, ic, ice, r2, n);
+        fit_ok[s] = true;
+      }
+      // THE BALANCED DESIGN. Every intercept that enters the coefficient is refitted on the
+      // taus live at EVERY fitted setting, so the comparison is at matched leverage. When
+      // the live sets already agree this is the same arithmetic on the same points and the
+      // balanced fit equals the own fit exactly -- which the print below states, so a
+      // reader can see whether the correction did anything at this run's length.
+      bool common[4] = {true, true, true, true};
+      uint32_t ncom = 0, nfit = 0;
+      for (uint32_t s = 0; s < 4; ++s) if (fit_ok[s]) ++nfit;
+      for (uint32_t j = 0; j < 4; ++j) {
+        for (uint32_t s = 0; s < 4; ++s)
+          if (fit_ok[s] && !plive[s][j]) common[j] = false;
+        if (common[j]) ++ncom;
+      }
+      std::printf("\n      THE BALANCED DESIGN: taus live at ALL %u fitted settings =", nfit);
+      for (uint32_t j = 0; j < 4; ++j) if (common[j]) std::printf(" %.0f", kTau78[j]);
+      if (ncom == 0) std::printf(" none");
+      std::printf("  (%u of 4)\n", ncom);
+      if (ncom < 3) {
+        std::printf("      FEWER THAN THREE TAUS ARE COMMON, so no two settings' intercepts\n"
+                    "      are comparable at matched leverage and this axis CANNOT produce a\n"
+                    "      coefficient. It refuses itself. Dropping the shortest tau moves a\n"
+                    "      fitted intercept by ~80 ms at 60k ticks, which is far larger than\n"
+                    "      any effect being looked for, so an unbalanced coefficient would be\n"
+                    "      a design artefact and is not printed.\n");
+        for (uint32_t s = 0; s < 4; ++s) fit_ok[s] = false;
+      } else {
+        for (uint32_t s = 0; s < 4; ++s) {
+          if (!fit_ok[s]) continue;
+          double bx[4] = {}, by[4] = {};
+          uint32_t bn = 0;
+          for (uint32_t j = 0; j < 4; ++j)
+            if (common[j]) { bx[bn] = kTau78[j]; by[bn] = per[s][j]; ++bn; }
+          ols(bx, by, bn, fit_a[s], fit_b[s], fit_ae[s], fit_be[s], fit_r2[s]);
+          std::printf("        %-13s %3.0f  BALANCED  slope %.3f +/- %.3f  intercept %7.1f"
+                      " +/- %5.1f ms  R^2 %.5f%s\n", field, double(set[s]), fit_a[s],
+                      fit_ae[s], fit_b[s], fit_be[s], fit_r2[s],
+                      fit_n[s] == ncom ? "   (= its own fit)" : "   <- REFITTED");
+        }
+      }
+      // THE ANCHOR SETTING IS THE SAME FOUR ARMS ON BOTH AXES, so it is also a free
+      // internal consistency check: the two calls must print an identical anchor fit, and
+      // if they do not, the arm resolution above is picking up different arms than it
+      // should. Recorded once, compared the second time. Note it compares the BALANCED
+      // fits, which can legitimately differ between the axes when one axis's other
+      // settings cost it a tau -- so a mismatch here is reported with that reading.
+      if (fit_ok[0]) {
+        if (!anchor_ok) {
+          anchor_a = fit_a[0]; anchor_ae = fit_ae[0];
+          anchor_b = fit_b[0]; anchor_be = fit_be[0];
+          anchor_ok = true;
+        } else {
+          const bool same = std::fabs(fit_a[0] - anchor_a) < 1e-9 &&
+                            std::fabs(fit_b[0] - anchor_b) < 1e-9;
+          std::printf("\n      ANCHOR CROSS-CHECK  this axis's setting [0] balanced fit %s\n"
+                      "      the other axis's: slope %.3f vs %.3f, intercept %.1f vs %.1f.%s\n",
+                      same ? "MATCHES" : "DIFFERS FROM", fit_a[0], anchor_a, fit_b[0],
+                      anchor_b,
+                      same ? "" : "  Both axes resolve the\n      SAME four anchor arms, so a"
+                                  " difference here can only be the balanced\n      design:"
+                                  " one axis lost a tau elsewhere and refitted the anchor"
+                                  " without\n      it. Compare the two OWN fits above --"
+                                  " THOSE must be identical.");
+        }
+      }
+      // THE FLOOR, DISCLOSED AND NOT VETOED ON -- v77's lesson, and the reason the gate
+      // above is a per-arm ratio rather than a global veto. A trigger handed a signal with
+      // no period in it rides noise, so the controls' reported periods track whatever sets
+      // the noise's autocorrelation time. That is the instrument working on an empty
+      // input. Printed beside the claimed slope so a reader can see they are not the same
+      // number -- on the filter axis the ratio was 1.82.
+      {
+        double fx = 0.0, fy = 0.0;
+        for (uint32_t s = 0; s < 4; ++s) { fx += double(set[s]); fy += m_cp[ctl_of[s]]; }
+        fx /= 4.0; fy /= 4.0;
+        double fxy = 0.0, fxx = 0.0, fyy = 0.0;
+        for (uint32_t s = 0; s < 4; ++s) {
+          const double dx = double(set[s]) - fx, dy = m_cp[ctl_of[s]] - fy;
+          fxy += dx * dy; fxx += dx * dx; fyy += dy * dy;
+        }
+        const double fs = fxx > 0.0 ? fxy / fxx : 0.0;
+        const double fr2 = (fxx > 0.0 && fyy > 0.0) ? (fxy * fxy) / (fxx * fyy) : 0.0;
+        std::printf("\n      THE NOISE FLOOR ITSELF rises %+.3f ms per ms of %s (R^2 %.4f)\n"
+                    "      across the four controls: %.1f / %.1f / %.1f / %.1f ms. Printed\n"
+                    "      beside the coefficient below, never subtracted from it.\n",
+                    fs, field, fr2, m_cp[ctl_of[0]], m_cp[ctl_of[1]], m_cp[ctl_of[2]],
+                    m_cp[ctl_of[3]]);
+        // THE OPERATING POINT, ON BOTH AXES, because v77's first version checked the rate
+        // alone and the rate is the quantity homeostasis actively defends -- all four of
+        // its controls read 4.94 Hz while the duty drifted 0.53 -> 0.62 underneath. A
+        // regulated quantity cannot detect an operating-point shift.
+        double rlo = 1e9, rhi = -1e9, dlo = 1e9, dhi = -1e9;
+        for (uint32_t s = 0; s < 4; ++s) {
+          const double r = m_rt[ctl_of[s]], d = m_du[ctl_of[s]];
+          if (r < rlo) rlo = r;
+          if (r > rhi) rhi = r;
+          if (d < dlo) dlo = d;
+          if (d > dhi) dhi = d;
+        }
+        std::printf("      THE CONTROLS' OPERATING POINT  rate %.2f-%.2f Hz (%.2fx)%s,"
+                    "  duty %.2f-%.2f (%+.0f%%)%s\n",
+                    rlo, rhi, rlo > 0.0 ? rhi / rlo : 0.0,
+                    (rlo > 0.0 && rhi / rlo > 1.25) ? " MOVED" : " held",
+                    dlo, dhi, dlo > 0.0 ? 100.0 * (dhi - dlo) / dlo : 0.0,
+                    (dlo > 0.0 && (dhi - dlo) / dlo > 0.10) ? "  <- MOVED" : " held");
+      }
+      // SLOPE INVARIANCE, the necessary condition and the escape-closer. A sum of lags
+      // cannot change the coefficient on tau_a, so a moving slope refuses the additive
+      // form whatever the intercepts do -- and if the slope HOLDS, a failure of the
+      // intercepts to move is about the intercepts and not about a broken form. On the
+      // filter axis this is what removed the "the test was meaningless" escape.
+      bool slope_held = true;
+      if (fit_ok[0]) {
+        for (uint32_t s = 1; s < 4; ++s) {
+          if (!fit_ok[s]) continue;
+          const double se = std::sqrt(fit_ae[s] * fit_ae[s] + fit_ae[0] * fit_ae[0]);
+          const double t = se > 0.0 ? (fit_a[s] - fit_a[0]) / se : 0.0;
+          std::printf("      slope at %s %3.0f  %.3f +/- %.3f vs anchor %.3f +/- %.3f"
+                      "  (%+.1f SE)%s\n", field, double(set[s]), fit_a[s], fit_ae[s],
+                      fit_a[0], fit_ae[0], t, std::fabs(t) >= 3.0 ? "   <- MOVED" : "");
+          if (std::fabs(t) >= 3.0) slope_held = false;
+        }
+      }
+      // THE PER-SETTING CONTRASTS, printed unconditionally. One fitted setting besides the
+      // anchor is enough to run them, and on the filter axis they were the only statistic
+      // the run had -- withheld by a first version that buried them inside the `n >= 3`
+      // coefficient branch. A pre-registration the code does not branch on is not a
+      // pre-registration, so these live outside every gate.
+      if (fit_ok[0]) {
+        for (uint32_t s = 1; s < 4; ++s) {
+          if (!fit_ok[s]) continue;
+          const double db = fit_b[s] - fit_b[0];
+          const double dse = std::sqrt(fit_be[s] * fit_be[s] + fit_be[0] * fit_be[0]);
+          const double pl = fit_a[0] * (double(set[s]) - double(set[0]));
+          const double tl = dse > 0.0 ? (db - pl) / dse : 0.0;
+          const double tn = dse > 0.0 ? db / dse : 0.0;
+          const bool wrong_sign = (pl > 0.0 && db < 0.0) || (pl < 0.0 && db > 0.0);
+          std::printf("      CONTRAST %s %3.0f vs %3.0f -- intercept changed %+.1f +/- %.1f"
+                      " ms;  L said %+.1f (%.1f SE off%s), N said +0.0 (%.1f SE off)\n",
+                      field, double(set[s]), double(set[0]), db, dse, pl, std::fabs(tl),
+                      wrong_sign ? ", WRONG SIGN" : "", std::fabs(tn));
+        }
+      }
+      // THE DECIDING COEFFICIENT.
+      double x[4] = {}, y[4] = {};
+      uint32_t n = 0;
+      for (uint32_t s = 0; s < 4; ++s)
+        if (fit_ok[s]) { x[n] = double(set[s]); y[n] = fit_b[s]; ++n; }
+      std::printf("\n      THE COEFFICIENT -- the BALANCED intercept against %s, on %u of 4\n"
+                  "      settings and %u of 4 taus\n", field, n, ncom);
+      for (uint32_t s = 0; s < 4; ++s)
+        std::printf("        %-13s %3.0f  %s  intercept %7.1f +/- %5.1f ms  (%u live of the"
+                    " %u common)\n", field, double(set[s]), fit_ok[s] ? "fitted " : "REFUSED",
+                    fit_b[s], fit_be[s], fit_n[s], ncom);
+      if (n < 3) {
+        std::printf("        FEWER THAN THREE SETTINGS FITTED -- no coefficient and no\n"
+                    "        error bar. This axis does not decide, and the contrasts above\n"
+                    "        are what it licenses. A contrast is one point.\n");
+        return;
+      }
+      double c = 0.0, d = 0.0, ce = 0.0, de = 0.0, r2 = 0.0;
+      ols(x, y, n, c, d, ce, de, r2);
+      const double a0 = fit_a[0], ae0 = fit_ae[0];
+      const double dse = std::sqrt(ce * ce + ae0 * ae0);
+      const double tc = dse > 0.0 ? (c - a0) / dse : 0.0;   // vs model L
+      const double t0 = ce > 0.0 ? c / ce : 0.0;            // vs model N
+      std::printf("        intercept = %+.3f * %s %+.1f ms,  R^2 %.5f\n", c, field, d, r2);
+      // THE DECIDING FIT'S OWN INTERCEPT IS THE REMAINDER, and it is a disclosure rather
+      // than a spare variable: it is what the period's offset extrapolates to at field = 0,
+      // so it is the part of the 180 ms this field does NOT reach. Model L does not require
+      // it to be zero here the way v77's did -- v77's single candidate was supposed to be
+      // the WHOLE offset, while neither of these fields can be, so a large remainder is
+      // expected and is the budget's subject. Printed with its error bar for that reason.
+      std::printf("        the remainder at %s = 0   %+.1f +/- %.1f ms -- the offset this\n"
+                  "        field does not reach, which is the budget's subject below\n",
+                  field, d, de);
+      std::printf("        coefficient on %-13s %+.3f +/- %.3f   (vs zero %.1f SE)\n",
+                  field, c, ce, std::fabs(t0));
+      std::printf("        coefficient on tau_a         %+.3f +/- %.3f   (L requires these\n"
+                  "        two to agree; they differ by %+.3f +/- %.3f = %.1f SE)\n",
+                  a0, ae0, c - a0, dse, std::fabs(tc));
+      acc_c[slot] = c; acc_ce[slot] = ce; acc_ship[slot] = double(set[0]);
+      acc_ok[slot] = true;
+      acc_why[slot] = "measured and additive";
+      if (!slope_held) {
+        std::printf("        REFUSED AS A SUM OF LAGS. The coefficient on tau_a is not\n"
+                    "        invariant across settings of %s, so the period is not a\n"
+                    "        function of (tau_a + %s) however the intercepts fell. This\n"
+                    "        field interacts with tau_a rather than adding to it, which is\n"
+                    "        a different mechanism than the one measured here.\n",
+                    field, field);
+        acc_ok[slot] = false;
+        acc_why[slot] = "the tau_a slope moved: not an additive lag at all";
+      } else if (std::fabs(t0) < 3.0 && std::fabs(tc) >= 3.0) {
+        std::printf("        NOT A LAG IN THIS LOOP -- model N. The coefficient is %+.3f\n"
+                    "        +/- %.3f, inside 3 SE of zero and %.1f SE from the %+.3f that\n"
+                    "        a lag requires, over a %.1fx range of the field. `%s` is\n"
+                    "        CLOSED as a source of the 180 ms.%s\n",
+                    c, ce, std::fabs(tc), a0,
+                    double(set[0]) > 0.0 ? double(set[3]) / double(set[0]) : 0.0, field,
+                    gain_scales ? " This reading is the unambiguous\n"
+                                  "        direction on this axis: neither the lag nor the\n"
+                                  "        gain it also changes moved the intercept."
+                                : "");
+        acc_why[slot] = "measured at zero -- a real zero, not a gap";
+      } else if (std::fabs(tc) < 3.0 && std::fabs(t0) >= 3.0) {
+        std::printf("        IT IS A LAG IN THIS LOOP -- model L. The intercept moves at\n"
+                    "        %+.3f +/- %.3f ms per ms of %s against %+.3f +/- %.3f per ms\n"
+                    "        of tau_a: the same number on two axes that have no reason to\n"
+                    "        agree unless the lags genuinely add.%s\n",
+                    c, ce, field, a0, ae0,
+                    gain_scales ? "  BUT THIS AXIS CANNOT\n"
+                                  "        CLAIM THE MECHANISM: `leak_tau_ms` scales the\n"
+                                  "        effective drive as well as the lag, so a non-zero\n"
+                                  "        coefficient here is ambiguous between the two by\n"
+                                  "        construction. Read the refractory axis for that."
+                                : "");
+        if (gain_scales) acc_note[slot] = "   <- lag or gain, ambiguous by construction";
+      } else if (std::fabs(t0) < 3.0 && std::fabs(tc) < 3.0) {
+        std::printf("        NOT SEPARATED -- both models sit inside 3 SE of the measured\n"
+                    "        coefficient (%.1f SE from zero, %.1f SE from %+.3f), so this\n"
+                    "        axis chooses neither. The design aimed at 4-6 SE of separation\n"
+                    "        and the SE came out at %.3f, so it is UNDERPOWERED and not a\n"
+                    "        null. It needs more reps or a longer record, NOT a wider gate.\n",
+                    std::fabs(t0), std::fabs(tc), a0, ce);
+        acc_ok[slot] = false;
+        acc_why[slot] = "underpowered -- the coefficient is not resolved either way";
+      } else {
+        std::printf("        CONTRIBUTES, BUT NOT AS A SIMPLE LAG. The coefficient is\n"
+                    "        %+.3f +/- %.3f, resolvably non-zero (%.1f SE) and resolvably\n"
+                    "        different from the %+.3f a lag requires (%.1f SE). The field\n"
+                    "        reaches the intercept; the equal-weight form is refused.%s\n",
+                    c, ce, std::fabs(t0), a0, std::fabs(tc),
+                    (c < 0.0) ? "  And the\n        coefficient is NEGATIVE, which no lag can"
+                                " be --\n        the same signature the filter axis gave."
+                              : "");
+        // A NEGATIVE COEFFICIENT IS KEPT OUT OF THE BUDGET, and this is a decision rather
+        // than a convenience. The budget sums lag contributions; a negative one would
+        // cancel a positive one from the other axis and shrink the unaccounted remainder
+        // by arithmetic instead of by mechanism. It is excluded and named with its value.
+        if (c < 0.0) {
+          acc_ok[slot] = false;
+          acc_why[slot] = "resolvably NEGATIVE -- cannot be a lag, excluded from the sum";
+        } else {
+          acc_note[slot] = "   <- reaches the intercept, but not as a simple lag";
+        }
+      }
+    };
+
+    const float kRefrSet[4] = {3.0f, 12.0f, 22.0f, 35.0f};
+    const float kLeakSet[4] = {20.0f, 35.0f, 50.0f, 65.0f};
+    // THE PURE LAG FIRST, because it is the axis that can refuse something on its own.
+    offset_axis(0, "refractory_ms", &HCArm::refr, kRefrSet, &HCArm::leak, 20.0f, false);
+    offset_axis(1, "leak_tau_ms", &HCArm::leak, kLeakSet, &HCArm::refr, 3.0f, true);
+
+    // THE BUDGET. What the two measured coefficients account for, against the intercept
+    // THIS RUN fits at the shipped setting rather than against the archived 179.8 -- so
+    // the statement is internal to the run and does not lean on an older number as a
+    // fixed truth. Only axes whose coefficient was both measurable and additive are
+    // counted; one that refused itself contributes nothing and is named.
+    std::printf("\n  v78 -- THE BUDGET. 179.8 / 3.560 = 50.5 ms of effective lag has to\n"
+                "  come from somewhere. These two fields ship at 3.0 and 20.0 ms, so even\n"
+                "  at the full lag coefficient they cannot be all of it, and this line is\n"
+                "  what they measurably ARE.\n");
+    double tot = 0.0, totv = 0.0;
+    uint32_t used = 0;
+    for (uint32_t k = 0; k < 2; ++k) {
+      if (!acc_ok[k]) {
+        std::printf("    %-13s  NOT COUNTED: %s\n"
+                    "                   (measured %+.3f +/- %.3f ms per ms)\n",
+                    acc_name[k], acc_why[k], acc_c[k], acc_ce[k]);
+        continue;
+      }
+      const double part = acc_c[k] * acc_ship[k];
+      const double pe = acc_ce[k] * acc_ship[k];
+      std::printf("    %-13s  %+.3f +/- %.3f ms per ms  x  %4.1f ms shipped  =  %+6.1f "
+                  "+/- %.1f ms%s\n", acc_name[k], acc_c[k], acc_ce[k], acc_ship[k], part, pe,
+                  acc_note[k]);
+      tot += part; totv += pe * pe;
+      ++used;
+    }
+    if (used > 0 && anchor_ok) {
+      const double te = std::sqrt(totv);
+      const double left = anchor_b - tot;
+      const double lefte = std::sqrt(totv + anchor_be * anchor_be);
+      std::printf("    accounted      %+.1f +/- %.1f ms of the %.1f +/- %.1f ms this run\n"
+                  "                   fits at the shipped setting (%.0f%%), leaving\n"
+                  "                   %+.1f +/- %.1f ms with no account on %u of 2 axes.\n",
+                  tot, te, anchor_b, anchor_be,
+                  anchor_b > 0.0 ? 100.0 * tot / anchor_b : 0.0, left, lefte, used);
+    } else {
+      std::printf("    NO BUDGET -- %u of 2 axes produced a usable coefficient, so there is\n"
+                  "    nothing to subtract from the intercept and the 180 ms stands\n"
+                  "    entirely unaccounted for.\n", used);
     }
   }
 

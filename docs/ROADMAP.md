@@ -2812,3 +2812,163 @@ membrane is also the physically obvious home for "the time for a released half t
 179.8/3.560 = 50.5 ms of effective lag to account for, against a 20 ms membrane and a 3 ms
 refractory — so it is probably not a single field, and the test should be built to measure a
 coefficient rather than to confirm a coincidence. **That is the lesson this run actually paid for.**
+
+---
+
+## §32 — THE TWO PER-MODULE LAGS, PRE-REGISTERED AS A COEFFICIENT AND NOT AS A PREDICTION (2026-11-01)
+
+§31 closed `rate_fast_tau_ms` and named the lesson: **build the test to measure a coefficient, not
+to confirm a coincidence.** This is that test. It is committed before the run.
+
+59 arms, 12 reps, 1.2M ticks. The 29 arms of v77 re-print unchanged; 30 are appended.
+
+### WHAT CHANGED IN THE SHAPE OF THE QUESTION
+
+v77 asked whether a predicted number survived being moved. That shape has exactly two answers and
+one of them is worthless: when the prediction failed, the run was left with no statement about how
+much of the 180 ms that field *does* buy. This run measures `dIntercept/dField` on both remaining
+lags and reports it with an error bar. Every outcome is then usable, including zero.
+
+**And no outcome here can explain the offset.** 179.8/3.560 = **50.5 ms** of effective lag has to be
+accounted for. The membrane ships at 20 ms and the refractory at 3 ms, so even if both land at the
+full lag coefficient they sum to 23 ms — under half of it. A test built to confirm "the membrane IS
+the 180 ms" would therefore have been built to fail. The committed deliverable is the **budget**:
+what the two measured coefficients account for, and what is left over.
+
+### THE TWO AXES, AND THEY ARE DELIBERATELY UNEQUAL
+
+Both are per-module (`DnaModule::leak_tau_ms`, `DnaModule::refractory_ms`), patched on the vocal
+module alone, so neither can reach the auditory module or the divisive normaliser the way the shared
+`rate_fast_tau_ms` did. That removes v77's specificity burden. It does not make them equivalent:
+
+| | `refractory_ms` | `leak_tau_ms` |
+|---|---|---|
+| in the loop as | **pure dead time** | a lag **and** an inverse gain |
+| side effects | rate ceiling 1000/refr Hz | effective drive scales as `leak_tau/dt` |
+| settings | 3 (anchor) / 12 / 22 / 35 | 20 (anchor) / 35 / 50 / 65 |
+| a coefficient of 3.560 means | the offset is dead time in this loop | **ambiguous** — lag or gain |
+| a coefficient of 0 means | this field is not in the loop | this field is not in the loop |
+
+The membrane's confound is arithmetic, not a worry: the update is `v += leak_alpha*(v_rest − v) +
+drive` with `leak_alpha = dt/leak_tau`, so a steady drive `d` holds `v` at `v_rest + d/leak_alpha`
+and the effective drive in units of threshold scales with `leak_tau`. Halving the membrane halves
+how far *any* drive — the half-centre's own inhibition included — pushes the neuron, while the
+threshold does not scale with it. **So only a zero on that axis is unambiguous**, because then
+neither the lag nor the gain moved the intercept. `refractory_ms` is the axis that can refuse
+something on its own, and it is evaluated first for that reason.
+
+### THE PRE-REGISTERED VERDICTS, AS THE CODE'S BRANCHES
+
+Written as branches and not as prose beside the code — §29's rule, and §30 broke it a fifth time by
+burying a committed contrast inside an `n ≥ 3` gate. Per axis, with `A` = that axis's own anchor
+coefficient on `tau_a` and `c ± ce` = the measured coefficient:
+
+| condition | verdict |
+|---|---|
+| the `tau_a` slope moves ≥ 3 SE across settings | **refused as a sum of lags** — the field interacts with `tau_a`, it does not add to it. Contributes nothing to the budget. |
+| `\|c\| < 3 SE` and `\|c − A\| ≥ 3 SE` | **not a lag in this loop.** The field is CLOSED as a source of the 180 ms. |
+| `\|c − A\| < 3 SE` and `\|c\| ≥ 3 SE` | **it is a lag** — the same coefficient on two axes with no reason to agree unless the lags add. On the membrane axis this still cannot claim the mechanism. |
+| both inside 3 SE | **not separated, and UNDERPOWERED rather than null.** Needs more reps or a longer record. |
+| both outside 3 SE | **contributes, but not as a simple lag.** A negative `c` is called out: no lag can be negative, and that is the filter axis's signature. |
+
+The design aims for that separation rather than hoping for it: with per-setting intercept SEs of
+11–21 ms, `Sxx` of 566 on the refractory axis and 1125 on the membrane gives a coefficient SE of
+~0.76 and ~0.54, so **3.560 and 0 are separated by 4.7 and 6.6 SE.** Derived before the run, and
+re-derived after the smoke moved the membrane range — see below.
+
+**And which coefficients may enter the budget is fixed now, not after seeing them.** Only an axis
+whose coefficient is measured *and* additive is summed. A refused additive form, an underpowered
+non-separation, and a **resolvably negative** coefficient are each excluded and named with their
+measured value, because a line that silently omits an axis reads as a zero and none of those three
+is a zero. The negative case is the one that needs the rule written down in advance: a negative
+`dIntercept/dField` cannot be a lag, so summing it would let it **cancel** a real contribution from
+the other axis and shrink the unaccounted remainder by arithmetic rather than by mechanism. The
+filter axis produced exactly that sign, so this is not a hypothetical.
+
+### WHAT IS CARRIED OVER UNCHANGED, ON PURPOSE
+
+* **The ±2% consistency gate is not widened.** It cost v77 the deciding coefficient — two settings
+  each lost an arm at +2.8% and +2.3%, and 3% would have handed the statistic back. The licensed
+  repair for a blocked statistic is more data, so this run buys a **fourth setting per axis as
+  insurance** instead of a looser gate.
+* **The floor is disclosed, never vetoed on.** The controls' reported periods track whatever sets
+  the noise's autocorrelation time, because a Schmitt trigger handed a signal with no period in it
+  rides noise. That is the instrument working on an empty input. Per-arm floor (period ≥ 2× the
+  matched control), plus the floor's own slope printed beside the claimed coefficient.
+* **The operating point is disclosed on BOTH duty and rate.** v77's first version checked the rate
+  alone, and the rate is the quantity homeostasis actively defends: all four controls read 4.94 Hz
+  while duty drifted 0.53 → 0.62 underneath. A regulated quantity cannot detect a shift.
+* **Slope invariance is a necessary condition, not a bonus.** A sum of lags cannot change the
+  coefficient on `tau_a`. On the filter axis this is what removed the "the additive form was broken,
+  so the test was meaningless" escape, and it does the same job here.
+
+### WHAT THE SMOKE CHANGED, BEFORE ANY OF THIS RAN AT LENGTH
+
+Three 60k-tick smokes. None of their effect sizes is quoted anywhere — `--allow-short` certifies
+nothing — but they changed the design twice, and the second change is the one that matters.
+
+**1. The membrane axis was written straddling the shipped value and a quarter of it was dead.**
+`leak_tau_ms = 8` came back with duty 0.00 on all four mechanism arms *and* on its own control,
+which ran 1.34 Hz against 4.1–5.0 everywhere else. The arithmetic above says why: effective drive
+scales with `leak_tau`, so 8 ms is 0.4× the shipped drive and the module cannot reach threshold.
+**The cliff is below the shipped value and the direction is not symmetric.** At 35 and 50 the
+controls run duty 0.55/0.54 and rate 5.04/5.02 against the anchor's 0.47/4.41 — a matched operating
+point, so homeostasis absorbs the gain change going up and not going down. The failure modes differ
+in kind, too: too low voids an entire setting including its control, too high can at worst cost the
+single fastest arm and leave three live, which is still a fit. The axis is now **20 / 35 / 50 / 65**,
+upward only. `Sxx` rises 781 → 1125 and the coefficient SE improves to ~0.54. A fourth smoke
+confirmed 65 ms is alive and that its control is the *closest* of any leak setting to the anchor.
+
+**2. The refractory axis moves the operating point, which I had asserted it would not.** "Pure dead
+time, no gain term" is true of the single-neuron update and false of the module: its controls run
+duty 0.47/0.43/0.41/0.36 and rate 4.41/4.14/3.93/3.71 across 3/12/22/35. Homeostasis does *not*
+hold the rate against a refractory period the way it holds it against the filter. That matters
+because the v76 normaliser divides by the **pair's own mean**, so a 1.19× lower module rate raises
+the between-coupling — a competition-strength change of the size v76's k sweep probed and could not
+resolve. The axis is kept, because **slope invariance separates the two**: a competition-strength
+change scales the whole relaxation cycle and so moves the coefficient on `tau_a`, while a lag adds
+and so moves the intercept alone. That check was already in the design as a necessary condition; it
+now does a second job, and it is printed before any verdict.
+
+**3. THE INTERCEPTS WERE NOT BEING COMPARED AT MATCHED LEVERAGE, AND THIS IS THE REAL FIND.**
+§32 above inherited a sentence from v77 — *"the same four taus at each setting, so every fit has an
+identical design matrix"* — and the code never enforced it. It fitted whatever survived the gates.
+In the smoke, `tau083` fails the ±2% consistency gate at the **anchor** and passes it at refractory
+12/22/35, so the anchor fitted on three taus and the others on four. The periods at the three
+*shared* taus are identical to within a millisecond (759.2/1082.1/1415.0 against 758.3/1085.0/
+1415.4) and the fitted intercepts read **97.7 against 12.3–18.0.** Refitting all four on the common
+three turns that into **97.7 / 96.7 / 97.1 / 93.1** — flat.
+
+So ~80 ms of apparent intercept shift was the design matrix: dropping the shortest tau removes the
+leverage that pins the intercept. That is far larger than any effect this run is looking for, and it
+would have arrived with a tight error bar on it.
+
+The fix: every intercept entering a coefficient is refitted on the taus live at **every** fitted
+setting. The per-setting law is still printed on its own live arms as `FIT (own)`; the balanced
+refit is labelled and marked `<- REFITTED` where it differs. Fewer than three common taus and the
+axis refuses itself rather than producing a coefficient. The OLS is factored out, because the block
+now fits twice per setting and a third hand-inlined copy is how the two come to disagree.
+
+**v77 escaped this by luck.** Both of its fitted settings happened to keep all four arms, so its
+published coefficient would have been valid — but the hazard was live in that code and unnoticed.
+The lesson is the §29 one again, in a new place: *an assumption stated in a comment is not enforced
+by the comment.*
+
+### TWO FREE CHECKS THIS DESIGN BUYS
+
+1. **The anchor is shared.** Both axes pass through the same four arms at the shipped 20.0/3.0, so
+   the two calls must print an identical anchor fit. If they do not, the arm resolution is picking up
+   arms it should not, and the coefficients are not comparable. The code prints the cross-check.
+2. **The range stops short of the fatigue constant.** v77 found the half-centre dies wherever a loop
+   lag approaches `tau_a` (at rft 100 the tau 83 arm collapsed to a 100 ms noise rhythm over 10239
+   turns). Both fields here stay well under 83 ms, and the refractory’s rate ceiling at 35 ms is
+   28.6 Hz against the 10.8 Hz the fastest arm runs at.
+
+### WHAT CANNOT BE CLAIMED, WHATEVER COMES BACK
+
+* **Not** that the offset is explained. Neither field can be 50.5 ms of lag; the budget will have a
+  remainder and the remainder is the honest output.
+* **Not** a mechanism from the membrane axis on a non-zero reading — the gain confound is
+  structural, and the verdict branch says so itself rather than leaving it to this paragraph.
+* **Not** anything about `rate_fast_tau_ms`, which is closed. The anchor setting here is the shipped
+  50.0 and no arm moves it.
