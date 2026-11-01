@@ -25266,3 +25266,46 @@ for: this turn-taking only works when the sensing filter is at or below its ship
 that setting is near the edge of what the mechanism tolerates. The next candidate for the 180 ms is
 the membrane itself — and it is a better-shaped question, because it can be changed on one body
 part alone instead of everywhere at once.
+
+## Three stopwatches, none of them the one that's slow (2026-11-01)
+
+The creature's voice now has a rhythm generator — two groups of cells that take turns, which is
+how a jaw opens and closes. It has a clock law we trust: the time for one full turn is
+`3.56 × tau + 180 ms`, where `tau` is a constant we set. That law fits almost perfectly. But the
+180 ms at the end of it has no explanation, and a number with no explanation in a model you built
+yourself is embarrassing.
+
+There are only three time constants inside that loop. Yesterday I tested the first and it failed in
+the most useful way possible — I predicted the 180 ms would halve, and it went *up* instead. Today
+I tested the other two. Both are refused.
+
+One of them, the cells' recovery time after firing, turns out to be worth **half a millisecond** of
+the 180. The other, the time the cell membrane takes to charge, does something more interesting: it
+doesn't shift the law, it **tilts** it. Make the membrane slower and the slow rhythms get slower
+while the fast one gets *faster* — 468 ms down to 394 at one end, 1361 up to 1477 at the other. That
+isn't a delay being added. It's a gain being changed, which is a different kind of thing, and the
+test was built in advance to tell those two apart. It did.
+
+So the honest tally is a budget: of a 180 ms mystery, these two fields account for 0.5 ms. All three
+stopwatches in the loop are now eliminated.
+
+**Two things went wrong today that are worth more than the result.**
+
+The first: the thirty new test conditions I added were *hijacking yesterday's published answer*. They
+all happened to share two settings with the older test, and that older test identified its own
+conditions by exactly those two settings — so it quietly picked up the new ones instead and printed a
+different number than the one I'd committed hours earlier. It would have looked like yesterday's
+conclusion had changed its mind overnight. I caught it by testing my own consistency-checker against
+an old log before trusting it, a habit that came from a different check being wrong last week.
+
+The second: I'd written that all the test conditions shared an identical setup, which made their
+results comparable. The code never actually enforced that. When one condition quietly lost a data
+point, its answer shifted by 80 ms — not because anything had changed in the creature, but because
+the arithmetic had less to work with. Comparing the uncomparable, with a confident error bar on it.
+Both are now fixed and both are checked by machine rather than by my remembering.
+
+And one correction to myself, found before publishing: I'd written up the measuring instrument as the
+cheapest remaining suspect, with an argument for why it would produce exactly this kind of error.
+Then I read the code and the argument was wrong — the instrument measures the gap between beats, and
+that gap doesn't care about the setting I thought it did. Deleted and replaced with the real next
+suspect, which is how hard the rhythm is being driven in the first place.

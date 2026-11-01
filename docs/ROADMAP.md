@@ -2999,3 +2999,143 @@ re-prints unchanged at full length.
   structural, and the verdict branch says so itself rather than leaving it to this paragraph.
 * **Not** anything about `rate_fast_tau_ms`, which is closed. The anchor setting here is the shipped
   50.0 and no arm moves it.
+
+---
+
+## §33 — THE OFFSET IS NOT A LAG IN ANY OF THIS LOOP'S THREE TIME CONSTANTS (2026-11-01)
+
+59 arms, 12 reps, 1.2M ticks. `results/halfcenter-v78.log`, verify gated on all four keys with
+`ad96f882becbee92` unchanged. Pre-registered in §32, committed as `a694213` before the run.
+
+**The answer is negative on both axes, and for the first time it is quantitative.** `refractory_ms`
+accounts for **+0.5 ± 0.2 ms of the 179.8 ± 11.0 ms** this run fits at the shipped setting — 0.3%.
+`leak_tau_ms` refuses the additive form outright. With v77's closure of `rate_fast_tau_ms`, **all
+three time constants in the half-centre loop are now closed as the source of the 180 ms.**
+
+### THE REFRACTORY AXIS — A CLEAN MEASUREMENT, AND IT SAYS NO
+
+| `refractory_ms` | 3 (shipped) | 12 | 22 | 35 |
+|---|---|---|---|---|
+| slope on `tau_a` | 3.560 ± 0.048 | 3.572 ± 0.036 | 3.577 ± 0.027 | 3.572 ± 0.019 |
+| intercept | 179.8 ± 11.0 | 179.6 ± 8.2 | 181.2 ± 6.3 | 185.4 ± 4.3 |
+| R² | 0.99963 | 0.99980 | 0.99988 | 0.99994 |
+| live arms | 4 | 4 | 4 | 4 |
+
+All four taus live at all four settings, so the balanced design equalled each setting's own fit and
+the correction cost nothing. **Slope invariance holds** at +0.2/+0.3/+0.2 SE. **The operating point
+held** — rate 4.91–4.94 Hz (1.01×), duty 0.57–0.62 (+8%), both inside their disclosure thresholds.
+
+**Coefficient +0.182 ± 0.054 ms per ms**, against the **+3.560 ± 0.048** a lag requires: they differ
+by **46.4 SE**. The pre-registered branch that fired is *"contributes, but not as a simple lag"* —
+3.4 SE from zero is just past the 3-SE line, so it did not take the "closed" branch. **See the
+threshold caveat below; it does not change the reading.** Over the shipped 3.0 ms the field is worth
+half a millisecond of a 180 ms offset.
+
+### THE MEMBRANE AXIS — IT ROTATES THE LAW RATHER THAN SHIFTING IT
+
+The raw periods say it without any fit:
+
+| | leak 20 | leak 35 | leak 50 | leak 65 |
+|---|---|---|---|---|
+| `tau_a` 83 | 468.3 | 394.2 | 393.3 | 395.8 | **← falls 74 ms** |
+| `tau_a` 167 | 784.2 | 797.5 | 815.0 | 830.8 | |
+| `tau_a` 250 | 1070.8 | 1100.0 | 1130.0 | 1153.3 | |
+| `tau_a` 333 | 1361.2 | 1406.7 | 1441.7 | 1476.7 | **← rises 115 ms** |
+
+A slower membrane makes the **slow** arms slower and the **fast** arm faster. That is a rotation
+about a pivot, not an additive shift, and the slope on `tau_a` duly climbs monotonically —
+**3.476 → 3.670 → 3.775 → 3.891**, +11.9% across the range, on the common three taus. The
+pre-registered branch **refused the axis as a sum of lags** and excluded it from the budget by name
+rather than scoring its coefficient.
+
+**This is exactly the discriminator §32 committed, firing on the axis it was predicted for.** The
+membrane is a lag *and* an inverse gain; a gain change scales the whole relaxation cycle, so it moves
+the coefficient on `tau_a`, while a lag adds and moves the intercept alone. The refractory period is
+dead time and did not move the slope. The two axes dissociate along precisely that line. And the
+membrane's intercept moved **down** (−19.0 / −17.9 / −22.0 ms) — the wrong sign for a lag regardless.
+
+**The anchor cross-check DIFFERED, and it was right to.** `lk35t083` missed the ±2% consistency gate
+at −2.3%, so the membrane axis's common set is {167, 250, 333} and its balanced anchor refits to
+203.0 ± 3.4 against the refractory axis's four-tau 179.8 ± 11.0. The two `FIT (own)` lines are
+identical (3.560 ± 0.048, 179.8 ± 11.0), which is what the check asks for. **Consequence:** the two
+axes' coefficients rest on different designs — each internally balanced — so they are individually
+valid and must not be compared with each other quantitatively.
+
+### THE BUDGET
+
+```
+refractory_ms  +0.182 +/- 0.054 ms per ms  x   3.0 ms shipped  =    +0.5 +/- 0.2 ms
+leak_tau_ms    NOT COUNTED: the tau_a slope moved: not an additive lag at all
+               (measured -0.433 +/- 0.197 ms per ms)
+accounted      +0.5 +/- 0.2 ms of the 179.8 +/- 11.0 ms (0%), leaving
+               +179.2 +/- 11.0 ms with no account on 1 of 2 axes.
+```
+
+### WHERE MY OWN PRE-REGISTRATION WAS WRONG
+
+**The 3-SE threshold was mis-specified for a four-point fit.** A fit on four settings has 2 dof,
+where the two-tailed 5% critical t is **4.303**, not 3. So the refractory coefficient at 3.4 SE is
+p ≈ 0.08 — *not* significant at 5%, and the branch that called it "resolvably non-zero" overstates
+what four points support. The slope-invariance SEs on the membrane axis are worse: three-point fits
+carry 1 dof, where the critical t is **12.706**, so of the three slope contrasts (9.9, 17.1, 31.0
+SE) only two clear it, and a `± 0.003` SE on three near-collinear points is not a trustworthy
+scale at all.
+
+**Neither correction changes a conclusion, and I am not relabelling either verdict** — the
+thresholds were committed before the run and moving them afterwards is the thing this project keeps
+refusing. What carries both readings is magnitude, which is threshold-free: half a millisecond of a
+180 ms offset, and a 74 ms fall against a 115 ms rise at opposite ends of the same axis. **The fix
+for the next run is a dof-scaled t-threshold rather than a flat 3-SE z-rule.**
+
+### WHAT THE SMOKE GOT WRONG ABOUT THE FULL RUN, AND WHY DISCLOSING BEAT GATING
+
+* §32 recorded, from a 60k smoke, that the refractory axis moves the operating point — duty
+  0.47→0.36, rate 4.41→3.71 — and argued slope invariance was needed to separate that confound from
+  a lag. **At 1.2M the operating point holds** (1.01× on rate, +8% on duty). The drift was a
+  short-run artefact. Had I *gated* on it instead of disclosing it, I would have thrown away the one
+  clean axis in the run.
+* The smoke also showed leak 65's slope moving 3.1 SE, and §32 said that setting stays because
+  dropping an arm for producing an inconvenient verdict is the verdict-fitting this project
+  refuses. **At full length the slope moves at every membrane setting, monotonically.** That signal
+  was real and keeping the setting was right.
+* The balanced-design correction, which the smoke forced, **cost nothing on the refractory axis**
+  (4 of 4 taus common) and **was load-bearing on the membrane axis** (3 of 4, and it is what makes
+  the rotation visible as a slope series rather than as intercept noise).
+
+### WHERE THE 180 MS GOES NEXT
+
+Three time constants are closed: the rate filter (v77), the refractory period and the membrane
+(v78). The remaining structural candidates are **not** time constants of the loop:
+
+**1. The tonic drive, and this run is what promotes it.** The textbook form this file has cited
+since §28 (Shpiro/Curtu/Rinzel/Rubin) makes the period depend on the adaptation constant *and the
+input strength*: the intercept is the **escape time**, how long a released half takes to climb back
+to threshold, and that is set by the drive, not by `tau_a`. v78's own finding points the same way —
+the membrane, which is an inverse **gain**, rotated the law, while the refractory period, which is
+pure dead time, did essentially nothing. **The gain-like axes are where the dynamics live and the
+drive is the pure gain axis.** `halfcenter_drive` is already an `HCArm` field (1.40 shipped) and
+`drive200` already exists as a single arm, so this is four taus at two or three drives.
+
+*Checked against what is closed:* `hcdrive` closed the **(gain, drive) plane for the lesson/gesture
+trade** and says do not re-sweep it. That is a different measurement — and decisively, its archived
+log predates the crossing estimator by two DNA versions, so **it contains no period data at all.**
+The period-versus-drive relation has never been measured on the good instrument.
+
+**2. The vocal frame.** [[the frame is a body part]] explains five refusals by a resonant jaw at
+~4.5 Hz — a 222 ms period, the right order for a 180 ms offset, and the only candidate whose natural
+scale matches without tuning.
+
+**3. The estimator — and I had this argument backwards until I checked the code.** The draft of this
+section called the Schmitt band "the cheapest candidate", reasoning that a finite dead band adds a
+fixed traverse time per turn. **That is wrong.** The estimator takes **up-to-up** intervals
+(`experiments_milestones.cpp`, `state <= 0 && x > band` → `state >= 0 && x < -band`), and for a
+periodic signal whose amplitude exceeds the band the up-to-up spacing *is* the true period,
+independent of band width. The band delays each detection in phase and does not change the spacing
+between detections.
+
+This is the same phase argument that v77 found **true but beside the point** for the *controls* —
+and the reason it applies here is the reason it failed there: an arm has a genuine periodic signal
+and a control has none. So the estimator is probably innocent, which demotes this from a candidate
+to a **cheap confirmation**: sweep the 0.25 coefficient with no genome change, prediction that the
+intercept does *not* move. Worth one arm block to retire an instrument question that has shadowed
+four runs, and not worth a run of its own.

@@ -1,0 +1,249 @@
+=== BUILD 2026-11-01T17:25:37+01:00
+=== BUILD ok
+=== VERIFY 2026-11-01T17:25:37+01:00
+=== VERIFY exit=0 at 2026-11-01T17:42:09+01:00
+KEY1 verify PASS      PASS
+KEY2 pinned hash val  PASS
+KEY3 pinned hash line PASS
+KEY4 24 experiments   PASS
+
+=== RUN: halfcenter, 59 arms at the 1.2M minimum 2026-11-01T17:42:09+01:00
+=== exit=1 at 2026-11-01T19:40:54+01:00
+
+=== DETERMINISM 1/6 -- the 29 existing main-table rows
+    IDENTICAL -- appending thirty arms re-rolled nothing.
+=== DETERMINISM 2/6 -- the KILL SWITCH lines (VOID flags, per-setting baseline)
+    IDENTICAL -- the two new hc_ctrl_for clauses are no-ops on every pre-v78 arm.
+=== DETERMINISM 3/6 -- the REGIME PROFILE's first 29 rows (SE vs control)
+    IDENTICAL -- the SE-vs-control column is unchanged.
+=== DETERMINISM 4/6 -- the published linear clock law block
+    IDENTICAL -- the fit and both out-of-sample arms are unmoved.
+=== DETERMINISM 5/6 -- the v76 competition-strength block
+    IDENTICAL -- the k sweep is unmoved.
+=== DETERMINISM 6/6 -- the WHOLE v77 OFFSET-TEST block, verdict included
+    *** THE v77 VERDICT BLOCK MOVED -- void. Any difference here is numeric,
+    because the extraction is symmetric on both sides.
+42,44c42,61
+<       FEWER THAN THREE SETTINGS FITTED -- no coefficient and no error
+<       bar, so this run does not decide between A and B. Report the
+<       per-setting intercepts and nothing more.
+---
+>       THE NOISE FLOOR ITSELF rises +1.953 ms per ms of filter (R^2 0.9999)
+>       across the four controls: 164.2 / 115.8 / 212.5 / 262.5 ms. That is the
+>       trigger on a signal with no period in it, NOT the claim above --
+>       the two slopes are separate numbers and must be read as such.
+>       THE CONTROLS' OPERATING POINT  rate 4.94-4.94 Hz (1.00x) held,  duty 0.53-0.62 (+17%)  <- MOVED
+>       slope at rft  25  3.372 +/- 0.093 vs anchor 3.560 +/- 0.048  (-1.8 SE)
+>       CONTRAST rft  25 vs  50 -- the intercept changed by +47.8 +/- 24.0 ms
+>         model A predicted -89.0 ms  -> off by 5.7 SE  AND THE OPPOSITE SIGN
+>         model B predicted   +0.0 ms  -> off by 2.0 SE
+>         A IS REFUSED HERE, B SURVIVES. The change has the WRONG SIGN, so no coefficient
+>         rescues A. The filter is not the
+>         offset in the equal-weight form: moving the only other lag
+>         in the loop does not move the intercept the way a sum of
+>         lags must. B is NOT thereby established -- it is unrefuted
+>         at 2.0 SE, which is a weaker thing.
+>       THE DECIDING STATISTIC IS UNAVAILABLE -- only 2 of 4 settings
+>       were fitted, so there is no coefficient on rate_fast_tau_ms and
+>       no error bar for one. §30 named that coefficient the deciding
+>       statistic and it is not measured here. The per-setting contrasts
+>       above are what this run licenses, and a contrast is one point.
+
+=== THE THIRTY NEW ARMS, and their duty/rate gate against their OWN control
+  rr12t083    1.00  83    0.60  1.00  -0.761 +/- 0.001   2.71/ 5.51    6.23 +/- 0.58 0.58   10.30
+  rr12t167    1.00  167   0.60  1.00  -0.558 +/- 0.001   2.73/ 4.81   1363.78 +/- 313.15 0.58    6.38
+  rr12t250    1.00  250   0.60  1.00  -0.405 +/- 0.001   2.85/ 5.89   63.23 +/- 27.26 0.59    4.66
+  rr12t333    1.00  333   0.60  1.00  -0.309 +/- 0.001   2.33/ 4.44   1403.67 +/- 984.42 0.59    3.66
+  rr12ctrl    0.00  167   0.00  1.00  +0.348 +/- 0.010   2.48/ 4.34    3.81 +/- 0.47 0.59    4.94
+  rr22t083    1.00  83    0.60  1.00  -0.767 +/- 0.001   2.52/ 4.65   11.06 +/- 3.69 0.59   10.38
+  rr22t167    1.00  167   0.60  1.00  -0.567 +/- 0.001   2.73/ 3.94   914.34 +/- 316.07 0.60    6.38
+  rr22t250    1.00  250   0.60  1.00  -0.417 +/- 0.001   2.62/ 3.60   183.49 +/- 52.66 0.60    4.65
+  rr22t333    1.00  333   0.60  1.00  -0.323 +/- 0.001   2.38/ 5.08   907.35 +/- 588.05 0.60    3.65
+  rr22ctrl    0.00  167   0.00  1.00  +0.330 +/- 0.010   2.60/ 3.49    4.04 +/- 0.45 0.60    4.93
+  rr35t083    1.00  83    0.60  1.00  -0.762 +/- 0.001   2.60/ 5.38    6.77 +/- 1.79 0.61   10.31
+  rr35t167    1.00  167   0.60  1.00  -0.585 +/- 0.001   2.79/ 4.69   1066.90 +/- 293.21 0.62    6.37
+  rr35t250    1.00  250   0.60  1.00  -0.435 +/- 0.001   2.48/ 4.40   98.02 +/- 29.28 0.62    4.63
+  rr35t333    1.00  333   0.60  1.00  -0.340 +/- 0.001   2.58/ 5.15   199.64 +/- 71.24 0.62    3.64
+  rr35ctrl    0.00  167   0.00  1.00  +0.309 +/- 0.010   2.92/ 3.78    3.97 +/- 0.44 0.62    4.91
+  lk65t083    1.00  83    0.60  1.00  -0.766 +/- 0.002   1.96/ 4.68   142.36 +/- 52.31 0.53   10.16
+  lk65t167    1.00  167   0.60  1.00  -0.487 +/- 0.001   1.88/ 4.88   37.56 +/- 10.20 0.54    6.01
+  lk65t250    1.00  250   0.60  1.00  -0.320 +/- 0.001   2.17/ 4.32   216.17 +/- 129.29 0.54    4.33
+  lk65t333    1.00  333   0.60  1.00  -0.247 +/- 0.000   2.46/ 4.32   227.56 +/- 64.65 0.53    3.39
+  lk65ctrl    0.00  167   0.00  1.00  +0.436 +/- 0.012   3.12/ 3.97    3.45 +/- 0.34 0.53    4.98
+  lk35t083    1.00  83    0.60  1.00  -0.750 +/- 0.001   2.10/ 4.48   23.16 +/- 5.47 0.56   10.29
+  lk35t167    1.00  167   0.60  1.00  -0.520 +/- 0.001   1.85/ 4.60   8197.23 +/- 2538.57 0.56    6.27
+  lk35t250    1.00  250   0.60  1.00  -0.363 +/- 0.000   2.48/ 4.67   697.98 +/- 324.24 0.56    4.54
+  lk35t333    1.00  333   0.60  1.00  -0.277 +/- 0.000   2.77/ 4.10   91.10 +/- 28.72 0.56    3.56
+  lk35ctrl    0.00  167   0.00  1.00  +0.405 +/- 0.012   2.85/ 5.66    5.59 +/- 0.91 0.56    4.98
+  lk50t083    1.00  83    0.60  1.00  -0.765 +/- 0.001   2.62/ 4.00   147.43 +/- 86.19 0.54   10.22
+  lk50t167    1.00  167   0.60  1.00  -0.500 +/- 0.001   2.19/ 3.69   2959.61 +/- 2548.45 0.54    6.13
+  lk50t250    1.00  250   0.60  1.00  -0.337 +/- 0.001   2.96/ 5.01    7.77 +/- 1.77 0.55    4.43
+  lk50t333    1.00  333   0.60  1.00  -0.259 +/- 0.000   2.23/ 5.15   44.86 +/- 31.18 0.55    3.46
+  lk50ctrl    0.00  167   0.00  1.00  +0.427 +/- 0.012   2.48/ 4.20    3.87 +/- 0.71 0.55    5.00
+
+
+=== THE v78 BLOCK
+  v78 -- THE refractory_ms AXIS. The same four taus at four settings of
+  the vocal module's own refractory_ms; setting [0] = 3 is the SHIPPED
+  value and its four arms are the archived anchor block, not re-run.
+    model L  THIS FIELD IS A LAG IN THE LOOP   dIntercept/dField = the
+                                              coefficient on tau_a
+    model N  THIS FIELD IS NOT THE OFFSET      dIntercept/dField = 0
+
+    refractory_ms =   3 ms   (rate ceiling 333 Hz; the fastest arm runs ~10.8)
+      CONTROL ctrl140     duty 0.57  rate  4.94 Hz   FLOOR: sd 3.6166, 5515 turns, period   164.2 ms
+      tau  83  tau083      period   468.3 +/-   1.7 ms  ( 2312 turns, x median +0.3% of record, sd  4.2x floor)
+      tau 167  tau167      period   784.2 +/-   1.5 ms  ( 1377 turns, x median -0.0% of record, sd  3.3x floor)
+      tau 250  tau250      period  1070.8 +/-   1.9 ms  ( 1008 turns, x median -0.1% of record, sd  2.9x floor)
+      tau 333  tau333      period  1361.2 +/-   2.3 ms  (  791 turns, x median -0.3% of record, sd  2.6x floor)
+      FIT (own)  slope 3.560 +/- 0.048  intercept   179.8 +/-  11.0 ms  R^2 0.99963  (4 live)
+
+    refractory_ms =  12 ms   (rate ceiling 83 Hz; the fastest arm runs ~10.8)
+      CONTROL rr12ctrl    duty 0.59  rate  4.94 Hz   FLOOR: sd 3.4739, 5818 turns, period   154.2 ms
+      tau  83  rr12t083    period   470.8 +/-   1.9 ms  ( 2285 turns, x median -0.4% of record, sd  4.4x floor)
+      tau 167  rr12t167    period   783.3 +/-   1.4 ms  ( 1378 turns, x median -0.1% of record, sd  3.4x floor)
+      tau 250  rr12t250    period  1073.3 +/-   1.9 ms  ( 1007 turns, x median +0.0% of record, sd  2.9x floor)
+      tau 333  rr12t333    period  1365.8 +/-   1.9 ms  (  790 turns, x median -0.1% of record, sd  2.6x floor)
+      FIT (own)  slope 3.572 +/- 0.036  intercept   179.6 +/-   8.2 ms  R^2 0.99980  (4 live)
+
+    refractory_ms =  22 ms   (rate ceiling 45 Hz; the fastest arm runs ~10.8)
+      CONTROL rr22ctrl    duty 0.60  rate  4.93 Hz   FLOOR: sd 3.3377, 6183 turns, period   145.0 ms
+      tau  83  rr22t083    period   474.2 +/-   1.9 ms  ( 2254 turns, x median -1.0% of record, sd  4.7x floor)
+      tau 167  rr22t167    period   784.2 +/-   1.5 ms  ( 1376 turns, x median -0.1% of record, sd  3.6x floor)
+      tau 250  rr22t250    period  1075.8 +/-   1.5 ms  ( 1004 turns, x median +0.0% of record, sd  3.0x floor)
+      tau 333  rr22t333    period  1370.0 +/-   2.1 ms  (  788 turns, x median -0.0% of record, sd  2.7x floor)
+      FIT (own)  slope 3.577 +/- 0.027  intercept   181.2 +/-   6.3 ms  R^2 0.99988  (4 live)
+
+    refractory_ms =  35 ms   (rate ceiling 29 Hz; the fastest arm runs ~10.8)
+      CONTROL rr35ctrl    duty 0.62  rate  4.91 Hz   FLOOR: sd 3.1974, 6665 turns, period   131.7 ms
+      tau  83  rr35t083    period   479.2 +/-   1.9 ms  ( 2239 turns, x median -0.7% of record, sd  4.8x floor)
+      tau 167  rr35t167    period   785.8 +/-   1.5 ms  ( 1375 turns, x median +0.0% of record, sd  3.7x floor)
+      tau 250  rr35t250    period  1078.3 +/-   1.7 ms  ( 1002 turns, x median -0.0% of record, sd  3.1x floor)
+      tau 333  rr35t333    period  1373.3 +/-   1.9 ms  (  786 turns, x median -0.1% of record, sd  2.7x floor)
+      FIT (own)  slope 3.572 +/- 0.019  intercept   185.4 +/-   4.3 ms  R^2 0.99994  (4 live)
+
+      THE BALANCED DESIGN: taus live at ALL 4 fitted settings = 83 167 250 333  (4 of 4)
+        refractory_ms   3  BALANCED  slope 3.560 +/- 0.048  intercept   179.8 +/-  11.0 ms  R^2 0.99963   (= its own fit)
+        refractory_ms  12  BALANCED  slope 3.572 +/- 0.036  intercept   179.6 +/-   8.2 ms  R^2 0.99980   (= its own fit)
+        refractory_ms  22  BALANCED  slope 3.577 +/- 0.027  intercept   181.2 +/-   6.3 ms  R^2 0.99988   (= its own fit)
+        refractory_ms  35  BALANCED  slope 3.572 +/- 0.019  intercept   185.4 +/-   4.3 ms  R^2 0.99994   (= its own fit)
+
+      THE NOISE FLOOR ITSELF rises -1.006 ms per ms of refractory_ms (R^2 0.9990)
+      across the four controls: 164.2 / 154.2 / 145.0 / 131.7 ms. Printed
+      beside the coefficient below, never subtracted from it.
+      THE CONTROLS' OPERATING POINT  rate 4.91-4.94 Hz (1.01x) held,  duty 0.57-0.62 (+8%) held
+      slope at refractory_ms  12  3.572 +/- 0.036 vs anchor 3.560 +/- 0.048  (+0.2 SE)
+      slope at refractory_ms  22  3.577 +/- 0.027 vs anchor 3.560 +/- 0.048  (+0.3 SE)
+      slope at refractory_ms  35  3.572 +/- 0.019 vs anchor 3.560 +/- 0.048  (+0.2 SE)
+      CONTRAST refractory_ms  12 vs   3 -- intercept changed -0.2 +/- 13.8 ms;  L said +32.0 (2.3 SE off, WRONG SIGN), N said +0.0 (0.0 SE off)
+      CONTRAST refractory_ms  22 vs   3 -- intercept changed +1.5 +/- 12.7 ms;  L said +67.6 (5.2 SE off), N said +0.0 (0.1 SE off)
+      CONTRAST refractory_ms  35 vs   3 -- intercept changed +5.7 +/- 11.9 ms;  L said +113.9 (9.1 SE off), N said +0.0 (0.5 SE off)
+
+      THE COEFFICIENT -- the BALANCED intercept against refractory_ms, on 4 of 4
+      settings and 4 of 4 taus
+        refractory_ms   3  fitted   intercept   179.8 +/-  11.0 ms  (4 live of the 4 common)
+        refractory_ms  12  fitted   intercept   179.6 +/-   8.2 ms  (4 live of the 4 common)
+        refractory_ms  22  fitted   intercept   181.2 +/-   6.3 ms  (4 live of the 4 common)
+        refractory_ms  35  fitted   intercept   185.4 +/-   4.3 ms  (4 live of the 4 common)
+        intercept = +0.182 * refractory_ms +178.2 ms,  R^2 0.84893
+        the remainder at refractory_ms = 0   +178.2 +/- 1.2 ms -- the offset this
+        field does not reach, which is the budget's subject below
+        coefficient on refractory_ms +0.182 +/- 0.054   (vs zero 3.4 SE)
+        coefficient on tau_a         +3.560 +/- 0.048   (L requires these
+        two to agree; they differ by -3.378 +/- 0.073 = 46.4 SE)
+        CONTRIBUTES, BUT NOT AS A SIMPLE LAG. The coefficient is
+        +0.182 +/- 0.054, resolvably non-zero (3.4 SE) and resolvably
+        different from the +3.560 a lag requires (46.4 SE). The field
+        reaches the intercept; the equal-weight form is refused.
+
+  v78 -- THE leak_tau_ms AXIS. The same four taus at four settings of
+  the vocal module's own leak_tau_ms; setting [0] = 20 is the SHIPPED
+  value and its four arms are the archived anchor block, not re-run.
+    model L  THIS FIELD IS A LAG IN THE LOOP   dIntercept/dField = the
+                                              coefficient on tau_a
+    model N  THIS FIELD IS NOT THE OFFSET      dIntercept/dField = 0
+
+    leak_tau_ms =  20 ms   (effective drive x1.00 vs the anchor, threshold unchanged)
+      CONTROL ctrl140     duty 0.57  rate  4.94 Hz   FLOOR: sd 3.6166, 5515 turns, period   164.2 ms
+      tau  83  tau083      period   468.3 +/-   1.7 ms  ( 2312 turns, x median +0.3% of record, sd  4.2x floor)
+      tau 167  tau167      period   784.2 +/-   1.5 ms  ( 1377 turns, x median -0.0% of record, sd  3.3x floor)
+      tau 250  tau250      period  1070.8 +/-   1.9 ms  ( 1008 turns, x median -0.1% of record, sd  2.9x floor)
+      tau 333  tau333      period  1361.2 +/-   2.3 ms  (  791 turns, x median -0.3% of record, sd  2.6x floor)
+      FIT (own)  slope 3.560 +/- 0.048  intercept   179.8 +/-  11.0 ms  R^2 0.99963  (4 live)
+
+    leak_tau_ms =  35 ms   (effective drive x1.75 vs the anchor, threshold unchanged)
+      CONTROL lk35ctrl    duty 0.56  rate  4.98 Hz   FLOOR: sd 3.7309, 5241 turns, period   171.7 ms
+      tau  83  lk35t083    period   394.2 +/-   1.5 ms  ( 2677 turns, x median -2.3% of record, sd  3.9x floor)  INCONSISTENT  <- DROPPED
+      tau 167  lk35t167    period   797.5 +/-   1.3 ms  ( 1356 turns, x median +0.1% of record, sd  3.1x floor)
+      tau 250  lk35t250    period  1100.0 +/-   2.1 ms  (  982 turns, x median +0.0% of record, sd  2.7x floor)
+      tau 333  lk35t333    period  1406.7 +/-   2.6 ms  (  768 turns, x median +0.0% of record, sd  2.5x floor)
+      FIT (own)  slope 3.670 +/- 0.014  intercept   184.0 +/-   3.8 ms  R^2 0.99998  (3 live)
+
+    leak_tau_ms =  50 ms   (effective drive x2.50 vs the anchor, threshold unchanged)
+      CONTROL lk50ctrl    duty 0.55  rate  5.00 Hz   FLOOR: sd 3.8606, 4985 turns, period   183.3 ms
+      tau  83  lk50t083    period   393.3 +/-   1.4 ms  ( 2730 turns, x median -0.6% of record, sd  3.8x floor)
+      tau 167  lk50t167    period   815.0 +/-   1.5 ms  ( 1326 turns, x median +0.1% of record, sd  2.9x floor)
+      tau 250  lk50t250    period  1130.0 +/-   2.1 ms  (  957 turns, x median +0.1% of record, sd  2.6x floor)
+      tau 333  lk50t333    period  1441.7 +/-   2.4 ms  (  748 turns, x median -0.1% of record, sd  2.3x floor)
+      FIT (own)  slope 4.155 +/- 0.218  intercept    79.8 +/-  49.7 ms  R^2 0.99453  (4 live)
+
+    leak_tau_ms =  65 ms   (effective drive x3.25 vs the anchor, threshold unchanged)
+      CONTROL lk65ctrl    duty 0.53  rate  4.98 Hz   FLOOR: sd 4.0167, 4708 turns, period   195.0 ms
+      tau  83  lk65t083    period   395.8 +/-   1.5 ms  ( 2714 turns, x median -0.5% of record, sd  3.6x floor)
+      tau 167  lk65t167    period   830.8 +/-   1.9 ms  ( 1299 turns, x median -0.1% of record, sd  2.8x floor)
+      tau 250  lk65t250    period  1153.3 +/-   2.2 ms  (  935 turns, x median -0.2% of record, sd  2.5x floor)
+      tau 333  lk65t333    period  1476.7 +/-   3.1 ms  (  731 turns, x median +0.0% of record, sd  2.2x floor)
+      FIT (own)  slope 4.281 +/- 0.224  intercept    72.7 +/-  51.1 ms  R^2 0.99456  (4 live)
+
+      THE BALANCED DESIGN: taus live at ALL 4 fitted settings = 167 250 333  (3 of 4)
+        leak_tau_ms    20  BALANCED  slope 3.476 +/- 0.013  intercept   203.0 +/-   3.4 ms  R^2 0.99999   <- REFITTED
+        leak_tau_ms    35  BALANCED  slope 3.670 +/- 0.014  intercept   184.0 +/-   3.8 ms  R^2 0.99998   (= its own fit)
+        leak_tau_ms    50  BALANCED  slope 3.775 +/- 0.012  intercept   185.1 +/-   3.0 ms  R^2 0.99999   <- REFITTED
+        leak_tau_ms    65  BALANCED  slope 3.891 +/- 0.003  intercept   181.0 +/-   0.8 ms  R^2 1.00000   <- REFITTED
+
+      ANCHOR CROSS-CHECK  this axis's setting [0] balanced fit DIFFERS FROM
+      the other axis's: slope 3.476 vs 3.560, intercept 203.0 vs 179.8.  Both axes resolve the
+      SAME four anchor arms, so a difference here can only be the balanced
+      design: one axis lost a tau elsewhere and refitted the anchor without
+      it. Compare the two OWN fits above -- THOSE must be identical.
+
+      THE NOISE FLOOR ITSELF rises +0.694 ms per ms of leak_tau_ms (R^2 0.9905)
+      across the four controls: 164.2 / 171.7 / 183.3 / 195.0 ms. Printed
+      beside the coefficient below, never subtracted from it.
+      THE CONTROLS' OPERATING POINT  rate 4.94-5.00 Hz (1.01x) held,  duty 0.53-0.57 (+7%) held
+      slope at leak_tau_ms  35  3.670 +/- 0.014 vs anchor 3.476 +/- 0.013  (+9.9 SE)   <- MOVED
+      slope at leak_tau_ms  50  3.775 +/- 0.012 vs anchor 3.476 +/- 0.013  (+17.1 SE)   <- MOVED
+      slope at leak_tau_ms  65  3.891 +/- 0.003 vs anchor 3.476 +/- 0.013  (+31.0 SE)   <- MOVED
+      CONTRAST leak_tau_ms  35 vs  20 -- intercept changed -19.0 +/- 5.1 ms;  L said +52.1 (14.1 SE off, WRONG SIGN), N said +0.0 (3.8 SE off)
+      CONTRAST leak_tau_ms  50 vs  20 -- intercept changed -17.9 +/- 4.5 ms;  L said +104.3 (27.0 SE off, WRONG SIGN), N said +0.0 (4.0 SE off)
+      CONTRAST leak_tau_ms  65 vs  20 -- intercept changed -22.0 +/- 3.5 ms;  L said +156.4 (51.6 SE off, WRONG SIGN), N said +0.0 (6.4 SE off)
+
+      THE COEFFICIENT -- the BALANCED intercept against leak_tau_ms, on 4 of 4
+      settings and 3 of 4 taus
+        leak_tau_ms    20  fitted   intercept   203.0 +/-   3.4 ms  (4 live of the 3 common)
+        leak_tau_ms    35  fitted   intercept   184.0 +/-   3.8 ms  (3 live of the 3 common)
+        leak_tau_ms    50  fitted   intercept   185.1 +/-   3.0 ms  (4 live of the 3 common)
+        leak_tau_ms    65  fitted   intercept   181.0 +/-   0.8 ms  (4 live of the 3 common)
+        intercept = -0.433 * leak_tau_ms +206.6 ms,  R^2 0.70606
+        the remainder at leak_tau_ms = 0   +206.6 +/- 9.0 ms -- the offset this
+        field does not reach, which is the budget's subject below
+        coefficient on leak_tau_ms   -0.433 +/- 0.197   (vs zero 2.2 SE)
+        coefficient on tau_a         +3.476 +/- 0.013   (L requires these
+        two to agree; they differ by -3.909 +/- 0.198 = 19.8 SE)
+        REFUSED AS A SUM OF LAGS. The coefficient on tau_a is not
+        invariant across settings of leak_tau_ms, so the period is not a
+        function of (tau_a + leak_tau_ms) however the intercepts fell. This
+        field interacts with tau_a rather than adding to it, which is
+        a different mechanism than the one measured here.
+
+  v78 -- THE BUDGET. 179.8 / 3.560 = 50.5 ms of effective lag has to
+  come from somewhere. These two fields ship at 3.0 and 20.0 ms, so even
+  at the full lag coefficient they cannot be all of it, and this line is
+  what they measurably ARE.
+    refractory_ms  +0.182 +/- 0.054 ms per ms  x   3.0 ms shipped  =    +0.5 +/- 0.2 ms   <- reaches the intercept, but not as a simple lag
+    leak_tau_ms    NOT COUNTED: the tau_a slope moved: not an additive lag at all
+                   (measured -0.433 +/- 0.197 ms per ms)
+    accounted      +0.5 +/- 0.2 ms of the 179.8 +/- 11.0 ms this run
+                   fits at the shipped setting (0%), leaving
+                   +179.2 +/- 11.0 ms with no account on 1 of 2 axes.
+
