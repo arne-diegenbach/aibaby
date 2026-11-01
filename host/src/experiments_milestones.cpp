@@ -21744,10 +21744,121 @@ bool run_halfcenter(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
         std::printf("      rft %3.0f  %s  intercept %7.1f +/- %5.1f ms  on %u live arms\n",
                     double(kRftSet[s]), fit_ok[s] ? "fitted" : "REFUSED",
                     fit_b[s], fit_be[s], fit_n[s]);
+      // EVERYTHING FROM HERE TO THE COEFFICIENT FIT PRINTS UNCONDITIONALLY, and the first
+      // version of this block had it all inside the `n >= 3` branch. That was the §29
+      // mistake a fifth time: §30 pre-registered a PER-SETTING contrast table (rft 25 ->
+      // A says 89.0, B says 179.8) and said in as many words that "this contrast can
+      // actually choose", and then the code evaluated only the four-point coefficient and
+      // printed "report the per-setting intercepts and nothing more" when two settings
+      // refused themselves -- withholding a committed test that one fitted setting is
+      // enough to run, along with the floor and operating-point disclosures that bound it.
+      // A pre-registration the code does not branch on is not a pre-registration.
+      {
+        // THE FLOOR, DISCLOSED AND NOT VETOED ON. The controls' reported periods track the
+        // filter because a trigger given a signal with no period in it rides noise, whose
+        // autocorrelation time is the filter's -- the instrument working on an empty
+        // input, not failing on a full one. It is printed beside the slope being claimed
+        // so a reader can see they are different numbers.
+        double fx = 0.0, fy = 0.0;
+        for (uint32_t s = 0; s < 4; ++s) { fx += double(kRftSet[s]); fy += m_cp[ctl_of[s]]; }
+        fx /= 4.0; fy /= 4.0;
+        double fxy = 0.0, fxx = 0.0, fyy = 0.0;
+        for (uint32_t s = 0; s < 4; ++s) {
+          const double dx = double(kRftSet[s]) - fx, dy = m_cp[ctl_of[s]] - fy;
+          fxy += dx * dy; fxx += dx * dx; fyy += dy * dy;
+        }
+        const double fs = fxx > 0.0 ? fxy / fxx : 0.0;
+        const double fr2 = (fxx > 0.0 && fyy > 0.0) ? (fxy * fxy) / (fxx * fyy) : 0.0;
+        std::printf("      THE NOISE FLOOR ITSELF rises %+.3f ms per ms of filter (R^2 %.4f)\n"
+                    "      across the four controls: %.1f / %.1f / %.1f / %.1f ms. That is the\n"
+                    "      trigger on a signal with no period in it, NOT the claim above --\n"
+                    "      the two slopes are separate numbers and must be read as such.\n",
+                    fs, fr2, m_cp[ctl_of[0]], m_cp[ctl_of[1]], m_cp[ctl_of[2]],
+                    m_cp[ctl_of[3]]);
+        // THE OPERATING POINT, ON BOTH AXES. v1 of this checked the RATE only, and the
+        // rate is held by homeostasis so it was always going to pass -- it would have
+        // certified a matched operating point while the duty drifted underneath. Both are
+        // printed. `rate_fast_tau_ms` is a shared constant and this is what it does with
+        // no competition present at all.
+        double rlo = 1e9, rhi = -1e9, dlo = 1e9, dhi = -1e9;
+        for (uint32_t s = 0; s < 4; ++s) {
+          const double r = m_rt[ctl_of[s]], d = m_du[ctl_of[s]];
+          if (r < rlo) rlo = r;
+          if (r > rhi) rhi = r;
+          if (d < dlo) dlo = d;
+          if (d > dhi) dhi = d;
+        }
+        std::printf("      THE CONTROLS' OPERATING POINT  rate %.2f-%.2f Hz (%.2fx)%s,"
+                    "  duty %.2f-%.2f (%+.0f%%)%s\n",
+                    rlo, rhi, rlo > 0.0 ? rhi / rlo : 0.0,
+                    (rlo > 0.0 && rhi / rlo > 1.25) ? " MOVED" : " held",
+                    dlo, dhi, dlo > 0.0 ? 100.0 * (dhi - dlo) / dlo : 0.0,
+                    (dlo > 0.0 && (dhi - dlo) / dlo > 0.10) ? "  <- MOVED" : " held");
+      }
+      // SLOPE INVARIANCE, the necessary condition. A sum of lags cannot change the
+      // coefficient on tau_a, so a moving slope refuses the additive form whatever the
+      // intercepts do -- and if the slope HOLDS, a failure of the intercepts to move is
+      // about the intercepts and not about a broken form.
+      bool slope_held = true;
+      if (fit_ok[0]) {
+        for (uint32_t s = 1; s < 4; ++s) {
+          if (!fit_ok[s]) continue;
+          const double se = std::sqrt(fit_ae[s] * fit_ae[s] + fit_ae[0] * fit_ae[0]);
+          const double t = se > 0.0 ? (fit_a[s] - fit_a[0]) / se : 0.0;
+          std::printf("      slope at rft %3.0f  %.3f +/- %.3f vs anchor %.3f +/- %.3f"
+                      "  (%+.1f SE)%s\n", double(kRftSet[s]), fit_a[s], fit_ae[s],
+                      fit_a[0], fit_ae[0], t, std::fabs(t) >= 3.0 ? "   <- MOVED" : "");
+          if (std::fabs(t) >= 3.0) slope_held = false;
+        }
+      }
+      // THE PER-SETTING CONTRAST, which is what §30 committed and what one fitted setting
+      // is enough to run. Stated as the CHANGE in the intercept from the anchor, so it is
+      // entirely within this run and does not lean on the archived 179.8 as a fixed truth:
+      // model A predicts the change to be slope * (rft - rft_anchor), model B predicts
+      // zero. A change of the WRONG SIGN is the strongest outcome available, because no
+      // choice of coefficient rescues a model whose prediction points the other way.
+      if (fit_ok[0]) {
+        for (uint32_t s = 1; s < 4; ++s) {
+          if (!fit_ok[s]) continue;
+          const double db = fit_b[s] - fit_b[0];
+          const double dse = std::sqrt(fit_be[s] * fit_be[s] + fit_be[0] * fit_be[0]);
+          const double pa = fit_a[0] * (double(kRftSet[s]) - double(kRftSet[0]));
+          const double ta = dse > 0.0 ? (db - pa) / dse : 0.0;
+          const double tb = dse > 0.0 ? db / dse : 0.0;
+          const bool wrong_sign = (pa > 0.0 && db < 0.0) || (pa < 0.0 && db > 0.0);
+          std::printf("\n      CONTRAST rft %3.0f vs %3.0f -- the intercept changed by"
+                      " %+.1f +/- %.1f ms\n", double(kRftSet[s]), double(kRftSet[0]),
+                      db, dse);
+          std::printf("        model A predicted %+.1f ms  -> off by %.1f SE%s\n", pa,
+                      std::fabs(ta), wrong_sign ? "  AND THE OPPOSITE SIGN" : "");
+          std::printf("        model B predicted   +0.0 ms  -> off by %.1f SE\n",
+                      std::fabs(tb));
+          if (std::fabs(ta) >= 3.0 && std::fabs(tb) < 3.0) {
+            std::printf("        A IS REFUSED HERE, B SURVIVES.%s The filter is not the\n"
+                        "        offset in the equal-weight form: moving the only other lag\n"
+                        "        in the loop does not move the intercept the way a sum of\n"
+                        "        lags must. B is NOT thereby established -- it is unrefuted\n"
+                        "        at %.1f SE, which is a weaker thing.\n",
+                        wrong_sign ? " The change has the WRONG SIGN, so no coefficient\n"
+                                     "        rescues A." : "", std::fabs(tb));
+          } else if (std::fabs(tb) >= 3.0 && std::fabs(ta) < 3.0) {
+            std::printf("        B IS REFUSED HERE, A SURVIVES. The intercept moved with the\n"
+                        "        filter by the amount a sum of two cascaded lags requires.\n");
+          } else if (std::fabs(ta) < 3.0 && std::fabs(tb) < 3.0) {
+            std::printf("        NOT SEPARATED at this setting -- both models sit inside 3\n"
+                        "        SE of the measured change, so it chooses neither.\n");
+          } else {
+            std::printf("        BOTH REFUSED at this setting. The intercept moved, but not\n"
+                        "        by what A requires, so neither candidate describes it.\n");
+          }
+        }
+      }
       if (n < 3) {
-        std::printf("      FEWER THAN THREE SETTINGS FITTED -- no coefficient and no error\n"
-                    "      bar, so this run does not decide between A and B. Report the\n"
-                    "      per-setting intercepts and nothing more.\n");
+        std::printf("\n      THE DECIDING STATISTIC IS UNAVAILABLE -- only %u of 4 settings\n"
+                    "      were fitted, so there is no coefficient on rate_fast_tau_ms and\n"
+                    "      no error bar for one. §30 named that coefficient the deciding\n"
+                    "      statistic and it is not measured here. The per-setting contrasts\n"
+                    "      above are what this run licenses, and a contrast is one point.\n", n);
       } else {
         double mx = 0.0, my = 0.0;
         for (uint32_t i = 0; i < n; ++i) { mx += x[i]; my += y[i]; }
@@ -21779,57 +21890,8 @@ bool run_halfcenter(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
         std::printf("      difference %+.3f +/- %.3f (%.1f SE);  c vs zero %.1f SE;"
                     "  residual offset %+.1f +/- %.1f ms (%.1f SE)\n",
                     c - fit_a[0], dse, tc, t0, d, de, td);
-        // SLOPE INVARIANCE IS NECESSARY. A sum of lags cannot change the coefficient on
-        // tau_a, so a moving slope refutes the additive form whatever the intercepts do.
-        bool slope_held = true;
-        for (uint32_t s = 1; s < 4; ++s) {
-          if (!fit_ok[s]) continue;
-          const double se = std::sqrt(fit_ae[s] * fit_ae[s] + fit_ae[0] * fit_ae[0]);
-          const double t = se > 0.0 ? (fit_a[s] - fit_a[0]) / se : 0.0;
-          std::printf("      slope at rft %3.0f  %.3f vs anchor %.3f  (%+.1f SE)%s\n",
-                      double(kRftSet[s]), fit_a[s], fit_a[0], t,
-                      std::fabs(t) >= 3.0 ? "   <- MOVED" : "");
-          if (std::fabs(t) >= 3.0) slope_held = false;
-        }
-        // ALSO FREE, AND IT GATES EVERYTHING: did the filter move the operating point by
-        // itself? If the controls' own firing rates drift across settings then the arms
-        // above them were not compared at a matched operating point, which is the §27
-        // failure this project paid four weeks for.
-        double ctl_lo = 1e9, ctl_hi = -1e9;
-        for (uint32_t s = 0; s < 4; ++s) {
-          const double r = m_rt[ctl_of[s]];
-          if (r < ctl_lo) ctl_lo = r;
-          if (r > ctl_hi) ctl_hi = r;
-        }
-        const double ctl_spread = ctl_lo > 0.0 ? ctl_hi / ctl_lo : 0.0;
-        std::printf("      CONTROL RATES across the four settings span %.2f-%.2f Hz "
-                    "(%.2fx)%s\n", ctl_lo, ctl_hi, ctl_spread,
-                    ctl_spread > 1.25 ? "   <- THE OPERATING POINT MOVED" : "");
-        // THE FLOOR, REPORTED AND NOT VETOED ON. The controls' reported periods track the
-        // filter -- measured at 90 + 2.0 * rft in the smoke -- because a trigger given a
-        // signal with no period in it rides the noise, whose autocorrelation time is the
-        // filter's. That is the instrument behaving correctly on an empty input, so it
-        // cannot be read as the instrument failing on a full one. The first version of
-        // this block did read it that way and would have printed NO VERDICT over a working
-        // measurement; the floor is handled per arm by the SNR and 2x gates above, and
-        // what belongs here is the DISCLOSURE, so the floor's own slope is printed beside
-        // the slope being claimed and a reader can see they are different numbers.
-        {
-          double fx = 0.0, fy = 0.0;
-          for (uint32_t s = 0; s < 4; ++s) { fx += double(kRftSet[s]); fy += m_cp[ctl_of[s]]; }
-          fx /= 4.0; fy /= 4.0;
-          double fxy = 0.0, fxx = 0.0;
-          for (uint32_t s = 0; s < 4; ++s) {
-            const double dx = double(kRftSet[s]) - fx;
-            fxy += dx * (m_cp[ctl_of[s]] - fy); fxx += dx * dx;
-          }
-          const double fs = fxx > 0.0 ? fxy / fxx : 0.0;
-          std::printf("      THE NOISE FLOOR ITSELF rises %+.3f ms per ms of filter across\n"
-                      "      the four controls (%.1f / %.1f / %.1f / %.1f ms) -- the trigger's\n"
-                      "      behaviour on a signal with no period in it, and NOT the claim\n"
-                      "      above. The two slopes must be read as separate numbers.\n",
-                      fs, m_cp[ctl_of[0]], m_cp[ctl_of[1]], m_cp[ctl_of[2]], m_cp[ctl_of[3]]);
-        }
+        // The slope-invariance table and the floor and operating-point disclosures are
+        // printed ABOVE, unconditionally, so they exist whether or not this branch runs.
         if (!slope_held) {
           std::printf("      REFUSED AS A SUM OF LAGS. The coefficient on tau_a is not\n"
                       "      invariant across filter settings, so the period is not a\n"

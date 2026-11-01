@@ -2696,3 +2696,119 @@ but the **tau_a axis itself is unchanged**, so this run cannot revisit whether t
 live arms refuses **itself** and not the law, written as the code's branch structure rather than as
 prose beside it — §29's rule, earned when this file printed "THE LAW DOES NOT PREDICT" for an arm
 that never tested the law.
+
+## §31 — THE OFFSET IS NOT THE RATE FILTER. THE INTERCEPT MOVED THE WRONG WAY (2026-11-01)
+
+The §30 prediction is refused, and refused in the one manner that cannot be argued with: the
+intercept moved **in the opposite direction** to what a sum of cascaded lags requires.
+
+29 arms, 12 reps, 1.2M ticks. `results/halfcenter-v77.log`. Verify gated on all four keys with
+`ad96f882becbee92` unchanged.
+
+### THE ANCHOR REPRODUCED ITSELF EXACTLY, WHICH IS WHAT LICENSES THE REST
+
+At `rate_fast_tau_ms = 50` the four taus give **slope 3.560 ± 0.048, intercept 179.8 ± 11.0 ms,
+R² 0.99963** — the published fit to every decimal, re-derived by a binary carrying fifteen new
+arms. Three of the five determinism checks were byte-identical (the fourteen main-table rows, the
+kill-switch VOID flags, the regime profile's SE-vs-control column) and the v76 k-sweep block was
+too. The periods are 468.3 / 784.2 / 1070.8 / 1361.2 ms, unmoved.
+
+*Check 4 flagged and it was my script that was wrong, not the run.* It diffed the clock-law block
+against a log written by the **pre-fix** binary, so it caught the §29 verdict correction and the
+new consistency column — text I had deliberately changed. Every number in that block is identical
+(`60.0 ± 0.0`, `1986.7 ± 3.1`, `+1.4%`, 543 turns), and the fit and all four residual lines diff
+clean. The corrected verdict text is now in an archived log, which closes §29's loose end.
+
+### THE RESULT
+
+| | rft 50 (anchor) | rft 25 |
+|---|---|---|
+| slope on `tau_a` | 3.560 ± 0.048 | 3.372 ± 0.093 |
+| intercept | 179.8 ± 11.0 ms | **227.6 ± 21.3 ms** |
+| R² | 0.99963 | 0.99847 |
+| live arms | 4 of 4 | 4 of 4 |
+
+The intercept changed by **+47.8 ± 24.0 ms**. Model A — cascaded lags, `period = A·(tau_a + rft)` —
+required it to change by **−89.0 ms**. That is **5.7 SE away and the opposite sign**, and a
+wrong-signed prediction is not rescued by any choice of coefficient.
+
+**Slope invariance HOLDS** at −1.80 SE (3.372 ± 0.093 against 3.560 ± 0.048). This matters: it
+removes the escape that the additive form was broken and the test therefore meaningless. The
+coefficient on `tau_a` is the same at both settings; it is the **intercept specifically** that
+refuses to follow the filter.
+
+**Model B — the offset is elsewhere — is unrefuted at 2.0 SE, and that is all.** It is not
+established. An unrefuted null is a weaker thing than a confirmed model, and the +47.8 ms hints at
+a weak *negative* dependence that neither candidate predicts.
+
+**So `A·50 = 178.0` against `179.8 ± 11.0` was a coincidence.** That agreement is what the whole run
+was built on. It is worth saying plainly: a one-parameter model that lands 1.8 ms from a measured
+value, derived from reading the kernel rather than fitted, was still wrong.
+
+### THE DECIDING STATISTIC WAS NOT MEASURED, AND I AM NOT LOOSENING A GATE TO GET IT
+
+§30 named the coefficient of the intercept **on** the filter, fitted across four settings, as the
+deciding statistic. **Only two settings were fitted, so it does not exist in this run.**
+
+`rft 75` and `rft 100` each refused themselves with 2 live arms:
+
+* `rf75t083` (113.3 ms over 6615 turns, −30.6% consistency) and `rf100t083` (100.0 ms over 10239
+  turns, −5.2%) **collapsed** — the oscillation is gone where the filter approaches `tau_a`, which
+  the 40k smoke predicted and §30 recorded in advance.
+* `rf75t167` (+2.8%) and `rf100t250` (+2.3%) were dropped on the **±2% consistency gate alone**.
+
+**Loosening that gate to ±3% would have given three settings plus the anchor and therefore the
+deciding coefficient. I am not doing it.** The ±2% came from v76, where the anchor arms land within
+0.3%, and it was in the binary before this run. Relaxing a pre-registered gate because it blocks
+the statistic I wanted is the definition of fitting the verdict to the data, and this file already
+carries four entries about doing exactly that. The right repair is a longer record or more reps to
+make those two arms as regular as the others — not a wider band.
+
+### WHAT THE CONFOUND CHECKS SAID, INCLUDING THE ONE I NEARLY MISSED
+
+* **Firing rate held exactly.** All four controls sit at **4.94 Hz** — homeostasis pins it, so the
+  shared filter does not move the rate.
+* **Duty drifted, and my check would have missed it.** The controls go **0.53 → 0.57 → 0.60 → 0.62**
+  across rft 25 → 100, a +17% spread. My operating-point check tested the *rate only*, which was
+  always going to pass; it would have certified a matched operating point while the duty moved
+  underneath. Both axes are printed now. The two fitted settings differ by 0.04 in duty, which is
+  disclosed rather than dismissed.
+* **The noise floor is real, linear, and a different number.** The no-mechanism controls report
+  115.8 / 164.2 / 212.5 / 262.5 ms, i.e. `66.7 + 1.954·rft` at R² 0.9999. The claimed coefficient on
+  `tau_a` is 3.560 — a ratio of 1.82, so the signal periods are not the floor being re-measured.
+  Every live arm clears 2× its own setting's floor.
+
+### AN ARCHITECTURAL CONSTRAINT FELL OUT OF IT
+
+**The half-centre only works cleanly at `rate_fast_tau_ms ≤ 50`.** Above that the fastest fatigue
+arm collapses: the loop cannot resolve an adaptation faster than the filter that measures it. The
+shipped 50.0 sits near the top of the usable range, which is a constraint on the architecture and
+not just on this test — any future change to that filter has to re-check the gesture.
+
+### THE FIFTH TIME A PRE-REGISTRATION LIVED IN PROSE AND NOT IN A BRANCH
+
+§30 committed a per-setting contrast table and wrote that "this contrast can actually choose". The
+code evaluated only the four-point coefficient and, when two settings refused themselves, printed
+*"report the per-setting intercepts and nothing more"* — withholding a committed test that **one**
+fitted setting is enough to run, together with the floor and operating-point disclosures, because
+all of it sat inside the `n ≥ 3` branch. The contrast above was therefore computed by hand from the
+binary's own printed per-setting fits, against §30's table as committed in `21fa450` **before the
+run**. The branch now exists and prints unconditionally, so the next run on this instrument states
+its own verdict. **A pre-registration the code does not branch on is not a pre-registration.**
+
+No re-run was spent on this. Re-running would have had the arithmetic done by a binary written
+*after* the numbers were seen, which buys an arithmetic check and no integrity at all — the
+integrity is in §30's commit timestamp, and the arithmetic was verified independently instead.
+
+### WHERE THE 180 MS GOES NEXT
+
+`rate_fast_tau_ms` is **closed** as its source in the equal-weight cascaded form, and has no support
+in any form: the one usable test point moved the wrong way.
+
+The next candidate is better-shaped than this one was. **`leak_tau_ms` is a PER-MODULE field**
+(`dna/default.toml`, 20.0 on the vocal module) rather than a shared constant, so changing it on the
+vocal module alone carries none of the specificity burden that made §29 hold this run back. The
+membrane is also the physically obvious home for "the time for a released half to rise". Note
+179.8/3.560 = 50.5 ms of effective lag to account for, against a 20 ms membrane and a 3 ms
+refractory — so it is probably not a single field, and the test should be built to measure a
+coefficient rather than to confirm a coincidence. **That is the lesson this run actually paid for.**

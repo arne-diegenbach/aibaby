@@ -25219,3 +25219,50 @@ separated by any setting of this weight, so the sweep measures how strong the co
 which of the two terms matters. Separating them needs a third design — dividing by a slowly
 smoothed version of the creature's own rate, which tracks how fast it is going without tracking
 which half is currently winning. That one needs no new constants and is not built.
+
+## A prediction that was 1.8 ms from right, and still wrong (2026-11-01)
+
+The creature's two competing halves take turns, and the time one turn takes follows the creature's
+own fatigue constant with a fixed extra delay of about 180 milliseconds added on top. That 180 ms
+had no explanation. Reading the machinery turned up a candidate: the filter the halves use to sense
+each other's activity has its own delay, set to 50 ms, and it sits *inside* the loop rather than
+beside it. If the two delays simply add, then one number describes both, and that number predicts
+the extra delay should be 178 ms. We measured 179.8.
+
+A one-in-a-hundred agreement, derived rather than fitted, is exactly the sort of thing worth
+testing rather than admiring — so we halved the sensing filter to 25 ms. If the two delays add,
+the extra delay should have dropped to 89 ms.
+
+**It went up, to 228 ms.** Not merely the wrong size: the wrong direction. A model that says "halve
+this and the delay halves" cannot survive the delay rising, and no adjustment of the numbers
+rescues a prediction that points the other way. We also checked that the rest of the law held
+steady while this happened — it did — which rules out the convenient excuse that the whole shape
+was wrong and the test therefore meaningless. It was the 180 ms specifically that refused to move.
+
+So the agreement was a coincidence, and we are saying so rather than quietly dropping it.
+
+### Two things we refused to do
+
+The full version of this test needed four filter settings. Two of them fell apart: where the
+sensing filter gets as slow as the fatigue it is sensing, the turn-taking stops altogether, which
+is a real finding about the creature rather than a broken measurement. That left two settings
+instead of four, and the headline statistic we had committed to in advance was simply unavailable.
+
+Loosening one quality threshold from 2% to 3% would have handed it back. **We didn't**, and the
+reason is that the threshold was fixed before the run and relaxing it because it blocks the answer
+you wanted is how measurements become wishes. The honest repair is a longer recording, not a wider
+band.
+
+The second refusal: the comparison we *could* make was done by hand from the program's own printed
+output, rather than re-running for an hour so a program could print the conclusion. Rewriting the
+program after seeing the numbers and then letting it announce the verdict would look more rigorous
+and be worth nothing — the rigour lives in the prediction having been written down and committed
+first, which it was.
+
+### Where it leaves the creature
+
+One unexplained number, now with one fewer explanation, and a new constraint we didn't go looking
+for: this turn-taking only works when the sensing filter is at or below its shipped setting, so
+that setting is near the edge of what the mechanism tolerates. The next candidate for the 180 ms is
+the membrane itself — and it is a better-shaped question, because it can be changed on one body
+part alone instead of everywhere at once.

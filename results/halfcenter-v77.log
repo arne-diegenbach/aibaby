@@ -1,0 +1,803 @@
+experiment: halfcenter
+  instrument        halfcenter   trial seed 0000000001357009   1200000 ticks
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  seed family       offset 288559 -> first creature 0000000001398ef8 (FRESH)
+  shipped genome    adapt_jump 0.00, halfcenter_gain 0.00 (both OFF,
+                    pinned hash ad96f882becbee92)
+  kernel            v76: hc_lo = g*(1 + k*D/S), pair-mean normaliser, so the
+                    tonic is g for EVERY k and the clamp cannot saturate
+                    (m_hi/mean <= 2 by construction). k = 1 is v57 EXACTLY and
+                    bit-identical; the eight base arms must re-print.
+  genome k          1.00 (shipped; v57's kernel, which is also the default for a pre-v76 genome)
+  v75 is retired    its normaliser tied the tonic, the coupling AND the clamp
+                    headroom to the rate the module RUNS at -- archived tau333
+                    ran 3.67 Hz against this genome's setpoint of 5.00 -- and
+                    matching v57's tonic vs its coupling demands gains 2x
+                    apart. Not a one-parameter family, so the archived `mat*`
+                    arms isolated nothing and this run does not repeat them.
+  what adaptclock   a fatigue current at the DERIVED constant produced no
+  actually showed   clock: peak frequency followed tau_a with exponent +0.104
+                    where a relaxation oscillator requires 1.000, and the peak
+                    never left the 3.0-3.9 Hz band the pre-existing resonance
+                    already occupies.
+  what was WRONG    only ONE of two ingredients had been built. Matsuoka 1985:
+  with it           mutual inhibition ALONE settles into a winner, ADAPTATION
+                    is what makes it oscillate. Both, wired as two mutually
+                    inhibiting populations. v32's kernel is local-minus-field-
+                    mean -- a bump kernel, not two populations taking turns.
+                    So v56 is a PREREQUISITE, not a failed attempt.
+
+  THE 2x2, AND THE THEORY MAKES TWO NULL PREDICTIONS
+    neither   -/-   nothing
+    fatigue   +/-   nothing (and adaptclock already measured exactly that)
+    inhibNN   -/+   SETTLES into a winner, no rhythm
+    bothNN    +/+   OSCILLATES
+  Two pre-registered nulls are two chances for the theory to be wrong in a
+  way a single contrast against the double-off baseline could not see.
+
+  PRE-REGISTERED
+    PRIMARY, an INTERACTION: a `both` arm's anti-phase correlation must beat
+      BOTH its own singles, not merely `neither`.
+    THE SIGNATURE     corr(lower-half rate, upper-half rate) must go NEGATIVE.
+                      A half-center ALTERNATES; a resonance moves both halves
+                      TOGETHER. This is the mechanism itself rather than a
+                      spectral proxy -- no frequency grid, no argmax, and the
+                      pre-existing 3 Hz ring cannot produce it. Bar: <= -0.20
+                      and >= 3 SE below each single.
+    frequency         within the `both` tau arms, report the EXPONENT on
+                      log(peak f) vs log(1/tau) -- adaptclock's lesson: a
+                      correlation passed 0.80 there while the slope was ten
+                      times too shallow. Required ~1.0.
+    KILL SWITCH       duty bounded AWAY FROM BOTH ENDS and rate near target.
+                      v32's first lateral form ran vocal at 66 Hz against 4.4
+                      with duty pinned at 1.00, and a runaway looks like a
+                      strong result on any ratio statistic.
+    BOTH HALVES       anti-phase reported per half of the recording, because
+                      the self_gain sweep died exactly there.
+    argmax null       peak SNR vs `neither`'s PEAK over the same 24 bins.
+                      adaptclock measured that null at ~3.9, never 1.0.
+    refusal           anti-phase stays >= 0 in every `both` arm -> reciprocal
+                      inhibition plus fatigue does not alternate HERE even
+                      though the textbook says it must, which would point at
+                      the rate code itself rather than at any missing part.
+
+  [4/348] seed 0 tau333      anti -0.299  peak 2.50 Hz SNR  2.74  duty 0.58
+  [2/348] seed 0 tau167      anti -0.556  peak 4.75 Hz SNR  5.92  duty 0.57
+  [8/348] seed 0 ctrl140     anti +0.281  peak 2.50 Hz SNR  3.05  duty 0.57
+  [9/348] seed 0 wi000       anti +0.035  peak 3.50 Hz SNR  7.48  duty 0.58
+  [7/348] seed 0 drive200    anti -0.641  peak 4.25 Hz SNR  1.97  duty 0.57
+  [13/348] seed 0 tau042      anti -0.302  peak 4.25 Hz SNR  2.08  duty 0.55
+  [11/348] seed 0 wi200       anti -0.278  peak 3.00 Hz SNR  4.79  duty 0.58
+  [3/348] seed 0 tau250      anti -0.396  peak 2.75 Hz SNR  4.70  duty 0.58
+  [5/348] seed 0 inhib140    anti +0.022  peak 1.25 Hz SNR  4.01  duty 0.53
+  [1/348] seed 0 tau083      anti -0.752  peak 5.25 Hz SNR  3.14  duty 0.57
+  [12/348] seed 0 wi300       anti -0.284  peak 4.75 Hz SNR  5.73  duty 0.57
+  [10/348] seed 0 wi150       anti -0.270  peak 2.00 Hz SNR  6.54  duty 0.57
+  [6/348] seed 0 fat140      anti +0.044  peak 1.50 Hz SNR  5.15  duty 0.00
+  [14/348] seed 0 tau500      anti -0.205  peak 3.75 Hz SNR  3.74  duty 0.58
+  [15/348] seed 0 rf25t083    anti -0.533  peak 4.25 Hz SNR  1.98  duty 0.53
+  [16/348] seed 0 rf25t167    anti -0.302  peak 1.00 Hz SNR  2.77  duty 0.53
+  [17/348] seed 0 rf25t250    anti -0.208  peak 2.75 Hz SNR  4.70  duty 0.54
+  [22/348] seed 0 rf100t250   anti -0.641  peak 4.50 Hz SNR  4.64  duty 0.62
+  [19/348] seed 0 rf25ctrl    anti +0.241  peak 2.75 Hz SNR  5.29  duty 0.54
+  [25/348] seed 0 rf75t083    anti -0.446  peak 3.75 Hz SNR  3.55  duty 0.60
+  [24/348] seed 0 rf100ctrl   anti +0.305  peak 4.25 Hz SNR  3.95  duty 0.62
+  [21/348] seed 0 rf100t167   anti -0.762  peak 1.75 Hz SNR  3.87  duty 0.62
+  [26/348] seed 0 rf75t167    anti -0.674  peak 2.25 Hz SNR  4.77  duty 0.60
+  [23/348] seed 0 rf100t333   anti -0.567  peak 0.75 Hz SNR  3.88  duty 0.62
+  [27/348] seed 0 rf75t250    anti -0.563  peak 4.75 Hz SNR  2.37  duty 0.60
+  [18/348] seed 0 rf25t333    anti -0.153  peak 3.50 Hz SNR  6.61  duty 0.54
+  [20/348] seed 0 rf100t083   anti -0.473  peak 1.00 Hz SNR  2.27  duty 0.61
+  [28/348] seed 0 rf75t333    anti -0.437  peak 3.00 Hz SNR  4.09  duty 0.60
+  [29/348] seed 0 rf75ctrl    anti +0.283  peak 0.25 Hz SNR  4.70  duty 0.59
+  [30/348] seed 1 tau083      anti -0.752  peak 3.50 Hz SNR  5.62  duty 0.57
+  [33/348] seed 1 tau333      anti -0.297  peak 3.25 Hz SNR  4.73  duty 0.58
+  [31/348] seed 1 tau167      anti -0.553  peak 3.00 Hz SNR  3.10  duty 0.57
+  [36/348] seed 1 drive200    anti -0.630  peak 4.25 Hz SNR  2.42  duty 0.57
+  [32/348] seed 1 tau250      anti -0.394  peak 3.25 Hz SNR  3.75  duty 0.57
+  [38/348] seed 1 wi000       anti +0.158  peak 0.75 Hz SNR  2.39  duty 0.58
+  [41/348] seed 1 wi300       anti -0.276  peak 2.75 Hz SNR  3.81  duty 0.58
+  [37/348] seed 1 ctrl140     anti +0.373  peak 3.25 Hz SNR  3.59  duty 0.58
+  [39/348] seed 1 wi150       anti -0.271  peak 2.50 Hz SNR  4.58  duty 0.58
+  [34/348] seed 1 inhib140    anti +0.103  peak 0.75 Hz SNR  4.44  duty 0.52
+  [40/348] seed 1 wi200       anti -0.270  peak 3.25 Hz SNR  5.60  duty 0.58
+  [42/348] seed 1 tau042      anti -0.302  peak 4.00 Hz SNR  4.56  duty 0.56
+  [35/348] seed 1 fat140      anti +0.097  peak 4.00 Hz SNR  2.86  duty 0.00
+  [43/348] seed 1 tau500      anti -0.202  peak 3.75 Hz SNR  5.89  duty 0.58
+  [44/348] seed 1 rf25t083    anti -0.530  peak 5.25 Hz SNR  4.74  duty 0.52
+  [45/348] seed 1 rf25t167    anti -0.298  peak 0.50 Hz SNR  5.26  duty 0.53
+  [47/348] seed 1 rf25t333    anti -0.153  peak 3.75 Hz SNR  3.08  duty 0.53
+  [46/348] seed 1 rf25t250    anti -0.204  peak 3.50 Hz SNR  4.19  duty 0.54
+  [48/348] seed 1 rf25ctrl    anti +0.328  peak 2.00 Hz SNR  5.17  duty 0.53
+  [51/348] seed 1 rf100t250   anti -0.643  peak 6.00 Hz SNR  2.48  duty 0.63
+  [49/348] seed 1 rf100t083   anti -0.471  peak 1.75 Hz SNR  2.10  duty 0.63
+  [50/348] seed 1 rf100t167   anti -0.765  peak 2.00 Hz SNR  4.44  duty 0.63
+  [53/348] seed 1 rf100ctrl   anti +0.359  peak 1.25 Hz SNR  2.87  duty 0.63
+  [55/348] seed 1 rf75t167    anti -0.672  peak 2.25 Hz SNR  4.55  duty 0.60
+  [52/348] seed 1 rf100t333   anti -0.564  peak 1.25 Hz SNR  3.74  duty 0.64
+  [56/348] seed 1 rf75t250    anti -0.562  peak 2.25 Hz SNR  3.28  duty 0.61
+  [54/348] seed 1 rf75t083    anti -0.457  peak 1.75 Hz SNR  5.97  duty 0.60
+  [63/348] seed 2 inhib140    anti +0.053  peak 2.75 Hz SNR 10.47  duty 0.53
+  [59/348] seed 2 tau083      anti -0.751  peak 4.00 Hz SNR  3.94  duty 0.58
+  [58/348] seed 1 rf75ctrl    anti +0.378  peak 3.25 Hz SNR  3.85  duty 0.61
+  [64/348] seed 2 fat140      anti +0.066  peak 4.25 Hz SNR  7.35  duty 0.00
+  [62/348] seed 2 tau333      anti -0.297  peak 2.25 Hz SNR  4.27  duty 0.59
+  [57/348] seed 1 rf75t333    anti -0.437  peak 3.00 Hz SNR  5.83  duty 0.61
+  [65/348] seed 2 drive200    anti -0.673  peak 4.50 Hz SNR  2.67  duty 0.58
+  [61/348] seed 2 tau250      anti -0.395  peak 3.75 Hz SNR  6.46  duty 0.59
+  [60/348] seed 2 tau167      anti -0.554  peak 2.75 Hz SNR  3.52  duty 0.59
+  [66/348] seed 2 ctrl140     anti +0.340  peak 2.75 Hz SNR  5.58  duty 0.58
+  [68/348] seed 2 wi150       anti -0.273  peak 3.50 Hz SNR  2.62  duty 0.59
+  [70/348] seed 2 wi300       anti -0.283  peak 5.50 Hz SNR  4.20  duty 0.59
+  [69/348] seed 2 wi200       anti -0.276  peak 1.25 Hz SNR  5.68  duty 0.59
+  [67/348] seed 2 wi000       anti +0.146  peak 3.00 Hz SNR  3.60  duty 0.59
+  [71/348] seed 2 tau042      anti -0.295  peak 1.00 Hz SNR  3.77  duty 0.57
+  [74/348] seed 2 rf25t167    anti -0.302  peak 4.25 Hz SNR  3.97  duty 0.55
+  [76/348] seed 2 rf25t333    anti -0.151  peak 1.00 Hz SNR  8.16  duty 0.55
+  [72/348] seed 2 tau500      anti -0.205  peak 3.75 Hz SNR  3.99  duty 0.60
+  [73/348] seed 2 rf25t083    anti -0.528  peak 2.75 Hz SNR  4.37  duty 0.54
+  [75/348] seed 2 rf25t250    anti -0.207  peak 2.25 Hz SNR  5.18  duty 0.55
+  [79/348] seed 2 rf100t167   anti -0.758  peak 0.25 Hz SNR  3.39  duty 0.64
+  [80/348] seed 2 rf100t250   anti -0.640  peak 1.75 Hz SNR  4.69  duty 0.64
+  [78/348] seed 2 rf100t083   anti -0.476  peak 5.75 Hz SNR  3.81  duty 0.64
+  [77/348] seed 2 rf25ctrl    anti +0.286  peak 5.00 Hz SNR  2.81  duty 0.55
+  [81/348] seed 2 rf100t333   anti -0.566  peak 4.25 Hz SNR  2.77  duty 0.64
+  [83/348] seed 2 rf75t083    anti -0.425  peak 2.25 Hz SNR  2.90  duty 0.61
+  [82/348] seed 2 rf100ctrl   anti +0.369  peak 1.00 Hz SNR  2.86  duty 0.65
+  [84/348] seed 2 rf75t167    anti -0.672  peak 1.00 Hz SNR  3.08  duty 0.62
+  [88/348] seed 3 tau083      anti -0.756  peak 1.75 Hz SNR  2.44  duty 0.56
+  [85/348] seed 2 rf75t250    anti -0.563  peak 1.75 Hz SNR  2.90  duty 0.62
+  [87/348] seed 2 rf75ctrl    anti +0.339  peak 2.25 Hz SNR  4.16  duty 0.61
+  [92/348] seed 3 inhib140    anti +0.093  peak 4.00 Hz SNR  6.25  duty 0.52
+  [89/348] seed 3 tau167      anti -0.556  peak 3.75 Hz SNR  2.73  duty 0.56
+  [86/348] seed 2 rf75t333    anti -0.438  peak 3.50 Hz SNR  5.37  duty 0.62
+  [91/348] seed 3 tau333      anti -0.298  peak 1.75 Hz SNR  2.17  duty 0.56
+  [93/348] seed 3 fat140      anti +0.117  peak 5.00 Hz SNR  3.84  duty 0.00
+  [90/348] seed 3 tau250      anti -0.395  peak 1.75 Hz SNR  6.05  duty 0.57
+  [97/348] seed 3 wi150       anti -0.272  peak 1.00 Hz SNR  4.66  duty 0.56
+  [94/348] seed 3 drive200    anti -0.653  peak 3.25 Hz SNR 14.61  duty 0.56
+  [95/348] seed 3 ctrl140     anti +0.391  peak 0.50 Hz SNR  3.21  duty 0.56
+  [96/348] seed 3 wi000       anti +0.121  peak 1.75 Hz SNR  3.38  duty 0.56
+  [98/348] seed 3 wi200       anti -0.272  peak 4.00 Hz SNR  3.23  duty 0.56
+  [99/348] seed 3 wi300       anti -0.278  peak 0.75 Hz SNR  5.75  duty 0.56
+  [101/348] seed 3 tau500      anti -0.201  peak 0.50 Hz SNR  6.20  duty 0.56
+  [102/348] seed 3 rf25t083    anti -0.534  peak 3.00 Hz SNR  2.94  duty 0.51
+  [103/348] seed 3 rf25t167    anti -0.300  peak 4.25 Hz SNR  3.36  duty 0.52
+  [106/348] seed 3 rf25ctrl    anti +0.346  peak 3.00 Hz SNR  4.78  duty 0.52
+  [104/348] seed 3 rf25t250    anti -0.207  peak 2.75 Hz SNR  4.09  duty 0.52
+  [100/348] seed 3 tau042      anti -0.293  peak 2.00 Hz SNR  6.83  duty 0.55
+  [108/348] seed 3 rf100t167   anti -0.770  peak 0.75 Hz SNR  3.68  duty 0.61
+  [107/348] seed 3 rf100t083   anti -0.454  peak 3.00 Hz SNR  3.58  duty 0.61
+  [105/348] seed 3 rf25t333    anti -0.154  peak 4.75 Hz SNR  6.15  duty 0.53
+  [109/348] seed 3 rf100t250   anti -0.647  peak 3.00 Hz SNR  3.74  duty 0.62
+  [111/348] seed 3 rf100ctrl   anti +0.394  peak 4.00 Hz SNR  2.55  duty 0.61
+  [112/348] seed 3 rf75t083    anti -0.470  peak 5.50 Hz SNR  4.41  duty 0.59
+  [113/348] seed 3 rf75t167    anti -0.678  peak 4.25 Hz SNR  2.88  duty 0.58
+  [114/348] seed 3 rf75t250    anti -0.563  peak 2.50 Hz SNR  6.84  duty 0.59
+  [118/348] seed 4 tau167      anti -0.556  peak 3.75 Hz SNR  9.29  duty 0.58
+  [115/348] seed 3 rf75t333    anti -0.436  peak 0.75 Hz SNR  8.50  duty 0.59
+  [117/348] seed 4 tau083      anti -0.753  peak 1.00 Hz SNR  5.52  duty 0.58
+  [110/348] seed 3 rf100t333   anti -0.568  peak 1.75 Hz SNR  5.10  duty 0.62
+  [119/348] seed 4 tau250      anti -0.396  peak 3.25 Hz SNR 10.88  duty 0.59
+  [121/348] seed 4 inhib140    anti +0.090  peak 3.00 Hz SNR  3.02  duty 0.52
+  [120/348] seed 4 tau333      anti -0.297  peak 3.00 Hz SNR  4.94  duty 0.59
+  [124/348] seed 4 ctrl140     anti +0.370  peak 2.50 Hz SNR  4.61  duty 0.59
+  [116/348] seed 3 rf75ctrl    anti +0.402  peak 0.50 Hz SNR  3.15  duty 0.59
+  [125/348] seed 4 wi000       anti +0.047  peak 4.50 Hz SNR  4.32  duty 0.60
+  [123/348] seed 4 drive200    anti -0.655  peak 3.25 Hz SNR  5.72  duty 0.59
+  [122/348] seed 4 fat140      anti +0.092  peak 2.00 Hz SNR  5.41  duty 0.00
+  [126/348] seed 4 wi150       anti -0.273  peak 3.50 Hz SNR  4.59  duty 0.59
+  [128/348] seed 4 wi300       anti -0.278  peak 3.00 Hz SNR  4.96  duty 0.59
+  [127/348] seed 4 wi200       anti -0.268  peak 3.50 Hz SNR  4.70  duty 0.59
+  [129/348] seed 4 tau042      anti -0.287  peak 0.75 Hz SNR  3.38  duty 0.57
+  [131/348] seed 4 rf25t083    anti -0.531  peak 2.50 Hz SNR  2.55  duty 0.54
+  [130/348] seed 4 tau500      anti -0.204  peak 2.75 Hz SNR  5.40  duty 0.59
+  [133/348] seed 4 rf25t250    anti -0.206  peak 5.50 Hz SNR  4.41  duty 0.55
+  [132/348] seed 4 rf25t167    anti -0.299  peak 2.75 Hz SNR  5.01  duty 0.54
+  [134/348] seed 4 rf25t333    anti -0.155  peak 5.25 Hz SNR  3.34  duty 0.55
+  [135/348] seed 4 rf25ctrl    anti +0.318  peak 3.50 Hz SNR  5.61  duty 0.55
+  [136/348] seed 4 rf100t083   anti -0.457  peak 2.00 Hz SNR  5.20  duty 0.64
+  [137/348] seed 4 rf100t167   anti -0.769  peak 6.00 Hz SNR  3.33  duty 0.64
+  [138/348] seed 4 rf100t250   anti -0.644  peak 3.00 Hz SNR  3.65  duty 0.65
+  [139/348] seed 4 rf100t333   anti -0.567  peak 1.50 Hz SNR  4.25  duty 0.64
+  [140/348] seed 4 rf100ctrl   anti +0.374  peak 5.00 Hz SNR  5.27  duty 0.64
+  [143/348] seed 4 rf75t250    anti -0.564  peak 4.00 Hz SNR  5.37  duty 0.62
+  [144/348] seed 4 rf75t333    anti -0.439  peak 5.75 Hz SNR  3.31  duty 0.62
+  [145/348] seed 4 rf75ctrl    anti +0.361  peak 3.00 Hz SNR  5.75  duty 0.63
+  [142/348] seed 4 rf75t167    anti -0.677  peak 1.25 Hz SNR  4.65  duty 0.62
+  [150/348] seed 5 inhib140    anti +0.050  peak 3.75 Hz SNR  4.61  duty 0.51
+  [141/348] seed 4 rf75t083    anti -0.463  peak 3.00 Hz SNR  5.32  duty 0.61
+  [146/348] seed 5 tau083      anti -0.754  peak 3.50 Hz SNR  5.52  duty 0.56
+  [148/348] seed 5 tau250      anti -0.395  peak 1.50 Hz SNR  4.56  duty 0.57
+  [149/348] seed 5 tau333      anti -0.297  peak 6.00 Hz SNR  3.54  duty 0.57
+  [147/348] seed 5 tau167      anti -0.555  peak 1.00 Hz SNR  3.34  duty 0.57
+  [153/348] seed 5 ctrl140     anti +0.373  peak 0.50 Hz SNR  2.99  duty 0.57
+  [151/348] seed 5 fat140      anti +0.096  peak 3.25 Hz SNR  4.64  duty 0.00
+  [152/348] seed 5 drive200    anti -0.648  peak 1.50 Hz SNR  3.73  duty 0.56
+  [156/348] seed 5 wi200       anti -0.271  peak 3.25 Hz SNR  6.07  duty 0.56
+  [157/348] seed 5 wi300       anti -0.280  peak 1.00 Hz SNR  6.52  duty 0.57
+  [154/348] seed 5 wi000       anti +0.098  peak 3.00 Hz SNR  8.06  duty 0.57
+  [164/348] seed 5 rf25ctrl    anti +0.307  peak 2.25 Hz SNR  3.19  duty 0.53
+  [158/348] seed 5 tau042      anti -0.293  peak 0.50 Hz SNR  4.09  duty 0.55
+  [159/348] seed 5 tau500      anti -0.202  peak 0.50 Hz SNR  3.52  duty 0.57
+  [162/348] seed 5 rf25t250    anti -0.206  peak 6.00 Hz SNR  3.07  duty 0.53
+  [160/348] seed 5 rf25t083    anti -0.532  peak 5.00 Hz SNR  4.40  duty 0.52
+  [161/348] seed 5 rf25t167    anti -0.303  peak 1.00 Hz SNR  4.02  duty 0.53
+  [163/348] seed 5 rf25t333    anti -0.152  peak 2.25 Hz SNR  2.79  duty 0.53
+  [166/348] seed 5 rf100t167   anti -0.768  peak 1.50 Hz SNR  2.78  duty 0.62
+  [155/348] seed 5 wi150       anti -0.269  peak 4.00 Hz SNR  3.60  duty 0.57
+  [167/348] seed 5 rf100t250   anti -0.646  peak 3.25 Hz SNR  2.74  duty 0.63
+  [170/348] seed 5 rf75t083    anti -0.460  peak 3.00 Hz SNR  5.37  duty 0.59
+  [168/348] seed 5 rf100t333   anti -0.566  peak 2.50 Hz SNR  3.39  duty 0.62
+  [169/348] seed 5 rf100ctrl   anti +0.371  peak 2.25 Hz SNR  2.80  duty 0.62
+  [165/348] seed 5 rf100t083   anti -0.465  peak 1.00 Hz SNR  3.54  duty 0.61
+  [174/348] seed 5 rf75ctrl    anti +0.372  peak 3.00 Hz SNR  2.82  duty 0.60
+  [171/348] seed 5 rf75t167    anti -0.675  peak 0.50 Hz SNR  2.59  duty 0.59
+  [172/348] seed 5 rf75t250    anti -0.564  peak 3.75 Hz SNR  3.81  duty 0.60
+  [173/348] seed 5 rf75t333    anti -0.436  peak 1.25 Hz SNR  5.91  duty 0.59
+  [175/348] seed 6 tau083      anti -0.754  peak 1.75 Hz SNR  4.30  duty 0.58
+  [177/348] seed 6 tau250      anti -0.394  peak 1.75 Hz SNR  4.91  duty 0.59
+  [176/348] seed 6 tau167      anti -0.552  peak 3.50 Hz SNR  3.56  duty 0.58
+  [178/348] seed 6 tau333      anti -0.295  peak 2.75 Hz SNR  6.70  duty 0.59
+  [181/348] seed 6 drive200    anti -0.653  peak 2.25 Hz SNR  5.71  duty 0.58
+  [184/348] seed 6 wi150       anti -0.268  peak 3.00 Hz SNR  4.76  duty 0.59
+  [182/348] seed 6 ctrl140     anti +0.382  peak 0.50 Hz SNR  5.05  duty 0.59
+  [179/348] seed 6 inhib140    anti +0.069  peak 3.00 Hz SNR  3.65  duty 0.53
+  [183/348] seed 6 wi000       anti +0.093  peak 3.75 Hz SNR  5.21  duty 0.59
+  [186/348] seed 6 wi300       anti -0.268  peak 2.00 Hz SNR  2.77  duty 0.59
+  [185/348] seed 6 wi200       anti -0.269  peak 2.50 Hz SNR  8.28  duty 0.58
+  [187/348] seed 6 tau042      anti -0.282  peak 3.00 Hz SNR  6.59  duty 0.57
+  [180/348] seed 6 fat140      anti +0.089  peak 3.25 Hz SNR  5.01  duty 0.00
+  [189/348] seed 6 rf25t083    anti -0.530  peak 0.75 Hz SNR  2.01  duty 0.54
+  [190/348] seed 6 rf25t167    anti -0.300  peak 2.50 Hz SNR  4.20  duty 0.55
+  [191/348] seed 6 rf25t250    anti -0.202  peak 3.00 Hz SNR  4.75  duty 0.55
+  [188/348] seed 6 tau500      anti -0.193  peak 5.50 Hz SNR  4.18  duty 0.59
+  [195/348] seed 6 rf100t167   anti -0.765  peak 1.00 Hz SNR  6.80  duty 0.64
+  [193/348] seed 6 rf25ctrl    anti +0.327  peak 3.25 Hz SNR  3.74  duty 0.54
+  [192/348] seed 6 rf25t333    anti -0.150  peak 4.50 Hz SNR  2.69  duty 0.55
+  [198/348] seed 6 rf100ctrl   anti +0.374  peak 2.25 Hz SNR  4.11  duty 0.64
+  [196/348] seed 6 rf100t250   anti -0.643  peak 2.75 Hz SNR  3.99  duty 0.64
+  [194/348] seed 6 rf100t083   anti -0.452  peak 1.75 Hz SNR  5.45  duty 0.64
+  [197/348] seed 6 rf100t333   anti -0.565  peak 1.75 Hz SNR  3.26  duty 0.64
+  [200/348] seed 6 rf75t167    anti -0.675  peak 1.75 Hz SNR  9.48  duty 0.61
+  [199/348] seed 6 rf75t083    anti -0.453  peak 0.75 Hz SNR  4.17  duty 0.61
+  [202/348] seed 6 rf75t333    anti -0.434  peak 1.00 Hz SNR  6.47  duty 0.62
+  [201/348] seed 6 rf75t250    anti -0.562  peak 2.50 Hz SNR  4.04  duty 0.61
+  [203/348] seed 6 rf75ctrl    anti +0.368  peak 2.25 Hz SNR  3.26  duty 0.61
+  [204/348] seed 7 tau083      anti -0.752  peak 0.50 Hz SNR  4.64  duty 0.58
+  [205/348] seed 7 tau167      anti -0.553  peak 0.75 Hz SNR  2.93  duty 0.58
+  [209/348] seed 7 fat140      anti +0.106  peak 6.00 Hz SNR  7.21  duty 0.00
+  [207/348] seed 7 tau333      anti -0.297  peak 4.75 Hz SNR  4.00  duty 0.58
+  [212/348] seed 7 wi000       anti +0.088  peak 1.00 Hz SNR  3.86  duty 0.59
+  [215/348] seed 7 wi300       anti -0.273  peak 2.50 Hz SNR  4.52  duty 0.58
+  [211/348] seed 7 ctrl140     anti +0.367  peak 2.75 Hz SNR  4.52  duty 0.58
+  [206/348] seed 7 tau250      anti -0.394  peak 0.25 Hz SNR  6.23  duty 0.58
+  [213/348] seed 7 wi150       anti -0.266  peak 3.50 Hz SNR  5.59  duty 0.58
+  [214/348] seed 7 wi200       anti -0.270  peak 2.00 Hz SNR  7.62  duty 0.58
+  [208/348] seed 7 inhib140    anti +0.086  peak 3.50 Hz SNR  4.69  duty 0.53
+  [217/348] seed 7 tau500      anti -0.202  peak 3.25 Hz SNR  4.85  duty 0.58
+  [210/348] seed 7 drive200    anti -0.634  peak 1.75 Hz SNR  5.87  duty 0.58
+  [216/348] seed 7 tau042      anti -0.268  peak 3.00 Hz SNR  7.22  duty 0.56
+  [218/348] seed 7 rf25t083    anti -0.528  peak 2.75 Hz SNR  3.77  duty 0.53
+  [219/348] seed 7 rf25t167    anti -0.296  peak 2.50 Hz SNR 10.70  duty 0.54
+  [221/348] seed 7 rf25t333    anti -0.152  peak 2.75 Hz SNR  3.66  duty 0.54
+  [220/348] seed 7 rf25t250    anti -0.203  peak 2.50 Hz SNR  5.35  duty 0.54
+  [223/348] seed 7 rf100t083   anti -0.463  peak 2.50 Hz SNR  2.39  duty 0.63
+  [222/348] seed 7 rf25ctrl    anti +0.311  peak 3.75 Hz SNR  9.58  duty 0.55
+  [228/348] seed 7 rf75t083    anti -0.470  peak 4.00 Hz SNR  3.35  duty 0.61
+  [224/348] seed 7 rf100t167   anti -0.768  peak 2.75 Hz SNR  4.67  duty 0.63
+  [229/348] seed 7 rf75t167    anti -0.676  peak 1.75 Hz SNR  3.76  duty 0.60
+  [225/348] seed 7 rf100t250   anti -0.644  peak 1.00 Hz SNR  6.36  duty 0.64
+  [227/348] seed 7 rf100ctrl   anti +0.373  peak 5.00 Hz SNR  3.86  duty 0.63
+  [230/348] seed 7 rf75t250    anti -0.562  peak 1.00 Hz SNR  4.16  duty 0.62
+  [226/348] seed 7 rf100t333   anti -0.567  peak 1.50 Hz SNR  6.26  duty 0.64
+  [232/348] seed 7 rf75ctrl    anti +0.359  peak 4.50 Hz SNR  3.69  duty 0.61
+  [231/348] seed 7 rf75t333    anti -0.435  peak 2.50 Hz SNR  5.40  duty 0.61
+  [233/348] seed 8 tau083      anti -0.753  peak 1.75 Hz SNR  4.83  duty 0.54
+  [236/348] seed 8 tau333      anti -0.296  peak 3.50 Hz SNR  5.88  duty 0.55
+  [234/348] seed 8 tau167      anti -0.553  peak 4.25 Hz SNR  3.87  duty 0.55
+  [237/348] seed 8 inhib140    anti +0.113  peak 1.25 Hz SNR  5.51  duty 0.45
+  [235/348] seed 8 tau250      anti -0.393  peak 3.25 Hz SNR  4.51  duty 0.54
+  [240/348] seed 8 ctrl140     anti +0.419  peak 2.50 Hz SNR  3.67  duty 0.54
+  [241/348] seed 8 wi000       anti +0.138  peak 3.50 Hz SNR  4.80  duty 0.55
+  [239/348] seed 8 drive200    anti -0.642  peak 1.50 Hz SNR  1.98  duty 0.54
+  [242/348] seed 8 wi150       anti -0.270  peak 2.75 Hz SNR  3.61  duty 0.54
+  [238/348] seed 8 fat140      anti +0.120  peak 6.00 Hz SNR  3.45  duty 0.00
+  [243/348] seed 8 wi200       anti -0.272  peak 1.00 Hz SNR  8.84  duty 0.55
+  [245/348] seed 8 tau042      anti -0.278  peak 1.25 Hz SNR  4.30  duty 0.52
+  [246/348] seed 8 tau500      anti -0.200  peak 1.00 Hz SNR  4.08  duty 0.55
+  [244/348] seed 8 wi300       anti -0.279  peak 3.25 Hz SNR  4.35  duty 0.55
+  [247/348] seed 8 rf25t083    anti -0.531  peak 1.25 Hz SNR  1.89  duty 0.50
+  [248/348] seed 8 rf25t167    anti -0.297  peak 4.00 Hz SNR  3.52  duty 0.50
+  [250/348] seed 8 rf25t333    anti -0.151  peak 3.50 Hz SNR  4.59  duty 0.51
+  [249/348] seed 8 rf25t250    anti -0.204  peak 4.75 Hz SNR  3.85  duty 0.51
+  [251/348] seed 8 rf25ctrl    anti +0.379  peak 3.25 Hz SNR  4.79  duty 0.50
+  [252/348] seed 8 rf100t083   anti -0.453  peak 2.75 Hz SNR  6.01  duty 0.58
+  [253/348] seed 8 rf100t167   anti -0.768  peak 2.25 Hz SNR  4.44  duty 0.59
+  [255/348] seed 8 rf100t333   anti -0.565  peak 4.50 Hz SNR  2.76  duty 0.60
+  [257/348] seed 8 rf75t083    anti -0.455  peak 3.00 Hz SNR  7.70  duty 0.56
+  [254/348] seed 8 rf100t250   anti -0.647  peak 2.50 Hz SNR  7.67  duty 0.60
+  [258/348] seed 8 rf75t167    anti -0.674  peak 2.50 Hz SNR  3.53  duty 0.57
+  [256/348] seed 8 rf100ctrl   anti +0.422  peak 2.50 Hz SNR  3.42  duty 0.59
+  [259/348] seed 8 rf75t250    anti -0.562  peak 3.75 Hz SNR  2.23  duty 0.57
+  [260/348] seed 8 rf75t333    anti -0.436  peak 2.75 Hz SNR  2.93  duty 0.57
+  [261/348] seed 8 rf75ctrl    anti +0.437  peak 2.75 Hz SNR 10.00  duty 0.57
+  [262/348] seed 9 tau083      anti -0.757  peak 6.00 Hz SNR  6.05  duty 0.57
+  [265/348] seed 9 tau333      anti -0.299  peak 3.50 Hz SNR  4.07  duty 0.58
+  [263/348] seed 9 tau167      anti -0.560  peak 3.25 Hz SNR  5.06  duty 0.58
+  [264/348] seed 9 tau250      anti -0.399  peak 0.75 Hz SNR  4.73  duty 0.58
+  [266/348] seed 9 inhib140    anti +0.037  peak 0.25 Hz SNR  4.33  duty 0.52
+  [267/348] seed 9 fat140      anti +0.070  peak 1.75 Hz SNR  2.14  duty 0.00
+  [270/348] seed 9 wi000       anti +0.080  peak 5.00 Hz SNR  3.77  duty 0.58
+  [269/348] seed 9 ctrl140     anti +0.356  peak 2.25 Hz SNR  8.96  duty 0.57
+  [268/348] seed 9 drive200    anti -0.668  peak 1.00 Hz SNR  3.53  duty 0.57
+  [271/348] seed 9 wi150       anti -0.272  peak 5.75 Hz SNR  3.38  duty 0.58
+  [272/348] seed 9 wi200       anti -0.277  peak 3.25 Hz SNR  2.19  duty 0.58
+  [273/348] seed 9 wi300       anti -0.284  peak 2.75 Hz SNR  4.65  duty 0.58
+  [274/348] seed 9 tau042      anti -0.297  peak 5.25 Hz SNR  5.13  duty 0.56
+  [275/348] seed 9 tau500      anti -0.207  peak 3.75 Hz SNR  2.04  duty 0.58
+  [276/348] seed 9 rf25t083    anti -0.540  peak 4.00 Hz SNR  4.98  duty 0.53
+  [280/348] seed 9 rf25ctrl    anti +0.301  peak 4.00 Hz SNR 10.39  duty 0.54
+  [278/348] seed 9 rf25t250    anti -0.209  peak 3.75 Hz SNR  6.13  duty 0.54
+  [279/348] seed 9 rf25t333    anti -0.159  peak 4.50 Hz SNR  6.12  duty 0.53
+  [277/348] seed 9 rf25t167    anti -0.309  peak 5.00 Hz SNR  3.84  duty 0.54
+  [282/348] seed 9 rf100t167   anti -0.765  peak 0.25 Hz SNR  4.50  duty 0.63
+  [283/348] seed 9 rf100t250   anti -0.647  peak 0.25 Hz SNR  3.73  duty 0.63
+  [281/348] seed 9 rf100t083   anti -0.457  peak 2.00 Hz SNR  2.07  duty 0.62
+  [284/348] seed 9 rf100t333   anti -0.566  peak 0.25 Hz SNR  4.97  duty 0.64
+  [287/348] seed 9 rf75t167    anti -0.680  peak 3.25 Hz SNR  3.25  duty 0.61
+  [286/348] seed 9 rf75t083    anti -0.446  peak 2.00 Hz SNR  3.25  duty 0.60
+  [288/348] seed 9 rf75t250    anti -0.563  peak 2.50 Hz SNR 10.47  duty 0.61
+  [285/348] seed 9 rf100ctrl   anti +0.354  peak 2.25 Hz SNR  6.14  duty 0.63
+  [289/348] seed 9 rf75t333    anti -0.441  peak 3.50 Hz SNR  2.75  duty 0.61
+  [290/348] seed 9 rf75ctrl    anti +0.364  peak 2.00 Hz SNR  6.57  duty 0.61
+  [291/348] seed 10 tau083      anti -0.753  peak 1.50 Hz SNR  3.16  duty 0.55
+  [293/348] seed 10 tau250      anti -0.394  peak 1.50 Hz SNR  2.59  duty 0.56
+  [292/348] seed 10 tau167      anti -0.554  peak 1.00 Hz SNR  3.51  duty 0.55
+  [294/348] seed 10 tau333      anti -0.296  peak 1.75 Hz SNR  3.38  duty 0.56
+  [298/348] seed 10 ctrl140     anti +0.425  peak 2.25 Hz SNR  4.59  duty 0.56
+  [297/348] seed 10 drive200    anti -0.661  peak 4.25 Hz SNR  2.21  duty 0.55
+  [295/348] seed 10 inhib140    anti +0.092  peak 4.00 Hz SNR  3.64  duty 0.49
+  [301/348] seed 10 wi200       anti -0.269  peak 0.50 Hz SNR  5.76  duty 0.56
+  [302/348] seed 10 wi300       anti -0.276  peak 0.75 Hz SNR  3.25  duty 0.56
+  [299/348] seed 10 wi000       anti +0.077  peak 3.75 Hz SNR  2.80  duty 0.56
+  [296/348] seed 10 fat140      anti +0.089  peak 4.50 Hz SNR  3.66  duty 0.00
+  [303/348] seed 10 tau042      anti -0.286  peak 2.75 Hz SNR  8.27  duty 0.53
+  [300/348] seed 10 wi150       anti -0.266  peak 0.75 Hz SNR  6.51  duty 0.55
+  [304/348] seed 10 tau500      anti -0.201  peak 3.50 Hz SNR  6.18  duty 0.56
+  [305/348] seed 10 rf25t083    anti -0.532  peak 4.75 Hz SNR  3.51  duty 0.51
+  [308/348] seed 10 rf25t333    anti -0.152  peak 4.00 Hz SNR  9.87  duty 0.52
+  [307/348] seed 10 rf25t250    anti -0.202  peak 1.75 Hz SNR  4.51  duty 0.52
+  [306/348] seed 10 rf25t167    anti -0.299  peak 0.50 Hz SNR  2.76  duty 0.51
+  [309/348] seed 10 rf25ctrl    anti +0.359  peak 0.75 Hz SNR  8.08  duty 0.52
+  [310/348] seed 10 rf100t083   anti -0.459  peak 2.50 Hz SNR  6.20  duty 0.60
+  [311/348] seed 10 rf100t167   anti -0.767  peak 2.50 Hz SNR  4.35  duty 0.60
+  [312/348] seed 10 rf100t250   anti -0.647  peak 3.50 Hz SNR  4.33  duty 0.61
+  [313/348] seed 10 rf100t333   anti -0.566  peak 1.00 Hz SNR  6.13  duty 0.61
+  [316/348] seed 10 rf75t167    anti -0.673  peak 2.75 Hz SNR  3.26  duty 0.58
+  [315/348] seed 10 rf75t083    anti -0.466  peak 2.50 Hz SNR 13.96  duty 0.58
+  [314/348] seed 10 rf100ctrl   anti +0.422  peak 0.50 Hz SNR  3.06  duty 0.61
+  [317/348] seed 10 rf75t250    anti -0.564  peak 2.50 Hz SNR  3.36  duty 0.58
+  [320/348] seed 11 tau083      anti -0.755  peak 1.75 Hz SNR  4.34  duty 0.53
+  [318/348] seed 10 rf75t333    anti -0.435  peak 4.50 Hz SNR  3.80  duty 0.59
+  [322/348] seed 11 tau250      anti -0.394  peak 1.00 Hz SNR  5.41  duty 0.54
+  [319/348] seed 10 rf75ctrl    anti +0.407  peak 2.75 Hz SNR  5.81  duty 0.58
+  [321/348] seed 11 tau167      anti -0.553  peak 3.75 Hz SNR  7.74  duty 0.54
+  [323/348] seed 11 tau333      anti -0.296  peak 3.00 Hz SNR  3.86  duty 0.54
+  [324/348] seed 11 inhib140    anti +0.097  peak 2.75 Hz SNR  6.68  duty 0.42
+  [327/348] seed 11 ctrl140     anti +0.378  peak 3.25 Hz SNR  5.75  duty 0.54
+  [326/348] seed 11 drive200    anti -0.644  peak 2.25 Hz SNR  4.33  duty 0.53
+  [328/348] seed 11 wi000       anti +0.052  peak 2.75 Hz SNR  6.70  duty 0.54
+  [329/348] seed 11 wi150       anti -0.269  peak 3.50 Hz SNR  4.51  duty 0.54
+  [330/348] seed 11 wi200       anti -0.268  peak 3.00 Hz SNR  3.65  duty 0.55
+  [331/348] seed 11 wi300       anti -0.278  peak 4.00 Hz SNR  2.95  duty 0.54
+  [325/348] seed 11 fat140      anti +0.121  peak 4.50 Hz SNR  3.72  duty 0.00
+  [332/348] seed 11 tau042      anti -0.286  peak 0.75 Hz SNR  3.03  duty 0.52
+  [333/348] seed 11 tau500      anti -0.200  peak 1.00 Hz SNR  2.06  duty 0.54
+  [334/348] seed 11 rf25t083    anti -0.531  peak 3.50 Hz SNR  8.98  duty 0.49
+  [336/348] seed 11 rf25t250    anti -0.205  peak 1.00 Hz SNR  2.93  duty 0.50
+  [337/348] seed 11 rf25t333    anti -0.146  peak 5.00 Hz SNR  4.46  duty 0.50
+  [335/348] seed 11 rf25t167    anti -0.294  peak 5.75 Hz SNR  4.97  duty 0.50
+  [339/348] seed 11 rf100t083   anti -0.458  peak 1.00 Hz SNR  4.36  duty 0.58
+  [338/348] seed 11 rf25ctrl    anti +0.350  peak 4.75 Hz SNR  5.53  duty 0.50
+  [340/348] seed 11 rf100t167   anti -0.770  peak 1.00 Hz SNR  2.80  duty 0.59
+  [342/348] seed 11 rf100t333   anti -0.566  peak 2.75 Hz SNR  4.19  duty 0.59
+  [341/348] seed 11 rf100t250   anti -0.646  peak 2.50 Hz SNR  7.49  duty 0.58
+  [344/348] seed 11 rf75t083    anti -0.496  peak 3.50 Hz SNR  4.16  duty 0.56
+  [343/348] seed 11 rf100ctrl   anti +0.384  peak 2.00 Hz SNR  6.80  duty 0.59
+  [345/348] seed 11 rf75t167    anti -0.677  peak 0.50 Hz SNR  5.00  duty 0.57
+  [346/348] seed 11 rf75t250    anti -0.562  peak 3.25 Hz SNR  4.02  duty 0.57
+  [347/348] seed 11 rf75t333    anti -0.435  peak 2.25 Hz SNR  3.98  duty 0.57
+  [348/348] seed 11 rf75ctrl    anti +0.377  peak 2.25 Hz SNR  2.46  duty 0.57
+
+  arm         jump  tau   hc    k     ANTI-PHASE corr  peak f/SNR    half-diff    duty   rate
+  tau083      1.00  83    0.60  1.00  -0.754 +/- 0.001   2.69/ 4.46    7.60 +/- 1.51 0.56   10.21
+                anti-phase by half of the recording: -0.752 / -0.764
+                low-F1 posture 10.209 +/- 8.147 Hz, high-F1 10.214 +/- 8.152 Hz   [0/12 seeds DEGENERATE]
+                WITHIN-half coherence +0.970 +/- 0.001  (a population half-center is strongly POSITIVE here; per-neuron bursting is not)
+                PRODUCED F1 sd  14.9 +/- 0.3 Hz, 5-95% swing   45.9 +/- 0.4 Hz
+                LAGGED coherence with the alternation -0.704 +/- 0.009
+                the 375 Hz neural swing at 2.88 Hz passes the 800 ms pole at |H| 0.069 ->  25.9 Hz predicted
+  tau167      1.00  167   0.60  1.00  -0.555 +/- 0.001   2.96/ 4.55   1177.00 +/- 190.41 0.57    6.38
+                anti-phase by half of the recording: -0.553 / -0.557
+                low-F1 posture 6.377 +/- 6.765 Hz, high-F1 6.379 +/- 6.765 Hz   [0/12 seeds DEGENERATE]
+                WITHIN-half coherence +0.969 +/- 0.001  (a population half-center is strongly POSITIVE here; per-neuron bursting is not)
+                PRODUCED F1 sd  24.8 +/- 0.3 Hz, 5-95% swing   75.6 +/- 0.6 Hz
+                LAGGED coherence with the alternation -0.693 +/- 0.009
+                the 375 Hz neural swing at 1.25 Hz passes the 800 ms pole at |H| 0.157 ->  58.9 Hz predicted
+  tau250      1.00  250   0.60  1.00  -0.395 +/- 0.000   2.06/ 5.40   67.38 +/- 19.08 0.57    4.67
+                anti-phase by half of the recording: -0.396 / -0.394
+                low-F1 posture 4.667 +/- 6.175 Hz, high-F1 4.668 +/- 6.179 Hz   [0/12 seeds DEGENERATE]
+                WITHIN-half coherence +0.968 +/- 0.001  (a population half-center is strongly POSITIVE here; per-neuron bursting is not)
+                PRODUCED F1 sd  33.8 +/- 0.2 Hz, 5-95% swing  105.6 +/- 0.3 Hz
+                LAGGED coherence with the alternation -0.610 +/- 0.003
+                the 375 Hz neural swing at 2.62 Hz passes the 800 ms pole at |H| 0.076 ->  28.3 Hz predicted
+  tau333      1.00  333   0.60  1.00  -0.297 +/- 0.000   3.17/ 4.19   3028.60 +/- 1513.75 0.57    3.67
+                anti-phase by half of the recording: -0.302 / -0.292
+                low-F1 posture 3.667 +/- 5.757 Hz, high-F1 3.669 +/- 5.757 Hz   [0/12 seeds DEGENERATE]
+                WITHIN-half coherence +0.966 +/- 0.001  (a population half-center is strongly POSITIVE here; per-neuron bursting is not)
+                PRODUCED F1 sd  43.8 +/- 0.4 Hz, 5-95% swing  134.9 +/- 0.4 Hz
+                LAGGED coherence with the alternation -0.527 +/- 0.004
+                the 375 Hz neural swing at 1.46 Hz passes the 800 ms pole at |H| 0.135 ->  50.7 Hz predicted
+  inhib140    0.00  167   0.60  1.00  +0.075 +/- 0.008   2.52/ 5.11    4.07 +/- 0.36 0.51   121.75  <- VOID
+                anti-phase by half of the recording: +0.084 / +0.062
+                low-F1 posture 121.558 +/- 2.930 Hz, high-F1 121.946 +/- 2.919 Hz   [0/12 seeds DEGENERATE]
+                WITHIN-half coherence +0.161 +/- 0.009  (a population half-center is strongly POSITIVE here; per-neuron bursting is not)
+                PRODUCED F1 sd   0.8 +/- 0.0 Hz, 5-95% swing    2.6 +/- 0.1 Hz
+                LAGGED coherence with the alternation -0.320 +/- 0.006
+                the 375 Hz neural swing at 2.88 Hz passes the 800 ms pole at |H| 0.069 ->  25.9 Hz predicted
+  fat140      1.00  167   0.00  1.00  +0.092 +/- 0.007   3.83/ 4.54    7.23 +/- 1.18 0.00    1.51  <- VOID
+                anti-phase by half of the recording: +0.096 / +0.087
+                low-F1 posture 1.509 +/- 1.423 Hz, high-F1 1.514 +/- 1.418 Hz   [0/12 seeds DEGENERATE]
+                WITHIN-half coherence +0.048 +/- 0.003  (a population half-center is strongly POSITIVE here; per-neuron bursting is not)
+                PRODUCED F1 sd  21.9 +/- 0.3 Hz, 5-95% swing   71.5 +/- 0.9 Hz
+                LAGGED coherence with the alternation -0.231 +/- 0.003
+                the 375 Hz neural swing at 3.06 Hz passes the 800 ms pole at |H| 0.065 ->  24.3 Hz predicted
+  drive200    1.00  167   0.60  1.00  -0.650 +/- 0.004   2.83/ 4.56   206.45 +/- 76.78 0.56    9.26
+                anti-phase by half of the recording: -0.670 / -0.628
+                low-F1 posture 9.259 +/- 7.660 Hz, high-F1 9.268 +/- 7.648 Hz   [0/12 seeds DEGENERATE]
+                WITHIN-half coherence +0.974 +/- 0.001  (a population half-center is strongly POSITIVE here; per-neuron bursting is not)
+                PRODUCED F1 sd  10.1 +/- 0.2 Hz, 5-95% swing   30.7 +/- 0.3 Hz
+                LAGGED coherence with the alternation -0.705 +/- 0.010
+                the 375 Hz neural swing at 3.00 Hz passes the 800 ms pole at |H| 0.066 ->  24.8 Hz predicted
+  ctrl140     0.00  167   0.00  1.00  +0.371 +/- 0.011   2.12/ 4.63    5.69 +/- 0.97 0.57    4.94
+                anti-phase by half of the recording: +0.395 / +0.346
+                low-F1 posture 4.945 +/- 3.226 Hz, high-F1 4.942 +/- 3.231 Hz   [0/12 seeds DEGENERATE]
+                WITHIN-half coherence +0.225 +/- 0.009  (a population half-center is strongly POSITIVE here; per-neuron bursting is not)
+                PRODUCED F1 sd  21.0 +/- 0.4 Hz, 5-95% swing   69.0 +/- 1.2 Hz
+                LAGGED coherence with the alternation -0.313 +/- 0.006
+                the 375 Hz neural swing at 2.98 Hz passes the 800 ms pole at |H| 0.067 ->  25.0 Hz predicted
+  wi000       1.00  333   0.60  0.00  +0.094 +/- 0.011   3.02/ 4.70   839.85 +/- 247.78 0.57    3.50
+                anti-phase by half of the recording: +0.104 / +0.085
+                low-F1 posture 3.502 +/- 1.903 Hz, high-F1 3.504 +/- 1.893 Hz   [0/12 seeds DEGENERATE]
+                WITHIN-half coherence +0.041 +/- 0.008  (a population half-center is strongly POSITIVE here; per-neuron bursting is not)
+                PRODUCED F1 sd  12.3 +/- 0.6 Hz, 5-95% swing   40.7 +/- 2.7 Hz
+                LAGGED coherence with the alternation -0.147 +/- 0.007
+                the 375 Hz neural swing at 3.50 Hz passes the 800 ms pole at |H| 0.057 ->  21.3 Hz predicted
+  wi150       1.00  333   0.60  1.50  -0.270 +/- 0.001   2.98/ 4.58   740.51 +/- 213.48 0.57    3.70
+                anti-phase by half of the recording: -0.272 / -0.268
+                low-F1 posture 3.701 +/- 5.839 Hz, high-F1 3.702 +/- 5.835 Hz   [0/12 seeds DEGENERATE]
+                WITHIN-half coherence +0.964 +/- 0.001  (a population half-center is strongly POSITIVE here; per-neuron bursting is not)
+                PRODUCED F1 sd  44.5 +/- 0.5 Hz, 5-95% swing  136.5 +/- 0.8 Hz
+                LAGGED coherence with the alternation -0.519 +/- 0.005
+                the 375 Hz neural swing at 1.00 Hz passes the 800 ms pole at |H| 0.195 ->  73.2 Hz predicted
+  wi200       1.00  333   0.60  2.00  -0.272 +/- 0.001   2.54/ 5.53   1017.27 +/- 379.45 0.57    3.70
+                anti-phase by half of the recording: -0.271 / -0.272
+                low-F1 posture 3.699 +/- 5.861 Hz, high-F1 3.700 +/- 5.860 Hz   [0/12 seeds DEGENERATE]
+                WITHIN-half coherence +0.965 +/- 0.001  (a population half-center is strongly POSITIVE here; per-neuron bursting is not)
+                PRODUCED F1 sd  44.5 +/- 0.5 Hz, 5-95% swing  136.3 +/- 0.8 Hz
+                LAGGED coherence with the alternation -0.518 +/- 0.004
+                the 375 Hz neural swing at 1.10 Hz passes the 800 ms pole at |H| 0.177 ->  66.5 Hz predicted
+  wi300       1.00  333   0.60  3.00  -0.278 +/- 0.001   2.75/ 4.45   1129.90 +/- 704.02 0.57    3.69
+                anti-phase by half of the recording: -0.276 / -0.280
+                low-F1 posture 3.694 +/- 5.860 Hz, high-F1 3.696 +/- 5.859 Hz   [0/12 seeds DEGENERATE]
+                WITHIN-half coherence +0.964 +/- 0.001  (a population half-center is strongly POSITIVE here; per-neuron bursting is not)
+                PRODUCED F1 sd  44.4 +/- 0.5 Hz, 5-95% swing  135.5 +/- 0.5 Hz
+                LAGGED coherence with the alternation -0.519 +/- 0.005
+                the 375 Hz neural swing at 1.00 Hz passes the 800 ms pole at |H| 0.195 ->  73.2 Hz predicted
+  tau042      1.00  42    0.60  1.00  -0.289 +/- 0.003   2.38/ 4.94    3.48 +/- 0.34 0.55   18.30  <- VOID
+                anti-phase by half of the recording: -0.263 / -0.324
+                low-F1 posture 18.281 +/- 3.477 Hz, high-F1 18.328 +/- 3.471 Hz   [0/12 seeds DEGENERATE]
+                WITHIN-half coherence +0.506 +/- 0.007  (a population half-center is strongly POSITIVE here; per-neuron bursting is not)
+                PRODUCED F1 sd   6.9 +/- 0.2 Hz, 5-95% swing   22.3 +/- 0.6 Hz
+                LAGGED coherence with the alternation -0.256 +/- 0.006
+                the 375 Hz neural swing at 3.81 Hz passes the 800 ms pole at |H| 0.052 ->  19.5 Hz predicted
+  tau500      1.00  500   0.60  1.00  -0.202 +/- 0.001   2.75/ 4.34   1012.54 +/- 172.91 0.57    2.52
+                anti-phase by half of the recording: -0.202 / -0.201
+                low-F1 posture 2.521 +/- 4.965 Hz, high-F1 2.523 +/- 4.963 Hz   [0/12 seeds DEGENERATE]
+                WITHIN-half coherence +0.959 +/- 0.001  (a population half-center is strongly POSITIVE here; per-neuron bursting is not)
+                PRODUCED F1 sd  61.8 +/- 0.6 Hz, 5-95% swing  189.7 +/- 0.4 Hz
+                LAGGED coherence with the alternation -0.446 +/- 0.003
+                the 375 Hz neural swing at 0.58 Hz passes the 800 ms pole at |H| 0.323 -> 121.0 Hz predicted
+  rf25t083    1.00  83    0.60  1.00  -0.532 +/- 0.001   3.31/ 3.84    8.04 +/- 1.22 0.52   10.82
+                anti-phase by half of the recording: -0.536 / -0.531
+                low-F1 posture 10.807 +/- 12.082 Hz, high-F1 10.832 +/- 12.083 Hz   [0/12 seeds DEGENERATE]
+                WITHIN-half coherence +0.951 +/- 0.001  (a population half-center is strongly POSITIVE here; per-neuron bursting is not)
+                PRODUCED F1 sd  17.9 +/- 0.3 Hz, 5-95% swing   56.3 +/- 0.8 Hz
+                LAGGED coherence with the alternation -0.640 +/- 0.010
+                the 375 Hz neural swing at 3.12 Hz passes the 800 ms pole at |H| 0.064 ->  23.8 Hz predicted
+  rf25t167    1.00  167   0.60  1.00  -0.300 +/- 0.001   2.83/ 4.53   321.86 +/- 102.26 0.53    6.54
+                anti-phase by half of the recording: -0.303 / -0.297
+                low-F1 posture 6.536 +/- 10.253 Hz, high-F1 6.541 +/- 10.266 Hz   [0/12 seeds DEGENERATE]
+                WITHIN-half coherence +0.949 +/- 0.001  (a population half-center is strongly POSITIVE here; per-neuron bursting is not)
+                PRODUCED F1 sd  27.2 +/- 0.4 Hz, 5-95% swing   84.2 +/- 1.0 Hz
+                LAGGED coherence with the alternation -0.507 +/- 0.006
+                the 375 Hz neural swing at 1.25 Hz passes the 800 ms pole at |H| 0.157 ->  58.9 Hz predicted
+  rf25t250    1.00  250   0.60  1.00  -0.205 +/- 0.001   3.29/ 4.43   27.89 +/- 5.81 0.53    4.73
+                anti-phase by half of the recording: -0.204 / -0.207
+                low-F1 posture 4.729 +/- 9.233 Hz, high-F1 4.731 +/- 9.224 Hz   [0/12 seeds DEGENERATE]
+                WITHIN-half coherence +0.945 +/- 0.001  (a population half-center is strongly POSITIVE here; per-neuron bursting is not)
+                PRODUCED F1 sd  36.9 +/- 0.6 Hz, 5-95% swing  114.9 +/- 2.0 Hz
+                LAGGED coherence with the alternation -0.425 +/- 0.006
+                the 375 Hz neural swing at 1.88 Hz passes the 800 ms pole at |H| 0.106 ->  39.6 Hz predicted
+  rf25t333    1.00  333   0.60  1.00  -0.152 +/- 0.001   3.73/ 5.13   950.17 +/- 309.61 0.53    3.70
+                anti-phase by half of the recording: -0.154 / -0.151
+                low-F1 posture 3.702 +/- 8.395 Hz, high-F1 3.700 +/- 8.397 Hz   [0/12 seeds DEGENERATE]
+                WITHIN-half coherence +0.940 +/- 0.001  (a population half-center is strongly POSITIVE here; per-neuron bursting is not)
+                PRODUCED F1 sd  45.6 +/- 0.4 Hz, 5-95% swing  140.4 +/- 0.3 Hz
+                LAGGED coherence with the alternation -0.378 +/- 0.003
+                the 375 Hz neural swing at 1.12 Hz passes the 800 ms pole at |H| 0.174 ->  65.3 Hz predicted
+  rf25ctrl    0.00  167   0.00  1.00  +0.321 +/- 0.011   3.19/ 5.75    4.10 +/- 0.48 0.53    4.94
+                anti-phase by half of the recording: +0.345 / +0.296
+                low-F1 posture 4.940 +/- 4.406 Hz, high-F1 4.949 +/- 4.418 Hz   [0/12 seeds DEGENERATE]
+                WITHIN-half coherence +0.188 +/- 0.008  (a population half-center is strongly POSITIVE here; per-neuron bursting is not)
+                PRODUCED F1 sd  23.6 +/- 0.4 Hz, 5-95% swing   75.5 +/- 1.2 Hz
+                LAGGED coherence with the alternation -0.213 +/- 0.004
+                the 375 Hz neural swing at 2.62 Hz passes the 800 ms pole at |H| 0.076 ->  28.3 Hz predicted
+  rf100t083   1.00  83    0.60  1.00  -0.462 +/- 0.002   2.25/ 3.91    3.51 +/- 0.27 0.62   10.04
+                anti-phase by half of the recording: -0.505 / -0.507
+                low-F1 posture 10.042 +/- 2.561 Hz, high-F1 10.046 +/- 2.563 Hz   [0/12 seeds DEGENERATE]
+                WITHIN-half coherence +0.882 +/- 0.004  (a population half-center is strongly POSITIVE here; per-neuron bursting is not)
+                PRODUCED F1 sd   6.8 +/- 0.4 Hz, 5-95% swing   22.1 +/- 1.1 Hz
+                LAGGED coherence with the alternation -0.233 +/- 0.003
+                the 375 Hz neural swing at 3.29 Hz passes the 800 ms pole at |H| 0.060 ->  22.6 Hz predicted
+  rf100t167   1.00  167   0.60  1.00  -0.766 +/- 0.001   1.83/ 4.09   228.36 +/- 71.26 0.62    5.91
+                anti-phase by half of the recording: -0.759 / -0.773
+                low-F1 posture 5.907 +/- 4.190 Hz, high-F1 5.906 +/- 4.193 Hz   [0/12 seeds DEGENERATE]
+                WITHIN-half coherence +0.981 +/- 0.000  (a population half-center is strongly POSITIVE here; per-neuron bursting is not)
+                PRODUCED F1 sd  16.7 +/- 0.3 Hz, 5-95% swing   49.6 +/- 0.7 Hz
+                LAGGED coherence with the alternation -0.793 +/- 0.011
+                the 375 Hz neural swing at 1.50 Hz passes the 800 ms pole at |H| 0.131 ->  49.3 Hz predicted
+  rf100t250   1.00  250   0.60  1.00  -0.645 +/- 0.001   2.83/ 4.63   15.55 +/- 2.38 0.62    4.45
+                anti-phase by half of the recording: -0.646 / -0.643
+                low-F1 posture 4.443 +/- 3.796 Hz, high-F1 4.449 +/- 3.793 Hz   [0/12 seeds DEGENERATE]
+                WITHIN-half coherence +0.977 +/- 0.001  (a population half-center is strongly POSITIVE here; per-neuron bursting is not)
+                PRODUCED F1 sd  30.6 +/- 0.4 Hz, 5-95% swing   91.6 +/- 0.5 Hz
+                LAGGED coherence with the alternation -0.789 +/- 0.008
+                the 375 Hz neural swing at 2.06 Hz passes the 800 ms pole at |H| 0.096 ->  36.0 Hz predicted
+  rf100t333   1.00  333   0.60  1.00  -0.566 +/- 0.000   1.98/ 4.23   37.51 +/- 6.96 0.63    3.55
+                anti-phase by half of the recording: -0.569 / -0.563
+                low-F1 posture 3.546 +/- 3.512 Hz, high-F1 3.545 +/- 3.508 Hz   [0/12 seeds DEGENERATE]
+                WITHIN-half coherence +0.977 +/- 0.001  (a population half-center is strongly POSITIVE here; per-neuron bursting is not)
+                PRODUCED F1 sd  41.7 +/- 0.4 Hz, 5-95% swing  125.9 +/- 0.9 Hz
+                LAGGED coherence with the alternation -0.733 +/- 0.007
+                the 375 Hz neural swing at 2.88 Hz passes the 800 ms pole at |H| 0.069 ->  25.9 Hz predicted
+  rf100ctrl   0.00  167   0.00  1.00  +0.375 +/- 0.009   2.69/ 3.97    4.61 +/- 0.42 0.62    4.94
+                anti-phase by half of the recording: +0.400 / +0.348
+                low-F1 posture 4.934 +/- 2.287 Hz, high-F1 4.945 +/- 2.290 Hz   [0/12 seeds DEGENERATE]
+                WITHIN-half coherence +0.228 +/- 0.007  (a population half-center is strongly POSITIVE here; per-neuron bursting is not)
+                PRODUCED F1 sd  20.4 +/- 0.3 Hz, 5-95% swing   65.4 +/- 1.2 Hz
+                LAGGED coherence with the alternation -0.395 +/- 0.006
+                the 375 Hz neural swing at 2.27 Hz passes the 800 ms pole at |H| 0.087 ->  32.7 Hz predicted
+  rf75t083    1.00  83    0.60  1.00  -0.459 +/- 0.005   2.92/ 5.34    5.22 +/- 0.46 0.59   10.18
+                anti-phase by half of the recording: -0.348 / -0.573
+                low-F1 posture 10.172 +/- 3.576 Hz, high-F1 10.188 +/- 3.573 Hz   [0/12 seeds DEGENERATE]
+                WITHIN-half coherence +0.835 +/- 0.003  (a population half-center is strongly POSITIVE here; per-neuron bursting is not)
+                PRODUCED F1 sd  19.8 +/- 0.5 Hz, 5-95% swing   66.3 +/- 1.8 Hz
+                LAGGED coherence with the alternation -0.353 +/- 0.010
+                the 375 Hz neural swing at 3.19 Hz passes the 800 ms pole at |H| 0.062 ->  23.4 Hz predicted
+  rf75t167    1.00  167   0.60  1.00  -0.675 +/- 0.001   2.00/ 4.23   42.70 +/- 15.54 0.60    6.17
+                anti-phase by half of the recording: -0.673 / -0.678
+                low-F1 posture 6.162 +/- 5.145 Hz, high-F1 6.169 +/- 5.144 Hz   [0/12 seeds DEGENERATE]
+                WITHIN-half coherence +0.974 +/- 0.001  (a population half-center is strongly POSITIVE here; per-neuron bursting is not)
+                PRODUCED F1 sd  22.0 +/- 0.3 Hz, 5-95% swing   65.8 +/- 0.4 Hz
+                LAGGED coherence with the alternation -0.783 +/- 0.008
+                the 375 Hz neural swing at 2.75 Hz passes the 800 ms pole at |H| 0.072 ->  27.1 Hz predicted
+  rf75t250    1.00  250   0.60  1.00  -0.563 +/- 0.000   2.88/ 4.40   798.32 +/- 247.24 0.60    4.56
+                anti-phase by half of the recording: -0.563 / -0.563
+                low-F1 posture 4.565 +/- 4.619 Hz, high-F1 4.564 +/- 4.620 Hz   [0/12 seeds DEGENERATE]
+                WITHIN-half coherence +0.974 +/- 0.001  (a population half-center is strongly POSITIVE here; per-neuron bursting is not)
+                PRODUCED F1 sd  33.5 +/- 0.4 Hz, 5-95% swing  100.6 +/- 0.6 Hz
+                LAGGED coherence with the alternation -0.716 +/- 0.008
+                the 375 Hz neural swing at 2.75 Hz passes the 800 ms pole at |H| 0.072 ->  27.1 Hz predicted
+  rf75t333    1.00  333   0.60  1.00  -0.437 +/- 0.001   2.81/ 4.86   159.57 +/- 37.71 0.60    3.62
+                anti-phase by half of the recording: -0.443 / -0.431
+                low-F1 posture 3.622 +/- 4.379 Hz, high-F1 3.621 +/- 4.376 Hz   [0/12 seeds DEGENERATE]
+                WITHIN-half coherence +0.972 +/- 0.001  (a population half-center is strongly POSITIVE here; per-neuron bursting is not)
+                PRODUCED F1 sd  42.9 +/- 0.3 Hz, 5-95% swing  130.4 +/- 0.3 Hz
+                LAGGED coherence with the alternation -0.639 +/- 0.005
+                the 375 Hz neural swing at 2.88 Hz passes the 800 ms pole at |H| 0.069 ->  25.9 Hz predicted
+  rf75ctrl    0.00  167   0.00  1.00  +0.371 +/- 0.011   2.40/ 4.69    3.90 +/- 0.62 0.60    4.94
+                anti-phase by half of the recording: +0.396 / +0.343
+                low-F1 posture 4.946 +/- 2.634 Hz, high-F1 4.943 +/- 2.643 Hz   [0/12 seeds DEGENERATE]
+                WITHIN-half coherence +0.225 +/- 0.008  (a population half-center is strongly POSITIVE here; per-neuron bursting is not)
+                PRODUCED F1 sd  20.0 +/- 0.2 Hz, 5-95% swing   65.1 +/- 0.7 Hz
+                LAGGED coherence with the alternation -0.376 +/- 0.002
+                the 375 Hz neural swing at 3.44 Hz passes the 800 ms pole at |H| 0.058 ->  21.7 Hz predicted
+
+  KILL SWITCH -- duty away from BOTH ends, rate near target
+    tau083      duty 0.56  rate 10.21 Hz
+    tau167      duty 0.57  rate  6.38 Hz
+    tau250      duty 0.57  rate  4.67 Hz
+    tau333      duty 0.57  rate  3.67 Hz
+    inhib140    duty 0.51  rate 121.75 Hz   <- VOID (runaway or silence)
+    fat140      duty 0.00  rate  1.51 Hz   <- VOID (runaway or silence)
+    drive200    duty 0.56  rate  9.26 Hz
+    ctrl140     duty 0.57  rate  4.94 Hz
+    wi000       duty 0.57  rate  3.50 Hz
+    wi150       duty 0.57  rate  3.70 Hz
+    wi200       duty 0.57  rate  3.70 Hz
+    wi300       duty 0.57  rate  3.69 Hz
+    tau042      duty 0.55  rate 18.30 Hz   <- VOID (runaway or silence)
+    tau500      duty 0.57  rate  2.52 Hz
+    rf25t083    duty 0.52  rate 10.82 Hz
+    rf25t167    duty 0.53  rate  6.54 Hz
+    rf25t250    duty 0.53  rate  4.73 Hz
+    rf25t333    duty 0.53  rate  3.70 Hz
+    rf25ctrl    duty 0.53  rate  4.94 Hz
+    rf100t083   duty 0.62  rate 10.04 Hz
+    rf100t167   duty 0.62  rate  5.91 Hz
+    rf100t250   duty 0.62  rate  4.45 Hz
+    rf100t333   duty 0.63  rate  3.55 Hz
+    rf100ctrl   duty 0.62  rate  4.94 Hz
+    rf75t083    duty 0.59  rate 10.18 Hz
+    rf75t167    duty 0.60  rate  6.17 Hz
+    rf75t250    duty 0.60  rate  4.56 Hz
+    rf75t333    duty 0.60  rate  3.62 Hz
+    rf75ctrl    duty 0.60  rate  4.94 Hz
+
+  THE REGIME PROFILE -- anti-phase and rate across the drive axis
+    fusion below the window, winner-take-all in its middle, simultaneous
+    activity above (Shpiro/Curtu/Rinzel/Rubin)
+    drive 1.40  anti -0.754 (-105.0 SE vs ctrl)  rate 10.21  0/12 deg  
+    drive 1.40  anti -0.555 (-86.4 SE vs ctrl)  rate  6.38  0/12 deg  
+    drive 1.40  anti -0.395 (-71.6 SE vs ctrl)  rate  4.67  0/12 deg  
+    drive 1.40  anti -0.297 (-62.4 SE vs ctrl)  rate  3.67  0/12 deg  
+    drive 1.40  anti +0.075 (-21.9 SE vs ctrl)  rate 121.75  0/12 deg  VOID
+    drive 1.40  anti +0.092 (-22.1 SE vs ctrl)  rate  1.51  0/12 deg  VOID
+    drive 2.00  anti -0.650 (-90.0 SE vs ctrl)  rate  9.26  0/12 deg  
+    drive 1.40  anti +0.371 (+0.0 SE vs ctrl)  rate  4.94  0/12 deg  
+    drive 1.40  anti +0.094 (-17.6 SE vs ctrl)  rate  3.50  0/12 deg  
+    drive 1.40  anti -0.270 (-59.8 SE vs ctrl)  rate  3.70  0/12 deg  
+    drive 1.40  anti -0.272 (-59.8 SE vs ctrl)  rate  3.70  0/12 deg  
+    drive 1.40  anti -0.278 (-60.2 SE vs ctrl)  rate  3.69  0/12 deg  
+    drive 1.40  anti -0.289 (-59.6 SE vs ctrl)  rate 18.30  0/12 deg  VOID
+    drive 1.40  anti -0.202 (-53.3 SE vs ctrl)  rate  2.52  0/12 deg  
+    drive 1.40  anti -0.532 (-80.6 SE vs ctrl)  rate 10.82  0/12 deg  
+    drive 1.40  anti -0.300 (-58.5 SE vs ctrl)  rate  6.54  0/12 deg  
+    drive 1.40  anti -0.205 (-49.8 SE vs ctrl)  rate  4.73  0/12 deg  
+    drive 1.40  anti -0.152 (-44.7 SE vs ctrl)  rate  3.70  0/12 deg  
+    drive 1.40  anti +0.321 (+0.0 SE vs ctrl)  rate  4.94  0/12 deg  
+    drive 1.40  anti -0.462 (-91.0 SE vs ctrl)  rate 10.04  0/12 deg  
+    drive 1.40  anti -0.766 (-127.4 SE vs ctrl)  rate  5.91  0/12 deg  
+    drive 1.40  anti -0.645 (-114.2 SE vs ctrl)  rate  4.45  0/12 deg  
+    drive 1.40  anti -0.566 (-105.7 SE vs ctrl)  rate  3.55  0/12 deg  
+    drive 1.40  anti +0.375 (+0.0 SE vs ctrl)  rate  4.94  0/12 deg  
+    drive 1.40  anti -0.459 (-69.1 SE vs ctrl)  rate 10.18  0/12 deg  
+    drive 1.40  anti -0.675 (-95.6 SE vs ctrl)  rate  6.17  0/12 deg  
+    drive 1.40  anti -0.563 (-85.5 SE vs ctrl)  rate  4.56  0/12 deg  
+    drive 1.40  anti -0.437 (-73.8 SE vs ctrl)  rate  3.62  0/12 deg  
+    drive 1.40  anti +0.371 (+0.0 SE vs ctrl)  rate  4.94  0/12 deg  
+
+  THE CLOCK TEST -- does the period follow tau_a at drive 1.40?
+    measured on the HALF-DIFFERENCE -- the alternation itself. The envelope
+    peak is group 8's amplitude rhythm and is NOT this mechanism.
+    tau  83 ms  alternation 2.88 +/- 0.51 Hz  period  347.8 ms  predicted   166-  332 ms  outside
+                CROSSINGS   period  468.3 +/-   1.7 ms  (2312 turns)                      outside
+    tau 167 ms  alternation 1.25 +/- 0.00 Hz  period  800.0 ms  predicted   334-  668 ms  outside
+                CROSSINGS   period  784.2 +/-   1.5 ms  (1377 turns)                      outside
+    tau 250 ms  alternation 2.62 +/- 0.27 Hz  period  381.0 ms  predicted   500- 1000 ms  outside
+                CROSSINGS   period 1070.8 +/-   1.9 ms  (1008 turns)                      outside
+    tau 333 ms  alternation 1.46 +/- 0.48 Hz  period  685.7 ms  predicted   666- 1332 ms  IN BAND
+                CROSSINGS   period 1361.2 +/-   2.3 ms  ( 791 turns)                      outside
+    ENDPOINT fit +0.489 over tau 83 -> 333 ms -- DO NOT QUOTE THIS ONE.
+    FOUR-POINT slope +0.319, R^2 0.213.  REQUIRED ~1.000.  <-- the ARGMAX
+    FOUR-POINT slope +0.764, R^2 0.999  on the CROSSING period  <-- the better instrument
+    THE TWO INSTRUMENTS DISAGREE WITHOUT EITHER WINNING -- crossings +0.764
+    (R^2 0.999) against the argmax's +0.319 (R^2 0.213). No verdict on the
+    clock from this run; the period estimator itself is the open question.
+
+  THE LINEAR CLOCK LAW, FITTED ON tau 83-333 AND TESTED ON TWO NEW ARMS
+    in-sample fit  period = 3.560 * tau_a +179.8 ms,  R^2 0.99963
+      tau  83  measured   468.3  fitted   475.2  residual   -6.9 ms
+      tau 167  measured   784.2  fitted   774.3  residual   +9.9 ms
+      tau 250  measured  1070.8  fitted  1069.8  residual   +1.1 ms
+      tau 333  measured  1361.2  fitted  1365.3  residual   -4.0 ms
+    OUT OF SAMPLE  tau  42  predicted   329.3  measured    60.0 +/- 0.0  -81.8%  (17011 turns, x median -5.5% of record) VOID  NOT TESTABLE
+    OUT OF SAMPLE  tau 500  predicted  1959.8  measured  1986.7 +/- 3.1   +1.4%  (  543 turns, x median -0.1% of record)  HELD
+    1 of 2 out-of-sample arms were testable at all -- the other left
+    the oscillating regime, so it refuses ITSELF and not the law. This
+    is a HALF-DONE test whichever way the testable arm fell.
+    THE PERIOD IS A CLOCK WITH AN OFFSET. Every TESTABLE out-of-sample
+    arm (1 of 2) lands inside 10% of a law fitted before it was run, so
+    the period does track tau_a -- at 3.56 ms per ms with a fixed 180 ms
+    latency that is NOT tau_a's. The log-log exponent of ~1.0 this line
+    has demanded for four runs cannot be reached by any oscillator with a
+    finite rise time, so that test was the wrong SHAPE rather than a
+    failed mechanism. On one arm this is SUGGESTIVE, not settled.
+
+  v77 -- THE OFFSET TEST. THE SAME FOUR TAUS AT FOUR FILTER SETTINGS
+    model A  CASCADED LAGS       period = A * (tau_a + rate_fast_tau_ms),
+                                 so intercept = slope * rft, one coefficient
+    model B  OFFSET IS ELSEWHERE intercept = 179.8 ms at every setting
+
+    rate_fast_tau_ms =  50 ms
+      CONTROL ctrl140     duty 0.57  rate  4.94 Hz   FLOOR: sd 3.6166, 5515 turns, period   164.2 ms
+      tau  83  tau083      period   468.3 +/-   1.7 ms  ( 2312 turns, x median +0.3% of record, sd  4.2x floor)
+      tau 167  tau167      period   784.2 +/-   1.5 ms  ( 1377 turns, x median -0.0% of record, sd  3.3x floor)
+      tau 250  tau250      period  1070.8 +/-   1.9 ms  ( 1008 turns, x median -0.1% of record, sd  2.9x floor)
+      tau 333  tau333      period  1361.2 +/-   2.3 ms  (  791 turns, x median -0.3% of record, sd  2.6x floor)
+      FIT  slope 3.560 +/- 0.048  intercept   179.8 +/-  11.0 ms  R^2 0.99963  (4 live)
+           A predicts   178.0 (off by    +1.8)   B predicts   179.8 (off by    -0.0)
+
+    rate_fast_tau_ms =  25 ms
+      CONTROL rf25ctrl    duty 0.53  rate  4.94 Hz   FLOOR: sd 5.1365, 7904 turns, period   115.8 ms
+      tau  83  rf25t083    period   520.8 +/-   2.3 ms  ( 2087 turns, x median +0.7% of record, sd  4.1x floor)
+      tau 167  rf25t167    period   773.3 +/-   2.2 ms  ( 1385 turns, x median -0.8% of record, sd  3.2x floor)
+      tau 250  rf25t250    period  1065.0 +/-   1.9 ms  ( 1012 turns, x median -0.2% of record, sd  2.8x floor)
+      tau 333  rf25t333    period  1360.0 +/-   2.1 ms  (  793 turns, x median -0.2% of record, sd  2.5x floor)
+      FIT  slope 3.372 +/- 0.093  intercept   227.6 +/-  21.3 ms  R^2 0.99847  (4 live)
+           A predicts    89.0 (off by  +138.6)   B predicts   179.8 (off by   +47.8)
+
+    rate_fast_tau_ms =  75 ms
+      CONTROL rf75ctrl    duty 0.60  rate  4.94 Hz   FLOOR: sd 2.9578, 4226 turns, period   212.5 ms
+      tau  83  rf75t083    period   113.3 +/-   1.4 ms  ( 6615 turns, x median -30.6% of record, sd  2.1x floor)  INCONSISTENT  UNDER 2x FLOOR  <- DROPPED
+      tau 167  rf75t167    period   790.8 +/-   2.9 ms  ( 1404 turns, x median +2.8% of record, sd  3.2x floor)  INCONSISTENT  <- DROPPED
+      tau 250  rf75t250    period  1094.2 +/-   1.5 ms  (  987 turns, x median +0.0% of record, sd  2.8x floor)
+      tau 333  rf75t333    period  1380.0 +/-   2.1 ms  (  782 turns, x median -0.0% of record, sd  2.5x floor)
+      ONLY 2 LIVE ARMS -- this setting is not fitted and bears on
+      nothing. It refuses ITSELF, not the law.
+
+    rate_fast_tau_ms = 100 ms
+      CONTROL rf100ctrl   duty 0.62  rate  4.94 Hz   FLOOR: sd 2.5565, 3399 turns, period   262.5 ms
+      tau  83  rf100t083   period   100.0 +/-   0.0 ms  (10239 turns, x median -5.2% of record, sd  1.7x floor)  INCONSISTENT  UNDER 2x FLOOR  <- DROPPED
+      tau 167  rf100t167   period   675.8 +/-   1.5 ms  ( 1609 turns, x median +0.7% of record, sd  3.1x floor)
+      tau 250  rf100t250   period  1103.8 +/-   3.1 ms  ( 1001 turns, x median +2.3% of record, sd  2.7x floor)  INCONSISTENT  <- DROPPED
+      tau 333  rf100t333   period  1407.5 +/-   1.8 ms  (  768 turns, x median +0.0% of record, sd  2.4x floor)
+      ONLY 2 LIVE ARMS -- this setting is not fitted and bears on
+      nothing. It refuses ITSELF, not the law.
+
+    THE DECIDING FIT -- the intercept against rate_fast_tau_ms (2 settings)
+      rft  50  fitted  intercept   179.8 +/-  11.0 ms  on 4 live arms
+      rft  25  fitted  intercept   227.6 +/-  21.3 ms  on 4 live arms
+      rft  75  REFUSED  intercept     0.0 +/-   0.0 ms  on 2 live arms
+      rft 100  REFUSED  intercept     0.0 +/-   0.0 ms  on 2 live arms
+      FEWER THAN THREE SETTINGS FITTED -- no coefficient and no error
+      bar, so this run does not decide between A and B. Report the
+      per-setting intercepts and nothing more.
+
+  UPPER EDGE -- drive 2.00 probes above the window (Shpiro predicts
+  simultaneous high activity there, not oscillation)
+    drive 2.00  anti -0.650  rate  9.26  peak 2.83 Hz
+
+  v76 -- THE COMPETITION'S STRENGTH, all five arms at tau333 / hc 0.60 /
+  drive 1.40, varying only k in hc_lo = g*(1 + k*D/S). k = 1 IS v57.
+    arm          k     anti      alternation       period     swing   vs ctrl      vs v57     clipped
+    wi000      0.00  +0.094   3.50 +/- 0.00 Hz   285.7     40.7   -28.4 +/- 2.9   -94.3 +/- 2.7    0.0%
+    tau333     1.00  -0.297   1.46 +/- 0.48 Hz   685.7    134.9   +65.9 +/- 1.2    +0.0 +/- 0.0    0.0%
+    wi150      1.50  -0.270   1.00 +/- 0.17 Hz  1000.0    136.5   +67.5 +/- 1.4    +1.6 +/- 0.7   98.7%
+    wi200      2.00  -0.272   1.10 +/- 0.35 Hz   905.7    136.3   +67.2 +/- 1.4    +1.3 +/- 0.8   99.3%
+    wi300      3.00  -0.278   1.00 +/- 0.17 Hz  1000.0    135.5   +66.5 +/- 1.3    +0.6 +/- 0.4   99.6%
+    NO VERDICT -- the best arm above k = 1 is `wi150` at +1.6 +/- 0.7 Hz
+    against v57 (2.2 SE), inside the +/-3 SE band where this run cannot
+    choose. The ordering is not the claim; the paired SE is.
+    the period:  1.46 -> 1.00 Hz, difference -0.46 +/- 0.51 (0.9 SE)
+    NOT RESOLVABLE (0.9 SE on an averaged ARGMAX), so this run does NOT
+    test the pole. The licensed statement is that nothing measurable
+    moved above k = 1, not that a longer period bought nothing.
+    k = 0 does not alternate (anti +0.094), so the differential term IS
+    required for the competition -- the tonic and the fatigue alone are
+    not enough, which is what Matsuoka predicts.
+
+  --- the reading ---
+  THE TWO HALVES TAKE TURNS. `tau083` reaches anti-phase -0.754, beating BOTH of
+  its own singles by at least 3 SE -- so it is the COMBINATION and not
+  either ingredient, which is Matsuoka's prediction and the interaction this
+  run pre-registered.
+  A resonance moves both halves TOGETHER, so this cannot be the 3 Hz ring
+  being re-measured -- the failure that killed adaptclock.
+  BUT IT IS NOT A CLOCK. The exponent is +0.489 against ~1.000 required, so
+  the period ignores tau_a -- competition WITHOUT timekeeping, in the same
+  2.5-3.5 Hz band the pre-existing resonance occupies. Report the
+  alternation and refuse the clock.
