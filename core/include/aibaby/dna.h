@@ -2111,6 +2111,60 @@ struct DnaVocal {
   // Milliseconds, as a first-order return toward `f1_rest_`.
   float f1_leak_tau_ms;
 
+  // DNA v76. THE WEIGHT ON THE HALF-CENTRE'S DIFFERENTIAL TERM, and it exists because
+  // v75 proved the two kernels are not a one-parameter family of each other.
+  //
+  // WHAT v75 TRIED AND WHY A GAIN COULD NOT FIX IT. v75 divided each half's inhibition
+  // by the module's `target_rate_hz` instead of by the pair's own mean, which sets
+  // within-population coupling to exactly 0 (Baruzzi, Lodi, Storace & Shilnikov 2020,
+  // Phys Rev E 102:032406). It was refused at both gains measured, and the reason is
+  // arithmetic rather than empirical. Write T for the setpoint and m for the half-mean
+  // the module actually runs at:
+  //
+  //     v57   tonic = g        between = g/(2m)      within = -g/(2m)
+  //     v75   tonic = g*m/T    between = g/T         within = 0
+  //
+  // v57's tonic is scale-FREE: m_hi/mean is ~1 whatever the rate, so the operating
+  // point does not move with it. v75's is proportional to m/T. Demanding equal tonic
+  // gives g' = g*T/m; demanding equal between-coupling gives g' = g*T/(2m). **The two
+  // demands differ by exactly a factor of two, so no single gain satisfies both** --
+  // and the vocal module runs at m = 3.7-4.6 Hz against T = 5.0, not at its setpoint,
+  // so the factor does not vanish. v75 also loses the clamp's headroom: m_hi/mean <= 2
+  // by construction, where m_hi/T passes 2 above 10 Hz and saturates the fast arms,
+  // destroying the very between-coupling it was added to isolate.
+  //
+  // THE FORM, which keeps the normaliser scale-free and weights only the difference:
+  //
+  //     hc_lo = g * clamp((1-k) + k*(m_hi/mean), 0, 2)      mean = (m_lo+m_hi)/2
+  //
+  // Since m_hi/mean = 1 + D/S for D = m_hi - m_lo and S = m_lo + m_hi, this is
+  // g*(1 + k*D/S): tonic g for every k, between +k*g/(2m), within -k*g/(2m). Within and
+  // between are EQUAL AND OPPOSITE at every k and cannot be separated here -- a term
+  // that depends on the normalised difference has no other option -- so this field is
+  // the strength of the COMPETITION, not a within-coupling knob. Isolating within would
+  // need a normaliser that tracks the rate without tracking the instantaneous balance,
+  // i.e. a slow filter of the group's own mean; that is a different mechanism.
+  //
+  // WHY TURN IT UP RATHER THAN OFF. The v75 pair measured a dissociation the project
+  // had the sign of backwards: across arms, the DEEPEST competition produces the
+  // SMALLEST formant swing, because deeper competition alternates faster and the vocal
+  // tract is a low-pass with an 800 ms pole (|H| = 1/sqrt(1+(2*pi*f*tau)^2), corner
+  // 0.2 Hz) that every oscillator here sits an order of magnitude above. Period is the
+  // amplitude lever. Larger k suppresses the loser harder and the winner less, so the
+  // winner holds longer -- which is the only measured handle on the period.
+  //
+  // BOUNDED BY CONSTRUCTION, which this kernel requires: the clamp to [0,2] caps the
+  // asymmetry at "loser 2g, winner 0" and never injects drive, so the v57b runaway
+  // (vocal at 125 Hz against a 4.9 baseline, from handing +d to the WINNER) cannot
+  // return at any k. The two offsets still sum to exactly 2g, clipped or not.
+  //
+  // 1.0 IS v57 AND IS BIT-IDENTICAL: (1-k) is exactly 0 and k*x is exactly x in IEEE
+  // arithmetic at k == 1, so the archived arms must re-print to every decimal and this
+  // run carries its own specificity check. 0 removes the competition and leaves the
+  // tonic -- the control the v75 pair never had. A genome without the key defaults to
+  // 1.0 and is disclosed by `Network::halfcenter_within()` rather than inferred.
+  float halfcenter_within;
+
 };
 
 // Curiosity (§3.3) is a forward model of the next sensory frame plus two

@@ -693,6 +693,15 @@ halfcenter_group = 2
 # ~0.8 cancels it. Oscillation is a BOUNDED WINDOW in this parameter with a
 # winner-take-all gap in the middle. 0 is OFF and bit-identical.
 halfcenter_drive = 0.0
+# DNA v76. Weight on the differential term: hc_lo = g*(1 + k*D/S), so k scales the
+# competition and leaves the tonic at g for every k. 1.0 is v57 and is bit-identical;
+# 0 leaves the tonic with no competition at all. v75 tried to remove the within-half
+# coupling by dividing by `target_rate_hz` instead of the pair mean and was refused at
+# both gains measured: that normaliser ties the tonic, the coupling AND the clamp's
+# headroom to the operating rate, which is 3.7-4.6 Hz against a setpoint of 5.0, and
+# no single gain can match both the tonic and the coupling of v57 (the two demands
+# differ by exactly 2x). Read only when `halfcenter_gain` > 0.
+halfcenter_within = 1.0
 
 # DNA v62 -- THE DECODER READS VELOCITY, NOT POSITION. 0 is OFF and bit-identical.
 #

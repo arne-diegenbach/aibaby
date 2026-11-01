@@ -153,15 +153,17 @@ class Network {
     return hc_mhi_[m] > hc_mlo_[m] ? 1 : 0;
   }
 
-  // DNA v75. WHICH NORMALISER THIS GENOME ACTUALLY RUNS, so an experiment can PRINT it
-  // instead of assuming it. Returns the module's setpoint when the v75 half-independent
-  // normaliser is in force, and 0 when the module has no `target_rate_hz` and the v57
-  // pair-mean fallback is running instead -- which is the OLD topology, within-population
-  // coupling and all. A null measured under the fallback refutes nothing about v75, and a
-  // caller that cannot tell the two apart would report it as if it did.
-  Scalar halfcenter_normaliser(uint32_t m) const {
+  // DNA v76. HOW STRONG THE COMPETITION THIS GENOME ACTUALLY RUNS IS, so an experiment
+  // can PRINT it instead of assuming it. Returns the weight on the differential term:
+  // 1 is v57's kernel exactly, 0 is the tonic with no competition at all, and the
+  // genome field is absent from every file written before v76 and defaults to 1 there.
+  // A caller that cannot tell 1 from 0 would report a run with no competition in it as
+  // if the mechanism had been on, which is what this accessor exists to prevent.
+  // Returns 0 when the mechanism is off in this module, which `halfcenter_phase()`
+  // reports as -1 and is not the same thing as a zero weight.
+  Scalar halfcenter_within(uint32_t m) const {
     if (m >= module_count_ || hc_gain_[m] <= kZero) return kZero;
-    return hc_norm_[m];
+    return hc_within_[m];
   }
 
   // EXPERIMENT ONLY -- the ENVELOPE-ONSET word gate, after Nabe, Schwartz & Diard's
@@ -1210,14 +1212,13 @@ class Network {
   uint32_t hc_begin_[kMaxModules] = {};
   uint32_t hc_end_[kMaxModules] = {};
   Scalar hc_drive_[kMaxModules] = {};
-  // DNA v75. THE NORMALISER THE INHIBITION IS DIVIDED BY, and it has to be a quantity
-  // INDEPENDENT OF BOTH HALVES. Cached from the module's `target_rate_hz` at build, which
-  // is the same ratio `norm_gain_`'s divisive normalisation already takes
-  // (`ms.mean_rate_fast / norm_target_[m]`), so the term stays dimensionless and no new
-  // genome constant is introduced. See the derivation at the computation site: dividing by
-  // the PAIR's own mean, as v57 did, made each half's inhibition depend on its own rate and
-  // reintroduced winner-amplification. Zero falls back and says so.
-  Scalar hc_norm_[kMaxModules] = {};
+  // DNA v76. THE WEIGHT ON THE DIFFERENTIAL TERM, cached from the genome at build and
+  // clamped to [0,8]. 1 is v57 and is bit-identical; 0 leaves the tonic with no
+  // competition. It REPLACES v75's constant normaliser, which is retired: dividing by
+  // `target_rate_hz` does zero the within-half coupling, but it ties the tonic and the
+  // clamp's headroom to the operating rate as well, and matching v57's tonic and its
+  // between-coupling then demand gains a factor of two apart. See the computation site.
+  Scalar hc_within_[kMaxModules] = {};
   // DnaExploration::drive_compensation, cached from the genome at build.
   Scalar drive_comp_ = kZero;
   // DNA v51. The context-indexed bias table: `ctx_slots_` scalars per neuron,

@@ -669,7 +669,7 @@ bool Network::build(const Dna& dna, Arena& arena, Rng& rng) {
     hc_gain_[m] = kZero;
     hc_lo_[m] = kZero;
     hc_hi_[m] = kZero;
-    hc_norm_[m] = kZero;
+    hc_within_[m] = kZero;
   }
   if (dna_.header().vocal.halfcenter_gain > kZero) {
     const Scalar g = Scalar(dna_.header().vocal.halfcenter_gain);
@@ -678,9 +678,11 @@ bool Network::build(const Dna& dna, Arena& arena, Rng& rng) {
         hc_gain_[m] = g;
         hc_group_[m] = dna_.header().vocal.halfcenter_group;
         hc_drive_[m] = Scalar(dna_.header().vocal.halfcenter_drive);
-        // DNA v75: the half-independent normaliser. The module's own homeostatic setpoint,
-        // not either half's measured rate -- see the derivation at the computation site.
-        hc_norm_[m] = Scalar(dna_.module(m).target_rate_hz);
+        // DNA v76: the weight on the differential term. Clamped non-negative because a
+        // negative weight inverts the competition into mutual EXCITATION, which is the
+        // v57a/v57b runaway with a sign flip, and nothing in the kernel would bound it.
+        hc_within_[m] = clampf(Scalar(dna_.header().vocal.halfcenter_within), kZero,
+                               Scalar(8));
       }
     }
   }
@@ -2274,12 +2276,21 @@ void Network::step() {
       // holds mean ~ T, so the OPERATING POINT barely moves and what changes is the
       // derivative structure -- which is the whole content of Baruzzi's condition.
       const Scalar mean = (m_lo + m_hi) * Scalar(0.5);
-      // Falls back to the v57 normaliser rather than dividing by zero, and the fallback is
-      // reported by `halfcenter_normaliser()` rather than inferred, because a genome with
-      // no setpoint on its vocal module would otherwise run the OLD topology silently and
-      // a null would be read as refuting the new one.
-      const Scalar hcn = hc_norm_[m];
-      const Scalar scale = hcn > Scalar(1e-4) ? hcn : (mean > Scalar(1e-4) ? mean : Scalar(1e-4));
+      // DNA v76. THE NORMALISER IS THE PAIR'S OWN MEAN AGAIN, and v75's constant one is
+      // retired rather than re-tuned, because what refused it is arithmetic. Dividing by
+      // `target_rate_hz` does set within-population coupling to 0, but it also ties the
+      // TONIC level and the CLAMP's headroom to the rate the module happens to run at:
+      //
+      //     v57   tonic = g        between = g/(2m)      within = -g/(2m)
+      //     v75   tonic = g*m/T    between = g/T         within = 0
+      //
+      // Equal tonic needs g' = g*T/m, equal between-coupling needs g' = g*T/(2m), and
+      // those differ by exactly 2x -- so the two kernels are not a one-parameter family
+      // and the "matched-coupling" arms that halved the gain halved the tonic with it.
+      // Here m is 3.7-4.6 Hz against T = 5.0, so nothing cancels, and above 10 Hz
+      // m_hi/T passes the clamp at 2 and flattens the between-coupling in exactly the
+      // fast arms the period is measured on. m_hi/mean cannot exceed 2 by construction.
+      const Scalar scale = mean > Scalar(1e-4) ? mean : Scalar(1e-4);
       const Scalar inv = kOne / scale;
       // ZERO-MEAN BY CONSTRUCTION, and v1 of this was not, which voided a whole run.
       //
@@ -2317,8 +2328,22 @@ void Network::step() {
       // Normalised by the group's own mean so the term is scale-free, for the reason
       // the v32 comment above gives: a term in absolute hertz scales with the rate it
       // derives from and amplifies itself.
-      hc_lo_[m] = hc_gain_[m] * clampf(m_hi * inv, kZero, Scalar(2));
-      hc_hi_[m] = hc_gain_[m] * clampf(m_lo * inv, kZero, Scalar(2));
+      // DNA v76: `k` weights the DIFFERENCE and leaves the tonic at g. Since
+      // m_hi/mean = 1 + D/S, this is g*(1 + k*D/S) -- between +k*g/(2m), within
+      // -k*g/(2m), equal and opposite at every k. Larger k suppresses the loser harder
+      // and the winner less, so the winner holds longer: the period lever, which is the
+      // amplitude lever through the 800 ms pole.
+      //
+      // BIT-IDENTICAL AT k == 1. (kOne - k) is exactly 0 and k * x is exactly x, so the
+      // archived v57 arms must re-print to every decimal and the run carries its own
+      // specificity check. The clamp still caps the asymmetry at "loser 2g, winner 0"
+      // and never injects drive, so v57b's runaway cannot return at any k; the two
+      // offsets sum to exactly 2g whether clipped or not, because they are symmetric
+      // about 1 and the bounds are too.
+      const Scalar kw = hc_within_[m];
+      const Scalar kbase = kOne - kw;
+      hc_lo_[m] = hc_gain_[m] * clampf(kbase + kw * (m_hi * inv), kZero, Scalar(2));
+      hc_hi_[m] = hc_gain_[m] * clampf(kbase + kw * (m_lo * inv), kZero, Scalar(2));
       // INSTRUMENT ONLY: the raw half-means, so the phase is readable even when both
       // inhibition terms saturate at the clamp. Nothing in the kernel reads them.
       hc_mlo_[m] = m_lo;

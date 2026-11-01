@@ -2012,6 +2012,11 @@ gain.
 
 ## §25 — THE FORBIDDEN TERM WAS BUYING THE PERIOD. v75 is dead at any gain (2026-11-01)
 
+> **READ §26 FIRST. Both of this section's headline claims are WITHDRAWN there.** The "matched"
+> arm halved the tonic along with the coupling — the two kernels are not a one-parameter family,
+> so no gain matches v57 — and "dead at any gain" runs against its own monotone trend. What
+> survives is the measurement at full gain and the across-arm dissociation.
+
 The matched stage, gated on all four keys, 12 arms × 12 reps, 26 min. **Determinism first:** all
 eight base arms re-print to every decimal — anti-phase and produced swing both — so appending
 four arms re-rolled nothing and the comparison is attributable to the arms alone.
@@ -2107,3 +2112,300 @@ shifts, and `halfcenter_gain` ships at 0.0 so the branch is dead at the shipped 
 pinned hash should hold — but a genome-layout change is exactly what
 `aibaby-shared-constants-audit` and `aibaby-nmax-rerolls-the-wiring` exist for, so the four
 verify keys gate it before anything else, and KEY2 failing is the finding rather than a nuisance.
+
+## §26 — THE MATCHED STAGE MATCHED NOTHING, AND THE TWO KERNELS ARE NOT A GAIN APART (2026-11-01)
+
+Written **before** v76 ran, because it is what made v76 a different experiment from the one §25
+prepared. No new ticks were spent: everything below is arithmetic over numbers already printed,
+and two of the four things it checks came out clean.
+
+### WHAT §25 CLAIMED AND WHY IT CANNOT BE TRUE
+
+§25's design claim was that `g' = g/2` "matches v57's between-coupling exactly and leaves the
+within-term as the ONLY difference." Write `T` for the vocal setpoint (5.0 Hz) and `m` for the
+half-mean the module actually runs at. At the balance point:
+
+    v57   tonic = g          between = +g/(2m)     within = -g/(2m)
+    v75   tonic = g*m/T      between = +g/T        within = 0
+
+v57's tonic is **scale-free** — `m_hi/mean` is ≈ 1 whatever the rate — while v75's is
+proportional to `m/T`. So:
+
+* **equal tonic** demands `g' = g*T/m`;
+* **equal between-coupling** demands `g' = g*T/(2m)`.
+
+**The two demands differ by exactly a factor of two.** No single gain satisfies both, and the
+factor does not cancel because **the module does not run at its setpoint**: the measured half
+means are 3.67 Hz (v57 tau333), 4.33 (v75 at hc 0.60) and 4.57 (`mat333`), against T = 5.0.
+The kernels are not a one-parameter family of each other, so "the matched-coupling arms" were
+not matched on anything:
+
+| | tonic | between (per Hz) |
+|---|---|---|
+| v57 tau333, g = 0.60 | 0.600 | 0.0818 |
+| v75 tau333, g = 0.60 | 0.519 | 0.120 |
+| v75 `mat333`, g = 0.30 | **0.274** | **0.060** |
+
+`mat333` had **less inhibition of every kind** than v57 — the tonic halved, the coupling 27%
+lower. Less inhibition means a higher rate (4.57 vs 3.67 Hz, as printed), faster fatigue
+accumulation, and a shorter half-period. **That is the sign of the effect §25 attributed to the
+within-term**, so the attribution is not established. And the true between-match is
+`g' = g*T/(2m) ≈ 0.41`, not 0.30 — a gain never run.
+
+### A THIRD UNMATCHED VARIABLE: THE CLAMP STOPS BEING INERT
+
+`m_hi/mean ≤ 2` **by construction** (m_hi ≤ m_lo + m_hi), so v57's clamp at 2 is unreachable and
+the kernel's `clampf(·, 0, 2)` never fires. `m_hi/T` has no such bound: it passes 2 above 10 Hz.
+`mat083`'s two half means are **11.188 and 11.197 Hz**, so its ratio is **2.24 — above the clamp
+on the MEAN**, not merely on excursions, and both offsets sit pinned at 2g with the differential
+flattened to zero for much of the record. `tau083` ran 9.37 with half-mean SDs of ±7.7, so it
+clips part of the time too. Under v75 the clamp bites in exactly the fast arms — which are the
+arms the clock slope is computed from, and that is a live candidate for the **−0.457** slope §25
+reported and declined to read as a law.
+
+It also means `mat083` reached anti-phase **−0.550 while its competition term was largely
+constant**, which is the first hint that the differential term may not be what alternates this
+oscillator. The run that settles it is v76's k = 0 arm: `fat140` cannot, because `halfcenter_drive`
+is applied inside the `hc_gain > 0` branch, so the "fatigue only" arm has no tonic drive either
+and is VOID at duty 0.00.
+
+### WHAT THIS WITHDRAWS, AND WHAT SURVIVES
+
+> **WITHDRAWN:** "the within-term is the only remaining difference" (§25). Three variables moved
+> at once, and the two that were not meant to move both push the measured direction.
+
+> **WITHDRAWN:** "v75 must not ship at any gain" (§25, and the commit message of `c941fe1`).
+> Within v75 the swing **rises** with gain — 19.3 Hz at 0.30, 42.7 at 0.60 — so an extrapolation
+> to all gains runs against its own monotone trend. The licensed statement is that **v75 is
+> refused at both gains measured**, and the region above 0.60 is unmeasured. It is not worth
+> measuring: the kernel is retired for the arithmetic above, not for the two refusals.
+
+**SURVIVING, and unaffected by any of this:** at hc 0.60 the tonic is nearly matched (0.519 vs
+0.600) and the coupling 1.47× v57's, so **§24's own comparison is sound as a measurement** — the
+produced swing fell 134.9 → 42.7 Hz against a 69.0 control at SEs under 1.3, and the creature
+got worse while the neural anti-phase deepened. The dissociation between competition depth and
+formant reach (§24) is **across the four tau arms of a single kernel** and is untouched. So is
+the pole arithmetic, and so is `tau_a`'s failure as the clock.
+
+### TWO CONFOUNDS CHECKED AND CLEAN — DO NOT RE-CHECK THESE
+
+**Budget.** The archived v57 logs are named `halfcenter-12m-*` and carry no instrument line, so
+they looked like a 12M-tick comparison against v75's 1.2M. They are not. The archive's two
+`hc = 0.00` arms print **identical** numbers to the v75 runs — `fat140` +0.092 ± 0.007 /
+3.83/4.54 / 7.23 ± 1.18 / duty 0.00 / 1.51 Hz / swing 71.5 ± 0.9, and `ctrl140` +0.371 ± 0.011 /
+2.12/4.63 / 5.69 ± 0.97 / 0.57 / 4.94 / 69.0 ± 1.2 — to every printed decimal including the SEs.
+Two runs of different length cannot agree like that. Same budget; the filename is a legacy label.
+
+**Seed family.** Both are 288559 (`offset 288559 -> first creature 0000000001398ef8`), and the
+same hc = 0.00 identity proves it independently.
+
+**A LABELLING BUG IN THE ARCHIVE, worth knowing before quoting it.** The hand-written header of
+`halfcenter-12m-gesture-replicated.log` has a column headed "ANTI-PHASE corr" whose values
+(tau333 −0.527 ± 0.004) are the **LAGGED coherence with the alternation**, not the anti-phase
+correlation the machine table prints on the same arm (−0.297 ± 0.000). The milestone's "30–44
+SE" figures come from that column, so they are SEs on the lagged coherence. The produced-swing
+claims (+65.9 Hz, +52.1 SE) are correctly labelled and carry the milestone regardless.
+
+### v76 `hcwithin` — BUILT, AND IT IS A DIFFERENT EXPERIMENT FROM §25'S
+
+§25's `w` was defined on v75's constant normaliser, which the arithmetic above rules out. The
+field that shipped instead weights the **differential term** on v57's scale-free normaliser:
+
+    hc_lo = g * clamp((1 - k) + k*(m_hi/mean), 0, 2),   mean = (m_lo + m_hi)/2
+          = g * (1 + k*D/S)
+
+so the **tonic is g for every k**, the clamp keeps its `≤ 2` guarantee, and `k = 1` is v57 in
+exact IEEE arithmetic — `(1 - k)` is exactly 0 and `k*x` is exactly `x`, so **the eight base arms
+must re-print the archive to every decimal**. That is a stronger specificity check than v75's,
+which only showed that two arms with the gain at zero were untouched: this one exercises the
+half-centre branch itself. v75's normaliser is retired rather than re-tuned, and lives in
+`c941fe1` if the unmeasured high-gain region is ever wanted.
+
+**WHAT k CANNOT DO, stated before the result.** `within = −k*g/(2m)` and `between = +k*g/(2m)` at
+every k — equal and opposite, because a term built from the **normalised difference** has no
+other option. So this sweep measures the **strength of the competition**, not the within-coupling
+alone, and a result here does not speak to Baruzzi's condition. Isolating within needs a
+normaliser that tracks the rate without tracking the instantaneous balance — a slow filter of the
+group's own mean, where a 1 s pole cuts the within-coupling ~9× at 1.46 Hz without touching the
+tonic. That is the design v75 should have been, it needs no new constant, and it is **not built**.
+
+**PRE-REGISTERED, and the statistic is unchanged from §25.** Primary is **produced swing at
+tau333**, reported both against the control's 69.0 Hz and **paired on the same twelve seeds
+against k = 1**, which is the increment the run exists to measure. Arms: k = 0, 1 (`tau333`
+itself), 1.5, 2.0, 3.0 at hc 0.60 / drive 1.40.
+
+* **Prediction:** the period lengthens with k and the swing rises with it through the pole,
+  because a larger k suppresses the loser harder (toward 2g) and the winner less (toward 0), so
+  the winner holds longer. The anti-phase **shallows** as it does — §24's dissociation continued
+  past its measured end.
+* **Refusal:** the swing peaks **at or below k = 1**, which says v57 already sits at the optimum
+  of this axis. A plateau above k = 1 is expected rather than refusing, since the clamp caps the
+  asymmetry at "loser 2g, winner 0".
+* **The k = 0 arm is informative either way.** It is the tonic with no competition at all — the
+  control the v75 pair never ran. If it still alternates at ≤ −0.20, the differential term is not
+  what makes this oscillate and every anti-phase number on this line has been read as evidence
+  for a mechanism that was not required.
+* **Runaway cannot return.** The clamp never injects drive, and the two offsets sum to exactly
+  2g whether clipped or not, so v57b's 125 Hz failure is unreachable at any k. The duty/rate
+  kill switch still gates every arm.
+
+**WHY THE SWING IS THE RIGHT PRIMARY HERE, AND IT IS NOT ONLY CONVENTION.** k has **no effect on
+the mean drive at any setting** — the two offsets sum to exactly 2g clipped or not, so raising k
+changes the competition's variance and not its level, and the rate should stay near tau333's 3.67
+Hz rather than drifting toward the VOID bound. That leaves two ways for a large k to fail, and
+the produced swing penalises both: too fast and the pole attenuates it; a **settled winner**
+(v57c's failure, which a large k invites by suppressing the loser past recovery) holds F1
+constant and so produces almost no swing at all, while showing up as near-perfect anti-phase. The
+anti-phase column would score that failure as the best result in the run. The swing column cannot.
+
+## §27 — k = 1 IS v57 TO THE LAST BIT, AND v57 IS ALREADY AT THE OPTIMUM OF THAT AXIS (2026-11-01)
+
+Gated on all four verify keys with the **pinned hash unchanged**, which is the first thing a new
+genome field has to survive. 12 arms × 12 reps at the 1.2M minimum, 25 min.
+
+### THE ANCHOR HELD EXACTLY, WHICH IS THE STRONGEST SPECIFICITY CHECK THIS LINE HAS HAD
+
+All eight base arms re-print the v57 archive **to every printed decimal, SEs included**:
+anti-phase −0.754 / −0.555 / −0.395 / −0.297 / +0.075 / +0.092 / −0.650 / +0.371, rates 10.21 /
+6.38 / 4.67 / 3.67 / 121.75 / 1.51 / 9.26 / 4.94, swings 45.9 / 75.6 / 105.6 / 134.9 / 2.6 / 71.5
+/ 30.7 / 69.0. So `g*clamp((1-k) + k*(m_hi/mean), 0, 2)` at `k = 1.0f` **is** v57's
+`g*clamp(m_hi/mean, 0, 2)`, as the IEEE argument said it must be.
+
+Why that matters more than v75's check: v75's specificity rested on two arms with
+`halfcenter_gain = 0`, which only shows the *dead* branch is dead. This exercises the half-centre
+branch itself, on the arms the result is read from. **And the gesture milestone replicates a third
+time** — tau333 carries +65.9 ± 1.2 Hz of free-running excursion over the matched control.
+
+### THE DIFFERENTIAL TERM IS REQUIRED, WHICH SETTLES A DOUBT §26 RAISED
+
+`k = 0` leaves the tonic and removes the competition entirely. It **does not alternate**: anti
++0.094 against v57's −0.297, and the produced swing collapses to 40.7 ± 2.7 Hz — **28.4 Hz BELOW
+the control** and **−94.3 ± 2.7 Hz against v57, paired on the same twelve seeds**.
+
+So Matsuoka's prediction holds here: the tonic drive and the fatigue current alone do not make
+this oscillate. This also answers §26's suspicion that `mat083` alternating with a largely clipped
+term meant the competition was dispensable — it was not. And note what `k = 0` is not: `fat140`
+cannot ask this question, because `halfcenter_drive` is applied inside the `hc_gain > 0` branch,
+so "fatigue only" has no tonic either and sits VOID at duty 0.00.
+
+### THE PRIMARY: FLAT, AND THE NULL IS TIGHT ENOUGH TO CLOSE THE AXIS
+
+Produced swing at tau333, paired on the same twelve seeds against `k = 1`:
+
+| k | anti | swing | vs control (69.0) | vs v57, paired |
+|---|---|---|---|---|
+| 0.00 | +0.094 | 40.7 | −28.4 ± 2.9 | **−94.3 ± 2.7** |
+| 1.00 (v57) | −0.297 | 134.9 | +65.9 ± 1.2 | — |
+| 1.50 | −0.270 | 136.5 | +67.5 ± 1.4 | **+1.6 ± 0.7** (2.2 SE) |
+| 2.00 | −0.272 | 136.3 | +67.2 ± 1.4 | +1.3 ± 0.8 |
+| 3.00 | −0.278 | 135.5 | +66.5 ± 1.3 | +0.6 ± 0.4 |
+
+**By the pre-registered rule this is NO VERDICT on the sign:** the best arm above k = 1 is +1.6 ±
+0.7, inside the ±3 SE band, and neither the "under-driven" branch nor the "peaks at or below k =
+1" refusal fires. But the *magnitude* closes the axis anyway. **The whole range of the effect is
++1.6 Hz on a 135 Hz quantity — 1.2%** — and it then declines monotonically with k. Tripling the
+weight on the competition changes the creature's formant reach by about one part in a hundred.
+This project needs ×1.68 on the naming line; 1.012 is not a lever.
+
+**AND THE THREE ARMS ABOVE k = 1 ARE INDISTINGUISHABLE FROM EACH OTHER**, across a 2× range in
+k: anti −0.270 / −0.272 / −0.278, swing 136.5 / 136.3 / 135.5, lagged coherence −0.519 / −0.518 /
+−0.519. If the term were still responding to k, k = 3 would differ from k = 1.5 by a factor of
+two in the differential. It does not — and the re-print says why, in one column:
+
+| k | frames with the term CLIPPED |
+|---|---|
+| 1.00 (v57) | **0.0%** |
+| 1.50 | 98.7% |
+| 2.00 | 99.3% |
+| 3.00 | 99.6% |
+
+**v57 is not "near the cap" — it is exactly at the boundary where the cap becomes reachable, and
+it never touches it.** That is not luck, it is the form: `D/S` is bounded to [−1, 1] because both
+half-means are non-negative, so `1 + k·D/S` at `k = 1` lands exactly inside the clamp's [0, 2]
+and the clamp is unreachable by construction. **v57's kernel is the unique member of this family
+that uses the full range without ever saturating.**
+
+So `k > 1` does not make a stronger competition. It makes a **saturated** one — bang-bang at
+"loser 2g, winner 0" essentially always — and the whole value of saturation is +1.6 ± 0.7 Hz. The
+axis is closed, and closed for a structural reason rather than an empirical one. The only route
+to a genuinely stronger competition is to raise `g`, which raises the cap (it is 2g) — but `g`
+also sets the tonic, which is exactly the entanglement §26 is about.
+
+**The rate confirms the construction.** k changes the competition's variance and not its level —
+the two offsets sum to exactly 2g clipped or not — and the measured rates are 3.50 / 3.67 / 3.70 /
+3.70 / 3.69 Hz across the whole sweep. No arm drifted toward the VOID bound, and no arm settled
+into a winner.
+
+### WHAT IS NOT YET INTERPRETABLE, AND WHY THE RE-PRINT IS WORTH 26 MINUTES
+
+The first pass printed the alternation frequency **without its spread**: 1.46 Hz at k = 1 against
+1.00 at k = 1.5, which reads as a 46% longer period. The clock block on the same page prints
+`tau 333 ms alternation 1.46 +/- 0.48 Hz`, so **that difference may be inside one SE** — an
+averaged argmax, which is the exact statistic `s_hf` is maintained for and the exact failure this
+project already has a rule about. The pole's prediction was about to be scored against it: 1.46 →
+1.00 Hz should pass ~1.46× more swing, i.e. 134.9 → ~197 Hz, against the +1.6 measured.
+
+That distinction decides the next experiment, so it was re-printed rather than guessed — and the
+answer is the cautious one. **The period difference is −0.46 ± 0.51 Hz, 0.9 SE. Not resolvable.**
+
+> So this run does **not** test the pole, and the "46% longer period bought nothing" reading that
+> the unlabelled column invited is withdrawn before it was ever published. The licensed statement
+> is only that **nothing measurable moved above k = 1.**
+
+The re-print was **not a new experiment**: identical arms, seeds and budget, and the run proved it
+by diffing all twelve arm rows against this log — *all twelve identical*, so both added columns
+are read-only. All four verify keys passed again with the hash unchanged.
+
+### THE ARGMAX IS THE WEAKER OF TWO INSTRUMENTS, AND IT IS THE ONE THE CLOCK WAS REFUSED ON
+
+Printing the spread exposed something bigger than the k question. Over the four `tau` arms:
+
+| tau_a | argmax alternation | produced swing |
+|---|---|---|
+| 83 ms | 2.88 ± 0.51 Hz | 45.9 ± 0.4 |
+| 167 ms | 1.25 ± **0.00** Hz | 75.6 ± 0.6 |
+| 250 ms | 2.62 ± 0.27 Hz | 105.6 ± 0.3 |
+| 333 ms | 1.46 ± 0.48 Hz | 134.9 ± 0.4 |
+
+The argmax series is **non-monotone**, carries SEs up to ±0.51, and at tau167 all twelve seeds
+landed in a single bin — an SE of exactly 0.00 on an argmax is a pinned estimator, not agreement.
+The swing series is **monotone with SEs of 0.4**. The plant is a low-pass, so swing falls as
+frequency rises: **both series cannot be right, and the tight one says the period tracks tau_a.**
+
+That matters because **"NOT A CLOCK" is this line's standing verdict across four runs and rests
+entirely on that argmax** — four-point slope +0.319 at R² 0.213 against a required 1.000.
+Inverting the plant's square-wave response on the swing column instead gives periods of 394 / 654
+/ 926 / 1206 ms, a slope of 0.80 at R² 0.997. **That number is not claimed**: it is one
+measurement expressed through a plant model which is itself miscalibrated, under-predicting the
+measured swing by 1.7× even after the π/2 correction below. But it is enough to say the refusal
+rests on the weaker instrument.
+
+**A DERIVATION ERROR IN THE PRINTED PREDICTION, worth fixing wherever it is quoted.** The log's
+"predicted" column applies the sinusoidal |H(f)| = 1/sqrt(1+(2πfτ)²) to the alternation. The
+alternation is not a sinusoid — above k = 1 it is 99% clipped, and even at k = 1 it is strongly
+square. A first-order pole driven by a square wave of period T passes `tanh(T/4τ)`, not |H(1/T)|,
+and the ratio between them is **π/2 to within 1% across this entire frequency range** (1.5616 at
+1.46 Hz, 1.5694 at 4.58 Hz). So every predicted figure on this line is low by that constant
+factor: tau333's prediction is 79.1 Hz, not 50.7. **This does not rescue §25's residual**, which
+was computed from a ratio between two arms where the π/2 cancels to 0.5% — that residual stays
+open. What it does mean is that the pole arithmetic is good for a *direction* and not for a
+magnitude, and the 1.7× that remains after correcting it is unexplained.
+
+### WHAT RUNS NEXT, AND IT IS A THIRD READ-ONLY COLUMN
+
+A period estimator with **no model and no spectrum**: a Schmitt trigger on the centred
+half-difference, hysteresis at ±0.25 sd (derived from the signal, not chosen), period = **median**
+up-to-up interval so a missed flip cannot halve it, and the turn count printed so a settled winner
+cannot read as an infinitely long period. Both estimators print side by side — an instrument is
+never silently replaced here — and the four-point slope is computed on each.
+
+**PRE-REGISTERED.** Slope ≥ 0.80 at R² ≥ 0.90 where the argmax gave +0.32 → the clock was refused
+on a broken instrument and `halfcenter` is a relaxation oscillator after all. Slope ≤ 0.60 →
+the refusal is confirmed on the better instrument and the clock closes for good. Anything between
+→ no verdict, and the estimator itself becomes the open question. A collapsed turn count in any
+arm refuses the new instrument instead of the hypothesis.
+
+**The pass/fail gate deliberately stays on the argmax exponent**, because four previous runs were
+refused on it and the exit code has to stay comparable. What changes is that the text may no
+longer assert "the period ignores tau_a" while the better instrument disagrees — a gate that
+fails has to say which statistic failed it.

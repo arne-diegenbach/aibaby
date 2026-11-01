@@ -20520,6 +20520,7 @@ struct HCArm {
   float tau_ms;
   float hc;
   float drive;   // DNA v57d: Matsuoka's tonic S, the regime axis
+  float kw;      // DNA v76: the weight on the differential term. 1.00 IS v57.
 };
 const HCArm kHCArms[] = {
     // THE CLOCK TEST, at the drive where anti-phase appeared (1.40). The previous run
@@ -20532,44 +20533,54 @@ const HCArm kHCArms[] = {
     // the period does not move with tau_a this is that resonance being re-measured,
     // which is exactly what killed adaptclock. Period is PROPORTIONAL to tau_a for a
     // relaxation oscillator (Shpiro/Curtu/Rinzel/Rubin), so the exponent must be ~1.
-    {"tau083",  1.00f,  83.0f, 0.60f, 1.40f},
-    {"tau167",  1.00f, 167.0f, 0.60f, 1.40f},   // replicates the -0.555 arm
-    {"tau250",  1.00f, 250.0f, 0.60f, 1.40f},
-    {"tau333",  1.00f, 333.0f, 0.60f, 1.40f},
+    {"tau083",  1.00f,  83.0f, 0.60f, 1.40f, 1.00f},
+    {"tau167",  1.00f, 167.0f, 0.60f, 1.40f, 1.00f},   // replicates the -0.555 arm
+    {"tau250",  1.00f, 250.0f, 0.60f, 1.40f, 1.00f},
+    {"tau333",  1.00f, 333.0f, 0.60f, 1.40f, 1.00f},
     // BOTH SINGLES AT THE WINNING DRIVE. The interaction was previously shown against
     // a control at drive 0.85, which is the wrong drive to compare against.
-    {"inhib140", 0.00f, 167.0f, 0.60f, 1.40f},  // inhibition only: must SETTLE
-    {"fat140",  1.00f, 167.0f, 0.00f, 1.40f},   // fatigue only: must do nothing
+    {"inhib140", 0.00f, 167.0f, 0.60f, 1.40f, 1.00f},  // inhibition only: must SETTLE
+    {"fat140",  1.00f, 167.0f, 0.00f, 1.40f, 1.00f},   // fatigue only: must do nothing
     // UPPER EDGE. The last sweep found the effect only at its TOP arm, so the window
     // was bracketed on one side only and its upper boundary is unmeasured. Shpiro
     // predicts simultaneous high activity above the window.
-    {"drive200", 1.00f, 167.0f, 0.60f, 2.00f},
-    {"ctrl140",  0.00f, 167.0f, 0.00f, 1.40f},  // matched-drive control, both OFF
-    // DNA v75, THE MATCHED-COUPLING ARMS. v75 divides the half-centre's inhibition by
-    // `target_rate_hz` instead of the pair's own mean, which makes within-population
-    // coupling exactly 0 (Baruzzi/Lodi/Storace/Shilnikov 2020) -- but at the fixed
-    // point it also makes BETWEEN-coupling g/T where v57 gave g/(2T). So at the same
-    // nominal gain v75 has TWICE the coupling, and the eight arms above change two
-    // things at once. `g' = g/2 = 0.30` matches v57's between-coupling exactly and
-    // leaves the within-term as the ONLY difference. That is what these four isolate.
+    {"drive200", 1.00f, 167.0f, 0.60f, 2.00f, 1.00f},
+    {"ctrl140",  0.00f, 167.0f, 0.00f, 1.40f, 1.00f},  // matched-drive control, both OFF
+    // DNA v76, THE COMPETITION-STRENGTH SWEEP. All four sit on `tau333` -- same jump,
+    // same tau_a, same gain, same drive -- and move ONE number: the weight `k` on the
+    // differential term, hc_lo = g*(1 + k*D/S). The tonic stays g at every k, which is
+    // what the retired v75 arms could not hold fixed.
+    //
+    // WHY UP AND NOT OFF, which reverses the direction this line was pushed in for two
+    // runs. Across the four tau arms the DEEPEST competition produces the SMALLEST
+    // formant swing (tau083 -0.754 and 45.9 Hz; tau333 -0.297 and 134.9 Hz) because
+    // deeper competition alternates faster and the tract is a low-pass with an 800 ms
+    // pole that every oscillator here sits an order of magnitude above. Period is the
+    // amplitude lever, and a larger k holds the winner longer: it suppresses the loser
+    // harder (toward 2g) and the winner less (toward 0).
+    //
+    // WHY k = 0 IS IN THE SWEEP. It is the control the v75 pair never had -- the tonic
+    // with NO competition at all. If it still alternates, the differential term is not
+    // what makes this oscillate and adaptation alone carries it.
     //
     // WHY THEY ARE APPENDED AFTER THE CONTROL and not inserted: the seed for a cell is
     // `seed + kHCSeedOffset + r * 7919`, which depends on the REPLICATE only, so adding
-    // arms re-rolls nothing and the eight above must re-print to every decimal. That
-    // makes this run carry its own determinism check. Inserting them would instead have
-    // renumbered `drive200` and the clock-test arms.
-    {"mat083",  1.00f,  83.0f, 0.30f, 1.40f},
-    {"mat167",  1.00f, 167.0f, 0.30f, 1.40f},
-    {"mat250",  1.00f, 250.0f, 0.30f, 1.40f},
-    {"mat333",  1.00f, 333.0f, 0.30f, 1.40f},
+    // arms re-rolls nothing and the eight above must re-print to every decimal -- here
+    // against the v57 ARCHIVE, since k = 1 restores that kernel bit for bit. That makes
+    // this run carry its own determinism check on the hc branch itself, which the hc=0
+    // arms cannot do. Inserting them would renumber `drive200` and the clock arms.
+    {"wi000",   1.00f, 333.0f, 0.60f, 1.40f, 0.00f},
+    {"wi150",   1.00f, 333.0f, 0.60f, 1.40f, 1.50f},
+    {"wi200",   1.00f, 333.0f, 0.60f, 1.40f, 2.00f},
+    {"wi300",   1.00f, 333.0f, 0.60f, 1.40f, 3.00f},
 };
 constexpr uint32_t kHCArmCount = sizeof(kHCArms) / sizeof(kHCArms[0]);
 // THE CONTROL IS NO LONGER THE LAST ARM, and two places used to find it that way --
 // `base_rt` for the VOID bound and `kCtrl` for the SE-vs-control column. Both now use
-// this index. Leaving them as `kHCArmCount - 1` would have made the appended `mat333`
+// this index. Leaving them as `kHCArmCount - 1` would have made the appended `wi300`
 // the baseline for the VOID criterion, which silently re-decides VOID for every arm.
 constexpr uint32_t kHCCtrlArm = 7;
-// The eight arms the stage-1 verdict was pre-registered on. The appended matched arms
+// The eight arms the stage-1 verdict was pre-registered on. The appended v76 k-sweep arms
 // get their own block rather than competing for `bestarm`, so the headline reading
 // stays comparable across runs instead of being re-decided by an arm added later.
 constexpr uint32_t kHCBaseArms = 8;
@@ -20619,6 +20630,24 @@ struct HCRow {
   double f1_p2p = 0.0;    // robust peak-to-peak, 5th to 95th percentile
   double f1_coh = 0.0;    // corr(produced F1, half-difference): IS the F1 motion the
                           // alternation, or something else moving at the same time?
+  // DNA v76. HOW OFTEN THE COMPETITION IS CLIPPED, computed HOST-SIDE from the same
+  // `rate_fast` the kernel reads, so no kernel edit and no hash risk. The term is
+  // g*clamp((1-k) + k*(m_hi/mean), 0, 2), which leaves its bounds exactly when
+  // |D/S| > 1/k -- so this is a derived quantity, not a new measurement, and the
+  // host has had m_lo and m_hi all along. It is what separates "k does nothing"
+  // from "k cannot do anything because the clamp is already holding the term at its
+  // cap", and those two call for opposite next experiments.
+  //
+  // SAMPLED AT THE VOCAL FRAME RATE, not per tick, which is where every other column
+  // in this row is sampled too.
+  double clip_frac = 0.0;
+  // DNA v76. THE PERIOD WITHOUT A SPECTRUM -- median interval between upward Schmitt
+  // crossings of the centred half-difference, and the number of crossings so a settled
+  // winner cannot read as a long period. See the derivation at the computation site:
+  // the FFT argmax it is checked against is non-monotone in tau_a with SEs up to
+  // +-0.51 Hz, while the produced swing over the same arms is monotone to +-0.4 Hz.
+  double cross_period_ms = 0.0;
+  double cross_n = 0.0;
 };
 
 // Returns the correlation, and sets `*degenerate` when one series is CONSTANT so a
@@ -20658,8 +20687,8 @@ static void hc_peak(const std::vector<double>& x, const std::vector<double>& tms
 }
 
 HCRow run_halfcenter_arm(const std::vector<uint8_t>& blob, uint64_t ticks, const HCArm& arm) {
-  (void)arm;
   HCRow row;
+  uint64_t clipped = 0;   // DNA v76: frames where the competition term hit its clamp
   Session s;
   std::string error;
   if (!s.init(blob, error)) return row;
@@ -20711,6 +20740,12 @@ HCRow run_halfcenter_arm(const std::vector<uint8_t>& blob, uint64_t ticks, const
     const double ml = mid > 0 ? sl / double(mid) : 0.0;
     const double mh = gn > mid ? sh / double(gn - mid) : 0.0;
     lo.push_back(ml); hi.push_back(mh); diff.push_back(ml - mh);
+    // Clipped when |D/S| exceeds 1/k, with k = 0 never clipping (the term is the
+    // constant g) -- the same algebra the kernel runs, on the same two numbers.
+    if (arm.kw > 0.0f) {
+      const double sS = ml + mh;
+      if (sS > 1e-4 && std::fabs((mh - ml) / sS) > 1.0 / double(arm.kw)) clipped += 1;
+    }
     f1s.push_back(double(v.f1));   // the articulator itself, per vocal frame
     // WITHIN-HALF COHERENCE, the discriminator between a POPULATION half-center and
     // per-NEURON bursting. At a tonic drive 2.2x threshold each neuron can
@@ -20741,6 +20776,60 @@ HCRow run_halfcenter_arm(const std::vector<uint8_t>& blob, uint64_t ticks, const
   // whether the alternation tracks tau_a. The alternation lives in the
   // half-DIFFERENCE, so that is the signal whose frequency has to be tested.
   hc_peak(diff, tms, &row.half_f, &row.half_snr);
+  // DNA v76. A SECOND PERIOD ESTIMATOR, BECAUSE THE FIRST ONE IS THE WEAKER OF TWO
+  // INSTRUMENTS AND IT IS THE ONE THE CLOCK WAS REFUSED ON.
+  //
+  // `hc_peak` is an FFT ARGMAX averaged over twelve seeds, and this experiment already
+  // keeps its spread for that reason. Measured: 2.88 +/- 0.51, 1.25 +/- 0.00, 2.62 +/-
+  // 0.27, 1.46 +/- 0.48 Hz across tau 83/167/250/333 -- NON-MONOTONE, with one arm's
+  // twelve seeds all pinned in a single bin. Over the same four arms the produced swing
+  // is 45.9, 75.6, 105.6, 134.9 Hz with SEs of 0.4, perfectly monotone. The plant is a
+  // low-pass, so swing is a monotone DECREASING function of frequency: those two series
+  // cannot both be right, and the tight one says the period does track tau_a.
+  //
+  // So the period is measured again without a spectrum. A Schmitt trigger on the centred
+  // half-difference counts the intervals between upward crossings; the period is their
+  // MEDIAN, which survives a missed flip where a mean would not. The hysteresis band is
+  // +-0.25 sd -- derived from the signal itself rather than chosen, so there is no new
+  // constant, and it is what stops rate noise from counting as a turn.
+  //
+  // BOTH ARE REPORTED. An instrument is never silently replaced here: a disagreement
+  // between them is the finding, and the crossing count is printed so a settled winner
+  // (which produces NO crossings) cannot read as an infinitely long period.
+  {
+    double mu = 0.0;
+    for (double q : diff) mu += q;
+    mu = diff.empty() ? 0.0 : mu / double(diff.size());
+    double v2 = 0.0;
+    for (double q : diff) v2 += (q - mu) * (q - mu);
+    const double sd = diff.empty() ? 0.0 : std::sqrt(v2 / double(diff.size()));
+    const double band = 0.25 * sd;
+    std::vector<double> ivals;
+    if (sd > 1e-9 && diff.size() == tms.size() && diff.size() > 4) {
+      int state = 0;           // +1 above the upper rail, -1 below the lower
+      double last_up = -1.0;
+      for (size_t i = 0; i < diff.size(); ++i) {
+        const double x = diff[i] - mu;
+        if (state <= 0 && x > band) {
+          // An interval only exists from the SECOND upward crossing on, so the first one
+          // just starts the clock. Interval = up-to-up, which is a FULL period and the
+          // same quantity 1/argmax is, so the 2-4*tau band applies to both unchanged.
+          if (state == -1) ivals.push_back(tms[i] - last_up);
+          last_up = tms[i];
+          state = 1;
+        } else if (state >= 0 && x < -band) {
+          state = -1;
+        }
+      }
+    }
+    row.cross_n = double(ivals.size());
+    if (!ivals.empty()) {
+      std::sort(ivals.begin(), ivals.end());
+      row.cross_period_ms = ivals.size() % 2 ? ivals[ivals.size() / 2]
+                                             : 0.5 * (ivals[ivals.size() / 2 - 1] +
+                                                      ivals[ivals.size() / 2]);
+    }
+  }
   row.anti = hc_corr(lo, hi, &row.degenerate);
   {
     const auto stats = [](const std::vector<double>& v, double* m, double* sd) {
@@ -20810,6 +20899,7 @@ HCRow run_halfcenter_arm(const std::vector<uint8_t>& blob, uint64_t ticks, const
   }
   row.duty = n > 0 ? on / n : 0.0;
   row.rate_hz = n > 0 ? rsum / n : 0.0;
+  row.clip_frac = n > 0 ? double(clipped) / n : 0.0;
   row.ok = true;
   return row;
 }
@@ -20830,31 +20920,38 @@ bool run_halfcenter(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
               "                    pinned hash ad96f882becbee92)\n",
               double(dna0.header().vocal.adapt_jump),
               double(dna0.header().vocal.halfcenter_gain));
-  // DNA v75. WHICH NORMALISER THIS GENOME RUNS, PRINTED RATHER THAN ASSUMED. The half-centre
-  // inhibition is divided by the vocal module's `target_rate_hz`, which depends on neither
-  // half and so makes within-population coupling exactly zero -- Baruzzi's condition. A
-  // genome whose vocal module has NO setpoint silently falls back to v57's pair-mean
-  // normaliser, which is the OLD topology, within-population coupling and all. A null
-  // measured under the fallback refutes nothing about v75, so the label has to be genome
-  // dependent and visible: this project has already paid for a label that was correct on
-  // only some genomes and printed unconditionally.
+  // DNA v76. WHICH KERNEL THIS BINARY RUNS AND WHAT THE GENOME'S OWN WEIGHT IS, PRINTED
+  // RATHER THAN ASSUMED, because the field is absent from every genome written before v76
+  // and defaults to 1.0 there. Printing the genome's value rather than the per-arm patch
+  // would hide an arm whose patch never landed, so both appear: this one is the SHIPPED
+  // value and the arm table carries the dose.
+  //
+  // WHY v75'S NORMALISER IS GONE. Dividing by `target_rate_hz` does make within-population
+  // coupling exactly zero (Baruzzi's condition), but it also makes the TONIC level and the
+  // clamp's headroom proportional to the rate the module actually runs at. Equal tonic and
+  // equal between-coupling then ask for gains a factor of two apart, so no gain reproduces
+  // v57 and the "matched-coupling" arms halved the tonic along with the coupling. Printed
+  // here because the archived v75 logs are still cited and the reader has to know which
+  // kernel a number came from.
   {
     const int32_t vmi = dna0.module_with_role(aibaby::ModuleRole::kVocal);
     const double tgt = vmi >= 0 ? double(dna0.module(uint32_t(vmi)).target_rate_hz) : 0.0;
-    if (tgt > 1e-4) {
-      std::printf("  normaliser        v75: inhibition / target_rate_hz = %.2f Hz, which depends\n"
-                  "                    on NEITHER half, so within-population coupling is 0 and\n"
-                  "                    Baruzzi's condition holds. Between-coupling is g/T, TWICE\n"
-                  "                    what v57 gave at the same nominal gain -- so g' = g/2\n"
-                  "                    matches v57's coupling and g = 0.60 here is double it.\n",
-                  tgt);
-    } else {
-      std::printf("  normaliser        v57 FALLBACK -- this genome's vocal module has no\n"
-                  "                    target_rate_hz, so the inhibition is divided by the PAIR's\n"
-                  "                    own mean and within-population coupling EQUALS\n"
-                  "                    between-population coupling. This run tests the OLD\n"
-                  "                    topology. A null here refutes nothing about v75.\n");
-    }
+    std::printf("  kernel            v76: hc_lo = g*(1 + k*D/S), pair-mean normaliser, so the\n"
+                "                    tonic is g for EVERY k and the clamp cannot saturate\n"
+                "                    (m_hi/mean <= 2 by construction). k = 1 is v57 EXACTLY and\n"
+                "                    bit-identical; the eight base arms must re-print.\n");
+    std::printf("  genome k          %.2f (shipped; %s)\n",
+                double(dna0.header().vocal.halfcenter_within),
+                dna0.header().vocal.halfcenter_within == 1.0f
+                    ? "v57's kernel, which is also the default for a pre-v76 genome"
+                    : "NOT v57 -- this genome overrides the competition's strength");
+    std::printf("  v75 is retired    its normaliser tied the tonic, the coupling AND the clamp\n"
+                "                    headroom to the rate the module RUNS at -- archived tau333\n"
+                "                    ran 3.67 Hz against this genome's setpoint of %.2f -- and\n"
+                "                    matching v57's tonic vs its coupling demands gains 2x\n"
+                "                    apart. Not a one-parameter family, so the archived `mat*`\n"
+                "                    arms isolated nothing and this run does not repeat them.\n",
+                tgt);
   }
   std::printf("  what adaptclock   a fatigue current at the DERIVED constant produced no\n"
               "  actually showed   clock: peak frequency followed tau_a with exponent +0.104\n"
@@ -20908,6 +21005,11 @@ bool run_halfcenter(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
   const size_t o_hg = offsetof(aibaby::DnaHeader, vocal) + offsetof(aibaby::DnaVocal, halfcenter_group);
   const uint32_t hc_group = 2u;   // F1 -- where a formant gesture lives
   const size_t o_hd = offsetof(aibaby::DnaHeader, vocal) + offsetof(aibaby::DnaVocal, halfcenter_drive);
+  // DNA v76. The weight on the differential term, patched per arm like every other dose.
+  // The genome ships 1.00, so an arm whose patch failed to land would look like v57 and
+  // read as a null on the sweep rather than as a broken arm -- which is why the per-arm
+  // value is printed in the summary table beside the result and not assumed from here.
+  const size_t o_hw = offsetof(aibaby::DnaHeader, vocal) + offsetof(aibaby::DnaVocal, halfcenter_within);
   const std::vector<Cell> cells = parallel_reps<Cell>(njobs, [&](uint32_t i) {
     Cell c;
     const uint32_t r = i / kHCArmCount, a = i % kHCArmCount;
@@ -20919,6 +21021,7 @@ bool run_halfcenter(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
     std::memcpy(variant.data() + o_hc, &kHCArms[a].hc, sizeof(float));
     std::memcpy(variant.data() + o_hg, &hc_group, sizeof(uint32_t));
     std::memcpy(variant.data() + o_hd, &kHCArms[a].drive, sizeof(float));
+    std::memcpy(variant.data() + o_hw, &kHCArms[a].kw, sizeof(float));
     c.row = run_halfcenter_arm(variant, ticks, kHCArms[a]);
     c.ok = c.row.ok;
     if (c.ok)
@@ -20941,15 +21044,23 @@ bool run_halfcenter(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
   double m_hf[kHCArmCount] = {};   // the ALTERNATION's peak frequency, per arm
   double s_hf[kHCArmCount] = {};   // ...and its SPREAD: averaging an argmax hides
                                    // whether the seeds actually agree
+  double m_cp[kHCArmCount] = {};   // DNA v76: the SPECTRUM-FREE period, Schmitt crossings
+  double s_cp[kHCArmCount] = {};
+  double m_cn[kHCArmCount] = {};   // ...and how many turns it counted
   bool void_arm[kHCArmCount] = {};
-  std::printf("\n  %-11s %-5s %-5s %-5s %-16s %-13s %-12s %-6s %s\n", "arm", "jump", "tau",
-              "hc", "ANTI-PHASE corr", "peak f/SNR", "half-diff", "duty", "rate");
+  std::printf("\n  %-11s %-5s %-5s %-5s %-5s %-16s %-13s %-12s %-6s %s\n", "arm", "jump", "tau",
+              "hc", "k", "ANTI-PHASE corr", "peak f/SNR", "half-diff", "duty", "rate");
   for (uint32_t a = 0; a < kHCArmCount; ++a) {
     std::vector<double> an, pk, pf, du, rt, hs, aa, ab, hf;
-    std::vector<double> fsd, fpp, fco;
+    std::vector<double> fsd, fpp, fco, cp, cn;
     for (uint32_t r = 0; r < kReps; ++r) {
       const Cell& c = cells[r * kHCArmCount + a];
       if (!c.ok) continue;
+      // Only arms that actually TURNED contribute a period. A rep with no crossings is
+      // a settled winner or a silenced half, and averaging its 0.0 in would shorten the
+      // period of exactly the arms where the mechanism failed.
+      if (c.row.cross_n > 0.0) { cp.push_back(c.row.cross_period_ms); }
+      cn.push_back(c.row.cross_n);
       an.push_back(c.row.anti); pk.push_back(c.row.peak_snr); pf.push_back(c.row.peak_f);
       du.push_back(c.row.duty); rt.push_back(c.row.rate_hz); hs.push_back(c.row.half_snr);
       aa.push_back(c.row.anti_a); ab.push_back(c.row.anti_b);
@@ -20969,13 +21080,15 @@ bool run_halfcenter(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
     m_rt[a] = ctx_mean_se(rt, &sr);
     m_hs[a] = ctx_mean_se(hs, &sh);
     { double e = 0.0; m_hf[a] = ctx_mean_se(hf, &e); s_hf[a] = e; }
+    { double e = 0.0; m_cp[a] = ctx_mean_se(cp, &e); s_cp[a] = e; }
+    { double e = 0.0; m_cn[a] = ctx_mean_se(cn, &e); }
     const double m_aa = ctx_mean_se(aa, &s1), m_ab = ctx_mean_se(ab, &s2);
     (void)sp;
     // RELATIVE to the control arm, not an absolute constant. A fixed 20 Hz bound let
     // `both60` through at 19.03 against a 4.9 baseline -- a 4x runaway that read as
     // healthy. The bound now tracks the arm that has no mechanism in it.
-    // Baseline is the MATCHED-DRIVE CONTROL (`kHCCtrlArm`, not the last arm -- the v75
-    // matched arms are appended after it), not arm 0 -- arm 0 now runs both mechanisms
+    // Baseline is the MATCHED-DRIVE CONTROL (`kHCCtrlArm`, not the last arm -- the v76
+    // k-sweep arms are appended after it), not arm 0 -- arm 0 now runs both mechanisms
     // with a collapsed rate, and normalising by it would hide exactly the artefact that
     // voided the previous run.
     const double base_rt = m_rt[kHCCtrlArm] > 0.0 ? m_rt[kHCCtrlArm] : 5.0;
@@ -20988,11 +21101,11 @@ bool run_halfcenter(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
     // switch the population off to look like alternation has not demonstrated one.
     void_arm[a] = m_du[a] < 0.10 || m_du[a] > 0.95 ||
                   m_rt[a] > 2.5 * base_rt || m_rt[a] < 0.40 * base_rt;
-    std::printf("  %-11s %-5.2f %-5.0f %-5.2f %+.3f +/- %-7.3f %4.2f/%5.2f   %5.2f +/- %-4.2f "
+    std::printf("  %-11s %-5.2f %-5.0f %-5.2f %-5.2f %+.3f +/- %-7.3f %4.2f/%5.2f   %5.2f +/- %-4.2f "
                 "%.2f   %5.2f%s\n",
                 kHCArms[a].name, double(kHCArms[a].jump), double(kHCArms[a].tau_ms),
-                double(kHCArms[a].hc), m_an[a], s_an[a], m_pf[a], m_pk[a], m_hs[a], sh,
-                m_du[a], m_rt[a], void_arm[a] ? "  <- VOID" : "");
+                double(kHCArms[a].hc), double(kHCArms[a].kw), m_an[a], s_an[a], m_pf[a],
+                m_pk[a], m_hs[a], sh, m_du[a], m_rt[a], void_arm[a] ? "  <- VOID" : "");
     std::printf("  %-11s   anti-phase by half of the recording: %+.3f / %+.3f\n", "", m_aa, m_ab);
     {
       std::vector<double> ml, mh, sl2, sh2;
@@ -21078,7 +21191,7 @@ bool run_halfcenter(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
                 double(kHCArms[a].drive), m_an[a], t, m_rt[a], ndeg, nn, tag);
     if (a == kCtrl) continue;
     if (!void_arm[a] && ndeg <= kReps / 2 && !drift && m_an[a] <= -0.20 && t <= -3.0) {
-      // BASE ARMS ONLY decide the headline. The appended v75 matched arms are reported
+      // BASE ARMS ONLY decide the headline. The appended v76 k-sweep arms are reported
       // in their own block below, so a later-added arm cannot re-decide the reading
       // that earlier runs are being compared against.
       if (a < kHCBaseArms) {
@@ -21104,6 +21217,13 @@ bool run_halfcenter(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
                 "  predicted %5.0f-%5.0f ms  %s\n",
                 double(kHCArms[a].tau_ms), m_hf[a], s_hf[a], per, tl, th,
                 in_band ? "IN BAND" : "outside");
+    // DNA v76: the same question asked without a spectrum. The band test is applied to
+    // this one too, so the two instruments are judged by the identical criterion.
+    const bool cb = m_cp[a] >= tl && m_cp[a] <= th;
+    std::printf("                CROSSINGS   period %6.1f +/- %5.1f ms  (%4.0f turns)"
+                "                      %s\n",
+                m_cp[a], s_cp[a], m_cn[a], m_cp[a] > 0.0 ? (cb ? "IN BAND" : "outside")
+                                                         : "NO TURNS");
   }
   double expo = 0.0;
   if (m_hf[0] > 0.0 && m_hf[3] > 0.0) {
@@ -21144,79 +21264,226 @@ bool run_halfcenter(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
   double r2_base = 0.0;
   const double slope_base = clockslope(0, &r2_base);
   std::printf("    ENDPOINT fit %+.3f over tau 83 -> 333 ms -- DO NOT QUOTE THIS ONE.\n", expo);
-  std::printf("    FOUR-POINT slope %+.3f, R^2 %.3f.  REQUIRED ~1.000.  <-- the statistic\n",
+  std::printf("    FOUR-POINT slope %+.3f, R^2 %.3f.  REQUIRED ~1.000.  <-- the ARGMAX\n",
               slope_base, r2_base);
-  if (expo < 0.60) {
-    std::printf("    THE PERIOD IGNORES ITS OWN TIME CONSTANT. Whatever the anti-phase is,\n"
-                "    it is not a relaxation oscillator's clock, and the 2.5-3.5 Hz band it\n"
-                "    sits in is where the damped resonance already lives. NOT A CLOCK.\n");
+  // DNA v76. THE SAME FIT ON THE SPECTRUM-FREE PERIOD, AND IT IS PRE-REGISTERED.
+  //
+  // THE DOUBT, stated before the number exists. "NOT A CLOCK" has been this line's
+  // standing verdict for four runs, and it rests entirely on an FFT argmax that this
+  // experiment's own spread column shows to be bad: 2.88 +/- 0.51, 1.25 +/- 0.00, 2.62
+  // +/- 0.27, 1.46 +/- 0.48 Hz over tau 83/167/250/333 -- non-monotone, one arm's twelve
+  // seeds pinned in a single bin. The produced swing over the same arms is 45.9, 75.6,
+  // 105.6, 134.9 Hz with SEs of 0.4 and is perfectly monotone, and the plant is a
+  // low-pass, so swing falls as frequency rises. BOTH SERIES CANNOT BE RIGHT.
+  //
+  // PRE-REGISTERED: if the crossing period gives a slope near 1.0 with a high R^2 where
+  // the argmax gave +0.32 at R^2 0.21, then the clock was refused on a broken instrument
+  // and `halfcenter` IS a relaxation oscillator. REFUSAL: the crossing period agrees with
+  // the argmax (slope <= 0.6), which confirms the refusal on the better instrument and
+  // closes it for good. A THIRD OUTCOME that refuses both: the crossing count collapses
+  // in some arm, which would mean the Schmitt trigger is measuring noise, not turns.
+  const auto crossslope = [&](double* r2) {
+    *r2 = 0.0;
+    double sx = 0.0, sy = 0.0; uint32_t n = 0;
+    for (uint32_t a = 0; a < 4; ++a) {
+      if (m_cp[a] <= 0.0) continue;
+      sx += std::log(double(kHCArms[a].tau_ms)); sy += std::log(m_cp[a]); ++n;
+    }
+    if (n < 3) return 0.0;
+    const double mx = sx / double(n), my = sy / double(n);
+    double sxy = 0.0, sxx = 0.0, syy = 0.0;
+    for (uint32_t a = 0; a < 4; ++a) {
+      if (m_cp[a] <= 0.0) continue;
+      const double dx = std::log(double(kHCArms[a].tau_ms)) - mx;
+      const double dy = std::log(m_cp[a]) - my;
+      sxy += dx * dy; sxx += dx * dx; syy += dy * dy;
+    }
+    if (sxx <= 0.0 || syy <= 0.0) return 0.0;
+    *r2 = (sxy * sxy) / (sxx * syy);
+    // Already a PERIOD, so no sign flip: this is the slope of log(period) on log(tau).
+    return sxy / sxx;
+  };
+  double r2_cross = 0.0;
+  const double slope_cross = crossslope(&r2_cross);
+  std::printf("    FOUR-POINT slope %+.3f, R^2 %.3f  on the CROSSING period"
+              "  <-- the better instrument\n", slope_cross, r2_cross);
+  if (slope_cross >= 0.80 && r2_cross >= 0.90 && slope_base < 0.60) {
+    std::printf("    THE CLOCK WAS REFUSED ON A BROKEN INSTRUMENT. The argmax gives %+.3f at\n"
+                "    R^2 %.3f; counting the turns directly gives %+.3f at R^2 %.3f against a\n"
+                "    required 1.000. The period DOES track tau_a, and four runs of 'NOT A\n"
+                "    CLOCK' were measuring an FFT argmax with half its seeds in one bin.\n",
+                slope_base, r2_base, slope_cross, r2_cross);
+  } else if (slope_cross < 0.60) {
+    std::printf("    NOT A CLOCK, NOW ON BOTH INSTRUMENTS. Counting the turns directly gives\n"
+                "    %+.3f at R^2 %.3f, which agrees with the argmax's %+.3f -- so the\n"
+                "    refusal was not an instrument artefact and the period genuinely\n"
+                "    ignores its own time constant.\n", slope_cross, r2_cross, slope_base);
+  } else {
+    std::printf("    THE TWO INSTRUMENTS DISAGREE WITHOUT EITHER WINNING -- crossings %+.3f\n"
+                "    (R^2 %.3f) against the argmax's %+.3f (R^2 %.3f). No verdict on the\n"
+                "    clock from this run; the period estimator itself is the open question.\n",
+                slope_cross, r2_cross, slope_base, r2_base);
+  }
+  if (expo < 0.60 && slope_cross < 0.60) {
+    std::printf("    Whatever the anti-phase is, it is not a relaxation oscillator's clock,\n"
+                "    and the 2.5-3.5 Hz band it sits in is where the damped resonance\n"
+                "    already lives.\n");
   }
   std::printf("\n  UPPER EDGE -- drive 2.00 probes above the window (Shpiro predicts\n"
               "  simultaneous high activity there, not oscillation)\n");
   std::printf("    drive 2.00  anti %+.3f  rate %5.2f  peak %.2f Hz\n",
               m_an[6], m_rt[6], m_pf[6]);
 
-  // DNA v75 AT MATCHED BETWEEN-COUPLING. The four arms above at hc 0.60 change two
-  // things at once under v75 -- they remove the within-population coupling AND double
-  // the between-population coupling, because v57's normaliser (the pair's own mean)
-  // gives g/(2T) at the fixed point where v75's (`target_rate_hz`) gives g/T. These
-  // four run at hc 0.30, which matches v57's between-coupling exactly, so the within
-  // term is the only thing left varying.
+  // DNA v76. THE COMPETITION-STRENGTH SWEEP, and it runs in the OPPOSITE direction to
+  // the two runs before it. v75 removed the within-population coupling that Baruzzi's
+  // condition forbids and was refused twice: the neural anti-phase deepened at every arm
+  // (-0.297 -> -0.507 at tau333, SEs ~0.001) while the produced swing fell 134.9 -> 42.7
+  // Hz against a control that makes 69.0 with both mechanisms off. The reason is the
+  // plant: faster alternation is attenuated by the tract's 800 ms pole, so depth and
+  // reach pull opposite ways and the PERIOD is the amplitude lever.
   //
-  // WHY THE SCORE IS THE SWING AND NOT THE ANTI-PHASE. The first v75 run deepened the
-  // neural anti-phase at every arm (-0.297 -> -0.507 at tau333, SEs ~0.001) and still
-  // made the creature WORSE: it roughly doubled the alternation frequency, and the
-  // 800 ms formant pole attenuates in proportion, so the produced swing at tau333 fell
-  // 134.9 -> 42.7 Hz. The matched control produces 69.0 Hz with both mechanisms OFF, so
-  // the milestone's +65.9 Hz EXCESS became a -26.3 Hz DEFICIT. A deeper neural
-  // competition that transmits less through the plant is not an improvement, and the
-  // anti-phase column cannot see that. Frequency and formant reach are coupled through
-  // the pole, which makes the period the AMPLITUDE lever and not a cosmetic failure.
+  // AND THE "MATCHED" STAGE MATCHED NOTHING, which is why this is a sweep in k rather
+  // than another gain. v57's tonic is g and its between-coupling g/(2m); v75's are g*m/T
+  // and g/T. Equal tonic needs g' = g*T/m, equal coupling needs g' = g*T/(2m), and the
+  // two differ by exactly 2x -- so halving the gain halved the tonic along with the
+  // coupling and the arms varied two things, not one. Here the tonic is g at every k by
+  // construction.
+  //
+  // WHAT k CANNOT DO, stated so the result is not over-read: within = -k*g/(2m) and
+  // between = +k*g/(2m) at every k, equal and opposite, because a term built from the
+  // NORMALISED DIFFERENCE has no other option. This sweep measures the strength of the
+  // competition, NOT the within-coupling alone. Isolating that needs a normaliser which
+  // tracks the rate without tracking the instantaneous balance -- a slow filter of the
+  // group's own mean -- and that is a different mechanism, not a dose of this one.
   if (kHCArmCount >= kHCBaseArms + 4) {
-    std::printf("\n  v75 AT MATCHED COUPLING -- hc 0.30 halves the between-term back to\n"
-                "  v57's, leaving the removed WITHIN-term as the only difference.\n");
-    double r2_mat = 0.0;
-    const double slope_mat = clockslope(kHCBaseArms, &r2_mat);
-    std::printf("    arm       anti      alternation  period   predicted      swing  vs ctrl\n");
-    for (uint32_t a = kHCBaseArms; a < kHCBaseArms + 4; ++a) {
+    const uint32_t kV57 = 3;   // `tau333`, which IS k = 1: same jump, tau, gain, drive
+    std::printf("\n  v76 -- THE COMPETITION'S STRENGTH, all five arms at tau333 / hc 0.60 /\n"
+                "  drive 1.40, varying only k in hc_lo = g*(1 + k*D/S). k = 1 IS v57.\n");
+    // THE ALTERNATION COLUMN CARRIES ITS SPREAD, and the first version of this block did
+    // not. `tau333`'s alternation is 1.46 +/- 0.48 Hz over twelve seeds -- an averaged
+    // ARGMAX, which is exactly the statistic this experiment keeps `s_hf` for. Printed
+    // without it, a 1.46 -> 1.00 Hz difference reads as a 46% longer period when it is
+    // inside one SE, and the pole's whole prediction would have been scored against it.
+    std::printf("    arm          k     anti      alternation       period     swing"
+                "   vs ctrl      vs v57     clipped\n");
+    for (uint32_t s = 0; s < 5; ++s) {
+      // k = 0, 1.0 (which is `tau333` itself), 1.5, 2.0, 3.0 -- printed in k order so the
+      // shape is readable, with v57 sitting in the middle of its own sweep.
+      const uint32_t a = s == 0 ? kHCBaseArms : (s == 1 ? kV57 : kHCBaseArms + s - 1);
       const double per = m_hf[a] > 0.0 ? 1000.0 / m_hf[a] : 0.0;
-      const double tl = 2.0 * double(kHCArms[a].tau_ms), th = 4.0 * double(kHCArms[a].tau_ms);
       const double dsw = m_pp[a] - m_pp[kHCCtrlArm];
       const double sse = std::sqrt(s_pp[a] * s_pp[a] + s_pp[kHCCtrlArm] * s_pp[kHCCtrlArm]);
-      std::printf("    %-9s %+.3f    %5.2f Hz   %6.1f  %5.0f-%5.0f %s  %6.1f  %+6.1f +/- %.1f%s\n",
-                  kHCArms[a].name, m_an[a], m_hf[a], per, tl, th,
-                  (per >= tl && per <= th) ? "IN " : "out", m_pp[a], dsw, sse,
-                  void_arm[a] ? "  VOID" : "");
+      // Against v57 the arms share all twelve seeds, so the difference is PAIRED and the
+      // between-seed spread drops out. The control column above cannot be paired the same
+      // way without claiming a pairing the milestone was never stated in.
+      std::vector<double> d57;
+      for (uint32_t r = 0; r < kReps; ++r) {
+        const Cell& ca = cells[r * kHCArmCount + a];
+        const Cell& cb = cells[r * kHCArmCount + kV57];
+        if (ca.ok && cb.ok) d57.push_back(ca.row.f1_p2p - cb.row.f1_p2p);
+      }
+      double e57 = 0.0;
+      const double m57 = ctx_mean_se(d57, &e57);
+      std::vector<double> cf;
+      for (uint32_t r = 0; r < kReps; ++r) {
+        const Cell& c = cells[r * kHCArmCount + a];
+        if (c.ok) cf.push_back(c.row.clip_frac);
+      }
+      double ecf = 0.0;
+      const double mcf = ctx_mean_se(cf, &ecf);
+      std::printf("    %-9s %5.2f  %+.3f  %5.2f +/- %.2f Hz  %6.1f   %6.1f  %+6.1f +/- %.1f"
+                  "  %+6.1f +/- %.1f   %4.1f%%%s\n",
+                  kHCArms[a].name, double(kHCArms[a].kw), m_an[a], m_hf[a], s_hf[a], per,
+                  m_pp[a], dsw, sse, m57, e57, 100.0 * mcf, void_arm[a] ? "  VOID" : "");
     }
-    std::printf("    FOUR-POINT slope %+.3f, R^2 %.3f  (hc 0.60 arms: %+.3f, R^2 %.3f)\n",
-                slope_mat, r2_mat, slope_base, r2_base);
-    // PRE-REGISTERED, BEFORE THIS RUN. Primary is the produced swing at `mat333`
-    // against the control's 69.0 Hz, because that is the statistic the milestone is
-    // stated in. Halving the coupling should roughly halve the alternation frequency,
-    // and the pole then passes about twice as much, so the prediction is a swing in
-    // v57's range and an excess back above zero.
-    const double dsw333 = m_pp[kHCBaseArms + 3] - m_pp[kHCCtrlArm];
-    const double sse333 = std::sqrt(s_pp[kHCBaseArms + 3] * s_pp[kHCBaseArms + 3] +
-                                    s_pp[kHCCtrlArm] * s_pp[kHCCtrlArm]);
-    const double t333 = sse333 > 0.0 ? dsw333 / sse333 : 0.0;
-    if (void_arm[kHCBaseArms + 3]) {
-      std::printf("    NO VERDICT -- `mat333` is VOID on the duty/rate bound, so its swing is\n"
-                  "    not interpretable. Halving the gain moved the arm out of the regime.\n");
-    } else if (dsw333 > 0.0 && t333 >= 3.0) {
-      std::printf("    THE COUPLING WAS THE PROBLEM. `mat333` carries %+.1f Hz of swing over\n"
-                  "    the control at %.1f SE, so removing the within-term is FREE once the\n"
-                  "    between-term is held fixed, and v75 ships at g' = 0.30 -- NOT at 0.60,\n"
-                  "    where it reverses the milestone.\n", dsw333, t333);
-    } else if (dsw333 < 0.0 && t333 <= -3.0) {
-      std::printf("    THE WITHIN-TERM WAS LOAD-BEARING FOR THE PLANT. `mat333` is %+.1f Hz\n"
-                  "    against the control at %.1f SE even with the between-term matched, so\n"
-                  "    the forbidden coupling was buying the SLOW period the pole needs.\n"
-                  "    Baruzzi's condition and this creature's formant reach are in conflict,\n"
-                  "    and v75 must not ship at any gain.\n", dsw333, t333);
+    // PRE-REGISTERED, BEFORE THIS RUN, and amended from ROADMAP §25 only in the
+    // parameterisation -- §25's `w` was defined on v75's normaliser, which the arithmetic
+    // above rules out as a one-parameter family. The statistic is unchanged: PRODUCED
+    // SWING at tau333, which is what the milestone is stated in.
+    //
+    // PREDICTION: the period lengthens with k and the swing rises with it through the
+    // pole, because a larger k suppresses the loser harder and the winner less, so the
+    // winner holds longer. The anti-phase SHALLOWS as it does -- the §24 dissociation
+    // continued past its measured end.
+    //
+    // REFUSAL: the swing peaks at or below k = 1, which says v57 already sits at the
+    // optimum and the period cannot be bought this way. The clamp caps the asymmetry at
+    // "loser 2g, winner 0", so a plateau is expected eventually; a peak AT k = 1 is the
+    // refusal, a plateau above it is not.
+    uint32_t bestk = kV57;
+    for (uint32_t s = 2; s < 5; ++s) {
+      const uint32_t a = kHCBaseArms + s - 1;
+      if (!void_arm[a] && m_pp[a] > m_pp[bestk]) bestk = a;
+    }
+    std::vector<double> dbest;
+    for (uint32_t r = 0; r < kReps; ++r) {
+      const Cell& ca = cells[r * kHCArmCount + bestk];
+      const Cell& cb = cells[r * kHCArmCount + kV57];
+      if (ca.ok && cb.ok) dbest.push_back(ca.row.f1_p2p - cb.row.f1_p2p);
+    }
+    double ebest = 0.0;
+    const double mbest = ctx_mean_se(dbest, &ebest);
+    const double tbest = ebest > 0.0 ? mbest / ebest : 0.0;
+    if (bestk == kV57) {
+      std::printf("    REFUSED -- THE SWING PEAKS AT k = 1. Every stronger competition\n"
+                  "    produces LESS formant reach than v57 does, so the period cannot be\n"
+                  "    bought by turning the forbidden term up and v57 sits at the optimum\n"
+                  "    of this axis. The period lever, if there is one, is not here.\n");
+    } else if (tbest >= 3.0) {
+      std::printf("    THE COMPETITION WAS UNDER-DRIVEN. `%s` (k = %.2f) carries %+.1f Hz\n"
+                  "    of swing over v57 at %.1f SE, PAIRED on the same twelve seeds, so the\n"
+                  "    forbidden term was not merely load-bearing -- v57 had too little of\n"
+                  "    it, and the period is purchasable after all.\n",
+                  kHCArms[bestk].name, double(kHCArms[bestk].kw), mbest, tbest);
     } else {
-      std::printf("    NO VERDICT -- `mat333` swing is %+.1f +/- %.1f Hz vs the control\n"
-                  "    (%.1f SE), inside the +/-3 SE band where this run cannot choose.\n",
-                  dsw333, sse333, t333);
+      std::printf("    NO VERDICT -- the best arm above k = 1 is `%s` at %+.1f +/- %.1f Hz\n"
+                  "    against v57 (%.1f SE), inside the +/-3 SE band where this run cannot\n"
+                  "    choose. The ordering is not the claim; the paired SE is.\n",
+                  kHCArms[bestk].name, mbest, ebest, tbest);
+    }
+    // DID THE PERIOD MOVE AT ALL? Declared before this column was ever printed, because
+    // the first pass of this block printed the alternation without its spread and the
+    // pole's prediction was about to be scored against a difference inside one SE. The
+    // pole says swing scales as ~1/f well above its 0.2 Hz corner, so a resolvable drop
+    // in frequency with a FLAT swing refutes the period as the amplitude lever, while an
+    // unresolvable one leaves the lever untested. Those are different findings and the
+    // run must not be allowed to pick whichever it looks like.
+    {
+      const uint32_t ab = bestk == kV57 ? kHCBaseArms + 1 : bestk;
+      const double df = m_hf[kV57] - m_hf[ab];
+      const double dfe = std::sqrt(s_hf[kV57] * s_hf[kV57] + s_hf[ab] * s_hf[ab]);
+      const double tf = dfe > 0.0 ? df / dfe : 0.0;
+      std::printf("    the period:  %.2f -> %.2f Hz, difference %+.2f +/- %.2f (%.1f SE)\n",
+                  m_hf[kV57], m_hf[ab], -df, dfe, tf);
+      if (std::fabs(tf) >= 3.0) {
+        std::printf("    RESOLVABLE, SO THE POLE IS REFUTED AS A LEVER. The frequency moved\n"
+                    "    %.1f SE and the swing did not follow -- 1/f over that step predicts\n"
+                    "    %+.0f Hz against the %+.1f Hz measured. Period buys reach only up to\n"
+                    "    a cap, and tau333 is already past it.\n",
+                    tf, m_pp[kV57] * (m_hf[kV57] / (m_hf[ab] > 0.0 ? m_hf[ab] : 1.0) - 1.0),
+                    mbest);
+      } else {
+        std::printf("    NOT RESOLVABLE (%.1f SE on an averaged ARGMAX), so this run does NOT\n"
+                    "    test the pole. The licensed statement is that nothing measurable\n"
+                    "    moved above k = 1, not that a longer period bought nothing.\n", tf);
+      }
+    }
+    // THE k = 0 ARM IS A SEPARATE QUESTION AND IT IS INFORMATIVE EITHER WAY. It has the
+    // tonic and no competition at all, which is the control the v75 pair never ran. If it
+    // still alternates, the differential term is not what makes this oscillate.
+    const uint32_t a0 = kHCBaseArms;
+    if (void_arm[a0]) {
+      std::printf("    k = 0 is VOID on the duty/rate bound -- the tonic alone moves the\n"
+                  "    module out of the regime, so it bounds nothing.\n");
+    } else if (m_an[a0] <= -0.20) {
+      std::printf("    AND THE COMPETITION IS NOT WHAT ALTERNATES IT. k = 0 reaches anti-phase\n"
+                  "    %+.3f with NO differential term at all, so the fatigue and the tonic\n"
+                  "    carry the alternation and every anti-phase number on this line has\n"
+                  "    been read as evidence for a mechanism that was not required.\n", m_an[a0]);
+    } else {
+      std::printf("    k = 0 does not alternate (anti %+.3f), so the differential term IS\n"
+                  "    required for the competition -- the tonic and the fatigue alone are\n"
+                  "    not enough, which is what Matsuoka predicts.\n", m_an[a0]);
     }
   }
 
@@ -21229,10 +21496,25 @@ bool run_halfcenter(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
     std::printf("  A resonance moves both halves TOGETHER, so this cannot be the 3 Hz ring\n"
                 "  being re-measured -- the failure that killed adaptclock.\n");
     if (expo < 0.60) {
-      std::printf("  BUT IT IS NOT A CLOCK. The exponent is %+.3f against ~1.000 required, so\n"
-                  "  the period ignores tau_a -- competition WITHOUT timekeeping, in the same\n"
-                  "  2.5-3.5 Hz band the pre-existing resonance occupies. Report the\n"
-                  "  alternation and refuse the clock.\n", expo);
+      // The GATE stays on the argmax exponent, deliberately: it is the statistic four
+      // previous runs were refused on and its exit code is comparable across them. What
+      // changes is that the TEXT may no longer claim the period ignores tau_a, because
+      // the crossing estimator can say otherwise -- and a gate that returns false while
+      // the better instrument disagrees has to say so rather than restate the refusal.
+      if (slope_cross >= 0.80 && r2_cross >= 0.90) {
+        std::printf("  THE ARGMAX EXPONENT IS %+.3f AND THE GATE BELOW STILL FAILS ON IT, BUT\n"
+                    "  DO NOT READ THAT AS 'NOT A CLOCK'. Counting the turns directly gives a\n"
+                    "  four-point slope of %+.3f at R^2 %.3f against the required 1.000, so on\n"
+                    "  the better instrument the period DOES track tau_a. The gate is kept on\n"
+                    "  the argmax only so this run's exit code stays comparable with the four\n"
+                    "  before it. Re-pin the gate before quoting a clock result.\n",
+                    expo, slope_cross, r2_cross);
+      } else {
+        std::printf("  BUT IT IS NOT A CLOCK. The exponent is %+.3f against ~1.000 required, so\n"
+                    "  the period ignores tau_a -- competition WITHOUT timekeeping, in the same\n"
+                    "  2.5-3.5 Hz band the pre-existing resonance occupies. Report the\n"
+                    "  alternation and refuse the clock.\n", expo);
+      }
       return false;
     }
     std::printf("  OLD TEXT, SUPERSEDED BY THE EXPONENT GATE ABOVE. It locates a\n"

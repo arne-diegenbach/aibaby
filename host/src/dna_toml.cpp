@@ -491,6 +491,10 @@ bool compile_dna_toml(const std::string& path, std::vector<uint8_t>& out,
     header.vocal.jaw_limit = float(r.number("jaw_limit"));
     header.vocal.jaw_gate_f1 = float(r.number("jaw_gate_f1"));
     header.vocal.f1_leak_tau_ms = float(r.number("f1_leak_tau_ms"));
+    // DNA v76. Absent means 1.0, which is v57's kernel exactly -- so the ~400 genome
+    // files that predate the field keep the behaviour they were measured with. A zero
+    // default would silently remove the competition from every one of them.
+    header.vocal.halfcenter_within = float(r.number_or("halfcenter_within", 1.0));
     collect(r);
   }
   {

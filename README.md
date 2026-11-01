@@ -25124,6 +25124,10 @@ The kernel was not violating the textbook condition by oversight. The violation 
 — and specifically load-bearing for the *body*, not for the competition, which is measurably
 cleaner without it. The fix is dead at any gain.
 
+*Both of those last two sentences turned out to be wrong, and the next section says why: the
+comparison they rest on was not the controlled comparison we thought it was. What stands is that
+the fix is refused at both strengths we measured.*
+
 ### Two things worth keeping from a refuted change
 
 The filter explains the direction of the loss in both runs, and about half its size; the leftover
@@ -25144,3 +25148,74 @@ obvious move is no longer to remove that term but to turn it *up*, past where th
 sits — and because the original kernel is one setting of that same knob, a sweep across it has two
 points whose answers we already know. If the sweep cannot reproduce them, the sweep is wrong and
 will say so before we read anything into it.
+
+## Our own matched comparison was not matched (2026-11-01)
+
+The section above rests on a comparison between two versions of the same kernel, and before
+building the next experiment we went back to check that the comparison was fair. It was not. No
+new simulation was needed to find this — only arithmetic over numbers we had already printed.
+
+The two versions differ in what they divide the competition by. The old kernel divides each
+half's inhibition by the pair's own average rate; the new one divides by the rate the module is
+*supposed* to run at, a fixed number from the genome. We halved the gain on the new kernel so
+that the strength of the mutual inhibition would match the old one, and then read the remaining
+difference as the effect of the term we had removed.
+
+But dividing by a fixed number changes more than the mutual inhibition. It also changes the
+*baseline* amount of inhibition each half receives when the two are balanced — in the old kernel
+that baseline is the gain itself, independent of how fast the creature happens to be firing,
+while in the new one it is the gain scaled by the firing rate over the setpoint. Matching the
+baseline and matching the mutual inhibition then ask for two different gains, a factor of two
+apart. **No single setting reproduces the old kernel.** The two are not the same mechanism at
+different strengths, and our "matched" arm had half the baseline inhibition as well as slightly
+less mutual inhibition.
+
+That matters because less inhibition of any kind makes the creature fire faster, fatigue sooner
+and flip sooner — which is precisely the effect we had attributed to the one term we meant to
+isolate. There was also a third difference we had not noticed: the old kernel's division
+guarantees its safety clamp can never engage, while the new one's lets it engage above 10 Hz, and
+the fastest arm was running at 11.2 — with the clamp holding the competition flat for much of the
+recording.
+
+So two claims come down. "The forbidden self-coupling is what holds the period open" is not
+established. And "dead at any gain" was an extrapolation pointing the wrong way: inside the new
+kernel the produced swing *rises* with gain, 19.3 Hz at one setting and 42.7 at double it. What
+stands is narrower and still enough: the new kernel is refused at both settings we measured, and
+it is retired for the arithmetic rather than for the refusals.
+
+### What survives, and why we checked two things that turned out fine
+
+The earlier comparison, at full gain, happens to be nearly matched on the baseline, so that
+measurement stands as it was reported: the creature's voice got quieter while its neurons
+competed harder. The observation that carries the most weight is unaffected either way, because
+it lives entirely inside one kernel — across four settings of the fatigue constant, the arm with
+the *deepest* competition is the *quietest* speaker and the arm with the shallowest is the
+loudest. That is still the finding, and the vocal tract's slow filter still explains why.
+
+Two other suspicions came out clean, and they are worth recording so nobody spends time on them
+again. The archived runs are named as though they were ten times longer than the new ones; they
+are not, and the proof is that the two arms with the mechanism switched off print identical
+numbers down to the last decimal in both, which runs of different lengths cannot do. And both
+sets of runs use the same family of random seeds. One real bug did turn up: a hand-written
+summary at the top of an old log labels a column "anti-phase" when the numbers in it are a
+different measure entirely. The milestone it supports is stated in a column that is labelled
+correctly, so the milestone is unharmed — but the figures quoted from that header describe
+something other than what their label says.
+
+### The experiment this turned into
+
+Instead of sweeping a knob on the retired kernel, the new version puts a weight on the
+competition itself in the *old* kernel, where the baseline inhibition stays fixed no matter how
+the weight is set. Weight one is the original kernel exactly — not approximately, but to the last
+bit, because of how the arithmetic simplifies — so the eight unchanged arms have to reproduce the
+archive digit for digit or the rewrite is not the identity it claims and the whole sweep is void.
+Weight zero leaves the creature with the baseline and no competition at all, which is the control
+the previous pair of runs never had; if it still takes turns, then competition was never what
+made this oscillate.
+
+We are honest about one limit: in this form, strengthening the competition between the halves
+also strengthens each half's pull on itself, in equal and opposite measure. The two cannot be
+separated by any setting of this weight, so the sweep measures how strong the competition is, not
+which of the two terms matters. Separating them needs a third design — dividing by a slowly
+smoothed version of the creature's own rate, which tracks how fast it is going without tracking
+which half is currently winning. That one needs no new constants and is not built.
