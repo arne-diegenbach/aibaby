@@ -25454,3 +25454,44 @@ unchanged, same seeds, same settings — specifically so that every number has t
 *identical* while only the verdict changes. If a single one of them shifts, the fix wasn't
 confined to the verdict and the run is void. That constraint is the whole point: it's what
 separates correcting a broken referee from quietly re-running until you like the score.
+
+## The same run, a different referee, and not one number moved (2026-11-02)
+
+The re-run finished. Four hours and forty-three minutes, the same 131 arms, the same seeds.
+
+**Every one of the ten comparisons came back identical** — all 131 rows of the main table, all
+four earlier experiments' published blocks, and, the one that mattered, all 54 measured lines of
+the experiment under scrutiny. The beat lengths, the fits, the coefficients: bit for bit the same
+numbers as before. Only the verdict changed, which is exactly the constraint we set ourselves
+before starting. A fixed referee, not a second roll of the dice.
+
+There's a bonus proof in there too. One of the ten comparisons had cried wolf last time, and we'd
+argued it was the *comparison* that was broken rather than the data — the text pattern it searched
+for matched the new section as well as the old one, so it was comparing the wrong paragraphs. This
+time, with the pattern tightened, it passes. An argument made on paper, confirmed by a machine.
+
+And the new safety check works. The force actually applied to the mechanism moved **142%** across
+the sweep, against the 10% it needed to clear. Beside it the log now prints all three rejected
+measurements side by side — the 7% one, the 3% one, the 170% one — each labelled with the reason
+it isn't the referee. Three bad referees in three runs have earned themselves a permanent box on
+the page, so the next person doesn't reach for one of them again.
+
+So, the answer the previous run had and couldn't publish: **pushing the two halves against each
+other harder doesn't delay the beat, it changes how steeply the beat responds to the tiredness
+dial.** Same shape as the two experiments before it. That's now three different ways to push on
+this part of the creature — the overall drive, the tiredness, and the shoving match — and all
+three tilt the line rather than sliding it. The fixed delay we've been hunting isn't in there at
+all. It's somewhere else.
+
+One more honesty note, because the arithmetic invites a mistake. The numbers *do* show the delay
+moving by 457 milliseconds per unit of force, and that looks like exactly what we were looking
+for. It isn't. When a family of lines pivots, the place where they'd each cross zero moves even
+though nothing has been delayed — and here they pivot around a point 73 milliseconds to the *left*
+of zero, a place no real tiredness setting could ever occupy. It's a bookkeeping shadow of the
+tilt, not a delay. The log now prints that pivot directly beneath the verdict, so the page itself
+refuses the misreading rather than leaving it to whoever reads it next.
+
+Pushing the shoving match the *other* way, incidentally, kills the creature's rhythm outright:
+all six of those arms came back with a wobble *quieter than the background noise* of a creature
+that isn't oscillating at all. We'd predicted that from the equations and a short pre-flight; it
+held over a record twenty times longer. That direction is closed.

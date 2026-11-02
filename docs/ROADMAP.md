@@ -4401,3 +4401,77 @@ the mechanism §39 names: at 60k part of what it read was *whether the creature 
 and at 1.2M ticks every fitted setting oscillates cleanly, so the correlation saturates. The
 quantity a smoke validates a guard against must be measured **in the regime the run will use** —
 a liveness indicator impersonates a dose meter precisely where liveness is marginal.
+
+### §39 CONFIRMED — THE RE-RUN CHANGED THE VERDICT AND MOVED NOT ONE NUMBER
+
+`results/halfcenter-v81b.log`, the same 131 arms at the 1.2M minimum, 18:42 → 23:25 (**4h43m**)
+behind a clean gate (all four keys PASS, hash `ad96f882becbee92`, 24 experiments).
+
+**All ten determinism checks came back IDENTICAL**, including the one the re-run exists for:
+
+| check | scope | result |
+|---|---|---|
+| 1 | all 131 main-table rows, the 24 v81 arms included | IDENTICAL |
+| 2 | the kill-switch / VOID lines | IDENTICAL |
+| 3 | the regime profile, 131 rows | IDENTICAL |
+| 4 | the published linear clock law | IDENTICAL |
+| 5 | the v76 k sweep, **start marker now anchored** | IDENTICAL |
+| 6–9 | the entire v77, v78, v79, v80 blocks | IDENTICAL |
+| **10** | **the v81 block's 54 measured lines** | **IDENTICAL** |
+
+Check 5 passing is the second proof that v81's fire was the extraction and not the data, now from
+a run rather than from a re-scoped `sed` on an archive. And the free cross-check closes it: the
+anchor's own six-tau fit prints `slope 3.5359 +/- 0.0378  intercept 186.7 +/- 8.6  R^2 0.99954`,
+**byte-identical to v80's print of the same arms** through a different block of code.
+
+So the cascade changed, the measurement did not, and the verdict below is the same data read
+through a gate that meters the dose it claims to meter.
+
+### THE DOSE LANDED, ON THE QUANTITY THE KERNEL ACTUALLY APPLIES
+
+At the reference tau the applied inhibition swing `g·k·sd(D)` runs **2.96–7.16 rate units, a 142%
+range** across the 2.00× sweep — against the 10% threshold pre-registered before the run. The
+three refused dosimeters now print beside it, each with the reason it is not the gate:
+
+| quantity | range over the same sweep | why it is not the gate |
+|---|---|---|
+| **`g·k·sd(D)`** | **142%** | **the inhibition the kernel applies, unnormalised** |
+| rate | 7% | held by design here, so it meters the compensation |
+| `\|anti\|` | 3% | a correlation, scale-free, blind to amplitude |
+| produced F1 swing | 170% | past the 800 ms pole, inflated by the shorter period |
+
+`sd(D)` falls *with* `g`, so the applied swing was falsifiable rather than tautological: had it
+scaled as `1/g` the swing would have been flat and the dose genuinely absorbed. It did not.
+
+### THE VERDICT, IN THE BRANCH THE CLAUSE TABLE PRE-REGISTERED
+
+The re-ordered cascade reaches the rotation clause first, and it fires hard:
+
+| `g·k` | slope `A` | vs anchor | intercept `B` |
+|---|---|---|---|
+| 0.60 (anchor) | 3.4758 ± 0.0090 | — | 203.1 ± 2.4 ms |
+| 0.50 | 2.8051 ± 0.0065 | **−60.5 SE** | 164.4 ± 1.7 ms |
+| 0.40 | 2.2175 ± 0.0085 | **−101.6 SE** | 114.9 ± 2.3 ms |
+| 0.30 | 1.5988 ± 0.0064 | **−170.0 SE** | 67.2 ± 1.7 ms |
+
+`dB/d(g·k) = +457.06 ± 16.92 ms per unit` — **27.0 SE, resolved** against the 2-dof critical t of
+4.303, R² 0.99727, per-setting residual rms 0.79–1.10 ms (a 1.4× spread, disclosed and not
+gated). And it is **not a shift**: the pivot regression prints `dB/dA = +73.4 ± 4.1 ms per unit of
+slope`, R² 0.99391, so **τ\* = −73.4 ms** — 73 ms to the *left* of the origin, where no adaptation
+constant can sit. The lines fan out from a virtual point; `B` is a `tau_a = 0` extrapolation of
+lines with different gains, and the log says so one line under the refusal.
+
+**THE ADDITIVE FORM IS REFUSED ON THIS AXIS, AND THAT CLOSES THE DRIVE ASSEMBLY.** The tonic
+(§35/v79), the fatigue rate (§37/v80) and the asymmetry (§39/v81) all **rotate** the law and not
+one of them **shifts** it. `B` is not a quantity in the vocal module's own drive assembly, and the
+search belongs outside it.
+
+### AND THE UPPER BOUND HOLDS ON THE FULL RECORD
+
+The six `g·k = 1.20` arms print `ONLY 0 LIVE ARMS -- this setting is not fitted`: periods of
+40–76 ms against taus of 83–333 ms, every one `INCONSISTENT  UNDER 2x FLOOR`, with turn-to-turn
+sd at **0.6× the control floor's own** — i.e. below the noise of a creature that is not
+oscillating at all. The 60k pre-flight's lock-up reproduces at twenty times the record, so the
+`(tonic, asymmetry)` plane is closed from above by measurement and not only by the normaliser
+arithmetic: once `m_lo = 0`, `m_hi/mean ≡ 2` identically, `hc_lo` pins at `2g`, and no amount of
+fatigue can release the loser. **Do not sweep the asymmetry upward again.**
