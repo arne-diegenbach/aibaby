@@ -3864,3 +3864,160 @@ one.** The full record can.
 against the drive axis's two — so unlike §35 this axis can at least produce comparable
 intercepts. The residual rms ratio is 2x, not 70x. Whatever this run says, it says it on a sound
 design.
+
+## §37 — THE FATIGUE RATE ROTATES THE LAW TOO, AND THE LAW TURNS OUT TO BE A LOCAL CHORD (2026-11-02)
+
+`results/halfcenter-v80.log`, 107 arms × 12 reps × 1.2M ticks, 3h33m. Gate `verify PASS`,
+hash `ad96f882becbee92` as recorded, 24 experiments. **Determinism 8 of 8 IDENTICAL** — one
+check fired and the firing was the check's own extraction scope, proven below before anything
+else in this section was written. Pre-registered in §36, commit `0d53335`, before the run.
+
+**The run refused itself at the clause §36 committed for it, and the refusal is the result.**
+`adapt_jump` rotates the law. Three settings, three rotations, all one-signed:
+
+| `adapt_jump` | slope on tau_a | intercept B | rms | vs anchor slope |
+|---|---|---|---|---|
+| **1.00** shipped, ANCHOR | 3.4666 ± 0.0112 | 205.0 ± 2.7 ms | 1.00 ms | — |
+| 1.40 | 3.6967 ± 0.0460 | 165.8 ± 11.1 ms | 4.08 ms | **+4.9 SE** |
+| 2.00 | 3.8490 ± 0.0298 | 104.0 ± 7.2 ms | 2.64 ms | **+12.0 SE** |
+| 2.80 | 4.5897 ± 0.0189 | 110.6 ± 4.6 ms | 1.68 ms | **+51.1 SE** |
+
+Balanced on the three taus live at all four settings, `{167, 250, 290}` — three of six, against
+the drive axis's two, so the design §36 bought did hold. The 60k smoke had already shown the
+rotation and §36 disclosed it rather than relaxing the clause; **the full record confirms it at
+51 SE where the smoke read 30.5.** The one thing the smoke could not settle — whether a
+short-record bias was manufacturing it — is settled against me.
+
+### THE PRIMARY IS VOID TWICE OVER, AND THE SECOND REASON IS NOT THE CLAUSE'S
+
+`dB/d(jump) = −53.75 ± 20.65 ms per unit`, R² 0.772. The sign is the fatigue direction, and it
+means nothing, for two independent reasons:
+
+1. **The clause.** B is a `tau_a = 0` extrapolation. Differencing the intercepts of lines with
+   different gains is arithmetically real and mechanistically empty — the drive axis's exact
+   failure, caught this time by a branch written beforehand rather than by a diagnosis after.
+2. **It would not have resolved anyway.** 2.6 SE against the dof-scaled 5% critical t of 4.303
+   (4 settings → 2 dof). And the raw pattern is not even monotone: 205.0 → 165.8 → 104.0 →
+   **110.6**, rising at the top setting.
+
+So the fatigue-time hypothesis §36 derived from the kernel is **not supported**, and §36 said in
+advance that this is what the test would mean: *"the clause firing is evidence against my own
+hypothesis, which is the shape a test should have."* The derivation's own disclosed defect — the
+closed form saturates at large `tau_a` where the data is linear — was the warning, and it was
+right.
+
+### THE ROTATION'S SIGN IS THE KERNEL'S, WHICH IS WHY THIS IS A CLOSURE AND NOT A PUZZLE
+
+**The drive rotates the coefficient DOWN (4.53 → 2.53) and the fatigue increment rotates it UP
+(3.47 → 4.59).** `core/src/network.cpp:2544-2545` is the whole reason: `drive_a = drive −
+adapt_[i]`, one subtraction, so the two axes enter the same quantity with opposite sign. Two
+independent sweeps, opposite directions, kernel-predicted — no fitting required to read it.
+
+**And `core/src/network.cpp:2294` says why neither can touch B.** The mutual inhibition is
+divided by the pair's own mean, `inv = 1/((m_lo + m_hi)/2)`, and the kernel comment states the
+intent: *"Normalised by the group's own mean so the term is scale-free."* So the competition
+loop carries **no absolute timescale at all**. The decomposition follows:
+
+- `A · tau_a` is the fatigue relaxation. Its coefficient is set by the drive/fatigue balance,
+  with the sign the subtraction demands. Both sweeps are measurements of that one coefficient.
+- `B` is what is left at `tau_a = 0` — the switch with no fatigue — and the scale-free loop
+  cannot host it.
+
+That is now five axes that fail to move B for one structural reason, not five coincidences:
+`rate_fast_tau_ms` (§31), `refractory_ms` and the per-module axonal lag (§33), `leak_tau_ms`
+(§33, rotates), `halfcenter_drive` (§35, rotates), `adapt_jump` (here, rotates). **Every
+quantity in the drive/fatigue balance rotates the law and none of them shifts it.**
+
+Two candidates were checked against the kernel and killed at the desk, before costing anything:
+
+- **The Schmitt band's additive term is not free.** `kbase = kOne − kw` (`:2344`) — fully
+  determined by the within-coupling `kw`, which §-v76's k-sweep already closed. There is no
+  independent additive term to sweep.
+- **There is no recompute cadence.** The half-centre block runs inside `Network::step()` with no
+  sub-sampling, so a fixed update interval — which would have had exactly B's signature — does
+  not exist.
+
+### THE DETERMINISM CHECK THAT FIRED WAS ITS OWN SCOPE, AND THAT IS THE FOURTH IN FOUR RUNS
+
+Check 8 printed `*** A NUMBER IN THE v79 BLOCK MOVED -- void.` It had not. The extraction ran
+`/v79 -- THE DRIVE AXIS/` → `/UPPER EDGE/`, and **`UPPER EDGE` is a trailing section, not a block
+boundary.** v79 was the last block when the check was written, so there was no successor marker
+to close it with; appending v80 put the new block *inside* that range, so the archived log's
+extraction stopped at v79 and the new log's ran on through v80.
+
+Proven two ways before being believed:
+
+- **Correctly scoped** — closing v79 at `/v80 -- THE FATIGUE RATE/` — both logs yield 41 lines,
+  **IDENTICAL**.
+- **The original firing's diff has one hunk, `41a42,74`**: a pure append. No `c` and no `d`
+  hunk, so no pre-existing line changed or vanished.
+
+Checks 6 and 7 close each block with the *next* version's marker and were immune. **The newest
+block is the one with no end delimiter, so it is the one that inherits this trap every time** —
+the check is now parameterised on its end marker and re-passes.
+
+### TWO FREE FINDINGS FROM THE AUDIT, AND ONE OF THEM DEMOTES §35
+
+Re-reading the law's own block with the corrected law in hand turned up something §35 should
+have caught and did not.
+
+**`tau500` departs the corrected law by +45.8 ms = 13.4 SE.** The out-of-sample arm measures
+1986.7 ± 3.1 ms. The superseded law predicts 1959.8 ± 15.2 → **+1.8 SE, HELD**, which is what
+the binary prints. The corrected law predicts **1940.9 ± 1.5 → +45.8 ms, 13.4 SE**. Same
+measurement, a ruler ten times tighter, and the verdict reverses.
+
+**So the §35 correction voided the law's only out-of-sample test, and §35 did not notice.** The
+rule in `aibaby-re-derive-after-an-estimator-fix` was applied to v78's two coefficients and *not*
+to the out-of-sample arm. §28's own text — *"On one arm this is SUGGESTIVE, not settled"* — turns
+out to have been the operative caveat.
+
+**And a pure power law is refuted by arithmetic, so the offset is not a linearization artefact.**
+The obvious reading of a bent law is that there is no offset and the exponent is simply below 1.
+Two free parameters either way, so the residuals compare directly:
+
+| taus | line + offset | pure power law |
+|---|---|---|
+| {125…333} | **0.703 ms** | 8.080 ms (`p` = 0.7733) |
+| {125…500} | **9.862 ms** | 31.048 ms (`p` = 0.8143) |
+| {83…500} | **9.488 ms** | 35.768 ms (`p` = 0.7935) |
+
+The line wins by 9–11× at every range. **B is real.** (The instrument reproduces the binary's
+published fits — 3.5600 / 179.8 / 9.055 and 3.4756 / 203.1 / 0.908 — to the last digit.)
+
+### THE LAW IS A LOCAL CHORD, AND ITS SHAPE IS A FLAT MINIMUM IN THE DERIVATIVE
+
+Consecutive secant slopes at the shipped setting, which need no fit at all:
+
+    tau_a    83 -> 125 -> 167 -> 250 -> 290 -> 333 -> 500
+    ms/ms      4.029  3.493  3.453  3.500  3.498  3.746
+
+**Flat to 1.3% across [125,333] and higher at both ends.** So `period = 3.4756·tau_a + 203.1` is
+the chord of a broad flat minimum in `d(period)/d(tau_a)`, not a global law — exactly linear
+where it was fitted, 0.908 ms over a 724 ms span of period, and bent outside. `B = 203.1` is a
+property of that window.
+
+**Both departures sit at a rate boundary, which is a lead and not a result.** `tau083` runs
+10.21 Hz — the fastest arm on file, and `aibaby-refractory-sigma-v73` already has the refractory
+constant biting only near the rate ceiling, which is why `tau083`'s misfit shrinks 2.6× as the
+refractory rises. `tau500` runs 2.52 Hz, approaching the low-rate edge where `jp280t333` at 1.83
+Hz went VOID. The window where the law holds spans 3.67–7.83 Hz around the 5.0 Hz setpoint.
+**This is post-hoc on seven points and is recorded as a lead**: it predicts that the window is a
+rate band rather than a `tau_a` band, which needs the rate moved at fixed `tau_a` to test and
+cannot be read off this run, because `adapt_jump` moves the rate and rotates the law at once.
+
+### WHAT IS LEFT, AND WHAT IS NOT CLAIMED
+
+`halfcenter_gain` is the one dose dimension in the arm vector with only an on/off history —
+**92 of 92 mechanism arms sit at 0.60 and the 15 controls at 0.00.** It multiplies the
+*scale-free* inhibition term, so it is dimensionless in rate units and is the only remaining
+quantity in the switch path that is neither a time constant nor a term in the drive/fatigue
+subtraction. (`aibaby-hcdrive`'s "DO NOT RE-SWEEP THIS PLANE" is a closure on the *composition*
+trade surface, measured on `lesson` and `sep` at gain 0.45 — a different experiment and a
+different outcome. The clock law has never been scored against this axis.) `noise_amp` and the
+~4.5 Hz resonant jaw remain as before.
+
+Not claimed: that the fatigue account is wrong in kind, only that it is unmeasurable on this
+axis and unsupported by this test. Not claimed: any value of `dB/d(jump)`. Not claimed: that the
+rate-band reading of the law's window is more than a post-hoc pattern in seven points. Not
+claimed: that `B = 203.1` means anything outside `tau_a ∈ [125,333]` — on the contrary, the one
+arm outside it now says it does not.

@@ -25356,3 +25356,58 @@ Finally, my own reporting code had a flaw: a single flag meant two different thi
 refused itself it also silenced three unrelated readouts that were working fine — including the one
 whose job was to check whether my redesign had been necessary. It had been. Fixed, and the flag is
 now two flags.
+
+### The test failed in my favour's opposite direction, and the ruler I'd just sharpened broke its own best result (2026-11-02)
+
+Last time I measured the creature's internal rhythm and found a clean rule: the beat lasts about
+3.48 times whatever its "tiredness" setting is, plus a fixed 203 milliseconds on top. That extra
+203 ms is the interesting part — it doesn't come from the tiredness setting, so something else in
+the circuit is adding it, and I've now spent five experiments trying to find out what.
+
+This time I tried the tiredness *strength* — how much each pulse of activity tires the cells out.
+I'd worked out from the circuit's own equations that the 203 ms might be a tiredness build-up
+time rather than a delay, which would explain why four attempts to find a delay had all come back
+empty. If so, making the cells tire faster should shrink it.
+
+**It didn't, and I'd written the refusal into the code beforehand so I couldn't talk myself out of
+it.** Turning the tiredness strength up doesn't shift the 203 ms — it tilts the whole rule, making
+the beat more sensitive to the tiredness setting rather than adding or removing a fixed amount.
+Once the rule tilts, the "203 ms" isn't a measurement any more, it's an extrapolation off the end
+of a line that's changed angle, and subtracting two of those tells you nothing. A quick trial run
+had already warned me this would happen, and the honest thing was to say so in the write-up and
+run the full test anyway rather than move the goalposts. The full test confirmed it fifty times
+over.
+
+**The useful part is that the failure has a reason, and the reason is one line of the circuit.**
+The drive and the tiredness are subtracted from each other — one number, one minus sign — so when
+I turn one up and the other down, I'm pushing on the same thing from opposite sides. That's
+exactly what the two experiments show: more drive tilts the rule one way, more tiredness tilts it
+the other. And the part of the circuit that decides *when* to switch sides works in proportions
+rather than absolute amounts, deliberately so, which means it has no clock of its own to
+contribute. So the 203 ms can't be hiding in there. Five settings, one explanation, instead of
+five separate dead ends.
+
+**Then the audit turned up something that cost me a published result.** When I sharpened the rule
+last time, I made it ten times more precise over the range I'd tested. There was one arm outside
+that range — a slow setting I'd run as a check — and against the old, blurrier rule it landed
+comfortably inside the margin: a pass. Against the sharpened rule, the same unchanged measurement
+is now off by 46 ms, which is far outside the new margin. I'd re-checked two other numbers after
+sharpening the rule and simply hadn't thought to re-check this one.
+
+So the rule is narrower than I'd said. It's extraordinarily exact over the middle of the range —
+within one millisecond across a beat that varies by three-quarters of a second — and it bends at
+both ends. The obvious explanation is that there's no fixed 203 ms at all and the relationship is
+just gently curved, but I tested that and it's wrong: a curve fits nine to eleven times worse than
+a straight line with an offset. The 203 ms is real. It's just real over a window.
+
+Both of the bent ends turn out to be where the cells are firing unusually fast or unusually slow,
+which hints that the window is about firing rate rather than about the tiredness setting. That's a
+guess from seven data points and I've written it down as a guess.
+
+**One more self-inflicted scare.** One of my eight "nothing moved" checks reported that something
+had. It hadn't: the check grabbed a stretch of the log by its start and end landmarks, and the
+new results had been added *between* those landmarks, so it was comparing a short extract against
+a longer one. Pure addition, nothing altered — but it took two separate proofs before I was
+willing to believe my own check was the thing at fault rather than the data. The checks for the
+older results close at the next result's heading and were never exposed; it's always the newest
+one that has no end marker yet, so this trap renews itself every time.
