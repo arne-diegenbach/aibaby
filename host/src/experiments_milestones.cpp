@@ -21859,6 +21859,15 @@ bool run_halfcenter(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
   }
   // DNA v77. THE OFFSET TEST -- is the 180 ms the rate filter's own lag?
   //
+  // THE LAW QUOTED BELOW IS SUPERSEDED, AND THIS BLOCK STILL PRINTS IT ON PURPOSE. v79
+  // found `tau_a` = 83 does not obey it (23.3 ms below the line the other five taus define,
+  // 25x its residual); on [125,333] the law is `3.4756 * tau_a + 203.1 +/- 1.3 ms` at a
+  // 0.908 ms residual rather than 9.06. This block's OUTPUT is an archived published verdict
+  // compared byte for byte by determinism check 6, so correcting it here would void the
+  // check and make a committed result irreproducible. The correction is carried in the v79
+  // block and in ROADMAP §35; the refusal this block reports is unaffected either way,
+  // because it rests on the intercept moving the WRONG WAY by 5.7 SE.
+  //
   // The law `period = 3.560 * tau_a + 179.8 ms` is the strongest thing this line has, and
   // its intercept is the part with no account. This block moves the only other lag in the
   // loop and asks the intercept to follow. See the v77 comment on the arm table for the
@@ -22805,7 +22814,23 @@ bool run_halfcenter(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
     double fit_a[kNDrv] = {}, fit_ae[kNDrv] = {}, fit_b[kNDrv] = {}, fit_be[kNDrv] = {};
     double fit_r2[kNDrv] = {}, fit_k[kNDrv] = {}, fit_ke[kNDrv] = {};
     uint32_t fit_n[kNDrv] = {}, ctl_of[kNDrv] = {};
-    bool fit_ok[kNDrv] = {};
+    // TWO FLAGS, NOT ONE, and v79's own log is why. These started as a single `fit_ok`
+    // meaning both "this setting produced a usable own fit" and "this setting may enter the
+    // balanced lag". The balanced-design branch cleared it to withdraw the second claim and
+    // silently withdrew the first as well, which suppressed three disclosures that do not
+    // depend on the balance at all: the dose-liveness check, the slope-rotation table with
+    // its self-check on the redesign, and the per-setting contrasts. The anchor's own fit
+    // was sound -- six live taus, R^2 0.99954 -- and the run still printed `THE DOSE CANNOT
+    // BE CHECKED` about a dose that moved the periods threefold.
+    //
+    // `fit_ok` is now ONLY the own fit, and nothing clears it after it is set. `bal_ok` is
+    // the balanced claim and is the one the refusal withdraws. Every statistic below reads
+    // whichever of the two it actually depends on.
+    bool fit_ok[kNDrv] = {}, bal_ok[kNDrv] = {};
+    // The OWN fit per setting, kept separately from the balanced refit's `fit_a`/`fit_b`.
+    // See the note at the own fit: sharing those arrays made the rotation table read zeros
+    // and announce a false conclusion whenever the balance was refused.
+    double own_a[kNDrv] = {}, own_ae[kNDrv] = {}, own_b[kNDrv] = {}, own_be[kNDrv] = {};
     double per[kNDrv][kNTau] = {};
     bool plive[kNDrv][kNTau] = {};
     // THE ARM INDICES ARE KEPT, which they were not in the first version, because the
@@ -22895,6 +22920,14 @@ bool run_halfcenter(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
       ols(x, y, n, sl, ic, sle, ice, r2);
       std::printf("      FIT (own)  slope %.3f +/- %.3f  intercept %7.1f +/- %5.1f ms"
                   "  R^2 %.5f  (%u live)\n", sl, sle, ic, ice, r2, n);
+      // THE OWN FIT IS KEPT, and a forced run of the refusal branch is why. `fit_a`/`fit_ae`
+      // are written ONLY by the balanced refit below, so when the balance is refused they
+      // are still zero -- and the rotation table read them, printed `slope 0.000 +/- 0.000`
+      // for every setting, concluded that every slope sat within 3 SE of the anchor's, and
+      // asserted THE LAW DID NOT ROTATE and that demoting the raw intercept had been WRONG.
+      // A confident false statement, which is worse than the silence the two-flag split was
+      // fixing. The rotation is a property of the OWN fits and now reads its own arrays.
+      own_a[s] = sl; own_ae[s] = sle; own_b[s] = ic; own_be[s] = ice;
       fit_ok[s] = true;
     }
     // THE BALANCED DESIGN, for the reason v78's 60k smoke found and not as inherited
@@ -22902,8 +22935,9 @@ bool run_halfcenter(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
     // which is larger than anything being looked for here. Intercepts are comparable only
     // on a COMMON set of taus.
     bool common[kNTau] = {true, true, true, true, true, true};
-    uint32_t ncom = 0, nfit = 0;
-    for (uint32_t s = 0; s < kNDrv; ++s) if (fit_ok[s]) ++nfit;
+    uint32_t ncom = 0, nfit = 0, nbal = 0;
+    for (uint32_t s = 0; s < kNDrv; ++s)
+      if (fit_ok[s]) { bal_ok[s] = true; ++nfit; ++nbal; }
     for (uint32_t j = 0; j < kNTau; ++j) {
       for (uint32_t s = 0; s < kNDrv; ++s)
         if (fit_ok[s] && !plive[s][j]) common[j] = false;
@@ -22919,8 +22953,10 @@ bool run_halfcenter(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
                   "      comparable at matched leverage and this axis CANNOT produce an\n"
                   "      effective lag. It refuses itself rather than printing an unbalanced\n"
                   "      number that would be a design artefact.\n");
-      for (uint32_t s = 0; s < kNDrv; ++s) fit_ok[s] = false;
-      nfit = 0;
+      // ONLY the balanced claim is withdrawn. `fit_ok` and `nfit` are left standing so the
+      // dose check and the rotation table below still report -- see the two-flag note above.
+      for (uint32_t s = 0; s < kNDrv; ++s) bal_ok[s] = false;
+      nbal = 0;
     } else {
       // THE EFFECTIVE LAG, AND ITS ERROR BAR BY JACKKNIFE. k = B / A is a ratio of two
       // quantities from the SAME fit, so they are correlated and a naive propagation of
@@ -22930,7 +22966,7 @@ bool run_halfcenter(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
       // refit, and take the leave-one-out spread. That is the estimator this project
       // already reaches for on a ratio, after a mean of ratios went wrong once.
       for (uint32_t s = 0; s < kNDrv; ++s) {
-        if (!fit_ok[s]) continue;
+        if (!bal_ok[s]) continue;
         double bx[kNTau] = {}, by[kNTau] = {};
         uint32_t bn = 0;
         for (uint32_t j = 0; j < kNTau; ++j)
@@ -23025,13 +23061,22 @@ bool run_halfcenter(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
     if (fit_ok[kAnchor79]) {
       for (uint32_t s = 0; s < kNDrv; ++s) {
         if (s == kAnchor79 || !fit_ok[s]) continue;
-        const double se = std::sqrt(fit_ae[s] * fit_ae[s] +
-                                    fit_ae[kAnchor79] * fit_ae[kAnchor79]);
-        const double t = se > 0.0 ? (fit_a[s] - fit_a[kAnchor79]) / se : 0.0;
+        // THE BALANCED FIT WHERE IT EXISTS, THE OWN FIT WHERE IT DOES NOT. The balanced
+        // refit compares the settings at MATCHED leverage, which is strictly the better
+        // comparison; the own fit is the fallback that keeps this table alive when the
+        // balance is refused, and it can sit on unequal tau sets, so it says so.
+        const bool bal = bal_ok[s] && bal_ok[kAnchor79];
+        const double as = bal ? fit_a[s] : own_a[s];
+        const double aa = bal ? fit_a[kAnchor79] : own_a[kAnchor79];
+        const double es = bal ? fit_ae[s] : own_ae[s];
+        const double ea = bal ? fit_ae[kAnchor79] : own_ae[kAnchor79];
+        const double se = std::sqrt(es * es + ea * ea);
+        const double t = se > 0.0 ? (as - aa) / se : 0.0;
         std::printf("      slope at drive %.2f  %.3f +/- %.3f vs anchor %.3f +/- %.3f"
-                    "  (%+.1f SE)%s\n", double(kDrvSet[s]), fit_a[s], fit_ae[s],
-                    fit_a[kAnchor79], fit_ae[kAnchor79], t,
-                    std::fabs(t) >= 3.0 ? "   <- ROTATED" : "");
+                    "  (%+.1f SE)%s%s\n", double(kDrvSet[s]), as, es, aa, ea, t,
+                    std::fabs(t) >= 3.0 ? "   <- ROTATED" : "",
+                    bal ? "" : (fit_n[s] == fit_n[kAnchor79]
+                                    ? "   (own fits)" : "   (own fits, unequal tau sets)"));
         if (std::fabs(t) >= 3.0) slope_held = false;
       }
       // AND THIS LINE CHECKS MY OWN REDESIGN. The decider was changed from the intercept to
@@ -23040,6 +23085,12 @@ bool run_halfcenter(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
       // B would be interpretable after all and demoting it cost this run its most direct
       // statistic. That is a refutation of my own reasoning, so it is printed rather than
       // left for a reader to infer from a table.
+      //
+      // WHEN IT FALLS BACK TO THE OWN FITS THOSE MAY SIT ON UNEQUAL TAU SETS, and the rows
+      // say so. That is an acceptable trade, because a rotation large enough to matter shows
+      // up in the RAW periods with no fit at all (v79: at tau 167 the period fell x0.342
+      // across the window against x0.413 at tau 333). This line is a cross-check on a
+      // conclusion that does not depend on it, not the evidence for it.
       std::printf("      THE LAW %s: %s\n",
                   slope_held ? "DID NOT ROTATE" : "ROTATED",
                   slope_held
@@ -23056,10 +23107,11 @@ bool run_halfcenter(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
     // setting besides the anchor is enough to run them, and on the filter axis they were
     // the only statistic the run had. These are on the EFFECTIVE LAG, since that is the
     // quantity the two models disagree about: K says every one of these is zero, E says
-    // each has the sign of minus the drive change.
-    if (fit_ok[kAnchor79]) {
+    // each has the sign of minus the drive change. These read `bal_ok`, not `fit_ok`: k is
+    // only written inside the balanced branch, so an unbalanced axis has no k to contrast.
+    if (bal_ok[kAnchor79]) {
       for (uint32_t s = 0; s < kNDrv; ++s) {
-        if (s == kAnchor79 || !fit_ok[s]) continue;
+        if (s == kAnchor79 || !bal_ok[s]) continue;
         const double dk = fit_k[s] - fit_k[kAnchor79];
         const double dse = std::sqrt(fit_ke[s] * fit_ke[s] +
                                      fit_ke[kAnchor79] * fit_ke[kAnchor79]);
@@ -23081,12 +23133,21 @@ bool run_halfcenter(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
     // and B are the gain and the offset of that setting's own balanced law; k = B/A is the
     // lag the two models disagree about.
     std::printf("\n      THE EFFECTIVE LAG ACROSS THE DRIVE, on %u of %u settings and %u\n"
-                "      of %u taus\n", nfit, kNDrv, ncom, kNTau);
-    for (uint32_t s = 0; s < kNDrv; ++s)
-      std::printf("        drive %.2f  %s  A %6.3f   B %7.1f ms   k = B/A %7.2f +/- %5.2f"
-                  " ms%s\n", double(kDrvSet[s]), fit_ok[s] ? "fitted " : "REFUSED",
-                  fit_a[s], fit_b[s], fit_k[s], fit_ke[s],
-                  s == kAnchor79 ? "   <- ANCHOR" : "");
+                "      of %u taus\n", nbal, kNDrv, ncom, kNTau);
+    // WITHDRAWN AS ONE LINE, NOT AS FIVE ROWS OF ZEROS. v79 printed the full table with
+    // every A, B and k at 0.000 and the word REFUSED beside it, which reads like a measured
+    // collapse rather than a statistic that was never computed.
+    if (nbal == 0) {
+      std::printf("        WITHDRAWN -- no setting entered the balanced fit, so there is no"
+                  " A,\n        no B and no k. The own fits above are what this axis"
+                  " produced.\n");
+    } else {
+      for (uint32_t s = 0; s < kNDrv; ++s)
+        std::printf("        drive %.2f  %s  A %6.3f   B %7.1f ms   k = B/A %7.2f +/- %5.2f"
+                    " ms%s\n", double(kDrvSet[s]), bal_ok[s] ? "fitted " : "REFUSED",
+                    fit_a[s], fit_b[s], fit_k[s], fit_ke[s],
+                    s == kAnchor79 ? "   <- ANCHOR" : "");
+    }
     // THE INTERCEPT'S OWN COEFFICIENT, KEPT AS A DISCLOSURE AND NOT AS THE VERDICT. This
     // is the statistic the first design was built on, and it is printed so a reader can see
     // why it was demoted rather than having to take the word of a comment: it is large,
@@ -23096,7 +23157,7 @@ bool run_halfcenter(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
       double bx[kNDrv] = {}, by[kNDrv] = {};
       uint32_t bn = 0;
       for (uint32_t s = 0; s < kNDrv; ++s)
-        if (fit_ok[s]) { bx[bn] = double(kDrvSet[s]); by[bn] = fit_b[s]; ++bn; }
+        if (bal_ok[s]) { bx[bn] = double(kDrvSet[s]); by[bn] = fit_b[s]; ++bn; }
       if (bn >= 3) {
         double c = 0.0, d = 0.0, ce = 0.0, de = 0.0, r2 = 0.0;
         ols(bx, by, bn, c, d, ce, de, r2);
@@ -23123,11 +23184,11 @@ bool run_halfcenter(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
     // reader can hold, and the decider below is the test that has the power.
     uint32_t slo = kNDrv, shi = kNDrv;
     for (uint32_t s = 0; s < kNDrv; ++s) {
-      if (!fit_ok[s]) continue;
+      if (!bal_ok[s]) continue;
       if (slo == kNDrv) slo = s;
       shi = s;
     }
-    if (nfit < 3 || slo == shi) {
+    if (nbal < 3 || slo == shi) {
       std::printf("\n      FEWER THAN THREE SETTINGS FITTED -- no contrast and no bound.\n"
                   "      This axis does not decide, and the per-setting contrasts above are\n"
                   "      what it licenses. A contrast is one point.\n");
@@ -23139,7 +23200,7 @@ bool run_halfcenter(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
       const bool resolved = dkse > 0.0 && std::fabs(t) >= tcrit;
       double kbar = 0.0;
       uint32_t nk = 0;
-      for (uint32_t s = 0; s < kNDrv; ++s) if (fit_ok[s]) { kbar += fit_k[s]; ++nk; }
+      for (uint32_t s = 0; s < kNDrv; ++s) if (bal_ok[s]) { kbar += fit_k[s]; ++nk; }
       if (nk > 0) kbar /= double(nk);
       const double dk_hi = std::fabs(dk) + tcrit * dkse;
       const double frac_hi = kbar > 0.0 ? dk_hi / kbar : 0.0;
@@ -23153,9 +23214,21 @@ bool run_halfcenter(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
                   " no\n      power either way on this axis (model E's drift is 2.8 SE here),"
                   " which\n      is why the nested test below is the decider.\n",
                   kbar, dk_hi, 100.0 * frac_hi);
-      std::printf("      FOR SCALE     the offset has always required 179.8 / 3.560 ="
-                  " 50.5 ms of\n                    effective lag, and this run measures"
-                  " %.2f ms at the shipped\n                    drive\n", fit_k[kAnchor79]);
+      // THE SCALE IS THE CORRECTED ONE. v79's own log showed tau_a = 83 does not obey the
+      // law -- it sits 23.3 ms below the line the other five taus define, 25x that line's
+      // residual -- so the archived 179.8 / 3.560 = 50.5 ms was fitted through a bad point.
+      // On tau_a in [125,333] the law is 3.4756 * tau_a + 203.1 +/- 1.3 ms at 0.908 ms
+      // residual, and the lag to account for is 58.4 ms. ROADMAP §35.
+      //
+      // The v77 and v78 blocks above still print the old numbers ON PURPOSE: they are
+      // archived published verdicts guarded by determinism checks 6 and 7, and editing them
+      // would void the checks and make two committed results irreproducible. History stays;
+      // only the statement carried FORWARD is corrected.
+      std::printf("      FOR SCALE     the offset requires 203.1 / 3.4756 = 58.4 ms of"
+                  " effective\n                    lag (CORRECTED -- the archived 50.5 was"
+                  " fitted through\n                    tau_a = 83, which is off the law),"
+                  " and this run measures\n                    %.2f ms at the shipped"
+                  " drive\n", fit_k[kAnchor79]);
 
       // THE DECIDER: A NESTED MODEL COMPARISON OVER EVERY PERIOD AT ONCE.
       //
@@ -23175,19 +23248,34 @@ bool run_halfcenter(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
       // with a false-positive rate at the nominal 5%. The two extra taus per setting were
       // bought for that 23 points, and the threshold is a tabulated critical F committed in
       // advance rather than a function evaluated here.
-      double rss_free = 0.0;
+      // AND ITS ERROR MODEL IS MEASURED, NOT ASSUMED. The F pools every setting's residuals
+      // into one RSS under a single common sigma. v79's own log is why this is now printed:
+      // the per-setting residual rms there ran 63.8 / 8.30 / 0.91 / 16.7 / 1.69 ms -- a
+      // factor of 70 -- so even a balanced version of that design would have produced an F
+      // with no calibrated null. The §34 power simulation was correct for the noise it was
+      // handed and never asked whether that noise was the noise the axis has. The ratio is
+      // reported beside the F; a run that wants to REFUSE on it must pre-register the factor
+      // first, which this cycle deliberately does not do after the fact.
+      double rss_free = 0.0, rms_lo = 1e30, rms_hi = 0.0;
       for (uint32_t s = 0; s < kNDrv; ++s) {
-        if (!fit_ok[s]) continue;
+        if (!bal_ok[s]) continue;
+        double rs = 0.0;
+        uint32_t rn = 0;
         for (uint32_t j = 0; j < kNTau; ++j) {
           if (!common[j]) continue;
           const double e = per[s][j] - (fit_a[s] * kTau79[j] + fit_b[s]);
           rss_free += e * e;
+          rs += e * e;
+          ++rn;
         }
+        const double rms = rn > 2 ? std::sqrt(rs / double(rn - 2)) : 0.0;
+        if (rms < rms_lo) rms_lo = rms;
+        if (rms > rms_hi) rms_hi = rms;
       }
       auto rss_shared = [&](double kk) {
         double r = 0.0;
         for (uint32_t s = 0; s < kNDrv; ++s) {
-          if (!fit_ok[s]) continue;
+          if (!bal_ok[s]) continue;
           double num = 0.0, den = 0.0;
           for (uint32_t j = 0; j < kNTau; ++j) {
             if (!common[j]) continue;
@@ -23219,9 +23307,9 @@ bool run_halfcenter(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
         const double r = rss_shared(kk);
         if (r < rss_k) { rss_k = r; k_hat = kk; }
       }
-      const uint32_t npts = nfit * ncom;
-      const uint32_t dnum = nfit - 1;
-      const uint32_t dden = npts - 2 * nfit;
+      const uint32_t npts = nbal * ncom;
+      const uint32_t dnum = nbal - 1;
+      const uint32_t dden = npts - 2 * nbal;
       const double fcrit = crit_f(dnum, dden);
       const double fstat = (dden > 0 && rss_free > 0.0 && dnum > 0)
                                ? ((rss_k - rss_free) / double(dnum)) /
@@ -23250,10 +23338,15 @@ bool run_halfcenter(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
                   "  [%.2f, %.2f]\n"
                   "        F(%u,%u) = %.3f  against a critical %.3f committed in advance"
                   "  -> %s\n",
-                  npts, nfit, ncom, nfit, nfit, rss_free, nfit, rss_k, k_hat, klo, khi,
+                  npts, nbal, ncom, nbal, nbal, rss_free, nbal, rss_k, k_hat, klo, khi,
                   dnum, dden, fstat, fcrit,
                   fstat >= fcrit ? "the free lags fit BETTER"
                                  : "one shared lag is ENOUGH");
+      std::printf("        ERROR MODEL  per-setting residual rms %.2f-%.2f ms (x%.0f). The F"
+                  "\n        pools these under ONE sigma, so a large ratio means the null it"
+                  "\n        is compared against is not calibrated. Reported, not gated --"
+                  " a\n        refusal on this needs a factor pre-registered first.\n",
+                  rms_lo, rms_hi, rms_lo > 0.0 ? rms_hi / rms_lo : 0.0);
       // THE VERDICT CASCADE, pre-registered in ROADMAP §34 before this run.
       if (!dose_live) {
         std::printf("      NO VERDICT -- THE DOSE DID NOT REACH THE OSCILLATOR. The\n"
@@ -23281,7 +23374,7 @@ bool run_halfcenter(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
                     "      are already eliminated: the rate filter (v77) and both per-module\n"
                     "      constants (v78). The simulation says this test had 95%% power to\n"
                     "      see model E's drift, so this is a null with teeth.\n",
-                    k_hat, klo, khi, npts, nfit, dnum, dden, fstat, fcrit,
+                    k_hat, klo, khi, npts, nbal, dnum, dden, fstat, fcrit,
                     100.0 * (double(kDrvSet[kNDrv - 1]) / double(kDrvSet[0]) - 1.0),
                     (fit_a[slo] > 0.0 && fit_a[shi] > 0.0)
                         ? fit_a[slo] / fit_a[shi] : 0.0);
