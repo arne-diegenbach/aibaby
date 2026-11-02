@@ -20928,6 +20928,52 @@ const HCArm kHCArms[] = {
     {"dr150t290", 1.00f, 290.0f, 0.60f, 1.50f, 1.00f,  50.0f, 20.0f,  3.0f},
     {"dr160t125", 1.00f, 125.0f, 0.60f, 1.60f, 1.00f,  50.0f, 20.0f,  3.0f},
     {"dr160t290", 1.00f, 290.0f, 0.60f, 1.60f, 1.00f,  50.0f, 20.0f,  3.0f},
+    // DNA v80. THE FATIGUE RATE, `adapt_jump`. Three settings against the shipped 1.00,
+    // whose six arms are the archived anchor block and are not re-run.
+    //
+    // WHY THIS AXIS AND NOT ANOTHER LAG. The offset survived all three loop time constants
+    // (v77, v78) and the drive (v79), and the kernel says why: it is not a lag. The fatigue
+    // difference between the halves obeys `dD/dt = jump*R - D/tau_a` with asymptote
+    // `D_inf = jump*R*tau_a` (network.cpp:689 and :2569 -- one `jump` per spike, decay
+    // dt/adapt_tau), so the switch at `D = delta` is at `tau_a * ln[(D_inf+D0)/(D_inf-delta)]`.
+    // When `D_inf >> delta` that collapses to `(D0+delta)/(jump*R)` -- INDEPENDENT of tau_a.
+    // An additive offset in a law that is otherwise proportional to tau_a, which is exactly
+    // the shape of the thing with no account, and it is a FATIGUE-ACCUMULATION TIME rather
+    // than a delay. No time constant in the loop could ever have carried it.
+    //
+    // THE SWEEP GOES UP ON PURPOSE, which is v79's lesson applied. The drive axis died
+    // because it moved WHICH TAUS OSCILLATE: `tau083` survived at one setting of five, so
+    // only two taus were common and the design could not exist. Raising `jump` raises
+    // `D_inf` and makes the switch EASIER, so the short taus should become more viable
+    // rather than less. Going down to 0.5 would have reproduced v79's failure by
+    // construction -- `D_inf` at tau 83 would fall under `delta` and the arm would stop.
+    //
+    // NO NEW CONTROLS, and that is deliberate. `adapt_jump` is read only inside
+    // `if (adapt_jump > 0 && adapt_tau_ms > 0)` (network.cpp:689) and a control carries
+    // jump 0.00, so a per-setting control would be BIT-IDENTICAL to `ctrl140` -- and
+    // `hc_ctrl_for` already resolves these arms to it, since it keys on
+    // drive/rft/leak/refr, all shipped here. Adding controls could only create the hijack
+    // risk v79 took on; adding none means no existing arm's control resolution can move.
+    // It also means the dose MUST be read on the mechanism arms: a control is dose-blind
+    // here for the same reason it was on the drive axis.
+    {"jp140t083", 1.40f,  83.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f,  3.0f},
+    {"jp140t125", 1.40f, 125.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f,  3.0f},
+    {"jp140t167", 1.40f, 167.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f,  3.0f},
+    {"jp140t250", 1.40f, 250.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f,  3.0f},
+    {"jp140t290", 1.40f, 290.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f,  3.0f},
+    {"jp140t333", 1.40f, 333.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f,  3.0f},
+    {"jp200t083", 2.00f,  83.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f,  3.0f},
+    {"jp200t125", 2.00f, 125.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f,  3.0f},
+    {"jp200t167", 2.00f, 167.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f,  3.0f},
+    {"jp200t250", 2.00f, 250.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f,  3.0f},
+    {"jp200t290", 2.00f, 290.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f,  3.0f},
+    {"jp200t333", 2.00f, 333.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f,  3.0f},
+    {"jp280t083", 2.80f,  83.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f,  3.0f},
+    {"jp280t125", 2.80f, 125.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f,  3.0f},
+    {"jp280t167", 2.80f, 167.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f,  3.0f},
+    {"jp280t250", 2.80f, 250.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f,  3.0f},
+    {"jp280t290", 2.80f, 290.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f,  3.0f},
+    {"jp280t333", 2.80f, 333.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f,  3.0f},
 };
 constexpr uint32_t kHCArmCount = sizeof(kHCArms) / sizeof(kHCArms[0]);
 // THE CONTROL IS NO LONGER THE LAST ARM, and two places used to find it that way --
@@ -23417,6 +23463,279 @@ bool run_halfcenter(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
                     "      ARE REFUSED and the shape is unaccounted for.\n",
                     k_hat, dnum, dden, fstat, fcrit, dk, double(kDrvSet[slo]),
                     double(kDrvSet[shi]));
+      }
+    }
+  }
+
+  // DNA v80. THE FATIGUE RATE. `adapt_jump` at four settings against the shipped 1.00,
+  // whose six arms are the archived anchor block. PRE-REGISTERED IN ROADMAP §36 BEFORE THE
+  // RUN -- the derivation, its REGIME FAILURE, the primary, and every refusal clause below.
+  //
+  // THE PRIMARY IS PARAMETER-FREE AND THAT IS THE WHOLE POINT. `adapt_jump` is an
+  // INCREMENT, not a time: it is dimensionless. No lag account -- the rate filter, either
+  // per-module constant, a conduction delay, the Schmitt band, the jaw -- has any mechanism
+  // by which a dimensionless fatigue increment changes an additive delay. So a lag account
+  // requires dB/d(jump) == 0 exactly, and a fatigue account requires B to FALL. The
+  // coefficient is measured and reported with an error bar rather than tested as a yes/no.
+  //
+  // WHAT IS **NOT** PRE-REGISTERED, and §36 says so in as many words: any number out of the
+  // closed form. `tau_a * ln[(tau_a+a)/(tau_a-b)]` SATURATES at large tau_a, where the
+  // measured law is linear at a 0.908 ms residual, so the regime of the expansion is wrong
+  // even though the mechanism is right in kind. Pre-registering a number from a model known
+  // not to reproduce the law would be the shape [[verdict fitted to data]] warns about.
+  if (kHCArmCount >= 107) {
+    const uint32_t kNJmp = 4;
+    const uint32_t kNTau8 = 6;
+    const double kTau80[kNTau8] = {83.0, 125.0, 167.0, 250.0, 290.0, 333.0};
+    const float kJmpSet[kNJmp] = {1.00f, 1.40f, 2.00f, 2.80f};
+    const uint32_t kAnchor80 = 0;  // the SHIPPED jump, and its arms are the archived block
+    std::printf("\n  v80 -- THE FATIGUE RATE. The same six taus at four settings of\n"
+                "  `adapt_jump`, the fatigue INCREMENT PER SPIKE. Setting [0] = 1.00 is\n"
+                "  the shipped value and its six arms are the archived anchor block.\n"
+                "    a LAG account     requires dB/d(jump) = 0    (jump is dimensionless)\n"
+                "    a FATIGUE account requires B to FALL as jump rises\n"
+                "    The sweep goes UP on purpose: raising `jump` raises D_inf = jump*R*tau_a\n"
+                "    and makes the switch EASIER, so the short taus stay viable. Sweeping\n"
+                "    DOWN would have reproduced the drive axis's failure by construction.\n");
+    double own_a[kNJmp] = {}, own_ae[kNJmp] = {}, own_b[kNJmp] = {}, own_be[kNJmp] = {};
+    double bal_a[kNJmp] = {}, bal_ae[kNJmp] = {}, bal_b[kNJmp] = {}, bal_be[kNJmp] = {};
+    double bal_r2[kNJmp] = {}, bal_rms[kNJmp] = {};
+    uint32_t fit_n8[kNJmp] = {}, ctl_of8[kNJmp] = {};
+    bool fit_ok8[kNJmp] = {}, bal_ok8[kNJmp] = {};
+    double per8[kNJmp][kNTau8] = {};
+    bool plive8[kNJmp][kNTau8] = {};
+    uint32_t aidx8[kNJmp][kNTau8] = {};
+    const double record80 = double(ticks) - double(ticks / 10);
+    for (uint32_t s = 0; s < kNJmp; ++s) {
+      uint32_t idx[kNTau8] = {}, ctl = kHCCtrlArm;
+      bool have[kNTau8] = {};
+      for (uint32_t a = 0; a < kHCArmCount; ++a) {
+        // THE WHOLE DOSE VECTOR IS PINNED, including `jump` itself. The v78 hijack and the
+        // latent one found while building this block both came from a selector that pinned
+        // only part of it, so every field of HCArm that this block does not sweep is
+        // matched explicitly here.
+        if (!hc_same(kHCArms[a].drive, 1.40f)) continue;
+        if (!hc_same(kHCArms[a].rft, 50.0f)) continue;
+        if (!hc_same(kHCArms[a].leak, 20.0f)) continue;
+        if (!hc_same(kHCArms[a].refr, 3.0f)) continue;
+        if (kHCArms[a].jump <= 0.0f && kHCArms[a].hc <= 0.0f) { ctl = a; continue; }
+        if (kHCArms[a].jump <= 0.0f || kHCArms[a].hc <= 0.0f) continue;
+        if (!hc_same(kHCArms[a].kw, 1.00f)) continue;
+        if (!hc_same(kHCArms[a].hc, 0.60f)) continue;
+        if (!hc_same(kHCArms[a].jump, kJmpSet[s])) continue;
+        for (uint32_t j = 0; j < kNTau8; ++j)
+          if (hc_same(kHCArms[a].tau_ms, float(kTau80[j]))) {
+            idx[j] = a; have[j] = true; aidx8[s][j] = a;
+          }
+      }
+      ctl_of8[s] = ctl;
+      std::printf("\n    adapt_jump = %.2f   (x%.2f the shipped increment)%s\n",
+                  double(kJmpSet[s]), double(kJmpSet[s]) / double(kJmpSet[kAnchor80]),
+                  s == kAnchor80 ? "   <- ANCHOR" : "");
+      std::printf("      CONTROL %-11s duty %.2f  rate %5.2f Hz   FLOOR: sd %.4f, "
+                  "%4.0f turns, period %7.1f ms%s\n",
+                  kHCArms[ctl].name, m_du[ctl], m_rt[ctl], m_ds[ctl], m_cn[ctl], m_cp[ctl],
+                  void_arm[ctl] ? "   <- VOID" : "");
+      double x[kNTau8] = {}, y[kNTau8] = {};
+      uint32_t n = 0;
+      for (uint32_t j = 0; j < kNTau8; ++j) {
+        if (!have[j]) { std::printf("      tau %3.0f  ARM MISSING\n", kTau80[j]); continue; }
+        const uint32_t a = idx[j];
+        const double prod = m_cn[a] * m_cp[a];
+        const double pe = record80 > 0.0 ? 100.0 * (prod - record80) / record80 : 0.0;
+        const bool consistent = std::fabs(pe) <= 2.0;
+        const double snr = m_ds[ctl] > 0.0 ? m_ds[a] / m_ds[ctl] : 0.0;
+        const bool floor_ok = m_cp[a] >= 2.0 * m_cp[ctl];
+        const bool live = !void_arm[a] && consistent && floor_ok;
+        std::printf("      tau %3.0f  %-11s period %7.1f +/- %5.1f ms  (%5.0f turns, "
+                    "x median %+.1f%% of record, sd %4.1fx floor, rate %5.2f Hz)%s%s%s%s\n",
+                    kTau80[j], kHCArms[a].name, m_cp[a], s_cp[a], m_cn[a], pe, snr, m_rt[a],
+                    void_arm[a] ? "  VOID" : "", !consistent ? "  INCONSISTENT" : "",
+                    !floor_ok ? "  UNDER 2x FLOOR" : "", live ? "" : "  <- DROPPED");
+        per8[s][j] = m_cp[a];
+        plive8[s][j] = live;
+        if (live) { x[n] = kTau80[j]; y[n] = m_cp[a]; ++n; }
+      }
+      fit_n8[s] = n;
+      if (n < 3) {
+        std::printf("      ONLY %u LIVE ARMS -- this setting is not fitted.\n", n);
+        continue;
+      }
+      double r2 = 0.0;
+      ols(x, y, n, own_a[s], own_b[s], own_ae[s], own_be[s], r2);
+      std::printf("      FIT (own)  slope %.4f +/- %.4f  intercept %7.1f +/- %5.1f ms"
+                  "  R^2 %.5f  (%u live)\n",
+                  own_a[s], own_ae[s], own_b[s], own_be[s], r2, n);
+      fit_ok8[s] = true;
+    }
+    // THE BALANCED DESIGN, and B is only comparable on it. §35 is why this is not optional:
+    // the drive axis lost `tau083` at four settings of five and could not produce a
+    // comparable intercept at all.
+    bool common8[kNTau8] = {true, true, true, true, true, true};
+    uint32_t ncom8 = 0, nfit8 = 0, nbal8 = 0;
+    for (uint32_t s = 0; s < kNJmp; ++s)
+      if (fit_ok8[s]) { bal_ok8[s] = true; ++nfit8; ++nbal8; }
+    for (uint32_t j = 0; j < kNTau8; ++j) {
+      for (uint32_t s = 0; s < kNJmp; ++s)
+        if (fit_ok8[s] && !plive8[s][j]) common8[j] = false;
+      if (common8[j]) ++ncom8;
+    }
+    std::printf("\n      THE BALANCED DESIGN: taus live at ALL %u fitted settings =", nfit8);
+    for (uint32_t j = 0; j < kNTau8; ++j) if (common8[j]) std::printf(" %.0f", kTau80[j]);
+    if (ncom8 == 0) std::printf(" none");
+    std::printf("  (%u of %u)\n", ncom8, kNTau8);
+    if (ncom8 < 3) {
+      std::printf("      FEWER THAN THREE TAUS ARE COMMON -- B is not comparable at matched\n"
+                  "      leverage and this axis REFUSES ITSELF, exactly as the drive did.\n");
+      for (uint32_t s = 0; s < kNJmp; ++s) bal_ok8[s] = false;
+      nbal8 = 0;
+    } else {
+      for (uint32_t s = 0; s < kNJmp; ++s) {
+        if (!bal_ok8[s]) continue;
+        double bx[kNTau8] = {}, by[kNTau8] = {};
+        uint32_t bn = 0;
+        for (uint32_t j = 0; j < kNTau8; ++j)
+          if (common8[j]) { bx[bn] = kTau80[j]; by[bn] = per8[s][j]; ++bn; }
+        ols(bx, by, bn, bal_a[s], bal_b[s], bal_ae[s], bal_be[s], bal_r2[s]);
+        double rs = 0.0;
+        for (uint32_t d = 0; d < bn; ++d) {
+          const double e = by[d] - (bal_a[s] * bx[d] + bal_b[s]);
+          rs += e * e;
+        }
+        bal_rms[s] = bn > 2 ? std::sqrt(rs / double(bn - 2)) : 0.0;
+        std::printf("        jump %.2f  BALANCED  slope %.4f +/- %.4f  intercept %7.1f"
+                    " +/- %5.1f ms  R^2 %.5f  rms %5.2f ms%s\n", double(kJmpSet[s]),
+                    bal_a[s], bal_ae[s], bal_b[s], bal_be[s], bal_r2[s], bal_rms[s],
+                    fit_n8[s] == ncom8 ? "   (= its own fit)" : "   <- REFITTED");
+      }
+    }
+    // THE DOSE, READ ON THE MECHANISM ARMS. A control carries jump 0.00 and `adapt_jump` is
+    // touched only inside `if (adapt_jump > 0 && adapt_tau_ms > 0)` (network.cpp:689), so
+    // every control here is BIT-IDENTICAL to `ctrl140` and is a baseline, never a dosimeter.
+    // That is the §34 pre-flight's lesson, applied in advance this time instead of being
+    // discovered by a guard that announced the homeostat had absorbed an unadministered dose.
+    uint32_t tref8 = kNTau8;
+    for (uint32_t j = 0; j < kNTau8 && tref8 == kNTau8; ++j) if (common8[j]) tref8 = j;
+    double alo = 1e9, ahi = -1e9;
+    uint32_t nlive8 = 0;
+    for (uint32_t s = 0; s < kNJmp; ++s) {
+      if (!fit_ok8[s] || tref8 == kNTau8) continue;
+      const double r = m_rt[aidx8[s][tref8]];
+      if (r < alo) alo = r;
+      if (r > ahi) ahi = r;
+      ++nlive8;
+    }
+    const double dose_move8 = (nlive8 >= 2 && alo > 0.0) ? (ahi - alo) / alo : 0.0;
+    const bool dose_live8 = dose_move8 >= 0.10;
+    if (tref8 == kNTau8 || nlive8 < 2) {
+      std::printf("\n      THE DOSE CANNOT BE CHECKED -- %u fitted settings share a common"
+                  " tau.\n", nlive8);
+    } else {
+      std::printf("\n      THE DOSE %s: at tau %.0f the mechanism arms run %.2f-%.2f Hz,\n"
+                  "      a %.0f%% range across a %.0fx change in the fatigue increment.%s\n",
+                  dose_live8 ? "LANDED" : "WAS ABSORBED", kTau80[tref8], alo, ahi,
+                  100.0 * dose_move8,
+                  double(kJmpSet[kNJmp - 1]) / double(kJmpSet[0]),
+                  dose_live8 ? "" : "  Under 10%, so any null is VACUOUS.");
+      // AND THE REGULATOR EATS PART OF THE DOSE, which the 60k pre-flight found and §36
+      // records: the rate FALLS as jump rises, so `jump * R` -- the quantity the mechanism
+      // actually turns on -- moves far less than `jump` does. Printed because a statistic
+      // in `jump` alone is testing a dose the homeostat has already shrunk.
+      std::printf("      THE EFFECTIVE DOSE is jump*R, not jump:");
+      for (uint32_t s = 0; s < kNJmp; ++s)
+        if (fit_ok8[s])
+          std::printf(" %.1f", double(kJmpSet[s]) * m_rt[aidx8[s][tref8]]);
+      std::printf("\n      so a %.2fx sweep in `jump` buys only %.2fx in `jump*R`"
+                  " -- the operating\n      point absorbs the rest.\n",
+                  double(kJmpSet[kNJmp - 1]) / double(kJmpSet[0]),
+                  (fit_ok8[0] && m_rt[aidx8[0][tref8]] > 0.0)
+                      ? (double(kJmpSet[kNJmp - 1]) * m_rt[aidx8[kNJmp - 1][tref8]]) /
+                            (double(kJmpSet[0]) * m_rt[aidx8[0][tref8]])
+                      : 0.0);
+    }
+    // SLOPE INVARIANCE, A PRE-REGISTERED REFUSAL AND NOT A DISCLOSURE. If the drive taught
+    // one thing it is that an axis which ROTATES the law makes B a tau_a = 0 extrapolation
+    // of differently-sloped lines, and differencing those is arithmetically real and
+    // mechanistically empty. The clause is the same one §32 used on the membrane.
+    bool slope_held8 = true;
+    if (bal_ok8[kAnchor80]) {
+      for (uint32_t s = 0; s < kNJmp; ++s) {
+        if (s == kAnchor80 || !bal_ok8[s]) continue;
+        const double se = std::sqrt(bal_ae[s] * bal_ae[s] +
+                                    bal_ae[kAnchor80] * bal_ae[kAnchor80]);
+        const double t = se > 0.0 ? (bal_a[s] - bal_a[kAnchor80]) / se : 0.0;
+        std::printf("      slope at jump %.2f  %.4f +/- %.4f vs anchor %.4f +/- %.4f"
+                    "  (%+.1f SE)%s\n", double(kJmpSet[s]), bal_a[s], bal_ae[s],
+                    bal_a[kAnchor80], bal_ae[kAnchor80], t,
+                    std::fabs(t) >= 3.0 ? "   <- ROTATED" : "");
+        if (std::fabs(t) >= 3.0) slope_held8 = false;
+      }
+    }
+    // THE PRIMARY: dB/d(jump), AS A COEFFICIENT WITH AN ERROR BAR.
+    if (nbal8 < 3) {
+      std::printf("\n      FEWER THAN THREE SETTINGS FITTED -- no coefficient. This axis\n"
+                  "      does not decide.\n");
+    } else {
+      double bx[kNJmp] = {}, by[kNJmp] = {};
+      uint32_t bn = 0;
+      for (uint32_t s = 0; s < kNJmp; ++s)
+        if (bal_ok8[s]) { bx[bn] = double(kJmpSet[s]); by[bn] = bal_b[s]; ++bn; }
+      double c = 0.0, d = 0.0, ce = 0.0, de = 0.0, cr2 = 0.0;
+      ols(bx, by, bn, c, d, ce, de, cr2);
+      // dof-SCALED, per §33: an OLS on `bn` points carries bn - 2 dof, so four settings give
+      // 2 and the 5% critical t is 4.303. A flat 3-SE z-rule overstates a four-point fit.
+      const double tc = crit_t_dof(bn > 2 ? bn - 2 : 0);
+      const double t = ce > 0.0 ? c / ce : 0.0;
+      double rlo = 1e30, rhi = 0.0;
+      for (uint32_t s = 0; s < kNJmp; ++s) {
+        if (!bal_ok8[s]) continue;
+        if (bal_rms[s] < rlo) rlo = bal_rms[s];
+        if (bal_rms[s] > rhi) rhi = bal_rms[s];
+      }
+      std::printf("\n      THE PRIMARY -- dB/d(jump) on %u settings and %u common taus\n",
+                  nbal8, ncom8);
+      for (uint32_t s = 0; s < kNJmp; ++s)
+        if (bal_ok8[s])
+          std::printf("        jump %.2f   B %7.1f +/- %5.1f ms   B*(jump*R) %8.1f\n",
+                      double(kJmpSet[s]), bal_b[s], bal_be[s],
+                      bal_b[s] * double(kJmpSet[s]) * m_rt[aidx8[s][tref8]]);
+      std::printf("        dB/d(jump) = %+.2f +/- %.2f ms per unit  (%.1f SE; %u dof, so\n"
+                  "        the 5%% critical t is %.3f -> %s),  R^2 %.5f\n",
+                  c, ce, std::fabs(t), bn > 2 ? bn - 2 : 0, tc,
+                  std::fabs(t) >= tc ? "RESOLVED" : "not resolved", cr2);
+      std::printf("        ERROR MODEL  per-setting residual rms %.2f-%.2f ms (x%.0f),"
+                  " reported\n        and NOT gated -- a refusal on it needs a factor"
+                  " pre-registered first.\n", rlo, rhi, rlo > 0.0 ? rhi / rlo : 0.0);
+      // THE VERDICT CASCADE, PRE-REGISTERED IN §36. First match decides.
+      if (!dose_live8) {
+        std::printf("      NO VERDICT -- THE DOSE DID NOT REACH THE OSCILLATOR (%.0f%% <\n"
+                    "      10%%). VACUOUS.\n", 100.0 * dose_move8);
+      } else if (!slope_held8) {
+        std::printf("      THE ADDITIVE FORM IS REFUSED ON THIS AXIS. A slope moved >= 3 SE\n"
+                    "      from the anchor's, so B is a tau_a = 0 extrapolation of lines with\n"
+                    "      different gains and differencing it is arithmetically real and\n"
+                    "      mechanistically empty -- the drive axis's exact failure, caught by\n"
+                    "      the clause §36 committed for it rather than after the fact.\n");
+      } else if (std::fabs(t) < tc) {
+        std::printf("      UNDERPOWERED, REPORTED AS A BOUND AND NOT A NULL. At %.3f the 95%%\n"
+                    "      interval on dB/d(jump) is [%+.1f, %+.1f] ms per unit, so a fall of\n"
+                    "      up to %.1f ms per unit is not excluded. A lag account needs zero\n"
+                    "      and is INSIDE this interval, so this run does not separate them.\n",
+                    tc, c - tc * ce, c + tc * ce, std::fabs(c) + tc * ce);
+      } else if (c < 0.0) {
+        std::printf("      THE OFFSET IS A FATIGUE TIME -- and every LAG account is excluded\n"
+                    "      as its sole source. B falls %+.2f +/- %.2f ms per unit of a\n"
+                    "      DIMENSIONLESS increment (%.1f SE), where a lag requires exactly\n"
+                    "      zero: `adapt_jump` is not a time, so no delay anywhere in this\n"
+                    "      loop can respond to it. THAT IS WHY v77, v78 AND v79 CLOSED FOUR\n"
+                    "      TIME CONSTANTS AND FOUND NOTHING -- the offset was never a lag.\n"
+                    "      The slope on tau_a held, so the additive form stands.\n",
+                    c, ce, std::fabs(t));
+      } else {
+        std::printf("      BOTH ACCOUNTS ARE REFUSED. B RISES %+.2f +/- %.2f ms per unit of\n"
+                    "      jump (%.1f SE). A lag requires zero and a fatigue time requires a\n"
+                    "      FALL, so neither survives. Printed rather than explained away.\n",
+                    c, ce, std::fabs(t));
       }
     }
   }

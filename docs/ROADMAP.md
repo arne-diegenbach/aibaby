@@ -3722,3 +3722,145 @@ candidate whose scale matches untuned.
 `tau_a` + 179.8 ms. It should read 3.4756 · `tau_a` + 203.1 ms, on `tau_a` ∈ [125, 333],
 with `tau_a` = 83 outside the law's range.** That correction lands before the next
 experiment, not after it.
+
+## §36 — THE FATIGUE RATE, PRE-REGISTERED AS A COEFFICIENT (2026-11-02)
+
+The offset has now survived all three loop time constants (§31, §33) and the drive (§35). The
+kernel says why, and it is not that the right lag has yet to be found.
+
+### THE ARGUMENT FROM THE KERNEL, AND WHERE IT BREAKS
+
+`network.cpp:2569` adds `adapt_jump` to a neuron's fatigue on every spike; `:689` decays it by
+`dt/adapt_tau` per tick; `:2545` subtracts it from the drive. So the fatigue difference between
+the two halves obeys `dD/dt = jump*R - D/tau_a` with asymptote `D_inf = jump*R*tau_a`, and the
+switch at `D = delta` (the inhibition asymmetry `hc_lo - hc_hi`) comes at
+
+    half-period = tau_a * ln[ (D_inf + D0) / (D_inf - delta) ]
+
+Writing `a = D0/(jump*R)` and `b = delta/(jump*R)`, both times, this is
+`tau_a * ln[(tau_a + a)/(tau_a - b)]`. **So the offset is a FATIGUE-ACCUMULATION TIME, not a
+delay — and no time constant in the loop could ever have carried it.** That is the first account
+this line has had of why four lag candidates failed in a row.
+
+**AND THE CLOSED FORM DOES NOT REPRODUCE THE MEASURED LAW, which is stated here rather than
+discovered later.** For `tau_a >> a, b` the expression tends to the constant `2(a+b)` — it
+SATURATES, where the data is linear in `tau_a` with slope 3.4756 over [125,333] at a 0.908 ms
+residual. So the regime is not the one the expansion assumes: `R` is not constant within a phase
+(the drive falls as fatigue grows, so the winner slows as it fatigues) and IP moves on its own
+timescale. **The mechanism is right in KIND and my closed form is wrong in REGIME, so no number
+derived from it is pre-registered as a prediction.** What is pre-registered is the one thing that
+does not depend on the regime at all.
+
+### THE PRIMARY, AND IT IS PARAMETER-FREE
+
+**`adapt_jump` is dimensionless.** It is an increment, not a time. **No lag account — the rate
+filter, either per-module constant, a conduction delay, the Schmitt band, the jaw resonance —
+has any mechanism by which a dimensionless fatigue increment changes an additive delay.** So:
+
+    a LAG account requires      dB/d(jump) = 0
+    a FATIGUE account requires  B falls as jump rises
+
+**PRIMARY: `dB/d(jump)` across four settings {1.00, 1.40, 2.00, 2.80}, with an error bar**, `B`
+being the intercept of the clean-tau law per setting. Reported as a coefficient and not as a
+yes/no, which is §32's lesson. Four settings is an OLS on 4 points = 2 dof, so the 5% critical t
+is **4.303**, not 3.0 — §33's dof lesson, applied in advance.
+
+**SECONDARY, printed and explicitly NOT deciding: is `B * (jump * R)` invariant?** This is the
+quantitative form of the mechanism, and it is demoted for the regime reason above.
+
+### WHAT THE SMOKE ALREADY CHANGED, BEFORE ANY VERDICT
+
+A 60k pre-flight was read for DESIGN VIABILITY only — which arms oscillate, the duty/rate gates
+— and not for any period or fit.
+
+1. **All 18 arms oscillate.** Anti-phase −0.177 to −0.659, all negative; SNR 5.3–11.3; **duty
+   0.46–0.47 at every setting, so the KILL SWITCH holds even at 2.8x fatigue.** The decision to
+   sweep UPWARD was the right one: raising `jump` raises `D_inf` and makes the switch easier, so
+   nothing dropped out. Sweeping down to 0.5 would have reproduced §35's failure by
+   construction, pushing `D_inf` under `delta` at short `tau_a`.
+2. **THE HOMEOSTAT PARTIALLY COMPENSATES, AND IT WOULD HAVE DEFEATED THE OBVIOUS STATISTIC.**
+   The rate FALLS as jump rises — at `tau_a` 83: 10.21 / 8.77 / 6.99 / 5.61 Hz — so `jump*R`
+   goes 10.21 / 12.28 / 13.98 / 15.71. **A 2.80x sweep in `jump` buys only 1.53x in `jump*R`.**
+   Pre-registering `B*jump = const`, which is what the derivation suggests at a glance, would
+   have been testing a statistic the regulator defeats — [[match at the operating point]] in its
+   exact documented form. The secondary therefore uses `jump*R`, with `R` read off the mechanism
+   arms.
+
+### THE REFUSAL CLAUSES, AS THE CODE'S BRANCHES AND NOT AS PROSE
+
+Written before the run, each one a branch:
+
+| condition | verdict |
+|---|---|
+| fewer than 3 taus common to all fitted settings | **REFUSED** — unbalanced leverage, as §35 |
+| the slope on `tau_a` moves >= 3 SE from the anchor's | **the additive form is REFUSED on this axis** — B is then a `tau_a` = 0 extrapolation of differently-sloped lines, which is what made the drive axis uninterpretable |
+| the mechanism arms' rate range < 10% across the sweep | **VACUOUS** — no dose |
+| `\|dB/d(jump)\|` < 4.303 SE and the predicted fall is inside the bound | **UNDERPOWERED**, reported as a bound and not as a null |
+| `dB/d(jump)` resolvably negative | **THE OFFSET IS A FATIGUE TIME** — every lag account is excluded as its sole source |
+| `dB/d(jump)` resolvably positive | **both models refused** — printed, not explained away |
+
+The per-setting residual rms and its ratio are printed beside the coefficient, because §35 met a
+factor of 70 and a pooled statistic's null is not calibrated under that. **Reported, not gated:
+a refusal on the ratio needs a factor pre-registered, and choosing one now would be choosing a
+bar after seeing §35's.**
+
+### POWER, DERIVED BEFORE THE RUN
+
+`Sxx` over jump {1.0, 1.4, 2.0, 2.8} is 1.84. With the anchor's own ±1.3 ms on five clean taus,
+a per-point scatter of 5 ms gives `se(slope)` = 3.69 ms per unit jump. The fatigue account's
+rough fall — 203 ms to ~132 over the 1.53x in `jump*R` — is about −39 ms per unit jump, so
+**10.6 SE against the lag account's zero.** At a scatter of 20 ms it is 2.7 SE and the run
+reports a bound instead. **The power rests on B's precision holding at the clean tau range,
+which is the one thing §35 bought and the reason this axis is worth running now and was not
+before.**
+
+### WHAT IS NOT CLAIMED
+
+This cannot say the offset is *only* fatigue, nor pin `delta`, which is not independently
+measured. And the 202.4 ms coincidence of §35 is NOT evidence for this: a fatigue time scales as
+`1/(jump*R)` so matching one inter-spike interval is expected rather than surprising, but with
+`delta/jump` unpinned the exact agreement remains a coincidence. **If this axis comes back null,
+the offset is not a fatigue time either, and the honest position is that none of the quantities
+the kernel exposes accounts for it.**
+
+### AMENDMENT, WRITTEN AFTER THE BLOCK SMOKE AND BEFORE THE RUN — FULL DISCLOSURE
+
+A 60k smoke of the finished block was read. **It shows the slope ROTATING on this axis**, which
+would fire the refusal clause above:
+
+    jump    1.00     1.40     2.00     2.80
+    slope  3.9547   4.0791   4.1379   4.8094      (+3.6, +5.5, +30.5 SE vs the anchor)
+
+**THE CLAUSE IS NOT BEING RELAXED.** It was committed before any data and it stands exactly as
+written: if a slope moves >= 3 SE at full record, the run refuses and B is not differenced.
+Moving that bar now, having seen which way the data leans, is the one thing
+[[verdict fitted to data]] exists to forbid.
+
+**AND I ALSO SAW THE PRIMARY, so it is recorded here rather than discovered in the result:** the
+smoke gives `dB/d(jump) = -2.94 +/- 11.01` ms per unit, 0.3 SE, not resolved, R^2 0.035.
+
+**WHY THE RUN GOES AHEAD ANYWAY, and it is not optimism.** A 60k record is known to distort this
+law badly and in a documented direction: the anchor's intercept reads **97.2 ms here against the
+203.1 the full record gives**, and v78's and v79's smokes produced the same artefact at 97.7 from
+the same arms. With only 32–71 turns per arm the fits are not the fits. Worse, the bias is not
+uniform — a 60k record hits the SLOWEST oscillators hardest, and `jump` 2.80 has the slowest arms
+in the set (900–1700 ms against the anchor's 760–1415). **So the smoke's rotation is exactly what
+a short-record bias would manufacture on this axis, and 60k cannot distinguish that from a real
+one.** The full record can.
+
+**WHAT THE RUN IS WORTH IF THE CLAUSE DOES FIRE,** which is the honest case to make in advance:
+
+- Full-record periods at four fatigue settings on six taus is permanent data no future design
+  has to re-buy, and it settles the rotation question outright.
+- A refusal here is a RESULT, not a blank. It would make `adapt_jump` the **third gain-like
+  axis** after the membrane (§33) and the drive (§35), and would mean **every quantity touching
+  the drive/fatigue balance rotates the law and none of them shifts it.**
+- That outcome argues AGAINST the fatigue account this section proposes, not for it: if the
+  offset were a fatigue-accumulation time, the fatigue increment is the one thing that should
+  move it. **So the clause firing is evidence against my own hypothesis, which is the shape a
+  test should have.**
+
+**The balance holds here where it did not on the drive** — four taus common to all four settings
+against the drive axis's two — so unlike §35 this axis can at least produce comparable
+intercepts. The residual rms ratio is 2x, not 70x. Whatever this run says, it says it on a sound
+design.
