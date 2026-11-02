@@ -3550,3 +3550,175 @@ show local slopes disagreeing within a setting (at drive 1.50: 4.82 between tau 
 3.50 between 250 and 333). Four taus cannot see curvature; **six can.** If it is there it
 inflates `RSS_free`, which makes the F-test *conservative* rather than wrong — but it would
 qualify the "clock law" framing this line has used since §28, and it is worth watching for.
+
+## §35 — THE DRIVE AXIS REFUSES ITSELF, AND THE DIAGNOSIS SUPERSEDES THE OFFSET'S PUBLISHED VALUE (2026-11-02)
+
+`results/halfcenter-v79.log`, gate `results/verify-v79.log`. 89 arms, 12 reps, 1.2M ticks.
+Gate 16m22s, run 3h02m18s. Pre-registered in §34 at commit `6c40df3`, before the run; the
+source was untouched between that commit and this log, so the log provably matches the
+committed binary.
+
+**Gate: `verify PASS`, hash `ad96f882becbee92` as recorded, pinned hash PASS, 24 experiments
+as expected / 0 not. Determinism 7 of 7 IDENTICAL** — the 59 archived rows, the VOID flags,
+the regime profile, the published clock law, the v76 k-sweep, the entire v77 block, and the
+entire v78 block. Check 7 is the one that was added for this run and it did its job: it
+**proves** the OLS lambda hoisted out of the v78 scope to be a no-op on every number and
+label v78 published, rather than asserting it.
+
+### THE VERDICT: the axis refuses itself, by the branch §34 wrote for it
+
+Taus live at all five fitted settings = **{167, 250}, two of six**, against the ≥3 the
+balanced design requires. The run printed the refusal and declined to produce an effective
+lag. Neither model K nor model E is tested.
+
+| drive | live taus | dropped | own fit slope | own intercept | resid rms |
+|---|---|---|---|---|---|
+| 1.20 | 167 250 290 333 | 083 (−73.1%), 125 (−15.9%) | 4.532 ± 0.521 | 793.4 ± 139.2 | **63.8 ms** |
+| 1.30 | 125 167 250 333 | 083 (−23.9%), 290 (+2.0%) | 4.356 ± 0.052 | 292.6 ± 12.1 | 8.30 ms |
+| **1.40** | **all six** | — | 3.536 ± 0.038 | 186.7 ± 8.6 | 8.34 ms |
+| 1.50 | 167 250 290 333 | 083 (+4.9%), 125 (−5.0%) | 3.546 ± 0.137 | 75.2 ± 36.5 | 16.7 ms |
+| 1.60 | 125 167 250 290 | 083 (+10.6%, also under 2× floor), 333 (−3.4%) | 2.534 ± 0.013 | 121.8 ± 2.8 | 1.69 ms |
+
+**`tau083` is live at one setting of five, and the shipped drive is the only setting where
+all six taus are clean.** That is not bad luck, and it is the result:
+
+- **At low drive the short taus go intermittent.** `dr120t083` logs 200 turns of a claimed
+  1458 ms period in a 1.08M ms record — 27% of the record oscillating. The oscillator is
+  near its lower boundary, which the §34 pre-flight had already located between 1.05 and
+  1.20 by finding no half-centre at all at 1.05.
+- **At high drive the short taus collide with the circuit's own noise band.** `dr160t083`
+  runs a 249.2 ms period against the control floor's 164.2 ms — 1.52×, so it trips the
+  `UNDER 2x FLOOR` gate. The arm is fast enough to be indistinguishable from the resonance.
+
+**So the drive window and the usable tau window are coupled: the drive is what decides which
+taus oscillate cleanly, and the leverage that gives `k` its precision cannot be held fixed
+while the drive moves.** The dropped cells are missing for a reason correlated with the
+period — the very quantity being measured — so relaxing the balance guard would not rescue
+this design, it would fit a model to a period-selected subsample.
+
+### A SECOND, INDEPENDENT REASON THE PRE-REGISTERED DECIDER COULD NOT HAVE FIRED
+
+The residual rms per setting is **63.8 / 8.30 / 0.91 / 16.7 / 1.69 ms — heteroscedastic by a
+factor of 70.** The nested F-test pools all of it into one `RSS_free` under a single common
+σ. Even a perfectly balanced version of this design would have produced an F with no
+calibrated null. §34 derived the power of this test and got the answer right for the error
+model it assumed; it never asked whether the error model held across the axis. **Deriving
+power is not the same as checking the error model — a power calculation assumes the noise it
+is given.**
+
+### THE ROTATION IS CONFIRMED, SO THE REDESIGN PREMISE WAS RIGHT
+
+Threshold-free, no fit needed: across drive 1.20 → 1.60 the period at `tau_a` 167 falls
+1587.5 → 543.3 ms (×0.342) while at `tau_a` 333 it falls 2350.4 → 970.0 ms (×0.413). The
+short taus are affected more, so the coefficient on `tau_a` falls — 4.532 → 2.534 in the own
+fits. The drive is a **gain**, as v78's discriminator predicted, and demoting the raw
+intercept in favour of `k = B/A` was the correct call. That is the one pre-registered
+expectation this run did meet.
+
+### A DEFECT IN MY OWN REPORTING CODE: ONE FLAG DOING TWO JOBS
+
+`fit_ok[]` meant both *"this setting produced a usable own fit"* and *"this setting may enter
+the balanced lag"*. The balance refusal zeroed it, which **silenced three disclosures that do
+not depend on balance at all**: the dose-liveness check, the slope-rotation table together
+with the printed self-check on my own redesign, and the per-setting `k` contrasts. The
+anchor's own fit was perfectly good — six live taus, R² 0.99954 — so the rotation table
+should have printed, and the guard instead announced `THE DOSE CANNOT BE CHECKED` about the
+single most live dose in the run (periods differ threefold).
+
+This is a **reporting** defect and cannot have moved the verdict: the refusal branch is
+upstream of everything it silenced, and the numbers it suppressed are recoverable from the
+printed table, which is how the rotation above is quoted. But it is the third guard in three
+runs to read the wrong quantity — §29's oracle regime, §34's control-as-dosimeter, and now
+this — and all three have the same shape: **a guard that is correct about a condition it is
+not actually measuring.** The fix is to split the flag, so that a balanced-design refusal
+withdraws only the balanced statistic.
+
+### THE REAL FINDING CAME FROM THE DIAGNOSIS: `tau083` DOES NOT OBEY THE LAW
+
+Buying `tau125` and `tau290` for power at six settings also bought, for free, the first
+chance this line has had to ask whether the law is linear *within* a setting. It is not — at
+the published four taus — and the culprit is the shortest one.
+
+| taus fitted | slope | intercept | resid rms |
+|---|---|---|---|
+| {83, 167, 250, 333} — **the published law since §28** | 3.5600 ± 0.0486 | **179.8 ± 11.1 ms** | 9.06 ms |
+| {83, 125, 167, 250, 290, 333} — all six | 3.5358 ± 0.0380 | 186.7 ± 8.6 ms | 8.34 ms |
+| {125, 167, 250, 290, 333} — `tau083` dropped | **3.4756 ± 0.0053** | **203.1 ± 1.3 ms** | **0.908 ms** |
+| {167, 250, 333} — the v78 balanced set | 3.4752 | 203.3 ± 3.4 ms | 1.56 ms |
+
+Dropping one point takes the residual from 9.06 ms to **0.908 ms, a factor of ten**, and
+tightens the offset **8.5-fold**. `tau083` sits 23.3 ms below the line the other five define
+— **25 times that line's own residual scale.** Adding `tau125` moves the intercept by 0.2 ms,
+so the law really is linear on 125–333 and `tau083` is a lone outlier, not a trend.
+
+**The whole ±11 ms uncertainty on the published offset was one arm's misfit.** The offset is
+**203.1 ± 1.3 ms** and the effective lag `B/A` is **58.4 ms**, not 179.8 ± 11.0 and 50.5.
+(The arithmetic was done with an independent OLS that reproduces the binary's published fit
+to the last printed digit — 3.5600 / 179.8 ± 11.1 against 3.560 / 179.8 ± 11.0 — so the
+instrument is cross-checked, not merely re-read.)
+
+### AND IT SUPERSEDES ONE OF v78's PUBLISHED COEFFICIENTS — RE-DERIVED, NOT ASSUMED
+
+`aibaby-re-derive-after-an-estimator-fix` says fixing a level does not fix a slope, so both
+v78 axes were refitted on the clean range. **`tau083`'s misfit is not constant — it shrinks
+monotonically with refractory**, which is exactly the way a bad point poisons a coefficient:
+
+| refractory | clean intercept {167,250,333} | `tau083` resid vs that line |
+|---|---|---|
+| 3 ms | 203.1 ms | −23.3 ms |
+| 12 ms | 196.9 ms | −17.3 ms |
+| 22 ms | 194.4 ms | −13.1 ms |
+| 35 ms | 194.3 ms | −8.9 ms |
+
+- **v78 published `dIntercept/d(refractory) = +0.182 ± 0.054 ms/ms`. On the clean taus it is
+  `−0.258 ± 0.107 ms/ms` — the sign reverses.** The published budget line, "+0.5 ± 0.2 ms
+  over the shipped 3.0", becomes −0.8 ms.
+- **v78's CLOSURE of `refractory_ms` stands, and is strengthened.** A lag requires the
+  coefficient to equal the slope, +3.476; −0.258 ± 0.107 is **34.9 SE** from that, where v78
+  claimed 46.4 SE from +3.560. Either number closes it. The budget verdict — 0% of the
+  offset accounted — is unchanged, because both candidate values are under 1 ms of 203.
+- **v78's `leak_tau_ms` result is fully intact, and for an instructive reason.** Its
+  published rotation, slope 3.476 → 3.891, reproduces *exactly* on the clean taus — because
+  the consistency gate had already dropped `tau083` at `lk35`, so the leak axis's balanced
+  set was `{167,250,333}` all along. **The balance guard protected the axis where it had
+  something to do and had nothing to say about the axis where `tau083` survived everywhere.**
+  That asymmetry is why the defect went unseen for two runs.
+- **A live effect nobody has looked at:** `tau083`'s deviation shrinks 2.6× across the
+  refractory axis. The refractory period does nothing to the law's intercept and something
+  resolvable to the fastest arm — consistent with v73's finding that the constant only bites
+  near the rate ceiling. It is not the offset, but it is the first resolvable effect this
+  field has shown in this line.
+
+### THE 202 MS COINCIDENCE, DISCLOSED AND NOT PROMOTED
+
+The controls' firing rate is pinned at **4.91–5.00 Hz on every control of every axis** —
+across refractory 3→35 ms (11.7×), leak 20→65 ms (3.25×) and drive 1.20→1.60 — while the
+control floor *period* swings 115.8→262.5 ms. The vocal module's `target_rate_hz` is 5.0.
+One period of 4.94 Hz is **202.4 ms**, against a measured offset of **203.1 ± 1.3 ms**.
+
+**This is numerology until tested, and two things already argue against the obvious reading.**
+The oscillating arms' own rates at the anchor run **10.21 / 7.83 / 6.38 / 4.67 / 4.13 / 3.67
+Hz** across the six taus — a 2.8-fold spread — while the offset is a single constant good to
+0.91 ms. So **the offset is not an interval of the oscillating pool's own firing.** It could
+still be an interval of the *unperturbed* rate, but that is a quantity the oscillating arm
+does not possess. And the one free cross-check disfavours a strict 1:1: across the refractory
+axis `1/rate` rises 202.4 → 203.7 ms while the clean intercept *falls* 203.1 → 194.3, a
+coefficient of −0.258 ± 0.107 against the +0.039 that 1:1 predicts — 2.8 SE, below this
+project's 3-SE bar, so suggestive rather than decisive. **Recorded as a coincidence with its
+first test already failing, not as a lead.**
+
+### WHAT THIS LEAVES
+
+The offset's three loop time constants are closed (§31, §33) and the drive is now closed as a
+*measurable* axis — not for want of power but because the design cannot exist on it. What
+changed is the instrument, and that is worth more than the axis was: at **±1.3 ms instead of
+±11 ms**, a candidate worth 4 ms is now a 3-SE effect where it used to be invisible. Every
+small candidate that was dismissed as unmeasurable deserves re-reading against the new
+precision — including the Schmitt-band confirmation v78 demoted, which predicts no intercept
+move and can now be held to 1.3 ms. The jaw resonance at ~4.5 Hz = 222 ms remains the only
+candidate whose scale matches untuned.
+
+**Before any of that: the published law in this document and in memory reads 3.560 ·
+`tau_a` + 179.8 ms. It should read 3.4756 · `tau_a` + 203.1 ms, on `tau_a` ∈ [125, 333],
+with `tau_a` = 83 outside the law's range.** That correction lands before the next
+experiment, not after it.

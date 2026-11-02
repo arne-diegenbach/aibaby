@@ -25309,3 +25309,50 @@ cheapest remaining suspect, with an argument for why it would produce exactly th
 Then I read the code and the argument was wrong — the instrument measures the gap between beats, and
 that gap doesn't care about the setting I thought it did. Deleted and replaced with the real next
 suspect, which is how hard the rhythm is being driven in the first place.
+
+## The test came back empty, and the leftover told us the clock was mis-measured (2026-11-02)
+
+Yesterday's suspect for the creature's unexplained 180 ms of lag was *how hard the rhythm is driven*
+— the one remaining knob with the right shape. Today's three-hour run tested it and came back with
+nothing, by design: the test refused itself rather than answer.
+
+**The refusal is honest and it is informative.** To compare five drive settings fairly you need the
+same set of rhythm speeds working cleanly at all five. Only two of six survived. And the reason is
+the interesting part: *the drive is what decides which speeds work at all.* Turn it down and the
+fastest rhythm stops and restarts instead of running steadily — it oscillates about a quarter of the
+time. Turn it up and the fastest rhythm speeds up until it's indistinguishable from the background
+hum the circuit already has. So you cannot hold the speeds fixed while you change the drive; the two
+are the same knob seen from different sides. That closes this line of attack properly, rather than
+leaving it as "we didn't find anything".
+
+**But the leftover data was worth more than the experiment.** I'd bought two extra rhythm speeds to
+give the test more statistical muscle, and those extra points made it possible, for the first time,
+to ask whether the creature's timing law is really a straight line. It isn't — or rather, it is, but
+one of the four speeds we'd been measuring all along *isn't on it.* The fastest one sits 23 ms below
+the line the others define, which is twenty-five times the line's own wobble.
+
+Drop that one point and the law gets ten times tighter. The famous "180 ms, give or take 11" becomes
+**203 ms, give or take 1.3**. The entire error bar we'd been working around for weeks was one bad
+data point dragging the line around.
+
+That matters more than any single result, because it changes what is *answerable*. A suspect worth 4
+ms of the 203 used to be invisible inside an 11 ms uncertainty. Now it's a clear signal. Several
+candidates previously dismissed as too small to test are back on the table.
+
+**It also means I had to go back and correct yesterday's published number.** The bad data point
+wasn't bad by a constant amount — its error shrank steadily as one of yesterday's settings was
+turned up, so it had been leaking into that measurement. Re-running the arithmetic without it flips
+the sign of the coefficient I published. The *conclusion* is unaffected and even slightly stronger —
+that setting still isn't the source of the lag, by a wide margin — but the number attached to it was
+wrong, and it's now marked as superseded rather than quietly left in place.
+
+**One more thing I caught and chose not to chase.** The creature's resting rhythm sits at 4.94 beats
+a second, which works out to 202 ms — within a hair of the 203 ms we just measured. Very tempting.
+But the rhythm-making cells themselves run anywhere from 3.7 to 10.2 beats a second depending on the
+speed setting, while the 203 ms stays put, so it can't be their own beat. And the one free test
+available already points the wrong way. Written down as a coincidence, not a lead.
+
+Finally, my own reporting code had a flaw: a single flag meant two different things, so when the test
+refused itself it also silenced three unrelated readouts that were working fine — including the one
+whose job was to check whether my redesign had been necessary. It had been. Fixed, and the flag is
+now two flags.
