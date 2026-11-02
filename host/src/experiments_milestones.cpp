@@ -21914,6 +21914,16 @@ bool run_halfcenter(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
         if (kHCArms[a].jump <= 0.0f && kHCArms[a].hc <= 0.0f) { ctl = a; continue; }
         if (kHCArms[a].jump <= 0.0f || kHCArms[a].hc <= 0.0f) continue;
         if (!hc_same(kHCArms[a].kw, 1.00f)) continue;
+        // THE LAST TWO UNPINNED DOSE DIMENSIONS, pinned before they are swept and not
+        // after. `jump > 0` and `hc > 0` only separate a mechanism arm from a control --
+        // they do NOT pin the DOSE, so an appended arm at `adapt_jump` 2.00 or
+        // `halfcenter_gain` 0.30 carrying the shipped drive/rft/leak/refr would be
+        // swallowed by this loop and would re-decide a published verdict. That is exactly
+        // the v78 hijack, which cost a run, and the only reason it had not recurred is that
+        // these two were the dose dimensions nobody had varied yet. No-ops today: every
+        // mechanism arm on file carries jump 1.00 and hc 0.60.
+        if (!hc_same(kHCArms[a].jump, 1.00f)) continue;
+        if (!hc_same(kHCArms[a].hc, 0.60f)) continue;
         for (uint32_t j = 0; j < 4; ++j)
           if (hc_same(kHCArms[a].tau_ms, float(kTauSet[j]))) { idx[j] = a; have[j] = true; }
       }
@@ -22368,6 +22378,11 @@ bool run_halfcenter(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
           if (kHCArms[a].jump <= 0.0f && kHCArms[a].hc <= 0.0f) { ctl = a; continue; }
           if (kHCArms[a].jump <= 0.0f || kHCArms[a].hc <= 0.0f) continue;
           if (!hc_same(kHCArms[a].kw, 1.00f)) continue;
+          // The two dose dimensions this block never pinned -- see the note at the v77
+          // selector. No-ops on every arm on file, and they close the v78 hijack for the
+          // two fields that had simply never been varied.
+          if (!hc_same(kHCArms[a].jump, 1.00f)) continue;
+          if (!hc_same(kHCArms[a].hc, 0.60f)) continue;
           for (uint32_t j = 0; j < 4; ++j)
             if (hc_same(kHCArms[a].tau_ms, float(kTau78[j]))) { idx[j] = a; have[j] = true; }
         }
@@ -22871,6 +22886,8 @@ bool run_halfcenter(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
         if (kHCArms[a].jump <= 0.0f || kHCArms[a].hc <= 0.0f) continue;
         if (!hc_same(kHCArms[a].kw, 1.00f)) continue;
         if (!hc_same(kHCArms[a].hc, 0.60f)) continue;
+        // `jump` was the one dose dimension this block left open -- see the v77 selector.
+        if (!hc_same(kHCArms[a].jump, 1.00f)) continue;
         for (uint32_t j = 0; j < kNTau; ++j)
           if (hc_same(kHCArms[a].tau_ms, float(kTau79[j]))) {
             idx[j] = a; have[j] = true; aidx[s][j] = a;
