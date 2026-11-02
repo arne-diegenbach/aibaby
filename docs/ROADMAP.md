@@ -4475,3 +4475,283 @@ oscillating at all. The 60k pre-flight's lock-up reproduces at twenty times the 
 `(tonic, asymmetry)` plane is closed from above by measurement and not only by the normaliser
 arithmetic: once `m_lo = 0`, `m_hi/mean ≡ 2` identically, `hc_lo` pins at `2g`, and no amount of
 fatigue can release the loser. **Do not sweep the asymmetry upward again.**
+
+## §40 — THE SELF-AUDITION LOOP, THE FIRST AXIS OUTSIDE THE DRIVE ASSEMBLY (2026-11-02)
+
+**Pre-registered before the run, clause order included.** v79, v80 and v81 closed the vocal
+module's drive assembly: the net tonic, the fatigue rate and the competition's asymmetry all
+**rotate** the clock law `period = 3.4756·tau_a + 203.1 ms` and not one of them **shifts** it, so
+`B` is not a quantity in that assembly. What is left inside the creature is the loop that runs
+*out* of it.
+
+### THE LOOP HAS BEEN CLOSED IN EVERY ARM EVER RUN, AND NOBODY HAD LOOKED AT IT
+
+Verified at five lines, not inferred:
+
+| what | where |
+|---|---|
+| the module carrying the rebound is `vocal` | `dna/default.toml:1870` |
+| `rebound_source = 1`, `rebound_gain = 0.02`, `rebound_mean_tau_ms = 5000` | `:1935-1937` |
+| module **1 is `auditory`** — so the ear drives the vocal drive | `:1472` |
+| `drop = mean_rate[src] − pool_fast[src]`, rectified, own 5 s mean subtracted | `network.cpp:2363-2381` |
+| `rebound` is a term of **`drive_module`** | `network.cpp:2520` |
+| the ear mixes the creature's own larynx at `self_gain = 0.5`, through a **sample-accurate ring-buffer delay** of `self_delay_ms` | `host/src/audio.cpp:52-56, 89-104` |
+
+And this experiment's caregiver renders **silence** on every tick, so the auditory module's entire
+input is the creature's own babble — at the 57% duty the log reports. `vocal → larynx → cochlea →
+auditory → vocal drive` has been a closed loop in all 131 arms of every run on this line.
+
+### WHY §37's CLOSURE ARGUMENT DOES NOT REACH IT
+
+§37 closed five axes with one observation: the drive assembles as a **single subtraction**, so a
+**DC** contribution to the net tonic rotates the law and cannot shift it. The rebound is not DC
+**and is designed not to be** — the genome's own comment says the slow mean is subtracted *"or it
+is a tonic lift"*. With `rebound_mean_tau_ms = 5000` against periods of 0.47–1.36 s, `use = raw −
+mean(raw)` is zero-mean over 3.5–10 cycles: its DC contribution is ~0 by construction and its
+whole contribution is **within-cycle and phase-locked**.
+
+That is the one functional form this line has never tested, and the only one that can host `B`:
+**a kick whose arrival time is set by a transport latency rather than by `tau_a`.**
+
+### WHAT v77 ALREADY CONSTRAINS — STATED AGAINST THIS TEST, NOT FOR IT
+
+v77 swept `rate_fast_tau_ms` and refused it. That constant is **shared**, and `pool_fast_[src]` is
+one of the two terms in the rebound's own `drop` — so v77 already moved the loop's **filter leg**
+and saw no shift. **The prior is against this axis.** It also says where to aim: the untested legs
+are the **gain** and the **transport delay**.
+
+### THE TWO DOSES, AND THE FOUR CONTROLS
+
+28 new arms, 131 → **159**.
+
+**(1) THE LOOP-OFF BOUND — 6 arms.** `rebound_gain` 0.02 → **0.00** at the six taus. A bound and
+not a slope: it removes the term rather than scaling it, so it measures the **entire** contribution
+the loop can make. It is also **self-dosimetering**, which no axis here has been — the dose is a
+structural switch, so bit-identical rows would prove the term is exactly zero on every tick and
+close the candidate with no appeal to a vacuity gate.
+
+**(2) THE LATENCY TEST — 18 arms.** `self_delay_ms` **25 / 50 / 100** at the six taus; the 0 ms
+setting *is* the anchor and is not re-run.
+
+**(3) AND FOUR CONTROLS OF THEIR OWN.** Every dose since v77 carries per-setting controls, and
+here that pin does real work for the first time. On the v79 and v81 axes the controls were
+dose-*blind* (`halfcenter_drive` is unread when `halfcenter_gain == 0`), so every setting resolved
+to the same arm and only its *name* was at stake. **This dose reaches the control:** a creature
+with the half-centre off still babbles and still hears itself, so its rebound and its delay are
+live and its floor is its own. `ctrl140` would have been the wrong baseline for all 24 arms.
+
+### THE PREDICTION HAS NO FREE SCALE
+
+If `B` is the loop's transport time, adding transport **adds** to it: **`dB/d(self_delay) = +1.0
+ms/ms`, exactly.** This is the discriminator shape that refuted the membrane in v78 — an additive
+transition-time account needed `dB/d(leak) ≈ +1` and measured **−0.433**, wrong sign and wrong
+size.
+
+**Power.** `B`'s SE is ±2.4 ms per setting on the balanced design. Over delays {0, 25, 50, 100}
+(mean 43.75), `Sxx = 5469`, so `SE(dB/d(delay)) = 2.4/√5469 = 0.032 ms/ms`. At 2 dof the critical
+t is 4.303, so the run **resolves `|dB/d(delay)| > 0.14 ms/ms` — seven times finer than the
+prediction it is testing.** This is the first axis on this line with that much headroom over its
+own hypothesis, and it is what makes a **null informative**: a bound that excludes +1.0 is a
+rejection, not a shrug.
+
+### THE DOSIMETER, AND WHY THIS AXIS NEEDS A DIFFERENT KIND OF GATE
+
+**A transport delay cannot be absorbed.** `self_delay_ms` is applied by a ring buffer of
+`round(delay·sample_rate/1000)` samples in the **ear**, outside the brain, with no adaptive element
+anywhere between the genome field and the delay line. A drive or a gain can be compensated by the
+homeostat — which is exactly what made v79's and v81's dose gates hard — but nothing in this
+creature can give the delayed samples back. **So a vacuity gate on the delay would guard a failure
+mode that cannot occur**, and asserting one would be a guard measuring a condition it does not
+check for the sixth time in seven runs.
+
+**What genuinely can be vacuous is the loop itself**, and that is what is gated. The dosimeter is
+`sd(rebound)` — the term's own within-cycle swing, **recorded by the kernel at the point it is
+applied** and reported in the drive's own rate units, unnormalised. Note what is *not* used: the
+amplitude of the delayed signal, which a pure delay leaves unchanged **by construction** and which
+would therefore read as *"the dose did not land"* on every arm however well it landed. That is the
+§34 error in a new dress, and it was refused at the desk rather than after a run.
+
+**The threshold is 1% of the net tonic of +0.80**, i.e. 0.008 rate units. A ratio is legitimate
+here and the distinction matters: the tonic is a **fixed constant of this design**, held at +0.80
+by construction in every arm of the block, so dividing by it is a *unit conversion* and not a
+normalisation that can absorb the dose — which is precisely what went wrong in §39. The reasoning
+behind the number holds either way: a term contributing under 1% of the drive cannot plausibly
+carry a 203 ms intercept when the drive's **own** 2× changes rotate the law rather than shift it.
+
+**And the DC level is itself a pre-registered check, not a decoration.** The v45 mean-subtraction
+exists so this term is *not* a tonic lift, and §37 closed every DC axis in this assembly. If
+`|rebound_mean|` comes back comparable to the swing, the term is partly a tonic after all and that
+much of it is **already refuted** — so the log prints both and says which case it is in.
+
+### THE CASCADE, IN ORDER, WITH THE ORDER JUSTIFIED
+
+First match decides. The order is §39's rule applied from the start rather than after a run: a
+vacuity clause is a precondition for trusting a **null** and has no bearing on a **rejection**.
+
+| # | clause | verdict |
+|---|---|---|
+| 1 | fewer than 3 delay settings fitted | NO VERDICT; the loop-off bound stands alone |
+| 2 | a slope moved ≥3 SE from the anchor's | THE ADDITIVE FORM IS REFUSED — plus the pivot |
+| 3 | `dB/d(delay)` resolved **and** within 3 SE of +1.0 | **THE OFFSET IS THE LOOP'S TRANSPORT LATENCY** |
+| 4 | `dB/d(delay)` resolved but far from +1.0 | B moves with the delay but **not as a latency** |
+| 5 | the loop is inert (`sd(rebound)` < 1% of tonic) | NO VERDICT — VACUOUS |
+| 6 | 95% upper limit on \|`dB/d(delay)`\| **< 1.0** | **THE LATENCY ACCOUNT IS REFUTED** by a bound |
+| 7 | otherwise | UNDERPOWERED, reported as a bound and not a null |
+
+Clause 2 before 3 and 4 because a rotated law makes `B` an extrapolation and not an offset. Clause
+5 before 6 because 6 *is* a rejection derived from a null and so is the one branch the dose gate
+legitimately guards. Clause 6 before 7 because the pre-registered resolution (0.14 against a
+prediction of 1.0) is what licenses reading this particular null as a rejection — and that
+licence was computed before the run, not granted after seeing the width.
+
+A **transport delay that rotated the law** would be a genuinely new finding — it would mean the
+loop's timing enters the *gain* on `tau_a`, which no term in the drive assembly does — so the
+pivot prints under clause 2 as it does in v81.
+
+### THE PINS, AND ONE KERNEL CHANGE
+
+Two new `HCArm` fields mean **every field-based verdict selector must pin both**. Five do: v77,
+v78, v79, v80, v81, now through a single named helper (`hc_v82_shipped`) so the next dose extends
+one function instead of auditing six call sites. **The sixth, v76, is immune by construction** — it
+selects its arms by fixed index (3, 7, 8–11), so appending cannot reach it. All 131 existing arms
+carry the shipped `0.02 / 0.0` explicitly; aggregate initialization would have **zero-filled
+`rebound_gain` and switched the loop off on every one of them**, which is the appended-arm hijack
+in its most destructive form.
+
+The kernel gains **one recorder and one accessor**: `rebound_last_[m]`, written where the term is
+computed and read by nothing inside the kernel, plus `Network::rebound_term(m)`. No arithmetic and
+no RNG draw moves, and it is **deliberately not serialized** — it is recomputed every tick, so
+adding it to the snapshot would change the save format for nothing. The pinned determinism hash
+`ad96f882becbee92` is therefore expected to stand, and the gate will say so rather than be assumed.
+
+**Determinism expectation:** writing `0.02f` over a genome that parsed `0.02`, and `0.0f` over
+`0.0`, is a byte no-op, so **all 131 existing arms must re-print identically**. That is check 1 and
+it is not assumed — if it fails, the patch offsets are wrong.
+
+### WHAT COULD GO WRONG, NAMED IN ADVANCE
+
+- **A delay shifts arrival *phase*, not only latency.** 100 ms is 7% of a cycle at tau 333 and 21%
+  at tau 83, so the phase shift differs per tau. That confounds a *rotation* reading and leaves
+  the `+1` prediction on `B` intact; clause 2 separates them.
+- **Startup transient.** With a delay the ear's first *n* samples are zeros — at most 100 ms of a
+  1.2M ms record, and the first 10% is discarded as settling anyway. Disclosed, not gated.
+- **The loop-off arm removes a term rather than scaling one**, so it is a bound on the loop's total
+  contribution and must not be read as a slope. It gets its own sentence in the verdict, and it is
+  refitted on the common taus so its `B` is comparable with the anchor's at matched leverage —
+  while being excluded from the delay regression, so the bound cannot silently re-weight the sweep.
+
+**Cost:** 159 arms against 131 at 4h43m ≈ **5h44m**, plus the 16-minute gate.
+
+### §40 PRE-FLIGHT — THE LOOP IS LIVE, AND THE CONTROLS WERE NOT OPTIONAL
+
+A 60k pre-flight on the 159-arm set, run before any verdict code existed, to answer the one
+question that decides whether this axis is worth five hours. **It is a vacuity check and a
+bit-identity test, not a measurement** — nothing below is quoted as an effect, which the standing
+rule forbids for `--allow-short`.
+
+**(1) The loop is live and reaches the oscillator.** `rb000t167` (loop cut) against `tau167` (loop
+at the shipped 0.02), same twelve seeds, one genome float apart: the voiced duty moves **0.46 →
+0.38**. A term that was identically zero on every tick would have produced a bit-identical row, and
+it did not. **(2) The transport delay reaches it too** — `sd100t167` differs from the anchor, and
+across 25/50/100 ms the duty declines monotonically (0.46 / 0.45 / 0.43).
+
+**(3) And the four controls earned their place, which is the pre-flight's real finding:**
+
+| control | `anti` | duty | rate |
+|---|---|---|---|
+| `ctrl140` (the shipped loop) | +0.572 | 0.47 | **4.41 Hz** |
+| `rb000ctrl` (loop cut) | +0.178 | 0.38 | **3.82 Hz** (−13%) |
+| `sd025ctrl` | +0.666 | 0.45 | 4.53 Hz |
+| `sd050ctrl` | +0.697 | 0.43 | 4.58 Hz |
+| `sd100ctrl` | +0.759 | 0.43 | **4.70 Hz** (+6.6%) |
+
+**The dose reaches the control, and the control's rate is what the kill switch gates on.** Had v82
+reused `ctrl140` — as v79 and v81 legitimately do, because `halfcenter_drive` is unread when the
+gain is zero — all 24 arms would have been scored against a floor measured on a creature that
+heard itself differently. That is the §34 lesson arriving the right way round for once: the
+question *"can the arm I am measuring reach the field?"* was asked of the **control** this time,
+before the run rather than after it.
+
+**(4) The five pins were verified empirically, not just by reading them.** Appending 28 arms left
+the arm-name sequence of every published block identical — v77 (20 names), v78 (40), v79 (36), v80
+(29), v81 (37), **162 in all**. Arm names do not depend on record length, so a short run is a
+valid instrument for exactly this check. The hijack class of defect is closed by measurement.
+
+### AND ONE TRAP THE PRE-FLIGHT WALKED INTO, RECOGNISED IN ADVANCE THIS TIME
+
+`rebound_mean_tau_ms = 5000`. At 60k ticks the settling period is 6 s — **1.2 time constants** — so
+the term's own mean is still converging while the record is taken, which leaves a slow drift in
+`use = raw − mean(raw)` that inflates **both** the DC level and the swing. At 1.2M ticks the settle
+is 120 s, twenty-four time constants, and the residual drift is negligible.
+
+**So the pre-flight's dose reading is an UPPER BOUND on the full-record swing, not an estimate of
+it.** This is structurally the same trap as §39's: a quantity that looks larger in a short record
+than it is at full length, read as evidence the dose landed. The difference is that this time the
+bias was derived from the genome's own time constant before the number was looked at, rather than
+diagnosed from a vacuous verdict afterwards. **Clause 5 reads the dose at full record and nowhere
+else.**
+
+### §40 ADDENDUM — A SIXTH GUARD DEFECT, FOUND BY READING MY OWN CASCADE
+
+Clause 1 of the table above was written as *"fewer than 3 delay settings fitted"*. That left a
+gap, found before the run by re-reading the branch rather than the result:
+
+`slope_held` **starts true** and is only ever set false by a comparison against the anchor's slope.
+So had the anchor itself failed to fit, the flag would still have read **held** — having compared
+nothing — and the cascade would have fallen through to a clause that presumes a held slope. A
+guard asserting a condition it never checked is the defect this experiment has now shipped five
+times (§35, §37, §39), and this would have been the sixth.
+
+The anchor has fitted in every run on this line, with six live taus and R² 0.99954, **which is
+precisely why the branch would never have been exercised in a smoke** — the same reason §35's
+refusal path had to be forced to run before its own defect showed. Clause 1 now requires the
+anchor to be balanced and names which of the two conditions failed. It is written as a refusal
+branch in the code, not as a caveat in this document.
+
+**The general form, which is the part worth keeping:** a boolean initialized to the *permissive*
+value and narrowed only inside a conditional block carries two meanings — *"the check ran and
+passed"* and *"the check did not run"* — and those are the same two meanings that `fit_ok` carried
+in §35. **Initialize such a flag to the value that means "unestablished", or require, in the
+branch that consumes it, the precondition that makes it meaningful.**
+
+### §40 SMOKE — ALL SEVEN CLAUSES EXERCISED, AND TWO HONEST DISCLOSURES BEFORE THE RUN
+
+The 60k smoke reaches every new path: the five per-setting blocks with their own controls, the
+balanced design, the dosimeter with its spread, the DC check, the loop-off bound, the rotation
+table, the primary, and the verdict. **Nothing below is an effect** — 60k distorts the law in a
+documented direction (the anchor fits 4.0441 / 71.5 against the published 3.4756 / 203.1) and the
+standing rule forbids quoting an `--allow-short` result. What a smoke *can* establish is that the
+code computes what it claims and that the design's premises hold.
+
+**(1) THE v45 MEAN-SUBTRACTION WORKS, WHICH NO RUN HAD EVER CHECKED.** The rebound's DC level is
+**+0.00027** against a swing of **0.01290** — **2% of the swing.** The term is predominantly AC,
+exactly as the genome's comment intends, and that is the load-bearing premise of this whole
+section: it is *why* §37's one-subtraction closure does not reach this axis. Had the DC come back
+comparable to the swing, most of §40 would have been refuted before it ran, by a result already on
+file. The premise is now measured rather than argued.
+
+**(2) THE DOSE SITS AT 1.61% AGAINST A 1% GATE, AND THE 60k READING IS BIASED UPWARD.** Disclosed
+now, in advance, because it is the one way this run can come back without a latency verdict: if the
+full-record swing falls below 1% of the tonic, clause 5 fires and the delay branch is VACUOUS. The
+threshold **stays at 1%** — moving it after seeing a number is the thing this project has a memory
+file about, and the direction of the bias is known, which makes a post-hoc adjustment exactly the
+unjustifiable kind.
+
+The bias is also smaller than the pre-flight note feared, and the measured DC says so: at 60k the
+*scored* window is 54 s, which is **10.8** time constants of the 5 s mean, not the 1.2 the settling
+period alone suggested — so convergence is largely complete within the record and the DC of 0.00027
+confirms it. The caveat erred conservative, which is the right direction, and is now quantified.
+
+**AND IT MATTERS LESS THAN IT APPEARS, BY DESIGN.** The decisive arm is threshold-free. The
+loop-off bound measures the loop's *entire* contribution to `B` directly — at 60k `dB = +8.5 ±
+18.3 ms` (0.5 SE), bounding the loop below 22% of the offset even at a twentieth of the record. At
+full length the SEs shrink by roughly √20, which should bound it near **5%**. So whatever clause 5
+does to the delay branch, **the question "can the self-audition loop host `B`?" is answered by an
+arm that needs no dosimeter at all** — which is what "self-dosimetering" was pre-registered to
+mean, and the reason the bound was put in the same run rather than after the sweep.
+
+**(3) AND THE SMOKE SHOWS THE SHAPE THE ANSWER IS LIKELY TO TAKE.** All three delay settings hold
+the slope (−0.4, +0.2, +0.5 SE), so this would be **the first axis on this line that does not
+rotate the law** — and `dB/d(delay)` comes back **−0.1566**, wrong in sign and 13.9 SE from the +1.0
+a transport account requires. That is the same signature that refuted the membrane in v78 (needed
+≈+1, measured −0.433). Stated as a prediction of the run's reading, not as the reading.

@@ -25495,3 +25495,64 @@ Pushing the shoving match the *other* way, incidentally, kills the creature's rh
 all six of those arms came back with a wobble *quieter than the background noise* of a creature
 that isn't oscillating at all. We'd predicted that from the equations and a short pre-flight; it
 held over a record twenty times longer. That direction is closed.
+
+## The creature has been listening to itself this whole time (2026-11-02)
+
+Three experiments in a row have now told us the same thing: the fixed 203-millisecond delay in the
+creature's rhythm is not hidden anywhere in the machinery that drives its voice. Push the overall
+drive, push the tiredness, push the shoving match between the two halves — each one tilts the line
+and none of them slides it. So the delay lives somewhere else, and the obvious question is where
+to look next.
+
+It turns out there's a loop we have never once touched, and it has been running in every single
+experiment on this line.
+
+The creature babbles. Its own voice goes out through its larynx, into the room, and back in
+through its own ear — and in this experiment the caregiver is silent, so **the only thing the
+creature's ear hears is itself.** The ear feeds the hearing module, and the hearing module feeds,
+by a small amount, straight back into the drive that makes the voice. A closed circle. It has been
+closed the whole time, in all 131 arms of every run, and nobody had looked at it.
+
+It's also the right shape for what we're hunting, and that's the interesting part. The reason we
+could rule out all those earlier candidates in one stroke is that they all contribute a *steady*
+push, and the arithmetic of how the drive is assembled means a steady push can only tilt the line.
+This loop is deliberately built *not* to be steady — there's a line in the creature's genome whose
+comment says, in effect, *subtract the average or this becomes a steady push.* So what's left is a
+kick that arrives at a particular moment in each cycle. A kick with a *travel time*. That is the one
+shape that could be a fixed delay, and it's the one shape we've never tested.
+
+The test has a prediction with no wiggle room, which is rare and worth a lot. There's a dial that
+delays what the ear hears by a set number of milliseconds — a genuine delay line, sample by sample.
+If the 203 ms *is* the time the creature's voice takes to get back round to its own ear, then adding
+25 milliseconds of travel should add 25 milliseconds. Exactly one-for-one, no fitted scale, nothing
+to tune. And we can measure that slope about seven times more finely than the thing we're
+predicting — which means that for the first time on this line, **a boring result is still an
+answer.** If the slope comes back flat, flat is precise enough to say "no, it isn't the travel
+time." Usually a null result just means you didn't look hard enough; here we worked out in advance
+that we're looking hard enough.
+
+Before spending six hours of computing on it, we ran a short check to make sure the loop does
+anything at all — because if that little feedback kick is effectively zero, delaying it would be
+like adjusting the timing on an engine that isn't connected. It isn't zero: cutting the loop
+changes how much of the time the creature is voicing, from 46% down to 38%.
+
+And the short check caught something we would otherwise have got wrong. Every experiment here has
+a comparison creature with the rhythm mechanism switched off, used to measure the background noise
+that everything else is judged against. On the last few experiments we could safely reuse the same
+comparison creature for every setting, because the thing being varied had no effect on a creature
+with the mechanism off. **Not this time.** A creature with the rhythm off still babbles and still
+hears itself, so cutting its loop changes *it* too — by 13%. Reusing the old comparison creature
+would have meant judging all 24 new arms against the wrong baseline. So the new experiment ships
+four comparison creatures of its own.
+
+That's the same mistake that cost us a run two months ago, arriving from the opposite direction:
+back then we checked whether the *experimental* creature could feel the change and forgot to ask
+it of the *control*. This time we asked.
+
+One last caution we wrote down before looking at any number. The loop's internal averaging works
+on a five-second timescale, and the short check only runs for sixty seconds — barely long enough
+for that average to settle. So the short check *overstates* how big the loop's kick is. We know the
+direction of the error, which means we know not to trust the short check's size, only its
+yes-or-no. That's precisely the trap we fell into last time, when a measurement that looked healthy
+in a short run turned out to be nearly flat in a long one. Naming it in advance is cheaper than
+diagnosing it afterwards.

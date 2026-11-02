@@ -793,6 +793,12 @@ class Network {
   // array, they already existed, and they were already exposed.
   Scalar rate(uint32_t neuron) const { return rate_ema_[neuron]; }
   Scalar rate_fast(uint32_t neuron) const { return rate_fast_[neuron]; }
+  // DNA v82. The post-stimulus rebound a module had added to its drive on the last tick,
+  // in the same rate units as the drive itself -- so `sd(rebound)` is an amplitude where
+  // the outcome is a timing, which is what a dosimeter has to be.
+  Scalar rebound_term(uint32_t module) const {
+    return module < kMaxModules ? rebound_last_[module] : Scalar(0);
+  }
 
   uint32_t total_capacity() const { return capacity_; }
   uint32_t live_neurons() const;
@@ -1069,6 +1075,19 @@ class Network {
   // DNA v45. The rebound term's own slow mean, so the tonic component of a
   // rectified difference can be subtracted off and only the offset survives.
   Scalar rebound_mean_[kMaxModules] = {};
+  // DNA v82. THE REBOUND TERM AS APPLIED, recorded so a dose can be metered in the
+  // kernel's own units instead of reconstructed in the host. §39 cost a run to the
+  // opposite choice -- a dosimeter that was a CORRELATION, scale-free and blind to the
+  // amplitude it claimed to meter -- and the rule it left is to read the term the kernel
+  // ACTUALLY APPLIES. Reconstructing `max(0, mean_rate - pool_fast)` host-side would
+  // duplicate kernel arithmetic that could then drift from it silently, which is the same
+  // defect one level down.
+  //
+  // PURE DIAGNOSTIC: written once per tick at the point of computation, read by nothing
+  // inside the kernel, and DELIBERATELY NOT SERIALISED -- it is recomputed every tick, so
+  // adding it to the snapshot would change the save format for no gain. No arithmetic and
+  // no RNG draw moves, which is what lets the pinned determinism hash stand.
+  Scalar rebound_last_[kMaxModules] = {};
   Scalar pool_alpha_ = kOne;
   // DNA v24. Per-neuron pooling weight, mean 1 within each module.
   Scalar* ffi_w_ = nullptr;

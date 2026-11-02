@@ -20532,6 +20532,22 @@ struct HCArm {
   // normaliser. The genome ships 20.0 and 3.0 on vocal.
   float leak;    // DnaModule::leak_tau_ms -- the membrane. A lag AND an inverse gain.
   float refr;    // DnaModule::refractory_ms -- pure dead time, no gain term at all.
+  // DNA v82: THE SELF-AUDITION LOOP, THE FIRST TWO FIELDS ON THIS LINE THAT LEAVE THE
+  // VOCAL MODULE'S OWN DRIVE ASSEMBLY. v79, v80 and v81 closed that assembly -- every
+  // axis in it ROTATES the clock law and none SHIFTS it -- and §37's closure argument
+  // (`drive_a` is ONE subtraction, so a DC term cannot shift B) does not reach these,
+  // because the rebound is ZERO-MEAN BY CONSTRUCTION. Its own 5 s mean is subtracted
+  // (`network.cpp:2371-2378`, and the genome's comment at dna/default.toml:1937 says
+  // why: "or it is a tonic lift"), so against periods of 0.47-1.36 s it averages to ~0
+  // over 3.5-10 cycles and contributes WITHIN-CYCLE ONLY. A phase-locked kick whose
+  // arrival time is set by a transport latency rather than by tau_a is the one
+  // functional form this line has never tested, and the only one that can host B.
+  float rbg;     // DnaModule::rebound_gain on VOCAL. Ships 0.02; 0.00 cuts the loop.
+  // DnaAudio::self_delay_ms, a HEADER field and so the first global one here. The ear
+  // receives what the larynx emitted `self_delay_ms` ago through a sample-accurate ring
+  // buffer (`host/src/audio.cpp:52-56, 89-104`), so this is literally the loop's
+  // transport delay and nothing else. Ships 0.0.
+  float sdl;
 };
 const HCArm kHCArms[] = {
     // THE CLOCK TEST, at the drive where anti-phase appeared (1.40). The previous run
@@ -20544,19 +20560,19 @@ const HCArm kHCArms[] = {
     // the period does not move with tau_a this is that resonance being re-measured,
     // which is exactly what killed adaptclock. Period is PROPORTIONAL to tau_a for a
     // relaxation oscillator (Shpiro/Curtu/Rinzel/Rubin), so the exponent must be ~1.
-    {"tau083",  1.00f,  83.0f, 0.60f, 1.40f, 1.00f, 50.0f, 20.0f,  3.0f},
-    {"tau167",  1.00f, 167.0f, 0.60f, 1.40f, 1.00f, 50.0f, 20.0f,  3.0f},   // replicates the -0.555 arm
-    {"tau250",  1.00f, 250.0f, 0.60f, 1.40f, 1.00f, 50.0f, 20.0f,  3.0f},
-    {"tau333",  1.00f, 333.0f, 0.60f, 1.40f, 1.00f, 50.0f, 20.0f,  3.0f},
+    {"tau083",  1.00f,  83.0f, 0.60f, 1.40f, 1.00f, 50.0f, 20.0f,  3.0f, 0.02f,   0.0f},
+    {"tau167",  1.00f, 167.0f, 0.60f, 1.40f, 1.00f, 50.0f, 20.0f,  3.0f, 0.02f,   0.0f},   // replicates the -0.555 arm
+    {"tau250",  1.00f, 250.0f, 0.60f, 1.40f, 1.00f, 50.0f, 20.0f,  3.0f, 0.02f,   0.0f},
+    {"tau333",  1.00f, 333.0f, 0.60f, 1.40f, 1.00f, 50.0f, 20.0f,  3.0f, 0.02f,   0.0f},
     // BOTH SINGLES AT THE WINNING DRIVE. The interaction was previously shown against
     // a control at drive 0.85, which is the wrong drive to compare against.
-    {"inhib140", 0.00f, 167.0f, 0.60f, 1.40f, 1.00f, 50.0f, 20.0f,  3.0f},  // inhibition only: must SETTLE
-    {"fat140",  1.00f, 167.0f, 0.00f, 1.40f, 1.00f, 50.0f, 20.0f,  3.0f},   // fatigue only: must do nothing
+    {"inhib140", 0.00f, 167.0f, 0.60f, 1.40f, 1.00f, 50.0f, 20.0f,  3.0f, 0.02f,   0.0f},  // inhibition only: must SETTLE
+    {"fat140",  1.00f, 167.0f, 0.00f, 1.40f, 1.00f, 50.0f, 20.0f,  3.0f, 0.02f,   0.0f},   // fatigue only: must do nothing
     // UPPER EDGE. The last sweep found the effect only at its TOP arm, so the window
     // was bracketed on one side only and its upper boundary is unmeasured. Shpiro
     // predicts simultaneous high activity above the window.
-    {"drive200", 1.00f, 167.0f, 0.60f, 2.00f, 1.00f, 50.0f, 20.0f,  3.0f},
-    {"ctrl140",  0.00f, 167.0f, 0.00f, 1.40f, 1.00f, 50.0f, 20.0f,  3.0f},  // matched-drive control, both OFF
+    {"drive200", 1.00f, 167.0f, 0.60f, 2.00f, 1.00f, 50.0f, 20.0f,  3.0f, 0.02f,   0.0f},
+    {"ctrl140",  0.00f, 167.0f, 0.00f, 1.40f, 1.00f, 50.0f, 20.0f,  3.0f, 0.02f,   0.0f},  // matched-drive control, both OFF
     // DNA v76, THE COMPETITION-STRENGTH SWEEP. All four sit on `tau333` -- same jump,
     // same tau_a, same gain, same drive -- and move ONE number: the weight `k` on the
     // differential term, hc_lo = g*(1 + k*D/S). The tonic stays g at every k, which is
@@ -20580,10 +20596,10 @@ const HCArm kHCArms[] = {
     // against the v57 ARCHIVE, since k = 1 restores that kernel bit for bit. That makes
     // this run carry its own determinism check on the hc branch itself, which the hc=0
     // arms cannot do. Inserting them would renumber `drive200` and the clock arms.
-    {"wi000",   1.00f, 333.0f, 0.60f, 1.40f, 0.00f, 50.0f, 20.0f,  3.0f},
-    {"wi150",   1.00f, 333.0f, 0.60f, 1.40f, 1.50f, 50.0f, 20.0f,  3.0f},
-    {"wi200",   1.00f, 333.0f, 0.60f, 1.40f, 2.00f, 50.0f, 20.0f,  3.0f},
-    {"wi300",   1.00f, 333.0f, 0.60f, 1.40f, 3.00f, 50.0f, 20.0f,  3.0f},
+    {"wi000",   1.00f, 333.0f, 0.60f, 1.40f, 0.00f, 50.0f, 20.0f,  3.0f, 0.02f,   0.0f},
+    {"wi150",   1.00f, 333.0f, 0.60f, 1.40f, 1.50f, 50.0f, 20.0f,  3.0f, 0.02f,   0.0f},
+    {"wi200",   1.00f, 333.0f, 0.60f, 1.40f, 2.00f, 50.0f, 20.0f,  3.0f, 0.02f,   0.0f},
+    {"wi300",   1.00f, 333.0f, 0.60f, 1.40f, 3.00f, 50.0f, 20.0f,  3.0f, 0.02f,   0.0f},
     // DNA v76, OUT-OF-SAMPLE ARMS FOR THE LINEAR CLOCK LAW. Appended last, so the twelve
     // arms above re-print unchanged (the seed is a function of the REPLICATE only) and
     // the fit is made on data that already exists before these two are measured.
@@ -20596,8 +20612,8 @@ const HCArm kHCArms[] = {
     // fitted AFTER seeing the four points, so it is worth nothing until it predicts
     // something it has not seen. These two arms are that prediction: tau 42 ms should give
     // 330 ms and tau 500 ms should give 1960 ms.
-    {"tau042",  1.00f,  42.0f, 0.60f, 1.40f, 1.00f, 50.0f, 20.0f,  3.0f},
-    {"tau500",  1.00f, 500.0f, 0.60f, 1.40f, 1.00f, 50.0f, 20.0f,  3.0f},
+    {"tau042",  1.00f,  42.0f, 0.60f, 1.40f, 1.00f, 50.0f, 20.0f,  3.0f, 0.02f,   0.0f},
+    {"tau500",  1.00f, 500.0f, 0.60f, 1.40f, 1.00f, 50.0f, 20.0f,  3.0f, 0.02f,   0.0f},
     // DNA v77, THE OFFSET TEST -- the four taus repeated at three more filter settings.
     //
     // WHAT IS BEING ASKED. The crossing period is linear in tau_a with an INTERCEPT:
@@ -20689,21 +20705,21 @@ const HCArm kHCArms[] = {
     // Four taus at each setting, the SAME four, so every fit has an identical design
     // matrix and the intercepts are compared at matched leverage. Appended last, so the
     // fourteen arms above re-print bit for bit.
-    {"rf25t083",  1.00f,  83.0f, 0.60f, 1.40f, 1.00f,  25.0f, 20.0f,  3.0f},
-    {"rf25t167",  1.00f, 167.0f, 0.60f, 1.40f, 1.00f,  25.0f, 20.0f,  3.0f},
-    {"rf25t250",  1.00f, 250.0f, 0.60f, 1.40f, 1.00f,  25.0f, 20.0f,  3.0f},
-    {"rf25t333",  1.00f, 333.0f, 0.60f, 1.40f, 1.00f,  25.0f, 20.0f,  3.0f},
-    {"rf25ctrl",  0.00f, 167.0f, 0.00f, 1.40f, 1.00f,  25.0f, 20.0f,  3.0f},
-    {"rf100t083", 1.00f,  83.0f, 0.60f, 1.40f, 1.00f, 100.0f, 20.0f,  3.0f},
-    {"rf100t167", 1.00f, 167.0f, 0.60f, 1.40f, 1.00f, 100.0f, 20.0f,  3.0f},
-    {"rf100t250", 1.00f, 250.0f, 0.60f, 1.40f, 1.00f, 100.0f, 20.0f,  3.0f},
-    {"rf100t333", 1.00f, 333.0f, 0.60f, 1.40f, 1.00f, 100.0f, 20.0f,  3.0f},
-    {"rf100ctrl", 0.00f, 167.0f, 0.00f, 1.40f, 1.00f, 100.0f, 20.0f,  3.0f},
-    {"rf75t083",  1.00f,  83.0f, 0.60f, 1.40f, 1.00f,  75.0f, 20.0f,  3.0f},
-    {"rf75t167",  1.00f, 167.0f, 0.60f, 1.40f, 1.00f,  75.0f, 20.0f,  3.0f},
-    {"rf75t250",  1.00f, 250.0f, 0.60f, 1.40f, 1.00f,  75.0f, 20.0f,  3.0f},
-    {"rf75t333",  1.00f, 333.0f, 0.60f, 1.40f, 1.00f,  75.0f, 20.0f,  3.0f},
-    {"rf75ctrl",  0.00f, 167.0f, 0.00f, 1.40f, 1.00f,  75.0f, 20.0f,  3.0f},
+    {"rf25t083",  1.00f,  83.0f, 0.60f, 1.40f, 1.00f,  25.0f, 20.0f,  3.0f, 0.02f,   0.0f},
+    {"rf25t167",  1.00f, 167.0f, 0.60f, 1.40f, 1.00f,  25.0f, 20.0f,  3.0f, 0.02f,   0.0f},
+    {"rf25t250",  1.00f, 250.0f, 0.60f, 1.40f, 1.00f,  25.0f, 20.0f,  3.0f, 0.02f,   0.0f},
+    {"rf25t333",  1.00f, 333.0f, 0.60f, 1.40f, 1.00f,  25.0f, 20.0f,  3.0f, 0.02f,   0.0f},
+    {"rf25ctrl",  0.00f, 167.0f, 0.00f, 1.40f, 1.00f,  25.0f, 20.0f,  3.0f, 0.02f,   0.0f},
+    {"rf100t083", 1.00f,  83.0f, 0.60f, 1.40f, 1.00f, 100.0f, 20.0f,  3.0f, 0.02f,   0.0f},
+    {"rf100t167", 1.00f, 167.0f, 0.60f, 1.40f, 1.00f, 100.0f, 20.0f,  3.0f, 0.02f,   0.0f},
+    {"rf100t250", 1.00f, 250.0f, 0.60f, 1.40f, 1.00f, 100.0f, 20.0f,  3.0f, 0.02f,   0.0f},
+    {"rf100t333", 1.00f, 333.0f, 0.60f, 1.40f, 1.00f, 100.0f, 20.0f,  3.0f, 0.02f,   0.0f},
+    {"rf100ctrl", 0.00f, 167.0f, 0.00f, 1.40f, 1.00f, 100.0f, 20.0f,  3.0f, 0.02f,   0.0f},
+    {"rf75t083",  1.00f,  83.0f, 0.60f, 1.40f, 1.00f,  75.0f, 20.0f,  3.0f, 0.02f,   0.0f},
+    {"rf75t167",  1.00f, 167.0f, 0.60f, 1.40f, 1.00f,  75.0f, 20.0f,  3.0f, 0.02f,   0.0f},
+    {"rf75t250",  1.00f, 250.0f, 0.60f, 1.40f, 1.00f,  75.0f, 20.0f,  3.0f, 0.02f,   0.0f},
+    {"rf75t333",  1.00f, 333.0f, 0.60f, 1.40f, 1.00f,  75.0f, 20.0f,  3.0f, 0.02f,   0.0f},
+    {"rf75ctrl",  0.00f, 167.0f, 0.00f, 1.40f, 1.00f,  75.0f, 20.0f,  3.0f, 0.02f,   0.0f},
     // DNA v78, THE OFFSET TEST AGAIN -- and this time as a COEFFICIENT, which is the
     // lesson v77 paid for and the only reason to spend another run here.
     //
@@ -20801,36 +20817,36 @@ const HCArm kHCArms[] = {
     // and whatever is left over is left over.
     //
     // Appended last, so the twenty-nine arms above re-print bit for bit.
-    {"rr12t083",  1.00f,  83.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f, 12.0f},
-    {"rr12t167",  1.00f, 167.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f, 12.0f},
-    {"rr12t250",  1.00f, 250.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f, 12.0f},
-    {"rr12t333",  1.00f, 333.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f, 12.0f},
-    {"rr12ctrl",  0.00f, 167.0f, 0.00f, 1.40f, 1.00f,  50.0f, 20.0f, 12.0f},
-    {"rr22t083",  1.00f,  83.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f, 22.0f},
-    {"rr22t167",  1.00f, 167.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f, 22.0f},
-    {"rr22t250",  1.00f, 250.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f, 22.0f},
-    {"rr22t333",  1.00f, 333.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f, 22.0f},
-    {"rr22ctrl",  0.00f, 167.0f, 0.00f, 1.40f, 1.00f,  50.0f, 20.0f, 22.0f},
-    {"rr35t083",  1.00f,  83.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f, 35.0f},
-    {"rr35t167",  1.00f, 167.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f, 35.0f},
-    {"rr35t250",  1.00f, 250.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f, 35.0f},
-    {"rr35t333",  1.00f, 333.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f, 35.0f},
-    {"rr35ctrl",  0.00f, 167.0f, 0.00f, 1.40f, 1.00f,  50.0f, 20.0f, 35.0f},
-    {"lk65t083",  1.00f,  83.0f, 0.60f, 1.40f, 1.00f,  50.0f, 65.0f,  3.0f},
-    {"lk65t167",  1.00f, 167.0f, 0.60f, 1.40f, 1.00f,  50.0f, 65.0f,  3.0f},
-    {"lk65t250",  1.00f, 250.0f, 0.60f, 1.40f, 1.00f,  50.0f, 65.0f,  3.0f},
-    {"lk65t333",  1.00f, 333.0f, 0.60f, 1.40f, 1.00f,  50.0f, 65.0f,  3.0f},
-    {"lk65ctrl",  0.00f, 167.0f, 0.00f, 1.40f, 1.00f,  50.0f, 65.0f,  3.0f},
-    {"lk35t083",  1.00f,  83.0f, 0.60f, 1.40f, 1.00f,  50.0f, 35.0f,  3.0f},
-    {"lk35t167",  1.00f, 167.0f, 0.60f, 1.40f, 1.00f,  50.0f, 35.0f,  3.0f},
-    {"lk35t250",  1.00f, 250.0f, 0.60f, 1.40f, 1.00f,  50.0f, 35.0f,  3.0f},
-    {"lk35t333",  1.00f, 333.0f, 0.60f, 1.40f, 1.00f,  50.0f, 35.0f,  3.0f},
-    {"lk35ctrl",  0.00f, 167.0f, 0.00f, 1.40f, 1.00f,  50.0f, 35.0f,  3.0f},
-    {"lk50t083",  1.00f,  83.0f, 0.60f, 1.40f, 1.00f,  50.0f, 50.0f,  3.0f},
-    {"lk50t167",  1.00f, 167.0f, 0.60f, 1.40f, 1.00f,  50.0f, 50.0f,  3.0f},
-    {"lk50t250",  1.00f, 250.0f, 0.60f, 1.40f, 1.00f,  50.0f, 50.0f,  3.0f},
-    {"lk50t333",  1.00f, 333.0f, 0.60f, 1.40f, 1.00f,  50.0f, 50.0f,  3.0f},
-    {"lk50ctrl",  0.00f, 167.0f, 0.00f, 1.40f, 1.00f,  50.0f, 50.0f,  3.0f},
+    {"rr12t083",  1.00f,  83.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f, 12.0f, 0.02f,   0.0f},
+    {"rr12t167",  1.00f, 167.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f, 12.0f, 0.02f,   0.0f},
+    {"rr12t250",  1.00f, 250.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f, 12.0f, 0.02f,   0.0f},
+    {"rr12t333",  1.00f, 333.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f, 12.0f, 0.02f,   0.0f},
+    {"rr12ctrl",  0.00f, 167.0f, 0.00f, 1.40f, 1.00f,  50.0f, 20.0f, 12.0f, 0.02f,   0.0f},
+    {"rr22t083",  1.00f,  83.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f, 22.0f, 0.02f,   0.0f},
+    {"rr22t167",  1.00f, 167.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f, 22.0f, 0.02f,   0.0f},
+    {"rr22t250",  1.00f, 250.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f, 22.0f, 0.02f,   0.0f},
+    {"rr22t333",  1.00f, 333.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f, 22.0f, 0.02f,   0.0f},
+    {"rr22ctrl",  0.00f, 167.0f, 0.00f, 1.40f, 1.00f,  50.0f, 20.0f, 22.0f, 0.02f,   0.0f},
+    {"rr35t083",  1.00f,  83.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f, 35.0f, 0.02f,   0.0f},
+    {"rr35t167",  1.00f, 167.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f, 35.0f, 0.02f,   0.0f},
+    {"rr35t250",  1.00f, 250.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f, 35.0f, 0.02f,   0.0f},
+    {"rr35t333",  1.00f, 333.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f, 35.0f, 0.02f,   0.0f},
+    {"rr35ctrl",  0.00f, 167.0f, 0.00f, 1.40f, 1.00f,  50.0f, 20.0f, 35.0f, 0.02f,   0.0f},
+    {"lk65t083",  1.00f,  83.0f, 0.60f, 1.40f, 1.00f,  50.0f, 65.0f,  3.0f, 0.02f,   0.0f},
+    {"lk65t167",  1.00f, 167.0f, 0.60f, 1.40f, 1.00f,  50.0f, 65.0f,  3.0f, 0.02f,   0.0f},
+    {"lk65t250",  1.00f, 250.0f, 0.60f, 1.40f, 1.00f,  50.0f, 65.0f,  3.0f, 0.02f,   0.0f},
+    {"lk65t333",  1.00f, 333.0f, 0.60f, 1.40f, 1.00f,  50.0f, 65.0f,  3.0f, 0.02f,   0.0f},
+    {"lk65ctrl",  0.00f, 167.0f, 0.00f, 1.40f, 1.00f,  50.0f, 65.0f,  3.0f, 0.02f,   0.0f},
+    {"lk35t083",  1.00f,  83.0f, 0.60f, 1.40f, 1.00f,  50.0f, 35.0f,  3.0f, 0.02f,   0.0f},
+    {"lk35t167",  1.00f, 167.0f, 0.60f, 1.40f, 1.00f,  50.0f, 35.0f,  3.0f, 0.02f,   0.0f},
+    {"lk35t250",  1.00f, 250.0f, 0.60f, 1.40f, 1.00f,  50.0f, 35.0f,  3.0f, 0.02f,   0.0f},
+    {"lk35t333",  1.00f, 333.0f, 0.60f, 1.40f, 1.00f,  50.0f, 35.0f,  3.0f, 0.02f,   0.0f},
+    {"lk35ctrl",  0.00f, 167.0f, 0.00f, 1.40f, 1.00f,  50.0f, 35.0f,  3.0f, 0.02f,   0.0f},
+    {"lk50t083",  1.00f,  83.0f, 0.60f, 1.40f, 1.00f,  50.0f, 50.0f,  3.0f, 0.02f,   0.0f},
+    {"lk50t167",  1.00f, 167.0f, 0.60f, 1.40f, 1.00f,  50.0f, 50.0f,  3.0f, 0.02f,   0.0f},
+    {"lk50t250",  1.00f, 250.0f, 0.60f, 1.40f, 1.00f,  50.0f, 50.0f,  3.0f, 0.02f,   0.0f},
+    {"lk50t333",  1.00f, 333.0f, 0.60f, 1.40f, 1.00f,  50.0f, 50.0f,  3.0f, 0.02f,   0.0f},
+    {"lk50ctrl",  0.00f, 167.0f, 0.00f, 1.40f, 1.00f,  50.0f, 50.0f,  3.0f, 0.02f,   0.0f},
     // DNA v79: THE TONIC DRIVE, and v78 is what promotes it. Three axes are now closed as
     // the 180 ms offset's source and all three were LAGS -- the shared rate filter (v77)
     // and the two per-module constants (v78). What v78 found on the way is the
@@ -20886,26 +20902,26 @@ const HCArm kHCArms[] = {
     // which is correct for a baseline and useless as a check that the dose landed. They are
     // kept because an arm still has to be gated against its own both-mechanisms-off
     // baseline; the dose's liveness is measured on the MECHANISM arms instead.
-    {"dr120t083", 1.00f,  83.0f, 0.60f, 1.20f, 1.00f,  50.0f, 20.0f,  3.0f},
-    {"dr120t167", 1.00f, 167.0f, 0.60f, 1.20f, 1.00f,  50.0f, 20.0f,  3.0f},
-    {"dr120t250", 1.00f, 250.0f, 0.60f, 1.20f, 1.00f,  50.0f, 20.0f,  3.0f},
-    {"dr120t333", 1.00f, 333.0f, 0.60f, 1.20f, 1.00f,  50.0f, 20.0f,  3.0f},
-    {"dr120ctrl", 0.00f, 167.0f, 0.00f, 1.20f, 1.00f,  50.0f, 20.0f,  3.0f},
-    {"dr130t083", 1.00f,  83.0f, 0.60f, 1.30f, 1.00f,  50.0f, 20.0f,  3.0f},
-    {"dr130t167", 1.00f, 167.0f, 0.60f, 1.30f, 1.00f,  50.0f, 20.0f,  3.0f},
-    {"dr130t250", 1.00f, 250.0f, 0.60f, 1.30f, 1.00f,  50.0f, 20.0f,  3.0f},
-    {"dr130t333", 1.00f, 333.0f, 0.60f, 1.30f, 1.00f,  50.0f, 20.0f,  3.0f},
-    {"dr130ctrl", 0.00f, 167.0f, 0.00f, 1.30f, 1.00f,  50.0f, 20.0f,  3.0f},
-    {"dr150t083", 1.00f,  83.0f, 0.60f, 1.50f, 1.00f,  50.0f, 20.0f,  3.0f},
-    {"dr150t167", 1.00f, 167.0f, 0.60f, 1.50f, 1.00f,  50.0f, 20.0f,  3.0f},
-    {"dr150t250", 1.00f, 250.0f, 0.60f, 1.50f, 1.00f,  50.0f, 20.0f,  3.0f},
-    {"dr150t333", 1.00f, 333.0f, 0.60f, 1.50f, 1.00f,  50.0f, 20.0f,  3.0f},
-    {"dr150ctrl", 0.00f, 167.0f, 0.00f, 1.50f, 1.00f,  50.0f, 20.0f,  3.0f},
-    {"dr160t083", 1.00f,  83.0f, 0.60f, 1.60f, 1.00f,  50.0f, 20.0f,  3.0f},
-    {"dr160t167", 1.00f, 167.0f, 0.60f, 1.60f, 1.00f,  50.0f, 20.0f,  3.0f},
-    {"dr160t250", 1.00f, 250.0f, 0.60f, 1.60f, 1.00f,  50.0f, 20.0f,  3.0f},
-    {"dr160t333", 1.00f, 333.0f, 0.60f, 1.60f, 1.00f,  50.0f, 20.0f,  3.0f},
-    {"dr160ctrl", 0.00f, 167.0f, 0.00f, 1.60f, 1.00f,  50.0f, 20.0f,  3.0f},
+    {"dr120t083", 1.00f,  83.0f, 0.60f, 1.20f, 1.00f,  50.0f, 20.0f,  3.0f, 0.02f,   0.0f},
+    {"dr120t167", 1.00f, 167.0f, 0.60f, 1.20f, 1.00f,  50.0f, 20.0f,  3.0f, 0.02f,   0.0f},
+    {"dr120t250", 1.00f, 250.0f, 0.60f, 1.20f, 1.00f,  50.0f, 20.0f,  3.0f, 0.02f,   0.0f},
+    {"dr120t333", 1.00f, 333.0f, 0.60f, 1.20f, 1.00f,  50.0f, 20.0f,  3.0f, 0.02f,   0.0f},
+    {"dr120ctrl", 0.00f, 167.0f, 0.00f, 1.20f, 1.00f,  50.0f, 20.0f,  3.0f, 0.02f,   0.0f},
+    {"dr130t083", 1.00f,  83.0f, 0.60f, 1.30f, 1.00f,  50.0f, 20.0f,  3.0f, 0.02f,   0.0f},
+    {"dr130t167", 1.00f, 167.0f, 0.60f, 1.30f, 1.00f,  50.0f, 20.0f,  3.0f, 0.02f,   0.0f},
+    {"dr130t250", 1.00f, 250.0f, 0.60f, 1.30f, 1.00f,  50.0f, 20.0f,  3.0f, 0.02f,   0.0f},
+    {"dr130t333", 1.00f, 333.0f, 0.60f, 1.30f, 1.00f,  50.0f, 20.0f,  3.0f, 0.02f,   0.0f},
+    {"dr130ctrl", 0.00f, 167.0f, 0.00f, 1.30f, 1.00f,  50.0f, 20.0f,  3.0f, 0.02f,   0.0f},
+    {"dr150t083", 1.00f,  83.0f, 0.60f, 1.50f, 1.00f,  50.0f, 20.0f,  3.0f, 0.02f,   0.0f},
+    {"dr150t167", 1.00f, 167.0f, 0.60f, 1.50f, 1.00f,  50.0f, 20.0f,  3.0f, 0.02f,   0.0f},
+    {"dr150t250", 1.00f, 250.0f, 0.60f, 1.50f, 1.00f,  50.0f, 20.0f,  3.0f, 0.02f,   0.0f},
+    {"dr150t333", 1.00f, 333.0f, 0.60f, 1.50f, 1.00f,  50.0f, 20.0f,  3.0f, 0.02f,   0.0f},
+    {"dr150ctrl", 0.00f, 167.0f, 0.00f, 1.50f, 1.00f,  50.0f, 20.0f,  3.0f, 0.02f,   0.0f},
+    {"dr160t083", 1.00f,  83.0f, 0.60f, 1.60f, 1.00f,  50.0f, 20.0f,  3.0f, 0.02f,   0.0f},
+    {"dr160t167", 1.00f, 167.0f, 0.60f, 1.60f, 1.00f,  50.0f, 20.0f,  3.0f, 0.02f,   0.0f},
+    {"dr160t250", 1.00f, 250.0f, 0.60f, 1.60f, 1.00f,  50.0f, 20.0f,  3.0f, 0.02f,   0.0f},
+    {"dr160t333", 1.00f, 333.0f, 0.60f, 1.60f, 1.00f,  50.0f, 20.0f,  3.0f, 0.02f,   0.0f},
+    {"dr160ctrl", 0.00f, 167.0f, 0.00f, 1.60f, 1.00f,  50.0f, 20.0f,  3.0f, 0.02f,   0.0f},
     // TWO MORE TAUS AT EVERY SETTING, AND A SIMULATION IS WHY. The decider is a nested
     // comparison -- does ONE shared effective lag fit all five settings as well as five
     // free ones -- and its power depends on how many periods go into the residual. Run as
@@ -20918,16 +20934,16 @@ const HCArm kHCArms[] = {
     // outside the window at the other end, so the usable band is ~83-333 and these two sit
     // inside it with room on both sides. They also cannot disturb the v77 or v78 blocks:
     // those match tau_ms against their own {83,167,250,333} and simply never see a 125.
-    {"dr140t125", 1.00f, 125.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f,  3.0f},
-    {"dr140t290", 1.00f, 290.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f,  3.0f},
-    {"dr120t125", 1.00f, 125.0f, 0.60f, 1.20f, 1.00f,  50.0f, 20.0f,  3.0f},
-    {"dr120t290", 1.00f, 290.0f, 0.60f, 1.20f, 1.00f,  50.0f, 20.0f,  3.0f},
-    {"dr130t125", 1.00f, 125.0f, 0.60f, 1.30f, 1.00f,  50.0f, 20.0f,  3.0f},
-    {"dr130t290", 1.00f, 290.0f, 0.60f, 1.30f, 1.00f,  50.0f, 20.0f,  3.0f},
-    {"dr150t125", 1.00f, 125.0f, 0.60f, 1.50f, 1.00f,  50.0f, 20.0f,  3.0f},
-    {"dr150t290", 1.00f, 290.0f, 0.60f, 1.50f, 1.00f,  50.0f, 20.0f,  3.0f},
-    {"dr160t125", 1.00f, 125.0f, 0.60f, 1.60f, 1.00f,  50.0f, 20.0f,  3.0f},
-    {"dr160t290", 1.00f, 290.0f, 0.60f, 1.60f, 1.00f,  50.0f, 20.0f,  3.0f},
+    {"dr140t125", 1.00f, 125.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f,  3.0f, 0.02f,   0.0f},
+    {"dr140t290", 1.00f, 290.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f,  3.0f, 0.02f,   0.0f},
+    {"dr120t125", 1.00f, 125.0f, 0.60f, 1.20f, 1.00f,  50.0f, 20.0f,  3.0f, 0.02f,   0.0f},
+    {"dr120t290", 1.00f, 290.0f, 0.60f, 1.20f, 1.00f,  50.0f, 20.0f,  3.0f, 0.02f,   0.0f},
+    {"dr130t125", 1.00f, 125.0f, 0.60f, 1.30f, 1.00f,  50.0f, 20.0f,  3.0f, 0.02f,   0.0f},
+    {"dr130t290", 1.00f, 290.0f, 0.60f, 1.30f, 1.00f,  50.0f, 20.0f,  3.0f, 0.02f,   0.0f},
+    {"dr150t125", 1.00f, 125.0f, 0.60f, 1.50f, 1.00f,  50.0f, 20.0f,  3.0f, 0.02f,   0.0f},
+    {"dr150t290", 1.00f, 290.0f, 0.60f, 1.50f, 1.00f,  50.0f, 20.0f,  3.0f, 0.02f,   0.0f},
+    {"dr160t125", 1.00f, 125.0f, 0.60f, 1.60f, 1.00f,  50.0f, 20.0f,  3.0f, 0.02f,   0.0f},
+    {"dr160t290", 1.00f, 290.0f, 0.60f, 1.60f, 1.00f,  50.0f, 20.0f,  3.0f, 0.02f,   0.0f},
     // DNA v80. THE FATIGUE RATE, `adapt_jump`. Three settings against the shipped 1.00,
     // whose six arms are the archived anchor block and are not re-run.
     //
@@ -20956,24 +20972,24 @@ const HCArm kHCArms[] = {
     // risk v79 took on; adding none means no existing arm's control resolution can move.
     // It also means the dose MUST be read on the mechanism arms: a control is dose-blind
     // here for the same reason it was on the drive axis.
-    {"jp140t083", 1.40f,  83.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f,  3.0f},
-    {"jp140t125", 1.40f, 125.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f,  3.0f},
-    {"jp140t167", 1.40f, 167.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f,  3.0f},
-    {"jp140t250", 1.40f, 250.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f,  3.0f},
-    {"jp140t290", 1.40f, 290.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f,  3.0f},
-    {"jp140t333", 1.40f, 333.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f,  3.0f},
-    {"jp200t083", 2.00f,  83.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f,  3.0f},
-    {"jp200t125", 2.00f, 125.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f,  3.0f},
-    {"jp200t167", 2.00f, 167.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f,  3.0f},
-    {"jp200t250", 2.00f, 250.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f,  3.0f},
-    {"jp200t290", 2.00f, 290.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f,  3.0f},
-    {"jp200t333", 2.00f, 333.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f,  3.0f},
-    {"jp280t083", 2.80f,  83.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f,  3.0f},
-    {"jp280t125", 2.80f, 125.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f,  3.0f},
-    {"jp280t167", 2.80f, 167.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f,  3.0f},
-    {"jp280t250", 2.80f, 250.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f,  3.0f},
-    {"jp280t290", 2.80f, 290.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f,  3.0f},
-    {"jp280t333", 2.80f, 333.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f,  3.0f},
+    {"jp140t083", 1.40f,  83.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f,  3.0f, 0.02f,   0.0f},
+    {"jp140t125", 1.40f, 125.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f,  3.0f, 0.02f,   0.0f},
+    {"jp140t167", 1.40f, 167.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f,  3.0f, 0.02f,   0.0f},
+    {"jp140t250", 1.40f, 250.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f,  3.0f, 0.02f,   0.0f},
+    {"jp140t290", 1.40f, 290.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f,  3.0f, 0.02f,   0.0f},
+    {"jp140t333", 1.40f, 333.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f,  3.0f, 0.02f,   0.0f},
+    {"jp200t083", 2.00f,  83.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f,  3.0f, 0.02f,   0.0f},
+    {"jp200t125", 2.00f, 125.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f,  3.0f, 0.02f,   0.0f},
+    {"jp200t167", 2.00f, 167.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f,  3.0f, 0.02f,   0.0f},
+    {"jp200t250", 2.00f, 250.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f,  3.0f, 0.02f,   0.0f},
+    {"jp200t290", 2.00f, 290.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f,  3.0f, 0.02f,   0.0f},
+    {"jp200t333", 2.00f, 333.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f,  3.0f, 0.02f,   0.0f},
+    {"jp280t083", 2.80f,  83.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f,  3.0f, 0.02f,   0.0f},
+    {"jp280t125", 2.80f, 125.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f,  3.0f, 0.02f,   0.0f},
+    {"jp280t167", 2.80f, 167.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f,  3.0f, 0.02f,   0.0f},
+    {"jp280t250", 2.80f, 250.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f,  3.0f, 0.02f,   0.0f},
+    {"jp280t290", 2.80f, 290.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f,  3.0f, 0.02f,   0.0f},
+    {"jp280t333", 2.80f, 333.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f,  3.0f, 0.02f,   0.0f},
     // DNA v81, THE COMPETITION'S STRENGTH AT A FIXED TONIC -- the last free direction in
     // the drive assembly, and a PAIR of fields because neither one alone is this axis.
     //
@@ -21021,35 +21037,120 @@ const HCArm kHCArms[] = {
     // So the shipped 0.60 sits near the UPPER edge of the asymmetry window, exactly as the
     // shipped k = 1.00 does, and down is the only direction. g = 0.45 is known to alternate
     // from `hcsweep`'s gain axis, so the window contains the range below.
-    {"ag050t083", 1.00f,  83.0f, 0.50f, 1.30f, 1.00f,  50.0f, 20.0f,  3.0f},
-    {"ag050t125", 1.00f, 125.0f, 0.50f, 1.30f, 1.00f,  50.0f, 20.0f,  3.0f},
-    {"ag050t167", 1.00f, 167.0f, 0.50f, 1.30f, 1.00f,  50.0f, 20.0f,  3.0f},
-    {"ag050t250", 1.00f, 250.0f, 0.50f, 1.30f, 1.00f,  50.0f, 20.0f,  3.0f},
-    {"ag050t290", 1.00f, 290.0f, 0.50f, 1.30f, 1.00f,  50.0f, 20.0f,  3.0f},
-    {"ag050t333", 1.00f, 333.0f, 0.50f, 1.30f, 1.00f,  50.0f, 20.0f,  3.0f},
-    {"ag040t083", 1.00f,  83.0f, 0.40f, 1.20f, 1.00f,  50.0f, 20.0f,  3.0f},
-    {"ag040t125", 1.00f, 125.0f, 0.40f, 1.20f, 1.00f,  50.0f, 20.0f,  3.0f},
-    {"ag040t167", 1.00f, 167.0f, 0.40f, 1.20f, 1.00f,  50.0f, 20.0f,  3.0f},
-    {"ag040t250", 1.00f, 250.0f, 0.40f, 1.20f, 1.00f,  50.0f, 20.0f,  3.0f},
-    {"ag040t290", 1.00f, 290.0f, 0.40f, 1.20f, 1.00f,  50.0f, 20.0f,  3.0f},
-    {"ag040t333", 1.00f, 333.0f, 0.40f, 1.20f, 1.00f,  50.0f, 20.0f,  3.0f},
-    {"ag030t083", 1.00f,  83.0f, 0.30f, 1.10f, 1.00f,  50.0f, 20.0f,  3.0f},
-    {"ag030t125", 1.00f, 125.0f, 0.30f, 1.10f, 1.00f,  50.0f, 20.0f,  3.0f},
-    {"ag030t167", 1.00f, 167.0f, 0.30f, 1.10f, 1.00f,  50.0f, 20.0f,  3.0f},
-    {"ag030t250", 1.00f, 250.0f, 0.30f, 1.10f, 1.00f,  50.0f, 20.0f,  3.0f},
-    {"ag030t290", 1.00f, 290.0f, 0.30f, 1.10f, 1.00f,  50.0f, 20.0f,  3.0f},
-    {"ag030t333", 1.00f, 333.0f, 0.30f, 1.10f, 1.00f,  50.0f, 20.0f,  3.0f},
+    {"ag050t083", 1.00f,  83.0f, 0.50f, 1.30f, 1.00f,  50.0f, 20.0f,  3.0f, 0.02f,   0.0f},
+    {"ag050t125", 1.00f, 125.0f, 0.50f, 1.30f, 1.00f,  50.0f, 20.0f,  3.0f, 0.02f,   0.0f},
+    {"ag050t167", 1.00f, 167.0f, 0.50f, 1.30f, 1.00f,  50.0f, 20.0f,  3.0f, 0.02f,   0.0f},
+    {"ag050t250", 1.00f, 250.0f, 0.50f, 1.30f, 1.00f,  50.0f, 20.0f,  3.0f, 0.02f,   0.0f},
+    {"ag050t290", 1.00f, 290.0f, 0.50f, 1.30f, 1.00f,  50.0f, 20.0f,  3.0f, 0.02f,   0.0f},
+    {"ag050t333", 1.00f, 333.0f, 0.50f, 1.30f, 1.00f,  50.0f, 20.0f,  3.0f, 0.02f,   0.0f},
+    {"ag040t083", 1.00f,  83.0f, 0.40f, 1.20f, 1.00f,  50.0f, 20.0f,  3.0f, 0.02f,   0.0f},
+    {"ag040t125", 1.00f, 125.0f, 0.40f, 1.20f, 1.00f,  50.0f, 20.0f,  3.0f, 0.02f,   0.0f},
+    {"ag040t167", 1.00f, 167.0f, 0.40f, 1.20f, 1.00f,  50.0f, 20.0f,  3.0f, 0.02f,   0.0f},
+    {"ag040t250", 1.00f, 250.0f, 0.40f, 1.20f, 1.00f,  50.0f, 20.0f,  3.0f, 0.02f,   0.0f},
+    {"ag040t290", 1.00f, 290.0f, 0.40f, 1.20f, 1.00f,  50.0f, 20.0f,  3.0f, 0.02f,   0.0f},
+    {"ag040t333", 1.00f, 333.0f, 0.40f, 1.20f, 1.00f,  50.0f, 20.0f,  3.0f, 0.02f,   0.0f},
+    {"ag030t083", 1.00f,  83.0f, 0.30f, 1.10f, 1.00f,  50.0f, 20.0f,  3.0f, 0.02f,   0.0f},
+    {"ag030t125", 1.00f, 125.0f, 0.30f, 1.10f, 1.00f,  50.0f, 20.0f,  3.0f, 0.02f,   0.0f},
+    {"ag030t167", 1.00f, 167.0f, 0.30f, 1.10f, 1.00f,  50.0f, 20.0f,  3.0f, 0.02f,   0.0f},
+    {"ag030t250", 1.00f, 250.0f, 0.30f, 1.10f, 1.00f,  50.0f, 20.0f,  3.0f, 0.02f,   0.0f},
+    {"ag030t290", 1.00f, 290.0f, 0.30f, 1.10f, 1.00f,  50.0f, 20.0f,  3.0f, 0.02f,   0.0f},
+    {"ag030t333", 1.00f, 333.0f, 0.30f, 1.10f, 1.00f,  50.0f, 20.0f,  3.0f, 0.02f,   0.0f},
     // AND SIX ARMS HOLD THE UPPER BOUND ON THE FULL RECORD, because a boundary found in a
     // 60k smoke is a structural claim that belongs in the published log rather than in a
     // scratchpad. g = 1.20 is the first fully-locked setting. These are EXPECTED to print
     // `ONLY 0 LIVE ARMS`; that is the measurement, and the verdict code excludes a setting
     // that does not fit from the balanced design automatically.
-    {"ag120t083", 1.00f,  83.0f, 1.20f, 2.00f, 1.00f,  50.0f, 20.0f,  3.0f},
-    {"ag120t125", 1.00f, 125.0f, 1.20f, 2.00f, 1.00f,  50.0f, 20.0f,  3.0f},
-    {"ag120t167", 1.00f, 167.0f, 1.20f, 2.00f, 1.00f,  50.0f, 20.0f,  3.0f},
-    {"ag120t250", 1.00f, 250.0f, 1.20f, 2.00f, 1.00f,  50.0f, 20.0f,  3.0f},
-    {"ag120t290", 1.00f, 290.0f, 1.20f, 2.00f, 1.00f,  50.0f, 20.0f,  3.0f},
-    {"ag120t333", 1.00f, 333.0f, 1.20f, 2.00f, 1.00f,  50.0f, 20.0f,  3.0f},
+    {"ag120t083", 1.00f,  83.0f, 1.20f, 2.00f, 1.00f,  50.0f, 20.0f,  3.0f, 0.02f,   0.0f},
+    {"ag120t125", 1.00f, 125.0f, 1.20f, 2.00f, 1.00f,  50.0f, 20.0f,  3.0f, 0.02f,   0.0f},
+    {"ag120t167", 1.00f, 167.0f, 1.20f, 2.00f, 1.00f,  50.0f, 20.0f,  3.0f, 0.02f,   0.0f},
+    {"ag120t250", 1.00f, 250.0f, 1.20f, 2.00f, 1.00f,  50.0f, 20.0f,  3.0f, 0.02f,   0.0f},
+    {"ag120t290", 1.00f, 290.0f, 1.20f, 2.00f, 1.00f,  50.0f, 20.0f,  3.0f, 0.02f,   0.0f},
+    {"ag120t333", 1.00f, 333.0f, 1.20f, 2.00f, 1.00f,  50.0f, 20.0f,  3.0f, 0.02f,   0.0f},
+    // DNA v82, THE SELF-AUDITION LOOP. THE FIRST ARMS ON THIS LINE THAT LEAVE THE VOCAL
+    // MODULE'S OWN DRIVE ASSEMBLY, because v79/v80/v81 closed it: the tonic, the fatigue
+    // rate and the competition's asymmetry ALL rotate the clock law and NONE shifts it,
+    // so `B` is not a quantity in that assembly (§39). What is left inside the creature
+    // is the loop that runs OUT of it: vocal -> larynx -> cochlea -> auditory -> vocal
+    // drive, closed in all 131 arms above and never once touched.
+    //
+    // IT HAS BEEN CLOSED THE WHOLE TIME AND NOBODY LOOKED. `rebound_source = 1` is the
+    // AUDITORY module (dna/default.toml:1472, :1935), the ear mixes the creature's own
+    // larynx at `self_gain = 0.5` (:344), and this experiment's caregiver renders
+    // SILENCE on every tick -- so the auditory module's entire input is the creature's
+    // own babble, at the 57% duty the log reports.
+    //
+    // WHY §37's CLOSURE ARGUMENT DOES NOT REACH IT. That argument is that `drive_a` is
+    // ONE subtraction, so a DC term rotates and cannot shift. The rebound is not DC and
+    // is DESIGNED not to be: its own 5 s mean is subtracted (`network.cpp:2371-2378`)
+    // precisely so a rectified difference "stops contributing a tonic lift". Against
+    // periods of 0.47-1.36 s that is ~zero mean over 3.5-10 cycles, so its whole
+    // contribution is WITHIN-CYCLE AND PHASE-LOCKED -- a kick whose arrival time is set
+    // by a TRANSPORT LATENCY rather than by tau_a. That is the one functional form this
+    // line has never tested and the only one that can host a fixed offset.
+    //
+    // WHAT v77 ALREADY CONSTRAINS, STATED AGAINST THIS TEST RATHER THAN FOR IT. v77
+    // swept `rate_fast_tau_ms` and refused it, and `pool_fast_[src]` is one of the two
+    // terms in the rebound's own `drop` -- so the loop's FILTER leg has already been
+    // moved and showed no shift. The prior is against this axis. The untested legs are
+    // the GAIN and the TRANSPORT DELAY, which is what these arms are.
+    //
+    // (1) THE LOOP-OFF BOUND, 6 arms. `rebound_gain` 0.02 -> 0.00 at the six taus, the
+    // anchor's settings otherwise. A bound and not a slope: it removes the term rather
+    // than scaling it, so it measures the ENTIRE contribution the loop can make to the
+    // period. It is also SELF-DOSIMETERING, which no axis on this line has been -- the
+    // dose is a structural switch, so if these rows come back bit-identical to the
+    // anchor's then the term is exactly zero on every tick and the candidate closes
+    // outright, with no appeal to a vacuity gate (§39).
+    {"rb000t083", 1.00f,  83.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f,  3.0f, 0.00f,   0.0f},
+    {"rb000t125", 1.00f, 125.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f,  3.0f, 0.00f,   0.0f},
+    {"rb000t167", 1.00f, 167.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f,  3.0f, 0.00f,   0.0f},
+    {"rb000t250", 1.00f, 250.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f,  3.0f, 0.00f,   0.0f},
+    {"rb000t290", 1.00f, 290.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f,  3.0f, 0.00f,   0.0f},
+    {"rb000t333", 1.00f, 333.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f,  3.0f, 0.00f,   0.0f},
+    // AND EACH SETTING CARRIES ITS OWN CONTROL, as every dose since v77 has. The control
+    // supplies the FLOOR the periods are scored against and the rate the kill switch
+    // gates on, and a control is a creature with the half-centre OFF -- but not with its
+    // EAR off. It still babbles at 57% duty and still hears itself, so the rebound and the
+    // delay are live in the control too and a v82 arm gated on ctrl140's rate would be
+    // VOIDed, or spared, for a reason unconnected to the half-centre. This is the §34
+    // lesson in its correct form: a matched control is the right BASELINE, and the dose
+    // here reaches it, unlike `halfcenter_drive` which only exists inside the gain.
+    {"rb000ctrl", 0.00f, 167.0f, 0.00f, 1.40f, 1.00f,  50.0f, 20.0f,  3.0f, 0.00f,   0.0f},
+    // (2) THE LATENCY TEST, 18 arms. `self_delay_ms` 25/50/100 at the six taus; the 0 ms
+    // setting IS the anchor (tau083, dr140t125, tau167, tau250, dr140t290, tau333) and
+    // is not re-run. The delay is a sample-accurate ring buffer in the ear
+    // (`host/src/audio.cpp:89-104`), so it is the loop's transport time and nothing else.
+    //
+    // THE PREDICTION IS ONE-PARAMETER AND HAS NO FREE SCALE. If B is a loop latency then
+    // adding transport delay ADDS to it: dB/d(self_delay) = +1.0 ms/ms, exactly. This is
+    // the discriminator shape that refuted the membrane in v78 -- an additive
+    // transition-time account needed dB/d(leak) ~ +1 and measured -0.433, wrong sign and
+    // wrong size. B's SE is +/-2.4 ms per setting on the balanced design, and over
+    // delays {0,25,50,100} Sxx = 5469, so SE(dB/d(delay)) = 0.032 ms/ms and the 2-dof
+    // critical t of 4.303 resolves |dB/d(delay)| > 0.14 ms/ms -- SEVEN TIMES FINER than
+    // the prediction it is testing. The first axis here with that much headroom over its
+    // own hypothesis, which means a NULL on it is informative rather than merely quiet.
+    {"sd025t083", 1.00f,  83.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f,  3.0f, 0.02f,  25.0f},
+    {"sd025t125", 1.00f, 125.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f,  3.0f, 0.02f,  25.0f},
+    {"sd025t167", 1.00f, 167.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f,  3.0f, 0.02f,  25.0f},
+    {"sd025t250", 1.00f, 250.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f,  3.0f, 0.02f,  25.0f},
+    {"sd025t290", 1.00f, 290.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f,  3.0f, 0.02f,  25.0f},
+    {"sd025t333", 1.00f, 333.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f,  3.0f, 0.02f,  25.0f},
+    {"sd025ctrl", 0.00f, 167.0f, 0.00f, 1.40f, 1.00f,  50.0f, 20.0f,  3.0f, 0.02f,  25.0f},
+    {"sd050t083", 1.00f,  83.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f,  3.0f, 0.02f,  50.0f},
+    {"sd050t125", 1.00f, 125.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f,  3.0f, 0.02f,  50.0f},
+    {"sd050t167", 1.00f, 167.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f,  3.0f, 0.02f,  50.0f},
+    {"sd050t250", 1.00f, 250.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f,  3.0f, 0.02f,  50.0f},
+    {"sd050t290", 1.00f, 290.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f,  3.0f, 0.02f,  50.0f},
+    {"sd050t333", 1.00f, 333.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f,  3.0f, 0.02f,  50.0f},
+    {"sd050ctrl", 0.00f, 167.0f, 0.00f, 1.40f, 1.00f,  50.0f, 20.0f,  3.0f, 0.02f,  50.0f},
+    {"sd100t083", 1.00f,  83.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f,  3.0f, 0.02f, 100.0f},
+    {"sd100t125", 1.00f, 125.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f,  3.0f, 0.02f, 100.0f},
+    {"sd100t167", 1.00f, 167.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f,  3.0f, 0.02f, 100.0f},
+    {"sd100t250", 1.00f, 250.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f,  3.0f, 0.02f, 100.0f},
+    {"sd100t290", 1.00f, 290.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f,  3.0f, 0.02f, 100.0f},
+    {"sd100t333", 1.00f, 333.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f,  3.0f, 0.02f, 100.0f},
+    {"sd100ctrl", 0.00f, 167.0f, 0.00f, 1.40f, 1.00f,  50.0f, 20.0f,  3.0f, 0.02f, 100.0f},
 };
 constexpr uint32_t kHCArmCount = sizeof(kHCArms) / sizeof(kHCArms[0]);
 // THE CONTROL IS NO LONGER THE LAST ARM, and two places used to find it that way --
@@ -21083,9 +21184,32 @@ uint32_t hc_ctrl_for(uint32_t a) {
     // pre-v78 arm carries the shipped 20.0 / 3.0 and so still resolves exactly as before.
     if (!hc_same(kHCArms[c].leak, kHCArms[a].leak)) continue;
     if (!hc_same(kHCArms[c].refr, kHCArms[a].refr)) continue;
+    // DNA v82. The loop's two legs join the key as well, and for a reason the earlier
+    // entries do not have: these are the first doses that change what the EAR delivers,
+    // and the control's whole job here is to supply the rate the kill switch gates on.
+    // A v82 arm resolving to a control that heard itself differently would be VOIDed --
+    // or spared -- for a reason unconnected to the half-centre. Every pre-v82 arm carries
+    // the shipped 0.02 / 0.0 and so still resolves exactly as before, which is check 1.
+    if (!hc_same(kHCArms[c].rbg, kHCArms[a].rbg)) continue;
+    if (!hc_same(kHCArms[c].sdl, kHCArms[a].sdl)) continue;
     return c;
   }
   return kHCCtrlArm;
+}
+// DNA v82. THE PIN EVERY PRE-v82 VERDICT BLOCK NEEDS, IN ONE PLACE SO THE NEXT AXIS
+// CANNOT FORGET ONE OF THEM. Appending arms to `kHCArms` is how this experiment grows,
+// and a selector that does not pin a NEW dose dimension will silently admit the new arms
+// into an OLD published statistic -- which has already happened once on this line: the
+// v78 arms were picked up by v77's selector and hijacked a published verdict block, and
+// the pins added in `9a0d029` are the only reason the v81 append was safe.
+//
+// WHY A NAMED HELPER AND NOT TWO MORE LINES PER SELECTOR. Five selectors need this and
+// the sixth does not -- v76 picks its arms by FIXED INDEX (3, 7, 8-11), so appending
+// cannot reach it at all. Spelling the condition once means the next dose extends one
+// function instead of auditing six call sites, and means a reader can see in one place
+// what "the shipped loop" is defined to be.
+inline bool hc_v82_shipped(uint32_t a) {
+  return hc_same(kHCArms[a].rbg, 0.02f) && hc_same(kHCArms[a].sdl, 0.0f);
 }
 // FRESH SEED FAMILY for the replication. 604553 produced the original result; nothing
 // has been measured on these seeds. The thing being replicated is specific and was
@@ -21160,6 +21284,21 @@ struct HCRow {
   // the filter's own autocorrelation time", and it costs nothing: `sd` was already
   // computed one line above and thrown away.
   double diff_sd = 0.0;
+  // DNA v82. THE SELF-AUDITION LOOP'S DOSIMETER, in the kernel's own rate units and
+  // UNNORMALISED, which is the whole lesson of §39: the gate that refused v81 was a
+  // CORRELATION, scale-free by construction, and it read a 3% range over a 2x sweep.
+  //
+  // `rebound_mean` is the loop's DC contribution to the drive and `rebound_sd` its
+  // WITHIN-CYCLE swing, and the split is the point rather than a convenience. §37 closed
+  // five axes by observing that the drive assembles as one subtraction, so a DC term can
+  // only rotate the law; the rebound escapes that closure precisely because its own slow
+  // mean is subtracted, leaving ~0 DC and a phase-locked swing. These two numbers say
+  // whether that design intent actually holds at the operating point, which no run has
+  // checked -- if `rebound_mean` is large the term is a tonic lift after all and §37
+  // already refuted it, and if `rebound_sd` is ~0 the loop is inert and both v82 doses
+  // are vacuous. Either way the log says so before the verdict is read.
+  double rebound_mean = 0.0;
+  double rebound_sd = 0.0;
 };
 
 // Returns the correlation, and sets `*degenerate` when one series is CONSTANT so a
@@ -21220,6 +21359,7 @@ HCRow run_halfcenter_arm(const std::vector<uint8_t>& blob, uint64_t ticks, const
   std::vector<double> env, tms, lo, hi, diff;
   std::vector<double> loq1, loq2, hiq1, hiq2;
   std::vector<double> f1s;
+  std::vector<double> rbd;   // DNA v82: the self-audition rebound, per vocal frame
   uint64_t last_frame = 0;
   double on = 0, n = 0, rsum = 0;
   for (uint64_t t = 0; t < ticks; ++t) {
@@ -21236,6 +21376,9 @@ HCRow run_halfcenter_arm(const std::vector<uint8_t>& blob, uint64_t ticks, const
     if (v.voicing > 0.5f && v.amplitude > 0.05f) on += 1;
     const aibaby::Network& net = s.brain.network();
     const aibaby::ModuleState& vm = net.module(uint32_t(vmod));
+    // DNA v82. The loop's own contribution to this module's drive, sampled at the vocal
+    // frame rate like every other column in this row.
+    rbd.push_back(double(net.rebound_term(uint32_t(vmod))));
     // MEASURE WHERE THE COMPETITION ACTUALLY IS. v1 of this read the two halves of
     // the whole MODULE, which with 126 neurons and 9 groups is {voicing, F1, ...}
     // against {..., amplitude} -- two different control parameters rather than two
@@ -21317,6 +21460,18 @@ HCRow run_halfcenter_arm(const std::vector<uint8_t>& blob, uint64_t ticks, const
     const double sd = diff.empty() ? 0.0 : std::sqrt(v2 / double(diff.size()));
     const double band = 0.25 * sd;
     row.diff_sd = sd;   // DNA v77: the band's own scale, kept for the matched-control SNR
+    // DNA v82. The loop's DC level and its within-cycle swing, computed the same way and
+    // on the same frames. Both are in the drive's own rate units, so they are directly
+    // comparable with the net tonic of +0.80 the v79/v81 arms hold.
+    if (!rbd.empty()) {
+      double rm = 0.0;
+      for (double q : rbd) rm += q;
+      rm /= double(rbd.size());
+      double rv = 0.0;
+      for (double q : rbd) rv += (q - rm) * (q - rm);
+      row.rebound_mean = rm;
+      row.rebound_sd = std::sqrt(rv / double(rbd.size()));
+    }
     std::vector<double> ivals;
     if (sd > 1e-9 && diff.size() == tms.size() && diff.size() > 4) {
       int state = 0;           // +1 above the upper rail, -1 below the lower
@@ -21544,6 +21699,23 @@ bool run_halfcenter(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
   const size_t o_mod = sizeof(aibaby::DnaHeader) + sizeof(aibaby::DnaModule) * size_t(vm78);
   const size_t o_lk = o_mod + offsetof(aibaby::DnaModule, leak_tau_ms);
   const size_t o_rr = o_mod + offsetof(aibaby::DnaModule, refractory_ms);
+  // DNA v82. The self-audition loop's two untested legs. `rebound_gain` rides the vocal
+  // module's own record alongside v78's pair; `self_delay_ms` is in the HEADER's audio
+  // block and so is the first GLOBAL dose on this line -- it changes the ear for the whole
+  // creature. That is harmless here and only here, because this experiment scores the
+  // vocal oscillator's period and the caregiver renders silence, so the only thing in the
+  // room to delay is the creature's own voice.
+  //
+  // BOTH SHIP NON-ZERO IN ONE DIRECTION ONLY, which decides how a failed patch would read:
+  // `rebound_gain` ships 0.02, so an unlanded patch leaves the loop ON and the loop-off
+  // bound would read as a null; `self_delay_ms` ships 0.0, so an unlanded patch leaves the
+  // delay OFF and the latency sweep would read as a null too. BOTH FAILURE MODES LOOK LIKE
+  // THE RESULT THIS RUN MOST EXPECTS, which is the worst possible alignment, so neither is
+  // assumed from here: the per-arm values are printed beside every row in the v82 block
+  // and the loop-off arm is checked against the anchor for BIT-INEQUALITY before the
+  // verdict is read at all.
+  const size_t o_rbg = o_mod + offsetof(aibaby::DnaModule, rebound_gain);
+  const size_t o_sdl = offsetof(aibaby::DnaHeader, audio) + offsetof(aibaby::DnaAudio, self_delay_ms);
   const std::vector<Cell> cells = parallel_reps<Cell>(njobs, [&](uint32_t i) {
     Cell c;
     const uint32_t r = i / kHCArmCount, a = i % kHCArmCount;
@@ -21559,6 +21731,8 @@ bool run_halfcenter(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
     std::memcpy(variant.data() + o_rf, &kHCArms[a].rft, sizeof(float));
     std::memcpy(variant.data() + o_lk, &kHCArms[a].leak, sizeof(float));
     std::memcpy(variant.data() + o_rr, &kHCArms[a].refr, sizeof(float));
+    std::memcpy(variant.data() + o_rbg, &kHCArms[a].rbg, sizeof(float));
+    std::memcpy(variant.data() + o_sdl, &kHCArms[a].sdl, sizeof(float));
     c.row = run_halfcenter_arm(variant, ticks, kHCArms[a]);
     c.ok = c.row.ok;
     if (c.ok)
@@ -21585,12 +21759,16 @@ bool run_halfcenter(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
   double s_cp[kHCArmCount] = {};
   double m_cn[kHCArmCount] = {};   // ...and how many turns it counted
   double m_ds[kHCArmCount] = {};   // DNA v77: the sd of the signal the estimator reads
+  double m_rb[kHCArmCount] = {};   // DNA v82: the loop's DC level in the drive
+  double m_rs[kHCArmCount] = {};   // DNA v82: ...and its WITHIN-CYCLE swing, the dosimeter
+  double s_rs[kHCArmCount] = {};
   bool void_arm[kHCArmCount] = {};
   std::printf("\n  %-11s %-5s %-5s %-5s %-5s %-16s %-13s %-12s %-6s %s\n", "arm", "jump", "tau",
               "hc", "k", "ANTI-PHASE corr", "peak f/SNR", "half-diff", "duty", "rate");
   for (uint32_t a = 0; a < kHCArmCount; ++a) {
     std::vector<double> an, pk, pf, du, rt, hs, aa, ab, hf;
     std::vector<double> fsd, fpp, fco, cp, cn, ds;
+    std::vector<double> rb, rs;   // DNA v82
     for (uint32_t r = 0; r < kReps; ++r) {
       const Cell& c = cells[r * kHCArmCount + a];
       if (!c.ok) continue;
@@ -21603,6 +21781,7 @@ bool run_halfcenter(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
       // whether or not the trigger found a turn, and it is what says whether the turns
       // it did find were the oscillation or the noise floor.
       ds.push_back(c.row.diff_sd);
+      rb.push_back(c.row.rebound_mean); rs.push_back(c.row.rebound_sd);
       an.push_back(c.row.anti); pk.push_back(c.row.peak_snr); pf.push_back(c.row.peak_f);
       du.push_back(c.row.duty); rt.push_back(c.row.rate_hz); hs.push_back(c.row.half_snr);
       aa.push_back(c.row.anti_a); ab.push_back(c.row.anti_b);
@@ -21625,6 +21804,8 @@ bool run_halfcenter(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
     { double e = 0.0; m_cp[a] = ctx_mean_se(cp, &e); s_cp[a] = e; }
     { double e = 0.0; m_cn[a] = ctx_mean_se(cn, &e); }
     { double e = 0.0; m_ds[a] = ctx_mean_se(ds, &e); }
+    { double e = 0.0; m_rb[a] = ctx_mean_se(rb, &e); }
+    { double e = 0.0; m_rs[a] = ctx_mean_se(rs, &e); s_rs[a] = e; }
     const double m_aa = ctx_mean_se(aa, &s1), m_ab = ctx_mean_se(ab, &s2);
     (void)sp;
     // RELATIVE to the control arm, not an absolute constant. A fixed 20 Hz bound let
@@ -22033,6 +22214,7 @@ bool run_halfcenter(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
         // the omission is.
         if (!hc_same(kHCArms[a].leak, 20.0f)) continue;
         if (!hc_same(kHCArms[a].refr, 3.0f)) continue;
+        if (!hc_v82_shipped(a)) continue;   // DNA v82: the shipped self-audition loop
         if (kHCArms[a].jump <= 0.0f && kHCArms[a].hc <= 0.0f) { ctl = a; continue; }
         if (kHCArms[a].jump <= 0.0f || kHCArms[a].hc <= 0.0f) continue;
         if (!hc_same(kHCArms[a].kw, 1.00f)) continue;
@@ -22497,6 +22679,9 @@ bool run_halfcenter(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
           if (!hc_same(kHCArms[a].*hold, hold_at)) continue;
           if (!hc_same(kHCArms[a].rft, 50.0f)) continue;
           if (!hc_same(kHCArms[a].drive, 1.40f)) continue;
+          // DNA v82. This selector has no `refr` pin because leak and refr ARE its two
+          // swept fields, so it is the one of the five the blanket pin could not reach.
+          if (!hc_v82_shipped(a)) continue;
           if (kHCArms[a].jump <= 0.0f && kHCArms[a].hc <= 0.0f) { ctl = a; continue; }
           if (kHCArms[a].jump <= 0.0f || kHCArms[a].hc <= 0.0f) continue;
           if (!hc_same(kHCArms[a].kw, 1.00f)) continue;
@@ -23004,6 +23189,7 @@ bool run_halfcenter(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
         if (!hc_same(kHCArms[a].rft, 50.0f)) continue;
         if (!hc_same(kHCArms[a].leak, 20.0f)) continue;
         if (!hc_same(kHCArms[a].refr, 3.0f)) continue;
+        if (!hc_v82_shipped(a)) continue;   // DNA v82: the shipped self-audition loop
         if (kHCArms[a].jump <= 0.0f && kHCArms[a].hc <= 0.0f) { ctl = a; continue; }
         if (kHCArms[a].jump <= 0.0f || kHCArms[a].hc <= 0.0f) continue;
         if (!hc_same(kHCArms[a].kw, 1.00f)) continue;
@@ -23594,6 +23780,7 @@ bool run_halfcenter(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
         if (!hc_same(kHCArms[a].rft, 50.0f)) continue;
         if (!hc_same(kHCArms[a].leak, 20.0f)) continue;
         if (!hc_same(kHCArms[a].refr, 3.0f)) continue;
+        if (!hc_v82_shipped(a)) continue;   // DNA v82: the shipped self-audition loop
         if (kHCArms[a].jump <= 0.0f && kHCArms[a].hc <= 0.0f) { ctl = a; continue; }
         if (kHCArms[a].jump <= 0.0f || kHCArms[a].hc <= 0.0f) continue;
         if (!hc_same(kHCArms[a].kw, 1.00f)) continue;
@@ -23864,6 +24051,7 @@ bool run_halfcenter(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
         if (!hc_same(kHCArms[a].rft, 50.0f)) continue;
         if (!hc_same(kHCArms[a].leak, 20.0f)) continue;
         if (!hc_same(kHCArms[a].refr, 3.0f)) continue;
+        if (!hc_v82_shipped(a)) continue;   // DNA v82: the shipped self-audition loop
         if (kHCArms[a].jump <= 0.0f && kHCArms[a].hc <= 0.0f) {
           // THE CONTROL NEEDS ITS OWN PIN HERE, and the 60k pre-flight found that it did
           // not have one. This clause has to sit BEFORE the drive pin, because the drive
@@ -24193,6 +24381,419 @@ bool run_halfcenter(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
     // newest block never has a successor marker when its check is written. This one ends
     // itself, so a determinism check on it is stable under appending.
     std::printf("  END v81\n");
+  }
+
+  // DNA v82. THE SELF-AUDITION LOOP -- THE FIRST AXIS ON THIS LINE OUTSIDE THE VOCAL
+  // MODULE'S OWN DRIVE ASSEMBLY, because v79, v80 and v81 closed that assembly: the net
+  // tonic, the fatigue rate and the competition's asymmetry ALL rotate the clock law and
+  // NONE of them shifts it, so `B` is not a quantity in it (§39).
+  //
+  // PRE-REGISTERED IN ROADMAP §40, BEFORE THE RUN, INCLUDING THE ORDER OF THE CLAUSES --
+  // which §39 established is part of a pre-registration and not a presentation detail,
+  // because a dose clause placed first can veto a rejection it was never built to judge.
+  if (kHCArmCount >= 159) {
+    const uint32_t kNV82 = 5;
+    const uint32_t kNTauA = 6;
+    const double kTau82[kNTauA] = {83.0, 125.0, 167.0, 250.0, 290.0, 333.0};
+    // THE FIVE SETTINGS. 0-3 are the LATENCY SWEEP and share the shipped rebound gain;
+    // 4 is the LOOP-OFF BOUND and is excluded from the regression by `in_lat`, because it
+    // removes the term rather than delaying it and so has no place on a delay axis.
+    const float kV82Rbg[kNV82] = {0.02f, 0.02f, 0.02f, 0.02f, 0.00f};
+    const float kV82Sdl[kNV82] = {0.0f, 25.0f, 50.0f, 100.0f, 0.0f};
+    const bool in_lat[kNV82] = {true, true, true, true, false};
+    const uint32_t kAnchor82 = 0;   // the SHIPPED loop: the same six arms as every block
+    const uint32_t kLoopOff = 4;
+    std::printf("\n  v82 -- THE SELF-AUDITION LOOP. The same six taus at four transport\n"
+                "  delays through the creature's own ear, plus six arms with the loop cut.\n"
+                "    the loop    vocal -> larynx -> cochlea -> auditory -> vocal drive,\n"
+                "                closed in every arm of every run on this line and never\n"
+                "                once touched. `rebound_source = 1` IS the auditory module,\n"
+                "                `self_gain = 0.5`, and this experiment's caregiver renders\n"
+                "                SILENCE -- so the ear's entire input is the creature itself.\n"
+                "    dose 1      `self_delay_ms` 0 -> 100, a sample-accurate ring buffer in\n"
+                "                the ear, i.e. the loop's transport time and nothing else.\n"
+                "    dose 2      `rebound_gain` 0.02 -> 0.00, which cuts the loop entirely.\n"
+                "    WHY THIS ESCAPES §37's CLOSURE. That argument is that `drive_a` is ONE\n"
+                "    subtraction, so a DC term can only rotate the law. The rebound is NOT\n"
+                "    DC and is designed not to be: its own 5 s mean is subtracted so that a\n"
+                "    rectified difference `stops contributing a tonic lift`. Against periods\n"
+                "    of 0.47-1.36 s that leaves ~0 DC and a WITHIN-CYCLE, PHASE-LOCKED kick\n"
+                "    whose arrival time is set by a transport latency rather than by tau_a.\n"
+                "    That is the one functional form this line has never tested, and the\n"
+                "    only one that can host a fixed offset.\n"
+                "    THE PRIOR IS AGAINST IT, STATED AGAINST THE TEST AND NOT FOR IT: v77\n"
+                "    swept `rate_fast_tau_ms` and refused it, and `pool_fast_[src]` is one\n"
+                "    of the two terms in the rebound's own `drop` -- so the loop's FILTER\n"
+                "    leg has already been moved and showed no shift. The untested legs are\n"
+                "    the GAIN and the TRANSPORT DELAY, which is what these arms are.\n");
+    double own_aA[kNV82] = {}, own_aeA[kNV82] = {}, own_bA[kNV82] = {}, own_beA[kNV82] = {};
+    double bal_aA[kNV82] = {}, bal_aeA[kNV82] = {}, bal_bA[kNV82] = {}, bal_beA[kNV82] = {};
+    double bal_r2A[kNV82] = {}, bal_rmsA[kNV82] = {};
+    uint32_t fit_nA[kNV82] = {};
+    bool fit_okA[kNV82] = {}, bal_okA[kNV82] = {};
+    double perA[kNV82][kNTauA] = {};
+    bool pliveA[kNV82][kNTauA] = {};
+    uint32_t aidxA[kNV82][kNTauA] = {};
+    const double record82 = double(ticks) - double(ticks / 10);
+    for (uint32_t s = 0; s < kNV82; ++s) {
+      uint32_t idx[kNTauA] = {}, ctl = kHCCtrlArm;
+      bool have[kNTauA] = {};
+      for (uint32_t a = 0; a < kHCArmCount; ++a) {
+        // THE WHOLE DOSE VECTOR, PINNED. Six blocks have now been written under this rule
+        // and it exists because appended arms once hijacked a published verdict block.
+        if (!hc_same(kHCArms[a].rft, 50.0f)) continue;
+        if (!hc_same(kHCArms[a].leak, 20.0f)) continue;
+        if (!hc_same(kHCArms[a].refr, 3.0f)) continue;
+        if (!hc_same(kHCArms[a].rbg, kV82Rbg[s])) continue;
+        if (!hc_same(kHCArms[a].sdl, kV82Sdl[s])) continue;
+        // THE CONTROL IS PINNED PER SETTING, and this is the first block where that pin
+        // does real work rather than guarding a tie. On the v79 and v81 axes the controls
+        // were dose-BLIND (`halfcenter_drive` is unread at hc_gain == 0), so every setting
+        // resolved to the same arm and only its NAME was at stake. Here the dose reaches
+        // the control: a creature with the half-centre off still babbles at 57% duty and
+        // still hears itself, so its rebound and its delay are live and its FLOOR is its
+        // own. That is why v82 ships four controls of its own.
+        if (kHCArms[a].jump <= 0.0f && kHCArms[a].hc <= 0.0f) {
+          if (hc_same(kHCArms[a].drive, 1.40f)) ctl = a;
+          continue;
+        }
+        if (kHCArms[a].jump <= 0.0f || kHCArms[a].hc <= 0.0f) continue;
+        if (!hc_same(kHCArms[a].kw, 1.00f)) continue;
+        if (!hc_same(kHCArms[a].jump, 1.00f)) continue;
+        if (!hc_same(kHCArms[a].hc, 0.60f)) continue;
+        if (!hc_same(kHCArms[a].drive, 1.40f)) continue;
+        for (uint32_t j = 0; j < kNTauA; ++j)
+          if (hc_same(kHCArms[a].tau_ms, float(kTau82[j]))) {
+            idx[j] = a; have[j] = true; aidxA[s][j] = a;
+          }
+      }
+      if (s == kLoopOff)
+        std::printf("\n    THE LOOP CUT: rebound_gain 0.00   (self_delay 0 ms)"
+                    "   <- BOUND, not on the delay axis\n");
+      else
+        std::printf("\n    transport delay = %3.0f ms   rebound_gain %.2f%s\n",
+                    double(kV82Sdl[s]), double(kV82Rbg[s]),
+                    s == kAnchor82 ? "   <- ANCHOR (the shipped creature)" : "");
+      std::printf("      CONTROL %-11s duty %.2f  rate %5.2f Hz   FLOOR: sd %.4f, "
+                  "%4.0f turns, period %7.1f ms%s\n",
+                  kHCArms[ctl].name, m_du[ctl], m_rt[ctl], m_ds[ctl], m_cn[ctl], m_cp[ctl],
+                  void_arm[ctl] ? "   <- VOID" : "");
+      double x[kNTauA] = {}, y[kNTauA] = {};
+      uint32_t n = 0;
+      for (uint32_t j = 0; j < kNTauA; ++j) {
+        if (!have[j]) { std::printf("      tau %3.0f  ARM MISSING\n", kTau82[j]); continue; }
+        const uint32_t a = idx[j];
+        const double prod = m_cn[a] * m_cp[a];
+        const double pe = record82 > 0.0 ? 100.0 * (prod - record82) / record82 : 0.0;
+        const bool consistent = std::fabs(pe) <= 2.0;
+        const double snr = m_ds[ctl] > 0.0 ? m_ds[a] / m_ds[ctl] : 0.0;
+        const bool floor_ok = m_cp[a] >= 2.0 * m_cp[ctl];
+        const bool live = !void_arm[a] && consistent && floor_ok;
+        std::printf("      tau %3.0f  %-11s period %7.1f +/- %5.1f ms  (%5.0f turns, "
+                    "x median %+.1f%% of record, sd %4.1fx floor, rate %5.2f Hz)%s%s%s%s\n",
+                    kTau82[j], kHCArms[a].name, m_cp[a], s_cp[a], m_cn[a], pe, snr, m_rt[a],
+                    void_arm[a] ? "  VOID" : "", !consistent ? "  INCONSISTENT" : "",
+                    !floor_ok ? "  UNDER 2x FLOOR" : "", live ? "" : "  <- DROPPED");
+        perA[s][j] = m_cp[a];
+        pliveA[s][j] = live;
+        if (live) { x[n] = kTau82[j]; y[n] = m_cp[a]; ++n; }
+      }
+      fit_nA[s] = n;
+      if (n < 3) {
+        std::printf("      ONLY %u LIVE ARMS -- this setting is not fitted.\n", n);
+        continue;
+      }
+      double r2 = 0.0;
+      ols(x, y, n, own_aA[s], own_bA[s], own_aeA[s], own_beA[s], r2);
+      std::printf("      FIT (own)  slope %.4f +/- %.4f  intercept %7.1f +/- %5.1f ms"
+                  "  R^2 %.5f  (%u live)\n",
+                  own_aA[s], own_aeA[s], own_bA[s], own_beA[s], r2, n);
+      fit_okA[s] = true;
+    }
+    // THE BALANCED DESIGN IS COMPUTED OVER THE DELAY SETTINGS ONLY. The loop-off setting
+    // is fitted and reported, but a tau that it alone loses must not shrink the delay
+    // axis's common set -- that would let the BOUND silently re-weight the SWEEP, which is
+    // the `one flag, two claims` defect (§35) in a new place.
+    bool commonA[kNTauA] = {true, true, true, true, true, true};
+    uint32_t ncomA = 0, nfitA = 0, nbalA = 0;
+    for (uint32_t s = 0; s < kNV82; ++s)
+      if (fit_okA[s] && in_lat[s]) { bal_okA[s] = true; ++nfitA; ++nbalA; }
+    for (uint32_t j = 0; j < kNTauA; ++j) {
+      for (uint32_t s = 0; s < kNV82; ++s)
+        if (fit_okA[s] && in_lat[s] && !pliveA[s][j]) commonA[j] = false;
+      if (commonA[j]) ++ncomA;
+    }
+    std::printf("\n      THE BALANCED DESIGN: taus live at ALL %u fitted DELAY settings =",
+                nfitA);
+    for (uint32_t j = 0; j < kNTauA; ++j) if (commonA[j]) std::printf(" %.0f", kTau82[j]);
+    if (ncomA == 0) std::printf(" none");
+    std::printf("  (%u of %u)\n", ncomA, kNTauA);
+    if (ncomA < 3) {
+      std::printf("      FEWER THAN THREE TAUS ARE COMMON -- B is not comparable at matched\n"
+                  "      leverage and this axis REFUSES ITSELF, exactly as the drive did.\n"
+                  "      ONLY the balanced claim is withdrawn; the own fits above stand.\n");
+      for (uint32_t s = 0; s < kNV82; ++s) bal_okA[s] = false;
+      nbalA = 0;
+    } else {
+      // The loop-off setting is refitted on the SAME common taus so its B is comparable
+      // with the anchor's at matched leverage. It is refitted, not admitted to the axis.
+      for (uint32_t s = 0; s < kNV82; ++s) {
+        if (!fit_okA[s]) continue;
+        bool enough = true;
+        for (uint32_t j = 0; j < kNTauA; ++j)
+          if (commonA[j] && !pliveA[s][j]) enough = false;
+        if (!in_lat[s] && !enough) {
+          std::printf("        LOOP-OFF cannot be refitted on the common taus -- its bound\n"
+                      "        is withdrawn and the delay axis below is unaffected.\n");
+          continue;
+        }
+        if (!in_lat[s]) bal_okA[s] = true;
+        double bx[kNTauA] = {}, by[kNTauA] = {};
+        uint32_t bn = 0;
+        for (uint32_t j = 0; j < kNTauA; ++j)
+          if (commonA[j]) { bx[bn] = kTau82[j]; by[bn] = perA[s][j]; ++bn; }
+        ols(bx, by, bn, bal_aA[s], bal_bA[s], bal_aeA[s], bal_beA[s], bal_r2A[s]);
+        double rs = 0.0;
+        for (uint32_t d = 0; d < bn; ++d) {
+          const double e = by[d] - (bal_aA[s] * bx[d] + bal_bA[s]);
+          rs += e * e;
+        }
+        bal_rmsA[s] = bn > 2 ? std::sqrt(rs / double(bn - 2)) : 0.0;
+        char lbl[24];
+        if (in_lat[s]) std::snprintf(lbl, sizeof lbl, "delay %3.0f ms", double(kV82Sdl[s]));
+        else std::snprintf(lbl, sizeof lbl, "LOOP OFF    ");
+        std::printf("        %s  BALANCED  slope %.4f +/- %.4f  intercept %7.1f"
+                    " +/- %5.1f ms  R^2 %.5f  rms %5.2f ms%s\n", lbl,
+                    bal_aA[s], bal_aeA[s], bal_bA[s], bal_beA[s], bal_r2A[s], bal_rmsA[s],
+                    fit_nA[s] == ncomA ? "   (= its own fit)" : "   <- REFITTED");
+      }
+    }
+    uint32_t trefA = kNTauA;
+    for (uint32_t j = 0; j < kNTauA && trefA == kNTauA; ++j) if (commonA[j]) trefA = j;
+    // THE DOSE, AND WHY THIS AXIS NEEDS A DIFFERENT KIND OF GATE THAN THE LAST THREE.
+    //
+    // A TRANSPORT DELAY CANNOT BE ABSORBED. `self_delay_ms` is applied by a ring buffer of
+    // `round(delay * sample_rate / 1000)` samples in the EAR (`host/src/audio.cpp:89-104`),
+    // outside the brain, with no adaptive element anywhere between the genome field and the
+    // delay line. A drive or a gain can be compensated by the homeostat -- which is exactly
+    // what made v79's and v81's dose gates hard -- but there is nothing in this creature
+    // that can give the delayed samples back. So a vacuity gate on the DELAY would guard a
+    // failure mode that cannot occur, and asserting one would be a guard measuring a
+    // condition it does not check for the SIXTH time in seven runs.
+    //
+    // WHAT CAN GENUINELY BE VACUOUS IS THE LOOP ITSELF, and that is what is gated. If the
+    // rebound term is ~0 at the operating point then there is no kick to delay, and the
+    // latency branch below is uninformative no matter which way it reads. So the dosimeter
+    // is `sd(rebound)` -- the term's own WITHIN-CYCLE SWING, recorded by the kernel at the
+    // point it is applied (`network.cpp:2383`), in the drive's own rate units and
+    // UNNORMALISED. Note what is NOT used: the swing of the DELAYED signal, which a pure
+    // delay leaves unchanged by construction and which would therefore read as `the dose
+    // did not land` on every arm however well the dose landed. That is the §34 error in a
+    // new dress and it was refused at the desk.
+    //
+    // THE THRESHOLD, AND WHY A RATIO IS LEGITIMATE HERE. 1% of the net tonic of +0.80, i.e.
+    // 0.008 rate units. The tonic is a FIXED CONSTANT of this design, held at +0.80 by
+    // construction in every arm of this block, so dividing by it is a unit conversion and
+    // not a normalisation that can absorb the dose -- which is the distinction §39 was
+    // about. And the reasoning is a magnitude argument that holds either way: a term
+    // contributing under 1% of the drive cannot plausibly carry a 203 ms intercept when the
+    // drive's OWN 2x changes rotate the law rather than shifting it.
+    const double kNetTonic82 = 0.80;
+    const double dose_abs82 = (trefA < kNTauA && fit_okA[kAnchor82])
+                                  ? m_rs[aidxA[kAnchor82][trefA]] : 0.0;
+    const double dose_dc82 = (trefA < kNTauA && fit_okA[kAnchor82])
+                                 ? m_rb[aidxA[kAnchor82][trefA]] : 0.0;
+    const double dose_frac82 = dose_abs82 / kNetTonic82;
+    const bool dose_live82 = dose_frac82 >= 0.01;
+    if (trefA < kNTauA) {
+      // THE DOSIMETER CARRIES ITS SPREAD, and §38 is why: `anti` was printed as
+      // `+0.000 +/- 0.000` for three runs running, and an SE of exactly zero is impossible
+      // for a real statistic -- it was the degenerate guard, believed because it was
+      // printed bare. A dose quoted without its between-seed spread cannot be checked.
+      const double dose_se82 = (trefA < kNTauA && fit_okA[kAnchor82])
+                                   ? s_rs[aidxA[kAnchor82][trefA]] : 0.0;
+      std::printf("\n      THE DOSE: at tau %3.0f the rebound the kernel APPLIES to the vocal\n"
+                  "      drive swings sd %.5f +/- %.5f rate units over %u seeds, which is\n"
+                  "      %.2f%% of the +0.80 net tonic, on a DC level of %+.5f.  %s\n",
+                  kTau82[trefA], dose_abs82, dose_se82, kReps,
+                  100.0 * dose_frac82, dose_dc82,
+                  dose_live82 ? "THE LOOP IS LIVE." : "THE LOOP IS INERT.");
+      std::printf("      AND THE DC LEVEL IS ITSELF A PRE-REGISTERED CHECK, not a decoration:\n"
+                  "      the v45 mean-subtraction exists so this term is NOT a tonic lift, and\n"
+                  "      §37 closed every DC axis in this assembly. A DC level comparable to\n"
+                  "      the swing would mean the loop is partly a tonic after all and that\n"
+                  "      much of it is ALREADY REFUTED -- %s\n",
+                  std::fabs(dose_dc82) <= 0.5 * dose_abs82
+                      ? "it is under half the swing, so the term is predominantly AC as designed."
+                      : "it is NOT, so read the delay result against §37's closure as well.");
+      if (fit_okA[kLoopOff] && bal_okA[kLoopOff] && bal_okA[kAnchor82]) {
+        const double dloop = bal_bA[kLoopOff] - bal_bA[kAnchor82];
+        const double eloop = std::sqrt(bal_beA[kLoopOff] * bal_beA[kLoopOff] +
+                                       bal_beA[kAnchor82] * bal_beA[kAnchor82]);
+        const double dslope = bal_aA[kLoopOff] - bal_aA[kAnchor82];
+        const double eslope = std::sqrt(bal_aeA[kLoopOff] * bal_aeA[kLoopOff] +
+                                        bal_aeA[kAnchor82] * bal_aeA[kAnchor82]);
+        std::printf("\n      THE LOOP-OFF BOUND, which is the decisive arm and is a BOUND and\n"
+                    "      not a slope -- it removes the term rather than scaling it, so it\n"
+                    "      measures the ENTIRE contribution the loop can make:\n"
+                    "        dB    %+7.1f +/- %5.1f ms   (%.1f SE)\n"
+                    "        dA    %+7.4f +/- %.4f      (%.1f SE)\n",
+                    dloop, eloop, eloop > 0.0 ? std::fabs(dloop) / eloop : 0.0,
+                    dslope, eslope, eslope > 0.0 ? std::fabs(dslope) / eslope : 0.0);
+        const double tcl = 2.447;   // >= 6 dof on the paired difference
+        if (eloop > 0.0 && std::fabs(dloop) < tcl * eloop)
+          std::printf("        THE WHOLE LOOP CONTRIBUTES NOTHING TO B: |dB| < %.1f ms at 95%%,\n"
+                      "        i.e. under %.1f%% of the 203.1 ms offset. THAT CLOSES THE\n"
+                      "        AUDITORY CANDIDATE, and it closes it without needing the delay\n"
+                      "        sweep below -- a term that does not move B cannot move it AS A\n"
+                      "        LATENCY either.\n",
+                      tcl * eloop, 100.0 * tcl * eloop / 203.1);
+        else
+          std::printf("        THE LOOP DOES MOVE B. Whether it moves it as a LATENCY is the\n"
+                      "        delay sweep's question, and it is now worth asking.\n");
+      }
+    }
+    // THE ROTATION CHECK, FIRST, BECAUSE A ROTATED LAW MAKES B AN EXTRAPOLATION AND NOT AN
+    // OFFSET. This is the clause that refused v79, v80 and v81, and it is pre-registered
+    // ahead of the primary for the reason §39 established: the order is part of the
+    // specification, and a dose clause may guard a NULL but never a REJECTION.
+    bool slope_heldA = true;
+    if (nbalA >= 2 && bal_okA[kAnchor82]) {
+      for (uint32_t s = 0; s < kNV82; ++s) {
+        if (s == kAnchor82 || !bal_okA[s] || !in_lat[s]) continue;
+        const double d = bal_aA[s] - bal_aA[kAnchor82];
+        const double e = std::sqrt(bal_aeA[s] * bal_aeA[s] +
+                                   bal_aeA[kAnchor82] * bal_aeA[kAnchor82]);
+        const double z = e > 0.0 ? d / e : 0.0;
+        if (std::fabs(z) >= 3.0) slope_heldA = false;
+        std::printf("      slope at delay %3.0f ms  %.4f +/- %.4f vs anchor %.4f +/- %.4f"
+                    "  (%+.1f SE)%s\n", double(kV82Sdl[s]), bal_aA[s], bal_aeA[s],
+                    bal_aA[kAnchor82], bal_aeA[kAnchor82], z,
+                    std::fabs(z) >= 3.0 ? "   <- ROTATED" : "   <- HELD");
+      }
+    }
+    // THE PRIMARY. dB/d(self_delay) over the four delay settings, on the common taus.
+    double t82 = 0.0, c82 = 0.0, ce82 = 0.0, r282 = 0.0, d82 = 0.0;
+    uint32_t nreg = 0;
+    double tc82 = 12.706;
+    if (nbalA >= 3) {
+      double gx[kNV82] = {}, gy[kNV82] = {};
+      std::printf("\n      THE PRIMARY -- dB/d(self_delay) on %u settings and %u common taus\n",
+                  nbalA, ncomA);
+      for (uint32_t s = 0; s < kNV82; ++s) {
+        if (!bal_okA[s] || !in_lat[s]) continue;
+        gx[nreg] = double(kV82Sdl[s]); gy[nreg] = bal_bA[s]; ++nreg;
+        std::printf("        delay %3.0f ms   B %7.1f +/- %5.1f ms\n",
+                    double(kV82Sdl[s]), bal_bA[s], bal_beA[s]);
+      }
+      double de82 = 0.0;
+      ols(gx, gy, nreg, c82, d82, ce82, de82, r282);
+      t82 = ce82 > 0.0 ? c82 / ce82 : 0.0;
+      const uint32_t dof = nreg > 2 ? nreg - 2 : 1;
+      tc82 = dof == 1 ? 12.706 : (dof == 2 ? 4.303 : (dof == 3 ? 3.182 :
+             (dof == 4 ? 2.776 : (dof == 5 ? 2.571 : 2.447))));
+      std::printf("        dB/d(self_delay) = %+.4f +/- %.4f ms per ms  (%.1f SE; %u dof,\n"
+                  "        so the 5%% critical t is %.3f -> %s),  R^2 %.5f\n",
+                  c82, ce82, std::fabs(t82), dof, tc82,
+                  std::fabs(t82) >= tc82 ? "RESOLVED" : "not resolved", r282);
+      std::printf("        THE PREDICTION IS +1.0000 ms/ms EXACTLY, with no free scale: if B\n"
+                  "        is the loop's transport time then adding transport ADDS to it. The\n"
+                  "        measured coefficient is %+.4f, which is %.1f SE from +1.\n",
+                  c82, ce82 > 0.0 ? std::fabs(c82 - 1.0) / ce82 : 0.0);
+      double rmslo = 1e9, rmshi = -1e9;
+      for (uint32_t s = 0; s < kNV82; ++s) {
+        if (!bal_okA[s] || !in_lat[s]) continue;
+        if (bal_rmsA[s] < rmslo) rmslo = bal_rmsA[s];
+        if (bal_rmsA[s] > rmshi) rmshi = bal_rmsA[s];
+      }
+      std::printf("        ERROR MODEL  per-setting residual rms %.2f-%.2f ms (x%.0f), reported\n"
+                  "        and NOT gated -- a refusal on it needs a factor pre-registered first.\n",
+                  rmslo, rmshi, rmslo > 0.0 ? rmshi / rmslo : 0.0);
+    }
+    // THE VERDICT CASCADE, PRE-REGISTERED IN §40. First match decides, and the order is
+    // §39's: rotation, then a resolved coefficient, then the dose clause, then the bound.
+    const double hi82 = std::fabs(c82) + tc82 * ce82;   // the 95% upper limit on |dB/d(delay)|
+    // THE FIRST CLAUSE ALSO REQUIRES THE ANCHOR, and that is not a formality. `slope_heldA`
+    // starts TRUE and is only ever set false by a comparison against the anchor's slope, so
+    // if the anchor itself had not fitted, the flag would still read `held` having compared
+    // nothing -- a guard asserting a condition it never checked, which is the one defect
+    // this experiment has shipped five times (§35, §37, §39). The anchor has fitted in every
+    // run on this line, which is exactly why the branch would never have been exercised and
+    // why it is written as a refusal rather than left to be discovered.
+    if (nbalA < 3 || !bal_okA[kAnchor82]) {
+      std::printf("      NO VERDICT -- %s, so there is no coefficient to read against a\n"
+                  "      held slope. The loop-off bound above stands on its own.\n",
+                  nbalA < 3 ? "fewer than three delay settings are fitted"
+                            : "the ANCHOR itself did not fit, so `slope held` would be a\n"
+                              "      claim about a comparison that never ran");
+    } else if (!slope_heldA) {
+      std::printf("      THE ADDITIVE FORM IS REFUSED ON THIS AXIS. A slope moved >= 3 SE\n"
+                  "      from the anchor's, so B is a tau_a = 0 extrapolation of lines with\n"
+                  "      different gains and dB/d(delay) is not a shift. A TRANSPORT DELAY\n"
+                  "      THAT ROTATES THE LAW WOULD BE A GENUINELY NEW FINDING -- it would\n"
+                  "      mean the loop's timing enters the GAIN on tau_a, which no term in\n"
+                  "      the drive assembly does -- so read the pivot below before believing\n"
+                  "      the coefficient above.\n");
+    } else if (std::fabs(t82) >= tc82 && std::fabs(c82 - 1.0) < 3.0 * ce82) {
+      std::printf("      THE OFFSET IS THE LOOP'S TRANSPORT LATENCY. dB/d(delay) is resolved\n"
+                  "      AND sits within 3 SE of the +1.0 ms/ms a latency account requires,\n"
+                  "      with the law's slope held. THIS IS THE FIRST POSITIVE IDENTIFICATION\n"
+                  "      OF B ON THIS LINE, after five axes that each only ruled a candidate\n"
+                  "      out, and it says the 203 ms offset is the time the creature's own\n"
+                  "      voice takes to come back round through its ear.\n");
+    } else if (std::fabs(t82) >= tc82) {
+      std::printf("      B MOVES WITH THE DELAY BUT NOT AS A LATENCY. The coefficient is\n"
+                  "      resolved at %.1f SE yet sits %.1f SE from the +1.0 ms/ms a transport\n"
+                  "      account requires, so the loop reaches the offset by some route that\n"
+                  "      is not its own travel time. Report the coefficient; do NOT call it\n"
+                  "      the lag.\n", std::fabs(t82),
+                  ce82 > 0.0 ? std::fabs(c82 - 1.0) / ce82 : 0.0);
+    } else if (!dose_live82) {
+      std::printf("      NO VERDICT -- THE LOOP IS INERT, so there was no kick to delay and a\n"
+                  "      null here says nothing. The rebound swings %.5f rate units, under the\n"
+                  "      1%% of the net tonic pre-registered as the floor. VACUOUS, and the\n"
+                  "      LOOP-OFF BOUND is the only reading this run supports.\n", dose_abs82);
+    } else if (hi82 < 1.0) {
+      std::printf("      THE LATENCY ACCOUNT IS REFUTED. The loop is live, the law's slope is\n"
+                  "      held, and dB/d(delay) is bounded above by %+.4f ms/ms at 95%% -- which\n"
+                  "      EXCLUDES the +1.0 a transport account requires, by a factor of %.1f.\n"
+                  "      This is a null that REJECTS, and it may be read that way only because\n"
+                  "      the resolution was pre-registered at 0.14 ms/ms against a prediction\n"
+                  "      of 1.0: seven times finer than the thing it tests. THE OFFSET IS NOT\n"
+                  "      THE TIME THE CREATURE'S VOICE TAKES TO RETURN THROUGH ITS EAR.\n",
+                  hi82, hi82 > 0.0 ? 1.0 / hi82 : 0.0);
+    } else {
+      std::printf("      UNDERPOWERED, REPORTED AS A BOUND AND NOT A NULL. dB/d(delay) is\n"
+                  "      unresolved and its 95%% upper limit of %+.4f ms/ms does NOT exclude\n"
+                  "      the +1.0 a transport account requires, so this run neither finds nor\n"
+                  "      refutes the latency. The power arithmetic predicted 0.032 ms/ms per\n"
+                  "      setting; if the realised SE is far above that, the error model and\n"
+                  "      not the design is what moved.\n", hi82);
+    }
+    // AND THE PIVOT, SO THE LOG ITSELF REFUSES THE MISREADING ABOVE IT -- the same print
+    // §39 added to the v81 block, for the same reason: when the slope turns, a resolved
+    // dB is NOT a shift. A family of lines pivoting about a common point (tau*, P*) moves
+    // its intercept by exactly -tau* per unit of slope.
+    if (!slope_heldA && nbalA >= 3) {
+      double ax[kNV82] = {}, ay[kNV82] = {};
+      uint32_t anA = 0;
+      for (uint32_t s = 0; s < kNV82; ++s)
+        if (bal_okA[s] && in_lat[s]) { ax[anA] = bal_aA[s]; ay[anA] = bal_bA[s]; ++anA; }
+      double pc = 0.0, pd = 0.0, pce = 0.0, pde = 0.0, pr2 = 0.0;
+      ols(ax, ay, anA, pc, pd, pce, pde, pr2);
+      std::printf("      THE PIVOT: B on A over the %u fitted settings gives dB/dA"
+                  " %+.1f +/- %.1f\n      ms per unit of slope, so tau* = %+.1f ms"
+                  " (R^2 %.5f).\n      %s\n", anA, pc, pce, -pc, pr2,
+                  pc < 0.0 ? "POSITIVE tau*: compare it against the 83-333 ms swept"
+                             " range before reading it as a pivot."
+                           : "NEGATIVE tau*: the lines FAN OUT from a virtual point left"
+                             " of the origin,\n      where no adaptation constant can"
+                             " sit.");
+    }
+    // AN EXPLICIT TERMINATOR, as v81 ships, so a determinism check on this block is stable
+    // under the next append. The start marker carries its version too -- §39's check 5
+    // fired because `THE COMPETITION'S STRENGTH` matched two headings.
+    std::printf("  END v82\n");
   }
 
   std::printf("\n  UPPER EDGE -- drive 2.00 probes above the window (Shpiro predicts\n"

@@ -2379,6 +2379,9 @@ void Network::step() {
         rebound = Scalar(dna_.module(m).rebound_gain) * use;
       }
     }
+    // DNA v82. Record it, read nothing. Placed after the branch so a module with the loop
+    // switched off records the kZero it actually applied rather than a stale value.
+    rebound_last_[m] = rebound;
 
     for (uint32_t k = 0; k < ms.count; ++k) {
       const uint32_t i = ms.begin + k;
