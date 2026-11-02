@@ -23972,37 +23972,56 @@ bool run_halfcenter(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
     // baseline, never a dosimeter. §34's lesson, applied in advance for the second time.
     uint32_t tref9 = kNTau9;
     for (uint32_t j = 0; j < kNTau9 && tref9 == kNTau9; ++j) if (common9[j]) tref9 = j;
-    // THE DOSIMETER IS `anti`, NOT THE RATE, and the 60k pre-flight is why -- this is the
-    // FOURTH guard in five runs to be correct about a condition it was not measuring, and
-    // the first one caught before the run rather than after.
+    // THE DOSIMETER IS THE APPLIED INHIBITION SWING `g*k * sd(D)`, AND THE FIRST v81 RUN IS
+    // why -- the FIFTH guard in six runs to be confidently correct about a condition it was
+    // not measuring, and the second of the five to be installed BY a fix to the one before.
     //
-    // v79 and v80 both read the mean firing RATE at a matched tau, because on those axes the
-    // dose arrives as a drive change and the homeostat's failure to absorb it IS the dose
-    // landing. THIS axis compensates the tonic ON PURPOSE, so a held rate is the design
-    // working, not the dose failing: the smoke returned a 9% rate range and the gate printed
-    // `THE DOSE WAS ABSORBED ... VACUOUS` over a sweep whose slopes had moved 52 SE. A
-    // liveness guard must read a quantity THE DOSE ACTUALLY MOVES.
+    // v79 and v80 read the mean firing RATE at a matched tau, because on those axes the dose
+    // arrives as a drive change and the homeostat's failure to absorb it IS the dose landing.
+    // THIS axis compensates the tonic ON PURPOSE, so a held rate is the design working: the
+    // 60k smoke printed `THE DOSE WAS ABSORBED ... VACUOUS` over a sweep whose slopes had
+    // moved 52 SE, and §38 replaced the rate with `anti`.
     //
-    // `anti` is that quantity and is not circular: it is the correlation between the two
-    // half-rate series, the competition's own depth, computed from the raw series and
-    // sharing no code with the crossing estimator or with the fit. It is also the statistic
-    // v76 pre-registered as the half-centre's signature. The smoke moves it -0.299 ->
-    // -0.353 -> -0.405 -> -0.397 at tau 333 with SEs of 0.001-0.015, and pins it at exactly
-    // 0.000 (degenerate) at the locked setting -- so it reads both the dose and the bound.
+    // THAT FIX WAS WRONG FOR A NEW REASON, AND A NORMALISED STATISTIC IS THE REASON. `anti`
+    // is a CORRELATION -- corr(lower-half rate, upper-half rate) -- so it is scale-free by
+    // construction and cannot meter an amplitude. It sits near -0.55 for ANY pair that
+    // genuinely alternates and collapses to 0.000 only at lock-up, which makes it a LIVENESS
+    // indicator, the exact thing a dose gate may not be built on. At full record it ran
+    // 0.543-0.559 across the whole 2x sweep -- a 3% range -- and refused a run whose slopes
+    // had moved 170 SE. The 60k smoke made it look graded (-0.299 -> -0.397) only because
+    // the oscillation was marginal there, so part of what it was reading was whether the
+    // creature oscillated at all.
+    //
+    // `g*k * sd(D)` is the inhibition the kernel ACTUALLY APPLIES: `hc_lo = g*(1 + k*D/S)`
+    // at `network.cpp:2344`, so the swing of the applied term is `g*k*sd(D)/S` with `S` the
+    // pair mean, which the homeostat holds. `m_ds[]` is `sd(D)` in the estimator's own rate
+    // units, UNNORMALISED, and it is an AMPLITUDE where the outcome is a TIMING. It is also
+    // falsifiable rather than tautological: were `sd(D)` to scale as `1/g`, the applied swing
+    // would be flat and the dose genuinely absorbed. It does not -- it falls WITH `g`, so the
+    // two compound.
+    double dlo9 = 1e9, dhi9 = -1e9;
     double alo9 = 1e9, ahi9 = -1e9;
     double rlo9 = 1e9, rhi9 = -1e9;
+    double plo9 = 1e9, phi9 = -1e9;
     uint32_t nlive9 = 0;
     for (uint32_t s = 0; s < kNAsy; ++s) {
       if (!fit_ok9[s] || tref9 == kNTau9) continue;
-      const double r = std::fabs(m_an[aidx9[s][tref9]]);
+      const uint32_t ia = aidx9[s][tref9];
+      const double ap = double(kAsyG[s]) * double(kHCArms[ia].kw) * m_ds[ia];
+      if (ap < dlo9) dlo9 = ap;
+      if (ap > dhi9) dhi9 = ap;
+      const double r = std::fabs(m_an[ia]);
       if (r < alo9) alo9 = r;
       if (r > ahi9) ahi9 = r;
-      const double hz = m_rt[aidx9[s][tref9]];
+      const double hz = m_rt[ia];
       if (hz < rlo9) rlo9 = hz;
       if (hz > rhi9) rhi9 = hz;
+      const double pp = m_pp[ia];
+      if (pp < plo9) plo9 = pp;
+      if (pp > phi9) phi9 = pp;
       ++nlive9;
     }
-    const double dose_move9 = (nlive9 >= 2 && alo9 > 0.0) ? (ahi9 - alo9) / alo9 : 0.0;
+    const double dose_move9 = (nlive9 >= 2 && dlo9 > 0.0) ? (dhi9 - dlo9) / dlo9 : 0.0;
     const bool dose_live9 = dose_move9 >= 0.10;
     // THE SWEPT RANGE IS MEASURED OVER THE SETTINGS THAT FITTED, not over the array. The
     // array's last entry is the locked upper bound and drops out, so `kAsyG[kNAsy-1]` is
@@ -24018,18 +24037,25 @@ bool run_halfcenter(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
       std::printf("\n      THE DOSE CANNOT BE CHECKED -- %u fitted settings share a common"
                   " tau.\n", nlive9);
     } else {
-      std::printf("\n      THE DOSE %s: at tau %.0f the ALTERNATION DEPTH |anti| runs"
-                  " %.3f-%.3f,\n      a %.0f%% range across the %.2f-%.2f asymmetry actually"
-                  " fitted (%.2fx).%s\n",
-                  dose_live9 ? "LANDED" : "WAS ABSORBED", kTau81[tref9], alo9, ahi9,
+      std::printf("\n      THE DOSE %s: at tau %.0f the APPLIED INHIBITION SWING g*k*sd(D)"
+                  "\n      runs %.2f-%.2f rate units, a %.0f%% range across the %.2f-%.2f"
+                  " asymmetry\n      actually fitted (%.2fx).%s\n",
+                  dose_live9 ? "LANDED" : "WAS ABSORBED", kTau81[tref9], dlo9, dhi9,
                   100.0 * dose_move9, glo, ghi, glo > 0.0 ? ghi / glo : 0.0,
-                  dose_live9 ? "" : "  Under 10%, so any null is VACUOUS.");
-      std::printf("      Read on |anti| and NOT on the rate: this axis holds the rate BY\n"
-                  "      DESIGN, so a rate dosimeter measures the compensation and not the\n"
-                  "      dose. Here the rate spans only %.2f-%.2f Hz (%.0f%%), which is the\n"
-                  "      compensation working -- and is what a rate gate would have called\n"
-                  "      vacuous over a sweep whose slopes moved tens of SE.\n",
-                  rlo9, rhi9, rlo9 > 0.0 ? 100.0 * (rhi9 - rlo9) / rlo9 : 0.0);
+                  dose_live9 ? "" : "  Under 10%, so any BOUND is VACUOUS.");
+      std::printf("      AND THE TWO QUANTITIES THIS GATE REFUSES, both disclosed because\n"
+                  "      each was once this gate and each was wrong in its own way:\n"
+                  "        rate     %5.2f-%5.2f Hz (%3.0f%%)  -- HELD BY DESIGN here, so a\n"
+                  "                                          rate gate meters the compensation\n"
+                  "        |anti|   %5.3f-%5.3f    (%3.0f%%)  -- a CORRELATION, scale-free, so\n"
+                  "                                          it cannot meter an amplitude\n"
+                  "        F1 swing %5.1f-%5.1f Hz (%3.0f%%)  -- the plant-side amplitude, past\n"
+                  "                                          the 800 ms pole, so it is INFLATED\n"
+                  "                                          by the shorter period and is too\n"
+                  "                                          permissive to gate on\n",
+                  rlo9, rhi9, rlo9 > 0.0 ? 100.0 * (rhi9 - rlo9) / rlo9 : 0.0,
+                  alo9, ahi9, alo9 > 0.0 ? 100.0 * (ahi9 - alo9) / alo9 : 0.0,
+                  plo9, phi9, plo9 > 0.0 ? 100.0 * (phi9 - plo9) / plo9 : 0.0);
       // THE COMPENSATION'S OWN CHECK, DISCLOSED AND NOT GATED. The net tonic is held by
       // construction and the algebra is exact in the cycle mean, but the arms still have to
       // SHOW a held operating point. v78 is why this is not a refusal clause: a 60k smoke
@@ -24091,27 +24117,55 @@ bool run_halfcenter(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
       std::printf("        ERROR MODEL  per-setting residual rms %.2f-%.2f ms (x%.0f),"
                   " reported\n        and NOT gated -- a refusal on it needs a factor"
                   " pre-registered first.\n", rlo, rhi, rlo > 0.0 ? rhi / rlo : 0.0);
-      // THE VERDICT CASCADE, PRE-REGISTERED IN §38. First match decides.
-      if (!dose_live9) {
-        std::printf("      NO VERDICT -- THE DOSE DID NOT REACH THE COMPETITION: the\n"
-                    "      alternation depth moved only %.0f%% (< 10%%) across a %.2fx change\n"
-                    "      in the asymmetry that drives it. VACUOUS.\n",
-                    100.0 * dose_move9, glo > 0.0 ? ghi / glo : 0.0);
-      } else if (!slope_held9) {
+      // THE VERDICT CASCADE, PRE-REGISTERED IN §38 AND RE-ORDERED IN §39. First match decides.
+      //
+      // THE DOSE GATE NOW GUARDS ONLY THE BRANCH IT CAN SPEAK TO, AND THE FIRST v81 RUN IS
+      // why. §38 pre-registered this cascade in two places that disagreed about ORDER: the
+      // clause TABLE put slope-invariance above the dose, the CODE put the dose first. Order
+      // is part of a specification and had never been testable, because v79 and v80 both
+      // ended in refusals where the two clauses agreed. v81 is the first run where they
+      // disagree, and the code's order printed `THE DOSE DID NOT REACH THE COMPETITION` over
+      // slopes that had moved 60-170 SE and a dB/d(g*k) resolved at 27 SE.
+      //
+      // That sentence is not merely unlucky, it is SELF-CONTRADICTORY, and the defect is
+      // structural rather than numerical: a vacuity gate's whole logical content is *if the
+      // independent variable did not perturb the mechanism, a FAILURE to see an effect is
+      // uninformative*. It is a precondition for trusting a NULL or a BOUND and has no
+      // bearing on a REJECTION. An outcome that moved by tens of SE is itself proof the dose
+      // arrived, whatever a dosimeter says. Placing the gate first let it void exactly the
+      // case it was never meant to address. Derivable at the desk, and independent of which
+      // way the data went: it changes nothing in any run where the clauses agree.
+      if (!slope_held9) {
         std::printf("      THE ADDITIVE FORM IS REFUSED ON THIS AXIS. A slope moved >= 3 SE\n"
                     "      from the anchor's, so B is a tau_a = 0 extrapolation of lines with\n"
                     "      different gains. THAT CLOSES THE DRIVE ASSEMBLY: the tonic (v79),\n"
                     "      the fatigue (v80) and now the asymmetry all ROTATE the law and\n"
                     "      none of them shifts it, so B is NOT a quantity in this assembly\n"
                     "      and the search belongs outside the vocal module's own drive.\n");
-      } else if (std::fabs(t) < tc) {
-        std::printf("      UNDERPOWERED, REPORTED AS A BOUND AND NOT A NULL. At %.3f the 95%%\n"
-                    "      interval on dB/d(g*k) is [%+.1f, %+.1f] ms per unit, so this run\n"
-                    "      excludes only a contribution larger than %.1f ms per unit. The\n"
-                    "      slope HELD, so the additive form itself survives -- which is the\n"
-                    "      first time any axis in this assembly has got that far.\n",
-                    tc, c - tc * ce, c + tc * ce, std::fabs(c) + tc * ce);
-      } else {
+        // AND THE PIVOT, SO THE LOG ITSELF REFUSES THE MISREADING ABOVE IT. When the slope
+        // turns, a resolved dB/d(g*k) is NOT a shift: a family of lines pivoting about a
+        // common point (tau*, P*) moves its intercept by exactly -tau* per unit of slope,
+        // with no additive term anywhere. Regressing B on A over the fitted settings gives
+        // tau* = -dB/dA directly. A tau* inside the swept range is a clean pivot; a NEGATIVE
+        // one means the lines fan out from a virtual point left of the origin, where no
+        // adaptation constant can sit -- either way the intercept is the slope's shadow.
+        {
+          double ax[kNAsy] = {}, ay[kNAsy] = {};
+          uint32_t an9 = 0;
+          for (uint32_t s = 0; s < kNAsy; ++s)
+            if (bal_ok9[s]) { ax[an9] = bal_a9[s]; ay[an9] = bal_b9[s]; ++an9; }
+          double pc = 0.0, pd = 0.0, pce = 0.0, pde = 0.0, pr2 = 0.0;
+          ols(ax, ay, an9, pc, pd, pce, pde, pr2);
+          std::printf("      THE PIVOT: B on A over the %u fitted settings gives dB/dA"
+                      " %+.1f +/- %.1f\n      ms per unit of slope, so tau* = %+.1f ms"
+                      " (R^2 %.5f).\n      %s\n", an9, pc, pce, -pc, pr2,
+                      pc < 0.0 ? "POSITIVE tau*: compare it against the 83-333 ms swept"
+                                 " range before reading it as a pivot."
+                               : "NEGATIVE tau*: the lines FAN OUT from a virtual point left"
+                                 " of the origin,\n      where no adaptation constant can"
+                                 " sit.");
+        }
+      } else if (std::fabs(t) >= tc) {
         std::printf("      THE OFFSET MOVES WITH THE COMPETITION'S STRENGTH -- the FIRST axis\n"
                     "      to shift B rather than rotate it. B moves %+.2f +/- %.2f ms per\n"
                     "      unit of g*k (%.1f SE) with the slope on tau_a HELD and the net\n"
@@ -24119,6 +24173,19 @@ bool run_halfcenter(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
                     "      disguise. Across the %.2f of asymmetry actually swept that is\n"
                     "      %+.1f ms of the %.1f ms offset.\n",
                     c, ce, std::fabs(t), gspan, c * gspan, bal_b9[kAnchor81]);
+      } else if (!dose_live9) {
+        std::printf("      NO VERDICT -- THE DOSE DID NOT REACH THE COMPETITION: the applied\n"
+                    "      inhibition swing moved only %.0f%% (< 10%%) across a %.2fx change in\n"
+                    "      the asymmetry that sets it, and the slope HELD while dB/d(g*k) did\n"
+                    "      not resolve. A non-result under an unadministered dose is VACUOUS.\n",
+                    100.0 * dose_move9, glo > 0.0 ? ghi / glo : 0.0);
+      } else {
+        std::printf("      UNDERPOWERED, REPORTED AS A BOUND AND NOT A NULL. At %.3f the 95%%\n"
+                    "      interval on dB/d(g*k) is [%+.1f, %+.1f] ms per unit, so this run\n"
+                    "      excludes only a contribution larger than %.1f ms per unit. The\n"
+                    "      slope HELD, so the additive form itself survives -- which is the\n"
+                    "      first time any axis in this assembly has got that far.\n",
+                    tc, c - tc * ce, c + tc * ce, std::fabs(c) + tc * ce);
       }
     }
     // AN EXPLICIT TERMINATOR, and the v80 check-8 defect is why. A block delimited by the

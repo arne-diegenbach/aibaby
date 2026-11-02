@@ -25411,3 +25411,46 @@ a longer one. Pure addition, nothing altered — but it took two separate proofs
 willing to believe my own check was the thing at fault rather than the data. The checks for the
 older results close at the next result's heading and were never exposed; it's always the newest
 one that has no end marker yet, so this trap renews itself every time.
+
+## The safety check said nothing happened, while something enormous was happening (2026-11-02)
+
+Every experiment here carries a safety check whose job is to confirm the thing we changed
+actually reached the part of the creature we changed it for. Without it a flat result is
+worthless: "nothing happened" and "we never did anything" look identical from the outside.
+
+This time we turned down the strength of the push-and-shove between the two halves of the
+creature's rhythm generator — the tug-of-war that makes its voice wobble — while carefully
+propping up everything else so only that one thing moved. The rhythm responded enormously. At the
+slowest setting the beat went from 1.36 seconds to 0.6 seconds, and the relationship between the
+tiredness dial and the beat changed by sixty to a hundred and seventy times its own measurement
+error. You could hardly ask for a louder answer.
+
+The safety check announced that nothing had reached the mechanism, and the run published **no
+verdict at all.**
+
+Two separate things were wrong, and neither was the data.
+
+**The check was measuring a quantity that can't measure size.** It read the *correlation* between
+the two halves — how reliably they take turns. But a correlation is a shape, not a size. Two
+halves taking clean turns score about the same whether they're shoving each other gently or
+violently, in just the way that "they alternate" is equally true of a whisper and a shout. It only
+collapses when one half gives up entirely. So it reported a 3% change across a sweep that had
+doubled the force. Worse: this check was *itself* a fix. The run before, we'd caught a different
+broken check and replaced it with this one. The repair installed the next fault.
+
+**And the check was in the wrong place in the queue.** A safety check like this exists to protect
+us from believing a *flat* result. It has nothing useful to say about a result that is screaming.
+But it had been placed first in the queue of questions, so it got to veto an answer it was never
+designed to judge — and the sentence it printed claims, in one breath, that the push never arrived
+and that it moved everything by a hundred and seventy times the error bar. That's not bad luck,
+it's a contradiction, and it was sitting there to be noticed before the run ever started.
+
+The embarrassing part: the right measurement was already printed in the log, under all 131 arms,
+and nobody read it. The actual force applied moved by 144%. The creature's audible wobble moved by
+170%. Both were right there on the page beneath the check that said nothing had happened.
+
+We've fixed the order, fixed the measurement, and we're running the same 131 arms again —
+unchanged, same seeds, same settings — specifically so that every number has to come back
+*identical* while only the verdict changes. If a single one of them shifts, the fix wasn't
+confined to the verdict and the run is void. That constraint is the whole point: it's what
+separates correcting a broken referee from quietly re-running until you like the score.

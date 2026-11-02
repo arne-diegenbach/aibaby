@@ -4235,3 +4235,169 @@ drive assembly at all.** Together with the lock-up bound above — the asymmetry
 and the shipped value sits near the window's upper edge — that closes the (tonic, asymmetry) plane
 in both directions. The remaining candidates are then all outside this assembly: the self-audition
 rebound loop through the auditory module, and the plant.
+
+## §39 — THE ASYMMETRY ROTATES THE LAW, AND THE GATE THAT REFUSED TO SAY SO WAS READING A CORRELATION (2026-11-02)
+
+The run §38 pre-registered landed: 131 arms, 12 replicates, 1.2M ticks, 4h29m. Its own verdict
+line reads **`NO VERDICT — THE DOSE DID NOT REACH THE COMPETITION … VACUOUS`**, printed over
+slopes that had moved 60 to 170 SE and a `dB/d(g·k)` resolved at 27 SE. That sentence is
+self-contradictory, and this section is mostly about why it got printed.
+
+### WHAT REPRODUCED
+
+Gate clean on all four keys (`ad96f882becbee92`). Eight of nine determinism checks identical,
+including the whole v77, v78, v79 and v80 blocks — so appending 24 arms and a new analysis block
+moved nothing that had been published.
+
+**Check 5 fired and had not failed.** Its diff is a single hunk, **`0a1,109`** — a pure prepend,
+no `c` and no `d`, which is arithmetically incapable of being a determinism failure. The cause is
+**v80's check-8 defect at the other end**: §37 fixed every unanchored *end* marker and left the
+*start* markers alone. `/THE COMPETITION.S STRENGTH/` matches **v81's own heading** as well as
+v76's, and v81 prints *before* v76, so the range swallowed the new block. Re-scoped to
+`/v76 -- THE COMPETITION.S STRENGTH/`: **20 lines, identical, on both logs.** The rule is now
+stated once and generally — **anchor both ends of a block range to a `vNN --` marker**, never to
+prose, at either end.
+
+**And a free, independent confirmation.** v81's anchor setting re-fits the same six archived arms
+and prints `slope 3.5359 ± 0.0378, intercept 186.7 ± 8.6, R² 0.99954` — **byte-identical to v80's
+print of the same arms.** Its balanced refit on the four common taus gives **3.4758 ± 0.0090 /
+203.1 ± 2.4**, reproducing the published law `3.4756·tau_a + 203.1` from a different tau subset
+and a different code path.
+
+### THE MEASUREMENT
+
+Four settings of the asymmetry `g·k`, with `halfcenter_drive` holding the net tonic at **+0.80**
+at every one, on the four taus live everywhere (167, 250, 290, 333):
+
+| `g·k` | `halfcenter_drive` | slope on tau_a | vs anchor | intercept `B` |
+|---|---|---|---|---|
+| **0.60** anchor | 1.40 | 3.4758 ± 0.0090 | — | 203.1 ± 2.4 ms |
+| 0.50 | 1.30 | 2.8051 ± 0.0065 | **−60.5 SE** | 164.4 ± 1.7 ms |
+| 0.40 | 1.20 | 2.2175 ± 0.0085 | **−101.6 SE** | 114.9 ± 2.3 ms |
+| 0.30 | 1.10 | 1.5988 ± 0.0064 | **−170.0 SE** | 67.2 ± 1.7 ms |
+| *1.20* | *2.00* | *locked* | — | *0 live arms* |
+
+Per-setting residual rms 0.79–1.10 ms — **×1.4, the first homogeneous error model this line has
+produced** (§35 met ×70). The six arms at `g·k = 1.20` returned `anti +0.000 ± 0.000` on all
+twelve seeds at every tau, with periods of 40–76 ms at 0.6× the control floor's own sd: **the
+lock-up §38 derived from the normaliser, confirmed on the full record.**
+
+This is the strongest lever on the period the line has found. At tau 333 the period runs
+**1361 → 600 ms** across a 2× change in the asymmetry.
+
+### THE PRINTED VERDICT WAS WRONG IN TWO INDEPENDENT WAYS, AND BOTH ARE STRUCTURAL
+
+**(1) The cascade's order was pre-registered twice, in two places that disagreed.** §38's clause
+table lists slope-invariance *above* the dose clause; the committed code put the dose clause
+first. **Order is part of a specification**, and it had never been testable — v79 and v80 both
+ended in refusals where the two clauses agreed. v81 is the first run in which they disagree.
+
+**(2) A vacuity gate cannot guard a rejection, and that is a logical fact rather than a numerical
+one.** A vacuity clause's entire content is *if the independent variable did not perturb the
+mechanism, then a **failure** to see an effect is uninformative.* It is a precondition for
+trusting a **null or a bound**. It has no bearing on a **rejection**: an outcome that moved by
+170 SE is itself proof the dose arrived, whatever a dosimeter says. Putting the gate first let it
+void exactly the case it was never meant to address — and the sentence it printed asserts, in one
+breath, that the dose never arrived and that it changed the outcome by tens of SE.
+
+This was derivable at the desk and is independent of which way the data went: re-ordering changes
+nothing in any run where the clauses agree, which is every run so far.
+
+### AND THE DOSIMETER WAS A CORRELATION — THE FIFTH GUARD IN SIX RUNS
+
+§38 caught the rate dosimeter before the run and replaced it with `anti`. **The replacement was
+wrong for a new reason.** `anti` is `corr(lower-half rate, upper-half rate)` — a **correlation**,
+hence **scale-free by construction**, hence incapable of metering an amplitude. It sits near
+−0.55 for *any* pair that genuinely alternates and collapses to 0.000 only at lock-up, which
+makes it a **liveness indicator** — the one thing [[aibaby-liveness-is-not-dose]] forbids as a
+dose. At full record it ran **0.543–0.559 across the whole 2× sweep: a 3% range.**
+
+The 60k smoke made it look graded (−0.299 → −0.397) only because the oscillation was marginal
+there, so part of what it was reading was *whether the creature oscillated at all*. **So the fix
+that caught the fourth guard installed the fifth**, and the general form is now:
+
+> **A NORMALISED STATISTIC CANNOT METER A DOSE.** Before using a quantity as a dosimeter, ask
+> what it is divided by. A correlation, a duty cycle, a ratio to a control and an R² are all
+> blind to the magnitude of the thing they describe.
+
+### THE RIGHT DOSIMETER WAS PRINTED UNDER ALL 131 ARMS AND NEVER READ
+
+Three unnormalised quantities were already in the log, one of them under every single arm:
+
+| quantity | range at tau 167 | as a gate |
+|---|---|---|
+| rate | 5.98–6.38 Hz (**7%**) | held **by design** — meters the compensation |
+| \|anti\| | 0.543–0.559 (**3%**) | a **correlation** — blind to amplitude |
+| produced F1 5–95% swing | 75.6 → 28.0 Hz (**170%**) | past the 800 ms pole, so **inflated** by the shorter period |
+| **applied inhibition swing `g·k·sd(D)`** | **≈2.93–7.16 (144%)** | **unnormalised, the kernel's own term** |
+
+`hc_lo = g·(1 + k·D/S)` at `network.cpp:2344`, so the swing of the term the kernel actually
+applies is `g·k·sd(D)/S`, with `S` the pair mean that the homeostat holds. `m_ds[]` is `sd(D)` in
+the estimator's own rate units — **unnormalised, and an amplitude where the outcome is a
+timing.** It is falsifiable rather than tautological: were `sd(D)` to scale as `1/g` the applied
+swing would be flat and the dose genuinely absorbed. It does not — it falls *with* `g`
+(3.3 → 2.7× the control floor), so the two compound. This is the same shape as
+[[aibaby-null-is-not-a-control]]: the quantity that settled it was already in the arrays.
+
+### THE READING, BY §38's TABLE ORDER
+
+The slope clause fires, at a threshold pre-registered identically in both documents:
+**the additive form is REFUSED on this axis.** The asymmetry rotates the law, as the tonic (v79)
+and the fatigue (v80) did. With the lock-up bound — the asymmetry cannot be raised, and the
+shipped 0.60 sits near the window's upper edge — **that closes the (tonic, asymmetry) plane in
+both directions, and `B` is not a quantity in the vocal module's drive assembly at all.** Exactly
+the outcome §38 pre-registered and said it expected to lose.
+
+### `dB/d(g·k) = +457 ms PER UNIT` IS NOT A SHIFT, AND THE PIVOT IS WHY
+
+With the slope refused, the intercept is **the slope's shadow**. A family of lines pivoting about
+a common point `(tau*, P*)` moves its intercept by exactly `−tau*` per unit of slope with no
+additive term anywhere, so regressing `B` on `A` recovers the pivot directly:
+
+    dB/dA = +73.4 ms per unit of slope   ->   tau* = -73 ms   (R^2 0.994)
+
+**The pivot sits 73 ms to the *left* of the origin**, where no adaptation constant can live: the
+four lines fan out from a virtual point rather than crossing inside the swept range. Nor is it a
+pure scaling — `B/A` runs 58.4, 58.6, 51.8, 42.0 and is not invariant. Both coefficients move and
+neither is separable from the other on this axis. **Do not quote +457 ms per unit as "the
+asymmetry shifts `B`".** The verdict code now prints the pivot immediately under the refusal, so
+the log itself declines the misreading.
+
+### WHAT §39 CHANGES, AND THE RE-RUN THAT PRINTS IT
+
+A verdict argued for in prose is precisely what *"write refusal clauses as the code's branches"*
+exists to prevent, so both fixes are in the verdict code and the same 131 arms run again:
+
+1. **The cascade is re-ordered** — rotation, then a resolved shift, then the dose gate, then the
+   bound. The dose clause now guards **only** the branch whose interpretation depends on it.
+2. **The dosimeter is the applied inhibition swing** `g·k·sd(D)`, with the rate, `|anti|` and the
+   produced F1 swing all **disclosed beside it**, each labelled with the reason it is not the
+   gate. Three refused dosimeters in three runs have earned their own line in the log.
+3. **The pivot is computed and printed** inside the refusal branch.
+
+**Nothing else changes: no arm, no seed, no genome field.** That is what makes the re-run
+readable rather than a second look at a result that did not suit — **check 10 compares the v81
+block's measured lines and every one of them must come back bit-identical**, while the prose
+changes by intent. If a single period, fit or coefficient moves, the run is void and the fix was
+not confined to the verdict. The threshold stays at 10%; the quantity changed for a reason that
+holds whichever way the data had gone, and at 144% it would pass any threshold this project has
+used, so this is not threshold-shopping.
+
+Pre-registered and committed before the run, as every refusal clause on this line has been.
+
+### §39 ADDENDUM — THE SMOKE CONFIRMED THE DIAGNOSIS FROM THE OTHER SIDE
+
+The 60k pre-flight on the corrected code exercises all four new paths — the applied-swing
+dosimeter, the three disclosed refusals, the re-ordered cascade reaching
+`THE ADDITIVE FORM IS REFUSED`, and the pivot print. It also measured the artefact §39 blames:
+
+| | 60k smoke | full record |
+|---|---|---|
+| `\|anti\|` range across the sweep | **28%** | **3%** |
+| applied inhibition swing | 128% | ≈144% |
+
+**`anti` looked like a dose meter at 60k and stopped being one at full length**, which is exactly
+the mechanism §39 names: at 60k part of what it read was *whether the creature oscillated at all*,
+and at 1.2M ticks every fitted setting oscillates cleanly, so the correlation saturates. The
+quantity a smoke validates a guard against must be measured **in the regime the run will use** —
+a liveness indicator impersonates a dose meter precisely where liveness is marginal.
