@@ -4021,3 +4021,217 @@ axis and unsupported by this test. Not claimed: any value of `dB/d(jump)`. Not c
 rate-band reading of the law's window is more than a post-hoc pattern in seven points. Not
 claimed: that `B = 203.1` means anything outside `tau_a ∈ [125,333]` — on the contrary, the one
 arm outside it now says it does not.
+
+## §38 — THE COMPETITION'S STRENGTH AT A FIXED TONIC, PRE-REGISTERED AS THE LAST FREE DIRECTION (2026-11-02)
+
+§37 closed `adapt_jump` and gave the structural reason five axes had failed: the drive assembly
+is one subtraction, and the competition loop is scale-free. This section pre-registers the one
+direction in that assembly nobody has moved — and it begins by **refusing the experiment §37
+proposed.**
+
+### THE AXIS I NAMED IN §37 DOES NOT EXIST, AND THE KERNEL'S OWN ALGEBRA IS WHY
+
+§37 named `halfcenter_gain` as "the one dose dimension with only an on/off history — 92 of 92
+mechanism arms at 0.60." That is true and it is not an axis. Assembling
+`core/src/network.cpp:2544-2554`:
+
+    drive_a = drive_module − adapt_[i] − g·(1 ± k·D/S) + hc_drive
+            = [drive_module + hc_drive − g] − adapt_[i] ∓ g·k·D/S
+
+Four terms, **two quantities**:
+
+- **net tonic** `T = drive_module + hc_drive − g`
+- **asymmetry** `g·k`, the amplitude of the competition itself
+
+So `g` moves `T` and `g·k` **together**, and `T` is `halfcenter_drive` — the axis v79 closed.
+Sweeping `g` alone would have confounded the one unmeasured direction with a closed one and
+produced a sixth rotation that proved nothing. **The v76 header states the same decomposition
+independently** — *"the tonic is g for EVERY k"* — so this was derivable without any run, and
+§37's proposal was wrong for a reason §37 itself had already published.
+
+**And `k` is not the vehicle either.** It is the pure asymmetry direction, but v76's sweep ran at
+**one tau** (tau333, on an FFT argmax) so it never fitted the law, and `k ≥ 1.5` **clips on
+98.7–99.6% of frames** — the clamp binds when `k·|D/S| > 1`, which is the clip detector's own
+condition at `host/src/experiments_milestones.cpp:21183`. Above the shipped 1.00 the axis is dead
+by saturation; below it, `k = 0` does not alternate at all. The shipped value sits at the top edge
+of a window that cannot be widened.
+
+### SO THE DOSE IS A PAIR, AND THE COMPENSATION IS EXACT
+
+Scale the asymmetry by `L` and let `halfcenter_drive` absorb the tonic:
+
+| L | `halfcenter_gain` g | `halfcenter_drive` | asymmetry g·k | net tonic |
+|---|---|---|---|---|
+| **1.00** shipped, ANCHOR | 0.60 | 1.40 | 0.60 | **+0.80** |
+| 0.83 | 0.50 | 1.30 | 0.50 | **+0.80** |
+| 0.67 | 0.40 | 1.20 | 0.40 | **+0.80** |
+| 0.50 | 0.30 | 1.10 | 0.30 | **+0.80** |
+| *2.00, the locked bound* | *1.20* | *2.00* | *1.20* | *+0.80* |
+
+**The compensation is exact in the cycle mean, not merely on average over arms.** A lower-half
+neuron always receives `hc_lo = g·clamp(m_hi/mean)`; `mean` is the pair's own mean, so `m_hi/mean`
+averages 1 over a cycle by the halves' symmetry, and its time-averaged tonic is exactly `g`. The
+clamp cannot break this: it binds only as `m_lo → 0`, where the value is already 2, and at
+`k = 1.00` the term `1 + k·D/S` is bounded by 2 because `|D| ≤ S`. **No clipping at any g.**
+
+**And no new controls.** The guard at `:2549` skips the inhibition *and* the `hc_drive` addition
+together when `hc_gain == 0`, so a control is blind to **both** swept fields and would be
+bit-identical to `ctrl140` — which v79 measured directly as four identical controls. `hc_ctrl_for`
+already resolves there. Adding none means no existing arm's control resolution can move, the same
+argument §36 used.
+
+**24 arms appended last**, 107 → 131: eighteen for the sweep and six holding the locked upper
+bound. Seeds are a function of the replicate only, so nothing is re-rolled, and **all four
+existing verdict selectors already pin `hc == 0.60`** — the pins added in `9a0d029` before this
+axis was swept, which is the whole reason this append is safe.
+
+### THE SWEEP GOES DOWN, BECAUSE UP LOCKS UP — AND THAT IS A FINDING
+
+The first version of these arms went **up** (g = 0.90 / 1.20 / 1.50). A 60k pre-flight lost the
+oscillation on **all eighteen**: periods collapsed to 40–107 ms against a 190 ms control floor at
+0.6–1.1× the floor's own sd, and at g ≥ 1.20 every arm returned **`anti +0.000 ± 0.000` on all
+twelve seeds** — which is `hc_corr`'s DEGENERATE flag, meaning **one half-series is constant.**
+
+**This is a lock-up, and it follows from the normaliser with no fitting.** Once the loser is
+silent, `m_lo = 0` makes `mean = m_hi/2` and therefore `m_hi/mean ≡ 2` *identically*, so
+`hc_lo` pins at `2g` and stays there however much the winner fatigues. **The scale-free
+normaliser — the very property that keeps the loop from carrying a timescale (§37) — is also
+what removes the fatigue's ability to release a fully-suppressed half.** As the asymmetry
+deepens the oscillator does not slow down; it stops. The same mechanism explains v76's `k ≥ 1.5`
+clipping, which reaches the identical state through `k` instead of `g`.
+
+So **the shipped 0.60 sits near the upper edge of the asymmetry window, exactly as the shipped
+`k = 1.00` does**, and down is the only direction. This is the smoke doing the job §34 defined
+for it — *choosing where to look, never where the line sits.* No threshold moved and no verdict
+was touched; the dose range changed, and six arms at g = 1.20 now carry the boundary on the full
+record so a structural claim is not left resting on a short run.
+
+A second pre-flight defect, found the same way and worth naming because it was invisible in the
+numbers: the block's **control resolution had no pin of its own.** The control clause must sit
+*before* the drive pin, since the drive varies per setting, so the last control passing
+rft/leak/refr won and every setting printed `dr160ctrl`. The values were right — v79 measured the
+drive controls as bit-identical because `hc_drive` is unread at `hc_gain == 0`, and the smoke
+re-confirmed it to four decimals — but **the name was wrong, which is exactly what gets read back
+out of a log as a finding two runs later.**
+
+### THE PRIMARY, AND THE CASCADE AS BRANCHES
+
+`dB/d(g·k)` on the balanced design, with the standing clause set now proven over two runs:
+
+| clause | branch |
+|---|---|
+| ≥3 taus live at all fitted settings | else withdraw **only** the balanced claim; own fits stand |
+| slope within 3 SE of the anchor's | else **the additive form is REFUSED** |
+| dose read on MECHANISM arms, ≥10% | else VACUOUS |
+| dof-scaled critical t (4 settings → 2 dof → **4.303**) | else a BOUND, never a null |
+| per-setting residual rms + ratio | reported, **not gated** |
+| operating point (duty, rate, net tonic) | **disclosed, not gated** — §32 is why |
+
+That last line is a deliberate choice against my own instinct. The compensation's whole purpose is
+to hold the operating point, so a held rate is the design working rather than a dose failing —
+and v78 showed a 60k duty/rate drift that vanished at full record, where gating would have
+discarded the run's only clean axis. **A held rate also weakens the vacuity test**, so the verdict
+code says so in the vacuous branch rather than leaving a reader to notice.
+
+**Power.** `B`'s SE is ±2.7 ms on the anchor's balanced three taus and ±1.3 ms on the clean five.
+Taking ±2.5 ms per setting and `Sxx = Σ(g−ḡ)² = 0.05` over the four swept gains gives
+`SE(dB/dg) ≈ 11.2` ms per unit, so 4.303 resolves `|dB/dg| > 48` ms per unit — **14.4 ms across
+the 0.30 of asymmetry swept, 7% of the 203 ms offset.** The sensitivity is unchanged by the
+redirection, because it is set by `B`'s own precision against the *fractional* range, and the
+range is 2× either way. This design cannot see a 1% contribution and says so in advance.
+
+### EITHER OUTCOME IS A RESULT, AND THEY POINT OPPOSITE WAYS
+
+- **Rotates** → the tonic (v79), the fatigue (v80) and the asymmetry all rotate the law and none
+  shifts it. **`B` is not a quantity in this assembly at all**, and the search moves outside the
+  vocal module's own drive.
+- **Slope holds and `B` moves** → the first axis ever to shift it, with the net tonic fixed by
+  construction so it is not the drive axis in disguise.
+- **Slope holds and `B` does not move resolvably** → a bound, and still the first time the
+  additive form has survived an axis in this assembly.
+
+### FOUR THINGS THE PRE-FLIGHT SETTLED FOR FREE
+
+1. **The instrument adds no constant.** The crossing estimator is a Schmitt trigger with a
+   `±0.25·sd` hysteresis band and **no dead time and no minimum interval**
+   (`experiments_milestones.cpp:21245-21258`). A threshold delays every crossing equally and
+   leaves the up-to-up spacing alone, so it cannot manufacture an offset. The whole line is not
+   chasing a measurement artefact.
+2. **`B` survives zeroing every constant it could decompose into.** `dB/d(leak_tau_ms)` extrapolates
+   to **+206.6 ± 9.0 ms at leak = 0**; the corrected refractory coefficient extrapolates to ~204 ms
+   at refractory = 0; the law itself reads **203.1 ± 1.3**. An additive transition-time account
+   needs `dB/d(leak) ≈ +1` ms/ms and measures **−0.433**, wrong sign and wrong size — so `B` does
+   not even partially decompose into the membrane or the dead time.
+3. **Noise is refuted by reproducibility, before being swept.** A noise-driven escape cannot give
+   periods repeatable to ±0.2% across twelve independent seeds (468.3 ± 1.7, 637.5 ± 1.3,
+   784.2 ± 1.5). `noise_amp` is also confounded — it scales a DC compensation term as well as the
+   stochastic one (`network.cpp:2518`) — so it was never the clean axis the memory index implied.
+4. **There IS one live, unaudited term in the vocal drive, and it is deferred, not dismissed.**
+   `rebound_source = 1`, `rebound_gain = 0.02`: the ear drives the vocal drive, `self_gain = 0.5`,
+   so the creature hears its own babble and a closed loop runs vocal → larynx → cochlea → auditory
+   → drive. v78 patched three constants on the **vocal** module; the auditory module's were never
+   touched, so this loop sits outside everything closed so far. Deferred because it needs a new
+   `HCArm` field and therefore an explicit value on all 131 existing arms — a change worth making
+   on its own rather than riding along with a sweep. Arithmetic says it is worth ~0–25 ms, which is
+   only interesting because ±1.3 ms now resolves it.
+
+Not claimed: that the asymmetry is more likely to shift `B` than to rotate it — the mechanism
+argument, that a larger escape threshold costs time proportional to `tau_a`, predicts a rotation,
+and this is pre-registered as a test I expect to lose.
+
+### §38 AMENDMENT — THE SECOND SMOKE FIXED MY DOSIMETER AND SHOWED ME THE ANSWER
+
+**The downward arms oscillate.** Three taus live at all four swept settings (`{250, 290, 333}`),
+and the balance should improve at full record rather than degrade: every drop at 60k is an `UNDER
+2x FLOOR` or `INCONSISTENT` against a 190.0 ms short-record floor that falls to 164.2 ms at full
+length, lowering the bar from 380 to 328 ms.
+
+**The compensation works, measurably.** At tau 250 across the whole sweep: duty 0.47 → 0.46, rate
+4.62 → 4.23 Hz, net tonic +0.80 at every setting. A 2× change in the asymmetry moves the operating
+rate by 9%. That is the (tonic, asymmetry) coordinate doing exactly what the algebra said it would.
+
+### AND THAT IS WHY THE DOSE GATE WAS WRONG — THE FOURTH GUARD IN FIVE RUNS
+
+The pre-registered liveness gate read the **firing rate** at a matched tau, copied from v79 and
+v80 where the dose arrives as a drive change and the homeostat's failure to absorb it *is* the
+dose landing. **This axis holds the rate on purpose.** So the smoke printed
+
+    THE DOSE WAS ABSORBED ... Under 10%, so any null is VACUOUS
+
+over a sweep whose slopes had moved **52 SE** — and because `!dose_live` sits first in the
+cascade, that would have been the published verdict. A held rate is the design working, not the
+dose failing.
+
+**Fixed before the run, and the fix is a quantity the dose actually moves.** `anti` — the
+correlation between the two half-rate series, the competition's own depth, pre-registered by v76
+as the half-centre's signature. It is not circular: it is computed from the raw series and shares
+no code with the crossing estimator or with the fit. The smoke moves it **−0.299 → −0.353 →
+−0.405 → −0.397** at tau 333 with SEs of 0.001–0.015, and pins it at exactly **0.000** at the
+locked setting — so one statistic reads both the dose and the bound. The rate range is still
+printed, now as the compensation's own check rather than as the gate.
+
+This is the fourth guard in five runs to be confidently correct about a condition it was not
+measuring, and **the first one caught before the run instead of after.** The pattern is now
+explicit: *a liveness guard inherited from another axis measures that axis's dose, not this one's.*
+
+### WHAT THE SMOKE SHOWED, AND WHY IT IS NOT THE RESULT
+
+The slopes rotate, hard and monotonically: **4.01 → 3.13 → 2.43 → 1.76**, i.e. −21.2, −36.6,
+−52.3 SE. A 2× change in the asymmetry changes the coefficient on `tau_a` by **2.3×** — the
+largest rotation any axis in this loop has produced.
+
+**Three reasons that is not quotable and the run goes ahead anyway.** The anchor's own 60k fit is
+4.0441 / 71.5 ms against 3.4666 / 205.0 at full record, so this record length distorts the law on
+the very arms the comparison rests on. §37 established the distortion is *not* common-mode — it
+hits the slowest arms hardest — and these settings have very different period distributions (1415
+vs 621 ms at tau 333), so the rotation's magnitude at 60k is exactly what a non-common-mode bias
+would manufacture. And the balanced set is a bare 3 taus here against the 5–6 expected at full
+length. **What a smoke changes is which quantity is interpretable, not where the line sits** — the
+clause is untouched, and I expect it to fire.
+
+If it does, the reading is the one §38 pre-registered: the tonic (v79), the fatigue (v80) and the
+asymmetry all rotate the law, none shifts it, **and `B` is not a quantity in the vocal module's
+drive assembly at all.** Together with the lock-up bound above — the asymmetry cannot be raised,
+and the shipped value sits near the window's upper edge — that closes the (tonic, asymmetry) plane
+in both directions. The remaining candidates are then all outside this assembly: the self-audition
+rebound loop through the auditory module, and the plant.

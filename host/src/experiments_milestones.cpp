@@ -20974,6 +20974,82 @@ const HCArm kHCArms[] = {
     {"jp280t250", 2.80f, 250.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f,  3.0f},
     {"jp280t290", 2.80f, 290.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f,  3.0f},
     {"jp280t333", 2.80f, 333.0f, 0.60f, 1.40f, 1.00f,  50.0f, 20.0f,  3.0f},
+    // DNA v81, THE COMPETITION'S STRENGTH AT A FIXED TONIC -- the last free direction in
+    // the drive assembly, and a PAIR of fields because neither one alone is this axis.
+    //
+    // THE ALGEBRA, FROM THE KERNEL AND NOT FROM A GUESS. network.cpp:2549-2554 assembles
+    //   drive_a = drive_module - adapt_[i] - g*(1 +- k*D/S) + hc_drive
+    //           = [drive_module + hc_drive - g] - adapt_[i] -+ g*k*D/S
+    // so the four terms separate into exactly two quantities:
+    //   NET TONIC          T = drive_module + hc_drive - g
+    //   ASYMMETRY          g*k, the amplitude of the competition itself
+    // `halfcenter_gain` ALONE is therefore NOT an axis -- it moves T and g*k together,
+    // and T is `halfcenter_drive`, which v79 closed. Sweeping g on its own would have
+    // confounded the one unmeasured direction with a closed one. The v76 header states
+    // the same decomposition independently: "the tonic is g for EVERY k".
+    //
+    // SO THE TONIC IS COMPENSATED, EXACTLY. Scaling the asymmetry by L needs g = 0.60*L
+    // and hc_drive = 1.40 + 0.60*(L-1), which holds T at the shipped +0.80 for every arm.
+    // The compensation is exact in the CYCLE MEAN and not merely on average over arms: a
+    // lower-half neuron always receives hc_lo = g*clamp(m_hi/mean), m_hi averages `mean`
+    // over a cycle by the halves' symmetry, so its time-averaged tonic is exactly g.
+    //
+    // AND NO CLIPPING AT ANY g. The clamp binds when k*|D/S| > 1 (the clip detector's own
+    // condition, line 21183), which at the shipped k = 1.00 is unreachable since |D| <= S.
+    // The v76 k-sweep could not use this axis for the law precisely because it moved k
+    // instead: k >= 1.5 clipped on 98.7-99.6% of frames, and it ran at ONE tau.
+    //
+    // NO NEW CONTROLS. At hc_gain == 0 the guard at :2549 skips the inhibition AND the
+    // hc_drive addition, so a control is blind to BOTH fields this axis moves and would be
+    // bit-identical to `ctrl140` -- v79 measured exactly that, four identical controls.
+    // `hc_ctrl_for` already resolves there. Adding none keeps every existing arm's control
+    // resolution fixed.
+    // THE SWEEP GOES DOWN, AND A 60k PRE-FLIGHT IS WHY -- the first version of these arms
+    // went UP (g 0.90/1.20/1.50) and every one of the eighteen lost the oscillation.
+    //
+    // THE ASYMMETRY HAS A HARD UPPER BOUND, AND THE NORMALISER IS THE REASON. The smoke
+    // returned `anti +0.000 +/- 0.000` on all twelve seeds of all twelve arms at g >= 1.20,
+    // which is `hc_corr`'s DEGENERATE flag: one half-series is CONSTANT. That is a lock-up,
+    // and it follows from the pair-mean normaliser without any fitting. Once the loser is
+    // silent, m_lo = 0 makes mean = m_hi/2 and therefore m_hi/mean == 2 IDENTICALLY, so
+    // hc_lo pins at 2g and stays there however much the winner fatigues. **The scale-free
+    // normaliser, which is what keeps the loop from carrying a timescale (ROADMAP §37), is
+    // also what removes the fatigue's ability to release a fully-suppressed half.** The
+    // oscillator does not slow down as the asymmetry deepens; it stops. The same mechanism
+    // explains v76's k >= 1.5 clipping, reached through k instead of g.
+    //
+    // So the shipped 0.60 sits near the UPPER edge of the asymmetry window, exactly as the
+    // shipped k = 1.00 does, and down is the only direction. g = 0.45 is known to alternate
+    // from `hcsweep`'s gain axis, so the window contains the range below.
+    {"ag050t083", 1.00f,  83.0f, 0.50f, 1.30f, 1.00f,  50.0f, 20.0f,  3.0f},
+    {"ag050t125", 1.00f, 125.0f, 0.50f, 1.30f, 1.00f,  50.0f, 20.0f,  3.0f},
+    {"ag050t167", 1.00f, 167.0f, 0.50f, 1.30f, 1.00f,  50.0f, 20.0f,  3.0f},
+    {"ag050t250", 1.00f, 250.0f, 0.50f, 1.30f, 1.00f,  50.0f, 20.0f,  3.0f},
+    {"ag050t290", 1.00f, 290.0f, 0.50f, 1.30f, 1.00f,  50.0f, 20.0f,  3.0f},
+    {"ag050t333", 1.00f, 333.0f, 0.50f, 1.30f, 1.00f,  50.0f, 20.0f,  3.0f},
+    {"ag040t083", 1.00f,  83.0f, 0.40f, 1.20f, 1.00f,  50.0f, 20.0f,  3.0f},
+    {"ag040t125", 1.00f, 125.0f, 0.40f, 1.20f, 1.00f,  50.0f, 20.0f,  3.0f},
+    {"ag040t167", 1.00f, 167.0f, 0.40f, 1.20f, 1.00f,  50.0f, 20.0f,  3.0f},
+    {"ag040t250", 1.00f, 250.0f, 0.40f, 1.20f, 1.00f,  50.0f, 20.0f,  3.0f},
+    {"ag040t290", 1.00f, 290.0f, 0.40f, 1.20f, 1.00f,  50.0f, 20.0f,  3.0f},
+    {"ag040t333", 1.00f, 333.0f, 0.40f, 1.20f, 1.00f,  50.0f, 20.0f,  3.0f},
+    {"ag030t083", 1.00f,  83.0f, 0.30f, 1.10f, 1.00f,  50.0f, 20.0f,  3.0f},
+    {"ag030t125", 1.00f, 125.0f, 0.30f, 1.10f, 1.00f,  50.0f, 20.0f,  3.0f},
+    {"ag030t167", 1.00f, 167.0f, 0.30f, 1.10f, 1.00f,  50.0f, 20.0f,  3.0f},
+    {"ag030t250", 1.00f, 250.0f, 0.30f, 1.10f, 1.00f,  50.0f, 20.0f,  3.0f},
+    {"ag030t290", 1.00f, 290.0f, 0.30f, 1.10f, 1.00f,  50.0f, 20.0f,  3.0f},
+    {"ag030t333", 1.00f, 333.0f, 0.30f, 1.10f, 1.00f,  50.0f, 20.0f,  3.0f},
+    // AND SIX ARMS HOLD THE UPPER BOUND ON THE FULL RECORD, because a boundary found in a
+    // 60k smoke is a structural claim that belongs in the published log rather than in a
+    // scratchpad. g = 1.20 is the first fully-locked setting. These are EXPECTED to print
+    // `ONLY 0 LIVE ARMS`; that is the measurement, and the verdict code excludes a setting
+    // that does not fit from the balanced design automatically.
+    {"ag120t083", 1.00f,  83.0f, 1.20f, 2.00f, 1.00f,  50.0f, 20.0f,  3.0f},
+    {"ag120t125", 1.00f, 125.0f, 1.20f, 2.00f, 1.00f,  50.0f, 20.0f,  3.0f},
+    {"ag120t167", 1.00f, 167.0f, 1.20f, 2.00f, 1.00f,  50.0f, 20.0f,  3.0f},
+    {"ag120t250", 1.00f, 250.0f, 1.20f, 2.00f, 1.00f,  50.0f, 20.0f,  3.0f},
+    {"ag120t290", 1.00f, 290.0f, 1.20f, 2.00f, 1.00f,  50.0f, 20.0f,  3.0f},
+    {"ag120t333", 1.00f, 333.0f, 1.20f, 2.00f, 1.00f,  50.0f, 20.0f,  3.0f},
 };
 constexpr uint32_t kHCArmCount = sizeof(kHCArms) / sizeof(kHCArms[0]);
 // THE CONTROL IS NO LONGER THE LAST ARM, and two places used to find it that way --
@@ -23738,6 +23814,318 @@ bool run_halfcenter(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
                     c, ce, std::fabs(t));
       }
     }
+  }
+
+  if (kHCArmCount >= 131) {
+    const uint32_t kNAsy = 5;
+    const uint32_t kNTau9 = 6;
+    const double kTau81[kNTau9] = {83.0, 125.0, 167.0, 250.0, 290.0, 333.0};
+    // THE DOSE IS A PAIR. `halfcenter_gain` alone is not an axis -- see the arm table's v81
+    // comment for the derivation. These two move together so the NET TONIC is held. The
+    // LAST entry is the locked upper bound, not part of the sweep: it is expected to drop
+    // out, and the balanced design below excludes a setting that does not fit.
+    const float kAsyG[kNAsy] = {0.60f, 0.50f, 0.40f, 0.30f, 1.20f};
+    const float kAsyD[kNAsy] = {1.40f, 1.30f, 1.20f, 1.10f, 2.00f};
+    const uint32_t kAnchor81 = 0;  // the SHIPPED pair; its six arms are the archived block
+    std::printf("\n  v81 -- THE COMPETITION'S STRENGTH AT A FIXED TONIC. The same six taus\n"
+                "  at four settings of the asymmetry amplitude g*k, with `halfcenter_drive`\n"
+                "  compensating g exactly so the net tonic never moves, plus six arms at the\n"
+                "  locked upper bound.\n"
+                "    net tonic   T = drive_module + hc_drive - g, held at +0.80 throughout\n"
+                "    asymmetry   g*k at k = 1.00, swept DOWN x1.00 -> x0.50\n"
+                "    This is the LAST free direction in the drive assembly. v79 closed T and\n"
+                "    v80 closed the fatigue; both ROTATE. If the asymmetry rotates too then\n"
+                "    nothing in this assembly shifts B and the offset is outside it.\n"
+                "    DOWN, because UP LOCKS UP. A 60k pre-flight at g 0.90/1.20/1.50 lost the\n"
+                "    oscillation on all eighteen arms, `anti +0.000 +/- 0.000` = hc_corr's\n"
+                "    DEGENERATE flag, one half-series CONSTANT. Once m_lo = 0 the pair-mean\n"
+                "    normaliser gives m_hi/mean == 2 identically, so hc_lo pins at 2g and no\n"
+                "    amount of fatigue can release the loser. g = 1.20 below holds that\n"
+                "    boundary on the full record; it is expected to print 0 live arms.\n"
+                "    k is NOT the vehicle either: it clips on 98.7-99.6%% of frames above\n"
+                "    1.00 -- the same lock-up by another route -- and v76 ran at one tau.\n");
+    double own_a9[kNAsy] = {}, own_ae9[kNAsy] = {}, own_b9[kNAsy] = {}, own_be9[kNAsy] = {};
+    double bal_a9[kNAsy] = {}, bal_ae9[kNAsy] = {}, bal_b9[kNAsy] = {}, bal_be9[kNAsy] = {};
+    double bal_r29[kNAsy] = {}, bal_rms9[kNAsy] = {};
+    uint32_t fit_n9[kNAsy] = {}, ctl_of9[kNAsy] = {};
+    bool fit_ok9[kNAsy] = {}, bal_ok9[kNAsy] = {};
+    double per9[kNAsy][kNTau9] = {};
+    bool plive9[kNAsy][kNTau9] = {};
+    uint32_t aidx9[kNAsy][kNTau9] = {};
+    const double record81 = double(ticks) - double(ticks / 10);
+    for (uint32_t s = 0; s < kNAsy; ++s) {
+      uint32_t idx[kNTau9] = {}, ctl = kHCCtrlArm;
+      bool have[kNTau9] = {};
+      for (uint32_t a = 0; a < kHCArmCount; ++a) {
+        // THE WHOLE DOSE VECTOR, PINNED -- and here BOTH swept fields are pinned per
+        // setting, because an arm carrying one of them and not the other is a different
+        // experiment. This is the third block written under that rule and the first where
+        // the dose is two-dimensional.
+        if (!hc_same(kHCArms[a].rft, 50.0f)) continue;
+        if (!hc_same(kHCArms[a].leak, 20.0f)) continue;
+        if (!hc_same(kHCArms[a].refr, 3.0f)) continue;
+        if (kHCArms[a].jump <= 0.0f && kHCArms[a].hc <= 0.0f) {
+          // THE CONTROL NEEDS ITS OWN PIN HERE, and the 60k pre-flight found that it did
+          // not have one. This clause has to sit BEFORE the drive pin, because the drive
+          // varies per setting -- so without a pin of its own the LAST control passing
+          // rft/leak/refr won, and every setting printed `dr160ctrl`. The numbers were
+          // right (v79 measured the drive controls as bit-identical because hc_drive is
+          // unread at hc_gain == 0, and the smoke re-confirmed it: +0.572 +/- 0.022 on
+          // both) and the NAME was wrong, which is precisely the kind of thing that gets
+          // read back out of a log as a finding two runs later.
+          if (hc_same(kHCArms[a].drive, 1.40f)) ctl = a;
+          continue;
+        }
+        if (kHCArms[a].jump <= 0.0f || kHCArms[a].hc <= 0.0f) continue;
+        if (!hc_same(kHCArms[a].kw, 1.00f)) continue;
+        if (!hc_same(kHCArms[a].jump, 1.00f)) continue;
+        if (!hc_same(kHCArms[a].hc, kAsyG[s])) continue;
+        if (!hc_same(kHCArms[a].drive, kAsyD[s])) continue;
+        for (uint32_t j = 0; j < kNTau9; ++j)
+          if (hc_same(kHCArms[a].tau_ms, float(kTau81[j]))) {
+            idx[j] = a; have[j] = true; aidx9[s][j] = a;
+          }
+      }
+      ctl_of9[s] = ctl;
+      std::printf("\n    asymmetry g*k = %.2f  (x%.2f)   hc_drive %.2f   net tonic %+.2f%s\n",
+                  double(kAsyG[s]), double(kAsyG[s]) / double(kAsyG[kAnchor81]),
+                  double(kAsyD[s]), double(kAsyD[s]) - double(kAsyG[s]),
+                  s == kAnchor81 ? "   <- ANCHOR" : "");
+      std::printf("      CONTROL %-11s duty %.2f  rate %5.2f Hz   FLOOR: sd %.4f, "
+                  "%4.0f turns, period %7.1f ms%s\n",
+                  kHCArms[ctl].name, m_du[ctl], m_rt[ctl], m_ds[ctl], m_cn[ctl], m_cp[ctl],
+                  void_arm[ctl] ? "   <- VOID" : "");
+      double x[kNTau9] = {}, y[kNTau9] = {};
+      uint32_t n = 0;
+      for (uint32_t j = 0; j < kNTau9; ++j) {
+        if (!have[j]) { std::printf("      tau %3.0f  ARM MISSING\n", kTau81[j]); continue; }
+        const uint32_t a = idx[j];
+        const double prod = m_cn[a] * m_cp[a];
+        const double pe = record81 > 0.0 ? 100.0 * (prod - record81) / record81 : 0.0;
+        const bool consistent = std::fabs(pe) <= 2.0;
+        const double snr = m_ds[ctl] > 0.0 ? m_ds[a] / m_ds[ctl] : 0.0;
+        const bool floor_ok = m_cp[a] >= 2.0 * m_cp[ctl];
+        const bool live = !void_arm[a] && consistent && floor_ok;
+        std::printf("      tau %3.0f  %-11s period %7.1f +/- %5.1f ms  (%5.0f turns, "
+                    "x median %+.1f%% of record, sd %4.1fx floor, rate %5.2f Hz)%s%s%s%s\n",
+                    kTau81[j], kHCArms[a].name, m_cp[a], s_cp[a], m_cn[a], pe, snr, m_rt[a],
+                    void_arm[a] ? "  VOID" : "", !consistent ? "  INCONSISTENT" : "",
+                    !floor_ok ? "  UNDER 2x FLOOR" : "", live ? "" : "  <- DROPPED");
+        per9[s][j] = m_cp[a];
+        plive9[s][j] = live;
+        if (live) { x[n] = kTau81[j]; y[n] = m_cp[a]; ++n; }
+      }
+      fit_n9[s] = n;
+      if (n < 3) {
+        std::printf("      ONLY %u LIVE ARMS -- this setting is not fitted.\n", n);
+        continue;
+      }
+      double r2 = 0.0;
+      ols(x, y, n, own_a9[s], own_b9[s], own_ae9[s], own_be9[s], r2);
+      std::printf("      FIT (own)  slope %.4f +/- %.4f  intercept %7.1f +/- %5.1f ms"
+                  "  R^2 %.5f  (%u live)\n",
+                  own_a9[s], own_ae9[s], own_b9[s], own_be9[s], r2, n);
+      fit_ok9[s] = true;
+    }
+    bool common9[kNTau9] = {true, true, true, true, true, true};
+    uint32_t ncom9 = 0, nfit9 = 0, nbal9 = 0;
+    for (uint32_t s = 0; s < kNAsy; ++s)
+      if (fit_ok9[s]) { bal_ok9[s] = true; ++nfit9; ++nbal9; }
+    for (uint32_t j = 0; j < kNTau9; ++j) {
+      for (uint32_t s = 0; s < kNAsy; ++s)
+        if (fit_ok9[s] && !plive9[s][j]) common9[j] = false;
+      if (common9[j]) ++ncom9;
+    }
+    std::printf("\n      THE BALANCED DESIGN: taus live at ALL %u fitted settings =", nfit9);
+    for (uint32_t j = 0; j < kNTau9; ++j) if (common9[j]) std::printf(" %.0f", kTau81[j]);
+    if (ncom9 == 0) std::printf(" none");
+    std::printf("  (%u of %u)\n", ncom9, kNTau9);
+    if (ncom9 < 3) {
+      std::printf("      FEWER THAN THREE TAUS ARE COMMON -- B is not comparable at matched\n"
+                  "      leverage and this axis REFUSES ITSELF, exactly as the drive did.\n"
+                  "      ONLY the balanced claim is withdrawn; the own fits above stand.\n");
+      for (uint32_t s = 0; s < kNAsy; ++s) bal_ok9[s] = false;
+      nbal9 = 0;
+    } else {
+      for (uint32_t s = 0; s < kNAsy; ++s) {
+        if (!bal_ok9[s]) continue;
+        double bx[kNTau9] = {}, by[kNTau9] = {};
+        uint32_t bn = 0;
+        for (uint32_t j = 0; j < kNTau9; ++j)
+          if (common9[j]) { bx[bn] = kTau81[j]; by[bn] = per9[s][j]; ++bn; }
+        ols(bx, by, bn, bal_a9[s], bal_b9[s], bal_ae9[s], bal_be9[s], bal_r29[s]);
+        double rs = 0.0;
+        for (uint32_t d = 0; d < bn; ++d) {
+          const double e = by[d] - (bal_a9[s] * bx[d] + bal_b9[s]);
+          rs += e * e;
+        }
+        bal_rms9[s] = bn > 2 ? std::sqrt(rs / double(bn - 2)) : 0.0;
+        std::printf("        g*k %.2f  BALANCED  slope %.4f +/- %.4f  intercept %7.1f"
+                    " +/- %5.1f ms  R^2 %.5f  rms %5.2f ms%s\n", double(kAsyG[s]),
+                    bal_a9[s], bal_ae9[s], bal_b9[s], bal_be9[s], bal_r29[s], bal_rms9[s],
+                    fit_n9[s] == ncom9 ? "   (= its own fit)" : "   <- REFITTED");
+      }
+    }
+    // THE DOSE, READ ON THE MECHANISM ARMS -- the controls are blind to BOTH swept fields,
+    // because the guard at network.cpp:2549 skips the inhibition and the hc_drive addition
+    // together when hc_gain == 0. So every control in this block is `ctrl140` and is a
+    // baseline, never a dosimeter. §34's lesson, applied in advance for the second time.
+    uint32_t tref9 = kNTau9;
+    for (uint32_t j = 0; j < kNTau9 && tref9 == kNTau9; ++j) if (common9[j]) tref9 = j;
+    // THE DOSIMETER IS `anti`, NOT THE RATE, and the 60k pre-flight is why -- this is the
+    // FOURTH guard in five runs to be correct about a condition it was not measuring, and
+    // the first one caught before the run rather than after.
+    //
+    // v79 and v80 both read the mean firing RATE at a matched tau, because on those axes the
+    // dose arrives as a drive change and the homeostat's failure to absorb it IS the dose
+    // landing. THIS axis compensates the tonic ON PURPOSE, so a held rate is the design
+    // working, not the dose failing: the smoke returned a 9% rate range and the gate printed
+    // `THE DOSE WAS ABSORBED ... VACUOUS` over a sweep whose slopes had moved 52 SE. A
+    // liveness guard must read a quantity THE DOSE ACTUALLY MOVES.
+    //
+    // `anti` is that quantity and is not circular: it is the correlation between the two
+    // half-rate series, the competition's own depth, computed from the raw series and
+    // sharing no code with the crossing estimator or with the fit. It is also the statistic
+    // v76 pre-registered as the half-centre's signature. The smoke moves it -0.299 ->
+    // -0.353 -> -0.405 -> -0.397 at tau 333 with SEs of 0.001-0.015, and pins it at exactly
+    // 0.000 (degenerate) at the locked setting -- so it reads both the dose and the bound.
+    double alo9 = 1e9, ahi9 = -1e9;
+    double rlo9 = 1e9, rhi9 = -1e9;
+    uint32_t nlive9 = 0;
+    for (uint32_t s = 0; s < kNAsy; ++s) {
+      if (!fit_ok9[s] || tref9 == kNTau9) continue;
+      const double r = std::fabs(m_an[aidx9[s][tref9]]);
+      if (r < alo9) alo9 = r;
+      if (r > ahi9) ahi9 = r;
+      const double hz = m_rt[aidx9[s][tref9]];
+      if (hz < rlo9) rlo9 = hz;
+      if (hz > rhi9) rhi9 = hz;
+      ++nlive9;
+    }
+    const double dose_move9 = (nlive9 >= 2 && alo9 > 0.0) ? (ahi9 - alo9) / alo9 : 0.0;
+    const bool dose_live9 = dose_move9 >= 0.10;
+    // THE SWEPT RANGE IS MEASURED OVER THE SETTINGS THAT FITTED, not over the array. The
+    // array's last entry is the locked upper bound and drops out, so `kAsyG[kNAsy-1]` is
+    // not the top of the sweep and quoting it would overstate the dose by 4x.
+    double glo = 1e9, ghi = -1e9;
+    for (uint32_t s = 0; s < kNAsy; ++s) {
+      if (!fit_ok9[s]) continue;
+      if (double(kAsyG[s]) < glo) glo = double(kAsyG[s]);
+      if (double(kAsyG[s]) > ghi) ghi = double(kAsyG[s]);
+    }
+    const double gspan = (ghi > glo) ? ghi - glo : 0.0;
+    if (tref9 == kNTau9 || nlive9 < 2) {
+      std::printf("\n      THE DOSE CANNOT BE CHECKED -- %u fitted settings share a common"
+                  " tau.\n", nlive9);
+    } else {
+      std::printf("\n      THE DOSE %s: at tau %.0f the ALTERNATION DEPTH |anti| runs"
+                  " %.3f-%.3f,\n      a %.0f%% range across the %.2f-%.2f asymmetry actually"
+                  " fitted (%.2fx).%s\n",
+                  dose_live9 ? "LANDED" : "WAS ABSORBED", kTau81[tref9], alo9, ahi9,
+                  100.0 * dose_move9, glo, ghi, glo > 0.0 ? ghi / glo : 0.0,
+                  dose_live9 ? "" : "  Under 10%, so any null is VACUOUS.");
+      std::printf("      Read on |anti| and NOT on the rate: this axis holds the rate BY\n"
+                  "      DESIGN, so a rate dosimeter measures the compensation and not the\n"
+                  "      dose. Here the rate spans only %.2f-%.2f Hz (%.0f%%), which is the\n"
+                  "      compensation working -- and is what a rate gate would have called\n"
+                  "      vacuous over a sweep whose slopes moved tens of SE.\n",
+                  rlo9, rhi9, rlo9 > 0.0 ? 100.0 * (rhi9 - rlo9) / rlo9 : 0.0);
+      // THE COMPENSATION'S OWN CHECK, DISCLOSED AND NOT GATED. The net tonic is held by
+      // construction and the algebra is exact in the cycle mean, but the arms still have to
+      // SHOW a held operating point. v78 is why this is not a refusal clause: a 60k smoke
+      // there showed duty and rate drifting on the refractory axis, the drift vanished at
+      // full record, and gating on it would have discarded the run's only clean axis.
+      std::printf("      THE OPERATING POINT, the compensation's own check (disclosed, NOT\n"
+                  "      gated -- see §32): duty and rate at tau %.0f across the sweep\n",
+                  kTau81[tref9]);
+      for (uint32_t s = 0; s < kNAsy; ++s)
+        if (fit_ok9[s])
+          std::printf("        g*k %.2f   duty %.2f   rate %5.2f Hz   net tonic %+.2f\n",
+                      double(kAsyG[s]), m_du[aidx9[s][tref9]], m_rt[aidx9[s][tref9]],
+                      double(kAsyD[s]) - double(kAsyG[s]));
+    }
+    // SLOPE INVARIANCE, THE SAME PRE-REGISTERED REFUSAL v80 USED AND FOR THE SAME REASON.
+    bool slope_held9 = true;
+    if (bal_ok9[kAnchor81]) {
+      for (uint32_t s = 0; s < kNAsy; ++s) {
+        if (s == kAnchor81 || !bal_ok9[s]) continue;
+        const double se = std::sqrt(bal_ae9[s] * bal_ae9[s] +
+                                    bal_ae9[kAnchor81] * bal_ae9[kAnchor81]);
+        const double t = se > 0.0 ? (bal_a9[s] - bal_a9[kAnchor81]) / se : 0.0;
+        std::printf("      slope at g*k %.2f  %.4f +/- %.4f vs anchor %.4f +/- %.4f"
+                    "  (%+.1f SE)%s\n", double(kAsyG[s]), bal_a9[s], bal_ae9[s],
+                    bal_a9[kAnchor81], bal_ae9[kAnchor81], t,
+                    std::fabs(t) >= 3.0 ? "   <- ROTATED" : "");
+        if (std::fabs(t) >= 3.0) slope_held9 = false;
+      }
+    }
+    // THE PRIMARY: dB/d(asymmetry), AS A COEFFICIENT WITH AN ERROR BAR.
+    if (nbal9 < 3) {
+      std::printf("\n      FEWER THAN THREE SETTINGS FITTED -- no coefficient. This axis\n"
+                  "      does not decide.\n");
+    } else {
+      double bx[kNAsy] = {}, by[kNAsy] = {};
+      uint32_t bn = 0;
+      for (uint32_t s = 0; s < kNAsy; ++s)
+        if (bal_ok9[s]) { bx[bn] = double(kAsyG[s]); by[bn] = bal_b9[s]; ++bn; }
+      double c = 0.0, d = 0.0, ce = 0.0, de = 0.0, cr2 = 0.0;
+      ols(bx, by, bn, c, d, ce, de, cr2);
+      const double tc = crit_t_dof(bn > 2 ? bn - 2 : 0);
+      const double t = ce > 0.0 ? c / ce : 0.0;
+      double rlo = 1e30, rhi = 0.0;
+      for (uint32_t s = 0; s < kNAsy; ++s) {
+        if (!bal_ok9[s]) continue;
+        if (bal_rms9[s] < rlo) rlo = bal_rms9[s];
+        if (bal_rms9[s] > rhi) rhi = bal_rms9[s];
+      }
+      std::printf("\n      THE PRIMARY -- dB/d(g*k) on %u settings and %u common taus\n",
+                  nbal9, ncom9);
+      for (uint32_t s = 0; s < kNAsy; ++s)
+        if (bal_ok9[s])
+          std::printf("        g*k %.2f   B %7.1f +/- %5.1f ms\n",
+                      double(kAsyG[s]), bal_b9[s], bal_be9[s]);
+      std::printf("        dB/d(g*k) = %+.2f +/- %.2f ms per unit  (%.1f SE; %u dof, so\n"
+                  "        the 5%% critical t is %.3f -> %s),  R^2 %.5f\n",
+                  c, ce, std::fabs(t), bn > 2 ? bn - 2 : 0, tc,
+                  std::fabs(t) >= tc ? "RESOLVED" : "not resolved", cr2);
+      std::printf("        ERROR MODEL  per-setting residual rms %.2f-%.2f ms (x%.0f),"
+                  " reported\n        and NOT gated -- a refusal on it needs a factor"
+                  " pre-registered first.\n", rlo, rhi, rlo > 0.0 ? rhi / rlo : 0.0);
+      // THE VERDICT CASCADE, PRE-REGISTERED IN §38. First match decides.
+      if (!dose_live9) {
+        std::printf("      NO VERDICT -- THE DOSE DID NOT REACH THE COMPETITION: the\n"
+                    "      alternation depth moved only %.0f%% (< 10%%) across a %.2fx change\n"
+                    "      in the asymmetry that drives it. VACUOUS.\n",
+                    100.0 * dose_move9, glo > 0.0 ? ghi / glo : 0.0);
+      } else if (!slope_held9) {
+        std::printf("      THE ADDITIVE FORM IS REFUSED ON THIS AXIS. A slope moved >= 3 SE\n"
+                    "      from the anchor's, so B is a tau_a = 0 extrapolation of lines with\n"
+                    "      different gains. THAT CLOSES THE DRIVE ASSEMBLY: the tonic (v79),\n"
+                    "      the fatigue (v80) and now the asymmetry all ROTATE the law and\n"
+                    "      none of them shifts it, so B is NOT a quantity in this assembly\n"
+                    "      and the search belongs outside the vocal module's own drive.\n");
+      } else if (std::fabs(t) < tc) {
+        std::printf("      UNDERPOWERED, REPORTED AS A BOUND AND NOT A NULL. At %.3f the 95%%\n"
+                    "      interval on dB/d(g*k) is [%+.1f, %+.1f] ms per unit, so this run\n"
+                    "      excludes only a contribution larger than %.1f ms per unit. The\n"
+                    "      slope HELD, so the additive form itself survives -- which is the\n"
+                    "      first time any axis in this assembly has got that far.\n",
+                    tc, c - tc * ce, c + tc * ce, std::fabs(c) + tc * ce);
+      } else {
+        std::printf("      THE OFFSET MOVES WITH THE COMPETITION'S STRENGTH -- the FIRST axis\n"
+                    "      to shift B rather than rotate it. B moves %+.2f +/- %.2f ms per\n"
+                    "      unit of g*k (%.1f SE) with the slope on tau_a HELD and the net\n"
+                    "      tonic fixed by construction, so this is not the drive axis in\n"
+                    "      disguise. Across the %.2f of asymmetry actually swept that is\n"
+                    "      %+.1f ms of the %.1f ms offset.\n",
+                    c, ce, std::fabs(t), gspan, c * gspan, bal_b9[kAnchor81]);
+      }
+    }
+    // AN EXPLICIT TERMINATOR, and the v80 check-8 defect is why. A block delimited by the
+    // NEXT heading breaks the moment a newer block is appended between them, because the
+    // newest block never has a successor marker when its check is written. This one ends
+    // itself, so a determinism check on it is stable under appending.
+    std::printf("  END v81\n");
   }
 
   std::printf("\n  UPPER EDGE -- drive 2.00 probes above the window (Shpiro predicts\n"
