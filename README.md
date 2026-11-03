@@ -25644,3 +25644,40 @@ So the lesson is small and sharp, and it's now a rule: **when you write down in 
 prove you wrong, also write down what would have to be true of the machine for that test to fire at
 all.** If the answer is "nothing could have made it fire," you haven't written a safety check. You've
 written a decoration.
+
+### Half of yesterday's good news was wrong, and we found out for free
+
+An hour after reporting that the creature has six usable voice dials, we went to run the follow-up —
+can its *ear* hear the four new ones? — and found the question couldn't be asked.
+
+The code that turns the creature's voice into actual sound has **two resonators and a hardcoded
+bandwidth**. The third formant and all three bandwidths are computed, displayed on the dashboard,
+written to the log — and then thrown away before anything is heard. The caregiver's voice goes
+through the same synthesiser, so it can't say them either.
+
+So four of the six dials move nothing in the air. **The real figure is about 7 distinguishable
+signals, not 425** — which is exactly where the project already was. The 425 was real as a fact
+about the creature's *muscles* and worthless as a fact about its *speech*.
+
+What survives is still worth having: the voice box really does command seven independent dials, the
+measurement of that is solid, and the discovery that each dial's precision comes from the shared
+neuron-group design rather than from the formant it drives. But the headline number was wrong and
+it's now corrected in place rather than quietly left standing.
+
+**The part worth keeping is how it was caught.** Three hours earlier we'd written down a new rule for
+ourselves: *before running an experiment, say what would have to be true of the machine for the
+experiment to be able to come out either way.* We applied it to the ear, and the ear looked fine —
+it has plenty of frequency resolution for the third formant. That reassuring answer is what pushed us
+one step further back, to the synthesiser, which is where the problem was.
+
+Without that habit we'd have run it, got "the ear cannot hear the third formant," and believed it.
+That conclusion would have been false, and it would have been false in a way that's almost impossible
+to detect afterwards — the experiment would have run cleanly, the statistics would have been sound,
+and the answer would have been determined entirely by a line of code we never looked at. **It is the
+third time this project has caught an experiment whose result was fixed before it started, and the
+first time it was caught before any computing was spent.**
+
+The line is now paused rather than finished. Giving the creature a real third resonator is a change
+to its physics, not an experiment — every creature we've ever run would have heard itself differently,
+and the fingerprint we use to prove our results are reproducible would change. That's a decision about
+what kind of creature this is, and it isn't ours to take quietly.

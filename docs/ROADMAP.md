@@ -5088,3 +5088,82 @@ ARCHITECTURE for it to fire.** If the answer is "nothing could have made it fire
 **RUN 1 OF 3 PASSED. Run 2 is the ear**, per §41's abandonment count: whether the auditory module
 resolves F3 and bandwidth distinctions. If it does not, the prize collapses to the two axes already
 known and the line stops there.
+
+### §41 RUN 2 — REFUSED AT THE DESK, AND IT CORRECTS RUN 1 (2026-11-03, zero runs)
+
+**Run 2 was to measure whether the ear resolves F3 and bandwidth. It cannot be run, and the reason
+invalidates part of §41 RESULT published an hour ago.**
+
+#### THE PRE-FLIGHT THAT WAS SUPPOSED TO PRICE THE EAR FOUND THE RENDERER INSTEAD
+
+The new rule from §41 RESULT — *state what the architecture would have to make true for the clause
+to fire* — was applied to run 2 before building it. First the cochlea, which looked **fine**:
+
+| axis | rest | learned reach | Hz per mel channel | reach in channels |
+|---|---|---|---|---|
+| f1 | 626.5 | 118.0 | 128.7 | **0.92** |
+| f2 | 1669.6 | 300.3 | 229.9 | **1.31** |
+| f3 | 2613.7 | 254.9 | 321.6 | **0.79** |
+
+24 mel channels, 50–7000 Hz, 8 neurons each. **F3's reach is 0.79 of a channel against F1's 0.92,
+and F1 demonstrably works** — so the ear was never the likely blocker, and the test looked live.
+
+**THEN THE SYNTHESISER.** `host/src/audio.cpp`:
+
+```
+void VowelSource::render(float f0, float f1, float f2, float amplitude, ...)
+  const float bw = 90.0f;
+```
+
+**TWO RESONATORS AND A HARDCODED BANDWIDTH.** There is no F3 resonator, and the three commanded
+bandwidths are replaced by a single constant 90 Hz. `struct Word { float f0, f1, f2; }` carries the
+same three. This is the **only** audio path — the creature's own voice into its own ear and the
+caregiver's speech both go through it. `f3`, `bw1`, `bw2`, `bw3` are computed by the vocal decoder,
+exposed in `VocalParams`, written to the panel and the journal, **and never rendered.**
+
+#### WHAT THIS DOES TO §41 RESULT
+
+**STILL TRUE, and measured:** the larynx *commands* seven independent centroid axes with worst
+cross-talk 0.007 and ~2.6 levels each; the level count is the group architecture (swing/scatter
+16.4–18.7 across a 10× range of scales); retention is nearly free across an orthogonal axis, so the
+item count is the axis count.
+
+**NOW FALSE AS PUBLISHED: "six teachable axes, code space 424.9."** Four of those six — f3, bw1,
+bw2, bw3 — **do not reach the air at all.** The axes that reach the air are f0, f1 and f2; of those,
+f0 does not survive creature-to-creature teaching. **So the transmitted code space is f1 × f2 ≈ 2.72
+× 2.60 ≈ 7.1 signals, which is exactly aimaxes's 4–9 and exactly where the project already was.**
+
+The 425 is a property of the **motor representation**, and it is entirely untransmitted. That number
+must not be quoted. §41 RESULT's own caveat said "this is not a word count, the ear is the gate" —
+**the caveat was right and the layer was wrong. The gate is the RENDERER, one layer before the ear.**
+
+#### AND RUN 2 WOULD HAVE BEEN VACUOUS, WHICH IS THE REUSABLE PART
+
+Had this been built as specified, it would have presented F3-varying stimuli through a synthesiser
+with no F3, measured chance, and concluded **"the ear cannot resolve F3"** — a false refusal of the
+ear, from an instrument that could not have produced any other answer. That is
+`aibaby-null-is-not-a-control` exactly: an arm whose result is fixed by construction.
+
+**It was caught for zero runs by the rule written three hours earlier in this same section**, which
+is the first time a method rule in this project has paid out on the very next run. The rule earned
+its place: *before building, say what the architecture must make true for the measurement to be
+capable of going either way.* I applied it to the cochlea, got a reassuring answer, and the habit is
+what carried me one layer further to the renderer.
+
+#### THE LINE'S STATUS UNDER ITS OWN STOPPING RULE
+
+§41 said: abandon after 3 runs, and stop if run 1 or run 2 refuses. **Run 2 refuses.** By the letter
+of the pre-registration the line stops here.
+
+**But the refusal is of a different KIND than the one anticipated, and that must not be used as an
+excuse to continue.** §41 anticipated *"the ear cannot hear these distinctions"* — a fact about the
+creature. What was found is *"the simulation never implements them"* — a fact about the code. A real
+vocal tract has an F3 and real formant bandwidths, and the decoder already computes all four, so
+extending the renderer would be completing an acknowledged incompleteness rather than inventing a
+capability.
+
+**THAT IS A DECISION ABOUT THE CREATURE'S PHYSICS, NOT AN EXPERIMENT, AND IT IS NOT MINE TO TAKE.**
+A third resonator and live bandwidths change what every creature has ever heard of itself
+(`self_gain` is on), so they would almost certainly move the determinism hash and break
+comparability with the entire archive of results. The line is therefore **HELD, not continued**,
+pending that call.
