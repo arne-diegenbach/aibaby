@@ -2339,18 +2339,33 @@ src = "auditory"
 dst = "central"
 kind = "random"
 source = "either"        # DNA v14: recruit both cell types, the pre-v14 rule
-# MEASURED 2026-08-14 and left alone pending its own verified change: at this
-# density the sound does not reach the association module. `pcprobe`'s offline
-# ridge ceiling — the best any linear readout of a module's firing rates could
-# do, held out — reads the spectrum in B2 at 0.583 and in central at +0.013.
-# It is legible at the ear and gone one step later. At 0.06 central reads 0.194
-# and at 0.10 it reads 0.266, so the tract is the whole loss, not the ear.
+# CORRECTED 2026-11-03. THE WORD DOES REACH THE ASSOCIATION MODULE. What this
+# thin tract costs is LATENCY, NOT PRESENCE: `audprobe` (2026-08-14, two words
+# with nothing in view, held-out, shuffled-label controls on every row) asks
+# which word was said from each module's spike counts, against 0.500 chance:
 #
-# Note what sits ten lines below: vision->central was raised from this same 0.02
-# to 0.06 for exactly this reason, and audio was never revisited. G3 is
-# cross-modal, and its cascade scores cube-versus-ball — a question the creature
-# can answer from vision alone — so no G3 measurement ever taken here has tested
-# whether the *word* arrives.
+#            integration     B2      central
+#               50 ms      0.916      0.512
+#              200 ms      1.000      0.700
+#             1200 ms      1.000      0.940
+#
+# So central is SLOW, NOT DEAF. Sweeping the density buys SPEED and not presence
+# (central @ 200 ms: 0.02 -> 0.700, 0.06 -> 0.820, 0.10 -> 0.916, 0.15 -> 0.956;
+# all reach ~1.000 by 1.2 s). Nothing helps at 50 ms, as expected from the 4 ms
+# axonal delay plus membrane integration.
+#
+# WHY THE PREVIOUS COMMENT HERE SAID THE OPPOSITE, because the distinction is
+# the reusable part: it quoted `pcprobe`'s offline ridge ceiling for
+# RECONSTRUCTING THE SPECTRUM (B2 0.583, central +0.013) and read that as the
+# sound not arriving. Those numbers are not wrong -- they answer a HARDER
+# question. Resolving which of two words was said survives a tract that cannot
+# carry the spectrum. **A null on a rich readout does not bound a coarse one.**
+#
+# The density change was BUILT, recalibrated and tested against G3, and NOT
+# SHIPPED: it buys nothing downstream. But note G3 is cross-modal and its
+# cascade scores cube-versus-ball, which vision alone can answer -- so that
+# refusal does NOT price whether central is a usable CONTEXT source. That
+# question is open. See memory `aibaby-auditory-central-tract`.
 #
 # Raising it needs auditory's max_out_degree above 72 (134 synapses drop at
 # 0.10) and a recalibration pass; central has norm_gain > 0, which makes that
