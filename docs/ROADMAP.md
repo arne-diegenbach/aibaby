@@ -5797,3 +5797,56 @@ until an hour earlier.
 command. Today's runs measured the **cochlea's** resolution of the same axes. **Nothing has measured
 whether the auditory MODULE can tell the creature's own words apart** — and "recognize WORDS" is what
 the goal asks for. That, not another d', is what stage 2b should be aimed at.
+
+### THE ABSOLUTE-THRESHOLD AUDIT — THE LIABILITY DOES NOT EXIST, AND THE ARCHIVE GOT THIS RIGHT FIRST
+
+`axisamp` recorded that "every absolute threshold claim in this archive is exposed" because the
+creature hears itself at 0.303 while "every `Timbre` instrument renders at 1.0". **Both halves of
+that are wrong, and enumerating the call sites was enough to show it.** Every `Timbre` amplitude in
+the archive:
+
+| site | amplitude | what it is | exposed? |
+|---|---|---|---|
+| 1513, 3412 | `r.amplitude / n` | the creature's own recorded mean | **no** — correct by construction |
+| 1587–1598 | `mamp`, plus [i]/[a]/[u] anchors at the *same* amplitude | own mean, self-calibrating | **no** |
+| 6209 (`teachsound`, M1b's ruler) | `a_acc / n_voiced` | the **voiced-frame conditional mean** | **no** |
+| 7463, 7467, 29440, 30793–4 | hardcoded `0.4` | contrasts only — taught vs control, first vs last | **no** — shared amplitude |
+| 45994 (`axisear`), 46386 (`axisjit`) | **`1.0`** | §41 | **yes — and already re-measured** |
+| 46622, 46888, 47145 | swept, including 0.303 | §41 runs 2d/2e/2f | no |
+
+**Two instruments out of ten ever rendered at 1.0. Both are §41's, both were written in the last two
+days, and `axisamp` already re-measured their entire ladder** — finding exactly one crossing, bw2,
+which `axisbw2` then settled at 0.990 ± 0.039. There is no archive-wide re-reading to do.
+
+**And the external regime was never at 1.0 either.** Caregiver words render at **0.5** in every
+caller (`voice.render(w.f0, w.f1, w.f2, 0.5f, ...)`), and `struct Word` carries only `f0, f1, f2` —
+no F3, no bandwidths. So no caregiver-word claim can touch the new axes, and at 0.5 the three it does
+touch read **5.418 / 7.493 / 9.964** against a bar of 1.0. Five to ten times the margin.
+
+**ONLY ONE PRE-§41 ABSOLUTE CLAIM EXISTS AT ALL** — `dpu >= 1.0` at line 1835, the cube-vs-ball
+audibility call, and M1b's 1.37 at line 6302. Everything else in the archive is a contrast at a
+shared amplitude, which was never at risk.
+
+#### THE PART WORTH KEEPING: THE OLD INSTRUMENT IS BETTER THAN THE ONE I WROTE
+
+The instrument making the oldest absolute audibility claim does two things §41's did not:
+
+1. **It conditions on voiced frames** — `a_acc / n_voiced`. That is precisely the conditioning I
+   "derived" in run 2e as though it were a new idea, complete with a new `babble` print to measure
+   it. It was already there, in the instrument whose claim it protects.
+2. **It carries vowel anchors at its own amplitude** — `[i]` vs `[a]` ("two vowels nobody would
+   confuse") and `[a]` vs `[u]`. So its absolute bar is calibrated *in situ*: if the amplitude were
+   wrong, the anchors would be wrong too and would say so. §41's instruments had a fixed 1.0 and no
+   anchor, which is exactly why they could drift without anything noticing.
+
+**So the fix for §41's instruments is not a different amplitude — it is an anchor.** An absolute bar
+needs a reference measured through the same tract at the same level, or it is a number floating free.
+
+#### AND THIS IS THE THIRD TIME TODAY
+
+`aibaby-cochlea-operating-point` generalised from the two instruments in front of me to an archive I
+had not enumerated. That is the same error as reading a memory's headline instead of its body
+(twice today) and as asking the architecture question of a run's clauses but not of its conclusion
+(once today). **One shape: asserting of the whole what was checked of the part.** The cost each time
+has been a few greps; the cost of not doing them was a published liability that would have made every
+future session distrust every threshold in the project.

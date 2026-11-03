@@ -26006,3 +26006,38 @@ measure of what the *voice* can produce, graded by a scorer that reads the voice
 Today's work measured what the *ear* can resolve. Nobody has yet measured the thing in between —
 whether the creature's hearing can tell its own words apart — and since the whole point is a
 creature that learns from what it hears, that is the gap worth closing next.
+
+**We audited the scare we raised this morning, and it was not real.** Earlier today we discovered our
+measuring instruments were running the creature's voice about three times louder than the creature
+ever hears itself, and we wrote down that *every* absolute "is this audible?" claim in the project
+was therefore suspect. That was an alarming thing to have to say, so we went and checked it properly,
+by listing every place in the code that renders a voice for measurement.
+
+**Two of the ten run at the wrong volume, both of them written in the last two days, and we had
+already re-measured both.** Every older instrument renders the voice at the amplitude the creature
+itself produced during that very run — which is the right volume for the claim being made, because
+those claims are about what an outside listener would hear. The remaining handful use a fixed quiet
+setting, and only ever for comparisons between two conditions, which were never at risk. The
+caregiver's spoken words turn out to run at half volume, not full, and they only use the two formants
+we have always known are easy to hear, with five to ten times the margin they need.
+
+**The genuinely humbling part: the oldest instrument is better built than the one we wrote
+yesterday.** It does two things ours did not. It averages the creature's loudness over the moments it
+was actually *voicing*, rather than over all moments including the silent ones — which is exactly the
+refinement we "discovered" this morning and added a new measurement to support, not realising it had
+been sitting in the code the whole time. And it measures two reference vowel pairs at the same volume
+as the thing being tested — one pair "nobody would confuse", one pair of neighbours — so if the
+volume were ever wrong, the references would be wrong too and would say so out loud. Our new
+instruments had a fixed volume and no reference at all, which is precisely why they could drift
+without anything catching it.
+
+So the repair isn't a different volume. It's an anchor: an absolute threshold needs a reference
+measured through the same equipment at the same level, or it's a number with nothing holding it down.
+
+**And this is the third time today we've made the same mistake in a different place.** We asserted
+something about the whole archive after checking two instruments; we read a memory's headline instead
+of its body, twice; and we asked our own "could this possibly show up?" question of an experiment's
+internal checks but not of the conclusion we drew from it. One shape, three costumes: claiming of the
+whole what we verified of the part. Each one cost a handful of searches to catch. Not catching this
+one would have left a note in our own records telling every future session to distrust every
+threshold in the project.
