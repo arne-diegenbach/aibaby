@@ -46518,6 +46518,250 @@ bool run_axisjit(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
   return true;
 }
 
+// ===== axislev (§41 run 2d): the level account, and the control I owed =====
+//
+// Two claims left over from `axisjit`, and they belong together because one is
+// the control for the other.
+//
+// (A) THE LEVEL ACCOUNT, AND IT HAS A CLEANER LOGIC THAN I FIRST WROTE. The
+// story is that `0.25*(v1+v2+g*v3)` adds a third resonator's energy without
+// rescaling, so turning f3 on makes everything louder and that is what costs F1.
+// I had filed this as "needs an amplitude-compensated cell". But the sharper
+// question comes first: IS THIS RULER SENSITIVE TO A GLOBAL AMPLITUDE SCALE AT
+// ALL? Sweep amplitude at `f3_gain = 0`, where no third resonator exists, and
+// look at F1.
+//
+//   * if F1's d' is FLAT across the ladder, then a global level change is
+//     INVISIBLE to this ruler -- and a mechanism the ruler cannot see cannot
+//     have produced a change the ruler DID see (-10.127 +- 0.324). That
+//     REFUTES the level account by construction. It does not merely fail to
+//     support it, and it is not a null: it is a deduction from an invariance.
+//   * if it is NOT flat, the ruler does see level, and then the compensated
+//     cell is worth running and clause 3 runs it.
+//
+// Either branch is informative, which is the test for whether a run is worth
+// building. Note the refutation reaches only the GLOBAL-level version -- which
+// is exactly the version the unrenormalised sum describes. Adding v3 also adds
+// energy in a BAND, and that is spectral masking, a different claim.
+//
+// (B) THE POSITIVE CONTROL FOR JITTER INFLATION, WHICH I OWED FROM axisjit.
+// That run's gain-0 clause could not fire: at `f3_gain = 0` the renderer never
+// reads f3, so freezing it was bit-exactly inert and the clause was a wiring
+// check wearing a control's clothes. The falsifiable version is to freeze an
+// axis that IS audible in both conditions -- f2 -- and measure F1. Jitter
+// inflation then predicts a recovery with NO third resonator in play at all.
+//
+// AND IT PREDICTS AN ORDERING, WHICH IS THE PART THAT CAN FAIL. f2 is both more
+// audible than f3 (d' 9.47 vs 4.85) and more jittered (sd 57.8 vs 47.6 Hz), so
+// freezing f2 must help F1 by MORE than freezing f3 at gain 1 did (+2.934 in
+// d'^2). A recovery that is real but SMALLER than that contradicts the account
+// even while having the right sign, and is written as its own branch.
+constexpr double kALvAmp[4] = {1.0, 0.8165, 0.6667, 0.5};
+constexpr uint32_t kALvN = 4;
+
+bool run_axislev(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  (void)ticks;
+  aibaby::Dna dna;
+  if (dna.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) return false;
+
+  std::printf("  the question      §41 run 2d. Two leftovers. (A) Is f3's 71%% static cost\n"
+              "                    LEVEL? (B) The positive control for jitter inflation\n"
+              "                    that axisjit's gain-0 clause could not provide.\n");
+  std::printf("  (A) the logic     sweep amplitude at f3_gain 0. FLAT => a global level\n"
+              "                    change is INVISIBLE to this ruler, and a mechanism the\n"
+              "                    ruler cannot see cannot have produced a change it DID\n"
+              "                    see. That REFUTES level -- a deduction, not a null.\n");
+  std::printf("  (B) the control   freeze f2 -- audible in BOTH conditions, unlike f3 at\n"
+              "                    gain 0 -- and measure F1. Jitter inflation predicts a\n"
+              "                    recovery with no third resonator in play, and predicts\n"
+              "                    it is LARGER than freezing f3 gave (+2.934), since f2\n"
+              "                    is both more audible and more jittered.\n\n");
+
+  Timbre tb;
+  std::string err;
+  if (!tb.configure(dna.header().audio, err)) {
+    std::printf("  could not configure the cochlea: %s\n", err.c_str());
+    return false;
+  }
+  const double sd[7] = {9.129, 21.727, 57.751, 47.616, 5.346, 5.967, 5.618};
+
+  // One F1 measurement. `freeze` is a parameter index to hold at rest, or -1.
+  auto measure_f1 = [&](float g3, double amp, int freeze, uint32_t rep) {
+    std::mt19937_64 rng(dna.header().seed ^ (0xAE00ull + 1u) ^
+                        (rep ? rep * 0x9E3779B97F4A7C15ull : 0ull));
+    std::normal_distribution<double> gauss(0.0, 1.0);
+    std::vector<std::vector<double>> x;
+    std::vector<int> y;
+    const double lo_c = kAERest[1] - kAEReach[1] * 0.5;
+    const double hi_c = kAERest[1] + kAEReach[1] * 0.5;
+    for (uint32_t s = 0; s < kAESamples * 2; ++s) {
+      const int cls = int(s % 2);
+      double p[7];
+      // Every deviate drawn in the same order, in every arm; the freeze is an
+      // overwrite afterwards, so the RNG stream never shifts between arms.
+      for (uint32_t k = 0; k < 7; ++k) p[k] = kAERest[k] + sd[k] * gauss(rng);
+      p[1] = (cls ? hi_c : lo_c) + sd[1] * gauss(rng);
+      if (freeze >= 0 && freeze != 1) p[freeze] = kAERest[freeze];
+      const std::vector<std::vector<double>> fr =
+          tb.frames_of(p[0], p[1], p[2], p[3], p[4], p[5], p[6], amp, g3, 0.0f);
+      if (fr.empty()) continue;
+      std::vector<double> m(fr[0].size(), 0.0);
+      for (const std::vector<double>& f : fr)
+        for (size_t k = 0; k < m.size(); ++k) m[k] += f[k];
+      for (double& v : m) v /= double(fr.size());
+      x.push_back(m);
+      y.push_back(cls);
+    }
+    if (x.size() < 4) return 0.0;
+    return cepstral_dprime(x, y, nullptr, true);
+  };
+  auto reps_of = [&](float g3, double amp, int freeze, double* se) {
+    std::vector<double> v;
+    for (uint32_t r = 0; r < kAEReps; ++r) v.push_back(measure_f1(g3, amp, freeze, r));
+    return ctx_mean_se(v, se);
+  };
+  auto paired = [&](float gA, double aA, int fA, float gB, double aB, int fB, double* se) {
+    std::vector<double> d;
+    for (uint32_t r = 0; r < kAEReps; ++r)
+      d.push_back(measure_f1(gB, aB, fB, r) - measure_f1(gA, aA, fA, r));
+    return ctx_mean_se(d, se);
+  };
+  auto dprime_of = [](double q) { return q > 0.0 ? std::sqrt(q) : 0.0; };
+
+  // ---- CLAUSE 1: is the ruler sensitive to a global amplitude scale? ----
+  std::printf("  CLAUSE 1 -- THE RULER'S AMPLITUDE SENSITIVITY, at f3_gain 0, on F1.\n"
+              "  A 2x amplitude range with no third resonator anywhere in it.\n");
+  double amp0[kALvN] = {}, amp0se[kALvN] = {};
+  for (uint32_t i = 0; i < kALvN; ++i) {
+    amp0[i] = reps_of(0.0f, kALvAmp[i], -1, &amp0se[i]);
+    std::printf("    amplitude %.4f   d'^2 %8.3f +- %6.3f   d' %6.3f\n", kALvAmp[i], amp0[i],
+                amp0se[i], dprime_of(amp0[i]));
+  }
+  double se_amp = 0.0;
+  const double d_amp = paired(0.0f, kALvAmp[0], -1, 0.0f, kALvAmp[kALvN - 1], -1, &se_amp);
+  const bool amp_blind = !(std::fabs(d_amp) > kAECrit * se_amp && se_amp > 0.0);
+  std::printf("    full range (1.0 -> %.4f), paired:  dd'^2 %8.3f +- %6.3f   -> %s\n",
+              kALvAmp[kALvN - 1], d_amp, se_amp,
+              amp_blind ? "FLAT: the ruler is amplitude-blind" : "the ruler SEES amplitude");
+
+  // ---- CLAUSE 2: the positive control for jitter inflation ----
+  std::printf("\n  CLAUSE 2 -- THE POSITIVE CONTROL: freeze f2's jitter at f3_gain 0 and\n"
+              "  measure F1. No third resonator is involved, so this tests the MECHANISM\n"
+              "  rather than the renderer change. Must be a recovery, and must exceed the\n"
+              "  +2.934 that freezing f3 bought at gain 1, because f2 is both more\n"
+              "  audible (d' 9.47 vs 4.85) and more jittered (sd 57.8 vs 47.6 Hz).\n");
+  double se_f2 = 0.0;
+  const double rec_f2 = paired(0.0f, kALvAmp[0], -1, 0.0f, kALvAmp[0], 2, &se_f2);
+  constexpr double kALvF3Rec = 2.934;  // axisjit, at gain 1
+  const bool ctl_sign = rec_f2 > kAECrit * se_f2;
+  const bool ctl_order = rec_f2 > kALvF3Rec;
+  std::printf("    freezing f2 at gain 0:   dd'^2 %8.3f +- %6.3f   -> %s\n", rec_f2, se_f2,
+              ctl_sign ? "RECOVERS" : "*** no recovery");
+  std::printf("    against freezing f3 at gain 1 (%.3f)                 -> %s\n", kALvF3Rec,
+              ctl_order ? "larger, as predicted" : "*** SMALLER than predicted");
+
+  // ---- CLAUSE 3: only if the ruler sees amplitude at all ----
+  // ---- CLAUSE 3: THE COST AT MATCHED AMPLITUDE, WHICH IS THE ONLY FAIR ASK ----
+  // THE FIRST VERSION OF THIS CLAUSE WAS MIS-SPECIFIED AND PRINTED A CONFIDENT
+  // WRONG VERDICT, WHICH THE SAME RUN'S OWN NUMBERS REFUTED. It compared the BEST
+  // gain-1 cell against gain 0 at amplitude 1.0 -- two cells differing in both
+  // the gain AND the amplitude. Clause 1 had just established that amplitude
+  // moves F1 on its own (+8.80 over this range, quieter being BETTER), so that
+  // comparison credits the amplitude effect to f3 compensation and concluded
+  // "the cost was level, a one-line fix". It is the operating-point rule exactly:
+  // a dose compared across a knob that independently moves the readout is not
+  // compared at all.
+  //
+  // THE RIGHT STATISTIC IS THE PAIRED f3 COST AT EACH AMPLITUDE. If level were
+  // the mechanism, turning the volume down must SHRINK f3's cost. If the cost is
+  // flat across a 2x range, lowering the level does not buy back anything f3
+  // took, and the level account is refuted ON A LADDER THE RULER CAN SEE -- which
+  // is a stronger refutation than the amplitude-blind branch I expected to get.
+  std::printf("\n  CLAUSE 3 -- F3'S COST AT MATCHED AMPLITUDE, which is the only fair ask.\n"
+              "  Clause 1 showed amplitude moves F1 by itself, so comparing a quiet gain-1\n"
+              "  cell against a loud gain-0 one would credit that to f3 compensation. If\n"
+              "  level is the mechanism, the cost must SHRINK as the volume comes down.\n");
+  double amp1[kALvN] = {}, amp1se[kALvN] = {};
+  double cost_at[kALvN] = {}, cost_se[kALvN] = {};
+  for (uint32_t i = 0; i < kALvN; ++i) {
+    amp1[i] = reps_of(1.0f, kALvAmp[i], -1, &amp1se[i]);
+    cost_at[i] = paired(0.0f, kALvAmp[i], -1, 1.0f, kALvAmp[i], -1, &cost_se[i]);
+    std::printf("    amp %.4f   gain0 %8.3f   gain1 %8.3f   COST %8.3f +- %6.3f\n",
+                kALvAmp[i], amp0[i], amp1[i], cost_at[i], cost_se[i]);
+  }
+  // Does the cost shrink across the ladder? Paired on the same rep streams.
+  std::vector<double> trend;
+  for (uint32_t r = 0; r < kAEReps; ++r) {
+    const double c_loud = measure_f1(1.0f, kALvAmp[0], -1, r) -
+                          measure_f1(0.0f, kALvAmp[0], -1, r);
+    const double c_quiet = measure_f1(1.0f, kALvAmp[kALvN - 1], -1, r) -
+                           measure_f1(0.0f, kALvAmp[kALvN - 1], -1, r);
+    trend.push_back(std::fabs(c_quiet) - std::fabs(c_loud));
+  }
+  double se_trend = 0.0;
+  const double d_trend = ctx_mean_se(trend, &se_trend);
+  const bool cost_shrinks = d_trend < -kAECrit * se_trend;
+  std::printf("    |cost| at %.4f minus |cost| at 1.0:  %8.3f +- %6.3f   -> %s\n",
+              kALvAmp[kALvN - 1], d_trend, se_trend,
+              cost_shrinks ? "SHRINKS: level helps"
+                           : (d_trend > kAECrit * se_trend ? "GROWS: level is the wrong sign"
+                                                           : "flat: level buys nothing"));
+
+  std::printf("\n");
+  if (!ctl_sign) {
+    std::printf("  JITTER INFLATION IS REFUTED BY ITS OWN CONTROL. Freezing f2 -- which is\n"
+                "  loudly audible at gain 0 -- does not help F1, so an audible axis's\n"
+                "  jitter does NOT inflate another axis's denominator. axisjit's 29%% then\n"
+                "  needs another explanation, and the mechanism split there is WITHDRAWN:\n"
+                "  the clause that could have caught this is the one it never had.\n");
+    return true;
+  }
+  if (!ctl_order) {
+    std::printf("  THE CONTROL HAS THE RIGHT SIGN AND THE WRONG SIZE. Freezing f2 recovers\n"
+                "  %.3f, less than the %.3f that freezing the quieter, less jittered f3\n"
+                "  bought. Jitter inflation survives in direction and fails its ORDERING\n"
+                "  prediction, so it is not simply \"audible jitter inflates denominators\"\n"
+                "  -- something axis-specific is in it, and the 29%% is not yet explained.\n",
+                rec_f2, kALvF3Rec);
+  } else {
+    std::printf("  JITTER INFLATION CONFIRMED ON AN INDEPENDENT AXIS. Freezing f2 recovers\n"
+                "  %.3f of F1's d'^2 with NO third resonator in play, and more than\n"
+                "  freezing f3 bought, as the audibility and jitter ordering predicts. The\n"
+                "  mechanism is a real property of the code, not an artefact of v83.\n",
+                rec_f2);
+  }
+  std::printf("\n");
+  if (amp_blind) {
+    std::printf("  THE RULER IS AMPLITUDE-BLIND, so the level account is refuted by\n"
+                "  deduction: a mechanism this ruler cannot see cannot have produced the\n"
+                "  -10.127 +- 0.324 that it did see. Clause 3's ladder is uninterpretable\n"
+                "  for this question by the same argument -- printed, not read.\n");
+  } else if (cost_shrinks) {
+    std::printf("  LEVEL CARRIES SOME OF IT. The ruler sees amplitude, and f3's cost at\n"
+                "  MATCHED amplitude shrinks as the volume comes down (%.3f +- %.3f over\n"
+                "  2x). So part of the static cost is the unrenormalised sum and a renderer\n"
+                "  fix would recover that part. Report the fraction, not the whole.\n",
+                d_trend, se_trend);
+  } else {
+    std::printf("  THE LEVEL ACCOUNT IS REFUTED, AND ON A LADDER THE RULER CAN SEE -- which\n"
+                "  is a stronger refutation than the amplitude-blind branch I expected.\n"
+                "  F1's d' DOES move with amplitude (%.3f +- %.3f over 2x, quieter being\n"
+                "  better), so the instrument is sensitive to exactly the quantity the level\n"
+                "  story turns on. And f3's cost AT MATCHED AMPLITUDE does not shrink:\n"
+                "  %.3f, %.3f, %.3f, %.3f across the ladder, with |cost| changing by\n"
+                "  %.3f +- %.3f -- flat or growing, never shrinking. Turning the volume down\n"
+                "  buys back NOTHING that the third resonator took.\n\n"
+                "  SO THE 71%% IS SPECTRAL MASKING: F3's energy in its own BAND diluting\n"
+                "  F1's cepstral signature, not the overall loudness of the sum. There is\n"
+                "  nothing for a renderer renormalisation to fix. That is the real price of\n"
+                "  putting another formant in the air.\n",
+                d_amp, se_amp, cost_at[0], cost_at[1], cost_at[2], cost_at[3], d_trend,
+                se_trend);
+  }
+  return true;
+}
+
 bool run_aimslice(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
   (void)verbose;
   aibaby::Dna dna;

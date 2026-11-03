@@ -5440,3 +5440,96 @@ why I have not counted them against a budget that was written about expensive st
 auditory module, remains the third and last stage under the rule and is still unspent.** If that
 reading of my own pre-registration is too convenient, the conservative count says §41 is finished and
 2b needs its own line.
+
+---
+
+### §41 RUN 2d — LEVEL REFUTED, JITTER CONFIRMED, AND THE MECHANISM IS CLOSED
+
+`axislev`, 21.4 s, zero brain runs. Both leftovers from run 2c, and they belonged in one build
+because one is the control for the other.
+
+#### THE CONTROL I OWED, AND IT PASSED ITS ORDERING PREDICTION
+
+`axisjit`'s gain-0 clause could not fire. The falsifiable version is to freeze an axis that is
+audible in **both** conditions — f2 — and measure F1, with no third resonator in play anywhere.
+Jitter inflation then predicts a recovery, and predicts it is **larger** than freezing f3 bought
+(+2.934), because f2 is both more audible (d' 9.47 vs 4.85) and more jittered (sd 57.8 vs 47.6 Hz).
+
+```
+freezing f2 at gain 0:   dd'^2  +34.590 +- 1.169   RECOVERS, and 11.8x the f3 figure
+```
+
+**Jitter inflation is confirmed on an independent axis**, with the ordering prediction — the part
+that could have failed — satisfied. It is a real property of the code and not an artefact of the v83
+renderer change. Note the size: freezing one axis's jitter nearly **doubles** F1's d'², which makes
+off-axis motor noise the largest single thing standing between this creature and a bigger vocabulary.
+
+#### THE LEVEL ACCOUNT IS REFUTED, AND MORE STRONGLY THAN I EXPECTED TO BE ABLE TO
+
+I predicted the ruler would be **amplitude-blind**, which would have refuted level by deduction (a
+mechanism the ruler cannot see cannot have produced a change it did see). **The prediction was
+wrong** — and the truth gives a better refutation:
+
+```
+amp 1.0000   gain0  47.345   gain1  37.218   COST  -10.127 +- 0.324
+amp 0.8165   gain0  49.920   gain1  39.479   COST  -10.441 +- 0.336
+amp 0.6667   gain0  52.486   gain1  41.886   COST  -10.600 +- 0.339
+amp 0.5000   gain0  56.144   gain1  45.253   COST  -10.890 +- 0.350
+```
+
+F1's d' **does** move with amplitude (+8.799 ± 0.278 over 2×), so the instrument is sensitive to
+exactly the quantity the level story turns on. And f3's cost **at matched amplitude does not shrink**:
+|cost| *grows* by 0.764 ± 0.181 (4.2 SE) as the volume halves — the wrong sign for level. **Turning
+the volume down buys back nothing the third resonator took.**
+
+**So the 71% is spectral masking:** F3's energy in its own band diluting F1's cepstral signature, not
+the loudness of the sum. **There is nothing for a renderer renormalisation to fix**, and the mechanism
+question that opened with run 2c is closed: **29% jitter inflation, 71% masking, 0% level.**
+
+#### CLAUSE 3 WAS MIS-SPECIFIED AND PRINTED A CONFIDENT WRONG VERDICT
+
+The first build of this clause compared the **best** gain-1 cell against gain 0 at amplitude **1.0** —
+two cells differing in the gain *and* the amplitude. Clause 1 had established, three lines above it,
+that amplitude moves F1 on its own by +8.80. So the clause credited the amplitude effect to f3
+compensation and printed:
+
+> *"compensation RESTORES F1, so the cost was level and the renderer's unrenormalised sum is the
+> defect — a one-line fix."*
+
+That is false, and **the same run's own numbers refute it**: the amplitude ladder moves gain 1 by
++8.04 and gain 0 by +8.80, i.e. identically, which is an independent additive effect and not a
+compensation. This is the operating-point rule exactly — **a dose compared across a knob that
+independently moves the readout is not compared at all** — and the rule was already in the method
+notes. Caught at the desk before publication; the fix is to score the **paired cost at matched
+amplitude**, which is what the table above does.
+
+#### AN INCIDENTAL FINDING THAT IS BIGGER THAN THIS LINE, AND IS ONLY A LEAD
+
+**Quieter is more discriminable.** F1's d'² rises monotonically 47.3 → 56.1 as amplitude falls by 2×,
+which says the cochlea is compressing or saturating at amplitude 1.0 — and 1.0 is the operating point
+this instrument has used throughout. If the creature's own utterances sit near there, then **every
+measurement in this project that goes through the ear is being taken above the cochlea's best
+operating point**, which would affect naming, echoing and teaching alike.
+
+**It is a lead and not a result**, for a reason that has to be checked first: this instrument sets
+amplitude by hand, while the creature sets it from vocal group 8's activity. **Nobody has measured
+what amplitude the creature actually produces.** If it is well below 1.0 the finding is irrelevant to
+the live system. That measurement is the cheap first step and it is not this run.
+
+#### THE RUN ACCOUNTING, AND A PATTERN WORTH MORE THAN THE RESULT
+
+Seven instrument faults today, all caught before publication except the units bug, which corrected an
+already-published number:
+
+1. §41's cross-talk clause — unfalsifiable.
+2. `axisear` v1 — no denominator (d' of 41,514).
+3. `axisear` v1 — a clause mis-derived from a wrong belief about which code the change touched.
+4. `axisear` v1 — reading inside the estimator's floor at n=24.
+5. `axisear` v2 — **d'² printed as d'**, which is the one that had already shipped.
+6. `axisjit` — the gain-0 clause unfalsifiable, a repeat of (1), *after* (1) was written down as a rule.
+7. `axislev` — clause 3 compared across an operating point, against a rule already in the notes.
+
+**The uncomfortable pattern is that (6) and (7) each broke a rule this project had already written
+down**, and (6) broke one written the same morning. The rules are not the missing thing; applying
+them to the clause one is most confident in is. That is now the standing instruction in
+[[aibaby-power-is-not-the-error-model]].

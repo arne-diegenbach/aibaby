@@ -335,6 +335,13 @@ const Spec kSpecs[] = {
      "  (axisfree 0.948 vs -0.167), so the AXIS COUNT is the accumulation lever.\n"
      "  Prints a 9x9 normalised cross-talk matrix. LIVENESS IS SCORED FIRST,\n"
      "  because cross-talk is a ratio and a DEAD axis has none of it"},
+    {"axislev", 1, Expect::kRead, Tier::kLong,
+     "  §41 run 2d: is f3's static cost to F1 LEVEL? Sweeps amplitude over 2x\n"
+     "  at render_f3_gain 0 -- if F1's d' is flat there, a global level change is\n"
+     "  invisible to this ruler, and a mechanism the ruler cannot see cannot have\n"
+     "  produced one it did see, so level is REFUTED by deduction. Also carries\n"
+     "  the positive control axisjit owed: freeze f2, audible in both conditions,\n"
+     "  and measure F1, with an ORDERING prediction that can fail"},
     {"axisjit", 1, Expect::kRead, Tier::kLong,
      "  §41 run 2c: WHY does f3 cost F1 11.3%% of its d'? Holds an axis exactly\n"
      "  at rest instead of jittering it -- drawing and DISCARDING the deviate so\n"
@@ -1311,6 +1318,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "axisgrid") ok = run_axisgrid(dna_blob, ticks, verbose);
   else if (name == "axisear") ok = run_axisear(dna_blob, ticks, verbose);
   else if (name == "axisjit") ok = run_axisjit(dna_blob, ticks, verbose);
+  else if (name == "axislev") ok = run_axislev(dna_blob, ticks, verbose);
   else if (name == "ctxgrid") ok = run_ctxgrid(dna_blob, ticks, verbose);
   else if (name == "echoname") ok = run_echoname(dna_blob, ticks, verbose);
   else if (name == "dirbudget") ok = run_dirbudget(dna_blob, ticks, verbose);

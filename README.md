@@ -25825,3 +25825,46 @@ being measured, the readings shot up — but with error bars a third as large as
 themselves, because freezing almost everything leaves almost nothing to measure the spread against.
 That's the same trap as the very first version of this experiment, which cheerfully reported a figure
 of 41,000. The direction is real; the size isn't trustworthy, so it isn't a result.
+
+### The loudness explanation is dead, the wobble explanation holds, and we found something bigger by accident
+
+Two loose ends from the last entry, run together because one checks the other.
+
+**The control we admitted we owed.** Last time we included a check that turned out incapable of
+failing, and said the version that would work is to hold steady a dial that *can* be heard — the
+second formant — and see whether the muddying lifts there too, with no third formant involved at all.
+It does, enormously: holding the second formant steady nearly **doubles** how well the first one can
+be told apart. And it had to be bigger than the third formant's figure to count, because the second
+formant is both louder and wobblier — that was the part of the prediction that could have failed, and
+it came out 12 times larger. So the wobble effect is real and general, not an artefact of the change
+we made to the synthesiser. It also means the creature's own unsteadiness on the dials it *isn't*
+using is the single biggest thing standing between it and a larger vocabulary.
+
+**The loudness explanation is dead.** We'd guessed the remaining 71% might just be that the
+synthesiser gets louder when you add a third resonance without turning anything down. We expected to
+rule this out on a technicality — that our measuring stick probably couldn't see overall loudness at
+all. We were wrong: it sees loudness clearly. Which gave us a much better answer. We measured the
+third formant's cost at four different volumes across a 2:1 range, and the cost doesn't shrink as you
+turn things down — it very slightly **grows**. Turning the volume down buys back nothing. So the 71%
+is the new formant's energy crowding the old one specifically, in its own frequency range, and no
+amount of volume adjustment would help. **There's nothing to fix.** The mechanism question is closed:
+29% wobble, 71% crowding, 0% loudness.
+
+**One check printed a confident wrong answer, and the same run's numbers caught it.** Our first
+version of that volume test compared the quietest "third formant on" case against the *loudest*
+"third formant off" case — two things differing in both the volume and the formant. Since turning the
+volume down helps all by itself, the test credited that to the formant and announced "it's loudness,
+and it's a one-line fix." It isn't. Three lines above, the same printout showed the volume effect
+being identical with the formant on and off, which is exactly what an unrelated side-effect looks
+like. We had a written rule about this specific mistake already.
+
+**And the accident, which may matter more than anything else here.** The first formant gets steadily
+*easier* to tell apart as we turn the volume down — about 19% better across a 2:1 drop. That means the
+ear is being overdriven at the volume we've been testing at, and it's the volume we've used all along.
+If the creature's own voice sits anywhere near there, then **every measurement in this project that
+goes through the ear has been taken with the ear slightly overloaded** — naming, echoing, teaching,
+all of it. We are deliberately not calling this a result yet, because there's an obvious thing to
+check first and we haven't: this test sets the volume by hand, while the creature sets its own from a
+different part of its brain, and **nobody has ever measured what volume it actually produces.** If
+that turns out to be well below where we've been testing, the whole thing is a non-issue. That
+measurement is cheap and it's the next thing to do.

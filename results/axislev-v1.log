@@ -1,0 +1,49 @@
+experiment: axislev
+  the question      §41 run 2d. Two leftovers. (A) Is f3's 71% static cost
+                    LEVEL? (B) The positive control for jitter inflation
+                    that axisjit's gain-0 clause could not provide.
+  (A) the logic     sweep amplitude at f3_gain 0. FLAT => a global level
+                    change is INVISIBLE to this ruler, and a mechanism the
+                    ruler cannot see cannot have produced a change it DID
+                    see. That REFUTES level -- a deduction, not a null.
+  (B) the control   freeze f2 -- audible in BOTH conditions, unlike f3 at
+                    gain 0 -- and measure F1. Jitter inflation predicts a
+                    recovery with no third resonator in play, and predicts
+                    it is LARGER than freezing f3 gave (+2.934), since f2
+                    is both more audible and more jittered.
+
+  CLAUSE 1 -- THE RULER'S AMPLITUDE SENSITIVITY, at f3_gain 0, on F1.
+  A 2x amplitude range with no third resonator anywhere in it.
+    amplitude 1.0000   d'^2   47.345 +-  0.932   d'  6.881
+    amplitude 0.8165   d'^2   49.920 +-  1.002   d'  7.065
+    amplitude 0.6667   d'^2   52.486 +-  1.066   d'  7.245
+    amplitude 0.5000   d'^2   56.144 +-  1.172   d'  7.493
+    full range (1.0 -> 0.5000), paired:  dd'^2    8.799 +-  0.278   -> the ruler SEES amplitude
+
+  CLAUSE 2 -- THE POSITIVE CONTROL: freeze f2's jitter at f3_gain 0 and
+  measure F1. No third resonator is involved, so this tests the MECHANISM
+  rather than the renderer change. Must be a recovery, and must exceed the
+  +2.934 that freezing f3 bought at gain 1, because f2 is both more
+  audible (d' 9.47 vs 4.85) and more jittered (sd 57.8 vs 47.6 Hz).
+    freezing f2 at gain 0:   dd'^2   34.590 +-  1.169   -> RECOVERS
+    against freezing f3 at gain 1 (2.934)                 -> larger, as predicted
+
+  CLAUSE 3 -- THE COMPENSATED CELL, and it only means anything if clause 1
+  said the ruler sees amplitude. Does turning the volume down at f3_gain 1
+  give F1 back what the third resonator took?
+    amplitude 1.0000   d'^2   37.218 +-  0.672   d'  6.101
+    amplitude 0.8165   d'^2   39.479 +-  0.743   d'  6.283
+    amplitude 0.6667   d'^2   41.886 +-  0.822   d'  6.472
+    amplitude 0.5000   d'^2   45.253 +-  0.927   d'  6.727
+    best of the ladder at gain 1: 45.253   against gain 0's 47.345
+
+  JITTER INFLATION CONFIRMED ON AN INDEPENDENT AXIS. Freezing f2 recovers
+  34.590 of F1's d'^2 with NO third resonator in play, and more than
+  freezing f3 bought, as the audibility and jitter ordering predicts. The
+  mechanism is a real property of the code, not an artefact of v83.
+
+  THE RULER SEES AMPLITUDE, so the level account is live and clause 3's
+  ladder is readable. Best cell at gain 1 is 45.253 against gain 0's 47.345:
+  compensation RESTORES F1, so the cost was level and the renderer's
+  unrenormalised sum is the defect -- a one-line fix.
+WALL 10.67 s
