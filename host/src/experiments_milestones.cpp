@@ -45475,6 +45475,357 @@ bool run_aimaxes(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
   return true;
 }
 
+// ===== axisgrid (§41): all NINE vocal groups, and the cross-talk MATRIX =====
+//
+// Pre-registered in docs/ROADMAP.md §41, committed BEFORE this was written, clause
+// order included. The prize: retention is nearly FREE across an orthogonal axis
+// (axisfree, 0.948 vs -0.167, +5.7 SE) and levels MULTIPLY across independent axes,
+// so the number of things this creature can hold at once is the number of axes it
+// has -- and `aimaxes` measured TWO of nine.
+//
+// WHY A NEW EXPERIMENT INSTEAD OF MORE GROUPS IN `aimaxes`. aimaxes publishes a 2x2
+// and carries a reproduction guard against aimgain's swing. Widening its table in
+// place is precisely the defect `aibaby-control-on-a-different-code-path` priced:
+// a guard written when two groups existed, silently handed nine. aimaxes is left
+// byte-identical, and ITS OUTPUT IS THE DETERMINISM CHECK on this build.
+//
+// THE PROTOCOL IS aimaxes's, UNCHANGED, deliberately: the same five-rung ladder, a
+// FRESH creature at every rung, and the same 66666-tick window pinned to aimgain's
+// rather than derived from `ticks` -- IP cancels a sustained bias, so the swing
+// depends on how long the bias is held, which makes the window a constant.
+constexpr uint32_t kAX9Groups[] = {0, 1, 2, 3, 4, 5, 6, 7, 8};
+constexpr uint32_t kAX9NGroups = 9;
+constexpr uint32_t kAX9NPar = 9;
+constexpr uint32_t kAX9Reps = 12;
+// THE MAPPING IS NOT GUESSABLE and is not the group order. `m3probe` read it out of
+// VocalDecoder::update: centroid 0 -> f0, centroids 2..7 -> f1,f2,f3,bw1,bw2,bw3,
+// ACTIVITY 1 -> the voicing gate, ACTIVITY 8 -> loudness. Centroids 1 and 8 and
+// activities 0 and 2..7 are computed every frame and discarded.
+enum { kAX9f0 = 0, kAX9f1, kAX9f2, kAX9f3, kAX9b1, kAX9b2, kAX9b3, kAX9amp, kAX9voi };
+constexpr const char* kAX9PName[kAX9NPar] =
+    {"f0", "f1", "f2", "f3", "bw1", "bw2", "bw3", "amp", "voi"};
+// kAX9Own[gi] = the parameter that group kAX9Groups[gi] is the DRIVER of.
+constexpr uint32_t kAX9Own[kAX9NGroups] =
+    {kAX9f0, kAX9voi, kAX9f1, kAX9f2, kAX9f3, kAX9b1, kAX9b2, kAX9b3, kAX9amp};
+// The set the product may be taken over: formant-like AND carried by the
+// transmission tape. f0 is excluded for LINEAGE (the tape carries formants only, so
+// an f0 distinction cannot be taught creature-to-creature); amp and voicing are not
+// vowel-identity axes. All nine are still measured and printed.
+constexpr bool kAX9Teach[kAX9NPar] =
+    {false, true, true, true, true, true, true, false, false};
+// WHICH PARAMETERS THIS INSTRUMENT CAN DRIVE AT ALL, and it is not all nine.
+// `set_bias_oracle` is "GRADED AND ZERO-MEAN on purpose": a ramp from -amp to +amp
+// across the group, sampled so the mean over the range is EXACTLY zero. That moves
+// a rate-weighted CENTROID over neuron index while adding NO NET DRIVE -- which is
+// precisely what makes it the right oracle for a formant and what makes it USELESS
+// for the two parameters read as ACTIVITY (voicing = activity 1, loudness =
+// activity 8). A zero-mean ramp cannot move a net-drive readout BY CONSTRUCTION.
+//
+// So those two cells are NOT A TEST, and must not be reported as a dead axis. That
+// distinction is the whole of `aibaby-null-is-not-a-control`: a quantity whose
+// answer is fixed by construction is not a measurement of anything. They may well
+// be steerable by a NON-zero-mean bias; this experiment says nothing about it.
+constexpr bool kAX9Centroid[kAX9NPar] =
+    {true, true, true, true, true, true, true, false, false};
+
+struct AX9Cell {
+  double m[kAX9NPar] = {};
+  double sd[kAX9NPar] = {};
+  bool ok = false;
+};
+
+bool run_axisgrid(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  (void)ticks;   // the window is kAXPerRung by construction -- see above
+  aibaby::Dna dna;
+  if (dna.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) return false;
+  const int32_t vmod = dna.module_with_role(aibaby::ModuleRole::kVocal);
+  if (vmod < 0) { std::printf("  no vocal module\n"); return false; }
+
+  instrument("axisgrid", dna.header().seed ^ 0xA9D1u, kAX9Reps, "creatures");
+  std::printf("  the question      how many INDEPENDENT steerable axes does the larynx\n"
+              "                    have? aimaxes measured 2 of the 9 groups senses.cpp\n"
+              "                    maps. Levels MULTIPLY across independent axes, so the\n"
+              "                    axis COUNT is the lever, not any axis's range.\n");
+  std::printf("  why it matters    retention is nearly FREE across an orthogonal axis\n"
+              "                    (axisfree 0.948 vs -0.167 on-axis, +5.7 SE), so the\n"
+              "                    number of lessons the creature can HOLD is the number\n"
+              "                    of axes it has. This is the accumulation lever.\n");
+  std::printf("  CLAUSE ORDER      1 liveness, 2 cross-talk, 3 resolution, 4 the product.\n"
+              "                    LIVENESS IS FIRST BECAUSE CROSS-TALK IS A RATIO: a DEAD\n"
+              "                    axis has zero cross-talk trivially and would be reported\n"
+              "                    as ideally independent. Pre-registered, not patched in.\n\n");
+
+  const std::vector<AX9Cell> cells = parallel_reps<AX9Cell>(
+      kAX9Reps * kAX9NGroups * kAXRungs, [&](uint32_t job) {
+    const uint32_t L = job % kAXRungs;
+    const uint32_t gi = (job / kAXRungs) % kAX9NGroups;
+    const uint32_t r = job / (kAXRungs * kAX9NGroups);
+    AX9Cell cell;
+    std::vector<uint8_t> variant = blob;
+    const uint64_t seed = dna.header().seed + r * 7919ull;
+    std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+    Session s;
+    std::string err;
+    if (!s.init(variant, err)) return cell;
+    const aibaby::ModuleState& vms = s.brain.network().module(uint32_t(vmod));
+    const uint32_t g = kAX9Groups[gi];
+    const uint32_t beg = vms.begin + aibaby::slice_begin(vms.count, aibaby::kVocalGroups, g);
+    const uint32_t end = vms.begin + aibaby::slice_begin(vms.count, aibaby::kVocalGroups, g + 1);
+    if (end <= beg + 3) return cell;
+    const double namp = double(s.dna.module(uint32_t(vmod)).noise_amp);
+    if (kAXLadder[L] != 0.0)
+      s.brain.network().set_bias_oracle(0, beg, end,
+                                        aibaby::Scalar(kAXLadder[L] * namp));
+    double sum[kAX9NPar] = {}, sq[kAX9NPar] = {};
+    uint32_t n = 0;
+    for (uint64_t t = 0; t < kAXPerRung; ++t) {
+      s.brain.step();
+      if (t < kAXPerRung / 2) continue;   // discard the settle half, as aimaxes does
+      const aibaby::VocalParams& v = s.brain.voice();
+      const double p[kAX9NPar] = {double(v.f0), double(v.f1), double(v.f2), double(v.f3),
+                                 double(v.bw1), double(v.bw2), double(v.bw3),
+                                 double(v.amplitude), double(v.voicing)};
+      for (uint32_t k = 0; k < kAX9NPar; ++k) { sum[k] += p[k]; sq[k] += p[k] * p[k]; }
+      ++n;
+    }
+    if (!n) return cell;
+    for (uint32_t k = 0; k < kAX9NPar; ++k) {
+      cell.m[k] = sum[k] / double(n);
+      cell.sd[k] = std::sqrt(std::fabs(sq[k] / double(n) - cell.m[k] * cell.m[k]));
+    }
+    cell.ok = true;
+    return cell;
+  });
+  auto at = [&](uint32_t r, uint32_t gi, uint32_t L) -> const AX9Cell& {
+    return cells[(size_t(r) * kAX9NGroups + gi) * kAXRungs + L];
+  };
+
+  const uint32_t zero = kAXRungs / 2;
+  // swing[gi][p] = full-ladder movement of parameter p when group gi is biased.
+  double swing[kAX9NGroups][kAX9NPar] = {};
+  double rest[kAX9NPar] = {}, scat[kAX9NPar] = {};
+  uint32_t live_n[kAX9NGroups] = {};
+  for (uint32_t gi = 0; gi < kAX9NGroups; ++gi) {
+    for (uint32_t p = 0; p < kAX9NPar; ++p) {
+      std::vector<double> lo, hi;
+      for (uint32_t r = 0; r < kAX9Reps; ++r) {
+        const AX9Cell& a = at(r, gi, 0);
+        const AX9Cell& b = at(r, gi, kAXRungs - 1);
+        if (!a.ok || !b.ok) continue;
+        lo.push_back(a.m[p]); hi.push_back(b.m[p]);
+      }
+      if (lo.empty()) continue;
+      double e;
+      swing[gi][p] = ctx_mean_se(hi, &e) - ctx_mean_se(lo, &e);
+      if (p == 0) live_n[gi] = uint32_t(lo.size());
+    }
+  }
+  // THE ZERO RUNG IS A FREE DETERMINISM CHECK. No bias is applied at the zero rung,
+  // so all nine groups run the SAME creature there. Any difference is a harness bug.
+  double zmax = 0.0;
+  for (uint32_t p = 0; p < kAX9NPar; ++p) {
+    std::vector<double> v, d;
+    for (uint32_t r = 0; r < kAX9Reps; ++r) {
+      const AX9Cell& c = at(r, 0, zero);
+      if (!c.ok) continue;
+      v.push_back(c.m[p]); d.push_back(c.sd[p]);
+    }
+    if (v.empty()) continue;
+    double e;
+    rest[p] = ctx_mean_se(v, &e);
+    scat[p] = ctx_mean_se(d, &e);
+    for (uint32_t gi = 1; gi < kAX9NGroups; ++gi)
+      for (uint32_t r = 0; r < kAX9Reps; ++r) {
+        const AX9Cell& c = at(r, gi, zero);
+        if (c.ok) zmax = std::max(zmax, std::fabs(c.m[p] - at(r, 0, zero).m[p]));
+      }
+  }
+  std::printf("  ZERO-RUNG IDENTITY  no bias is applied at k=0, so all nine groups run\n"
+              "  the SAME creature there. Largest disagreement across the nine: %.3e  -> %s\n\n",
+              zmax, zmax == 0.0 ? "EXACT, as it must be" : "*** NONZERO -- harness bug");
+
+  std::printf("  THE REST POINT and its within-run scatter (zero rung, %u creatures)\n", kAX9Reps);
+  for (uint32_t p = 0; p < kAX9NPar; ++p)
+    std::printf("    %-4s rest %10.3f   within-run sd %9.3f\n", kAX9PName[p], rest[p], scat[p]);
+
+  // ---- CLAUSE 1: LIVENESS. First, because cross-talk is a ratio. ----
+  std::printf("\n  CLAUSE 1 -- LIVENESS: own-axis swing against its own scatter.\n"
+              "  Bar: |swing| >= 3 x within-run sd. A DEAD axis is NO VERDICT, never\n"
+              "  \"independent\", and never enters the product. AND THE TWO ACTIVITY\n"
+              "  READOUTS ARE SEPARATED OUT: this instrument's bias is zero-mean by\n"
+              "  construction, so it cannot drive a net-drive readout at all -- those\n"
+              "  cells are NOT A TEST and are not evidence the axis is unsteerable.\n");
+  bool live[kAX9NGroups] = {};
+  for (uint32_t gi = 0; gi < kAX9NGroups; ++gi) {
+    const uint32_t p = kAX9Own[gi];
+    const double sw = std::fabs(swing[gi][p]);
+    const double bar = 3.0 * scat[p];
+    live[gi] = live_n[gi] > 0 && scat[p] > 0.0 && sw >= bar;
+    const char* verdict = live[gi] ? "LIVE"
+                        : (kAX9Centroid[p] ? "NO VERDICT -- AXIS DEAD"
+                                           : "NOT TESTED -- activity readout, and this"
+                                             " bias is zero-mean");
+    std::printf("    group %u -> %-4s  swing %9.3f  bar %9.3f  -> %s\n",
+                kAX9Groups[gi], kAX9PName[p], sw, bar, verdict);
+  }
+
+  // ---- CLAUSE 2: CROSS-TALK, normalised by each axis's OWN steerable range. ----
+  // A raw Hz off-diagonal cannot be compared across these axes: f0 rests near 120,
+  // f3 near 2500, the bandwidths near 100. X[g][p] asks what fraction of what p's
+  // OWN driver achieves is produced by biasing g instead.
+  uint32_t owner[kAX9NPar];
+  for (uint32_t p = 0; p < kAX9NPar; ++p) {
+    owner[p] = kAX9NGroups;
+    for (uint32_t gi = 0; gi < kAX9NGroups; ++gi) if (kAX9Own[gi] == p) owner[p] = gi;
+  }
+  std::printf("\n  CLAUSE 2 -- CROSS-TALK MATRIX  X[g][p] = swing_p(bias g) / swing_p(bias p's\n"
+              "  own driver). The diagonal is 1 by construction. Bar: |X| <= 0.10 off-diagonal,\n"
+              "  deliberately 10x looser than aimaxes's measured 0.01, so a REFUSAL is\n"
+              "  unambiguous rather than marginal. `-` = p's own driver is dead.\n");
+  std::printf("    bias \\ reads ");
+  for (uint32_t p = 0; p < kAX9NPar; ++p) std::printf("%8s", kAX9PName[p]);
+  std::printf("\n");
+  bool indep[kAX9NGroups] = {};
+  double worst[kAX9NGroups] = {};
+  uint32_t worst_p[kAX9NGroups] = {};
+  for (uint32_t gi = 0; gi < kAX9NGroups; ++gi) {
+    std::printf("    group %u (%-3s) ", kAX9Groups[gi], kAX9PName[kAX9Own[gi]]);
+    double w = 0.0; uint32_t wp = 0;
+    for (uint32_t p = 0; p < kAX9NPar; ++p) {
+      const uint32_t og = owner[p];
+      const double den = og < kAX9NGroups ? swing[og][p] : 0.0;
+      if (den == 0.0 || !live[og]) { std::printf("%8s", "-"); continue; }
+      const double x = swing[gi][p] / den;
+      std::printf("%8.3f", x);
+      if (p != kAX9Own[gi] && kAX9Teach[p] && std::fabs(x) > w) { w = std::fabs(x); wp = p; }
+    }
+    std::printf("\n");
+    worst[gi] = w; worst_p[gi] = wp;
+    indep[gi] = live[gi] && w <= 0.10;
+  }
+  std::printf("    worst off-diagonal into a TEACHABLE axis, per group:\n");
+  for (uint32_t gi = 0; gi < kAX9NGroups; ++gi)
+    std::printf("      group %u (%-3s)  %.3f into %-4s -> %s\n", kAX9Groups[gi],
+                kAX9PName[kAX9Own[gi]], worst[gi], kAX9PName[worst_p[gi]],
+                !live[gi] ? (kAX9Centroid[kAX9Own[gi]] ? "n/a, dead" : "n/a, NOT TESTED")
+                          : (indep[gi] ? "INDEPENDENT" : "REALLOCATES, not added"));
+
+  // ---- CLAUSE 3: RESOLUTION, which is what sets the prize. ----
+  // aimaxes's own move, kept so the numbers are comparable: scale the ORACLE ladder
+  // swing to a LEARNED one by the factor ctxscale's 118 Hz dF1 asymptote implies on
+  // F1, then levels = reach / (2 x scatter). THE ASSUMPTION IS STATED: that the
+  // learned/oracle ratio measured on F1 carries to the other axes. It is not measured.
+  const double learned_f1 = 118.0;
+  const uint32_t g_f1 = owner[kAX9f1];
+  const double sw_f1 = g_f1 < kAX9NGroups ? std::fabs(swing[g_f1][kAX9f1]) : 0.0;
+  const double frac = sw_f1 > 0.0 ? learned_f1 / sw_f1 : 0.0;
+  std::printf("\n  CLAUSE 3 -- RESOLUTION. Oracle swing scaled to a LEARNED bias by x%.3f\n"
+              "  (ctxscale's 118 Hz F1 asymptote / this run's F1 oracle swing %.1f), then\n"
+              "  levels = reach / (2 x within-run sd), which is aimaxes's k=2. ASSUMPTION,\n"
+              "  stated and NOT measured: the learned/oracle ratio found on F1 carries.\n", frac, sw_f1);
+  double levels[kAX9NPar] = {};
+  for (uint32_t p = 0; p < kAX9NPar; ++p) {
+    const uint32_t og = owner[p];
+    if (og >= kAX9NGroups || !live[og] || scat[p] <= 0.0) continue;
+    levels[p] = std::fabs(swing[og][p]) * frac / (2.0 * scat[p]);
+  }
+  for (uint32_t p = 0; p < kAX9NPar; ++p) {
+    const uint32_t og = owner[p];
+    const double snr = scat[p] > 0.0 ? std::fabs(swing[og][p]) / scat[p] : 0.0;
+    std::printf("    %-4s  reach %9.3f / scatter %8.3f  ->  %5.2f levels"
+                "   (oracle swing/scatter %5.1f)   %s%s\n",
+                kAX9PName[p], std::fabs(swing[og][p]) * frac, scat[p], levels[p], snr,
+                kAX9Teach[p] ? "" : "(not in the product: ",
+                kAX9Teach[p] ? "" : (p == kAX9f0 ? "f0 fails LINEAGE)" : "not a vowel-identity axis)"));
+  }
+  // THE swing/scatter COLUMN IS A FINDING, NOT A DIAGNOSTIC. If it is near-constant
+  // across axes whose absolute scales differ by 10x, then "~2.6 levels per axis" is a
+  // property of the GROUP ARCHITECTURE -- identical neuron count and noise_amp per
+  // group -- and not of any parameter. That makes aimaxes's 2.6 a structural constant
+  // replicated here, and it is why the level counts below look suspiciously uniform.
+  {
+    double lo = 1e18, hi = 0.0;
+    for (uint32_t p = 0; p < kAX9NPar; ++p) {
+      const uint32_t og = owner[p];
+      if (og >= kAX9NGroups || !live[og] || scat[p] <= 0.0) continue;
+      const double snr = std::fabs(swing[og][p]) / scat[p];
+      lo = std::min(lo, snr); hi = std::max(hi, snr);
+    }
+    if (hi > 0.0)
+      std::printf("    -> swing/scatter spans %.1f to %.1f across the live axes%s\n", lo, hi,
+                  hi / lo < 1.5 ? ", i.e. NEARLY CONSTANT: the level count is the group"
+                                  " ARCHITECTURE, not the parameter" : "");
+  }
+  std::printf("    CAVEAT ON THE RULER, stated: `scatter` is WITHIN-RUN jitter, which is\n"
+              "    aimaxes's convention and so comparable to its 2.6 -- but a held vowel is\n"
+              "    scored over many ticks, so it OVERSTATES the noise a scorer sees, while\n"
+              "    the quantity that actually bounds naming is BETWEEN-TRIAL spread, which\n"
+              "    this run does not measure. Conservative, and the wrong ruler either way.\n");
+
+  // ---- CLAUSE 4: AND ONLY NOW THE PRODUCT. ----
+  std::printf("\n  CLAUSE 4 -- THE PRODUCT, over axes that passed 1, 2 AND 3 (levels >= 2)\n"
+              "  and are carried by the transmission tape.\n");
+  double product = 1.0;
+  uint32_t kept = 0;
+  for (uint32_t p = 0; p < kAX9NPar; ++p) {
+    if (!kAX9Teach[p]) continue;
+    const uint32_t og = owner[p];
+    const bool pass = og < kAX9NGroups && live[og] && indep[og] && levels[p] >= 2.0;
+    std::printf("    %-4s  live %-3s  independent %-3s  levels %5.2f  -> %s\n",
+                kAX9PName[p], og < kAX9NGroups && live[og] ? "yes" : "no",
+                og < kAX9NGroups && indep[og] ? "yes" : "no", levels[p],
+                pass ? "COUNTS" : "excluded");
+    if (pass) { product *= levels[p]; ++kept; }
+  }
+  std::printf("    -> %u axes qualify, code space = %.1f distinguishable signals\n",
+              kept, kept ? product : 0.0);
+
+  // GUARD: this must be aimaxes's instrument, or none of the above is comparable.
+  const double want = 186.1 + 192.2;
+  const bool repro = sw_f1 > 0.0 && std::fabs(sw_f1 - want) < 60.0 &&
+                     std::fabs(rest[kAX9f1] - 629.7) < 25.0;
+  std::printf("\n  GUARD  is this aimaxes's instrument?  F1 swing %.1f against its %.1f,\n"
+              "         F1 rest %.1f against its 629.7   -> %s\n",
+              sw_f1, want, rest[kAX9f1], repro ? "OK" : "NO -- different instrument");
+
+  std::printf("\n");
+  if (!repro) {
+    std::printf("  VOID: the F1 axis does not reproduce aimaxes/aimgain, so this is not the\n"
+                "  instrument those numbers came from. Nothing above may be read.\n");
+    return true;
+  }
+  if (zmax != 0.0) {
+    std::printf("  VOID: the zero rung differs between groups, which is impossible if no\n"
+                "  bias is applied there. The harness, not the creature.\n");
+    return true;
+  }
+  if (kept <= 2) {
+    std::printf("  REFUSED -- NO NEW AXIS. Only %u teachable axes clear liveness,\n"
+                "  independence and 2 levels, and aimaxes already had 2 (F1, F2). The\n"
+                "  accumulation prize argued in §41 does NOT exist at the larynx: the\n"
+                "  item count cannot be grown by adding axes, because there are none to\n"
+                "  add. §41's clause-2 refusal, and the line stops at run 1 of 3.\n", kept);
+  } else {
+    std::printf("  %u TEACHABLE AXES QUALIFY, against aimaxes's 2, for a code space of\n"
+                "  %.1f signals with NO new learning rule. BUT THIS IS NOT A WORD COUNT\n"
+                "  AND MAY NOT BE QUOTED AS ONE: the ear is the gate, not the larynx, and\n"
+                "  whether it RESOLVES the new axes is unmeasured -- kVLScoreFormant scores\n"
+                "  only F1/F2. Stage two is that measurement, and §41 forbids a naming\n"
+                "  claim until it exists.\n", kept, product);
+    std::printf("\n  AND §41's OWN POWER ARGUMENT WAS WRONG, WHICH IS WORTH MORE THAN THE\n"
+                "  RESULT. It named CROSS-TALK as \"the cheapest thing that could refuse\n"
+                "  this\". It could not: the groups are DISJOINT INDEX SLICES and each\n"
+                "  parameter is a centroid over its own slice, so a ramp inside one slice\n"
+                "  can only reach another through lateral dynamics -- near-zero was\n"
+                "  structurally near-certain, and a bar of 0.10 against measured 0.007 was\n"
+                "  never going to bind. The clause that actually did work was CLAUSE 1,\n"
+                "  which caught the two readouts this instrument cannot drive at all. A\n"
+                "  pre-registered refusal clause is only as good as its chance of firing.\n");
+  }
+  return true;
+}
+
 bool run_aimslice(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
   (void)verbose;
   aibaby::Dna dna;

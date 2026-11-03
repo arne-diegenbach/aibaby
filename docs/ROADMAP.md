@@ -4988,3 +4988,103 @@ proposal to teach two axes at once is already refused.
 
 **Had this rule existed in September the offset hunt would have ended at v79.** It exists now
 because §40 cost twelve DNA versions to establish that a quantity was never worth naming.
+
+### §41 RESULT — SIX INDEPENDENT AXES, NOT TWO (2026-11-03, run 1 of 3)
+
+`results/axisgrid-v1.log`, new experiment `axisgrid`, 9 groups × 5 rungs × 12 creatures at
+aimaxes's pinned 66666-tick window, read-only, 4m40s. `aimaxes` left byte-identical.
+
+**THE INSTRUMENT IS aimaxes's, AND IT SAYS SO.** F1 swing **372.2** against aimgain's published
+378.3 and F1 rest **626.5** against its 629.7 — the reproduction guard passes. F2 swings **947.4**
+against aimaxes's published **961**. Two independent anchors from a different experiment, both
+reproduced by new code.
+
+**AND A FREE DETERMINISM CHECK THAT COST NOTHING TO ADD.** No bias is applied at the zero rung, so
+all nine groups run the *same* creature there. Largest disagreement across the nine: **0.000e+00**.
+Any nonzero value would have been a harness bug, and this is the check that proves the nine slices
+are indexed correctly.
+
+#### CLAUSE 1 — LIVENESS, AND IT IS THE CLAUSE THAT DID THE WORK
+
+| group → parameter | own swing | bar (3×sd) | verdict |
+|---|---|---|---|
+| 0 → f0 | 157.0 | 27.4 | LIVE |
+| 1 → **voi** | 0.009 | 1.45 | **NOT TESTED** |
+| 2 → f1 | 372.2 | 65.2 | LIVE |
+| 3 → f2 | 947.4 | 173.3 | LIVE |
+| 4 → f3 | 803.9 | 142.8 | LIVE |
+| 5 → bw1 | 99.8 | 16.0 | LIVE |
+| 6 → bw2 | 101.1 | 17.9 | LIVE |
+| 7 → bw3 | 100.2 | 16.9 | LIVE |
+| 8 → **amp** | 0.002 | 0.47 | **NOT TESTED** |
+
+**THE TWO ZEROES ARE NOT A REFUTATION AND THE FIRST DRAFT LABELLED THEM AS ONE.** `set_bias_oracle`
+is *"GRADED AND ZERO-MEAN on purpose"* — a ramp from −amp to +amp sampled so the mean over the
+group is exactly zero, which **moves a centroid while adding no net drive.** Seven parameters are
+read as centroids; **voicing and loudness are read as ACTIVITY** (activity 1 and activity 8, per
+`m3probe`). A zero-mean ramp cannot move a net-drive readout **by construction**, so those two cells
+were never a test. The run was re-run with the label corrected to **NOT TESTED**, and every measured
+number came back byte-identical, which is what proves the fix touched only the label. Those axes may
+well be steerable by a non-zero-mean bias; this says nothing about it.
+
+#### CLAUSE 2 — CROSS-TALK: THE SEVEN LIVE AXES ARE INDEPENDENT
+
+Worst off-diagonal into a teachable axis, per group: **0.002, 0.006, 0.003, 0.004, 0.007, 0.003,
+0.002** — every one at or under **0.007**, against a pre-registered bar of 0.10 and aimaxes's
+measured 0.01 between F1 and F2. **All seven pass.**
+
+#### CLAUSE 3 — RESOLUTION, AND AN UNEXPECTED STRUCTURAL FINDING
+
+| axis | levels | oracle swing/scatter |
+|---|---|---|
+| f0 | 2.73 | 17.2 |
+| f1 | 2.72 | 17.1 |
+| f2 | 2.60 | 16.4 |
+| f3 | 2.68 | 16.9 |
+| bw1 | 2.96 | 18.7 |
+| bw2 | 2.69 | 16.9 |
+| bw3 | 2.83 | 17.8 |
+
+**swing/scatter spans 16.4 to 18.7 across seven axes whose absolute scales differ by 10× (f0 rests
+at 246, f2 at 1670, the bandwidths near 150).** That near-constancy is a finding, not a diagnostic:
+**the ~2.6 levels per axis is a property of the GROUP ARCHITECTURE** — identical neuron count and
+`noise_amp` per group — **and not of any parameter.** aimaxes's 2.6, replicated seven times. It is
+also why the level counts look suspiciously uniform, which was the first thing to check.
+
+#### CLAUSE 4 — THE PRODUCT
+
+Six teachable axes qualify (f1, f2, f3, bw1, bw2, bw3; **f0 excluded for lineage** — the tape
+carries formants only). **Code space = 424.9 distinguishable signals, against aimaxes's 2 axes and
+4–9 words, with no new learning rule.**
+
+#### §41's OWN POWER ARGUMENT WAS WRONG, AND THAT IS WORTH MORE THAN THE RESULT
+
+§41 named **cross-talk** as *"the cheapest thing that could refuse it"*. **It could not have.** The
+vocal groups are **disjoint index slices** and each parameter is a centroid over *its own* slice, so
+a ramp inside one slice can only reach another through lateral dynamics. Near-zero was
+*structurally* near-certain, and a 0.10 bar against a measured 0.007 was never going to bind. **A
+pre-registered refusal clause is only as good as its probability of firing**, and I did not compute
+that probability — the same omission as a power calculation, one level up. The clause that actually
+worked was **clause 1**, which caught the two readouts the instrument cannot drive at all, and it
+was written for a different reason (a dead axis scoring as a perfect one).
+
+**New rule: when pre-registering a refusal clause, state what would have to be true of the
+ARCHITECTURE for it to fire.** If the answer is "nothing could have made it fire", it is decoration.
+
+#### WHAT THIS DOES NOT ESTABLISH — THE SAME LIST §41 WROTE IN ADVANCE
+
+1. **IT IS NOT A WORD COUNT.** The ear is the gate, not the larynx. Whether the ear resolves F3 or
+   bandwidth is **unmeasured**, and `kVLScoreFormant` scores only F1/F2, so the scorer and the
+   reward both need extending before any naming claim.
+2. **THE RULER IS WITHIN-RUN JITTER**, which is aimaxes's convention and therefore comparable to its
+   2.6 — but a held vowel is scored over many ticks, so it *overstates* the noise a scorer sees,
+   while the quantity that actually bounds naming is **between-trial spread**, which this run does
+   not measure. Wrong ruler in both directions, conservative in the one that matters.
+3. **THE LEARNED/ORACLE RATIO IS ASSUMED, NOT MEASURED.** `frac = 0.317` comes from ctxscale's
+   118 Hz F1 asymptote over this run's F1 oracle swing, and is applied to six other axes.
+4. **TEACHING MUST STILL BE SEQUENTIAL.** `capacity`: two dimensions share one scalar reward channel,
+   A keeps 0.58 against A-then-A. More axes multiply the code space, not the teaching rate.
+
+**RUN 1 OF 3 PASSED. Run 2 is the ear**, per §41's abandonment count: whether the auditory module
+resolves F3 and bandwidth distinctions. If it does not, the prize collapses to the two axes already
+known and the line stops there.

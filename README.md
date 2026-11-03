@@ -25597,3 +25597,50 @@ generate "try the next one along."
 
 So the next work is on the other side of the creature entirely: what it hears, what it can be told,
 and what it can hold on to. Two of those three turn out to be the things it's already best at.
+
+### The creature has six voice dials, not two — and nobody had checked the other seven
+
+A good day. We went looking for the thing that limits how much this creature can *hold*, and found
+that the question had been asked the wrong way round for months.
+
+The old summary was "it can only learn one thing at a time — a new lesson wipes the old one." That
+turns out to be true only when both lessons pull on the *same* dial. Teach it something on a
+different dial and the first lesson survives almost perfectly — 0.95 of it, where "1.0" means
+untouched. So the number of things it can hold isn't one or two. **It's however many independent
+dials it has.** And nobody had counted them.
+
+The voice box has nine. Two had ever been measured. We measured all nine this afternoon, in under
+five minutes of computing, because nothing has to learn for this — you just nudge each dial and see
+what moves.
+
+**Seven of the nine move, and they move independently.** When you turn one, the amount that leaks
+into any other is under **0.7%**. So they really are separate dials and not one dial wearing seven
+hats — which was the thing that could have killed the whole idea. Six of the seven can also be
+taught between creatures (the seventh is pitch, which doesn't survive the creature-to-creature
+teaching channel, so it's out). Six dials at about 2.7 settings each is roughly **425 distinct
+signals**, up from the four-to-nine we thought it had, with no change to how it learns.
+
+**Three honest caveats, and the first is the big one.** This counts what the creature's *mouth* can
+do. It says nothing about what its *ear* can hear — and a distinction it can make but can't hear is
+worth nothing, because the whole point is to learn words from what it hears. The scoring code
+currently only listens to two of the dials. So this is step one of two, and we wrote down before
+running it that no word count may be claimed until step two exists. Second: the two dials that
+showed no movement aren't broken — our nudging tool is built to move *which* neurons fire rather
+than *how many*, and those two are read off *how many*. They weren't tested, and we fixed the label
+to say so rather than reporting them as dead. Third: more dials multiplies what it can *express*,
+not how fast it learns; lessons still have to be taught one at a time.
+
+**And the most useful thing we learned was about our own method.** Before running it, we wrote down
+which result would kill the idea — "if the dials bleed into each other, this is worthless." Then we
+ran it and realised that test could never have failed. The dials are wired to separate groups of
+neurons by construction, so of course they don't bleed. We'd written a safety check that looked
+rigorous and could not possibly have caught anything.
+
+What *did* catch something was a different check, added for an unrelated reason: a dial that doesn't
+move at all would have scored as a *perfectly* independent dial, since "leaks nothing into anything"
+is trivially true of a dial that does nothing. That check is what flagged the two we couldn't test.
+
+So the lesson is small and sharp, and it's now a rule: **when you write down in advance what would
+prove you wrong, also write down what would have to be true of the machine for that test to fire at
+all.** If the answer is "nothing could have made it fire," you haven't written a safety check. You've
+written a decoration.

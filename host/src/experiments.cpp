@@ -328,6 +328,13 @@ const Spec kSpecs[] = {
      "  The aim line biased one group; senses.cpp maps group 2 to F1 and 3 to F2.\n"
      "  A 2x2 of bias-group x formant-read, because the OFF-DIAGONALS decide\n"
      "  whether four-word naming has a 2x2 vocabulary available at all"},
+    {"axisgrid", 66666, Expect::kRead, Tier::kLong,
+     "  §41: how many INDEPENDENT steerable axes does the larynx have? aimaxes\n"
+     "  measured 2 of the 9 groups senses.cpp maps. Levels MULTIPLY across\n"
+     "  independent axes and retention is nearly FREE across an orthogonal one\n"
+     "  (axisfree 0.948 vs -0.167), so the AXIS COUNT is the accumulation lever.\n"
+     "  Prints a 9x9 normalised cross-talk matrix. LIVENESS IS SCORED FIRST,\n"
+     "  because cross-talk is a ratio and a DEAD axis has none of it"},
     {"aimslice", 600000, Expect::kRead, Tier::kLong,
      "  closes the loop on the REAL auditory slice rather than a noise model of\n"
      "  it, before a DNA change rests on the sigma projection. Four readouts --\n"
@@ -1287,6 +1294,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "sensefit") ok = run_sensefit(dna_blob, ticks, verbose);
   else if (name == "aimslice") ok = run_aimslice(dna_blob, ticks, verbose);
   else if (name == "aimaxes") ok = run_aimaxes(dna_blob, ticks, verbose);
+  else if (name == "axisgrid") ok = run_axisgrid(dna_blob, ticks, verbose);
   else if (name == "ctxgrid") ok = run_ctxgrid(dna_blob, ticks, verbose);
   else if (name == "echoname") ok = run_echoname(dna_blob, ticks, verbose);
   else if (name == "dirbudget") ok = run_dirbudget(dna_blob, ticks, verbose);
