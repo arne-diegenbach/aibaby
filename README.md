@@ -25976,3 +25976,33 @@ physically ignores the dials being frozen in that condition — and we labelled 
 the source *before* running it, which is the mistake from yesterday caught in advance instead of
 afterwards. And the one control that could have failed with every sign still pointing the right way
 did not fail.
+
+**Correction, same day: the resonance-width finding has nowhere to go, and we found that out for
+free.** We wrote above that it was "a candidate change with a measured size" and the first thing in
+this line that would *improve* the creature rather than just price something. That was wrong, and
+four searches through our own code were enough to show it.
+
+The creature's naming lessons don't go through its ears at all. When we score whether it hit a
+target vowel, the score is computed from the *muscle command* it sent to its voice — a number read
+straight off the larynx, handed to it by the teacher. Its ear is not in that loop anywhere. And the
+only other thing the resonance width touches is the creature hearing *itself* — a pathway we
+measured two different ways a while back and found stone dead: shifting the creature's own auditory
+feedback moved its voice by 0.01 Hz, give or take 0.23, which is nothing, and handing it a
+*perfect* error signal about its own vowel bought it no precision either.
+
+So the measurement stands and the recommendation doesn't. Sharper resonances genuinely are easier to
+tell apart; they're easier to tell apart on a channel that nothing is listening to. If we ever
+revive the self-hearing line, this is a lever sitting ready — but on its own it is an ear fact, not
+an improvement.
+
+**The useful part is why we missed it.** We have a standing rule to ask, before building anything,
+what would have to be true of the architecture for the effect to show up at all. We applied it
+carefully to every clause *inside* the experiment, and then didn't apply it to the conclusion we
+drew *from* the experiment. Same omission, one level up. It cost nothing this time because the
+check is four searches, which is exactly why it should have come first.
+
+**And it clarifies what today's numbers were about.** Our "about 19 distinguishable signals" is a
+measure of what the *voice* can produce, graded by a scorer that reads the voice's own controls.
+Today's work measured what the *ear* can resolve. Nobody has yet measured the thing in between —
+whether the creature's hearing can tell its own words apart — and since the whole point is a
+creature that learns from what it hears, that is the gap worth closing next.

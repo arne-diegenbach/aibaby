@@ -5757,3 +5757,43 @@ Stage 2a — does the air carry the new axes — is **finished**. The answer is 
 the auditory *module* represents f3, is the last stage the count allows and is still unspent.** The
 new `render_bw_gain` lead is **not** part of §41: it is an input-side renderer change with its own
 pre-registration owed, and it does not consume §41's budget.
+
+#### CORRECTED THE SAME DAY — THE BANDWIDTH LEAD HAS NO ROUTE TO BEHAVIOUR, AND IT COST NO RUN
+
+The section above calls `render_bw_gain = 1` "a candidate genome change on its own merits" and "the
+first thing in this line that would RAISE a capability rather than price one." **Both are wrong, and
+four greps were enough to show it.**
+
+**1. The naming reward never consults the ear.** `experiments_milestones.cpp:5401` computes the
+formant error as `formant_error_axis(double(v.f1), double(v.f2), ...)` — an **oracle on the larynx
+command**. Every naming result in this archive is driven by a teacher-supplied scalar on the motor
+parameters. Improving the cochlea's resolution of formants cannot move it by one bit.
+
+**2. `render_bw_gain` reaches nothing else.** `VowelSource` has exactly one consumer outside the
+experiment layer: `Ear::larynx_` at `audio.cpp:119`, the **self-audition** render, scaled by
+`self_gain`. The field is read once, in `Ear::configure`. So its entire causal footprint is what the
+creature hears of itself.
+
+**3. And that path is a measured dead null.** `aibaby-selfloop` altered the creature's auditory
+feedback and got a coherent response of **+0.01 Hz ± 0.23** at the shift frequency, at both
+timescales. `aibaby-aimhold` handed over a *perfect* F1 error signal and bought reach but no aim,
+concluding: *if a perfect controller cannot improve precision, no learned one can.*
+
+So the +4.882 ± 0.413 is real, and it is a real improvement to the fidelity of a channel with **no
+route to behaviour**. It is an ear-side fact, not a capability. The honest status is **the
+measurement stands, the ship argument is withdrawn** — if the self-audition line is ever re-opened
+this is a lever waiting there, and `aibaby-aimfloor` is the memory that would re-open it.
+
+**WHAT THIS COST AND WHAT CAUGHT IT.** It cost nothing — no run was built. What caught it was asking
+*what must be true of the architecture for the effect to reach behaviour*, which is the rule from
+`aibaby-power-is-not-the-error-model` applied to a LEAD rather than to a clause. **I did not apply it
+before writing the lead up as a capability candidate, which is the same omission in a new place.**
+And the memory that refuted it — `aibaby-aimhold` — had been **unreachable from the memory index**
+until an hour earlier.
+
+#### AND IT SHARPENS WHAT §41 ACTUALLY MEASURED
+
+`f1 x f2 x f3 ~ 19 signals` is a **motor** capacity, scored by an oracle that reads the motor
+command. Today's runs measured the **cochlea's** resolution of the same axes. **Nothing has measured
+whether the auditory MODULE can tell the creature's own words apart** — and "recognize WORDS" is what
+the goal asks for. That, not another d', is what stage 2b should be aimed at.
