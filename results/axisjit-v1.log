@@ -1,0 +1,72 @@
+experiment: axisjit
+  the question      §41 run 2c. axisear v2 measured that f3 costs F1 11.3%
+                    of its d'. WHY? Level, spectral masking, or the f3
+                    JITTER becoming audible and inflating every other
+                    axis's denominator?
+  the manipulation  hold an axis EXACTLY at rest instead of jittering it,
+                    drawing and discarding its deviate so the RNG stream
+                    and every other parameter are untouched.
+  the built-in null the same freeze at render_f3_gain 0, where f3 is
+                    inaudible and freezing it MUST do nothing. A freeze
+                    that moves THAT column is a leak, and voids the run.
+  the ruler         as axisear v2: signed d'^2 from `cepstral_dprime`,
+                    unbiased, the root taken once after averaging reps.
+
+  render_f3_gain 0   <- THE SHIPPED CREATURE
+    axis              none frozen             f3 frozen   all off-axis frozen
+    f0       d'  7.238 +- 1.669   d'  7.238 +- 1.669   d'  9.809 +- 4.675
+    f1       d'  6.881 +- 0.932   d'  6.881 +- 0.932   d' 15.027 +- 5.267
+    f2       d'  9.469 +- 1.774   d'  9.469 +- 1.774   d' 11.412 +- 3.105
+    f3       d'  0.000 +- 0.020   d'  0.000 +- 0.020   d'  0.000 +- 0.000
+    bw1      d'  0.161 +- 0.032   d'  0.161 +- 0.032   d'  0.000 +- 0.000
+    bw2      d'  0.000 +- 0.012   d'  0.000 +- 0.012   d'  0.000 +- 0.000
+    bw3      d'  0.014 +- 0.024   d'  0.014 +- 0.024   d'  0.000 +- 0.000
+
+  render_f3_gain 1
+    axis              none frozen             f3 frozen   all off-axis frozen
+    f0       d'  7.078 +- 1.618   d'  7.247 +- 1.744   d'  9.240 +- 4.080
+    f1       d'  6.101 +- 0.672   d'  6.337 +- 0.763   d' 15.459 +- 5.609
+    f2       d'  8.982 +- 1.528   d'  9.309 +- 1.659   d' 13.520 +- 4.416
+    f3       d'  4.852 +- 0.328   d'  4.852 +- 0.328   d' 15.841 +- 5.835
+    bw1      d'  0.126 +- 0.023   d'  0.146 +- 0.024   d'  0.000 +- 0.000
+    bw2      d'  0.000 +- 0.017   d'  0.000 +- 0.018   d'  0.000 +- 0.000
+    bw3      d'  0.000 +- 0.015   d'  0.000 +- 0.019   d'  0.000 +- 0.000
+
+  CLAUSE 1 -- THE NULL: at render_f3_gain 0 the third resonator does not
+  exist, so freezing f3's jitter cannot be heard and must not move any
+  axis by more than 2.447 x its paired SE. A freeze that moves this column
+  is reaching something it should not, and nothing below is readable.
+    f0    dd'^2   0.0000 +- 0.0000   -> flat, as it must be
+    f1    dd'^2   0.0000 +- 0.0000   -> flat, as it must be
+    f2    dd'^2   0.0000 +- 0.0000   -> flat, as it must be
+    bw1   dd'^2   0.0000 +- 0.0000   -> flat, as it must be
+    bw2   dd'^2   0.0000 +- 0.0000   -> flat, as it must be
+    bw3   dd'^2   0.0000 +- 0.0000   -> flat, as it must be
+
+  CLAUSE 2 -- THE TEST on F1: how much of f3's cost does freezing f3's
+  jitter give back? Both ends are measured, so the branches are written
+  against their own SEs and not against a midpoint I chose.
+    the cost       gain 0 -> gain 1, nothing frozen   dd'^2  -10.127 +-  0.324
+    the recovery   at gain 1, freeze f3's jitter      dd'^2    2.934 +-  0.154
+    recovered fraction of the cost                       0.290
+
+  CLAUSE 3 -- THE SHAPE: jitter inflation predicts the freeze helps EVERY
+  axis at gain 1, because an inflated denominator is shared. Masking
+  predicts it helps the spectrally adjacent ones most.
+    f0    freezing f3 at gain 1:  dd'^2    2.421 +-  0.336   -> HELPS
+    f1    freezing f3 at gain 1:  dd'^2    2.934 +-  0.154   -> HELPS
+    f2    freezing f3 at gain 1:  dd'^2    5.980 +-  0.360   -> HELPS
+    bw1   freezing f3 at gain 1:  dd'^2    0.005 +-  0.005   -> flat
+    bw2   freezing f3 at gain 1:  dd'^2   -0.003 +-  0.008   -> flat
+    bw3   freezing f3 at gain 1:  dd'^2    0.007 +-  0.006   -> flat
+
+  AND THE WHOLE OFF-AXIS JITTER BURDEN, same mechanism at full size:
+    F1 at gain 0, freezing ALL off-axis jitter:  dd'^2  178.468 +-  4.577
+    F1 at gain 1, freezing ALL off-axis jitter:  dd'^2  201.770 +-  5.127
+
+  BOTH, AND THE SPLIT IS THE RESULT. The freeze gives back 0.290 of f3's
+  cost -- resolvably more than nothing and resolvably less than all of
+  it. So the creature's audible jitter on f3 carries part of the tax and
+  the static third formant carries the rest, and neither candidate alone
+  accounts for it.
+WALL 37.48 s

@@ -25785,3 +25785,43 @@ so that one particular slice of it re-runs yesterday's version exactly. All four
 numbers came back identical to the last printed digit. That's how we know this rewrite changed the
 labels and the design and not a single measurement — and the experiment refuses to report anything at
 all if those fourteen numbers ever disagree.
+
+### We ran the test, and our favourite explanation covers less than a third of it
+
+The previous entry said the likeliest reason the third formant makes the first one harder to hear is
+that switching it on makes the creature's *wobble* on that dial audible, and that wobble muddies
+every other reading. We said we knew the cheap test. We ran it: hold the third formant perfectly
+steady while still letting the first one vary, and see how much of the damage goes away.
+
+**About 29% of it goes away.** Which means the wobble explanation is real — and the other 71% is the
+third formant simply *being there*. The creature pays most of that cost for having the sound in the
+air at all, not for being unsteady about it.
+
+So we were right about the kind of thing happening and wrong about how much of it there was. We'd
+promoted that explanation to "leading candidate" on the strength of one prediction: that the pitch
+and both other formants would all get worse together, rather than just the one nearest in frequency.
+They do. But the second formant — the one *closest* in frequency to the third — is helped most when
+we hold the third one steady, which is the fingerprint of the other explanation. Both signatures were
+sitting in the same table. A prediction that tells two explanations apart doesn't tell you their
+proportions, and we read it as though it did.
+
+**And a check we wrote was incapable of failing — for the second time in one day.** We included what
+we described as the point of the whole design: apply the same freeze with the third formant switched
+*off*, where it can't be heard, so the freeze must do nothing. It did nothing. It did *exactly*
+nothing, to the last digit, on all six dials — because with the formant switched off the synthesiser
+never reads that dial, so freezing it cannot change a single sample. That isn't a test that our
+manipulation is clean; it's a confirmation that the off switch is really off. Useful, but not what we
+claimed it was.
+
+What makes this worth writing down is that we'd recorded a rule about exactly this error *this
+morning*, after the same mistake in a different experiment, and then made it again before the day was
+out — on the very check we were proudest of. The rule says to ask what the design would have to make
+true for a check to fail. Evidently we ask that about the checks we're unsure of, and not about the
+ones we like. The version that would have worked: freeze a dial that *can* be heard in both
+conditions, and see whether the muddying goes away there too.
+
+One number from this run we're explicitly not quoting: when we froze *every* dial except the one
+being measured, the readings shot up — but with error bars a third as large as the readings
+themselves, because freezing almost everything leaves almost nothing to measure the spread against.
+That's the same trap as the very first version of this experiment, which cheerfully reported a figure
+of 41,000. The direction is real; the size isn't trustworthy, so it isn't a result.

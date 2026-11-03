@@ -335,6 +335,13 @@ const Spec kSpecs[] = {
      "  (axisfree 0.948 vs -0.167), so the AXIS COUNT is the accumulation lever.\n"
      "  Prints a 9x9 normalised cross-talk matrix. LIVENESS IS SCORED FIRST,\n"
      "  because cross-talk is a ratio and a DEAD axis has none of it"},
+    {"axisjit", 1, Expect::kRead, Tier::kLong,
+     "  §41 run 2c: WHY does f3 cost F1 11.3%% of its d'? Holds an axis exactly\n"
+     "  at rest instead of jittering it -- drawing and DISCARDING the deviate so\n"
+     "  the RNG stream is untouched -- and asks how much of the cost comes back.\n"
+     "  Carries its own null: the same freeze at render_f3_gain 0, where f3 is\n"
+     "  inaudible and freezing it must do nothing. Three branches, three\n"
+     "  candidate mechanisms: jitter inflation, static presence, or both"},
     {"axisear", 1, Expect::kRead, Tier::kLong,
      "  §41 run 2a: does the AIR carry the four axes axisgrid found at the\n"
      "  larynx? Until v83 the renderer had two resonators and bw = 90.0f\n"
@@ -1303,6 +1310,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "aimaxes") ok = run_aimaxes(dna_blob, ticks, verbose);
   else if (name == "axisgrid") ok = run_axisgrid(dna_blob, ticks, verbose);
   else if (name == "axisear") ok = run_axisear(dna_blob, ticks, verbose);
+  else if (name == "axisjit") ok = run_axisjit(dna_blob, ticks, verbose);
   else if (name == "ctxgrid") ok = run_ctxgrid(dna_blob, ticks, verbose);
   else if (name == "echoname") ok = run_echoname(dna_blob, ticks, verbose);
   else if (name == "dirbudget") ok = run_dirbudget(dna_blob, ticks, verbose);

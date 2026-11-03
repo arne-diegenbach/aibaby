@@ -2323,6 +2323,7 @@ bool run_aimslice(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_aimaxes(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_axisgrid(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_axisear(const std::vector<uint8_t>&, uint64_t, bool);
+bool run_axisjit(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_ctxgrid(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_echoname(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_dirbudget(const std::vector<uint8_t>&, uint64_t, bool);

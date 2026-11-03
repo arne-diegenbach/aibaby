@@ -5363,3 +5363,80 @@ the presentation and the design and **not one measured value**, and the clause t
 Unchanged where it counts: **F3 is a real audible axis** at ~0.8× F1, the air carries it, and stage
 2b is still the open question and still the last run §41's count allows. What changed is the price
 tag — f3 taxes f1 by 11% — and a published sentence about the bandwidths that was wrong by a square.
+
+---
+
+### §41 RUN 2c — F3'S TAX ON F1 IS 29% MOTOR NOISE AND 71% THE FORMANT ITSELF
+
+`axisjit`, 37.5 s, zero brain runs. The mechanism question from the section above, answered — and the
+candidate I had promoted to "leading" turns out to carry under a third of the effect.
+
+#### THE MANIPULATION
+
+Hold an axis **exactly at rest** instead of jittering it, and ask how much of f3's cost to F1 comes
+back. The deviate is still **drawn and then discarded**, so the RNG stream and every other parameter
+are untouched: skipping the `gauss(rng)` call would have shifted every subsequent draw and the arms
+would have differed by their noise as well as by the freeze.
+
+#### THE RESULT
+
+```
+the cost       gain 0 -> gain 1, nothing frozen   dd'^2  -10.127 +-  0.324
+the recovery   at gain 1, freeze f3's jitter      dd'^2    2.934 +-  0.154
+recovered fraction of the cost                        0.290
+```
+
+The recovery is **19 SE above zero** and **20 SE short of the whole cost**, so both ends are
+resolved and the verdict is the middle branch: **jitter inflation is real and is 29% of it.** The
+remaining **71% is the static presence of a third formant** — the creature pays most of the tax
+simply for having F3 in the air, not for being unsteady on it.
+
+**So my desk hypothesis was right in kind and wrong in size.** I had written it up as "the leading
+candidate" on the strength of one qualitative prediction (that f0, f1 and f2 would all fall
+together). They do, and freezing f3 helps all three — f0 +2.42, f1 +2.93, f2 +5.98 — which is the
+shared-denominator signature. But **f2 is helped most, and f2 is the axis spectrally closest to f3**,
+which is the masking signature. Both fingerprints are in the same table, which is exactly what a 29/71
+split should look like. A qualitative prediction that discriminates between mechanisms does not
+measure their proportions, and I treated it as though it had.
+
+#### CLAUSE 1 COULD NOT FIRE, AND THAT IS THE SECOND TIME TODAY
+
+I pre-registered the gain-0 column as "the built-in null, which is the point": freezing f3 where f3
+is inaudible must do nothing. It came back **exactly `0.0000 +- 0.0000` on all six axes** — bit-exact,
+because at `f3_gain = 0` the renderer **never reads f3 at all**, so the freeze cannot change a single
+sample. **Near-certain was not the word; structurally impossible was.**
+
+It is not worthless — it confirms the off-path genuinely ignores f3, which is a real property of the
+v83 build. But it is a **wiring check**, not a test that the freeze is a clean manipulation, and I
+sold it as the latter. This is the identical error to §41's cross-talk clause, **recorded as a rule
+this morning and committed within the same day**, which says the rule as written is not yet doing its
+job: asking "what must the architecture make true?" catches it only if asked of the clause one is
+most pleased with.
+
+**The clause that WOULD have fired:** freeze an axis that is *audible* at gain 0 — f2, say — and
+measure F1. Jitter inflation predicts a recovery there with no third resonator involved at all. That
+is a falsifiable positive control for the mechanism, and it is the one I should have written.
+
+#### WHAT MUST NOT BE READ FROM THIS RUN
+
+The **"all off-axis frozen"** column is near-degenerate and its magnitudes are unreliable. F1 reads
+d' 15.0 +- 5.3 — an SE a third of the value — because freezing almost everything collapses the
+within-class denominator toward numerical dust. That is the same failure family as `axisear` v1's
+d' of 41,514. The direction is informative (off-axis jitter is by far the largest single burden on
+every axis) and **the numbers 178.5 and 201.8 are not quotable.**
+
+#### WHAT IS STILL OPEN
+
+The **71%** is still unsplit between **level** and **spectral masking**. The amplitude-compensated
+cell separates them and is still named, not run. Level would be fixable in the renderer; masking
+would not.
+
+#### RUN ACCOUNTING, STATED RATHER THAN ASSUMED
+
+§41 budgeted three runs with an abandonment count. Run 1 was the cross-talk matrix; run 2 was the
+ear, and it has now taken **three builds** — v1 (void at the desk), v2 (the units and the 2x2), and
+this one. **All three are read-only desk instruments costing seconds and zero brain runs**, which is
+why I have not counted them against a budget that was written about expensive stages. **Stage 2b, the
+auditory module, remains the third and last stage under the rule and is still unspent.** If that
+reading of my own pre-registration is too convenient, the conservative count says §41 is finished and
+2b needs its own line.

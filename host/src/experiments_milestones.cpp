@@ -46272,6 +46272,252 @@ bool run_axisear(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
   return true;
 }
 
+// ===== axisjit (§41 run 2c): WHY does F3 cost F1? =====
+//
+// `axisear` v2 measured that turning `render_f3_gain` on costs F1 11.3% of its
+// d' (-10.127 +- 0.324 in d'^2, 31 SE). It did not say why, and I wrote down two
+// candidates and then found a third at the desk that is better than both.
+//
+//   1. LEVEL -- the renderer sums 0.25*(v1+v2+g*v3) unrenormalised. Against it:
+//      amplitude is constant across all samples in a cell, so a constant level
+//      shift moves both classes' C0 equally and cannot move a BETWEEN-class
+//      difference directly.
+//   2. SPECTRAL MASKING -- F3's energy diluting F1's cepstral signature. Against
+//      it: F1 at 626 Hz is the axis FURTHEST from F3 at 2614 Hz, and it is the
+//      one that loses most.
+//   3. JITTER INFLATION, the leading candidate. Every posture is drawn with
+//      jitter on ALL SEVEN parameters. At `f3_gain = 0` the f3 jitter is
+//      INAUDIBLE, so it contributes nothing to the within-class spread. At gain
+//      1 it reaches the ear and inflates the DENOMINATOR of every other axis's
+//      d' while leaving its numerator alone. It is the only one of the three
+//      that predicts what the table shows -- f0, f1 and f2 ALL falling together
+//      (-2.2%, -11.3%, -5.1%) rather than only the spectrally adjacent axis.
+//
+// WHY IT MATTERS MORE THAN A RENDERER PATCH. If (3) is right there is nothing to
+// fix, and the finding reframes into something far more useful: giving the
+// creature a seventh commanded axis makes its own motor noise on that axis
+// audible, which taxes every other axis. That is an intrinsic cost of adding to
+// a code -- it would BOUND how many axes a code can carry, which is exactly the
+// §41 question -- rather than a defect in the synthesiser.
+//
+// THE MANIPULATION IS A FREEZE, AND IT MUST DRAW THE JITTER AND THROW IT AWAY.
+// Skipping the `gauss(rng)` call for a frozen axis would shift the RNG stream
+// and change every OTHER parameter too, so the arms would differ by their noise
+// as well as by the freeze and nothing would be paired. Each arm therefore draws
+// the identical seven deviates and then overwrites the frozen ones with rest.
+//
+// AND THE DESIGN CARRIES ITS OWN NULL, WHICH IS THE POINT. The SAME freeze is
+// applied at `f3_gain = 0`, where f3 is inaudible and so freezing it MUST do
+// nothing. A manipulation that moves the gain-0 column is leaking somewhere it
+// should not, and that is a VOID rather than a result -- the lesson from §41's
+// clause 2, which asserted an arm was unaffected instead of testing it.
+enum { kAJNone = 0, kAJF3, kAJOff, kAJArms };
+constexpr const char* kAJArm[kAJArms] = {"none frozen", "f3 frozen", "all off-axis frozen"};
+
+bool run_axisjit(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  (void)ticks;
+  aibaby::Dna dna;
+  if (dna.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) return false;
+
+  std::printf("  the question      §41 run 2c. axisear v2 measured that f3 costs F1 11.3%%\n"
+              "                    of its d'. WHY? Level, spectral masking, or the f3\n"
+              "                    JITTER becoming audible and inflating every other\n"
+              "                    axis's denominator?\n");
+  std::printf("  the manipulation  hold an axis EXACTLY at rest instead of jittering it,\n"
+              "                    drawing and discarding its deviate so the RNG stream\n"
+              "                    and every other parameter are untouched.\n");
+  std::printf("  the built-in null the same freeze at render_f3_gain 0, where f3 is\n"
+              "                    inaudible and freezing it MUST do nothing. A freeze\n"
+              "                    that moves THAT column is a leak, and voids the run.\n");
+  std::printf("  the ruler         as axisear v2: signed d'^2 from `cepstral_dprime`,\n"
+              "                    unbiased, the root taken once after averaging reps.\n\n");
+
+  Timbre tb;
+  std::string err;
+  if (!tb.configure(dna.header().audio, err)) {
+    std::printf("  could not configure the cochlea: %s\n", err.c_str());
+    return false;
+  }
+  const double sd[7] = {9.129, 21.727, 57.751, 47.616, 5.346, 5.967, 5.618};
+
+  // dsq[gain][arm][axis][rep]
+  std::vector<std::vector<std::vector<std::vector<double>>>> dsq(
+      2, std::vector<std::vector<std::vector<double>>>(
+             kAJArms, std::vector<std::vector<double>>(7, std::vector<double>(kAEReps, 0.0))));
+  for (uint32_t g = 0; g < 2; ++g) {
+    for (uint32_t arm = 0; arm < kAJArms; ++arm) {
+      for (uint32_t a = 0; a < 7; ++a) {
+        for (uint32_t r = 0; r < kAEReps; ++r) {
+          // IDENTICAL seeding to axisear v2, and independent of gain AND arm, so
+          // every cell of this table sees the same posture draws.
+          std::mt19937_64 rng(dna.header().seed ^ (0xAE00ull + a) ^
+                              (r ? r * 0x9E3779B97F4A7C15ull : 0ull));
+          std::normal_distribution<double> gauss(0.0, 1.0);
+          std::vector<std::vector<double>> x;
+          std::vector<int> y;
+          const double lo_c = kAERest[a] - kAEReach[a] * 0.5;
+          const double hi_c = kAERest[a] + kAEReach[a] * 0.5;
+          for (uint32_t s = 0; s < kAESamples * 2; ++s) {
+            const int cls = int(s % 2);
+            double p[7];
+            // EVERY deviate is drawn, in the same order, in every arm.
+            for (uint32_t k = 0; k < 7; ++k) p[k] = kAERest[k] + sd[k] * gauss(rng);
+            p[a] = (cls ? hi_c : lo_c) + sd[a] * gauss(rng);
+            // ...and only then is the freeze applied, by overwrite. The target
+            // axis `a` is never frozen: it carries the signal being measured.
+            for (uint32_t k = 0; k < 7; ++k) {
+              if (k == a) continue;
+              const bool frz = (arm == kAJF3) ? (k == 3) : (arm == kAJOff);
+              if (frz) p[k] = kAERest[k];
+            }
+            const std::vector<std::vector<double>> fr =
+                tb.frames_of(p[0], p[1], p[2], p[3], p[4], p[5], p[6], kAEAmp,
+                             g ? 1.0f : 0.0f, 0.0f);
+            if (fr.empty()) continue;
+            std::vector<double> m(fr[0].size(), 0.0);
+            for (const std::vector<double>& f : fr)
+              for (size_t k = 0; k < m.size(); ++k) m[k] += f[k];
+            for (double& v : m) v /= double(fr.size());
+            x.push_back(m);
+            y.push_back(cls);
+          }
+          if (x.size() < 4) continue;
+          dsq[g][arm][a][r] = cepstral_dprime(x, y, nullptr, true);
+        }
+      }
+    }
+  }
+
+  auto dprime_of = [](double q) { return q > 0.0 ? std::sqrt(q) : 0.0; };
+  auto cell = [&](uint32_t g, uint32_t arm, uint32_t a, double* se) {
+    return ctx_mean_se(dsq[g][arm][a], se);
+  };
+  // A paired difference between two arms at one gain, over reps.
+  auto paired = [&](uint32_t g0, uint32_t a0, uint32_t g1, uint32_t a1, uint32_t ax,
+                    double* se) {
+    std::vector<double> d;
+    for (uint32_t r = 0; r < kAEReps; ++r)
+      d.push_back(dsq[g1][a1][ax][r] - dsq[g0][a0][ax][r]);
+    return ctx_mean_se(d, se);
+  };
+
+  for (uint32_t g = 0; g < 2; ++g) {
+    std::printf("  render_f3_gain %u%s\n", g, g ? "" : "   <- THE SHIPPED CREATURE");
+    std::printf("    axis   ");
+    for (uint32_t arm = 0; arm < kAJArms; ++arm) std::printf("%22s", kAJArm[arm]);
+    std::printf("\n");
+    for (uint32_t a = 0; a < 7; ++a) {
+      std::printf("    %-4s  ", kAEName[a]);
+      for (uint32_t arm = 0; arm < kAJArms; ++arm) {
+        double se = 0.0;
+        const double m = cell(g, arm, a, &se);
+        std::printf("   d' %6.3f +-%6.3f", dprime_of(m), se);
+      }
+      std::printf("\n");
+    }
+    std::printf("\n");
+  }
+
+  // ---- CLAUSE 1: THE BUILT-IN NULL. The freeze must do NOTHING at gain 0. ----
+  std::printf("  CLAUSE 1 -- THE NULL: at render_f3_gain 0 the third resonator does not\n"
+              "  exist, so freezing f3's jitter cannot be heard and must not move any\n"
+              "  axis by more than %.3f x its paired SE. A freeze that moves this column\n"
+              "  is reaching something it should not, and nothing below is readable.\n",
+              kAECrit);
+  bool null_ok = true;
+  for (uint32_t a = 0; a < 7; ++a) {
+    if (a == 3) continue;  // f3 is the target axis there; the freeze cannot apply
+    double se = 0.0;
+    const double m = paired(0, kAJNone, 0, kAJF3, a, &se);
+    const bool flat = !(std::fabs(m) > kAECrit * se && se > 0.0);
+    if (!flat) null_ok = false;
+    std::printf("    %-4s  dd'^2 %8.4f +- %6.4f   -> %s\n", kAEName[a], m, se,
+                flat ? "flat, as it must be" : "*** MOVED -- the freeze leaks");
+  }
+
+  // ---- CLAUSE 2: THE TEST, and its branches are the three candidates ----
+  // THE BAR IS THE DECREMENT ITSELF, not a fraction I pick. The quantity is how
+  // much of f3's cost to F1 the freeze gives back, and the two ends are both
+  // measured with error bars, so the branches can be written against them rather
+  // than against a midpoint invented for the numbers in front of me.
+  std::printf("\n  CLAUSE 2 -- THE TEST on F1: how much of f3's cost does freezing f3's\n"
+              "  jitter give back? Both ends are measured, so the branches are written\n"
+              "  against their own SEs and not against a midpoint I chose.\n");
+  double se_cost = 0.0, se_rec = 0.0;
+  const double cost = paired(0, kAJNone, 1, kAJNone, 1, &se_cost);   // gain 0 -> gain 1
+  const double rec = paired(1, kAJNone, 1, kAJF3, 1, &se_rec);       // at gain 1, freeze f3
+  std::printf("    the cost       gain 0 -> gain 1, nothing frozen   dd'^2 %8.3f +- %6.3f\n",
+              cost, se_cost);
+  std::printf("    the recovery   at gain 1, freeze f3's jitter      dd'^2 %8.3f +- %6.3f\n",
+              rec, se_rec);
+  const double frac = cost != 0.0 ? -rec / cost : 0.0;
+  std::printf("    recovered fraction of the cost                    %8.3f\n", frac);
+  const bool rec_real = rec > kAECrit * se_rec;
+  // Is the recovery statistically indistinguishable from the WHOLE cost?
+  const double se_gap = std::sqrt(se_rec * se_rec + se_cost * se_cost);
+  const bool rec_full = std::fabs(rec + cost) < kAECrit * se_gap;
+
+  // ---- CLAUSE 3: the same question asked of every axis, as a shape check ----
+  std::printf("\n  CLAUSE 3 -- THE SHAPE: jitter inflation predicts the freeze helps EVERY\n"
+              "  axis at gain 1, because an inflated denominator is shared. Masking\n"
+              "  predicts it helps the spectrally adjacent ones most.\n");
+  for (uint32_t a = 0; a < 7; ++a) {
+    if (a == 3) continue;
+    double se = 0.0;
+    const double m = paired(1, kAJNone, 1, kAJF3, a, &se);
+    std::printf("    %-4s  freezing f3 at gain 1:  dd'^2 %8.3f +- %6.3f   -> %s\n",
+                kAEName[a], m, se,
+                m > kAECrit * se ? "HELPS" : (m < -kAECrit * se ? "hurts" : "flat"));
+  }
+  // And the total off-axis jitter burden, which is the same mechanism at full size.
+  std::printf("\n  AND THE WHOLE OFF-AXIS JITTER BURDEN, same mechanism at full size:\n");
+  for (uint32_t g = 0; g < 2; ++g) {
+    double se = 0.0;
+    const double m = paired(g, kAJNone, g, kAJOff, 1, &se);
+    std::printf("    F1 at gain %u, freezing ALL off-axis jitter:  dd'^2 %8.3f +- %6.3f\n",
+                g, m, se);
+  }
+
+  std::printf("\n");
+  if (!null_ok) {
+    std::printf("  VOID -- THE FREEZE LEAKS. Holding f3 at rest changed an axis at\n"
+                "  render_f3_gain 0, where the third resonator does not exist and the\n"
+                "  freeze is inaudible by construction. So the manipulation is not the\n"
+                "  one described, and the mechanism question is untouched by this run.\n");
+    return true;
+  }
+  if (!(cost < -kAECrit * se_cost)) {
+    std::printf("  VOID -- THE COST IS NOT HERE TO EXPLAIN. F1's decrement from\n"
+                "  render_f3_gain does not reproduce at %.3f x SE, so there is nothing\n"
+                "  for the freeze to give back and no mechanism to attribute.\n", kAECrit);
+    return true;
+  }
+  if (rec_full) {
+    std::printf("  JITTER INFLATION. Freezing f3's jitter gives back the WHOLE of f3's\n"
+                "  cost to F1 (%.3f of it, indistinguishable from all of it). The static\n"
+                "  presence of a third formant costs F1 nothing: what costs it is that\n"
+                "  the creature's own unsteadiness on f3 became AUDIBLE.\n\n"
+                "  SO THERE IS NOTHING TO FIX IN THE RENDERER, and the finding reframes.\n"
+                "  A seventh commanded axis taxes every other axis through its own motor\n"
+                "  noise -- an intrinsic cost of adding to a code, not a defect. That\n"
+                "  BOUNDS how many axes a code can carry, which is §41's actual question,\n"
+                "  and it is a NEW LINE needing its own pre-registration.\n", frac);
+  } else if (!rec_real) {
+    std::printf("  THE STATIC PRESENCE, NOT THE JITTER. Freezing f3's jitter gives back\n"
+                "  nothing resolvable, so the leading candidate is REFUTED: the cost is\n"
+                "  the third formant being THERE, not its unsteadiness. Level and masking\n"
+                "  remain, and an amplitude-compensated cell separates those two.\n");
+  } else {
+    std::printf("  BOTH, AND THE SPLIT IS THE RESULT. The freeze gives back %.3f of f3's\n"
+                "  cost -- resolvably more than nothing and resolvably less than all of\n"
+                "  it. So the creature's audible jitter on f3 carries part of the tax and\n"
+                "  the static third formant carries the rest, and neither candidate alone\n"
+                "  accounts for it.\n", frac);
+  }
+  return true;
+}
+
 bool run_aimslice(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
   (void)verbose;
   aibaby::Dna dna;
