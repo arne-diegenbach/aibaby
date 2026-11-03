@@ -4755,3 +4755,51 @@ the slope (−0.4, +0.2, +0.5 SE), so this would be **the first axis on this lin
 rotate the law** — and `dB/d(delay)` comes back **−0.1566**, wrong in sign and 13.9 SE from the +1.0
 a transport account requires. That is the same signature that refuted the membrane in v78 (needed
 ≈+1, measured −0.433). Stated as a prediction of the run's reading, not as the reading.
+
+### §40 AMENDMENT, WRITTEN WHILE THE RUN IS IN FLIGHT AND BEFORE ANY RESULT EXISTS
+
+Recorded now, from reading the genome, **not** from reading an outcome — the run is ~1 h into
+~6 h and its verdict is not yet visible. The measurement is unaffected; what is wrong is the
+**scope of one verdict sentence** and the **reach of the dose gate**.
+
+**THE REBOUND IS NOT THE LOOP. IT IS THE WEAKEST OF THREE ROUTES FROM THE EAR TO THE VOICE.**
+`dna/default.toml` declares two synaptic `auditory -> vocal` projections as well:
+
+| route | strength |
+|---|---|
+| the rebound (`rebound_source = 1`) | `rebound_gain` = **0.02** |
+| `auditory -> vocal`, `source = "either"` (line 2656) | density 0.15, weight **0.12** |
+| `auditory -> vocal`, `source = "inhibitory"` (line 2906) — the listening reflex | density 0.25, weight **0.25** |
+
+So `rebound_gain = 0.00` cuts **one** path, and the *smallest*. The verdict block's sentence
+*"THE WHOLE LOOP CONTRIBUTES NOTHING TO B ... THAT CLOSES THE AUDITORY CANDIDATE"* **overclaims and
+is withdrawn.** What that arm bounds is the **rebound path's** contribution, and it must be read as
+exactly that. This is the seventh instance of this project's recurring defect — a guard or a label
+confidently describing something it does not measure — and it is mine, in a running experiment,
+found by a five-minute genome read that belonged *before* the pre-registration.
+
+**THE TWO DOSES SWAP ROLES, AND THE BROAD ONE IS THE DELAY.** `self_delay_ms` delays the audio
+**before the cochlea**, upstream of all three routes, so the latency sweep probes the entire
+self-audition loop while the loop-off arm probes a twentieth of it. §40 framed these the other way
+round. Clause 6's wording happens to be correctly scoped already — *"the offset is not the time the
+creature's voice takes to return through its ear"* is a claim about the delay, and the delay delays
+everything.
+
+**AND THE DOSE GATE THEREFORE DOES NOT BEAR ON THE DELAY BRANCH.** Clause 5 reads `sd(rebound)`,
+which meters the weakest route; a delay acting through the two synaptic paths would be real whatever
+the rebound's size. **Pre-registered reading, stated before the outcome: if clause 5 fires, the
+delay branch is governed by clause 6 or 7 on the coefficient alone, and the "VACUOUS" label applies
+only to the rebound path.** The threshold is not moved and the code is not touched mid-run — what is
+fixed is the *scope* of a label, derived from the genome and committed before the number.
+
+**WHAT THIS DOES NOT WEAKEN.** The delay sweep's power arithmetic, its one-parameter prediction, the
+rotation check and the balanced design are all untouched; they were never functions of which route
+carries the signal. If anything the run got **stronger**: its broad dose turns out to be the one
+with 7x headroom over its own hypothesis.
+
+**AND IT MAKES v82 A TERMINUS RATHER THAN A WAYPOINT.** The period is measured on **neural** rates —
+Schmitt crossings of the half-difference of `rate_fast` within vocal group 2 — so the acoustic plant
+(the 800 ms formant pole, the jaw) sits **downstream of the instrument** and cannot reach the
+oscillator except back through the ear. The delay sweep is exactly that path. So v82 closes the
+plant by the same measurement that closes the loop, and the candidate list for `B` inside this
+creature is then empty rather than one short.
