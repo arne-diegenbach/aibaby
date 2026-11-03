@@ -5627,3 +5627,133 @@ and **spectral masking**. Neither has been measured for bw2.
 
 **So: the candidate axis count is 4, and the prize is NOT `19 × 2`.** Quoting a number requires
 pricing bw2's tax first, and that is a new measurement, not an arithmetic step.
+
+### §41 RUN 2f — THE FOURTH AXIS LANDS ON THE BAR, AND THE BANDWIDTH GAIN PAYS ANYWAY
+
+`axisamp` left four **candidate** audible axes and an explicit refusal to multiply them: bw2's
+d' 1.101 had been measured in a creature with **no third formant**, and a four-axis code ships one.
+This run asks whether bw2 survives f3, and what bw2 costs in return.
+
+**Pre-registered, as a number, before the run:** if f3 taxes bw2 the way run 2c measured it taxing F1
+(21.4% of d'²), then 1.101² = 1.212 becomes 0.953 — **d' 0.976, below the bar.** bw2 survives only if
+that tax comes in under 17.5%.
+
+**Measured: f3's tax on bw2 is 19.3%, and bw2 lands at d' 0.990 ± 0.039.** The prediction was within
+one SE of the measurement.
+
+| | as rendered | at matched output level |
+|---|---|---|
+| bw2, no f3 | d' 1.103 | 1.070 |
+| **bw2, with f3** | **d' 0.990 ± 0.039** | 0.970 |
+| f3's tax on bw2 | −0.235 ± 0.036 | **−0.204 ± 0.038** |
+
+The bar of 1.0 sits **inside** the error, so the honest verdict is **UNRESOLVED, and the usable count
+remains THREE**. An axis within noise of its own audibility threshold cannot carry a vocabulary
+claim. `f1 × f2 × f3 ≈ 19 signals` stands uncorrected, and §41's accumulation prize is not doubled.
+
+The tax **survives level matching** at 5.4 SE, so it is not f3's extra loudness — `f3_gain` adds a
+third resonator to an unrenormalised sum and does make the voice louder, but renormalising the
+renderer would **not** give bw2 back. That matters because it closes the cheapest available fix.
+
+#### AND THE THING THIS RUN WAS NOT LOOKING FOR: `render_bw_gain` IMPROVES THE AXES THE CREATURE ALREADY HAS
+
+`axisear` priced the bandwidth gain at **−3.211 ± 0.245** on F1 — in a creature with f3 **off**. With
+f3 shipped the sign flips, which that run's own factorial implied (B + AB = −3.211 + 4.255 = +1.044)
+and which this run's header pre-registered as the likely branch. The measured effect is far larger
+than the implied +1.044, and it holds across every formant:
+
+```
+                        d' at matched level        dd'^2
+  f0    4.318 ->  5.465   (+26.6%)    +11.219 +- 0.365   HELPED
+  f1    7.189 ->  7.521   ( +4.6%)     +4.882 +- 0.413   HELPED
+  f2    8.308 ->  9.601   (+15.6%)    +23.150 +- 0.593   HELPED
+  f3    4.299 ->  5.431   (+26.3%)    +11.016 +- 0.269   HELPED
+```
+
+**4 of 4 formant axes helped, after level matching.** The mechanism is clause 3's: the **static
+widening** (+8.085 ± 0.497 on F1), not the bandwidths' own jitter, which is a small *real cost*
+(−0.480 ± 0.069). The reading is that **the renderer's hardcoded 90 Hz bandwidth was too narrow for
+its own cochlea** — a 90 Hz resonance sits inside a single mel channel, so a formant shift barely
+moves the spectrum, while a ~149 Hz one spans several and a shift moves them all.
+
+**This is a candidate genome change on its own merits, independent of bw2**, and it is the first
+thing in this line that would *raise* a capability rather than price one. It is **not free**: it
+moves the determinism hash and voids every cross-genome absolute
+(`aibaby-vocal-calibration-invariant`), and `kVLScoreFormant` scores only F1/F2, so an ear-side d'
+gain is **not** a naming gain until a naming task shows it. Pre-registering that is the next run.
+
+#### THE LEVEL CONTROL WAS NOT OPTIONAL, AND IT MOVED A NUMBER BY 36%
+
+Widening a resonator lowers its peak gain, so `bw_gain = 1` comes out **quieter** at the same
+commanded amplitude (rms 0.1319 → 0.1167, −11.5%) — and `axisamp` showed this ruler *improves* as
+level falls. The uncompensated bandwidth effect was **+7.605 ± 0.451**; at matched output level it is
+**+4.882 ± 0.413**. So **36% of the headline was loudness**, and without the control this run would
+have overstated a real effect by half again. `rms_of` was added to `Timbre` so the compensation is
+**measured over the posture distribution the d' is measured over**, not derived at the setpoint
+(`aibaby-match-at-the-operating-point`).
+
+The uncompensated grid remains the primary reading, because the creature really does hear the
+uncompensated level — that is where an absolute bar applies. The matched grid is what **attribution**
+may use, and nothing else.
+
+#### THREE FAULTS IN MY OWN INSTRUMENT, AND ONE OF THEM RETRACTS A PUBLISHED READING
+
+**1. A branch that could only see one sign printed a false statement.** v1's clause 2 tested
+`cost < -crit*SE` only, so a **+7.605 ± 0.451** result — a benefit at 16.8 SE — fell into the branch
+whose text reads *"not resolvable at 2.447 × SE"*. The instrument asserted the opposite of its own
+measurement. **Rule: a pre-registered quantity that is not sign-constrained needs a three-way
+branch.** `aibaby-verdict-fitted-to-data` says to write refusal clauses as the code's branches; this
+is the companion failure — writing them as branches that cannot reach the data.
+
+**2. The `all off-axis frozen` arm is an artefact, and now its exact arithmetic is known.** Freeze
+every axis but the target and the within-class noise becomes **rank one and collinear with the
+signal**. `cepstral_dprime` is a *diagonal* Mahalanobis, so it divides each coefficient's class
+difference by that coefficient's own marginal spread and **sums** — and when signal and noise share
+one direction, every coefficient reports the same ratio. The sum returns `dims × (reach/sd)²` instead
+of `(reach/sd)²`: the estimator counts one number `dims` times.
+
+```
+  axis   measured    dims*(reach/sd)^2   ratio
+  bw2     347.260         347.280        1.000   <- five significant figures
+  bw1     409.029         419.274        0.976
+  bw3     392.900         384.478        1.022
+  f1      317.803         353.953        0.898
+```
+
+Run 2c called this column *"near-degenerate"* and refused to quote it — the right instinct with the
+**wrong diagnosis**: it blamed an SE a third of the value, i.e. noise. The column is not noisy, it is
+**deterministic**, and its value can be written down from the reach and the sd with no ear involved.
+**That also retracts run 2c's statement that the column's *direction* was informative.** A saturated
+estimator has no direction. The off-axis burden is still real, but only arms where **two or more**
+axes still jitter can measure it — run 2d's f2-only freeze is one, and it stands.
+
+**3. A difference of two means quoted without an error bar.** v1 printed the jitter part as
+`cost − static` with no SE. It is now its own paired contrast, and it turns out to be a *resolvable*
+−0.480 ± 0.069 rather than the rounding error it looked like.
+
+#### WHAT HELD
+
+- **The guard reproduced run 2c exactly**: +2.934 at amplitude 1.0, same seeds, same draw order. This
+  instrument is the one that produced the archive.
+- **The wiring check read exactly 0**, and was *labelled a wiring check in the source before it ran* —
+  at `bw_gain = 0` the renderer uses a literal `90.0f` and never reads the commanded bandwidths, so
+  freezing them is bit-exactly inert and cannot fail for a measured reason. That is run 2c's fault
+  (`aibaby-power-is-not-the-error-model`) disclosed in advance rather than discovered afterwards.
+- **Clause 4, the control that *could* fail with every sign correct, held.** Freezing f3 beats
+  freezing bw1+bw3 on F1 by **+5.888 ± 0.197**, the ordering jitter inflation requires — f3 is both
+  more audible and more jittered than the two weak bandwidths.
+- **Four instruments' duplicated jitter calibration was hoisted** to one `kAESd`. Four copies of a
+  constant that must move together is what `aibaby-shared-constants-audit` warns about; editing one
+  would have silently voided only part of §41.
+- **`axisjit`'s result table printed its ± in d'² beside a value in d'.** Published yesterday. It
+  changes no verdict — every clause used paired d'² with matching bars — but the table's error bars
+  were mislabelled by the very units slip `axisear` v2 was built to fix. Converted:
+  `se(d') = se(d'²)/(2d')`.
+
+#### WHERE §41 STANDS
+
+Stage 2a — does the air carry the new axes — is **finished**. The answer is that it carries f3 well
+(d' 5.43 in the four-axis cell) and bw2 to exactly the threshold and no further. **Stage 2b, whether
+the auditory *module* represents f3, is the last stage the count allows and is still unspent.** The
+new `render_bw_gain` lead is **not** part of §41: it is an input-side renderer change with its own
+pre-registration owed, and it does not consume §41's budget.

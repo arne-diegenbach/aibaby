@@ -1800,6 +1800,26 @@ class Timbre {
 
   uint32_t coefficients() const { return mfcc_.coefficients(); }
 
+  // §41 run 2f. The RMS of the SAME waveform `frames_of` would hand the ear, so
+  // that a level confound can be MEASURED and compensated rather than argued
+  // about. Widening a resonator lowers its peak gain, so `bw_gain` changes the
+  // output level at a FIXED `amplitude` -- and `axisamp` showed this ruler gets
+  // better as level falls, which is enough to manufacture a benefit out of
+  // nothing. Deriving the compensation needs the level, so the level is exposed.
+  double rms_of(double f0, double f1, double f2, double f3, double bw1,
+                double bw2, double bw3, double amplitude, float f3_gain,
+                float bw_gain) {
+    const size_t n = size_t(rate_) * 500 / 1000;  // the same 500 ms
+    pcm_.assign(n, 0.0f);
+    VowelSource voice;
+    voice.configure(rate_, f3_gain, bw_gain);
+    voice.render(float(f0), float(f1), float(f2), float(f3), float(bw1),
+                 float(bw2), float(bw3), float(amplitude), pcm_.data(), n);
+    double acc = 0.0;
+    for (float v : pcm_) acc += double(v) * double(v);
+    return n ? std::sqrt(acc / double(n)) : 0.0;
+  }
+
   // DNA v83, for §41 run 2. The same path as `of` above, with two differences
   // that it needs and `of` must not have: the four parameters the renderer used
   // to discard, and the PER-FRAME cepstra rather than their mean.
@@ -2326,6 +2346,7 @@ bool run_axisear(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_axisjit(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_axislev(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_axisamp(const std::vector<uint8_t>&, uint64_t, bool);
+bool run_axisbw2(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_ctxgrid(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_echoname(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_dirbudget(const std::vector<uint8_t>&, uint64_t, bool);

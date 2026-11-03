@@ -25923,3 +25923,56 @@ today measuring on the third formant — its own wobble becoming audible, and it
 others. We haven't measured either of those for this dial. So the count of candidate dials is four,
 and the vocabulary number is not four-dials-multiplied-together. Getting one requires another
 measurement, not another multiplication.
+
+**The fourth dial doesn't quite arrive — and we said in advance what would decide it.** Yesterday we
+found a fourth usable voice dial, one of the three "bandwidth" controls, scraping over the
+audibility bar. But we'd measured it in a version of the creature with the *third formant switched
+off*, and a four-dial voice would have it switched on. The third formant's own wobble makes
+everything slightly harder to hear, so the question was whether the fourth dial still clears the bar
+once the third one is running. **We wrote the number down first:** if it loses as much as the third
+formant costs the first, it lands at 0.976 against a bar of 1.0 and fails. It landed at **0.990,
+give or take 0.039** — within a hair of the prediction, and straddling the bar. So the honest answer
+is three usable dials, not four, and the vocabulary estimate stays where it was. A dial that sits
+inside the error bars of its own audibility threshold can't carry a claim.
+
+**We also checked the cheapest possible fix, and it doesn't work.** Switching the third formant on
+makes the voice slightly louder, and this measuring stick happens to get *better* at lower volumes —
+so the fourth dial's loss might just have been the extra loudness, which a one-line change to the
+synthesiser would undo. It isn't. Matching the volumes exactly leaves the loss intact. That closes
+the door we were hoping was open.
+
+**But the run turned up something we weren't looking for, and it's better than what we went in
+for.** The synthesiser has always used a single hardcoded resonance width — 90 Hz — for every vowel
+it produces. Letting the creature's own commanded widths through instead makes **every formant
+easier to hear**, by 5% to 27%, and the effect survives the volume control. The reason seems to be
+that a 90 Hz resonance is so narrow it fits inside one of the ear's frequency channels, so moving a
+formant barely changes what the ear receives; a wider resonance spreads across several channels, and
+moving it changes all of them. In other words **the synthesiser's resonances were too sharp for its
+own ear**, and have been for the whole project.
+
+That is a genuinely useful finding, and we're being careful about it. It's a measurement of what the
+*ear* can distinguish, which is not the same as the creature *learning* better — that needs a naming
+test, which scores only the first two formants and would have to show the gain itself. And switching
+it on changes what every creature hears of itself, which invalidates every number in the archive
+that compares across creature versions. So: a candidate change with a measured size, written down,
+not adopted.
+
+**Three faults in our own measuring instrument, one of which retracts something we published
+yesterday.** The first: a test written to detect a *cost* was handed a *benefit*, and printed "not
+resolvable" over a result that was sixteen times its own error bar. It could only see one direction.
+The second is more interesting. One column of yesterday's experiment froze every dial but the one
+being measured, and we flagged it as unreliable and declined to quote the numbers — but we said it
+was unreliable because of *noise*. It isn't noisy at all. When only one dial moves, the measuring
+stick double-counts the same ratio once per frequency channel, and returns an answer you can compute
+from the dial's range and wobble with no ear involved whatsoever. We predicted one of those numbers
+to five significant figures from arithmetic alone. So the column is withdrawn, and so is our
+statement that its *direction* was informative — a saturated instrument has no direction. The third
+was a number quoted without an error bar, which turned out to be a real effect rather than the
+rounding noise it looked like.
+
+**And what held.** The run reproduced yesterday's key number exactly, from the same random seeds, so
+it is the same instrument that produced the archive. One check in it *cannot* fail — the synthesiser
+physically ignores the dials being frozen in that condition — and we labelled it a wiring check in
+the source *before* running it, which is the mistake from yesterday caught in advance instead of
+afterwards. And the one control that could have failed with every sign still pointing the right way
+did not fail.

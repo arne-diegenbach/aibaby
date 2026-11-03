@@ -1,0 +1,187 @@
+experiment: axisbw2
+  the question      §41 run 2f. axisamp made bw2 the FOURTH audible axis,
+                    at d' 1.101. But it was measured with no third
+                    formant, and a four-axis code ships one. Does bw2
+                    survive f3, and what does bw2 cost in return?
+  pre-registered    if f3 taxes bw2 as it taxes F1 (21.4% of d'^2), bw2
+                    lands at d' 0.976 and FAILS. It survives only if that
+                    tax is under 17.5%. Written before the run.
+  and the likely    axisear's factorial puts the bandwidth cost GIVEN f3 at
+  branch for cl.2   -3.211 + 4.255 = +1.044, a BENEFIT. So clause 2 most
+                    likely finds nothing to attribute, and that is itself
+                    the answer: bw2 free on F1 in the creature that ships f3.
+  the amplitude     0.3035 -- babble's conditional mean 0.607 x self_gain 0.50.
+                    Amplitude 1.0 appears ONLY in the guard, because the
+                    ear's sensitivity is non-monotone in amplitude and an
+                    old d' may not be scaled to this operating point.
+  the ruler         signed d'^2 from `cepstral_dprime`, unbiased. The
+                    absolute call is against a bar in d', so every error
+                    bar beside a d' is CONVERTED: se(d') = se(d'^2)/(2d').
+  the level control BOTH gains change the output LEVEL at a fixed amplitude
+                    -- f3 adds energy to an unrenormalised sum, a widened
+                    resonator has a lower peak gain -- and this ruler
+                    improves as level falls. So every cell is read twice:
+                    as rendered, and at an amplitude matching cell 0's
+                    measured output RMS. Attribution uses only the matched
+                    reading; the bar applies only to the unmatched one.
+
+  d'^2 AT AMPLITUDE 0.3035, by gain cell and freeze arm (12 paired reps).
+  The `d'` column is the `none` arm in d' units, which is where the bar of
+  1.0 applies.
+
+  f3=0 bw=0   <- THE SHIPPED CREATURE
+    axis      d'           none      bw1+bw3     all 3 bw           f3 all off-axis
+    f0    4.838         23.410       23.410       23.410       23.410       48.634
+    f1    7.982         63.706       63.706       63.706       63.706      231.034
+    f2    9.433         88.986       88.986       88.986       88.986      146.709
+    f3    0.000         -0.003       -0.003       -0.003       -0.003        0.000
+    bw1   0.177          0.031        0.031        0.031        0.031        0.000
+    bw2   0.000         -0.029       -0.029       -0.029       -0.029        0.000
+    bw3   0.133          0.018        0.018        0.018        0.018        0.000
+
+  f3=1 bw=0
+    axis      d'           none      bw1+bw3     all 3 bw           f3 all off-axis
+    f0    4.424         19.572       19.572       19.572       20.614       36.817
+    f1    7.134         50.894       50.894       50.894       55.507      234.402
+    f2    8.427         71.007       71.007       71.007       77.116      141.800
+    f3    4.470         19.982       19.982       19.982       19.982      147.352
+    bw1   0.143          0.020        0.020        0.020        0.028        0.000
+    bw2   0.000         -0.031       -0.031       -0.031       -0.028        0.000
+    bw3   0.064          0.004        0.004        0.004        0.016        0.000
+
+  f3=0 bw=1
+    axis      d'           none      bw1+bw3     all 3 bw           f3 all off-axis
+    f0    5.480         30.032       30.403       30.556       30.032       90.467
+    f1    8.206         67.331       67.578       67.836       67.331      316.017
+    f2   10.389        107.921      108.029      108.399      107.921      184.209
+    f3    0.000         -0.005       -0.005       -0.007       -0.005        0.000
+    bw1   0.931          0.867        0.867        0.868        0.867      408.941
+    bw2   1.103          1.216        1.222        1.222        1.216      338.105
+    bw3   0.033          0.001        0.001       -0.004        0.001        0.000
+
+  f3=1 bw=1   <- THE FOUR-AXIS CREATURE
+    axis      d'           none      bw1+bw3     all 3 bw           f3 all off-axis
+    f0    5.298         28.074       28.465       28.559       29.438       65.717
+    f1    7.649         58.500       58.766       58.980       64.653      317.803
+    f2    9.492         90.102       90.290       90.504       98.832      175.273
+    f3    5.119         26.201       26.292       26.455       26.201      196.248
+    bw1   0.859          0.738        0.740        0.740        0.845      409.029
+    bw2   0.990          0.981        0.990        0.990        1.175      347.260
+    bw3   0.756          0.571        0.573        0.574        0.703      392.900
+
+  THE LEVEL EACH CELL PRODUCES at amplitude 0.3035, averaged over 40 drawn
+  postures, with the amplitude that puts it back at cell 0's level. The
+  `matched` d' column is the ONLY one attribution may use; the grid above is
+  what the creature really hears, and is where the bar applies.
+
+    cell         rms      vs cell 0   matched amp      f0      f1      f2      f3     bw1     bw2     bw3
+    f3=0 bw=0    0.12523     1.0000      0.30350   4.838   7.982   9.433   0.000   0.177   0.000   0.133
+    f3=1 bw=0    0.13185     1.0528      0.28828   4.318   7.189   8.308   4.299   0.139   0.000   0.056
+    f3=0 bw=1    0.11178     0.8926      0.34002   5.573   8.026  10.655   0.000   0.899   1.070   0.053
+    f3=1 bw=1    0.11672     0.9320      0.32564   5.465   7.521   9.601   5.431   0.844   0.970   0.744
+  GUARD -- IS THIS RUN 2c's INSTRUMENT? Same seeds, same draw order, at
+  amplitude 1.0 and f3_gain 1, freezing f3 must give F1 back run 2c's
+  published +2.934 in d'^2. A different number means this harness is not
+  the one that produced the archive, and nothing below may be read.
+    freezing f3, amp 1.0:  dd'^2   +2.934 +-  0.154  against +2.934  -> REPRODUCES
+
+  WIRING CHECK, NOT A CONTROL. At bw_gain 0 the renderer uses the literal
+  90.0f for every bandwidth and never reads the commanded values, so
+  freezing them is bit-exactly inert and this MUST be exactly 0. It cannot
+  fail for a measured reason; the control that can is clause 4.
+    all 7 axes x both bw_gain-0 cells, freeze bw1/bw2/bw3  -> exactly 0, as the renderer forces
+
+  CLAUSE 1 -- THE POINT: does bw2 survive the third formant?
+    bw2 with no f3    d'^2   1.216 +-  0.101   d'  1.103
+    bw2 WITH f3       d'^2   0.981 +-  0.076   d'  0.990 +- 0.039
+    f3's tax on bw2   dd'^2  -0.235 +-  0.036  = -19.3% of d'^2 (the
+                      pre-registered threshold was -17.5%)
+    the same at matched level        dd'^2  -0.204 +-  0.038   -> SURVIVES: not the level
+
+  CLAUSE 2 -- bw2's OWN TAX, and whether bw1/bw3 are dead weight. The
+  cost is measured with f3 ALREADY SHIPPED, because that is the creature a
+  four-axis code describes.
+    bandwidths on, given f3, on F1   dd'^2   +7.605 +-  0.451  (+16.8 SE)
+    of which freezing bw1+bw3 gives back     +0.266 +-  0.045
+    the same at matched level        dd'^2   +4.882 +-  0.413  (+11.8 SE)
+    and across the whole code, at matched level:
+      f0    d'  4.318 ->  5.465   dd'^2  +11.219 +-  0.365   -> HELPED
+      f1    d'  7.189 ->  7.521   dd'^2   +4.882 +-  0.413   -> HELPED
+      f2    d'  8.308 ->  9.601   dd'^2  +23.150 +-  0.593   -> HELPED
+      f3    d'  4.299 ->  5.431   dd'^2  +11.016 +-  0.269   -> HELPED
+      bw1   d'  0.139 ->  0.844   dd'^2   +0.694 +-  0.055   -> the dose arriving, not a benefit
+      bw2   d'  0.000 ->  0.970   dd'^2   +0.971 +-  0.064   -> the dose arriving, not a benefit
+      bw3   d'  0.056 ->  0.744   dd'^2   +0.551 +-  0.033   -> the dose arriving, not a benefit
+      -> 4 of the 4 formant axes (f0,f1,f2,f3) are HELPED at matched level
+
+  CLAUSE 3 -- STATIC OR JITTER, for the bandwidth GROUP. With all three
+  bandwidths held at rest, bw_gain still widens every resonator from 90 to
+  ~149 Hz, so this contrast is the static widening with no added audible
+  jitter. The single gain cannot split the static part per bandwidth.
+    static widening alone, on F1     dd'^2   +8.085 +-  0.497
+    the three bandwidths' jitter     dd'^2   -0.480 +-  0.069   -> a real cost
+
+  CLAUSE 4 -- THE ORDERING, and this is the control that can fail. In the
+  four-axis cell, freezing f3 (d' ~4.5, sd 47.6 Hz) must help F1 by MORE
+  than freezing bw1+bw3 (d' ~0.9/0.8, sd 5.3/5.6 Hz), because jitter
+  inflation scales with how audible the frozen axis's unsteadiness is. A
+  reversal contradicts the account with every sign correct.
+    freezing f3 on F1        dd'^2   +6.154 +-  0.209
+    freezing bw1+bw3 on F1   dd'^2   +0.266 +-  0.045
+    f3 minus bw1+bw3         dd'^2   +5.888 +-  0.197   -> ORDERED as predicted
+
+  THE `all off-axis` ARM, AND WHY NOTHING MAY BE READ FROM IT. With only
+  the target axis jittering, the within-class noise is RANK ONE and
+  collinear with the signal, so this diagonal Mahalanobis counts the same
+  ratio once per coefficient and returns dims*(reach/sd)^2. That ceiling is
+  computed below from the reach and sd alone -- no ear involved.
+    f0    measured    65.717   dims*(reach/sd)^2   357.103   0.184 of it
+    f1    measured   317.803   dims*(reach/sd)^2   353.953   0.898 of it
+    f2    measured   175.273   dims*(reach/sd)^2   324.469   0.540 of it
+    f3    measured   196.248   dims*(reach/sd)^2   343.886   0.571 of it
+    bw1   measured   409.029   dims*(reach/sd)^2   419.274   0.976 of it   <- SATURATED
+    bw2   measured   347.260   dims*(reach/sd)^2   347.280   1.000 of it   <- SATURATED
+    bw3   measured   392.900   dims*(reach/sd)^2   384.478   1.022 of it   <- SATURATED
+    -> 3 of 7 axes sit within 5% of an arithmetic ceiling that has no ear
+       in it. The column is WITHDRAWN, and so is run 2c's reading that its
+       DIRECTION was informative: a saturated estimator has no direction.
+       The off-axis burden is still real, but only arms where TWO OR MORE
+       axes still jitter can measure it -- run 2d's f2-only freeze is one.
+
+  THE FOURTH AXIS IS UNRESOLVED, AND THE BAR IS INSIDE THE ERROR. bw2
+  reads d' 0.990 +- 0.039 with f3 shipped, which straddles the bar of 1.0.
+  More reps would decide it -- the quantity is 10% of the way to
+  resolvable at this n -- but the honest reading is that a 4th axis within
+  noise of the audibility threshold cannot carry a vocabulary claim, and
+  the usable count remains THREE.
+
+  AND THE DROP IS NOT THE LEVEL: it is still -0.204 +- 0.038 when the two
+  cells are rendered at matched output level, so the third formant costs
+  bw2 through its jitter or its spectrum and not through its loudness.
+  Renormalising the renderer would not give bw2 back.
+
+  AND WHAT THE BANDWIDTHS COST, which is a separate question from whether
+  bw2 is audible, and is answered either way:
+  NOT A COST AT ALL -- A BENEFIT, AND IT SURVIVES THE LEVEL CONTROL. With
+  f3 already shipped, turning the bandwidths on makes F1 MORE separable by
+  +7.605 +- 0.451 (+16.8 SE), and +4.882 +- 0.413 of it is still there when the
+  two cells are rendered at MATCHED OUTPUT LEVEL. axisear's -3.211 describes
+  a creature WITHOUT a third formant; in the creature a four-axis code
+  actually describes, the bandwidth gain PAYS.
+
+  AND THE MECHANISM IS THE STATIC WIDENING (+8.085 +- 0.497), not the jitter
+  (-0.480 +- 0.069). Widening every resonator from 90 to ~149 Hz spreads each
+  formant's energy over more mel channels, so the same formant shift moves
+  MORE cepstral coefficients. The three bandwidths' own unsteadiness is a
+  separate and much smaller term.
+
+  SO `render_bw_gain = 1` IS A CANDIDATE GENOME CHANGE ON ITS OWN MERITS,
+  independent of whether bw2 is usable as an axis -- it would improve the
+  axes the creature ALREADY has. It is not free to adopt: it moves the
+  determinism hash and voids every cross-genome absolute
+  (`aibaby-vocal-calibration-invariant`), and `kVLScoreFormant` would have
+  to show the gain in a naming task before any capability is claimed.
+
+  AND CLAUSE 4 HELD: freezing f3 beats freezing bw1+bw3 by +5.888 +- 0.197,
+  the ordering jitter inflation requires. The control could have failed
+  with every sign correct, and did not.

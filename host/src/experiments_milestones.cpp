@@ -45902,6 +45902,12 @@ bool run_axisgrid(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
 // changed the presentation and the design, and not any measured value.
 constexpr double kAERest[7] = {245.9, 626.5, 1669.6, 2613.7, 148.2, 150.6, 150.1};
 constexpr double kAEReach[7] = {49.8, 118.0, 300.3, 254.9, 31.6, 32.1, 31.8};
+// The WITHIN-class jitter, one sd per parameter, from §41 run 1's measured
+// scatter. FOUR instruments carried this by copy before it was hoisted here --
+// axisear, axisjit, axislev and axisamp -- and a calibration constant that must
+// move together across instruments belongs in exactly one place
+// (`aibaby-shared-constants-audit`). Editing it voids every d' in §41.
+constexpr double kAESd[7] = {9.129, 21.727, 57.751, 47.616, 5.346, 5.967, 5.618};
 constexpr const char* kAEName[7] = {"f0", "f1", "f2", "f3", "bw1", "bw2", "bw3"};
 constexpr double kAEAmp = 1.0;
 // The 2x2: cell 0 is the shipped creature, cell 3 is run 1's "gain 1" column.
@@ -45961,7 +45967,6 @@ bool run_axisear(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
   // axis is §41 run 1's within-run scatter -- DERIVED, not chosen, and the same
   // number whose ratio to the reach produced "2.6 levels". That makes this d' and
   // run 1's level count the same quantity in two domains, which is the point.
-  const double sd[7] = {9.129, 21.727, 57.751, 47.616, 5.346, 5.967, 5.618};
   // dsq[cell][axis][rep], in the estimator's own units: SIGNED d'^2.
   std::vector<std::vector<std::vector<double>>> dsq(
       4, std::vector<std::vector<double>>(7, std::vector<double>(kAEReps, 0.0)));
@@ -45984,8 +45989,8 @@ bool run_axisear(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
         for (uint32_t s = 0; s < kAESamples * 2; ++s) {
           const int cls = int(s % 2);
           double p[7];
-          for (uint32_t k = 0; k < 7; ++k) p[k] = kAERest[k] + sd[k] * gauss(rng);
-          p[a] = (cls ? hi_c : lo_c) + sd[a] * gauss(rng);
+          for (uint32_t k = 0; k < 7; ++k) p[k] = kAERest[k] + kAESd[k] * gauss(rng);
+          p[a] = (cls ? hi_c : lo_c) + kAESd[a] * gauss(rng);
           const std::vector<std::vector<double>> fr = tb.frames_of(
               p[0], p[1], p[2], p[3], p[4], p[5], p[6], kAEAmp, kAEF3[c], kAEBw[c]);
           if (fr.empty()) continue;
@@ -46030,7 +46035,7 @@ bool run_axisear(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
       const double hi_c = kAERest[a] + kAEReach[a] * 0.5;
       std::printf("    %-4s %7.1f vs %7.1f Hz (reach %6.1f, sd %5.1f)  d'^2 %8.3f +- %6.3f"
                   "   d' %6.3f\n",
-                  kAEName[a], lo_c, hi_c, kAEReach[a], sd[a], msq[c][a], sesq[c][a],
+                  kAEName[a], lo_c, hi_c, kAEReach[a], kAESd[a], msq[c][a], sesq[c][a],
                   dprime_of(msq[c][a]));
     }
     std::printf("\n");
@@ -46346,7 +46351,6 @@ bool run_axisjit(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
     std::printf("  could not configure the cochlea: %s\n", err.c_str());
     return false;
   }
-  const double sd[7] = {9.129, 21.727, 57.751, 47.616, 5.346, 5.967, 5.618};
 
   // dsq[gain][arm][axis][rep]
   std::vector<std::vector<std::vector<std::vector<double>>>> dsq(
@@ -46369,8 +46373,8 @@ bool run_axisjit(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
             const int cls = int(s % 2);
             double p[7];
             // EVERY deviate is drawn, in the same order, in every arm.
-            for (uint32_t k = 0; k < 7; ++k) p[k] = kAERest[k] + sd[k] * gauss(rng);
-            p[a] = (cls ? hi_c : lo_c) + sd[a] * gauss(rng);
+            for (uint32_t k = 0; k < 7; ++k) p[k] = kAERest[k] + kAESd[k] * gauss(rng);
+            p[a] = (cls ? hi_c : lo_c) + kAESd[a] * gauss(rng);
             // ...and only then is the freeze applied, by overwrite. The target
             // axis `a` is never frozen: it carries the signal being measured.
             for (uint32_t k = 0; k < 7; ++k) {
@@ -46419,7 +46423,12 @@ bool run_axisjit(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
       for (uint32_t arm = 0; arm < kAJArms; ++arm) {
         double se = 0.0;
         const double m = cell(g, arm, a, &se);
-        std::printf("   d' %6.3f +-%6.3f", dprime_of(m), se);
+        // THE ERROR BAR IS CONVERTED, not printed raw. `cepstral_dprime` returns
+        // d'^2, so `se` is in squared units and must not sit beside a d': run 2c
+        // first shipped it that way, which is the same units slip axisear v2 was
+        // built to fix. d'^2 = q, d' = sqrt(q), so se(d') = se(q) / (2 d').
+        const double d = dprime_of(m);
+        std::printf("   d' %6.3f +-%6.3f", d, d > 0.0 ? se / (2.0 * d) : 0.0);
       }
       std::printf("\n");
     }
@@ -46591,7 +46600,6 @@ bool run_axislev(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
     std::printf("  could not configure the cochlea: %s\n", err.c_str());
     return false;
   }
-  const double sd[7] = {9.129, 21.727, 57.751, 47.616, 5.346, 5.967, 5.618};
 
   // One F1 measurement. `freeze` is a parameter index to hold at rest, or -1.
   auto measure_f1 = [&](float g3, double amp, int freeze, uint32_t rep) {
@@ -46607,8 +46615,8 @@ bool run_axislev(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
       double p[7];
       // Every deviate drawn in the same order, in every arm; the freeze is an
       // overwrite afterwards, so the RNG stream never shifts between arms.
-      for (uint32_t k = 0; k < 7; ++k) p[k] = kAERest[k] + sd[k] * gauss(rng);
-      p[1] = (cls ? hi_c : lo_c) + sd[1] * gauss(rng);
+      for (uint32_t k = 0; k < 7; ++k) p[k] = kAERest[k] + kAESd[k] * gauss(rng);
+      p[1] = (cls ? hi_c : lo_c) + kAESd[1] * gauss(rng);
       if (freeze >= 0 && freeze != 1) p[freeze] = kAERest[freeze];
       const std::vector<std::vector<double>> fr =
           tb.frames_of(p[0], p[1], p[2], p[3], p[4], p[5], p[6], amp, g3, 0.0f);
@@ -46856,7 +46864,6 @@ bool run_axisamp(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
     std::printf("  could not configure the cochlea: %s\n", err.c_str());
     return false;
   }
-  const double sd[7] = {9.129, 21.727, 57.751, 47.616, 5.346, 5.967, 5.618};
   // Each axis in its own cell, as axisear v2 established: f3 needs f3_gain, the
   // bandwidths need bw_gain, bw3 needs both.
   constexpr uint32_t own[7] = {0, 0, 0, 1, 2, 2, 3};
@@ -46875,8 +46882,8 @@ bool run_axisamp(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
     for (uint32_t s = 0; s < kAESamples * 2; ++s) {
       const int cls = int(s % 2);
       double p[7];
-      for (uint32_t k = 0; k < 7; ++k) p[k] = kAERest[k] + sd[k] * gauss(rng);
-      p[a] = (cls ? hi_c : lo_c) + sd[a] * gauss(rng);
+      for (uint32_t k = 0; k < 7; ++k) p[k] = kAERest[k] + kAESd[k] * gauss(rng);
+      p[a] = (cls ? hi_c : lo_c) + kAESd[a] * gauss(rng);
       const std::vector<std::vector<double>> fr =
           tb.frames_of(p[0], p[1], p[2], p[3], p[4], p[5], p[6], amp, g3[c], gb[c]);
       if (fr.empty()) continue;
@@ -46984,6 +46991,645 @@ bool run_axisamp(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
   }
   return true;
 }
+
+// ===== axisbw2 (§41 run 2f): the fourth axis has not paid for itself =====
+//
+// `axisamp` left FOUR candidate audible axes -- f1, f2, f3, bw2 -- and I wrote
+// in the same breath that the prize is NOT `19 x 2`, because bw2 has not paid
+// what f3 paid. There are two debts and either one deletes the axis.
+//
+//   1. bw2's d' OF 1.101 WAS MEASURED IN A CREATURE WITH NO THIRD FORMANT.
+//      axisear scores each axis in its own gain cell, and bw1/bw2 are owned by
+//      the `f3=0 bw=1` cell. But a four-axis code SHIPS f3, and run 2c measured
+//      what f3 does to its neighbours: its audible jitter inflates every other
+//      axis's denominator. bw2 clears the 2AFC bar by 10%; f3 cost F1 21.4% of
+//      its d'^2 (-10.127 on 47.35).
+//
+//      PRE-REGISTERED, AS A NUMBER, BEFORE THE RUN: if f3 taxes bw2 the way it
+//      taxes F1, then 1.101^2 = 1.212 becomes 0.953, i.e. **d' 0.976, BELOW THE
+//      BAR**, and the fourth axis does not exist in the creature that would use
+//      it. bw2 survives only if f3's tax on it comes in under 17.4% in d'^2.
+//      Both sides of that are permitted by the architecture: f3_gain > 0 adds a
+//      resonator whose energy and whose unsteadiness both reach the ear and
+//      change every cepstral coefficient, so nothing pins bw2's column.
+//
+//   2. bw2's OWN TAX ON THE AXES THE CREATURE ALREADY HAS IS UNMEASURED.
+//      axisear priced the bandwidth gain at -3.211 +- 0.245 on F1 -- but
+//      `render_bw_gain` carries ALL THREE bandwidths, and bw1 (0.930) and bw3
+//      (0.755) buy no levels. If their jitter is most of that cost, the creature
+//      is paying for three bandwidths to get one, and a per-bandwidth gain is a
+//      concrete renderer change with a measured size. If it is not, bw2 is a
+//      trade like f3 and the four-axis code must price it.
+//
+//      AND THE LIKELY BRANCH IS THE REFUSAL, WHICH I SAY FIRST. axisear's own
+//      factorial puts the bandwidth cost GIVEN f3 at B + AB = -3.211 + 4.255 =
+//      **+1.044**, a BENEFIT, because the interaction was large and positive. So
+//      clause 2 most likely finds nothing to attribute, and that is a result:
+//      it would mean bw2 is free on F1 in the creature that ships f3. The clause
+//      is written with that branch first rather than discovered in the output.
+//
+// PRICED AT THE AMPLITUDE THE CREATURE HEARS, 0.303, DERIVED AS axisamp DERIVED
+// IT (babble's conditional mean 0.607 x self_gain 0.50). The published f3
+// figures are at 1.0, and axisamp showed the ear's sensitivity is axis-specific
+// and NON-MONOTONE in amplitude -- so an old d' may not be scaled to this
+// operating point. Every f3 quantity is therefore RE-MEASURED here in the same
+// table. Amplitude 1.0 appears in exactly one place below: the guard that
+// reproduces run 2c, which is how this instrument is tied to the archive at all
+// (`aibaby-control-on-a-different-code-path`).
+//
+// WHAT THE SINGLE GAIN CANNOT SEPARATE, STATED BEFORE THE RESULT. `bw_gain`
+// interpolates every bandwidth from 90 Hz toward its commanded value, so turning
+// it on does two things at once: a STATIC widening of all three resonators from
+// 90 to ~149 Hz, and three axes' worth of jitter becoming audible. The freeze
+// separates the jitter PER BANDWIDTH; it cannot separate the static widening,
+// because one gain carries all three. Clause 3 therefore reports the static part
+// for the bandwidths as a GROUP and says so, rather than attributing it to bw2.
+//
+// AND ONE CHECK HERE IS A WIRING CHECK, LABELLED AS ONE BEFORE IT RUNS. At
+// `bw_gain = 0` the renderer uses the literal `90.0f` for all three bandwidths
+// and never reads the commanded values, so freezing them is bit-exactly inert
+// and that column MUST read exactly 0. It cannot fail for a measured reason --
+// which is exactly the fault run 2c shipped, a wiring check wearing a control's
+// clothes (`aibaby-power-is-not-the-error-model`). So it is printed as a wiring
+// check, it asserts EXACT zero rather than a tolerance, and the control that can
+// actually fail is clause 4's ORDERING, which fails with every sign correct.
+enum { kB2None = 0, kB2Comp, kB2AllBw, kB2F3, kB2Off, kB2Arms };
+constexpr const char* kB2ArmName[kB2Arms] = {"none", "bw1+bw3", "all 3 bw", "f3",
+                                         "all off-axis"};
+// Derived, not picked: the conditional-mean amplitude at the creature's own ear.
+constexpr double kB2Amp = kAmpBabbleMeanLoud * kAmpSelfGain;
+constexpr double kB2Bar = 1.0;          // the 2AFC bar, in d' units
+constexpr double kB2Run2cRec = 2.934;   // run 2c's F1 recovery, d'^2, at amp 1.0
+constexpr double kB2F3TaxFrac = 0.214;  // f3's measured tax on F1, fraction of d'^2
+constexpr uint32_t kB2f1 = 1, kB2f3 = 3, kB2bw2 = 5;
+// axisear's 2x2 cell indices, by the gains they set.
+constexpr uint32_t kB2CellBase = 0, kB2CellF3 = 1, kB2CellBw = 2, kB2CellBoth = 3;
+
+bool run_axisbw2(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  (void)ticks;
+  aibaby::Dna dna;
+  if (dna.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) return false;
+
+  std::printf("  the question      §41 run 2f. axisamp made bw2 the FOURTH audible axis,\n"
+              "                    at d' 1.101. But it was measured with no third\n"
+              "                    formant, and a four-axis code ships one. Does bw2\n"
+              "                    survive f3, and what does bw2 cost in return?\n");
+  std::printf("  pre-registered    if f3 taxes bw2 as it taxes F1 (%.1f%% of d'^2), bw2\n"
+              "                    lands at d' %.3f and FAILS. It survives only if that\n"
+              "                    tax is under %.1f%%. Written before the run.\n",
+              kB2F3TaxFrac * 100.0, std::sqrt(1.101 * 1.101 * (1.0 - kB2F3TaxFrac)),
+              (1.0 - kB2Bar * kB2Bar / (1.101 * 1.101)) * 100.0);
+  std::printf("  and the likely    axisear's factorial puts the bandwidth cost GIVEN f3 at\n"
+              "  branch for cl.2   -3.211 + 4.255 = +1.044, a BENEFIT. So clause 2 most\n"
+              "                    likely finds nothing to attribute, and that is itself\n"
+              "                    the answer: bw2 free on F1 in the creature that ships f3.\n");
+  std::printf("  the amplitude     %.4f -- babble's conditional mean %.3f x self_gain %.2f.\n"
+              "                    Amplitude 1.0 appears ONLY in the guard, because the\n"
+              "                    ear's sensitivity is non-monotone in amplitude and an\n"
+              "                    old d' may not be scaled to this operating point.\n",
+              kB2Amp, kAmpBabbleMeanLoud, kAmpSelfGain);
+  std::printf("  the ruler         signed d'^2 from `cepstral_dprime`, unbiased. The\n"
+              "                    absolute call is against a bar in d', so every error\n"
+              "                    bar beside a d' is CONVERTED: se(d') = se(d'^2)/(2d').\n");
+  std::printf("  the level control BOTH gains change the output LEVEL at a fixed amplitude\n"
+              "                    -- f3 adds energy to an unrenormalised sum, a widened\n"
+              "                    resonator has a lower peak gain -- and this ruler\n"
+              "                    improves as level falls. So every cell is read twice:\n"
+              "                    as rendered, and at an amplitude matching cell 0's\n"
+              "                    measured output RMS. Attribution uses only the matched\n"
+              "                    reading; the bar applies only to the unmatched one.\n\n");
+
+  Timbre tb;
+  std::string err;
+  if (!tb.configure(dna.header().audio, err)) {
+    std::printf("  could not configure the cochlea: %s\n", err.c_str());
+    return false;
+  }
+
+  // One cell: `kAESamples` paired postures on axis `a`, with `arm`'s freeze
+  // applied AFTER every deviate is drawn, rendered at `amp` with the two gains.
+  auto measure = [&](uint32_t a, uint32_t r, uint32_t arm, float f3g, float bwg,
+                     double amp) {
+    // IDENTICAL seeding to axisear v2 and run 2c, and independent of arm, gain
+    // AND amplitude, so every cell of every table below sees the same postures.
+    std::mt19937_64 rng(dna.header().seed ^ (0xAE00ull + a) ^
+                        (r ? r * 0x9E3779B97F4A7C15ull : 0ull));
+    std::normal_distribution<double> gauss(0.0, 1.0);
+    std::vector<std::vector<double>> x;
+    std::vector<int> y;
+    const double lo_c = kAERest[a] - kAEReach[a] * 0.5;
+    const double hi_c = kAERest[a] + kAEReach[a] * 0.5;
+    for (uint32_t s = 0; s < kAESamples * 2; ++s) {
+      const int cls = int(s % 2);
+      double p[7];
+      // EVERY deviate is drawn, in the same order, in every arm. Skipping the
+      // call for a frozen axis would shift the stream and unpair the arms.
+      for (uint32_t k = 0; k < 7; ++k) p[k] = kAERest[k] + kAESd[k] * gauss(rng);
+      p[a] = (cls ? hi_c : lo_c) + kAESd[a] * gauss(rng);
+      // ...and only then is the freeze applied, by overwrite. The target axis is
+      // never frozen: it carries the signal being measured.
+      for (uint32_t k = 0; k < 7; ++k) {
+        if (k == a) continue;
+        bool frz = false;
+        switch (arm) {
+          case kB2Comp: frz = (k == 4 || k == 6); break;  // bw2's companions
+          case kB2AllBw: frz = (k >= 4); break;           // the three bandwidths
+          case kB2F3: frz = (k == kB2f3); break;
+          case kB2Off: frz = true; break;
+          default: break;
+        }
+        if (frz) p[k] = kAERest[k];
+      }
+      const std::vector<std::vector<double>> fr =
+          tb.frames_of(p[0], p[1], p[2], p[3], p[4], p[5], p[6], amp, f3g, bwg);
+      if (fr.empty()) continue;
+      std::vector<double> m(fr[0].size(), 0.0);
+      for (const std::vector<double>& f : fr)
+        for (size_t k = 0; k < m.size(); ++k) m[k] += f[k];
+      for (double& v : m) v /= double(fr.size());
+      x.push_back(m);
+      y.push_back(cls);
+    }
+    if (x.size() < 4) return 0.0;
+    return cepstral_dprime(x, y, nullptr, true);
+  };
+
+  // dsq[cell][arm][axis][rep], the cells being axisear's 2x2 over the two gains.
+  std::vector<std::vector<std::vector<std::vector<double>>>> dsq(
+      4, std::vector<std::vector<std::vector<double>>>(
+             kB2Arms, std::vector<std::vector<double>>(7, std::vector<double>(kAEReps, 0.0))));
+  for (uint32_t c = 0; c < 4; ++c)
+    for (uint32_t arm = 0; arm < kB2Arms; ++arm)
+      for (uint32_t a = 0; a < 7; ++a)
+        for (uint32_t r = 0; r < kAEReps; ++r)
+          dsq[c][arm][a][r] = measure(a, r, arm, kAEF3[c], kAEBw[c], kB2Amp);
+
+  // THE GUARD, and the only place amplitude 1.0 appears.
+  std::vector<double> g_none(kAEReps, 0.0), g_f3(kAEReps, 0.0);
+  for (uint32_t r = 0; r < kAEReps; ++r) {
+    g_none[r] = measure(kB2f1, r, kB2None, 1.0f, 0.0f, kAEAmp);
+    g_f3[r] = measure(kB2f1, r, kB2F3, 1.0f, 0.0f, kAEAmp);
+  }
+
+  // ---- THE LEVEL PROBE, AND IT IS NOT OPTIONAL ----
+  // Widening a resonator LOWERS ITS PEAK GAIN, so `bw_gain = 1` makes the same
+  // `amplitude` come out quieter -- and axisamp measured that F1's d' RISES as
+  // level falls, by +6.9 in d'^2 from 0.3035 down to 0.223. That is large enough
+  // to manufacture an entire bandwidth benefit out of nothing, and it is the
+  // axislev mistake exactly: a contrast that differs in the gain AND in the
+  // level the gain produces. Likewise `f3_gain` adds a third resonator to an
+  // unrenormalised sum, so it makes the output LOUDER.
+  //
+  // So the level is MEASURED, over the same posture distribution the d' is
+  // measured over rather than at the setpoint alone
+  // (`aibaby-match-at-the-operating-point`), and every cell is read a second
+  // time at the amplitude that puts its output back at cell 0's level. The
+  // uncompensated grid stays the primary reading, because the creature really
+  // does hear the uncompensated level -- that is the absolute bar. The matched
+  // grid is what ATTRIBUTION may use, and nothing else.
+  constexpr uint32_t kB2LvlProbe = 40;
+  double rms[4] = {0.0, 0.0, 0.0, 0.0};
+  for (uint32_t c = 0; c < 4; ++c) {
+    // Re-seeded identically per cell, so all four see the same postures.
+    std::mt19937_64 rng(dna.header().seed ^ 0xB2B2ull);
+    std::normal_distribution<double> gauss(0.0, 1.0);
+    double acc = 0.0;
+    for (uint32_t s = 0; s < kB2LvlProbe; ++s) {
+      double p[7];
+      for (uint32_t k = 0; k < 7; ++k) p[k] = kAERest[k] + kAESd[k] * gauss(rng);
+      acc += tb.rms_of(p[0], p[1], p[2], p[3], p[4], p[5], p[6], kB2Amp, kAEF3[c],
+                       kAEBw[c]);
+    }
+    rms[c] = acc / double(kB2LvlProbe);
+  }
+  double amp_m[4];
+  for (uint32_t c = 0; c < 4; ++c)
+    amp_m[c] = rms[c] > 0.0 ? kB2Amp * rms[0] / rms[c] : kB2Amp;
+
+  // dsqL[cell][axis][rep]: the `none` arm again, at the level-matched amplitude.
+  std::vector<std::vector<std::vector<double>>> dsqL(
+      4, std::vector<std::vector<double>>(7, std::vector<double>(kAEReps, 0.0)));
+  for (uint32_t c = 0; c < 4; ++c)
+    for (uint32_t a = 0; a < 7; ++a)
+      for (uint32_t r = 0; r < kAEReps; ++r)
+        dsqL[c][a][r] = measure(a, r, kB2None, kAEF3[c], kAEBw[c], amp_m[c]);
+
+  auto dprime_of = [](double q) { return q > 0.0 ? std::sqrt(q) : 0.0; };
+  // d'^2 = q, d' = sqrt(q), so se(d') = se(q)/(2 d'). The estimator returns
+  // squares, so an unconverted bar beside a d' is the wrong unit.
+  auto se_dprime = [&](double q, double se_sq) {
+    const double d = dprime_of(q);
+    return d > 0.0 ? se_sq / (2.0 * d) : 0.0;
+  };
+  auto cell = [&](uint32_t c, uint32_t arm, uint32_t a, double* se) {
+    return ctx_mean_se(dsq[c][arm][a], se);
+  };
+  auto paired = [&](uint32_t c0, uint32_t a0, uint32_t c1, uint32_t a1, uint32_t ax,
+                    double* se) {
+    std::vector<double> d;
+    for (uint32_t r = 0; r < kAEReps; ++r)
+      d.push_back(dsq[c1][a1][ax][r] - dsq[c0][a0][ax][r]);
+    return ctx_mean_se(d, se);
+  };
+  auto cellL = [&](uint32_t c, uint32_t ax, double* se) {
+    return ctx_mean_se(dsqL[c][ax], se);
+  };
+  auto pairedL = [&](uint32_t c0, uint32_t c1, uint32_t ax, double* se) {
+    std::vector<double> d;
+    for (uint32_t r = 0; r < kAEReps; ++r) d.push_back(dsqL[c1][ax][r] - dsqL[c0][ax][r]);
+    return ctx_mean_se(d, se);
+  };
+
+  std::printf("  d'^2 AT AMPLITUDE %.4f, by gain cell and freeze arm (12 paired reps).\n"
+              "  The `d'` column is the `none` arm in d' units, which is where the bar of\n"
+              "  %.1f applies.\n\n", kB2Amp, kB2Bar);
+  for (uint32_t c = 0; c < 4; ++c) {
+    std::printf("  %s%s\n", kAECell[c],
+                c == kB2CellBoth ? "   <- THE FOUR-AXIS CREATURE"
+                                 : (c == kB2CellBase ? "   <- THE SHIPPED CREATURE" : ""));
+    std::printf("    axis      d'  ");
+    for (uint32_t arm = 0; arm < kB2Arms; ++arm) std::printf("%13s", kB2ArmName[arm]);
+    std::printf("\n");
+    for (uint32_t a = 0; a < 7; ++a) {
+      double se0 = 0.0;
+      const double base = cell(c, kB2None, a, &se0);
+      std::printf("    %-4s %6.3f  ", kAEName[a], dprime_of(base));
+      for (uint32_t arm = 0; arm < kB2Arms; ++arm) {
+        double se = 0.0;
+        std::printf("%13.3f", cell(c, arm, a, &se));
+      }
+      std::printf("\n");
+    }
+    std::printf("\n");
+  }
+
+  // ---- the level each cell actually produces, and the matched re-reading ----
+  std::printf("  THE LEVEL EACH CELL PRODUCES at amplitude %.4f, averaged over %u drawn\n"
+              "  postures, with the amplitude that puts it back at cell 0's level. The\n"
+              "  `matched` d' column is the ONLY one attribution may use; the grid above is\n"
+              "  what the creature really hears, and is where the bar applies.\n\n",
+              kB2Amp, kB2LvlProbe);
+  std::printf("    cell         rms      vs cell 0   matched amp");
+  for (uint32_t a = 0; a < 7; ++a) std::printf("%8s", kAEName[a]);
+  std::printf("\n");
+  for (uint32_t c = 0; c < 4; ++c) {
+    std::printf("    %-11s %8.5f %10.4f %12.5f", kAECell[c], rms[c],
+                rms[0] > 0.0 ? rms[c] / rms[0] : 0.0, amp_m[c]);
+    for (uint32_t a = 0; a < 7; ++a) {
+      double se = 0.0;
+      std::printf("%8.3f", dprime_of(cellL(c, a, &se)));
+    }
+    std::printf("\n");
+  }
+
+  // ---- GUARD: is this run 2c's instrument? ----
+  std::printf("  GUARD -- IS THIS RUN 2c's INSTRUMENT? Same seeds, same draw order, at\n"
+              "  amplitude 1.0 and f3_gain 1, freezing f3 must give F1 back run 2c's\n"
+              "  published %+.3f in d'^2. A different number means this harness is not\n"
+              "  the one that produced the archive, and nothing below may be read.\n",
+              kB2Run2cRec);
+  std::vector<double> gd(kAEReps, 0.0);
+  for (uint32_t r = 0; r < kAEReps; ++r) gd[r] = g_f3[r] - g_none[r];
+  double se_g = 0.0;
+  const double got = ctx_mean_se(gd, &se_g);
+  const bool repro = std::fabs(got - kB2Run2cRec) < 1e-3;
+  std::printf("    freezing f3, amp 1.0:  dd'^2 %+8.3f +- %6.3f  against %+.3f  -> %s\n",
+              got, se_g, kB2Run2cRec, repro ? "REPRODUCES" : "*** DIFFERENT");
+
+  // ---- WIRING CHECK, declared as one ----
+  std::printf("\n  WIRING CHECK, NOT A CONTROL. At bw_gain 0 the renderer uses the literal\n"
+              "  90.0f for every bandwidth and never reads the commanded values, so\n"
+              "  freezing them is bit-exactly inert and this MUST be exactly 0. It cannot\n"
+              "  fail for a measured reason; the control that can is clause 4.\n");
+  bool wired = true;
+  for (uint32_t c = 0; c < 2; ++c) {
+    for (uint32_t a = 0; a < 7; ++a) {
+      double se = 0.0;
+      const double m = paired(c, kB2None, c, kB2AllBw, a, &se);
+      if (m != 0.0 || se != 0.0) wired = false;
+    }
+  }
+  std::printf("    all 7 axes x both bw_gain-0 cells, freeze bw1/bw2/bw3  -> %s\n",
+              wired ? "exactly 0, as the renderer forces" : "*** NONZERO -- a real bug");
+
+  // ---- CLAUSE 1: THE POINT ----
+  double se_alone = 0.0, se_joint = 0.0, se_tax = 0.0;
+  const double alone = cell(kB2CellBw, kB2None, kB2bw2, &se_alone);
+  const double joint = cell(kB2CellBoth, kB2None, kB2bw2, &se_joint);
+  const double tax = paired(kB2CellBw, kB2None, kB2CellBoth, kB2None, kB2bw2, &se_tax);
+  const double d_joint = dprime_of(joint);
+  const double sed_joint = se_dprime(joint, se_joint);
+  std::printf("\n  CLAUSE 1 -- THE POINT: does bw2 survive the third formant?\n");
+  std::printf("    bw2 with no f3    d'^2 %7.3f +- %6.3f   d' %6.3f\n", alone, se_alone,
+              dprime_of(alone));
+  std::printf("    bw2 WITH f3       d'^2 %7.3f +- %6.3f   d' %6.3f +- %.3f\n", joint,
+              se_joint, d_joint, sed_joint);
+  std::printf("    f3's tax on bw2   dd'^2 %+7.3f +- %6.3f  = %+.1f%% of d'^2 (the\n"
+              "                      pre-registered threshold was %.1f%%)\n",
+              tax, se_tax, alone != 0.0 ? 100.0 * tax / alone : 0.0,
+              -(1.0 - kB2Bar * kB2Bar / (1.101 * 1.101)) * 100.0);
+  const bool bw2_clears = d_joint - kAECrit * sed_joint > kB2Bar;
+  const bool bw2_fails = d_joint + kAECrit * sed_joint < kB2Bar;
+  // AND THE SAME DROP AT MATCHED LEVEL, because f3_gain adds energy to an
+  // unrenormalised sum and so makes the output louder. axislev refuted the level
+  // account for f3's cost to F1 -- but axisamp showed the ear's sensitivity is
+  // AXIS-SPECIFIC, so that refutation does not transfer to bw2 and has to be
+  // asked again here.
+  double se_taxl = 0.0;
+  const double taxl = pairedL(kB2CellBw, kB2CellBoth, kB2bw2, &se_taxl);
+  std::printf("    the same at matched level        dd'^2 %+7.3f +- %6.3f   -> %s\n", taxl,
+              se_taxl,
+              taxl < -kAECrit * se_taxl ? "SURVIVES: not the level"
+                                        : (taxl > kAECrit * se_taxl ? "*** REVERSES"
+                                                                    : "gone: it WAS the level"));
+  const bool tax_is_level = !(taxl < -kAECrit * se_taxl);
+
+  // ---- CLAUSE 2: what bw2 costs the axes already in the code ----
+  std::printf("\n  CLAUSE 2 -- bw2's OWN TAX, and whether bw1/bw3 are dead weight. The\n"
+              "  cost is measured with f3 ALREADY SHIPPED, because that is the creature a\n"
+              "  four-axis code describes.\n");
+  double se_cost = 0.0, se_give = 0.0;
+  const double cost = paired(kB2CellF3, kB2None, kB2CellBoth, kB2None, kB2f1, &se_cost);
+  const double give = paired(kB2CellBoth, kB2None, kB2CellBoth, kB2Comp, kB2f1, &se_give);
+  std::printf("    bandwidths on, given f3, on F1   dd'^2 %+8.3f +- %6.3f  (%+.1f SE)\n", cost,
+              se_cost, se_cost > 0.0 ? cost / se_cost : 0.0);
+  std::printf("    of which freezing bw1+bw3 gives back   %+8.3f +- %6.3f\n", give, se_give);
+  // THE SAME CONTRAST AT MATCHED LEVEL. Widening the resonators lowers the
+  // output, and this ruler improves as the output falls, so an uncompensated
+  // bandwidth effect of EITHER sign may be entirely level.
+  double se_costl = 0.0;
+  const double costl = pairedL(kB2CellF3, kB2CellBoth, kB2f1, &se_costl);
+  std::printf("    the same at matched level        dd'^2 %+8.3f +- %6.3f  (%+.1f SE)\n", costl,
+              se_costl, se_costl > 0.0 ? costl / se_costl : 0.0);
+  // AND ASKED OF EVERY AXIS, because "it helps F1" and "it helps the code" are
+  // different claims and only the second one would justify a genome change.
+  std::printf("    and across the whole code, at matched level:\n");
+  uint32_t helped = 0;
+  for (uint32_t a = 0; a < 7; ++a) {
+    double se = 0.0, se0 = 0.0, se1 = 0.0;
+    const double m = pairedL(kB2CellF3, kB2CellBoth, a, &se);
+    const double d0 = dprime_of(cellL(kB2CellF3, a, &se0));
+    const double d1 = dprime_of(cellL(kB2CellBoth, a, &se1));
+    const bool up = m > kAECrit * se;
+    if (up && a <= kB2f3) ++helped;
+    // The three bandwidth rows go from INAUDIBLE to audible here, because
+    // bw_gain is what makes them exist at all. That is the dose arriving, not a
+    // benefit, and it must not be labelled as one or the count is inflated.
+    std::printf("      %-4s  d' %6.3f -> %6.3f   dd'^2 %+8.3f +- %6.3f   -> %s\n", kAEName[a],
+                d0, d1, m, se,
+                a > kB2f3 ? "the dose arriving, not a benefit"
+                          : (up ? "HELPED" : (m < -kAECrit * se ? "hurt" : "flat")));
+  }
+  std::printf("      -> %u of the 4 formant axes (f0,f1,f2,f3) are HELPED at matched level\n",
+              helped);
+  // THREE-WAY, because the quantity is not sign-constrained and v1 got this
+  // wrong: it tested only `cost < 0` and so printed "not resolvable" over a
+  // +16.9 SE BENEFIT. A branch that can only see one sign is not a test.
+  const bool cost_hurts = cost < -kAECrit * se_cost;
+  const bool cost_helps = cost > kAECrit * se_cost;
+  const bool costl_helps = costl > kAECrit * se_costl;
+  const bool costl_hurts = costl < -kAECrit * se_costl;
+  const bool give_real = give > kAECrit * se_give;
+  const double se_gap = std::sqrt(se_give * se_give + se_cost * se_cost);
+  const bool give_full = cost_hurts && std::fabs(give + cost) < kAECrit * se_gap;
+
+  // ---- CLAUSE 3: the static widening, for the group ----
+  std::printf("\n  CLAUSE 3 -- STATIC OR JITTER, for the bandwidth GROUP. With all three\n"
+              "  bandwidths held at rest, bw_gain still widens every resonator from 90 to\n"
+              "  ~149 Hz, so this contrast is the static widening with no added audible\n"
+              "  jitter. The single gain cannot split the static part per bandwidth.\n");
+  double se_stat = 0.0, se_jit = 0.0;
+  const double stat = paired(kB2CellF3, kB2None, kB2CellBoth, kB2AllBw, kB2f1, &se_stat);
+  // The jitter part is its OWN paired contrast, not a subtraction of two means,
+  // so it carries an error bar instead of being quoted bare as v1 quoted it.
+  const double jit = paired(kB2CellBoth, kB2AllBw, kB2CellBoth, kB2None, kB2f1, &se_jit);
+  std::printf("    static widening alone, on F1     dd'^2 %+8.3f +- %6.3f\n", stat, se_stat);
+  std::printf("    the three bandwidths' jitter     dd'^2 %+8.3f +- %6.3f   -> %s\n", jit,
+              se_jit,
+              jit < -kAECrit * se_jit ? "a real cost"
+                                      : (jit > kAECrit * se_jit ? "a real benefit" : "flat"));
+
+  // ---- CLAUSE 4: THE ORDERING, the control that can fail with the signs right ----
+  std::printf("\n  CLAUSE 4 -- THE ORDERING, and this is the control that can fail. In the\n"
+              "  four-axis cell, freezing f3 (d' ~4.5, sd %.1f Hz) must help F1 by MORE\n"
+              "  than freezing bw1+bw3 (d' ~0.9/0.8, sd %.1f/%.1f Hz), because jitter\n"
+              "  inflation scales with how audible the frozen axis's unsteadiness is. A\n"
+              "  reversal contradicts the account with every sign correct.\n",
+              kAESd[kB2f3], kAESd[4], kAESd[6]);
+  double se_rf3 = 0.0, se_ord = 0.0;
+  const double rf3 = paired(kB2CellBoth, kB2None, kB2CellBoth, kB2F3, kB2f1, &se_rf3);
+  const double ord = paired(kB2CellBoth, kB2Comp, kB2CellBoth, kB2F3, kB2f1, &se_ord);
+  std::printf("    freezing f3 on F1        dd'^2 %+8.3f +- %6.3f\n", rf3, se_rf3);
+  std::printf("    freezing bw1+bw3 on F1   dd'^2 %+8.3f +- %6.3f\n", give, se_give);
+  std::printf("    f3 minus bw1+bw3         dd'^2 %+8.3f +- %6.3f   -> %s\n", ord, se_ord,
+              ord > kAECrit * se_ord ? "ORDERED as predicted"
+                                       : (ord < -kAECrit * se_ord ? "*** REVERSED"
+                                                                    : "indistinguishable"));
+  const bool ord_ok = ord > kAECrit * se_ord;
+  const bool ord_rev = ord < -kAECrit * se_ord;
+
+  // ---- THE `all off-axis` ARM IS AN ARTEFACT, AND HERE IS ITS ARITHMETIC ----
+  // Run 2c called this column "near-degenerate" and refused to quote it, which
+  // was the right instinct and the WRONG DIAGNOSIS: it blamed an SE a third of
+  // the value, i.e. noise. The column is not noisy, it is DETERMINISTIC, and the
+  // number it returns can be written down in advance.
+  //
+  // Freeze every axis but the target and the within-class noise becomes RANK ONE
+  // and collinear with the between-class signal: both now lie along the target
+  // axis's direction in cepstral space. `cepstral_dprime` is a DIAGONAL
+  // Mahalanobis, so it divides each coefficient's class difference by that
+  // coefficient's own marginal spread and SUMS over coefficients -- and when the
+  // signal and the noise share one direction, every coefficient reports the same
+  // ratio `reach/sd`. The sum is then `dims * (reach/sd)^2` instead of
+  // `(reach/sd)^2`: the estimator counts one number `dims` times.
+  //
+  // So the ceiling is printed beside the measurement. An arm that SATURATES it
+  // measured nothing about the ear.
+  std::printf("\n  THE `all off-axis` ARM, AND WHY NOTHING MAY BE READ FROM IT. With only\n"
+              "  the target axis jittering, the within-class noise is RANK ONE and\n"
+              "  collinear with the signal, so this diagonal Mahalanobis counts the same\n"
+              "  ratio once per coefficient and returns dims*(reach/sd)^2. That ceiling is\n"
+              "  computed below from the reach and sd alone -- no ear involved.\n");
+  const double dims = double(tb.coefficients());
+  uint32_t saturated = 0;
+  for (uint32_t a = 0; a < 7; ++a) {
+    double se = 0.0;
+    const double got_a = cell(kB2CellBoth, kB2Off, a, &se);
+    const double ceil_a = dims * (kAEReach[a] / kAESd[a]) * (kAEReach[a] / kAESd[a]);
+    const double ratio = ceil_a > 0.0 ? got_a / ceil_a : 0.0;
+    const bool sat = ratio > 0.95;
+    if (sat) ++saturated;
+    std::printf("    %-4s  measured %9.3f   dims*(reach/sd)^2 %9.3f   %5.3f of it%s\n",
+                kAEName[a], got_a, ceil_a, ratio, sat ? "   <- SATURATED" : "");
+  }
+  std::printf("    -> %u of 7 axes sit within 5%% of an arithmetic ceiling that has no ear\n"
+              "       in it. The column is WITHDRAWN, and so is run 2c's reading that its\n"
+              "       DIRECTION was informative: a saturated estimator has no direction.\n"
+              "       The off-axis burden is still real, but only arms where TWO OR MORE\n"
+              "       axes still jitter can measure it -- run 2d's f2-only freeze is one.\n",
+              saturated);
+
+  std::printf("\n");
+  if (!repro) {
+    std::printf("  VOID -- NOT RUN 2c's INSTRUMENT. The f3 freeze at amplitude 1.0 does not\n"
+                "  reproduce the published %+.3f, so this harness and the one that produced\n"
+                "  §41's numbers differ somewhere, and no contrast above may be compared to\n"
+                "  the archive. Fix the harness before reading the result.\n", kB2Run2cRec);
+    return true;
+  }
+  if (!wired) {
+    std::printf("  VOID -- THE FREEZE REACHES SOMETHING IT CANNOT. At bw_gain 0 the\n"
+                "  bandwidths are the literal 90.0f and freezing them is inert by\n"
+                "  construction, so a nonzero column is a bug in this instrument rather\n"
+                "  than a measurement. Nothing above is readable.\n");
+    return true;
+  }
+
+  // THE AXIS COUNT, which is clause 1 and nothing else.
+  if (bw2_fails) {
+    std::printf("  THE FOURTH AXIS DOES NOT SURVIVE ITS OWN CODE. bw2 reads d' %.3f +- %.3f\n"
+                "  in the creature that ships f3, resolvably BELOW the 2AFC bar of %.1f. It\n"
+                "  was 1.101 with no third formant, and f3's jitter took %+.1f%% of its\n"
+                "  d'^2 -- which is what run 2c predicted would happen to every axis.\n\n"
+                "  SO THE AUDIBLE COUNT IS THREE, NOT FOUR, and f3 and bw2 are ALTERNATIVES\n"
+                "  rather than an addition: each one's jitter eats the other's margin. The\n"
+                "  prize is f1 x f2 x f3, and `19 signals` stands uncorrected -- axisamp's\n"
+                "  four was measured one axis at a time in a creature that cannot be all\n"
+                "  of them at once.\n",
+                d_joint, sed_joint, kB2Bar, alone != 0.0 ? 100.0 * tax / alone : 0.0);
+  } else if (bw2_clears) {
+    std::printf("  THE FOURTH AXIS SURVIVES. bw2 reads d' %.3f +- %.3f with f3 shipped,\n"
+                "  resolvably ABOVE the bar, and f3's tax on it was %+.1f%% of d'^2 against\n"
+                "  the %.1f%% it could have afforded. The pre-registered prediction FAILED,\n"
+                "  which is the informative direction: f3's tax is NOT uniform across axes,\n"
+                "  so run 2c's shared-denominator account is incomplete.\n\n"
+                "  BUT THE COUNT IS STILL NOT A PRIZE. These are d' at full reach, not a\n"
+                "  LEVEL count, and §41 run 1's level ruler has never been run at this\n"
+                "  amplitude. Do not multiply.\n",
+                d_joint, sed_joint, alone != 0.0 ? 100.0 * tax / alone : 0.0,
+                (1.0 - kB2Bar * kB2Bar / (1.101 * 1.101)) * 100.0);
+  } else {
+    std::printf("  THE FOURTH AXIS IS UNRESOLVED, AND THE BAR IS INSIDE THE ERROR. bw2\n"
+                "  reads d' %.3f +- %.3f with f3 shipped, which straddles the bar of %.1f.\n"
+                "  More reps would decide it -- the quantity is %.0f%% of the way to\n"
+                "  resolvable at this n -- but the honest reading is that a 4th axis within\n"
+                "  noise of the audibility threshold cannot carry a vocabulary claim, and\n"
+                "  the usable count remains THREE.\n",
+                d_joint, sed_joint, kB2Bar,
+                sed_joint > 0.0 ? 100.0 * std::fabs(d_joint - kB2Bar) / (kAECrit * sed_joint)
+                                : 0.0);
+  }
+
+  if (tax_is_level) {
+    std::printf("\n  AND WHAT f3 TOOK FROM bw2 WAS ITS LOUDNESS, NOT ITS JITTER. At matched\n"
+                "  output level the drop is %+.3f +- %.3f, i.e. gone. `f3_gain` adds a third\n"
+                "  resonator to an unrenormalised sum, so it makes the voice LOUDER, and\n"
+                "  axisamp measured that bw2's d' FALLS as level rises. axislev refuted the\n"
+                "  level account for f3's cost to F1; it does NOT transfer to bw2, and this\n"
+                "  is the axis-specific sensitivity axisamp warned about.\n\n"
+                "  WHICH MAKES THE FIX A RENORMALISATION, NOT A NEW MECHANISM: dividing the\n"
+                "  sum by its own gain would hold the level fixed as f3 comes on. That is a\n"
+                "  renderer change with a measured size, and it is the first thing in this\n"
+                "  line that would RAISE the axis count rather than price it.\n",
+                taxl, se_taxl);
+  } else {
+    std::printf("\n  AND THE DROP IS NOT THE LEVEL: it is still %+.3f +- %.3f when the two\n"
+                "  cells are rendered at matched output level, so the third formant costs\n"
+                "  bw2 through its jitter or its spectrum and not through its loudness.\n"
+                "  Renormalising the renderer would not give bw2 back.\n",
+                taxl, se_taxl);
+  }
+
+  // THE COST, which is clauses 2 and 3.
+  std::printf("\n  AND WHAT THE BANDWIDTHS COST, which is a separate question from whether\n"
+              "  bw2 is audible, and is answered either way:\n");
+  if (cost_helps && costl_helps) {
+    std::printf("  NOT A COST AT ALL -- A BENEFIT, AND IT SURVIVES THE LEVEL CONTROL. With\n"
+                "  f3 already shipped, turning the bandwidths on makes F1 MORE separable by\n"
+                "  %+.3f +- %.3f (%+.1f SE), and %+.3f +- %.3f of it is still there when the\n"
+                "  two cells are rendered at MATCHED OUTPUT LEVEL. axisear's -3.211 describes\n"
+                "  a creature WITHOUT a third formant; in the creature a four-axis code\n"
+                "  actually describes, the bandwidth gain PAYS.\n\n"
+                "  AND THE MECHANISM IS THE STATIC WIDENING (%+.3f +- %.3f), not the jitter\n"
+                "  (%+.3f +- %.3f). Widening every resonator from 90 to ~149 Hz spreads each\n"
+                "  formant's energy over more mel channels, so the same formant shift moves\n"
+                "  MORE cepstral coefficients. The three bandwidths' own unsteadiness is a\n"
+                "  separate and much smaller term.\n\n"
+                "  SO `render_bw_gain = 1` IS A CANDIDATE GENOME CHANGE ON ITS OWN MERITS,\n"
+                "  independent of whether bw2 is usable as an axis -- it would improve the\n"
+                "  axes the creature ALREADY has. It is not free to adopt: it moves the\n"
+                "  determinism hash and voids every cross-genome absolute\n"
+                "  (`aibaby-vocal-calibration-invariant`), and `kVLScoreFormant` would have\n"
+                "  to show the gain in a naming task before any capability is claimed.\n",
+                cost, se_cost, se_cost > 0.0 ? cost / se_cost : 0.0, costl, se_costl, stat,
+                se_stat, jit, se_jit);
+  } else if (cost_helps && !costl_helps) {
+    std::printf("  THE BENEFIT WAS THE LEVEL. Turning the bandwidths on makes F1 more\n"
+                "  separable by %+.3f +- %.3f -- but at MATCHED OUTPUT LEVEL it is %+.3f\n"
+                "  +- %.3f, so the effect is the quieter output a widened resonator\n"
+                "  produces, on a ruler axisamp showed improves as level falls. Not a\n"
+                "  property of the bandwidths, and exactly the confound axislev caught once\n"
+                "  already. The bandwidth gain is level-neutral at best on F1.\n",
+                cost, se_cost, costl, se_costl);
+  } else if (!cost_hurts) {
+    std::printf("  NOTHING TO ATTRIBUTE -- AND THAT WAS THE PRE-REGISTERED BRANCH. With f3\n"
+                "  already shipped, turning the bandwidths on moves F1 by %+.3f +- %.3f,\n"
+                "  not resolvable at %.3f x SE. axisear's factorial predicted this (+1.044\n"
+                "  from B + AB), so the bandwidth gain is FREE on F1 in the creature that\n"
+                "  ships f3, and the -3.211 figure describes a creature WITHOUT a third\n"
+                "  formant. Clauses 2 and 3 have no cost to split.\n",
+                cost, se_cost, kAECrit);
+  } else if (!costl_hurts) {
+    std::printf("  THE COST WAS THE LEVEL. The bandwidths cost F1 %+.3f +- %.3f as rendered,\n"
+                "  but %+.3f +- %.3f at MATCHED OUTPUT LEVEL -- so what hurt F1 was the\n"
+                "  change in loudness a widened resonator produces, not the bandwidths\n"
+                "  themselves. There is no mechanism here to split, and a per-bandwidth gain\n"
+                "  would recover nothing.\n",
+                cost, se_cost, costl, se_costl);
+  } else if (give_full) {
+    std::printf("  THE CREATURE PAYS FOR THREE BANDWIDTHS TO GET ONE. The cost is %+.3f\n"
+                "  +- %.3f and freezing bw1+bw3 gives back the WHOLE of it, so bw2's own\n"
+                "  unsteadiness costs F1 nothing and the two bandwidths that buy no levels\n"
+                "  carry the entire tax.\n\n"
+                "  THAT IS A CONCRETE RENDERER CHANGE WITH A MEASURED SIZE: a per-bandwidth\n"
+                "  gain, so bw2 can be commanded while bw1 and bw3 stay at the fixed 90 Hz.\n"
+                "  It is a genome field and a dose, not a new mechanism.\n",
+                cost, se_cost);
+  } else if (give_real) {
+    std::printf("  SPLIT, AND BOTH PARTS ARE REAL. The cost is %+.3f +- %.3f; bw1+bw3's\n"
+                "  jitter carries %.0f%% of it and the rest is bw2's own jitter plus the\n"
+                "  static widening (%+.3f +- %.3f of the total). A per-bandwidth gain would\n"
+                "  recover the first part only.\n",
+                cost, se_cost, cost != 0.0 ? -100.0 * give / cost : 0.0, stat, se_stat);
+  } else {
+    std::printf("  THE COST IS bw2's OWN, OR THE STATIC WIDENING. The cost is %+.3f +- %.3f\n"
+                "  and freezing bw1+bw3 gives back nothing resolvable, so the two useless\n"
+                "  bandwidths are NOT the problem and a per-bandwidth gain would buy\n"
+                "  nothing. The static widening accounts for %+.3f +- %.3f of it, leaving\n"
+                "  %+.3f for bw2's own jitter: bw2 is a trade, exactly as f3 is.\n",
+                cost, se_cost, stat, se_stat, cost - stat);
+  }
+
+  if (ord_rev) {
+    std::printf("\n  AND CLAUSE 4 FIRED AGAINST THE ACCOUNT. Freezing the two weak, barely\n"
+                "  audible bandwidths helped F1 MORE than freezing f3 did (%+.3f +- %.3f in\n"
+                "  favour of the bandwidths). Jitter inflation predicts the opposite\n"
+                "  ordering, so the shared-denominator story is not what is happening here\n"
+                "  and run 2c's attribution needs re-opening at this amplitude.\n",
+                -ord, se_ord);
+  } else if (!ord_ok) {
+    std::printf("\n  CLAUSE 4 IS INDISTINGUISHABLE (%+.3f +- %.3f), so this run neither\n"
+                "  confirms nor refutes the ordering, and the control did not do its job.\n"
+                "  Reported as unresolved rather than counted as a pass.\n", ord, se_ord);
+  } else {
+    std::printf("\n  AND CLAUSE 4 HELD: freezing f3 beats freezing bw1+bw3 by %+.3f +- %.3f,\n"
+                "  the ordering jitter inflation requires. The control could have failed\n"
+                "  with every sign correct, and did not.\n", ord, se_ord);
+  }
+  return true;
+}
+
 
 bool run_aimslice(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
   (void)verbose;

@@ -342,6 +342,13 @@ const Spec kSpecs[] = {
      "  2AFC bar verdict that called bw1/bw2 sub-bar may be an artefact of the\n"
      "  instrument's loudness. Re-tests the bar where the creature actually\n"
      "  lives. Between-arm contrasts are unaffected; absolute thresholds are not"},
+    {"axisbw2", 1, Expect::kRead, Tier::kLong,
+     "  §41 run 2f: axisamp made bw2 the FOURTH audible axis at d' 1.101 -- but\n"
+     "  measured it with no third formant, and a four-axis code ships one. Does\n"
+     "  bw2 survive f3's audible jitter, and what does bw2 cost in return? A\n"
+     "  2x2 over the two render gains x five freeze arms, at the amplitude the\n"
+     "  creature hears. Pre-registers that bw2 FAILS at d' 0.976 if f3 taxes it\n"
+     "  as it taxed F1. Amplitude 1.0 appears only in the run-2c reproduction"},
     {"axislev", 1, Expect::kRead, Tier::kLong,
      "  §41 run 2d: is f3's static cost to F1 LEVEL? Sweeps amplitude over 2x\n"
      "  at render_f3_gain 0 -- if F1's d' is flat there, a global level change is\n"
@@ -1327,6 +1334,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "axisjit") ok = run_axisjit(dna_blob, ticks, verbose);
   else if (name == "axislev") ok = run_axislev(dna_blob, ticks, verbose);
   else if (name == "axisamp") ok = run_axisamp(dna_blob, ticks, verbose);
+  else if (name == "axisbw2") ok = run_axisbw2(dna_blob, ticks, verbose);
   else if (name == "ctxgrid") ok = run_ctxgrid(dna_blob, ticks, verbose);
   else if (name == "echoname") ok = run_echoname(dna_blob, ticks, verbose);
   else if (name == "dirbudget") ok = run_dirbudget(dna_blob, ticks, verbose);
