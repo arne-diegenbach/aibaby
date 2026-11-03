@@ -4905,3 +4905,86 @@ a blocker. That rule, recorded the day before this run landed, exists precisely 
 refuted" otherwise generates "try the adjacent axis" forever. **§40 is the terminus of the offset line.
 Twelve DNA versions, v76 through v82, and the honest summary is that the quantity was never worth
 naming.** The next work is on the input side — recognition, instruction, accumulation.
+
+## §41 — THE NUMBER OF ORTHOGONAL AXES, PRE-REGISTERED (2026-11-03)
+
+**The first line of the input-side work, and it is not an input-side line** — it is the
+**accumulation** lever, which is the row the goal names as the real wall. Written before any build.
+
+### WHY, AS A CHAIN OF FOUR MEASURED RESULTS WITH NO GAP
+
+1. **Retention is FREE across an orthogonal axis.** A second lesson *silent* about F1 leaves lesson
+   A at **0.948 ± 0.126** — not distinguishable from 1.0 — while one that *demands* F1 wipes it to
+   **−0.057/−0.167**. `axisfree`, **+5.7 SE** between them.
+2. **Two orthogonal lessons coexist**: 0.84 kept against 0.22 for a conflicting one (`capacity`).
+3. **A second axis is genuinely independent**: biasing vocal group 3 swings F2 by **961 Hz with
+   0.00 cross-talk into F1** (`aimaxes`).
+4. **Levels MULTIPLY across independent axes**, and `aimaxes` measured **2 of 9** groups. 2–3 levels
+   on 2 axes = 4–9 words; on 4 axes = **16–81**, same per-axis resolution, **no new learning rule**.
+
+**So "capacity is pure overwrite holding ~2 items" is the wrong summary.** Overwrite is what happens
+*on one axis*. The item count is **the number of orthogonal axes**, and seven are unmeasured.
+
+### THE BUILD, WHICH IS SMALL BY DESIGN
+
+`aimaxes` already loops over `kAXGroups[gi]` and `VocalParams` already exposes every output
+(`f0 f1 f2 f3 bw1 bw2 bw3 amplitude voicing`). So: `kAXNGroups` 2 → 9, record all nine parameters
+per rung instead of two, and print a **nine-by-nine normalised cross-talk matrix**. Read-only,
+66666 ticks, `Expect::kRead`, nothing learns.
+
+**The candidate set is four, not nine.** `larynx-reads-nine-scalars` gives the non-guessable
+mapping — centroid 0→f0, centroids 2–7→f1,f2,f3,bw1,bw2,bw3, **activity** 1→voicing, **activity**
+8→loudness. F1 and F2 are done. **F0 is excluded for lineage**: the transmission tape carries
+formants only, so an F0 distinction cannot be taught creature-to-creature. That leaves **F3 and the
+three bandwidths**, plus voicing/loudness which are not vowel-identity axes.
+
+### THE CLAUSES, IN ORDER — AND ORDER IS PART OF THE PRE-REGISTRATION
+
+**CLAUSE 1 — LIVENESS, AND IT COMES FIRST BECAUSE A DEAD AXIS SCORES AS A PERFECT ONE.** This is the
+defect this project has installed seven times: *a guard measuring the wrong quantity.* Cross-talk is
+a ratio, so **an axis that does not move at all has zero cross-talk trivially** and would be reported
+as ideally independent. So for each group, the own-axis full-ladder swing must exceed the within-run
+scatter by a factor stated **now**: `|swing_own| >= 3 * sd_own`. An axis failing this prints
+**NO VERDICT — AXIS DEAD**, and is **never** counted as independent and never enters the product.
+
+**CLAUSE 2 — CROSS-TALK, NORMALISED, BECAUSE RAW Hz CANNOT BE COMPARED ACROSS THESE AXES.** F0 rests
+near 120, F3 near 2500, the bandwidths near 80–120, so a raw Hz off-diagonal is meaningless. Define
+`X[g][p] = swing_p(bias g) / swing_p(bias p)` — each axis's response in units of **its own**
+steerable range. The diagonal is 1 by construction. **Independence bar: `|X[g][p]| <= 0.10` for all
+p != g**, an order of magnitude looser than `aimaxes`'s measured 0.01 between groups 2 and 3, chosen
+loose on purpose so a *refusal* is unambiguous rather than marginal.
+
+**CLAUSE 3 — RESOLUTION, which is what actually sets the prize.** Levels per axis
+`= 1 + |swing_own| / (k * sd_own)`, with `k` fixed at the value `aimaxes` used to get its 2.6, so
+this run's numbers are comparable to the one published result on this instrument. An axis that is
+live and independent but resolves **< 2 levels adds nothing** and is reported as such.
+
+**CLAUSE 4 — AND ONLY THEN THE PRODUCT.** The code-space claim is the product of level counts over
+axes that passed clauses 1, 2 and 3. **It is a claim about CODE SPACE, not about words.** No naming
+claim may be made from this run — see the gate below.
+
+### WHAT THIS RUN MAY NOT CONCLUDE, STATED IN ADVANCE
+
+**THE EAR IS THE GATE, NOT THE LARYNX.** Naming needs the distinction *heard and scored*. The ear
+handles F2 (/i/ vs /u/ at 0.900) but **whether it resolves F3 or bandwidth is unmeasured**, and
+`kVLScoreFormant` scores only F1/F2 — so the scorer and the reward both need extending before any
+word count is claimed. **A steerable, independent, well-resolved axis the ear cannot hear is worth
+exactly nothing for naming.** This is stage one of two.
+
+**AND ORTHOGONAL IS FREE FOR RETENTION, NEVER FOR THE REWARD CHANNEL.** `capacity`: two dimensions
+share one scalar reward, A keeps only **0.58** against A-then-A, and **sequential beats
+simultaneous**. More axes multiply the code space; the teaching must still be sequential. Any
+proposal to teach two axes at once is already refused.
+
+### THE LINE'S OWN STOPPING RULE, WITH THE COUNT
+
+1. **Which part of the goal:** accumulation *and* vocabulary, together.
+2. **The cheapest thing that could refuse it:** cross-talk (clause 2) — the prize is a product of
+   *independent* axes, so an axis that moves F1/F2 while moving itself **reallocates rather than
+   adds**. One read-only run settles it.
+3. **ABANDON AFTER 3 RUNS**, regardless of how interesting it has become: (i) this nine-group
+   cross-talk matrix, (ii) the ear's resolution on whichever axes survive, (iii) one build if both
+   pass. If (i) or (ii) refuses, stop at that run and write the refusal.
+
+**Had this rule existed in September the offset hunt would have ended at v79.** It exists now
+because §40 cost twelve DNA versions to establish that a quantity was never worth naming.
