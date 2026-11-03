@@ -335,6 +335,13 @@ const Spec kSpecs[] = {
      "  (axisfree 0.948 vs -0.167), so the AXIS COUNT is the accumulation lever.\n"
      "  Prints a 9x9 normalised cross-talk matrix. LIVENESS IS SCORED FIRST,\n"
      "  because cross-talk is a ratio and a DEAD axis has none of it"},
+    {"axisear", 1, Expect::kRead, Tier::kLong,
+     "  §41 run 2a: does the AIR carry the four axes axisgrid found at the\n"
+     "  larynx? Until v83 the renderer had two resonators and bw = 90.0f\n"
+     "  hardcoded, so f3 and the bandwidths reached no ear. Renders each axis\n"
+     "  at its OWN learned reach through the creature's own cochlea and scores\n"
+     "  an unbiased cepstral d', where 1.0 is ~76% in a 2AFC. Runs every pair\n"
+     "  at render gain 0 AND 1, so the dose-response is in the same table"},
     {"aimslice", 600000, Expect::kRead, Tier::kLong,
      "  closes the loop on the REAL auditory slice rather than a noise model of\n"
      "  it, before a DNA change rests on the sigma projection. Four readouts --\n"
@@ -1295,6 +1302,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "aimslice") ok = run_aimslice(dna_blob, ticks, verbose);
   else if (name == "aimaxes") ok = run_aimaxes(dna_blob, ticks, verbose);
   else if (name == "axisgrid") ok = run_axisgrid(dna_blob, ticks, verbose);
+  else if (name == "axisear") ok = run_axisear(dna_blob, ticks, verbose);
   else if (name == "ctxgrid") ok = run_ctxgrid(dna_blob, ticks, verbose);
   else if (name == "echoname") ok = run_echoname(dna_blob, ticks, verbose);
   else if (name == "dirbudget") ok = run_dirbudget(dna_blob, ticks, verbose);

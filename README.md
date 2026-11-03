@@ -25681,3 +25681,46 @@ The line is now paused rather than finished. Giving the creature a real third re
 to its physics, not an experiment — every creature we've ever run would have heard itself differently,
 and the fingerprint we use to prove our results are reproducible would change. That's a decision about
 what kind of creature this is, and it isn't ours to take quietly.
+
+### We gave the creature a third formant, and it can hear it
+
+Yesterday's problem was that four of the creature's seven voice dials never reached the air — the
+synthesiser had two resonators and a fixed bandwidth, so the third formant and the three bandwidth
+dials were computed, displayed, and thrown away. We've now built them, behind switches that ship
+**off**, so the creature as shipped is unchanged down to the last bit and every past result stays
+comparable.
+
+Then we asked the question that was blocked: with the new parts switched on, can the creature's own
+ear actually hear those four dials? We rendered each one through the same vocal tract and the same
+cochlea the creature uses, and measured how far apart two sounds are in the units an ear cares about
+— where 1.0 means a listener gets about 76% right when asked which of two sounds they just heard.
+
+**The third formant: yes, clearly.** It goes from 0.002 when switched off to **31.2** when switched
+on, which is 86% of what the first formant manages. That's a genuine new dial the creature can both
+make and hear.
+
+**The three bandwidths: no.** They sit at about 1% of the first formant, barely above the measurement
+noise. The creature can command them, the air now carries them, and they're still inaudible at the
+range it can actually reach.
+
+So the honest prize is **about 19 distinguishable signals, up from about 7** — roughly two and a half
+times, from one new dial, not the sixty-fold jump yesterday's muscle-side measurement implied. Worth
+having, much smaller than it looked.
+
+One finding worth acting on: turning the bandwidths on actually makes the *first* formant harder to
+hear, by about a fifth, because widening a resonance blurs it. So the bandwidths cost something and
+buy nothing. If anything is ever switched on permanently, it should be the third formant alone. (We
+moved both switches together in this run, so we can't yet prove the blurring is the bandwidths' doing
+rather than the new formant's — that's a one-line follow-up, and until it runs it's a suspicion, not
+a result.)
+
+**Three times in a row the experiment refused to give us an answer, and each time it was right.** The
+first version measured separation against no noise at all, and reported a figure of 41,000 for a
+quantity where 1.0 is meaningful. The second had a safety check built on a mistaken belief of ours
+about which parts of the code the change touched. The third was reading numbers that sat inside its
+own margin of error. None of those would have been obvious from looking at the final answer — each
+was caught because the experiment had been told in advance what results would mean it couldn't be
+trusted, and it stopped rather than printing something.
+
+That is the whole value of writing the failure conditions before the run. It cost three cheap
+iterations of a few seconds each, and what it bought was not printing a confident wrong number.

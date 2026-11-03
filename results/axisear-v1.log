@@ -1,0 +1,63 @@
+experiment: axisear
+  the question      §41 run 2a. The larynx commands seven independent
+                    axes; does the AIR carry them? Until v83 the renderer
+                    had two resonators and `bw = 90.0f` hardcoded, so f3
+                    and the three bandwidths reached no ear at all.
+  the ruler         cepstral d', unbiased, through the creature's OWN
+                    cochlea. d' = 1 is ~76% correct in a 2AFC, which is a
+                    bar about ears rather than about classifiers.
+  the anchor        F1, which the ear demonstrably resolves, at F1's own
+                    reach. Every axis is also reported as a FRACTION of it.
+  the dose          the SAME posture pairs at gains 0 (shipped) and 1.
+                    A flat f3 column at gain 0 and a live one at gain 1 is
+                    the dose-response that proves the renderer change took.
+
+  RENDER GAINS  render_f3_gain 0.0   render_bw_gain 0.0   <- THE SHIPPED CREATURE
+    f0      221.0 vs   270.8 Hz (reach   49.8, jitter sd   9.1)   d'  51.897
+    f1      567.5 vs   685.5 Hz (reach  118.0, jitter sd  21.7)   d'  44.822
+    f2     1519.4 vs  1819.8 Hz (reach  300.3, jitter sd  57.8)   d'  91.805
+    f3     2486.2 vs  2741.1 Hz (reach  254.9, jitter sd  47.6)   d'   0.002
+    bw1     132.4 vs   164.0 Hz (reach   31.6, jitter sd   5.3)   d'  -0.043
+    bw2     134.5 vs   166.7 Hz (reach   32.1, jitter sd   6.0)   d'  -0.042
+    bw3     134.2 vs   166.0 Hz (reach   31.8, jitter sd   5.6)   d'   0.036
+
+  RENDER GAINS  render_f3_gain 1.0   render_bw_gain 1.0
+    f0      221.0 vs   270.8 Hz (reach   49.8, jitter sd   9.1)   d'  69.070
+    f1      567.5 vs   685.5 Hz (reach  118.0, jitter sd  21.7)   d'  36.398
+    f2     1519.4 vs  1819.8 Hz (reach  300.3, jitter sd  57.8)   d'  94.569
+    f3     2486.2 vs  2741.1 Hz (reach  254.9, jitter sd  47.6)   d'  31.195
+    bw1     132.4 vs   164.0 Hz (reach   31.6, jitter sd   5.3)   d'   0.399
+    bw2     134.5 vs   166.7 Hz (reach   32.1, jitter sd   6.0)   d'   0.418
+    bw3     134.2 vs   166.0 Hz (reach   31.8, jitter sd   5.6)   d'   0.367
+
+  CLAUSE 1 -- THE DOSE, against the estimator's own null floor d' = 0.346
+  (= sqrt(d*(1/n0+1/n1)), derived, n = 200 per class). Required of f3, which
+  is the axis the third resonator adds; bw3 is that resonator's OWN width and
+  so has nothing to act on at f3_gain 0, which §41 did not notice.
+    f3    gain 0 d'    0.002  ->  gain 1 d'   31.195   delta   31.193   MOVED
+    bw1   gain 0 d'   -0.043  ->  gain 1 d'    0.399   delta    0.441   MOVED
+    bw2   gain 0 d'   -0.042  ->  gain 1 d'    0.418   delta    0.460   MOVED
+    bw3   gain 0 d'    0.036  ->  gain 1 d'    0.367   delta    0.331   flat (not required of a bandwidth)
+
+  CLAUSE 2 -- THE POSITIVE CONTROL: the ear demonstrably resolves f1 and
+  f2, so both must clear the 2AFC bar at BOTH gain settings or the ruler is
+  wrong. (§41's extra demand that they not MOVE with the gain is withdrawn:
+  bw1 and bw2 ARE the f1/f2 resonators' bandwidths, so render_bw_gain moves
+  them by design. The first build voided here and was right to.)
+    f1  d' 44.822 -> 36.398     f2  d' 91.805 -> 94.569   -> OK
+
+  CLAUSE 3 -- THE TEST: each axis at gain 1, as a fraction of F1's d'.
+  Bar: d' >= 1.0 (~76% in a 2AFC) AND clear of the 0.346 null floor, because
+  a 2AFC bar beneath the estimator's own noise is not a bar.
+    f1    d'   36.398    1.000 x F1   -> AUDIBLE
+    f2    d'   94.569    2.598 x F1   -> AUDIBLE
+    f3    d'   31.195    0.857 x F1   -> AUDIBLE
+    bw1   d'    0.399    0.011 x F1   -> below the bar
+    bw2   d'    0.418    0.011 x F1   -> below the bar
+    bw3   d'    0.367    0.010 x F1   -> below the bar
+
+  1 OF THE FOUR NEW AXES ARE AUDIBLE at their own reach, so the air
+  carries them and stage 2b -- whether the auditory MODULE represents
+  them -- is worth building. STILL NOT A WORD COUNT: this says the
+  distinction survives the cochlea, not that the creature uses it, and
+  kVLScoreFormant still scores only F1/F2.

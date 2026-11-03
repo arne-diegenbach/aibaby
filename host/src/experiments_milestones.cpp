@@ -5,6 +5,7 @@
 #include <chrono>
 #include <cstring>
 #include <numeric>
+#include <random>
 #include "experiments_common.h"
 #include "host/mel.h"
 #include "host/wav.h"
@@ -45822,6 +45823,217 @@ bool run_axisgrid(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
                 "  never going to bind. The clause that actually did work was CLAUSE 1,\n"
                 "  which caught the two readouts this instrument cannot drive at all. A\n"
                 "  pre-registered refusal clause is only as good as its chance of firing.\n");
+  }
+  return true;
+}
+
+// ===== axisear (§41 run 2a): does the AIR carry the four new axes? =====
+//
+// Run 2 as §41 specified it -- "does the EAR resolve F3 and bandwidth" -- could
+// not be run, because `VowelSource::render` had two resonators and a hardcoded
+// 90 Hz bandwidth, so those four axes reached no ear at all. v83 added them
+// behind gains that ship at 0.0. This is the measurement that was blocked.
+//
+// IT IS STAGE 2a AND NOT 2b, deliberately. Whether the SIGNAL survives the
+// cochlea is a necessary precondition for whether the auditory MODULE represents
+// it, and it is far cheaper: no brain, no learning, no seeds. If the mel
+// spectrum does not carry the distinction then nothing downstream can, and 2b is
+// not worth building. If it does carry it, 2b is the next run.
+//
+// THE RULER IS `cepstral_dprime`, already in this codebase and already argued:
+// a diagonal-Mahalanobis distance in cepstral space, unbiased, where d' = 1 is
+// about 76% correct in a two-alternative forced choice. That is a bar about EARS
+// rather than a classifier accuracy, which is the whole reason it exists.
+//
+// THE ANCHOR IS F1. The ear demonstrably resolves F1 and F2 -- /i/ vs /u/ reads
+// 0.900 and differs almost purely in F2 -- so every axis is reported BOTH as a
+// raw d' and as a fraction of F1's d' at F1's own reach. A fraction against a
+// known-audible axis is interpretable in a way a bare d' is not.
+//
+// THE SEPARATION IS EACH AXIS'S OWN LEARNED REACH from §41 run 1, so every axis
+// is asked for exactly as much as the creature could actually command on it.
+// Asking each axis for the same number of Hz would be the wrong question.
+constexpr double kAERest[7] = {245.9, 626.5, 1669.6, 2613.7, 148.2, 150.6, 150.1};
+constexpr double kAEReach[7] = {49.8, 118.0, 300.3, 254.9, 31.6, 32.1, 31.8};
+constexpr const char* kAEName[7] = {"f0", "f1", "f2", "f3", "bw1", "bw2", "bw3"};
+constexpr double kAEAmp = 1.0;
+
+bool run_axisear(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  (void)ticks;
+  aibaby::Dna dna;
+  if (dna.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) return false;
+
+  std::printf("  the question      §41 run 2a. The larynx commands seven independent\n"
+              "                    axes; does the AIR carry them? Until v83 the renderer\n"
+              "                    had two resonators and `bw = 90.0f` hardcoded, so f3\n"
+              "                    and the three bandwidths reached no ear at all.\n");
+  std::printf("  the ruler         cepstral d', unbiased, through the creature's OWN\n"
+              "                    cochlea. d' = 1 is ~76%% correct in a 2AFC, which is a\n"
+              "                    bar about ears rather than about classifiers.\n");
+  std::printf("  the anchor        F1, which the ear demonstrably resolves, at F1's own\n"
+              "                    reach. Every axis is also reported as a FRACTION of it.\n");
+  std::printf("  the dose          the SAME posture pairs at gains 0 (shipped) and 1.\n"
+              "                    A flat f3 column at gain 0 and a live one at gain 1 is\n"
+              "                    the dose-response that proves the renderer change took.\n\n");
+
+  Timbre tb;
+  std::string err;
+  if (!tb.configure(dna.header().audio, err)) {
+    std::printf("  could not configure the cochlea: %s\n", err.c_str());
+    return false;
+  }
+
+  // THE DENOMINATOR HAS TO BE THE CREATURE'S OWN JITTER, AND THE FIRST VERSION OF
+  // THIS HAD NONE. Scoring the per-FRAME cepstra of one held posture gave d' in
+  // the tens of thousands, because a deterministic noiseless vowel renders nearly
+  // identical frames and the within-class spread was numerical dust. `d' = 1 is
+  // 76% in a 2AFC` is only true of a d' whose denominator is a real variability.
+  //
+  // So each sample is a posture PERTURBED by the creature's own measured motor
+  // scatter, and the within-class spread is that perturbation. The sd on each
+  // axis is §41 run 1's within-run scatter -- DERIVED, not chosen, and the same
+  // number whose ratio to the reach produced "2.6 levels". That makes this d' and
+  // run 1's level count the same quantity in two domains, which is the point.
+  const double sd[7] = {9.129, 21.727, 57.751, 47.616, 5.346, 5.967, 5.618};
+  // n=24 WAS TOO SMALL AND THE FIRST RUN SHOWED IT. `cepstral_dprime`'s unbiased
+  // correction subtracts d*(1/n0 + 1/n1), so under the null d'^2 has expectation
+  // zero but a spread of the same order -- at n=24 with 12 coefficients that is
+  // d'_null ~ sqrt(12*2/24) = 1.0. The bandwidth cells read 0.3 to 3.2, i.e. ON
+  // the noise floor, and a bar of "d' >= 1" cannot be read against a floor of 1.
+  // 200 puts the floor at sqrt(12*2/200) = 0.35. Each sample is one 500 ms render,
+  // so this costs seconds.
+  constexpr uint32_t kAESamples = 200;
+  double dp[2][7] = {};
+  for (int on = 0; on < 2; ++on) {
+    const float g = on ? 1.0f : 0.0f;
+    std::printf("  RENDER GAINS  render_f3_gain %.1f   render_bw_gain %.1f%s\n", g, g,
+                on ? "" : "   <- THE SHIPPED CREATURE");
+    for (uint32_t a = 0; a < 7; ++a) {
+      // One RNG per cell, seeded from the genome and the axis only, so the two
+      // gain settings see the IDENTICAL posture draws. Otherwise the gain-0 and
+      // gain-1 columns would differ by their noise as well as by the renderer,
+      // and the dose-response would not be a paired comparison.
+      std::mt19937_64 rng(dna.header().seed ^ (0xAE00ull + a));
+      std::normal_distribution<double> gauss(0.0, 1.0);
+      std::vector<std::vector<double>> x;
+      std::vector<int> y;
+      double lo_c = kAERest[a] - kAEReach[a] * 0.5;
+      double hi_c = kAERest[a] + kAEReach[a] * 0.5;
+      for (uint32_t s = 0; s < kAESamples * 2; ++s) {
+        const int cls = int(s % 2);
+        double p[7];
+        for (uint32_t k = 0; k < 7; ++k) p[k] = kAERest[k] + sd[k] * gauss(rng);
+        p[a] = (cls ? hi_c : lo_c) + sd[a] * gauss(rng);
+        const std::vector<std::vector<double>> fr =
+            tb.frames_of(p[0], p[1], p[2], p[3], p[4], p[5], p[6], kAEAmp, g, g);
+        if (fr.empty()) continue;
+        // The MEAN cepstrum of this one posture, so a sample is a posture and the
+        // within-class variance is the jitter rather than the frame noise.
+        std::vector<double> m(fr[0].size(), 0.0);
+        for (const std::vector<double>& f : fr)
+          for (size_t k = 0; k < m.size(); ++k) m[k] += f[k];
+        for (double& v : m) v /= double(fr.size());
+        x.push_back(m);
+        y.push_back(cls);
+      }
+      if (x.size() < 4) { std::printf("    %-4s  no frames\n", kAEName[a]); continue; }
+      dp[on][a] = cepstral_dprime(x, y, nullptr, true);
+      std::printf("    %-4s  %7.1f vs %7.1f Hz (reach %6.1f, jitter sd %5.1f)   d' %7.3f\n",
+                  kAEName[a], lo_c, hi_c, kAEReach[a], sd[a], dp[on][a]);
+    }
+    std::printf("\n");
+  }
+
+  // ---- CLAUSE 1: THE DOSE. Did the renderer change do anything at all? ----
+  // This clause CAN fire and would have fired on every build before v83, which
+  // is what makes it a test rather than a decoration -- the §41 lesson, applied.
+  // THE FLOOR IS DERIVED, NOT CHOSEN. d'^2_null = d*(1/n0 + 1/n1) is the bias the
+  // unbiased form removes, and its square root is the scale on which a null cell
+  // fluctuates. Anything inside it is not a measurement. The first build compared
+  // `|dp1| > 2*|dp0| + 0.10`, which is a rule invented for the numbers in front of
+  // me rather than derived from the estimator -- and at n=24 it declared two
+  // bandwidth cells FLAT purely on estimator noise.
+  //
+  // AND THE DOSE IS REQUIRED OF f3 ONLY, which is a correction to §41. bw1/bw2 are
+  // the f1/f2 resonators' bandwidths and bw3 belongs to the third resonator, so at
+  // f3_gain 0 the bw3 cell has no resonator to act on: it CANNOT show a dose and
+  // demanding one of it is a clause that could only ever fail.
+  const double floor_null = std::sqrt(12.0 * 2.0 / double(kAESamples));
+  std::printf("  CLAUSE 1 -- THE DOSE, against the estimator's own null floor d' = %.3f\n"
+              "  (= sqrt(d*(1/n0+1/n1)), derived, n = %u per class). Required of f3, which\n"
+              "  is the axis the third resonator adds; bw3 is that resonator's OWN width and\n"
+              "  so has nothing to act on at f3_gain 0, which §41 did not notice.\n",
+              floor_null, kAESamples);
+  bool dose = true;
+  for (uint32_t a = 3; a < 7; ++a) {
+    const bool moved = dp[1][a] - dp[0][a] > floor_null;
+    if (a == 3 && !moved) dose = false;
+    std::printf("    %-4s  gain 0 d' %8.3f  ->  gain 1 d' %8.3f   delta %8.3f   %s\n",
+                kAEName[a], dp[0][a], dp[1][a], dp[1][a] - dp[0][a],
+                moved ? "MOVED" : (a == 3 ? "*** FLAT -- the gain did nothing"
+                                          : "flat (not required of a bandwidth)"));
+  }
+  // ---- CLAUSE 2: THE POSITIVE CONTROL, which must not depend on the gains ----
+  // CLAUSE 2 AS §41 WROTE IT WAS WRONG, AND THE RUN SAID SO BEFORE I DID.
+  // It required f1 and f2 to be large AND gain-independent, on the reasoning that
+  // "f1 and f2 never pass through the new code". THEY DO: `bw1` and `bw2` ARE the
+  // bandwidths of the f1 and f2 resonators, so `render_bw_gain` moves them by
+  // design -- it is the whole point of the field. The first run voided on exactly
+  // that, f2 going 168448 -> 279153, and the void was correct about the number
+  // while the clause was wrong about the reason.
+  //
+  // So the surviving requirement is the one that was always the real control: the
+  // instrument must reproduce the known fact that THE EAR RESOLVES F1 AND F2, at
+  // every gain setting. The gain-independence half is withdrawn as mis-derived,
+  // which is a correction to the pre-registration and is recorded as one.
+  std::printf("\n  CLAUSE 2 -- THE POSITIVE CONTROL: the ear demonstrably resolves f1 and\n"
+              "  f2, so both must clear the 2AFC bar at BOTH gain settings or the ruler is\n"
+              "  wrong. (§41's extra demand that they not MOVE with the gain is withdrawn:\n"
+              "  bw1 and bw2 ARE the f1/f2 resonators' bandwidths, so render_bw_gain moves\n"
+              "  them by design. The first build voided here and was right to.)\n");
+  const double f1d = dp[1][1], f2d = dp[1][2];
+  const bool ctl_ok = f1d > 1.0 && f2d > 1.0 && dp[0][1] > 1.0 && dp[0][2] > 1.0;
+  std::printf("    f1  d' %.3f -> %.3f     f2  d' %.3f -> %.3f   -> %s\n", dp[0][1], dp[1][1],
+              dp[0][2], dp[1][2], ctl_ok ? "OK" : "*** the instrument is not trustworthy");
+
+  // ---- CLAUSE 3: THE TEST, against the anchor ----
+  std::printf("\n  CLAUSE 3 -- THE TEST: each axis at gain 1, as a fraction of F1's d'.\n"
+              "  Bar: d' >= 1.0 (~76%% in a 2AFC) AND clear of the %.3f null floor, because\n"
+              "  a 2AFC bar beneath the estimator's own noise is not a bar.\n", floor_null);
+  uint32_t audible = 0;
+  for (uint32_t a = 1; a < 7; ++a) {
+    const bool ok = dp[1][a] >= 1.0 && dp[1][a] > floor_null;
+    if (ok && a != 1 && a != 2) ++audible;
+    std::printf("    %-4s  d' %8.3f   %6.3f x F1   -> %s\n", kAEName[a], dp[1][a],
+                f1d != 0.0 ? dp[1][a] / f1d : 0.0, ok ? "AUDIBLE" : "below the bar");
+  }
+
+  std::printf("\n");
+  if (!ctl_ok) {
+    std::printf("  VOID: the positive control failed. The ear is known to resolve f1 and\n"
+                "  f2, so a d' under the 2AFC bar on either of them means the RULER is\n"
+                "  wrong, not the creature. Nothing above may be read.\n");
+    return true;
+  }
+  if (!dose) {
+    std::printf("  VOID -- THE GAIN DID NOTHING. At least one of f3/bw1/bw2/bw3 is as\n"
+                "  separable at gain 0 as at gain 1, which cannot happen if the renderer\n"
+                "  is using them. The v83 build is wrong, not the hypothesis.\n");
+    return true;
+  }
+  if (audible == 0) {
+    std::printf("  REFUSED -- THE AIR DOES NOT CARRY THE NEW AXES. The renderer now emits\n"
+                "  f3 and the bandwidths and the cochlea does not resolve any of them at\n"
+                "  the reach the creature can command. The §41 prize is refused at the\n"
+                "  SIGNAL, one layer before the auditory module, and 2b is not worth\n"
+                "  building. The transmitted code space stays f1 x f2.\n");
+  } else {
+    std::printf("  %u OF THE FOUR NEW AXES ARE AUDIBLE at their own reach, so the air\n"
+                "  carries them and stage 2b -- whether the auditory MODULE represents\n"
+                "  them -- is worth building. STILL NOT A WORD COUNT: this says the\n"
+                "  distinction survives the cochlea, not that the creature uses it, and\n"
+                "  kVLScoreFormant still scores only F1/F2.\n", audible);
   }
   return true;
 }

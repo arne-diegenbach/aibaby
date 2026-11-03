@@ -26,16 +26,33 @@ class VowelSource {
   VowelSource() = default;
   VowelSource(uint32_t sample_rate) : sample_rate_(sample_rate) {}
   void configure(uint32_t sample_rate) { sample_rate_ = sample_rate; }
+  // DNA v83. Both default 0.0, which is the pre-v83 synthesiser exactly.
+  void configure(uint32_t sample_rate, float f3_gain, float bw_gain) {
+    sample_rate_ = sample_rate;
+    f3_gain_ = f3_gain;
+    bw_gain_ = bw_gain;
+  }
 
   // Generates `count` samples of a voiced vowel with the given pitch and
-  // first two formants.
+  // first two formants. THE PRE-v83 ENTRY POINT, kept so that every caller
+  // which has only three parameters to give stays bit-identical.
   void render(float f0, float f1, float f2, float amplitude, float* out, size_t count);
+
+  // DNA v83. The same synthesiser with the third formant and the three
+  // commanded bandwidths available. With both gains at 0.0 this is the
+  // function above, by construction: the third resonator is not evaluated and
+  // the bandwidth is the same literal constant.
+  void render(float f0, float f1, float f2, float f3, float bw1, float bw2,
+              float bw3, float amplitude, float* out, size_t count);
 
  private:
   uint32_t sample_rate_ = 16000;
   float phase_ = 0.0f;
   float y1_[2] = {0.0f, 0.0f};
   float y2_[2] = {0.0f, 0.0f};
+  float y3_[2] = {0.0f, 0.0f};
+  float f3_gain_ = 0.0f;
+  float bw_gain_ = 0.0f;
 };
 
 // The ear, including the half that hears the creature itself.

@@ -5167,3 +5167,81 @@ A third resonator and live bandwidths change what every creature has ever heard 
 (`self_gain` is on), so they would almost certainly move the determinism hash and break
 comparability with the entire archive of results. The line is therefore **HELD, not continued**,
 pending that call.
+
+### §41 RUN 2 RESULT — ONE OF THE FOUR SURVIVES, AND IT IS F3 (2026-11-03)
+
+`results/axisear-v1.log`, new experiment `axisear`, plus **DNA v83** which made the measurement
+possible. Read-only, seconds.
+
+#### WHAT v83 IS, AND WHY IT SHIPS OFF
+
+`VowelSource::render` gained a third resonator and the three commanded bandwidths, behind
+`render_f3_gain` and `render_bw_gain`, **both shipping at 0.0.** The off-path is the *literal*
+pre-v83 code — the third resonator is never evaluated and `bw` is the same literal `90.0f` — so
+bit-identity is **by construction** rather than by a floating-point argument. `x + 0.0f * y` is not
+reliably `x`; a branch is. Both are **gains, not flags**, because an axis needs a dose.
+
+The off-by-default choice is not timidity: turning either on changes what every creature has ever
+heard of **itself**, since `self_gain` is on. Any result compared across that boundary compares two
+different creatures.
+
+#### THE RESULT — d', unbiased, through the creature's own cochlea, at each axis's OWN reach
+
+| axis | gain 0 (shipped) | gain 1 | × F1 |
+|---|---|---|---|
+| f1 | 44.822 | 36.398 | 1.000 |
+| f2 | 91.805 | 94.569 | 2.598 |
+| **f3** | **0.002** | **31.195** | **0.857** |
+| bw1 | −0.043 | 0.399 | 0.011 |
+| bw2 | −0.042 | 0.418 | 0.011 |
+| bw3 | 0.036 | 0.367 | 0.010 |
+
+Null floor `sqrt(d*(1/n0+1/n1)) = 0.346` at n=200 per class, **derived**. Positive control passes:
+f1 and f2 clear the 2AFC bar at both settings.
+
+**F3 IS A REAL AUDIBLE AXIS: 0.002 → 31.195, at 0.86× F1's own separability.** **THE THREE
+BANDWIDTHS ARE NOT:** 0.37–0.42, barely clear of the 0.346 floor and **~1% of F1**. At the reach the
+creature can actually command, a 21% bandwidth change does essentially nothing in the air.
+
+**AND THE GAIN-0 COLUMN IS THE DIRECT MEASUREMENT OF THE DESK FINDING.** All four read *exactly null*
+on the shipped creature — 0.002, −0.043, −0.042, 0.036. Those axes were acoustically absent, now
+measured rather than inferred from reading `audio.cpp`.
+
+#### THE CORRECTED PRIZE
+
+**f1 × f2 × f3 ≈ 2.72 × 2.60 × 2.68 ≈ 19 signals, against ~7.1 before. About 2.7×, not the 60× run
+1 implied.** One new axis, not four.
+
+**AND `render_bw_gain` BUYS NOTHING WHILE COSTING SOMETHING:** f1's d' falls **44.822 → 36.398**
+(−19%) with the gains on, because widening the resonators from 90 Hz to the commanded ~150 blurs
+them. So if anything ever ships it is `render_f3_gain` alone. **Confounded, and stated as such:** this
+run moves both gains together, so the f1 decrement cannot be attributed to bandwidth specifically. A
+one-line follow-up separates them, and until it runs the attribution is a hypothesis.
+
+#### THREE INSTRUMENT ERRORS, ALL MINE, EACH CAUGHT BY THE RUN REFUSING
+
+1. **NO DENOMINATOR.** The first ruler scored per-**frame** cepstra of one held posture. A
+   deterministic noiseless vowel renders near-identical frames, so the within-class spread was
+   numerical dust and d' came out at **41,514** — for a statistic where 1.0 means 76% correct. Fixed
+   by making each sample a posture perturbed by the creature's **own measured motor scatter** from
+   run 1, which makes this d' and run 1's level count the same quantity in two domains.
+2. **CLAUSE 2 WAS MIS-DERIVED, AND THE VOID BRANCH SAID SO.** §41 required f1/f2 to be
+   gain-independent "because they never pass through the new code". **They do:** `bw1` and `bw2` ARE
+   the f1 and f2 resonators' bandwidths. The run voided on f2 moving 168448 → 279153 and was right
+   about the number while the clause was wrong about the reason. Withdrawn and recorded.
+3. **n=24 PUT THE BANDWIDTH CELLS ON THE NOISE FLOOR**, where the unbiased estimator's own null is
+   d' ≈ 1.0 — and the bar was 1.0. My dose test was `|dp1| > 2*|dp0| + 0.10`, a rule invented for the
+   numbers in front of me. Both replaced with the **derived** floor. Also: §41 demanded a dose of
+   bw3, which **cannot show one** — bw3 is the third resonator's own width, so at `f3_gain = 0` it
+   has no resonator to act on. A clause that could only ever fail.
+
+#### STATUS, AND THE COUNT IS NOW SPENT
+
+**STILL NOT A WORD COUNT.** This says the distinction survives the **cochlea**, not that the
+auditory module represents it, and `kVLScoreFormant` still scores only F1/F2. Stage **2b** is that
+measurement.
+
+§41 budgeted three runs. Run 1 was the cross-talk matrix; run 2 was the ear, which required a
+renderer build the user authorised as a separate scope decision. **Stage 2b is the third and last
+under the rule.** If it passes, extending the scorer and the reward to F3 is a new line and needs its
+own pre-registration — not a continuation of this one.

@@ -905,6 +905,34 @@ struct DnaAudio {
   // threshold, so this prices a mechanism rather than proposing the creature
   // should have one -- the same footing as the credit oracle.
   float self_delay_ms;
+  // DNA v83. THE SYNTHESISER ONLY EVER HAD TWO FORMANTS AND A FIXED BANDWIDTH.
+  //
+  // `VocalDecoder` computes nine parameters and `VocalParams` exposes them, but
+  // `VowelSource::render` took f0, f1, f2 and amplitude, with `const float bw =
+  // 90.0f` for both resonators. So f3, bw1, bw2 and bw3 were commanded by the
+  // creature, shown on the panel, written to the journal -- and thrown away
+  // before anything was heard. §41 measured seven independent steerable axes at
+  // the larynx and then found four of them reach no ear, the creature's own
+  // included. The air carried f0, f1, f2 and nothing else.
+  //
+  // BOTH SHIP AT 0.0 AND 0.0 IS THE OLD CODE LITERALLY, not the old code's value
+  // recomputed: at zero the third resonator is never evaluated and `bw` is the
+  // same constant, so bit-identity is by construction rather than by a
+  // floating-point argument. The pinned hash does not move. Same footing as
+  // `self_delay_ms` above and `context_source`.
+  //
+  // GAINS RATHER THAN FLAGS, because an axis needs a dose and not a switch
+  // (`aibaby-liveness-is-not-dose`). `render_f3_gain` is the third resonator's
+  // weight in the output mix, 1.0 putting it level with f1 and f2.
+  // `render_bw_gain` interpolates each resonator's bandwidth from the old fixed
+  // 90 Hz toward the commanded one, so 1.0 is "the creature's bandwidths mean
+  // what they say".
+  //
+  // NOT A FREE LUNCH, and it is the reason these default off: turning either on
+  // changes what every creature hears of ITSELF, because `self_gain` is on. Any
+  // result compared across this boundary is comparing two different creatures.
+  float render_f3_gain;
+  float render_bw_gain;
 };
 
 // The retina (§5.1). As with the cochlea, the sampling itself is host code and

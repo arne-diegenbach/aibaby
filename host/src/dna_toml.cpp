@@ -425,6 +425,10 @@ bool compile_dna_toml(const std::string& path, std::vector<uint8_t>& out,
     header.audio.floor_db = float(r.number("floor_db"));
     header.audio.self_gain = float(r.number("self_gain"));
     header.audio.self_delay_ms = float(r.number("self_delay_ms"));
+    // DNA v83, both optional and both inert at 0.0 -- the case `number_or` was
+    // written for. A genome that predates them renders exactly as it always did.
+    header.audio.render_f3_gain = float(r.number_or("render_f3_gain", 0.0));
+    header.audio.render_bw_gain = float(r.number_or("render_bw_gain", 0.0));
     header.audio.gain = float(r.number("gain"));
     collect(r);
   }
