@@ -4803,3 +4803,105 @@ Schmitt crossings of the half-difference of `rate_fast` within vocal group 2 —
 oscillator except back through the ear. The delay sweep is exactly that path. So v82 closes the
 plant by the same measurement that closes the loop, and the candidate list for `B` inside this
 creature is then empty rather than one short.
+
+### §40 RESULT — THE OFFSET IS NOT THE TIME THE VOICE TAKES TO RETURN THROUGH THE EAR (2026-11-03)
+
+`results/halfcenter-v82.log`, 159 arms, 12 reps, 1.2M ticks. Gate `results/verify-v82.log`.
+Pre-registered in §40 with the clause order, and **amended mid-run before any result existed** —
+that amendment governs the reading below wherever it differs from the printed verdict text.
+
+**THE GATE HELD, INCLUDING THE ONE KEY THIS RUN COULD GENUINELY HAVE BROKEN.** All four keys PASS
+and the pinned hash is still `ad96f882becbee92`. v82 is the first axis on this line to touch the
+**kernel** (`rebound_last_[m]` plus an accessor), and the hash standing is the measurement that the
+recorder is as inert as the reasoning claimed — written where the term is computed, read by nothing
+inside the kernel, deliberately not serialised.
+
+**ELEVEN DETERMINISM CHECKS, ALL IDENTICAL OR CLEAN.** The 131 pre-v82 main-table rows (131/131
+matched, byte-identical), their kill-switch lines, the regime profile's first 131 rows, the published
+clock-law block, and the v76/v77/v78/v79/v80/v81 blocks entire at 30/69/164/94/79/116 lines — v81
+diffed with its prose for the first time, which is what `END v81` was added for. Check 11: **no v82
+arm name appears anywhere between the v76 and v81 markers**, so the five `hc_v82_shipped` pins held
+at full record exactly as the 60k pre-flight said they would. The anchor cross-check agrees byte for
+byte with v81's same-arms anchor for the **fourth** consecutive run (v80, v81, v81b, v82).
+
+#### THE MEASUREMENT
+
+Balanced: all **6 of 6** taus live at all four delay settings, so each setting's balanced fit equals
+its own fit.
+
+| self_delay | B (intercept) | slope on tau_a | vs anchor |
+|---|---|---|---|
+| 0 ms (shipped) | **186.7 ± 8.6 ms** | 3.5359 ± 0.0378 | anchor |
+| 25 ms | 186.4 ± 8.5 ms | 3.5385 ± 0.0376 | +0.0 SE — HELD |
+| 50 ms | 185.6 ± 8.8 ms | 3.5410 ± 0.0388 | +0.1 SE — HELD |
+| 100 ms | 187.0 ± 8.2 ms | 3.5349 ± 0.0363 | −0.0 SE — HELD |
+| loop cut (`rebound_gain` 0) | 187.4 ± 9.0 ms | 3.5342 ± 0.0398 | — |
+
+**THE PRIMARY: `dB/d(self_delay)` = +0.0026 ± 0.0093 ms per ms** (0.3 SE; 2 dof, 5% critical t
+4.303, so unresolved), R² 0.038. **The prediction is +1.0000 ms/ms exactly, with no free scale** —
+if `B` is the loop's transport time then adding transport adds to it. The measurement is **107.0 SE
+from +1**, and bounded above by **+0.0427 ms/ms at 95%, which excludes +1.0 by a factor of 23.4.**
+
+**THIS IS A NULL THAT REJECTS, and it may be read that way only because of what was fixed in
+advance:** the resolution was pre-registered at 0.14 ms/ms against a prediction of 1.0 — seven times
+finer than the thing it tests. A null at this resolution against a parameter-free prediction is a
+refusal, not an absence of power.
+
+**THE REBOUND-PATH BOUND** (the threshold-free arm — it removes the term rather than scaling it):
+`dB` **+0.7 ± 12.4 ms** (0.1 SE), `dA` −0.0018 ± 0.0549. So `|dB| < 30.4 ms at 95%`, under **15.0%**
+of the 203.1 ms offset.
+
+**SCOPE, PER THE AMENDMENT AND AGAINST THE LOG'S OWN WORDING.** The verdict block prints *"THE WHOLE
+LOOP CONTRIBUTES NOTHING TO B ... THAT CLOSES THE AUDITORY CANDIDATE"*. **That sentence was withdrawn
+in `87bfe35`, before this number existed, and the log preserves the overclaim permanently.**
+`rebound_gain = 0` cuts one of three ear→voice routes and the *smallest* (0.02 against synaptic
+weights 0.12 and 0.25). The bound is on the **rebound path**. The **delay** sweep is the broad test,
+because `self_delay_ms` delays the audio before the cochlea and therefore upstream of all three.
+
+#### THE DOSE, AND WHY THE AMENDMENT PAID FOR ITSELF
+
+The rebound the kernel applies to the vocal drive swings **sd 0.00843 ± 0.00002** rate units over 12
+seeds — **1.05% of the +0.80 net tonic** — on a DC level of **−0.00001**, i.e. 0.1% of the swing.
+Two things follow. The term is **predominantly AC as designed**, which confirms the premise §40 rests
+on: §37's one-subtraction closure genuinely does not reach this axis, a thing never previously
+checked. And the liveness gate was pre-registered at 1%, so **it cleared by 5% of relative margin** —
+a knife edge.
+
+**That knife edge does not load-bear, and the reason is the amendment.** It pre-registered, before
+the number, that *if clause 5 fires the delay branch is governed by clause 6 or 7 on the coefficient
+alone, and "VACUOUS" applies only to the rebound path* — because the dosimeter meters the weakest of
+three routes while the delay acts on all of them. So the delay rejection holds whichever side of 1%
+the rebound's swing had landed on. **The amendment's value is now measurable: it converted a coin-flip
+gate into an irrelevance, and it was written from the genome rather than from an outcome.**
+
+**AN INDEPENDENT LIVENESS SIGNAL THE DOSIMETER DOES NOT READ — ordered, and UNBARRED.** The *control*
+arms move monotonically with the dose: duty **0.57 / 0.56 / 0.55 / 0.54** across 0/25/50/100 ms, rate
+4.94 / 4.93 / 4.93 / 4.92 Hz, floor period 164.2 / 165.0 / 165.0 / 165.0 ms — and the loop-off control
+sits outside that ordering on all three (duty **0.61**, rate 4.97 Hz, period **160.8 ms**). No error
+bars are printed on those columns, so this is corroboration and **not** a measured effect. But it is
+an ordered dose–response in a quantity independent of the dosimeter, and note the direction:
+**increasing the delay moves duty AWAY from the loop-off value, not toward it.** A delayed loop is not
+a weaker loop, it is a differently-timed one. The loop does something to the non-oscillating creature
+while doing nothing whatever to `B`.
+
+#### WHAT IS CLOSED, AND THE ONE RESIDUAL
+
+**CLOSED: the latency account, for the entire self-audition loop.** All three ear→voice routes see the
+delayed signal and `B` did not move at 23.4x the resolution the hypothesis needs.
+
+**CLOSED BY THE SAME MEASUREMENT: the plant.** The period is read on **neural** rates (Schmitt
+crossings of the half-difference of `rate_fast` in vocal group 2), so the formant pole and the jaw sit
+**downstream of the instrument** and can only reach the oscillator back through the ear — which is the
+path just swept flat.
+
+**THE ONE RESIDUAL, STATED AND NOT CHASED.** A *non-latency* contribution through the two synaptic
+`auditory -> vocal` projections is not bounded: the delay sweep refutes the latency form for all three
+routes, and the loop-off arm bounds only the rebound. Bounding the other two would mean cutting those
+projections, which v82 did not do.
+
+**AND IT WILL NOT BE CHASED, BY THE LINE-LEVEL STOPPING RULE.** The question *what capability would
+naming `B` buy?* has the answer **none** — the period is set by `tau_a`, so `B` is neither a lever nor
+a blocker. That rule, recorded the day before this run landed, exists precisely because "this axis is
+refuted" otherwise generates "try the adjacent axis" forever. **§40 is the terminus of the offset line.
+Twelve DNA versions, v76 through v82, and the honest summary is that the quantity was never worth
+naming.** The next work is on the input side — recognition, instruction, accumulation.

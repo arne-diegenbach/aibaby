@@ -25556,3 +25556,44 @@ direction of the error, which means we know not to trust the short check's size,
 yes-or-no. That's precisely the trap we fell into last time, when a measurement that looked healthy
 in a short run turned out to be nearly flat in a long one. Naming it in advance is cheaper than
 diagnosing it afterwards.
+
+### No — the delay isn't the echo coming back (and we're stopping here)
+
+The answer came back flat. Delaying the creature's own voice on its way back to its own ear by 0,
+25, 50 or 100 milliseconds moved the unexplained 200-millisecond offset by **0.0026 milliseconds per
+millisecond of delay**, where the idea being tested predicts exactly 1.0. Not "small" — we can place
+that number inside a window 23 times narrower than the effect would have to be. So this is a boring
+result that is nevertheless a real answer, which is what the advance arithmetic bought us.
+
+And because the voice has to pass through the ear to reach the rhythm machinery at all, the same
+measurement rules out the creature's whole vocal apparatus — the throat, the jaw, the resonance —
+as the source. They sit downstream of the thing we're measuring, with no way back except the path we
+just swept flat.
+
+**The short check was wrong in the direction, not just the size.** Before the long run we'd written
+down that the 60-second check would overstate how big the loop's effect was, because the loop
+averages over five seconds and sixty seconds is barely enough for that average to settle — so trust
+its yes-or-no, not its number. That caution turned out to be generous. The short check said cutting
+the loop drops voicing time from 47% to 38%. Over the full run, cutting the loop *raises* it, 57% to
+61%. The yes-or-no held — the loop does do something, which is why the experiment shipped its own
+comparison creatures — but the size and the sign were both wrong. We'd only predicted the size.
+
+**And a mistake we caught mid-run by reading the wiring instead of the results.** An hour into the
+six, we went back to the creature's blueprint and found that the ear reaches the voice by *three*
+routes, not one — and the knob we were using to "switch the loop off" only cuts the weakest of them,
+about a twentieth. One sentence of the experiment's own verdict was therefore going to claim more
+than it measured. We wrote the correction down and committed it **before any result existed**, which
+is the only time a correction like that is worth anything; afterwards it's indistinguishable from
+fitting the story to the data. It also turned out to matter: the loop's strength landed at 1.05%
+against a 1% minimum we'd set in advance — a coin flip — and the correction we'd already written is
+exactly what makes the conclusion independent of which side of 1% it fell on.
+
+**We're stopping the hunt here.** Twelve versions went into chasing that 200-millisecond offset, and
+the honest summary is that it was never worth naming. It isn't a lever — the rhythm's speed is set by
+a different quantity entirely — and it isn't blocking anything. What was missing wasn't rigour; every
+one of those twelve runs was carefully done. What was missing was the habit of asking *what would
+knowing this buy us?* before starting, rather than letting "that idea is ruled out" automatically
+generate "try the next one along."
+
+So the next work is on the other side of the creature entirely: what it hears, what it can be told,
+and what it can hold on to. Two of those three turn out to be the things it's already best at.
