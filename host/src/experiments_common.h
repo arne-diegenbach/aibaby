@@ -2034,7 +2034,13 @@ struct M3Run {
   bool ok = false;
   double vocal = 0;       // held-out accuracy on the baby's voice — the milestone
   double timbre = 0;      // the same with loudness dropped
-  double shuffled = 0;    // the same again with labels shuffled: the control
+  // THE CONTROLS, AND WHICH READOUT EACH ONE BOUNDS -- because "the same again"
+  // used to sit under `timbre` and read as though it controlled it, while the
+  // code shuffled labels against `probe_vocal`. `timbre` had NO null for the
+  // whole life of this instrument, and it is the readout with the different
+  // feature matrix, so `vocal`'s control never bounded it.
+  double shuffled = 0;         // probe_VOCAL with labels shuffled
+  double timbre_shuffled = 0;  // probe_TIMBRE, the same permutation
   // The same trials, scored on what they SOUND like rather than on the motor
   // parameters that produced them. `acoustic` is directly comparable to
   // `vocal`; `dprime` is the one that answers the milestone's own sentence,

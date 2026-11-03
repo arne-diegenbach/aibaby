@@ -1609,6 +1609,13 @@ M3Run run_m3_session(const std::vector<uint8_t>& blob, uint64_t ticks, bool pair
     std::swap(shuffled[i - 1], shuffled[rng.next() % i]);
   }
   out.shuffled = holdout_accuracy(probe_vocal, shuffled, train);
+  // AND THE SAME CONTROL FOR THE ACOUSTIC READOUT, which never had one. It reuses
+  // `shuffled` rather than drawing a second permutation, for two reasons: the two
+  // controls then differ ONLY in the feature matrix, which is the comparison
+  // wanted; and it adds no RNG draws, so the stream and the pinned hash cannot
+  // move. `probe_timbre` has its own dimensionality and its own scaling, so any
+  // leakage or dimension artefact there was invisible to `probe_vocal`'s null.
+  out.timbre_shuffled = holdout_accuracy(probe_timbre, shuffled, train);
 
   if (echo_labels.size() >= 12) {
     out.echo = holdout_accuracy(echo_vocal, echo_labels, echo_labels.size() / 2);
@@ -1675,10 +1682,10 @@ bool run_m3(const std::vector<uint8_t>& blob, uint64_t ticks, const Caregiver& c
   std::printf("  chance            0.500 — probes are balanced cube/ball\n");
   std::printf("  the caregiver names the object while it is in view, and praises the\n"
               "  same way for both, so only the sound carries which one it is.\n\n");
-  std::printf("  %-4s %-6s %-9s %-9s %-9s %-9s %-9s %-9s %s\n", "seed", "raised", "voice",
-              "timbre", "shuffled", "echo", "B1 shape", "aligned", "|R-E[R]|");
+  std::printf("  %-4s %-6s %-9s %-9s %-9s %-9s %-9s %-9s %-9s %s\n", "seed", "raised", "voice",
+              "timbre", "shuf-voi", "shuf-tim", "echo", "B1 shape", "aligned", "|R-E[R]|");
 
-  double sum[2][15] = {{0}};
+  double sum[2][16] = {{0}};
   uint32_t valid[2] = {0, 0};
   uint32_t above = 0;
   std::vector<double> gap;
@@ -1715,10 +1722,11 @@ bool run_m3(const std::vector<uint8_t>& blob, uint64_t ticks, const Caregiver& c
       sum[c][13] += run[c].dprime_unb_sq;
       sum[c][14] += run[c].dprime_null_unb_sq;
       sum[c][12] += run[c].motor_interleaved;
-      std::printf("  %-4u %-6s %-9.3f %-9.3f %-9.3f %-9.3f %-9.3f %+-9.3f %.4f\n", r,
+      sum[c][15] += run[c].timbre_shuffled;
+      std::printf("  %-4u %-6s %-9.3f %-9.3f %-9.3f %-9.3f %-9.3f %-9.3f %+-9.3f %.4f\n", r,
                   c == 0 ? "named" : "muddle", run[c].vocal, run[c].timbre,
-                  run[c].shuffled, run[c].echo, run[c].b1_shape, run[c].alignment,
-                  run[c].reward);
+                  run[c].shuffled, run[c].timbre_shuffled, run[c].echo, run[c].b1_shape,
+                  run[c].alignment, run[c].reward);
     }
     if (!run[0].ok || !run[1].ok) continue;
     if (run[0].vocal >= 0.75) ++above;
@@ -1738,6 +1746,7 @@ bool run_m3(const std::vector<uint8_t>& blob, uint64_t ticks, const Caregiver& c
   const double paired_vocal = sum[0][0] / double(valid[0]);
   const double paired_timbre = sum[0][1] / double(valid[0]);
   const double paired_shuffled = sum[0][2] / double(valid[0]);
+  const double paired_timbre_shuf = sum[0][15] / double(valid[0]);
   const double paired_echo = sum[0][3] / double(valid[0]);
   const double control_vocal = sum[1][0] / double(valid[1]);
   const double paired_align = sum[0][4] / double(valid[0]);
@@ -1747,8 +1756,17 @@ bool run_m3(const std::vector<uint8_t>& blob, uint64_t ticks, const Caregiver& c
   std::printf("    named consistently   %.3f   <- the milestone\n", paired_vocal);
   std::printf("    named at random      %.3f   (the control: nothing to associate)\n",
               control_vocal);
+  // EACH CONTROL BESIDE THE READOUT IT BOUNDS. These two used to print as
+  // `timbre only` then `labels shuffled`, which invited the second to be read as
+  // the first's control -- it is not, it shuffles against `probe_vocal`. The
+  // verdict below is about the VOICE readout and `shuffled` is its correct
+  // control, so this is a reporting fix and NOT a new gate: adding `timbre` to
+  // `pass` would gate the verdict on a quantity its own sentence does not claim.
+  std::printf("    labels shuffled      %.3f   (the VOICE readout's control:"
+              " must sit at chance)\n", paired_shuffled);
   std::printf("    timbre only          %.3f   (loudness dropped)\n", paired_timbre);
-  std::printf("    labels shuffled      %.3f   (must sit at chance)\n", paired_shuffled);
+  std::printf("    timbre, shuffled     %.3f   (TIMBRE's own control, new:"
+              " it had none)\n", paired_timbre_shuf);
   std::printf("    while hearing a word %.3f   (the audio route's own ceiling)\n",
               paired_echo);
   std::printf("    at or above 0.75     %u of %u creatures\n", above, valid[0]);
@@ -2022,6 +2040,22 @@ G2Run run_g2_session(const std::vector<uint8_t>& blob, uint64_t ticks,
   // `explore_scale`, so a mean over every neuron would be mostly zeros from
   // populations the mechanism never touches -- the shape of error that made
   // `act_gate`'s vacuity check read 0.9% across a 2x change.
+  //
+  // OWED, AND SPECIFIED RATHER THAN GUESSED (2026-11-03): the same scoping is
+  // owed for EXPLORATION, so a reader can tell the motor noise was live. It is
+  // NOT done here because the quantity does not exist yet and picking the wrong
+  // one installs a seventh wrong-quantity guard:
+  //   * `Network::explore_mult(module)` (network.h:584) is the DNA-derived
+  //     MULTIPLIER, not the realised perturbation. It is a dose setting, and
+  //     `aibaby-liveness-is-not-dose` is exactly the error of reporting it.
+  //   * `Telemetry` (network.h:60-68) carries no perturbation field at all, so
+  //     the realised magnitude needs a new accessor in core.
+  //   * The right pair is the MIN and MEAN of the realised |perturbation| over
+  //     the vocal module's neurons -- the min because a mean hides a subset
+  //     frozen at zero, which is the failure `set_explore_block` can produce
+  //     silently.
+  // So: add that accessor, then read it here. A mean of `explore_mult` would
+  // look like a liveness check and measure the genome instead.
   {
     const aibaby::Network& net = s.brain.network();
     out.leak_pinned = net.leak_pinned_fraction();
@@ -51623,6 +51657,16 @@ namespace {
 // published columns are verified character-identical run to run by
 // `tools/echoname_identity.sh`, and unifying the two is a follow-up that has to be gated by
 // that check rather than bundled into a new experiment.
+//
+// THE COST, MEASURED 2026-11-03 so the next session can budget it rather than discover it:
+// `echoname` is 6,800,000 ticks at Tier::kTeach over 36 creatures x 4 arms (144 rows in
+// `results/echoname-full.log`). That is hours, not minutes, and it is the ONLY thing standing
+// between this duplication and its removal -- the edit itself is mechanical. Run:
+//   ./build/aibaby --dna dna/default.toml --experiment echoname --ticks 6800000 > new.log
+//   tools/echoname_identity.sh results/echoname-full.log new.log
+// and commit the unification only if that reports character-identical. A smoke CANNOT
+// substitute: the check compares published digits, and `aibaby-smoke-the-exact-command` plus
+// the `--allow-short` rule both forbid reading a published number off a short run.
 struct ArticSpread {
   bool ok = false;
   double mu = 0.0, within = 0.0, between = 0.0, sep = 0.0;
