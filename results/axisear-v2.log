@@ -1,0 +1,125 @@
+experiment: axisear
+  the question      §41 run 2a. The larynx commands seven independent
+                    axes; does the AIR carry them? Until v83 the renderer
+                    had two resonators and `bw = 90.0f` hardcoded, so f3
+                    and the three bandwidths reached no ear at all.
+  the ruler         cepstral d', unbiased, through the creature's OWN
+                    cochlea. d' = 1 is ~76% correct in a 2AFC, which is a
+                    bar about ears rather than about classifiers.
+  the anchor        F1, which the ear demonstrably resolves, at F1's own
+                    reach. Every axis is also reported as a FRACTION of it.
+  the dose          the SAME posture pairs across a 2x2 of the two render
+                    gains. A flat f3 cell at f3=0 and a live one at f3=1 is
+                    the dose-response that proves the renderer change took,
+                    and the two single-factor cells attribute F1's cost.
+  the units         CORRECTED. `unbiased` returns signed d'^2, not d', so
+                    run 1's labels, floor and ratios were wrong while its
+                    measured values were right. d' = sqrt(d'^2) is reported
+                    beside it, and the root is taken ONCE, after averaging
+                    the squares over reps, as that estimator requires.
+
+  CELL 0  render_f3_gain 0.0  render_bw_gain 0.0   <- THE SHIPPED CREATURE
+    f0     221.0 vs   270.8 Hz (reach   49.8, sd   9.1)  d'^2   52.384 +-  1.669   d'  7.238
+    f1     567.5 vs   685.5 Hz (reach  118.0, sd  21.7)  d'^2   47.345 +-  0.932   d'  6.881
+    f2    1519.4 vs  1819.8 Hz (reach  300.3, sd  57.8)  d'^2   89.670 +-  1.774   d'  9.469
+    f3    2486.2 vs  2741.1 Hz (reach  254.9, sd  47.6)  d'^2   -0.010 +-  0.020   d'  0.000
+    bw1    132.4 vs   164.0 Hz (reach   31.6, sd   5.3)  d'^2    0.026 +-  0.032   d'  0.161
+    bw2    134.5 vs   166.7 Hz (reach   32.1, sd   6.0)  d'^2   -0.036 +-  0.012   d'  0.000
+    bw3    134.2 vs   166.0 Hz (reach   31.8, sd   5.6)  d'^2    0.000 +-  0.024   d'  0.014
+
+  CELL 1  render_f3_gain 1.0  render_bw_gain 0.0
+    f0     221.0 vs   270.8 Hz (reach   49.8, sd   9.1)  d'^2   50.104 +-  1.618   d'  7.078
+    f1     567.5 vs   685.5 Hz (reach  118.0, sd  21.7)  d'^2   37.218 +-  0.672   d'  6.101
+    f2    1519.4 vs  1819.8 Hz (reach  300.3, sd  57.8)  d'^2   80.674 +-  1.528   d'  8.982
+    f3    2486.2 vs  2741.1 Hz (reach  254.9, sd  47.6)  d'^2   23.539 +-  0.328   d'  4.852
+    bw1    132.4 vs   164.0 Hz (reach   31.6, sd   5.3)  d'^2    0.016 +-  0.023   d'  0.126
+    bw2    134.5 vs   166.7 Hz (reach   32.1, sd   6.0)  d'^2   -0.026 +-  0.017   d'  0.000
+    bw3    134.2 vs   166.0 Hz (reach   31.8, sd   5.6)  d'^2   -0.011 +-  0.015   d'  0.000
+
+  CELL 2  render_f3_gain 0.0  render_bw_gain 1.0
+    f0     221.0 vs   270.8 Hz (reach   49.8, sd   9.1)  d'^2   73.834 +-  2.360   d'  8.593
+    f1     567.5 vs   685.5 Hz (reach  118.0, sd  21.7)  d'^2   44.133 +-  0.956   d'  6.643
+    f2    1519.4 vs  1819.8 Hz (reach  300.3, sd  57.8)  d'^2  103.674 +-  1.878   d' 10.182
+    f3    2486.2 vs  2741.1 Hz (reach  254.9, sd  47.6)  d'^2   -0.014 +-  0.021   d'  0.000
+    bw1    132.4 vs   164.0 Hz (reach   31.6, sd   5.3)  d'^2    0.610 +-  0.042   d'  0.781
+    bw2    134.5 vs   166.7 Hz (reach   32.1, sd   6.0)  d'^2    0.766 +-  0.068   d'  0.875
+    bw3    134.2 vs   166.0 Hz (reach   31.8, sd   5.6)  d'^2   -0.018 +-  0.024   d'  0.000
+
+  CELL 3  render_f3_gain 1.0  render_bw_gain 1.0
+    f0     221.0 vs   270.8 Hz (reach   49.8, sd   9.1)  d'^2   73.495 +-  2.454   d'  8.573
+    f1     567.5 vs   685.5 Hz (reach  118.0, sd  21.7)  d'^2   38.261 +-  0.820   d'  6.186
+    f2    1519.4 vs  1819.8 Hz (reach  300.3, sd  57.8)  d'^2   90.933 +-  1.729   d'  9.536
+    f3    2486.2 vs  2741.1 Hz (reach  254.9, sd  47.6)  d'^2   29.614 +-  0.455   d'  5.442
+    bw1    132.4 vs   164.0 Hz (reach   31.6, sd   5.3)  d'^2    0.517 +-  0.035   d'  0.719
+    bw2    134.5 vs   166.7 Hz (reach   32.1, sd   6.0)  d'^2    0.651 +-  0.064   d'  0.807
+    bw3    134.2 vs   166.0 Hz (reach   31.8, sd   5.6)  d'^2    0.345 +-  0.021   d'  0.588
+
+  THE NULL, IN d'^2 UNITS   bias removed 0.1206   its spread 0.0492
+  (run 1 printed sqrt(bias) = 0.3473 and called it a d' floor: wrong units,
+   wrong quantity, and 2.9x too strict. n = 200 per class, dims = 12.)
+
+  REPRODUCTION -- cell 0 and cell 3 at rep 0 must BE run 1 (printed to 3dp)
+    f0    cell0    51.897 vs    51.897 ok    cell3    69.070 vs    69.070 ok
+    f1    cell0    44.822 vs    44.822 ok    cell3    36.398 vs    36.398 ok
+    f2    cell0    91.805 vs    91.805 ok    cell3    94.569 vs    94.569 ok
+    f3    cell0     0.002 vs     0.002 ok    cell3    31.195 vs    31.195 ok
+    bw1   cell0    -0.043 vs    -0.043 ok    cell3     0.399 vs     0.399 ok
+    bw2   cell0    -0.042 vs    -0.042 ok    cell3     0.418 vs     0.418 ok
+    bw3   cell0     0.036 vs     0.036 ok    cell3     0.367 vs     0.367 ok
+
+  CLAUSE 1 -- THE DOSE: f3 must separate better with render_f3_gain ON and
+  render_bw_gain OFF (cell 0 -> cell 1), by more than 2.447 x its PAIRED SE.
+  Required of f3 alone; bw3 is the third resonator's own width and so has
+  nothing to act on at f3_gain 0, which §41 did not notice.
+    f3    cell 0   -0.010  ->  cell 1   23.539   delta   23.549 +-  0.321  MOVED
+    bw1   cell 0    0.026  ->  cell 2    0.610   delta    0.584 +-  0.038  MOVED
+    bw2   cell 0   -0.036  ->  cell 2    0.766   delta    0.803 +-  0.063  MOVED
+    bw3   cell 0    0.000  ->  cell 2   -0.018   delta   -0.018 +-  0.011  flat (not required of a bandwidth)
+
+  CLAUSE 2 -- THE POSITIVE CONTROL: the ear demonstrably resolves f1 and
+  f2, so both must clear the 2AFC bar in ALL FOUR CELLS or the ruler is
+  wrong. (§41's extra demand that they not MOVE with the gain is withdrawn:
+  bw1 and bw2 ARE the f1/f2 resonators' bandwidths, so render_bw_gain moves
+  them by design. The first build voided here and was right to.)
+    f3=0 bw=0   f1 d'  6.881   f2 d'  9.469   -> ok
+    f3=1 bw=0   f1 d'  6.101   f2 d'  8.982   -> ok
+    f3=0 bw=1   f1 d'  6.643   f2 d' 10.182   -> ok
+    f3=1 bw=1   f1 d'  6.186   f2 d'  9.536   -> ok
+
+  CLAUSE 3 -- THE TEST: each axis in ITS OWN cell, as a fraction of F1's
+  d' there. Bar: d' >= 1.0 (~76% in a 2AFC) AND significantly above zero at
+  2.447 x the paired SE, because a 2AFC bar inside the estimator's own noise
+  is not a bar. Ratios are taken in d', NOT d'^2 -- run 1's were squares.
+    f1   f3=0 bw=0  d'^2   47.345 +-  0.932   d'  6.881   1.000 x F1   50.8 sd   -> AUDIBLE
+    f2   f3=0 bw=0  d'^2   89.670 +-  1.774   d'  9.469   1.376 x F1   50.6 sd   -> AUDIBLE
+    f3   f3=1 bw=0  d'^2   23.539 +-  0.328   d'  4.852   0.795 x F1   71.8 sd   -> AUDIBLE
+    bw1  f3=0 bw=1  d'^2    0.610 +-  0.042   d'  0.781   0.118 x F1   14.4 sd   -> REAL BUT SUB-BAR
+    bw2  f3=0 bw=1  d'^2    0.766 +-  0.068   d'  0.875   0.132 x F1   11.2 sd   -> REAL BUT SUB-BAR
+    bw3  f3=1 bw=1  d'^2    0.345 +-  0.021   d'  0.588   0.095 x F1   16.3 sd   -> REAL BUT SUB-BAR
+
+  CLAUSE 4 -- THE ATTRIBUTION of F1's cost, paired over 12 reps, t = 2.447.
+  Run 1 moved both gains at once and so could not say which one paid.
+    f3 alone      dd'^2  -10.127 +-  0.324   -> COSTS F1
+    bw alone      dd'^2   -3.211 +-  0.245   -> COSTS F1
+    both (corner) dd'^2   -9.083 +-  0.284   -> real
+    interaction   dd'^2    4.255 +-  0.204   -> present
+
+  1 OF THE FOUR NEW AXES ARE AUDIBLE at their own reach, so the air
+  carries them and stage 2b -- whether the auditory MODULE represents
+  them -- is worth building. STILL NOT A WORD COUNT: this says the
+  distinction survives the cochlea, not that the creature uses it, and
+  kVLScoreFormant still scores only F1/F2.
+
+  AND 3 AXES ARE REAL BUT SUB-BAR, which run 1 got wrong in BOTH
+  directions at once. Its over-strict floor hid that they are resolvably
+  non-zero, and its squared ratio made them look ~10x weaker than they
+  are. They are not inaudible; they are WEAK -- roughly a tenth of F1 in
+  d', about 67% in a 2AFC against 50% chance. That is below the bar for a
+  teachable level and well above nothing, so they stay OFF and stay OPEN:
+  an axis at a tenth of F1 could clear the bar at a larger reach, and the
+  reach here is the one §41 run 1 measured, not a limit of the body.
+
+  THE SHIP DECISION, ON THE ATTRIBUTION RATHER THAN THE CORNER:
+  BOTH GAINS COST F1, so there is no free pick: the third formant is a
+  trade against the first and the prize arithmetic must price it.
+WALL 24.86 s

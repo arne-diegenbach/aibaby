@@ -45853,10 +45853,63 @@ bool run_axisgrid(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
 // THE SEPARATION IS EACH AXIS'S OWN LEARNED REACH from §41 run 1, so every axis
 // is asked for exactly as much as the creature could actually command on it.
 // Asking each axis for the same number of Hz would be the wrong question.
+// RUN 1 OF THIS INSTRUMENT REPORTED THE WRONG QUANTITY, AND THE FIX IS HERE.
+// `cepstral_dprime(..., unbiased = true)` returns a SIGNED SQUARED distance --
+// its own last line says `// signed d'^2` -- because the bias correction is
+// unbiased in d'^2 and not in d'. Run 1 printed every cell as `d'`. The measured
+// numbers were right and the labels, the null floor and the ratios were not:
+//
+//   * the 2AFC bar is UNAFFECTED, because d' >= 1 and d'^2 >= 1 are the same
+//     threshold. Every AUDIBLE / below-the-bar verdict in run 1 stands. That is
+//     luck, not correctness.
+//   * the null floor was over-strict by its own square root. The removed bias is
+//     dims*(1/n0+1/n1)*inflate = 0.121 in d'^2 units; run 1 printed sqrt of it,
+//     0.347, and called that the floor. The null's SPREAD -- which is what a
+//     floor should be -- is sqrt(2*dims)*(1/n0+1/n1)*inflate = 0.049.
+//   * every RATIO was a ratio of squares. f3 is 0.926x F1 and not 0.857x; the
+//     three bandwidths are 0.104x F1 and not the ~1% that was published.
+//
+// SO THE BANDWIDTHS ARE NOT INAUDIBLE, THEY ARE WEAK: d' ~ 0.63, about 67% in a
+// 2AFC against 50% chance, and eight null-sigma clear of zero. The ship decision
+// (f3 yes, bandwidths no) survives on the 2AFC bar; the REASON for it does not,
+// and a 10%-of-F1 axis is a different object from a 1%-of-F1 one.
+//
+// WHY IT HID: run 1 derived the floor at n = 24, where the bias is 1.02 -- and
+// sqrt(1.02) = 1.01. A square root is invisible at the one sample size where the
+// quantity is 1, which is the sample size I happened to derive it at. Recorded
+// as a rule: derive a constant where its value is NOT 1, or you cannot tell a
+// quantity from its square root.
+//
+// AND RUN 1 MOVED BOTH GAINS TOGETHER, so it could not say which of them cost F1
+// its separability. That matters precisely because it drives a ship decision: if
+// the cost is the BANDWIDTHS then "ship f3 alone" avoids it, and if it is F3's
+// own added energy -- the renderer sums 0.25*(v1+v2+g*v3) with no renormalisation
+// -- then shipping f3 alone does not avoid it and the headline arithmetic is
+// wrong. A 2x2 factorial over the two gains is the measurement that separates
+// them, and at 1.03 s for run 1's 5600 renders it is nearly free.
+//
+// REPLICATE STREAMS, so the attribution has an error bar at all. Run 1 had ONE
+// draw per cell and therefore no way to know whether 44.822 -> 36.398 was outside
+// noise. Rep 0 keeps run 1's exact seeding, so cells 0 and 3 at rep 0 must come
+// back BYTE-IDENTICAL to run 1 -- which is the free check that this rebuild
+// changed the presentation and the design, and not any measured value.
 constexpr double kAERest[7] = {245.9, 626.5, 1669.6, 2613.7, 148.2, 150.6, 150.1};
 constexpr double kAEReach[7] = {49.8, 118.0, 300.3, 254.9, 31.6, 32.1, 31.8};
 constexpr const char* kAEName[7] = {"f0", "f1", "f2", "f3", "bw1", "bw2", "bw3"};
 constexpr double kAEAmp = 1.0;
+// The 2x2: cell 0 is the shipped creature, cell 3 is run 1's "gain 1" column.
+constexpr float kAEF3[4] = {0.0f, 1.0f, 0.0f, 1.0f};
+constexpr float kAEBw[4] = {0.0f, 0.0f, 1.0f, 1.0f};
+constexpr const char* kAECell[4] = {"f3=0 bw=0", "f3=1 bw=0", "f3=0 bw=1", "f3=1 bw=1"};
+constexpr uint32_t kAEReps = 12;
+// n=24 WAS TOO SMALL AND RUN 1 SHOWED IT. The unbiased correction subtracts
+// dims*(1/n0+1/n1), so under the null d'^2 fluctuates on that scale -- at n=24
+// with 12 coefficients the bias is 1.0 in d'^2 units and the bandwidth cells read
+// 0.3 to 3.2, i.e. inside it. 200 puts the bias at 0.121 and its spread at 0.049.
+// Each sample is one 500 ms render, so this costs seconds.
+constexpr uint32_t kAESamples = 200;
+// The project's dof-scaled critical t, at its 6+ value. Conservative at dof 11.
+constexpr double kAECrit = 2.447;
 
 bool run_axisear(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
   (void)verbose;
@@ -45873,9 +45926,15 @@ bool run_axisear(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
               "                    bar about ears rather than about classifiers.\n");
   std::printf("  the anchor        F1, which the ear demonstrably resolves, at F1's own\n"
               "                    reach. Every axis is also reported as a FRACTION of it.\n");
-  std::printf("  the dose          the SAME posture pairs at gains 0 (shipped) and 1.\n"
-              "                    A flat f3 column at gain 0 and a live one at gain 1 is\n"
-              "                    the dose-response that proves the renderer change took.\n\n");
+  std::printf("  the dose          the SAME posture pairs across a 2x2 of the two render\n"
+              "                    gains. A flat f3 cell at f3=0 and a live one at f3=1 is\n"
+              "                    the dose-response that proves the renderer change took,\n"
+              "                    and the two single-factor cells attribute F1's cost.\n");
+  std::printf("  the units         CORRECTED. `unbiased` returns signed d'^2, not d', so\n"
+              "                    run 1's labels, floor and ratios were wrong while its\n"
+              "                    measured values were right. d' = sqrt(d'^2) is reported\n"
+              "                    beside it, and the root is taken ONCE, after averaging\n"
+              "                    the squares over reps, as that estimator requires.\n\n");
 
   Timbre tb;
   std::string err;
@@ -45896,51 +45955,76 @@ bool run_axisear(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
   // number whose ratio to the reach produced "2.6 levels". That makes this d' and
   // run 1's level count the same quantity in two domains, which is the point.
   const double sd[7] = {9.129, 21.727, 57.751, 47.616, 5.346, 5.967, 5.618};
-  // n=24 WAS TOO SMALL AND THE FIRST RUN SHOWED IT. `cepstral_dprime`'s unbiased
-  // correction subtracts d*(1/n0 + 1/n1), so under the null d'^2 has expectation
-  // zero but a spread of the same order -- at n=24 with 12 coefficients that is
-  // d'_null ~ sqrt(12*2/24) = 1.0. The bandwidth cells read 0.3 to 3.2, i.e. ON
-  // the noise floor, and a bar of "d' >= 1" cannot be read against a floor of 1.
-  // 200 puts the floor at sqrt(12*2/200) = 0.35. Each sample is one 500 ms render,
-  // so this costs seconds.
-  constexpr uint32_t kAESamples = 200;
-  double dp[2][7] = {};
-  for (int on = 0; on < 2; ++on) {
-    const float g = on ? 1.0f : 0.0f;
-    std::printf("  RENDER GAINS  render_f3_gain %.1f   render_bw_gain %.1f%s\n", g, g,
-                on ? "" : "   <- THE SHIPPED CREATURE");
+  // dsq[cell][axis][rep], in the estimator's own units: SIGNED d'^2.
+  std::vector<std::vector<std::vector<double>>> dsq(
+      4, std::vector<std::vector<double>>(7, std::vector<double>(kAEReps, 0.0)));
+  for (uint32_t c = 0; c < 4; ++c) {
     for (uint32_t a = 0; a < 7; ++a) {
-      // One RNG per cell, seeded from the genome and the axis only, so the two
-      // gain settings see the IDENTICAL posture draws. Otherwise the gain-0 and
-      // gain-1 columns would differ by their noise as well as by the renderer,
-      // and the dose-response would not be a paired comparison.
-      std::mt19937_64 rng(dna.header().seed ^ (0xAE00ull + a));
-      std::normal_distribution<double> gauss(0.0, 1.0);
-      std::vector<std::vector<double>> x;
-      std::vector<int> y;
-      double lo_c = kAERest[a] - kAEReach[a] * 0.5;
-      double hi_c = kAERest[a] + kAEReach[a] * 0.5;
-      for (uint32_t s = 0; s < kAESamples * 2; ++s) {
-        const int cls = int(s % 2);
-        double p[7];
-        for (uint32_t k = 0; k < 7; ++k) p[k] = kAERest[k] + sd[k] * gauss(rng);
-        p[a] = (cls ? hi_c : lo_c) + sd[a] * gauss(rng);
-        const std::vector<std::vector<double>> fr =
-            tb.frames_of(p[0], p[1], p[2], p[3], p[4], p[5], p[6], kAEAmp, g, g);
-        if (fr.empty()) continue;
-        // The MEAN cepstrum of this one posture, so a sample is a posture and the
-        // within-class variance is the jitter rather than the frame noise.
-        std::vector<double> m(fr[0].size(), 0.0);
-        for (const std::vector<double>& f : fr)
-          for (size_t k = 0; k < m.size(); ++k) m[k] += f[k];
-        for (double& v : m) v /= double(fr.size());
-        x.push_back(m);
-        y.push_back(cls);
+      for (uint32_t r = 0; r < kAEReps; ++r) {
+        // SEEDED FROM THE GENOME, THE AXIS AND THE REP -- AND NOT THE CELL, so all
+        // four gain cells see the IDENTICAL posture draws and every cell-to-cell
+        // difference is PAIRED. Otherwise the cells would differ by their noise as
+        // well as by the renderer, and neither the dose nor the attribution would
+        // be a paired comparison. Rep 0 reduces to run 1's exact stream, which is
+        // what makes cells 0 and 3 at rep 0 a reproduction check on run 1.
+        std::mt19937_64 rng(dna.header().seed ^ (0xAE00ull + a) ^
+                            (r ? r * 0x9E3779B97F4A7C15ull : 0ull));
+        std::normal_distribution<double> gauss(0.0, 1.0);
+        std::vector<std::vector<double>> x;
+        std::vector<int> y;
+        const double lo_c = kAERest[a] - kAEReach[a] * 0.5;
+        const double hi_c = kAERest[a] + kAEReach[a] * 0.5;
+        for (uint32_t s = 0; s < kAESamples * 2; ++s) {
+          const int cls = int(s % 2);
+          double p[7];
+          for (uint32_t k = 0; k < 7; ++k) p[k] = kAERest[k] + sd[k] * gauss(rng);
+          p[a] = (cls ? hi_c : lo_c) + sd[a] * gauss(rng);
+          const std::vector<std::vector<double>> fr = tb.frames_of(
+              p[0], p[1], p[2], p[3], p[4], p[5], p[6], kAEAmp, kAEF3[c], kAEBw[c]);
+          if (fr.empty()) continue;
+          // The MEAN cepstrum of this one posture, so a sample is a posture and the
+          // within-class variance is the jitter rather than the frame noise.
+          std::vector<double> m(fr[0].size(), 0.0);
+          for (const std::vector<double>& f : fr)
+            for (size_t k = 0; k < m.size(); ++k) m[k] += f[k];
+          for (double& v : m) v /= double(fr.size());
+          x.push_back(m);
+          y.push_back(cls);
+        }
+        if (x.size() < 4) continue;
+        dsq[c][a][r] = cepstral_dprime(x, y, nullptr, true);
       }
-      if (x.size() < 4) { std::printf("    %-4s  no frames\n", kAEName[a]); continue; }
-      dp[on][a] = cepstral_dprime(x, y, nullptr, true);
-      std::printf("    %-4s  %7.1f vs %7.1f Hz (reach %6.1f, jitter sd %5.1f)   d' %7.3f\n",
-                  kAEName[a], lo_c, hi_c, kAEReach[a], sd[a], dp[on][a]);
+    }
+  }
+
+  // THE ROOT IS TAKEN ONCE, AFTER AVERAGING THE SQUARES over reps, because the
+  // correction is unbiased in d'^2 and not in d': rooting per rep and averaging
+  // puts the bias straight back, which is the estimator's own documented warning.
+  auto dprime_of = [](double msq) { return msq > 0.0 ? std::sqrt(msq) : 0.0; };
+  double msq[4][7] = {}, sesq[4][7] = {};
+  for (uint32_t c = 0; c < 4; ++c) {
+    for (uint32_t a = 0; a < 7; ++a) {
+      double se = 0.0;
+      msq[c][a] = ctx_mean_se(dsq[c][a], &se);
+      sesq[c][a] = se;
+    }
+  }
+
+  const double dims = 12.0, nper = double(kAESamples);
+  const double inflate = (2.0 * nper - 2.0) / (2.0 * nper - 4.0);
+  const double bias_null = dims * (2.0 / nper) * inflate;
+  const double sd_null = std::sqrt(2.0 * dims) * (2.0 / nper) * inflate;
+
+  for (uint32_t c = 0; c < 4; ++c) {
+    std::printf("  CELL %u  render_f3_gain %.1f  render_bw_gain %.1f%s\n", c, double(kAEF3[c]),
+                double(kAEBw[c]), c == 0 ? "   <- THE SHIPPED CREATURE" : "");
+    for (uint32_t a = 0; a < 7; ++a) {
+      const double lo_c = kAERest[a] - kAEReach[a] * 0.5;
+      const double hi_c = kAERest[a] + kAEReach[a] * 0.5;
+      std::printf("    %-4s %7.1f vs %7.1f Hz (reach %6.1f, sd %5.1f)  d'^2 %8.3f +- %6.3f"
+                  "   d' %6.3f\n",
+                  kAEName[a], lo_c, hi_c, kAEReach[a], sd[a], msq[c][a], sesq[c][a],
+                  dprime_of(msq[c][a]));
     }
     std::printf("\n");
   }
@@ -45959,18 +46043,64 @@ bool run_axisear(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
   // the f1/f2 resonators' bandwidths and bw3 belongs to the third resonator, so at
   // f3_gain 0 the bw3 cell has no resonator to act on: it CANNOT show a dose and
   // demanding one of it is a clause that could only ever fail.
-  const double floor_null = std::sqrt(12.0 * 2.0 / double(kAESamples));
-  std::printf("  CLAUSE 1 -- THE DOSE, against the estimator's own null floor d' = %.3f\n"
-              "  (= sqrt(d*(1/n0+1/n1)), derived, n = %u per class). Required of f3, which\n"
-              "  is the axis the third resonator adds; bw3 is that resonator's OWN width and\n"
-              "  so has nothing to act on at f3_gain 0, which §41 did not notice.\n",
-              floor_null, kAESamples);
+  // THE NULL SCALE IS DERIVED IN THE ESTIMATOR'S OWN UNITS, which is the fix.
+  // The bias the unbiased form removes is dims*(1/n0+1/n1)*inflate, in d'^2. Run 1
+  // printed its SQUARE ROOT and called that the floor, which is 2.9x too strict.
+  // And a floor should be the null's SPREAD, not the size of the bias that was
+  // already subtracted: for a sum of dims squared z-scores that is
+  // sqrt(2*dims)*(1/n0+1/n1)*inflate. Both are printed so neither can be confused
+  // with the other again.
+  //
+  // WHAT ACTUALLY DECIDES IS THE PAIRED SE OVER REPS, which run 1 did not have.
+  std::printf("  THE NULL, IN d'^2 UNITS   bias removed %.4f   its spread %.4f\n"
+              "  (run 1 printed sqrt(bias) = %.4f and called it a d' floor: wrong units,\n"
+              "   wrong quantity, and 2.9x too strict. n = %u per class, dims = %.0f.)\n\n",
+              bias_null, sd_null, std::sqrt(bias_null), kAESamples, dims);
+
+  // ---- REPRODUCTION: cells 0 and 3 at rep 0 ARE run 1, or this is not run 1's
+  // instrument and nothing here corrects anything. This is free: rep 0 keeps the
+  // old seeding exactly, so the only way these can differ is if the rebuild
+  // changed a measured value, which it was not supposed to touch.
+  const double kAER1Lo[7] = {51.897, 44.822, 91.805, 0.002, -0.043, -0.042, 0.036};
+  const double kAER1Hi[7] = {69.070, 36.398, 94.569, 31.195, 0.399, 0.418, 0.367};
+  bool repro = true;
+  std::printf("  REPRODUCTION -- cell 0 and cell 3 at rep 0 must BE run 1 (printed to 3dp)\n");
+  for (uint32_t a = 0; a < 7; ++a) {
+    const bool lo_ok = std::fabs(dsq[0][a][0] - kAER1Lo[a]) < 1e-3;
+    const bool hi_ok = std::fabs(dsq[3][a][0] - kAER1Hi[a]) < 1e-3;
+    if (!lo_ok || !hi_ok) repro = false;
+    std::printf("    %-4s  cell0 %9.3f vs %9.3f %s    cell3 %9.3f vs %9.3f %s\n", kAEName[a],
+                dsq[0][a][0], kAER1Lo[a], lo_ok ? "ok" : "**", dsq[3][a][0], kAER1Hi[a],
+                hi_ok ? "ok" : "**");
+  }
+
+  // ---- CLAUSE 1: THE DOSE. Did the renderer change do anything at all? ----
+  // This clause CAN fire and would have fired on every build before v83, which
+  // is what makes it a test rather than a decoration -- the §41 lesson, applied.
+  //
+  // IT IS NOW A CLEANER DOSE THAN RUN 1'S, because the 2x2 gives a cell where
+  // ONLY render_f3_gain moves. Run 1 could only compare the corner against the
+  // origin, so its "the gain did something" was a statement about both gains.
+  //
+  // AND THE DOSE IS REQUIRED OF f3 ONLY, which is a correction to §41. bw1/bw2 are
+  // the f1/f2 resonators' bandwidths and bw3 belongs to the third resonator, so at
+  // f3_gain 0 the bw3 cell has no resonator to act on: it CANNOT show a dose and
+  // demanding one of it is a clause that could only ever fail.
+  std::printf("\n  CLAUSE 1 -- THE DOSE: f3 must separate better with render_f3_gain ON and\n"
+              "  render_bw_gain OFF (cell 0 -> cell 1), by more than %.3f x its PAIRED SE.\n"
+              "  Required of f3 alone; bw3 is the third resonator's own width and so has\n"
+              "  nothing to act on at f3_gain 0, which §41 did not notice.\n", kAECrit);
   bool dose = true;
   for (uint32_t a = 3; a < 7; ++a) {
-    const bool moved = dp[1][a] - dp[0][a] > floor_null;
+    const uint32_t cl = (a == 3) ? 1u : 2u;  // each gain's own single-factor cell
+    std::vector<double> d;
+    for (uint32_t r = 0; r < kAEReps; ++r) d.push_back(dsq[cl][a][r] - dsq[0][a][r]);
+    double se = 0.0;
+    const double m = ctx_mean_se(d, &se);
+    const bool moved = m > kAECrit * se && se > 0.0;
     if (a == 3 && !moved) dose = false;
-    std::printf("    %-4s  gain 0 d' %8.3f  ->  gain 1 d' %8.3f   delta %8.3f   %s\n",
-                kAEName[a], dp[0][a], dp[1][a], dp[1][a] - dp[0][a],
+    std::printf("    %-4s  cell 0 %8.3f  ->  cell %u %8.3f   delta %8.3f +- %6.3f  %s\n",
+                kAEName[a], msq[0][a], cl, msq[cl][a], m, se,
                 moved ? "MOVED" : (a == 3 ? "*** FLAT -- the gain did nothing"
                                           : "flat (not required of a bandwidth)"));
   }
@@ -45988,28 +46118,96 @@ bool run_axisear(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
   // every gain setting. The gain-independence half is withdrawn as mis-derived,
   // which is a correction to the pre-registration and is recorded as one.
   std::printf("\n  CLAUSE 2 -- THE POSITIVE CONTROL: the ear demonstrably resolves f1 and\n"
-              "  f2, so both must clear the 2AFC bar at BOTH gain settings or the ruler is\n"
+              "  f2, so both must clear the 2AFC bar in ALL FOUR CELLS or the ruler is\n"
               "  wrong. (§41's extra demand that they not MOVE with the gain is withdrawn:\n"
               "  bw1 and bw2 ARE the f1/f2 resonators' bandwidths, so render_bw_gain moves\n"
               "  them by design. The first build voided here and was right to.)\n");
-  const double f1d = dp[1][1], f2d = dp[1][2];
-  const bool ctl_ok = f1d > 1.0 && f2d > 1.0 && dp[0][1] > 1.0 && dp[0][2] > 1.0;
-  std::printf("    f1  d' %.3f -> %.3f     f2  d' %.3f -> %.3f   -> %s\n", dp[0][1], dp[1][1],
-              dp[0][2], dp[1][2], ctl_ok ? "OK" : "*** the instrument is not trustworthy");
-
-  // ---- CLAUSE 3: THE TEST, against the anchor ----
-  std::printf("\n  CLAUSE 3 -- THE TEST: each axis at gain 1, as a fraction of F1's d'.\n"
-              "  Bar: d' >= 1.0 (~76%% in a 2AFC) AND clear of the %.3f null floor, because\n"
-              "  a 2AFC bar beneath the estimator's own noise is not a bar.\n", floor_null);
-  uint32_t audible = 0;
-  for (uint32_t a = 1; a < 7; ++a) {
-    const bool ok = dp[1][a] >= 1.0 && dp[1][a] > floor_null;
-    if (ok && a != 1 && a != 2) ++audible;
-    std::printf("    %-4s  d' %8.3f   %6.3f x F1   -> %s\n", kAEName[a], dp[1][a],
-                f1d != 0.0 ? dp[1][a] / f1d : 0.0, ok ? "AUDIBLE" : "below the bar");
+  bool ctl_ok = true;
+  for (uint32_t c = 0; c < 4; ++c) {
+    const bool ok = msq[c][1] >= 1.0 && msq[c][2] >= 1.0;
+    if (!ok) ctl_ok = false;
+    std::printf("    %s   f1 d' %6.3f   f2 d' %6.3f   -> %s\n", kAECell[c],
+                dprime_of(msq[c][1]), dprime_of(msq[c][2]), ok ? "ok" : "**");
   }
 
+  // ---- CLAUSE 3: THE TEST, against the anchor, EACH AXIS IN ITS OWN CELL ----
+  // Run 1 read every axis in the corner, where both gains are on. That is the
+  // wrong cell for a ship decision: f3's candidate is f3 ALONE, and bw1/bw2 are
+  // tested with the bandwidths on and f3 off. bw3 is the exception and has to be
+  // read in the corner, because without the third resonator it has no width to
+  // vary -- the same asymmetry clause 1 turns on.
+  //
+  // THE BAR IS UNCHANGED AND SURVIVES THE UNITS BUG UNTOUCHED, because d' >= 1 and
+  // d'^2 >= 1 are the same threshold. That is luck. The RATIOS do not survive it:
+  // a ratio of squares is the square of the ratio, so every "x F1" in run 1 was
+  // wrong -- f3 reads 0.926x and not 0.857x, and the bandwidths 0.104x and not 1%.
+  constexpr uint32_t kAEOwn[7] = {0, 0, 0, 1, 2, 2, 3};
+  std::printf("\n  CLAUSE 3 -- THE TEST: each axis in ITS OWN cell, as a fraction of F1's\n"
+              "  d' there. Bar: d' >= 1.0 (~76%% in a 2AFC) AND significantly above zero at\n"
+              "  %.3f x the paired SE, because a 2AFC bar inside the estimator's own noise\n"
+              "  is not a bar. Ratios are taken in d', NOT d'^2 -- run 1's were squares.\n",
+              kAECrit);
+  uint32_t audible = 0, real_sub_bar = 0;
+  for (uint32_t a = 1; a < 7; ++a) {
+    const uint32_t c = kAEOwn[a];
+    const double f1c = dprime_of(msq[c][1]);
+    const double d = dprime_of(msq[c][a]);
+    const bool nonzero = msq[c][a] > kAECrit * sesq[c][a] && sesq[c][a] > 0.0;
+    const bool ok = msq[c][a] >= 1.0 && nonzero;
+    if (ok && a > 2) ++audible;
+    if (!ok && nonzero && a > 2) ++real_sub_bar;
+    std::printf("    %-4s %s  d'^2 %8.3f +- %6.3f   d' %6.3f  %6.3f x F1   %4.1f sd"
+                "   -> %s\n",
+                kAEName[a], kAECell[c], msq[c][a], sesq[c][a], d, f1c != 0.0 ? d / f1c : 0.0,
+                sesq[c][a] > 0.0 ? msq[c][a] / sesq[c][a] : 0.0,
+                ok ? "AUDIBLE" : (nonzero ? "REAL BUT SUB-BAR" : "null"));
+  }
+
+  // ---- CLAUSE 4: THE ATTRIBUTION. Which gain costs F1 its separability? ----
+  // PRE-REGISTERED AS BRANCHES, AND THE CORNER WAS ALREADY SEEN -- run 1 measured
+  // 44.822 -> 36.398 there, so the honest statement is that this clause tests
+  // WHICH MARGINAL EXPLAINS A DECREMENT I HAVE ALREADY LOOKED AT. The two
+  // single-factor cells and every SE here are unseen, and branch (e) exists
+  // precisely because run 1 had n=1 and could not know the corner was real at all.
+  //
+  // It matters because it decides a ship: "ship f3 alone" only avoids the cost if
+  // the cost belongs to the BANDWIDTHS. If f3 carries it on its own then the
+  // suspect is the renderer's unrenormalised sum, 0.25*(v1+v2+g*v3), and the
+  // remedy is a renderer fix rather than a refusal.
+  std::vector<double> ad_f3, ad_bw, ad_both, ad_int;
+  for (uint32_t r = 0; r < kAEReps; ++r) {
+    ad_f3.push_back(dsq[1][1][r] - dsq[0][1][r]);
+    ad_bw.push_back(dsq[2][1][r] - dsq[0][1][r]);
+    ad_both.push_back(dsq[3][1][r] - dsq[0][1][r]);
+    ad_int.push_back(dsq[3][1][r] - dsq[1][1][r] - dsq[2][1][r] + dsq[0][1][r]);
+  }
+  double se_f3 = 0.0, se_bw = 0.0, se_both = 0.0, se_int = 0.0;
+  const double m_f3 = ctx_mean_se(ad_f3, &se_f3);
+  const double m_bw = ctx_mean_se(ad_bw, &se_bw);
+  const double m_both = ctx_mean_se(ad_both, &se_both);
+  const double m_int = ctx_mean_se(ad_int, &se_int);
+  const bool carries_f3 = m_f3 < 0.0 && -m_f3 > kAECrit * se_f3;
+  const bool carries_bw = m_bw < 0.0 && -m_bw > kAECrit * se_bw;
+  const bool corner_real = m_both < 0.0 && -m_both > kAECrit * se_both;
+  std::printf("\n  CLAUSE 4 -- THE ATTRIBUTION of F1's cost, paired over %u reps, t = %.3f.\n"
+              "  Run 1 moved both gains at once and so could not say which one paid.\n",
+              kAEReps, kAECrit);
+  std::printf("    f3 alone      dd'^2 %8.3f +- %6.3f   -> %s\n", m_f3, se_f3,
+              carries_f3 ? "COSTS F1" : "no cost resolved");
+  std::printf("    bw alone      dd'^2 %8.3f +- %6.3f   -> %s\n", m_bw, se_bw,
+              carries_bw ? "COSTS F1" : "no cost resolved");
+  std::printf("    both (corner) dd'^2 %8.3f +- %6.3f   -> %s\n", m_both, se_both,
+              corner_real ? "real" : "*** WITHIN NOISE");
+  std::printf("    interaction   dd'^2 %8.3f +- %6.3f   -> %s\n", m_int, se_int,
+              std::fabs(m_int) > kAECrit * se_int ? "present" : "none resolved");
+
   std::printf("\n");
+  if (!repro) {
+    std::printf("  VOID: cell 0 or cell 3 at rep 0 does not reproduce run 1, so this is not\n"
+                "  run 1's instrument and it cannot correct run 1's numbers. The rebuild\n"
+                "  changed a measured value it was only supposed to relabel.\n");
+    return true;
+  }
   if (!ctl_ok) {
     std::printf("  VOID: the positive control failed. The ear is known to resolve f1 and\n"
                 "  f2, so a d' under the 2AFC bar on either of them means the RULER is\n"
@@ -46034,6 +46232,42 @@ bool run_axisear(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
                 "  them -- is worth building. STILL NOT A WORD COUNT: this says the\n"
                 "  distinction survives the cochlea, not that the creature uses it, and\n"
                 "  kVLScoreFormant still scores only F1/F2.\n", audible);
+  }
+  if (real_sub_bar) {
+    std::printf("\n  AND %u AXES ARE REAL BUT SUB-BAR, which run 1 got wrong in BOTH\n"
+                "  directions at once. Its over-strict floor hid that they are resolvably\n"
+                "  non-zero, and its squared ratio made them look ~10x weaker than they\n"
+                "  are. They are not inaudible; they are WEAK -- roughly a tenth of F1 in\n"
+                "  d', about 67%% in a 2AFC against 50%% chance. That is below the bar for a\n"
+                "  teachable level and well above nothing, so they stay OFF and stay OPEN:\n"
+                "  an axis at a tenth of F1 could clear the bar at a larger reach, and the\n"
+                "  reach here is the one §41 run 1 measured, not a limit of the body.\n",
+                real_sub_bar);
+  }
+  std::printf("\n  THE SHIP DECISION, ON THE ATTRIBUTION RATHER THAN THE CORNER:\n");
+  if (!corner_real) {
+    std::printf("  F1'S COST IS WITHDRAWN ENTIRELY. The corner decrement run 1 reported is\n"
+                "  within noise at %u reps, so there was never a measured cost to attribute\n"
+                "  and \"render_bw_gain costs f1\" is retracted. It was n=1.\n", kAEReps);
+  } else if (carries_bw && !carries_f3) {
+    std::printf("  THE COST IS THE BANDWIDTHS. f3 alone does not depress F1 and bw alone\n"
+                "  does, so shipping render_f3_gain WITHOUT render_bw_gain buys the third\n"
+                "  formant at no cost to the first. That is the decision run 1 guessed and\n"
+                "  could not support.\n");
+  } else if (carries_f3 && !carries_bw) {
+    std::printf("  THE COST IS F3'S OWN, AND \"SHIP F3 ALONE\" DOES NOT AVOID IT. Run 1's\n"
+                "  conclusion is wrong on the mechanism: the bandwidths are not what\n"
+                "  depresses F1. The suspect is the renderer's unrenormalised sum,\n"
+                "  0.25*(v1+v2+g*v3), which adds a third resonator's energy without\n"
+                "  rescaling -- so the remedy is a RENDERER FIX, not a refusal, and the\n"
+                "  f1 x f2 x f3 arithmetic must carry this cost until that fix is measured.\n");
+  } else if (carries_f3 && carries_bw) {
+    std::printf("  BOTH GAINS COST F1, so there is no free pick: the third formant is a\n"
+                "  trade against the first and the prize arithmetic must price it.\n");
+  } else {
+    std::printf("  THE ATTRIBUTION FAILS. The corner is real but neither gain reproduces it\n"
+                "  alone, so the cost lives in the INTERACTION and no single-gain ship\n"
+                "  decision follows from it. Reported as unresolved rather than assigned.\n");
   }
   return true;
 }

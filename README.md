@@ -25724,3 +25724,64 @@ trusted, and it stopped rather than printing something.
 
 That is the whole value of writing the failure conditions before the run. It cost three cheap
 iterations of a few seconds each, and what it bought was not printing a confident wrong number.
+
+### The follow-up ran, and it says we had it backwards
+
+Yesterday's entry ended with a promise: we'd moved two switches at once, so we couldn't yet prove the
+first formant was being blurred by the *bandwidths* rather than by the new third formant itself, and
+until that ran it was a suspicion rather than a result. It ran. It took twenty-five seconds. The
+suspicion was wrong, and on the way to finding that out we found a second mistake that was worse.
+
+**The measuring stick was reporting squares.** The function that scores "how different do these two
+sounds actually sound" has two modes, and in the mode we used it returns a *squared* distance — its
+own last line of code says so in a comment. We printed those numbers as if they were unsquared. Every
+individual verdict happened to survive, because the threshold we cared about was 1.0 and one squared
+is still one. But everything built on top of them was wrong by a square root. Most importantly: we
+announced that the three bandwidths were about **1%** as audible as the first formant, i.e. nothing
+at all. The real figure is about **10%**. They aren't silent, they're *faint* — a listener would get
+them right about 67% of the time, against 50% for pure guessing. Still under the bar we set, so they
+still stay switched off. But "inaudible" and "a tenth as strong as the main one" are different
+sentences, and only one of them is true.
+
+**Why we didn't catch it:** we worked out that threshold using 24 samples, and at 24 samples the
+number in question comes out to 1.02 — and the square root of 1.02 is 1.01. A square root is
+completely invisible at the one sample size where the quantity happens to be 1. We later raised the
+sample count to 200 for unrelated reasons, which is the only reason the two numbers ever became
+visibly different. The lesson is now written down: work out a constant somewhere its value *isn't*
+one, or you can't tell it apart from its own square root.
+
+**And the thing we actually set out to test came back reversed.** We ran all four combinations of the
+two switches this time, twelve times each. Turning on the third formant *by itself* costs the first
+formant about 11% of its clarity. Turning on the bandwidths by itself costs about 3%. So the new
+formant is the bigger culprit by a factor of three — the opposite of what we'd guessed — and
+"switch on the third formant alone, that's the safe one" was the worst available choice of the three.
+The bandwidths also turn out to *help* several things: they make the pitch 19% clearer and the second
+formant 8% clearer. "Costs something and buys nothing" was wrong in both directions at once.
+
+So the third formant is real and worth having, and it isn't free: it makes the first formant
+measurably harder to hear. That's a trade, not a bonus, and the arithmetic has to carry it.
+
+**One thing we're not claiming.** We don't know *why* the third formant costs the first one, and
+after the run we thought of a better explanation than either of the two we'd written down. The first
+guess was loudness: the renderer adds the new resonance without turning anything down. The second was
+crowding: the new formant's energy smothers the first one's fingerprint. But the likeliest answer is
+neither. Every test sound we generate is deliberately wobbled on all seven dials at once, to imitate
+the creature's own unsteadiness. With the third formant switched off, the wobble *on that dial* is
+silent — it literally cannot be heard, so it adds no confusion. Switch it on and that wobble becomes
+audible, and it muddies every other dial's reading at once. That's exactly the pattern we see: the
+pitch, the first formant and the second formant all get worse together, not just the one nearest in
+frequency.
+
+If that's the right explanation, there's nothing to fix. The sentence becomes: **give the creature a
+seventh thing it can control, and its unsteadiness on that seventh thing becomes audible and makes
+everything else slightly harder to hear.** That's an unavoidable cost of adding to a vocabulary
+rather than a bug in our code, and it would tell us something we actually want to know — roughly how
+many dials a code like this can carry before they start drowning each other out. We know the cheap
+test that separates the three explanations. We haven't run it, and we're not going to guess in the
+meantime. (We also can't yet explain why switching the bandwidths on *partly undoes* the damage.)
+
+**The check that makes the rest of this believable:** we deliberately arranged the rebuilt experiment
+so that one particular slice of it re-runs yesterday's version exactly. All fourteen of yesterday's
+numbers came back identical to the last printed digit. That's how we know this rewrite changed the
+labels and the design and not a single measurement — and the experiment refuses to report anything at
+all if those fourteen numbers ever disagree.

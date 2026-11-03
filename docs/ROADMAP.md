@@ -5245,3 +5245,121 @@ measurement.
 renderer build the user authorised as a separate scope decision. **Stage 2b is the third and last
 under the rule.** If it passes, extending the scorer and the reward to F3 is a new line and needs its
 own pre-registration — not a continuation of this one.
+
+---
+
+### §41 RUN 2 CORRECTED — THE INSTRUMENT REPORTED d'², AND THE SHIP DECISION WAS BACKWARDS
+
+`axisear` v2, 24.9 s, zero new brain runs. Two faults in run 2, one of units and one of design, and
+the second one **reverses the conclusion run 2 published**.
+
+#### FAULT 1 — THE UNITS. `unbiased` RETURNS d'², NOT d'
+
+`cepstral_dprime(..., unbiased = true)` ends on `return acc - dims * (1.0/n[0] + 1.0/n[1]) *
+inflate;  // signed d'^2`. Its own header says why: the bias correction is unbiased in d'² and not
+in d'. **Run 2 printed every cell as `d'`.** The measured values were right; three things built on
+them were not.
+
+| | run 2 published | correct |
+|---|---|---|
+| the 2AFC bar | `d' ≥ 1` | **unchanged** — `d' ≥ 1` ⟺ `d'² ≥ 1`, the same threshold. Luck, not correctness. |
+| the null floor | 0.347, "= sqrt(d·(1/n₀+1/n₁))" | the removed **bias** is 0.121 in d'² units; its **spread** — which is what a floor should be — is **0.049**. Over-strict by 2.9×, and the wrong quantity besides. |
+| every ratio | a ratio of **squares** | the square of the ratio. f3 is 0.80–0.88× F1, not 0.857×; the bandwidths are **0.10–0.13× F1, not the ~1% published**. |
+
+So the headline verdicts stand and **the sentence under them does not**. The bandwidths are not
+inaudible. They read d' 0.78 / 0.88 / 0.59 at **11–16 SE above zero** — about 67% in a 2AFC against
+50% chance. They stay off because they are under the bar, and they stay **open**, because a
+tenth-of-F1 axis could clear the bar at a larger reach and the reach here is the one run 1 measured,
+not a limit of the body.
+
+**WHY IT HID, AND THE RULE.** Run 2 derived the floor at n = 24, where the bias is 1.02 — and
+`sqrt(1.02) = 1.01`. **A square root is invisible at the one sample size where the quantity is 1**,
+and that was the sample size I derived it at. Moving to n = 200 is what made 0.121 and 0.347
+different numbers. *Derive a constant where its value is NOT 1, or you cannot tell a quantity from
+its square root.*
+
+#### FAULT 2 — ONE KNOB, TWO FACTORS. A 2×2 WAS NEEDED AND REVERSES THE ANSWER
+
+Run 2 moved `render_f3_gain` and `render_bw_gain` **together**, then attributed F1's decrement to the
+bandwidths and concluded *"`render_bw_gain` buys nothing and costs f1 19%, so ship f3 alone."* The
+2×2 over the two gains, paired over 12 replicate streams:
+
+| cell | f0 | **f1** | f2 | f3 | bw1 | bw2 | bw3 |
+|---|---|---|---|---|---|---|---|
+| f3=0 bw=0 — **shipped** | 7.24 | **6.88** | 9.47 | — | — | — | — |
+| f3=1 bw=0 | 7.08 | **6.10** | 8.98 | **4.85** | — | — | — |
+| f3=0 bw=1 | 8.59 | **6.64** | 10.18 | — | 0.78 | 0.88 | — |
+| f3=1 bw=1 | 8.57 | **6.19** | 9.54 | 5.44 | 0.72 | 0.81 | 0.59 |
+
+(d', each the root of the mean of 12 reps' d'² — the root taken once, at the end, as that estimator
+requires.) The paired attribution of F1's cost, in d'²:
+
+```
+f3 alone      -10.127 +- 0.324   COSTS F1   (31 SE)
+bw alone       -3.211 +- 0.245   COSTS F1   (13 SE)
+both (corner)  -9.083 +- 0.284   real
+interaction    +4.255 +- 0.204   present
+```
+
+**F3 IS THE LARGER COST, NOT THE BANDWIDTHS.** It takes 11.3% of F1's d' on its own, against the
+bandwidths' 3.5%, and the corner is *smaller* than f3 alone because the interaction recovers +4.26.
+"Ship f3 alone to avoid the cost" is exactly backwards: shipping f3 alone is the **worst** cell for
+F1 of the three that have f3 in them. The corrected decision is that **the third formant is a trade
+against the first**, and the `f1 × f2 × f3` arithmetic has to price it.
+
+**AND THE BANDWIDTHS ARE NOT ONLY A COST.** Turning them on *improves* f0 by 18.7%, f2 by 7.5% and
+f3's own separability by 12%, while costing f1 3.5%. "Buys nothing" was wrong in both directions.
+
+#### WHAT IS CONFOUNDED, AND WHAT IS NOT
+
+**The f3 cost is clean.** Cell 1 has `bw_gain = 0`, so the third resonator renders at the shipped
+hardcoded 90 Hz: it is "add F3 and change nothing else".
+
+**The bw column is not.** `render_bw_gain = 1` does two things at once — it makes bandwidth *live*
+**and** moves its mean from the hardcoded 90 Hz to the genome's ~149 Hz. So every bw number above
+conflates "bandwidth now varies" with "bandwidth is now 60% wider". Per the operating-point rule,
+stated rather than quietly fixed; separating them needs a cell that jitters around 90.
+
+**AND THE MECHANISM OF F3'S COST IS UNTESTED, WITH THREE CANDIDATES — THE THIRD FOUND AT THE DESK
+AFTER THE RUN AND THE MOST LIKELY OF THEM.**
+
+1. **LEVEL.** The renderer sums `0.25*(v1+v2+g*v3)` with no renormalisation. Against it: amplitude
+   is constant across all samples in a cell, so a constant level shift moves both classes' C0
+   equally and cannot change a *between*-class difference directly.
+2. **SPECTRAL MASKING** — F3's energy at ~2.6 kHz diluting F1's cepstral signature. No
+   renormalisation would fix it, because it is the real price of adding a formant. Against it: F1
+   at 626 Hz is the axis *furthest* from F3 in frequency and it loses the most.
+3. **JITTER INFLATION, AND THIS IS THE LEADING CANDIDATE.** Every posture is drawn with jitter on
+   **all seven** parameters, f3 included. At `f3_gain = 0` that f3 jitter is **inaudible**, so it
+   contributes nothing to the within-class spread. At `f3_gain = 1` it reaches the ear and **inflates
+   the denominator of every other axis's d'** while leaving its numerator alone. It predicts what
+   the table shows and the other two do not: **f0, f1 and f2 all fall together** (−2.2%, −11.3%,
+   −5.1%) rather than only the spectrally-adjacent one.
+
+**IF (3) IS RIGHT THE FINDING REFRAMES, AND NOT AS A DEFECT.** There would be nothing to fix in the
+renderer. The statement becomes: **giving the creature a seventh commanded axis means its motor noise
+on that axis now reaches the ear and adds to the confusion on every other axis.** That is an
+intrinsic cost of adding an axis to a code, it is the same quantity as §41 run 1's level count seen
+from the other side, and it would bound how many axes a code can carry — which is a far more useful
+result than a renderer patch.
+
+**THE DISCRIMINATING TEST IS CLEAN, CHEAP AND NEEDS NO GENOME CHANGE:** re-measure F1 in cell 1 with
+f3 held **exactly at rest** instead of jittered. Return toward 6.88 ⇒ jitter inflation; stay at 6.10
+⇒ the static presence of the third formant. **Named, not run** — it is a separate claim and gets its
+own build and its own gate rather than riding on this one.
+
+**What none of the three explains** is the **positive interaction**: switching the bandwidths on
+*recovers* +4.26 of F1's d'² and *improves* f3's own separability. Stated as unexplained.
+
+#### THE REPRODUCTION CHECK, WHICH IS WHY ANY OF THIS IS CREDIBLE
+
+Rep 0 keeps run 2's exact seeding, so cells 0 and 3 at rep 0 **must be run 2**. All fourteen agree to
+the printed 3 dp — f1 44.822 and 36.398, f3 0.002 and 31.195, every bandwidth. The rebuild changed
+the presentation and the design and **not one measured value**, and the clause that says so is a
+`VOID` branch rather than a remark.
+
+#### STATUS
+
+Unchanged where it counts: **F3 is a real audible axis** at ~0.8× F1, the air carries it, and stage
+2b is still the open question and still the last run §41's count allows. What changed is the price
+tag — f3 taxes f1 by 11% — and a published sentence about the bandwidths that was wrong by a square.
