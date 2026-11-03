@@ -51658,15 +51658,32 @@ namespace {
 // `tools/echoname_identity.sh`, and unifying the two is a follow-up that has to be gated by
 // that check rather than bundled into a new experiment.
 //
-// THE COST, MEASURED 2026-11-03 so the next session can budget it rather than discover it:
-// `echoname` is 6,800,000 ticks at Tier::kTeach over 36 creatures x 4 arms (144 rows in
-// `results/echoname-full.log`). That is hours, not minutes, and it is the ONLY thing standing
-// between this duplication and its removal -- the edit itself is mechanical. Run:
-//   ./build/aibaby --dna dna/default.toml --experiment echoname --ticks 6800000 > new.log
-//   tools/echoname_identity.sh results/echoname-full.log new.log
-// and commit the unification only if that reports character-identical. A smoke CANNOT
-// substitute: the check compares published digits, and `aibaby-smoke-the-exact-command` plus
-// the `--allow-short` rule both forbid reading a published number off a short run.
+// THE GATE, CORRECTED 2026-11-04 AFTER RUNNING THE COMMANDS I HAD WRITTEN HERE UNTESTED.
+// The first version of this note said to run `--dna dna/default.toml` and diff against
+// `results/echoname-full.log`. All three of its facts were wrong:
+//   * `echoname` REFUSES `dna/default.toml` -- "this genome has no kContext module" -- and
+//     needs one with `context_source = 4`, i.e. `ctx.toml` from
+//     `tools/genome_add_context.py dna/default.toml ctx.toml vocal out_w=0`.
+//   * `echoname-full.log` has 144 rows; `echoname_identity.sh` expects 180. The baseline is
+//     `results/echoname-audit-full.log`.
+//   * It is not "hours": the README records ONE 5-HOUR RUN at `--ticks 6800000`.
+// And the baseline predates eight commits to `core/` and the genome (v73, v74, v75, v76, v82,
+// v83), so a character-identity check against it would fail for reasons that have nothing to
+// do with this dedup. **That published log is no longer the right gate.**
+//
+// SO USE THE CHEAP GATE INSTEAD, WHICH IS ALSO THE STRONGER ONE. Both implementations are
+// pure deterministic functions of (rows, labels, words), and what a dedup can break is the
+// FLOAT ACCUMULATION ORDER. So compute BOTH in place and assert bit-equality:
+//   1. call `artic_spread` beside the inline block and `assert`/print `==` on mu, within,
+//      between and sep;
+//   2. run `./build/aibaby --dna ctx.toml --experiment echoname --ticks 100000 --allow-short`
+//      -- a short run cannot QUOTE a number, but it exercises the arithmetic on REAL rows,
+//      which is all this check needs;
+//   3. only then delete the inline copy.
+// That is minutes, it tests the one thing that can go wrong, and unlike one 5-hour run it is
+// not limited to whichever rows that session happened to produce. Add the structural edge
+// cases too -- a word with one repeat, a row whose size differs from `grand`, an empty row --
+// since those are the branches where the two copies could legitimately disagree.
 struct ArticSpread {
   bool ok = false;
   double mu = 0.0, within = 0.0, between = 0.0, sep = 0.0;
