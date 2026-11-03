@@ -25868,3 +25868,58 @@ check first and we haven't: this test sets the volume by hand, while the creatur
 different part of its brain, and **nobody has ever measured what volume it actually produces.** If
 that turns out to be well below where we've been testing, the whole thing is a non-issue. That
 measurement is cheap and it's the next thing to do.
+
+### We'd been testing the ear three times louder than the creature ever speaks
+
+The last entry ended with a lead we refused to call a result: the ear seemed to work *better* at
+lower volumes, which would mean we'd been testing it overloaded. We said the first thing to check was
+what volume the creature actually produces, and that we hadn't. We have now, and it needed no new
+experiment — one of our oldest ones had been printing the answer for months.
+
+The creature's voice averages 0.45 on a 0-to-1 scale, and about half of its frames are too quiet to
+count as speech at all. Counting only the frames where it *is* making a sound, the average is 0.61.
+That then gets halved on the way to its own ears. So **the creature hears itself at about 0.30**.
+Every single one of our measuring instruments has been rendering at **1.0** — a bit over three times
+too loud.
+
+**The good news: the overloaded-ear worry is dead.** The creature already lives at the quiet end, so
+nothing in the running system is being overdriven.
+
+**The bad news: it flips a verdict we published earlier today.** We'd measured the three bandwidth
+dials as "real but below the threshold of audibility" — the second one at 0.875 against a bar of
+1.00, a 12% shortfall. At the volume the creature actually hears, that same dial reads **1.101**. It
+clears the bar. So the creature can hear it after all, and the count of usable dials is **four, not
+three**. The first bandwidth dial comes in at 0.930 — close enough that we're now calling it
+undecided rather than ruled out.
+
+That is the **third** correction to the same claim in one day. "The bandwidths are inaudible" became
+"faint but real, and below the bar" became "one of them is audible." Each correction came from a
+different mistake: first the units, then the volume we happened to test at. Neither was visible in
+the answer itself.
+
+**What this does and doesn't affect elsewhere.** Almost every comparison in this project is "does
+arrangement A beat arrangement B" — and both sides were always rendered at the same volume, so those
+all stand. What's exposed is any claim of the form "is X audible at all", because that's measured
+against a fixed threshold, and we set every one of those at the wrong volume.
+
+**And there's no single correction factor, because the ear trades the dials against each other.** As
+the volume drops, the first formant and all three bandwidths get clearer, the pitch gets steadily
+worse, and the second and third formants get better and then worse again, peaking around halfway. So
+"quieter is better" is simply false as a general statement — it depends which dial you're asking
+about.
+
+**One of our own safety checks caught us over-reaching, which is the part we're pleased about.** We'd
+taken the earlier two-point measurement and turned it into a *rate* — "about 9% better per halving" —
+and used that rate in this very experiment's description to predict the bandwidth dial would clear
+the bar. The experiment then discovered that two of the formants reverse direction partway down,
+which means that rate was never a rate at all, and it withdrew our own 18% figure in its printout
+before announcing anything. The verdict stands on the volume we actually measured at, not on our
+arithmetic. A line through two points is not a trend.
+
+**What we are not claiming:** that the vocabulary just doubled. The newly audible dial scrapes over
+the bar at about 78% correct, which is roughly two distinguishable settings, not the two and a half
+the muscle-side measurement suggested. And switching it on would levy the same two costs we spent
+today measuring on the third formant — its own wobble becoming audible, and its energy crowding the
+others. We haven't measured either of those for this dial. So the count of candidate dials is four,
+and the vocabulary number is not four-dials-multiplied-together. Getting one requires another
+measurement, not another multiplication.

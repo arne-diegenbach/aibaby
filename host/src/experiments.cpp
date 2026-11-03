@@ -335,6 +335,13 @@ const Spec kSpecs[] = {
      "  (axisfree 0.948 vs -0.167), so the AXIS COUNT is the accumulation lever.\n"
      "  Prints a 9x9 normalised cross-talk matrix. LIVENESS IS SCORED FIRST,\n"
      "  because cross-talk is a ratio and a DEAD axis has none of it"},
+    {"axisamp", 1, Expect::kRead, Tier::kLong,
+     "  §41 run 2e: every Timbre instrument renders at amplitude 1.0, but the\n"
+     "  creature's ear receives babble's mean 0.446 x self_gain 0.50 = 0.223 --\n"
+     "  4.5x quieter. Since axislev showed d' RISES as amplitude falls, the\n"
+     "  2AFC bar verdict that called bw1/bw2 sub-bar may be an artefact of the\n"
+     "  instrument's loudness. Re-tests the bar where the creature actually\n"
+     "  lives. Between-arm contrasts are unaffected; absolute thresholds are not"},
     {"axislev", 1, Expect::kRead, Tier::kLong,
      "  §41 run 2d: is f3's static cost to F1 LEVEL? Sweeps amplitude over 2x\n"
      "  at render_f3_gain 0 -- if F1's d' is flat there, a global level change is\n"
@@ -1319,6 +1326,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "axisear") ok = run_axisear(dna_blob, ticks, verbose);
   else if (name == "axisjit") ok = run_axisjit(dna_blob, ticks, verbose);
   else if (name == "axislev") ok = run_axislev(dna_blob, ticks, verbose);
+  else if (name == "axisamp") ok = run_axisamp(dna_blob, ticks, verbose);
   else if (name == "ctxgrid") ok = run_ctxgrid(dna_blob, ticks, verbose);
   else if (name == "echoname") ok = run_echoname(dna_blob, ticks, verbose);
   else if (name == "dirbudget") ok = run_dirbudget(dna_blob, ticks, verbose);

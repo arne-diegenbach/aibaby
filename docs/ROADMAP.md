@@ -5533,3 +5533,97 @@ already-published number:
 down**, and (6) broke one written the same morning. The rules are not the missing thing; applying
 them to the clause one is most confident in is. That is now the standing instruction in
 [[aibaby-power-is-not-the-error-model]].
+
+---
+
+### §41 RUN 2e — THE WHOLE ARCHIVE MEASURED THE EAR 3.3x TOO LOUD, AND A VERDICT FLIPS
+
+`axisamp`, 39.6 s, zero brain runs. The lead `axislev` opened, closed by executing its own step 1 —
+which took no new instrument at all, because `babble` had printed the answer all along.
+
+#### THE CREATURE'S EAR OPERATES AT 0.30, AND EVERY INSTRUMENT RENDERED AT 1.0
+
+```
+mean amplitude      0.446      (babble, 1.2M ticks, all motor frames)
+mean amp if loud    0.607      (the 60122 of 120000 frames above the amplitude floor)
+self_gain           0.50       (genome)
+```
+
+`audio.cpp` passes `float(v.amplitude) * self_gain_` to the larynx, so the product **is** the
+amplitude at the ear: **0.607 × 0.50 = 0.303** when the creature is producing. Every `Timbre`
+instrument in this archive — `axisear`, `axisjit`, `axislev` and everything older — renders at
+**1.0**, about **3.3× too loud**.
+
+**THE CONDITIONING MATTERS AND IS DERIVED, NOT PICKED.** Half the motor frames sit below the
+amplitude floor and carry no utterance, so an "is this distinguishable?" claim must condition on
+frames that *are* producing. The all-frames mean gives 0.223 at the ear and **a different answer** —
+two axes cross the bar there, one crosses at 0.303. I added the conditional mean to `babble`'s output
+rather than keep estimating it from histogram bin centres, because the verdict turns on it. (The
+estimate was 0.609 against the measured 0.607, so it would not have misled — but a verdict should not
+rest on a number read off a bar chart.)
+
+#### THE LEAD IS REFUTED AND A PUBLISHED VERDICT FLIPS
+
+**The "overdriven ear" lead is dead:** the creature already lives at the quiet end, so nothing in the
+live system is being saturated. But the same fact puts today's own verdict at risk, and it does not
+survive:
+
+| axis | d' at 1.0 (archive) | d' at 0.303 (the creature) | |
+|---|---|---|---|
+| f1 | 6.881 AUDIBLE | 7.976 AUDIBLE | same |
+| f2 | 9.469 AUDIBLE | 9.445 AUDIBLE | same |
+| f3 | 4.852 AUDIBLE | 4.487 AUDIBLE | same |
+| bw1 | 0.781 sub-bar | 0.930 sub-bar | same, and *just* short |
+| **bw2** | **0.875 sub-bar** | **1.101 AUDIBLE** | **CROSSES** |
+| bw3 | 0.588 sub-bar | 0.755 sub-bar | same |
+
+**`axisear` v2's "REAL BUT SUB-BAR" was partly an artefact of the instrument's loudness.** At the
+amplitude the creature actually hears, **bw2 clears the same 2AFC bar that called it sub-bar**, so the
+audible axis count is **four — f1, f2, f3, bw2 — not three.** bw1 at 0.930 is close enough that it
+should be treated as unresolved rather than refused.
+
+**That is three successive corrections to one claim in one day:** "the bandwidths are inaudible
+(~1% of F1)" → "weak but real, 10% of F1, sub-bar" → "**bw2 is audible at the creature's own
+amplitude**". Each correction came from a different fault: units, then the instrument's operating
+point.
+
+#### WHAT THIS DOES AND DOES NOT DO TO THE REST OF THE ARCHIVE
+
+**Between-arm contrasts are untouched.** Both arms always rendered at the same amplitude, so every
+"arm A beats arm B by N SE" in this project is unaffected. That is most of what the archive contains.
+
+**Every ABSOLUTE threshold claim is exposed**, and `d' >= 1.0 is ~76% in a 2AFC` is exactly one. Any
+archived "is X audible / distinguishable" verdict was decided at 1.0 and needs the same re-reading.
+
+**AND THE SENSITIVITY IS AXIS-SPECIFIC AND NON-MONOTONE, so there is no single correction factor and
+no best operating point.** Across 1.0 → 0.12 the ear *trades* axes against each other:
+
+```
+amp     f0      f1      f2      f3     bw1     bw2     bw3
+1.000  7.238   6.881   9.469   4.852   0.781   0.875   0.588
+0.500  5.418   7.493   9.964   5.331   0.840   1.001   0.694
+0.305  4.844   7.976   9.445   4.487   0.930   1.101   0.755
+0.223  4.392   8.403   8.564   3.766   1.032   1.182   0.797
+0.120  3.432   9.129   6.122   1.702   1.130   1.214   0.714
+```
+
+f1 and the bandwidths rise monotonically as it gets quieter; f0 falls monotonically; **f2 and f3 turn
+over**, peaking near 0.5. So a single "quieter is better" is false.
+
+#### CLAUSE 1 EARNED ITS PLACE BY REFUTING MY OWN EXTRAPOLATION
+
+I had reasoned from `axislev`'s 1.0 → 0.5 measurement to a *per-halving rate* (+8.9% in d') and used
+it in this experiment's own header to predict bw2 would clear the bar. **f2 turns over inside the
+ladder**, so that rate does not extrapolate and the clause withdrew the 18% figure in the run's own
+output. The verdict stands on the **measured rung** instead — which is why the test was run at the
+creature's amplitude rather than computed from a slope. A two-point slope is not a rate.
+
+#### THE PRIZE IS NOT YET RE-DERIVABLE, AND I AM NOT GOING TO MULTIPLY
+
+bw2 clears **audibility**, at d' 1.101 — which is ~78% in a 2AFC, i.e. about **two** distinguishable
+levels at best, not the ~2.6 the motor-side measurement gave. And adding bw2 would impose the same
+two taxes this line just measured on f3: **jitter inflation** (its own motor noise becoming audible)
+and **spectral masking**. Neither has been measured for bw2.
+
+**So: the candidate axis count is 4, and the prize is NOT `19 × 2`.** Quoting a number requires
+pricing bw2's tax first, and that is a new measurement, not an arithmetic step.

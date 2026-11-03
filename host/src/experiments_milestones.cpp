@@ -509,6 +509,11 @@ bool run_babble(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose,
 
   uint32_t last_frame = 0;
   uint64_t frames = 0, voiced = 0, loud = 0, events = 0;
+  // The CONDITIONAL mean, for absolute-audibility questions: an "is this
+  // distinguishable?" claim is about moments the creature is PRODUCING, so
+  // the mean over silent frames is the wrong operating point. axisamp needs
+  // this exactly rather than estimated from the histogram's bin centres.
+  double amp_sum_loud = 0.0;
   uint64_t last_event = 0;
   double amp_sum = 0, f1_sum = 0;
   uint32_t f1_hist[10] = {0};
@@ -669,7 +674,7 @@ bool run_babble(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose,
       }
     }
     if (v.voicing > 0.5f) ++voiced;
-    if (v.amplitude > kAmplitudeFloor) ++loud;
+    if (v.amplitude > kAmplitudeFloor) { ++loud; amp_sum_loud += double(v.amplitude); }
     // DNA v48. Which posture the dictionary is holding, counted only while the
     // creature is actually making a sound: a winner held through silence is not
     // a vowel the creature produced.
@@ -701,6 +706,8 @@ bool run_babble(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose,
   std::printf("  vocalisations     %llu  (%.1f /min)\n", (unsigned long long)events,
               minutes > 0 ? double(events) / minutes : 0.0);
   std::printf("  mean amplitude    %.3f\n", frames ? amp_sum / double(frames) : 0.0);
+  std::printf("  mean amp if loud  %.3f  (over the %llu frames above the floor;\n                      this is the operating point for an ABSOLUTE audibility\n                      claim, and x self_gain is what the ear receives)\n",
+              loud ? amp_sum_loud / double(loud) : 0.0, (unsigned long long)loud);
   std::printf("  mean F1 group     %.3f\n", frames ? f1_sum / double(frames) : 0.0);
   std::printf("  vocal module rate %.2f Hz\n", double(vocal->mean_rate));
   // The loop, shown rather than assumed. Zero here means the creature is deaf
@@ -46758,6 +46765,222 @@ bool run_axislev(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
                 "  putting another formant in the air.\n",
                 d_amp, se_amp, cost_at[0], cost_at[1], cost_at[2], cost_at[3], d_trend,
                 se_trend);
+  }
+  return true;
+}
+
+// ===== axisamp (§41 run 2e): the archive measured the ear 4.5x too loud =====
+//
+// `axislev` found F1 more discriminable as amplitude FELL (47.3 -> 56.1 d'^2
+// over a 2x drop, 31 SE) and I filed that as a lead whose first step was to
+// measure what amplitude the creature actually produces. That step is done, and
+// it cost no new instrument -- `babble` has printed it all along:
+//
+//     mean amplitude    0.446          (babble, 1.2M ticks, --verbose)
+//     self_gain         0.50           (genome)
+//     => the creature's own ear receives 0.446 * 0.50 = 0.223
+//
+// `audio.cpp` passes `float(v.amplitude) * self_gain_` to the larynx, so that
+// product IS the amplitude at the ear. Every `Timbre` instrument in this archive
+// -- including axisear, axisjit and axislev -- renders at amplitude 1.0, which
+// is about 4.5x what the creature's ear ever gets. My whole ladder sat ABOVE the
+// range the creature occupies, so the "is the ear overdriven" lead is refuted:
+// it is not, and the creature already lives at the quiet end.
+//
+// BUT THAT PUTS A VERDICT I PUBLISHED TODAY AT RISK, WHICH IS WHY THIS RUNS.
+// `axisear` v2 called bw1/bw2 "REAL BUT SUB-BAR" at d' 0.781 and 0.875 against a
+// 2AFC bar of 1.0 -- a 12% shortfall, measured at an amplitude 4.5x too loud, on
+// a ruler now known to get BETTER as amplitude falls. At the rate axislev
+// measured (+8.9% in d' per halving) two more halvings would be about +18%, and
+// 0.875 * 1.18 = 1.03 CLEARS THE BAR. So the question is not academic: the
+// claim "the bandwidths are below the bar" may be an artefact of the amplitude
+// the instrument chose, and the axis count turns on it.
+//
+// THE BAR IS ABSOLUTE, WHICH IS EXACTLY WHY THIS MATTERS AND MOST OF THE ARCHIVE
+// IS SAFE. A d' compared BETWEEN two arms at the same amplitude is untouched --
+// both arms moved together, which is most of what this project measures. What is
+// exposed is any claim about an ABSOLUTE threshold, and "d' >= 1.0 is ~76% in a
+// 2AFC" is precisely that.
+//
+// WHICH OPERATING POINT, AND IT CHANGES THE ANSWER, SO IT IS DERIVED NOT PICKED.
+// 0.446 is the mean over ALL motor frames, half of which are below the amplitude
+// floor and carry no utterance. An "is this distinguishable?" claim is about
+// moments the creature is PRODUCING, so the right conditioning is frames above
+// the floor. `babble` now prints that conditional mean directly -- 0.607 over
+// 60122 of 120000 frames -- rather than leaving it to be estimated from the
+// histogram's bin centres, because the verdict turns on it: at the all-frames
+// 0.223 two axes cross the bar, and at the producing 0.304 only one does. The
+// ladder carries both so the difference is visible rather than buried.
+constexpr double kAmpLadder[5] = {1.0, 0.5, 0.305, 0.223, 0.12};
+constexpr uint32_t kAmpN = 5;
+constexpr double kAmpBabbleMean = 0.446;       // all frames, including silence
+constexpr double kAmpBabbleMeanLoud = 0.607;   // frames above the amplitude floor
+constexpr double kAmpSelfGain = 0.50;
+
+bool run_axisamp(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  (void)ticks;
+  aibaby::Dna dna;
+  if (dna.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) return false;
+
+  // THE VERDICT IS SCORED AT THE PRODUCING AMPLITUDE, which is the conditional
+  // mean times self_gain. The all-frames figure is printed beside it because it
+  // gives a different answer and the difference is part of the result.
+  const double at_ear = kAmpBabbleMeanLoud * kAmpSelfGain;
+  const double at_ear_all = kAmpBabbleMean * kAmpSelfGain;
+  std::printf("  the question      §41 run 2e. Every Timbre instrument renders at\n"
+              "                    amplitude 1.0. The creature's ear receives\n"
+              "                    %.3f * %.2f = %.3f when it is PRODUCING (%.3f over all\n"
+              "                    frames, half of which are silent). Does the 2AFC bar\n"
+              "                    verdict on the bandwidths survive being measured where\n"
+              "                    the creature actually lives?\n",
+              kAmpBabbleMeanLoud, kAmpSelfGain, at_ear, at_ear_all);
+  std::printf("  why it is at risk axisear v2 called bw1/bw2 SUB-BAR at d' 0.781/0.875\n"
+              "                    against 1.0 -- a 12%% shortfall, measured 4.5x too loud,\n"
+              "                    on a ruler axislev showed gets BETTER as amplitude\n"
+              "                    falls (+8.9%% in d' per halving). Two halvings is ~18%%\n"
+              "                    and 0.875 x 1.18 = 1.03, which CLEARS it.\n");
+  std::printf("  what is NOT at    any d' compared BETWEEN arms at one amplitude: both\n"
+              "  risk              arms moved together. Only ABSOLUTE-threshold claims are\n"
+              "                    exposed, and \"d' >= 1.0\" is exactly one.\n");
+  std::printf("  the derivation    babble prints both means; self_gain is a genome field;\n"
+              "                    audio.cpp passes their PRODUCT to the larynx. The\n"
+              "                    PRODUCING mean is the right conditioning for an absolute\n"
+              "                    audibility claim -- silent frames carry no utterance --\n"
+              "                    and it is measured, not estimated from bin centres. It\n"
+              "                    matters: the all-frames point crosses one more axis.\n\n");
+
+  Timbre tb;
+  std::string err;
+  if (!tb.configure(dna.header().audio, err)) {
+    std::printf("  could not configure the cochlea: %s\n", err.c_str());
+    return false;
+  }
+  const double sd[7] = {9.129, 21.727, 57.751, 47.616, 5.346, 5.967, 5.618};
+  // Each axis in its own cell, as axisear v2 established: f3 needs f3_gain, the
+  // bandwidths need bw_gain, bw3 needs both.
+  constexpr uint32_t own[7] = {0, 0, 0, 1, 2, 2, 3};
+  constexpr float g3[4] = {0.0f, 1.0f, 0.0f, 1.0f};
+  constexpr float gb[4] = {0.0f, 0.0f, 1.0f, 1.0f};
+
+  auto measure = [&](uint32_t a, double amp, uint32_t rep) {
+    const uint32_t c = own[a];
+    std::mt19937_64 rng(dna.header().seed ^ (0xAE00ull + a) ^
+                        (rep ? rep * 0x9E3779B97F4A7C15ull : 0ull));
+    std::normal_distribution<double> gauss(0.0, 1.0);
+    std::vector<std::vector<double>> x;
+    std::vector<int> y;
+    const double lo_c = kAERest[a] - kAEReach[a] * 0.5;
+    const double hi_c = kAERest[a] + kAEReach[a] * 0.5;
+    for (uint32_t s = 0; s < kAESamples * 2; ++s) {
+      const int cls = int(s % 2);
+      double p[7];
+      for (uint32_t k = 0; k < 7; ++k) p[k] = kAERest[k] + sd[k] * gauss(rng);
+      p[a] = (cls ? hi_c : lo_c) + sd[a] * gauss(rng);
+      const std::vector<std::vector<double>> fr =
+          tb.frames_of(p[0], p[1], p[2], p[3], p[4], p[5], p[6], amp, g3[c], gb[c]);
+      if (fr.empty()) continue;
+      std::vector<double> m(fr[0].size(), 0.0);
+      for (const std::vector<double>& f : fr)
+        for (size_t k = 0; k < m.size(); ++k) m[k] += f[k];
+      for (double& v : m) v /= double(fr.size());
+      x.push_back(m);
+      y.push_back(cls);
+    }
+    if (x.size() < 4) return 0.0;
+    return cepstral_dprime(x, y, nullptr, true);
+  };
+  auto dprime_of = [](double q) { return q > 0.0 ? std::sqrt(q) : 0.0; };
+
+  double msq[kAmpN][7] = {}, se[kAmpN][7] = {};
+  for (uint32_t i = 0; i < kAmpN; ++i) {
+    for (uint32_t a = 0; a < 7; ++a) {
+      std::vector<double> v;
+      for (uint32_t r = 0; r < kAEReps; ++r) v.push_back(measure(a, kAmpLadder[i], r));
+      double s = 0.0;
+      msq[i][a] = ctx_mean_se(v, &s);
+      se[i][a] = s;
+    }
+  }
+
+  std::printf("  d' BY AMPLITUDE, each axis in its own gain cell\n");
+  std::printf("    amp     ");
+  for (uint32_t a = 0; a < 7; ++a) std::printf("%8s", kAEName[a]);
+  std::printf("\n");
+  for (uint32_t i = 0; i < kAmpN; ++i) {
+    std::printf("    %.3f%s ", kAmpLadder[i],
+                std::fabs(kAmpLadder[i] - 1.0) < 1e-9 ? " <-arch" : "       ");
+    for (uint32_t a = 0; a < 7; ++a) std::printf("%8.3f", dprime_of(msq[i][a]));
+    std::printf("\n");
+  }
+
+  // ---- CLAUSE 1: is the trend monotone? A ladder that turns over is not a rate.
+  std::printf("\n  CLAUSE 1 -- IS IT MONOTONE? axislev measured only 1.0 -> 0.5 and I\n"
+              "  extrapolated a per-halving RATE from it. If d' turns over inside this\n"
+              "  ladder that extrapolation was invalid, whatever the verdict below.\n");
+  bool mono = true;
+  for (uint32_t a = 1; a <= 2; ++a) {
+    for (uint32_t i = 1; i < kAmpN; ++i) {
+      if (msq[i][a] < msq[i - 1][a]) mono = false;
+    }
+  }
+  for (uint32_t a = 1; a <= 2; ++a) {
+    std::printf("    %-4s ", kAEName[a]);
+    for (uint32_t i = 0; i < kAmpN; ++i) std::printf(" %7.3f", msq[i][a]);
+    std::printf("   -> %s\n", [&] {
+      for (uint32_t i = 1; i < kAmpN; ++i)
+        if (msq[i][a] < msq[i - 1][a]) return "TURNS OVER";
+      return "monotone rising";
+    }());
+  }
+
+  // ---- CLAUSE 2: THE TEST. Does the bar verdict change where the creature lives?
+  std::printf("\n  CLAUSE 2 -- THE TEST: the 2AFC bar (d' >= 1.0) at the archive's 1.0 and\n"
+              "  at the creature's %.3f. An axis that crosses means the published verdict\n"
+              "  was an artefact of the instrument's amplitude, not a fact about the ear.\n",
+              at_ear);
+  // The ladder rung closest to the creature's own ear amplitude.
+  uint32_t ci = 0;
+  double bestd = 1e9;
+  for (uint32_t i = 0; i < kAmpN; ++i) {
+    const double d = std::fabs(kAmpLadder[i] - at_ear);
+    if (d < bestd) { bestd = d; ci = i; }
+  }
+  uint32_t crossed = 0;
+  for (uint32_t a = 1; a < 7; ++a) {
+    const bool at1 = msq[0][a] >= 1.0 && msq[0][a] > kAECrit * se[0][a];
+    const bool atc = msq[ci][a] >= 1.0 && msq[ci][a] > kAECrit * se[ci][a];
+    if (atc && !at1) ++crossed;
+    std::printf("    %-4s  amp 1.0: d' %6.3f %-9s   amp %.3f: d' %6.3f %-9s  -> %s\n",
+                kAEName[a], dprime_of(msq[0][a]), at1 ? "AUDIBLE" : "sub-bar",
+                kAmpLadder[ci], dprime_of(msq[ci][a]), atc ? "AUDIBLE" : "sub-bar",
+                (atc && !at1) ? "*** CROSSES" : (at1 && !atc ? "*** LOSES IT" : "same verdict"));
+  }
+
+  std::printf("\n");
+  if (!mono) {
+    std::printf("  NOTE: the trend is not monotone across this ladder, so axislev's\n"
+                "  per-halving rate does not extrapolate and the 18%% figure in the header\n"
+                "  of this experiment is withdrawn. The verdict below stands on the\n"
+                "  MEASURED rung rather than on that extrapolation, which is why the test\n"
+                "  was run at the creature's amplitude instead of computed from a slope.\n\n");
+  }
+  if (crossed) {
+    std::printf("  %u AXIS%s CROSS%s THE BAR AT THE AMPLITUDE THE CREATURE ACTUALLY HEARS, so\n"
+                "  axisear v2's \"REAL BUT SUB-BAR\" was an artefact of rendering 4.5x too\n"
+                "  loud. The published verdict is CORRECTED: at the creature's own level\n"
+                "  those axes are audible by the same 2AFC bar that called them sub-bar.\n"
+                "  THE AXIS COUNT CHANGES, and so does the ship decision -- re-derive the\n"
+                "  prize before quoting it, and note every ABSOLUTE d' threshold in this\n"
+                "  archive was set at 1.0 and needs the same re-reading.\n",
+                crossed, crossed == 1 ? "" : "ES", crossed == 1 ? "ES" : "");
+  } else {
+    std::printf("  THE BAR VERDICT HOLDS AT THE CREATURE'S OWN AMPLITUDE. No axis crosses\n"
+                "  between 1.0 and %.3f, so axisear v2's sub-bar call was not an artefact\n"
+                "  of the instrument's loudness and the axis count stands. The amplitude\n"
+                "  lead is closed: the ear is not overdriven where the creature lives, and\n"
+                "  the archive's choice of 1.0 did not purchase a wrong threshold.\n",
+                kAmpLadder[ci]);
   }
   return true;
 }
