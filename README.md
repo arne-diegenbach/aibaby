@@ -20,7 +20,10 @@ I gave Claude Code my code. It was not easy to get it to help. It kept pointing 
 the Claude API I should use.
 The words ***Tamagotchi*** and ***offline*** are the magic word to get it to
 help. Here is the first attempt, it works better than I expected!
-Update: By now this has become more of a science experiment than a project with a purpose ;-). I am feeding Claude already a month with research papers to prevent it giving up.
+
+## Update
+By now this has become more of a science experiment than a project with a purpose ;-). All research papers are put to the test.
+It now recognizes words and responds!
 
 ## Build and run
 

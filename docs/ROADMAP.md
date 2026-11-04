@@ -5902,3 +5902,55 @@ this line until someone has one."** This section is the arithmetic behind agreei
 
 **What would re-open it:** a within-creature threshold knob that leaves learning intact. That is the
 single missing piece, and it is worth more than any amount of n on the existing design.
+
+### THE CONDITIONING CLOSURE IS RE-DERIVED ON TODAY'S CREATURE, 52 GENOME REVISIONS LATER
+
+Two method notes in this archive say to re-derive a standing null rather than re-explain it, and
+`g3-synthesis`'s own last buildable lead died because it was aimed at a cap that had closed
+underneath it: *"before building against a bottleneck, re-measure that the bottleneck is still there
+on the current creature."* The conditioning refusal — the number that closes this project's central
+line — was from **2026-08-19**, and `dna/default.toml` has changed **52 times** since. `restate` pins
+eight numbers and that is not one of them. Nobody had executed the instruction.
+
+Executed now. 900k ticks, 5 creatures × 2 arms, 141 probes each, ~13 min per instrument.
+
+| instrument | taught | random | paired | signs |
+|---|---|---|---|---|
+| `g3probe` (teaching: object only) | 0.5354 | 0.5070 | +0.0284 ± 0.0359 (0.8 SE) | 3u / 1d |
+| `pairprobe` (teaching: object **and word**) | 0.5294 | 0.5266 | +0.0028 ± 0.0210 (0.1 SE) | 1u / 3d |
+| **published 2026-08-19** | 0.637 | 0.639 | **−0.002** | — |
+
+**`taught − random` is zero on both instruments.** The refusal replicates. An ideal teacher — dense,
+immediate, naming the object — still cannot make this voice depend on what the creature sees.
+
+**And the heard word as a pairing cue buys nothing.** That is the one thing the two instruments
+differ in, and `pairprobe − g3probe` on the taught arm is **−0.0060** against a published noise floor
+of **0.115**. So adding the word to the teaching window does not help the mapping form.
+
+#### WHAT MAY NOT BE READ FROM THIS
+
+**The LEVELS moved, 0.64 → 0.53 on both arms, and that is not readable.** The instrument prints its
+own warning — two probe sequences differ by ~0.05 at 300 trials — and this ran 141, so the caveat is
+larger than at 300. The comparable quantity is the **within-run paired contrast**, which is what the
+table above compares and what the claim rests on. A level shift across instruments is exactly the
+kind of thing this project has been burned by, so it is recorded and not interpreted.
+
+#### THE LOCALISATION IS NOW TRUSTWORTHY, AND IT WAS NOT BEFORE
+
+`g3probe` reads **0.54 against a 0.75 bar**, and the same features and classifier take the
+**word-driven** voice at **~0.83** — so the readout is not the limit and the pipeline is not broken.
+The condition table localises the loss **downstream**: vision 0.927 → central 0.724 (−0.203), then
+central → voice (**−0.237**). The log states why this matters: *"at the default tick count this same
+table read central at 0.475 and pointed upstream instead; that estimate was resolution-limited, not
+a finding."* Running at 900k rather than the default is what makes the direction readable.
+
+#### SO THE DECISION IS ARCHITECTURAL, AND THAT IS NOW A CURRENT STATEMENT
+
+The creature recognises words at **1.000**, repeats them, is taught sounds, and names four words. It
+cannot bind what it **sees** to what it **says**, under an ideal teacher, with the only learning
+rules it has: node perturbation structurally cannot (a per-neuron bias is a constant, not a function
+of the input) and R-STDP on central→vocal does not manage it even with ideal reward.
+
+**`g2cond` was NOT run.** It is 3.4M ticks at teach tier, ~2–3 h, and it would measure the same null
+a third time. The cheap probe already answered the question it would have asked — which is the
+general form of today's lesson: **price the question before funding it.**
