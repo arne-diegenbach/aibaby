@@ -5948,7 +5948,8 @@ a finding."* Running at 900k rather than the default is what makes the direction
 
 #### SO THE DECISION IS ARCHITECTURAL, AND THAT IS NOW A CURRENT STATEMENT
 
-The creature recognises words at **1.000**, repeats them, is taught sounds, and names four words. It
+The creature recognises words at **0.981** (1.000 is the signal *ceiling*, not the reading —
+corrected 2026-11-04), repeats them, is taught sounds, and names four words. It
 cannot bind what it **sees** to what it **says**, under an ideal teacher, with the only learning
 rules it has: node perturbation structurally cannot (a per-neuron bias is a constant, not a function
 of the input) and R-STDP on central→vocal does not manage it even with ideal reward.
@@ -5956,3 +5957,58 @@ of the input) and R-STDP on central→vocal does not manage it even with ideal r
 **`g2cond` was NOT run.** It is 3.4M ticks at teach tier, ~2–3 h, and it would measure the same null
 a third time. The cheap probe already answered the question it would have asked — which is the
 general form of today's lesson: **price the question before funding it.**
+
+## THE OWED DEDUP, AND WHAT A SHORT RUN CANNOT GATE
+
+Done 2026-11-04, after `docs/CONCLUSION.md`. `echoname` and `exsweep` each carried an inline copy
+of the separability decomposition — the within/between variance split pooled over the articulator
+dimensions. The source note said the dedup had to be gated by `tools/echoname_identity.sh`
+against `results/echoname-audit-full.log`, and **that gate was already wrong when it was written**:
+the baseline predates eight commits to `core/` and the genome (v73–v76, v82, v83), so a
+character-identity check against it would have failed for reasons with nothing to do with the
+change. The note had been corrected the day before to name a cheaper and stronger gate; this is
+that gate executed.
+
+**The helper also had to move.** `artic_spread` sat in an anonymous namespace **2,700 lines after
+its caller**, so a plain call was not possible. It is now in `experiments_common.h` beside
+`code_stats`, the other struct-and-function statistic, which removes the ordering problem instead
+of relocating it. **157 lines of duplicated arithmetic left `experiments_milestones.cpp`.**
+
+**THE GATE, AND IT IS TWO HALVES BECAUSE ONE OF THEM IS UNREACHABLE FROM A RUN.** Both
+implementations are pure deterministic functions of (rows, labels, words), so what a dedup can
+break is the **float accumulation order** — compared with `memcmp` rather than a tolerance, since a
+tolerance would pass the one failure being looked for.
+
+    bit-equality on real rows   51 of 51 cells, all four values to 17 significant digits
+    structural edge cases        9 of 9  (tools/artic_spread_edges.cpp, self-checking)
+    verify on the final tree     PASS, hash ad96f882becbee92, 24 as expected / 0 not
+
+**Every one of those 51 cells took the same branch**, which is why the second half exists. The two
+copies agreed on every ordinary creature and disagreed in exactly one place: when every scored row
+is identical within its word, `within` is 0, the ratio is undefined, and `echoname` published the
+partial decomposition with `sep` 0 while `exsweep` published nothing. **That is not a theoretical
+branch** — the taught arm runs at a voiced fraction of 0.082 and an all-zero articulator row is
+what silence looks like. So `ArticSpread` carries two flags, `decomposed` and `ok`, each caller
+guards on the one that preserves its own published output, and the edge test pins all nine
+contracts including that one.
+
+**THREE THINGS THIS RUN GOT WRONG BEFORE IT GOT THEM RIGHT, all caught by reading output rather
+than trusting it:**
+
+1. **The gate run did not finish and said it had.** `timeout` killed the binary at 900 s after 51
+   of 180 cells — **exit 124, masked by the compound command's own exit 0**, visible only in the
+   `echo "exit: $?"` line. A truncated run that prints no table looks like a run with nothing to
+   say. **Read the status of the binary, not of the pipeline.**
+2. **`ctx.toml` was six weeks stale** and missing ten keys added since (`rate_fast_tau_ms`,
+   `self_delay_ms`, the six `jaw_*` fields). Regenerated rather than repaired, to a scratch path
+   so the owner's file was left alone — and this is the same staleness the note predicted for the
+   published log, in a second place nobody had checked.
+3. **A third copy was suspected and is not one.** The per-word mean accumulation near
+   `experiments_milestones.cpp:31016` is a nearest-centroid one-of-eight classifier with a
+   train/test split on halves, sharing only a generic idiom. The decomposition's distinctive
+   denominators now appear **exactly once** in the codebase, with two call sites.
+
+**What was NOT done, and why.** A full `echoname` would be 1–2 h and would produce a table with
+nothing to compare it against, because the only published baseline is the stale one that made the
+original gate invalid. Per-cell bit-equality is the stronger statement anyway: it is 51
+independent comparisons at full precision rather than one aggregate.

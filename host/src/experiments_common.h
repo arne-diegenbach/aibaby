@@ -1446,6 +1446,125 @@ inline CodeStats code_stats(const std::vector<std::vector<double>>& x,
 }
 
 
+// The separability decomposition of a set of articulator rows, pooled over the
+// dimensions so the answer is one number per creature rather than seven:
+//
+//   `mu`       grand mean activity -- did reward change the vocal drive at all?
+//   `within`   pooled within-word variance  (repeatability; LOWER is better)
+//   `between`  between-word centroid variance (separability; HIGHER is better)
+//   `sep`      between / within, the F-like ratio accuracy actually tracks
+//
+// `echoname` and `exsweep` each carried an inline copy of this arithmetic. They
+// are one call now, and the two flags are what made that possible without
+// moving either instrument's published output:
+//
+//   `decomposed`  both passes ran; mu/within/between are populated.
+//   `ok`          the same AND within > 0, so `sep` is a finite ratio.
+//
+// They differ only for a creature whose scored rows are bit-identical within
+// every word, which is NOT a theoretical branch: the taught arm runs at a
+// voiced fraction of 0.082, and an all-zero articulator row is what silence
+// looks like here. On that creature `echoname` publishes the partial
+// decomposition with `sep` 0 and `exsweep` publishes nothing, and both of those
+// are the behaviour each one already had.
+//
+// HOW THE DEDUP WAS GATED, because a published-log diff was the wrong gate.
+// `results/echoname-audit-full.log` predates eight commits to `core/` and the
+// genome (v73, v74, v75, v76, v82, v83), so a character-identity check against
+// it would have failed for reasons with nothing to do with this change. Both
+// implementations are pure deterministic functions of (rows, labels, words), so
+// what a dedup can actually break is the FLOAT ACCUMULATION ORDER -- and that
+// was checked directly, by computing both in place on real rows and asserting
+// bit-equality on all four values before the inline copy was deleted. The loop
+// order below is therefore load-bearing: it is the accumulation order the
+// published columns were produced with.
+//
+// IT PASSED ON 51 OF 51 CELLS, all four values identical to 17 significant
+// digits -- a truncated `echoname` on a freshly generated context genome, which
+// is all the check needs since both sides see the same rows. **Every one of
+// those cells landed in the `within > 0` branch**, so the degenerate branch was
+// verified separately, and these are the values it must keep returning:
+//
+//   rows                                     labels   -> dec ok  mu   within between sep
+//   {}                                       {}          0   0   0    0      0       0
+//   {{1}}                             words=0 {0}         0   0   0    0      0       0
+//   {{1},{2}}                                 {0}         0   0   0    0      0       0
+//   {{1},{2},{5}}                             {0,0,1}     0   0   0    0      0       0
+//   {{1,1},{1,1},{3,3},{3,3}}                 {0,0,1,1}   1   0   2    0      4       0
+//   {{1,1},{2,2},{},{3,3},{4,4}}              {0,0,1,1,1} 1   1   2.5  0.5    4       8
+//   {{1,1},{2,2},{9},{3,3},{4,4}}             {0,0,1,1,1} 1   1   2.5  0.5    4       8
+//   {{1,1},{2,2},{3,3},{4,4},{9,9}}           {0,0,1,1,7} 1   1   2.5  0.5    4       8
+//   {{1,1},{2,2},{5,5},{6,6}}                 {0,0,1,1}   1   1   3.5  0.5    16      32
+//
+// Row 4 is a word with one repeat; row 5 is the degenerate one (identical rows
+// within each word, so `within` is exactly 0 and `sep` is undefined); rows 6-8
+// are an empty row, a ragged row and an out-of-range label, each of which must
+// be SKIPPED rather than counted, which is why those three agree exactly.
+struct ArticSpread {
+  bool ok = false;
+  bool decomposed = false;
+  double mu = 0.0, within = 0.0, between = 0.0, sep = 0.0;
+};
+
+inline ArticSpread artic_spread(const std::vector<std::vector<double>>& rows,
+                                const std::vector<int>& labels, uint32_t words) {
+  ArticSpread out;
+  if (rows.size() != labels.size() || words == 0) return out;
+  std::vector<std::vector<double>> wmu(words);
+  std::vector<uint32_t> wn(words, 0);
+  std::vector<double> grand;
+  uint32_t n_used = 0;
+  for (size_t t = 0; t < labels.size(); ++t) {
+    const int L = labels[t];
+    if (L < 0 || L >= int(words) || rows[t].empty()) continue;
+    if (grand.empty()) grand.assign(rows[t].size(), 0.0);
+    if (rows[t].size() != grand.size()) continue;
+    if (wmu[L].empty()) wmu[L].assign(rows[t].size(), 0.0);
+    for (size_t d = 0; d < rows[t].size(); ++d) {
+      wmu[L][d] += rows[t][d];
+      grand[d] += rows[t][d];
+    }
+    ++wn[L];
+    ++n_used;
+  }
+  for (uint32_t k = 0; k < words; ++k) {
+    if (wn[k] < 2) return out;  // a within-word variance needs two repeats
+  }
+  if (n_used <= words || grand.empty()) return out;
+  const size_t D = grand.size();
+  for (double& v : grand) v /= double(n_used);
+  for (uint32_t k = 0; k < words; ++k) {
+    for (double& v : wmu[k]) v /= double(wn[k]);
+  }
+  double within = 0.0, between = 0.0, mu = 0.0;
+  for (size_t t = 0; t < labels.size(); ++t) {
+    const int L = labels[t];
+    if (L < 0 || L >= int(words) || rows[t].size() != D) continue;
+    for (size_t d = 0; d < D; ++d) {
+      const double e = rows[t][d] - wmu[L][d];
+      within += e * e;
+    }
+  }
+  for (uint32_t k = 0; k < words; ++k) {
+    for (size_t d = 0; d < D; ++d) {
+      const double e = wmu[k][d] - grand[d];
+      between += double(wn[k]) * e * e;
+    }
+  }
+  for (size_t d = 0; d < D; ++d) mu += grand[d];
+  within /= double((n_used - words) * D);
+  between /= double((words - 1) * D);
+  out.decomposed = true;
+  out.mu = mu / double(D);
+  out.within = within;
+  out.between = between;
+  if (!(within > 0.0)) return out;  // `sep` is undefined; `ok` stays false
+  out.ok = true;
+  out.sep = between / within;
+  return out;
+}
+
+
 // Population binning of per-neuron counts. The classifier never sees one
 // feature per neuron: 400 counts against 50 training trials would let even a
 // centroid rule fit the noise, and what it reported would be a fact about the

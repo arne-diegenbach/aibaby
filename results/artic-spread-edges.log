@@ -1,0 +1,11 @@
+  1 empty                      dec 0 ok 0  mu 0      within 0      between 0      sep 0       ok
+  2 words == 0                 dec 0 ok 0  mu 0      within 0      between 0      sep 0       ok
+  3 rows/labels mismatch       dec 0 ok 0  mu 0      within 0      between 0      sep 0       ok
+  4 word 1 has one repeat      dec 0 ok 0  mu 0      within 0      between 0      sep 0       ok
+  5 within == 0                dec 1 ok 0  mu 2      within 0      between 4      sep 0       ok
+  6 empty row skipped          dec 1 ok 1  mu 2.5    within 0.5    between 4      sep 8       ok
+  7 ragged row skipped         dec 1 ok 1  mu 2.5    within 0.5    between 4      sep 8       ok
+  8 label out of range skipped dec 1 ok 1  mu 2.5    within 0.5    between 4      sep 8       ok
+  9 ordinary                   dec 1 ok 1  mu 3.5    within 0.5    between 16     sep 32      ok
+
+  PASS -- 0 of 9 cases wrong

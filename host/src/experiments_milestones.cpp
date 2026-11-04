@@ -49250,63 +49250,22 @@ bool run_echoname(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
         // The same six pairs, the same trials, the same reader -- on a feature set that
         // cannot contain the voiced fraction. See the note on `Cell::artic`.
         cell.artic = pair_mean(echo.scored_artic, echo.scored_labels, nullptr);
-        // The separability decomposition described on `Cell::amu`. One pass for the
-        // per-word means, a second for the two variances, both pooled over dimensions so
-        // the answer is one number per creature rather than seven.
-        if (echo.scored_artic.size() == echo.scored_labels.size()) {
-          std::vector<std::vector<double>> wmu(kCFWords);
-          std::vector<uint32_t> wn(kCFWords, 0);
-          std::vector<double> grand;
-          uint32_t n_used = 0;
-          for (size_t t = 0; t < echo.scored_labels.size(); ++t) {
-            const int L = echo.scored_labels[t];
-            const std::vector<double>& row = echo.scored_artic[t];
-            if (L < 0 || L >= int(kCFWords) || row.empty()) continue;
-            if (grand.empty()) grand.assign(row.size(), 0.0);
-            if (row.size() != grand.size()) continue;
-            if (wmu[L].empty()) wmu[L].assign(row.size(), 0.0);
-            for (size_t d = 0; d < row.size(); ++d) {
-              wmu[L][d] += row[d];
-              grand[d] += row[d];
-            }
-            ++wn[L];
-            ++n_used;
-          }
-          // Every word needs two repeats or a within-word variance is undefined, and a
-          // creature that cannot supply that reports nothing rather than a zero.
-          uint32_t words_ok = 0;
-          for (uint32_t k = 0; k < kCFWords; ++k) {
-            if (wn[k] >= 2) ++words_ok;
-          }
-          if (words_ok == kCFWords && n_used > kCFWords && !grand.empty()) {
-            const size_t D = grand.size();
-            for (double& v : grand) v /= double(n_used);
-            for (uint32_t k = 0; k < kCFWords; ++k) {
-              for (double& v : wmu[k]) v /= double(wn[k]);
-            }
-            double within = 0.0, between = 0.0, mu = 0.0;
-            for (size_t t = 0; t < echo.scored_labels.size(); ++t) {
-              const int L = echo.scored_labels[t];
-              const std::vector<double>& row = echo.scored_artic[t];
-              if (L < 0 || L >= int(kCFWords) || row.size() != D) continue;
-              for (size_t d = 0; d < D; ++d) {
-                const double e = row[d] - wmu[L][d];
-                within += e * e;
-              }
-            }
-            for (uint32_t k = 0; k < kCFWords; ++k) {
-              for (size_t d = 0; d < D; ++d) {
-                const double e = wmu[k][d] - grand[d];
-                between += double(wn[k]) * e * e;
-              }
-            }
-            for (size_t d = 0; d < D; ++d) mu += grand[d];
-            within /= double((n_used - kCFWords) * D);
-            between /= double((kCFWords - 1) * D);
-            cell.amu = mu / double(D);
-            cell.awithin = within;
-            cell.abetween = between;
-            cell.asep = within > 0.0 ? between / within : 0.0;
+        // The separability decomposition described on `Cell::amu`. The arithmetic is
+        // shared with `exsweep` and lives in `artic_spread` (`experiments_common.h`),
+        // which also records how the dedup of the two former copies was gated.
+        // `decomposed` and not `ok` is the right guard here: on a creature whose scored
+        // rows are identical within every word `within` is 0 and the ratio is undefined,
+        // and this instrument has always published the partial decomposition with `asep`
+        // 0 in that case rather than dropping the row. `exsweep` guards on `ok` because
+        // it has always done the opposite. Changing either guard moves published output.
+        {
+          const ArticSpread sp =
+              artic_spread(echo.scored_artic, echo.scored_labels, kCFWords);
+          if (sp.decomposed) {
+            cell.amu = sp.mu;
+            cell.awithin = sp.within;
+            cell.abetween = sp.between;
+            cell.asep = sp.sep;
           }
         }
         if (!echo.scored_heard.empty()) {
@@ -51650,103 +51609,6 @@ bool run_quietecho(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
 // the ladder is the arithmetic proof the knob engaged. It doubles as the silence guard the
 // genome's own note demands. **An identical count across arms means the genome edit did not
 // land**, which is exactly how the pre-flight's first sweep measured one creature six times.
-namespace {
-
-// The separability decomposition, pooled over the articulator dimensions. `echoname` holds
-// an inline copy of this arithmetic that is deliberately NOT replaced by a call here: its
-// published columns are verified character-identical run to run by
-// `tools/echoname_identity.sh`, and unifying the two is a follow-up that has to be gated by
-// that check rather than bundled into a new experiment.
-//
-// THE GATE, CORRECTED 2026-11-04 AFTER RUNNING THE COMMANDS I HAD WRITTEN HERE UNTESTED.
-// The first version of this note said to run `--dna dna/default.toml` and diff against
-// `results/echoname-full.log`. All three of its facts were wrong:
-//   * `echoname` REFUSES `dna/default.toml` -- "this genome has no kContext module" -- and
-//     needs one with `context_source = 4`, i.e. `ctx.toml` from
-//     `tools/genome_add_context.py dna/default.toml ctx.toml vocal out_w=0`.
-//   * `echoname-full.log` has 144 rows; `echoname_identity.sh` expects 180. The baseline is
-//     `results/echoname-audit-full.log`.
-//   * It is not "hours": the README records ONE 5-HOUR RUN at `--ticks 6800000`.
-// And the baseline predates eight commits to `core/` and the genome (v73, v74, v75, v76, v82,
-// v83), so a character-identity check against it would fail for reasons that have nothing to
-// do with this dedup. **That published log is no longer the right gate.**
-//
-// SO USE THE CHEAP GATE INSTEAD, WHICH IS ALSO THE STRONGER ONE. Both implementations are
-// pure deterministic functions of (rows, labels, words), and what a dedup can break is the
-// FLOAT ACCUMULATION ORDER. So compute BOTH in place and assert bit-equality:
-//   1. call `artic_spread` beside the inline block and `assert`/print `==` on mu, within,
-//      between and sep;
-//   2. run `./build/aibaby --dna ctx.toml --experiment echoname --ticks 100000 --allow-short`
-//      -- a short run cannot QUOTE a number, but it exercises the arithmetic on REAL rows,
-//      which is all this check needs;
-//   3. only then delete the inline copy.
-// That is minutes, it tests the one thing that can go wrong, and unlike one 5-hour run it is
-// not limited to whichever rows that session happened to produce. Add the structural edge
-// cases too -- a word with one repeat, a row whose size differs from `grand`, an empty row --
-// since those are the branches where the two copies could legitimately disagree.
-struct ArticSpread {
-  bool ok = false;
-  double mu = 0.0, within = 0.0, between = 0.0, sep = 0.0;
-};
-
-ArticSpread artic_spread(const std::vector<std::vector<double>>& rows,
-                         const std::vector<int>& labels, uint32_t words) {
-  ArticSpread out;
-  if (rows.size() != labels.size() || words == 0) return out;
-  std::vector<std::vector<double>> wmu(words);
-  std::vector<uint32_t> wn(words, 0);
-  std::vector<double> grand;
-  uint32_t n_used = 0;
-  for (size_t t = 0; t < labels.size(); ++t) {
-    const int L = labels[t];
-    if (L < 0 || L >= int(words) || rows[t].empty()) continue;
-    if (grand.empty()) grand.assign(rows[t].size(), 0.0);
-    if (rows[t].size() != grand.size()) continue;
-    if (wmu[L].empty()) wmu[L].assign(rows[t].size(), 0.0);
-    for (size_t d = 0; d < rows[t].size(); ++d) {
-      wmu[L][d] += rows[t][d];
-      grand[d] += rows[t][d];
-    }
-    ++wn[L];
-    ++n_used;
-  }
-  for (uint32_t k = 0; k < words; ++k) {
-    if (wn[k] < 2) return out;  // a within-word variance needs two repeats
-  }
-  if (n_used <= words || grand.empty()) return out;
-  const size_t D = grand.size();
-  for (double& v : grand) v /= double(n_used);
-  for (uint32_t k = 0; k < words; ++k) {
-    for (double& v : wmu[k]) v /= double(wn[k]);
-  }
-  double within = 0.0, between = 0.0, mu = 0.0;
-  for (size_t t = 0; t < labels.size(); ++t) {
-    const int L = labels[t];
-    if (L < 0 || L >= int(words) || rows[t].size() != D) continue;
-    for (size_t d = 0; d < D; ++d) {
-      const double e = rows[t][d] - wmu[L][d];
-      within += e * e;
-    }
-  }
-  for (uint32_t k = 0; k < words; ++k) {
-    for (size_t d = 0; d < D; ++d) {
-      const double e = wmu[k][d] - grand[d];
-      between += double(wn[k]) * e * e;
-    }
-  }
-  for (size_t d = 0; d < D; ++d) mu += grand[d];
-  within /= double((n_used - words) * D);
-  between /= double((words - 1) * D);
-  if (!(within > 0.0)) return out;
-  out.ok = true;
-  out.mu = mu / double(D);
-  out.within = within;
-  out.between = between;
-  out.sep = between / within;
-  return out;
-}
-
-}  // namespace
 
 bool run_exsweep(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
   (void)verbose;
