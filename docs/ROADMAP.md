@@ -5850,3 +5850,55 @@ had not enumerated. That is the same error as reading a memory's headline instea
 (once today). **One shape: asserting of the whole what was checked of the part.** The cost each time
 has been a few greps; the cost of not doing them was a published liability that would have made every
 future session distrust every threshold in the project.
+
+### THE ROTATION-DECLINE LINE, PRICED BEFORE IT WAS RUN — AND THE PRICE REFUSES IT
+
+Picked up as the live frontier. The pre-flight is free (both numbers are already published) and it
+withdraws the run rather than scoping it.
+
+#### STAGE 0: THE PEAK-LOCATION DATA CARRIES ALMOST NO INFORMATION
+
+`dirbudget` reports per-creature argmax rungs of **4 / 12 / 12 / 8** at 3.4M / 6.8M / 13.6M / 27.2M.
+Against uniform that is **χ² = 4.89 on 3 df, p = 0.18** — indistinguishable. **Eight of thirty-six
+creatures still do best on the largest budget.**
+
+Stated carefully, because this is a caution and not a refutation: a *true* common peak with noise
+would also spread the argmax, so p = 0.18 does not show there is no peak. What it shows is that the
+peak-location data cannot locate one, and the paired-step statistic is doing all the work.
+
+#### STAGE 1: THE POWER, AND IT DEPENDS ON WHICH CLAIM IS BEING MADE
+
+Two different effects are in play and they are not interchangeable:
+
+| claim | effect | SE at n=36 | n for 2.447 SE | n for 4 SE |
+|---|---|---|---|---|
+| `excess` declines (published) | −0.0244 | 0.0092 | 31 (already there, 2.65 SE) | **82** (×2.27) |
+| `direction` itself declines | **−0.0158** | not published | **74** (×2.0) | **196** (×5.4) |
+
+The second row is the mechanistic claim — *the creature's mapping degrades* — and `decline-tracks-ticks`
+established that **about a third of the published decline is the creature's own chance level rising,
+not its direction falling.** Subtracting the null stays correct, so `excess` is the right statistic;
+but anyone reasoning about a *mechanism* is reasoning about −0.0158, which at n=36 is not resolved
+even by this project's lenient 2.447 convention.
+
+At the predecessor's measured 6–7 h per sample, 4 SE on `excess` is **~15 h** and 4 SE on `direction`
+is **~35 h**.
+
+#### AND STAGE 2 HAS NO CANDIDATE AT ALL
+
+Explaining the decline needs the larynx threshold moved **within** a creature without moving its
+learning. `ipoff` cannot: it destroys learning at **−7.42 SE**. No other knob has been identified.
+So the sequence is 15–35 h to find out whether a 2.6 SE hypothesis survives, and then a causal
+question with **no known manipulation**.
+
+#### THE REFUSAL
+
+`dirbudget`'s own "how to cite" section says it first: *"the 2.6 SE decline is a HYPOTHESIS, not a
+finding… do not promote it because it is interesting. Three 2-3 SE results have been retracted here."*
+Spending 35 hours to resolve a −0.0158 effect that a quarter of creatures do not show, in order to
+reach a causal question with no candidate manipulation, is poor value. **The line's own closing
+paragraph was right: "that is a design problem, not a budget problem, and it is the honest end of
+this line until someone has one."** This section is the arithmetic behind agreeing with it.
+
+**What would re-open it:** a within-creature threshold knob that leaves learning intact. That is the
+single missing piece, and it is worth more than any amount of n on the existing design.
