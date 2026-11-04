@@ -1,7 +1,9 @@
 # Where this project stands, and what is prepared next
 
 Written 2026-10-09, revised 2026-10-12. The *record* is the root `README.md`, which is chronological and long;
-the *curated findings* are `docs/discoveries.pdf`. This file is the short forward-looking
+the *curated findings* are `docs/discoveries.pdf`; the *conclusion* — what the creature does, what it
+cannot, and the one reason behind both — is `docs/CONCLUSION.md`, added 2026-11-04 and the place to
+start. This file is the short forward-looking
 one, and it exists because the working lead queue has always lived in a memory store
 **outside the repository** — so a reader of the repo could see everything that had been
 done and nothing that was planned.

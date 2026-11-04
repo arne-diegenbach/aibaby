@@ -25,6 +25,19 @@ help. Here is the first attempt, it works better than I expected!
 By now this has become more of a science experiment than a project with a purpose ;-). All research papers are put to the test.
 It now recognizes words and responds!
 
+### Where to read what
+
+This page is the full record and it is long. The four documents, shortest first:
+
+- **[docs/CONCLUSION.md](docs/CONCLUSION.md)** — what the creature does, the one thing it
+  cannot, and the single architectural reason behind both. **Start here.**
+- [docs/ROADMAP.md](docs/ROADMAP.md) — where the project stands and what is prepared next,
+  with the bar each planned run has to clear.
+- [docs/discoveries.pdf](docs/discoveries.pdf) — the findings written up as a research
+  document, with an auditable criterion for what counts as this project's own.
+- this page — the chronological record: every result with the reasoning that produced it,
+  including the retractions, in the order they happened.
+
 ## Build and run
 
 ```sh
