@@ -24,3 +24,12 @@ not the record.
 planned run has to clear. It exists because the working lead queue lives in a memory store
 outside this repository, so the repo carried the whole record and none of the plan. Update it
 when a line closes or a lead is refused, not when a run merely finishes.
+
+
+`CONCLUSION.md` — the short account of what the project established: the six capabilities
+with their bars and controls, the one capability that resisted everything, and the single
+architectural reason that explains both lists. It exists because the other three documents
+each do a different job — `README.md` is the chronological record, `discoveries.pdf` the
+curated findings, `ROADMAP.md` the forward view — and none of them states the conclusion.
+Read it first if you are coming to this repository cold. Update it only when a capability
+or a closure changes, not when a run finishes.
