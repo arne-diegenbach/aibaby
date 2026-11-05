@@ -161,6 +161,17 @@ Each of these was built or measured, not argued away; the record carries the run
   with a delay line, a synaptic tag, a faster-than-human teacher, and a *perfect* phase index — the
   last at 0.5 SE while the per-phase bias tables provably diverge at 70–100 SE, which locates the
   obstacle in expression rather than credit assignment. The creature composes in space, not in time.
+- **The size of the vocabulary, from both ends.** The code the air carries is
+  `f1 x f2 x f3 ~ 19 signals`. The larynx *commands* seven independent centroid axes (cross-talk
+  ≤ 0.007), but four never reached the air — the synthesiser had two resonators and a hardcoded
+  bandwidth — and once a third resonator was added, only F3 survives the cochlea as a usable axis at
+  ~0.93x F1. The fourth candidate, bw2, reads **d' 1.016 ± 0.040** against a 1.0 audibility bar: the
+  point estimate above it, the lower bound at 0.918, so it cannot carry a word. The *denominator* is
+  closed too — levels per axis are `swing / scatter`, and `noise_amp`, the only knob on the scatter,
+  turns out to move the **duty cycle** rather than the audible spread, leaving voiced-gated levels
+  flat within 1.0 SE across the ladder it is scoreable on. So nine words naming as well as six was
+  never evidence that the grid could keep growing: the limit is how many distinctions the air and
+  the ear carry, and that is three axes at roughly 2.6 levels each.
 
 ## What would have to be different
 
