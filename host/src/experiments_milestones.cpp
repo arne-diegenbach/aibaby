@@ -45520,10 +45520,16 @@ bool run_aimaxes(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
 // ===== axisgrid (§41): all NINE vocal groups, and the cross-talk MATRIX =====
 //
 // Pre-registered in docs/ROADMAP.md §41, committed BEFORE this was written, clause
-// order included. The prize: retention is nearly FREE across an orthogonal axis
-// (axisfree, 0.948 vs -0.167, +5.7 SE) and levels MULTIPLY across independent axes,
-// so the number of things this creature can hold at once is the number of axes it
-// has -- and `aimaxes` measured TWO of nine.
+// order included. The prize: retention IS free across an orthogonal axis, and levels
+// MULTIPLY across independent axes, so the number of things this creature can hold at
+// once is the number of axes it has -- and `aimaxes` measured TWO of nine.
+//
+// CITE `axispower` FOR THAT PREMISE: 1.024 +- 0.062 against 0.116 +- 0.048, a +11.5 SE
+// contrast on 60 seeds of a THIRD independent family (`results/axispower-56m.log`).
+// This comment used to cite `axisfree`'s 0.948 vs -0.167 at +5.7 SE, which is the
+// DISCOVERY sample: axisfree's own confirmation family read +2.0 SE and printed
+// `NO VERDICT: between the gates`. Corrected by ROADMAP §44 on 2026-11-05, which found
+// the settling run had never been written into the roadmap or into memory at all.
 //
 // WHY A NEW EXPERIMENT INSTEAD OF MORE GROUPS IN `aimaxes`. aimaxes publishes a 2x2
 // and carries a reproduction guard against aimgain's swing. Widening its table in
@@ -45602,9 +45608,11 @@ bool run_axisgrid(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
               "                    have? aimaxes measured 2 of the 9 groups senses.cpp\n"
               "                    maps. Levels MULTIPLY across independent axes, so the\n"
               "                    axis COUNT is the lever, not any axis's range.\n");
-  std::printf("  why it matters    retention is nearly FREE across an orthogonal axis\n"
-              "                    (axisfree 0.948 vs -0.167 on-axis, +5.7 SE), so the\n"
-              "                    number of lessons the creature can HOLD is the number\n"
+  std::printf("  why it matters    a lesson SILENT about another's axis costs it nothing\n"
+              "                    (axispower 1.024 vs 0.116, +11.5 SE, 60 seeds, third\n"
+              "                    family -- NOT axisfree's 0.948 vs -0.167, which is the\n"
+              "                    discovery sample whose confirmation read NO VERDICT), so\n"
+              "                    the number of lessons the creature can HOLD is the number\n"
               "                    of axes it has. This is the accumulation lever.\n");
   std::printf("  CLAUSE ORDER      1 liveness, 2 cross-talk, 3 resolution, 4 the product.\n"
               "                    LIVENESS IS FIRST BECAUSE CROSS-TALK IS A RATIO: a DEAD\n"

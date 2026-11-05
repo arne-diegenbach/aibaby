@@ -331,8 +331,11 @@ const Spec kSpecs[] = {
     {"axisgrid", 66666, Expect::kRead, Tier::kLong,
      "  §41: how many INDEPENDENT steerable axes does the larynx have? aimaxes\n"
      "  measured 2 of the 9 groups senses.cpp maps. Levels MULTIPLY across\n"
-     "  independent axes and retention is nearly FREE across an orthogonal one\n"
-     "  (axisfree 0.948 vs -0.167), so the AXIS COUNT is the accumulation lever.\n"
+     "  independent axes and retention IS free across an orthogonal one -- cite\n"
+     "  axispower (1.024 vs 0.116, +11.5 SE, 60 seeds, third family), NOT\n"
+     "  axisfree's 0.948 vs -0.167, which is the DISCOVERY sample whose own\n"
+     "  confirmation family read +2.0 SE and NO VERDICT. So the AXIS COUNT is the\n"
+     "  accumulation lever, and the premise is settled rather than suggestive.\n"
      "  Prints a 9x9 normalised cross-talk matrix. LIVENESS IS SCORED FIRST,\n"
      "  because cross-talk is a ratio and a DEAD axis has none of it"},
     {"axisamp", 1, Expect::kRead, Tier::kLong,

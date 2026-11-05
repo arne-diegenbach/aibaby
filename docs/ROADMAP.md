@@ -6510,3 +6510,123 @@ mattered to any conclusion drawn from moving `noise_amp`, and it did not matter 
 The abandonment count allowed two runs and both were used: the gated `kAESd` and the paired arm.
 `kAESdG` ships beside `kAESd` as documentation of a checked null rather than as a replacement. **The
 axis count is three, §41's magnitudes stand, and bw2 does not re-open.**
+
+## §44 — "ACCUMULATION", RE-DERIVED: THE PREMISE WAS SETTLED AND THE RESULT WAS LOST (2026-11-05)
+
+**A desk exercise, no runs.** §41–43 closed the axis count and the denominator, and the memory
+direction's two classical routes were already closed, so the question was: what else can
+*"builds intelligence from what it hears and is told"* mean on this architecture? The answer is not
+a new lead. **It is that the question was already answered, at 11.5 SE, by a run that was never
+written into this document or into memory.**
+
+### WHAT "ACCUMULATION" WAS OPERATIONALISED AS, AND EVERY READING'S STATUS
+
+`aibaby-the-goal` (2026-11-03) named accumulation as the wall and picked the axis count as the
+lead, on the premise *"retention is FREE off-axis (0.948 vs −0.167), levels MULTIPLY."* Checking
+every reading of the word against the archive:
+
+| reading of "accumulate" | status |
+| --- | --- |
+| more distinguishable utterances (vocabulary) | **capped**: `f1 x f2 x f3 ~ 19 signals`, §41–43 |
+| lessons that persist | **works**: a taught sound is kept and keeps improving, 1.31 vs 0.999, and sleep does not erase it 3/3 |
+| two lessons at once | **works at 0.84** on orthogonal targets; a conflicting pair collapses to 0.22 |
+| across sleep (consolidation) | **closed**: replay as shipped does nothing; switching it off costs 0.3 SE |
+| hold a word after it stops (working memory) | **closed**: 0.503, chance |
+| a new conditional mapping | **the conclusion's refusal** — no input-specific factor exists |
+| structure over time (sequences) | **closed**: composes in space, not in time |
+| monotone improvement with exposure | **open and positive**, with a measured price: `dF1 ~ aligned^0.61` |
+
+Nothing in that table is a new direction. But the *premise* under the second and third rows turned
+out to be the interesting thing.
+
+### THE PREMISE HAD A THREE-RUN HISTORY AND THE ARCHIVE RECORDS ONLY ITS FIRST TWO STEPS
+
+1. **`axiscollide`** (2026-09-16, 20 seeds) refuted *"the wipe tracks distance"* cleanly — `f1-full`
+   and `f2-full` are the same L1 distance and retain **−0.06 against 2.83** — and established that
+   retention tracks the demand on A's **own** axis, with `corr(retention, gap dUPPER) = −0.9994`.
+   **But its own write-up says the useful half is UNTESTED:** its "orthogonal" arms set the second
+   target's F1 to A's own F1 target, so they *reaffirm* A's axis rather than being silent about it.
+   Its memory still carries *"do not quote this file for the third claim"* and names the fix: an arm
+   with `second_axis = 2`.
+2. **`axisfree`** (5.6M ticks, 20 seeds) built exactly that arm. It **replicated the level** —
+   `f2-axis` retention ~1.0 in two families — **but not the contrast: +5.7 SE in family 0, then
+   +2.0 SE in family 1, against a pre-registered +3 SE gate. Its own verdict line reads `NO
+   VERDICT: between the gates.`**
+3. **`axispower`** (2026-09-17, `results/axispower-56m.log`) settled it, and **nothing in this
+   document or in memory says so.**
+
+### WHAT `axispower` MEASURED
+
+Third independent seed family (offset 224737, *"a nonzero offset distinct from 104729 proves this is
+not a rerun of family 0 or 1 on a stale binary"*), n=60, 180 jobs, with `do NOT pool this with
+families 0 or 1 — they generated the hypothesis` written into the pre-registration.
+
+| arm | B scored | F1-axis retention | gap dUPPER |
+| --- | --- | --- | --- |
+| `f2-axis` (silent about F1) | F2 only | **1.024 ± 0.062** | −1.941 ± 0.541 |
+| `f1-axis` (pure demand on F1) | F1 only | **0.116 ± 0.048** | +6.428 ± 0.616 |
+
+**Contrast +0.909 ± 0.079 = +11.5 SE** against a +3 SE gate, 60/60 seeds scored in both arms, and
+`f2-axis` retention 0.39 SE *above* 1.0 where the gate allowed 2 SE below. Both pre-registered
+conditions met: **a lesson silent about A's axis is FREE, at power.** The mechanism column tracks as
+`axiscollide` predicted — arms that keep A deepen the suppression, arms that lose A restore it.
+
+The pre-registration even priced itself: *"on a true difference of ~0.9 this should read about 4.3
+SE."* It read 11.5, because the SE came in at 0.079 rather than the projected 0.21.
+
+### SO THE ACCUMULATION ACCOUNT IS COMPLETE, AND IT IS A PRODUCT OF TWO MEASURED FACTORS
+
+**Capacity = (how many axes can carry mutually silent demands) x (levels per axis).** Both factors
+are now measured, and by different lines that never met:
+
+- **The second factor is §41–43's:** three axes reach the air and the ear, at ~2.6 levels each.
+- **The first factor is `axispower`'s:** a lesson silent about another's axis costs it nothing, 11.5
+  SE. So the axes really do act as independent slots rather than as a shared store.
+
+That is why nine words name as well as six, and why the ceiling is where it is. **It is a coherent,
+closed account rather than a set of unexplained refusals** — which is the useful output of this
+section, and it needed no run.
+
+### THREE PLACES IN THE ARCHIVE CARRIED THE PRE-`axispower` STATE
+
+1. **`axisgrid` printed it at runtime, in every log it has ever produced.** `run_axisgrid`'s
+   `why it matters` block cited *"axisfree 0.948 vs −0.167, +5.7 SE"* as the stated rationale for
+   the whole axis-count line — the discovery-sample number, whose own confirmation family returned
+   NO VERDICT. **Seven archived logs carry it, five of them committed by §42 yesterday.** The
+   registry's documentation string for `axisgrid` carried it too; that one is *not* in the
+   user-facing `--experiment` listing, which shows a curated subset, so it was source documentation
+   rather than displayed output — an earlier draft of this section overstated it as printed. Both
+   are corrected. Every changed line is a comment or a string literal, so computation cannot move;
+   gated regardless.
+2. **`aibaby-axis-not-distance`** still says the claim is UNTESTED and *"do not quote this file for
+   the third claim."* True when written; superseded by two later runs.
+3. **`aibaby-the-goal`** cites the discovery number as *"THE REAL LEAD."* The lead was right and its
+   evidence was the weaker of the two available.
+
+**And this project already knows this failure mode by name** — `aibaby-pairing-on-discovery-sample`
+is in the method rules. What it did not have was a check that a *superseding* result gets written
+back to everything that cited the superseded one.
+
+### ONE GENUINELY UNFILLED CELL, RECORDED WITHOUT ENTHUSIASM
+
+`axisgrid` reports `amp` and `voi` as `NOT TESTED -- activity readout, and this bias is zero-mean`.
+That is structural, not an oversight: `bias_oracle_at` returns `amp * (2*pos - 1)`, a zero-mean ramp
+by construction, and `target_amp = group_activity_[8]` is a **mean** over the slice — so the oracle
+*cannot* move a net-drive readout at any dose. Testing whether loudness is a steerable fourth axis
+needs a constant-offset oracle mode, which the kernel does not have.
+
+**It is recorded as unfilled, not as promising**, for three reasons written down before anyone builds
+it: the transmission tape carries formants only, so a loudness distinction cannot be taught
+creature-to-creature (`f0`'s caveat exactly); `aibaby-cochlea-operating-point` measured that d' rises
+as level falls, so a loud/soft axis **modulates every other axis's discriminability** instead of
+multiplying with it; and `kAmplitudeFloor = 0.45` gates "is it sounding" at eight sites, so a
+deliberately quiet signal is scored as silence by this project's own instruments. A constant lift of
+a group is also the *"you made the module louder"* confound that the zero-mean ramp was chosen to
+avoid — and for an activity readout the confound and the signal are the same event.
+
+### §44 VERDICT: NO NEW LINE, AND THAT IS THE RESULT
+
+The accumulation question is **answered**, by three runs over two days in September, and the answer
+is a product of two factors that are each closed. §44 opens nothing and spends no abandonment count.
+What it changes is the archive: a settled 11.5 SE premise now has a memory, and the three places
+that cited its unsettled predecessor now point at it.
