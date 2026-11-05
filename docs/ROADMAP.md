@@ -6184,7 +6184,7 @@ constantly and its parameters wander more; one voiced 81.2% of the time holds a 
 **That makes this scatter a DUTY-CYCLE statistic as much as a motor-noise one** — and `noise_amp`
 moves the duty cycle, which is why the sign inverts.
 
-**It matters beyond §42 because the constant is shared.** `kAESd[7]` in `experiments_common.h` is
+**It matters beyond §42 because the constant is shared.** `kAESd[7]` (in `experiments_milestones.cpp:46042` — §42 said `experiments_common.h`, corrected by §43) is
 exactly this ungated scatter from §41 run 1, and **four instruments** read it — `axisear`,
 `axisjit`, `axislev`, `axisamp`. If it is partly a duty-cycle number then the within-class
 denominator of every d' in §41 is partly a duty-cycle number. §41 note 2 half-saw this — *"a held
@@ -6424,3 +6424,89 @@ quantity that just proved fragile. The protection is structural rather than a pr
 every number here is a **within-run difference on identical draws**, and the old value survives
 beside the new one in the same table. What §43 cannot do is say which of the two is *correct* in an
 absolute sense; it can only say that one counts ticks a listener hears and the other does not.
+
+### §43 RESULT — THE CORRECTION IS REAL AND IMMATERIAL, AND bw2 IS STILL NOT A FOURTH AXIS (2026-11-05)
+
+`results/n43-axisgrid.log`, `results/n43-axisbw2.log`, gate at `results/n43-verify.log`.
+
+**CLAUSE 1 PASSES TWICE, which is what makes the rest readable.** `axisgrid`'s ungated zero rung is
+identical to `results/axisgrid-v1.log`, and `axisbw2`'s diff against `results/axisbw2-v1.log`
+contains **only added lines** — every published number, including `bw2 0.990 +- 0.039`, came back
+unchanged after `measure` was rewired to take the jitter scale as a parameter at four call sites.
+
+**CLAUSE 2 PASSES.** The gate left **0.288 of scored ticks** and **12 of 12 creatures** contributing
+— inside the pre-registered 0.10–0.95 window, so it bit without emptying the sample.
+
+**AND THE GATE IS PROVABLY APPLIED,** by a row that can only read one way: `voi` comes back with
+rest **exactly 1.000** and audible sd **exactly 0.000**. Voicing is binary and the gate requires it
+above 0.5, so those two values are forced — and they are the cheapest possible check that the
+conjunction is really in the accumulation path.
+
+| axis | sd ungated | sd audible | **jitter ratio** | d' ungated | d' audible | **d' ratio** |
+| --- | --- | --- | --- | --- | --- | --- |
+| f0 | 9.129 | 8.906 | 0.976 | 5.298 ± 0.076 | 5.489 ± 0.076 | 1.036 |
+| f1 | 21.727 | 20.806 | 0.958 | 7.649 ± 0.091 | 7.857 ± 0.093 | 1.027 |
+| f2 | 57.751 | 56.462 | 0.978 | 9.492 ± 0.093 | 9.722 ± 0.094 | 1.024 |
+| f3 | 47.616 | 45.395 | 0.953 | 5.119 ± 0.044 | 5.272 ± 0.045 | 1.030 |
+| bw1 | 5.346 | 5.253 | 0.983 | 0.859 ± 0.031 | 0.875 ± 0.030 | 1.019 |
+| **bw2** | 5.967 | 5.696 | 0.955 | **0.990 ± 0.039** | **1.016 ± 0.040** | 1.025 |
+| bw3 | 5.618 | 5.342 | 0.951 | 0.756 ± 0.021 | 0.777 ± 0.022 | 1.028 |
+
+**CLAUSE 3 LANDS ON THE "~1" BRANCH — the cheapest of the three and the one worth having.** The
+audible-tick jitter is **2–5% smaller** than the ungated one, so every §41 d' is **2–4% larger**.
+`kAESd` was **adequate**. §42's defect is real and **immaterial to §41's magnitudes**, which stand
+to within about four percent. **Nothing in the §41 archive needs re-deriving or voiding.**
+
+**THE SELECTION EFFECT WAS MEASURED AND IS NEGLIGIBLE.** Gating on amplitude could have shrunk
+formant variance merely by conditioning on a correlated variable. The gated rest points say it did
+not: f1 **626.843** against 626.545, f2 **1667.849** against 1669.598, bw2 **150.551** against
+150.579 — all under 0.11%. Meanwhile `amp` itself moves **0.444 → 0.610** with its sd ratio at
+0.712, exactly as conditioning on it must. So the formants are essentially uncorrelated with
+amplitude and the 2–5% narrowing is a real effect, not a subsetting artefact.
+
+### CLAUSE 4: THE POINT ESTIMATE CROSSES AND THE VERDICT DOES NOT
+
+**bw2 rises from d' 0.990 to 1.016 — above the bar of 1.0.** And it is **STILL UNRESOLVED**, because
+the pre-registered rule is the lower bound, not the point estimate:
+
+    1.016 - 2.447 x 0.040 = 0.918     which is below 1.0
+
+**The usable axis count stays THREE and `f1 x f2 x f3 ~ 19 signals` is unchanged.** This is the
+clause working as intended: a point estimate stepping over a bar is exactly the result that invites
+a relaxed rule, which is why the rule was quoted into the output rather than rewritten there, and
+why the instrument prints `SO THE CORRECTION DOES NOT CHANGE THE VERDICT` as a computed branch
+rather than leaving it to be narrated afterwards.
+
+**AND THE MORE USEFUL CLOSURE IS THAT STATISTICS IS NOT WHAT IS MISSING.** For 1.016 to clear by
+replication, the SE would have to fall from 0.040 to under 0.0065 — a 6.1x reduction, so about
+**450 creatures instead of 12**. That is affordable. It is also not worth doing: **a margin of 1.6%
+over the bar is smaller than the systematic choices the number rests on** — which `kAESd`, which
+amplitude, which reach — and §41's rule exists precisely to exclude an axis sitting on its own
+audibility threshold. **bw2 is not a fourth axis in any useful sense, and §43 closes the question
+rather than refining it.**
+
+### A CORRECTION TO §42'S WRITE-UP
+
+§42's result section and its memory both place `kAESd` in `experiments_common.h`. **It is in
+`host/src/experiments_milestones.cpp:46042`**, in the `axisear` block, hoisted there from four
+instruments that previously carried it by copy. The claim about what it *is* was right; the file was
+wrong. `kAESdG` now sits beside it.
+
+### AND §42'S FINDING IS REFINED, NOT WITHDRAWN
+
+Both of these are true and they are about different things:
+
+- **§42:** across a `noise_amp` ladder the **ungated** scatter's slope is steep (levels −32%) while
+  the **gated** one is flat (1.0 SE). The ungated statistic tracks the duty cycle.
+- **§43:** at the **shipped operating point** the two **levels** agree to within 5%.
+
+A statistic can be a poor *estimator of a derivative* and a fine *estimator of a level*. §42
+established the first, §43 the second, and together they say: the defect is real, it would have
+mattered to any conclusion drawn from moving `noise_amp`, and it did not matter to the conclusions
+§41 actually drew — which were all at the shipped point.
+
+### §43 STATUS: CLOSED, BOTH RUNS SPENT, NOTHING OWED
+
+The abandonment count allowed two runs and both were used: the gated `kAESd` and the paired arm.
+`kAESdG` ships beside `kAESd` as documentation of a checked null rather than as a replacement. **The
+axis count is three, §41's magnitudes stand, and bw2 does not re-open.**

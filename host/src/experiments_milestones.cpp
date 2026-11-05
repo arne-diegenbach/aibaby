@@ -45573,6 +45573,19 @@ constexpr bool kAX9Centroid[kAX9NPar] =
 struct AX9Cell {
   double m[kAX9NPar] = {};
   double sd[kAX9NPar] = {};
+  // §43. THE SAME TWO MOMENTS OVER AUDIBLE TICKS ONLY, alongside the ungated pair
+  // above and never replacing it. §42 showed the ungated scatter is a DUTY-CYCLE
+  // statistic: `VocalDecoder::update` sets every formant on every awake tick and
+  // gates only voicing, so `sd` above counts posture wander during SILENCE, which
+  // no listener hears -- while `kAESd`, derived from it, is applied to renders
+  // `tb.frames_of` makes unconditionally voiced. `gn` is the surviving tick count,
+  // which clause 2 reads: this gate can fail in BOTH directions because
+  // `kAmplitudeFloor` (0.45) sits almost exactly at the shipped mean amplitude
+  // (0.444), so it cuts the distribution near its centre.
+  double mg[kAX9NPar] = {};
+  double sdg[kAX9NPar] = {};
+  uint32_t gn = 0;
+  uint32_t n = 0;
   bool ok = false;
 };
 
@@ -45620,7 +45633,10 @@ bool run_axisgrid(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
       s.brain.network().set_bias_oracle(0, beg, end,
                                         aibaby::Scalar(kAXLadder[L] * namp));
     double sum[kAX9NPar] = {}, sq[kAX9NPar] = {};
-    uint32_t n = 0;
+    // §43: the audible-tick moments. Separate accumulators, so the ungated pair
+    // above is bit-for-bit what it was before this section existed.
+    double sumg[kAX9NPar] = {}, sqg[kAX9NPar] = {};
+    uint32_t n = 0, ng = 0;
     for (uint64_t t = 0; t < kAXPerRung; ++t) {
       s.brain.step();
       if (t < kAXPerRung / 2) continue;   // discard the settle half, as aimaxes does
@@ -45630,12 +45646,31 @@ bool run_axisgrid(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
                                  double(v.amplitude), double(v.voicing)};
       for (uint32_t k = 0; k < kAX9NPar; ++k) { sum[k] += p[k]; sq[k] += p[k] * p[k]; }
       ++n;
+      // THE PROJECT'S OWN "IS IT SOUNDING" IDIOM, not a new one: this exact
+      // conjunction appears at eight sites in this file, and `babble` reports the
+      // voiced fraction with it. Using anything else here would make the gated
+      // scatter incomparable with the duty cycles §42 measured.
+      if (v.voicing > 0.5f && v.amplitude > kAmplitudeFloor) {
+        for (uint32_t k = 0; k < kAX9NPar; ++k) { sumg[k] += p[k]; sqg[k] += p[k] * p[k]; }
+        ++ng;
+      }
     }
     if (!n) return cell;
     for (uint32_t k = 0; k < kAX9NPar; ++k) {
       cell.m[k] = sum[k] / double(n);
       cell.sd[k] = std::sqrt(std::fabs(sq[k] / double(n) - cell.m[k] * cell.m[k]));
     }
+    // Needs TWO audible ticks for a variance to exist at all. Below that the gated
+    // columns stay zero and `gn` says why -- clause 2 reads `gn`, never the zeros,
+    // because a zero here means "not measured" and not "no spread".
+    if (ng > 1) {
+      for (uint32_t k = 0; k < kAX9NPar; ++k) {
+        cell.mg[k] = sumg[k] / double(ng);
+        cell.sdg[k] = std::sqrt(std::fabs(sqg[k] / double(ng) - cell.mg[k] * cell.mg[k]));
+      }
+    }
+    cell.gn = ng;
+    cell.n = n;
     cell.ok = true;
     return cell;
   });
@@ -45666,6 +45701,11 @@ bool run_axisgrid(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
   // THE ZERO RUNG IS A FREE DETERMINISM CHECK. No bias is applied at the zero rung,
   // so all nine groups run the SAME creature there. Any difference is a harness bug.
   double zmax = 0.0;
+  // §43 state: the audible-tick rest point and scatter, the mean surviving fraction,
+  // and how many of the twelve creatures had enough audible ticks to contribute.
+  double restg[kAX9NPar] = {}, scatg[kAX9NPar] = {};
+  double gfrac = 0.0;
+  uint32_t gskip = 0, gused = 0;
   for (uint32_t p = 0; p < kAX9NPar; ++p) {
     std::vector<double> v, d;
     for (uint32_t r = 0; r < kAX9Reps; ++r) {
@@ -45677,6 +45717,27 @@ bool run_axisgrid(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
     double e;
     rest[p] = ctx_mean_se(v, &e);
     scat[p] = ctx_mean_se(d, &e);
+    // §43: the same two moments over audible ticks, averaged the same way over the
+    // same twelve creatures -- so `scatg` and `scat` differ ONLY by the gate, which
+    // is what makes them comparable where §42's cross-instrument pair was not.
+    // Creatures with fewer than two audible ticks are dropped from the gated mean
+    // and counted in `gskip`, rather than contributing a zero.
+    {
+      std::vector<double> vg, dg, frac;
+      for (uint32_t r = 0; r < kAX9Reps; ++r) {
+        const AX9Cell& c = at(r, 0, zero);
+        if (!c.ok) continue;
+        if (c.n) frac.push_back(double(c.gn) / double(c.n));
+        if (c.gn < 2) { if (p == 0) ++gskip; continue; }
+        vg.push_back(c.mg[p]); dg.push_back(c.sdg[p]);
+      }
+      if (!vg.empty()) {
+        restg[p] = ctx_mean_se(vg, &e);
+        scatg[p] = ctx_mean_se(dg, &e);
+        if (p == 0) gused = uint32_t(vg.size());
+      }
+      if (!frac.empty() && p == 0) gfrac = ctx_mean_se(frac, &e);
+    }
     for (uint32_t gi = 1; gi < kAX9NGroups; ++gi)
       for (uint32_t r = 0; r < kAX9Reps; ++r) {
         const AX9Cell& c = at(r, gi, zero);
@@ -45690,6 +45751,43 @@ bool run_axisgrid(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
   std::printf("  THE REST POINT and its within-run scatter (zero rung, %u creatures)\n", kAX9Reps);
   for (uint32_t p = 0; p < kAX9NPar; ++p)
     std::printf("    %-4s rest %10.3f   within-run sd %9.3f\n", kAX9PName[p], rest[p], scat[p]);
+
+  // ---- §43: THE SAME TABLE OVER AUDIBLE TICKS ONLY ----
+  // The ungated table above is unchanged and remains the reproduction anchor
+  // against `results/axisgrid-v1.log`. This one is the quantity `kAESd` should have
+  // been: a within-class spread measured where the creature is actually sounding,
+  // to be applied to renders that are unconditionally voiced.
+  std::printf("\n  §43 -- THE AUDIBLE-TICK REST POINT AND SCATTER (same creatures, same\n"
+              "  window, gated on `voicing > 0.5 && amplitude > %.2f` -- this file's own\n"
+              "  idiom at eight sites, and the one `babble` reports its duty cycle with).\n",
+              double(kAmplitudeFloor));
+  // CLAUSE 2 AS A BRANCH, NOT A NUMBER TO EYEBALL. It can fail in both directions
+  // and the floor sits near the centre of the amplitude distribution it cuts, so
+  // the verdict is printed rather than left to the reader.
+  const bool g_empty = gfrac < 0.10 || gused < 2;
+  const bool g_vacuous = gfrac > 0.95;
+  std::printf("  CLAUSE 2  audible fraction %.3f of scored ticks, %u of %u creatures\n"
+              "            contributed  -> %s\n",
+              gfrac, gused, kAX9Reps,
+              g_empty ? "*** NO VERDICT -- gate emptied the sample (<0.10 or <2 creatures)"
+                      : (g_vacuous ? "*** VACUOUS -- gate did not bite (>0.95); the two "
+                                     "columns cannot differ"
+                                   : "PASS -- the gate bit and left a sample"));
+  if (gskip) std::printf("            %u creature(s) had under 2 audible ticks and were dropped\n",
+                         gskip);
+  if (g_empty || g_vacuous) {
+    std::printf("  The gated columns below are NOT READABLE under clause 2 and must not be\n"
+                "  quoted. Printed anyway, because a suppressed table cannot be audited.\n");
+  }
+  for (uint32_t p = 0; p < kAX9NPar; ++p) {
+    const double rat = scat[p] > 0.0 ? scatg[p] / scat[p] : 0.0;
+    std::printf("    %-4s rest %10.3f   audible sd %9.3f   (ungated %9.3f, ratio %6.3f)\n",
+                kAX9PName[p], restg[p], scatg[p], scat[p], rat);
+  }
+  std::printf("  CLAUSE 3 is read off the `ratio` column and SPANS THE SIGN by construction:\n"
+              "  > 1 means §41's d' were OPTIMISTIC (a bigger denominator), < 1 means they\n"
+              "  were PESSIMISTIC and bw2 may cross its bar, and ~1 means `kAESd` was\n"
+              "  adequate and §42's defect is immaterial to §41's magnitudes.\n");
 
   // ---- CLAUSE 1: LIVENESS. First, because cross-talk is a ratio. ----
   std::printf("\n  CLAUSE 1 -- LIVENESS: own-axis swing against its own scatter.\n"
@@ -45942,6 +46040,27 @@ constexpr double kAEReach[7] = {49.8, 118.0, 300.3, 254.9, 31.6, 32.1, 31.8};
 // move together across instruments belongs in exactly one place
 // (`aibaby-shared-constants-audit`). Editing it voids every d' in §41.
 constexpr double kAESd[7] = {9.129, 21.727, 57.751, 47.616, 5.346, 5.967, 5.618};
+// §43: THE SAME QUANTITY OVER AUDIBLE TICKS ONLY, from `axisgrid`'s own gated
+// accumulator (`results/n43-axisgrid.log`) -- same estimator, same 66666-tick
+// window, same 12 creatures, gated on `voicing > 0.5 && amplitude > 0.45`, which
+// left 0.288 of scored ticks and 12 of 12 creatures contributing.
+//
+// WHY A SECOND CONSTANT AND NOT A CORRECTION OF THE FIRST. §42 found that `kAESd`
+// is an UNGATED scatter: `VocalDecoder::update` writes every formant on every awake
+// tick and gates only voicing, so it counts posture wander during silence, while
+// `tb.frames_of` renders every sample here as a voiced vowel. The ungated value is
+// nevertheless the number every published §41 d' was computed with, so replacing it
+// in place would void that archive with nothing left to check against. Both live
+// here and every §43 comparison is a within-run difference on identical deviates.
+//
+// AND THE SELECTION EFFECT IS MEASURED, NOT ASSUMED. Gating on amplitude could
+// shrink formant variance merely by conditioning on a correlated variable. The
+// gated rest points say it does not: f1 626.843 against 626.545 ungated, bw2
+// 150.551 against 150.579. The formants are essentially uncorrelated with
+// amplitude, so the 2-5% reduction below is a real narrowing and not a subsetting
+// artefact -- whereas `amp` itself moves 0.444 -> 0.610, exactly as conditioning on
+// it must.
+constexpr double kAESdG[7] = {8.906, 20.806, 56.462, 45.395, 5.253, 5.696, 5.342};
 constexpr const char* kAEName[7] = {"f0", "f1", "f2", "f3", "bw1", "bw2", "bw3"};
 constexpr double kAEAmp = 1.0;
 // The 2x2: cell 0 is the shipped creature, cell 3 is run 1's "gain 1" column.
@@ -47143,10 +47262,16 @@ bool run_axisbw2(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
 
   // One cell: `kAESamples` paired postures on axis `a`, with `arm`'s freeze
   // applied AFTER every deviate is drawn, rendered at `amp` with the two gains.
+  // §43 added `jit`: the per-axis jitter SCALE, so the same posture stream can be
+  // scaled by the ungated `kAESd` or the audible-tick `kAESdG`. It is a parameter
+  // and not a swapped constant deliberately -- the two arms must sit in one table
+  // on identical deviates, or §41's published numbers are voided with nothing left
+  // to check them against (`aibaby-control-on-a-different-code-path`).
   auto measure = [&](uint32_t a, uint32_t r, uint32_t arm, float f3g, float bwg,
-                     double amp) {
-    // IDENTICAL seeding to axisear v2 and run 2c, and independent of arm, gain
-    // AND amplitude, so every cell of every table below sees the same postures.
+                     double amp, const double* jit) {
+    // IDENTICAL seeding to axisear v2 and run 2c, and independent of arm, gain,
+    // amplitude AND `jit`, so every cell of every table below sees the same
+    // postures. `jit` scales those deviates; it never changes how many are drawn.
     std::mt19937_64 rng(dna.header().seed ^ (0xAE00ull + a) ^
                         (r ? r * 0x9E3779B97F4A7C15ull : 0ull));
     std::normal_distribution<double> gauss(0.0, 1.0);
@@ -47159,8 +47284,8 @@ bool run_axisbw2(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
       double p[7];
       // EVERY deviate is drawn, in the same order, in every arm. Skipping the
       // call for a frozen axis would shift the stream and unpair the arms.
-      for (uint32_t k = 0; k < 7; ++k) p[k] = kAERest[k] + kAESd[k] * gauss(rng);
-      p[a] = (cls ? hi_c : lo_c) + kAESd[a] * gauss(rng);
+      for (uint32_t k = 0; k < 7; ++k) p[k] = kAERest[k] + jit[k] * gauss(rng);
+      p[a] = (cls ? hi_c : lo_c) + jit[a] * gauss(rng);
       // ...and only then is the freeze applied, by overwrite. The target axis is
       // never frozen: it carries the signal being measured.
       for (uint32_t k = 0; k < 7; ++k) {
@@ -47197,13 +47322,24 @@ bool run_axisbw2(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
     for (uint32_t arm = 0; arm < kB2Arms; ++arm)
       for (uint32_t a = 0; a < 7; ++a)
         for (uint32_t r = 0; r < kAEReps; ++r)
-          dsq[c][arm][a][r] = measure(a, r, arm, kAEF3[c], kAEBw[c], kB2Amp);
+          dsq[c][arm][a][r] = measure(a, r, arm, kAEF3[c], kAEBw[c], kB2Amp, kAESd);
+
+  // §43: the SAME grid with the audible-tick jitter, for the unfrozen arm only --
+  // which is all clause 4 needs and keeps this to ~a quarter of the cost. Identical
+  // deviates by construction (`measure`'s seed ignores `jit`), so every difference
+  // below is the jitter SCALE and nothing else.
+  std::vector<std::vector<std::vector<double>>> dsqG(
+      4, std::vector<std::vector<double>>(7, std::vector<double>(kAEReps, 0.0)));
+  for (uint32_t c = 0; c < 4; ++c)
+    for (uint32_t a = 0; a < 7; ++a)
+      for (uint32_t r = 0; r < kAEReps; ++r)
+        dsqG[c][a][r] = measure(a, r, kB2None, kAEF3[c], kAEBw[c], kB2Amp, kAESdG);
 
   // THE GUARD, and the only place amplitude 1.0 appears.
   std::vector<double> g_none(kAEReps, 0.0), g_f3(kAEReps, 0.0);
   for (uint32_t r = 0; r < kAEReps; ++r) {
-    g_none[r] = measure(kB2f1, r, kB2None, 1.0f, 0.0f, kAEAmp);
-    g_f3[r] = measure(kB2f1, r, kB2F3, 1.0f, 0.0f, kAEAmp);
+    g_none[r] = measure(kB2f1, r, kB2None, 1.0f, 0.0f, kAEAmp, kAESd);
+    g_f3[r] = measure(kB2f1, r, kB2F3, 1.0f, 0.0f, kAEAmp, kAESd);
   }
 
   // ---- THE LEVEL PROBE, AND IT IS NOT OPTIONAL ----
@@ -47247,7 +47383,7 @@ bool run_axisbw2(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
   for (uint32_t c = 0; c < 4; ++c)
     for (uint32_t a = 0; a < 7; ++a)
       for (uint32_t r = 0; r < kAEReps; ++r)
-        dsqL[c][a][r] = measure(a, r, kB2None, kAEF3[c], kAEBw[c], amp_m[c]);
+        dsqL[c][a][r] = measure(a, r, kB2None, kAEF3[c], kAEBw[c], amp_m[c], kAESd);
 
   auto dprime_of = [](double q) { return q > 0.0 ? std::sqrt(q) : 0.0; };
   // d'^2 = q, d' = sqrt(q), so se(d') = se(q)/(2 d'). The estimator returns
@@ -47365,6 +47501,49 @@ bool run_axisbw2(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
               -(1.0 - kB2Bar * kB2Bar / (1.101 * 1.101)) * 100.0);
   const bool bw2_clears = d_joint - kAECrit * sed_joint > kB2Bar;
   const bool bw2_fails = d_joint + kAECrit * sed_joint < kB2Bar;
+
+  // ---- §43: THE SAME VERDICT WITH THE AUDIBLE-TICK JITTER ----
+  // The bar is `kB2Bar`, unchanged, and the decision rule is the same expression
+  // used for the ungated arm three lines above -- quoted rather than rewritten so
+  // it cannot be relaxed to fit what comes back.
+  {
+    std::printf("\n  §43 -- THE SAME TABLE WITH THE AUDIBLE-TICK JITTER (`kAESdG`), on\n"
+                "  IDENTICAL deviates. Every row is cell %u (f3 and bw both shipped on),\n"
+                "  unfrozen arm; the difference is the jitter SCALE and nothing else.\n",
+                kB2CellBoth);
+    std::printf("    axis   d' ungated      d' audible      ratio   jitter ratio\n");
+    for (uint32_t a = 0; a < 7; ++a) {
+      double se_u = 0.0, se_g = 0.0;
+      const double u = ctx_mean_se(dsq[kB2CellBoth][kB2None][a], &se_u);
+      const double g = ctx_mean_se(dsqG[kB2CellBoth][a], &se_g);
+      const double du = dprime_of(u), dg = dprime_of(g);
+      std::printf("    %-4s %6.3f +- %.3f  %6.3f +- %.3f   %6.3f   %6.3f\n", kAEName[a], du,
+                  se_dprime(u, se_u), dg, se_dprime(g, se_g),
+                  du > 0.0 ? dg / du : 0.0, kAESd[a] > 0.0 ? kAESdG[a] / kAESd[a] : 0.0);
+    }
+    double se_jg = 0.0;
+    const double jg = ctx_mean_se(dsqG[kB2CellBoth][kB2bw2], &se_jg);
+    const double d_jg = dprime_of(jg);
+    const double sed_jg = se_dprime(jg, se_jg);
+    const bool g_clears = d_jg - kAECrit * sed_jg > kB2Bar;
+    const bool g_fails = d_jg + kAECrit * sed_jg < kB2Bar;
+    std::printf("\n  CLAUSE 4 -- does bw2 cross with the corrected denominator?\n"
+                "    bw2, audible jitter   d' %6.3f +- %.3f   against the bar %.1f\n"
+                "    pre-registered rule   clears only if the LOWER bound exceeds the\n"
+                "                          bar; %6.3f - %.3f x %.3f = %6.3f\n"
+                "    -> %s\n",
+                d_jg, sed_jg, kB2Bar, d_jg, kAECrit, sed_jg, d_jg - kAECrit * sed_jg,
+                g_clears ? "CLEARS -- the usable axis count is FOUR"
+                         : (g_fails ? "FAILS -- bw2 is below the bar, count stays THREE"
+                                    : "*** STILL UNRESOLVED -- straddles the bar, count "
+                                      "stays THREE"));
+    std::printf("    and the ungated arm   d' %6.3f +- %.3f  -> %s\n"
+                "    SO THE CORRECTION %s THE VERDICT.\n",
+                d_joint, sed_joint,
+                bw2_clears ? "CLEARS" : (bw2_fails ? "FAILS" : "UNRESOLVED"),
+                (g_clears == bw2_clears && g_fails == bw2_fails) ? "DOES NOT CHANGE"
+                                                                 : "*** CHANGES");
+  }
   // AND THE SAME DROP AT MATCHED LEVEL, because f3_gain adds energy to an
   // unrenormalised sum and so makes the output louder. axislev refuted the level
   // account for f3's cost to F1 -- but axisamp showed the ear's sensitivity is
