@@ -1,0 +1,121 @@
+experiment: axisgrid
+  instrument        axisgrid   trial seed 0000000001358e18   12 creatures
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  the question      how many INDEPENDENT steerable axes does the larynx
+                    have? aimaxes measured 2 of the 9 groups senses.cpp
+                    maps. Levels MULTIPLY across independent axes, so the
+                    axis COUNT is the lever, not any axis's range.
+  why it matters    retention is nearly FREE across an orthogonal axis
+                    (axisfree 0.948 vs -0.167 on-axis, +5.7 SE), so the
+                    number of lessons the creature can HOLD is the number
+                    of axes it has. This is the accumulation lever.
+  CLAUSE ORDER      1 liveness, 2 cross-talk, 3 resolution, 4 the product.
+                    LIVENESS IS FIRST BECAUSE CROSS-TALK IS A RATIO: a DEAD
+                    axis has zero cross-talk trivially and would be reported
+                    as ideally independent. Pre-registered, not patched in.
+
+  ZERO-RUNG IDENTITY  no bias is applied at k=0, so all nine groups run
+  the SAME creature there. Largest disagreement across the nine: 0.000e+00  -> EXACT, as it must be
+
+  THE REST POINT and its within-run scatter (zero rung, 12 creatures)
+    f0   rest    246.612   within-run sd    11.214
+    f1   rest    627.140   within-run sd    27.675
+    f2   rest   1677.543   within-run sd    72.621
+    f3   rest   2617.251   within-run sd    59.624
+    bw1  rest    147.547   within-run sd     7.290
+    bw2  rest    151.511   within-run sd     7.917
+    bw3  rest    150.253   within-run sd     7.640
+    amp  rest      0.298   within-run sd     0.137
+    voi  rest      0.159   within-run sd     0.347
+
+  CLAUSE 1 -- LIVENESS: own-axis swing against its own scatter.
+  Bar: |swing| >= 3 x within-run sd. A DEAD axis is NO VERDICT, never
+  "independent", and never enters the product. AND THE TWO ACTIVITY
+  READOUTS ARE SEPARATED OUT: this instrument's bias is zero-mean by
+  construction, so it cannot drive a net-drive readout at all -- those
+  cells are NOT A TEST and are not evidence the axis is unsteerable.
+    group 0 -> f0    swing   160.358  bar    33.643  -> LIVE
+    group 1 -> voi   swing     0.002  bar     1.041  -> NOT TESTED -- activity readout, and this bias is zero-mean
+    group 2 -> f1    swing   377.929  bar    83.025  -> LIVE
+    group 3 -> f2    swing   964.560  bar   217.864  -> LIVE
+    group 4 -> f3    swing   813.118  bar   178.871  -> LIVE
+    group 5 -> bw1   swing   101.056  bar    21.869  -> LIVE
+    group 6 -> bw2   swing   103.975  bar    23.750  -> LIVE
+    group 7 -> bw3   swing   102.851  bar    22.919  -> LIVE
+    group 8 -> amp   swing     0.002  bar     0.412  -> NOT TESTED -- activity readout, and this bias is zero-mean
+
+  CLAUSE 2 -- CROSS-TALK MATRIX  X[g][p] = swing_p(bias g) / swing_p(bias p's
+  own driver). The diagonal is 1 by construction. Bar: |X| <= 0.10 off-diagonal,
+  deliberately 10x looser than aimaxes's measured 0.01, so a REFUSAL is
+  unambiguous rather than marginal. `-` = p's own driver is dead.
+    bias \ reads       f0      f1      f2      f3     bw1     bw2     bw3     amp     voi
+    group 0 (f0 )    1.000   0.002   0.001   0.004   0.002  -0.005  -0.003       -       -
+    group 1 (voi)    0.005   0.001  -0.004   0.000  -0.007   0.004  -0.002       -       -
+    group 2 (f1 )   -0.000   1.000   0.001   0.003  -0.000   0.005   0.002       -       -
+    group 3 (f2 )   -0.002   0.001   1.000  -0.002  -0.002   0.005   0.001       -       -
+    group 4 (f3 )    0.005   0.002   0.001   1.000  -0.000   0.001  -0.001       -       -
+    group 5 (bw1)    0.008   0.006   0.005  -0.006   1.000  -0.001   0.002       -       -
+    group 6 (bw2)    0.003   0.004   0.002   0.001  -0.002   1.000   0.002       -       -
+    group 7 (bw3)    0.000  -0.004   0.001  -0.003   0.000   0.001   1.000       -       -
+    group 8 (amp)   -0.003  -0.001   0.002  -0.001  -0.007   0.003  -0.007       -       -
+    worst off-diagonal into a TEACHABLE axis, per group:
+      group 0 (f0 )  0.005 into bw2  -> INDEPENDENT
+      group 1 (voi)  0.007 into bw1  -> n/a, NOT TESTED
+      group 2 (f1 )  0.005 into bw2  -> INDEPENDENT
+      group 3 (f2 )  0.005 into bw2  -> INDEPENDENT
+      group 4 (f3 )  0.002 into f1   -> INDEPENDENT
+      group 5 (bw1)  0.006 into f1   -> INDEPENDENT
+      group 6 (bw2)  0.004 into f1   -> INDEPENDENT
+      group 7 (bw3)  0.004 into f1   -> INDEPENDENT
+      group 8 (amp)  0.007 into bw3  -> n/a, NOT TESTED
+
+  CLAUSE 3 -- RESOLUTION. Oracle swing scaled to a LEARNED bias by x0.312
+  (ctxscale's 118 Hz F1 asymptote / this run's F1 oracle swing 377.9), then
+  levels = reach / (2 x within-run sd), which is aimaxes's k=2. ASSUMPTION,
+  stated and NOT measured: the learned/oracle ratio found on F1 carries.
+    f0    reach    50.068 / scatter   11.214  ->   2.23 levels   (oracle swing/scatter  14.3)   (not in the product: f0 fails LINEAGE)
+    f1    reach   118.000 / scatter   27.675  ->   2.13 levels   (oracle swing/scatter  13.7)   
+    f2    reach   301.162 / scatter   72.621  ->   2.07 levels   (oracle swing/scatter  13.3)   
+    f3    reach   253.878 / scatter   59.624  ->   2.13 levels   (oracle swing/scatter  13.6)   
+    bw1   reach    31.553 / scatter    7.290  ->   2.16 levels   (oracle swing/scatter  13.9)   
+    bw2   reach    32.464 / scatter    7.917  ->   2.05 levels   (oracle swing/scatter  13.1)   
+    bw3   reach    32.113 / scatter    7.640  ->   2.10 levels   (oracle swing/scatter  13.5)   
+    amp   reach     0.001 / scatter    0.137  ->   0.00 levels   (oracle swing/scatter   0.0)   (not in the product: not a vowel-identity axis)
+    voi   reach     0.001 / scatter    0.347  ->   0.00 levels   (oracle swing/scatter   0.0)   (not in the product: not a vowel-identity axis)
+    -> swing/scatter spans 13.1 to 14.3 across the live axes, i.e. NEARLY CONSTANT: the level count is the group ARCHITECTURE, not the parameter
+    CAVEAT ON THE RULER, stated: `scatter` is WITHIN-RUN jitter, which is
+    aimaxes's convention and so comparable to its 2.6 -- but a held vowel is
+    scored over many ticks, so it OVERSTATES the noise a scorer sees, while
+    the quantity that actually bounds naming is BETWEEN-TRIAL spread, which
+    this run does not measure. Conservative, and the wrong ruler either way.
+
+  CLAUSE 4 -- THE PRODUCT, over axes that passed 1, 2 AND 3 (levels >= 2)
+  and are carried by the transmission tape.
+    f1    live yes  independent yes  levels  2.13  -> COUNTS
+    f2    live yes  independent yes  levels  2.07  -> COUNTS
+    f3    live yes  independent yes  levels  2.13  -> COUNTS
+    bw1   live yes  independent yes  levels  2.16  -> COUNTS
+    bw2   live yes  independent yes  levels  2.05  -> COUNTS
+    bw3   live yes  independent yes  levels  2.10  -> COUNTS
+    -> 6 axes qualify, code space = 87.8 distinguishable signals
+
+  GUARD  is this aimaxes's instrument?  F1 swing 377.9 against its 378.3,
+         F1 rest 627.1 against its 629.7   -> OK
+
+  6 TEACHABLE AXES QUALIFY, against aimaxes's 2, for a code space of
+  87.8 signals with NO new learning rule. BUT THIS IS NOT A WORD COUNT
+  AND MAY NOT BE QUOTED AS ONE: the ear is the gate, not the larynx, and
+  whether it RESOLVES the new axes is unmeasured -- kVLScoreFormant scores
+  only F1/F2. Stage two is that measurement, and §41 forbids a naming
+  claim until it exists.
+
+  AND §41's OWN POWER ARGUMENT WAS WRONG, WHICH IS WORTH MORE THAN THE
+  RESULT. It named CROSS-TALK as "the cheapest thing that could refuse
+  this". It could not: the groups are DISJOINT INDEX SLICES and each
+  parameter is a centroid over its own slice, so a ramp inside one slice
+  can only reach another through lateral dynamics -- near-zero was
+  structurally near-certain, and a bar of 0.10 against measured 0.007 was
+  never going to bind. The clause that actually did work was CLAUSE 1,
+  which caught the two readouts this instrument cannot drive at all. A
+  pre-registered refusal clause is only as good as its chance of firing.

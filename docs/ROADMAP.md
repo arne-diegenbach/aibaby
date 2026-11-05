@@ -6264,3 +6264,91 @@ in this codebase — `v.voicing > 0.5f && v.amplitude > kAmplitudeFloor`, used a
 
 P1–P3 are unaffected by this correction: both stories predict all three. What changes is what a
 confirmation **means**, which is why it is recorded before the four rungs land rather than after.
+
+### §42 RESULT — THE SCATTER IS A DUTY CYCLE, AND THE LEAD THAT OPENED §42 IS NOT SUPPORTED (2026-11-05)
+
+`results/n42-axisgrid-namp0{28,22,16,11,06}.log`, `results/n42-babble-seeded.log`,
+`results/n42-calibrate-ladder.log`. No build, no genome shipped, pinned hash untouched.
+
+| vocal `noise_amp` | f1 swing | **sd f1 ungated** | **levels ungated** | **sd f1 gated** | **levels gated** | `voi` | `amp` | guards |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 0.28 | 363.6 | 18.146 | **20.04** | 22.33 ± 1.71 | **16.28** | 0.812 | 0.588 | 6/6 PASS |
+| **0.22 shipped** | 372.2 | 21.727 | **17.13** | 25.17 ± 2.87 | **14.79** | 0.475 | 0.444 | 6/6 PASS |
+| 0.16 | 377.9 | 27.675 | **13.66** | 25.67 ± 1.48 | **14.72** | 0.159 | 0.298 | 6/6 PASS |
+| 0.11 | 368.0 | 38.784 | 9.49 | 23.83 ± 1.47 | 15.44 | 0.041 | 0.198 | **NO VERDICT** |
+| 0.06 | 289.8 | 46.582 | 6.22 | 24.67 ± 2.97 | 11.75 | 0.012 | 0.133 | **NO VERDICT** |
+
+Gated spread is `babble`'s voiced-gated F1 sd, **6 seeds per rung**; ungated is `axisgrid`'s zero
+rung, 12 creatures. Levels are `swing / sd` in each column's own units.
+
+**P1, P2 AND P3 ALL HOLD, STRICTLY AND ON ALL FIVE RUNGS.** Ungated `sd(f1)` is monotone decreasing
+in `noise_amp` (18.1 → 46.6); `voi` is monotone increasing (0.012 → 0.812); their rank correlation
+is **−1**. That is the branch whose reading was fixed in advance.
+
+**AND THE GATED LADDER SETTLES IT.** Over the three scoreable rungs the **ungated** levels fall
+**32%** (20.04 → 13.66) while the **gated** levels move **1.56 ± 1.51, i.e. 1.0 SE — flat.** The
+audible resolution of the voice does not change across a ladder on which the ungated statistic
+changes by a third.
+
+**SO §42 ANSWERS ITS OWN QUESTION: NO.** `noise_amp` does not take scatter out of the denominator
+that matters. What it moves is the **duty cycle** — 0.812 → 0.159 over the scoreable range, a 5.1x
+change — and the ungated scatter follows the duty cycle, because it counts posture wander during
+silence that no listener hears.
+
+### AND THE LEAD THAT OPENED §42 IS NOT SUPPORTED IN THE FORM IT WAS WRITTEN
+
+§42 was opened by `axislev`'s *"freezing one axis nearly doubles F1's d'²"* (+34.590 ± 1.169) and
+its note *"off-axis motor noise is the single largest thing between this creature and a bigger
+vocabulary"*. Read the instrument (`experiments_milestones.cpp`, `measure_f1`):
+
+    for (uint32_t k = 0; k < 7; ++k) p[k] = kAERest[k] + kAESd[k] * gauss(rng);
+    ...
+    tb.frames_of(p[0], p[1], ..., amp, g3, 0.0f);
+
+**The jitter magnitude is `kAESd` — the ungated scatter — and `frames_of` renders a vowel
+unconditionally, so every sample is audible.** The magnitude is taken from a creature that is silent
+half the time and applied to renders in which it never is. The two do not match, and §42 shows the
+mismatched quantity is exactly the one that moves with the duty cycle.
+
+**SCOPE OF THE DAMAGE, stated narrowly on purpose.** `kAESd` is shared by four instruments
+(`axisear`, `axisjit`, `axislev`, `axisamp`), and it enters every arm of every comparison equally.
+So §41's **sign and verdict** conclusions survive — F3 is audible, the bandwidths are weak, f3 taxes
+F1, level is refuted, masking carries ~71%. What does **not** survive is any claim resting on the
+jitter's **magnitude**, and *"off-axis motor noise is the largest thing between this creature and a
+bigger vocabulary"* is precisely such a claim. **It is withdrawn.** Whether `kAESd` is too large or
+too small in absolute terms cannot be said from this ladder: comparing `axisgrid`'s 12-creature
+mean-of-within-run-sds against `babble`'s pooled voiced sd is a cross-instrument comparison of
+absolute levels, which is not valid. Only each instrument's own slope is, and that is what was used.
+
+**THE FIX IS A RE-DERIVATION, NOT A RE-RUN.** `kAESd` should come from a voiced-gated measurement,
+and `babble` already computes one under the comment *"the spread is what any milestone downstream
+has to hear"* — written before §41 built four instruments on the ungated number instead. Re-deriving
+it voids §41's d' **absolutes** by [[aibaby-vocal-calibration-invariant]] and leaves its verdicts.
+
+### FOUR METHOD RESULTS, THREE OF THEM AGAINST ME
+
+1. **`calibrate` PASSES ALL FIVE RUNGS** while the manipulated module's rate collapses 10.6x,
+   because it excuses vocal by construction. The guard that works was already in the tree:
+   `babble`'s duty-cycle bar (0.10–0.85). It and the `amp < 0.222` bar fire on **the same two
+   rungs**, independently — two guards agreeing on the scoreable set is worth more than either.
+2. **CLAUSE 3'S THREE-WAY SPLIT WAS ALL ON ONE SIDE OF ZERO.** Measured:
+   `d log sd(f1) / d log noise_amp = −0.75`, a sign the pre-registration did not contain. Three-way
+   is not sufficient; it has to **span the sign**. Note which document got it right: the P1–P3 set
+   written after seeing **one** rung spans the sign explicitly, and the clause written after seeing
+   **zero** does not.
+3. **THE BIAS ORACLE IS DOSE-SATURATED, so my desk refusal of the swing columns was unnecessary.**
+   The dose is `±0.25 × noise_amp` and therefore varies 1.75x across the scoreable range, yet f1
+   swing moves **3.9%** (363.6 / 372.2 / 377.9). Levels were readable all along. The refusal was
+   right as procedure and wrong as physics; `set_bias_oracle` has no clamp, so the saturation is
+   downstream and its mechanism is **untested**.
+4. **ONE SEED WOULD HAVE PRODUCED THE OPPOSITE HEADLINE.** The single-seed gated ladder read
+   23 / 25 / 26 / 27 — a tidy monotone rise that would have been reported as a real residual effect.
+   At 6 seeds the same rungs read 22.33 / 25.17 / 25.67 / 23.83 with per-seed values spanning
+   **16 to 37**, and the trend is not significant. Six `babble` runs cost about three minutes.
+
+### §42 STATUS: CLOSED AT STAGE 1 OF THREE
+
+The abandonment count allowed three runs. Stage 1 refuses the line, so stages 2 and 3 are not spent.
+**§42 does not re-open**, and the denominator is not the lever the numerator wasn't either: the
+audible levels per axis are ~2.6 and `noise_amp` does not move them. What §42 leaves behind is the
+`kAESd` re-derivation, which is bookkeeping on §41's magnitudes rather than a new lead.
