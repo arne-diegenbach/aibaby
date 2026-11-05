@@ -6156,3 +6156,64 @@ but it now has exactly one, where it was written as if it had two.
    split is now read as a **ratio of exponents**, and a scatter exponent near 1.53 is the *null*,
    not the result. This is a stricter test than the one pre-registered, and it is stricter in the
    direction that could refuse the lead.
+
+### §42 PREDICTION, WRITTEN ON RUNG 1 OF 5 AND TESTABLE BY THE OTHER FOUR
+
+**The first rung inverts the expected sign, so the prediction is recorded now, while four rungs are
+still in flight and cannot be used to fit it.**
+
+Rung `noise_amp = 0.28` — **above** the shipped 0.22 — against the archive's shipped zero rung:
+
+| | f0 | f1 | f2 | f3 | bw1 | bw2 | bw3 | **amp** | **voi** |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| sd at 0.28 | 7.619 | **18.146** | 47.916 | 38.768 | 4.880 | 5.090 | 4.748 | 0.164 | 0.377 |
+| sd at 0.22 (shipped) | 9.129 | **21.727** | 57.751 | 47.616 | 5.346 | 5.967 | 5.618 | 0.158 | 0.482 |
+| rest at 0.28 | — | — | — | — | — | — | — | **0.588** | **0.812** |
+| rest at 0.22 | — | — | — | — | — | — | — | **0.444** | **0.475** |
+
+**MORE motor noise gives LESS scatter on all seven axes** — f1 down 16.5%, f2 down 17.0% — while
+amplitude rises 32% and **voicing rises from 0.475 to 0.812**. The naive reading of §42 ("turn the
+knob down to take scatter out of the denominator") has the sign exactly wrong, and the direction is
+not a small effect.
+
+**THE MECHANISM I THINK THIS IS, AND IT IS A SECOND CONFOUND IN THE SAME INSTRUMENT.** `axisgrid`
+accumulates `p[k]` on **every tick** after the settle half, with **no voicing gate**
+(`experiments_milestones.cpp` ~45624). So its "within-run sd" is the wander of a parameter across
+voiced *and unvoiced* ticks. A creature voiced 47.5% of the time crosses in and out of voicing
+constantly and its parameters wander more; one voiced 81.2% of the time holds a steadier posture.
+**That makes this scatter a DUTY-CYCLE statistic as much as a motor-noise one** — and `noise_amp`
+moves the duty cycle, which is why the sign inverts.
+
+**It matters beyond §42 because the constant is shared.** `kAESd[7]` in `experiments_common.h` is
+exactly this ungated scatter from §41 run 1, and **four instruments** read it — `axisear`,
+`axisjit`, `axislev`, `axisamp`. If it is partly a duty-cycle number then the within-class
+denominator of every d' in §41 is partly a duty-cycle number. §41 note 2 half-saw this — *"a held
+vowel is scored over many ticks (overstates the noise)"* — without connecting it to voicing.
+
+**THREE PREDICTIONS, and the four remaining rungs are a clean test because they are already running
+and I cannot see them:**
+
+- **P1.** `sd(f1)` is **monotonically decreasing in `noise_amp`** across all five rungs — i.e. it
+  *rises* as the knob falls, the opposite of the naive expectation.
+- **P2.** `voi` is **monotonically increasing in `noise_amp`** across all five rungs.
+- **P3.** The rank correlation between `sd(f1)` and `voi` across the five rungs is **−1**. This is
+  what a duty-cycle artefact predicts; a per-tick motor-noise mechanism predicts the *opposite* sign
+  on P1 and no particular relation on P3.
+
+**WHAT EACH OUTCOME MEANS, fixed in advance:**
+
+- **P1 ∧ P2 ∧ P3 hold** → the instrument's scatter is a duty-cycle statistic. §42 stage 1 answers
+  its question in the negative *and* turns up a defect in a constant four instruments share. Stage 2
+  becomes a **voicing-gated** scatter, which is a small build on a read-only path, and §41's d'
+  numbers need re-reading rather than re-running.
+- **P1 fails (non-monotonic)** → neither story holds, and the 0.28-vs-0.22 inversion is something
+  else; §42 reports it as unexplained rather than naming a mechanism.
+- **P1 holds, P3 fails** → scatter does rise as the knob falls, but not with voicing, so there is a
+  per-tick mechanism after all and it has the sign the naive reading wanted. §42 continues to
+  stage 2 as originally written.
+
+**AND CLAUSE 2 IS NOT YET SATISFIED.** The 0.22 rung of this ladder has not run; the comparison
+above is against `results/axisgrid-v1.log`. The ladder's own 0.22 rung is byte-identical to
+`dna/default.toml` (diff = 0 lines, checked), so it must return f1 sd **21.727** and amp **0.444**
+exactly. **Until it does, every number in this section is provisional** and the inversion could still
+be a harness difference rather than a creature difference.
