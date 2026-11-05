@@ -6012,3 +6012,101 @@ than trusting it:**
 nothing to compare it against, because the only published baseline is the stale one that made the
 original gate invalid. Per-cell bit-equality is the stronger statement anyway: it is 51
 independent comparisons at full precision rather than one aggregate.
+
+## §42 — THE DENOMINATOR: WHAT SETS THE CREATURE'S OFF-AXIS MOTOR SCATTER? (2026-11-05)
+
+**Pre-registered before the run. No build: the measurement already exists in `axisgrid`'s output
+and has never been read as a dose-response.**
+
+### WHY THIS AND NOT ANOTHER AXIS
+
+§41 closed the axis *count*: three axes reach the air, `f1 x f2 x f3 ~ 19 signals`, and the fourth
+(bw2) lands inside the error bars of its own audibility bar. The line's stopping rule is spent.
+
+But §41 run 2d measured something larger **in passing**, and §41 never picked it up because it was
+a positive control for a different question. Freezing **one** off-axis parameter — f2, held at rest
+instead of jittered — recovers **+34.590 ± 1.169** of F1's d'², against F1's shipped d'² of ~47.
+**Freezing one axis nearly doubles the discriminability of another.** Its own note says it:
+*"off-axis motor noise is the single largest thing between this creature and a bigger vocabulary"*.
+
+Levels per axis are `swing / scatter` and the code space is the product of levels, so there are two
+ways to grow a vocabulary: add axes to the numerator, or take scatter out of the denominator. §41
+spent three runs and a genome revision on the numerator and got 2.7x. **Nothing has ever asked what
+sets the denominator.** This section asks.
+
+### THE ROUTE TO BEHAVIOUR, ASKED OF THE LEAD AND NOT OF THE CLAUSES
+
+`render_bw_gain` was measured and then **withdrawn as a ship argument the same day**, because its
+only consumer is `Ear::larynx_` — self-audition, a path with a measured dead null to behaviour. The
+rule that miss produced is to ask what the architecture must make true for the *lead* to reach
+behaviour, before designing the run. Asked here:
+
+Scatter is a property of what the creature **produces**, so it is read by every audibility
+measurement in the project (`imitate` d' 1.37, `teachsound` d' 5.57), by every held-out classifier
+on the voice (`echoname` echo 0.955, `orthoname` 0.958), and by the transmission tape a pupil hears
+(`tutorgrid`, 18/18 on both bits). **It does not reach the naming reward**, which is an oracle on
+`v.f1`/`v.f2` (`experiments_milestones.cpp:5401`) and never consults the ear. So the claim §42 can
+support is about **what a listener or a pupil can recover from the voice**, not about the learning
+signal. Written down now so it cannot be inflated later.
+
+### THE INSTRUMENT, AND THE ONE COLUMN THAT IS SAFE TO READ
+
+`axisgrid` already prints, at the **zero rung**, the rest point and the **within-run scatter** of
+all nine larynx parameters. At that rung `kAXLadder[zero] == 0.0` and the code skips
+`set_bias_oracle` entirely, so the column is **dose-free**. No build, no new instrument, no gate.
+
+**AND THAT IS NOT A CONVENIENCE — IT IS THE ONLY SAFE COLUMN.** `axisgrid` sets its dose as
+`kAXLadder[L] * namp`: **the ladder is denominated in `noise_amp` itself.** A `noise_amp` ladder
+read off the *swing* columns would lower the dose in exact proportion to the knob, swing and scatter
+would fall together, levels would read flat, and §42 would close on a purely mechanical artefact
+that would not have looked wrong in the output. Caught at the desk for zero runs. The swing half of
+this question therefore needs a **pinned absolute dose** and is stage 2, not stage 1.
+
+### THE LADDER
+
+Vocal `noise_amp` ∈ **{0.28, 0.22 (shipped), 0.16, 0.11, 0.06}**. **Two-sided**, because a
+down-only ladder cannot distinguish *"scatter is `noise_amp`"* from *"scatter has a floor"*. Only
+`dna/default.toml:1928` moves; the other five modules sit at 0.28 and must not.
+
+### CLAUSE ORDER — LIVENESS FIRST, FOR `axisgrid`'S OWN STATED REASON
+
+1. **LIVENESS.** The genome records a measurement at `exploration.sensitivity 500` where **five of
+   nine creatures produced too few vocalisations to score**, because in this creature the motor
+   module's spontaneous drive *is* its babble: closing exploration makes the larynx **silent, not
+   stereotyped** — and a silent larynx has low scatter trivially. `amp` and `voi` are in the same
+   table (shipped **0.444** and **0.475**). A rung whose `amp` falls below **0.222**, half the
+   shipped value, is **NO VERDICT** and not a scatter result. `calibrate` must **PASS** at every
+   rung: it is this project's pre-calibrated detector of a moved operating point, which broke at
+   `threshold_sigma 0.04` and held to `refractory_sigma 0.60`.
+2. **REPRODUCTION.** Rung 0.22 **is** the shipped genome, so it must return `results/axisgrid-v1.log`'s
+   zero-rung table exactly — f1 sd **21.727**, f2 **57.751**, amp **0.444**. If it does not, the
+   harness is wrong and nothing else in the run is readable.
+3. **DOSE — THREE-WAY, because the question is not the sign but the exponent.** Fit
+   `d log sd(f1) / d log noise_amp`:
+   - **≈ 1** — scatter *is* `noise_amp`, proportionally. The lever is real, and stage 2 is justified.
+   - **strictly between 0 and 1** — there is a floor: something else sets most of the scatter, and
+     the exponent **bounds what the knob can ever buy**. This is the outcome that most changes the
+     plan, because it prices the lever instead of opening or closing it.
+   - **≈ 0** — `noise_amp` is not the scatter source. §42 closes here and names its successor: the
+     dense ears→larynx tract, which the genome comment at `[[module]]` vocal already blames for
+     swamping the reward signal at the motor module.
+4. **SELECTIVITY.** `noise_amp` is **per module, not per group**: `network.cpp:633` fills
+   `noise_amp_[i]` from `dm.noise_amp` for every neuron of the module, and the nine larynx
+   parameters are **disjoint index slices of that one module**. So the prediction is that all seven
+   axes move **together** — and that is what would make the interesting object a knob the kernel
+   **does not have**: a per-group noise scale. If one axis moves differently from the others, this
+   prediction is wrong and the group architecture is doing something unmeasured.
+
+### ABANDONMENT COUNT: THREE RUNS
+
+Stage 1 is this one. **Stage 2** (swing at a pinned absolute dose, so `levels` can be read) only if
+clause 3 reads above 0. **Stage 3** (does a per-group scale buy audible separation on a real task)
+only if stage 2's levels move. A refusal at any stage ends §42.
+
+### HONEST DISCLOSURE BEFORE THE RUN
+
+The scatter `axisgrid` measures is **within-run** — the variability of a held posture across ticks.
+What a vocabulary is actually bounded by is **between-trial** spread, which is **unmeasured**; §41
+note 2 already flags this as *"wrong ruler both ways"*. So a dose-response here is a statement about
+the knob's effect on motor variability, and the step from that to a word count still needs the
+between-trial measurement §41 never made. §42 does not claim that step.
