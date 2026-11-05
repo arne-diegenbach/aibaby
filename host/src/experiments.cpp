@@ -361,6 +361,15 @@ const Spec kSpecs[] = {
      "  reproducing §43's d' at each axis's own reach as the wiring check. EQUAL\n"
      "  within error refutes the airborne-SNR account model-free. Tier::kLong,\n"
      "  so verify's experiment COUNT is untouched"},
+    {"f3name", 1200000, Expect::kRead, Tier::kLong,
+     "  §46 stage 1 / clause 3: the larynx COMMANDS f3 at 2.68 levels and the\n"
+     "  air CARRIES it at d' 5.272 once rendered -- but render_f3_gain SHIPS AT\n"
+     "  0.0, so the code space is f1 x f2 ~ 7 signals where three axes would give\n"
+     "  ~19. Can f3 be TAUGHT? A fixed f3 target against teachsound's yoke, on a\n"
+     "  VARIANT genome, so dna/default.toml and the pinned hash are untouched\n"
+     "  whatever the answer. REFUSES AS VACUOUS at render_f3_gain = 0, where f3\n"
+     "  reaches no ear and a null would be a false refusal of the axis. Gates\n"
+     "  clause 4; Tier::kLong, so verify's experiment COUNT is untouched"},
     {"axislev", 1, Expect::kRead, Tier::kLong,
      "  §41 run 2d: is f3's static cost to F1 LEVEL? Sweeps amplitude over 2x\n"
      "  at render_f3_gain 0 -- if F1's d' is flat there, a global level change is\n"
@@ -1348,6 +1357,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "axisamp") ok = run_axisamp(dna_blob, ticks, verbose);
   else if (name == "axisbw2") ok = run_axisbw2(dna_blob, ticks, verbose);
   else if (name == "bitsnr") ok = run_bitsnr(dna_blob, ticks, verbose);
+  else if (name == "f3name") ok = run_f3name(dna_blob, ticks, verbose);
   else if (name == "ctxgrid") ok = run_ctxgrid(dna_blob, ticks, verbose);
   else if (name == "echoname") ok = run_echoname(dna_blob, ticks, verbose);
   else if (name == "dirbudget") ok = run_dirbudget(dna_blob, ticks, verbose);

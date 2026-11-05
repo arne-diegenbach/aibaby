@@ -1651,6 +1651,16 @@ struct Praise {
 // the one dimension the filterbank resolves best.
 struct Word {
   float f0, f1, f2;
+  // §46. LAST, AND DEFAULTED, ON PURPOSE: every existing `{f0, f1, f2}` initialiser
+  // in this codebase zero-fills it, and at `render_f3_gain = 0` -- which is what
+  // `dna/default.toml` ships -- the renderer never reads f3 at all. So adding this
+  // field is bit-identical for every caller, and `verify` is asked to prove it
+  // rather than asked to take it on trust (§46 clause 1).
+  //
+  // A ZERO HERE MEANS "NOT SPECIFIED", NEVER "2613.7 Hz" and never "0 Hz". A word
+  // whose f3 is unset cannot be scored on axis 3, and `formant_error_axis` refuses
+  // it rather than returning a ratio against zero.
+  float f3 = 0.0f;
 };
 
 // A TARGET THAT MOVES, for `staircase`. Tumer & Brainard drive pitch shifts in
@@ -2489,6 +2499,7 @@ bool run_axislev(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_axisamp(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_axisbw2(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_bitsnr(const std::vector<uint8_t>&, uint64_t, bool);
+bool run_f3name(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_ctxgrid(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_echoname(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_dirbudget(const std::vector<uint8_t>&, uint64_t, bool);

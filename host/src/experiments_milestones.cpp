@@ -4213,7 +4213,11 @@ enum VLTarget {
 // silent trials -- correctly, since silence has no formants to be wrong about --
 // and carrying that rule over would make "be quiet" unscoreable and unrewardable,
 // which is the one mistake that would decide this experiment before it ran.
-enum VLScore { kVLScoreFormant = 0, kVLScoreAmp, kVLScoreRate };
+// kVLScoreF3 is §46's: the same graded formant error on the THIRD formant, which
+// kVLScoreFormant cannot express because `formant_error_axis` is only ever handed
+// f1 and f2. APPENDED, never inserted, so every existing enumerator keeps its value
+// and no caller that passes kVLScoreFormant changes behaviour.
+enum VLScore { kVLScoreFormant = 0, kVLScoreAmp, kVLScoreRate, kVLScoreF3 };
 
 // The two amplitudes, either side of what the creature does naturally (babble
 // sits near 0.48) so that neither target is the one it would drift to anyway.
@@ -4770,6 +4774,10 @@ struct VLRun {
   // score loudness as naming -- which would be true of the protocol rather than
   // of the voice.
   std::vector<double> utt_f1, utt_f2;
+  // §46: the same per-utterance row for the third formant. Appended so every
+  // existing reader of utt_f1/utt_f2 is untouched, and pushed in lockstep with
+  // them below so the three vectors always index the same trial.
+  std::vector<double> utt_f3;
   std::vector<int> utt_word;
   // The trial each kept utterance came from. Nothing that moves the creature depends
   // on `n_trials` in this session -- it sets the loop bound, the early/late thirds and
@@ -4817,6 +4825,23 @@ inline double formant_error_axis(double f1, double f2, const Word& w, uint32_t a
   if (axis == 1) return std::fabs(std::log(f1 / double(w.f1)));
   if (axis == 2) return std::fabs(std::log(f2 / double(w.f2)));
   return formant_error(f1, f2, w);
+}
+
+// §46: the same on the THIRD formant, which the two-argument form above cannot see
+// because it is never handed f3. Separate rather than a fourth parameter on the
+// existing signature, so every one of its callers is byte-identical.
+//
+// THE REFUSAL IS THE POINT OF THE GUARD. `Word::f3` defaults to 0, meaning "not
+// specified" -- every word in `kWords` and `kGridWords` is in that state. Scoring
+// axis 3 against an unset target would compute log(f3 / 0) and hand the reward an
+// infinity, so an unset target is a REFUSAL (-1.0, this file's own convention for
+// unscoreable) and never a zero error. §46 clause 3 exercises this branch: a null
+// naming result produced by a reward that silently never moved would be a false
+// refusal of the axis, which is the shape `aibaby-null-is-not-a-control` records.
+inline double formant_error_f3(double f3, const Word& w, uint32_t axis) {
+  if (axis != 3) return -1.0;
+  if (f3 <= 1.0 || w.f3 <= 1.0f) return -1.0;
+  return std::fabs(std::log(f3 / double(w.f3)));
 }
 
 // `phasemask`: credit confined to the half of the F1 group that is currently WINNING.
@@ -5239,7 +5264,7 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
             aibaby::Scalar(dir * bias_sign[g] * bias_amp_units));
       }
     }
-    double f1_sum = 0.0, f2_sum = 0.0;
+    double f1_sum = 0.0, f2_sum = 0.0, f3_sum = 0.0;   // f3_sum is §46
     uint32_t n_voiced = 0;
     // Amplitude is averaged over EVERY frame of the window, silent ones
     // included at zero, because a quiet answer is an answer.
@@ -5434,6 +5459,13 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
           now - last_feedback >= regime.feedback_period) {
         const double e = score == kVLScoreAmp
                              ? std::fabs(double(v.amplitude) - amp_target)
+                         // §46: F3's own graded error. Refuses rather than returns
+                         // zero when the target's f3 is unset, so a word table that
+                         // forgot f3 produces NO feedback instead of constant praise
+                         // -- the failure that would read as "the axis cannot be
+                         // taught" while the reward had simply never moved.
+                         : score == kVLScoreF3
+                             ? formant_error_f3(double(v.f3), w, 3u)
                          : score == kVLScoreRate
                              // An event happened. Praise it if this trial wanted
                              // events and scold it if it did not -- so the sign
@@ -5596,6 +5628,7 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
       ++n_voiced;
       f1_sum += double(v.f1);
       f2_sum += double(v.f2);
+      f3_sum += double(v.f3);   // §46, same gate and same divisor as the two above
       // Bucketed by the word HEARD, not by the word scored: the question this
       // serves is whether the voice became conditional on the input.
       vf1_sum[label] += double(v.f1);
@@ -5710,6 +5743,7 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
     if (n_voiced > 0 && label < nw) {
       out.utt_f1.push_back(f1_sum / double(n_voiced));
       out.utt_f2.push_back(f2_sum / double(n_voiced));
+      out.utt_f3.push_back(f3_sum / double(n_voiced));
       out.utt_word.push_back(int(label));
       out.utt_trial.push_back(trial);
       ++out.dl_kept[dec];
@@ -48032,6 +48066,191 @@ bool run_bitsnr(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) 
   return true;
 }
 
+
+// ===== f3name (§46 stage 1): can the THIRD formant be taught at all? =====
+//
+// `render_f3_gain` ships at 0.0, so the renderer has two resonators and the
+// transmitted code space is `f1 x f2 ~ 7 signals`. §41 measured F3, once rendered,
+// as a real audible axis (d' 5.272 +- 0.045 at its own reach, ~0.93x F1) that the
+// larynx already COMMANDS at 2.68 levels with cross-talk <= 0.007. So the prize is
+// ~19 signals, 2.7x, switched off.
+//
+// THE 19-SIGNAL FIGURE HAS NEVER BEEN A BEHAVIOURAL CLAIM. §41 established that the
+// AIR carries three axes. Nothing has ever asked whether the creature can be TAUGHT
+// on the third, and that is what this asks -- before anything ships, on a VARIANT
+// genome, with `dna/default.toml` and the pinned hash untouched.
+//
+// THIS IS §46 CLAUSE 3 AND IT GATES CLAUSE 4. A conditional naming test on F3 is
+// pointless if a FIXED F3 target cannot move the voice at all, and a null from the
+// naming test would then be unattributable between "the axis cannot be named" and
+// "the reward never moved". So the fixed-target lesson runs first and is the vacuity
+// gate on everything after it (`aibaby-null-is-not-a-control`).
+//
+// THE CONTROL IS teachsound's YOKE, for teachsound's reason: the voice drifts on its
+// own, and on one seed that drift alone cleared an audibility bar. Praise is replayed
+// in the same proportions shifted by half a trial, so it cannot line up with this
+// creature's own utterances. The claim is never "F3 moved" but "F3 moved MORE than
+// the same creature given uncorrelated praise".
+constexpr double kF3Rest = 2613.7;    // §41 run 1's measured f3 rest
+constexpr double kF3Reach = 254.9;    // and its measured reach
+// The ask is HALF the reach, up, matching ctxgrid's convention of putting each axis's
+// targets at +-half its own reach around rest (F1 571/689 about 626.5, F2 1517/1817
+// about 1669.6). Asking for the whole reach would be asking for the edge of what the
+// larynx can command, which `aibaby-ask-not-the-bias` says is where naming fails for
+// reasons that have nothing to do with the axis.
+constexpr double kF3Target = kF3Rest + kF3Reach * 0.5;
+// f1 and f2 sit at the GRID'S OWN midpoints, so this differs from `ctxgrid` in the
+// axis under test and in nothing else.
+constexpr double kF3MidF1 = 630.0, kF3MidF2 = 1667.0;
+
+bool run_f3name(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  aibaby::Dna dna;
+  if (dna.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) return false;
+
+  const double gain = double(dna.header().audio.render_f3_gain);
+  std::printf("  the question      §46 stage 1 / clause 3. The larynx COMMANDS f3 at\n"
+              "                    2.68 levels and the air CARRIES it at d' 5.272 once\n"
+              "                    rendered. Can it be TAUGHT? Asked before anything\n"
+              "                    ships, so dna/default.toml and the pinned hash are\n"
+              "                    untouched whatever the answer is.\n");
+  std::printf("  render_f3_gain    %.2f%s\n", gain,
+              gain > 0.0 ? "  -- f3 reaches the ear"
+                         : "  *** ZERO: f3 reaches NO ear. See the guard below.");
+  std::printf("  the ask           f3 %.1f -> %.1f Hz, half the measured reach, which is\n"
+              "                    ctxgrid's own convention for a target on an axis.\n",
+              kF3Rest, kF3Target);
+  std::printf("  the control       teachsound's YOKE: the same praise in the same\n"
+              "                    proportions, shifted half a trial so it cannot line\n"
+              "                    up with this creature's own utterances. The voice\n"
+              "                    drifts on its own, so the claim is never \"f3 moved\".\n\n");
+
+  // ---- THE GUARD, AND IT COMES FIRST BECAUSE IT CAN MAKE THE RUN VACUOUS ----
+  // At `render_f3_gain = 0` the third resonator is never evaluated, so the creature's
+  // own ear and the caregiver's speech both carry NO f3. The lesson's error would
+  // still be computable off `VocalParams::f3` -- the decoder always produces it -- so
+  // this would measure whether an INAUDIBLE axis can be driven by a reward that reads
+  // the motor command. That is a real question and it is NOT this one, and reporting
+  // it as "f3 cannot be taught" would be the false refusal §41's own run 2 made.
+  if (!(gain > 0.0)) {
+    std::printf("  *** VACUOUS AND NOT RUN. render_f3_gain is 0.0, so f3 reaches no ear\n"
+                "  at all: the creature cannot hear its own f3 and the caregiver cannot\n"
+                "  say one. A lesson scored here would measure whether an INAUDIBLE axis\n"
+                "  follows a motor-command oracle -- a different question, whose null\n"
+                "  would read as \"f3 cannot be taught\" and be wrong.\n"
+                "  Run this on a variant genome with render_f3_gain = 1.0.\n");
+    return true;
+  }
+
+  Regime regime;
+  // One word, so the lesson is a FIXED target and conditionality is not in play yet.
+  Word tbl[1];
+  tbl[0].f0 = 200.0f;
+  tbl[0].f1 = float(kF3MidF1);
+  tbl[0].f2 = float(kF3MidF2);
+  tbl[0].f3 = float(kF3Target);
+
+  // kVLTgtFixed EXPLICITLY. Passing -1 resolves to kVLTgtHeard for a kVLTaught arm
+  // -- the CONDITIONAL mode -- and clause 3 is the FIXED-target question that gates
+  // conditionality. The first version of this instrument passed -1 and so asked the
+  // wrong question of the two.
+  const VLRun taught = run_vocallearn_session(blob, ticks, kVLTaught, nullptr, regime,
+                                              int(kVLTgtFixed), nullptr, kVLScoreF3,
+                                              nullptr, 1u, tbl);
+  if (!taught.ok || taught.utt_f3.empty()) {
+    std::printf("  inconclusive: the taught arm scored %u trials and skipped %u, with\n"
+                "  %zu f3 rows. A creature that does not vocalise has no f3 to move.\n",
+                taught.scored, taught.skipped, taught.utt_f3.size());
+    return false;
+  }
+  std::vector<Praise> yoke = taught.feedback;
+  for (Praise& p : yoke) p.tick += kVLTrialTicks / 2;
+  const VLRun yoked = run_vocallearn_session(blob, ticks, kVLYoked, &yoke, regime,
+                                             int(kVLTgtFixed), nullptr, kVLScoreF3,
+                                             nullptr, 1u, tbl);
+
+  // ---- CLAUSE 3a: DID THE REWARD MOVE AT ALL? ----
+  // The error is the quantity the lesson actually optimises, so a flat error with a
+  // moved voice, or a moved error with a flat voice, are different failures and both
+  // are worth seeing. `formant_error_f3` REFUSES an unset target rather than scoring
+  // zero, so a nonzero error here is also proof the f3 field reached the scorer.
+  std::printf("  CLAUSE 3a -- DID THE REWARD SEE F3? A zero error with a set target\n"
+              "  would mean the f3 field never reached the scorer, not that the lesson\n"
+              "  succeeded. `formant_error_f3` refuses an unset target rather than\n"
+              "  returning 0, so this is a wiring check with a firing branch.\n");
+  const VLRun* arms[2] = {&taught, &yoked};
+  const char* nm[2] = {"taught", "yoked"};
+  // THE OBJECTIVE IS COMPUTED FROM `utt_f3`, NOT READ OUT OF `err_early`. The session
+  // fills err_early/err_late from `formant_error(f1, f2, w)` in every mode except amp
+  // and rate, so under kVLScoreF3 they are the F1/F2 JOINT error and not this lesson's
+  // objective. The first version of this clause read them, called a finite-voice run
+  // "THE REWARD NEVER MOVED", and was a guard measuring the wrong quantity -- while
+  // clause 3b on the same output showed the voice moving +33 Hz against its yoke.
+  auto f3_err = [&](const std::vector<double>& u, size_t from, size_t to) {
+    double s2 = 0.0; size_t n = 0;
+    for (size_t i = from; i < to && i < u.size(); ++i) {
+      if (!(u[i] > 1.0)) continue;            // also excludes a non-finite row
+      s2 += std::fabs(std::log(u[i] / kF3Target));
+      ++n;
+    }
+    return n ? s2 / double(n) : -1.0;
+  };
+  // AND THE NON-FINITE COUNT IS PRINTED RATHER THAN ASSUMED AWAY. `nan < 0.0` is false,
+  // so a non-finite formant passes both `formant_error`'s guard and the `err < 0`
+  // skip, and poisons every mean it reaches. If the joint error is nan, this says where.
+  auto nonfinite = [](const std::vector<double>& u) {
+    size_t k = 0;
+    for (double x : u) if (!std::isfinite(x)) ++k;
+    return k;
+  };
+  std::printf("    %-9s %-8s %-9s %-11s %-11s %-9s %-s\n", "arm", "scored", "skipped",
+              "f3 err early", "f3 err late", "change", "non-finite f1/f2/f3");
+  bool reward_live = true;
+  for (uint32_t a = 0; a < 2; ++a) {
+    const VLRun& r = *arms[a];
+    const size_t third = r.utt_f3.size() / 3;
+    const double e = f3_err(r.utt_f3, 0, third);
+    const double l = f3_err(r.utt_f3, r.utt_f3.size() - third, r.utt_f3.size());
+    const double ch = e > 0.0 ? 100.0 * (1.0 - l / e) : 0.0;
+    std::printf("    %-9s %-8u %-9u %-12.5f %-12.5f %+-9.1f %zu/%zu/%zu\n", nm[a], r.scored,
+                r.skipped, e, l, ch, nonfinite(r.utt_f1), nonfinite(r.utt_f2),
+                nonfinite(r.utt_f3));
+    if (a == 0 && !(e > 0.0 && l > 0.0)) reward_live = false;
+  }
+  std::printf("    the joint F1/F2 error the session reports, NOT this mode's objective:\n"
+              "      taught %.4f -> %.4f    yoked %.4f -> %.4f\n",
+              taught.err_early, taught.err_late, yoked.err_early, yoked.err_late);
+  std::printf("    -> %s\n", reward_live
+                                 ? "the scorer produced a graded f3 error in both windows"
+                                 : "*** NO GRADED F3 ERROR -- clause 4 is NOT readable");
+
+  // ---- CLAUSE 3b: DID THE VOICE MOVE, AND MORE THAN THE YOKE'S DRIFT? ----
+  auto mean_of = [](const std::vector<double>& v, size_t from, size_t to) {
+    double s = 0.0; size_t n = 0;
+    for (size_t i = from; i < to && i < v.size(); ++i) { if (v[i] > 1.0) { s += v[i]; ++n; } }
+    return n ? s / double(n) : 0.0;
+  };
+  std::printf("\n  CLAUSE 3b -- DID THE VOICE FOLLOW? f3 over the first and last thirds,\n"
+              "  against a target of %.1f Hz and a rest of %.1f.\n", kF3Target, kF3Rest);
+  double moved[2] = {};
+  for (uint32_t a = 0; a < 2; ++a) {
+    const std::vector<double>& u = arms[a]->utt_f3;
+    const size_t third = u.size() / 3;
+    const double e = mean_of(u, 0, third), l = mean_of(u, u.size() - third, u.size());
+    moved[a] = l - e;
+    std::printf("    %-9s n %-5zu  early %8.1f   late %8.1f   moved %+8.1f Hz\n", nm[a],
+                u.size(), e, l, moved[a]);
+  }
+  const double excess = moved[0] - moved[1];
+  std::printf("    taught - yoked   %+8.1f Hz   (the ask is %+.1f)\n", excess,
+              kF3Target - kF3Rest);
+  std::printf("\n  SINGLE SEED, SO THIS IS A GATE AND NOT A RESULT. It decides whether\n"
+              "  §46 clause 4 -- two words differing only in f3, indexed against a\n"
+              "  no-index control -- is worth building. A null here localises the\n"
+              "  refusal in the WRITE, with the axis already known audible (d' 5.272)\n"
+              "  and commandable (2.68 levels), and ends §46 at stage 1.\n");
+  return true;
+}
 
 bool run_aimslice(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
   (void)verbose;

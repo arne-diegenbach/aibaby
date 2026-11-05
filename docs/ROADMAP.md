@@ -6906,3 +6906,99 @@ The 19-signal figure has never been a behavioural claim. §41 measured that the 
 axes; nothing has ever asked whether the creature can be **taught** on the third. §46 asks that, and
 the answer may well be no — in which case the value delivered is a closed question and an
 unchanged genome, not a bigger vocabulary.
+
+### §46 SIDE-FINDING, INDEPENDENT OF THE RESULT: `kVLTgtHeard` AT `nw = 1` RETURNS nan
+
+Found while debugging my own instrument, and worth separating from §46's question because it is a
+**latent trap in `run_vocallearn_session` for anyone else**, not a fact about f3.
+
+`f3name`'s first version passed `target = -1`. Line 4957 resolves that to `kVLTgtHeard` for a
+`kVLTaught` arm — **the conditional mode** — where clause 3 is the *fixed-target* question that
+gates conditionality. So it asked the wrong one of the two. It also came back with
+`err early nan, err late nan`, and changing the mode to `kVLTgtFixed` made the nan vanish:
+**`kVLTgtHeard` with `words = 1` produces a non-finite joint error.**
+
+**AND THE REASON IT PROPAGATES IS WORTH KNOWING EVERYWHERE, NOT JUST HERE: `nan < 0.0` IS FALSE.**
+So a non-finite formant passes *both* guards on that path —
+
+    if (f1 <= 1.0 || f2 <= 1.0) return -1.0;   // formant_error: nan fails both comparisons
+    if (err < 0.0) { ++out.skipped; continue; }  // the degenerate-trial skip: nan is not < 0
+
+— and lands in `err_sum[bin]`, poisoning `err_early`, `err_late` and every mean downstream of
+them, while `scored` still counts the trial. **A guard written as `x <= bound` does not exclude a
+nan; it admits one.** The corrected instrument therefore prints a **non-finite count** per
+utterance vector rather than assuming the rows are clean, and `utt_f1/f2/f3` came back
+**0/0/0** once the mode was right.
+
+**AND MY OWN CLAUSE 3a WAS A GUARD MEASURING THE WRONG QUANTITY.** It read `err_early`/`err_late`
+— which the session fills from `formant_error(f1, f2, w)` in every mode except amp and rate, i.e.
+the **F1/F2 joint** error, *not* `kVLScoreF3`'s objective. It printed *"THE REWARD NEVER MOVED --
+clause 4 is NOT readable"* for a run whose very next clause showed the voice moving **+33 Hz against
+its yoke**. Two clauses on the same output contradicting each other is what caught it. It now
+computes the objective from `utt_f3` directly.
+
+**That is three instances in one instrument** of the shape this project keeps hitting — the wrong
+target mode, a guard on the wrong quantity, and a comparison that admits nan — and all three were
+found by *reading output that disagreed with itself* rather than by any gate.
+
+### §46 STAGE 1 RESULT — F3 CAN BE TAUGHT, WEAKLY, AND THE GATE OPENS (2026-11-05)
+
+`results/n46-f3name-s{0..8}.log`, gate at `results/n46-verify.log`. Nothing shipped:
+`dna/default.toml` untouched, every run on a scratchpad variant with `render_f3_gain = 1.0`.
+
+**CLAUSE 1 PASSES, WHICH IS WHAT MADE STAGE 1 FREE.** On the shipped genome the extended `Word`
+(`f3` last and defaulted), the appended `kVLScoreF3`, the new `utt_f3` vector and
+`formant_error_f3` change **nothing**: `verify PASS`, hash **`ad96f882becbee92` unmoved**, pinned
+hash PASS, **experiments 24 as expected**. The changes really were additive.
+
+**CLAUSE 2 PASSES WITH THE NUMBER READ AS A NUMBER.** `calibrate PASS` on the f3 variant, and vocal
+sits at **4.12 Hz — identical to the shipped genome's 4.12**. Turning f3 on does not move the
+operating point, so nothing below is confounded by a rate shift.
+
+**CLAUSE 3 PASSES. Nine seeds, a fixed f3 target of +127.4 Hz against teachsound's yoke:**
+
+| | value | |
+| --- | --- | --- |
+| taught moved | **+27.54 ± 15.11 Hz** (21.6% of the ask) | 6/9 positive — **1.8 SE, NOT significant alone** |
+| yoked moved | **−20.33 ± 13.49 Hz** | 2/9 positive |
+| **paired taught − yoked** | **+47.88 ± 9.47 Hz** | **5.1 SE, 9 of 9 seeds positive** (sign test p ≈ 0.002) |
+
+Per seed, taught: +4.3, +87.0, +63.3, −7.5, +79.7, −20.6, −37.8, +50.9, +28.6. **Non-finite rows
+0/0/0 in every arm of every seed.**
+
+**THREE THINGS THE 5.1 SE DOES NOT SAY, stated so it cannot be quoted as more than it is:**
+
+1. **The taught arm alone is 1.8 SE.** What is established is *taught differs from yoked*, not *the
+   lesson moves f3 toward the target* standing on its own. The pairing is legitimate — it is
+   `teachsound`'s design, the yoke replays the taught arm's own praise shifted half a trial, and
+   pairing by seed removes the seed-level variance — but the two claims are different sizes.
+2. **Part of the contrast is the control going the wrong way.** The yoke drifts **−20.33 Hz at 2/9
+   positive**: directional, not symmetric noise. That is why the paired figure exceeds the taught
+   arm's own movement. [[aibaby-lesson-silences-the-top]] and
+   [[aibaby-silences-the-wrong-side]] make a directional drift under uncorrelated praise plausible,
+   but it is **unexplained here** and the contrast is not all signal.
+3. **It is weak in absolute terms** — 21.6% of the ask, against M1c's F1 lesson at d' 5.57 versus a
+   yoked 1.08. **f3 is influenceable, not readily taught.** And conditionality always costs
+   (`ctxgrid`'s excess is a fraction of its unconditional lesson), so **the prior on clause 4 is
+   modest even though the gate opened.**
+
+**AND I MISREAD THE EVIDENCE TWICE, IN OPPOSITE DIRECTIONS, OFF PARTIAL DATA.** After seed 0
+(+4.3 Hz) I wrote that the evidence pointed at *not teachable*; after seeds 1–2 (+87.0, +63.3) I
+nearly wrote the opposite. The spread is **+87.0 to −37.8**, which is exactly the variance the
+instrument's own *"single seed is a gate and not a result"* line was pointing at — a caveat I had
+written into it myself and then ignored twice. **The rule is not "run more seeds"; it is: do not
+narrate a sweep while it is running.**
+
+### WHERE §46 STANDS: STAGE 2 IS NOW A REAL DECISION, AND IT IS NOT MINE
+
+The abandonment count allowed two runs; stage 1 spent one and **opened** rather than closed. Stage 2
+— shipping `render_f3_gain = 1.0` — would be a genome revision with a **new pinned hash**, voiding
+every cross-genome absolute in the archive by [[aibaby-vocal-calibration-invariant]]. Stage 1 was
+designed so that this decision could be made on evidence rather than on the 19-signal arithmetic,
+and the evidence is: **the third axis is audible (d' 5.272), commandable (2.68 levels), and
+teachable at about a fifth of what is asked of it.**
+
+**The honest recommendation is to build clause 4 BEFORE stage 2**, on the variant, and ship nothing
+until a *conditional* f3 code is shown to work: a code space is only worth a hash move if the
+creature can be taught to use it, and naming is the thing §46 actually cares about. Clause 4 is the
+2-word f3-only grid against a no-index control, and it needs its own section and its own count.

@@ -1,0 +1,36 @@
+experiment: f3name
+  the question      §46 stage 1 / clause 3. The larynx COMMANDS f3 at
+                    2.68 levels and the air CARRIES it at d' 5.272 once
+                    rendered. Can it be TAUGHT? Asked before anything
+                    ships, so dna/default.toml and the pinned hash are
+                    untouched whatever the answer is.
+  render_f3_gain    1.00  -- f3 reaches the ear
+  the ask           f3 2613.7 -> 2741.1 Hz, half the measured reach, which is
+                    ctxgrid's own convention for a target on an axis.
+  the control       teachsound's YOKE: the same praise in the same
+                    proportions, shifted half a trial so it cannot line
+                    up with this creature's own utterances. The voice
+                    drifts on its own, so the claim is never "f3 moved".
+
+  CLAUSE 3a -- DID THE REWARD SEE F3? A zero error with a set target
+  would mean the f3 field never reached the scorer, not that the lesson
+  succeeded. `formant_error_f3` refuses an unset target rather than
+  returning 0, so this is a wiring check with a firing branch.
+    arm       scored   skipped   f3 err early f3 err late change    non-finite f1/f2/f3
+    taught    392      36        0.05536      0.02529      +54.3     0/0/0
+    yoked     391      37        0.05790      0.06163      -6.4      0/0/0
+    the joint F1/F2 error the session reports, NOT this mode's objective:
+      taught 0.0857 -> 0.0747    yoked 0.0765 -> 0.0729
+    -> the scorer produced a graded f3 error in both windows
+
+  CLAUSE 3b -- DID THE VOICE FOLLOW? f3 over the first and last thirds,
+  against a target of 2741.1 Hz and a rest of 2613.7.
+    taught    n 392    early   2600.1   late   2687.1   moved    +87.0 Hz
+    yoked     n 391    early   2591.0   late   2577.9   moved    -13.0 Hz
+    taught - yoked     +100.0 Hz   (the ask is +127.4)
+
+  SINGLE SEED, SO THIS IS A GATE AND NOT A RESULT. It decides whether
+  §46 clause 4 -- two words differing only in f3, indexed against a
+  no-index control -- is worth building. A null here localises the
+  refusal in the WRITE, with the axis already known audible (d' 5.272)
+  and commandable (2.68 levels), and ends §46 at stage 1.
