@@ -6217,3 +6217,50 @@ above is against `results/axisgrid-v1.log`. The ladder's own 0.22 rung is byte-i
 `dna/default.toml` (diff = 0 lines, checked), so it must return f1 sd **21.727** and amp **0.444**
 exactly. **Until it does, every number in this section is provisional** and the inversion could still
 be a harness difference rather than a creature difference.
+
+### §42 CLAUSE 2 PASSES, AND THE CODE CORRECTS MY OWN MECHANISM CLAIM
+
+**Clause 2 is satisfied.** The ladder's own `0.22` rung reproduces `results/axisgrid-v1.log`'s
+zero-rung table **byte-identically** (`diff` empty over the whole block). So the 0.28-vs-0.22
+inversion is a **creature** difference, not a harness difference, and the provisional flag on the
+previous section is lifted.
+
+**AND THE MECHANISM IS NOT QUITE THE ONE I COMMITTED TWELVE MINUTES AGO.** I wrote that the ungated
+scatter was inflated by *"crossing in and out of voicing"*. Reading `VocalDecoder::update`
+(`core/src/senses.cpp:655-666`) says otherwise:
+
+    params_.f1 = target_f1;        // set on EVERY awake tick, unconditionally
+    ...
+    // Voicing is a gate, not a dial, so it is not smoothed.
+    params_.voicing = group_activity_[1] > Scalar(cfg_.voicing_threshold) ? kOne : kZero;
+
+**The formants are live on every awake tick and no branch freezes or resets them when unvoiced.**
+On a silent tick `v.f1` is a genuine articulatory posture — the tongue is somewhere, it simply is
+not phonating. So nothing is corrupted by a transition. The defect is simpler and worse:
+
+**`axisgrid` counts posture wander that occurs during silence, which no listener ever hears.** A
+creature voiced 0.475 of the time spends the other 0.525 moving its articulators **inaudibly**, and
+that movement sits in the within-class denominator of every d' in §41. One voiced 0.812 of the time
+spends less of itself wandering unheard. The quantity a listener actually experiences is the
+variability of the posture **while it is audible**, and that is exactly what the ungated statistic
+does not measure.
+
+**`voi` IS THE DUTY CYCLE, CONFIRMED ARITHMETICALLY.** Voicing is binary per tick, so its mean *is*
+the voiced fraction and its sd must be Bernoulli: predicted `sqrt(p(1-p))` = 0.499 at p = 0.475 and
+0.390 at p = 0.812, measured **0.482** and **0.377**. The table is internally consistent with the
+code.
+
+**THIS CHANGES WHAT STAGE 2 MEASURES, AND GIVES IT A TWO-WAY ANSWER.** The gate is already an idiom
+in this codebase — `v.voicing > 0.5f && v.amplitude > kAmplitudeFloor`, used at eight sites in
+`experiments_milestones.cpp` — so stage 2 is a small read-only change, not a new instrument. And it
+**separates two effects the ungated number conflates**:
+
+- **gated scatter flat across the ladder** → the entire inversion was the gate, §41's shared `kAESd`
+  is measuring unheard movement, and the fix is to re-read §41's d' numbers rather than re-run them.
+- **gated scatter also falls as `noise_amp` rises** → there is a *real* steadiness gain on top of
+  the gating artefact. The decoder applies inertia to the motor **command**, so a creature that
+  phonates more continuously may genuinely hold postures longer. That would be a lever, with the
+  sign the naive reading of §42 had backwards.
+
+P1–P3 are unaffected by this correction: both stories predict all three. What changes is what a
+confirmation **means**, which is why it is recorded before the four rungs land rather than after.
