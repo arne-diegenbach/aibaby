@@ -6630,3 +6630,104 @@ The accumulation question is **answered**, by three runs over two days in Septem
 is a product of two factors that are each closed. §44 opens nothing and spends no abandonment count.
 What it changes is the archive: a settled 11.5 SE premise now has a memory, and the three places
 that cited its unsettled predecessor now point at it.
+
+## §45 — WHY F1 AND NOT F2: BOTH NAMED CAUSES ARE WEAK, AND Hz IS THE WRONG UNIT (2026-11-05)
+
+**Pre-registered before the build.** The last open lead from `aibaby-open-leads` other than the
+rotation's decline. `tutorgrid` run 3 (depth 5) found a split nobody predicted:
+
+| gen | bit F1 | bit F2 |
+| --- | --- | --- |
+| 0 | +37.6 ± 3.0 | +91.9 ± 13.7 |
+| 4 | +16.1 ± 5.5 | +92.9 ± 28.1 |
+
+**gen 4 − gen 0, paired: F1 −21.58 ± 5.56 (3.9 SE), a RESOLVED LOSS of 57%. F2 +0.97 ± 27.91
+(0.0 SE), nothing.** A two-signal code loses nothing over four generations, so four signals leak
+where two did not — **on one axis only.**
+
+### THE PREMISE SURVIVES ITS OWN SIBLING'S RETRACTION, WHICH HAD TO BE CHECKED FIRST
+
+`tutorwide` retracted a *different* decay as an artefact: *"a signed mean is not a magnitude when
+the sign can flip between units"* — 5 of 18 chains ended holding the inverted convention, and with
+the width held there was no loss at all. **If F1's decay were the same artefact there would be
+nothing to explain.** It is not: `tutorgrid` reports **inheritance at every consecutive pair, F1
+18/18**, so no F1 lineage ever flips sign and its signed mean *is* a magnitude. (F2 is 16/18, two
+flips, which would only *understate* F2 — and F2 shows no loss anyway.) The premise holds.
+
+### CAUSE (b) IS ALREADY REFUTED, BY THE INSTRUMENT BUILT TO FIND IT
+
+The lead says two causes coincide on the F1 axis: a smaller separation, and *a worse derived-index
+recovery*. **The second points the wrong way.** `ctxaxis` measured the kernel's own clustering rule
+against the best available reader:
+
+| | kernel index | best reader | loss |
+| --- | --- | --- | --- |
+| bit F1 | 0.827 ± 0.011 | 0.850 ± 0.020 | **0.023** |
+| bit F2 | 0.781 ± 0.023 | 0.965 ± 0.006 | **0.184** |
+
+**The index recovers F1 nearly perfectly and loses 8x more on F2 — yet F2 is the bit that does not
+decay.** `ctxaxis`'s own closing line says so: *"the opposite of the asymmetry the primary was
+built to find."* So index recovery cannot be why F1 decays, and the lead's framing of "two
+coinciding causes" is already down to one.
+
+### AND CAUSE (a) IS MOSTLY A UNIT ARTEFACT — THE DESK CALCULATION THIS SECTION EXISTS TO TEST
+
+§43 measured each axis's airborne d' at its **own reach**. `d' = Δ/σ` is linear in separation at
+fixed jitter, so `d'(reach)/reach` is a per-Hz slope — and the two tables have never been combined:
+
+| axis | reach | d' at reach (§43) | **d' per Hz** | delivered (tutorgrid) | **d' at delivered** |
+| --- | --- | --- | --- | --- | --- |
+| f1 | 118.0 | 7.857 ± 0.093 | **0.0666** | 37.6 | **2.50** |
+| f2 | 300.3 | 9.722 ± 0.094 | **0.0324** | 91.9 | **2.98** |
+
+**F1 is 2.06x MORE discriminable per Hz than F2.** So the separation gap is **2.44x in Hz and only
+1.19x in airborne d'** — the unit the air and the pupil's ear actually work in. *"F1 is the weaker
+signal"* is largely an artefact of quoting Hz.
+
+**THIS IS AN EXTRAPOLATION ACROSS TWO INSTRUMENTS AND IS NOT A MEASUREMENT.** §43's d' comes from
+synthetic jitter at `kAESd` magnitudes rendered at `kB2Amp`; tutorgrid's Hz are delivered values in
+a lineage run. The combination is defensible — §42/§43 showed the jitter magnitude is right to
+within 5% at the shipped point — but it is exactly the cross-instrument absolute comparison this
+session has refused three times. **So §45 measures it in ONE run instead.**
+
+### THE INSTRUMENT: `bitsnr`, READ-ONLY, NO GENOME FIELD, NOTHING SHIPPED
+
+For each axis, the airborne cepstral d' at **tutorgrid's delivered separation**, with identical
+deviates across axes, jittered on all seven parameters at `kAESdG` (§43's audible-tick values, the
+correct denominator; by §43 the choice moves nothing material), at the amplitude the creature hears,
+through its own cochlea.
+
+### CLAUSE ORDER
+
+1. **WIRING CHECK FIRST, because every number downstream is a difference against it.** Run at each
+   axis's **own reach** and the instrument must return §43's values — f1 **7.857**, f2 **9.722**.
+   An instrument that cannot reproduce the table it extends cannot extend it. This also proves the
+   instrument *can* see a difference between the axes at all, so clause 2 is not asking a question
+   it is structurally unable to answer.
+2. **THE COMPARISON, THREE-WAY AND SPANNING THE SIGN** (the §42 lesson, applied on the next run
+   rather than filed):
+   - **d'(F2 at 91.9) > d'(F1 at 37.6) by the 1.19x the desk predicts** → the airborne-SNR account
+     survives as *a* factor, and the open question becomes whether 1.19x can produce 57% against 0%.
+   - **the two are EQUAL within error** → **the airborne-SNR account is REFUTED, model-free.** Two
+     bits on the same creature with the same jitter, equally audible, one decaying 57% and the other
+     not at all, cannot be explained by one being the weaker signal. This holds regardless of any
+     transmission model, which is why it is the clause worth having.
+   - **d'(F1) > d'(F2)** → the asymmetry is *inverted* relative to the decay, and the lead's
+     remaining cause joins its first in pointing the wrong way.
+3. **POWER, STATED AS A NUMBER BEFORE THE RUN.** §43 returned SE ~0.09 on d' at these sample sizes.
+   The predicted gap is 2.98 − 2.50 = **0.47, about 5 SE** — so the instrument can tell 1.19x from
+   1.00x, and a null will mean "equal" rather than "underpowered". If the realised SE is above
+   **0.16** the comparison is NO VERDICT on power alone, and that is checked before the contrast is
+   read.
+
+### WHAT §45 CANNOT DO, STATED NOW
+
+It cannot explain the decay. It can only remove, or fail to remove, the one surviving named cause.
+If clause 2 lands on "equal", **the lead becomes a question with no candidate answers left** — which
+is a worse-sounding and more useful position than one with two bad ones, and is where the next
+design would have to start from scratch.
+
+### ABANDONMENT COUNT: ONE RUN
+
+§45 is a single read-only measurement. It opens no line. If it refutes the SNR account, what remains
+is a *new* question and gets its own section.
