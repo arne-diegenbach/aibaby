@@ -6820,3 +6820,89 @@ spent.
 ("no longer established"), then 3.9 SE** across three runs. At depth 5 with 18 lineages and 18/18
 inheritance it is credible, but its *size* is not well pinned, and a successor should re-measure the
 asymmetry before modelling it.
+
+## §46 — SHIP THE THIRD FORMANT? MEASURE THE PRIZE BEFORE PAYING FOR IT (2026-11-05)
+
+**Pre-registered before the build.** The owner picked this after §45, ordered *"first 2 then 1"*, and
+the ordering is right for a reason worth stating: **shipping f3 moves the determinism hash**, so
+every absolute measured after it stops being comparable with the archive. Anything cheap and
+hash-neutral belongs first, because it is the last chance to measure on the current physics.
+
+### WHAT IS ACTUALLY OFF, AND WHAT THAT COSTS THE CREATURE
+
+`dna/default.toml:383` ships `render_f3_gain = 0.0`. The renderer therefore has **two resonators**,
+and the transmitted code space is `f1 x f2 ~ 7 signals`. §41 measured F3, once rendered, as a real
+audible axis — **d' 5.272 ± 0.045 at its own reach**, ~0.93x F1 — and the larynx already *commands*
+it at **2.68 levels with cross-talk ≤ 0.007**. So the prize is `f1 x f2 x f3 ~ 19 signals`, **2.7x,
+and it is switched off.**
+
+Three things are needed before it is *usable*, and naming only the gain would be misleading:
+
+| change | why it is required |
+| --- | --- |
+| `render_f3_gain` 0.0 → 1.0 | F3 reaches no ear at all until this is on |
+| `struct Word` gains `f3` | it is `{float f0, f1, f2;}` — **a caregiver cannot currently say an F3 distinction**, nor a tutor transmit one |
+| `formant_error_axis` gains axis 3 | it handles `axis == 1, 2` only, so **the reward cannot see F3** |
+
+### THE SEQUENCING, AND IT IS THE WHOLE DESIGN
+
+**STAGE 1 MEASURES THE PRIZE ON A VARIANT GENOME AND SHIPS NOTHING.** `dna/default.toml` is not
+touched, the pinned hash `ad96f882becbee92` does not move, and the archive stays comparable. The
+source changes are **additive**: `f3` last in `Word` leaves every `{f0, f1, f2}` initialiser
+zero-filling it, and at `render_f3_gain = 0` the renderer ignores it — so existing behaviour is
+bit-identical and `verify` must prove that.
+
+**STAGE 2 SHIPS IT, AND ONLY IF STAGE 1 PAYS.** A genome revision, a **new pinned hash**, a fresh
+`calibrate`, and an explicit note that every cross-genome absolute in the archive is void by
+[[aibaby-vocal-calibration-invariant]]. **If stage 1 reads null, nothing was shipped and nothing was
+voided** — which is the entire reason for doing it in this order rather than flipping the switch.
+
+### STAGE 1'S TEST: THE MINIMAL DECISIVE FORM
+
+Not a 2x2x2. **Two words differing ONLY in f3**, taught on the creature's own derived index, scored
+as naming excess over the same creature's no-index control — `ctxgrid`'s design with the axis
+swapped. If the creature cannot name on the third axis *at all*, a three-dimensional grid is
+pointless; if it can, the grid is the obvious successor and gets its own section.
+
+Separation follows the grid's own convention — each axis at its **own measured reach**, as `ctxgrid`
+used 118 Hz on F1 (571/689) and 300 on F2 (1517/1817). F3 rests at **2613.7** with a reach of
+**254.9**, giving **2486 / 2741**.
+
+### CLAUSE ORDER
+
+1. **BIT-IDENTITY FIRST, because it is what makes stage 1 free.** With `render_f3_gain = 0` the
+   extended `Word` and scorer must change nothing: `verify PASS`, hash **`ad96f882becbee92`
+   unmoved**, `experiments 24 as expected`. A hash move here means the change was not additive and
+   stage 1's variant results are not interpretable against anything.
+2. **CALIBRATION ON THE VARIANT, before any behaviour is read.** `self_gain` is on, so turning f3 on
+   changes **what the creature hears of itself** and may move its operating point. `calibrate` is
+   the pre-calibrated detector of exactly that and must PASS on the f3 variant. **A rate shift here
+   would confound every naming number in the run**, and §42 is the reminder that `calibrate` can
+   also pass while the thing you moved went silent — so the vocal rate is read as a number, not as a
+   verdict.
+3. **THE REWARD MUST DEMONSTRABLY SEE F3.** A wiring check, not an assumption: `formant_error_axis`
+   at `axis == 3` must return finite values, and **the taught arm's F3 error must fall**. Written as
+   its own clause because a null naming result with a reward that never moved would be a false
+   refusal of the axis — the shape [[aibaby-null-is-not-a-control]] and §41's own vacuous run 2
+   record. **A guard for the zero-filled f3: any word with `f3 <= 1.0` makes axis 3 unscoreable, and
+   that is a refusal, not a zero.**
+4. **THE NAMING TEST, THREE-WAY AND SPANNING THE SIGN.** Excess over the creature's own no-index
+   control:
+   - **positive** → the third axis names, the code space is real, and stage 2 is justified.
+   - **zero** → **the most interesting outcome.** F3 is audible (d' 5.272), commandable (2.68
+     levels) and now rewarded, so a null localises the failure in the **write** and not in the air,
+     the ear or the reward — and it would say the 19-signal figure is a code-space claim the
+     creature cannot cash. Stage 2 does **not** run.
+   - **negative** → F3 interferes; the f3 tax on F1 (11.3% of d'², measured) is the named suspect.
+
+### ABANDONMENT COUNT: TWO RUNS
+
+Stage 1 is one run. Stage 2 is one genome revision plus its gate. **A null at stage 1 ends §46**, and
+the shipped creature keeps two resonators with a written reason rather than an unexamined default.
+
+### HONEST DISCLOSURE
+
+The 19-signal figure has never been a behavioural claim. §41 measured that the air *carries* three
+axes; nothing has ever asked whether the creature can be **taught** on the third. §46 asks that, and
+the answer may well be no — in which case the value delivered is a closed question and an
+unchanged genome, not a bigger vocabulary.

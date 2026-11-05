@@ -1749,6 +1749,22 @@ constexpr Word kWords[8] = {
     // F2, /^/ sits between /a/ and /e/, and /I/ is a close front vowel 550 Hz
     // below /i/ on F2. A vocabulary that only grows into empty space measures
     // the size of the space, not the creature.
+    //
+    // *** THESE FOUR ARE A MEASUREMENT SET, NOT A RECOMMENDED VOCABULARY. ***
+    // They were chosen to COLLIDE, and the archive has since established that
+    // colliding is the one thing a command set must not do:
+    //   - `orthovocab`: an orthogonal second lesson does 77% LESS DAMAGE than a
+    //     colliding one, at 10.7 SE, and learns better while doing it.
+    //   - `axispower` (n=60, third seed family): a lesson SILENT about another's
+    //     axis costs it NOTHING -- 1.024 +- 0.062 against 0.116 +- 0.048, a
+    //     +11.5 SE contrast. "Silent about" is the operative property, and it is
+    //     stronger than distance: `axiscollide` showed two second-lessons at the
+    //     SAME L1 distance retain -0.06 and 2.83 depending on axis.
+    // So the design that WORKS is a factorial grid, where each word shares each
+    // coordinate with exactly one other and the two bits are separate demands --
+    // `kGridWords` in experiments_milestones.cpp, which `ctxgrid` named at 4 words
+    // and `ctxvocab` extended to 9 with the total naming excess conserved.
+    // **Do not copy kWords[4..7] as a vocabulary.** Copy the grid.
     {205.0f, 450.0f, 850.0f},    // "boat" — /o/,  crowds /u/
     {195.0f, 690.0f, 1700.0f},   // "bat"  — /ae/, crowds /a/ and /e/
     {210.0f, 620.0f, 1200.0f},   // "but"  — /^/,  crowds /a/
