@@ -6352,3 +6352,75 @@ The abandonment count allowed three runs. Stage 1 refuses the line, so stages 2 
 **§42 does not re-open**, and the denominator is not the lever the numerator wasn't either: the
 audible levels per axis are ~2.6 and `noise_amp` does not move them. What §42 leaves behind is the
 `kAESd` re-derivation, which is bookkeeping on §41's magnitudes rather than a new lead.
+
+## §43 — RE-DERIVE THE JITTER FROM AUDIBLE TICKS, AND ASK WHETHER bw2 CROSSES (2026-11-05)
+
+**Pre-registered before the build. Opened by §42's finding, with §42's own stopping rule respected:
+§42 closed at stage 1 and this is a new line with its own count.**
+
+### THE QUESTION, AND WHY §42 COULD NOT ANSWER IT
+
+§42 established that `kAESd` — the jitter magnitude four instruments draw their within-class spread
+from — is an **ungated** scatter, measured on a creature silent half the time and applied to renders
+`tb.frames_of` makes **unconditionally voiced**. `axisear` left **bw2 at d' 0.990 ± 0.039 against a
+1.0 bar: UNRESOLVED**, inside its own error. That d' is computed with the defective denominator.
+
+**Does a correctly gated denominator move bw2 across the bar — making the usable axis count FOUR
+instead of three?** Levels multiply, so a fourth axis is worth more than anything else still open.
+
+§42 could not answer it. Its gated number came from `babble`: a pooled sd over one creature's voiced
+frames, against `axisgrid`'s mean of twelve per-creature within-run sds. **Comparing those absolutes
+is invalid** and §42 used only each instrument's own slope. To get a gated `kAESd` that is
+comparable, the gate has to go into **`axisgrid`'s own accumulation** — same estimator, same window,
+same twelve creatures.
+
+### THE DESIGN, AND THE TWO THINGS IT MUST NOT DO
+
+1. **The ungated column stays byte-identical.** The gated accumulator is added **alongside**, never
+   replacing. Six reproduction checks exist: `results/axisgrid-v1.log` plus §42's five ladder logs.
+2. **`axisear` keeps its old arm.** The jitter magnitude becomes a **paired arm** — ungated `kAESd`
+   against gated `kAESdG`, on **identical posture draws** — so `results/axisbw2-v1.log` must come
+   back exactly in the ungated arm. Replacing `kAESd` in place would void §41 with nothing left to
+   check against: the hijack [[aibaby-control-on-a-different-code-path]] priced.
+
+### CLAUSE ORDER
+
+1. **REPRODUCTION FIRST, because every number downstream is a difference against it.** `axisgrid`'s
+   ungated zero rung identical to `results/axisgrid-v1.log`; `axisear`'s ungated arm identical to
+   `results/axisbw2-v1.log`. If either fails, nothing else in the run is readable.
+2. **THE GATE MUST BITE AND MUST NOT EMPTY THE SAMPLE.** `kAmplitudeFloor = 0.45`
+   (`experiments_common.h:128`) against a shipped mean amplitude of **0.444** — the gate sits almost
+   exactly at the centre of the distribution it cuts, which is why it can fail in both directions.
+   **Under 10% of ticks surviving on any axis is NO VERDICT; over 95% means the gate did not bite
+   and the comparison is vacuous.** `babble` measures 51.7% at this genome, so both branches are
+   reachable and neither is foregone.
+3. **THE DIRECTION IS NOT CONSTRAINED — THREE-WAY, SPANNING THE SIGN.** This is §42's lesson applied
+   on the next run rather than recorded and forgotten. Gated `kAESd` may be **larger** (every §41 d'
+   falls, bw2 moves further below the bar, the count stays three, and §41's magnitudes were
+   optimistic), **smaller** (d' rises, bw2 may cross, the count may be four), or **equal within
+   error** (`kAESd` was adequate; §42's defect is real but immaterial to §41's magnitudes — a result
+   worth having, and the one that costs the least).
+4. **bw2's VERDICT, against the bar that already exists and is not being moved.** bw2 clears only if
+   its gated d' exceeds 1.0 **with its lower error bound above 1.0**. 0.990 ± 0.039 did not. *An axis
+   inside the error bars of its own audibility threshold cannot carry a vocabulary claim* — §41's
+   rule, quoted unchanged so it cannot be relaxed to fit what comes back.
+
+### THE PINNED HASH MUST NOT MOVE, AND THAT IS A CLAUSE TOO
+
+Nothing in `core/` changes and no RNG stream is touched: the gated accumulator only reads
+`VocalParams` that the ungated one already reads, and `axisear`'s new arm re-seeds identically per
+arm. **So `verify` must return `ad96f882becbee92` unchanged.** If the hash moves, the change is not
+what this section claims it is, and the result is void regardless of what it says.
+
+### ABANDONMENT COUNT: TWO RUNS
+
+Run 1 is the gated `kAESd` from `axisgrid`. Run 2 is `axisear`'s paired arm. **If run 1 fails
+clause 2, §43 ends having spent one.**
+
+### HONEST DISCLOSURE BEFORE THE BUILD
+
+§42 withdrew a **magnitude** claim, and §43 is entirely about magnitudes — the same class of
+quantity that just proved fragile. The protection is structural rather than a promise to be careful:
+every number here is a **within-run difference on identical draws**, and the old value survives
+beside the new one in the same table. What §43 cannot do is say which of the two is *correct* in an
+absolute sense; it can only say that one counts ticks a listener hears and the other does not.
