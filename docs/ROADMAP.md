@@ -6731,3 +6731,92 @@ design would have to start from scratch.
 
 §45 is a single read-only measurement. It opens no line. If it refutes the SNR account, what remains
 is a *new* question and gets its own section.
+
+### §45 RESULT — THE AIR IS NOT THE REASON, AND THE ANSWER WAS ALREADY IN tutorgrid's ORACLE ARM
+
+`results/n45-bitsnr.log`. Read-only, no genome field, nothing shipped.
+
+**CLAUSE 1 REPRODUCES §43 EXACTLY**, which is what licenses everything below:
+
+| axis | own reach | d' measured | §43 says | difference |
+| --- | --- | --- | --- | --- |
+| f1 | 118.0 Hz | 7.857 ± 0.093 | 7.857 | **−0.000** |
+| f2 | 300.3 Hz | 9.722 ± 0.094 | 9.722 | **−0.000** |
+
+Bit-exact, because the seeding is `axisbw2`'s and ignores the separation. The same table is
+the vacuity check: an instrument that resolves a known 1.24x difference between these axes is
+demonstrably able to answer clause 2 either way.
+
+**CLAUSE 3 PASSES BEFORE THE CONTRAST IS READ:** SE on the gap **0.079** against the
+pre-registered ceiling of 0.16.
+
+**CLAUSE 2 — AT THE SEPARATIONS tutorgrid ACTUALLY DELIVERED:**
+
+| axis | delivered | the bit | airborne d' |
+| --- | --- | --- | --- |
+| f1 | 37.6 Hz | **decays 57%** | **2.576 ± 0.065** |
+| f2 | 91.9 Hz | holds | **2.708 ± 0.045** |
+
+**Gap +0.132 ± 0.079 (1.7 SE), ratio 1.051. EQUAL WITHIN ERROR.**
+
+So **the airborne-SNR account is refused**, and on two independent grounds, which matters
+because 1.7 SE is close to the 2 SE line the code tests:
+
+1. **The significance test does not clear the bar** it was given in advance.
+2. **The effect size cannot do the work regardless.** Even taking the point estimate at face
+   value, a **5%** difference in airborne discriminability is being asked to produce **57%
+   against 0%**. That argument does not depend on the p-value and is the stronger of the two.
+
+Note the desk extrapolation predicted **1.19x** and the measurement returned **1.05x** — the
+right direction, a smaller gap, and a different conclusion at the 2 SE line. Measuring instead
+of extrapolating was the right call for once in the direction that mattered.
+
+### MY PRE-REGISTRATION'S "WHAT THIS CANNOT DO" WAS WRONG, AND THE ARCHIVE SAYS SO
+
+§45 predicted that an EQUAL verdict would leave the lead *"with no candidate answers left."*
+**That was written before I had read `tutorgrid`'s fourth run**, and it is wrong: the oracle-index
+arm (`results/tutorgrid-oracle.log`) already contains the mechanism.
+
+Only the pupils' index source changed, derived → host-written, with generation 0 **bit-identical
+on all four numbers** so the pairing is licensed:
+
+    F1 decay, oracle - derived, cross-run paired   +62.61 +/- 5.91  (10.6 SE)
+    gen 4 - gen 0:  derived chain F1  -21.58 +/- 5.57  (3.9 SE)  resolved LOSS
+                    ORACLE  chain F1  +41.03 +/- 4.36  (9.4 SE)  resolved GAIN
+                    both chains   F2  under 3 SE either way
+
+**A perfect index turns a 3.9 SE loss into a 9.4 SE gain, and reach is ruled out** — F1's 118 Hz
+is unchanged between the runs and only the index moved. That run's own correction reads: *"The
+channel is fine; a four-way DERIVED index is worse than a two-way one, and down a lineage that
+compounds into apparent decay."* And: *"the chain's level is set by how well a pupil can USE its
+index, not by cumulative transmission loss."*
+
+**So "why F1 and not F2" now has an answer, assembled from three places that had never been put
+together:**
+
+1. **It is not the channel.** §45, measured: the two bits are equally audible at the separations
+   actually delivered, 1.05x.
+2. **It is not the index's classification accuracy.** `ctxaxis`: the kernel's index loses **0.023**
+   against the best reader on bit F1 and **0.184** on bit F2 — eight times worse on the bit that
+   does *not* decay.
+3. **It is the index, in MAGNITUDE rather than in accuracy.** The oracle arm makes the index
+   causal at 10.6 SE, and the deficit costs **F1's delivered Hz** while leaving F2's alone.
+
+**AND THAT IS THE PROJECT'S OWN RECURRING SPLIT.** `aibaby-magnitude-direction-split` established
+that magnitude and assignment are separable here; `aibaby-storage-vs-expression` that a store and
+its expression are different quantities. **`ctxaxis` measured whether a classifier can read the bit
+out of the index. The lineage is limited by how many Hz the lesson writes given that index.** Those
+are different statistics and this is the clearest case in the archive of the second not following
+from the first.
+
+### THE SUCCESSOR, POSED BUT NOT RUN
+
+**Why does an index deficit cost F1's magnitude and not F2's, when that index classifies F1
+better?** That is a magnitude-vs-accuracy question about the write, not about the air or the
+partition, and it is where a new section would start. §45's abandonment count was one run and it is
+spent.
+
+**One honest caveat on the thing being explained:** the F1 decay has read **4.3 SE, then 2.6 SE
+("no longer established"), then 3.9 SE** across three runs. At depth 5 with 18 lineages and 18/18
+inheritance it is credible, but its *size* is not well pinned, and a successor should re-measure the
+asymmetry before modelling it.

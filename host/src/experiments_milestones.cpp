@@ -47851,6 +47851,187 @@ bool run_axisbw2(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
   return true;
 }
 
+// ===== bitsnr (§45): is the F1 bit a WEAKER SIGNAL IN THE AIR than the F2 bit? =====
+//
+// `tutorgrid` run 3 at depth 5: the F1 bit loses 57% over four generations
+// (-21.58 +- 5.56, 3.9 SE) while the F2 bit ends where it started (+0.97 +- 27.91).
+// Two signals lose nothing over four generations, so four leak where two did not --
+// on ONE AXIS. The premise is not `tutorwide`'s signed-mean artefact: tutorgrid
+// reports inheritance at every consecutive pair at F1 18/18, so no F1 lineage ever
+// flips sign and its signed mean IS a magnitude.
+//
+// The lead named two causes coinciding on the F1 axis. ONE IS ALREADY REFUTED by the
+// instrument built to find it: `ctxaxis` has the kernel's index losing 0.023 against
+// the best reader on bit F1 and 0.184 on bit F2 -- eight times worse on the bit that
+// does NOT decay, which its own closing line calls "the opposite of the asymmetry the
+// primary was built to find". So index recovery cannot be why F1 decays.
+//
+// THE OTHER IS MOSTLY A UNIT ARTEFACT, AND THAT IS WHAT THIS MEASURES. §43 gives each
+// axis's airborne d' at its OWN reach (f1 7.857 at 118.0 Hz, f2 9.722 at 300.3). d' is
+// delta/sigma, linear in separation at fixed jitter, so d'/reach is a per-Hz slope --
+// and F1 is 2.06x MORE discriminable per Hz. tutorgrid delivered 37.6 Hz on F1 and
+// 91.9 on F2, so the gap is 2.44x in Hz and about 1.19x in airborne d'. "F1 is the
+// weaker signal" is largely an artefact of quoting Hz.
+//
+// BUT THAT IS AN EXTRAPOLATION ACROSS TWO INSTRUMENTS, which is precisely the
+// cross-instrument comparison of absolutes that §42 and §43 refused. So it is measured
+// here in ONE run, both axes on identical deviates.
+//
+// CLAUSE 1 IS THE WIRING CHECK AND IT COMES FIRST, because every number below is a
+// difference against it: run at each axis's own reach and this must return §43's
+// values. It does double duty as the vacuity check -- an instrument that reproduces a
+// known difference between the axes is demonstrably able to answer clause 2 either way
+// (`aibaby-power-is-not-the-error-model`).
+constexpr double kBSDeliv[2] = {37.6, 91.9};   // tutorgrid run 3 depth 5, generation 0
+constexpr uint32_t kBSAx[2] = {1, 2};          // f1, f2 in kAERest/kAESd indexing
+constexpr double kBSRef[2] = {7.857, 9.722};   // §43's d' at own reach, to reproduce
+// Clause 3's power bar, written before the run: §43 returned SE ~0.09 on d' at these
+// sample sizes and the predicted gap is 0.47, about 5 SE. Above this the contrast is
+// NO VERDICT on power alone, checked BEFORE the contrast is read.
+constexpr double kBSMaxSE = 0.16;
+
+bool run_bitsnr(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  (void)ticks;
+  aibaby::Dna dna;
+  if (dna.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) return false;
+
+  std::printf("  the question      §45. tutorgrid's F1 bit loses 57%% over four\n"
+              "                    generations and its F2 bit loses nothing. Is the F1\n"
+              "                    bit simply a WEAKER SIGNAL IN THE AIR?\n");
+  std::printf("  the unit          Hz is the wrong one. F1 carries 2.06x more d' PER HZ\n"
+              "                    than F2 (§43: 7.857 at 118.0 vs 9.722 at 300.3), so\n"
+              "                    tutorgrid's 37.6 vs 91.9 Hz is 2.44x in Hz and about\n"
+              "                    1.19x in airborne d'. Measured here, not extrapolated.\n");
+  std::printf("  the jitter        kAESdG, §43's audible-tick values -- the denominator\n"
+              "                    measured where the creature is actually sounding.\n");
+  std::printf("  the level         %.3f, the amplitude the creature hears itself at\n\n",
+              kB2Amp);
+
+  Timbre tb;
+  std::string err;
+  if (!tb.configure(dna.header().audio, err)) {
+    std::printf("  could not configure the cochlea: %s\n", err.c_str());
+    return false;
+  }
+
+  // One cell: `kAESamples` paired postures on axis `a`, separated by `sep`, every
+  // other parameter jittered. Seeding is axisbw2's EXACTLY and ignores `sep`, so the
+  // reach and delivered conditions see identical deviates and differ only by the
+  // separation -- which is what makes clause 1 a reproduction rather than a re-run.
+  auto measure = [&](uint32_t a, uint32_t r, double sep) {
+    std::mt19937_64 rng(dna.header().seed ^ (0xAE00ull + a) ^
+                        (r ? r * 0x9E3779B97F4A7C15ull : 0ull));
+    std::normal_distribution<double> gauss(0.0, 1.0);
+    std::vector<std::vector<double>> x;
+    std::vector<int> y;
+    const double lo_c = kAERest[a] - sep * 0.5;
+    const double hi_c = kAERest[a] + sep * 0.5;
+    for (uint32_t s = 0; s < kAESamples * 2; ++s) {
+      const int cls = int(s % 2);
+      double p[7];
+      for (uint32_t k = 0; k < 7; ++k) p[k] = kAERest[k] + kAESdG[k] * gauss(rng);
+      p[a] = (cls ? hi_c : lo_c) + kAESdG[a] * gauss(rng);
+      const std::vector<std::vector<double>> fr =
+          tb.frames_of(p[0], p[1], p[2], p[3], p[4], p[5], p[6], kB2Amp, 1.0f, 1.0f);
+      if (fr.empty()) continue;
+      std::vector<double> m(fr[0].size(), 0.0);
+      for (const std::vector<double>& f : fr)
+        for (size_t k = 0; k < m.size(); ++k) m[k] += f[k];
+      for (double& v : m) v /= double(fr.size());
+      x.push_back(m);
+      y.push_back(cls);
+    }
+    if (x.size() < 4) return 0.0;
+    return cepstral_dprime(x, y, nullptr, true);   // SIGNED d'^2, not d'
+  };
+
+  auto dprime_of = [](double q) { return q > 0.0 ? std::sqrt(q) : 0.0; };
+  auto se_dprime = [&](double q, double se_sq) {
+    const double d = dprime_of(q);
+    return d > 0.0 ? se_sq / (2.0 * d) : 0.0;
+  };
+  // [condition][axis], condition 0 = own reach (clause 1), 1 = delivered (clause 2).
+  double dsq[2][2] = {}, sesq[2][2] = {};
+  for (uint32_t c = 0; c < 2; ++c) {
+    for (uint32_t i = 0; i < 2; ++i) {
+      const uint32_t a = kBSAx[i];
+      const double sep = c == 0 ? kAEReach[a] : kBSDeliv[i];
+      std::vector<double> v;
+      for (uint32_t r = 0; r < kAEReps; ++r) v.push_back(measure(a, r, sep));
+      double se = 0.0;
+      dsq[c][i] = ctx_mean_se(v, &se);
+      sesq[c][i] = se;
+    }
+  }
+
+  // ---- CLAUSE 1: the wiring check, first ----
+  std::printf("  CLAUSE 1 -- WIRING: at each axis's OWN reach this must return §43's\n"
+              "  values. An instrument that cannot reproduce the table it extends cannot\n"
+              "  extend it -- and reproducing a KNOWN axis difference is also what proves\n"
+              "  clause 2 is answerable either way.\n");
+  bool wiring_ok = true;
+  for (uint32_t i = 0; i < 2; ++i) {
+    const double d = dprime_of(dsq[0][i]);
+    const double sd = se_dprime(dsq[0][i], sesq[0][i]);
+    const double off = d - kBSRef[i];
+    // Within 2 SE of the recorded value, or within 1% of it, whichever is kinder:
+    // the recorded figure is printed to 3 dp and this is a different call path.
+    const bool ok = std::fabs(off) <= 2.0 * sd || std::fabs(off) <= 0.01 * kBSRef[i];
+    if (!ok) wiring_ok = false;
+    std::printf("    %-3s reach %6.1f Hz   d' %6.3f +- %.3f   §43 says %6.3f   %+6.3f  -> %s\n",
+                kAEName[kBSAx[i]], kAEReach[kBSAx[i]], d, sd, kBSRef[i], off,
+                ok ? "ok" : "*** DISAGREES");
+  }
+  if (!wiring_ok) {
+    std::printf("\n  *** CLAUSE 1 FAILED. Clause 2 is NOT READ: a differences table whose\n"
+                "  own anchor does not reproduce says nothing. Printed below anyway,\n"
+                "  because a suppressed table cannot be audited.\n");
+  }
+
+  // ---- CLAUSE 2: the comparison, at the separations tutorgrid actually delivered ----
+  std::printf("\n  CLAUSE 2 -- AT THE DELIVERED SEPARATIONS (tutorgrid run 3, generation 0)\n");
+  const double d_f1 = dprime_of(dsq[1][0]), d_f2 = dprime_of(dsq[1][1]);
+  const double s_f1 = se_dprime(dsq[1][0], sesq[1][0]);
+  const double s_f2 = se_dprime(dsq[1][1], sesq[1][1]);
+  for (uint32_t i = 0; i < 2; ++i)
+    std::printf("    %-3s %6.1f Hz (the bit that %s)   d' %6.3f +- %.3f\n",
+                kAEName[kBSAx[i]], kBSDeliv[i], i == 0 ? "DECAYS 57%" : "holds      ",
+                dprime_of(dsq[1][i]), se_dprime(dsq[1][i], sesq[1][i]));
+  const double gap = d_f2 - d_f1;
+  const double se_gap = std::sqrt(s_f1 * s_f1 + s_f2 * s_f2);
+  // ---- CLAUSE 3: power, read BEFORE the contrast ----
+  const bool underpowered = se_gap > kBSMaxSE;
+  std::printf("\n  CLAUSE 3 -- POWER, read BEFORE the contrast: SE on the gap %.3f against\n"
+              "  the pre-registered ceiling %.2f  -> %s\n",
+              se_gap, kBSMaxSE,
+              underpowered ? "*** NO VERDICT on power alone" : "adequate");
+  std::printf("    gap  d'(F2) - d'(F1)  %+6.3f +- %.3f  (%.1f SE)   ratio %.3f\n", gap, se_gap,
+              se_gap > 0.0 ? gap / se_gap : 0.0, d_f1 > 0.0 ? d_f2 / d_f1 : 0.0);
+  if (!underpowered) {
+    const bool f2_better = gap > 2.0 * se_gap;
+    const bool f1_better = -gap > 2.0 * se_gap;
+    std::printf("    -> %s\n",
+                f2_better
+                    ? "F2 IS THE LOUDER BIT: the airborne-SNR account SURVIVES as a factor,\n"
+                      "       and the open question becomes whether this ratio can produce 57%\n"
+                      "       against 0%"
+                    : (f1_better
+                           ? "*** INVERTED: F1 is the MORE audible bit, so the asymmetry runs\n"
+                             "       OPPOSITE to the decay and the lead's last named cause joins\n"
+                             "       its first in pointing the wrong way"
+                           : "EQUAL WITHIN ERROR -- THE AIRBORNE-SNR ACCOUNT IS REFUTED,\n"
+                             "       MODEL-FREE: two bits on one creature, same jitter, equally\n"
+                             "       audible, one decaying 57% and the other not at all cannot\n"
+                             "       differ because one is the weaker signal"));
+  }
+  std::printf("\n  WHAT THIS CANNOT DO: explain the decay. It removes, or fails to remove,\n"
+              "  the one surviving named cause. If the verdict is EQUAL then the lead has\n"
+              "  no candidate answers left, which is a worse-sounding and more useful\n"
+              "  position than one with two bad ones.\n");
+  return true;
+}
+
 
 bool run_aimslice(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
   (void)verbose;

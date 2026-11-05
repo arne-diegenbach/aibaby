@@ -1,0 +1,35 @@
+experiment: bitsnr
+  the question      §45. tutorgrid's F1 bit loses 57% over four
+                    generations and its F2 bit loses nothing. Is the F1
+                    bit simply a WEAKER SIGNAL IN THE AIR?
+  the unit          Hz is the wrong one. F1 carries 2.06x more d' PER HZ
+                    than F2 (§43: 7.857 at 118.0 vs 9.722 at 300.3), so
+                    tutorgrid's 37.6 vs 91.9 Hz is 2.44x in Hz and about
+                    1.19x in airborne d'. Measured here, not extrapolated.
+  the jitter        kAESdG, §43's audible-tick values -- the denominator
+                    measured where the creature is actually sounding.
+  the level         0.303, the amplitude the creature hears itself at
+
+  CLAUSE 1 -- WIRING: at each axis's OWN reach this must return §43's
+  values. An instrument that cannot reproduce the table it extends cannot
+  extend it -- and reproducing a KNOWN axis difference is also what proves
+  clause 2 is answerable either way.
+    f1  reach  118.0 Hz   d'  7.857 +- 0.093   §43 says  7.857   -0.000  -> ok
+    f2  reach  300.3 Hz   d'  9.722 +- 0.094   §43 says  9.722   -0.000  -> ok
+
+  CLAUSE 2 -- AT THE DELIVERED SEPARATIONS (tutorgrid run 3, generation 0)
+    f1    37.6 Hz (the bit that DECAYS 57%)   d'  2.576 +- 0.065
+    f2    91.9 Hz (the bit that holds      )   d'  2.708 +- 0.045
+
+  CLAUSE 3 -- POWER, read BEFORE the contrast: SE on the gap 0.079 against
+  the pre-registered ceiling 0.16  -> adequate
+    gap  d'(F2) - d'(F1)  +0.132 +- 0.079  (1.7 SE)   ratio 1.051
+    -> EQUAL WITHIN ERROR -- THE AIRBORNE-SNR ACCOUNT IS REFUTED,
+       MODEL-FREE: two bits on one creature, same jitter, equally
+       audible, one decaying 57% and the other not at all cannot
+       differ because one is the weaker signal
+
+  WHAT THIS CANNOT DO: explain the decay. It removes, or fails to remove,
+  the one surviving named cause. If the verdict is EQUAL then the lead has
+  no candidate answers left, which is a worse-sounding and more useful
+  position than one with two bad ones.

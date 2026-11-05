@@ -352,6 +352,15 @@ const Spec kSpecs[] = {
      "  2x2 over the two render gains x five freeze arms, at the amplitude the\n"
      "  creature hears. Pre-registers that bw2 FAILS at d' 0.976 if f3 taxes it\n"
      "  as it taxed F1. Amplitude 1.0 appears only in the run-2c reproduction"},
+    {"bitsnr", 1, Expect::kRead, Tier::kLong,
+     "  §45: is tutorgrid's F1 bit -- the one that loses 57% over four\n"
+     "  generations, where the F2 bit loses nothing -- simply a WEAKER SIGNAL\n"
+     "  IN THE AIR? Hz is the wrong unit: F1 carries 2.06x more d' per Hz, so\n"
+     "  37.6 vs 91.9 Hz is 2.44x in Hz and ~1.19x in airborne d'. Measures both\n"
+     "  axes at the DELIVERED separations on identical deviates, with clause 1\n"
+     "  reproducing §43's d' at each axis's own reach as the wiring check. EQUAL\n"
+     "  within error refutes the airborne-SNR account model-free. Tier::kLong,\n"
+     "  so verify's experiment COUNT is untouched"},
     {"axislev", 1, Expect::kRead, Tier::kLong,
      "  §41 run 2d: is f3's static cost to F1 LEVEL? Sweeps amplitude over 2x\n"
      "  at render_f3_gain 0 -- if F1's d' is flat there, a global level change is\n"
@@ -1338,6 +1347,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "axislev") ok = run_axislev(dna_blob, ticks, verbose);
   else if (name == "axisamp") ok = run_axisamp(dna_blob, ticks, verbose);
   else if (name == "axisbw2") ok = run_axisbw2(dna_blob, ticks, verbose);
+  else if (name == "bitsnr") ok = run_bitsnr(dna_blob, ticks, verbose);
   else if (name == "ctxgrid") ok = run_ctxgrid(dna_blob, ticks, verbose);
   else if (name == "echoname") ok = run_echoname(dna_blob, ticks, verbose);
   else if (name == "dirbudget") ok = run_dirbudget(dna_blob, ticks, verbose);
