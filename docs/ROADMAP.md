@@ -6110,3 +6110,49 @@ What a vocabulary is actually bounded by is **between-trial** spread, which is *
 note 2 already flags this as *"wrong ruler both ways"*. So a dose-response here is a statement about
 the knob's effect on motor variability, and the step from that to a word count still needs the
 between-trial measurement §41 never made. §42 does not claim that step.
+
+### §42 AMENDMENT — `calibrate` IS NOT A LIVENESS GUARD HERE, AND THE SMOKE SAID SO
+
+**Written after the smoke and the calibrate ladder, before any scatter number exists.**
+
+Clause 1 named `calibrate` as a guard on liveness. **It is not one for this ladder, and the reason
+is printed in its own output.** Run across all five rungs:
+
+| vocal `noise_amp` | vocal free-running rate | amplitude floor | verdict |
+| --- | --- | --- | --- |
+| 0.28 | 6.55 Hz | 0.45 | `calibrate PASS` |
+| **0.22 (shipped)** | **4.12 Hz** | 0.45 | `calibrate PASS` |
+| 0.16 | 2.10 Hz | 0.45 | `calibrate PASS` |
+| 0.11 | 1.20 Hz | 0.45 | `calibrate PASS` |
+| 0.06 | **0.62 Hz** | 0.45 | `calibrate PASS` |
+
+**A 10.6x collapse in the rate of the module being manipulated, and the guard passes every rung.**
+`calibrate` compares each module's free-running rate against its genome target and prints, for
+vocal and vocal only, `by design — holds the duty cycle down`. The one module whose rate this
+section moves is the one module `calibrate` **excuses by construction**. The amplitude floor is
+0.45 at every rung and is likewise blind to it.
+
+This is [[aibaby-guard-measures-the-wrong-quantity]] again, and it is the shape that memory counts
+as six in seven runs — **two of them installed by the previous fix.** Pre-registering a guard is not
+the same as checking that the guard can fire. Cost here: one smoke, ninety seconds, before the
+ladder rather than after it.
+
+**THE SURVIVING GUARD IS THE ONE IN `axisgrid`'S OWN TABLE**, which clause 1 also named: `amp` rest
+**0.444** and `voi` rest **0.475** on the shipped genome. A rung whose `amp` falls below 0.222 is
+NO VERDICT. That guard is unaffected by this amendment, so clause 1 still has a firing branch —
+but it now has exactly one, where it was written as if it had two.
+
+**AND THE CALIBRATE LADDER IS A RESULT IN ITS OWN RIGHT, two ways:**
+
+1. **The 0.22 rung returns 4.12 Hz**, which is the archive's published shipped vocal rate to the
+   printed precision. Clause 2's reproduction check passes on the calibrate side before `axisgrid`
+   has reported anything.
+2. **The rate is supralinear in the knob**: `d log rate / d log noise_amp = 1.53` over the full
+   ladder. That is the quantity clause 3 must be read **against**. If `sd(f1)` falls with an
+   exponent at or below the rate's, the scatter may be falling because the creature is *firing
+   less*, not because its motor noise per unit of behaviour is lower — **"less behaviour" and "less
+   noise" are not the same finding**, and the shipped genome's own comment says which one to expect
+   (*"in this creature the motor module's spontaneous drive is its babble"*). So clause 3's three-way
+   split is now read as a **ratio of exponents**, and a scatter exponent near 1.53 is the *null*,
+   not the result. This is a stricter test than the one pre-registered, and it is stricter in the
+   direction that could refuse the lead.
