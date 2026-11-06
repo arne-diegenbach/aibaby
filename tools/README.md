@@ -142,3 +142,32 @@ Two ways that loop misbehaves, both real:
   excitatory top-down feedback took central 8.48 → 17.48 Hz over five rounds and
   was still climbing. That is a verdict on the configuration, not a calibration
   failure.
+
+## Auditing the instruments for a plausible wrong number
+
+`audit_printf_order.py` scans every `host/src/*.cpp` and `*.h` for one defect
+class: a `printf`/`snprintf` whose argument list contains **both** a call that
+writes an out-parameter **and** a bare read of that same variable.
+
+```cpp
+std::printf("%7.2f +- %5.2f", ctx_mean_se(v, &e), e);   // WRONG
+```
+
+C++ does not order a call's arguments, so `e` may be read before the call that
+writes it. In §48 this printed **`0.00` for every standard error in a four-arm,
+36-seed table** while the means beside them were correct — a result that reads
+as "the arms do not differ, with no scatter at all". The means were right and
+the paired contrasts were right, which is exactly why it survived a reading.
+
+Run it from the repo root with no arguments; it exits nonzero on a finding, so
+give it its own command rather than putting it mid-pipe. Write the mean into a
+named local first and the bug cannot occur:
+
+```cpp
+const double m = ctx_mean_se(v, &e);
+std::printf("%7.2f +- %5.2f", m, e);
+```
+
+It strips comments before scanning (the fix for this bug is documented with a
+comment showing the broken call) but deliberately preserves string literals, so
+a `http://` inside a format string does not swallow the rest of the line.
