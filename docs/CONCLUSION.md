@@ -172,6 +172,30 @@ Each of these was built or measured, not argued away; the record carries the run
   flat within 1.0 SE across the ladder it is scoreable on. So nine words naming as well as six was
   never evidence that the grid could keep growing: the limit is how many distinctions the air and
   the ear carry, and that is three axes at roughly 2.6 levels each.
+- **Spending the vocabulary on more axes, which is the behavioural half of the same question.** The
+  entry above says the air carries three axes; this one says using the third one *loses*. With a
+  third resonator switched on, f3 is audible (d' 5.272 at its reach), commandable (2.68 levels),
+  teachable (+47.88 ± 9.47 Hz, 5.1 SE) and nameable on the creature's own derived index (excess
+  +0.2427 ± 0.0492, 4.9 SE, 16/18). It still does not pay. A 2×2×2 code spread over three axes
+  delivers **5.95 ± 0.75 Hz** of F1 where a 3×3 code stretched over two delivers **11.14 ± 1.27** —
+  paired −5.19 ± 1.43, −3.6 SE. Taught one axis per session third instead, so that the three lessons
+  are mutually silent by construction, it is still **−4.53 ± 1.78 Hz (−2.5 SE)** behind the stretched
+  code, and sequencing at matched budget buys **+0.83 ± 1.39 (0.6 SE)** — nothing. The retention
+  prediction that motivated the whole line held exactly: F1, taught first and measured two
+  intervening lessons later, delivered 8.83 ± 1.07 against an interleaved 8.00 ± 0.92. So **silence
+  between axes is free and also worthless.** Adding an axis multiplies the code space and divides the
+  teaching time, and reach is bought with time — a three-axis arm given 3× the teaching exactly ties
+  a two-axis stretched arm given 1.125× (+0.09 ± 2.25). `render_f3_gain` ships at 0.0 for that reason
+  and not for an audibility one.
+- **Accumulating on the input side instead.** The ear is not a bottleneck and cannot be made into
+  one: it carries one-of-eight at **0.981 against a 1.000 signal ceiling**, so a better auditory
+  front end has nothing to occupy. Nor is it a memory — on the same trials it reads 1.000 while the
+  word plays, 0.992 for 200 ms after, 0.624 by 200–600 ms and 0.520 by 600 ms, which is chance. The
+  creature's only persistent record of a word it heard is its own **motor echo**, which still carries
+  the word at 0.706 where the ear is already at chance. Central carries nothing: deleting
+  `central→vocal` entirely leaves every number unchanged. This is why the exponent above bounds
+  everything rather than only production, and why four weight-retention stores were the wrong shape
+  — there is no non-motor trace for them to consolidate.
 
 ## What would have to be different
 
