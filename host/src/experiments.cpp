@@ -387,6 +387,16 @@ const Spec kSpecs[] = {
      "  carry f3 at rest). Primary is delivered |dF1| between the EXTREME F1\n"
      "  levels, which both arms ask at 118 Hz -- NOT ctxgrid's sp1, which\n"
      "  averages over all pairs and so depends on grid shape. Tier::kLong"},
+    {"f3seq", 1200000, Expect::kRead, Tier::kLong,
+     "  §48: SEQUENTIAL teaching. §47 taught three axes AT ONCE and the\n"
+     "  three-axis code lost -- breaking nine-axes note 4, which says teaching\n"
+     "  stays SEQUENTIAL because two dimensions share one reward channel. Four\n"
+     "  arms: the 2x2x2 taught one axis per session third at x1 and x3 budget,\n"
+     "  plus §47's SIMUL and STRETCH arms UNCHANGED as reproduction checks.\n"
+     "  Window is the FINAL THIRD, so F1 is the oldest lesson and the primary\n"
+     "  is also a retention test. Clause 3 counts feedback per third, because a\n"
+     "  schedule that never switched would make a sequential arm a one-axis\n"
+     "  lesson and its null a false refusal. Tier::kLong"},
     {"axislev", 1, Expect::kRead, Tier::kLong,
      "  §41 run 2d: is f3's static cost to F1 LEVEL? Sweeps amplitude over 2x\n"
      "  at render_f3_gain 0 -- if F1's d' is flat there, a global level change is\n"
@@ -1377,6 +1387,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "f3name") ok = run_f3name(dna_blob, ticks, verbose);
   else if (name == "f3grid") ok = run_f3grid(dna_blob, ticks, verbose);
   else if (name == "f3comp") ok = run_f3comp(dna_blob, ticks, verbose);
+  else if (name == "f3seq") ok = run_f3seq(dna_blob, ticks, verbose);
   else if (name == "ctxgrid") ok = run_ctxgrid(dna_blob, ticks, verbose);
   else if (name == "echoname") ok = run_echoname(dna_blob, ticks, verbose);
   else if (name == "dirbudget") ok = run_dirbudget(dna_blob, ticks, verbose);

@@ -4219,7 +4219,11 @@ enum VLTarget {
 // and no caller that passes kVLScoreFormant changes behaviour.
 // kVLScore3 is §47's: the JOINT three-formant error. Appended, so every existing
 // enumerator keeps its value.
-enum VLScore { kVLScoreFormant = 0, kVLScoreAmp, kVLScoreRate, kVLScoreF3, kVLScore3 };
+// kVLScore3Seq is §48's: the same three axes, but ONE AT A TIME -- the scored axis
+// rotates by session third (F1, then F2, then f3). Appended, so every existing
+// enumerator keeps its value.
+enum VLScore { kVLScoreFormant = 0, kVLScoreAmp, kVLScoreRate, kVLScoreF3, kVLScore3,
+               kVLScore3Seq };
 
 // The two amplitudes, either side of what the creature does naturally (babble
 // sits near 0.48) so that neither target is the one it would drift to anyway.
@@ -4599,6 +4603,12 @@ struct VLRun {
   double ph_share = 0.0;
   double ph_off = 0.0;
   double err_early = 0.0, err_late = 0.0;
+  // §48 clause 3: how many feedback events landed in each session third, and which
+  // axis was scored there. A rotating schedule that silently never switched would
+  // make a sequential arm a one-axis lesson and its null a FALSE REFUSAL -- the shape
+  // that cost §46 clause 4 a whole run. Counted, not assumed.
+  uint32_t seq_fb[3] = {};
+  uint32_t seq_axis[3] = {};
   double err_by_word[kVLMaxWords][2] = {};
   uint32_t scored = 0, skipped = 0, praises = 0, scolds = 0;
   // WHERE THE BUDGET GOES, split by tenth of the session. `dirbudget` found that
@@ -5269,6 +5279,11 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
                     : tgt_table                                  ? tgt_table[target_word]
                                                                  : kWords[target_word];
     const uint32_t bucket = target_word;
+    // §48: which third of the session this trial is in, and therefore which axis
+    // kVLScore3Seq scores. Computed per TRIAL (not per tick) so the schedule is a
+    // property of the lesson rather than of the moment.
+    const uint32_t seq_phase =
+        n_trials ? uint32_t(std::min<uint64_t>(2ull, uint64_t(trial) * 3ull / n_trials)) : 0u;
     // The oracle is set once per trial and held, exactly as the context tract
     // is: a condition that vanishes before reward lands has nothing to bind to.
     // In the CONDITIONAL arm the sign follows the word the creature heard, which
@@ -5488,6 +5503,15 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
                          // §47: all three formants at once, the same way in both arms.
                          : score == kVLScore3
                              ? formant_error3(double(v.f1), double(v.f2), double(v.f3), w)
+                         // §48: one axis at a time, by session third. Per-axis scoring is
+                         // what makes the three lessons mutually SILENT, the property
+                         // `axispower` measured as free at +11.5 SE.
+                         : score == kVLScore3Seq
+                             ? (seq_phase == 0
+                                    ? formant_error_axis(double(v.f1), double(v.f2), w, 1u)
+                                : seq_phase == 1
+                                    ? formant_error_axis(double(v.f1), double(v.f2), w, 2u)
+                                    : formant_error_f3(double(v.f3), w, 3u))
                          : score == kVLScoreRate
                              // An event happened. Praise it if this trial wanted
                              // events and scold it if it did not -- so the sign
@@ -5507,6 +5531,10 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
                                    // otherwise -- the same index the baseline uses,
                                    // so target, axis and baseline cannot disagree.
                                    tgt_axis ? tgt_axis[bk] : 0u);
+        if (seq_phase < 3u) {   // §48 clause 3: counted where it landed
+          ++out.seq_fb[seq_phase];
+          out.seq_axis[seq_phase] = seq_phase == 0 ? 1u : (seq_phase == 1 ? 2u : 3u);
+        }
         if (score == kVLScoreRate) {
           // No baseline here, and that is not an omission. The baseline exists
           // so that praise means "closer than you usually get to THIS target",
@@ -5749,6 +5777,16 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
       // the right answer rather than a missing measurement.
       if (n_amp == 0) { ++out.skipped; ++out.dl_silent[dec]; continue; }
       err = std::fabs(amp_sum / double(n_amp) - amp_target);
+    } else if (score == kVLScore3Seq) {
+      // §48: the trial error tracks the SAME rotating axis the feedback optimises, for
+      // §46 clause 3a's reason -- err_early/err_late describing a different objective is
+      // what produced a false "THE REWARD NEVER MOVED".
+      if (n_voiced == 0) { ++out.skipped; ++out.dl_silent[dec]; continue; }
+      err = seq_phase == 0
+                ? formant_error_axis(f1_sum / n_voiced, f2_sum / n_voiced, w, 1u)
+            : seq_phase == 1
+                ? formant_error_axis(f1_sum / n_voiced, f2_sum / n_voiced, w, 2u)
+                : formant_error_f3(f3_sum / n_voiced, w, 3u);
     } else if (score == kVLScore3) {
       // §47: the trial error must be the SAME quantity the feedback optimises, or
       // err_early/err_late describe a different objective -- which is exactly what bit
@@ -48732,6 +48770,287 @@ bool run_f3comp(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) 
                              "       product argument behaviourally. f3 still NAMES (4.9 SE) --\n"
                              "       what fails is the claim that axes MULTIPLY"));
   }
+  return true;
+}
+
+// ===== f3seq (§48): SEQUENTIAL teaching, the product argument at its precondition =====
+//
+// §47 found a three-axis code delivers half the F1 separation of a two-axis one, and
+// then found it had broken the precondition of the argument it was testing.
+// `aibaby-nine-axes-lead` note 4: "TEACHING STAYS SEQUENTIAL: two dimensions share one
+// reward channel (0.58 vs A-then-A). More axes multiply the CODE SPACE, never the
+// teaching rate." §47 taught three axes at once. This teaches them one at a time.
+//
+// WHY IT SHOULD WIN, AND THE MECHANISM IS ALREADY MEASURED. `axispower` established at
+// +11.5 SE that a lesson SILENT about another's axis costs it nothing. Per-axis scoring
+// makes each lesson silent by construction, so sequential teaching is the protocol that
+// turns three competing lessons into three mutually silent ones.
+//
+// TWO OF THE FOUR ARMS ARE REPRODUCTION CHECKS. SIMUL is §47's spread arm and STRETCH
+// its stretched arm; both must return §47's whole-session numbers or nothing else here
+// is readable. Two arms paying for themselves as a gate.
+//
+// AND THE MATCHED-WHAT QUESTION HAS NO CLEAN ANSWER, SO BOTH ARE RUN. Sequencing at a
+// fixed total budget gives each axis a THIRD of the trials the simultaneous arm gives
+// it; scaling by three equalises trials per axis but triples total teaching. All three
+// readings are fixed in the pre-registration, because picking the favourable one
+// afterwards is `aibaby-verdict-fitted-to-data`.
+enum { kFSSeqTotal = 0, kFSSeqAxis, kFSSimul, kFSStretch, kFSArms };
+constexpr const char* kFSName[kFSArms] = {"SEQ-TOTAL", "SEQ-AXIS", "SIMUL", "STRETCH"};
+// §47's published whole-session delivered |dF1|, which arms 2 and 3 must reproduce.
+constexpr double kFSRef[kFSArms] = {0.0, 0.0, 5.95, 11.14};
+constexpr uint32_t kFSReps = 36;
+constexpr double kFSMaxSE = 5.5;
+
+struct FSCell {
+  bool ok = false;
+  double d1 = 0.0, d2 = 0.0, d3 = 0.0;          // final third
+  double w1 = 0.0;                              // whole session, for the §47 check
+  double present = 0.0, match = 0.0;
+  uint32_t fb[3] = {}, axis[3] = {};
+  uint32_t scored = 0, skipped = 0;
+};
+
+inline uint32_t fs_words(uint32_t arm) { return arm == kFSStretch ? 9u : 8u; }
+inline uint64_t fs_mult(uint32_t arm) {   // budget multiplier, in eighths
+  return arm == kFSSeqAxis ? 24ull : (arm == kFSStretch ? 9ull : 8ull);
+}
+inline VLScore fs_score(uint32_t arm) {
+  return (arm == kFSSeqTotal || arm == kFSSeqAxis) ? kVLScore3Seq : kVLScore3;
+}
+
+bool run_f3seq(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  aibaby::Dna dna0;
+  if (dna0.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) return false;
+  const double gain = double(dna0.header().audio.render_f3_gain);
+  const uint32_t csrc = dna0.header().exploration.context_source;
+
+  std::printf("  the question      §48. §47 taught three axes AT ONCE and a three-axis\n"
+              "                    code lost. nine-axes note 4 says teaching stays\n"
+              "                    SEQUENTIAL. This teaches them one at a time.\n");
+  std::printf("  the mechanism     axispower: a lesson SILENT about another's axis costs\n"
+              "                    it nothing (+11.5 SE). Per-axis scoring makes the three\n"
+              "                    lessons silent by construction.\n");
+  std::printf("  the window        delivered |d| between each axis's EXTREME levels over\n"
+              "                    the FINAL THIRD -- so F1 is the OLDEST lesson in the\n"
+              "                    sequential arms and the primary is also a RETENTION\n"
+              "                    test. Whole-session is printed for §47's check.\n");
+  std::printf("  disclosed         the order is FIXED at F1 -> F2 -> f3, so \"sequential\"\n"
+              "                    is confounded with \"f3 last\". All three axes are\n"
+              "                    reported separately so that shows as an asymmetry.\n");
+  std::printf("  render_f3_gain    %.2f\n  context_source    %u\n\n", gain, csrc);
+  if (!(gain > 0.0) || csrc == 0) {
+    std::printf("  *** VACUOUS AND NOT RUN: %s\n",
+                !(gain > 0.0) ? "render_f3_gain is 0.0, so the third axis reaches no ear"
+                              : "context_source is 0, so no arm can name at all");
+    return true;
+  }
+
+  instrument("f3seq", dna0.header().seed ^ 0xF548u, kFSReps, "creatures");
+  Regime regime;
+  const std::vector<FSCell> cells =
+      parallel_reps<FSCell>(kFSReps * kFSArms, [&](uint32_t job) {
+    FSCell cell;
+    const uint32_t r = job / kFSArms, arm = job % kFSArms;
+    const uint32_t nw = fs_words(arm);
+    Word tbl[9];
+    fc_table(arm == kFSStretch ? 1u : 0u, tbl);   // §47's own tables, unchanged
+    std::vector<uint8_t> variant = blob;
+    const uint64_t seed = dna0.header().seed + r * 7919ull;
+    std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+    aibaby::Dna probe;
+    if (probe.load(variant.data(), variant.size()) != aibaby::DnaStatus::kOk) return cell;
+    { aibaby::DnaHeader h = probe.header();
+      h.exploration.context_slots = nw;          // BOTH fields, §46's lesson
+      std::memcpy(variant.data(), &h, sizeof(h)); }
+    const uint64_t arm_ticks = ticks * fs_mult(arm) / 8ull;
+    const VLRun run = run_vocallearn_session(variant, arm_ticks, kVLTaught, nullptr, regime,
+                                             int(kVLTgtHeard), nullptr, fs_score(arm),
+                                             nullptr, nw, tbl);
+    if (!run.ok || run.utt_f3.empty()) return cell;
+    // Delivered separation between an axis's extreme levels, over a window of rows.
+    auto sep = [&](const std::vector<double>& u, uint32_t which, size_t from) {
+      const double lo_t = which == 0 ? kFCF1[0] : which == 1 ? kFCF2[0] : kFCF3[0];
+      const double hi_t = which == 0 ? kFCF1[2] : which == 1 ? kFCF2[2] : kFCF3[1];
+      double lo = 0.0, hi = 0.0; uint32_t nl = 0, nh = 0;
+      for (size_t q = from; q < run.utt_word.size() && q < u.size(); ++q) {
+        const int wd = run.utt_word[q];
+        if (wd < 0 || wd >= int(nw) || !(u[q] > 1.0)) continue;
+        const double t = which == 0 ? double(tbl[wd].f1)
+                       : which == 1 ? double(tbl[wd].f2) : double(tbl[wd].f3);
+        if (std::fabs(t - lo_t) < 1.0) { lo += u[q]; ++nl; }
+        else if (std::fabs(t - hi_t) < 1.0) { hi += u[q]; ++nh; }
+      }
+      return (nl && nh) ? std::fabs(hi / double(nh) - lo / double(nl)) : -1.0;
+    };
+    const size_t n = run.utt_f1.size(), last = n - n / 3;
+    cell.d1 = sep(run.utt_f1, 0, last);
+    cell.d2 = sep(run.utt_f2, 1, last);
+    cell.d3 = sep(run.utt_f3, 2, last);
+    cell.w1 = sep(run.utt_f1, 0, 0);
+    if (cell.d1 < 0.0 || cell.d2 < 0.0 || cell.w1 < 0.0) return cell;
+    cell.present = run.ctx_present_frac;
+    cell.match = run.ctx_match;
+    for (uint32_t k = 0; k < 3; ++k) { cell.fb[k] = run.seq_fb[k]; cell.axis[k] = run.seq_axis[k]; }
+    cell.scored = run.scored; cell.skipped = run.skipped; cell.ok = true;
+    parallel_note("  [%u/%u] seed %u %-9s  dF1 %6.1f  dF2 %6.1f  df3 %6.1f\n", job + 1,
+                  kFSReps * kFSArms, r, kFSName[arm], cell.d1, cell.d2, cell.d3);
+    return cell;
+  });
+
+  // `sep` returns -1.0 to mean "this arm's table has no two extreme levels on
+  // that axis" -- true of f3 in STRETCH by construction. That sentinel must
+  // never enter a mean: averaged over 36 STRETCH cells it printed as "-1.00 Hz"
+  // under a column headed "ask 255", which reads like a measured collapse. The
+  // d1/d2/w1 columns cannot carry it (the cell is dropped above), so only f3
+  // needs filtering -- but filtering by value is the robust form, and it also
+  // catches a sequential arm where only SOME seeds failed to reach an extreme.
+  auto col = [&](uint32_t arm, double FSCell::*f) {
+    std::vector<double> v;
+    for (uint32_t r = 0; r < kFSReps; ++r) {
+      const FSCell& c = cells[size_t(r) * kFSArms + arm];
+      if (c.ok && c.*f >= 0.0) v.push_back(c.*f);
+    }
+    return v;
+  };
+  auto paired = [&](uint32_t a, uint32_t b, double FSCell::*f, double* se, uint32_t* pos,
+                    uint32_t* n) {
+    std::vector<double> d;
+    *pos = 0;
+    for (uint32_t r = 0; r < kFSReps; ++r) {
+      const FSCell& x = cells[size_t(r) * kFSArms + a];
+      const FSCell& y = cells[size_t(r) * kFSArms + b];
+      // Same sentinel filter as `col`, asked of BOTH sides of the pair.
+      if (x.ok && y.ok && x.*f >= 0.0 && y.*f >= 0.0) {
+        d.push_back(x.*f - y.*f);
+        if (x.*f > y.*f) ++(*pos);
+      }
+    }
+    *n = uint32_t(d.size());
+    return d.size() >= 6 ? ctx_mean_se(d, se) : 0.0;
+  };
+
+  // ---- CLAUSE 1: REPRODUCTION ----
+  std::printf("  CLAUSE 1 -- REPRODUCTION against §47, whole-session delivered |dF1|.\n"
+              "  SIMUL and STRETCH are §47's two arms unchanged; if they do not come back\n"
+              "  nothing below is readable.\n");
+  bool repro = true;
+  for (uint32_t arm = kFSSimul; arm < kFSArms; ++arm) {
+    double e = 0.0;
+    const std::vector<double> v = col(arm, &FSCell::w1);
+    const double m = v.empty() ? 0.0 : ctx_mean_se(v, &e);
+    const bool ok = v.size() >= 6 && std::fabs(m - kFSRef[arm]) <= 3.0 * e;
+    if (!ok) repro = false;
+    std::printf("    %-9s %7.2f +- %5.2f   §47 said %6.2f   %+6.2f  -> %s\n", kFSName[arm], m, e,
+                kFSRef[arm], m - kFSRef[arm], ok ? "reproduces" : "*** DISAGREES");
+  }
+
+  // ---- CLAUSE 2: INDEX LIVENESS ----
+  std::printf("\n  CLAUSE 2 -- INDEX LIVE? measured per arm, not read off the genome.\n");
+  bool live = true;
+  for (uint32_t arm = 0; arm < kFSArms; ++arm) {
+    double e = 0.0, e2 = 0.0;
+    const std::vector<double> p = col(arm, &FSCell::present), mm = col(arm, &FSCell::match);
+    const double pv = p.empty() ? 0.0 : ctx_mean_se(p, &e);
+    const double mv = mm.empty() ? 0.0 : ctx_mean_se(mm, &e2);
+    if (!(pv > 0.01)) live = false;
+    std::printf("    %-9s ctx_present_frac %.4f   ctx_match %.4f  (reported, NOT gated)\n",
+                kFSName[arm], pv, mv);
+  }
+  std::printf("    -> %s\n", live ? "live in every arm" : "*** DEAD INDEX somewhere");
+
+  // ---- CLAUSE 3: DID THE ROTATION ROTATE? ----
+  std::printf("\n  CLAUSE 3 -- DID THE SCHEDULE ACTUALLY ROTATE? Feedback events per session\n"
+              "  third and the axis scored there. A schedule that never switched would make\n"
+              "  a sequential arm a ONE-AXIS lesson and its null a false refusal.\n");
+  bool rot = true;
+  for (uint32_t arm = 0; arm < 2; ++arm) {
+    double s[3] = {}; uint32_t ax[3] = {}, n = 0;
+    for (uint32_t r = 0; r < kFSReps; ++r) {
+      const FSCell& c = cells[size_t(r) * kFSArms + arm];
+      if (!c.ok) continue;
+      for (uint32_t k = 0; k < 3; ++k) { s[k] += c.fb[k]; ax[k] = c.axis[k]; }
+      ++n;
+    }
+    const bool ok = n && s[0] > 0.0 && s[1] > 0.0 && s[2] > 0.0 &&
+                    ax[0] == 1u && ax[1] == 2u && ax[2] == 3u;
+    if (!ok) rot = false;
+    std::printf("    %-9s feedback per third %.0f / %.0f / %.0f   axes %u / %u / %u  -> %s\n",
+                kFSName[arm], n ? s[0] / n : 0.0, n ? s[1] / n : 0.0, n ? s[2] / n : 0.0,
+                ax[0], ax[1], ax[2], ok ? "rotated" : "*** DID NOT ROTATE");
+  }
+
+  // ---- THE TABLE ----
+  std::printf("\n  FINAL THIRD, delivered separation between each axis's extreme levels\n");
+  std::printf("    arm         |dF1| (ask %.0f)      |dF2| (ask %.0f)      |df3| (ask %.0f)\n"
+              "                n and Hz             n and Hz             n and Hz\n",
+              kFCAskF1, kFCAskF2, kFCF3[1] - kFCF3[0]);
+  for (uint32_t arm = 0; arm < kFSArms; ++arm) {
+    double e1 = 0.0, e2 = 0.0, e3 = 0.0;
+    const std::vector<double> v1 = col(arm, &FSCell::d1), v2 = col(arm, &FSCell::d2),
+                              v3 = col(arm, &FSCell::d3);
+    // The means are computed into locals FIRST, deliberately. Written inline as
+    // `printf(..., ctx_mean_se(v1, &e1), e1, ...)` the standard does not order
+    // printf's arguments, and the pre-flight read `e1` before the call wrote it:
+    // every SE in this table printed 0.00 over 36 varying seeds. An SE of zero
+    // beside a plausible mean is the quietest wrong number this file can print.
+    // One formatter for all three columns. An EMPTY column is "nothing scored
+    // on this axis", not "0 Hz +- 0" -- the smoke printed exactly that for the
+    // three single-budget arms and it reads like a measured collapse to zero.
+    // 96 bytes, not 32: a non-finite SE formats wide and would truncate.
+    char cell_txt[3][96];
+    const std::vector<double>* vs[3] = {&v1, &v2, &v3};
+    double* es[3] = {&e1, &e2, &e3};
+    for (uint32_t k = 0; k < 3; ++k) {
+      if (vs[k]->empty()) {
+        std::snprintf(cell_txt[k], sizeof(cell_txt[k]), " 0   none scored  ");
+        continue;
+      }
+      // The mean lands in a local BEFORE the call that prints it. Inlining it as
+      // `snprintf(..., ctx_mean_se(v, es[k]), *es[k])` is the very bug this block
+      // exists to fix, and I wrote it that way once already.
+      const double m = ctx_mean_se(*vs[k], es[k]);
+      std::snprintf(cell_txt[k], sizeof(cell_txt[k]), "%2zu  %7.2f +- %5.2f", vs[k]->size(), m,
+                    *es[k]);
+    }
+    std::printf("    %-9s %s   %s   %s\n", kFSName[arm], cell_txt[0], cell_txt[1], cell_txt[2]);
+  }
+
+  // ---- CLAUSES 4 AND 5 ----
+  std::printf("\n  CLAUSE 4/5 -- THE CONTRASTS, paired by seed, in the pre-registered order.\n");
+  struct Q { uint32_t a, b; const char* label; const char* reading; };
+  const Q qs[3] = {
+      {kFSSeqTotal, kFSSimul, "SEQ-TOTAL - SIMUL",
+       "same TOTAL teaching: a win is STRONG, sequencing beating interleaving despite a\n"
+       "         third the trials per axis"},
+      {kFSSeqAxis, kFSSimul, "SEQ-AXIS  - SIMUL",
+       "same teaching PER AXIS: a win is WEAKER, this arm also got 3x the total"},
+      {kFSSeqTotal, kFSStretch, "SEQ-TOTAL - STRETCH",
+       "the question §47 asked, now with the schedule its own precondition demands"}};
+  for (const Q& q : qs) {
+    double se = 0.0; uint32_t pos = 0, n = 0;
+    const double m = paired(q.a, q.b, &FSCell::d1, &se, &pos, &n);
+    const bool weak = se > kFSMaxSE;
+    std::printf("    %-20s %+7.2f +- %5.2f Hz  (%.1f SE)  %u/%u positive\n", q.label, m, se,
+                se > 0.0 ? m / se : 0.0, pos, n);
+    std::printf("      %s\n", q.reading);
+    if (!repro || !live || !rot) {
+      std::printf("      -> NO VERDICT: a clause above failed, so this is not a result.\n");
+    } else if (weak) {
+      std::printf("      -> NO VERDICT on power alone (SE %.2f over the %.1f ceiling).\n", se,
+                  kFSMaxSE);
+    } else {
+      std::printf("      -> %s\n", m > 2.0 * se ? "SEQUENCING WINS on this contrast"
+                                 : (-m > 2.0 * se ? "*** SEQUENCING LOSES on this contrast"
+                                                  : "NULL on this contrast"));
+    }
+  }
+  std::printf("\n  IF SEQ-TOTAL BEATS STRETCH, the product argument cashes and the axis count\n"
+              "  is a real lever under the right protocol. IF ALL THREE ARE NULL, more axes\n"
+              "  buy nothing behaviourally however they are taught, and §41's arithmetic is\n"
+              "  a statement about code space alone -- which would close the vocabulary line\n"
+              "  with a mechanism rather than a tally.\n");
   return true;
 }
 

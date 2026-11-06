@@ -7324,3 +7324,46 @@ reported separately**, so an ordering effect is visible as an asymmetry rather t
 single number. If the result hinges on it, the permuted order is the successor.
 
 ### ABANDONMENT COUNT: ONE RUN
+
+### PRE-FLIGHT, 240 000 ticks, `--allow-short` (2026-11-06)
+
+Run before the real budget, exactly as the clause order demands. **Clauses 1-3 all pass:**
+
+| clause | reading |
+|---|---|
+| 1 REPRODUCTION | SIMUL **7.29 ± 0.96** vs §47's 5.95 (+1.34, inside 3 SE); STRETCH **11.48 ± 1.38** vs 11.14 (+0.34). Both reproduce. |
+| 2 INDEX LIVE | `ctx_present_frac` **1.0000** in all four arms. `ctx_match` 0.51-0.65, reported not gated. §46's false null cannot recur here. |
+| 3 ROTATION | SEQ-TOTAL 136/124/125 feedback events on axes 1/2/3; SEQ-AXIS 388/387/381 on 1/2/3. **The schedule rotates.** |
+
+The contrasts at a fifth of the budget are all null, with SEQ-TOTAL − STRETCH at **−3.45 ± 1.95 Hz
+(−1.8 SE, 11/36 positive)** — stretching still ahead, the same direction §47 found. Not a result: a
+short run cannot pass whatever it reads, and the binary exits 1 by design to say so.
+
+### TWO BUGS THE PRE-FLIGHT CAUGHT IN THE INSTRUMENT ITSELF
+
+**1. Every standard error in the final-third table printed `0.00` over 36 varying seeds.** The cause
+is argument evaluation order:
+
+```cpp
+std::printf("%7.2f +- %5.2f", v1.empty() ? 0.0 : ctx_mean_se(v1, &e1), e1);   // WRONG
+```
+
+C++ does not order `printf`'s arguments, so `e1` was read before the call that writes it. The means
+were right and the paired contrasts — which compute into a local first — were right, which is what
+made it survive a reading: **an SE of zero beside a plausible mean is the quietest wrong number this
+file can print**, and it would have been quoted as "the arms do not differ, with no scatter at all".
+A scanner over all 14 host sources found this as the **only** instance in the codebase, and it was
+three hours old. Fixed by computing each mean into a local first. I then wrote the identical bug
+again inside the fix, which is recorded where the fix is.
+
+**2. A sentinel was being averaged as Hz.** `sep()` returns `-1.0` for "this arm's table has no two
+extreme levels on that axis", which is true of f3 in STRETCH by construction. Averaged over 36
+STRETCH cells it printed **`-1.00`** under a column headed `ask 255` — indistinguishable from a
+measured collapse. `d1`/`d2`/`w1` cannot carry it because the cell is dropped earlier, so only f3 was
+exposed, but the filter is now by value in `col()` **and in `paired()`, asked of both sides**, which
+also catches the case where only *some* seeds fail to reach an extreme. An empty column now prints
+`none scored` rather than `0.00 ± 0.00` — the smoke printed that silent zero for three of four arms
+and it reads the same wrong way.
+
+Both are display defects, not measurement defects: no published number changes. They are written
+down because both produced a **plausible, quotable, wrong** number rather than an error.
