@@ -2500,6 +2500,7 @@ bool run_axisamp(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_axisbw2(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_bitsnr(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_f3name(const std::vector<uint8_t>&, uint64_t, bool);
+bool run_f3grid(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_ctxgrid(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_echoname(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_dirbudget(const std::vector<uint8_t>&, uint64_t, bool);

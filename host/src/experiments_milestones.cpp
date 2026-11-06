@@ -48252,6 +48252,235 @@ bool run_f3name(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) 
   return true;
 }
 
+// ===== f3grid (§46 clause 4): can the third formant carry a CONDITIONAL code? =====
+//
+// Clause 3 opened the gate: a FIXED f3 target moves the voice against teachsound's
+// yoke at +47.88 +- 9.47 Hz, 5.1 SE, 9 of 9 seeds. But it also said the lesson is
+// weak -- the taught arm alone reached 21.6% of the ask at 1.8 SE -- and
+// conditionality always costs here, so the prior on this run is modest.
+//
+// THIS IS `ctxgrid`'S DESIGN WITH THE AXIS SWAPPED. Two words differing ONLY in f3,
+// both arms hearing identical sessions, differing only in whether the target the
+// creature is rewarded toward FOLLOWS THE WORD IT HEARD (kVLTgtHeard) or is drawn in
+// the same proportions independently of it (kVLTgtRandom). That isolates
+// CONDITIONALITY and nothing else: same targets, same reward rate, same words.
+//
+// THE MEASURE IS ctxgrid's `p`, AND ITS CHANCE IS 0.5 BY CONSTRUCTION. Which side of
+// the pair's own f3 midline the utterance landed on, against the side its target word
+// is on. The midline is the GRID's, not the creature's, so a creature that never
+// moves scores exactly 0.5 and no slot-to-word map is ever fitted on scored rows --
+// the best-of-k! trap `aibaby-direction-null` records.
+//
+// WHAT IS NOT USED AS A GATE: `ctx_match`. It is the BETTER OF THE TWO PERMUTATIONS,
+// so its null is above 0.5 and stating a 0.5 bar against it would be the same trap in
+// the diagnostic column. It is printed because a derived index sits inside a loop --
+// the bias steers the voice and the index is read off the voice -- and its early/late
+// split says whether the partition is closing on itself or fixed.
+constexpr Word kC4Words[2] = {
+    {200.0f, 630.0f, 1667.0f, 2486.3f},   // low  f3
+    {200.0f, 630.0f, 1667.0f, 2741.2f},   // high f3
+};
+constexpr double kC4Mid = 2613.75;    // the pair's own midline = f3 rest
+constexpr uint32_t kC4Reps = 18;
+// POWER, STATED BEFORE THE RUN. `ctxgrid` reported its excess at +-0.023 on n=36, so
+// the SE here is about 0.023*sqrt(36/18) = 0.033. Its own F1 and F2 excesses were
+// +0.126 and +0.082, which at this SE would read 3.8 and 2.5 SE. So this n can resolve
+// a ctxgrid-sized effect and a null will mean "smaller than ctxgrid's", not
+// "underpowered". Above this ceiling the contrast is NO VERDICT on power alone.
+constexpr double kC4MaxSE = 0.055;
+
+struct C4Cell {
+  bool ok = false;
+  double p3 = 0.0;        // fraction on the correct side of the f3 midline
+  double match = 0.0, m_early = 0.0, m_late = 0.0;
+  // THE PRE-FLIGHT THIS FILE ALREADY DEMANDED AND THE FIRST RUN SKIPPED. The comment
+  // at ~5423 says it in as many words: "the genome must carry `context_slots >= 2`,
+  // and `ctx_present_frac` must be checked NONZERO on a smoke BEFORE any budget is
+  // spent." Run 1 of clause 4 set `context_source = 4` and left `context_slots = 0`
+  // -- `ctxgrid` patches BOTH fields at runtime and only one was copied -- so there
+  // were no prototypes, `active_context()` never returned an index inside the word
+  // range, ctx_match came back 0.000 in both arms, and the instrument printed a NULL
+  // that was a FALSE REFUSAL. The config check it carried (`context_source != 0`)
+  // tested the wrong one of the two fields.
+  double present = 0.0;
+  uint32_t scored = 0, skipped = 0, rows = 0;
+};
+
+bool run_f3grid(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  aibaby::Dna dna0;
+  if (dna0.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) return false;
+
+  const double gain = double(dna0.header().audio.render_f3_gain);
+  const uint32_t csrc = dna0.header().exploration.context_source;
+  std::printf("  the question      §46 clause 4. Clause 3 showed a FIXED f3 target moves\n"
+              "                    the voice (5.1 SE, 9/9). Can f3 carry a CONDITIONAL\n"
+              "                    code -- two words differing only in f3, on an index\n"
+              "                    the creature derives itself?\n");
+  std::printf("  the design        ctxgrid's, axis swapped. Both arms hear identical\n"
+              "                    sessions; only whether the REWARDED target follows the\n"
+              "                    heard word differs. That isolates conditionality.\n");
+  std::printf("  the measure       which side of the pair's own f3 midline (%.1f Hz) the\n"
+              "                    utterance landed on. Chance is 0.5 BY CONSTRUCTION and\n"
+              "                    no slot-to-word map is fitted on scored rows.\n", kC4Mid);
+  std::printf("  render_f3_gain    %.2f\n  context_source    %u\n\n", gain, csrc);
+
+  // ---- THE TWO WAYS THIS RUN CAN BE VACUOUS, BOTH CHECKED BEFORE IT STARTS ----
+  if (!(gain > 0.0)) {
+    std::printf("  *** VACUOUS AND NOT RUN. render_f3_gain is 0.0, so f3 reaches no ear:\n"
+                "  the creature cannot hear its own f3 and the caregiver cannot say one.\n");
+    return true;
+  }
+  if (csrc == 0) {
+    std::printf("  *** VACUOUS AND NOT RUN. context_source is 0, so there is no derived\n"
+                "  index and the \"conditional\" arm has nothing to be conditional ON. Its\n"
+                "  null would read as \"f3 cannot carry a code\" and be wrong -- the same\n"
+                "  false refusal shape as §41's run 2. Use a genome with a context module\n"
+                "  and context_source = 4.\n");
+    return true;
+  }
+
+  instrument("f3grid", dna0.header().seed ^ 0xF3C4u, kC4Reps, "creatures");
+  Regime regime;
+  const std::vector<C4Cell> cells = parallel_reps<C4Cell>(kC4Reps * 2u, [&](uint32_t job) {
+    C4Cell cell;
+    const uint32_t r = job / 2u, a = job % 2u;   // a = 0 conditional, 1 random
+    std::vector<uint8_t> variant = blob;
+    const uint64_t seed = dna0.header().seed + r * 7919ull;
+    std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+    const int tgt = a == 0 ? int(kVLTgtHeard) : int(kVLTgtRandom);
+    const VLRun run = run_vocallearn_session(variant, ticks, kVLTaught, nullptr, regime, tgt,
+                                             nullptr, kVLScoreF3, nullptr, 2u, kC4Words);
+    if (!run.ok || run.utt_f3.empty()) return cell;
+    uint32_t hit = 0, n = 0;
+    for (size_t u = 0; u < run.utt_word.size() && u < run.utt_f3.size(); ++u) {
+      const int wd = run.utt_word[u];
+      if (wd < 0 || wd > 1) continue;
+      if (!(run.utt_f3[u] > 1.0)) continue;        // also excludes a non-finite row
+      const bool want_high = double(kC4Words[wd].f3) > kC4Mid;
+      if ((run.utt_f3[u] > kC4Mid) == want_high) ++hit;
+      ++n;
+    }
+    if (!n) return cell;
+    cell.p3 = double(hit) / double(n);
+    cell.rows = n;
+    cell.match = run.ctx_match;
+    cell.m_early = run.ctx_match_early;
+    cell.m_late = run.ctx_match_late;
+    cell.present = run.ctx_present_frac;
+    cell.scored = run.scored;
+    cell.skipped = run.skipped;
+    cell.ok = true;
+    parallel_note("  [%u/%u] seed %u %-11s  p3 %.3f  match %.3f  rows %u\n", job + 1,
+                  kC4Reps * 2u, r, a == 0 ? "conditional" : "random", cell.p3, cell.match,
+                  cell.rows);
+    return cell;
+  });
+
+  std::vector<double> p[2], mt[2], me[2], ml[2], dif;
+  for (uint32_t r = 0; r < kC4Reps; ++r) {
+    const C4Cell& c = cells[size_t(r) * 2u + 0];
+    const C4Cell& d = cells[size_t(r) * 2u + 1];
+    if (c.ok) { p[0].push_back(c.p3); mt[0].push_back(c.match);
+                me[0].push_back(c.m_early); ml[0].push_back(c.m_late); }
+    if (d.ok) { p[1].push_back(d.p3); mt[1].push_back(d.match);
+                me[1].push_back(d.m_early); ml[1].push_back(d.m_late); }
+    if (c.ok && d.ok) dif.push_back(c.p3 - d.p3);     // PAIRED, same seed
+  }
+  if (dif.size() < 3) { std::printf("\n  inconclusive: %zu paired seeds.\n", dif.size()); return false; }
+
+  double sp[2] = {}, se[2] = {}, sm[2] = {}, sme = 0.0;
+  for (uint32_t a = 0; a < 2; ++a) {
+    sp[a] = ctx_mean_se(p[a], &se[a]);
+    sm[a] = ctx_mean_se(mt[a], &sme);
+  }
+  double sd = 0.0;
+  const double md = ctx_mean_se(dif, &sd);
+  uint32_t pos = 0;
+  for (double x : dif) if (x > 0.0) ++pos;
+
+  std::printf("\n  arm           n     p3 (chance 0.500)    ctx_match (best-of-2, null > 0.5)\n");
+  const char* nm[2] = {"conditional", "random"};
+  for (uint32_t a = 0; a < 2; ++a) {
+    double e2 = 0.0, e3 = 0.0;
+    const double a_e = ctx_mean_se(me[a], &e2), a_l = ctx_mean_se(ml[a], &e3);
+    std::printf("    %-11s %-5zu %.3f +- %.3f        %.3f   (early %.3f -> late %.3f)\n", nm[a],
+                p[a].size(), sp[a], se[a], sm[a], a_e, a_l);
+    (void)e2; (void)e3;
+  }
+
+  // ---- CLAUSE 4a(i): THE INDEX MUST BE LIVE. FIRST, AND MEASURED NOT CONFIGURED ----
+  double spr = 0.0, epr = 0.0;
+  std::vector<double> pres;
+  for (const C4Cell& c : cells) if (c.ok) pres.push_back(c.present);
+  spr = pres.empty() ? 0.0 : ctx_mean_se(pres, &epr);
+  double mm = 0.0, emm = 0.0;
+  std::vector<double> allm;
+  for (const C4Cell& c : cells) if (c.ok) allm.push_back(c.match);
+  mm = allm.empty() ? 0.0 : ctx_mean_se(allm, &emm);
+  const bool index_live = spr > 0.01 && mm > 0.0;
+  std::printf("\n  CLAUSE 4a(i) -- IS THE INDEX LIVE? Measured, not read off the genome.\n"
+              "  `ctx_present_frac` %.4f, `ctx_match` %.4f over all cells.\n"
+              "    -> %s\n", spr, mm,
+              index_live ? "live: the conditional arm has something to condition on"
+                         : "*** DEAD INDEX -- THIS RUN IS VACUOUS AND THE EXCESS BELOW IS\n"
+                           "       NOT A RESULT. A null here would be a false refusal of the\n"
+                           "       AXIS produced by a broken configuration. Check that the\n"
+                           "       genome carries BOTH context_slots >= 2 AND context_source,\n"
+                           "       which is the pre-flight the comment at ~5423 demands");
+
+  // ---- CLAUSE 4a(ii): THE CONTROL MUST SIT AT CHANCE ----
+  const bool ctrl_ok = std::fabs(sp[1] - 0.5) <= 2.0 * se[1];
+  std::printf("\n  CLAUSE 4a(ii) -- THE CONTROL. p3's chance is 0.500 by construction, so a\n"
+              "  random arm away from it means something is driving f3 UNCONDITIONALLY and\n"
+              "  the paired contrast is not purely about conditionality.\n"
+              "    random arm %.3f +- %.3f, %+.3f from chance  -> %s\n", sp[1], se[1],
+              sp[1] - 0.5, ctrl_ok ? "at chance, as it must be" : "*** OFF CHANCE");
+
+  // ---- CLAUSE 4b: POWER, read BEFORE the contrast ----
+  const bool weak = sd > kC4MaxSE;
+  std::printf("\n  CLAUSE 4b -- POWER, read BEFORE the contrast: SE on the paired excess\n"
+              "  %.4f against the pre-registered ceiling %.3f  -> %s\n", sd, kC4MaxSE,
+              weak ? "*** NO VERDICT on power alone" : "adequate");
+
+  // ---- CLAUSE 4c: THE EXCESS, THREE-WAY ----
+  std::printf("\n  CLAUSE 4c -- THE EXCESS, paired by seed and spanning the sign.\n"
+              "    conditional - random  %+.4f +- %.4f  (%.1f SE)   %u/%zu seeds positive\n",
+              md, sd, sd > 0.0 ? md / sd : 0.0, pos, dif.size());
+  if (!index_live) {
+    std::printf("    -> NO VERDICT. The index is dead (clause 4a(i)), so this contrast is\n"
+                "       between two arms neither of which had a condition. Printed because a\n"
+                "       suppressed table cannot be audited; it is not a result.\n");
+  } else if (!weak) {
+    const bool up = md > 2.0 * sd, down = -md > 2.0 * sd;
+    std::printf("    -> %s\n",
+                up ? "F3 CARRIES A CONDITIONAL CODE at TWO contexts. The third axis is\n"
+                     "       nameable. It does NOT yet follow that 19 signals are cashable:\n"
+                     "       that needs f3 to COMPOSE with f1/f2, and §41 measured f3 TAXING\n"
+                     "       f1 by 11.3% of d'^2, so a three-axis code may lose on f1 what it\n"
+                     "       gains on f3. The composition run is the one that decides shipping"
+                   : (down ? "*** INVERTED: conditioning makes f3 WORSE than not conditioning"
+                           : "NULL -- f3 is audible, commandable and teachable UNCONDITIONALLY,\n"
+                             "       and still carries no conditional code. The refusal is in\n"
+                             "       the conditional WRITE, exactly where docs/CONCLUSION.md\n"
+                             "       locates it, and the 19-signal figure is a code space this\n"
+                             "       creature cannot cash"));
+  }
+  // THE ctxgrid COMPARISON IS NOT LIKE-FOR-LIKE AND MUST NOT BE QUOTED AS ONE.
+  // Its p1/p2 are per-axis bits inside a FOUR-word task; this is a TWO-word task on
+  // one axis. `tutorgrid` established that the derived index is good at two contexts
+  // and is the binding limit at four -- and `ctx_match` here is ~0.93, the easy case.
+  // So a larger excess here than ctxgrid's is an EASIER TASK, not a better axis.
+  std::printf("\n  ctxgrid's F1 excess was +0.126 and its F2 +0.082 at n=36 -- BUT THAT IS\n"
+              "  NOT A LIKE-FOR-LIKE COMPARISON AND MUST NOT BE QUOTED AS ONE. Those are\n"
+              "  per-axis bits inside a FOUR-word task; this is TWO words on one axis, and\n"
+              "  tutorgrid showed the derived index is good at two contexts and binding at\n"
+              "  four. A bigger excess here means an EASIER TASK, not a better axis. What a\n"
+              "  NULL here would have meant is still a statement about the axis, because the\n"
+              "  design and the measure are ctxgrid's.\n");
+  return true;
+}
+
 bool run_aimslice(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
   (void)verbose;
   aibaby::Dna dna;

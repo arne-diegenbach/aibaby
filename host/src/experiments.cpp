@@ -370,6 +370,15 @@ const Spec kSpecs[] = {
      "  whatever the answer. REFUSES AS VACUOUS at render_f3_gain = 0, where f3\n"
      "  reaches no ear and a null would be a false refusal of the axis. Gates\n"
      "  clause 4; Tier::kLong, so verify's experiment COUNT is untouched"},
+    {"f3grid", 1200000, Expect::kRead, Tier::kLong,
+     "  §46 clause 4: can f3 carry a CONDITIONAL code? ctxgrid's design with\n"
+     "  the axis swapped -- two words differing ONLY in f3, both arms hearing\n"
+     "  identical sessions, differing only in whether the rewarded target\n"
+     "  follows the heard word. Chance is 0.5 BY CONSTRUCTION (the midline is\n"
+     "  the grid's, not the creature's). REFUSES AS VACUOUS at render_f3_gain 0\n"
+     "  or context_source 0, either of which would make a null a false refusal.\n"
+     "  Needs a genome with a context module; Tier::kLong, so verify's count\n"
+     "  is untouched"},
     {"axislev", 1, Expect::kRead, Tier::kLong,
      "  §41 run 2d: is f3's static cost to F1 LEVEL? Sweeps amplitude over 2x\n"
      "  at render_f3_gain 0 -- if F1's d' is flat there, a global level change is\n"
@@ -1358,6 +1367,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "axisbw2") ok = run_axisbw2(dna_blob, ticks, verbose);
   else if (name == "bitsnr") ok = run_bitsnr(dna_blob, ticks, verbose);
   else if (name == "f3name") ok = run_f3name(dna_blob, ticks, verbose);
+  else if (name == "f3grid") ok = run_f3grid(dna_blob, ticks, verbose);
   else if (name == "ctxgrid") ok = run_ctxgrid(dna_blob, ticks, verbose);
   else if (name == "echoname") ok = run_echoname(dna_blob, ticks, verbose);
   else if (name == "dirbudget") ok = run_dirbudget(dna_blob, ticks, verbose);

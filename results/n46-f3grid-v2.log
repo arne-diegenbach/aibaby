@@ -1,0 +1,79 @@
+  [10/36] seed 4 random       p3 0.676  match 0.974  rows 408
+  [5/36] seed 2 conditional  p3 0.881  match 0.979  rows 412
+  [12/36] seed 5 random       p3 0.321  match 0.977  rows 408
+  [9/36] seed 4 conditional  p3 0.856  match 0.974  rows 409
+  [2/36] seed 0 random       p3 0.371  match 0.958  rows 410
+  [1/36] seed 0 conditional  p3 0.829  match 0.976  rows 410
+  [7/36] seed 3 conditional  p3 0.884  match 0.981  rows 415
+  [11/36] seed 5 conditional  p3 0.787  match 0.976  rows 409
+  [6/36] seed 2 random       p3 0.859  match 0.979  rows 411
+  [13/36] seed 6 conditional  p3 0.923  match 0.976  rows 413
+  [14/36] seed 6 random       p3 0.728  match 0.963  rows 412
+  [8/36] seed 3 random       p3 0.797  match 0.981  rows 413
+  [3/36] seed 1 conditional  p3 0.835  match 0.979  rows 412
+  [4/36] seed 1 random       p3 0.671  match 0.981  rows 413
+  [20/36] seed 9 random       p3 0.403  match 0.983  rows 414
+  [17/36] seed 8 conditional  p3 0.910  match 0.975  rows 412
+  [15/36] seed 7 conditional  p3 0.862  match 0.983  rows 414
+  [18/36] seed 8 random       p3 0.398  match 0.975  rows 410
+  [16/36] seed 7 random       p3 0.268  match 0.979  rows 414
+  [19/36] seed 9 conditional  p3 0.644  match 0.978  rows 413
+  [23/36] seed 11 conditional  p3 0.605  match 0.500  rows 415
+  [22/36] seed 10 random       p3 0.443  match 0.961  rows 409
+  [21/36] seed 10 conditional  p3 0.914  match 0.976  rows 408
+  [25/36] seed 12 conditional  p3 0.710  match 0.861  rows 417
+  [24/36] seed 11 random       p3 0.801  match 0.887  rows 413
+  [27/36] seed 13 conditional  p3 0.525  match 0.890  rows 413
+  [26/36] seed 12 random       p3 0.475  match 0.949  rows 417
+  [28/36] seed 13 random       p3 0.366  match 0.980  rows 413
+  [32/36] seed 15 random       p3 0.577  match 0.968  rows 411
+  [30/36] seed 14 random       p3 0.467  match 0.980  rows 413
+  [31/36] seed 15 conditional  p3 0.796  match 0.981  rows 411
+  [29/36] seed 14 conditional  p3 0.903  match 0.979  rows 414
+  [35/36] seed 17 conditional  p3 0.816  match 0.971  rows 412
+  [34/36] seed 16 random       p3 0.477  match 0.521  rows 417
+  [36/36] seed 17 random       p3 0.689  match 0.981  rows 412
+  [33/36] seed 16 conditional  p3 0.475  match 0.523  rows 417
+experiment: f3grid
+  the question      §46 clause 4. Clause 3 showed a FIXED f3 target moves
+                    the voice (5.1 SE, 9/9). Can f3 carry a CONDITIONAL
+                    code -- two words differing only in f3, on an index
+                    the creature derives itself?
+  the design        ctxgrid's, axis swapped. Both arms hear identical
+                    sessions; only whether the REWARDED target follows the
+                    heard word differs. That isolates conditionality.
+  the measure       which side of the pair's own f3 midline (2613.8 Hz) the
+                    utterance landed on. Chance is 0.5 BY CONSTRUCTION and
+                    no slot-to-word map is fitted on scored rows.
+  render_f3_gain    1.00
+  context_source    4
+
+  instrument        f3grid   trial seed 000000000135d40d   18 creatures
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+
+  arm           n     p3 (chance 0.500)    ctx_match (best-of-2, null > 0.5)
+    conditional 18    0.786 +- 0.032        0.915   (early 0.930 -> late 0.884)
+    random      18    0.544 +- 0.043        0.943   (early 0.953 -> late 0.914)
+
+  CLAUSE 4a(i) -- IS THE INDEX LIVE? Measured, not read off the genome.
+  `ctx_present_frac` 1.0000, `ctx_match` 0.9288 over all cells.
+    -> live: the conditional arm has something to condition on
+
+  CLAUSE 4a(ii) -- THE CONTROL. p3's chance is 0.500 by construction, so a
+  random arm away from it means something is driving f3 UNCONDITIONALLY and
+  the paired contrast is not purely about conditionality.
+    random arm 0.544 +- 0.043, +0.044 from chance  -> at chance, as it must be
+
+  CLAUSE 4b -- POWER, read BEFORE the contrast: SE on the paired excess
+  0.0492 against the pre-registered ceiling 0.055  -> adequate
+
+  CLAUSE 4c -- THE EXCESS, paired by seed and spanning the sign.
+    conditional - random  +0.2427 +- 0.0492  (4.9 SE)   16/18 seeds positive
+    -> F3 CARRIES A CONDITIONAL CODE. The third axis is nameable, the
+       19-signal code space is cashable, and shipping render_f3_gain
+       becomes a decision with evidence behind it
+
+  AND COMPARE ctxgrid ON THE SAME MEASURE: its F1 excess was +0.126 and
+  its F2 +0.082 at n=36. A null here against those is a statement about the
+  AXIS, not about the design, because the design is the same one.

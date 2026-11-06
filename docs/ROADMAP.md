@@ -7002,3 +7002,61 @@ teachable at about a fifth of what is asked of it.**
 until a *conditional* f3 code is shown to work: a code space is only worth a hash move if the
 creature can be taught to use it, and naming is the thing §46 actually cares about. Clause 4 is the
 2-word f3-only grid against a no-index control, and it needs its own section and its own count.
+
+### §46 CLAUSE 4 RESULT — F3 CARRIES A CONDITIONAL CODE, AND RUN 1 WAS VACUOUS (2026-11-06)
+
+`results/n46-f3grid.log` (run 1, **VOID**), `results/n46-f3grid-v2.log` (the result), gate at
+`results/n46c4-verify.log`. Nothing shipped: `dna/default.toml` untouched, hash
+**`ad96f882becbee92` unmoved**, `experiments 24 as expected`.
+
+**RUN 1 PRINTED A FALSE NULL AND IT HAS TO BE RECORDED, NOT QUIETLY REPLACED.** It read
+`+0.0181 ± 0.0105 (1.7 SE)` with the verdict *"f3 carries no conditional code -- the refusal is in
+the conditional WRITE."* **That null agreed with `docs/CONCLUSION.md`, which is precisely what made
+it dangerous.** It was an artefact: the genome carried `context_source = 4` and
+**`context_slots = 0`**, so there were no prototypes, `active_context()` never returned an index
+inside the word range, and the contrast was between two arms **neither of which had a condition**.
+`ctxgrid` patches **both** fields at runtime (`slots = 2u, src = 4u`) and only one was copied.
+
+**AND THE PRE-FLIGHT WAS WRITTEN IN A COMMENT TWENTY LINES FROM THE EDIT:** *"the genome must carry
+`context_slots >= 2`, and `ctx_present_frac` must be checked NONZERO on a smoke BEFORE any budget is
+spent. That check is the pre-flight."* The budget was spent without it. The instrument's own vacuity
+check tested `context_source != 0` — **the wrong one of the two fields.** It is now a *measured*
+clause 4a(i) that suppresses the verdict entirely when the index is dead, and it discriminates
+**1.0000 / 0.9395 live** against **0.0000 / 0.0000 dead**.
+
+**THE RESULT, on a live index:**
+
+| arm | p3 (chance 0.500 by construction) | ctx_match (best-of-2, null > 0.5) |
+| --- | --- | --- |
+| **conditional** | **0.786 ± 0.032** | 0.915 (early 0.930 → late 0.884) |
+| random | 0.544 ± 0.043 | 0.943 (early 0.953 → late 0.914) |
+
+**Excess +0.2427 ± 0.0492 — 4.9 SE, 16 of 18 seeds positive.** Index live (`ctx_present_frac`
+1.0000, `ctx_match` 0.9288), control **at chance** (+0.044, ~1 SE), power adequate (SE 0.0492
+against the 0.055 ceiling set beforehand).
+
+**So a two-word distinction carried PURELY on f3, on an index the creature derives for itself, is
+named. F3 is the first axis beyond F1 and F2 shown to carry a conditional distinction.**
+
+### TWO WAYS THE INSTRUMENT OVERCLAIMED, CORRECTED IN THE SOURCE
+
+1. **It said the 19-signal code space is "cashable". It does not follow.** This is **one bit on one
+   axis at two contexts.** Nineteen signals requires f3 to **compose** with f1 and f2, and §41
+   measured f3 **taxing F1 by 11.3% of d'²** — so a three-axis code may lose on F1 what it gains on
+   f3. **The composition run is the one that decides shipping, and it has not been run.**
+2. **It invited a like-for-like comparison with `ctxgrid` that is not one.** ctxgrid's +0.126 and
+   +0.082 are per-axis bits inside a **four-word** task; this is **two words on one axis**.
+   `tutorgrid` established the derived index is good at two contexts and is the **binding limit** at
+   four — and `ctx_match` here is ~0.93, the easy case. **A larger excess here means an EASIER TASK,
+   not a better axis.** Quoting "twice ctxgrid's F1" would have been flattering and wrong.
+
+What the ctxgrid comparison *does* still license, and only this: a **null** here would have been a
+statement about the axis rather than the method, because the design and the measure are ctxgrid's.
+
+### WHAT STAGE 2 NOW NEEDS, AND WHY IT IS STILL NOT A SHIP DECISION
+
+The axis is **audible** (d' 5.272), **commandable** (2.68 levels), **teachable** (clause 3, 5.1 SE,
+9/9) and **nameable** (clause 4, 4.9 SE, 16/18). What is missing is **composition**: a 2x2 grid with
+f3 as one axis against `ctxgrid`'s F1xF2, on the variant, hash-neutral. Either f3 **adds** an axis —
+and the vocabulary claim is real — or it **trades** against the first two, which §41's measured tax
+makes a live possibility. §46's abandonment count is spent, so that is a new section.
