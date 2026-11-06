@@ -7577,3 +7577,45 @@ say "build it" — `shapeprobe`'s own standard.
 
 If `visprobe` refuses, the index route to naming what it sees is closed and the remaining question is
 the representation, not the mechanism.
+
+### §49 AMENDMENT, BEFORE THE BUILD: THE VISUAL CODE IS ALREADY MEASURED AT 0.927
+
+Applying this project's own rule — grep the registry for the STAGE before calling a quantity
+unmeasured — `g3probe` already carries a `vision` row with a shuffled control, and
+`experiments_probes.cpp` states the cascade in prose:
+
+> *"At 141 probes they are vision 0.927 -> central 0.724 (-0.203) and then central -> voice
+> (-0.237), so the larger loss is the downstream one."*
+
+**So clause 4's premise is half-answered and the answer is good.** A supervised per-neuron readout of
+the visual population recovers which object is being shown at **0.927**, against a 0.700 bar the
+instrument already checks. The object is legible *before* any tract. What costs 0.44 is carrying it:
+`vision 0.927 → central 0.724 → voice ~0.487`.
+
+**This strengthens the design rather than retiring it, and it sharpens what `visprobe` must ask.**
+The mechanism proposed here is the one operation in the architecture that does **not** cross a
+tract — it reads a population in place and indexes a bias table. The measured cascade says that is
+exactly where the 0.44 goes.
+
+**What is still genuinely unmeasured** is the gap `partprobe` found for audition: a *supervised*
+ceiling is not the *shippable* number, because v53's partition is **unsupervised, fixed and
+latched**. For the motor state that gap was 0.740 supervised against 0.561 per-neuron, and
+`partprobe`'s verdict was that the representation, not the cut, carried the loss. So:
+
+| | measured | still unknown |
+|---|---|---|
+| visual population | supervised per-neuron **0.927** | what v53's unsupervised partition gets on it |
+| auditory population | **1.000** while the word plays, **0.533** by the reward window | — (shipped, 100.1% of a perfect index's lift) |
+
+**And the derived expectation, which is the reason to run it.** The auditory route reaches 100.1% of
+a *perfect* index's lift from a code that is at **chance by the reward window** and has to be latched
+to survive. Vision's code is at **0.927 in that window and does not need a latch, because the object
+does not stop.** If index quality is what the per-context table consumes, vision enters this with a
+better signal than the route that already works.
+
+**Clause 4's bar is therefore set here, in advance:** the unsupervised partition on a visual
+population must reach the auditory partition's own `ctx_match` at matched object count (§48: 0.5442
+to 0.6590 at eight and nine words, reported never gated, since best-of-k! puts its null above 1/k).
+Below that and the cut is the loss; at or above it and the build is licensed. **The 0.927 is quoted
+as a bound on what the cut could recover and never as the expected result** — that is `partprobe`'s
+lesson and it applies to its own successor.
