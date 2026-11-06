@@ -4217,7 +4217,9 @@ enum VLTarget {
 // kVLScoreFormant cannot express because `formant_error_axis` is only ever handed
 // f1 and f2. APPENDED, never inserted, so every existing enumerator keeps its value
 // and no caller that passes kVLScoreFormant changes behaviour.
-enum VLScore { kVLScoreFormant = 0, kVLScoreAmp, kVLScoreRate, kVLScoreF3 };
+// kVLScore3 is §47's: the JOINT three-formant error. Appended, so every existing
+// enumerator keeps its value.
+enum VLScore { kVLScoreFormant = 0, kVLScoreAmp, kVLScoreRate, kVLScoreF3, kVLScore3 };
 
 // The two amplitudes, either side of what the creature does naturally (babble
 // sits near 0.48) so that neither target is the one it would drift to anyway.
@@ -4825,6 +4827,23 @@ inline double formant_error_axis(double f1, double f2, const Word& w, uint32_t a
   if (axis == 1) return std::fabs(std::log(f1 / double(w.f1)));
   if (axis == 2) return std::fabs(std::log(f2 / double(w.f2)));
   return formant_error(f1, f2, w);
+}
+
+// §47: the JOINT error over all three formants. Both arms of the spread-vs-stretched
+// comparison use THIS, including the 3x3 arm whose words all carry f3 at rest -- because
+// `formant_error` is a SUM of per-axis log terms, so a three-term error gives F1 a third
+// of the gradient where a two-term error gives it a half. The primary is F1 delivered Hz,
+// so mixing term counts across the arms would move it for a reason unrelated to axis
+// count. Identical scorer in both arms is what makes the contrast about the CODE's shape.
+//
+// REFUSES rather than scoring zero when any target is unset, for `formant_error_f3`'s
+// reason: `Word::f3` defaults to 0 meaning "not specified", and log(f3/0) would hand the
+// reward an infinity.
+inline double formant_error3(double f1, double f2, double f3, const Word& w) {
+  if (f1 <= 1.0 || f2 <= 1.0 || f3 <= 1.0) return -1.0;
+  if (w.f1 <= 1.0f || w.f2 <= 1.0f || w.f3 <= 1.0f) return -1.0;
+  return std::fabs(std::log(f1 / double(w.f1))) + std::fabs(std::log(f2 / double(w.f2))) +
+         std::fabs(std::log(f3 / double(w.f3)));
 }
 
 // §46: the same on the THIRD formant, which the two-argument form above cannot see
@@ -5466,6 +5485,9 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
                          // taught" while the reward had simply never moved.
                          : score == kVLScoreF3
                              ? formant_error_f3(double(v.f3), w, 3u)
+                         // §47: all three formants at once, the same way in both arms.
+                         : score == kVLScore3
+                             ? formant_error3(double(v.f1), double(v.f2), double(v.f3), w)
                          : score == kVLScoreRate
                              // An event happened. Praise it if this trial wanted
                              // events and scold it if it did not -- so the sign
@@ -5727,6 +5749,12 @@ VLRun run_vocallearn_session(const std::vector<uint8_t>& blob, uint64_t ticks, V
       // the right answer rather than a missing measurement.
       if (n_amp == 0) { ++out.skipped; ++out.dl_silent[dec]; continue; }
       err = std::fabs(amp_sum / double(n_amp) - amp_target);
+    } else if (score == kVLScore3) {
+      // §47: the trial error must be the SAME quantity the feedback optimises, or
+      // err_early/err_late describe a different objective -- which is exactly what bit
+      // §46's clause 3a, where they stayed the F1/F2 joint error under a kVLScoreF3 run.
+      if (n_voiced == 0) { ++out.skipped; ++out.dl_silent[dec]; continue; }
+      err = formant_error3(f1_sum / n_voiced, f2_sum / n_voiced, f3_sum / n_voiced, w);
     } else {
       if (n_voiced == 0) { ++out.skipped; ++out.dl_silent[dec]; continue; }
       err = formant_error(f1_sum / n_voiced, f2_sum / n_voiced, w);
@@ -48478,6 +48506,232 @@ bool run_f3grid(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) 
               "  four. A bigger excess here means an EASIER TASK, not a better axis. What a\n"
               "  NULL here would have meant is still a statement about the axis, because the\n"
               "  design and the measure are ctxgrid's.\n");
+  return true;
+}
+
+// ===== f3comp (§47): SPREADING versus STRETCHING =====
+//
+// §46 left f3 audible, commandable, teachable and nameable, and left the 19-signal
+// figure uncashed, because that needs f3 to COMPOSE with f1/f2 and §41 measured f3
+// TAXING F1 by 11.3% of d'^2. This is that question, at matched code size:
+//
+//   STRETCHED  3x3 on F1xF2   9 words, 2 axes, 3 levels each
+//   SPREAD     2x2x2          8 words, 3 axes, 2 levels each
+//
+// BOTH ARMS RUN ON ONE GENOME WITH render_f3_gain = 1.0 and the SAME three-formant
+// scorer, and the stretched arm simply never varies f3 -- all nine of its words carry
+// f3 at the measured rest. `formant_error` is a SUM of per-axis log terms, so a
+// three-term error gives F1 a third of the gradient where a two-term error gives it a
+// half; mixing term counts across arms would move the primary for a reason unrelated
+// to axis count. Identical physics, identical scorer, identical gradient share. The
+// only difference is whether the code USES the third axis.
+//
+// THE PRIMARY IS THE EXTREME-LEVEL F1 CONTRAST, NOT ctxgrid's `sp1`. That statistic is
+// a mean over ALL word pairs including pairs sharing an F1 target, so its value depends
+// on the grid's pair structure and is not comparable between a 2x2x2 and a 3x3. Here:
+// mean delivered |dF1| between the words at the LOWEST and HIGHEST F1 target, which
+// both arms ask for at the same 118 Hz.
+constexpr double kFCF1[3] = {567.5, 626.5, 685.5};      // F1 rest 626.5, reach 118.0
+constexpr double kFCF2[3] = {1519.5, 1669.6, 1819.7};   // F2 rest 1669.6, reach 300.3
+constexpr double kFCF3[2] = {2486.3, 2741.2};           // f3 rest 2613.7, reach 254.9
+constexpr double kFCF3Rest = 2613.7;
+constexpr double kFCAskF1 = 118.0, kFCAskF2 = 300.2;
+constexpr uint32_t kFCReps = 36;      // ctxvocab's n, whose SE on delivered Hz was 3.5
+constexpr double kFCMaxSE = 5.5;      // above this, NO VERDICT on power alone
+
+struct FCCell {
+  bool ok = false;
+  double d1 = 0.0, d2 = 0.0;      // delivered |dF1|, |dF2| between extreme levels
+  double present = 0.0, match = 0.0;
+  uint32_t rows = 0, scored = 0, skipped = 0;
+};
+
+// arm 0 = SPREAD (8 words), arm 1 = STRETCHED (9 words)
+inline uint32_t fc_words(uint32_t arm) { return arm == 0 ? 8u : 9u; }
+inline void fc_table(uint32_t arm, Word* out) {
+  if (arm == 0) {
+    uint32_t k = 0;
+    for (uint32_t a = 0; a < 2; ++a)
+      for (uint32_t b = 0; b < 2; ++b)
+        for (uint32_t c = 0; c < 2; ++c, ++k) {
+          out[k].f0 = 200.0f;
+          out[k].f1 = float(kFCF1[a ? 2 : 0]);
+          out[k].f2 = float(kFCF2[b ? 2 : 0]);
+          out[k].f3 = float(kFCF3[c]);
+        }
+  } else {
+    uint32_t k = 0;
+    for (uint32_t a = 0; a < 3; ++a)
+      for (uint32_t b = 0; b < 3; ++b, ++k) {
+        out[k].f0 = 200.0f;
+        out[k].f1 = float(kFCF1[a]);
+        out[k].f2 = float(kFCF2[b]);
+        out[k].f3 = float(kFCF3Rest);   // never varied: that is the whole contrast
+      }
+  }
+}
+
+bool run_f3comp(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  aibaby::Dna dna0;
+  if (dna0.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) return false;
+  const double gain = double(dna0.header().audio.render_f3_gain);
+  const uint32_t csrc = dna0.header().exploration.context_source;
+
+  std::printf("  the question      §47. Given a creature with THREE audible axes, is it\n"
+              "                    better to SPREAD a vocabulary across them or STRETCH\n"
+              "                    it over two? 2x2x2 (8 words) vs 3x3 (9 words).\n");
+  std::printf("  matched           word count, index load, physics (one genome, f3 ON in\n"
+              "                    BOTH arms) and scorer (the same three-formant joint\n"
+              "                    error; the 3x3's nine words all carry f3 at rest).\n");
+  std::printf("  the primary       delivered |dF1| between the LOWEST and HIGHEST F1\n"
+              "                    target -- both arms ask %.1f Hz there, so it is one\n"
+              "                    asked against one delivered. NOT ctxgrid's sp1, which\n"
+              "                    averages over all pairs and so depends on grid shape.\n",
+              kFCAskF1);
+  std::printf("  render_f3_gain    %.2f\n  context_source    %u\n\n", gain, csrc);
+
+  if (!(gain > 0.0) || csrc == 0) {
+    std::printf("  *** VACUOUS AND NOT RUN. %s\n",
+                !(gain > 0.0) ? "render_f3_gain is 0.0: the SPREAD arm's third axis reaches\n"
+                                "  no ear, so it would be a worse 2-axis code and nothing else."
+                              : "context_source is 0: no derived index, so neither arm can\n"
+                                "  name and the contrast is between two creatures that cannot.");
+    return true;
+  }
+
+  instrument("f3comp", dna0.header().seed ^ 0xFC47u, kFCReps, "creatures");
+  Regime regime;
+  const std::vector<FCCell> cells = parallel_reps<FCCell>(kFCReps * 2u, [&](uint32_t job) {
+    FCCell cell;
+    const uint32_t r = job / 2u, arm = job % 2u;
+    const uint32_t nw = fc_words(arm);
+    Word tbl[9];
+    fc_table(arm, tbl);
+    std::vector<uint8_t> variant = blob;
+    const uint64_t seed = dna0.header().seed + r * 7919ull;
+    std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+    // CLAUSE 1: context_slots must MATCH the word count, and it is patched here rather
+    // than left to the genome -- §46's clause 4 produced a false null from exactly this
+    // field being 0 while `context_source` looked right.
+    aibaby::Dna probe;
+    if (probe.load(variant.data(), variant.size()) != aibaby::DnaStatus::kOk) return cell;
+    {
+      aibaby::DnaHeader h = probe.header();
+      h.exploration.context_slots = nw;
+      std::memcpy(variant.data(), &h, sizeof(h));
+    }
+    // CLAUSE 2: TRIALS PER WORD MATCHED. 8 words against 9 at one tick budget gives the
+    // smaller vocabulary 12.5% more practice per word -- and that would move delivered Hz
+    // on its own, in the direction this run is looking for. `ctxvocab` scaled its ticks
+    // for exactly this reason (its k9+ arm ran 1.5x its six-word arms), and its own note
+    // warns against comparing SEs across arms that did not. So the budget scales with the
+    // word count and the per-word trial count is equal by construction.
+    const uint64_t arm_ticks = ticks * uint64_t(nw) / 8ull;
+    const VLRun run = run_vocallearn_session(variant, arm_ticks, kVLTaught, nullptr, regime,
+                                             int(kVLTgtHeard), nullptr, kVLScore3, nullptr,
+                                             nw, tbl);
+    if (!run.ok || run.utt_f3.empty()) return cell;
+    // Delivered separation between the EXTREME levels of each axis.
+    auto extreme = [&](const std::vector<double>& u, double lo_t, double hi_t,
+                       double Word::*unused) {
+      (void)unused;
+      double lo = 0.0, hi = 0.0; uint32_t nl = 0, nh = 0;
+      for (size_t q = 0; q < run.utt_word.size() && q < u.size(); ++q) {
+        const int wd = run.utt_word[q];
+        if (wd < 0 || wd >= int(nw) || !(u[q] > 1.0)) continue;
+        const double t1 = double(tbl[wd].f1), t2 = double(tbl[wd].f2);
+        const double t = (lo_t == kFCF1[0]) ? t1 : t2;
+        if (std::fabs(t - lo_t) < 1.0) { lo += u[q]; ++nl; }
+        else if (std::fabs(t - hi_t) < 1.0) { hi += u[q]; ++nh; }
+      }
+      return (nl && nh) ? std::fabs(hi / double(nh) - lo / double(nl)) : -1.0;
+    };
+    cell.d1 = extreme(run.utt_f1, kFCF1[0], kFCF1[2], nullptr);
+    cell.d2 = extreme(run.utt_f2, kFCF2[0], kFCF2[2], nullptr);
+    if (cell.d1 < 0.0 || cell.d2 < 0.0) return cell;
+    cell.present = run.ctx_present_frac;
+    cell.match = run.ctx_match;
+    cell.rows = uint32_t(run.utt_f1.size());
+    cell.scored = run.scored;
+    cell.skipped = run.skipped;
+    cell.ok = true;
+    parallel_note("  [%u/%u] seed %u %-9s  dF1 %6.1f  dF2 %6.1f  present %.3f\n", job + 1,
+                  kFCReps * 2u, r, arm == 0 ? "SPREAD" : "STRETCHED", cell.d1, cell.d2,
+                  cell.present);
+    return cell;
+  });
+
+  std::vector<double> a1[2], a2[2], pr[2], mt[2], dif1, dif2;
+  for (uint32_t r = 0; r < kFCReps; ++r) {
+    const FCCell& s = cells[size_t(r) * 2u + 0];
+    const FCCell& t = cells[size_t(r) * 2u + 1];
+    if (s.ok) { a1[0].push_back(s.d1); a2[0].push_back(s.d2); pr[0].push_back(s.present); mt[0].push_back(s.match); }
+    if (t.ok) { a1[1].push_back(t.d1); a2[1].push_back(t.d2); pr[1].push_back(t.present); mt[1].push_back(t.match); }
+    if (s.ok && t.ok) { dif1.push_back(s.d1 - t.d1); dif2.push_back(s.d2 - t.d2); }
+  }
+  if (dif1.size() < 6) { std::printf("\n  inconclusive: %zu paired seeds.\n", dif1.size()); return false; }
+
+  // ---- CLAUSE 1: THE INDEX, MEASURED, FIRST ----
+  double e = 0.0;
+  const double p0 = ctx_mean_se(pr[0], &e), p1 = ctx_mean_se(pr[1], &e);
+  const double m0 = ctx_mean_se(mt[0], &e), m1 = ctx_mean_se(mt[1], &e);
+  const bool live = p0 > 0.01 && p1 > 0.01;
+  std::printf("\n  CLAUSE 1 -- IS THE INDEX LIVE AT 8 AND 9 SLOTS? Measured, not configured.\n"
+              "    SPREAD    (8 slots)  ctx_present_frac %.4f   ctx_match %.4f\n"
+              "    STRETCHED (9 slots)  ctx_present_frac %.4f   ctx_match %.4f\n"
+              "    -> %s\n"
+              "    ctx_match is REPORTED AND NOT GATED: it is the best of k! permutations,\n"
+              "    so at 8 and 9 contexts its null is far above 1/k.\n",
+              p0, m0, p1, m1,
+              live ? "live in both arms" : "*** DEAD INDEX -- the contrast below is NOT a result");
+
+  std::printf("\n  arm          n     delivered |dF1|        of the %.0f Hz ask   delivered |dF2|\n",
+              kFCAskF1);
+  const char* nm[2] = {"SPREAD", "STRETCHED"};
+  double s1v[2] = {}, se1[2] = {};
+  for (uint32_t k = 0; k < 2; ++k) {
+    double q = 0.0;
+    s1v[k] = ctx_mean_se(a1[k], &se1[k]);
+    const double v2 = ctx_mean_se(a2[k], &q);
+    std::printf("    %-9s %-5zu %7.2f +- %5.2f        %5.1f%%          %7.2f +- %5.2f\n", nm[k],
+                a1[k].size(), s1v[k], se1[k], 100.0 * s1v[k] / kFCAskF1, v2, q);
+  }
+
+  double sd1 = 0.0, sd2 = 0.0;
+  const double md1 = ctx_mean_se(dif1, &sd1), md2 = ctx_mean_se(dif2, &sd2);
+  uint32_t pos = 0;
+  for (double x : dif1) if (x > 0.0) ++pos;
+
+  // ---- CLAUSE 3: POWER BEFORE THE CONTRAST ----
+  const bool weak = sd1 > kFCMaxSE;
+  std::printf("\n  CLAUSE 3 -- POWER, read BEFORE the contrast: SE on the paired dF1 excess\n"
+              "  %.2f Hz against the pre-registered ceiling %.1f  -> %s\n", sd1, kFCMaxSE,
+              weak ? "*** NO VERDICT on power alone" : "adequate");
+
+  // ---- CLAUSE 4: THE CONTRAST ----
+  std::printf("\n  CLAUSE 4 -- SPREAD minus STRETCHED, paired by seed, spanning the sign.\n"
+              "    delivered |dF1|  %+7.2f +- %5.2f Hz  (%.1f SE)   %u/%zu seeds positive\n"
+              "    delivered |dF2|  %+7.2f +- %5.2f Hz  (%.1f SE)   [secondary]\n",
+              md1, sd1, sd1 > 0.0 ? md1 / sd1 : 0.0, pos, dif1.size(),
+              md2, sd2, sd2 > 0.0 ? md2 / sd2 : 0.0);
+  if (!live) {
+    std::printf("    -> NO VERDICT: the index is dead, so neither arm could name.\n");
+  } else if (!weak) {
+    const bool up = md1 > 2.0 * sd1, down = -md1 > 2.0 * sd1;
+    std::printf("    -> %s\n",
+                up ? "SPREADING WINS. A third axis buys F1 reach back, so levels do\n"
+                     "       multiply across independent axes behaviourally and not only in\n"
+                     "       the code-space arithmetic. Shipping render_f3_gain is worth a\n"
+                     "       hash move"
+                   : (down ? "*** STRETCHING WINS: f3 costs more than it saves, and §41's\n"
+                             "       measured 11.3% tax on F1 is the named suspect"
+                           : "NULL -- recruiting a third axis behaves like reshaping two.\n"
+                             "       ctxvocab already found shape null WITHIN two axes at 1.2 SE;\n"
+                             "       this extends that to recruiting an axis, which RETIRES the\n"
+                             "       product argument behaviourally. f3 still NAMES (4.9 SE) --\n"
+                             "       what fails is the claim that axes MULTIPLY"));
+  }
   return true;
 }
 

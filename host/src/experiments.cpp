@@ -379,6 +379,14 @@ const Spec kSpecs[] = {
      "  or context_source 0, either of which would make a null a false refusal.\n"
      "  Needs a genome with a context module; Tier::kLong, so verify's count\n"
      "  is untouched"},
+    {"f3comp", 1200000, Expect::kRead, Tier::kLong,
+     "  §47: SPREADING vs STRETCHING. Given three audible axes, is it better to\n"
+     "  spread a vocabulary across them (2x2x2, 8 words) or stretch it over two\n"
+     "  (3x3, 9 words)? Matched word count, index load, physics (f3 ON in BOTH\n"
+     "  arms) and scorer (one three-formant joint error; the 3x3's words all\n"
+     "  carry f3 at rest). Primary is delivered |dF1| between the EXTREME F1\n"
+     "  levels, which both arms ask at 118 Hz -- NOT ctxgrid's sp1, which\n"
+     "  averages over all pairs and so depends on grid shape. Tier::kLong"},
     {"axislev", 1, Expect::kRead, Tier::kLong,
      "  §41 run 2d: is f3's static cost to F1 LEVEL? Sweeps amplitude over 2x\n"
      "  at render_f3_gain 0 -- if F1's d' is flat there, a global level change is\n"
@@ -1368,6 +1376,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "bitsnr") ok = run_bitsnr(dna_blob, ticks, verbose);
   else if (name == "f3name") ok = run_f3name(dna_blob, ticks, verbose);
   else if (name == "f3grid") ok = run_f3grid(dna_blob, ticks, verbose);
+  else if (name == "f3comp") ok = run_f3comp(dna_blob, ticks, verbose);
   else if (name == "ctxgrid") ok = run_ctxgrid(dna_blob, ticks, verbose);
   else if (name == "echoname") ok = run_echoname(dna_blob, ticks, verbose);
   else if (name == "dirbudget") ok = run_dirbudget(dna_blob, ticks, verbose);

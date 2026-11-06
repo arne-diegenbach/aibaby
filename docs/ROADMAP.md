@@ -7134,3 +7134,114 @@ It also means a null here must NOT be read as "f3 fails": f3 names at 4.9 SE. It
 ### ABANDONMENT COUNT: ONE RUN
 
 §47 is one paired comparison. It decides stage 2 either way and opens nothing by itself.
+
+### §47 AMENDMENT, BEFORE THE BUILD: BOTH ARMS GET THE SAME THREE-TERM SCORER
+
+Written while implementing, before any run. The pre-registration implied the 3x3 arm would use the
+existing two-formant joint error and the 2x2x2 arm a three-formant one. **That would confound the
+primary.** `formant_error` is a SUM of per-axis log terms, so a three-term error gives F1 one third
+of the gradient where a two-term error gives it one half — and the primary is **F1 delivered Hz**.
+The spread arm would deliver less F1 for a reason that has nothing to do with axis count, and the
+bias runs **against** the prediction, which makes it a conservative confound but a confound.
+
+**So both arms use the SAME three-formant joint error**, and the stretched arm simply never varies
+the third axis: all nine of its words carry `f3 = 2613.7`, the measured rest. Identical physics
+(one genome with `render_f3_gain = 1.0`), identical scorer, identical term count, identical gradient
+share per axis. **The only difference between the arms is whether the code USES the third axis** —
+which is the question.
+
+This needs one new scorer (`formant_error3`) and one new score mode (`kVLScore3`), both **additive**:
+appended enumerator, new function, every existing caller untouched, and `verify` asked to prove the
+hash does not move.
+
+**AND `render_f3_gain = 1.0` IN BOTH ARMS IS DELIBERATE.** The question is not *"is f3-on better than
+f3-off"* — §46 already showed f3-on gives a nameable axis. It is *"given a creature that has three
+audible axes, is it better to spread a vocabulary across them or stretch it over two?"* Running the
+stretched arm on the same physics removes the between-genome contrast
+[[aibaby-vocal-calibration-invariant]] would otherwise void.
+
+### §47 SECOND AMENDMENT: `ctxgrid`'s `sp1` IS NOT COMPARABLE ACROSS GRID SHAPES
+
+Also before any run, and also found by reading the existing estimator instead of assuming it.
+`ctxgrid`'s delivered-separation statistic is
+
+    for every word PAIR (x,y):  s1 += |mean F1(x) - mean F1(y)|;  sp1 = s1 / pairs
+
+— a mean over **all** pairs, including pairs that share an F1 target and should contribute ~0. In a
+2x2x2 the fraction of pairs differing on F1 is 4/7 of the 28 pairs; in a 3x3 it is 6/9 of the 36,
+at **two different asked separations** (59 and 118 Hz). **So `sp1` mixes "pairs that should differ"
+with "pairs that should not" in different proportions in the two arms, and a difference in it would
+be partly the grid's pair structure rather than the creature's delivery.**
+
+**THE PRIMARY IS THEREFORE THE EXTREME-LEVEL CONTRAST:** mean delivered `|ΔF1|` between the words at
+the **lowest** and **highest** F1 target. Both arms ask for the same **118 Hz** there (567.5 vs
+685.5), so it is one asked separation against one delivered separation, dimensionally identical in
+both. Reported in Hz and as **delivered/asked**, with the same pair of numbers for F2 (asked 300 Hz
+in both) as the secondary.
+
+**AND THE CONSEQUENCE FOR THE PRE-REGISTRATION'S "11.8 Hz TO BEAT":** that figure is `ctxvocab`'s on
+`sp1`-style accounting, so it is an **order-of-magnitude expectation here and not a bar**. §47's
+verdict rests on its own within-run paired contrast, which is the only sound comparison available.
+
+### §47 RESULT — STRETCHING WINS, AND §47 VIOLATED THE PRECONDITION IT WAS TESTING (2026-11-06)
+
+`results/n47-f3comp.log`, gate at `results/n47-verify.log`. Nothing shipped.
+
+**CLAUSE 1 PASSES:** index live in both arms, `ctx_present_frac` **1.0000** at 8 and at 9 slots.
+`ctx_match` reads **0.627 / 0.544** there against **0.93 at two slots** — a sharp fall that matches
+`tutorgrid`'s finding that the index is the binding limit past four contexts. Reported, not gated.
+
+**CLAUSE 3 PASSES:** SE on the paired contrast **1.43 Hz** against the 5.5 ceiling.
+
+| arm | delivered \|ΔF1\| | of the 118 Hz ask | delivered \|ΔF2\| |
+| --- | --- | --- | --- |
+| SPREAD (2x2x2, 3 axes) | **5.95 ± 0.75** | **5.0%** | 18.38 ± 2.21 |
+| STRETCHED (3x3, 2 axes) | **11.14 ± 1.27** | **9.4%** | 25.16 ± 3.47 |
+
+**Paired: −5.19 ± 1.43 Hz, −3.6 SE, 11 of 36 seeds positive.** F2 the same sign at −1.6 SE.
+**The two-axis code delivers nearly twice the F1 separation of the three-axis one.**
+
+### THE SUSPECT I PRE-REGISTERED IS THE WRONG ONE
+
+Clause 4 named §41's **11.3% of d'²** tax on F1. It cannot do this work: the delivery drop is
+**−47%**, four times too large, and a d'² tax on a rendered posture is a different quantity from how
+much separation a lesson delivers. **Naming a suspect in advance does not make it the cause**, and
+the pre-registration should have required the magnitudes to match.
+
+### THE REAL MECHANISM IS DOCUMENTED, AND §47 VIOLATED ITS OWN PRECONDITION
+
+`aibaby-nine-axes-lead` note 4 — in the memory §47 was built to test — reads:
+
+> **TEACHING STAYS SEQUENTIAL**: two dimensions share one reward channel (0.58 vs A-then-A).
+> **More axes multiply the CODE SPACE, never the teaching rate.**
+
+**§47 taught three axes SIMULTANEOUSLY.** `aibaby-capacity` prices that at **0.58 simultaneous
+against 0.84 A-then-A**. So §47 measured the known cost of a shared reward channel on the naming
+task — a real quantification, and **not** a refutation of the product argument, whose stated
+precondition it broke. The product argument is about **code space**; it never claimed three axes
+could be taught at once.
+
+**AND THE SECOND AMENDMENT'S "IDENTICAL GRADIENT SHARE" CLAIM WAS WRONG.** Both arms use the same
+three-term scorer, but **the stretched arm's f3 term is constant across all nine of its words**, so
+it contributes no gradient — effectively **two** varying terms against the spread arm's **three**.
+The scorer's *form* was matched and its *effective* share was not. That confound pushes in the same
+direction as the result, so **in this design it is not separable from it.**
+
+### WHAT SURVIVES, AND IT DECIDES STAGE 2: DO NOT SHIP f3
+
+The actionable conclusion holds regardless of which of the two accounts dominates, because both
+describe the protocol the caregiver actually uses. **Under simultaneous teaching a three-axis code
+delivers LESS than a two-axis one**, so turning on `render_f3_gain` would make the creature worse at
+the task it is scored on, whatever the code-space arithmetic says. **Stage 2 is decided: f3 does not
+ship**, `dna/default.toml` keeps two resonators, and the reason is measured rather than inherited.
+
+That leaves §46's results standing and unembarrassed: f3 **is** audible, commandable, teachable and
+nameable. What fails is the step from *"an axis exists"* to *"a vocabulary spread across it is
+better"*, and it fails on the **teaching channel**, not on the axis.
+
+### THE SUCCESSOR, AND IT IS THE PROPER TEST OF THE PRODUCT ARGUMENT
+
+**Sequential teaching**: the F1 bit, then F2, then f3, against the same stretched control.
+`aibaby-capacity`'s 0.84-against-0.58 is the size of the prize, and it is the arm §47 should have
+run beside the simultaneous one. It needs its own section and its own count. **Until it is run, the
+product argument is neither cashed nor refuted — it is untested at its own stated precondition.**
