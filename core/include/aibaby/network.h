@@ -408,6 +408,18 @@ class Network {
   bool context_present() const { return ctx_present_; }
   uint32_t context_slots() const { return ctx_slots_; }
   uint32_t context_source() const { return ctx_source_; }
+  // DNA v84. The sources that index off a RATE EMA with DeSieno's conscience,
+  // rather than off spikes inside an episode bin. Grouped behind one predicate
+  // because the distinction is read at three separate points in `step` and an
+  // edit that updated two of the three would pin the index to slice 0 silently
+  // -- which the comment at the third site already warns about for source 4
+  // alone. Source 5 is source 4's rule pointed at the retina instead of the
+  // auditory module: the EMA matters there for a different reason than it does
+  // for a word (a word STOPS and the EMA is what survives the silence; an
+  // object does not stop, and the EMA is what stops the index flickering with
+  // the frame), so the shared path is a convenience and not a claim that the
+  // two senses need the same smoothing. See DnaExploration::context_source.
+  bool context_source_is_ema() const { return ctx_source_ == 4u || ctx_source_ == 5u; }
   bool context_latched() const { return ctx_latched_; }
   uint64_t context_events() const { return ctx_events_; }
   // This neuron's bias in context `c`. Exposed so a probe can show the table

@@ -303,7 +303,14 @@ DnaStatus Dna::load(const void* blob, size_t size) {
     // the derived rate cap cost -0.146 of index on 8 of 9 seeds, and it is
     // refused rather than ignored so that a genome asking for it fails loudly
     // instead of silently getting source 2's base rule.
-    if (h->exploration.context_source > 4u ||
+    //
+    // DNA v84 adds 5: THE RETINA, source 4's rule pointed at kVision. A genome
+    // asking for 5 on a creature whose modules do not include a vision role
+    // still fails safe rather than silently -- `ctx_module_ < 0` sets
+    // `ctx_slots_ = 0` and the index never fires -- which is why this bound is
+    // the only change needed here and the probe checks liveness rather than
+    // trusting it.
+    if (h->exploration.context_source > 5u ||
         h->exploration.context_source == 3u) {
       return DnaStatus::kBadPlasticity;
     }

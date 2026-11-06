@@ -545,7 +545,16 @@ bool Network::build(const Dna& dna, Arena& arena, Rng& rng) {
     // the larynx nothing where DNA v47's tract cost it everything. DNA v52
     // chooses WHICH module: the kContext one the host may write (an oracle
     // whenever it does), or the larynx itself (the creature's own state).
+    // DNA v84 adds source 5: the RETINA. It must be tested BEFORE the `>= 2`
+    // branch, which would otherwise swallow it into kAuditory.
+    //
+    // Why the retina and not v46's form stage: `g3probe` measures object
+    // identity per neuron at kVision at 0.927, and the shipped genome has six
+    // modules -- association, auditory, vision, somato, vocal, expression -- so
+    // kVisualForm is not there to read. A genome that adds one can point this
+    // field at it by changing this line and nothing else.
     const ModuleRole want = ctx_source_ == 1  ? ModuleRole::kVocal
+                            : ctx_source_ == 5 ? ModuleRole::kVision
                             : ctx_source_ >= 2 ? ModuleRole::kAuditory
                                                : ModuleRole::kContext;
     for (uint32_t m = 0; m < module_count_; ++m) {
@@ -1690,7 +1699,7 @@ void Network::step() {
       // window. That counted spikes INSIDE the bin, which remembers nothing
       // before it. A different measurement of the same module, not a better
       // decoder of the same quantity.)
-      if (ctx_source_ == 4) {
+      if (context_source_is_ema()) {   // DNA v84: source 5 shares this path
         // THE CONSCIENCE, WHICH SOURCE 4 NEVER HAD. The episode path below carries
         // DeSieno's win-balance penalty, and its own comment says why: "a unit that
         // wins early becomes the running mean of what it won, and in high dimensions
@@ -1910,8 +1919,8 @@ void Network::step() {
         }
         ++ctx_on_ticks_;
         for (uint32_t n = 0; n < sms.count; ++n) {
-          ctx_acc_[n] += ctx_source_ == 4 ? rate_ema_[sms.begin + n]
-                                          : rate_fast_[sms.begin + n];
+          ctx_acc_[n] += context_source_is_ema() ? rate_ema_[sms.begin + n]
+                                                 : rate_fast_[sms.begin + n];
         }
         ctx_acc_n_ += kOne;
         // The INDEX, refreshed from the running mean rather than from this
@@ -1921,10 +1930,12 @@ void Network::step() {
         const Scalar in2 = kOne / ctx_acc_n_;
         Scalar best_d = kZero;
         uint32_t winner = 0;
-        // Source 4 already set the index from the EMA above and must not have
-        // it overwritten here -- an `else` binding to the loop rather than to
-        // the assignment would silently pin it to slice 0.
-        if (ctx_source_ != 4) {
+        // The EMA sources (4, and 5 since DNA v84) already set the index from
+        // the EMA above and must not have it overwritten here -- an `else`
+        // binding to the loop rather than to the assignment would silently pin
+        // it to slice 0. This is the third of the three sites that read the
+        // distinction, which is why it is behind `context_source_is_ema()`.
+        if (!context_source_is_ema()) {
           for (uint32_t c = 0; c < ctx_slots_; ++c) {
             const Scalar* proto = ctx_proto_ + size_t(c) * sms.capacity;
             Scalar d = kZero;

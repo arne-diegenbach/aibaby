@@ -416,6 +416,20 @@ constexpr uint32_t kDnaMagic = 0x44424941;  // "AIBD"
 //     a COMPETITIVE partition of the auditory code, formed while the word plays
 //     and LATCHED across the silence. See DnaExploration::context_source and
 //     `ctxself`'s `ear` arms. Ships OFF; `context_source = 0` is bit-identical.
+// DNA v84: the same index, read off THE RETINA -- `context_source = 5`. The
+//     creature already names what it HEARS by this mechanism and cannot name
+//     what it SEES, and the reason is measured rather than guessed: `g3probe`
+//     reads object identity per neuron at kVision at 0.927 and the cascade to
+//     the larynx costs it 0.44 (vision 0.927 -> central 0.724 -> voice ~0.487),
+//     while every failed G3 route TRANSMITTED the object through a tract and the
+//     object code is pooling-fragile. This source transmits nothing: like source
+//     4 it reads a population in place and indexes the bias table, which is the
+//     whole reason it costs the larynx nothing where DNA v47's tract cost it
+//     everything. Two asymmetries against the auditory case, both in vision's
+//     favour: the code is at 0.927 in the reward window where the word is at
+//     chance 0.533 and needs the latch to survive, and an object does not stop.
+//     A change of WHICH NEURONS THE LOOP WALKS and not a new rule. Ships OFF;
+//     `context_source = 0` is bit-identical. See ROADMAP §49.
 // v54: DNA v71 appends `threshold_sigma` and `leak_tau_sigma` to DnaModule. The
 // blob is `sizeof(DnaModule) * module_count`, so the layout change is what the
 // bump is for — a v53 snapshot read as v54 would misalign every module after the
