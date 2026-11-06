@@ -7060,3 +7060,77 @@ The axis is **audible** (d' 5.272), **commandable** (2.68 levels), **teachable**
 f3 as one axis against `ctxgrid`'s F1xF2, on the variant, hash-neutral. Either f3 **adds** an axis —
 and the vocabulary claim is real — or it **trades** against the first two, which §41's measured tax
 makes a live possibility. §46's abandonment count is spent, so that is a new section.
+
+## §47 — SPREADING VERSUS STRETCHING: DOES A THIRD AXIS BUY REACH BACK? (2026-11-06)
+
+**Pre-registered before the build.** §46 established f3 is audible, commandable, teachable and
+nameable. What it did **not** establish is that 19 signals are cashable, because that needs f3 to
+**compose** with f1/f2 and §41 measured f3 **taxing F1 by 11.3% of d'²**. §47 is that question.
+
+### THE DESIGN, AND WHY IT IS NOT THE OBVIOUS ONE
+
+The obvious run — *"does turning f3 on cost F1/F2 naming?"* — is **refused on power before
+building.** f3's tax is 11.3% of d'², so ~5.5% of d'; against `ctxgrid`'s +0.137 ± 0.023 excess that
+is an effect of **0.0075**, needing SE ≤ 0.0037, i.e. **~1,400 seeds.** Vacuous.
+
+The resolvable question is the **shape** of the code at matched size:
+
+| code | words | axes | levels/axis |
+| --- | --- | --- | --- |
+| **3x3** on F1xF2 | 9 | 2 | 3 — *stretched* |
+| **2x2x2** on F1xF2xf3 | 8 | 3 | 2 — *spread* |
+
+Matched word count (8 vs 9) and matched index load (8 vs 9 contexts), so the only difference is how
+the code is **shaped**. Each axis at its own measured reach around rest: F1 567/686, F2 1520/1820,
+f3 2486/2741; the 3x3 adds the midpoints 626.5 and 1669.6.
+
+### THE PRIMARY IS DELIVERED Hz, NOT NAMING EXCESS, AND ctxvocab IS WHY
+
+`ctxvocab` ran 9 words against 6 **paired within creature with trials per word matched**, and only
+two columns cleared 3 SE:
+
+    F1 delivered Hz        -11.8 +- 3.5   (3.3 SE)   <- THE RESOLVABLE ONE
+    total naming excess    -0.012 +- 0.019 (0.6 SE)  CONSERVED, uninformative
+
+**So the primary is F1 delivered Hz.** The prediction is sharp: the spread code asks F1 for **two**
+levels where the stretched code asks for **three**, so if levels multiply across independent axes
+the spread code should **deliver more F1 separation** — recovering some of ctxvocab's 11.8 Hz.
+Naming excess is reported as a secondary and is **expected conserved**, because ctxvocab says it is.
+
+### AND THE OBJECTION THIS RUN HAS TO ANSWER, STATED FIRST
+
+**`ctxvocab` ALREADY FOUND SHAPE NULL WITHIN TWO AXES: 2x3 minus 3x2 = −0.032 ± 0.027 (1.2 SE), and
+"shape beats count" is WITHDRAWN.** So why should shape matter here? Because that comparison
+**redistributed levels between the same two axes**, while this one **recruits a third**. §41
+measured f3's cross-talk into the teachable axes at **≤ 0.007**, and the whole product argument is
+that levels multiply across *independent* axes, not that they rearrange within dependent ones.
+**If §47 is null, the honest reading is that recruiting an axis behaves like reshaping one — which
+would retire the product argument behaviourally**, and that is a result worth the run.
+
+It also means a null here must NOT be read as "f3 fails": f3 names at 4.9 SE. It would be read as
+"a third axis buys no reach back", which is a statement about composition.
+
+### CLAUSE ORDER
+
+1. **INDEX LIVENESS AT 8 AND 9 SLOTS, MEASURED, BEFORE ANY BUDGET.** The pre-flight §46's clause 4
+   skipped and paid for: `context_slots` must be set (**not just `context_source`** — `ctxgrid`
+   patches both and copying one is what produced a false null), and `ctx_present_frac` must be
+   **nonzero on a smoke**. Reported as a number per arm.
+   **`ctx_match` IS REPORTED AND NOT GATED:** it is the best of k! permutations, so at 8 and 9
+   contexts its null is far above 1/k and stating a naive bar against it would be
+   [[aibaby-direction-null]]'s trap in the diagnostic column.
+2. **TRIALS PER WORD MATCHED,** as `ctxvocab` did explicitly. 8 words against 9 means an unmatched
+   design gives the smaller vocabulary more practice per word, which would move delivered Hz on its
+   own and in the direction this run is looking for.
+3. **POWER, STATED AS A NUMBER FIRST.** ctxvocab's SE on delivered Hz was **3.5 at n=36**, so n=36
+   here. The effect to beat is its own **11.8 Hz**. Above SE **5.5** the contrast is NO VERDICT on
+   power alone, read before the contrast.
+4. **THE CONTRAST, THREE-WAY AND SPANNING THE SIGN.** Spread − stretched on F1 delivered Hz:
+   **positive** → a third axis buys reach back, the product argument cashes, and shipping f3 is
+   worth a hash move; **zero** → recruiting an axis behaves like reshaping one, and the product
+   argument does not cash behaviourally; **negative** → f3 costs more than it saves, and §41's
+   measured tax is the named suspect.
+
+### ABANDONMENT COUNT: ONE RUN
+
+§47 is one paired comparison. It decides stage 2 either way and opens nothing by itself.
