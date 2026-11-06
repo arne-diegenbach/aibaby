@@ -7245,3 +7245,82 @@ better"*, and it fails on the **teaching channel**, not on the axis.
 `aibaby-capacity`'s 0.84-against-0.58 is the size of the prize, and it is the arm §47 should have
 run beside the simultaneous one. It needs its own section and its own count. **Until it is run, the
 product argument is neither cashed nor refuted — it is untested at its own stated precondition.**
+
+## §48 — SEQUENTIAL TEACHING: THE PRODUCT ARGUMENT AT ITS OWN PRECONDITION (2026-11-06)
+
+**Pre-registered before the build.** §47 found a three-axis code delivers half the F1 separation of a
+two-axis one — and then found it had **broken the precondition of the argument it was testing**.
+`aibaby-nine-axes-lead` note 4: *"TEACHING STAYS SEQUENTIAL: two dimensions share one reward channel
+(0.58 vs A-then-A). More axes multiply the CODE SPACE, never the teaching rate."* §47 taught three
+axes simultaneously. §48 teaches them one at a time.
+
+### WHY SEQUENTIAL SHOULD WIN, AND THE MECHANISM IS ALREADY MEASURED
+
+`axispower` established at **+11.5 SE** that a lesson **silent about another's axis costs it
+nothing** (1.024 ± 0.062 against 0.116 ± 0.048). Per-axis scoring makes each lesson silent about the
+others by construction. **So sequential teaching is the protocol that turns three competing lessons
+into three mutually silent ones**, and `aibaby-capacity` prices the difference at **0.58 simultaneous
+against 0.84 A-then-A**. If the product argument cashes anywhere, it cashes here.
+
+### FOUR ARMS, AND TWO OF THEM ARE REPRODUCTION CHECKS
+
+One genome, `render_f3_gain = 1.0`, `context_slots` patched to the word count per arm.
+
+| arm | code | schedule | budget |
+| --- | --- | --- | --- |
+| **SEQ-TOTAL** | 2x2x2, 8 words | axis rotates by session third: F1 → F2 → f3 | x1 |
+| **SEQ-AXIS** | 2x2x2, 8 words | same rotation | **x3** |
+| **SIMUL** | 2x2x2, 8 words | all three axes every trial | x1 — **reproduces §47's spread arm** |
+| **STRETCH** | 3x3, 9 words | all axes every trial, f3 at rest | x9/8 — **reproduces §47's stretched arm** |
+
+**SIMUL and STRETCH must return §47's whole-session numbers — 5.95 ± 0.75 and 11.14 ± 1.27 Hz — or
+nothing else in the run is readable.** Two arms paying for themselves as a gate.
+
+### THE MATCHED-WHAT QUESTION HAS NO CLEAN ANSWER, SO BOTH ARE RUN
+
+Sequential teaching at a fixed total budget gives each axis **one third** the trials the simultaneous
+arm gives it. Scaling the budget by three equalises trials per axis but triples the **total**
+teaching. Neither is "the" control:
+
+- **SEQ-TOTAL vs SIMUL** asks *given the same total teaching, is it better to sequence or interleave?*
+  A win here is strong, because sequencing wins **despite** a third the trials per axis.
+- **SEQ-AXIS vs SIMUL** asks *given the same teaching per axis, does sequencing help?* A win here is
+  weaker, because the arm also received three times the total teaching.
+- **A loss in SEQ-TOTAL with a win in SEQ-AXIS** is the interesting middle: it would say sequencing
+  helps but does not pay for the trials it costs, which is a statement about the budget rather than
+  about the schedule.
+
+Stating all three readings now is the point; picking the favourable one afterwards is
+[[aibaby-verdict-fitted-to-data]].
+
+### THE MEASUREMENT WINDOW, AND WHY IT IS THE FINAL THIRD
+
+Delivered `|ΔF1|`, `|ΔF2|` and `|Δf3|` between each axis's **extreme levels**, over the **final third**
+of scored utterances — the state the creature ends in. For the sequential arms that makes F1 the
+**oldest** lesson and f3 the freshest, so **the primary is also a retention test**, which is exactly
+the capacity question: `axispower` predicts the later lessons do not wipe F1 because they are silent
+about its axis. The **whole-session** window is reported beside it, because that is the one §47
+measured and the one the reproduction check needs.
+
+### CLAUSE ORDER
+
+1. **REPRODUCTION.** SIMUL and STRETCH against §47 on the whole-session window.
+2. **INDEX LIVENESS AT 8 AND 9 SLOTS, measured** — `ctx_present_frac` nonzero per arm. The pre-flight
+   §46 skipped and paid for. `ctx_match` reported, **not** gated: best-of-k! at 8-9 contexts.
+3. **THE ROTATION MUST ACTUALLY ROTATE.** A wiring check with a firing branch: the scored axis per
+   session third, printed, plus the count of feedback events in each third. A schedule that silently
+   never switched would make SEQ identical to a one-axis lesson and its null a false refusal.
+4. **POWER before the contrast.** §47's SE on the paired dF1 contrast was **1.43 Hz** at n=36, so
+   n=36. Above SE **5.5** it is NO VERDICT on power alone.
+5. **THE CONTRASTS, THREE-WAY AND SPANNING THE SIGN**, in the order above, each against SIMUL paired
+   by seed.
+
+### ONE LIMITATION DISCLOSED NOW
+
+**The order is fixed at F1 → F2 → f3.** So "sequential" is confounded with "f3 taught last", and f3
+being freshest at the measurement window flatters its own delivery while F1's must survive two
+intervening lessons. Randomising the order would triple the arms; instead **all three axes are
+reported separately**, so an ordering effect is visible as an asymmetry rather than hidden in a
+single number. If the result hinges on it, the permuted order is the successor.
+
+### ABANDONMENT COUNT: ONE RUN
