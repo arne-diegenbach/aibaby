@@ -7402,9 +7402,10 @@ and it is strictly more informative than what is printed here.
 
 ### §48 RESULT: THE PRODUCT ARGUMENT DOES NOT CASH, AND SEQUENCING IS NOT WHAT WAS MISSING
 
-Full run, 1 200 000 ticks, n=36 paired seeds per arm. **Verify gate: see the note at the end of
-this section** -- it was still running when these numbers were written down and this line is not a
-claim that it passed.
+Full run, 1 200 000 ticks, n=36 paired seeds per arm. **Verify gate held** on all four keys, checked
+by grep rather than by eye: `verify PASS`, `hash ad96f882becbee92 as recorded`, `pinned hash PASS`,
+`experiments 24 as expected, 0 not` (`results/n48-verify.log`). The gate ran AFTER these numbers were
+written down, and the sentence it replaces said so rather than claiming a pass in advance.
 
 | contrast | what it isolates | result | verdict |
 |---|---|---|---|
