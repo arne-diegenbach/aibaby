@@ -7367,3 +7367,35 @@ and it reads the same wrong way.
 
 Both are display defects, not measurement defects: no published number changes. They are written
 down because both produced a **plausible, quotable, wrong** number rather than an error.
+
+### CLAUSE 3 IS HALF A TAUTOLOGY — DISCLOSED BEFORE THE RESULT IS READ
+
+Re-reading the implementation while the run was in flight: clause 3 prints two things, and only
+one of them can fail.
+
+```cpp
+if (seq_phase < 3u) {
+  ++out.seq_fb[seq_phase];
+  out.seq_axis[seq_phase] = seq_phase == 0 ? 1u : (seq_phase == 1 ? 2u : 3u);
+}
+```
+
+- **The feedback counts per third are a real check.** A phase that received zero feedback events
+  would print `0` and fire `*** DID NOT ROTATE`. That is what the pre-flight's `136 / 124 / 125`
+  and `388 / 387 / 381` establish, and it is the thing that matters: every third was taught.
+- **The axis triple `1 / 2 / 3` cannot fail.** `seq_axis[k]` is a pure function of `seq_phase` by
+  the same constant mapping, so it reports that the code says what the code says. It is
+  **decoration, not evidence** — exactly the `Expect::kRead` failure mode: a check that cannot
+  fail for a measured reason is not a check.
+
+What *is* established independently is better than the tautology anyway: **the feedback objective
+and the trial error are the same rotating expression**, verified by reading both — the feedback
+selection and the `err =` assignment use an identical `seq_phase` ternary over an identical axis
+mapping. That is the property §46 clause 3a lost when `err_early`/`err_late` stayed the F1/F2 joint
+error under an f3 objective and printed "THE REWARD NEVER MOVED" about a run that had moved +33 Hz.
+
+**So §48's verdict may not claim "clause 3 confirmed the objective rotated".** It may claim that
+all three session thirds received feedback, and that the scored and optimised quantities are the
+same by construction. A falsifiable version — tracking the measured error on all three axes per
+phase and checking that the optimised one is the one that declines — is the successor's to build,
+and it is strictly more informative than what is printed here.
