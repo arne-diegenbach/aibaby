@@ -1,0 +1,208 @@
+  [7/144] seed 1 SIMUL      dF1    8.1  dF2   25.7  df3   15.6
+  [3/144] seed 0 SIMUL      dF1    1.9  dF2   24.2  df3   11.4
+  [9/144] seed 2 SEQ-TOTAL  dF1    5.1  dF2   13.6  df3   33.7
+  [1/144] seed 0 SEQ-TOTAL  dF1    9.2  dF2   20.7  df3   12.5
+  [13/144] seed 3 SEQ-TOTAL  dF1    2.9  dF2    5.2  df3   10.8
+  [11/144] seed 2 SIMUL      dF1    3.2  dF2    1.3  df3    7.5
+  [5/144] seed 1 SEQ-TOTAL  dF1   29.8  dF2   14.0  df3   19.4
+  [12/144] seed 2 STRETCH    dF1    2.8  dF2    9.0  df3   -1.0
+  [8/144] seed 1 STRETCH    dF1   27.3  dF2   15.5  df3   -1.0
+  [4/144] seed 0 STRETCH    dF1   37.8  dF2   47.8  df3   -1.0
+  [19/144] seed 4 SIMUL      dF1    1.2  dF2   22.2  df3   27.7
+  [15/144] seed 3 SIMUL      dF1    7.2  dF2    1.1  df3   30.5
+  [21/144] seed 5 SEQ-TOTAL  dF1   11.8  dF2    8.5  df3    0.3
+  [17/144] seed 4 SEQ-TOTAL  dF1   20.9  dF2   36.2  df3   27.4
+  [16/144] seed 3 STRETCH    dF1   36.7  dF2   34.7  df3   -1.0
+  [23/144] seed 5 SIMUL      dF1   21.3  dF2    5.4  df3   35.2
+  [20/144] seed 4 STRETCH    dF1   13.3  dF2    4.6  df3   -1.0
+  [24/144] seed 5 STRETCH    dF1    9.3  dF2    5.6  df3   -1.0
+  [25/144] seed 6 SEQ-TOTAL  dF1    8.4  dF2   30.3  df3   73.0
+  [27/144] seed 6 SIMUL      dF1    3.9  dF2    5.4  df3   24.7
+  [28/144] seed 6 STRETCH    dF1   22.3  dF2   50.1  df3   -1.0
+  [29/144] seed 7 SEQ-TOTAL  dF1    4.8  dF2    5.7  df3    7.8
+  [10/144] seed 2 SEQ-AXIS   dF1    6.9  dF2   44.1  df3   76.0
+  [14/144] seed 3 SEQ-AXIS   dF1    6.8  dF2   26.7  df3   29.3
+  [2/144] seed 0 SEQ-AXIS   dF1   19.7  dF2   68.8  df3   76.2
+  [31/144] seed 7 SIMUL      dF1    6.2  dF2    5.0  df3   11.0
+  [6/144] seed 1 SEQ-AXIS   dF1   19.8  dF2   10.1  df3   20.5
+  [33/144] seed 8 SEQ-TOTAL  dF1   11.1  dF2   13.5  df3   49.2
+  [32/144] seed 7 STRETCH    dF1    1.9  dF2   17.1  df3   -1.0
+  [18/144] seed 4 SEQ-AXIS   dF1    5.8  dF2   40.3  df3   68.4
+  [35/144] seed 8 SIMUL      dF1   13.2  dF2   47.3  df3    9.2
+  [37/144] seed 9 SEQ-TOTAL  dF1   12.2  dF2    4.4  df3    9.9
+  [39/144] seed 9 SIMUL      dF1    6.2  dF2   13.8  df3   10.9
+  [40/144] seed 9 STRETCH    dF1    2.9  dF2    3.9  df3   -1.0
+  [36/144] seed 8 STRETCH    dF1   13.0  dF2    2.6  df3   -1.0
+  [22/144] seed 5 SEQ-AXIS   dF1   19.4  dF2   19.4  df3   11.9
+  [41/144] seed 10 SEQ-TOTAL  dF1    9.3  dF2    8.5  df3   34.0
+  [43/144] seed 10 SIMUL      dF1    7.3  dF2   40.8  df3    1.5
+  [45/144] seed 11 SEQ-TOTAL  dF1    1.6  dF2   61.8  df3   62.7
+  [47/144] seed 11 SIMUL      dF1    4.6  dF2   26.1  df3   39.4
+  [44/144] seed 10 STRETCH    dF1    6.2  dF2   58.4  df3   -1.0
+  [26/144] seed 6 SEQ-AXIS   dF1   15.4  dF2   67.2  df3   90.9
+  [51/144] seed 12 SIMUL      dF1   11.7  dF2    2.3  df3   11.5
+  [30/144] seed 7 SEQ-AXIS   dF1   34.7  dF2   72.9  df3   28.4
+  [49/144] seed 12 SEQ-TOTAL  dF1   15.5  dF2    3.0  df3   14.1
+  [48/144] seed 11 STRETCH    dF1    2.1  dF2    8.0  df3   -1.0
+  [52/144] seed 12 STRETCH    dF1   21.4  dF2   63.5  df3   -1.0
+  [34/144] seed 8 SEQ-AXIS   dF1   23.2  dF2   14.4  df3   40.2
+  [53/144] seed 13 SEQ-TOTAL  dF1    6.3  dF2   70.2  df3    4.4
+  [55/144] seed 13 SIMUL      dF1   17.1  dF2   28.0  df3   10.5
+  [38/144] seed 9 SEQ-AXIS   dF1    6.4  dF2   75.5  df3   66.6
+  [59/144] seed 14 SIMUL      dF1   10.7  dF2    6.0  df3   25.8
+  [57/144] seed 14 SEQ-TOTAL  dF1    1.4  dF2   27.4  df3    8.7
+  [56/144] seed 13 STRETCH    dF1   21.7  dF2   72.6  df3   -1.0
+  [60/144] seed 14 STRETCH    dF1   19.3  dF2   94.1  df3   -1.0
+  [42/144] seed 10 SEQ-AXIS   dF1    6.9  dF2   43.0  df3    8.6
+  [61/144] seed 15 SEQ-TOTAL  dF1   18.9  dF2   43.0  df3    6.5
+  [65/144] seed 16 SEQ-TOTAL  dF1    2.4  dF2    9.0  df3   26.4
+  [63/144] seed 15 SIMUL      dF1    7.0  dF2   15.8  df3   50.3
+  [67/144] seed 16 SIMUL      dF1    8.1  dF2   20.1  df3    3.6
+  [64/144] seed 15 STRETCH    dF1   11.2  dF2    0.8  df3   -1.0
+  [46/144] seed 11 SEQ-AXIS   dF1    7.0  dF2   70.4  df3  118.2
+  [68/144] seed 16 STRETCH    dF1   20.3  dF2   28.9  df3   -1.0
+  [50/144] seed 12 SEQ-AXIS   dF1    7.0  dF2   79.0  df3   52.7
+  [69/144] seed 17 SEQ-TOTAL  dF1    6.2  dF2    4.4  df3   23.3
+  [71/144] seed 17 SIMUL      dF1    4.6  dF2   12.6  df3   21.7
+  [73/144] seed 18 SEQ-TOTAL  dF1    3.7  dF2    7.5  df3   14.6
+  [54/144] seed 13 SEQ-AXIS   dF1   33.4  dF2   67.3  df3   20.2
+  [75/144] seed 18 SIMUL      dF1    5.7  dF2   11.9  df3   31.7
+  [72/144] seed 17 STRETCH    dF1    4.4  dF2   22.6  df3   -1.0
+  [58/144] seed 14 SEQ-AXIS   dF1    5.0  dF2   13.5  df3   49.9
+  [79/144] seed 19 SIMUL      dF1   16.3  dF2   50.9  df3   11.3
+  [77/144] seed 19 SEQ-TOTAL  dF1   12.9  dF2   24.7  df3   23.0
+  [76/144] seed 18 STRETCH    dF1    4.0  dF2    3.5  df3   -1.0
+  [80/144] seed 19 STRETCH    dF1   29.5  dF2   18.6  df3   -1.0
+  [66/144] seed 16 SEQ-AXIS   dF1   20.4  dF2   34.6  df3   37.7
+  [81/144] seed 20 SEQ-TOTAL  dF1   15.1  dF2   25.1  df3    4.1
+  [83/144] seed 20 SIMUL      dF1    4.4  dF2    1.6  df3    6.8
+  [62/144] seed 15 SEQ-AXIS   dF1    6.3  dF2   73.6  df3   22.3
+  [85/144] seed 21 SEQ-TOTAL  dF1   11.6  dF2    3.2  df3   25.0
+  [84/144] seed 20 STRETCH    dF1    5.5  dF2   48.4  df3   -1.0
+  [87/144] seed 21 SIMUL      dF1    1.7  dF2   21.6  df3   50.4
+  [89/144] seed 22 SEQ-TOTAL  dF1    3.7  dF2    7.4  df3   24.2
+  [70/144] seed 17 SEQ-AXIS   dF1   24.0  dF2   35.7  df3    5.1
+  [88/144] seed 21 STRETCH    dF1   20.0  dF2   80.4  df3   -1.0
+  [91/144] seed 22 SIMUL      dF1   14.3  dF2   24.4  df3   49.5
+  [93/144] seed 23 SEQ-TOTAL  dF1    7.0  dF2   55.1  df3   35.5
+  [74/144] seed 18 SEQ-AXIS   dF1    0.1  dF2    6.1  df3   50.2
+  [92/144] seed 22 STRETCH    dF1    5.0  dF2   38.0  df3   -1.0
+  [95/144] seed 23 SIMUL      dF1    7.7  dF2   27.2  df3   53.9
+  [96/144] seed 23 STRETCH    dF1   24.9  dF2   58.8  df3   -1.0
+  [78/144] seed 19 SEQ-AXIS   dF1   17.5  dF2   33.4  df3   83.9
+  [97/144] seed 24 SEQ-TOTAL  dF1    6.3  dF2   30.0  df3    0.5
+  [99/144] seed 24 SIMUL      dF1   10.8  dF2    6.0  df3    5.1
+  [101/144] seed 25 SEQ-TOTAL  dF1    1.4  dF2   67.6  df3   22.1
+  [82/144] seed 20 SEQ-AXIS   dF1   24.5  dF2   38.6  df3   57.6
+  [100/144] seed 24 STRETCH    dF1    6.1  dF2   45.0  df3   -1.0
+  [103/144] seed 25 SIMUL      dF1   11.2  dF2    7.3  df3   11.2
+  [104/144] seed 25 STRETCH    dF1    1.9  dF2    5.3  df3   -1.0
+  [105/144] seed 26 SEQ-TOTAL  dF1    9.5  dF2    9.7  df3   21.4
+  [86/144] seed 21 SEQ-AXIS   dF1   15.0  dF2   28.1  df3   31.9
+  [107/144] seed 26 SIMUL      dF1    5.3  dF2   43.0  df3   17.5
+  [90/144] seed 22 SEQ-AXIS   dF1    6.3  dF2   27.7  df3   44.0
+  [109/144] seed 27 SEQ-TOTAL  dF1    7.8  dF2   36.3  df3   34.5
+  [108/144] seed 26 STRETCH    dF1    1.7  dF2    7.9  df3   -1.0
+  [111/144] seed 27 SIMUL      dF1    0.5  dF2   27.6  df3    2.5
+  [94/144] seed 23 SEQ-AXIS   dF1   19.6  dF2   70.3  df3    6.5
+  [113/144] seed 28 SEQ-TOTAL  dF1    1.7  dF2    1.5  df3   43.2
+  [112/144] seed 27 STRETCH    dF1   16.6  dF2   19.8  df3   -1.0
+  [115/144] seed 28 SIMUL      dF1    1.3  dF2   75.5  df3   55.1
+  [98/144] seed 24 SEQ-AXIS   dF1    5.5  dF2   30.4  df3   16.6
+  [117/144] seed 29 SEQ-TOTAL  dF1    0.8  dF2   20.1  df3   33.0
+  [116/144] seed 28 STRETCH    dF1    0.7  dF2   12.1  df3   -1.0
+  [119/144] seed 29 SIMUL      dF1    7.0  dF2   13.8  df3   53.1
+  [121/144] seed 30 SEQ-TOTAL  dF1    8.4  dF2   21.8  df3   37.4
+  [102/144] seed 25 SEQ-AXIS   dF1    8.6  dF2   95.7  df3   19.8
+  [120/144] seed 29 STRETCH    dF1   16.0  dF2   84.0  df3   -1.0
+  [123/144] seed 30 SIMUL      dF1    7.2  dF2    9.7  df3    7.3
+  [124/144] seed 30 STRETCH    dF1   19.2  dF2   95.1  df3   -1.0
+  [125/144] seed 31 SEQ-TOTAL  dF1   17.7  dF2   65.0  df3   31.9
+  [106/144] seed 26 SEQ-AXIS   dF1   13.6  dF2   64.2  df3   45.4
+  [127/144] seed 31 SIMUL      dF1    4.3  dF2   29.6  df3   34.2
+  [110/144] seed 27 SEQ-AXIS   dF1   13.3  dF2   53.5  df3   75.0
+  [128/144] seed 31 STRETCH    dF1   28.0  dF2   34.9  df3   -1.0
+  [129/144] seed 32 SEQ-TOTAL  dF1    6.2  dF2    4.6  df3   14.6
+  [131/144] seed 32 SIMUL      dF1    3.8  dF2    2.1  df3    5.4
+  [132/144] seed 32 STRETCH    dF1    9.3  dF2   66.7  df3   -1.0
+  [114/144] seed 28 SEQ-AXIS   dF1    8.7  dF2    9.7  df3   72.2
+  [133/144] seed 33 SEQ-TOTAL  dF1    2.0  dF2   17.8  df3   15.4
+  [135/144] seed 33 SIMUL      dF1    5.3  dF2   13.0  df3   14.3
+  [118/144] seed 29 SEQ-AXIS   dF1    4.9  dF2   19.1  df3   58.0
+  [136/144] seed 33 STRETCH    dF1    0.2  dF2    7.0  df3   -1.0
+  [139/144] seed 34 SIMUL      dF1   14.4  dF2   35.6  df3    0.9
+  [137/144] seed 34 SEQ-TOTAL  dF1   14.8  dF2   14.9  df3    3.9
+  [122/144] seed 30 SEQ-AXIS   dF1    2.7  dF2   29.5  df3   12.2
+  [141/144] seed 35 SEQ-TOTAL  dF1    9.4  dF2   45.7  df3    8.3
+  [140/144] seed 34 STRETCH    dF1   15.1  dF2   64.0  df3   -1.0
+  [143/144] seed 35 SIMUL      dF1   23.1  dF2   19.3  df3   42.6
+  [144/144] seed 35 STRETCH    dF1    3.1  dF2    4.1  df3   -1.0
+  [126/144] seed 31 SEQ-AXIS   dF1    7.0  dF2  103.2  df3   38.1
+  [130/144] seed 32 SEQ-AXIS   dF1    3.0  dF2   14.6  df3   45.0
+  [134/144] seed 33 SEQ-AXIS   dF1    8.2  dF2   10.5  df3    9.3
+  [138/144] seed 34 SEQ-AXIS   dF1   25.5  dF2   24.2  df3    6.4
+  [142/144] seed 35 SEQ-AXIS   dF1   31.7  dF2   76.0  df3   16.7
+experiment: f3seq
+  the question      §48. §47 taught three axes AT ONCE and a three-axis
+                    code lost. nine-axes note 4 says teaching stays
+                    SEQUENTIAL. This teaches them one at a time.
+  the mechanism     axispower: a lesson SILENT about another's axis costs
+                    it nothing (+11.5 SE). Per-axis scoring makes the three
+                    lessons silent by construction.
+  the window        delivered |d| between each axis's EXTREME levels over
+                    the FINAL THIRD -- so F1 is the OLDEST lesson in the
+                    sequential arms and the primary is also a RETENTION
+                    test. Whole-session is printed for §47's check.
+  disclosed         the order is FIXED at F1 -> F2 -> f3, so "sequential"
+                    is confounded with "f3 last". All three axes are
+                    reported separately so that shows as an asymmetry.
+  render_f3_gain    1.00
+  context_source    4
+
+  instrument        f3seq   trial seed 000000000135d281   36 creatures
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  CLAUSE 1 -- REPRODUCTION against §47, whole-session delivered |dF1|.
+  SIMUL and STRETCH are §47's two arms unchanged; if they do not come back
+  nothing below is readable.
+    SIMUL        5.95 +-  0.75   §47 said   5.95    -0.00  -> reproduces
+    STRETCH     11.14 +-  1.27   §47 said  11.14    +0.00  -> reproduces
+
+  CLAUSE 2 -- INDEX LIVE? measured per arm, not read off the genome.
+    SEQ-TOTAL ctx_present_frac 1.0000   ctx_match 0.6590  (reported, NOT gated)
+    SEQ-AXIS  ctx_present_frac 1.0000   ctx_match 0.5943  (reported, NOT gated)
+    SIMUL     ctx_present_frac 1.0000   ctx_match 0.6267  (reported, NOT gated)
+    STRETCH   ctx_present_frac 1.0000   ctx_match 0.5442  (reported, NOT gated)
+    -> live in every arm
+
+  CLAUSE 3 -- DID THE SCHEDULE ACTUALLY ROTATE? Feedback events per session
+  third and the axis scored there. A schedule that never switched would make
+  a sequential arm a ONE-AXIS lesson and its null a false refusal.
+    SEQ-TOTAL feedback per third 644 / 642 / 568   axes 1 / 2 / 3  -> rotated
+    SEQ-AXIS  feedback per third 1851 / 1399 / 1613   axes 1 / 2 / 3  -> rotated
+
+  FINAL THIRD, delivered separation between each axis's extreme levels
+    arm         |dF1| (ask 118)      |dF2| (ask 300)      |df3| (ask 255)
+                n and Hz             n and Hz             n and Hz
+    SEQ-TOTAL 36     8.83 +-  1.07   36    23.26 +-  3.39   36    22.70 +-  2.80
+    SEQ-AXIS  36    13.44 +-  1.55   36    44.20 +-  4.49   36    41.99 +-  4.70
+    SIMUL     36     8.00 +-  0.92   36    20.09 +-  2.76   36    22.24 +-  2.90
+    STRETCH   36    13.35 +-  1.78   36    34.26 +-  4.88    0   none scored  
+
+  CLAUSE 4/5 -- THE CONTRASTS, paired by seed, in the pre-registered order.
+    SEQ-TOTAL - SIMUL      +0.83 +-  1.39 Hz  (0.6 SE)  19/36 positive
+      same TOTAL teaching: a win is STRONG, sequencing beating interleaving despite a
+         third the trials per axis
+      -> NULL on this contrast
+    SEQ-AXIS  - SIMUL      +5.44 +-  1.47 Hz  (3.7 SE)  23/36 positive
+      same teaching PER AXIS: a win is WEAKER, this arm also got 3x the total
+      -> SEQUENCING WINS on this contrast
+    SEQ-TOTAL - STRETCH    -4.53 +-  1.78 Hz  (-2.5 SE)  15/36 positive
+      the question §47 asked, now with the schedule its own precondition demands
+      -> *** SEQUENCING LOSES on this contrast
+
+  IF SEQ-TOTAL BEATS STRETCH, the product argument cashes and the axis count
+  is a real lever under the right protocol. IF ALL THREE ARE NULL, more axes
+  buy nothing behaviourally however they are taught, and §41's arithmetic is
+  a statement about code space alone -- which would close the vocabulary line
+  with a mechanism rather than a tally.

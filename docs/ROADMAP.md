@@ -7399,3 +7399,85 @@ all three session thirds received feedback, and that the scored and optimised qu
 same by construction. A falsifiable version — tracking the measured error on all three axes per
 phase and checking that the optimised one is the one that declines — is the successor's to build,
 and it is strictly more informative than what is printed here.
+
+### §48 RESULT: THE PRODUCT ARGUMENT DOES NOT CASH, AND SEQUENCING IS NOT WHAT WAS MISSING
+
+Full run, 1 200 000 ticks, n=36 paired seeds per arm. **Verify gate: see the note at the end of
+this section** -- it was still running when these numbers were written down and this line is not a
+claim that it passed.
+
+| contrast | what it isolates | result | verdict |
+|---|---|---|---|
+| SEQ-TOTAL − SIMUL | schedule, **matched budget** | **+0.83 ± 1.39 Hz** (0.6 SE), 19/36 | **NULL** |
+| SEQ-AXIS − SIMUL | schedule **+ 3× budget** | +5.44 ± 1.47 Hz (3.7 SE), 23/36 | wins, confounded |
+| SEQ-TOTAL − STRETCH | **the pre-registered question** | **−4.53 ± 1.78 Hz (−2.5 SE)**, 15/36 | **SEQUENCING LOSES** |
+
+**The answer is no.** A three-axis code taught one axis at a time still delivers less F1 than a
+two-axis code stretched, by −2.5 SE — the same direction as §47's −3.6 SE under simultaneous
+teaching. §47's finding survives the repair of the precondition it broke. `nine-axes` note 4's
+"teaching stays SEQUENTIAL" is a true statement about the teaching *rate* and does **not** rescue
+the axis count.
+
+### THE DECOMPOSITION (POST-HOC, `tools/n48_decompose.py`)
+
+The one positive contrast differs from its control in two ways at once, so it was decomposed. Note
+that paired differences on common seeds telescope, so the two parts **sum to the joint effect by
+arithmetic, not by evidence** — what is informative is the allocation, not the sum.
+
+| | isolates | dF1 | dF2 | df3 |
+|---|---|---|---|---|
+| SEQ-TOTAL − SIMUL | schedule | +0.83 ± 1.39 (0.6 SE) | — | — |
+| SEQ-AXIS − SEQ-TOTAL | **budget, matched schedule** | **+4.61 ± 1.74 (2.7 SE)** | **+20.94 ± 3.69 (5.7 SE)** | **+19.31 ± 4.11 (4.7 SE)** |
+
+So of SEQ-AXIS's +5.44 Hz over SIMUL, the schedule contributes +0.83 (null) and the budget +4.61.
+**What buys delivered reach is teaching time, not how the lessons are ordered.**
+
+And the sharpest line in the run, also post-hoc:
+
+> **SEQ-AXIS − STRETCH = +0.09 ± 2.25 Hz (0.0 SE), 18/36.** A three-axis sequential arm with **3×
+> the teaching** exactly ties a two-axis stretched arm with **1.125×**. Stretching reaches the same
+> F1 separation for roughly **2.7× less teaching**.
+
+### WHAT THIS MEANS, AND WHY `axispower` WAS NOT WRONG
+
+The retention half of the primary came out as `axispower` predicted. F1 is the **oldest** lesson in
+the sequential arms, two intervening lessons behind the measurement window, and it did not decay:
+SEQ-TOTAL **8.83 ± 1.07** against SIMUL's **8.00 ± 0.92**. A lesson silent about another axis really
+does cost that axis nothing.
+
+**It also buys nothing.** That is the mechanism, and it closes the line more honestly than a tally:
+
+> **Silence between axes is free, and free is not the same as profitable.** Adding an axis multiplies
+> the code *space* and divides the teaching *time*. Reach is bought with time. So the product in
+> §41's arithmetic is real about how many signals the air could carry and says nothing about how far
+> the voice will move on any of them.
+
+### CLAUSE 1 WAS A REFACTOR CHECK, NOT A REPLICATION — AND THE ±0.00 IS WHY
+
+SIMUL came back at **5.95 ± 0.75** against §47's 5.95, and STRETCH at **11.14 ± 1.27** against 11.14
+— equal in both the mean *and* the standard error, to the last printed digit. That is not striking
+agreement; it is the expected output, and reading it as replication would have been an error. The
+two arms are **bit-identical computations** to §47's: same genome file, same creature seeds
+(`header().seed + r*7919`), same word tables via `fc_table`, same `kVLScore3`, same `×1` and `×9/8`
+budgets. The differing "trial seed" in the two headers (`135db8e` vs `135d281`) is
+`header().seed ^ <per-instrument constant>` — **a label that does not drive these arms**, so the
+boilerplate note about "another probe is another trial sequence" does not apply to them and the
+`3.0 × e` tolerance could never have been a real test.
+
+What the check *is* worth is considerable, and it is the reason to keep it: §48 added `f3_sum`,
+`seq_phase` and a new enum value into the **shared** `run_vocallearn_session`. Had any of that
+perturbed the existing `kVLScore3` path — one extra RNG draw would do it — SIMUL and STRETCH would
+have moved. They did not move at all. **It is a refactor-invariance proof on a shared code path**,
+which is exactly what this project needed after §46's bugs and should be labelled as such.
+
+An independent recomputation of all three pre-registered contrasts straight from the per-seed rows
+(`tools/n48_decompose.py`, separate parser and estimator) returns +0.83 ± 1.39, +5.44 ± 1.46 and
+−4.53 ± 1.78 — agreeing with the instrument to rounding on two code paths.
+
+### STATUS OF THE AXIS-COUNT LEAD: CLOSED BEHAVIOURALLY
+
+Three sections asked whether more axes buy more behaviour. §46: f3 is audible, teachable and
+nameable. §47: spreading loses to stretching under simultaneous teaching. §48: it loses under
+sequential teaching too, and sequencing at matched budget is null. **`render_f3_gain` stays 0.0.**
+The remaining open question is not about axes at all — it is why teaching time converts to reach so
+inefficiently, which is the `occupancy-ceiling` exponent, already measured at `dF1 ~ aligned^0.61`.
