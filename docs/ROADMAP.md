@@ -7482,3 +7482,98 @@ nameable. §47: spreading loses to stretching under simultaneous teaching. §48:
 sequential teaching too, and sequencing at matched budget is null. **`render_f3_gain` stays 0.0.**
 The remaining open question is not about axes at all — it is why teaching time converts to reach so
 inefficiently, which is the `occupancy-ceiling` exponent, already measured at `dF1 ~ aligned^0.61`.
+
+## §49 — CAN THE CREATURE INDEX ITS VOICE ON WHAT IT SEES? (2026-11-06, pre-registration)
+
+### THE REDIRECTION, STATED BEFORE THE DESIGN
+
+The direction given was "the vision front end — make it understand and speak the object it sees".
+**The front end was already rebuilt and it is not the lever.** `shapeprobe` priced a radial mass
+profile outside the brain (0.960 pooled against the shipped retina's 0.570, 4/4 seeds) and said
+BUILD; **DNA v46 built it**; the outcome was *delivery moves a LOT — central +0.160, vocal +0.115,
+oracle ×3, all 4/4 — and the milestone does not* (+0.085 ± 0.071 on one arm of four). The seen
+object reaches the larynx, the `vision→vocal` tract **ships**, and G2 is 9 of 9. G3 is settled
+negative for a reason measured elsewhere: **conditionality**. `g2cond` made G2's own contingency
+conditional and got +0.022 ± 0.153 against a positive control of +0.369 ± 0.031.
+
+So the goal is right and the target moves one stage: not *a better visual code*, but **an index read
+off the visual code**.
+
+### THE MECHANISM, AND WHY IT IS NOT THE ROUTE THAT FAILED
+
+`CONCLUSION.md`'s spine: **this architecture can learn a bias per context and cannot learn the
+context.** Where the index is *supplied* the creature names — four words **+0.160 ± 0.032**, nine as
+well as six, and the ear's own rate EMA reaches **100.1% of a perfect index's lift**. DNA v53 supplies
+it as `context_source = 4`: a **competitive partition of the auditory code**, formed while the word
+plays and **latched** across the silence.
+
+**There is no visual source.** The kernel's role selector offers `kContext` (0), `kVocal` (1) and
+`kAuditory` (≥2), and `dna.cpp` refuses `context_source > 4` and `== 3`.
+
+Every failed G3 route **transmitted** the object through a tract, and the object code is
+**pooling-fragile** — a random sparse tract is a low-pass filter whose capacity *falls* with density,
+while the word code survives the same tract. **The context source transmits nothing.** The kernel
+says so itself:
+
+> *"this source needs no projection anywhere, which is the whole reason this costs the larynx nothing
+> where DNA v47's tract cost it everything."*
+
+It reads a population **in place** and indexes a bias table. That is a different operation from
+every route in the G3 cluster, and it is the operation that already works for hearing.
+
+### ONE ASYMMETRY IN VISION'S FAVOUR, WHICH IS WHY THIS IS WORTH A RUN
+
+`ctxsrc` named persistence **THE LAST PIECE**: the word is at ceiling **1.000** while it plays and at
+**chance 0.533** by the reward window, which is the whole reason source 4 needs a latch. **A SEEN
+OBJECT DOES NOT STOP.** It is still there when the reward arrives. Vision starts ahead on precisely
+the dimension that was audition's final blocker.
+
+### THE PROBE: `visprobe`, READ-ONLY, NO LEARNING OF ANY KIND
+
+Does a fixed partition of a visual population recover **which object is being seen**, in the reward
+window? Three populations × three rules.
+
+| | |
+|---|---|
+| populations | `kVision` (retina), `kVisualCortex` (V1), `kVisualForm` (v46's curve-radius stage) |
+| the shippable rule | v53's competitive partition — unsupervised, fixed, latched |
+| the upper bound | a supervised held-out readout |
+| the null | shuffled labels |
+
+### CLAUSE ORDER, EACH A BRANCH IN THE CODE
+
+1. **VACUITY, MEASURED PER POPULATION.** Each module must exist and be active in the window. A
+   missing source module sets `ctx_module_ < 0` and the index then *silently never fires* — `areax`
+   and `ctxself` check for this rather than trusting it, and so does this.
+2. **THE NULL MUST SIT AT CHANCE.** A nearest-prototype estimator gains from width alone: `vocab`'s
+   126-dimension shuffled control read **0.149** against a chance of 0.125. Printed, not assumed.
+3. **THE SUPERVISED CEILING IS AN UPPER BOUND, NOT A PREDICTION.** `partprobe`'s lesson: the
+   supervised ceiling needs the labels the creature is trying to infer — a circularity, not a tuning
+   problem. Reported as a bound and never as the shippable number.
+4. **THE SHIPPABLE NUMBER** is the unsupervised fixed partition, against the auditory partition's own
+   `ctx_match` at matched object count (§48 measured 0.5442–0.6590 at eight and nine words; its null
+   is above 1/k because it is a best-of-k! match, so it is reported and never gated on).
+5. **THE DISPLACEMENT REGIME, STATED NOT ASSUMED.** The object code **dies at 2.6 px — one foveal
+   cell** — and position tolerance is **not learnable** (`invprobe`: jittered minus centred −0.025
+   over 3 seeds). So the same measurement runs at 0 px and at ≥2.6 px. Every visual number in this
+   project was measured inside that window; this one prints its window.
+
+### THE THREE-WAY, SPANNING THE SIGN
+
+- **At or above the auditory level** → build `context_source = 5`: one role in the selector, one
+  validation bound. Everything downstream (`ctx_proto_`, `ctx_acc_`, the latch, the per-context
+  table) is role-agnostic and walks whichever module was selected.
+- **At chance** → the **representation** is the loss, exactly as `partprobe` found for audition, and
+  the front end *is* the lever after all — which vindicates the original instinct and points back at
+  the radial profile.
+- **In between** → report where, and price the build against the `dF1 ~ aligned^0.61` transfer curve
+  **before** building it. `ceiling-is-an-exponent`'s rule: compute a gate's power against the
+  transfer curve first, or the null is guaranteed by the gate's own arithmetic.
+
+Both outer outcomes point at a *different* lever, so this is a real gate and not one that can only
+say "build it" — `shapeprobe`'s own standard.
+
+### ABANDONMENT COUNT: ONE PROBE
+
+If `visprobe` refuses, the index route to naming what it sees is closed and the remaining question is
+the representation, not the mechanism.
