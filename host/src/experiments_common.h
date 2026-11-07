@@ -1822,6 +1822,25 @@ inline Toy m3_toy(aibaby::Rng& rng, int object) {
 }
 
 
+// §49: the two G3 objects with EVERY NUISANCE REMOVED -- fixed centre, fixed
+// size, and the shapes still area-matched by kAreaMatch so brightness cannot
+// give the answer away. `m3_toy` jitters position by +-1.28 px and half-width
+// over 0.095-0.115 (~20%), and an UNSUPERVISED partition of retinal rates takes
+// whichever direction carries the most variance. Size and position are much
+// larger variance sources than disc-versus-square, so a partition that splits on
+// a nuisance rather than on identity is the thing to rule out before concluding
+// the object is not in the rate code. This arm is what rules it out.
+inline Toy m3_toy_fixed(int object) {
+  Toy t;
+  t.shape = object == 1 ? SceneSource::Shape::kSquare : SceneSource::Shape::kDisc;
+  t.cx = 0.5f;
+  t.cy = 0.5f;
+  const float half_width = 0.105f;  // the mid-size the jittered draw centres on
+  t.radius = object == 1 ? half_width : half_width * kAreaMatch;
+  return t;
+}
+
+
 // The same toy at a chosen place, with the size jitter removed. For probes that
 // sweep POSITION and need everything else held: a toy that also changed size
 // would confound "the eye cannot find it out there" with "it got smaller".
@@ -2550,6 +2569,7 @@ bool run_apicalprobe(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_oscprobe(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_gazeprobe(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_invprobe(const std::vector<uint8_t>&, uint64_t, bool);
+bool run_visprobe(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_cpprobe(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_stpprobe(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_burstprobe(const std::vector<uint8_t>&, uint64_t, bool);

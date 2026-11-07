@@ -899,6 +899,19 @@ struct G3Probe {
   double central = 0, central_shuffled = 0;
   double vision = 0;        // the same readout at the retina's own cortex
   double vision_shuffled = 0;
+  // §49 / DNA v84. The live CONTEXT SLICE during each probe's scored window,
+  // paired with the label that probe showed. This is a different question from
+  // the `vision` row above: that one asks whether a SUPERVISED readout can
+  // recover the object from the retina (0.927), this one asks what the
+  // creature's OWN unsupervised partition actually indexes on -- which is the
+  // quantity the per-context bias table consumes. `partprobe` is the reason
+  // both are needed: for the motor state the supervised ceiling was 0.740 and
+  // the loss was in the representation, not the cut, so a ceiling is a bound
+  // and never the shippable number.
+  std::vector<int> ctx_label;   // which object (or word) the probe presented
+  std::vector<int> ctx_slot;    // the modal slice while it was being presented
+  double ctx_present_frac = 0;  // scored ticks with the index live, over all of them
+  uint32_t ctx_slots = 0;       // what the genome asked for, for the vacuity clause
   // And at the larynx, which is the module G3 is ultimately about. Missing
   // from this table until 2026-08-15: `m3probe` can say whether the object
   // reaches vocal with learning *off*, and nothing said whether it survives a
@@ -937,7 +950,8 @@ struct G3Probe {
 // during teaching, the CS is present at the same time, and the probe asks
 // whether the CS alone has come to evoke it.
 G3Probe run_g3probe_session(const std::vector<uint8_t>& blob, uint64_t ticks,
-                            bool consistent, uint64_t seed_shift, int mode) {
+                            bool consistent, uint64_t seed_shift, int mode,
+                            bool hold_nuisance = false) {
   G3Probe out;
   std::string error;
   Session s;
@@ -1023,6 +1037,14 @@ G3Probe run_g3probe_session(const std::vector<uint8_t>& blob, uint64_t ticks,
                           : 1.0;
   constexpr uint64_t kPressEvery = 5000;  // 5 s of simulated life
 
+  // §49 / DNA v84. The live context slice, sampled inside the SCORED window
+  // only, so the index is read over the same interval the behaviour is. Session
+  // scope rather than inside `observe` because the probe loop has to read them
+  // after the call returns; `observe` zeroes them on entry.
+  uint32_t ctx_hist[aibaby::kMaxContextSlots] = {};
+  uint64_t ctx_win_ticks = 0, ctx_on_ticks = 0;
+  uint64_t ctx_win_total = 0, ctx_on_total = 0;
+
   // Reads the vocal tract over a stretch of ticks, optionally with a word
   // playing and optionally with a toy in view, and returns the mean of the nine
   // motor groups over the vocal frames it saw.
@@ -1034,7 +1056,19 @@ G3Probe run_g3probe_session(const std::vector<uint8_t>& blob, uint64_t ticks,
     std::vector<double> sum(aibaby::kVocalGroups, 0.0);
     double amp = 0, voiced = 0;
     uint32_t frames = 0;
-    const Toy toy = m3_toy(rng, object);
+    // §49: per-call, so the probe loop can read the modal slice for THIS
+    // presentation. Zeroed here rather than at the call site because a stale
+    // histogram would attribute the previous trial's index to this label, which
+    // is exactly the kind of silent mis-pairing this project keeps finding.
+    std::memset(ctx_hist, 0, sizeof(ctx_hist));
+    ctx_win_ticks = 0;
+    ctx_on_ticks = 0;
+    // §49: the jittered draw happens EITHER WAY, so every later random number in
+    // the session is identical between the held and jittered arms and the two
+    // differ only in where the toy is. Skipping the draw would shift the stream
+    // and confound "nuisance held" with "a different session".
+    Toy toy = m3_toy(rng, object);
+    if (hold_nuisance) toy = m3_toy_fixed(object);
 
     for (uint64_t t = 0; t < length; ++t, ++now) {
       if (show && t % frame_ticks == 0) {
@@ -1122,6 +1156,19 @@ G3Probe run_g3probe_session(const std::vector<uint8_t>& blob, uint64_t ticks,
       }
 
       if (t < settle) continue;
+      // §49: sampled HERE, above the vocal-frame guard below, deliberately. That
+      // guard skips every tick on which the vocal frame has not advanced, so
+      // sampling under it would read the index only while the creature happens
+      // to be vocalising -- an index measured on a subset selected by the
+      // creature's own output, which is a confound and not a window.
+      ++ctx_win_ticks;
+      ++ctx_win_total;
+      if (s.brain.network().context_present()) {
+        ++ctx_on_ticks;
+        ++ctx_on_total;
+        const uint32_t c = s.brain.network().active_context();
+        if (c < aibaby::kMaxContextSlots) ++ctx_hist[c];
+      }
       if (s.brain.vocal_frame() == last_frame) continue;
       last_frame = s.brain.vocal_frame();
       const aibaby::Scalar* g = s.brain.vocal_groups();
@@ -1241,6 +1288,22 @@ G3Probe run_g3probe_session(const std::vector<uint8_t>& blob, uint64_t ticks,
     if (f.empty()) continue;
     probe_x.push_back(f);
     probe_y.push_back(probe_object);
+    // §49: the modal slice over this probe's scored window, paired with the
+    // label this probe actually presented. `probe_object` is the right label in
+    // both modes: mode 1 passes it as the WORD and mode 0 as the OBJECT, so the
+    // pairing is with whichever sense carried the condition. A probe on which
+    // the index never went live contributes -1 and is dropped by the scorer
+    // rather than counted as slice 0.
+    {
+      uint32_t best = 0;
+      bool any = false;
+      for (uint32_t c = 0; c < aibaby::kMaxContextSlots; ++c) {
+        if (ctx_hist[c] == 0) continue;
+        if (!any || ctx_hist[c] > ctx_hist[best]) { best = c; any = true; }
+      }
+      out.ctx_label.push_back(probe_object);
+      out.ctx_slot.push_back(any ? int(best) : -1);
+    }
     central_x.push_back(last_central);
     vision_x.push_back(last_vision);
     cfull_x.push_back(last_central_full);
@@ -1249,6 +1312,13 @@ G3Probe run_g3probe_session(const std::vector<uint8_t>& blob, uint64_t ticks,
   }
 
   out.probes = uint32_t(probe_x.size());
+  // §49: liveness over every scored tick of the session, and what the genome
+  // asked for. Both are for the vacuity clause -- a missing source module sets
+  // ctx_slots_ = 0 in the kernel and the index then never fires at all, which
+  // from outside looks like a mechanism that did nothing rather than a genome
+  // this creature could not run. `areax` and `ctxself` check rather than trust.
+  out.ctx_present_frac = ctx_win_total ? double(ctx_on_total) / double(ctx_win_total) : 0.0;
+  out.ctx_slots = s.brain.network().context_slots();
   out.reward = reward_n ? reward_acc / double(reward_n) : 0.0;
   if (out.press_n) {
     out.press /= double(out.press_n);
@@ -9054,6 +9124,384 @@ bool run_shapeprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
               "  a licence to measure.\n");
   (void)verbose;
   return lit;
+}
+
+
+
+// --- visprobe: can the creature INDEX ITS VOICE ON WHAT IT SEES? ------------
+//
+// ROADMAP §49. `CONCLUSION.md`'s spine is that this architecture can learn a
+// bias PER CONTEXT and cannot learn the CONTEXT. Where the index is supplied it
+// names -- four words +0.160 +- 0.032, and the ear's own rate EMA reaches 100.1%
+// of a perfect index's lift. DNA v53 supplies it as `context_source = 4`, a
+// competitive partition of the AUDITORY code. DNA v84 adds source 5: the same
+// rule pointed at the RETINA.
+//
+// WHY THIS IS NOT THE ROUTE THAT FAILED NINE TIMES. Every failed G3 route
+// TRANSMITTED the object through a tract, and the object code is pooling-fragile
+// -- `g3probe` states the cascade as vision 0.927 -> central 0.724 -> voice
+// ~0.487, so carrying it costs 0.44. A context source carries nothing: it reads
+// a population in place and indexes the bias table. The kernel's own words, on
+// source 4: "this source needs no projection anywhere, which is the whole reason
+// this costs the larynx nothing where DNA v47's tract cost it everything."
+//
+// WHAT IS ACTUALLY BEING ASKED, which is NOT the 0.927. That number is a
+// SUPERVISED per-neuron readout. The quantity the per-context table consumes is
+// what the creature's OWN unsupervised, fixed, conscience-balanced partition
+// lands on. `partprobe` is why the distinction is not pedantic: for the motor
+// state the supervised ceiling was 0.740 against 0.561 per-neuron and its
+// verdict was that the loss lived in the REPRESENTATION rather than in the cut.
+// So 0.927 bounds what this could recover and never predicts it.
+//
+// THE TWO ARMS, and the second is the positive control rather than a baseline.
+//
+//   RETINA  source 5, mode 0: the object is shown and the caregiver is SILENT.
+//   EAR     source 4, mode 1: the object is HIDDEN and the caregiver speaks.
+//
+// Each sense is probed in the protocol that delivers the condition through it,
+// at the same k, so the comparison is about the sense and not about the timing
+// -- the same reason `condprobe` exists. EAR is the mechanism already known to
+// work, so if EAR lands at its own null the protocol is broken and RETINA is
+// unreadable whatever it says. There is deliberately NO oracle arm: source 1
+// reads `ModuleRole::kContext`, the shipped genome has six modules and no
+// context role, and that arm would silently measure nothing at all.
+//
+// THE WINDOW, PRINTED RATHER THAN ASSUMED. `m3_toy` jitters the toy by +-0.02 of
+// a 64 px frame = +-1.28 px, inside the 1.4 px window every visual number in
+// this project was measured in, and under `gazeprobe`'s measured death at 2.6 px
+// (one 2x2 px foveal cell). The displacement CURVE is gazeprobe's and is not
+// re-swept here.
+//
+// AND ONE INTERPRETATION LIMIT, DISCLOSED BEFORE THE RESULT. A supervised
+// per-neuron readout tolerates that jitter at 0.927; a PROTOTYPE matcher need
+// not, because a prototype is a fixed template and the partition scores by
+// Euclidean distance to it. So a chance RETINA result has two candidate causes
+// -- "vision cannot index" and "a template cannot survive 1.28 px" -- which this
+// probe does not separate. The discriminator is cheap and already in the
+// codebase: `m3_toy_at` holds position with the size jitter removed, for exactly
+// this kind of question.
+namespace {
+
+// The same statistic `vocallearn` reports as `ctx_match`: the best agreement
+// over all k! relabelings of slice onto label, divided by the trials counted.
+// Local rather than shared because the milestones version closes over its own
+// `nw`; the semantics are copied deliberately so the numbers are comparable.
+//
+// ITS NULL IS ABOVE 1/k AND IS THEREFORE MEASURED, NEVER ASSUMED. Taking the
+// best of k! permutations is an optimisation over the labelling, so even a
+// random index scores above chance -- which is why every caller reports this
+// against a label-shuffled null and none of them gates on the raw value.
+double vis_ctx_match(const std::vector<int>& label, const std::vector<int>& slot,
+                     uint32_t k, uint64_t* counted) {
+  uint64_t conf[aibaby::kMaxContextSlots][aibaby::kMaxContextSlots] = {};
+  uint64_t n = 0;
+  for (size_t i = 0; i < label.size() && i < slot.size(); ++i) {
+    // A probe on which the index never went live carries -1 and is DROPPED. It
+    // is not slice 0: counting it there would read as a creature that indexed
+    // everything into one bin, which is a different finding.
+    if (slot[i] < 0 || label[i] < 0) continue;
+    if (uint32_t(label[i]) >= k || uint32_t(slot[i]) >= aibaby::kMaxContextSlots) continue;
+    ++conf[label[i]][slot[i]];
+    ++n;
+  }
+  if (counted) *counted = n;
+  if (n == 0) return 0.0;
+  std::vector<uint32_t> perm(k);
+  for (uint32_t i = 0; i < k; ++i) perm[i] = i;
+  double best = 0.0;
+  do {
+    double agree = 0.0;
+    for (uint32_t w = 0; w < k; ++w) agree += double(conf[w][perm[w]]);
+    if (agree > best) best = agree;
+  } while (std::next_permutation(perm.begin(), perm.end()));
+  return best / double(n);
+}
+
+// THE SLICE THE PARTITION ACTUALLY USED, as a fraction of probes in the busiest
+// one. This exists because the first smoke of this probe read ctx_match EXACTLY
+// 0.5000 against a null of EXACTLY 0.5000, and with the labels alternating by
+// construction at k=2 that is the signature of an index PINNED TO ONE SLICE --
+// not of an index that fails to track the object. The two have the same
+// ctx_match and completely different causes, and `ctx_present_frac` cannot tell
+// them apart because a pinned index is perfectly live (LIVENESS IS NOT DOSE).
+//
+// `partprobe` named the mechanism: "a unit that wins early becomes the running
+// mean of what it won, and in high dimensions a mean is nearer every point than
+// any single point is, so it keeps winning and the other starves" -- measured
+// killing 78% of random inits, which is what DeSieno's conscience is for.
+//
+// 1.0 means collapsed. 1/k means perfectly balanced.
+double vis_occupancy(const std::vector<int>& slot, uint32_t k) {
+  uint64_t col[aibaby::kMaxContextSlots] = {};
+  uint64_t n = 0;
+  for (size_t i = 0; i < slot.size(); ++i) {
+    if (slot[i] < 0 || uint32_t(slot[i]) >= aibaby::kMaxContextSlots) continue;
+    ++col[slot[i]];
+    ++n;
+  }
+  if (n == 0) return 0.0;
+  uint64_t busiest = 0;
+  for (uint32_t c = 0; c < k && c < aibaby::kMaxContextSlots; ++c)
+    if (col[c] > busiest) busiest = col[c];
+  return double(busiest) / double(n);
+}
+
+}  // namespace
+
+bool run_visprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  aibaby::Dna dna;
+  if (dna.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) return false;
+  const double dt = double(dna.header().sim.dt_ms);
+  constexpr uint32_t kObjects = 2;   // the G3 protocol's own object count
+  constexpr uint32_t kShuffles = 64; // for the label-destroyed null
+
+  std::printf("  the question      §49. The creature names what it HEARS by indexing a\n"
+              "                    bias table off a partition of the auditory code, and\n"
+              "                    cannot name what it SEES. DNA v84 points the SAME rule\n"
+              "                    at the retina. Does the index track the OBJECT?\n");
+  std::printf("  the mechanism     every failed G3 route TRANSMITTED the object and the\n"
+              "                    object code is pooling-fragile (vision 0.927 -> central\n"
+              "                    0.724 -> voice ~0.487). A context source transmits\n"
+              "                    nothing: it reads a population in place.\n");
+  std::printf("  not the 0.927     that is a SUPERVISED per-neuron readout and bounds what\n"
+              "                    this could recover. partprobe: for the motor state the\n"
+              "                    supervised ceiling was 0.740 and the loss was in the\n"
+              "                    REPRESENTATION, not the cut.\n");
+  std::printf("  the window        m3_toy jitters +-1.28 px on a 64 px frame, inside the\n"
+              "                    1.4 px window every visual number here was measured in\n"
+              "                    and under gazeprobe's death at 2.6 px. Not re-swept.\n");
+  std::printf("  disclosed         a chance RETINA result has TWO causes this probe does\n"
+              "                    not separate: vision cannot index, or a prototype cannot\n"
+              "                    survive 1.28 px. Discriminator: m3_toy_at.\n");
+  std::printf("  session           %.1f s x %u creatures x 2 arms\n",
+              double(ticks) * dt / 1000.0, kM3Replicates);
+  instrument("visprobe", dna.header().seed ^ 0x49A5u, kM3Replicates, "creatures");
+
+  // THE FIRST SMOKE TURNED THIS INTO A 2x2 AND THE REASON IS WORTH STATING.
+  // With the shipped gate the retina's partition COLLAPSED -- occupancy 1.0000,
+  // every probe in one slice -- which scores exactly the k=2 null and is NOT the
+  // same finding as "the index does not track the object". The kernel already
+  // documents both the cause and the fixes, for the auditory case:
+  //
+  //   "the conscience can KEEP two live units balanced but cannot RESCUE one
+  //    that died at initialisation ... Gate 3 removes the origin instead of
+  //    strengthening the penalty: seed every prototype from the first sample, so
+  //    no unit starts stranded. Gate 4 is the seeding WITHOUT the conscience, so
+  //    the two can be told apart."
+  //
+  // And `rate_ema_` is all-positive, so a prototype left at the ORIGIN sits at
+  // the full |x| and loses every race. Nothing new is built here: gate 0 is
+  // shipped, 2 adds DeSieno's conscience, 3 is conscience + seeding, 4 is
+  // seeding alone. Source 5 inherits them through `context_source_is_ema()`.
+  //
+  // There is a second candidate the sweep also speaks to. Under gate 0 the
+  // prototypes only learn while the LARYNX IS QUIET, so they are sampled at
+  // moments chosen by the creature's own vocal state. A heard word quiets the
+  // larynx -- the listening reflex ships ON -- and a seen object does not. If
+  // that is the whole story, moving off gate 0 is what rescues the retina.
+  struct Arm {
+    const char* name;
+    uint32_t source;
+    int mode;
+    uint32_t gate;
+    bool hold;
+    const char* what;
+  };
+  // THE LAST TWO ARMS DECIDE WHAT A NULL MEANS, and the smoke is why they exist.
+  // With the conscience on, the visual partition is ALIVE (occupancy 0.65) and
+  // ctx_match still sits at its null -- so the cut finds two real clusters that
+  // have nothing to do with the object. An unsupervised split of retinal RATES
+  // takes the largest variance direction, and `m3_toy` supplies two that dwarf
+  // disc-versus-square: position (+-1.28 px) and half-width (0.095-0.115, ~20%),
+  // while the shapes are deliberately AREA-MATCHED so brightness carries no
+  // signal. Holding both nuisances fixed is the only arm that separates "the
+  // object is not in the rate code" from "the partition split on size".
+  constexpr uint32_t kArms = 7;
+  const Arm arms[kArms] = {
+      {"EAR g0", 4u, 1, 0u, false, "object hidden, caregiver speaks -- POSITIVE CONTROL"},
+      {"RET g0", 5u, 0, 0u, false, "object shown; shipped larynx-quiet gate"},
+      {"RET g2", 5u, 0, 2u, false, "+ conscience, no seeding"},
+      {"RET g3", 5u, 0, 3u, false, "+ conscience AND seed from first sample"},
+      {"RET g4", 5u, 0, 4u, false, "seeding alone, no conscience"},
+      {"RET g2 H", 5u, 0, 2u, true, "conscience, POSITION AND SIZE HELD"},
+      {"RET g3 H", 5u, 0, 3u, true, "conscience + seeding, POSITION AND SIZE HELD"},
+  };
+
+  struct Row {
+    double match = 0, null = 0, present = 0, vision = 0, vshuf = 0, occ = 0;
+    uint32_t slots = 0, n_ok = 0;
+    uint64_t counted = 0;
+  } rows[kArms];
+
+  for (uint32_t a = 0; a < kArms; ++a) {
+    for (uint32_t r = 0; r < kM3Replicates; ++r) {
+      std::vector<uint8_t> variant = blob;
+      const uint64_t seed = dna.header().seed + r * 7919ull;
+      std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+      // BOTH fields, which is §46's lesson: copying only `context_source` leaves
+      // `context_slots` at 0, no prototypes are ever allocated, the index never
+      // enters word range, and the run prints a confident FALSE NULL.
+      {
+        aibaby::DnaHeader h;
+        std::memcpy(&h, variant.data(), sizeof(h));
+        h.exploration.context_source = arms[a].source;
+        h.exploration.context_slots = kObjects;
+        h.exploration.ctx_proto_gate = arms[a].gate;
+        std::memcpy(variant.data(), &h, sizeof(h));
+      }
+      const G3Probe p =
+          run_g3probe_session(variant, ticks, true, 0x51E7u, arms[a].mode, arms[a].hold);
+      if (!p.ok || p.ctx_label.size() < 12) continue;
+      uint64_t counted = 0;
+      const double m = vis_ctx_match(p.ctx_label, p.ctx_slot, kObjects, &counted);
+      // THE LABEL-DESTROYED NULL, not an isotropic one: the slices stay exactly
+      // as the creature produced them and only the pairing with the object is
+      // destroyed, which is the only arm that says the match is ABOUT the label.
+      aibaby::Rng rng;
+      rng.seed(seed ^ 0x5A17u);
+      double null_acc = 0.0;
+      std::vector<int> shuf = p.ctx_label;
+      for (uint32_t s = 0; s < kShuffles; ++s) {
+        for (size_t i = shuf.size(); i > 1; --i) {
+          const size_t j = size_t(rng.next() % uint64_t(i));
+          std::swap(shuf[i - 1], shuf[j]);
+        }
+        null_acc += vis_ctx_match(shuf, p.ctx_slot, kObjects, nullptr);
+      }
+      Row& row = rows[a];
+      row.match += m;
+      row.null += null_acc / double(kShuffles);
+      row.present += p.ctx_present_frac;
+      row.occ += vis_occupancy(p.ctx_slot, kObjects);
+      row.vision += p.vision;
+      row.vshuf += p.vision_shuffled;
+      row.slots = p.ctx_slots;
+      row.counted += counted;
+      ++row.n_ok;
+    }
+  }
+
+  for (uint32_t a = 0; a < kArms; ++a) {
+    Row& q = rows[a];
+    if (!q.n_ok) continue;
+    const double in = 1.0 / double(q.n_ok);
+    q.match *= in; q.null *= in; q.present *= in; q.vision *= in; q.vshuf *= in;
+    q.occ *= in;
+  }
+
+  // ---- CLAUSE 1: VACUITY, MEASURED PER ARM ----
+  std::printf("\n  CLAUSE 1 -- IS THE INDEX LIVE AT ALL? Measured, not read off the genome.\n"
+              "  A missing source module sets ctx_slots = 0 in the kernel and the index\n"
+              "  then never fires, which from outside looks like a mechanism that did\n"
+              "  nothing rather than a genome this creature cannot run.\n");
+  bool live = true;
+  for (uint32_t a = 0; a < kArms; ++a) {
+    const Row& q = rows[a];
+    const bool ok = q.n_ok > 0 && q.slots == kObjects && q.present > 0.01;
+    if (!ok) live = false;
+    std::printf("    %-9s creatures %u/%u  ctx_slots %u (asked %u)  present %.4f  "
+                "occupancy %.4f  -> %s\n",
+                arms[a].name, q.n_ok, kM3Replicates, q.slots, kObjects, q.present, q.occ,
+                ok ? "live" : "*** DEAD");
+  }
+  std::printf("  occupancy is the share of probes in the BUSIEST slice: %.3f means\n"
+              "  balanced, 1.000 means the partition COLLAPSED onto one winner and the\n"
+              "  index is constant. A constant index is perfectly LIVE and scores exactly\n"
+              "  the k=2 null, so `present` cannot see it -- which is why it is here.\n",
+              1.0 / double(kObjects));
+  // A COLLAPSED ARM IS NOW A DATA POINT, NOT AN ABORT. Gate 0 collapsing is the
+  // measured baseline this sweep exists to fix, so the refusal moved: it fires
+  // only if EVERY retina gate collapses, which would say no initialisation this
+  // kernel has rescues a visual partition.
+  uint32_t ret_alive = 0;
+  for (uint32_t a = 1; a < kArms; ++a)
+    if (rows[a].n_ok && rows[a].occ <= 0.995) ++ret_alive;
+  if (ret_alive == 0) {
+    std::printf("\n  visprobe REFUSES -- EVERY retina gate collapsed onto one slice. The\n"
+                "  conscience and the first-sample seeding both fail to keep two visual\n"
+                "  prototypes alive, so no ctx_match below is a statement about whether\n"
+                "  vision can index: a constant index scores the null by construction.\n"
+                "  This is partprobe's starving-winner failure, and the question it leaves\n"
+                "  is the PARTITION, not the sense. The retina's rate_ema is all-positive\n"
+                "  and the two objects are AREA-MATCHED by kAreaMatch, so a rate code may\n"
+                "  simply not separate a disc from a square -- shape lives in retinal spike\n"
+                "  TIMING, which an EMA averages away. That is the next measurement.\n");
+    return true;
+  }
+  if (!live) {
+    std::printf("\n  visprobe NO VERDICT -- the index is not live in both arms, so nothing\n"
+                "  below is a measurement of vision. Fix the wiring, not the hypothesis.\n");
+    return true;
+  }
+
+  // ---- CLAUSE 2: THE SUPERVISED CEILING, AS A BOUND ----
+  std::printf("\n  CLAUSE 2 -- THE SUPERVISED CEILING, quoted as a BOUND and never as the\n"
+              "  expected result. This is the `vision` row of g3probe on these same runs.\n"
+              "  It is at chance in the EAR arm BY CONSTRUCTION -- that arm hides the\n"
+              "  object -- and that is a check on the arm, not a loss.\n");
+  for (uint32_t a = 0; a < kArms; ++a)
+    std::printf("    %-9s vision, per neuron %.3f  (shuffled %.3f)   %s\n", arms[a].name,
+                rows[a].vision, rows[a].vshuf, arms[a].what);
+
+  // ---- CLAUSE 3: THE SHIPPABLE NUMBER ----
+  std::printf("\n  CLAUSE 3 -- WHAT THE CREATURE'S OWN PARTITION INDEXES ON. ctx_match is\n"
+              "  the best of %u! relabelings, so its null is ABOVE 1/k and is MEASURED\n"
+              "  here by destroying the label pairing %u times per creature.\n",
+              kObjects, kShuffles);
+  std::printf("    %-9s %-9s %-9s %-9s %s\n", "arm", "ctx_match", "null", "excess", "probes");
+  for (uint32_t a = 0; a < kArms; ++a)
+    std::printf("    %-9s %-9.4f %-9.4f %+-9.4f %llu\n", arms[a].name, rows[a].match,
+                rows[a].null, rows[a].match - rows[a].null,
+                (unsigned long long)rows[a].counted);
+
+  // ---- CLAUSE 4: THE POSITIVE CONTROL GATES EVERYTHING ----
+  const double ear_excess = rows[0].match - rows[0].null;
+  // The best NON-COLLAPSED retina gate. A collapsed arm is excluded because its
+  // ctx_match is the null by construction and would flatter the maximum.
+  uint32_t best_a = 0;
+  double ret_excess = 0.0;
+  bool have_ret = false;
+  for (uint32_t a = 1; a < kArms; ++a) {
+    if (!rows[a].n_ok || rows[a].occ > 0.995) continue;
+    const double e = rows[a].match - rows[a].null;
+    if (!have_ret || e > ret_excess) { ret_excess = e; best_a = a; have_ret = true; }
+  }
+  std::printf("\n  CLAUSE 4 -- THE POSITIVE CONTROL. EAR is the mechanism already known to\n"
+              "  work. If it sits at its own null the protocol is broken and the RETINA\n"
+              "  row is unreadable whatever it says.\n");
+  if (!(ear_excess > 0.02)) {
+    std::printf("    EAR excess %+.4f -- *** PROTOCOL REFUSED. The known-good sense did not\n"
+                "    index either, so this says nothing about vision. NO VERDICT.\n",
+                ear_excess);
+    return true;
+  }
+  std::printf("    EAR excess %+.4f over its own null -- the protocol carries an index.\n",
+              ear_excess);
+
+  // ---- CLAUSE 5: THE THREE-WAY ----
+  std::printf("\n  CLAUSE 5 -- THE VERDICT, three-way and spanning the sign.\n");
+  if (ret_excess >= ear_excess) {
+    std::printf("    %s %+.4f >= EAR %+.4f  -> THE VISUAL INDEX IS AT LEAST AS GOOD AS\n"
+                "    THE ONE THAT ALREADY NAMES. The build is licensed: teach a two-object\n"
+                "    vocabulary on source 5 and score the voice.\n",
+                arms[best_a].name, ret_excess, ear_excess);
+  } else if (ret_excess > 0.02) {
+    std::printf("    %s %+.4f, between its null and EAR's %+.4f  -> AN INDEX EXISTS AND\n"
+                "    IS WEAKER. Price the build against the dF1 ~ aligned^0.61 transfer\n"
+                "    curve BEFORE running it: ceiling-is-an-exponent's rule is that a gate\n"
+                "    computed after the fact is a null guaranteed by its own arithmetic.\n",
+                arms[best_a].name, ret_excess, ear_excess);
+  } else {
+    std::printf("    best retina gate %+.4f, at its own null while EAR reads %+.4f  -> THE CUT\n"
+                "    LOSS. The object is legible to a supervised readout at %.3f and the\n"
+                "    creature's own partition cannot find it, which is partprobe's verdict\n"
+                "    for the motor state arriving for vision. The front end IS the lever\n"
+                "    after all -- and the disclosed confound applies: rerun with m3_toy_at\n"
+                "    before blaming the representation rather than the 1.28 px jitter.\n",
+                ret_excess, ear_excess, rows[1].vision);
+  }
+  return true;
 }
 
 }  // namespace aibaby_host

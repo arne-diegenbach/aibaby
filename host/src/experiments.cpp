@@ -148,6 +148,19 @@ const Spec kSpecs[] = {
      "  envelope, which is the fewest an average per burst may rest on"},
     {"invprobe", 200000, Expect::kPass, Tier::kLong,
      "derived: 100 trials per scatter arm, x3 creatures x3 upbringings"},
+    {"visprobe", 900000, Expect::kRead, Tier::kLong,
+     "derived: it IS g3probe's session, so it inherits g3probe's budget -- 141\n"
+     "  probes per creature, x5 creatures x2 arms. §49: the creature names what\n"
+     "  it HEARS by indexing a bias table off a partition of the auditory code\n"
+     "  and cannot name what it SEES; DNA v84 points the same rule at the retina\n"
+     "  (context_source = 5). Asks whether the index tracks the OBJECT, which is\n"
+     "  NOT g3probe's 0.927 -- that is a supervised per-neuron readout and bounds\n"
+     "  this rather than predicting it, per partprobe. RETINA (source 5, object\n"
+     "  shown) against EAR (source 4, object hidden and the caregiver speaking),\n"
+     "  each sense in the protocol that delivers the condition through it. EAR is\n"
+     "  the POSITIVE CONTROL: at its own null the protocol is broken and the\n"
+     "  RETINA row is unreadable. kRead because every refusal here prints NO\n"
+     "  VERDICT rather than returning false"},
     {"cpprobe", 600000, Expect::kGuard, Tier::kLong,
      "derived: two 300 s phases. Expected to FAIL, and the failure is the current\n"
      "  finding: its own positive control says 300 s of praise does not measurably\n"
@@ -1406,6 +1419,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "oscprobe") ok = run_oscprobe(dna_blob, ticks, verbose);
   else if (name == "gazeprobe") ok = run_gazeprobe(dna_blob, ticks, verbose);
   else if (name == "invprobe") ok = run_invprobe(dna_blob, ticks, verbose);
+  else if (name == "visprobe") ok = run_visprobe(dna_blob, ticks, verbose);
   else if (name == "cpprobe") ok = run_cpprobe(dna_blob, ticks, verbose);
   else if (name == "stpprobe") ok = run_stpprobe(dna_blob, ticks, verbose);
   else if (name == "burstprobe") ok = run_burstprobe(dna_blob, ticks, verbose);

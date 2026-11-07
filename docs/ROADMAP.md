@@ -7619,3 +7619,55 @@ to 0.6590 at eight and nine words, reported never gated, since best-of-k! puts i
 Below that and the cut is the loss; at or above it and the build is licensed. **The 0.927 is quoted
 as a bound on what the cut could recover and never as the expected result** — that is `partprobe`'s
 lesson and it applies to its own successor.
+
+### §49 DESIGN CHANGE, DISCLOSED AS SUCH: TWO ARMS ADDED AFTER SEEING SMOKE DATA
+
+The pre-registration above describes two arms, RETINA and EAR. The probe that will run has
+**seven**, and five of those were added after looking at output. A smoke is not a measurement — the
+binary exits 1 and says so — but the design it produced was still shaped by data, and recording that
+is the difference between a pre-registration and a story.
+
+**What the first smoke showed, and why it changed the instrument.** RETINA read `ctx_match` exactly
+**0.5000** against a null of exactly **0.5000**, and clause 5 printed *"the cut is the loss, the
+front end IS the lever after all"*. **That verdict was wrong.** With the labels alternating by
+construction at k=2, an exact 0.5000 is the signature of an index **pinned to one slice**. Adding an
+occupancy column showed it: RETINA **1.0000**, every probe in a single slice, against EAR's 0.6800.
+
+`ctx_present_frac` could not see it, and that is the general lesson rather than a detail: **a
+constant index is perfectly live.** This is `liveness-is-not-dose` landing on its own author. The
+occupancy measure is now part of clause 1 with its own refusal branch.
+
+**The second smoke, seven arms, is a 2×2 of {conscience} × {first-sample seeding}** — gates the
+kernel already carries, which source 5 inherits through `context_source_is_ema()`:
+
+| arm | occupancy | ctx_match | null | excess |
+|---|---|---|---|---|
+| EAR g0 | 0.6800 | 0.7800 | 0.5653 | **+0.2147** |
+| RET g0 | **1.0000** collapsed | 0.5000 | 0.5000 | +0.0000 |
+| RET g2 | 0.6500 alive | 0.5300 | 0.5788 | −0.0488 |
+| RET g3 | 0.6700 alive | 0.5100 | 0.5784 | −0.0684 |
+| RET g4 | **1.0000** collapsed | 0.5000 | 0.5000 | +0.0000 |
+
+**THE CONSCIENCE IS WHAT KEEPS A VISUAL PARTITION ALIVE, and the seeding is neither necessary nor
+sufficient.** g2 and g3 carry the conscience and balance; g0 and g4 do not and collapse totally.
+That differs from the auditory case, where the kernel's own note says the conscience *"cannot RESCUE
+one that died at initialisation"* and gate 3's seeding was the proposed fix. On the retina the
+conscience alone suffices.
+
+**And with the partition demonstrably alive, `ctx_match` is still at its null** while a supervised
+readout of the same runs reads 0.76–0.84. Note how much work the label-destroyed null is doing: it
+*rises* to 0.578 once the index varies, because best-of-k! has more to optimise over. Against a
+naive 0.5000 the g2 arm would have been read as a +0.03 effect.
+
+**WHY TWO MORE ARMS, AND WHAT THEY DECIDE.** An unsupervised split of retinal **rates** takes the
+largest variance direction. `m3_toy` supplies two that dwarf disc-versus-square — position
+**±1.28 px** and half-width **0.095–0.115 (~20%)** — while the shapes are deliberately
+**area-matched** by `kAreaMatch` so brightness carries no signal at all. So a partition that is alive
+and uninformative is exactly what splitting on *size* would look like. `RET g2 H` and `RET g3 H`
+hold position and size fixed; `m3_toy_fixed` is new and the jittered draw still runs in both, so the
+rng stream is identical and the arms differ only in where the toy is.
+
+**This is the discriminator the pre-registration already promised** under "one interpretation limit,
+disclosed before the result" — it named `m3_toy_at` as the tool. It is being run as part of the same
+section rather than deferred, because a null without it cannot distinguish *"the object is not in
+the rate code"* from *"the partition split on size"*, and those point at opposite next steps.
