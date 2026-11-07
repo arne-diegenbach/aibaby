@@ -1,0 +1,73 @@
+experiment: visprobe
+  the question      §49. The creature names what it HEARS by indexing a
+                    bias table off a partition of the auditory code, and
+                    cannot name what it SEES. DNA v84 points the SAME rule
+                    at the retina. Does the index track the OBJECT?
+  the mechanism     every failed G3 route TRANSMITTED the object and the
+                    object code is pooling-fragile (vision 0.927 -> central
+                    0.724 -> voice ~0.487). A context source transmits
+                    nothing: it reads a population in place.
+  not the 0.927     that is a SUPERVISED per-neuron readout and bounds what
+                    this could recover. partprobe: for the motor state the
+                    supervised ceiling was 0.740 and the loss was in the
+                    REPRESENTATION, not the cut.
+  the window        m3_toy jitters +-1.28 px on a 64 px frame, inside the
+                    1.4 px window every visual number here was measured in
+                    and under gazeprobe's death at 2.6 px. Not re-swept.
+  disclosed         a chance RETINA result has TWO causes this probe does
+                    not separate: vision cannot index, or a prototype cannot
+                    survive 1.28 px. Discriminator: m3_toy_at.
+  session           900.0 s x 5 creatures x 2 arms
+  instrument        visprobe   trial seed 0000000001356e6c   5 creatures
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+
+  CLAUSE 1 -- IS THE INDEX LIVE AT ALL? Measured, not read off the genome.
+  A missing source module sets ctx_slots = 0 in the kernel and the index
+  then never fires, which from outside looks like a mechanism that did
+  nothing rather than a genome this creature cannot run.
+    EAR g0    creatures 5/5  ctx_slots 2 (asked 2)  present 1.0000  occupancy 0.7262  -> live
+    RET g0    creatures 5/5  ctx_slots 2 (asked 2)  present 1.0000  occupancy 0.7901  -> live
+    RET g2    creatures 5/5  ctx_slots 2 (asked 2)  present 1.0000  occupancy 0.5348  -> live
+    RET g3    creatures 5/5  ctx_slots 2 (asked 2)  present 1.0000  occupancy 0.5291  -> live
+    RET g4    creatures 5/5  ctx_slots 2 (asked 2)  present 1.0000  occupancy 0.9277  -> live
+    RET g2 H  creatures 5/5  ctx_slots 2 (asked 2)  present 1.0000  occupancy 0.5092  -> live
+    RET g3 H  creatures 5/5  ctx_slots 2 (asked 2)  present 1.0000  occupancy 0.5248  -> live
+  occupancy is the share of probes in the BUSIEST slice: 0.500 means
+  balanced, 1.000 means the partition COLLAPSED onto one winner and the
+  index is constant. A constant index is perfectly LIVE and scores exactly
+  the k=2 null, so `present` cannot see it -- which is why it is here.
+
+  CLAUSE 2 -- THE SUPERVISED CEILING, quoted as a BOUND and never as the
+  expected result. This is the `vision` row of g3probe on these same runs.
+  It is at chance in the EAR arm BY CONSTRUCTION -- that arm hides the
+  object -- and that is a check on the arm, not a loss.
+    EAR g0    vision, per neuron 0.496  (shuffled 0.504)   object hidden, caregiver speaks -- POSITIVE CONTROL
+    RET g0    vision, per neuron 0.927  (shuffled 0.507)   object shown; shipped larynx-quiet gate
+    RET g2    vision, per neuron 0.949  (shuffled 0.513)   + conscience, no seeding
+    RET g3    vision, per neuron 0.932  (shuffled 0.487)   + conscience AND seed from first sample
+    RET g4    vision, per neuron 0.938  (shuffled 0.496)   seeding alone, no conscience
+    RET g2 H  vision, per neuron 1.000  (shuffled 0.501)   conscience, POSITION AND SIZE HELD
+    RET g3 H  vision, per neuron 1.000  (shuffled 0.468)   conscience + seeding, POSITION AND SIZE HELD
+
+  CLAUSE 3 -- WHAT THE CREATURE'S OWN PARTITION INDEXES ON. ctx_match is
+  the best of 2! relabelings, so its null is ABOVE 1/k and is MEASURED
+  here by destroying the label pairing 64 times per creature.
+    arm       ctx_match null      excess    probes
+    EAR g0    0.7674    0.5233    +0.2441   705
+    RET g0    0.5092    0.5243    -0.0150   705
+    RET g2    0.6099    0.5330    +0.0769   705
+    RET g3    0.6326    0.5354    +0.0972   705
+    RET g4    0.5050    0.5153    -0.0104   705
+    RET g2 H  0.8624    0.5346    +0.3278   705
+    RET g3 H  0.8383    0.5328    +0.3055   705
+
+  CLAUSE 4 -- THE POSITIVE CONTROL. EAR is the mechanism already known to
+  work. If it sits at its own null the protocol is broken and the RETINA
+  row is unreadable whatever it says.
+    EAR excess +0.2441 over its own null -- the protocol carries an index.
+
+  CLAUSE 5 -- THE VERDICT, three-way and spanning the sign.
+    RET g2 H +0.3278 >= EAR +0.2441  -> THE VISUAL INDEX IS AT LEAST AS GOOD AS
+    THE ONE THAT ALREADY NAMES. The build is licensed: teach a two-object
+    vocabulary on source 5 and score the voice.

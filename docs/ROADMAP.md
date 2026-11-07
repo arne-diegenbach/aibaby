@@ -7671,3 +7671,81 @@ rng stream is identical and the arms differ only in where the toy is.
 disclosed before the result" — it named `m3_toy_at` as the tool. It is being run as part of the same
 section rather than deferred, because a null without it cannot distinguish *"the object is not in
 the rate code"* from *"the partition split on size"*, and those point at opposite next steps.
+
+### §49 RESULT: THE CREATURE DERIVES A VISUAL INDEX, AND IT IS BETTER THAN ITS AUDITORY ONE
+
+Full run, 900 000 ticks, 5 creatures × 9 arms, **705 probes per arm**. Verify gate held on all four
+keys (`verify PASS`, `hash ad96f882becbee92 as recorded`, `pinned hash PASS`, `experiments 24 as
+expected, 0 not`) — `results/n49-verify.log`.
+
+| arm | occupancy | supervised `vision` | `ctx_match` | null | excess |
+|---|---|---|---|---|---|
+| EAR g0 | 0.7262 | 0.496 | 0.7674 | 0.5233 | **+0.2441** |
+| RET g0 | 0.7901 | 0.927 | 0.5092 | 0.5243 | −0.0150 |
+| RET g2 | 0.5348 | 0.949 | 0.6099 | 0.5330 | +0.0769 |
+| RET g3 | 0.5291 | 0.932 | 0.6326 | 0.5354 | +0.0972 |
+| RET g4 | 0.9277 | 0.938 | 0.5050 | 0.5153 | −0.0104 |
+| **RET g2 H** | 0.5092 | **1.000** | **0.8624** | 0.5346 | **+0.3278** |
+| RET g3 H | 0.5248 | 1.000 | 0.8383 | 0.5328 | +0.3055 |
+
+**A competitive partition of the retina recovers which object is being shown at `ctx_match` 0.8624
+against a measured null of 0.5346 — and the ear, the mechanism that already names, reads 0.7674
+against 0.5233.** The visual index is the better of the two.
+
+### IT SURVIVES THE CONTROL THAT WOULD HAVE VOIDED IT
+
+Probe labels alternate upstream by construction, and this codebase already warns that an alternating
+sequence lets a readout score off session time alone (`holdout_guess_time_corr`). A label-shuffled
+null **cannot** catch that, because shuffling breaks a spurious parity correlation exactly as it
+breaks a real one. So the probe order was drawn instead, and the question asked of **both** senses:
+
+| | alternating | order drawn | retained |
+|---|---|---|---|
+| RET g2 H | +0.3278 | +0.3182 | **97%** |
+| EAR g0 | +0.2441 | +0.2002 | **82%** |
+
+The effect is the stimulus, not the schedule. (The first version of this clause paired `RET g3 H`
+against `RET g2 HS` — arms differing in gate as well as order. Same verdict, but a control that is
+not like-for-like is not a control, so it now pairs on source, gate and hold with the order as the
+only difference.)
+
+### TWO CONDITIONS, BOTH MEASURED
+
+1. **DeSieno's conscience is necessary.** Without it the partition drifts to collapse and carries
+   nothing: g0 reads −0.0150 at occupancy 0.7901 and g4 −0.0104 at 0.9277, while the conscience arms
+   sit at occupancy ~0.53 and carry +0.077 to +0.097. **The first-sample seeding is neither necessary
+   nor sufficient** — g4 (seeding alone) collapses, and g3 ≈ g2 throughout. That is the *opposite*
+   weighting from the auditory case, where the kernel's own note says the conscience "cannot RESCUE
+   one that died at initialisation" and gate 3's seeding was the proposed fix.
+2. **Position and size must be held, and this is the dominant term: 4.3×** (+0.0769 → +0.3278). It is
+   also the regime this project already lives in — every visual number here was measured inside a
+   1.4 px window and the code dies at 2.6 px — but it is a real scope limit and it is the reason
+   `m3_toy_fixed` exists. A caregiver holding a toy still is the setting this result is about.
+
+### WHAT IT IS NOT
+
+**This is not naming the seen object.** The index is the *input* to the per-context bias table. The
+conclusion's spine — *this architecture can learn a bias per context and cannot learn the context* —
+is not broken by this: what §49 shows is that the **context can be supplied from vision by the
+creature itself**, unsupervised, which is the premise that clause said was missing. Whether the voice
+then learns a per-object bias off that index is the next run, and the instrument already names it:
+teach a two-object vocabulary on `context_source = 5` and score the voice.
+
+### I WAS WRONG TWICE IN THIS SECTION, IN OPPOSITE DIRECTIONS, AND BOTH TIMES OFF A SMOKE
+
+Worth recording because the pattern is the lesson, not the slips.
+
+1. The first smoke had RETINA at `ctx_match` exactly 0.5000 against a null of exactly 0.5000 and
+   clause 5 printed *"the cut is the loss, the front end IS the lever after all"*. The index had
+   merely **collapsed onto one slice**. `ctx_present_frac` read 1.0000 throughout, because a constant
+   index is perfectly live — `liveness-is-not-dose`, landing on its own author. Occupancy is now
+   clause 1.
+2. Having fixed that, the seven-arm smoke showed the held arms still at their null and I wrote into
+   this notebook that §49 would be *"a refusal with a mechanism"*. At full budget the nuisance
+   hypothesis those arms tested is **confirmed** and the effect is +0.33. The smoke had **100**
+   probes; the run has **705**.
+
+**The rule both slips share: a smoke can show the right sign of nothing.** It exists to walk the
+branches, and this one did its job — every clause fired. It is not evidence about the magnitude of
+anything, and the only reason §49 has a result is that the pre-registered budget was run anyway
+rather than stopping at output that looked conclusive.

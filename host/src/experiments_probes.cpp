@@ -951,7 +951,7 @@ struct G3Probe {
 // whether the CS alone has come to evoke it.
 G3Probe run_g3probe_session(const std::vector<uint8_t>& blob, uint64_t ticks,
                             bool consistent, uint64_t seed_shift, int mode,
-                            bool hold_nuisance = false) {
+                            bool hold_nuisance = false, bool shuffle_order = false) {
   G3Probe out;
   std::string error;
   Session s;
@@ -1278,7 +1278,20 @@ G3Probe run_g3probe_session(const std::vector<uint8_t>& blob, uint64_t ticks,
 
     // Alternating rather than drawn, so the train and test halves are balanced
     // by construction. The classifier's split is positional.
-    const int probe_object = int(out.probes_seen++ & 1u);
+    // §49 CONTROL. The alternating order is deliberate upstream -- it balances the
+    // supervised classifier's positional train/test split by construction. But
+    // ctx_match is not a positional classifier: if the context index flips for
+    // ANY reason with probe parity, it correlates with a strictly alternating
+    // label and the label-shuffled null cannot tell that apart from the index
+    // tracking the object, because shuffling the label breaks a real correlation
+    // just as it breaks a spurious one. This project has been caught by an
+    // alternating sequence once already -- see `holdout_guess_time_corr`.
+    //
+    // With the order DRAWN instead, an index that merely alternates scores its
+    // null while an index that reads the stimulus is unaffected.
+    const int probe_object =
+        shuffle_order ? int(rng.next() & 1u) : int(out.probes_seen++ & 1u);
+    if (shuffle_order) ++out.probes_seen;
     // The probe is the CS alone in mode 2: object shown, caregiver silent. That
     // is the whole question — has the sight come to evoke the sound by itself.
     const std::vector<double> f =
@@ -9306,6 +9319,7 @@ bool run_visprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
     int mode;
     uint32_t gate;
     bool hold;
+    bool shuf;
     const char* what;
   };
   // THE LAST TWO ARMS DECIDE WHAT A NULL MEANS, and the smoke is why they exist.
@@ -9317,15 +9331,17 @@ bool run_visprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
   // while the shapes are deliberately AREA-MATCHED so brightness carries no
   // signal. Holding both nuisances fixed is the only arm that separates "the
   // object is not in the rate code" from "the partition split on size".
-  constexpr uint32_t kArms = 7;
+  constexpr uint32_t kArms = 9;
   const Arm arms[kArms] = {
-      {"EAR g0", 4u, 1, 0u, false, "object hidden, caregiver speaks -- POSITIVE CONTROL"},
-      {"RET g0", 5u, 0, 0u, false, "object shown; shipped larynx-quiet gate"},
-      {"RET g2", 5u, 0, 2u, false, "+ conscience, no seeding"},
-      {"RET g3", 5u, 0, 3u, false, "+ conscience AND seed from first sample"},
-      {"RET g4", 5u, 0, 4u, false, "seeding alone, no conscience"},
-      {"RET g2 H", 5u, 0, 2u, true, "conscience, POSITION AND SIZE HELD"},
-      {"RET g3 H", 5u, 0, 3u, true, "conscience + seeding, POSITION AND SIZE HELD"},
+      {"EAR g0", 4u, 1, 0u, false, false, "object hidden, caregiver speaks -- POSITIVE CONTROL"},
+      {"RET g0", 5u, 0, 0u, false, false, "object shown; shipped larynx-quiet gate"},
+      {"RET g2", 5u, 0, 2u, false, false, "+ conscience, no seeding"},
+      {"RET g3", 5u, 0, 3u, false, false, "+ conscience AND seed from first sample"},
+      {"RET g4", 5u, 0, 4u, false, false, "seeding alone, no conscience"},
+      {"RET g2 H", 5u, 0, 2u, true, false, "conscience, POSITION AND SIZE HELD"},
+      {"RET g3 H", 5u, 0, 3u, true, false, "conscience + seeding, POSITION AND SIZE HELD"},
+      {"RET g2 HS", 5u, 0, 2u, true, true, "the same, PROBE ORDER DRAWN not alternating"},
+      {"EAR g0 S", 4u, 1, 0u, false, true, "the control arm asked of the EAR too"},
   };
 
   struct Row {
@@ -9351,7 +9367,8 @@ bool run_visprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
         std::memcpy(variant.data(), &h, sizeof(h));
       }
       const G3Probe p =
-          run_g3probe_session(variant, ticks, true, 0x51E7u, arms[a].mode, arms[a].hold);
+          run_g3probe_session(variant, ticks, true, 0x51E7u, arms[a].mode, arms[a].hold,
+                              arms[a].shuf);
       if (!p.ok || p.ctx_label.size() < 12) continue;
       uint64_t counted = 0;
       const double m = vis_ctx_match(p.ctx_label, p.ctx_slot, kObjects, &counted);
@@ -9416,7 +9433,7 @@ bool run_visprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
   // kernel has rescues a visual partition.
   uint32_t ret_alive = 0;
   for (uint32_t a = 1; a < kArms; ++a)
-    if (rows[a].n_ok && rows[a].occ <= 0.995) ++ret_alive;
+    if (arms[a].source == 5u && rows[a].n_ok && rows[a].occ <= 0.995) ++ret_alive;
   if (ret_alive == 0) {
     std::printf("\n  visprobe REFUSES -- EVERY retina gate collapsed onto one slice. The\n"
                 "  conscience and the first-sample seeding both fail to keep two visual\n"
@@ -9463,6 +9480,7 @@ bool run_visprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
   double ret_excess = 0.0;
   bool have_ret = false;
   for (uint32_t a = 1; a < kArms; ++a) {
+    if (arms[a].source != 5u) continue;   // the list now holds a second EAR arm
     if (!rows[a].n_ok || rows[a].occ > 0.995) continue;
     const double e = rows[a].match - rows[a].null;
     if (!have_ret || e > ret_excess) { ret_excess = e; best_a = a; have_ret = true; }
@@ -9478,6 +9496,51 @@ bool run_visprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
   }
   std::printf("    EAR excess %+.4f over its own null -- the protocol carries an index.\n",
               ear_excess);
+
+  // ---- CLAUSE 4b: THE ALTERNATION CONTROL ----
+  //
+  // THE ONE THAT DECIDES WHETHER ANYTHING ABOVE IS REAL. Probe labels alternate
+  // upstream by construction, so an index that flips with probe PARITY for any
+  // reason correlates with the label and the shuffled null cannot see it. The
+  // `S` arms draw the order instead. A real stimulus index is unaffected; a
+  // parity artefact falls to its null.
+  std::printf("\n  CLAUSE 4b -- THE ALTERNATION CONTROL. Probe order DRAWN, not alternating.\n"
+              "  An index that merely flips with probe parity scores its null here while a\n"
+              "  stimulus index is unchanged. Asked of BOTH senses, because a confound\n"
+              "  must be asked of the positive control too.\n");
+  // PAIRED ON source AND gate AND hold, so the only difference inside a pair is
+  // the probe order. The first version keyed on the sense alone and printed
+  // `RET g3 H` against `RET g2 HS` -- two arms that differ in GATE as well, which
+  // is not the comparison the clause claims to make even though it reached the
+  // same verdict. A control that is not like-for-like is not a control.
+  bool alternation_ok = true;
+  for (uint32_t is = 0; is < kArms; ++is) {
+    if (!arms[is].shuf) continue;
+    int32_t ia = -1;
+    for (uint32_t b = 0; b < kArms; ++b) {
+      if (arms[b].shuf) continue;
+      if (arms[b].source == arms[is].source && arms[b].gate == arms[is].gate &&
+          arms[b].hold == arms[is].hold) {
+        ia = int32_t(b);
+        break;
+      }
+    }
+    if (ia < 0 || !rows[ia].n_ok || !rows[is].n_ok) continue;
+    const double ea = rows[ia].match - rows[ia].null;
+    const double es = rows[is].match - rows[is].null;
+    const bool survives = es > 0.5 * ea;
+    if (!survives) alternation_ok = false;
+    std::printf("    %-9s %+.4f  ->  %-9s %+.4f   keeps %.0f%%  -> %s\n", arms[ia].name, ea,
+                arms[is].name, es, ea > 0.0 ? 100.0 * es / ea : 0.0,
+                survives ? "SURVIVES" : "*** PARITY ARTEFACT");
+  }
+  if (!alternation_ok) {
+    std::printf("\n  visprobe NO VERDICT -- an arm loses more than half its excess when the\n"
+                "  probe order is DRAWN instead of alternating, so that excess was tracking\n"
+                "  probe PARITY and not the stimulus. Nothing above is a measurement of\n"
+                "  either sense's index.\n");
+    return true;
+  }
 
   // ---- CLAUSE 5: THE THREE-WAY ----
   std::printf("\n  CLAUSE 5 -- THE VERDICT, three-way and spanning the sign.\n");
