@@ -8073,3 +8073,255 @@ The pinned hash is unmoved, so DNA v84's `context_source = 5` and §50's `pin_mo
 the shipped genome (`context_slots = 0`, `context_source = 0` — confirmed in `dna/default.toml`). The
 experiment count stays 24 because `objname` is `Tier::kLong` / `Expect::kRead`, exactly as `visprobe`
 was.
+
+
+## §51 — PRE-REGISTERED: WHO SUPPLIES THE ANSWER? A CAREGIVER THAT NEVER LOOKS AT THE TOY (2026-11-07)
+
+§50's first scope limit is the whole of §51. The teacher there is **idealised in two separate ways**,
+and only one of them has ever been argued about:
+
+1. It **knows which object is present** and signs the reward by that label.
+2. Its target is `±axis`, where `axis` is **this creature's own echo posture difference**, measured in
+   Phase A before teaching. A real caregiver cannot compute that: it is a per-creature, perfectly
+   reachable, perfectly aligned direction in the creature's own motor space.
+
+So §50 established that *the creature can supply the question*. The answer was still handed over. The
+lead `g3probe` itself named, and the one §50's result makes the next one rather than one of several,
+is the **picture→sound→voice teaching signal**: a caregiver who *says a word while the object is in
+view*, with no per-object reward supplied.
+
+### FIRST, A REFUSAL BY ARITHMETIC, BEFORE ANY BUDGET IS SPENT
+
+The strongest reading of that lead is **constant, object-blind, word-blind approval** — the caregiver
+simply approves of naming, the same approval for both words, and the *binding* comes from the innate
+echo (M1b: the voice carries the heard word at 0.890 after the word stops) being reinforced into
+whichever slot the retina has selected. The m3 naming milestone's own code says this out loud:
+
+> *"Approval accompanies naming, and it is the same approval for both words. It is what opens the gate
+> on three-factor learning (§3.1); it is not what says which object this is."*
+
+**That version cannot work, and the kernel says so without a run.** `network.cpp:3021` writes
+
+```
+b = clampf(b + u * gate_meta, -perturb_max_, perturb_max_)      with  u = perturb_rate_ * gate * r̃ * perturb_[i]
+```
+
+where `r̃` is the centred reward. The written direction is **the neuron's own random perturbation**,
+not the posture the larynx is currently holding. There is no Hebbian term on the current output. So
+if `r̃` carries no information about the voice, `E[write] = E[r̃] · E[perturb_[i]] = 0`, because
+`perturb_[i]` is zero-mean. A reward that does not evaluate the voice writes **nothing in
+expectation**, whatever it is correlated with in the world.
+
+The only thing such a protocol can learn is a *timing* correlation — praise arriving while the
+creature happens to be vocalising credits perturbations that increased vocalisation. That is "say
+more", which is G2, already measured, and it is not naming.
+
+This is why the m3 naming milestone needed `set_reward_mask` with `CtxMask::kByObject` — **an oracle
+mask is how the answer got in there**, and it is the same oracle §51 is trying to remove. So the
+question is not whether the reward can be information-free. It is **how little the reward has to know**.
+
+### THE TEACHER THAT IS LEFT, AND IT IS A PUBLISHED ONE
+
+M1c's caregiver (`teachsound`, d' 5.57, 3/3 seeds): *praise when a moment lands closer than this
+creature usually gets, a mild no when further.* In code, at
+`experiments_milestones.cpp:6305`, binary `kPraiseValue` / `kScoldValue` on
+`formant_error(produced f1, f2, target word)` against a **per-word EMA baseline**.
+
+Point that teacher at **the word the caregiver is currently saying** and it has these properties:
+
+* It **evaluates the voice**, so `r̃` correlates with the perturbation and the arithmetic above does
+  not kill it.
+* It **never looks at the object.** It compares two sounds. A caregiver who says "cube" and warms when
+  the babble comes out closer to "cube" needs no knowledge of what is on the table.
+* Its target lives **in the world** — `kWords[1] = {250, 320, 2500}` — not in the creature's motor
+  space. It is not fitted per creature and is not guaranteed reachable. This removes §50's *second*
+  idealisation, the one nobody has argued about.
+* The **conditionality is never told to the reward.** Object→word is never a term in it. The only
+  route from sight to sound is that the caregiver happens to say "cube" when the cube is in view.
+
+**That is the claim §51 tests.** `vocallearn` is the reason it is worth testing and the reason it might
+fail: it ran exactly this target — "a target that depends on what was heard" — and read **flat on 3/3
+seeds** (+0.7, −1.4, +0.3) against a fixed target's **+24.0**, and concluded *reward cannot reshape
+the conditional route; node perturbation moves a constant.* **That conclusion was reached at
+`context_slots = 0`.** It is the same missing index that made `g3probe` null, and §50 is what makes
+`vocallearn`'s wall worth re-measuring rather than re-asserting.
+
+`vocallearn` also could not have run this: it has no retina and no toy. §51 goes in
+`run_g3probe_session`, which already has the retina, the toy, the caregiver's voice, the context index
+and the silent object-only probe.
+
+### THE THREE TEACHERS, AND WHAT EACH ONE KNOWS
+
+| teacher | what it says | does it see the toy? | does it evaluate the voice? |
+|---|---|---|---|
+| **T0** — §50's | dense signed projection of the voice onto `±axis`, signed by **the object** | **yes** | yes, in its own motor space |
+| **T1** — M1c's, re-pointed | praise/scold on whether the produced formants came closer than usual to **the word being spoken** | **no** | yes, in the world's units |
+| **T2** — yoked | praise/scold at the same clock, **drawn by a coin** | no | **no** |
+
+T2 is both the arithmetic floor measured rather than asserted (`power-is-not-the-error-model`: write
+the firing output as a number) and the established reward-arrival control — it is `vocallearn`'s
+`kVLYoked`. Its expected write is zero by the derivation above, and an arm that scores above zero on
+it voids the whole run.
+
+**T1's clock is T0's clock**, every `plasticity_interval_ticks` (10) over `t ∈ [500, 1400)`, not
+`kFeedbackPeriodTicks`. That is a deliberate change from M1c and it removes a confound rather than
+adding one: `vocallearn`'s own power note records that reward density flipped its sign (−1.2 at one
+reward per trial, +1.0 at 19× denser, both at 560k ticks), so a sparse T1 against a dense T0 would
+confound *what the reward knows* with *how often it arrives*. The one legitimate dose difference that
+remains is that **T1 can only fire on a voiced frame** (`voicing > 0.5 && amplitude > 0.45`), because
+a silent larynx has no formants. `delivery-fraction` says the creature falls silent as it trains, so
+that difference could be large. It is measured as clause 0 and not assumed.
+
+The **per-word baseline** is kept from `vocallearn`'s design-trap note ("against one global mean the
+creature is rewarded for saying the easy word"). It sets the praise/scold *threshold*, never a
+direction, and it is per-word in every arm including the decorrelated one, so it is symmetric. A
+caregiver tracking "how close does this baby usually get to *this* word" needs no sight of the toy.
+
+### THE ARMS. THE TABLE PINS THE WHOLE DOSE VECTOR ON EVERY ROW
+
+`control-on-a-different-code-path`: an arm selector that sets some fields and inherits others is how a
+control ends up on a different code path from the arm it controls.
+
+| # | arm | index | teacher | word spoken | n | what a null here would mean |
+|---|---|---|---|---|---|---|
+| 1 | `T0·RET` | retina, source 5, gate 2 | T0 | — (silent) | 12 | **the run is void** — §50 did not reproduce |
+| 2 | **`T1·RET`** | retina, source 5, gate 2 | T1 | **= the object** | **36** | **THE CLAIM** |
+| 3 | `T1·RET·D` | retina, source 5, gate 2 | T1 | **drawn, independent of the object** | **36** | the pairing is doing the work |
+| 4 | `T1·ORACLE` | **pinned to the true object** | T1 | = the object | 12 | T1 cannot teach even a perfect index |
+| 5 | `T1·BASE` | **table off**, `slots = 0` | T1 | = the object | 12 | the bias table is the route, not an association |
+| 6 | `T2·RET` | retina, source 5, gate 2 | **T2** | = the object | 12 | reward *arrival* is not the effect |
+
+Position and size are **held** (`m3_toy_fixed`) in all six, inheriting §49's measured conditions
+rather than re-testing them — the conscience is necessary and holding nuisances is worth 4.3×. Two
+objects. The probe is unchanged from §50: **the object alone, in silence.**
+
+Three arms earn their place against specific published failure modes:
+
+* **Arm 5 is not redundant with arm 1.** If the caregiver says "cube" whenever the cube is in view,
+  vision→auditory association could form and the sight could come to *evoke* the sound at probe,
+  driving the innate ear→larynx route with the bias table doing nothing. That is the classical
+  conditioning route, and `g2cond`/`pairprobe` say it is closed — so arm 5 should be null. If it is
+  **not**, that is a larger result than the one being asked for and the honest response is to report
+  it as the headline and re-run `pairprobe` before believing it.
+* **Arm 4 separates two different nulls on arm 2.** "The teacher cannot teach" and "the index is not
+  good enough for a weaker teacher" are different findings with different next steps, and arm 2 alone
+  cannot tell them apart. `null-is-not-a-control` cost four weeks for this exact omission.
+* **Arm 3 is the label-destroyed arm, and `control-blind-to-its-artefact` is why it is enough *here*
+  and was not enough in §50.** §50's `SHUF` was blind to table divergence because divergence is not
+  about the label. Arm 3 is not blind to it on this estimator: two per-slot tables random-walk in
+  arms 2 and 3 alike, and `axis_sep` has **zero expectation under drift in both**. The artefact is
+  present in the control and the estimator cannot read it. That is the property §50's accuracy column
+  lacked, and it is why the primary is not being re-chosen.
+
+### THE ESTIMATOR IS §50's, UNCHANGED, AND DELIBERATELY NOT T1's OWN CURRENCY
+
+Primary: **`axis_sep`** — the projection of (mean voice | object 1 − mean voice | object 0) onto the
+Phase A echo axis, divided by |axis|², so 1.0 is full compliance with the separation the two words
+ask for. Signed; zero expectation under drift; no fitted split. It cross-validates against a known
+number — §50 read `BASE` at +0.0200 ± 0.0250, which is `g3probe`'s published 0.535 vs 0.507 in these
+units.
+
+**The same ruler for every arm, including the arms whose reward uses a different target.** Scoring T1
+on T1's own formant error and T0 on T0's own projection would be fitting the verdict to the arm. The
+cost of this choice is stated up front: `axis` is the creature's *echo* axis and T1's target is the
+*world* formant pair, so a success could be under-read if the two are misaligned. M1b (echo 0.890)
+says they should be positively aligned, and `axis_sep` on arm 1 is the within-run check that the ruler
+is pointing the right way. The probe formant error toward the paired word versus the other word is
+reported as a **secondary** in T1's own currency, explicitly excluded from the verdict — the
+`estimator-change` lesson from §50 run forward rather than relearned.
+
+### CLAUSES, IN ORDER, FIXED BEFORE THE RUN
+
+**Order is part of a pre-registration** (`vacuity-gate-cannot-guard-a-rejection`), and every bar is
+asked of the controls too.
+
+**Clause 0 — DOSE, NOT LIVENESS.** Per arm: `ctx_slots` as the genome asked, `ctx_present_frac`,
+occupancy, and the reward dose — evaluations fired / eligible, praise fraction, and mean |effective
+reward|. `liveness-is-not-dose`. **Any arm whose fired-count is below 50% of arm 1's is reported as
+UNDERPOWERED, not as a null**, and the reason is named. T1 and T2 should both land near a praise
+fraction of 0.5, T1 because an EMA baseline is straddled by construction and T2 because it is a coin;
+a T1 praise fraction outside [0.35, 0.65] means the baseline is not tracking and the arm is void.
+
+**Clause 1 — THE INDEX UNDER A SPEAKING CAREGIVER.** §49 and §50 both measured the retinal index with
+the caregiver **silent**. Source 5 reads `kVision`, so added auditory drive should not touch it, but
+that has never been measured. `ctx_match` excess over its own 64-shuffle null, arms 2 and 3. **Bar
++0.20**, against §50's +0.3165. Below it, §51 says nothing about teaching and reports an index finding
+instead.
+
+**Clause 2 — THE PROBE IS SILENT, AND THIS ONE IS FATAL.** If the word is audible at probe, M1b's
+innate route produces the right sound with nothing learned at all. Required:
+`probe_heard / probe_ticks == 0.0000` exactly, in every arm. And for the T1/T2 arms the teaching
+window must read `teach_heard / teach_ticks = 0.444` — the word sounds for `t < 900` and the window
+opens at `t = 500`, so 400 of 900 ticks. **A number, pre-computed, not an eyeball.** Any deviation
+voids the run.
+
+**Clause 3 — THE PRIMARY.** `axis_sep` per arm, mean ± SE across creatures. Primary contrast
+**arm 2 − arm 3**, paired by creature identity (on `ax_who`, never on position — a cell can yield an
+accuracy and no axis value). Bar **2 SE**, as §50. Secondary contrasts: arm 2 − arm 6, arm 2 − arm 5.
+
+**Clause 4 — THE 4TH RUNG.** `lesson-landed-guard`. Arm 1 must read **≥ +0.30** — half of §50's
++0.5875 — for a null on arm 2 to be interpretable at all. A flat arm 2 beside a flat arm 1 is an
+underpowered run, not a finding about teachers.
+
+**Clause 5 — THE VERDICT. Seven branches, and the sign is not constrained.**
+
+1. **Arm 1 < +0.30 → VOID.** Report, stop, claim nothing about the teacher.
+2. Arm 6 ≥ +2 SE above zero → **VOID**: the effect is reward arrival, not content.
+3. Arm 5 ≥ +2 SE above zero → **the association route works and the table is not needed.** Bigger
+   than the question asked; report as the headline and re-run `pairprobe` before believing it.
+4. Arm 1 passes, arms 5 and 6 null, **arm 2 − arm 3 ≥ +2 SE and arm 2 > 0 → THE CLAIM HOLDS.** A
+   caregiver that never looks at the toy and only compares sounds suffices; the binding comes from
+   co-occurrence. Report arm 2 as a fraction of arm 1 and of arm 4.
+5. Arm 1 passes, arm 2 ≈ arm 3 ≈ 0 **and arm 4 ≈ 0 → THE TEACHER IS THE BLOCKER, NOT THE INDEX.**
+   §50's scope limit 1 is a real wall, `vocallearn`'s conclusion survives the index being supplied,
+   and the next lead is the teacher rather than the retina.
+6. Arm 1 passes, arm 2 ≈ 0 **but arm 4 ≥ +2 SE → the index is not good enough for this weaker
+   teacher.** A dose statement, not a wall: the next step is the index, and §49's 4.3× nuisance term
+   is where to look.
+7. **arm 2 − arm 3 ≤ −2 SE → A REVERSAL.** The mapping learned backwards. `axis_sep` can express
+   this and an accuracy column cannot; the candidate mechanism is T1's scold half dominating, and it
+   would be reported as a finding rather than folded into a null. **The sign is not constrained in
+   advance, so this branch exists** (`verdict-fitted-to-data`).
+8. Otherwise **INCONCLUSIVE**, with the SE printed.
+
+### POWER, WRITTEN AS A NUMBER, AND IT SET n
+
+§50's published spread is the prior: `RET` taught +0.5875 ± 0.1500 over 12 creatures, so per-creature
+**SD ≈ 0.52**; the paired `RET − SHUF` contrast read SE 0.2282 over 12, so the **paired SD ≈ 0.79**.
+
+T1 knows strictly less than T0, so assume it delivers **half** of §50's effect, +0.29. Then:
+
+| n | paired SE | +0.29 reads | clause 5.4 fires? |
+|---|---|---|---|
+| 12 | 0.228 | **1.3 SE** | no — INCONCLUSIVE |
+| 24 | 0.161 | 1.8 SE | no — INCONCLUSIVE |
+| **36** | **0.132** | **2.2 SE** | **yes** |
+
+**So n = 12 would have had roughly even odds of printing INCONCLUSIVE on a real half-sized effect**,
+and that is exactly the outcome this project pays for twice (`ctxsrc` at 3 creatures printed a licence
+on four thousandths; `smoothing-sweep-closed` on 3 seeds). The primary contrast therefore runs at
+**n = 36** and the reference and null arms at **n = 12**, where the quantities being asked for are
+"reproduces ≈ +0.59" and "is not above +0.30" and n = 12 resolves both. Creature r is the same
+creature in every arm (`seed + r * 7919`), so the paired contrast between arms 2 and 3 uses all 36 and
+contrasts against arms 1/4/5/6 use the shared first 12.
+
+**Ticks: 1 800 000, double §50's.** T1 fires only on voiced frames and `delivery-fraction` says the
+creature falls silent as it trains, so T1's realised dose is below T0's by an unknown factor; and
+`vocallearn` needed 3.4M at a 19× sparser clock. Halving this to save ~25 minutes on a run whose
+refusal clause was just shown to have ~50% power at the smaller size is false economy.
+
+**Cost: 2·36 + 4·12 = 120 sessions at 1.8M ticks.** §50 ran 96 sessions at 900k in 1249.59 s wall
+parallel, so this is `120/96 × 2 × 1250 ≈ 3100 s ≈ 52 min`. Quoted from the archived wall time of a
+measured run, not from a remembered per-session figure — §50's pre-registration got that wrong by 3×
+and the correction is the reason this sentence names its source.
+
+### THE GATES, BOTH BEFORE THE BUDGET
+
+1. **`g3probe`, `condprobe`, `pairprobe`, `visprobe` and `objname` stay bit-identical.** Every new
+   path is gated on `teacher != 0`; the decorrelated word reuses the `coin` that
+   `run_g3probe_session` **already draws unconditionally** on every teaching trial, so no new random
+   stream is touched and no existing stream shifts. `pin_rng`'s lesson, applied before it could cost
+   anything.
+2. **`verify` holds all four keys** and the pinned hash `ad96f882becbee92` is unmoved. §51 adds no
+   genome field at all — `context_source = 5` already shipped inert in DNA v84 — so there is nothing
+   for the shipped genome to pick up.
