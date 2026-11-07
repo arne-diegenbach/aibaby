@@ -1,0 +1,113 @@
+experiment: objword
+  the question      §51. §50's teacher is idealised TWICE: it knows which
+                    object is present, and its target is this creature's own
+                    echo axis fitted in Phase A. How little can it know?
+  the teacher       M1c's caregiver re-pointed at THE WORD IT IS SAYING:
+                    praise/scold on whether the produced formants came closer
+                    than usual, per-word EMA baseline. It never looks at the
+                    toy and its target is in the WORLD's units, not the
+                    creature's. Object->word is never a term in the reward.
+  the precedent     vocallearn ran this target and read FLAT on 3/3 (+0.7,
+                    -1.4, +0.3) against a fixed target's +24.0 -- AT
+                    context_slots = 0. Same missing index that made g3probe
+                    null. §50 is why that is worth re-measuring.
+  refused first     constant object-blind approval CANNOT work and needs no
+                    run: the write is u = r * perturb_[i] with perturb_[i]
+                    zero-mean and no Hebbian term on the held posture, so a
+                    reward that does not evaluate the voice writes NOTHING in
+                    expectation. T2 is that claim measured.
+  session           1800.0 s of simulated life x 120 sessions, 6 arms
+  instrument        objword   trial seed 0000000001357639   120 sessions
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+
+  CLAUSE 0 -- DOSE, NOT LIVENESS. T0 rewards a projection of the nine motor
+  groups, which exist whether or not the creature is making a sound. T1 and T2
+  can only fire on a VOICED frame, and delivery-fraction says this creature
+  falls silent as it trains. An arm below 50% of T0's fire rate is
+  UNDERPOWERED, not null. A T1 praise fraction outside [0.35, 0.65] means the
+  EMA baseline is not being straddled and the arm is void.
+    T0.RET     n 12/12  slots 2(ask 2)  present 1.0000  occ 0.5160  fired 1.0000 (1.00x T0)  praise 0.551  mean|r| 0.0926  probes 3432
+    T1.RET     n 36/36  slots 2(ask 2)  present 1.0000  occ 0.5234  fired 0.5960 (0.60x T0)  praise 0.518  mean|r| 0.5000  probes 10296
+    T1.RET.D   n 36/36  slots 2(ask 2)  present 1.0000  occ 0.5223  fired 0.5587 (0.56x T0)  praise 0.509  mean|r| 0.5000  probes 10296
+    T1.ORACLE  n 12/12  slots 2(ask 2)  present 1.0000  occ 0.5000  fired 0.6320 (0.63x T0)  praise 0.526  mean|r| 0.5000  probes 3432
+    T1.BASE    n 12/12  slots 0(ask 0)  present 0.0000  occ 0.0000  fired 0.5266 (0.53x T0)  praise 0.515  mean|r| 0.5000  probes 3432
+    T2.RET     n 12/12  slots 2(ask 2)  present 1.0000  occ 0.5076  fired 0.3899 (0.39x T0)  praise 0.500  mean|r| 0.5000  probes 3432
+    *** AN ARM IS BELOW HALF OF T0's FIRE RATE. Pre-registered as
+    UNDERPOWERED rather than null -- a teacher that rarely fires has not
+    been tested, and reporting it as a refusal would be the error
+    liveness-is-not-dose exists to prevent.
+    magnitude: T0 mean|r| 0.0926 vs T1/T2 0.5000 = 5.4x. The PRIMARY contrast
+    is magnitude-matched (both T1 arms run the same rule); every comparison
+    with T0 is NOT, and T1 is driven HARDER, so a T1 null is not a drive
+    shortfall. Baseline memory held at 9.4 trials, alpha 0.00119 (M1c's 0.02
+    re-derived for an 17x denser clock).
+
+  CLAUSE 1 -- §49 AND §50 BOTH MEASURED THE RETINAL INDEX WITH THE CAREGIVER
+  SILENT. Source 5 reads kVision, so added auditory drive should not touch it,
+  and that has never been measured. Bar is +0.20 excess against §50's +0.3165.
+    T0.RET     ctx_match 0.7736  null 0.5242  excess +0.2494
+    T1.RET     ctx_match 0.7503  null 0.5234  excess +0.2269
+    T1.RET.D   ctx_match 0.7539  null 0.5236  excess +0.2302
+    T2.RET     ctx_match 0.8054  null 0.5240  excess +0.2814
+
+  CLAUSE 2 -- THE PROBE MUST BE SILENT. If the word is audible at probe,
+  M1b's INNATE ear->larynx route produces the right sound with nothing
+  learned, and every number above is an echo. Teaching-window heard fraction
+  is derived: (900 - 500)/(1400 - 500) = 0.4444.
+    T0.RET     probe heard 0.0000 (want 0.0000)  teach heard 0.0000 (want 0.0000)
+    T1.RET     probe heard 0.0000 (want 0.0000)  teach heard 0.4444 (want 0.4444)
+    T1.RET.D   probe heard 0.0000 (want 0.0000)  teach heard 0.4444 (want 0.4444)
+    T1.ORACLE  probe heard 0.0000 (want 0.0000)  teach heard 0.4444 (want 0.4444)
+    T1.BASE    probe heard 0.0000 (want 0.0000)  teach heard 0.4444 (want 0.4444)
+    T2.RET     probe heard 0.0000 (want 0.0000)  teach heard 0.4444 (want 0.4444)
+
+  CLAUSE 3 -- THE PRIMARY, axis_sep: the projection of (mean voice | object 1
+  - mean voice | object 0) onto the Phase A echo axis over |axis|^2, so 1.0 is
+  FULL compliance with the separation the two words ask for. Signed, zero
+  expectation under drift, no fitted split. THE SAME RULER FOR EVERY ARM,
+  including the ones whose reward uses a different target -- scoring each arm
+  on its own reward's currency is how a verdict gets fitted to the data.
+    T0.RET     axis_sep +0.5295 +- 0.1056  (n 12, 12/12 > 0)   §50 reproduced -- THE 4TH RUNG, without which a null below says nothing
+    T1.RET     axis_sep -0.0686 +- 0.0606  (n 36, 17/36 > 0)   THE CLAIM: the caregiver never looks at the toy
+    T1.RET.D   axis_sep +0.0193 +- 0.0618  (n 36, 17/36 > 0)   word DRAWN -- the CO-OCCURRENCE destroyed, everything else identical
+    T1.ORACLE  axis_sep +0.0702 +- 0.2334  (n 12, 7/12 > 0)   index pinned to the true object -- T1's CEILING
+    T1.BASE    axis_sep +0.0170 +- 0.0092  (n 12, 9/12 > 0)   bias table OFF -- catches the ASSOCIATION route (g2cond says it is shut)
+    T2.RET     axis_sep +0.0386 +- 0.0969  (n 12, 5/12 > 0)   YOKED reward -- the arithmetic floor, and arrival vs content
+
+  SECONDARY, IN T1's OWN CURRENCY AND EXCLUDED FROM THE VERDICT: formant
+  error at the silent probe toward the OTHER word minus toward its OWN word,
+  so positive means the voice sits closer to the word this object is named by.
+    T0.RET     perr(other) - perr(own) -0.0059
+    T1.RET     perr(other) - perr(own) +0.0121
+    T1.RET.D   perr(other) - perr(own) -0.0678
+    T1.ORACLE  perr(other) - perr(own) +0.1889
+    T1.BASE    perr(other) - perr(own) -0.0057
+    T2.RET     perr(other) - perr(own) +0.0098
+
+  CLAUSE 4 -- THE 4TH RUNG. T0.RET must reproduce §50 at >= +0.30 (half of
+  +0.5875) for a null on T1 to be interpretable. It reads +0.5295: PASS
+
+  CLAUSE 5 -- THE VERDICT. Paired by creature, bar 2 SE, sign unconstrained.
+    T1.RET - T1.RET.D   -0.0879  (paired SE 0.0741, -1.2 SE)   <-- PRIMARY
+    T1.RET - T2.RET     +0.0338  (paired SE 0.1018)
+    T1.RET - T1.BASE    +0.0554  (paired SE 0.0665)
+    in these units 1.0 is FULL compliance, so 2 SE = 0.1482 is the smallest
+    share of the asked-for gesture this run can resolve.
+
+    (5) THE TEACHER IS THE BLOCKER, NOT THE INDEX. T1.ORACLE reads +0.0702
+    +- 0.2334 with a PERFECT index, and T1.RET -0.0686. A teacher whose target
+    lives in the world rather than in this creature's motor space cannot
+    teach this mapping however good the index is. §50's scope limit 1 is a
+    real wall; vocallearn's conclusion survives the index being supplied;
+    and the next lead is the TEACHER, not the retina. T0 on the same run
+    reads +0.5295, so the protocol is teaching -- it is this teacher that is
+    not.
+
+  *** READ EVERY BRANCH ABOVE AGAINST CLAUSE 0's DOSE REFUSAL. An arm that
+  fired at under half of T0's rate was not tested at the dose its name
+  claims, and no verdict about it is available from this run.
+
+real	57m27.988s
+user	768m18.729s
+sys	0m24.892s

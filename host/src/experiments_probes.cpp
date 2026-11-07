@@ -961,6 +961,30 @@ struct G3Probe {
   // arm including the ones whose reward uses a different target.
   double perr_own = 0, perr_other = 0;
   uint32_t perr_n = 0;
+  // §51's RULER CALIBRATION, and it is what decides whether §50's estimator and
+  // §51's secondary are measuring the same thing.
+  //
+  // `axis_sep = 1.0` is defined as the full separation between the two ECHO
+  // POSTURES -- what this larynx does on hearing each word. Nothing has ever
+  // asked what that separation is worth in FORMANT terms. If the echo postures
+  // barely differ in F1 and F2, then full compliance with §50's teacher is not a
+  // formant separation at all, and the two sections are about different
+  // quantities.
+  //
+  //   `axis_f12`      share of |axis|^2 lying in groups 2 and 3 (F1, F2) rather
+  //                   than in f0, the bandwidths and the rest.
+  //   `echo_perr_gap` the formant gap a voice sitting exactly ON the echo
+  //                   postures would score on §51's secondary -- i.e. THE VALUE
+  //                   OF axis_sep = 1.0 IN T1's CURRENCY, measured rather than
+  //                   assumed.
+  //
+  // Both are Phase A properties, computed before any teaching and from RNG that
+  // the teaching loop has not yet touched, so they are functions of the creature
+  // seed alone and independent of `ticks`. That is a claim worth checking rather
+  // than asserting, and two short runs at different budgets check it.
+  double echo_f1[2] = {0.0, 0.0}, echo_f2[2] = {0.0, 0.0};
+  double echo_perr_gap = 0.0, axis_f12 = 0.0;
+  bool echo_perr_ok = false;
   // And at the larynx, which is the module G3 is ultimately about. Missing
   // from this table until 2026-08-15: `m3probe` can say whether the object
   // reaches vocal with learning *off*, and nothing said whether it survives a
@@ -1466,6 +1490,9 @@ G3Probe run_g3probe_session(const std::vector<uint8_t>& blob, uint64_t ticks,
   // motor module is not a posture.
   std::vector<std::vector<double>> word_mean(2, std::vector<double>(aibaby::kVocalGroups, 0.0));
   std::vector<std::vector<std::vector<double>>> echo_feat(2);
+  // §51's ruler calibration, accumulated over the same calibration trials.
+  double echo_f1_acc[2] = {0.0, 0.0}, echo_f2_acc[2] = {0.0, 0.0};
+  uint32_t echo_fn[2] = {0u, 0u};
   constexpr uint32_t kCalibTrials = 8;
   for (uint32_t rep = 0; rep < kCalibTrials; ++rep) {
     for (int w = 0; w < 2; ++w) {
@@ -1475,6 +1502,13 @@ G3Probe run_g3probe_session(const std::vector<uint8_t>& blob, uint64_t ticks,
       if (f.empty()) continue;
       for (uint32_t k = 0; k < aibaby::kVocalGroups; ++k) word_mean[w][k] += f[k];
       echo_feat[w].push_back(f);
+      // §51. The produced formants of THIS echo trial, voiced frames only. Read
+      // straight after the call because `observe` zeroes these on entry.
+      if (probe_fn > 0) {
+        echo_f1_acc[w] += probe_f1 / double(probe_fn);
+        echo_f2_acc[w] += probe_f2 / double(probe_fn);
+        ++echo_fn[w];
+      }
     }
   }
   for (int w = 0; w < 2; ++w) {
@@ -1492,6 +1526,39 @@ G3Probe run_g3probe_session(const std::vector<uint8_t>& blob, uint64_t ticks,
   for (uint32_t k = 0; k < aibaby::kVocalGroups; ++k) {
     axis[k] = word_mean[1][k] - word_mean[0][k];
     mid[k] = 0.5 * (word_mean[1][k] + word_mean[0][k]);
+  }
+
+  // §51's RULER CALIBRATION. What is `axis_sep = 1.0` worth in formant terms?
+  {
+    double tot = 0.0;
+    for (uint32_t k = 0; k < aibaby::kVocalGroups; ++k) tot += axis[k] * axis[k];
+    if (tot > 1e-12) {
+      out.axis_f12 = (axis[2] * axis[2] + axis[3] * axis[3]) / tot;
+    }
+    // The gap a voice sitting exactly ON each echo posture would score on §51's
+    // secondary. Averaged over the two words, because the secondary is: for a
+    // probe of object w, perr(the OTHER word) - perr(ITS OWN word). A voice at
+    // the right echo posture is the best §50's teacher can ask for, so this is
+    // the CEILING of the secondary under full compliance -- and if it is near
+    // zero, the two estimators are about different quantities.
+    double gap = 0.0;
+    uint32_t n = 0;
+    for (int w = 0; w < 2; ++w) {
+      if (echo_fn[w] == 0) continue;
+      const double f1 = echo_f1_acc[w] / double(echo_fn[w]);
+      const double f2 = echo_f2_acc[w] / double(echo_fn[w]);
+      out.echo_f1[w] = f1;
+      out.echo_f2[w] = f2;
+      const double e_own = formant_error(f1, f2, kWords[w]);
+      const double e_oth = formant_error(f1, f2, kWords[1 - w]);
+      if (e_own < 0.0 || e_oth < 0.0) continue;
+      gap += e_oth - e_own;
+      ++n;
+    }
+    if (n > 0) {
+      out.echo_perr_gap = gap / double(n);
+      out.echo_perr_ok = true;
+    }
   }
 
   // The echo, scored the same way the milestone is, for reference.
@@ -10513,6 +10580,7 @@ bool run_objword(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
     double fired = 0, eligible = 0, praise = 0, rmean = 0;
     double pheard = 0, theard = 0;
     double perr_own = 0, perr_other = 0;
+    double axis_f12 = 0, echo_gap = 0, ef1a = 0, ef2a = 0, ef1b = 0, ef2b = 0;
     uint32_t slots = 0, probes = 0;
   };
   const std::vector<Cell> cells = parallel_reps<Cell>(kJobs, [&](uint32_t i) {
@@ -10559,6 +10627,10 @@ bool run_objword(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
       c.perr_own = run.perr_own / double(run.perr_n);
       c.perr_other = run.perr_other / double(run.perr_n);
     }
+    c.axis_f12 = run.axis_f12;
+    c.echo_gap = run.echo_perr_ok ? run.echo_perr_gap : 0.0;
+    c.ef1a = run.echo_f1[0]; c.ef2a = run.echo_f2[0];
+    c.ef1b = run.echo_f1[1]; c.ef2b = run.echo_f2[1];
     aibaby::Rng srng;
     srng.seed(seed ^ 0x5A17u);
     if (run.ctx_label.size() >= 12) {
@@ -10583,6 +10655,7 @@ bool run_objword(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
     double match = 0, null = 0, occ = 0, present = 0;
     double fired = 0, eligible = 0, praise = 0, rmean = 0;
     double pheard = 0, theard = 0, perr_gap = 0;
+    double axis_f12 = 0, echo_gap = 0, ef1a = 0, ef2a = 0, ef1b = 0, ef2b = 0;
     uint32_t slots = 0, n_ok = 0, pos = 0, probes = 0;
   } rows[kArms];
   {
@@ -10605,6 +10678,8 @@ bool run_objword(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
         q.fired += c.fired; q.eligible += c.eligible; q.praise += c.praise;
         q.rmean += c.rmean; q.pheard += c.pheard; q.theard += c.theard;
         q.perr_gap += c.perr_other - c.perr_own;
+        q.axis_f12 += c.axis_f12; q.echo_gap += c.echo_gap;
+        q.ef1a += c.ef1a; q.ef2a += c.ef2a; q.ef1b += c.ef1b; q.ef2b += c.ef2b;
         q.probes += c.probes;
         q.slots = c.slots;
         ++q.n_ok;
@@ -10617,6 +10692,8 @@ bool run_objword(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
     const double in = 1.0 / double(q.n_ok);
     q.match *= in; q.null *= in; q.occ *= in; q.present *= in;
     q.rmean *= in; q.pheard *= in; q.theard *= in; q.perr_gap *= in;
+    q.axis_f12 *= in; q.echo_gap *= in;
+    q.ef1a *= in; q.ef2a *= in; q.ef1b *= in; q.ef2b *= in;
   }
 
   // ---- CLAUSE 0: DOSE, NOT LIVENESS ----
@@ -10751,6 +10828,22 @@ bool run_objword(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
               "  so positive means the voice sits closer to the word this object is named by.\n");
   for (uint32_t a = 0; a < kArms; ++a) {
     std::printf("    %-10s perr(other) - perr(own) %+.4f\n", arms[a].name, rows[a].perr_gap);
+  }
+
+  // ---- THE RULER CALIBRATION, AND IT DECIDES WHETHER THE TWO ESTIMATORS AGREE
+  std::printf("\n  RULER CALIBRATION -- WHAT IS axis_sep = 1.0 ACTUALLY WORTH? The primary's\n"
+              "  1.0 is the full separation between the two ECHO POSTURES, and nothing has\n"
+              "  ever asked what that is worth in FORMANT terms. `echo gap` is the secondary\n"
+              "  a voice sitting EXACTLY on the echo postures would score -- the CEILING of\n"
+              "  the secondary under full compliance with §50's teacher. If it is near zero,\n"
+              "  the two estimators are about different quantities and neither §50 nor §51\n"
+              "  can be read as the other's units. These are Phase A properties, so they are\n"
+              "  functions of the creature seed alone and must not move with the budget.\n");
+  for (uint32_t a = 0; a < kArms; ++a) {
+    std::printf("    %-10s |axis|^2 in F1+F2 %.4f   echo gap %+.4f   echo f1/f2 "
+                "%.0f/%.0f vs %.0f/%.0f   words 780/1180 vs 320/2500\n",
+                arms[a].name, rows[a].axis_f12, rows[a].echo_gap, rows[a].ef1a,
+                rows[a].ef2a, rows[a].ef1b, rows[a].ef2b);
   }
 
   // Paired on creature identity, never on position.

@@ -156,6 +156,45 @@ refusal list can both be long.
 > and it says which object this is. The creature now supplies the *question*; the teacher still
 > supplies the *answer*. Two objects, position and size held. **This is not autonomous word
 > learning**, and the open lead is the picture→sound→voice teaching signal.
+>
+> ---
+>
+> #### FURTHER AMENDED 2026-11-07, LATER THE SAME DAY — §51 MEASURED WHAT §50's RULER IS WORTH
+>
+> **§50 must not be read as "the creature says the two words differently."** Its +0.5875 is
+> compliance with the separation its teacher asked for, and §51 calibrated that separation in the
+> units a listener hears for the first time. `axis_sep = 1.0` is the full gap between the two **echo
+> postures**, and those postures are **the same vowel**:
+>
+> | | |
+> |---|---|
+> | echo formants hearing "ball" | **630 / 1691 Hz** |
+> | echo formants hearing "cube" | **632 / 1698 Hz** |
+> | the words themselves | 780 / 1180 and 320 / 2500 Hz |
+> | share of \|`axis`\|² in F1 + F2 | **0.1909** |
+> | **formant gap at `axis_sep` = 1.0** | **+0.0008**, of an available ≈1.64 |
+>
+> **2 Hz on F1 and 7 Hz on F2.** So full compliance with §50's teacher is 0.05% of a formant
+> separation, four fifths of the axis is f0 and the bandwidths, and on the one §51 arm that measured
+> the audible quantity §50's own teacher moved it **−0.0059** — slightly the wrong way.
+>
+> **What §49 and §50 established, restated at the width the data supports:** the creature derives an
+> unsupervised visual index, and **its motor state then separates by object along the direction that
+> hearing the two words produces.** The mechanism claim is untouched — node perturbation *can* learn
+> a conditional mapping from what is in view to what the larynx does, which is what corrects
+> `g3probe`'s null, and the second clause of the finding above is still false for vision. What does
+> **not** survive is the implication that the mapping reaches the vowel.
+>
+> This is consistent with what the archive already said and never quantified: `vowel-space` ("one
+> vowel: the centroid never dwells") and `audibility-ruler` (cube vs ball **0.40** against a bar of
+> 1.0, while M1b's word repetition is **1.37**). **The creature repeats a word by moving f0 and the
+> bandwidths, not by moving the vowel.** M1c's d' 5.57 (F1 609→564, F2 1685→1789) shows reward *can*
+> move the formants, so this is a property of the innate echo route, not of the larynx.
+>
+> **And the method rule it cost an hour to learn: calibrate the estimator in the units of the claim
+> before spending the budget.** The calibration is ~20 lines, runs in Phase A with no teaching at all,
+> and is a function of the creature seed — it was available before §49. Three sections were scored on
+> a ruler whose full-scale reading had never been converted into the units the milestone is written in.
 
 *Where the conditioning variable is supplied, conditional production works.* The shipped context
 mechanism computes an index from the ear's own rate EMA — no gate, no episode, no latch, and no

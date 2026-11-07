@@ -7974,6 +7974,18 @@ came out flattering.
 
 ### §50 RESULT: THE CREATURE SPEAKS THE OBJECT IT SEES
 
+> **AMENDED BY §51 THE SAME DAY, AND THE HEADING ABOVE OVERSTATES IT.** §51 calibrated what this
+> section's estimator is worth in the units a listener hears, which nothing here had done. The two
+> **echo postures** that define `axis_sep = 1.0` are **the same vowel** — 630/1691 Hz against
+> 632/1698 Hz, for words at 780/1180 and 320/2500 — only **19%** of `axis` lies in F1 and F2, and
+> full compliance is therefore worth **+0.0008** of an available ≈1.64 formant gap.
+>
+> Read everything below as: **the creature's motor state separates by object, along the direction
+> that hearing the two words produces.** The mechanism claim stands and `g3probe`'s null is still
+> corrected. **The creature is not shown to say the two words differently** — on §51's audible
+> estimator this section's own teacher reads **−0.0059**, slightly the wrong way. See §51's ruler
+> calibration, and note that the calibration needed no teaching and was available before §49.
+
 Full run, 900 000 ticks, 12 creatures × 4 index arms × 2 target arms = 96 sessions, ~21 min
 parallel (`results/n50-objname.log`, per-creature rows in `results/n50-objname-perseed.log`,
 genome `results/n50-genome.toml`). Re-run with per-creature output added reproduced clauses 1–3
@@ -8416,3 +8428,149 @@ verdict rather than only once. The arithmetic argument stands independently of d
 uncorrelated with the perturbation writes nothing *in expectation* at any density. But **T2 is
 reported as underpowered rather than as a clean floor**, and that was pre-registered as the response
 before the number existed.
+
+### §51 RESULT: THE RULER WAS THE WRONG RULER, AND IT WAS §50'S
+
+Full run, 1 800 000 ticks, 120 sessions, **WALL 57m28s** (`results/n51-objword.log`, genome
+`results/n51-genome.toml`). Clause 5 fired branch **(5)**, and **the branch's own text is wrong**. The
+finding is not about this teacher. It is about the estimator both sections were scored on.
+
+| arm | index | teacher | `axis_sep` | > 0 | dose |
+|---|---|---|---|---|---|
+| `T0.RET` | retina | §50's, object-signed | **+0.5295 ± 0.1056** | **12/12** | 1.00× |
+| `T1.RET` | retina | sound-only, word = object | −0.0686 ± 0.0606 | 17/36 | 0.60× |
+| `T1.RET.D` | retina | sound-only, word drawn | +0.0193 ± 0.0618 | 17/36 | 0.56× |
+| `T1.ORACLE` | pinned true object | sound-only, word = object | +0.0702 ± 0.2334 | 7/12 | 0.63× |
+| `T1.BASE` | table off | sound-only, word = object | +0.0170 ± 0.0092 | 9/12 | 0.53× |
+| `T2.RET` | retina | yoked coin | +0.0386 ± 0.0969 | 5/12 | 0.39× — refused |
+
+Primary `T1.RET − T1.RET.D` = **−0.0879, paired SE 0.0741, −1.2 SE**, with **17/36 in both arms** —
+the same coin flip, which is the distributional statement a mean and an SE cannot make.
+
+The three gates held: **`T0.RET` reproduced §50 at 12/12** (+0.5295 against §50's +0.5875 on half the
+budget), the retinal index **survived a speaking caregiver** at +0.2269 excess against a +0.20 bar —
+which neither §49 nor §50 measured, both having run the caregiver silent — and clause 2 was exact,
+`probe heard 0.0000` and `teach heard 0.4444` against a derived 0.4444, in all six arms.
+
+#### THE RULER CALIBRATION, WHICH IS THE RESULT
+
+The pre-registration named this risk before the run:
+
+> *"`axis` is the creature's echo axis and T1's target is the world formant pair, so a success could be
+> under-read if the two are misaligned."*
+
+It did not merely fire. It dominates. `axis_sep = 1.0` is defined as the full separation between the
+two **echo postures** — what this larynx does on hearing each word — and nothing in §49, §50 or
+`g3probe` had ever asked what that separation is worth in the units a listener hears:
+
+| quantity | value |
+|---|---|
+| share of \|`axis`\|² lying in groups 2 and 3 (F1, F2) | **0.1909** |
+| echo posture formants, hearing "ball" | **630 / 1691 Hz** |
+| echo posture formants, hearing "cube" | **632 / 1698 Hz** |
+| the two words themselves | 780 / 1180 and 320 / 2500 Hz |
+| **formant gap at `axis_sep` = 1.0 (`echo gap`)** | **+0.0008** |
+
+**The two echo postures are the same vowel.** They differ by **2 Hz on F1 and 7 Hz on F2**, against
+words that differ by 460 Hz and 1320 Hz. Four fifths of the echo axis lies in f0, the bandwidths and
+the rest; the fifth that is formant is, given those numbers, **noise**.
+
+So **full compliance with §50's teacher — `axis_sep` = 1.0 — is worth `+0.0008` of an available
+≈1.64 formant gap, which is 0.05%.** The primary estimator has essentially no formant content, and
+what little it has points in a direction set by a 2 Hz and 7 Hz difference. **A real formant
+separation would project onto it with random sign**, which is exactly what `T1.RET` −0.0686 and
+`T1.RET.D` +0.0193 at 17/36 and 17/36 look like.
+
+This is not a new fact about the creature so much as a quantification of one the archive already had:
+`vowel-space` ("one vowel: the centroid never dwells") and `audibility-ruler` (cube vs ball at **0.40**
+on a bar of 1.0, while M1b's word repetition is **1.37**). The creature repeats a word by moving f0
+and the bandwidths, **not by moving the vowel**. M1c's d' 5.57 shows reward *can* move F1 and F2 —
+609→564, 1685→1789 — so this is a property of the innate echo route, not of the larynx.
+
+**The calibration is a Phase A property and was checked rather than asserted.** `T0.RET`,
+`T1.ORACLE` and `T2.RET` differ in teacher *and* in pin and print byte-identical ruler rows; and all
+six rows are byte-identical between a 150 000-tick and a 300 000-tick run. It is a function of the
+creature seed alone.
+
+#### WHAT THIS DOES TO §51's OWN VERDICT
+
+**`T1`'s null on the primary is uninformative about `T1`.** The teacher aimed at formants; the
+estimator cannot see formants. Branch (5)'s *"a teacher whose target lives in the world cannot teach
+this mapping however good the index is"* is **not supported**, on two counts:
+
+1. The estimator could not have detected success in either direction.
+2. `T1.ORACLE` was underpowered anyway: ±0.2334 means a 2 SE interval of ±0.467, **which spans
+   `T0.RET`'s entire +0.5295**. That arm excludes nothing.
+
+And the **secondary — the only estimator in the run that can see a formant change — inverts the
+ordering**, with a scale that is now interpretable rather than suggestive:
+
+| arm | `axis_sep` | `perr(other) − perr(own)` | as a multiple of the `echo gap` ceiling |
+|---|---|---|---|
+| `T0.RET` | **+0.5295** | −0.0059 | — |
+| `T1.ORACLE` | +0.0702 | **+0.1889** | **236×** |
+| `T1.RET` | −0.0686 | +0.0121 | 15× |
+| `T1.RET.D` | +0.0193 | −0.0678 | — |
+
+`T1.ORACLE` moved the formants **236 times further than full compliance with §50's teacher would**,
+and ~12% of the whole available gap. It read +0.1071 and +0.1049 in the two smokes, so it has
+**reproduced at three budgets.**
+
+**It is still not a result, and promoting it would be §50's error in the opposite direction.** The
+secondary has no SE, `T1.ORACLE` has no decorrelated counterpart (no `T1.ORACLE.D` was run), and
+n = 12. What has changed is that it is no longer a hint against a null — it is the one arm that moved
+the audible quantity, measured against a ceiling that makes its size meaningful.
+
+**§51's honest status is therefore INCONCLUSIVE, on the ruler that matters**, reached by a route the
+pre-registration anticipated but whose magnitude it underestimated by three orders.
+
+#### WHAT STANDS, AND WHAT §50 HAS TO BE RESTATED AS
+
+Unaffected and solid:
+
+* **`T1.BASE` is null at +0.0170 ± 0.0092**, the tightest number in the table, so the association
+  route stays shut and `g2cond`/`pairprobe` are re-confirmed.
+* **The retinal index survives a speaking caregiver** (+0.2269 vs +0.2494 silent on the same budget),
+  so added auditory drive costs the visual index ~0.02. New, and it is a real measurement.
+* **The protocol teaches**: `T0` at 12/12.
+* **`T2` is underpowered, as pre-registered.** It fired at 0.39× T0 because T1's teacher *requires*
+  voicing and so reinforces it while a coin does not — **the content of a reward raises its own
+  dose** — and it reads +0.0386 ± 0.0969, consistent with the arithmetic's zero but not a clean floor.
+
+And the correction, which is to a result written up and pushed earlier the same day:
+
+> **§50 MUST NOT BE READ AS "THE CREATURE SAYS THE TWO WORDS DIFFERENTLY".** Its +0.5875 is
+> compliance with the separation its teacher asked for, and that separation is **0.05% of a formant
+> separation**. What §50 established is that *the creature's motor state separates by object, along
+> the direction that hearing the two words produces*. It did **not** establish that the two objects
+> sound different, and on the one arm of §51 that measured the audible quantity, §50's own teacher
+> moved it **−0.0059** — slightly the wrong way.
+>
+> The §50 section and `CONCLUSION.md` are amended accordingly. The mechanism claim survives intact:
+> node perturbation *can* learn a conditional mapping from what is in view to what the larynx does,
+> which is what corrected `g3probe`'s null. What does not survive is the headline's implication that
+> the mapping reaches the vowel.
+
+#### §52 IS NOW OBVIOUS, AND IT IS CHEAPER THAN THIS RUN WAS
+
+Score the voice on the quantity a listener hears, not on the echo axis, and give the load-bearing
+null enough creatures:
+
+1. **Primary becomes the formant gap** with an SE and a paired label-destroyed contrast, the way
+   `axis_sep` was built for §50.
+2. **`T1.ORACLE` at n = 36 with a `T1.ORACLE.D` beside it** — `null-is-not-a-control`, and this run
+   is why.
+3. **Keep `T0.RET` as the 4th rung and `axis_sep` as a reported secondary**, so the dissociation is
+   measured on both rulers in one instrument rather than inferred across two sections.
+
+The pre-registration's other escape hatch also remains open and is now owed: the **baseline memory**
+was derived rather than inherited, and the alternative reading — a fast baseline is ordinary RPE and
+sharper credit — was written down as *"the first thing to vary if T1 nulls."* T1 nulled on a ruler
+that could not see it, so that line is deferred rather than discharged, and it is deferred for a
+stated reason.
+
+**And the method lesson, which cost an hour of compute and would have cost nothing to avoid:
+CALIBRATE THE ESTIMATOR IN THE UNITS OF THE CLAIM BEFORE SPENDING THE BUDGET.** The calibration is
+~20 lines, runs in Phase A, needs no teaching at all, and is a function of the creature seed. It was
+available before §49, let alone §50. Three sections were scored on a ruler whose full-scale reading
+was never converted into the units the milestone is written in.
