@@ -10652,6 +10652,13 @@ bool run_objword(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
   struct Row {
     std::vector<double> ax;
     std::vector<uint32_t> who;
+    // §52 PRE-FLIGHT. The per-creature formant gap, so the secondary gets an SE
+    // and a spread. §51's lesson was that power must come from the SD of the arm
+    // whose NULL is load-bearing, and for §52 that arm's quantity is THIS one --
+    // which §51 reported only as a mean, so its SD was unmeasured. Carried on its
+    // own `who`, because a creature can yield an axis value and no formant gap.
+    std::vector<double> pe;
+    std::vector<uint32_t> pe_who;
     double match = 0, null = 0, occ = 0, present = 0;
     double fired = 0, eligible = 0, praise = 0, rmean = 0;
     double pheard = 0, theard = 0, perr_gap = 0;
@@ -10678,6 +10685,15 @@ bool run_objword(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
         q.fired += c.fired; q.eligible += c.eligible; q.praise += c.praise;
         q.rmean += c.rmean; q.pheard += c.pheard; q.theard += c.theard;
         q.perr_gap += c.perr_other - c.perr_own;
+        // A cell with no voiced probe frame yields perr_own == perr_other == 0
+        // exactly, which is not a measured zero gap -- it is no measurement at
+        // all, and averaging it in would pull every arm toward zero in
+        // proportion to how silent it was. `delivery-fraction` makes that a real
+        // risk here rather than a hypothetical one.
+        if (c.perr_own > 0.0 || c.perr_other > 0.0) {
+          q.pe.push_back(c.perr_other - c.perr_own);
+          q.pe_who.push_back(r);
+        }
         q.axis_f12 += c.axis_f12; q.echo_gap += c.echo_gap;
         q.ef1a += c.ef1a; q.ef2a += c.ef2a; q.ef1b += c.ef1b; q.ef2b += c.ef2b;
         q.probes += c.probes;
@@ -10826,8 +10842,43 @@ bool run_objword(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
   std::printf("\n  SECONDARY, IN T1's OWN CURRENCY AND EXCLUDED FROM THE VERDICT: formant\n"
               "  error at the silent probe toward the OTHER word minus toward its OWN word,\n"
               "  so positive means the voice sits closer to the word this object is named by.\n");
+  // WITH AN SE AND A SPREAD, which §51 reported as a bare mean. That omission is
+  // why §52 could not be sized: the quantity its verdict will rest on had no
+  // published SD. See the §51 lesson on power and the load-bearing null.
+  double mean_pe[kArms] = {}, se_pe[kArms] = {};
   for (uint32_t a = 0; a < kArms; ++a) {
-    std::printf("    %-10s perr(other) - perr(own) %+.4f\n", arms[a].name, rows[a].perr_gap);
+    double se = 0.0;
+    const double m = n50_mean_se(rows[a].pe, &se);
+    mean_pe[a] = m;
+    se_pe[a] = se;
+    uint32_t pos = 0;
+    for (double v : rows[a].pe) {
+      if (v > 0.0) ++pos;
+    }
+    std::printf("    %-10s perr(other) - perr(own) %+.4f +- %.4f  (n %2zu, %u > 0, SD %.4f)\n",
+                arms[a].name, m, se, rows[a].pe.size(), pos,
+                se * std::sqrt(double(rows[a].pe.size() > 0 ? rows[a].pe.size() : 1)));
+  }
+  {
+    // And the contrast §52 would make its primary, computed here so the pilot
+    // reports the quantity rather than leaving it to be derived by hand.
+    auto paired_pe = [&](uint32_t a, uint32_t b, double* se) {
+      std::vector<double> dd;
+      for (size_t i = 0; i < rows[a].pe_who.size(); ++i) {
+        for (size_t j = 0; j < rows[b].pe_who.size(); ++j) {
+          if (rows[a].pe_who[i] != rows[b].pe_who[j]) continue;
+          dd.push_back(rows[a].pe[i] - rows[b].pe[j]);
+          break;
+        }
+      }
+      return n50_mean_se(dd, se);
+    };
+    double se_c = 0.0;
+    const double c = paired_pe(1, 2, &se_c);
+    std::printf("    §52's WOULD-BE PRIMARY: T1.RET - T1.RET.D on the FORMANT gap %+.4f\n"
+                "    +- %.4f paired, so paired SD %.4f -- this is the number that sizes n,\n"
+                "    and §51 did not have it.\n",
+                c, se_c, se_c * std::sqrt(double(rows[1].pe.size() > 0 ? rows[1].pe.size() : 1)));
   }
 
   // ---- THE RULER CALIBRATION, AND IT DECIDES WHETHER THE TWO ESTIMATORS AGREE

@@ -8574,3 +8574,118 @@ CALIBRATE THE ESTIMATOR IN THE UNITS OF THE CLAIM BEFORE SPENDING THE BUDGET.** 
 ~20 lines, runs in Phase A, needs no teaching at all, and is a function of the creature seed. It was
 available before §49, let alone §50. Three sections were scored on a ruler whose full-scale reading
 was never converted into the units the milestone is written in.
+
+## §52 — PRE-REGISTERED: THE SAME QUESTION ON THE AUDIBLE RULER (2026-11-08)
+
+§51 established that its own primary cannot see what its teacher aimed at: `axis_sep = 1.0` is worth
+**+0.0008** of a formant gap, so `T1`'s −0.0686 is a statement about an estimator, not about a
+teacher. §52 re-asks §51's question with the **formant gap as the primary**, the arms §51's `ORACLE`
+lacked, and an `n` that is finally derived from a measured spread.
+
+### THE PRE-FLIGHT, AND IT INVERTS §51's BUDGET ARGUMENT
+
+§51 reported the formant gap as a bare mean, so the quantity §52's verdict rests on had **no
+published SD** — which is the error §51 itself recorded. Two pilot runs at different budgets now
+measure it (`results/n52-pilot-150k.log`, `results/n52-pilot-450k.log`, both `--allow-short`):
+
+| quantity | 150k | 450k | ratio |
+|---|---|---|---|
+| `T1.RET − T1.RET.D` paired **SD** | 0.0451 | **0.1689** | **×3.7** |
+| `T1.ORACLE` per-creature SD | 0.1080 | 0.1752 | ×1.6 |
+| ticks | — | — | ×3.0 |
+
+**THE SD GROWS WITH THE BUDGET, ROUGHLY IN PROPORTION TO IT.** That is not estimation noise
+shrinking as probes accumulate — it is the opposite, and it is what `ctxscale` already describes:
+`bias_ctx_` is *"a pure clamped accumulator"* with a near-diffusive growth exponent, so the per-slot
+tables random-walk further apart the longer they run, and the formant gap inherits that spread.
+
+**So §51's reasoning — "double the budget, it can only help" — is wrong for this estimator, and
+more ticks can buy negative power.** Projecting the trend, at 1.8M the paired SD would be ≈0.68, so
+`n = 36` would give SE ≈ 0.113 and a 2 SE bar of **0.225** — which **would not detect `T1.ORACLE`'s
+own +0.1889**, the very effect §52 exists to pin down. At 450k the same `n` gives SE 0.0282 and a bar
+of **0.056**.
+
+### THE BUDGET IS CHOSEN ON POWER, AND THE PILOT'S OWN CONTRAST IS RING-FENCED
+
+**This matters and is stated before the run.** The 450k pilot also happens to read
+`T1.RET − T1.RET.D` = **+0.0627 ± 0.0282 = 2.2 SE**, and that is **not** the reason 450k was chosen
+and **must not be cited as a result.** M1b's lesson is explicit: *selecting the window on the outcome
+is a search, not a milestone.* The budget argument above uses only (a) the measured **SD**, which is a
+variance and not an effect, and (b) a target effect of **+0.19** taken from **§51's completed full
+run**, not from either pilot.
+
+And because a single budget is itself a selection when the SD moves with it, **§52 runs TWO budgets
+as a pre-registered dose axis — 450 000 and 900 000** — so the result is not a one-budget artefact.
+A finding that appears at one and not the other is reported as exactly that.
+
+### THE ARMS, WITH THE TWO §51 LACKED
+
+| # | arm | index | teacher | word | n |
+|---|---|---|---|---|---|
+| 1 | `T0.RET` | retina | §50's, object-signed | silent | 12 |
+| 2 | **`T1.RET`** | retina | sound-only | **= object** | **36** |
+| 3 | `T1.RET.D` | retina | sound-only | drawn | **36** |
+| 4 | **`T1.ORACLE`** | pinned true object | sound-only | = object | **36** |
+| 5 | **`T1.ORACLE.D`** | pinned true object | sound-only | **drawn** | **36** |
+| 6 | `T1.BASE` | table off | sound-only | = object | 12 |
+
+* **`T1.ORACLE` rises from 12 to 36**, because it is the arm whose *null* was load-bearing in §51 and
+  whose 2 SE interval spanned the whole effect being compared against.
+* **`T1.ORACLE.D` is new and is the reason §51 could not finish the argument.** `null-is-not-a-control`:
+  without a decorrelated counterpart, `ORACLE`'s +0.1889 cannot be separated from whatever a pinned
+  two-slot table does to the formant gap on its own. **This arm is the one §52 is really for.**
+* **`T2.RET` is dropped.** It was underpowered in §51 at 0.39× dose, and it is now redundant: the two
+  `.D` arms are proper label-destroyed controls on the actual primary, which a yoked-reward arm is
+  not. Dropping it pays for `ORACLE.D`.
+
+168 sessions per budget. From §51's measured rate (120 sessions × 1.8M in 57m28s), 450k is ≈20 min
+and 900k ≈40 min: **≈60 min for both**, against §51's 57 for one.
+
+### CLAUSES
+
+**Clause 0 — dose and baseline**, unchanged from §51 and still gating: fired/eligible ≥ 0.50 of T0's,
+T1 praise fraction inside [0.35, 0.65]. **Clause 1 — the index** at ≥ +0.20 excess. **Clause 2 — the
+probe is silent**, `probe heard` exactly 0.0000 and `teach heard` 0.4444. All three passed in §51 and
+are re-asked rather than assumed.
+
+**Clause 3 — THE RULER, FIRST THIS TIME.** The calibration block prints before any verdict:
+`echo gap` and the share of `axis` in F1+F2. If `echo gap` is again ≈+0.0008, then `axis_sep` is
+reported as a **secondary only** and no verdict may rest on it. **This clause exists because §51
+spent an hour discovering it after the fact.**
+
+**Clause 4 — the 4th rung, and its prediction is INVERTED.** `T0.RET` must still reach ≥ +0.30 on
+`axis_sep` (its own ruler) to show the protocol teaches. But on the **formant** primary §51 measured
+T0 at **−0.0059**, so T0 is predicted **NULL OR NEGATIVE** here. A large positive T0 on the formant
+gap would contradict §51's calibration and voids the run pending re-measurement of the ruler.
+
+**Clause 5 — the verdict.** Primary `T1.RET − T1.RET.D`, paired by creature, bar 2 SE, sign
+unconstrained. Ceiling contrast `T1.ORACLE − T1.ORACLE.D`. Branches:
+
+1. Clause 0, 1, 2 or 4's rung fails → **VOID.**
+2. `T1.BASE` ≥ 2 SE above zero → **the association route works**; report as the headline and re-run
+   `pairprobe` before believing it.
+3. **`T1.ORACLE − T1.ORACLE.D` ≤ 2 SE → §51's +0.1889 WAS THE TABLE, NOT THE TEACHING.** The hint
+   that motivated §52 dies, and the sound-only teacher is refused on both rulers. This is the branch
+   that would close the line, and it is written first on purpose.
+4. Ceiling clears 2 SE **and** primary clears 2 SE at **both** budgets → **THE SOUND-ONLY CAREGIVER
+   TEACHES, AND §51's NULL WAS THE RULER.** Report T1 as a fraction of the ceiling.
+5. Ceiling clears, primary clears at **one** budget only → reported as budget-dependent, with the
+   accumulator's SD growth as the named candidate mechanism. **Not** promoted to a result.
+6. Ceiling clears, primary null at both → **the index is not good enough for this teacher** on the
+   audible ruler; next step is the index.
+7. Primary ≤ −2 SE → **a reversal**, reported as a finding, with `T1.RET.D`'s persistent negative
+   drift (−0.0064 at 150k, −0.0691 at 450k, −0.0678 at 1.8M) as the thing to explain first. **That
+   drift is unexplained today**: the resting voice sits much closer to "ball" (perr 0.574) than to
+   "cube" (1.069), but averaged over both objects a resting voice scores exactly zero, so a
+   systematic −0.07 in a label-destroyed arm is not yet accounted for and `ORACLE.D` is the arm that
+   will say whether it is general.
+8. Otherwise **INCONCLUSIVE**, with the SE printed.
+
+### WHAT THIS DOES NOT DO
+
+It does not revisit §51's **baseline-memory** constant, still deferred and still owed. It does not
+address the larger thing §51 exposed — **the innate echo route does not move the vowel**, which is
+why the two echo postures are 2 Hz apart and which no amount of re-scoring will change. If §52
+confirms that a sound-only teacher moves the formants, then **the echo route's silence on vowels
+stops being an obstacle and starts being the finding**: reward reaches the vowel where the reflex does
+not.
