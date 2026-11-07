@@ -7749,3 +7749,141 @@ Worth recording because the pattern is the lesson, not the slips.
 branches, and this one did its job — every clause fired. It is not evidence about the magnitude of
 anything, and the only reason §49 has a result is that the pre-registered budget was run anyway
 rather than stopping at output that looked conclusive.
+
+---
+
+## §50 — PRE-REGISTERED: does the voice learn a per-object bias off the visual index?
+
+Written and committed **before the instrument is built**. §49 supplied the index; this asks the other
+half of the owner's instruction — *make it understand and speak the object it sees*. §49 is the
+understanding. This is the speaking.
+
+### THE MECHANISM, CONFIRMED IN THE KERNEL FIRST
+
+Not assumed. `network.cpp` learns the per-context bias table by **node perturbation keyed on the
+derived slice**:
+
+```cpp
+} else if (ctx_slots_ > 0 && ctx_present_) {
+  Scalar& b = bias_ctx_[size_t(i) * ctx_slots_ + active_ctx_];
+  b = clampf(b + u * gate_meta, -perturb_max_, perturb_max_);
+}
+```
+
+and reads it back into the drive at `bias_ctx_[i * ctx_slots_ + active_ctx_]`. So **§49's arms already
+had a retina-indexed bias table running**; `visprobe` simply never read the voice off them. §50 does
+not need a new mechanism, only a new column — which is the same shape as §49 and the reason it is
+cheap.
+
+### THE HYPOTHESIS, AND WHY THE ARCHIVE MAKES IT A STRONG ONE
+
+`ctxsrc` named the obstruction that stood between `areax` v51 and naming, and it was not the readout
+and not the reward: **persistence.** The word is at ceiling (1.000) *while it plays* and at chance
+(0.533) *by the reward window* — the index has to survive 800 ms of silence to still be there when
+reward lands, and nothing in the creature holds it. Its own closing rule:
+
+> *"before wiring a signal into a mechanism, check it is still there WHEN THE MECHANISM NEEDS IT.
+> `coderprobe`'s 0.981 and this file's 0.533 are the same module measured 400 ms apart."*
+
+**An object in view does not stop.** A word is a transient; a toy held in front of the creature drives
+the retina continuously, through the vocalisation and through the reward window. The persistence
+problem that the auditory index has to fight **does not arise for vision** — structurally, not as a
+matter of degree. That is the prediction, and it is derived from the archive rather than invented.
+
+**This is a prediction, so it gets measured, not assumed** — clause 2b below asks `ctxsrc`'s question
+of vision directly instead of reasoning about it.
+
+### THE ARMS — the full dose vector, pinned per arm
+
+`control-on-a-different-code-path` requires an arm selector to pin every field it varies, so all five
+are named on every row. Each index arm runs **both** target arms (idealised teacher / random target),
+paired by seed, exactly as `g3probe` does.
+
+| arm | `context_source` | `context_slots` | `ctx_proto_gate` | toy | index |
+|---|---|---|---|---|---|
+| `BASE` | 0 | **0** | 0 | held | none — bias table off |
+| `RET` | 5 | 2 | 2 | held | **the creature's own, off the retina** |
+| `ORACLE` | 5 | 2 | 2 | held | host-pinned to the **true** object |
+| `SHUF` | 5 | 2 | 2 | held | host-pinned to a **drawn** object |
+
+`ORACLE` and `SHUF` use `pin_context_oracle`, which overrides every source *after* it has run and
+forces `ctx_present_ = true`. So all three indexed arms are **the same genome on the same code path**,
+differing only in what the index contains. That is the one design choice that makes §50 readable:
+
+- **`ORACLE` is the ceiling** on what the bias table can express with a *perfect* object index. Without
+  it, a null on `RET` cannot distinguish *"the visual index is too weak"* from *"the bias table cannot
+  make this voice object-specific at all"*. `null-is-not-a-control` cost this project four weeks for
+  exactly this omission.
+- **`SHUF` is the label-destroyed control.** It is equally live, equally bimodal and equally present —
+  it just carries no object information. It is what says any `RET` effect is about the *label* and not
+  about having a second bias table to write into. (`sparse-switch` found a benefit from mere dropout
+  once; that is why this arm is not optional.)
+
+All four arms hold position and size, including `BASE`. **`BASE` is therefore not bit-comparable to the
+published `g3probe` 0.535 / 0.507**, which jitters the toy; it is the slots-0 anchor under §50's own
+protocol. The tie back to the published protocol already exists and is already verified — §49
+confirmed `g3probe` bit-identical to `results/g3probe-2026-11-04.log` — so it is cited, not re-run.
+
+### POWER, COMPUTED BEFORE THE RUN, AS A NUMBER
+
+The published per-creature spread of (taught − random) is **SD 0.080** over 5 creatures. That is almost
+entirely *probe-count* noise, not biology: 70 held-out test probes at p = 0.5 give a binomial
+SE of √(0.25/70) = 0.0598, and a difference of two such is 0.0598·√2 = **0.0846**, which matches the
+observed 0.080. Between-creature biology is therefore a small term and **total test probes is the
+lever** — more creatures and more ticks buy the same power per tick spent.
+
+At **n = 12 creatures, 900 000 ticks**: SE(taught − random) = 0.0846/√12 = **0.0244**.
+
+- Primary comparison `RET − SHUF` is a difference of two such paired estimates. Treating them as
+  independent is the conservative bound: SE ≈ 0.0244·√2 = **0.0345**.
+- **2 SE = 0.069. 3 SE = 0.104.**
+- The available dynamic range is small and must be stated up front: the calibration echo — the voice
+  while a word plays, with no learning at all — reads **0.725**, so the headroom above chance is about
+  **0.23**. A 2 SE effect is **30% of that range**; a 3 SE effect is **45%**.
+
+**So §50 can resolve an effect of ~0.07 and cannot resolve one of ~0.03.** If `RET − SHUF` lands inside
+±0.069 the pre-registered reading is **inconclusive with a stated bound**, not a refusal
+(`power-is-not-the-error-model`). Written as a number now so it cannot be re-read later: an outcome of
+`RET − SHUF = +0.04 ± 0.035` is **not** evidence of naming and **not** evidence against it.
+
+Cost: 4 index arms × 2 target arms × 12 creatures = **96 sessions** at ~26 s = **~42 min**.
+
+### THE CLAUSES, IN ORDER — order is part of a pre-registration
+
+1. **Vacuity and occupancy.** Realised `ctx_slots`, `ctx_present_frac` and **occupancy** (share of
+   probes in the busiest slice) per arm. Expected by construction: `BASE` slots 0; `ORACLE`/`SHUF`
+   occupancy ≈ 0.50; `RET` ≈ 0.51 from §49. **Refusal, as a number: if `RET` occupancy > 0.90 the
+   partition has collapsed and every `RET` row below is void** — this is the §49 trap, where a constant
+   index read `ctx_present_frac` 1.0000 and looked perfectly healthy.
+2. **The index, re-measured on this instrument.** `ctx_match` against its label-destroyed null for
+   `RET`. §49 read **+0.3278**. **Refusal: if this comes back under +0.15, §50 is not running on the
+   index §49 found and nothing below is interpretable** — a different instrument invocation is exactly
+   where this project has found harness divergence before.
+3. **`ctxsrc`'s question, asked of vision.** The same `ctx_match`, restricted to the **teaching**
+   windows where reward actually lands, not pooled over probes. This is the clause that tests the
+   hypothesis above rather than asserting it. A gap between clause 2 and clause 3 is the auditory
+   failure reappearing in the visual path.
+4. **The voice.** taught − random per creature, paired by seed, mean ± SE over 12 creatures, for all
+   four arms. This is the primary table.
+5. **The verdict, three-way and spanning the sign**, with all three branches written now:
+   - **(a) `ORACLE` > `SHUF` and `RET` − `SHUF` > 2 SE** → the creature's voice carries what it sees,
+     driven by an index it derived itself. Report `RET`/`ORACLE` as the fraction of achievable lift,
+     and quote the margin in SE units, never as a bare inequality.
+   - **(b) `ORACLE` ≈ `SHUF`** → **the ceiling itself is null**: the bias table cannot make this voice
+     object-specific even with a perfect index, so `RET`'s null says nothing about vision. This
+     indicts *expression*, not the index, and §49's own cascade predicts it is possible
+     (central → voice is the larger loss at −0.237). §49 would stand unchanged and G3's block would be
+     downstream of the index — `CONCLUSION.md`'s spine re-confirmed with the input side now supplied.
+   - **(c) `ORACLE` > `SHUF` but `RET` ≈ `SHUF`** → the table works with a perfect index and the
+     retina's is not good enough to drive it. That outcome is *surprising* against `ctxsrc`'s derived
+     bar — an index right with probability p scales the signal as (2p−1), so p ≥ 0.75 keeps half, and
+     `RET` measured **0.86**. Pre-registered response: do **not** conclude the index is weak; read
+     clause 3 against clause 2, because (c) with clause 3 ≈ clause 2 means the failure is neither
+     accuracy nor timing and the next measurement is the *write*, not the index.
+
+### WHAT WOULD MAKE THIS UNREADABLE
+
+Stated now so it cannot be discovered as a convenience later. The run is void if `RET`'s partition
+collapses (clause 1), if clause 2 fails to reproduce §49 (clause 2), or if the **random-target arm
+beats the taught arm in `BASE`** — which would mean the idealised teacher is not teaching under the
+held-toy protocol and no arm's contrast means what its name says.
