@@ -161,6 +161,21 @@ const Spec kSpecs[] = {
      "  the POSITIVE CONTROL: at its own null the protocol is broken and the\n"
      "  RETINA row is unreadable. kRead because every refusal here prints NO\n"
      "  VERDICT rather than returning false"},
+    {"objname", 900000, Expect::kRead, Tier::kLong,
+     "derived: g3probe's session again, so g3probe's budget -- 141 probes per\n"
+     "  creature. §50 asks the other half of §49: the index is the INPUT to the\n"
+     "  per-context bias table, and whether the VOICE then learns a per-object\n"
+     "  bias off it is a separate question. No new mechanism -- bias_ctx_ is\n"
+     "  already learned by node perturbation keyed on active_ctx_, so §49's arms\n"
+     "  ran this table and visprobe never scored it. 12 creatures, not 5:\n"
+     "  ctxsrc read 0.754 at 3 and PRINTED A LICENCE, then 0.740 at 9 and\n"
+     "  refused. Four arms on ONE code path differing only in index CONTENT --\n"
+     "  BASE (table off), RET (derived off the retina), ORACLE (pinned to the\n"
+     "  true object) and SHUF (pinned to a drawn one). ORACLE is the ceiling\n"
+     "  without which a RET null cannot separate 'the index is too weak' from\n"
+     "  'the table cannot express an object-specific voice at all'; SHUF is the\n"
+     "  label-destroyed control without which an effect could be mere dropout.\n"
+     "  kRead because every branch prints a reading rather than returning false"},
     {"cpprobe", 600000, Expect::kGuard, Tier::kLong,
      "derived: two 300 s phases. Expected to FAIL, and the failure is the current\n"
      "  finding: its own positive control says 300 s of praise does not measurably\n"
@@ -1420,6 +1435,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "gazeprobe") ok = run_gazeprobe(dna_blob, ticks, verbose);
   else if (name == "invprobe") ok = run_invprobe(dna_blob, ticks, verbose);
   else if (name == "visprobe") ok = run_visprobe(dna_blob, ticks, verbose);
+  else if (name == "objname") ok = run_objname(dna_blob, ticks, verbose);
   else if (name == "cpprobe") ok = run_cpprobe(dna_blob, ticks, verbose);
   else if (name == "stpprobe") ok = run_stpprobe(dna_blob, ticks, verbose);
   else if (name == "burstprobe") ok = run_burstprobe(dna_blob, ticks, verbose);

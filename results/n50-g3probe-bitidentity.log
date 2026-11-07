@@ -1,0 +1,75 @@
+experiment: g3probe
+  session           900.0 s of simulated life x 5 creatures x 2 arms
+  instrument        g3probe   trial seed 00000000013527c9   5 creatures x 2 arms
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  the teacher is idealised: dense, immediate, and it says which
+  object this is. The targets are postures this creature was
+  observed to produce when it heard each word.
+
+  seed arm      voice     shuffled  echo    probes
+  0    taught   0.507     0.465     0.750   141
+  0    random   0.507     0.549     0.750   141
+  1    taught   0.592     0.465     0.875   141
+  1    random   0.493     0.521     0.875   141
+  2    taught   0.493     0.549     0.750   141
+  2    random   0.479     0.408     0.750   141
+  3    taught   0.606     0.451     0.625   141
+  3    random   0.493     0.493     0.625   141
+  4    taught   0.479     0.521     0.625   141
+  4    random   0.563     0.465     0.625   141
+
+  condition present, as a fraction of each scored window
+    teaching   object 1.00   word 0.00
+    probe      object 1.00   word 0.00
+
+  mean held-out accuracy on the probe voice
+    idealised teacher    0.535   <- the ceiling
+    random target        0.507   (dense reward, no object mapping)
+    labels shuffled      0.490   (must sit at chance)
+    calibration echo     0.725
+    at or above 0.75     0 of 5 creatures
+    beat its own control 3 of 5 creatures
+    vocal sum|w| / setpoint  1.017, outside the band 0.0% of samples
+
+  cube vs ball, read off the creature's own activity
+    vision, per neuron   0.935   (shuffled 0.496)  <- positive control
+    central, per neuron  0.707   (shuffled 0.499)  <- the condition
+    vocal,   per neuron  0.569   (shuffled 0.510)  <- does it ARRIVE
+    central, 16 bins     0.541   (pooled; kept because it reads lower —
+                                 pooling loses the code, see vision)
+
+  how that distinction is carried
+               |d'| > 0.5     mean |d'|    sparseness
+    vision     21.5          % 0.335        0.741
+    central    3.8           % 0.183        0.914
+    (sparseness: 1.0 = every neuron equally active, ->0 = few active)
+
+  the same, without the penalty a sparse code pays
+               active   |d'| active  r within   r between   corr-clf
+    vision     1.00     0.335        0.358      0.244       0.944
+    central    1.00     0.183        0.053      0.040       0.789
+    (pattern separation is r_within - r_between going UP, which a
+     centroid classifier on raw rates can miss entirely)
+
+  g3probe is a bound, not a criterion. It reads 0.54 against a 0.75 bar:
+  a perfect teacher cannot make this voice depend on what the creature
+  sees. Read that against the calibration echo above: the same features
+  and the same classifier take the word-driven voice at ~0.83, so the
+  readout is not the limit and the null is not a broken pipeline. What
+  is missing is a mechanism that can learn a *conditional* mapping from
+  what is in view to what the larynx does. Node perturbation cannot: a
+  per-neuron bias is a constant, not a function of the input. That
+  leaves reward-modulated STDP on central->vocal as the only candidate
+  in the creature, and this says it does not manage it even when the
+  reward is ideal.
+
+  But weigh that against the condition table above before charging the
+  learning rule for all of it. The teacher is ideal; what the mapping
+  has to key on is only partly so — read the two losses off the
+  condition table rather than assuming which one is larger. At 141
+  probes they are vision 0.927 -> central 0.724 (-0.203) and then
+  central -> voice (-0.237), so the larger loss is the downstream one,
+  which is where m3probe and projprobe both localise it. At the default
+  tick count this same table read central at 0.475 and pointed upstream
+  instead; that estimate was resolution-limited, not a finding.

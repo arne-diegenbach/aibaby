@@ -912,6 +912,39 @@ struct G3Probe {
   std::vector<int> ctx_slot;    // the modal slice while it was being presented
   double ctx_present_frac = 0;  // scored ticks with the index live, over all of them
   uint32_t ctx_slots = 0;       // what the genome asked for, for the vacuity clause
+  // §50 clause 3. The same pairing over the TEACHING windows rather than the
+  // probes. `ctxsrc` is the reason this is a separate column and not an
+  // assumption: for the auditory index the word is at ceiling (1.000) while it
+  // plays and at CHANCE (0.533) by the reward window, so an index measured on
+  // the presentation can be absent at the moment the bias table is written.
+  // The prediction for vision is that this gap closes, because a toy in view
+  // does not stop -- and a prediction gets measured.
+  std::vector<int> teach_label;
+  std::vector<int> teach_slot;
+  // §50. THE TAUGHT DIRECTION, which is a different question from decodability
+  // and the one that actually asks whether the creature learned what it was
+  // taught.
+  //
+  // `vocal` above is held-out accuracy on object identity, and the §50 smoke
+  // showed it is CONFOUNDED the moment the context index is object-correlated:
+  // ORACLE's RANDOM-target arm read 0.875 against BASE's 0.517. The mechanism is
+  // not subtle. Node perturbation writes to `bias_ctx_[... + active_ctx_]`, so
+  // with the index pinned to the object there are two tables that each random-
+  // walk under reward; they DIVERGE, and a classifier then reads "which object"
+  // off the divergence with nothing object-specific having been taught. The
+  // label-destroyed arm cannot catch it, because a drawn pin decorrelates the
+  // slot from the object and the divergence stops being readable off the label.
+  //
+  // This is the projection of (mean voice | object 1 - mean voice | object 0)
+  // onto the teacher's OWN axis, divided by |axis|^2 -- so it reads as multiples
+  // of the separation the teacher asked for, 1.0 being full compliance. Under
+  // drift its expectation is ZERO, because each slot is rewarded toward +axis and
+  // -axis equally often when the target is a coin. It is also SIGNED, so a
+  // creature that learned the mapping backwards reads negative instead of
+  // scoring as a success. `magnitude-direction-split` is the archive's name for
+  // this distinction: reward buys the separation, the lesson buys the direction.
+  double axis_sep = 0.0;
+  bool axis_ok = false;
   // And at the larynx, which is the module G3 is ultimately about. Missing
   // from this table until 2026-08-15: `m3probe` can say whether the object
   // reaches vocal with learning *off*, and nothing said whether it survives a
@@ -951,7 +984,8 @@ struct G3Probe {
 // whether the CS alone has come to evoke it.
 G3Probe run_g3probe_session(const std::vector<uint8_t>& blob, uint64_t ticks,
                             bool consistent, uint64_t seed_shift, int mode,
-                            bool hold_nuisance = false, bool shuffle_order = false) {
+                            bool hold_nuisance = false, bool shuffle_order = false,
+                            int pin_mode = 0) {
   G3Probe out;
   std::string error;
   Session s;
@@ -974,6 +1008,13 @@ G3Probe run_g3probe_session(const std::vector<uint8_t>& blob, uint64_t ticks,
 
   aibaby::Rng rng;
   rng.seed((s.dna.header().seed ^ seed_shift) + 0x6D3Bu);
+  // §50. A PRIVATE stream for the label-destroyed arm's coin. Drawing it from
+  // `rng` would shift every later random number in the session, so `g3probe`
+  // and §49's arms would stop being bit-identical to their archived logs the
+  // moment this parameter existed -- a silent cost to two published results for
+  // the sake of one new arm. This stream is touched only when `pin_mode == 2`.
+  aibaby::Rng pin_rng;
+  pin_rng.seed((s.dna.header().seed ^ seed_shift) + 0x9A50u);
 
   uint64_t now = 0;
   uint32_t last_frame = 0;
@@ -1069,6 +1110,43 @@ G3Probe run_g3probe_session(const std::vector<uint8_t>& blob, uint64_t ticks,
     // and confound "nuisance held" with "a different session".
     Toy toy = m3_toy(rng, object);
     if (hold_nuisance) toy = m3_toy_fixed(object);
+
+    // §50. The index, supplied from outside instead of derived, for the two arms
+    // that bound the derived one. `pin_context_oracle` overrides every source
+    // AFTER it has run and forces `ctx_present_ = true` -- the separate entry
+    // point exists precisely because `pin_context` alone leaves presence false,
+    // and then both the bias READ and the bias WRITE fall through to the shared
+    // table and the arm becomes a silent copy of its own control.
+    //
+    // pin_mode 1 pins the TRUE object: the ceiling on what the bias table can
+    // express given a perfect index.
+    // pin_mode 2 pins a DRAWN object: equally live, equally bimodal, equally
+    // present, and carrying no object information at all. Without this arm an
+    // effect could be mere dropout rather than indexing -- `sparse-switch`
+    // found exactly that once, which is why a null is not a control here.
+    //
+    // Set per window rather than once per session because `object` is what this
+    // window is presenting, and a stale pin would index the previous trial.
+    //
+    // Gated on `show`, and CLEARED when nothing is shown, so the pin means
+    // exactly "which object is in view". Phase A's calibration trials hear a
+    // word with no toy present and pass the WORD index as `object`; pinning
+    // there would seed the bias table off a label that names nothing in the
+    // scene, before teaching has begun. Clearing rather than relying on Phase A
+    // running first keeps that true if the call order ever changes.
+    //
+    // The whole block is gated on `pin_mode != 0` so that every pre-existing
+    // caller -- `g3probe`, `condprobe`, `pairprobe`, §49's `visprobe` -- makes
+    // no call here at all and stays bit-identical to its archived log.
+    if (pin_mode != 0) {
+      if (!show) {
+        s.brain.network().clear_context_pin();
+      } else if (pin_mode == 1) {
+        s.brain.network().pin_context_oracle(uint32_t(object));
+      } else {
+        s.brain.network().pin_context_oracle(uint32_t(pin_rng.next() & 1u));
+      }
+    }
 
     for (uint64_t t = 0; t < length; ++t, ++now) {
       if (show && t % frame_ticks == 0) {
@@ -1272,6 +1350,21 @@ G3Probe run_g3probe_session(const std::vector<uint8_t>& blob, uint64_t ticks,
             kM3TrialTicks, kM3SettleTicks, shaped.data(), mid.data(), &reward_acc,
             &reward_n);
     ++out.taught;
+    // §50 clause 3. `ctx_hist` is zeroed per `observe` call, so immediately
+    // after the teaching call it holds THIS teaching window and nothing else.
+    // This is the window in which reward lands and the bias table is written,
+    // which is the window `ctxsrc` says to measure -- the auditory index scores
+    // 1.000 while the word plays and 0.533 by the time it is needed.
+    {
+      uint32_t best = 0;
+      bool any = false;
+      for (uint32_t c = 0; c < aibaby::kMaxContextSlots; ++c) {
+        if (ctx_hist[c] == 0) continue;
+        if (!any || ctx_hist[c] > ctx_hist[best]) { best = c; any = true; }
+      }
+      out.teach_label.push_back(mode == 1 ? 0 : object);
+      out.teach_slot.push_back(any ? int(best) : -1);
+    }
 
     if (++since_probe < kM3TrainPerProbe) continue;
     since_probe = 0;
@@ -1338,6 +1431,30 @@ G3Probe run_g3probe_session(const std::vector<uint8_t>& blob, uint64_t ticks,
     out.outside /= double(out.press_n);
   }
   if (probe_x.size() < 12) return out;
+
+  // §50. Computed over EVERY probe, not a held-out half: this is a projection
+  // onto a direction fixed by Phase A before any teaching happened, not a fitted
+  // classifier, so there is nothing to overfit and splitting would throw away
+  // half the precision for no gain.
+  {
+    std::vector<double> m1(aibaby::kVocalGroups, 0.0), m0(aibaby::kVocalGroups, 0.0);
+    uint32_t n1 = 0, n0 = 0;
+    for (size_t i = 0; i < probe_x.size(); ++i) {
+      if (probe_x[i].size() < aibaby::kVocalGroups) continue;
+      std::vector<double>& acc = probe_y[i] == 1 ? m1 : m0;
+      for (uint32_t k = 0; k < aibaby::kVocalGroups; ++k) acc[k] += probe_x[i][k];
+      if (probe_y[i] == 1) ++n1; else ++n0;
+    }
+    double num = 0.0, den = 0.0;
+    for (uint32_t k = 0; k < aibaby::kVocalGroups; ++k) den += axis[k] * axis[k];
+    if (n1 > 0 && n0 > 0 && den > 1e-12) {
+      for (uint32_t k = 0; k < aibaby::kVocalGroups; ++k) {
+        num += (m1[k] / double(n1) - m0[k] / double(n0)) * axis[k];
+      }
+      out.axis_sep = num / den;
+      out.axis_ok = true;
+    }
+  }
 
   const size_t train = probe_x.size() / 2;
   out.vocal = holdout_accuracy(probe_x, probe_y, train);
@@ -9563,6 +9680,484 @@ bool run_visprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
                 "    after all -- and the disclosed confound applies: rerun with m3_toy_at\n"
                 "    before blaming the representation rather than the 1.28 px jitter.\n",
                 ret_excess, ear_excess, rows[1].vision);
+  }
+  return true;
+}
+
+// --- §50: does the voice learn a per-object bias off the visual index? -------
+//
+// §49 supplied the index. This asks the other half: whether the voice then
+// becomes object-specific off it.
+//
+// NO NEW MECHANISM. `network.cpp` already learns the per-context bias table by
+// node perturbation keyed on the derived slice --
+//
+//   } else if (ctx_slots_ > 0 && ctx_present_) {
+//     Scalar& b = bias_ctx_[size_t(i) * ctx_slots_ + active_ctx_];
+//     b = clampf(b + u * gate_meta, -perturb_max_, perturb_max_);
+//
+// -- and reads it back into the drive at the same index. So §49's arms were
+// ALREADY running a retina-indexed bias table; `visprobe` simply never read the
+// voice off them. This is a new column, not a new rule.
+namespace {
+
+// Mean and standard error over creatures. Written out rather than borrowed
+// because the SE is the quantity every verdict below turns on, and this file
+// has no such helper -- `ctx_mean_se` lives in another translation unit.
+double n50_mean_se(const std::vector<double>& v, double* se) {
+  *se = 0.0;
+  if (v.empty()) return 0.0;
+  double m = 0.0;
+  for (double x : v) m += x;
+  m /= double(v.size());
+  if (v.size() < 2) return m;
+  double s2 = 0.0;
+  for (double x : v) s2 += (x - m) * (x - m);
+  // AN SE OF 0.00 OVER n>1 IS A BUG, and this project has printed one. The
+  // divisor is n-1 and the result is divided by sqrt(n); both are spelled out
+  // so a later reader can check the units against the table.
+  *se = std::sqrt(s2 / double(v.size() - 1)) / std::sqrt(double(v.size()));
+  return m;
+}
+
+}  // namespace
+
+bool run_objname(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  aibaby::Dna dna;
+  if (dna.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) return false;
+  const double dt = double(dna.header().sim.dt_ms);
+  constexpr uint32_t kObjects = 2;
+  constexpr uint32_t kShuffles = 64;
+  // 12, not kM3Replicates' 5. `ctxsrc` is the precedent and it is a sharp one:
+  // at 3 creatures it read 0.754 and PRINTED A LICENCE; at 9 it read 0.740 and
+  // refused. The spread here is almost entirely probe-count noise -- 70 held-out
+  // test probes at p=0.5 give a binomial SE of 0.0598 and a difference of two
+  // such is 0.0846, against a published per-creature SD of 0.080 -- so creatures
+  // and ticks buy the same power per tick spent, and creatures also sample
+  // genome initialisation, which is real variance rather than estimator noise.
+  constexpr uint32_t kCreatures = 12;
+
+  std::printf("  the question      §50. §49 showed the creature can DERIVE a visual index\n"
+              "                    (ctx_match 0.8624 vs null 0.5346). Does the VOICE then\n"
+              "                    learn a per-object bias off it -- does it speak the\n"
+              "                    object it sees?\n");
+  std::printf("  the mechanism     bias_ctx_[i * slots + active_ctx_], learned by node\n"
+              "                    perturbation and read back into the drive. Already in\n"
+              "                    the kernel; §49's arms ran it and never scored it.\n");
+  std::printf("  the prediction    ctxsrc named PERSISTENCE as what stands between areax\n"
+              "                    v51 and naming: the word is at 1.000 while it plays and\n"
+              "                    0.533 by the reward window. AN OBJECT IN VIEW DOES NOT\n"
+              "                    STOP, so that obstruction should not arise. Clause 3\n"
+              "                    MEASURES that rather than asserting it.\n");
+  std::printf("  session           %.1f s x %u creatures x 4 index arms x 2 target arms\n",
+              double(ticks) * dt / 1000.0, kCreatures);
+  instrument("objname", dna.header().seed ^ 0x50B1u, kCreatures, "creatures");
+
+  // THE ARM TABLE PINS THE WHOLE DOSE VECTOR on every row.
+  // `control-on-a-different-code-path` is the reason: an arm selector that sets
+  // some fields and inherits others is how a control ends up on a different code
+  // path from the arm it is controlling.
+  //
+  // The three indexed arms are THE SAME GENOME ON THE SAME CODE PATH and differ
+  // only in what the index CONTAINS. That is what makes a null readable:
+  //
+  //  * ORACLE is the CEILING. Without it a null on RET cannot separate "the
+  //    visual index is too weak" from "the bias table cannot make this voice
+  //    object-specific at all". `null-is-not-a-control` cost this project four
+  //    weeks for exactly that omission.
+  //  * SHUF is the LABEL-DESTROYED control: equally live, equally bimodal,
+  //    equally present, carrying no object information. `sparse-switch` once
+  //    found a benefit that turned out to be dropout, which is why an arm that
+  //    merely has a second table to write into is not good enough.
+  struct Arm {
+    const char* name;
+    uint32_t source;
+    uint32_t slots;
+    uint32_t gate;
+    int pin;  // 0 derived, 1 true object, 2 drawn object
+    const char* what;
+  };
+  constexpr uint32_t kArms = 4;
+  const Arm arms[kArms] = {
+      {"BASE", 0u, 0u, 0u, 0, "bias table OFF -- the slots-0 anchor"},
+      {"RET", 5u, kObjects, 2u, 0, "the creature's own index, off the retina"},
+      {"ORACLE", 5u, kObjects, 2u, 1, "index PINNED to the true object -- the CEILING"},
+      {"SHUF", 5u, kObjects, 2u, 2, "index PINNED to a DRAWN object -- the NULL"},
+  };
+
+  struct Row {
+    std::vector<double> taught, ctl, diff;
+    // A SEPARATE `who` for the axis columns, because a cell can yield an accuracy
+    // but no axis value (all probes of one class), and sharing one index vector
+    // between two differently-filtered lists is how the pairing below would end
+    // up comparing different creatures.
+    std::vector<double> ax_t, ax_c, ax_diff;
+    std::vector<uint32_t> ax_who;
+    // Which creature each entry came from. A creature can be SKIPPED in one arm
+    // and not another, so the arms' vectors are not index-aligned and pairing on
+    // position would silently compare different creatures -- the exact shape of
+    // mis-pairing this project keeps finding.
+    std::vector<uint32_t> who;
+    double match = 0, null = 0, occ = 0, present = 0;
+    double tmatch = 0, tnull = 0;
+    uint32_t slots = 0, n_ok = 0;
+    uint32_t beat = 0;
+  } rows[kArms];
+
+  // PARALLEL OVER arm x creature, which is a standing instruction here and not a
+  // per-experiment judgement: a serial long run is a mistake on a 14-core box.
+  // Bit-identical rather than merely equivalent, for three reasons verified in
+  // the source: `core/src/` has no mutable globals, every creature is its own
+  // Arena + Network + Rng, and a rep's seed is a pure function of its index, so
+  // execution order cannot reach the numbers. The two mechanical blockers the
+  // standing rule names are both avoided: nothing is printf'd inside the loop,
+  // and nothing push_backs onto a shared vector -- each job returns its own cell
+  // and the fold below runs serially in index order.
+  //
+  // One flat pool over all 48 jobs rather than one pool per arm, because a
+  // per-arm pool pays an idle tail four times.
+  struct Cell {
+    bool ok = false;
+    double taught = 0, ctl = 0;
+    double ax_t = 0, ax_c = 0;
+    bool ax_ok = false;
+    double match = 0, null = 0, occ = 0, present = 0;
+    double tmatch = 0, tnull = 0;
+    uint32_t slots = 0;
+  };
+  const std::vector<Cell> cells = parallel_reps<Cell>(kArms * kCreatures, [&](uint32_t i) {
+    const uint32_t a = i / kCreatures, r = i % kCreatures;
+    Cell c;
+    std::vector<uint8_t> variant = blob;
+    const uint64_t seed = dna.header().seed + r * 7919ull;
+    std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+    {
+      aibaby::DnaHeader h;
+      std::memcpy(&h, variant.data(), sizeof(h));
+      h.exploration.context_source = arms[a].source;
+      h.exploration.context_slots = arms[a].slots;
+      h.exploration.ctx_proto_gate = arms[a].gate;
+      std::memcpy(variant.data(), &h, sizeof(h));
+    }
+    // Both target arms, paired by seed, with the toy HELD in both. §49 measured
+    // holding position and size at 4.3x, and all four arms hold so that ORACLE's
+    // ceiling is the ceiling for RET's actual condition.
+    const G3Probe taught =
+        run_g3probe_session(variant, ticks, true, 0x51E7u, 0, /*hold_nuisance=*/true,
+                            /*shuffle_order=*/false, arms[a].pin);
+    const G3Probe ctl =
+        run_g3probe_session(variant, ticks, false, 0x51E7u, 0, /*hold_nuisance=*/true,
+                            /*shuffle_order=*/false, arms[a].pin);
+    if (!taught.ok || !ctl.ok || taught.probes < 12 || ctl.probes < 12) return c;
+    c.ok = true;
+    c.taught = taught.vocal;
+    c.ctl = ctl.vocal;
+    c.ax_ok = taught.axis_ok && ctl.axis_ok;
+    c.ax_t = taught.axis_sep;
+    c.ax_c = ctl.axis_sep;
+    c.present = taught.ctx_present_frac;
+    c.occ = vis_occupancy(taught.ctx_slot, kObjects);
+    c.slots = taught.ctx_slots;
+
+    // Clause 2 and clause 3 on the SAME session that produced the voice row, so
+    // a creature whose index collapsed cannot be averaged into a voice number
+    // that is then explained by an index it did not have.
+    aibaby::Rng srng;
+    srng.seed(seed ^ 0x5A17u);
+    auto scored = [&](const std::vector<int>& lab, const std::vector<int>& slot,
+                      double* m_out, double* null_out) {
+      if (lab.size() < 12) return;
+      *m_out = vis_ctx_match(lab, slot, kObjects, nullptr);
+      std::vector<int> shuf = lab;
+      double acc = 0.0;
+      for (uint32_t s = 0; s < kShuffles; ++s) {
+        for (size_t k = shuf.size(); k > 1; --k) {
+          const size_t j = size_t(srng.next() % uint64_t(k));
+          std::swap(shuf[k - 1], shuf[j]);
+        }
+        acc += vis_ctx_match(shuf, slot, kObjects, nullptr);
+      }
+      *null_out = acc / double(kShuffles);
+    };
+    scored(taught.ctx_label, taught.ctx_slot, &c.match, &c.null);
+    scored(taught.teach_label, taught.teach_slot, &c.tmatch, &c.tnull);
+    return c;
+  });
+
+  for (uint32_t a = 0; a < kArms; ++a) {
+    for (uint32_t r = 0; r < kCreatures; ++r) {
+      const Cell& c = cells[a * kCreatures + r];
+      if (!c.ok) continue;
+      Row& row = rows[a];
+      row.taught.push_back(c.taught);
+      row.ctl.push_back(c.ctl);
+      row.diff.push_back(c.taught - c.ctl);
+      if (c.ax_ok) {
+        row.ax_t.push_back(c.ax_t);
+        row.ax_c.push_back(c.ax_c);
+        row.ax_diff.push_back(c.ax_t - c.ax_c);
+        row.ax_who.push_back(r);
+      }
+      row.who.push_back(r);
+      if (c.taught > c.ctl) ++row.beat;
+      row.present += c.present;
+      row.occ += c.occ;
+      row.slots = c.slots;
+      row.match += c.match;
+      row.null += c.null;
+      row.tmatch += c.tmatch;
+      row.tnull += c.tnull;
+      ++row.n_ok;
+    }
+  }
+
+  for (uint32_t a = 0; a < kArms; ++a) {
+    Row& q = rows[a];
+    if (!q.n_ok) continue;
+    const double in = 1.0 / double(q.n_ok);
+    q.match *= in; q.null *= in; q.occ *= in; q.present *= in;
+    q.tmatch *= in; q.tnull *= in;
+  }
+
+  // ---- CLAUSE 1: VACUITY AND OCCUPANCY ----
+  std::printf("\n  CLAUSE 1 -- IS THE INDEX LIVE, AND IS IT BALANCED? §49's first smoke read\n"
+              "  ctx_match exactly 0.5000 against a null of exactly 0.5000 because the\n"
+              "  partition had COLLAPSED onto one slice, and ctx_present_frac read 1.0000\n"
+              "  throughout -- a constant index is perfectly live. Occupancy is the share\n"
+              "  of probes in the busiest slice: %.3f balanced, 1.000 collapsed.\n",
+              1.0 / double(kObjects));
+  bool ret_collapsed = false;
+  for (uint32_t a = 0; a < kArms; ++a) {
+    const Row& q = rows[a];
+    const bool off = arms[a].slots == 0;
+    std::printf("    %-7s creatures %2u/%2u  ctx_slots %u (asked %u)  present %.4f  "
+                "occupancy %.4f  %s\n",
+                arms[a].name, q.n_ok, kCreatures, q.slots, arms[a].slots, q.present, q.occ,
+                off ? "<- table OFF by design" : "");
+    if (!off && q.n_ok > 0 && q.slots != arms[a].slots) ret_collapsed = true;
+  }
+  if (rows[1].n_ok > 0 && rows[1].occ > 0.90) {
+    std::printf("\n  *** REFUSED, PRE-REGISTERED: RET occupancy %.4f > 0.90. The partition\n"
+                "  collapsed onto one slice, so every RET row below is VOID -- not a\n"
+                "  finding about the voice. This is the §49 trap and the bar was written\n"
+                "  before the run.\n",
+                rows[1].occ);
+    ret_collapsed = true;
+  }
+
+  // ---- CLAUSE 2: THE INDEX, RE-MEASURED ON THIS INSTRUMENT ----
+  std::printf("\n  CLAUSE 2 -- DOES §49 REPRODUCE HERE? A different instrument invocation is\n"
+              "  exactly where this project has found harness divergence before, so the\n"
+              "  index is re-measured rather than cited. §49 read RET at +0.3278.\n");
+  std::printf("    %-7s %-10s %-10s %-10s %s\n", "arm", "ctx_match", "null", "excess",
+              "window");
+  for (uint32_t a = 0; a < kArms; ++a) {
+    const Row& q = rows[a];
+    if (!q.n_ok || arms[a].slots == 0) continue;
+    std::printf("    %-7s %-10.4f %-10.4f %+-10.4f %s\n", arms[a].name, q.match, q.null,
+                q.match - q.null, "probes");
+  }
+  const double ret_excess = rows[1].match - rows[1].null;
+  bool index_ok = true;
+  if (rows[1].n_ok > 0 && ret_excess < 0.15) {
+    std::printf("\n  *** REFUSED, PRE-REGISTERED: RET excess %+.4f is under the +0.15 bar, so\n"
+                "  §50 is NOT running on the index §49 found and nothing below is\n"
+                "  interpretable as a test of it.\n",
+                ret_excess);
+    index_ok = false;
+  }
+
+  // ---- CLAUSE 3: ctxsrc's QUESTION, ASKED OF VISION ----
+  std::printf("\n  CLAUSE 3 -- IS THE INDEX THERE WHEN THE MECHANISM NEEDS IT? ctxsrc's rule:\n"
+              "  'before wiring a signal into a mechanism, check it is still there WHEN THE\n"
+              "  MECHANISM NEEDS IT' -- coderprobe's 0.981 and ctxsrc's 0.533 are the same\n"
+              "  module 400 ms apart. The bias table is written where REWARD lands, so the\n"
+              "  teaching window is the one that matters, not the probe.\n");
+  std::printf("    %-7s %-12s %-10s %-10s %s\n", "arm", "window", "ctx_match", "null",
+              "excess");
+  for (uint32_t a = 0; a < kArms; ++a) {
+    const Row& q = rows[a];
+    if (!q.n_ok || arms[a].slots == 0) continue;
+    std::printf("    %-7s %-12s %-10.4f %-10.4f %+.4f\n", arms[a].name, "probe", q.match,
+                q.null, q.match - q.null);
+    std::printf("    %-7s %-12s %-10.4f %-10.4f %+.4f\n", "", "TEACHING", q.tmatch, q.tnull,
+                q.tmatch - q.tnull);
+  }
+  const double ret_teach_excess = rows[1].tmatch - rows[1].tnull;
+  std::printf("\n    RET: probe %+.4f, teaching %+.4f. A teaching value well below the\n"
+              "    probe value is the AUDITORY failure reappearing in the visual path --\n"
+              "    an index that is right when looked at and gone when used.\n",
+              ret_excess, ret_teach_excess);
+
+  // ---- CLAUSE 4: THE VOICE ----
+  // ---- CLAUSE 4: THE VOICE ----
+  //
+  // THE PRIMARY ESTIMATOR IS THE TAUGHT DIRECTION, NOT DECODABILITY, AND THE
+  // SMOKE IS WHY. With held-out accuracy as the primary, ORACLE's RANDOM-target
+  // arm read 0.875 against BASE's 0.517 -- because two per-object bias tables
+  // random-walk under reward and DIVERGE, so a classifier reads "which object"
+  // off the divergence with nothing object-specific taught. That is decodability
+  // without naming, and `SHUF` cannot catch it: a drawn pin decorrelates the slot
+  // from the object, so the divergence stops being readable off the label.
+  //
+  // `axis_sep` projects (voice | object 1 - voice | object 0) onto the teacher's
+  // own axis, in multiples of the separation it asked for. Expectation ZERO under
+  // drift, positive only under compliance, and SIGNED so learning it backwards
+  // reads negative rather than scoring as success.
+  std::printf("\n  CLAUSE 4 -- THE VOICE. Two estimators, and the ORDER MATTERS.\n");
+  std::printf("\n  4a (PRIMARY) -- THE TAUGHT DIRECTION. Projection of the per-object voice\n"
+              "  difference onto the teacher's axis, in multiples of the separation asked\n"
+              "  for (1.0 = full compliance). Zero expectation under drift, and signed.\n");
+  std::printf("    %-7s %-18s %-18s %s\n", "arm", "taught", "random", "taught-random");
+  double mean_ax[kArms] = {}, se_ax[kArms] = {};
+  for (uint32_t a = 0; a < kArms; ++a) {
+    Row& q = rows[a];
+    if (q.ax_t.empty()) {
+      std::printf("    %-7s none scored\n", arms[a].name);
+      continue;
+    }
+    double se_t = 0, se_c = 0;
+    const double mt = n50_mean_se(q.ax_t, &se_t);
+    const double mc = n50_mean_se(q.ax_c, &se_c);
+    mean_ax[a] = n50_mean_se(q.ax_diff, &se_ax[a]);
+    std::printf("    %-7s %+7.4f +- %-7.4f %+7.4f +- %-7.4f %+7.4f +- %.4f\n", arms[a].name,
+                mt, se_t, mc, se_c, mean_ax[a], se_ax[a]);
+  }
+
+  std::printf("\n  4b (SECONDARY) -- DECODABILITY. Held-out accuracy on object identity.\n"
+              "  CONFOUNDED by table divergence wherever the index is object-correlated,\n"
+              "  so it is reported and NOT used for the verdict. A high number here with a\n"
+              "  zero in 4a means the two voices DIFFER without differing as taught.\n");
+  std::printf("    %-7s %-16s %-16s %-18s %s\n", "arm", "taught", "random", "taught-random",
+              "beat own ctl");
+  double mean_d[kArms] = {}, se_d[kArms] = {};
+  for (uint32_t a = 0; a < kArms; ++a) {
+    Row& q = rows[a];
+    if (!q.n_ok) {
+      std::printf("    %-7s none scored\n", arms[a].name);
+      continue;
+    }
+    // THE ARGUMENTS ARE EVALUATED FIRST, INTO LOCALS. A printf whose argument
+    // list both writes an out-param and reads it bare is unordered in C++, and
+    // that bug printed an entire 36-seed table of 0.00 SEs in §48. There is a
+    // scanner for it now (tools/audit_printf_order.py) and this is the shape it
+    // looks for.
+    double se_t = 0, se_c = 0;
+    const double mt = n50_mean_se(q.taught, &se_t);
+    const double mc = n50_mean_se(q.ctl, &se_c);
+    mean_d[a] = n50_mean_se(q.diff, &se_d[a]);
+    std::printf("    %-7s %6.3f +- %-6.3f %6.3f +- %-6.3f %+6.3f +- %-8.3f %u of %u\n",
+                arms[a].name, mt, se_t, mc, se_c, mean_d[a], se_d[a], q.beat, q.n_ok);
+  }
+
+  // ---- CLAUSE 5: THE VERDICT ----
+  // The bar, computed from the arms' own spreads rather than from the
+  // pre-registered estimate, so it is the power this run actually had. The
+  // pre-registered figure was SE 0.0345 and 2 SE = 0.069; whatever this prints
+  // is the honest version of it.
+  // PAIRED BY CREATURE, not treated as independent. RET and SHUF run the same
+  // seeds, so the per-creature difference-of-differences removes whatever
+  // variance is shared between them, and the pre-registered SE of 0.0345 -- which
+  // assumed independence -- is the conservative bound rather than the estimate.
+  // Both are printed, because a paired SE that comes out LARGER than the
+  // independent one means the arms are anti-correlated and the pairing is
+  // telling me something I did not expect.
+  // Paired on the PRIMARY estimator (4a), not on decodability.
+  auto paired_dd = [&](uint32_t a, uint32_t b, double* se) {
+    std::vector<double> dd;
+    for (size_t i = 0; i < rows[a].ax_who.size(); ++i) {
+      for (size_t j = 0; j < rows[b].ax_who.size(); ++j) {
+        if (rows[a].ax_who[i] != rows[b].ax_who[j]) continue;
+        dd.push_back(rows[a].ax_diff[i] - rows[b].ax_diff[j]);
+        break;
+      }
+    }
+    return n50_mean_se(dd, se);
+  };
+  double se_pair = 0.0, se_oracle = 0.0;
+  const double ret_minus_shuf = paired_dd(1, 3, &se_pair);
+  const double oracle_minus_shuf = paired_dd(2, 3, &se_oracle);
+  const double se_indep = std::sqrt(se_ax[1] * se_ax[1] + se_ax[3] * se_ax[3]);
+  std::printf("\n  CLAUSE 5 -- THE VERDICT, spanning the sign. Paired by creature.\n");
+  std::printf("    RET - SHUF     %+.4f  (paired SE %.4f, so %.1f SE; unpaired SE %.4f)\n",
+              ret_minus_shuf, se_pair, se_pair > 0 ? ret_minus_shuf / se_pair : 0.0,
+              se_indep);
+  std::printf("    ORACLE - SHUF  %+.4f  (paired SE %.4f)\n", oracle_minus_shuf, se_oracle);
+  // The scale statement has to change with the estimator. In 4a's units 1.0 is
+  // FULL compliance with the teacher, so 2 SE expressed as a fraction of 1.0 says
+  // directly what share of the asked-for gesture this run could detect.
+  std::printf("    in these units 1.0 is FULL compliance with the teacher, so 2 SE = %.4f\n"
+              "    is the smallest share of the asked-for gesture this run can resolve.\n",
+              2.0 * se_pair);
+
+  if (ret_collapsed || !index_ok) {
+    std::printf("\n    VOID: clause 1 or clause 2 refused above, so the voice table is not a\n"
+                "    test of the visual index. The refusal is the result.\n");
+    return true;
+  }
+  const bool oracle_works = se_oracle > 0 && oracle_minus_shuf > 2.0 * se_oracle;
+  const bool ret_works = se_pair > 0 && ret_minus_shuf > 2.0 * se_pair;
+
+  if (!oracle_works) {
+    std::printf("\n    (b) THE CEILING ITSELF IS NULL: ORACLE - SHUF %+.4f against SE %.4f.\n"
+                "    A PERFECT object index does not make this voice object-specific, so\n"
+                "    RET's number says nothing about vision -- the block is EXPRESSION, not\n"
+                "    the index. §49's own cascade predicts this is possible: central->voice\n"
+                "    is the larger loss at -0.237. §49 stands unchanged and CONCLUSION.md's\n"
+                "    spine is re-confirmed with the input side now supplied.\n",
+                oracle_minus_shuf, se_oracle);
+  } else if (ret_works) {
+    std::printf("\n    (a) THE VOICE CARRIES WHAT THE CREATURE SEES, off an index it derived\n"
+                "    itself. RET - SHUF %+.4f = %.1f SE, and ORACLE - SHUF %+.4f says the\n"
+                "    table can express it. RET reaches %.0f%% of the achievable lift.\n",
+                ret_minus_shuf, ret_minus_shuf / se_pair, oracle_minus_shuf,
+                oracle_minus_shuf > 0 ? 100.0 * ret_minus_shuf / oracle_minus_shuf : 0.0);
+  } else if (se_pair > 0 && ret_minus_shuf < -2.0 * se_pair) {
+    // THE SIGN IS NOT CONSTRAINED, so it gets its own branch. An index that is
+    // measurably WORSE than a drawn one is not the same finding as one that
+    // carries nothing: it means the partition is reliably splitting on something
+    // that cuts ACROSS the objects, so the bias table is being written coherently
+    // to the wrong slot. That is a mechanism, and it is testable -- it predicts
+    // the loss disappears under ORACLE, which this table already reports.
+    std::printf("\n    (d) THE DERIVED INDEX IS WORSE THAN A DRAWN ONE: RET - SHUF %+.4f =\n"
+                "    %.1f SE, with ORACLE - SHUF %+.4f. The partition is not failing to\n"
+                "    carry the object, it is splitting on something that cuts ACROSS the\n"
+                "    objects and the table is written coherently to the WRONG slot. Read\n"
+                "    against clause 2: a ctx_match of %.4f with this voice result means the\n"
+                "    index tracks the object at the PROBE and something else while being\n"
+                "    TAUGHT, which is clause 3's teaching column (%+.4f).\n",
+                ret_minus_shuf, ret_minus_shuf / se_pair, oracle_minus_shuf, rows[1].match,
+                ret_teach_excess);
+  } else if (std::fabs(ret_minus_shuf) < 2.0 * se_pair) {
+    std::printf("\n    INCONCLUSIVE, AND PRE-DECLARED AS SUCH: RET - SHUF %+.4f +- %.4f is\n"
+                "    inside 2 SE. ORACLE works (%+.4f), so the table CAN express an\n"
+                "    object-specific voice and this run cannot say whether the retina's\n"
+                "    index drives it. This is not a refusal -- the pre-registration wrote\n"
+                "    the number down: an outcome of +0.04 +- 0.035 is neither evidence of\n"
+                "    naming nor evidence against it. The lever is total test probes.\n",
+                ret_minus_shuf, se_pair, oracle_minus_shuf);
+  } else {
+    std::printf("\n    (c) THE TABLE WORKS AND THE RETINA'S INDEX DOES NOT DRIVE IT:\n"
+                "    ORACLE - SHUF %+.4f but RET - SHUF %+.4f. Do NOT conclude the index is\n"
+                "    weak: ctxsrc's bar is p >= 0.75 to keep half the signal and RET's index\n"
+                "    measures %.4f. Read clause 3 -- probe %+.4f vs teaching %+.4f. If those\n"
+                "    agree, the failure is neither accuracy nor timing and the next\n"
+                "    measurement is the WRITE, not the index.\n",
+                oracle_minus_shuf, ret_minus_shuf, rows[1].match, ret_excess,
+                ret_teach_excess);
+  }
+
+  // THE UNREADABILITY CHECK, pre-registered: if the idealised teacher does not
+  // beat its own random control even with the bias table OFF, then the protocol
+  // is not teaching under the held-toy regime and no arm's contrast means what
+  // its name says.
+  if (mean_ax[0] < 0.0) {
+    std::printf("\n  *** PROTOCOL WARNING, PRE-REGISTERED: BASE taught-random is %+.4f on the\n"
+                "  PRIMARY estimator. The idealised teacher is not moving the voice toward\n"
+                "  what it asked for even with the table off, so the held-toy protocol may\n"
+                "  not be teaching at all and every contrast above is suspect.\n",
+                mean_ax[0]);
   }
   return true;
 }

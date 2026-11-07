@@ -7846,7 +7846,19 @@ At **n = 12 creatures, 900 000 ticks**: SE(taught − random) = 0.0846/√12 = *
 (`power-is-not-the-error-model`). Written as a number now so it cannot be re-read later: an outcome of
 `RET − SHUF = +0.04 ± 0.035` is **not** evidence of naming and **not** evidence against it.
 
-Cost: 4 index arms × 2 target arms × 12 creatures = **96 sessions** at ~26 s = **~42 min**.
+Cost: 4 index arms × 2 target arms × 12 creatures = **96 sessions**.
+
+**The cost figure here was wrong when first written and is corrected before the run.** It said "~26 s
+per session = ~42 min", taken from a half-remembered figure. The archived baseline log records its own
+wall time — `real 12m49.955s` for 5 creatures × 2 arms at 900 000 ticks — which is **77 s per session**,
+so 96 sessions is **~2 hours serial**, not 42 minutes. That is nearly 3× the stated budget, and it is
+the kind of error that gets noticed only after the machine has been busy for an hour.
+
+It also makes a standing rule bite: *a serial long run is a mistake on this box.* `objname`'s rep loop
+was therefore converted to `parallel_reps` over all 48 arm × creature jobs in **one flat pool** (a
+per-arm pool pays an idle tail four times), which the measured ceiling of 3.2× puts at **~38 min**. Per
+that rule the conversion is proved, not assumed: the smoke was captured **serially before the edit**
+and the parallel build must reproduce it exactly.
 
 ### THE CLAUSES, IN ORDER — order is part of a pre-registration
 
@@ -7887,3 +7899,58 @@ Stated now so it cannot be discovered as a convenience later. The run is void if
 collapses (clause 1), if clause 2 fails to reproduce §49 (clause 2), or if the **random-target arm
 beats the taught arm in `BASE`** — which would mean the idealised teacher is not teaching under the
 held-toy protocol and no arm's contrast means what its name says.
+
+### §50 DESIGN CHANGE, DISCLOSED BEFORE THE RUN: THE PRIMARY ESTIMATOR WAS WRONG
+
+The pre-registration above named *held-out accuracy on the probe voice, taught minus random* as the
+primary comparison. **The smoke showed that estimator is confounded, and the confound is a mechanism
+rather than noise.** Changed before the budget was spent, and recorded here rather than quietly.
+
+The serial smoke (150 000 ticks, 12 creatures, every clause walked):
+
+| arm | taught | random | taught − random |
+|---|---|---|---|
+| BASE | 0.567 | 0.517 | +0.050 |
+| RET | 0.483 | 0.583 | −0.100 |
+| **ORACLE** | **0.900** | **0.875** | +0.025 |
+| SHUF | 0.533 | 0.600 | −0.067 |
+
+**`ORACLE`'s RANDOM-target arm reads 0.875 against `BASE`'s 0.517.** Nothing object-specific is taught
+in that arm — `target_for` is a coin — so a voice that is 87.5% decodable by object cannot be learning.
+The mechanism is visible in the kernel: node perturbation writes to `bias_ctx_[i * slots + active_ctx_]`,
+so pinning the index to the object creates **two tables that each random-walk under reward and
+diverge**. A classifier then reads *which object* off the divergence. That is decodability without
+naming.
+
+**And `SHUF` cannot catch it** — which is the part worth keeping. A drawn pin decorrelates the slot
+from the object, so the divergence stops being readable off the label and the label-destroyed arm sits
+near chance by construction. The control was correctly chosen for the hypothesis and is simply blind to
+*this* artefact. Had the run gone ahead on the pre-registered estimator, the headline available from
+it was **"the voice carries which object at 0.90"**, which is false.
+
+**The replacement, `axis_sep`:** the projection of (mean voice | object 1 − mean voice | object 0) onto
+the teacher's **own axis**, divided by |axis|², so it reads in multiples of the separation the teacher
+asked for — 1.0 being full compliance. Three properties the accuracy column lacks:
+
+1. **Expectation zero under drift.** In the random arm each slot is rewarded toward +axis and −axis
+   equally often, so divergence has no systematic component along the axis.
+2. **Signed.** A creature that learns the mapping backwards reads negative instead of scoring as a
+   success, which an accuracy column cannot express at all.
+3. **No fitted split.** The axis is fixed in Phase A before any teaching, so it uses every probe
+   rather than a held-out half.
+
+This is the archive's own distinction and it already has a name: `magnitude-direction-split` —
+*reward buys the separation, the lesson buys the direction.* The accuracy column is **kept as a
+secondary** and explicitly excluded from the verdict, because a high 4b with a zero in 4a is itself a
+finding: the two voices differ without differing as taught.
+
+Clause 5's scale statement changes with it. The old "headroom 0.23 above an echo of 0.725" was in
+accuracy units; in 4a's units 1.0 is full compliance and the printed 2 SE says directly what share of
+the asked-for gesture the run can resolve.
+
+**What the smoke does NOT say.** `RET` read occupancy 0.8917 and clause 2 refused it at −0.0216, and
+**that is not a finding about the visual index.** §49 measured occupancy 0.509 and `ctx_match` +0.3278
+at full budget, and §49's own second smoke had the held arms at their null before the real run reversed
+them to +0.33. A smoke can show the right sign of nothing. The 150 000-tick partition has had a
+fraction of the time the conscience needs to balance two prototypes, so clause 2 at full budget is the
+measurement and this is not evidence about it in either direction.
