@@ -8057,3 +8057,19 @@ teaching, so which way `taught − random` lands is arbitrary: at the smoke it f
 (+0.025), at full budget it buries it (−0.133). **The danger was described as a false headline when
 the smoke found it; the full run shows the worse failure mode was a false refusal.** A confounded
 estimator does not merely inflate — it has no reliable sign.
+
+#### THE VERIFY GATE, ALL FOUR KEYS
+
+`results/n50-verify.log`:
+
+```
+verify PASS
+hash              ad96f882becbee92  as recorded
+pinned hash       PASS
+experiments       24 as expected, 0 not
+```
+
+The pinned hash is unmoved, so DNA v84's `context_source = 5` and §50's `pin_mode` remain inert for
+the shipped genome (`context_slots = 0`, `context_source = 0` — confirmed in `dna/default.toml`). The
+experiment count stays 24 because `objname` is `Tier::kLong` / `Expect::kRead`, exactly as `visprobe`
+was.
