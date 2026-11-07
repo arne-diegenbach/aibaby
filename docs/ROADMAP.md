@@ -7954,3 +7954,20 @@ at full budget, and §49's own second smoke had the held arms at their null befo
 them to +0.33. A smoke can show the right sign of nothing. The 150 000-tick partition has had a
 fraction of the time the conscience needs to balance two prototypes, so clause 2 at full budget is the
 measurement and this is not evidence about it in either direction.
+
+### §50 GATES, BOTH PASSED BEFORE THE BUDGET WAS SPENT
+
+1. **`g3probe` is bit-identical** to `results/g3probe-2026-11-04.log`, number for number
+   (`results/n50-g3probe-bitidentity.log`). The new `pin_mode` parameter, the two teaching-window
+   columns and the private `pin_rng` cost nothing to `g3probe`, `condprobe`, `pairprobe` or §49's
+   `visprobe`: the pin block is gated on `pin_mode != 0`, and the label-destroyed arm's coin is drawn
+   from a **separate** stream so the session's own `rng` never shifts. Drawing that coin from `rng`
+   would have silently de-published two results.
+2. **The parallel conversion is bit-identical.** `results/n50-smoke-serial.log` was captured serially
+   *before* the edit and `results/n50-smoke-parallel.log` after it; clauses 1–3 and the whole accuracy
+   table match exactly, the only difference being the clause-4 heading that was deliberately rewritten.
+
+Parallel wall time is **170 s** for 96 sessions at 150 000 ticks, so the 900 000-tick run is ~17 min.
+**No speedup factor is quoted**, because the serial reference ran concurrently with the `g3probe`
+bit-identity check and a contended baseline is exactly how the parallel-run note's first speedup table
+came out flattering.
