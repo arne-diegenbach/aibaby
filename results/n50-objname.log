@@ -1,0 +1,84 @@
+experiment: objname
+  the question      §50. §49 showed the creature can DERIVE a visual index
+                    (ctx_match 0.8624 vs null 0.5346). Does the VOICE then
+                    learn a per-object bias off it -- does it speak the
+                    object it sees?
+  the mechanism     bias_ctx_[i * slots + active_ctx_], learned by node
+                    perturbation and read back into the drive. Already in
+                    the kernel; §49's arms ran it and never scored it.
+  the prediction    ctxsrc named PERSISTENCE as what stands between areax
+                    v51 and naming: the word is at 1.000 while it plays and
+                    0.533 by the reward window. AN OBJECT IN VIEW DOES NOT
+                    STOP, so that obstruction should not arise. Clause 3
+                    MEASURES that rather than asserting it.
+  session           900.0 s x 12 creatures x 4 index arms x 2 target arms
+  instrument        objname   trial seed 0000000001357778   12 creatures
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+
+  CLAUSE 1 -- IS THE INDEX LIVE, AND IS IT BALANCED? §49's first smoke read
+  ctx_match exactly 0.5000 against a null of exactly 0.5000 because the
+  partition had COLLAPSED onto one slice, and ctx_present_frac read 1.0000
+  throughout -- a constant index is perfectly live. Occupancy is the share
+  of probes in the busiest slice: 0.500 balanced, 1.000 collapsed.
+    BASE    creatures 12/12  ctx_slots 0 (asked 0)  present 0.0000  occupancy 0.0000  <- table OFF by design
+    RET     creatures 12/12  ctx_slots 2 (asked 2)  present 1.0000  occupancy 0.5177  
+    ORACLE  creatures 12/12  ctx_slots 2 (asked 2)  present 1.0000  occupancy 0.5035  
+    SHUF    creatures 12/12  ctx_slots 2 (asked 2)  present 1.0000  occupancy 0.5372  
+
+  CLAUSE 2 -- DOES §49 REPRODUCE HERE? A different instrument invocation is
+  exactly where this project has found harness divergence before, so the
+  index is re-measured rather than cited. §49 read RET at +0.3278.
+    arm     ctx_match  null       excess     window
+    RET     0.8517     0.5352     +0.3165    probes
+    ORACLE  1.0000     0.5334     +0.4666    probes
+    SHUF    0.5266     0.5329     -0.0063    probes
+
+  CLAUSE 3 -- IS THE INDEX THERE WHEN THE MECHANISM NEEDS IT? ctxsrc's rule:
+  'before wiring a signal into a mechanism, check it is still there WHEN THE
+  MECHANISM NEEDS IT' -- coderprobe's 0.981 and ctxsrc's 0.533 are the same
+  module 400 ms apart. The bias table is written where REWARD lands, so the
+  teaching window is the one that matters, not the probe.
+    arm     window       ctx_match  null       excess
+    RET     probe        0.8517     0.5352     +0.3165
+            TEACHING     0.8400     0.5200     +0.3200
+    ORACLE  probe        1.0000     0.5334     +0.4666
+            TEACHING     1.0000     0.5198     +0.4802
+    SHUF    probe        0.5266     0.5329     -0.0063
+            TEACHING     0.5238     0.5188     +0.0050
+
+    RET: probe +0.3165, teaching +0.3200. A teaching value well below the
+    probe value is the AUDITORY failure reappearing in the visual path --
+    an index that is right when looked at and gone when used.
+
+  CLAUSE 4 -- THE VOICE. Two estimators, and the ORDER MATTERS.
+
+  4a (PRIMARY) -- THE TAUGHT DIRECTION. Projection of the per-object voice
+  difference onto the teacher's axis, in multiples of the separation asked
+  for (1.0 = full compliance). Zero expectation under drift, and signed.
+    arm     taught             random             taught-random
+    BASE    +0.0149 +- 0.0245  -0.0051 +- 0.0156  +0.0200 +- 0.0250
+    RET     +0.5875 +- 0.1500  -0.0659 +- 0.1609  +0.6534 +- 0.2236
+    ORACLE  +0.9798 +- 0.2340  +0.1989 +- 0.2240  +0.7809 +- 0.2842
+    SHUF    +0.0194 +- 0.0362  +0.0458 +- 0.0352  -0.0264 +- 0.0264
+
+  4b (SECONDARY) -- DECODABILITY. Held-out accuracy on object identity.
+  CONFOUNDED by table divergence wherever the index is object-correlated,
+  so it is reported and NOT used for the verdict. A high number here with a
+  zero in 4a means the two voices DIFFER without differing as taught.
+    arm     taught           random           taught-random      beat own ctl
+    BASE     0.609 +- 0.037   0.558 +- 0.011  +0.052 +- 0.036    8 of 12
+    RET      0.872 +- 0.018   0.900 +- 0.027  -0.028 +- 0.027    3 of 12
+    ORACLE   0.816 +- 0.079   0.948 +- 0.016  -0.133 +- 0.082    5 of 12
+    SHUF     0.583 +- 0.020   0.534 +- 0.012  +0.049 +- 0.021    7 of 12
+
+  CLAUSE 5 -- THE VERDICT, spanning the sign. Paired by creature.
+    RET - SHUF     +0.6798  (paired SE 0.2282, so 3.0 SE; unpaired SE 0.2252)
+    ORACLE - SHUF  +0.8073  (paired SE 0.2685)
+    in these units 1.0 is FULL compliance with the teacher, so 2 SE = 0.4565
+    is the smallest share of the asked-for gesture this run can resolve.
+
+    (a) THE VOICE CARRIES WHAT THE CREATURE SEES, off an index it derived
+    itself. RET - SHUF +0.6798 = 3.0 SE, and ORACLE - SHUF +0.8073 says the
+    table can express it. RET reaches 84% of the achievable lift.
+WALL 1249.59 s

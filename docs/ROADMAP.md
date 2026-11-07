@@ -7971,3 +7971,89 @@ Parallel wall time is **170 s** for 96 sessions at 150 000 ticks, so the 900 000
 **No speedup factor is quoted**, because the serial reference ran concurrently with the `g3probe`
 bit-identity check and a contended baseline is exactly how the parallel-run note's first speedup table
 came out flattering.
+
+### §50 RESULT: THE CREATURE SPEAKS THE OBJECT IT SEES
+
+Full run, 900 000 ticks, 12 creatures × 4 index arms × 2 target arms = 96 sessions, ~21 min
+parallel (`results/n50-objname.log`, per-creature rows in `results/n50-objname-perseed.log`,
+genome `results/n50-genome.toml`). Re-run with per-creature output added reproduced clauses 1–3
+and clause 5 **identically**, which doubles as a determinism check.
+
+#### CLAUSE 3 CONFIRMED THE PREDICTION, AND IT IS THE WHOLE RESULT
+
+| index | while presented | **in the reward window** |
+|---|---|---|
+| the ear — `ctxsrc`, published | 1.000 | **0.533, at chance** |
+| **the retina — §50** | 0.8517 | **0.8400, intact** |
+
+`ctxsrc` named *persistence* as what stood between `areax` v51 and naming: the auditory index is at
+ceiling while the word plays and gone by the time reward lands 800 ms later, and nothing in the
+creature holds it. **A toy in view does not stop.** The visual index is as good in the reward window
+as at the probe — the obstruction does not arise, structurally rather than by degree. This was
+derived from the archive before the run and clause 3 measured it instead of asserting it.
+
+#### CLAUSE 2 REPRODUCED §49 ON A DIFFERENT INSTRUMENT
+
+`ctx_match` 0.8517 against a measured null of 0.5352 = **+0.3165**, against §49's +0.3278. Occupancy
+0.5177 — balanced, no collapse. ORACLE 1.0000 by construction, SHUF −0.0063 as a drawn pin must.
+
+#### CLAUSE 4a — THE VOICE, IN MULTIPLES OF THE SEPARATION THE TEACHER ASKED FOR
+
+| arm | taught | random | taught − random | beat own ctl | taught > 0 |
+|---|---|---|---|---|---|
+| `BASE` — table off | +0.0149 ± 0.0245 | −0.0051 | +0.0200 ± 0.0250 | 7/12 | 9/12 |
+| **`RET` — self-derived** | **+0.5875 ± 0.1500** | −0.0659 | **+0.6534 ± 0.2236** | **10/12** | **11/12** |
+| `ORACLE` — perfect index | +0.9798 ± 0.2340 | +0.1989 | +0.7809 ± 0.2842 | 10/12 | 10/12 |
+| `SHUF` — label destroyed | +0.0194 ± 0.0362 | +0.0458 | −0.0264 ± 0.0264 | 5/12 | 5/12 |
+
+**`RET − SHUF` = +0.6798, paired SE 0.2282, 3.0 SE** — clears the pre-registered 2 SE bar. `ORACLE`
+works, so the ceiling is real; `RET` reaches **84%** of the achievable lift and **60%** of `ORACLE`'s
+taught column. Every *random* arm sits at zero, which is the estimator validating itself.
+
+**The effect is not bimodal**, which a mean and an SE cannot tell you. Per creature, `RET` taught:
+
+```
+-0.244  +0.119  +1.071  +0.696  +1.738  +0.398  +0.876  +0.099  +0.359  +0.429  +0.750  +0.758
+```
+
+Eleven of twelve positive, ten of twelve beating their own control, a continuous spread from 0.10 to
+1.74 with one negative. `SHUF` reads 5/12 and 5/12 — an exact coin flip with every value under 0.27.
+And `BASE`'s +0.0200 ± 0.0250 is the `axis_sep` rendering of `g3probe`'s published 0.535 vs 0.507,
+which cross-validates the new estimator against a known number.
+
+#### WHAT THIS CORRECTS IN THE PUBLISHED CONCLUSION
+
+`g3probe`'s verdict — *"a perfect teacher cannot make this voice depend on what the creature sees"*,
+0.535 against a 0.75 bar — was measured with `context_slots = 0`. **That null was a statement about a
+missing index, not about the learning rule.** With the bias table on and indexed off the creature's
+own retinal partition, the same idealised teacher moves the voice to **59% of the asked-for
+separation** against **2% with the table off**. Node perturbation *can* learn a conditional mapping
+from what is in view to what the larynx does — it needs somewhere to put the condition.
+
+`CONCLUSION.md`'s spine was *this architecture can learn a bias per context and cannot learn the
+context.* For vision, under held nuisances, **both halves now hold**: the creature learns the context
+(§49) and then names off it (§50).
+
+#### THE SCOPE LIMITS, WHICH ARE REAL
+
+1. **The teacher is idealised** — dense, immediate, and it says which object this is. The creature
+   supplies the *question* (which object, from its own retina, unsupervised); the teacher still
+   supplies the *answer* (which sound). `g3probe`'s own note names what remains: the
+   picture→sound→voice teaching signal. **This is not autonomous word learning.**
+2. **Position and size are held** in all four arms. §50 inherits §49's measured conditions rather
+   than re-testing them: the conscience is necessary (`ctx_proto_gate` 2) and holding nuisances is
+   worth 4.3×. A caregiver holding a toy still is the setting this result is about.
+3. **Two objects.** The vocabulary ceiling and axis-count work is about a different question.
+
+#### THE ESTIMATOR CHANGE WAS NOT COSMETIC — IT REVERSED THE VERDICT
+
+On the **pre-registered** primary estimator, this same run reads `ORACLE` **−0.133** and `RET`
+**−0.028**: taught *losing* to random. That fires branch (b) — *"the ceiling itself is null, the block
+is expression"* — and closes the line **in exactly the wrong direction**, on a run whose honest
+estimator says 3.0 SE the other way.
+
+The accuracy column is contaminated in *both* arms because it measures table divergence rather than
+teaching, so which way `taught − random` lands is arbitrary: at the smoke it flattered `ORACLE`
+(+0.025), at full budget it buries it (−0.133). **The danger was described as a false headline when
+the smoke found it; the full run shows the worse failure mode was a false refusal.** A confounded
+estimator does not merely inflate — it has no reliable sign.

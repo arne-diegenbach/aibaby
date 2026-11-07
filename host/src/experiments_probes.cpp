@@ -10009,7 +10009,8 @@ bool run_objname(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
   std::printf("\n  4a (PRIMARY) -- THE TAUGHT DIRECTION. Projection of the per-object voice\n"
               "  difference onto the teacher's axis, in multiples of the separation asked\n"
               "  for (1.0 = full compliance). Zero expectation under drift, and signed.\n");
-  std::printf("    %-7s %-18s %-18s %s\n", "arm", "taught", "random", "taught-random");
+  std::printf("    %-7s %-18s %-18s %-18s %s\n", "arm", "taught", "random", "taught-random",
+              "beat ctl / t>0");
   double mean_ax[kArms] = {}, se_ax[kArms] = {};
   for (uint32_t a = 0; a < kArms; ++a) {
     Row& q = rows[a];
@@ -10021,8 +10022,29 @@ bool run_objname(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
     const double mt = n50_mean_se(q.ax_t, &se_t);
     const double mc = n50_mean_se(q.ax_c, &se_c);
     mean_ax[a] = n50_mean_se(q.ax_diff, &se_ax[a]);
-    std::printf("    %-7s %+7.4f +- %-7.4f %+7.4f +- %-7.4f %+7.4f +- %.4f\n", arms[a].name,
-                mt, se_t, mc, se_c, mean_ax[a], se_ax[a]);
+    uint32_t ax_beat = 0, ax_pos = 0;
+    for (size_t i = 0; i < q.ax_diff.size(); ++i) {
+      if (q.ax_diff[i] > 0.0) ++ax_beat;
+      if (q.ax_t[i] > 0.0) ++ax_pos;
+    }
+    std::printf("    %-7s %+7.4f +- %-7.4f %+7.4f +- %-7.4f %+7.4f +- %-7.4f %2u/%2u  %2u/%2u\n",
+                arms[a].name, mt, se_t, mc, se_c, mean_ax[a], se_ax[a], ax_beat,
+                uint32_t(q.ax_diff.size()), ax_pos, uint32_t(q.ax_t.size()));
+  }
+  // THE DISTRIBUTION, NOT JUST THE MEAN. An SE of 0.15 over 12 creatures implies
+  // a per-creature SD near 0.52, and a mean of ~0.59 with that spread could be
+  // four creatures complying fully and eight not -- a different claim entirely
+  // from twelve creatures each complying partly. `smoothing-sweep-closed` is the
+  // precedent: three seeds with unanimous signs collapsed at n=6, and a mean is
+  // the statistic that hides it.
+  std::printf("\n  4a PER CREATURE (taught), so the shape of the distribution is visible\n"
+              "  rather than inferred from a mean and an SE:\n");
+  for (uint32_t a = 0; a < kArms; ++a) {
+    const Row& q = rows[a];
+    if (q.ax_t.empty()) continue;
+    std::printf("    %-7s", arms[a].name);
+    for (size_t i = 0; i < q.ax_t.size(); ++i) std::printf(" %+6.3f", q.ax_t[i]);
+    std::printf("\n");
   }
 
   std::printf("\n  4b (SECONDARY) -- DECODABILITY. Held-out accuracy on object identity.\n"
