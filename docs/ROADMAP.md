@@ -8364,7 +8364,9 @@ over an 800-tick reward window — 5.33 evaluations a trial — so its baseline 
 evaluations, which is **9.4 trials** of memory. That span is what *"closer than this creature usually
 gets"* means.
 
-§51 evaluates on the plasticity clock to match T0's dose: 90 evaluations a trial, **18× denser**.
+§51 evaluates on the plasticity clock to match T0's dose: 90 evaluations a trial, **16.9× denser**
+(90 ÷ 5.33; the first draft of this paragraph said 18× from rounding 5.33 to 5, and the instrument
+prints the ratio it actually used rather than the one that was typed).
 Inheriting 0.02 would have left the baseline with **half a trial** of memory and silently turned
 "closer than usual" into "closer than a moment ago" — a different teacher wearing M1c's name, and a
 null that says nothing about what a teacher has to know.
