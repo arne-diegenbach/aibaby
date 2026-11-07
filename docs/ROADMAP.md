@@ -8689,3 +8689,25 @@ why the two echo postures are 2 Hz apart and which no amount of re-scoring will 
 confirms that a sound-only teacher moves the formants, then **the echo route's silence on vowels
 stops being an obstacle and starts being the finding**: reward reaches the vowel where the reflex does
 not.
+
+### §51's VERIFY GATE, ALL FOUR KEYS
+
+`results/n51-verify.log`:
+
+```
+verify PASS
+hash              ad96f882becbee92  as recorded
+pinned hash       PASS
+experiments       24 as expected, 0 not
+```
+
+The pinned hash is unmoved, so §51's `teacher`/`pairing` parameters, the dose counters, the probe
+formant accumulator, the ruler calibration and the moved `formant_error` are all inert for the
+shipped genome. The count stays 24 because `objword` and `wordruler` are both `Tier::kLong` /
+`Expect::kRead`, exactly as `objname` and `visprobe` were.
+
+**And the log was re-run to get it.** The first two attempts collided: `--verify` is not an argument
+(the flag is `--experiment verify`), and then two runs were launched redirecting to the *same* path,
+so they interleaved. **The interleaved log still ended in `verify PASS` and looked entirely clean**,
+which is why it was discarded rather than read — `smoke-the-exact-command` is about the invocation,
+and this is the same lesson for the output file.
