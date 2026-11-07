@@ -1,0 +1,87 @@
+experiment: wordruler
+  SHORT RUN — 150000 ticks against a minimum of 450000. derived: §51's own estimator could not see what its teacher aimed at --
+  axis_sep = 1.0 is the gap between two echo postures 2 Hz apart on F1, so
+  worth +0.0008 of a formant separation. §52 re-asks the question on the
+  FORMANT gap. The budget is a QUARTER of §51's and that is a power
+  argument, not thrift: the paired SD GROWS with ticks (0.0451 at 150k ->
+  0.1689 at 450k) because bias_ctx_ is a clamped accumulator whose slots
+  random-walk apart, so more ticks buy NEGATIVE power. Projected to 1.8M the
+  2 SE bar would be 0.225, which would not even detect §51's own +0.1889.
+  Run at 450k AND 900k as a pre-registered dose axis, because one budget is
+  itself a selection when the SD moves with it. Six arms: T1.ORACLE rises to
+  n=36 (it was the load-bearing NULL in §51) and gains T1.ORACLE.D, the arm
+  without which ORACLE's gap cannot be told from what a pinned two-slot
+  table does alone. Clause 3 prints the RULER FIRST. kRead: every branch,
+  the four VOIDs included, prints a reading rather than returning false
+  Everything below is printed for debugging and is NOT a
+  measurement; this run cannot pass whatever it reads.
+
+  the question      §52. §51's primary could not see what its teacher aimed
+                    at: axis_sep = 1.0 is worth +0.0008 of a formant gap. Same
+                    question, scored on the quantity a listener hears.
+  what §51 left     T1.ORACLE read +0.1889 on the formant gap -- 236x the
+                    echo-posture ceiling -- with NO SE and NO decorrelated
+                    twin, so it could not be separated from what a pinned
+                    two-slot table does by itself. T1.ORACLE.D is that twin.
+  the budget        chosen on POWER, not outcome: the paired SD GROWS with
+                    ticks (0.0451 at 150k -> 0.1689 at 450k), so more ticks buy
+                    NEGATIVE power here. Two budgets run as a dose axis.
+  session           150.0 s of simulated life x 168 sessions, 6 arms
+  instrument        wordruler   trial seed 0000000001357569   168 sessions
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+
+  CLAUSE 3 (FIRST, DELIBERATELY) -- THE RULER. §51 discovered AFTER spending
+  its budget that axis_sep = 1.0 is the gap between two echo postures that are
+  THE SAME VOWEL. `echo gap` is what full compliance is worth in formant terms.
+    the gap AVAILABLE between the two words is 1.6417 (a voice exactly on one
+    word scores perr(the other)), so every `echo gap` below is read against it.
+    T0.RET       |axis|^2 in F1+F2 0.1909   echo gap +0.0008 = 0.05% of available   <-- NOT A FORMANT RULER
+    T1.RET       |axis|^2 in F1+F2 0.2008   echo gap -0.0228 = 1.39% of available   <-- NOT A FORMANT RULER
+    T1.RET.D     |axis|^2 in F1+F2 0.2008   echo gap -0.0228 = 1.39% of available   <-- NOT A FORMANT RULER
+    T1.ORACLE    |axis|^2 in F1+F2 0.2008   echo gap -0.0228 = 1.39% of available   <-- NOT A FORMANT RULER
+    T1.ORACLE.D  |axis|^2 in F1+F2 0.2008   echo gap -0.0228 = 1.39% of available   <-- NOT A FORMANT RULER
+    T1.BASE      |axis|^2 in F1+F2 0.1717   echo gap +0.0057 = 0.35% of available   <-- NOT A FORMANT RULER
+    CONFIRMED: axis_sep is reported below as a SECONDARY ONLY and no verdict
+    rests on it. This is §51's correction applied before the fact.
+
+  CLAUSE 0 -- DOSE. Below 0.50 of T0's fire rate is UNDERPOWERED, not null;
+  a T1 praise fraction outside [0.35, 0.65] means the baseline is not straddled.
+    T0.RET       n 12/12  slots 2(ask 2)  present 1.0000  occ 0.8917  fired 1.00x T0  praise 0.493  mean|r| 0.0781  probes 240
+    T1.RET       n 36/36  slots 2(ask 2)  present 1.0000  occ 0.6875  fired 0.80x T0  praise 0.519  mean|r| 0.5000  probes 720
+    T1.RET.D     n 36/36  slots 2(ask 2)  present 1.0000  occ 0.6847  fired 0.81x T0  praise 0.512  mean|r| 0.5000  probes 720
+    T1.ORACLE    n 36/36  slots 2(ask 2)  present 1.0000  occ 0.5000  fired 0.84x T0  praise 0.590  mean|r| 0.5000  probes 720
+    T1.ORACLE.D  n 36/36  slots 2(ask 2)  present 1.0000  occ 0.5000  fired 0.86x T0  praise 0.509  mean|r| 0.5000  probes 720
+    T1.BASE      n 12/12  slots 0(ask 0)  present 0.0000  occ 0.0000  fired 0.84x T0  praise 0.465  mean|r| 0.5000  probes 240
+
+  CLAUSE 1 -- THE INDEX, bar +0.20 excess.  CLAUSE 2 -- THE PROBE IS SILENT,
+  probe heard must be 0.0000 and teach heard 0.4444.
+    T0.RET       excess -0.0216   probe heard 0.0000  teach heard 0.0000
+    T1.RET       excess -0.0409   probe heard 0.0000  teach heard 0.4444
+    T1.RET.D     excess -0.0404   probe heard 0.0000  teach heard 0.4444
+    T1.ORACLE    excess +0.4153 (pinned/off)   probe heard 0.0000  teach heard 0.4444
+    T1.ORACLE.D  excess +0.4153 (pinned/off)   probe heard 0.0000  teach heard 0.4444
+    T1.BASE      excess +0.0000 (pinned/off)   probe heard 0.0000  teach heard 0.4444
+
+  THE PRIMARY -- THE FORMANT GAP at the silent probe: perr(the OTHER word)
+  minus perr(ITS OWN word), so positive means the voice sits closer to the word
+  this object is named by. The units a listener hears.
+    T0.RET       formant gap +0.0127 +- 0.0098  (n 12, 7 > 0)   [axis_sep +0.0583 +- 0.0306]   §50's teacher -- the rung on axis_sep, predicted NULL/NEGATIVE on formants
+    T1.RET       formant gap -0.0002 +- 0.0073  (n 36, 17 > 0)   [axis_sep -0.0065 +- 0.0293]   THE CLAIM
+    T1.RET.D     formant gap -0.0064 +- 0.0052  (n 36, 17 > 0)   [axis_sep -0.0158 +- 0.0245]   word DRAWN -- the primary's control
+    T1.ORACLE    formant gap +0.0819 +- 0.0177  (n 36, 27 > 0)   [axis_sep +0.0698 +- 0.1429]   perfect index -- the CEILING
+    T1.ORACLE.D  formant gap -0.0220 +- 0.0203  (n 36, 15 > 0)   [axis_sep -0.0381 +- 0.1166]   perfect index, word DRAWN -- THE ARM §51 LACKED
+    T1.BASE      formant gap -0.0024 +- 0.0068  (n 12, 5 > 0)   [axis_sep +0.0159 +- 0.0476]   table OFF -- the association route
+
+  CLAUSE 4 -- THE RUNG: does the protocol teach AT ALL? T0.RET on axis_sep
+  +0.0583 +- 0.0306 = 1.9 SE above zero: FAIL. (§51 read +0.5295 at 1.8M and +0.0583
+  at 150k, so the MAGNITUDE is budget-dependent and is NOT the bar -- a 2 SE
+  test asks what the rung means.) On the FORMANT primary §51 measured T0 at
+  -0.0059, so T0 is predicted NULL OR NEGATIVE here and reads +0.0127 +- 0.0098;
+  a LARGE POSITIVE T0 would contradict §51's ruler calibration.
+
+  CLAUSE 5 -- THE VERDICT. Paired by creature, bar 2 SE, sign unconstrained.
+    T1.RET - T1.RET.D         +0.0062  (paired SE 0.0075, 0.8 SE)   <-- PRIMARY
+    T1.ORACLE - T1.ORACLE.D   +0.1039  (paired SE 0.0284, 3.7 SE)   <-- CEILING
+
+    (1) VOID: T0 did not reproduce §50's effect on its own ruler. The refusal is the result.

@@ -11020,4 +11020,354 @@ bool run_objword(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
   return true;
 }
 
+// ===================== §52 — THE SAME QUESTION, AUDIBLE RULER =================
+//
+// `objword` (§51) is left EXACTLY as it was, so `results/n51-objword.log` stays
+// reproducible. Nothing in the session function needs changing either: `pin_mode`
+// and `pairing` already compose into the one arm §51 lacked -- a PERFECT index
+// with the word DRAWN -- which is what makes `ORACLE`'s formant gap readable at
+// all. So §52 is a new driver and no edit to shared code.
+//
+// Three things are different, and each one is a §51 lesson:
+//   1. THE PRIMARY IS THE FORMANT GAP. §51's `axis_sep = 1.0` is worth +0.0008
+//      of a formant separation, so it cannot see what this teacher aims at.
+//   2. THE RULER PRINTS FIRST, before any verdict.
+//   3. `T1.ORACLE` runs at n = 36 and gains a `.D` twin, because it was the arm
+//      whose NULL carried the verdict and its 2 SE spanned the whole comparison.
+bool run_wordruler(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  aibaby::Dna dna;
+  if (dna.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) return false;
+  const double dt = double(dna.header().sim.dt_ms);
+  constexpr uint32_t kObjects = 2;
+  constexpr uint32_t kShuffles = 64;
+  const double kHeardExpect = double(kM3LabelTicks - kM3SettleTicks) /
+                              double(kM3TrialTicks - kM3SettleTicks);
+
+  struct Arm {
+    const char* name;
+    uint32_t source, slots, gate;
+    int pin, teacher, pairing;
+    uint32_t n;
+    const char* what;
+  };
+  constexpr uint32_t kArms = 6;
+  const Arm arms[kArms] = {
+      {"T0.RET", 5u, kObjects, 2u, 0, 0, 0, 12u,
+       "§50's teacher -- the rung on axis_sep, predicted NULL/NEGATIVE on formants"},
+      {"T1.RET", 5u, kObjects, 2u, 0, 1, 0, 36u, "THE CLAIM"},
+      {"T1.RET.D", 5u, kObjects, 2u, 0, 1, 1, 36u, "word DRAWN -- the primary's control"},
+      {"T1.ORACLE", 5u, kObjects, 2u, 1, 1, 0, 36u, "perfect index -- the CEILING"},
+      {"T1.ORACLE.D", 5u, kObjects, 2u, 1, 1, 1, 36u,
+       "perfect index, word DRAWN -- THE ARM §51 LACKED"},
+      {"T1.BASE", 0u, 0u, 0u, 0, 1, 0, 12u, "table OFF -- the association route"},
+  };
+
+  std::vector<uint32_t> job_arm, job_rep;
+  for (uint32_t a = 0; a < kArms; ++a) {
+    for (uint32_t r = 0; r < arms[a].n; ++r) { job_arm.push_back(a); job_rep.push_back(r); }
+  }
+  const uint32_t kJobs = uint32_t(job_arm.size());
+
+  std::printf("  the question      §52. §51's primary could not see what its teacher aimed\n"
+              "                    at: axis_sep = 1.0 is worth +0.0008 of a formant gap. Same\n"
+              "                    question, scored on the quantity a listener hears.\n");
+  std::printf("  what §51 left     T1.ORACLE read +0.1889 on the formant gap -- 236x the\n"
+              "                    echo-posture ceiling -- with NO SE and NO decorrelated\n"
+              "                    twin, so it could not be separated from what a pinned\n"
+              "                    two-slot table does by itself. T1.ORACLE.D is that twin.\n");
+  std::printf("  the budget        chosen on POWER, not outcome: the paired SD GROWS with\n"
+              "                    ticks (0.0451 at 150k -> 0.1689 at 450k), so more ticks buy\n"
+              "                    NEGATIVE power here. Two budgets run as a dose axis.\n");
+  std::printf("  session           %.1f s of simulated life x %u sessions, 6 arms\n",
+              double(ticks) * dt / 1000.0, kJobs);
+  instrument("wordruler", dna.header().seed ^ 0x52A0u, kJobs, "sessions");
+
+  struct Cell {
+    bool ok = false, ax_ok = false;
+    double ax = 0, pe = 0;
+    bool pe_ok = false;
+    double match = 0, null = 0, occ = 0, present = 0;
+    double fired = 0, eligible = 0, praise = 0, rmean = 0, pheard = 0, theard = 0;
+    double axis_f12 = 0, echo_gap = 0;
+    uint32_t slots = 0, probes = 0;
+  };
+  const std::vector<Cell> cells = parallel_reps<Cell>(kJobs, [&](uint32_t i) {
+    const uint32_t a = job_arm[i], r = job_rep[i];
+    Cell c;
+    std::vector<uint8_t> variant = blob;
+    const uint64_t seed = dna.header().seed + r * 7919ull;
+    std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+    {
+      aibaby::DnaHeader h;
+      std::memcpy(&h, variant.data(), sizeof(h));
+      h.exploration.context_source = arms[a].source;
+      h.exploration.context_slots = arms[a].slots;
+      h.exploration.ctx_proto_gate = arms[a].gate;
+      std::memcpy(variant.data(), &h, sizeof(h));
+    }
+    const G3Probe run =
+        run_g3probe_session(variant, ticks, /*consistent=*/true, 0x51E7u, 0,
+                            /*hold_nuisance=*/true, /*shuffle_order=*/false,
+                            arms[a].pin, arms[a].teacher, arms[a].pairing);
+    if (!run.ok || run.probes < 12) return c;
+    c.ok = true;
+    c.ax_ok = run.axis_ok;
+    c.ax = run.axis_sep;
+    // A cell with no voiced probe frame has NO formant measurement. Averaging its
+    // exact zero in would pull every arm toward zero in proportion to how silent
+    // it was, which `delivery-fraction` makes a live risk rather than a pedantic
+    // one. So it is dropped from the primary and counted in the n column.
+    if (run.perr_n > 0) {
+      c.pe = (run.perr_other - run.perr_own) / double(run.perr_n);
+      c.pe_ok = true;
+    }
+    c.present = run.ctx_present_frac;
+    c.occ = vis_occupancy(run.ctx_slot, kObjects);
+    c.slots = run.ctx_slots;
+    c.probes = run.probes;
+    c.fired = run.t_fired; c.eligible = run.t_eligible; c.praise = run.t_praise;
+    c.rmean = run.reward;
+    c.pheard = run.probe_ticks > 0 ? run.probe_heard / run.probe_ticks : 0.0;
+    c.theard = run.teach_ticks > 0 ? run.teach_heard / run.teach_ticks : 0.0;
+    c.axis_f12 = run.axis_f12;
+    c.echo_gap = run.echo_perr_ok ? run.echo_perr_gap : 0.0;
+    aibaby::Rng srng;
+    srng.seed(seed ^ 0x5A17u);
+    if (run.ctx_label.size() >= 12) {
+      c.match = vis_ctx_match(run.ctx_label, run.ctx_slot, kObjects, nullptr);
+      std::vector<int> shuf = run.ctx_label;
+      double acc = 0.0;
+      for (uint32_t sh = 0; sh < kShuffles; ++sh) {
+        for (size_t k = shuf.size(); k > 1; --k) {
+          const size_t j = size_t(srng.next() % uint64_t(k));
+          std::swap(shuf[k - 1], shuf[j]);
+        }
+        acc += vis_ctx_match(shuf, run.ctx_slot, kObjects, nullptr);
+      }
+      c.null = acc / double(kShuffles);
+    }
+    return c;
+  });
+
+  struct Row {
+    std::vector<double> ax, pe;
+    std::vector<uint32_t> ax_who, pe_who;
+    double match = 0, null = 0, occ = 0, present = 0;
+    double fired = 0, eligible = 0, praise = 0, rmean = 0, pheard = 0, theard = 0;
+    double axis_f12 = 0, echo_gap = 0;
+    uint32_t slots = 0, n_ok = 0, probes = 0, pe_pos = 0;
+  } rows[kArms];
+  {
+    uint32_t i = 0;
+    for (uint32_t a = 0; a < kArms; ++a) {
+      for (uint32_t r = 0; r < arms[a].n; ++r, ++i) {
+        const Cell& c = cells[i];
+        if (!c.ok) continue;
+        Row& q = rows[a];
+        if (c.ax_ok) { q.ax.push_back(c.ax); q.ax_who.push_back(r); }
+        if (c.pe_ok) {
+          q.pe.push_back(c.pe);
+          q.pe_who.push_back(r);
+          if (c.pe > 0.0) ++q.pe_pos;
+        }
+        q.match += c.match; q.null += c.null; q.occ += c.occ; q.present += c.present;
+        q.fired += c.fired; q.eligible += c.eligible; q.praise += c.praise;
+        q.rmean += c.rmean; q.pheard += c.pheard; q.theard += c.theard;
+        q.axis_f12 += c.axis_f12; q.echo_gap += c.echo_gap;
+        q.probes += c.probes; q.slots = c.slots;
+        ++q.n_ok;
+      }
+    }
+  }
+  for (uint32_t a = 0; a < kArms; ++a) {
+    Row& q = rows[a];
+    if (!q.n_ok) continue;
+    const double in = 1.0 / double(q.n_ok);
+    q.match *= in; q.null *= in; q.occ *= in; q.present *= in; q.rmean *= in;
+    q.pheard *= in; q.theard *= in; q.axis_f12 *= in; q.echo_gap *= in;
+  }
+
+  // ---- CLAUSE 3 FIRST: THE RULER. §51 spent an hour learning to do this. -----
+  std::printf("\n  CLAUSE 3 (FIRST, DELIBERATELY) -- THE RULER. §51 discovered AFTER spending\n"
+              "  its budget that axis_sep = 1.0 is the gap between two echo postures that are\n"
+              "  THE SAME VOWEL. `echo gap` is what full compliance is worth in formant terms.\n");
+  // AGAINST THE GAP THAT IS ACTUALLY AVAILABLE, not against a magic constant.
+  // A voice sitting exactly on one word scores perr(the other word), so the full
+  // scale of the primary is computable from `kWords` alone. The smoke's first
+  // version of this gate compared `echo gap` to 0.01 and let -0.0228 through as
+  // if it were meaningful, when -0.0228 is 1.4% of what is on offer -- a
+  // threshold with no derivation, which is the constant this project keeps
+  // paying for.
+  const double avail = formant_error(double(kWords[0].f1), double(kWords[0].f2), kWords[1]);
+  std::printf("    the gap AVAILABLE between the two words is %.4f (a voice exactly on one\n"
+              "    word scores perr(the other)), so every `echo gap` below is read against it.\n",
+              avail);
+  bool axis_usable = true;
+  for (uint32_t a = 0; a < kArms; ++a) {
+    const double frac = avail > 1e-9 ? std::fabs(rows[a].echo_gap) / avail : 0.0;
+    std::printf("    %-12s |axis|^2 in F1+F2 %.4f   echo gap %+.4f = %.2f%% of available%s\n",
+                arms[a].name, rows[a].axis_f12, rows[a].echo_gap, 100.0 * frac,
+                frac < 0.05 ? "   <-- NOT A FORMANT RULER" : "");
+    if (frac < 0.05) axis_usable = false;
+  }
+  if (!axis_usable) {
+    std::printf("    CONFIRMED: axis_sep is reported below as a SECONDARY ONLY and no verdict\n"
+                "    rests on it. This is §51's correction applied before the fact.\n");
+  }
+
+  // ---- CLAUSE 0: DOSE ----
+  std::printf("\n  CLAUSE 0 -- DOSE. Below 0.50 of T0's fire rate is UNDERPOWERED, not null;\n"
+              "  a T1 praise fraction outside [0.35, 0.65] means the baseline is not straddled.\n");
+  const double t0_rate = rows[0].eligible > 0 ? rows[0].fired / rows[0].eligible : 0.0;
+  bool dose_ok = true, baseline_ok = true;
+  for (uint32_t a = 0; a < kArms; ++a) {
+    const Row& q = rows[a];
+    const double rate = q.eligible > 0 ? q.fired / q.eligible : 0.0;
+    const double pf = q.fired > 0 ? q.praise / q.fired : 0.0;
+    const double rel = t0_rate > 0 ? rate / t0_rate : 0.0;
+    std::printf("    %-12s n %2u/%2u  slots %u(ask %u)  present %.4f  occ %.4f  fired %.2fx T0"
+                "  praise %.3f  mean|r| %.4f  probes %u\n",
+                arms[a].name, q.n_ok, arms[a].n, q.slots, arms[a].slots, q.present, q.occ,
+                rel, pf, q.rmean, q.probes);
+    if (a > 0 && rel < 0.50) dose_ok = false;
+    if (arms[a].teacher == 1 && (pf < 0.35 || pf > 0.65)) baseline_ok = false;
+  }
+
+  // ---- CLAUSES 1 AND 2 ----
+  std::printf("\n  CLAUSE 1 -- THE INDEX, bar +0.20 excess.  CLAUSE 2 -- THE PROBE IS SILENT,\n"
+              "  probe heard must be 0.0000 and teach heard %.4f.\n", kHeardExpect);
+  bool index_ok = true, silent_ok = true;
+  for (uint32_t a = 0; a < kArms; ++a) {
+    const double ex = rows[a].match - rows[a].null;
+    const double want = arms[a].teacher == 0 ? 0.0 : kHeardExpect;
+    const bool bad = rows[a].pheard > 1e-9 || std::fabs(rows[a].theard - want) > 1e-3;
+    const bool idx = arms[a].slots > 0 && arms[a].pin == 0;
+    std::printf("    %-12s excess %+.4f%s   probe heard %.4f  teach heard %.4f%s\n",
+                arms[a].name, ex, idx ? "" : " (pinned/off)", rows[a].pheard, rows[a].theard,
+                bad ? "   <-- BAD" : "");
+    if (idx && arms[a].teacher == 1 && ex < 0.20) index_ok = false;
+    if (bad) silent_ok = false;
+  }
+
+  // ---- THE PRIMARY ----
+  std::printf("\n  THE PRIMARY -- THE FORMANT GAP at the silent probe: perr(the OTHER word)\n"
+              "  minus perr(ITS OWN word), so positive means the voice sits closer to the word\n"
+              "  this object is named by. The units a listener hears.\n");
+  double mpe[kArms] = {}, spe[kArms] = {}, max_[kArms] = {}, sax[kArms] = {};
+  for (uint32_t a = 0; a < kArms; ++a) {
+    double s1 = 0.0, s2 = 0.0;
+    mpe[a] = n50_mean_se(rows[a].pe, &s1);
+    max_[a] = n50_mean_se(rows[a].ax, &s2);
+    spe[a] = s1;
+    sax[a] = s2;
+    std::printf("    %-12s formant gap %+.4f +- %.4f  (n %2zu, %u > 0)   [axis_sep %+.4f +- %.4f]"
+                "   %s\n",
+                arms[a].name, mpe[a], s1, rows[a].pe.size(), rows[a].pe_pos, max_[a], s2,
+                arms[a].what);
+  }
+
+  auto paired = [&](const Row& A, const Row& B, double* se) {
+    std::vector<double> dd;
+    for (size_t i = 0; i < A.pe_who.size(); ++i) {
+      for (size_t j = 0; j < B.pe_who.size(); ++j) {
+        if (A.pe_who[i] != B.pe_who[j]) continue;
+        dd.push_back(A.pe[i] - B.pe[j]);
+        break;
+      }
+    }
+    return n50_mean_se(dd, se);
+  };
+  double se_claim = 0, se_ceil = 0;
+  const double claim = paired(rows[1], rows[2], &se_claim);
+  const double ceil_ = paired(rows[3], rows[4], &se_ceil);
+
+  // THE RUNG IS "THE PROTOCOL TEACHES", AND ITS BAR IS 2 SE ABOVE ZERO -- NOT
+  // §51's +0.30. That bar was calibrated at 1.8M, where T0 read +0.5295, and T0
+  // on axis_sep is strongly budget-dependent: +0.0583 at 150k. At 450k it would
+  // land near +0.175 and VOID this run for a reason that has nothing to do with
+  // §52's question. A magnitude bar imported across a 4x budget change is a
+  // calibration error, so the rung asks the question it actually means -- is T0
+  // teaching at all -- and the magnitude is printed beside §51's for context
+  // without gating on it.
+  const bool rung_ok = sax[0] > 0.0 && max_[0] > 2.0 * sax[0];
+  std::printf("\n  CLAUSE 4 -- THE RUNG: does the protocol teach AT ALL? T0.RET on axis_sep\n"
+              "  %+.4f +- %.4f = %.1f SE above zero: %s. (§51 read +0.5295 at 1.8M and +0.0583\n"
+              "  at 150k, so the MAGNITUDE is budget-dependent and is NOT the bar -- a 2 SE\n"
+              "  test asks what the rung means.) On the FORMANT primary §51 measured T0 at\n"
+              "  -0.0059, so T0 is predicted NULL OR NEGATIVE here and reads %+.4f +- %.4f;\n"
+              "  a LARGE POSITIVE T0 would contradict §51's ruler calibration.\n",
+              max_[0], sax[0], sax[0] > 0 ? max_[0] / sax[0] : 0.0, rung_ok ? "PASS" : "FAIL",
+              mpe[0], spe[0]);
+
+  std::printf("\n  CLAUSE 5 -- THE VERDICT. Paired by creature, bar 2 SE, sign unconstrained.\n");
+  std::printf("    T1.RET - T1.RET.D         %+.4f  (paired SE %.4f, %.1f SE)   <-- PRIMARY\n",
+              claim, se_claim, se_claim > 0 ? claim / se_claim : 0.0);
+  std::printf("    T1.ORACLE - T1.ORACLE.D   %+.4f  (paired SE %.4f, %.1f SE)   <-- CEILING\n",
+              ceil_, se_ceil, se_ceil > 0 ? ceil_ / se_ceil : 0.0);
+
+  if (!silent_ok || !rung_ok || !baseline_ok || !index_ok) {
+    std::printf("\n    (1) VOID: %s. The refusal is the result.\n",
+                !silent_ok ? "the probe was not silent"
+                           : (!rung_ok ? "T0 did not reproduce §50's effect on its own ruler"
+                                       : (!baseline_ok ? "the per-word baseline was not straddled"
+                                                       : "the index did not clear its bar")));
+    return true;
+  }
+  const bool base_fires = spe[5] > 0 && mpe[5] > 2.0 * spe[5];
+  const bool ceil_works = se_ceil > 0 && ceil_ > 2.0 * se_ceil;
+  const bool claim_works = se_claim > 0 && claim > 2.0 * se_claim;
+
+  if (base_fires) {
+    std::printf("\n    (2) THE ASSOCIATION ROUTE WORKS: T1.BASE %+.4f +- %.4f with slots = 0.\n"
+                "    Contradicts g2cond and pairprobe. Report as the headline and re-run\n"
+                "    pairprobe before believing it.\n", mpe[5], spe[5]);
+  } else if (!ceil_works) {
+    std::printf("\n    (3) THE CEILING DOES NOT CLEAR: ORACLE - ORACLE.D %+.4f +- %.4f. A\n"
+                "    perfect index with the word DRAWN scores what a perfect index with the\n"
+                "    word PAIRED does, so §51's +0.1889 would be what a pinned two-slot table\n"
+                "    does by itself rather than teaching.\n"
+                "\n"
+                "    *** AND THIS BRANCH SPANS TWO READINGS, WHICH IS A FAULT IN THE DESIGN\n"
+                "    AND IS DISCLOSED RATHER THAN HIDDEN. The ceiling arm is both the\n"
+                "    discriminator here AND the only positive control this run has on the\n"
+                "    formant gap -- T0 moves axis_sep hugely and formants not at all, and a\n"
+                "    FIXED-target arm (M1c, which does move F1/F2) would move both objects the\n"
+                "    same way and so produce no GAP. So a null here means EITHER 'the\n"
+                "    sound-only teacher cannot move formants conditionally' OR 'this run could\n"
+                "    not resolve it', and nothing in this instrument separates them. Read the\n"
+                "    dose column and the SE, compare the two budgets, and DO NOT quote this as\n"
+                "    a refusal from one budget alone.\n",
+                ceil_, se_ceil);
+  } else if (claim_works) {
+    std::printf("\n    (4) THE SOUND-ONLY CAREGIVER TEACHES, AND §51's NULL WAS THE RULER.\n"
+                "    T1.RET - T1.RET.D %+.4f = %.1f SE on the quantity a listener hears, with\n"
+                "    the ceiling at %+.4f = %.1f SE. T1 reaches %.0f%% of it. The caregiver\n"
+                "    compared two SOUNDS and never looked at the toy; the binding came from\n"
+                "    CO-OCCURRENCE. CHECK THE OTHER BUDGET BEFORE QUOTING THIS -- the dose axis\n"
+                "    is pre-registered precisely because this estimator's SD grows with ticks.\n",
+                claim, claim / se_claim, ceil_, ceil_ / se_ceil,
+                ceil_ > 0 ? 100.0 * claim / ceil_ : 0.0);
+  } else if (se_claim > 0 && claim < -2.0 * se_claim) {
+    std::printf("\n    (7) A REVERSAL: %+.4f = %.1f SE the wrong way, with the ceiling working\n"
+                "    at %+.4f. Explain T1.RET.D's persistent negative drift first -- it read\n"
+                "    -0.0064, -0.0691 and -0.0678 at three budgets in §51 and its pilots, where\n"
+                "    a label-destroyed arm should sit at zero by symmetry over the two objects.\n"
+                "    T1.ORACLE.D reads %+.4f and is the arm that says whether it is general.\n",
+                claim, claim / se_claim, ceil_, mpe[4]);
+  } else {
+    std::printf("\n    (6/8) THE CEILING WORKS AND THE DERIVED INDEX DOES NOT CARRY IT:\n"
+                "    ORACLE - ORACLE.D %+.4f = %.1f SE but T1.RET - T1.RET.D %+.4f +- %.4f is\n"
+                "    inside 2 SE. A sound-only teacher CAN move the formants conditionally; the\n"
+                "    retina's index is not good enough to drive it. The next step is the index,\n"
+                "    and §49's 4.3x nuisance term is where to look. Clause 1 reads %+.4f here.\n",
+                ceil_, se_ceil > 0 ? ceil_ / se_ceil : 0.0, claim, se_claim,
+                rows[1].match - rows[1].null);
+  }
+  if (!dose_ok) {
+    std::printf("\n  *** CLAUSE 0 REFUSED AN ARM's DOSE. Read every branch above against it.\n");
+  }
+  return true;
+}
+
 }  // namespace aibaby_host
