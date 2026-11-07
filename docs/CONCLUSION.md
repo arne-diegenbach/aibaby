@@ -121,6 +121,42 @@ to depend on the input.
 That single sentence accounts for both sections above, and it is why the capability list and the
 refusal list can both be long.
 
+> ### AMENDED 2026-11-07 — THE SECOND CLAUSE IS FALSE FOR VISION
+>
+> This is a correction to the finding above, not a second synthesis. ROADMAP §49 and §50:
+>
+> * **§49 — it learns the context.** DNA v84 points the shipped competitive-partition rule at the
+>   retina (`context_source = 5`). An **unsupervised** partition recovers which object is shown at
+>   `ctx_match` **0.8624 against a measured null of 0.5346**, where the ear — the sense that already
+>   names — reads 0.7674 against 0.5233. **The visual index is the better of the two.** It survives a
+>   drawn probe order (97%), and needs DeSieno's conscience plus position and size held.
+> * **§50 — it then names off it.** With that self-derived index driving the per-context bias table,
+>   an idealised teacher takes the voice to **59% of the separation it asked for (+0.5875 ± 0.1500)**
+>   against **2% with the table off** and −0.03 with the index label-destroyed. RET − SHUF = +0.6798,
+>   **3.0 SE**, 11 of 12 creatures positive.
+>
+> **The structural impossibility argument above survives, but it is narrower than it reads.** "A
+> per-neuron bias is a constant, not a function of the input" is true of the *shared* bias `bias_`.
+> It is **not** true of `bias_ctx_[i * slots + active_ctx_]`: the delivered bias is a function of the
+> index, and with `context_source = 5` the index is a function of the input. The composition is
+> conditional, and no new mechanism was added to make it so — §49's arms were already running this
+> table and nothing had read the voice off them.
+>
+> **`g3probe`'s null is therefore not a fact about the learning rule.** *"A perfect teacher cannot
+> make this voice depend on what the creature sees"* was measured at `context_slots = 0`; it was a
+> statement about a **missing index**. Cite §50 beside it.
+>
+> **Why vision and not hearing.** `ctxsrc` named the obstruction and it is **persistence**: a word is
+> at ceiling (1.000) while it plays and at chance (0.533) by the reward window 800 ms later. **A toy
+> in view does not stop** — the retinal index reads **0.8400 in the reward window against 0.8517 at
+> the probe.** The old lesson "there is nowhere to hold a context" should be carried forward as "a
+> **transient** context has nowhere to be held."
+>
+> **What is still missing, and it is not the index.** The teacher is **idealised** — dense, immediate,
+> and it says which object this is. The creature now supplies the *question*; the teacher still
+> supplies the *answer*. Two objects, position and size held. **This is not autonomous word
+> learning**, and the open lead is the picture→sound→voice teaching signal.
+
 *Where the conditioning variable is supplied, conditional production works.* The shipped context
 mechanism computes an index from the ear's own rate EMA — no gate, no episode, no latch, and no
 word-boundary oracle — and reaches **100.1%** of the lift a host-supplied perfect index gives. The
