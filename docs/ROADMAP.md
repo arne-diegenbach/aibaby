@@ -8325,3 +8325,92 @@ and the correction is the reason this sentence names its source.
 2. **`verify` holds all four keys** and the pinned hash `ad96f882becbee92` is unmoved. §51 adds no
    genome field at all — `context_source = 5` already shipped inert in DNA v84 — so there is nothing
    for the shipped genome to pick up.
+
+### §51 GATES, BOTH PASSED BEFORE THE BUDGET WAS SPENT
+
+1. **`g3probe` is bit-identical** to `results/n50-g3probe-bitidentity.log`, all 75 lines including the
+   instrument seed line (`results/n51-g3probe.log`). The new `teacher` and `pairing` parameters, the
+   dose counters, the probe-formant accumulator and the moved `formant_error` cost `g3probe`,
+   `condprobe`, `pairprobe` and §49's `visprobe` nothing: every new path is gated on `teacher != 0`,
+   and the decorrelated word reuses `coin`, which the teaching loop **already draws unconditionally on
+   every trial**. No new random stream is touched by the paired or decorrelated arms at all, so no
+   existing stream can shift. `pin_rng`'s lesson applied before it could cost anything rather than
+   after.
+2. **`objname` is bit-identical**, 110 lines number for number, against a reference captured *before*
+   the edit (`results/n51-objname-bitidentity.log`). §50's published result therefore still stands on
+   this binary.
+
+The pre-edit reference also measures the rate the cost estimate rests on: **185 s wall for 96 sessions
+at 150 000 ticks**, so ~78 000 ticks/s aggregate, against §50's full run at ~69 000. 120 sessions at
+1.8M is ~51 min, which is the pre-registered figure confirmed by a measurement rather than a memory.
+
+**And all eight clause-5 branches plus the four VOIDs are present in the shipped binary**, checked by
+string. The first form of that check used `grep` on the executable and reported every branch missing,
+including one the smoke had just printed; `strings | grep` found them all. **That is §50's wrong-case
+grep again — the check tool was wrong, not the thing being checked** — and the only reason it did not
+become a conclusion is that a result claiming twelve-for-twelve missing was too clean to be true.
+
+### TWO THINGS THE SMOKE CHANGED, DISCLOSED BEFORE THE RESULT EXISTS
+
+Neither is a response to an outcome. The smoke's verdict was a pre-registered **VOID** — clause 1 read
+−0.0216 excess at 150 000 ticks, which is *the same number* §50's own smoke read before the full budget
+reversed it to +0.3165, and clause 4 read +0.0583 against its +0.30 bar. Both changes come from
+quantities clause 0 was built to print.
+
+**1. THE BASELINE RATE WAS RE-DERIVED, AND CARRYING IT OVER WOULD HAVE BEEN `ctxgain`'S ERROR.**
+
+`kTSBaselineAlpha = 0.02` is a rate **per evaluation**. M1c evaluated every `kFeedbackPeriodTicks`
+over an 800-tick reward window — 5.33 evaluations a trial — so its baseline carried `1/0.02 = 50`
+evaluations, which is **9.4 trials** of memory. That span is what *"closer than this creature usually
+gets"* means.
+
+§51 evaluates on the plasticity clock to match T0's dose: 90 evaluations a trial, **18× denser**.
+Inheriting 0.02 would have left the baseline with **half a trial** of memory and silently turned
+"closer than usual" into "closer than a moment ago" — a different teacher wearing M1c's name, and a
+null that says nothing about what a teacher has to know.
+
+This is the shape of error the kernel already documents on `ctxgain`, where a normaliser 12× too small
+made an arm run under-driven by exactly that factor: *"a learning-rate CUT wearing the costume of a
+parameterisation test."* So the **invariant preserved is the baseline's memory in trials**, and the
+ratio is computed from the named constants rather than typed in: α = 1/(9.375 × 90) = **0.001185**.
+
+**The smoke could not have told the two regimes apart, which is why this is an argument and not a
+measurement.** Both straddle, so both read a praise fraction near 0.5 — the first smoke read 0.500,
+0.518, 0.554, 0.513, 0.498 across the five speaking arms, comfortably inside the pre-registered
+[0.35, 0.65]. And **the opposite reading is defensible**: a fast baseline is a high-pass, and
+crediting a perturbation against the error a moment ago is ordinary RPE and arguably sharper credit
+assignment. It is not settled here. **If T1 nulls, this constant is the first thing to vary**, and
+that is written down now rather than discovered later.
+
+**2. T1 DRIVES THE REWARD CHANNEL 6.4× HARDER THAN T0, AND IT IS NOT BEING RETUNED.**
+
+Clause 0 measured `mean|r|` at **0.0781 for T0 and 0.5000 for T1 and T2**. Neither is a bug: T0's
+reward is a *correlation*, bounded by 1 and typically small, while T1's is M1c's published
+`±kPraiseValue`. The two teachers differ in how hard they drive the reward channel as well as in what
+they know.
+
+* **The primary contrast is unaffected and is magnitude-matched by construction.** `T1.RET` and
+  `T1.RET.D` run the same rule on the same clock and differ only in which word is spoken, so both read
+  0.5000.
+* **Every comparison with T0 is affected.** "% of T0" in the result is a descriptive ratio and
+  explicitly **not** an efficiency statement.
+* **It is not retuned, and the direction is why.** Scaling T1's praise to match T0's measured output
+  would be fitting a constant to the very arm T1 is compared against. And the asymmetry runs in the
+  conservative direction for a null: T1 is given *more* drive than T0, so **a T1 null cannot be blamed
+  on want of drive.**
+
+The ratio is now printed in clause 0 on every run, so the result cannot be read without it.
+
+### ONE CONTROL THE SMOKE WEAKENED, AND THE PRE-REGISTRATION ALREADY HANDLES IT
+
+`T2.RET` fired at **0.42× T0's rate**, below clause 0's pre-registered 0.50 bar, so the dose refusal
+fired on it. The cause is not a harness fault and is worth naming: T1's teacher *requires* voicing to
+score, so it reinforces vocalising as a side effect and lands at 0.77×, while a coin does not and
+lands at 0.42×. **The content of the reward raises its own dose.**
+
+That weakens branch 2 in the direction that matters — a yoked arm with less drive is *less* likely to
+show the spurious effect branch 2 exists to catch — so the clause-0 refusal is printed beside every
+verdict rather than only once. The arithmetic argument stands independently of dose: a reward
+uncorrelated with the perturbation writes nothing *in expectation* at any density. But **T2 is
+reported as underpowered rather than as a clean floor**, and that was pre-registered as the response
+before the number existed.

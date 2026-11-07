@@ -176,6 +176,21 @@ const Spec kSpecs[] = {
      "  'the table cannot express an object-specific voice at all'; SHUF is the\n"
      "  label-destroyed control without which an effect could be mere dropout.\n"
      "  kRead because every branch prints a reading rather than returning false"},
+    {"objword", 1800000, Expect::kRead, Tier::kLong,
+     "derived: DOUBLE objname's 900k, and the reason is a measured one. §51's\n"
+     "  caregiver can only fire on a VOICED frame -- a silent larynx has no\n"
+     "  formants -- and delivery-fraction says this creature falls silent as it\n"
+     "  trains, so its realised dose is below §50's teacher by an unknown factor.\n"
+     "  vocallearn needed 3.4M at a 19x sparser reward clock and recorded density\n"
+     "  flipping its own sign. §51 asks how little the teacher has to KNOW: §50's\n"
+     "  was idealised twice over, since it saw the toy AND its target was this\n"
+     "  creature's own echo axis fitted in Phase A. M1c's caregiver re-pointed at\n"
+     "  the word it is SAYING removes both -- it compares two sounds, and\n"
+     "  object->word is never a term in the reward. Six arms, n unequal BY A\n"
+     "  POWER CALCULATION: §50's paired SD is 0.79, so a half-sized effect reads\n"
+     "  1.3 SE at n=12 and 2.2 SE at n=36. The primary contrast runs at 36; the\n"
+     "  4th-rung reference, the ceiling, the table-off arm and the yoked floor at\n"
+     "  12. kRead because every branch, including four VOIDs, prints a reading"},
     {"cpprobe", 600000, Expect::kGuard, Tier::kLong,
      "derived: two 300 s phases. Expected to FAIL, and the failure is the current\n"
      "  finding: its own positive control says 300 s of praise does not measurably\n"
@@ -1436,6 +1451,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "invprobe") ok = run_invprobe(dna_blob, ticks, verbose);
   else if (name == "visprobe") ok = run_visprobe(dna_blob, ticks, verbose);
   else if (name == "objname") ok = run_objname(dna_blob, ticks, verbose);
+  else if (name == "objword") ok = run_objword(dna_blob, ticks, verbose);
   else if (name == "cpprobe") ok = run_cpprobe(dna_blob, ticks, verbose);
   else if (name == "stpprobe") ok = run_stpprobe(dna_blob, ticks, verbose);
   else if (name == "burstprobe") ok = run_burstprobe(dna_blob, ticks, verbose);

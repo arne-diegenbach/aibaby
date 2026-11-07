@@ -4816,14 +4816,10 @@ struct VLRun {
   std::vector<Praise> feedback;  // what the taught arm earned, for the yoke
 };
 
-// Distance between what the creature said and what it heard, in log formant
-// space. Log because a formant difference of 100 Hz means something very
-// different at 300 Hz and at 2500 Hz, and the two words this is scored on are
-// 780/1180 against 320/2500.
-inline double formant_error(double f1, double f2, const Word& w) {
-  if (f1 <= 1.0 || f2 <= 1.0) return -1.0;
-  return std::fabs(std::log(f1 / double(w.f1))) + std::fabs(std::log(f2 / double(w.f2)));
-}
+// `formant_error` moved to experiments_common.h in §51, beside `kWords`, so the
+// probes TU can score a caregiver against the word being spoken. Unchanged, and
+// the move is bit-identical: same formula, same `inline`, and this TU still sees
+// exactly one definition of it.
 
 // PER-AXIS SCORING, for `orthovocab`. The joint error above makes genuinely
 // orthogonal lessons impossible to express: lesson A's target pins BOTH formants,
@@ -6222,7 +6218,8 @@ constexpr uint64_t kTSEchoFrom = kTSWordTicks + 200;
 constexpr uint64_t kTSEchoTo = kTSWordTicks + 600;
 constexpr uint64_t kTSRewardFrom = kTSWordTicks;
 constexpr uint64_t kTSRewardTo = kTSWordTicks + 800;
-constexpr double kTSBaselineAlpha = 0.02;
+// kTSBaselineAlpha moved to experiments_common.h in §51 — §51's caregiver is
+// M1c's, re-pointed, and the two must not drift apart.
 // The vowel being taught, and the vowel the caregiver keeps saying. They are
 // DIFFERENT on purpose: the creature hears /a/ and is praised toward /i/, so a
 // change toward the target cannot be the echo pathway doing its innate job.

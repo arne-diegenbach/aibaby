@@ -1787,6 +1787,31 @@ constexpr uint32_t kWordCount = 4;
 // The whole table, for `vocab`.
 constexpr uint32_t kVocabCount = 8;
 
+// Distance between what the creature said and what it heard, in log formant
+// space. Log because a formant difference of 100 Hz means something very
+// different at 300 Hz and at 2500 Hz, and the two words this is scored on are
+// 780/1180 against 320/2500.
+//
+// §51 MOVED THIS HERE from experiments_milestones.cpp's anonymous namespace,
+// unchanged. It belongs beside `kWords`, which is the only table it reads, and
+// §51's caregiver lives in experiments_probes.cpp -- the other translation unit
+// -- because that is where the retina and the toy are. Duplicating a two-line
+// scoring function into a second TU is exactly what `shared-constants-audit` is
+// about, so it is shared rather than copied.
+//
+// A -1 return means "not voiced enough to have formants" and is NOT an error
+// code a caller may average: `vocallearn` skips those trials rather than
+// scoring them as maximum error, because otherwise "say less" wins.
+inline double formant_error(double f1, double f2, const Word& w) {
+  if (f1 <= 1.0 || f2 <= 1.0) return -1.0;
+  return std::fabs(std::log(f1 / double(w.f1))) + std::fabs(std::log(f2 / double(w.f2)));
+}
+
+// M1c's reward baseline rate. The caregiver praises a moment that lands closer
+// than this creature USUALLY gets, so it needs a running mean of how close that
+// is, and 0.02 per evaluation is the published one (`teachsound`, d' 5.57).
+constexpr double kTSBaselineAlpha = 0.02;
+
 
 // The two toys. A cube is a square and a ball is a disc, and the disc is drawn
 // with the radius that gives it the *same area* as the square: 2/sqrt(pi).
@@ -2571,6 +2596,7 @@ bool run_gazeprobe(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_invprobe(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_visprobe(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_objname(const std::vector<uint8_t>&, uint64_t, bool);
+bool run_objword(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_cpprobe(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_stpprobe(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_burstprobe(const std::vector<uint8_t>&, uint64_t, bool);

@@ -945,6 +945,22 @@ struct G3Probe {
   // this distinction: reward buys the separation, the lesson buys the direction.
   double axis_sep = 0.0;
   bool axis_ok = false;
+  // §51. THE TEACHER'S REALISED DOSE, and clause 0 cannot be read without it.
+  // T0 rewards a projection of the nine motor groups, which exist whether or not
+  // the creature is making a sound. T1 and T2 can only fire on a VOICED frame,
+  // because a silent larynx has no formants to score -- and `delivery-fraction`
+  // says this creature falls silent as it trains. So the dose difference between
+  // the teachers is a measured quantity, not an assumed one, and an arm whose
+  // dose collapsed is UNDERPOWERED rather than null (`liveness-is-not-dose`).
+  double t_fired = 0, t_eligible = 0, t_praise = 0;
+  // §51's SECONDARY, in T1's own currency rather than on the shared ruler: at a
+  // silent object-only probe, how far are the produced formants from the word
+  // this object is named by, against the OTHER word. Explicitly excluded from
+  // the verdict -- §50's lesson is that a secondary chosen for the arm is how a
+  // verdict gets fitted to the data, so the primary stays `axis_sep` for every
+  // arm including the ones whose reward uses a different target.
+  double perr_own = 0, perr_other = 0;
+  uint32_t perr_n = 0;
   // And at the larynx, which is the module G3 is ultimately about. Missing
   // from this table until 2026-08-15: `m3probe` can say whether the object
   // reaches vocal with learning *off*, and nothing said whether it survives a
@@ -982,10 +998,37 @@ struct G3Probe {
 // Mode 2 is the classical-conditioning test: the US drives the correct output
 // during teaching, the CS is present at the same time, and the probe asks
 // whether the CS alone has come to evoke it.
+// §51. `teacher` picks WHO SUPPLIES THE ANSWER, and `pairing` picks whether the
+// caregiver's word has anything to do with the toy. Appended at the END with
+// defaults, which is this signature's own convention and the field-order hazard
+// this file has already paid for:
+//
+//   teacher 0  §50's. A dense signed projection of the voice onto +/-`axis`,
+//              signed BY THE OBJECT. Idealised twice over -- it sees the toy,
+//              and its target is this creature's own echo posture difference
+//              measured in Phase A, which no caregiver could compute.
+//   teacher 1  M1c's caregiver, re-pointed at the word IT IS SAYING. Binary
+//              praise/scold on whether the produced formants came closer than
+//              this creature usually gets, against a PER-WORD EMA baseline.
+//              It never looks at the toy. Its target is in the world's units.
+//   teacher 2  YOKED: the same clock, the same voicing gate, the same magnitude,
+//              praise or scold BY A COIN. The arithmetic floor measured rather
+//              than asserted -- the kernel writes `b += u*gate_meta` with `u`
+//              proportional to the centred reward times the neuron's own
+//              zero-mean perturbation, so a reward that does not evaluate the
+//              voice writes NOTHING in expectation. This arm is that claim's
+//              number, and it is also `vocallearn`'s kVLYoked.
+//
+//   pairing 0  the caregiver says the word the toy is named by.
+//   pairing 1  the caregiver says a DRAWN word, independent of the toy. The
+//              label-destroyed arm, and the only thing that differs is the
+//              CO-OCCURRENCE -- same reward rule, same density, same index.
+//
+// teacher 0 / pairing 0 is bit-identical to every pre-existing caller.
 G3Probe run_g3probe_session(const std::vector<uint8_t>& blob, uint64_t ticks,
                             bool consistent, uint64_t seed_shift, int mode,
                             bool hold_nuisance = false, bool shuffle_order = false,
-                            int pin_mode = 0) {
+                            int pin_mode = 0, int teacher = 0, int pairing = 0) {
   G3Probe out;
   std::string error;
   Session s;
@@ -1015,6 +1058,59 @@ G3Probe run_g3probe_session(const std::vector<uint8_t>& blob, uint64_t ticks,
   // the sake of one new arm. This stream is touched only when `pin_mode == 2`.
   aibaby::Rng pin_rng;
   pin_rng.seed((s.dna.header().seed ^ seed_shift) + 0x9A50u);
+  // §51. The yoked teacher's coin, on its own stream for the same reason, and
+  // touched only when `teacher == 2`. The decorrelated WORD needs no stream at
+  // all: the teaching loop below already draws `coin` unconditionally on every
+  // trial, so pairing 1 reuses a number this session was going to spend anyway.
+  aibaby::Rng yoke_rng;
+  yoke_rng.seed((s.dna.header().seed ^ seed_shift) + 0x51C0u);
+  // §51. M1c's reward baseline, PER WORD. `vocallearn`'s design-trap note is the
+  // reason: against one global mean the creature is rewarded for saying whichever
+  // word is easier for its larynx, and the easy word is not the taught one.
+  //
+  // Session scope, not per trial -- an EMA of "how close does this baby usually
+  // get to this word" is meaningless inside one 900-tick window. -1 means "no
+  // sample yet", which is the same sentinel `teachsound` uses, and the first
+  // sample seeds the mean instead of being scored against nothing.
+  //
+  // It is per-word in EVERY arm, the decorrelated one included, so it is
+  // symmetric across the primary contrast. And it sets a praise/scold THRESHOLD,
+  // never a direction, so it cannot supply the answer: a caregiver tracking how
+  // close the babble usually lands needs no sight of the toy.
+  double t1_base[2] = {-1.0, -1.0};
+  // AND ITS RATE IS RE-DERIVED FOR THIS CLOCK, NOT INHERITED. `kTSBaselineAlpha`
+  // = 0.02 is a rate PER EVALUATION. M1c evaluated every `kFeedbackPeriodTicks`
+  // over an 800-tick reward window (kTSRewardTo - kTSRewardFrom, in
+  // experiments_milestones.cpp -- quoted rather than shared, because moving a
+  // milestone's trial geometry into a common header to serve one probe is the
+  // larger change), which is 800/150 evaluations a trial. So M1c's baseline
+  // carries 1/0.02 = 50 evaluations = NINE AND A HALF TRIALS of memory, and
+  // "closer than this creature USUALLY gets" is a statement about that span.
+  //
+  // §51 evaluates on the plasticity clock instead, to match T0's dose. That is
+  // 18x denser. Carrying 0.02 across unchanged would leave the baseline with
+  // HALF A TRIAL of memory and silently turn "closer than usual" into "closer
+  // than a moment ago" -- a different teacher wearing M1c's name, and a null
+  // then says nothing about what a teacher has to know.
+  //
+  // THIS IS ctxgain's ERROR EXACTLY, where the normaliser was 12x too small and
+  // an arm ran under-driven by precisely that factor: "a learning-rate CUT
+  // wearing the costume of a parameterisation test". The invariant preserved is
+  // the baseline's memory in TRIALS, and the ratio is computed from the
+  // constants rather than typed in.
+  //
+  // The opposite reading is defensible and is NOT settled here: a fast baseline
+  // is a high-pass, and crediting the perturbation against the error a moment
+  // ago is ordinary RPE and arguably sharper credit assignment. The smoke cannot
+  // tell the two regimes apart -- both straddle, so both read a praise fraction
+  // near 0.5. If T1 nulls, this constant is the first thing to vary.
+  const double t1_evals_m1c = 800.0 / double(kFeedbackPeriodTicks);
+  const double t1_mem_trials = (1.0 / kTSBaselineAlpha) / t1_evals_m1c;
+  const double t1_evals_here =
+      double(kM3TrialTicks - kM3SettleTicks) / double(plasticity);
+  const double t1_alpha =
+      t1_mem_trials * t1_evals_here > 0.0 ? 1.0 / (t1_mem_trials * t1_evals_here)
+                                          : kTSBaselineAlpha;
 
   uint64_t now = 0;
   uint32_t last_frame = 0;
@@ -1085,6 +1181,14 @@ G3Probe run_g3probe_session(const std::vector<uint8_t>& blob, uint64_t ticks,
   uint32_t ctx_hist[aibaby::kMaxContextSlots] = {};
   uint64_t ctx_win_ticks = 0, ctx_on_ticks = 0;
   uint64_t ctx_win_total = 0, ctx_on_total = 0;
+  // §51. The formants the creature actually produced over a PROBE's scored
+  // window, so the result can be read in T1's own currency as well as on the
+  // shared ruler. Per-call like `ctx_hist`, and voiced frames only, because
+  // `formant_error` refuses a frame with no formants rather than scoring it as
+  // maximum error -- `vocallearn`'s trap, where scoring silence as failure makes
+  // "say less" the winning strategy.
+  double probe_f1 = 0, probe_f2 = 0;
+  uint32_t probe_fn = 0;
 
   // Reads the vocal tract over a stretch of ticks, optionally with a word
   // playing and optionally with a toy in view, and returns the mean of the nine
@@ -1104,6 +1208,9 @@ G3Probe run_g3probe_session(const std::vector<uint8_t>& blob, uint64_t ticks,
     std::memset(ctx_hist, 0, sizeof(ctx_hist));
     ctx_win_ticks = 0;
     ctx_on_ticks = 0;
+    probe_f1 = 0;
+    probe_f2 = 0;
+    probe_fn = 0;
     // §49: the jittered draw happens EITHER WAY, so every later random number in
     // the session is identical between the held and jittered arms and the two
     // differ only in where the toy is. Skipping the draw would shift the stream
@@ -1189,7 +1296,72 @@ G3Probe run_g3probe_session(const std::vector<uint8_t>& blob, uint64_t ticks,
       // The idealised teacher. Dense — every plasticity interval — immediate,
       // and signed by how far the voice currently sits along the axis between
       // the two target postures, toward the one this object calls for.
-      if (shape_target && t >= settle && now % plasticity == 0) {
+      if (shape_target && t >= settle && now % plasticity == 0 && teacher != 0) {
+        // §51. THE CAREGIVER THAT NEVER LOOKS AT THE TOY.
+        //
+        // On T0's clock exactly -- every plasticity interval over the same
+        // window -- and that is deliberate rather than cosmetic. `vocallearn`'s
+        // power note records reward DENSITY flipping its own sign: the same
+        // contrast read -1.2 at one reward per trial and +1.0 at 19x denser,
+        // both at 560k ticks. A sparse T1 against a dense T0 would confound what
+        // the reward KNOWS with how often it ARRIVES, which is the one thing
+        // §51 is trying to isolate. M1c's own clock was kFeedbackPeriodTicks and
+        // the change away from it is the controlled choice.
+        //
+        // The one dose difference that is left is legitimate and is measured:
+        // this teacher can only fire on a VOICED frame, because `formant_error`
+        // needs formants. `delivery-fraction` says the creature falls silent as
+        // it trains, so that shortfall may be large -- hence the counters, and
+        // hence clause 0 reading dose rather than liveness.
+        const aibaby::VocalParams& v = s.brain.voice();
+        out.t_eligible += 1.0;
+        if (v.voicing > aibaby::Scalar(0.5) &&
+            v.amplitude > aibaby::Scalar(kAmplitudeFloor)) {
+          float value = 0.0f;
+          bool fire = false;
+          if (teacher == 1) {
+            // Scored against THE WORD THIS CAREGIVER IS SAYING, which is the
+            // whole point: `word` is what the host is rendering into the room,
+            // not a label it looked up off the scene. `object` is never read
+            // here, and in the decorrelated arm `word` is independent of it.
+            const double e = formant_error(double(v.f1), double(v.f2), kWords[word]);
+            if (e >= 0.0) {
+              double& base = t1_base[word & 1];
+              // THE BASELINE UPDATES EVEN ON THE FIRST SAMPLE, WHICH DOES NOT
+              // SCORE. Scoring a first sample against -1 would make every first
+              // evaluation of each word a scold, and with two words that is a
+              // systematic negative transient at the start of training -- the
+              // kind of plausible-looking artefact that is invisible in a mean.
+              if (base >= 0.0) {
+                value = e < base ? kPraiseValue : kScoldValue;
+                fire = true;
+              }
+              base = base < 0.0 ? e : base + t1_alpha * (e - base);
+            }
+          } else {
+            // Teacher 2. Same clock, same gate, same magnitude, zero content.
+            value = (yoke_rng.next() & 1u) ? kPraiseValue : kScoldValue;
+            fire = true;
+          }
+          if (fire) {
+            s.brain.praise(value);
+            out.t_fired += 1.0;
+            if (value > 0.0f) out.t_praise += 1.0;
+            // Folded into the SAME dose accumulator T0 uses, so clause 0 can put
+            // the two teachers in one column. |value| rather than value, because
+            // what this measures is how hard the reward channel is being driven
+            // and a scold drives it as hard as a praise.
+            if (reward_acc) { *reward_acc += std::fabs(double(value)); ++*reward_n; }
+          }
+        }
+      }
+      if (shape_target && t >= settle && now % plasticity == 0 && teacher == 0) {
+        // §51 clause 0 counts T0 on the SAME column as T1 and T2, so the three
+        // teachers' doses can be compared directly instead of one being inferred
+        // from the trial count. T0 has no voicing gate, so its fired/eligible
+        // ratio is 1.0 by construction and that is the reference the others are
+        // read against. Unprinted by every pre-existing caller.
+        out.t_eligible += 1.0;
         const aibaby::Scalar* g = s.brain.vocal_groups();
         // Centred on the midpoint between the two postures. Uncentred, the
         // projection of an all-positive group vector onto the axis is dominated
@@ -1205,6 +1377,8 @@ G3Probe run_g3probe_session(const std::vector<uint8_t>& blob, uint64_t ticks,
           const double r = dot / std::sqrt(norm);
           const float clipped = float(r > 1.0 ? 1.0 : (r < -1.0 ? -1.0 : r));
           s.brain.praise(clipped);
+          out.t_fired += 1.0;
+          if (clipped > 0.0f) out.t_praise += 1.0;
           if (reward_acc) { *reward_acc += std::fabs(double(clipped)); ++*reward_n; }
         }
       }
@@ -1254,6 +1428,16 @@ G3Probe run_g3probe_session(const std::vector<uint8_t>& blob, uint64_t ticks,
       amp += double(s.brain.voice().amplitude);
       voiced += s.brain.voice().voicing > aibaby::Scalar(0.5) ? 1.0 : 0.0;
       ++frames;
+      // §51's secondary. Voiced frames only, and accumulated for every window --
+      // the probe loop is what reads it, and it reads it right after the call.
+      // Adding an unprinted accumulator touches no random stream and no existing
+      // column, so `g3probe` and §49's arms cannot move by it.
+      if (s.brain.voice().voicing > aibaby::Scalar(0.5) &&
+          s.brain.voice().amplitude > aibaby::Scalar(kAmplitudeFloor)) {
+        probe_f1 += double(s.brain.voice().f1);
+        probe_f2 += double(s.brain.voice().f2);
+        ++probe_fn;
+      }
     }
 
     // What the two modules looked like at the end of this stretch. The rate
@@ -1346,7 +1530,21 @@ G3Probe run_g3probe_session(const std::vector<uint8_t>& blob, uint64_t ticks,
       shaped[k] = target_for == 1 ? axis[k] : -axis[k];
     }
 
-    observe(mode == 1 ? 0 : object, mode == 0 ? 0 : object, mode != 0, mode != 1,
+    // §51. WHAT THE CAREGIVER SAYS, and whether it says anything at all.
+    //
+    // teacher 0 keeps mode's own behaviour exactly: silent in mode 0, speaking
+    // `object` in modes 1 and 2. Nothing below it can move a published number.
+    //
+    // The speaking teachers say either the toy's own word (the pairing under
+    // test) or a DRAWN one. The drawn one reuses `coin`, which this loop already
+    // draws unconditionally two lines above on every trial and which is
+    // independent of `object` by construction. So the label-destroyed arm costs
+    // no new random stream and shifts nothing -- `pin_rng`'s lesson applied
+    // before it could cost anything rather than after.
+    const int spoken = teacher == 0 ? 0 : (pairing == 0 ? object : coin);
+    const int word_teach = teacher != 0 ? spoken : (mode == 0 ? 0 : object);
+    const bool speak_teach = teacher != 0 ? true : (mode != 0);
+    observe(mode == 1 ? 0 : object, word_teach, speak_teach, mode != 1,
             kM3TrialTicks, kM3SettleTicks, shaped.data(), mid.data(), &reward_acc,
             &reward_n);
     ++out.taught;
@@ -1394,6 +1592,21 @@ G3Probe run_g3probe_session(const std::vector<uint8_t>& blob, uint64_t ticks,
     if (f.empty()) continue;
     probe_x.push_back(f);
     probe_y.push_back(probe_object);
+    // §51's secondary, scored on THIS probe. Object w is named by kWords[w], the
+    // same mapping the teaching loop speaks, so "own" is the word a successful
+    // creature should be moving toward and "other" is the one it should not.
+    // A probe with no voiced frame contributes to neither rather than counting
+    // as a failure, for `vocallearn`'s reason.
+    if (probe_fn > 0) {
+      const double f1 = probe_f1 / double(probe_fn), f2 = probe_f2 / double(probe_fn);
+      const double e_own = formant_error(f1, f2, kWords[probe_object]);
+      const double e_oth = formant_error(f1, f2, kWords[1 - probe_object]);
+      if (e_own >= 0.0 && e_oth >= 0.0) {
+        out.perr_own += e_own;
+        out.perr_other += e_oth;
+        ++out.perr_n;
+      }
+    }
     // §49: the modal slice over this probe's scored window, paired with the
     // label this probe actually presented. `probe_object` is the right label in
     // both modes: mode 1 passes it as the WORD and mode 0 as the OBJECT, so the
@@ -10180,6 +10393,485 @@ bool run_objname(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
                 "  what it asked for even with the table off, so the held-toy protocol may\n"
                 "  not be teaching at all and every contrast above is suspect.\n",
                 mean_ax[0]);
+  }
+  return true;
+}
+
+// ======================= §51 — WHO SUPPLIES THE ANSWER? ======================
+//
+// §50 showed the creature supplies the QUESTION: a per-object voice bias learned
+// off an index it derived itself from its own retina, 59% of the separation the
+// teacher asked for. The teacher still supplied the ANSWER, and it was idealised
+// in two separate ways -- it knew which object was present, and its target was
+// `axis`, this creature's own echo posture difference fitted in Phase A. No
+// caregiver can compute that second one.
+//
+// This asks how little the teacher has to know. The strongest reading of the
+// lead -- constant object-blind approval, with M1b's innate echo supplying the
+// direction -- is REFUSED BY ARITHMETIC in the pre-registration and does not get
+// an arm of its own beyond the yoked floor: `network.cpp:3021` writes
+// `b += u * gate_meta` with `u` proportional to the centred reward times the
+// neuron's own ZERO-MEAN perturbation, and there is no Hebbian term on the
+// posture the larynx currently holds. A reward that does not evaluate the voice
+// writes nothing in expectation. That is why the m3 naming milestone needed
+// `set_reward_mask(CtxMask::kByObject)`, which is the same oracle being removed.
+//
+// What is left is M1c's published caregiver re-pointed at the word it is saying.
+// `vocallearn` ran exactly that target -- "a target that depends on what was
+// heard" -- and read FLAT on 3/3 against a fixed target's +24.0, concluding that
+// node perturbation moves a constant and cannot be made conditional. That was
+// measured at `context_slots = 0`. It is the same missing index that made
+// `g3probe` null, which is why it is worth re-measuring rather than re-asserting.
+bool run_objword(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  aibaby::Dna dna;
+  if (dna.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) return false;
+  const double dt = double(dna.header().sim.dt_ms);
+  constexpr uint32_t kObjects = 2;
+  constexpr uint32_t kShuffles = 64;
+  // The expected share of the TEACHING window the caregiver's word is audible
+  // for, derived rather than eyeballed: the window opens at kM3SettleTicks and
+  // the word stops at kM3LabelTicks, out of kM3TrialTicks.
+  const double kHeardExpect = double(kM3LabelTicks - kM3SettleTicks) /
+                              double(kM3TrialTicks - kM3SettleTicks);
+
+  // THE ARM TABLE PINS THE WHOLE DOSE VECTOR ON EVERY ROW, including `n`.
+  // `control-on-a-different-code-path`: an arm selector that sets some fields
+  // and inherits others is how a control ends up on a different code path from
+  // the arm it is controlling.
+  //
+  // `n` IS NOT UNIFORM, AND THE POWER CALCULATION IS WHY. §50's paired contrast
+  // read SE 0.2282 over 12 creatures, so the paired SD is 0.79. T1 knows
+  // strictly less than T0, so assume it delivers HALF of §50's +0.5875. Then
+  // n=12 reads 1.3 SE and prints INCONCLUSIVE on a real effect; n=36 reads
+  // 2.2 SE. The primary contrast therefore runs at 36 and the reference and null
+  // arms at 12, where the questions asked are "reproduces ~+0.59" and "is not
+  // above +0.30" and 12 resolves both. `ctxsrc` printed a licence at 3 creatures
+  // and refused at 9; this project pays for n twice before it learns it once.
+  struct Arm {
+    const char* name;
+    uint32_t source;
+    uint32_t slots;
+    uint32_t gate;
+    int pin;      // 0 derived, 1 true object, 2 drawn object
+    int teacher;  // 0 §50's object-signed, 1 acoustic, 2 yoked
+    int pairing;  // 0 word = object, 1 word drawn
+    uint32_t n;
+    const char* what;
+  };
+  constexpr uint32_t kArms = 6;
+  const Arm arms[kArms] = {
+      {"T0.RET", 5u, kObjects, 2u, 0, 0, 0, 12u,
+       "§50 reproduced -- THE 4TH RUNG, without which a null below says nothing"},
+      {"T1.RET", 5u, kObjects, 2u, 0, 1, 0, 36u,
+       "THE CLAIM: the caregiver never looks at the toy"},
+      {"T1.RET.D", 5u, kObjects, 2u, 0, 1, 1, 36u,
+       "word DRAWN -- the CO-OCCURRENCE destroyed, everything else identical"},
+      {"T1.ORACLE", 5u, kObjects, 2u, 1, 1, 0, 12u,
+       "index pinned to the true object -- T1's CEILING"},
+      {"T1.BASE", 0u, 0u, 0u, 0, 1, 0, 12u,
+       "bias table OFF -- catches the ASSOCIATION route (g2cond says it is shut)"},
+      {"T2.RET", 5u, kObjects, 2u, 0, 2, 0, 12u,
+       "YOKED reward -- the arithmetic floor, and arrival vs content"},
+  };
+
+  // One flat pool over every arm x creature job rather than one pool per arm: a
+  // per-arm pool pays an idle tail six times. Parallel is a standing instruction
+  // here, not a per-experiment judgement.
+  std::vector<uint32_t> job_arm, job_rep;
+  for (uint32_t a = 0; a < kArms; ++a) {
+    for (uint32_t r = 0; r < arms[a].n; ++r) { job_arm.push_back(a); job_rep.push_back(r); }
+  }
+  const uint32_t kJobs = uint32_t(job_arm.size());
+
+  std::printf("  the question      §51. §50's teacher is idealised TWICE: it knows which\n"
+              "                    object is present, and its target is this creature's own\n"
+              "                    echo axis fitted in Phase A. How little can it know?\n");
+  std::printf("  the teacher       M1c's caregiver re-pointed at THE WORD IT IS SAYING:\n"
+              "                    praise/scold on whether the produced formants came closer\n"
+              "                    than usual, per-word EMA baseline. It never looks at the\n"
+              "                    toy and its target is in the WORLD's units, not the\n"
+              "                    creature's. Object->word is never a term in the reward.\n");
+  std::printf("  the precedent     vocallearn ran this target and read FLAT on 3/3 (+0.7,\n"
+              "                    -1.4, +0.3) against a fixed target's +24.0 -- AT\n"
+              "                    context_slots = 0. Same missing index that made g3probe\n"
+              "                    null. §50 is why that is worth re-measuring.\n");
+  std::printf("  refused first     constant object-blind approval CANNOT work and needs no\n"
+              "                    run: the write is u = r * perturb_[i] with perturb_[i]\n"
+              "                    zero-mean and no Hebbian term on the held posture, so a\n"
+              "                    reward that does not evaluate the voice writes NOTHING in\n"
+              "                    expectation. T2 is that claim measured.\n");
+  std::printf("  session           %.1f s of simulated life x %u sessions, 6 arms\n",
+              double(ticks) * dt / 1000.0, kJobs);
+  instrument("objword", dna.header().seed ^ 0x51F0u, kJobs, "sessions");
+
+  struct Cell {
+    bool ok = false;
+    double ax = 0;
+    bool ax_ok = false;
+    double match = 0, null = 0, occ = 0, present = 0;
+    double fired = 0, eligible = 0, praise = 0, rmean = 0;
+    double pheard = 0, theard = 0;
+    double perr_own = 0, perr_other = 0;
+    uint32_t slots = 0, probes = 0;
+  };
+  const std::vector<Cell> cells = parallel_reps<Cell>(kJobs, [&](uint32_t i) {
+    const uint32_t a = job_arm[i], r = job_rep[i];
+    Cell c;
+    std::vector<uint8_t> variant = blob;
+    // THE SAME SEED FORMULA §50 USES, so creature r is the SAME creature in
+    // every arm and the paired contrasts below are within-creature. With unequal
+    // n the shared creatures are the first 12, which is what makes a 36-arm
+    // pairable against a 12-arm at all.
+    const uint64_t seed = dna.header().seed + r * 7919ull;
+    std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+    {
+      aibaby::DnaHeader h;
+      std::memcpy(&h, variant.data(), sizeof(h));
+      h.exploration.context_source = arms[a].source;
+      h.exploration.context_slots = arms[a].slots;
+      h.exploration.ctx_proto_gate = arms[a].gate;
+      std::memcpy(variant.data(), &h, sizeof(h));
+    }
+    // ONE session per cell, not §50's two. §50's control was WITHIN an arm (a
+    // coin-flipped target); §51's controls are the arms themselves -- the drawn
+    // word, the yoked reward, the table off. `consistent` only picks T0's target
+    // sign and is inert for the speaking teachers, so it is held true.
+    const G3Probe run =
+        run_g3probe_session(variant, ticks, /*consistent=*/true, 0x51E7u, 0,
+                            /*hold_nuisance=*/true, /*shuffle_order=*/false,
+                            arms[a].pin, arms[a].teacher, arms[a].pairing);
+    if (!run.ok || run.probes < 12) return c;
+    c.ok = true;
+    c.ax_ok = run.axis_ok;
+    c.ax = run.axis_sep;
+    c.present = run.ctx_present_frac;
+    c.occ = vis_occupancy(run.ctx_slot, kObjects);
+    c.slots = run.ctx_slots;
+    c.probes = run.probes;
+    c.fired = run.t_fired;
+    c.eligible = run.t_eligible;
+    c.praise = run.t_praise;
+    c.rmean = run.reward;
+    c.pheard = run.probe_ticks > 0 ? run.probe_heard / run.probe_ticks : 0.0;
+    c.theard = run.teach_ticks > 0 ? run.teach_heard / run.teach_ticks : 0.0;
+    if (run.perr_n > 0) {
+      c.perr_own = run.perr_own / double(run.perr_n);
+      c.perr_other = run.perr_other / double(run.perr_n);
+    }
+    aibaby::Rng srng;
+    srng.seed(seed ^ 0x5A17u);
+    if (run.ctx_label.size() >= 12) {
+      c.match = vis_ctx_match(run.ctx_label, run.ctx_slot, kObjects, nullptr);
+      std::vector<int> shuf = run.ctx_label;
+      double acc = 0.0;
+      for (uint32_t sh = 0; sh < kShuffles; ++sh) {
+        for (size_t k = shuf.size(); k > 1; --k) {
+          const size_t j = size_t(srng.next() % uint64_t(k));
+          std::swap(shuf[k - 1], shuf[j]);
+        }
+        acc += vis_ctx_match(shuf, run.ctx_slot, kObjects, nullptr);
+      }
+      c.null = acc / double(kShuffles);
+    }
+    return c;
+  });
+
+  struct Row {
+    std::vector<double> ax;
+    std::vector<uint32_t> who;
+    double match = 0, null = 0, occ = 0, present = 0;
+    double fired = 0, eligible = 0, praise = 0, rmean = 0;
+    double pheard = 0, theard = 0, perr_gap = 0;
+    uint32_t slots = 0, n_ok = 0, pos = 0, probes = 0;
+  } rows[kArms];
+  {
+    uint32_t i = 0;
+    for (uint32_t a = 0; a < kArms; ++a) {
+      for (uint32_t r = 0; r < arms[a].n; ++r, ++i) {
+        const Cell& c = cells[i];
+        if (!c.ok) continue;
+        Row& q = rows[a];
+        // The axis list carries its OWN `who`, because a cell can yield a dose
+        // and no axis value (all probes of one class) and sharing one index
+        // vector between two differently-filtered lists is how the pairing below
+        // would end up comparing different creatures.
+        if (c.ax_ok) {
+          q.ax.push_back(c.ax);
+          q.who.push_back(r);
+          if (c.ax > 0.0) ++q.pos;
+        }
+        q.match += c.match; q.null += c.null; q.occ += c.occ; q.present += c.present;
+        q.fired += c.fired; q.eligible += c.eligible; q.praise += c.praise;
+        q.rmean += c.rmean; q.pheard += c.pheard; q.theard += c.theard;
+        q.perr_gap += c.perr_other - c.perr_own;
+        q.probes += c.probes;
+        q.slots = c.slots;
+        ++q.n_ok;
+      }
+    }
+  }
+  for (uint32_t a = 0; a < kArms; ++a) {
+    Row& q = rows[a];
+    if (!q.n_ok) continue;
+    const double in = 1.0 / double(q.n_ok);
+    q.match *= in; q.null *= in; q.occ *= in; q.present *= in;
+    q.rmean *= in; q.pheard *= in; q.theard *= in; q.perr_gap *= in;
+  }
+
+  // ---- CLAUSE 0: DOSE, NOT LIVENESS ----
+  std::printf("\n  CLAUSE 0 -- DOSE, NOT LIVENESS. T0 rewards a projection of the nine motor\n"
+              "  groups, which exist whether or not the creature is making a sound. T1 and T2\n"
+              "  can only fire on a VOICED frame, and delivery-fraction says this creature\n"
+              "  falls silent as it trains. An arm below 50%% of T0's fire rate is\n"
+              "  UNDERPOWERED, not null. A T1 praise fraction outside [0.35, 0.65] means the\n"
+              "  EMA baseline is not being straddled and the arm is void.\n");
+  const double t0_rate =
+      rows[0].eligible > 0 ? rows[0].fired / rows[0].eligible : 0.0;
+  bool dose_ok = true, baseline_ok = true;
+  for (uint32_t a = 0; a < kArms; ++a) {
+    const Row& q = rows[a];
+    const double rate = q.eligible > 0 ? q.fired / q.eligible : 0.0;
+    const double pf = q.fired > 0 ? q.praise / q.fired : 0.0;
+    const double rel = t0_rate > 0 ? rate / t0_rate : 0.0;
+    std::printf("    %-10s n %2u/%2u  slots %u(ask %u)  present %.4f  occ %.4f  "
+                "fired %.4f (%.2fx T0)  praise %.3f  mean|r| %.4f  probes %u\n",
+                arms[a].name, q.n_ok, arms[a].n, q.slots, arms[a].slots, q.present,
+                q.occ, rate, rel, pf, q.rmean, q.probes);
+    if (a > 0 && rel < 0.50) dose_ok = false;
+    if (arms[a].teacher == 1 && (pf < 0.35 || pf > 0.65)) baseline_ok = false;
+  }
+  if (!dose_ok) {
+    std::printf("    *** AN ARM IS BELOW HALF OF T0's FIRE RATE. Pre-registered as\n"
+                "    UNDERPOWERED rather than null -- a teacher that rarely fires has not\n"
+                "    been tested, and reporting it as a refusal would be the error\n"
+                "    liveness-is-not-dose exists to prevent.\n");
+  }
+  if (!baseline_ok) {
+    std::printf("    *** A T1 PRAISE FRACTION IS OUTSIDE [0.35, 0.65]. The per-word EMA\n"
+                "    baseline is not being straddled, so praise and scold are not a\n"
+                "    comparison against this creature's own recent best. VOID.\n");
+  }
+  // THE MAGNITUDE ASYMMETRY, PRINTED SO THE RESULT CANNOT BE READ WITHOUT IT.
+  // The smoke found it and it is not a bug in either teacher: T0's reward is a
+  // CORRELATION, bounded by 1 but typically small, while T1's and T2's is M1c's
+  // published +/-kPraiseValue. So the two differ in how hard they drive the
+  // reward channel as well as in what they know.
+  //
+  // It does not touch the PRIMARY, which is the one contrast that matters: T1.RET
+  // and T1.RET.D are magnitude-matched by construction, because they run the
+  // same rule on the same clock and differ only in which word is spoken. It does
+  // touch every comparison with T0, so "% of T0" below is a descriptive ratio
+  // and NOT an efficiency statement.
+  //
+  // Deliberately NOT retuned. Scaling T1's praise to match T0's measured output
+  // would be fitting a constant to the arm it is being compared against, and the
+  // asymmetry runs in the conservative direction for a null: T1 is given MORE
+  // reward drive than T0, so a T1 null cannot be blamed on want of drive.
+  if (rows[0].rmean > 0.0) {
+    std::printf("    magnitude: T0 mean|r| %.4f vs T1/T2 %.4f = %.1fx. The PRIMARY contrast\n"
+                "    is magnitude-matched (both T1 arms run the same rule); every comparison\n"
+                "    with T0 is NOT, and T1 is driven HARDER, so a T1 null is not a drive\n"
+                "    shortfall. Baseline memory held at %.1f trials, alpha %.5f (M1c's 0.02\n"
+                "    re-derived for an %.0fx denser clock).\n",
+                rows[0].rmean, rows[1].rmean,
+                rows[1].rmean / rows[0].rmean, 9.375,
+                1.0 / (9.375 * double(kM3TrialTicks - kM3SettleTicks) /
+                       double(dna.header().sim.plasticity_interval_ticks)),
+                (double(kM3TrialTicks - kM3SettleTicks) /
+                 double(dna.header().sim.plasticity_interval_ticks)) /
+                    (800.0 / double(kFeedbackPeriodTicks)));
+  }
+
+  // ---- CLAUSE 1: THE INDEX UNDER A SPEAKING CAREGIVER ----
+  std::printf("\n  CLAUSE 1 -- §49 AND §50 BOTH MEASURED THE RETINAL INDEX WITH THE CAREGIVER\n"
+              "  SILENT. Source 5 reads kVision, so added auditory drive should not touch it,\n"
+              "  and that has never been measured. Bar is +0.20 excess against §50's +0.3165.\n");
+  bool index_ok = true;
+  for (uint32_t a = 0; a < kArms; ++a) {
+    if (arms[a].slots == 0 || arms[a].pin != 0) continue;
+    const double ex = rows[a].match - rows[a].null;
+    std::printf("    %-10s ctx_match %.4f  null %.4f  excess %+.4f%s\n", arms[a].name,
+                rows[a].match, rows[a].null, ex, ex >= 0.20 ? "" : "   <-- BELOW BAR");
+    // Only the two arms the primary contrast is built from can void it.
+    if (arms[a].teacher == 1 && ex < 0.20) index_ok = false;
+  }
+
+  // ---- CLAUSE 2: THE PROBE IS SILENT, AND THIS ONE IS FATAL ----
+  std::printf("\n  CLAUSE 2 -- THE PROBE MUST BE SILENT. If the word is audible at probe,\n"
+              "  M1b's INNATE ear->larynx route produces the right sound with nothing\n"
+              "  learned, and every number above is an echo. Teaching-window heard fraction\n"
+              "  is derived: (%llu - %llu)/(%llu - %llu) = %.4f.\n",
+              (unsigned long long)kM3LabelTicks, (unsigned long long)kM3SettleTicks,
+              (unsigned long long)kM3TrialTicks, (unsigned long long)kM3SettleTicks,
+              kHeardExpect);
+  bool silent_ok = true;
+  for (uint32_t a = 0; a < kArms; ++a) {
+    const double want = arms[a].teacher == 0 ? 0.0 : kHeardExpect;
+    const bool bad = rows[a].pheard > 1e-9 || std::fabs(rows[a].theard - want) > 1e-3;
+    std::printf("    %-10s probe heard %.4f (want 0.0000)  teach heard %.4f (want %.4f)%s\n",
+                arms[a].name, rows[a].pheard, rows[a].theard, want, bad ? "   <-- BAD" : "");
+    if (bad) silent_ok = false;
+  }
+
+  // ---- CLAUSE 3: THE PRIMARY ----
+  std::printf("\n  CLAUSE 3 -- THE PRIMARY, axis_sep: the projection of (mean voice | object 1\n"
+              "  - mean voice | object 0) onto the Phase A echo axis over |axis|^2, so 1.0 is\n"
+              "  FULL compliance with the separation the two words ask for. Signed, zero\n"
+              "  expectation under drift, no fitted split. THE SAME RULER FOR EVERY ARM,\n"
+              "  including the ones whose reward uses a different target -- scoring each arm\n"
+              "  on its own reward's currency is how a verdict gets fitted to the data.\n");
+  double mean_ax[kArms] = {}, se_ax[kArms] = {};
+  // EVERY BRANCH BELOW TESTS `mean > 2 * se`, AND AN se OF 0 MAKES THAT TRUE OR
+  // FALSE FOR THE WRONG REASON. `n50_mean_se` returns se = 0 both for an empty
+  // list and for a single value, so an arm that lost eleven of its twelve
+  // creatures would route the verdict silently. `plausible-wrong-number`: an SE
+  // of 0.00 over n > 1 is a bug, and an SE of 0.00 over n = 1 is not a
+  // measurement. Refused out loud rather than compared.
+  bool n_ok = true;
+  for (uint32_t a = 0; a < kArms; ++a) {
+    double se = 0.0;
+    const double m = n50_mean_se(rows[a].ax, &se);
+    mean_ax[a] = m;
+    se_ax[a] = se;
+    const size_t n = rows[a].ax.size();
+    const bool bad_se = n < 2 || se <= 0.0;
+    std::printf("    %-10s axis_sep %+.4f +- %.4f  (n %2zu, %u/%zu > 0)%s   %s\n",
+                arms[a].name, m, se, n, rows[a].pos, n,
+                bad_se ? "  <-- NO SPREAD" : "", arms[a].what);
+    if (bad_se) n_ok = false;
+  }
+  if (!n_ok) {
+    std::printf("    *** AN ARM HAS FEWER THAN TWO SCORED CREATURES OR A ZERO SE. No 2 SE\n"
+                "    comparison involving it means anything, and the branches below would\n"
+                "    route on it silently. Treat this run as a harness failure.\n");
+  }
+  std::printf("\n  SECONDARY, IN T1's OWN CURRENCY AND EXCLUDED FROM THE VERDICT: formant\n"
+              "  error at the silent probe toward the OTHER word minus toward its OWN word,\n"
+              "  so positive means the voice sits closer to the word this object is named by.\n");
+  for (uint32_t a = 0; a < kArms; ++a) {
+    std::printf("    %-10s perr(other) - perr(own) %+.4f\n", arms[a].name, rows[a].perr_gap);
+  }
+
+  // Paired on creature identity, never on position.
+  auto paired = [&](uint32_t a, uint32_t b, double* se) {
+    std::vector<double> dd;
+    for (size_t i = 0; i < rows[a].who.size(); ++i) {
+      for (size_t j = 0; j < rows[b].who.size(); ++j) {
+        if (rows[a].who[i] != rows[b].who[j]) continue;
+        dd.push_back(rows[a].ax[i] - rows[b].ax[j]);
+        break;
+      }
+    }
+    return n50_mean_se(dd, se);
+  };
+  double se_claim = 0, se_yoke = 0, se_base = 0;
+  const double claim = paired(1, 2, &se_claim);
+  const double vs_yoke = paired(1, 5, &se_yoke);
+  const double vs_base = paired(1, 4, &se_base);
+
+  // ---- CLAUSE 4: THE 4TH RUNG ----
+  const bool rung_ok = mean_ax[0] >= 0.30;
+  std::printf("\n  CLAUSE 4 -- THE 4TH RUNG. T0.RET must reproduce §50 at >= +0.30 (half of\n"
+              "  +0.5875) for a null on T1 to be interpretable. It reads %+.4f: %s\n",
+              mean_ax[0], rung_ok ? "PASS" : "FAIL");
+
+  // ---- CLAUSE 5: THE VERDICT ----
+  std::printf("\n  CLAUSE 5 -- THE VERDICT. Paired by creature, bar 2 SE, sign unconstrained.\n");
+  std::printf("    T1.RET - T1.RET.D   %+.4f  (paired SE %.4f, %.1f SE)   <-- PRIMARY\n",
+              claim, se_claim, se_claim > 0 ? claim / se_claim : 0.0);
+  std::printf("    T1.RET - T2.RET     %+.4f  (paired SE %.4f)\n", vs_yoke, se_yoke);
+  std::printf("    T1.RET - T1.BASE    %+.4f  (paired SE %.4f)\n", vs_base, se_base);
+  std::printf("    in these units 1.0 is FULL compliance, so 2 SE = %.4f is the smallest\n"
+              "    share of the asked-for gesture this run can resolve.\n", 2.0 * se_claim);
+
+  if (!silent_ok) {
+    std::printf("\n    VOID (clause 2): the probe was not silent or the teaching window did\n"
+                "    not carry the word as derived. M1b's innate route can produce this\n"
+                "    result with nothing learned. The refusal is the result.\n");
+    return true;
+  }
+  if (!baseline_ok || !index_ok || !n_ok) {
+    std::printf("\n    VOID (clause 0, 1 or 3): %s. §51 says nothing about teaching.\n",
+                !n_ok ? "an arm has no spread to compare"
+                      : (!baseline_ok ? "the per-word baseline was not straddled"
+                                      : "the retinal index did not survive a speaking "
+                                        "caregiver"));
+    return true;
+  }
+  const bool yoke_fires = se_ax[5] > 0 && mean_ax[5] > 2.0 * se_ax[5];
+  const bool base_fires = se_ax[4] > 0 && mean_ax[4] > 2.0 * se_ax[4];
+  const bool oracle_works = se_ax[3] > 0 && mean_ax[3] > 2.0 * se_ax[3];
+  const bool claim_works = se_claim > 0 && claim > 2.0 * se_claim && mean_ax[1] > 0.0;
+
+  if (!rung_ok) {
+    std::printf("\n    (1) VOID -- UNDERPOWERED, NOT A FINDING. T0.RET reads %+.4f against the\n"
+                "    pre-registered +0.30, so §50's own effect did not reproduce on this\n"
+                "    run's clock. A flat T1 beside a flat T0 is a budget problem. Nothing\n"
+                "    here is evidence about what a teacher has to know.\n", mean_ax[0]);
+  } else if (yoke_fires) {
+    std::printf("\n    (2) VOID -- THE YOKED ARM FIRES: T2.RET reads %+.4f +- %.4f above zero.\n"
+                "    A reward drawn by a coin should write nothing in expectation, so either\n"
+                "    the derivation in the pre-registration is wrong or something other than\n"
+                "    the reward's CONTENT is moving this voice. Every contrast above is\n"
+                "    suspect and the arithmetic is what to re-examine first.\n",
+                mean_ax[5], se_ax[5]);
+  } else if (base_fires) {
+    std::printf("\n    (3) THE ASSOCIATION ROUTE WORKS AND THE TABLE IS NOT NEEDED: T1.BASE\n"
+                "    reads %+.4f +- %.4f with slots = 0. The sight has come to evoke the\n"
+                "    sound without a per-context bias anywhere. That CONTRADICTS g2cond and\n"
+                "    pairprobe and is a larger result than the one asked for -- report it as\n"
+                "    the headline and re-run pairprobe before believing it.\n",
+                mean_ax[4], se_ax[4]);
+  } else if (claim_works) {
+    std::printf("\n    (4) A CAREGIVER THAT NEVER LOOKS AT THE TOY IS ENOUGH. T1.RET %+.4f,\n"
+                "    T1.RET.D %+.4f, difference %+.4f = %.1f SE. The reward compared two\n"
+                "    SOUNDS and its target was in the world's units; object->word was never a\n"
+                "    term in it. The binding came from CO-OCCURRENCE, and destroying the\n"
+                "    co-occurrence while keeping the rule, the density and the index removes\n"
+                "    it. T1 reaches %.0f%% of T0's %+.4f and %.0f%% of T1.ORACLE's %+.4f.\n"
+                "    vocallearn's wall was the missing index, not the rule -- the same\n"
+                "    correction §50 made to g3probe, now made to the EAR line.\n",
+                mean_ax[1], mean_ax[2], claim, claim / se_claim,
+                mean_ax[0] > 0 ? 100.0 * mean_ax[1] / mean_ax[0] : 0.0, mean_ax[0],
+                mean_ax[3] > 0 ? 100.0 * mean_ax[1] / mean_ax[3] : 0.0, mean_ax[3]);
+  } else if (se_claim > 0 && claim < -2.0 * se_claim) {
+    std::printf("\n    (7) A REVERSAL, AND THE SIGN WAS NOT CONSTRAINED IN ADVANCE: T1.RET -\n"
+                "    T1.RET.D %+.4f = %.1f SE the WRONG WAY. The paired arm learned the\n"
+                "    mapping backwards, which axis_sep can express and an accuracy column\n"
+                "    cannot. Candidate mechanism: T1's scold half dominating, so the voice is\n"
+                "    pushed AWAY from the word that co-occurs. Testable -- it predicts the\n"
+                "    reversal survives T1.ORACLE (%+.4f) and vanishes under T0 (%+.4f).\n",
+                claim, claim / se_claim, mean_ax[3], mean_ax[0]);
+  } else if (!oracle_works && std::fabs(mean_ax[1]) < 2.0 * se_ax[1]) {
+    std::printf("\n    (5) THE TEACHER IS THE BLOCKER, NOT THE INDEX. T1.ORACLE reads %+.4f\n"
+                "    +- %.4f with a PERFECT index, and T1.RET %+.4f. A teacher whose target\n"
+                "    lives in the world rather than in this creature's motor space cannot\n"
+                "    teach this mapping however good the index is. §50's scope limit 1 is a\n"
+                "    real wall; vocallearn's conclusion survives the index being supplied;\n"
+                "    and the next lead is the TEACHER, not the retina. T0 on the same run\n"
+                "    reads %+.4f, so the protocol is teaching -- it is this teacher that is\n"
+                "    not.\n",
+                mean_ax[3], se_ax[3], mean_ax[1], mean_ax[0]);
+  } else if (oracle_works) {
+    std::printf("\n    (6) THE INDEX IS NOT GOOD ENOUGH FOR THIS WEAKER TEACHER. T1.ORACLE\n"
+                "    %+.4f +- %.4f works, T1.RET %+.4f does not clear 2 SE over the drawn\n"
+                "    word. This is a DOSE statement, not a wall: T1 can teach, and what it\n"
+                "    needs is a cleaner index than the retina currently supplies. §49's 4.3x\n"
+                "    nuisance term is where to look, and clause 1 reads %+.4f excess here.\n",
+                mean_ax[3], se_ax[3], mean_ax[1], rows[1].match - rows[1].null);
+  } else {
+    std::printf("\n    (8) INCONCLUSIVE, AND PRE-DECLARED AS SUCH. T1.RET - T1.RET.D %+.4f +-\n"
+                "    %.4f is inside 2 SE, and T1.ORACLE %+.4f +- %.4f does not separate the\n"
+                "    two nulls either. This is not a refusal: the pre-registration wrote the\n"
+                "    number down, and at this n a half-sized effect was always going to land\n"
+                "    here. The lever is creatures, and the power table says how many.\n",
+                claim, se_claim, mean_ax[3], se_ax[3]);
+  }
+  if (!dose_ok) {
+    std::printf("\n  *** READ EVERY BRANCH ABOVE AGAINST CLAUSE 0's DOSE REFUSAL. An arm that\n"
+                "  fired at under half of T0's rate was not tested at the dose its name\n"
+                "  claims, and no verdict about it is available from this run.\n");
   }
   return true;
 }
